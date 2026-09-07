@@ -3,7 +3,7 @@
 // is. There is no main window that owns anything: a torn-off Estimate Sheet is
 // the same code in a different frame, reading the same document.
 
-import { at, connect, demoFolder, folder, open, save, subscribe, tearOff, type Doc } from './doc.js';
+import { at, connect, demoFolder, folder, open, pickFolder, save, subscribe, tearOff, type Doc } from './doc.js';
 import { area, menu, startScreen, statusBar } from './chrome.js';
 import { HELP } from './help.js';
 import { openByDefault, renderTree } from './tree.js';
@@ -111,17 +111,19 @@ subscribe((doc: Doc) => {
       openByDefault(doc);
       editor.mount(areaBody);
     } else {
-      showStart();
+      void showStart();
     }
   }
   redrawTree();
 });
 
-function showStart() {
+async function showStart() {
+  const demo = await demoFolder().catch(() => null);
   areaBody.replaceChildren(startScreen({
     onOpen: () => void openJob(),
     recent: [],
     onOpenRecent: (path) => void openJob(path),
+    demo: demo ? { path: demo } : null,
   }));
 }
 
@@ -131,14 +133,14 @@ async function start() {
   try {
     await connect();
     await showPath();
-    if (!hasJob) showStart();
+    if (!hasJob) await showStart();
   } catch (e) {
     status.say(`Could not reach the document: ${message(e)}`);
   }
 }
 
 async function openJob(path?: string) {
-  const target = path ?? window.prompt('Job folder', (await demoFolder()) ?? '')?.trim();
+  const target = path ?? await pickFolder(await demoFolder());
   if (!target) return;
   try {
     await open(target);

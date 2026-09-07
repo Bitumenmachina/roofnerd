@@ -226,6 +226,8 @@ export function startScreen(options: {
   onOpen: () => void;
   recent: readonly { path: string; name: string }[];
   onOpenRecent: (path: string) => void;
+  /** The demo job, when this build can still find one. */
+  demo?: { path: string } | null;
 }): HTMLElement {
   const root = document.createElement('div');
   root.className = 'start';
@@ -247,6 +249,23 @@ export function startScreen(options: {
   open.addEventListener('click', options.onOpen);
 
   root.append(title, line, open);
+
+  // The demo job, when there is one. It is the product's first screen: somebody
+  // opening this for the first time should see a roof, not a file browser. It
+  // is also the one way into a job that does not go through an operating-system
+  // dialog, which makes it the path a check can actually walk.
+  if (options.demo) {
+    const demo = document.createElement('button');
+    demo.type = 'button';
+    demo.className = 'start-demo';
+    demo.append(icon('page', 16));
+    const demoText = document.createElement('span');
+    demoText.textContent = 'Open the demo job';
+    demo.append(demoText);
+    demo.title = options.demo.path;
+    demo.addEventListener('click', () => options.onOpenRecent(options.demo!.path));
+    root.append(demo);
+  }
 
   if (options.recent.length) {
     const heading = document.createElement('h3');

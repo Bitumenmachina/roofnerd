@@ -132,6 +132,33 @@ export async function launch({ timeout = 60000 } = {}) {
   };
 }
 
+/**
+ * Open the demo job the way a person does: from the button on the start screen.
+ *
+ * No probe calls `doc_open` any more. Every one of them passed while the
+ * program could not be given a job at all, because they all went round the
+ * front door — File → Open a job called `window.prompt`, which this webview
+ * does not implement, so it returned nothing and the handler gave up quietly.
+ * A check that bypasses the path a person uses is not a check.
+ */
+export async function openDemoJob(session, { timeout = 30000 } = {}) {
+  await until(session, () => document.querySelector('#editor')?.children.length > 0,
+    { what: 'the window', timeout });
+
+  const clicked = await session.execute(function () {
+    const button = [...document.querySelectorAll('.start-demo')]
+      .find((b) => (b.textContent || '').trim() === 'Open the demo job');
+    if (!button) return false;
+    button.click();
+    return true;
+  });
+  if (!clicked) throw new Error('the start screen offers no way into the demo job');
+
+  await until(session, () => !document.querySelector('.start'),
+    { what: 'the job to open', timeout });
+  return true;
+}
+
 /** Wait for something in the page, polling rather than sleeping blindly. */
 export async function until(session, fn, { timeout = 20000, every = 250, what = 'a condition' } = {}) {
   const deadline = Date.now() + timeout;

@@ -10,6 +10,11 @@
 # call: an SVG carries http://www.w3.org/2000/svg in its own namespace, and the
 # trace surface arriving at Gate 1 is SVG. A gate that fires on legitimate code
 # is a gate people learn to skip.
+#
+# It also refuses prompt, alert and confirm. This webview does not implement
+# them: they return nothing, the caller gives up, and the feature silently does
+# not exist. That is how the program shipped for a while unable to open a job at
+# all. Anything the program needs to ask, it asks in a field in the window.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -34,6 +39,18 @@ if hits=$(grep -rnE "${SKIP[@]}" \
   fail=1
 else
   echo "  no network calls"
+fi
+
+# Dialogs the webview does not have. A call to one of these is a feature that
+# silently does nothing.
+if hits=$(grep -rnE "${SKIP[@]}" \
+     -e '(^|[^.[:alnum:]_])(window\.)?(prompt|alert|confirm)[[:space:]]*\(' \
+     "${WHERE[@]}"); then
+  echo "  a browser dialog the webview does not implement:"
+  echo "$hits" | sed 's/^/    /'
+  fail=1
+else
+  echo "  no browser dialogs"
 fi
 
 # The policy has to actually be there, and connect-src has to actually be closed.

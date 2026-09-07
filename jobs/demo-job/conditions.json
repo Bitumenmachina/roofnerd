@@ -1,14 +1,188 @@
 [
   {
-    "color": "#c1440e",
-    "id": "condition-1",
-    "items": [],
+    "color": "#2f6f4f",
+    "id": "c-field",
+    "items": [
+      {
+        "costCode": "07-100-100",
+        "description": "TPO membrane, 60 mil",
+        "formula": "SQ",
+        "id": "tpo-60",
+        "order": {
+          "name": "ROLL",
+          "per": 10,
+          "rule": "ceil"
+        },
+        "price": {
+          "contains": 1000,
+          "name": "SF",
+          "rule": "exact"
+        },
+        "unit": "SQ",
+        "unitCost": 1.8,
+        "waste": 10
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Polyisocyanurate, 2.2 in",
+        "formula": "SQ",
+        "id": "iso-22",
+        "unit": "SQ",
+        "unitCost": 111.16,
+        "waste": 10
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Gypsum cover board, 5/8 in",
+        "formula": "SQ",
+        "id": "coverboard",
+        "unit": "SQ",
+        "unitCost": 77.22,
+        "waste": 8
+      },
+      {
+        "costCode": "07-100-230",
+        "crewSize": 6,
+        "description": "Install membrane",
+        "formula": "SQ",
+        "id": "install-membrane",
+        "productionRate": 0.35,
+        "unit": "SQ",
+        "unitCost": 51.59
+      }
+    ],
+    "kind": "area",
+    "name": "Main Roof Field",
+    "properties": {
+      "PITCH": 4,
+      "SIDES": 4
+    },
+    "traces": [
+      {
+        "id": "t1",
+        "pageId": "page-1",
+        "points": [
+          {
+            "x": 110,
+            "y": 150
+          },
+          {
+            "x": 430,
+            "y": 150
+          },
+          {
+            "x": 430,
+            "y": 400
+          },
+          {
+            "x": 110,
+            "y": 400
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "color": "#1d5f8a",
+    "id": "c-parapet",
+    "items": [
+      {
+        "costCode": "07-100-150",
+        "description": "Counter flashing, 16 oz copper",
+        "formula": "LF * H",
+        "id": "counterflash",
+        "unit": "LF",
+        "unitCost": 36.5
+      },
+      {
+        "costCode": "07-100-150",
+        "description": "Coping, 24 ga formed",
+        "formula": "LF",
+        "id": "coping",
+        "unit": "LF",
+        "unitCost": 22.02
+      },
+      {
+        "costCode": "07-100-150",
+        "description": "Coping mitre",
+        "formula": "VERTICES",
+        "id": "mitre",
+        "unit": "EA",
+        "unitCost": 70.73
+      },
+      {
+        "costCode": "07-100-320",
+        "crewSize": 2,
+        "description": "Fabricate metal",
+        "formula": "LF",
+        "id": "fab-metal",
+        "productionRate": 0.95,
+        "unit": "LF",
+        "unitCost": 47.93
+      }
+    ],
     "kind": "line",
     "name": "Parapet Wall Flashing",
     "properties": {
       "H": 1.5,
-      "SIDES": 4
+      "STRETCHOUT": 14
     },
-    "traces": []
+    "traces": [
+      {
+        "id": "t2",
+        "pageId": "page-1",
+        "points": [
+          {
+            "x": 110,
+            "y": 430
+          },
+          {
+            "x": 430,
+            "y": 430
+          },
+          {
+            "x": 430,
+            "y": 560
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "color": "#8a5a1d",
+    "id": "c-drains",
+    "items": [
+      {
+        "costCode": "07-100-100",
+        "description": "Retrofit drain assembly",
+        "formula": "EA",
+        "id": "drain",
+        "unit": "EA",
+        "unitCost": 423.08
+      }
+    ],
+    "kind": "count",
+    "name": "Roof Drains",
+    "properties": {},
+    "traces": [
+      {
+        "id": "t3",
+        "pageId": "page-1",
+        "points": [
+          {
+            "x": 180,
+            "y": 610
+          },
+          {
+            "x": 300,
+            "y": 610
+          },
+          {
+            "x": 420,
+            "y": 610
+          }
+        ]
+      }
+    ]
   }
 ]

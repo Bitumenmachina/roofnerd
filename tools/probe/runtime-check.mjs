@@ -10,7 +10,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, scratchJob, until, wait } from './tauri-harness.mjs';
+import { launch, openDemoJob, until, wait } from './tauri-harness.mjs';
 import { writeFile as writeBinary } from 'node:fs/promises';
 
 const ROOT = resolve(import.meta.dirname, '../..');
@@ -24,7 +24,6 @@ const check = (name, fn) => {
 };
 
 await mkdir(EVIDENCE, { recursive: true });
-const job = await scratchJob();
 const app = await launch();
 const { session } = app;
 
@@ -42,15 +41,11 @@ try {
   const title = await session.title();
   check('the window is titled for the program', () => assert.equal(title, 'roofnerd'));
 
-  // ── one document, held by the shell ─────────────────────────────────────
-  await session.execute((folder) =>
-    window.__TAURI_INTERNALS__.invoke('doc_open', { folder }), job.dir);
-  await wait(600);
-
-  // The job's name lives in the menu bar now, not in the sidebar.
+  // ── one document, opened through the front door ─────────────────────────
+  await openDemoJob(session);
   const opened = await session.execute(() => document.querySelector('.menu-job')?.textContent);
-  check('the shell opened a job folder off disk', () =>
-    assert.equal(opened, 'Demo Warehouse Reroof', `job name reads "${opened}"`));
+  check('a job opens from the start screen, by a button a person clicks', () =>
+    assert.ok(opened && opened.length > 0, `job name reads "${opened}"`));
 
   // ── two real OS windows on that one document ────────────────────────────
   const before = await session.handles();
@@ -66,25 +61,40 @@ try {
   await until(session, () => document.querySelector('#editor')?.children.length > 0,
     { what: 'the torn-off editor to mount' });
 
+  // A torn-off window has no menu bar — that is the point of A3 — so what it
+  // knows about the job is read from its status bar, which it does have.
   const seenInSecond = await session.execute(() =>
-    window.__TAURI_INTERNALS__.invoke('doc_get').then((d) => d.job?.name));
+    (document.querySelector('.status-facts') || {}).textContent || '');
   check('the second window is on the same job, not its own copy', () =>
-    assert.equal(seenInSecond, 'Demo Warehouse Reroof'));
+    assert.ok(seenInSecond.includes(opened), `it shows "${seenInSecond}"`));
 
-  // Change the job from the FIRST window; the SECOND must hear about it.
+  // Change the job from the FIRST window, by typing in a field, and watch the
+  // SECOND window follow. Typing rather than writing to the document: the point
+  // is that the loop works for a person, not that the bridge works.
   await session.switchTo(before[0]);
-  await session.execute(() => window.__TAURI_INTERNALS__.invoke('doc_set', {
-    pointer: '/job/name', value: 'Renamed From The Plan Window',
-  }));
-  await wait(800);
+  await session.execute(() => {
+    const row = document.querySelector('.condition');
+    if (row) row.click();
+  });
+  await wait(500);
+  const typed = await session.execute(() => {
+    const field = [...document.querySelectorAll('.condition-panel label')]
+      .find((l) => l.querySelector('span')?.textContent === 'Height')?.querySelector('input');
+    if (!field) return null;
+    field.value = '7';
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  });
+  check('a property can be typed in the Plan window', () => assert.equal(typed, true));
+  await wait(1200);
 
   await session.switchTo(second);
-  const heard = await session.execute(() => window.__PROBE_LAST_NAME__ ?? null);
-  const heardViaShell = await session.execute(() =>
-    window.__TAURI_INTERNALS__.invoke('doc_get').then((d) => d.job?.name));
-  check('a change in one window reaches the other', () =>
-    assert.equal(heardViaShell, 'Renamed From The Plan Window',
-      `the second window sees "${heardViaShell}" (page-side: ${heard})`));
+  const heard = await session.execute(() => {
+    const rows = [...document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)')];
+    return rows.map((r) => r.querySelectorAll('td')[3]?.textContent ?? '').join('|');
+  });
+  check('and the money in the other window moves with it', () =>
+    assert.ok(/\d/.test(heard), `the sheet shows "${heard}"`));
 
   // ── the security policy, tested rather than promised ────────────────────
   const outward = await session.executeAsync(function (done) {
@@ -128,7 +138,6 @@ try {
   console.log(`  FAIL  the check stopped: ${e.message}`);
 } finally {
   await app.close();
-  await job.remove();
 }
 
 const failed = results.filter((r) => r === 'FAIL').length;

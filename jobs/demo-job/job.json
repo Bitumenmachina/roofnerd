@@ -1,7 +1,7 @@
 {
-  "activeScenarioId": "scenario-1",
+  "activeScenarioId": "s1",
   "format": 1,
-  "name": "Demo Warehouse Reroof",
+  "name": "Warehouse Reroof",
   "scenarios": [
     {
       "adders": {
@@ -13,18 +13,18 @@
           "tax": 7
         },
         "Sub": {
-          "generalLiability": 2
+          "generalLiability": 5
         },
         "Supervision": {
           "burden": 50
         }
       },
-      "bond": 1,
-      "id": "scenario-1",
+      "bond": 2,
+      "id": "s1",
       "name": "Scenario 1",
-      "overhead": 8,
+      "overhead": 0,
       "prices": {},
-      "profit": 10
+      "profit": 15
     }
   ]
 }

@@ -103,6 +103,9 @@ const { session } = app;
 try {
   await until(session, () => document.querySelector('#editor')?.children.length > 0,
     { what: 'the editor to mount' });
+  // This one dresses a scene to photograph rather than checking a path, so it
+  // opens its scratch job directly. Every CHECK goes through the front door;
+  // see tools/probe/front-door.mjs.
   await session.execute((folder) =>
     window.__TAURI_INTERNALS__.invoke('doc_open', { folder }), job.dir);
   await wait(1200);

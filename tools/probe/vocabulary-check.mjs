@@ -17,7 +17,7 @@ import { cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, until, wait } from './tauri-harness.mjs';
+import { launch, openDemoJob, until, wait } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 
@@ -76,9 +76,8 @@ const app = await launch();
 const { session } = app;
 
 try {
-  await until(session, () => document.querySelector('#editor')?.children.length > 0, { what: 'the editor' });
-  await session.execute((folder) => window.__TAURI_INTERNALS__.invoke('doc_open', { folder }), scratch.dir);
-  await wait(1500);
+  await openDemoJob(session);
+  await wait(1200);
   await session.execute(() => document.querySelector('.condition')?.click());
   await wait(800);
 

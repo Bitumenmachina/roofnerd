@@ -39,10 +39,20 @@ If `refs/` is empty on this clone, ask before assuming what the project wants.
   LF, EA, SQ. No synonyms in the UI, the file format, the types or the comments.
 - **Nothing is ever silently zero.** A quantity off an unscaled sheet is pending. A line
   with no price says so. A total that leaves something out says what it left out.
+- **A check that bypasses the path a person uses is not a check.** Every runtime probe
+  starts at the start screen and goes through the menu, the buttons and the fields. None of
+  them calls `doc_open` — or any other command — to get a job open. This is not a
+  preference: every probe passed for days while the program could not be given a job at all,
+  because File → Open a job called `window.prompt`, which this webview does not implement,
+  so it returned nothing and the handler gave up quietly. "8/8" only counts when it went
+  through the front door. Use `openDemoJob(session)` from `tools/probe/tauri-harness.mjs`.
+- **No `prompt`, `alert` or `confirm`.** This webview does not implement them: they return
+  nothing, the caller gives up, and the feature silently does not exist. Anything the program
+  asks, it asks in a field in the window. `tools/gate-egress.sh` refuses them.
 - **A section is done when its check passes against the shipped runtime**, not against a
-  browser with the shell stubbed. `pnpm build:app` then
-  `node tools/probe/runtime-check.mjs`. Evidence goes in `evidence/` named with the section
-  and the commit.
+  browser with the shell stubbed. `pnpm build:app`, then `node tools/probe/front-door.mjs`
+  and `node tools/probe/runtime-check.mjs`. Evidence goes in `evidence/` named with the
+  section and the commit.
 - **Prove a gate red before trusting it.**
 - **Report at the end of every session** by updating `STATUS.md`: what was built, what check
   passed, what is next, anything new in `DECISIONS.md` and `QUESTIONS.md`, and what Patrick
@@ -60,7 +70,8 @@ If `refs/` is empty on this clone, ask before assuming what the project wants.
     pnpm -r test                                # the engine
     pnpm gates                                  # vocabulary, egress, client data
     pnpm build:app                              # deb, rpm, AppImage
-    node tools/probe/runtime-check.mjs          # the shipped runtime
+    node tools/probe/front-door.mjs             # start screen → buttons → fields
+    node tools/probe/runtime-check.mjs          # the shipped runtime, two windows
     node tools/compare-fixtures.mjs             # needs fixtures/, which is local only
 
 `packages/engine` is pure arithmetic with no window anywhere near it — if a number is wrong,

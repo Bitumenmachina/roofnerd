@@ -112,7 +112,7 @@ export function mountPlan(host: HTMLElement): void {
   tools = new Tools(surface, {
     existingPoints: () => currentPageId ? tracedPoints(conditions(), currentPageId) : [],
     onTrace: (kind, points) => void recordTrace(kind, points),
-    onScale: (a, b) => void askScale(a, b),
+    onScale: (a, b) => askScale(a, b),
     onHint: (text) => { hint.textContent = text; },
   });
 
@@ -198,16 +198,69 @@ async function loadSource(page: Page): Promise<void> {
 
 // ── scale ──────────────────────────────────────────────────────────────────
 
-async function askScale(a: Point, b: Point): Promise<void> {
-  const typed = window.prompt(
-    `How long is that, really?  (12'-6", 6", 12.5 — all read the same way)`,
-    '',
-  );
-  const feet = parseFeet(typed);
-  if (feet === null) return;
-  const cal = calibrateFromTwoPoints(a, b, feet);
-  if (!cal) return;
-  await applyScale(cal.feetPerUnit, `two points, ${formatFeetInches(feet)}`);
+/**
+ * Ask how long that really is — in the window, not in a browser dialog.
+ *
+ * The field appears where the instruction already is, under the drawing, with
+ * the cursor in it. A dialog would take the estimator off the sheet they are
+ * pointing at, and in this webview there is no dialog to take them to anyway.
+ */
+function askScale(a: Point, b: Point): void {
+  const bar = document.querySelector<HTMLElement>('.hint');
+  if (!bar) return;
+
+  bar.replaceChildren();
+  bar.classList.add('asking');
+
+  const label = document.createElement('label');
+  label.className = 'scale-ask';
+  const text = document.createElement('span');
+  text.textContent = 'How long is that, really?';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.placeholder = `12'-6"`;
+  input.setAttribute('aria-label', 'The real distance between those two points');
+
+  const note = document.createElement('small');
+  note.textContent = `12'-6", 6", 4'-6 1/2" and 12.5 all read the same way`;
+
+  const accept = document.createElement('button');
+  accept.type = 'button';
+  accept.textContent = 'Set the scale';
+
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'quiet';
+  cancel.textContent = 'Cancel';
+
+  label.append(text, input, accept, cancel, note);
+  bar.append(label);
+  input.focus();
+
+  const finish = () => {
+    bar.classList.remove('asking');
+    bar.textContent = 'click a trace to select it';
+  };
+
+  const submit = () => {
+    const feet = parseFeet(input.value);
+    if (feet === null) {
+      input.classList.add('bad');
+      note.textContent = 'That is not a length. Try 12\'-6", 6", or 12.5.';
+      return;
+    }
+    const cal = calibrateFromTwoPoints(a, b, feet);
+    if (!cal) { finish(); return; }
+    void applyScale(cal.feetPerUnit, `two points, ${formatFeetInches(feet)}`).then(finish);
+  };
+
+  accept.addEventListener('click', submit);
+  cancel.addEventListener('click', finish);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submit(); }
+    if (e.key === 'Escape') { e.preventDefault(); finish(); }
+  });
 }
 
 async function applyScale(feetPerUnit: number, note: string): Promise<void> {

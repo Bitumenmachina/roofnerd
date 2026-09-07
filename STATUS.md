@@ -5,8 +5,37 @@ acceptance does not pause the build.
 
 ## Where the build is
 
-**Sections 1, 2, 3 and 7 are done.** Section 4 — the library — is next, and is the first
-thing not yet started.
+**Sections 1, 2, 3 and 7 are done, and the front door now works.** Section 4 — the library —
+is next, and starts now that the front-door probe passes.
+
+## The one that mattered: the program could not be opened
+
+Patrick opened the built application and could not load anything. He was right, and every
+check I had was green.
+
+*File → Open a job* called `window.prompt`. This webview does not implement it: it returns
+nothing, the handler treats that as "cancelled", and no job opens. Setting a scale by two
+points had the same defect. Every probe passed because every probe called `doc_open` through
+the bridge — **not one of them ever touched the door a person uses.** "8/8" was true and
+useless in the same breath.
+
+Fixed, and fixed so it cannot come back:
+
+- Every `prompt`, `alert` and `confirm` is gone. Opening uses the dialog plugin's folder
+  picker; the scale is a field under the drawing where the instruction already is; naming a
+  property is a field in the panel. The egress gate refuses all three, proven red on each.
+- **A check that bypasses the path a person uses is not a check.** It is a rule in
+  `CLAUDE.md` now. No probe calls `doc_open`; they go in through the start screen with
+  `openDemoJob()`, and `tools/probe/front-door.mjs` walks the whole path — start screen,
+  button, drawing, scale field, tear-off, second window.
+- The start screen offers the demo job, and the demo job now opens to a roof with work on it.
+
+**And one thing the handover itself turned up.** The first drawing opened through the
+program was a scan from a real office, and *Add a drawing* copies what it is given into the
+job's folder — which for the demo job is inside this repository. It was caught before it was
+staged, the copy is gone, the original is untouched, and drawings inside any job folder are
+gitignored now, with only the demo's own synthetic sheet tracked. Proven by dropping a file
+in and watching git refuse it.
 
 Section 7 was the restyle, against Visual Specification v2. All twelve defects it names are
 closed, with a before/after pair from the Tauri window for each.
@@ -225,7 +254,8 @@ one screen, watch the money move on the other.
 |---|---|
 | Section 1 done-check (`tools/probe/section1-trace.mjs`) | **PASS 12/12** — opens a PDF, scales it, traces an area with pitch, a run and a count, reads the measures off the list, confirms traces are stored in page units and the drawing is only referenced |
 | Section 2 done-check (`tools/probe/section2-sheet.mjs`) | **PASS 16/16** — traces a parapet, types a height in the panel, tears the sheet into a second window, adds three items in three units, then changes the drawing and the height and watches the money move in the OTHER window. Two windows, one job, throughout |
-| Real-runtime check (`tools/probe/runtime-check.mjs`) | **PASS 8/8** — the release binary under `tauri-driver`: two OS windows on one document, a change in one reaching the other, and the CSP refusing the network |
+| Front door (`tools/probe/front-door.mjs`) | **PASS 17/17** — start screen → button → job open → drawing → scale typed into a field → tear-off → second window. Never once through the bridge |
+| Real-runtime check (`tools/probe/runtime-check.mjs`) | **PASS 9/9** — opens through the front door, then two OS windows on one document, a property typed in one moving the money in the other, and the CSP refusing the network |
 | Fixture ladder (`tools/compare-fixtures.mjs`) | **PASS 26/26** — both real recaps, every line within 0.01% |
 | Subtotals rebuilt (`tools/rebuild-subtotals.mjs`) | **PASS** — 207 item lines priced through the engine; 28/28 cost codes, 12/12 classes |
 | Client-data gate | **PASS**, and proven red on a figure, a bid name and a home path |

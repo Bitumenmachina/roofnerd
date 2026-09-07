@@ -412,3 +412,32 @@ button.remove:hover { color: var(--warn); background: var(--rule-soft); }
 .selling .partial { font-size: var(--t-micro); color: var(--warn); }
 
 .empty-note { color: var(--ink-soft); padding: var(--gap-5); text-align: center; }
+
+/* ── Asking for something, in the window ────────────────────────────────────
+   This webview has no prompt, alert or confirm — they return nothing and the
+   caller quietly gives up. Anything the program needs to ask, it asks here. */
+
+.hint.asking { background: var(--accent-soft); border-top-color: var(--accent); }
+.scale-ask { display: flex; align-items: center; gap: var(--gap-2); flex-wrap: wrap; }
+.scale-ask input {
+  width: 120px; padding: 3px 7px; border: 1px solid var(--rule);
+  border-radius: var(--radius); background: var(--paper);
+}
+.scale-ask input.bad, .name-property input.bad { border-color: var(--warn); background: #fdf5f2; }
+.scale-ask small, .name-property small { color: var(--ink-soft); font-size: var(--t-micro); }
+.scale-ask button, .name-property button { padding: 3px 10px; font-size: var(--t-small); }
+button.quiet { border-color: transparent; background: transparent; color: var(--ink-soft); }
+button.quiet:hover { border-color: var(--rule); }
+
+.name-property {
+  display: flex; align-items: center; gap: var(--gap-2); flex-wrap: wrap;
+  margin-top: var(--gap-2); padding: var(--gap-2);
+  border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper);
+}
+.name-property input { flex: 1; min-width: 110px; padding: 4px 7px; border: 1px solid var(--rule); border-radius: var(--radius); }
+.name-property small { flex-basis: 100%; }
+
+.start-demo {
+  display: inline-flex; align-items: center; gap: var(--gap-2);
+  margin-top: var(--gap-2); padding: 7px 14px; color: var(--ink-soft);
+}

@@ -138,13 +138,49 @@ export function renderConditionPanel(
   const addText = document.createElement('span');
   addText.textContent = 'Add a property';
   add.append(addText);
-  add.addEventListener('click', () => {
-    const typed = window.prompt('Name it. Formulas on this condition will use that name.', '');
-    const clean = typed?.trim().toUpperCase();
-    if (!clean || !/^[A-Z_][A-Z0-9_]*$/.test(clean)) return;
+  // Naming a property happens in the panel, beside the properties it joins.
+  const naming = document.createElement('div');
+  naming.className = 'name-property';
+  naming.hidden = true;
+
+  const nameField = document.createElement('input');
+  nameField.type = 'text';
+  nameField.placeholder = 'DECK_GAUGE';
+  nameField.setAttribute('aria-label', 'Name the property');
+
+  const nameNote = document.createElement('small');
+  nameNote.textContent = 'Formulas on this condition will use that name.';
+
+  const confirmName = document.createElement('button');
+  confirmName.type = 'button';
+  confirmName.textContent = 'Add it';
+
+  const submitName = () => {
+    const clean = nameField.value.trim().toUpperCase().replace(/\s+/g, '_');
+    if (!clean || !/^[A-Z_][A-Z0-9_]*$/.test(clean)) {
+      nameField.classList.add('bad');
+      nameNote.textContent = 'Letters, numbers and underscores, starting with a letter.';
+      return;
+    }
+    naming.hidden = true;
     void writeProperty(base, condition, clean, 0);
+  };
+
+  confirmName.addEventListener('click', submitName);
+  nameField.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); submitName(); }
+    if (e.key === 'Escape') { e.preventDefault(); naming.hidden = true; }
   });
-  host.append(add);
+
+  naming.append(nameField, confirmName, nameNote);
+
+  add.addEventListener('click', () => {
+    naming.hidden = false;
+    nameField.value = '';
+    nameField.classList.remove('bad');
+    nameField.focus();
+  });
+  host.append(add, naming);
 }
 
 function measuresFor(condition: ConditionShape, all: ConditionShape[], d: Doc): Measures {
