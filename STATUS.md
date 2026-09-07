@@ -5,13 +5,19 @@ acceptance does not pause the build.
 
 ## Where the build is
 
-**Sections 1, 2 and 3 are done, and both addenda are in.** Section 4 — the library — is
-next.
+**Sections 1, 2 and 3 are done. Section 3 was reopened by Addendum 3 and is now closed as
+the handoff actually wrote it.** Section 7 — legibility and visual grammar — comes next, and
+waits on a visual specification from the design seat. Section 4, the library, does not start
+before it.
 
-Section 3's acceptance is the one that mattered: **both real Edge recaps reproduce, every
-line within one hundredth of one percent.** The worst difference across the two jobs is two
-cents on a three-million-dollar contract amount, and that is a rounding artefact of the
-printed page, not a disagreement.
+Section 3's acceptance, in two halves, both passing:
+
+- **The ladder** reproduces both real recaps from their class subtotals — every line within
+  one hundredth of one percent, worst difference two cents on a three-million-dollar
+  contract amount.
+- **The class subtotals themselves** are now rebuilt from the item lines underneath them,
+  priced through the engine rather than read off the report's own total column. Both jobs:
+  every cost code and every class within tolerance.
 
 Section 0 (the skeleton) was built and pushed earlier the same day.
 
@@ -33,8 +39,8 @@ The money model, and the check that it is the right one.
 - **Labor is not a special case.** A labor line measures in its own unit and *orders* in
   hours, with the production rate as the conversion and no package rounding. Fabrication and
   installation are separate lines with separate rates. Crew days come from hours.
-- **Hours keep every digit until they are displayed.** A line shows 4,566.87 hours and holds
-  more; summing what is shown is how a labor total ends up dollars adrift.
+- **Hours keep every digit until they are displayed.** A line shows fewer digits than it
+  holds; summing what is shown is how a labor total ends up dollars adrift.
 - **A comparison tool** that takes a recap printed by the program this one replaces and
   reproduces it — deriving the profit rate from the printed dollars rather than trusting the
   printed rate. A report prints its rate to two places and its dollars to the cent, and on
@@ -68,10 +74,36 @@ The figures behind those rows are a client's and stay in `fixtures/`, which is n
 repository. `node tools/compare-fixtures.mjs` prints the full table on the estimator's own
 machine; `--shape` prints exactly what is above.
 
-**What this does and does not prove.** It reproduces the *ladder* — which adder sits on
-which base, what profit is taken on, what bond is taken on — from the printed class
-subtotals. It does not yet rebuild those subtotals from the item lines underneath them.
-That is the next pass, and it needs the conditions and items entered from the same reports.
+### The subtotals, rebuilt from the lines (Addendum 3 §1)
+
+Both jobs' consolidated reports were parsed into item lines — description, cost code,
+estimating quantity and unit, order quantity and unit, price unit and unit price — and every
+line was priced **through the engine**, not read off the report's own net-cost column.
+
+```
+                                    job one     job two
+item lines                              107         100
+  chain fully stated by the report       99          96
+  conversion recovered from the money     8           4
+  money the engine did not reproduce      0           0
+cost codes within tolerance         13 / 13     15 / 15
+classes within tolerance              6 / 6       6 / 6
+```
+
+Two things that reading is careful about:
+
+- A line whose price unit differs from its order unit — membrane bought by the roll and
+  quoted by the square foot — does not have its conversion printed anywhere in the report.
+  That conversion is recovered from the money, which means the line cannot also be evidence
+  that the money is right. Those lines are counted separately and never allowed to look like
+  a pass.
+- The per-line tolerance is **derived, not flat**. A report displays an order quantity to two
+  decimal places and computed the money on the unrounded one, so feeding the displayed figure
+  back in can be out by up to half a hundredth of a unit's price. That is Addendum 2 §3's rule
+  about hours — and it turns out not to be only hours: it applies to boxes and cartons too.
+
+The entered lines are the library's seed for section 4. Prices become invented values before
+any of it leaves `fixtures/`; product names are public and may stay.
 
 ## Addendum 1, applied
 
@@ -150,7 +182,9 @@ one screen, watch the money move on the other.
 | Section 1 done-check (`tools/probe/section1-trace.mjs`) | **PASS 12/12** — opens a PDF, scales it, traces an area with pitch, a run and a count, reads the measures off the list, confirms traces are stored in page units and the drawing is only referenced |
 | Section 2 done-check (`tools/probe/section2-sheet.mjs`) | **PASS 16/16** — traces a parapet, types a height in the panel, tears the sheet into a second window, adds three items in three units, then changes the drawing and the height and watches the money move in the OTHER window. Two windows, one job, throughout |
 | Real-runtime check (`tools/probe/runtime-check.mjs`) | **PASS 8/8** — the release binary under `tauri-driver`: two OS windows on one document, a change in one reaching the other, and the CSP refusing the network |
-| Fixture comparison (`tools/compare-fixtures.mjs`) | **PASS 26/26** — both real Edge recaps, every line within 0.01% |
+| Fixture ladder (`tools/compare-fixtures.mjs`) | **PASS 26/26** — both real recaps, every line within 0.01% |
+| Subtotals rebuilt (`tools/rebuild-subtotals.mjs`) | **PASS** — 207 item lines priced through the engine; 28/28 cost codes, 12/12 classes |
+| Client-data gate | **PASS**, and proven red on a figure, a bid name and a home path |
 | Engine tests | **95/95** |
 | Shell tests | **5/5**, including that a job saved by the application is byte-for-byte one saved by the command line |
 | Vocabulary gate | **PASS** |
@@ -213,3 +247,4 @@ To run what the executor ran:
     node tools/probe/section2-sheet.mjs
     pnpm build:app && node tools/probe/runtime-check.mjs
     node tools/compare-fixtures.mjs           # needs fixtures/, which is local only
+    node tools/rebuild-subtotals.mjs          # likewise

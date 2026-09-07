@@ -35,8 +35,9 @@ export interface LineResult {
   /** Price quantity times unit cost. Null if either is unknown — never a silent zero. */
   readonly extended: Money | null;
   /**
-   * Labor hours, at full precision. A displayed 4,566.87 is a rounded 4,566.87…,
-   * and totals only reconcile if the sum is taken before the rounding.
+   * Labor hours, at full precision. What a line displays is a rounded version
+   * of what it holds, and a labor total only reconciles if the sum is taken
+   * before the rounding rather than after it.
    */
   readonly hours: number | null;
   /** Crew days, for the labor lens. Derived from hours, never entered. */

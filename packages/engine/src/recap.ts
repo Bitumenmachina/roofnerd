@@ -17,9 +17,9 @@
 //   Tax and escalation both sit on subtotal material — they do not compound, and
 //   compounding them puts a job several thousand dollars out.
 //
-//   Hours are summed at full precision. A labor line displays 4,566.87 hours,
-//   but it holds 4,566.87…, and totalling the displayed figure is how a recap
-//   ends up a few dollars adrift of the report it is checked against.
+//   Hours are summed at full precision. A labor line displays fewer digits than
+//   it holds, and totalling what is displayed is how a recap ends up a few
+//   dollars adrift of the report it is being checked against.
 
 import type {
   ClassAdders, ClassName, CostCode, JobDocument, Money, Percent, Scenario,
