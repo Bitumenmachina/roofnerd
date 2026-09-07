@@ -27,7 +27,7 @@ test('one square is one hundred square feet, both directions', () => {
 test('a measure keeps the unit through arithmetic', () => {
   assert.deepEqual(add(lf(100), lf(35.5)), { value: 135.5, unit: 'LF' });
   assert.deepEqual(scale(sf(1000), 1.1), { value: 1100, unit: 'SF' });
-  assert.equal(formatMeasure(lf(1354.93)), '1,354.93 LF');
+  assert.equal(formatMeasure(lf(1200.5)), '1,200.50 LF');
   assert.equal(formatMeasure({ value: 5.4, unit: 'EA' }), '5 EA');
 });
 

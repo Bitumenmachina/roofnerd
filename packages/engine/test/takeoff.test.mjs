@@ -118,15 +118,15 @@ test('the scope hands a formula the measures and the properties together', () =>
 
 // ── the formula language ───────────────────────────────────────────────────
 
-const scope = { SF: 1000, LF: 435.15, EA: 5, SQ: 10, PLAN_SF: 1000, H: 1.5, STRETCHOUT: 14 };
+const scope = { SF: 1000, LF: 400, EA: 5, SQ: 10, PLAN_SF: 1000, H: 1.5, STRETCHOUT: 14 };
 
 test('the five worked examples from the handoff', () => {
-  assert.equal(run('LF * H', scope).value, 435.15 * 1.5);          // wall flashing → SF
-  assert.equal(run('LF', scope).value, 435.15);                     // coping → LF
+  assert.equal(run('LF * H', scope).value, 400 * 1.5);          // wall flashing → SF
+  assert.equal(run('LF', scope).value, 400);                     // coping → LF
   assert.equal(run('EA', scope).value, 5);                          // corners → EA
-  assert.equal(run('LF * 2 / 0.5', scope).value, 435.15 * 4);       // two fasteners every 6"
+  assert.equal(run('LF * 2 / 0.5', scope).value, 400 * 4);       // two fasteners every 6"
   assert.equal(run('ceil(LF * STRETCHOUT / 12 / 30)', scope).value, // copper sheets
-    Math.ceil((435.15 * 14) / 12 / 30));
+    Math.ceil((400 * 14) / 12 / 30));
 });
 
 test('arithmetic binds the way arithmetic binds', () => {
@@ -231,4 +231,63 @@ test('inheriting from a condition that is not there is refused', () => {
     { id: 'a', name: 'A', kind: 'line', traces: [], properties: {}, from: 'ghost', items: [] },
   ]);
   assert.throws(() => measureJob(doc), /not here/);
+});
+
+// ── corners, segments and arcs ─────────────────────────────────────────────
+// The rule these pin was read off real drawing reports rather than guessed at:
+// a closed rectangle traced twelve times counts four corners each time, and a
+// single arc counts none at all while still having a length. The numbers below
+// are invented; only the rule came from anywhere.
+
+test('a closed area has as many corners as it has sides', () => {
+  const m = measure('area', trace(square), {}, oneFoot);
+  assert.equal(m.VERTICES, 4);
+  assert.equal(m.SEGMENTS, 4, 'the last side closes back to the first');
+  assert.equal(m.EA, m.VERTICES);
+});
+
+test('twelve rectangular curbs read 48 EA, the way Edge reports them', () => {
+  const curbs = Array.from({ length: 12 }, (_, i) => ({
+    id: `curb-${i}`, pageId: 'page-1',
+    points: [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }],
+  }));
+  assert.equal(measure('area', curbs, {}, oneFoot).EA, 48);
+});
+
+test('a run has one fewer straight piece than it has corners', () => {
+  const m = measure('line', trace(square), {}, oneFoot);
+  assert.equal(m.VERTICES, 4);
+  assert.equal(m.SEGMENTS, 3, 'an open run does not close');
+});
+
+test('an arc has length but no corners — nothing on it gets mitred', () => {
+  const arc = [{ id: 'a1', pageId: 'page-1', arc: true, points: square }];
+  const m = measure('line', arc, {}, oneFoot);
+  assert.equal(m.LF, 30, 'the curve still has a length');
+  assert.equal(m.EA, 0);
+  assert.equal(m.VERTICES, 0);
+  assert.equal(m.SEGMENTS, 0);
+});
+
+test('a run of arcs and corners counts only the corners', () => {
+  const mixed = [
+    { id: 'straight', pageId: 'page-1', points: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }] },
+    { id: 'curved', pageId: 'page-1', arc: true, points: [{ x: 10, y: 10 }, { x: 20, y: 10 }] },
+  ];
+  const m = measure('line', mixed, {}, oneFoot);
+  assert.equal(m.EA, 3);
+  assert.equal(m.LF, 30, 'both still contribute their length');
+});
+
+test('a count condition counts objects, and has no corners of its own', () => {
+  const m = measure('count', trace([{ x: 1, y: 1 }, { x: 2, y: 2 }]), {}, {});
+  assert.equal(m.EA, 2);
+  assert.equal(m.VERTICES, 0);
+});
+
+test('a formula can buy mitres against VERTICES and pieces against SEGMENTS', () => {
+  const m = measure('area', trace(square), {}, oneFoot);
+  const scope = scopeFor(m, {});
+  assert.equal(run('VERTICES', scope).value, 4);
+  assert.equal(run('SEGMENTS * 2', scope).value, 8);
 });

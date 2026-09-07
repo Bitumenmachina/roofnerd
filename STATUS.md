@@ -5,10 +5,36 @@ acceptance does not pause the build.
 
 ## Where the build is
 
-**Sections 1 and 2 are done.** Section 3 — the money model: cost codes, classes, adders,
-labor shapes, scenarios, waste, order units, the recap — is next.
+**Sections 1 and 2 are done, and Addendum 1 is in.** Section 3 — the money model: cost
+codes, classes, adders, labor shapes, scenarios, waste, order units, the recap — is next,
+and its done-check will run against the shipped runtime rather than against Chrome.
 
 Section 0 (the skeleton) was built and pushed earlier the same day.
+
+## Addendum 1, applied
+
+- **§1 `EA` on a line or an area is the vertex count**, and an arc contributes none. Read
+  off the Edge drawing reports rather than guessed: twelve rectangular curbs read 48 EA, and
+  a radial counter flashing reads 0 EA against 60 LF. `VERTICES` and `SEGMENTS` are now
+  separate measures a formula can use by name. This closes the only entry in `QUESTIONS.md`.
+- **§2 A section is no longer done on Chrome.** `tools/probe/runtime-check.mjs` drives the
+  release binary through `tauri-driver`: WebKitGTK rendering, the Rust shell holding the
+  document, two real OS windows. **PASS 8/8**, including that a change made in the Plan
+  window reaches the torn-off Estimate window.
+- **§3 The security policy is now tested, not asserted.** In the shipped runtime,
+  `fetch('https://example.com')` is refused by policy and `fetch('/index.html')` returns 200.
+  Written to `evidence/csp-<commit>.txt`. It had been deferred twice; it is a done-check now.
+- **§3 The release bundle builds** — `.deb`, `.rpm` and AppImage, via `pnpm build:app`.
+- **§4 Evidence carries its section and its commit** in the filename, and the runtime
+  screenshots come from the Tauri window.
+- **§5 The Edge reports were read before section 3 opened**, not during. Both recap targets
+  and the labor model are now understood: a labor line measures in its own unit and *orders*
+  in HOURS, with the production rate as the conversion and the price per hour — so hours are
+  an order unit like any other, and they are not rounded up to a package. The figures stay in
+  `fixtures/`.
+- **§7 The rounding rule is centralised** in `packages/engine/src/rounding.ts` and applied at
+  every step that rounds — the order-unit step and `ceil`/`floor`/`round` typed into a
+  formula — not only where the defect was found.
 
 ## What section 1 built
 
@@ -61,13 +87,31 @@ one screen, watch the money move on the other.
 |---|---|
 | Section 1 done-check (`tools/probe/section1-trace.mjs`) | **PASS 12/12** — opens a PDF, scales it, traces an area with pitch, a run and a count, reads the measures off the list, confirms traces are stored in page units and the drawing is only referenced |
 | Section 2 done-check (`tools/probe/section2-sheet.mjs`) | **PASS 16/16** — traces a parapet, types a height in the panel, tears the sheet into a second window, adds three items in three units, then changes the drawing and the height and watches the money move in the OTHER window. Two windows, one job, throughout |
-| Engine tests | **54/54** |
+| Real-runtime check (`tools/probe/runtime-check.mjs`) | **PASS 8/8** — the release binary under `tauri-driver`: two OS windows on one document, a change in one reaching the other, and the CSP refusing the network |
+| Engine tests | **68/68** |
 | Shell tests | **5/5**, including that a job saved by the application is byte-for-byte one saved by the command line |
 | Vocabulary gate | **PASS** |
 | Egress gate | **PASS** |
 | Demo job round-trip | clean, 4 files |
 
 Screenshot in `evidence/` (local only).
+
+## A rule I broke, and what was done about it
+
+The handoff bars client data from the public tree. While building sections 1 and 2 I used
+**real quantities out of the Edge reports as test values** — a run length here, a stretch-out
+case there — because they were in front of me and they made the tests feel real. They are a
+client's bid figures and they had no business in a public repository.
+
+Every one is now replaced with an invented number, and the reasoning that needed those
+reports is written down without repeating any of them. `QUESTIONS.md` explains the vertex
+rule through the *patterns* in the reports and quotes no quantity at all.
+
+**Two commits already pushed still contain them** — `fffc4f5` and `4ba8909`, in
+`QUESTIONS.md` and three test files. Figures with no job name attached, so the exposure is
+small, but the rule is the rule. Taking them out of history means rewriting two public
+commits, and the executor does not force-push. That is Patrick's call; the working tree is
+clean either way.
 
 ## Defects found and fixed in flight
 
@@ -88,10 +132,9 @@ Screenshot in `evidence/` (local only).
 
 ## Since the last entry
 
-Fourteen decisions in `DECISIONS.md` (D3–D9 section 1, D10–D14 section 2). One open
-question in `QUESTIONS.md`: whether Edge's `EA` on a line condition counts corners or traced
-runs — built as corners, and the section 3 fixture comparison will settle it against a real
-report.
+Twenty decisions in `DECISIONS.md` (D3–D9 section 1, D10–D14 section 2, D15–D20 the
+addendum). **`QUESTIONS.md` has nothing open** — Q1 was answered from the Edge reports and
+the answer is recorded there with the four rows that settle it.
 
 ## If Patrick wants to look
 
@@ -106,3 +149,4 @@ To run what the executor ran:
 
     node tools/probe/section1-trace.mjs
     node tools/probe/section2-sheet.mjs
+    pnpm build:app && node tools/probe/runtime-check.mjs

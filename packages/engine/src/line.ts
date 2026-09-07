@@ -9,16 +9,7 @@
 
 import type { Item, Money } from './model.js';
 import { run, type FormulaResult } from './formula.js';
-
-/**
- * Drop the last crumbs of binary floating-point noise.
- *
- * Nine decimal places is far below anything an estimator measures and far above
- * the ~1e-14 error that arithmetic like `100 * 1.1` leaves behind. It matters
- * only where a value meets a rounding step — which is exactly where a bid gains
- * a roll it does not need.
- */
-const settle = (v: number): number => Math.round(v * 1e9) / 1e9;
+import { ceilPackages, settle } from './rounding.js';
 
 export interface LineResult {
   readonly item: Item;
@@ -67,11 +58,11 @@ export function priceLine(
     // Packaging rounds up. You cannot buy two thirds of a bucket, and an
     // estimate that pretends you can is short on the day.
     //
-    // `settle` first, and it is not fussiness: 100 with 10% waste is
-    // 110.00000000000001 in binary floating point, and a bare ceil turns that
-    // into twelve rolls instead of eleven. An estimator would find it by
-    // counting the pallet.
-    : Math.ceil(settle(withWaste / order.per));
+    // `ceilPackages` settles before it rounds, and that is not fussiness: 100
+    // with 10% waste is 110.00000000000001 in binary floating point, and a bare
+    // ceil turns that into twelve rolls instead of eleven. An estimator would
+    // find it by counting the pallet. See rounding.ts.
+    : ceilPackages(withWaste / order.per);
 
   // An item's own price wins over the scenario's. A price typed on the line is
   // a quote in hand; the scenario is the book.

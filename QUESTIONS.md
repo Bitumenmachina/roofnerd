@@ -3,16 +3,31 @@
 Things where a wrong call would waste work. Each one names the smallest version built so
 the rest could proceed. Not a stop — the build continues past every entry here.
 
-## Q1 — what `EA` counts on an area or a run
+_(none open)_
 
-**Built:** `EA` is the number of corners (vertices). A count condition's `EA` is its markers,
-which is not in doubt.
+## Closed
 
-**The doubt:** an Edge report shows `Parapet Wall Flashing A3/1A551 — 1,354.93 LF, 5 EA`.
-Five corners on 1,355 feet of parapet is implausible; five traced *runs* is not. So Edge's
-`EA` on a line may be the number of separate shapes, not the number of vertices.
+### Q1 — what `EA` counts on an area or a run — CLOSED 2026-09-07
 
-**Why it can wait:** the fixture comparison in section 3 runs both jobs' real numbers against
-this program's, and a mismatch on a line condition's `EA` will show up there against a real
-report rather than being guessed at now. If it turns out to mean runs, it is a one-line
-change in `measures.ts` and a test.
+**Answer:** `EA` is the number of vertices in the trace, and an arc contributes none.
+
+It was settled by reading real drawing reports rather than by guessing. Four patterns in
+them decide it, and none of them needs a number repeating here:
+
+- A closed rectangle traced a dozen times counts four corners each time, and the report's
+  `EA` is exactly four times the number of rectangles. So `EA` is not the count of traced
+  shapes — it was never one-per-shape.
+- A single radial flashing — one arc — carries a real run in `LF` and **zero** `EA`. A
+  curve has length but nothing on it gets mitred.
+- The same building perimeter traced twice, once roughly and once in detail, reports a
+  different `EA` each time while the `LF` barely moves. `EA` follows how many points were
+  clicked, not how big the thing is.
+- A long straight parapet reports a small `EA`; a short broken one reports a larger `EA`.
+
+So `VERTICES` and `SEGMENTS` are separate measures a formula can use by name, and `EA` on a
+line or an area is `VERTICES`. Mitres and corner pieces are bought against `VERTICES`;
+pieces between corners against `SEGMENTS`.
+
+Splitting inside from outside corners by signed angle is left until something asks for it.
+The section 3 fixture comparison confirms the counts against the real reports, which stay
+in `fixtures/` where they belong.

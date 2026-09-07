@@ -76,3 +76,15 @@ GPU-adjacent tool is worth checking against both.
 - **The two-window acceptance is Patrick's to run.** The document layer is tested from both
   sides and the application launches; whether a change in one window shows in the other is
   something a person has to see.
+
+## This machine — the AppImage bundle and `strip`
+
+`pnpm tauri build` produced the `.deb` and the `.rpm` and then failed the AppImage with
+`failed to run linuxdeploy`. The real reason is further down its log: linuxdeploy carries a
+`strip` from a 2024 build, and it does not understand the `.relr.dyn` sections a current
+Fedora toolchain emits, so it errors on every system library it touches.
+
+`NO_STRIP=true` is linuxdeploy's own escape and all three bundles build. `pnpm build:app`
+sets it. The only cost is that the bundled libraries keep their symbols, so the AppImage is
+larger than it needs to be — worth revisiting when linuxdeploy catches up, and not worth
+anything before then.

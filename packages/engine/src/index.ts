@@ -5,6 +5,7 @@
 // is a test in here that should have caught it.
 
 export * from './units.js';
+export * from './rounding.js';
 export * from './geometry.js';
 export * from './measures.js';
 export * from './formula.js';

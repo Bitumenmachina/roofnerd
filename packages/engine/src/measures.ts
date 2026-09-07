@@ -19,6 +19,12 @@ export interface Trace {
   readonly id: string;
   readonly pageId: string;
   readonly points: readonly Point[];
+  /**
+   * An arc is a run with no corners on it. Its points describe the curve for
+   * drawing and for length, but none of them is a place where a piece of metal
+   * gets mitred, so it contributes nothing to the corner count.
+   */
+  readonly arc?: boolean;
 }
 
 /**
@@ -60,8 +66,18 @@ export interface Measures {
   readonly SQ: number | null;
   /** Run. An area's perimeter, a line's length. */
   readonly LF: number | null;
-  /** Corners for an area or a run; markers for a count. Never null: counting needs no scale. */
+  /**
+   * What gets counted. On a run or an area it is the corners; on a count
+   * condition it is the objects. Never null — counting needs no scale.
+   */
   readonly EA: number;
+  /**
+   * Corners: the points clicked along a run or around an area. An arc adds
+   * none. This is what a mitre, a corner piece or a cleat is bought against.
+   */
+  readonly VERTICES: number;
+  /** The straight pieces between those corners. A closed area has as many as it has corners. */
+  readonly SEGMENTS: number;
 }
 
 /** A page that has been scaled, or has not. */
@@ -85,7 +101,9 @@ export function measure(
 
   let planSf = 0;
   let lf = 0;
-  let ea = 0;
+  let objects = 0;
+  let vertices = 0;
+  let segments = 0;
   let unscaled = false;
 
   for (const trace of traces) {
@@ -93,13 +111,17 @@ export function measure(
     if (points.length === 0) continue;
 
     if (kind === 'count') {
-      ea += points.length;
+      objects += points.length;
       continue;
     }
 
-    // Corners. A polygon's last vertex closes back to its first, so the vertex
-    // count is the corner count either way.
-    ea += points.length;
+    // Corners, and the straight pieces between them. An arc has neither: it is
+    // one continuous curve, and nothing on it gets mitred. A closed area has as
+    // many segments as corners, because the last one closes back to the first.
+    if (!trace.arc) {
+      vertices += points.length;
+      segments += kind === 'area' ? points.length : Math.max(0, points.length - 1);
+    }
 
     const calibration = calibrations[trace.pageId];
     if (!calibration) {
@@ -116,20 +138,26 @@ export function measure(
     }
   }
 
+  // On a run or an area, EA is the corner count. That is what an Edge drawing
+  // report shows: twelve rectangular curbs read 48 EA, and a radial counter
+  // flashing — one arc — reads 0 EA against 61 LF of run.
+  const ea = kind === 'count' ? objects : vertices;
+  const counts = { EA: ea, VERTICES: vertices, SEGMENTS: segments };
+
   if (kind === 'count') {
-    return { SF: null, PLAN_SF: null, SQ: null, LF: null, EA: ea };
+    return { SF: null, PLAN_SF: null, SQ: null, LF: null, ...counts };
   }
   if (unscaled) {
     // One unscaled page makes the whole quantity unanswerable. It is not
     // partially right; it is pending, and it says so.
-    return { SF: null, PLAN_SF: null, SQ: null, LF: null, EA: ea };
+    return { SF: null, PLAN_SF: null, SQ: null, LF: null, ...counts };
   }
   if (kind === 'line') {
-    return { SF: null, PLAN_SF: null, SQ: null, LF: lf, EA: ea };
+    return { SF: null, PLAN_SF: null, SQ: null, LF: lf, ...counts };
   }
 
   const sf = planSf * slope;
-  return { SF: sf, PLAN_SF: planSf, SQ: sf / 100, LF: lf, EA: ea };
+  return { SF: sf, PLAN_SF: planSf, SQ: sf / 100, LF: lf, ...counts };
 }
 
 /** The names a formula may use, and what each is worth right now. */
@@ -140,6 +168,8 @@ export function scopeFor(measures: Measures, properties: Properties): Record<str
     SQ: measures.SQ,
     LF: measures.LF,
     EA: measures.EA,
+    VERTICES: measures.VERTICES,
+    SEGMENTS: measures.SEGMENTS,
   };
   for (const [name, value] of Object.entries(properties)) {
     if (value !== undefined) scope[name] = value;

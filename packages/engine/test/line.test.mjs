@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { priceLine } from '../dist/index.js';
 
-const scope = { SF: 1000, LF: 435.15, EA: 5, SQ: 10, PLAN_SF: 1000, H: 1.5, STRETCHOUT: 14 };
+const scope = { SF: 1000, LF: 400, EA: 5, SQ: 10, PLAN_SF: 1000, H: 1.5, STRETCHOUT: 14 };
 const item = (over) => ({ id: 'i1', description: 'x', costCode: '07-100-100', unit: 'SF', formula: 'SF', ...over });
 
 test('quantity comes off the formula, money off the quantity', () => {
@@ -15,7 +15,7 @@ test('quantity comes off the formula, money off the quantity', () => {
 
 test('a run becomes an area on the line, where it can be seen', () => {
   const r = priceLine(item({ formula: 'LF * H', unit: 'SF', unitCost: 9 }), scope);
-  assert.ok(Math.abs(r.quantity - 652.725) < 1e-9);
+  assert.equal(r.quantity, 600);
 });
 
 test('waste is added before packaging, not after', () => {
@@ -80,7 +80,7 @@ test('a broken formula reports itself and prices nothing', () => {
 
 test('labor hours come from a production rate, never typed', () => {
   const r = priceLine(item({ formula: 'LF', unit: 'LF', productionRate: 40, unitCost: 1 }), scope);
-  assert.ok(Math.abs(r.hours - 435.15 / 40) < 1e-9);
+  assert.ok(Math.abs(r.hours - 400 / 40) < 1e-9);
 });
 
 test('an item with no production rate has no hours, not zero hours', () => {
@@ -88,11 +88,62 @@ test('an item with no production rate has no hours, not zero hours', () => {
 });
 
 test('the copper sheet case, end to end', () => {
-  // 435.15 LF of 14" stretch-out on 3' x 10' sheets: 30 SF a sheet.
+  // 400 LF of 14" stretch-out on 3' x 10' sheets: 30 SF a sheet.
   const r = priceLine(item({
     formula: 'ceil(LF * STRETCHOUT / 12 / 30)', unit: 'EA', unitCost: 210,
   }), scope);
-  assert.equal(r.quantity, Math.ceil((435.15 * 14) / 12 / 30));
-  assert.equal(r.quantity, 17);
-  assert.equal(r.extended, 17 * 210);
+  assert.equal(r.quantity, Math.ceil((400 * 14) / 12 / 30));
+  assert.equal(r.quantity, 16);
+  assert.equal(r.extended, 16 * 210);
+});
+
+// ── the rounding rule, everywhere it applies ───────────────────────────────
+// Addendum §7: the settled-floating-point rule is applied at every step that
+// rounds a quantity, not only at the order-unit step where it was found.
+
+import { settle, ceilPackages, roundWhole, floorWhole, SETTLE_PLACES, run as runFormula } from '../dist/index.js';
+
+test('the rule is nine decimal places, stated rather than implied', () => {
+  assert.equal(SETTLE_PLACES, 9);
+  assert.equal(settle(110.00000000000001), 110);
+  assert.equal(settle(1 / 3), 0.333333333);
+});
+
+test('settling does not move a number anyone would notice', () => {
+  // A nanometre on a mile. Anything an estimator can measure survives intact.
+  assert.equal(settle(1200.5), 1200.5);
+  assert.equal(settle(0.0625), 0.0625);
+  assert.equal(settle(58000.25), 58000.25);
+});
+
+test('every rounding step settles first', () => {
+  // Without settling these are 12, 2 and 2 — each one a whole unit adrift.
+  assert.equal(ceilPackages(11.000000000000002), 11);
+  assert.equal(floorWhole(2.9999999999999996), 3);
+  assert.equal(roundWhole(1.9999999999999998), 2);
+});
+
+test('settling decides the intent before the rounding decides the answer', () => {
+  // 2.4999999999999996 is what arithmetic leaves when 2.5 was meant. Settled
+  // it becomes 2.5, and 2.5 rounds up — so this answers 3, not 2. That is the
+  // rule doing what it is for: rounding the number that was intended rather
+  // than the crumbs left over from computing it.
+  assert.equal(settle(2.4999999999999996), 2.5);
+  assert.equal(roundWhole(2.4999999999999996), 3);
+});
+
+test('a rounding step still rounds when it genuinely should', () => {
+  assert.equal(ceilPackages(11.001), 12);
+  assert.equal(roundWhole(2.6), 3);
+  assert.equal(floorWhole(2.9), 2);
+});
+
+test('ceil typed into a formula gets the same protection as the order unit', () => {
+  // 100 LF at 10% waste, ten to a package, written out by hand on the line.
+  assert.equal(runFormula('ceil(LF * 1.1 / 10)', { LF: 100 }).value, 11);
+});
+
+test('an infinite or missing value passes through rather than being mangled', () => {
+  assert.equal(settle(Infinity), Infinity);
+  assert.ok(Number.isNaN(settle(NaN)));
 });

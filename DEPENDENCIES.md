@@ -22,7 +22,9 @@ ISC. Nothing copyleft in the shipped application.
 | @tauri-apps/cli | 2.11.4 | MIT / Apache-2.0 | Builds and runs the application |
 | typescript | 5.9.3 | Apache-2.0 | Types |
 | vite | 8.2.2 | MIT | Bundles the front end to static files |
-| puppeteer-core | 25.10.0 | Apache-2.0 | Drives the built application in headless Chrome so a section's done-check can be run, not described. Uses the system Chrome; downloads no browser |
+| puppeteer-core | 25.10.0 | Apache-2.0 | Drives the front end in headless Chrome while building. Uses the system Chrome; downloads no browser. NOT what a section's done-check runs on — see below |
+| tauri-driver | 2.x (cargo) | MIT / Apache-2.0 | WebDriver in front of the release binary, so a done-check runs against the shipped runtime |
+| WebKitWebDriver | system (webkit2gtk4.1) | LGPL — a separate executable, never linked or shipped | What `tauri-driver` drives. A build tool on the developer's machine, not part of the program |
 
 ## Deliberately not used
 
@@ -31,3 +33,4 @@ ISC. Nothing copyleft in the shipped application.
 | Any UI framework | The ported trace code is plain DOM. A framework would sit between a roofer-legible codebase and the screen. |
 | Any HTTP client | The program makes no network calls. Not having the capability is the shortest way to keep that true. |
 | A Tauri file-system plugin | Drawings are read through `read_page_source`, which resolves inside the open job and refuses anything outside it. A general file plugin would give a window the run of the machine for no gain. |
+| webdriverio | It reshapes WebDriver capabilities on the way out, and `tauri-driver` rejected the result while the raw payload worked. The protocol is documented and small; `tools/probe/tauri-harness.mjs` speaks it directly. |

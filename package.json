@@ -7,7 +7,8 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "dev": "tauri dev",
-    "gates": "bash tools/gate-language.sh && bash tools/gate-egress.sh"
+    "gates": "bash tools/gate-language.sh && bash tools/gate-egress.sh",
+    "build:app": "NO_STRIP=true tauri build"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.11.4",

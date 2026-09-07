@@ -17,6 +17,8 @@
 // It is parsed to a tree and walked. There is no eval anywhere in this program:
 // a formula is data typed into a bid, and data does not get to run.
 
+import { ceilPackages, floorWhole, roundWhole } from './rounding.js';
+
 export type Node =
   | { readonly kind: 'number'; readonly value: number }
   | { readonly kind: 'name'; readonly name: string }
@@ -34,10 +36,14 @@ export class FormulaError extends Error {
   }
 }
 
+// An estimator who writes ceil(...) on a line gets the same protection the
+// order-unit step gets: the crumbs are settled off before the rounding, so
+// `ceil(LF * 1.1 / 10)` does not quietly buy one more of anything. See
+// rounding.ts for why that is necessary at all.
 const FUNCTIONS: Record<string, { arity: number | 'many'; apply: (args: number[]) => number }> = {
-  ceil: { arity: 1, apply: ([a]) => Math.ceil(a!) },
-  floor: { arity: 1, apply: ([a]) => Math.floor(a!) },
-  round: { arity: 1, apply: ([a]) => Math.round(a!) },
+  ceil: { arity: 1, apply: ([a]) => ceilPackages(a!) },
+  floor: { arity: 1, apply: ([a]) => floorWhole(a!) },
+  round: { arity: 1, apply: ([a]) => roundWhole(a!) },
   max: { arity: 'many', apply: (args) => Math.max(...args) },
   min: { arity: 'many', apply: (args) => Math.min(...args) },
 };
