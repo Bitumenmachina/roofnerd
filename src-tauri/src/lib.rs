@@ -315,10 +315,10 @@ mod tests {
     fn a_pointer_reaches_a_nested_property() {
         let mut doc = read_folder(&demo()).unwrap();
         let slot = doc
-            .pointer_mut("/conditions/0/properties/height")
+            .pointer_mut("/conditions/0/properties/H")
             .expect("the demo condition has a height");
         *slot = json!(2.5);
-        assert_eq!(doc["conditions"][0]["properties"]["height"], 2.5);
+        assert_eq!(doc["conditions"][0]["properties"]["H"], 2.5);
     }
 
     #[test]

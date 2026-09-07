@@ -1,11 +1,15 @@
 // ── The probe harness ──────────────────────────────────────────────────────
-// Drives the built application in a headless browser so the executor can run a
-// section's done-check itself instead of describing one.
+// Drives the built application in a headless browser so a section's done-check
+// can be run rather than described.
 //
-// The shell is not here, so it is stood in for: `doc_get`, `doc_set`, the
-// change event, and reading a drawing out of the job folder all run against an
-// in-memory job. Everything ABOVE that line — the editors, the surface, the
-// tools, the engine — is the real shipped code, unmodified.
+// The Rust shell is not here, so it is stood in for: one document held on this
+// side, `doc_get` and `doc_set` against it, the change event broadcast to every
+// open window, and reading a drawing out of the job folder. That is the same
+// shape as the real shell — one document, windows subscribe, nobody owns a copy
+// — which is why a two-window check here proves the real thing.
+//
+// Everything ABOVE that line is the shipped code, unmodified: the editors, the
+// surface, the tools, the engine.
 
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -41,6 +45,14 @@ export async function serve() {
   return { origin: `http://127.0.0.1:${port}`, stop: () => server.close() };
 }
 
+/** Walk a JSON Pointer to the slot it names. */
+function slotAt(root, pointer) {
+  const parts = pointer.slice(1).split('/').map((p) => p.replace(/~1/g, '/').replace(/~0/g, '~'));
+  let node = root;
+  for (const part of parts.slice(0, -1)) node = Array.isArray(node) ? node[Number(part)] : node[part];
+  return { parent: node, key: parts[parts.length - 1] };
+}
+
 /**
  * Open the application with a job already in it.
  *
@@ -53,90 +65,111 @@ export async function openApp({ doc, files = {}, editor = 'plan' } = {}) {
     headless: true,
     args: ['--no-sandbox', '--disable-gpu', '--window-size=1400,1000'],
   });
-  const page = await browser.newPage();
-  await page.setViewport({ width: 1400, height: 1000 });
 
+  // THE one document. Every window reads this and none of them owns it.
+  const state = { doc: structuredClone(doc) };
+  const windows = [];
   const problems = [];
-  page.on('console', (m) => { if (m.type() === 'error') problems.push(m.text()); });
-  page.on('pageerror', (e) => problems.push(String(e)));
-  page.on('requestfailed', (r) => problems.push(`request failed: ${r.url()} — ${r.failure()?.errorText}`));
-  page.on('response', (r) => { if (r.status() >= 400) problems.push(`HTTP ${r.status()}: ${r.url()}`); });
-  if (process.env.ROOFNERD_PROBE_VERBOSE) {
-    page.on('console', (m) => console.log(`  [page ${m.type()}] ${m.text()}`));
+  const encoded = Object.fromEntries(Object.entries(files).map(([k, v]) => [k, Array.from(v)]));
+
+  const broadcast = async () => {
+    for (const w of windows) {
+      if (w.isClosed()) continue;
+      await w.evaluate((d) => window.__applyDoc(d), state.doc).catch(() => undefined);
+    }
+  };
+
+  async function attach(page, which) {
+    page.on('console', (m) => { if (m.type() === 'error') problems.push(m.text()); });
+    page.on('pageerror', (e) => problems.push(String(e)));
+    page.on('requestfailed', (r) => problems.push(`request failed: ${r.url()} — ${r.failure()?.errorText}`));
+    page.on('response', (r) => { if (r.status() >= 400) problems.push(`HTTP ${r.status()}: ${r.url()}`); });
+    if (process.env.ROOFNERD_PROBE_VERBOSE) {
+      page.on('console', (m) => console.log(`  [${which} ${m.type()}] ${m.text()}`));
+    }
+
+    await page.exposeFunction('__shellGet', () => state.doc);
+    await page.exposeFunction('__shellSet', async (pointer, value) => {
+      const { parent, key } = slotAt(state.doc, pointer);
+      if (value === undefined) delete parent[key];
+      else if (Array.isArray(parent)) parent[Number(key)] = value;
+      else parent[key] = value;
+      await broadcast();
+      return null;
+    });
+    await page.exposeFunction('__shellRead', (relative) => {
+      const bytes = encoded[relative];
+      if (!bytes) throw new Error(`${relative} is not in this job`);
+      return bytes;
+    });
+
+    await page.evaluateOnNewDocument(() => {
+      const listeners = new Map();
+      let local = {};
+
+      window.__applyDoc = (d) => {
+        local = d;
+        for (const fn of listeners.get('doc:changed') ?? []) fn({ payload: d });
+      };
+      window.__PROBE__ = { doc: () => local };
+
+      window.__TAURI_INTERNALS__ = {
+        transformCallback: (cb) => {
+          const id = `cb${Math.random().toString(36).slice(2)}`;
+          window[id] = cb;
+          return id;
+        },
+        invoke: async (command, args = {}) => {
+          switch (command) {
+            case 'doc_get': { local = await window.__shellGet(); return local; }
+            case 'doc_folder':
+            case 'demo_folder': return '/probe/job';
+            case 'doc_set': return window.__shellSet(args.pointer, args.value);
+            case 'doc_save': return '/probe/job';
+            case 'add_page_source': return `pages/${String(args.source).split('/').pop()}`;
+            case 'read_page_source': return window.__shellRead(args.relative);
+            case 'open_editor': return null;
+            case 'plugin:event|listen': {
+              const list = listeners.get(args.event) ?? [];
+              list.push((payload) => window[args.handler](payload));
+              listeners.set(args.event, list);
+              return 0;
+            }
+            default: return null;
+          }
+        },
+      };
+    });
+
+    windows.push(page);
   }
 
-  const encoded = Object.fromEntries(
-    Object.entries(files).map(([k, v]) => [k, Array.from(v)]),
-  );
-
-  // Stand in for the shell, before any of the application's own code runs.
-  await page.evaluateOnNewDocument((initial, sourceFiles) => {
-    const listeners = new Map();
-    let document_ = structuredClone(initial);
-
-    const atPointer = (root, pointer) => {
-      const parts = pointer.slice(1).split('/');
-      let node = root;
-      for (const part of parts.slice(0, -1)) node = Array.isArray(node) ? node[Number(part)] : node[part];
-      return { parent: node, key: parts[parts.length - 1] };
-    };
-
-    const emit = () => {
-      for (const fn of listeners.get('doc:changed') ?? []) {
-        fn({ payload: structuredClone(document_) });
-      }
-    };
-
-    window.__PROBE__ = {
-      doc: () => structuredClone(document_),
-      problems: [],
-    };
-
-    window.__TAURI_INTERNALS__ = {
-      transformCallback: (cb) => {
-        const id = Math.random();
-        window[`_cb_${id}`] = cb;
-        return id;
-      },
-      invoke: async (command, args = {}) => {
-        switch (command) {
-          case 'doc_get': return structuredClone(document_);
-          case 'doc_folder': return '/probe/job';
-          case 'demo_folder': return '/probe/job';
-          case 'doc_set': {
-            const { parent, key } = atPointer(document_, args.pointer);
-            if (Array.isArray(parent)) parent[Number(key)] = args.value;
-            else parent[key] = args.value;
-            emit();
-            return null;
-          }
-          case 'doc_save': return '/probe/job';
-          case 'add_page_source': return `pages/${String(args.source).split('/').pop()}`;
-          case 'read_page_source': {
-            const bytes = sourceFiles[args.relative];
-            if (!bytes) throw new Error(`${args.relative} is not in this job`);
-            return bytes;
-          }
-          case 'open_editor': return null;
-          case 'plugin:event|listen': {
-            const list = listeners.get(args.event) ?? [];
-            list.push((payload) => window[`_cb_${args.handler}`](payload));
-            listeners.set(args.event, list);
-            return 0;
-          }
-          default: return null;
-        }
-      },
-    };
-  }, doc, encoded);
-
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1400, height: 1000 });
+  await attach(page, editor);
   await page.goto(`${site.origin}/?editor=${editor}`, { waitUntil: 'load' });
   await page.waitForFunction(() => document.querySelector('#editor')?.children.length > 0);
 
   return {
     page,
     problems,
-    doc: () => page.evaluate(() => window.__PROBE__.doc()),
+    doc: () => structuredClone(state.doc),
+    /** Change the job from outside any window — what a second window's edit looks like. */
+    async set(pointer, value) {
+      const { parent, key } = slotAt(state.doc, pointer);
+      if (Array.isArray(parent)) parent[Number(key)] = value;
+      else parent[key] = value;
+      await broadcast();
+    },
+    /** Tear an editor off into its own window, on the same document. */
+    async tearOff(which) {
+      const second = await browser.newPage();
+      await second.setViewport({ width: 900, height: 900 });
+      await attach(second, which);
+      await second.goto(`${site.origin}/?editor=${which}`, { waitUntil: 'load' });
+      await second.waitForFunction(() => document.querySelector('#editor')?.children.length > 0);
+      return second;
+    },
     async close() {
       await browser.close();
       site.stop();
@@ -182,5 +215,10 @@ export async function clickPage(page, x, y, { detail = 1 } = {}) {
     overlay.dispatchEvent(make('pointerup'));
   }, x, y, detail);
 }
+
+/** Click a toolbar button by its label. */
+export const clickTool = (page, label) =>
+  page.evaluate((name) => [...document.querySelectorAll('.toolbar button')]
+    .find((b) => b.textContent === name).click(), label);
 
 export const wait = (ms) => new Promise((r) => setTimeout(r, ms));

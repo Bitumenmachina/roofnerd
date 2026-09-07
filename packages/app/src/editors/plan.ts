@@ -13,6 +13,7 @@ import { at, addPage, doc, pageBytes, pickFile, set, subscribe, type Doc } from 
 import { Surface, svg, pointsAttribute } from '../viewer/surface.js';
 import { Tools, type ToolName } from '../viewer/tools.js';
 import { loadSheet, type Sheet } from '../viewer/page-source.js';
+import { renderConditionPanel } from './condition-panel.js';
 
 type Trace = { id: string; pageId: string; points: Point[] };
 type Condition = {
@@ -75,9 +76,16 @@ export function mountPlan(host: HTMLElement): void {
   const list = document.createElement('div');
   list.className = 'condition-list';
 
+  const panel = document.createElement('div');
+  panel.className = 'condition-panel';
+
+  const rail = document.createElement('div');
+  rail.className = 'plan-rail';
+  rail.append(list, panel);
+
   const layout = document.createElement('div');
   layout.className = 'plan-layout';
-  layout.append(surface.root, list);
+  layout.append(surface.root, rail);
 
   host.append(bar, layout, hint);
 
@@ -103,6 +111,7 @@ export function mountPlan(host: HTMLElement): void {
     if (!currentPageId && pages[0]) showPage(pages[0].id).catch((e) => report('opening the drawing', e));
     else if (currentPageId) refreshSheetIfChanged(pages).catch((e) => report('opening the drawing', e));
     renderConditions(list, d);
+    renderConditionPanel(panel, selectedConditionId, d, () => renderConditions(list, doc()));
     drawTraces(d);
     const page = pages.find((p) => p.id === currentPageId);
     scaleButton.textContent = page?.feetPerUnit ? 'Rescale' : 'Set scale';
@@ -262,7 +271,14 @@ function renderConditions(host: HTMLElement, d: Doc): void {
     const m = measure(c.kind, c.traces ?? [], c.properties ?? {}, calibrations);
     const row = document.createElement('button');
     row.className = c.id === selectedConditionId ? 'condition on' : 'condition';
-    row.addEventListener('click', () => { selectedConditionId = c.id; renderConditions(host, doc()); drawTraces(doc()); });
+    row.addEventListener('click', () => {
+      selectedConditionId = c.id;
+      const d = doc();
+      renderConditions(host, d);
+      const panel = document.querySelector<HTMLElement>('.condition-panel');
+      if (panel) renderConditionPanel(panel, selectedConditionId, d, () => renderConditions(host, doc()));
+      drawTraces(d);
+    });
 
     const swatch = document.createElement('span');
     swatch.className = 'swatch';

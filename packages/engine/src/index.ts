@@ -9,6 +9,7 @@ export * from './geometry.js';
 export * from './measures.js';
 export * from './formula.js';
 export * from './takeoff.js';
+export * from './line.js';
 export * from './model.js';
 export * from './job.js';
 export * from './recap.js';
