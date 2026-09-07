@@ -48,7 +48,7 @@ function wireShell() {
   const treeBody = document.querySelector<HTMLElement>('#tree-body');
 
   subscribe((doc: Doc) => {
-    const name = at('/job.json/name', doc);
+    const name = at('/job/name', doc);
     if (jobName) jobName.textContent = typeof name === 'string' ? name : 'no job open';
     if (treeBody) renderTree(treeBody, doc);
   });
@@ -87,7 +87,7 @@ function wireShell() {
 
 function renderTree(hostEl: HTMLElement, doc: Doc) {
   hostEl.replaceChildren();
-  const conditions = at('/conditions.json', doc);
+  const conditions = at('/conditions', doc);
   if (!Array.isArray(conditions) || conditions.length === 0) return;
 
   const list = document.createElement('ul');

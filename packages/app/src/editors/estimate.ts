@@ -7,7 +7,15 @@
 // same document the Plan editor is changing. Tear this editor into its own
 // window, drag it to the other monitor, and it keeps following.
 
+import { measure } from '@roofnerd/engine';
 import { at, subscribe, type Doc } from '../doc.js';
+
+type Condition = {
+  id: string; name: string; kind: 'area' | 'line' | 'count';
+  traces: { id: string; pageId: string; points: { x: number; y: number }[] }[];
+  properties: Record<string, number>;
+};
+type Page = { id: string; feetPerUnit?: number };
 
 export function mountEstimate(host: HTMLElement): void {
   host.replaceChildren();
@@ -30,42 +38,35 @@ export function mountEstimate(host: HTMLElement): void {
   host.append(table);
 
   subscribe((doc: Doc) => {
-    const condition = at('/conditions.json/0', doc) as
-      | { name?: string; properties?: { height?: number; sides?: number } }
-      | undefined;
+    const conditions = (at('/conditions', doc) as Condition[]) ?? [];
+    const pages = (at('/pages', doc) as Page[]) ?? [];
+    const calibrations: Record<string, { feetPerUnit: number } | undefined> = {};
+    for (const p of pages) if (p.feetPerUnit) calibrations[p.id] = { feetPerUnit: p.feetPerUnit };
 
     body.replaceChildren();
-    if (!condition) {
-      body.append(row(['no job open', '', '', ''], 'td'));
+    if (!conditions.length) {
+      body.append(row(['nothing traced yet', '', '', ''], 'td'));
       return;
     }
 
-    const name = condition.name ?? 'condition';
-    const height = condition.properties?.height;
-    const sides = condition.properties?.sides;
-
-    // Gate 0 has no trace, so there is no measured run to work from. One
-    // linear foot stands in, which keeps the arithmetic visible and honest
-    // about being a placeholder rather than dressing it up as a takeoff.
-    const run = 1;
-    const wall = height === undefined ? undefined : run * height;
-    const corners = sides;
-
-    body.append(row([name, 'Run traced', fixed(run), 'LF'], 'td'));
-    body.append(row([name, 'Wall flashing', fixed(wall), 'SF'], 'td'));
-    body.append(row([name, 'Corners', fixed(corners), 'EA'], 'td'));
-
-    const total = row(['', 'Total quantity', fixed(sum(run, wall, corners)), ''], 'td');
-    total.className = 'total';
-    body.append(total);
+    for (const c of conditions) {
+      const m = measure(c.kind, c.traces ?? [], c.properties ?? {}, calibrations);
+      // Every condition carries all three at once. A blank is a page nobody has
+      // scaled, not a zero — an unscaled sheet has no answer and says so.
+      for (const [what, value, unit] of [
+        ['Area', m.SF, 'SF'],
+        ['Run', m.LF, 'LF'],
+        ['Count', m.EA, 'EA'],
+      ] as const) {
+        if (value === null || (value === 0 && what !== 'Count')) continue;
+        body.append(row([c.name, what, fixed(value), unit], 'td'));
+      }
+    }
   });
 }
 
-const sum = (...xs: (number | undefined)[]) =>
-  xs.every((x) => x !== undefined) ? xs.reduce((a, b) => a! + b!, 0) : undefined;
-
-const fixed = (v: number | undefined) =>
-  v === undefined ? '—' : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fixed = (v: number | null | undefined) =>
+  v == null ? 'pending' : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function row(cells: string[], kind: 'th' | 'td'): HTMLTableRowElement {
   const tr = document.createElement('tr');

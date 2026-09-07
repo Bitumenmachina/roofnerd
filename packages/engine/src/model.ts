@@ -10,7 +10,8 @@
 // A cost code sits on every item. Every code belongs to a class. The recap adds
 // up by class, which is the only way it can be honest.
 
-import type { Measure, Unit } from './units.js';
+import type { Unit } from './units.js';
+import type { Properties, Trace, TraceKind } from './measures.js';
 
 /** The program's own name. Renaming it is this line, tauri.conf.json, the README. */
 export const PRODUCT_NAME = 'roofnerd';
@@ -125,17 +126,6 @@ export interface Assembly {
 // ── The traced thing ───────────────────────────────────────────────────────
 
 /**
- * Properties that come off the drawing detail rather than off the trace. A
- * parapet is a line until you say how tall it is; then it is also an area.
- */
-export interface ConditionProperties {
-  readonly height?: number;
-  readonly width?: number;
-  readonly sides?: number;
-  readonly pitch?: string;
-}
-
-/**
  * One thing you traced. It carries square feet, linear feet and a count at the
  * same time, because one parapet run is all three and pretending otherwise is
  * what makes estimating software annoying.
@@ -143,11 +133,22 @@ export interface ConditionProperties {
 export interface Condition {
   readonly id: string;
   readonly name: string;
-  readonly pageId: string;
-  readonly properties: ConditionProperties;
-  readonly measures: readonly Measure[];
+  /** An area on the sheet, a run along it, or things counted. */
+  readonly kind: TraceKind;
+  /** The shapes drawn for it, on any number of pages. */
+  readonly traces: readonly Trace[];
+  /** What the drawing cannot say: height, width, slope, stretch-out. */
+  readonly properties: Properties;
+  /**
+   * Take another condition's measures as this one's own. The parapet a coping
+   * runs along is measured once; the coping says where it came from rather than
+   * being traced twice, and the two can never drift apart.
+   */
+  readonly from?: string;
   readonly assemblyId?: string;
   readonly items: readonly Item[];
+  /** A colour to draw it in on the sheet. */
+  readonly color?: string;
   readonly notes?: string;
 }
 
@@ -157,10 +158,20 @@ export interface Condition {
 export interface Page {
   readonly id: string;
   readonly name: string;
-  /** Path relative to the job folder. The source file is never copied inline. */
+  /**
+   * Path relative to the job folder. The drawing itself is never copied into
+   * the job file — a job stays small and readable, and the PDF stays the PDF.
+   */
   readonly source?: string;
-  /** Feet per drawing unit, from the two-point scale. Absent until scaled. */
-  readonly scale?: number;
+  /** Which page of that PDF. Absent for an image. */
+  readonly pageNumber?: number;
+  /**
+   * Feet per page unit, once somebody has scaled the sheet. Absent means not
+   * scaled, and everything measured on it reads as pending rather than zero.
+   */
+  readonly feetPerUnit?: number;
+  /** How the scale was set, so it can be seen and argued with. */
+  readonly scaleNote?: string;
 }
 
 /** One set of prices for the job. A supply house, or a pricing date. */

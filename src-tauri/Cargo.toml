@@ -21,3 +21,4 @@ serde = { version = "1", features = ["derive"] }
 # produces. A job saved by the application and a job saved by the command line
 # are byte-identical, and `roofnerd check` proves it.
 serde_json = "1"
+tauri-plugin-dialog = "2"

@@ -1,13 +1,14 @@
 [
   {
+    "color": "#c1440e",
     "id": "condition-1",
     "items": [],
-    "measures": [],
+    "kind": "line",
     "name": "Parapet Wall Flashing",
-    "pageId": "page-1",
     "properties": {
-      "height": 1.5,
-      "sides": 4
-    }
+      "H": 1.5,
+      "SIDES": 4
+    },
+    "traces": []
   }
 ]

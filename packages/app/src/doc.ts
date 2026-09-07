@@ -6,6 +6,7 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 
 /**
  * The open job as the shell holds it: keyed by the file each part came from,
@@ -53,6 +54,31 @@ export const folder = () => invoke<string | null>('doc_folder');
 
 /** Where the demo job sits, if this build can still find it. Null once installed. */
 export const demoFolder = () => invoke<string | null>('demo_folder');
+
+/**
+ * Copy a drawing the estimator picked into the job folder; the job stores the
+ * path it came back with, never the drawing itself.
+ */
+export const addPage = (source: string) => invoke<string>('add_page_source', { source });
+
+/** Read a drawing back out of the job folder. */
+export async function pageBytes(relative: string): Promise<ArrayBuffer> {
+  const bytes = await invoke<number[]>('read_page_source', { relative });
+  return new Uint8Array(bytes).buffer;
+}
+
+/**
+ * Ask the operating system for a drawing. This is the one place the program
+ * touches a file the estimator did not already put in the job, and it happens
+ * only because they picked it by hand.
+ */
+export async function pickFile(): Promise<string | null> {
+  const picked = await openDialog({
+    multiple: false,
+    filters: [{ name: 'Drawings', extensions: ['pdf', 'png', 'jpg', 'jpeg', 'webp'] }],
+  });
+  return typeof picked === 'string' ? picked : null;
+}
 export const tearOff = (editor: string) => invoke<void>('open_editor', { editor });
 
 /** Read a value out of the document by pointer. Returns undefined if absent. */

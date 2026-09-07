@@ -9,7 +9,9 @@
   },
   "dependencies": {
     "@roofnerd/engine": "workspace:*",
-    "@tauri-apps/api": "2.9.0"
+    "@tauri-apps/api": "2.9.0",
+    "@tauri-apps/plugin-dialog": "^2.7.3",
+    "pdfjs-dist": "^6.3.289"
   },
   "devDependencies": {
     "typescript": "5.9.3",
