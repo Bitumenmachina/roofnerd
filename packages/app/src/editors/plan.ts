@@ -14,6 +14,10 @@ import { Surface, svg, pointsAttribute } from '../viewer/surface.js';
 import { Tools, type ToolName } from '../viewer/tools.js';
 import { loadSheet, type Sheet } from '../viewer/page-source.js';
 import { renderConditionPanel } from './condition-panel.js';
+import { toolButton, iconButton } from '../chrome.js';
+import { hueFor } from '../icons.js';
+import { KIND_LABELS, PENDING_REASON, propertyPhrase, quantity } from '../labels.js';
+import { select, selectedConditionId, watchSelection } from '../selection.js';
 
 type Trace = { id: string; pageId: string; points: Point[] };
 type Condition = {
@@ -23,12 +27,9 @@ type Condition = {
 };
 type Page = { id: string; name: string; source?: string; pageNumber?: number; feetPerUnit?: number; scaleNote?: string };
 
-const COLORS = ['#c1440e', '#1d6a96', '#3f7d20', '#8a3ffc', '#b58900', '#d33682'];
-
 let surface: Surface;
 let tools: Tools;
 let currentPageId: string | null = null;
-let selectedConditionId: string | null = null;
 let loadedSource: string | null = null;
 
 export function mountPlan(host: HTMLElement): void {
@@ -39,19 +40,24 @@ export function mountPlan(host: HTMLElement): void {
   bar.className = 'toolbar';
 
   const pageSelect = document.createElement('select');
-  pageSelect.title = 'which drawing';
-  const addPageButton = button('Add a drawing', () => addDrawing().catch((e) => report('adding a drawing', e)));
+  pageSelect.setAttribute('aria-label', 'Drawing');
+  const addPageButton = toolButton('addDrawing', 'Add a drawing',
+    () => addDrawing().catch((e) => report('Adding a drawing', e)));
 
   const toolButtons = new Map<ToolName, HTMLButtonElement>();
-  for (const [tool, label] of [['select', 'Select'], ['area', 'Area'], ['line', 'Line'], ['count', 'Count']] as const) {
-    const b = button(label, () => chooseTool(tool));
-    toolButtons.set(tool, b);
+  for (const [tool, label, iconName] of [
+    ['select', 'Select', 'select'], ['area', 'Area', 'area'],
+    ['line', 'Line', 'line'], ['count', 'Count', 'count'],
+  ] as const) {
+    toolButtons.set(tool, toolButton(iconName, label, () => chooseTool(tool)));
   }
 
-  const scaleButton = button('Set scale', () => chooseTool('scale'));
+  // One action, one word. Its label reads Scale or Rescale by state — the sheet
+  // either has a scale or it does not, and that is a state, not two commands.
+  const scaleButton = toolButton('scale', 'Scale', () => chooseTool('scale'));
   const scaleSelect = document.createElement('select');
-  scaleSelect.title = 'or pick an architectural scale';
-  scaleSelect.append(option('', 'scale…'));
+  scaleSelect.setAttribute('aria-label', 'Architectural scale');
+  scaleSelect.append(option('', 'Or pick a scale…'));
   for (const s of ARCHITECTURAL_SCALES) scaleSelect.append(option(String(s.feetPerInch), s.label));
   scaleSelect.addEventListener('change', () => {
     const feetPerInch = Number(scaleSelect.value);
@@ -61,17 +67,23 @@ export function mountPlan(host: HTMLElement): void {
     scaleSelect.value = '';
   });
 
-  const zoomOut = button('−', () => void surface.setZoom(surface.zoom / 1.25));
-  const zoomIn = button('+', () => void surface.setZoom(surface.zoom * 1.25));
-  const zoomFit = button('Fit', () => void surface.fit());
+  const spacer = document.createElement('span');
+  spacer.className = 'spacer';
+  const zoomOut = iconButton('zoomOut', 'Zoom out', () => void surface.setZoom(surface.zoom / 1.25));
+  const zoomIn = iconButton('zoomIn', 'Zoom in', () => void surface.setZoom(surface.zoom * 1.25));
+  const zoomFit = iconButton('fit', 'Fit the sheet in the window', () => void surface.fit());
 
   bar.append(pageSelect, addPageButton, divider(), ...toolButtons.values(), divider(),
-    scaleButton, scaleSelect, divider(), zoomOut, zoomIn, zoomFit);
+    scaleButton, scaleSelect, spacer, zoomOut, zoomIn, zoomFit);
 
   surface = new Surface();
 
   const hint = document.createElement('p');
   hint.className = 'hint';
+
+  const railHeading = document.createElement('p');
+  railHeading.className = 'rail-heading';
+  railHeading.textContent = 'Conditions';
 
   const list = document.createElement('div');
   list.className = 'condition-list';
@@ -79,9 +91,11 @@ export function mountPlan(host: HTMLElement): void {
   const panel = document.createElement('div');
   panel.className = 'condition-panel';
 
+  // One scroll region: the list on top, the selected condition below it. Two
+  // scrollers side by side is how the heading ended up clipped under the panel.
   const rail = document.createElement('div');
   rail.className = 'plan-rail';
-  rail.append(list, panel);
+  rail.append(railHeading, list, panel);
 
   const layout = document.createElement('div');
   layout.className = 'plan-layout';
@@ -103,6 +117,13 @@ export function mountPlan(host: HTMLElement): void {
   }
   chooseTool('select');
 
+  // Selecting a condition anywhere — here or in the tree — redraws both.
+  watchSelection(() => {
+    renderConditions(list, doc());
+    renderConditionPanel(panel, selectedConditionId(), doc(), () => renderConditions(list, doc()));
+    drawTraces(doc());
+  });
+
   pageSelect.addEventListener('change', () => showPage(pageSelect.value).catch((e) => report('opening the drawing', e)));
 
   subscribe((d: Doc) => {
@@ -111,10 +132,11 @@ export function mountPlan(host: HTMLElement): void {
     if (!currentPageId && pages[0]) showPage(pages[0].id).catch((e) => report('opening the drawing', e));
     else if (currentPageId) refreshSheetIfChanged(pages).catch((e) => report('opening the drawing', e));
     renderConditions(list, d);
-    renderConditionPanel(panel, selectedConditionId, d, () => renderConditions(list, doc()));
+    renderConditionPanel(panel, selectedConditionId(), d, () => renderConditions(list, doc()));
     drawTraces(d);
     const page = pages.find((p) => p.id === currentPageId);
-    scaleButton.textContent = page?.feetPerUnit ? 'Rescale' : 'Set scale';
+    const word = scaleButton.querySelector('span');
+    if (word) word.textContent = page?.feetPerUnit ? 'Rescale' : 'Scale';
   });
 }
 
@@ -193,14 +215,29 @@ function tracedPoints(list: Condition[], pageId: string): Point[] {
   return out;
 }
 
-async function recordTrace(kind: 'area' | 'line' | 'count', points: readonly Point[]): Promise<void> {
+/**
+ * Traces are recorded one at a time, in order.
+ *
+ * Dropping three counts quickly used to start three conditions: each click read
+ * the job before the one before it had finished writing, saw nothing selected
+ * that took a count, and made its own. Whoever did it got one marker in each of
+ * three conditions and no reason why.
+ */
+let recording: Promise<void> = Promise.resolve();
+
+function recordTrace(kind: 'area' | 'line' | 'count', points: readonly Point[]): Promise<void> {
+  recording = recording.catch(() => undefined).then(() => writeTrace(kind, points));
+  return recording;
+}
+
+async function writeTrace(kind: 'area' | 'line' | 'count', points: readonly Point[]): Promise<void> {
   if (!currentPageId) return;
   const all = conditions();
   const trace: Trace = { id: `trace-${Date.now().toString(36)}`, pageId: currentPageId, points: [...points] };
 
   // Into the selected condition if it takes this kind of shape; otherwise a new
   // one, named for what it is, so a trace is never dropped on the floor.
-  const selected = all.find((c) => c.id === selectedConditionId && c.kind === kind);
+  const selected = all.find((c) => c.id === selectedConditionId() && c.kind === kind);
   if (selected) {
     await set('/conditions', all.map((c) =>
       c.id === selected.id ? { ...c, traces: [...(c.traces ?? []), trace] } : c));
@@ -209,15 +246,15 @@ async function recordTrace(kind: 'area' | 'line' | 'count', points: readonly Poi
 
   const condition: Condition = {
     id: `condition-${Date.now().toString(36)}`,
-    name: `${kind[0]!.toUpperCase()}${kind.slice(1)} ${all.filter((c) => c.kind === kind).length + 1}`,
+    name: `${KIND_LABELS[kind]} ${all.filter((c) => c.kind === kind).length + 1}`,
     kind,
     traces: [trace],
     properties: {},
     items: [],
-    color: COLORS[all.length % COLORS.length]!,
+    color: hueFor(all.length),
   };
-  selectedConditionId = condition.id;
   await set('/conditions', [...all, condition]);
+  select({ kind: 'condition', id: condition.id });
 }
 
 function drawTraces(d: Doc): void {
@@ -226,8 +263,8 @@ function drawTraces(d: Doc): void {
   g.replaceChildren();
 
   for (const c of ((at('/conditions', d) as Condition[]) ?? [])) {
-    const color = c.color ?? '#c1440e';
-    const selected = c.id === selectedConditionId;
+    const color = c.color ?? hueFor(0);
+    const selected = c.id === selectedConditionId();
     for (const t of c.traces ?? []) {
       if (t.pageId !== currentPageId) continue;
       const common = { stroke: color, class: selected ? 'trace on' : 'trace' };
@@ -254,10 +291,6 @@ function renderConditions(host: HTMLElement, d: Doc): void {
   const calibrations: Record<string, { feetPerUnit: number } | undefined> = {};
   for (const p of pages) if (p.feetPerUnit) calibrations[p.id] = { feetPerUnit: p.feetPerUnit };
 
-  const heading = document.createElement('h3');
-  heading.textContent = 'Conditions';
-  host.append(heading);
-
   const list = (at('/conditions', d) as Condition[]) ?? [];
   if (!list.length) {
     const empty = document.createElement('p');
@@ -270,15 +303,9 @@ function renderConditions(host: HTMLElement, d: Doc): void {
   for (const c of list) {
     const m = measure(c.kind, c.traces ?? [], c.properties ?? {}, calibrations);
     const row = document.createElement('button');
-    row.className = c.id === selectedConditionId ? 'condition on' : 'condition';
-    row.addEventListener('click', () => {
-      selectedConditionId = c.id;
-      const d = doc();
-      renderConditions(host, d);
-      const panel = document.querySelector<HTMLElement>('.condition-panel');
-      if (panel) renderConditionPanel(panel, selectedConditionId, d, () => renderConditions(host, doc()));
-      drawTraces(d);
-    });
+    row.type = 'button';
+    row.className = c.id === selectedConditionId() ? 'condition on' : 'condition';
+    row.addEventListener('click', () => select({ kind: 'condition', id: c.id }));
 
     const swatch = document.createElement('span');
     swatch.className = 'swatch';
@@ -290,26 +317,30 @@ function renderConditions(host: HTMLElement, d: Doc): void {
 
     const measures = document.createElement('span');
     measures.className = 'condition-measures';
-    measures.textContent = [
-      m.SF === null ? null : `${fmt(m.SF)} SF`,
-      m.LF === null ? null : `${fmt(m.LF)} LF`,
-      `${m.EA} EA`,
-    ].filter(Boolean).join(' · ');
+    // A measure with no number yet is a dash with the reason in its tooltip.
+    // Never a coloured word — nothing is broken, the sheet is not scaled.
+    // An area has a surface; a run does not, and printing "— SF" beside one
+    // suggests it might. Each kind shows the measures it actually has.
+    const parts: string[] = [];
+    if (c.kind === 'area') parts.push(m.SF === null ? '—' : `${quantity(m.SF)} SF`);
+    if (c.kind !== 'count') parts.push(m.LF === null ? '—' : `${quantity(m.LF)} LF`);
+    parts.push(`${quantity(m.EA, 0)} EA`);
+    measures.textContent = parts.join(' · ');
+    if (m.LF === null && c.kind !== 'count') measures.title = PENDING_REASON;
 
     row.append(swatch, name, measures);
 
-    const props = document.createElement('span');
-    props.className = 'condition-props';
-    const shown = Object.entries(c.properties ?? {}).filter(([, v]) => v !== undefined);
-    if (shown.length) props.textContent = shown.map(([k, v]) => `${k} ${v}`).join(' · ');
-    if (shown.length) row.append(props);
-
-    if (m.SF === null && m.LF === null && c.kind !== 'count') {
-      const pending = document.createElement('span');
-      pending.className = 'pending';
-      pending.textContent = 'sheet not scaled';
-      row.append(pending);
+    // Properties in the words an estimator uses: "4 sides", not "SIDES 4".
+    const shown = Object.entries(c.properties ?? {})
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => propertyPhrase(k, v as number));
+    if (shown.length) {
+      const props = document.createElement('span');
+      props.className = 'condition-props';
+      props.textContent = shown.join(' · ');
+      row.append(props);
     }
+
     host.append(row);
   }
 }

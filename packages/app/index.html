@@ -7,20 +7,15 @@
     <link rel="stylesheet" href="/src/app.css" />
   </head>
   <body>
-    <!-- The tree on the left, one editor on the right. Which editor this window
-         is showing comes from its own URL, so any editor can be any window. -->
-    <aside id="tree">
-      <h1 id="job-name">no job open</h1>
-      <p id="job-folder" class="muted"></p>
-      <nav id="tree-body"></nav>
-      <footer>
-        <button id="open-demo">Open the demo job</button>
-        <button id="save">Save</button>
-        <button id="tear-off">Tear off the Estimate Sheet</button>
-        <p id="status" class="muted"></p>
-      </footer>
-    </aside>
-    <main id="editor"></main>
+    <!-- Every window has the same anatomy: a menu bar, the tree beside one
+         editor area, and a status bar. A torn-off editor is the same window
+         with the tree folded away, not a lesser kind of window. -->
+    <nav id="menu-bar" class="menu-bar"></nav>
+    <div id="frame" class="frame">
+      <aside id="sidebar" class="sidebar"></aside>
+      <div id="editor"></div>
+    </div>
+    <div id="status"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -5,10 +5,14 @@ acceptance does not pause the build.
 
 ## Where the build is
 
-**Sections 1, 2 and 3 are done. Section 3 was reopened by Addendum 3 and is now closed as
-the handoff actually wrote it.** Section 7 — legibility and visual grammar — comes next, and
-waits on a visual specification from the design seat. Section 4, the library, does not start
-before it.
+**Sections 1, 2, 3 and 7 are done.** Section 4 — the library — is next, and is the first
+thing not yet started.
+
+Section 7 was the restyle, against Visual Specification v2. All twelve defects it names are
+closed, with a before/after pair from the Tauri window for each. One thing to flag: **v2 §2
+carries forward v1 §3–§9 "unchanged", and v1 is not on this machine** — see `QUESTIONS.md`
+Q2. Where v2 §1 was specific it was followed to the letter; where it referred to v1 the call
+is mine, recorded, and cheap to replace.
 
 Section 3's acceptance, in two halves, both passing:
 
@@ -20,6 +24,33 @@ Section 3's acceptance, in two halves, both passing:
   every cost code and every class within tolerance.
 
 Section 0 (the skeleton) was built and pushed earlier the same day.
+
+## What section 7 changed
+
+Every defect in v2 §1, in the order it lists them:
+
+| | Defect | Now |
+|---|---|---|
+| 1 | Dark warm-grey desk dominating every plan view | Light neutral desk; the paper has a hairline border and a 1 px shadow |
+| 2 | "Pages" listing conditions, no hierarchy | A real tree: Job → Page → Condition → Item. Selecting a node selects it in every editor |
+| 3 | Probe controls in the product chrome | File menu and a start screen; the path in the status bar; tear-off on every area's own header |
+| 4 | A brown active tool and unrelated trace colours | One accent — mid blue — for active tool, selection and focus. Condition colours from a twelve-hue palette, never for interface state |
+| 5 | Two rows of text buttons, "Set scale" and "Rescale" | One row, 16 px icons with their words, one **Scale** action whose label reads Rescale by state, zoom grouped right |
+| 6 | `PLAN_SF`, `SIDES 4`, `trace(s)`, red `pending` | Trade words throughout: "4:12 pitch", "1.5 ft high", "1 trace". A measure with no number is an em dash with the reason in its tooltip |
+| 7 | Rail heading clipped under the panel | One scroll region: list above, selected condition below, hairline between |
+| 8 | Eight equal fields, live measures smallest and last | Measures first and large in tabular figures; properties grouped under Geometry and Metal; hints unchanged |
+| 9 | Truncated headers, actions clipping off the edge, a bare "%" | Fixed column widths, horizontal scroll inside the area, actions pinned to a column that never scrolls out, waste reads 0 |
+| 10 | An explanatory paragraph on every open | The editor's help page, behind the "?" in its header |
+| 11 | No row separators, groups marked only by bold | Hairline separators, tinted condition rows, monospace formulas, tabular numbers, bold extended |
+| 12 | "Total" alone | Class subtotals and Selling Price pinned in the footer |
+
+**Two product bugs the restyle surfaced**, both found by the probes rather than by eye:
+
+- Three quick clicks with the Count tool started **three separate conditions**. Each click
+  read the job before the one before it had finished writing, saw nothing selected that took
+  a count, and made its own. Traces are recorded one at a time now.
+- A run was showing "— SF", which suggests it might have a surface if you scaled the sheet.
+  It has none by design; each kind now shows the measures it actually has.
 
 ## What section 3 built
 
@@ -185,6 +216,7 @@ one screen, watch the money move on the other.
 | Fixture ladder (`tools/compare-fixtures.mjs`) | **PASS 26/26** — both real recaps, every line within 0.01% |
 | Subtotals rebuilt (`tools/rebuild-subtotals.mjs`) | **PASS** — 207 item lines priced through the engine; 28/28 cost codes, 12/12 classes |
 | Client-data gate | **PASS**, and proven red on a figure, a bid name and a home path |
+| Vocabulary check (`tools/probe/vocabulary-check.mjs`) | **PASS 23/23** — reads what is rendered in the shipped window, not the source; proven red on `PLAN_SF` |
 | Engine tests | **95/95** |
 | Shell tests | **5/5**, including that a job saved by the application is byte-for-byte one saved by the command line |
 | Vocabulary gate | **PASS** |

@@ -10,8 +10,11 @@
 // Tear this editor onto the other monitor and trace on the first. Both windows
 // are the same job: the total moves while the mouse is still down.
 
-import { measure, priceLine, scopeFor, type Measures } from '@roofnerd/engine';
+import { CLASS_NAMES, measure, priceLine, recap, scopeFor, type Measures } from '@roofnerd/engine';
 import { at, doc, set, subscribe, type Doc } from '../doc.js';
+import { icon } from '../icons.js';
+import { PENDING_REASON, money, quantity } from '../labels.js';
+import { select, selectedConditionId, watchSelection } from '../selection.js';
 
 type UnitStep = { name: string; per?: number; contains?: number; rule: 'ceil' | 'exact' };
 type Item = {
@@ -30,26 +33,23 @@ const UNITS = ['SF', 'LF', 'EA', 'SQ'];
 
 export function mountEstimate(host: HTMLElement): void {
   host.replaceChildren();
-  host.classList.add('estimate-editor');
 
-  const title = document.createElement('h2');
-  title.textContent = 'Estimate Sheet';
-
-  const note = document.createElement('p');
-  note.className = 'editor-note';
-  note.textContent =
-    'Every line shows the formula that produced its quantity, and you can change it here. '
-    + 'A line with no price says so instead of counting as nothing.';
+  // The sheet scrolls inside its own area rather than clipping, so a torn-off
+  // window narrower than the table still reaches every column.
+  const scroller = document.createElement('div');
+  scroller.className = 'sheet-scroll';
 
   const body = document.createElement('div');
   body.className = 'sheet';
+  scroller.append(body);
 
   const foot = document.createElement('div');
-  foot.className = 'sheet-total';
+  foot.className = 'sheet-footer';
 
-  host.append(title, note, body, foot);
+  host.append(scroller, foot);
 
   subscribe((d: Doc) => render(body, foot, d));
+  watchSelection(() => render(body, foot, doc()));
 }
 
 function render(body: HTMLElement, foot: HTMLElement, d: Doc): void {
@@ -69,82 +69,165 @@ function render(body: HTMLElement, foot: HTMLElement, d: Doc): void {
   body.replaceChildren();
   if (!conditions.length) {
     const empty = document.createElement('p');
-    empty.className = 'muted';
-    empty.textContent = 'Nothing traced yet. Trace something on the Plan and it will appear here.';
+    empty.className = 'empty-note';
+    empty.textContent = 'Nothing traced yet. Trace something on the Plan and it appears here.';
     body.append(empty);
-    foot.textContent = '';
+    foot.replaceChildren();
     return;
   }
 
-  let total = 0;
+  let total_ = 0;
   let anythingPending = false;
+
+  // One table, one header. A header repeated under every condition is three
+  // times the furniture and no more information.
+  const table = document.createElement('table');
+  const cols = document.createElement('colgroup');
+  for (const n of ['item', 'code', 'formula', 'qty', 'unit', 'waste', 'order', 'priced', 'cost', 'extended', 'actions']) {
+    const col = document.createElement('col');
+    col.className = `c-${n}`;
+    cols.append(col);
+  }
+  table.append(cols);
+  const head = document.createElement('thead');
+  head.append(headRow([
+    'Item', 'Code', 'Formula', 'Qty', 'Unit', 'Waste', 'Order', 'Priced', 'Unit cost', 'Extended', '',
+  ]));
+  const rows = document.createElement('tbody');
+  table.append(head, rows);
+  body.append(table);
 
   for (const [index, condition] of conditions.entries()) {
     const measures = measured.get(condition.id)!;
     const scope = scopeFor(measures, condition.properties ?? {});
 
-    const group = document.createElement('section');
-    group.className = 'sheet-group';
-
-    const header = document.createElement('header');
+    // The condition is a tinted row of the same table, so the columns run under
+    // it and the group reads as part of the sheet rather than beside it.
+    const groupRow = document.createElement('tr');
+    groupRow.className = 'group-row';
+    if (condition.id === selectedConditionId()) groupRow.classList.add('on');
+    const groupCell = document.createElement('td');
+    groupCell.colSpan = 10;
     const swatch = document.createElement('span');
     swatch.className = 'swatch';
-    swatch.style.background = condition.color ?? '#c1440e';
-    const name = document.createElement('strong');
+    swatch.style.background = condition.color ?? '#5f5f5f';
+    const name = document.createElement('span');
     name.textContent = condition.name;
     const summary = document.createElement('span');
-    summary.className = 'muted';
+    summary.className = 'group-measures';
     summary.textContent = [
-      measures.SF === null ? null : `${fmt(measures.SF)} SF`,
-      measures.LF === null ? null : `${fmt(measures.LF)} LF`,
-      `${measures.EA} EA`,
+      condition.kind !== 'area' ? null : (measures.SF === null ? '—' : `${quantity(measures.SF)} SF`),
+      condition.kind === 'count' ? null : (measures.LF === null ? '—' : `${quantity(measures.LF)} LF`),
+      `${quantity(measures.EA, 0)} EA`,
       condition.from ? `from ${conditions.find((c) => c.id === condition.from)?.name ?? '—'}` : null,
     ].filter(Boolean).join(' · ');
-    header.append(swatch, name, summary);
-    group.append(header);
-
-    const table = document.createElement('table');
-    // Fixed columns, so the formula keeps its room however long a description is.
-    const cols = document.createElement('colgroup');
-    for (const name of ['item', 'code', 'formula', 'qty', 'unit', 'waste', 'order', 'priced', 'cost', 'extended', 'remove']) {
-      const col = document.createElement('col');
-      col.className = `c-${name}`;
-      cols.append(col);
+    if (measures.SF === null && measures.LF === null && condition.kind !== 'count') {
+      summary.title = PENDING_REASON;
     }
-    table.append(cols);
-    const head = document.createElement('thead');
-    head.append(headRow(['Item', 'Code', 'Formula', 'Qty', 'Unit', 'Waste', 'Order', 'Priced', 'Unit cost', 'Extended', '']));
-    const rows = document.createElement('tbody');
-    table.append(head, rows);
+    groupCell.append(swatch, name, summary);
+    const groupActions = document.createElement('td');
+    groupActions.className = 'actions';
+    groupRow.append(groupCell, groupActions);
+    groupRow.addEventListener('click', () => select({ kind: 'condition', id: condition.id }));
+    rows.append(groupRow);
 
-    const items = condition.items ?? [];
-    for (const [itemIndex, item] of items.entries()) {
+    for (const [itemIndex, item] of (condition.items ?? []).entries()) {
       const result = priceLine(item as never, scope, scenario?.prices ?? {});
-      if (result.extended !== null) total += result.extended;
+      if (result.extended !== null) total_ += result.extended;
       if (result.pending) anythingPending = true;
       rows.append(itemRow(index, itemIndex, item, result));
     }
 
+    // The button that adds a line sits in the group it adds to.
+    const addRow = document.createElement('tr');
+    addRow.className = 'add-row';
+    const addCell = document.createElement('td');
+    addCell.colSpan = 11;
     const add = document.createElement('button');
+    add.type = 'button';
     add.className = 'add-item';
-    add.textContent = '+ item';
+    add.append(icon('add', 13));
+    const addText = document.createElement('span');
+    addText.textContent = 'Add a line';
+    add.append(addText);
     add.addEventListener('click', () => void addItem(index, condition));
-
-    group.append(table, add);
-    body.append(group);
+    addCell.append(add);
+    addRow.append(addCell);
+    rows.append(addRow);
   }
 
+  // ── the footer: the classes, now that there are classes ─────────────────
   foot.replaceChildren();
-  const label = document.createElement('span');
-  label.textContent = 'Total';
-  const value = document.createElement('strong');
-  value.textContent = money(total);
-  foot.append(label, value);
-  if (anythingPending) {
-    const warn = document.createElement('span');
-    warn.className = 'pending';
-    warn.textContent = 'partial — some lines have no quantity or no price';
-    foot.append(warn);
+
+  const rolled = recapOf(d);
+  if (rolled) {
+    const strip = document.createElement('div');
+    strip.className = 'class-strip';
+    for (const name of CLASS_NAMES) {
+      const line = rolled.classes.find((c) => c.class === name);
+      if (!line || line.total === 0) continue;
+      const cell = document.createElement('div');
+      cell.className = 'class-cell';
+      const label = document.createElement('span');
+      label.className = 'label';
+      label.textContent = name;
+      const value = document.createElement('span');
+      value.className = 'value';
+      value.textContent = money(line.total);
+      cell.append(label, value);
+      strip.append(cell);
+    }
+    if (strip.children.length) foot.append(strip);
+
+    const selling = document.createElement('div');
+    selling.className = 'selling';
+    const label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = 'Selling price';
+    const value = document.createElement('span');
+    value.className = 'value';
+    value.textContent = money(rolled.sellingPrice);
+    selling.append(label, value);
+    if (rolled.pending.length) {
+      const partial = document.createElement('span');
+      partial.className = 'partial';
+      partial.textContent = `${rolled.pending.length} line(s) not counted`;
+      partial.title = rolled.pending.join('\n');
+      selling.append(partial);
+    }
+    foot.append(selling);
+  } else {
+    const total = document.createElement('div');
+    total.className = 'selling';
+    const label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = 'Total';
+    const value = document.createElement('span');
+    value.className = 'value';
+    value.textContent = money(total_);
+    total.append(label, value);
+    foot.append(total);
+  }
+}
+
+/**
+ * The recap, when the job has the cost codes to roll one up.
+ *
+ * Without codes there are no classes, so the sheet shows a plain total rather
+ * than pretending to a structure the job has not got yet.
+ */
+function recapOf(d: Doc) {
+  const job = at('/job', d) as { scenarios?: unknown[]; activeScenarioId?: string } | undefined;
+  const codes = (at('/costCodes', d) as unknown[]) ?? [];
+  if (!job?.scenarios?.length || codes.length === 0) return null;
+  try {
+    const document_ = {
+      job, pages: at('/pages', d) ?? [], conditions: at('/conditions', d) ?? [], costCodes: codes,
+    } as never;
+    const scenario = activeScenario(d) as never;
+    return recap(document_, scenario);
+  } catch {
+    return null;
   }
 }
 
@@ -170,7 +253,9 @@ function itemRow(conditionIndex: number, itemIndex: number, item: Item, result: 
 
   tr.append(numberCell(result.quantity));
   tr.append(cell(selectField(UNITS, item.unit, (v) => set(`${base}/unit`, v))));
-  tr.append(cell(numberField(item.waste, (v) => set(`${base}/waste`, v), '%')));
+  // An empty waste field reads "0%", not a bare per-cent sign with nothing
+  // in front of it. Zero waste is a real answer; a lone "%" is a shrug.
+  tr.append(cell(numberField(item.waste ?? 0, (v) => set(`${base}/waste`, v), '0'), 'num'));
 
   // What you buy, and what it is priced against — three units, because a real
   // supply house uses three. Membrane is estimated in squares, bought by the
@@ -181,16 +266,25 @@ function itemRow(conditionIndex: number, itemIndex: number, item: Item, result: 
   tr.append(cell(numberField(item.unitCost, (v) => set(`${base}/unitCost`, v), '$')));
 
   const extended = document.createElement('span');
-  extended.textContent = result.extended === null ? (result.pending ?? '—') : money(result.extended);
-  if (result.extended === null) extended.className = 'pending';
-  tr.append(cell(extended, 'num'));
+  if (result.extended === null) {
+    // The reason lives in the tooltip; the cell shows a dash. A red word in a
+    // money column reads as an error, and a line with no price yet is not one.
+    extended.textContent = '—';
+    extended.className = 'none';
+    extended.title = result.pending ?? PENDING_REASON;
+  } else {
+    extended.textContent = money(result.extended);
+  }
+  tr.append(cell(extended, 'num extended'));
 
   const remove = document.createElement('button');
+  remove.type = 'button';
   remove.className = 'remove';
-  remove.textContent = '×';
-  remove.title = 'take this line off';
+  remove.title = 'Take this line off';
+  remove.setAttribute('aria-label', 'Take this line off');
+  remove.append(icon('close', 14));
   remove.addEventListener('click', () => void removeItem(conditionIndex, itemIndex));
-  tr.append(cell(remove));
+  tr.append(cell(remove, 'actions'));
 
   return tr;
 }
@@ -220,10 +314,10 @@ async function removeItem(conditionIndex: number, itemIndex: number): Promise<vo
 }
 
 /** A quantity in a unit that is not the one it was measured in. */
-function stepCell(quantity: number | null, unit: string | null): HTMLElement {
+function stepCell(value: number | null, unit: string | null): HTMLElement {
   const span = document.createElement('span');
-  span.textContent = quantity === null ? '—' : `${fmt(quantity)} ${unit ?? ''}`.trim();
-  if (quantity === null) span.className = 'muted';
+  span.textContent = value === null ? '—' : `${quantity(value)} ${unit ?? ''}`.trim();
+  if (value === null) span.className = 'none';
   return span;
 }
 
@@ -243,16 +337,23 @@ function cell(child: Node, className?: string): HTMLTableCellElement {
 
 function numberCell(value: number | null): HTMLTableCellElement {
   const span = document.createElement('span');
-  span.textContent = value === null ? 'pending' : fmt(value);
-  if (value === null) span.className = 'pending';
+  span.textContent = value === null ? '—' : quantity(value);
+  if (value === null) {
+    span.className = 'none';
+    span.title = PENDING_REASON;
+  }
   return cell(span, 'num');
 }
 
 function headRow(labels: string[]): HTMLTableRowElement {
   const tr = document.createElement('tr');
-  for (const label of labels) {
+  for (const [i, label] of labels.entries()) {
     const th = document.createElement('th');
     th.textContent = label;
+    // Numbers right, and the last column is the pinned one the row actions
+    // live in so they never scroll out of a narrow window.
+    if ([3, 5, 6, 7, 8, 9].includes(i)) th.className = 'num';
+    if (i === labels.length - 1) th.className = 'actions';
     tr.append(th);
   }
   return tr;
@@ -298,5 +399,3 @@ function selectField(options: string[], value: string, write: (v: string) => Pro
   return select;
 }
 
-const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 2 });
-const money = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });

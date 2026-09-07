@@ -47,7 +47,8 @@ try {
     window.__TAURI_INTERNALS__.invoke('doc_open', { folder }), job.dir);
   await wait(600);
 
-  const opened = await session.execute(() => document.querySelector('#job-name')?.textContent);
+  // The job's name lives in the menu bar now, not in the sidebar.
+  const opened = await session.execute(() => document.querySelector('.menu-job')?.textContent);
   check('the shell opened a job folder off disk', () =>
     assert.equal(opened, 'Demo Warehouse Reroof', `job name reads "${opened}"`));
 

@@ -1,21 +1,30 @@
 // ── The condition panel ────────────────────────────────────────────────────
-// What the drawing cannot tell you. A parapet is a line until somebody says how
+// What the drawing cannot tell you. A parapet is a run until somebody says how
 // tall it is; a roof is a footprint until somebody says what the slope is.
 //
-// The six named properties are the ones every roofing detail keeps asking for.
-// Anything else the estimator needs, they name themselves, and it becomes
-// available to every formula on that condition's lines by that name.
+// The live measures come first and come large. They are the reason the panel is
+// open — an estimator glances here to see what a formula is about to be handed,
+// and a number they have to hunt for is a number they will not check.
 
 import { measure, type Measures } from '@roofnerd/engine';
-import { at, set, doc, type Doc } from '../doc.js';
+import { at, set, type Doc } from '../doc.js';
+import { icon } from '../icons.js';
+import { KIND_LABELS, MEASURE_LABELS, PENDING_REASON, PROPERTY_LABELS, plural, quantity } from '../labels.js';
 
-const NAMED: readonly { readonly key: string; readonly label: string; readonly hint: string }[] = [
-  { key: 'H', label: 'Height', hint: 'feet — how far the flashing runs up' },
-  { key: 'W', label: 'Width', hint: 'feet — coping width, cricket width' },
-  { key: 'T', label: 'Thickness', hint: 'inches — insulation, as it is sold' },
-  { key: 'PITCH', label: 'Pitch', hint: 'rise per 12 — 5 means 5:12' },
-  { key: 'SIDES', label: 'Sides', hint: 'how many' },
-  { key: 'STRETCHOUT', label: 'Stretch-out', hint: 'inches — flat metal the profile eats' },
+type ConditionShape = {
+  id: string; name: string; kind: 'area' | 'line' | 'count';
+  traces?: { id: string; pageId: string; points: { x: number; y: number }[] }[];
+  properties?: Record<string, number>; from?: string;
+};
+
+const GROUPS = ['Geometry', 'Metal'] as const;
+
+/** The four an estimator glances at. Shown whether or not they have a number yet. */
+const HEADLINE: readonly { key: keyof Measures; unit: string }[] = [
+  { key: 'SF', unit: 'SF' },
+  { key: 'LF', unit: 'LF' },
+  { key: 'EA', unit: 'EA' },
+  { key: 'SQ', unit: 'SQ' },
 ];
 
 export function renderConditionPanel(
@@ -31,80 +40,112 @@ export function renderConditionPanel(
   if (!condition) return;
 
   const base = `/conditions/${index}`;
+  const properties = condition.properties ?? {};
 
-  const heading = document.createElement('h3');
-  heading.textContent = 'Condition';
-  host.append(heading);
+  // ── name, and what it is ────────────────────────────────────────────────
+  const name = document.createElement('input');
+  name.type = 'text';
+  name.className = 'panel-name';
+  name.value = condition.name;
+  name.setAttribute('aria-label', 'Condition name');
+  name.addEventListener('input', () => void set(`${base}/name`, name.value));
+  host.append(name);
 
-  // Name.
-  host.append(field('Name', textInput(condition.name, (v) => set(`${base}/name`, v))));
-
-  // What it is. Changing this changes what its traces mean, so it is shown.
+  const traces = (condition.traces ?? []).length;
   const kind = document.createElement('p');
-  kind.className = 'muted';
-  kind.textContent = `${condition.kind} · ${(condition.traces ?? []).length} trace(s)`;
+  kind.className = 'panel-kind';
+  kind.textContent = `${KIND_LABELS[condition.kind]} · ${plural(traces, 'trace')}`;
   host.append(kind);
 
-  // Where its measures come from.
+  // ── what it measures, first and large ───────────────────────────────────
+  const measures = measuresFor(condition, conditions, d);
+  const grid = document.createElement('div');
+  grid.className = 'panel-measures';
+
+  for (const { key, unit } of HEADLINE) {
+    const cell = document.createElement('div');
+
+    const label = document.createElement('div');
+    label.className = 'measure-label';
+    label.textContent = MEASURE_LABELS[key as string] ?? String(key);
+
+    const value = document.createElement('div');
+    value.className = 'measure-value';
+    const raw = measures[key] as number | null;
+    if (raw === null) {
+      // A dash, and the reason in the tooltip. Never a coloured word: nothing
+      // is broken, the sheet simply has not been scaled.
+      value.classList.add('none');
+      value.textContent = '—';
+      value.title = PENDING_REASON;
+    } else {
+      value.textContent = quantity(raw, key === 'EA' ? 0 : 2);
+      const suffix = document.createElement('span');
+      suffix.className = 'unit';
+      suffix.textContent = unit;
+      value.append(suffix);
+    }
+
+    cell.append(label, value);
+    grid.append(cell);
+  }
+  host.append(grid);
+
+  // ── where its measures come from ────────────────────────────────────────
   const others = conditions.filter((c) => c.id !== condition.id);
   const from = document.createElement('select');
-  from.append(optionEl('', 'measured from its own traces'));
-  for (const other of others) from.append(optionEl(other.id, `from ${other.name}`));
+  from.append(optionEl('', 'Measured from its own traces'));
+  for (const other of others) from.append(optionEl(other.id, `From ${other.name}`));
   from.value = condition.from ?? '';
   from.addEventListener('change', () => {
     void set(`${base}/from`, from.value === '' ? undefined : from.value).then(onChanged);
   });
   host.append(field('Measures', from, 'one run, measured once — a coping and its parapet cannot drift apart'));
 
-  // The six named properties.
-  for (const { key, label, hint } of NAMED) {
-    const input = numberInput(condition.properties?.[key], (v) => writeProperty(base, condition, key, v));
-    host.append(field(label, input, hint));
+  // ── the properties, grouped ─────────────────────────────────────────────
+  for (const group of GROUPS) {
+    const named = Object.entries(PROPERTY_LABELS).filter(([, v]) => v.group === group);
+    if (!named.length) continue;
+
+    const heading = document.createElement('p');
+    heading.className = 'panel-group';
+    heading.textContent = group;
+    host.append(heading);
+
+    for (const [key, { label, hint }] of named) {
+      const input = numberInput(properties[key], (v) => writeProperty(base, condition, key, v));
+      host.append(field(label, input, hint));
+    }
   }
 
   // Anything the estimator named themselves.
-  const extra = Object.keys(condition.properties ?? {}).filter((k) => !NAMED.some((n) => n.key === k));
-  for (const key of extra) {
-    const input = numberInput(condition.properties?.[key], (v) => writeProperty(base, condition, key, v));
-    host.append(field(key, input, 'yours — usable in a formula by this name'));
+  const extra = Object.keys(properties).filter((k) => !(k in PROPERTY_LABELS));
+  if (extra.length) {
+    const heading = document.createElement('p');
+    heading.className = 'panel-group';
+    heading.textContent = 'Yours';
+    host.append(heading);
+    for (const key of extra) {
+      const input = numberInput(properties[key], (v) => writeProperty(base, condition, key, v));
+      host.append(field(key, input, 'usable in a formula on this condition by this name'));
+    }
   }
 
   const add = document.createElement('button');
-  add.textContent = '+ property';
+  add.type = 'button';
+  add.className = 'add-property';
+  add.append(icon('add', 14));
+  const addText = document.createElement('span');
+  addText.textContent = 'Add a property';
+  add.append(addText);
   add.addEventListener('click', () => {
-    const name = window.prompt('Name it. Formulas on this condition will use that name.', '');
-    const clean = name?.trim().toUpperCase();
+    const typed = window.prompt('Name it. Formulas on this condition will use that name.', '');
+    const clean = typed?.trim().toUpperCase();
     if (!clean || !/^[A-Z_][A-Z0-9_]*$/.test(clean)) return;
     void writeProperty(base, condition, clean, 0);
   });
   host.append(add);
-
-  // What it measures, so the numbers a formula will see are visible here too.
-  const measures = measuresFor(condition, conditions, d);
-  const shows = document.createElement('table');
-  shows.className = 'measures';
-  for (const [name, value] of [
-    ['SF', measures.SF], ['PLAN_SF', measures.PLAN_SF], ['SQ', measures.SQ],
-    ['LF', measures.LF], ['EA', measures.EA],
-  ] as const) {
-    const tr = document.createElement('tr');
-    const th = document.createElement('th');
-    th.textContent = name;
-    const td = document.createElement('td');
-    td.className = 'num';
-    td.textContent = value === null ? 'pending' : value.toLocaleString('en-US', { maximumFractionDigits: 2 });
-    if (value === null) td.classList.add('pending');
-    tr.append(th, td);
-    shows.append(tr);
-  }
-  host.append(shows);
 }
-
-type ConditionShape = {
-  id: string; name: string; kind: 'area' | 'line' | 'count';
-  traces: { id: string; pageId: string; points: { x: number; y: number }[] }[];
-  properties: Record<string, number>; from?: string;
-};
 
 function measuresFor(condition: ConditionShape, all: ConditionShape[], d: Doc): Measures {
   const pages = (at('/pages', d) as { id: string; feetPerUnit?: number }[]) ?? [];
@@ -134,14 +175,6 @@ function field(label: string, control: HTMLElement, hint?: string): HTMLLabelEle
   return wrap;
 }
 
-function textInput(value: string, write: (v: string) => Promise<unknown>): HTMLInputElement {
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.value = value ?? '';
-  input.addEventListener('input', () => void write(input.value));
-  return input;
-}
-
 function numberInput(value: number | undefined, write: (v: number | undefined) => Promise<unknown>): HTMLInputElement {
   const input = document.createElement('input');
   input.type = 'number';
@@ -160,11 +193,3 @@ function optionEl(value: string, label: string): HTMLOptionElement {
   o.textContent = label;
   return o;
 }
-
-/** Which condition the panel is showing, kept where both editors can read it. */
-export const selection = {
-  id: null as string | null,
-  set(id: string | null) { this.id = id; },
-};
-
-export const currentDoc = doc;

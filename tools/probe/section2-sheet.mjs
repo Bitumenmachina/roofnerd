@@ -99,7 +99,7 @@ try {
     await estimate.evaluate(() => document.querySelector('.add-item').click());
     await wait(200);
     await estimate.evaluate((d, f, u, c) => {
-      const rows = document.querySelectorAll('.sheet tbody tr');
+      const rows = document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)');
       const row = rows[rows.length - 1];
       const [desc, , form] = row.querySelectorAll('input[type=text]');
       const set = (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
@@ -119,7 +119,7 @@ try {
   await addItem('Corners', 'EA', 'EA', 45);
 
   const lines = await estimate.evaluate(() =>
-    [...document.querySelectorAll('.sheet tbody tr')].map((tr) => {
+    [...document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)')].map((tr) => {
       const cells = [...tr.querySelectorAll('td')];
       return {
         description: cells[0].querySelector('input').value,
@@ -147,7 +147,7 @@ try {
   });
 
   check('the corners are counted', () => {
-    assert.equal(lines[2].quantity, '4');
+    nearly(lines[2].quantity, 4, 'corners');
   });
 
   check('each line extends at its own price', () => {
@@ -156,7 +156,7 @@ try {
     nearly(lines[2].extended, 180, 'corners');           // 4 x 45
   });
 
-  const total = await estimate.evaluate(() => document.querySelector('.sheet-total strong').textContent);
+  const total = await estimate.evaluate(() => document.querySelector('.selling .value').textContent);
   check('the total is the sum of the lines', () => nearly(total, 1067.5, 'total'));
 
   // ── the live loop: trace more of the same parapet ───────────────────────
@@ -170,9 +170,9 @@ try {
   await wait(400);
 
   const afterTrace = await estimate.evaluate(() => ({
-    total: document.querySelector('.sheet-total strong').textContent,
-    coping: document.querySelectorAll('.sheet tbody tr')[1].querySelectorAll('td')[3].textContent,
-    rows: document.querySelectorAll('.sheet tbody tr').length,
+    total: document.querySelector('.selling .value').textContent,
+    coping: document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)')[1].querySelectorAll('td')[3].textContent,
+    rows: document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)').length,
   }));
 
   check('another run joins the condition that is selected', () => {
@@ -197,8 +197,8 @@ try {
   await wait(500);
 
   const moved = await estimate.evaluate(() => ({
-    quantity: document.querySelectorAll('.sheet tbody tr')[0].querySelectorAll('td')[3].textContent,
-    total: document.querySelector('.sheet-total strong').textContent,
+    quantity: document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)')[0].querySelectorAll('td')[3].textContent,
+    total: document.querySelector('.selling .value').textContent,
   }));
 
   check('a property typed in one window moves the money in the other', () => {
@@ -209,19 +209,25 @@ try {
 
   // ── a bad formula says what is wrong, on the line ───────────────────────
   await estimate.evaluate(() => {
-    const form = document.querySelectorAll('.sheet tbody tr')[0].querySelectorAll('input[type=text]')[2];
+    const form = document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)')[0].querySelectorAll('input[type=text]')[2];
     form.value = 'LF * NOPE';
     form.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await wait(300);
 
   const bad = await estimate.evaluate(() => {
-    const row = document.querySelectorAll('.sheet tbody tr')[0];
+    const row = document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)')[0];
+    const qtyCell = row.querySelectorAll('td')[3];
+    const extCell = row.querySelectorAll('td')[9];
     return {
       error: row.querySelector('.formula-error')?.textContent ?? null,
       marked: row.querySelector('input.formula')?.classList.contains('bad'),
-      quantity: row.querySelectorAll('td')[3].textContent,
-      extended: row.querySelectorAll('td')[9].textContent,
+      quantity: qtyCell.textContent,
+      // The reason moved into the tooltip; the cell shows a dash. A red word in
+      // a money column reads as breakage, and a line with no price is not that.
+      quantityReason: qtyCell.querySelector('[title]')?.getAttribute('title') ?? '',
+      extended: extCell.textContent,
+      extendedReason: extCell.querySelector('[title]')?.getAttribute('title') ?? '',
     };
   });
 
@@ -231,8 +237,14 @@ try {
   });
 
   check('a bad formula shows no quantity and no money', () => {
-    assert.match(bad.quantity, /pending/, bad.quantity);
+    assert.equal(bad.quantity.trim(), '—', bad.quantity);
+    assert.equal(bad.extended.trim(), '—', bad.extended);
     assert.doesNotMatch(bad.extended, /\$/, bad.extended);
+  });
+
+  check('and says why, in the tooltip rather than in red', () => {
+    assert.ok(bad.extendedReason.length > 0, 'no reason on the money cell');
+    assert.match(bad.extendedReason, /NOPE|scale|price/i, bad.extendedReason);
   });
 
   check('nothing errored in either window', () => {

@@ -1,15 +1,54 @@
-/* A stylesheet, not a style attribute. The security policy forbids inline
-   styling, and that is deliberate: it is the same rule that keeps a stray
-   script from running, so it is not worth loosening for convenience. */
+/* ── roofnerd ──────────────────────────────────────────────────────────────
+   A stylesheet, not a style attribute. The security policy forbids inline
+   styling, and that is the same rule that keeps a stray script from running,
+   so it is not worth loosening for convenience.
+
+   One accent, one sans, one grid. Condition colours are for telling one traced
+   thing from another and never for interface state: a colour that means
+   "selected" on Tuesday must not mean "parapet" on Wednesday.
+   ────────────────────────────────────────────────────────────────────────── */
 
 :root {
-  --ink: #1b1b1b;
-  --paper: #f7f6f3;
-  --panel: #ffffff;
-  --rule: #d6d2ca;
-  --muted: #6f6a63;
-  --accent: #7a4b1e;
-  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Paper and ink */
+  --ink:        #1c1c1e;
+  --ink-soft:   #5b5b62;
+  --ink-faint:  #8b8b93;
+  --paper:      #ffffff;
+  --panel:      #f7f7f8;
+  --rule:       #dcdce1;
+  --rule-soft:  #ebebef;
+
+  /* The desk the drawing lies on. Light and neutral: the paper is the subject. */
+  --desk:       #e6e6ea;
+
+  /* One accent. Active tool, selection, focus. Nothing else. */
+  --accent:      #1f66b8;
+  --accent-soft: #e8f0fa;
+  --accent-ink:  #ffffff;
+
+  --warn: #9a3412;
+
+  /* Type */
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --t-micro: 11px;
+  --t-small: 12px;
+  --t-base:  13px;
+  --t-mid:   15px;
+  --t-large: 20px;
+
+  /* Density */
+  --gap-1: 4px;
+  --gap-2: 8px;
+  --gap-3: 12px;
+  --gap-4: 16px;
+  --gap-5: 24px;
+  --row:   28px;
+
+  --radius: 5px;
+
+  font-family: var(--sans);
+  font-size: var(--t-base);
   color: var(--ink);
 }
 
@@ -17,197 +56,333 @@
 
 body {
   margin: 0;
-  display: grid;
-  grid-template-columns: 260px 1fr;
   height: 100vh;
-  background: var(--paper);
-}
-
-body.detached { grid-template-columns: 1fr; }
-body.detached #tree { display: none; }
-
-#tree {
-  border-right: 1px solid var(--rule);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
   background: var(--panel);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  overflow: auto;
+  overflow: hidden;
 }
 
-#tree h1 { font-size: 15px; margin: 0; }
-#tree footer { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
-
-.muted { color: var(--muted); font-size: 12px; margin: 0; word-break: break-all; }
+button, input, select { font: inherit; color: inherit; }
 
 button {
-  font: inherit;
-  padding: 7px 10px;
   border: 1px solid var(--rule);
-  border-radius: 4px;
+  border-radius: var(--radius);
   background: var(--paper);
+  padding: 5px 10px;
   cursor: pointer;
-  text-align: left;
 }
-button:hover { border-color: var(--accent); }
-
-#editor { padding: 24px 28px; overflow: auto; }
-
-h2 { margin: 0 0 4px; font-size: 18px; }
-.editor-note { color: var(--muted); font-size: 12px; margin: 0 0 20px; max-width: 52ch; }
-
-label { display: block; margin-bottom: 14px; max-width: 340px; }
-label span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
-
-input {
-  font: inherit;
-  width: 100%;
-  padding: 6px 8px;
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-  background: var(--panel);
+button:hover { border-color: var(--ink-faint); }
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
-table { border-collapse: collapse; margin-top: 8px; }
-th, td { text-align: left; padding: 4px 18px 4px 0; }
-th { font-size: 12px; color: var(--muted); font-weight: 500; }
-td.num { text-align: right; font-variant-numeric: tabular-nums; }
-tr.total td { border-top: 1px solid var(--rule); font-weight: 600; padding-top: 8px; }
+.muted { color: var(--ink-soft); font-size: var(--t-small); margin: 0; }
+.icon { flex: none; }
 
-ul.tree { list-style: none; padding-left: 0; margin: 0; }
-ul.tree li { padding: 3px 0; }
-ul.tree ul { list-style: none; padding-left: 14px; }
+/* ── Menu bar ───────────────────────────────────────────────────────────── */
 
-/* ── The Plan editor ──────────────────────────────────────────────────────── */
-
-.plan-editor { display: flex; flex-direction: column; height: 100%; padding: 0; }
-
-.toolbar {
+.menu-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: var(--gap-2);
+  padding: 0 var(--gap-2);
+  height: 32px;
   border-bottom: 1px solid var(--rule);
   background: var(--panel);
-  flex-wrap: wrap;
 }
-.toolbar button { padding: 5px 10px; }
-.toolbar button.on { background: var(--accent); color: var(--panel); border-color: var(--accent); }
-.toolbar select { font: inherit; padding: 5px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--paper); }
-.divider { width: 1px; height: 22px; background: var(--rule); margin: 0 4px; }
+.menu { position: relative; }
+.menu-button { border: 0; background: transparent; padding: 4px 10px; border-radius: var(--radius); }
+.menu-button:hover { background: var(--rule-soft); }
+.menu-list {
+  position: absolute; top: 100%; left: 0; z-index: 40; min-width: 190px;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.12); padding: var(--gap-1); display: flex; flex-direction: column;
+}
+/* `display: flex` beats the browser's own [hidden] rule, so a hidden menu
+   would sit open over the tree. Say it explicitly. */
+.menu-list[hidden] { display: none; }
+.menu-item { border: 0; background: transparent; text-align: left; padding: 6px 10px; border-radius: 4px; }
+.menu-item:hover:not(:disabled) { background: var(--accent-soft); }
+.menu-item:disabled { color: var(--ink-faint); cursor: default; }
+.menu-job { margin-left: auto; color: var(--ink-soft); font-size: var(--t-small); }
 
-.plan-layout { display: grid; grid-template-columns: 1fr 280px; flex: 1; min-height: 0; }
+/* ── The frame ──────────────────────────────────────────────────────────── */
 
-.surface { position: relative; overflow: hidden; background: #57534e; }
+.frame { display: grid; grid-template-columns: 268px 1fr; min-height: 0; }
+.frame.detached { grid-template-columns: 1fr; }
+.frame.detached > .sidebar { display: none; }
+
+.sidebar {
+  border-right: 1px solid var(--rule);
+  background: var(--panel);
+  overflow: auto;
+  padding: var(--gap-2) 0;
+  min-height: 0;
+}
+
+/* ── The tree ───────────────────────────────────────────────────────────── */
+
+ul.tree { list-style: none; margin: 0; padding: 0; }
+.tree-node {
+  display: flex; align-items: center; gap: 2px;
+  padding-left: calc(var(--depth) * 14px);
+  min-height: var(--row);
+}
+.tree-node.on > .tree-label { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+.twisty {
+  border: 0; background: transparent; padding: 0; width: 18px; height: 18px;
+  display: grid; place-items: center; color: var(--ink-faint); flex: none;
+}
+.twisty .icon { transition: transform 90ms ease; }
+.twisty.open .icon { transform: rotate(90deg); }
+.twisty.empty { visibility: hidden; }
+.tree-label {
+  display: flex; align-items: center; gap: var(--gap-2); flex: 1; min-width: 0;
+  border: 0; background: transparent; border-radius: 4px; padding: 3px 8px 3px 4px;
+  text-align: left; color: var(--ink-soft);
+}
+.tree-label:hover { background: var(--rule-soft); }
+.tree-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-detail { color: var(--ink-faint); font-size: var(--t-micro); flex: none; }
+.tree-note { color: var(--ink-faint); font-size: var(--t-micro); padding: var(--gap-2) var(--gap-3); margin: 0; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+
+/* ── An area ────────────────────────────────────────────────────────────── */
+
+.area { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--paper); }
+.area-header {
+  display: flex; align-items: center; gap: var(--gap-2);
+  padding: 0 var(--gap-2) 0 var(--gap-4); height: 34px;
+  border-bottom: 1px solid var(--rule); background: var(--panel); flex: none;
+}
+.area-header h2 { font-size: var(--t-base); font-weight: 600; margin: 0; }
+.area-actions { margin-left: auto; display: flex; gap: 2px; }
+.area-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.icon-button {
+  border: 0; background: transparent; padding: 5px; border-radius: 4px;
+  color: var(--ink-soft); display: grid; place-items: center;
+}
+.icon-button:hover { background: var(--rule-soft); color: var(--ink); }
+
+/* ── Status bar ─────────────────────────────────────────────────────────── */
+
+.status-bar {
+  display: flex; align-items: center; gap: var(--gap-3);
+  height: 26px; padding: 0 var(--gap-3);
+  border-top: 1px solid var(--rule); background: var(--panel);
+  font-size: var(--t-micro); color: var(--ink-soft);
+}
+.status-path { margin-left: auto; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Start screen ───────────────────────────────────────────────────────── */
+
+.start { margin: auto; padding: var(--gap-5); max-width: 380px; text-align: center; }
+.start h1 { font-size: 28px; margin: 0 0 var(--gap-1); font-weight: 600; }
+.start-line { color: var(--ink-soft); margin: 0 0 var(--gap-5); }
+.start-open {
+  display: inline-flex; align-items: center; gap: var(--gap-2);
+  padding: 9px 18px; background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+}
+.start-open:hover { filter: brightness(1.08); border-color: var(--accent); }
+.start h3 { font-size: var(--t-small); color: var(--ink-faint); font-weight: 500; margin: var(--gap-5) 0 var(--gap-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.start-recent { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.start-recent button { width: 100%; border-color: transparent; background: transparent; }
+.start-recent button:hover { background: var(--rule-soft); }
+
+/* ── Help ───────────────────────────────────────────────────────────────── */
+
+.help-sheet {
+  position: fixed; inset: 0; z-index: 60; margin: auto; max-width: 560px; max-height: 78vh;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 8px;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.22); display: flex; flex-direction: column;
+}
+.help-sheet header {
+  display: flex; align-items: center; padding: var(--gap-3) var(--gap-4);
+  border-bottom: 1px solid var(--rule);
+}
+.help-sheet h2 { margin: 0; font-size: var(--t-mid); }
+.help-close { margin-left: auto; }
+.help-body { padding: var(--gap-4); overflow: auto; }
+.help-body p { margin: 0 0 var(--gap-3); line-height: 1.6; color: var(--ink-soft); }
+.help-body p:last-child { margin-bottom: 0; }
+
+/* ── Plan: toolbar ──────────────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex; align-items: center; gap: var(--gap-1);
+  padding: var(--gap-2) var(--gap-3); border-bottom: 1px solid var(--rule);
+  background: var(--paper); flex: none; overflow-x: auto; scrollbar-width: thin;
+}
+.toolbar select {
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 5px 6px; background: var(--paper); max-width: 150px; min-width: 0;
+}
+.tool { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; white-space: nowrap; flex: none; }
+.tool.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.tool.on:hover { border-color: var(--accent); }
+.divider { width: 1px; height: 20px; background: var(--rule); margin: 0 var(--gap-1); flex: none; }
+.toolbar .spacer { margin-left: auto; }
+
+/* ── Plan: the desk and the paper ───────────────────────────────────────── */
+
+.plan-layout { display: grid; grid-template-columns: 1fr 300px; flex: 1; min-height: 0; }
+.surface { position: relative; overflow: hidden; background: var(--desk); }
 .surface-scroll { position: absolute; inset: 0; overflow: auto; }
-.surface-stack { position: relative; margin: 12px auto; }
-.surface-sheet { display: block; box-shadow: 0 2px 12px rgb(0 0 0 / 0.35); background: white; }
+.surface-stack { position: relative; margin: var(--gap-4) auto; }
+.surface-sheet {
+  display: block; background: white;
+  border: 1px solid var(--rule);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.16);
+}
 .surface-overlay { position: absolute; inset: 0; cursor: crosshair; touch-action: none; }
 
-/* Strokes keep the same weight on screen at every zoom: --hair is one screen
-   pixel expressed in page units, set by the surface when the zoom changes. */
 .surface-overlay .trace,
 .surface-overlay .draft-area,
 .surface-overlay .draft-line { stroke-width: calc(var(--hair, 1) * 2); vector-effect: non-scaling-stroke; }
-
-.trace { fill-opacity: 0.16; }
-.trace.on { fill-opacity: 0.3; stroke-width: calc(var(--hair, 1) * 3); }
+.trace { fill-opacity: 0.14; }
+.trace.on { fill-opacity: 0.26; stroke-width: calc(var(--hair, 1) * 3); }
 polyline.trace { fill: none; }
-
-.draft-area { fill: #f5a623; fill-opacity: 0.2; stroke: #f5a623; stroke-dasharray: 6 4; }
-.draft-line { fill: none; stroke: #f5a623; stroke-dasharray: 6 4; }
-.draft-vertex { fill: #f5a623; stroke: #1b1b1b; stroke-width: calc(var(--hair, 1)); }
+.draft-area { fill: var(--accent); fill-opacity: 0.14; stroke: var(--accent); stroke-dasharray: 6 4; }
+.draft-line { fill: none; stroke: var(--accent); stroke-dasharray: 6 4; }
+.draft-vertex { fill: var(--accent); stroke: var(--paper); stroke-width: calc(var(--hair, 1)); }
 
 .hint {
-  margin: 0;
-  padding: 6px 12px;
-  border-top: 1px solid var(--rule);
-  background: var(--panel);
-  color: var(--muted);
-  font-size: 12px;
-  min-height: 26px;
+  margin: 0; padding: 6px var(--gap-3); border-top: 1px solid var(--rule);
+  background: var(--panel); color: var(--ink-soft); font-size: var(--t-small);
+  min-height: 26px; flex: none;
 }
 
-.condition-list { border-left: 1px solid var(--rule); background: var(--panel); overflow: auto; padding: 12px; }
-.condition-list h3 { margin: 0 0 8px; font-size: 13px; }
+/* ── The rail: one scroll region ────────────────────────────────────────── */
 
+.plan-rail {
+  border-left: 1px solid var(--rule); background: var(--panel);
+  overflow-y: auto; overflow-x: hidden; min-height: 0;
+  display: flex; flex-direction: column;
+}
+.rail-heading {
+  font-size: var(--t-micro); text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--ink-faint); font-weight: 600; margin: 0;
+  padding: var(--gap-3) var(--gap-3) var(--gap-2);
+  position: sticky; top: 0; background: var(--panel); z-index: 2;
+}
+.condition-list { padding: 0 var(--gap-2) var(--gap-2); }
 .condition {
-  display: grid;
-  grid-template-columns: 12px 1fr;
-  gap: 4px 8px;
-  width: 100%;
-  margin-bottom: 4px;
-  align-items: center;
-  border-color: transparent;
-  background: transparent;
+  display: grid; grid-template-columns: 10px 1fr; gap: 3px var(--gap-2);
+  width: 100%; align-items: start; text-align: left;
+  border-color: transparent; background: transparent; padding: 6px 8px; margin-bottom: 2px;
 }
-.condition:hover { background: var(--paper); }
-.condition.on { border-color: var(--accent); background: var(--paper); }
-.swatch { width: 12px; height: 12px; border-radius: 2px; grid-row: span 2; align-self: start; margin-top: 3px; }
-.condition-name { font-size: 13px; }
-.condition-measures { grid-column: 2; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.pending { grid-column: 2; font-size: 11px; color: #a33; }
-.condition-props { grid-column: 2; font-size: 11px; color: var(--muted); }
+.condition:hover { background: var(--rule-soft); }
+.condition.on { background: var(--accent-soft); border-color: var(--accent); }
+.condition .swatch { grid-row: span 2; margin-top: 4px; }
+.condition-name { font-size: var(--t-base); }
+.condition-measures { grid-column: 2; font-size: var(--t-small); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.condition-props { grid-column: 2; font-size: var(--t-micro); color: var(--ink-faint); }
 
-/* ── The right rail: what is traced, and what is selected ─────────────────── */
+/* ── The condition panel ────────────────────────────────────────────────── */
 
-.plan-rail { border-left: 1px solid var(--rule); background: var(--panel); overflow: auto; display: flex; flex-direction: column; }
-.condition-list { border-left: 0; }
-.condition-panel { border-top: 1px solid var(--rule); padding: 12px; }
-.condition-panel h3 { margin: 0 0 8px; font-size: 13px; }
-.condition-panel label { margin-bottom: 8px; }
-.condition-panel label span { font-size: 11px; }
-.condition-panel small { display: block; color: var(--muted); font-size: 10px; margin-top: 2px; }
-.condition-panel select { font: inherit; width: 100%; padding: 5px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--panel); }
-table.measures { width: 100%; margin-top: 10px; border-top: 1px solid var(--rule); padding-top: 6px; }
-table.measures th { text-align: left; font-weight: 500; color: var(--muted); font-size: 11px; }
-table.measures td { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
+.condition-panel { border-top: 1px solid var(--rule); padding: var(--gap-3); }
+.panel-name { width: 100%; font-size: var(--t-mid); font-weight: 600; border: 1px solid transparent; background: transparent; border-radius: var(--radius); padding: 4px 6px; }
+.panel-name:hover { border-color: var(--rule); }
+.panel-kind { color: var(--ink-faint); font-size: var(--t-micro); margin: 0 0 var(--gap-3) 6px; }
 
-/* ── The Estimate Sheet ───────────────────────────────────────────────────── */
+/* The measures are why the panel exists, so they come first and they are big. */
+.panel-measures {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--gap-2) var(--gap-3);
+  padding: var(--gap-3); margin-bottom: var(--gap-3);
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius);
+}
+.measure-label { font-size: var(--t-micro); color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.04em; }
+.measure-value { font-size: var(--t-large); font-variant-numeric: tabular-nums; line-height: 1.15; }
+.measure-value .unit { font-size: var(--t-small); color: var(--ink-faint); margin-left: 3px; }
+.measure-value.none { color: var(--ink-faint); }
 
-.estimate-editor { display: flex; flex-direction: column; height: 100%; }
-.sheet { flex: 1; overflow: auto; }
-.sheet-group { margin-bottom: 20px; }
-.sheet-group header { display: flex; align-items: center; gap: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--rule); }
-.sheet table { width: 100%; margin-top: 6px; table-layout: fixed; }
-/* The formula gets the widest column on the sheet. It is the joint where the
-   geometry meets the money, and a formula clipped at the column edge is a
-   formula nobody can check — which is the whole failure this program set out
-   to leave behind. */
-.sheet col.c-item      { width: 17%; }
-.sheet col.c-code      { width: 9%; }
-.sheet col.c-formula   { width: 21%; }
-.sheet col.c-qty       { width: 8%; }
-.sheet col.c-unit      { width: 6%; }
-.sheet col.c-waste     { width: 6%; }
-.sheet col.c-order     { width: 9%; }
-.sheet col.c-priced    { width: 9%; }
-.sheet col.c-cost      { width: 7%; }
-.sheet col.c-extended  { width: 10%; }
-.sheet col.c-remove    { width: 24px; }
-.sheet th, .sheet td { overflow: hidden; text-overflow: ellipsis; }
-.sheet th:nth-child(4), .sheet th:nth-child(7), .sheet th:nth-child(8), .sheet th:nth-child(9), .sheet th:nth-child(10) { text-align: right; }
-.sheet th { font-size: 11px; }
-.sheet td { padding: 2px 6px 2px 0; vertical-align: top; }
-.sheet input, .sheet select { font: inherit; font-size: 12px; padding: 3px 5px; border: 1px solid transparent; border-radius: 3px; background: transparent; width: 100%; }
-.sheet input:hover, .sheet select:hover { border-color: var(--rule); }
-.sheet input:focus, .sheet select:focus { border-color: var(--accent); background: var(--panel); outline: none; }
+.panel-group { font-size: var(--t-micro); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); font-weight: 600; margin: var(--gap-3) 0 var(--gap-2); }
+.condition-panel label { display: block; margin-bottom: var(--gap-2); }
+.condition-panel label > span { display: block; font-size: var(--t-small); margin-bottom: 2px; }
+.condition-panel small { display: block; color: var(--ink-faint); font-size: var(--t-micro); margin-top: 2px; }
+.condition-panel input, .condition-panel select {
+  width: 100%; padding: 5px 7px; border: 1px solid var(--rule);
+  border-radius: var(--radius); background: var(--paper);
+}
+.add-property { width: 100%; margin-top: var(--gap-2); }
+
+/* ── The Estimate Sheet ─────────────────────────────────────────────────── */
+
+.sheet-scroll { flex: 1; overflow: auto; min-height: 0; }
+
+/* Minimum widths so a header never truncates and a select always shows its
+   value. Below this the table scrolls inside its own area — which is the point:
+   a torn-off sheet narrower than the columns still reaches every one of them. */
+.sheet { min-width: 844px; }
+.sheet table { table-layout: fixed; }
+.sheet col.c-item     { width: 148px; }
+.sheet col.c-code     { width: 92px; }
+.sheet col.c-formula  { width: 118px; }
+.sheet col.c-qty      { width: 66px; }
+.sheet col.c-unit     { width: 76px; }
+.sheet col.c-waste    { width: 58px; }
+.sheet col.c-order    { width: 78px; }
+.sheet col.c-priced   { width: 78px; }
+.sheet col.c-cost     { width: 72px; }
+.sheet col.c-extended { width: 84px; }
+.sheet col.c-actions  { width: 34px; }
+.sheet td:not(.actions) { overflow: hidden; }
+.sheet tr.add-row td { border-bottom: 0; padding-bottom: var(--gap-3); }
+.sheet tr.group-row.on td { box-shadow: inset 3px 0 0 var(--accent); }
+.sheet table { width: 100%; border-collapse: collapse; }
+.sheet th {
+  font-size: var(--t-micro); color: var(--ink-faint); font-weight: 600; text-align: left;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  padding: var(--gap-2) var(--gap-2) 6px; white-space: nowrap;
+  border-bottom: 1px solid var(--rule); position: sticky; top: 0; background: var(--paper); z-index: 1;
+}
+.sheet td { padding: 3px var(--gap-2); border-bottom: 1px solid var(--rule-soft); vertical-align: middle; }
+.sheet tr.group-row td {
+  background: var(--panel); border-bottom: 1px solid var(--rule);
+  font-weight: 600; padding: 7px var(--gap-2);
+}
+.group-row .swatch { display: inline-block; margin-right: var(--gap-2); vertical-align: -1px; }
+.group-measures { font-weight: 400; color: var(--ink-soft); font-size: var(--t-small); margin-left: var(--gap-2); font-variant-numeric: tabular-nums; }
+.sheet td.num, .sheet th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.sheet td.extended { font-weight: 600; }
+.sheet input, .sheet select {
+  width: 100%; padding: 3px 2px 3px 5px; border: 1px solid transparent;
+  border-radius: 4px; background: transparent; font-size: var(--t-small);
+}
+.sheet select { padding-right: 0; }
+.sheet input:hover, .sheet select:hover { border-color: var(--rule); background: var(--paper); }
+.sheet input:focus, .sheet select:focus { border-color: var(--accent); background: var(--paper); outline: none; }
 .sheet input.num { text-align: right; font-variant-numeric: tabular-nums; }
+.sheet input.formula { font-family: var(--mono); font-size: var(--t-small); }
+.sheet input.formula.bad { border-color: var(--warn); background: #fdf5f2; }
+.formula-error { display: block; color: var(--warn); font-size: var(--t-micro); padding: 2px 5px 0; }
+.none { color: var(--ink-faint); }
 
-/* The formula is the joint where the geometry meets the money. It is the part
-   that leaks when it is hidden, so it is given room and a face of its own. */
-.sheet input.formula { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
-.sheet input.formula.bad { border-color: #a33; background: #fdf3f3; }
-.formula-error { display: block; color: #a33; font-size: 11px; padding-left: 5px; }
-
-.add-item { margin-top: 4px; font-size: 12px; padding: 3px 8px; color: var(--muted); }
-button.remove { border: 0; background: transparent; color: var(--muted); padding: 2px 6px; }
-button.remove:hover { color: #a33; }
-
-.sheet-total {
-  display: flex; align-items: baseline; gap: 12px;
-  border-top: 2px solid var(--ink); padding-top: 8px; margin-top: 8px;
+/* Row actions sit in a column pinned to the right edge, so they never scroll
+   out of a torn-off window that is narrower than the sheet. */
+.sheet th.actions, .sheet td.actions {
+  position: sticky; right: 0; background: var(--paper); width: 34px; padding-right: var(--gap-3);
+  box-shadow: -6px 0 6px -6px rgb(0 0 0 / 0.18);
 }
-.sheet-total strong { font-size: 18px; font-variant-numeric: tabular-nums; }
-.sheet-total .pending { font-size: 12px; }
+.sheet tr.group-row td.actions { background: var(--panel); }
+button.remove { border: 0; background: transparent; color: var(--ink-faint); padding: 3px; border-radius: 4px; display: grid; place-items: center; }
+button.remove:hover { color: var(--warn); background: var(--rule-soft); }
+.add-item { margin: var(--gap-2) 0 0 var(--gap-2); font-size: var(--t-small); color: var(--ink-soft); display: inline-flex; align-items: center; gap: 5px; }
+
+/* The footer carries the classes, now that there are classes to carry. */
+.sheet-footer {
+  flex: none; border-top: 1px solid var(--rule); background: var(--panel);
+  padding: var(--gap-2) var(--gap-3);
+}
+.class-strip { display: flex; flex-wrap: wrap; gap: var(--gap-4); margin-bottom: var(--gap-2); }
+.class-cell { display: flex; flex-direction: column; gap: 1px; }
+.class-cell .label { font-size: var(--t-micro); color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.04em; }
+.class-cell .value { font-size: var(--t-base); font-variant-numeric: tabular-nums; }
+.selling { display: flex; align-items: baseline; gap: var(--gap-2); border-top: 1px solid var(--rule); padding-top: var(--gap-2); }
+.selling .label { font-size: var(--t-small); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); }
+.selling .value { font-size: var(--t-large); font-weight: 600; font-variant-numeric: tabular-nums; margin-left: auto; }
+.selling .partial { font-size: var(--t-micro); color: var(--warn); }
+
+.empty-note { color: var(--ink-soft); padding: var(--gap-5); text-align: center; }
