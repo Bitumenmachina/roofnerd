@@ -20,6 +20,9 @@ export interface AreaOptions {
   readonly editor?: string;
   readonly help?: string;
   readonly onTearOff?: (editor: string) => void;
+  /** Every editor this area could show, for the picker at its top-left. */
+  readonly editors?: readonly { readonly id: string; readonly title: string }[];
+  readonly onSwitch?: (editor: string) => void;
 }
 
 /**
@@ -35,9 +38,26 @@ export function area(options: AreaOptions): { root: HTMLElement; body: HTMLEleme
   const header = document.createElement('header');
   header.className = 'area-header';
 
-  const title = document.createElement('h2');
-  title.textContent = options.title;
-  header.append(title);
+  // An area is a frame that can show any editor, so which one it shows is a
+  // choice made on the area — not a fact about the window it happens to be in.
+  if (options.editors && options.editors.length > 1 && options.onSwitch) {
+    const picker = document.createElement('select');
+    picker.className = 'editor-picker';
+    picker.setAttribute('aria-label', 'Which editor');
+    for (const e of options.editors) {
+      const option = document.createElement('option');
+      option.value = e.id;
+      option.textContent = e.title;
+      picker.append(option);
+    }
+    picker.value = options.editor ?? options.editors[0]!.id;
+    picker.addEventListener('change', () => options.onSwitch!(picker.value));
+    header.append(picker);
+  } else {
+    const title = document.createElement('h2');
+    title.textContent = options.title;
+    header.append(title);
+  }
 
   const actions = document.createElement('div');
   actions.className = 'area-actions';
@@ -121,10 +141,30 @@ export function menu(label: string, items: readonly MenuItem[]): HTMLElement {
   return wrap;
 }
 
-/** The status bar: where the job is, and what just happened. */
-export function statusBar(): { root: HTMLElement; setPath(p: string): void; say(text: string): void } {
+export interface StatusFacts {
+  readonly job?: string;
+  readonly scenario?: string;
+  readonly scale?: string;
+  readonly units?: string;
+  readonly saved?: string;
+}
+
+/**
+ * The status bar: the facts about the job that are true whatever editor is
+ * open — its name, which price set is active, what the sheet is scaled at,
+ * what units are in use, and whether the work is saved. Nothing else.
+ */
+export function statusBar(): {
+  root: HTMLElement;
+  setPath(p: string): void;
+  setFacts(f: StatusFacts): void;
+  say(text: string): void;
+} {
   const root = document.createElement('footer');
   root.className = 'status-bar';
+
+  const facts = document.createElement('span');
+  facts.className = 'status-facts';
 
   const message = document.createElement('span');
   message.className = 'status-message';
@@ -132,11 +172,46 @@ export function statusBar(): { root: HTMLElement; setPath(p: string): void; say(
   const path = document.createElement('span');
   path.className = 'status-path';
 
-  root.append(message, path);
+  const held: StatusFacts & Record<string, string | undefined> = {};
+
+  root.append(facts, message, path);
+
   return {
     root,
     setPath: (p) => { path.textContent = p; path.title = p; },
     say: (text) => { message.textContent = text; },
+    setFacts: (f) => {
+      // Merged, not replaced: saying "Saved" must not blank the job's name.
+      Object.assign(held, f);
+      const shown = held;
+      facts.replaceChildren();
+      const pairs: [string, string][] = [];
+      if (shown.job) pairs.push(['Job', shown.job]);
+      if (shown.scenario) pairs.push(['Scenario', shown.scenario]);
+      if (shown.scale) pairs.push(['Scale', shown.scale]);
+      if (shown.units) pairs.push(['Units', shown.units]);
+      if (shown.saved) pairs.push(['', shown.saved]);
+      for (const [i, [key, value]] of pairs.entries()) {
+        if (i) {
+          const sep = document.createElement('span');
+          sep.className = 'status-sep';
+          sep.textContent = '│';
+          facts.append(sep);
+        }
+        const field = document.createElement('span');
+        field.className = 'status-field';
+        if (key) {
+          const k = document.createElement('span');
+          k.className = 'k';
+          k.textContent = key;
+          field.append(k);
+        }
+        const v = document.createElement('span');
+        v.textContent = value;
+        field.append(v);
+        facts.append(field);
+      }
+    },
   };
 }
 

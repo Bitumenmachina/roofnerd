@@ -9,10 +9,23 @@ acceptance does not pause the build.
 thing not yet started.
 
 Section 7 was the restyle, against Visual Specification v2. All twelve defects it names are
-closed, with a before/after pair from the Tauri window for each. One thing to flag: **v2 §2
-carries forward v1 §3–§9 "unchanged", and v1 is not on this machine** — see `QUESTIONS.md`
-Q2. Where v2 §1 was specific it was followed to the letter; where it referred to v1 the call
-is mine, recorded, and cheap to replace.
+closed, with a before/after pair from the Tauri window for each.
+
+**Appendix A then restored the sections v2 pointed at, and the reconciliation is done.** Five
+interim calls met it and were kept with their mapping written down; eight were overruled and
+the section applied — type scale, density and corners, panel widths, the status bar's
+contents, no second chrome in a torn-off window, an editor picker per area, the scale badge
+and visibility toggle, and a generated price set. `QUESTIONS.md` Q2 is closed; the full
+mapping is at the end of `DECISIONS.md`.
+
+**Two things from the appendix are deliberately not done, and are not oversights:**
+
+- **A4's Estimate Sheet columns contradict v2 §0.** §0 says the formula visible on the line
+  must not be lost; A4's column set has no Formula column and reveals it on expansion. Both
+  cannot hold, and guessing would be the expensive kind of wrong. `QUESTIONS.md` Q3 sets out
+  the choice; the sheet is unchanged meanwhile.
+- **A8 wants help as markdown files in the repo**, one per editor, so a roofer can correct
+  it. It is still strings in `help.ts`. Noted rather than quietly dropped.
 
 Section 3's acceptance, in two halves, both passing:
 
@@ -217,6 +230,7 @@ one screen, watch the money move on the other.
 | Subtotals rebuilt (`tools/rebuild-subtotals.mjs`) | **PASS** — 207 item lines priced through the engine; 28/28 cost codes, 12/12 classes |
 | Client-data gate | **PASS**, and proven red on a figure, a bid name and a home path |
 | Vocabulary check (`tools/probe/vocabulary-check.mjs`) | **PASS 23/23** — reads what is rendered in the shipped window, not the source; proven red on `PLAN_SF` |
+| Synthetic prices (`tools/make-demo-prices.mjs`) | 18 seeded invented prices in `jobs/demo-job/prices.json`; every screenshot and probe draws from them |
 | Engine tests | **95/95** |
 | Shell tests | **5/5**, including that a job saved by the application is byte-for-byte one saved by the command line |
 | Vocabulary gate | **PASS** |

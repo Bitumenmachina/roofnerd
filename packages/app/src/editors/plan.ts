@@ -23,7 +23,7 @@ type Trace = { id: string; pageId: string; points: Point[] };
 type Condition = {
   id: string; name: string; kind: 'area' | 'line' | 'count';
   traces: Trace[]; properties: Record<string, number>; items: unknown[];
-  color?: string; from?: string;
+  color?: string; from?: string; hidden?: boolean;
 };
 type Page = { id: string; name: string; source?: string; pageNumber?: number; feetPerUnit?: number; scaleNote?: string };
 
@@ -97,6 +97,12 @@ export function mountPlan(host: HTMLElement): void {
   rail.className = 'plan-rail';
   rail.append(railHeading, list, panel);
 
+  // A4: the scale badge sits on the drawing, bottom-left, where an estimator
+  // looks to check what they are measuring against.
+  const scaleBadge = document.createElement('div');
+  scaleBadge.className = 'scale-badge';
+  surface.root.append(scaleBadge);
+
   const layout = document.createElement('div');
   layout.className = 'plan-layout';
   layout.append(surface.root, rail);
@@ -137,6 +143,11 @@ export function mountPlan(host: HTMLElement): void {
     const page = pages.find((p) => p.id === currentPageId);
     const word = scaleButton.querySelector('span');
     if (word) word.textContent = page?.feetPerUnit ? 'Rescale' : 'Scale';
+    scaleBadge.textContent = page?.feetPerUnit
+      ? (page.scaleNote ?? 'Scaled')
+      : 'Not scaled';
+    scaleBadge.classList.toggle('none', !page?.feetPerUnit);
+    scaleBadge.hidden = !page;
   });
 }
 
@@ -263,6 +274,7 @@ function drawTraces(d: Doc): void {
   g.replaceChildren();
 
   for (const c of ((at('/conditions', d) as Condition[]) ?? [])) {
+    if (c.hidden) continue;
     const color = c.color ?? hueFor(0);
     const selected = c.id === selectedConditionId();
     for (const t of c.traces ?? []) {
@@ -328,7 +340,22 @@ function renderConditions(host: HTMLElement, d: Doc): void {
     measures.textContent = parts.join(' · ');
     if (m.LF === null && c.kind !== 'count') measures.title = PENDING_REASON;
 
-    row.append(swatch, name, measures);
+    // A4: a condition can be hidden on the sheet without being deleted — a busy
+    // roof plan is unreadable with every trace on it at once.
+    const visible = c.hidden !== true;
+    const eye = document.createElement('span');
+    eye.className = 'visibility';
+    eye.title = visible ? 'Hide this on the drawing' : 'Show this on the drawing';
+    eye.setAttribute('role', 'button');
+    eye.textContent = visible ? '●' : '○';
+    eye.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const all = conditions();
+      void set('/conditions', all.map((x) => (x.id === c.id ? { ...x, hidden: visible } : x)));
+    });
+    row.classList.toggle('hidden-condition', !visible);
+
+    row.append(swatch, name, eye, measures);
 
     // Properties in the words an estimator uses: "4 sides", not "SIDES 4".
     const shown = Object.entries(c.properties ?? {})

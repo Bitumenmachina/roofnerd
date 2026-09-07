@@ -3,7 +3,31 @@
 Things where a wrong call would waste work. Each one names the smallest version built so
 the rest could proceed. Not a stop — the build continues past every entry here.
 
-## Q2 — Visual Specification v1 is not on this machine
+## Q3 — the Estimate Sheet's columns: v2 §0 and A4 disagree
+
+**Built:** the formula stays visible on every line, as it is today.
+
+**The disagreement, inside the specification rather than between it and me:**
+
+- v2 §0 lists what the screenshots show that **stays**, and the first item is "the formula
+  visible on the line".
+- A4 gives the sheet the columns Condition · Item · Qty · Unit · Material · Labor · Total,
+  with Formula revealed only when a line is expanded.
+
+Both cannot hold. A4's column set has no Formula column at all, so adopting it hides on
+expansion the one thing v2 §0 says must not be lost — and the thing the handoff itself calls
+the reason the program exists ("a library you cannot see into is a library nobody trusts").
+
+**Why it waits:** rebuilding the sheet's columns on a reading of an ambiguity would be the
+expensive kind of wrong. The current sheet already does the harder half of A4 — the whole
+chain is on the line rather than hidden — so the change, if A4 is meant literally, is to
+*remove* columns and put them behind an expander. That is an afternoon either way, and it
+should be Patrick's word rather than my guess.
+
+**Also still open from A4, and smaller:** rows grouped by condition are not yet collapsible,
+and Material/Labor are not yet split per line. Both are additive to what is there.
+
+## Q2 — Visual Specification v1 is not on this machine — CLOSED by Appendix A
 
 **Built:** the twelve defects in v2 §1, which v2 specifies completely on their own.
 
@@ -19,9 +43,13 @@ affordance, an icon set drawn inline rather than fetched, and the vocabulary che
 §1 is specific it was followed to the letter; where it referred to v1 the call is mine and
 is marked as such.
 
-**Why it can wait:** every one of those is a stylesheet value or a small component. None of
-them is load-bearing on the document model, and replacing a palette or a type scale is an
-afternoon, not a rebuild.
+**Closed 2026-09-07.** Appendix A restored those sections and is now their only source. Five
+interim calls met it and were kept with their mapping recorded; eight were overruled and the
+section applied. The full reconciliation is at the end of `DECISIONS.md`.
+
+The one thing A8 asks for that is not yet done: help text as markdown files in the repo, one
+per editor, so a roofer can correct it. It is currently strings in `help.ts`. Noted rather
+than quietly dropped.
 
 ## Closed
 

@@ -8,7 +8,7 @@
 // Writes evidence/<area>-<label>-<commit>.png
 
 import { execFileSync } from 'node:child_process';
-import { cp, mkdir, writeFile, mkdtemp, rm } from 'node:fs/promises';
+import { cp, mkdir, readFile, writeFile, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { launch, until, wait } from './tauri-harness.mjs';
@@ -17,6 +17,22 @@ const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
 const COMMIT = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT }).toString().trim();
 const label = process.argv[2] ?? 'shot';
+
+/**
+ * Prices come from the seeded synthetic set, never from anywhere else.
+ *
+ * A screenshot needs plausible money on it, and the only safe source of that is
+ * one that was invented on purpose. Reaching for a real figure has gone wrong
+ * three times; a generated set that is always closer to hand is the fix.
+ */
+const PRICES = JSON.parse(
+  await readFile(resolve(import.meta.dirname, '../../jobs/demo-job/prices.json'), 'utf8'),
+);
+const priced = (id, over = {}) => {
+  const found = PRICES.items.find((i) => i.id === id);
+  if (!found) throw new Error(`no synthetic price called ${id}`);
+  return { ...found, ...over };
+};
 
 /** A job with a drawing, three traces and a few priced lines to look at. */
 async function demoJob() {
@@ -39,13 +55,9 @@ async function demoJob() {
       properties: { PITCH: 4 },
       traces: [trace('t1', [{ x: 110, y: 150 }, { x: 430, y: 150 }, { x: 430, y: 400 }, { x: 110, y: 400 }])],
       items: [
-        { id: 'i-mem', description: 'TPO membrane, 60 mil', costCode: '07-100-100', unit: 'SQ',
-          formula: 'SQ', waste: 10, order: { name: 'ROLL', per: 10, rule: 'ceil' },
-          price: { name: 'SF', contains: 1000, rule: 'exact' }, unitCost: 1.95 },
-        { id: 'i-iso', description: '2.2" polyiso, 4 x 8', costCode: '07-100-100', unit: 'SQ',
-          formula: 'SQ', waste: 10, unitCost: 88.5 },
-        { id: 'i-lab', description: 'Install membrane', costCode: '07-100-230', unit: 'SQ',
-          formula: 'SQ', productionRate: 0.35, crewSize: 6, unitCost: 50 },
+        priced('tpo-60', { formula: 'SQ' }),
+        priced('iso-22', { formula: 'SQ' }),
+        priced('install-membrane', { formula: 'SQ' }),
       ],
     },
     {
@@ -53,12 +65,9 @@ async function demoJob() {
       properties: { H: 1.5, STRETCHOUT: 14 },
       traces: [trace('t2', [{ x: 110, y: 430 }, { x: 430, y: 430 }, { x: 430, y: 560 }])],
       items: [
-        { id: 'i-wall', description: 'Wall flashing membrane', costCode: '07-100-100', unit: 'SF',
-          formula: 'LF * H', unitCost: 1.95 },
-        { id: 'i-cop', description: '24 ga coping, formed', costCode: '07-100-150', unit: 'LF',
-          formula: 'LF', unitCost: 26.5 },
-        { id: 'i-mitre', description: 'Coping mitres', costCode: '07-100-150', unit: 'EA',
-          formula: 'VERTICES', unitCost: 52 },
+        priced('counterflash', { formula: 'LF * H' }),
+        priced('coping', { formula: 'LF' }),
+        priced('mitre', { formula: 'VERTICES' }),
       ],
     },
     {
@@ -66,8 +75,7 @@ async function demoJob() {
       properties: {},
       traces: [trace('t3', [{ x: 180, y: 610 }, { x: 300, y: 610 }, { x: 420, y: 610 }])],
       items: [
-        { id: 'i-drain', description: 'Retrofit drain assembly', costCode: '07-100-100', unit: 'EA',
-          formula: 'EA', unitCost: 410 },
+        priced('drain', { formula: 'EA' }),
       ],
     },
   ]);

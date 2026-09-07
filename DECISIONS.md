@@ -48,3 +48,32 @@ did not cover. Newest last.
 | D41 | Traces are recorded one at a time, in order | Three quick counts used to start three conditions: each click read the job before the one before it finished writing, saw nothing selected that took a count, and made its own. Found by the section 1 probe after the restyle. |
 | D42 | A run shows no square-foot measure at all, rather than showing a dash for one | A run has no surface (D3), and "— SF" beside it suggests it might have one if you scaled the sheet. Each kind shows the measures it actually has. |
 
+## Appendix A reconciliation (2026-09-07)
+
+Visual Specification v2 §2 carried forward sections that were not on this machine; Appendix A
+restores them and is now their only source. Per its reconciliation rule, every interim call is
+either kept with its mapping written down, or dropped where the section wins.
+
+### Interim calls that already met the appendix — kept
+
+| Call | Section | Mapping |
+|---|---|---|
+| D36 — icons drawn inline from Lucide's geometry, 16 px, never without their word | A9 | Meets it exactly, including "icons never stand alone in a toolbar". Inline rather than fetched is additionally forced by the security policy. |
+| D37 — a measure with no number is an em dash with the reason in its tooltip, never a coloured word | A6 | Meets "any status hue is paired with a word or glyph; no colour-only meaning" — by using no hue at all. |
+| D38 — twelve condition hues, one accent that is not among them | A6 | Meets "a fixed palette of twelve saturated hues assigned in order… never used for interface state". Still to add: per-condition editing of the colour. |
+| D34 — one shared selection watched by every editor | A3 | Meets "selecting a node selects it in every editor". |
+| D40 — the paragraph became the editor's help behind a "?" | A8 | Partly. A8 additionally wants help as markdown in the repo, one file per editor, so a roofer can correct it. Not yet — the text is still in `help.ts`. |
+
+### Where the appendix won
+
+| # | Was | Now |
+|---|---|---|
+| D43 | Type 11/12/13/15/20 | 12/13/14/16/20, per A5 |
+| D44 | 4 px grid but 5 px corners, and card shadows on the menu and the help sheet | Corners no rounder than 4 px; no card shadows — those panels are bordered instead. The paper keeps its 1 px shadow because v2 §1.1 asks for exactly that, and the pinned column keeps its scroll shadow because that is an affordance, not a card |
+| D45 | Tree 268 px, rail 300 px, status bar 26 px, list rows 28 px | 260 / 320 / 28 / 32, per A3 and A7 |
+| D46 | Status bar carried a message and a path | Job · Scenario · Scale · Units · save state, then the path. Nothing else, per A3 |
+| D47 | A torn-off window kept the menu bar | It carries the editor area and the status bar only. A menu bar in a window that owns no job is a second copy of the chrome, which A3 forbids |
+| D48 | An area was whichever editor its URL named, with no way to change it | Each area has an editor picker at its top-left, per A3 |
+| D49 | No scale badge, no page navigator, no visibility toggle | Scale badge bottom-left on the drawing; the page select is the navigator at the toolbar's left; each condition row carries a visibility toggle, and a hidden condition is not drawn. Per A4 |
+| D50 | Screenshot and probe dressing carried hand-written prices | `jobs/demo-job/prices.json`, generated and seeded by `tools/make-demo-prices.mjs`. Every screenshot and every probe draws from it. Per A10 — and it is the standing fix for a leak that happened three times because a real figure was the number closest to hand. Product names stay real; a manufacturer's catalogue is not anybody's bid |
+

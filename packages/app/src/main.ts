@@ -27,7 +27,12 @@ const host = document.querySelector<HTMLElement>('#editor')!;
 const menuBar = document.querySelector<HTMLElement>('#menu-bar')!;
 const statusHost = document.querySelector<HTMLElement>('#status')!;
 
-if (detached) frame.classList.add('detached');
+if (detached) {
+  frame.classList.add('detached');
+  // A torn-off window is the editor and the status bar. A second menu bar in it
+  // would be a second copy of the chrome for a window that owns no job.
+  menuBar.remove();
+}
 
 const status = statusBar();
 statusHost.replaceWith(status.root);
@@ -37,6 +42,15 @@ const { root: areaRoot, body: areaBody } = area({
   title: editor.title,
   editor: which,
   help: editor.help,
+  editors: Object.entries(EDITORS).map(([id, e]) => ({ id, title: e.title })),
+  onSwitch: (id) => {
+    // An area can show any editor. Switching is a reload of this same window
+    // with a different editor named in its URL, which keeps one code path for
+    // "which editor am I" instead of two.
+    const url = new URL(window.location.href);
+    url.searchParams.set('editor', id);
+    window.location.assign(url.toString());
+  },
   onTearOff: (name) => {
     // Tearing off the editor you are looking at gives you a second view of it;
     // from the Plan that is the sheet, which is the working pair.
@@ -78,6 +92,17 @@ subscribe((doc: Doc) => {
   const name = at('/job/name', doc);
   const named = typeof name === 'string' && name ? name : null;
   jobLabel.textContent = named ?? '';
+
+  const job = at('/job', doc) as { scenarios?: { id: string; name: string }[]; activeScenarioId?: string } | undefined;
+  const scenario = job?.scenarios?.find((s) => s.id === job.activeScenarioId) ?? job?.scenarios?.[0];
+  const pages = (at('/pages', doc) as { name: string; feetPerUnit?: number; scaleNote?: string }[]) ?? [];
+  const scaled = pages.find((p) => p.feetPerUnit);
+  status.setFacts({
+    ...(named ? { job: named } : {}),
+    ...(scenario ? { scenario: scenario.name } : {}),
+    ...(pages.length ? { scale: scaled?.scaleNote ?? 'not scaled' } : {}),
+    ...(named ? { units: 'SF · LF · EA · SQ' } : {}),
+  });
 
   const nowHasJob = named !== null;
   if (nowHasJob !== hasJob) {
@@ -128,7 +153,8 @@ async function openJob(path?: string) {
 async function saveJob() {
   try {
     await save();
-    status.say('Saved');
+    status.say('');
+    status.setFacts({ saved: 'Saved' });
   } catch (e) {
     status.say(message(e));
   }

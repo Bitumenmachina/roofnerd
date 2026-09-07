@@ -31,10 +31,12 @@
   /* Type */
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --t-micro: 11px;
-  --t-small: 12px;
-  --t-base:  13px;
-  --t-mid:   15px;
+  /* A5: status and hints 12, tables and lists 13, body and properties 14,
+     editor headers 16, the job name 20. */
+  --t-micro: 12px;
+  --t-small: 13px;
+  --t-base:  14px;
+  --t-mid:   16px;
   --t-large: 20px;
 
   /* Density */
@@ -43,9 +45,10 @@
   --gap-3: 12px;
   --gap-4: 16px;
   --gap-5: 24px;
-  --row:   28px;
+  --row:      32px;   /* list rows */
+  --row-sheet: 28px;  /* sheet rows */
 
-  --radius: 5px;
+  --radius: 4px;
 
   font-family: var(--sans);
   font-size: var(--t-base);
@@ -98,7 +101,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .menu-list {
   position: absolute; top: 100%; left: 0; z-index: 40; min-width: 190px;
   background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius);
-  box-shadow: 0 6px 20px rgb(0 0 0 / 0.12); padding: var(--gap-1); display: flex; flex-direction: column;
+  padding: var(--gap-1); display: flex; flex-direction: column;
 }
 /* `display: flex` beats the browser's own [hidden] rule, so a hidden menu
    would sit open over the tree. Say it explicitly. */
@@ -110,7 +113,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 /* ── The frame ──────────────────────────────────────────────────────────── */
 
-.frame { display: grid; grid-template-columns: 268px 1fr; min-height: 0; }
+.frame { display: grid; grid-template-columns: 260px 1fr; min-height: 0; }
 .frame.detached { grid-template-columns: 1fr; }
 .frame.detached > .sidebar { display: none; }
 
@@ -127,7 +130,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 ul.tree { list-style: none; margin: 0; padding: 0; }
 .tree-node {
   display: flex; align-items: center; gap: 2px;
-  padding-left: calc(var(--depth) * 14px);
+  padding-left: calc(var(--depth) * 16px);
   min-height: var(--row);
 }
 .tree-node.on > .tree-label { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
@@ -170,11 +173,34 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
 
 .status-bar {
   display: flex; align-items: center; gap: var(--gap-3);
-  height: 26px; padding: 0 var(--gap-3);
+  height: 28px; padding: 0 var(--gap-3);
   border-top: 1px solid var(--rule); background: var(--panel);
   font-size: var(--t-micro); color: var(--ink-soft);
 }
-.status-path { margin-left: auto; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status-field { display: inline-flex; gap: 5px; align-items: baseline; }
+.status-field .k { color: var(--ink-faint); }
+.status-sep { color: var(--rule); }
+.status-message { color: var(--ink-soft); }
+.status-path { margin-left: auto; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 45%; }
+
+/* The scale badge sits on the drawing, bottom-left, where an estimator looks
+   to check what they are measuring against. */
+.scale-badge {
+  position: absolute; left: var(--gap-3); bottom: var(--gap-3); z-index: 3;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 3px 8px; font-size: var(--t-micro); color: var(--ink-soft);
+  font-variant-numeric: tabular-nums; pointer-events: none;
+}
+.scale-badge.none { color: var(--warn); }
+
+.editor-picker { border: 1px solid var(--rule); border-radius: var(--radius); padding: 3px 6px; background: var(--paper); font-size: var(--t-small); }
+
+.visibility {
+  grid-column: 3; grid-row: 1; border: 0; background: transparent; padding: 2px;
+  color: var(--ink-faint); border-radius: 3px; display: grid; place-items: center;
+}
+.visibility:hover { background: var(--rule-soft); color: var(--ink); }
+.condition.hidden-condition .condition-name { color: var(--ink-faint); text-decoration: line-through; }
 
 /* ── Start screen ───────────────────────────────────────────────────────── */
 
@@ -196,7 +222,7 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
 .help-sheet {
   position: fixed; inset: 0; z-index: 60; margin: auto; max-width: 560px; max-height: 78vh;
   background: var(--paper); border: 1px solid var(--rule); border-radius: 8px;
-  box-shadow: 0 16px 48px rgb(0 0 0 / 0.22); display: flex; flex-direction: column;
+  display: flex; flex-direction: column;
 }
 .help-sheet header {
   display: flex; align-items: center; padding: var(--gap-3) var(--gap-4);
@@ -227,7 +253,7 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
 
 /* ── Plan: the desk and the paper ───────────────────────────────────────── */
 
-.plan-layout { display: grid; grid-template-columns: 1fr 300px; flex: 1; min-height: 0; }
+.plan-layout { display: grid; grid-template-columns: 1fr 320px; flex: 1; min-height: 0; }
 .surface { position: relative; overflow: hidden; background: var(--desk); }
 .surface-scroll { position: absolute; inset: 0; overflow: auto; }
 .surface-stack { position: relative; margin: var(--gap-4) auto; }
@@ -269,7 +295,7 @@ polyline.trace { fill: none; }
 }
 .condition-list { padding: 0 var(--gap-2) var(--gap-2); }
 .condition {
-  display: grid; grid-template-columns: 10px 1fr; gap: 3px var(--gap-2);
+  display: grid; grid-template-columns: 10px 1fr auto; gap: 3px var(--gap-2);
   width: 100%; align-items: start; text-align: left;
   border-color: transparent; background: transparent; padding: 6px 8px; margin-bottom: 2px;
 }
@@ -277,8 +303,8 @@ polyline.trace { fill: none; }
 .condition.on { background: var(--accent-soft); border-color: var(--accent); }
 .condition .swatch { grid-row: span 2; margin-top: 4px; }
 .condition-name { font-size: var(--t-base); }
-.condition-measures { grid-column: 2; font-size: var(--t-small); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-.condition-props { grid-column: 2; font-size: var(--t-micro); color: var(--ink-faint); }
+.condition-measures { grid-column: 2 / -1; font-size: var(--t-small); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.condition-props { grid-column: 2 / -1; font-size: var(--t-micro); color: var(--ink-faint); }
 
 /* ── The condition panel ────────────────────────────────────────────────── */
 
@@ -338,7 +364,7 @@ polyline.trace { fill: none; }
   padding: var(--gap-2) var(--gap-2) 6px; white-space: nowrap;
   border-bottom: 1px solid var(--rule); position: sticky; top: 0; background: var(--paper); z-index: 1;
 }
-.sheet td { padding: 3px var(--gap-2); border-bottom: 1px solid var(--rule-soft); vertical-align: middle; }
+.sheet td { height: var(--row-sheet); padding: 2px var(--gap-2); border-bottom: 1px solid var(--rule-soft); vertical-align: middle; }
 .sheet tr.group-row td {
   background: var(--panel); border-bottom: 1px solid var(--rule);
   font-weight: 600; padding: 7px var(--gap-2);
