@@ -126,7 +126,7 @@ try {
         formula: cells[2].querySelector('input').value,
         quantity: cells[3].textContent,
         unit: cells[4].querySelector('select').value,
-        extended: cells[8].textContent,
+        extended: cells[9].textContent,
       };
     }));
 
@@ -221,7 +221,7 @@ try {
       error: row.querySelector('.formula-error')?.textContent ?? null,
       marked: row.querySelector('input.formula')?.classList.contains('bad'),
       quantity: row.querySelectorAll('td')[3].textContent,
-      extended: row.querySelectorAll('td')[8].textContent,
+      extended: row.querySelectorAll('td')[9].textContent,
     };
   });
 

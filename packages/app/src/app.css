@@ -175,18 +175,19 @@ table.measures td { text-align: right; font-variant-numeric: tabular-nums; font-
    geometry meets the money, and a formula clipped at the column edge is a
    formula nobody can check — which is the whole failure this program set out
    to leave behind. */
-.sheet col.c-item      { width: 20%; }
+.sheet col.c-item      { width: 17%; }
 .sheet col.c-code      { width: 9%; }
-.sheet col.c-formula   { width: 24%; }
+.sheet col.c-formula   { width: 21%; }
 .sheet col.c-qty       { width: 8%; }
 .sheet col.c-unit      { width: 6%; }
 .sheet col.c-waste     { width: 6%; }
 .sheet col.c-order     { width: 9%; }
-.sheet col.c-cost      { width: 8%; }
+.sheet col.c-priced    { width: 9%; }
+.sheet col.c-cost      { width: 7%; }
 .sheet col.c-extended  { width: 10%; }
 .sheet col.c-remove    { width: 24px; }
 .sheet th, .sheet td { overflow: hidden; text-overflow: ellipsis; }
-.sheet th:nth-child(4), .sheet th:nth-child(7), .sheet th:nth-child(8), .sheet th:nth-child(9) { text-align: right; }
+.sheet th:nth-child(4), .sheet th:nth-child(7), .sheet th:nth-child(8), .sheet th:nth-child(9), .sheet th:nth-child(10) { text-align: right; }
 .sheet th { font-size: 11px; }
 .sheet td { padding: 2px 6px 2px 0; vertical-align: top; }
 .sheet input, .sheet select { font: inherit; font-size: 12px; padding: 3px 5px; border: 1px solid transparent; border-radius: 3px; background: transparent; width: 100%; }

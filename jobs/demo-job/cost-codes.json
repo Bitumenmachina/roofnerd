@@ -6,13 +6,28 @@
   },
   {
     "class": "Material",
+    "code": "07-100-115",
+    "name": "Tile Material"
+  },
+  {
+    "class": "Material",
     "code": "07-100-150",
     "name": "S/M Material"
   },
   {
     "class": "Material",
+    "code": "07-100-160",
+    "name": "Misc Material"
+  },
+  {
+    "class": "Material",
     "code": "07-100-170",
     "name": "Fasteners & Plates"
+  },
+  {
+    "class": "Labor",
+    "code": "07-100-200",
+    "name": "Setup Labor"
   },
   {
     "class": "Labor",
@@ -31,6 +46,16 @@
   },
   {
     "class": "Labor",
+    "code": "07-100-270",
+    "name": "Tile Labor"
+  },
+  {
+    "class": "Labor",
+    "code": "07-100-300",
+    "name": "S/M Install Labor"
+  },
+  {
+    "class": "Labor",
     "code": "07-100-320",
     "name": "S/M Fab Labor"
   },
@@ -40,14 +65,14 @@
     "name": "Subcontract"
   },
   {
-    "class": "Equipment",
-    "code": "07-100-940",
-    "name": "Equipment"
-  },
-  {
     "class": "Other",
     "code": "07-100-920",
     "name": "Warranty"
+  },
+  {
+    "class": "Equipment",
+    "code": "07-100-940",
+    "name": "Equipment"
   },
   {
     "class": "Other",

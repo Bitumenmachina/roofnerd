@@ -19,7 +19,7 @@ test('a run becomes an area on the line, where it can be seen', () => {
 });
 
 test('waste is added before packaging, not after', () => {
-  const r = priceLine(item({ formula: '100', orderUnit: { name: 'ROLL', per: 10, waste: 10 }, unitCost: 50 }), scope);
+  const r = priceLine(item({ formula: '100', waste: 10, order: { name: 'ROLL', per: 10, rule: 'ceil' }, unitCost: 50 }), scope);
   assert.equal(r.withWaste, 110);
   assert.equal(r.orderQuantity, 11);
 });
@@ -28,25 +28,40 @@ test('floating-point crumbs do not buy an extra roll', () => {
   // 100 with 10% waste is 110.00000000000001 in binary floating point. A bare
   // ceil turns that into twelve rolls. An estimator finds this by counting the
   // pallet, which is a bad way to find it.
-  const r = priceLine(item({ formula: '100', orderUnit: { name: 'ROLL', per: 10, waste: 10 }, unitCost: 50 }), scope);
+  const r = priceLine(item({ formula: '100', waste: 10, order: { name: 'ROLL', per: 10, rule: 'ceil' }, unitCost: 50 }), scope);
   assert.equal(r.orderQuantity, 11);
-  assert.equal(r.extended, 11 * 10 * 50);
+  assert.equal(r.extended, 11 * 50);
 });
 
 test('packaging rounds up — you cannot buy two thirds of a bucket', () => {
-  const r = priceLine(item({ formula: '101', orderUnit: { name: 'ROLL', per: 10 }, unitCost: 50 }), scope);
+  const r = priceLine(item({ formula: '101', order: { name: 'ROLL', per: 10, rule: 'ceil' }, unitCost: 50 }), scope);
   assert.equal(r.orderQuantity, 11);
 });
 
 test('the bid pays for what gets bought, not what gets installed', () => {
-  // 101 SF, sold ten to a roll: eleven rolls, and eleven rolls is what is paid for.
-  const r = priceLine(item({ formula: '101', orderUnit: { name: 'ROLL', per: 10 }, unitCost: 2 }), scope);
-  assert.equal(r.extended, 11 * 10 * 2);
+  // 101 SF, sold ten to a roll: eleven rolls. Priced by the roll, that is
+  // eleven rolls of money — the fraction nobody can buy is still paid for.
+  const r = priceLine(item({ formula: '101', order: { name: 'ROLL', per: 10, rule: 'ceil' }, unitCost: 20 }), scope);
+  assert.equal(r.orderQuantity, 11);
+  assert.equal(r.extended, 11 * 20);
+});
+
+test('and priced by what the roll holds, when that is how it is quoted', () => {
+  // The same eleven rolls, quoted by the square foot instead: ten SF to a roll.
+  const r = priceLine(item({
+    formula: '101',
+    order: { name: 'ROLL', per: 10, rule: 'ceil' },
+    price: { name: 'SF', contains: 10, rule: 'exact' },
+    unitCost: 2,
+  }), scope);
+  assert.equal(r.priceQuantity, 110);
+  assert.equal(r.extended, 220);
 });
 
 test('an item with no order unit is priced on what it measures', () => {
   const r = priceLine(item({ formula: '101', unitCost: 2 }), scope);
   assert.equal(r.orderQuantity, null);
+  assert.equal(r.priceQuantity, 101);
   assert.equal(r.extended, 202);
 });
 
@@ -80,7 +95,7 @@ test('a broken formula reports itself and prices nothing', () => {
 
 test('labor hours come from a production rate, never typed', () => {
   const r = priceLine(item({ formula: 'LF', unit: 'LF', productionRate: 40, unitCost: 1 }), scope);
-  assert.ok(Math.abs(r.hours - 400 / 40) < 1e-9);
+  assert.equal(r.hours, 400 / 40);
 });
 
 test('an item with no production rate has no hours, not zero hours', () => {

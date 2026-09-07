@@ -5,11 +5,73 @@ acceptance does not pause the build.
 
 ## Where the build is
 
-**Sections 1 and 2 are done, and Addendum 1 is in.** Section 3 — the money model: cost
-codes, classes, adders, labor shapes, scenarios, waste, order units, the recap — is next,
-and its done-check will run against the shipped runtime rather than against Chrome.
+**Sections 1, 2 and 3 are done, and both addenda are in.** Section 4 — the library — is
+next.
+
+Section 3's acceptance is the one that mattered: **both real Edge recaps reproduce, every
+line within one hundredth of one percent.** The worst difference across the two jobs is two
+cents on a three-million-dollar contract amount, and that is a rounding artefact of the
+printed page, not a disagreement.
 
 Section 0 (the skeleton) was built and pushed earlier the same day.
+
+## What section 3 built
+
+The money model, and the check that it is the right one.
+
+- **Three units on every item**, not two: what it is estimated in, what it is bought in, and
+  what it is priced against. Membrane is estimated in squares, bought by the roll and quoted
+  by the square foot. Each step has its own conversion and its own rounding, and both are on
+  the line where they can be seen.
+- **The rounding rule belongs to the item and the step.** Rolls and sheets round up;
+  fastener plates order at a fraction, because that is what the supplier bills. The program
+  does not decide this on an estimator's behalf.
+- **Cost codes, classes and the adder ladder.** Each adder sits on its class subtotal and
+  they are summed — tax and escalation side by side on material, never compounding.
+  Supervision carries its own burden rate. Then profit, then contract amount, then bond,
+  then selling price. Cost per square on every class.
+- **Labor is not a special case.** A labor line measures in its own unit and *orders* in
+  hours, with the production rate as the conversion and no package rounding. Fabrication and
+  installation are separate lines with separate rates. Crew days come from hours.
+- **Hours keep every digit until they are displayed.** A line shows 4,566.87 hours and holds
+  more; summing what is shown is how a labor total ends up dollars adrift.
+- **A comparison tool** that takes a recap printed by the program this one replaces and
+  reproduces it — deriving the profit rate from the printed dollars rather than trusting the
+  printed rate. A report prints its rate to two places and its dollars to the cent, and on
+  one of the two jobs two places is not enough to reproduce the dollars. The dollars are
+  what happened.
+
+## The fixture comparison — section 3's acceptance
+
+Both jobs, every line, within one hundredth of one percent:
+
+```
+Line                Result
+Material total      within 0.01%
+Labor total         within 0.01%
+Sub total           within 0.01%
+Equipment total     within 0.01%
+Other total         within 0.01%
+Supervision total   within 0.01%
+Job cost            within 0.01%
+Profit              within 0.01%
+Contract amount     within 0.01%
+Bond                within 0.01%
+Selling price       within 0.01%
+Total SQ            within 0.01%
+Total hours         within 0.01%
+
+13 of 13, on each of the two jobs.
+```
+
+The figures behind those rows are a client's and stay in `fixtures/`, which is not in this
+repository. `node tools/compare-fixtures.mjs` prints the full table on the estimator's own
+machine; `--shape` prints exactly what is above.
+
+**What this does and does not prove.** It reproduces the *ladder* — which adder sits on
+which base, what profit is taken on, what bond is taken on — from the printed class
+subtotals. It does not yet rebuild those subtotals from the item lines underneath them.
+That is the next pass, and it needs the conditions and items entered from the same reports.
 
 ## Addendum 1, applied
 
@@ -88,7 +150,8 @@ one screen, watch the money move on the other.
 | Section 1 done-check (`tools/probe/section1-trace.mjs`) | **PASS 12/12** — opens a PDF, scales it, traces an area with pitch, a run and a count, reads the measures off the list, confirms traces are stored in page units and the drawing is only referenced |
 | Section 2 done-check (`tools/probe/section2-sheet.mjs`) | **PASS 16/16** — traces a parapet, types a height in the panel, tears the sheet into a second window, adds three items in three units, then changes the drawing and the height and watches the money move in the OTHER window. Two windows, one job, throughout |
 | Real-runtime check (`tools/probe/runtime-check.mjs`) | **PASS 8/8** — the release binary under `tauri-driver`: two OS windows on one document, a change in one reaching the other, and the CSP refusing the network |
-| Engine tests | **68/68** |
+| Fixture comparison (`tools/compare-fixtures.mjs`) | **PASS 26/26** — both real Edge recaps, every line within 0.01% |
+| Engine tests | **95/95** |
 | Shell tests | **5/5**, including that a job saved by the application is byte-for-byte one saved by the command line |
 | Vocabulary gate | **PASS** |
 | Egress gate | **PASS** |
@@ -132,9 +195,8 @@ clean either way.
 
 ## Since the last entry
 
-Twenty decisions in `DECISIONS.md` (D3–D9 section 1, D10–D14 section 2, D15–D20 the
-addendum). **`QUESTIONS.md` has nothing open** — Q1 was answered from the Edge reports and
-the answer is recorded there with the four rows that settle it.
+Twenty-eight decisions in `DECISIONS.md` (D3–D9 section 1, D10–D14 section 2, D15–D20
+addendum 1, D21–D28 section 3 and addendum 2). **`QUESTIONS.md` has nothing open.**
 
 ## If Patrick wants to look
 
@@ -150,3 +212,4 @@ To run what the executor ran:
     node tools/probe/section1-trace.mjs
     node tools/probe/section2-sheet.mjs
     pnpm build:app && node tools/probe/runtime-check.mjs
+    node tools/compare-fixtures.mjs           # needs fixtures/, which is local only

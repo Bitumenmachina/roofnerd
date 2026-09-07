@@ -62,7 +62,7 @@ test('an empty job sells for nothing, which is the honest answer', () => {
   const r = recap(doc, doc.job.scenarios[0]);
   assert.equal(r.jobCost, 0);
   assert.equal(r.sellingPrice, 0);
-  assert.deepEqual(r.unpriced, []);
+  assert.deepEqual(r.pending, []);
 });
 
 test('each class takes its own adders and nobody else\'s', () => {
@@ -99,45 +99,42 @@ test('supervision burden is its own rate, not the field labor rate', () => {
 });
 
 test('overhead, then profit, then bond — each on what came before it', () => {
-  const doc = {
-    ...emptyJob('Demo'),
-    // A class gross of zero makes the walk visible without pricing existing yet:
-    // every step is a percentage of the running total, and 0 stays 0.
-  };
+  const doc = emptyJob('Demo');
   const scenario = { ...doc.job.scenarios[0], overhead: 10, profit: 10, bond: 1 };
   const r = recap(doc, scenario);
   assert.equal(r.overhead, 0);
   assert.equal(r.profit, 0);
   assert.equal(r.bond, 0);
-  assert.equal(r.sellingPrice, r.jobCost + r.overhead + r.profit + r.bond);
+  assert.equal(r.contractAmount, r.jobCost + r.overhead + r.profit);
+  assert.equal(r.sellingPrice, r.contractAmount + r.bond);
+});
+
+const conditionWith = (item) => ({
+  id: 'c1', name: 'Counter Flashing', kind: 'line',
+  traces: [], properties: {}, items: [item],
 });
 
 test('an item whose cost code is in no class is named, never counted as zero', () => {
   const doc = {
     ...emptyJob('Demo'),
-    conditions: [{
-      id: 'c1', name: 'Parapet Wall Flashing', pageId: 'p1', properties: {}, measures: [],
-      items: [{ id: 'i1', description: '16 oz copper', costCode: '07-100-100', unit: 'SF', formula: 'ADJ', unitCost: 12 }],
-    }],
+    conditions: [conditionWith({ id: 'i1', description: 'copper', costCode: '07-100-100', unit: 'SF', formula: '100', unitCost: 12 })],
     costCodes: [],
   };
   const r = recap(doc, doc.job.scenarios[0]);
-  assert.equal(r.unpriced.length, 1);
-  assert.match(r.unpriced[0], /in no class/);
+  assert.equal(r.pending.length, 1);
+  assert.match(r.pending[0], /in no class/);
+  assert.equal(r.jobCost, 0);
 });
 
 test('an item with no price is named, never counted as zero', () => {
   const doc = {
     ...emptyJob('Demo'),
-    conditions: [{
-      id: 'c1', name: 'Parapet Wall Flashing', pageId: 'p1', properties: {}, measures: [],
-      items: [{ id: 'i1', description: '16 oz copper', costCode: '07-100-100', unit: 'SF', formula: 'ADJ' }],
-    }],
+    conditions: [conditionWith({ id: 'i1', description: 'copper', costCode: '07-100-100', unit: 'SF', formula: '100' })],
     costCodes: [{ code: '07-100-100', name: 'Roofing Material', class: 'Material' }],
   };
   const r = recap(doc, doc.job.scenarios[0]);
-  assert.equal(r.unpriced.length, 1);
-  assert.match(r.unpriced[0], /no price/);
+  assert.equal(r.pending.length, 1);
+  assert.match(r.pending[0], /no price/);
 });
 
 test('classOf finds an item\'s class through its cost code', () => {

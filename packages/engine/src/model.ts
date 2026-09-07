@@ -81,19 +81,50 @@ export interface ClassAdders {
 export type Formula = string;
 
 /**
- * What the supply house sells, and how what you measured becomes what you
- * order. Waste is applied first; packaging rounds up after.
+ * Whether a step rounds up to a whole one, or takes the number as it falls.
+ *
+ * Do not assume it is always up. In one real job, rolls and sheets round up
+ * while fastener plates order at 4.94 boxes — the supplier bills the fraction.
+ * The rule belongs to the item and to the step, not to the program.
  */
-export interface OrderUnit {
-  /** ROLL, SHEET, BOX, 5GAL, TUBE — the supplier's word, not ours. */
+export type RoundingRule = 'ceil' | 'exact';
+
+/**
+ * One conversion in the chain from what was measured to what gets paid for.
+ *
+ * The factor is given in whichever direction reads naturally to the person
+ * typing it, because both directions occur and neither is the odd one out:
+ *
+ *   `per`      how many of the PREVIOUS unit make one of this one
+ *              — four rolls to a box, twenty cartridges to a case
+ *   `contains` how many of THIS unit are in one of the previous
+ *              — a thousand square feet in a roll of membrane
+ *
+ * Exactly one of them is given. They are the same fact written from either end.
+ */
+export interface UnitStep {
+  /** ROLL, SHEET, BOX, CASE, 5GAL, TUBE, HOURS — the supplier's word, not ours. */
   readonly name: string;
-  /** How many estimating units come in one of them. */
-  readonly per: number;
-  /** Waste, as a percent, applied before the packaging round-up. */
-  readonly waste?: Percent;
+  readonly per?: number;
+  readonly contains?: number;
+  readonly rule: RoundingRule;
 }
 
-/** One thing a condition consumes. */
+/**
+ * One thing a condition consumes.
+ *
+ * A line carries three units, not two, because a real supply house uses three:
+ *
+ *   estimating unit  what the formula produces — the measure you work in
+ *   order unit       what you actually buy — rolls, sheets, buckets, hours
+ *   price unit       what the price is quoted against — which need not be
+ *                    either of the others
+ *
+ * Membrane is estimated in squares, ordered in rolls, and priced by the square
+ * foot. Flashing tape is estimated in feet, ordered in rolls, and priced by the
+ * box. Each step has its own conversion and its own rounding, and both are shown
+ * on the line, because this is exactly where a bid quietly gains or loses money.
+ */
 export interface Item {
   readonly id: string;
   readonly description: string;
@@ -102,13 +133,23 @@ export interface Item {
   readonly unit: Unit;
   /** How the condition's measure becomes this item's quantity. */
   readonly formula: Formula;
+  /** Waste, as a percent, added before anything is ordered. */
+  readonly waste?: Percent;
+  /** Estimating unit → what you buy. Absent means you buy what you measured. */
+  readonly order?: UnitStep;
+  /** What you buy → what it is priced against. Absent means priced as ordered. */
+  readonly price?: UnitStep;
+  /** The price, per price unit — or per order unit, or per estimating unit, whichever is last. */
   readonly unitCost?: Money;
-  readonly orderUnit?: OrderUnit;
   /**
-   * Units this crew puts in per hour. Present on labor items; hours come from
-   * it and the quantity, and crew days come from hours. Never typed directly.
+   * Units this crew puts in per hour. On a labor line this IS the order-step
+   * conversion: the order unit is HOURS and the rate turns the measure into
+   * them. Crew days come from hours; hours are never typed directly, except on
+   * supervision, which is entered as hours to begin with.
    */
   readonly productionRate?: number;
+  /** How many are in the crew. Derives crew-days for the labor lens only. */
+  readonly crewSize?: number;
   readonly notes?: string;
 }
 

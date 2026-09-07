@@ -13,10 +13,11 @@
 import { measure, priceLine, scopeFor, type Measures } from '@roofnerd/engine';
 import { at, doc, set, subscribe, type Doc } from '../doc.js';
 
+type UnitStep = { name: string; per?: number; contains?: number; rule: 'ceil' | 'exact' };
 type Item = {
   id: string; description: string; costCode: string; unit: string; formula: string;
-  unitCost?: number; orderUnit?: { name: string; per: number; waste?: number };
-  productionRate?: number; notes?: string;
+  waste?: number; order?: UnitStep; price?: UnitStep;
+  unitCost?: number; productionRate?: number; crewSize?: number; notes?: string;
 };
 type Condition = {
   id: string; name: string; kind: 'area' | 'line' | 'count';
@@ -105,14 +106,14 @@ function render(body: HTMLElement, foot: HTMLElement, d: Doc): void {
     const table = document.createElement('table');
     // Fixed columns, so the formula keeps its room however long a description is.
     const cols = document.createElement('colgroup');
-    for (const name of ['item', 'code', 'formula', 'qty', 'unit', 'waste', 'order', 'cost', 'extended', 'remove']) {
+    for (const name of ['item', 'code', 'formula', 'qty', 'unit', 'waste', 'order', 'priced', 'cost', 'extended', 'remove']) {
       const col = document.createElement('col');
       col.className = `c-${name}`;
       cols.append(col);
     }
     table.append(cols);
     const head = document.createElement('thead');
-    head.append(headRow(['Item', 'Code', 'Formula', 'Qty', 'Unit', 'Waste', 'Order', 'Unit cost', 'Extended', '']));
+    head.append(headRow(['Item', 'Code', 'Formula', 'Qty', 'Unit', 'Waste', 'Order', 'Priced', 'Unit cost', 'Extended', '']));
     const rows = document.createElement('tbody');
     table.append(head, rows);
 
@@ -169,13 +170,13 @@ function itemRow(conditionIndex: number, itemIndex: number, item: Item, result: 
 
   tr.append(numberCell(result.quantity));
   tr.append(cell(selectField(UNITS, item.unit, (v) => set(`${base}/unit`, v))));
-  tr.append(cell(numberField(item.orderUnit?.waste, (v) => setOrderUnit(base, item, { waste: v }), '%')));
+  tr.append(cell(numberField(item.waste, (v) => set(`${base}/waste`, v), '%')));
 
-  const order = document.createElement('span');
-  order.textContent = result.orderQuantity === null
-    ? '—'
-    : `${fmt(result.orderQuantity)} ${result.orderUnitName ?? ''}`.trim();
-  tr.append(cell(order, 'num'));
+  // What you buy, and what it is priced against — three units, because a real
+  // supply house uses three. Membrane is estimated in squares, bought by the
+  // roll and quoted by the square foot, and each step is where money hides.
+  tr.append(cell(stepCell(result.orderQuantity, result.orderUnitName), 'num'));
+  tr.append(cell(stepCell(result.priceQuantity, result.priceUnitName), 'num'));
 
   tr.append(cell(numberField(item.unitCost, (v) => set(`${base}/unitCost`, v), '$')));
 
@@ -218,9 +219,12 @@ async function removeItem(conditionIndex: number, itemIndex: number): Promise<vo
   await set(`/conditions/${conditionIndex}/items`, items);
 }
 
-async function setOrderUnit(base: string, item: Item, patch: { waste?: number | undefined }): Promise<void> {
-  const order = { name: item.orderUnit?.name ?? '', per: item.orderUnit?.per ?? 1, ...item.orderUnit, ...patch };
-  await set(`${base}/orderUnit`, order);
+/** A quantity in a unit that is not the one it was measured in. */
+function stepCell(quantity: number | null, unit: string | null): HTMLElement {
+  const span = document.createElement('span');
+  span.textContent = quantity === null ? '—' : `${fmt(quantity)} ${unit ?? ''}`.trim();
+  if (quantity === null) span.className = 'muted';
+  return span;
 }
 
 // ── small parts ────────────────────────────────────────────────────────────
