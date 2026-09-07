@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>roofnerd</title>
+    <link rel="stylesheet" href="/src/app.css" />
+  </head>
+  <body>
+    <!-- The tree on the left, one editor on the right. Which editor this window
+         is showing comes from its own URL, so any editor can be any window. -->
+    <aside id="tree">
+      <h1 id="job-name">no job open</h1>
+      <p id="job-folder" class="muted"></p>
+      <nav id="tree-body"></nav>
+      <footer>
+        <button id="open-demo">Open the demo job</button>
+        <button id="save">Save</button>
+        <button id="tear-off">Tear off the Estimate Sheet</button>
+        <p id="status" class="muted"></p>
+      </footer>
+    </aside>
+    <main id="editor"></main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,62 @@
+[
+  {
+    "class": "Material",
+    "code": "07-100-100",
+    "name": "Roofing Material"
+  },
+  {
+    "class": "Material",
+    "code": "07-100-150",
+    "name": "S/M Material"
+  },
+  {
+    "class": "Material",
+    "code": "07-100-170",
+    "name": "Fasteners & Plates"
+  },
+  {
+    "class": "Labor",
+    "code": "07-100-210",
+    "name": "Tear Off Labor"
+  },
+  {
+    "class": "Labor",
+    "code": "07-100-230",
+    "name": "Roofing Labor"
+  },
+  {
+    "class": "Labor",
+    "code": "07-100-240",
+    "name": "Flashing Labor"
+  },
+  {
+    "class": "Labor",
+    "code": "07-100-320",
+    "name": "S/M Fab Labor"
+  },
+  {
+    "class": "Sub",
+    "code": "07-100-900",
+    "name": "Subcontract"
+  },
+  {
+    "class": "Equipment",
+    "code": "07-100-940",
+    "name": "Equipment"
+  },
+  {
+    "class": "Other",
+    "code": "07-100-920",
+    "name": "Warranty"
+  },
+  {
+    "class": "Other",
+    "code": "07-100-950",
+    "name": "Other"
+  },
+  {
+    "class": "Supervision",
+    "code": "07-100-990",
+    "name": "Supervision"
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "What a roofnerd window is allowed to do. Deliberately almost nothing: it may open its own windows and talk to the document. There is no HTTP plugin here, and there will not be one — the program has no business reaching the network, and the shortest way to keep that true is to never grant it the ability.",
+  "windows": ["main", "plan", "estimate", "recap", "library"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-focus",
+    "core:webview:allow-create-webview-window"
+  ]
+}

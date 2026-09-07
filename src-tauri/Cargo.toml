@@ -1,0 +1,23 @@
+[package]
+name = "roofnerd"
+version = "0.0.0"
+description = "Roofing estimating software"
+edition = "2021"
+rust-version = "1.77"
+license = "MIT"
+
+[lib]
+name = "roofnerd_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+# No `preserve_order`: serde_json then backs objects with a BTreeMap and writes
+# keys sorted, which is the same canonical form packages/engine/src/job.ts
+# produces. A job saved by the application and a job saved by the command line
+# are byte-identical, and `roofnerd check` proves it.
+serde_json = "1"

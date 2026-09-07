@@ -1,0 +1,80 @@
+/* A stylesheet, not a style attribute. The security policy forbids inline
+   styling, and that is deliberate: it is the same rule that keeps a stray
+   script from running, so it is not worth loosening for convenience. */
+
+:root {
+  --ink: #1b1b1b;
+  --paper: #f7f6f3;
+  --panel: #ffffff;
+  --rule: #d6d2ca;
+  --muted: #6f6a63;
+  --accent: #7a4b1e;
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--ink);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  height: 100vh;
+  background: var(--paper);
+}
+
+body.detached { grid-template-columns: 1fr; }
+body.detached #tree { display: none; }
+
+#tree {
+  border-right: 1px solid var(--rule);
+  background: var(--panel);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+}
+
+#tree h1 { font-size: 15px; margin: 0; }
+#tree footer { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }
+
+.muted { color: var(--muted); font-size: 12px; margin: 0; word-break: break-all; }
+
+button {
+  font: inherit;
+  padding: 7px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--paper);
+  cursor: pointer;
+  text-align: left;
+}
+button:hover { border-color: var(--accent); }
+
+#editor { padding: 24px 28px; overflow: auto; }
+
+h2 { margin: 0 0 4px; font-size: 18px; }
+.editor-note { color: var(--muted); font-size: 12px; margin: 0 0 20px; max-width: 52ch; }
+
+label { display: block; margin-bottom: 14px; max-width: 340px; }
+label span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+
+input {
+  font: inherit;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+}
+
+table { border-collapse: collapse; margin-top: 8px; }
+th, td { text-align: left; padding: 4px 18px 4px 0; }
+th { font-size: 12px; color: var(--muted); font-weight: 500; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.total td { border-top: 1px solid var(--rule); font-weight: 600; padding-top: 8px; }
+
+ul.tree { list-style: none; padding-left: 0; margin: 0; }
+ul.tree li { padding: 3px 0; }
+ul.tree ul { list-style: none; padding-left: 14px; }
