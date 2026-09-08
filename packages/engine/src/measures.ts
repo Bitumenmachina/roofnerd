@@ -72,6 +72,23 @@ export interface Properties {
    * elevations, and nothing else on the condition can tell them apart.
    */
   readonly ELEV?: number;
+  /**
+   * Sump width in feet — the side of the square depression the drain sits in,
+   * where the tapered field is cut down to meet the drain bowl.
+   *
+   * The trade sizes it off the insulation thickness at the drain: a shallow
+   * field takes a four-foot sump, a thicker one takes eight. That rule belongs
+   * to the layout, not to this type; what the condition carries is the width
+   * that was used.
+   */
+  readonly SUMP?: number;
+  /**
+   * How many boards the taper runs over. Tapered insulation is sold as a
+   * stack of 4-foot boards, so a layout is a whole number of them, and the
+   * sump's depth falls out of the thickness at the drain, the slope, the sump
+   * width and this count.
+   */
+  readonly BOARDS?: number;
   /** Number of sides. */
   readonly SIDES?: number;
   /** Stretch-out in inches: flat width of metal a formed profile eats. */
@@ -82,7 +99,7 @@ export interface Properties {
 
 /** The reserved property names. The last three only some details use. */
 export const PROPERTY_NAMES = [
-  'H', 'W', 'T', 'PITCH', 'TAPER', 'ELEV', 'SIDES', 'STRETCHOUT',
+  'H', 'W', 'T', 'PITCH', 'TAPER', 'ELEV', 'SUMP', 'BOARDS', 'SIDES', 'STRETCHOUT',
 ] as const;
 
 /**

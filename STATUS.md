@@ -82,13 +82,56 @@ The web seat answered the handoff Code sent it. What came back, and what it chan
 - **`refs/carry-forward-register.md` is new** — the things this product has re-derived more than
   once or lost at least once. Twenty-two entries. It is the first thing to read in `refs/`.
 
-**A correction to this file's own record.** The handoff Code sent to web reported library constants —
-pitch factors, labour roles and rates, crew-day hours, adder defaults — as a total gap in the source
-corpus. That was wrong. A reconciled set exists in the prior lineage with `MATCH` / `NEEDS-VERIFY` /
-`CONFLICT` / `NO-SOURCE` verdicts already attached to each value, including two known SSMR conflicts
-that were deliberately shipped as "verify basis" flags rather than silently corrected. Section 4
-inherits the flags, not only the values. Being wrong on the record is worse than the error, so it is
-corrected here rather than quietly.
+## The survey of `~/KNOWLEDGE` was wrong, and here is the whole of it
+
+The handoff Code sent to web reported five categories as gaps that would have to be authored from
+nothing. **All five were on this machine.** The survey was written by crawling the tree without
+opening the index that sits inside it — `INDEX.md`, `index/knowledge_manifest.csv` and `.json`
+(1,122 rows), `index/index_audit.md`, and the scripts that built them. Re-run against the manifest:
+
+| Claimed | Actually |
+|---|---|
+| Dimensioned details / profiles — "must be authored from tables not on the box" | **655 rows carry `doc_type: detail_drawing`** — the single largest document class in the corpus. `NRCA/NRCA CAD Details/` alone holds 646 files across the 2017–2020 editions, with its own `Index of Drawings.pdf` |
+| Gauge and weight per SF — a library-constant gap | Two files in `SHEET_METAL/`: `Gauge Chart.pdf`, `sheet-metal-gauge-chart.pdf` |
+| Pitch-factor table — a total gap | Not a table at all. It is `sqrt(rise² + 12²) / 12`, one line, already in `geometry.ts`. It should never have been on a gap list |
+| Assemblies — "nothing structured" | `VERSICO/BIM/` per membrane type with an extraction script already written; `SIKA/RoofPro Systems Summary`; and 21 rows under `Previously Submitted/` — real assemblies, by job, already accepted by a manufacturer |
+| Labour and equipment constants | `NRCA/Business/` (equipment cost schedule, guide to bidding), `EXCEL_TEMPLATES/`, `PRICING/UNIT_PRICING/`, `PRICING/YANCEY/` rental linecard |
+
+And the sixth, reported earlier and equally wrong: library constants were called absent when the
+prior lineage holds a reconciled set with `MATCH` / `NEEDS-VERIFY` / `CONFLICT` / `NO-SOURCE`
+verdicts already attached — including two known SSMR conflicts deliberately shipped as "verify
+basis" flags. Section 4 inherits the flags, not only the values.
+
+**Sheet-metal girth was the worst of them**, because it was called the hardest gap. It is not a
+lookup at all: girth is the sum of a profile's flat legs plus hem and return allowances, entered
+once per detail and reused wherever that detail runs. `STRETCHOUT` on a condition already does this
+and has since section 1 — the case Patrick named as the whole reason for the formula language was
+*already supported*. Searched properly (D67), girth is the specification's word and stretch-out is
+the shop's; both parse on import, the screen shows girth.
+
+**Why this is written out in full rather than quietly fixed.** The rule that now heads `CLAUDE.md`
+exists because of this survey. A gap claim made without reading an available index is the same
+defect as one made with no search at all, and the corpus's own audit file would have answered it in
+one read. Being wrong on the record is worse than the error.
+
+## Section 6 gained two more inputs, and the geometry route is decided
+
+`SUMP` (feet) and `BOARDS` (count) are on the model — the design bundle derives sump depth from
+thickness at drain, slope, sump width and board count, so all four had to exist before the renderer
+wants them. Engine tests **102/102**.
+
+**The renderer takes no straight-skeleton dependency** (D65). Searched: CGAL's `Straight_skeleton_2`
+is GPL, `polyskel` is LGPL, `ladybug-geometry-polyskel` is AGPL, no permissive Rust crate exists, and
+the one npm package labelled MIT ships a WebAssembly binary compiled from that GPL CGAL code. More to
+the point, **§4.10 never asked for one** — facets are traced, not generated from a footprint. What it
+needs is which drain a point falls to and where the valley between two drains sits, which is a
+nearest-site partition: `d3-delaunay` (ISC) with `polygon-clipping` (MIT), or `spade` with `geo`
+(MIT/Apache-2.0) in the Rust shell. Permissive, offline, bundleable.
+
+Tapered layout conventions are recorded from two convergent public sources (D69) — 4×4 ft board
+module, ½ in. minimum at the low edge, ¼ in./ft standard slope, 4×4 ft sump under 2 in. and 8×8 ft
+over 3 in., cricket slope at twice the field slope, 3:1 to 4:1 length-to-width. Implementable as
+logic; no vendor's chart is copied.
 
 `QUESTIONS.md` now has five open: Q3 (sheet columns), Q4 (heightfield to estimate — evidence now
 points at *derived*, ruling still Patrick's), Q6 (window anatomy), Q7 (orbit or isometric), Q9 (price
@@ -345,9 +388,9 @@ one screen, watch the money move on the other.
 | Fixture ladder (`tools/compare-fixtures.mjs`) | **PASS 26/26** — both real recaps, every line within 0.01% |
 | Subtotals rebuilt (`tools/rebuild-subtotals.mjs`) | **PASS** — 207 item lines priced through the engine; 28/28 cost codes, 12/12 classes |
 | Client-data gate | **PASS**, and proven red on a figure, a bid name and a home path |
-| Vocabulary check (`tools/probe/vocabulary-check.mjs`) | **PASS 25/25** — reads what is rendered in the shipped window, not the source; proven red on `PLAN_SF`. Gained `TAPER` and `ELEV` when section 6 added them, so the gate covers the new words rather than trailing them |
+| Vocabulary check (`tools/probe/vocabulary-check.mjs`) | **PASS 27/27** — reads what is rendered in the shipped window, not the source; proven red on `PLAN_SF`. Gained `TAPER`, `ELEV`, `SUMP` and `BOARDS` as section 6 added them, so the gate covers the new words rather than trailing them |
 | Synthetic prices (`tools/make-demo-prices.mjs`) | 18 seeded invented prices in `jobs/demo-job/prices.json`; every screenshot and probe draws from them |
-| Engine tests | **100/100** — five added for the tapered inputs |
+| Engine tests | **102/102** — seven added for the tapered inputs |
 | Shell tests | **5/5**, including that a job saved by the application is byte-for-byte one saved by the command line |
 | Vocabulary gate | **PASS** |
 | Egress gate | **PASS** |

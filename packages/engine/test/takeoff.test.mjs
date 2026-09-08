@@ -336,3 +336,21 @@ test('an unscaled sheet still makes the tapered measures pending, not zero', () 
   assert.equal(m.SF, null);
   assert.equal(m.PLAN_SF, null);
 });
+
+test('sump width and board count are properties, and touch no measure', () => {
+  const plain = measure('area', trace(square), {}, oneFoot);
+  const sumped = measure('area', trace(square), { T: 0.5, TAPER: 0.25, SUMP: 4, BOARDS: 3 }, oneFoot);
+  assert.equal(sumped.SF, plain.SF);
+  assert.equal(sumped.LF, plain.LF);
+  assert.equal(sumped.EA, plain.EA);
+});
+
+test('a formula can reach the sump and the board count by name', () => {
+  const props = { T: 0.5, TAPER: 0.25, SUMP: 4, BOARDS: 3 };
+  const m = measure('area', trace(square), props, oneFoot);
+  const scope = scopeFor(m, props);
+  assert.equal(run('SUMP', scope).value, 4);
+  assert.equal(run('BOARDS', scope).value, 3);
+  // Thickness at the sump's outer edge, four feet out from the drain.
+  assert.equal(run('T + SUMP * TAPER', scope).value, 1.5);
+});

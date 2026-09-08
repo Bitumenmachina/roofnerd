@@ -18,6 +18,39 @@ iterations — every entry was paid for, and the register exists because the sta
 about this work is that each pass drops earned context. It rules nothing; where it disagrees
 with a ruling document, the ruling document wins.
 
+## Search before asking — three sources, in order
+
+This rule exists because it was broken. A session reported sheet-metal stretch-out, dimensioned
+details, gauge tables, the pitch factor and assemblies as "gaps that must be authored from
+nothing." All five were on this machine, and `~/KNOWLEDGE` has a machine-readable index of itself
+that was never opened. Nine questions went to Patrick that a search would have answered.
+
+1. **The box** — the repo, `refs/`, `DECISIONS.md`, `QUESTIONS.md`, the carry-forward register,
+   `~/KNOWLEDGE`, the prior lineage's trees. **Where a tree has an index or a manifest, that is the
+   first read, not the last.** `~/KNOWLEDGE/index/index_audit.md` states what the index covers and
+   what it misses — one read instead of a crawl, and the manifest is CSV and JSON, so it needs no
+   model and no retrieval service. A gap claim made without reading an available index is a defect
+   in the same class as a claim made with no search at all.
+2. **The prior sweeps** — scored landscapes that already exist. A scored list that exists and goes
+   unread is worse than no list.
+3. **The open internet** — this is an open-source program built against current public work, not
+   against a model's training weights. The seat has web search. Not using it is a defect, not a
+   style.
+
+**Do not invent what already has a name.** Roofing is a solved trade with published standards, a
+settled vocabulary and thirty years of geometry literature. Girth, tapered layout, hip-and-valley
+generation, provenance on a measurement — none are novel, and none need a roofnerd-original word,
+table or algorithm. Coining one is drift, and it is the expensive kind because it looks like
+progress.
+
+**A question to Patrick is a last resort with a receipt.** Before an entry reaches `QUESTIONS.md`,
+all three sources are searched and the search came back empty. If it came back with something
+merely inconvenient, that is a **decision with a reason** in `DECISIONS.md` — not a question handed
+back to him.
+
+**Anything meant to survive is written to disk in the turn it is produced.** A paste cache is not
+storage. Two documents have already been lost this way.
+
 ## Never
 
 - **No client data in the public tree.** Nothing out of `fixtures/`, `refs/` or `evidence/`.

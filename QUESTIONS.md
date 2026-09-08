@@ -25,6 +25,14 @@ of change as retrofitting a second waste term, and expensive for the same reason
 needs it: a supplier lens that hides cost still has to decide whether to show a placeholder as a
 quantity.
 
+**Narrowed 2026-09-08.** Two thirds of this stopped being a question once the axes were separated
+(D66). Authorship — derived or typed — is the design bundle's contract and is settled. Validity —
+usable, pending, excluded, no price — is "nothing is ever silently zero" and is settled. Neither
+needed Patrick.
+
+**What is left is one axis: firmness.** Does a price carry how good it is — firm, budget, estimate,
+placeholder? That is the only part that widens the item, and it is the only part still asked.
+
 **Why it waits:** it widens the item, and a wrong shape there is paid for in every lens. Declining is
 a perfectly good answer and costs a string.
 

@@ -52,12 +52,14 @@ If a screen says something else, that is a defect — report it.
 | **Job** | One bid. |
 | **Scenario** | One set of prices for that job. A supply house, or a pricing date. You price a job three ways and compare. |
 | **Page** | One drawing or aerial photo you are tracing. |
-| **Condition** | One thing you traced, with its properties — pitch, height, width, thickness, taper, elevation, number of sides. A single condition yields square feet, linear feet and a count at the same time, because a parapet run is all three. |
+| **Condition** | One thing you traced, with its properties — pitch, height, width, thickness, taper, elevation, sump width, boards, number of sides. A single condition yields square feet, linear feet and a count at the same time, because a parapet run is all three. |
 | **Drain** | A traced count that water goes to. The low point of a tapered field. A roof with none has nowhere for the taper to fall to. |
 | **Ridge** | The high line a cricket is built along, running between two drains. |
 | **Cricket** | The pair of sloped planes built to push water away from something — a curb, a wall — and toward the drains either side. |
 | **Taper** | Slope added by the insulation, in inches per foot, on top of whatever the deck already does. Sold as 1/8, 1/4, 1/2. |
 | **Elevation** | How high something sits, in feet. Top of the deck on an area; the base of the run on a line. |
+| **Sump** | The square cut down around a drain so the tapered field can meet the bowl. Four foot or eight, off the thickness at the drain. |
+| **Girth** | The flat width of coil a formed profile eats — the blank strip a piece is rolled from. The shop calls the same measure the *stretch-out*; a quote written either way is read the same. |
 | **Item** | One thing a condition consumes: material, labor, equipment, a sub, or something else. |
 | **Formula** | The arithmetic that turns what you measured into how much of an item you need. It is printed on the estimate line and you can edit it there. A formula you cannot see is a formula you cannot trust. |
 | **Order unit** | What the supply house actually sells — a roll, a sheet, a box, a 5-gallon pail — and the conversion from what you measured to what you order, waste included. |

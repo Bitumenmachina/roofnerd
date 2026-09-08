@@ -25,6 +25,8 @@ export const PROPERTY_LABELS: Readonly<Record<string, { label: string; hint: str
   PITCH: { label: 'Pitch', hint: 'rise per 12 — 5 means 5:12', group: 'Geometry' },
   TAPER: { label: 'Taper', hint: 'inches per foot — 1/4 means 1/4" in 12"', group: 'Geometry' },
   ELEV: { label: 'Elevation', hint: 'feet — top of deck on an area, base on a run', group: 'Geometry' },
+  SUMP: { label: 'Sump width', hint: 'feet — the square cut down to the drain', group: 'Geometry' },
+  BOARDS: { label: 'Boards', hint: 'how many the taper runs over', group: 'Geometry' },
   SIDES: { label: 'Sides', hint: 'how many', group: 'Geometry' },
   STRETCHOUT: { label: 'Stretch-out', hint: 'inches — flat metal the profile eats', group: 'Metal' },
 };
