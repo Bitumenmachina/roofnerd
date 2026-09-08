@@ -94,6 +94,10 @@ plausible one.
 - **A failed rebuild used to leave the last good roof on screen.** The one failure in a drawing that
   yields wrong geometry instead of a refusal, and nothing downstream can see it. The view now empties
   and says so.
+- **The recap read $4,274.72 a square** and every check passed, because the arithmetic was right.
+  An area traced and priced by nothing is correctly out of the divisor — and that exclusion was
+  invisible, so the rate could not be explained. It now prints `Per SQ · over 2.60 SQ` in the
+  heading of the column it made, and names the 7.41 SQ that is not in it (D87).
 - **Read off the screenshots, not off a check:** the instanced flow arrows read as a scatter of blobs
   because instancing dropped the shaft, and `Wall thickness 8` printed with no unit — eight what.
 

@@ -386,3 +386,37 @@ test('and a price on the line still beats the book', () => {
   };
   assert.equal(priceLine(item, { LF: 10 }, { coping: 2.5 }).unitCost, 9);
 });
+
+test('an area priced by nothing stays out of the per-square, and is named', () => {
+  // Both halves matter. Leaving it in dilutes every rate toward zero; leaving it
+  // out silently makes a rate that cannot be explained. The demo showed material
+  // at four thousand a square because seven hundred feet of traced roof carried
+  // no lines and quietly left the divisor.
+  const doc = {
+    pages: [{ id: 'p', feetPerUnit: 1 }],
+    costCodes: [{ code: 'm', class: 'Material' }],
+    conditions: [
+      {
+        id: 'priced', name: 'Field', kind: 'area', properties: {},
+        traces: [{ id: 't', pageId: 'p', points: square(10) }],
+        items: [{ id: 'i', description: 'Membrane', costCode: 'm', unit: 'SQ', formula: 'SQ', unitCost: 100 }],
+      },
+      {
+        id: 'bare', name: 'Low Roof', kind: 'area', properties: {},
+        traces: [{ id: 't2', pageId: 'p', points: square(30) }],
+        items: [],
+      },
+    ],
+  };
+  const r = recap(doc, { id: 's', name: 'S', prices: {}, adders: {}, overhead: 0, profit: 0, bond: 0 });
+  // One square of priced roof, not ten.
+  assert.equal(r.totalSquares, 1);
+  assert.equal(r.squaresLeftOut.length, 1);
+  assert.match(r.squaresLeftOut[0], /Low Roof/);
+  assert.match(r.squaresLeftOut[0], /nothing priced/);
+});
+
+/** A square of roof `side` feet on a side, as a traced ring. */
+function square(side) {
+  return [{ x: 0, y: 0 }, { x: side, y: 0 }, { x: side, y: side }, { x: 0, y: side }];
+}

@@ -159,6 +159,9 @@ try {
       assert.ok(recap.text.includes(want), `no ${want} row — the recap read "${recap.text.slice(0, 160)}"`);
     }
   });
+  await writeFile(join(EVIDENCE, `section5-recap-${COMMIT}.png`),
+    Buffer.from(await session.screenshot(), 'base64'));
+
   check('and no row is money beside a blank name', () => {
     const cells = [...recap.html.matchAll(/<tr>\s*<td[^>]*>([^<]*)<\/td>/g)].map((m) => m[1].trim());
     assert.ok(cells.length > 0, 'no rows in the recap');

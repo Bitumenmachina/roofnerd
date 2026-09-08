@@ -59,6 +59,11 @@ export interface Recap {
   readonly bond: Money;
   readonly sellingPrice: Money;
   readonly totalSquares: number | null;
+  /**
+   * Areas traced but not in the per-square divisor, because nothing is priced on
+   * them. Named so a rate cannot quietly be taken over a fraction of the roof.
+   */
+  readonly squaresLeftOut: readonly string[];
   readonly totalHours: number;
   readonly perSquare: Money | null;
   /**
@@ -151,18 +156,44 @@ export function priceJob(doc: JobDocument, scenario: Scenario): PricedLine[] {
  * on. Anything else is two unrelated numbers in a fraction.
  */
 export function totalSquaresOf(doc: JobDocument): number | null {
+  return squaresOf(doc).squares;
+}
+
+/**
+ * The squares a per-square rate is taken over, and the areas that are not in it.
+ *
+ * An area carrying no items is deliberately out of the denominator: a field
+ * traced for the Model and priced by nothing would otherwise dilute every rate
+ * in the recap toward zero. That exclusion is right and it is also invisible,
+ * which is the half that was missing. A demo job showed material at $4,274 a
+ * square — a number no roofer would read twice — because seven hundred square
+ * feet of traced roof carried no lines and quietly left the divisor.
+ *
+ * So the areas that were left out come back with the number, and the recap says
+ * both. It is the same rule the pending list already follows: a total that
+ * leaves something out says what it left out. A rate is a total with a divisor,
+ * and the divisor can lie the same way.
+ */
+export function squaresOf(doc: JobDocument): {
+  readonly squares: number | null;
+  readonly leftOut: readonly string[];
+} {
   const measured = measureJob(doc);
   let squares = 0;
   let sawOne = false;
+  const leftOut: string[] = [];
   for (const condition of doc.conditions) {
     if (condition.kind !== 'area') continue;
-    if ((condition.items?.length ?? 0) === 0) continue;
     const sq = measured.get(condition.id)?.SQ;
+    if ((condition.items?.length ?? 0) === 0) {
+      if (sq) leftOut.push(`${condition.name}: ${sq.toFixed(2)} SQ traced, with nothing priced on it`);
+      continue;
+    }
     if (sq === null || sq === undefined) continue;
     squares += sq;
     sawOne = true;
   }
-  return sawOne && squares > 0 ? squares : null;
+  return { squares: sawOne && squares > 0 ? squares : null, leftOut };
 }
 
 /** Roll a job up to a selling price under one scenario's prices and adders. */
@@ -189,7 +220,7 @@ export function recap(doc: JobDocument, scenario: Scenario): Recap {
     if (line.hours !== null) hoursBy.set(line.class, (hoursBy.get(line.class) ?? 0) + line.hours);
   }
 
-  const totalSquares = totalSquaresOf(doc);
+  const { squares: totalSquares, leftOut: squaresLeftOut } = squaresOf(doc);
 
   const classes: ClassLine[] = CLASS_NAMES.map((cls) => {
     const subtotal = subtotals.get(cls) ?? 0;
@@ -222,6 +253,7 @@ export function recap(doc: JobDocument, scenario: Scenario): Recap {
     bond,
     sellingPrice,
     totalSquares,
+    squaresLeftOut,
     totalHours,
     perSquare: totalSquares ? sellingPrice / totalSquares : null,
     pending,

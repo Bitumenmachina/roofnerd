@@ -60,6 +60,9 @@ function drawPicker(host: HTMLElement, redraw: () => void): void {
 
 type Row = Record<string, string>;
 
+/** How many squares the recap's rates were taken over. Printed beside them. */
+let perSquareOver: number | null = null;
+
 function drawLens(host: HTMLElement, d: Doc): void {
   host.replaceChildren();
   const lens = lensById(current);
@@ -86,6 +89,7 @@ function drawLens(host: HTMLElement, d: Doc): void {
   head.append(download);
   host.append(head);
 
+  perSquareOver = null;
   const rows = rowsFor(lens, d);
   const left = leftOut(lens, d);
 
@@ -94,7 +98,11 @@ function drawLens(host: HTMLElement, d: Doc): void {
   const hr = document.createElement('tr');
   for (const c of lens.columns) {
     const th = document.createElement('th');
-    th.textContent = c.heading;
+    // The divisor goes in the heading of the column it made, where it cannot be
+    // read apart from the rate.
+    th.textContent = c.key === 'perSquare' && perSquareOver
+      ? `${c.heading} · over ${perSquareOver.toFixed(2)} SQ`
+      : c.heading;
     if (c.numeric) th.className = 'num';
     hr.append(th);
   }
@@ -157,10 +165,15 @@ function leftOut(lens: Lens, d: Doc): string[] {
     { scenarios?: { id: string }[]; activeScenarioId?: string } | undefined;
   const scenario = job?.scenarios?.find((s) => s.id === job.activeScenarioId) ?? job?.scenarios?.[0];
   if (!scenario) return [];
-  return [...recapOf(
+  const r = recapOf(
     { ...(d as object) } as Parameters<typeof recapOf>[0],
     scenario as Parameters<typeof recapOf>[1],
-  ).pending];
+  );
+  // A rate is a total with a divisor under it, and the divisor leaves things out
+  // the same way a total does. An area traced and priced by nothing is correctly
+  // out of the per-square — and saying so is what turns $4,274 a square from a
+  // number nobody can explain into a number with a reason.
+  return [...r.pending, ...r.squaresLeftOut];
 }
 
 const quote = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
@@ -189,6 +202,7 @@ function rowsFor(lens: Lens, d: Doc): Row[] {
     // field that is not on the type printed a recap of blank rows with money
     // beside them, and every check passed because none of them read the recap.
     // Found by opening a real job and looking at the sheet.
+    perSquareOver = r.totalSquares;
     return r.classes.map((c) => ({
       class: c.class,
       cost: money(c.total),
