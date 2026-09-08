@@ -10,6 +10,7 @@ export * from './geometry.js';
 export * from './measures.js';
 export * from './formula.js';
 export * from './dimension.js';
+export * from './lens.js';
 export * from './takeoff.js';
 export * from './line.js';
 export * from './model.js';

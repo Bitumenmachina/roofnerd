@@ -21,6 +21,35 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## Phase 5 — lenses
+
+Five templates, the reader picks one, and a lens leaves things out without ever
+touching a number. `tools/probe/section5-lenses.mjs` — **15/15**.
+
+| Lens | For | Shows |
+|---|---|---|
+| Drawing | the subcontractor pricing the work | quantities and units, nothing else |
+| Stocking | the supply house and the crew | order units, with Sent and Returned blank for the field |
+| Condition Summary | the project manager | one line per condition, with what it costs |
+| Recap | accounting, and the owner | the roll-up by class |
+| Consolidated | this office, and nobody else | the whole chain, formula included |
+
+**A concealed cost is not in the page at all** — not greyed, not blurred, absent. The check reads the
+markup rather than the rendered text, because a number that is in the document and merely hidden is
+one look at the source away from the supply house knowing the margin.
+
+**And none of the working travels.** A document going outside carries no measure name an estimator
+only sees inside a formula, no property, and no rounding function — tested by searching the finished
+page for each of them. `SF`, `LF`, `EA` and `SQ` are deliberately *not* on that list: they are the
+units, a quantity without one is useless, and a check that treated them as leaks would fire on every
+honest page and be switched off within a week.
+
+**A defect the looking caught and the check did not.** Every line on the stocking list except the
+membrane printed a blank order quantity, because only that item had an order step. With no step you
+buy what you measured — that is what the model means by an absent step — and a supply house does not
+want a line with nothing in the quantity column. Blank is not a quantity. Fixed, and there is now a
+check that every line carries one.
+
 ## Phase 3 — the Model answers water
 
 Thickness shading said how thick. It did not say where the water goes, which is the ruling that made

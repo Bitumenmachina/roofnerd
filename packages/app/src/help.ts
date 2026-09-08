@@ -78,6 +78,14 @@ Pick a condition, then load an assembly onto it. That copies the items; it does 
 
 A profile is the flat legs a piece of metal is formed from. Girth is their sum plus what the hems eat, and it belongs to the detail rather than the material: 19 1/2 inches at a coping, 8 at a gravel stop, 26 at an equipment curb cap, all off the same coil. That is why you enter it once per detail and use it everywhere that detail runs.`,
 
+  Reports: `One estimate, filtered for whoever is receiving it.
+
+Pick who it is for. The sheet is the same estimate with their columns and nothing else — a lens leaves things out, and that is all it does. Nothing here changes a number.
+
+The supply house sees what to send, in the units they sell, with no cost and no waste on it. A subcontractor sees the measurements without your internal assumptions. The Consolidated lens is the only one that shows how a quantity was worked out, and it says on its face that it is internal.
+
+A cost a lens leaves out is not on the page at all — not greyed, not blurred, not there. A number that is in the document and merely hidden is one look at the source away from the wrong person.`,
+
   Condition: `A condition is one thing you traced, and this is everything the drawing cannot tell you about it.
 
 The numbers at the top are what it measures right now. Everything below sets what the detail calls for: how tall the flashing runs, how wide the coping is, what the slope is, how much flat metal a formed profile eats.

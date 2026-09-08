@@ -13,12 +13,14 @@ import { mountPlan } from './editors/plan.js';
 import { mountEstimate } from './editors/estimate.js';
 import { mountModel } from './editors/model.js';
 import { mountLibrary } from './editors/library.js';
+import { mountReports } from './editors/reports.js';
 
 const EDITORS: Record<string, { title: string; mount: (host: HTMLElement) => void; help: string }> = {
   plan: { title: 'Plan', mount: mountPlan, help: HELP['Plan']! },
   estimate: { title: 'Estimate Sheet', mount: mountEstimate, help: HELP['Estimate Sheet']! },
   model: { title: 'Model', mount: mountModel, help: HELP['Model']! },
   library: { title: 'Library', mount: mountLibrary, help: HELP['Library']! },
+  reports: { title: 'Reports', mount: mountReports, help: HELP['Reports']! },
 };
 
 const params = new URLSearchParams(window.location.search);
