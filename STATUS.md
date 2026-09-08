@@ -10,10 +10,9 @@ acceptance does not pause the build.
 **Section 6 — 3D — is done.** Sections 4 (the library) and 5 (the lenses) are what remain, plus the
 Gantt bonus. Addendum 4 §2 put 6 ahead of them because nothing in either fed it.
 
-**Section 6 — 3D — was opened out of order, and here is why.** Addendum 4 arrived and changes the order: 6 goes
-ahead of 4 and 5, because nothing in either feeds it and it depends on sections 1 and 2 only. The
-tapered inputs it needs are condition properties in this section; their library defaults arrive
-with section 4, afterwards.
+It was built out of order on purpose: Addendum 4 §2 moved 6 ahead of 4 and 5, because nothing in
+either feeds it and it depends on sections 1 and 2 only. The tapered inputs it needs are condition
+properties, and their library defaults arrive with section 4, afterwards.
 
 **Its precondition is satisfied, and it opens now.** Addendum 4's standing instruction is that
 nothing opens until the front door is fixed *and Patrick has opened a job himself*. He did open the
@@ -105,13 +104,11 @@ Six new vocabulary rows — Drain, Ridge, Cricket, Taper, Elevation, and the Con
 list — are in `README.md`, and `TAPER` and `ELEV` are now in the vocabulary check's bare-key list, so
 the gate that stops a code word reaching a screen covers them too.
 
-Engine tests **100/100**, up from 95 — the five new ones are the taper/pitch distinction in both
+Engine tests at that point **100/100**, up from 95 — the five new ones are the taper/pitch distinction in both
 directions, elevation touching no measure, the tapered inputs reachable from a formula by name, and
 an unscaled sheet still reading pending rather than zero with a taper set.
 
-**Next in section 6:** three.js, the heightfield, crickets, and the ponding view, with the done-check
-and its evidence. The projection goes behind one function — `QUESTIONS.md` Q7 is open on orbit versus
-fixed isometric, and §4.10's orbit is what gets built meanwhile.
+That was step 1. The renderer that draws from it is above, and section 6 is closed.
 
 ## What the seats settled, 2026-09-08
 
