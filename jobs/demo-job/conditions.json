@@ -18,6 +18,7 @@
           "name": "SF",
           "rule": "exact"
         },
+        "thickness": 0.06,
         "unit": "SQ",
         "unitCost": 1.8,
         "waste": 10
@@ -27,6 +28,7 @@
         "description": "Polyisocyanurate, 2.2 in",
         "formula": "SQ",
         "id": "iso-22",
+        "thickness": 2.2,
         "unit": "SQ",
         "unitCost": 111.16,
         "waste": 10
@@ -36,6 +38,7 @@
         "description": "Gypsum cover board, 5/8 in",
         "formula": "SQ",
         "id": "coverboard",
+        "thickness": 0.625,
         "unit": "SQ",
         "unitCost": 77.22,
         "waste": 8
@@ -127,7 +130,8 @@
     "properties": {
       "ELEV": 0,
       "H": 1.5,
-      "STRETCHOUT": 14
+      "STRETCHOUT": 14,
+      "WALL": 8
     },
     "traces": [
       {
@@ -243,8 +247,7 @@
     "name": "Cricket behind RTU-1",
     "properties": {
       "ELEV": 0.25,
-      "TAPER": 0.5,
-      "W": 4
+      "TAPER": 0.5
     },
     "role": "ridge",
     "traces": [
@@ -253,12 +256,12 @@
         "pageId": "page-1",
         "points": [
           {
-            "x": 240,
-            "y": 700
+            "x": 252.5,
+            "y": 704.4
           },
           {
-            "x": 240,
-            "y": 820
+            "x": 297.5,
+            "y": 815.6
           }
         ]
       }

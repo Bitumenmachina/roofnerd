@@ -365,3 +365,24 @@ test('girth is the legs plus what the hems eat', () => {
   assert.equal(girthOf({ id: 'p', name: 'Coping', legs: [4, 11, 4], hems: [0.5, 0.5] }), 20);
   assert.equal(girthOf({ id: 'p', name: 'Gravel stop', legs: [3, 5] }), 8);
 });
+
+test('a line loaded from the book is still priced by the book', () => {
+  // Loading an assembly gives each line its own id, so a price typed on one
+  // condition cannot leak to another. The book still has to be able to price
+  // it, and it keys on the book's id — so the line carries both.
+  const item = {
+    id: 'c-parapet-coping-0', libraryId: 'coping', description: 'Coping',
+    costCode: 'c', unit: 'LF', formula: 'LF',
+  };
+  const priced = priceLine(item, { LF: 100 }, { coping: 2.5 });
+  assert.equal(priced.unitCost, 2.5);
+  assert.equal(priced.extended, 250);
+});
+
+test('and a price on the line still beats the book', () => {
+  const item = {
+    id: 'x', libraryId: 'coping', description: 'Coping', costCode: 'c',
+    unit: 'LF', formula: 'LF', unitCost: 9,
+  };
+  assert.equal(priceLine(item, { LF: 10 }, { coping: 2.5 }).unitCost, 9);
+});

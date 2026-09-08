@@ -99,7 +99,7 @@ export interface Properties {
 
 /** The reserved property names. The last three only some details use. */
 export const PROPERTY_NAMES = [
-  'H', 'W', 'T', 'PITCH', 'TAPER', 'ELEV', 'SUMP', 'BOARDS', 'SIDES', 'STRETCHOUT',
+  'H', 'W', 'T', 'WALL', 'PITCH', 'TAPER', 'ELEV', 'SUMP', 'BOARDS', 'SIDES', 'STRETCHOUT',
 ] as const;
 
 /**

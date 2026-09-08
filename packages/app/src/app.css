@@ -470,12 +470,18 @@ button.quiet:hover { border-color: var(--rule); }
   font-size: 12px; color: var(--ink-2, #5a5f66);
 }
 .model-key { display: inline-flex; align-items: center; gap: 6px; }
+/* A row with no swatch: the drawing saying what it does not know, or what it
+   checked and did not like. It reads as a sentence, not as a key. */
+.model-says { font-style: italic; color: var(--ink-2); }
 .model-key i {
   width: 10px; height: 10px; border-radius: 2px; display: inline-block;
   border: 1px solid rgba(0, 0, 0, 0.18);
 }
 .model-note { margin: 0; padding: 0 12px 10px; font-size: 12px; color: var(--ink-2, #5a5f66); }
 .model-note:empty { display: none; }
+/* The roof did not draw. Not a hint — the view is empty and this says why, so
+   nobody measures off a picture that is partly the last job. */
+.model-broke { color: var(--warn-ink, #7c2d12); background: var(--warn-bg, rgba(180, 83, 9, 0.12)); border-left: 3px solid var(--warn, #b45309); padding: 8px 12px; font-weight: 600; }
 
 /* A corner clicked past the edge of the paper. Not an error — a measurement
    taken off the desk instead of the drawing, said out loud so it can be
@@ -570,6 +576,12 @@ button.quiet:hover { border-color: var(--rule); }
 .lens-sheet h2 { margin: 0; font-size: var(--t-head); font-weight: 500; }
 .lens-audience, .lens-note { margin: 0; font-size: var(--t-small); color: var(--ink-2); }
 .lens-note { flex-basis: 100%; }
+
+/* What a total left out. Under the table, not beside it — it is a footnote on
+   the number above, and it has to be legible enough to read rather than skip. */
+.lens-pending { margin-top: 1rem; padding: 0.6rem 0.8rem; border-left: 3px solid var(--warn, #b45309); background: var(--surface-2, rgba(180, 83, 9, 0.06)); font-size: var(--t-small); }
+.lens-pending ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+.lens-pending li { margin: 0.15rem 0; }
 .lens-export { margin-left: auto; }
 .lens-sheet table { border-collapse: collapse; width: 100%; font-size: var(--t-small); }
 .lens-sheet th, .lens-sheet td {

@@ -200,3 +200,65 @@ export function formatFeetInches(feet: number | null | undefined): string {
   }
   return `${sign}${wholeFeet}'-${inches}${fraction}"`;
 }
+
+/**
+ * Does this ring cross itself?
+ *
+ * A polygon traced by hand off a PDF can double back — a click landing on the
+ * wrong side of an earlier edge, a stray vertex, a ring closed through its own
+ * middle. Nothing downstream notices. Area still comes out a number, because
+ * the shoelace formula happily returns the signed sum of a figure-eight, and a
+ * triangulator hands back a mesh that renders: earcut's own documentation says
+ * outright that it "does not guarantee a correct triangulation" on a ring that
+ * self-crosses, and it says so without raising anything.
+ *
+ * So it gets checked instead of assumed. Two segments of the same ring may only
+ * meet if they are neighbours meeting at their shared vertex.
+ *
+ * This is the same class of defect as an unscaled page reading zero: a number
+ * that is wrong and looks ordinary. It is worth more than any amount of care
+ * taken while drawing.
+ */
+export function selfIntersects(points: readonly Point[]): boolean {
+  const n = points.length;
+  if (n < 4) return false;
+  // A closed ring may arrive with its first point repeated at the end; the
+  // duplicate is the closure, not a crossing.
+  const ring = (points[0]!.x === points[n - 1]!.x && points[0]!.y === points[n - 1]!.y)
+    ? points.slice(0, -1)
+    : points;
+  const m = ring.length;
+  if (m < 4) return false;
+
+  for (let i = 0; i < m; i += 1) {
+    const a1 = ring[i]!;
+    const a2 = ring[(i + 1) % m]!;
+    for (let j = i + 1; j < m; j += 1) {
+      // Neighbours share a vertex by construction, and the pair that closes the
+      // ring are neighbours too.
+      if (j === i || j === (i + 1) % m || (j + 1) % m === i) continue;
+      if (segmentsCross(a1, a2, ring[j]!, ring[(j + 1) % m]!)) return true;
+    }
+  }
+  return false;
+}
+
+/** Which side of a→b the point c falls, by sign. Zero means collinear. */
+const side = (a: Point, b: Point, c: Point): number =>
+  Math.sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
+
+/**
+ * Do two segments properly cross?
+ *
+ * Properly: each straddles the other's line. Touching at an endpoint is not a
+ * crossing — a traced ring is full of vertices that touch, and treating those
+ * as defects would flag every honest polygon, which is how a check gets turned
+ * off inside a week.
+ */
+function segmentsCross(a1: Point, a2: Point, b1: Point, b2: Point): boolean {
+  const d1 = side(a1, a2, b1);
+  const d2 = side(a1, a2, b2);
+  const d3 = side(b1, b2, a1);
+  const d4 = side(b1, b2, a2);
+  return d1 !== 0 && d2 !== 0 && d3 !== 0 && d4 !== 0 && d1 !== d2 && d3 !== d4;
+}

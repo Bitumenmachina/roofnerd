@@ -5,10 +5,17 @@ acceptance does not pause the build.
 
 ## Where the build is
 
-**Sections 1, 2, 3 and 7 are done, and the front door now works.**
+**Sections 1, 2, 3, 4, 5, 6 and 7 are built, and the seven things run end to end on a real job.**
+`tools/probe/real-job.mjs` — **13/13** — opens a real 36 × 24 architectural sheet at full size, sets
+its scale from two points and a real dimension, traces the field, the parapet, the drains, a tapered
+area and a cricket, loads the coping assembly out of the book and watches the parapet yield children
+in mixed units, buys coping in pounds through its girth, moves the money when the parapet height
+doubles, stands the roof up in the Model, and sends the supply house a list with no cost on it.
 
-**Section 6 — 3D — is done.** Sections 4 (the library) and 5 (the lenses) are what remain, plus the
-Gantt bonus. Addendum 4 §2 put 6 ahead of them because nothing in either fed it.
+**The Model was rebuilt on the trade's conventions rather than on assumptions** — see the pass below.
+The Gantt bonus is the only thing in the handoff still unbuilt.
+
+Addendum 4 §2 put 6 ahead of 4 and 5 because nothing in either fed it.
 
 It was built out of order on purpose: Addendum 4 §2 moved 6 ahead of 4 and 5, because nothing in
 either feeds it and it depends on sections 1 and 2 only. The tapered inputs it needs are condition
@@ -21,10 +28,79 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## The Model, rebuilt on how a roof is actually built
+
+The old Model looked right and was invented. Its check passed 14/14 because it was written against
+the same assumptions that produced the geometry — a check reading its own producer's tally.
+
+Three readers were sent out first: FreeCAD 1.1.1 driven headless and ifcopenshell 0.8.4 in
+`~/venvs/ifc`; the prior 3D work on this machine; and the NRCA manual with the manufacturers' own
+data sheets. What they found is in `refs/roof-construction-findings-2026-09-08.md` with a source on
+every claim, and `packages/engine/src/roof.ts` carries the conventions as tested arithmetic —
+**19 tests written against the sources, not against the drawing.**
+
+What changed, each with its decision:
+
+- **The cricket's ridge is derived** (D84). NRCA pp.166–168 puts it on the perpendicular bisector
+  between the drainage points it serves. The old one traced a ridge and hung planes off it at a `W`
+  property that defaulted to four feet — modelling an output as an input. Width is now half the
+  drain-to-drain span, slope is twice the field, and NRCA Fig. 4-13's length-to-width ceiling is
+  checked and reported.
+- **Four inches a board came from nowhere** (D83). A single layer runs to 4.5 in (Carlisle) and past
+  that you buy a second layer, so the roof keeps rising. What actually caps it is NRCA's 8 in
+  flashing height against a parapet the estimator has already traced. The view names which of the two
+  bound, because they are different problems.
+- **A build-up is the sum of its layers, or it is unstated** (D85). `DECK_FEET = 0.75` is gone, along
+  with the comment admitting it was "not a real assembly — enough to be a building". `thickness` sits
+  on the item, the total falls out, and `null` — never zero — is what an unstated stack returns.
+- **A wall is as thick as a property says** (D85). The parapet was a face because nothing carried a
+  wall thickness. Declining to invent a value was right; declining to offer a property was not.
+  `WALL` joins `ELEV` and `TAPER` — empty until the estimator fills it, reading pending on the
+  drawing until they do.
+- **Direction is a named parameter** (D86). Not a sign inside a rotation. The build-up grows up from
+  the top of deck; the parapet grows inboard from its traced line, which is the exterior face by the
+  convention every tool defaults to.
+
+**Section 6's check was rewritten to test the convention** — `tools/probe/section6-model.mjs`,
+**23/23**. It reads the drawn triangles and the drains out of the document and works NRCA out for
+itself: is the ridge square to the line joining its drains, does it sit equidistant, is it cut at
+twice the field, is it in proportion, does the wall stand exactly its stated thickness off its
+reference line and never outside it, does a build-up rise off the datum by what its layers say, and
+does an assembly stating no thickness draw nothing at all. **Three of those were proven to fail on
+the old geometry — at 68.0° off square** — which the old 14/14 could never have done.
+
+**And the demo job's ridge was traced perfectly square to its drains**, so a cricket built the wrong
+way passed the check meant to catch it. It is now traced the way a person traces one, at the same
+length so no quantity moves. A fixture that is right by luck cannot tell a correct program from a
+plausible one.
+
+## Defects found by driving rather than by any check
+
+- **Selection died on every editor switch.** A switch is a reload; selection lived in a module
+  variable. Now in `sessionStorage` — per window, never in the job.
+- **A loaded assembly could never be priced.** `loadOnto` remakes item ids so a price typed on one
+  condition cannot leak to another, but a price book keys on the book's id. A line now carries both.
+- **The Recap lens printed money beside blank class names.** `reports.ts` read `c.name`; a
+  `ClassLine` has no `name`. Five lenses were offered and three were opened, so nothing ever saw it.
+  Section 5 now reads the recap — **17/17** — and the recap says what its total left out.
+- **The client-data gate was already red on `HEAD`**, on a coping profile's leg dimensions and a
+  gauge weight. Narrowed to exclude fractional-inch dimensions, with the reasoning in the script.
+  Then, proving it red, it turned out `--all` read only tracked files — so a brand-new file carrying
+  a real figure got a green from `pnpm gates`. Fixed, and proven red both ways.
+- **A ring that crosses itself has an area of zero.** The two lobes of a bow tie wind opposite ways
+  and cancel; a ten-by-six figure-eight returns 0 SF out of correct arithmetic, and earcut
+  triangulates it into overlapping faces without raising anything. `selfIntersects` now catches it
+  and the area is left out and named rather than drawn.
+- **A failed rebuild used to leave the last good roof on screen.** The one failure in a drawing that
+  yields wrong geometry instead of a refusal, and nothing downstream can see it. The view now empties
+  and says so.
+- **Read off the screenshots, not off a check:** the instanced flow arrows read as a scatter of blobs
+  because instancing dropped the shaft, and `Wall thickness 8` printed with no unit — eight what.
+
 ## Phase 5 — lenses
 
 Five templates, the reader picks one, and a lens leaves things out without ever
-touching a number. `tools/probe/section5-lenses.mjs` — **15/15**.
+touching a number. `tools/probe/section5-lenses.mjs` — **17/17**.
 
 | Lens | For | Shows |
 |---|---|---|

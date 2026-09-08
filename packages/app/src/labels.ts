@@ -20,8 +20,17 @@ export const MEASURE_LABELS: Readonly<Record<string, string>> = {
 /** What a property is called, and the trade words that say what it is for. */
 export const PROPERTY_LABELS: Readonly<Record<string, { label: string; hint: string; group: 'Geometry' | 'Metal' }>> = {
   H: { label: 'Height', hint: 'feet — how far the flashing runs up', group: 'Geometry' },
-  W: { label: 'Width', hint: 'feet — coping width, cricket width', group: 'Geometry' },
+  // Not cricket width any more. A cricket's width is half the span between the
+  // drains it serves, and NRCA bounds it against the length — it is worked out,
+  // not typed. Leaving it here as something to type was modelling an output.
+  W: { label: 'Width', hint: 'feet — coping width', group: 'Geometry' },
   T: { label: 'Thickness', hint: 'inches — insulation, as it is sold', group: 'Geometry' },
+  // Its own name rather than sharing T. T is what goes on the roof; this is
+  // what the roof stops against, and one property meaning two things depending
+  // on what kind of condition it sits on is how a number ends up in the wrong
+  // place. Left empty it reads pending, which is a true thing to say about a
+  // parapet nobody has measured — and is not the same as inventing a width.
+  WALL: { label: 'Wall thickness', hint: 'inches — the parapet itself, not what is on the roof', group: 'Geometry' },
   PITCH: { label: 'Pitch', hint: 'rise per 12 — 5 means 5:12', group: 'Geometry' },
   TAPER: { label: 'Taper', hint: 'inches per foot — 1/4 means 1/4" in 12"', group: 'Geometry' },
   ELEV: { label: 'Elevation', hint: 'feet — top of deck on an area, base on a run', group: 'Geometry' },
@@ -60,6 +69,9 @@ export function propertyPhrase(name: string, value: number): string {
     case 'W': return `${value} ft wide`;
     case 'T': return `${value} in thick`;
     case 'STRETCHOUT': return `${value} in girth`;
+    // A thickness with no unit beside it is a number nobody can act on, and the
+    // default arm prints exactly that. Eight what — inches, or feet of wall?
+    case 'WALL': return `${value} in wall`;
     default: return `${PROPERTY_LABELS[name]?.label ?? name.toLowerCase()} ${value}`;
   }
 }

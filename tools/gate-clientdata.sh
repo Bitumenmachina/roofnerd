@@ -27,7 +27,24 @@ MIN_INTEGER=5         # a bare integer needs this many
 # Numbers that appear in a roofing report because they appear in all roofing,
 # not because they belong to a job. A pitch factor is the square root of one
 # plus the slope squared; it is the same on every roof in the world.
-UNIVERSAL='^(1\.0833|1\.4142|1\.1180|1\.2019|1\.3017|1\.5366|1\.6667|3\.1416|0\.0625)$'
+UNIVERSAL='^(1\.0833|1\.4142|1\.1180|1\.2019|1\.3017|1\.5366|1\.6667|3\.1416|0\.0625|1\.156)$'
+
+# A NARROWING, stated, because the gate fired on the demo library and the demo
+# library was right.
+#
+# What it caught: a coping profile's legs — 1.625, 2.375, 4.375, 6.375 — and
+# 1.156, the weight of a square foot of 24 ga steel. Those are 1 5/8", 2 3/8",
+# 4 3/8", 6 3/8" and a gauge weight. They describe a standard product, not a
+# job, and they are in the local trees only because a real coping has the same
+# legs as a demo one. 1.156 joins UNIVERSAL above by name; the legs are a class
+# and get a rule.
+#
+# The rule: a figure written to three decimal places, under 24, that is an exact
+# sixteenth of an inch is a fractional-inch dimension. That is how metal is
+# drawn and it is not how money is written — a price carries two decimals and a
+# quantity that size is not a client's. Three decimals keeps 12.5 and 1.25 out
+# of it; under 24 keeps a real quantity like 1240.375 in.
+SIXTEENTHS='is a fractional-inch dimension: 3 decimals, under 24, exact 1/16'
 
 PRIVATE=(fixtures refs)
 EXEMPT_RE='^(fixtures|refs|evidence)/'
@@ -59,6 +76,8 @@ tokens=$(
       # gate that cannot tell them apart is a gate that gets switched off. A
       # figure with cents on it is distinctive; a round one is not.
       if ($0 !~ /[.]/ && ($0 % 100) == 0) next
+      # A fractional-inch dimension — see SIXTEENTHS above.
+      if ($0 ~ /^[0-9]+\.[0-9][0-9][0-9]$/ && $0 < 24 && ($0 * 16) == int($0 * 16)) next
       print $0
     }
   ' | grep -vE "$UNIVERSAL" | sort -u
@@ -69,7 +88,13 @@ echo "  $count distinctive figure(s) to keep in"
 
 # ── what to check ──────────────────────────────────────────────────────────
 if [ "${1:-}" = "--all" ]; then
-  files=$(git ls-files)
+  # Tracked AND untracked-but-not-ignored. `git ls-files` alone reads only what
+  # is already committed, so a brand new file carrying a client's figure got a
+  # green from `pnpm gates` and would only have been caught later by the staged
+  # check at commit time. Found by planting a real figure in a new file and
+  # watching the gate pass — which is why a gate gets proven red before it is
+  # trusted, and why proving it on the wrong kind of file proves nothing.
+  files=$(git ls-files --cached --others --exclude-standard)
 else
   files=$(git diff --cached --name-only --diff-filter=ACM)
 fi

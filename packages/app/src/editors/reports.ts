@@ -87,6 +87,7 @@ function drawLens(host: HTMLElement, d: Doc): void {
   host.append(head);
 
   const rows = rowsFor(lens, d);
+  const left = leftOut(lens, d);
 
   const table = document.createElement('table');
   const thead = document.createElement('thead');
@@ -112,6 +113,25 @@ function drawLens(host: HTMLElement, d: Doc): void {
   table.append(thead, tbody);
   host.append(table);
 
+  // A total that leaves something out says what it left out. The recap's own
+  // arithmetic already knows — it collects every line it could not add — and a
+  // sheet that showed the total without it would be the silent zero this
+  // program is not allowed to have.
+  if (left.length > 0) {
+    const note = document.createElement('div');
+    note.className = 'lens-pending';
+    const h = document.createElement('strong');
+    h.textContent = `Not in this total (${left.length}):`;
+    const ul = document.createElement('ul');
+    for (const p of left) {
+      const li = document.createElement('li');
+      li.textContent = p;
+      ul.append(li);
+    }
+    note.append(h, ul);
+    host.append(note);
+  }
+
   download.addEventListener('click', () => {
     const csv = [
       lens.columns.map((c) => c.heading).join(','),
@@ -121,6 +141,26 @@ function drawLens(host: HTMLElement, d: Doc): void {
     download.textContent = 'Copied';
     setTimeout(() => { download.textContent = 'Copy as CSV'; }, 1500);
   });
+}
+
+/**
+ * What a lens's total could not add.
+ *
+ * Only the recap has one — it is the only lens that rolls up to a selling
+ * price, so it is the only one where a missing line changes a number somebody
+ * signs. The other lenses show lines, and a line with no price says so on
+ * itself.
+ */
+function leftOut(lens: Lens, d: Doc): string[] {
+  if (lens.id !== 'recap') return [];
+  const job = at('/job', d) as
+    { scenarios?: { id: string }[]; activeScenarioId?: string } | undefined;
+  const scenario = job?.scenarios?.find((s) => s.id === job.activeScenarioId) ?? job?.scenarios?.[0];
+  if (!scenario) return [];
+  return [...recapOf(
+    { ...(d as object) } as Parameters<typeof recapOf>[0],
+    scenario as Parameters<typeof recapOf>[1],
+  ).pending];
 }
 
 const quote = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
@@ -145,8 +185,12 @@ function rowsFor(lens: Lens, d: Doc): Row[] {
 
   if (lens.id === 'recap') {
     const r = recapOf(document_, scenario as Parameters<typeof recapOf>[1]);
+    // `class`, not `name` — a ClassLine is named by the class it is. Reading a
+    // field that is not on the type printed a recap of blank rows with money
+    // beside them, and every check passed because none of them read the recap.
+    // Found by opening a real job and looking at the sheet.
     return r.classes.map((c) => ({
-      class: c.name,
+      class: c.class,
       cost: money(c.total),
       perSquare: c.perSquare === null ? '' : `${money(c.perSquare)}/SQ`,
     }));

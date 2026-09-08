@@ -156,6 +156,33 @@ export interface Item {
   readonly profileId?: string;
   /** What this item does in the build-up, when it came off an assembly. */
   readonly layer?: LayerFunction;
+  /**
+   * How thick this layer is, in inches. Never negative.
+   *
+   * The field whose absence made the Model invent a nine-inch deck: with no
+   * layer carrying a thickness there was nothing to add up, so a constant got
+   * written instead and a comment admitted it was "not a real assembly". Both
+   * real systems put the magnitude on the layer and derive the total from it —
+   * `IfcMaterialLayer.LayerThickness` is an `IfcNonNegativeLengthMeasure`, and
+   * ifcopenshell's own example is explicit that a slab's extrusion depth "must
+   * equal .013 + .092 + .013 from our type". You never type the total.
+   *
+   * Which way the stack grows is not a sign on this number. It is a separate
+   * parameter — `DirectionSense` in IFC, `Normal` in FreeCAD — and for a roof
+   * build-up the answer is always up from the top of deck.
+   */
+  readonly thickness?: number;
+  /**
+   * Which item in the book this line came from.
+   *
+   * A line's own id has to be unique to the line — load the same assembly onto
+   * two conditions and a shared id would make a price typed on one appear on
+   * the other. But a price book keys on the **book's** id, so a line that only
+   * carried its own would be unpriceable from the book the moment it was
+   * loaded. Both ids, doing their own jobs. Found by loading an assembly onto a
+   * real job and watching every line come back with no price.
+   */
+  readonly libraryId?: string;
   readonly notes?: string;
 }
 
@@ -234,25 +261,47 @@ export function girthOf(profile: Profile): number {
 /**
  * What a layer does in a roof, bottom-up from the deck.
  *
- * Every real assembly document on the box orders itself this way and none of
- * them orders top-down — a liquid-applied system numbered Primer, Base,
- * Reinforcement, Top Coat; a submittal letter reading Deck, Thermal Barrier,
- * Vapour Barrier, Insulation, Membrane, Flashings, Edge Metal. The vocabulary
- * recurs across manufacturers who share nothing else.
+ * A free string, deliberately, because neither real model closes this set.
+ * `IfcMaterialLayer` carries `Name`, `Category` and `Priority` as plain string
+ * and integer — checked against the schema in ifcopenshell 0.8.4, not read about
+ * — and FreeCAD's multi-material is three parallel lists (`Names`, `Materials`,
+ * `Thicknesses`) with no enumeration anywhere near it. This started life as a
+ * closed union taken from a summary of some PDFs, which would have refused a
+ * recovery board, a protection layer or an air barrier: structurally valid, and
+ * wrong about the trade.
+ *
+ * `LAYER_FUNCTIONS` below is what to offer in a picklist. It is a suggestion.
  */
-export type LayerFunction =
-  | 'primer' | 'vapour barrier' | 'thermal barrier'
-  | 'insulation' | 'tapered insulation' | 'cover board'
-  | 'reinforcement' | 'membrane' | 'top coat'
-  | 'flashing' | 'edge metal' | 'fastening' | 'adhesive';
+export type LayerFunction = string;
+
+/**
+ * The layer names that recur across manufacturers who share nothing else — a
+ * liquid-applied system numbered Primer, Base, Reinforcement, Top Coat; a
+ * submittal reading Deck, Thermal Barrier, Vapour Barrier, Insulation,
+ * Membrane, Flashings, Edge Metal. Ordered bottom-up from the deck, which is
+ * the direction the whole trade dimensions from.
+ */
+export const LAYER_FUNCTIONS: readonly string[] = [
+  'primer', 'vapour barrier', 'thermal barrier',
+  'insulation', 'tapered insulation', 'cover board',
+  'reinforcement', 'membrane', 'top coat',
+  'flashing', 'edge metal', 'fastening', 'adhesive',
+];
 
 /**
  * How a system is held down. The top-level way this trade sorts assemblies —
  * manufacturers group by this first, then by deck, and only then by membrane.
+ *
+ * Also a free string, for the same reason: a closed set would have no room for
+ * vacuum adhered, induction welded under somebody's brand name, or loose laid.
  */
-export type Attachment =
-  | 'fully adhered' | 'mechanically fastened' | 'induction welded'
-  | 'ballasted' | 'self adhered' | 'liquid applied';
+export type Attachment = string;
+
+/** What to offer for it. A suggestion, not a schema. */
+export const ATTACHMENTS: readonly string[] = [
+  'fully adhered', 'mechanically fastened', 'induction welded',
+  'ballasted', 'self adhered', 'liquid applied',
+];
 
 /** A saved set of items. Generic, or a named manufacturer's system. */
 export interface Assembly {

@@ -119,8 +119,236 @@ try {
   check('the fall is drawn, not only the thickness', () => {
     assert.match(first, /arrows follow the fall/, `legend read "${first}"`);
   });
-  check('a ridge between drains renders as a cricket', () => {
-    assert.match(first, /cricket/, `legend read "${first}"`);
+  // ── the cricket, checked against NRCA rather than against the legend ────
+  //
+  // Everything below reads the drawn triangles and the drains in the document,
+  // and works the trade's rules out for itself. Asking the legend whether there
+  // is a cricket is worthless: it says yes because the code counted one. These
+  // are written so that a plausible-looking wrong cricket fails them.
+  const scene = JSON.parse(await session.execute(function () {
+    return JSON.stringify(window.__roofnerdModel ? window.__roofnerdModel() : []);
+  }));
+  const job = JSON.parse(await session.execute(function () {
+    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+      return JSON.stringify({ conditions: d.conditions, pages: d.pages });
+    });
+  }));
+
+  const scales = {};
+  for (const p of job.pages ?? []) if (p.feetPerUnit) scales[p.id] = p.feetPerUnit;
+  const inFeet = (c) => (c.traces ?? []).flatMap((t) =>
+    (scales[t.pageId] ? t.points.map((p) => ({ x: p.x * scales[t.pageId], y: p.y * scales[t.pageId] })) : []));
+
+  const drains = (job.conditions ?? []).filter((c) => c.role === 'drain').flatMap(inFeet);
+  const ridge = (job.conditions ?? []).find((c) => c.role === 'ridge');
+  const field = (job.conditions ?? []).find((c) => c.kind === 'area' && c.properties?.TAPER !== undefined);
+  const cricket = scene.find((m) => m.kind === 'cricket');
+
+  check('the cricket is drawn from the drains it serves', () => {
+    assert.ok(ridge, 'the demo job has no ridge condition');
+    assert.ok(cricket, 'no cricket in the scene');
+    assert.ok(cricket.points && cricket.points.length >= 18, 'the cricket has no readable geometry');
+  });
+
+  // The ridge is the top edge: the two distinct vertices at max height.
+  const ridgePoints = () => {
+    const pts = [];
+    for (let i = 0; i < cricket.points.length; i += 3) {
+      pts.push({ x: cricket.points[i], y: cricket.points[i + 1], z: cricket.points[i + 2] });
+    }
+    const top = Math.max(...pts.map((p) => p.y));
+    const high = pts.filter((p) => Math.abs(p.y - top) < 1e-4);
+    const a = high[0];
+    const b = high.reduce((far, p) =>
+      Math.hypot(p.x - a.x, p.z - a.z) > Math.hypot(far.x - a.x, far.z - a.z) ? p : far, a);
+    return { a, b, top, low: Math.min(...pts.map((p) => p.y)) };
+  };
+
+  check('and its ridge runs square to the line joining them', () => {
+    // NRCA pp.166-168: the ridge is perpendicular to the line connecting the two
+    // drainage points. A cricket built by hanging planes off a traced line
+    // passes this only by luck.
+    const { a, b } = ridgePoints();
+    const byRange = [...drains].sort((p, q) => {
+      const m = { x: (a.x + b.x) / 2, y: (a.z + b.z) / 2 };
+      return Math.hypot(p.x - m.x, p.y - m.y) - Math.hypot(q.x - m.x, q.y - m.y);
+    });
+    assert.ok(byRange.length >= 2, `only ${byRange.length} drain(s) to sit between`);
+    const dx = byRange[1].x - byRange[0].x;
+    const dy = byRange[1].y - byRange[0].y;
+    const span = Math.hypot(dx, dy);
+    const rx = b.x - a.x;
+    const rz = b.z - a.z;
+    const run = Math.hypot(rx, rz);
+    assert.ok(run > 1e-6 && span > 1e-6, 'the ridge or the drain pair is degenerate');
+    // Perpendicular means the dot product of the two unit vectors is zero.
+    const dot = Math.abs((dx / span) * (rx / run) + (dy / span) * (rz / run));
+    assert.ok(dot < 0.02, `the ridge is ${(Math.acos(Math.min(1, dot)) * 180 / Math.PI).toFixed(1)}° off square to its drains`);
+  });
+
+  check('and it sits equidistant between them', () => {
+    const { a, b } = ridgePoints();
+    const mid = { x: (a.x + b.x) / 2, y: (a.z + b.z) / 2 };
+    const byRange = [...drains].sort((p, q) =>
+      Math.hypot(p.x - mid.x, p.y - mid.y) - Math.hypot(q.x - mid.x, q.y - mid.y));
+    const d0 = Math.hypot(byRange[0].x - mid.x, byRange[0].y - mid.y);
+    const d1 = Math.hypot(byRange[1].x - mid.x, byRange[1].y - mid.y);
+    assert.ok(Math.abs(d0 - d1) < 0.5, `${d0.toFixed(1)} ft to one drain and ${d1.toFixed(1)} ft to the other`);
+  });
+
+  check('and it is cut at twice the slope of the field it sits in', () => {
+    // NRCA p.79 and p.165. Read off the drawn shape: the ridge rise over the
+    // fall run has to be twice the field's own taper.
+    const { a, b, top, low } = ridgePoints();
+    const rise = (top - low) * 12;
+    const mid = { x: (a.x + b.x) / 2, y: (a.z + b.z) / 2 };
+    const byRange = [...drains].sort((p, q) =>
+      Math.hypot(p.x - mid.x, p.y - mid.y) - Math.hypot(q.x - mid.x, q.y - mid.y));
+    const run = Math.hypot(byRange[0].x - mid.x, byRange[0].y - mid.y);
+    assert.ok(run > 1e-6, 'no fall run to measure against');
+    const drawn = rise / run;
+    const want = (field?.properties?.TAPER ?? 0) * 2;
+    assert.ok(want > 0, 'the field has no taper to double');
+    assert.ok(Math.abs(drawn - want) < 0.02,
+      `drawn at ${drawn.toFixed(3)} in/ft against a field of ${(want / 2).toFixed(3)} — should be ${want.toFixed(3)}`);
+  });
+
+  check('and it is not too long for its width to drain', () => {
+    // NRCA Fig. 4-13: 3:1 at an eighth or a quarter, 4:1 at a half. Width is what
+    // moves water along the valley, and no amount of slope makes up for it.
+    const { a, b } = ridgePoints();
+    const length = Math.hypot(b.x - a.x, b.z - a.z);
+    const mid = { x: (a.x + b.x) / 2, y: (a.z + b.z) / 2 };
+    const byRange = [...drains].sort((p, q) =>
+      Math.hypot(p.x - mid.x, p.y - mid.y) - Math.hypot(q.x - mid.x, q.y - mid.y));
+    const width = Math.hypot(byRange[0].x - mid.x, byRange[0].y - mid.y);
+    const ceiling = (field?.properties?.TAPER ?? 0) >= 0.5 ? 4 : 3;
+    assert.ok(length / width <= ceiling,
+      `${(length / width).toFixed(1)}:1 against a ceiling of ${ceiling}:1`);
+  });
+
+  // ── the parapet stands off its reference line, on the inboard side ──────
+  const parapetTrace = () => {
+    const wall = scene.find((m) => m.kind === 'parapet');
+    const run = (job.conditions ?? []).find((c) => c.id === wall.conditionId);
+    return { wall, run, ring: inFeet(run), thick: (run?.properties?.WALL ?? 0) / 12 };
+  };
+  // How far a point sits from the traced polyline, which is the wall's own
+  // reference line.
+  const offLine = (p, ring) => {
+    let best = Infinity;
+    for (let i = 0; i < ring.length - 1; i += 1) {
+      const a = ring[i]; const b = ring[i + 1];
+      const dx = b.x - a.x; const dy = b.y - a.y;
+      const len2 = dx * dx + dy * dy;
+      const u = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
+      best = Math.min(best, Math.hypot(p.x - (a.x + u * dx), p.y - (a.y + u * dy)));
+    }
+    return best;
+  };
+  const wallVertices = (wall) => {
+    const out = [];
+    for (let i = 0; i < wall.points.length; i += 3) out.push({ x: wall.points[i], y: wall.points[i + 2] });
+    return out;
+  };
+
+  check('a parapet with a stated thickness is a wall, not a face', () => {
+    const { wall, ring, thick } = parapetTrace();
+    assert.ok(wall, 'no parapet solid — the demo parapet states a wall thickness');
+    assert.ok(thick > 0, 'the parapet has no wall thickness to check against');
+    assert.ok(wall.points, 'the parapet has no readable geometry');
+    // Its far face stands exactly the stated thickness off the reference line.
+    // A ribbon has every vertex on the line; a wall has a whole face off it.
+    const off = wallVertices(wall).map((p) => offLine(p, ring));
+    const deepest = Math.max(...off);
+    assert.ok(Math.abs(deepest - thick) < 0.02,
+      `its far face is ${deepest.toFixed(3)} ft off the line against a stated ${thick.toFixed(3)}`);
+  });
+
+  check('and every part of it grows inboard, not outboard', () => {
+    // The traced line is the exterior face — the convention every real tool
+    // defaults to, and how a parapet is traced on a roof plan. An open run
+    // traced round three sides has two legs pointing opposite ways, and a wall
+    // built off a single winding sign puts one of them outside the building.
+    const { wall, ring, thick } = parapetTrace();
+    const xs = ring.map((p) => p.x); const ys = ring.map((p) => p.y);
+    const box = { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+    for (const p of wallVertices(wall)) {
+      assert.ok(p.x >= box.x0 - 0.02 && p.x <= box.x1 + 0.02
+        && p.y >= box.y0 - 0.02 && p.y <= box.y1 + 0.02,
+        `a wall vertex at ${p.x.toFixed(2)}, ${p.y.toFixed(2)} sits outside its own trace`);
+    }
+    assert.ok(thick > 0);
+  });
+
+  // Clear it the way an editor would, and watch the view refuse to invent one.
+  await session.execute(function () {
+    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+      const list = d.conditions.map(function (c) {
+        if (c.id !== 'c-parapet') return c;
+        const props = Object.assign({}, c.properties);
+        delete props.WALL;
+        return Object.assign({}, c, { properties: props });
+      });
+      return window.__TAURI_INTERNALS__.invoke('doc_set', { pointer: '/conditions', value: list });
+    });
+  });
+  await wait(900);
+  const cleared = JSON.parse(await session.execute(function () {
+    return JSON.stringify(window.__roofnerdModel ? window.__roofnerdModel() : []);
+  }));
+  const clearedLegend = await legend(session);
+
+  check('and with the thickness cleared it says so rather than guessing one', () => {
+    // Nothing invented in its place, and nothing quietly becoming zero. The
+    // drawing keeps the face it actually knows about and names what it does not.
+    assert.equal(cleared.filter((m) => m.kind === 'parapet').length, 0,
+      'a wall is still drawn at a thickness nothing states');
+    assert.ok(cleared.some((m) => m.kind === 'parapet-ribbon'), 'the run stopped being drawn at all');
+    assert.match(clearedLegend, /no wall thickness stated/, `legend read "${clearedLegend}"`);
+  });
+
+  // Put it back, so nothing after this reads a job this check changed.
+  await session.execute(function (thick) {
+    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+      const list = d.conditions.map(function (c) {
+        if (c.id !== 'c-parapet') return c;
+        return Object.assign({}, c, {
+          properties: Object.assign({}, c.properties, { WALL: thick }),
+        });
+      });
+      return window.__TAURI_INTERNALS__.invoke('doc_set', { pointer: '/conditions', value: list });
+    });
+  }, 8);
+  await wait(700);
+
+  // ── the build-up grows up from the deck, and is never invented ──────────
+  check('a build-up stands on the datum and rises by what its layers say', () => {
+    const datums = scene.filter((m) => m.kind === 'datum');
+    assert.ok(datums.length > 0, 'nothing is drawn at the deck');
+    for (const stack of scene.filter((m) => m.kind === 'build-up')) {
+      const datum = datums.find((d) => d.conditionId === stack.conditionId);
+      assert.ok(datum, `a build-up with no datum under it (${stack.conditionId})`);
+      // Its underside sits on the deck and its top is above — growing up, which
+      // is the direction a roof build-up goes. Down would be the structure, and
+      // the structure is not traced.
+      assert.ok(Math.abs(stack.min[1] - datum.min[1]) < 1e-3,
+        `the build-up starts at ${stack.min[1]} and the deck is at ${datum.min[1]}`);
+      assert.ok(stack.max[1] > datum.max[1] + 1e-6, 'the build-up does not rise off the deck');
+    }
+  });
+
+  check('and an assembly that states no thickness draws nothing at all', () => {
+    // The defect this replaced: a deck extruded three quarters of a foot because
+    // a flat surface "reads as a coloured shape in space". An unstated build-up
+    // is unstated, and the legend carries it instead.
+    const stated = new Set((job.conditions ?? [])
+      .filter((c) => (c.items ?? []).some((i) => i.thickness !== undefined))
+      .map((c) => c.id));
+    for (const stack of scene.filter((m) => m.kind === 'build-up')) {
+      assert.ok(stated.has(stack.conditionId),
+        `${stack.conditionId} is drawn with a thickness nothing in the job states`);
+    }
   });
 
   // ── §5.6, second half: a low point with no drain on it is marked ────────
@@ -129,8 +357,12 @@ try {
     assert.ok(noFall !== null, `legend read "${first}"`);
     assert.ok(noFall > 0, `no-fall area came back as ${noFall} SF`);
   });
-  check('and it says why, in words a roofer uses', () => {
-    assert.match(first, /the boards run out/, `legend read "${first}"`);
+  check('and it says which constraint stopped it, not a guess', () => {
+    // The two reasons are different problems: another layer of board, or a wall
+    // that will not take any more roof under NRCA's 8" of flashing. The old
+    // version said "the boards run out" always, off a four-inch cap that came
+    // from nowhere.
+    assert.match(first, /the boards run out|flashes against/, `legend read "${first}"`);
   });
 
   await writeFile(join(EVIDENCE, `section6-model-${COMMIT}.png`),

@@ -148,6 +148,23 @@ try {
   await writeFile(join(EVIDENCE, `section5-consolidated-${COMMIT}.png`),
     Buffer.from(await session.screenshot(), 'base64'));
 
+  // ── the recap, which section 5 certified without ever reading ───────────
+  // Five lenses were offered and three were opened. The recap printed a table
+  // of blank class names with money beside them for as long as it existed,
+  // because "all five are offered" is not a check on any of them.
+  await pickLens(session, 'Recap');
+  const recap = JSON.parse(await sheetNow(session));
+  check('the recap names its classes', () => {
+    for (const want of ['Material', 'Labor', 'Sub']) {
+      assert.ok(recap.text.includes(want), `no ${want} row — the recap read "${recap.text.slice(0, 160)}"`);
+    }
+  });
+  check('and no row is money beside a blank name', () => {
+    const cells = [...recap.html.matchAll(/<tr>\s*<td[^>]*>([^<]*)<\/td>/g)].map((m) => m[1].trim());
+    assert.ok(cells.length > 0, 'no rows in the recap');
+    for (const c of cells) assert.notEqual(c, '', 'a recap row carries a cost under no class');
+  });
+
   // ── a lens never edits the estimate ─────────────────────────────────────
   const untouched = await session.execute(function () {
     return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {

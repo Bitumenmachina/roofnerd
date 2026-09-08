@@ -165,7 +165,13 @@ export function priceLine(
 
   // An item's own price wins over the scenario's. A price typed on the line is
   // a quote in hand; the scenario is the book.
-  const unitCost = item.unitCost ?? scenarioPrices[item.id] ?? null;
+  // A price typed on the line wins; then the book's price for the item this
+  // line came from; then the book's price for the line itself, which is what a
+  // line authored by hand rather than loaded looks like.
+  const unitCost = item.unitCost
+    ?? scenarioPrices[item.id]
+    ?? (item.libraryId === undefined ? undefined : scenarioPrices[item.libraryId])
+    ?? null;
   const extended = priceQuantity === null || unitCost === null
     ? null
     : priceQuantity * unitCost;

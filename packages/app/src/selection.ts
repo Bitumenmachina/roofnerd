@@ -15,13 +15,45 @@ export type Selected =
 
 type Watcher = (selected: Selected) => void;
 
-let current: Selected = { kind: 'job' };
+/**
+ * Selection survives an editor switch, because an editor switch is a reload.
+ *
+ * Changing which editor an area shows re-navigates the window with a different
+ * editor in the URL — one code path for "which editor am I" instead of two,
+ * which is the right trade. But the selection lived in a module variable, so
+ * picking a condition on the Plan and then switching that area to the Library
+ * arrived with nothing selected and a button saying "pick a condition". Found
+ * by driving a real job end to end; no section's own check caught it, because
+ * each of them selects after it has finished switching.
+ *
+ * `sessionStorage` is the right shelf for it: it survives the reload, it is
+ * per-window so a torn-off sheet keeps its own, and it never touches the job —
+ * which condition you are looking at is still not part of the bid.
+ */
+const REMEMBERED = 'roofnerd:selected';
+
+function remembered(): Selected {
+  try {
+    const raw = sessionStorage.getItem(REMEMBERED);
+    if (raw) return JSON.parse(raw) as Selected;
+  } catch {
+    // A window with no storage still works; it just starts at the job.
+  }
+  return { kind: 'job' };
+}
+
+let current: Selected = remembered();
 const watchers = new Set<Watcher>();
 
 export const selected = (): Selected => current;
 
 export function select(next: Selected): void {
   current = next;
+  try {
+    sessionStorage.setItem(REMEMBERED, JSON.stringify(next));
+  } catch {
+    // Not being able to remember it is not a reason to refuse the selection.
+  }
   for (const w of watchers) w(current);
 }
 

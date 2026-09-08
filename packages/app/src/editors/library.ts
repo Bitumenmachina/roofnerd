@@ -194,7 +194,12 @@ async function loadOnto(a: Assembly, condition: Condition): Promise<void> {
   const conditions = ((at('/conditions') as Condition[]) ?? []).map((c) => {
     if (c.id !== condition.id) return c;
     const existing = (c.items ?? []) as Item[];
-    const added = a.items.map((item, n) => ({ ...item, id: `${condition.id}-${a.id}-${n}` }));
+    const added = a.items.map((item, n) => ({
+      ...item,
+      id: `${condition.id}-${a.id}-${n}`,
+      // Keep the book's id so the price book can still price this line.
+      libraryId: item.id,
+    }));
     return { ...c, items: [...existing, ...added], assemblyId: a.id };
   });
   await set('/conditions', conditions);

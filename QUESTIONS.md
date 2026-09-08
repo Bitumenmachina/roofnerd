@@ -45,7 +45,9 @@ document.
 **The disagreement:** §4.10 says "orbit camera". The design bundle says fixed isometric with preset
 corners, fit, and a vertical exaggeration control — *"no free orbit — the user never orbits or drags
 vertices"* — reasoning that 3D here is a view of the takeoff, not a modeling environment. The earlier
-RAISE work was also isometric.
+RAISE work was also isometric — though RAISE itself is not on this machine and
+that description comes from prose about it, not from anything anybody has opened.
+See the carry-forward register, items 20 and 23.
 
 **Why it waits, and what makes it cheap either way:** a half-inch-over-twenty-two-feet fall is
 invisible at true scale, which is an argument for exaggeration over orbit. But §4.10 is the ruling

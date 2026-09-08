@@ -12,6 +12,7 @@
           "formula": "SQ",
           "id": "a-cover",
           "layer": "cover board",
+          "thickness": 0.625,
           "unit": "SQ",
           "waste": 8
         },
@@ -21,6 +22,7 @@
           "formula": "SQ",
           "id": "a-iso",
           "layer": "insulation",
+          "thickness": 2.2,
           "unit": "SQ",
           "waste": 10
         },
@@ -35,6 +37,7 @@
             "name": "ROLL",
             "rule": "ceil"
           },
+          "thickness": 0.06,
           "unit": "SQ",
           "waste": 10
         },
