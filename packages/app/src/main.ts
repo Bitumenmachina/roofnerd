@@ -3,6 +3,7 @@
 // is. There is no main window that owns anything: a torn-off Estimate Sheet is
 // the same code in a different frame, reading the same document.
 
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { at, connect, demoFolder, folder, open, pickFolder, save, subscribe, tearOff, type Doc } from './doc.js';
 import { area, menu, startScreen, statusBar } from './chrome.js';
 import { HELP } from './help.js';
@@ -10,16 +11,40 @@ import { openByDefault, renderTree } from './tree.js';
 import { select, watchSelection } from './selection.js';
 import { mountPlan } from './editors/plan.js';
 import { mountEstimate } from './editors/estimate.js';
+import { mountModel } from './editors/model.js';
 
 const EDITORS: Record<string, { title: string; mount: (host: HTMLElement) => void; help: string }> = {
   plan: { title: 'Plan', mount: mountPlan, help: HELP['Plan']! },
   estimate: { title: 'Estimate Sheet', mount: mountEstimate, help: HELP['Estimate Sheet']! },
+  model: { title: 'Model', mount: mountModel, help: HELP['Model']! },
 };
 
 const params = new URLSearchParams(window.location.search);
 const which = params.get('editor') ?? 'plan';
-const detached = which !== 'plan';
 const editor = EDITORS[which] ?? EDITORS['plan']!;
+
+/**
+ * Is this a window that was torn off, or the one the job was opened in?
+ *
+ * The window's own label answers it: the shell names the first window `main`
+ * and names a torn-off one after the editor in it. This used to be read off the
+ * URL as "the editor is not the Plan", which is a different question and gave
+ * the wrong answer the moment an area's editor picker was used — switching the
+ * main window to any other editor made it believe it had been torn off, and it
+ * dropped the tree and the menu bar on the floor. Found by section 6's check.
+ */
+const detached = isDetached();
+
+function isDetached(): boolean {
+  try {
+    return getCurrentWindow().label !== 'main';
+  } catch {
+    // The front-end harness runs this page in a plain browser with the shell
+    // stubbed, so there is no window to ask. There, one page is one window and
+    // the URL is the only thing that distinguishes them.
+    return which !== 'plan';
+  }
+}
 
 const frame = document.querySelector<HTMLElement>('#frame')!;
 const sidebar = document.querySelector<HTMLElement>('#sidebar')!;

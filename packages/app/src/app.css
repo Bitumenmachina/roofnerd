@@ -441,3 +441,22 @@ button.quiet:hover { border-color: var(--rule); }
   display: inline-flex; align-items: center; gap: var(--gap-2);
   margin-top: var(--gap-2); padding: 7px 14px; color: var(--ink-soft);
 }
+
+/* ── The Model editor ─────────────────────────────────────────────────────
+   The roof stood up. The canvas takes the room; the legend and the note sit
+   under it in trade words, because a colour on its own means nothing to
+   anybody who did not build the palette. */
+.model-editor { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.model-canvas { flex: 1; min-height: 0; width: 100%; display: block; background: var(--desk); }
+.model-legend {
+  display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center;
+  padding: 8px 12px; border-top: var(--hair, 1px) solid var(--line, #d6d8db);
+  font-size: 12px; color: var(--ink-2, #5a5f66);
+}
+.model-key { display: inline-flex; align-items: center; gap: 6px; }
+.model-key i {
+  width: 10px; height: 10px; border-radius: 2px; display: inline-block;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+}
+.model-note { margin: 0; padding: 0 12px 10px; font-size: 12px; color: var(--ink-2, #5a5f66); }
+.model-note:empty { display: none; }

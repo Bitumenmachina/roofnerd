@@ -7,7 +7,10 @@ acceptance does not pause the build.
 
 **Sections 1, 2, 3 and 7 are done, and the front door now works.**
 
-**Section 6 — 3D — opens next, not section 4.** Addendum 4 arrived and changes the order: 6 goes
+**Section 6 — 3D — is done.** Sections 4 (the library) and 5 (the lenses) are what remain, plus the
+Gantt bonus. Addendum 4 §2 put 6 ahead of them because nothing in either fed it.
+
+**Section 6 — 3D — was opened out of order, and here is why.** Addendum 4 arrived and changes the order: 6 goes
 ahead of 4 and 5, because nothing in either feeds it and it depends on sections 1 and 2 only. The
 tapered inputs it needs are condition properties in this section; their library defaults arrive
 with section 4, afterwards.
@@ -18,6 +21,58 @@ application — and it would not load anything. That attempt is what produced th
 the fix exists because of it. The door has had a person's hands on it, it failed, it was repaired,
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
+
+## Section 6 is done — the roof stands up
+
+**`tools/probe/section6-model.mjs` — PASS 11/11**, against the shipped runtime, in through the front
+door. It covers §5.6 and all four lines Addendum 4 §4 adds.
+
+The Model is an editor in the area picker every area already has (D57) — no new window kind, and it
+tears off to the second monitor by the mechanism section 1 built. Nothing in it is modelled: every
+surface comes off the same traces and properties that drive the estimate, which is why it cannot
+disagree with the takeoff.
+
+| What it draws | What it is made of |
+|---|---|
+| A facet | an area condition, laid at its `ELEV` |
+| A parapet | a line condition with `H`, stood up off its base |
+| The taper | `T` at the drain, plus `TAPER` times the distance to the nearest drain, sampled on a two-foot grid |
+| A cricket | a traced ridge, with a plane falling square off each side by its width and slope |
+| No fall | where the boards run out and the roof goes flat |
+
+**Ponding is where the taper stops climbing** (D72). A board stack cannot build for ever — four
+inches is the most a single board carries — so a field rises until `BOARDS` runs out and then goes
+flat, and flat is where water stays. The demo roof reports **147 SF with no fall — "the boards run
+out before the water gets anywhere"**, which is a cause an estimator recognises and a number they
+can price. §4.10 and the design bundle drew the same boundary independently: mark where fall runs
+out; do not simulate water over time.
+
+**Section 6 ships three.js and nothing else** (D71, verified MIT from the package's own LICENSE).
+The straight skeleton stayed out on both licence and need — what the view actually asks is how thick
+the roof is at a point, which is a loop over a handful of drains and exact. `d3-delaunay` and
+`polygon-clipping` are recorded in `DEPENDENCIES.md` as evaluated and not needed, so the question is
+not priced twice.
+
+**The projection lives in one function.** §4.10 says orbit and orbit is what is built. Q7 is open on
+fixed isometric with a vertical exaggeration; if it is ruled that way, it is that function and
+nothing else in the file.
+
+**A defect the check found, latent since section 1** (D74). The page decided "am I a torn-off
+window?" by asking "is my editor not the Plan" — a different question. So the first time an area's
+editor picker was used in the main window, the window believed it had been torn off and dropped the
+tree and the menu bar. It now reads its own window label, which is the fact the shell actually
+holds. This would have hit the Estimate Sheet the same way.
+
+**Evidence** in `evidence/`, from the Tauri window, named with the section and the commit:
+`section6-model-<commit>.png` and `section6-live-edit-<commit>.png`.
+
+**On the demo job and what is in a shipped image.** Everything in those screenshots is invented:
+the tapered field, its drains, the cricket and the no-fall area carry the design bundle's fixture
+values — quarter-inch taper, half an inch at the drain, a one-board stack — on the demo's own
+synthetic sheet, with prices from the generated set (A10, D50). **Nothing derived from the NRCA CAD
+details reaches any image, and nothing from them has entered the repository**; their licence is
+personal, single-machine and forbids distribution (D64), so they inform work on this box and stop
+there.
 
 ## Section 6, step 1 — the inputs are on the model
 
@@ -383,6 +438,7 @@ one screen, watch the money move on the other.
 |---|---|
 | Section 1 done-check (`tools/probe/section1-trace.mjs`) | **PASS 12/12** — opens a PDF, scales it, traces an area with pitch, a run and a count, reads the measures off the list, confirms traces are stored in page units and the drawing is only referenced |
 | Section 2 done-check (`tools/probe/section2-sheet.mjs`) | **PASS 17/17** — traces a parapet, types a height in the panel, tears the sheet into a second window, adds three items in three units, then changes the drawing and the height and watches the money move in the OTHER window. Two windows, one job, throughout |
+| Section 6 done-check (`tools/probe/section6-model.mjs`) | **PASS 11/11** — the Model in the area picker, a tapered field rendered as a heightfield, a cricket, a marked no-fall area with its square feet, a live change to the roof moving the view in the same window, selection crossing the editors, and nothing changed by selecting |
 | Front door (`tools/probe/front-door.mjs`) | **PASS 17/17** — start screen → button → job open → drawing → scale typed into a field → tear-off → second window. Never once through the bridge |
 | Real-runtime check (`tools/probe/runtime-check.mjs`) | **PASS 9/9** — opens through the front door, then two OS windows on one document, a property typed in one moving the money in the other, and the CSP refusing the network |
 | Fixture ladder (`tools/compare-fixtures.mjs`) | **PASS 26/26** — both real recaps, every line within 0.01% |

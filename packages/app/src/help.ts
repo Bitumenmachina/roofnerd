@@ -60,6 +60,14 @@ A line carries three units, because a supply house uses three: what you estimate
 
 A line with no price says so. A line off a sheet nobody has scaled says so. Neither is ever counted as nothing, because a zero looks like a finished line for free.`,
 
+  Model: `The roof, stood up. Everything here comes off the same traces and properties as the estimate, so it cannot disagree with what you are pricing.
+
+An area lies at its elevation. A run with a height stands up off its base. Where a field has a taper and the roof has drains, the thickness at any point is what you put at the drain plus the slope times how far that point is from the nearest drain — the same arithmetic you could write on a line by hand.
+
+The field is lighter where it is thicker. Amber is where the boards run out: the taper has built as high as it can, the roof goes flat, and flat is where water stays. Walk that area before you bid it.
+
+Clicking picks a condition and picks it everywhere else too. Nothing in this window changes the job — there is no editing in 3D.`,
+
   Condition: `A condition is one thing you traced, and this is everything the drawing cannot tell you about it.
 
 The numbers at the top are what it measures right now. Everything below sets what the detail calls for: how tall the flashing runs, how wide the coping is, what the slope is, how much flat metal a formed profile eats.
