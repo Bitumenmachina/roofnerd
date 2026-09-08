@@ -61,14 +61,20 @@ const CATALOGUE = [
     band: [320, 520] },
   { id: 'walkpad', description: 'Walkway pad', costCode: '07-100-100', unit: 'LF',
     order: { name: 'ROLL', per: 50, rule: 'ceil' }, band: [520, 860] },
+  // `productionRate` is UNITS PER HOUR, not hours per unit — hours come out as
+  // `quantity / productionRate`. Getting that backwards is what put an hour of
+  // shop time against every foot of coping on the demo sheet, and a rate a
+  // roofer would laugh at costs more than no rate at all: trust goes before
+  // anything else on the screen is read. These are invented and plausible;
+  // real ones arrive with the library.
   { id: 'tearoff', description: 'Tear off existing roof', costCode: '07-100-210', unit: 'SQ',
     labor: { productionRate: 1.2, crewSize: 6 }, band: [44, 62] },
   { id: 'install-membrane', description: 'Install membrane', costCode: '07-100-230', unit: 'SQ',
-    labor: { productionRate: 0.35, crewSize: 6 }, band: [44, 62] },
+    labor: { productionRate: 1.1, crewSize: 6 }, band: [44, 62] },
   { id: 'install-flashing', description: 'Install flashing', costCode: '07-100-240', unit: 'LF',
-    labor: { productionRate: 5, crewSize: 2 }, band: [44, 62] },
+    labor: { productionRate: 22, crewSize: 2 }, band: [44, 62] },
   { id: 'fab-metal', description: 'Fabricate metal', costCode: '07-100-320', unit: 'LF',
-    labor: { productionRate: 0.95, crewSize: 2 }, band: [44, 62] },
+    labor: { productionRate: 40, crewSize: 2 }, band: [44, 62] },
   { id: 'supervision', description: 'Supervision', costCode: '07-100-990', unit: 'EA',
     band: [62, 92] },
   { id: 'dumpster', description: 'Dumpster, 30 yard', costCode: '07-100-950', unit: 'EA',

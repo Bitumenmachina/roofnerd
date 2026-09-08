@@ -481,3 +481,11 @@ button.quiet:hover { border-color: var(--rule); }
    taken off the desk instead of the drawing, said out loud so it can be
    checked. Paired with a word, never colour alone. */
 .condition-off-sheet { color: var(--warn, #8a5a1d); }
+
+/* The unit on a line does not follow from its own formula. A word, not a
+   colour alone, and never red — nothing is broken and the number is the one
+   the estimator asked for. It is a second opinion, offered quietly. */
+.formula-note {
+  display: block; font-size: var(--t-small); color: var(--warn, #8a5a1d);
+  margin-top: 2px; cursor: help;
+}

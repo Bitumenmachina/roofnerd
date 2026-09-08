@@ -14,7 +14,8 @@
 // one conversion is where a bid quietly gains or loses money.
 
 import type { Item, Money, RoundingRule, UnitStep } from './model.js';
-import { run, type FormulaResult } from './formula.js';
+import { parse, run, type FormulaResult } from './formula.js';
+import { unitDisagreement } from './dimension.js';
 import { ceilPackages, settle } from './rounding.js';
 
 export interface LineResult {
@@ -46,6 +47,14 @@ export interface LineResult {
   readonly pending: string | null;
   readonly formulaError?: string;
   readonly formulaErrorAt?: number;
+  /**
+   * The unit this line is priced in does not follow from its own formula.
+   *
+   * Not an error and never a refusal — the estimator declared the unit and it
+   * is what prices the line, the way it is in every tool they already use. This
+   * only says so, where saying so is possible at all.
+   */
+  readonly unitNote?: string;
 }
 
 /** Hours in a crew's working day. A library number later; this is the default. */
@@ -98,6 +107,16 @@ export function priceLine(
   scenarioPrices: Readonly<Record<string, Money>> = {},
 ): LineResult {
   const formula: FormulaResult = run(item.formula, scope);
+
+  // Only worth asking when the formula parses at all.
+  let unitNote: string | null = null;
+  if (formula.error === undefined) {
+    try {
+      unitNote = unitDisagreement(parse(item.formula), item.unit);
+    } catch {
+      unitNote = null;
+    }
+  }
   const quantity = formula.value;
 
   const waste = item.waste ?? 0;
@@ -171,6 +190,7 @@ export function priceLine(
     hours,
     crewDays,
     pending,
+    ...(unitNote === null ? {} : { unitNote }),
     ...(formula.error === undefined ? {} : { formulaError: formula.error }),
     ...(formula.position === undefined ? {} : { formulaErrorAt: formula.position }),
   };

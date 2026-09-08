@@ -3,7 +3,7 @@
 Things where a wrong call would waste work. Each one names the smallest version built so
 the rest could proceed. Not a stop — the build continues past every entry here.
 
-## Q9 — does an item's price source become a firmness type?
+## Q9 — a price carries its firmness — ANSWERED 2026-09-08
 
 **Built:** nothing. `priceSource` is a string on the item, as it has been since section 3.
 
@@ -33,8 +33,9 @@ needed Patrick.
 **What is left is one axis: firmness.** Does a price carry how good it is — firm, budget, estimate,
 placeholder? That is the only part that widens the item, and it is the only part still asked.
 
-**Why it waits:** it widens the item, and a wrong shape there is paid for in every lens. Declining is
-a perfectly good answer and costs a string.
+**ANSWERED 2026-09-08: yes.** A price carries its firmness, and it stays orthogonal to authorship and
+to validity — three axes, never collapsed. Built with the library in section 4, where a price gets
+its source anyway.
 
 ## Q7 — orbit camera, or fixed isometric?
 
@@ -74,7 +75,7 @@ anatomy wins:**
 **Why it waits:** rebuilding the chrome on a reading of a reference bundle would discard a completed
 section. The bundle is marked reference, not exact.
 
-## Q4 — does the tapered heightfield produce an estimate measure, or only a picture?
+## Q4 — the heightfield is view-only, with a seam — ANSWERED 2026-09-08
 
 **Built:** nothing yet — section 6 has not opened. When it does, the heightfield is **view-only**
 until this is answered, which is what Addendum 4 §5 instructs.
@@ -104,12 +105,11 @@ question before it was asked, and neither said view-only:
 - The design bundle derives **sump depth** from thickness at drain, slope, sump width and board
   count, and shows it as a worked line beside the four tapered estimate lines a pick changed.
 
-Against that: view-only makes tapered the one condition kind whose geometry cannot pay for itself.
-**The ruling is still Patrick's and the boundary holds until he gives it** — but section 6 should
-build the heightfield behind a seam that a measure can be attached to without restructuring, because
-the evidence says that seam will be opened.
+**ANSWERED 2026-09-08: view-only, and build the seam.** The heightfield stays a view. The thickness
+at a point is computed in one place, so a measure can be hung off it later without restructuring
+anything — which is what the evidence above says will eventually be wanted.
 
-## Q3 — the Estimate Sheet's columns: v2 §0 and A4 disagree
+## Q3 — the formula stays visible on the line — ANSWERED 2026-09-08
 
 **Built:** the formula stays visible on every line, as it is today.
 
@@ -124,11 +124,10 @@ Both cannot hold. A4's column set has no Formula column at all, so adopting it h
 expansion the one thing v2 §0 says must not be lost — and the thing the handoff itself calls
 the reason the program exists ("a library you cannot see into is a library nobody trusts").
 
-**Why it waits:** rebuilding the sheet's columns on a reading of an ambiguity would be the
-expensive kind of wrong. The current sheet already does the harder half of A4 — the whole
-chain is on the line rather than hidden — so the change, if A4 is meant literally, is to
-*remove* columns and put them behind an expander. That is an afternoon either way, and it
-should be Patrick's word rather than my guess.
+**ANSWERED 2026-09-08: the formula stays visible on the line, not behind an expander.** v2 §0
+wins over A4's column set. It is the thing the program exists to do and the one Edge hides;
+putting it one click away to save a column would give that up. The sheet is already right and
+no longer waits on anything.
 
 **Also still open from A4, and smaller:** rows grouped by condition are not yet collapsible,
 and Material/Labor are not yet split per line. Both are additive to what is there.

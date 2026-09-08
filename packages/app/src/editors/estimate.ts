@@ -248,6 +248,15 @@ function itemRow(conditionIndex: number, itemIndex: number, item: Item, result: 
     why.className = 'formula-error';
     why.textContent = result.formulaError;
     formulaCell.append(why);
+  } else if (result.unitNote) {
+    // The unit does not follow from the formula. Not an error, and it does not
+    // change a number — the estimator declared the unit and the unit prices the
+    // line. It just stops being silent about the disagreement.
+    const note = document.createElement('span');
+    note.className = 'formula-note';
+    note.textContent = 'check the unit';
+    note.title = result.unitNote;
+    formulaCell.append(note);
   }
   tr.append(formulaCell);
 

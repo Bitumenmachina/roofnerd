@@ -6,6 +6,7 @@ import {
   polygonArea, polygonPerimeter, polylineLength, calibrateFromTwoPoints, calibrateFromScale,
   pitchFactor, distanceToShape, parseFeet, formatFeetInches, ARCHITECTURAL_SCALES,
   measure, scopeFor, parse, evaluate, run, namesUsed, measureJob, scopeOf, emptyJob,
+  unitDisagreement,
 } from '../dist/index.js';
 
 const square = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }];
@@ -353,4 +354,47 @@ test('a formula can reach the sump and the board count by name', () => {
   assert.equal(run('BOARDS', scope).value, 3);
   // Thickness at the sump's outer edge, four feet out from the drain.
   assert.equal(run('T + SUMP * TAPER', scope).value, 1.5);
+});
+
+// ── does the unit follow from the formula (D-unit) ─────────────────────────
+// Narrow on purpose: it speaks only where every name is a known measure and no
+// bare constant is multiplying or dividing. Everything else is out of scope,
+// which is the correct answer rather than a gap.
+
+test('LF * H priced as LF is called out — feet times feet is an area', () => {
+  const note = unitDisagreement(parse('LF * H'), 'LF');
+  assert.ok(note, 'expected a note');
+  assert.match(note, /an area/);
+  assert.match(note, /LF/);
+});
+
+test('and the same formula priced as SF says nothing', () => {
+  assert.equal(unitDisagreement(parse('LF * H'), 'SF'), null);
+});
+
+test('the sheet-metal formula stays quiet — the 30 is square feet per sheet', () => {
+  assert.equal(unitDisagreement(parse('ceil(LF * STRETCHOUT / 12 / 30)'), 'EA'), null);
+});
+
+test('a bare constant anywhere in a product silences it', () => {
+  assert.equal(unitDisagreement(parse('LF * 2 / 0.5'), 'EA'), null);
+});
+
+test('an unknown name silences it', () => {
+  assert.equal(unitDisagreement(parse('LF * MYNUMBER'), 'LF'), null);
+});
+
+test('the plain cases agree and say nothing', () => {
+  assert.equal(unitDisagreement(parse('SQ'), 'SQ'), null);
+  assert.equal(unitDisagreement(parse('LF'), 'LF'), null);
+  assert.equal(unitDisagreement(parse('VERTICES'), 'EA'), null);
+  assert.equal(unitDisagreement(parse('EA'), 'EA'), null);
+});
+
+test('a count priced as a length is called out', () => {
+  assert.match(unitDisagreement(parse('VERTICES'), 'LF') ?? '', /a count/);
+});
+
+test('ceil keeps the dimension it was handed', () => {
+  assert.match(unitDisagreement(parse('ceil(LF * H)'), 'LF') ?? '', /an area/);
 });

@@ -138,8 +138,17 @@ export function priceJob(doc: JobDocument, scenario: Scenario): PricedLine[] {
 /**
  * How many squares of roof the job is, for the cost-per-square column.
  *
- * The sum of every area condition's squares, unless the job states one — some
- * jobs price against a contract area that is not the sum of what was traced.
+ * The sum of every area condition **that carries a cost**.
+ *
+ * The qualifier is the whole point, and it was learned the expensive way. An
+ * area traced for its geometry and priced by nothing — a tapered field standing
+ * up in the model, a slab outlined for reference — used to be counted here, and
+ * every dollar-per-square figure in the recap quietly divided by roof that
+ * nobody was charging for. The figure still looked like a rate. It was a rate
+ * against a different roof.
+ *
+ * A cost per square is a rate: the money over the area the money was worked out
+ * on. Anything else is two unrelated numbers in a fraction.
  */
 export function totalSquaresOf(doc: JobDocument): number | null {
   const measured = measureJob(doc);
@@ -147,6 +156,7 @@ export function totalSquaresOf(doc: JobDocument): number | null {
   let sawOne = false;
   for (const condition of doc.conditions) {
     if (condition.kind !== 'area') continue;
+    if ((condition.items?.length ?? 0) === 0) continue;
     const sq = measured.get(condition.id)?.SQ;
     if (sq === null || sq === undefined) continue;
     squares += sq;

@@ -21,6 +21,30 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## Phase 2 — the punch list
+
+**A line says when its unit does not follow from its own formula.** `LF * H` is feet times feet and
+was priced as LF. The rule is narrow on purpose: it speaks only where every name in the expression
+is a known measure and no bare number is multiplying or dividing. That is not a limitation, it is
+the boundary the trade sets — `ceil(LF * STRETCHOUT / 12 / 30)` has a 30 in it that means square
+feet per sheet, and nothing will ever recover that. So the sheet-metal formula stays silent and the
+counter flashing says *check the unit*. **The declared unit still prices the line** — every system
+worth copying declares the unit and never checks it, because their "formulas" are coverage factors
+with nothing in them to check. roofnerd can check only because it does the thing Edge hides.
+
+**Cost per square is now a rate.** A tapered field traced for the model and priced by nothing was
+being counted in `Total SQ`, so every per-square figure divided the money by roof nobody was
+charging for. It looked like a rate and was two unrelated numbers in a fraction. The denominator is
+the area the money was worked out on. On the demo that cut the denominator to a quarter of what it had been — the tapered field is most of the traced area and none of the priced area.
+
+**Demo rates a roofer would not laugh at.** `productionRate` is units per hour, and the generator
+read as though it were hours per unit — an hour of shop time against every foot of coping. Total
+hours on the demo went from 33.75 to 2.99.
+
+**Q3, Q4 and Q9 are answered** — the formula stays visible on the line; the heightfield is view-only
+with the seam built; a price carries its firmness, orthogonal to authorship and validity. Q6 and Q7
+remain open.
+
 ## Section 6 is done — the roof stands up
 
 **`tools/probe/section6-model.mjs` — PASS 11/11**, against the shipped runtime, in through the front

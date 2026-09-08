@@ -46,7 +46,7 @@
         "description": "Install membrane",
         "formula": "SQ",
         "id": "install-membrane",
-        "productionRate": 0.35,
+        "productionRate": 1.1,
         "unit": "SQ",
         "unitCost": 51.59
       }
@@ -117,7 +117,7 @@
         "description": "Fabricate metal",
         "formula": "LF",
         "id": "fab-metal",
-        "productionRate": 0.95,
+        "productionRate": 40,
         "unit": "LF",
         "unitCost": 47.93
       }

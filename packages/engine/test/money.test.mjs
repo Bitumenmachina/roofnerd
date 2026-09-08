@@ -320,3 +320,30 @@ test('the comparison can be printed without any of the figures in it', () => {
   assert.match(shape, /Job cost\twithin/);
   assert.doesNotMatch(shape, /10000/, 'a figure leaked into the public form');
 });
+
+test('total squares counts only area that carries a cost', () => {
+  // A tapered field traced for the model and priced by nothing must not appear
+  // in the denominator of a cost per square — it is not roof anybody is being
+  // charged for, and counting it turns every rate in the recap into a rate
+  // against a different roof.
+  const base = {
+    format: 1,
+    job: { format: 1, name: 'T', activeScenarioId: 's1', scenarios: [{ id: 's1', name: 'S', prices: {}, adders: {} }] },
+    pages: [{ id: 'p1', name: 'P', feetPerUnit: 1 }],
+    costCodes: [],
+    conditions: [
+      {
+        id: 'priced', name: 'Priced', kind: 'area', properties: {},
+        traces: [{ id: 't1', pageId: 'p1', points: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }] }],
+        items: [{ id: 'i1', description: 'Thing', costCode: 'c', unit: 'SQ', formula: 'SQ', unitCost: 1 }],
+      },
+      {
+        id: 'geometry-only', name: 'Reference', kind: 'area', properties: {},
+        traces: [{ id: 't2', pageId: 'p1', points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }] }],
+        items: [],
+      },
+    ],
+  };
+  // 10 x 10 ft = 100 SF = 1 SQ priced; the 100 x 100 reference area is 100 SQ.
+  assert.equal(totalSquaresOf(base), 1);
+});
