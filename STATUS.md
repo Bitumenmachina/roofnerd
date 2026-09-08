@@ -21,6 +21,28 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## Phase 3 — the Model answers water
+
+Thickness shading said how thick. It did not say where the water goes, which is the ruling that made
+geometry an imperative in the first place.
+
+- **The fall is drawn.** An arrow every few feet, pointing at the drain that part of the roof falls
+  to — the nearest one, because that is what the heightfield already says. Flat ground gets none:
+  there is nothing to point at once the fall has run out.
+- **The thickness scale has depths on it**, written the way a roofer writes them — `3/4"`, `2 5/8"`,
+  `4 1/2"` — instead of a sentence about shading nobody can read a depth off.
+- **The roof can be read where the pointer is:** thickness at that point, the fall per foot, and how
+  far the water has to travel to the drain it reaches. Where the boards have run out it says so
+  instead of quoting a slope that is not there. It comes off the same arithmetic the surface is
+  drawn from, so it cannot say something the picture does not.
+- **It reads as a building.** The deck is a slab rather than a plane floating at its elevation, and
+  the parapet runs around the roof it encloses instead of standing beside it.
+- **The view follows the roof** until the estimator takes the camera. It used to frame once on mount
+  and never again, so anything traced afterwards could sit off screen with no way to know.
+
+Ponding is unchanged: fall runs out because the boards are spent. Orbit per §4.10, and the whole
+projection is still one function, so Q7 stays a small change.
+
 ## Phase 2 — the punch list
 
 **A line says when its unit does not follow from its own formula.** `LF * H` is feet times feet and

@@ -84,13 +84,40 @@ try {
     assert.ok(canvas.gl, 'no WebGL context — nothing could have been drawn');
   });
 
+  const readout = await session.execute(function () {
+    const el = document.querySelector('.model-readout');
+    return el ? (el.textContent || '').trim() : null;
+  });
+  check('the roof can be read where the pointer is', () => {
+    assert.ok(readout !== null, 'no readout');
+    assert.match(readout, /roof/i, `readout said "${readout}"`);
+  });
+
   // ── §5.6, first half: the tapered layout renders as slopes ──────────────
   const first = await legend(session);
   check('the drains are drawn, and counted in trade words', () => {
     assert.match(first, /\d+ drains|1 drain/, `legend read "${first}"`);
   });
   check('a facet with drains, slope and start thickness renders as a heightfield', () => {
-    assert.match(first, /tapered field/, `legend read "${first}"`);
+    // The legend carries a scale a depth can be read off, not a sentence about
+    // shading. Inch marks are the proof it is a scale.
+    assert.match(first, /\d\s*(\d\/\d)?"/, `legend read "${first}"`);
+  });
+
+  const scale = await session.execute(function () {
+    const el = document.querySelector('.model-scale');
+    if (!el) return null;
+    return JSON.stringify([...el.querySelectorAll('.model-ticks span')].map((s) => s.textContent));
+  });
+  check('the thickness scale has depths written on it', () => {
+    assert.ok(scale, 'no thickness scale');
+    const ticks = JSON.parse(scale);
+    assert.equal(ticks.length, 3, `ticks: ${scale}`);
+    for (const t of ticks) assert.match(t, /"/, `tick "${t}" is not a depth`);
+  });
+
+  check('the fall is drawn, not only the thickness', () => {
+    assert.match(first, /arrows follow the fall/, `legend read "${first}"`);
   });
   check('a ridge between drains renders as a cricket', () => {
     assert.match(first, /cricket/, `legend read "${first}"`);

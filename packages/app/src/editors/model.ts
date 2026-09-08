@@ -57,6 +57,8 @@ let controls: OrbitControls | null = null;
 let world: THREE.Group;
 let frameHandle = 0;
 let stopWatching: (() => void) | null = null;
+/** Has the estimator taken the camera? Until then the view follows the roof. */
+let framed = false;
 let stopSubscribing: (() => void) | null = null;
 
 /**
@@ -84,8 +86,54 @@ function projection(canvas: HTMLCanvasElement, target: THREE.Vector3, span: numb
   return orbit;
 }
 
+/** Put the camera back around the roof, keeping the angle it is already at. */
+function reframe(target: THREE.Vector3, span: number) {
+  if (!controls || !camera) return;
+  const back = Math.max(span * 1.4, 40);
+  const direction = camera.position.clone().sub(controls.target).normalize();
+  controls.target.copy(target);
+  camera.position.copy(target).add(direction.multiplyScalar(back));
+  controls.update();
+}
+
+/**
+ * What the roof is doing under the pointer.
+ *
+ * Thickness, the fall, which drain the water reaches and how far it has to go.
+ * All of it comes off the same arithmetic the surface is drawn from, so it can
+ * never say something the picture does not.
+ */
+function readAt(canvas: HTMLCanvasElement, event: PointerEvent): string {
+  if (!camera || fieldsNow.length === 0) return 'Point at the roof to read it.';
+  const rect = canvas.getBoundingClientRect();
+  raycaster.setFromCamera(new THREE.Vector2(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -((event.clientY - rect.top) / rect.height) * 2 + 1,
+  ), camera);
+  const hit = raycaster.intersectObjects(world.children, false)[0];
+  if (!hit) return 'Point at the roof to read it.';
+
+  const p = { x: hit.point.x, y: hit.point.z };
+  const field = fieldsNow.find((f) => inside(p, f.ring));
+  if (!field) return 'Off the tapered field.';
+
+  const run = nearest(p, drainsNow);
+  const raw = field.start + run * field.slope;
+  const flat = raw > field.cap;
+  const thickness = Math.min(raw, field.cap);
+  const parts = [`${inchLabel(thickness)} thick`];
+  if (flat) {
+    parts.push('no fall — the boards have run out here');
+  } else {
+    parts.push(`falls ${inchLabel(field.slope)} per foot`);
+    parts.push(`${run.toFixed(1)} ft to the drain it reaches`);
+  }
+  return parts.join(' · ');
+}
+
 export function mountModel(host: HTMLElement): void {
   unmount();
+  framed = false;
   host.replaceChildren();
   host.classList.add('model-editor');
 
@@ -99,7 +147,14 @@ export function mountModel(host: HTMLElement): void {
   const note = document.createElement('p');
   note.className = 'model-note';
 
-  host.append(canvas, legend, note);
+  // What the roof does where the pointer is. The water-migration view written
+  // out in words — it costs no geometry and it answers the question the shading
+  // can only hint at.
+  const readout = document.createElement('p');
+  readout.className = 'model-readout';
+  readout.textContent = 'Point at the roof to read it.';
+
+  host.append(canvas, readout, legend, note);
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -123,7 +178,11 @@ export function mountModel(host: HTMLElement): void {
     note.textContent = built.note;
     if (!controls && built.span > 0) {
       controls = projection(canvas, built.centre, built.span);
+      // Once they move the camera it is theirs. Until then the view follows the
+      // roof, so tracing something new does not leave it off screen.
+      controls.addEventListener('start', () => { framed = true; });
     } else if (controls) {
+      if (!framed && built.span > 0) reframe(built.centre, built.span);
       controls.update();
     }
     resize(canvas);
@@ -133,6 +192,8 @@ export function mountModel(host: HTMLElement): void {
   stopWatching = watchSelection(() => highlight());
 
   canvas.addEventListener('click', (e) => pick(canvas, e));
+  canvas.addEventListener('pointermove', (e) => { readout.textContent = readAt(canvas, e); });
+  canvas.addEventListener('pointerleave', () => { readout.textContent = 'Point at the roof to read it.'; });
   window.addEventListener('resize', () => resize(canvas));
 
   const tick = () => {
@@ -194,6 +255,17 @@ function drainPoints(list: Condition[], scales: Record<string, number>): Point[]
   return out;
 }
 
+/** Which drain this point falls to — the one it is closest to. */
+const nearestDrain = (p: Point, drains: Point[]): Point | null => {
+  let best: Point | null = null;
+  let far = Infinity;
+  for (const d of drains) {
+    const r = Math.hypot(p.x - d.x, p.y - d.y);
+    if (r < far) { far = r; best = d; }
+  }
+  return best;
+};
+
 const nearest = (p: Point, drains: Point[]): number => {
   let best = Infinity;
   for (const d of drains) {
@@ -219,7 +291,17 @@ function inside(p: Point, ring: Point[]): boolean {
 
 // ── building the world ─────────────────────────────────────────────────────
 
-type Built = { centre: THREE.Vector3; span: number; legend: HTMLElement[]; note: string };
+type Built = {
+  centre: THREE.Vector3; span: number; legend: HTMLElement[]; note: string;
+  thin: number | null; thick: number | null;
+};
+
+/** A tapered facet, kept so the cursor can be asked what the roof does here. */
+type Field = { ring: Point[]; start: number; slope: number; cap: number; elevation: number };
+
+/** The tapered fields on screen, for the readout. Rebuilt with the world. */
+let fieldsNow: Field[] = [];
+let drainsNow: Point[] = [];
 
 function build(d: Doc): Built {
   world.clear();
@@ -233,6 +315,9 @@ function build(d: Doc): Built {
   let noFallSquares = 0;
   let taperedFacets = 0;
   let crickets = 0;
+  let thin = Infinity;
+  let thick = -Infinity;
+  const fields: Field[] = [];
   const unscaled = list.some((c) => (c.traces ?? []).some((t) => !scales[t.pageId]));
 
   list.forEach((c, index) => {
@@ -251,8 +336,12 @@ function build(d: Doc): Built {
           const built = taperSurface(ring, props, elevation, drains, colour, c);
           if (built) {
             world.add(built.mesh);
+            world.add(built.flow);
             noFallSquares += built.noFallSquareFeet;
             taperedFacets += 1;
+            if (built.thin !== null) thin = Math.min(thin, built.thin);
+            if (built.thick !== null) thick = Math.max(thick, built.thick);
+            fields.push({ ring: built.ring, start: built.start, slope: built.slope, cap: built.cap, elevation });
           }
         }
         world.add(deck(ring, elevation, colour, c, tapered));
@@ -282,10 +371,15 @@ function build(d: Doc): Built {
   const centre = anything ? box.getCenter(new THREE.Vector3()) : new THREE.Vector3();
   const span = anything ? Math.max(box.getSize(new THREE.Vector3()).length(), 20) : 0;
 
+  fieldsNow = fields;
+  drainsNow = drains;
+
   return {
     centre,
     span,
-    legend: legendFor(taperedFacets, noFallSquares, drains.length, crickets),
+    thin: Number.isFinite(thin) ? thin : null,
+    thick: Number.isFinite(thick) ? thick : null,
+    legend: legendFor(taperedFacets, noFallSquares, drains.length, crickets, thin, thick),
     note: anything
       ? (unscaled ? 'Some of this roof is on a sheet nobody has scaled, so it is not drawn.' : '')
       : 'Nothing traced yet. Trace a roof on the Plan and it stands up here.',
@@ -293,9 +387,16 @@ function build(d: Doc): Built {
 }
 
 /** The deck itself — the plan polygon, laid flat at its elevation. */
+/** How thick the deck reads as. Not a real assembly — enough to be a building. */
+const DECK_FEET = 0.75;
+
 function deck(ring: Point[], elevation: number, colour: string, c: Condition, tapered: boolean) {
   const shape = new THREE.Shape(ring.map((p) => new THREE.Vector2(p.x, p.y)));
-  const geometry = new THREE.ShapeGeometry(shape);
+  // Extruded rather than a bare plane. A facet drawn as a single surface floats
+  // at its elevation with nothing under it and reads as a coloured shape in
+  // space; give it a depth and it reads as a roof on a building, which is the
+  // whole reason anyone asked for a 3D view.
+  const geometry = new THREE.ExtrudeGeometry(shape, { depth: DECK_FEET, bevelEnabled: false });
   geometry.rotateX(Math.PI / 2);
   geometry.translate(0, elevation, 0);
   const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
@@ -389,7 +490,52 @@ function taperSurface(
     vertexColors: true, side: THREE.DoubleSide,
   }));
   mesh.userData = { conditionId: c.id, kind: 'taper' };
-  return { mesh, noFallSquareFeet: noFallCells * stepX * stepY };
+  // Where the water goes, as arrows. One every few feet, pointing at the drain
+  // that part of the roof falls to — which is the nearest one, because that is
+  // what the heightfield already says. Flat ground gets none: there is nothing
+  // to point at when the fall has run out.
+  const flow = new THREE.Group();
+  const ARROW_FEET = 8;
+  const cols2 = Math.max(2, Math.round((maxX - minX) / ARROW_FEET));
+  const rows2 = Math.max(2, Math.round((maxY - minY) / ARROW_FEET));
+  for (let r = 1; r < rows2; r += 1) {
+    for (let col = 1; col < cols2; col += 1) {
+      const p = { x: minX + (col * (maxX - minX)) / cols2, y: minY + (r * (maxY - minY)) / rows2 };
+      if (!inside(p, ring)) continue;
+      const raw = start + nearest(p, drains) * slope;
+      if (raw > cap) continue;
+      const to = nearestDrain(p, drains);
+      if (!to) continue;
+      const dx = to.x - p.x;
+      const dy = to.y - p.y;
+      const len = Math.hypot(dx, dy);
+      if (len < 1) continue;
+      const y = elevation + inches(Math.min(raw, cap)) + 0.08;
+      const arrow = new THREE.ArrowHelper(
+        new THREE.Vector3(dx / len, 0, dy / len),
+        new THREE.Vector3(p.x, y, p.y),
+        Math.min(len * 0.5, ARROW_FEET * 0.55),
+        0x1f7a8c, ARROW_FEET * 0.22, ARROW_FEET * 0.14,
+      );
+      flow.add(arrow);
+    }
+  }
+
+  let thin = Infinity;
+  let thick = -Infinity;
+  for (let i = 0; i < thickness.length; i += 1) {
+    if (!within[i]) continue;
+    thin = Math.min(thin, thickness[i]!);
+    thick = Math.max(thick, thickness[i]!);
+  }
+
+  return {
+    mesh, flow,
+    noFallSquareFeet: noFallCells * stepX * stepY,
+    thin: Number.isFinite(thin) ? thin : null,
+    thick: Number.isFinite(thick) ? thick : null,
+    start, slope, cap, ring,
+  };
 }
 
 /** A parapet: the run, stood up off its base by its height. */
@@ -485,8 +631,47 @@ function marker(p: Point, elevation: number, c: Condition, props: Record<string,
 
 // ── the legend, in trade words ─────────────────────────────────────────────
 
+/** Inches as a roofer writes them: 1/2", 2 1/4", 4". */
+function inchLabel(v: number): string {
+  const whole = Math.floor(v);
+  const frac = v - whole;
+  const eighths = Math.round(frac * 8);
+  const names = ['', '1/8', '1/4', '3/8', '1/2', '5/8', '3/4', '7/8'];
+  if (eighths === 8) return `${whole + 1}"`;
+  if (eighths === 0) return `${whole}"`;
+  return whole === 0 ? `${names[eighths]}"` : `${whole} ${names[eighths]}"`;
+}
+
+/**
+ * The thickness ramp, with depths written on it.
+ *
+ * "Thicker where it is lighter" is a sentence, not a scale — nobody can read a
+ * depth off it, which is what an estimator actually wants from a shaded field.
+ */
+function thicknessScale(thin: number, thick: number): HTMLElement {
+  const wrap = document.createElement('span');
+  wrap.className = 'model-scale';
+
+  const ramp = document.createElement('i');
+  ramp.className = 'model-ramp';
+  // The same lerp the surface uses, so the ramp is the field's own colouring.
+  ramp.style.background = 'linear-gradient(to right, #4a6b8a, #ffffff)';
+  wrap.append(ramp);
+
+  const ticks = document.createElement('span');
+  ticks.className = 'model-ticks';
+  for (const v of [thin, (thin + thick) / 2, thick]) {
+    const t = document.createElement('span');
+    t.textContent = inchLabel(v);
+    ticks.append(t);
+  }
+  wrap.append(ticks);
+  return wrap;
+}
+
 function legendFor(
   taperedFacets: number, noFallSquareFeet: number, drains: number, crickets: number,
+  thin: number, thick: number,
 ): HTMLElement[] {
   const out: HTMLElement[] = [];
   const row = (swatch: string, text: string) => {
@@ -498,10 +683,10 @@ function legendFor(
     out.push(el);
   };
   if (drains > 0) row('#1f7a8c', drains === 1 ? '1 drain' : `${drains} drains`);
-  if (taperedFacets > 0) {
-    row('#ffffff', taperedFacets === 1 ? '1 tapered field — thicker where it is lighter'
-      : `${taperedFacets} tapered fields — thicker where it is lighter`);
+  if (taperedFacets > 0 && Number.isFinite(thin) && Number.isFinite(thick)) {
+    out.push(thicknessScale(thin, thick));
   }
+  if (drains > 0) row('#1f7a8c', 'arrows follow the fall to the drain');
   if (crickets > 0) row('#8a5a1d', crickets === 1 ? '1 cricket' : `${crickets} crickets`);
   if (noFallSquareFeet > 0) {
     row('#c98a1d', `${Math.round(noFallSquareFeet).toLocaleString('en-US')} SF with no fall — the boards run out before the water gets anywhere`);
