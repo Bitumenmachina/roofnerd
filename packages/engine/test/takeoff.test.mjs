@@ -291,3 +291,48 @@ test('a formula can buy mitres against VERTICES and pieces against SEGMENTS', ()
   assert.equal(run('VERTICES', scope).value, 4);
   assert.equal(run('SEGMENTS * 2', scope).value, 8);
 });
+
+// ── the tapered inputs (section 6, addendum 4 §3) ───────────────────────────
+// These are properties like any other. The reason they get their own tests is
+// that TAPER sits next to PITCH and means something different, and a slope that
+// quietly multiplied an area would be wrong in the direction nobody checks.
+
+test('TAPER is not PITCH: insulation slope does not inflate the surface', () => {
+  const flat = measure('area', trace(square), {}, oneFoot);
+  const tapered = measure('area', trace(square), { TAPER: 0.25 }, oneFoot);
+  // A quarter-inch-per-foot taper over a hundred square feet of deck adds
+  // insulation, not roof. The membrane over it is still a hundred feet.
+  assert.equal(tapered.SF, flat.SF);
+  assert.equal(tapered.PLAN_SF, flat.PLAN_SF);
+});
+
+test('PITCH still does inflate it, with TAPER set alongside', () => {
+  // A sloped deck carrying tapered insulation has both, and only one of them
+  // is what the membrane is bought against.
+  const m = measure('area', trace(square), { PITCH: 12, TAPER: 0.25 }, oneFoot);
+  assert.equal(Math.round(m.SF), 141);
+  assert.equal(m.PLAN_SF, 100);
+});
+
+test('ELEV does not touch any measure, on an area or on a run', () => {
+  const area = measure('area', trace(square), { ELEV: 24 }, oneFoot);
+  assert.equal(area.SF, 100);
+  const line = measure('line', trace(square), { H: 1.5, ELEV: 24 }, oneFoot);
+  assert.equal(line.LF, 30);
+});
+
+test('a formula can use the tapered inputs by name', () => {
+  const m = measure('area', trace(square), { T: 0.5, TAPER: 0.25, ELEV: 24 }, oneFoot);
+  const scope = scopeFor(m, { T: 0.5, TAPER: 0.25, ELEV: 24 });
+  assert.equal(run('TAPER', scope).value, 0.25);
+  assert.equal(run('ELEV', scope).value, 24);
+  // Thickness twenty feet from the drain: half an inch, plus a quarter inch
+  // for every foot out. This is the heightfield, done by hand on one line.
+  assert.equal(run('T + 20 * TAPER', scope).value, 5.5);
+});
+
+test('an unscaled sheet still makes the tapered measures pending, not zero', () => {
+  const m = measure('area', trace(square), { TAPER: 0.25 }, {});
+  assert.equal(m.SF, null);
+  assert.equal(m.PLAN_SF, null);
+});

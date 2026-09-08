@@ -37,10 +37,41 @@ export interface Properties {
   readonly H?: number;
   /** Width in feet. */
   readonly W?: number;
-  /** Thickness in inches. Insulation, in the unit it is sold in. */
+  /**
+   * Thickness in inches. Insulation, in the unit it is sold in.
+   *
+   * On a tapered facet this is the thickness **at the drain** — the thin end,
+   * where the taper starts. Thickness anywhere else on that facet is `T` plus
+   * the distance from the drain times `TAPER`, which is why the two of them
+   * together describe the whole board layout and neither does alone.
+   */
   readonly T?: number;
   /** Rise per twelve inches of run. 5 means 5:12. */
   readonly PITCH?: number;
+  /**
+   * Taper slope, in inches of rise per foot of run — the way tapered insulation
+   * is specified and sold: 1/8, 1/4, 1/2.
+   *
+   * This is not `PITCH`, and the difference is not pedantry. `PITCH` is the
+   * deck's own slope in rise per twelve; `TAPER` is what the insulation adds on
+   * top of it, per foot. A dead-flat deck with a quarter-inch taper has a
+   * `PITCH` of nothing and a `TAPER` of 0.25, and a sloped deck can carry
+   * tapered insulation as well. One name meaning both is how a wrong number
+   * gets priced.
+   */
+  readonly TAPER?: number;
+  /**
+   * Elevation in feet. What it is measured to depends on what was traced, the
+   * same way `SF` and `LF` already do:
+   *
+   * - on an **area**, the top of the deck — the reference the facet sits at;
+   * - on a **line**, the base the run starts from.
+   *
+   * A roof is not flat in the sense that matters here: a parapet on a raised
+   * section and a parapet on a low roof are the same trace with different
+   * elevations, and nothing else on the condition can tell them apart.
+   */
+  readonly ELEV?: number;
   /** Number of sides. */
   readonly SIDES?: number;
   /** Stretch-out in inches: flat width of metal a formed profile eats. */
@@ -49,8 +80,10 @@ export interface Properties {
   readonly [name: string]: number | undefined;
 }
 
-/** The four reserved property names plus the two that only some details use. */
-export const PROPERTY_NAMES = ['H', 'W', 'T', 'PITCH', 'SIDES', 'STRETCHOUT'] as const;
+/** The reserved property names. The last three only some details use. */
+export const PROPERTY_NAMES = [
+  'H', 'W', 'T', 'PITCH', 'TAPER', 'ELEV', 'SIDES', 'STRETCHOUT',
+] as const;
 
 /**
  * Everything a formula can see. `null` where a page has not been scaled yet:

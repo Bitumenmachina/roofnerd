@@ -171,6 +171,17 @@ export interface Assembly {
  * same time, because one parapet run is all three and pretending otherwise is
  * what makes estimating software annoying.
  */
+/**
+ * What a condition is to the water on the roof.
+ *
+ * A drain is the low point a tapered field falls to; a ridge is the line a
+ * cricket is built along, between two of them. Everything else has no role,
+ * which is the normal case.
+ */
+export type ConditionRole = 'drain' | 'ridge';
+
+export const CONDITION_ROLES: readonly ConditionRole[] = ['drain', 'ridge'] as const;
+
 export interface Condition {
   readonly id: string;
   readonly name: string;
@@ -186,6 +197,30 @@ export interface Condition {
    * being traced twice, and the two can never drift apart.
    */
   readonly from?: string;
+  /**
+   * What this condition is to the roof's drainage, when it is anything.
+   *
+   * Most conditions have no role — a parapet is a parapet. But a heightfield
+   * cannot be solved without knowing which counts are drains, and a cricket
+   * cannot be built without knowing which run is its ridge. That is a fact
+   * about the thing, not a number on it, so it cannot be a property: every
+   * property is a number.
+   *
+   * It is a fixed set rather than free text on purpose. Reading "drain" off a
+   * condition's *name* works until somebody types "Drains", or "RD-1", or
+   * "roof drains (typ)" — and then the roof silently has no low points and the
+   * taper solves to nothing.
+   */
+  readonly role?: ConditionRole;
+  /**
+   * The conditions this one runs between — a cricket's ridge, which sits
+   * between two drains.
+   *
+   * `from:` inherits one parent's measures. This is a different relation: a
+   * ridge is *defined by* two drains without taking either one's measures, and
+   * the two planes either side of it are what the geometry is for.
+   */
+  readonly between?: readonly string[];
   readonly assemblyId?: string;
   readonly items: readonly Item[];
   /** A colour to draw it in on the sheet. */

@@ -12,6 +12,12 @@ where the build actually is; `DECISIONS.md` says what was decided and why.
 The ruling documents — the handoff and its addenda — are in `refs/`, which is local-only.
 If `refs/` is empty on this clone, ask before assuming what the project wants.
 
+`refs/carry-forward-register.md` is the first thing to read there. It is the list of things
+that have been re-derived more than once or lost at least once across this product's
+iterations — every entry was paid for, and the register exists because the standing complaint
+about this work is that each pass drops earned context. It rules nothing; where it disagrees
+with a ruling document, the ruling document wins.
+
 ## Never
 
 - **No client data in the public tree.** Nothing out of `fixtures/`, `refs/` or `evidence/`.
@@ -38,7 +44,20 @@ If `refs/` is empty on this clone, ask before assuming what the project wants.
   Item, Formula, Order unit, Assembly, Library, Cost code, Class, Recap, Lens. Units are SF,
   LF, EA, SQ. No synonyms in the UI, the file format, the types or the comments.
 - **Nothing is ever silently zero.** A quantity off an unscaled sheet is pending. A line
-  with no price says so. A total that leaves something out says what it left out.
+  with no price says so. A total that leaves something out says what it left out. This is not
+  a principle you prove once — it has been closed at the engine, found again in the formula
+  parser, and found again in the library data. Prove it at every layer a number can collapse.
+- **Geometry is an imperative, not a feature.** Open source, import/export, geometry — the three
+  things this program exists for. *"Builders see in 3D — I cannot stress how imperative that is."*
+  It has been slotted late twice and pulled forward twice. It is not a bonus.
+- **A formula is editable on the line, and a validation pass must never strip what the sheet can
+  author.** A library you cannot see into is a library nobody trusts. This has already been ruled,
+  reversed by a sanitizer that deleted line-level formulas on load, and reversed back.
+- **The stretch-out belongs to the detail, not to the material.** It is 19½″ at a coping, 8″ at a
+  gravel-stop edge, 26″ at an equipment curb cap — so it can never be a stored constant on a library
+  item. The sheet-metal case is what the formula language exists for: LF of profile becomes pounds
+  through a width that changes per detail. A formula design that cannot say this is wrong however
+  clean it looks.
 - **A check that bypasses the path a person uses is not a check.** Every runtime probe
   starts at the start screen and goes through the menu, the buttons and the fields. None of
   them calls `doc_open` — or any other command — to get a job open. This is not a

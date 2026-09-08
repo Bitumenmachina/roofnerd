@@ -30,7 +30,7 @@ const BANNED = [
 ];
 
 /** Bare property keys, which are fine in a formula and nowhere else. */
-const BARE_KEYS = ['SIDES', 'PITCH', 'STRETCHOUT'];
+const BARE_KEYS = ['SIDES', 'PITCH', 'STRETCHOUT', 'TAPER', 'ELEV'];
 
 const results = [];
 const check = (name, fn) => {

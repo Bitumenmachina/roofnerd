@@ -23,8 +23,19 @@ export const PROPERTY_LABELS: Readonly<Record<string, { label: string; hint: str
   W: { label: 'Width', hint: 'feet — coping width, cricket width', group: 'Geometry' },
   T: { label: 'Thickness', hint: 'inches — insulation, as it is sold', group: 'Geometry' },
   PITCH: { label: 'Pitch', hint: 'rise per 12 — 5 means 5:12', group: 'Geometry' },
+  TAPER: { label: 'Taper', hint: 'inches per foot — 1/4 means 1/4" in 12"', group: 'Geometry' },
+  ELEV: { label: 'Elevation', hint: 'feet — top of deck on an area, base on a run', group: 'Geometry' },
   SIDES: { label: 'Sides', hint: 'how many', group: 'Geometry' },
   STRETCHOUT: { label: 'Stretch-out', hint: 'inches — flat metal the profile eats', group: 'Metal' },
+};
+
+/**
+ * What a condition's role is called. No role is the normal case and shows
+ * nothing at all — a parapet is not "no role", it is a parapet.
+ */
+export const ROLE_LABELS: Readonly<Record<string, string>> = {
+  drain: 'Drain',
+  ridge: 'Ridge',
 };
 
 /** What a traced thing is called. */
