@@ -490,7 +490,7 @@ one screen, watch the money move on the other.
 | Vocabulary check (`tools/probe/vocabulary-check.mjs`) | **PASS 27/27** — reads what is rendered in the shipped window, not the source; proven red on `PLAN_SF`. Gained `TAPER`, `ELEV`, `SUMP` and `BOARDS` as section 6 added them, so the gate covers the new words rather than trailing them |
 | Synthetic prices (`tools/make-demo-prices.mjs`) | 18 seeded invented prices in `jobs/demo-job/prices.json`; every screenshot and probe draws from them |
 | Engine tests | **102/102** — seven added for the tapered inputs |
-| Shell tests | **5/5**, including that a job saved by the application is byte-for-byte one saved by the command line |
+| Shell tests (`pnpm test:shell`) | **6/6** — including that a job saved by the application is byte-for-byte one saved by the command line. **These were red from the front-door commit until 2026-09-08 and reported as passing**, because `pnpm -r test` runs the engine and the app and never ran them. They assert on identity now instead of on array position, and `pnpm test` runs them |
 | Vocabulary gate | **PASS** |
 | Egress gate | **PASS** |
 | Demo job round-trip | clean, 4 files |

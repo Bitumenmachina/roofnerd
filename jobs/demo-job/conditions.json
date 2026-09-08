@@ -54,9 +54,9 @@
     "kind": "area",
     "name": "Main Roof Field",
     "properties": {
+      "ELEV": 3,
       "PITCH": 4,
-      "SIDES": 4,
-      "ELEV": 3
+      "SIDES": 4
     },
     "traces": [
       {
@@ -125,9 +125,9 @@
     "kind": "line",
     "name": "Parapet Wall Flashing",
     "properties": {
+      "ELEV": 0,
       "H": 1.5,
-      "STRETCHOUT": 14,
-      "ELEV": 0
+      "STRETCHOUT": 14
     },
     "traces": [
       {
@@ -172,6 +172,7 @@
     "properties": {
       "SUMP": 4
     },
+    "role": "drain",
     "traces": [
       {
         "id": "t3",
@@ -191,20 +192,20 @@
           }
         ]
       }
-    ],
-    "role": "drain"
+    ]
   },
   {
-    "id": "c-tapered",
-    "name": "Low Roof \u2014 Tapered",
-    "kind": "area",
     "color": "#4a6b8a",
+    "id": "c-tapered",
+    "items": [],
+    "kind": "area",
+    "name": "Low Roof — Tapered",
     "properties": {
-      "ELEV": 0,
-      "T": 0.5,
-      "TAPER": 0.25,
       "BOARDS": 1,
-      "SIDES": 4
+      "ELEV": 0,
+      "SIDES": 4,
+      "T": 0.5,
+      "TAPER": 0.25
     },
     "traces": [
       {
@@ -229,23 +230,23 @@
           }
         ]
       }
-    ],
-    "items": []
+    ]
   },
   {
-    "id": "c-cricket",
-    "name": "Cricket behind RTU-1",
-    "kind": "line",
-    "color": "#8a5a1d",
-    "role": "ridge",
     "between": [
       "c-drains"
     ],
+    "color": "#8a5a1d",
+    "id": "c-cricket",
+    "items": [],
+    "kind": "line",
+    "name": "Cricket behind RTU-1",
     "properties": {
       "ELEV": 0.25,
-      "W": 4,
-      "TAPER": 0.5
+      "TAPER": 0.5,
+      "W": 4
     },
+    "role": "ridge",
     "traces": [
       {
         "id": "t-cricket",
@@ -261,7 +262,6 @@
           }
         ]
       }
-    ],
-    "items": []
+    ]
   }
 ]

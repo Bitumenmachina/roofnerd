@@ -1,0 +1,132 @@
+{
+  "assemblies": [
+    {
+      "generic": true,
+      "id": "tpo-mechanically-attached",
+      "items": [
+        {
+          "costCode": "07-100-100",
+          "description": "Gypsum cover board, 5/8 in",
+          "formula": "SQ",
+          "id": "a-cover",
+          "unit": "SQ",
+          "waste": 8
+        },
+        {
+          "costCode": "07-100-100",
+          "description": "Polyisocyanurate, 2.2 in",
+          "formula": "SQ",
+          "id": "a-iso",
+          "unit": "SQ",
+          "waste": 10
+        },
+        {
+          "costCode": "07-100-100",
+          "description": "TPO membrane, 60 mil",
+          "formula": "SQ",
+          "id": "a-membrane",
+          "order": {
+            "contains": 10,
+            "name": "ROLL",
+            "rule": "ceil"
+          },
+          "unit": "SQ",
+          "waste": 10
+        },
+        {
+          "costCode": "07-100-170",
+          "description": "Fasteners and plates",
+          "formula": "SQ * 12",
+          "id": "a-fasteners",
+          "order": {
+            "name": "BOX",
+            "per": 1000,
+            "rule": "exact"
+          },
+          "unit": "EA",
+          "waste": 5
+        },
+        {
+          "costCode": "07-100-230",
+          "crewSize": 6,
+          "description": "Install membrane",
+          "formula": "SQ",
+          "id": "a-install",
+          "productionRate": 1.1,
+          "unit": "SQ"
+        }
+      ],
+      "name": "TPO, 60 mil, mechanically attached",
+      "notes": "A generic build-up. Swap in a manufacturer's system when one is specified."
+    },
+    {
+      "generic": true,
+      "id": "coping-24ga",
+      "items": [
+        {
+          "costCode": "07-100-150",
+          "description": "Coping, 24 ga formed",
+          "formula": "LF",
+          "id": "a-coping",
+          "profileId": "coping-standard",
+          "unit": "LF",
+          "waste": 5
+        },
+        {
+          "costCode": "07-100-150",
+          "description": "Continuous cleat, 24 ga",
+          "formula": "LF",
+          "id": "a-cleat",
+          "unit": "LF",
+          "waste": 5
+        },
+        {
+          "costCode": "07-100-150",
+          "description": "Coping mitre",
+          "formula": "VERTICES",
+          "id": "a-mitre",
+          "unit": "EA"
+        },
+        {
+          "costCode": "07-100-320",
+          "crewSize": 2,
+          "description": "Fabricate metal",
+          "formula": "LF",
+          "id": "a-fab",
+          "productionRate": 40,
+          "unit": "LF"
+        }
+      ],
+      "name": "Coping, 24 ga formed"
+    }
+  ],
+  "profiles": [
+    {
+      "hems": [
+        0.5,
+        0.5
+      ],
+      "id": "coping-standard",
+      "legs": [
+        4,
+        11,
+        4
+      ],
+      "name": "Coping — 11 in wall, 4 in faces",
+      "notes": "Legs off the detail. Girth is their sum plus the hems.",
+      "weightPerSF": 1.156
+    },
+    {
+      "hems": [
+        0.5
+      ],
+      "id": "gravel-stop",
+      "legs": [
+        3,
+        5
+      ],
+      "name": "Gravel stop — 5 in face",
+      "weightPerSF": 1.156
+    }
+  ]
+}

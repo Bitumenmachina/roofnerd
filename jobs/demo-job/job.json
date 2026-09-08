@@ -25,6 +25,12 @@
       "overhead": 0,
       "prices": {},
       "profit": 15
+    },
+    {
+      "adders": {},
+      "id": "s2",
+      "name": "Second supply house",
+      "prices": {}
     }
   ]
 }

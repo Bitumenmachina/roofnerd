@@ -181,14 +181,16 @@ export interface PriceSource {
   /** When it was good. A price with no date is a price nobody can defend. */
   readonly on?: string;
   /**
-   * Why it is doubtful, when it is.
+   * Why this number is doubtful, when it is — in the words you would say to
+   * the supplier.
+   *
    *
    * The prior lineage carried two sheet-metal figures it knew disagreed with
    * the field and shipped them saying so rather than silently correcting or
    * silently keeping them. A value that admits it is doubtful is worth more
    * than one that looks settled and is not.
    */
-  readonly verify?: string;
+  readonly doubt?: string;
 }
 
 /**

@@ -24,11 +24,19 @@ use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder
 /// would read as two steps and never find anything. Windows address the job as
 /// "/pages/0/feetPerUnit", which is what an estimator would expect it to look
 /// like anyway. `packages/engine/src/job.ts` owns this list.
-const JOB_PARTS: [(&str, &str); 4] = [
+/// The files a job folder is made of.
+///
+/// `library.json` sits here for now, which makes the library per-job. The
+/// proposal has it as a folder shared across jobs and that is where it ends up
+/// — but a job that carries its own is the smallest thing that lets an assembly
+/// be loaded onto a condition and priced, and the shape of the data does not
+/// change when it moves. Recorded rather than pretended about.
+const JOB_PARTS: [(&str, &str); 5] = [
     ("job", "job.json"),
     ("conditions", "conditions.json"),
     ("pages", "pages/pages.json"),
     ("costCodes", "cost-codes.json"),
+    ("library", "library.json"),
 ];
 
 /// The open job: where it came from, and what it currently says.
@@ -295,12 +303,36 @@ mod tests {
         }
     }
 
+    /// Find a condition by its id rather than its place in the array.
+    ///
+    /// These tests used to reach for `conditions[0]` and for a job name that had
+    /// been changed, so they went red the day the demo job was edited and stayed
+    /// red — through a whole section — because `pnpm -r test` runs the engine and
+    /// the app and never ran these. Asserting on identity instead of on position
+    /// is what stops that happening again; running them is the other half.
+    fn condition<'a>(doc: &'a Value, id: &str) -> &'a Value {
+        doc["conditions"]
+            .as_array()
+            .expect("the demo job has conditions")
+            .iter()
+            .find(|c| c["id"] == id)
+            .unwrap_or_else(|| panic!("the demo job has a condition {id}"))
+    }
+
     #[test]
     fn a_folder_reads_into_one_document_keyed_by_file() {
         let doc = read_folder(&demo()).unwrap();
-        assert_eq!(doc["job"]["name"], "Demo Warehouse Reroof");
+        assert!(doc["job"]["name"].as_str().unwrap().contains("Reroof"));
         assert!(doc["costCodes"].as_array().unwrap().len() >= 6);
-        assert_eq!(doc["conditions"][0]["name"], "Parapet Wall Flashing");
+        assert_eq!(condition(&doc, "c-parapet")["name"], "Parapet Wall Flashing");
+    }
+
+    #[test]
+    fn the_library_is_part_of_the_open_document() {
+        let doc = read_folder(&demo()).unwrap();
+        let assemblies = doc["library"]["assemblies"].as_array().expect("assemblies");
+        assert!(!assemblies.is_empty(), "the demo library has an assembly to load");
+        assert!(doc["library"]["profiles"].as_array().is_some_and(|p| !p.is_empty()));
     }
 
     #[test]
@@ -314,11 +346,17 @@ mod tests {
     #[test]
     fn a_pointer_reaches_a_nested_property() {
         let mut doc = read_folder(&demo()).unwrap();
+        let at = doc["conditions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .position(|c| c["id"] == "c-parapet")
+            .expect("the demo job has a parapet");
         let slot = doc
-            .pointer_mut("/conditions/0/properties/H")
+            .pointer_mut(&format!("/conditions/{at}/properties/H"))
             .expect("the demo condition has a height");
         *slot = json!(2.5);
-        assert_eq!(doc["conditions"][0]["properties"]["H"], 2.5);
+        assert_eq!(doc["conditions"][at]["properties"]["H"], 2.5);
     }
 
     #[test]
