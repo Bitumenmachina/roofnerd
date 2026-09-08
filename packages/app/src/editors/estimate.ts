@@ -31,8 +31,46 @@ type Page = { id: string; feetPerUnit?: number };
 
 const UNITS = ['SF', 'LF', 'EA', 'SQ'];
 
+/**
+ * The price set this bid is worked out under.
+ *
+ * Hidden when a job has only one, because a picker with a single choice is
+ * furniture. It appears the moment a job has a second, which is when it starts
+ * meaning something.
+ */
+function drawScenarios(host: HTMLElement, d: Doc): void {
+  const job = at('/job', d) as
+    { scenarios?: { id: string; name: string }[]; activeScenarioId?: string } | undefined;
+  const scenarios = job?.scenarios ?? [];
+  host.replaceChildren();
+  if (scenarios.length < 2) return;
+
+  const label = document.createElement('span');
+  label.textContent = 'Scenario';
+
+  const pick = document.createElement('select');
+  pick.setAttribute('aria-label', 'Which price set');
+  for (const s of scenarios) {
+    const o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = s.name;
+    pick.append(o);
+  }
+  pick.value = job?.activeScenarioId ?? scenarios[0]!.id;
+  pick.addEventListener('change', () => void set('/job/activeScenarioId', pick.value));
+
+  host.append(label, pick);
+}
+
 export function mountEstimate(host: HTMLElement): void {
   host.replaceChildren();
+
+  // Which price set this bid is being worked out under. A job can hold several
+  // — a supply house, a pricing date — and the whole sheet re-prices when it
+  // changes, which is the point of having them.
+  const scenarioBar = document.createElement('div');
+  scenarioBar.className = 'scenario-bar';
+  host.append(scenarioBar);
 
   // The sheet scrolls inside its own area rather than clipping, so a torn-off
   // window narrower than the table still reaches every column.
@@ -48,7 +86,10 @@ export function mountEstimate(host: HTMLElement): void {
 
   host.append(scroller, foot);
 
-  subscribe((d: Doc) => render(body, foot, d));
+  subscribe((d: Doc) => {
+    drawScenarios(scenarioBar, d);
+    render(body, foot, d);
+  });
   watchSelection(() => render(body, foot, doc()));
 }
 

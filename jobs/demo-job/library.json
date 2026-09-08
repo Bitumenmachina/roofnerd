@@ -1,6 +1,8 @@
 {
   "assemblies": [
     {
+      "attachment": "mechanically fastened",
+      "deck": "steel",
       "generic": true,
       "id": "tpo-mechanically-attached",
       "items": [
@@ -9,6 +11,7 @@
           "description": "Gypsum cover board, 5/8 in",
           "formula": "SQ",
           "id": "a-cover",
+          "layer": "cover board",
           "unit": "SQ",
           "waste": 8
         },
@@ -17,6 +20,7 @@
           "description": "Polyisocyanurate, 2.2 in",
           "formula": "SQ",
           "id": "a-iso",
+          "layer": "insulation",
           "unit": "SQ",
           "waste": 10
         },
@@ -25,6 +29,7 @@
           "description": "TPO membrane, 60 mil",
           "formula": "SQ",
           "id": "a-membrane",
+          "layer": "membrane",
           "order": {
             "contains": 10,
             "name": "ROLL",
@@ -38,6 +43,7 @@
           "description": "Fasteners and plates",
           "formula": "SQ * 12",
           "id": "a-fasteners",
+          "layer": "fastening",
           "order": {
             "name": "BOX",
             "per": 1000,
@@ -52,14 +58,16 @@
           "description": "Install membrane",
           "formula": "SQ",
           "id": "a-install",
+          "layer": "membrane",
           "productionRate": 1.1,
           "unit": "SQ"
         }
       ],
       "name": "TPO, 60 mil, mechanically attached",
-      "notes": "A generic build-up. Swap in a manufacturer's system when one is specified."
+      "notes": "Written by stripping the brands off a real build-up. Nothing in the corpus is a generic assembly — every layered system on the box is a named manufacturer's — so this one has no source behind it and says so."
     },
     {
+      "attachment": "mechanically fastened",
       "generic": true,
       "id": "coping-24ga",
       "items": [
@@ -68,6 +76,7 @@
           "description": "Coping, 24 ga formed",
           "formula": "LF",
           "id": "a-coping",
+          "layer": "edge metal",
           "profileId": "coping-standard",
           "unit": "LF",
           "waste": 5
@@ -77,6 +86,7 @@
           "description": "Continuous cleat, 24 ga",
           "formula": "LF",
           "id": "a-cleat",
+          "layer": "fastening",
           "unit": "LF",
           "waste": 5
         },
@@ -85,6 +95,7 @@
           "description": "Coping mitre",
           "formula": "VERTICES",
           "id": "a-mitre",
+          "layer": "edge metal",
           "unit": "EA"
         },
         {
@@ -93,11 +104,72 @@
           "description": "Fabricate metal",
           "formula": "LF",
           "id": "a-fab",
+          "layer": "edge metal",
           "productionRate": 40,
           "unit": "LF"
         }
       ],
-      "name": "Coping, 24 ga formed"
+      "name": "Coping, 24 ga formed",
+      "notes": "Generic coping. The girth comes off the profile, not off the material."
+    },
+    {
+      "attachment": "fully adhered",
+      "deck": "steel",
+      "id": "versiweld-tpo-adhered",
+      "items": [
+        {
+          "costCode": "07-100-100",
+          "description": "Low-VOC EPDM/TPO Primer",
+          "formula": "SQ",
+          "id": "v-primer",
+          "layer": "primer",
+          "notes": "700 sq ft per gallon, published.",
+          "order": {
+            "contains": 7,
+            "name": "GAL",
+            "rule": "ceil"
+          },
+          "priceSource": {
+            "firmness": "firm",
+            "from": "Versico adhesives chart"
+          },
+          "unit": "SQ"
+        },
+        {
+          "costCode": "07-100-100",
+          "description": "TPO Bonding Adhesive",
+          "formula": "SQ",
+          "id": "v-adhesive",
+          "layer": "adhesive",
+          "notes": "60 sq ft per gallon, published. Porous substrates run to the low end.",
+          "order": {
+            "contains": 0.6,
+            "name": "GAL",
+            "rule": "ceil"
+          },
+          "priceSource": {
+            "firmness": "firm",
+            "from": "Versico adhesives chart"
+          },
+          "unit": "SQ"
+        },
+        {
+          "costCode": "07-100-100",
+          "description": "VersiWeld TPO membrane",
+          "formula": "SQ",
+          "id": "v-membrane",
+          "layer": "membrane",
+          "priceSource": {
+            "doubt": "No price. The coverage is published; what it costs is not.",
+            "firmness": "placeholder"
+          },
+          "unit": "SQ",
+          "waste": 10
+        }
+      ],
+      "manufacturer": "Versico",
+      "name": "VersiWeld TPO, fully adhered",
+      "notes": "Coverage rates as published in the manufacturer's adhesives chart. The layer thicknesses and fastener counts behind a wind rating live in the evaluation report the system is approved under, not in this book."
     }
   ],
   "profiles": [
@@ -114,6 +186,10 @@
       ],
       "name": "Coping — 11 in wall, 4 in faces",
       "notes": "Legs off the detail. Girth is their sum plus the hems.",
+      "source": {
+        "doubt": "Weight per square foot is thickness times density. No document on this box publishes it.",
+        "firmness": "estimate"
+      },
       "weightPerSF": 1.156
     },
     {
@@ -126,6 +202,53 @@
         5
       ],
       "name": "Gravel stop — 5 in face",
+      "source": {
+        "doubt": "Weight per square foot is thickness times density. No document on this box publishes it.",
+        "firmness": "estimate"
+      },
+      "weightPerSF": 1.156
+    },
+    {
+      "id": "face-edge-4",
+      "legs": [
+        1.625,
+        4,
+        2.375
+      ],
+      "name": "Face edge metal — 4 in face",
+      "notes": "Legs as drawn. Girth is their sum; no hem allowance is shown on the detail.",
+      "source": {
+        "firmness": "firm",
+        "from": "SentriClad edge metal catalogue"
+      },
+      "weightPerSF": 1.156
+    },
+    {
+      "id": "face-edge-6",
+      "legs": [
+        1.625,
+        6,
+        4.375
+      ],
+      "name": "Face edge metal — 6 in face",
+      "source": {
+        "firmness": "firm",
+        "from": "SentriClad edge metal catalogue"
+      },
+      "weightPerSF": 1.156
+    },
+    {
+      "id": "face-edge-8",
+      "legs": [
+        1.625,
+        8,
+        6.375
+      ],
+      "name": "Face edge metal — 8 in face",
+      "source": {
+        "firmness": "firm",
+        "from": "SentriClad edge metal catalogue"
+      },
       "weightPerSF": 1.156
     }
   ]

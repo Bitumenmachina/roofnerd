@@ -507,3 +507,45 @@ button.quiet:hover { border-color: var(--rule); }
   display: flex; justify-content: space-between;
   font-size: 11px; color: var(--ink-faint, #7a8087); font-variant-numeric: tabular-nums;
 }
+
+/* ── The Library ────────────────────────────────────────────────────────── */
+.library-editor { overflow: auto; min-height: 0; }
+.library-body { padding: var(--gap-4); display: flex; flex-direction: column; gap: 18px; }
+.library-section h3 { margin: 0 0 8px; font-size: var(--t-head); font-weight: 500; }
+.library-card {
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--paper); padding: 10px 12px; margin-bottom: 8px;
+}
+.library-card header { display: flex; align-items: baseline; gap: 10px; }
+.library-kind, .library-girth { color: var(--ink-faint); font-size: var(--t-small); }
+.library-girth { font-variant-numeric: tabular-nums; }
+.library-load { margin-left: auto; }
+.library-items { list-style: none; margin: 8px 0 0; padding: 0; }
+.library-items li {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 3px 0; border-top: var(--hair, 1px) solid var(--line, #eceef0);
+  font-size: var(--t-small);
+}
+.library-items code { font-family: var(--mono); color: var(--ink-2); }
+.library-note { margin: 6px 0 0; font-size: var(--t-small); color: var(--ink-2); }
+
+/* The price set this bid is worked out under. Absent while a job has only one. */
+.scenario-bar {
+  display: flex; align-items: center; gap: 8px; flex: none;
+  padding: 6px var(--gap-4); border-bottom: var(--hair, 1px) solid var(--line, #d6d8db);
+  font-size: var(--t-small); color: var(--ink-2);
+}
+.scenario-bar:empty { display: none; }
+.scenario-bar select {
+  border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 3px 6px; background: var(--paper); font-size: var(--t-small);
+}
+
+/* How good a price is. A word, never colour alone, and silent when nobody has
+   said — an unmarked line is not the same as one marked firm. */
+.library-firmness { font-size: 11px; color: var(--ink-faint); margin-left: auto; padding-right: 10px; }
+.library-firmness.is-firm { color: #1f7a6b; }
+.library-firmness.is-budget, .library-firmness.is-estimate { color: #8a5a1d; }
+.library-firmness.is-placeholder { color: #8a1d2f; cursor: help; }
+.library-layer { color: var(--ink-faint); font-style: normal; font-size: 11px; }
+.library-items li { align-items: baseline; }

@@ -196,9 +196,17 @@ opening the index that sits inside it — `INDEX.md`, `index/knowledge_manifest.
 | Labour and equipment constants | `NRCA/Business/` (equipment cost schedule, guide to bidding), `EXCEL_TEMPLATES/`, `PRICING/UNIT_PRICING/`, `PRICING/YANCEY/` rental linecard |
 
 And the sixth, reported earlier and equally wrong: library constants were called absent when the
-prior lineage holds a reconciled set with `MATCH` / `NEEDS-VERIFY` / `CONFLICT` / `NO-SOURCE`
-verdicts already attached — including two known SSMR conflicts deliberately shipped as "verify
-basis" flags. Section 4 inherits the flags, not only the values.
+prior lineage holds a reconciled set with its provenance already attached — including SSMR figures
+deliberately shipped carrying their own doubt rather than silently corrected. Section 4 inherits the
+flags, not only the values.
+
+**A correction inside that correction.** I described those verdicts as `MATCH` / `NEEDS-VERIFY` /
+`CONFLICT` / `NO-SOURCE`. **That vocabulary does not exist.** It came to me in a report, I repeated it
+here and in two other documents without opening the lineage, and it is not in it. What is actually
+there is `authority` — OBS observed, INF inferred, STD standard — alongside a `match_code` of
+MATCHED, MANUAL or NO_MATCH, and free-text `note` and `verify` fields carrying the reasoning case by
+case. Same discipline, different words, and inventing the words is the thing this file exists to
+stop me doing.
 
 **Sheet-metal girth was the worst of them**, because it was called the hardest gap. It is not a
 lookup at all: girth is the sum of a profile's flat legs plus hem and return allowances, entered

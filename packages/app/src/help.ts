@@ -70,6 +70,14 @@ The field is lighter where it is thicker. Amber is where the boards run out: the
 
 Clicking picks a condition and picks it everywhere else too. Nothing in this window changes the job — there is no editing in 3D.`,
 
+  Library: `The book: saved sets of items, and the profiles the sheet-metal ones are formed from.
+
+It is optional. A job traces, measures, prices and recaps with no library open at all — this is where you stop retyping the same build-up on every bid.
+
+Pick a condition, then load an assembly onto it. That copies the items; it does not link them. Change a price on this bid and you have changed this bid, which is how it should be — a library that reached back into finished jobs would be one nobody dared edit.
+
+A profile is the flat legs a piece of metal is formed from. Girth is their sum plus what the hems eat, and it belongs to the detail rather than the material: 19 1/2 inches at a coping, 8 at a gravel stop, 26 at an equipment curb cap, all off the same coil. That is why you enter it once per detail and use it everywhere that detail runs.`,
+
   Condition: `A condition is one thing you traced, and this is everything the drawing cannot tell you about it.
 
 The numbers at the top are what it measures right now. Everything below sets what the detail calls for: how tall the flashing runs, how wide the coping is, what the slope is, how much flat metal a formed profile eats.

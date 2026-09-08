@@ -154,6 +154,8 @@ export interface Item {
   readonly priceSource?: PriceSource;
   /** The profile this item is formed from, when it is sheet metal. */
   readonly profileId?: string;
+  /** What this item does in the build-up, when it came off an assembly. */
+  readonly layer?: LayerFunction;
   readonly notes?: string;
 }
 
@@ -229,11 +231,58 @@ export function girthOf(profile: Profile): number {
   return legs + hems;
 }
 
+/**
+ * What a layer does in a roof, bottom-up from the deck.
+ *
+ * Every real assembly document on the box orders itself this way and none of
+ * them orders top-down — a liquid-applied system numbered Primer, Base,
+ * Reinforcement, Top Coat; a submittal letter reading Deck, Thermal Barrier,
+ * Vapour Barrier, Insulation, Membrane, Flashings, Edge Metal. The vocabulary
+ * recurs across manufacturers who share nothing else.
+ */
+export type LayerFunction =
+  | 'primer' | 'vapour barrier' | 'thermal barrier'
+  | 'insulation' | 'tapered insulation' | 'cover board'
+  | 'reinforcement' | 'membrane' | 'top coat'
+  | 'flashing' | 'edge metal' | 'fastening' | 'adhesive';
+
+/**
+ * How a system is held down. The top-level way this trade sorts assemblies —
+ * manufacturers group by this first, then by deck, and only then by membrane.
+ */
+export type Attachment =
+  | 'fully adhered' | 'mechanically fastened' | 'induction welded'
+  | 'ballasted' | 'self adhered' | 'liquid applied';
+
 /** A saved set of items. Generic, or a named manufacturer's system. */
 export interface Assembly {
   readonly id: string;
   readonly name: string;
   readonly manufacturer?: string;
+  /**
+   * True when this is not anybody's branded system.
+   *
+   * Worth knowing that the corpus on this machine contains **no** generic
+   * assemblies — every layered system in it is a named manufacturer's. A
+   * generic one is therefore something the estimator writes, by stripping the
+   * brands off something real, and it should say so rather than implying a
+   * source it does not have.
+   */
+  readonly generic?: boolean;
+  readonly attachment?: Attachment;
+  /** Steel, plywood, structural concrete, lightweight insulating concrete… */
+  readonly deck?: string;
+  /**
+   * The manufacturer's own code for this exact combination, when it has one.
+   *
+   * This is what ties an assembly to the approval that makes it valid, and it
+   * is a pointer to evidence rather than data to copy: the wind-uplift report
+   * behind it holds the layer thicknesses and fastener counts, and those are
+   * not in the assembly document itself.
+   */
+  readonly designation?: string;
+  /** The evaluation report the designation refers to. */
+  readonly evaluation?: string;
   readonly items: readonly Item[];
   /** A picture of the tile or the detail, so the right one is confirmed by sight. */
   readonly image?: string;
