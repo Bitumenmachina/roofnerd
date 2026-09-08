@@ -105,6 +105,7 @@ export function priceLine(
   item: Item,
   scope: Readonly<Record<string, number | null>>,
   scenarioPrices: Readonly<Record<string, Money>> = {},
+  conditionWaste = 0,
 ): LineResult {
   const formula: FormulaResult = run(item.formula, scope);
 
@@ -119,8 +120,15 @@ export function priceLine(
   }
   const quantity = formula.value;
 
+  // Two waste terms, applied in order and kept apart. The item's belongs to the
+  // material; the condition's belongs to this run. Multiplying them rather than
+  // adding keeps each one meaning what it says — 10% of material waste on a run
+  // that already carries 5% is 15.5%, not 15%, and the estimator can still see
+  // which factor is which.
   const waste = item.waste ?? 0;
-  const withWaste = quantity === null ? null : settle(quantity * (1 + waste / 100));
+  const withWaste = quantity === null
+    ? null
+    : settle(quantity * (1 + waste / 100) * (1 + conditionWaste / 100));
 
   // ── what you buy ────────────────────────────────────────────────────────
   // On a labor line the order unit is HOURS and the production rate is the

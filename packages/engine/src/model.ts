@@ -150,7 +150,81 @@ export interface Item {
   readonly productionRate?: number;
   /** How many are in the crew. Derives crew-days for the labor lens only. */
   readonly crewSize?: number;
+  /** Where the price came from and how firm it is. */
+  readonly priceSource?: PriceSource;
+  /** The profile this item is formed from, when it is sheet metal. */
+  readonly profileId?: string;
   readonly notes?: string;
+}
+
+/**
+ * How good a price is.
+ *
+ * Four independent arrivals said a price needs this: NEXUS types it and ships
+ * the colour language, the prior estimating lineage reached it as a basis
+ * chain, the design work draws it as a chip, and this program had it as prose.
+ *
+ * It is its own axis and never collapses into the other two. **Authorship** is
+ * who wrote a number — derived or typed. **Validity** is whether it can be used
+ * — usable, pending, excluded, no price. **Firmness** is how good a price is,
+ * and a firm price can sit on a pending quantity without either being wrong.
+ */
+export type Firmness = 'firm' | 'budget' | 'estimate' | 'placeholder';
+
+export const FIRMNESS: readonly Firmness[] = ['firm', 'budget', 'estimate', 'placeholder'] as const;
+
+/** Where a price came from, and how much to trust it. */
+export interface PriceSource {
+  /** Who or what it came from — a supply house, a quote number, a book. */
+  readonly from?: string;
+  readonly firmness?: Firmness;
+  /** When it was good. A price with no date is a price nobody can defend. */
+  readonly on?: string;
+  /**
+   * Why it is doubtful, when it is.
+   *
+   * The prior lineage carried two sheet-metal figures it knew disagreed with
+   * the field and shipped them saying so rather than silently correcting or
+   * silently keeping them. A value that admits it is doubtful is worth more
+   * than one that looks settled and is not.
+   */
+  readonly verify?: string;
+}
+
+/**
+ * A formed metal profile: the flat legs it is brake-formed from.
+ *
+ * Girth is their sum plus what the hems eat, and it belongs to the **detail**
+ * rather than to the material — 19½ inches at a coping, 8 at a gravel stop, 26
+ * at an equipment curb cap, all off the same coil. That is why it can never be
+ * a constant on a library item, and it is the case the whole formula language
+ * exists for: linear feet of profile become pounds through a width that changes
+ * with the detail.
+ */
+export interface Profile {
+  readonly id: string;
+  readonly name: string;
+  /** The flat legs in inches, in the order they come off the brake. */
+  readonly legs: readonly number[];
+  /** What each hem eats, in inches. A hem folds back, so it is not a leg. */
+  readonly hems?: readonly number[];
+  /** Pounds per square foot of the coil, for turning girth into weight. */
+  readonly weightPerSF?: number;
+  readonly source?: PriceSource;
+  readonly notes?: string;
+}
+
+/**
+ * Girth: everything the profile eats across the coil, in inches.
+ *
+ * Entered once for a detail and reused everywhere that detail runs. There is no
+ * table to look this up in and there never was — an estimator who can draw the
+ * detail can state its legs.
+ */
+export function girthOf(profile: Profile): number {
+  const legs = profile.legs.reduce((a, b) => a + b, 0);
+  const hems = (profile.hems ?? []).reduce((a, b) => a + b, 0);
+  return legs + hems;
 }
 
 /** A saved set of items. Generic, or a named manufacturer's system. */
@@ -222,6 +296,18 @@ export interface Condition {
    */
   readonly between?: readonly string[];
   readonly assemblyId?: string;
+  /**
+   * Waste for this run in particular, on top of whatever each item wastes.
+   *
+   * Two different facts, and they do not collapse into one number. An item's
+   * waste is a property of the material — this membrane always wastes so much,
+   * wherever it is used, and it comes down from the library with the item. A
+   * condition's waste is a property of the *situation*: this run gets extra
+   * because of the cut pattern, the access, the number of penetrations. An
+   * estimator needs to see which of the two moved a quantity, so it composes
+   * after the item's and stays visible as its own factor.
+   */
+  readonly waste?: Percent;
   readonly items: readonly Item[];
   /** A colour to draw it in on the sheet. */
   readonly color?: string;

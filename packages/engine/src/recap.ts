@@ -125,7 +125,7 @@ export function priceJob(doc: JobDocument, scenario: Scenario): PricedLine[] {
     const scope = scopeFor(measures, condition.properties ?? {});
     for (const item of condition.items ?? []) {
       out.push({
-        ...priceLine(item, scope, scenario.prices ?? {}),
+        ...priceLine(item, scope, scenario.prices ?? {}, condition.waste ?? 0),
         conditionId: condition.id,
         conditionName: condition.name,
         class: classOf(doc.costCodes, item.costCode) ?? null,

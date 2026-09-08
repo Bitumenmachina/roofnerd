@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { priceLine, recap, priceJob, totalSquaresOf, emptyJob, CLASS_NAMES } from '../dist/index.js';
+import { priceLine, recap, priceJob, totalSquaresOf, emptyJob, CLASS_NAMES, girthOf } from '../dist/index.js';
 
 const scope = { SF: 1000, LF: 500, EA: 5, SQ: 10, PLAN_SF: 1000, VERTICES: 5, SEGMENTS: 4, H: 1.5 };
 const item = (over) => ({ id: 'i1', description: 'x', costCode: '07-100-100', unit: 'SF', formula: 'SF', ...over });
@@ -346,4 +346,22 @@ test('total squares counts only area that carries a cost', () => {
   };
   // 10 x 10 ft = 100 SF = 1 SQ priced; the 100 x 100 reference area is 100 SQ.
   assert.equal(totalSquaresOf(base), 1);
+});
+
+test('condition waste composes after item waste and stays its own factor', () => {
+  const item = { id: 'i', description: 'M', costCode: 'c', unit: 'SQ', formula: 'SQ', waste: 10, unitCost: 1 };
+  const scope = { SQ: 100 };
+  const plain = priceLine(item, scope, {}, 0);
+  const withRun = priceLine(item, scope, {}, 5);
+  // 10% material waste on a run that also carries 5% is 15.5%, not 15% — each
+  // factor keeps meaning what it says.
+  assert.equal(plain.withWaste, 110);
+  assert.equal(withRun.withWaste, 115.5);
+});
+
+test('girth is the legs plus what the hems eat', () => {
+  // A coping: two faces, a top, and a hem on each edge. Entered once for the
+  // detail, reused everywhere that detail runs — there is no table for this.
+  assert.equal(girthOf({ id: 'p', name: 'Coping', legs: [4, 11, 4], hems: [0.5, 0.5] }), 20);
+  assert.equal(girthOf({ id: 'p', name: 'Gravel stop', legs: [3, 5] }), 8);
 });
