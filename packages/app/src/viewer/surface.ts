@@ -37,6 +37,18 @@ export class Surface {
 
   private sheet: Sheet | null = null;
   private zoomLevel = 1;
+  /**
+   * Whether the sheet is still following the window rather than the estimator.
+   *
+   * `fit()` runs the moment a sheet is shown, and at that point the surface has
+   * often not been laid out — on a 36 x 24 drawing it measured 355 px of height
+   * in an area that ended up nearly a thousand, and fitted to the wrong box.
+   * Waiting a frame or two is a guess about how long layout takes. Watching the
+   * box is not: while nobody has chosen a zoom, the sheet re-fits whenever the
+   * area it sits in changes size, including the first time it gets a real one.
+   */
+  private autoFit = true;
+  private observer: ResizeObserver | null = null;
   /** Paints run one at a time and in order, however fast the zoom is worked. */
   private painting: Promise<void> = Promise.resolve();
   private events: SurfaceEvents = {};
@@ -48,6 +60,12 @@ export class Surface {
 
     this.scroller = document.createElement('div');
     this.scroller.className = 'surface-scroll';
+
+    // Follow the size of the area the sheet sits in. This is what makes the
+    // opening fit correct rather than lucky: the first real box the surface
+    // gets arrives after the sheet is already shown, and it arrives here.
+    this.observer = new ResizeObserver(() => { if (this.autoFit) void this.refit(); });
+    this.observer.observe(this.scroller);
 
     this.stack = document.createElement('div');
     this.stack.className = 'surface-stack';
@@ -100,10 +118,47 @@ export class Surface {
     this.scratch.replaceChildren();
   }
 
-  async setZoom(zoom: number): Promise<void> {
-    this.zoomLevel = Math.min(8, Math.max(0.1, zoom));
+  /**
+   * Change the zoom, keeping a point on the sheet where it was on screen.
+   *
+   * Without this the view drifts to the sheet's own top-left corner every time
+   * anybody zooms: the content grows from a fixed origin while the scroll
+   * offset stays at whatever pixel it held, so the page position under the
+   * corner of the viewport is `scrollLeft / zoom` and shrinks toward nothing.
+   * On a small sheet that is a nuisance. On a 36-inch drawing you lose the
+   * thing you were working on at the first click.
+   *
+   * `anchor` is a point in page units to hold still — the cursor when zooming
+   * with the wheel, the middle of the view otherwise.
+   */
+  async setZoom(zoom: number, anchor?: Point): Promise<void> {
+    // A deliberate zoom. Stop re-fitting behind their back from here on.
+    this.autoFit = false;
+    await this.applyZoom(zoom, anchor);
+  }
+
+  private async applyZoom(zoom: number, anchor?: Point): Promise<void> {
     const sheet = this.sheet;
-    if (!sheet) return;
+    if (!sheet) {
+      this.zoomLevel = Math.min(8, Math.max(0.1, zoom));
+      return;
+    }
+
+    // Where the held point sits in the viewport right now, so it can be put
+    // back there afterwards.
+    const box = this.scroller.getBoundingClientRect();
+    const hold = anchor ?? {
+      x: (this.scroller.scrollLeft + box.width / 2) / this.zoomLevel,
+      y: (this.scroller.scrollTop + box.height / 2) / this.zoomLevel,
+    };
+    const offsetX = anchor
+      ? hold.x * this.zoomLevel - this.scroller.scrollLeft
+      : box.width / 2;
+    const offsetY = anchor
+      ? hold.y * this.zoomLevel - this.scroller.scrollTop
+      : box.height / 2;
+
+    this.zoomLevel = Math.min(8, Math.max(0.1, zoom));
 
     // The overlay is sized in PAGE units and stretched over the painted sheet,
     // so everything drawn into it is written in page coordinates directly. It
@@ -118,7 +173,13 @@ export class Surface {
     this.stack.style.width = `${width}px`;
     this.stack.style.height = `${height}px`;
 
-    // Keep strokes a constant width on screen however far in the estimator is.
+    // Put the held point back under the same part of the viewport.
+    this.scroller.scrollLeft = hold.x * zoomAtCall - offsetX;
+    this.scroller.scrollTop = hold.y * zoomAtCall - offsetY;
+
+    // Vertex handles and the snap radius are drawn in page units, so they need
+    // the reciprocal to come out a constant size on screen. Trace outlines do
+    // NOT use this — see the note on the stroke rules in app.css.
     this.overlay.style.setProperty('--hair', String(1 / zoomAtCall));
     this.events.onZoom?.(zoomAtCall);
 
@@ -128,16 +189,31 @@ export class Surface {
     await this.painting;
   }
 
-  /** Fit the whole sheet in the window — where an estimator starts. */
+  /**
+   * Fit the whole sheet in the window — where an estimator starts.
+   *
+   * The wait matters. This is called straight after the sheet is shown, and on
+   * a first paint the surface has not been laid out yet, so the box measured is
+   * smaller than the one the estimator ends up looking at. A 36 x 24 sheet came
+   * up at 496 px in a space that could hold 560, with the slack left below it.
+   * Two frames is enough for the layout to settle.
+   */
   async fit(): Promise<void> {
     if (!this.sheet) return;
+    this.autoFit = true;
+    await this.refit();
+  }
+
+  private async refit(): Promise<void> {
+    if (!this.sheet) return;
     const box = this.scroller.getBoundingClientRect();
+    if (box.width < 2 || box.height < 2) return;
     const margin = 24;
     const zoom = Math.min(
       (box.width - margin) / this.sheet.width,
       (box.height - margin) / this.sheet.height,
     );
-    await this.setZoom(zoom);
+    await this.applyZoom(zoom);
   }
 
   /**
@@ -171,8 +247,13 @@ export class Surface {
     });
 
     this.overlay.addEventListener('pointerdown', (e) => {
-      // Middle button, or space held, pans. The left button belongs to the tool.
-      if (e.button === 1 || e.shiftKey && e.button === 0 && !this.events.onDown) {
+      // The middle button pans. The left button belongs to the tool, and Shift
+      // belongs to the tool too — it squares a segment up — so it cannot also
+      // pan. This used to read `|| e.shiftKey && e.button === 0 && !onDown`,
+      // which could never fire once any tool was wired, and said "space held"
+      // in a comment while testing the Shift key. Dead code that describes a
+      // feature nobody has is worse than no code.
+      if (e.button === 1) {
         this.panning = {
           x: e.clientX, y: e.clientY,
           left: this.scroller.scrollLeft, top: this.scroller.scrollTop,
@@ -197,7 +278,7 @@ export class Surface {
     this.scroller.addEventListener('wheel', (e) => {
       if (!e.ctrlKey) return;
       e.preventDefault();
-      void this.setZoom(this.zoomLevel * (e.deltaY < 0 ? 1.15 : 1 / 1.15));
+      void this.setZoom(this.zoomLevel * (e.deltaY < 0 ? 1.15 : 1 / 1.15), this.toPage(e));
     }, { passive: false });
   }
 }

@@ -221,7 +221,7 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
 
 .help-sheet {
   position: fixed; inset: 0; z-index: 60; margin: auto; max-width: 560px; max-height: 78vh;
-  background: var(--paper); border: 1px solid var(--rule); border-radius: 8px;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius);
   display: flex; flex-direction: column;
 }
 .help-sheet header {
@@ -255,7 +255,17 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
 
 .plan-layout { display: grid; grid-template-columns: 1fr 320px; flex: 1; min-height: 0; }
 .surface { position: relative; overflow: hidden; background: var(--desk); }
-.surface-scroll { position: absolute; inset: 0; overflow: auto; }
+.surface-scroll {
+  position: absolute; inset: 0; overflow: auto;
+  /* Centres the sheet on both axes when it is smaller than the area, and still
+     scrolls when it is larger. `margin: auto` alone only centred it sideways,
+     so any slack fell below the drawing. */
+  /* `safe` matters: with plain `center`, content larger than the box overflows
+     equally in both directions and the top-left becomes unreachable — you zoom
+     in and cannot scroll back to the corner. `safe` falls back to start
+     alignment the moment it would overflow. */
+  display: grid; place-content: safe center;
+}
 .surface-stack { position: relative; margin: var(--gap-4) auto; }
 .surface-sheet {
   display: block; background: white;
@@ -264,11 +274,17 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
 }
 .surface-overlay { position: absolute; inset: 0; cursor: crosshair; touch-action: none; }
 
+/* `vector-effect: non-scaling-stroke` already means this width is read in
+   screen pixels, so it must NOT also be divided by the zoom. It used to be
+   `calc(var(--hair) * 2)` with `--hair` set to 1/zoom, which made the outline
+   2/zoom pixels wide — a hairline zoomed in and four pixels zoomed out, the
+   opposite of the intent written beside it. On a real drawing the trace was
+   wider than the walls it was being run along. */
 .surface-overlay .trace,
 .surface-overlay .draft-area,
-.surface-overlay .draft-line { stroke-width: calc(var(--hair, 1) * 2); vector-effect: non-scaling-stroke; }
+.surface-overlay .draft-line { stroke-width: 2; vector-effect: non-scaling-stroke; }
 .trace { fill-opacity: 0.14; }
-.trace.on { fill-opacity: 0.26; stroke-width: calc(var(--hair, 1) * 3); }
+.trace.on { fill-opacity: 0.26; stroke-width: 3; }
 polyline.trace { fill: none; }
 .draft-area { fill: var(--accent); fill-opacity: 0.14; stroke: var(--accent); stroke-dasharray: 6 4; }
 .draft-line { fill: none; stroke: var(--accent); stroke-dasharray: 6 4; }
@@ -341,11 +357,11 @@ polyline.trace { fill: none; }
 /* Minimum widths so a header never truncates and a select always shows its
    value. Below this the table scrolls inside its own area — which is the point:
    a torn-off sheet narrower than the columns still reaches every one of them. */
-.sheet { min-width: 844px; }
+.sheet { min-width: 1064px; }
 .sheet table { table-layout: fixed; }
-.sheet col.c-item     { width: 148px; }
+.sheet col.c-item     { width: 220px; }
 .sheet col.c-code     { width: 92px; }
-.sheet col.c-formula  { width: 118px; }
+.sheet col.c-formula  { width: 240px; }
 .sheet col.c-qty      { width: 66px; }
 .sheet col.c-unit     { width: 76px; }
 .sheet col.c-waste    { width: 58px; }
@@ -460,3 +476,8 @@ button.quiet:hover { border-color: var(--rule); }
 }
 .model-note { margin: 0; padding: 0 12px 10px; font-size: 12px; color: var(--ink-2, #5a5f66); }
 .model-note:empty { display: none; }
+
+/* A corner clicked past the edge of the paper. Not an error — a measurement
+   taken off the desk instead of the drawing, said out loud so it can be
+   checked. Paired with a word, never colour alone. */
+.condition-off-sheet { color: var(--warn, #8a5a1d); }

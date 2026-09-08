@@ -72,7 +72,7 @@ try {
   const named = await app.page.evaluate(() =>
     [...document.querySelectorAll('.condition-panel label span')].map((s) => s.textContent));
   check('the panel offers the properties a roofing detail asks for', () => {
-    for (const want of ['Height', 'Width', 'Thickness', 'Pitch', 'Sides', 'Stretch-out']) {
+    for (const want of ['Height', 'Width', 'Thickness', 'Pitch', 'Sides', 'Girth']) {
       assert.ok(named.includes(want), `no "${want}" — panel has ${named.join(', ')}`);
     }
   });

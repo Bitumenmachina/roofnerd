@@ -50,7 +50,9 @@ Set the scale first: click Scale, click two points a known distance apart, and t
 
 Area outlines a surface. Line runs along something. Count drops a marker on each one. Click to place points, press Enter or double-click to finish, Escape to throw it away, Backspace to take back a corner. Hold Shift to keep a segment square. Corners snap to corners already on the sheet, which is what stops a roof leaking area at every junction.
 
-One traced thing gives you square feet, linear feet and a count at the same time, because a parapet run is all three.`,
+One traced thing gives you square feet, linear feet and a count at the same time, because a parapet run is all three.
+
+Getting around a big sheet: scroll to move, hold Ctrl and scroll to zoom where the pointer is, or drag with the middle mouse button. The zoom buttons and Fit are at the right end of the toolbar. On a full-size drawing, zoom in before you trace — fitted to the window, one screen pixel can be half a foot of roof, and a click lands where the pixel is, not where you meant.`,
 
   'Estimate Sheet': `Every line here is one thing a condition consumes, grouped under the condition it comes off.
 

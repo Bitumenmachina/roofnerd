@@ -174,7 +174,7 @@ export class Tools {
 }
 
 const HINTS: Record<ToolName, string> = {
-  select: 'click a trace to select it',
+  select: 'click a trace to select it — scroll to move, Ctrl+scroll to zoom',
   area: 'click the corners of an area — Enter or double-click to close it',
   line: 'click along a run — Enter or double-click to end it',
   count: 'click each one',

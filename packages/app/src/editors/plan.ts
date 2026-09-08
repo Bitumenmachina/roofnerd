@@ -25,7 +25,7 @@ type Condition = {
   traces: Trace[]; properties: Record<string, number>; items: unknown[];
   color?: string; from?: string; hidden?: boolean;
 };
-type Page = { id: string; name: string; source?: string; pageNumber?: number; feetPerUnit?: number; scaleNote?: string };
+type Page = { id: string; name: string; source?: string; pageNumber?: number; feetPerUnit?: number; scaleNote?: string; width?: number; height?: number };
 
 let surface: Surface;
 let tools: Tools;
@@ -194,6 +194,15 @@ async function loadSource(page: Page): Promise<void> {
   loadedSource = page.source!;
   await surface.show(sheet);
   await surface.fit();
+
+  // Record how big the paper is, once, the first time it is opened. Nothing
+  // downstream could tell the drawing from the desk around it without this —
+  // a corner clicked past the edge measured the same as one on the roof.
+  if (page.width !== sheet.width || page.height !== sheet.height) {
+    const pages = ((at('/pages') as Page[]) ?? []).map((p) =>
+      (p.id === page.id ? { ...p, width: sheet.width, height: sheet.height } : p));
+    await set('/pages', pages);
+  }
 }
 
 // ── scale ──────────────────────────────────────────────────────────────────
@@ -349,6 +358,26 @@ function drawTraces(d: Doc): void {
 
 // ── the condition list ─────────────────────────────────────────────────────
 
+/**
+ * How many of a condition's corners were clicked past the edge of the paper.
+ *
+ * A page only counts once it knows its own size — a sheet still loading has no
+ * bounds to be outside of, and guessing would raise a warning on every open.
+ */
+function offSheet(c: Condition, pages: Page[]): number {
+  let stray = 0;
+  for (const t of c.traces ?? []) {
+    const page = pages.find((p) => p.id === t.pageId);
+    const w = page?.width;
+    const h = page?.height;
+    if (!w || !h) continue;
+    for (const p of t.points) {
+      if (p.x < 0 || p.y < 0 || p.x > w || p.y > h) stray += 1;
+    }
+  }
+  return stray;
+}
+
 function renderConditions(host: HTMLElement, d: Doc): void {
   host.replaceChildren();
 
@@ -392,6 +421,22 @@ function renderConditions(host: HTMLElement, d: Doc): void {
     parts.push(`${quantity(m.EA, 0)} EA`);
     measures.textContent = parts.join(' · ');
     if (m.LF === null && c.kind !== 'count') measures.title = PENDING_REASON;
+
+    // Corners clicked past the edge of the paper.
+    //
+    // The desk around a sheet is not the drawing, and area measured out there
+    // is measured off nothing — but the program used to take it, price it and
+    // save it without a word. On a full-size sheet that is easy to do and
+    // impossible to notice, because the whole drawing is a thumbnail until you
+    // zoom. It stays a measurement; it just stops being a silent one.
+    const stray = offSheet(c, pages);
+    if (stray > 0) {
+      const off = document.createElement('span');
+      off.className = 'condition-off-sheet';
+      off.textContent = `${stray === 1 ? '1 corner' : `${stray} corners`} off the sheet`;
+      off.title = 'Traced past the edge of the drawing. What is out there was measured off the desk, not off the roof.';
+      measures.append(document.createTextNode(' · '), off);
+    }
 
     // A4: a condition can be hidden on the sheet without being deleted — a busy
     // roof plan is unreadable with every trace on it at once.

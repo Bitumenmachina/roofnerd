@@ -19,13 +19,24 @@ type ConditionShape = {
 
 const GROUPS = ['Geometry', 'Metal'] as const;
 
-/** The four an estimator glances at. Shown whether or not they have a number yet. */
-const HEADLINE: readonly { key: keyof Measures; unit: string }[] = [
-  { key: 'SF', unit: 'SF' },
-  { key: 'LF', unit: 'LF' },
-  { key: 'EA', unit: 'EA' },
-  { key: 'SQ', unit: 'SQ' },
-];
+/**
+ * The measures an estimator glances at — but only the ones this kind of thing
+ * actually has.
+ *
+ * A run has no surface at any scale (D3), so printing "— SF" beside one says
+ * the number is missing when it is not missing, it does not exist. Worse, the
+ * dash carried the tooltip "this sheet has not been scaled yet", which tells
+ * the estimator a scale would produce a number. It never would. D42 said each
+ * kind shows the measures it actually has; the rail and the sheet did that and
+ * this panel did not.
+ */
+const headlineFor = (kind: 'area' | 'line' | 'count'): readonly { key: keyof Measures; unit: string }[] => {
+  if (kind === 'area') {
+    return [{ key: 'SF', unit: 'SF' }, { key: 'LF', unit: 'LF' }, { key: 'EA', unit: 'EA' }, { key: 'SQ', unit: 'SQ' }];
+  }
+  if (kind === 'line') return [{ key: 'LF', unit: 'LF' }, { key: 'EA', unit: 'EA' }];
+  return [{ key: 'EA', unit: 'EA' }];
+};
 
 export function renderConditionPanel(
   host: HTMLElement,
@@ -62,7 +73,7 @@ export function renderConditionPanel(
   const grid = document.createElement('div');
   grid.className = 'panel-measures';
 
-  for (const { key, unit } of HEADLINE) {
+  for (const { key, unit } of headlineFor(condition.kind)) {
     const cell = document.createElement('div');
 
     const label = document.createElement('div');

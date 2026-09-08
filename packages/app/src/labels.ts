@@ -28,7 +28,7 @@ export const PROPERTY_LABELS: Readonly<Record<string, { label: string; hint: str
   SUMP: { label: 'Sump width', hint: 'feet — the square cut down to the drain', group: 'Geometry' },
   BOARDS: { label: 'Boards', hint: 'how many the taper runs over', group: 'Geometry' },
   SIDES: { label: 'Sides', hint: 'how many', group: 'Geometry' },
-  STRETCHOUT: { label: 'Stretch-out', hint: 'inches — flat metal the profile eats', group: 'Metal' },
+  STRETCHOUT: { label: 'Girth', hint: 'inches — flat width of coil this profile eats', group: 'Metal' },
 };
 
 /**
@@ -59,7 +59,7 @@ export function propertyPhrase(name: string, value: number): string {
     case 'H': return `${value} ft high`;
     case 'W': return `${value} ft wide`;
     case 'T': return `${value} in thick`;
-    case 'STRETCHOUT': return `${value} in stretch-out`;
+    case 'STRETCHOUT': return `${value} in girth`;
     default: return `${PROPERTY_LABELS[name]?.label ?? name.toLowerCase()} ${value}`;
   }
 }

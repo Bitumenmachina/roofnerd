@@ -114,7 +114,7 @@ try {
     // What the specification requires to be readable: the four headline
     // measures by their trade names, the properties by theirs, and a property
     // written as a person would say it.
-    for (const word of ['Area', 'Run', 'Count', 'Squares', 'Pitch', 'Stretch-out', 'Height', 'sides']) {
+    for (const word of ['Area', 'Run', 'Count', 'Squares', 'Pitch', 'Girth', 'Height', 'sides']) {
       assert.ok(screen.includes(word), `expected to see "${word}"`);
     }
   });
