@@ -38,9 +38,11 @@ import {
   CRICKET_SLOPE_MULTIPLE, MIN_FLASHING_INCHES, SINGLE_LAYER_MAX_INCHES,
   buildUpInches, capInches, formatFeetInches, maxLengthToWidth, ridgeBetween, ridgeDisagreement,
   selfIntersects,
-  type CapReason, type Condition, type Page, type Point, type Properties, type Spot, type Trace,
+  type CapReason, type Condition, type Page, type Point, type Properties, type Spot,
 } from '@roofnerd/engine';
 import { at, doc, subscribe, type Doc } from '../doc.js';
+import { feet, feetPerUnit } from '../scale.js';
+import { ifcRoof, type IfcRoofView } from '../ifc/world.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
 import { stripField, type RailTool, type Reading as StripReading, type SurfaceChrome } from '../chrome.js';
 import { hueFor } from '../icons.js';
@@ -89,6 +91,15 @@ let stopObserving: (() => void) | null = null;
 let stopSubscribing: (() => void) | null = null;
 /** The canvas this view is drawn on, for turning world points into screen ones. */
 let surface: HTMLCanvasElement | null = null;
+/**
+ * The same roof, gone the long way round: written as IFC4 and read back through
+ * the toolkit. It stands beside the derived drawing rather than replacing it
+ * while it is new, so the two can be held against each other by eye — the
+ * derived one is the one the estimator has been reading for six sections, and
+ * the IFC one is what an architect's program will see when the file is handed
+ * over. When they agree, the second retires the first.
+ */
+let ifcView: IfcRoofView | null = null;
 
 /**
  * The projection, in one place.
@@ -232,7 +243,17 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
   // cursor, in the same region whatever the surface is showing. It used to be a
   // line of its own under this canvas, which meant the Plan had nowhere to put
   // the same four facts when it learns to compute them.
-  host.append(canvas, legend, note);
+  //
+  // The surface carries two roofs while the IFC one is new: the drawing this
+  // file derives, and beside it the same roof written out as IFC4 and read back
+  // through the toolkit. Both go in one stage, so the surface region still owns
+  // a single child that flexes.
+  ifcView = ifcRoof();
+  const stage = document.createElement('div');
+  stage.className = 'model-stage';
+  stage.append(canvas, ifcView.root);
+
+  host.append(stage, legend, note);
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -267,6 +288,9 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
    * answer is the right one: empty the view and say so, loudly, in the window.
    */
   const draw = () => {
+    // The IFC roof is stood up from the same document and is not downstream of
+    // the drawing below: a rebuild that throws must not take it with it.
+    ifcView?.show(doc());
     let built: Built;
     try {
       built = build(doc());
@@ -396,6 +420,8 @@ function unmount() {
   renderer?.dispose();
   renderer = null;
   surface = null;
+  ifcView?.dispose();
+  ifcView = null;
 }
 
 /**
@@ -422,21 +448,6 @@ function resize(canvas: HTMLCanvasElement) {
 // ── reading the job ────────────────────────────────────────────────────────
 
 const conditionsOf = (d: Doc): Condition[] => (at('/conditions', d) as Condition[]) ?? [];
-
-function feetPerUnit(d: Doc): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const p of ((at('/pages', d) as Page[]) ?? [])) {
-    if (p.feetPerUnit) out[p.id] = p.feetPerUnit;
-  }
-  return out;
-}
-
-/** A trace's points in feet. Empty when its sheet has no scale — never zero. */
-function feet(trace: Trace, scales: Record<string, number>): Point[] {
-  const s = scales[trace.pageId];
-  if (!s) return [];
-  return trace.points.map((p) => ({ x: p.x * s, y: p.y * s }));
-}
 
 /** Every drain on the roof, in feet. A drain is a point, not a condition. */
 /**
@@ -559,7 +570,7 @@ function build(d: Doc): Built {
   world.clear();
 
   const list = conditionsOf(d);
-  const scales = feetPerUnit(d);
+  const scales = feetPerUnit((at('/pages', d) as Page[]) ?? []);
   const drains = drainPoints(list, scales);
   const perimeter = perimeterInches(list);
 

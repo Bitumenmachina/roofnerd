@@ -48,7 +48,28 @@ ISC. Nothing copyleft in the shipped application.
 | `web-ifc` | 0.0.77 | MPL-2.0 (linked, never modified) | Reads and writes IFC4; `web-ifc.wasm` (single-thread build) self-hosted from the bundle — no SharedArrayBuffer on WebKitGTK, no fetch |
 | `camera-controls` | 3.1.2 | MIT | Peer of `@thatopen/components` |
 
-Not taken: `@thatopen/ui` (our chrome is ours); `web-ifc-mt.wasm` (needs cross-origin isolation the
+Not taken: `@thatopen/ui` (our chrome is ours); the multi-thread wasm (needs cross-origin isolation the
 webview does not give); xeokit (AGPL); Bonsai (GPL); ifc-lite (MPL, IFCX — watched, not used).
 Runtime rule unchanged: nothing is fetched; `connect-src 'self'`; the egress gate stays red on any fetch.
+
+**Self-hosted, and how (D142).** `packages/app/vite.config.ts` copies two files byte for byte out of
+the installed packages into `dist/runtime/` at build time — `web-ifc.wasm` from `web-ifc` and
+`worker.min.mjs` from `@thatopen/fragments`, renamed `fragments-worker.mjs`. Neither is modified;
+web-ifc is MPL-2.0 and is linked, never touched. `packages/app/src/ifc/local-files.ts` is the one
+place either path is written down, and the build reads the same file, so the path the program asks
+for and the path the build writes cannot drift. The build stops if the built program has stopped
+naming either of them. Both of the toolkit's own CDN paths are closed in
+`packages/app/src/ifc/world.ts`: `IfcLoader.setup({ autoSetWasm: false, wasm: { path, absolute } })`
+and `FragmentsManager.init(<local worker>)` rather than `FragmentsManager.getWorker()`.
+
+Two strings of the libraries' own remain in the built bundle — the unpkg addresses inside
+`autoSetWasm` and `getWorker`, neither of which this program calls. They are dead code that
+`connect-src 'self'` would refuse anyway; the runtime check lists every address the window actually
+fetched from, which is the claim that matters.
+
+**Attribution (D145).** `SimpleRenderer` paints a That Open Company wordmark into the viewport by
+default and the library asks that it be left on where it fits the design. It does not fit an
+estimator's roof — a third-party mark on a drawing that goes to an owner reads as that owner's
+consultant — so `showLogo` is off and the element is taken out of the page. The MIT notice travels
+with the package, and the attribution is this table.
 

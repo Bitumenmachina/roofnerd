@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "test": "tsc -p tsconfig.json --noEmit"
+    "test": "tsc -p tsconfig.json --noEmit && node --test \"test/**/*.test.mjs\""
   },
   "dependencies": {
     "@roofnerd/engine": "workspace:*",

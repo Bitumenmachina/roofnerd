@@ -1017,7 +1017,22 @@ button.quiet:hover { border-color: var(--rule); }
    under it in trade words, because a colour on its own means nothing to
    anybody who did not build the palette. */
 .model-editor { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.model-canvas { flex: 1; min-height: 0; width: 100%; display: block; background: var(--desk); }
+.model-canvas { flex: 1; min-height: 0; min-width: 0; width: 100%; display: block; background: var(--desk); }
+/* The roof twice: the one the engine derives, and the same roof written out as
+   an IFC model and read back through the toolkit that draws it. Side by side
+   while the second is new — a reader can hold one against the other, which is
+   the only way to find out whether the long way round arrives at the same
+   building. The pair becomes one view when it has. */
+.model-stage { flex: 1; display: flex; min-height: 0; min-width: 0; }
+.model-ifc {
+  flex: 1; min-width: 0; display: flex; flex-direction: column;
+  border-left: var(--hair, 1px) solid var(--line, #d6d8db);
+}
+.model-ifc-stage { flex: 1; min-height: 0; min-width: 0; position: relative; background: var(--desk); }
+.model-ifc-says {
+  margin: 0; padding: 6px 12px; font-size: 12px; color: var(--ink-2, #5a5f66);
+  border-top: var(--hair, 1px) solid var(--line, #d6d8db);
+}
 .model-legend {
   display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center;
   padding: 8px 12px; border-top: var(--hair, 1px) solid var(--line, #d6d8db);
