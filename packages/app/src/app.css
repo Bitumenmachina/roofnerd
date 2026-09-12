@@ -176,6 +176,19 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
   height: 28px; padding: 0 var(--gap-3);
   border-top: 1px solid var(--rule); background: var(--panel);
   font-size: var(--t-micro); color: var(--ink-soft);
+  /* The bar is sized by the WINDOW, never by what it is saying — and this is
+     the line that says so. `min-width: 0` on the message inside it is not
+     enough: a grid row asks its item how narrow it can be, and a flex box full
+     of unbreakable text answers with the width of that text. The body is a
+     grid, this bar is one of its three rows, and one export message seventy
+     characters long made the single column 1314 px in a 1100 px window. Every
+     row then stretched to it: the recap's last column, the buttons on the lens
+     header and this bar's own job path all went off the right edge, clipped by
+     `overflow: hidden` on the body — one CSS declaration away from a window
+     that looked cropped for no visible reason. Measured, both ways.
+     `overflow` here is the second half: an item that clips has an automatic
+     minimum size of zero, which is what stops the question being asked at all. */
+  min-width: 0; overflow: hidden;
 }
 /* The facts are the fixed part of the bar: they never wrap and never give way.
    What gives way is the message beside them, which can be a path seventy
@@ -194,7 +207,18 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
   flex: 1 1 auto; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.status-path { margin-left: auto; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 45%; }
+/* The job path, and which end of it survives. The front of a path is the
+   machine and the back of it is the job, so the last folder is the part that is
+   always on screen and everything before it is what gives way. Two elements
+   rather than a bidi trick: `direction: rtl` moves the ellipsis to the left but
+   reorders the leading slash to the far end, and a path that reads
+   "home/BuildOs/projects/" is worse than one that is short. */
+.status-path {
+  margin-left: auto; color: var(--ink-faint);
+  display: flex; min-width: 0; max-width: 45%; overflow: hidden;
+}
+.path-head { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.path-tail { flex: none; white-space: nowrap; }
 
 /* The scale badge sits on the drawing, bottom-left, where an estimator looks
    to check what they are measuring against. */

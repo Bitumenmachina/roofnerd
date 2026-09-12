@@ -186,6 +186,14 @@ export function statusBar(): {
 
   const path = document.createElement('span');
   path.className = 'status-path';
+  // Two parts, because only one of them can be given up. The last folder of a
+  // job's path is the job; everything in front of it is the machine it happens
+  // to be on. So the tail holds its ground and the head is what shortens.
+  const pathHead = document.createElement('span');
+  pathHead.className = 'path-head';
+  const pathTail = document.createElement('span');
+  pathTail.className = 'path-tail';
+  path.append(pathHead, pathTail);
 
   const held: StatusFacts & Record<string, string | undefined> = {};
 
@@ -193,7 +201,12 @@ export function statusBar(): {
 
   return {
     root,
-    setPath: (p) => { path.textContent = p; path.title = p; },
+    setPath: (p) => {
+      const cut = p.lastIndexOf('/');
+      pathHead.textContent = cut > 0 ? p.slice(0, cut) : '';
+      pathTail.textContent = cut > 0 ? p.slice(cut) : p;
+      path.title = p;
+    },
     // The whole of it on hover, the way the path beside it already does: a
     // message that names a file is longer than the bar and the estimator still
     // has to be able to read where the file went.
