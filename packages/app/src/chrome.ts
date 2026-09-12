@@ -141,6 +141,21 @@ export function menu(label: string, items: readonly MenuItem[]): HTMLElement {
   return wrap;
 }
 
+/**
+ * What an editor dispatches when it has something for the status bar.
+ *
+ * An editor does not hold the status bar — the window does, and a torn-off
+ * editor has its own. So the editor says it where it stands and lets the
+ * message rise to whichever window it is in, which is the same way the tree
+ * tells the window it changed (`tree:changed`).
+ */
+export const STATUS_SAID = 'status:said';
+
+/** Say something in the status bar of whatever window this element is in. */
+export function sayInStatus(from: HTMLElement, text: string): void {
+  from.dispatchEvent(new CustomEvent<string>(STATUS_SAID, { bubbles: true, detail: text }));
+}
+
 export interface StatusFacts {
   readonly job?: string;
   readonly scenario?: string;
@@ -179,7 +194,10 @@ export function statusBar(): {
   return {
     root,
     setPath: (p) => { path.textContent = p; path.title = p; },
-    say: (text) => { message.textContent = text; },
+    // The whole of it on hover, the way the path beside it already does: a
+    // message that names a file is longer than the bar and the estimator still
+    // has to be able to read where the file went.
+    say: (text) => { message.textContent = text; message.title = text; },
     setFacts: (f) => {
       // Merged, not replaced: saying "Saved" must not blank the job's name.
       Object.assign(held, f);

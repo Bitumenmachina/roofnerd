@@ -11,9 +11,10 @@
 
 import {
   LENSES, conceals, lensById, priceJob, totalSquaresOf, recap as recapOf,
-  type Lens,
+  type Lens, type LensColumn,
 } from '@roofnerd/engine';
-import { at, doc, subscribe, type Doc } from '../doc.js';
+import { at, doc, subscribe, writeExport, type Doc } from '../doc.js';
+import { sayInStatus } from '../chrome.js';
 
 let current = LENSES[0]!.id;
 let stopSubscribing: (() => void) | null = null;
@@ -82,11 +83,38 @@ function drawLens(host: HTMLElement, d: Doc): void {
     head.append(note);
   }
 
+  // Two ways out of a lens, side by side: onto the clipboard for a message, or
+  // into the job's own folder as a file to attach. The text is the same text.
+  const actions = document.createElement('div');
+  actions.className = 'lens-actions';
+
   const download = document.createElement('button');
   download.type = 'button';
   download.className = 'lens-export';
   download.textContent = 'Copy as CSV';
-  head.append(download);
+
+  const write = document.createElement('button');
+  write.type = 'button';
+  // Its own name alongside the shared look, so the check can put its hand on
+  // this button rather than on whichever one happens to read 'Export CSV'
+  // — and then read the word off it.
+  write.className = 'lens-export lens-write';
+  write.textContent = 'Export CSV';
+  // Nothing open, nothing to write. The shell refuses it as well; this is so
+  // the button never looks like it would work.
+  write.disabled = !jobIsOpen(d);
+
+  actions.append(download, write);
+  head.append(actions);
+
+  // Where the reason goes when nothing could be written: in the window, beside
+  // the button that was pressed. Never a browser dialog — this webview does not
+  // implement one — and never silence.
+  const trouble = document.createElement('p');
+  trouble.className = 'lens-trouble';
+  trouble.hidden = true;
+  head.append(trouble);
+
   host.append(head);
 
   perSquareOver = null;
@@ -98,11 +126,7 @@ function drawLens(host: HTMLElement, d: Doc): void {
   const hr = document.createElement('tr');
   for (const c of lens.columns) {
     const th = document.createElement('th');
-    // The divisor goes in the heading of the column it made, where it cannot be
-    // read apart from the rate.
-    th.textContent = c.key === 'perSquare' && perSquareOver
-      ? `${c.heading} · over ${perSquareOver.toFixed(2)} SQ`
-      : c.heading;
+    th.textContent = headingOf(c);
     if (c.numeric) th.className = 'num';
     hr.append(th);
   }
@@ -140,15 +164,91 @@ function drawLens(host: HTMLElement, d: Doc): void {
     host.append(note);
   }
 
+  // Built once, from the rows the table above was drawn from. The clipboard and
+  // the file cannot disagree because there is nothing for them to disagree about.
+  const csv = csvFor(lens, rows, left);
+
   download.addEventListener('click', () => {
-    const csv = [
-      lens.columns.map((c) => c.heading).join(','),
-      ...rows.map((r) => lens.columns.map((c) => quote(r[c.key] ?? '')).join(',')),
-    ].join('\n');
     void navigator.clipboard?.writeText(csv);
     download.textContent = 'Copied';
     setTimeout(() => { download.textContent = 'Copy as CSV'; }, 1500);
   });
+
+  write.addEventListener('click', () => {
+    trouble.hidden = true;
+    trouble.textContent = '';
+    // A text file ends in a newline; a paste does not want one. Same text.
+    writeExport(`${lens.id}-${today()}.csv`, `${csv}\n`).then(
+      (path) => {
+        sayInStatus(host, `Exported to ${path}`);
+        write.textContent = 'Exported';
+        setTimeout(() => { write.textContent = 'Export CSV'; }, 1500);
+      },
+      (e: unknown) => {
+        const why = typeof e === 'string' ? e : e instanceof Error ? e.message : String(e);
+        trouble.textContent = `Nothing was written: ${why}`;
+        trouble.hidden = false;
+      },
+    );
+  });
+}
+
+/** Is a job open at all? Its name answers it, the way the window chrome asks. */
+const jobIsOpen = (d: Doc): boolean => {
+  const name = at('/job/name', d);
+  return typeof name === 'string' && name.length > 0;
+};
+
+/**
+ * A column's heading, with the divisor on the rate column.
+ *
+ * The divisor goes in the heading of the column it made, where it cannot be
+ * read apart from the rate — on the screen and in the file both, because the
+ * file is the copy that leaves the office.
+ */
+const headingOf = (c: LensColumn): string =>
+  c.key === 'perSquare' && perSquareOver
+    ? `${c.heading} · over ${perSquareOver.toFixed(2)} SQ`
+    : c.heading;
+
+/**
+ * A lens as CSV — one builder, two destinations.
+ *
+ * The clipboard and the file come through here together. Two builders is how a
+ * pasted table and an attached sheet end up a column apart, and nobody finds
+ * out until the one that went out was the wrong one.
+ *
+ * What the total left out travels with the total. A sheet that printed the
+ * number and not the footnote under it would be the silent zero at the one
+ * place it matters most: after it has left the building. Padded to the table's
+ * width so the file is still a rectangle anything can read.
+ */
+function csvFor(lens: Lens, rows: Row[], left: readonly string[]): string {
+  const width = lens.columns.length;
+  const line = (cells: readonly string[]) =>
+    Array.from({ length: width }, (_, i) => quote(cells[i] ?? '')).join(',');
+
+  const out = [
+    line(lens.columns.map(headingOf)),
+    ...rows.map((r) => line(lens.columns.map((c) => r[c.key] ?? ''))),
+  ];
+  if (left.length > 0) {
+    out.push(line([]), line([`Not in this total (${left.length})`]));
+    for (const p of left) out.push(line([p]));
+  }
+  return out.join('\n');
+}
+
+/**
+ * Today, on the calendar of whoever is sitting here.
+ *
+ * Not the ISO string off a Date: that is UTC, and a sheet exported at eight in
+ * the evening on this coast would be named after tomorrow.
+ */
+function today(): string {
+  const now = new Date();
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
 }
 
 /**

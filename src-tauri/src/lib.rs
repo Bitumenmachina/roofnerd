@@ -208,6 +208,66 @@ fn read_page_source(state: State<'_, Document>, relative: String) -> Result<Vec<
     fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))
 }
 
+/// Write a sheet the estimator asked for into the open job's own folder.
+///
+/// The same confinement `read_page_source` reads under, one direction along:
+/// canonicalize, then `starts_with(root)`. Two differences, both deliberate.
+///
+/// The root here is the job's `exports` folder rather than the job folder, so
+/// `../sheet.csv` is refused instead of quietly landing on `conditions.json`.
+/// A sheet goes where sheets go.
+///
+/// And the file does not exist yet, so there is nothing to canonicalize. The
+/// PARENT is canonicalized — which exists, because `exports` is made first —
+/// and the name is taken off the end. A name is not a place: anything with a
+/// folder in it, absolute or climbing, resolves to a parent that is not this
+/// one and is refused. A name that is already a link is refused outright: a
+/// sheet is a file, and following a link is how a write lands off the job.
+fn write_export(folder: Option<&Path>, relative: &str, text: &str) -> Result<String, String> {
+    let folder = folder.ok_or("no job is open")?;
+    let root = fs::canonicalize(folder).map_err(|e| format!("{}: {e}", folder.display()))?;
+
+    let exports = root.join("exports");
+    fs::create_dir_all(&exports).map_err(|e| format!("{}: {e}", exports.display()))?;
+    let exports = fs::canonicalize(&exports).map_err(|e| format!("{}: {e}", exports.display()))?;
+    if !exports.starts_with(&root) {
+        return Err("this job's exports folder is outside the job".to_string());
+    }
+
+    let asked = exports.join(relative);
+    let parent = asked
+        .parent()
+        .ok_or_else(|| format!("{relative} does not name a sheet"))?;
+    let parent = fs::canonicalize(parent).map_err(|e| format!("{relative}: {e}"))?;
+    if !parent.starts_with(&exports) {
+        return Err(format!("{relative} is outside this job"));
+    }
+
+    let name = asked
+        .file_name()
+        .ok_or_else(|| format!("{relative} does not name a sheet"))?;
+    let path = parent.join(name);
+    // A name that is a link is a name that points somewhere else, and where it
+    // points is not this program's to follow — least of all when it points
+    // nowhere yet, which is the case `canonicalize` cannot answer and a plain
+    // write would happily create on the other side. A sheet is a file.
+    if fs::symlink_metadata(&path).is_ok_and(|m| m.file_type().is_symlink()) {
+        return Err(format!("{relative} is a link out of this job, not a sheet in it"));
+    }
+
+    fs::write(&path, text).map_err(|e| format!("{}: {e}", path.display()))?;
+    Ok(path.display().to_string())
+}
+
+#[tauri::command]
+fn export_write(state: State<'_, Document>, relative: String, text: String) -> Result<String, String> {
+    let folder = {
+        let guard = state.0.lock().map_err(|_| "the document lock is poisoned".to_string())?;
+        guard.folder.clone()
+    };
+    write_export(folder.as_deref(), &relative, &text)
+}
+
 /// Tear an editor off into its own window, which can go to the other monitor.
 ///
 /// Every window loads the same page and reads which editor it is from its own
@@ -271,6 +331,7 @@ pub fn run() {
             doc_save,
             add_page_source,
             read_page_source,
+            export_write,
             open_editor
         ])
         .run(tauri::generate_context!())
@@ -363,5 +424,90 @@ mod tests {
     fn a_pointer_at_nothing_is_refused_rather_than_created() {
         let mut doc = read_folder(&demo()).unwrap();
         assert!(doc.pointer_mut("/conditions/0/properties/nonsense").is_none());
+    }
+
+    // ── writing a sheet out ────────────────────────────────────────────────
+    // Every figure in these is made up. The demo job in the repository is never
+    // written into by a test: a job folder a test can write to is a job folder
+    // a test made, in the temporary directory, and thrown away by the next run.
+
+    /// An empty job folder to write into, in a scratch place.
+    fn somewhere_to_write(what: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("roofnerd-export-{what}"));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("a temporary folder");
+        dir
+    }
+
+    #[test]
+    fn a_sheet_lands_in_the_exports_folder_and_reads_back_unchanged() {
+        let job = somewhere_to_write("lands");
+        let sheet = "Item,Order,Unit\nCoping,4.50,LF\nCleat,9.00,LF\n";
+        let path = write_export(Some(&job), "stocking-2026-01-02.csv", sheet).unwrap();
+
+        assert!(
+            path.ends_with("exports/stocking-2026-01-02.csv"),
+            "it landed at {path}"
+        );
+        assert_eq!(fs::read_to_string(&path).unwrap(), sheet, "the bytes changed on the way");
+    }
+
+    #[test]
+    fn writing_the_same_sheet_twice_leaves_one_file() {
+        let job = somewhere_to_write("twice");
+        write_export(Some(&job), "recap-2026-01-02.csv", "Class,Cost\nMaterial,1.00\n").unwrap();
+        let path = write_export(Some(&job), "recap-2026-01-02.csv", "Class,Cost\nMaterial,2.00\n").unwrap();
+
+        let names: Vec<String> = fs::read_dir(job.join("exports"))
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().to_string())
+            .collect();
+        assert_eq!(names, vec!["recap-2026-01-02.csv"], "the second one made a second file");
+        assert!(fs::read_to_string(&path).unwrap().contains("2.00"), "the second one did not take");
+    }
+
+    #[test]
+    fn a_name_that_climbs_out_of_the_exports_folder_is_refused() {
+        let job = somewhere_to_write("climbs");
+        let refused = write_export(Some(&job), "../sheet.csv", "Class,Cost\n");
+        assert!(refused.is_err(), "it wrote to {refused:?}");
+        assert!(!job.join("sheet.csv").exists(), "it landed in the job folder anyway");
+    }
+
+    #[test]
+    fn a_name_that_is_a_place_of_its_own_is_refused() {
+        let job = somewhere_to_write("absolute");
+        let out = std::env::temp_dir().join("roofnerd-export-must-not-appear.csv");
+        let _ = fs::remove_file(&out);
+
+        let refused = write_export(Some(&job), out.to_str().unwrap(), "Class,Cost\n");
+        assert!(refused.is_err(), "it wrote to {refused:?}");
+        assert!(!out.exists(), "it wrote outside the job");
+        assert!(write_export(Some(&job), "/etc/roofnerd-export.csv", "x").is_err());
+    }
+
+    /// A name already standing as a link is refused on being a link, not on
+    /// where it leads — which is the only answer that also holds when it leads
+    /// nowhere yet and a write would have created the far end.
+    #[cfg(unix)]
+    #[test]
+    fn a_name_that_is_a_link_out_of_the_job_is_refused() {
+        let job = somewhere_to_write("link");
+        let out = std::env::temp_dir().join("roofnerd-export-link-target.csv");
+        let _ = fs::remove_file(&out);
+        fs::create_dir_all(job.join("exports")).unwrap();
+        std::os::unix::fs::symlink(&out, job.join("exports/recap-2026-01-02.csv")).unwrap();
+
+        let refused = write_export(Some(&job), "recap-2026-01-02.csv", "Class,Cost\n");
+        assert!(refused.is_err(), "it wrote to {refused:?}");
+        assert!(!out.exists(), "it followed the link and wrote off the job");
+    }
+
+    #[test]
+    fn with_no_job_open_there_is_nowhere_to_write() {
+        assert_eq!(
+            write_export(None, "recap-2026-01-02.csv", "Class,Cost\n"),
+            Err("no job is open".to_string())
+        );
     }
 }

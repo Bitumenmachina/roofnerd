@@ -34,6 +34,14 @@ jobs/*/pages/*.jpeg
 jobs/*/pages/*.webp
 !jobs/demo-job/pages/roof-plan.pdf
 
+# Sheets the program writes out land in the job's own exports folder. The same
+# reasoning as the drawings above, one step worse: the demo job is IN this
+# repository, and an export carries the figures themselves — quantities, unit
+# prices, a total. The folder is tracked so it is always there to write into;
+# nothing that lands in it ever is.
+jobs/*/exports/*
+!jobs/*/exports/.gitkeep
+
 
 # Agents build in throwaway clones here; never tracked, never seen by commitStamp().
 .scratch/

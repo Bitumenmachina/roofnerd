@@ -180,7 +180,10 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
 .status-field { display: inline-flex; gap: 5px; align-items: baseline; }
 .status-field .k { color: var(--ink-faint); }
 .status-sep { color: var(--rule); }
-.status-message { color: var(--ink-soft); }
+.status-message {
+  color: var(--ink-soft); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .status-path { margin-left: auto; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 45%; }
 
 /* The scale badge sits on the drawing, bottom-left, where an estimator looks
@@ -639,7 +642,21 @@ button.quiet:hover { border-color: var(--rule); }
 .lens-pending { margin-top: 1rem; padding: 0.6rem 0.8rem; border-left: 3px solid var(--warn, #b45309); background: var(--surface-2, rgba(180, 83, 9, 0.06)); font-size: var(--t-small); }
 .lens-pending ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
 .lens-pending li { margin: 0.15rem 0; }
-.lens-export { margin-left: auto; }
+/* Both ways out of a lens, together at the right of the header. The pair is
+   what carries the margin now — on the button it pushed the second one away
+   from the first. */
+.lens-actions { margin-left: auto; display: flex; align-items: baseline; gap: 8px; }
+.lens-export:disabled { color: var(--ink-faint); border-color: var(--rule-soft); cursor: default; }
+.lens-export:disabled:hover { border-color: var(--rule-soft); }
+
+/* Why nothing was written. Same look as the footnote under a total — this is
+   something to read, not an alarm — and on its own line under the header so a
+   long path does not squeeze the buttons. */
+.lens-trouble {
+  flex-basis: 100%; margin: 0; padding: 0.4rem 0.6rem;
+  border-left: 3px solid var(--warn, #b45309); background: var(--surface-2, rgba(180, 83, 9, 0.06));
+  font-size: var(--t-small);
+}
 .lens-sheet table { border-collapse: collapse; width: 100%; font-size: var(--t-small); }
 .lens-sheet th, .lens-sheet td {
   text-align: left; padding: 4px 8px; border-bottom: var(--hair, 1px) solid var(--line, #eceef0);

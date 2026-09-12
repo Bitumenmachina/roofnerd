@@ -61,6 +61,14 @@ export const demoFolder = () => invoke<string | null>('demo_folder');
  */
 export const addPage = (source: string) => invoke<string>('add_page_source', { source });
 
+/**
+ * Write a sheet the estimator asked for into the open job's own folder, and get
+ * back where it landed. The shell will not write anywhere else — it takes a
+ * name, never a place, and refuses a name that would climb out.
+ */
+export const writeExport = (relative: string, text: string) =>
+  invoke<string>('export_write', { relative, text });
+
 /** Read a drawing back out of the job folder. */
 export async function pageBytes(relative: string): Promise<ArrayBuffer> {
   const bytes = await invoke<number[]>('read_page_source', { relative });

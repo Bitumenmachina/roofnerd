@@ -5,7 +5,7 @@
 
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { at, connect, demoFolder, folder, open, pickFolder, save, subscribe, tearOff, type Doc } from './doc.js';
-import { area, menu, startScreen, statusBar } from './chrome.js';
+import { area, menu, startScreen, statusBar, STATUS_SAID } from './chrome.js';
 import { HELP } from './help.js';
 import { openByDefault, renderTree } from './tree.js';
 import { select, watchSelection } from './selection.js';
@@ -65,6 +65,11 @@ if (detached) {
 
 const status = statusBar();
 statusHost.replaceWith(status.root);
+
+// An editor that has something to report says it where it stands and it rises
+// to here. This window owns its status bar; the editor in it does not, and a
+// torn-off editor is in a different window with a different one.
+document.addEventListener(STATUS_SAID, (e) => status.say((e as CustomEvent<string>).detail));
 
 // ── the area, with its own tear-off ────────────────────────────────────────
 const { root: areaRoot, body: areaBody } = area({
