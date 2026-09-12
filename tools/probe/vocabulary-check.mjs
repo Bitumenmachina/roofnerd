@@ -95,7 +95,8 @@ const { session } = app;
 try {
   await openDemoJob(session);
   await wait(1200);
-  await session.execute(() => document.querySelector('.plan-rail .condition')?.click());
+  await showTab(session, 'Condition');
+  await session.execute(() => document.querySelector('.cost-condition .condition-list .condition')?.click());
   await wait(800);
 
   // Every surface a person can reach, not one of them: the Plan with a

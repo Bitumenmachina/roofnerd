@@ -147,10 +147,26 @@ const sheetNow = (session) => session.execute(function () {
 const windowNow = (session) => session.execute(function () {
   const bar = document.querySelector('.status-strip');
   if (!bar) return null;
-  const facts = bar.querySelector('.status-facts');
+  // The four facts left the status bar for the regions they belong to: the job
+  // is the document bar's, the price set is the Estimate tab's header, and the
+  // scale and the units are in the tool settings strip. Each one is still read,
+  // at its own region, and each region is still asked whether it is one line.
+  const facts = bar.querySelector('.readout');
   const path = bar.querySelector('.status-path');
   const message = bar.querySelector('.status-message');
   const sheet = document.querySelector('.lens-sheet');
+  const panel = document.querySelector('.cost-panel');
+  const regions = {};
+  for (const pair of [['doc', '.doc-bar'], ['strip', '.tool-strip'], ['status', '.status-strip']]) {
+    const el = document.querySelector(pair[1]);
+    regions[pair[0]] = !el ? null : {
+      height: Math.round(el.getBoundingClientRect().height),
+      content: el.scrollWidth,
+      room: el.clientWidth,
+      right: Math.round(el.getBoundingClientRect().right),
+      text: (el.innerText || '').replace(/\s+/g, ' ').trim(),
+    };
+  }
   const headings = [...document.querySelectorAll('.lens-sheet thead th')];
   const right = function (el) { return el ? Math.round(el.getBoundingClientRect().right) : null; };
   return JSON.stringify({

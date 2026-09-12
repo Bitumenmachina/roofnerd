@@ -16,7 +16,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import {
-  detachCostPanel, launch, scratchJob, tool, until, wait, commitStamp,
+  detachCostPanel, launch, scratchJob, showTab, tool, until, wait, commitStamp,
 } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
@@ -77,11 +77,14 @@ try {
   // been traced is the list where conditions live, and what the sheet is
   // scaled at is in the tool settings strip, because it is what decides
   // whether a measurement exists at all. Not one of them is asserted less.
+  // Conditions live in the cost panel's Condition tab (D148). The surface is
+  // the drawing; what has been traced off it is read where it is listed.
+  await showTab(session, 'Condition');
   const opened = await session.execute(function () {
     return JSON.stringify({
       job: (document.querySelector('.doc-job') || {}).textContent || '',
       start: !!document.querySelector('.start'),
-      conditions: document.querySelectorAll('.plan-rail .condition').length,
+      conditions: document.querySelectorAll('.cost-condition .condition-list .condition').length,
       strip: (document.querySelector('.tool-strip') || {}).innerText || '',
       area: (document.querySelector('.roof-area') || {}).innerText || '',
     });
@@ -108,7 +111,7 @@ try {
 
   const plan = await session.execute(function () {
     return JSON.stringify({
-      conditions: document.querySelectorAll('.plan-rail .condition').length,
+      conditions: document.querySelectorAll('.cost-condition .condition-list .condition').length,
       badge: (document.querySelector('.scale-badge') || {}).textContent || '',
       measures: [...document.querySelectorAll('.condition-measures')].map((e) => e.textContent),
     });
@@ -193,7 +196,11 @@ try {
   const second = after.find((h) => !before.includes(h));
   if (second) {
     await session.switchTo(second);
-    await until(session, () => document.querySelector('#editor')?.children.length > 0, { what: 'the sheet' });
+    // The detached window IS the panel: there is no surface in it, so there is
+    // no `#editor` for its children to arrive in. What tells you it is up is
+    // the thing it exists to show.
+    await until(session, () => !!document.querySelector('.cost-panel.detached .cost-totals'),
+      { what: 'the detached cost panel' });
     await wait(900);
     const sheet = await session.execute(function () {
       return JSON.stringify({

@@ -117,13 +117,16 @@ try {
   await wait(1400);
 
   await session.switchTo(before[0]);
-  const heard = await session.execute(() => {
-    const row = [...document.querySelectorAll('.plan-rail .condition')]
-      .find((r) => /Parapet/.test(r.textContent || ''));
-    return row ? (row.innerText || '').replace(/\s+/g, ' ') : '';
-  });
+  // The window that kept the drawing has no list in it any more (D148), so what
+  // it is asked is what it holds: the job, as this window has it. One document,
+  // two windows, and the second one heard.
+  const heard = await session.execute(() =>
+    window.__TAURI_INTERNALS__.invoke('doc_get').then((d) => {
+      const c = (d.conditions || []).find((x) => /Parapet/.test(x.name || ''));
+      return String((c && c.properties ? c.properties.H : '') ?? '');
+    }));
   check('and the roof in the other window follows it', () =>
-    assert.match(heard, /7 ft high/, `the condition reads "${heard}"`));
+    assert.equal(heard, '7', `the other window holds a height of "${heard}"`));
 
   // Put it back, so nothing after this reads a job this check moved.
   await session.switchTo(second);

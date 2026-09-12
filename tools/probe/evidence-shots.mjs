@@ -67,12 +67,12 @@ try {
   await wait(400);
 
   // The Condition tab, with a condition selected.
+  await showTab(session, 'Condition');
   await session.execute(function () {
-    const first = document.querySelector('.plan-rail .condition');
+    const first = document.querySelector('.cost-condition .condition-list .condition');
     if (first) first.click();
   });
-  await wait(500);
-  await showTab(session, 'Condition');
+  await wait(700);
   await shot('condition-panel');
 
   // A help sheet, open. The third screen with no picture: nothing in the suite

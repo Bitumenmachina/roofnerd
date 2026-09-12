@@ -52,13 +52,13 @@ try {
   // ── the condition panel ─────────────────────────────────────────────────
   // It is the cost panel's Condition tab now, beside the drawing rather than
   // in an editor of its own. Same panel, same fields, same claim.
+  await showTab(session, 'Condition');
   await session.execute(function () {
-    const row = [...document.querySelectorAll('.plan-rail .condition')]
+    const row = [...document.querySelectorAll('.cost-condition .condition-list .condition')]
       .find(function (e) { return /Parapet Wall Flashing/.test(e.textContent || ''); });
     if (row) row.click();
   });
   await wait(800);
-  await showTab(session, 'Condition');
 
   // What the job says the parapet is, so the checks below compare the window
   // against the document rather than against a number typed into this file. A

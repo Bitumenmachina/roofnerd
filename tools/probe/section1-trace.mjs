@@ -16,7 +16,10 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { clickAt, errorsSoFar, launch, openDemoJob, tool, typeScale, until, wait, watchErrors, commitStamp } from './tauri-harness.mjs';
+import {
+  clickAt, errorsSoFar, launch, openDemoJob, showTab, tool, typeScale, until, wait,
+  watchErrors, commitStamp,
+} from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -116,8 +119,11 @@ try {
     }
   });
 
+  // What each traced thing measures is read where it is listed: the cost
+  // panel's Condition tab (D148). The surface is the drawing.
+  await showTab(session, 'Condition');
   const rows = JSON.parse(await session.execute(function () {
-    return JSON.stringify([...document.querySelectorAll('.condition')].map(function (el) {
+    return JSON.stringify([...document.querySelectorAll('.cost-condition .condition-list .condition')].map(function (el) {
       return (el.innerText || '').replace(/\s+/g, ' ');
     }));
   }));

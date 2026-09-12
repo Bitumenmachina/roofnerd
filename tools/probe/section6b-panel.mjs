@@ -97,8 +97,10 @@ const panelNow = (session) => session.execute(function () {
     overlaps: panelBox && surfaceBox ? Math.round(Math.max(0, surfaceBox.right - panelBox.left)) : null,
     surfaceWidth: surfaceBox ? Math.round(surfaceBox.width) : null,
     totals: ((document.querySelector('.cost-totals') || {}).innerText || '').replace(/\s+/g, ' ').trim(),
-    railRows: document.querySelectorAll('.plan-rail .condition-list .condition').length,
     tabRows: document.querySelectorAll('.cost-condition .condition-list .condition').length,
+    // The surface is the drawing (D148). A list inside it would be the same
+    // list twice, which is what this row exists to catch.
+    listInSurface: document.querySelectorAll('.surface-region .condition').length,
   };
   if (!el) return JSON.stringify(Object.assign({ count: 0 }, shape));
   const measure = {};
@@ -208,18 +210,19 @@ try {
     assert.ok(fresh.surfaceWidth > 400,
       `the surface is left with ${fresh.surfaceWidth}px`);
   });
-  check('the conditions are listed in both places they live, and nowhere else', () => {
-    // D132: no tree. The Plan keeps its list beside the drawing and the
-    // Condition tab has the same list over the properties — one renderer, two
-    // places a person looks.
-    assert.ok(fresh.railRows >= 3, `the Plan's list shows ${fresh.railRows} rows`);
-    assert.equal(fresh.tabRows, fresh.railRows,
-      `the Condition tab lists ${fresh.tabRows} and the Plan lists ${fresh.railRows}`);
+  check('the conditions are listed where they live, and nowhere else', () => {
+    // D132 took the tree away and D148 took the copy beside the drawing away
+    // with it: the Condition tab is where conditions are, and the surface is
+    // the drawing. Both halves — they are listed, and they are not listed
+    // twice.
+    assert.ok(fresh.tabRows >= 3, `the Condition tab lists ${fresh.tabRows} rows`);
+    assert.equal(fresh.listInSurface, 0,
+      `${fresh.listInSurface} conditions are listed inside the surface as well`);
   });
 
-  // ── pick one, on the Plan, the way a person does ────────────────────────
+  // ── pick one, the way a person does ─────────────────────────────────────
   const picked = await session.execute(function () {
-    const row = [...document.querySelectorAll('.plan-rail .condition-list .condition')]
+    const row = [...document.querySelectorAll('.cost-condition .condition-list .condition')]
       .find(function (r) { return (r.textContent || '').indexOf('Parapet') >= 0; });
     if (!row) return null;
     row.click();
@@ -227,8 +230,8 @@ try {
   });
   await wait(900);
   const onPlan = JSON.parse(await panelNow(session));
-  check('picking a condition on the Plan fills the panel', () => {
-    assert.ok(picked, 'the Plan lists no parapet to pick');
+  check('picking a condition fills the panel', () => {
+    assert.ok(picked, 'the Condition tab lists no parapet to pick');
     assert.ok(onPlan.name && onPlan.name.length > 0, 'the panel names nothing');
     assert.match(onPlan.measure?.['Run'] ?? '', /\d/, `its run reads "${onPlan.measure?.['Run']}"`);
     assert.match(onPlan.cost ?? '', /\$|nothing priced/,

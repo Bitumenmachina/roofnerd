@@ -123,10 +123,15 @@ try {
   // ── the first-open frame: chrome present, and quiet ─────────────────────
   const cold = JSON.parse(await regionsNow(session));
   check('the window is the handoff\'s frame — 1440 by 900', () => {
-    assert.ok(Math.abs(cold.innerWidth - 1440) <= 4,
-      `it is ${cold.innerWidth}px wide and is specified at 1440 (D137)`);
-    assert.ok(Math.abs(cold.innerHeight - 900) <= 40,
-      `it is ${cold.innerHeight}px tall and is specified at 900 — window decoration takes some`);
+    // Measured INSIDE. Every region below is specified against the page, so the
+    // page is what has to be 1440 x 900 — and this desktop takes the title bar
+    // out of the inside of what the shell asks for, which is why the shell is
+    // told the shortfall and gives it back. Exact on purpose: a tolerance wide
+    // enough to swallow a title bar cannot see the thing it exists to see.
+    assert.ok(Math.abs(cold.innerWidth - 1440) <= 2,
+      `the page is ${cold.innerWidth}px wide and is specified at 1440 (D137)`);
+    assert.ok(Math.abs(cold.innerHeight - 900) <= 2,
+      `the page is ${cold.innerHeight}px tall and is specified at 900 (D137)`);
   });
   check('before a job is open the chrome is all there, and quiet', () => {
     // Frame 8. Not an empty grid with a paragraph explaining that it is empty:
@@ -274,9 +279,10 @@ try {
 
   // 1 to 9 picks the nth condition — VES muscle memory, and the number is
   // printed on the row so it can be seen rather than remembered.
+  await showTab(session, 'Condition');
   const keyPick = JSON.parse(await session.execute(function () {
     document.body.focus();
-    const before = [...document.querySelectorAll('.plan-rail .condition')]
+    const before = [...document.querySelectorAll('.cost-condition .condition-list .condition')]
       .map((r) => ({ name: ((r.querySelector('.condition-name') || {}).textContent || '').trim(), on: r.classList.contains('on') }));
     document.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
     window.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
@@ -284,7 +290,7 @@ try {
   }));
   await wait(600);
   const afterKey = JSON.parse(await session.execute(function () {
-    return JSON.stringify([...document.querySelectorAll('.plan-rail .condition')]
+    return JSON.stringify([...document.querySelectorAll('.cost-condition .condition-list .condition')]
       .map((r) => ({
         name: ((r.querySelector('.condition-name') || {}).textContent || '').trim(),
         key: ((r.querySelector('.condition-key') || {}).textContent || '').trim(),
@@ -298,6 +304,48 @@ try {
       `the second condition is "${afterKey[1].name}" and it is not the one picked`);
     assert.equal(afterKey.filter((r) => r.on).length, 1, 'more than one condition is picked');
     void keyPick;
+  });
+
+  // Select picks what is under the pointer, on the drawing.
+  //
+  // It had nothing to do until D148 folded the list out of the surface: the
+  // list was the only way to pick a condition, and the hint under the drawing
+  // has been saying "click a trace to select it" the whole time. An act in the
+  // rail that does nothing is the one thing the rail is not allowed to have.
+  await tool(session, 'Select');
+  const shape = await centreOf(session, '.surface-overlay [data-condition]');
+  let pickedOnTheDrawing = null;
+  if (shape) {
+    const at = JSON.parse(shape);
+    const which = await session.execute(function () {
+      const el = document.querySelector('.surface-overlay [data-condition]');
+      return el ? el.getAttribute('data-condition') : null;
+    });
+    try {
+      await pointerClick(session, at.x, at.y);
+    } catch {
+      await session.execute(function (x, y) {
+        const el = document.elementFromPoint(x, y) || document.querySelector('.surface-overlay [data-condition]');
+        for (const type of ['pointermove', 'pointerdown', 'pointerup']) {
+          el.dispatchEvent(new PointerEvent(type, {
+            clientX: x, clientY: y, button: 0, buttons: 1, bubbles: true, detail: 1, pointerId: 1,
+          }));
+        }
+      }, at.x, at.y);
+    }
+    await wait(800);
+    await showTab(session, 'Condition');
+    pickedOnTheDrawing = JSON.parse(await session.execute(function (want) {
+      const row = [...document.querySelectorAll('.cost-condition .condition-list .condition.on')]
+        .map((r) => ((r.querySelector('.condition-name') || {}).textContent || '').trim());
+      return JSON.stringify({ want, picked: row });
+    }, which));
+  }
+  check('Select picks the traced thing under the pointer', () => {
+    assert.ok(shape, 'nothing on the drawing carries the condition it belongs to');
+    assert.ok(pickedOnTheDrawing, 'the click could not be made');
+    assert.equal(pickedOnTheDrawing.picked.length, 1,
+      `${pickedOnTheDrawing.picked.length} conditions are picked`);
   });
 
   // The pill, and the money, while a trace is open.
@@ -371,7 +419,7 @@ try {
   // ── 3. the surface switches views in place ──────────────────────────────
   await session.execute(function () { window.__markBeforeSwitch = 'still here'; });
   await session.execute(function () {
-    const row = [...document.querySelectorAll('.plan-rail .condition')]
+    const row = [...document.querySelectorAll('.cost-condition .condition-list .condition')]
       .find((r) => /Parapet/.test(r.textContent || ''));
     if (row) row.click();
   });
@@ -379,7 +427,7 @@ try {
   const before = JSON.parse(await session.execute(function () {
     return JSON.stringify({
       selling: ((document.querySelector('.selling .value') || {}).textContent || '').trim(),
-      picked: [...document.querySelectorAll('.plan-rail .condition.on')]
+      picked: [...document.querySelectorAll('.cost-condition .condition-list .condition.on')]
         .map((r) => ((r.querySelector('.condition-name') || {}).textContent || '').trim()),
     });
   }));
@@ -658,9 +706,9 @@ try {
     const detached = JSON.parse(moneyDetached);
     check('the cost window is 600 by 860, with the same money in it', () => {
       assert.ok(Math.abs(detached.width - 600) <= 2,
-        `it is ${detached.width}px wide and is specified at 600`);
-      assert.ok(Math.abs(detached.height - 860) <= 40,
-        `it is ${detached.height}px tall and is specified at 860`);
+        `its page is ${detached.width}px wide and is specified at 600`);
+      assert.ok(Math.abs(detached.height - 860) <= 2,
+        `its page is ${detached.height}px tall and is specified at 860`);
       assert.equal(cents(detached.selling), cents(moneyDocked),
         `it says ${detached.selling} and the docked panel said ${moneyDocked}`);
       assert.deepEqual(detached.tabs, ['Estimate', 'Condition', 'Recap'],

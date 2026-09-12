@@ -660,7 +660,11 @@ try {
     assert.equal(others, 1, `${others} groups are marked at once`);
   });
   check('and the panel in that window names it and shows what it measures', () => {
-    assert.ok(panelLowRoof && panelLowRoof.count === 1,
+    // `panelNow` in this file answers `there`, not a count — the count belongs
+    // to 6b, which is the check about how many panels a window has. Asking for
+    // a field the reader does not return is a row that fails on its own
+    // bookkeeping and says nothing about the program.
+    assert.ok(panelLowRoof && panelLowRoof.there,
       'no Properties panel in the window the cost panel is in');
     assert.equal(panelLowRoof.name, names['c-tapered'],
       `the panel names "${panelLowRoof.name}"`);

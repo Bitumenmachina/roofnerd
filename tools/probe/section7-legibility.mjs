@@ -39,6 +39,9 @@ try {
   await openDemoJob(session);
   await wait(1800);
 
+  // Conditions are listed in the cost panel's Condition tab (D148).
+  await showTab(session, 'Condition');
+
   // ── §1.2 what is traced is named as what it is ──────────────────────────
   // The defect was a flat list headed "Pages" that listed conditions under it.
   // There is no tree at all now (D132) and the claim survives it: the things an
@@ -48,8 +51,8 @@ try {
   // screen and still not confused for one another.
   const listed = JSON.parse(await session.execute(function () {
     return JSON.stringify({
-      heading: ((document.querySelector('.plan-rail .rail-heading') || {}).textContent || '').trim(),
-      rows: [...document.querySelectorAll('.plan-rail .condition .condition-name')]
+      heading: ((document.querySelector('.cost-condition .rail-heading') || {}).textContent || '').trim(),
+      rows: [...document.querySelectorAll('.cost-condition .condition .condition-name')]
         .map(function (e) { return (e.textContent || '').trim(); }),
       drawing: (document.querySelector('.tool-strip') || {}).innerText || '',
     });
@@ -74,7 +77,7 @@ try {
       toolsInDocBar: [...document.querySelectorAll('.doc-bar .rail-tool')].length,
       status: (document.querySelector('.status-strip') || {}).innerText || '',
       hasMenu: !!document.querySelector('.doc-bar .menu-button'),
-      list: (document.querySelector('.plan-rail') || document.body).innerText || '',
+      list: (document.querySelector('.cost-condition') || document.body).innerText || '',
     });
   }));
   check('§1.3 the list carries no probe buttons, and there is a File menu', () => {
@@ -91,6 +94,8 @@ try {
   check('§1.3 the job path is in the status strip, not under the job name', () => {
     assert.match(chrome.status, /\//, `status strip read "${chrome.status.slice(0, 80)}"`);
   });
+
+  await showTab(session, 'Estimate');
 
   // ── §1.5 the acts, and the settings they need ───────────────────────────
   //
@@ -296,11 +301,13 @@ try {
   await tool(session, 'Select');
 
   // ── §1.7 the conditions header is not under the panel ───────────────────
+  await showTab(session, 'Condition');
   const rail = JSON.parse(await session.execute(function () {
     // Pointed at the heading that actually exists. It used to look for three
     // class names none of which the Plan has ever used, so the row passed by
-    // finding nothing — the weakest way a check can be green.
-    const head = document.querySelector('.plan-rail .rail-heading');
+    // finding nothing — the weakest way a check can be green. The heading is
+    // over the list, which is the Condition tab now (D148).
+    const head = document.querySelector('.cost-condition .rail-heading');
     if (!head) return JSON.stringify({ found: false });
     const r = head.getBoundingClientRect();
     const top = document.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
@@ -357,10 +364,16 @@ try {
       const box = scroll.getBoundingClientRect();
       const owner = function (el) {
         const r = el.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) return 'nothing — it has no box';
         const top = document.elementFromPoint(
           Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
         if (!top) return 'nothing';
         if (top === el || el.contains(top)) return 'itself';
+        // An ANCESTOR answering is not something drawn over the top of this —
+        // it is this not being painted at that point at all, because it has
+        // been clipped out of the layout. Naming the container as the culprit
+        // sent a reader looking for an overlap that was never there.
+        if (top.contains(el)) return 'nothing — it is clipped out of the layout';
         return top.className || top.tagName;
       };
       const heads = [...document.querySelectorAll('.cost-columns > span')].map(function (h) {
