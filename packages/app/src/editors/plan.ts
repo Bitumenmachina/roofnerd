@@ -1,22 +1,32 @@
-// ── The Plan editor ────────────────────────────────────────────────────────
-// The drawing, the tools, and the list of what has been traced off it.
+// ── The Plan view ──────────────────────────────────────────────────────────
+// The drawing, and the list of what has been traced off it.
 //
-// Everything traced goes straight into the one document, so the Estimate Sheet
-// — in this window or torn off onto the other monitor — is looking at the same
-// numbers before the mouse button comes back up.
+// The tools are no longer a row across the top of this editor. They are the
+// window's tool rail — one act per button, in the words a roofer uses for it —
+// and everything an act needs is in the window's tool settings strip. That is
+// the handoff's anatomy, and it is also the arrangement VES has: a rack on the
+// left, a spare stage, the depth somewhere that is not on top of the drawing.
+//
+// Everything traced goes straight into the one document, so the money — in the
+// cost panel beside it, or in the panel pulled onto the other monitor — is
+// looking at the same numbers before the mouse button comes back up.
 
 import {
-  ARCHITECTURAL_SCALES, calibrateFromScale, calibrateFromTwoPoints, distance,
-  formatFeetInches, measure, parseFeet, strayCorners,
-  type Condition, type Page, type Point, type Trace,
+  ARCHITECTURAL_SCALES, calibrateFromScale, calibrateFromTwoPoints,
+  formatFeetInches, parseFeet,
+  type Condition, type ConditionRole, type Page, type Point, type Trace,
 } from '@roofnerd/engine';
 import { at, addPage, doc, pageBytes, pickFile, set, subscribe, type Doc } from '../doc.js';
 import { Surface, svg, pointsAttribute } from '../viewer/surface.js';
-import { Tools, type ToolName } from '../viewer/tools.js';
+import { Tools, type ToolName, type ToolProgress } from '../viewer/tools.js';
 import { loadSheet, type Sheet } from '../viewer/page-source.js';
-import { toolButton, iconButton } from '../chrome.js';
-import { hueFor } from '../icons.js';
-import { KIND_LABELS, PENDING_REASON, propertyPhrase, quantity } from '../labels.js';
+import {
+  derivedField, iconButton, stripButton, stripField,
+  type RailTool, type SurfaceChrome,
+} from '../chrome.js';
+import { hueFor, type IconName } from '../icons.js';
+import { KIND_LABELS, PENDING_REASON, quantity } from '../labels.js';
+import { renderConditionList } from '../condition-list.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
 
 // `Condition`, `Page`, `Trace` and `Point` are the engine's. They were copied
@@ -26,63 +36,60 @@ import { select, selectedConditionId, watchSelection } from '../selection.js';
 // folder without being in the format's own type. One definition, in the package
 // whose job is the shape of a job.
 
+/**
+ * One act in the rail: what a roofer calls it, which tool does it, and what
+ * kind of condition it makes.
+ *
+ * The verbs are the handoff's. Only the acts this program can actually carry
+ * out are here: "Set high and low", "Box out a curb", "Measure" and "Section"
+ * are named in the handoff and are not built, so they are not in the rail. An
+ * estimator is never offered a button that does nothing.
+ *
+ * The act is also what names the condition it makes. A run traced with "Run a
+ * parapet" is a parapet and a run traced with "Cricket" is a cricket, and the
+ * roles — which counts are drains, which run is a ridge — are set here rather
+ * than being read off the name later. The Model cannot solve a heightfield
+ * without knowing which counts are drains, and until now nothing in the window
+ * could say so: a role could only arrive from a fixture.
+ */
+interface Act {
+  readonly id: string;
+  readonly label: string;
+  readonly icon: IconName;
+  readonly tool: ToolName;
+  readonly role?: ConditionRole;
+  /** What a new condition off this act is called. */
+  readonly names?: string;
+}
+
+const ACTS: readonly Act[] = [
+  { id: 'select', label: 'Select', icon: 'select', tool: 'select' },
+  { id: 'area', label: 'Trace an area', icon: 'area', tool: 'area', names: 'Area' },
+  { id: 'parapet', label: 'Run a parapet', icon: 'parapet', tool: 'line', names: 'Parapet' },
+  { id: 'drain', label: 'Drop a drain', icon: 'drain', tool: 'count', role: 'drain', names: 'Drain' },
+  { id: 'cricket', label: 'Cricket', icon: 'cricket', tool: 'line', role: 'ridge', names: 'Cricket' },
+  { id: 'scale', label: 'Scale', icon: 'scale', tool: 'scale' },
+];
+
 let surface: Surface;
 let tools: Tools;
 let currentPageId: string | null = null;
 let loadedSource: string | null = null;
+let act: Act = ACTS[0]!;
+let progress: ToolProgress = { tool: 'select', points: 0, pageArea: null, pageLength: null };
+let chrome: SurfaceChrome | null = null;
+let stopSubscribing: (() => void) | null = null;
+let stopWatching: (() => void) | null = null;
 
-export function mountPlan(host: HTMLElement): void {
+/** The Plan's acts, for the window's rail. */
+export const planTools = (pick: (id: string) => void): readonly RailTool[] =>
+  ACTS.map((a) => ({ id: a.id, label: a.label, icon: a.icon, onPick: () => pick(a.id) }));
+
+export function mountPlan(host: HTMLElement, surroundings: SurfaceChrome): void {
+  unmountPlan();
   host.replaceChildren();
   host.classList.add('plan-editor');
-
-  const bar = document.createElement('div');
-  bar.className = 'toolbar';
-
-  const pageSelect = document.createElement('select');
-  pageSelect.setAttribute('aria-label', 'Drawing');
-  const addPageButton = toolButton('addDrawing', 'Add a drawing',
-    () => addDrawing().catch((e) => report('Adding a drawing', e)));
-
-  const toolButtons = new Map<ToolName, HTMLButtonElement>();
-  for (const [tool, label, iconName] of [
-    ['select', 'Select', 'select'], ['area', 'Area', 'area'],
-    ['line', 'Line', 'line'], ['count', 'Count', 'count'],
-  ] as const) {
-    toolButtons.set(tool, toolButton(iconName, label, () => chooseTool(tool)));
-  }
-
-  // One action, one word. Its label reads Scale or Rescale by state — the sheet
-  // either has a scale or it does not, and that is a state, not two commands.
-  const scaleButton = toolButton('scale', 'Scale', () => chooseTool('scale'));
-  const scaleSelect = document.createElement('select');
-  scaleSelect.setAttribute('aria-label', 'Architectural scale');
-  // "Pick a scale", not "Or pick a scale…": a select is as wide as its widest
-  // option, the prompt was the widest one, and those four extra words were 26px
-  // of a row that had none to give — the tail of it read "Or pick a s" under the
-  // pinned zoom group (v2 §1.5). The word beside it is the Scale button, so the
-  // "Or" was doing nothing the row could afford.
-  scaleSelect.append(option('', 'Pick a scale'));
-  for (const s of ARCHITECTURAL_SCALES) scaleSelect.append(option(String(s.feetPerInch), s.label));
-  scaleSelect.addEventListener('change', () => {
-    const feetPerInch = Number(scaleSelect.value);
-    if (!feetPerInch || !currentPageId) return;
-    const cal = calibrateFromScale(feetPerInch, surface.unitsPerInch);
-    void applyScale(cal.feetPerUnit, scaleSelect.selectedOptions[0]?.text ?? 'preset');
-    scaleSelect.value = '';
-  });
-
-  const spacer = document.createElement('span');
-  spacer.className = 'spacer';
-  // The zoom group travels together and stays reachable — see `.toolbar .zoom`.
-  const zoom = document.createElement('span');
-  zoom.className = 'zoom';
-  const zoomOut = iconButton('zoomOut', 'Zoom out', () => void surface.setZoom(surface.zoom / 1.25));
-  const zoomIn = iconButton('zoomIn', 'Zoom in', () => void surface.setZoom(surface.zoom * 1.25));
-  const zoomFit = iconButton('fit', 'Fit the sheet in the window', () => void surface.fit());
-
-  bar.append(pageSelect, addPageButton, divider(), ...toolButtons.values(), divider(),
-    scaleButton, scaleSelect, spacer, zoom);
-  zoom.append(zoomOut, zoomIn, zoomFit);
+  chrome = surroundings;
 
   surface = new Surface();
 
@@ -96,11 +103,9 @@ export function mountPlan(host: HTMLElement): void {
   const list = document.createElement('div');
   list.className = 'condition-list';
 
-  // The rail is the LIST — swatch, name, live measures, visibility — and nothing
-  // else. The panel that used to sit under it is now built once by the area
-  // chrome and stands beside every editor (A3, D113), so the Plan no longer
-  // keeps a private copy of it. Two copies in one window was the alternative,
-  // and the Plan is the window that would have had them.
+  // The rail is the LIST — swatch, name, live measures, the number that picks
+  // it, visibility — and nothing else. Conditions live here and in the cost
+  // panel's Condition tab (D132); there is no tree any more.
   const rail = document.createElement('div');
   rail.className = 'plan-rail';
   rail.append(railHeading, list);
@@ -115,48 +120,270 @@ export function mountPlan(host: HTMLElement): void {
   layout.className = 'plan-layout';
   layout.append(surface.root, rail);
 
-  host.append(bar, layout, hint);
+  host.append(layout, hint);
 
   tools = new Tools(surface, {
     existingPoints: () => currentPageId ? tracedPoints(conditions(), currentPageId) : [],
     onTrace: (kind, points) => void recordTrace(kind, points),
     onScale: (a, b) => askScale(a, b),
     onHint: (text) => { hint.textContent = text; },
+    onProgress: (state) => {
+      progress = state;
+      drawStrip();
+      chrome?.setMeasuringInto(state.points > 0 ? measuringInto(state.tool) : null);
+    },
+    onCursor: (page) => readOut(page),
   });
 
-  function chooseTool(tool: ToolName) {
-    tools.use(tool);
-    for (const [name, b] of toolButtons) b.classList.toggle('on', name === tool);
-    scaleButton.classList.toggle('on', tool === 'scale');
-  }
-  chooseTool('select');
+  // The pointer off the sheet is a real answer: nothing is known here.
+  surface.root.addEventListener('pointerleave', () => readOut(null));
+  readOut(null);
 
-  // Selecting a condition anywhere — here, in the tree, on the sheet, in the
-  // Model, or in another window — redraws the list and the drawing. The panel
-  // watches the same selection from the area chrome.
-  watchSelection(() => {
-    renderConditions(list, doc());
+  surroundings.setTools(planTools((id) => chooseAct(id)));
+
+  // Getting around the sheet. It was a group pinned to the right end of the
+  // Plan's own toolbar row, painting over whatever the row scrolled under it
+  // (§1.5); it is now an overlay at the top right of the drawing, where the
+  // handoff puts view navigation, and an overlay cannot cover a control because
+  // there is no row for it to be in.
+  surroundings.setViewTools([
+    iconButton('zoomOut', 'Zoom out', () => void surface.setZoom(surface.zoom / 1.25)),
+    iconButton('zoomIn', 'Zoom in', () => void surface.setZoom(surface.zoom * 1.25)),
+    iconButton('fit', 'Fit the sheet in the window', () => void surface.fit()),
+  ]);
+
+  chooseAct('select');
+
+  // Selecting a condition anywhere — here, on the sheet, in the Model, or in
+  // another window — redraws the list and the drawing.
+  stopWatching = watchSelection(() => {
+    renderConditionList(list, doc());
     drawTraces(doc());
+    if (progress.points > 0) chrome?.setMeasuringInto(measuringInto(progress.tool));
   });
 
-  pageSelect.addEventListener('change', () => showPage(pageSelect.value).catch((e) => report('opening the drawing', e)));
-
-  subscribe((d: Doc) => {
+  stopSubscribing = subscribe((d: Doc) => {
     const pages = (at('/pages', d) as Page[]) ?? [];
-    fillPages(pageSelect, pages);
     if (!currentPageId && pages[0]) showPage(pages[0].id).catch((e) => report('opening the drawing', e));
     else if (currentPageId) refreshSheetIfChanged(pages).catch((e) => report('opening the drawing', e));
-    renderConditions(list, d);
+    renderConditionList(list, d);
     drawTraces(d);
     const page = pages.find((p) => p.id === currentPageId);
-    const word = scaleButton.querySelector('span');
-    if (word) word.textContent = page?.feetPerUnit ? 'Rescale' : 'Scale';
     scaleBadge.textContent = page?.feetPerUnit
       ? (page.scaleNote ?? 'Scaled')
       : 'Not scaled';
     scaleBadge.classList.toggle('none', !page?.feetPerUnit);
     scaleBadge.hidden = !page;
+    drawStrip();
   });
+}
+
+/**
+ * Put the Plan down.
+ *
+ * The surface switches views in place, so this view is built and taken down
+ * repeatedly in one page. Everything it holds outside its own DOM has to come
+ * back: two subscriptions, one selection watcher and the tools' keyboard. A
+ * subscriber left behind draws into a host that is no longer in the document
+ * every time the job changes, and two sets of tools both answer Enter.
+ */
+export function unmountPlan(): void {
+  stopSubscribing?.();
+  stopWatching?.();
+  stopSubscribing = null;
+  stopWatching = null;
+  tools?.destroy();
+  chrome?.setMeasuringInto(null);
+  chrome = null;
+  currentPageId = null;
+  loadedSource = null;
+  progress = { tool: 'select', points: 0, pageArea: null, pageLength: null };
+}
+
+/**
+ * What the roof is doing under the pointer, on the Plan.
+ *
+ * Today that is where the cursor is on the sheet, in feet, which the page's own
+ * scale answers. The other four — slope, how thick the insulation is there,
+ * which way the water goes and how far it has to go to reach a drain — are the
+ * Model's to compute from the tapered solve, and the Plan will be able to ask
+ * for them when the renderers land. Until then they are em dashes, which is a
+ * true thing to say: nothing here knows.
+ */
+function readOut(page: Point | null): void {
+  const sheet = currentPage();
+  const where = page === null ? null
+    : !sheet?.feetPerUnit ? null
+      : `${formatFeetInches(page.x * sheet.feetPerUnit)}, ${formatFeetInches(page.y * sheet.feetPerUnit)}`;
+  chrome?.setReadout([
+    { key: 'Cursor', value: where },
+    { key: 'Slope', value: null },
+    { key: 'Insulation here', value: null },
+    { key: 'Flow', value: null, water: true },
+    { key: '', value: null },
+  ]);
+}
+
+// ── the act, and what it needs ─────────────────────────────────────────────
+
+function chooseAct(id: string): void {
+  act = ACTS.find((a) => a.id === id) ?? ACTS[0]!;
+  tools.use(act.tool);
+  chrome?.setActiveTool(act.id);
+  drawStrip();
+}
+
+/** The page the drawing is on, out of the document. */
+const currentPage = (d: Doc = doc()): Page | undefined =>
+  ((at('/pages', d) as Page[]) ?? []).find((p) => p.id === currentPageId);
+
+/**
+ * What the active act needs, and nothing else.
+ *
+ * Every Plan act measures off a sheet, so every one of them needs the drawing,
+ * what it is scaled at and the units the answers come back in — that is not
+ * furniture, it is the thing that decides whether a number exists at all. On
+ * top of that each act carries its own: the keyed entry an estimator types
+ * instead of clicking, the button that closes the shape, and how much has been
+ * measured so far.
+ */
+function drawStrip(): void {
+  if (!chrome) return;
+  const d = doc();
+  const page = currentPage(d);
+  const pages = (at('/pages', d) as Page[]) ?? [];
+
+  const fields: Node[] = [];
+
+  // The drawing, and how to add another one. It was a select and a button in a
+  // toolbar over the drawing; it is the same select and the same button, in the
+  // region the handoff puts them in.
+  const drawing = document.createElement('select');
+  drawing.setAttribute('aria-label', 'Drawing');
+  if (!pages.length) drawing.append(option('', 'no drawings yet'));
+  for (const p of pages) drawing.append(option(p.id, p.feetPerUnit ? p.name : `${p.name} (unscaled)`));
+  drawing.value = currentPageId ?? '';
+  drawing.addEventListener('change', () => {
+    showPage(drawing.value).catch((e) => report('opening the drawing', e));
+  });
+  fields.push(labelled('Drawing', drawing));
+  fields.push(stripButton('Add a drawing', () => {
+    addDrawing().catch((e) => report('Adding a drawing', e));
+  }, true));
+
+  // What the sheet is scaled at, and the one action that sets it. Its word
+  // reads Scale or Rescale by state — the sheet either has a scale or it does
+  // not, and that is a state, not two commands (D129).
+  if (act.id === 'scale') {
+    const picker = document.createElement('select');
+    picker.setAttribute('aria-label', 'Architectural scale');
+    picker.append(option('', 'Pick a scale'));
+    for (const s of ARCHITECTURAL_SCALES) picker.append(option(String(s.feetPerInch), s.label));
+    picker.addEventListener('change', () => {
+      const feetPerInch = Number(picker.value);
+      if (!feetPerInch || !currentPageId) return;
+      const cal = calibrateFromScale(feetPerInch, surface.unitsPerInch);
+      void applyScale(cal.feetPerUnit, picker.selectedOptions[0]?.text ?? 'preset');
+      picker.value = '';
+    });
+    fields.push(labelled('Or', picker));
+  }
+  fields.push(stripField('Scale', page?.feetPerUnit ? (page.scaleNote ?? 'set') : 'not scaled',
+    undefined, true));
+  fields.push(stripField('Units', 'SF · LF · EA · SQ'));
+
+  // Snapping, said as what it does. The handoff's strip reads "Snap to 6″",
+  // which claims a snap measured in roof inches; this one pulls a corner onto a
+  // corner already on the sheet within ten pixels of the screen, at whatever
+  // zoom is up. Saying 6″ would be a number the program does not honour.
+  if (act.tool === 'area' || act.tool === 'line') {
+    fields.push(stripField('Snap', 'to corners already traced'));
+
+    // The keyed entry, from VES muscle memory. A box, or a length carrying the
+    // run on in the direction it is already going.
+    const keyed = document.createElement('input');
+    keyed.type = 'text';
+    keyed.className = 'keyed';
+    keyed.placeholder = '40x30 · 25';
+    keyed.setAttribute('aria-label', 'Type a box or a length');
+    keyed.title = 'Type 40x30 for a box off the last corner, or 25 to carry the run on';
+    const trouble = document.createElement('span');
+    trouble.className = 'why';
+    keyed.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const said = applyKeyed(keyed.value);
+      keyed.classList.toggle('bad', said !== null);
+      trouble.textContent = said ?? '';
+      if (said === null) keyed.value = '';
+    });
+    fields.push(labelled('Keyed', keyed), trouble);
+
+    fields.push(stripButton(act.tool === 'area' ? 'Close the area' : 'End the run',
+      () => tools.close()));
+  }
+
+  // How much has been measured so far, in the units the sheet can answer in.
+  if (act.tool === 'area') fields.push(soFar('Area so far', progress.pageArea, 2, page, 'SF'));
+  if (act.tool === 'line') fields.push(soFar('Run so far', progress.pageLength, 1, page, 'LF'));
+
+  chrome.strip.show(act.id === 'scale' && page?.feetPerUnit ? 'Rescale' : act.label, fields);
+}
+
+/**
+ * A measure taken off the shape in progress, in feet.
+ *
+ * Page units times the page's own scale — the same conversion the engine makes
+ * for a finished trace, so the strip cannot disagree with the list beside it.
+ * An unscaled sheet answers with a dash and the reason, never a number.
+ */
+function soFar(label: string, pageValue: number | null, power: number, page: Page | undefined, unit: string): HTMLElement {
+  if (pageValue === null) return stripField(label, '—', undefined, true);
+  if (!page?.feetPerUnit) {
+    const field = stripField(label, '—', undefined, true);
+    field.title = PENDING_REASON;
+    return field;
+  }
+  const feet = pageValue * page.feetPerUnit ** power;
+  return derivedField(label, `${quantity(feet)} ${unit}`,
+    'Worked out from the corners on the sheet and the scale the sheet is set at.');
+}
+
+/**
+ * A keyed entry, applied. Answers null when it worked and the reason when it
+ * did not — a field that silently does nothing is the defect this program was
+ * started to escape.
+ */
+function applyKeyed(text: string): string | null {
+  const page = currentPage();
+  if (!page?.feetPerUnit) return 'this sheet has no scale yet';
+  const raw = text.trim();
+  if (!raw) return 'type 40x30 for a box, or 25 to carry the run on';
+
+  const box = /^([^x×]+)[x×](.+)$/i.exec(raw);
+  if (box) {
+    const w = parseFeet(box[1]!.trim());
+    const h = parseFeet(box[2]!.trim());
+    if (w === null || h === null) return 'that is not two lengths';
+    if (act.tool !== 'area') return 'a box is traced with Trace an area';
+    if (progress.points === 0) return 'click the corner it starts from first';
+    return tools.box(w / page.feetPerUnit, h / page.feetPerUnit)
+      ? null : 'that box could not be laid down';
+  }
+
+  const length = parseFeet(raw);
+  if (length === null) return 'that is not a length';
+  if (progress.points < 2) return 'click two corners first, so it has a direction';
+  return tools.extend(length / page.feetPerUnit)
+    ? null : 'that length could not be carried on';
+}
+
+/** What a trace about to be recorded will go into. The pill says this out loud. */
+function measuringInto(tool: ToolName): string {
+  const kind = tool === 'area' ? 'area' : tool === 'count' ? 'count' : 'line';
+  const selected = conditions().find((c) => c.id === selectedConditionId() && c.kind === kind);
+  if (selected) return selected.name;
+  return `a new ${act.names ?? KIND_LABELS[kind]}`;
 }
 
 // ── the sheet ──────────────────────────────────────────────────────────────
@@ -181,7 +408,7 @@ async function showPage(pageId: string): Promise<void> {
 
 /**
  * A drawing that will not open has to say so. A blank sheet with no explanation
- * is the worst thing this editor could do — the estimator would trace nothing
+ * is the worst thing this view could do — the estimator would trace nothing
  * and never know the file was the problem.
  */
 function report(where: string, e: unknown): void {
@@ -218,19 +445,17 @@ async function loadSource(page: Page): Promise<void> {
 /**
  * Ask how long that really is — in the window, not in a browser dialog.
  *
- * The field appears where the instruction already is, under the drawing, with
- * the cursor in it. A dialog would take the estimator off the sheet they are
- * pointing at, and in this webview there is no dialog to take them to anyway.
+ * The field appears in the tool settings strip, which is where everything the
+ * Scale act needs now lives. A dialog would take the estimator off the sheet
+ * they are pointing at, and in this webview there is no dialog to take them to
+ * anyway: `prompt` returns nothing and the caller gives up quietly.
  */
 function askScale(a: Point, b: Point): void {
-  const bar = document.querySelector<HTMLElement>('.hint');
-  if (!bar) return;
+  if (!chrome) return;
 
-  bar.replaceChildren();
-  bar.classList.add('asking');
+  const wrap = document.createElement('span');
+  wrap.className = 'scale-ask scale-field';
 
-  const label = document.createElement('label');
-  label.className = 'scale-ask';
   const text = document.createElement('span');
   text.textContent = 'How long is that, really?';
 
@@ -242,22 +467,17 @@ function askScale(a: Point, b: Point): void {
   const note = document.createElement('small');
   note.textContent = `12'-6", 6", 4'-6 1/2" and 12.5 all read the same way`;
 
-  const accept = document.createElement('button');
-  accept.type = 'button';
-  accept.textContent = 'Set the scale';
+  const accept = stripButton('Set the scale', () => submit());
+  const cancel = stripButton('Cancel', () => finish(), true);
 
-  const cancel = document.createElement('button');
-  cancel.type = 'button';
-  cancel.className = 'quiet';
-  cancel.textContent = 'Cancel';
-
-  label.append(text, input, accept, cancel, note);
-  bar.append(label);
+  wrap.append(text, input, accept, cancel, note);
+  chrome.strip.show('Scale', [wrap]);
   input.focus();
 
   const finish = () => {
-    bar.classList.remove('asking');
-    bar.textContent = 'click a trace to select it';
+    drawStrip();
+    const hint = document.querySelector<HTMLElement>('.hint');
+    if (hint) hint.textContent = 'click a trace to select it';
   };
 
   const submit = () => {
@@ -272,8 +492,6 @@ function askScale(a: Point, b: Point): void {
     void applyScale(cal.feetPerUnit, `two points, ${formatFeetInches(feet)}`).then(finish);
   };
 
-  accept.addEventListener('click', submit);
-  cancel.addEventListener('click', finish);
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); submit(); }
     if (e.key === 'Escape') { e.preventDefault(); finish(); }
@@ -317,7 +535,9 @@ async function writeTrace(kind: 'area' | 'line' | 'count', points: readonly Poin
   const trace: Trace = { id: `trace-${Date.now().toString(36)}`, pageId: currentPageId, points: [...points] };
 
   // Into the selected condition if it takes this kind of shape; otherwise a new
-  // one, named for what it is, so a trace is never dropped on the floor.
+  // one, named for the act that made it, so a trace is never dropped on the
+  // floor. The act is what carries the role: a count dropped with "Drop a
+  // drain" IS a drain, and the Model reads that to find the roof's low points.
   const selected = all.find((c) => c.id === selectedConditionId() && c.kind === kind);
   if (selected) {
     await set('/conditions', all.map((c) =>
@@ -325,14 +545,16 @@ async function writeTrace(kind: 'area' | 'line' | 'count', points: readonly Poin
     return;
   }
 
+  const word = act.names ?? KIND_LABELS[kind]!;
   const condition: Condition = {
     id: `condition-${Date.now().toString(36)}`,
-    name: `${KIND_LABELS[kind]} ${all.filter((c) => c.kind === kind).length + 1}`,
+    name: `${word} ${all.filter((c) => c.name.startsWith(word)).length + 1}`,
     kind,
     traces: [trace],
     properties: {},
     items: [],
     color: hueFor(all.length),
+    ...(act.role ? { role: act.role } : {}),
   };
   await set('/conditions', [...all, condition]);
   select({ kind: 'condition', id: condition.id });
@@ -364,121 +586,7 @@ function drawTraces(d: Doc): void {
   }
 }
 
-// ── the condition list ─────────────────────────────────────────────────────
-
-/**
- * How many of a condition's corners were clicked past the edge of the paper.
- *
- * The check itself is `strayCorners` in the engine now, because it was private
- * here and the page bounds it needs lived only on this file's local `Page`
- * shape — so the Model, the panel and every probe were shut out of a question
- * they all want to ask. A page only counts once it knows its own size: a sheet
- * still loading has no bounds to be outside of.
- */
-const offSheet = (c: Condition, pages: Page[]): number => strayCorners(c.traces, pages);
-
-function renderConditions(host: HTMLElement, d: Doc): void {
-  host.replaceChildren();
-
-  const pages = (at('/pages', d) as Page[]) ?? [];
-  const calibrations: Record<string, { feetPerUnit: number } | undefined> = {};
-  for (const p of pages) if (p.feetPerUnit) calibrations[p.id] = { feetPerUnit: p.feetPerUnit };
-
-  const list = (at('/conditions', d) as Condition[]) ?? [];
-  if (!list.length) {
-    const empty = document.createElement('p');
-    empty.className = 'muted';
-    empty.textContent = 'Nothing traced yet. Add a drawing, set its scale, then pick a tool.';
-    host.append(empty);
-    return;
-  }
-
-  for (const c of list) {
-    const m = measure(c.kind, c.traces ?? [], c.properties ?? {}, calibrations);
-    const row = document.createElement('button');
-    row.type = 'button';
-    row.className = c.id === selectedConditionId() ? 'condition on' : 'condition';
-    row.addEventListener('click', () => select({ kind: 'condition', id: c.id }));
-
-    const swatch = document.createElement('span');
-    swatch.className = 'swatch';
-    swatch.style.background = c.color ?? '#c1440e';
-
-    const name = document.createElement('span');
-    name.className = 'condition-name';
-    name.textContent = c.name;
-
-    const measures = document.createElement('span');
-    measures.className = 'condition-measures';
-    // A measure with no number yet is a dash with the reason in its tooltip.
-    // Never a coloured word — nothing is broken, the sheet is not scaled.
-    // An area has a surface; a run does not, and printing "— SF" beside one
-    // suggests it might. Each kind shows the measures it actually has.
-    const parts: string[] = [];
-    if (c.kind === 'area') parts.push(m.SF === null ? '—' : `${quantity(m.SF)} SF`);
-    if (c.kind !== 'count') parts.push(m.LF === null ? '—' : `${quantity(m.LF)} LF`);
-    parts.push(`${quantity(m.EA, 0)} EA`);
-    measures.textContent = parts.join(' · ');
-    if (m.LF === null && c.kind !== 'count') measures.title = PENDING_REASON;
-
-    // Corners clicked past the edge of the paper.
-    //
-    // The desk around a sheet is not the drawing, and area measured out there
-    // is measured off nothing — but the program used to take it, price it and
-    // save it without a word. On a full-size sheet that is easy to do and
-    // impossible to notice, because the whole drawing is a thumbnail until you
-    // zoom. It stays a measurement; it just stops being a silent one.
-    const stray = offSheet(c, pages);
-    if (stray > 0) {
-      const off = document.createElement('span');
-      off.className = 'condition-off-sheet';
-      off.textContent = `${stray === 1 ? '1 corner' : `${stray} corners`} off the sheet`;
-      off.title = 'Traced past the edge of the drawing. What is out there was measured off the desk, not off the roof.';
-      measures.append(document.createTextNode(' · '), off);
-    }
-
-    // A4: a condition can be hidden on the sheet without being deleted — a busy
-    // roof plan is unreadable with every trace on it at once.
-    const visible = c.hidden !== true;
-    const eye = document.createElement('span');
-    eye.className = 'visibility';
-    eye.title = visible ? 'Hide this on the drawing' : 'Show this on the drawing';
-    eye.setAttribute('role', 'button');
-    eye.textContent = visible ? '●' : '○';
-    eye.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const all = conditions();
-      void set('/conditions', all.map((x) => (x.id === c.id ? { ...x, hidden: visible } : x)));
-    });
-    row.classList.toggle('hidden-condition', !visible);
-
-    row.append(swatch, name, eye, measures);
-
-    // Properties in the words an estimator uses: "4 sides", not "SIDES 4".
-    const shown = Object.entries(c.properties ?? {})
-      .filter(([, v]) => v !== undefined)
-      .map(([k, v]) => propertyPhrase(k, v as number));
-    if (shown.length) {
-      const props = document.createElement('span');
-      props.className = 'condition-props';
-      props.textContent = shown.join(' · ');
-      row.append(props);
-    }
-
-    host.append(row);
-  }
-}
-
 // ── odds and ends ──────────────────────────────────────────────────────────
-
-const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 2 });
-
-function button(label: string, onClick: () => void): HTMLButtonElement {
-  const b = document.createElement('button');
-  b.textContent = label;
-  b.addEventListener('click', onClick);
-  return b;
-}
 
 function option(value: string, label: string): HTMLOptionElement {
   const o = document.createElement('option');
@@ -487,16 +595,12 @@ function option(value: string, label: string): HTMLOptionElement {
   return o;
 }
 
-function divider(): HTMLSpanElement {
-  const s = document.createElement('span');
-  s.className = 'divider';
-  return s;
-}
-
-function fillPages(select: HTMLSelectElement, pages: Page[]): void {
-  const keep = select.value;
-  select.replaceChildren();
-  if (!pages.length) select.append(option('', 'no drawings yet'));
-  for (const p of pages) select.append(option(p.id, p.feetPerUnit ? p.name : `${p.name} (unscaled)`));
-  select.value = currentPageId ?? keep;
+/** A control in the strip with the word that says what it is. */
+function labelled(label: string, control: HTMLElement): HTMLElement {
+  const wrap = document.createElement('span');
+  wrap.className = 'strip-field';
+  const k = document.createElement('span');
+  k.textContent = label;
+  wrap.append(k, control);
+  return wrap;
 }

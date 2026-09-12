@@ -36,12 +36,13 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
   CRICKET_SLOPE_MULTIPLE, MIN_FLASHING_INCHES, SINGLE_LAYER_MAX_INCHES,
-  buildUpInches, capInches, maxLengthToWidth, ridgeBetween, ridgeDisagreement,
+  buildUpInches, capInches, formatFeetInches, maxLengthToWidth, ridgeBetween, ridgeDisagreement,
   selfIntersects,
   type CapReason, type Condition, type Page, type Point, type Properties, type Spot, type Trace,
 } from '@roofnerd/engine';
 import { at, doc, subscribe, type Doc } from '../doc.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
+import { stripField, type RailTool, type Reading as StripReading, type SurfaceChrome } from '../chrome.js';
 import { hueFor } from '../icons.js';
 
 // The four shapes this file draws from are the engine's, not its own. The copies
@@ -49,6 +50,15 @@ import { hueFor } from '../icons.js';
 // roles, and `items?: { thickness?: number }[]` — a line reduced to the one
 // field this file reads, which is how a file ends up believing that is all a
 // line has.
+
+/** What the status strip says when nothing is under the pointer. */
+const EMPTY_READING: readonly StripReading[] = [
+  { key: 'Cursor', value: null },
+  { key: 'Slope', value: null },
+  { key: 'Insulation here', value: null },
+  { key: 'Flow', value: null, water: true },
+  { key: '', value: null },
+];
 
 /** Inches to feet, because a property is in inches and the world is in feet. */
 const inches = (n: number) => n / 12;
@@ -64,6 +74,7 @@ const GRID_FEET = 2;
 
 let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
+let chrome: SurfaceChrome | null = null;
 let renderer: THREE.WebGLRenderer | null = null;
 let controls: OrbitControls | null = null;
 let world: THREE.Group;
@@ -121,45 +132,86 @@ function reframe(target: THREE.Vector3, span: number) {
  * All of it comes off the same arithmetic the surface is drawn from, so it can
  * never say something the picture does not.
  */
-function readAt(canvas: HTMLCanvasElement, event: PointerEvent): string {
-  if (!camera || fieldsNow.length === 0) return 'Point at the roof to read it.';
+function readAt(canvas: HTMLCanvasElement, event: PointerEvent): readonly StripReading[] {
+  const nothing = (why: string | null): readonly StripReading[] => [
+    { key: 'Cursor', value: why },
+    { key: 'Slope', value: null },
+    { key: 'Insulation here', value: null },
+    { key: 'Flow', value: null, water: true },
+    { key: '', value: null },
+  ];
+  if (!camera || fieldsNow.length === 0) return nothing(null);
   const rect = canvas.getBoundingClientRect();
   raycaster.setFromCamera(new THREE.Vector2(
     ((event.clientX - rect.left) / rect.width) * 2 - 1,
     -((event.clientY - rect.top) / rect.height) * 2 + 1,
   ), camera);
   const hit = raycaster.intersectObjects(world.children, false)[0];
-  if (!hit) return 'Point at the roof to read it.';
+  if (!hit) return nothing(null);
 
   const p = { x: hit.point.x, y: hit.point.z };
+  const where = `${formatFeetInches(p.x)}, ${formatFeetInches(p.y)}`;
   const field = fieldsNow.find((f) => inside(p, f.ring));
-  if (!field) return 'Off the tapered field.';
+  if (!field) {
+    return [
+      { key: 'Cursor', value: where },
+      { key: 'Slope', value: null },
+      { key: 'Insulation here', value: null },
+      { key: 'Flow', value: 'off the tapered field', water: true },
+      { key: '', value: null },
+    ];
+  }
 
   const run = nearest(p, drainsNow);
   const raw = field.start + run * field.slope;
   const flat = raw > field.cap;
   const thickness = Math.min(raw, field.cap);
-  const parts = [`${inchLabel(thickness)} thick`];
   if (flat) {
-    parts.push(field.capReason === 'flashing'
-      ? 'no fall — the roof is as high as the wall it flashes against allows'
-      : 'no fall — the boards have run out here');
-  } else {
-    parts.push(`falls ${inchLabel(field.slope)} per foot`);
-    // Which way the water goes, in words. The arrows draw it and the drawing is
-    // the wrong place to read a direction off — an arrow at this zoom is a few
-    // pixels and the estimator is being asked to eyeball a bearing. It was the
-    // one of the four things this readout owes that it did not say, and
-    // `nearestDrain` was already here returning the point it needed.
-    const to = nearestDrain(p, drainsNow);
-    if (to) parts.push(`water runs ${compass(p, to)}`);
-    parts.push(`${run.toFixed(1)} ft to the drain it reaches`);
+    // No fall is the one thing on a low-slope roof that decides whether the
+    // water leaves, so it says which ceiling was hit rather than only that one
+    // was. Amber, and only here.
+    const why = field.capReason === 'flashing'
+      ? 'no fall — as high as the wall it flashes against allows'
+      : 'no fall — the boards have run out here';
+    return [
+      { key: 'Cursor', value: where },
+      { key: 'Slope', value: `${inchLabel(field.slope)} in 12` },
+      { key: 'Insulation here', value: inchLabel(thickness) },
+      { key: 'Flow', value: why, warn: true },
+      { key: '', value: null },
+    ];
   }
-  return parts.join(' · ');
+  const to = nearestDrain(p, drainsNow);
+  return [
+    { key: 'Cursor', value: where },
+    { key: 'Slope', value: `${inchLabel(field.slope)} in 12` },
+    { key: 'Insulation here', value: inchLabel(thickness) },
+    { key: 'Flow', value: to ? `runs ${compass(p, to)}` : null, water: true },
+    { key: '', value: `${run.toFixed(1)} ft to the drain it reaches` },
+  ];
 }
 
-export function mountModel(host: HTMLElement): void {
+/**
+ * The Model's own acts, for the window's rail.
+ *
+ * One, today: pointing at the roof to pick what you are looking at. The
+ * handoff's Model frame carries "Set high and low", and that arrives with the
+ * renderers — it is not in the rail until it does something.
+ */
+export const modelTools = (pick: (id: string) => void): readonly RailTool[] =>
+  [{ id: 'select', label: 'Select', icon: 'select', onPick: () => pick('select') }];
+
+export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void {
   unmount();
+  chrome = surroundings;
+  surroundings.setTools(modelTools(() => undefined));
+  surroundings.setActiveTool('select');
+  surroundings.setViewTools([]);
+  surroundings.setReadout(EMPTY_READING);
+  surroundings.strip.show('Select', [
+    stripField('On the roof', 'click to pick what you are looking at'),
+    stripField('Units', 'SF · LF · EA · SQ'),
+  ]);
   framed = false;
   host.replaceChildren();
   host.classList.add('model-editor');
@@ -175,14 +227,12 @@ export function mountModel(host: HTMLElement): void {
   const note = document.createElement('p');
   note.className = 'model-note';
 
-  // What the roof does where the pointer is. The water-migration view written
-  // out in words — it costs no geometry and it answers the question the shading
-  // can only hint at.
-  const readout = document.createElement('p');
-  readout.className = 'model-readout';
-  readout.textContent = 'Point at the roof to read it.';
-
-  host.append(canvas, readout, legend, note);
+  // What the roof does where the pointer is reads in the window's status strip
+  // now, which is where the handoff puts it: a continuous readout under the
+  // cursor, in the same region whatever the surface is showing. It used to be a
+  // line of its own under this canvas, which meant the Plan had nowhere to put
+  // the same four facts when it learns to compute them.
+  host.append(canvas, legend, note);
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -296,8 +346,8 @@ export function mountModel(host: HTMLElement): void {
   stopWatching = watchSelection(() => highlight());
 
   canvas.addEventListener('click', (e) => pick(canvas, e));
-  canvas.addEventListener('pointermove', (e) => { readout.textContent = readAt(canvas, e); });
-  canvas.addEventListener('pointerleave', () => { readout.textContent = 'Point at the roof to read it.'; });
+  canvas.addEventListener('pointermove', (e) => chrome?.setReadout(readAt(canvas, e)));
+  canvas.addEventListener('pointerleave', () => chrome?.setReadout(EMPTY_READING));
   window.addEventListener('resize', () => resize(canvas));
 
   // Watch the box, not the window.
@@ -324,6 +374,12 @@ export function mountModel(host: HTMLElement): void {
     if (renderer && camera) renderer.render(scene, camera);
   };
   tick();
+}
+
+/** Put the Model down. The surface switches views in place; this is the other half. */
+export function unmountModel(): void {
+  unmount();
+  chrome = null;
 }
 
 function unmount() {

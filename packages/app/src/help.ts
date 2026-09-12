@@ -42,25 +42,28 @@ export function closeHelp(): void {
   open = null;
 }
 
-/** What each editor's "?" says. Plain words, no software in them. */
+/**
+ * What the "?" says, keyed by what the window is showing.
+ *
+ * The names are the names on screen now: the surface has two views, the cost
+ * panel has three tabs, and the book is reached from the Condition tab. There
+ * is no "Estimate Sheet" and no "Reports" because there are no such editors —
+ * a help page for a thing nobody can open is a help page nobody can use.
+ */
 export const HELP: Readonly<Record<string, string>> = {
   Plan: `This is the drawing. Add one, tell the program how big it is, then trace what you are pricing.
 
-Set the scale first: click Scale, click two points a known distance apart, and type that distance the way the drawing writes it — 12'-6", 6", or 12.5 all read the same. Until a sheet is scaled, anything measured on it shows a dash rather than a number, because a wrong number is worse than none.
+Set the scale first: pick Scale off the rail, click two points a known distance apart, and type that distance the way the drawing writes it — 12'-6", 6", or 12.5 all read the same. Until a sheet is scaled, anything measured on it shows a dash rather than a number, because a wrong number is worse than none.
 
-Area outlines a surface. Line runs along something. Count drops a marker on each one. Click to place points, press Enter or double-click to finish, Escape to throw it away, Backspace to take back a corner. Hold Shift to keep a segment square. Corners snap to corners already on the sheet, which is what stops a roof leaking area at every junction.
+The rail is the acts: Trace an area outlines a surface, Run a parapet runs along one, Drop a drain marks each one, Cricket lays a ridge between drains. Click to place corners, press Enter or double-click to finish, Escape to throw it away, Backspace to take back a corner. Hold Shift to keep a segment square. Corners snap to corners already on the sheet, which is what stops a roof leaking area at every junction.
+
+Instead of clicking you can type: 40x30 lays a box off the corner already down, and 25 carries a run on in the direction it is already going.
+
+Press 1 to 9 to pick a condition — the number is printed on its row. Whatever is picked is what the next shape goes into, and the pill on the drawing says which one while you are tracing.
 
 One traced thing gives you square feet, linear feet and a count at the same time, because a parapet run is all three.
 
-Getting around a big sheet: scroll to move, hold Ctrl and scroll to zoom where the pointer is, or drag with the middle mouse button. The zoom buttons and Fit are at the right end of the toolbar. On a full-size drawing, zoom in before you trace — fitted to the window, one screen pixel can be half a foot of roof, and a click lands where the pixel is, not where you meant.`,
-
-  'Estimate Sheet': `Every line here is one thing a condition consumes, grouped under the condition it comes off.
-
-The formula on each line is the arithmetic that turned what you traced into how much of that item you need. It is printed on the line and you can change it there. A library you cannot see into is a library nobody trusts.
-
-A line carries three units, because a supply house uses three: what you estimated in, what you buy in, and what the price is quoted against. Membrane is estimated in squares, bought by the roll and priced by the square foot. Each step shows its own quantity.
-
-A line with no price says so. A line off a sheet nobody has scaled says so. Neither is ever counted as nothing, because a zero looks like a finished line for free.`,
+Getting around a big sheet: scroll to move, hold Ctrl and scroll to zoom where the pointer is, or drag with the middle mouse button. Zoom and Fit are at the top right of the drawing. On a full-size drawing, zoom in before you trace — fitted to the window, one screen pixel can be half a foot of roof, and a click lands where the pixel is, not where you meant.`,
 
   Model: `The roof, stood up. Everything here comes off the same traces and properties as the estimate, so it cannot disagree with what you are pricing.
 
@@ -68,7 +71,37 @@ An area lies at its elevation. A run with a height stands up off its base. Where
 
 The field is lighter where it is thicker. Amber is where the boards run out: the taper has built as high as it can, the roof goes flat, and flat is where water stays. Walk that area before you bid it.
 
+Move the pointer over the roof and the strip at the bottom of the window says what it is doing there — the slope, how thick the insulation is at that point, which way the water runs and how far it has to go to reach a drain.
+
 Clicking picks a condition and picks it everywhere else too. Nothing in this window changes the job — there is no editing in 3D.`,
+
+  Estimate: `Every line here is one thing a condition consumes, grouped under the condition it comes off.
+
+The line is short on purpose: what it is, how much of it, in what unit, and what it costs. A diamond after the unit means the program worked the quantity out from what you traced; a dotted underline means you typed it. There is no third kind.
+
+Click a line and it opens where it is, to the whole of it: the formula, and every step from the traced measure to the money — quantity, waste, what you buy, what the price is quoted against, the unit cost — and then the arithmetic written out so you can check the number without doing it yourself.
+
+The formula is edited there, on the line. A library you cannot see into is a library nobody trusts.
+
+A line carries three units, because a supply house uses three: what you estimated in, what you buy in, and what the price is quoted against. Membrane is estimated in squares, bought by the roll and priced by the square foot.
+
+A line with no price says so. A line off a sheet nobody has scaled says so. Neither is ever counted as nothing, because a zero looks like a finished line for free.`,
+
+  Condition: `A condition is one thing you traced, and this is everything the drawing cannot tell you about it.
+
+The list at the top is what has been traced. Pick one — here, on the drawing, on the roof, or with the number printed on its row — and what it measures and what it costs read underneath.
+
+The numbers are what it measures right now. Everything below sets what the detail calls for: how tall the flashing runs, how wide the coping is, what the slope is, how much flat metal a formed profile eats.
+
+Anything else you need, name it yourself with "Add a property". Every formula on this condition's lines can then use it by that name.
+
+"Load an assembly" opens the book: saved sets of items, and the profiles the sheet-metal ones are formed from. Loading one copies its items onto the condition; it does not link them. Change a price on this bid and you have changed this bid, which is how it should be.`,
+
+  Recap: `Where the money actually sits, by class.
+
+A cost lands in a class and a class carries its own adders. Fifteen thousand dollars of "material" that is really material plus a dumpster plus a permit is the lie this structure exists to make impossible.
+
+If the total left something out it says so underneath, by name. A total taken over a line nobody could price is a total that lies.`,
 
   Library: `The book: saved sets of items, and the profiles the sheet-metal ones are formed from.
 
@@ -78,17 +111,11 @@ Pick a condition, then load an assembly onto it. That copies the items; it does 
 
 A profile is the flat legs a piece of metal is formed from. Girth is their sum plus what the hems eat, and it belongs to the detail rather than the material: 19 1/2 inches at a coping, 8 at a gravel stop, 26 at an equipment curb cap, all off the same coil. That is why you enter it once per detail and use it everywhere that detail runs.`,
 
-  Reports: `One estimate, filtered for whoever is receiving it.
+  Lens: `One estimate, filtered for whoever is receiving it.
 
-Pick who it is for. The sheet is the same estimate with their columns and nothing else — a lens leaves things out, and that is all it does. Nothing here changes a number.
+Pick who it is for in the document bar. What you get is the same estimate with their columns and nothing else — a lens leaves things out, and that is all it does. Nothing here changes a number.
 
 The supply house sees what to send, in the units they sell, with no cost and no waste on it. A subcontractor sees the measurements without your internal assumptions. The Consolidated lens is the only one that shows how a quantity was worked out, and it says on its face that it is internal.
 
 A cost a lens leaves out is not on the page at all — not greyed, not blurred, not there. A number that is in the document and merely hidden is one look at the source away from the wrong person.`,
-
-  Condition: `A condition is one thing you traced, and this is everything the drawing cannot tell you about it.
-
-The numbers at the top are what it measures right now. Everything below sets what the detail calls for: how tall the flashing runs, how wide the coping is, what the slope is, how much flat metal a formed profile eats.
-
-Anything else you need, name it yourself with "+ property". Every formula on this condition's lines can then use it by that name.`,
 };

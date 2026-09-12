@@ -26,6 +26,34 @@ export interface ToolHost {
   onScale(a: Point, b: Point): void;
   /** Something for the status line — the running length, or what to do next. */
   onHint(text: string): void;
+  /**
+   * How the shape in progress stands, every time it changes.
+   *
+   * In page units, because that is what this class knows: the caller has the
+   * page's scale and turns it into square feet and linear feet. It is what the
+   * tool settings strip reads ("Area so far 9,600 SF") and what puts the
+   * "Measuring into" pill on the drawing and takes it away again.
+   */
+  onProgress(state: ToolProgress): void;
+  /**
+   * Where the pointer is on the sheet, in page units, on every move.
+   *
+   * The status strip reads it. It comes through here rather than off a second
+   * listener because `Surface.on` holds one set of handlers, and two callers
+   * both registering would mean whichever went second silently took the
+   * pointer away from the first.
+   */
+  onCursor(page: Point | null): void;
+}
+
+export interface ToolProgress {
+  readonly tool: ToolName;
+  /** Corners put down so far. Zero means nothing is open. */
+  readonly points: number;
+  /** The area the shape encloses, in page units, when it encloses one. */
+  readonly pageArea: number | null;
+  /** How far along it runs, in page units. */
+  readonly pageLength: number | null;
 }
 
 export class Tools {
@@ -34,19 +62,43 @@ export class Tools {
   private cursor: Point | null = null;
   private orthogonal = false;
 
+  /** The two window listeners, held so they can be taken off again. */
+  private readonly onKeyDown = (e: KeyboardEvent) => this.key(e);
+  private readonly onKeyUp = (e: KeyboardEvent) => {
+    if (e.key === 'Shift') { this.orthogonal = false; this.draw(); }
+  };
+
   constructor(private readonly surface: Surface, private readonly host: ToolHost) {
     surface.on({
       onDown: (page, event) => this.down(page, event),
       onMove: (page, event) => this.move(page, event),
     });
-    window.addEventListener('keydown', (e) => this.key(e));
-    window.addEventListener('keyup', (e) => {
-      if (e.key === 'Shift') { this.orthogonal = false; this.draw(); }
-    });
+    window.addEventListener('keydown', this.onKeyDown);
+    window.addEventListener('keyup', this.onKeyUp);
+  }
+
+  /**
+   * Give the keyboard back.
+   *
+   * The surface switches between Plan and Model in place now, so this class is
+   * built and thrown away repeatedly in one page. Its listeners are on `window`
+   * — they have to be, a keystroke is not aimed at the drawing — and a set left
+   * behind would go on drawing into a scratch layer that is no longer in the
+   * document. Two Tools both answering Enter is the shape of that defect.
+   */
+  destroy(): void {
+    window.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('keyup', this.onKeyUp);
+    this.points = [];
   }
 
   get current(): ToolName {
     return this.tool;
+  }
+
+  /** Is a shape open? Escape belongs to the shape while one is. */
+  get tracing(): boolean {
+    return this.points.length > 0;
   }
 
   use(tool: ToolName): void {
@@ -59,6 +111,58 @@ export class Tools {
   abandon(): void {
     this.points = [];
     this.surface.scratch.replaceChildren();
+    this.report();
+  }
+
+  /** Close the shape and record it, the way Enter does. */
+  close(): void {
+    this.finish();
+  }
+
+  /**
+   * A box, typed rather than traced: "40x30" off the corner already put down.
+   *
+   * VES has had this for years and an estimator who has used it does not want
+   * a dialog. It goes right and down from the last corner on the sheet, which
+   * is the direction a drawing reads in, and it is recorded as an ordinary
+   * traced area — there is nothing special about it once it exists.
+   */
+  box(width: number, height: number): boolean {
+    if (this.tool !== 'area') return false;
+    const from = this.points[this.points.length - 1];
+    if (!from || !(width > 0) || !(height > 0)) return false;
+    this.host.onTrace('area', [
+      from,
+      { x: from.x + width, y: from.y },
+      { x: from.x + width, y: from.y + height },
+      { x: from.x, y: from.y + height },
+    ]);
+    this.abandon();
+    this.host.onHint(HINTS[this.tool]);
+    return true;
+  }
+
+  /**
+   * A length, typed: carry the run on in the direction it is already going.
+   *
+   * It needs a direction, so it needs two corners already down. With one it
+   * refuses and the caller says why — a keyed length that guessed a bearing
+   * would put a parapet somewhere nobody asked for.
+   */
+  extend(length: number): boolean {
+    if (this.tool !== 'line' && this.tool !== 'area') return false;
+    const n = this.points.length;
+    const a = this.points[n - 2];
+    const b = this.points[n - 1];
+    if (!a || !b || !(length > 0)) return false;
+    const run = Math.hypot(b.x - a.x, b.y - a.y);
+    if (run === 0) return false;
+    this.points.push({
+      x: b.x + ((b.x - a.x) / run) * length,
+      y: b.y + ((b.y - a.y) / run) * length,
+    });
+    this.draw();
+    return true;
   }
 
   private down(page: Point, event: PointerEvent): void {
@@ -77,6 +181,7 @@ export class Tools {
     }
 
     this.points.push(point);
+    this.report();
 
     if (this.tool === 'scale' && this.points.length === 2) {
       const [a, b] = this.points as [Point, Point];
@@ -92,6 +197,7 @@ export class Tools {
   private move(page: Point, event: PointerEvent): void {
     this.orthogonal = event.shiftKey;
     this.cursor = this.snap(this.constrain(page));
+    this.host.onCursor(this.cursor);
     if (this.points.length) this.draw();
   }
 
@@ -162,6 +268,21 @@ export class Tools {
     }
 
     this.host.onHint(this.progress(preview));
+    this.report();
+  }
+
+  /** What the shape measures right now, in page units, for the chrome. */
+  private report(): void {
+    const preview = this.cursor ? [...this.points, this.cursor] : this.points;
+    const enough = preview.length > 2;
+    this.host.onProgress({
+      tool: this.tool,
+      points: this.points.length,
+      pageArea: this.tool === 'area' && enough ? polygonArea(preview) : null,
+      pageLength: this.points.length > 1
+        ? (this.tool === 'area' ? polygonPerimeter(preview) : polylineLength(preview))
+        : null,
+    });
   }
 
   /** What the shape measures so far, in page units — the caller turns it into feet. */

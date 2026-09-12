@@ -25,6 +25,14 @@ const PATHS: Readonly<Record<string, string[]>> = {
   close: ['M18 6 6 18', 'm6 6 12 12'],
   add: ['M5 12h14', 'M12 5v14'],
   chevron: ['m9 18 6-6-6-6'],
+  // The acts the tool rail names, drawn from Lucide's own geometry: a wall for
+  // a parapet run, a sump with a drain in it, a cricket as the wedge it is.
+  parapet: ['M3 4h18v16H3z', 'M3 10h18', 'M3 16h18', 'M9 4v6', 'M15 10v6', 'M9 16v4'],
+  drain: ['M3 3h18v18H3z', 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', 'M12 11.5h.01'],
+  cricket: ['M13.73 4a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z'],
+  // Which room the window is in. The icon shows where the toggle is going.
+  sun: ['M12 2v2', 'M12 20v2', 'm4.93 4.93 1.41 1.41', 'm17.66 17.66 1.41 1.41', 'M2 12h2', 'M20 12h2', 'm6.34 17.66-1.41 1.41', 'm19.07 4.93-1.41 1.41', 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'],
+  moon: ['M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z'],
   addDrawing: ['M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z', 'M14 2v4a2 2 0 0 0 2 2h4', 'M12 11v6', 'M9 14h6'],
 };
 

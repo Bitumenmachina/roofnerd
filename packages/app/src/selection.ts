@@ -132,4 +132,7 @@ export function selectedConditionId(): string | null {
   return null;
 }
 
+/** The line in view, when a line is what is selected. */
+export const selectedItemId = (): string | null => (current.kind === 'item' ? current.id : null);
+
 export const selectedPageId = (): string | null => (current.kind === 'page' ? current.id : null);

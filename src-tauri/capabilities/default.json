@@ -1,11 +1,12 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "What a roofnerd window is allowed to do. Deliberately almost nothing: open its own windows, talk to the document, and ask the operating system for a file the estimator picked by hand. There is no HTTP plugin here, and there will not be one — the program has no business reaching the network, and the shortest way to keep that true is to never grant it the ability. There is no file-system plugin either: drawings are read through read_page_source, which will not look outside the open job.",
-  "windows": ["main", "plan", "estimate", "model", "recap", "library", "reports"],
+  "description": "What a roofnerd window is allowed to do. Deliberately almost nothing: open its own windows, talk to the document, and ask the operating system for a file the estimator picked by hand. There is no HTTP plugin here, and there will not be one — the program has no business reaching the network, and the shortest way to keep that true is to never grant it the ability. There is no file-system plugin either: drawings are read through read_page_source, which will not look outside the open job. A window may close ITSELF: the cost panel torn off onto a second monitor has a dock-it-back affordance, and the only way for that to send the panel home is for the window to go away. Same set of windows, one more thing they may do to themselves.",
+  "windows": ["main", "plan", "estimate", "model", "recap", "library", "reports", "cost"],
   "permissions": [
     "core:default",
     "core:window:allow-set-focus",
+    "core:window:allow-close",
     "core:webview:allow-create-webview-window",
     "dialog:allow-open"
   ]

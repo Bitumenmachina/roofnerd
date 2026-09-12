@@ -1,62 +1,44 @@
-// ── Reports ────────────────────────────────────────────────────────────────
+// ── The lens renderer ──────────────────────────────────────────────────────
 // One estimate, filtered for whoever is receiving it.
 //
-// Pick who it is for on the left; the sheet on the right is the same estimate
-// with their columns and nothing else. Nothing here changes a number — a lens
-// leaves things out, and that is the whole of what it does.
+// Who it is for is chosen in the document bar — "Showing …", the handoff's
+// "WHO IS LOOKING" menu — and what comes out is drawn here, in the cost panel,
+// over the same document. There is no Reports editor any more: a lens is a
+// read over the one estimate and it belongs where the money already is, not in
+// an editor of its own with a second copy of the picker beside it.
+//
+// Nothing here changes a number — a lens leaves things out, and that is the
+// whole of what it does.
 //
 // A concealed cost is never written into the page. Not greyed, not blurred, not
 // present: a value that is in the document and merely hidden is one "view
 // source" away from the supply house knowing the margin.
 
 import {
-  LENSES, conceals, conditionTotal, lensById, priceJob, recap as recapOf,
+  conceals, conditionTotal, lensById, priceJob, recap as recapOf,
   type Lens, type LensColumn,
 } from '@roofnerd/engine';
 import { at, doc, subscribe, writeExport, type Doc } from '../doc.js';
 import { sayInStatus } from '../chrome.js';
 
-let current = LENSES[0]!.id;
 let stopSubscribing: (() => void) | null = null;
 
-export function mountReports(host: HTMLElement): void {
+/**
+ * Draw one lens into a host and keep it drawn.
+ *
+ * The lens is named by the caller — the document bar owns the choice — so this
+ * has no state of its own beyond the subscription it has to release.
+ */
+export function mountLens(host: HTMLElement, lensId: string): void {
   stopSubscribing?.();
   host.replaceChildren();
   host.classList.add('reports-editor');
 
-  const picker = document.createElement('nav');
-  picker.className = 'lens-picker';
-
   const sheet = document.createElement('div');
   sheet.className = 'lens-sheet';
+  host.append(sheet);
 
-  host.append(picker, sheet);
-
-  const draw = () => {
-    drawPicker(picker, () => draw());
-    drawLens(sheet, doc());
-  };
-  stopSubscribing = subscribe(() => draw());
-}
-
-function drawPicker(host: HTMLElement, redraw: () => void): void {
-  host.replaceChildren();
-  const h = document.createElement('h3');
-  h.textContent = 'Who is it for?';
-  host.append(h);
-
-  for (const lens of LENSES) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = lens.id === current ? 'lens on' : 'lens';
-    const name = document.createElement('strong');
-    name.textContent = lens.name;
-    const who = document.createElement('span');
-    who.textContent = lens.audience;
-    b.append(name, who);
-    b.addEventListener('click', () => { current = lens.id; redraw(); });
-    host.append(b);
-  }
+  stopSubscribing = subscribe(() => drawLens(sheet, doc(), lensId));
 }
 
 type Row = Record<string, string>;
@@ -64,9 +46,9 @@ type Row = Record<string, string>;
 /** How many squares the recap's rates were taken over. Printed beside them. */
 let perSquareOver: number | null = null;
 
-function drawLens(host: HTMLElement, d: Doc): void {
+function drawLens(host: HTMLElement, d: Doc, lensId: string): void {
   host.replaceChildren();
-  const lens = lensById(current);
+  const lens = lensById(lensId);
   if (!lens) return;
 
   const head = document.createElement('header');

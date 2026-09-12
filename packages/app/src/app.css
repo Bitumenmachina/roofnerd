@@ -6,6 +6,25 @@
    One accent, one sans, one grid. Condition colours are for telling one traced
    thing from another and never for interface state: a colour that means
    "selected" on Tuesday must not mean "parapet" on Wednesday.
+
+   TWO THEMES, ONE SET OF NAMES. Everything the chrome paints with is a token
+   below. `:root` is the light theme — the values this program has always used,
+   given names — and `[data-theme="dark"]` is the design handoff's palette,
+   hex for hex as the handoff writes it. Nothing else about colour changes
+   here: the light values are the same values, and the dark ones are not
+   adjusted to taste.
+
+   The handoff names two rules where the light theme has one (`hairline` and
+   `hairline strong`), and several inks where the light theme has three. Where
+   that happens the light side points two names at one value rather than
+   inventing a shade — one rule colour is the truth about this stylesheet, and
+   a made-up grey would be a light value that changed.
+
+   IBM Plex Sans and IBM Plex Mono are the handoff's faces. They are not on
+   this machine (`fc-list | grep -i plex` finds nothing) and this program
+   fetches nothing, so the system stack stands and the fonts are named first in
+   it — a box that has Plex installed picks it up, and one that does not reads
+   in the same sizes.
    ────────────────────────────────────────────────────────────────────────── */
 
 :root {
@@ -27,10 +46,47 @@
   --accent-ink:  #ffffff;
 
   --warn: #9a3412;
+  --warn-soft: #fdf5f2;
+
+  /* ── the handoff's token set, in the light theme's own values ──────────── */
+  --rn-viewport:        var(--desk);
+  --rn-chrome:          var(--panel);
+  --rn-bar:             var(--panel);
+  --rn-strip:           var(--panel);
+  --rn-panel:           var(--panel);
+  --rn-panel-head:      var(--rule-soft);
+  --rn-row-lit:         var(--accent-soft);
+  --rn-open-line:       var(--accent-soft);
+  --rn-hairline:        var(--rule);
+  --rn-hairline-strong: var(--rule);
+  --rn-row-rule:        var(--rule-soft);
+  --rn-ink:             var(--ink);
+  --rn-ink-mono:        var(--ink);
+  --rn-ink-2:           var(--ink-soft);
+  --rn-ink-3:           var(--ink-faint);
+  --rn-ink-dim:         var(--ink-faint);
+  --rn-ink-off:         var(--ink-faint);
+  --rn-ink-off-2:       var(--rule);
+  --rn-metal-1:         var(--ink-faint);
+  --rn-metal-2:         var(--ink-soft);
+  --rn-metal-3:         var(--rule);
+  --rn-water:           var(--accent);
+  --rn-water-ground:    var(--accent-soft);
+  --rn-water-border:    var(--accent);
+  --rn-water-ink:       var(--accent);
+  --rn-warn:            var(--warn);
+  --rn-warn-ground:     var(--warn-soft);
+  --rn-warn-border:     var(--warn);
+  --rn-warn-prose:      var(--ink-soft);
+  /* Surface on the hover label chip beside the tool rail: the handoff's chip is
+     a light ground with dark text, which in the light theme is the other way
+     round or it disappears into the rail. */
+  --rn-chip:            var(--ink);
+  --rn-chip-ink:        var(--paper);
 
   /* Type */
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   /* A5: status and hints 12, tables and lists 13, body and properties 14,
      editor headers 16, the job name 20. */
   --t-micro: 12px;
@@ -50,20 +106,106 @@
 
   --radius: 4px;
 
+  /* The regions, as the handoff sizes them. They are declared once here so a
+     check and the stylesheet cannot disagree about what "44px" means. */
+  --doc-bar:    44px;
+  --tool-strip: 42px;
+  --tool-rail:  52px;
+  --status:     30px;
+  /* The Plan keeps its own list of what has been traced, beside the drawing
+     (D132). It is inside the surface, so the overlays that belong to the
+     DRAWING have to stand off it — the view switch was landing on top of the
+     first condition in the list, which is the sort of thing only a picture
+     shows. Declared once here so the overlay and the layout cannot disagree. */
+  --plan-rail:  320px;
+  /* The cost panel: 364 docked, 420 with a line open or the book out, and what
+     a lens needs when a lens is showing. Set on the element by the panel. */
+  --panel-w:    364px;
+
   font-family: var(--sans);
   font-size: var(--t-base);
   color: var(--ink);
 }
 
+/* ── The handoff's palette, verbatim ───────────────────────────────────────
+   Every value below is copied from the handoff's own token table. Nothing is
+   tuned, and the two loud colours are the only colours in it: water for
+   drainage and everything derived, amber for a flat area with no fall. */
+[data-theme="dark"] {
+  --ink:        #e6ebef;
+  --ink-soft:   #9aa5ad;
+  --ink-faint:  #6b757c;
+  --paper:      #191d21;
+  --panel:      #15181b;
+  --rule:       #2a3036;
+  --rule-soft:  #22272b;
+  --desk:       #0b0e10;
+
+  --accent:      #45b3e0;
+  --accent-soft: #16262e;
+  --accent-ink:  #15181b;
+
+  --warn: #e0a03c;
+  --warn-soft: #241d10;
+
+  --rn-viewport:        #0b0e10;
+  --rn-chrome:          #15181b;
+  --rn-bar:             #1b1f23;
+  --rn-strip:           #181c20;
+  --rn-panel:           #191d21;
+  --rn-panel-head:      #1d2226;
+  --rn-row-lit:         #1e242a;
+  --rn-open-line:       #1b2227;
+  --rn-hairline:        #2a3036;
+  --rn-hairline-strong: #343b42;
+  --rn-row-rule:        #22272b;
+  --rn-ink:             #e6ebef;
+  --rn-ink-mono:        #cfd8dd;
+  --rn-ink-2:           #9aa5ad;
+  --rn-ink-3:           #8fa3ad;
+  --rn-ink-dim:         #6b757c;
+  --rn-ink-off:         #4b5459;
+  --rn-ink-off-2:       #3f474c;
+  --rn-metal-1:         #b9c4c9;
+  --rn-metal-2:         #8d989e;
+  --rn-metal-3:         #4c5459;
+  --rn-water:           #45b3e0;
+  --rn-water-ground:    #16262e;
+  --rn-water-border:    #2f5b70;
+  --rn-water-ink:       #9dc3d5;
+  --rn-warn:            #e0a03c;
+  --rn-warn-ground:     #241d10;
+  --rn-warn-border:     #4a3a1c;
+  --rn-warn-prose:      #c9b9a0;
+  --rn-chip:            #e6ebef;
+  --rn-chip-ink:        #15181b;
+
+  color-scheme: dark;
+}
+
 * { box-sizing: border-box; }
 
+/* ── The window, as the handoff lays it out ────────────────────────────────
+   Document bar 44 · tool settings strip 42 · body · status strip 30. The four
+   fixed rows are fixed in the grid itself, not by what happens to be in them:
+   the README's "Responsive behavior" says only the surface flexes, and an
+   `auto` track asks its item how tall it wants to be, which is how one long
+   export message made the status bar two lines high (D120). A track written as
+   `30px` cannot be talked into 44 by its contents. */
 body {
   margin: 0;
   height: 100vh;
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  background: var(--panel);
+  grid-template-rows: var(--doc-bar) var(--tool-strip) minmax(0, 1fr) var(--status);
+  background: var(--rn-chrome);
+  color: var(--rn-ink);
   overflow: hidden;
+}
+
+/* A window that is only the cost panel — the detached one — is the panel and
+   its own title bar, and nothing else. */
+body.cost-window {
+  grid-template-rows: 36px minmax(0, 1fr);
 }
 
 button, input, select { font: inherit; color: inherit; }
@@ -84,17 +226,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .muted { color: var(--ink-soft); font-size: var(--t-small); margin: 0; }
 .icon { flex: none; }
 
-/* ── Menu bar ───────────────────────────────────────────────────────────── */
+/* ── Menus ─────────────────────────────────────────────────────────────── */
 
-.menu-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--gap-2);
-  padding: 0 var(--gap-2);
-  height: 32px;
-  border-bottom: 1px solid var(--rule);
-  background: var(--panel);
-}
 .menu { position: relative; }
 .menu-button { border: 0; background: transparent; padding: 4px 10px; border-radius: var(--radius); }
 .menu-button:hover { background: var(--rule-soft); }
@@ -109,64 +242,293 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .menu-item { border: 0; background: transparent; text-align: left; padding: 6px 10px; border-radius: 4px; }
 .menu-item:hover:not(:disabled) { background: var(--accent-soft); }
 .menu-item:disabled { color: var(--ink-faint); cursor: default; }
-.menu-job { margin-left: auto; color: var(--ink-soft); font-size: var(--t-small); }
 
-/* ── The frame ──────────────────────────────────────────────────────────── */
-
-.frame { display: grid; grid-template-columns: 260px 1fr; min-height: 0; }
-.frame.detached { grid-template-columns: 1fr; }
-.frame.detached > .sidebar { display: none; }
-
-.sidebar {
-  border-right: 1px solid var(--rule);
-  background: var(--panel);
-  overflow: auto;
-  padding: var(--gap-2) 0;
-  min-height: 0;
+/* ── The document bar ──────────────────────────────────────────────────────
+   Identity of the one open file: what it is called, the single roof-area
+   figure everything reconciles to, who the estimate is being shown to, and
+   the two affordances that belong to the window rather than to a tool — help,
+   and which theme the room is in. It never holds a tool. File actions are not
+   tools: opening and saving are things done to the one document this bar
+   names, which is why the File menu is here and nowhere else. */
+.doc-bar {
+  display: flex; align-items: center; gap: var(--gap-4);
+  padding: 0 14px; min-width: 0; overflow: hidden;
+  background: var(--rn-bar); border-bottom: 1px solid var(--rn-hairline);
 }
-
-/* ── The tree ───────────────────────────────────────────────────────────── */
-
-ul.tree { list-style: none; margin: 0; padding: 0; }
-.tree-node {
-  display: flex; align-items: center; gap: 2px;
-  padding-left: calc(var(--depth) * 16px);
-  min-height: var(--row);
+.doc-job {
+  font-size: var(--t-small); font-weight: 500; color: var(--rn-ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
 }
-.tree-node.on > .tree-label { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
-.twisty {
-  border: 0; background: transparent; padding: 0; width: 18px; height: 18px;
-  display: grid; place-items: center; color: var(--ink-faint); flex: none;
-}
-.twisty .icon { transition: transform 90ms ease; }
-.twisty.open .icon { transform: rotate(90deg); }
-.twisty.empty { visibility: hidden; }
-.tree-label {
-  display: flex; align-items: center; gap: var(--gap-2); flex: 1; min-width: 0;
-  border: 0; background: transparent; border-radius: 4px; padding: 3px 8px 3px 4px;
-  text-align: left; color: var(--ink-soft);
-}
-.tree-label:hover { background: var(--rule-soft); }
-.tree-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tree-detail { color: var(--ink-faint); font-size: var(--t-micro); flex: none; }
-.tree-note { color: var(--ink-faint); font-size: var(--t-micro); padding: var(--gap-2) var(--gap-3); margin: 0; }
-.swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.doc-job.none { color: var(--rn-ink-dim); font-weight: 400; }
+.doc-divider { width: 1px; height: 20px; background: var(--rn-hairline); flex: none; }
+.doc-spacer { flex: 1 1 auto; min-width: 0; }
 
-/* ── An area ────────────────────────────────────────────────────────────── */
+/* One roof-area figure, and the basis of it on its own title. Everything on
+   screen reconciles to this number, so what went into it has to be readable:
+   the title names every area condition counted in it. */
+.roof-area { display: flex; align-items: baseline; gap: 7px; flex: none; }
+.roof-area .label { font-size: var(--t-micro); color: var(--rn-ink-dim); }
+.roof-area .value {
+  font-family: var(--mono); font-size: var(--t-base); font-weight: 500;
+  color: var(--rn-ink); font-variant-numeric: tabular-nums;
+}
+.roof-area .unit { font-family: var(--mono); font-size: var(--t-micro); color: var(--rn-ink-3); }
+.roof-area.none .value { color: var(--rn-ink-dim); }
+.roof-area .left-out { font-size: 11px; color: var(--rn-warn); }
 
-.area { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: var(--paper); }
-.area-header {
+/* Derived from the model, not typed. The handoff spends its one loud colour on
+   water and on this mark, because they are the same claim: the program worked
+   it out. A typed number is dotted-underlined instead — `.typed`, below. */
+.derived { color: var(--rn-water); font-size: 11px; flex: none; }
+.typed { text-decoration: underline dotted; text-underline-offset: 3px; }
+
+/* Who is looking. Closed it is a word; open it is the lens menu. */
+.lens-selector { position: relative; flex: none; }
+.lens-button {
   display: flex; align-items: center; gap: var(--gap-2);
-  padding: 0 var(--gap-2) 0 var(--gap-4); height: 34px;
-  border-bottom: 1px solid var(--rule); background: var(--panel); flex: none;
+  border: 1px solid var(--rn-hairline-strong); border-radius: 0;
+  background: var(--rn-panel-head); padding: 5px 9px;
 }
-.area-header h2 { font-size: var(--t-base); font-weight: 600; margin: 0; }
-.area-actions { margin-left: auto; display: flex; gap: 2px; }
-/* Two columns: the editor, and the Properties panel beside it (A3, D113). The
-   panel's column is `auto`, so a window with nothing to show in it — the start
-   screen — gives the whole area to the editor by hiding the panel, rather than
-   leaving a 320px hole. */
-.area-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; overflow: hidden; }
+.lens-button .label { font-size: 11px; color: var(--rn-ink-dim); }
+.lens-button .value { font-size: var(--t-micro); font-weight: 500; color: var(--rn-ink); }
+.lens-button.on { border-color: var(--rn-water); background: var(--rn-water-ground); }
+.lens-button.on .label { color: var(--rn-water-ink); }
+.lens-menu {
+  position: absolute; top: 32px; right: 0; z-index: 40; width: 290px;
+  background: var(--rn-panel-head); border: 1px solid var(--rn-water);
+  display: flex; flex-direction: column;
+}
+.lens-menu[hidden] { display: none; }
+.lens-menu-head {
+  padding: 8px 11px; font-family: var(--mono); font-size: 10px;
+  color: var(--rn-ink-3); border-bottom: 1px solid var(--rn-hairline);
+}
+.lens-menu-foot {
+  padding: 8px 11px; font-size: 11px; line-height: 1.5; color: var(--rn-ink-dim);
+  border-top: 1px solid var(--rn-hairline);
+}
+/* One row of the menu is one lens. It keeps the class the lens buttons have
+   always had, because what a check puts its hand on is "a lens, by its name". */
+.lens-menu .lens {
+  display: block; width: 100%; text-align: left; border: 0; border-radius: 0;
+  border-bottom: 1px solid var(--rn-row-rule); background: transparent;
+  padding: 9px 11px; color: var(--rn-ink-mono);
+}
+.lens-menu .lens:hover { background: var(--rn-row-lit); }
+.lens-menu .lens.on { background: var(--rn-water-ground); color: var(--rn-ink); }
+.lens-menu .lens strong { display: block; font-weight: 400; font-size: var(--t-micro); }
+.lens-menu .lens span { display: block; font-size: 11px; color: var(--rn-ink-dim); }
+
+.doc-bar .icon-button, .doc-bar .theme-toggle {
+  flex: none; width: 26px; height: 26px; padding: 0;
+  border: 1px solid var(--rn-hairline-strong); border-radius: 0;
+  background: transparent; color: var(--rn-ink-3);
+  display: grid; place-items: center;
+}
+.doc-bar .icon-button:hover, .doc-bar .theme-toggle:hover {
+  color: var(--rn-ink); border-color: var(--rn-ink-3);
+}
+
+/* ── The tool settings strip ───────────────────────────────────────────────
+   Everything the active tool needs and nothing else, and it swaps wholesale
+   when the tool changes. All the depth lives here so the surface stays spare.
+   It is 42px and it never becomes 84: the fields inside it give way, the strip
+   does not. */
+.tool-strip {
+  display: flex; align-items: center; gap: 0;
+  padding: 0 14px; min-width: 0; overflow: hidden;
+  background: var(--rn-strip); border-bottom: 1px solid var(--rn-hairline);
+}
+.tool-strip-name {
+  font-size: var(--t-micro); font-weight: 600; color: var(--rn-ink);
+  padding-right: var(--gap-4); flex: none; white-space: nowrap;
+}
+.tool-strip-fields {
+  display: flex; align-items: center; gap: 18px;
+  font-size: var(--t-micro); color: var(--rn-ink-2);
+  min-width: 0; overflow: hidden;
+}
+.tool-strip-fields > * { flex: none; }
+.strip-field { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+.strip-field .v { color: var(--rn-ink); }
+.strip-field .v.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.strip-field .why { color: var(--rn-ink-dim); }
+.tool-strip select, .tool-strip input {
+  border: 1px solid var(--rn-hairline-strong); border-radius: 0;
+  background: var(--rn-panel-head); color: var(--rn-ink);
+  padding: 4px 6px; font-size: var(--t-micro); max-width: 196px; flex: none;
+}
+/* The keyed entry field. VES muscle memory: 40x30 is a box, 25 is a length,
+   800 is an exact value, and an estimator who has used that for years should
+   not have to learn a dialog. */
+.tool-strip input.keyed { width: 148px; font-family: var(--mono); }
+.tool-strip input.keyed.bad { border-color: var(--rn-warn); }
+.tool-strip button {
+  border: 1px solid var(--rn-hairline-strong); border-radius: 0;
+  background: transparent; color: var(--rn-ink);
+  padding: 5px 9px; font-size: var(--t-micro); flex: none; white-space: nowrap;
+}
+.tool-strip button:hover { border-color: var(--rn-ink-3); }
+.tool-strip button.quiet { color: var(--rn-ink-2); }
+.tool-strip-idle { font-size: var(--t-micro); color: var(--rn-ink-off); }
+/* Asking how long that really is, in the strip the Scale act owns. It must not
+   wrap: the strip is one 42px row by specification and a field that pushed it
+   to two would be the status-bar defect (D120) in a new region. */
+.tool-strip .scale-ask {
+  display: inline-flex; align-items: center; gap: var(--gap-2);
+  flex-wrap: nowrap; white-space: nowrap;
+}
+.tool-strip .scale-ask small { color: var(--rn-ink-dim); font-size: 11px; }
+
+/* ── The body: rail · surface · cost panel ─────────────────────────────────
+   The three fixed widths are fixed and the surface is the only thing that
+   flexes (README, "Responsive behavior"). `minmax(0, 1fr)` rather than `1fr`
+   because a 1fr track still asks its content how narrow it can be, and the
+   drawing inside it is a scroller full of unbreakable things. */
+.body-row {
+  display: grid;
+  grid-template-columns: var(--tool-rail) minmax(0, 1fr) auto;
+  min-height: 0; min-width: 0; overflow: hidden;
+}
+.body-row.no-panel { grid-template-columns: var(--tool-rail) minmax(0, 1fr); }
+
+/* ── The tool rail ─────────────────────────────────────────────────────────
+   One act per button, in the words a roofer uses for it, 36x36 in a 52px rail,
+   the word itself on hover. Only the acts this program can actually do are in
+   it: an estimator is never offered a button that does nothing. */
+.tool-rail {
+  display: flex; flex-direction: column; align-items: center;
+  padding: var(--gap-2) 0; gap: var(--gap-1);
+  background: var(--rn-strip); border-right: 1px solid var(--rn-hairline);
+  overflow: visible;
+}
+.rail-tool {
+  position: relative; width: 36px; height: 36px; flex: none;
+  border: 1px solid transparent; border-radius: 0;
+  background: transparent; color: var(--rn-ink-2);
+  display: grid; place-items: center; padding: 0;
+}
+.rail-tool:hover { color: var(--rn-ink); border-color: var(--rn-hairline-strong); }
+.rail-tool.on { background: var(--rn-row-lit); border-color: var(--rn-water); color: var(--rn-ink); }
+/* The hover label: a light chip to the right of the rail, over whatever is
+   there. It is the word, so the pictogram never has to be learned. */
+.rail-label {
+  position: absolute; left: 44px; top: 5px; z-index: 30;
+  background: var(--rn-chip); color: var(--rn-chip-ink);
+  font-size: var(--t-micro); font-weight: 500; line-height: 1;
+  padding: 6px 8px; white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity 120ms ease;
+}
+.rail-tool:hover .rail-label, .rail-tool:focus-visible .rail-label { opacity: 1; }
+.tool-rail.quiet { opacity: 0.35; }
+
+/* ── The surface ───────────────────────────────────────────────────────────
+   The takeoff. Content chips overlay upper-left; the view switch upper-right.
+   Both are overlays so the drawing keeps the whole region. */
+.surface-region { position: relative; min-width: 0; min-height: 0; display: flex; overflow: hidden; }
+.surface-region > .editor-host { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.view-switch {
+  position: absolute; right: 14px; top: 14px; z-index: 20;
+  display: flex; flex-direction: column; gap: var(--gap-2); align-items: flex-end;
+}
+/* Upper right OF THE DRAWING. The Plan's list of conditions is inside the
+   surface and takes its right-hand side, so the overlay stands off it; without
+   this the view switch is drawn on top of the first condition in the list. The
+   sibling selector is the relationship that is actually true — the view's host
+   and the overlay are both children of the surface region — and the Model,
+   which has no list, keeps the plain 14px. */
+.editor-host.plan-editor ~ .view-switch { right: calc(var(--plan-rail) + 14px); }
+.editor-host.plan-editor ~ .measuring-pill { left: 14px; }
+.view-switch .views { display: flex; border: 1px solid var(--rn-hairline-strong); background: var(--rn-strip); }
+.view-switch .views button {
+  border: 0; border-radius: 0; background: transparent;
+  padding: 8px 14px; font-size: var(--t-micro); color: var(--rn-ink-2);
+}
+.view-switch .views button + button { border-left: 1px solid var(--rn-hairline-strong); }
+.view-switch .views button.on { background: var(--rn-ink); color: var(--rn-chip-ink); font-weight: 500; }
+.view-caption { font-family: var(--mono); font-size: 10px; color: var(--rn-ink-off); }
+/* Zoom and fit, and later the Model's preset corners. A group of icon buttons
+   on its own ground so it reads against the drawing under it. */
+.view-nav {
+  display: flex; gap: 2px;
+  border: 1px solid var(--rn-hairline-strong); background: var(--rn-strip);
+}
+.view-nav:empty { display: none; }
+.view-nav .icon-button { border-radius: 0; padding: 6px; color: var(--rn-ink-2); }
+.view-nav .icon-button:hover { background: var(--rn-row-lit); color: var(--rn-ink); }
+/* Bringing the panel home, from the window that lost it. Dashed, in the one
+   loud colour, because it is a state the estimator put the window into. */
+.view-switch .redock {
+  border: 1px dashed var(--rn-water); background: var(--rn-water-ground);
+  color: var(--rn-water); font-family: var(--mono); font-size: 11px;
+  padding: 8px 11px; border-radius: 0;
+}
+.surface-chips {
+  position: absolute; left: 14px; top: 14px; z-index: 20; display: flex; gap: 6px;
+}
+.surface-chips span {
+  background: var(--rn-strip); border: 1px solid var(--rn-hairline-strong);
+  padding: 6px 9px; font-family: var(--mono); font-size: 11px; color: var(--rn-ink-2);
+}
+/* "Measuring into: <condition>", on the drawing, while a trace is open. VES
+   puts it there and an estimator tracing into the wrong condition is the
+   mistake it exists to stop. */
+.measuring-pill {
+  position: absolute; left: 14px; bottom: 14px; z-index: 20;
+  display: flex; align-items: baseline; gap: 6px;
+  background: var(--rn-water-ground); border: 1px solid var(--rn-water);
+  padding: 7px 10px; font-size: var(--t-micro); color: var(--rn-ink);
+}
+.measuring-pill .label { color: var(--rn-water-ink); font-size: 11px; }
+.measuring-pill[hidden] { display: none; }
+.measuring-pill .into { font-weight: 500; }
+
+/* ── The status strip ──────────────────────────────────────────────────────
+   What the roof is doing under the cursor — slope, how thick the insulation is
+   there, which way the water goes, how far it has to go to reach a drain — and
+   at the right end, where the job is and whatever just happened.
+
+   `min-width: 0; overflow: hidden` is load-bearing and was paid for: a grid
+   track asks its item how narrow it can be, a flex row of unbreakable text
+   answers with the width of that text, and one export message seventy
+   characters long made the whole page 214px wider than its window (D120). The
+   row is a fixed 30px here, but the WIDTH question is still asked. */
+.status-strip {
+  display: flex; align-items: center; gap: 22px;
+  padding: 0 14px;
+  background: var(--rn-bar); border-top: 1px solid var(--rn-hairline);
+  font-family: var(--mono); font-size: 11px; color: var(--rn-ink-2);
+  min-width: 0; overflow: hidden;
+}
+.readout { display: flex; align-items: baseline; gap: 22px; flex: none; white-space: nowrap; }
+.readout-field { display: inline-flex; gap: 5px; align-items: baseline; }
+.readout-field .k { color: var(--rn-ink-dim); }
+.readout-field .v { color: var(--rn-ink); }
+.readout-field.water .v, .readout-field.water .k { color: var(--rn-water); }
+.readout-field.none .v { color: var(--rn-ink-dim); }
+.readout-field.warn .v, .readout-field.warn .k { color: var(--rn-warn); }
+.status-spacer { flex: 1 1 auto; min-width: 0; }
+/* The facts that are true whatever tool is up. Job, Scenario, Scale and Units
+   have left this strip for the regions they belong to (the document bar, the
+   Estimate tab's header, the tool settings strip); what is left here is where
+   the file is and what just happened. */
+.status-message {
+  color: var(--rn-ink-2);
+  flex: 0 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.status-aside { flex: none; color: var(--rn-water); white-space: nowrap; }
+.status-aside[hidden] { display: none; }
+.status-path {
+  color: var(--rn-ink-dim); flex: none;
+  display: flex; min-width: 0; max-width: 45%; overflow: hidden;
+}
+.path-head { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.path-tail { flex: none; white-space: nowrap; }
+
+/* ── One editor's host ─────────────────────────────────────────────────────
+   Every view mounts into this, and it keeps the id the whole program — and
+   every check — uses to mean "where the editor is". */
 .editor-host { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
 .icon-button {
   border: 0; background: transparent; padding: 5px; border-radius: 4px;
@@ -174,56 +536,13 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
 }
 .icon-button:hover { background: var(--rule-soft); color: var(--ink); }
 
-/* ── Status bar ─────────────────────────────────────────────────────────── */
-
-.status-bar {
-  display: flex; align-items: center; gap: var(--gap-3);
-  height: 28px; padding: 0 var(--gap-3);
-  border-top: 1px solid var(--rule); background: var(--panel);
-  font-size: var(--t-micro); color: var(--ink-soft);
-  /* The bar is sized by the WINDOW, never by what it is saying — and this is
-     the line that says so. `min-width: 0` on the message inside it is not
-     enough: a grid row asks its item how narrow it can be, and a flex box full
-     of unbreakable text answers with the width of that text. The body is a
-     grid, this bar is one of its three rows, and one export message seventy
-     characters long made the single column 1314 px in a 1100 px window. Every
-     row then stretched to it: the recap's last column, the buttons on the lens
-     header and this bar's own job path all went off the right edge, clipped by
-     `overflow: hidden` on the body — one CSS declaration away from a window
-     that looked cropped for no visible reason. Measured, both ways.
-     `overflow` here is the second half: an item that clips has an automatic
-     minimum size of zero, which is what stops the question being asked at all. */
-  min-width: 0; overflow: hidden;
-}
-/* The facts are the fixed part of the bar: they never wrap and never give way.
-   What gives way is the message beside them, which can be a path seventy
-   characters long — when it was allowed to push, "Units SF · LF · EA · SQ" went
-   to a second line in a bar that is specified at one (28 px), which is what the
-   section 9a evidence caught and no check had. */
-.status-facts { flex: none; white-space: nowrap; }
-.status-field { display: inline-flex; gap: 5px; align-items: baseline; }
-.status-field .k { color: var(--ink-faint); }
-.status-sep { color: var(--rule); }
-.status-message {
-  color: var(--ink-soft);
-  /* Takes what is left and gives it all back: min-width 0 is what lets a flex
-     item shrink under its own text at all, and the ellipsis is what it looks
-     like when it does. The whole of it is on the element's title. */
-  flex: 1 1 auto; min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-/* The job path, and which end of it survives. The front of a path is the
-   machine and the back of it is the job, so the last folder is the part that is
-   always on screen and everything before it is what gives way. Two elements
-   rather than a bidi trick: `direction: rtl` moves the ellipsis to the left but
-   reorders the leading slash to the far end, and a path that reads
-   "home/BuildOs/projects/" is worse than one that is short. */
-.status-path {
-  margin-left: auto; color: var(--ink-faint);
-  display: flex; min-width: 0; max-width: 45%; overflow: hidden;
-}
-.path-head { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.path-tail { flex: none; white-space: nowrap; }
+/* The tree is gone (D132). A bid nests, and a tree of it was the obvious thing
+   to draw — but nothing in the handoff has one and neither does the program
+   Patrick uses every day. Conditions live in the cost panel's Condition tab and
+   in the Plan's own list beside the drawing, which is two places a person
+   actually looks rather than three. The swatch survives because both lists use
+   it. */
+.swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
 
 /* The scale badge sits on the drawing, bottom-left, where an estimator looks
    to check what they are measuring against. */
@@ -235,7 +554,6 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
 }
 .scale-badge.none { color: var(--warn); }
 
-.editor-picker { border: 1px solid var(--rule); border-radius: var(--radius); padding: 3px 6px; background: var(--paper); font-size: var(--t-small); }
 
 .visibility {
   grid-column: 3; grid-row: 1; border: 0; background: transparent; padding: 2px;
@@ -276,57 +594,15 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
 .help-body p { margin: 0 0 var(--gap-3); line-height: 1.6; color: var(--ink-soft); }
 .help-body p:last-child { margin-bottom: 0; }
 
-/* ── Plan: toolbar ──────────────────────────────────────────────────────── */
-
-.toolbar {
-  display: flex; align-items: center; gap: var(--gap-1);
-  padding: var(--gap-2) var(--gap-3); border-bottom: 1px solid var(--rule);
-  background: var(--paper); flex: none; overflow-x: auto; scrollbar-width: thin;
-}
-.toolbar select {
-  border: 1px solid var(--rule); border-radius: var(--radius);
-  /* `flex: none`, because the cap was never what was cutting them. The toolbar
-     is a flex row and a select's default `flex: 0 1 auto` let it be squeezed to
-     96px against 103px of label — so "Or pick a scale…" read "Or pick a", which
-     is not a phrase, and the page name lost its end under the arrow. The tool
-     buttons beside them already say `flex: none`; the selects were the only
-     controls in the row that would give ground. They keep their own width and
-     the row scrolls if it must, which it does not at any width the app opens. */
-  padding: 5px 6px; background: var(--paper); max-width: 196px; flex: none;
-}
-.tool { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; white-space: nowrap; flex: none; }
-.tool.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.tool.on:hover { border-color: var(--accent); }
-.divider { width: 1px; height: 20px; background: var(--rule); margin: 0 var(--gap-1); flex: none; }
-.toolbar .spacer { margin-left: auto; }
-/* Zoom and Fit stay on screen at any width.
-   §1.5 asks for them grouped at the right end, and stopping the selects being
-   squeezed pushed them 76px past it — one defect traded for a worse one, since a
-   truncated label can still be guessed at and an unreachable button cannot. So
-   they pin, the same way the sheet's money column pins.
-
-   What the line under this used to claim — "the row scrolls between a fixed left
-   and a fixed right rather than losing either end" — is not what sticky does,
-   and the scale picker was the proof. A sticky item reserves NO room: it paints
-   over whatever the row has scrolled under it. Measured against this stylesheet
-   at the 839px editor the 1100px window used to give the Plan: 902px of controls
-   in 835px of row, and 83px of a 140px picker underneath this group, reading
-   "Or pick a s". Nothing in the row was too small — the row was.
-
-   So the row is given a window it fits in (1560, which leaves it 978px) and the
-   picker's prompt was cut to the width of its own options. Narrow the window by
-   hand and this group will cover the end of the row again; that is what pinning
-   costs, and it is written down here rather than found in a screenshot again. */
-.toolbar .zoom {
-  display: inline-flex; gap: 2px; flex: none;
-  position: sticky; right: 0; z-index: 1;
-  background: var(--paper); padding-left: var(--gap-2);
-  box-shadow: -8px 0 8px -6px rgb(0 0 0 / 12%);
-}
+/* The Plan's toolbar row is gone. Its acts are the window's tool rail and its
+   settings are the tool settings strip, which is the handoff's anatomy — and it
+   also ends §1.5 for good: the row that could not hold its own controls, and
+   the pinned zoom group that painted over whatever the row had scrolled under
+   it, are not a narrower row now, they are no row at all. */
 
 /* ── Plan: the desk and the paper ───────────────────────────────────────── */
 
-.plan-layout { display: grid; grid-template-columns: 1fr 320px; flex: 1; min-height: 0; }
+.plan-layout { display: grid; grid-template-columns: minmax(0, 1fr) var(--plan-rail); flex: 1; min-height: 0; }
 .surface { position: relative; overflow: hidden; background: var(--desk); }
 .surface-scroll {
   position: absolute; inset: 0; overflow: auto;
@@ -394,6 +670,231 @@ polyline.trace { fill: none; }
 .condition-name { font-size: var(--t-base); }
 .condition-measures { grid-column: 2 / -1; font-size: var(--t-small); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .condition-props { grid-column: 2 / -1; font-size: var(--t-micro); color: var(--ink-faint); }
+/* The number that picks it. Printed on the row, because a hotkey nobody can see
+   is a hotkey nobody uses — VES prints 1–9 on its rail for the same reason. */
+.condition-key {
+  grid-column: 4; grid-row: 1; flex: none;
+  font-family: var(--mono); font-size: 10px; color: var(--rn-ink-dim);
+  border: 1px solid var(--rn-hairline); padding: 1px 4px; align-self: start;
+}
+.condition { grid-template-columns: 10px 1fr auto auto; }
+.condition .swatch { grid-column: 1; }
+.condition-name { grid-column: 2; }
+
+/* ── The cost panel ───────────────────────────────────────────────────────
+   Geometry on one side, money on the other, both visible at once. Fixed width:
+   364 docked, 420 with a line open or the book out, and what a lens needs when
+   a lens is showing. It is a WIDTH, set by the panel on itself — never a flex,
+   because the README says only the surface flexes. */
+.cost-panel {
+  width: var(--panel-w); flex: none; min-height: 0; min-width: 0;
+  background: var(--rn-panel); border-left: 1px solid var(--rn-hairline);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.cost-panel[hidden] { display: none; }
+/* Before a job is open the panel is present and quiet, which is the handoff's
+   first-open frame: not hidden — a panel that vanishes makes the window look
+   like it lost something — and not blank, because it says in words that there
+   is nothing to price yet. */
+.cost-panel.quiet .cost-tabs { opacity: 0.4; }
+.cost-panel.quiet .cost-totals { opacity: 0.55; }
+.cost-body { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── The cost panel's tabs, and the button that detaches the whole thing ─── */
+.cost-tabs {
+  flex: none; height: 36px; display: flex; align-items: stretch;
+  border-bottom: 1px solid var(--rn-hairline);
+}
+.cost-tab {
+  flex: 1; border: 0; border-radius: 0; background: transparent;
+  font-size: var(--t-micro); color: var(--rn-ink-3);
+  border-bottom: 2px solid transparent; padding: 0;
+}
+.cost-tab:hover { color: var(--rn-ink); }
+.cost-tab.on { color: var(--rn-ink); font-weight: 500; border-bottom-color: var(--rn-ink); }
+.cost-tabs .icon-button {
+  flex: none; width: 34px; border-radius: 0;
+  border-left: 1px solid var(--rn-hairline); color: var(--rn-ink-3);
+}
+.cost-tabs .icon-button:hover { color: var(--rn-ink); background: var(--rn-row-lit); }
+
+/* The detached window's own title bar: which job's money this is, and the way
+   home. The handoff draws one, and a window that is nothing but a panel has to
+   say what it belongs to. */
+.cost-title {
+  flex: none; height: 36px; display: flex; align-items: center; gap: 10px;
+  padding: 0 12px; background: var(--rn-panel-head);
+  border-bottom: 1px solid var(--rn-hairline-strong);
+}
+.cost-title-name { font-size: var(--t-micro); font-weight: 500; color: var(--rn-ink-mono); }
+.cost-dock {
+  margin-left: auto; border: 0; background: transparent; border-radius: 0;
+  font-family: var(--mono); font-size: 11px; color: var(--rn-ink-3); padding: 4px 6px;
+}
+.cost-dock:hover { color: var(--rn-water); }
+.cost-panel.detached { width: auto; border-left: 0; }
+body.cost-window { background: var(--rn-panel); }
+
+/* ── The Estimate tab ──────────────────────────────────────────────────────
+   Four columns, the handoff's grid: what it is, how much, in what unit, what it
+   costs. Numbers are tabular and right-aligned, and they hold one line — a
+   money figure that wraps is a row twice as tall and a column that reads like
+   two. */
+.cost-estimate { display: flex; flex-direction: column; min-height: 0; flex: 1; overflow: hidden; }
+.cost-head {
+  flex: none; display: flex; align-items: baseline; gap: var(--gap-2);
+  padding: 9px 12px; background: var(--rn-panel-head);
+  border-bottom: 1px solid var(--rn-hairline);
+  font-family: var(--mono); font-size: 11px; color: var(--rn-ink-3);
+  min-width: 0; overflow: hidden;
+}
+.cost-head-what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cost-head-count { margin-left: auto; flex: none; white-space: nowrap; }
+.cost-head .scenario-bar {
+  flex: none; border: 0; padding: 0; gap: 5px; font-size: 11px; color: var(--rn-ink-3);
+}
+.cost-head .scenario-bar select {
+  border: 1px solid var(--rn-hairline-strong); border-radius: 0;
+  background: transparent; color: var(--rn-ink); font-size: 11px; padding: 1px 3px;
+}
+
+.cost-columns, .cost-line {
+  display: grid; grid-template-columns: 1fr 72px 40px 84px; gap: 6px;
+  padding: 8px 12px; align-items: baseline;
+}
+.cost-columns {
+  flex: none; padding: 6px 12px; font-family: var(--mono); font-size: 10px;
+  color: var(--rn-ink-dim); border-bottom: 1px solid var(--rn-hairline);
+}
+.cost-columns .c-qty, .cost-columns .c-money { text-align: right; }
+
+.cost-lines { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.cost-line { border-bottom: 1px solid var(--rn-row-rule); }
+.cost-line.on { background: var(--rn-row-lit); }
+.cost-line.open { background: var(--rn-open-line); box-shadow: inset 0 1px 0 var(--rn-water); }
+.line-what {
+  border: 0; background: transparent; border-radius: 0; padding: 0; text-align: left;
+  display: flex; flex-direction: column; gap: 2px; min-width: 0;
+}
+.line-item {
+  font-size: var(--t-micro); line-height: 1.3; color: var(--rn-ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.line-basis {
+  display: flex; gap: 6px; align-items: baseline; min-width: 0;
+  font-size: 10px; line-height: 1.4; color: var(--rn-ink-dim);
+}
+.line-basis > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The formula, on the line, as a chip. It is code and it is set in the mono
+   face for the same reason the sheet always set it there: a formula IS code,
+   typed on purpose by the person reading it. */
+.line-formula {
+  flex: none; font-family: var(--mono); color: var(--rn-ink-3);
+  border: 1px solid var(--rn-hairline); padding: 0 4px; max-width: 50%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.line-qty, .line-money {
+  font-family: var(--mono); font-size: var(--t-micro); text-align: right;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.line-qty { color: var(--rn-ink-mono); }
+.line-money { color: var(--rn-ink); }
+.line-unit { font-family: var(--mono); font-size: 10px; color: var(--rn-ink-3); white-space: nowrap; }
+.cost-line .formula-error, .cost-line .formula-note { grid-column: 1 / -1; }
+
+.cost-group {
+  display: flex; align-items: baseline; gap: var(--gap-2); width: 100%;
+  border: 0; border-radius: 0; text-align: left;
+  padding: 7px 12px; background: var(--rn-panel-head);
+  border-bottom: 1px solid var(--rn-hairline);
+  font-size: var(--t-micro); color: var(--rn-ink); min-width: 0;
+}
+.cost-group.on { box-shadow: inset 3px 0 0 var(--rn-water); }
+.cost-group .group-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cost-group .group-measures {
+  margin-left: auto; flex: none; font-family: var(--mono); font-size: 10px;
+  color: var(--rn-ink-3); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.cost-add {
+  display: flex; align-items: center; gap: 5px; width: 100%;
+  border: 0; border-radius: 0; background: transparent; text-align: left;
+  padding: 6px 12px 10px; font-size: 11px; color: var(--rn-ink-3);
+}
+.cost-add:hover { color: var(--rn-ink); background: var(--rn-row-lit); }
+/* How many lines are below the fold. Counted off where the rows actually are,
+   so it can never be a number that lies. */
+.cost-more {
+  flex: none; margin: 0; padding: 10px 12px;
+  font-family: var(--mono); font-size: 11px; color: var(--rn-ink-off);
+  border-top: 1px solid var(--rn-hairline);
+}
+
+/* ── A line, open to its whole chain ─────────────────────────────────────── */
+.line-chain {
+  background: var(--rn-open-line); padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--rn-water);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.chain-formula { display: flex; flex-direction: column; gap: 3px; }
+.chain-formula > span { font-size: 10px; color: var(--rn-ink-dim); }
+.line-chain input, .line-chain select {
+  width: 100%; padding: 4px 6px; border: 1px solid var(--rn-hairline-strong);
+  border-radius: 0; background: var(--rn-viewport); color: var(--rn-ink);
+  font-size: var(--t-micro);
+}
+.line-chain input.formula {
+  font-family: var(--mono); font-size: 13px; border-color: var(--rn-water);
+  caret-color: var(--rn-water);
+}
+.line-chain input.formula.bad { border-color: var(--rn-warn); }
+.chain-source { margin: 0; font-size: 10px; color: var(--rn-ink-dim); }
+.chain-rows { display: flex; flex-direction: column; gap: 4px; }
+.chain-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px; align-items: center; }
+.chain-name { font-size: 11px; color: var(--rn-ink-2); }
+.chain-value { font-family: var(--mono); font-size: var(--t-micro); color: var(--rn-ink-mono); }
+.chain-value .num { display: inline-block; width: 100%; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chain-total .chain-value { color: var(--rn-ink); font-weight: 500; }
+/* The arithmetic, written out. Three lines of what actually happened, off the
+   engine's own answer — nothing here is recomputed, so it cannot disagree with
+   the figure above it. */
+.chain-trace {
+  border-top: 1px solid var(--rn-hairline); padding-top: 8px;
+  font-family: var(--mono); font-size: 11px; color: var(--rn-ink-3);
+}
+.chain-trace p { margin: 0 0 3px; }
+.chain-also { margin: 0; font-size: 11px; color: var(--rn-ink-dim); }
+.chain-actions { display: flex; gap: var(--gap-2); }
+.chain-actions button {
+  border: 1px solid var(--rn-hairline-strong); border-radius: 0; background: transparent;
+  color: var(--rn-ink); font-size: 11px; padding: 5px 9px;
+}
+.chain-actions .chain-close { border-color: var(--rn-water); color: var(--rn-water); }
+.chain-actions .remove { color: var(--rn-ink-2); }
+.chain-actions .remove:hover { color: var(--rn-warn); border-color: var(--rn-warn); }
+
+/* ── The Condition tab ─────────────────────────────────────────────────────
+   What is traced, and everything the drawing cannot say about the one that is
+   picked. The list is the same list the Plan keeps beside the drawing — one
+   definition, two places (D132). */
+.cost-condition { display: flex; flex-direction: column; min-height: 0; flex: 1; overflow-y: auto; }
+.cost-condition > .condition-list { flex: none; padding: var(--gap-2); border-bottom: 1px solid var(--rn-hairline); }
+.cost-condition > .condition-panel { flex: none; width: auto; border-left: 0; overflow: visible; }
+.cost-load, .cost-back {
+  flex: none; margin: 0 var(--gap-3) var(--gap-3); border-radius: 0;
+  border: 1px solid var(--rn-hairline-strong); background: transparent; color: var(--rn-ink);
+  padding: 6px 10px; font-size: var(--t-micro);
+}
+.cost-load:disabled { color: var(--rn-ink-off); border-color: var(--rn-hairline); cursor: default; }
+.cost-book { display: flex; flex-direction: column; min-height: 0; flex: 1; overflow-y: auto; }
+.cost-back { align-self: flex-start; margin: var(--gap-2) var(--gap-3); }
+
+/* ── The pinned totals ─────────────────────────────────────────────────────
+   Material, Labor and the selling price, under every tab, never scrolling away.
+   The point is watching them move while you click geometry. */
+.cost-totals {
+  flex: none; border-top: 1px solid var(--rn-hairline-strong);
+  background: var(--rn-panel-head); padding: 10px 12px;
+}
 
 /* ── The condition panel ────────────────────────────────────────────────── */
 
@@ -443,140 +944,42 @@ polyline.trace { fill: none; }
 }
 .add-property { width: 100%; margin-top: var(--gap-2); }
 
-/* ── The Estimate Sheet ─────────────────────────────────────────────────── */
+/* The Estimate Sheet as a full-width table of eleven columns is gone. The
+   lines are the cost panel's Estimate tab, compact, with the whole chain
+   opening in place on the one line an estimator is looking at — the handoff's
+   Frame 1 and Frame 5, and what a 364px panel beside a drawing can actually
+   hold. What the sheet's rules were paid for survives where it belongs:
+   numbers are tabular and hold one line, a formula is in the mono face, a note
+   about a line goes under it, and nothing is ever silently zero. */
+.empty-note { color: var(--rn-ink-2); padding: var(--gap-5); text-align: center; }
+.formula-error { display: block; color: var(--rn-warn); font-size: 11px; padding: 2px 0 0; }
+.none { color: var(--rn-ink-dim); }
+.num { font-variant-numeric: tabular-nums; }
 
-.sheet-scroll { flex: 1; overflow: auto; min-height: 0; }
-
-/* Minimum widths so a header never truncates and a select always shows its
-   value. Below this the table scrolls inside its own area — which is the point:
-   a torn-off sheet narrower than the columns still reaches every one of them.
-
-   1212 is the columns added up, action column included. It read 1064 — exactly
-   34px short, which is the action column left out of the sum. With
-   `table-layout: fixed` and `width: 100%` that shortfall squeezes every column
-   by three percent, and the header this spec promises never truncates rendered
-   as "WAS". A minimum that does not include every column is not a minimum.
-
-   The numeric columns are sized from what they have to hold, measured in the
-   cell's own 14px face with its 16px of padding:
-
-     "1.00 ROLL"      82px      an order step with its unit
-     "<one thousand> SF"  90px      a price step with its unit — the demo's membrane
-     "12,345.00 SF"   98px      the same on a large roof
-     "$9,139.88"      80px      the demo's largest line
-     "$999,999.99"   104px      a six-figure line, which this trade has
-
-   Order and Priced were 78px and the demo wrapped in both of them: "<one thousand>
-   SF" on two lines, and the row 43px tall instead of 28. Extended was 84px,
-   which held the demo's own money with four pixels to spare and wrapped at six
-   figures — a quarter-million-dollar line, which is an ordinary week.
-
-   Qty stays at 66px and therefore wraps above "9,999.99". That is written down
-   rather than paid for: widening every numeric column for a number the demo is
-   four orders of magnitude below would add 130px to a table that already does
-   not fit a laptop, and section 7 now has a row that goes red the day a real
-   job crosses the line — which is the alarm, not this comment. */
-.sheet { min-width: 1212px; }
-
-/* The two columns that never scroll away: what the line is, and what it costs.
-   §1.9 already pinned the row actions "in a fixed right column that never
-   scrolls out"; this is the same rule applied to the column an estimator
-   actually came for. Between them the working scrolls — code, formula, quantity,
-   unit, waste, order — and at any width the sheet still shows a name against a
-   number. On a narrow window it used to show neither: ITEM, CODE, FORMULA, QTY,
-   UNIT, WAS, and every money column past the edge. */
-.sheet th:first-child, .sheet td:first-child {
-  position: sticky; left: 0; z-index: 2; background: var(--paper);
+/* The classes, and the number under them. It was the sheet's footer; it is the
+   panel's pinned totals now, under whichever tab is up, and it never scrolls
+   away — the point is watching it move while you click geometry. */
+.class-strip { display: flex; flex-wrap: wrap; gap: var(--gap-3); margin-bottom: 6px; }
+.class-cell { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.class-cell .label {
+  font-size: 10px; color: var(--rn-ink-dim); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
 }
-.sheet th:first-child { z-index: 3; }
-.sheet td.extended, .sheet th.extended {
-  position: sticky; right: 34px; z-index: 2; background: var(--paper);
+.class-cell .value { font-family: var(--mono); font-size: var(--t-micro); font-variant-numeric: tabular-nums; }
+.class-cell.rest { margin-left: auto; text-align: right; }
+.selling {
+  display: flex; align-items: baseline; gap: var(--gap-2);
+  border-top: 1px solid var(--rn-hairline-strong); padding-top: 6px;
 }
-.sheet th.extended { z-index: 3; }
-.sheet td.actions, .sheet th.actions {
-  position: sticky; right: 0; z-index: 2; background: var(--paper);
+.selling .label { font-size: var(--t-micro); font-weight: 600; color: var(--rn-ink); }
+.selling .value {
+  font-family: var(--mono); font-size: var(--t-large); font-weight: 500;
+  font-variant-numeric: tabular-nums; margin-left: auto; white-space: nowrap;
 }
-.sheet th.actions { z-index: 3; }
-/* A pinned cell sits over the scrolling ones, so it needs its own edge to read
-   as an edge rather than as a column that happens to be there. */
-.sheet td.extended, .sheet th.extended { border-left: 1px solid var(--rule); }
-/* A condition header and an "add a line" row are one cell spanning ten or
-   eleven columns. Pinning a cell that wide would park it over the whole table,
-   so those two stay where they are and scroll with the working. */
-.sheet tr.group-row td:first-child,
-.sheet tr.add-row td:first-child { position: static; background: var(--panel); }
-.sheet tr.add-row td:first-child { background: var(--paper); }
-.sheet table { table-layout: fixed; }
-.sheet col.c-item     { width: 220px; }
-.sheet col.c-code     { width: 106px; }
-.sheet col.c-formula  { width: 240px; }
-.sheet col.c-qty      { width: 66px; }
-.sheet col.c-unit     { width: 76px; }
-.sheet col.c-waste    { width: 58px; }
-.sheet col.c-order    { width: 104px; }
-.sheet col.c-priced   { width: 104px; }
-/* "UNIT COST" is two words in a micro uppercase face with letter-spacing, and
-   72px could not hold it — §1.9 named "wrapped 'Unit cost'" as one of the two
-   defects it was closing, and it was still wrapping. */
-.sheet col.c-cost     { width: 96px; }
-.sheet col.c-extended { width: 108px; }
-.sheet col.c-actions  { width: 34px; }
-.sheet td:not(.actions) { overflow: hidden; }
-.sheet tr.add-row td { border-bottom: 0; padding-bottom: var(--gap-3); }
-.sheet tr.group-row.on td { box-shadow: inset 3px 0 0 var(--accent); }
-.sheet table { width: 100%; border-collapse: collapse; }
-.sheet th {
-  font-size: var(--t-micro); color: var(--ink-faint); font-weight: 600; text-align: left;
-  text-transform: uppercase; letter-spacing: 0.04em;
-  padding: var(--gap-2) var(--gap-2) 6px; white-space: nowrap;
-  border-bottom: 1px solid var(--rule); position: sticky; top: 0; background: var(--paper); z-index: 1;
-}
-.sheet td { height: var(--row-sheet); padding: 2px var(--gap-2); border-bottom: 1px solid var(--rule-soft); vertical-align: middle; }
-.sheet tr.group-row td {
-  background: var(--panel); border-bottom: 1px solid var(--rule);
-  font-weight: 600; padding: 7px var(--gap-2);
-}
-.group-row .swatch { display: inline-block; margin-right: var(--gap-2); vertical-align: -1px; }
-.group-measures { font-weight: 400; color: var(--ink-soft); font-size: var(--t-small); margin-left: var(--gap-2); font-variant-numeric: tabular-nums; }
-.sheet td.num, .sheet th.num { text-align: right; font-variant-numeric: tabular-nums; }
-.sheet td.extended { font-weight: 600; }
-.sheet input, .sheet select {
-  width: 100%; padding: 3px 2px 3px 5px; border: 1px solid transparent;
-  border-radius: 4px; background: transparent; font-size: var(--t-small);
-}
-.sheet select { padding-right: 0; }
-.sheet input:hover, .sheet select:hover { border-color: var(--rule); background: var(--paper); }
-.sheet input:focus, .sheet select:focus { border-color: var(--accent); background: var(--paper); outline: none; }
-.sheet input.num { text-align: right; font-variant-numeric: tabular-nums; }
-.sheet input.formula { font-family: var(--mono); font-size: var(--t-small); }
-.sheet input.formula.bad { border-color: var(--warn); background: #fdf5f2; }
-.formula-error { display: block; color: var(--warn); font-size: var(--t-micro); padding: 2px 5px 0; }
-.none { color: var(--ink-faint); }
-
-/* Row actions sit in a column pinned to the right edge, so they never scroll
-   out of a torn-off window that is narrower than the sheet. */
-.sheet th.actions, .sheet td.actions {
-  position: sticky; right: 0; background: var(--paper); width: 34px; padding-right: var(--gap-3);
-  box-shadow: -6px 0 6px -6px rgb(0 0 0 / 0.18);
-}
-.sheet tr.group-row td.actions { background: var(--panel); }
-button.remove { border: 0; background: transparent; color: var(--ink-faint); padding: 3px; border-radius: 4px; display: grid; place-items: center; }
-button.remove:hover { color: var(--warn); background: var(--rule-soft); }
-.add-item { margin: var(--gap-2) 0 0 var(--gap-2); font-size: var(--t-small); color: var(--ink-soft); display: inline-flex; align-items: center; gap: 5px; }
-
-/* The footer carries the classes, now that there are classes to carry. */
-.sheet-footer {
-  flex: none; border-top: 1px solid var(--rule); background: var(--panel);
-  padding: var(--gap-2) var(--gap-3);
-}
-.class-strip { display: flex; flex-wrap: wrap; gap: var(--gap-4); margin-bottom: var(--gap-2); }
-.class-cell { display: flex; flex-direction: column; gap: 1px; }
-.class-cell .label { font-size: var(--t-micro); color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.04em; }
-.class-cell .value { font-size: var(--t-base); font-variant-numeric: tabular-nums; }
-.selling { display: flex; align-items: baseline; gap: var(--gap-2); border-top: 1px solid var(--rule); padding-top: var(--gap-2); }
-.selling .label { font-size: var(--t-small); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); }
-.selling .value { font-size: var(--t-large); font-weight: 600; font-variant-numeric: tabular-nums; margin-left: auto; }
-.selling .partial { font-size: var(--t-micro); color: var(--warn); }
+.selling .value.none { font-size: var(--t-micro); font-weight: 400; color: var(--rn-ink-dim); }
+.selling .partial { font-size: 10px; color: var(--rn-warn); flex-basis: 100%; text-align: right; }
+/* The detached panel has room, so the number it exists to show is larger. */
+.cost-panel.detached .selling .value { font-size: 24px; }
 
 .empty-note { color: var(--ink-soft); padding: var(--gap-5); text-align: center; }
 
@@ -647,14 +1050,9 @@ button.quiet:hover { border-color: var(--rule); }
   margin-top: 2px; cursor: help;
 }
 
-/* The Model's readout and its thickness scale. The readout answers "what does
-   the roof do here" in words; the scale lets a depth be read off the shading
-   instead of guessed at. */
-.model-readout {
-  margin: 0; padding: 6px 12px; font-size: 12px; color: var(--ink-2, #5a5f66);
-  border-top: var(--hair, 1px) solid var(--line, #d6d8db);
-  font-variant-numeric: tabular-nums; min-height: 1.2em;
-}
+/* The thickness scale, which lets a depth be read off the shading instead of
+   guessed at. What the roof does under the pointer is in the window's status
+   strip now — the same region whatever the surface is showing. */
 .model-scale { display: inline-flex; flex-direction: column; gap: 2px; min-width: 140px; }
 .model-ramp {
   display: block; height: 8px; border-radius: 2px;
@@ -707,21 +1105,22 @@ button.quiet:hover { border-color: var(--rule); }
 .library-layer { color: var(--ink-faint); font-style: normal; font-size: 11px; }
 .library-items li { align-items: baseline; }
 
+/* A lens shown inside the cost panel. The panel takes the width the lens's own
+   columns come to, capped — the internal lens has nine of them and comes to
+   868px, which is more than a 1440 window can spare beside a drawing, so that
+   one scrolls inside its own sheet and every other lens fits whole. */
+.cost-panel .reports-editor { flex: 1; min-height: 0; }
+.cost-panel .lens-sheet { padding: var(--gap-3); font-size: var(--t-micro); }
+.cost-panel .lens-sheet h2 { font-size: var(--t-base); }
+.cost-panel .lens-sheet table { font-size: 11px; }
+.cost-panel .lens-sheet th, .cost-panel .lens-sheet td { padding: 3px 6px; }
+
 /* ── Reports ────────────────────────────────────────────────────────────── */
 .reports-editor { display: flex; min-height: 0; height: 100%; }
-.lens-picker {
-  flex: none; width: 220px; padding: var(--gap-4); overflow: auto;
-  border-right: var(--hair, 1px) solid var(--line, #d6d8db);
-}
-.lens-picker h3 { margin: 0 0 8px; font-size: var(--t-small); color: var(--ink-faint); font-weight: 500; }
-.lens {
-  display: block; width: 100%; text-align: left; border: 1px solid transparent;
-  border-radius: var(--radius); background: transparent; padding: 6px 8px; margin-bottom: 2px;
-}
-.lens:hover { background: var(--accent-soft); }
-.lens.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
-.lens strong { display: block; font-weight: 500; }
-.lens span { display: block; font-size: 11px; color: var(--ink-faint); }
+/* The lens picker that stood beside the lens sheet is gone: who the estimate is
+   being shown to is asked once, in the document bar, and the answer is drawn in
+   the cost panel. Two copies of that question was one too many. The `.lens`
+   rows themselves are styled with the document bar's menu, above. */
 .lens-sheet { flex: 1; min-width: 0; overflow: auto; padding: var(--gap-4); }
 .lens-sheet header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-bottom: 12px; }
 .lens-sheet h2 { margin: 0; font-size: var(--t-head); font-weight: 500; }

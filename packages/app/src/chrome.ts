@@ -1,102 +1,31 @@
 // ── The window ─────────────────────────────────────────────────────────────
 // Every window has the same anatomy, whether it is the one the program opened
-// with or an editor torn off onto another monitor:
+// with or the cost panel pulled onto a second monitor:
 //
-//   menu bar        File, and nothing that is not a file action
-//   tree            the shape of the job (hidden in a torn-off window)
-//   area            one editor, with its own header and its own tear-off
-//   status bar      where the job is, and what just happened
+//   document bar        44px  what file is open, the one roof-area figure
+//                             everything reconciles to, who it is being shown
+//                             to, help, and which theme the room is in.
+//                             Never holds a tool.
+//   tool settings strip 42px  everything the active tool needs and nothing
+//                             else. It swaps wholesale with the tool.
+//   body                      tool rail 52 · surface · cost panel 364
+//   status strip        30px  what the roof does under the cursor, where the
+//                             job is, and what just happened.
 //
-// A torn-off editor is not a lesser window. It is the same anatomy with the
-// tree folded away, which is why the button that tears an editor off lives on
-// the editor rather than in the sidebar.
+// The regions are fixed and only the surface flexes. That is the README's
+// "Responsive behavior" and it is in the grid rather than in a comment: a
+// track written as `30px` cannot be talked into 44 by its contents, which is
+// how one long export message once made the status bar two lines high.
+//
+// What is NOT here any more: the tree, the editor picker and the area header.
+// A bid does not need a second navigator when the conditions are in the cost
+// panel's Condition tab and in the Plan's own list, and an area that can show
+// any editor was the A3 anatomy — the handoff has one surface with two views
+// switched in place and a panel beside it (D132, Addendum 7).
 
 import { icon, type IconName } from './icons.js';
 import { openHelp } from './help.js';
-
-export interface AreaOptions {
-  readonly title: string;
-  /** Which editor this is, for the tear-off. Absent means it cannot be torn off. */
-  readonly editor?: string;
-  readonly help?: string;
-  readonly onTearOff?: (editor: string) => void;
-  /** Every editor this area could show, for the picker at its top-left. */
-  readonly editors?: readonly { readonly id: string; readonly title: string }[];
-  readonly onSwitch?: (editor: string) => void;
-}
-
-/**
- * An area: a titled region with one editor in it, and the Properties panel
- * beside it.
- *
- * The header carries the editor's name, a help affordance, and — on every area,
- * not on one of them — the button that pulls it into its own window.
- *
- * The panel is built HERE, once, rather than by each editor, because A3 asks for
- * the same panel in every editor and the Plan was the only one that had it: an
- * estimator on the sheet, in the Library or in the Model could see what was
- * selected and not what it was. It rides with the area (D113), so a torn-off
- * editor gets its own — the same way a torn-off window gets its own status bar.
- */
-export function area(options: AreaOptions): { root: HTMLElement; body: HTMLElement; panel: HTMLElement } {
-  const root = document.createElement('section');
-  root.className = 'area';
-
-  const header = document.createElement('header');
-  header.className = 'area-header';
-
-  // An area is a frame that can show any editor, so which one it shows is a
-  // choice made on the area — not a fact about the window it happens to be in.
-  if (options.editors && options.editors.length > 1 && options.onSwitch) {
-    const picker = document.createElement('select');
-    picker.className = 'editor-picker';
-    picker.setAttribute('aria-label', 'Which editor');
-    for (const e of options.editors) {
-      const option = document.createElement('option');
-      option.value = e.id;
-      option.textContent = e.title;
-      picker.append(option);
-    }
-    picker.value = options.editor ?? options.editors[0]!.id;
-    picker.addEventListener('change', () => options.onSwitch!(picker.value));
-    header.append(picker);
-  } else {
-    const title = document.createElement('h2');
-    title.textContent = options.title;
-    header.append(title);
-  }
-
-  const actions = document.createElement('div');
-  actions.className = 'area-actions';
-
-  if (options.help) {
-    actions.append(iconButton('help', 'What this is for', () => openHelp(options.title, options.help!)));
-  }
-  if (options.editor && options.onTearOff) {
-    actions.append(iconButton('tearOff', 'Open in its own window', () => options.onTearOff!(options.editor!)));
-  }
-  header.append(actions);
-
-  // The body is two columns: the editor, and the panel. The editor keeps the
-  // flex column it has always mounted into — it is now a child of the body
-  // rather than the body itself, so nothing inside an editor changes.
-  const body = document.createElement('div');
-  body.className = 'area-body';
-
-  const host = document.createElement('div');
-  host.className = 'editor-host';
-
-  const panel = document.createElement('aside');
-  panel.className = 'condition-panel';
-  panel.setAttribute('aria-label', 'Properties');
-  // A window opens on the start screen, where there is no job to have a
-  // condition in. The window shows it when a job opens.
-  panel.hidden = true;
-
-  body.append(host, panel);
-  root.append(header, body);
-  return { root, body: host, panel };
-}
+import { flipTheme, theme, watchTheme } from './theme.js';
 
 export function iconButton(name: IconName, label: string, onClick: () => void): HTMLButtonElement {
   const button = document.createElement('button');
@@ -105,19 +34,6 @@ export function iconButton(name: IconName, label: string, onClick: () => void): 
   button.title = label;
   button.setAttribute('aria-label', label);
   button.append(icon(name));
-  button.addEventListener('click', onClick);
-  return button;
-}
-
-/** A toolbar button: an icon and its word, because a pictogram alone teaches nobody. */
-export function toolButton(name: IconName, label: string, onClick: () => void): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'tool';
-  button.append(icon(name));
-  const text = document.createElement('span');
-  text.textContent = label;
-  button.append(text);
   button.addEventListener('click', onClick);
   return button;
 }
@@ -162,48 +78,399 @@ export function menu(label: string, items: readonly MenuItem[]): HTMLElement {
   return wrap;
 }
 
+// ── the document bar ───────────────────────────────────────────────────────
+
+/** A quantity and where it came from: derived off the model, or typed. */
+export interface Figure {
+  readonly value: string | null;
+  readonly unit: string;
+  /** What went into it. On the title, so it can be checked rather than trusted. */
+  readonly basis: string;
+  /**
+   * What the figure could not count, in words, beside it.
+   *
+   * A total that leaves something out says what it left out — and says it on
+   * screen, not only on a tooltip. An unscaled sheet has area on it that has
+   * no square feet yet, and a roof-area figure that quietly skipped it would
+   * be the silent zero this program is not allowed to have.
+   */
+  readonly leftOut?: string | null;
+}
+
+export interface LensChoice {
+  readonly id: string | null;
+  readonly name: string;
+  readonly audience: string;
+}
+
+export function documentBar(options: {
+  readonly menus: readonly HTMLElement[];
+  readonly lenses: readonly LensChoice[];
+  readonly onLens: (id: string | null) => void;
+  readonly help: { title: string; body: string };
+}): {
+  root: HTMLElement;
+  setJob(name: string | null): void;
+  setRoofArea(figure: Figure): void;
+  setLens(id: string | null): void;
+  /** What the "?" opens. It follows whatever the surface is showing. */
+  setHelp(title: string, body: string): void;
+} {
+  const root = document.createElement('header');
+  root.className = 'doc-bar';
+
+  const job = document.createElement('span');
+  job.className = 'doc-job none';
+  job.textContent = 'no file open';
+
+  // The one roof-area figure. Everything on screen reconciles to it, so its
+  // basis travels with it on the title rather than living in a document
+  // somewhere: an estimator who cannot see what went into a number cannot use
+  // it to check anything.
+  const area = document.createElement('span');
+  area.className = 'roof-area none';
+  const areaLabel = document.createElement('span');
+  areaLabel.className = 'label';
+  areaLabel.textContent = 'Roof area';
+  const areaValue = document.createElement('span');
+  areaValue.className = 'value';
+  areaValue.textContent = '—';
+  const areaUnit = document.createElement('span');
+  areaUnit.className = 'unit';
+  const areaMark = document.createElement('span');
+  areaMark.className = 'derived';
+  areaMark.textContent = '◈';
+  areaMark.hidden = true;
+  const areaLeftOut = document.createElement('span');
+  areaLeftOut.className = 'left-out';
+  areaLeftOut.hidden = true;
+  area.append(areaLabel, areaValue, areaUnit, areaMark, areaLeftOut);
+
+  const spacer = document.createElement('span');
+  spacer.className = 'doc-spacer';
+
+  // ── who is looking ──────────────────────────────────────────────────────
+  const selector = document.createElement('div');
+  selector.className = 'lens-selector';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'lens-button';
+  const showing = document.createElement('span');
+  showing.className = 'label';
+  showing.textContent = 'Showing';
+  const shown = document.createElement('span');
+  shown.className = 'value';
+  shown.textContent = options.lenses[0]?.name ?? 'Full estimate';
+  button.append(showing, shown);
+
+  const list = document.createElement('div');
+  list.className = 'lens-menu';
+  list.hidden = true;
+  const head = document.createElement('p');
+  head.className = 'lens-menu-head';
+  head.textContent = 'WHO IS LOOKING';
+  list.append(head);
+
+  let chosen: string | null = null;
+  const rows: { choice: LensChoice; row: HTMLButtonElement }[] = [];
+  for (const choice of options.lenses) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'lens';
+    const name = document.createElement('strong');
+    name.textContent = choice.name;
+    const who = document.createElement('span');
+    who.textContent = choice.audience;
+    row.append(name, who);
+    row.addEventListener('click', () => {
+      list.hidden = true;
+      setLens(choice.id);
+      options.onLens(choice.id);
+    });
+    list.append(row);
+    rows.push({ choice, row });
+  }
+  const foot = document.createElement('p');
+  foot.className = 'lens-menu-foot';
+  foot.textContent = 'A lens hides lines and columns. It never edits the estimate.';
+  list.append(foot);
+
+  button.addEventListener('click', (e) => {
+    e.stopPropagation();
+    list.hidden = !list.hidden;
+  });
+  document.addEventListener('click', () => { list.hidden = true; });
+  selector.append(button, list);
+
+  function setLens(id: string | null): void {
+    chosen = id;
+    for (const { choice, row } of rows) row.classList.toggle('on', choice.id === chosen);
+    const match = rows.find((r) => r.choice.id === chosen);
+    shown.textContent = match?.choice.name ?? 'Full estimate';
+    button.classList.toggle('on', chosen !== null);
+  }
+
+  let helping = options.help;
+  const help = iconButton('help', 'What this is for',
+    () => openHelp(helping.title, helping.body));
+
+  // Light is the default and stays it. The toggle says which room you are
+  // going to, not which one you are in — a button labelled with the state it
+  // is already in is a button nobody can read.
+  const themeToggle = document.createElement('button');
+  themeToggle.type = 'button';
+  themeToggle.className = 'theme-toggle';
+  themeToggle.addEventListener('click', () => { flipTheme(); });
+  watchTheme((now) => {
+    const going = now === 'dark' ? 'a light room' : 'a dark room';
+    themeToggle.replaceChildren(icon(now === 'dark' ? 'sun' : 'moon'));
+    themeToggle.title = `Work in ${going}`;
+    themeToggle.setAttribute('aria-label', `Work in ${going}`);
+  });
+
+  const divider = document.createElement('span');
+  divider.className = 'doc-divider';
+
+  root.append(...options.menus, job, divider, area, spacer, selector, help, themeToggle);
+  setLens(null);
+
+  return {
+    root,
+    setJob: (name) => {
+      job.textContent = name ?? 'no file open';
+      job.classList.toggle('none', name === null);
+      job.title = name ?? '';
+    },
+    setRoofArea: (figure) => {
+      area.classList.toggle('none', figure.value === null);
+      areaValue.textContent = figure.value ?? '—';
+      areaUnit.textContent = figure.value === null ? '' : figure.unit;
+      areaMark.hidden = figure.value === null;
+      areaLeftOut.textContent = figure.leftOut ?? '';
+      areaLeftOut.hidden = !figure.leftOut;
+      area.title = figure.basis;
+    },
+    setLens,
+    setHelp: (title, body) => { helping = { title, body }; },
+  };
+}
+
+// ── the tool settings strip ────────────────────────────────────────────────
+
+/** What the strip says when no tool has been picked: nothing, in words. */
+const STRIP_IDLE = 'Tool settings appear here once a tool is active';
+
+export function toolStrip(): {
+  root: HTMLElement;
+  show(name: string, fields: readonly Node[]): void;
+  idle(): void;
+} {
+  const root = document.createElement('div');
+  root.className = 'tool-strip';
+
+  const name = document.createElement('span');
+  name.className = 'tool-strip-name';
+  const fields = document.createElement('div');
+  fields.className = 'tool-strip-fields';
+
+  const idle = document.createElement('span');
+  idle.className = 'tool-strip-idle';
+  idle.textContent = STRIP_IDLE;
+
+  root.append(idle);
+
+  return {
+    root,
+    // Wholesale: the strip is emptied and refilled, never patched. Half of one
+    // tool's settings beside half of another's is worse than none.
+    show: (label, contents) => {
+      name.textContent = label;
+      fields.replaceChildren(...contents);
+      root.replaceChildren(name, fields);
+    },
+    idle: () => { root.replaceChildren(idle); },
+  };
+}
+
+/** One reading in the strip: what it is, what it says, and why. */
+export function stripField(label: string, value: string, why?: string, mono = false): HTMLElement {
+  const wrap = document.createElement('span');
+  wrap.className = 'strip-field';
+  if (label) {
+    const k = document.createElement('span');
+    k.textContent = label;
+    wrap.append(k);
+  }
+  const v = document.createElement('span');
+  v.className = mono ? 'v mono' : 'v';
+  v.textContent = value;
+  wrap.append(v);
+  if (why) {
+    const w = document.createElement('span');
+    w.className = 'why';
+    w.textContent = why;
+    wrap.append(w);
+  }
+  return wrap;
+}
+
+/** A reading the model worked out, with the cyan mark and its basis. */
+export function derivedField(label: string, value: string, basis: string): HTMLElement {
+  const wrap = stripField(label, value, undefined, true);
+  const mark = document.createElement('span');
+  mark.className = 'derived';
+  mark.textContent = '◈';
+  wrap.append(mark);
+  wrap.title = basis;
+  return wrap;
+}
+
+export function stripButton(label: string, onClick: () => void, quiet = false): HTMLButtonElement {
+  const b = document.createElement('button');
+  b.type = 'button';
+  if (quiet) b.className = 'quiet';
+  b.textContent = label;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+// ── the tool rail ──────────────────────────────────────────────────────────
+
 /**
- * What an editor dispatches when it has something for the status bar.
+ * What a view in the surface is handed so it can fill the chrome around it.
  *
- * An editor does not hold the status bar — the window does, and a torn-off
- * editor has its own. So the editor says it where it stands and lets the
- * message rise to whichever window it is in, which is the same way the tree
- * tells the window it changed (`tree:changed`).
+ * A view does not own the rail or the strip — the window does, because they are
+ * regions of the window and the handoff says so. But the acts in the rail and
+ * the settings in the strip belong to whatever is in the surface, so the view
+ * is given the handles and puts its own tools in them. Switching views swaps
+ * the contents of both, wholesale.
+ */
+export interface SurfaceChrome {
+  /** Put this view's acts in the rail. */
+  setTools(tools: readonly RailTool[]): void;
+  /** Which one is up. Null for none. */
+  setActiveTool(id: string | null): void;
+  /** Everything the active tool needs, and nothing else. */
+  strip: { show(name: string, fields: readonly Node[]): void; idle(): void };
+  /**
+   * Getting around the view: zoom, fit, and later the Model's preset corners.
+   *
+   * Upper right, under the view switch, which is where the pattern lineage the
+   * handoff names puts view navigation. It used to be a pinned group at the end
+   * of the Plan's own toolbar row, which is what §1.5 was about: a sticky item
+   * reserves no room, so it painted over whatever the row scrolled under it.
+   * An overlay on the drawing cannot cover a control, because there is no row
+   * for it to be in.
+   */
+  setViewTools(controls: readonly Node[]): void;
+  /** "Measuring into: <condition>", on the drawing, or nothing. */
+  setMeasuringInto(into: string | null): void;
+  /** What the roof is doing under the cursor, for the status strip. */
+  setReadout(readings: readonly Reading[]): void;
+}
+
+export interface RailTool {
+  readonly id: string;
+  /** The act, in a roofer's words. It is the hover label and the whole point. */
+  readonly label: string;
+  readonly icon: IconName;
+  readonly onPick: () => void;
+}
+
+export function toolRail(): {
+  root: HTMLElement;
+  setTools(tools: readonly RailTool[]): void;
+  active(id: string | null): void;
+  quiet(on: boolean): void;
+} {
+  const root = document.createElement('nav');
+  root.className = 'tool-rail';
+  root.setAttribute('aria-label', 'Tools');
+
+  let buttons = new Map<string, HTMLButtonElement>();
+
+  return {
+    root,
+    // Wholesale, when the surface changes what it is showing: the acts belong
+    // to the view, and half of one view's acts beside half of another's would
+    // be a rail offering something that cannot be done.
+    setTools: (tools) => {
+      buttons = new Map();
+      root.replaceChildren();
+      for (const tool of tools) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'rail-tool';
+        button.setAttribute('aria-label', tool.label);
+        button.title = tool.label;
+        button.append(icon(tool.icon, 20));
+        const chip = document.createElement('span');
+        chip.className = 'rail-label';
+        chip.textContent = tool.label;
+        button.append(chip);
+        button.addEventListener('click', tool.onPick);
+        root.append(button);
+        buttons.set(tool.id, button);
+      }
+    },
+    active: (id) => { for (const [name, b] of buttons) b.classList.toggle('on', name === id); },
+    quiet: (on) => { root.classList.toggle('quiet', on); },
+  };
+}
+
+// ── the status strip ───────────────────────────────────────────────────────
+
+/**
+ * What an editor dispatches when it has something for the status strip.
+ *
+ * An editor does not hold the strip — the window does, and the detached cost
+ * panel has its own. So the editor says it where it stands and lets the
+ * message rise to whichever window it is in.
  */
 export const STATUS_SAID = 'status:said';
 
-/** Say something in the status bar of whatever window this element is in. */
+/** Say something in the status strip of whatever window this element is in. */
 export function sayInStatus(from: HTMLElement, text: string): void {
   from.dispatchEvent(new CustomEvent<string>(STATUS_SAID, { bubbles: true, detail: text }));
 }
 
-export interface StatusFacts {
-  readonly job?: string;
-  readonly scenario?: string;
-  readonly scale?: string;
-  readonly units?: string;
-  readonly saved?: string;
+/** One field of the cursor readout. An em dash is a real answer: it says nothing is known. */
+export interface Reading {
+  readonly key: string;
+  readonly value: string | null;
+  /** Water — where it goes and how far. The one loud colour, spent on drainage. */
+  readonly water?: boolean;
+  /** A flat area with no fall. The only other colour there is, and only here. */
+  readonly warn?: boolean;
 }
 
-/**
- * The status bar: the facts about the job that are true whatever editor is
- * open — its name, which price set is active, what the sheet is scaled at,
- * what units are in use, and whether the work is saved. Nothing else.
- */
-export function statusBar(): {
+export function statusStrip(): {
   root: HTMLElement;
+  setReadout(readings: readonly Reading[]): void;
   setPath(p: string): void;
-  setFacts(f: StatusFacts): void;
   say(text: string): void;
+  /** A standing fact about the window, beside the message rather than instead of it. */
+  setAside(text: string): void;
 } {
   const root = document.createElement('footer');
-  root.className = 'status-bar';
+  root.className = 'status-strip';
 
-  const facts = document.createElement('span');
-  facts.className = 'status-facts';
+  const readout = document.createElement('div');
+  readout.className = 'readout';
+
+  const spacer = document.createElement('span');
+  spacer.className = 'status-spacer';
 
   const message = document.createElement('span');
   message.className = 'status-message';
+
+  // Standing facts about the window itself — where the cost panel is, today.
+  // Separate from the message so that saying where a file went does not wipe
+  // out the reason half the window is missing, and the other way round.
+  const aside = document.createElement('span');
+  aside.className = 'status-aside';
+  aside.hidden = true;
 
   const path = document.createElement('span');
   path.className = 'status-path';
@@ -216,12 +483,31 @@ export function statusBar(): {
   pathTail.className = 'path-tail';
   path.append(pathHead, pathTail);
 
-  const held: StatusFacts & Record<string, string | undefined> = {};
-
-  root.append(facts, message, path);
+  root.append(readout, spacer, message, aside, path);
 
   return {
     root,
+    setReadout: (readings) => {
+      readout.replaceChildren();
+      for (const reading of readings) {
+        const field = document.createElement('span');
+        field.className = 'readout-field';
+        if (reading.water) field.classList.add('water');
+        if (reading.warn) field.classList.add('warn');
+        if (reading.value === null) field.classList.add('none');
+        if (reading.key) {
+          const k = document.createElement('span');
+          k.className = 'k';
+          k.textContent = reading.key;
+          field.append(k);
+        }
+        const v = document.createElement('span');
+        v.className = 'v';
+        v.textContent = reading.value ?? '—';
+        field.append(v);
+        readout.append(field);
+      }
+    },
     setPath: (p) => {
       const cut = p.lastIndexOf('/');
       pathHead.textContent = cut > 0 ? p.slice(0, cut) : '';
@@ -229,41 +515,10 @@ export function statusBar(): {
       path.title = p;
     },
     // The whole of it on hover, the way the path beside it already does: a
-    // message that names a file is longer than the bar and the estimator still
-    // has to be able to read where the file went.
+    // message that names a file is longer than the strip and the estimator
+    // still has to be able to read where the file went.
     say: (text) => { message.textContent = text; message.title = text; },
-    setFacts: (f) => {
-      // Merged, not replaced: saying "Saved" must not blank the job's name.
-      Object.assign(held, f);
-      const shown = held;
-      facts.replaceChildren();
-      const pairs: [string, string][] = [];
-      if (shown.job) pairs.push(['Job', shown.job]);
-      if (shown.scenario) pairs.push(['Scenario', shown.scenario]);
-      if (shown.scale) pairs.push(['Scale', shown.scale]);
-      if (shown.units) pairs.push(['Units', shown.units]);
-      if (shown.saved) pairs.push(['', shown.saved]);
-      for (const [i, [key, value]] of pairs.entries()) {
-        if (i) {
-          const sep = document.createElement('span');
-          sep.className = 'status-sep';
-          sep.textContent = '│';
-          facts.append(sep);
-        }
-        const field = document.createElement('span');
-        field.className = 'status-field';
-        if (key) {
-          const k = document.createElement('span');
-          k.className = 'k';
-          k.textContent = key;
-          field.append(k);
-        }
-        const v = document.createElement('span');
-        v.textContent = value;
-        field.append(v);
-        facts.append(field);
-      }
-    },
+    setAside: (text) => { aside.textContent = text; aside.hidden = text === ''; },
   };
 }
 
@@ -272,7 +527,8 @@ export function statusBar(): {
  *
  * Not an empty grid with a paragraph explaining that it is empty. Two things to
  * do, and the recent jobs, which is what somebody opening the program actually
- * wants.
+ * wants. It sits in the surface, which is where the handoff's first-open frame
+ * puts it, with the chrome present and quiet around it.
  */
 export function startScreen(options: {
   onOpen: () => void;
@@ -339,3 +595,6 @@ export function startScreen(options: {
 
   return root;
 }
+
+/** The theme this window is in, for anything that has to paint outside CSS. */
+export { theme };

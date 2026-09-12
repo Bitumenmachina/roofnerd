@@ -7,15 +7,21 @@
     <link rel="stylesheet" href="/src/app.css" />
   </head>
   <body>
-    <!-- Every window has the same anatomy: a menu bar, the tree beside one
-         editor area, and a status bar. A torn-off editor is the same window
-         with the tree folded away, not a lesser kind of window. -->
-    <nav id="menu-bar" class="menu-bar"></nav>
-    <div id="frame" class="frame">
-      <aside id="sidebar" class="sidebar"></aside>
-      <div id="editor"></div>
+    <!-- Every window has the same anatomy, top to bottom: the document bar,
+         the tool settings strip, the body — tool rail, surface, cost panel —
+         and the status strip. The regions are fixed; only the surface flexes.
+         The cost panel detached onto a second monitor is the same panel in a
+         window of its own, over the same document. -->
+    <header id="doc-bar" class="doc-bar"></header>
+    <div id="tool-strip" class="tool-strip"></div>
+    <div id="body-row" class="body-row">
+      <nav id="tool-rail" class="tool-rail" aria-label="Tools"></nav>
+      <div id="surface-region" class="surface-region">
+        <div id="editor"></div>
+      </div>
+      <aside id="cost-panel" class="cost-panel" aria-label="Cost"></aside>
     </div>
-    <div id="status"></div>
+    <footer id="status-strip" class="status-strip"></footer>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
