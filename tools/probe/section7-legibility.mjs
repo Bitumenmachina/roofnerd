@@ -137,6 +137,70 @@ try {
     assert.deepEqual(lost, [], `off the end of the toolbar: ${lost.join(', ')}`);
   });
 
+  // The scale picker, measured against the thing that was actually covering it.
+  //
+  // §1.5 had two rows about this row and neither could see the defect: one
+  // measures each control's label against its own box, and the picker's box was
+  // never too small — 140px of control with 105px of label in it. What clipped
+  // it was the zoom group, which is `position: sticky` and therefore reserves no
+  // room at all: it paints over whatever the row has scrolled under it. The
+  // picker read "Or pick a s" with 83px of itself underneath (measured at the
+  // 839px editor the 1100px window used to give the Plan).
+  const scalePicker = JSON.parse(await session.execute(function () {
+    const bar = document.querySelector('.toolbar');
+    if (!bar) return JSON.stringify({ found: false });
+    const pick = [...bar.querySelectorAll('select')]
+      .find(function (s) { return (s.getAttribute('aria-label') || '') === 'Architectural scale'; });
+    const zoom = bar.querySelector('.zoom');
+    if (!pick || !zoom) return JSON.stringify({ found: false });
+    const p = pick.getBoundingClientRect();
+    const z = zoom.getBoundingClientRect();
+    const b = bar.getBoundingClientRect();
+    const at = function (x, y) {
+      const top = document.elementFromPoint(Math.round(x), Math.round(y));
+      return top ? (top === pick || pick.contains(top) ? 'itself' : (top.getAttribute('aria-label') || top.className || top.tagName)) : 'nothing';
+    };
+    return JSON.stringify({
+      found: true,
+      label: ((pick.selectedOptions[0] || {}).textContent || '').trim(),
+      coveredByZoom: Math.round(Math.max(0, p.right - z.left)),
+      pastTheBox: Math.round(Math.max(0, p.right - b.right)),
+      scrollWidth: pick.scrollWidth,
+      clientWidth: pick.clientWidth,
+      barContent: bar.scrollWidth,
+      barRoom: bar.clientWidth,
+      // What is drawn at the far end of the control, which is what the eye reads.
+      atItsRightEdge: at(p.right - 6, p.top + p.height / 2),
+      atItsMiddle: at(p.left + p.width / 2, p.top + p.height / 2),
+    });
+  }));
+
+  check('§1.5 the scale picker is not under the pinned zoom group', () => {
+    assert.ok(scalePicker.found, 'no scale picker in the toolbar');
+    assert.equal(scalePicker.coveredByZoom, 0,
+      `${scalePicker.coveredByZoom}px of "${scalePicker.label}" is under the zoom group`);
+    assert.equal(scalePicker.atItsRightEdge, 'itself',
+      `what is drawn at the end of the picker is ${scalePicker.atItsRightEdge}`);
+    assert.equal(scalePicker.atItsMiddle, 'itself',
+      `what is drawn in the middle of the picker is ${scalePicker.atItsMiddle}`);
+  });
+  check('§1.5 and the whole of it is inside the toolbar, showing its whole label', () => {
+    assert.equal(scalePicker.pastTheBox, 0,
+      `it runs ${scalePicker.pastTheBox}px past the end of the toolbar`);
+    // Asked for, and worth knowing it has no teeth of its own: a <select> is not
+    // a scroller, so this reads equal even with 83px of the control covered. It
+    // is here to say so, not to catch anything.
+    assert.ok(scalePicker.scrollWidth <= scalePicker.clientWidth,
+      `the picker holds ${scalePicker.scrollWidth}px in ${scalePicker.clientWidth}px`);
+    assert.match(scalePicker.label, /scale/i, `it reads "${scalePicker.label}"`);
+  });
+  check('§1.5 and the row it is in fits the window it is in', () => {
+    // The row that does not overflow is the row nothing can be pinned over. This
+    // is the number the window width was chosen from: 902px of controls.
+    assert.ok(scalePicker.barContent <= scalePicker.barRoom,
+      `the toolbar holds ${scalePicker.barContent}px of controls in ${scalePicker.barRoom}px`);
+  });
+
   check('§1.5 scale is one action, not "Set scale" and "Rescale" both', () => {
     const both = /Set scale/.test(toolbar.text) && /Rescale/.test(toolbar.text);
     assert.ok(!both, `toolbar reads "${toolbar.text.replace(/\n/g, ' · ')}"`);
@@ -158,6 +222,103 @@ try {
 
   await writeFile(join(EVIDENCE, `section7-plan-${COMMIT}.png`),
     Buffer.from(await session.screenshot(), 'base64'));
+
+  // ── §1.9 in the window the sheet is actually worked in ──────────────────
+  //
+  // The sheet is torn off so it can have a monitor of its own — that is the
+  // arrangement the README opens with. Nothing had ever measured it in that
+  // window, and it was the window the defect was in: at 760px the pinned
+  // Extended column sat on top of the Unit column and the word UNIT, which is
+  // v2 §1.9's own complaint about the pinning that closed v2 §1.9.
+  //
+  // A sticky cell reserves no room. It paints over whatever scrolls under it,
+  // so at any width short of the whole table some column is half covered and no
+  // amount of pinning fixes it. What fixes it is a window wide enough for the
+  // table it carries.
+  const oneWindow = await session.handles();
+  const tore = await session.execute(function () {
+    const b = [...document.querySelectorAll('.area-header .icon-button')]
+      .find((e) => (e.getAttribute('aria-label') || '') === 'Open in its own window');
+    if (!b) return false;
+    b.click();
+    return true;
+  });
+  await wait(3500);
+  const handles = await session.handles();
+  const main = oneWindow[0];
+  const torn = handles.find((h) => !oneWindow.includes(h)) ?? null;
+
+  check('§1.9 the Estimate Sheet tears off into its own window', () => {
+    assert.ok(tore, 'no tear-off button in the area header');
+    assert.ok(torn, `${oneWindow.length} window before and ${handles.length} after`);
+  });
+
+  if (torn) {
+    await session.switchTo(torn);
+    await until(session, () => !!document.querySelector('.sheet'), { what: 'the torn-off sheet' });
+    await wait(1200);
+
+    const tornSheet = JSON.parse(await session.execute(function () {
+      const scroll = document.querySelector('.sheet-scroll');
+      const box = scroll.getBoundingClientRect();
+      const owner = function (th) {
+        const r = th.getBoundingClientRect();
+        const top = document.elementFromPoint(
+          Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
+        if (!top) return 'nothing';
+        if (top === th || th.contains(top)) return 'itself';
+        return top.className || top.tagName;
+      };
+      const heads = [...document.querySelectorAll('.sheet th')].map(function (th) {
+        const r = th.getBoundingClientRect();
+        return {
+          text: (th.textContent || '').trim() || '(actions)',
+          left: Math.round(r.left - box.left),
+          right: Math.round(r.right - box.left),
+          owner: owner(th),
+          clipped: th.scrollWidth > th.clientWidth + 1,
+        };
+      });
+      return JSON.stringify({
+        room: Math.round(scroll.clientWidth),
+        needs: scroll.scrollWidth,
+        windowWidth: window.innerWidth,
+        panel: Math.round((document.querySelector('.condition-panel') || { getBoundingClientRect: () => ({ width: 0 }) })
+          .getBoundingClientRect().width),
+        heads,
+      });
+    }));
+
+    check('§1.9 the torn-off sheet shows every column at once', () => {
+      // The root of it, in one number: what the table needs against what the
+      // window gives it. At 760 it was 1136 against 756 — and 440 once the
+      // Properties panel stood beside it.
+      assert.ok(tornSheet.needs <= tornSheet.room,
+        `the sheet needs ${tornSheet.needs}px and has ${tornSheet.room}px`
+        + ` (window ${tornSheet.windowWidth}, panel ${tornSheet.panel})`);
+    });
+    check('§1.9 the UNIT heading is visible and nothing is drawn over it', () => {
+      const unit = tornSheet.heads.find((h) => /^unit$/i.test(h.text));
+      assert.ok(unit, `the headings read ${tornSheet.heads.map((h) => h.text).join(', ')}`);
+      assert.ok(!unit.clipped, 'the UNIT heading is cut off by its own column');
+      assert.equal(unit.owner, 'itself',
+        `what is drawn over the middle of UNIT is ${unit.owner}`
+        + ` (UNIT at ${unit.left}-${unit.right} in a ${tornSheet.room}px view)`);
+    });
+    check('§1.9 and the same is true of every other heading', () => {
+      // Whichever column the pinned pair lands on is the defect; naming only
+      // UNIT would move the wound and call it fixed. At 1240px of window it
+      // moves to ORDER, whose heading reads "O" and whose cells read "75.".
+      const covered = tornSheet.heads.filter((h) => h.owner !== 'itself')
+        .map((h) => `${h.text} under ${h.owner}`);
+      assert.deepEqual(covered, [], `covered: ${covered.join(' | ')}`);
+    });
+
+    await writeFile(join(EVIDENCE, `section7-torn-sheet-${COMMIT}.png`),
+      Buffer.from(await session.screenshot(), 'base64'));
+    await session.switchTo(main);
+    await wait(600);
+  }
 
   // ── to the sheet, for §1.9, §1.10, §1.11, §1.12 ─────────────────────────
   await session.execute(function () {

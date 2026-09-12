@@ -17,7 +17,7 @@ import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { errorsSoFar, launch, openDemoJob, until, wait, watchErrors, commitStamp } from './tauri-harness.mjs';
+import { elementShot, errorsSoFar, launch, openDemoJob, until, wait, watchErrors, commitStamp } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -225,16 +225,11 @@ const exportNow = async (session) => {
 /**
  * The status bar on its own, cropped by the driver where it will do it, and the
  * whole window where it will not. Evidence is never the reason a check fails.
+ *
+ * The crop-or-whole-window part now lives in the harness, because section 6b
+ * wanted it for the Properties panel and two copies of it would have drifted.
  */
-async function statusBarShot(session) {
-  try {
-    const found = await session.call('POST', '/element', { using: 'css selector', value: '.status-bar' });
-    const id = Object.values(found)[0];
-    return await session.call('GET', `/element/${id}/screenshot`);
-  } catch {
-    return await session.screenshot();
-  }
-}
+const statusBarShot = (session) => elementShot(session, '.status-bar');
 
 await mkdir(EVIDENCE, { recursive: true });
 

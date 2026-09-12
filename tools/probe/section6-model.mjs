@@ -19,7 +19,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, openDemoJob, until, wait, commitStamp } from './tauri-harness.mjs';
+import {
+  centreOf, launch, openDemoJob, pointerClick, pointerRelease, until, wait, commitStamp,
+} from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -42,14 +44,164 @@ const squaresWithNoFall = (text) => {
   return m ? Number(m[1].replace(/,/g, '')) : null;
 };
 
+/** Money as cents, so two windows can be compared without a rounding argument. */
+const cents = (text) => {
+  const m = /-?\$[\d,]+\.\d\d/.exec(String(text));
+  return m ? Math.round(Number(m[0].replace(/[$,]/g, '')) * 100) : null;
+};
+
+/** What the Properties panel says, wherever it is standing. */
+const panelNow = (session) => session.execute(function () {
+  const el = document.querySelector('.condition-panel');
+  if (!el) return JSON.stringify({ there: false });
+  const measure = {};
+  for (const cell of el.querySelectorAll('.panel-measures > div')) {
+    const label = (cell.querySelector('.measure-label') || {}).textContent || '';
+    measure[label.trim()] = ((cell.querySelector('.measure-value') || {}).textContent || '').trim();
+  }
+  const named = (want) => {
+    const label = [...el.querySelectorAll('label')]
+      .find((l) => ((l.querySelector('span') || {}).textContent || '').trim() === want);
+    const input = label ? label.querySelector('input') : null;
+    return input ? input.value : null;
+  };
+  return JSON.stringify({
+    there: !el.hidden,
+    name: (el.querySelector('.panel-name') || {}).value || null,
+    kind: ((el.querySelector('.panel-kind') || {}).textContent || '').trim(),
+    measure,
+    cost: ((el.querySelector('.panel-money .value') || {}).textContent || '').trim(),
+    note: ((el.querySelector('.panel-money-note') || {}).textContent || '').trim(),
+    empty: ((el.querySelector('.panel-empty') || {}).textContent || '').trim(),
+    height: named('Height'),
+    text: (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim(),
+  });
+});
+
+/** The sheet, as the other window shows it: the group rows and their money. */
+const sheetNow = (session) => session.execute(function () {
+  const rows = [...document.querySelectorAll('.sheet tbody tr')];
+  const groups = [];
+  let current = null;
+  for (const row of rows) {
+    if (row.classList.contains('group-row')) {
+      current = {
+        name: ((row.querySelector('td span:nth-of-type(2)') || {}).textContent || '').trim(),
+        text: (row.textContent || '').replace(/\s+/g, ' ').trim(),
+        on: row.classList.contains('on'),
+        measures: ((row.querySelector('.group-measures') || {}).textContent || '').trim(),
+        money: [],
+      };
+      groups.push(current);
+      continue;
+    }
+    const extended = row.querySelector('td.extended');
+    const item = row.querySelector('td input');
+    if (extended && current) {
+      current.money.push({
+        item: item ? item.value : '',
+        extended: (extended.textContent || '').trim(),
+      });
+    }
+  }
+  return JSON.stringify({
+    groups,
+    selling: ((document.querySelector('.selling .value') || {}).textContent || '').trim(),
+  });
+});
+
+/** Every condition in the job, as text, so "nothing changed" can be read literally. */
+const jobNow = (session) => session.execute(function () {
+  return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+    return JSON.stringify(d.conditions);
+  });
+});
+
+/** What the 3D view says about itself: the selection, and what is lit. */
+const modelNow = (session) => session.execute(function () {
+  const m = window.__roofnerdModel ? window.__roofnerdModel() : null;
+  if (!m) return JSON.stringify({ there: false });
+  return JSON.stringify({
+    there: true,
+    selectedConditionId: m.selectedConditionId,
+    lit: m.filter(function (x) { return x.emissiveIntensity > 0; })
+      .map(function (x) { return { conditionId: x.conditionId, kind: x.kind, emissive: x.emissive }; }),
+  });
+});
+
 await mkdir(EVIDENCE, { recursive: true });
 const app = await launch();
 const { session } = app;
 
+/**
+ * Which path the pointer took, so the output can never claim a real click it
+ * did not make. Set once, below, on a click whose outcome is already known.
+ */
+let pointerPath = 'not tried';
+let pointerRefused = '';
+
 try {
   await until(session, () => document.querySelector('#editor')?.children.length > 0, { what: 'the window' });
-  await openDemoJob(session);
+
+  // ── the pointer itself, proven on a click that cannot be misread ────────
+  // The job is opened by clicking "Open the demo job" WHERE IT IS — the button's
+  // own centre, through the driver's actions endpoint — rather than by calling
+  // its handler. If that opens the job, the endpoint works and the pick below
+  // can be trusted to be a click. If it does not, we go in through the same
+  // button the ordinary way and say so in the output.
+  const demoAt = await centreOf(session, '.start-demo');
+  if (demoAt) {
+    const at = JSON.parse(demoAt);
+    try {
+      await pointerClick(session, at.x, at.y);
+      await wait(1500);
+      const opened = await session.execute(function () { return !document.querySelector('.start'); });
+      pointerPath = opened ? 'actions' : 'synthetic';
+      if (!opened) pointerRefused = 'the driver took the click and the job did not open';
+    } catch (e) {
+      pointerPath = 'synthetic';
+      pointerRefused = e.message;
+    }
+  } else {
+    pointerPath = 'synthetic';
+    pointerRefused = 'the demo button was not on screen to aim at';
+  }
+  console.log(`  pointer: ${pointerPath}${pointerRefused ? ` — ${pointerRefused}` : ''}`);
+  check(`the driver clicks where a hand would (${pointerPath})`, () => {
+    assert.equal(pointerPath, 'actions',
+      `real pointer input is not available: ${pointerRefused}. Every pointer below`
+      + ' ran as a synthetic event, which is weaker evidence and is reported as such.');
+  });
+
+  if (pointerPath !== 'actions') await openDemoJob(session);
+  await until(session, () => !document.querySelector('.start'), { what: 'the job to open' });
   await wait(1200);
+
+  // ── window B: the Estimate Sheet, torn off the way a person tears it off ──
+  // From the Plan, the tear-off button gives the sheet — the working pair. It
+  // has to happen here, while the Plan is still the editor in this area.
+  const oneWindow = await session.handles();
+  const tore = await session.execute(function () {
+    const b = [...document.querySelectorAll('.area-header .icon-button')]
+      .find((e) => (e.getAttribute('aria-label') || '') === 'Open in its own window');
+    if (!b) return false;
+    b.click();
+    return true;
+  });
+  await wait(3000);
+  const handles = await session.handles();
+  const A = oneWindow[0];
+  const B = handles.find((h) => !oneWindow.includes(h)) ?? null;
+  check('the Estimate Sheet tears off into its own window', () => {
+    assert.ok(tore, 'no tear-off button in the area header');
+    assert.ok(B, `${oneWindow.length} window before and ${handles.length} after`);
+  });
+  if (B) {
+    await session.switchTo(B);
+    await until(session, () => !!document.querySelector('.sheet'), { what: 'the torn-off sheet' });
+    await session.switchTo(A);
+    await wait(400);
+  }
 
   // ── the Model is an editor, in the picker every area already has ────────
   // D57. Not a new window kind, not a special case — the mechanism section 1
@@ -410,31 +562,231 @@ try {
   await writeFile(join(EVIDENCE, `section6-live-edit-${COMMIT}.png`),
     Buffer.from(await session.screenshot(), 'base64'));
 
-  // ── Addendum 4 §4: selection crosses the editors, and is not editing ────
-  const selectedAfter = await session.execute(function () {
-    // Select on the tree — the same selection every editor watches.
-    const node = [...document.querySelectorAll('.tree-label')]
-      .find(function (e) { return (e.textContent || '').includes('Low Roof'); });
-    if (!node) return null;
-    node.click();
-    return true;
-  });
-  await wait(600);
-
-  check('selecting a condition elsewhere selects it here too', () => {
-    assert.ok(selectedAfter, 'the tapered field was not in the tree to click');
-  });
-
-  const unchanged = await session.execute(function () {
+  // ── Addendum 4 §4: selection crosses the WINDOWS, and is not editing ────
+  //
+  // What was here clicked a tree node and asserted that the node existed. It
+  // tested nothing — not that anything was selected, not that the 3D view knew,
+  // and certainly not the claim, which is about two windows (register #32, and
+  // the line STATUS has carried as not proven ever since). Window A is this one
+  // with the roof in it; window B is the sheet, torn off. Both directions, and
+  // the money at the end of it.
+  const names = JSON.parse(await session.execute(function () {
     return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
-      const c = d.conditions.find(function (x) { return x.id === 'c-tapered'; });
-      return { traces: (c.traces || []).length, points: ((c.traces || [])[0] || {}).points.length };
+      const out = {};
+      for (const c of d.conditions) out[c.id] = c.name;
+      return JSON.stringify(out);
     });
+  }));
+  const jobBeforeSelecting = await jobNow(session);
+
+  // ── (a) point at the Low Roof in 3D ─────────────────────────────────────
+  const aim = JSON.parse(await session.execute(function (id) {
+    const m = window.__roofnerdModel ? window.__roofnerdModel() : null;
+    const p = m && m.screenPointOf ? m.screenPointOf(id) : null;
+    return JSON.stringify(p);
+  }, 'c-tapered'));
+
+  check('the view can say where on screen the Low Roof is drawn', () => {
+    assert.ok(aim, 'nothing in the scene carries that condition');
+    assert.ok(aim.inside, `it projects to ${aim.x}, ${aim.y}, which is not on the canvas`);
+    assert.equal(aim.hits, 'c-tapered',
+      `a ray cast at that point finds ${aim.hits ?? 'nothing'} — the point is not on it`);
   });
+
+  if (aim && aim.inside) {
+    if (pointerPath === 'actions') {
+      await pointerClick(session, aim.x, aim.y);
+    } else {
+      // The fallback, for this one click, said plainly: a synthetic event with
+      // the coordinates in it. The raycast reads clientX and clientY, so this
+      // exercises the same arithmetic — but it is not a click and the row below
+      // says which path ran.
+      await session.execute(function (x, y) {
+        const c = document.querySelector('.model-canvas');
+        c.dispatchEvent(new MouseEvent('click', { clientX: x, clientY: y, bubbles: true, button: 0 }));
+      }, aim.x, aim.y);
+    }
+    await wait(1000);
+  }
+
+  const pickedA = JSON.parse(await modelNow(session));
+  const panelLowRoof = JSON.parse(await panelNow(session));
+
+  check(`picking the Low Roof in 3D selects it (${pointerPath})`, () => {
+    assert.ok(pickedA.there, 'the view has nothing to say about itself');
+    assert.equal(pickedA.selectedConditionId, 'c-tapered',
+      `the view believes ${pickedA.selectedConditionId ?? 'nothing'} is selected`);
+  });
+  check('and the panel beside the roof names it and shows what it measures', () => {
+    assert.ok(panelLowRoof.there, 'no Properties panel in the window with the roof in it');
+    assert.equal(panelLowRoof.name, names['c-tapered'],
+      `the panel names "${panelLowRoof.name}"`);
+    assert.match(panelLowRoof.measure?.['Area'] ?? '', /\d/,
+      `its area reads "${panelLowRoof.measure?.['Area']}"`);
+    assert.match(panelLowRoof.measure?.['Squares'] ?? '', /\d/,
+      `its squares read "${panelLowRoof.measure?.['Squares']}"`);
+  });
+  check('and says what it costs — in words, because nothing is priced on it', () => {
+    // The demo's Low Roof is traced and carries no line. $0.00 would be a lie
+    // an estimator could bid on, and this is the row that makes sure it is not
+    // what the panel says.
+    assert.equal(panelLowRoof.cost, 'nothing priced on it',
+      `the panel's cost line reads "${panelLowRoof.cost}"`);
+  });
+
+  // ── (b) the other window already knows ──────────────────────────────────
+  let sheetB = null;
+  if (B) {
+    await session.switchTo(B);
+    await until(session, () => !!document.querySelector('.sheet'), { what: 'the sheet' });
+    await wait(800);
+    sheetB = JSON.parse(await sheetNow(session));
+  }
+  const lowRoofRow = sheetB?.groups.find((g) => g.text.includes(names['c-tapered'])) ?? null;
+
+  check('and the sheet in the other window marks the same condition', () => {
+    assert.ok(sheetB, 'there is no second window to look in');
+    assert.ok(lowRoofRow, `the sheet has no row for "${names['c-tapered']}"`);
+    assert.ok(lowRoofRow.on,
+      'the row is not marked — a pick in 3D did not cross the window frame');
+    const others = sheetB.groups.filter((g) => g.on).length;
+    assert.equal(others, 1, `${others} rows are marked at once`);
+  });
+  check('and both windows print the same area for it', () => {
+    const inPanel = (panelLowRoof.measure?.['Area'] ?? '').replace(/[^\d.]/g, '');
+    assert.ok(inPanel.length > 0, 'the panel shows no area');
+    assert.ok(lowRoofRow && lowRoofRow.measures.includes(inPanel),
+      `the panel says ${inPanel} and the sheet's row says "${lowRoofRow?.measures}"`);
+  });
+
+  // ── (c) and back the other way: pick on the sheet, watch the roof ───────
+  const parapetAt = B ? await centreOf(session, '.sheet tr.group-row', names['c-parapet']) : null;
+  if (parapetAt && pointerPath === 'actions') {
+    const at = JSON.parse(parapetAt);
+    await pointerClick(session, at.x, at.y);
+  } else if (B) {
+    await session.execute(function (want) {
+      const row = [...document.querySelectorAll('.sheet tr.group-row')]
+        .find(function (r) { return (r.textContent || '').indexOf(want) >= 0; });
+      if (row) row.click();
+    }, names['c-parapet']);
+  }
+  await wait(1000);
+  const sheetParapet = B ? JSON.parse(await sheetNow(session)) : null;
+  const parapetRowBefore = sheetParapet?.groups.find((g) => g.text.includes(names['c-parapet'])) ?? null;
+
+  if (B) {
+    await session.switchTo(A);
+    await wait(1000);
+  }
+  const litA = JSON.parse(await modelNow(session));
+  const panelParapet = JSON.parse(await panelNow(session));
+
+  check('picking a condition on the sheet reaches the roof in the other window', () => {
+    assert.ok(parapetRowBefore, `no row for "${names['c-parapet']}" to pick`);
+    assert.equal(litA.selectedConditionId, 'c-parapet',
+      `the view believes ${litA.selectedConditionId ?? 'nothing'} is selected`);
+  });
+  check('and it is that condition, and only it, that is lit in 3D', () => {
+    // Read off the material the roof is painted with, not off the selection
+    // that was just set. The emissive is what `highlight()` actually did.
+    assert.ok(litA.lit.length > 0, 'nothing in the view is lit at all');
+    for (const m of litA.lit) {
+      assert.equal(m.conditionId, 'c-parapet',
+        `the ${m.kind} of ${m.conditionId} is lit as well`);
+    }
+    assert.ok(litA.lit.some((m) => String(m.kind).startsWith('parapet')),
+      `what is lit is ${JSON.stringify(litA.lit)}`);
+  });
+  check('and the panel figure is the sheet\'s own money, to the cent', () => {
+    const inPanel = cents(panelParapet.cost);
+    assert.ok(inPanel !== null, `the panel's cost line reads "${panelParapet.cost}"`);
+    const onSheet = (parapetRowBefore?.money ?? [])
+      .map((m) => cents(m.extended))
+      .filter((c) => c !== null)
+      .reduce((sum, c) => sum + c, 0);
+    assert.equal(inPanel, onSheet,
+      `the panel says ${inPanel} cents and the sheet's own lines add to ${onSheet}`);
+  });
+
+  // ── (e) none of that was an edit ────────────────────────────────────────
+  const jobAfterSelecting = await jobNow(session);
   check('and selecting changed nothing about the job — there is no editing in 3D', () => {
-    assert.equal(unchanged.traces, 1);
-    assert.equal(unchanged.points, 4);
+    assert.equal(jobAfterSelecting, jobBeforeSelecting,
+      'the job moved while nothing but selections happened');
+    const c = JSON.parse(jobAfterSelecting).find((x) => x.id === 'c-tapered');
+    assert.equal((c.traces || []).length, 1);
+    assert.equal(c.traces[0].points.length, 4);
   });
+
+  await writeFile(join(EVIDENCE, `section6-both-windows-a-${COMMIT}.png`),
+    Buffer.from(await session.screenshot(), 'base64'));
+
+  // ── (d) a property typed in the panel beside the roof moves the money ───
+  // Typing a height is not dragging geometry: §4.10 stands, and the panel is
+  // the place a height has always been typed. What is new is that the panel is
+  // in the window with the roof in it, and the sheet is on the other monitor.
+  const heightBefore = Number(panelParapet.height);
+  const typed = await session.execute(function (value) {
+    const label = [...document.querySelectorAll('.condition-panel label')]
+      .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Height'; });
+    const input = label ? label.querySelector('input') : null;
+    if (!input) return false;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(input, String(value));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  }, heightBefore * 2);
+  await wait(1600);
+
+  let sheetAfter = null;
+  if (B) {
+    await session.switchTo(B);
+    await wait(1200);
+    sheetAfter = JSON.parse(await sheetNow(session));
+    await writeFile(join(EVIDENCE, `section6-both-windows-b-${COMMIT}.png`),
+      Buffer.from(await session.screenshot(), 'base64'));
+  }
+  const parapetRowAfter = sheetAfter?.groups.find((g) => g.text.includes(names['c-parapet'])) ?? null;
+
+  check('a height typed in the panel moves the selling price in the other window', () => {
+    assert.ok(typed, 'the panel has no Height field to type in');
+    assert.ok(Number.isFinite(heightBefore), `the panel read its height as "${panelParapet.height}"`);
+    assert.ok(sheetAfter, 'there is no second window to read the price in');
+    assert.notEqual(cents(sheetAfter.selling), cents(sheetParapet.selling),
+      `the selling price stayed at ${sheetAfter.selling}`);
+  });
+  check('and it is the one line the height is in that moved, and it doubled', () => {
+    const was = (parapetRowBefore?.money ?? []).map((m) => cents(m.extended));
+    const now = (parapetRowAfter?.money ?? []).map((m) => cents(m.extended));
+    assert.equal(now.length, was.length, `${was.length} lines before and ${now.length} after`);
+    const moved = now.map((v, i) => (v !== was[i] ? i : -1)).filter((i) => i >= 0);
+    assert.equal(moved.length, 1,
+      `${moved.length} lines changed when one formula reads the height: ${JSON.stringify({ was, now })}`);
+    const i = moved[0];
+    // Doubling H doubles `LF * H`, and the cent it is displayed at is the same
+    // arithmetic rounded once, so this is exact. One cent of tolerance because
+    // a half-cent at the boundary is a display question, not a money question.
+    assert.ok(Math.abs(now[i] - was[i] * 2) <= 1,
+      `the line went from ${was[i]} to ${now[i]} cents when its height doubled`);
+  });
+
+  // Put the height back, so nothing after this reads a job this check moved.
+  if (B) {
+    await session.switchTo(A);
+    await wait(600);
+  }
+  await session.execute(function (value) {
+    const label = [...document.querySelectorAll('.condition-panel label')]
+      .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Height'; });
+    const input = label ? label.querySelector('input') : null;
+    if (!input) return false;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(input, String(value));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  }, heightBefore);
+  await wait(1200);
 
   // ── the vocabulary rule holds in this window too ────────────────────────
   const words = await session.execute(function () {
@@ -450,6 +802,7 @@ try {
   results.push('FAIL');
   console.log(`  FAIL  the check stopped: ${e.message}`);
 } finally {
+  await pointerRelease(session);
   await app.close();
 }
 

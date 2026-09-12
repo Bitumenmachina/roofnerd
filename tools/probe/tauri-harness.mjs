@@ -62,6 +62,22 @@ class Session {
   switchTo(handle) { return this.call('POST', '/window', { handle }); }
   screenshot() { return this.call('GET', '/screenshot'); }
 
+  /**
+   * The W3C actions endpoint: real input, dispatched by the driver.
+   *
+   * Everything else in here reaches the page through `execute`, which is the
+   * program's own code being called by name. That is fine for reading the
+   * window and it is not a click: a synthetic `PointerEvent` is a JavaScript
+   * object with the coordinates already in it, so a check built on one can pass
+   * while the thing a hand does never worked. The 3D pick is exactly that case
+   * — it reads clientX and clientY off the event and casts a ray — so section 6
+   * asks for the real thing.
+   */
+  actions(sequence) { return this.call('POST', '/actions', { actions: sequence }); }
+
+  /** Let go of whatever the driver is holding down. */
+  releaseActions() { return this.call('DELETE', '/actions'); }
+
   /** Run a function in the page and get its return value back. */
   execute(fn, ...args) {
     return this.call('POST', '/execute/sync', { script: `return (${fn}).apply(null, arguments)`, args });
@@ -237,6 +253,64 @@ export const clickAt = (session, points) => session.execute(function (pts) {
   }
   document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 }, points);
+
+/**
+ * One click of the left button at a point in the window, through the driver.
+ *
+ * Coordinates are CSS pixels from the top-left of the viewport — the same frame
+ * `clientX`/`clientY` are given in, which is what `getBoundingClientRect` hands
+ * back and what the Model's raycast reads. A `pause` between down and up
+ * because a zero-length press is not what a hand does and some webviews treat
+ * it as nothing at all.
+ *
+ * It throws if the driver will not do it. The caller decides what that means —
+ * section 6 says so in its output and falls back for the one click that cannot
+ * be left untested, rather than reporting a real pointer it never had.
+ */
+export const pointerClick = (session, x, y) => session.actions([{
+  type: 'pointer',
+  id: 'mouse',
+  parameters: { pointerType: 'mouse' },
+  actions: [
+    { type: 'pointerMove', origin: 'viewport', x: Math.round(x), y: Math.round(y) },
+    { type: 'pointerDown', button: 0 },
+    { type: 'pause', duration: 40 },
+    { type: 'pointerUp', button: 0 },
+  ],
+}]);
+
+/** Release everything the driver holds. Cheap insurance in a `finally`. */
+export const pointerRelease = (session) => session.releaseActions().catch(() => undefined);
+
+/**
+ * The middle of something on screen, in the coordinates a pointer wants.
+ *
+ * Null when it is not there, so a check can say "there was nothing to click"
+ * rather than clicking the top-left corner of the window.
+ */
+export const centreOf = (session, selector, text) => session.execute(function (sel, want) {
+  const all = [...document.querySelectorAll(sel)];
+  const el = want ? all.find((e) => ((e.innerText || e.textContent || '').indexOf(want) >= 0)) : all[0];
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  if (r.width < 1 || r.height < 1) return null;
+  return JSON.stringify({ x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) });
+}, selector, text ?? null);
+
+/**
+ * The one element as a picture, cropped by the driver where it will do it and
+ * the whole window where it will not. Evidence is never the reason a check
+ * fails, so the fallback is silent and the caller still gets a PNG.
+ */
+export async function elementShot(session, selector) {
+  try {
+    const found = await session.call('POST', '/element', { using: 'css selector', value: selector });
+    const id = Object.values(found)[0];
+    return await session.call('GET', `/element/${id}/screenshot`);
+  } catch {
+    return await session.screenshot();
+  }
+}
 
 /** Pick a tool off the toolbar by the word on it. */
 export const tool = async (session, label) => {
