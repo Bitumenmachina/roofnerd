@@ -28,6 +28,28 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## Section 9a — a lens leaves the program as a file (2026-09-12)
+
+"Export CSV" beside "Copy as CSV" in Reports. One builder feeds both; the file lands in the job's
+own `exports/` folder — the folder Gate 0 laid down with a `.gitkeep` — through a shell command
+confined to it (D114). The status bar names the path. With no job open there is no button. The
+file carries the per-SQ divisor and the "Not in this total" footnote (D116).
+
+Built by the 9a agent in a scratch clone (its notes are the record: what it reused, what it could
+not run, seven findings). The probe was committed first (`f5e5b24`) and went **RED on the program
+as it stood — 2 of 4, stopped waiting for a button that did not exist**; then the export landed.
+
+Checks at `ed33619`: **section9a-export 57/57** (green first run) · front-door 17/17 · section5
+17/17 · vocabulary 38/38 · section7 15/15 · engine 146 · shell 12/12 (six new) · gates 3/3. Images
+`section9a-export-ed33619.png` and `section9a-status-ed33619.png` opened: the two buttons sit
+together at the right of the lens header; the status bar names the file with a clean ellipsis —
+**and has wrapped to two lines** (Units under Job · Scenario · Scale). Seen-not-fixed 9, below;
+the follow-up patch carries the fix and the assertion the check lacked.
+
+The 9a agent's findings, on the record: `window.__errors` was set by nothing, so two "no console
+errors" rows had passed vacuously since section 1 (register #35, D118); `vite build` does not
+type-check the app (register #36, D119). Both close in the follow-up commit.
+
 ## The 2026-09-08 pass, committed 2026-09-12
 
 Patrick stopped the previous session mid-pass; nothing from it was committed until now
@@ -131,6 +153,9 @@ in it, is below. Eight things were seen that no check caught. They are listed, n
    lens right.
 6. **The cricket is not legible as two planes** at the Model's default angle.
 7. **Start screen has no "New job" and no "Recent"; the File menu has no "Recent"** — A4, v2 §1.3.
+9. **The status bar wraps to two lines after an export** — the "Exported to …" message takes the
+   width and Units drops under Job · Scenario · Scale (A3: one line, 28 px). Seen in
+   `section9a-export-ed33619.png`; the 57/57 check did not look. Fix + assertion in the 9a follow-up.
 8. Library rows show `VERTICES → EA`: a formula identifier where a roofer says corners. Allowed (it is
    a formula, Addendum 1), noted as a candidate for a trade word.
 
