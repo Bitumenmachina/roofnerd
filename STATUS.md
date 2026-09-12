@@ -43,8 +43,16 @@ Checks at `ed33619`: **section9a-export 57/57** (green first run) · front-door 
 17/17 · vocabulary 38/38 · section7 15/15 · engine 146 · shell 12/12 (six new) · gates 3/3. Images
 `section9a-export-ed33619.png` and `section9a-status-ed33619.png` opened: the two buttons sit
 together at the right of the lens header; the status bar names the file with a clean ellipsis —
-**and has wrapped to two lines** (Units under Job · Scenario · Scale). Seen-not-fixed 9, below;
-the follow-up patch carries the fix and the assertion the check lacked.
+**and had wrapped to two lines** (Units under Job · Scenario · Scale) — seen-not-fixed 9, closed
+in two rounds below.
+
+**Follow-ups landed (all red-first):** `309b6cf` checks → `d0e1882` one-line bar (RED 2 of 60 →
+GREEN 60/60; the picture then showed the page grown past the window) → `bdbdec2` checks →
+`dd5413e` bar takes the window's width (RED 5 of 64 → **GREEN 64/64**; images
+`section9a-export-dd5413e.png` / `section9a-status-dd5413e.png` opened: one line, message
+ellipsized, path keeps `/demo-job`, both buttons and the Per SQ column inside the window). At
+`dd5413e`: front-door 17/17 · section5 17/17 · section7 15/15 · section1 12/12 and section2 14/14
+with a real error hook (D118) · app type-checked under `pnpm test` (D119).
 
 The 9a agent's findings, on the record: `window.__errors` was set by nothing, so two "no console
 errors" rows had passed vacuously since section 1 (register #35, D118); `vite build` does not
@@ -153,9 +161,11 @@ in it, is below. Eight things were seen that no check caught. They are listed, n
    lens right.
 6. **The cricket is not legible as two planes** at the Model's default angle.
 7. **Start screen has no "New job" and no "Recent"; the File menu has no "Recent"** — A4, v2 §1.3.
-9. **The status bar wraps to two lines after an export** — the "Exported to …" message takes the
-   width and Units drops under Job · Scenario · Scale (A3: one line, 28 px). Seen in
-   `section9a-export-ed33619.png`; the 57/57 check did not look. Fix + assertion in the 9a follow-up.
+9. ~~The status bar wraps to two lines after an export~~ — **FIXED at `d0e1882`**, then the fix pushed
+   the page past the window (`section9a-export-d0e1882.png`: Per SQ column and the export button off
+   the right edge) — **FIXED at `dd5413e`** with the document-width assertions the check lacked (red
+   at `bdbdec2` 5 of 7 bar rows, green after). Both rounds by the 9a agent; both defects seen in
+   the pictures, not by the checks (register #38).
 8. Library rows show `VERTICES → EA`: a formula identifier where a roofer says corners. Allowed (it is
    a formula, Addendum 1), noted as a candidate for a trade word.
 
