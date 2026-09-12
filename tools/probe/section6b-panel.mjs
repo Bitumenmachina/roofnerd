@@ -20,7 +20,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import {
-  errorsSoFar, launch, openDemoJob, until, wait, watchErrors, commitStamp,
+  centreOf, errorsSoFar, launch, openDemoJob, pointerClick, pointerRelease,
+  typeKeys, until, wait, watchErrors, commitStamp,
 } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
@@ -32,6 +33,13 @@ const check = (name, fn) => {
   try { fn(); results.push('PASS'); console.log(`  PASS  ${name}`); }
   catch (e) { results.push('FAIL'); console.log(`  FAIL  ${name}\n        ${e.message}`); }
 };
+
+/**
+ * Which path the keyboard and the pointer took, so no row can claim real input
+ * it never had. Settled below on a click whose outcome is already known.
+ */
+let pointerPath = 'not tried';
+let pointerRefused = '';
 
 /** Every editor an area can show, and the word a person picks it by. */
 const EDITORS = [
@@ -115,7 +123,37 @@ try {
       `the panel is on screen with no job open: "${(cold.text ?? '').slice(0, 80)}"`);
   });
 
-  await openDemoJob(session);
+  // ── the pointer, proven on a click whose outcome cannot be misread ──────
+  // The same arrangement section 6 uses: the demo job is opened by clicking the
+  // button WHERE IT IS, through the driver's actions endpoint. If the job opens,
+  // real input works and the keystrokes below are keystrokes. If it does not,
+  // the rows below say so in their names and fall back to dispatched events.
+  const demoAt = await centreOf(session, '.start-demo');
+  if (demoAt) {
+    const at = JSON.parse(demoAt);
+    try {
+      await pointerClick(session, at.x, at.y);
+      await wait(1500);
+      const opened = await session.execute(function () { return !document.querySelector('.start'); });
+      pointerPath = opened ? 'actions' : 'synthetic';
+      if (!opened) pointerRefused = 'the driver took the click and the job did not open';
+    } catch (e) {
+      pointerPath = 'synthetic';
+      pointerRefused = e.message;
+    }
+  } else {
+    pointerPath = 'synthetic';
+    pointerRefused = 'the demo button was not on screen to aim at';
+  }
+  console.log(`  pointer: ${pointerPath}${pointerRefused ? ` — ${pointerRefused}` : ''}`);
+  check(`the driver clicks where a hand would (${pointerPath})`, () => {
+    assert.equal(pointerPath, 'actions',
+      `real input is not available: ${pointerRefused}. The typing rows below ran as`
+      + ' dispatched events, which is weaker evidence and is reported as such.');
+  });
+
+  if (pointerPath !== 'actions') await openDemoJob(session);
+  await until(session, () => !document.querySelector('.start'), { what: 'the job to open' });
   await wait(1500);
 
   // ── a job open, nothing picked ──────────────────────────────────────────
@@ -265,10 +303,245 @@ try {
     await writeFile(join(EVIDENCE, `section6b-panel-model-torn-off-${COMMIT}.png`),
       Buffer.from(await session.screenshot(), 'base64'));
   }
+
+  // ── a field has to keep the second character ────────────────────────────
+  //
+  // Every field in this program writes to the document as it is typed, and
+  // every editor rebuilds itself when the document changes — `replaceChildren`,
+  // then the fields again from what the job now says. The element being typed
+  // into is destroyed between one keystroke and the next, and the focus goes
+  // with it, so a height typed as "12" is a height of 1 and the second key was
+  // never anywhere. Nothing caught it because every check in this repository
+  // sets `.value` and dispatches ONE input event, which is not what a hand does.
+  //
+  // So: focus the field the way a hand does, send one key, let the document come
+  // back around, and send the second key to WHEREVER THE FOCUS NOW IS. That last
+  // clause is the whole check. Sending it to the element the check is still
+  // holding would pass on a program that had lost it.
+  await session.switchTo(oneWindow[0]);
+  await wait(600);
+  await showEditor(session, 'estimate', '.sheet');
+  await watchErrors(session);
+
+  /** Where the focus went, which is the diagnosis when a row below goes red. */
+  const focusNow = () => session.execute(function () {
+    const el = document.activeElement;
+    if (!el) return 'none';
+    return el.tagName + (el.className ? `.${String(el.className).split(' ')[0]}` : '');
+  });
+
+  /**
+   * The second keystroke, to whatever has the focus. Never to a held element.
+   *
+   * It follows the path the FIRST key actually took, and if the driver refuses
+   * a key in the middle of the pair it falls back rather than abandoning the
+   * run — a row that cannot report is worse than a row that reports weakly.
+   */
+  let keysRefused = '';
+  const secondKey = async (ch, path) => {
+    if (path === 'keys') {
+      try {
+        await typeKeys(session, ch);
+        return { path: 'keys' };
+      } catch (e) {
+        keysRefused = e.message;
+      }
+    }
+    return JSON.parse(await session.execute(function (c) {
+      const el = document.activeElement;
+      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) {
+        return JSON.stringify({ path: 'synthetic', wentNowhere: true });
+      }
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      setter.call(el, el.value + c);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      return JSON.stringify({ path: 'synthetic', wentNowhere: false });
+    }, ch));
+  };
+
+  // ── the panel's Height field ────────────────────────────────────────────
+  const heightField = () => session.execute(function () {
+    const label = [...document.querySelectorAll('.condition-panel label')]
+      .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Height'; });
+    const input = label ? label.querySelector('input') : null;
+    if (!input) return null;
+    const r = input.getBoundingClientRect();
+    return JSON.stringify({
+      x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2),
+      value: input.value, focused: document.activeElement === input,
+    });
+  });
+
+  /** A field is emptied by script, once, so the two keystrokes start from nothing. */
+  const emptyTheHeight = () => session.execute(function () {
+    const label = [...document.querySelectorAll('.condition-panel label')]
+      .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Height'; });
+    const input = label ? label.querySelector('input') : null;
+    if (!input) return false;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(input, '');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  });
+
+  const heightWas = JSON.parse((await heightField()) ?? 'null');
+  await emptyTheHeight();
+  await wait(1400);
+
+  const heightEmpty = JSON.parse((await heightField()) ?? 'null');
+  let heightPath = 'not tried';
+  if (heightEmpty) {
+    if (pointerPath === 'actions') {
+      try {
+        await pointerClick(session, heightEmpty.x, heightEmpty.y);
+        await wait(400);
+        await typeKeys(session, '1');
+        heightPath = 'keys';
+      } catch (e) {
+        keysRefused = e.message;
+      }
+    }
+    if (heightPath !== 'keys') {
+      await session.execute(function () {
+        const label = [...document.querySelectorAll('.condition-panel label')]
+          .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Height'; });
+        const input = label ? label.querySelector('input') : null;
+        if (!input) return false;
+        input.focus();
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        setter.call(input, '1');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+      });
+      heightPath = 'synthetic';
+    }
+    await wait(1400);
+  }
+  const heightFocus = await focusNow();
+  const heightSecond = heightEmpty ? await secondKey('2', heightPath) : null;
+  await wait(1400);
+
+  const heightAfter = JSON.parse((await heightField()) ?? 'null');
+  const heightInJob = await session.execute(function () {
+    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+      const c = d.conditions.find(function (x) { return x.id === 'c-parapet'; });
+      return JSON.stringify((c.properties || {}).H ?? null);
+    });
+  });
+
+  check(`the panel keeps the field being typed into — "12", not "1" (${heightPath})`, () => {
+    assert.ok(heightEmpty, 'no Height field in the panel to type into');
+    assert.equal(heightAfter && heightAfter.value, '12',
+      `the field reads "${heightAfter && heightAfter.value}" after 1 then 2`
+      + ` — after the first key the focus was on ${heightFocus}`
+      + `${heightSecond && heightSecond.wentNowhere ? ' and the second key went nowhere' : ''}`);
+    assert.equal(JSON.parse(heightInJob), 12,
+      `the job holds ${heightInJob} for the parapet's height`);
+  });
+
+  // Put the height back, whatever happened.
+  await session.execute(function (value) {
+    const label = [...document.querySelectorAll('.condition-panel label')]
+      .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Height'; });
+    const input = label ? label.querySelector('input') : null;
+    if (!input) return false;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(input, String(value));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  }, heightWas ? heightWas.value : '1');
+  await wait(1200);
+
+  // ── and the sheet's formula, which is the field this program is for ─────
+  const formulaField = () => session.execute(function () {
+    const input = document.querySelector('.sheet input.formula');
+    if (!input) return null;
+    const r = input.getBoundingClientRect();
+    return JSON.stringify({
+      x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2),
+      value: input.value, focused: document.activeElement === input,
+    });
+  });
+  const setFormula = (value) => session.execute(function (v) {
+    const input = document.querySelector('.sheet input.formula');
+    if (!input) return false;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(input, v);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  }, value);
+
+  const formulaWas = JSON.parse((await formulaField()) ?? 'null');
+  await setFormula('');
+  await wait(1400);
+
+  const formulaEmpty = JSON.parse((await formulaField()) ?? 'null');
+  let formulaPath = 'not tried';
+  if (formulaEmpty) {
+    if (pointerPath === 'actions') {
+      try {
+        await pointerClick(session, formulaEmpty.x, formulaEmpty.y);
+        await wait(400);
+        await typeKeys(session, '1');
+        formulaPath = 'keys';
+      } catch (e) {
+        keysRefused = e.message;
+      }
+    }
+    if (formulaPath !== 'keys') {
+      await session.execute(function () {
+        const input = document.querySelector('.sheet input.formula');
+        if (!input) return false;
+        input.focus();
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        setter.call(input, '1');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+      });
+      formulaPath = 'synthetic';
+    }
+    await wait(1400);
+  }
+  const formulaFocus = await focusNow();
+  const formulaSecond = formulaEmpty ? await secondKey('2', formulaPath) : null;
+  await wait(1400);
+
+  const formulaAfter = JSON.parse((await formulaField()) ?? 'null');
+  const formulaInJob = await session.execute(function () {
+    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+      return JSON.stringify(((d.conditions[0] || {}).items || [])[0]?.formula ?? null);
+    });
+  });
+
+  check(`the sheet keeps the formula being typed into — "12", not "1" (${formulaPath})`, () => {
+    assert.ok(formulaEmpty, 'no formula field on the sheet to type into');
+    assert.equal(formulaAfter && formulaAfter.value, '12',
+      `the field reads "${formulaAfter && formulaAfter.value}" after 1 then 2`
+      + ` — after the first key the focus was on ${formulaFocus}`
+      + `${formulaSecond && formulaSecond.wentNowhere ? ' and the second key went nowhere' : ''}`);
+    assert.equal(JSON.parse(formulaInJob), '12',
+      `the job holds ${formulaInJob} as that line's formula`);
+  });
+
+  await writeFile(join(EVIDENCE, `section6b-typing-${COMMIT}.png`),
+    Buffer.from(await session.screenshot(), 'base64'));
+
+  // And put the formula back.
+  await setFormula(formulaWas ? formulaWas.value : 'SQ');
+  await wait(1200);
+
+  console.log(`  keyboard: panel ${heightPath}, sheet ${formulaPath}`
+    + `${keysRefused ? ` — ${keysRefused.split('\n')[0]}` : ''}`);
+
+  const typingErrors = await errorsSoFar(session);
+  check('nothing errored while the fields were typed into', () => {
+    assert.deepEqual(typingErrors, [], typingErrors.join(' | '));
+  });
 } catch (e) {
   results.push('FAIL');
   console.log(`  FAIL  the check stopped: ${e.message}`);
 } finally {
+  await pointerRelease(session);
   await app.close();
 }
 

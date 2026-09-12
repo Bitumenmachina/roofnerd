@@ -34,7 +34,23 @@ export async function scratchJob(from = join(ROOT, 'jobs/demo-job')) {
   return { dir, async remove() { await rm(dir, { recursive: true, force: true }); } };
 }
 
-class WebDriverError extends Error {}
+/**
+ * What the driver said, kept rather than summarised.
+ *
+ * The first run of section 6 printed "real pointer input is not available: ." —
+ * an empty reason, because the driver answered with a `message` of empty string
+ * and this class had nothing else to say. A refusal with no diagnosis in it
+ * costs a whole round trip to the runtime, so the status, the body and the JSON
+ * that was sent all travel with the error now.
+ */
+class WebDriverError extends Error {
+  constructor(message, { status = 0, body = '', sent = '' } = {}) {
+    super(message);
+    this.status = status;
+    this.body = body;
+    this.sent = sent;
+  }
+}
 
 /** The bits of the WebDriver protocol this project uses. */
 class Session {
@@ -45,14 +61,33 @@ class Session {
   }
 
   async call(method, path, body) {
+    const sent = body === undefined ? '' : JSON.stringify(body);
     const response = await fetch(`${this.base}/session/${this.id}${path}`, {
       method,
       headers: { 'content-type': 'application/json' },
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      ...(body === undefined ? {} : { body: sent }),
     });
-    const payload = await response.json().catch(() => ({}));
+    // The text first, the JSON second: a driver that answers with an empty body
+    // or with something that is not JSON at all is exactly the case that needs
+    // reporting, and `response.json()` throws that evidence away.
+    const text = await response.text();
+    let payload = {};
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = {};
+    }
     if (!response.ok || payload?.value?.error) {
-      throw new WebDriverError(payload?.value?.message ?? `${method} ${path} failed`);
+      const said = typeof payload?.value?.message === 'string' ? payload.value.message.trim() : '';
+      const kind = payload?.value?.error ? ` ${payload.value.error}` : '';
+      const why = said
+        ? `: ${said}`
+        : ` — the driver's answer was ${text.trim() ? `"${text.trim().slice(0, 300)}"` : 'empty'}`;
+      throw new WebDriverError(`${method} ${path} → ${response.status}${kind}${why}`, {
+        status: response.status,
+        body: text.slice(0, 600),
+        sent: sent.slice(0, 600),
+      });
     }
     return payload.value;
   }
@@ -267,17 +302,117 @@ export const clickAt = (session, points) => session.execute(function (pts) {
  * section 6 says so in its output and falls back for the one click that cannot
  * be left untested, rather than reporting a real pointer it never had.
  */
-export const pointerClick = (session, x, y) => session.actions([{
-  type: 'pointer',
-  id: 'mouse',
-  parameters: { pointerType: 'mouse' },
-  actions: [
-    { type: 'pointerMove', origin: 'viewport', x: Math.round(x), y: Math.round(y) },
-    { type: 'pointerDown', button: 0 },
-    { type: 'pause', duration: 40 },
-    { type: 'pointerUp', button: 0 },
-  ],
-}]);
+/**
+ * The shapes of a click, most human first, then progressively more minimal.
+ *
+ * WebKitWebDriver refused the first one with an empty message, and an empty
+ * message is not a diagnosis — so instead of one shape and a shrug there are
+ * three, each tried in turn, and whatever the driver says about each of them
+ * travels out in the error. The second is the W3C minimum: move to a point in
+ * the viewport, press, release. The third drops `parameters`, which the
+ * specification asks for and some drivers reject.
+ */
+const CLICK_SHAPES = [
+  {
+    name: 'pointer with parameters, a pause between down and up',
+    of: (x, y) => [{
+      type: 'pointer',
+      id: 'mouse',
+      parameters: { pointerType: 'mouse' },
+      actions: [
+        { type: 'pointerMove', origin: 'viewport', x, y },
+        { type: 'pointerDown', button: 0 },
+        { type: 'pause', duration: 40 },
+        { type: 'pointerUp', button: 0 },
+      ],
+    }],
+  },
+  {
+    name: 'the W3C minimum — move, down, up',
+    of: (x, y) => [{
+      type: 'pointer',
+      id: 'mouse',
+      parameters: { pointerType: 'mouse' },
+      actions: [
+        { type: 'pointerMove', origin: 'viewport', x, y },
+        { type: 'pointerDown', button: 0 },
+        { type: 'pointerUp', button: 0 },
+      ],
+    }],
+  },
+  {
+    name: 'the same without pointerType parameters',
+    of: (x, y) => [{
+      type: 'pointer',
+      id: 'mouse',
+      actions: [
+        { type: 'pointerMove', origin: 'viewport', x, y },
+        { type: 'pointerDown', button: 0 },
+        { type: 'pointerUp', button: 0 },
+      ],
+    }],
+  },
+];
+
+/**
+ * One click of the left button at a point in the window, through the driver.
+ *
+ * Answers which shape the driver took, so a probe can say so; throws with every
+ * shape's own refusal in the message when none of them is accepted. A repeated
+ * click is the price of finding out: if a shape half-works the next one clicks
+ * the same point again, and every place this is used, clicking twice is the same
+ * as clicking once.
+ */
+export async function pointerClick(session, x, y) {
+  const at = { x: Math.round(x), y: Math.round(y) };
+  const tried = [];
+  for (const shape of CLICK_SHAPES) {
+    try {
+      await session.actions(shape.of(at.x, at.y));
+      return { shape: shape.name, at };
+    } catch (e) {
+      tried.push(`${shape.name} → ${e.message}${e.sent ? `\n        sent ${e.sent}` : ''}`);
+    }
+  }
+  const error = new Error(
+    `the driver would not click at ${at.x}, ${at.y} — ${CLICK_SHAPES.length} shapes refused:`
+    + `\n      ${tried.join('\n      ')}`);
+  error.tried = tried;
+  throw error;
+}
+
+/**
+ * Keystrokes, one key down and up per character, through the driver.
+ *
+ * They go where the page's focus is, which is the whole point of having them:
+ * `input.value = x` writes to an element a check already has in its hand, and
+ * says nothing about whether a person could have typed it. Two of these, with a
+ * wait between them, is the smallest honest test of a field that is rebuilt
+ * while it is being typed into.
+ *
+ * Send one character at a time when the gap between them matters.
+ */
+export async function typeKeys(session, text) {
+  try {
+    await session.actions([{
+      type: 'key',
+      id: 'keyboard',
+      actions: [...String(text)].flatMap((ch) => [
+        { type: 'keyDown', value: ch },
+        { type: 'keyUp', value: ch },
+      ]),
+    }]);
+    return { sent: String(text) };
+  } catch (e) {
+    // Same reasoning as the click: the refusal carries what was sent and what
+    // the driver answered, because a probe that can only say "it did not work"
+    // costs a whole run to find out why.
+    const error = new Error(`the driver would not type ${JSON.stringify(String(text))} → ${e.message}`
+      + `${e.sent ? `\n      sent ${e.sent}` : ''}`);
+    error.status = e.status;
+    throw error;
+  }
+}
 
 /** Release everything the driver holds. Cheap insurance in a `finally`. */
 export const pointerRelease = (session) => session.releaseActions().catch(() => undefined);

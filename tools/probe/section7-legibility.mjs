@@ -279,10 +279,23 @@ try {
           clipped: th.scrollWidth > th.clientWidth + 1,
         };
       });
+      // The one control in the unnamed column, and whether a hand could reach
+      // it: the ✕ that takes a line off. It is the reason that column exists.
+      const remove = document.querySelector('.sheet td.actions button.remove');
+      const removeAt = !remove ? null : (function () {
+        const r = remove.getBoundingClientRect();
+        const top = document.elementFromPoint(
+          Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
+        return {
+          right: Math.round(r.right - box.left),
+          owner: !top ? 'nothing' : ((top === remove || remove.contains(top)) ? 'itself' : (top.className || top.tagName)),
+        };
+      })();
       return JSON.stringify({
         room: Math.round(scroll.clientWidth),
         needs: scroll.scrollWidth,
         windowWidth: window.innerWidth,
+        removeAt,
         panel: Math.round((document.querySelector('.condition-panel') || { getBoundingClientRect: () => ({ width: 0 }) })
           .getBoundingClientRect().width),
         heads,
@@ -305,13 +318,42 @@ try {
         `what is drawn over the middle of UNIT is ${unit.owner}`
         + ` (UNIT at ${unit.left}-${unit.right} in a ${tornSheet.room}px view)`);
     });
-    check('§1.9 and the same is true of every other heading', () => {
+    check('§1.9 and the same is true of every heading with a word in it', () => {
       // Whichever column the pinned pair lands on is the defect; naming only
       // UNIT would move the wound and call it fixed. At 1240px of window it
       // moves to ORDER, whose heading reads "O" and whose cells read "75.".
-      const covered = tornSheet.heads.filter((h) => h.owner !== 'itself')
+      //
+      // The actions column is out of this set, and the reason is not a
+      // convenience. It has no heading on purpose — the ✕ on each line needs no
+      // word — so there is nothing in it to be covered or read. What reported it
+      // as covered is WebKit: a GTK scrollbar floats over the right edge of a
+      // scroller instead of reserving room, so `elementFromPoint` at the centre
+      // of that last 34px answers with the scroll container. Widening a nameless
+      // column to make this row green would be taking room from the table to
+      // satisfy a check, which is the wrong way round. What the column owes is
+      // that its button can be reached, and that is the row below.
+      const words = tornSheet.heads.filter((h) => h.text !== '(actions)');
+      assert.equal(words.length, tornSheet.heads.length - 1,
+        `${tornSheet.heads.length} headings and ${words.length} of them named`);
+      assert.equal(words.length, 10, `the sheet shows ${words.length} named columns`);
+      const covered = words.filter((h) => h.owner !== 'itself')
         .map((h) => `${h.text} under ${h.owner}`);
       assert.deepEqual(covered, [], `covered: ${covered.join(' | ')}`);
+    });
+    check('§1.9 and the unnamed column is at the edge with its button reachable', () => {
+      // §1.9 pinned the row actions "in a fixed right column that never scrolls
+      // out". Two claims, measured: the column ends where the view ends, and a
+      // click at the middle of the ✕ lands on the ✕ — not on the scrollbar that
+      // floats over that edge. If this one ever goes red, the answer IS width:
+      // the button is under the scrollbar and the column is too narrow for it.
+      const actions = tornSheet.heads[tornSheet.heads.length - 1];
+      assert.equal(actions.text, '(actions)', `the last heading reads "${actions.text}"`);
+      assert.ok(Math.abs(actions.right - tornSheet.room) <= 2,
+        `it ends at ${actions.right}px in a ${tornSheet.room}px view`);
+      assert.ok(tornSheet.removeAt, 'no line has a button to take it off');
+      assert.equal(tornSheet.removeAt.owner, 'itself',
+        `what is drawn over the middle of the ✕ is ${tornSheet.removeAt.owner}`
+        + ` (its right edge at ${tornSheet.removeAt.right}px of ${tornSheet.room}px)`);
     });
 
     await writeFile(join(EVIDENCE, `section7-torn-sheet-${COMMIT}.png`),
@@ -353,9 +395,32 @@ try {
       const inner = c.querySelector('input') || c;
       return { text: (inner.value || inner.textContent || '').trim(), clipped: inner.scrollWidth > inner.clientWidth + 1 };
     });
+    // Every numeric cell, and whether what is in it is on one line. A span that
+    // has wrapped answers with two client rectangles, which is the only reading
+    // of "one line" that does not depend on knowing the line height.
+    const numeric = [...document.querySelectorAll('.sheet td.num')].map(function (c) {
+      const inner = c.querySelector('span') || c.querySelector('input');
+      const r = c.getBoundingClientRect();
+      return {
+        text: inner ? String(inner.value || inner.textContent || '').trim() : '',
+        lines: inner && inner.getClientRects ? inner.getClientRects().length : 0,
+        width: Math.round(r.width),
+        height: Math.round(r.height),
+      };
+    });
+    // A line whose formula could not be worked out carries the reason under the
+    // formula, and a line whose unit disagrees carries a note: both are meant to
+    // make that row taller. They are left out here so this measures wrapping and
+    // not the program saying something.
+    const rowHeights = [...document.querySelectorAll('.sheet tbody tr')]
+      .filter(function (r) {
+        return r.querySelectorAll('td').length > 8
+          && !r.querySelector('.formula-error, .formula-note');
+      })
+      .map(function (r) { return Math.round(r.getBoundingClientRect().height); });
     return JSON.stringify({
       viewLeft: Math.round(box.left), viewRight: Math.round(box.right),
-      heads, money, codes,
+      heads, money, codes, numeric, rowHeights,
       html: (document.querySelector('.sheet') || {}).innerHTML || '',
       text: (document.querySelector('.area, #editor') || document.body).innerText || '',
       rules: getComputedStyle(document.querySelector('.sheet td')).borderBottomWidth,
@@ -383,6 +448,29 @@ try {
   });
   check('§1.9 waste never shows a bare percent sign with no number', () => {
     assert.ok(!/>\s*%\s*</.test(sheet.html), 'a bare "%" is in a cell');
+  });
+  check('§1.9 no numeric cell wraps onto a second line', () => {
+    // Found by opening the picture: the demo's membrane line is priced per
+    // square foot over a 1000 SF roll, so its Priced cell read the thousand-with-decimals form in
+    // 78px of column — 90px of text — and wrapped, which made that row 43px tall
+    // in a sheet whose rows are 28. Order and Priced are 104px now and Extended
+    // is 108, sized off what they have to hold rather than off what the demo
+    // happens to show; Qty is still 66 and wraps above "9,999.99", which is what
+    // this row is here to catch the day a real job crosses it.
+    const wrapped = sheet.numeric.filter((c) => c.lines > 1)
+      .map((c) => `"${c.text}" on ${c.lines} lines in ${c.width}px`);
+    assert.ok(sheet.numeric.length > 0, 'no numeric cells on the sheet');
+    assert.deepEqual(wrapped, [], `wrapped: ${wrapped.join(', ')}`);
+  });
+  check('§1.9 and every line of the sheet is one row tall', () => {
+    // The consequence of the above, measured where an estimator sees it: a
+    // wrapped cell does not look like a wrapped cell, it looks like one row
+    // being taller than the rest for no reason anybody can name.
+    assert.ok(sheet.rowHeights.length > 0, 'no item rows on the sheet');
+    const tallest = Math.max(...sheet.rowHeights);
+    const shortest = Math.min(...sheet.rowHeights);
+    assert.ok(tallest - shortest <= 2,
+      `rows run from ${shortest}px to ${tallest}px: ${sheet.rowHeights.join(', ')}`);
   });
   check('§1.10 the explanatory paragraph is gone from the sheet', () => {
     assert.ok(!/Every line shows the formula that produced its quantity/.test(sheet.text),

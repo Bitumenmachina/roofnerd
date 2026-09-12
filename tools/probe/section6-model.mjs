@@ -593,10 +593,20 @@ try {
       `a ray cast at that point finds ${aim.hits ?? 'nothing'} — the point is not on it`);
   });
 
+  /** The pick, by hand where the driver allows it, and said plainly where not. */
+  let pickPath = pointerPath === 'actions' ? 'actions' : 'synthetic';
   if (aim && aim.inside) {
-    if (pointerPath === 'actions') {
-      await pointerClick(session, aim.x, aim.y);
-    } else {
+    if (pickPath === 'actions') {
+      try {
+        await pointerClick(session, aim.x, aim.y);
+      } catch (e) {
+        // The endpoint took the first click and refused this one. Say so, and
+        // do not lose the twenty rows after this one to an abandoned run.
+        pickPath = 'synthetic';
+        pointerRefused = e.message;
+      }
+    }
+    if (pickPath !== 'actions') {
       // The fallback, for this one click, said plainly: a synthetic event with
       // the coordinates in it. The raycast reads clientX and clientY, so this
       // exercises the same arithmetic — but it is not a click and the row below
@@ -612,7 +622,7 @@ try {
   const pickedA = JSON.parse(await modelNow(session));
   const panelLowRoof = JSON.parse(await panelNow(session));
 
-  check(`picking the Low Roof in 3D selects it (${pointerPath})`, () => {
+  check(`picking the Low Roof in 3D selects it (${pickPath})`, () => {
     assert.ok(pickedA.there, 'the view has nothing to say about itself');
     assert.equal(pickedA.selectedConditionId, 'c-tapered',
       `the view believes ${pickedA.selectedConditionId ?? 'nothing'} is selected`);
@@ -661,10 +671,17 @@ try {
 
   // ── (c) and back the other way: pick on the sheet, watch the roof ───────
   const parapetAt = B ? await centreOf(session, '.sheet tr.group-row', names['c-parapet']) : null;
-  if (parapetAt && pointerPath === 'actions') {
+  let rowClicked = false;
+  if (parapetAt && pickPath === 'actions') {
     const at = JSON.parse(parapetAt);
-    await pointerClick(session, at.x, at.y);
-  } else if (B) {
+    try {
+      await pointerClick(session, at.x, at.y);
+      rowClicked = true;
+    } catch (e) {
+      pointerRefused = e.message;
+    }
+  }
+  if (!rowClicked && B) {
     await session.execute(function (want) {
       const row = [...document.querySelectorAll('.sheet tr.group-row')]
         .find(function (r) { return (r.textContent || '').indexOf(want) >= 0; });
