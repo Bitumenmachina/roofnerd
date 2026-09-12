@@ -177,11 +177,21 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
   border-top: 1px solid var(--rule); background: var(--panel);
   font-size: var(--t-micro); color: var(--ink-soft);
 }
+/* The facts are the fixed part of the bar: they never wrap and never give way.
+   What gives way is the message beside them, which can be a path seventy
+   characters long — when it was allowed to push, "Units SF · LF · EA · SQ" went
+   to a second line in a bar that is specified at one (28 px), which is what the
+   section 9a evidence caught and no check had. */
+.status-facts { flex: none; white-space: nowrap; }
 .status-field { display: inline-flex; gap: 5px; align-items: baseline; }
 .status-field .k { color: var(--ink-faint); }
 .status-sep { color: var(--rule); }
 .status-message {
-  color: var(--ink-soft); min-width: 0;
+  color: var(--ink-soft);
+  /* Takes what is left and gives it all back: min-width 0 is what lets a flex
+     item shrink under its own text at all, and the ellipsis is what it looks
+     like when it does. The whole of it is on the element's title. */
+  flex: 1 1 auto; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .status-path { margin-left: auto; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 45%; }
