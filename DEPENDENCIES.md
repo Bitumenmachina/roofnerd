@@ -37,3 +37,18 @@ ISC. Nothing copyleft in the shipped application.
 | A Voronoi library (`d3-delaunay`, `polygon-clipping`, `spade`) | Evaluated and permissive — ISC and MIT — and genuinely the right answer *if* a drainage basin ever has to be an exact polygon. The heightfield is sampled on a grid, so nearest-drain is a loop and the exact cell boundary is never needed. Adding it now would be a dependency carried for a feature nobody asked for. |
 | A Tauri file-system plugin | Drawings are read through `read_page_source`, which resolves inside the open job and refuses anything outside it. A general file plugin would give a window the run of the machine for no gain. |
 | webdriverio | It reshapes WebDriver capabilities on the way out, and `tauri-driver` rejected the result while the raw payload worked. The protocol is documented and small; `tools/probe/tauri-harness.mjs` speaks it directly. |
+
+## The 3D toolkit (section 10b, added 2026-09-12 — Addendum 7 / Patrick's redirection: use what exists)
+
+| Package | Version | Licence | Why |
+|---|---|---|---|
+| `@thatopen/components` | 3.4.8 | MIT | Worlds, `OrthoPerspectiveCamera` (orthographic presets + orbit), `Raycasters`, `Clipper`, `IfcLoader`, `FragmentsManager` — the maintained BIM toolkit on three.js, vanilla TypeScript |
+| `@thatopen/components-front` | 3.4.4 | MIT | `Highlighter`, `ClipEdges` (section-cut linework), `LengthMeasurement` / `AreaMeasurement` |
+| `@thatopen/fragments` | 3.4.7 | MIT | The geometry format the toolkit's tools key on; worker self-hosted |
+| `web-ifc` | 0.0.77 | MPL-2.0 (linked, never modified) | Reads and writes IFC4; `web-ifc.wasm` (single-thread build) self-hosted from the bundle — no SharedArrayBuffer on WebKitGTK, no fetch |
+| `camera-controls` | 3.1.2 | MIT | Peer of `@thatopen/components` |
+
+Not taken: `@thatopen/ui` (our chrome is ours); `web-ifc-mt.wasm` (needs cross-origin isolation the
+webview does not give); xeokit (AGPL); Bonsai (GPL); ifc-lite (MPL, IFCX — watched, not used).
+Runtime rule unchanged: nothing is fetched; `connect-src 'self'`; the egress gate stays red on any fetch.
+

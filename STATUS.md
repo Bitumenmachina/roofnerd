@@ -28,6 +28,24 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## Batch 6c — the caret, the cent, and the driver's own words (2026-09-12)
+
+Checks first at `b2401f0`, red on the program as it stood: a field keeps its second character (the
+panel and the sheet both lost it — a height typed as 12 became 1), a numeric cell holds its number
+on one line, the panel's figure is the sheet's own cents, the ✕ is reachable at the sheet's edge.
+Fixes at `b604446`: focus and caret kept across the rebuild (D139); one rounding rule for money off
+a line (D138 — selling prices can move by cents; fixtures still within 0.01%); the plural rule reads
+the whole program (the engine's own report obeyed it last); numeric columns nowrap; the harness
+prints the driver's status and reply. At `b604446`: section6b 31/32 · section6 34/35 · section7
+24/25 · section9a 64/64 · front-door 17/17 · runtime 9/9 · vocabulary 38/38 · section1 12/12 ·
+section2 14/14 · section4 14/14 · section5 17/17 · real-job 13/13 · compare-fixtures within 0.01%.
+The one red row in each of section6b/section6 is the driver refusing a real pointer ("would not
+click … 3 shapes refused") — D140 makes it a report line. Section 7's last red row is the ✕ at the
+sheet's edge — carried into section 10a, where the sheet becomes the cost panel's lines.
+
+A reader opened the 29 remaining `b7a4228` images (the four new-section images were opened here):
+nothing new that blocks; four items added to "Seen, not fixed" below (10–13).
+
 ## Section 6b — the Model is a working surface (2026-09-12)
 
 The Properties panel stands beside every editor — Plan, Estimate Sheet, Library, Reports, Model,
@@ -197,6 +215,13 @@ in it, is below. Eight things were seen that no check caught. They are listed, n
    the right edge) — **FIXED at `dd5413e`** with the document-width assertions the check lacked (red
    at `bdbdec2` 5 of 7 bar rows, green after). Both rounds by the 9a agent; both defects seen in
    the pictures, not by the checks (register #38).
+10. A torn-off Model window draws the roof small in a large blank window — the fit on open may not
+    run there (`section6b-panel-model-torn-off-b7a4228.png`).
+11. The help sheet covers the Properties panel and clips the toolbar behind it.
+12. "$7,159.50" beside "4 lines not counted" reads as a contradiction to a first-time reader; the
+    wording should say the total is of the priced lines.
+13. The scale badge shows how the scale was set ("two points, 20'-0"") rather than the ratio it
+    produced; show the ratio and keep the method in its title.
 8. Library rows show `VERTICES → EA`: a formula identifier where a roofer says corners. Allowed (it is
    a formula, Addendum 1), noted as a candidate for a trade word.
 
