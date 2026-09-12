@@ -37,23 +37,18 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
   CRICKET_SLOPE_MULTIPLE, MIN_FLASHING_INCHES, SINGLE_LAYER_MAX_INCHES,
   buildUpInches, capInches, maxLengthToWidth, ridgeBetween, ridgeDisagreement,
-  selfIntersects, type CapReason, type Spot,
+  selfIntersects,
+  type CapReason, type Condition, type Page, type Point, type Properties, type Spot, type Trace,
 } from '@roofnerd/engine';
 import { at, doc, subscribe, type Doc } from '../doc.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
 import { hueFor } from '../icons.js';
 
-type Point = { x: number; y: number };
-type Trace = { id: string; pageId: string; points: Point[]; arc?: boolean };
-type Condition = {
-  id: string; name: string; kind: 'area' | 'line' | 'count';
-  traces?: Trace[]; properties?: Record<string, number>;
-  role?: 'drain' | 'ridge'; between?: string[];
-  /** The lines on this condition. Their thicknesses are the build-up. */
-  items?: { thickness?: number }[];
-  color?: string; hidden?: boolean;
-};
-type Page = { id: string; feetPerUnit?: number };
+// The four shapes this file draws from are the engine's, not its own. The copies
+// that were here said `role?: 'drain' | 'ridge'` where the engine names the
+// roles, and `items?: { thickness?: number }[]` — a line reduced to the one
+// field this file reads, which is how a file ends up believing that is all a
+// line has.
 
 /** Inches to feet, because a property is in inches and the world is in feet. */
 const inches = (n: number) => n / 12;
@@ -81,6 +76,8 @@ let lastCentre = new THREE.Vector3();
 let lastSpan = 0;
 let stopObserving: (() => void) | null = null;
 let stopSubscribing: (() => void) | null = null;
+/** The canvas this view is drawn on, for turning world points into screen ones. */
+let surface: HTMLCanvasElement | null = null;
 
 /**
  * The projection, in one place.
@@ -170,6 +167,7 @@ export function mountModel(host: HTMLElement): void {
   const canvas = document.createElement('canvas');
   canvas.className = 'model-canvas';
   canvas.setAttribute('aria-label', 'The roof in three dimensions');
+  surface = canvas;
 
   const legend = document.createElement('div');
   legend.className = 'model-legend';
@@ -260,8 +258,8 @@ export function mountModel(host: HTMLElement): void {
    * program reads it — the job is still opened through the menu, traced through
    * the sheet, and read through the window.
    */
-  (window as unknown as Record<string, unknown>)['__roofnerdModel'] = () =>
-    world.children.map((object) => {
+  (window as unknown as Record<string, unknown>)['__roofnerdModel'] = () => {
+    const meshes = world.children.map((object) => {
       const mesh = object as THREE.Mesh;
       const box = new THREE.Box3().setFromObject(mesh);
       const kind = mesh.userData['kind'] ?? null;
@@ -270,14 +268,29 @@ export function mountModel(host: HTMLElement): void {
       // check can work the convention out from the vertices instead of asking
       // the legend. A heightfield is thousands of points and is not one of them.
       const wholeShape = kind === 'cricket' || kind === 'parapet' || kind === 'parapet-ribbon';
+      const material = mesh.material as THREE.MeshLambertMaterial | undefined;
       return {
         conditionId: mesh.userData['conditionId'] ?? null,
         kind,
         min: [box.min.x, box.min.y, box.min.z],
         max: [box.max.x, box.max.y, box.max.z],
         points: wholeShape && position ? Array.from(position.array as Float32Array) : null,
+        // What `highlight()` actually did to this surface, read off the
+        // material rather than off the selection it was given. A check that
+        // reads back the state it just set measures nothing; this is the
+        // picture's own answer to "is it lit".
+        emissive: material?.emissive ? `#${material.emissive.getHexString()}` : null,
+        emissiveIntensity: material?.emissiveIntensity ?? null,
       };
     });
+    // Two answers hung on the same array, so the checks that already read it go
+    // on reading it: `JSON.stringify` of an array carries the elements and
+    // nothing else, and these are asked for by name.
+    return Object.assign(meshes, {
+      selectedConditionId: selectedConditionId(),
+      screenPointOf: (id: string) => screenPointOf(id),
+    });
+  };
 
   stopSubscribing = subscribe(() => draw());
   stopWatching = watchSelection(() => highlight());
@@ -326,6 +339,7 @@ function unmount() {
   controls = null;
   renderer?.dispose();
   renderer = null;
+  surface = null;
 }
 
 /**
@@ -696,7 +710,7 @@ function buildUp(ring: Point[], elevation: number, thick: number, colour: string
  * flat is where water stays.
  */
 function taperSurface(
-  ring: Point[], props: Record<string, number>, elevation: number,
+  ring: Point[], props: Properties, elevation: number,
   drains: Point[], colour: string, c: Condition, perimeter: number | undefined,
 ) {
   const start = props['T'] ?? 0;
@@ -968,7 +982,7 @@ type Cricket = {
  * legend says so instead of the code quietly preferring one.
  */
 function cricketBetween(
-  traced: Point[], props: Record<string, number>, fieldSlope: number,
+  traced: Point[], props: Properties, fieldSlope: number,
   elevation: number, pair: readonly [Spot, Spot], colour: string, c: Condition,
 ): Cricket | null {
   const derived = ridgeBetween(pair[0], pair[1]);
@@ -1054,7 +1068,7 @@ function runLine(ring: Point[], elevation: number, colour: string, c: Condition)
 }
 
 /** A counted thing. A drain gets its sump; anything else gets a marker. */
-function marker(p: Point, elevation: number, c: Condition, props: Record<string, number>) {
+function marker(p: Point, elevation: number, c: Condition, props: Properties) {
   const isDrain = c.role === 'drain';
   const sump = props['SUMP'] ?? 4;
   const geometry = isDrain
@@ -1221,6 +1235,100 @@ function pick(canvas: HTMLCanvasElement, event: MouseEvent) {
   const hit = raycaster.intersectObjects(world.children, false)[0];
   const id = hit?.object.userData['conditionId'];
   if (typeof id === 'string') select({ kind: 'condition', id });
+}
+
+/**
+ * Where on the screen a condition is drawn, in the canvas's own client
+ * coordinates — the coordinates a pointer event carries and `pick()` reads.
+ *
+ * For checking only, like the rest of `__roofnerdModel`. Nothing in the program
+ * calls it: a person aims with their hand, and this exists so that a check can
+ * aim at the Low Roof without a coordinate typed into it by somebody who had
+ * the camera in front of them.
+ *
+ * It does not merely project a centre and hope. A heightfield's bounding-box
+ * centre hangs in the air above the surface, a parapet's sits inside the wall,
+ * and a ring's sits in the hole — so each candidate point is put back through
+ * the SAME raycast `pick()` uses, and the first one that comes back as this
+ * condition is the one returned. `hits` says what a click there would select,
+ * whatever that turns out to be, so a check can never read a point that would
+ * have picked something else as proof of a point that would not.
+ */
+function screenPointOf(conditionId: string): {
+  x: number; y: number; inside: boolean; of: string | null; hits: string | null;
+} | null {
+  if (!camera || !surface || !world) return null;
+  const rect = surface.getBoundingClientRect();
+
+  const toScreen = (p: THREE.Vector3) => {
+    const v = p.clone().project(camera);
+    return {
+      x: rect.left + (v.x * 0.5 + 0.5) * rect.width,
+      y: rect.top + (-v.y * 0.5 + 0.5) * rect.height,
+    };
+  };
+  const within = (at: { x: number; y: number }) =>
+    at.x >= rect.left && at.x <= rect.right && at.y >= rect.top && at.y <= rect.bottom;
+
+  const candidates: { at: { x: number; y: number }; of: string }[] = [];
+  for (const object of world.children) {
+    if (object.userData['conditionId'] !== conditionId) continue;
+    const mesh = object as THREE.Mesh;
+    const position = mesh.geometry?.getAttribute('position');
+    if (!position) continue;
+    const of = String(mesh.userData['kind'] ?? '');
+
+    // The centroid of the vertices first — on a surface it is on the surface,
+    // which a box centre is not — then a scattering of the vertices themselves,
+    // for the shapes a centroid can miss.
+    const centre = new THREE.Vector3();
+    const v = new THREE.Vector3();
+    for (let i = 0; i < position.count; i += 1) {
+      centre.add(v.fromBufferAttribute(position, i));
+    }
+    centre.multiplyScalar(1 / Math.max(1, position.count));
+    candidates.push({ at: toScreen(mesh.localToWorld(centre)), of });
+
+    const step = Math.max(1, Math.floor(position.count / 12));
+    for (let i = 0; i < position.count; i += step) {
+      const point = new THREE.Vector3().fromBufferAttribute(position, i);
+      candidates.push({ at: toScreen(mesh.localToWorld(point)), of });
+    }
+  }
+  if (candidates.length === 0) return null;
+
+  for (const candidate of candidates) {
+    if (!within(candidate.at)) continue;
+    const hits = whatIsAt(rect, candidate.at);
+    if (hits === conditionId) {
+      return {
+        x: Math.round(candidate.at.x), y: Math.round(candidate.at.y),
+        inside: true, of: candidate.of, hits,
+      };
+    }
+  }
+
+  // Nothing on this condition answers a ray from where it is drawn — it is
+  // behind something, or off screen. Answer with the best point there is and
+  // what is actually there, rather than with a point nothing would pick.
+  const first = candidates[0]!;
+  return {
+    x: Math.round(first.at.x), y: Math.round(first.at.y),
+    inside: within(first.at), of: first.of,
+    hits: within(first.at) ? whatIsAt(rect, first.at) : null,
+  };
+}
+
+/** What a click at this point would select — the same ray `pick()` casts. */
+function whatIsAt(rect: DOMRect, at: { x: number; y: number }): string | null {
+  if (!camera || !world) return null;
+  raycaster.setFromCamera(new THREE.Vector2(
+    ((at.x - rect.left) / rect.width) * 2 - 1,
+    -((at.y - rect.top) / rect.height) * 2 + 1,
+  ), camera);
+  const hit = raycaster.intersectObjects(world.children, false)[0];
+  const id = hit?.object.userData['conditionId'];
+  return typeof id === 'string' ? id : null;
 }
 
 /** Selected reads as the accent everywhere else does; nothing else changes. */

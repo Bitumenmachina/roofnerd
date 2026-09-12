@@ -8,7 +8,8 @@ import { at, connect, demoFolder, folder, open, pickFolder, save, subscribe, tea
 import { area, menu, startScreen, statusBar, STATUS_SAID } from './chrome.js';
 import { HELP } from './help.js';
 import { openByDefault, renderTree } from './tree.js';
-import { select, watchSelection } from './selection.js';
+import { followSelection, select, selectedConditionId, watchSelection } from './selection.js';
+import { renderConditionPanel } from './editors/condition-panel.js';
 import { mountPlan } from './editors/plan.js';
 import { mountEstimate } from './editors/estimate.js';
 import { mountModel } from './editors/model.js';
@@ -72,7 +73,7 @@ statusHost.replaceWith(status.root);
 document.addEventListener(STATUS_SAID, (e) => status.say((e as CustomEvent<string>).detail));
 
 // ── the area, with its own tear-off ────────────────────────────────────────
-const { root: areaRoot, body: areaBody } = area({
+const { root: areaRoot, body: areaBody, panel: panelHost } = area({
   title: editor.title,
   editor: which,
   help: editor.help,
@@ -121,8 +122,24 @@ function redrawTree() {
 
 let currentDoc: Doc = {};
 
+// ── the Properties panel, beside whichever editor this window shows ────────
+// The window owns it, not the editor, for the same reason the window owns the
+// status bar: it is the same panel in every editor (A3), and a torn-off editor
+// is a window with its own. It watches the one selection and the one document,
+// which is all it ever needed from the Plan.
+//
+// It sits below `currentDoc` deliberately: `watchSelection` calls its watcher
+// once, immediately, and a watcher reading a `let` declared further down the
+// file reads it before it exists.
+const drawPanel = () => {
+  if (panelHost.hidden) return;
+  renderConditionPanel(panelHost, selectedConditionId(), currentDoc, () => drawPanel());
+};
+watchSelection(() => drawPanel());
+
 subscribe((doc: Doc) => {
   currentDoc = doc;
+  drawPanel();
   const name = at('/job/name', doc);
   const named = typeof name === 'string' && name ? name : null;
   jobLabel.textContent = named ?? '';
@@ -143,8 +160,14 @@ subscribe((doc: Doc) => {
     hasJob = nowHasJob;
     if (hasJob) {
       openByDefault(doc);
+      // The panel belongs to an open job. On the start screen there is no
+      // editor and nothing to be selected, so it is not there either — and the
+      // area gives the whole window to the two buttons that matter.
+      panelHost.hidden = false;
       editor.mount(areaBody);
+      drawPanel();
     } else {
+      panelHost.hidden = true;
       void showStart();
     }
   }
@@ -166,6 +189,9 @@ void start();
 async function start() {
   try {
     await connect();
+    // And follow what the other windows select, the same way this window
+    // follows what they change in the document.
+    await followSelection();
     await showPath();
     if (!hasJob) await showStart();
   } catch (e) {

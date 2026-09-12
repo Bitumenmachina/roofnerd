@@ -287,7 +287,25 @@ fn open_editor(app: AppHandle, editor: String) -> Result<(), String> {
         WebviewUrl::App(format!("index.html?editor={editor}").into()),
     )
     .title(title)
-    .inner_size(760.0, 800.0)
+    // Wide enough for what is in it, which is the whole of the fix for v2 §1.9.
+    //
+    // A torn-off editor is the same anatomy as the main window: the editor, and
+    // the Properties panel beside it. The Estimate Sheet's columns come to
+    // 1136px, the actions column included, and it is torn off precisely so it
+    // can have a monitor to itself. At 760 it had 440 of those 1136 once the
+    // panel was beside it — and even before the panel, at 756, its pinned money
+    // column sat on top of the Unit column and the word UNIT. Pinning cannot
+    // fix that: a sticky cell reserves no room, it paints over whatever scrolls
+    // under it, so at any width short of the table SOME column is half covered.
+    // Measured against the real stylesheet: 1240 moves the wound to Order and
+    // Priced (the heading read "O" and the cells "75."); 1480 leaves the
+    // scroller 1160px for 1160px of table, nothing overlaps anything, and every
+    // heading is its own element at its own centre.
+    //
+    // The main window keeps the pinned pair, because 1136 + 320 + the tree is
+    // wider than a laptop screen. That is what pinning is for (D94) and it is
+    // the trade this window no longer has to make.
+    .inner_size(1480.0, 860.0)
     .build()
     .map_err(|e| e.to_string())?;
 

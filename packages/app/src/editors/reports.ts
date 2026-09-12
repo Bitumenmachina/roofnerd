@@ -260,11 +260,21 @@ function today(): string {
  * itself.
  */
 function leftOut(lens: Lens, d: Doc): string[] {
-  if (lens.id !== 'recap') return [];
+  if (lens.id !== 'recap' && lens.id !== 'condition-summary') return [];
   const job = at('/job', d) as
     { scenarios?: { id: string }[]; activeScenarioId?: string } | undefined;
   const scenario = job?.scenarios?.find((s) => s.id === job.activeScenarioId) ?? job?.scenarios?.[0];
   if (!scenario) return [];
+  // The Condition Summary adds money up per condition, so it can leave a line
+  // out the same way the recap can, and it owes the same footnote.
+  if (lens.id === 'condition-summary') {
+    return priceJob(
+      { ...(d as object) } as Parameters<typeof priceJob>[0],
+      scenario as Parameters<typeof priceJob>[1],
+    )
+      .filter((l) => l.extended === null)
+      .map((l) => `${l.conditionName} → ${l.item.description || l.item.id}: ${l.pending ?? 'no money'}`);
+  }
   const r = recapOf(
     { ...(d as object) } as Parameters<typeof recapOf>[0],
     scenario as Parameters<typeof recapOf>[1],
@@ -315,17 +325,24 @@ function rowsFor(lens: Lens, d: Doc): Row[] {
   const showCost = !conceals(lens, 'cost');
 
   if (lens.id === 'condition-summary') {
-    const byCondition = new Map<string, { quantity: number; cost: number; unit: string }>();
+    // Keyed by the condition's id, not by the words on it. Two conditions can
+    // carry one name — a parapet on the high roof and a parapet on the low one
+    // are both "Parapet Wall Flashing" to whoever traced them — and grouping by
+    // the label added their money into a single row named after one of them.
+    // Nothing on screen said so; the row looked like a condition and was two.
+    const byCondition = new Map<string, { name: string; cost: number; priced: number }>();
     for (const l of lines) {
-      const at_ = byCondition.get(l.conditionName) ?? { quantity: 0, cost: 0, unit: l.unit };
-      at_.cost += l.extended ?? 0;
-      byCondition.set(l.conditionName, at_);
+      const at_ = byCondition.get(l.conditionId) ?? { name: l.conditionName, cost: 0, priced: 0 };
+      // A line with no money is not a line worth nothing. It stays out of the
+      // sum and comes back under the table as a footnote, the way the recap's do.
+      if (l.extended !== null) { at_.cost += l.extended; at_.priced += 1; }
+      byCondition.set(l.conditionId, at_);
     }
-    return [...byCondition].map(([name, v]) => ({
-      condition: name,
+    return [...byCondition.values()].map((v) => ({
+      condition: v.name,
       quantity: '',
       unit: '',
-      ...(showCost ? { cost: money(v.cost) } : {}),
+      ...(showCost ? { cost: v.priced > 0 ? money(v.cost) : 'nothing priced on it' } : {}),
     }));
   }
 

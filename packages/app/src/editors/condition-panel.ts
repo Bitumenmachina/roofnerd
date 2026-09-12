@@ -6,16 +6,10 @@
 // open — an estimator glances here to see what a formula is about to be handed,
 // and a number they have to hunt for is a number they will not check.
 
-import { measure, type Measures } from '@roofnerd/engine';
+import { measure, priceJob, type Condition, type Measures, type Page, type TraceKind } from '@roofnerd/engine';
 import { at, set, type Doc } from '../doc.js';
 import { icon } from '../icons.js';
-import { KIND_LABELS, MEASURE_LABELS, PENDING_REASON, PROPERTY_LABELS, plural, quantity } from '../labels.js';
-
-type ConditionShape = {
-  id: string; name: string; kind: 'area' | 'line' | 'count';
-  traces?: { id: string; pageId: string; points: { x: number; y: number }[] }[];
-  properties?: Record<string, number>; from?: string;
-};
+import { KIND_LABELS, MEASURE_LABELS, PENDING_REASON, PROPERTY_LABELS, money, plural, quantity } from '../labels.js';
 
 const GROUPS = ['Geometry', 'Metal'] as const;
 
@@ -30,7 +24,7 @@ const GROUPS = ['Geometry', 'Metal'] as const;
  * kind shows the measures it actually has; the rail and the sheet did that and
  * this panel did not.
  */
-const headlineFor = (kind: 'area' | 'line' | 'count'): readonly { key: keyof Measures; unit: string }[] => {
+const headlineFor = (kind: TraceKind): readonly { key: keyof Measures; unit: string }[] => {
   if (kind === 'area') {
     return [{ key: 'SF', unit: 'SF' }, { key: 'LF', unit: 'LF' }, { key: 'EA', unit: 'EA' }, { key: 'SQ', unit: 'SQ' }];
   }
@@ -45,10 +39,21 @@ export function renderConditionPanel(
   onChanged: () => void,
 ): void {
   host.replaceChildren();
-  const conditions = (at('/conditions', d) as ConditionShape[]) ?? [];
+  const conditions = (at('/conditions', d) as Condition[]) ?? [];
   const index = conditions.findIndex((c) => c.id === conditionId);
   const condition = conditions[index];
-  if (!condition) return;
+  // An empty panel is a panel that looks broken. It stands beside every editor
+  // now, so the state it is in most often — a job just opened, nothing picked —
+  // is the one state it used to render as a blank column.
+  if (!condition) {
+    const empty = document.createElement('p');
+    empty.className = 'panel-empty';
+    empty.textContent = conditionId === null
+      ? 'Nothing picked yet. Pick a condition — in the tree, on the drawing, on the sheet or on the roof — and what it measures and what it costs read here.'
+      : 'That condition is not in the job any more.';
+    host.append(empty);
+    return;
+  }
 
   const base = `/conditions/${index}`;
   const properties = condition.properties ?? {};
@@ -101,6 +106,40 @@ export function renderConditionPanel(
     grid.append(cell);
   }
   host.append(grid);
+
+  // ── and what it costs ───────────────────────────────────────────────────
+  // The same number the sheet shows and the Condition Summary lens groups by,
+  // out of the same call: `priceJob`, summed over the lines that came off this
+  // condition. Never a second piece of arithmetic — a panel figure that differs
+  // from the sheet by a cent is worse than no figure at all, because both look
+  // right and one of them is not.
+  const cost = costOf(condition, d);
+  const row = document.createElement('div');
+  row.className = 'panel-money';
+  const costLabel = document.createElement('span');
+  costLabel.className = 'label';
+  costLabel.textContent = 'Cost';
+  const costValue = document.createElement('span');
+  costValue.className = 'value';
+  if (cost.total === null) {
+    // Never $0.00. A condition nothing is priced on has no total, and that is a
+    // different fact from a total of nothing — one is traced-and-not-yet-priced
+    // and the other is free of charge.
+    costValue.classList.add('none');
+    costValue.textContent = 'nothing priced on it';
+  } else {
+    costValue.textContent = money(cost.total);
+  }
+  row.append(costLabel, costValue);
+  host.append(row);
+  if (cost.unpriced > 0) {
+    const short = document.createElement('small');
+    short.className = 'panel-money-note';
+    short.textContent = cost.total === null
+      ? `${plural(cost.unpriced, 'line')} on it with no price yet`
+      : `${plural(cost.unpriced, 'line')} not counted`;
+    host.append(short);
+  }
 
   // ── where its measures come from ────────────────────────────────────────
   const others = conditions.filter((c) => c.id !== condition.id);
@@ -194,16 +233,55 @@ export function renderConditionPanel(
   host.append(add, naming);
 }
 
-function measuresFor(condition: ConditionShape, all: ConditionShape[], d: Doc): Measures {
-  const pages = (at('/pages', d) as { id: string; feetPerUnit?: number }[]) ?? [];
+/**
+ * What the lines on one condition come to, and how many of them have no money.
+ *
+ * `priceJob` is the whole of the arithmetic; this only picks out the lines whose
+ * condition this is. A job with no scenario, or a document too young to price,
+ * answers "no total" rather than zero.
+ */
+function costOf(condition: Condition, d: Doc): {
+  total: number | null; priced: number; unpriced: number;
+} {
+  const job = at('/job', d) as
+    { scenarios?: { id: string }[]; activeScenarioId?: string } | undefined;
+  const scenario = job?.scenarios?.find((s) => s.id === job.activeScenarioId) ?? job?.scenarios?.[0];
+  if (!scenario) return { total: null, priced: 0, unpriced: 0 };
+  try {
+    // The document as the shell holds it is already this shape — job, pages,
+    // conditions, costCodes — which is how Reports hands it to the same call.
+    const lines = priceJob(
+      { ...(d as object) } as Parameters<typeof priceJob>[0],
+      scenario as Parameters<typeof priceJob>[1],
+    );
+    let total = 0;
+    let priced = 0;
+    let unpriced = 0;
+    for (const line of lines) {
+      if (line.conditionId !== condition.id) continue;
+      if (line.extended === null) { unpriced += 1; continue; }
+      total += line.extended;
+      priced += 1;
+    }
+    return { total: priced > 0 ? total : null, priced, unpriced };
+  } catch {
+    return { total: null, priced: 0, unpriced: 0 };
+  }
+}
+
+function measuresFor(condition: Condition, all: Condition[], d: Doc): Measures {
+  const pages = (at('/pages', d) as Page[]) ?? [];
   const calibrations: Record<string, { feetPerUnit: number } | undefined> = {};
   for (const p of pages) if (p.feetPerUnit) calibrations[p.id] = { feetPerUnit: p.feetPerUnit };
   const source = condition.from ? all.find((c) => c.id === condition.from) ?? condition : condition;
   return measure(source.kind, source.traces ?? [], source.properties ?? {}, calibrations);
 }
 
-async function writeProperty(base: string, condition: ConditionShape, key: string, value: number | undefined) {
-  const properties = { ...(condition.properties ?? {}) };
+async function writeProperty(base: string, condition: Condition, key: string, value: number | undefined) {
+  // A mutable copy, which is what the engine's `Properties` is not: it is
+  // readonly and its values can be absent, because a property nobody has typed
+  // is not a zero. Cleared here by deleting the key, never by writing one.
+  const properties: Record<string, number | undefined> = { ...(condition.properties ?? {}) };
   if (value === undefined) delete properties[key];
   else properties[key] = value;
   await set(`${base}/properties`, properties);

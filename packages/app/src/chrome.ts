@@ -26,12 +26,19 @@ export interface AreaOptions {
 }
 
 /**
- * An area: a titled region with one editor in it.
+ * An area: a titled region with one editor in it, and the Properties panel
+ * beside it.
  *
  * The header carries the editor's name, a help affordance, and — on every area,
  * not on one of them — the button that pulls it into its own window.
+ *
+ * The panel is built HERE, once, rather than by each editor, because A3 asks for
+ * the same panel in every editor and the Plan was the only one that had it: an
+ * estimator on the sheet, in the Library or in the Model could see what was
+ * selected and not what it was. It rides with the area (D113), so a torn-off
+ * editor gets its own — the same way a torn-off window gets its own status bar.
  */
-export function area(options: AreaOptions): { root: HTMLElement; body: HTMLElement } {
+export function area(options: AreaOptions): { root: HTMLElement; body: HTMLElement; panel: HTMLElement } {
   const root = document.createElement('section');
   root.className = 'area';
 
@@ -70,11 +77,25 @@ export function area(options: AreaOptions): { root: HTMLElement; body: HTMLEleme
   }
   header.append(actions);
 
+  // The body is two columns: the editor, and the panel. The editor keeps the
+  // flex column it has always mounted into — it is now a child of the body
+  // rather than the body itself, so nothing inside an editor changes.
   const body = document.createElement('div');
   body.className = 'area-body';
 
+  const host = document.createElement('div');
+  host.className = 'editor-host';
+
+  const panel = document.createElement('aside');
+  panel.className = 'condition-panel';
+  panel.setAttribute('aria-label', 'Properties');
+  // A window opens on the start screen, where there is no job to have a
+  // condition in. The window shows it when a job opens.
+  panel.hidden = true;
+
+  body.append(host, panel);
   root.append(header, body);
-  return { root, body };
+  return { root, body: host, panel };
 }
 
 export function iconButton(name: IconName, label: string, onClick: () => void): HTMLButtonElement {

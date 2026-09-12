@@ -10,24 +10,20 @@
 // Tear this editor onto the other monitor and trace on the first. Both windows
 // are the same job: the total moves while the mouse is still down.
 
-import { CLASS_NAMES, measure, priceLine, recap, scopeFor, type Measures } from '@roofnerd/engine';
+import {
+  CLASS_NAMES, measure, priceLine, recap, scopeFor,
+  type Condition, type Item, type Measures, type Page,
+} from '@roofnerd/engine';
 import { at, doc, set, subscribe, type Doc } from '../doc.js';
 import { icon } from '../icons.js';
 import { PENDING_REASON, money, plural, quantity } from '../labels.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
 
-type UnitStep = { name: string; per?: number; contains?: number; rule: 'ceil' | 'exact' };
-type Item = {
-  id: string; description: string; costCode: string; unit: string; formula: string;
-  waste?: number; order?: UnitStep; price?: UnitStep;
-  unitCost?: number; productionRate?: number; crewSize?: number; notes?: string;
-};
-type Condition = {
-  id: string; name: string; kind: 'area' | 'line' | 'count';
-  traces: { id: string; pageId: string; points: { x: number; y: number }[] }[];
-  properties: Record<string, number>; items?: Item[]; from?: string; color?: string;
-};
-type Page = { id: string; feetPerUnit?: number };
+// `Item`, `Condition` and `Page` are the engine's — the same shapes the
+// arithmetic on this page is done with. The local copies were a unit that was
+// `string` where the engine says `SF | LF | EA | SQ`, a condition with no
+// `waste` on it at all (which is how this sheet came to be the one place that
+// did not apply it), and a page with two of its seven fields.
 
 const UNITS = ['SF', 'LF', 'EA', 'SQ'];
 
@@ -173,7 +169,14 @@ function render(body: HTMLElement, foot: HTMLElement, d: Doc): void {
     rows.append(groupRow);
 
     for (const [itemIndex, item] of (condition.items ?? []).entries()) {
-      const result = priceLine(item as never, scope, scenario?.prices ?? {});
+      // The condition's own waste is the fourth argument, and leaving it off
+      // made this sheet the one place in the program that did not apply it: the
+      // recap under the same table, the Condition Summary lens and the panel
+      // beside it all price through `priceJob`, which passes it. Nothing in the
+      // demo carries condition waste, so every line agreed and no check could
+      // have caught it — the first real job with a run-level waste on it would
+      // have shown a line total that did not add up to its own selling price.
+      const result = priceLine(item, scope, scenario?.prices ?? {}, condition.waste ?? 0);
       if (result.extended !== null) total_ += result.extended;
       if (result.pending) anythingPending = true;
       rows.append(itemRow(index, itemIndex, item, result));

@@ -162,7 +162,12 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
 }
 .area-header h2 { font-size: var(--t-base); font-weight: 600; margin: 0; }
 .area-actions { margin-left: auto; display: flex; gap: 2px; }
-.area-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+/* Two columns: the editor, and the Properties panel beside it (A3, D113). The
+   panel's column is `auto`, so a window with nothing to show in it — the start
+   screen — gives the whole area to the editor by hiding the panel, rather than
+   leaving a 320px hole. */
+.area-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; overflow: hidden; }
+.editor-host { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
 .icon-button {
   border: 0; background: transparent; padding: 5px; border-radius: 4px;
   color: var(--ink-soft); display: grid; place-items: center;
@@ -298,8 +303,20 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
    §1.5 asks for them grouped at the right end, and stopping the selects being
    squeezed pushed them 76px past it — one defect traded for a worse one, since a
    truncated label can still be guessed at and an unreachable button cannot. So
-   they pin, the same way the sheet's money column pins: the row scrolls between
-   a fixed left and a fixed right rather than losing either end. */
+   they pin, the same way the sheet's money column pins.
+
+   What the line under this used to claim — "the row scrolls between a fixed left
+   and a fixed right rather than losing either end" — is not what sticky does,
+   and the scale picker was the proof. A sticky item reserves NO room: it paints
+   over whatever the row has scrolled under it. Measured against this stylesheet
+   at the 839px editor the 1100px window used to give the Plan: 902px of controls
+   in 835px of row, and 83px of a 140px picker underneath this group, reading
+   "Or pick a s". Nothing in the row was too small — the row was.
+
+   So the row is given a window it fits in (1560, which leaves it 978px) and the
+   picker's prompt was cut to the width of its own options. Narrow the window by
+   hand and this group will cover the end of the row again; that is what pinning
+   costs, and it is written down here rather than found in a screenshot again. */
 .toolbar .zoom {
   display: inline-flex; gap: 2px; flex: none;
   position: sticky; right: 0; z-index: 1;
@@ -380,7 +397,16 @@ polyline.trace { fill: none; }
 
 /* ── The condition panel ────────────────────────────────────────────────── */
 
-.condition-panel { border-top: 1px solid var(--rule); padding: var(--gap-3); }
+/* It used to sit under the Plan's condition list, sharing that rail's scroll,
+   which is why it was bordered on top. Its home is now the area, beside
+   whichever editor is open, so it is bordered on the side it meets and it
+   scrolls on its own — a parapet with a dozen properties must not push the
+   sheet's own scrollbar around. */
+.condition-panel {
+  width: 320px; border-left: 1px solid var(--rule); background: var(--panel);
+  padding: var(--gap-3); overflow-y: auto; min-height: 0;
+}
+.panel-empty { color: var(--ink-soft); font-size: var(--t-small); margin: 0; }
 .panel-name { width: 100%; font-size: var(--t-mid); font-weight: 600; border: 1px solid transparent; background: transparent; border-radius: var(--radius); padding: 4px 6px; }
 .panel-name:hover { border-color: var(--rule); }
 .panel-kind { color: var(--ink-faint); font-size: var(--t-micro); margin: 0 0 var(--gap-3) 6px; }
@@ -395,6 +421,17 @@ polyline.trace { fill: none; }
 .measure-value { font-size: var(--t-large); font-variant-numeric: tabular-nums; line-height: 1.15; }
 .measure-value .unit { font-size: var(--t-small); color: var(--ink-faint); margin-left: 3px; }
 .measure-value.none { color: var(--ink-faint); }
+
+/* What it costs, under what it measures. One line, because it is one number:
+   the same total the sheet extends and the Condition Summary groups. */
+.panel-money {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--gap-2);
+  padding: 0 var(--gap-3) var(--gap-2);
+}
+.panel-money .label { font-size: var(--t-micro); color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.04em; }
+.panel-money .value { font-size: var(--t-mid); font-variant-numeric: tabular-nums; }
+.panel-money .value.none { font-size: var(--t-small); color: var(--ink-faint); }
+.panel-money-note { display: block; color: var(--ink-faint); font-size: var(--t-micro); padding: 0 var(--gap-3) var(--gap-2); }
 
 .panel-group { font-size: var(--t-micro); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); font-weight: 600; margin: var(--gap-3) 0 var(--gap-2); }
 .condition-panel label { display: block; margin-bottom: var(--gap-2); }

@@ -11,20 +11,14 @@
 // library that reached back into finished jobs would be a library nobody dared
 // edit.
 
-import { girthOf, type Profile } from '@roofnerd/engine';
+import { girthOf, type Assembly, type Condition, type Item, type Profile } from '@roofnerd/engine';
 import { at, doc, set, subscribe, type Doc } from '../doc.js';
 import { selectedConditionId, watchSelection } from '../selection.js';
 
-type Item = {
-  id: string; description: string; costCode: string; unit: string; formula: string;
-  layer?: string;
-  priceSource?: { from?: string; firmness?: string; on?: string; doubt?: string };
-};
-type Assembly = {
-  id: string; name: string; generic?: boolean; manufacturer?: string;
-  items: Item[]; notes?: string;
-};
-type Condition = { id: string; name: string; kind: string; items?: unknown[] };
+// `Item`, `Assembly` and `Condition` are the engine's. The copies here had a
+// `priceSource.firmness` of `string` where the engine names the four it can be,
+// and a condition of three fields — enough to render a card, not enough to be
+// the thing being written back to the job on the line below.
 
 let stopWatching: (() => void) | null = null;
 let stopSubscribing: (() => void) | null = null;
@@ -193,7 +187,7 @@ function profileCard(p: Profile): HTMLElement {
 async function loadOnto(a: Assembly, condition: Condition): Promise<void> {
   const conditions = ((at('/conditions') as Condition[]) ?? []).map((c) => {
     if (c.id !== condition.id) return c;
-    const existing = (c.items ?? []) as Item[];
+    const existing = c.items ?? [];
     const added = a.items.map((item, n) => ({
       ...item,
       id: `${condition.id}-${a.id}-${n}`,

@@ -7,27 +7,24 @@
 
 import {
   ARCHITECTURAL_SCALES, calibrateFromScale, calibrateFromTwoPoints, distance,
-  formatFeetInches, measure, parseFeet, strayCorners, type Point,
+  formatFeetInches, measure, parseFeet, strayCorners,
+  type Condition, type Page, type Point, type Trace,
 } from '@roofnerd/engine';
 import { at, addPage, doc, pageBytes, pickFile, set, subscribe, type Doc } from '../doc.js';
 import { Surface, svg, pointsAttribute } from '../viewer/surface.js';
 import { Tools, type ToolName } from '../viewer/tools.js';
 import { loadSheet, type Sheet } from '../viewer/page-source.js';
-import { renderConditionPanel } from './condition-panel.js';
 import { toolButton, iconButton } from '../chrome.js';
 import { hueFor } from '../icons.js';
 import { KIND_LABELS, PENDING_REASON, propertyPhrase, quantity } from '../labels.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
 
-type Trace = { id: string; pageId: string; points: Point[] };
-type Condition = {
-  id: string; name: string; kind: 'area' | 'line' | 'count';
-  traces: Trace[]; properties: Record<string, number>; items: unknown[];
-  color?: string; from?: string; hidden?: boolean;
-};
-// The bounds are on the engine's own `Page` now, so this local shape no longer
-// has to carry two fields nothing else could see.
-type Page = { id: string; name: string; source?: string; pageNumber?: number; feetPerUnit?: number; scaleNote?: string; width?: number; height?: number };
+// `Condition`, `Page`, `Trace` and `Point` are the engine's. They were copied
+// here — three shapes, each a little different from the real one and from the
+// other editors' copies — and the copies are how the page bounds ended up
+// invisible to everything but this file and how `hidden` ended up in the job
+// folder without being in the format's own type. One definition, in the package
+// whose job is the shape of a job.
 
 let surface: Surface;
 let tools: Tools;
@@ -59,7 +56,12 @@ export function mountPlan(host: HTMLElement): void {
   const scaleButton = toolButton('scale', 'Scale', () => chooseTool('scale'));
   const scaleSelect = document.createElement('select');
   scaleSelect.setAttribute('aria-label', 'Architectural scale');
-  scaleSelect.append(option('', 'Or pick a scale…'));
+  // "Pick a scale", not "Or pick a scale…": a select is as wide as its widest
+  // option, the prompt was the widest one, and those four extra words were 26px
+  // of a row that had none to give — the tail of it read "Or pick a s" under the
+  // pinned zoom group (v2 §1.5). The word beside it is the Scale button, so the
+  // "Or" was doing nothing the row could afford.
+  scaleSelect.append(option('', 'Pick a scale'));
   for (const s of ARCHITECTURAL_SCALES) scaleSelect.append(option(String(s.feetPerInch), s.label));
   scaleSelect.addEventListener('change', () => {
     const feetPerInch = Number(scaleSelect.value);
@@ -94,14 +96,14 @@ export function mountPlan(host: HTMLElement): void {
   const list = document.createElement('div');
   list.className = 'condition-list';
 
-  const panel = document.createElement('div');
-  panel.className = 'condition-panel';
-
-  // One scroll region: the list on top, the selected condition below it. Two
-  // scrollers side by side is how the heading ended up clipped under the panel.
+  // The rail is the LIST — swatch, name, live measures, visibility — and nothing
+  // else. The panel that used to sit under it is now built once by the area
+  // chrome and stands beside every editor (A3, D113), so the Plan no longer
+  // keeps a private copy of it. Two copies in one window was the alternative,
+  // and the Plan is the window that would have had them.
   const rail = document.createElement('div');
   rail.className = 'plan-rail';
-  rail.append(railHeading, list, panel);
+  rail.append(railHeading, list);
 
   // A4: the scale badge sits on the drawing, bottom-left, where an estimator
   // looks to check what they are measuring against.
@@ -129,10 +131,11 @@ export function mountPlan(host: HTMLElement): void {
   }
   chooseTool('select');
 
-  // Selecting a condition anywhere — here or in the tree — redraws both.
+  // Selecting a condition anywhere — here, in the tree, on the sheet, in the
+  // Model, or in another window — redraws the list and the drawing. The panel
+  // watches the same selection from the area chrome.
   watchSelection(() => {
     renderConditions(list, doc());
-    renderConditionPanel(panel, selectedConditionId(), doc(), () => renderConditions(list, doc()));
     drawTraces(doc());
   });
 
@@ -144,7 +147,6 @@ export function mountPlan(host: HTMLElement): void {
     if (!currentPageId && pages[0]) showPage(pages[0].id).catch((e) => report('opening the drawing', e));
     else if (currentPageId) refreshSheetIfChanged(pages).catch((e) => report('opening the drawing', e));
     renderConditions(list, d);
-    renderConditionPanel(panel, selectedConditionId(), d, () => renderConditions(list, doc()));
     drawTraces(d);
     const page = pages.find((p) => p.id === currentPageId);
     const word = scaleButton.querySelector('span');

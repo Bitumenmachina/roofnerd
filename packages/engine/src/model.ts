@@ -412,6 +412,17 @@ export interface Condition {
   readonly items: readonly Item[];
   /** A colour to draw it in on the sheet. */
   readonly color?: string;
+  /**
+   * Taken off the drawing without being taken off the bid.
+   *
+   * A busy roof plan is unreadable with every trace on it at once (A4), so a
+   * condition can be hidden on the sheet — it still measures, still prices and
+   * still appears everywhere else. It is on this type because it is written into
+   * the job folder like everything else here: the editors were carrying it in
+   * their own local copies of this shape, which is the same reason the page
+   * bounds were invisible to everything but the Plan.
+   */
+  readonly hidden?: boolean;
   readonly notes?: string;
 }
 
