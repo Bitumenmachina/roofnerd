@@ -51,10 +51,19 @@ export interface SlabPlan {
   readonly thickness: number;
 }
 
-/** One straight length of a parapet run, ready to be an IfcWall. */
+/** One straight length of a parapet run or a curb, ready to be an IfcWall. */
 export interface WallPlan {
   readonly conditionId: string;
   readonly name: string;
+  /**
+   * A curb, rather than the edge of the roof.
+   *
+   * Both are a run with a height and both stand up the same way, so both are an
+   * IfcWall — but IFC has a type for a parapet and calling a curb one would tell
+   * an architect's program that the box round the unit is the edge of the
+   * building. `SOLIDWALL` is what is left when the specific type is wrong.
+   */
+  readonly curb: boolean;
   readonly from: Point;
   readonly to: Point;
   /** The base the run starts from, in feet. */
@@ -174,7 +183,7 @@ export function roofPlan(d: Doc): RoofPlan {
           const from = ring[i]!;
           const to = ring[i + 1]!;
           walls.push({
-            conditionId: c.id, name, from, to,
+            conditionId: c.id, name, from, to, curb: c.role === 'curb',
             elevation, height, thickness: inchesToFeet(thick),
             inboard: towards(from, to, middle),
           });
@@ -295,7 +304,8 @@ export function writeRoof(plan: RoofPlan, api: WEBIFC.IfcAPI): Uint8Array {
       guid(`wall:${wall.conditionId}:${n}`), null, label(wall.name), null, null,
       new IFC4.IfcLocalPlacement(storeyPlacement, placement(0, 0, wall.elevation)),
       body(upward(profile(wall.name, footprint(wall)), wall.height)),
-      new IFC4.IfcIdentifier(wall.conditionId), IFC4.IfcWallTypeEnum.PARAPET,
+      new IFC4.IfcIdentifier(wall.conditionId),
+      wall.curb ? IFC4.IfcWallTypeEnum.SOLIDWALL : IFC4.IfcWallTypeEnum.PARAPET,
     ));
   }
 

@@ -82,9 +82,18 @@ test('the demo job stands up as a roof slab and a parapet wall', () => {
   assert.equal(say(slab.Name), plan.slabs[0].name);
   assert.equal(say(slab.Tag), plan.slabs[0].conditionId);
 
-  const wall = back.lineOf(WebIFC.IFCWALL);
-  assert.equal(say(wall.PredefinedType), 'PARAPET');
-  assert.equal(say(wall.Tag), plan.walls[0].conditionId);
+  // By tag, not by position: the demo stands a curb up as well as a parapet and
+  // the file does not promise which order they come back in. A row that reads
+  // `lineOf(IFCWALL)` and calls the answer the parapet is a row that passes on
+  // whichever wall happened to be written first.
+  const walls = back.every(WebIFC.IFCWALL);
+  const parapet = walls.find((w) => say(w.Tag) === 'c-parapet');
+  const curb = walls.find((w) => say(w.Tag) === 'c-curb');
+  assert.ok(parapet, 'the parapet did not reach the file');
+  assert.equal(say(parapet.PredefinedType), 'PARAPET');
+  assert.ok(curb, 'the curb did not reach the file');
+  assert.equal(say(curb.PredefinedType), 'SOLIDWALL',
+    'a curb was written as the edge of the building');
   back.close();
 });
 

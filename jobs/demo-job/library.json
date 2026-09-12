@@ -253,6 +253,44 @@
         "from": "SentriClad edge metal catalogue"
       },
       "weightPerSF": 1.156
+    },
+    {
+      "hems": [
+        0.75,
+        0.75
+      ],
+      "id": "coping-p1",
+      "legs": [
+        2,
+        14,
+        2
+      ],
+      "name": "Coping P-1 — 14 in cap, 2 in faces",
+      "notes": "Detail P-1 at the parapet. Legs off the detail; girth is their sum plus the hems, which is the 19 1/2 in the coping line runs on.",
+      "source": {
+        "doubt": "Weight per square foot is thickness times density. No document on this box publishes it.",
+        "firmness": "estimate"
+      },
+      "weightPerSF": 1.156
+    },
+    {
+      "hems": [
+        0.5,
+        0.5
+      ],
+      "id": "curb-cap-rtu",
+      "legs": [
+        3.5,
+        18,
+        3.5
+      ],
+      "name": "Equipment curb cap — 18 in cap",
+      "notes": "The cap over RTU-1. Same coil as the coping, twenty-six inches across the brake instead of nineteen and a half — which is why a stretch-out cannot sit on the material.",
+      "source": {
+        "doubt": "Weight per square foot is thickness times density. No document on this box publishes it.",
+        "firmness": "estimate"
+      },
+      "weightPerSF": 1.156
     }
   ]
 }

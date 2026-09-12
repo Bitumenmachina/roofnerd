@@ -436,7 +436,7 @@ mod tests {
     #[test]
     fn a_folder_reads_into_one_document_keyed_by_file() {
         let doc = read_folder(&demo()).unwrap();
-        assert!(doc["job"]["name"].as_str().unwrap().contains("Reroof"));
+        assert!(doc["job"]["name"].as_str().unwrap().contains("Retrofit"));
         assert!(doc["costCodes"].as_array().unwrap().len() >= 6);
         assert_eq!(condition(&doc, "c-parapet")["name"], "Parapet Wall Flashing");
     }

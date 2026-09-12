@@ -350,12 +350,20 @@ export interface Assembly {
  * What a condition is to the water on the roof.
  *
  * A drain is the low point a tapered field falls to; a ridge is the line a
- * cricket is built along, between two of them. Everything else has no role,
- * which is the normal case.
+ * cricket is built along, between two of them; a curb is the box the water has
+ * to get around, which is why a cricket is built behind one. Everything else
+ * has no role, which is the normal case.
+ *
+ * A curb is a run with a height, the same as a parapet is, and every number on
+ * it measures the same way. What the role carries is the one thing the trace
+ * cannot say: a parapet is the edge of the roof and a curb is a thing standing
+ * on it. The Model draws them differently because they are different, and the
+ * flashing height that caps a tapered field is taken off whichever of them is
+ * lowest — which on most roofs is a curb, not the parapet.
  */
-export type ConditionRole = 'drain' | 'ridge';
+export type ConditionRole = 'drain' | 'ridge' | 'curb';
 
-export const CONDITION_ROLES: readonly ConditionRole[] = ['drain', 'ridge'] as const;
+export const CONDITION_ROLES: readonly ConditionRole[] = ['drain', 'ridge', 'curb'] as const;
 
 export interface Condition {
   readonly id: string;

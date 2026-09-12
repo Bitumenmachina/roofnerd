@@ -1,10 +1,10 @@
 [
   {
-    "feetPerUnit": 0.05555555555555555,
+    "feetPerUnit": 0.2222222222222222,
     "id": "page-1",
     "name": "Roof Plan",
     "pageNumber": 1,
-    "scaleNote": "1/4\" = 1'-0\"",
+    "scaleNote": "1/16\" = 1'-0\"",
     "source": "pages/roof-plan.pdf"
   }
 ]

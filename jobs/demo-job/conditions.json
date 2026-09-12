@@ -1,6 +1,6 @@
 [
   {
-    "color": "#2f6f4f",
+    "color": "#4a6b8a",
     "id": "c-field",
     "items": [
       {
@@ -8,6 +8,7 @@
         "description": "TPO membrane, 60 mil",
         "formula": "SQ",
         "id": "tpo-60",
+        "layer": "membrane",
         "order": {
           "name": "ROLL",
           "per": 10,
@@ -20,46 +21,148 @@
         },
         "thickness": 0.06,
         "unit": "SQ",
-        "unitCost": 1.8,
+        "unitCost": 1.13,
         "waste": 10
       },
       {
         "costCode": "07-100-100",
-        "description": "Polyisocyanurate, 2.2 in",
+        "description": "Tapered polyisocyanurate, 1/4 : 12",
         "formula": "SQ",
-        "id": "iso-22",
-        "thickness": 2.2,
+        "id": "iso-tapered",
+        "layer": "tapered insulation",
+        "notes": "Half an inch at the drains, three boards, a quarter in twelve. How thick it is anywhere else is the slope and the run, which is why no one thickness is written on this line.",
         "unit": "SQ",
-        "unitCost": 111.16,
-        "waste": 10
+        "unitCost": 424.3,
+        "waste": 8
       },
       {
         "costCode": "07-100-100",
-        "description": "Gypsum cover board, 5/8 in",
+        "description": "High density cover board, 1/2 in",
         "formula": "SQ",
         "id": "coverboard",
-        "thickness": 0.625,
+        "layer": "cover board",
+        "thickness": 0.5,
         "unit": "SQ",
-        "unitCost": 77.22,
+        "unitCost": 101.94,
         "waste": 8
+      },
+      {
+        "costCode": "07-100-170",
+        "description": "Fasteners and plates",
+        "formula": "SQ * 10",
+        "id": "plates",
+        "layer": "fastening",
+        "notes": "One fastener to ten square feet through the field. The perimeter and the corners take more, and they are priced with the metal.",
+        "order": {
+          "name": "BOX",
+          "per": 1000,
+          "rule": "exact"
+        },
+        "unit": "EA",
+        "unitCost": 420.01
+      },
+      {
+        "costCode": "07-100-210",
+        "crewSize": 6,
+        "description": "Tear off existing roof",
+        "formula": "SQ",
+        "id": "tearoff",
+        "productionRate": 0.83333,
+        "unit": "SQ",
+        "unitCost": 55.66
       },
       {
         "costCode": "07-100-230",
         "crewSize": 6,
-        "description": "Install membrane",
+        "description": "Lay the tapered package",
+        "formula": "SQ",
+        "id": "set-insulation",
+        "productionRate": 1.25,
+        "unit": "SQ",
+        "unitCost": 56.37
+      },
+      {
+        "costCode": "07-100-230",
+        "crewSize": 6,
+        "description": "Lay cover board",
+        "formula": "SQ",
+        "id": "set-coverboard",
+        "productionRate": 1.66667,
+        "unit": "SQ",
+        "unitCost": 55.25
+      },
+      {
+        "costCode": "07-100-230",
+        "crewSize": 6,
+        "description": "Weld the membrane",
         "formula": "SQ",
         "id": "install-membrane",
-        "productionRate": 1.1,
+        "productionRate": 1.25,
         "unit": "SQ",
-        "unitCost": 51.59
+        "unitCost": 52.86
+      },
+      {
+        "costCode": "07-100-940",
+        "description": "Telehandler rental, weekly",
+        "formula": "SQ / 32",
+        "id": "lift",
+        "notes": "Three weeks on the roof, at the pace the crew lines above set.",
+        "order": {
+          "name": "EA",
+          "per": 1,
+          "rule": "ceil"
+        },
+        "unit": "EA",
+        "unitCost": 2297.26
+      },
+      {
+        "costCode": "07-100-950",
+        "description": "Dumpster, 30 yard",
+        "formula": "SQ / 14",
+        "id": "dumpster",
+        "notes": "Fourteen squares of single-ply tear-off to a thirty yard box.",
+        "order": {
+          "name": "EA",
+          "per": 1,
+          "rule": "ceil"
+        },
+        "unit": "EA",
+        "unitCost": 798.37
+      },
+      {
+        "costCode": "07-100-920",
+        "description": "Manufacturer warranty, 20 year NDL",
+        "formula": "SQ",
+        "id": "warranty",
+        "unit": "SQ",
+        "unitCost": 65.07
+      },
+      {
+        "costCode": "07-100-950",
+        "description": "Permit and inspections",
+        "formula": "1",
+        "id": "permit",
+        "unit": "EA",
+        "unitCost": 1271.14
+      },
+      {
+        "costCode": "07-100-990",
+        "description": "Supervision, foreman day",
+        "formula": "15",
+        "id": "supervision",
+        "notes": "One foreman for the fifteen crew days this job runs. Supervision follows the schedule, not the squares — typed here because nothing else on the sheet knows how long the job is.",
+        "unit": "EA",
+        "unitCost": 499.78
       }
     ],
     "kind": "area",
     "name": "Main Roof Field",
     "properties": {
-      "ELEV": 3,
-      "PITCH": 4,
-      "SIDES": 4
+      "BOARDS": 3,
+      "ELEV": 0,
+      "SIDES": 8,
+      "T": 0.5,
+      "TAPER": 0.25
     },
     "traces": [
       {
@@ -67,20 +170,36 @@
         "pageId": "page-1",
         "points": [
           {
-            "x": 110,
-            "y": 60
+            "x": 63,
+            "y": 225
           },
           {
-            "x": 430,
-            "y": 60
+            "x": 225,
+            "y": 225
           },
           {
-            "x": 430,
-            "y": 310
+            "x": 225,
+            "y": 189
           },
           {
-            "x": 110,
-            "y": 310
+            "x": 522,
+            "y": 189
+          },
+          {
+            "x": 522,
+            "y": 225
+          },
+          {
+            "x": 549,
+            "y": 225
+          },
+          {
+            "x": 549,
+            "y": 603
+          },
+          {
+            "x": 63,
+            "y": 603
           }
         ]
       }
@@ -91,46 +210,104 @@
     "id": "c-parapet",
     "items": [
       {
-        "costCode": "07-100-150",
-        "description": "Counter flashing, 16 oz copper",
+        "costCode": "07-100-100",
+        "description": "TPO wall flashing, 60 mil",
         "formula": "LF * H",
-        "id": "counterflash",
-        "unit": "LF",
-        "unitCost": 36.5
+        "id": "wallflash",
+        "layer": "flashing",
+        "unit": "SF",
+        "unitCost": 1.11,
+        "waste": 10
       },
       {
         "costCode": "07-100-150",
-        "description": "Coping, 24 ga formed",
-        "formula": "LF",
+        "description": "Coping cap, 24 ga galvanized",
+        "formula": "LF * (STRETCHOUT / 12)",
         "id": "coping",
-        "unit": "LF",
-        "unitCost": 22.02
+        "layer": "edge metal",
+        "notes": "Linear feet of run become square feet of flat coil through the stretch-out, and pounds through the coil weight. The stretch-out belongs to Detail P-1, not to the coil.",
+        "order": {
+          "contains": 1.156,
+          "name": "LB",
+          "rule": "exact"
+        },
+        "profileId": "coping-p1",
+        "unit": "SF",
+        "unitCost": 3.6,
+        "waste": 10
       },
       {
         "costCode": "07-100-150",
-        "description": "Coping mitre",
-        "formula": "VERTICES",
-        "id": "mitre",
-        "unit": "EA",
-        "unitCost": 70.73
+        "description": "Continuous cleat, 20 ga",
+        "formula": "LF * 2",
+        "id": "cleat",
+        "layer": "edge metal",
+        "notes": "Both faces of the cap.",
+        "unit": "LF",
+        "unitCost": 2.22,
+        "waste": 5
       },
       {
-        "costCode": "07-100-320",
-        "crewSize": 2,
-        "description": "Fabricate metal",
+        "costCode": "07-100-150",
+        "description": "Shop-formed corner, mitre welded",
+        "formula": "SEGMENTS",
+        "id": "mitre",
+        "layer": "edge metal",
+        "notes": "One for every straight run of cap: six outside and two inside on this roof.",
+        "unit": "EA",
+        "unitCost": 81.9
+      },
+      {
+        "costCode": "07-100-160",
+        "description": "Termination bar and sealant",
         "formula": "LF",
-        "id": "fab-metal",
-        "productionRate": 40,
+        "id": "termbar",
+        "layer": "flashing",
         "unit": "LF",
-        "unitCost": 47.93
+        "unitCost": 3.14
+      },
+      {
+        "costCode": "07-100-170",
+        "description": "Fasteners, cleat and termination bar",
+        "formula": "LF * 2",
+        "id": "metal-fasteners",
+        "layer": "fastening",
+        "notes": "Twelve inches on centre, both.",
+        "order": {
+          "name": "BOX",
+          "per": 1000,
+          "rule": "exact"
+        },
+        "unit": "EA",
+        "unitCost": 376.33
+      },
+      {
+        "costCode": "07-100-240",
+        "crewSize": 2,
+        "description": "Flash the wall",
+        "formula": "LF",
+        "id": "install-flashing",
+        "productionRate": 7.5,
+        "unit": "LF",
+        "unitCost": 56.44
+      },
+      {
+        "costCode": "07-100-900",
+        "description": "Form and set the metal",
+        "formula": "LF",
+        "id": "set-metal",
+        "notes": "Bought in. The shop brakes the cap and the cleat and sets them.",
+        "unit": "LF",
+        "unitCost": 7.72
       }
     ],
     "kind": "line",
     "name": "Parapet Wall Flashing",
     "properties": {
       "ELEV": 0,
-      "H": 1,
-      "STRETCHOUT": 14,
+      "H": 3.5,
+      "STRETCHOUT": 19.5,
+      "W": 1.17,
       "WALL": 8
     },
     "traces": [
@@ -139,36 +316,74 @@
         "pageId": "page-1",
         "points": [
           {
-            "x": 60,
-            "y": 340
+            "x": 63,
+            "y": 225
           },
           {
-            "x": 60,
-            "y": 770
+            "x": 225,
+            "y": 225
           },
           {
-            "x": 560,
-            "y": 770
+            "x": 225,
+            "y": 189
           },
           {
-            "x": 560,
-            "y": 340
+            "x": 522,
+            "y": 189
+          },
+          {
+            "x": 522,
+            "y": 225
+          },
+          {
+            "x": 549,
+            "y": 225
+          },
+          {
+            "x": 549,
+            "y": 603
+          },
+          {
+            "x": 63,
+            "y": 603
+          },
+          {
+            "x": 63,
+            "y": 225
           }
         ]
       }
     ]
   },
   {
-    "color": "#8a5a1d",
+    "color": "#1f7a8c",
     "id": "c-drains",
     "items": [
       {
         "costCode": "07-100-100",
-        "description": "Retrofit drain assembly",
+        "description": "Retrofit drain, 4 in",
         "formula": "EA",
         "id": "drain",
         "unit": "EA",
-        "unitCost": 423.08
+        "unitCost": 443
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Tapered sump panel, 4 ft square",
+        "formula": "EA",
+        "id": "sump-panel",
+        "unit": "EA",
+        "unitCost": 202.27
+      },
+      {
+        "costCode": "07-100-240",
+        "crewSize": 2,
+        "description": "Set the drains",
+        "formula": "EA",
+        "id": "set-drain",
+        "productionRate": 0.16875,
+        "unit": "EA",
+        "unitCost": 57.36
       }
     ],
     "kind": "count",
@@ -183,54 +398,97 @@
         "pageId": "page-1",
         "points": [
           {
-            "x": 180,
-            "y": 600
+            "x": 162,
+            "y": 441
           },
           {
-            "x": 300,
-            "y": 600
+            "x": 333,
+            "y": 441
           },
           {
-            "x": 420,
-            "y": 600
+            "x": 504,
+            "y": 441
           }
         ]
       }
     ]
   },
   {
-    "color": "#4a6b8a",
-    "id": "c-tapered",
-    "items": [],
-    "kind": "area",
-    "name": "Low Roof — Tapered",
+    "color": "#8d989e",
+    "id": "c-curb",
+    "items": [
+      {
+        "costCode": "07-100-100",
+        "description": "TPO curb flashing, 60 mil",
+        "formula": "LF * H",
+        "id": "curbflash",
+        "layer": "flashing",
+        "unit": "SF",
+        "unitCost": 1.05,
+        "waste": 10
+      },
+      {
+        "costCode": "07-100-150",
+        "description": "Curb cap, 24 ga galvanized",
+        "formula": "LF * (STRETCHOUT / 12)",
+        "id": "curbcap",
+        "layer": "edge metal",
+        "notes": "The same coil as the coping and a different stretch-out: twenty-six inches at an equipment curb cap against nineteen and a half at the parapet.",
+        "order": {
+          "contains": 1.156,
+          "name": "LB",
+          "rule": "exact"
+        },
+        "profileId": "curb-cap-rtu",
+        "unit": "SF",
+        "unitCost": 3.79,
+        "waste": 10
+      },
+      {
+        "costCode": "07-100-240",
+        "crewSize": 2,
+        "description": "Flash the curb",
+        "formula": "LF",
+        "id": "set-curb",
+        "productionRate": 3,
+        "unit": "LF",
+        "unitCost": 49.02
+      }
+    ],
+    "kind": "line",
+    "name": "RTU-1 Curb",
     "properties": {
-      "BOARDS": 1,
       "ELEV": 0,
-      "SIDES": 4,
-      "T": 0.5,
-      "TAPER": 0.25
+      "H": 2,
+      "STRETCHOUT": 26,
+      "W": 1.5,
+      "WALL": 6
     },
+    "role": "curb",
     "traces": [
       {
-        "id": "t-tapered",
+        "id": "t-curb",
         "pageId": "page-1",
         "points": [
           {
-            "x": 60,
-            "y": 340
+            "x": 238.5,
+            "y": 342
           },
           {
-            "x": 560,
-            "y": 340
+            "x": 256.5,
+            "y": 342
           },
           {
-            "x": 560,
-            "y": 770
+            "x": 256.5,
+            "y": 378
           },
           {
-            "x": 60,
-            "y": 770
+            "x": 238.5,
+            "y": 378
+          },
+          {
+            "x": 238.5,
+            "y": 342
           }
         ]
       }
@@ -246,7 +504,7 @@
     "kind": "line",
     "name": "Cricket behind RTU-1",
     "properties": {
-      "ELEV": 0.25,
+      "ELEV": 0.45,
       "TAPER": 0.5
     },
     "role": "ridge",
@@ -256,12 +514,12 @@
         "pageId": "page-1",
         "points": [
           {
-            "x": 252.5,
-            "y": 604.4
+            "x": 247.5,
+            "y": 378
           },
           {
-            "x": 297.5,
-            "y": 715.6
+            "x": 247.5,
+            "y": 504
           }
         ]
       }
