@@ -9,7 +9,12 @@
 # Turn it on once per clone:   git config core.hooksPath .githooks
 root="$(git rev-parse --show-toplevel)"
 cd "$root" || exit 1
-if ! pnpm test >/tmp/roofnerd-precommit.log 2>&1; then
+# Build first: the app type-checks against the engine's built dist, and a stale dist reads an
+# engine change as an app error (it did, on 2026-09-12).
+if ! pnpm -r build >/tmp/roofnerd-precommit.log 2>&1; then
+  echo "commit refused: the build failed (see /tmp/roofnerd-precommit.log)"; tail -15 /tmp/roofnerd-precommit.log; exit 1
+fi
+if ! pnpm test >>/tmp/roofnerd-precommit.log 2>&1; then
   echo "commit refused: a test failed (see /tmp/roofnerd-precommit.log)"; tail -15 /tmp/roofnerd-precommit.log; exit 1
 fi
 # Braced on purpose: `! a && b` runs b only when a fails, which is the opposite of a gate.
