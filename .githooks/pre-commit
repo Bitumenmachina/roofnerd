@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
-# Nothing from a client's job leaves the local-only trees.
+# A commit does not go through until the tests and the three gates pass, and nothing from a
+# client's job leaves the local-only trees.
 #
-# This is a hook rather than a habit because twice it was a habit and twice it
-# failed — a real number was in front of me while I wrote a test, and it went in.
+# This is a hook rather than a habit because twice it was a habit and twice it failed — a real
+# number was in front of me while I wrote a test, and it went in. The tests and gates joined it
+# on 2026-09-12 so that "green before commit" is mechanical too (Addendum 6).
 #
 # Turn it on once per clone:   git config core.hooksPath .githooks
-exec bash "$(git rev-parse --show-toplevel)/tools/gate-clientdata.sh"
+root="$(git rev-parse --show-toplevel)"
+cd "$root" || exit 1
+if ! pnpm test >/tmp/roofnerd-precommit.log 2>&1; then
+  echo "commit refused: a test failed (see /tmp/roofnerd-precommit.log)"; tail -15 /tmp/roofnerd-precommit.log; exit 1
+fi
+if ! bash tools/gate-language.sh && bash tools/gate-egress.sh; then
+  echo "commit refused: a gate failed"; exit 1
+fi
+exec bash "$root/tools/gate-clientdata.sh"

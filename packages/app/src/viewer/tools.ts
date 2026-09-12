@@ -7,6 +7,7 @@
 // Enter. Escape throws the whole shape away; Backspace takes back the last
 // point. Holding Shift keeps the segment square to the sheet.
 
+import { plural } from '../labels.js';
 import type { Point } from '@roofnerd/engine';
 import { distance, polygonArea, polylineLength, polygonPerimeter } from '@roofnerd/engine';
 import { Surface, svg, pointsAttribute } from './surface.js';
@@ -169,7 +170,7 @@ export class Tools {
     const raw = this.tool === 'area'
       ? `area ${polygonArea(preview).toFixed(0)} · perimeter ${polygonPerimeter(preview).toFixed(0)} page units`
       : `${polylineLength(preview).toFixed(0)} page units`;
-    return `${this.points.length} point(s) · ${raw} · Enter or double-click to finish, Escape to drop it`;
+    return `${plural(this.points.length, 'point')} · ${raw} · Enter or double-click to finish, Escape to drop it`;
   }
 }
 

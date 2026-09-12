@@ -38,5 +38,16 @@ else
   echo "  no authority markers"
 fi
 
+# 3. The programmer's plural — "line(s)", "trace(s)" — never reaches a screen. labels.ts has
+#    plural() for this; the vocabulary probe bans the words but only sees the states it renders,
+#    and "1 line(s) not counted" shipped past it. Matched in the app's source strings.
+if hits=$(grep -rnE "${SKIP[@]}" -e '[a-z]\(s\)' packages/app/src | grep -vE ':[0-9]+:[[:space:]]*(//|/\*|\*)'); then
+  echo "  a programmer's plural in the product:"
+  echo "$hits" | sed 's/^/    /'
+  fail=1
+else
+  echo "  no programmer's plural"
+fi
+
 [ $fail -eq 0 ] && echo "PASS" || echo "FAIL"
 exit $fail

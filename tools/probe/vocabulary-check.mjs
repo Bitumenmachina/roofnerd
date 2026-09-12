@@ -29,6 +29,13 @@ const BANNED = [
   'undefined', 'null', 'NaN', '[object Object]',
 ];
 
+/**
+ * Software and AI words. The program speaks roofing and construction (Addendum 6, 2026-09-12):
+ * an estimator never meets an agent, a token or a pipeline on this screen. Matched as whole
+ * words so "AI" cannot hide inside "drain".
+ */
+const SOFTWARE = ['agent', 'AI', 'inference', 'token', 'prompt', 'embedding', 'pipeline', 'node', 'entity', 'component', 'render'];
+
 /** Bare property keys, which are fine in a formula and nowhere else. */
 const BARE_KEYS = ['SIDES', 'PITCH', 'STRETCHOUT', 'TAPER', 'ELEV', 'SUMP', 'BOARDS'];
 
@@ -101,6 +108,13 @@ try {
   for (const word of BANNED) {
     check(`"${word}" is not on screen`, () => {
       assert.ok(!screen.includes(word), `found "${word}"`);
+    });
+  }
+
+  for (const word of SOFTWARE) {
+    check(`"${word}" is not on screen`, () => {
+      const re = new RegExp(`\\b${word}\\b`, word === 'AI' ? '' : 'i');
+      assert.ok(!re.test(screen), `found "${word}"`);
     });
   }
 

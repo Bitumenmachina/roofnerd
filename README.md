@@ -5,9 +5,11 @@ move on the other. Both screens are the same job, open at the same time.
 
 The name is a placeholder.
 
-**Where it is right now:** Gate 0. The program opens, it opens a second window, and a
-change you make in one window shows up in the other. That is all it does today. There is
-no takeoff yet, no pricing yet, no reports yet. The gates below say what arrives when.
+**Where it is right now:** sections 1–7 of the build handoff are built and checked on the shipped
+program — trace, conditions and the estimate sheet, the money model against two real jobs, the
+library, the lenses, the Model standing the roof up, and the legibility pass. `STATUS.md` says
+what each check proved and what was seen in the pictures that no check caught. Next: CSV export
+to the job folder, the Model as a working surface, then the Schedule.
 
 ---
 
@@ -101,12 +103,12 @@ Each one is finished when it does the thing next to it. No dates.
 
 | | | Finished when |
 |---|---|---|
-| **Gate 0** | Skeleton | Two windows, one job. A change in one shows in the other. **← here** |
+| **Gate 0** | Skeleton | Two windows, one job. A change in one shows in the other. Built. |
 | **Gate 1** | The working loop | Trace a parapet on a PDF and watch wall flashing SF, coping LF and corner count appear, with the total moving in the other window. |
 | **Gate 2** | The money | Cost codes, classes, labor from production rates, waste, order units, the recap, the library. Checked by reproducing two real Edge bids from their own quantities and prices. |
 | **Gate 3** | Lenses | The five reports as templates you can edit. CSV, XLSX and PDF out. |
 | **Gate 4** | 3D | Facets, parapets, tapered insulation and crickets as real slopes — and a low spot with no drain on it, visible. |
-| Bonus | Gantt | Only after Gate 4. |
+| Section 8 | Schedule | Was "bonus, only after Gate 4"; Addendum 6 (2026-09-12) makes it the section after export and the Model. Tasks read the estimate lines; nothing in the core model changes for it. |
 
 Gate 2 gets checked against real bids that live on the estimator's own machine and are not
 in this repository. The public build checks the *structure* of the recap against a made-up

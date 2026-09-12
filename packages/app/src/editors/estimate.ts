@@ -13,7 +13,7 @@
 import { CLASS_NAMES, measure, priceLine, recap, scopeFor, type Measures } from '@roofnerd/engine';
 import { at, doc, set, subscribe, type Doc } from '../doc.js';
 import { icon } from '../icons.js';
-import { PENDING_REASON, money, quantity } from '../labels.js';
+import { PENDING_REASON, money, plural, quantity } from '../labels.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
 
 type UnitStep = { name: string; per?: number; contains?: number; rule: 'ceil' | 'exact' };
@@ -232,7 +232,7 @@ function render(body: HTMLElement, foot: HTMLElement, d: Doc): void {
     if (rolled.pending.length) {
       const partial = document.createElement('span');
       partial.className = 'partial';
-      partial.textContent = `${rolled.pending.length} line(s) not counted`;
+      partial.textContent = `${plural(rolled.pending.length, 'line')} not counted`;
       partial.title = rolled.pending.join('\n');
       selling.append(partial);
     }
