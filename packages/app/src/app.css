@@ -451,12 +451,32 @@ polyline.trace { fill: none; }
    value. Below this the table scrolls inside its own area — which is the point:
    a torn-off sheet narrower than the columns still reaches every one of them.
 
-   1136 is the columns added up, action column included. It read 1064 — exactly
+   1212 is the columns added up, action column included. It read 1064 — exactly
    34px short, which is the action column left out of the sum. With
    `table-layout: fixed` and `width: 100%` that shortfall squeezes every column
    by three percent, and the header this spec promises never truncates rendered
-   as "WAS". A minimum that does not include every column is not a minimum. */
-.sheet { min-width: 1136px; }
+   as "WAS". A minimum that does not include every column is not a minimum.
+
+   The numeric columns are sized from what they have to hold, measured in the
+   cell's own 14px face with its 16px of padding:
+
+     "1.00 ROLL"      82px      an order step with its unit
+     "<one thousand> SF"  90px      a price step with its unit — the demo's membrane
+     "12,345.00 SF"   98px      the same on a large roof
+     "$9,139.88"      80px      the demo's largest line
+     "$999,999.99"   104px      a six-figure line, which this trade has
+
+   Order and Priced were 78px and the demo wrapped in both of them: "<one thousand>
+   SF" on two lines, and the row 43px tall instead of 28. Extended was 84px,
+   which held the demo's own money with four pixels to spare and wrapped at six
+   figures — a quarter-million-dollar line, which is an ordinary week.
+
+   Qty stays at 66px and therefore wraps above "9,999.99". That is written down
+   rather than paid for: widening every numeric column for a number the demo is
+   four orders of magnitude below would add 130px to a table that already does
+   not fit a laptop, and section 7 now has a row that goes red the day a real
+   job crosses the line — which is the alarm, not this comment. */
+.sheet { min-width: 1212px; }
 
 /* The two columns that never scroll away: what the line is, and what it costs.
    §1.9 already pinned the row actions "in a fixed right column that never
@@ -493,13 +513,13 @@ polyline.trace { fill: none; }
 .sheet col.c-qty      { width: 66px; }
 .sheet col.c-unit     { width: 76px; }
 .sheet col.c-waste    { width: 58px; }
-.sheet col.c-order    { width: 78px; }
-.sheet col.c-priced   { width: 78px; }
+.sheet col.c-order    { width: 104px; }
+.sheet col.c-priced   { width: 104px; }
 /* "UNIT COST" is two words in a micro uppercase face with letter-spacing, and
    72px could not hold it — §1.9 named "wrapped 'Unit cost'" as one of the two
    defects it was closing, and it was still wrapping. */
 .sheet col.c-cost     { width: 96px; }
-.sheet col.c-extended { width: 84px; }
+.sheet col.c-extended { width: 108px; }
 .sheet col.c-actions  { width: 34px; }
 .sheet td:not(.actions) { overflow: hidden; }
 .sheet tr.add-row td { border-bottom: 0; padding-bottom: var(--gap-3); }

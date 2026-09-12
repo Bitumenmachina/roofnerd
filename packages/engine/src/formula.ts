@@ -17,6 +17,7 @@
 // It is parsed to a tree and walked. There is no eval anywhere in this program:
 // a formula is data typed into a bid, and data does not get to run.
 
+import { plural } from './words.js';
 import { ceilPackages, floorWhole, roundWhole } from './rounding.js';
 
 export type Node =
@@ -222,7 +223,7 @@ export function evaluate(tree: Node, scope: Readonly<Record<string, number | nul
       if (!fn) throw new FormulaError(`there is no function called "${tree.name}"`, 0);
       if (fn.arity === 'many' ? tree.args.length === 0 : tree.args.length !== fn.arity) {
         throw new FormulaError(
-          `${tree.name} takes ${fn.arity === 'many' ? 'at least one number' : `${fn.arity} number(s)`}`,
+          `${tree.name} takes ${fn.arity === 'many' ? 'at least one number' : plural(fn.arity, 'number')}`,
           0,
         );
       }

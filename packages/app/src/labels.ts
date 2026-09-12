@@ -6,6 +6,8 @@
 // This file is the one place the two vocabularies meet. Everything an estimator
 // reads comes from here.
 
+import { plural } from '@roofnerd/engine';
+
 /** What a measure is called where a person reads it. */
 export const MEASURE_LABELS: Readonly<Record<string, string>> = {
   SF: 'Area',
@@ -56,9 +58,15 @@ export const KIND_LABELS: Readonly<Record<string, string>> = {
   count: 'Count',
 };
 
-/** "1 trace", "2 traces" — never "trace(s)". */
-export const plural = (n: number, one: string, many = `${one}s`): string =>
-  `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
+/**
+ * "1 trace", "2 traces" — the engine's, re-exported here.
+ *
+ * Everything an estimator reads comes from this file, so the name stays; the
+ * rule itself belongs beside the arithmetic, because the engine prints text too
+ * — a formula's refusal lands on the line in the sheet, and it was saying
+ * "takes 2 number(s)" while this file was being careful.
+ */
+export { plural };
 
 /** A property as a person would say it: "4 sides", "1.5 ft high". */
 /**

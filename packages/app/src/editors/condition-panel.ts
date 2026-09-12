@@ -6,8 +6,12 @@
 // open — an estimator glances here to see what a formula is about to be handed,
 // and a number they have to hunt for is a number they will not check.
 
-import { measure, priceJob, type Condition, type Measures, type Page, type TraceKind } from '@roofnerd/engine';
+import {
+  conditionTotal, measure, priceJob,
+  type Condition, type LineTotal, type Measures, type Page, type TraceKind,
+} from '@roofnerd/engine';
 import { at, set, type Doc } from '../doc.js';
+import { heldCaret, named, restoreCaret } from '../caret.js';
 import { icon } from '../icons.js';
 import { KIND_LABELS, MEASURE_LABELS, PENDING_REASON, PROPERTY_LABELS, money, plural, quantity } from '../labels.js';
 
@@ -38,6 +42,8 @@ export function renderConditionPanel(
   d: Doc,
   onChanged: () => void,
 ): void {
+  // Which field is being typed into, before it is destroyed — see caret.ts.
+  const caret = heldCaret(host);
   host.replaceChildren();
   const conditions = (at('/conditions', d) as Condition[]) ?? [];
   const index = conditions.findIndex((c) => c.id === conditionId);
@@ -65,7 +71,7 @@ export function renderConditionPanel(
   name.value = condition.name;
   name.setAttribute('aria-label', 'Condition name');
   name.addEventListener('input', () => void set(`${base}/name`, name.value));
-  host.append(name);
+  host.append(named(name, `${base}/name`));
 
   const traces = (condition.traces ?? []).length;
   const kind = document.createElement('p');
@@ -150,21 +156,22 @@ export function renderConditionPanel(
   from.addEventListener('change', () => {
     void set(`${base}/from`, from.value === '' ? undefined : from.value).then(onChanged);
   });
-  host.append(field('Measures', from, 'one run, measured once — a coping and its parapet cannot drift apart'));
+  host.append(field('Measures', named(from, `${base}/from`),
+    'one run, measured once — a coping and its parapet cannot drift apart'));
 
   // ── the properties, grouped ─────────────────────────────────────────────
   for (const group of GROUPS) {
-    const named = Object.entries(PROPERTY_LABELS).filter(([, v]) => v.group === group);
-    if (!named.length) continue;
+    const known = Object.entries(PROPERTY_LABELS).filter(([, v]) => v.group === group);
+    if (!known.length) continue;
 
     const heading = document.createElement('p');
     heading.className = 'panel-group';
     heading.textContent = group;
     host.append(heading);
 
-    for (const [key, { label, hint }] of named) {
+    for (const [key, { label, hint }] of known) {
       const input = numberInput(properties[key], (v) => writeProperty(base, condition, key, v));
-      host.append(field(label, input, hint));
+      host.append(field(label, named(input, `${base}/properties/${key}`), hint));
     }
   }
 
@@ -177,7 +184,8 @@ export function renderConditionPanel(
     host.append(heading);
     for (const key of extra) {
       const input = numberInput(properties[key], (v) => writeProperty(base, condition, key, v));
-      host.append(field(key, input, 'usable in a formula on this condition by this name'));
+      host.append(field(key, named(input, `${base}/properties/${key}`),
+        'usable in a formula on this condition by this name'));
     }
   }
 
@@ -222,7 +230,7 @@ export function renderConditionPanel(
     if (e.key === 'Escape') { e.preventDefault(); naming.hidden = true; }
   });
 
-  naming.append(nameField, confirmName, nameNote);
+  naming.append(named(nameField, `${base}/new-property`), confirmName, nameNote);
 
   add.addEventListener('click', () => {
     naming.hidden = false;
@@ -231,18 +239,22 @@ export function renderConditionPanel(
     nameField.focus();
   });
   host.append(add, naming);
+
+  restoreCaret(host, caret);
 }
 
 /**
  * What the lines on one condition come to, and how many of them have no money.
  *
- * `priceJob` is the whole of the arithmetic; this only picks out the lines whose
- * condition this is. A job with no scenario, or a document too young to price,
- * answers "no total" rather than zero.
+ * Both halves are the engine's: `priceJob` prices the lines and
+ * `conditionTotal` adds them up in cents, which is the rule the sheet's own
+ * column obeys. This file used to do the adding itself, in dollars, and it was
+ * a cent out — $4,794.97 under four lines that read $4,794.96.
+ *
+ * A job with no scenario, or a document too young to price, answers "no total"
+ * rather than zero.
  */
-function costOf(condition: Condition, d: Doc): {
-  total: number | null; priced: number; unpriced: number;
-} {
+function costOf(condition: Condition, d: Doc): LineTotal {
   const job = at('/job', d) as
     { scenarios?: { id: string }[]; activeScenarioId?: string } | undefined;
   const scenario = job?.scenarios?.find((s) => s.id === job.activeScenarioId) ?? job?.scenarios?.[0];
@@ -254,16 +266,7 @@ function costOf(condition: Condition, d: Doc): {
       { ...(d as object) } as Parameters<typeof priceJob>[0],
       scenario as Parameters<typeof priceJob>[1],
     );
-    let total = 0;
-    let priced = 0;
-    let unpriced = 0;
-    for (const line of lines) {
-      if (line.conditionId !== condition.id) continue;
-      if (line.extended === null) { unpriced += 1; continue; }
-      total += line.extended;
-      priced += 1;
-    }
-    return { total: priced > 0 ? total : null, priced, unpriced };
+    return conditionTotal(lines, condition.id);
   } catch {
     return { total: null, priced: 0, unpriced: 0 };
   }

@@ -10,7 +10,7 @@
 // source" away from the supply house knowing the margin.
 
 import {
-  LENSES, conceals, lensById, priceJob, recap as recapOf,
+  LENSES, conceals, conditionTotal, lensById, priceJob, recap as recapOf,
   type Lens, type LensColumn,
 } from '@roofnerd/engine';
 import { at, doc, subscribe, writeExport, type Doc } from '../doc.js';
@@ -330,20 +330,23 @@ function rowsFor(lens: Lens, d: Doc): Row[] {
     // are both "Parapet Wall Flashing" to whoever traced them — and grouping by
     // the label added their money into a single row named after one of them.
     // Nothing on screen said so; the row looked like a condition and was two.
-    const byCondition = new Map<string, { name: string; cost: number; priced: number }>();
-    for (const l of lines) {
-      const at_ = byCondition.get(l.conditionId) ?? { name: l.conditionName, cost: 0, priced: 0 };
-      // A line with no money is not a line worth nothing. It stays out of the
-      // sum and comes back under the table as a footnote, the way the recap's do.
-      if (l.extended !== null) { at_.cost += l.extended; at_.priced += 1; }
-      byCondition.set(l.conditionId, at_);
-    }
-    return [...byCondition.values()].map((v) => ({
-      condition: v.name,
-      quantity: '',
-      unit: '',
-      ...(showCost ? { cost: v.priced > 0 ? money(v.cost) : 'nothing priced on it' } : {}),
-    }));
+    const names = new Map<string, string>();
+    for (const l of lines) if (!names.has(l.conditionId)) names.set(l.conditionId, l.conditionName);
+    // `conditionTotal` is the engine's, and it is the same call the panel makes:
+    // the cents each line is shown at, added up. A line with no money is not a
+    // line worth nothing — it stays out of the sum and comes back under the
+    // table as a footnote, the way the recap's do.
+    return [...names].map(([id, name]) => {
+      const total = conditionTotal(lines, id);
+      return {
+        condition: name,
+        quantity: '',
+        unit: '',
+        ...(showCost
+          ? { cost: total.total === null ? 'nothing priced on it' : money(total.total) }
+          : {}),
+      };
+    });
   }
 
   return lines

@@ -11,10 +11,11 @@
 // are the same job: the total moves while the mouse is still down.
 
 import {
-  CLASS_NAMES, measure, priceLine, recap, scopeFor,
+  CLASS_NAMES, centsOf, fromCents, measure, priceLine, recap, scopeFor,
   type Condition, type Item, type Measures, type Page,
 } from '@roofnerd/engine';
 import { at, doc, set, subscribe, type Doc } from '../doc.js';
+import { heldCaret, named, restoreCaret } from '../caret.js';
 import { icon } from '../icons.js';
 import { PENDING_REASON, money, plural, quantity } from '../labels.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
@@ -90,6 +91,11 @@ export function mountEstimate(host: HTMLElement): void {
 }
 
 function render(body: HTMLElement, foot: HTMLElement, d: Doc): void {
+  // The sheet is rebuilt whole on every change to the job, which is how a line
+  // typed in one window moves the total in the other. It also destroyed the cell
+  // being typed into, so a formula typed "LF * H" got as far as "L" — see
+  // caret.ts.
+  const caret = heldCaret(body);
   const conditions = (at('/conditions', d) as Condition[]) ?? [];
   const pages = (at('/pages', d) as Page[]) ?? [];
   const scenario = activeScenario(d);
@@ -113,7 +119,9 @@ function render(body: HTMLElement, foot: HTMLElement, d: Doc): void {
     return;
   }
 
-  let total_ = 0;
+  // In cents, the way every other total of lines in this program is counted:
+  // the sum of what the lines SAY, which is what the estimator adds up.
+  let totalCents = 0;
   let anythingPending = false;
 
   // One table, one header. A header repeated under every condition is three
@@ -177,7 +185,7 @@ function render(body: HTMLElement, foot: HTMLElement, d: Doc): void {
       // have caught it — the first real job with a run-level waste on it would
       // have shown a line total that did not add up to its own selling price.
       const result = priceLine(item, scope, scenario?.prices ?? {}, condition.waste ?? 0);
-      if (result.extended !== null) total_ += result.extended;
+      if (result.extended !== null) totalCents += centsOf(result.extended);
       if (result.pending) anythingPending = true;
       rows.append(itemRow(index, itemIndex, item, result));
     }
@@ -248,10 +256,12 @@ function render(body: HTMLElement, foot: HTMLElement, d: Doc): void {
     label.textContent = 'Total';
     const value = document.createElement('span');
     value.className = 'value';
-    value.textContent = money(total_);
+    value.textContent = money(fromCents(totalCents));
     total.append(label, value);
     foot.append(total);
   }
+
+  restoreCaret(body, caret);
 }
 
 /**
@@ -279,11 +289,14 @@ function itemRow(conditionIndex: number, itemIndex: number, item: Item, result: 
   const tr = document.createElement('tr');
   const base = `/conditions/${conditionIndex}/items/${itemIndex}`;
 
-  tr.append(cell(textField(item.description, (v) => set(`${base}/description`, v), 'what it is')));
-  tr.append(cell(textField(item.costCode, (v) => set(`${base}/costCode`, v), 'code')));
+  tr.append(cell(named(textField(item.description, (v) => set(`${base}/description`, v), 'what it is'),
+    `${base}/description`)));
+  tr.append(cell(named(textField(item.costCode, (v) => set(`${base}/costCode`, v), 'code'),
+    `${base}/costCode`)));
 
   // The formula, on the line, editable. The point of the whole program.
-  const formula = textField(item.formula, (v) => set(`${base}/formula`, v), 'LF * H');
+  const formula = named(textField(item.formula, (v) => set(`${base}/formula`, v), 'LF * H'),
+    `${base}/formula`);
   formula.classList.add('formula');
   const formulaCell = cell(formula);
   if (result.formulaError) {
@@ -305,10 +318,11 @@ function itemRow(conditionIndex: number, itemIndex: number, item: Item, result: 
   tr.append(formulaCell);
 
   tr.append(numberCell(result.quantity));
-  tr.append(cell(selectField(UNITS, item.unit, (v) => set(`${base}/unit`, v))));
+  tr.append(cell(named(selectField(UNITS, item.unit, (v) => set(`${base}/unit`, v)), `${base}/unit`)));
   // An empty waste field reads "0%", not a bare per-cent sign with nothing
   // in front of it. Zero waste is a real answer; a lone "%" is a shrug.
-  tr.append(cell(numberField(item.waste ?? 0, (v) => set(`${base}/waste`, v), '0'), 'num'));
+  tr.append(cell(named(numberField(item.waste ?? 0, (v) => set(`${base}/waste`, v), '0'),
+    `${base}/waste`), 'num'));
 
   // What you buy, and what it is priced against — three units, because a real
   // supply house uses three. Membrane is estimated in squares, bought by the
@@ -316,7 +330,8 @@ function itemRow(conditionIndex: number, itemIndex: number, item: Item, result: 
   tr.append(cell(stepCell(result.orderQuantity, result.orderUnitName), 'num'));
   tr.append(cell(stepCell(result.priceQuantity, result.priceUnitName), 'num'));
 
-  tr.append(cell(numberField(item.unitCost, (v) => set(`${base}/unitCost`, v), '$')));
+  tr.append(cell(named(numberField(item.unitCost, (v) => set(`${base}/unitCost`, v), '$'),
+    `${base}/unitCost`)));
 
   const extended = document.createElement('span');
   if (result.extended === null) {

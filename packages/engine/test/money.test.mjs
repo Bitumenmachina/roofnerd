@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { priceLine, recap, priceJob, totalSquaresOf, emptyJob, CLASS_NAMES, girthOf } from '../dist/index.js';
+import { priceLine, recap, priceJob, conditionTotal, centsOf, totalSquaresOf, emptyJob, CLASS_NAMES, girthOf } from '../dist/index.js';
 
 const scope = { SF: 1000, LF: 500, EA: 5, SQ: 10, PLAN_SF: 1000, VERTICES: 5, SEGMENTS: 4, H: 1.5 };
 const item = (over) => ({ id: 'i1', description: 'x', costCode: '07-100-100', unit: 'SF', formula: 'SF', ...over });
@@ -200,17 +200,79 @@ test('material contains only material — a dumpster is not roofing material', (
   assert.equal(by('Other').adders.length, 0);
 });
 
-test('hours are summed at full precision, not from the displayed figure', () => {
+test('hours are summed at full precision, and money is not', () => {
   const doc = job([
     { id: 'a', description: 'fab', costCode: 'LAB', unit: 'SF', formula: '10000', productionRate: 3, unitCost: 50 },
   ], { Labor: { burden: 10 } });
   const r = recap(doc, doc.job.scenarios[0]);
   const labor = r.classes.find((c) => c.class === 'Labor');
+
+  // HOURS: 10,000 SF at three a hour is 3,333.333… hours, and it stays that.
+  // Summing the DISPLAYED figure instead would land about a sixth of a cent out
+  // per line — which is exactly how a labor total ends up adrift of the payroll
+  // report it is being checked against.
   assert.equal(labor.hours, 10000 / 3);
-  // Summing the DISPLAYED figure instead would land about a sixth of a cent
-  // out per line — which is exactly how a recap ends up dollars adrift.
   assert.notEqual(labor.hours, Number((10000 / 3).toFixed(2)));
-  assert.ok(Math.abs(labor.subtotal - (10000 / 3) * 50) < 1e-9);
+
+  // MONEY: the other rule, on purpose. The line's own money is 166,666.666…,
+  // it is SHOWN as $166,666.67, and the class it lands in says the same thing —
+  // because a class subtotal is its own column added up, and a column of one
+  // line has to agree with that line. This assertion used to read
+  // `|subtotal - (10000/3) * 50| < 1e-9`, which is the unrounded product: a
+  // third of a cent adrift of the line printed above it, forty times over on a
+  // real job. Changed on purpose, with the reason beside it.
+  assert.equal(centsOf(labor.subtotal), 16666667);
+  assert.equal(centsOf(labor.subtotal), centsOf((10000 / 3) * 50));
+});
+
+// ── one rounding rule for money off a line ─────────────────────────────────
+
+test('a total of lines is the sum of the cents those lines are shown at', () => {
+  // Two lines of 1000/3, priced at a dollar: each is 333.3333…, each is SHOWN
+  // as $333.33, and the column an estimator adds up reads $666.66.
+  //
+  // Summed unrounded first, the same two lines make 666.6666…, which displays
+  // as $666.67 — a cent that is in no column on the sheet and in nobody's
+  // invoice. That is the whole of the defect this rule closes: the condition
+  // panel said $4,794.97 while the four lines under it added to $4,794.96, and
+  // both figures came out of the same `priceJob`.
+  const doc = job([
+    { id: 'a', description: 'a third', costCode: 'MAT', unit: 'SF', formula: '1000 / 3', unitCost: 1 },
+    { id: 'b', description: 'another', costCode: 'MAT', unit: 'SF', formula: '1000 / 3', unitCost: 1 },
+  ]);
+  const lines = priceJob(doc, doc.job.scenarios[0]);
+  assert.equal(lines.length, 2);
+
+  const shown = lines.reduce((sum, l) => sum + centsOf(l.extended), 0);
+  const unrounded = centsOf(lines.reduce((sum, l) => sum + l.extended, 0));
+  assert.equal(shown, 66666, 'the two displayed amounts');
+  assert.equal(unrounded, 66667, 'the same two amounts summed before rounding');
+
+  // The condition total is the column's answer, not the other one.
+  const total = conditionTotal(lines, 'c1');
+  assert.equal(centsOf(total.total), 66666);
+  assert.equal(total.priced, 2);
+  assert.equal(total.unpriced, 0);
+
+  // And the class subtotal under the same table follows the same rule, because
+  // it is the same lines added up one level higher.
+  const r = recap(doc, doc.job.scenarios[0]);
+  assert.equal(centsOf(r.classes.find((c) => c.class === 'Material').subtotal), 66666);
+});
+
+test('a condition with nothing priced on it has no total, and says how many', () => {
+  // Never zero. A line with no price is not a line worth nothing, and a
+  // condition carrying only those has no total to print.
+  const doc = job([
+    { id: 'a', description: 'no price yet', costCode: 'MAT', unit: 'SF', formula: 'SF' },
+  ]);
+  const lines = priceJob(doc, doc.job.scenarios[0]);
+  const total = conditionTotal(lines, 'c1');
+  assert.equal(total.total, null);
+  assert.equal(total.priced, 0);
+  assert.equal(total.unpriced, 1);
+  // And a condition nobody traced anything for is the same answer.
+  assert.deepEqual(conditionTotal(lines, 'c-nothing'), { total: null, priced: 0, unpriced: 0 });
 });
 
 test('cost per square is on every class, and on the job', () => {

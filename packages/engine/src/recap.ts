@@ -26,6 +26,7 @@ import type {
 } from './model.js';
 import { CLASS_NAMES } from './model.js';
 import { priceLine, type LineResult } from './line.js';
+import { plural } from './words.js';
 import { measureJob } from './takeoff.js';
 import { scopeFor } from './measures.js';
 
@@ -112,6 +113,58 @@ function addersFor(cls: ClassName, a: ClassAdders | undefined, subtotal: Money):
 export function classOf(costCodes: readonly CostCode[], code: string): ClassName | undefined {
   return costCodes.find((c) => c.code === code)?.class;
 }
+
+// ── One rounding rule for money that comes off a line ──────────────────────
+//
+// A line's extended amount is money: it is printed to the cent on the sheet,
+// exported to the cent in the CSV, and it is what somebody invoices. So a total
+// of lines is the sum of those cents — never the sum of the unrounded products,
+// because the two differ and the one that differs is the one that disagrees with
+// the column an estimator just added up with a calculator.
+//
+// This was found the expensive way round: the condition panel printed $4,794.97
+// while the four lines above it added to $4,794.96, and both figures came out of
+// the same `priceJob`. One of them was summing before rounding.
+//
+// HOURS DO NOT FOLLOW THIS RULE and must not. An hour is not a currency: a
+// labour total is checked against a payroll report that carries the fractions,
+// and rounding each line's hours would put a crew-day out. The two quantities
+// are summed differently on purpose, and that is the reason.
+
+/** The cent a figure is shown at. The unit every total of lines is counted in. */
+export const centsOf = (amount: Money): number => Math.round(amount * 100);
+
+/** Back to dollars, exactly. */
+export const fromCents = (cents: number): Money => cents / 100;
+
+/** What a set of lines comes to, and how many of them had no money on them. */
+export interface LineTotal {
+  /**
+   * The sum of the amounts as they are shown, in dollars. Null when nothing is
+   * priced — which is a different fact from a total of zero, and the one place
+   * this program is never allowed to say $0.00.
+   */
+  readonly total: Money | null;
+  readonly priced: number;
+  readonly unpriced: number;
+}
+
+/** Add up lines the way the sheet adds them up. */
+export function totalOfLines(lines: readonly PricedLine[]): LineTotal {
+  let cents = 0;
+  let priced = 0;
+  let unpriced = 0;
+  for (const line of lines) {
+    if (line.extended === null) { unpriced += 1; continue; }
+    cents += centsOf(line.extended);
+    priced += 1;
+  }
+  return { total: priced > 0 ? fromCents(cents) : null, priced, unpriced };
+}
+
+/** The same question asked about one condition — what the panel and the lens show. */
+export const conditionTotal = (lines: readonly PricedLine[], conditionId: string): LineTotal =>
+  totalOfLines(lines.filter((line) => line.conditionId === conditionId));
 
 /** Every priced line in the job, with the condition it came off. */
 export interface PricedLine extends LineResult {
@@ -200,7 +253,9 @@ export function squaresOf(doc: JobDocument): {
 export function recap(doc: JobDocument, scenario: Scenario): Recap {
   const lines = priceJob(doc, scenario);
 
-  const subtotals = new Map<ClassName, Money>(CLASS_NAMES.map((c) => [c, 0]));
+  // Counted in cents, because that is the unit a line's money is in — see the
+  // rule above. Dollars are only ever made from these at the end.
+  const centsBy = new Map<ClassName, number>(CLASS_NAMES.map((c) => [c, 0]));
   const hoursBy = new Map<ClassName, number>(CLASS_NAMES.map((c) => [c, 0]));
   const pending: string[] = [];
 
@@ -214,16 +269,18 @@ export function recap(doc: JobDocument, scenario: Scenario): Recap {
       pending.push(`${where}: ${line.pending ?? 'no money'}`);
       continue;
     }
-    subtotals.set(line.class, (subtotals.get(line.class) ?? 0) + line.extended);
-    // Full precision, deliberately. Summing displayed hours is how a labor
-    // total ends up adrift of the report it is being checked against.
+    centsBy.set(line.class, (centsBy.get(line.class) ?? 0) + centsOf(line.extended));
+    // Full precision, deliberately, and deliberately NOT the rule the money
+    // above follows. Summing displayed hours is how a labor total ends up
+    // adrift of the payroll report it is being checked against; summing
+    // unrounded money is how a class total ends up adrift of its own column.
     if (line.hours !== null) hoursBy.set(line.class, (hoursBy.get(line.class) ?? 0) + line.hours);
   }
 
   const { squares: totalSquares, leftOut: squaresLeftOut } = squaresOf(doc);
 
   const classes: ClassLine[] = CLASS_NAMES.map((cls) => {
-    const subtotal = subtotals.get(cls) ?? 0;
+    const subtotal = fromCents(centsBy.get(cls) ?? 0);
     const adders = addersFor(cls, scenario.adders[cls], subtotal);
     const total = adders.reduce((sum, a) => sum + a.amount, subtotal);
     return {
@@ -292,7 +349,7 @@ export function formatRecap(r: Recap): string {
   if (r.totalHours) rows.push(`Total hours ${num(r.totalHours)}`);
 
   if (r.pending.length) {
-    rows.push('', `${r.pending.length} line(s) not in the total:`);
+    rows.push('', `${plural(r.pending.length, 'line')} not in the total:`);
     for (const u of r.pending) rows.push(`  ${u}`);
   }
   return rows.join('\n');

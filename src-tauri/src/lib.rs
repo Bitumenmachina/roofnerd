@@ -298,14 +298,17 @@ fn open_editor(app: AppHandle, editor: String) -> Result<(), String> {
     // fix that: a sticky cell reserves no room, it paints over whatever scrolls
     // under it, so at any width short of the table SOME column is half covered.
     // Measured against the real stylesheet: 1240 moves the wound to Order and
-    // Priced (the heading read "O" and the cells "75."); 1480 leaves the
-    // scroller 1160px for 1160px of table, nothing overlaps anything, and every
-    // heading is its own element at its own centre.
+    // Priced (the heading read "O" and the cells "75."); 1480 left the scroller
+    // 1160px, which was enough for the 1136px table it was measured against.
+    // The table is 1212px since Order, Priced and Extended were widened to hold
+    // the numbers they print without wrapping them onto a second line, so this
+    // is 1560: 1239px of scroller for 1212px of table, nothing overlapping
+    // anything, and every heading its own element at its own centre.
     //
     // The main window keeps the pinned pair, because 1136 + 320 + the tree is
     // wider than a laptop screen. That is what pinning is for (D94) and it is
     // the trade this window no longer has to make.
-    .inner_size(1480.0, 860.0)
+    .inner_size(1560.0, 860.0)
     .build()
     .map_err(|e| e.to_string())?;
 

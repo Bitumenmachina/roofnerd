@@ -10,7 +10,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { readJob, writeJob, recap, formatRecap, PRODUCT_NAME } from '../dist/index.js';
+import { readJob, writeJob, recap, formatRecap, plural, PRODUCT_NAME } from '../dist/index.js';
 
 const [, , command, target] = process.argv;
 
@@ -71,7 +71,7 @@ try {
     for (const [rel, contents] of rewritten) write(rel, contents);
     console.log(moved.length === 0
       ? `${doc.job.name}: already canonical, nothing moved`
-      : `${doc.job.name}: rewrote ${moved.length} file(s) — ${moved.map(([r]) => r).join(', ')}`);
+      : `${doc.job.name}: rewrote ${plural(moved.length, 'file')} — ${moved.map(([r]) => r).join(', ')}`);
     process.exit(0);
   }
 
