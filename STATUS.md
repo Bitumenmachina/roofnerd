@@ -13,7 +13,7 @@ in mixed units, buys coping in pounds through its girth, moves the money when th
 doubles, stands the roof up in the Model, and sends the supply house a list with no cost on it.
 
 **The Model was rebuilt on the trade's conventions rather than on assumptions** — see the pass below.
-The Gantt bonus is the only thing in the handoff still unbuilt.
+The Gantt bonus is the only thing in the handoff still unbuilt — and Addendum 6 (2026-09-12) lifts its bonus status: it is section 8, after 9a and 6b.
 
 Addendum 4 §2 put 6 ahead of 4 and 5 because nothing in either fed it.
 
@@ -55,9 +55,78 @@ record. In plain words, what it did:
 - **Housekeeping this session:** the Chrome stub harness is deleted (D97); every probe now refuses
   to photograph a dirty tree (D98).
 
-**Not yet re-run at this commit:** the full probe suite on the shipped runtime. The last full run
-was before the final toolbar change; the counts below are re-established in the next entry, and
-until then the table under "What the checks say" is the *previous* state.
+**Re-run at `c893211`, the clean HEAD after the two commits above — everything green:**
+
+    front-door 17/17 · runtime-check 9/9 · vocabulary-check 27/27
+    section1 12/12 · section2 13/13 · section4 14/14 · section5 17/17 · section6 23/23 · section7 15/15
+    real-job 13/13 · engine 146/146 · shell 6/6 · gates 3/3
+    compare-fixtures within 0.01% · rebuild-subtotals 15/15 + 13/13 cost codes, 6/6 classes
+
+**Every image at `c893211` was opened and read, all twenty-two.** What each shows, and what is wrong
+in it, is below. Eight things were seen that no check caught. They are listed, not quietly fixed.
+
+### What the pictures show (opened 2026-09-12)
+
+- `front-door-plan` / `runtime-plan` / `section1-trace` / `section7-plan` / `plan-shot` — the Plan:
+  light desk, paper with a hairline edge, one-row toolbar with icon-and-word tools, the demo's five
+  conditions in the rail with live SF · LF · EA and their properties in trade words, a scale badge,
+  the hint line, the status bar. The tree is Job → Page → Conditions. **The scale select reads
+  "Or pick a s" — clipped by the pinned zoom group, on every one of these images including the
+  section-7 evidence** (seen-not-fixed 1).
+- `front-door-sheet` / `runtime-estimate` — the sheet torn into its own window: no tree, no second
+  chrome. Formula visible on the line, `LF * H` flagged "check the unit", money right-aligned and
+  bold, Selling Price pinned. **At this window's width the pinned Extended column covers the Unit
+  column; its header shows as a stray "l"** (seen-not-fixed 2).
+- `section2-condition-panel` / `condition-panel-shot` — the panel under the list: name, "Run · 1
+  trace", RUN 75.56 LF and COUNT 4 EA in large figures, measures first as v2 §1.8 asks.
+- `section2-estimate-sheet` — a formula typed as `LF *` reads "the formula stops early", its quantity
+  and money are dashes, and the footer says "1 line(s) not counted". **"line(s)" is on the banned
+  list and reached the screen** — the vocabulary check never renders that state (seen-not-fixed 4).
+- `section4-library` — three assemblies with their layers named by role (cover board, insulation,
+  membrane, fastening, edge metal), the unit chain per item, firmness marked "firm"/"placeholder",
+  a provenance sentence under each. Reads like a book, not a database.
+- `section4-two-scenarios` — the same lines under "Second supply house": different money, and
+  "4 line(s) not counted" for the lines that scenario has no price for.
+- `section5-stocking` / `section5-consolidated` / `section5-recap` — Reports: a "Who is it for?"
+  picker, then the lens. Stocking has Order · Unit · Sent · Returned and no money; Consolidated shows
+  the whole chain with HOURS as an order unit; Recap shows six classes, per-SQ over the priced
+  squares, and "Not in this total (1): Low Roof — Tapered: 6.64 SQ traced, with nothing priced on it".
+  **The lens renders under the picker and the upper right of the editor is empty; A4 puts the lens
+  to the right** (seen-not-fixed 5).
+- `section6-model` / `section6-live-edit` — the roof standing up: the field as a plate at 3 ft, the
+  low roof as a graded fall to three drains with arrows, parapet walls on the traced run, a legend
+  in sentences (thickness scale 5/8" – 4", "the surface is the fall, not the board layout", "capped
+  by flashing height — NRCA wants 8" above the finished roof"). After the live edit, 170 SF with no
+  fall is painted and named. **The cricket reads as a flat brown patch at this angle; its two planes
+  are not legible** (seen-not-fixed 6).
+- `start-screen-shot` — "roofnerd", one sentence, "Open a job" and "Open the demo job". **No "New
+  job", no "Recent"** — A4 asks for both (seen-not-fixed 7). `menu-shot` — File: "Open a job…",
+  "Save"; **no Recent** (same item).
+- `help-sheet-shot` — the Plan help in trade words: scale first, what Area/Line/Count do, Enter to
+  finish, Shift to square, why a wrong number is worse than none. Good.
+- `section7-sheet` / `estimate-sheet-shot` — the full-width sheet with the Unit selects visible and
+  the selected condition's header carrying the accent bar.
+
+### Seen, not fixed (2026-09-12)
+
+1. **"Or pick a scale…" is still clipped** to "Or pick a s" by the pinned zoom group — v2 §1.5. The
+   section-7 check passed 15/15 with this in its own evidence: it measures control overflow, not the
+   select's text. The check gets the assertion it was missing when this is fixed.
+2. **Torn-off sheet: pinned Extended covers Unit** at the tear-off width — v2 §1.9, introduced with
+   the pinning (D94).
+3. **The demo's labor is about 2½% of its material** ($233.86 against $9,139.88 at scenario 1) on a
+   900 SF "warehouse" — a roofer would laugh. The prices are synthetic (D50) but the shape is what a
+   first look sees; and a one-roll minimum on 2.6 SQ puts material at $3,500/SQ. A demo roof large
+   enough for rounding not to dominate, with labor in a believable proportion, is a demo-data change
+   that moves money on purpose and is recorded here first.
+4. **"1 line(s) not counted"** on the sheet footer (`estimate.ts`) — banned by the vocabulary check,
+   which never induces the state that renders it. Fixed with the gate in the next commit.
+5. **Reports lays the lens under the picker**, leaving the top right empty — A4 says picker left,
+   lens right.
+6. **The cricket is not legible as two planes** at the Model's default angle.
+7. **Start screen has no "New job" and no "Recent"; the File menu has no "Recent"** — A4, v2 §1.3.
+8. Library rows show `VERTICES → EA`: a formula identifier where a roofer says corners. Allowed (it is
+   a formula, Addendum 1), noted as a candidate for a trade word.
 
 **Section 6's selection line is not verified.** Its check asserted only that a tree node existed
 (register #32). It stays open until section 6b rewrites it in both directions across two windows.
@@ -631,8 +700,8 @@ one screen, watch the money move on the other.
 | | |
 |---|---|
 | Section 1 done-check (`tools/probe/section1-trace.mjs`) | **PASS 12/12** — opens a PDF, scales it, traces an area with pitch, a run and a count, reads the measures off the list, confirms traces are stored in page units and the drawing is only referenced |
-| Section 2 done-check (`tools/probe/section2-sheet.mjs`) | **PASS 17/17** — traces a parapet, types a height in the panel, tears the sheet into a second window, adds three items in three units, then changes the drawing and the height and watches the money move in the OTHER window. Two windows, one job, throughout |
-| Section 6 done-check (`tools/probe/section6-model.mjs`) | **PASS 11/11** — the Model in the area picker, a tapered field rendered as a heightfield, a cricket, a marked no-fall area with its square feet, a live change to the roof moving the view in the same window, selection crossing the editors, and nothing changed by selecting |
+| Section 2 done-check (`tools/probe/section2-sheet.mjs`) | **PASS 13/13** at `c893211` (rewritten onto the shipped runtime; was 17/17 on the stubbed browser) — traces a parapet, types a height in the panel, tears the sheet into a second window, adds three items in three units, then changes the drawing and the height and watches the money move in the OTHER window. Two windows, one job, throughout |
+| Section 6 done-check (`tools/probe/section6-model.mjs`) | **PASS 23/23** at `c893211` (its selection line is not verified — see register #32); the earlier form was **11/11** — the Model in the area picker, a tapered field rendered as a heightfield, a cricket, a marked no-fall area with its square feet, a live change to the roof moving the view in the same window, selection crossing the editors, and nothing changed by selecting |
 | Front door (`tools/probe/front-door.mjs`) | **PASS 17/17** — start screen → button → job open → drawing → scale typed into a field → tear-off → second window. Never once through the bridge |
 | Real-runtime check (`tools/probe/runtime-check.mjs`) | **PASS 9/9** — opens through the front door, then two OS windows on one document, a property typed in one moving the money in the other, and the CSP refusing the network |
 | Fixture ladder (`tools/compare-fixtures.mjs`) | **PASS 26/26** — both real recaps, every line within 0.01% |
@@ -640,7 +709,7 @@ one screen, watch the money move on the other.
 | Client-data gate | **PASS**, and proven red on a figure, a bid name and a home path |
 | Vocabulary check (`tools/probe/vocabulary-check.mjs`) | **PASS 27/27** — reads what is rendered in the shipped window, not the source; proven red on `PLAN_SF`. Gained `TAPER`, `ELEV`, `SUMP` and `BOARDS` as section 6 added them, so the gate covers the new words rather than trailing them |
 | Synthetic prices (`tools/make-demo-prices.mjs`) | 18 seeded invented prices in `jobs/demo-job/prices.json`; every screenshot and probe draws from them |
-| Engine tests | **102/102** — seven added for the tapered inputs |
+| Engine tests | **146/146** — seven added for the tapered inputs |
 | Shell tests (`pnpm test:shell`) | **6/6** — including that a job saved by the application is byte-for-byte one saved by the command line. **These were red from the front-door commit until 2026-09-08 and reported as passing**, because `pnpm -r test` runs the engine and the app and never ran them. They assert on identity now instead of on array position, and `pnpm test` runs them |
 | Vocabulary gate | **PASS** |
 | Egress gate | **PASS** |
