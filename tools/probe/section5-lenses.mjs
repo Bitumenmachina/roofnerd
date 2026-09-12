@@ -11,7 +11,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, openDemoJob, until, wait, commitStamp } from './tauri-harness.mjs';
+import { launch, openDemoJob, pickLens, until, wait, commitStamp } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -30,17 +30,6 @@ const results = [];
 const check = (name, fn) => {
   try { fn(); results.push('PASS'); console.log(`  PASS  ${name}`); }
   catch (e) { results.push('FAIL'); console.log(`  FAIL  ${name}\n        ${e.message}`); }
-};
-
-const pickLens = async (session, name) => {
-  const ok = await session.execute(function (want) {
-    const b = [...document.querySelectorAll('.lens')].find((e) => (e.querySelector('strong') || {}).textContent === want);
-    if (!b) return false;
-    b.click();
-    return true;
-  }, name);
-  await wait(900);
-  return ok;
 };
 
 /** Everything on the rendered lens — headings, cells, and the page's own source. */
@@ -64,22 +53,32 @@ try {
   await openDemoJob(session);
   await wait(1200);
 
-  await session.execute(function () {
-    const p = document.querySelector('.editor-picker');
-    p.value = 'reports';
-    p.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  await wait(2500);
-  await until(session, () => !!document.querySelector('.lens-sheet'), { what: 'the reports editor' });
-
+  // Who the estimate is being shown to is asked once, in the document bar —
+  // the handoff's "WHO IS LOOKING" menu — and the answer is drawn in the cost
+  // panel over the same document. There is no Reports editor to switch to.
   const offered = await session.execute(function () {
-    return JSON.stringify([...document.querySelectorAll('.lens strong')].map((e) => e.textContent));
+    const open = document.querySelector('.lens-selector .lens-button');
+    if (open) open.click();
+    return JSON.stringify({
+      names: [...document.querySelectorAll('.lens-menu .lens strong')].map((e) => e.textContent),
+      asks: (document.querySelector('.lens-menu-head') || {}).textContent || '',
+      says: (document.querySelector('.lens-menu-foot') || {}).textContent || '',
+    });
   });
+  await session.execute(function () { document.body.click(); });
   check('all five lenses are offered', () => {
-    const names = JSON.parse(offered);
+    const menu = JSON.parse(offered);
     for (const want of ['Drawing', 'Stocking', 'Condition Summary', 'Recap', 'Consolidated']) {
-      assert.ok(names.includes(want), `missing ${want} — got ${offered}`);
+      assert.ok(menu.names.includes(want), `missing ${want} — got ${JSON.stringify(menu.names)}`);
     }
+  });
+  check('and the menu asks the question in the words a person would', () => {
+    const menu = JSON.parse(offered);
+    assert.match(menu.asks, /WHO IS LOOKING/, `it reads "${menu.asks}"`);
+    assert.match(menu.says, /never edits the estimate/i, `it reads "${menu.says}"`);
+    // The estimate itself is one of the choices, and it is the first: a filter
+    // you cannot take off is not a filter.
+    assert.ok(menu.names.includes('Full estimate'), `the menu offers ${JSON.stringify(menu.names)}`);
   });
 
   // ── the supplier's lens ─────────────────────────────────────────────────

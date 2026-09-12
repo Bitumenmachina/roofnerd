@@ -17,7 +17,9 @@ import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { elementShot, errorsSoFar, launch, openDemoJob, until, wait, watchErrors, commitStamp } from './tauri-harness.mjs';
+import {
+  elementShot, errorsSoFar, launch, openDemoJob, pickLens, until, wait, watchErrors, commitStamp,
+} from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -106,23 +108,11 @@ function totalOf(headings, rows) {
   return { cents: sum, cells: found, column: at };
 }
 
-/** Pick a lens off the picker on the left, by the name on it. */
-const pickLens = async (session, name) => {
-  const ok = await session.execute(function (want) {
-    const b = [...document.querySelectorAll('.lens')].find((e) => (e.querySelector('strong') || {}).textContent === want);
-    if (!b) return false;
-    b.click();
-    return true;
-  }, name);
-  await wait(900);
-  return ok;
-};
-
 /** The rendered lens, the status bar, and the state of the two buttons. */
 const sheetNow = (session) => session.execute(function () {
   const el = document.querySelector('.lens-sheet');
   if (!el) return null;
-  const bar = document.querySelector('.status-bar');
+  const bar = document.querySelector('.status-strip');
   const trouble = document.querySelector('.lens-trouble');
   const write = document.querySelector('.lens-write');
   return JSON.stringify({
@@ -155,7 +145,7 @@ const sheetNow = (session) => session.execute(function () {
  * right side is past `innerWidth` is a thing the estimator cannot see.
  */
 const windowNow = (session) => session.execute(function () {
-  const bar = document.querySelector('.status-bar');
+  const bar = document.querySelector('.status-strip');
   if (!bar) return null;
   const facts = bar.querySelector('.status-facts');
   const path = bar.querySelector('.status-path');
@@ -165,20 +155,27 @@ const windowNow = (session) => session.execute(function () {
   const right = function (el) { return el ? Math.round(el.getBoundingClientRect().right) : null; };
   return JSON.stringify({
     // ── the window ──
+    regions,
+    panelRight: panel ? Math.round(panel.getBoundingClientRect().right) : null,
+    panelWidth: panel ? Math.round(panel.getBoundingClientRect().width) : null,
     innerWidth: window.innerWidth,
     // The body clips, so the page does not scroll — it is simply cut off. Its
     // scrollWidth is what it WOULD need, which is the number that tells you.
     pageWidth: document.body.scrollWidth,
     documentWidth: document.documentElement.scrollWidth,
-    frameWidth: Math.round((document.querySelector('.frame') || bar).getBoundingClientRect().width),
+    frameWidth: Math.round((document.querySelector('.body-row') || bar).getBoundingClientRect().width),
     // ── the bar ──
     height: Math.round(bar.getBoundingClientRect().height),
     content: bar.scrollHeight,
     room: bar.clientHeight,
     factsHeight: facts ? Math.round(facts.getBoundingClientRect().height) : 0,
-    fields: [...bar.querySelectorAll('.status-field')].map(function (f) {
+    fields: [...bar.querySelectorAll('.readout-field')].map(function (f) {
       return { text: (f.textContent || '').trim(), top: Math.round(f.getBoundingClientRect().top) };
     }),
+    // Where the four facts went, so each can still be read where it now lives.
+    job: (document.querySelector('.doc-job') || {}).textContent || '',
+    scenario: (document.querySelector('.cost-head .scenario-bar') || {}).textContent || '',
+    stripText: (document.querySelector('.tool-strip') || {}).innerText || '',
     path: path ? (path.textContent || '') : '',
     pathRight: right(path),
     // The last folder is the job, and it is the part that must survive.
@@ -229,7 +226,7 @@ const exportNow = async (session) => {
  * The crop-or-whole-window part now lives in the harness, because section 6b
  * wanted it for the Properties panel and two copies of it would have drifted.
  */
-const statusBarShot = (session) => elementShot(session, '.status-bar');
+const statusBarShot = (session) => elementShot(session, '.status-strip');
 
 await mkdir(EVIDENCE, { recursive: true });
 
@@ -264,14 +261,10 @@ try {
   await openDemoJob(session);
   await wait(1200);
 
-  await session.execute(function () {
-    const p = document.querySelector('.editor-picker');
-    p.value = 'reports';
-    p.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  await wait(2500);
-  await until(session, () => !!document.querySelector('.lens-sheet'), { what: 'the reports editor' });
-  // After the switch, not before it: the picker reloads the window.
+  await pickLens(session, 'Recap');
+  await until(session, () => !!document.querySelector('.lens-sheet'), { what: 'a lens in the panel' });
+  // Nothing reloads any more — a lens is drawn in the panel over the same page
+  // — so one watch covers the whole run instead of one per switch.
   await watchErrors(session);
 
   // The window as it stands with a job open and nothing said in the bar yet.
@@ -391,23 +384,42 @@ try {
 
   // ── the bar is still one line, and the window still fits ───────────────
   const barAfter = JSON.parse(await windowNow(session));
-  check('the status bar is still one line after an export', () => {
+  check('the status strip is still one line after an export', () => {
     assert.equal(barAfter.height, barBefore.height,
-      `the bar was ${barBefore.height}px and is now ${barAfter.height}px`);
+      `the strip was ${barBefore.height}px and is now ${barAfter.height}px`);
     assert.equal(barAfter.factsHeight, barBefore.factsHeight,
-      `the fields were ${barBefore.factsHeight}px and are now ${barAfter.factsHeight}px — they wrapped`);
+      `the readout was ${barBefore.factsHeight}px and is now ${barAfter.factsHeight}px — it wrapped`);
     assert.ok(barAfter.content <= barAfter.room + 1,
-      `${barAfter.content}px of content in a ${barAfter.room}px bar`);
-  });
-  check('and Job, Scenario, Scale and Units are all on that line', () => {
-    const shown = barAfter.fields.map((f) => `${f.text}@${f.top}`).join(' / ');
-    for (const want of ['Job', 'Scenario', 'Scale', 'Units']) {
-      assert.ok(barAfter.fields.some((f) => f.text.startsWith(want)), `no ${want} field: ${shown}`);
-    }
+      `${barAfter.content}px of content in a ${barAfter.room}px strip`);
     const lines = new Set(barAfter.fields.map((f) => f.top));
-    assert.equal(lines.size, 1, `the fields sit on ${lines.size} lines: ${shown}`);
+    assert.ok(lines.size <= 1, `the readout sits on ${lines.size} lines`);
   });
-  check('and the bar still says where the job is', () => {
+  check('and every fixed region is still exactly its own height', () => {
+    // The four regions are FIXED — that is the README's "Responsive behavior"
+    // and it is the whole of D120's lesson: a region that grows to fit what is
+    // in it takes the page with it. Written as the numbers the stylesheet
+    // declares, so a region that swelled by one line is caught by name.
+    for (const [name, want] of [['doc', 44], ['strip', 42], ['status', 30]]) {
+      const region = barAfter.regions[name];
+      assert.ok(region, `there is no ${name} region`);
+      assert.equal(region.height, want,
+        `the ${name} region is ${region.height}px and is specified at ${want}px`);
+      assert.ok(region.content <= region.room + 1,
+        `the ${name} region holds ${region.content}px of content in ${region.room}px`);
+      assert.ok(region.right <= barAfter.innerWidth + 1,
+        `the ${name} region ends at ${region.right}px in a ${barAfter.innerWidth}px window`);
+    }
+  });
+  check('and Job, Scenario, Scale and Units are each where they went', () => {
+    // Not one of them is dropped: the job's name is the document bar's, the
+    // price set is the Estimate tab's header, and the scale and the units are
+    // in the tool settings strip because they are what decides whether a
+    // measurement exists at all.
+    assert.ok(barAfter.job.length > 0, `the document bar names no job: "${barAfter.job}"`);
+    assert.match(barAfter.stripText, /Scale/, `the strip reads "${barAfter.stripText}"`);
+    assert.match(barAfter.stripText, /Units/, `the strip reads "${barAfter.stripText}"`);
+  });
+  check('and the strip still says where the job is', () => {
     assert.ok(barAfter.path.includes(JOB), `the path slot reads "${barAfter.path}"`);
     assert.equal(barAfter.pathTail, '/demo-job',
       `the last folder is what must survive, and the path ends "${barAfter.pathTail}"`);
@@ -432,12 +444,22 @@ try {
         `"${b.text}" ends at ${b.right}px in a ${barAfter.innerWidth}px window`);
     }
   });
-  check('the last column of the recap is inside the window', () => {
+  check('the last column of the recap is inside the panel it is drawn in', () => {
+    // The claim is the same and its edge has moved: the recap is drawn in the
+    // cost panel now, so "inside the window" is not enough — a column that ends
+    // past the panel's own right edge is a column the estimator cannot see,
+    // whether or not the window is wide. The panel takes the width the chosen
+    // lens's columns come to, so this goes red the day a lens is given a column
+    // the panel was not widened for.
     assert.ok(barAfter.lastHeading, 'the recap has no headings');
+    assert.ok(barAfter.panelRight, 'there is no cost panel to draw it in');
+    assert.ok(barAfter.lastHeading.right <= barAfter.panelRight,
+      `"${barAfter.lastHeading.text}" ends at ${barAfter.lastHeading.right}px`
+      + ` in a panel ${barAfter.panelWidth}px wide ending at ${barAfter.panelRight}px`
+      + ` (the lens sheet's own scroller is`
+      + ` ${barAfter.sheetScrolls ? 'in use — the lens is wider than the panel' : 'not in use'})`);
     assert.ok(barAfter.lastHeading.right <= barAfter.innerWidth,
-      `"${barAfter.lastHeading.text}" ends at ${barAfter.lastHeading.right}px in a`
-      + ` ${barAfter.innerWidth}px window (the sheet's own scroller is`
-      + ` ${barAfter.sheetScrolls ? 'in use — the window may simply be narrow' : 'not in use'})`);
+      `and it ends at ${barAfter.lastHeading.right}px in a ${barAfter.innerWidth}px window`);
   });
   check('and the message gave way instead, ellipsized inside the bar', () => {
     assert.ok(barAfter.messageRight <= barAfter.innerWidth,

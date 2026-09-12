@@ -9,7 +9,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, openDemoJob, until, wait, commitStamp } from './tauri-harness.mjs';
+import { launch, openDemoJob, showTab, until, wait, commitStamp } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -21,13 +21,25 @@ const check = (name, fn) => {
   catch (e) { results.push('FAIL'); console.log(`  FAIL  ${name}\n        ${e.message}`); }
 };
 
-const toEditor = async (session, id) => {
-  await session.execute(function (which) {
-    const p = document.querySelector('.editor-picker');
-    p.value = which;
-    p.dispatchEvent(new Event('change', { bubbles: true }));
-  }, id);
-  await wait(2500);
+/**
+ * Open the book, the way a person does: the Condition tab, then "Load an
+ * assembly".
+ *
+ * There is no Library editor to switch to any more. The book is reached from
+ * the condition it is going to be loaded onto, which is the order the act
+ * actually happens in — and it is why the button beside it can say which
+ * condition it will land on.
+ */
+const openTheBook = async (session) => {
+  await showTab(session, 'Condition');
+  const pressed = await session.execute(function () {
+    const b = document.querySelector('.cost-load');
+    if (!b || b.disabled) return false;
+    b.click();
+    return true;
+  });
+  await wait(1200);
+  return pressed;
 };
 
 const sellingPrice = (session) => session.execute(function () {
@@ -44,16 +56,36 @@ try {
   await openDemoJob(session);
   await wait(1200);
 
-  // ── the library is an editor like any other ─────────────────────────────
-  const editors = await session.execute(function () {
-    const p = document.querySelector('.editor-picker');
-    return p ? [...p.options].map((o) => o.text) : [];
+  // ── the book is reached from the condition it loads onto ────────────────
+  await showTab(session, 'Condition');
+  const beforePicking = await session.execute(function () {
+    const b = document.querySelector('.cost-load');
+    return JSON.stringify({ there: !!b, off: b ? !!b.disabled : null, label: b ? b.textContent : '' });
   });
-  check('the Library is one of the editors an area can show', () => {
-    assert.ok(editors.includes('Library'), `the picker offers ${JSON.stringify(editors)}`);
+  check('the Condition tab offers the book', () => {
+    const state = JSON.parse(beforePicking);
+    assert.equal(state.there, true, 'there is no way into the library');
+    assert.match(state.label, /Load an assembly/, `the button reads "${state.label}"`);
+  });
+  check('and it will not open onto nothing', () => {
+    // Nothing is picked yet, and an assembly is loaded ONTO a condition. The
+    // button says what it needs rather than opening a book that cannot be used.
+    assert.equal(JSON.parse(beforePicking).off, true, 'it is live with no condition picked');
   });
 
-  await toEditor(session, 'library');
+  // ── pick a traced condition, then load a generic assembly onto it ───────
+  const picked = await session.execute(function () {
+    const row = [...document.querySelectorAll('.cost-condition .condition')]
+      .find((e) => /Low Roof/.test(e.textContent || ''));
+    if (!row) return null;
+    row.click();
+    return true;
+  });
+  check('a traced condition can be picked from the list', () => assert.ok(picked));
+  await wait(700);
+
+  const openedBook = await openTheBook(session);
+  check('and the book opens onto it', () => assert.equal(openedBook, true, 'the button would not open'));
   await until(session, () => !!document.querySelector('.library-card'), { what: 'the library' });
 
   const book = JSON.parse(await session.execute(function () {
@@ -73,20 +105,9 @@ try {
     assert.ok(book.girths.length >= 1, 'no profiles');
     for (const g of book.girths) assert.match(g, /in girth/, `girth read "${g}"`);
   });
-  check('and it will not load onto nothing', () => {
-    assert.match(book.loadLabel, /Pick a condition/, `button read "${book.loadLabel}"`);
+  check('and the card names the condition it will load onto', () => {
+    assert.match(book.loadLabel, /Load onto /, `button read "${book.loadLabel}"`);
   });
-
-  // ── pick a traced condition, then load a generic assembly onto it ───────
-  const picked = await session.execute(function () {
-    const node = [...document.querySelectorAll('.tree-label')]
-      .find((e) => /Low Roof/.test(e.textContent || ''));
-    if (!node) return null;
-    node.click();
-    return true;
-  });
-  check('a traced condition can be picked from the tree', () => assert.ok(picked));
-  await wait(700);
 
   const before = JSON.parse(await session.execute(function () {
     return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
@@ -137,16 +158,16 @@ try {
     Buffer.from(await session.screenshot(), 'base64'));
 
   // ── price it under two scenarios ────────────────────────────────────────
-  await toEditor(session, 'estimate');
-  await until(session, () => !!document.querySelector('.sheet'), { what: 'the sheet' });
+  await showTab(session, 'Estimate');
+  await until(session, () => !!document.querySelector('.cost-estimate'), { what: 'the lines' });
   await wait(800);
 
   const scenarios = JSON.parse(await session.execute(function () {
     const s = document.querySelector('.scenario-bar select');
     return JSON.stringify(s ? [...s.options].map((o) => ({ id: o.value, name: o.text })) : []);
   }));
-  check('the sheet offers the job\'s price sets', () => {
-    assert.ok(scenarios.length >= 2, `${scenarios.length} scenario(s)`);
+  check('the Estimate tab offers the job\'s price sets', () => {
+    assert.ok(scenarios.length >= 2, `${scenarios.length} of them`);
   });
 
   const first = await sellingPrice(session);
@@ -183,6 +204,9 @@ try {
   await writeFile(join(EVIDENCE, `section4-two-scenarios-${COMMIT}.png`),
     Buffer.from(await session.screenshot(), 'base64'));
 
+  await showTab(session, 'Condition');
+  await openTheBook(session);
+  await wait(900);
   const words = await session.execute(function () {
     const el = document.querySelector('.library-editor');
     return el ? (el.innerText || el.textContent || '') : '';

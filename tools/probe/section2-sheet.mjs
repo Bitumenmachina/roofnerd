@@ -19,7 +19,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { errorsSoFar, launch, openDemoJob, until, wait, watchErrors, commitStamp } from './tauri-harness.mjs';
+import {
+  errorsSoFar, launch, openDemoJob, showTab, until, wait, watchErrors, commitStamp,
+} from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -48,12 +50,15 @@ try {
   await wait(700);
 
   // ── the condition panel ─────────────────────────────────────────────────
+  // It is the cost panel's Condition tab now, beside the drawing rather than
+  // in an editor of its own. Same panel, same fields, same claim.
   await session.execute(function () {
-    const row = [...document.querySelectorAll('.condition')]
+    const row = [...document.querySelectorAll('.plan-rail .condition')]
       .find(function (e) { return /Parapet Wall Flashing/.test(e.textContent || ''); });
     if (row) row.click();
   });
   await wait(800);
+  await showTab(session, 'Condition');
 
   // What the job says the parapet is, so the checks below compare the window
   // against the document rather than against a number typed into this file. A
@@ -101,30 +106,24 @@ try {
     assert.deepEqual(drawingErrors, [], drawingErrors.join(' | '));
   });
 
-  // ── the sheet ───────────────────────────────────────────────────────────
-  await session.execute(function () {
-    const p = document.querySelector('.editor-picker');
-    p.value = 'estimate';
-    p.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  await wait(2500);
-  await until(session, () => !!document.querySelector('.sheet'), { what: 'the sheet' });
-  // A new page, so a new watch. This is the reload the old row was blind to.
-  await watchErrors(session);
+  // ── the lines ───────────────────────────────────────────────────────────
+  // The Estimate tab. There is no editor switch and no reload any more — the
+  // tab is a tab, so the error watch that had to be reinstalled after every
+  // switch is installed once and stays.
+  await showTab(session, 'Estimate');
+  await until(session, () => !!document.querySelector('.cost-estimate'), { what: 'the lines' });
 
   const lines = JSON.parse(await session.execute(function () {
-    const rows = [...document.querySelectorAll('.sheet tbody tr')]
-      .filter(function (r) { return r.querySelectorAll('td').length > 8; });
-    return JSON.stringify(rows.map(function (r) {
-      const c = r.querySelectorAll('td');
-      const input = function (i) { const el = c[i].querySelector('input, select'); return el ? el.value : (c[i].textContent || '').trim(); };
+    return JSON.stringify([...document.querySelectorAll('.cost-line')].map(function (r) {
+      const text = function (sel) { const el = r.querySelector(sel); return el ? (el.textContent || '').trim() : ''; };
       return {
-        description: input(0),
-        formula: input(2),
-        quantity: (c[3].textContent || '').trim(),
-        unit: input(4),
-        extended: (c[9].textContent || '').trim(),
-        note: (c[2].querySelector('.formula-note') || {}).textContent || '',
+        description: text('.line-item'),
+        formula: text('.line-formula'),
+        quantity: text('.line-qty'),
+        unit: text('.line-unit').replace('◈', '').trim(),
+        extended: text('.line-money'),
+        note: text('.formula-note'),
+        derived: !!r.querySelector('.line-unit .derived'),
       };
     }));
   }));
@@ -166,8 +165,19 @@ try {
     assert.ok(parapet.some((l) => /\$/.test(l.extended)), 'no line carries money');
   });
 
+  check('a quantity the program worked out says so, and one that was typed says so', () => {
+    // The handoff's provenance contract, on the line where an estimator reads
+    // it: a formula over what was traced carries the cyan mark; there is no
+    // third state. This is new and it is the frame's own rule.
+    const worked = parapet.filter((l) => !/^\s*-?[\d.,]+\s*$/.test(l.formula));
+    assert.ok(worked.length > 0, `the parapet's formulas read ${JSON.stringify(parapet.map((l) => l.formula))}`);
+    for (const l of worked) {
+      assert.equal(l.derived, true, `"${l.description}" is worked out from ${l.formula} and carries no mark`);
+    }
+  });
+
   const totals = await session.execute(function () {
-    return (document.querySelector('.sheet-foot, .totals, .area') || document.body).innerText || '';
+    return (document.querySelector('.cost-totals') || document.body).innerText || '';
   });
   check('the sheet totals to a selling price', () => {
     assert.match(totals, /SELLING PRICE/i, 'no selling price');
@@ -175,31 +185,49 @@ try {
   });
 
   // ── a formula that cannot be worked out ─────────────────────────────────
+  // The formula is edited where it always was: on the line. The line is opened
+  // to its chain first, which is the act a person performs to get at it — and
+  // the field it opens to is the same field writing to the same pointer.
+  const opened = await session.execute(function () {
+    const line = [...document.querySelectorAll('.cost-line')]
+      .find(function (r) {
+        const chip = r.querySelector('.line-formula');
+        return chip && (chip.textContent || '').trim() === 'LF';
+      });
+    if (!line) return false;
+    line.querySelector('.line-what').click();
+    return true;
+  });
+  check('a line opens to its whole chain, where the formula is', () =>
+    assert.equal(opened, true, 'no line carrying the formula LF'));
+  await wait(900);
+
   await session.execute(function () {
-    const row = [...document.querySelectorAll('.sheet tbody tr')]
-      .find(function (r) { const i = r.querySelector('td:nth-child(3) input'); return i && i.value === 'LF'; });
-    const field = row.querySelector('td:nth-child(3) input');
+    const field = document.querySelector('.line-chain input.formula');
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
     setter.call(field, 'LF * ');
     field.dispatchEvent(new Event('input', { bubbles: true }));
     field.dispatchEvent(new Event('change', { bubbles: true }));
-    field.blur();
   });
   await wait(1200);
 
   const broken = JSON.parse(await session.execute(function () {
-    const row = [...document.querySelectorAll('.sheet tbody tr')]
-      .find(function (r) { const i = r.querySelector('td:nth-child(3) input'); return i && i.value === 'LF * '; });
-    if (!row) return JSON.stringify({ found: false });
-    const c = row.querySelectorAll('td');
-    const note = row.querySelector('.formula-note, .formula-error');
+    const chain = document.querySelector('.line-chain');
+    const line = document.querySelector('.cost-line.open');
+    if (!chain || !line) return JSON.stringify({ found: false });
+    const field = chain.querySelector('input.formula');
+    const note = chain.querySelector('.formula-error') || line.querySelector('.formula-error, .formula-note');
+    const rowOf = function (name) {
+      const row = [...chain.querySelectorAll('.chain-row')]
+        .find(function (r) { return ((r.querySelector('.chain-name') || {}).textContent || '') === name; });
+      return row ? ((row.querySelector('.chain-value') || {}).textContent || '').trim() : '';
+    };
     return JSON.stringify({
-      found: true,
-      quantity: (c[3].textContent || '').trim(),
-      extended: (c[9].textContent || '').trim(),
+      found: !!field && field.value === 'LF * ',
+      quantity: rowOf('Quantity'),
+      extended: rowOf('Extended'),
+      onTheLine: ((line.querySelector('.line-qty') || {}).textContent || '').trim(),
       note: note ? (note.textContent || '').trim() : '',
-      title: note ? (note.getAttribute('title') || '') : '',
-      red: note ? getComputedStyle(note).color : '',
     });
   }));
   check('a formula that cannot be worked out says so on its own line', () => {
@@ -209,9 +237,10 @@ try {
   check('and shows no quantity and no money rather than a zero', () => {
     assert.match(broken.quantity, /^[—-]?$/, `quantity read "${broken.quantity}"`);
     assert.match(broken.extended, /^[—-]?$/, `extended read "${broken.extended}"`);
+    assert.match(broken.onTheLine, /^[—-]?$/, `the line itself read "${broken.onTheLine}"`);
   });
 
-  await writeFile(join(EVIDENCE, `section2-estimate-sheet-${COMMIT}.png`),
+  await writeFile(join(EVIDENCE, `section2-estimate-lines-${COMMIT}.png`),
     Buffer.from(await session.screenshot(), 'base64'));
 
   const errors = await errorsSoFar(session);

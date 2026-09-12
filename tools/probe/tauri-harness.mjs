@@ -447,14 +447,95 @@ export async function elementShot(session, selector) {
   }
 }
 
-/** Pick a tool off the toolbar by the word on it. */
+/**
+ * Pick an act off the tool rail by the word on it.
+ *
+ * The rail's buttons carry the act as their accessible name — "Trace an area",
+ * "Run a parapet", "Drop a drain", "Scale" — because the word IS the button:
+ * the icon is a picture of it and the chip on hover is the same string. So a
+ * check puts its hand on the act rather than on a position in a row.
+ */
 export const tool = async (session, label) => {
-  await session.execute(function (want) {
-    const b = [...document.querySelectorAll('.toolbar .tool')]
-      .find((e) => e.textContent.trim().startsWith(want));
-    if (b) b.click();
+  const found = await session.execute(function (want) {
+    const b = [...document.querySelectorAll('.tool-rail .rail-tool')]
+      .find((e) => (e.getAttribute('aria-label') || '').toLowerCase().startsWith(String(want).toLowerCase()));
+    if (!b) return false;
+    b.click();
+    return true;
   }, label);
   await wait(300);
+  return found;
+};
+
+/** Switch the surface between Plan and Model, the way a person does. */
+export const showView = async (session, title) => {
+  const found = await session.execute(function (want) {
+    const b = [...document.querySelectorAll('.view-switch .views button')]
+      .find((e) => (e.textContent || '').trim() === want);
+    if (!b) return false;
+    b.click();
+    return true;
+  }, title);
+  await wait(700);
+  return found;
+};
+
+/** Show a tab of the cost panel — Estimate, Condition or Recap. */
+export const showTab = async (session, title) => {
+  const found = await session.execute(function (want) {
+    const b = [...document.querySelectorAll('.cost-tabs .cost-tab')]
+      .find((e) => (e.textContent || '').trim() === want);
+    if (!b) return false;
+    b.click();
+    return true;
+  }, title);
+  await wait(700);
+  return found;
+};
+
+/**
+ * Choose who the estimate is being shown to, in the document bar.
+ *
+ * Open the menu, then click the row. Two acts, because that is what a hand
+ * does: the lens selector is a closed word until somebody asks it.
+ */
+export const pickLens = async (session, name) => {
+  const found = await session.execute(function (want) {
+    const open = document.querySelector('.lens-selector .lens-button');
+    if (!open) return false;
+    open.click();
+    const row = [...document.querySelectorAll('.lens-menu .lens')]
+      .find((e) => ((e.querySelector('strong') || {}).textContent || '') === want);
+    if (!row) return false;
+    row.click();
+    return true;
+  }, name);
+  await wait(900);
+  return found;
+};
+
+/** Pull the cost panel into its own window, from the button beside the tabs. */
+export const detachCostPanel = async (session) => {
+  const pressed = await session.execute(function () {
+    const b = document.querySelector('.cost-tabs .icon-button[aria-label="Open the cost panel in its own window"]');
+    if (!b) return false;
+    b.click();
+    return true;
+  });
+  await wait(3000);
+  return pressed;
+};
+
+/** Send it home, from either window. */
+export const dockCostPanel = async (session) => {
+  const pressed = await session.execute(function () {
+    const b = document.querySelector('.cost-dock') || document.querySelector('.view-switch .redock:not([hidden])');
+    if (!b) return false;
+    b.click();
+    return true;
+  });
+  await wait(2000);
+  return pressed;
 };
 
 /** Type a real dimension into the scale field and commit it. */

@@ -9,7 +9,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, openDemoJob, until, wait, commitStamp } from './tauri-harness.mjs';
+import {
+  detachCostPanel, launch, openDemoJob, showTab, until, wait, commitStamp,
+} from './tauri-harness.mjs';
 import { writeFile as writeBinary } from 'node:fs/promises';
 
 const ROOT = resolve(import.meta.dirname, '../..');
@@ -42,58 +44,100 @@ try {
 
   // ── one document, opened through the front door ─────────────────────────
   await openDemoJob(session);
-  const opened = await session.execute(() => document.querySelector('.menu-job')?.textContent);
+  const opened = await session.execute(() => document.querySelector('.doc-job')?.textContent);
   check('a job opens from the start screen, by a button a person clicks', () =>
     assert.ok(opened && opened.length > 0, `job name reads "${opened}"`));
 
   // ── two real OS windows on that one document ────────────────────────────
+  // Through the button, not the command: the panel is detached by pressing the
+  // thing beside the tabs, which is the path a person has. This used to invoke
+  // `open_editor` over the bridge, which tests that the shell can open a window
+  // and says nothing about whether anybody could ask it to.
   const before = await session.handles();
-  await session.execute(() => window.__TAURI_INTERNALS__.invoke('open_editor', { editor: 'estimate' }));
-  await wait(1500);
+  const pressed = await detachCostPanel(session);
   const after = await session.handles();
 
-  check('tearing off an editor opens a second OS window', () =>
-    assert.ok(after.length > before.length, `${before.length} window(s) before, ${after.length} after`));
+  check('the cost panel detaches into a second OS window', () => {
+    assert.equal(pressed, true, 'there is no button beside the tabs to press');
+    assert.ok(after.length > before.length, `${before.length} before, ${after.length} after`);
+  });
 
   const second = after.find((h) => !before.includes(h));
   await session.switchTo(second);
-  await until(session, () => document.querySelector('#editor')?.children.length > 0,
-    { what: 'the torn-off editor to mount' });
+  // The detached window IS the panel: there is no surface in it to wait for.
+  await until(session, () => !!document.querySelector('.cost-panel.detached .cost-totals'),
+    { what: 'the detached cost panel to mount' });
 
-  // A torn-off window has no menu bar — that is the point of A3 — so what it
-  // knows about the job is read from its status bar, which it does have.
+  // The detached window has no document bar — it is the panel and nothing else
+  // — so what it knows about the job is read from its own title bar, which it
+  // does have and which names the job whose money it is showing.
   const seenInSecond = await session.execute(() =>
-    (document.querySelector('.status-facts') || {}).textContent || '');
+    (document.querySelector('.cost-title-name') || {}).textContent || '');
   check('the second window is on the same job, not its own copy', () =>
-    assert.ok(seenInSecond.includes(opened), `it shows "${seenInSecond}"`));
+    assert.ok(opened && seenInSecond.includes(opened), `it shows "${seenInSecond}"`));
 
-  // Change the job from the FIRST window, by typing in a field, and watch the
-  // SECOND window follow. Typing rather than writing to the document: the point
-  // is that the loop works for a person, not that the bridge works.
-  await session.switchTo(before[0]);
+  // Change the job by typing in a field in ONE window, and watch the OTHER
+  // follow. Typing rather than writing to the document: the point is that the
+  // loop works for a person, not that the bridge works.
+  //
+  // Which window does the typing has changed with the anatomy, and it had to.
+  // The properties are the cost panel's Condition tab, and the panel is what
+  // detaches — so with it on the second monitor the fields are THERE and the
+  // drawing is here. That is the arrangement the handoff draws and it is the
+  // stronger test of the same claim: the estimator types beside the money and
+  // the roof follows on the other screen.
+  await showTab(session, 'Condition');
   await session.execute(() => {
-    const row = document.querySelector('.condition');
+    const row = [...document.querySelectorAll('.cost-condition .condition')]
+      .find((r) => /Parapet/.test(r.textContent || ''));
     if (row) row.click();
   });
-  await wait(500);
+  await wait(700);
+
+  const heightWas = await session.execute(() => {
+    const label = [...document.querySelectorAll('.condition-panel label')]
+      .find((l) => l.querySelector('span')?.textContent === 'Height');
+    const field = label ? label.querySelector('input') : null;
+    return field ? field.value : null;
+  });
+
   const typed = await session.execute(() => {
-    const field = [...document.querySelectorAll('.condition-panel label')]
-      .find((l) => l.querySelector('span')?.textContent === 'Height')?.querySelector('input');
+    const label = [...document.querySelectorAll('.condition-panel label')]
+      .find((l) => l.querySelector('span')?.textContent === 'Height');
+    const field = label ? label.querySelector('input') : null;
     if (!field) return null;
-    field.value = '7';
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(field, '7');
     field.dispatchEvent(new Event('input', { bubbles: true }));
     return true;
   });
-  check('a property can be typed in the Plan window', () => assert.equal(typed, true));
-  await wait(1200);
-
-  await session.switchTo(second);
-  const heard = await session.execute(() => {
-    const rows = [...document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)')];
-    return rows.map((r) => r.querySelectorAll('td')[3]?.textContent ?? '').join('|');
+  check('a property can be typed in the window the cost panel is in', () => {
+    assert.equal(typed, true, `the panel read its height as "${heightWas}"`);
   });
-  check('and the money in the other window moves with it', () =>
-    assert.ok(/\d/.test(heard), `the sheet shows "${heard}"`));
+  await wait(1400);
+
+  await session.switchTo(before[0]);
+  const heard = await session.execute(() => {
+    const row = [...document.querySelectorAll('.plan-rail .condition')]
+      .find((r) => /Parapet/.test(r.textContent || ''));
+    return row ? (row.innerText || '').replace(/\s+/g, ' ') : '';
+  });
+  check('and the roof in the other window follows it', () =>
+    assert.match(heard, /7 ft high/, `the condition reads "${heard}"`));
+
+  // Put it back, so nothing after this reads a job this check moved.
+  await session.switchTo(second);
+  await session.execute((was) => {
+    const label = [...document.querySelectorAll('.condition-panel label')]
+      .find((l) => l.querySelector('span')?.textContent === 'Height');
+    const field = label ? label.querySelector('input') : null;
+    if (!field) return false;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(field, String(was ?? ''));
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  }, heightWas);
+  await wait(900);
 
   // ── the security policy, tested rather than promised ────────────────────
   const outward = await session.executeAsync(function (done) {
@@ -131,7 +175,7 @@ try {
   await session.switchTo(before[0]);
   await writeBinary(join(EVIDENCE, `runtime-plan-${COMMIT}.png`), Buffer.from(await session.screenshot(), 'base64'));
   await session.switchTo(second);
-  await writeBinary(join(EVIDENCE, `runtime-estimate-${COMMIT}.png`), Buffer.from(await session.screenshot(), 'base64'));
+  await writeBinary(join(EVIDENCE, `runtime-cost-${COMMIT}.png`), Buffer.from(await session.screenshot(), 'base64'));
 } catch (e) {
   results.push('FAIL');
   console.log(`  FAIL  the check stopped: ${e.message}`);

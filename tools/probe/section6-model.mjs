@@ -20,7 +20,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import {
-  centreOf, launch, openDemoJob, pointerClick, pointerRelease, until, wait, commitStamp,
+  centreOf, detachCostPanel, launch, openDemoJob, pointerClick, pointerRelease,
+  showTab, showView, until, wait, commitStamp,
 } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
@@ -78,15 +79,22 @@ const panelNow = (session) => session.execute(function () {
   });
 });
 
-/** The sheet, as the other window shows it: the group rows and their money. */
+/**
+ * The lines, as the cost panel shows them: each condition's header row and the
+ * money on the lines under it.
+ *
+ * It reads the compact line the estimator actually looks at — item, quantity,
+ * unit, money — rather than an eleven-column table that no longer exists. The
+ * claims are the same: which condition is marked, what it measures, what each
+ * of its lines came to, and what the whole thing sells for.
+ */
 const sheetNow = (session) => session.execute(function () {
-  const rows = [...document.querySelectorAll('.sheet tbody tr')];
   const groups = [];
   let current = null;
-  for (const row of rows) {
-    if (row.classList.contains('group-row')) {
+  for (const row of document.querySelectorAll('.cost-lines > *')) {
+    if (row.classList.contains('cost-group')) {
       current = {
-        name: ((row.querySelector('td span:nth-of-type(2)') || {}).textContent || '').trim(),
+        name: ((row.querySelector('.group-name') || {}).textContent || '').trim(),
         text: (row.textContent || '').replace(/\s+/g, ' ').trim(),
         on: row.classList.contains('on'),
         measures: ((row.querySelector('.group-measures') || {}).textContent || '').trim(),
@@ -95,12 +103,10 @@ const sheetNow = (session) => session.execute(function () {
       groups.push(current);
       continue;
     }
-    const extended = row.querySelector('td.extended');
-    const item = row.querySelector('td input');
-    if (extended && current) {
+    if (row.classList.contains('cost-line') && current) {
       current.money.push({
-        item: item ? item.value : '',
-        extended: (extended.textContent || '').trim(),
+        item: ((row.querySelector('.line-item') || {}).textContent || '').trim(),
+        extended: ((row.querySelector('.line-money') || {}).textContent || '').trim(),
       });
     }
   }
@@ -166,62 +172,42 @@ try {
     pointerPath = 'synthetic';
     pointerRefused = 'the demo button was not on screen to aim at';
   }
-  console.log(`  pointer: ${pointerPath}${pointerRefused ? ` — ${pointerRefused}` : ''}`);
-  check(`the driver clicks where a hand would (${pointerPath})`, () => {
-    assert.equal(pointerPath, 'actions',
-      `real pointer input is not available: ${pointerRefused}. Every pointer below`
-      + ' ran as a synthetic event, which is weaker evidence and is reported as such.');
-  });
+  // REPORTED, not asserted. Whether tauri-driver will dispatch a real pointer is
+  // a fact about the harness on this box, not about the program — 6c found
+  // WebKitWebDriver refusing all three shapes of a W3C click, with its own words
+  // on the record. A row that can only ever be red says nothing about the build
+  // and teaches the reader to skip the list. What it costs is carried instead:
+  // every row below that depends on real input names the path it took.
+  console.log(`  REPORT  real pointer input: ${pointerPath === 'actions'
+    ? 'available — every pick below is a driver click'
+    : `refused, so every pick below is a dispatched event — ${pointerRefused.split('\n')[0]}`}`);
 
   if (pointerPath !== 'actions') await openDemoJob(session);
   await until(session, () => !document.querySelector('.start'), { what: 'the job to open' });
   await wait(1200);
 
-  // ── window B: the Estimate Sheet, torn off the way a person tears it off ──
-  // From the Plan, the tear-off button gives the sheet — the working pair. It
-  // has to happen here, while the Plan is still the editor in this area.
-  const oneWindow = await session.handles();
-  const tore = await session.execute(function () {
-    const b = [...document.querySelectorAll('.area-header .icon-button')]
-      .find((e) => (e.getAttribute('aria-label') || '') === 'Open in its own window');
-    if (!b) return false;
-    b.click();
-    return true;
-  });
-  await wait(3000);
-  const handles = await session.handles();
-  const A = oneWindow[0];
-  const B = handles.find((h) => !oneWindow.includes(h)) ?? null;
-  check('the Estimate Sheet tears off into its own window', () => {
-    assert.ok(tore, 'no tear-off button in the area header');
-    assert.ok(B, `${oneWindow.length} window before and ${handles.length} after`);
-  });
-  if (B) {
-    await session.switchTo(B);
-    await until(session, () => !!document.querySelector('.sheet'), { what: 'the torn-off sheet' });
-    await session.switchTo(A);
-    await wait(400);
-  }
-
-  // ── the Model is an editor, in the picker every area already has ────────
-  // D57. Not a new window kind, not a special case — the mechanism section 1
-  // built for tearing an editor off is the mechanism this arrives through.
+  // ── the Model is one of the views the surface shows ─────────────────────
+  // Three views of one geometry, switched IN PLACE. It used to be an editor in
+  // a picker, and picking reloaded the window; the roof is now a swap of what
+  // is mounted in the surface, over the same document, the same selection and
+  // the same panel.
   const options = await session.execute(function () {
-    const picker = document.querySelector('.editor-picker');
-    return picker ? [...picker.options].map((o) => o.text) : [];
+    return [...document.querySelectorAll('.view-switch .views button')].map((b) => (b.textContent || '').trim());
   });
-  check('the Model is one of the editors an area can show', () => {
-    assert.ok(options.includes('Model'), `the picker offers ${JSON.stringify(options)}`);
+  check('the Model is one of the views the surface can show', () => {
+    assert.ok(options.includes('Model'), `the switch offers ${JSON.stringify(options)}`);
   });
 
-  // Switch to it the way a person does: the picker.
-  await session.execute(function () {
-    const picker = document.querySelector('.editor-picker');
-    picker.value = 'model';
-    picker.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  await wait(2500);
+  // A mark on the window, so "the switch did not reload the page" is a fact and
+  // not an impression: a reload takes every global with it.
+  await session.execute(function () { window.__markBeforeSwitch = 'still here'; });
+  const switched = await showView(session, 'Model');
   await until(session, () => !!document.querySelector('.model-canvas'), { what: 'the model canvas' });
+  const mark = await session.execute(function () { return window.__markBeforeSwitch || 'gone'; });
+  check('and switching to it does not reload the window', () => {
+    assert.equal(switched, true, 'there is no Model button in the view switch');
+    assert.equal(mark, 'still here', 'the page was reloaded — everything in it was thrown away');
+  });
 
   const canvas = await session.execute(function () {
     const el = document.querySelector('.model-canvas');
@@ -235,13 +221,20 @@ try {
     assert.ok(canvas.gl, 'no WebGL context — nothing could have been drawn');
   });
 
+  // The readout is the window's status strip now — the same region whatever
+  // the surface is showing, which is what lets the Plan carry the same four
+  // facts when it can compute them. It answers in em dashes until the pointer
+  // is on the roof, which is a true thing to say rather than a blank.
   const readout = await session.execute(function () {
-    const el = document.querySelector('.model-readout');
-    return el ? (el.textContent || '').trim() : null;
+    const el = document.querySelector('.status-strip .readout');
+    return el ? (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim() : null;
   });
   check('the roof can be read where the pointer is', () => {
-    assert.ok(readout !== null, 'no readout');
-    assert.match(readout, /roof/i, `readout said "${readout}"`);
+    assert.ok(readout !== null, 'no readout in the status strip');
+    for (const want of ['Slope', 'Insulation here', 'Flow']) {
+      assert.ok(readout.includes(want), `the readout says "${readout}"`);
+    }
+    assert.match(readout, /—/, `nothing is under the pointer and it should read em dashes: "${readout}"`);
   });
 
   // ── §5.6, first half: the tapered layout renders as slopes ──────────────
@@ -564,12 +557,27 @@ try {
 
   // ── Addendum 4 §4: selection crosses the WINDOWS, and is not editing ────
   //
-  // What was here clicked a tree node and asserted that the node existed. It
-  // tested nothing — not that anything was selected, not that the 3D view knew,
-  // and certainly not the claim, which is about two windows (register #32, and
-  // the line STATUS has carried as not proven ever since). Window A is this one
-  // with the roof in it; window B is the sheet, torn off. Both directions, and
-  // the money at the end of it.
+  // Window A is this one, with the roof in it. Window B is the cost panel,
+  // pulled onto the other monitor — which is the second window this program
+  // opens now, and the arrangement the handoff draws: geometry on one screen,
+  // money on the other. Both directions, and the money at the end of it.
+  const oneWindow = await session.handles();
+  const tore = await detachCostPanel(session);
+  const handles = await session.handles();
+  const A = oneWindow[0];
+  const B = handles.find((h) => !oneWindow.includes(h)) ?? null;
+  check('the cost panel detaches onto the other monitor', () => {
+    assert.ok(tore, 'no detach button beside the tabs');
+    assert.ok(B, `${oneWindow.length} window before and ${handles.length} after`);
+  });
+  if (B) {
+    await session.switchTo(B);
+    await until(session, () => !!document.querySelector('.cost-panel.detached'),
+      { what: 'the detached cost panel' });
+    await session.switchTo(A);
+    await wait(600);
+  }
+
   const names = JSON.parse(await session.execute(function () {
     return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
       const out = {};
@@ -620,15 +628,40 @@ try {
   }
 
   const pickedA = JSON.parse(await modelNow(session));
-  const panelLowRoof = JSON.parse(await panelNow(session));
 
   check(`picking the Low Roof in 3D selects it (${pickPath})`, () => {
     assert.ok(pickedA.there, 'the view has nothing to say about itself');
     assert.equal(pickedA.selectedConditionId, 'c-tapered',
       `the view believes ${pickedA.selectedConditionId ?? 'nothing'} is selected`);
   });
-  check('and the panel beside the roof names it and shows what it measures', () => {
-    assert.ok(panelLowRoof.there, 'no Properties panel in the window with the roof in it');
+
+  // ── (b) the other window already knows ──────────────────────────────────
+  // The panel is in window B, so what the pick reached is read there: the lines
+  // mark the condition, and the Condition tab names it with its measures and
+  // what it costs.
+  let sheetB = null;
+  let panelLowRoof = null;
+  if (B) {
+    await session.switchTo(B);
+    await until(session, () => !!document.querySelector('.cost-estimate'), { what: 'the lines' });
+    await wait(800);
+    sheetB = JSON.parse(await sheetNow(session));
+    await showTab(session, 'Condition');
+    panelLowRoof = JSON.parse(await panelNow(session));
+  }
+  const lowRoofRow = sheetB?.groups.find((g) => g.text.includes(names['c-tapered'])) ?? null;
+
+  check('and the lines in the other window mark the same condition', () => {
+    assert.ok(sheetB, 'there is no second window to look in');
+    assert.ok(lowRoofRow, `the panel has no group for "${names['c-tapered']}"`);
+    assert.ok(lowRoofRow.on,
+      'the group is not marked — a pick in 3D did not cross the window frame');
+    const others = sheetB.groups.filter((g) => g.on).length;
+    assert.equal(others, 1, `${others} groups are marked at once`);
+  });
+  check('and the panel in that window names it and shows what it measures', () => {
+    assert.ok(panelLowRoof && panelLowRoof.count === 1,
+      'no Properties panel in the window the cost panel is in');
     assert.equal(panelLowRoof.name, names['c-tapered'],
       `the panel names "${panelLowRoof.name}"`);
     assert.match(panelLowRoof.measure?.['Area'] ?? '', /\d/,
@@ -640,37 +673,22 @@ try {
     // The demo's Low Roof is traced and carries no line. $0.00 would be a lie
     // an estimator could bid on, and this is the row that makes sure it is not
     // what the panel says.
-    assert.equal(panelLowRoof.cost, 'nothing priced on it',
-      `the panel's cost line reads "${panelLowRoof.cost}"`);
-  });
-
-  // ── (b) the other window already knows ──────────────────────────────────
-  let sheetB = null;
-  if (B) {
-    await session.switchTo(B);
-    await until(session, () => !!document.querySelector('.sheet'), { what: 'the sheet' });
-    await wait(800);
-    sheetB = JSON.parse(await sheetNow(session));
-  }
-  const lowRoofRow = sheetB?.groups.find((g) => g.text.includes(names['c-tapered'])) ?? null;
-
-  check('and the sheet in the other window marks the same condition', () => {
-    assert.ok(sheetB, 'there is no second window to look in');
-    assert.ok(lowRoofRow, `the sheet has no row for "${names['c-tapered']}"`);
-    assert.ok(lowRoofRow.on,
-      'the row is not marked — a pick in 3D did not cross the window frame');
-    const others = sheetB.groups.filter((g) => g.on).length;
-    assert.equal(others, 1, `${others} rows are marked at once`);
+    assert.equal(panelLowRoof && panelLowRoof.cost, 'nothing priced on it',
+      `the panel's cost line reads "${panelLowRoof && panelLowRoof.cost}"`);
   });
   check('and both windows print the same area for it', () => {
-    const inPanel = (panelLowRoof.measure?.['Area'] ?? '').replace(/[^\d.]/g, '');
+    // The panel's figure against the group row's, in the two windows they are
+    // drawn in. One measurement, two surfaces, and they cannot be allowed to
+    // differ by so much as a digit.
+    const inPanel = (panelLowRoof?.measure?.['Area'] ?? '').replace(/[^\d.]/g, '');
     assert.ok(inPanel.length > 0, 'the panel shows no area');
     assert.ok(lowRoofRow && lowRoofRow.measures.includes(inPanel),
-      `the panel says ${inPanel} and the sheet's row says "${lowRoofRow?.measures}"`);
+      `the panel says ${inPanel} and the group row says "${lowRoofRow?.measures}"`);
   });
 
-  // ── (c) and back the other way: pick on the sheet, watch the roof ───────
-  const parapetAt = B ? await centreOf(session, '.sheet tr.group-row', names['c-parapet']) : null;
+  // ── (c) and back the other way: pick on the lines, watch the roof ───────
+  if (B) await showTab(session, 'Estimate');
+  const parapetAt = B ? await centreOf(session, '.cost-group', names['c-parapet']) : null;
   let rowClicked = false;
   if (parapetAt && pickPath === 'actions') {
     const at = JSON.parse(parapetAt);
@@ -683,7 +701,7 @@ try {
   }
   if (!rowClicked && B) {
     await session.execute(function (want) {
-      const row = [...document.querySelectorAll('.sheet tr.group-row')]
+      const row = [...document.querySelectorAll('.cost-group')]
         .find(function (r) { return (r.textContent || '').indexOf(want) >= 0; });
       if (row) row.click();
     }, names['c-parapet']);
@@ -692,14 +710,19 @@ try {
   const sheetParapet = B ? JSON.parse(await sheetNow(session)) : null;
   const parapetRowBefore = sheetParapet?.groups.find((g) => g.text.includes(names['c-parapet'])) ?? null;
 
+  const panelParapet = B ? await (async () => {
+    await showTab(session, 'Condition');
+    const read = JSON.parse(await panelNow(session));
+    await showTab(session, 'Estimate');
+    return read;
+  })() : null;
   if (B) {
     await session.switchTo(A);
     await wait(1000);
   }
   const litA = JSON.parse(await modelNow(session));
-  const panelParapet = JSON.parse(await panelNow(session));
 
-  check('picking a condition on the sheet reaches the roof in the other window', () => {
+  check('picking a condition on the lines reaches the roof in the other window', () => {
     assert.ok(parapetRowBefore, `no row for "${names['c-parapet']}" to pick`);
     assert.equal(litA.selectedConditionId, 'c-parapet',
       `the view believes ${litA.selectedConditionId ?? 'nothing'} is selected`);
@@ -715,15 +738,15 @@ try {
     assert.ok(litA.lit.some((m) => String(m.kind).startsWith('parapet')),
       `what is lit is ${JSON.stringify(litA.lit)}`);
   });
-  check('and the panel figure is the sheet\'s own money, to the cent', () => {
-    const inPanel = cents(panelParapet.cost);
-    assert.ok(inPanel !== null, `the panel's cost line reads "${panelParapet.cost}"`);
+  check('and the panel figure is the lines\' own money, to the cent', () => {
+    const inPanel = cents(panelParapet && panelParapet.cost);
+    assert.ok(inPanel !== null, `the panel's cost line reads "${panelParapet && panelParapet.cost}"`);
     const onSheet = (parapetRowBefore?.money ?? [])
       .map((m) => cents(m.extended))
       .filter((c) => c !== null)
       .reduce((sum, c) => sum + c, 0);
     assert.equal(inPanel, onSheet,
-      `the panel says ${inPanel} cents and the sheet's own lines add to ${onSheet}`);
+      `the panel says ${inPanel} cents and its own lines add to ${onSheet}`);
   });
 
   // ── (e) none of that was an edit ────────────────────────────────────────
@@ -739,11 +762,18 @@ try {
   await writeFile(join(EVIDENCE, `section6-both-windows-a-${COMMIT}.png`),
     Buffer.from(await session.screenshot(), 'base64'));
 
-  // ── (d) a property typed in the panel beside the roof moves the money ───
+  // ── (d) a property typed beside the money moves it, and the roof follows ─
   // Typing a height is not dragging geometry: §4.10 stands, and the panel is
-  // the place a height has always been typed. What is new is that the panel is
-  // in the window with the roof in it, and the sheet is on the other monitor.
-  const heightBefore = Number(panelParapet.height);
+  // the place a height has always been typed. What is new is which window it is
+  // in — the panel is the thing that detaches, so the fields are on the second
+  // monitor and the roof is here. The claim is the same and it now runs the
+  // other way round: type beside the money and watch the roof follow.
+  if (B) {
+    await session.switchTo(B);
+    await showTab(session, 'Condition');
+    await wait(600);
+  }
+  const heightBefore = Number(panelParapet && panelParapet.height);
   const typed = await session.execute(function (value) {
     const label = [...document.querySelectorAll('.condition-panel label')]
       .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Height'; });
@@ -758,7 +788,7 @@ try {
 
   let sheetAfter = null;
   if (B) {
-    await session.switchTo(B);
+    await showTab(session, 'Estimate');
     await wait(1200);
     sheetAfter = JSON.parse(await sheetNow(session));
     await writeFile(join(EVIDENCE, `section6-both-windows-b-${COMMIT}.png`),
@@ -766,12 +796,36 @@ try {
   }
   const parapetRowAfter = sheetAfter?.groups.find((g) => g.text.includes(names['c-parapet'])) ?? null;
 
-  check('a height typed in the panel moves the selling price in the other window', () => {
+  // What the window with the roof in it now says the parapet is, read off the
+  // job as that window holds it — one document, two windows.
+  let roofAfterTyping = null;
+  if (B) {
+    await session.switchTo(A);
+    await wait(1200);
+    roofAfterTyping = await session.execute(function () {
+      return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+        const c = d.conditions.find(function (x) { return x.id === 'c-parapet'; });
+        return String((c.properties || {}).H ?? '');
+      });
+    });
+    await session.switchTo(B);
+    await wait(400);
+  }
+
+  check('a height typed in the panel moves the selling price pinned under it', () => {
     assert.ok(typed, 'the panel has no Height field to type in');
-    assert.ok(Number.isFinite(heightBefore), `the panel read its height as "${panelParapet.height}"`);
-    assert.ok(sheetAfter, 'there is no second window to read the price in');
+    assert.ok(Number.isFinite(heightBefore),
+      `the panel read its height as "${panelParapet && panelParapet.height}"`);
+    assert.ok(sheetAfter, 'there is no cost panel to read the price in');
     assert.notEqual(cents(sheetAfter.selling), cents(sheetParapet.selling),
       `the selling price stayed at ${sheetAfter.selling}`);
+  });
+  check('and the roof in the other window took the new height', () => {
+    // The cross-window half, at the new anatomy: the fields are here and the
+    // geometry is there, so what has to travel is the height itself.
+    assert.ok(roofAfterTyping !== null, 'there is no other window to look in');
+    assert.ok(roofAfterTyping.includes(String(heightBefore * 2)),
+      `the roof's parapet reads "${roofAfterTyping}" and the height was set to ${heightBefore * 2}`);
   });
   check('and it is the one line the height is in that moved, and it doubled', () => {
     const was = (parapetRowBefore?.money ?? []).map((m) => cents(m.extended));
@@ -790,7 +844,7 @@ try {
 
   // Put the height back, so nothing after this reads a job this check moved.
   if (B) {
-    await session.switchTo(A);
+    await showTab(session, 'Condition');
     await wait(600);
   }
   await session.execute(function (value) {
@@ -804,6 +858,11 @@ try {
     return true;
   }, heightBefore);
   await wait(1200);
+
+  if (B) {
+    await session.switchTo(A);
+    await wait(800);
+  }
 
   // ── the vocabulary rule holds in this window too ────────────────────────
   const words = await session.execute(function () {

@@ -19,7 +19,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { clickAt, launch, tool, typeScale, until, wait, commitStamp } from './tauri-harness.mjs';
+import {
+  clickAt, launch, pickLens, showTab, showView, tool, typeScale, until, wait, commitStamp,
+} from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const JOB = join(ROOT, 'fixtures/real-job');
@@ -33,14 +35,11 @@ const check = (name, fn) => {
 };
 const step = (n, what) => console.log(`\n${n}. ${what}`);
 
-const toEditor = async (session, which) => {
-  await session.execute(function (id) {
-    const p = document.querySelector('.editor-picker');
-    p.value = id;
-    p.dispatchEvent(new Event('change', { bubbles: true }));
-  }, which);
-  await wait(2600);
-};
+/** The money, wherever the panel is showing it. */
+const sellingPrice = (session) => session.execute(function () {
+  const el = document.querySelector('.selling .value');
+  return el ? el.textContent.trim() : null;
+});
 
 await mkdir(SHOTS, { recursive: true });
 const app = await launch();
@@ -98,15 +97,15 @@ try {
 
   // ── 2. trace what a roof is made of ─────────────────────────────────────
   step(2, 'Trace the field, the parapet, the drains, a tapered area, a cricket');
-  await tool(session, 'Area');
+  await tool(session, 'Trace an area');
   await clickAt(session, [[150, 200], [430, 200], [430, 380], [150, 380]]);
   await wait(900);
 
-  await tool(session, 'Line');
+  await tool(session, 'Run a parapet');
   await clickAt(session, [[150, 200], [430, 200], [430, 380], [150, 380], [150, 200]]);
   await wait(900);
 
-  await tool(session, 'Count');
+  await tool(session, 'Drop a drain');
   await clickAt(session, [[230, 260], [350, 320]]);
   await wait(900);
 
@@ -145,12 +144,18 @@ try {
 
   // ── 3 & 4. the parapet yields its children, from the book ───────────────
   step(3, 'Load the coping assembly and watch the parapet yield its children');
+  await showTab(session, 'Condition');
   await session.execute(function () {
-    const node = [...document.querySelectorAll('.tree-label')].find((e) => /Parapet/.test(e.textContent || ''));
-    if (node) node.click();
+    const row = [...document.querySelectorAll('.cost-condition .condition')]
+      .find((e) => /Parapet/.test(e.textContent || ''));
+    if (row) row.click();
   });
   await wait(600);
-  await toEditor(session, 'library');
+  await session.execute(function () {
+    const b = document.querySelector('.cost-load');
+    if (b && !b.disabled) b.click();
+  });
+  await wait(1400);
   await until(session, () => !!document.querySelector('.library-card'), { what: 'the library' });
 
   const loadedFrom = await session.execute(function () {
@@ -192,14 +197,11 @@ try {
   });
 
   // ── 5. the money moves, in the other window ─────────────────────────────
-  step(5, 'Tear off the sheet and watch the money move');
-  await toEditor(session, 'estimate');
-  await until(session, () => !!document.querySelector('.sheet'), { what: 'the sheet' });
+  step(5, 'Watch the money move beside the drawing');
+  await showTab(session, 'Estimate');
+  await until(session, () => !!document.querySelector('.cost-estimate'), { what: 'the lines' });
   await wait(800);
-  const before = await session.execute(function () {
-    const el = document.querySelector('.selling .value');
-    return el ? el.textContent.trim() : null;
-  });
+  const before = await sellingPrice(session);
 
   await session.execute(function () {
     return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
@@ -212,19 +214,16 @@ try {
     });
   });
   await wait(1200);
-  const after = await session.execute(function () {
-    const el = document.querySelector('.selling .value');
-    return el ? el.textContent.trim() : null;
-  });
+  const after = await sellingPrice(session);
   check('doubling the parapet height moves the money', () => {
     assert.ok(before && after, `${before} → ${after}`);
     assert.notEqual(before, after, `the price did not move: ${before}`);
   });
-  await writeFile(join(SHOTS, `02-sheet-${COMMIT}.png`), Buffer.from(await session.screenshot(), 'base64'));
+  await writeFile(join(SHOTS, `02-lines-${COMMIT}.png`), Buffer.from(await session.screenshot(), 'base64'));
 
   // ── 6. where the water goes ─────────────────────────────────────────────
   step(6, 'Switch to Model and read the water');
-  await toEditor(session, 'model');
+  await showView(session, 'Model');
   await until(session, () => !!document.querySelector('.model-canvas'), { what: 'the model' });
   await wait(1500);
   const legend = await session.execute(function () {
@@ -242,13 +241,9 @@ try {
 
   // ── 7. a supplier list with no cost, and an honest recap ────────────────
   step(7, 'Produce a supplier list and a recap');
-  await toEditor(session, 'reports');
-  await until(session, () => !!document.querySelector('.lens-sheet'), { what: 'reports' });
-  await session.execute(function () {
-    const b = [...document.querySelectorAll('.lens')].find((e) => (e.querySelector('strong') || {}).textContent === 'Stocking');
-    if (b) b.click();
-  });
-  await wait(900);
+  await showView(session, 'Plan');
+  await pickLens(session, 'Stocking');
+  await until(session, () => !!document.querySelector('.lens-sheet'), { what: 'the lens' });
   const stocking = JSON.parse(await session.execute(function () {
     const el = document.querySelector('.lens-sheet');
     return JSON.stringify({ html: el.innerHTML, rows: el.querySelectorAll('tbody tr').length });
@@ -262,11 +257,7 @@ try {
   });
   await writeFile(join(SHOTS, `04-stocking-${COMMIT}.png`), Buffer.from(await session.screenshot(), 'base64'));
 
-  await session.execute(function () {
-    const b = [...document.querySelectorAll('.lens')].find((e) => (e.querySelector('strong') || {}).textContent === 'Recap');
-    if (b) b.click();
-  });
-  await wait(900);
+  await pickLens(session, 'Recap');
   const recap = await session.execute(function () {
     const el = document.querySelector('.lens-sheet');
     return (el.innerText || el.textContent || '').replace(/\s+/g, ' ');

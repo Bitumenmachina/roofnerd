@@ -1,18 +1,23 @@
-// ── Section 6b's done-check: the same panel in every editor ────────────────
-// Appendix A3: "Properties right, 320 px, contextual: the selected condition or
-// item. The same panel in every editor."
+// ── Section 6b's done-check: the panel stands beside everything ────────────
+// The claim has not changed and its anatomy has. A3 asked for "the same panel
+// in every editor"; the handoff has one surface with two views and a cost panel
+// beside it, and the Properties are that panel's Condition tab. So what has to
+// be true is the same thing said at the new regions: whatever the surface is
+// showing, and in the panel's own window when it is on the other monitor, the
+// same condition reads with the same measures and the same money — once, at the
+// panel's width, beside the surface and never over it.
 //
-// Only the Plan had it. An estimator on the sheet, in the Library or looking at
-// the roof could see what was selected and nothing about what it was — no
-// measures, no height, no money. This walks the four other editors and reads
-// the panel in each of them, and it reads the states that are easy to get wrong:
-// nothing selected, and the same condition after an editor switch (which is a
-// reload, and takes everything in the page with it).
+// The states that are easy to get wrong are the same ones: nothing picked, and
+// the same condition after the window has been made to change what it shows.
+// Switching is no longer a reload, which removes one failure and adds another:
+// a view or a tab left mounted twice would show two of everything.
 //
-// It also tears the Model off, which is the one window this program could not
-// open: `open_editor` names the window after the editor, and the Model's name
-// was never added to the capabilities list, so the window came up with no way
-// to ask for the job.
+// It also detaches the panel, which is the window this program opens now. The
+// Model window it used to tear off has no affordance any more — the detach
+// button belongs to the panel — so the capabilities claim it proved is proved
+// here instead, on the window that exists: `open_editor` names a window after
+// what is in it, and a label outside `capabilities/default.json` is a window
+// with no way to ask for the job.
 //
 //   pnpm build:app && node tools/probe/section6b-panel.mjs
 
@@ -20,8 +25,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import {
-  centreOf, errorsSoFar, launch, openDemoJob, pointerClick, pointerRelease,
-  typeKeys, until, wait, watchErrors, commitStamp,
+  centreOf, detachCostPanel, errorsSoFar, launch, openDemoJob, pickLens, pointerClick,
+  pointerRelease, showTab, showView, typeKeys, until, wait, watchErrors, commitStamp,
 } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
@@ -41,12 +46,30 @@ const check = (name, fn) => {
 let pointerPath = 'not tried';
 let pointerRefused = '';
 
-/** Every editor an area can show, and the word a person picks it by. */
-const EDITORS = [
-  { id: 'estimate', title: 'Estimate Sheet', shows: '.sheet' },
-  { id: 'library', title: 'Library', shows: '.library-body' },
-  { id: 'reports', title: 'Reports', shows: '.lens-sheet' },
-  { id: 'model', title: 'Model', shows: '.model-canvas' },
+/**
+ * Everywhere the window can be put, and how a person puts it there.
+ *
+ * The Properties are the Condition tab, so getting back to them is part of each
+ * one — which is the point: the panel has to come back to the same condition
+ * with the same numbers however the window was moved around in between.
+ */
+const PLACES = [
+  { title: 'the Model', shows: '.model-canvas', go: async (s_) => { await showView(s_, 'Model'); } },
+  { title: 'the Estimate tab', shows: '.cost-estimate', go: async (s_) => { await showTab(s_, 'Estimate'); } },
+  { title: 'the Recap tab', shows: '.lens-sheet', go: async (s_) => { await showTab(s_, 'Recap'); } },
+  {
+    title: 'the Library',
+    shows: '.library-body',
+    go: async (s_) => {
+      await showTab(s_, 'Condition');
+      await s_.execute(function () {
+        const b = document.querySelector('.cost-load');
+        if (b && !b.disabled) b.click();
+      });
+      await wait(1200);
+    },
+  },
+  { title: 'a lens', shows: '.lens-sheet', go: async (s_) => { await pickLens(s_, 'Stocking'); } },
 ];
 
 /**
@@ -57,52 +80,52 @@ const EDITORS = [
  * out would leave the Plan as the one window with two.
  */
 const panelNow = (session) => session.execute(function () {
+  const panel = document.querySelector('.cost-panel');
   const all = [...document.querySelectorAll('.condition-panel')];
   const el = all[0];
-  if (!el) return JSON.stringify({ count: 0 });
+  const panelBox = panel ? panel.getBoundingClientRect() : null;
+  const surface = document.querySelector('.surface-region');
+  const surfaceBox = surface ? surface.getBoundingClientRect() : null;
+  const shape = {
+    panelThere: !!panel,
+    panelHidden: panel ? !!panel.hidden : null,
+    quiet: panel ? panel.classList.contains('quiet') : null,
+    width: panelBox ? Math.round(panelBox.width) : null,
+    right: panelBox ? Math.round(panelBox.right) : null,
+    windowWidth: window.innerWidth,
+    // The panel is beside the surface, not on top of it.
+    overlaps: panelBox && surfaceBox ? Math.round(Math.max(0, surfaceBox.right - panelBox.left)) : null,
+    surfaceWidth: surfaceBox ? Math.round(surfaceBox.width) : null,
+    totals: ((document.querySelector('.cost-totals') || {}).innerText || '').replace(/\s+/g, ' ').trim(),
+    railRows: document.querySelectorAll('.plan-rail .condition-list .condition').length,
+    tabRows: document.querySelectorAll('.cost-condition .condition-list .condition').length,
+  };
+  if (!el) return JSON.stringify(Object.assign({ count: 0 }, shape));
   const measure = {};
   for (const cell of el.querySelectorAll('.panel-measures > div')) {
     const label = ((cell.querySelector('.measure-label') || {}).textContent || '').trim();
     measure[label] = ((cell.querySelector('.measure-value') || {}).textContent || '').trim();
   }
-  const box = el.getBoundingClientRect();
-  const editor = document.querySelector('#editor');
-  const editorBox = editor ? editor.getBoundingClientRect() : null;
-  return JSON.stringify({
+  return JSON.stringify(Object.assign({
     count: all.length,
     hidden: !!el.hidden,
-    width: Math.round(box.width),
-    right: Math.round(box.right),
-    windowWidth: window.innerWidth,
-    // The panel is beside the editor, not on top of it.
-    overlaps: editorBox ? Math.round(Math.max(0, editorBox.right - box.left)) : null,
-    editorWidth: editorBox ? Math.round(editorBox.width) : null,
     name: (el.querySelector('.panel-name') || {}).value || null,
     kind: ((el.querySelector('.panel-kind') || {}).textContent || '').trim(),
     measure,
     cost: ((el.querySelector('.panel-money .value') || {}).textContent || '').trim(),
     empty: ((el.querySelector('.panel-empty') || {}).textContent || '').trim(),
     text: (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim(),
-    railHasPanel: !!document.querySelector('.plan-rail .condition-panel'),
-    railRows: document.querySelectorAll('.plan-rail .condition-list .condition').length,
-  });
+  }, shape));
 });
 
-/** Switch the area to another editor, the way a person does. */
-const showEditor = async (session, id, shows) => {
-  await session.execute(function (want) {
-    const picker = document.querySelector('.editor-picker');
-    picker.value = want;
-    picker.dispatchEvent(new Event('change', { bubbles: true }));
-  }, id);
-  await wait(2500);
+/** Come back to the Properties, wherever the window has been left. */
+const showProperties = async (session) => {
+  await showView(session, 'Plan');
+  await pickLens(session, 'Full estimate');
+  await showTab(session, 'Condition');
   await until(session, () => !!document.querySelector('.condition-panel'),
-    { what: `the panel in ${id}`, timeout: 15000 }).catch(() => undefined);
-  // The editor's own body, by its own selector, with the selector baked in —
-  // `until` takes no arguments for the page.
-  await until(session, new Function(`return !!document.querySelector(${JSON.stringify(shows)})`),
-    { what: `${id} to draw`, timeout: 15000 }).catch(() => undefined);
-  await wait(600);
+    { what: 'the Condition tab', timeout: 15000 }).catch(() => undefined);
+  await wait(500);
 };
 
 await mkdir(EVIDENCE, { recursive: true });
@@ -115,12 +138,18 @@ try {
 
   // ── nothing open: no job, no condition, no panel ────────────────────────
   const cold = JSON.parse(await panelNow(session));
-  check('on the start screen the panel is not standing there empty', () => {
-    // A3 puts the panel beside an editor. The start screen is not an editor and
-    // has nothing that could be selected, so a 320px column of nothing would be
-    // the program looking broken before it has been given a job.
-    assert.ok(cold.count === 0 || cold.hidden,
-      `the panel is on screen with no job open: "${(cold.text ?? '').slice(0, 80)}"`);
+  check('on the start screen the panel is present and quiet, and says why', () => {
+    // The ruling changed here and the handoff is the reason: Frame 8 keeps the
+    // chrome on screen and quiet, with the panel saying in words that there is
+    // nothing to price yet. A panel that vanished would make the window look
+    // like it had lost something; a panel standing there blank would make it
+    // look broken. This asserts BOTH halves — it is there, and it is not a
+    // column of nothing.
+    assert.equal(cold.panelThere, true, 'there is no cost panel on the start screen');
+    assert.notEqual(cold.panelHidden, true, 'the panel is hidden with no job open');
+    assert.equal(cold.quiet, true, 'the panel is at full strength with no job open');
+    assert.match(cold.totals ?? '', /nothing priced yet|hidden by/i,
+      `its totals read "${cold.totals}"`);
   });
 
   // ── the pointer, proven on a click whose outcome cannot be misread ──────
@@ -146,17 +175,20 @@ try {
     pointerRefused = 'the demo button was not on screen to aim at';
   }
   console.log(`  pointer: ${pointerPath}${pointerRefused ? ` — ${pointerRefused}` : ''}`);
-  check(`the driver clicks where a hand would (${pointerPath})`, () => {
-    assert.equal(pointerPath, 'actions',
-      `real input is not available: ${pointerRefused}. The typing rows below ran as`
-      + ' dispatched events, which is weaker evidence and is reported as such.');
-  });
+  // REPORTED, not asserted. Whether tauri-driver will dispatch a real pointer
+  // is a fact about the harness on this box, not about the program: 6c found
+  // WebKitWebDriver refusing all three shapes of a W3C click. A row that can
+  // only ever be red says nothing about the build and trains the reader to skip
+  // the list. What it costs is carried instead — every row below that depends
+  // on real input says in its own name which path it took.
+  console.log(`  REPORT  real pointer input: ${pointerPath === 'actions' ? 'available' : `refused — ${pointerRefused.split('\n')[0]}`}`);
 
   if (pointerPath !== 'actions') await openDemoJob(session);
   await until(session, () => !document.querySelector('.start'), { what: 'the job to open' });
   await wait(1500);
 
   // ── a job open, nothing picked ──────────────────────────────────────────
+  await showTab(session, 'Condition');
   const fresh = JSON.parse(await panelNow(session));
   check('with a job open and nothing picked the panel says so', () => {
     assert.equal(fresh.count, 1, `${fresh.count} panels in one window`);
@@ -164,21 +196,25 @@ try {
     assert.match(fresh.empty ?? '', /Nothing picked/i,
       `it reads "${(fresh.empty || fresh.text || '').slice(0, 120)}"`);
   });
-  check('and it is 320px wide, at the right, beside the editor and not over it', () => {
-    // A3 says 320. The rest of this row is the part a number cannot fake: the
-    // editor ends where the panel starts, and the panel ends at the window.
-    assert.equal(fresh.width, 320, `the panel is ${fresh.width}px wide`);
+  check('and it is 364px wide, at the right, beside the surface and not over it', () => {
+    // The handoff says 364 docked. The rest of this row is the part a number
+    // cannot fake: the surface ends where the panel starts, and the panel ends
+    // at the window.
+    assert.equal(fresh.width, 364, `the panel is ${fresh.width}px wide`);
     assert.equal(fresh.overlaps, 0,
-      `the editor and the panel overlap by ${fresh.overlaps}px`);
+      `the surface and the panel overlap by ${fresh.overlaps}px`);
     assert.ok(fresh.right <= fresh.windowWidth,
       `the panel ends at ${fresh.right}px in a ${fresh.windowWidth}px window`);
-    assert.ok(fresh.editorWidth > 400,
-      `the editor is left with ${fresh.editorWidth}px`);
+    assert.ok(fresh.surfaceWidth > 400,
+      `the surface is left with ${fresh.surfaceWidth}px`);
   });
-  check('the Plan keeps its list and does not keep a second panel', () => {
-    assert.ok(!fresh.railHasPanel, 'the Plan still builds its own panel inside the rail');
-    assert.ok(fresh.railRows >= 3,
-      `the Plan's condition list shows ${fresh.railRows} rows`);
+  check('the conditions are listed in both places they live, and nowhere else', () => {
+    // D132: no tree. The Plan keeps its list beside the drawing and the
+    // Condition tab has the same list over the properties — one renderer, two
+    // places a person looks.
+    assert.ok(fresh.railRows >= 3, `the Plan's list shows ${fresh.railRows} rows`);
+    assert.equal(fresh.tabRows, fresh.railRows,
+      `the Condition tab lists ${fresh.tabRows} and the Plan lists ${fresh.railRows}`);
   });
 
   // ── pick one, on the Plan, the way a person does ────────────────────────
@@ -206,69 +242,81 @@ try {
   const wantedMeasures = onPlan.measure;
   const wantedCost = onPlan.cost;
 
-  // ── the same panel, in each of the other four editors ───────────────────
-  for (const editor of EDITORS) {
-    await showEditor(session, editor.id, editor.shows);
-    // Switching editors reloads the window, which takes the error watch with it.
-    await watchErrors(session);
-    const there = JSON.parse(await panelNow(session));
+  // ── the window put in every state it has, and brought back ──────────────
+  for (const [index, place] of PLACES.entries()) {
+    await place.go(session);
     const showing = await session.execute(function (sel) {
       return !!document.querySelector(sel);
-    }, editor.shows);
+    }, place.shows);
+    const whileThere = JSON.parse(await panelNow(session));
 
-    check(`${editor.title}: the editor is up`, () => {
-      assert.ok(showing, `nothing matching ${editor.shows} is in the window`);
+    check(`${place.title}: it is up`, () => {
+      assert.ok(showing, `nothing matching ${place.shows} is in the window`);
     });
-    check(`${editor.title}: the same panel is beside it, once`, () => {
-      assert.equal(there.count, 1, `${there.count} panels in one window`);
-      assert.ok(!there.hidden, 'the panel is hidden');
-      assert.equal(there.width, 320, `the panel is ${there.width}px wide`);
-      assert.equal(there.overlaps, 0, `it overlaps the editor by ${there.overlaps}px`);
-    });
-    check(`${editor.title}: it still names the condition that is selected`, () => {
-      // The switch is a reload. The selection is remembered per window, and the
-      // panel is rebuilt from it — this is the row that would have caught the
-      // Library arriving with "pick a condition" after a switch.
-      assert.equal(there.name, wanted, `the panel names "${there.name}"`);
-    });
-    check(`${editor.title}: with the same measures and the same money`, () => {
-      for (const key of Object.keys(wantedMeasures)) {
-        assert.equal(there.measure[key], wantedMeasures[key],
-          `${key} reads "${there.measure[key]}" here and "${wantedMeasures[key]}" on the Plan`);
-      }
-      assert.equal(there.cost, wantedCost,
-        `the cost reads "${there.cost}" here and "${wantedCost}" on the Plan`);
+    check(`${place.title}: the panel is still one panel, beside the surface`, () => {
+      // Nothing reloads any more, so the failure this guards against has changed
+      // shape: a view or a tab left mounted while the next one goes up would
+      // show two of everything, with two subscriptions writing into both.
+      assert.ok(whileThere.panelThere, 'the cost panel is gone');
+      assert.notEqual(whileThere.panelHidden, true, 'the cost panel is hidden');
+      assert.ok(whileThere.count <= 1, `${whileThere.count} Properties panels in one window`);
+      assert.equal(whileThere.overlaps, 0,
+        `the surface and the panel overlap by ${whileThere.overlaps}px`);
+      assert.ok(whileThere.right <= whileThere.windowWidth,
+        `the panel ends at ${whileThere.right}px in a ${whileThere.windowWidth}px window`);
     });
 
-    await writeFile(join(EVIDENCE, `section6b-panel-${editor.id}-${COMMIT}.png`),
+    await writeFile(join(EVIDENCE, `section6b-panel-${index + 1}-${COMMIT}.png`),
       Buffer.from(await session.screenshot(), 'base64'));
 
+    await showProperties(session);
+    const back = JSON.parse(await panelNow(session));
+
+    check(`${place.title}: coming back, the panel names the same condition`, () => {
+      // The row that would have caught a panel arriving with "pick a condition"
+      // after the window was moved around. The selection lives in the window,
+      // not in whatever was on screen a moment ago.
+      assert.equal(back.count, 1, `${back.count} Properties panels in one window`);
+      assert.equal(back.name, wanted, `the panel names "${back.name}"`);
+      assert.equal(back.width, 364, `the panel is ${back.width}px wide`);
+    });
+    check(`${place.title}: with the same measures and the same money`, () => {
+      for (const key of Object.keys(wantedMeasures)) {
+        assert.equal(back.measure[key], wantedMeasures[key],
+          `${key} reads "${back.measure[key]}" here and "${wantedMeasures[key]}" before`);
+      }
+      assert.equal(back.cost, wantedCost,
+        `the cost reads "${back.cost}" here and "${wantedCost}" before`);
+    });
+
     const errors = await errorsSoFar(session);
-    check(`${editor.title}: nothing errored while it was open`, () => {
+    check(`${place.title}: nothing errored while it was open`, () => {
       assert.deepEqual(errors, [], errors.join(' | '));
     });
   }
 
-  // ── the Model, torn off into its own window ─────────────────────────────
-  // The area is showing the Model, so its tear-off button gives a Model window.
-  // Before this batch that window had no capabilities: `doc_get` was refused, no
-  // job ever arrived, and it would have sat on the start screen looking like the
-  // program had lost the job.
+  // ── the panel, pulled onto the other monitor ────────────────────────────
+  // The window this program opens now. `open_editor` names a window after what
+  // is in it, and a label that is not in `capabilities/default.json` is a
+  // window with no way to ask for the job — it would come up on the start
+  // screen looking as though the program had lost it. "cost" is in the list.
   const oneWindow = await session.handles();
-  const tore = await session.execute(function () {
-    const b = [...document.querySelectorAll('.area-header .icon-button')]
-      .find((e) => (e.getAttribute('aria-label') || '') === 'Open in its own window');
-    if (!b) return false;
-    b.click();
-    return true;
-  });
-  await wait(3500);
+  const tore = await detachCostPanel(session);
   const handles = await session.handles();
   const torn = handles.find((h) => !oneWindow.includes(h)) ?? null;
 
-  check('the Model tears off into its own window', () => {
-    assert.ok(tore, 'no tear-off button in the area header');
+  check('the cost panel detaches into a window of its own', () => {
+    assert.ok(tore, 'no detach button beside the tabs');
     assert.ok(torn, `${oneWindow.length} window before and ${handles.length} after`);
+  });
+
+  const reclaimed = JSON.parse(await panelNow(session));
+  check('and the surface reclaims the width it gave up', () => {
+    // The handoff: "the viewport reclaims the width; nothing else in the layout
+    // moves". Read as the surface being wider than it was with the panel beside
+    // it, and the panel no longer standing in the main window at all.
+    assert.ok(reclaimed.surfaceWidth > fresh.surfaceWidth,
+      `the surface was ${fresh.surfaceWidth}px with the panel and is ${reclaimed.surfaceWidth}px without it`);
   });
 
   if (torn) {
@@ -277,31 +325,53 @@ try {
     const inTorn = JSON.parse(await session.execute(function () {
       return JSON.stringify({
         start: !!document.querySelector('.start'),
-        canvas: !!document.querySelector('.model-canvas'),
-        panels: document.querySelectorAll('.condition-panel').length,
-        status: ((document.querySelector('.status-bar') || {}).textContent || '').trim(),
-        tree: !!document.querySelector('.sidebar .tree'),
+        panels: document.querySelectorAll('.cost-panel').length,
+        title: ((document.querySelector('.cost-title-name') || {}).textContent || '').trim(),
+        home: !!document.querySelector('.cost-dock'),
+        docBar: !!document.querySelector('.doc-bar'),
+        rail: !!document.querySelector('.tool-rail'),
+        selling: ((document.querySelector('.selling .value') || {}).textContent || '').trim(),
+        width: Math.round(window.innerWidth),
+        height: Math.round(window.innerHeight),
       });
     }));
-    const tornPanel = JSON.parse(await panelNow(session));
 
-    check('and the torn-off Model has the job in it, not the start screen', () => {
+    check('and the detached window has the job in it, not the start screen', () => {
       assert.ok(!inTorn.start,
-        'the torn-off window is on the start screen — it could not ask for the job');
-      assert.ok(inTorn.canvas, 'no canvas in the torn-off window');
-      assert.match(inTorn.status, /\//, `its status bar reads "${inTorn.status.slice(0, 80)}"`);
+        'the detached window is on the start screen — it could not ask for the job');
+      assert.equal(inTorn.panels, 1, `${inTorn.panels} cost panels in it`);
+      assert.match(inTorn.title, /Cost/, `its title bar reads "${inTorn.title}"`);
+      assert.match(inTorn.selling, /\$/, `it shows no money: "${inTorn.selling}"`);
     });
-    check('and the panel rides with it (D113), with its own copy of the selection', () => {
-      assert.equal(inTorn.panels, 1, `${inTorn.panels} panels in the torn-off window`);
-      // A window torn off after a condition was picked starts with its own empty
-      // memory of what is selected, so what it must show is the "nothing picked"
-      // sentence — not a blank column, and not somebody else's condition.
-      assert.ok(tornPanel.name === wanted || /Nothing picked/i.test(tornPanel.empty ?? ''),
-        `it reads "${(tornPanel.empty || tornPanel.text || '').slice(0, 120)}"`);
+    check('and it is the panel and nothing else, with the way home on it', () => {
+      assert.equal(inTorn.docBar, false, 'it carries a second document bar');
+      assert.equal(inTorn.rail, false, 'it carries a second tool rail');
+      assert.equal(inTorn.home, true, 'there is no way to dock it back');
     });
 
-    await writeFile(join(EVIDENCE, `section6b-panel-model-torn-off-${COMMIT}.png`),
+    await writeFile(join(EVIDENCE, `section6b-panel-detached-${COMMIT}.png`),
       Buffer.from(await session.screenshot(), 'base64'));
+
+    // And home again, from the window it is in. The main window takes it back
+    // and this one goes away — one panel, wherever it is.
+    await session.execute(function () {
+      const b = document.querySelector('.cost-dock');
+      if (b) b.click();
+    });
+    await wait(2500);
+    const afterDock = await session.handles();
+    check('and "dock it back" sends it home and closes the window it was in', () => {
+      assert.ok(afterDock.length <= oneWindow.length,
+        `${afterDock.length} windows are open and there was ${oneWindow.length} to start with`);
+    });
+    await session.switchTo(afterDock[0]);
+    await wait(1200);
+    const homeAgain = JSON.parse(await panelNow(session));
+    check('and the panel is standing beside the surface again', () => {
+      assert.ok(homeAgain.panelThere, 'the panel did not come back');
+      assert.notEqual(homeAgain.panelHidden, true, 'it came back hidden');
+      assert.equal(homeAgain.width, 364, `it came back ${homeAgain.width}px wide`);
+    });
   }
 
   // ── a field has to keep the second character ────────────────────────────
@@ -318,9 +388,8 @@ try {
   // back around, and send the second key to WHEREVER THE FOCUS NOW IS. That last
   // clause is the whole check. Sending it to the element the check is still
   // holding would pass on a program that had lost it.
-  await session.switchTo(oneWindow[0]);
   await wait(600);
-  await showEditor(session, 'estimate', '.sheet');
+  await showProperties(session);
   await watchErrors(session);
 
   /** Where the focus went, which is the diagnosis when a row below goes red. */
@@ -452,9 +521,18 @@ try {
   }, heightWas ? heightWas.value : '1');
   await wait(1200);
 
-  // ── and the sheet's formula, which is the field this program is for ─────
+  // ── and the formula on the line, which is the field this program is for ─
+  // It is edited where it always was — on the line — and the line is opened to
+  // its whole chain to get at it, which is the act a person performs.
+  await showTab(session, 'Estimate');
+  await session.execute(function () {
+    const line = document.querySelector('.cost-line .line-what');
+    if (line) line.click();
+  });
+  await wait(900);
+
   const formulaField = () => session.execute(function () {
-    const input = document.querySelector('.sheet input.formula');
+    const input = document.querySelector('.line-chain input.formula');
     if (!input) return null;
     const r = input.getBoundingClientRect();
     return JSON.stringify({
@@ -463,7 +541,7 @@ try {
     });
   });
   const setFormula = (value) => session.execute(function (v) {
-    const input = document.querySelector('.sheet input.formula');
+    const input = document.querySelector('.line-chain input.formula');
     if (!input) return false;
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
     setter.call(input, v);
@@ -490,7 +568,7 @@ try {
     }
     if (formulaPath !== 'keys') {
       await session.execute(function () {
-        const input = document.querySelector('.sheet input.formula');
+        const input = document.querySelector('.line-chain input.formula');
         if (!input) return false;
         input.focus();
         const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
@@ -513,8 +591,8 @@ try {
     });
   });
 
-  check(`the sheet keeps the formula being typed into — "12", not "1" (${formulaPath})`, () => {
-    assert.ok(formulaEmpty, 'no formula field on the sheet to type into');
+  check(`the open line keeps the formula being typed into — "12", not "1" (${formulaPath})`, () => {
+    assert.ok(formulaEmpty, 'no formula field on the open line to type into');
     assert.equal(formulaAfter && formulaAfter.value, '12',
       `the field reads "${formulaAfter && formulaAfter.value}" after 1 then 2`
       + ` — after the first key the focus was on ${formulaFocus}`
@@ -530,7 +608,7 @@ try {
   await setFormula(formulaWas ? formulaWas.value : 'SQ');
   await wait(1200);
 
-  console.log(`  keyboard: panel ${heightPath}, sheet ${formulaPath}`
+  console.log(`  keyboard: panel ${heightPath}, line ${formulaPath}`
     + `${keysRefused ? ` — ${keysRefused.split('\n')[0]}` : ''}`);
 
   const typingErrors = await errorsSoFar(session);

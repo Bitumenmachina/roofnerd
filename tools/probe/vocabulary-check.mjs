@@ -17,7 +17,7 @@ import { cp, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, openDemoJob, until, wait } from './tauri-harness.mjs';
+import { detachCostPanel, launch, openDemoJob, showTab, showView, until, wait } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 
@@ -62,11 +62,21 @@ async function job() {
   return { dir, remove: () => rm(dir, { recursive: true, force: true }) };
 }
 
-/** Everything a person can read, with formula fields left out. */
+/**
+ * Everything a person can read, with the formula left out.
+ *
+ * A formula IS code, typed on purpose by the person reading it, which is why it
+ * is the one thing on screen set in the mono face. It used to live only in an
+ * input, so the exemption was `input.formula`; it is now also a chip on the
+ * compact line and a term in the working written out under an open one — the
+ * same string, in the same face, for the same reason. So the exemption is keyed
+ * on the class the program puts on the formula wherever it renders it, and on
+ * nothing else. Everything that is not the formula is still read.
+ */
 const VISIBLE = `
   const strip = (root) => {
     const clone = root.cloneNode(true);
-    for (const f of clone.querySelectorAll('input.formula')) f.remove();
+    for (const f of clone.querySelectorAll('.formula, input.formula')) f.remove();
     return clone.innerText || clone.textContent || '';
   };
   const values = [...document.querySelectorAll('input:not(.formula), select')]
@@ -85,25 +95,47 @@ const { session } = app;
 try {
   await openDemoJob(session);
   await wait(1200);
-  await session.execute(() => document.querySelector('.condition')?.click());
+  await session.execute(() => document.querySelector('.plan-rail .condition')?.click());
   await wait(800);
 
+  // Every surface a person can reach, not one of them: the Plan with a
+  // condition picked, the Condition tab with its properties, a line open to its
+  // whole chain, the Model, and the panel in a window of its own. The check
+  // used to read two screens and there are more than two now.
   const planText = await session.execute(new Function(VISIBLE));
 
+  await showTab(session, 'Condition');
+  await wait(700);
+  const conditionText = await session.execute(new Function(VISIBLE));
+
+  await showTab(session, 'Estimate');
+  await wait(700);
+  await session.execute(() => {
+    const line = document.querySelector('.cost-line .line-what');
+    if (line) line.click();
+  });
+  await wait(900);
+  const openLineText = await session.execute(new Function(VISIBLE));
+
+  await showView(session, 'Model');
+  await wait(1600);
+  const modelText = await session.execute(new Function(VISIBLE));
+  await showView(session, 'Plan');
+  await wait(900);
+
   const before = await session.handles();
-  await session.execute(() => window.__TAURI_INTERNALS__.invoke('open_editor', { editor: 'estimate' }));
-  await wait(2000);
+  await detachCostPanel(session);
   const after = await session.handles();
   const second = after.find((h) => !before.includes(h));
-  let sheetText = '';
+  let costText = '';
   if (second) {
     await session.switchTo(second);
-    await until(session, () => document.querySelector('#editor')?.children.length > 0, { what: 'the sheet' });
+    await until(session, () => !!document.querySelector('.cost-panel.detached'), { what: 'the cost panel' });
     await wait(800);
-    sheetText = await session.execute(new Function(VISIBLE));
+    costText = await session.execute(new Function(VISIBLE));
   }
 
-  const screen = `${planText}\n${sheetText}`;
+  const screen = [planText, conditionText, openLineText, modelText, costText].join('\n');
 
   for (const word of BANNED) {
     check(`"${word}" is not on screen`, () => {

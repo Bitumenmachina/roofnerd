@@ -15,7 +15,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, scratchJob, until, wait, commitStamp } from './tauri-harness.mjs';
+import {
+  detachCostPanel, launch, scratchJob, tool, until, wait, commitStamp,
+} from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -70,22 +72,33 @@ try {
   check('and its button can be clicked', () => assert.equal(clicked, true));
   await wait(2500);
 
+  // The same four facts, at the regions that carry them now: the file's name
+  // is the document bar's (it is the identity of the one open file), what has
+  // been traced is the list where conditions live, and what the sheet is
+  // scaled at is in the tool settings strip, because it is what decides
+  // whether a measurement exists at all. Not one of them is asserted less.
   const opened = await session.execute(function () {
     return JSON.stringify({
-      job: (document.querySelector('.menu-job') || {}).textContent || '',
+      job: (document.querySelector('.doc-job') || {}).textContent || '',
       start: !!document.querySelector('.start'),
-      tree: document.querySelectorAll('.tree-node').length,
-      status: (document.querySelector('.status-facts') || {}).textContent || '',
+      conditions: document.querySelectorAll('.plan-rail .condition').length,
+      strip: (document.querySelector('.tool-strip') || {}).innerText || '',
+      area: (document.querySelector('.roof-area') || {}).innerText || '',
     });
   });
   const state = JSON.parse(opened);
 
   check('the job actually opened', () => assert.ok(state.job.length > 0, `job label is "${state.job}"`));
-  check('the start screen gave way to the editor', () => assert.equal(state.start, false));
-  check('the tree filled with the job', () => assert.ok(state.tree >= 3, `${state.tree} node(s)`));
-  check('the status bar names the job and its scale', () => {
-    assert.match(state.status, /Job/);
-    assert.match(state.status, /Scale/);
+  check('the start screen gave way to the drawing', () => assert.equal(state.start, false));
+  check('the conditions are listed where they live now', () =>
+    assert.ok(state.conditions >= 3, `${state.conditions} of them`));
+  check('the tool settings strip says what the sheet is scaled at, and in what units', () => {
+    assert.match(state.strip, /Scale/, `the strip reads "${state.strip.replace(/\s+/g, ' ')}"`);
+    assert.match(state.strip, /Units/, `the strip reads "${state.strip.replace(/\s+/g, ' ')}"`);
+  });
+  check('and the document bar carries the one roof-area figure', () => {
+    assert.match(state.area, /Roof area/, `it reads "${state.area.replace(/\s+/g, ' ')}"`);
+    assert.match(state.area, /SF/, `it reads "${state.area.replace(/\s+/g, ' ')}"`);
   });
 
   // ── the drawing is on screen, because the demo job has one ──────────────
@@ -95,7 +108,7 @@ try {
 
   const plan = await session.execute(function () {
     return JSON.stringify({
-      conditions: document.querySelectorAll('.condition').length,
+      conditions: document.querySelectorAll('.plan-rail .condition').length,
       badge: (document.querySelector('.scale-badge') || {}).textContent || '',
       measures: [...document.querySelectorAll('.condition-measures')].map((e) => e.textContent),
     });
@@ -111,11 +124,7 @@ try {
   });
 
   // ── set a scale through the field, not a dialog ─────────────────────────
-  await session.execute(function () {
-    const b = [...document.querySelectorAll('.toolbar .tool')].find((e) => /Scale|Rescale/.test(e.textContent));
-    if (b) b.click();
-  });
-  await wait(400);
+  await tool(session, 'Scale');
 
   // Two clicks on the overlay, the way a hand does it.
   await session.execute(function () {
@@ -134,12 +143,16 @@ try {
   });
   await wait(600);
 
+  // It asks in the tool settings strip, which is where everything the Scale act
+  // needs now lives. The claim is unchanged and it is the one this whole probe
+  // exists for: the program asks in a field in the window, never in a browser
+  // dialog it does not have.
   const askedInWindow = await session.execute(function () {
-    const bar = document.querySelector('.hint');
+    const bar = document.querySelector('.tool-strip');
     return JSON.stringify({
-      asking: !!(bar && bar.classList.contains('asking')),
+      asking: !!document.querySelector('.tool-strip .scale-ask'),
       hasField: !!document.querySelector('.scale-ask input'),
-      words: bar ? (bar.innerText || '').slice(0, 120) : '',
+      words: bar ? (bar.innerText || '').slice(0, 160) : '',
     });
   });
   const ask = JSON.parse(askedInWindow);
@@ -169,15 +182,11 @@ try {
     assert.match(rescaled, /20'-0"|two points/, rescaled);
   });
 
-  // ── tear the sheet off, from the button on the area ─────────────────────
+  // ── pull the cost panel onto the other monitor, from the button on it ───
   const before = await session.handles();
-  await session.execute(function () {
-    const b = document.querySelector('.area-actions .icon-button[aria-label="Open in its own window"]');
-    if (b) b.click();
-  });
-  await wait(2000);
+  await detachCostPanel(session);
   const after = await session.handles();
-  check('the tear-off button on the area opens a second window', () => {
+  check('the button beside the tabs opens a second window', () => {
     assert.ok(after.length > before.length, `${before.length} → ${after.length}`);
   });
 
@@ -188,19 +197,27 @@ try {
     await wait(900);
     const sheet = await session.execute(function () {
       return JSON.stringify({
-        rows: document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)').length,
+        rows: document.querySelectorAll('.cost-line').length,
         selling: (document.querySelector('.selling .value') || {}).textContent || '',
-        menuBar: !!document.querySelector('.menu-bar'),
+        docBar: !!document.querySelector('.doc-bar'),
+        rail: !!document.querySelector('.tool-rail'),
+        title: (document.querySelector('.cost-title-name') || {}).textContent || '',
+        home: !!document.querySelector('.cost-dock'),
       });
     });
     const sh = JSON.parse(sheet);
-    check('the torn-off sheet has the job\'s priced lines in it', () => {
-      assert.ok(sh.rows >= 5, `${sh.rows} line(s)`);
+    check('the detached panel has the job\'s priced lines in it', () => {
+      assert.ok(sh.rows >= 5, `${sh.rows} of them`);
       assert.match(sh.selling, /\$/, sh.selling);
     });
-    check('and carries no second copy of the chrome', () => assert.equal(sh.menuBar, false));
+    check('and carries no second copy of the chrome, only its own title and the way home', () => {
+      assert.equal(sh.docBar, false, 'the detached window has a document bar');
+      assert.equal(sh.rail, false, 'the detached window has a tool rail');
+      assert.match(sh.title, /Cost/, `its title bar reads "${sh.title}"`);
+      assert.equal(sh.home, true, 'there is no way to dock it back');
+    });
 
-    await writeFile(join(EVIDENCE, `front-door-sheet-${COMMIT}.png`),
+    await writeFile(join(EVIDENCE, `front-door-cost-${COMMIT}.png`),
       Buffer.from(await session.screenshot(), 'base64'));
     await session.switchTo(before[0]);
     await writeFile(join(EVIDENCE, `front-door-plan-${COMMIT}.png`),

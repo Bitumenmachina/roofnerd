@@ -16,7 +16,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, openDemoJob, until, wait, commitStamp } from './tauri-harness.mjs';
+import {
+  detachCostPanel, launch, openDemoJob, showTab, tool, until, wait, commitStamp,
+} from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -37,57 +39,91 @@ try {
   await openDemoJob(session);
   await wait(1800);
 
-  // ── §1.2 the tree is a tree, and says what its nodes are ────────────────
-  const tree = JSON.parse(await session.execute(function () {
-    const rows = [...document.querySelectorAll('.tree-label, .tree-node')];
+  // ── §1.2 what is traced is named as what it is ──────────────────────────
+  // The defect was a flat list headed "Pages" that listed conditions under it.
+  // There is no tree at all now (D132) and the claim survives it: the things an
+  // estimator traced are listed as conditions, under a heading that says so,
+  // with the drawing they are on named where the drawing is chosen. Neither
+  // half is asserted less — the page and the conditions are still both on
+  // screen and still not confused for one another.
+  const listed = JSON.parse(await session.execute(function () {
     return JSON.stringify({
-      text: (document.querySelector('.tree') || document.body).innerText || '',
-      depths: rows.map(function (r) { return (r.className || '').includes('tree-label') ? 1 : 0; }).length,
+      heading: ((document.querySelector('.plan-rail .rail-heading') || {}).textContent || '').trim(),
+      rows: [...document.querySelectorAll('.plan-rail .condition .condition-name')]
+        .map(function (e) { return (e.textContent || '').trim(); }),
+      drawing: (document.querySelector('.tool-strip') || {}).innerText || '',
     });
   }));
-  check('§1.2 the tree names conditions as conditions, not as pages', () => {
-    // The defect was a flat list headed "Pages" that listed conditions under it.
-    assert.match(tree.text, /Roof Plan/, 'the page is not in the tree');
-    assert.match(tree.text, /Main Roof Field/, 'the conditions are not in the tree');
-    assert.ok(!/^Pages$/m.test(tree.text), 'a bare "Pages" heading still lists conditions');
+  check('§1.2 conditions are listed as conditions, and the drawing is named apart from them', () => {
+    assert.equal(listed.heading, 'Conditions', `the list is headed "${listed.heading}"`);
+    assert.ok(listed.rows.includes('Main Roof Field'),
+      `the list reads ${JSON.stringify(listed.rows)}`);
+    assert.ok(!listed.rows.includes('Roof Plan'),
+      'the drawing is being listed as a condition');
+    assert.match(listed.drawing, /Roof Plan/,
+      `the strip names no drawing: "${listed.drawing.replace(/\s+/g, ' ')}"`);
   });
 
   // ── §1.3 no probe controls in the product chrome ────────────────────────
   const chrome = JSON.parse(await session.execute(function () {
+    const bar = document.querySelector('.doc-bar');
     return JSON.stringify({
-      sidebar: (document.querySelector('.tree, .sidebar') || document.body).innerText || '',
-      status: (document.querySelector('.status-bar') || {}).innerText || '',
-      hasMenu: !!document.querySelector('.menu-button'),
+      docBar: bar ? (bar.innerText || '') : '',
+      // The handoff: the document bar never holds a tool. Read as the thing
+      // itself — no act from the rail is drawn in it.
+      toolsInDocBar: [...document.querySelectorAll('.doc-bar .rail-tool')].length,
+      status: (document.querySelector('.status-strip') || {}).innerText || '',
+      hasMenu: !!document.querySelector('.doc-bar .menu-button'),
+      list: (document.querySelector('.plan-rail') || document.body).innerText || '',
     });
   }));
-  check('§1.3 the sidebar carries no probe buttons, and there is a File menu', () => {
+  check('§1.3 the list carries no probe buttons, and there is a File menu', () => {
     for (const word of ['Open the demo job', 'Save', 'Tear off the Estimate Sheet']) {
-      assert.ok(!chrome.sidebar.includes(word), `"${word}" is still a button in the sidebar`);
+      assert.ok(!chrome.list.includes(word), `"${word}" is still a button beside the drawing`);
     }
     assert.ok(chrome.hasMenu, 'no File menu');
   });
-  check('§1.3 the job path is in the status bar, not under the job name', () => {
-    assert.match(chrome.status, /\//, `status bar read "${chrome.status.slice(0, 80)}"`);
+  check('§1.3 and the document bar holds no tool', () => {
+    // The handoff's own rule for this region, which is the same rule §1.3 was
+    // making: the bar is the identity of the open file and nothing else.
+    assert.equal(chrome.toolsInDocBar, 0, 'an act from the rail is drawn in the document bar');
+  });
+  check('§1.3 the job path is in the status strip, not under the job name', () => {
+    assert.match(chrome.status, /\//, `status strip read "${chrome.status.slice(0, 80)}"`);
   });
 
-  // ── §1.5 one toolbar row, and one Scale action ──────────────────────────
-  const toolbar = JSON.parse(await session.execute(function () {
-    const bar = document.querySelector('.toolbar');
-    if (!bar) return JSON.stringify({ rows: 0, text: '', tops: [] });
-    // Centres, not tops: a 26px icon button and a 29px labelled one on the same
-    // row sit two pixels apart, and counting distinct tops called that two rows.
-    const centres = [...bar.querySelectorAll('button')].map(function (b) {
+  // ── §1.5 the acts, and the settings they need ───────────────────────────
+  //
+  // §1.5 was a row: one row, nothing cut off mid-word, zoom and fit grouped
+  // right and still reachable, and one Scale action rather than two. The row is
+  // gone — the acts are the tool rail and their settings are the tool settings
+  // strip — and every one of those claims has an owner in the new anatomy:
+  //
+  //   one row                → the strip is one 42px row and never two
+  //   nothing cut off        → nothing in the strip is wider than its own box
+  //   zoom and fit reachable → they are an overlay on the drawing, and an
+  //                            overlay cannot be covered by a row it is not in
+  //   one Scale action       → the rail has exactly one act that sets a scale
+  //
+  // The picker that read "Or pick a s" under the pinned zoom group is measured
+  // the same way it was: what is actually drawn at its own edge and its own
+  // middle, by `elementFromPoint`. That is the reading that caught it, and it
+  // works wherever the control lives.
+  await tool(session, 'Scale');
+
+  const strip = JSON.parse(await session.execute(function () {
+    const bar = document.querySelector('.tool-strip');
+    if (!bar) return JSON.stringify({ found: false });
+    const box = bar.getBoundingClientRect();
+    // Centres, not tops: a 26px control and a 29px one on the same row sit two
+    // pixels apart, and counting distinct tops called that two rows.
+    const centres = [...bar.querySelectorAll('button, select, input, .strip-field')].map(function (b) {
       const r = b.getBoundingClientRect();
       return r.top + r.height / 2;
     });
     const rows = [];
     for (const c of centres) if (!rows.some(function (r) { return Math.abs(r - c) < 12; })) rows.push(c);
-    return JSON.stringify({ text: bar.innerText || '', tops: rows });
-  }));
-  check('§1.5 the toolbar is one row', () => {
-    assert.ok(toolbar.tops.length <= 1, `buttons sit on ${toolbar.tops.length} rows`);
-  });
-  const clippedControls = JSON.parse(await session.execute(function () {
+
     // Measured, not inferred from scrollWidth: a <select> clips its option text
     // visually while reporting scrollWidth === clientWidth, so the obvious check
     // sees nothing. The label is drawn into a canvas in the control's own
@@ -101,121 +137,177 @@ try {
         - (el.tagName === 'SELECT' ? 18 : 0);  // the dropdown arrow takes its own room
       return ctx.measureText(text).width > room + 1;
     };
-    const out = [];
-    for (const el of document.querySelectorAll('.toolbar button, .toolbar select')) {
+    const clipped = [];
+    for (const el of bar.querySelectorAll('button, select')) {
       const text = el.tagName === 'SELECT'
         ? ((el.selectedOptions[0] || {}).textContent || '')
         : (el.textContent || '');
-      if (text.trim() && tooWide(el, text.trim())) out.push(text.trim().slice(0, 40));
+      if (text.trim() && tooWide(el, text.trim())) clipped.push(text.trim().slice(0, 40));
     }
-    return JSON.stringify(out);
-  }));
-  check('§1.5 no toolbar control is cut off mid-word', () => {
-    // Found by opening the picture: the scale picker read "Or pick a", which is
-    // not a phrase. A control that shows most of its own label is worse than a
-    // short one, because the reader cannot tell what was taken away.
-    assert.deepEqual(clippedControls, [], `truncated: ${clippedControls.join(', ')}`);
-  });
 
-  const zoomGroup = JSON.parse(await session.execute(function () {
-    const bar = document.querySelector('.toolbar');
-    const box = bar.getBoundingClientRect();
-    return JSON.stringify([...bar.querySelectorAll('.zoom button')].map(function (b) {
-      const r = b.getBoundingClientRect();
-      return {
-        label: b.getAttribute('aria-label') || (b.textContent || '').trim(),
-        inside: r.left >= box.left - 1 && r.right <= box.right + 1,
-      };
-    }));
-  }));
-  check('§1.5 zoom and fit are grouped right and stay on screen', () => {
-    // They went 76px past the right edge the moment the selects stopped being
-    // squeezed, and nothing would have noticed: a button that is off the end of
-    // a scrolling row is not visibly broken, it is just gone.
-    assert.ok(zoomGroup.length >= 3, `only ${zoomGroup.length} zoom controls`);
-    const lost = zoomGroup.filter((b) => !b.inside).map((b) => b.label);
-    assert.deepEqual(lost, [], `off the end of the toolbar: ${lost.join(', ')}`);
-  });
-
-  // The scale picker, measured against the thing that was actually covering it.
-  //
-  // §1.5 had two rows about this row and neither could see the defect: one
-  // measures each control's label against its own box, and the picker's box was
-  // never too small — 140px of control with 105px of label in it. What clipped
-  // it was the zoom group, which is `position: sticky` and therefore reserves no
-  // room at all: it paints over whatever the row has scrolled under it. The
-  // picker read "Or pick a s" with 83px of itself underneath (measured at the
-  // 839px editor the 1100px window used to give the Plan).
-  const scalePicker = JSON.parse(await session.execute(function () {
-    const bar = document.querySelector('.toolbar');
-    if (!bar) return JSON.stringify({ found: false });
-    const pick = [...bar.querySelectorAll('select')]
-      .find(function (s) { return (s.getAttribute('aria-label') || '') === 'Architectural scale'; });
-    const zoom = bar.querySelector('.zoom');
-    if (!pick || !zoom) return JSON.stringify({ found: false });
-    const p = pick.getBoundingClientRect();
-    const z = zoom.getBoundingClientRect();
-    const b = bar.getBoundingClientRect();
     const at = function (x, y) {
       const top = document.elementFromPoint(Math.round(x), Math.round(y));
-      return top ? (top === pick || pick.contains(top) ? 'itself' : (top.getAttribute('aria-label') || top.className || top.tagName)) : 'nothing';
+      return top ? (top.getAttribute('aria-label') || top.className || top.tagName) : 'nothing';
     };
+    const pick = [...bar.querySelectorAll('select')]
+      .find(function (el) { return (el.getAttribute('aria-label') || '') === 'Architectural scale'; });
+    let picker = null;
+    if (pick) {
+      const p = pick.getBoundingClientRect();
+      const own = function (x, y) {
+        const top = document.elementFromPoint(Math.round(x), Math.round(y));
+        return top ? (top === pick || pick.contains(top) ? 'itself' : (top.getAttribute('aria-label') || top.className || top.tagName)) : 'nothing';
+      };
+      picker = {
+        label: ((pick.selectedOptions[0] || {}).textContent || '').trim(),
+        pastTheBox: Math.round(Math.max(0, p.right - box.right)),
+        scrollWidth: pick.scrollWidth,
+        clientWidth: pick.clientWidth,
+        atItsRightEdge: own(p.right - 6, p.top + p.height / 2),
+        atItsMiddle: own(p.left + p.width / 2, p.top + p.height / 2),
+      };
+    }
+
+    // The inner box as well as the bar. The bar clips at its own edge and the
+    // field box clips inside it, so asking only the bar "do you hold your own
+    // content" reads equal however much is crammed into it — the same
+    // toothlessness the scale picker's `scrollWidth` had. What actually
+    // overflows is the row of fields, and that is the number with the teeth.
+    const fields = bar.querySelector('.tool-strip-fields');
     return JSON.stringify({
       found: true,
-      label: ((pick.selectedOptions[0] || {}).textContent || '').trim(),
-      coveredByZoom: Math.round(Math.max(0, p.right - z.left)),
-      pastTheBox: Math.round(Math.max(0, p.right - b.right)),
-      scrollWidth: pick.scrollWidth,
-      clientWidth: pick.clientWidth,
-      barContent: bar.scrollWidth,
-      barRoom: bar.clientWidth,
-      // What is drawn at the far end of the control, which is what the eye reads.
-      atItsRightEdge: at(p.right - 6, p.top + p.height / 2),
-      atItsMiddle: at(p.left + p.width / 2, p.top + p.height / 2),
+      rows: rows.length,
+      height: Math.round(box.height),
+      content: bar.scrollWidth,
+      room: bar.clientWidth,
+      fieldsContent: fields ? fields.scrollWidth : 0,
+      fieldsRoom: fields ? fields.clientWidth : 0,
+      text: bar.innerText || '',
+      clipped,
+      picker,
+      at,
     });
   }));
 
-  check('§1.5 the scale picker is not under the pinned zoom group', () => {
-    assert.ok(scalePicker.found, 'no scale picker in the toolbar');
-    assert.equal(scalePicker.coveredByZoom, 0,
-      `${scalePicker.coveredByZoom}px of "${scalePicker.label}" is under the zoom group`);
-    assert.equal(scalePicker.atItsRightEdge, 'itself',
-      `what is drawn at the end of the picker is ${scalePicker.atItsRightEdge}`);
-    assert.equal(scalePicker.atItsMiddle, 'itself',
-      `what is drawn in the middle of the picker is ${scalePicker.atItsMiddle}`);
+  check('§1.5 the tool settings strip is one row', () => {
+    assert.ok(strip.found, 'there is no tool settings strip');
+    assert.ok(strip.rows <= 1, `its controls sit on ${strip.rows} rows`);
+    assert.equal(strip.height, 42, `the strip is ${strip.height}px and is specified at 42px`);
   });
-  check('§1.5 and the whole of it is inside the toolbar, showing its whole label', () => {
-    assert.equal(scalePicker.pastTheBox, 0,
-      `it runs ${scalePicker.pastTheBox}px past the end of the toolbar`);
-    // Asked for, and worth knowing it has no teeth of its own: a <select> is not
-    // a scroller, so this reads equal even with 83px of the control covered. It
-    // is here to say so, not to catch anything.
-    assert.ok(scalePicker.scrollWidth <= scalePicker.clientWidth,
-      `the picker holds ${scalePicker.scrollWidth}px in ${scalePicker.clientWidth}px`);
-    assert.match(scalePicker.label, /scale/i, `it reads "${scalePicker.label}"`);
+  check('§1.5 no control in it is cut off mid-word', () => {
+    // Found by opening the picture: the scale picker read "Or pick a", which is
+    // not a phrase. A control that shows most of its own label is worse than a
+    // short one, because the reader cannot tell what was taken away.
+    assert.deepEqual(strip.clipped, [], `truncated: ${strip.clipped.join(', ')}`);
   });
   check('§1.5 and the row it is in fits the window it is in', () => {
-    // The row that does not overflow is the row nothing can be pinned over. This
-    // is the number the window width was chosen from: 902px of controls.
-    assert.ok(scalePicker.barContent <= scalePicker.barRoom,
-      `the toolbar holds ${scalePicker.barContent}px of controls in ${scalePicker.barRoom}px`);
+    // The row that does not overflow is the row nothing can be pinned over.
+    // Both boxes: the bar, and the field row inside it that actually carries
+    // the controls. The bar alone reads equal at any amount of overflow,
+    // because the field row clips before the bar ever sees it.
+    assert.ok(strip.content <= strip.room,
+      `the strip holds ${strip.content}px of controls in ${strip.room}px`);
+    assert.ok(strip.fieldsContent <= strip.fieldsRoom,
+      `its controls come to ${strip.fieldsContent}px in ${strip.fieldsRoom}px of row`);
+  });
+  check('§1.5 the scale picker has nothing drawn over it', () => {
+    assert.ok(strip.picker, 'no scale picker in the strip while the Scale act is up');
+    assert.equal(strip.picker.atItsRightEdge, 'itself',
+      `what is drawn at the end of the picker is ${strip.picker.atItsRightEdge}`);
+    assert.equal(strip.picker.atItsMiddle, 'itself',
+      `what is drawn in the middle of the picker is ${strip.picker.atItsMiddle}`);
+    assert.equal(strip.picker.pastTheBox, 0,
+      `it runs ${strip.picker.pastTheBox}px past the end of the strip`);
+    // Asked for, and worth knowing it has no teeth of its own: a <select> is not
+    // a scroller, so this reads equal even with most of the control covered. It
+    // is here to say so, not to catch anything.
+    assert.ok(strip.picker.scrollWidth <= strip.picker.clientWidth,
+      `the picker holds ${strip.picker.scrollWidth}px in ${strip.picker.clientWidth}px`);
+    assert.match(strip.picker.label, /scale/i, `it reads "${strip.picker.label}"`);
   });
 
-  check('§1.5 scale is one action, not "Set scale" and "Rescale" both', () => {
-    const both = /Set scale/.test(toolbar.text) && /Rescale/.test(toolbar.text);
-    assert.ok(!both, `toolbar reads "${toolbar.text.replace(/\n/g, ' · ')}"`);
+  const viewNav = JSON.parse(await session.execute(function () {
+    const box = document.querySelector('.surface-region').getBoundingClientRect();
+    return JSON.stringify([...document.querySelectorAll('.view-nav .icon-button')].map(function (b) {
+      const r = b.getBoundingClientRect();
+      const top = document.elementFromPoint(
+        Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
+      return {
+        label: b.getAttribute('aria-label') || (b.textContent || '').trim(),
+        inside: r.left >= box.left - 1 && r.right <= box.right + 1
+          && r.top >= box.top - 1 && r.bottom <= box.bottom + 1,
+        owner: !top ? 'nothing' : ((top === b || b.contains(top)) ? 'itself' : (top.getAttribute('aria-label') || top.className || top.tagName)),
+      };
+    }));
+  }));
+  check('§1.5 zoom and fit are grouped at the drawing and stay reachable', () => {
+    // They went 76px past the right edge of the old row the moment the selects
+    // stopped being squeezed, and nothing would have noticed: a button off the
+    // end of a scrolling row is not visibly broken, it is just gone. On the
+    // drawing there is no row to run off, and the reading here is the one that
+    // matters — a click at the middle of each one lands on it.
+    assert.ok(viewNav.length >= 3, `only ${viewNav.length} view controls`);
+    const lost = viewNav.filter((b) => !b.inside).map((b) => b.label);
+    assert.deepEqual(lost, [], `outside the drawing: ${lost.join(', ')}`);
+    const covered = viewNav.filter((b) => b.owner !== 'itself').map((b) => `${b.label} under ${b.owner}`);
+    assert.deepEqual(covered, [], `covered: ${covered.join(' | ')}`);
   });
+
+  const acts = JSON.parse(await session.execute(function () {
+    return JSON.stringify([...document.querySelectorAll('.tool-rail .rail-tool')].map(function (b) {
+      const r = b.getBoundingClientRect();
+      const chip = b.querySelector('.rail-label');
+      return {
+        label: b.getAttribute('aria-label') || '',
+        chip: chip ? (chip.textContent || '').trim() : '',
+        width: Math.round(r.width), height: Math.round(r.height),
+      };
+    }));
+  }));
+  check('§1.5 scale is one act, not "Set scale" and "Rescale" both', () => {
+    const scaling = acts.filter((a) => /scale/i.test(a.label));
+    assert.equal(scaling.length, 1, `the rail offers ${JSON.stringify(scaling.map((a) => a.label))}`);
+    assert.ok(!/Set scale/.test(strip.text), `the strip reads "${strip.text.replace(/\n/g, ' · ')}"`);
+  });
+  check('§1.5 every act carries its own word, and they are the trade\'s words', () => {
+    // The rail is pictograms with the word on hover. A pictogram whose word is
+    // missing is a thing a roofer has to learn, which is the defect §1.5 was
+    // about in the first place.
+    assert.ok(acts.length >= 5, `the rail offers ${acts.length} acts`);
+    for (const a of acts) {
+      assert.ok(a.label.length > 0, 'an act with no name at all');
+      assert.equal(a.chip, a.label, `"${a.label}" hovers as "${a.chip}"`);
+      assert.equal(a.width, 36, `"${a.label}" is ${a.width}px wide and is specified at 36`);
+      assert.equal(a.height, 36, `"${a.label}" is ${a.height}px tall and is specified at 36`);
+    }
+    for (const want of ['Trace an area', 'Run a parapet', 'Drop a drain']) {
+      assert.ok(acts.some((a) => a.label === want), `no act called "${want}"`);
+    }
+  });
+  check('§1.5 and nothing in the rail is an act this program cannot do', () => {
+    // The handoff names eight. Four of them are not built, and a button that
+    // does nothing is worse than a missing one: it teaches the estimator that
+    // the program is broken rather than that the feature is coming.
+    for (const notYet of ['Set high and low', 'Box out a curb', 'Measure', 'Section']) {
+      assert.ok(!acts.some((a) => a.label === notYet), `"${notYet}" is offered and does nothing`);
+    }
+  });
+
+  await tool(session, 'Select');
 
   // ── §1.7 the conditions header is not under the panel ───────────────────
   const rail = JSON.parse(await session.execute(function () {
-    const head = document.querySelector('.rail-title, .conditions-title, .rail h3');
+    // Pointed at the heading that actually exists. It used to look for three
+    // class names none of which the Plan has ever used, so the row passed by
+    // finding nothing — the weakest way a check can be green.
+    const head = document.querySelector('.plan-rail .rail-heading');
     if (!head) return JSON.stringify({ found: false });
     const r = head.getBoundingClientRect();
     const top = document.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
     return JSON.stringify({ found: true, visible: r.height > 0, own: !!top && (head === top || head.contains(top)) });
   }));
-  check('§1.7 the conditions heading is not clipped under the panel', () => {
-    if (!rail.found) { assert.ok(true); return; }
+  check('§1.7 the conditions heading is not clipped under anything', () => {
+    assert.ok(rail.found, 'the Plan has no conditions heading');
     assert.ok(rail.visible, 'the heading has no height');
     assert.ok(rail.own, 'something is drawn over the conditions heading');
   });
@@ -223,269 +315,259 @@ try {
   await writeFile(join(EVIDENCE, `section7-plan-${COMMIT}.png`),
     Buffer.from(await session.screenshot(), 'base64'));
 
-  // ── §1.9 in the window the sheet is actually worked in ──────────────────
+  // ── §1.9 in the window the money is actually worked in ──────────────────
   //
   // The sheet is torn off so it can have a monitor of its own — that is the
-  // arrangement the README opens with. Nothing had ever measured it in that
-  // window, and it was the window the defect was in: at 760px the pinned
-  // Extended column sat on top of the Unit column and the word UNIT, which is
-  // v2 §1.9's own complaint about the pinning that closed v2 §1.9.
+  // arrangement the README opens with, and it is now the cost panel that goes
+  // there rather than an eleven-column table. §1.9's complaint survives the
+  // change whole: at any width short of the table, SOME column was half covered
+  // by the pinned pair, and the ✕ that takes a line off sat under the floating
+  // scrollbar where a hand could not reach it.
   //
-  // A sticky cell reserves no room. It paints over whatever scrolls under it,
-  // so at any width short of the whole table some column is half covered and no
-  // amount of pinning fixes it. What fixes it is a window wide enough for the
-  // table it carries.
+  // The compact line has four columns and fits the panel at every width the
+  // panel has, so the reading is the one that says so: nothing is drawn over
+  // any of them, and none of them is cut off by its own box. And the ✕ is no
+  // longer at an edge at all — it is a named button inside the line's own
+  // chain, which is the answer to 6c's red row.
   const oneWindow = await session.handles();
-  const tore = await session.execute(function () {
-    const b = [...document.querySelectorAll('.area-header .icon-button')]
-      .find((e) => (e.getAttribute('aria-label') || '') === 'Open in its own window');
-    if (!b) return false;
-    b.click();
-    return true;
-  });
-  await wait(3500);
+  const tore = await detachCostPanel(session);
   const handles = await session.handles();
   const main = oneWindow[0];
   const torn = handles.find((h) => !oneWindow.includes(h)) ?? null;
 
-  check('§1.9 the Estimate Sheet tears off into its own window', () => {
-    assert.ok(tore, 'no tear-off button in the area header');
+  check('§1.9 the cost panel detaches into its own window', () => {
+    assert.ok(tore, 'no detach button beside the tabs');
     assert.ok(torn, `${oneWindow.length} window before and ${handles.length} after`);
   });
 
   if (torn) {
     await session.switchTo(torn);
-    await until(session, () => !!document.querySelector('.sheet'), { what: 'the torn-off sheet' });
+    await until(session, () => !!document.querySelector('.cost-estimate'), { what: 'the detached lines' });
     await wait(1200);
 
-    const tornSheet = JSON.parse(await session.execute(function () {
-      const scroll = document.querySelector('.sheet-scroll');
+    // Open a line, so the whole chain and its ✕ are on screen to be measured.
+    await session.execute(function () {
+      const line = document.querySelector('.cost-line .line-what');
+      if (line) line.click();
+    });
+    await wait(900);
+
+    const tornPanel = JSON.parse(await session.execute(function () {
+      const scroll = document.querySelector('.cost-lines');
       const box = scroll.getBoundingClientRect();
-      const owner = function (th) {
-        const r = th.getBoundingClientRect();
+      const owner = function (el) {
+        const r = el.getBoundingClientRect();
         const top = document.elementFromPoint(
           Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
         if (!top) return 'nothing';
-        if (top === th || th.contains(top)) return 'itself';
+        if (top === el || el.contains(top)) return 'itself';
         return top.className || top.tagName;
       };
-      const heads = [...document.querySelectorAll('.sheet th')].map(function (th) {
-        const r = th.getBoundingClientRect();
+      const heads = [...document.querySelectorAll('.cost-columns > span')].map(function (h) {
+        const r = h.getBoundingClientRect();
         return {
-          text: (th.textContent || '').trim() || '(actions)',
+          text: (h.textContent || '').trim() || '(unit)',
           left: Math.round(r.left - box.left),
           right: Math.round(r.right - box.left),
-          owner: owner(th),
-          clipped: th.scrollWidth > th.clientWidth + 1,
+          owner: owner(h),
+          clipped: h.scrollWidth > h.clientWidth + 1,
         };
       });
-      // The one control in the unnamed column, and whether a hand could reach
-      // it: the ✕ that takes a line off. It is the reason that column exists.
-      const remove = document.querySelector('.sheet td.actions button.remove');
-      const removeAt = !remove ? null : (function () {
-        const r = remove.getBoundingClientRect();
-        const top = document.elementFromPoint(
-          Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
-        return {
-          right: Math.round(r.right - box.left),
-          owner: !top ? 'nothing' : ((top === remove || remove.contains(top)) ? 'itself' : (top.className || top.tagName)),
-        };
-      })();
+      const cells = [...document.querySelectorAll('.cost-line .line-money, .cost-line .line-qty')]
+        .map(function (c) {
+          const r = c.getBoundingClientRect();
+          return {
+            text: (c.textContent || '').trim(),
+            lines: c.getClientRects ? c.getClientRects().length : 0,
+            right: Math.round(r.right),
+            inside: r.right <= box.right + 1 && r.left >= box.left - 1,
+          };
+        });
+      const off = document.querySelector('.line-chain .remove');
       return JSON.stringify({
         room: Math.round(scroll.clientWidth),
         needs: scroll.scrollWidth,
         windowWidth: window.innerWidth,
-        removeAt,
-        panel: Math.round((document.querySelector('.condition-panel') || { getBoundingClientRect: () => ({ width: 0 }) })
-          .getBoundingClientRect().width),
+        windowHeight: window.innerHeight,
         heads,
+        cells,
+        removeAt: !off ? null : {
+          text: (off.textContent || '').trim(),
+          owner: owner(off),
+          right: Math.round(off.getBoundingClientRect().right),
+        },
+        totalsPinned: (function () {
+          const totals = document.querySelector('.cost-totals');
+          const panel = document.querySelector('.cost-panel');
+          if (!totals || !panel) return null;
+          const t = totals.getBoundingClientRect();
+          const p = panel.getBoundingClientRect();
+          return { bottomGap: Math.round(p.bottom - t.bottom), height: Math.round(t.height) };
+        })(),
       });
     }));
 
-    check('§1.9 the torn-off sheet shows every column at once', () => {
-      // The root of it, in one number: what the table needs against what the
-      // window gives it. At 760 it was 1136 against 756 — and 440 once the
-      // Properties panel stood beside it.
-      assert.ok(tornSheet.needs <= tornSheet.room,
-        `the sheet needs ${tornSheet.needs}px and has ${tornSheet.room}px`
-        + ` (window ${tornSheet.windowWidth}, panel ${tornSheet.panel})`);
+    check('§1.9 the detached panel shows every column at once', () => {
+      // The root of it, in one number: what the lines need against what the
+      // window gives them. At 760 the old table was 1136 against 756.
+      assert.ok(tornPanel.needs <= tornPanel.room + 1,
+        `the lines need ${tornPanel.needs}px and have ${tornPanel.room}px`
+        + ` (window ${tornPanel.windowWidth})`);
     });
-    check('§1.9 the UNIT heading is visible and nothing is drawn over it', () => {
-      const unit = tornSheet.heads.find((h) => /^unit$/i.test(h.text));
-      assert.ok(unit, `the headings read ${tornSheet.heads.map((h) => h.text).join(', ')}`);
-      assert.ok(!unit.clipped, 'the UNIT heading is cut off by its own column');
-      assert.equal(unit.owner, 'itself',
-        `what is drawn over the middle of UNIT is ${unit.owner}`
-        + ` (UNIT at ${unit.left}-${unit.right} in a ${tornSheet.room}px view)`);
+    check('§1.9 the window is the size the handoff gives it', () => {
+      // 600 x 860 (D137). It is load-bearing: the panel's own widths are
+      // specified against it, and nothing else asserts it.
+      assert.ok(Math.abs(tornPanel.windowWidth - 600) <= 2,
+        `it is ${tornPanel.windowWidth}px wide and is specified at 600`);
+      assert.ok(Math.abs(tornPanel.windowHeight - 860) <= 2,
+        `it is ${tornPanel.windowHeight}px tall and is specified at 860`);
     });
-    check('§1.9 and the same is true of every heading with a word in it', () => {
-      // Whichever column the pinned pair lands on is the defect; naming only
-      // UNIT would move the wound and call it fixed. At 1240px of window it
-      // moves to ORDER, whose heading reads "O" and whose cells read "75.".
-      //
-      // The actions column is out of this set, and the reason is not a
-      // convenience. It has no heading on purpose — the ✕ on each line needs no
-      // word — so there is nothing in it to be covered or read. What reported it
-      // as covered is WebKit: a GTK scrollbar floats over the right edge of a
-      // scroller instead of reserving room, so `elementFromPoint` at the centre
-      // of that last 34px answers with the scroll container. Widening a nameless
-      // column to make this row green would be taking room from the table to
-      // satisfy a check, which is the wrong way round. What the column owes is
-      // that its button can be reached, and that is the row below.
-      const words = tornSheet.heads.filter((h) => h.text !== '(actions)');
-      assert.equal(words.length, tornSheet.heads.length - 1,
-        `${tornSheet.heads.length} headings and ${words.length} of them named`);
-      assert.equal(words.length, 10, `the sheet shows ${words.length} named columns`);
-      const covered = words.filter((h) => h.owner !== 'itself')
+    check('§1.9 every column heading is visible with nothing drawn over it', () => {
+      const covered = tornPanel.heads.filter((h) => h.owner !== 'itself')
         .map((h) => `${h.text} under ${h.owner}`);
       assert.deepEqual(covered, [], `covered: ${covered.join(' | ')}`);
+      const cut = tornPanel.heads.filter((h) => h.clipped).map((h) => h.text);
+      assert.deepEqual(cut, [], `cut off by their own box: ${cut.join(', ')}`);
     });
-    check('§1.9 and the unnamed column is at the edge with its button reachable', () => {
-      // §1.9 pinned the row actions "in a fixed right column that never scrolls
-      // out". Two claims, measured: the column ends where the view ends, and a
-      // click at the middle of the ✕ lands on the ✕ — not on the scrollbar that
-      // floats over that edge. If this one ever goes red, the answer IS width:
-      // the button is under the scrollbar and the column is too narrow for it.
-      const actions = tornSheet.heads[tornSheet.heads.length - 1];
-      assert.equal(actions.text, '(actions)', `the last heading reads "${actions.text}"`);
-      assert.ok(Math.abs(actions.right - tornSheet.room) <= 2,
-        `it ends at ${actions.right}px in a ${tornSheet.room}px view`);
-      assert.ok(tornSheet.removeAt, 'no line has a button to take it off');
-      assert.equal(tornSheet.removeAt.owner, 'itself',
-        `what is drawn over the middle of the ✕ is ${tornSheet.removeAt.owner}`
-        + ` (its right edge at ${tornSheet.removeAt.right}px of ${tornSheet.room}px)`);
+    check('§1.9 and every number holds one line, inside the panel', () => {
+      // A money figure that wraps is a row twice as tall and a column that
+      // reads like two — 6c's rule, at the surface that carries the money now.
+      assert.ok(tornPanel.cells.length > 0, 'no quantities or money on screen');
+      for (const c of tornPanel.cells) {
+        assert.equal(c.lines, 1, `"${c.text}" is on ${c.lines} lines`);
+        assert.ok(c.inside, `"${c.text}" ends at ${c.right}px, outside the lines it is in`);
+      }
+    });
+    check('§1.9 and the button that takes a line off can be reached', () => {
+      // 6c measured the ✕ as unreachable: it sat in a 34px column jammed to the
+      // right edge of the scroller, under the GTK scrollbar that floats over
+      // that edge instead of reserving room. It is a named button inside the
+      // line's own chain now, away from every edge — and taking a line off is
+      // not something to do by accident.
+      assert.ok(tornPanel.removeAt, 'no open line has a button to take it off');
+      assert.match(tornPanel.removeAt.text, /take this line off/i,
+        `the button reads "${tornPanel.removeAt.text}"`);
+      assert.equal(tornPanel.removeAt.owner, 'itself',
+        `what is drawn over the middle of it is ${tornPanel.removeAt.owner}`);
+    });
+    check('§1.9 and the totals are pinned at the bottom of the panel', () => {
+      assert.ok(tornPanel.totalsPinned, 'there are no pinned totals');
+      assert.ok(Math.abs(tornPanel.totalsPinned.bottomGap) <= 1,
+        `they sit ${tornPanel.totalsPinned.bottomGap}px off the bottom of the panel`);
     });
 
-    await writeFile(join(EVIDENCE, `section7-torn-sheet-${COMMIT}.png`),
+    await writeFile(join(EVIDENCE, `section7-detached-cost-${COMMIT}.png`),
       Buffer.from(await session.screenshot(), 'base64'));
+
+    // Home again, so the rest of this runs in one window.
+    await session.execute(function () {
+      const b = document.querySelector('.cost-dock');
+      if (b) b.click();
+    });
+    await wait(2500);
     await session.switchTo(main);
-    await wait(600);
+    await wait(900);
   }
 
-  // ── to the sheet, for §1.9, §1.10, §1.11, §1.12 ─────────────────────────
+  // ── the lines in the window they are read in, for §1.9 to §1.12 ─────────
+  await showTab(session, 'Estimate');
+  await until(session, () => !!document.querySelector('.cost-estimate'), { what: 'the lines' });
   await session.execute(function () {
-    const p = document.querySelector('.editor-picker');
-    p.value = 'estimate';
-    p.dispatchEvent(new Event('change', { bubbles: true }));
+    const line = document.querySelector('.cost-line .line-what');
+    if (line) line.click();
   });
-  await wait(2500);
-  await until(session, () => !!document.querySelector('.sheet'), { what: 'the sheet' });
+  await wait(900);
 
-  const sheet = JSON.parse(await session.execute(function () {
-    const scroll = document.querySelector('.sheet-scroll');
+  const lines = JSON.parse(await session.execute(function () {
+    const scroll = document.querySelector('.cost-lines');
     const box = scroll.getBoundingClientRect();
-    const th = [...document.querySelectorAll('.sheet th')];
-    const heads = th.map(function (h) {
+    const heads = [...document.querySelectorAll('.cost-columns > span')].map(function (h) {
       const r = h.getBoundingClientRect();
       return {
         text: (h.textContent || '').trim(),
-        // A heading truncates when its text is wider than the box drawn for it.
         clipped: h.scrollWidth > h.clientWidth + 1,
         right: Math.round(r.right),
-        cls: h.className,
       };
     });
-    const money = [...document.querySelectorAll('.sheet td.extended')].map(function (c) {
+    const money = [...document.querySelectorAll('.cost-line .line-money')].map(function (c) {
       const r = c.getBoundingClientRect();
       return { text: (c.textContent || '').trim(), left: Math.round(r.left), right: Math.round(r.right) };
     });
-    const codes = [...document.querySelectorAll('.sheet td')].filter(function (c) {
-      return /^\d{2}-\d{3}-\d{2}/.test((c.textContent || '').trim());
-    }).map(function (c) {
-      const inner = c.querySelector('input') || c;
-      return { text: (inner.value || inner.textContent || '').trim(), clipped: inner.scrollWidth > inner.clientWidth + 1 };
-    });
-    // Every numeric cell, and whether what is in it is on one line. A span that
-    // has wrapped answers with two client rectangles, which is the only reading
-    // of "one line" that does not depend on knowing the line height.
-    const numeric = [...document.querySelectorAll('.sheet td.num')].map(function (c) {
-      const inner = c.querySelector('span') || c.querySelector('input');
-      const r = c.getBoundingClientRect();
-      return {
-        text: inner ? String(inner.value || inner.textContent || '').trim() : '',
-        lines: inner && inner.getClientRects ? inner.getClientRects().length : 0,
-        width: Math.round(r.width),
-        height: Math.round(r.height),
-      };
-    });
-    // A line whose formula could not be worked out carries the reason under the
-    // formula, and a line whose unit disagrees carries a note: both are meant to
-    // make that row taller. They are left out here so this measures wrapping and
-    // not the program saying something.
-    const rowHeights = [...document.querySelectorAll('.sheet tbody tr')]
-      .filter(function (r) {
-        return r.querySelectorAll('td').length > 8
-          && !r.querySelector('.formula-error, .formula-note');
-      })
+    const codes = [...document.querySelectorAll('.line-chain .chain-value input')]
+      .filter(function (i) { return /^\d{2}-\d{3}-\d{2}/.test(i.value || ''); })
+      .map(function (i) { return { text: i.value, clipped: i.scrollWidth > i.clientWidth + 1 }; });
+    // A line whose formula could not be worked out carries the reason under it,
+    // and a line whose unit disagrees carries a note: both are meant to make
+    // that row taller. They are left out here so this measures wrapping and not
+    // the program saying something.
+    const rowHeights = [...document.querySelectorAll('.cost-line')]
+      .filter(function (r) { return !r.querySelector('.formula-error, .formula-note'); })
       .map(function (r) { return Math.round(r.getBoundingClientRect().height); });
+    const numeric = [...document.querySelectorAll('.cost-line .line-qty, .cost-line .line-money')]
+      .map(function (c) {
+        return {
+          text: (c.textContent || '').trim(),
+          lines: c.getClientRects ? c.getClientRects().length : 0,
+        };
+      });
     return JSON.stringify({
       viewLeft: Math.round(box.left), viewRight: Math.round(box.right),
-      heads, money, codes, numeric, rowHeights,
-      html: (document.querySelector('.sheet') || {}).innerHTML || '',
-      text: (document.querySelector('.area, #editor') || document.body).innerText || '',
-      rules: getComputedStyle(document.querySelector('.sheet td')).borderBottomWidth,
-      formulaFont: getComputedStyle(document.querySelector('.sheet input.formula') || document.body).fontFamily,
+      heads, money, codes, rowHeights, numeric,
+      html: (document.querySelector('.cost-estimate') || {}).innerHTML || '',
+      text: (document.querySelector('.cost-panel') || document.body).innerText || '',
+      rules: getComputedStyle(document.querySelector('.cost-line')).borderBottomWidth,
+      formulaFont: getComputedStyle(document.querySelector('.line-chain input.formula') || document.body).fontFamily,
+      chipFont: getComputedStyle(document.querySelector('.line-formula') || document.body).fontFamily,
     });
   }));
 
   check('§1.9 no column heading truncates', () => {
-    const bad = sheet.heads.filter((h) => h.clipped).map((h) => `"${h.text}"`);
+    const bad = lines.heads.filter((h) => h.clipped).map((h) => `"${h.text}"`);
     assert.equal(bad.length, 0, `truncated: ${bad.join(', ')}`);
   });
   check('§1.9 every line shows its money without scrolling', () => {
     // The defect this replaced: on a narrow window the sheet showed ITEM, CODE,
     // FORMULA, QTY, UNIT, WAS — and every money column past the right edge.
-    assert.ok(sheet.money.length > 0, 'no extended cells');
-    for (const m of sheet.money) {
-      assert.ok(m.right <= sheet.viewRight + 1 && m.left >= sheet.viewLeft - 1,
-        `a line's money sits at ${m.left}–${m.right} in a view of ${sheet.viewLeft}–${sheet.viewRight}`);
-      assert.notEqual(m.text, '', 'an extended cell is empty');
+    assert.ok(lines.money.length > 0, 'no money on any line');
+    for (const m of lines.money) {
+      assert.ok(m.right <= lines.viewRight + 1 && m.left >= lines.viewLeft - 1,
+        `a line's money sits at ${m.left}–${m.right} in a view of ${lines.viewLeft}–${lines.viewRight}`);
+      assert.notEqual(m.text, '', 'a money cell is empty');
     }
   });
   check('§1.9 no cost code is cut off mid-code', () => {
-    const bad = sheet.codes.filter((c) => c.clipped).map((c) => c.text);
+    const bad = lines.codes.filter((c) => c.clipped).map((c) => c.text);
     assert.equal(bad.length, 0, `clipped codes: ${bad.join(', ')}`);
   });
+  check('§1.9 every number holds one line, and the rows are one height', () => {
+    // 6c's rule: a figure that wraps is a row twice as tall and a column that
+    // reads like two. Read off the client rectangles, which is the only reading
+    // of "one line" that does not depend on knowing the line height.
+    for (const n of lines.numeric) {
+      assert.equal(n.lines, 1, `"${n.text}" is drawn on ${n.lines} lines`);
+    }
+    const heights = [...new Set(lines.rowHeights)];
+    assert.ok(heights.length <= 1,
+      `the lines are ${heights.join(', ')}px tall — one of them has wrapped`);
+  });
   check('§1.9 waste never shows a bare percent sign with no number', () => {
-    assert.ok(!/>\s*%\s*</.test(sheet.html), 'a bare "%" is in a cell');
+    assert.ok(!/>\s*%\s*</.test(lines.html), 'a bare "%" is in a cell');
   });
-  check('§1.9 no numeric cell wraps onto a second line', () => {
-    // Found by opening the picture: the demo's membrane line is priced per
-    // square foot over a 1000 SF roll, so its Priced cell read the thousand-with-decimals form in
-    // 78px of column — 90px of text — and wrapped, which made that row 43px tall
-    // in a sheet whose rows are 28. Order and Priced are 104px now and Extended
-    // is 108, sized off what they have to hold rather than off what the demo
-    // happens to show; Qty is still 66 and wraps above "9,999.99", which is what
-    // this row is here to catch the day a real job crosses it.
-    const wrapped = sheet.numeric.filter((c) => c.lines > 1)
-      .map((c) => `"${c.text}" on ${c.lines} lines in ${c.width}px`);
-    assert.ok(sheet.numeric.length > 0, 'no numeric cells on the sheet');
-    assert.deepEqual(wrapped, [], `wrapped: ${wrapped.join(', ')}`);
-  });
-  check('§1.9 and every line of the sheet is one row tall', () => {
-    // The consequence of the above, measured where an estimator sees it: a
-    // wrapped cell does not look like a wrapped cell, it looks like one row
-    // being taller than the rest for no reason anybody can name.
-    assert.ok(sheet.rowHeights.length > 0, 'no item rows on the sheet');
-    const tallest = Math.max(...sheet.rowHeights);
-    const shortest = Math.min(...sheet.rowHeights);
-    assert.ok(tallest - shortest <= 2,
-      `rows run from ${shortest}px to ${tallest}px: ${sheet.rowHeights.join(', ')}`);
-  });
-  check('§1.10 the explanatory paragraph is gone from the sheet', () => {
-    assert.ok(!/Every line shows the formula that produced its quantity/.test(sheet.text),
-      'the paragraph is still printed above the table');
+  check('§1.10 the explanatory paragraph is gone', () => {
+    assert.ok(!/Every line shows the formula that produced its quantity/.test(lines.text),
+      'the paragraph is still printed above the lines');
   });
   check('§1.11 rows have separators and formulas are monospace', () => {
-    assert.notEqual(sheet.rules, '0px', 'rows have no rule between them');
-    assert.match(sheet.formulaFont, /mono/i, `formula font is ${sheet.formulaFont}`);
+    assert.notEqual(lines.rules, '0px', 'the lines have no rule between them');
+    assert.match(lines.formulaFont, /mono/i, `the formula field is ${lines.formulaFont}`);
+    assert.match(lines.chipFont, /mono/i, `the formula on the line is ${lines.chipFont}`);
   });
-  check('§1.12 the footer carries class subtotals and a selling price', () => {
-    assert.match(sheet.text, /MATERIAL/i, 'no class subtotal');
-    assert.match(sheet.text, /SELLING PRICE/i, 'no selling price');
+  check('§1.12 the pinned totals carry the classes and a selling price', () => {
+    assert.match(lines.text, /MATERIAL/i, 'no class subtotal');
+    assert.match(lines.text, /SELLING PRICE/i, 'no selling price');
   });
 
-  await writeFile(join(EVIDENCE, `section7-sheet-${COMMIT}.png`),
+  await writeFile(join(EVIDENCE, `section7-lines-${COMMIT}.png`),
     Buffer.from(await session.screenshot(), 'base64'));
 } catch (e) {
   results.push('FAIL');

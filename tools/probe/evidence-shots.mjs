@@ -20,7 +20,9 @@
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { launch, openDemoJob, until, wait, commitStamp } from './tauri-harness.mjs';
+import {
+  detachCostPanel, launch, openDemoJob, pickLens, showTab, showView, until, wait, commitStamp,
+} from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -64,12 +66,13 @@ try {
   await session.execute(function () { document.body.click(); });
   await wait(400);
 
-  // The condition panel, with a condition selected.
+  // The Condition tab, with a condition selected.
   await session.execute(function () {
-    const first = document.querySelector('.condition');
+    const first = document.querySelector('.plan-rail .condition');
     if (first) first.click();
   });
-  await wait(700);
+  await wait(500);
+  await showTab(session, 'Condition');
   await shot('condition-panel');
 
   // A help sheet, open. The third screen with no picture: nothing in the suite
@@ -86,17 +89,39 @@ try {
   });
   await wait(400);
 
-  // The estimate sheet, in the same window rather than a torn-off one — that is
-  // where an estimator reads it, and it is the width the money has to survive.
+  // The lines, beside the drawing rather than in a window of their own — that
+  // is where an estimator reads them, and it is the width the money has to
+  // survive.
+  await showTab(session, 'Estimate');
+  await shot('estimate-lines');
+
+  // A line open to its whole chain, which is the screen this program exists for.
   await session.execute(function () {
-    const picker = document.querySelector('.editor-picker');
-    if (picker) {
-      picker.value = 'estimate';
-      picker.dispatchEvent(new Event('change', { bubbles: true }));
-    }
+    const line = document.querySelector('.cost-line .line-what');
+    if (line) line.click();
   });
-  await wait(2200);
-  await shot('estimate-sheet');
+  await wait(900);
+  await shot('open-line');
+
+  // The roof, in the same window, switched in place.
+  await showView(session, 'Model');
+  await wait(1800);
+  await shot('model');
+  await showView(session, 'Plan');
+  await wait(900);
+
+  // A lens, and the panel on the other monitor.
+  await pickLens(session, 'Stocking');
+  await shot('lens');
+  await pickLens(session, 'Full estimate');
+  await detachCostPanel(session);
+  await shot('detached-main');
+  const handles = await session.handles();
+  if (handles.length > 1) {
+    await session.switchTo(handles[handles.length - 1]);
+    await wait(1200);
+    await shot('detached-cost');
+  }
 } finally {
   await app.close();
 }
