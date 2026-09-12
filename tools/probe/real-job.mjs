@@ -20,7 +20,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, until, wait } from './tauri-harness.mjs';
+import { clickAt, launch, tool, typeScale, until, wait } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const JOB = join(ROOT, 'fixtures/real-job');
@@ -43,29 +43,6 @@ const toEditor = async (session, which) => {
   await wait(2600);
 };
 
-const clickAt = (session, points) => session.execute(function (pts) {
-  const o = document.querySelector('.surface-overlay');
-  const box = o.getBoundingClientRect();
-  for (const [x, y] of pts) {
-    for (const type of ['pointermove', 'pointerdown', 'pointerup']) {
-      o.dispatchEvent(new PointerEvent(type, {
-        clientX: box.left + x, clientY: box.top + y,
-        button: 0, buttons: 1, bubbles: true, detail: 1, pointerId: 1,
-      }));
-    }
-  }
-  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-}, points);
-
-const tool = async (session, label) => {
-  await session.execute(function (want) {
-    const b = [...document.querySelectorAll('.toolbar .tool')]
-      .find((e) => e.textContent.trim().startsWith(want));
-    if (b) b.click();
-  }, label);
-  await wait(300);
-};
-
 await mkdir(SHOTS, { recursive: true });
 const app = await launch();
 const { session } = app;
@@ -75,6 +52,12 @@ try {
 
   // ── 1. open a real plan and scale it ────────────────────────────────────
   step(1, 'Open a real roof plan and set its scale');
+  // The one place a probe opens a job any way but through the front door, and
+  // it is not a shortcut: the start screen offers "Open a job", which is a
+  // native file picker no driver can drive, and "Open the demo job", which is
+  // not this job. A real job on a real sheet cannot be reached from the start
+  // screen under WebDriver at all. Everything after this line is front-door
+  // work on a real drawing, and the standard is met everywhere it can be.
   await session.execute(function (f) {
     return window.__TAURI_INTERNALS__.invoke('doc_open', { folder: f });
   }, JOB);

@@ -171,3 +171,50 @@ export async function until(session, fn, { timeout = 20000, every = 250, what = 
 }
 
 export const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Click points on the drawing, the way a hand does.
+ *
+ * Pointer events on the overlay in its own client coordinates, then Enter to
+ * finish the shape. Lived in one probe and is wanted by every probe that traces
+ * anything, which is the usual reason a helper ends up copied.
+ */
+export const clickAt = (session, points) => session.execute(function (pts) {
+  const o = document.querySelector('.surface-overlay');
+  const box = o.getBoundingClientRect();
+  for (const [x, y] of pts) {
+    for (const type of ['pointermove', 'pointerdown', 'pointerup']) {
+      o.dispatchEvent(new PointerEvent(type, {
+        clientX: box.left + x, clientY: box.top + y,
+        button: 0, buttons: 1, bubbles: true, detail: 1, pointerId: 1,
+      }));
+    }
+  }
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+}, points);
+
+/** Pick a tool off the toolbar by the word on it. */
+export const tool = async (session, label) => {
+  await session.execute(function (want) {
+    const b = [...document.querySelectorAll('.toolbar .tool')]
+      .find((e) => e.textContent.trim().startsWith(want));
+    if (b) b.click();
+  }, label);
+  await wait(300);
+};
+
+/** Type a real dimension into the scale field and commit it. */
+export const typeScale = async (session, text) => {
+  await session.execute(function (value) {
+    const f = document.querySelector('.hint input, .scale-field input, input.scale');
+    if (!f) return false;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(f, value);
+    f.dispatchEvent(new Event('input', { bubbles: true }));
+    f.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const form = f.closest('form');
+    if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    return true;
+  }, text);
+  await wait(900);
+};

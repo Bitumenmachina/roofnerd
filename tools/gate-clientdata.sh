@@ -146,6 +146,31 @@ else
     echo "  (no $TERMS_FILE — names and job numbers are not being checked)"
   fi
 
+  # Drawing references — a sheet and a detail number, the way a set numbers its
+  # own details: a detail number over a sheet number, or a sheet over a detail.
+  # The examples are described rather than written out, because writing one here
+  # makes this file match its own pattern and the gate red for ever.
+  #
+  # The companion the numeric net could not be widened into. The history audit
+  # found one of these in a tracked file, beside a quantity, and no pattern built
+  # out of figures would ever have caught it: it identifies a project more
+  # directly than a length does, because it names the drawing it was read off.
+  #
+  # Deliberately only the PAIRED form — a detail over a sheet, or a sheet over a
+  # detail. A bare sheet number like A101 is indistinguishable from a hundred
+  # ordinary tokens, and a gate that fires on those is a gate switched off by
+  # Friday. One part must carry letters AND digits, which is what keeps
+  # `packages/app`, `SF/LF`, a quarter-inch scale and a date out of it.
+  DRAWING_REF='(^|[^A-Za-z0-9/.-])([0-9]{1,2}/[A-Z]{1,3}-?[0-9]{1,3}(\.[0-9]{1,2})?|[A-Z]{1,3}-?[0-9]{1,3}(\.[0-9]{1,2})?/[0-9A-Z]{1,6})([^A-Za-z0-9/.-]|$)'
+  hits=$(printf '%s\n' "$files" | while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    grep -HnE "$DRAWING_REF" "$f" 2>/dev/null
+  done)
+  if [ -n "$hits" ]; then
+    report "a drawing sheet-and-detail reference is in the public tree"
+    printf '%s\n' "$hits" | sed 's/^/      /' | head -5
+  fi
+
   # Absolute home paths. Nobody else's machine has them and they name a person.
   hits=$(printf '%s\n' "$files" | while IFS= read -r f; do
     [ -f "$f" ] || continue

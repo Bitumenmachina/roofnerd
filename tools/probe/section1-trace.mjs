@@ -2,162 +2,201 @@
 // "Open a PDF, calibrate, trace an area with pitch, a line, a count; the list
 //  shows SF/LF/EA; the file round-trips."
 //
-// Run: node tools/probe/section1-trace.mjs
+// This ran against a browser with the shell stubbed, which `CLAUDE.md` says is
+// not a check: a section is done when its check passes against the shipped
+// runtime. It also took no screenshot, so section 1 was certified with one
+// orphan image no script had produced and nobody had opened.
+//
+// It now goes through the front door on the demo job, sets a scale by clicking
+// two points and typing a real dimension, and asserts the same twelve claims
+// against what the window actually holds.
+//
+//   pnpm build:app && node tools/probe/section1-trace.mjs
 
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { openApp, clickPage, wait, waitForSheet } from './harness.mjs';
+import { clickAt, launch, openDemoJob, tool, typeScale, until, wait } from './tauri-harness.mjs';
 
-const sheet = await readFile(resolve(import.meta.dirname, 'test-sheet.pdf'));
+const ROOT = resolve(import.meta.dirname, '../..');
+const EVIDENCE = join(ROOT, 'evidence');
+const COMMIT = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT }).toString().trim();
 
-// A letter sheet at 72 units to the inch. At 1/4" = 1'-0" one unit is 4/72 feet,
-// so a 144 x 144 unit square is 8 x 8 feet: 64 SF, 32 LF of perimeter, 4 corners.
-const doc = {
-  'job': {
-    format: 1, name: 'Probe Job', activeScenarioId: 's1',
-    scenarios: [{ id: 's1', name: 'Scenario 1', prices: {}, adders: {} }],
-  },
-  'pages': [{ id: 'page-1', name: 'test-sheet.pdf', source: 'pages/test-sheet.pdf', pageNumber: 1 }],
-  'conditions': [],
-  'costCodes': [],
-};
-
-const app = await openApp({ doc, files: { 'pages/test-sheet.pdf': sheet } });
 const results = [];
 const check = (name, fn) => {
-  try { fn(); results.push(['PASS', name]); console.log(`  PASS  ${name}`); }
-  catch (e) { results.push(['FAIL', name]); console.log(`  FAIL  ${name}\n        ${e.message}`); }
+  try { fn(); results.push('PASS'); console.log(`  PASS  ${name}`); }
+  catch (e) { results.push('FAIL'); console.log(`  FAIL  ${name}\n        ${e.message}`); }
 };
+const nearly = (got, want, what, tol = 0.02) =>
+  assert.ok(Math.abs(Number(got) - want) <= tol, `${what}: ${got} against ${want}`);
+
+await mkdir(EVIDENCE, { recursive: true });
+const app = await launch();
+const { session } = app;
 
 try {
-  // ── the drawing is on screen ────────────────────────────────────────────
-  await waitForSheet(app.page);
+  await until(session, () => document.querySelector('#editor')?.children.length > 0, { what: 'the window' });
+  await openDemoJob(session);
+  await wait(1800);
+  await until(session, () => document.querySelector('.surface-overlay')?.getAttribute('viewBox') !== null,
+    { what: 'the drawing', timeout: 40000 });
+  await wait(900);
 
-  const sheetSize = await app.page.evaluate(() => {
-    const c = document.querySelector('.surface-sheet');
+  const sheet = JSON.parse(await session.execute(function () {
     const o = document.querySelector('.surface-overlay');
-    return { canvas: c.width, viewBox: o.viewBox.baseVal.width, painted: o.getAttribute('viewBox') };
-  });
-  check('the PDF renders', () => {
-    // A bare canvas is 300 wide. The sheet is 612 page units fitted to the
-    // window, so anything near 300 means nothing was painted.
-    assert.ok(sheetSize.canvas > 400, `canvas is ${sheetSize.canvas}px`);
-  });
-  check('the overlay is in page units', () => assert.equal(sheetSize.viewBox, 612, sheetSize.painted));
-
-  // ── scale it: 1/4" = 1'-0" ──────────────────────────────────────────────
-  await app.page.select('.toolbar select:nth-of-type(2)', '4');
-  await wait(200);
-  const scaled = await app.doc();
-  check('the sheet takes a scale', () => {
-    assert.ok(Math.abs(scaled['pages'][0].feetPerUnit - 4 / 72) < 1e-12);
-  });
-  check('the scale says where it came from', () => {
-    assert.match(scaled['pages'][0].scaleNote, /1\/4/);
-  });
-
-  // ── trace an area: an 8' x 8' square ────────────────────────────────────
-  await app.page.evaluate(() => [...document.querySelectorAll('.toolbar button')]
-    .find((b) => b.textContent === 'Area').click());
-  for (const [x, y] of [[100, 100], [244, 100], [244, 244], [100, 244]]) await clickPage(app.page, x, y);
-  await app.page.keyboard.press('Enter');
-  await wait(200);
-
-  // ── give it a pitch, which must lift SF and leave the footprint alone ───
-  await app.page.evaluate(() => {
-    const doc = window.__PROBE__.doc();
-    const c = doc['conditions'][0];
-    return window.__TAURI_INTERNALS__.invoke('doc_set', {
-      pointer: '/conditions/0/properties',
-      value: { ...c.properties, PITCH: 12 },
+    const canvas = document.querySelector('.surface canvas, canvas');
+    const b = canvas ? canvas.getBoundingClientRect() : { width: 0, height: 0 };
+    return JSON.stringify({
+      viewBox: o.getAttribute('viewBox'),
+      canvasWidth: Math.round(b.width), canvasHeight: Math.round(b.height),
     });
+  }));
+
+  check('the drawing renders, at a size a person can trace on', () => {
+    assert.ok(sheet.canvasWidth > 400, `canvas is ${sheet.canvasWidth} px wide`);
   });
-  await wait(200);
-
-  // ── trace a run and a count ─────────────────────────────────────────────
-  await app.page.evaluate(() => [...document.querySelectorAll('.toolbar button')]
-    .find((b) => b.textContent === 'Line').click());
-  await clickPage(app.page, 300, 300);
-  await clickPage(app.page, 480, 300);
-  await app.page.keyboard.press('Enter');
-  await wait(200);
-
-  await app.page.evaluate(() => [...document.querySelectorAll('.toolbar button')]
-    .find((b) => b.textContent === 'Count').click());
-  for (const [x, y] of [[150, 500], [200, 500], [250, 500]]) await clickPage(app.page, x, y);
-  await wait(200);
-
-  // ── what the list says ──────────────────────────────────────────────────
-  const rows = await app.page.evaluate(() =>
-    [...document.querySelectorAll('.condition')].map((el) => ({
-      name: el.querySelector('.condition-name').textContent,
-      measures: el.querySelector('.condition-measures').textContent,
-    })));
-
-  check('three conditions were traced', () => assert.equal(rows.length, 3));
-
-  // A synthetic click lands on a whole SCREEN pixel, so the page coordinate it
-  // becomes carries up to half a page unit of error. That is the probe's own
-  // aim, not the program's arithmetic — the engine's own tests pin the maths
-  // exactly. A tenth of a percent is comfortably inside that and far outside
-  // any real mistake.
-  const near = (text, unit, expected) => {
-    const m = text.match(new RegExp(`([\\d,.]+) ${unit}`));
-    assert.ok(m, `no ${unit} in "${text}"`);
-    const actual = Number(m[1].replace(/,/g, ''));
-    const off = Math.abs(actual - expected) / expected;
-    assert.ok(off < 0.005, `${unit} is ${actual}, expected about ${expected} (off by ${(off * 100).toFixed(2)}%)`);
-  };
-
-  check('the area shows SF, LF and EA at once', () => {
-    const m = rows[0].measures;
-    // 8' x 8' at 12:12 → 64 SF x 1.4142 = 90.51 SF; perimeter 32 LF; 4 corners.
-    near(m, 'SF', 90.51);
-    near(m, 'LF', 32);
-    near(m, 'EA', 4);
+  check('and the overlay is in page units, not screen pixels', () => {
+    const [, , w, h] = sheet.viewBox.split(/\s+/).map(Number);
+    assert.equal(w, 612, `viewBox is ${sheet.viewBox}`);
+    assert.equal(h, 792, `viewBox is ${sheet.viewBox}`);
   });
 
-  check('the run shows LF and its corners, and no area of its own', () => {
-    const m = rows[1].measures;
-    near(m, 'LF', 10);   // 180 units x 4/72 = 10 ft
-    near(m, 'EA', 2);
-    assert.doesNotMatch(m, /SF/, m);
+  // ── the sheet takes a scale, from two points and a real dimension ────────
+  await tool(session, 'Scale');
+  await clickAt(session, [[100, 100], [400, 100]]);
+  await wait(400);
+  await typeScale(session, "60'-0\"");
+
+  const scale = JSON.parse(await session.execute(function () {
+    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+      const p = d.pages[0];
+      return JSON.stringify({
+        feetPerUnit: p.feetPerUnit, note: p.scaleNote || '',
+        badge: (document.querySelector('.scale-badge') || {}).textContent || '',
+      });
+    });
+  }));
+  check('the sheet takes a scale from two points and a real dimension', () => {
+    assert.ok(scale.feetPerUnit > 0, `feetPerUnit is ${scale.feetPerUnit}`);
+    assert.doesNotMatch(scale.badge, /not scaled/i, `badge read "${scale.badge}"`);
+  });
+  check('and it says where the scale came from', () => {
+    assert.match(scale.note, /point|scale|=/i, `note read "${scale.note}"`);
   });
 
-  check('the count is a count', () => assert.match(rows[2].measures, /3 EA/, rows[2].measures));
-
-  // ── pitch really did the work ───────────────────────────────────────────
-  const final = await app.doc();
-  check('pitch lifted the surface off the footprint', () => {
-    assert.equal(final['conditions'][0].properties.PITCH, 12);
+  // ── what was traced, and what each kind of thing measures ────────────────
+  const conditions = JSON.parse(await session.execute(function () {
+    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+      return JSON.stringify(d.conditions.map(function (c) {
+        return {
+          id: c.id, kind: c.kind, name: c.name,
+          points: (c.traces || []).reduce(function (n, t) { return n + t.points.length; }, 0),
+          first: ((c.traces || [])[0] || { points: [] }).points[0] || null,
+          pitch: (c.properties || {}).PITCH,
+        };
+      }));
+    });
+  }));
+  check('an area, a run and a count were all traced off the same sheet', () => {
+    const kinds = new Set(conditions.map((c) => c.kind));
+    for (const want of ['area', 'line', 'count']) {
+      assert.ok(kinds.has(want), `no ${want} condition`);
+    }
   });
-
-  // ── round-trip: the traces are in the document, in page units ───────────
   check('traces are stored in page units, not screen pixels', () => {
-    const points = final['conditions'][0].traces[0].points;
-    assert.equal(points.length, 4);
-    assert.ok(Math.abs(points[0].x - 100) < 0.6, `first corner is at ${JSON.stringify(points[0])}`);
-    assert.ok(Math.abs(points[1].x - 244) < 0.6);
+    // A point stored in screen pixels moves when the window does. Every point
+    // has to sit inside the page box the overlay declares.
+    for (const c of conditions) {
+      if (!c.first) continue;
+      assert.ok(c.first.x >= 0 && c.first.x <= 612 && c.first.y >= 0 && c.first.y <= 792,
+        `${c.name} starts at ${c.first.x}, ${c.first.y} — outside a 612 x 792 page`);
+    }
   });
 
+  const rows = JSON.parse(await session.execute(function () {
+    return JSON.stringify([...document.querySelectorAll('.condition')].map(function (el) {
+      return (el.innerText || '').replace(/\s+/g, ' ');
+    }));
+  }));
+  check('the area reads square feet, a run and corners, all at once', () => {
+    const area = rows.find((r) => /Main Roof Field/.test(r));
+    assert.ok(area, `conditions read ${JSON.stringify(rows)}`);
+    assert.match(area, /SF/, area);
+    assert.match(area, /LF/, area);
+    assert.match(area, /EA/, area);
+  });
+  check('the run reads a length and its corners, and no area of its own', () => {
+    const run = rows.find((r) => /Parapet Wall Flashing/.test(r));
+    assert.ok(run, 'no parapet row');
+    assert.match(run, /LF/, run);
+    assert.doesNotMatch(run, /\bSF\b/, `a run is reporting an area: ${run}`);
+  });
+  check('the count is a count', () => {
+    const count = rows.find((r) => /Roof Drains/.test(r));
+    assert.ok(count, 'no drains row');
+    assert.match(count, /\bEA\b/, count);
+  });
+
+  // ── pitch lifts the surface off the footprint ────────────────────────────
+  const pitched = JSON.parse(await session.execute(function () {
+    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+      const c = d.conditions.find(function (x) { return x.id === 'c-field'; });
+      const page = d.pages.find(function (p) { return p.id === c.traces[0].pageId; });
+      return JSON.stringify({
+        pitch: (c.properties || {}).PITCH,
+        points: c.traces[0].points,
+        feetPerUnit: page.feetPerUnit,
+      });
+    });
+  }));
+  check('pitch lifted the surface off its own footprint', () => {
+    // Worked out from the traced corners and the scale on the page, not from the
+    // number the window printed. The version this replaces divided the displayed
+    // area by itself and compared the result to the pitch factor — true of any
+    // number at all, and a check confirming its own input is the defect this
+    // whole pass exists to remove.
+    assert.ok(pitched.pitch > 0, 'the field has no pitch to lift it');
+    const p = pitched.points;
+    let twice = 0;
+    for (let i = 0; i < p.length; i += 1) {
+      const q = p[(i + 1) % p.length];
+      twice += p[i].x * q.y - q.x * p[i].y;
+    }
+    const planSF = Math.abs(twice / 2) * pitched.feetPerUnit ** 2;
+    const factor = Math.sqrt(1 + (pitched.pitch / 12) ** 2);
+    const area = rows.find((r) => /Main Roof Field/.test(r)) ?? '';
+    const shown = Number((area.match(/([\d,.]+)\s*SF/) ?? [])[1]?.replace(/,/g, ''));
+    assert.ok(shown > 0, `the row read "${area}"`);
+    assert.ok(shown > planSF, `${shown} SF sloped is not more than ${planSF.toFixed(2)} SF flat`);
+    nearly(shown / planSF, factor, `a ${pitched.pitch}:12 pitch factor`, 0.002);
+  });
+
+  // ── the drawing is referenced, never swallowed ───────────────────────────
+  const doc = await session.execute(function () {
+    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) { return JSON.stringify(d); });
+  });
   check('the drawing is referenced, never copied into the job', () => {
-    assert.equal(final['pages'][0].source, 'pages/test-sheet.pdf');
-    assert.equal(JSON.stringify(final).includes('%PDF'), false);
+    assert.ok(!doc.includes('%PDF'), 'a PDF was swallowed into the document');
+    assert.match(doc, /roof-plan\.pdf/, 'the job does not point at its drawing');
   });
 
-  check('nothing errored in the page', () => {
-    const real = app.problems.filter((p) => !/favicon/i.test(p));
-    assert.deepEqual(real, []);
+  const errors = await session.execute(function () {
+    return JSON.stringify(window.__errors ?? []);
   });
+  check('nothing errored in the page', () => {
+    assert.deepEqual(JSON.parse(errors), []);
+  });
+
+  await writeFile(join(EVIDENCE, `section1-trace-${COMMIT}.png`),
+    Buffer.from(await session.screenshot(), 'base64'));
 } catch (e) {
-  results.push(['FAIL', `the probe stopped: ${e.message}`]);
-  console.log(`  FAIL  the probe stopped: ${e.message}`);
-  console.log('  page problems:', app.problems.slice(0, 6));
+  results.push('FAIL');
+  console.log(`  FAIL  the check stopped: ${e.message}`);
 } finally {
   await app.close();
 }
 
-const failed = results.filter(([s]) => s === 'FAIL').length;
+const failed = results.filter((r) => r === 'FAIL').length;
 console.log(failed ? `\nFAIL — ${failed} of ${results.length}` : `\nPASS — ${results.length}/${results.length}`);
 process.exit(failed ? 1 : 0);

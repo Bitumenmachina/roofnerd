@@ -1,144 +1,103 @@
 // ── Evidence from the shipped window ───────────────────────────────────────
 // Screenshots for a section's done-check come from the Tauri window, never from
-// a browser. This sets up a job with a drawing and some traces on it, drives the
-// real application, and writes a labelled pair of shots per area.
+// a browser, and never from a scene dressed for the camera.
 //
 //   node tools/probe/evidence-shots.mjs <label>
 //
 // Writes evidence/<area>-<label>-<commit>.png
+//
+// This used to build a scratch job in a temp directory and hand it straight to
+// `doc_open`, with a comment saying it "dresses a scene to photograph rather
+// than checking a path". That was the wrong trade and it cost more than it
+// saved: every image in `evidence/` was of a set rather than of the program, so
+// the pictures three sections were certified against were not pictures of what
+// anyone would see. They also showed a poorer job than the real one — three
+// conditions where the demo has five, no library, no thicknesses.
+//
+// So it opens the demo job through the front door, the way a person does, and
+// photographs what is actually there. The scratch job is gone; there is nothing
+// it did that the shipped demo does not do better.
 
 import { execFileSync } from 'node:child_process';
-import { cp, mkdir, readFile, writeFile, mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { launch, until, wait } from './tauri-harness.mjs';
+import { launch, openDemoJob, until, wait } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
 const COMMIT = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT }).toString().trim();
 const label = process.argv[2] ?? 'shot';
 
-/**
- * Prices come from the seeded synthetic set, never from anywhere else.
- *
- * A screenshot needs plausible money on it, and the only safe source of that is
- * one that was invented on purpose. Reaching for a real figure has gone wrong
- * three times; a generated set that is always closer to hand is the fix.
- */
-const PRICES = JSON.parse(
-  await readFile(resolve(import.meta.dirname, '../../jobs/demo-job/prices.json'), 'utf8'),
-);
-const priced = (id, over = {}) => {
-  const found = PRICES.items.find((i) => i.id === id);
-  if (!found) throw new Error(`no synthetic price called ${id}`);
-  return { ...found, ...over };
-};
-
-/** A job with a drawing, three traces and a few priced lines to look at. */
-async function demoJob() {
-  const dir = await mkdtemp(join(tmpdir(), 'roofnerd-shots-'));
-  await cp(join(ROOT, 'jobs/demo-job'), dir, { recursive: true });
-  await mkdir(join(dir, 'pages'), { recursive: true });
-  await cp(join(ROOT, 'tools/probe/test-sheet.pdf'), join(dir, 'pages/roof-plan.pdf'));
-
-  const trace = (id, points) => ({ id, pageId: 'page-1', points });
-  const write = (name, value) => writeFile(join(dir, name), `${JSON.stringify(value, null, 2)}\n`);
-
-  await write('pages/pages.json', [{
-    id: 'page-1', name: 'Roof Plan', source: 'pages/roof-plan.pdf', pageNumber: 1,
-    feetPerUnit: 4 / 72, scaleNote: '1/4" = 1\'-0"',
-  }]);
-
-  await write('conditions.json', [
-    {
-      id: 'c-field', name: 'Main Roof Field', kind: 'area', color: '#2f6f4f',
-      properties: { PITCH: 4 },
-      traces: [trace('t1', [{ x: 110, y: 150 }, { x: 430, y: 150 }, { x: 430, y: 400 }, { x: 110, y: 400 }])],
-      items: [
-        priced('tpo-60', { formula: 'SQ' }),
-        priced('iso-22', { formula: 'SQ' }),
-        priced('install-membrane', { formula: 'SQ' }),
-      ],
-    },
-    {
-      id: 'c-parapet', name: 'Parapet Wall Flashing', kind: 'line', color: '#1d5f8a',
-      properties: { H: 1.5, STRETCHOUT: 14 },
-      traces: [trace('t2', [{ x: 110, y: 430 }, { x: 430, y: 430 }, { x: 430, y: 560 }])],
-      items: [
-        priced('counterflash', { formula: 'LF * H' }),
-        priced('coping', { formula: 'LF' }),
-        priced('mitre', { formula: 'VERTICES' }),
-      ],
-    },
-    {
-      id: 'c-drains', name: 'Roof Drains', kind: 'count', color: '#8a5a1d',
-      properties: {},
-      traces: [trace('t3', [{ x: 180, y: 610 }, { x: 300, y: 610 }, { x: 420, y: 610 }])],
-      items: [
-        priced('drain', { formula: 'EA' }),
-      ],
-    },
-  ]);
-
-  await write('job.json', {
-    format: 1, name: 'Warehouse Reroof', activeScenarioId: 's1',
-    scenarios: [{
-      id: 's1', name: 'Scenario 1', prices: {},
-      adders: {
-        Material: { tax: 7, escalation: 3 }, Labor: { burden: 10 },
-        Sub: { generalLiability: 5 }, Supervision: { burden: 50 },
-      },
-      overhead: 0, profit: 15, bond: 2,
-    }],
-  });
-
-  return { dir, remove: () => rm(dir, { recursive: true, force: true }) };
-}
-
 await mkdir(EVIDENCE, { recursive: true });
-const job = await demoJob();
 const app = await launch();
 const { session } = app;
 
+const shot = async (name) => {
+  const path = join(EVIDENCE, `${name}-${label}-${COMMIT}.png`);
+  await writeFile(path, Buffer.from(await session.screenshot(), 'base64'));
+  console.log(`  ${path.replace(`${ROOT}/`, '')}`);
+};
+
 try {
   await until(session, () => document.querySelector('#editor')?.children.length > 0,
-    { what: 'the editor to mount' });
-  // This one dresses a scene to photograph rather than checking a path, so it
-  // opens its scratch job directly. Every CHECK goes through the front door;
-  // see tools/probe/front-door.mjs.
-  await session.execute((folder) =>
-    window.__TAURI_INTERNALS__.invoke('doc_open', { folder }), job.dir);
-  await wait(1200);
+    { what: 'the window' });
+
+  // The start screen, before anything is opened. It had never been photographed
+  // once, and it is the first thing anybody sees.
+  await wait(600);
+  await shot('start-screen');
+
+  await openDemoJob(session);
+  await wait(1800);
   await until(session, () => document.querySelector('.surface-overlay')?.getAttribute('viewBox') !== null,
     { what: 'the drawing', timeout: 25000 });
-  await wait(1500);
-
-  const shot = async (name) => {
-    const path = join(EVIDENCE, `${name}-${label}-${COMMIT}.png`);
-    await writeFile(path, Buffer.from(await session.screenshot(), 'base64'));
-    console.log(`  ${path.replace(`${ROOT}/`, '')}`);
-  };
-
+  await wait(1200);
   await shot('plan');
 
+  // The File menu, open. Also never photographed — a menu list is closed in
+  // every shot that exists.
+  await session.execute(function () {
+    const button = document.querySelector('.menu-button');
+    if (button) button.click();
+  });
+  await wait(500);
+  await shot('menu');
+  await session.execute(function () { document.body.click(); });
+  await wait(400);
+
   // The condition panel, with a condition selected.
-  await session.execute(() => document.querySelector('.condition')?.click());
-  await wait(600);
+  await session.execute(function () {
+    const first = document.querySelector('.condition');
+    if (first) first.click();
+  });
+  await wait(700);
   await shot('condition-panel');
 
-  const before = await session.handles();
-  await session.execute(() => window.__TAURI_INTERNALS__.invoke('open_editor', { editor: 'estimate' }));
-  await wait(2000);
-  const after = await session.handles();
-  const second = after.find((h) => !before.includes(h));
-  if (second) {
-    await session.switchTo(second);
-    await until(session, () => document.querySelector('#editor')?.children.length > 0,
-      { what: 'the sheet' });
-    await wait(800);
-    await shot('estimate-sheet');
-  }
+  // A help sheet, open. The third screen with no picture: nothing in the suite
+  // has ever clicked a "?".
+  await session.execute(function () {
+    const help = document.querySelector('[aria-label="What this is for"]');
+    if (help) help.click();
+  });
+  await wait(600);
+  await shot('help-sheet');
+  await session.execute(function () {
+    const close = document.querySelector('.help-close');
+    if (close) close.click();
+  });
+  await wait(400);
+
+  // The estimate sheet, in the same window rather than a torn-off one — that is
+  // where an estimator reads it, and it is the width the money has to survive.
+  await session.execute(function () {
+    const picker = document.querySelector('.editor-picker');
+    if (picker) {
+      picker.value = 'estimate';
+      picker.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+  await wait(2200);
+  await shot('estimate-sheet');
 } finally {
   await app.close();
-  await job.remove();
 }

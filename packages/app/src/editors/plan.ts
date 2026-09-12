@@ -7,7 +7,7 @@
 
 import {
   ARCHITECTURAL_SCALES, calibrateFromScale, calibrateFromTwoPoints, distance,
-  formatFeetInches, measure, parseFeet, type Point,
+  formatFeetInches, measure, parseFeet, strayCorners, type Point,
 } from '@roofnerd/engine';
 import { at, addPage, doc, pageBytes, pickFile, set, subscribe, type Doc } from '../doc.js';
 import { Surface, svg, pointsAttribute } from '../viewer/surface.js';
@@ -25,6 +25,8 @@ type Condition = {
   traces: Trace[]; properties: Record<string, number>; items: unknown[];
   color?: string; from?: string; hidden?: boolean;
 };
+// The bounds are on the engine's own `Page` now, so this local shape no longer
+// has to carry two fields nothing else could see.
 type Page = { id: string; name: string; source?: string; pageNumber?: number; feetPerUnit?: number; scaleNote?: string; width?: number; height?: number };
 
 let surface: Surface;
@@ -69,12 +71,16 @@ export function mountPlan(host: HTMLElement): void {
 
   const spacer = document.createElement('span');
   spacer.className = 'spacer';
+  // The zoom group travels together and stays reachable — see `.toolbar .zoom`.
+  const zoom = document.createElement('span');
+  zoom.className = 'zoom';
   const zoomOut = iconButton('zoomOut', 'Zoom out', () => void surface.setZoom(surface.zoom / 1.25));
   const zoomIn = iconButton('zoomIn', 'Zoom in', () => void surface.setZoom(surface.zoom * 1.25));
   const zoomFit = iconButton('fit', 'Fit the sheet in the window', () => void surface.fit());
 
   bar.append(pageSelect, addPageButton, divider(), ...toolButtons.values(), divider(),
-    scaleButton, scaleSelect, spacer, zoomOut, zoomIn, zoomFit);
+    scaleButton, scaleSelect, spacer, zoom);
+  zoom.append(zoomOut, zoomIn, zoomFit);
 
   surface = new Surface();
 
@@ -361,22 +367,13 @@ function drawTraces(d: Doc): void {
 /**
  * How many of a condition's corners were clicked past the edge of the paper.
  *
- * A page only counts once it knows its own size — a sheet still loading has no
- * bounds to be outside of, and guessing would raise a warning on every open.
+ * The check itself is `strayCorners` in the engine now, because it was private
+ * here and the page bounds it needs lived only on this file's local `Page`
+ * shape — so the Model, the panel and every probe were shut out of a question
+ * they all want to ask. A page only counts once it knows its own size: a sheet
+ * still loading has no bounds to be outside of.
  */
-function offSheet(c: Condition, pages: Page[]): number {
-  let stray = 0;
-  for (const t of c.traces ?? []) {
-    const page = pages.find((p) => p.id === t.pageId);
-    const w = page?.width;
-    const h = page?.height;
-    if (!w || !h) continue;
-    for (const p of t.points) {
-      if (p.x < 0 || p.y < 0 || p.x > w || p.y > h) stray += 1;
-    }
-  }
-  return stray;
-}
+const offSheet = (c: Condition, pages: Page[]): number => strayCorners(c.traces, pages);
 
 function renderConditions(host: HTMLElement, d: Doc): void {
   host.replaceChildren();

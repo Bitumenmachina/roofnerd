@@ -3,7 +3,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { polygonArea, selfIntersects } from '@roofnerd/engine';
+import { onPage, polygonArea, selfIntersects, strayCorners } from '@roofnerd/engine';
 
 
 // ── a ring that crosses itself ─────────────────────────────────────────────
@@ -50,4 +50,40 @@ test('an L-shaped roof is not a crossing', () => {
 
 test('a run doubling back on itself is not a polygon and is not judged as one', () => {
   assert.equal(selfIntersects([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: 0 }]), false);
+});
+
+// ── traced past the edge of the paper ──────────────────────────────────────
+
+test('a point on the sheet is on the sheet', () => {
+  const page = { id: 'p', name: 'Roof Plan', width: 612, height: 792 };
+  assert.equal(onPage({ x: 300, y: 400 }, page), true);
+  assert.equal(onPage({ x: 0, y: 0 }, page), true, 'the corner is on it');
+  assert.equal(onPage({ x: 612, y: 792 }, page), true, 'so is the far corner');
+});
+
+test('and one past the bottom is not', () => {
+  const page = { id: 'p', name: 'Roof Plan', width: 612, height: 792 };
+  assert.equal(onPage({ x: 300, y: 1040 }, page), false);
+  assert.equal(onPage({ x: -1, y: 400 }, page), false);
+});
+
+test('a sheet that does not know its own size calls everything on it', () => {
+  // A drawing still loading has no bounds to be outside of, and warning on every
+  // open is how a warning gets ignored.
+  assert.equal(onPage({ x: 9999, y: 9999 }, { id: 'p', name: 'Roof Plan' }), true);
+});
+
+test('stray corners are counted, not clamped', () => {
+  // The estimator may have had a reason. Saying so is the job; moving their
+  // point quietly is not.
+  const pages = [{ id: 'p', name: 'Roof Plan', width: 612, height: 792 }];
+  const traces = [{ pageId: 'p', points: [
+    { x: 60, y: 560 }, { x: 560, y: 560 }, { x: 560, y: 1040 }, { x: 60, y: 1040 },
+  ] }];
+  assert.equal(strayCorners(traces, pages), 2);
+});
+
+test('and a trace on a page nobody has is not counted as stray', () => {
+  assert.equal(strayCorners([{ pageId: 'gone', points: [{ x: 5, y: 5 }] }],
+    [{ id: 'p', name: 'Roof Plan', width: 10, height: 10 }]), 0);
 });

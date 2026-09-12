@@ -403,6 +403,9 @@ function headRow(labels: string[]): HTMLTableRowElement {
     // Numbers right, and the last column is the pinned one the row actions
     // live in so they never scroll out of a narrow window.
     if ([3, 5, 6, 7, 8, 9].includes(i)) th.className = 'num';
+    // Extended is pinned with the actions, so its header has to be pinned too
+    // or the heading slides off the column it names.
+    if (i === 9) th.className = 'num extended';
     if (i === labels.length - 1) th.className = 'actions';
     tr.append(th);
   }

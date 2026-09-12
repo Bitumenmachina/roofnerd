@@ -76,6 +76,10 @@ let frameHandle = 0;
 let stopWatching: (() => void) | null = null;
 /** Has the estimator taken the camera? Until then the view follows the roof. */
 let framed = false;
+/** The roof the view was last framed on, so a box change can re-frame on it. */
+let lastCentre = new THREE.Vector3();
+let lastSpan = 0;
+let stopObserving: (() => void) | null = null;
 let stopSubscribing: (() => void) | null = null;
 
 /**
@@ -145,6 +149,13 @@ function readAt(canvas: HTMLCanvasElement, event: PointerEvent): string {
       : 'no fall — the boards have run out here');
   } else {
     parts.push(`falls ${inchLabel(field.slope)} per foot`);
+    // Which way the water goes, in words. The arrows draw it and the drawing is
+    // the wrong place to read a direction off — an arrow at this zoom is a few
+    // pixels and the estimator is being asked to eyeball a bearing. It was the
+    // one of the four things this readout owes that it did not say, and
+    // `nearestDrain` was already here returning the point it needed.
+    const to = nearestDrain(p, drainsNow);
+    if (to) parts.push(`water runs ${compass(p, to)}`);
     parts.push(`${run.toFixed(1)} ft to the drain it reaches`);
   }
   return parts.join(' · ');
@@ -230,6 +241,8 @@ export function mountModel(host: HTMLElement): void {
       if (!framed && built.span > 0) reframe(built.centre, built.span);
       controls.update();
     }
+    lastCentre = built.centre;
+    lastSpan = built.span;
     resize(canvas);
   };
 
@@ -274,6 +287,24 @@ export function mountModel(host: HTMLElement): void {
   canvas.addEventListener('pointerleave', () => { readout.textContent = 'Point at the roof to read it.'; });
   window.addEventListener('resize', () => resize(canvas));
 
+  // Watch the box, not the window.
+  //
+  // The Plan learned this first and the Model never got it: a `window` resize
+  // listener misses every way the area changes size without the window doing —
+  // the legend wrapping to a second row, a sheet torn off, an area re-laid. The
+  // camera framing here is computed from the roof's span in feet rather than
+  // from the canvas, so a stale box does not put the roof at the wrong scale;
+  // what it does put wrong is the aspect and the render buffer, and until the
+  // next document change nothing corrects it. Same fix as
+  // `packages/app/src/viewer/surface.ts`: while nobody has taken the camera,
+  // re-fit whenever the box changes, including the first time it gets a real one.
+  const watchBox = new ResizeObserver(() => {
+    resize(canvas);
+    if (!framed && lastSpan > 0) reframe(lastCentre, lastSpan);
+  });
+  watchBox.observe(canvas);
+  stopObserving = () => watchBox.disconnect();
+
   const tick = () => {
     frameHandle = requestAnimationFrame(tick);
     controls?.update();
@@ -289,16 +320,30 @@ function unmount() {
   stopSubscribing?.();
   stopWatching = null;
   stopSubscribing = null;
+  stopObserving?.();
+  stopObserving = null;
   controls?.dispose();
   controls = null;
   renderer?.dispose();
   renderer = null;
 }
 
+/**
+ * Size the canvas to the box it is actually in — or decline.
+ *
+ * It used to substitute 1 for a zero measurement, which sounds harmless and is
+ * not: a canvas measured before layout settles reads 0, gets a 1x1 buffer at
+ * aspect 1, and **keeps it**, because nothing measures again until the document
+ * next changes. A roof drawn into a one-pixel buffer at the wrong aspect is the
+ * same class of defect as the Plan's, which fitted to 355 px of a box that ended
+ * up nearly a thousand. Declining leaves the last good size, and the observer
+ * below calls back the moment there is a real one.
+ */
 function resize(canvas: HTMLCanvasElement) {
   if (!renderer || !camera) return;
-  const w = canvas.clientWidth || 1;
-  const h = canvas.clientHeight || 1;
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  if (w < 2 || h < 2) return;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
@@ -370,6 +415,21 @@ function drainPoints(list: Condition[], scales: Record<string, number>): Point[]
     for (const t of c.traces ?? []) out.push(...feet(t, scales));
   }
   return out;
+}
+
+/**
+ * Which way the water leaves this point, as a bearing a person can act on.
+ *
+ * North is up the sheet, which is the direction a roof plan is read in and the
+ * same convention the prior 3D work on this machine settled on. Eight points is
+ * as fine as anybody can use standing on a roof: "north-east" sends somebody to
+ * the right corner, "N 43\u00b0 E" does not.
+ */
+function compass(from: Point, to: Point): string {
+  // Plan y grows down the sheet, so north is negative y.
+  const deg = (Math.atan2(to.x - from.x, from.y - to.y) * 180) / Math.PI;
+  const points = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+  return points[Math.round(((deg + 360) % 360) / 45) % 8]!;
 }
 
 /** Which drain this point falls to — the one it is closest to. */

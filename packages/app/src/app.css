@@ -243,13 +243,32 @@ ul.tree { list-style: none; margin: 0; padding: 0; }
 }
 .toolbar select {
   border: 1px solid var(--rule); border-radius: var(--radius);
-  padding: 5px 6px; background: var(--paper); max-width: 150px; min-width: 0;
+  /* `flex: none`, because the cap was never what was cutting them. The toolbar
+     is a flex row and a select's default `flex: 0 1 auto` let it be squeezed to
+     96px against 103px of label — so "Or pick a scale…" read "Or pick a", which
+     is not a phrase, and the page name lost its end under the arrow. The tool
+     buttons beside them already say `flex: none`; the selects were the only
+     controls in the row that would give ground. They keep their own width and
+     the row scrolls if it must, which it does not at any width the app opens. */
+  padding: 5px 6px; background: var(--paper); max-width: 196px; flex: none;
 }
 .tool { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; white-space: nowrap; flex: none; }
 .tool.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .tool.on:hover { border-color: var(--accent); }
 .divider { width: 1px; height: 20px; background: var(--rule); margin: 0 var(--gap-1); flex: none; }
 .toolbar .spacer { margin-left: auto; }
+/* Zoom and Fit stay on screen at any width.
+   §1.5 asks for them grouped at the right end, and stopping the selects being
+   squeezed pushed them 76px past it — one defect traded for a worse one, since a
+   truncated label can still be guessed at and an unreachable button cannot. So
+   they pin, the same way the sheet's money column pins: the row scrolls between
+   a fixed left and a fixed right rather than losing either end. */
+.toolbar .zoom {
+  display: inline-flex; gap: 2px; flex: none;
+  position: sticky; right: 0; z-index: 1;
+  background: var(--paper); padding-left: var(--gap-2);
+  box-shadow: -8px 0 8px -6px rgb(0 0 0 / 12%);
+}
 
 /* ── Plan: the desk and the paper ───────────────────────────────────────── */
 
@@ -356,18 +375,56 @@ polyline.trace { fill: none; }
 
 /* Minimum widths so a header never truncates and a select always shows its
    value. Below this the table scrolls inside its own area — which is the point:
-   a torn-off sheet narrower than the columns still reaches every one of them. */
-.sheet { min-width: 1064px; }
+   a torn-off sheet narrower than the columns still reaches every one of them.
+
+   1136 is the columns added up, action column included. It read 1064 — exactly
+   34px short, which is the action column left out of the sum. With
+   `table-layout: fixed` and `width: 100%` that shortfall squeezes every column
+   by three percent, and the header this spec promises never truncates rendered
+   as "WAS". A minimum that does not include every column is not a minimum. */
+.sheet { min-width: 1136px; }
+
+/* The two columns that never scroll away: what the line is, and what it costs.
+   §1.9 already pinned the row actions "in a fixed right column that never
+   scrolls out"; this is the same rule applied to the column an estimator
+   actually came for. Between them the working scrolls — code, formula, quantity,
+   unit, waste, order — and at any width the sheet still shows a name against a
+   number. On a narrow window it used to show neither: ITEM, CODE, FORMULA, QTY,
+   UNIT, WAS, and every money column past the edge. */
+.sheet th:first-child, .sheet td:first-child {
+  position: sticky; left: 0; z-index: 2; background: var(--paper);
+}
+.sheet th:first-child { z-index: 3; }
+.sheet td.extended, .sheet th.extended {
+  position: sticky; right: 34px; z-index: 2; background: var(--paper);
+}
+.sheet th.extended { z-index: 3; }
+.sheet td.actions, .sheet th.actions {
+  position: sticky; right: 0; z-index: 2; background: var(--paper);
+}
+.sheet th.actions { z-index: 3; }
+/* A pinned cell sits over the scrolling ones, so it needs its own edge to read
+   as an edge rather than as a column that happens to be there. */
+.sheet td.extended, .sheet th.extended { border-left: 1px solid var(--rule); }
+/* A condition header and an "add a line" row are one cell spanning ten or
+   eleven columns. Pinning a cell that wide would park it over the whole table,
+   so those two stay where they are and scroll with the working. */
+.sheet tr.group-row td:first-child,
+.sheet tr.add-row td:first-child { position: static; background: var(--panel); }
+.sheet tr.add-row td:first-child { background: var(--paper); }
 .sheet table { table-layout: fixed; }
 .sheet col.c-item     { width: 220px; }
-.sheet col.c-code     { width: 92px; }
+.sheet col.c-code     { width: 106px; }
 .sheet col.c-formula  { width: 240px; }
 .sheet col.c-qty      { width: 66px; }
 .sheet col.c-unit     { width: 76px; }
 .sheet col.c-waste    { width: 58px; }
 .sheet col.c-order    { width: 78px; }
 .sheet col.c-priced   { width: 78px; }
-.sheet col.c-cost     { width: 72px; }
+/* "UNIT COST" is two words in a micro uppercase face with letter-spacing, and
+   72px could not hold it — §1.9 named "wrapped 'Unit cost'" as one of the two
+   defects it was closing, and it was still wrapping. */
+.sheet col.c-cost     { width: 96px; }
 .sheet col.c-extended { width: 84px; }
 .sheet col.c-actions  { width: 34px; }
 .sheet td:not(.actions) { overflow: hidden; }

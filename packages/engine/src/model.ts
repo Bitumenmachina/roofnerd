@@ -10,6 +10,7 @@
 // A cost code sits on every item. Every code belongs to a class. The recap adds
 // up by class, which is the only way it can be honest.
 
+import type { Point } from './geometry.js';
 import type { Unit } from './units.js';
 import type { Properties, Trace, TraceKind } from './measures.js';
 
@@ -434,6 +435,44 @@ export interface Page {
   readonly feetPerUnit?: number;
   /** How the scale was set, so it can be seen and argued with. */
   readonly scaleNote?: string;
+  /**
+   * The page box, in page units, once the drawing has been loaded and can say.
+   *
+   * Optional because a sheet still loading has no bounds to be outside of, and a
+   * guess here would raise a warning on every open. These lived only on the Plan
+   * editor's own local `Page` shape, which is why nothing outside the Plan could
+   * ask whether a trace had left the paper — the check existed and could not be
+   * reached.
+   */
+  readonly width?: number;
+  readonly height?: number;
+}
+
+/**
+ * Is this point on the paper?
+ *
+ * A trace clicked past the edge of the drawing was measured off the desk, not
+ * off the roof. This does not clamp or refuse — an estimator may have good
+ * reason, and a program that silently moved their point would be worse than one
+ * that says something. It only answers the question.
+ */
+export const onPage = (p: Point, page: Page): boolean =>
+  page.width === undefined || page.height === undefined
+    ? true
+    : p.x >= 0 && p.y >= 0 && p.x <= page.width && p.y <= page.height;
+
+/** How many of a condition's corners were clicked past the edge of the paper. */
+export function strayCorners(
+  traces: readonly { readonly pageId: string; readonly points: readonly Point[] }[] | undefined,
+  pages: readonly Page[],
+): number {
+  let stray = 0;
+  for (const t of traces ?? []) {
+    const page = pages.find((p) => p.id === t.pageId);
+    if (!page) continue;
+    for (const p of t.points) if (!onPage(p, page)) stray += 1;
+  }
+  return stray;
 }
 
 /** One set of prices for the job. A supply house, or a pricing date. */

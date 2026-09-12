@@ -105,6 +105,18 @@ storage. Two documents have already been lost this way.
   browser with the shell stubbed. `pnpm build:app`, then `node tools/probe/front-door.mjs`
   and `node tools/probe/runtime-check.mjs`. Evidence goes in `evidence/` named with the
   section and the commit.
+- **Look at every image, as a person, before anything is called green.** A check that passes
+  while the window is wrong is a defect in the check, not a pass. This is the rule that was
+  agreed and then left in a gitignored file, so it bound nobody: three sections were certified
+  without one of their evidence images being opened, and section 7 — twelve defects entirely
+  about how the program looks — was certified with the disproof of its own §1.9 sitting in the
+  "after" screenshot nobody opened. A count of green rows is not a review. The review is
+  opening the picture and reading it the way the estimator will.
+- **Evidence is the product, opened through the front door, and nothing else.** Every capture
+  starts at the start screen and opens the demo job the way a person does — `openDemoJob(session)`
+  — and is stamped with the commit the section closes at. A probe that dresses a scene by calling
+  `doc_open` is photographing a set, not the program. Probe scratch states never land in
+  `evidence/`.
 - **Prove a gate red before trusting it.**
 - **Report at the end of every session** by updating `STATUS.md`: what was built, what check
   passed, what is next, anything new in `DECISIONS.md` and `QUESTIONS.md`, and what Patrick

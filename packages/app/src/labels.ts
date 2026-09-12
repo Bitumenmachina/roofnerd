@@ -61,6 +61,23 @@ export const plural = (n: number, one: string, many = `${one}s`): string =>
   `${n.toLocaleString('en-US')} ${n === 1 ? one : many}`;
 
 /** A property as a person would say it: "4 sides", "1.5 ft high". */
+/**
+ * A decimal inch as the trade writes it — 0.25 is a quarter, not "0.25".
+ *
+ * Sixteenths, because that is as fine as a taper is ever specified and it is
+ * what a tape measure reads.
+ */
+function inchFraction(v: number): string {
+  const whole = Math.floor(v);
+  const sixteenths = Math.round((v - whole) * 16);
+  if (sixteenths === 0) return `${whole}`;
+  if (sixteenths === 16) return `${whole + 1}`;
+  let n = sixteenths;
+  let d = 16;
+  while (n % 2 === 0) { n /= 2; d /= 2; }
+  return whole === 0 ? `${n}/${d}` : `${whole} ${n}/${d}`;
+}
+
 export function propertyPhrase(name: string, value: number): string {
   switch (name) {
     case 'SIDES': return plural(value, 'side');
@@ -72,6 +89,14 @@ export function propertyPhrase(name: string, value: number): string {
     // A thickness with no unit beside it is a number nobody can act on, and the
     // default arm prints exactly that. Eight what — inches, or feet of wall?
     case 'WALL': return `${value} in wall`;
+    // The same defect one property along. `Taper 0.25` sits between `0.5 in
+    // thick` and `14 in girth` and is the only one that does not say what it is
+    // measured in — and a taper is the one number on a low-slope roof that
+    // decides whether the water leaves. It is inches per foot, and it is
+    // written the way a roofer writes it.
+    case 'TAPER': return `${inchFraction(value)} in 12`;
+    case 'ELEV': return `elevation ${value} ft`;
+    case 'SUMP': return `${value} ft sump`;
     default: return `${PROPERTY_LABELS[name]?.label ?? name.toLowerCase()} ${value}`;
   }
 }
