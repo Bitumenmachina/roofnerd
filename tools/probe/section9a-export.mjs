@@ -138,22 +138,40 @@ const sheetNow = (session) => session.execute(function () {
 });
 
 /**
- * The shape of the status bar, measured rather than looked at.
+ * The shape of the window, measured rather than looked at.
  *
- * The first run of this check was green while the bar was wrong: the export
- * message is a path seventy characters long, it pushed the fixed fields, and
- * "Units SF · LF · EA · SQ" dropped to a second line in a bar that is one line
- * high. Nothing in the page was in error and no total was out by a cent, so the
- * only thing that caught it was a person opening the picture. This is that
- * reading, written down: how tall the bar's own content is, and whether every
- * field still sits on the same line as the first one.
+ * Twice now this check has been green while the window was wrong, and both
+ * times the only thing that caught it was a person opening the picture. First
+ * the export message pushed the fixed fields and "Units SF · LF · EA · SQ"
+ * dropped to a second line in a bar that is one line high. Then, with the
+ * fields pinned, the bar answered the body grid's question — how narrow can you
+ * be — with the width of its own unbreakable text, the single column came out
+ * 1314 px in a 1100 px window, every row stretched to it, and the recap's last
+ * column, the lens buttons and the job path all went off the right edge.
+ *
+ * So the reading is of the whole window, not of the bar: how wide the page lays
+ * itself out against how wide the window is, and where the right edge of
+ * everything that lives at the right edge actually falls. A rectangle whose
+ * right side is past `innerWidth` is a thing the estimator cannot see.
  */
-const barNow = (session) => session.execute(function () {
+const windowNow = (session) => session.execute(function () {
   const bar = document.querySelector('.status-bar');
   if (!bar) return null;
   const facts = bar.querySelector('.status-facts');
   const path = bar.querySelector('.status-path');
+  const message = bar.querySelector('.status-message');
+  const sheet = document.querySelector('.lens-sheet');
+  const headings = [...document.querySelectorAll('.lens-sheet thead th')];
+  const right = function (el) { return el ? Math.round(el.getBoundingClientRect().right) : null; };
   return JSON.stringify({
+    // ── the window ──
+    innerWidth: window.innerWidth,
+    // The body clips, so the page does not scroll — it is simply cut off. Its
+    // scrollWidth is what it WOULD need, which is the number that tells you.
+    pageWidth: document.body.scrollWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    frameWidth: Math.round((document.querySelector('.frame') || bar).getBoundingClientRect().width),
+    // ── the bar ──
     height: Math.round(bar.getBoundingClientRect().height),
     content: bar.scrollHeight,
     room: bar.clientHeight,
@@ -162,6 +180,22 @@ const barNow = (session) => session.execute(function () {
       return { text: (f.textContent || '').trim(), top: Math.round(f.getBoundingClientRect().top) };
     }),
     path: path ? (path.textContent || '') : '',
+    pathRight: right(path),
+    // The last folder is the job, and it is the part that must survive.
+    pathTail: (bar.querySelector('.path-tail') || {}).textContent || '',
+    messageRight: right(message),
+    messageCut: message ? message.scrollWidth > message.clientWidth : null,
+    // ── what lives at the right edge of the lens ──
+    buttons: [...document.querySelectorAll('.lens-actions button')].map(function (b) {
+      return { text: (b.textContent || '').trim(), right: right(b) };
+    }),
+    lastHeading: headings.length
+      ? { text: headings[headings.length - 1].textContent, right: right(headings[headings.length - 1]) }
+      : null,
+    // A table may be wider than the sheet it sits in — that is what the sheet's
+    // own scroller is for. Carried so a narrow window can be told apart from a
+    // page that has run off the edge.
+    sheetScrolls: sheet ? sheet.scrollWidth > sheet.clientWidth : null,
   });
 });
 
@@ -245,8 +279,8 @@ try {
   // After the switch, not before it: the picker reloads the window.
   await watchErrors(session);
 
-  // The bar as it stands with a job open and nothing said in it yet.
-  const barBefore = JSON.parse(await barNow(session));
+  // The window as it stands with a job open and nothing said in the bar yet.
+  const barBefore = JSON.parse(await windowNow(session));
 
   // ── every lens, out of the window and onto the disk ─────────────────────
   for (const lens of LENSES) {
@@ -360,8 +394,8 @@ try {
     assert.deepEqual(parseCsv(second)[0], parseCsv(first)[0], 'the headings changed');
   });
 
-  // ── the bar is still one line ───────────────────────────────────────────
-  const barAfter = JSON.parse(await barNow(session));
+  // ── the bar is still one line, and the window still fits ───────────────
+  const barAfter = JSON.parse(await windowNow(session));
   check('the status bar is still one line after an export', () => {
     assert.equal(barAfter.height, barBefore.height,
       `the bar was ${barBefore.height}px and is now ${barAfter.height}px`);
@@ -380,6 +414,41 @@ try {
   });
   check('and the bar still says where the job is', () => {
     assert.ok(barAfter.path.includes(JOB), `the path slot reads "${barAfter.path}"`);
+    assert.equal(barAfter.pathTail, '/demo-job',
+      `the last folder is what must survive, and the path ends "${barAfter.pathTail}"`);
+  });
+
+  // The window itself. The bar saying its line is not the same claim as the
+  // window still fitting in the window — the second one is what the picture
+  // showed and the first one did not.
+  check('the page is no wider than the window after an export', () => {
+    assert.equal(barAfter.pageWidth, barAfter.innerWidth,
+      `the page needs ${barAfter.pageWidth}px in a ${barAfter.innerWidth}px window`
+      + ` (it needed ${barBefore.pageWidth}px before the export)`);
+    assert.ok(barAfter.documentWidth <= barAfter.innerWidth,
+      `the document is ${barAfter.documentWidth}px in a ${barAfter.innerWidth}px window`);
+    assert.equal(barAfter.frameWidth, barBefore.frameWidth,
+      `the frame was ${barBefore.frameWidth}px and the export stretched it to ${barAfter.frameWidth}px`);
+  });
+  check('both buttons on the lens are inside the window', () => {
+    assert.equal(barAfter.buttons.length, 2, `${barAfter.buttons.length} buttons on the header`);
+    for (const b of barAfter.buttons) {
+      assert.ok(b.right <= barAfter.innerWidth,
+        `"${b.text}" ends at ${b.right}px in a ${barAfter.innerWidth}px window`);
+    }
+  });
+  check('the last column of the recap is inside the window', () => {
+    assert.ok(barAfter.lastHeading, 'the recap has no headings');
+    assert.ok(barAfter.lastHeading.right <= barAfter.innerWidth,
+      `"${barAfter.lastHeading.text}" ends at ${barAfter.lastHeading.right}px in a`
+      + ` ${barAfter.innerWidth}px window (the sheet's own scroller is`
+      + ` ${barAfter.sheetScrolls ? 'in use — the window may simply be narrow' : 'not in use'})`);
+  });
+  check('and the message gave way instead, ellipsized inside the bar', () => {
+    assert.ok(barAfter.messageRight <= barAfter.innerWidth,
+      `the message ends at ${barAfter.messageRight}px in a ${barAfter.innerWidth}px window`);
+    assert.ok(barAfter.pathRight <= barAfter.innerWidth,
+      `the job path ends at ${barAfter.pathRight}px in a ${barAfter.innerWidth}px window`);
   });
 
   await writeFile(join(EVIDENCE, `section9a-export-${COMMIT}.png`),
