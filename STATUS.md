@@ -28,6 +28,37 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## Section 6b — the Model is a working surface (2026-09-12)
+
+The Properties panel stands beside every editor — Plan, Estimate Sheet, Library, Reports, Model,
+and a torn-off window (D122). Under the measures it says what the condition costs, from the same
+arithmetic as the sheet (D123). Selecting in one window selects in all of them (D124). The harness
+clicks through the driver (D126). Two legibility defects from the "seen, not fixed" list are closed
+with the checks that could not see them (D121, D129, register #39/#40), and "model" is in the
+capabilities window list (D127). Found on the way and fixed: the sheet skipped condition waste
+(D128); the Condition Summary grouped by name.
+
+**RED first at `2e39c37`:** section6b-panel 17 of 28 red · section6-model 12 of 35 red · section7 5 of 22 red (the four new
+rows) · section9a still 64/64. **GREEN at `b7a4228`:** section6b-panel 28/28 (the torn-off Model has the job — the capabilities defect was real) · section9a 64/64 · front-door 17/17 · runtime-check 9/9 · vocabulary 38/38 · section1 12/12 · section2 14/14 · section4 14/14 · section5 17/17 · real-job 13/13 · engine 146 · shell 12/12 · gates 3/3. **Three rows red, all owed to 6c:** section6-model "the panel figure is the sheet's own money, to the cent" (479497 vs 479496 cents — a per-line rounding difference; one rounding rule in the engine is the fix) · section7 "every other heading" (the blank actions heading sits under the scroll gutter) · section6-model "the driver clicks where a hand would" (the pointer ran synthetic; the driver's reply was empty and is now reported). Images opened: `section6b-panel-model`, `section6b-panel-plan`, `section6-both-windows-a`, `section7-torn-sheet` — the panel stands beside the Model with RUN · COUNT large, COST under them, and the Geometry fields; the Plan keeps its list; the torn-off sheet shows ITEM through EXTENDED with the panel saying "Nothing picked yet".
+
+Pointer path on this box: "pointer: synthetic — real pointer input is not available" with an empty driver message; 6c makes the driver's reply part of the record.
+
+## Correction, 2026-09-12 12:30–12:50 — the design handoff (Addendum 7)
+
+Patrick asked whether the layout follows the previous HTML files, where the 3D is, and whether the
+seat was driving or following. The answer was: following. `~/Downloads/Roofing Takeoff Desktop
+Application.zip` — the design handoff of 2026-09-08, eight frames, "final intent, pixel-close" —
+had never been opened by any seat, and this one ruled for Appendix A3 without reading it (register
+#44). VES, the program Patrick uses daily, has the handoff's shape too. Addendum 7 adopts the
+handoff's anatomy (document bar · tool settings strip · tool rail of roofer's verbs · one surface
+with Plan / Model / Section switched in place · cost panel with Estimate / Condition / Recap and
+detach · status strip with the cursor readout · provenance marks), closes Q6 and Q7 (D131 fixed
+isometric with presets, D132 no tree), renames the lenses to who is looking (D133), makes
+"stretch-out" the screen word (D134), makes the handoff's fixture roof the demo (D135), owes Undo
+(D136), and sizes the window to the handoff's frame (D137). IFCX export is re-opened after the
+chrome. Order: 6c → 10a chrome → 10b renderers → 10c → 8 Schedule → Undo → IFCX → persona.
+
+
 ## Section 9a — a lens leaves the program as a file (2026-09-12)
 
 "Export CSV" beside "Copy as CSV" in Reports. One builder feeds both; the file lands in the job's

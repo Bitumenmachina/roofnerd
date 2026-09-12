@@ -5,7 +5,7 @@ move on the other. Both screens are the same job, open at the same time.
 
 The name is a placeholder.
 
-**Where it is right now:** sections 1–7 and 9a (CSV export into the job folder) are built and checked on the shipped
+**Where it is right now:** sections 1–7, 9a (CSV export into the job folder) and 6b (the Model as a working surface) are built and checked on the shipped
 program — trace, conditions and the estimate sheet, the money model against two real jobs, the
 library, the lenses, the Model standing the roof up, and the legibility pass. `STATUS.md` says
 what each check proved and what was seen in the pictures that no check caught. Next: CSV export
