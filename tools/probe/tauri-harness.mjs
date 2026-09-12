@@ -159,6 +159,51 @@ export async function openDemoJob(session, { timeout = 30000 } = {}) {
   return true;
 }
 
+/**
+ * Start collecting what the window says went wrong, into `window.__errors`.
+ *
+ * That global was read by two probes for as long as they existed and was set by
+ * nothing at all, so "nothing errored in the page" was a row that could not go
+ * red. This is the half that was missing: the unhandled errors, the rejected
+ * promises nobody caught, and everything the program itself logged as an error.
+ *
+ * Install it after `launch`, and AGAIN after anything that reloads the window —
+ * switching editors through the picker is `window.location.assign`, and a reload
+ * takes every hook in the page with it. Installing twice over one page is
+ * harmless; it says so and leaves the first one alone.
+ */
+export const watchErrors = (session) => session.execute(function () {
+  if (window.__errorsWatching) return 'already watching';
+  window.__errorsWatching = true;
+  window.__errors = [];
+  const was = console.error;
+  console.error = function () {
+    window.__errors.push([].map.call(arguments, String).join(' '));
+    was.apply(console, arguments);
+  };
+  window.addEventListener('error', function (e) { window.__errors.push(String(e.message)); });
+  window.addEventListener('unhandledrejection', function (e) { window.__errors.push(String(e.reason)); });
+  return 'watching';
+});
+
+/**
+ * What the window has logged since the watch went in.
+ *
+ * It refuses rather than answering an empty list when nothing was watching —
+ * an unwatched page and a page where nothing went wrong are not the same
+ * answer, and reading them as the same is the defect this pair exists to close.
+ */
+export async function errorsSoFar(session) {
+  const raw = await session.execute(function () {
+    return JSON.stringify(window.__errors === undefined ? null : window.__errors);
+  });
+  const list = JSON.parse(raw);
+  if (list === null) {
+    throw new Error('nothing was watching for errors — call watchErrors(session), and again after any reload');
+  }
+  return list;
+}
+
 /** Wait for something in the page, polling rather than sleeping blindly. */
 export async function until(session, fn, { timeout = 20000, every = 250, what = 'a condition' } = {}) {
   const deadline = Date.now() + timeout;

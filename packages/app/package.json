@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "test": "echo \"the app has no tests of its own — the arithmetic is tested in @roofnerd/engine\""
+    "test": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@roofnerd/engine": "workspace:*",

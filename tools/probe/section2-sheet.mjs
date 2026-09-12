@@ -19,7 +19,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, openDemoJob, until, wait, commitStamp } from './tauri-harness.mjs';
+import { errorsSoFar, launch, openDemoJob, until, wait, watchErrors, commitStamp } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -40,6 +40,7 @@ const { session } = app;
 
 try {
   await until(session, () => document.querySelector('#editor')?.children.length > 0, { what: 'the window' });
+  await watchErrors(session);
   await openDemoJob(session);
   await wait(1800);
   await until(session, () => document.querySelector('.surface-overlay')?.getAttribute('viewBox') !== null,
@@ -93,6 +94,13 @@ try {
   await writeFile(join(EVIDENCE, `section2-condition-panel-${COMMIT}.png`),
     Buffer.from(await session.screenshot(), 'base64'));
 
+  // What the watch caught while the drawing and the panel were up. Read before
+  // the switch, because the picker reloads the window and the list goes with it.
+  const drawingErrors = await errorsSoFar(session);
+  check('nothing errored while the condition panel was open', () => {
+    assert.deepEqual(drawingErrors, [], drawingErrors.join(' | '));
+  });
+
   // ── the sheet ───────────────────────────────────────────────────────────
   await session.execute(function () {
     const p = document.querySelector('.editor-picker');
@@ -101,6 +109,8 @@ try {
   });
   await wait(2500);
   await until(session, () => !!document.querySelector('.sheet'), { what: 'the sheet' });
+  // A new page, so a new watch. This is the reload the old row was blind to.
+  await watchErrors(session);
 
   const lines = JSON.parse(await session.execute(function () {
     const rows = [...document.querySelectorAll('.sheet tbody tr')]
@@ -204,9 +214,9 @@ try {
   await writeFile(join(EVIDENCE, `section2-estimate-sheet-${COMMIT}.png`),
     Buffer.from(await session.screenshot(), 'base64'));
 
-  const errors = await session.execute(function () { return JSON.stringify(window.__errors ?? []); });
+  const errors = await errorsSoFar(session);
   check('nothing errored in the window', () => {
-    assert.deepEqual(JSON.parse(errors), []);
+    assert.deepEqual(errors, [], errors.join(' | '));
   });
 } catch (e) {
   results.push('FAIL');

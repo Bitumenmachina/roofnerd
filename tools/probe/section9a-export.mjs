@@ -17,7 +17,7 @@ import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, openDemoJob, until, wait, commitStamp } from './tauri-harness.mjs';
+import { errorsSoFar, launch, openDemoJob, until, wait, watchErrors, commitStamp } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -138,6 +138,34 @@ const sheetNow = (session) => session.execute(function () {
 });
 
 /**
+ * The shape of the status bar, measured rather than looked at.
+ *
+ * The first run of this check was green while the bar was wrong: the export
+ * message is a path seventy characters long, it pushed the fixed fields, and
+ * "Units SF · LF · EA · SQ" dropped to a second line in a bar that is one line
+ * high. Nothing in the page was in error and no total was out by a cent, so the
+ * only thing that caught it was a person opening the picture. This is that
+ * reading, written down: how tall the bar's own content is, and whether every
+ * field still sits on the same line as the first one.
+ */
+const barNow = (session) => session.execute(function () {
+  const bar = document.querySelector('.status-bar');
+  if (!bar) return null;
+  const facts = bar.querySelector('.status-facts');
+  const path = bar.querySelector('.status-path');
+  return JSON.stringify({
+    height: Math.round(bar.getBoundingClientRect().height),
+    content: bar.scrollHeight,
+    room: bar.clientHeight,
+    factsHeight: facts ? Math.round(facts.getBoundingClientRect().height) : 0,
+    fields: [...bar.querySelectorAll('.status-field')].map(function (f) {
+      return { text: (f.textContent || '').trim(), top: Math.round(f.getBoundingClientRect().top) };
+    }),
+    path: path ? (path.textContent || '') : '',
+  });
+});
+
+/**
  * Press Export CSV, the way a hand does.
  *
  * It waits for the word to be back on the button first: the button says
@@ -159,26 +187,6 @@ const exportNow = async (session) => {
   await wait(1200);
   return pressed;
 };
-
-/**
- * Catch what the window says went wrong.
- *
- * `window.__errors` is read by two older probes and was never set by anything,
- * so it answered an empty list whatever happened. It is set here, and it goes in
- * AFTER the editor switch, because switching editors reloads the window and a
- * reload takes every hook with it.
- */
-const watchErrors = (session) => session.execute(function () {
-  window.__errors = [];
-  const was = console.error;
-  console.error = function () {
-    window.__errors.push([].map.call(arguments, String).join(' '));
-    was.apply(console, arguments);
-  };
-  window.addEventListener('error', function (e) { window.__errors.push(String(e.message)); });
-  window.addEventListener('unhandledrejection', function (e) { window.__errors.push(String(e.reason)); });
-  return true;
-});
 
 /**
  * The status bar on its own, cropped by the driver where it will do it, and the
@@ -234,7 +242,11 @@ try {
   });
   await wait(2500);
   await until(session, () => !!document.querySelector('.lens-sheet'), { what: 'the reports editor' });
+  // After the switch, not before it: the picker reloads the window.
   await watchErrors(session);
+
+  // The bar as it stands with a job open and nothing said in it yet.
+  const barBefore = JSON.parse(await barNow(session));
 
   // ── every lens, out of the window and onto the disk ─────────────────────
   for (const lens of LENSES) {
@@ -348,15 +360,35 @@ try {
     assert.deepEqual(parseCsv(second)[0], parseCsv(first)[0], 'the headings changed');
   });
 
+  // ── the bar is still one line ───────────────────────────────────────────
+  const barAfter = JSON.parse(await barNow(session));
+  check('the status bar is still one line after an export', () => {
+    assert.equal(barAfter.height, barBefore.height,
+      `the bar was ${barBefore.height}px and is now ${barAfter.height}px`);
+    assert.equal(barAfter.factsHeight, barBefore.factsHeight,
+      `the fields were ${barBefore.factsHeight}px and are now ${barAfter.factsHeight}px — they wrapped`);
+    assert.ok(barAfter.content <= barAfter.room + 1,
+      `${barAfter.content}px of content in a ${barAfter.room}px bar`);
+  });
+  check('and Job, Scenario, Scale and Units are all on that line', () => {
+    const shown = barAfter.fields.map((f) => `${f.text}@${f.top}`).join(' / ');
+    for (const want of ['Job', 'Scenario', 'Scale', 'Units']) {
+      assert.ok(barAfter.fields.some((f) => f.text.startsWith(want)), `no ${want} field: ${shown}`);
+    }
+    const lines = new Set(barAfter.fields.map((f) => f.top));
+    assert.equal(lines.size, 1, `the fields sit on ${lines.size} lines: ${shown}`);
+  });
+  check('and the bar still says where the job is', () => {
+    assert.ok(barAfter.path.includes(JOB), `the path slot reads "${barAfter.path}"`);
+  });
+
   await writeFile(join(EVIDENCE, `section9a-export-${COMMIT}.png`),
     Buffer.from(await session.screenshot(), 'base64'));
   await writeFile(join(EVIDENCE, `section9a-status-${COMMIT}.png`),
     Buffer.from(await statusBarShot(session), 'base64'));
 
   // ── nothing broke on the way ────────────────────────────────────────────
-  const errors = JSON.parse(await session.execute(function () {
-    return JSON.stringify(window.__errors ?? []);
-  }));
+  const errors = await errorsSoFar(session);
   check('and the window logged nothing going wrong', () => {
     assert.deepEqual(errors, [], errors.join(' | '));
   });

@@ -16,7 +16,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { clickAt, launch, openDemoJob, tool, typeScale, until, wait, commitStamp } from './tauri-harness.mjs';
+import { clickAt, errorsSoFar, launch, openDemoJob, tool, typeScale, until, wait, watchErrors, commitStamp } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
@@ -36,6 +36,9 @@ const { session } = app;
 
 try {
   await until(session, () => document.querySelector('#editor')?.children.length > 0, { what: 'the window' });
+  // Before the job is opened, so everything after this is watched. This probe
+  // never switches editors, so the page is never reloaded under it.
+  await watchErrors(session);
   await openDemoJob(session);
   await wait(1800);
   await until(session, () => document.querySelector('.surface-overlay')?.getAttribute('viewBox') !== null,
@@ -180,11 +183,11 @@ try {
     assert.match(doc, /roof-plan\.pdf/, 'the job does not point at its drawing');
   });
 
-  const errors = await session.execute(function () {
-    return JSON.stringify(window.__errors ?? []);
-  });
+  // Read off the watch that went in above. This row used to read a global that
+  // nothing ever wrote to, so it could not go red however badly the page broke.
+  const errors = await errorsSoFar(session);
   check('nothing errored in the page', () => {
-    assert.deepEqual(JSON.parse(errors), []);
+    assert.deepEqual(errors, [], errors.join(' | '));
   });
 
   await writeFile(join(EVIDENCE, `section1-trace-${COMMIT}.png`),

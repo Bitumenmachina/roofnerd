@@ -10,7 +10,7 @@
 // source" away from the supply house knowing the margin.
 
 import {
-  LENSES, conceals, lensById, priceJob, totalSquaresOf, recap as recapOf,
+  LENSES, conceals, lensById, priceJob, recap as recapOf,
   type Lens, type LensColumn,
 } from '@roofnerd/engine';
 import { at, doc, subscribe, writeExport, type Doc } from '../doc.js';
