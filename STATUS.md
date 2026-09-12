@@ -62,6 +62,10 @@ record. In plain words, what it did:
     real-job 13/13 · engine 146/146 · shell 6/6 · gates 3/3
     compare-fixtures within 0.01% · rebuild-subtotals 15/15 + 13/13 cost codes, 6/6 classes
 
+**Re-run at `8c7c1d1` after the gate commits (product code touched: the sheet footer and the tracing
+hint):** front-door 17/17 · section1 12/12 · section2 13/13 · vocabulary-check **38/38** (eleven
+software/AI words added) · section7 15/15; the section-2 sheet image opened and read.
+
 **Every image at `c893211` was opened and read, all twenty-two.** What each shows, and what is wrong
 in it, is below. Eight things were seen that no check caught. They are listed, not quietly fixed.
 
@@ -119,8 +123,10 @@ in it, is below. Eight things were seen that no check caught. They are listed, n
    first look sees; and a one-roll minimum on 2.6 SQ puts material at $3,500/SQ. A demo roof large
    enough for rounding not to dominate, with labor in a believable proportion, is a demo-data change
    that moves money on purpose and is recorded here first.
-4. **"1 line(s) not counted"** on the sheet footer (`estimate.ts`) — banned by the vocabulary check,
-   which never induces the state that renders it. Fixed with the gate in the next commit.
+4. ~~**"1 line(s) not counted"** on the sheet footer~~ — **FIXED at `3ea4403`**, seen reading
+   "1 line not counted" in `section2-estimate-sheet-8c7c1d1.png`. The gate that catches the class
+   (`gate-language.sh`, programmer's plural in app source) was proven red on it first and found a
+   second one in the tracing hint.
 5. **Reports lays the lens under the picker**, leaving the top right empty — A4 says picker left,
    lens right.
 6. **The cricket is not legible as two planes** at the Model's default angle.
@@ -707,7 +713,7 @@ one screen, watch the money move on the other.
 | Fixture ladder (`tools/compare-fixtures.mjs`) | **PASS 26/26** — both real recaps, every line within 0.01% |
 | Subtotals rebuilt (`tools/rebuild-subtotals.mjs`) | **PASS** — 207 item lines priced through the engine; 28/28 cost codes, 12/12 classes |
 | Client-data gate | **PASS**, and proven red on a figure, a bid name and a home path |
-| Vocabulary check (`tools/probe/vocabulary-check.mjs`) | **PASS 27/27** — reads what is rendered in the shipped window, not the source; proven red on `PLAN_SF`. Gained `TAPER`, `ELEV`, `SUMP` and `BOARDS` as section 6 added them, so the gate covers the new words rather than trailing them |
+| Vocabulary check (`tools/probe/vocabulary-check.mjs`) | **PASS 38/38** at `8c7c1d1` (27 before the software/AI words) — reads what is rendered in the shipped window, not the source; proven red on `PLAN_SF`. Gained `TAPER`, `ELEV`, `SUMP` and `BOARDS` as section 6 added them, so the gate covers the new words rather than trailing them |
 | Synthetic prices (`tools/make-demo-prices.mjs`) | 18 seeded invented prices in `jobs/demo-job/prices.json`; every screenshot and probe draws from them |
 | Engine tests | **146/146** — seven added for the tapered inputs |
 | Shell tests (`pnpm test:shell`) | **6/6** — including that a job saved by the application is byte-for-byte one saved by the command line. **These were red from the front-door commit until 2026-09-08 and reported as passing**, because `pnpm -r test` runs the engine and the app and never ran them. They assert on identity now instead of on array position, and `pnpm test` runs them |

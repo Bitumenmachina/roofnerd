@@ -34,3 +34,6 @@ jobs/*/pages/*.jpeg
 jobs/*/pages/*.webp
 !jobs/demo-job/pages/roof-plan.pdf
 
+
+# Agents build in throwaway clones here; never tracked, never seen by commitStamp().
+.scratch/
