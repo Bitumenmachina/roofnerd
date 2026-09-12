@@ -112,12 +112,6 @@
   --tool-strip: 42px;
   --tool-rail:  52px;
   --status:     30px;
-  /* The Plan keeps its own list of what has been traced, beside the drawing
-     (D132). It is inside the surface, so the overlays that belong to the
-     DRAWING have to stand off it — the view switch was landing on top of the
-     first condition in the list, which is the sort of thing only a picture
-     shows. Declared once here so the overlay and the layout cannot disagree. */
-  --plan-rail:  320px;
   /* The cost panel: 364 docked, 420 with a line open or the book out, and what
      a lens needs when a lens is showing. Set on the element by the panel. */
   --panel-w:    364px;
@@ -202,10 +196,16 @@ body {
   overflow: hidden;
 }
 
-/* A window that is only the cost panel — the detached one — is the panel and
-   its own title bar, and nothing else. */
+/* A window that is only the cost panel — the detached one — is the panel, and
+   the panel carries its own title bar inside itself. ONE row: it was two, and
+   the panel landed in the 36px one with the second standing empty, so the
+   panel was 36px tall and everything in it overflowed. Three of section 7's
+   §1.9 rows were reading that one mistake — the totals 133px past the bottom,
+   and every heading "covered" by the window's own body, which is what
+   `elementFromPoint` finds when the thing it is aimed at has been clipped out
+   of the layout. */
 body.cost-window {
-  grid-template-rows: 36px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
 }
 
 button, input, select { font: inherit; color: inherit; }
@@ -431,14 +431,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   position: absolute; right: 14px; top: 14px; z-index: 20;
   display: flex; flex-direction: column; gap: var(--gap-2); align-items: flex-end;
 }
-/* Upper right OF THE DRAWING. The Plan's list of conditions is inside the
-   surface and takes its right-hand side, so the overlay stands off it; without
-   this the view switch is drawn on top of the first condition in the list. The
-   sibling selector is the relationship that is actually true — the view's host
-   and the overlay are both children of the surface region — and the Model,
-   which has no list, keeps the plain 14px. */
-.editor-host.plan-editor ~ .view-switch { right: calc(var(--plan-rail) + 14px); }
-.editor-host.plan-editor ~ .measuring-pill { left: 14px; }
+/* Upper right of the drawing, plainly, because the surface IS the drawing now
+   (D148). It used to have to stand off the Plan's own list of conditions,
+   which lived inside the surface and which the switch was landing on top of —
+   the sort of thing only a picture shows. The list is the cost panel's
+   Condition tab; there is nothing left in here to stand off. */
 .view-switch .views { display: flex; border: 1px solid var(--rn-hairline-strong); background: var(--rn-strip); }
 .view-switch .views button {
   border: 0; border-radius: 0; background: transparent;
@@ -602,8 +599,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 /* ── Plan: the desk and the paper ───────────────────────────────────────── */
 
-.plan-layout { display: grid; grid-template-columns: minmax(0, 1fr) var(--plan-rail); flex: 1; min-height: 0; }
-.surface { position: relative; overflow: hidden; background: var(--desk); }
+.plan-editor { display: flex; flex-direction: column; min-height: 0; }
+.surface { position: relative; overflow: hidden; background: var(--desk); flex: 1; min-height: 0; }
 .surface-scroll {
   position: absolute; inset: 0; overflow: auto;
   /* Centres the sheet on both axes when it is smaller than the area, and still
@@ -622,6 +619,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.16);
 }
 .surface-overlay { position: absolute; inset: 0; cursor: crosshair; touch-action: none; }
+/* A traced thing is picked by clicking it, so a run has to be clickable along
+   the line that is drawn rather than only inside a shape it does not enclose.
+   `stroke` is the hit area an open polyline actually has. */
+.surface-overlay .trace { pointer-events: visiblePainted; }
+polyline.trace { pointer-events: stroke; }
 
 /* `vector-effect: non-scaling-stroke` already means this width is read in
    screen pixels, so it must NOT also be divided by the zoom. It used to be
@@ -645,18 +647,17 @@ polyline.trace { fill: none; }
   min-height: 26px; flex: none;
 }
 
-/* ── The rail: one scroll region ────────────────────────────────────────── */
+/* ── The list of what has been traced ──────────────────────────────────────
+   It stood beside the drawing, inside the surface, and it is the cost panel's
+   Condition tab now (D148): 320px of the surface drawn twice, with the view
+   switch landing on its first row. The rows themselves are unchanged — one
+   renderer, and the number that picks each one is still printed on it. */
 
-.plan-rail {
-  border-left: 1px solid var(--rule); background: var(--panel);
-  overflow-y: auto; overflow-x: hidden; min-height: 0;
-  display: flex; flex-direction: column;
-}
 .rail-heading {
-  font-size: var(--t-micro); text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--ink-faint); font-weight: 600; margin: 0;
-  padding: var(--gap-3) var(--gap-3) var(--gap-2);
-  position: sticky; top: 0; background: var(--panel); z-index: 2;
+  font-size: 10px; font-family: var(--mono); text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--rn-ink-3); margin: 0;
+  padding: 9px 12px; background: var(--rn-panel-head);
+  border-bottom: 1px solid var(--rn-hairline);
 }
 .condition-list { padding: 0 var(--gap-2) var(--gap-2); }
 .condition {
@@ -877,7 +878,13 @@ body.cost-window { background: var(--rn-panel); }
    picked. The list is the same list the Plan keeps beside the drawing — one
    definition, two places (D132). */
 .cost-condition { display: flex; flex-direction: column; min-height: 0; flex: 1; overflow-y: auto; }
-.cost-condition > .condition-list { flex: none; padding: var(--gap-2); border-bottom: 1px solid var(--rn-hairline); }
+.cost-condition > .rail-heading {
+  font-size: 10px; font-family: var(--mono); text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--rn-ink-3); margin: 0;
+  padding: 9px 12px; background: var(--rn-panel-head);
+  border-bottom: 1px solid var(--rn-hairline);
+}
+.condition-list { flex: none; padding: var(--gap-2); border-bottom: 1px solid var(--rn-hairline); }
 .cost-condition > .condition-panel { flex: none; width: auto; border-left: 0; overflow: visible; }
 .cost-load, .cost-back {
   flex: none; margin: 0 var(--gap-3) var(--gap-3); border-radius: 0;

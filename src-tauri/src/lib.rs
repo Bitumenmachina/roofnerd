@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use serde_json::{json, Value};
-use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, LogicalSize, Manager, State, WebviewUrl, WebviewWindowBuilder, Window};
 
 /// The parts of a job, and the file each one lives in.
 ///
@@ -311,6 +311,41 @@ fn open_editor(app: AppHandle, editor: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Make the window's INNER size what the design asks for.
+///
+/// The sizes in `tauri.conf.json` and in `open_editor` are what the window is
+/// asked for, and on this desktop they are not what the webview gets: the main
+/// window opens with 900 px of height and the page measures 853, and the cost
+/// window 860 against 813 — 47 px of window decoration, taken off the inside
+/// rather than added to the outside. The width is exact, so it is the title bar
+/// and nothing else.
+///
+/// Rather than subtract a magic 47 somewhere — which would be right on this
+/// desktop and wrong on the next one — the page measures what it actually got
+/// and says how much it is short by. This grows the outer size by that much.
+/// The page asks again until the shortfall is gone, so it converges whichever
+/// way the window manager counts, and it stops when there is nothing to fix.
+///
+/// It is deliberately dumb: no target sizes live here. The anatomy is the front
+/// end's, and it is the front end that knows a document bar is 44 px.
+#[tauri::command]
+fn fit_window(window: Window, grow_width: f64, grow_height: f64) -> Result<(), String> {
+    if grow_width.abs() < 1.0 && grow_height.abs() < 1.0 {
+        return Ok(());
+    }
+    let scale = window.scale_factor().map_err(|e| e.to_string())?;
+    let outer = window
+        .outer_size()
+        .map_err(|e| e.to_string())?
+        .to_logical::<f64>(scale);
+    window
+        .set_size(LogicalSize::new(
+            outer.width + grow_width,
+            outer.height + grow_height,
+        ))
+        .map_err(|e| e.to_string())
+}
+
 /// WebKitGTK renders through DMABUF by default, and that path is broken against
 /// the proprietary NVIDIA driver — the window dies on startup with a Wayland
 /// protocol error, or fills the log with GBM buffer failures under XWayland.
@@ -349,7 +384,8 @@ pub fn run() {
             add_page_source,
             read_page_source,
             export_write,
-            open_editor
+            open_editor,
+            fit_window
         ])
         .run(tauri::generate_context!())
         .expect("roofnerd failed to start");

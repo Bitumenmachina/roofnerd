@@ -34,6 +34,15 @@ let openLineId: string | null = null;
 let stopSubscribing: (() => void) | null = null;
 let stopWatching: (() => void) | null = null;
 let widthChanged: (open: boolean) => void = () => undefined;
+/**
+ * Draw the lines again.
+ *
+ * Opening a line also selects it, so the selection watcher redrew and the chain
+ * appeared; CLOSING one changes no selection and changed no document, so
+ * Escape set the state and nothing put it on screen. The state and the drawing
+ * are the same act and they go together here.
+ */
+let redraw: () => void = () => undefined;
 
 export interface EstimateOptions {
   /** Told when a line opens or closes, because the panel's width follows it. */
@@ -86,6 +95,7 @@ export function mountEstimate(host: HTMLElement, options: EstimateOptions): void
     requestAnimationFrame(countBelow);
   };
 
+  redraw = () => draw(doc());
   stopSubscribing = subscribe((d: Doc) => draw(d));
   stopWatching = watchSelection(() => draw(doc()));
 }
@@ -95,19 +105,20 @@ export function unmountEstimate(): void {
   stopWatching?.();
   stopSubscribing = null;
   stopWatching = null;
+  redraw = () => undefined;
 }
 
 /** Close whatever line is open. Answers whether there was one — Escape asks. */
 export function closeOpenLine(): boolean {
   if (openLineId === null) return false;
-  openLineId = null;
-  widthChanged(false);
+  openLine(null);
   return true;
 }
 
 function openLine(id: string | null): void {
   openLineId = id;
   widthChanged(id !== null);
+  redraw();
 }
 
 // ── the lines ──────────────────────────────────────────────────────────────
@@ -317,7 +328,11 @@ function compactLine(
     const mark = document.createElement('span');
     mark.className = 'derived';
     mark.textContent = '◈';
-    mark.title = `Worked out from ${item.formula}`;
+    // The formula is beside this mark, in the mono face, exempt because it is
+    // code the estimator typed. A tooltip is not exempt and never can be — it
+    // is read as a sentence — so it says what the mark MEANS rather than
+    // printing `VERTICES` at somebody who never asked to see one.
+    mark.title = 'Worked out from what was traced, by the formula on this line.';
     unit.append(mark);
   }
 

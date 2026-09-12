@@ -13,7 +13,9 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { emit, listen } from '@tauri-apps/api/event';
 import { LENSES, measure, type Condition, type Page } from '@roofnerd/engine';
-import { at, connect, demoFolder, folder, open, pickFolder, save, subscribe, tearOff, type Doc } from './doc.js';
+import {
+  at, connect, demoFolder, fitWindow, folder, open, pickFolder, save, subscribe, tearOff, type Doc,
+} from './doc.js';
 import {
   documentBar, menu, startScreen, statusStrip, toolRail, toolStrip,
   STATUS_SAID, type RailTool, type Reading, type SurfaceChrome,
@@ -419,10 +421,44 @@ async function showStart() {
   strip.idle();
 }
 
+/**
+ * The inner size the design asks of each window.
+ *
+ * The handoff's frame is 1440 x 900 and the detached cost panel is 600 x 860
+ * (D137), and those are sizes of the PAGE — every region in it is specified
+ * against them. The shell asks the window manager for them and this desktop
+ * takes the title bar out of the inside, so the page comes up 47 px short. The
+ * page is the only thing that can measure that, so it does, and asks the shell
+ * to make up the difference. It asks again until there is nothing left to make
+ * up, because which side of the frame a window manager counts from is not
+ * something to guess at from in here.
+ */
+const WANTED: Readonly<Record<string, readonly [number, number]>> = {
+  main: [1440, 900],
+  cost: [600, 860],
+};
+
+async function fitTheWindow(): Promise<void> {
+  const want = WANTED[role];
+  if (!want) return;
+  for (let tries = 0; tries < 4; tries += 1) {
+    const short = [want[0] - window.innerWidth, want[1] - window.innerHeight] as const;
+    if (Math.abs(short[0]) < 1 && Math.abs(short[1]) < 1) return;
+    try {
+      await fitWindow(short[0], short[1]);
+    } catch {
+      // A window that cannot be resized is a window the estimator can resize.
+      return;
+    }
+    await new Promise((r) => { setTimeout(r, 150); });
+  }
+}
+
 void start();
 
 async function start() {
   try {
+    await fitTheWindow();
     await connect();
     // And follow what the other windows select and which room they are in, the
     // same way this window follows what they change in the document.

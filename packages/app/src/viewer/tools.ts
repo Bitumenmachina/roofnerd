@@ -44,6 +44,15 @@ export interface ToolHost {
    * pointer away from the first.
    */
   onCursor(page: Point | null): void;
+  /**
+   * A click with the Select act up.
+   *
+   * The event travels rather than the point: the caller reads what was HIT —
+   * every shape on the drawing says which condition it belongs to — so the
+   * answer agrees with the picture by construction instead of by arithmetic
+   * over the same points a second time.
+   */
+  onSelectAt(event: PointerEvent): void;
 }
 
 export interface ToolProgress {
@@ -166,7 +175,7 @@ export class Tools {
   }
 
   private down(page: Point, event: PointerEvent): void {
-    if (this.tool === 'select') return;
+    if (this.tool === 'select') { this.host.onSelectAt(event); return; }
     const point = this.snap(this.constrain(page));
 
     // A double-click finishes rather than adding a point on top of the last one.

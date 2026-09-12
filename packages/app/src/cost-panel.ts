@@ -221,6 +221,13 @@ export function costPanel(options: {
       } else {
         options.onShowingChanged?.();
         host.className = 'cost-condition';
+        // The list of what has been traced, with the heading that says what it
+        // is. It stood beside the drawing until D148 folded it in here, and it
+        // brought its heading with it — a list of five coloured rows with no
+        // word over them is a list of five coloured rows.
+        const heading = document.createElement('p');
+        heading.className = 'rail-heading';
+        heading.textContent = 'Conditions';
         const list = document.createElement('div');
         list.className = 'condition-list';
         const properties = document.createElement('aside');
@@ -231,7 +238,7 @@ export function costPanel(options: {
         load.className = 'cost-load';
         load.textContent = 'Load an assembly';
         load.addEventListener('click', () => { book = true; draw(); });
-        host.append(list, properties, load);
+        host.append(heading, list, properties, load);
         conditionHosts = { list, properties, load };
       }
     }

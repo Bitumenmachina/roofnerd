@@ -107,6 +107,17 @@ export async function pickFile(): Promise<string | null> {
 }
 export const tearOff = (editor: string) => invoke<void>('open_editor', { editor });
 
+/**
+ * Grow this window by what the page is short of.
+ *
+ * The shell asks for a size and the window manager takes the decoration out of
+ * the inside of it, so a window asked for 900 gives the page 853. The page is
+ * the only thing that knows what it actually got; this tells the shell, and the
+ * shell adds it to the outside.
+ */
+export const fitWindow = (growWidth: number, growHeight: number) =>
+  invoke<void>('fit_window', { growWidth, growHeight });
+
 /** Read a value out of the document by pointer. Returns undefined if absent. */
 export function at(pointer: string, from: Doc = current): unknown {
   if (pointer === '') return from;

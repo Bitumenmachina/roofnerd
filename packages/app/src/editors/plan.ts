@@ -26,7 +26,6 @@ import {
 } from '../chrome.js';
 import { hueFor, type IconName } from '../icons.js';
 import { KIND_LABELS, PENDING_REASON, quantity } from '../labels.js';
-import { renderConditionList } from '../condition-list.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
 
 // `Condition`, `Page`, `Trace` and `Point` are the engine's. They were copied
@@ -96,31 +95,18 @@ export function mountPlan(host: HTMLElement, surroundings: SurfaceChrome): void 
   const hint = document.createElement('p');
   hint.className = 'hint';
 
-  const railHeading = document.createElement('p');
-  railHeading.className = 'rail-heading';
-  railHeading.textContent = 'Conditions';
-
-  const list = document.createElement('div');
-  list.className = 'condition-list';
-
-  // The rail is the LIST — swatch, name, live measures, the number that picks
-  // it, visibility — and nothing else. Conditions live here and in the cost
-  // panel's Condition tab (D132); there is no tree any more.
-  const rail = document.createElement('div');
-  rail.className = 'plan-rail';
-  rail.append(railHeading, list);
-
   // A4: the scale badge sits on the drawing, bottom-left, where an estimator
   // looks to check what they are measuring against.
   const scaleBadge = document.createElement('div');
   scaleBadge.className = 'scale-badge';
   surface.root.append(scaleBadge);
 
-  const layout = document.createElement('div');
-  layout.className = 'plan-layout';
-  layout.append(surface.root, rail);
-
-  host.append(layout, hint);
+  // The surface is the drawing (D148, Frame 1). The list of what has been
+  // traced folded into the cost panel's Condition tab: it was 320px of the
+  // surface drawn twice, and the view switch — an overlay at the drawing's
+  // upper right — was landing on top of its first row. The keys that reached
+  // it stay: 1 to 9 pick, and the pill says what the next corner goes into.
+  host.append(surface.root, hint);
 
   tools = new Tools(surface, {
     existingPoints: () => currentPageId ? tracedPoints(conditions(), currentPageId) : [],
@@ -133,6 +119,12 @@ export function mountPlan(host: HTMLElement, surroundings: SurfaceChrome): void 
       chrome?.setMeasuringInto(state.points > 0 ? measuringInto(state.tool) : null);
     },
     onCursor: (page) => readOut(page),
+    // Select picks what is under the pointer. It had nothing to do before,
+    // because the list beside the drawing was the only way to pick a condition
+    // — and the hint has been saying "click a trace to select it" the whole
+    // time. With the list folded into the panel (D148) an act in the rail that
+    // did nothing would be exactly the thing the rail is not allowed to have.
+    onSelectAt: (event) => pickAt(event),
   });
 
   // The pointer off the sheet is a real answer: nothing is known here.
@@ -157,7 +149,6 @@ export function mountPlan(host: HTMLElement, surroundings: SurfaceChrome): void 
   // Selecting a condition anywhere — here, on the sheet, in the Model, or in
   // another window — redraws the list and the drawing.
   stopWatching = watchSelection(() => {
-    renderConditionList(list, doc());
     drawTraces(doc());
     if (progress.points > 0) chrome?.setMeasuringInto(measuringInto(progress.tool));
   });
@@ -166,7 +157,6 @@ export function mountPlan(host: HTMLElement, surroundings: SurfaceChrome): void 
     const pages = (at('/pages', d) as Page[]) ?? [];
     if (!currentPageId && pages[0]) showPage(pages[0].id).catch((e) => report('opening the drawing', e));
     else if (currentPageId) refreshSheetIfChanged(pages).catch((e) => report('opening the drawing', e));
-    renderConditionList(list, d);
     drawTraces(d);
     const page = pages.find((p) => p.id === currentPageId);
     scaleBadge.textContent = page?.feetPerUnit
@@ -258,15 +248,32 @@ function drawStrip(): void {
   // The drawing, and how to add another one. It was a select and a button in a
   // toolbar over the drawing; it is the same select and the same button, in the
   // region the handoff puts them in.
-  const drawing = document.createElement('select');
-  drawing.setAttribute('aria-label', 'Drawing');
-  if (!pages.length) drawing.append(option('', 'no drawings yet'));
-  for (const p of pages) drawing.append(option(p.id, p.feetPerUnit ? p.name : `${p.name} (unscaled)`));
-  drawing.value = currentPageId ?? '';
-  drawing.addEventListener('change', () => {
-    showPage(drawing.value).catch((e) => report('opening the drawing', e));
-  });
-  fields.push(labelled('Drawing', drawing));
+  // Named as TEXT, and then picked from. A <select> carries its chosen option
+  // inside itself and `innerText` does not read it — so a strip that offered
+  // only the picker named no drawing at all to anything reading the window,
+  // which is how section 7's §1.2 went red. With one drawing there is nothing
+  // to pick between and the picker is furniture; it appears with the second.
+  const named_ = document.createElement('span');
+  named_.className = 'strip-field';
+  const drawingLabel = document.createElement('span');
+  drawingLabel.textContent = 'Drawing';
+  const drawingName = document.createElement('span');
+  drawingName.className = 'v';
+  drawingName.textContent = page ? (page.feetPerUnit ? page.name : `${page.name} (unscaled)`)
+    : 'no drawing yet';
+  named_.append(drawingLabel, drawingName);
+
+  if (pages.length > 1) {
+    const drawing = document.createElement('select');
+    drawing.setAttribute('aria-label', 'Drawing');
+    for (const p of pages) drawing.append(option(p.id, p.feetPerUnit ? p.name : `${p.name} (unscaled)`));
+    drawing.value = currentPageId ?? '';
+    drawing.addEventListener('change', () => {
+      showPage(drawing.value).catch((e) => report('opening the drawing', e));
+    });
+    named_.append(drawing);
+  }
+  fields.push(named_);
   fields.push(stripButton('Add a drawing', () => {
     addDrawing().catch((e) => report('Adding a drawing', e));
   }, true));
@@ -384,6 +391,23 @@ function measuringInto(tool: ToolName): string {
   const selected = conditions().find((c) => c.id === selectedConditionId() && c.kind === kind);
   if (selected) return selected.name;
   return `a new ${act.names ?? KIND_LABELS[kind]}`;
+}
+
+/**
+ * Pick the traced thing under the pointer.
+ *
+ * Read off what was actually hit rather than worked out from coordinates: every
+ * shape the Plan draws carries the condition it belongs to, so the hit test is
+ * the browser's own and it agrees with the picture by construction. A click on
+ * bare paper picks nothing, which is a real answer — it is how an estimator
+ * puts a selection down.
+ */
+function pickAt(event: PointerEvent): void {
+  const target = event.target as Element | null;
+  const shape = target?.closest?.('[data-condition]') as HTMLElement | null;
+  const id = shape?.dataset['condition'];
+  if (!id) return;
+  select({ kind: 'condition', id });
 }
 
 // ── the sheet ──────────────────────────────────────────────────────────────
@@ -573,14 +597,18 @@ function drawTraces(d: Doc): void {
       if (t.pageId !== currentPageId) continue;
       const common = { stroke: color, class: selected ? 'trace on' : 'trace' };
 
+      // Every shape says which condition it belongs to, so a click on it can be
+      // answered by what was hit rather than by arithmetic over the points.
+      const whose = { 'data-condition': c.id };
+
       if (c.kind === 'count') {
         for (const p of t.points) {
-          g.append(svg('circle', { cx: p.x, cy: p.y, r: 4 * surface.pageUnitsPerPixel, fill: color, ...common }));
+          g.append(svg('circle', { cx: p.x, cy: p.y, r: 4 * surface.pageUnitsPerPixel, fill: color, ...common, ...whose }));
         }
       } else if (c.kind === 'area') {
-        g.append(svg('polygon', { points: pointsAttribute(t.points), fill: color, ...common }));
+        g.append(svg('polygon', { points: pointsAttribute(t.points), fill: color, ...common, ...whose }));
       } else {
-        g.append(svg('polyline', { points: pointsAttribute(t.points), fill: 'none', ...common }));
+        g.append(svg('polyline', { points: pointsAttribute(t.points), fill: 'none', ...common, ...whose }));
       }
     }
   }
