@@ -1,6 +1,6 @@
 # Status
 
-Current as of 2026-09-08. One file, short. Patrick accepts against this whenever he chooses;
+Current as of 2026-09-12. One file, short. Patrick accepts against this whenever he chooses;
 acceptance does not pause the build.
 
 ## Where the build is
@@ -27,6 +27,40 @@ application — and it would not load anything. That attempt is what produced th
 the fix exists because of it. The door has had a person's hands on it, it failed, it was repaired,
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
+
+## The 2026-09-08 pass, committed 2026-09-12
+
+Patrick stopped the previous session mid-pass; nothing from it was committed until now
+(`refs/pass-in-flight-2026-09-08.md`). It is in as two commits: the pass as it stood, then this
+record. In plain words, what it did:
+
+- **Sections 1, 2 and 6 run on the shipped runtime now**, through the start screen and the demo-job
+  button, not on the stubbed browser. Section 1 lost a check that compared a number with itself
+  (register #28). Section 2 reads the parapet height off the document instead of hardcoding it.
+- **The evidence photographs go through the front door** (D92): start screen, File menu, condition
+  panel, help sheet, plan, estimate sheet.
+- **The paper has edges.** A corner traced past the sheet is named on the plan and in the panel;
+  the check lives in the engine (D93) with six tests.
+- **The cursor readout says which way the water runs.** The Model refits when its area is resized.
+- **Sheet headers and columns no longer clip** (D94); "Or pick a scale…" no longer reads "Or pick a".
+- **The client-data gate refuses drawing references** (D95), proven red at both doors.
+- **`section7-legibility.mjs` is new**, 15 checks; it supersedes the twelve-pair photograph form
+  (D96). Four of section 7's defects are eye-only and are read below when the images are opened.
+- **Two demo changes move money on purpose.** The demo traces were re-laid inside the 612 × 792
+  sheet (half the low roof, two parapet corners and one end of the cricket had been traced past the
+  bottom of the paper), so the low roof and the parapet are smaller. The demo parapet dropped from
+  1.5 ft to 1 ft so that the flashing cap — NRCA's 8 in of flashing above the finished roof — is the
+  constraint that binds, which is the one an estimator actually hits (D83). `LF * H` moved with it.
+  The real-job fixtures are untouched; `compare-fixtures` still passes.
+- **Housekeeping this session:** the Chrome stub harness is deleted (D97); every probe now refuses
+  to photograph a dirty tree (D98).
+
+**Not yet re-run at this commit:** the full probe suite on the shipped runtime. The last full run
+was before the final toolbar change; the counts below are re-established in the next entry, and
+until then the table under "What the checks say" is the *previous* state.
+
+**Section 6's selection line is not verified.** Its check asserted only that a tree node existed
+(register #32). It stays open until section 6b rewrites it in both directions across two windows.
 
 ## The Model, rebuilt on how a roof is actually built
 

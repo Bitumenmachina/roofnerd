@@ -18,14 +18,13 @@
 // photographs what is actually there. The scratch job is gone; there is nothing
 // it did that the shipped demo does not do better.
 
-import { execFileSync } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { launch, openDemoJob, until, wait } from './tauri-harness.mjs';
+import { launch, openDemoJob, until, wait, commitStamp } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
-const COMMIT = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT }).toString().trim();
+const COMMIT = commitStamp();
 const label = process.argv[2] ?? 'shot';
 
 await mkdir(EVIDENCE, { recursive: true });

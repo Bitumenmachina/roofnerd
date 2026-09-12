@@ -8,15 +8,14 @@
 //
 //   pnpm build:app && node tools/probe/section5-lenses.mjs
 
-import { execFileSync } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { launch, openDemoJob, until, wait } from './tauri-harness.mjs';
+import { launch, openDemoJob, until, wait, commitStamp } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
-const COMMIT = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT }).toString().trim();
+const COMMIT = commitStamp();
 
 // The working: measure names that only appear inside a formula, the properties,
 // and the rounding functions. NOT SF/LF/EA/SQ — those are units, and a

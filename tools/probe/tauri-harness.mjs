@@ -12,7 +12,7 @@
 // against a documented protocol is less to go wrong than a library that has an
 // opinion about the payload.
 
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { mkdtemp, cp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -218,3 +218,17 @@ export const typeScale = async (session, text) => {
   }, text);
   await wait(900);
 };
+
+/**
+ * The commit a probe stamps on its evidence must name the code that ran. A dirty tree
+ * photographed under HEAD's hash is evidence of nothing, so this refuses rather than guesses.
+ * Proven red on an untracked file before it was trusted.
+ */
+export function commitStamp() {
+  const dirty = execFileSync('git', ['status', '--porcelain'], { cwd: ROOT }).toString().trim();
+  if (dirty) {
+    console.error('the working tree is not clean — commit first, then take evidence:\n' + dirty);
+    process.exit(2);
+  }
+  return execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT }).toString().trim();
+}

@@ -13,15 +13,14 @@
 //
 //   pnpm build:app && node tools/probe/section1-trace.mjs
 
-import { execFileSync } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import { clickAt, launch, openDemoJob, tool, typeScale, until, wait } from './tauri-harness.mjs';
+import { clickAt, launch, openDemoJob, tool, typeScale, until, wait, commitStamp } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
-const COMMIT = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: ROOT }).toString().trim();
+const COMMIT = commitStamp();
 
 const results = [];
 const check = (name, fn) => {
