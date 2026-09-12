@@ -430,6 +430,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .view-switch {
   position: absolute; right: 14px; top: 14px; z-index: 20;
   display: flex; flex-direction: column; gap: var(--gap-2); align-items: flex-end;
+  max-width: calc(100% - 28px);
 }
 /* Upper right of the drawing, plainly, because the surface IS the drawing now
    (D148). It used to have to stand off the Plan's own list of conditions,
@@ -444,14 +445,28 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .view-switch .views button + button { border-left: 1px solid var(--rn-hairline-strong); }
 .view-switch .views button.on { background: var(--rn-ink); color: var(--rn-chip-ink); font-weight: 500; }
 .view-caption { font-family: var(--mono); font-size: 10px; color: var(--rn-ink-off); }
-/* Zoom and fit, and later the Model's preset corners. A group of icon buttons
-   on its own ground so it reads against the drawing under it. */
+/* Getting around the view: the Plan's zoom and fit, the Model's four corners,
+   its fit, its vertical and its orbit. Groups on their own ground so each reads
+   against the drawing under it, and wrapping rather than running off the end of
+   the window — which is what §1.5 was about the first time. */
 .view-nav {
-  display: flex; gap: 2px;
-  border: 1px solid var(--rn-hairline-strong); background: var(--rn-strip);
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
 }
 .view-nav:empty { display: none; }
-.view-nav .icon-button { border-radius: 0; padding: 6px; color: var(--rn-ink-2); }
+.view-nav .chip-group {
+  display: flex; border: 1px solid var(--rn-hairline-strong); background: var(--rn-strip);
+}
+.view-chip {
+  border: 0; border-radius: 0; background: transparent; padding: 6px 9px;
+  font-family: var(--mono); font-size: 11px; color: var(--rn-ink-2);
+}
+.view-chip + .view-chip { border-left: 1px solid var(--rn-hairline-strong); }
+.view-chip:hover { background: var(--rn-row-lit); color: var(--rn-ink); }
+.view-chip.on { background: var(--rn-ink); color: var(--rn-chip-ink); font-weight: 500; }
+.view-nav .icon-button {
+  border: 1px solid var(--rn-hairline-strong); background: var(--rn-strip);
+  border-radius: 0; padding: 6px; color: var(--rn-ink-2);
+}
 .view-nav .icon-button:hover { background: var(--rn-row-lit); color: var(--rn-ink); }
 /* Bringing the panel home, from the window that lost it. Dashed, in the one
    loud colour, because it is a state the estimator put the window into. */
@@ -1020,44 +1035,71 @@ button.quiet:hover { border-color: var(--rule); }
 }
 
 /* ── The Model editor ─────────────────────────────────────────────────────
-   The roof stood up. The canvas takes the room; the legend and the note sit
-   under it in trade words, because a colour on its own means nothing to
-   anybody who did not build the palette. */
-.model-editor { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.model-canvas { flex: 1; min-height: 0; min-width: 0; width: 100%; display: block; background: var(--desk); }
-/* The roof twice: the one the engine derives, and the same roof written out as
-   an IFC model and read back through the toolkit that draws it. Side by side
-   while the second is new — a reader can hold one against the other, which is
-   the only way to find out whether the long way round arrives at the same
-   building. The pair becomes one view when it has. */
-.model-stage { flex: 1; display: flex; min-height: 0; min-width: 0; }
-.model-ifc {
-  flex: 1; min-width: 0; display: flex; flex-direction: column;
-  border-left: var(--hair, 1px) solid var(--line, #d6d8db);
+   One canvas, filling the surface, with what the shading means over the top of
+   it at the upper left — Frame 2's anatomy. It was a canvas with a row of keys
+   underneath and, for a while, a second canvas beside it showing the same roof
+   through a viewer toolkit. Both of those took room off the roof, which is the
+   one thing in this window that needs it. */
+.model-editor { position: relative; min-height: 0; overflow: hidden; }
+.model-canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block; background: var(--desk);
 }
-.model-ifc-stage { flex: 1; min-height: 0; min-width: 0; position: relative; background: var(--desk); }
-.model-ifc-says {
-  margin: 0; padding: 6px 12px; font-size: 12px; color: var(--ink-2, #5a5f66);
-  border-top: var(--hair, 1px) solid var(--line, #d6d8db);
+
+.model-overlay {
+  position: absolute; left: 14px; top: 14px; z-index: 10;
+  display: flex; flex-direction: column; gap: var(--gap-2);
+  width: 252px; max-width: calc(100% - 28px); max-height: calc(100% - 28px);
+  overflow: auto;
+  /* The drawing is under this. Only the cards themselves take a pointer. */
+  pointer-events: none;
 }
 .model-legend {
-  display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center;
-  padding: 8px 12px; border-top: var(--hair, 1px) solid var(--line, #d6d8db);
-  font-size: 12px; color: var(--ink-2, #5a5f66);
+  pointer-events: auto;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px;
+  background: var(--rn-strip); border: 1px solid var(--rn-hairline-strong);
+  font-size: 11px; line-height: 1.45; color: var(--rn-ink-2);
 }
-.model-key { display: inline-flex; align-items: center; gap: 6px; }
+.model-legend:empty { display: none; }
+.model-key { display: flex; align-items: baseline; gap: 6px; }
 /* A row with no swatch: the drawing saying what it does not know, or what it
    checked and did not like. It reads as a sentence, not as a key. */
-.model-says { font-style: italic; color: var(--ink-2); }
+.model-says { font-style: italic; color: var(--rn-ink-dim); }
 .model-key i {
-  width: 10px; height: 10px; border-radius: 2px; display: inline-block;
-  border: 1px solid rgba(0, 0, 0, 0.18);
+  width: 10px; height: 10px; flex: none; display: inline-block;
+  position: relative; top: 1px;
+  border: 1px solid var(--rn-hairline-strong);
 }
-.model-note { margin: 0; padding: 0 12px 10px; font-size: 12px; color: var(--ink-2, #5a5f66); }
+
+/* The thickness scale, which lets a depth be read off the shading instead of
+   guessed at. What the roof does under the pointer is in the window's status
+   strip — the same region whatever the surface is showing. */
+.model-scale { display: flex; flex-direction: column; gap: 5px; }
+.model-head {
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  text-transform: uppercase; color: var(--rn-ink-2);
+}
+.model-ramp { display: block; height: 12px; border: 1px solid var(--rn-hairline-strong); }
+.model-ticks {
+  display: flex; justify-content: space-between;
+  font-family: var(--mono); font-size: 11px; color: var(--rn-ink-mono);
+  font-variant-numeric: tabular-nums;
+}
+.model-caption { font-style: normal; font-family: var(--mono); font-size: 10px; color: var(--rn-ink-dim); }
+
+.model-note {
+  pointer-events: auto; margin: 0; padding: 8px 10px;
+  background: var(--rn-strip); border: 1px solid var(--rn-hairline-strong);
+  font-size: var(--t-micro); color: var(--rn-ink-2);
+}
 .model-note:empty { display: none; }
 /* The roof did not draw. Not a hint — the view is empty and this says why, so
    nobody measures off a picture that is partly the last job. */
-.model-broke { color: var(--warn-ink, #7c2d12); background: var(--warn-bg, rgba(180, 83, 9, 0.12)); border-left: 3px solid var(--warn, #b45309); padding: 8px 12px; font-weight: 600; }
+.model-broke {
+  color: var(--warn-ink, #7c2d12); background: var(--warn-bg, rgba(180, 83, 9, 0.12));
+  border-left: 3px solid var(--warn, #b45309); padding: 8px 12px; font-weight: 600;
+}
 
 /* A corner clicked past the edge of the paper. Not an error — a measurement
    taken off the desk instead of the drawing, said out loud so it can be
@@ -1070,19 +1112,6 @@ button.quiet:hover { border-color: var(--rule); }
 .formula-note {
   display: block; font-size: var(--t-small); color: var(--warn, #8a5a1d);
   margin-top: 2px; cursor: help;
-}
-
-/* The thickness scale, which lets a depth be read off the shading instead of
-   guessed at. What the roof does under the pointer is in the window's status
-   strip now — the same region whatever the surface is showing. */
-.model-scale { display: inline-flex; flex-direction: column; gap: 2px; min-width: 140px; }
-.model-ramp {
-  display: block; height: 8px; border-radius: 2px;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-}
-.model-ticks {
-  display: flex; justify-content: space-between;
-  font-size: 11px; color: var(--ink-faint, #7a8087); font-variant-numeric: tabular-nums;
 }
 
 /* ── The Library ────────────────────────────────────────────────────────── */

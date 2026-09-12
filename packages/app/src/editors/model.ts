@@ -16,12 +16,25 @@
 //               up from the datum. Absent when no layer says, because a roof
 //               whose build-up nobody has stated is not a roof nine inches thick
 //   a parapet   a line condition with a height, stood up off its base
+//   a curb      the same, and said to be a curb, because a parapet is the edge
+//               of the roof and a curb is a thing standing on it
+//   the coping  formed metal over a wall or a curb, as wide as the detail says
+//               and not as wide as the wall. A surface, not a plate: 24 ga is
+//               twenty-eight thousandths of an inch
 //   the taper   thickness at the drain, plus the slope, over the distance to
 //               the nearest drain — sampled on a grid and drawn as a surface
+//   a sump      the square the field is cut down in at each drain, at the side
+//               the condition states
+//   a valley    the low line between two drains, sampled onto the surface it
+//               lies in rather than drawn straight through it
 //   a cricket   two planes falling from a ridge the drains put there, not a
 //               ridge somebody drew
 //   no fall     where the build-up has hit its ceiling and the roof goes flat,
 //               so the water stops moving
+//
+// It is seen through a fixed isometric from one of four corners, with a fit and
+// a vertical exaggeration and an orbit that is off until it is asked for. All
+// four of those move the camera and nothing else.
 //
 // The conventions above are not this file's opinion. They live in the engine at
 // `roof.ts`, each with the manual or the tool it came from, and they are tested
@@ -42,9 +55,9 @@ import {
 } from '@roofnerd/engine';
 import { at, doc, subscribe, type Doc } from '../doc.js';
 import { feet, feetPerUnit } from '../scale.js';
-import { ifcRoof, type IfcRoofView } from '../ifc/world.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
 import { stripField, type RailTool, type Reading as StripReading, type SurfaceChrome } from '../chrome.js';
+import { watchTheme } from '../theme.js';
 import { hueFor } from '../icons.js';
 
 // The four shapes this file draws from are the engine's, not its own. The copies
@@ -74,8 +87,41 @@ const inches = (n: number) => n / 12;
 /** How fine the taper is sampled, in feet. Small enough to see a sump. */
 const GRID_FEET = 2;
 
+/**
+ * The four corners the roof is offered from.
+ *
+ * North is up the sheet, which is how a roof plan is read, so north is negative
+ * z in the world and the compass below reads the way it does. Each one is a
+ * direction to stand in, not a position: the distance comes off the roof.
+ */
+const CORNERS = {
+  NE: { x: 1, z: -1 },
+  NW: { x: -1, z: -1 },
+  SE: { x: 1, z: 1 },
+  SW: { x: -1, z: 1 },
+} as const;
+
+type Corner = keyof typeof CORNERS;
+
+/** What the chips offer, in the words on them. */
+const CORNER_LABEL: Record<Corner, string> = {
+  NE: 'NE corner', NW: 'NW corner', SE: 'SE corner', SW: 'SW corner',
+};
+
+/** The two vertical exaggerations. A quarter in twelve is invisible at true scale. */
+const EXAGGERATIONS = [1, 3] as const;
+
 let scene: THREE.Scene;
-let camera: THREE.PerspectiveCamera;
+let camera: THREE.OrthographicCamera;
+/** Which corner the fixed view is taken from. */
+let corner: Corner = 'NE';
+/** How far the vertical is stretched. One is true scale. */
+let exaggeration = 1;
+/** Has the estimator asked to look around? Until then the camera is fixed. */
+let looking = false;
+/** Redraw the chips when one of the three above moves. */
+let refreshChips: () => void = () => undefined;
+let stopWatchingTheme: (() => void) | null = null;
 let chrome: SurfaceChrome | null = null;
 let renderer: THREE.WebGLRenderer | null = null;
 let controls: OrbitControls | null = null;
@@ -84,56 +130,125 @@ let frameHandle = 0;
 let stopWatching: (() => void) | null = null;
 /** Has the estimator taken the camera? Until then the view follows the roof. */
 let framed = false;
-/** The roof the view was last framed on, so a box change can re-frame on it. */
-let lastCentre = new THREE.Vector3();
+/** Whether there is a roof to frame at all. A box change on nothing is nothing. */
 let lastSpan = 0;
 let stopObserving: (() => void) | null = null;
 let stopSubscribing: (() => void) | null = null;
 /** The canvas this view is drawn on, for turning world points into screen ones. */
 let surface: HTMLCanvasElement | null = null;
-/**
- * The same roof, gone the long way round: written as IFC4 and read back through
- * the toolkit. It stands beside the derived drawing rather than replacing it
- * while it is new, so the two can be held against each other by eye — the
- * derived one is the one the estimator has been reading for six sections, and
- * the IFC one is what an architect's program will see when the file is handed
- * over. When they agree, the second retires the first.
- */
-let ifcView: IfcRoofView | null = null;
 
 /**
- * The projection, in one place.
+ * The projection: a fixed isometric, from one of four corners.
  *
- * §4.10 asks for an orbit camera and that is what this builds. The design work
- * argues for a fixed isometric with a vertical exaggeration instead, on the
- * grounds that a quarter inch in twelve is invisible at true scale and a camera
- * a person has to fight is worse than one they cannot move. That is an open
- * question, so the whole of the answer lives in this function: changing it is
- * changing this, and nothing else in the file knows which way it went.
+ * The design work asked for this and the reason is the roof itself. A quarter
+ * inch in twelve is a fortieth of a degree; at true scale in perspective it is
+ * not a slope, it is a flat grey field, and an estimator fighting an orbit
+ * camera to find an angle where it reads is an estimator who stops opening this
+ * view. So the camera does not move unless it is asked to: four corners, a fit,
+ * and a vertical stretch that makes the fall visible without moving a vertex.
+ *
+ * Orthographic, and that is not a style. Two lengths the same on the roof have
+ * to be the same on the screen or the picture cannot be measured off, which is
+ * what perspective gives up. A direction with the same magnitude on all three
+ * axes is what makes the two plan axes foreshorten equally — the isometric the
+ * handoff draws, arrived at rather than approximated.
+ *
+ * The orbit is still here and still off. "Look around" turns it on for anybody
+ * who wants to get behind a curb, and any of the presets puts it back.
  */
-function projection(canvas: HTMLCanvasElement, target: THREE.Vector3, span: number) {
-  camera = new THREE.PerspectiveCamera(45, 1, 0.5, 20_000);
-  const back = Math.max(span * 1.4, 40);
-  camera.position.set(target.x + back, target.y + back * 0.8, target.z + back);
+function projection(canvas: HTMLCanvasElement) {
+  camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -20_000, 20_000);
+  camera.up.set(0, 1, 0);
 
   const orbit = new OrbitControls(camera, canvas);
-  orbit.target.copy(target);
   orbit.enableDamping = true;
   orbit.dampingFactor = 0.08;
   // Under the roof there is nothing to see and it is easy to get lost there.
   orbit.maxPolarAngle = Math.PI * 0.49;
-  orbit.update();
+  orbit.enabled = false;
+  orbit.addEventListener('start', () => { framed = true; });
   return orbit;
 }
 
-/** Put the camera back around the roof, keeping the angle it is already at. */
-function reframe(target: THREE.Vector3, span: number) {
-  if (!controls || !camera) return;
-  const back = Math.max(span * 1.4, 40);
-  const direction = camera.position.clone().sub(controls.target).normalize();
-  controls.target.copy(target);
-  camera.position.copy(target).add(direction.multiplyScalar(back));
+/**
+ * Stand the camera at the chosen corner and put the whole roof in the window.
+ *
+ * Called on open, on every document change until somebody takes the camera, on
+ * every change to the box the canvas is in, and on each of the chips. The last
+ * of those is why this is one function: a preset that framed differently from a
+ * fit would be two cameras, and the two would disagree the first time a roof
+ * was traced off centre.
+ */
+function frame() {
+  if (!camera || !controls || !world) return;
+  const box = new THREE.Box3().setFromObject(world);
+  if (box.isEmpty()) return;
+  const centre = box.getCenter(new THREE.Vector3());
+  const span = Math.max(box.getSize(new THREE.Vector3()).length(), 20);
+
+  const dir = CORNERS[corner];
+  const from = new THREE.Vector3(dir.x, 1, dir.z).normalize().multiplyScalar(Math.max(span * 2, 80));
+  controls.target.copy(centre);
+  camera.position.copy(centre).add(from);
+  camera.up.set(0, 1, 0);
+  camera.lookAt(centre);
+  camera.zoom = 1;
   controls.update();
+  fitFrustum(box);
+}
+
+/**
+ * Size the window on the world so the whole roof is in it, with a margin.
+ *
+ * The box's own corners, put through the camera rather than guessed at from the
+ * span: a diagonal view of a long roof needs a wider window than a square one,
+ * and a span-times-a-constant rule is how the roof ends up a postage stamp in a
+ * wide window and cropped in a tall one. Both were on screen this week.
+ */
+function fitFrustum(known?: THREE.Box3) {
+  if (!camera || !surface || !world) return;
+  const box = known ?? new THREE.Box3().setFromObject(world);
+  if (box.isEmpty()) return;
+  const w = surface.clientWidth;
+  const h = surface.clientHeight;
+  if (w < 2 || h < 2) return;
+
+  camera.updateMatrixWorld();
+  // Computed here rather than read: `matrixWorldInverse` is filled in by the
+  // renderer on its way to drawing a frame, so on the frame this is called from
+  // it is whatever the last frame left. The roof fitted to the previous camera
+  // is the small-roof defect wearing a different hat.
+  const toCamera = camera.matrixWorld.clone().invert();
+  let minX = Infinity; let maxX = -Infinity; let minY = Infinity; let maxY = -Infinity;
+  const p = new THREE.Vector3();
+  for (const x of [box.min.x, box.max.x]) {
+    for (const y of [box.min.y, box.max.y]) {
+      for (const z of [box.min.z, box.max.z]) {
+        p.set(x, y, z).applyMatrix4(toCamera);
+        minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+      }
+    }
+  }
+  const MARGIN = 1.1;
+  const halfW = Math.max(((maxX - minX) / 2) * MARGIN, 1);
+  const halfH = Math.max(((maxY - minY) / 2) * MARGIN, 1);
+  // Whichever of the two needs more room decides, so nothing is ever cut off.
+  const scale = Math.max(halfW / (w / 2), halfH / (h / 2));
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  camera.left = cx - (w / 2) * scale;
+  camera.right = cx + (w / 2) * scale;
+  camera.top = cy + (h / 2) * scale;
+  camera.bottom = cy - (h / 2) * scale;
+  camera.updateProjectionMatrix();
+}
+
+/** The ground the drawing lies on, in whichever room the estimator is in. */
+function paintBackground() {
+  if (!scene) return;
+  const token = getComputedStyle(document.documentElement).getPropertyValue('--desk').trim();
+  scene.background = new THREE.Color(token || '#e6e6ea');
 }
 
 /**
@@ -212,6 +327,80 @@ function readAt(canvas: HTMLCanvasElement, event: PointerEvent): readonly StripR
 export const modelTools = (pick: (id: string) => void): readonly RailTool[] =>
   [{ id: 'select', label: 'Select', icon: 'select', onPick: () => pick('select') }];
 
+/** One chip, in the words Frame 2 writes on it. */
+function chip(label: string, onPick: () => void): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'view-chip';
+  button.textContent = label;
+  button.addEventListener('click', onPick);
+  return button;
+}
+
+const chipGroup = (...chips: HTMLElement[]) => {
+  const group = document.createElement('div');
+  group.className = 'chip-group';
+  group.append(...chips);
+  return group;
+};
+
+/**
+ * Getting around the roof: four corners, a fit, the vertical, and the orbit.
+ *
+ * Every one of these moves the camera and nothing else. That is the whole rule
+ * of this view — a preset that changed a thickness or a slope would be a second
+ * roof, and two roofs disagree. The vertical stretch is the one that looks like
+ * an exception and is not: it stretches the picture, the vertices stay where the
+ * heightfield put them, and the readout under the pointer goes on answering in
+ * the inches the roof actually is.
+ */
+function viewChips(surroundings: SurfaceChrome): void {
+  const corners: HTMLButtonElement[] = [];
+  const verts: HTMLButtonElement[] = [];
+
+  for (const id of Object.keys(CORNERS) as Corner[]) {
+    corners.push(chip(CORNER_LABEL[id], () => {
+      corner = id;
+      looking = false;
+      if (controls) controls.enabled = false;
+      framed = false;
+      frame();
+      refreshChips();
+    }));
+  }
+
+  const fit = chip('fit roof', () => { framed = false; frame(); refreshChips(); });
+
+  for (const times of EXAGGERATIONS) {
+    verts.push(chip(`vert \u00d7${times}`, () => {
+      exaggeration = times;
+      if (world) world.scale.set(1, times, 1);
+      framed = false;
+      frame();
+      refreshChips();
+    }));
+  }
+
+  const look = chip('look around', () => {
+    looking = !looking;
+    if (controls) controls.enabled = looking;
+    refreshChips();
+  });
+
+  refreshChips = () => {
+    (Object.keys(CORNERS) as Corner[]).forEach((id, i) => {
+      corners[i]!.classList.toggle('on', id === corner && !looking);
+    });
+    EXAGGERATIONS.forEach((times, i) => {
+      verts[i]!.classList.toggle('on', times === exaggeration);
+    });
+    look.classList.toggle('on', looking);
+  };
+  refreshChips();
+
+  surroundings.setViewTools([chipGroup(...corners), chipGroup(fit), chipGroup(...verts), chipGroup(look)]);
+}
+
 export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void {
   unmount();
   chrome = surroundings;
@@ -224,13 +413,28 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
     stripField('Units', 'SF · LF · EA · SQ'),
   ]);
   framed = false;
+  corner = 'NE';
+  exaggeration = 1;
+  looking = false;
   host.replaceChildren();
   host.classList.add('model-editor');
 
+  // One canvas, filling the surface. It carried a second one beside it for a
+  // while — the same roof written out as IFC and read back through a viewer
+  // toolkit, so the two could be held against each other by eye. What that
+  // actually put on screen was a white slab next to the roof, taking half the
+  // room the roof had. The IFC file is still written and still checked; it is
+  // not a second picture in the window an estimator works in.
   const canvas = document.createElement('canvas');
   canvas.className = 'model-canvas';
   canvas.setAttribute('aria-label', 'The roof in three dimensions');
   surface = canvas;
+
+  // Upper left, over the drawing, which is where Frame 2 puts them: what the
+  // shading means, and what the marks on the roof are. An overlay rather than a
+  // row underneath, because a row underneath is room taken off the roof.
+  const overlay = document.createElement('div');
+  overlay.className = 'model-overlay';
 
   const legend = document.createElement('div');
   legend.className = 'model-legend';
@@ -238,28 +442,25 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
   const note = document.createElement('p');
   note.className = 'model-note';
 
+  overlay.append(legend, note);
+
   // What the roof does where the pointer is reads in the window's status strip
   // now, which is where the handoff puts it: a continuous readout under the
   // cursor, in the same region whatever the surface is showing. It used to be a
   // line of its own under this canvas, which meant the Plan had nowhere to put
   // the same four facts when it learns to compute them.
-  //
-  // The surface carries two roofs while the IFC one is new: the drawing this
-  // file derives, and beside it the same roof written out as IFC4 and read back
-  // through the toolkit. Both go in one stage, so the surface region still owns
-  // a single child that flexes.
-  ifcView = ifcRoof();
-  const stage = document.createElement('div');
-  stage.className = 'model-stage';
-  stage.append(canvas, ifcView.root);
+  host.append(canvas, overlay);
 
-  host.append(stage, legend, note);
+  viewChips(surroundings);
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color('#eceeef');
+  // The ground the drawing lies on is the room the estimator is in — the same
+  // token the window itself paints its viewport with, so a dark room does not
+  // leave one pale rectangle in it.
+  stopWatchingTheme = watchTheme(() => paintBackground());
 
   // Flat light plus one sun. A tapered field reads by its shading, so the light
   // has to come from somewhere rather than being uniform.
@@ -269,6 +470,7 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
   scene.add(sun);
 
   world = new THREE.Group();
+  world.scale.set(1, exaggeration, 1);
   scene.add(world);
 
   /**
@@ -288,9 +490,6 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
    * answer is the right one: empty the view and say so, loudly, in the window.
    */
   const draw = () => {
-    // The IFC roof is stood up from the same document and is not downstream of
-    // the drawing below: a rebuild that throws must not take it with it.
-    ifcView?.show(doc());
     let built: Built;
     try {
       built = build(doc());
@@ -304,18 +503,15 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
     note.classList.remove('model-broke');
     legend.replaceChildren(...built.legend);
     note.textContent = built.note;
-    if (!controls && built.span > 0) {
-      controls = projection(canvas, built.centre, built.span);
-      // Once they move the camera it is theirs. Until then the view follows the
-      // roof, so tracing something new does not leave it off screen.
-      controls.addEventListener('start', () => { framed = true; });
-    } else if (controls) {
-      if (!framed && built.span > 0) reframe(built.centre, built.span);
-      controls.update();
-    }
-    lastCentre = built.centre;
+    if (!controls) controls = projection(canvas);
     lastSpan = built.span;
     resize(canvas);
+    // Once they have looked around it is their camera. Until then the view
+    // follows the roof, so tracing something new does not leave it off screen —
+    // and so the roof is in the window the first time it is opened, in every
+    // window it is opened in.
+    if (!framed && built.span > 0) frame();
+    controls.update();
   };
 
   /**
@@ -363,6 +559,18 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
     return Object.assign(meshes, {
       selectedConditionId: selectedConditionId(),
       screenPointOf: (id: string) => screenPointOf(id),
+      // Where the camera is standing and how the vertical is stretched, so a
+      // check can hold a preset against what it claims to have changed. The
+      // meshes above are the other half of that: a preset moves this and
+      // nothing in the list.
+      view: camera ? {
+        corner,
+        vert: exaggeration,
+        looking,
+        position: [camera.position.x, camera.position.y, camera.position.z],
+        target: controls ? [controls.target.x, controls.target.y, controls.target.z] : null,
+        frustum: [camera.left, camera.right, camera.top, camera.bottom],
+      } : null,
     });
   };
 
@@ -387,7 +595,7 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
   // re-fit whenever the box changes, including the first time it gets a real one.
   const watchBox = new ResizeObserver(() => {
     resize(canvas);
-    if (!framed && lastSpan > 0) reframe(lastCentre, lastSpan);
+    if (!framed && lastSpan > 0) frame();
   });
   watchBox.observe(canvas);
   stopObserving = () => watchBox.disconnect();
@@ -420,8 +628,9 @@ function unmount() {
   renderer?.dispose();
   renderer = null;
   surface = null;
-  ifcView?.dispose();
-  ifcView = null;
+  stopWatchingTheme?.();
+  stopWatchingTheme = null;
+  refreshChips = () => undefined;
 }
 
 /**
@@ -441,7 +650,17 @@ function resize(canvas: HTMLCanvasElement) {
   const h = canvas.clientHeight;
   if (w < 2 || h < 2) return;
   renderer.setSize(w, h, false);
-  camera.aspect = w / h;
+  if (!framed) {
+    fitFrustum();
+    return;
+  }
+  // Their camera. Keep what they are looking at and give the new width to the
+  // sides, which is what a window getting wider does to a drawing.
+  const halfH = (camera.top - camera.bottom) / 2;
+  const cx = (camera.left + camera.right) / 2;
+  const halfW = halfH * (w / h);
+  camera.left = cx - halfW;
+  camera.right = cx + halfW;
   camera.updateProjectionMatrix();
 }
 
@@ -573,6 +792,12 @@ function build(d: Doc): Built {
   const scales = feetPerUnit((at('/pages', d) as Page[]) ?? []);
   const drains = drainPoints(list, scales);
   const perimeter = perimeterInches(list);
+  // What the roof is at a drain, which the sump and the valley between drains
+  // both sit on. It is the tapered field's own starting thickness — the same
+  // number the heightfield begins from, not a second one.
+  const tapered = list.find((c) => c.kind === 'area' && !c.hidden && c.properties?.['TAPER'] !== undefined);
+  const atDrain = tapered?.properties?.['T'] ?? 0;
+  const fallPerFoot = tapered?.properties?.['TAPER'] ?? 0;
 
   const box = new THREE.Box3();
   let anything = false;
@@ -593,6 +818,9 @@ function build(d: Doc): Built {
   let unbuiltCrickets = 0;
   let crossedTraces = 0;
   let unstatedWall = 0;
+  let unstatedCap = 0;
+  let copings = 0;
+  let curbs = 0;
 
   list.forEach((c, index) => {
     if (c.hidden) return;
@@ -665,19 +893,44 @@ function build(d: Doc): Built {
         } else if (height > 0) {
           const wall = props['WALL'];
           if (wall === undefined) unstatedWall += 1;
-          world.add(parapet(ring, elevation, height, wall, colour, c));
+          const stood = standUp(ring, elevation, height, wall, colour, c);
+          world.add(stood.mesh);
+          if (c.role === 'curb') curbs += 1;
+          // The cap on top of it. A coping is formed metal over a wall and a
+          // curb cap is formed metal over a curb; both are as wide as the
+          // detail says and neither is as wide as the wall. With no width
+          // stated nothing is drawn and the legend says so, which is the same
+          // rule the wall thickness already follows.
+          if (stood.cap) { world.add(stood.cap); copings += 1; }
+          else if (wall !== undefined && props['W'] === undefined) unstatedCap += 1;
         } else {
           world.add(runLine(ring, elevation, colour, c));
         }
         anything = true;
       } else if (c.kind === 'count') {
-        for (const p of ring) world.add(marker(p, elevation, c, props));
+        for (const p of ring) world.add(...marker(p, elevation, c, props, atDrain, fallPerFoot));
         anything = true;
       }
 
       for (const p of ring) box.expandByPoint(new THREE.Vector3(p.x, elevation, p.y));
     }
   });
+
+  // The valley between drains. Two drains with roof between them meet along the
+  // line joining them — water off both sides runs to it and then along it — and
+  // it is derived from the same heightfield the surface is drawn from rather
+  // than being a line anybody drew. Each drain is joined to its nearest
+  // neighbour, so three in a row read as two valleys and not as three.
+  let valleys = 0;
+  if (tapered && drains.length > 1) {
+    const slope = tapered.properties?.['TAPER'] ?? 0;
+    const { cap } = capInches(atDrain, tapered.properties?.['BOARDS'], perimeter);
+    const elevation = tapered.properties?.['ELEV'] ?? 0;
+    for (const [a, b] of nearestNeighbours(drains)) {
+      world.add(valleyLine(a, b, drains, atDrain, slope, cap, elevation));
+      valleys += 1;
+    }
+  }
 
   highlight();
 
@@ -696,6 +949,8 @@ function build(d: Doc): Built {
       taperedFacets, noFallSquareFeet: noFallSquares, drains: drains.length, crickets,
       thin, thick, capReason, unstatedBuildUp, outOfProportion, ridgeOffSquare,
       cricketSlopeOff, overOneLayer, unbuiltCrickets, crossedTraces, unstatedWall,
+      unstatedCap, copings, curbs, valleys,
+      ramp: (tapered?.color ?? '#4a6b8a'),
     }),
     note: anything
       ? (unscaled ? 'Some of this roof is on a sheet nobody has scaled, so it is not drawn.' : '')
@@ -956,11 +1211,14 @@ function taperSurface(
  * With no thickness stated it stays a ribbon, and the legend says the thickness
  * is not stated. That is not the same as inventing one.
  */
-function parapet(
+function standUp(
   ring: Point[], elevation: number, height: number, thick: number | undefined,
   colour: string, c: Condition,
-) {
+): { mesh: THREE.Mesh; cap: THREE.Mesh | null } {
   const positions: number[] = [];
+  /** The top of the wall, segment by segment, for the cap that goes on it. */
+  const capPositions: number[] = [];
+  const capWidth = c.properties?.['W'];
   const low = elevation;
   const high = elevation + height;
 
@@ -1002,6 +1260,25 @@ function parapet(
       // The cap, which is where the coping goes.
       positions.push(a.x, high, a.y, b.x, high, b.y, a2.x, high, a2.y);
       positions.push(b.x, high, b.y, b2.x, high, b2.y, a2.x, high, a2.y);
+
+      // And the formed metal over it, as wide as the detail says. It is drawn
+      // as a surface and not a solid on purpose: 24 ga is twenty-eight
+      // thousandths of an inch, and a plate thick enough to see would be a
+      // thickness nobody stated.
+      if (capWidth !== undefined && capWidth > 0) {
+        // Centred on the wall, so it overhangs both faces the way a cap does.
+        const mx2 = ux * (t / 2) * inboard;
+        const my2 = uy * (t / 2) * inboard;
+        const outX = ux * (capWidth / 2) * inboard;
+        const outY = uy * (capWidth / 2) * inboard;
+        const top = high + 0.02;
+        const cA = { x: a.x + mx2 - outX, y: a.y + my2 - outY };
+        const cB = { x: b.x + mx2 - outX, y: b.y + my2 - outY };
+        const cC = { x: b.x + mx2 + outX, y: b.y + my2 + outY };
+        const cD = { x: a.x + mx2 + outX, y: a.y + my2 + outY };
+        capPositions.push(cA.x, top, cA.y, cB.x, top, cB.y, cC.x, top, cC.y);
+        capPositions.push(cA.x, top, cA.y, cC.x, top, cC.y, cD.x, top, cD.y);
+      }
     }
   }
 
@@ -1011,9 +1288,90 @@ function parapet(
   const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
     color: new THREE.Color(colour), side: THREE.DoubleSide,
   }));
-  mesh.userData = { conditionId: c.id, kind: t > 0 ? 'parapet' : 'parapet-ribbon' };
-  return mesh;
+  // A curb is a run with a height, the same as a parapet is, and it is drawn by
+  // the same arithmetic. What it is called here is what it is: a parapet is the
+  // edge of the roof and a curb is a thing standing on it, and a check counting
+  // one must not find the other.
+  const kind = c.role === 'curb' ? 'curb' : (t > 0 ? 'parapet' : 'parapet-ribbon');
+  mesh.userData = { conditionId: c.id, kind };
+
+  let cap: THREE.Mesh | null = null;
+  if (capPositions.length > 0) {
+    const capGeometry = new THREE.BufferGeometry();
+    capGeometry.setAttribute('position', new THREE.Float32BufferAttribute(capPositions, 3));
+    capGeometry.computeVertexNormals();
+    cap = new THREE.Mesh(capGeometry, new THREE.MeshLambertMaterial({
+      color: new THREE.Color(GALVANIZED), side: THREE.DoubleSide,
+    }));
+    cap.userData = { conditionId: c.id, kind: 'coping' };
+  }
+  return { mesh, cap };
 }
+
+/** Formed metal, in the colour of the material rather than of the condition. */
+const GALVANIZED = '#b9c4c9';
+
+/**
+ * Which drains sit next to which, for the valleys between them.
+ *
+ * Each drain joined to its nearest neighbour, taken once. It is the cheap end
+ * of a spanning tree and it is the right shape for the question: a valley runs
+ * between two drains that share roof, and three drains along a building share
+ * roof in a line, not in a triangle.
+ */
+function nearestNeighbours(drains: Point[]): [Point, Point][] {
+  const out: [Point, Point][] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < drains.length; i += 1) {
+    let best = -1;
+    let far = Infinity;
+    for (let j = 0; j < drains.length; j += 1) {
+      if (i === j) continue;
+      const r = Math.hypot(drains[i]!.x - drains[j]!.x, drains[i]!.y - drains[j]!.y);
+      if (r < far) { far = r; best = j; }
+    }
+    if (best < 0) continue;
+    const key = i < best ? `${i}:${best}` : `${best}:${i}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push([drains[i]!, drains[best]!]);
+  }
+  return out;
+}
+
+/**
+ * The valley between two drains, drawn on the surface it lies in.
+ *
+ * Sampled along the line and lifted to whatever the heightfield says the roof is
+ * at each point, so it sits on the roof rather than hovering over it. Dashed,
+ * because that is what a low line is on a roof plan and what Frame 2 draws.
+ */
+function valleyLine(
+  a: Point, b: Point, drains: Point[], start: number, slope: number, cap: number, elevation: number,
+) {
+  const run = Math.hypot(b.x - a.x, b.y - a.y);
+  const steps = Math.max(2, Math.ceil(run / 2));
+  const points: THREE.Vector3[] = [];
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps;
+    const p = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    const thickness = Math.min(start + nearest(p, drains) * slope, cap);
+    points.push(new THREE.Vector3(p.x, elevation + inches(thickness) + 0.12, p.y));
+  }
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const line = new THREE.Line(geometry, new THREE.LineDashedMaterial({
+    color: new THREE.Color(WATER), dashSize: 2, gapSize: 1.4,
+  }));
+  line.computeLineDistances();
+  // The valley is the drawing explaining the roof, not a thing on it: a click
+  // here should pick the field it lies in.
+  line.raycast = () => {};
+  line.userData = { conditionId: null, kind: 'valley' };
+  return line;
+}
+
+/** The one loud colour: drainage, and everything the water does. */
+const WATER = '#1f7a8c';
 
 /** What a cricket came out as, so the legend can say if it will not drain. */
 type Cricket = {
@@ -1134,23 +1492,55 @@ function runLine(ring: Point[], elevation: number, colour: string, c: Condition)
   return line;
 }
 
-/** A counted thing. A drain gets its sump; anything else gets a marker. */
-function marker(p: Point, elevation: number, c: Condition, props: Properties) {
-  const isDrain = c.role === 'drain';
-  const sump = props['SUMP'] ?? 4;
-  const geometry = isDrain
-    ? new THREE.CylinderGeometry(sump / 2, sump / 4, 0.5, 16)
-    : new THREE.SphereGeometry(0.75, 12, 8);
-  const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
-    color: new THREE.Color(isDrain ? '#1f7a8c' : (c.color ?? '#555555')),
+/**
+ * A counted thing. A drain gets its sump and its bowl; anything else gets a mark.
+ *
+ * The sump is the square the tapered field is cut down in to meet the drain —
+ * four feet a side on this roof, which is what the condition says, and a square
+ * rather than a dish because that is how it is bought and how it is drawn. It
+ * sits at the thickness the field is at a drain, because that is where the
+ * roof is there: the same number the heightfield starts from.
+ */
+function marker(
+  p: Point, elevation: number, c: Condition, props: Properties,
+  atDrain: number, fallPerFoot: number,
+): THREE.Object3D[] {
+  if (c.role !== 'drain') {
+    const mark = new THREE.Mesh(
+      new THREE.SphereGeometry(0.75, 12, 8),
+      new THREE.MeshLambertMaterial({ color: new THREE.Color(c.color ?? '#555555') }),
+    );
+    mark.position.set(p.x, elevation + 0.75, p.y);
+    mark.userData = { conditionId: c.id, kind: 'count' };
+    return [mark];
+  }
+
+  const side = props['SUMP'] ?? 4;
+  // The square is the CUT, so it is drawn where the cut is: at the roof the
+  // sump is let into, which is the thickness the field has at the sump's rim —
+  // half a sump width out from the drain, at the field's own fall. Drawn at the
+  // drain's own thickness instead it would sit under the roof around it and
+  // read as nothing at all.
+  const surfaceAt = elevation + inches(atDrain + (side / 2) * fallPerFoot);
+
+  const sumpGeometry = new THREE.PlaneGeometry(side, side);
+  sumpGeometry.rotateX(-Math.PI / 2);
+  sumpGeometry.translate(p.x, surfaceAt + 0.03, p.y);
+  const sump = new THREE.Mesh(sumpGeometry, new THREE.MeshLambertMaterial({
+    color: new THREE.Color(WATER), side: THREE.DoubleSide, transparent: true, opacity: 0.55,
   }));
-  // A drain sits at the thin end of the taper, where the surface is only an
-  // inch or two off the deck — so a marker centred below the deck disappears
-  // under the very field it drains. It sits proud instead: this is a mark on a
-  // drawing, not a modelled bowl.
-  mesh.position.set(p.x, elevation + (isDrain ? 0.2 : 0.75), p.y);
-  mesh.userData = { conditionId: c.id, kind: isDrain ? 'drain' : 'count' };
-  return mesh;
+  sump.userData = { conditionId: c.id, kind: 'sump' };
+
+  // The bowl, proud of the sump floor so it is not swallowed by it. A mark on a
+  // drawing, not a modelled casting.
+  const bowl = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.7, 0.55, 0.35, 16),
+    new THREE.MeshLambertMaterial({ color: new THREE.Color(WATER) }),
+  );
+  bowl.position.set(p.x, surfaceAt + 0.22, p.y);
+  bowl.userData = { conditionId: c.id, kind: 'drain' };
+
+  return [sump, bowl];
 }
 
 // ── the legend, in trade words ─────────────────────────────────────────────
@@ -1172,14 +1562,20 @@ function inchLabel(v: number): string {
  * "Thicker where it is lighter" is a sentence, not a scale — nobody can read a
  * depth off it, which is what an estimator actually wants from a shaded field.
  */
-function thicknessScale(thin: number, thick: number): HTMLElement {
+function thicknessScale(thin: number, thick: number, base: string): HTMLElement {
   const wrap = document.createElement('span');
   wrap.className = 'model-scale';
 
+  const head = document.createElement('b');
+  head.className = 'model-head';
+  head.textContent = 'Insulation thickness';
+  wrap.append(head);
+
   const ramp = document.createElement('i');
   ramp.className = 'model-ramp';
-  // The same lerp the surface uses, so the ramp is the field's own colouring.
-  ramp.style.background = 'linear-gradient(to right, #4a6b8a, #ffffff)';
+  // The same lerp the surface uses, so the ramp is the field's own colouring
+  // rather than a second palette that happens to look like it.
+  ramp.style.background = `linear-gradient(to right, ${base}, #ffffff)`;
   wrap.append(ramp);
 
   const ticks = document.createElement('span');
@@ -1190,6 +1586,11 @@ function thicknessScale(thin: number, thick: number): HTMLElement {
     ticks.append(t);
   }
   wrap.append(ticks);
+
+  const caption = document.createElement('em');
+  caption.className = 'model-caption';
+  caption.textContent = 'thin at the drains, thick at the high side';
+  wrap.append(caption);
   return wrap;
 }
 
@@ -1201,6 +1602,9 @@ type Reading = {
   unstatedBuildUp: number; outOfProportion: number; ridgeOffSquare: number;
   cricketSlopeOff: number; overOneLayer: boolean; unbuiltCrickets: number;
   crossedTraces: number; unstatedWall: number;
+  unstatedCap: number; copings: number; curbs: number; valleys: number;
+  /** The tapered field's own colour, which the ramp is drawn in. */
+  ramp: string;
 };
 
 /**
@@ -1229,9 +1633,8 @@ function legendFor(r: Reading): HTMLElement[] {
     out.push(el);
   };
 
-  if (r.drains > 0) row('#1f7a8c', r.drains === 1 ? '1 drain' : `${r.drains} drains`);
   if (r.taperedFacets > 0 && Number.isFinite(r.thin) && Number.isFinite(r.thick)) {
-    out.push(thicknessScale(r.thin, r.thick));
+    out.push(thicknessScale(r.thin, r.thick, r.ramp));
     // The surface is the fall. It is not the layout, and it must not be read as
     // one: a real taper is a schedule of lettered boards on a four foot module,
     // in panel repeats, with flat fill under them — thickness steps at a board
@@ -1239,7 +1642,16 @@ function legendFor(r: Reading): HTMLElement[] {
     // that helps and one that gets ordered from.
     say('the surface is the fall, not the board layout');
   }
-  if (r.drains > 0) row('#1f7a8c', 'arrows follow the fall to the drain');
+
+  // The key: what the marks on the roof are, and only the marks that are on it.
+  // A key that names a thing the drawing does not carry is a sentence that is
+  // not true of this roof, which is the same defect as a wrong number.
+  if (r.drains > 0) row(WATER, 'arrows follow the fall to the drain');
+  if (r.noFallSquareFeet > 0) row('#c98a1d', 'no fall');
+  if (r.valleys > 0) row(WATER, 'dashed: the valley between drains');
+  if (r.drains > 0) row(WATER, r.drains === 1 ? '1 drain, on its sump' : `${r.drains} drains, each on its sump`);
+  if (r.copings > 0) row(GALVANIZED, r.copings === 1 ? 'coping on the wall' : 'coping on the walls');
+  if (r.curbs > 0) row(GALVANIZED, r.curbs === 1 ? '1 curb' : `${r.curbs} curbs`);
   if (r.crickets > 0) row('#8a5a1d', r.crickets === 1 ? '1 cricket' : `${r.crickets} crickets`);
 
   if (r.noFallSquareFeet > 0) {
@@ -1262,6 +1674,11 @@ function legendFor(r: Reading): HTMLElement[] {
     say(r.unstatedWall === 1
       ? '1 run has no wall thickness stated, so it is drawn as a face — fill it in and it stands up'
       : `${r.unstatedWall} runs have no wall thickness stated`);
+  }
+  if (r.unstatedCap > 0) {
+    say(r.unstatedCap === 1
+      ? '1 wall has no cap width stated, so no coping is drawn on it'
+      : `${r.unstatedCap} walls have no cap width stated, so no coping is drawn on them`);
   }
   if (r.unstatedBuildUp > 0) {
     say(r.unstatedBuildUp === 1
