@@ -8,7 +8,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import type {
-  Drawings, Scopes, SolvedFastening, SolvedTaper, SolvedWalls,
+  BetweenAnswer, CricketBehindAnswer, Drawings, HighAndLowAnswer, SectionAtAnswer, Scopes,
+  SolvedFastening, SolvedTaper, SolvedWalls, Spot,
 } from '@roofnerd/engine';
 
 /**
@@ -117,6 +118,34 @@ export const solveWalls = () => invoke<SolvedWalls>('solve_get', { part: 'walls'
  * asks for either.
  */
 export const solveFastening = () => invoke<SolvedFastening>('solve_get', { part: 'fastening' });
+
+/**
+ * What two picks WOULD mean, before anything is written.
+ *
+ * An act in the tool rail asks the core the question first and writes second, so
+ * that a slope, a run or the place a cricket goes is never worked out in the
+ * window. The question rides in the part — `ask <name> <json>` — because
+ * `solve_get` takes one argument and this is a read like every other one: no
+ * document moves until the act writes through `set`, and then the whole model is
+ * solved again the way it is after any other edit.
+ */
+const ask = <T>(name: string, question: unknown) =>
+  invoke<T>('solve_get', { part: `ask ${name} ${JSON.stringify(question)}` });
+
+/** Two picks and, once they are typed, the two thicknesses they stand for. */
+export const askHighAndLow = (question: {
+  high: Spot; low: Spot; highInches?: number | null; lowInches?: number | null;
+}) => ask<HighAndLowAnswer>('high-and-low', question);
+
+/** A ruler: how far, how much rise, how thick at each end. */
+export const askBetween = (a: Spot, b: Spot) => ask<BetweenAnswer>('between', { a, b });
+
+/** Where the cricket behind a curb runs, off the curb's own ring in feet. */
+export const askCricketBehind = (ring: readonly Spot[]) =>
+  ask<CricketBehindAnswer>('cricket-behind', ring);
+
+/** Which section goes through a place on the roof, and where that cut runs. */
+export const askSectionAt = (p: Spot) => ask<SectionAtAnswer>('section-at', p);
 
 export function subscribe(fn: Subscriber): () => void {
   subscribers.add(fn);

@@ -861,3 +861,78 @@ export const NOTHING_TO_DRAW: Drawings = {
   fastening: NOTHING_DRAWN('fastening', 'Fastening plan'),
   sections: [],
 };
+
+// ── the verbs' answers ─────────────────────────────────────────────────────
+// What the core says two picks would mean, before anything is written.
+//
+// The mirror of `src-tauri/core/src/verbs.rs`, and the reason it is a mirror
+// rather than a shape the window makes up is the same reason every other type in
+// this file is: the window asks, reads and writes what it was told, and never
+// works out a slope or a run of its own. An act that computed its own geometry
+// would be a second layout beside the solved one.
+
+/** What two picks would make of a tapered area's own slope and thickness. */
+export interface HighAndLowAnswer {
+  readonly conditionId: string | null;
+  readonly drainConditionId: string | null;
+  readonly drainAt: Spot | null;
+  /** What the drain is called, so the strip can say which one the pick took. */
+  readonly drainNamed: string | null;
+  readonly drainNumber: number | null;
+  /** The run along the boards, in feet. Not the straight line to the drain. */
+  readonly runFeet: number;
+  readonly taperInchesPerFoot: number | null;
+  readonly thicknessInches: number | null;
+  /** Where the roof would stop rising under these picks. */
+  readonly capInches: number | null;
+  /** What the roof is at each pick as it stands. The strip is seeded from these. */
+  readonly highNowInches: number | null;
+  readonly lowNowInches: number | null;
+  /** Courses at the deepest position, beside the ceiling the job typed. */
+  readonly boardsNeeded: number | null;
+  readonly boardsAllowed: number | null;
+  /** The drain's own sump as it stands: how wide, and how far it falls. */
+  readonly sumpFeet: number | null;
+  readonly sumpDepthInches: number | null;
+  /** A thing worth saying that is not a refusal — a flat patch, most often. */
+  readonly note: string | null;
+  /** Why the picks cannot be honoured. Nothing is written when this is set. */
+  readonly refused: string | null;
+}
+
+/** A ruler between two places: how far, how much rise, how thick at each end. */
+export interface BetweenAnswer {
+  readonly feet: number;
+  readonly aInches: number | null;
+  readonly bInches: number | null;
+  /** Signed: a ruler dragged downhill answers a fall. */
+  readonly riseInches: number | null;
+  readonly aOn: string | null;
+  readonly bOn: string | null;
+}
+
+/** Where the cricket behind a curb runs, as the ridge a condition is traced with. */
+export interface CricketBehindAnswer {
+  readonly ridge: readonly [Spot, Spot] | null;
+  readonly faceFeet: number;
+  /** Which way the water comes at the curb, as a unit vector on the plan. */
+  readonly from: Spot | null;
+  readonly refused: string | null;
+}
+
+/**
+ * Which section goes through a place on the roof, and where that cut runs.
+ *
+ * The line travels with the index because the view that asked has to draw it —
+ * the cut stays marked on the Plan and on the Model until it is cleared — and
+ * working out where a cut runs in the window would be a second copy of the rule
+ * that chooses it.
+ */
+export interface SectionAtAnswer {
+  readonly index: number | null;
+  /** The drain the cut runs out of. */
+  readonly at: Spot | null;
+  /** The way out of it the cut takes, as a unit vector on the plan. */
+  readonly along: Spot | null;
+  readonly runFeet: number;
+}

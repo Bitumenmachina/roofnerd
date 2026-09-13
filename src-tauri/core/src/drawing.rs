@@ -748,6 +748,56 @@ fn sections_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls) ->
     out
 }
 
+/// Which section a place on the roof belongs to, by its place in `sections_of`.
+///
+/// The Section view shows one cut per drain, and "cut a section" is the estimator
+/// pointing at the roof and getting the one that goes through the ground they
+/// pointed at. So the answer has to be worked out on the SAME walk `sections_of`
+/// makes — a region that yields no cut is skipped there and has to be skipped
+/// here, or every index past it names the wrong drawing.
+///
+/// `None` where the pick is on no drainage area, which is a real answer: there is
+/// no section through a place the layout does not cover.
+pub fn section_at(taper: &SolvedTaper, p: Point) -> Option<SectionAt> {
+    let mut at = 0usize;
+    for field in &taper.fields {
+        for region in &field.regions {
+            let Some(cut) = cut_for(field, region) else { continue };
+            let holds = region.shapes.iter().any(|shape| {
+                crate::geom::inside(p, &shape.ring)
+                    && !shape.holes.iter().any(|hole| crate::geom::inside(p, hole))
+            });
+            if holds {
+                return Some(SectionAt {
+                    index: at,
+                    at: cut.drain,
+                    along: cut.away,
+                    run_feet: cut.run_feet,
+                });
+            }
+            at += 1;
+        }
+    }
+    None
+}
+
+/// Which cut a pick landed on, and where that cut runs on the plan.
+///
+/// The line travels with the index because the view that asked has to DRAW it —
+/// the cut stays marked on the Plan and on the Model until it is cleared — and
+/// working out where a cut runs in the window would be a second copy of
+/// `cut_for`, which is the one thing this crate exists to stop.
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SectionAt {
+    pub index: usize,
+    /// The drain the cut runs out of.
+    pub at: Point,
+    /// The way out of it the cut takes, as a unit vector on the plan.
+    pub along: Point,
+    pub run_feet: f64,
+}
+
 /// Which way to cut through one drain, and how far the cut runs.
 ///
 /// ALONG THE BOARDS. That is the direction the layout is set out in, the

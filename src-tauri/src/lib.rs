@@ -210,6 +210,63 @@ fn solve_get(state: State<'_, Document>, part: String) -> Result<Value, String> 
             let solved = guard.solved.as_ref().ok_or("this roof did not solve")?;
             serde_json::to_value(&solved.fastening).map_err(|e| e.to_string())
         }
+        // ── the verbs' own question ──────────────────────────────────────
+        // An act in the tool rail asks what two picks WOULD mean before
+        // anything is written: the slope they imply, how far apart they are,
+        // which section goes through them, where the cricket behind a curb
+        // runs. The question rides in the part, as `ask <name> <json>`, because
+        // `solve_get` takes one argument and the plan fixed that surface — a
+        // second argument would be a command change for a question that is
+        // read-only either way. Nothing here touches the document: the window
+        // writes through `doc_set` afterwards, and the whole model is solved
+        // again from what the document says, the way it is after every edit.
+        other if other.starts_with("ask ") => {
+            let rest = &other["ask ".len()..];
+            let (name, raw) = rest.split_once(' ').unwrap_or((rest, "null"));
+            let asked: Value = serde_json::from_str(raw).map_err(|e| e.to_string())?;
+            if guard.solved.is_none() {
+                let solved = roofnerd_core::solve(&guard.doc, guard.solve_id)?;
+                guard.solved = Some(solved);
+            }
+            let document = roofnerd_core::Document::read(&guard.doc)?;
+            let solved = guard.solved.as_ref().ok_or("this roof did not solve")?;
+            match name {
+                "high-and-low" => {
+                    let ask: roofnerd_core::HighAndLow =
+                        serde_json::from_value(asked).map_err(|e| e.to_string())?;
+                    serde_json::to_value(roofnerd_core::high_and_low(
+                        &document,
+                        &solved.taper,
+                        &ask,
+                    ))
+                    .map_err(|e| e.to_string())
+                }
+                "between" => {
+                    let ask: roofnerd_core::Between =
+                        serde_json::from_value(asked).map_err(|e| e.to_string())?;
+                    serde_json::to_value(roofnerd_core::between(&solved.taper, &ask))
+                        .map_err(|e| e.to_string())
+                }
+                "cricket-behind" => {
+                    let ring: Vec<roofnerd_core::Point> =
+                        serde_json::from_value(asked).map_err(|e| e.to_string())?;
+                    serde_json::to_value(roofnerd_core::cricket_behind(&solved.taper, &ring))
+                        .map_err(|e| e.to_string())
+                }
+                "section-at" => {
+                    let at: roofnerd_core::Point =
+                        serde_json::from_value(asked).map_err(|e| e.to_string())?;
+                    let found = roofnerd_core::drawing::section_at(&solved.taper, at);
+                    Ok(json!({
+                        "index": found.map(|f| f.index),
+                        "at": found.map(|f| f.at),
+                        "along": found.map(|f| f.along),
+                        "runFeet": found.map(|f| f.run_feet).unwrap_or(0.0),
+                    }))
+                }
+                _ => Err(format!("nothing in this model answers {name}")),
+            }
+        }
         other => Err(format!("there is no {other} in this model")),
     }
 }

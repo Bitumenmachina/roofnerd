@@ -42,6 +42,7 @@ pub mod profile;
 pub mod scope;
 pub mod sump;
 pub mod taper;
+pub mod verbs;
 pub mod walls;
 pub mod wind;
 
@@ -57,6 +58,10 @@ pub use model::{
 pub use profile::{LetterRow, Panel, ProfileSet, Schedule};
 pub use scope::Scopes;
 pub use fastening::{FastenedField, FastenedZone, Pattern, SolvedFastening};
+pub use verbs::{
+    between, cricket_behind, high_and_low, Between, BetweenAnswer, CricketBehindAnswer, HighAndLow,
+    HighAndLowAnswer,
+};
 pub use walls::{SolvedWalls, WallRun};
 pub use wind::{SolvedWind, WindPlan, Zone};
 
