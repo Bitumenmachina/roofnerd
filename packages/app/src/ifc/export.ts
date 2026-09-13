@@ -54,7 +54,12 @@ export async function exportIfc(from: HTMLElement): Promise<void> {
   await writeExport(`${name}.expected.json`, `${JSON.stringify(expected, null, 2)}\n`);
   await writeExport(`${name}.ifcx`, `${ifcx}\n`);
 
+  // What was left out goes FIRST, because the path does not fit in the bar and
+  // whatever comes after it is the half that gets cut. The status line read
+  // "Exported /home/…/exports/northgate-retail-ce…" and stopped, so the one
+  // part of the sentence worth reading — that something did not make it into
+  // the file — was the part nobody saw (C8 §10).
   const left = plan.leftOut.length;
-  const note = left > 0 ? `; ${left} thing${left === 1 ? '' : 's'} left out, named on the panel` : '';
-  sayInStatus(from, `Exported ${ifcPath}${note}`);
+  const note = left > 0 ? `${left} thing${left === 1 ? '' : 's'} left out, named on the panel — ` : '';
+  sayInStatus(from, `${note}exported ${ifcPath}`);
 }

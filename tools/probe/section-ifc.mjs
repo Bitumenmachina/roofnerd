@@ -17,7 +17,7 @@
 //   drain point the job traces has an `IfcFlowTerminal`; every wall or curb
 //   `solve_get('walls')` gives a real inboard offset to has an `IfcWall`.
 //
-//   THE STATUS STRIP NAMES THE FILE. "Exported …", the same sentence a hand
+//   THE STATUS STRIP NAMES THE FILE. "… exported …", the same sentence a hand
 //   would read after pressing the menu item.
 //
 // Front door throughout: the start screen, the demo button, the File menu,
@@ -181,16 +181,16 @@ try {
   check('the File menu opens', () => assert.ok(opened, 'no button reads "File"'));
   check('Export IFC is on it', () => assert.ok(pressed, 'no item reads "Export IFC"'));
 
-  await until(session, () => (document.querySelector('.status-strip')?.textContent || '').includes('Exported'),
-    { what: 'the status strip to say Exported', timeout: 15000 });
+  await until(session, () => (document.querySelector('.status-strip')?.textContent || '').includes('exported'),
+    { what: 'the status strip to say it exported', timeout: 15000 });
   await wait(500);
   await shot(session, 'section-ifc-status');
 
   const status = JSON.parse(await statusNow(session));
   check('the status strip names the file it wrote', () => {
-    assert.match(status.text, /Exported/, `the strip reads "${status.text.trim()}"`);
+    assert.match(status.text, /exported/, `the strip reads "${status.text.trim()}"`);
     assert.ok(status.text.includes(`${stem}.ifc`), `the strip does not name ${stem}.ifc: "${status.text.trim()}"`);
-    assert.match(status.seen, /Exported/, `nothing of it is rendered: "${status.seen.trim()}"`);
+    assert.match(status.seen, /exported/, `nothing of it is rendered: "${status.seen.trim()}"`);
   });
 
   // ── the file, read with Node's own fs, reopened with web-ifc IN THIS PROBE ──

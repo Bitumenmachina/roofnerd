@@ -346,9 +346,27 @@ function compactLine(
   const what = document.createElement('button');
   what.type = 'button';
   what.className = 'line-what';
+  // The name, in two pieces, and the SECOND one is the piece that survives.
+  //
+  // "Base layer fasteners, field", "…, perimeter" and "…, corner" are three
+  // different quantities at three different prices, and the column is about
+  // 130px wide, so all three read "Base layer fasteners, …" and an estimator
+  // has three identical rows with different numbers on them. The word that
+  // tells them apart is the last one, which is exactly the word an ellipsis at
+  // the end eats (C8 §3c). So the tail after the last comma is held back from
+  // shrinking and the head gives way instead: "Base layer faste…, corner".
   const title = document.createElement('span');
   title.className = 'line-item';
-  title.textContent = item.description || 'Untitled line';
+  const whole = item.description || 'Untitled line';
+  const comma = whole.lastIndexOf(', ');
+  const head = document.createElement('span');
+  head.className = 'item-head';
+  const tail = document.createElement('span');
+  tail.className = 'item-tail';
+  head.textContent = comma > 0 ? whole.slice(0, comma) : whole;
+  tail.textContent = comma > 0 ? whole.slice(comma) : '';
+  title.title = whole;
+  title.append(head, tail);
   what.append(title);
   // The second row, and EVERY line has one, which is what makes them all the
   // same height. It was inside the item's own cell, sharing about 126 px with
