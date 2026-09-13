@@ -286,15 +286,19 @@ const linesNow = (session) => session.execute(function () {
   }));
 });
 
-/** What the recap on screen rolls the job up to. */
+/**
+ * What the recap on screen rolls the job up to.
+ *
+ * `.lens-sheet` is where the Recap tab draws, which is what `section10a-chrome.mjs`
+ * reads, and the pending list is the footnote under it.
+ */
 const recapNow = (session) => session.execute(function () {
-  const rows = [...document.querySelectorAll('.cost-recap .recap-row, .cost-recap tr')]
-    .map(function (r) { return (r.innerText || r.textContent || '').replace(/\s+/g, ' ').trim(); });
-  const panel = document.querySelector('.cost-recap');
+  const sheet = document.querySelector('.lens-sheet');
+  const panel = document.querySelector('.cost-panel');
   return JSON.stringify({
-    there: !!panel,
-    text: panel ? (panel.innerText || '').replace(/\s+/g, ' ').trim() : '',
-    rows,
+    there: !!sheet,
+    text: sheet ? (sheet.innerText || '').replace(/\s+/g, ' ').trim() : '',
+    footnote: panel ? (panel.innerText || '').replace(/\s+/g, ' ').trim() : '',
   });
 });
 
@@ -507,9 +511,11 @@ try {
   });
 
   check('the tapered package is not in the recap\'s pending list', () => {
-    assert.ok(!/TAPER_/.test(rolled.text),
-      `the recap says "${/[^.]*TAPER_[^.]*/.exec(rolled.text)?.[0]}"`);
-    assert.ok(!/has no scale/.test(rolled.text),
+    const said = rolled.footnote;
+    assert.ok(!/TAPER_/.test(said), `the recap says "${/[^.]*TAPER_[^.]*/.exec(said)?.[0]}"`);
+    assert.ok(!/has not been solved/.test(said),
+      `the recap says "${/[^.]*has not been solved[^.]*/.exec(said)?.[0]}"`);
+    assert.ok(!/no scale/.test(said),
       'the recap blames a sheet\'s scale for a derived number');
   });
 
@@ -527,7 +533,7 @@ try {
       `the panel lists ${panel.derived.join(', ') || 'nothing'} and the field carries ${want.join(', ')}`);
   });
 
-  const typedThickness = JSON.parse((await fieldValue(session, 'Thickness (in)')) ?? 'null');
+  const typedThickness = JSON.parse((await fieldValue(session, 'Thickness')) ?? 'null');
   check('and the typed thickness at the drain is still the estimator\'s own', () => {
     // The reserved names stay typed. A solve that quietly wrote over one would
     // move money with nothing on screen saying it had, which is what `scopeFor`
