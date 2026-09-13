@@ -43,15 +43,29 @@ export function mountLens(host: HTMLElement, lensId: string): void {
 
 type Row = Record<string, string>;
 
+/**
+ * What a row under a class is indented by — the subtotal and each adder.
+ *
+ * Two spaces of an en quad rather than a stylesheet rule: the same rows go into
+ * the CSV, where the indent has to survive as a character or the file reads as
+ * a flat list of classes with a tax line among them.
+ */
+const INSIDE = '  ';
+
 /** How many squares the recap's rates were taken over. Printed beside them. */
 let perSquareOver: number | null = null;
 
 /**
- * The three figures a recap carries that are not rows in its table.
+ * The figures a recap carries that are not rows in its table.
  *
- * A report prints them under the ladder, where a roofer looks first: how much
- * roof, how many hours, and hours a square. Held here between building the
- * rows and drawing the sheet, the same way the divisor above is.
+ * The ladder from job cost to selling price, and then how much roof, how many
+ * hours, and hours a square. Held here between building the rows and drawing
+ * the sheet, the same way the divisor above is.
+ *
+ * The ladder is here because the sheet promises it — "the roll-up to selling
+ * price, by class" — and printed none of it: an owner could add the six class
+ * totals to a job cost and had no way from there to the price in the footer.
+ * Overhead, profit and bond were all worked out and all thrown away (C8 §4).
  */
 let recapSummary: readonly (readonly [string, string])[] = [];
 
@@ -384,22 +398,48 @@ function rowsFor(lens: Lens, d: Doc): Row[] {
     // beside them, and every check passed because none of them read the recap.
     // Found by opening a real job and looking at the sheet.
     perSquareOver = r.totalSquares;
-    // Held for the summary block under the table. A lens draws rows; this one
-    // also has three figures that are not rows — how much roof, how many hours,
-    // and the two divided — and they are what a roofer reads first.
+    const rate = (v: number | undefined) => (v ? ` · ${num(v, 2).replace(/\.00$/, '')}%` : '');
+    const s = scenario as { overhead?: number; profit?: number; bond?: number };
+    // Held for the summary block under the table: the ladder this sheet is
+    // named after, and then how much roof, how many hours, and the two divided.
     recapSummary = [
+      ['Job cost', money(r.jobCost)],
+      [`Overhead${rate(s.overhead)}`, money(r.overhead)],
+      [`Profit${rate(s.profit)}`, money(r.profit)],
+      ['Contract amount', money(r.contractAmount)],
+      [`Bond${rate(s.bond)}`, money(r.bond)],
+      ['Selling price', money(r.sellingPrice)],
       ['Total SQ', r.totalSquares === null ? '—' : num(r.totalSquares)],
       ['Total hours', num(r.totalHours)],
       ['Hours/SQ', r.hoursPerSquare === null ? '—' : num(r.hoursPerSquare)],
     ];
-    return r.classes.map((c) => ({
-      class: c.class,
-      cost: money(c.total),
-      perSquare: c.perSquare === null ? '' : `${money(c.perSquare)}/SQ`,
-      // Nought hours against Material is a fact and reads as one; a blank would
-      // read as a figure nobody worked out.
-      hours: num(c.hours),
-    }));
+    // A class, then what is inside it. The class total carries its own adders —
+    // tax and escalation on material, burden on labor and on supervision,
+    // general liability on a sub — and a sheet that printed only the total put
+    // eleven thousand dollars of tax inside a figure called "Material" with
+    // nothing on the page saying so. An estimator checking the recap against
+    // the sheet found a supervision class half again as big as its one
+    // supervision line and could not say why (C8 §4). The engine already builds
+    // them named, on the subtotal, and its own words are "never folded in".
+    const out: Row[] = [];
+    for (const c of r.classes) {
+      out.push({
+        class: c.class,
+        cost: money(c.total),
+        perSquare: c.perSquare === null ? '' : `${money(c.perSquare)}/SQ`,
+        // Nought hours against Material is a fact and reads as one; a blank would
+        // read as a figure nobody worked out.
+        hours: num(c.hours),
+      });
+      if (c.adders.length === 0) continue;
+      out.push({ class: `${INSIDE}the lines themselves`, cost: money(c.subtotal), perSquare: '', hours: '' });
+      for (const a of c.adders) {
+        out.push({
+          class: `${INSIDE}${a.name}${rate(a.rate)}`, cost: money(a.amount), perSquare: '', hours: '',
+        });
+      }
+    }
+    return out;
   }
 
   const lines = priceJob(document_, scenario as Parameters<typeof priceJob>[1], derived());
