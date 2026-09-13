@@ -38,11 +38,28 @@
 //   CRICKET_SF          a cricket's footprint. Cricket stock is its own lettered
 //                       series and the chart on disk carries only the primary
 //                       slope, so a cricket is billed by area and not by letter
+//
+// C3 adds the wall and curb names, and the same three-kinds-of-answer rule
+// applies to them: `FLASH_SF` at nought is a wall the membrane never has to
+// climb, `None` is a wall whose ceiling could not be worked out (no roof traced
+// under part of it), and absent is a condition that is not a wall or curb run
+// at all.
+//
+//   FLASH_SF            square feet under the flashing ceiling: the exact sum
+//                       of trapezoids along the run's own breakpoints
+//   FLASH_MIN_IN        the least the ceiling comes to anywhere on the run
+//   CURB_RAISE_IN       how far short of NRCA's 8 in minimum the run's own
+//                       least flashing height falls, or nought
+//   COPING_LF           the condition's own `LF`, named so a formula never
+//                       spells `LF * (STRETCHOUT / 12)` again
+//   COPING_PCS_EA       sections plus corners
+//   CLEAT_LF            both faces: `LF * 2`
 
 use std::collections::BTreeMap;
 
 use crate::model::Document;
 use crate::model::SolvedTaper;
+use crate::walls::SolvedWalls;
 
 /// Per condition, the numbers it carries, by name.
 pub type Scopes = BTreeMap<String, BTreeMap<String, Option<f64>>>;
@@ -53,7 +70,7 @@ pub type Scopes = BTreeMap<String, BTreeMap<String, Option<f64>>>;
 /// number. A window that asks for a condition it can see and gets nothing back
 /// cannot tell "this condition has no derived numbers" from "the solve did not
 /// reach it", and those are different facts.
-pub fn scopes_of(document: &Document, taper: &SolvedTaper) -> Scopes {
+pub fn scopes_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls) -> Scopes {
     let mut out = Scopes::new();
     for condition in &document.conditions {
         out.insert(condition.id.clone(), BTreeMap::new());
@@ -105,6 +122,19 @@ pub fn scopes_of(document: &Document, taper: &SolvedTaper) -> Scopes {
         }
     }
 
+    // ── the walls and curbs ──────────────────────────────────────────────────
+    for run in &walls.runs {
+        let Some(mine) = out.get_mut(&run.condition_id) else { continue };
+        add(mine, "FLASH_SF", run.flash_square_feet);
+        add(mine, "FLASH_MIN_IN", run.flash_min_inches);
+        add(mine, "CURB_RAISE_IN", run.curb_raise_inches);
+        if let Some(coping) = &run.coping {
+            add(mine, "COPING_LF", Some(coping.run_feet));
+            add(mine, "COPING_PCS_EA", Some(coping.pieces_ea as f64));
+            add(mine, "CLEAT_LF", Some(coping.cleat_feet));
+        }
+    }
+
     out
 }
 
@@ -127,7 +157,8 @@ mod tests {
 
     fn scopes(document: &Document) -> Scopes {
         let taper = crate::taper::solve(document, 1);
-        scopes_of(document, &taper)
+        let walls = crate::walls::solve(document, &taper, 1);
+        scopes_of(document, &taper, &walls)
     }
 
     #[test]

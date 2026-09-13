@@ -547,6 +547,7 @@ impl NotSolvedYet {
 pub struct Solved {
     pub solve_id: u64,
     pub taper: SolvedTaper,
+    pub walls: crate::walls::SolvedWalls,
     pub scopes: crate::scope::Scopes,
 }
 

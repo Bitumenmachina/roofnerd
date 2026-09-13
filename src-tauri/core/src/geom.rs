@@ -33,6 +33,35 @@ impl Point {
     }
 }
 
+/// How far a point is from a segment, in feet.
+pub fn distance_to_segment(p: Point, a: Point, b: Point) -> f64 {
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    let len = dx * dx + dy * dy;
+    if len < 1e-12 {
+        return p.distance(a);
+    }
+    let t = (((p.x - a.x) * dx + (p.y - a.y) * dy) / len).clamp(0.0, 1.0);
+    p.distance(Point::new(a.x + dx * t, a.y + dy * t))
+}
+
+/// Is this point inside `ring`, or near enough to the ring's own boundary that
+/// ray casting's one blind spot should not read as "off the roof"?
+///
+/// `inside` is exact everywhere except exactly on an edge, which is not a
+/// numerical-precision problem — the algorithm is genuinely ambiguous there,
+/// by definition, at any point whose y exactly equals a vertex's. A wall very
+/// often runs exactly along the field's own traced line (a parapet always
+/// does), so every one of ITS corners then sits exactly on that boundary, and
+/// the far end of a wall drawn corner-to-corner along one side does too.
+pub fn on_or_in(p: Point, ring: &[Point]) -> bool {
+    if inside(p, ring) {
+        return true;
+    }
+    const NEAR_FEET: f64 = 1e-6;
+    (0..ring.len()).any(|i| distance_to_segment(p, ring[i], ring[(i + 1) % ring.len()]) < NEAR_FEET)
+}
+
 /// The box a ring sits in. `None` for a ring with no points — an unscaled sheet
 /// gives a trace no feet at all, and a box round nothing is not a box.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -77,6 +106,23 @@ pub fn inside(p: Point, ring: &[Point]) -> bool {
         j = i;
     }
     hit
+}
+
+/// The signed area of a ring, twice over — the shoelace sum, undivided.
+///
+/// The sign says which way the ring winds; `walls.rs` uses it to pick which of
+/// a polyline offset's two directions is inboard, and `coping.rs` uses it to
+/// class a corner as outside or inside by comparing a local turn against it.
+/// Callers that want the area itself still have to halve it; nobody here does,
+/// because a sign is all either of them reads.
+pub fn signed_area(ring: &[Point]) -> f64 {
+    let mut sum = 0.0;
+    for i in 0..ring.len() {
+        let a = ring[i];
+        let b = ring[(i + 1) % ring.len()];
+        sum += a.x * b.y - b.x * a.y;
+    }
+    sum
 }
 
 /// How long a traced run is, corner to corner. Open: the last point is the end,

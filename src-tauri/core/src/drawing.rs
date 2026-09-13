@@ -32,7 +32,7 @@
 
 use serde::Serialize;
 
-use crate::geom::{bounds, inside_ring, Point, Shape};
+use crate::geom::{bounds, distance_to_segment, inside_ring, Point, Shape};
 use crate::model::{Board, Condition, Document, Line, SolvedTaper, TaperField, TaperRegion};
 use crate::taper::{read_at, MIN_FLASHING_INCHES};
 
@@ -1154,7 +1154,7 @@ fn wall_at(document: &Document, at: Point) -> Option<Wall> {
         for trace in &c.traces {
             let ring = document.feet(trace, &scales);
             for pair in ring.windows(2) {
-                if away_from_segment(at, pair[0], pair[1]) <= NEAR_FEET {
+                if distance_to_segment(at, pair[0], pair[1]) <= NEAR_FEET {
                     return Some(Wall {
                         id: c.id.clone(),
                         name: if c.name.is_empty() { "the wall".to_string() } else { c.name.clone() },
@@ -1169,18 +1169,6 @@ fn wall_at(document: &Document, at: Point) -> Option<Wall> {
         }
     }
     None
-}
-
-/// How far a point is from a segment, in feet.
-fn away_from_segment(p: Point, a: Point, b: Point) -> f64 {
-    let dx = b.x - a.x;
-    let dy = b.y - a.y;
-    let len = dx * dx + dy * dy;
-    if len < 1e-12 {
-        return p.distance(a);
-    }
-    let t = (((p.x - a.x) * dx + (p.y - a.y) * dy) / len).clamp(0.0, 1.0);
-    p.distance(Point::new(a.x + dx * t, a.y + dy * t))
 }
 
 /// Which condition counted the drain at a place, or none.

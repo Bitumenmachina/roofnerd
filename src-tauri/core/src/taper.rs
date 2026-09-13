@@ -379,25 +379,39 @@ pub fn read_field_at(field: &TaperField, p: Point) -> Option<Reading> {
     read_at(p, &region.planes, field.start_inches, region.cap_inches)
 }
 
+/// How deep the tapered package is at a place, in inches — off whichever region
+/// holds it, or off the greatest any region there comes to.
+///
+/// A point exactly on the boundary between two regions belongs to neither as far
+/// as ray casting is concerned, and a cricket's ridge lands on one — so where no
+/// region holds the point the answer is the greatest the regions come to, which
+/// is the same number from either side, because a shared boundary at one
+/// thickness is what a ridge IS. `walls.rs` reads this too, at a wall's own
+/// inboard face: a parapet standing on the field's own boundary needs the same
+/// fallback a cricket's ridge does, for the same reason.
+pub fn depth_inches_at(field: &TaperField, p: Point) -> Option<f64> {
+    if let Some(reading) = read_field_at(field, p) {
+        return Some(reading.thickness_inches);
+    }
+    let best = field
+        .regions
+        .iter()
+        .filter_map(|r| read_at(p, &r.planes, field.start_inches, r.cap_inches))
+        .map(|r| r.thickness_inches)
+        .fold(f64::NEG_INFINITY, f64::max);
+    if best.is_finite() {
+        Some(best)
+    } else {
+        None
+    }
+}
+
 /// Where the top of the tapered package is at a place, in feet above the datum.
 ///
 /// The deck plus the depth the layout makes there. This is what sits on the roof:
-/// a cricket, a sump rim, a section cut. A point exactly on the boundary between
-/// two regions belongs to neither as far as ray casting is concerned, and a
-/// cricket's ridge lands on one — so where no region holds the point the answer is
-/// the greatest the regions come to, which is the same number from either side,
-/// because a shared boundary at one thickness is what a ridge IS.
+/// a cricket, a sump rim, a section cut.
 pub fn surface_feet(field: &TaperField, p: Point) -> f64 {
-    let depth = match read_field_at(field, p) {
-        Some(reading) => reading.thickness_inches,
-        None => field
-            .regions
-            .iter()
-            .filter_map(|r| read_at(p, &r.planes, field.start_inches, r.cap_inches))
-            .map(|r| r.thickness_inches)
-            .fold(f64::NEG_INFINITY, f64::max),
-    };
-    let depth = if depth.is_finite() { depth } else { field.start_inches };
+    let depth = depth_inches_at(field, p).unwrap_or(field.start_inches);
     field.elevation + depth / 12.0
 }
 
@@ -414,7 +428,7 @@ pub fn surface_feet(field: &TaperField, p: Point) -> f64 {
 /// line. So a crossing is kept only where the plane that actually governs changes,
 /// or where the roof goes flat. Returned as fractions of the way along, ends
 /// included.
-fn folds_along(a: Point, b: Point, planes: &[Plane], start: f64, cap: Option<f64>) -> Vec<f64> {
+pub(crate) fn folds_along(a: Point, b: Point, planes: &[Plane], start: f64, cap: Option<f64>) -> Vec<f64> {
     let length = (b.x - a.x).hypot(b.y - a.y);
     if length < NEAR_ENOUGH {
         return Vec::new();

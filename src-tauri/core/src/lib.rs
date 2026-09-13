@@ -32,6 +32,7 @@
 // roof any more (D149).
 
 pub mod boards;
+pub mod coping;
 pub mod cricket;
 pub mod drawing;
 pub mod geom;
@@ -40,7 +41,9 @@ pub mod profile;
 pub mod scope;
 pub mod sump;
 pub mod taper;
+pub mod walls;
 
+pub use coping::Coping;
 pub use cricket::Layout;
 pub use drawing::{Dimension, DrawnLine, DrawnShape, DrawnText, Drawing, Drawings};
 pub use geom::{bounds, inside, Bounds, Edge, HalfPlane, Plane, Point, Shape};
@@ -51,6 +54,7 @@ pub use model::{
 };
 pub use profile::{LetterRow, Panel, ProfileSet, Schedule};
 pub use scope::Scopes;
+pub use walls::{SolvedWalls, WallRun};
 
 /// Solve the open job.
 ///
@@ -60,8 +64,9 @@ pub use scope::Scopes;
 pub fn solve(document: &serde_json::Value, solve_id: u64) -> Result<Solved, String> {
     let document = Document::read(document)?;
     let taper = taper::solve(&document, solve_id);
-    let scopes = scope::scopes_of(&document, &taper);
-    Ok(Solved { solve_id, taper, scopes })
+    let walls = walls::solve(&document, &taper, solve_id);
+    let scopes = scope::scopes_of(&document, &taper, &walls);
+    Ok(Solved { solve_id, taper, walls, scopes })
 }
 
 #[cfg(test)]

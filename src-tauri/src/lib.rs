@@ -140,9 +140,8 @@ fn doc_get(state: State<'_, Document>) -> Result<Value, String> {
 /// event: the tapered boards on a real roof are hundreds of kilobytes, and a
 /// keystroke must not carry them to three windows.
 ///
-/// Walls and fastening answer that they are not solved yet (C3, C4). That is not
-/// the same answer as an empty roof, and a window that got an empty roof would
-/// draw one.
+/// Fastening answers that it is not solved yet (C4). That is not the same
+/// answer as an empty roof, and a window that got an empty roof would draw one.
 #[tauri::command]
 fn solve_get(state: State<'_, Document>, part: String) -> Result<Value, String> {
     let mut guard = state.0.lock().map_err(|_| "the document lock is poisoned".to_string())?;
@@ -186,7 +185,17 @@ fn solve_get(state: State<'_, Document>, part: String) -> Result<Value, String> 
             serde_json::to_value(roofnerd_core::drawing::drawings(&document, &solved.taper))
                 .map_err(|e| e.to_string())
         }
-        "walls" | "fastening" => {
+        // The walls and curbs: their solids, and how high the membrane may
+        // climb them. C3.
+        "walls" => {
+            if guard.solved.is_none() {
+                let solved = roofnerd_core::solve(&guard.doc, guard.solve_id)?;
+                guard.solved = Some(solved);
+            }
+            let solved = guard.solved.as_ref().ok_or("this roof did not solve")?;
+            serde_json::to_value(&solved.walls).map_err(|e| e.to_string())
+        }
+        "fastening" => {
             serde_json::to_value(roofnerd_core::NotSolvedYet::new(&part, guard.solve_id))
                 .map_err(|e| e.to_string())
         }
