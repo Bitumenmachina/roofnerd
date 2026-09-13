@@ -247,7 +247,7 @@
       {
         "costCode": "07-100-100",
         "description": "TPO wall flashing, 60 mil",
-        "formula": "LF * H",
+        "formula": "FLASH_SF",
         "id": "wallflash",
         "layer": "flashing",
         "unit": "SF",
@@ -257,7 +257,7 @@
       {
         "costCode": "07-100-150",
         "description": "Coping cap, 24 ga galvanized",
-        "formula": "LF * (STRETCHOUT / 12)",
+        "formula": "COPING_LF * (STRETCHOUT / 12)",
         "id": "coping",
         "layer": "edge metal",
         "notes": "Linear feet of run become square feet of flat coil through the stretch-out, and pounds through the coil weight. The stretch-out belongs to Detail P-1, not to the coil.",
@@ -274,7 +274,7 @@
       {
         "costCode": "07-100-150",
         "description": "Continuous cleat, 20 ga",
-        "formula": "LF * 2",
+        "formula": "CLEAT_LF",
         "id": "cleat",
         "layer": "edge metal",
         "notes": "Both faces of the cap.",
@@ -285,10 +285,10 @@
       {
         "costCode": "07-100-150",
         "description": "Shop-formed corner, mitre welded",
-        "formula": "SEGMENTS",
+        "formula": "COPING_PCS_EA",
         "id": "mitre",
         "layer": "edge metal",
-        "notes": "One for every straight run of cap: six outside and two inside on this roof.",
+        "notes": "Every coping piece the run is cut into, corners and the straight sections between them alike — this fixture prices one shop-formed line for both rather than carrying a second for plain lengths. The corners are the least of it: six outside, two inside on this roof's own trace.",
         "unit": "EA",
         "unitCost": 89.39
       },
@@ -304,7 +304,7 @@
       {
         "costCode": "07-100-170",
         "description": "Fasteners, cleat and termination bar",
-        "formula": "LF * 2",
+        "formula": "CLEAT_LF * (12 / FASTEN_OC)",
         "id": "metal-fasteners",
         "layer": "fastening",
         "notes": "Twelve inches on centre, both.",
@@ -340,6 +340,7 @@
     "name": "Parapet Wall Flashing",
     "properties": {
       "ELEV": 0,
+      "FASTEN_OC": 12,
       "FLASHUP": 24,
       "H": 3.5,
       "STRETCHOUT": 19.5,
@@ -456,7 +457,7 @@
       {
         "costCode": "07-100-100",
         "description": "TPO curb flashing, 60 mil",
-        "formula": "LF * H",
+        "formula": "FLASH_SF",
         "id": "curbflash",
         "layer": "flashing",
         "unit": "SF",
@@ -466,7 +467,7 @@
       {
         "costCode": "07-100-150",
         "description": "Curb cap, 24 ga galvanized",
-        "formula": "LF * (STRETCHOUT / 12)",
+        "formula": "COPING_LF * (STRETCHOUT / 12)",
         "id": "curbcap",
         "layer": "edge metal",
         "notes": "The same coil as the coping and a different stretch-out: twenty-six inches at an equipment curb cap against nineteen and a half at the parapet.",

@@ -259,7 +259,48 @@ const DERIVED = [
   { condition: 'c-field', id: 'iso-fill', formula: 'FILL_SF / 100' },
   { condition: 'c-drains', id: 'sump-panel', formula: 'SUMP_PANELS_EA' },
   { condition: 'c-cricket', id: 'cricket-stock', formula: 'CRICKET_SF' },
+  // C3: the wall and curb lines move off LF * H and off SEGMENTS, onto the
+  // names the wall solver carries. wallflash/curbflash were the wall's own
+  // height times its run, which is every inch of the wall whether or not the
+  // detail is drawn to flash that far; FLASH_SF is the exact area under the
+  // ceiling FLASHUP and the roof beneath it actually leave. coping/curbcap
+  // and mitre moved off LF and SEGMENTS the same way C2's own notes asked for
+  // COPING_LF to exist at all: a formula should never have to spell
+  // LF * (STRETCHOUT / 12) again, and a corner count read off the trace's own
+  // turns is exact where SEGMENTS (every straight piece, corner or not) was
+  // only ever a stand-in. cleat keeps its LF * 2 but reads it off CLEAT_LF —
+  // the same figure, now a named scope instead of an expression repeated on
+  // two conditions. metal-fasteners is the one line that changes shape:
+  // CLEAT_LF * (12 / FASTEN_OC) is one fastener a foot at the 12 in spacing
+  // the demo types, which is the same count the retired LF * 2 gave — a
+  // fastener spacing other than 12 in now actually moves this line, which
+  // LF * 2 could never do.
+  { condition: 'c-parapet', id: 'wallflash', formula: 'FLASH_SF' },
+  { condition: 'c-parapet', id: 'coping', formula: 'COPING_LF * (STRETCHOUT / 12)' },
+  {
+    condition: 'c-parapet', id: 'mitre', formula: 'COPING_PCS_EA',
+    notes: 'Every coping piece the run is cut into, corners and the straight '
+      + 'sections between them alike — this fixture prices one shop-formed line '
+      + 'for both rather than carrying a second for plain lengths. The corners '
+      + "are the least of it: six outside, two inside on this roof's own trace.",
+  },
+  { condition: 'c-parapet', id: 'cleat', formula: 'CLEAT_LF' },
+  { condition: 'c-parapet', id: 'metal-fasteners', formula: 'CLEAT_LF * (12 / FASTEN_OC)' },
+  { condition: 'c-curb', id: 'curbflash', formula: 'FLASH_SF' },
+  { condition: 'c-curb', id: 'curbcap', formula: 'COPING_LF * (STRETCHOUT / 12)' },
 ];
+
+/**
+ * The cleat and termination-bar spacing C3's coping is priced against.
+ *
+ * A typed default rather than an invented one: nothing in the box states how
+ * many of a term bar's own 6 in punches get a fastener (`coping.rs`'s own
+ * GAP), so the demo states the spacing an estimator would type absent a
+ * detail calling for tighter — 12 in, one to the foot — on the record here
+ * rather than silently assumed by a formula that could not otherwise reach
+ * `FASTEN_OC` at all.
+ */
+const FASTEN_OC_DEMO_IN = 12;
 
 /** Lines a solved bill replaces. Left on the job they would charge it twice. */
 const RETIRED = ['iso-tapered'];
@@ -296,6 +337,15 @@ let derived = 0;
 let retired = 0;
 const missing = [];
 
+// The one property this pass types rather than prices: metal-fasteners is the
+// only line on the job that reaches FASTEN_OC directly, and a name a formula
+// cannot resolve leaves the line pending rather than silently priced at some
+// assumed spacing.
+const parapet = conditions.find((c) => c.id === 'c-parapet');
+if (parapet && parapet.properties?.FASTEN_OC === undefined) {
+  parapet.properties = { ...(parapet.properties ?? {}), FASTEN_OC: FASTEN_OC_DEMO_IN };
+}
+
 for (const condition of conditions) {
   const items = condition.items ?? (condition.items = []);
   // Where the retired line stood, so the lines that replace it stand there too and
@@ -321,6 +371,7 @@ for (const condition of conditions) {
     item.unit = priced.unit;
     item.formula = line.formula;
     if (priced.waste !== undefined) item.waste = priced.waste;
+    if (line.notes !== undefined) item.notes = line.notes;
     derived += 1;
   }
 }
