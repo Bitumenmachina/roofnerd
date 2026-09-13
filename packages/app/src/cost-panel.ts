@@ -20,7 +20,7 @@ import {
   CLASS_NAMES, conceals, lensById, recap as recapOf,
   type Lens,
 } from '@roofnerd/engine';
-import { at, doc, subscribe, type Doc } from './doc.js';
+import { at, derived, doc, subscribe, type Doc } from './doc.js';
 import { iconButton } from './chrome.js';
 import { renderConditionList } from './condition-list.js';
 import { renderConditionPanel } from './editors/condition-panel.js';
@@ -413,7 +413,7 @@ function recapOf_(d: Doc) {
     } as never;
     const scenario = (job.scenarios as { id: string }[])
       .find((s) => s.id === job.activeScenarioId) ?? job.scenarios[0];
-    return recapOf(document_, scenario as never);
+    return recapOf(document_, scenario as never, derived());
   } catch {
     return null;
   }

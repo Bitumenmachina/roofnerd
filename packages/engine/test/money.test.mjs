@@ -482,3 +482,40 @@ test('an area priced by nothing stays out of the per-square, and is named', () =
 function square(side) {
   return [{ x: 0, y: 0 }, { x: side, y: 0 }, { x: side, y: side }, { x: 0, y: side }];
 }
+
+// ── the recap prices what the sheet prices ─────────────────────────────────
+
+test('the recap rolls up the model\'s numbers, not only the traced ones', () => {
+  // C0 threaded the solve through `priceJob` and left `recap` to make its own
+  // call, so the moment a board bill arrived the sheet would have shown it and the
+  // recap would have dropped the whole tapered package into the pending list. A
+  // recap that prices a different set of lines from the sheet beside it is the
+  // defect this repository has hit twice.
+  const doc = job([
+    { id: 'panel', description: 'X panel', costCode: 'MAT', unit: 'SQ', formula: 'TAPER_X_SF / 100', unitCost: 100 },
+  ]);
+  const scenario = doc.job.scenarios[0];
+  const solved = { c1: { TAPER_X_SF: 2800 } };
+
+  const blind = recap(doc, scenario);
+  assert.equal(blind.classes.find((c) => c.class === 'Material').subtotal, 0);
+  assert.equal(blind.pending.length, 1);
+  assert.match(blind.pending[0], /TAPER_X_SF/, `it says "${blind.pending[0]}"`);
+
+  const seeing = recap(doc, scenario, solved);
+  assert.equal(seeing.classes.find((c) => c.class === 'Material').subtotal, 2800);
+  assert.deepEqual(seeing.pending, []);
+  assert.ok(seeing.sellingPrice > blind.sellingPrice,
+    `the bill is worth ${seeing.sellingPrice - blind.sellingPrice}`);
+});
+
+test('and a name the solve cannot answer leaves the recap saying which', () => {
+  const doc = job([
+    { id: 'cricket', description: 'Cricket stock', costCode: 'MAT', unit: 'SF', formula: 'CRICKET_SF', unitCost: 4 },
+  ]);
+  const r = recap(doc, doc.job.scenarios[0], { c1: { CRICKET_SF: null } });
+  assert.equal(r.pending.length, 1);
+  assert.match(r.pending[0], /CRICKET_SF has not been solved/, `it says "${r.pending[0]}"`);
+  // Never a silent zero in the class it belongs to.
+  assert.equal(r.classes.find((c) => c.class === 'Material').subtotal, 0);
+});

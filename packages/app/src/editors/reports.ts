@@ -261,6 +261,7 @@ function leftOut(lens: Lens, d: Doc): string[] {
   const r = recapOf(
     { ...(d as object) } as Parameters<typeof recapOf>[0],
     scenario as Parameters<typeof recapOf>[1],
+    derived(),
   );
   // A rate is a total with a divisor under it, and the divisor leaves things out
   // the same way a total does. An area traced and priced by nothing is correctly
@@ -290,7 +291,7 @@ function rowsFor(lens: Lens, d: Doc): Row[] {
   const document_ = { ...(d as object) } as Parameters<typeof priceJob>[0];
 
   if (lens.id === 'recap') {
-    const r = recapOf(document_, scenario as Parameters<typeof recapOf>[1]);
+    const r = recapOf(document_, scenario as Parameters<typeof recapOf>[1], derived());
     // `class`, not `name` — a ClassLine is named by the class it is. Reading a
     // field that is not on the type printed a recap of blank rows with money
     // beside them, and every check passed because none of them read the recap.

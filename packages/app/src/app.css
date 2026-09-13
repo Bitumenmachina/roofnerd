@@ -965,6 +965,19 @@ body.cost-window { background: var(--rn-panel); }
   border-radius: var(--radius); background: var(--paper);
 }
 .add-property { width: 100%; margin-top: var(--gap-2); }
+/* What the model solved for this condition: the names a formula can use, with
+   what each is worth. Not fields — nothing here is editable, because typing over
+   a derived number happens on the line where the money is. The name is in the
+   mono face because it is a term an estimator types into a formula. */
+.panel-derived { display: grid; gap: 2px; }
+.derived-row {
+  display: grid; grid-template-columns: 12px 1fr auto; align-items: baseline;
+  gap: var(--gap-1); font-size: var(--t-small); padding: 1px 0;
+}
+.derived-name { font-size: var(--t-small); word-break: break-all; }
+.derived-value { color: var(--ink); font-variant-numeric: tabular-nums; }
+.derived-value.none { color: var(--ink-faint); font-style: italic; }
+
 
 /* The Estimate Sheet as a full-width table of eleven columns is gone. The
    lines are the cost panel's Estimate tab, compact, with the whole chain

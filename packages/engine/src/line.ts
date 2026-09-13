@@ -14,7 +14,7 @@
 // one conversion is where a bid quietly gains or loses money.
 
 import type { Item, Money, RoundingRule, UnitStep } from './model.js';
-import { parse, run, type FormulaResult } from './formula.js';
+import { namesUsed, parse, run, type FormulaResult } from './formula.js';
 import { unitDisagreement } from './dimension.js';
 import { ceilPackages, settle } from './rounding.js';
 
@@ -80,6 +80,44 @@ function convert(value: number, step: UnitStep): number | null {
   if (step.contains !== undefined && step.contains > 0) return value * step.contains;
   if (step.per !== undefined && step.per > 0) return value / step.per;
   return null;
+}
+
+/**
+ * The measures a page's scale answers. A null one of these IS the unscaled sheet.
+ *
+ * `EA`, `VERTICES` and `SEGMENTS` are never null — counting needs no scale — so
+ * the list is the four that are.
+ */
+const FROM_THE_SHEET: readonly string[] = ['SF', 'PLAN_SF', 'SQ', 'LF'];
+
+/**
+ * Why a formula came out with no number.
+ *
+ * Until the model started solving things, the only way a quantity could be null
+ * was an unscaled sheet, so that is what this said for all of them — and a solve
+ * that answers `CRICKET_SF: null` got a sentence blaming the estimator's sheet for
+ * a gap in the solver. It is not their sheet. So the formula is parsed, the names
+ * it uses are looked up in the scope, and the first one the solve carries and
+ * cannot answer is NAMED.
+ *
+ * A name that is absent from the scope entirely is a different case and is not
+ * this one: the formula parser already answers that with the name back, as an
+ * error on the line, and it never reaches here.
+ */
+function whyThereIsNoNumber(
+  formula: string,
+  scope: Readonly<Record<string, number | null>>,
+): string {
+  try {
+    for (const name of namesUsed(parse(formula))) {
+      if (scope[name] === null && !FROM_THE_SHEET.includes(name)) {
+        return `${name} has not been solved.`;
+      }
+    }
+  } catch {
+    // A formula that will not parse has already said so, above this call.
+  }
+  return 'the sheet this comes off has no scale yet';
 }
 
 function applyRule(value: number, rule: RoundingRule): number {
@@ -185,7 +223,7 @@ export function priceLine(
 
   let pending: string | null = null;
   if (formula.error) pending = formula.error;
-  else if (quantity === null) pending = 'the sheet this comes off has no scale yet';
+  else if (quantity === null) pending = whyThereIsNoNumber(item.formula, scope);
   else if (orderIncomplete) pending = `${orderStep!.name} has no conversion`;
   else if (priceIncomplete) pending = `${item.price!.name} has no conversion`;
   else if (unitCost === null) pending = 'no price';

@@ -388,7 +388,7 @@ test('a derived name the model did not solve leaves the line pending, never zero
   assert.match(line.pending, /FILL_BOARDS_EA/, `the line says "${line.pending}"`);
 });
 
-test('a name the solve carries but cannot answer leaves the line pending too', () => {
+test('a name the solve carries but cannot answer is NAMED on the line', () => {
   const m = measure('area', trace(square), {}, oneFoot);
   const scope = scopeFor(m, {}, { CRICKET_SF: null });
   assert.equal(run('CRICKET_SF', scope).value, null);
@@ -402,12 +402,49 @@ test('a name the solve carries but cannot answer leaves the line pending too', (
   assert.equal(line.quantity, null);
   assert.equal(line.extended, null);
   assert.ok(line.pending, 'the line does not say why it has no money');
-  // WHAT it says is wrong, and it is C2's to fix rather than C0's: `pending` in
-  // `packages/engine/src/line.ts` blames the sheet's scale for any null
-  // quantity, which was the only way one could happen until there were derived
-  // names. C0 solves none of them, so nothing can reach this branch yet; C2 puts
-  // the board bill in and owes the line the real reason.
-  assert.match(line.pending, /scale/);
+  // C0 left this asserting the WRONG sentence on purpose, with a comment saying
+  // C2 owed the fix: `pending` blamed the sheet's scale for any null quantity,
+  // because until there were derived names that was the only way one could
+  // happen. The estimator's sheet is scaled and it is not their sheet that is
+  // short — it is the solver, and the line says which name.
+  assert.match(line.pending, /CRICKET_SF/, `the line says "${line.pending}"`);
+  assert.ok(!/scale/.test(line.pending), `the line still says "${line.pending}"`);
+});
+
+test('and an unscaled sheet still blames the sheet, because that is what it is', () => {
+  // The other half of the same fix. A measure off a page nobody has scaled is a
+  // null the estimator can act on, and naming `SF` at them would be worse than
+  // saying so — so the four measures a scale answers are left out of the naming.
+  const m = measure('area', trace(square), {}, {});
+  const scope = scopeFor(m, {}, { CRICKET_SF: 20 });
+  const line = priceLine(
+    {
+      id: 'i3', description: 'membrane', costCode: '07-220-100',
+      unit: 'SQ', formula: 'SQ', unitCost: 3,
+    },
+    scope,
+  );
+  assert.equal(line.quantity, null);
+  assert.match(line.pending, /scale/, `the line says "${line.pending}"`);
+});
+
+test('a formula with two nulls names the one nobody has solved', () => {
+  // Both are null: the sheet has no scale AND the solve did not answer. The
+  // derived name wins, because the sheet's own trouble is already on every other
+  // line off the same condition and this one is otherwise invisible — a line that
+  // said "no scale" would look fixed the moment somebody scaled the sheet, and it
+  // would not be.
+  const m = measure('area', trace(square), {}, {});
+  const scope = scopeFor(m, {}, { CRICKET_SF: null });
+  const line = priceLine(
+    {
+      id: 'i4', description: 'both', costCode: '07-220-100',
+      unit: 'SF', formula: 'SF + CRICKET_SF', unitCost: 3,
+    },
+    scope,
+  );
+  assert.equal(line.quantity, null);
+  assert.match(line.pending, /CRICKET_SF/, `the line says "${line.pending}"`);
 });
 
 test('the model may not take a name the estimator types into', () => {

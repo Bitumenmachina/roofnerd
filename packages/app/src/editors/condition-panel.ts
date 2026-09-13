@@ -10,7 +10,7 @@ import {
   conditionTotal, measure, priceJob,
   type Condition, type LineTotal, type Measures, type Page, type TraceKind,
 } from '@roofnerd/engine';
-import { at, derived, set, type Doc } from '../doc.js';
+import { at, derived, derivedFor, set, type Doc } from '../doc.js';
 import { heldCaret, named, restoreCaret } from '../caret.js';
 import { icon } from '../icons.js';
 import { KIND_LABELS, MEASURE_LABELS, PENDING_REASON, PROPERTY_LABELS, money, plural, quantity } from '../labels.js';
@@ -145,6 +145,55 @@ export function renderConditionPanel(
       ? `${plural(cost.unpriced, 'line')} on it with no price yet`
       : `${plural(cost.unpriced, 'line')} not counted`;
     host.append(short);
+  }
+
+  // ── and what the model solved for it ────────────────────────────────────
+  //
+  // The names a formula on this condition can use, which is the question an
+  // estimator asks before writing one. They are not fields: nothing here is
+  // editable, because a derived number is the model's and typing over it happens
+  // on the line where the money is (the formula, which then reads as typed).
+  //
+  // A name the solve carries and cannot answer says so rather than showing a dash
+  // that looks like nought. That is the same rule the measures above follow, and
+  // the same rule `line.ts` follows on the line.
+  const solved = derivedFor(condition.id) ?? {};
+  const names = Object.keys(solved).sort();
+  if (names.length > 0) {
+    const heading = document.createElement('p');
+    heading.className = 'panel-group';
+    heading.textContent = 'From the model';
+    host.append(heading);
+
+    const list = document.createElement('div');
+    list.className = 'panel-derived';
+    for (const key of names) {
+      const row = document.createElement('div');
+      row.className = 'derived-row';
+      const mark = document.createElement('span');
+      mark.className = 'derived';
+      mark.textContent = '◈';
+      mark.title = 'Worked out from the model. Usable in a formula on this condition by this name.';
+      const name = document.createElement('span');
+      // `formula` puts it in the mono face, which is what it is: a term an
+      // estimator types into one. The vocabulary check exempts the formula
+      // wherever the program renders it.
+      name.className = 'formula derived-name';
+      name.textContent = key;
+      const value = document.createElement('span');
+      value.className = 'derived-value num';
+      const held = solved[key];
+      if (held === null || held === undefined) {
+        value.classList.add('none');
+        value.textContent = 'not solved';
+        value.title = `The model reached this condition and could not work ${key} out.`;
+      } else {
+        value.textContent = quantity(held, Number.isInteger(held) ? 0 : 2);
+      }
+      row.append(mark, name, value);
+      list.append(row);
+    }
+    host.append(list);
   }
 
   // ── where its measures come from ────────────────────────────────────────

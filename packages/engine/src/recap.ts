@@ -250,9 +250,18 @@ export function squaresOf(doc: JobDocument): {
   return { squares: sawOne && squares > 0 ? squares : null, leftOut };
 }
 
-/** Roll a job up to a selling price under one scenario's prices and adders. */
-export function recap(doc: JobDocument, scenario: Scenario): Recap {
-  const lines = priceJob(doc, scenario);
+/**
+ * Roll a job up to a selling price under one scenario's prices and adders.
+ *
+ * `solved` is what the model derived, per condition, the same as `priceJob` takes
+ * — and it has to be here too. C0 threaded the seam through `priceJob` and left
+ * this call to make its own, so the moment a board bill arrived every derived line
+ * would have gone to the pending list and the selling price would have DROPPED by
+ * the whole tapered package. A recap that prices a different set of lines from the
+ * sheet beside it is the defect this repository has hit twice.
+ */
+export function recap(doc: JobDocument, scenario: Scenario, solved?: Scopes): Recap {
+  const lines = priceJob(doc, scenario, solved);
 
   // Counted in cents, because that is the unit a line's money is in — see the
   // rule above. Dollars are only ever made from these at the end.

@@ -57,11 +57,9 @@ pub use scope::Scopes;
 /// geometry when it moves, so a keystroke carries a number and not a roof.
 pub fn solve(document: &serde_json::Value, solve_id: u64) -> Result<Solved, String> {
     let document = Document::read(document)?;
-    Ok(Solved {
-        solve_id,
-        taper: taper::solve(&document, solve_id),
-        scopes: scope::scopes_of(&document),
-    })
+    let taper = taper::solve(&document, solve_id);
+    let scopes = scope::scopes_of(&document, &taper);
+    Ok(Solved { solve_id, taper, scopes })
 }
 
 #[cfg(test)]
