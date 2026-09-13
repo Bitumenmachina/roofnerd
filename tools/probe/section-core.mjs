@@ -22,6 +22,11 @@
 //   re-traced and — worse — keeps passing while the window is wrong and the
 //   fixture was moved to match it.
 //
+//   That arithmetic is the LAYOUT's now, not the cone's: C1 (D149) retired the
+//   cone, so the run is the greater of the two runs along the field's axes. The
+//   claim this file makes is unchanged — the strip answers what the job comes to —
+//   and `tools/probe/section-taper.mjs` is the check written for C1 itself.
+//
 //   THE PICTURE. One capture, in the state the pre-change capture was taken in:
 //   the Model as it opens, north-east corner, true scale, nothing picked. The
 //   orchestrator holds it against `evidence/section-model-frame2-light-<pre>.png`
@@ -93,14 +98,44 @@ const slope = field.properties?.TAPER ?? 0;
 
 /** Where the roof stops rising, for a stated thickness at the drain. */
 const ceiling = (start) => capInches(start, field.properties?.BOARDS, perimeter).cap;
+
+/**
+ * The field's own axes: its longest side, and square to that.
+ *
+ * C1 (D149) replaced the cone this file was written against. The roof is laid out
+ * from its drains now — one drainage region each, four planes falling from the
+ * drain along the field's own edges — so the run that sets the thickness is the
+ * greater of the two runs along those axes, not the straight line to the drain. The
+ * expression here moved with the program; the three places it reads did not, and
+ * the row about the far corner is the one that shows the difference. What it was:
+ * `min(start + hypot(dx, dy) * slope, ceiling)`.
+ */
+let longest = null;
+for (let i = 0; i < ring.length; i += 1) {
+  const a = ring[i]; const b = ring[(i + 1) % ring.length];
+  const run = Math.hypot(b.x - a.x, b.y - a.y);
+  if (run > 1e-9 && (longest === null || run > longest.run)) {
+    longest = { run, u: { x: (b.x - a.x) / run, y: (b.y - a.y) / run } };
+  }
+}
+let axisAlong = longest.u;
+if (axisAlong.x < -1e-12 || (Math.abs(axisAlong.x) <= 1e-12 && axisAlong.y < 0)) {
+  axisAlong = { x: -axisAlong.x, y: -axisAlong.y };
+}
+const axisAcross = { x: -axisAlong.y, y: axisAlong.x };
+
 /** How thick the roof is at a place, for a stated thickness at the drain. */
 const thicknessAt = (p, start) => {
-  let run = Infinity;
+  // Which region: the drain whose perpendicular bisectors keep this place, which
+  // is the drain it is nearest. Then the run, along the boards.
+  let drain = null; let far = Infinity;
   for (const d of drains) {
-    const r = Math.sqrt((p.x - d.x) ** 2 + (p.y - d.y) ** 2);
-    if (r < run) run = r;
+    const r = (p.x - d.x) ** 2 + (p.y - d.y) ** 2;
+    if (r < far) { far = r; drain = d; }
   }
-  return Math.min(start + run * slope, ceiling(start));
+  const along = (p.x - drain.x) * axisAlong.x + (p.y - drain.y) * axisAlong.y;
+  const across = (p.x - drain.x) * axisAcross.x + (p.y - drain.y) * axisAcross.y;
+  return Math.min(start + Math.max(Math.abs(along), Math.abs(across)) * slope, ceiling(start));
 };
 
 const box = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
@@ -115,8 +150,7 @@ for (const p of ring) {
  * At a drain the roof is what the estimator said it is there and nothing else,
  * which is the one place the answer cannot come out of a slope. Between two
  * drains it is the ridge the water leaves from. Four feet inboard of the far
- * corner is the long run the cone is wrong about and C1 will change — worth
- * reading now so there is a number on record from before it moves.
+ * corner is the long run, and it is the reading that moved when C1 landed.
  */
 const places = [
   { what: 'at the first drain', at: drains[0] },
@@ -124,6 +158,8 @@ const places = [
     what: 'on the ridge between the first two drains',
     at: { x: (drains[0].x + drains[1].x) / 2, y: (drains[0].y + drains[1].y) / 2 },
   },
+  // Four feet inboard of the far corner: the long run, and the place where the
+  // layout and the cone that came before it disagree by inches.
   { what: 'four feet inboard of the far corner', at: { x: box.minX + 4, y: box.maxY - 4 } },
 ];
 
