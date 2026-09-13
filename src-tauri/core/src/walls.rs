@@ -76,7 +76,7 @@ pub struct WallRun {
     /// Why the flashing ceiling could not be read everywhere on the run, where
     /// it could not.
     pub refused: Option<String>,
-    pub coping: Option<Coping>,
+    pub coping: Coping,
 }
 
 #[derive(Clone, Debug, serde::Serialize)]

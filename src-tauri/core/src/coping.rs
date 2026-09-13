@@ -92,8 +92,13 @@ pub fn gauge_of(face_height_inches: f64) -> Option<u32> {
     }
 }
 
-/// Solve the coping on one wall or curb run, or none where the wall has
-/// neither a typed cap width nor a thickness to derive one from.
+/// Solve the coping on one wall or curb run.
+///
+/// Every run gets one of these, the same way every run gets a flashing
+/// finding whether or not it needs raising — a run with neither a typed cap
+/// width nor a wall thickness to derive one from still has sections and
+/// corners; it simply has `cap_width_feet: None`, which is the caller's own
+/// signal that there is no cap to draw or to price.
 ///
 /// `closed` and `sign` are the same facts `walls.rs` already worked out for the
 /// run's own solid and flashing walk — whether the trace closes on itself, and
@@ -105,7 +110,7 @@ pub fn solve_one(
     closed: bool,
     sign: f64,
     wall_inches: Option<f64>,
-) -> Option<Coping> {
+) -> Coping {
     let stated_width = c.property("W");
     let cap_width_feet = stated_width.or_else(|| {
         wall_inches.map(|w| (w + 2.0 * CAP_OVERHANG_DEFAULT_IN) / 12.0)
@@ -152,7 +157,7 @@ pub fn solve_one(
     let fasten_oc_inches = c.property("FASTEN_OC").unwrap_or(FASTEN_OC_DEFAULT_IN);
     let fasten_oc_stated = c.property("FASTEN_OC").is_some();
 
-    Some(Coping {
+    Coping {
         cap_width_feet,
         cap_width_stated: stated_width.is_some(),
         girth_inches,
@@ -170,7 +175,7 @@ pub fn solve_one(
         cleat_feet: run_feet * 2.0,
         fasten_oc_inches,
         fasten_oc_stated,
-    })
+    }
 }
 
 /// How many corners on a run turn the same way `sign` calls inboard (outside,
@@ -293,7 +298,7 @@ mod tests {
             Point::new(20.0, 20.0), Point::new(0.0, 20.0), Point::new(0.0, 0.0),
         ];
         let coping =
-            solve_one(&c, &ring, true, 1.0, c.property("WALL")).expect("a wall this tall has a cap");
+            solve_one(&c, &ring, true, 1.0, c.property("WALL"));
         assert!(!coping.cap_width_stated);
         assert_eq!(coping.cap_width_feet, Some(14.0 / 12.0));
         // Girth 19.5 in less a 14 in cap, split two legs: 2.75 in each — under 8,

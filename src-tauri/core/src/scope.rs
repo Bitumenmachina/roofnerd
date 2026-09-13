@@ -128,10 +128,15 @@ pub fn scopes_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls) 
         add(mine, "FLASH_SF", run.flash_square_feet);
         add(mine, "FLASH_MIN_IN", run.flash_min_inches);
         add(mine, "CURB_RAISE_IN", run.curb_raise_inches);
-        if let Some(coping) = &run.coping {
-            add(mine, "COPING_LF", Some(coping.run_feet));
-            add(mine, "COPING_PCS_EA", Some(coping.pieces_ea as f64));
-            add(mine, "CLEAT_LF", Some(coping.cleat_feet));
+        // Every run carries a `Coping`, but a run with no wall thickness and no
+        // typed width has nothing to centre a cap on — no cap width means no
+        // cap, and a run with no cap has nothing to buy sections, pieces or a
+        // cleat for. Absent, not nought: naming one of these on a run with no
+        // cap gets the name back off the formula parser, not a zero.
+        if run.coping.cap_width_feet.is_some() {
+            add(mine, "COPING_LF", Some(run.coping.run_feet));
+            add(mine, "COPING_PCS_EA", Some(run.coping.pieces_ea as f64));
+            add(mine, "CLEAT_LF", Some(run.coping.cleat_feet));
         }
     }
 

@@ -181,19 +181,19 @@ fn gauge_steps_at_eight_and_ten_inches_through_the_whole_solve() {
     };
     // A 12 in cap: a leg of exactly 8 in is `12 + 2 x 8 = 28` in of girth.
     let at_eight = solved_walls(&wall(28.0));
-    let coping = at_eight.runs[0].coping.as_ref().expect("a cap this wide has a coping");
+    let coping = &at_eight.runs[0].coping;
     assert_eq!(coping.face_height_inches, Some(8.0));
     assert_eq!(coping.gauge_ga, Some(24));
 
     // A leg of exactly 10 in is `12 + 2 x 10 = 32` in of girth.
     let at_ten = solved_walls(&wall(32.0));
-    let coping = at_ten.runs[0].coping.as_ref().unwrap();
+    let coping = &at_ten.runs[0].coping;
     assert_eq!(coping.face_height_inches, Some(10.0));
     assert_eq!(coping.gauge_ga, Some(22));
 
     // And past it, reported rather than invented.
     let past_ten = solved_walls(&wall(32.01));
-    let coping = past_ten.runs[0].coping.as_ref().unwrap();
+    let coping = &past_ten.runs[0].coping;
     assert!(coping.face_height_inches.unwrap() > 10.0);
     assert_eq!(coping.gauge_ga, None);
 }
@@ -206,7 +206,7 @@ fn gauge_steps_at_eight_and_ten_inches_through_the_whole_solve() {
 fn the_demo_s_parapet_pieces_come_to_sections_plus_its_own_corners() {
     let walls = solved_walls(&demo());
     let run = walls.runs.iter().find(|r| r.condition_id == "c-parapet").expect("the parapet solved");
-    let coping = run.coping.as_ref().expect("the demo parapet types a cap");
+    let coping = &run.coping;
     assert_eq!((coping.corners_outside, coping.corners_inside), (6, 2));
     assert_eq!(coping.run_feet, 400.0);
     assert_eq!(coping.section_feet, 10.0);
