@@ -272,8 +272,26 @@ function readAt(canvas: HTMLCanvasElement, event: PointerEvent): readonly StripR
     ((event.clientX - rect.left) / rect.width) * 2 - 1,
     -((event.clientY - rect.top) / rect.height) * 2 + 1,
   ), camera);
-  const hit = raycaster.intersectObjects(world.children, false)[0];
-  if (!hit) return nothing(null);
+  const hits = raycaster.intersectObjects(world.children, false);
+  if (hits.length === 0) return nothing(null);
+
+  // The roof under the pointer, not the first thing standing on it.
+  //
+  // A curb, the cricket behind it, a parapet and the coping on top of the
+  // parapet all STAND ON the roof. An estimator pointing at one of them is
+  // still pointing at a place on the roof, and the readout that answers there
+  // with three em dashes reads as the program not knowing its own roof — which
+  // is what it did: the pointer sat at the middle of the field and the strip
+  // said "off the tapered field", because the ray struck the thing in front and
+  // the answer was taken off that.
+  //
+  // The tapered surface is asked first on purpose. A point on it is inside the
+  // field by construction, where a point on the deck can land on the polygon's
+  // own edge, which is neither in nor out — one traced corner was enough to put
+  // the whole reading out.
+  const nearestOf = (kind: string) =>
+    hits.find((h) => String(h.object.userData['kind'] ?? '') === kind);
+  const hit = nearestOf('taper') ?? nearestOf('build-up') ?? nearestOf('datum') ?? hits[0]!;
 
   const p = { x: hit.point.x, y: hit.point.z };
   const where = `${formatFeetInches(p.x)}, ${formatFeetInches(p.y)}`;
@@ -875,10 +893,19 @@ function build(d: Doc): Built {
           // The field this cricket sits in, for the slope it should be cut at.
           const fieldSlope = list.find((o) => o.kind === 'area' && o.properties?.['TAPER'] !== undefined)
             ?.properties?.['TAPER'] ?? 0;
-          const pair = pairFor(ring, drainsNamedBy(list, scales, c.between));
-          const built = pair
-            ? cricketBetween(ring, props, fieldSlope, elevation, pair, colour, c)
-            : null;
+          // What this cricket serves, said in the document rather than guessed
+          // at from the shape. A cricket behind a curb and a saddle between two
+          // drains are two different things with two different rules, and the
+          // one thing that cannot tell them apart is the traced line, which is
+          // a ridge either way. `between` already names what is served; a curb
+          // named there says this is the cricket behind it.
+          const behind = curbNamedBy(list, scales, c.between);
+          const pair = behind ? null : pairFor(ring, drainsNamedBy(list, scales, c.between));
+          const built = behind
+            ? cricketBehind(ring, behind, props, fieldSlope, elevation, colour, c)
+            : pair
+              ? cricketBetween(ring, props, fieldSlope, elevation, pair, colour, c)
+              : null;
           if (built) {
             world.add(built.mesh);
             crickets += 1;
@@ -1468,6 +1495,132 @@ function cricketBetween(
 }
 
 /**
+ * The curb a cricket says it is behind, as a ring in feet.
+ *
+ * `between` names what a cricket serves. Where that is a run with the curb role
+ * on it, the cricket is the one behind that curb and the curb is what sizes it.
+ */
+function curbNamedBy(
+  list: Condition[], scales: Record<string, number>, names: readonly string[] | undefined,
+): Point[] | null {
+  if (!names || names.length === 0) return null;
+  const wanted = new Set(names);
+  for (const c of list) {
+    if (!wanted.has(c.id) || c.hidden || c.role !== 'curb') continue;
+    for (const t of c.traces ?? []) {
+      const ring = feet(t, scales);
+      if (ring.length >= 3) return ring;
+    }
+  }
+  return null;
+}
+
+/**
+ * A cricket behind a curb, sized off the curb rather than off the drains.
+ *
+ * NRCA wants one wherever a curb is 24 in or wider (Membrane Roof Systems 2019,
+ * §8.1 p.252, Fig. 8-1) and draws it spanning that curb's upslope face, with one
+ * ridge square to the face and centred on it (Figs. 10-13 and 10-14, pp.309-310).
+ * Water falls from the ridge to each side of the curb, so what it has to travel
+ * is half the face — the same quantity `ridgeBetween` calls the width, and the
+ * one the length-to-width table is written against (Fig. 4-13, p.166).
+ *
+ * The manual states no depth for it. How far it runs upslope is the estimator's
+ * and comes off their traced line, drawn as drawn and reported when it is too
+ * long for its width to drain. So the document is read in two halves, which is
+ * the same division this file already uses for the saddle: their line says where
+ * it starts and how far it goes, and the thing it serves says everything else
+ * about the shape.
+ *
+ * This is not the saddle between two drains. That one has a written rule of its
+ * own — equidistant, square to the line joining them — and a function of its own.
+ */
+function cricketBehind(
+  traced: Point[], curb: Point[], props: Properties, fieldSlope: number,
+  elevation: number, colour: string, c: Condition,
+): Cricket | null {
+  if (traced.length < 2 || curb.length < 3) return null;
+
+  const middle = {
+    x: curb.reduce((sum, p) => sum + p.x, 0) / curb.length,
+    y: curb.reduce((sum, p) => sum + p.y, 0) / curb.length,
+  };
+
+  // Which face of the curb this cricket sits against: the one the estimator
+  // started their ridge at. Reading it off a slope direction instead would have
+  // to break a tie on a curb standing between two drains, and this curb does.
+  const start = traced[0]!;
+  let face: { mid: Point; half: number; across: Point; along: Point } | null = null;
+  let nearest = Infinity;
+  for (let i = 0; i < curb.length - 1; i += 1) {
+    const a = curb[i]!;
+    const b = curb[i + 1]!;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const run = Math.hypot(dx, dy);
+    if (run < 1e-6) continue;
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const range = Math.hypot(mid.x - start.x, mid.y - start.y);
+    if (range >= nearest) continue;
+    nearest = range;
+    // Square to the face and pointing away from the curb, so the cricket is
+    // always outside the thing it sheds water around.
+    const out = (middle.x - mid.x) * (-dy / run) + (middle.y - mid.y) * (dx / run) >= 0 ? -1 : 1;
+    face = {
+      mid,
+      half: run / 2,
+      across: { x: dx / run, y: dy / run },
+      along: { x: (-dy / run) * out, y: (dx / run) * out },
+    };
+  }
+  if (!face || face.half < 1e-6) return null;
+
+  const stated = props['TAPER'];
+  const wanted = fieldSlope * CRICKET_SLOPE_MULTIPLE;
+  const slope = stated ?? wanted;
+  const slopeDisagrees = stated !== undefined && fieldSlope > 0
+    && Math.abs(stated - wanted) > 1e-6;
+
+  let length = 0;
+  for (let i = 0; i < traced.length - 1; i += 1) {
+    length += Math.hypot(traced[i + 1]!.x - traced[i]!.x, traced[i + 1]!.y - traced[i]!.y);
+  }
+  if (length < 1e-6) return null;
+
+  const rise = inches(slope * face.half);
+  const top = elevation + rise;
+  const ridgeA = face.mid;
+  const ridgeB = { x: face.mid.x + face.along.x * length, y: face.mid.y + face.along.y * length };
+
+  const positions: number[] = [];
+  for (const side of [1, -1]) {
+    const footA = { x: ridgeA.x + face.across.x * face.half * side, y: ridgeA.y + face.across.y * face.half * side };
+    const footB = { x: ridgeB.x + face.across.x * face.half * side, y: ridgeB.y + face.across.y * face.half * side };
+    positions.push(ridgeA.x, top, ridgeA.y, ridgeB.x, top, ridgeB.y, footA.x, elevation, footA.y);
+    positions.push(ridgeB.x, top, ridgeB.y, footB.x, elevation, footB.y, footA.x, elevation, footA.y);
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.computeVertexNormals();
+  const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
+    color: new THREE.Color(colour), side: THREE.DoubleSide,
+  }));
+  mesh.userData = { conditionId: c.id, kind: 'cricket' };
+
+  return {
+    mesh,
+    lengthToWidth: length / face.half,
+    maxLengthToWidth: maxLengthToWidth(fieldSlope || slope / CRICKET_SLOPE_MULTIPLE),
+    // Square to the curb's face is what the figures draw, so that is what the
+    // traced line is held against here — the saddle holds it against the line
+    // joining its drains, which is the same question asked of a different thing.
+    offBy: ridgeDisagreement(traced, face.along),
+    slopeDisagrees,
+  };
+}
+
+/**
  * The two drainage points a cricket sits between.
  *
  * `between` names conditions, and one count condition can hold every drain on
@@ -1783,13 +1936,17 @@ function screenPointOf(conditionId: string): {
   if (candidates.length === 0) return null;
 
   for (const candidate of candidates) {
-    if (!within(candidate.at)) continue;
-    const hits = whatIsAt(rect, candidate.at);
+    // Rounded BEFORE it is tested, because rounded is what it is used at. A
+    // point verified at 640.4 and handed back as 640 is a point nothing ever
+    // cast a ray through, and at the corner of a roof one pixel is the whole
+    // difference between the deck and the wall standing on it: a check aimed at
+    // the field, was told the field was there, clicked the number it was given
+    // and selected the parapet.
+    const at = { x: Math.round(candidate.at.x), y: Math.round(candidate.at.y) };
+    if (!within(at)) continue;
+    const hits = whatIsAt(rect, at);
     if (hits === conditionId) {
-      return {
-        x: Math.round(candidate.at.x), y: Math.round(candidate.at.y),
-        inside: true, of: candidate.of, hits,
-      };
+      return { x: at.x, y: at.y, inside: true, of: candidate.of, hits };
     }
   }
 
@@ -1797,10 +1954,11 @@ function screenPointOf(conditionId: string): {
   // behind something, or off screen. Answer with the best point there is and
   // what is actually there, rather than with a point nothing would pick.
   const first = candidates[0]!;
+  const at = { x: Math.round(first.at.x), y: Math.round(first.at.y) };
   return {
-    x: Math.round(first.at.x), y: Math.round(first.at.y),
-    inside: within(first.at), of: first.of,
-    hits: within(first.at) ? whatIsAt(rect, first.at) : null,
+    x: at.x, y: at.y,
+    inside: within(at), of: first.of,
+    hits: within(at) ? whatIsAt(rect, at) : null,
   };
 }
 

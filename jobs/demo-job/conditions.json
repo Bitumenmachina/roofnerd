@@ -496,7 +496,7 @@
   },
   {
     "between": [
-      "c-drains"
+      "c-curb"
     ],
     "color": "#8a5a1d",
     "id": "c-cricket",
@@ -504,7 +504,7 @@
     "kind": "line",
     "name": "Cricket behind RTU-1",
     "properties": {
-      "ELEV": 0.45,
+      "ELEV": 0.75,
       "TAPER": 0.5
     },
     "role": "ridge",
@@ -515,11 +515,11 @@
         "points": [
           {
             "x": 247.5,
-            "y": 378
+            "y": 342
           },
           {
             "x": 247.5,
-            "y": 504
+            "y": 319.5
           }
         ]
       }

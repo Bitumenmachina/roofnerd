@@ -164,7 +164,7 @@ export function roofPlan(d: Doc): RoofPlan {
 
     if (c.kind === 'line') {
       if (c.role === 'ridge') {
-        leftOut.push({ name, why: 'a cricket is two planes off the drains, and they are not cut yet' });
+        leftOut.push({ name, why: 'a cricket is two planes, and they are not cut into a solid yet' });
         continue;
       }
       const height = props['H'] ?? 0;
