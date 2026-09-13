@@ -90,9 +90,11 @@ section4 16/16, section5 18/18, front-door 18/18, runtime-check 9/9, section10a 
 0.01%. The picture: `section-core-model-6dde6f3.png` against `section-model-frame2-light-27afb21.png`
 (same 1440 × 900 page, same state) differs by at most one level in 255 at any pixel and by nothing
 at a 1% fuzz — quantization, not the roof. The one red row, "a thickness typed into the panel
-re-solves the roof", failed because the dispatched click on the roof missed and nothing was
-selected; the probe now takes the field's Estimate row as the other front door to the same
-selection. The records commit was refused once by the client-data gate for a question number, a slash and a decision number written as one token
+re-solves the roof", failed because the probe's own field lookup never passed the field's name
+into the page (fixed in 5e2932f, after three front-door diagnostics showed the field was there);
+the Estimate-row fallback added on the way stays, because a dispatched click on the roof can miss.
+At 5e2932f section-core is green, 8 of 8: the thickness typed, the roof re-solved, the strip
+followed. The records commit was refused once by the client-data gate for a question number, a slash and a decision number written as one token
 (its sheet-and-detail pattern) and landed as "Q4 and D100".
 
 **Next: C1 — regions and planes.** The cone is retired for the half-plane partition NRCA
