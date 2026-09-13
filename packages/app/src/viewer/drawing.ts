@@ -218,11 +218,13 @@ export function extentOf(marks: SVGGElement): DOMRect | null {
  * is where lifting it keeps it — that is how a crowded dimension is drawn by
  * hand, and "6 in at the wall" was sitting on a board letter until it was.
  *
- * A word that has to move goes UP, in steps of its own height, because a
- * section is drawn with the sky above it and the build-up below: up is where
- * there is room and down is the drawing. The x never moves, so a word stays
- * over the thing it names. A dimension's figure is held to a short lift — far
- * enough to clear a letter, not far enough to look like it belongs to
+ * A word that has to move goes AWAY from the drawing: one standing over the
+ * build-up goes up, one written under the deck goes down. Up for everything was
+ * the first try and it drove the note under the deck straight back into the
+ * section — the room on a sheet is outside the drawing, and which way that is
+ * depends on which side of it the word is on. The x never moves, so a word
+ * stays over the thing it names, and a dimension's figure is held to a short
+ * move: far enough to clear a letter, not far enough to look like it belongs to
  * something else.
  */
 export function spreadWords(marks: SVGGElement, gap = 2): void {
@@ -233,6 +235,17 @@ export function spreadWords(marks: SVGGElement, gap = 2): void {
   type Word = { el: SVGTextElement; at: Taken; limit: number };
   const clash = (a: Taken, b: Taken) => a.x < b.x + b.w + gap && b.x < a.x + a.w + gap
     && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
+
+  // Where the drawing itself is, so a word knows which way is out of it.
+  let middle = 0;
+  let ink = 0;
+  for (const el of Array.from(marks.querySelectorAll<SVGGraphicsElement>('path, polygon, polyline'))) {
+    const b = box(el);
+    if (!b || b.height < 0.01) continue;
+    middle += b.y + b.height / 2;
+    ink += 1;
+  }
+  if (ink > 0) middle /= ink;
 
   const taken: Taken[] = [];
   const movable: Word[] = [];
@@ -252,8 +265,11 @@ export function spreadWords(marks: SVGGElement, gap = 2): void {
 
   // Highest first, so a stack of labels settles from the top down rather than
   // pushing the same one up twice.
-  movable.sort((a, b) => a.at.y - b.at.y);
+  // Outermost first, each side, so a stack settles from the outside in rather
+  // than pushing the same word twice.
+  movable.sort((a, b) => Math.abs(b.at.y + b.at.h / 2 - middle) - Math.abs(a.at.y + a.at.h / 2 - middle));
   for (const word of movable) {
+    const away = word.at.y + word.at.h / 2 < middle ? -1 : 1;
     let lifted = 0;
     // Enough tries to climb clear of a full stack of layer labels and no more:
     // a label that cannot find room in eight steps is on a drawing with a
@@ -261,14 +277,16 @@ export function spreadWords(marks: SVGGElement, gap = 2): void {
     for (let pass = 0; pass < 8; pass += 1) {
       const over = taken.find((t) => clash(word.at, t));
       if (!over) break;
-      const step = over.y + over.h - word.at.y + gap;
+      const step = away < 0
+        ? over.y + over.h - word.at.y + gap
+        : word.at.y + word.at.h - over.y + gap;
       if (lifted + step > word.limit) { lifted = 0; break; }
-      word.at.y -= step;
+      word.at.y += away * step;
       lifted += step;
     }
     if (lifted > 0) {
       const y = Number(word.el.getAttribute('y') ?? 0);
-      word.el.setAttribute('y', String(y - lifted));
+      word.el.setAttribute('y', String(y + away * lifted));
     } else {
       // It could not find room inside its own limit, so it stays where the core
       // put it and is not treated as taking room it does not hold.
