@@ -30,6 +30,7 @@ import { mountSection, unmountSection } from './editors/section.js';
 import { quantity } from './labels.js';
 import { watchWantedCut } from './cut.js';
 import { clearVerbPicks, verbNow, verbPicks } from './verbs.js';
+import { exportIfc } from './ifc/export.js';
 
 /**
  * The three views of the one geometry.
@@ -205,6 +206,7 @@ const surfaceChrome: SurfaceChrome = {
 const fileMenu = menu('File', [
   { label: 'Open a job…', onSelect: () => void openJob() },
   { label: 'Save', onSelect: () => void saveJob() },
+  { label: 'Export IFC', onSelect: () => void exportIfc(fileMenu).catch((e) => status.say(message(e))) },
 ]);
 
 /**
