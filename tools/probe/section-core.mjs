@@ -363,7 +363,11 @@ try {
       .find(function (e) { return e.classList.contains('active') || e.getAttribute('aria-selected') === 'true'; });
     return JSON.stringify({ selected: m && m.selectedConditionId, tab: tab ? tab.textContent.trim() : null,
       panels: document.querySelectorAll('.condition-panel').length, labels: labels.slice(0, 6), handles: 1 });
-  })} · the lookup answered ${JSON.stringify(await fieldValue(session, 'Thickness'))} · was=${JSON.stringify(was)}`);
+  })} · the lookup answered ${JSON.stringify(await fieldValue(session, 'Thickness'))} · was=${JSON.stringify(was)} · the labels called Thickness: ${await session.execute(function () {
+    return JSON.stringify([...document.querySelectorAll('.condition-panel label')]
+      .filter(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Thickness'; })
+      .map(function (l) { return l.outerHTML.slice(0, 200); }));
+  })}`);
   const solveWas = JSON.parse(await modelNow(session)).solveId;
   // An inch thicker at the drain than the job says, whatever the job says. The
   // ceiling moves with it — another inch of board is another inch the wall has
