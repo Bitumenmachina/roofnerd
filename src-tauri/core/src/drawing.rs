@@ -537,38 +537,69 @@ fn fastening_of(fastening: &SolvedFastening) -> Drawing {
         }
     }
 
-    // A word in each band, on the band's own biggest piece. Two lines: what the
-    // zone is and what it is rated to, and then what that comes to here.
-    for zone in &roof.zones {
-        let Some(widest) = zone
+    // The zone's own number on every piece of it big enough to carry one — the
+    // way a hatched plan is read, so that a crew standing at the fourth corner
+    // can see it is the same zone as the first. One character, because a corner
+    // region on this roof is under nine feet square and a sentence in it would
+    // run out over the roof next to it.
+    //
+    // Every zone but the one the statement block stands in: a bare "1" four feet
+    // over a line that begins "1 the field" is the same mark twice.
+    for zone in roof.zones.iter().skip(1) {
+        for piece in &zone.shapes {
+            if piece.square_feet() < ZONE_MARK_LEAST_SQUARE_FEET {
+                continue;
+            }
+            let Some(at) = crate::taper::middle_of(piece) else { continue };
+            d.text(at, zone.zone.clone(), "label", "middle");
+        }
+    }
+
+    // And the statement, once, stood in the field — which is the only ground on
+    // a roof this shape with room for a line of writing. A block that says the
+    // same thing in three places is three places for it to disagree.
+    if let Some(field) = roof.zones.first() {
+        let widest = field
             .shapes
             .iter()
-            .max_by(|a, b| a.square_feet().total_cmp(&b.square_feet()))
-        else {
-            continue;
-        };
-        let Some(at) = crate::taper::middle_of(widest) else { continue };
-        let rated = match (zone.fm_class, &zone.pattern) {
-            (Some(wanted), Some(printed)) if printed.fm_class > wanted => format!(
-                "FM 1-{} wanted, fastened to FM 1-{}",
-                wanted as i64, printed.fm_class as i64
-            ),
-            (Some(wanted), _) => format!("FM 1-{}", wanted as i64),
-            (None, _) => "no pressure typed, so nothing rates it".to_string(),
-        };
-        d.text(at, format!("{} · {rated}", zone.label), "label", "middle");
-
-        let counted = match (zone.fasteners_per_board, zone.fasteners) {
-            (Some(per), Some(all)) => {
-                format!("{per} per board · {} boards · {all} fasteners and plates", zone.boards)
+            .max_by(|a, b| a.square_feet().total_cmp(&b.square_feet()));
+        if let Some(at) = widest.and_then(crate::taper::middle_of) {
+            let mut row = -1.0;
+            let mut line = |d: &mut Drawing, text: String| {
+                row += 1.0;
+                d.text(Point::new(at.x, at.y + row * BLOCK_STEP_FEET), text, "label", "middle");
+            };
+            for zone in &roof.zones {
+                let rated = match (zone.fm_class, &zone.pattern) {
+                    (Some(wanted), Some(printed)) if printed.fm_class > wanted => format!(
+                        "FM 1-{} to 1-{}",
+                        wanted as i64, printed.fm_class as i64
+                    ),
+                    (Some(wanted), _) => format!("FM 1-{}", wanted as i64),
+                    (None, _) => "no pressure typed".to_string(),
+                };
+                let per = match zone.fasteners_per_board {
+                    Some(per) => format!("{per} per board"),
+                    None => zone
+                        .refused
+                        .clone()
+                        .unwrap_or_else(|| "no pattern printed".to_string()),
+                };
+                line(
+                    &mut d,
+                    format!(
+                        "{} {} · {rated} · {per} · {} boards",
+                        zone.zone, zone.label, zone.boards
+                    ),
+                );
             }
-            _ => format!(
-                "{} boards · {}",
-                zone.boards,
-                zone.refused.clone().unwrap_or_else(|| "no pattern".to_string())
-            ),
-        };
-        d.text(Point::new(at.x, at.y + 4.0), counted, "label", "middle");
+            if let Some(plates) = roof.plates {
+                line(
+                    &mut d,
+                    format!("{plates} fasteners and plates in all, one plate to a fastener"),
+                );
+            }
+        }
     }
 
     // The band's own width, dimensioned along the edge it was set out from.
@@ -604,6 +635,13 @@ fn fastening_of(fastening: &SolvedFastening) -> Drawing {
     d
 }
 
+/// A piece of a zone smaller than this gets no number on it: the mark would be
+/// bigger than the ground it stands on.
+const ZONE_MARK_LEAST_SQUARE_FEET: f64 = 8.0;
+
+/// How far apart the rows of the statement block sit, in feet on the roof.
+const BLOCK_STEP_FEET: f64 = 4.0;
+
 /// A corner of the outline and the way the next edge runs out of it, for the
 /// one dimension this drawing carries.
 fn first_edge(ring: &[Point]) -> Option<(Point, Point)> {
@@ -634,6 +672,12 @@ fn note_of(roof: &FastenedField) -> String {
             roof.board_size,
             inches_written(inches),
             roof.product_family
+        ));
+    }
+    if let Some(printed) = roof.zones.iter().find_map(|z| z.pattern.as_ref()) {
+        said.push(format!(
+            "patterns per {} {} {}",
+            printed.publisher, printed.document_id, printed.document_date
         ));
     }
     if roof.straddling > 0 {

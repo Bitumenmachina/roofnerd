@@ -146,13 +146,17 @@ fn the_fastening_plan_draws_the_zones_and_says_what_they_were_set_out_to() {
             "the drawing never says what goes in a board in {}",
             zone.label
         );
-        let all_of_them = zone.fasteners.expect("and a count");
         assert!(
-            said.contains(&format!("{all_of_them} fasteners and plates")),
-            "the drawing never says what {} comes to",
+            said.contains(&format!("{} boards", zone.boards)),
+            "the drawing never says how many boards are in {}",
             zone.label
         );
     }
+    let plates = roof.plates.expect("the roof is fastened");
+    assert!(
+        said.contains(&format!("{plates} fasteners and plates")),
+        "the drawing never says what the whole roof comes to"
+    );
 
     // A word standing on ground that is not its own zone is a word in the wrong
     // place, and on a roof with a bump in it that is not a theoretical worry.
