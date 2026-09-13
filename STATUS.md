@@ -28,6 +28,93 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## C8 — a roofer opens it cold: the persona pass, and what it found (2026-09-13)
+
+**Nobody had used this program.** Every batch from C0 to C9 proved its own claim and every one of
+them was green. C8 opened the shipped build cold as a commercial roofing estimator on the Georgia
+coast who has never seen it, used it for twenty minutes the way an estimator would — open the demo,
+read the roof, read the sheet, change a thing, read again, cut a section, export, close — and wrote
+down what happened in the order it happened, with a picture at every step, **before touching any
+code**. That pass is `.scratch/c8-persona.md`. D160 makes it the acceptance for any batch that
+changes what a person sees.
+
+**What he saw first is that the demo had no drawing.** The Plan view's whole promise is that you
+trace the architect's sheet, and the one job a stranger opens to find out what this program is had
+its trace floating on the probe harness's blank grey "ROOF PLAN — test sheet". It opens on a roof
+plan now — outline, parapet, deck, three drains with their sumps, the RTU curb, two overall
+dimensions, north arrow, graphic scale, title block — drawn by `tools/make-demo-sheet.mjs` with
+ImageMagick, which made the test sheet before it, through MVG, so the sheet is text in this
+repository rather than a binary to take on trust. It reads the outline, the drains and the curb out
+of the job, so a retraced demo gets a sheet that follows it. Every line of it is invented and the
+title block says so.
+
+**Five things about money that nothing was looking at.**
+
+- **"Shop-formed corner, mitre welded · 48 EA · $4,296.00"** on a roof that turns eight times.
+  The formula was every piece the coping run is cut into, under a description that says corner, so
+  about three and a half thousand dollars of shop welding sat on forty straight lengths. The core
+  has counted the turns since C3 and nothing asked it for them: `COPING_CORNERS_EA` comes out of
+  the coping solve now and the demo carries two lines where it carried one.
+- **The recap folded its adders into the class totals.** Supervision read $12,510 against one
+  supervision line of $8,340; Material read $123,709.58 against $112,463.25 of material lines. The
+  50% supervision burden, the 10% labor burden, the 5% general liability and the 7% tax and 3%
+  escalation on material were all in there and no row named one of them — while the engine builds
+  them named, on the subtotal, with "never folded in" written beside the type. Each class shows
+  what its own lines came to and then each adder with its rate.
+- **"The roll-up to selling price, by class" printed no roll-up.** Job cost, overhead, profit,
+  contract amount and bond were all worked out and all discarded, so the only way from $194,458.36
+  of class totals to the price in the footer was to know the scenario. All six are under the table.
+- **The Drawing lens handed a subcontractor 105.60 SQ of a 96 SQ roof** under a heading reading
+  "quantities as measured, no costs and no internal assumptions", with its waste column concealed
+  on purpose. The Quantity column is the measured figure on every lens now; waste belongs to the
+  order quantity beside it and to the Consolidated lens's own Waste column.
+- **A line showed what it measured and charged what it ordered.** "Dumpster, 30 yard · 6.86 EA ·
+  $5,813.50" is seven dumpsters' money; "Coping cap · 650.00 SF" is priced per pound. Both figures
+  were on the priced line all along. A line now says "buy 7 EA", "buy 826.5 LB" where the order
+  step changes the number — which is how Frame 3 of the handoff prints the coping line.
+
+**Six things that misled.** Two fields in the Condition panel called "Uplift, corner", one strength
+design and one working load, so a pressure typed into the wrong one of a pair loses its 0.6 and the
+corner gets a pattern for 122 psf where 73 is what the roof sees — the basis is on the label now. A
+Measures help line that described a coping and a parapet on every condition in the job, including a
+count of drains. Three rows reading "Base layer fasteners, …" because the word that tells them
+apart is the one the column cuts — the tail after the last comma no longer gives way. An export
+message that truncated before "1 thing left out, named on the panel", which was the half worth
+reading, so it leads. A key saying "the 8 ridges" on a roof with three drains, which was counting
+the segments a boundary is drawn in. And a reading in the strip with no name on it.
+
+**The polish list, all of it.** The section is drawn at the biggest scale off an architect's rule
+that its own pane has room for, and says which — it used to be laid out at 1" = 4'-0" whatever the
+room, so one cut sat in a third-empty pane and another was squashed to fit under a note admitting
+it. Its words stand clear of each other: labels and dimension figures move away from the drawing,
+letters and the key stay put. The reason it needed so much room was that every gap the core wrote
+between a word and the thing it names was in plain feet on a drawing whose vertical is stretched
+four times, so "a foot above the coping cap" came out four feet above it. The fastening plan's
+nine-clause paragraph is a title line with the standard on it and three short lines of key, the two
+findings buried in it are on the roof with the counts they are about, and every band names the
+pressure it is fastened for. "Boards 4 courses against 3 allowed" reads as the finding it is: "4
+courses, one over the 3 allowed".
+
+**Checked:** `tools/probe/section-persona.mjs` — **28/28** — the walk with a claim on every step and
+twelve pictures. Regressions all green at this head: front-door 18/18, runtime-check 9/9, section2
+17/17, section4 16/16, section5 18/18, section6 37/37, section6b 39/39, section7 28/28, section9a
+64/64, section10a 35/35, vocabulary 38/38, core 8/8, taper 9/9, model 23/23, bill 22/22, walls 7/7,
+fastening 18/18, section 16/16, verbs 20/20, labor 18/18, ifc 19/19. `real-job` needs `fixtures/`,
+which is local only.
+
+**Parked, and listed rather than built** (taste, in the pass's own words): the Condition panel
+offers every property in the schema to every condition, so a count of three drains is asked for a
+girth and a pitch; the roof area reads "9,600.00 SF" where a bid says 9,600 SF; picking a condition
+floods the whole field in the selection colour and takes the thickness ramp with it; the panel says
+"Taper" where the strip and the handoff say "Slope"; the help sheet covers the cost panel; the
+boards chip draws 697 letters and none of them is legible at the opening camera; the title says "42
+lines" against 45 rows; the start screen still has no recent jobs.
+
+**What Patrick should look at:** `evidence/section-persona-02-plan-*.png` — the demo on a drawing.
+`-04-recap-` — a recap that adds up. `-07-section-` — a cut at a scale you can put a rule on.
+`-08-fastening-` — three lines of key instead of a paragraph. And `.scratch/c8-persona.md`, which is
+the twenty minutes as they happened.
+
 ## C9 — the labor basis: the sheet prices the way a roofer states it (2026-09-13)
 
 **Every line now says what kind of cost it is, what crew puts it in and how fast they go, and the
