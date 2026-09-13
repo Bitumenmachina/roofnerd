@@ -31,6 +31,9 @@ import {
 import { hueFor, type IconName } from '../icons.js';
 import { KIND_LABELS, PENDING_REASON, quantity } from '../labels.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
+import {
+  clearVerbPicks, isVerb, useVerb, verbMarks, verbNow, verbPick, verbStrip, watchVerb,
+} from '../verbs.js';
 
 // `Condition`, `Page`, `Trace` and `Point` are the engine's. They were copied
 // here — three shapes, each a little different from the real one and from the
@@ -43,10 +46,12 @@ import { select, selectedConditionId, watchSelection } from '../selection.js';
  * One act in the rail: what a roofer calls it, which tool does it, and what
  * kind of condition it makes.
  *
- * The verbs are the handoff's. Only the acts this program can actually carry
- * out are here: "Set high and low", "Box out a curb", "Measure" and "Section"
- * are named in the handoff and are not built, so they are not in the rail. An
- * estimator is never offered a button that does nothing.
+ * The verbs are the handoff's, and all eight of them are here now: trace an
+ * area, set high and low, drop a drain, run a parapet, box out a curb, add a
+ * cricket, measure, cut a section. The four that were missing are the four that
+ * work ON the roof rather than tracing something new onto the sheet, and they
+ * live in `verbs.ts` because the Model offers the same four and an act that
+ * meant one thing here and another there would be two acts wearing one word.
  *
  * The act is also what names the condition it makes. A run traced with "Run a
  * parapet" is a parapet and a run traced with "Cricket" is a cricket, and the
@@ -68,9 +73,13 @@ interface Act {
 const ACTS: readonly Act[] = [
   { id: 'select', label: 'Select', icon: 'select', tool: 'select' },
   { id: 'area', label: 'Trace an area', icon: 'area', tool: 'area', names: 'Area' },
-  { id: 'parapet', label: 'Run a parapet', icon: 'parapet', tool: 'line', names: 'Parapet' },
+  { id: 'high-low', label: 'Set high and low', icon: 'highLow', tool: 'pick' },
   { id: 'drain', label: 'Drop a drain', icon: 'drain', tool: 'count', role: 'drain', names: 'Drain' },
-  { id: 'cricket', label: 'Cricket', icon: 'cricket', tool: 'line', role: 'ridge', names: 'Cricket' },
+  { id: 'parapet', label: 'Run a parapet', icon: 'parapet', tool: 'line', names: 'Parapet' },
+  { id: 'curb', label: 'Box out a curb', icon: 'curb', tool: 'pick' },
+  { id: 'cricket', label: 'Add a cricket', icon: 'cricket', tool: 'line', role: 'ridge', names: 'Cricket' },
+  { id: 'measure', label: 'Measure', icon: 'measure', tool: 'pick' },
+  { id: 'section', label: 'Cut a section', icon: 'section', tool: 'pick' },
   { id: 'scale', label: 'Scale', icon: 'scale', tool: 'scale' },
 ];
 
@@ -83,6 +92,7 @@ let progress: ToolProgress = { tool: 'select', points: 0, pageArea: null, pageLe
 let chrome: SurfaceChrome | null = null;
 let stopSubscribing: (() => void) | null = null;
 let stopWatching: (() => void) | null = null;
+let stopWatchingVerb: (() => void) | null = null;
 
 /**
  * Which solved drawing is laid over the sheet, if any.
@@ -141,6 +151,15 @@ export function mountPlan(host: HTMLElement, surroundings: SurfaceChrome): void 
     existingPoints: () => currentPageId ? tracedPoints(conditions(), currentPageId) : [],
     onTrace: (kind, points) => void recordTrace(kind, points),
     onScale: (a, b) => askScale(a, b),
+    // A place on the sheet is a place on the ROOF once the sheet's own scale is
+    // applied. An unscaled sheet has no places on it, which is why the act says
+    // so rather than picking somewhere.
+    onPick: (page) => {
+      const sheet = currentPage();
+      if (!sheet?.feetPerUnit) { hint.textContent = PENDING_REASON; return; }
+      verbPick({ x: page.x * sheet.feetPerUnit, y: page.y * sheet.feetPerUnit });
+    },
+    onPickCleared: () => clearVerbPicks(),
     onHint: (text) => { hint.textContent = text; },
     onProgress: (state) => {
       progress = state;
@@ -235,12 +254,22 @@ export function mountPlan(host: HTMLElement, surroundings: SurfaceChrome): void 
     if (drawn.nothingYet) surface.drawing.replaceChildren();
   };
 
-  chooseAct('select');
+  // The act the window was already in, if it is in one. A view switch does not
+  // end an act: the two picks of "Set high and low" stay on the roof until the
+  // next act, and the roof is the same roof in plan.
+  chooseAct(verbNow() ?? 'select');
+
+  // What the act has left on the sheet, and the strip that goes with it. Both
+  // are redrawn together: a mark on the roof and a reading in the strip are one
+  // answer said twice, and a window where they disagree is worse than one that
+  // says neither.
+  stopWatchingVerb = watchVerb(() => { drawMarks(); drawStrip(); });
 
   // Selecting a condition anywhere — here, on the sheet, in the Model, or in
   // another window — redraws the list and the drawing.
   stopWatching = watchSelection(() => {
     drawTraces(doc());
+    drawMarks();
     if (progress.points > 0) chrome?.setMeasuringInto(measuringInto(progress.tool));
   });
 
@@ -270,6 +299,7 @@ export function mountPlan(host: HTMLElement, surroundings: SurfaceChrome): void 
     if (!currentPageId && pages[0]) showPage(pages[0].id).catch((e) => report('opening the drawing', e));
     else if (currentPageId) refreshSheetIfChanged(pages).catch((e) => report('opening the drawing', e));
     drawTraces(d);
+    drawMarks();
     const page = pages.find((p) => p.id === currentPageId);
     scaleBadge.textContent = page?.feetPerUnit
       ? (page.scaleNote ?? 'Scaled')
@@ -292,8 +322,10 @@ export function mountPlan(host: HTMLElement, surroundings: SurfaceChrome): void 
 export function unmountPlan(): void {
   stopSubscribing?.();
   stopWatching?.();
+  stopWatchingVerb?.();
   stopSubscribing = null;
   stopWatching = null;
+  stopWatchingVerb = null;
   tools?.destroy();
   chrome?.setMeasuringInto(null);
   chrome = null;
@@ -337,6 +369,11 @@ function chooseAct(id: string): void {
   act = ACTS.find((a) => a.id === id) ?? ACTS[0]!;
   tools.use(act.tool);
   chrome?.setActiveTool(act.id);
+  // Four of the ten acts work on the roof rather than on the sheet; picking one
+  // of the other six puts whichever was up down, which is what takes its marks
+  // off the roof.
+  useVerb(isVerb(act.id) ? act.id : null);
+  drawMarks();
   drawStrip();
 }
 
@@ -356,6 +393,11 @@ const currentPage = (d: Doc = doc()): Page | undefined =>
  */
 function drawStrip(): void {
   if (!chrome) return;
+  // An act that works on the roof says what it needs itself, in the same words
+  // on both views. The sheet's own settings — which drawing, what it is scaled
+  // at — are not what that act is doing and would be furniture under it.
+  const verb = verbStrip();
+  if (verb) { chrome.strip.show(verb.name, verb.fields); return; }
   const d = doc();
   const page = currentPage(d);
   const pages = (at('/pages', d) as Page[]) ?? [];
@@ -727,6 +769,60 @@ function drawTraces(d: Doc): void {
       } else {
         g.append(svg('polyline', { points: pointsAttribute(t.points), fill: 'none', ...common, ...whose }));
       }
+    }
+  }
+}
+
+/**
+ * What the act in the rail has left on the sheet.
+ *
+ * The marks arrive in FEET, because that is what the core answers in and what
+ * the Model draws them in; the sheet is in page units, so they come back through
+ * the same scale every trace on it went out through. Nothing is worked out here
+ * — where the picks are, where the ruler runs, where the cut goes and where the
+ * cricket behind a curb stands are all the act's, and the act got them from the
+ * solve.
+ */
+function drawMarks(): void {
+  if (!surface) return;
+  const g = surface.marks;
+  g.replaceChildren();
+  const page = currentPage();
+  if (!page?.feetPerUnit) return;
+  const unit = 1 / page.feetPerUnit;
+  const px = surface.pageUnitsPerPixel;
+
+  for (const mark of verbMarks()) {
+    const at = { x: mark.at.x * unit, y: mark.at.y * unit };
+    const to = mark.to ? { x: mark.to.x * unit, y: mark.to.y * unit } : null;
+
+    if (mark.ring) {
+      g.append(svg('polygon', {
+        points: pointsAttribute(mark.ring.map((p) => ({ x: p.x * unit, y: p.y * unit }))),
+        class: 'verb-mark verb-box', 'data-verb-mark': mark.kind,
+      }));
+    }
+    if (to) {
+      g.append(svg('line', {
+        x1: at.x, y1: at.y, x2: to.x, y2: to.y,
+        class: 'verb-mark verb-line', 'data-verb-mark': mark.kind,
+      }));
+    }
+    if (mark.kind === 'high' || mark.kind === 'low' || mark.kind === 'corner') {
+      g.append(svg('circle', {
+        cx: at.x, cy: at.y, r: 5 * px,
+        class: 'verb-mark verb-pick', 'data-verb-mark': mark.kind,
+      }));
+    }
+    if (mark.text) {
+      const where = to ? { x: (at.x + to.x) / 2, y: (at.y + to.y) / 2 } : at;
+      const word = svg('text', {
+        x: where.x, y: where.y - 8 * px,
+        class: 'verb-mark verb-word', 'data-verb-mark': mark.kind,
+        'font-size': 12 * px,
+      });
+      word.textContent = mark.text;
+      g.append(word);
     }
   }
 }

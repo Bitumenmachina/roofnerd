@@ -28,6 +28,8 @@ import { mountPlan, unmountPlan } from './editors/plan.js';
 import { mountModel, unmountModel } from './editors/model.js';
 import { mountSection, unmountSection } from './editors/section.js';
 import { quantity } from './labels.js';
+import { watchWantedCut } from './cut.js';
+import { clearVerbPicks, verbNow, verbPicks } from './verbs.js';
 
 /**
  * The three views of the one geometry.
@@ -550,8 +552,25 @@ window.addEventListener('keydown', (e) => {
  * estimate, which is the state everything else is a departure from.
  */
 function backOut(): boolean {
+  // The first rung is whatever the act in the rail has picked. "Escape clears
+  // it" is what the strip says while a ruler is on the roof, and the strip has
+  // to be telling the truth: an act with places picked is the nearest thing to
+  // back out of, nearer than anything the cost panel is showing.
+  if (verbNow() !== null && verbPicks().length > 0) {
+    clearVerbPicks();
+    return true;
+  }
   return panel.backOut();
 }
+
+// ── "cut a section" ────────────────────────────────────────────────────────
+// An act on the Plan or the Model picks a place and asks for the cut through it.
+// The surface is the window's, so the window is what switches to the Section —
+// the act says which cut it wants and the Section, once it is up, shows that one.
+watchWantedCut(() => {
+  if (role === 'cost' || !hasJob) return;
+  showView('section');
+});
 
 void role;
 void bodyRow;

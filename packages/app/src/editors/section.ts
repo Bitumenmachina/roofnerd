@@ -24,7 +24,7 @@
 
 import { NOTHING_TO_DRAW, type Drawing, type Drawings } from '@roofnerd/engine';
 import { solveDrawings, solveId, subscribe } from '../doc.js';
-import { showingCut } from '../cut.js';
+import { cutWanted, showingCut, watchWantedCut } from '../cut.js';
 import { stripField, type RailTool, type SurfaceChrome } from '../chrome.js';
 import { fitDrawing, renderDrawing } from '../viewer/drawing.js';
 import { mountModel, recutModel, unmountModel } from './model.js';
@@ -66,7 +66,9 @@ export function mountSection(host: HTMLElement, surroundings: SurfaceChrome): vo
   chrome = surroundings;
   host.replaceChildren();
   host.className = 'editor-host section-editor';
-  showing = 0;
+  // An act asked for a cut before this view was mounted: honour it on the way
+  // up rather than opening on the first one and jumping a moment later.
+  showing = cutWanted() ?? 0;
   drawnSolveId = -1;
   drawings = NOTHING_TO_DRAW;
   trouble = null;
@@ -165,6 +167,11 @@ export function mountSection(host: HTMLElement, surroundings: SurfaceChrome): vo
   };
 
   stopSubscribing = subscribe(() => void refresh());
+  stopWatchingWanted = watchWantedCut((index) => {
+    if (index === showing) return;
+    showing = index;
+    if (drawings.sections[showing]) paint();
+  });
   // A window that opened AFTER the job did has heard no change, so it has no
   // solve id to chase. Ask once on the way up.
   void refresh();
@@ -188,11 +195,14 @@ export function mountSection(host: HTMLElement, surroundings: SurfaceChrome): vo
 }
 
 let boxWatch: (() => void) | null = null;
+let stopWatchingWanted: (() => void) | null = null;
 
 export function unmountSection(): void {
   unmountModel();
   stopSubscribing?.();
+  stopWatchingWanted?.();
   stopSubscribing = null;
+  stopWatchingWanted = null;
   boxWatch?.();
   boxWatch = null;
   paint = () => undefined;

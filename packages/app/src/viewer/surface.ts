@@ -31,6 +31,16 @@ export class Surface {
   private readonly canvas: HTMLCanvasElement;
   readonly overlay: SVGSVGElement;
   /** Where the tool in use draws its work in progress. Cleared between strokes. */
+  /**
+   * What an act in the rail has left on the sheet: the two picks of "Set high
+   * and low", a ruler, the box a curb is being drawn in, the line a section is
+   * cut on.
+   *
+   * Its own layer, over the traces and under the shape in progress. Not
+   * `scratch`: that belongs to the tool and is emptied every time the shape in
+   * progress is redrawn, so a mark left in it would come and go with the mouse.
+   */
+  readonly marks: SVGGElement;
   readonly scratch: SVGGElement;
   /** Where finished traces are drawn. */
   readonly shapes: SVGGElement;
@@ -87,8 +97,9 @@ export class Surface {
     this.overlay.classList.add('surface-overlay');
     this.drawing = document.createElementNS(SVG_NS, 'g');
     this.shapes = document.createElementNS(SVG_NS, 'g');
+    this.marks = document.createElementNS(SVG_NS, 'g');
     this.scratch = document.createElementNS(SVG_NS, 'g');
-    this.overlay.append(this.drawing, this.shapes, this.scratch);
+    this.overlay.append(this.drawing, this.shapes, this.marks, this.scratch);
 
     this.stack.append(this.canvas, this.overlay);
     this.scroller.append(this.stack);
@@ -127,6 +138,7 @@ export class Surface {
     this.canvas.height = 0;
     this.drawing.replaceChildren();
     this.shapes.replaceChildren();
+    this.marks.replaceChildren();
     this.scratch.replaceChildren();
   }
 

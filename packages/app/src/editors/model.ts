@@ -77,6 +77,7 @@ import {
   type SolvedWalls,
 } from '@roofnerd/engine';
 import { at, doc, solveId, solveTaper, solveWalls, subscribe, type Doc } from '../doc.js';
+import { inches as inchLabel } from '../labels.js';
 import { feet, feetPerUnit } from '../scale.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
 import {
@@ -85,6 +86,10 @@ import {
 } from '../chrome.js';
 import { watchTheme } from '../theme.js';
 import { hueFor } from '../icons.js';
+import {
+  VERB_LABELS, clearVerbPicks, isVerb, useVerb, verbMarks, verbNow, verbPick, verbStrip,
+  watchVerb, type VerbName,
+} from '../verbs.js';
 
 // The four shapes this file draws from are the engine's, not its own. The copies
 // that were here said `role?: 'drain' | 'ridge'` where the engine names the
@@ -413,12 +418,23 @@ function readAt(canvas: HTMLCanvasElement, event: PointerEvent): readonly StripR
 /**
  * The Model's own acts, for the window's rail.
  *
- * One, today: pointing at the roof to pick what you are looking at. The
- * handoff's Model frame carries "Set high and low", and that arrives with the
- * renderers — it is not in the rail until it does something.
+ * Pointing at the roof to pick what you are looking at, and the four acts that
+ * work ON the roof. Frame 2 is headed "Set high and low" and this is the view it
+ * is headed over: the high side and the drain are places, and a place is easier
+ * to put a finger on standing up than in plan. The other three are here for the
+ * same reason — a ruler, a curb and a cut are all two picks on the roof.
+ *
+ * Not here: tracing an area, running a parapet, dropping a drain, scaling the
+ * sheet. Those put something new on a DRAWING, and this view has no drawing
+ * under it.
  */
-export const modelTools = (pick: (id: string) => void): readonly RailTool[] =>
-  [{ id: 'select', label: 'Select', icon: 'select', onPick: () => pick('select') }];
+export const modelTools = (pick: (id: string) => void): readonly RailTool[] => [
+  { id: 'select', label: 'Select', icon: 'select', onPick: () => pick('select') },
+  { id: 'high-low', label: VERB_LABELS['high-low'], icon: 'highLow', onPick: () => pick('high-low') },
+  { id: 'curb', label: VERB_LABELS.curb, icon: 'curb', onPick: () => pick('curb') },
+  { id: 'measure', label: VERB_LABELS.measure, icon: 'measure', onPick: () => pick('measure') },
+  { id: 'section', label: VERB_LABELS.section, icon: 'section', onPick: () => pick('section') },
+];
 
 /** One chip, in the words Frame 2 writes on it. */
 function chip(label: string, onPick: () => void): HTMLButtonElement {
@@ -536,14 +552,17 @@ export function mountModel(
   cutting = options.cut ?? null;
   ownsChrome = options.ownsChrome !== false;
   if (ownsChrome) {
-    surroundings.setTools(modelTools(() => undefined));
-    surroundings.setActiveTool('select');
+    surroundings.setTools(modelTools((id) => chooseAct(id)));
+    surroundings.setActiveTool(verbNow() ?? 'select');
     surroundings.setViewTools([]);
     surroundings.setReadout(EMPTY_READING);
-    surroundings.strip.show('Select', [
-      stripField('On the roof', 'click to pick what you are looking at'),
-      stripField('Units', 'SF · LF · EA · SQ'),
-    ]);
+    if (verbNow()) showVerbStrip();
+    else {
+      surroundings.strip.show('Select', [
+        stripField('On the roof', 'click to pick what you are looking at'),
+        stripField('Units', 'SF · LF · EA · SQ'),
+      ]);
+    }
   }
   framed = false;
   corner = 'NE';
@@ -643,7 +662,9 @@ export function mountModel(
     } catch (e) {
       world.clear();
       legend.replaceChildren();
+      roofLabels = [];
       labelsNow = [];
+      marks = null;
       words.replaceChildren();
       note.textContent = `This roof did not draw, so nothing is shown — what you would have seen would not have been this job. ${e instanceof Error ? e.message : String(e)}`;
       note.classList.add('model-broke');
@@ -652,8 +673,14 @@ export function mountModel(
     note.classList.remove('model-broke');
     legend.replaceChildren(...built.legend);
     note.textContent = built.note;
-    labelsNow = cutting ? [] : built.labels;
-    if (ownsChrome) chrome?.strip.show('Select', built.strip);
+    roofLabels = cutting ? [] : built.labels;
+    labelsNow = roofLabels;
+    // While an act is up the strip is the act's: it is what the estimator is
+    // doing, and the readout of the roof as it stands is what they are doing it
+    // to. Frame 2's six readings are in the act's own strip, in the same order.
+    if (ownsChrome && !verbNow()) chrome?.strip.show('Select', built.strip);
+    if (ownsChrome && verbNow()) showVerbStrip();
+    drawMarks();
     if (solveTrouble) {
       // The roof did not solve. Nothing tapered is drawn, and the window says
       // why rather than showing a deck with no fall on it as though that were
@@ -778,10 +805,23 @@ export function mountModel(
   };
 
   redrawWorld = () => draw();
+  stopWatchingVerb = watchVerb(() => {
+    drawMarks();
+    if (ownsChrome) showVerbStrip();
+  });
   stopSubscribing = subscribe(() => void refresh());
   stopWatching = watchSelection(() => highlight());
 
-  canvas.addEventListener('click', (e) => pick(canvas, e));
+  canvas.addEventListener('click', (e) => {
+    // An act that works on the roof takes the click: a pick is a place, not a
+    // selection. With no act up, a click on the roof selects what it hit, which
+    // is what this view has always done.
+    // Only the view that owns the rail takes a pick: the Section stands this
+    // same roof up behind a clipping plane, and a click in THAT pane is not an
+    // act being carried out on the roof.
+    if (ownsChrome && verbNow()) { pickPlace(canvas, e); return; }
+    pick(canvas, e);
+  });
   canvas.addEventListener('pointermove', (e) => chrome?.setReadout(readAt(canvas, e)));
   canvas.addEventListener('pointerleave', () => chrome?.setReadout(EMPTY_READING));
   window.addEventListener('resize', () => resize(canvas));
@@ -1027,7 +1067,16 @@ function placeWords() {
   });
 }
 
-/** Put the Model down. The surface switches views in place; this is the other half. */
+/**
+ * Put the Model down. The surface switches views in place; this is the other
+ * half.
+ *
+ * The act in the rail is NOT put down with it. "Until the next act" is what the
+ * handoff says about the marks on the roof, and a view switch is not an act: an
+ * estimator who sets the high side standing up and then looks at it in plan
+ * should find their two picks still on the roof. What ends an act is choosing
+ * another one.
+ */
 export function unmountModel(): void {
   unmount();
   chrome = null;
@@ -1042,6 +1091,11 @@ function unmount() {
   stopSubscribing = null;
   stopObserving?.();
   stopObserving = null;
+  stopWatchingVerb?.();
+  stopWatchingVerb = null;
+  marks?.clear();
+  marks = null;
+  markWords = [];
   controls?.dispose();
   controls = null;
   renderer?.dispose();
@@ -1053,6 +1107,7 @@ function unmount() {
   redrawWorld = () => undefined;
   labelHost = null;
   labelsNow = [];
+  roofLabels = [];
   cutting = null;
   ownsChrome = true;
 }
@@ -1153,6 +1208,13 @@ let fieldsNow: SolvedTaperField[] = [];
  */
 type RoofLabel = { kind: string; at: THREE.Vector3; text: string };
 let labelsNow: RoofLabel[] = [];
+/** The words the ROOF says, apart from the ones an act is saying. */
+let roofLabels: RoofLabel[] = [];
+/** The words an act is saying, which come and go with the act. */
+let markWords: RoofLabel[] = [];
+/** Where an act's marks live in the scene. Rebuilt whole, never patched. */
+let marks: THREE.Group | null = null;
+let stopWatchingVerb: (() => void) | null = null;
 /** Where they are drawn. One element per label, moved rather than rebuilt. */
 let labelHost: HTMLElement | null = null;
 /** Has the estimator asked for the board grid? */
@@ -2059,17 +2121,6 @@ function marker(
 
 // ── the legend, in trade words ─────────────────────────────────────────────
 
-/** Inches as a roofer writes them: 1/2", 2 1/4", 4". */
-function inchLabel(v: number): string {
-  const whole = Math.floor(v);
-  const frac = v - whole;
-  const eighths = Math.round(frac * 8);
-  const names = ['', '1/8', '1/4', '3/8', '1/2', '5/8', '3/4', '7/8'];
-  if (eighths === 8) return `${whole + 1}"`;
-  if (eighths === 0) return `${whole}"`;
-  return whole === 0 ? `${names[eighths]}"` : `${whole} ${names[eighths]}"`;
-}
-
 /**
  * The thickness ramp, with depths written on it.
  *
@@ -2272,6 +2323,124 @@ function pick(canvas: HTMLCanvasElement, event: MouseEvent) {
   const hit = raycaster.intersectObjects(world.children, false)[0];
   const id = hit?.object.userData['conditionId'];
   if (typeof id === 'string') select({ kind: 'condition', id });
+}
+
+// ── the acts, on the roof ──────────────────────────────────────────────────
+
+/**
+ * Pick an act off the rail.
+ *
+ * Select is the absence of an act, not an act of its own: it is what the view
+ * does when nobody has asked for anything else. Choosing any other act puts the
+ * one before it down, which is what takes its marks off the roof.
+ */
+function chooseAct(id: string): void {
+  const wanted: VerbName | null = isVerb(id) ? id : null;
+  useVerb(wanted);
+  chrome?.setActiveTool(wanted ?? 'select');
+  if (wanted) showVerbStrip();
+  else redrawWorld();
+  drawMarks();
+}
+
+/** The act's own strip, in the window that owns one. */
+function showVerbStrip(): void {
+  const verb = verbStrip();
+  if (verb) chrome?.strip.show(verb.name, verb.fields);
+}
+
+/**
+ * A place on the roof, picked by hand.
+ *
+ * The same ray the selection uses, read for WHERE it struck rather than for
+ * what: a place is a point on the plan in feet, which is what the core answers
+ * in. The tapered surface is asked for first, for the reason the readout asks
+ * for it first — a curb, a cricket and a parapet all stand on the roof, and an
+ * estimator pointing at one of them is still pointing at a place.
+ */
+function pickPlace(canvas: HTMLCanvasElement, event: MouseEvent): void {
+  if (!camera) return;
+  const rect = canvas.getBoundingClientRect();
+  raycaster.setFromCamera(new THREE.Vector2(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -((event.clientY - rect.top) / rect.height) * 2 + 1,
+  ), camera);
+  const hits = raycaster.intersectObjects(world.children, false);
+  if (hits.length === 0) return;
+  const nearestOf = (kind: string) =>
+    hits.find((h) => String(h.object.userData['kind'] ?? '') === kind);
+  const hit = nearestOf('taper') ?? nearestOf('build-up') ?? nearestOf('datum') ?? hits[0]!;
+  verbPick({ x: hit.point.x, y: hit.point.z });
+}
+
+/**
+ * What the act has left on the roof, in three dimensions.
+ *
+ * The marks arrive in feet on the plan and stand at whatever depth the solved
+ * package is at that place, so a pick sits ON the roof rather than hovering at
+ * the datum under it. Its own group, rebuilt whole and re-added after every
+ * rebuild of the world, because `build` empties the world and the marks are not
+ * the roof.
+ */
+function drawMarks(): void {
+  markWords = [];
+  if (!world || cutting) return;
+  if (marks) {
+    world.remove(marks);
+    marks.clear();
+  }
+  marks = new THREE.Group();
+  world.add(marks);
+
+  const standsOn = (p: { x: number; y: number }) => {
+    const field = fieldsNow.find((f) => pointInPolygon(p, f.ring));
+    if (!field) return 0;
+    const here = readTaperAt(field, p);
+    return field.elevation + inches(here?.thicknessInches ?? field.startInches);
+  };
+
+  for (const mark of verbMarks()) {
+    const lift = 0.2;
+    const a = new THREE.Vector3(mark.at.x, standsOn(mark.at) + lift, mark.at.y);
+    if (mark.ring) {
+      const ring = mark.ring.map((p) => new THREE.Vector3(p.x, standsOn(p) + lift, p.y));
+      const shape = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(ring),
+        new THREE.LineBasicMaterial({ color: new THREE.Color(WATER) }),
+      );
+      shape.raycast = () => {};
+      marks.add(shape);
+    }
+    if (mark.to) {
+      const b = new THREE.Vector3(mark.to.x, standsOn(mark.to) + lift, mark.to.y);
+      const line = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([a, b]),
+        new THREE.LineBasicMaterial({ color: new THREE.Color(WATER) }),
+      );
+      line.raycast = () => {};
+      marks.add(line);
+    }
+    if (mark.kind === 'high' || mark.kind === 'low' || mark.kind === 'corner') {
+      const dot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.8, 10, 8),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(WATER) }),
+      );
+      dot.position.copy(a);
+      dot.raycast = () => {};
+      marks.add(dot);
+    }
+    if (mark.text) {
+      const at = mark.to
+        ? new THREE.Vector3(
+          (mark.at.x + mark.to.x) / 2,
+          (standsOn(mark.at) + standsOn(mark.to)) / 2 + lift,
+          (mark.at.y + mark.to.y) / 2,
+        )
+        : a;
+      markWords.push({ kind: 'pick', at, text: mark.text });
+    }
+  }
+  labelsNow = [...roofLabels, ...markWords];
 }
 
 /**

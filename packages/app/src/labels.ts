@@ -121,6 +121,23 @@ function inchFraction(v: number): string {
   return whole === 0 ? `${n}/${d}` : `${whole} ${n}/${d}`;
 }
 
+/**
+ * A thickness the way a roofer writes it: 1/2", 2 1/4", 4".
+ *
+ * Eighths, which is how a tapered package is specified and how a board is sold.
+ * It lived in the Model editor, where it was written for the legend; it is here
+ * now because the tool settings strip writes the same thicknesses and two
+ * spellings of one number on one screen is exactly what this file exists to stop.
+ */
+export function inches(v: number): string {
+  const whole = Math.floor(v);
+  const eighths = Math.round((v - whole) * 8);
+  const names = ['', '1/8', '1/4', '3/8', '1/2', '5/8', '3/4', '7/8'];
+  if (eighths === 8) return `${whole + 1}"`;
+  if (eighths === 0) return `${whole}"`;
+  return whole === 0 ? `${names[eighths]}"` : `${whole} ${names[eighths]}"`;
+}
+
 export function propertyPhrase(name: string, value: number): string {
   switch (name) {
     case 'SIDES': return plural(value, 'side');

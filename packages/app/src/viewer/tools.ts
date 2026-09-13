@@ -12,7 +12,7 @@ import type { Point } from '@roofnerd/engine';
 import { distance, polygonArea, polylineLength, polygonPerimeter } from '@roofnerd/engine';
 import { Surface, svg, pointsAttribute } from './surface.js';
 
-export type ToolName = 'select' | 'area' | 'line' | 'count' | 'scale';
+export type ToolName = 'select' | 'area' | 'line' | 'count' | 'scale' | 'pick';
 
 /** Snap to a nearby point already on the sheet, within this many screen pixels. */
 const SNAP_PIXELS = 10;
@@ -24,6 +24,17 @@ export interface ToolHost {
   onTrace(kind: 'area' | 'line' | 'count', points: readonly Point[]): void;
   /** Two points picked for a scale, and how far apart they are on the sheet. */
   onScale(a: Point, b: Point): void;
+  /**
+   * A place picked on the sheet, for an act that is not tracing anything.
+   *
+   * "Set high and low", "Measure", "Box out a curb" and "Cut a section" put a
+   * finger on the roof and nothing goes into the document at the click. So they
+   * are not a trace tool with the recording taken out — they get their own,
+   * which snaps and squares up like every other pick and records nothing.
+   */
+  onPick(page: Point): void;
+  /** Escape, with an act up and places picked: drop them. */
+  onPickCleared(): void;
   /** Something for the status line — the running length, or what to do next. */
   onHint(text: string): void;
   /**
@@ -178,6 +189,11 @@ export class Tools {
     if (this.tool === 'select') { this.host.onSelectAt(event); return; }
     const point = this.snap(this.constrain(page));
 
+    // An act that only picks places records nothing and draws nothing of its
+    // own: what the picks MEAN is the act's, and what they look like on the
+    // sheet is the view's.
+    if (this.tool === 'pick') { this.host.onPick(point); return; }
+
     // A double-click finishes rather than adding a point on top of the last one.
     if (event.detail > 1 && this.tool !== 'count') {
       this.finish();
@@ -212,6 +228,13 @@ export class Tools {
 
   private key(e: KeyboardEvent): void {
     if (e.key === 'Shift') { this.orthogonal = true; this.draw(); return; }
+    // An act that picks places has no shape open, so the rung below never
+    // reaches it. Escape still means back out of what has been picked.
+    if (this.tool === 'pick' && e.key === 'Escape') {
+      this.host.onPickCleared();
+      e.preventDefault();
+      return;
+    }
     if (!this.points.length) return;
 
     if (e.key === 'Escape') { this.abandon(); this.host.onHint(HINTS[this.tool]); e.preventDefault(); }
@@ -310,4 +333,5 @@ const HINTS: Record<ToolName, string> = {
   line: 'click along a run — Enter or double-click to end it',
   count: 'click each one',
   scale: 'click one end of a dimension you know',
+  pick: 'click a place on the roof — Escape clears what you picked',
 };

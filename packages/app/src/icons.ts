@@ -30,6 +30,12 @@ const PATHS: Readonly<Record<string, string[]>> = {
   parapet: ['M3 4h18v16H3z', 'M3 10h18', 'M3 16h18', 'M9 4v6', 'M15 10v6', 'M9 16v4'],
   drain: ['M3 3h18v18H3z', 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z', 'M12 11.5h.01'],
   cricket: ['M13.73 4a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z'],
+  // The four acts the rail could not offer until there was something behind
+  // them: the high side and the low, a curb boxed out, a tape, and a cut.
+  highLow: ['M3 20h18', 'M3 20 21 6', 'M6 20V17.7', 'M21 3v6', 'M18 6h6'],
+  curb: ['M3 15h18', 'M7 15V9h10v6', 'M7 9 9 6h6l2 3'],
+  measure: ['M2 9h20v6H2z', 'M6 9v3', 'M10 9v4', 'M14 9v3', 'M18 9v4'],
+  section: ['M3 8h18', 'M3 12h18', 'M3 16h18', 'M8 3v18'],
   // Which room the window is in. The icon shows where the toggle is going.
   sun: ['M12 2v2', 'M12 20v2', 'm4.93 4.93 1.41 1.41', 'm17.66 17.66 1.41 1.41', 'M2 12h2', 'M20 12h2', 'm6.34 17.66-1.41 1.41', 'm19.07 4.93-1.41 1.41', 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z'],
   moon: ['M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z'],

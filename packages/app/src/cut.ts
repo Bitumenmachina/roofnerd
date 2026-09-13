@@ -39,3 +39,32 @@ export function watchCut(w: Watcher): () => void {
   w(current);
   return () => watchers.delete(w);
 }
+
+// ── the cut an act asked for ───────────────────────────────────────────────
+// "Cut a section" is a pick on the Plan or the Model and then the Section view,
+// open on the cut that goes through what was picked. Two regions of the window
+// have to move for that — the surface switches view, and the Section shows a
+// different one of its cuts — so the act says which cut it wants and both of
+// them read it. The alternative was the act reaching into the Section view, or
+// the window carrying an argument through a view switch that means nothing to
+// the other two views.
+//
+// It is a want and not a command: a Section that is already up honours it at
+// once, and one that is not honours it when it mounts.
+
+let asked: number | null = null;
+const wanters = new Set<(index: number) => void>();
+
+/** Show the cut at this place in the list. */
+export function wantCut(index: number): void {
+  asked = index;
+  for (const w of wanters) w(index);
+}
+
+/** Which cut was asked for, for a view that has only just mounted. */
+export const cutWanted = (): number | null => asked;
+
+export function watchWantedCut(w: (index: number) => void): () => void {
+  wanters.add(w);
+  return () => wanters.delete(w);
+}

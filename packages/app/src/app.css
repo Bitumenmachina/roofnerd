@@ -654,6 +654,25 @@ polyline.trace { pointer-events: stroke; }
 polyline.trace { fill: none; }
 .draft-area { fill: var(--accent); fill-opacity: 0.14; stroke: var(--accent); stroke-dasharray: 6 4; }
 .draft-line { fill: none; stroke: var(--accent); stroke-dasharray: 6 4; }
+
+/* ── what an act has left on the roof ─────────────────────────────────────
+   The two picks of "Set high and low", a ruler, the box a curb is drawn in and
+   the line a section is cut on. They are the water colour, because every one of
+   them is about where the water goes, and they take no pointer: a mark is the
+   program answering, not something to click. */
+.verb-mark { pointer-events: none; }
+.surface-overlay .verb-line,
+.surface-overlay .verb-box { stroke-width: 2; vector-effect: non-scaling-stroke; }
+.verb-pick { fill: var(--rn-water); stroke: var(--paper); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.verb-line { fill: none; stroke: var(--rn-water); stroke-dasharray: 7 4; }
+.verb-line[data-verb-mark="cut"] { stroke-dasharray: 12 4 3 4; }
+.verb-box { fill: var(--rn-water); fill-opacity: 0.12; stroke: var(--rn-water); }
+.verb-word { fill: var(--rn-water-ink); font-family: var(--mono); text-anchor: middle; }
+
+/* An act's own sentence in the tool settings strip: a refusal, or what it just
+   did. Never a silence — a pick the program will not honour has to say why. */
+.verb-said { color: var(--rn-water-ink); font-style: italic; white-space: nowrap; }
+.tool-strip .verb-typed input.keyed { width: 92px; }
 .draft-vertex { fill: var(--accent); stroke: var(--paper); stroke-width: calc(var(--hair, 1)); }
 
 .hint {
@@ -1242,6 +1261,9 @@ button.quiet:hover { border-color: var(--rule); }
 }
 .model-label[data-label-kind="drain"] { color: var(--rn-water-ink); border-color: var(--rn-water-border); }
 .model-label[data-label-kind="nofall"] { color: var(--rn-warn); border-color: var(--rn-warn-border); }
+/* A word an act has put on the roof — the high pick, the low one, the ruler's
+   own reading. The water colour, the same as its mark on the Plan. */
+.model-label[data-label-kind="pick"] { color: var(--rn-water-ink); border-color: var(--rn-water-border); font-weight: 600; }
 /* What the drawing cannot say, under the key rather than in it. */
 .model-said {
   font-style: italic; color: var(--rn-ink-dim); font-size: var(--t-micro); line-height: 1.35;
