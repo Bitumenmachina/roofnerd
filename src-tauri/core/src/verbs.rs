@@ -280,7 +280,21 @@ pub fn high_and_low(
         return answer;
     }
 
-    let taper_now = (high_inches - low_inches) / run;
+    // Rounded to the nearest sixteenth of an inch to the foot: a roofer states a
+    // slope that way, the strip already prints "1/8 in 12" and not a fifth
+    // decimal place, and a pick never lands on the exact point it was aimed at
+    // — the screen-to-roof round trip the C6B notes flag has its own slop — so
+    // the raw quotient two real picks make is not a round number even when
+    // they were aimed at one. The shipped probe's own picks, aimed at an
+    // eighth in twelve, wrote a slope several thousandths short of it, which
+    // is not a printed slope at all: `profile::schedule` matches a chart entry
+    // exactly, so it found none, the whole lettered bill went unbought, and
+    // every name below it in `scope.rs` — the fill, the fasteners, the
+    // adhesive, the plates — went pending with it. A tapered package is
+    // bought at the slopes the manufacturer prints, so the fix is not a
+    // tighter tolerance on the lookup, it is not carrying a slope nobody can
+    // order in the first place. D158 addendum records this.
+    let taper_now = ((high_inches - low_inches) / run * 16.0).round() / 16.0;
     answer.taper_inches_per_foot = Some(taper_now);
     answer.thickness_inches = Some(low_inches);
 
@@ -512,13 +526,18 @@ mod tests {
         crate::taper::solve(document, 1)
     }
 
-    /// Two picks, and the slope is the fall over the run the boards make.
+    /// Two picks, and the slope is the fall over the run the boards make —
+    /// rounded to the nearest sixteenth, because that is the finest a roofer
+    /// ever states one and it is what a tapered chart is printed at.
     ///
     /// Ten feet along and ten across from the drain is ten feet of run — the
     /// greater of the two, which is what the four-way layout reads — so an inch
     /// and a half at the far end over half an inch at the drain is an inch over
-    /// ten feet: a tenth of an inch to the foot. Nothing about this is the
-    /// straight-line distance, which is fourteen feet and a bit.
+    /// ten feet: a tenth of an inch to the foot, raw. Nothing about this is the
+    /// straight-line distance, which is fourteen feet and a bit. A tenth of an
+    /// inch is not a printed slope — the chart runs in sixteenths — and 0.1 is
+    /// closer to 2/16 than to 1/16, so the answer the strip carries is an
+    /// eighth in twelve.
     #[test]
     fn the_slope_is_the_fall_over_the_run_the_boards_make() {
         let document = square();
@@ -536,10 +555,41 @@ mod tests {
         assert_eq!(answer.refused, None);
         assert!((answer.run_feet - 10.0).abs() < 1e-9, "{} ft of run", answer.run_feet);
         let taper_now = answer.taper_inches_per_foot.expect("a slope");
-        assert!((taper_now - 0.1).abs() < 1e-9, "{taper_now} in 12");
+        assert!((taper_now - 0.125).abs() < 1e-9, "{taper_now} in 12, rounded from a raw 0.1");
         assert_eq!(answer.thickness_inches, Some(0.5));
         assert_eq!(answer.drain_condition_id.as_deref(), Some("c-drain"));
         assert_eq!(answer.drain_number, Some(1));
+    }
+
+    /// A run that already lands on a sixteenth is not moved by rounding it.
+    ///
+    /// Two and a half inches of fall over ten feet of run is a quarter in
+    /// twelve exactly — 4/16 — so the roundtrip through the nearest sixteenth
+    /// is a no-op, and this is the case a chart lookup on the raw quotient
+    /// would also have passed. The point of pairing it with the test above is
+    /// that ONE of the two carries a raw value the chart has no row for at
+    /// all: `0.1` in per foot is not a printed slope, `profile::schedule`
+    /// answers `None` for it, and every name `scope.rs` builds off the bill —
+    /// the lettered panels, the fill, the fastener and adhesive counts — goes
+    /// pending with it. The rounding here is not cosmetic; it is what keeps
+    /// the verb from writing a slope nobody can buy.
+    #[test]
+    fn a_run_already_at_a_sixteenth_is_unchanged() {
+        let document = square();
+        let taper = solved(&document);
+        let answer = high_and_low(
+            &document,
+            &taper,
+            &HighAndLow {
+                high: Point::new(30.0, 30.0),
+                low: Point::new(20.0, 20.0),
+                high_inches: Some(3.0),
+                low_inches: Some(0.5),
+            },
+        );
+        assert_eq!(answer.refused, None);
+        let taper_now = answer.taper_inches_per_foot.expect("a slope");
+        assert!((taper_now - 0.25).abs() < 1e-9, "{taper_now} in 12");
     }
 
     /// The high pick is where the roof is deep, and a low pick above it is refused.

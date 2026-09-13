@@ -254,6 +254,16 @@ const groupsNow = (session) => session.execute(function () {
   }));
 });
 
+/** The recap's own selling price and how many lines it left out of it. */
+const recapNow = (session) => session.execute(function () {
+  const value = document.querySelector('.selling .value');
+  const partial = document.querySelector('.selling .partial');
+  return JSON.stringify({
+    sellingPriceText: value ? (value.textContent || '').trim() : null,
+    notCountedText: partial ? (partial.textContent || '').trim() : null,
+  });
+});
+
 /** The panel's field with this label on it, by the words on screen. */
 const panelField = (session, label) => session.execute(function (want) {
   const l = [...document.querySelectorAll('.condition-panel label')]
@@ -510,11 +520,40 @@ try {
 
   await showTab(session, 'Estimate');
   await wait(900);
-  const letteredAfter = lettered(JSON.parse(await linesNow(session)));
+  const linesAfterSlope = JSON.parse(await linesNow(session));
+  const letteredAfter = lettered(linesAfterSlope);
   check('the bill re-solves: the lettered panels are not the ones it was buying', () => {
     assert.ok(letteredBefore.length > 0, 'there were no lettered panel lines to begin with');
     assert.notEqual(letteredAfter, letteredBefore,
       'halving the slope bought exactly the same boards, which cannot be right');
+  });
+
+  // The letters just changed families — a quarter in twelve buys X, Y, Z and
+  // ZZ, and an eighth buys a different lettered series entirely (the bulletin prints
+  // two unrelated charts, not one chart with moving edges) — so the four lines
+  // this job wrote for the OLD letters are honestly pending now: the panel
+  // they name is not one this roof buys any more, and `formula.ts` says so on
+  // the line. That is a fact about the SKUs an estimator typed, not a defect
+  // in the solve. What must not go pending with them is everything the solve
+  // itself carries regardless of which letters govern: the fill, the board
+  // waste, the fastener and adhesive counts by zone, the plates — the names
+  // `c-field`'s own items ask for that are not `TAPER_<letter>_SF`, read off
+  // the job rather than typed here.
+  const aggregateDescriptions = new Set(
+    (field.items ?? [])
+      .filter((it) => typeof it.formula === 'string' && /^[A-Z][A-Z0-9_]*_(SF|EA|GAL)\b/.test(it.formula)
+        && !it.formula.startsWith('TAPER_'))
+      .map((it) => it.description),
+  );
+  check('halving the slope does not take the fill, the fasteners or the adhesive down with the letters', () => {
+    assert.ok(aggregateDescriptions.size > 0, 'the field has no non-lettered board line to check');
+    const byDescription = new Map(linesAfterSlope.map((l) => [l.description, l]));
+    for (const description of aggregateDescriptions) {
+      const line = byDescription.get(description);
+      assert.ok(line, `"${description}" is not on the sheet: ${JSON.stringify(linesAfterSlope.map((l) => l.description))}`);
+      assert.ok(line.quantity && line.quantity !== '—',
+        `"${description}" is pending right after the slope moved: ${JSON.stringify(line)}`);
+    }
   });
 
   // ── BOX OUT A CURB ──────────────────────────────────────────────────────
@@ -566,6 +605,54 @@ try {
       + `${curbNow[0]?.items?.length ?? 0}`);
     assert.ok(curbLines.every((l) => l.quantity && l.quantity !== '—'),
       `a line on the new curb has no quantity: ${JSON.stringify(curbLines)}`);
+  });
+
+  // The demo's own RTU-1 cricket is typed at half an inch to the foot, which
+  // was twice the field at a quarter in twelve and is four times it now that
+  // the field is at an eighth — a real disagreement, and the key says so
+  // (`legendFor`'s `cricketSlopeOff` row). What it must not do is take the
+  // saddle's own line down with it: `cricket()` still answers a `Cricket` for
+  // a disagreeing slope, it only carries the flag, so `CRICKET_SF` is still a
+  // number and the line still prices. Boxing out a second curb is the same
+  // shape of question one condition over: a curb with no cricket, or one this
+  // program refuses outright, must not touch the FIELD's own board bill next
+  // to it — the sump, the letters, the fill, the fastener and adhesive counts
+  // are the field's regardless of what stands on it.
+  const linesAfterCurb = JSON.parse(await linesNow(session));
+  const priceOf = (lines, description) => (lines.find((l) => l.description === description) ?? {}).quantity;
+  // The cricket's own line lives on the cricket condition, not the field's —
+  // read its description off the job rather than typing it twice.
+  const cricketDescription = conditions
+    .flatMap((c) => (c.role === 'ridge' ? c.items ?? [] : []))
+    .find((it) => (it.formula || '') === 'CRICKET_SF')?.description;
+
+  check('holds the bill after the curb: the fill, the fasteners, the adhesive and the disagreeing cricket all still price', () => {
+    assert.ok(cricketDescription, 'no ridge condition in the job carries a CRICKET_SF line to check');
+    for (const description of aggregateDescriptions) {
+      const now = priceOf(linesAfterCurb, description);
+      assert.ok(now && now !== '—', `"${description}" went pending once the curb was on the roof`);
+    }
+    const cricketNow = priceOf(linesAfterCurb, cricketDescription);
+    assert.ok(cricketNow && cricketNow !== '—',
+      `"${cricketDescription}" is pending — a slope that only disagrees must not stop it pricing: ${cricketNow}`);
+    // Nothing that priced right after the slope moved may go pending for a
+    // reason the curb introduced: the two snapshots are compared line for
+    // line, by description, rather than assuming the set is unchanged (the
+    // curb and its cricket add lines of their own).
+    for (const before of linesAfterSlope) {
+      if (!before.quantity || before.quantity === '—') continue;
+      const now = priceOf(linesAfterCurb, before.description);
+      assert.ok(now && now !== '—',
+        `"${before.description}" priced before the curb (${before.quantity}) and does not now`);
+    }
+  });
+
+  const recapAfterCurb = JSON.parse(await recapNow(session));
+  check('the selling price after the curb is the recap’s own figure, not typed here', () => {
+    assert.ok(recapAfterCurb.sellingPriceText, 'no selling price is shown at all');
+    const asNumber = Number(recapAfterCurb.sellingPriceText.replace(/[^0-9.]/g, ''));
+    assert.ok(Number.isFinite(asNumber) && asNumber > 0,
+      `the selling price reads "${recapAfterCurb.sellingPriceText}"`);
   });
 
   // ── MEASURE ─────────────────────────────────────────────────────────────

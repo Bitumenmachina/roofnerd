@@ -12,6 +12,7 @@
 
 use roofnerd_core::geom::Point;
 use roofnerd_core::{between, cricket_behind, high_and_low, taper, Between, Document, HighAndLow};
+use serde_json::{json, Value};
 use std::fs;
 use std::path::PathBuf;
 
@@ -257,4 +258,128 @@ fn pointing_at_the_roof_finds_the_section_through_the_drain_that_serves_it() {
         all[0].y,
     );
     assert!(roofnerd_core::drawing::section_at(&solved, off).is_none());
+}
+
+/// A curb boxed out AFTER "Set high and low" moves the slope still lets the
+/// field's own board bill solve — and a cricket that disagrees with the new
+/// slope is a sentence in the key, not a hole in the bill.
+///
+/// This is C6B's finding: a pick never lands on the exact pixel it was aimed
+/// at, so the run `high_and_low` measures between two real picks is not a
+/// clean number, and the shipped probe's own raw quotient — several
+/// thousandths short of an eighth in twelve — is not a slope the bulletin
+/// prints. `profile::schedule` matches chart entries exactly, so the WHOLE
+/// lettered bill went unbought and every name
+/// `scope.rs` builds off it (the fill, the board waste, the courses, the
+/// fastener and adhesive counts by zone) went pending with it. None of that
+/// is the cricket's doing: `condition-curb2-cricket` below is given a typed
+/// slope that disagrees with the field once it moves — the same 4× the demo's
+/// key shows — and disagreeing is all it does. The fix is `high_and_low`
+/// rounding to the nearest sixteenth before it answers, which is proved here
+/// by starting from a run that is deliberately NOT a whole number of feet.
+#[test]
+fn a_curb_after_the_slope_moves_still_lets_the_bill_solve() {
+    let (document, solved) = open();
+    let first = drains(&document)[0];
+    let field = &solved.fields[0];
+
+    // 19.7 ft of run, not 20 — standing in for a pick that landed a few pixels
+    // short of where it was aimed, the way a real click on a real screen does.
+    let run = 19.7;
+    let high = Point::new(
+        first.x + field.axis_along.x * run,
+        first.y + field.axis_along.y * run,
+    );
+    let low_inches = 0.5;
+    // Aimed at an eighth in twelve over the intended 20 ft; the actual 19.7 ft
+    // run makes the raw quotient a shade over an eighth, which is not a
+    // printed slope.
+    let high_inches = low_inches + 0.125 * 20.0;
+    let answer = high_and_low(
+        &document,
+        &solved,
+        &HighAndLow { high, low: first, high_inches: Some(high_inches), low_inches: Some(low_inches) },
+    );
+    assert_eq!(answer.refused, None);
+    let taper_now = answer.taper_inches_per_foot.expect("a slope");
+    assert!(
+        (taper_now - 0.125).abs() < 1e-9,
+        "{taper_now} in 12 — the raw quotient off a 19.7 ft run is not a chart slope, and rounding is what makes it one"
+    );
+
+    // Write what the act would write: the field's TAPER and T, a new curb, and
+    // the cricket behind it — with a typed slope that no longer agrees with
+    // the field once it is at an eighth in twelve.
+    let mut job = demo();
+    let conditions = job.get_mut("conditions").unwrap().as_array_mut().unwrap();
+    for c in conditions.iter_mut() {
+        if c.get("id").and_then(Value::as_str) == Some("c-field") {
+            c["properties"]["TAPER"] = json!(taper_now);
+            c["properties"]["T"] = json!(answer.thickness_inches.unwrap());
+        }
+    }
+    conditions.push(json!({
+        "id": "condition-curb2",
+        "name": "Curb 2",
+        "kind": "line",
+        "role": "curb",
+        "properties": { "ELEV": 0, "STRETCHOUT": 26, "W": 1.5, "WALL": 6, "H": 2 },
+        "traces": [{ "id": "t-curb2", "pageId": "page-1", "points": [
+            { "x": 300, "y": 380 }, { "x": 336, "y": 380 },
+            { "x": 336, "y": 416 }, { "x": 300, "y": 416 },
+            { "x": 300, "y": 380 }
+        ]}],
+        "items": [],
+    }));
+    conditions.push(json!({
+        "id": "condition-curb2-cricket",
+        "name": "Cricket behind Curb 2",
+        "kind": "line",
+        "role": "ridge",
+        "between": ["condition-curb2"],
+        // Typed, and 4x the new field slope rather than the 2x NRCA wants —
+        // the demo's own key finding, reproduced on purpose.
+        "properties": { "TAPER": 0.5 },
+        "traces": [{ "id": "t-curb2-cricket", "pageId": "page-1", "points": [
+            { "x": 336, "y": 398 }, { "x": 372, "y": 398 }
+        ]}],
+        "items": [],
+    }));
+
+    let solved_job = roofnerd_core::solve(&job, 1).expect("the job with the curb still solves");
+
+    assert!(solved_job.taper.refused.is_empty(), "the field is not refused: {:?}", solved_job.taper.refused);
+    let field_after = solved_job
+        .taper
+        .fields
+        .iter()
+        .find(|f| f.condition_id == "c-field")
+        .expect("the field is still laid out");
+    assert!(field_after.bill.is_some(), "the board bill did not solve: {:?}", field_after.bill_refused);
+
+    let cricket2 = solved_job
+        .taper
+        .crickets
+        .iter()
+        .find(|c| c.condition_id == "condition-curb2-cricket")
+        .expect("the boxed-out curb has its cricket");
+    assert!(cricket2.slope_disagrees, "the typed 1/2 in 12 should read as 4x the new 1/8 in 12 field");
+
+    let field_scope = solved_job.scopes.get("c-field").expect("the field is in the scope map");
+    for name in ["FILL_SF", "BOARDS_MAX", "BOARD_WASTE_SF"] {
+        assert!(
+            field_scope.get(name).copied().flatten().is_some(),
+            "{name} should be a real number, not pending: {:?}",
+            field_scope.get(name)
+        );
+    }
+    let letters: Vec<&String> = field_after.bill.as_ref().unwrap().by_letter.keys().collect();
+    assert!(!letters.is_empty(), "the new slope still buys a lettered panel or two");
+    for letter in &letters {
+        let key = format!("TAPER_{letter}_SF");
+        assert!(
+            field_scope.get(&key).copied().flatten().is_some(),
+            "{key} is on the bill and should be a real number"
+        );
+    }
 }
