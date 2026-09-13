@@ -18,15 +18,7 @@
         "rule": "exact"
       },
       "waste": 10,
-      "unitCost": 1.13
-    },
-    {
-      "id": "iso-tapered",
-      "description": "Tapered polyisocyanurate, 1/4 : 12",
-      "costCode": "07-100-100",
-      "unit": "SQ",
-      "waste": 8,
-      "unitCost": 424.3
+      "unitCost": 1.17
     },
     {
       "id": "coverboard",
@@ -34,7 +26,7 @@
       "costCode": "07-100-100",
       "unit": "SQ",
       "waste": 8,
-      "unitCost": 101.94
+      "unitCost": 93.3
     },
     {
       "id": "plates",
@@ -46,7 +38,7 @@
         "per": 1000,
         "rule": "exact"
       },
-      "unitCost": 420.01
+      "unitCost": 441.05
     },
     {
       "id": "wallflash",
@@ -54,7 +46,7 @@
       "costCode": "07-100-100",
       "unit": "SF",
       "waste": 10,
-      "unitCost": 1.11
+      "unitCost": 1.1
     },
     {
       "id": "coping",
@@ -67,7 +59,7 @@
         "rule": "exact"
       },
       "waste": 10,
-      "unitCost": 3.6
+      "unitCost": 3.55
     },
     {
       "id": "cleat",
@@ -75,21 +67,21 @@
       "costCode": "07-100-150",
       "unit": "LF",
       "waste": 5,
-      "unitCost": 2.22
+      "unitCost": 2.06
     },
     {
       "id": "mitre",
       "description": "Shop-formed corner, mitre welded",
       "costCode": "07-100-150",
       "unit": "EA",
-      "unitCost": 81.9
+      "unitCost": 89.39
     },
     {
       "id": "termbar",
       "description": "Termination bar and sealant",
       "costCode": "07-100-160",
       "unit": "LF",
-      "unitCost": 3.14
+      "unitCost": 3.25
     },
     {
       "id": "metal-fasteners",
@@ -101,21 +93,21 @@
         "per": 1000,
         "rule": "exact"
       },
-      "unitCost": 376.33
+      "unitCost": 353.37
     },
     {
       "id": "drain",
       "description": "Retrofit drain, 4 in",
       "costCode": "07-100-100",
       "unit": "EA",
-      "unitCost": 443
+      "unitCost": 478.45
     },
     {
       "id": "sump-panel",
       "description": "Tapered sump panel, 4 ft square",
       "costCode": "07-100-100",
       "unit": "EA",
-      "unitCost": 202.27
+      "unitCost": 187.16
     },
     {
       "id": "curbflash",
@@ -123,7 +115,7 @@
       "costCode": "07-100-100",
       "unit": "SF",
       "waste": 10,
-      "unitCost": 1.05
+      "unitCost": 1.14
     },
     {
       "id": "curbcap",
@@ -136,7 +128,7 @@
         "rule": "exact"
       },
       "waste": 10,
-      "unitCost": 3.79
+      "unitCost": 3.43
     },
     {
       "id": "tearoff",
@@ -145,7 +137,7 @@
       "unit": "SQ",
       "productionRate": 0.83333,
       "crewSize": 6,
-      "unitCost": 55.66
+      "unitCost": 53.47
     },
     {
       "id": "set-insulation",
@@ -154,7 +146,7 @@
       "unit": "SQ",
       "productionRate": 1.25,
       "crewSize": 6,
-      "unitCost": 56.37
+      "unitCost": 48.16
     },
     {
       "id": "set-coverboard",
@@ -163,7 +155,7 @@
       "unit": "SQ",
       "productionRate": 1.66667,
       "crewSize": 6,
-      "unitCost": 55.25
+      "unitCost": 53.16
     },
     {
       "id": "install-membrane",
@@ -172,7 +164,7 @@
       "unit": "SQ",
       "productionRate": 1.25,
       "crewSize": 6,
-      "unitCost": 52.86
+      "unitCost": 56.27
     },
     {
       "id": "install-flashing",
@@ -181,7 +173,7 @@
       "unit": "LF",
       "productionRate": 7.5,
       "crewSize": 2,
-      "unitCost": 56.44
+      "unitCost": 56.89
     },
     {
       "id": "set-drain",
@@ -190,7 +182,7 @@
       "unit": "EA",
       "productionRate": 0.16875,
       "crewSize": 2,
-      "unitCost": 57.36
+      "unitCost": 49.47
     },
     {
       "id": "set-curb",
@@ -199,14 +191,14 @@
       "unit": "LF",
       "productionRate": 3,
       "crewSize": 2,
-      "unitCost": 49.02
+      "unitCost": 55.8
     },
     {
       "id": "set-metal",
       "description": "Form and set the metal",
       "costCode": "07-100-900",
       "unit": "LF",
-      "unitCost": 7.72
+      "unitCost": 8.36
     },
     {
       "id": "lift",
@@ -218,7 +210,7 @@
         "per": 1,
         "rule": "ceil"
       },
-      "unitCost": 2297.26
+      "unitCost": 2268.85
     },
     {
       "id": "dumpster",
@@ -230,28 +222,76 @@
         "per": 1,
         "rule": "ceil"
       },
-      "unitCost": 798.37
+      "unitCost": 830.6
     },
     {
       "id": "permit",
       "description": "Permit and inspections",
       "costCode": "07-100-950",
       "unit": "EA",
-      "unitCost": 1271.14
+      "unitCost": 1039.8
     },
     {
       "id": "warranty",
       "description": "Manufacturer warranty, 20 year NDL",
       "costCode": "07-100-920",
       "unit": "SQ",
-      "unitCost": 65.07
+      "unitCost": 53.86
     },
     {
       "id": "supervision",
       "description": "Supervision, foreman day",
       "costCode": "07-100-990",
       "unit": "EA",
-      "unitCost": 499.78
+      "unitCost": 525.27
+    },
+    {
+      "id": "iso-x",
+      "description": "Tapered polyisocyanurate X, 1/4\" : 12 — 1/2\" to 1 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 51.66
+    },
+    {
+      "id": "iso-y",
+      "description": "Tapered polyisocyanurate Y, 1/4\" : 12 — 1 1/2\" to 2 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 110.7
+    },
+    {
+      "id": "iso-z",
+      "description": "Tapered polyisocyanurate Z, 1/4\" : 12 — 2 1/2\" to 3 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 161.97
+    },
+    {
+      "id": "iso-zz",
+      "description": "Tapered polyisocyanurate ZZ, 1/4\" : 12 — 3 1/2\" to 4 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 216.66
+    },
+    {
+      "id": "iso-fill",
+      "description": "Flat polyisocyanurate fill, 4\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 170.36
+    },
+    {
+      "id": "cricket-stock",
+      "description": "Tapered cricket stock, cut to the saddle",
+      "costCode": "07-100-100",
+      "unit": "SF",
+      "waste": 10,
+      "unitCost": 2.43
     }
   ]
 }

@@ -24,10 +24,17 @@
 // catalogue below is the one source and both files are written from it.
 
 import { readFile, writeFile } from 'node:fs/promises';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+
+const { readJob, writeJob } = await import('../packages/engine/dist/index.js');
 
 const ROOT = resolve(import.meta.dirname, '..');
 const SEED = 20260912;
+
+const readJson = async (rel) => JSON.parse(await readFile(join(ROOT, rel), 'utf8'));
+const conditionsPath = join(ROOT, 'jobs/demo-job/conditions.json');
+const conditions = JSON.parse(await readFile(conditionsPath, 'utf8'));
 
 /** A small deterministic generator: same seed, same prices, every time. */
 function generator(seed) {
@@ -37,10 +44,37 @@ function generator(seed) {
     return state / 0x100000000;
   };
 }
-const random = generator(SEED);
 
-/** A price somewhere in a plausible band, to the cent. */
-const between = (low, high) => Math.round((low + random() * (high - low)) * 100) / 100;
+/** FNV-1a over a string, for a seed that belongs to one item and not to a place. */
+function hashOf(text) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h;
+}
+
+/**
+ * A price somewhere in a plausible band, to the cent — seeded on the item's OWN
+ * id rather than on its place in the list.
+ *
+ * It used to be one stream drawn in order, which is deterministic and also
+ * fragile in a way that only shows up later: retire one line and every price
+ * after it in the catalogue moves, so a batch that adds a fastener line quietly
+ * re-prices the coping. C2 retires the single tapered line and adds six, and C3
+ * and C4 add more; seeding per id means each item keeps its own price for good and
+ * the catalogue can be edited anywhere. Every price moves once, here, and never
+ * again for a reason that has nothing to do with the item.
+ */
+const between = (id, low, high) => {
+  const random = generator(hashOf(id) ^ SEED);
+  // One draw thrown away: the first value out of a linear congruential generator
+  // is the seed run through one step, so close seeds give close first values and
+  // `iso-x` and `iso-y` would price nearly the same.
+  random();
+  return Math.round((low + random() * (high - low)) * 100) / 100;
+};
 
 /**
  * Product names are a public matter — a manufacturer's catalogue is not
@@ -69,12 +103,9 @@ const CATALOGUE = [
   { id: 'tpo-60', description: 'TPO membrane, 60 mil', costCode: '07-100-100', unit: 'SQ',
     order: { name: 'ROLL', per: 10, rule: 'ceil' }, price: { name: 'SF', contains: 1000, rule: 'exact' },
     band: [1.05, 1.25], waste: 10 },
-  // A quarter in twelve off a half inch at the drain reaches fourteen inches at
-  // the far corner of this roof, so the package averages seven. Tapered polyiso
-  // is bought by the square foot per inch of average thickness, which is why
-  // this band is where it is rather than where a two-inch flat board's is.
-  { id: 'iso-tapered', description: 'Tapered polyisocyanurate, 1/4 : 12', costCode: '07-100-100', unit: 'SQ',
-    band: [400, 486], waste: 8 },
+  // The tapered package is not one line any more — see THE PACKAGE, BY LETTER
+  // below. It used to be `SQ` off the traced area at a band picked for an
+  // average thickness somebody guessed, which is the money seam D146 named.
   { id: 'coverboard', description: 'High density cover board, 1/2 in', costCode: '07-100-100', unit: 'SQ',
     band: [88, 104], waste: 8 },
   { id: 'plates', description: 'Fasteners and plates', costCode: '07-100-170', unit: 'EA',
@@ -138,10 +169,101 @@ const CATALOGUE = [
     band: [460, 540] },
 ];
 
+// ── the package, by letter ─────────────────────────────────────────────────
+// One entry per lettered panel the layout can actually reach, generated from the
+// manufacturer's own chart rather than typed here — so the catalogue follows the
+// chart and cannot drift from what the solve bills against.
+//
+// Polyiso is quoted by the square foot per inch of thickness, which is why a
+// band per letter is the honest shape: an X panel averages an inch across its
+// 4 ft and a ZZ averages four, so a ZZ costs about four times an X and a single
+// band for "tapered polyiso" cannot say either. The flat fill board under them is
+// the cheaper article — no taper to cut — and its band is per inch too.
+//
+// Invented rates, plausible ranges. Nothing here came off anybody's bid.
+const PER_INCH_TAPERED = [48, 58];
+const PER_INCH_FLAT = [40, 48];
+
+const profile = await readJson('data/profiles/versico-versicore-mp-h.json');
+const field = conditions.find(
+  (c) => c.kind === 'area' && !c.hidden && c.properties?.TAPER !== undefined,
+);
+const atDrain = field.properties.T;
+const charted = profile.slopes.find(
+  (s) => Math.abs(s.slope_in_per_ft - field.properties.TAPER) < 1e-9,
+);
+if (!charted?.extended) {
+  throw new Error(`the chart draws no extended set at ${field.properties.TAPER} in per foot`);
+}
+const fillStep = Number.parseFloat(charted.extended.fill_in);
+/** The panels a layout off this drain thickness can reach: `[T, T + step)`. */
+const letters = charted.extended.panels.filter(
+  (p) => p.thick_edge_in > atDrain + 1e-9 && p.thin_edge_in < atDrain + fillStep - 1e-9,
+);
+
+/** As a roofer writes it: 1/2", 2 1/4", 4". */
+const inchLabel = (v) => {
+  const whole = Math.floor(v);
+  const eighths = Math.round((v - whole) * 8);
+  const fraction = eighths === 0 ? '' : `${eighths / 8}`.replace('0.', '').length > 0
+    ? ` ${[0, '1/8', '1/4', '3/8', '1/2', '5/8', '3/4', '7/8'][eighths]}` : '';
+  return `${whole || (fraction ? '' : 0)}${fraction}"`.trim();
+};
+
+const slopeLabel = charted.label;
+for (const panel of letters) {
+  const average = (panel.thin_edge_in + panel.thick_edge_in) / 2;
+  CATALOGUE.push({
+    id: `iso-${panel.designation.toLowerCase()}`,
+    description: `Tapered polyisocyanurate ${panel.designation}, ${slopeLabel} : 12`
+      + ` — ${inchLabel(panel.thin_edge_in)} to ${inchLabel(panel.thick_edge_in)}`,
+    costCode: '07-100-100', unit: 'SQ',
+    band: [PER_INCH_TAPERED[0] * average, PER_INCH_TAPERED[1] * average],
+    waste: 8,
+  });
+}
+CATALOGUE.push({
+  id: 'iso-fill',
+  description: `Flat polyisocyanurate fill, ${inchLabel(fillStep)}`,
+  costCode: '07-100-100', unit: 'SQ',
+  band: [PER_INCH_FLAT[0] * fillStep, PER_INCH_FLAT[1] * fillStep],
+  waste: 8,
+});
+CATALOGUE.push({
+  // Cricket stock is its own lettered series — Carlisle prints two charts side by
+  // side, headed Cricket and Primary Slope — and the bulletin on disk carries only
+  // the primary one. So this is priced by the square foot of footprint and not by
+  // letter, and that gap is on the record rather than papered over with the
+  // field's own table.
+  id: 'cricket-stock', description: 'Tapered cricket stock, cut to the saddle',
+  costCode: '07-100-100', unit: 'SF', band: [2.15, 2.6], waste: 10,
+});
+
+/**
+ * The lines the MODEL answers, and the name each one is worth.
+ *
+ * A formula of derived names alone renders ◈ and is not editable in place; the
+ * estimator overrides it by typing a formula, which then reads as typed. That is
+ * the existing mechanism and nothing about it changes here.
+ */
+const DERIVED = [
+  ...letters.map((panel) => ({
+    condition: 'c-field',
+    id: `iso-${panel.designation.toLowerCase()}`,
+    formula: `TAPER_${panel.designation}_SF / 100`,
+  })),
+  { condition: 'c-field', id: 'iso-fill', formula: 'FILL_SF / 100' },
+  { condition: 'c-drains', id: 'sump-panel', formula: 'SUMP_PANELS_EA' },
+  { condition: 'c-cricket', id: 'cricket-stock', formula: 'CRICKET_SF' },
+];
+
+/** Lines a solved bill replaces. Left on the job they would charge it twice. */
+const RETIRED = ['iso-tapered'];
+
 const library = CATALOGUE.map(({ band, labor, ...item }) => ({
   ...item,
   ...(labor ?? {}),
-  unitCost: between(band[0], band[1]),
+  unitCost: between(item.id, band[0], band[1]),
 }));
 
 const out = {
@@ -155,13 +277,50 @@ const pricesPath = join(ROOT, 'jobs/demo-job/prices.json');
 await writeFile(pricesPath, `${JSON.stringify(out, null, 2)}\n`);
 
 // ── and the demo's own lines, from the same catalogue ──────────────────────
-// Only the money and the crew move. Formulas, units, waste and every word on
-// the line belong to the job and are left exactly where they are.
+// The money and the crew move. Formulas, units, waste and every word on a line
+// that the estimator owns belong to the job and are left exactly where they are.
+//
+// The exception is the lines the MODEL answers. Those are put here, with the
+// derived-name formula on them, because the name and the catalogue entry are one
+// fact: a line priced per square of X panel and a formula naming `TAPER_Y_SF`
+// would look entirely plausible on the sheet. The retired line goes in the same
+// pass — a solved bill beside the one line it replaces would charge the tapered
+// package twice.
 const byId = new Map(library.map((i) => [i.id, i]));
-const conditionsPath = join(ROOT, 'jobs/demo-job/conditions.json');
-const conditions = JSON.parse(await readFile(conditionsPath, 'utf8'));
 let moved = 0;
+let derived = 0;
+let retired = 0;
 const missing = [];
+
+for (const condition of conditions) {
+  const items = condition.items ?? (condition.items = []);
+  // Where the retired line stood, so the lines that replace it stand there too and
+  // the sheet reads in the order a crew builds in.
+  let at = items.findIndex((i) => RETIRED.includes(i.id));
+  if (at < 0) at = items.length;
+  const before = items.length;
+  condition.items = items.filter((i) => !RETIRED.includes(i.id));
+  retired += before - condition.items.length;
+
+  for (const line of DERIVED) {
+    if (line.condition !== condition.id) continue;
+    const priced = byId.get(line.id);
+    if (!priced) { missing.push(`${condition.name} → ${line.id}`); continue; }
+    let item = condition.items.find((i) => i.id === line.id);
+    if (!item) {
+      item = { id: line.id };
+      condition.items.splice(Math.min(at, condition.items.length), 0, item);
+      at += 1;
+    }
+    item.description = priced.description;
+    item.costCode = priced.costCode;
+    item.unit = priced.unit;
+    item.formula = line.formula;
+    if (priced.waste !== undefined) item.waste = priced.waste;
+    derived += 1;
+  }
+}
+
 for (const condition of conditions) {
   for (const item of condition.items ?? []) {
     const priced = byId.get(item.id);
@@ -172,10 +331,22 @@ for (const condition of conditions) {
     moved += 1;
   }
 }
-await writeFile(conditionsPath, `${JSON.stringify(conditions, null, 2)}\n`);
+// Written through the engine's own writer, not restringified here. The shell and
+// the command line agree on one canonical form — sorted keys, two spaces, a
+// trailing newline — and `cargo test` holds the demo job to it. A line added with
+// its keys in the order a person would type them is not in that form, and the
+// round-trip test caught exactly that. One writer, one form.
+const folder = join(ROOT, 'jobs/demo-job');
+const job = readJob((rel) => {
+  try { return readFileSync(join(folder, rel), 'utf8'); }
+  catch (e) { if (e.code === 'ENOENT') return null; throw e; }
+});
+job.conditions = conditions;
+writeJob(job, (rel, contents) => writeFileSync(join(folder, rel), contents));
 
 console.log(`${library.length} synthetic prices → jobs/demo-job/prices.json`);
 console.log(`${moved} lines on the demo job priced from the same catalogue`);
+console.log(`${derived} of them answered by the model, by name; ${retired} retired`);
 if (missing.length) {
   // Named, never silently left at whatever it was. A line the book does not
   // carry is a line whose price nobody regenerated.
