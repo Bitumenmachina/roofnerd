@@ -80,6 +80,21 @@ solve is drawn, so a difference in that pair is a difference in the roof. The re
 touches are `section-model`, `section6-model`, `section10a-chrome` (the two frame rows) and
 `section7-legibility` (§1.9) — both windows.
 
+**Landed on the real repo (22:37–22:47) as 58817f2 → 27afb21 → 8d703cd → 6b252e1 → 6dde6f3**, checks
+first: at 27afb21 (the window fix and the check, before the core) section10a-chrome went **35/35**
+and section7-legibility **28/28** — both windows are the handoff's size now — and section-core was
+red 5 of 8. At 6dde6f3, through the front door on the shipped program: section-core 7/8,
+section-model 23/23, section6-model 36/36, section6b-panel 39/39, section1 12/12, section2 17/17,
+section4 16/16, section5 18/18, front-door 18/18, runtime-check 9/9, section10a 35/35, section7
+28/28, section9a 64/64, vocabulary 38/38, real-job 13/13, compare-fixtures every line within
+0.01%. The picture: `section-core-model-6dde6f3.png` against `section-model-frame2-light-27afb21.png`
+(same 1440 × 900 page, same state) differs by at most one level in 255 at any pixel and by nothing
+at a 1% fuzz — quantization, not the roof. The one red row, "a thickness typed into the panel
+re-solves the roof", failed because the dispatched click on the roof missed and nothing was
+selected; the probe now takes the field's Estimate row as the other front door to the same
+selection. The records commit was refused once by the client-data gate for a question number, a slash and a decision number written as one token
+(its sheet-and-detail pattern) and landed as "Q4 and D100".
+
 **Next: C1 — regions and planes.** The cone is retired for the half-plane partition NRCA
 draws: valleys at 45°, saddles, thickness piecewise-planar on drainage regions and
 perpendicular rather than radial, and the `roof.ts` ↔ core constant test. The 14 in the

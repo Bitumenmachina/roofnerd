@@ -335,7 +335,24 @@ try {
   await showTab(session, 'Condition');
   await wait(500);
 
-  const was = JSON.parse((await fieldValue(session, 'Thickness')) ?? 'null');
+  // The driver refuses real clicks here and a dispatched click on the roof can
+  // miss the mesh, in which case nothing is selected and the panel has no field
+  // to type into. The other front door to the same selection is the field's
+  // own row on the Estimate tab — one document, one selection, one panel — so
+  // take that door when the first one did not open.
+  let was = JSON.parse((await fieldValue(session, 'Thickness')) ?? 'null');
+  if (!was) {
+    await showTab(session, 'Estimate');
+    await session.execute(function (want) {
+      const row = [...document.querySelectorAll('.cost-group')]
+        .find(function (r) { return (r.textContent || '').indexOf(want) >= 0; });
+      if (row) row.click();
+    }, field.name);
+    await wait(900);
+    await showTab(session, 'Condition');
+    await wait(500);
+    was = JSON.parse((await fieldValue(session, 'Thickness')) ?? 'null');
+  }
   const solveWas = JSON.parse(await modelNow(session)).solveId;
   // An inch thicker at the drain than the job says, whatever the job says. The
   // ceiling moves with it — another inch of board is another inch the wall has
