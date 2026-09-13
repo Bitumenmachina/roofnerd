@@ -152,9 +152,16 @@ const cornerSquare = (corner, a) => {
  * The three zones by area, counted on a lattice.
  *
  * A count on a lattice is not the solve's exact boolean and is not meant to be:
- * it is an independent reading, good to a fraction of a per cent on a roof this
- * size, and that is exactly enough to catch a band built the wrong width or a
- * corner square laid on the wrong side of its own corner.
+ * it is an independent reading, and that is exactly enough to catch a band built
+ * the wrong width or a corner region laid on the wrong side of its own corner.
+ *
+ * It is also measured a DIFFERENT WAY on purpose. The band here is every point
+ * within `a` of the nearest edge; the program cuts it by offsetting the traced
+ * outline inboard. The two agree exactly along a straight run and at a corner
+ * that turns outward, and part company at a corner that turns INTO the roof —
+ * where an offset polyline does not mitre. This outline has two of those, at the
+ * bump, so the two readings sit about one per cent apart and the row allows for
+ * it rather than pretending they are the same arithmetic.
  */
 const zonesByLattice = (poly, a, step) => {
   const corners = outsideCorners(poly).map((c) => cornerSquare(c, a));
@@ -408,7 +415,7 @@ try {
 
   check('each zone is the size a second reading of the same rule makes it', () => {
     assert.ok(aFeet !== null, 'there is no zone width to lay a lattice against');
-    const mine = zonesByLattice(ring, aFeet, 0.5);
+    const mine = zonesByLattice(ring, aFeet, 0.1);
     for (const [name, want] of [['1', mine.field], ['2', mine.perimeter], ['3', mine.corner]]) {
       const z = zoneOf(name);
       assert.ok(z, `there is no zone ${name} on the solve`);

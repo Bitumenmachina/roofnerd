@@ -57,6 +57,7 @@
 
 use std::collections::BTreeMap;
 
+use crate::fastening::SolvedFastening;
 use crate::model::Document;
 use crate::model::SolvedTaper;
 use crate::walls::SolvedWalls;
@@ -70,7 +71,12 @@ pub type Scopes = BTreeMap<String, BTreeMap<String, Option<f64>>>;
 /// number. A window that asks for a condition it can see and gets nothing back
 /// cannot tell "this condition has no derived numbers" from "the solve did not
 /// reach it", and those are different facts.
-pub fn scopes_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls) -> Scopes {
+pub fn scopes_of(
+    document: &Document,
+    taper: &SolvedTaper,
+    walls: &SolvedWalls,
+    fastening: &SolvedFastening,
+) -> Scopes {
     let mut out = Scopes::new();
     for condition in &document.conditions {
         out.insert(condition.id.clone(), BTreeMap::new());
@@ -140,6 +146,20 @@ pub fn scopes_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls) 
         }
     }
 
+    // ── the wind zones, the fasteners and the adhesive ──────────────────────
+    // `ZONE_A_FT` and the three `FM_CLASS_` are not quantities anybody buys and
+    // they are named all the same: they are what the counts beside them were
+    // worked out from, and a bill whose basis is only on a drawing is a bill
+    // nobody can check. The same three kinds of answer apply — a count of
+    // nought is a zone with no boards in it, `None` is a zone the table prints
+    // no pattern for, and absent is a condition with no roof on it.
+    for field in &fastening.fields {
+        let Some(mine) = out.get_mut(&field.condition_id) else { continue };
+        for (name, value) in crate::fastening::named(field) {
+            add(mine, &name, value);
+        }
+    }
+
     out
 }
 
@@ -163,7 +183,9 @@ mod tests {
     fn scopes(document: &Document) -> Scopes {
         let taper = crate::taper::solve(document, 1);
         let walls = crate::walls::solve(document, &taper, 1);
-        scopes_of(document, &taper, &walls)
+        let wind = crate::wind::solve(document, &taper, 1);
+        let fastening = crate::fastening::solve(document, &taper, &wind, 1);
+        scopes_of(document, &taper, &walls, &fastening)
     }
 
     #[test]

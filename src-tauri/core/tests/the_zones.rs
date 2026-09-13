@@ -164,20 +164,26 @@ fn each_zone_asks_for_the_rating_its_own_pressure_makes_it_need() {
     for (zone, name) in [("1", "WIND_PSF_FIELD"), ("2", "WIND_PSF_PERIMETER"), ("3", "WIND_PSF_CORNER")] {
         let z = plan.zones.iter().find(|z| z.zone == zone).expect("the zone is solved");
         let design = typed(&document, name);
-        assert_eq!(z.design_psf, design);
-        assert!((z.asd_psf - design * ASD_FACTOR).abs() < 1e-9);
-        assert!((z.required_psf - design * ASD_FACTOR * SAFETY_FACTOR).abs() < 1e-9);
-        assert!(z.fm_class >= z.required_psf, "the rating has to cover what is wanted");
-        assert!(
-            z.fm_class - z.required_psf < 15.0,
-            "and it is the next step up, not two steps"
-        );
+        let asd = z.asd_psf.expect("a zone with a typed pressure works at a load");
+        let required = z.required_psf.expect("and asks for a capacity");
+        let rating = z.fm_class.expect("and a rating that covers it");
+        assert_eq!(z.design_psf, Some(design));
+        assert!((asd - design * ASD_FACTOR).abs() < 1e-9);
+        assert!((required - design * ASD_FACTOR * SAFETY_FACTOR).abs() < 1e-9);
+        assert!(rating >= required, "the rating has to cover what is wanted");
+        assert!(rating - required < 15.0, "and it is the next step up, not two steps");
     }
 
     // The three are in order and none of them ties: a corner is worse than an
     // edge and an edge is worse than the field, which is the premise the whole
     // appendix rests on (p.553).
-    let by = |zone: &str| plan.zones.iter().find(|z| z.zone == zone).expect("solved").required_psf;
+    let by = |zone: &str| {
+        plan.zones
+            .iter()
+            .find(|z| z.zone == zone)
+            .and_then(|z| z.required_psf)
+            .expect("solved")
+    };
     assert!(by("1") < by("2"), "the perimeter is worse than the field");
     assert!(by("2") < by("3"), "and a corner is worse than the perimeter");
 }
@@ -252,9 +258,9 @@ fn a_pressure_typed_at_working_load_is_taken_as_it_stands() {
     let plan = solved.plans.first().expect("the plan is solved");
     assert_eq!(plan.basis, "working load");
     let corner = plan.zones.iter().find(|z| z.zone == "3").expect("solved");
-    assert_eq!(corner.asd_psf, 45.0, "it was typed at working load and stays there");
+    assert_eq!(corner.asd_psf, Some(45.0), "it was typed at working load and stays there");
     // p.565: an assembly rated FM 1-90 covers a design uplift load of 45 psf.
-    assert_eq!(corner.fm_class, 90.0);
+    assert_eq!(corner.fm_class, Some(90.0));
 }
 
 /// A band cannot be wider than the roof it is on.

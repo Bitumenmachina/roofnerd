@@ -110,15 +110,17 @@ pub struct Zone {
     /// is one piece, and a corner region clipped by the outline can be several.
     pub shapes: Vec<Shape>,
     pub square_feet: f64,
-    /// What was typed for this zone, in pounds a square foot.
-    pub design_psf: f64,
+    /// What was typed for this zone, in pounds a square foot. Absent where
+    /// nobody typed one — never nought, which would read as a roof the wind
+    /// does not pull on.
+    pub design_psf: Option<f64>,
     /// The same at working load: the typed figure, reduced where it was typed
     /// as strength design.
-    pub asd_psf: f64,
+    pub asd_psf: Option<f64>,
     /// Working load times the safety factor — the capacity the assembly needs.
-    pub required_psf: f64,
+    pub required_psf: Option<f64>,
     /// The rating that covers it: the next step of fifteen at or above.
-    pub fm_class: f64,
+    pub fm_class: Option<f64>,
 }
 
 /// One roof's zones, and everything they were set out from.
@@ -379,9 +381,14 @@ fn plan_of(
     let [one, two, three] = zone_shapes(ring, a);
     for (shapes, (t, zone, label)) in [one, two, three].into_iter().zip(typed) {
         let square_feet: f64 = shapes.iter().map(Shape::square_feet).sum();
-        let design_psf = t.psf.unwrap_or(0.0).abs();
-        let asd_psf = if t.strength { design_psf * ASD_FACTOR } else { design_psf };
-        let required_psf = asd_psf * SAFETY_FACTOR;
+        // An uplift is a pull, so a figure typed either way means the same
+        // thing; what is NOT the same is a figure nobody typed, and that stays
+        // absent all the way down the chain rather than becoming a nought that
+        // would rate at the lowest published class.
+        let design_psf = t.psf.map(f64::abs);
+        let asd_psf =
+            design_psf.map(|psf| if t.strength { psf * ASD_FACTOR } else { psf });
+        let required_psf = asd_psf.map(|psf| psf * SAFETY_FACTOR);
         plan.zones.push(Zone {
             zone: zone.to_string(),
             label: label.to_string(),
@@ -390,7 +397,7 @@ fn plan_of(
             design_psf,
             asd_psf,
             required_psf,
-            fm_class: rating_for(required_psf),
+            fm_class: required_psf.map(rating_for),
         });
     }
     if !basis_stated {

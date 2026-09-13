@@ -35,6 +35,7 @@ pub mod boards;
 pub mod coping;
 pub mod cricket;
 pub mod drawing;
+pub mod fastening;
 pub mod geom;
 pub mod model;
 pub mod profile;
@@ -55,6 +56,7 @@ pub use model::{
 };
 pub use profile::{LetterRow, Panel, ProfileSet, Schedule};
 pub use scope::Scopes;
+pub use fastening::{FastenedField, FastenedZone, Pattern, SolvedFastening};
 pub use walls::{SolvedWalls, WallRun};
 pub use wind::{SolvedWind, WindPlan, Zone};
 
@@ -67,8 +69,10 @@ pub fn solve(document: &serde_json::Value, solve_id: u64) -> Result<Solved, Stri
     let document = Document::read(document)?;
     let taper = taper::solve(&document, solve_id);
     let walls = walls::solve(&document, &taper, solve_id);
-    let scopes = scope::scopes_of(&document, &taper, &walls);
-    Ok(Solved { solve_id, taper, walls, scopes })
+    let wind = wind::solve(&document, &taper, solve_id);
+    let fastening = fastening::solve(&document, &taper, &wind, solve_id);
+    let scopes = scope::scopes_of(&document, &taper, &walls, &fastening);
+    Ok(Solved { solve_id, taper, walls, fastening, scopes })
 }
 
 #[cfg(test)]

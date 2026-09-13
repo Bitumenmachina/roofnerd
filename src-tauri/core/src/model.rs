@@ -524,9 +524,10 @@ pub struct SolvedTaper {
 
 /// A part of the model that is not solved yet, said out loud.
 ///
-/// Walls, fastening and the drawing land in C3, C4 and C5. Until they do, the
-/// command answers with this rather than with an empty geometry that would read
-/// as a roof with no walls on it.
+/// A part the shell is asked for that this solve did not produce. Nothing
+/// answers with it today; it stays because a part added later must be able to
+/// say it is not solved rather than answer with an empty roof, which a window
+/// would draw.
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NotSolvedYet {
@@ -548,6 +549,7 @@ pub struct Solved {
     pub solve_id: u64,
     pub taper: SolvedTaper,
     pub walls: crate::walls::SolvedWalls,
+    pub fastening: crate::fastening::SolvedFastening,
     pub scopes: crate::scope::Scopes,
 }
 

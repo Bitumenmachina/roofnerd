@@ -140,8 +140,9 @@ fn doc_get(state: State<'_, Document>) -> Result<Value, String> {
 /// event: the tapered boards on a real roof are hundreds of kilobytes, and a
 /// keystroke must not carry them to three windows.
 ///
-/// Fastening answers that it is not solved yet (C4). That is not the same
-/// answer as an empty roof, and a window that got an empty roof would draw one.
+/// Every part answers with the one solve the shell is holding. A part this
+/// program does not have would answer that it is not solved rather than with an
+/// empty roof, which a window would draw.
 #[tauri::command]
 fn solve_get(state: State<'_, Document>, part: String) -> Result<Value, String> {
     let mut guard = state.0.lock().map_err(|_| "the document lock is poisoned".to_string())?;
@@ -195,9 +196,14 @@ fn solve_get(state: State<'_, Document>, part: String) -> Result<Value, String> 
             let solved = guard.solved.as_ref().ok_or("this roof did not solve")?;
             serde_json::to_value(&solved.walls).map_err(|e| e.to_string())
         }
+        // The wind zones, the count in each and the adhesive over them. C4.
         "fastening" => {
-            serde_json::to_value(roofnerd_core::NotSolvedYet::new(&part, guard.solve_id))
-                .map_err(|e| e.to_string())
+            if guard.solved.is_none() {
+                let solved = roofnerd_core::solve(&guard.doc, guard.solve_id)?;
+                guard.solved = Some(solved);
+            }
+            let solved = guard.solved.as_ref().ok_or("this roof did not solve")?;
+            serde_json::to_value(&solved.fastening).map_err(|e| e.to_string())
         }
         other => Err(format!("there is no {other} in this model")),
     }
