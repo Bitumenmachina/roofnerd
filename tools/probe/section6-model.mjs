@@ -108,6 +108,11 @@ const sheetNow = (session) => session.execute(function () {
       current.money.push({
         item: ((row.querySelector('.line-item') || {}).textContent || '').trim(),
         extended: ((row.querySelector('.line-money') || {}).textContent || '').trim(),
+        // Struck: on the sheet, out of every total. Read here because a figure
+        // that leaves a line out has to be held against the lines it counted
+        // and not against every line that is drawn.
+        off: row.classList.contains('off'),
+        why: ((row.querySelector('.line-off') || {}).textContent || '').trim(),
       });
     }
   }
@@ -892,14 +897,46 @@ try {
       `what is lit is ${JSON.stringify(litA.lit)}`);
   });
   check('and the panel figure is the lines\' own money, to the cent', () => {
+    // The lines it COUNTED. A line struck off the bid is drawn on the sheet and
+    // is out of every total — the panel's, the class subtotals', the recap's —
+    // so summing every line that is drawn and holding the panel to it asks the
+    // panel to count something it is right to leave out. The row used to do
+    // exactly that and read $3,300.00 over, which was the struck alternate.
     const inPanel = cents(panelParapet && panelParapet.cost);
     assert.ok(inPanel !== null, `the panel's cost line reads "${panelParapet && panelParapet.cost}"`);
-    const onSheet = (parapetRowBefore?.money ?? [])
+    const drawn = parapetRowBefore?.money ?? [];
+    const onSheet = drawn
+      .filter((m) => !m.off)
       .map((m) => cents(m.extended))
       .filter((c) => c !== null)
       .reduce((sum, c) => sum + c, 0);
     assert.equal(inPanel, onSheet,
-      `the panel says ${inPanel} cents and its own lines add to ${onSheet}`);
+      `the panel says ${inPanel} cents and the lines it counts add to ${onSheet}`);
+  });
+  check('and a struck line is on that sheet, with its reason, and out of that figure', () => {
+    // The other half of the row above, and the reason it can be trusted: the
+    // difference between the two sums is exactly the lines somebody took off,
+    // and each of them says on the sheet why it is off.
+    const drawn = parapetRowBefore?.money ?? [];
+    const struck = drawn.filter((m) => m.off);
+    assert.ok(struck.length > 0, 'no line on this run is struck, so nothing proves one would be left out');
+    for (const m of struck) {
+      assert.ok(m.why.length > 0, `"${m.item}" is struck with no reason drawn beside it`);
+      assert.ok(cents(m.extended) !== null,
+        `"${m.item}" is struck and shows no money — what it would have cost is the question asked of it`);
+    }
+    const inPanel = cents(panelParapet && panelParapet.cost);
+    const everything = drawn
+      .map((m) => cents(m.extended))
+      .filter((c) => c !== null)
+      .reduce((sum, c) => sum + c, 0);
+    const takenOff = struck
+      .map((m) => cents(m.extended))
+      .filter((c) => c !== null)
+      .reduce((sum, c) => sum + c, 0);
+    assert.equal(everything - inPanel, takenOff,
+      `every line drawn adds to ${everything}, the panel says ${inPanel},`
+      + ` and the struck lines come to ${takenOff}`);
   });
 
   // ── (e) none of that was an edit ────────────────────────────────────────

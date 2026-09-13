@@ -128,6 +128,21 @@ function openLine(id: string | null): void {
   openLineId = id;
   widthChanged(id !== null);
   redraw();
+  if (id === null) return;
+  // The chain is taller than the panel on a line with a rate on it, so the two
+  // buttons at the end of it can fall below the fold — and in the torn-off
+  // window the one that takes a line off was landing under the footnote that
+  // counts the lines below, where nothing can click it. A button that cannot be
+  // reached is a button that does not exist.
+  //
+  // The smallest scroll that brings them in, after the panel has been rebuilt
+  // and re-measured. Nothing moves at all when the whole chain already fits, and
+  // this happens on OPENING only — a redraw while somebody is typing a rate into
+  // the chain must not pull the view out from under them.
+  requestAnimationFrame(() => {
+    document.querySelector('.line-chain .chain-actions')
+      ?.scrollIntoView({ block: 'nearest' });
+  });
 }
 
 // ── the lines ──────────────────────────────────────────────────────────────
@@ -334,6 +349,14 @@ function compactLine(
   const title = document.createElement('span');
   title.className = 'line-item';
   title.textContent = item.description || 'Untitled line';
+  what.append(title);
+  // The second row, and EVERY line has one, which is what makes them all the
+  // same height. It was inside the item's own cell, sharing about 126 px with
+  // the description's column — and once a labor line put its crew and its rate
+  // there too, the condition's name was ellipsised down to "Main Roof F…". It
+  // spans the whole line now, where there is room for the run it came off, the
+  // formula, the crew, the name on a quote and why the line is struck, with the
+  // hours at the right end under the money they produced.
   const basis = document.createElement('span');
   basis.className = 'line-basis';
   const from = document.createElement('span');
@@ -365,7 +388,17 @@ function compactLine(
     if (result.quotedBy === null) quoted.classList.add('none');
     basis.append(quoted);
   }
-  what.append(title, basis);
+  // Why it is off, in the words you would say across the table. On this row and
+  // not on one of its own: a struck line that stood a third of a line taller
+  // than everything around it read as a different kind of thing, and it is not
+  // — it is a line on this estimate that somebody decided about.
+  if (result.off !== null) {
+    const why = document.createElement('span');
+    why.className = 'line-off';
+    why.textContent = result.off;
+    why.title = `Struck: ${result.off}. It is on the sheet and out of every total.`;
+    basis.append(why);
+  }
   // Opening a line selects it too, so the geometry it came off lights up in
   // whatever view the surface is showing.
   what.addEventListener('click', () => {
@@ -403,13 +436,10 @@ function compactLine(
     unit.append(mark);
   }
 
-  // The money, and the hours under it. Three figures on a labor line, the way a
-  // report prints them: how much of it, how long it takes, what it costs. The
-  // panel is 364 wide and there is no room for a fifth column, so the hours sit
-  // under the money they produced rather than beside them.
-  const paid = document.createElement('span');
-  paid.className = 'line-paid';
-
+  // Three figures on a labor line, the way a report prints them: how much of
+  // it, how long it takes, what it costs. The panel is 364 wide and there is no
+  // room for a fifth column, so the hours sit at the right end of the row below,
+  // under the money they produced.
   const cost = document.createElement('span');
   cost.className = 'line-money num';
   if (result.extended === null) {
@@ -421,7 +451,6 @@ function compactLine(
   } else {
     cost.textContent = money(result.extended);
   }
-  paid.append(cost);
 
   if (result.hours !== null) {
     const hours = document.createElement('span');
@@ -432,19 +461,10 @@ function compactLine(
     mark.textContent = '◈';
     mark.title = 'Worked out from the rate and the crew on this line.';
     hours.append(mark);
-    paid.append(hours);
+    basis.append(hours);
   }
 
-  row.append(what, qty, unit, paid);
-  // Why it is off, spanning the row, in the words you would say across the
-  // table. A struck line with no reason on it is a line somebody will quietly
-  // add back.
-  if (result.off !== null) {
-    const why = document.createElement('span');
-    why.className = 'line-off';
-    why.textContent = result.off;
-    row.append(why);
-  }
+  row.append(what, qty, unit, cost, basis);
   // A note about the line goes under it, spanning the row: the formula would
   // not run, or the unit does not follow from it.
   if (result.formulaError) {

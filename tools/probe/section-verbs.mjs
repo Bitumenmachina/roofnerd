@@ -239,11 +239,17 @@ const linesNow = (session) => session.execute(function () {
       const el = r.querySelector(sel);
       return el ? (el.textContent || '').trim() : null;
     };
+    const cost = r.querySelector('.line-money');
     return {
       description: text('.line-item'),
       condition: text('.line-basis > span'),
       quantity: text('.line-qty'),
       derived: !!r.querySelector('.line-unit .derived'),
+      money: text('.line-money'),
+      // Why a line shows a dash instead of money — the sentence the program
+      // puts in the tooltip, which is where a pending line says what it is
+      // waiting for.
+      why: cost ? cost.getAttribute('title') : null,
     };
   }));
 });
@@ -457,9 +463,25 @@ try {
   await showTab(session, 'Estimate');
   await wait(700);
   const before = JSON.parse(await linesNow(session));
+  /**
+   * The letter a tapered line is for, off the words on it.
+   *
+   * By the DESCRIPTION and not by an id: the sheet's lettered lines are
+   * generated from the letters the solve actually bought, one per letter, so
+   * there is no `iso-x` on the job to look for any more — and looking for one
+   * is how this row came to say "there were no lettered panel lines to begin
+   * with" about a sheet that had four of them on it.
+   */
+  const letterOf = (line) => {
+    const m = /^tapered\s+([a-z]+[0-9]*)\b/i.exec((line.description || '').trim());
+    return m === null ? null : m[1].toUpperCase();
+  };
+  const lettersOn = (lines) =>
+    [...new Set(lines.map(letterOf).filter((l) => l !== null))].sort();
   const lettered = (lines) => lines
-    .filter((l) => /tapered [a-z]+ ·/i.test(l.description || ''))
+    .filter((l) => letterOf(l) !== null)
     .map((l) => `${l.description}=${l.quantity}`).sort().join(' | ');
+  const lettersBefore = lettersOn(before);
   const letteredBefore = lettered(before);
   const modelBefore = JSON.parse(await modelNow(session));
 
@@ -522,23 +544,50 @@ try {
   await wait(900);
   const linesAfterSlope = JSON.parse(await linesNow(session));
   const letteredAfter = lettered(linesAfterSlope);
+  const lettersAfter = lettersOn(linesAfterSlope);
   check('the bill re-solves: the lettered panels are not the ones it was buying', () => {
     assert.ok(letteredBefore.length > 0, 'there were no lettered panel lines to begin with');
+    assert.ok(lettersAfter.length > 0,
+      `the sheet buys no lettered panel at all after the slope moved (it bought ${lettersBefore.join(', ')})`);
     assert.notEqual(letteredAfter, letteredBefore,
       'halving the slope bought exactly the same boards, which cannot be right');
   });
+  check('and the letters themselves changed, because the chart did', () => {
+    // A quarter in twelve buys X, Y, Z and ZZ; an eighth buys a different
+    // lettered series entirely — the bulletin prints two unrelated charts, not
+    // one chart with moving edges. So this is not the same four panels at new
+    // quantities: it is a different set of panels.
+    assert.notDeepEqual(lettersAfter, lettersBefore,
+      `the sheet bought ${lettersBefore.join(', ')} before and ${lettersAfter.join(', ')} after,`
+      + ' which is the same chart');
+    const shared = lettersAfter.filter((l) => lettersBefore.includes(l));
+    assert.equal(shared.length, 0,
+      `${shared.join(', ')} is on the sheet at both slopes, and the two charts share no designation`);
+  });
+  check('and every panel the new chart names is priced, not pending', () => {
+    // What C6's fix round could not make true and this is the proof of: the
+    // lines are generated from the letters the solve bought and priced from the
+    // job's own price set, which carries every lettered panel in the
+    // manufacturer's document. Four letters typed into a job file priced
+    // nothing at all here.
+    for (const line of linesAfterSlope) {
+      if (letterOf(line) === null) continue;
+      assert.ok(line.money && !/^—/.test(line.money),
+        `"${line.description}" shows ${line.money || 'nothing'}: ${line.why ?? 'no reason given'}`);
+    }
+  });
 
-  // The letters just changed families — a quarter in twelve buys X, Y, Z and
-  // ZZ, and an eighth buys a different lettered series entirely (the bulletin prints
-  // two unrelated charts, not one chart with moving edges) — so the four lines
-  // this job wrote for the OLD letters are honestly pending now: the panel
-  // they name is not one this roof buys any more, and `formula.ts` says so on
-  // the line. That is a fact about the SKUs an estimator typed, not a defect
-  // in the solve. What must not go pending with them is everything the solve
-  // itself carries regardless of which letters govern: the fill, the board
-  // waste, the fastener and adhesive counts by zone, the plates — the names
-  // `c-field`'s own items ask for that are not `TAPER_<letter>_SF`, read off
-  // the job rather than typed here.
+  // The letters just changed families — a quarter in twelve buys X, Y, Z and ZZ,
+  // and an eighth buys a different lettered series entirely (the bulletin prints
+  // two unrelated charts, not one chart with moving edges). When this was
+  // written the four lines this job carried were typed for the OLD letters, so
+  // they went honestly pending here and the rows above could only check that
+  // everything else survived. The job carries ONE line for the package now and
+  // the sheet draws one per letter the solve bought, so the rows above hold the
+  // letters themselves; this one still holds what the solve carries regardless
+  // of which letters govern — the fill, the board waste, the fastener and
+  // adhesive counts by zone, the plates — read off `c-field`'s own items rather
+  // than typed here.
   const aggregateDescriptions = new Set(
     (field.items ?? [])
       .filter((it) => typeof it.formula === 'string' && /^[A-Z][A-Z0-9_]*_(SF|EA|GAL)\b/.test(it.formula)

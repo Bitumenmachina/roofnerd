@@ -71,6 +71,21 @@ crew on this roof is the crew he would carry. The General Conditions group, and 
 belongs in it or stays on the field. The struck metal line: whether an alternate kept on the sheet
 reads right, or whether he wants it out of the file.
 
+**Fix round, on the shipped program.** `section-labor` came back 18/18 and four other rows went
+red. Two were the product: every line is one height again — the run it came off, the formula, the
+crew and rate, the name on a quote and why a line is struck now share ONE full-width second row on
+every line, with the hours at its right end under the money, instead of being squeezed into the
+item's own 126 px column (which ellipsised "Main Roof Field" to "Main Roof F…") and a struck line
+carrying a third row of its own. And opening a line now scrolls the two buttons at the end of its
+chain into view: in the torn-off window they were landing under the footnote that counts the lines
+below, where nothing could click them. Two were checks reading the old shape:
+`section6-model`'s panel figure is held against the lines the panel COUNTS (a struck line is
+rightly out of it, and there is a new row proving the difference is exactly what was struck), and
+`section-verbs` finds the lettered lines by the words on them rather than by the fixed ids that no
+longer exist — and now asserts that moving the slope changes the letters themselves and that every
+panel the new chart names is priced, which is what D162 was built for and what C6's fix round could
+not make true.
+
 **Checks.** `pnpm -r build && pnpm test && pnpm gates` green at every commit through the hook —
 engine 191, app 41, shell 14, core 64 plus its five suites, three gates PASS (rebased onto C7).
 `tools/probe/section-labor.mjs` was written first and red, and **has not been run**: no binary in
