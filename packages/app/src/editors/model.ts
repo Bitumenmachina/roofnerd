@@ -1558,11 +1558,10 @@ function legendFor(r: Reading): HTMLElement[] {
       ? 'dashed: the ridge, halfway between two drains'
       : `dashed: the ${r.ridges} ridges, halfway between two drains`);
   }
-  if (r.regions > 1) {
-    row(r.ramp, r.regions === 2
-      ? 'the field falls to 2 drains, one region each'
-      : `the field falls to ${r.regions} drains, one region each`);
-  }
+  // The count of them, in the words a roofer would use for it. "Region" is the
+  // core's word for the ground one drain takes and it is not a word on a roof, so
+  // the key says what happened to the field instead of naming the type.
+  if (r.regions > 1) row(r.ramp, `the field is split between its ${r.regions} drains`);
   if (r.drains > 0) row(WATER, r.drains === 1 ? '1 drain, on its sump' : `${r.drains} drains, each on its sump`);
   if (r.copings > 0) row(GALVANIZED, r.copings === 1 ? 'coping on the wall' : 'coping on the walls');
   if (r.curbs > 0) row(GALVANIZED, r.curbs === 1 ? '1 curb' : `${r.curbs} curbs`);
