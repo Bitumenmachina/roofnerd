@@ -97,10 +97,13 @@ pub fn run_length(traced: &[Point]) -> f64 {
 /// foot. Thickness at p is then `start + rise_at(p)`, clipped by the cap — which
 /// is analytic, so a section cut or a readout is exact rather than sampled.
 ///
-/// Nothing produces one yet: today's cone is radial (C0 reproduces it as it is)
-/// and the half-plane partition that fills these in is C1. It is written here
-/// now because the payload's shape is what the front end is being wired to, and
-/// a shape that changes after the wiring is the expensive kind of change.
+/// Four of these come off every drainage region from C1 on: the drain is the
+/// origin of all four, the directions are the field's own axes and their
+/// opposites, and the thickness is the greatest rise of the four. That is the
+/// four-way pattern NRCA generally prefers to an interior drain (Membrane Roof
+/// Systems 2019, p.165, Fig. 4-11), and it is why the valleys come out at 45
+/// degrees without anybody drawing one: two planes tie exactly where the two
+/// runs are equal.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Plane {
@@ -117,6 +120,351 @@ impl Plane {
         ((p.x - self.origin.x) * self.direction.x + (p.y - self.origin.y) * self.direction.y)
             * self.slope
     }
+}
+
+// ── polygons, half planes and creases ──────────────────────────────────────
+// From C1 on, the field is laid out rather than sampled, and laying it out is
+// polygon work: a drainage region is the field's ring cut by a half plane per
+// other drain, a facet is that region cut by the wedge one plane governs, and
+// the plateau where the cap binds is the region with a square taken out of it.
+//
+// The boolean work is `geo`'s (D147). Lines are cut here instead, against the
+// ring and against the half planes, because the two lines C1 has to cut lie ON
+// boundaries — a ridge IS the edge between two regions — and a polygon clipper
+// asked about a line lying along its own edge answers differently from one run
+// to the next. Cutting a segment by an interval of its own parameter is exact
+// and says the same thing every time.
+
+use geo::geometry::{Coord, LineString, MultiPolygon, Polygon};
+use geo::{Area, BooleanOps};
+
+/// A polygon in feet: an outline and whatever holes it has.
+///
+/// Holes are not decoration. Take a square out of the middle of a region — which
+/// is what the cap does to a field whose drain sits well inside it — and what is
+/// left has a hole in it. Answering with the outline alone would report the whole
+/// region as no fall, and the no-fall figure is the one an estimator walks.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shape {
+    pub ring: Vec<Point>,
+    #[serde(default)]
+    pub holes: Vec<Vec<Point>>,
+}
+
+impl Shape {
+    pub fn of(ring: Vec<Point>) -> Self {
+        Self { ring, holes: Vec::new() }
+    }
+
+    /// Square feet, holes taken off.
+    pub fn square_feet(&self) -> f64 {
+        polygon_of(self).unsigned_area()
+    }
+}
+
+/// Half of the plan, kept on one side of a line: every p with
+/// `(p − at) · normal <= 0`. The normal points at the half being thrown away.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct HalfPlane {
+    pub at: Point,
+    pub normal: Point,
+}
+
+impl HalfPlane {
+    /// How far p is outside. Negative is kept, zero is the line itself.
+    pub fn beyond(&self, p: Point) -> f64 {
+        (p.x - self.at.x) * self.normal.x + (p.y - self.at.y) * self.normal.y
+    }
+
+    pub fn holds(&self, p: Point) -> bool {
+        self.beyond(p) <= 0.0
+    }
+}
+
+fn coords_of(ring: &[Point]) -> LineString<f64> {
+    LineString::from(ring.iter().map(|p| Coord { x: p.x, y: p.y }).collect::<Vec<_>>())
+}
+
+fn points_of(ring: &LineString<f64>) -> Vec<Point> {
+    let mut out: Vec<Point> = ring.coords().map(|c| Point::new(c.x, c.y)).collect();
+    // `geo` closes a ring by repeating its first point; a ring in this program is
+    // open, the way a trace arrives from the sheet.
+    if out.len() > 1 && out[0] == out[out.len() - 1] {
+        out.pop();
+    }
+    out
+}
+
+pub fn polygon_of(shape: &Shape) -> Polygon<f64> {
+    Polygon::new(coords_of(&shape.ring), shape.holes.iter().map(|h| coords_of(h)).collect())
+}
+
+fn shapes_of(polygons: &MultiPolygon<f64>) -> Vec<Shape> {
+    polygons
+        .iter()
+        .map(|p| Shape {
+            ring: points_of(p.exterior()),
+            holes: p.interiors().iter().map(points_of).collect(),
+        })
+        .filter(|s| s.ring.len() >= 3)
+        .collect()
+}
+
+/// The half plane as a rectangle big enough to cover everything in play.
+///
+/// `reach` comes off the ring being cut rather than being a constant: a roof is
+/// a hundred feet across and a site plan is a thousand, and a rectangle that
+/// covers one does not cover the other.
+fn half_plane_of(half: HalfPlane, reach: f64) -> Polygon<f64> {
+    let n = half.normal;
+    let along = Point::new(-n.y, n.x);
+    let corner = |s: f64, d: f64| {
+        Point::new(half.at.x + along.x * s + n.x * d, half.at.y + along.y * s + n.y * d)
+    };
+    Polygon::new(
+        coords_of(&[corner(-reach, 0.0), corner(reach, 0.0), corner(reach, -reach), corner(-reach, -reach)]),
+        vec![],
+    )
+}
+
+/// The square the cap draws round a drain, in the field's own axes.
+///
+/// Not a circle: the thickness is the greater of the two axis runs, so the line
+/// the cap binds along is a square standing square to the boards, not a ring at
+/// a radius. Where the fall runs out is a fact about the layout.
+pub fn square_of(centre: Point, u: Point, v: Point, half: f64) -> Shape {
+    let corner = |a: f64, b: f64| {
+        Point::new(centre.x + u.x * a + v.x * b, centre.y + u.y * a + v.y * b)
+    };
+    Shape::of(vec![
+        corner(-half, -half),
+        corner(half, -half),
+        corner(half, half),
+        corner(-half, half),
+    ])
+}
+
+/// The wedge one plane governs: where its own run is the greater of the two.
+pub fn wedge_of(centre: Point, along: Point, across: Point) -> [HalfPlane; 2] {
+    // `along · (p − drain) >= across · (p − drain)` and the same against
+    // `−across`, which is the 45 degree pair NRCA's valleys fall on.
+    [
+        HalfPlane { at: centre, normal: Point::new(across.x - along.x, across.y - along.y) },
+        HalfPlane { at: centre, normal: Point::new(-across.x - along.x, -across.y - along.y) },
+    ]
+}
+
+/// Cut shapes by half planes, one after another.
+pub fn cut_by(shapes: &[Shape], halves: &[HalfPlane], reach: f64) -> Vec<Shape> {
+    let mut now: MultiPolygon<f64> = MultiPolygon::new(shapes.iter().map(polygon_of).collect());
+    for half in halves {
+        if now.0.is_empty() {
+            return Vec::new();
+        }
+        now = now.intersection(&half_plane_of(*half, reach));
+    }
+    shapes_of(&now)
+}
+
+/// What is left of one shape when another is taken out of it.
+pub fn take_out(shape: &Shape, out: &Shape) -> Vec<Shape> {
+    shapes_of(&polygon_of(shape).difference(&polygon_of(out)))
+}
+
+/// How far apart the two furthest corners of a ring are — the size of the thing
+/// being cut, for a rectangle that has to cover it.
+pub fn reach_of(ring: &[Point]) -> f64 {
+    match bounds(ring) {
+        None => 0.0,
+        Some(b) => (b.max_x - b.min_x).hypot(b.max_y - b.min_y),
+    }
+}
+
+/// The longest side of a ring, and the direction it runs in.
+///
+/// It travels whole rather than as a bare direction because the layout has to be
+/// able to say WHICH wall the boards were laid to. An estimator reading a tapered
+/// drawing asks that first, and a drawing that cannot answer is one more picture.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Edge {
+    pub a: Point,
+    pub b: Point,
+    /// A unit vector along a→b, turned so the same ring always gives the same one.
+    pub along: Point,
+    pub run: f64,
+}
+
+/// The direction a ring mostly runs in: its longest side.
+///
+/// The boards are laid to this. NRCA lays a four-way pattern out on the roof's
+/// own edges (p.165, Fig. 4-11) and cuts the valley boards corner to corner at
+/// 45 degrees from one edge (p.166), so the pattern's axes are the field's
+/// edges, not the compass. The longest side is the one an estimator would set a
+/// string line to, and the first of equal-longest wins so the answer does not
+/// depend on which corner the trace started at.
+///
+/// The direction is returned pointing right, or up where it is vertical, so the
+/// same ring gives the same axis whichever way round it was traced.
+pub fn dominant_edge(ring: &[Point]) -> Option<Edge> {
+    if ring.len() < 2 {
+        return None;
+    }
+    let mut best: Option<Edge> = None;
+    for i in 0..ring.len() {
+        let a = ring[i];
+        let b = ring[(i + 1) % ring.len()];
+        let run = (b.x - a.x).hypot(b.y - a.y);
+        if run < 1e-9 {
+            continue;
+        }
+        if best.map(|edge| run > edge.run).unwrap_or(true) {
+            best = Some(Edge {
+                a,
+                b,
+                along: Point::new((b.x - a.x) / run, (b.y - a.y) / run),
+                run,
+            });
+        }
+    }
+    let mut edge = best?;
+    if edge.along.x < -1e-12 || (edge.along.x.abs() <= 1e-12 && edge.along.y < 0.0) {
+        edge.along = Point::new(-edge.along.x, -edge.along.y);
+    }
+    Some(edge)
+}
+
+/// Square to a direction, turned the way plan y turns.
+pub fn square_to(u: Point) -> Point {
+    Point::new(-u.y, u.x)
+}
+
+/// The pieces of the segment a→b that lie inside a ring.
+///
+/// Every crossing of every edge, sorted, and each span kept or dropped on
+/// whether its own middle is inside. That handles a concave ring — the demo roof
+/// has a bump in its north side — without asking the ring to be convex, and it
+/// never has to decide what "on the edge" means, because a midpoint is not on an
+/// edge unless the segment lies along it.
+pub fn inside_ring(a: Point, b: Point, ring: &[Point]) -> Vec<(Point, Point)> {
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    if dx.hypot(dy) < 1e-12 || ring.len() < 3 {
+        return Vec::new();
+    }
+    let at = |t: f64| Point::new(a.x + dx * t, a.y + dy * t);
+
+    let mut cuts = vec![0.0f64, 1.0];
+    for i in 0..ring.len() {
+        let c = ring[i];
+        let d = ring[(i + 1) % ring.len()];
+        let ex = d.x - c.x;
+        let ey = d.y - c.y;
+        let denominator = dx * ey - dy * ex;
+        if denominator.abs() < 1e-12 {
+            continue;
+        }
+        let t = ((c.x - a.x) * ey - (c.y - a.y) * ex) / denominator;
+        let s = ((c.x - a.x) * dy - (c.y - a.y) * dx) / denominator;
+        if t > 0.0 && t < 1.0 && s >= 0.0 && s <= 1.0 {
+            cuts.push(t);
+        }
+    }
+    cuts.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+
+    let mut out: Vec<(f64, f64)> = Vec::new();
+    for pair in cuts.windows(2) {
+        let (from, to) = (pair[0], pair[1]);
+        if to - from < 1e-12 {
+            continue;
+        }
+        if !inside(at((from + to) / 2.0), ring) {
+            continue;
+        }
+        match out.last_mut() {
+            Some(last) if (last.1 - from).abs() < 1e-12 => last.1 = to,
+            _ => out.push((from, to)),
+        }
+    }
+    out.into_iter().map(|(from, to)| (at(from), at(to))).collect()
+}
+
+/// What is left of a segment after every half plane has had its say, or nothing.
+pub fn within(a: Point, b: Point, halves: &[HalfPlane]) -> Option<(Point, Point)> {
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    let mut from = 0.0f64;
+    let mut to = 1.0f64;
+    for half in halves {
+        let at_a = half.beyond(a);
+        let step = dx * half.normal.x + dy * half.normal.y;
+        if step.abs() < 1e-12 {
+            if at_a > 1e-12 {
+                return None;
+            }
+            continue;
+        }
+        // `at_a + t · step <= 0`
+        let t = -at_a / step;
+        if step > 0.0 {
+            to = to.min(t);
+        } else {
+            from = from.max(t);
+        }
+    }
+    if to - from < 1e-12 {
+        return None;
+    }
+    Some((
+        Point::new(a.x + dx * from, a.y + dy * from),
+        Point::new(a.x + dx * to, a.y + dy * to),
+    ))
+}
+
+/// Which side of a→b c falls on, by sign. Zero is collinear.
+fn side(a: Point, b: Point, c: Point) -> f64 {
+    ((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)).signum()
+}
+
+/// Do two segments properly cross — each straddling the other's line?
+/// `segmentsCross` in `packages/engine/src/geometry.ts`.
+fn segments_cross(a1: Point, a2: Point, b1: Point, b2: Point) -> bool {
+    let d1 = side(a1, a2, b1);
+    let d2 = side(a1, a2, b2);
+    let d3 = side(b1, b2, a1);
+    let d4 = side(b1, b2, a2);
+    d1 != 0.0 && d2 != 0.0 && d3 != 0.0 && d4 != 0.0 && d1 != d2 && d3 != d4
+}
+
+/// Does this ring cross itself?
+///
+/// `selfIntersects` in `packages/engine/src/geometry.ts:222`, ported for the same
+/// reason it was written there: the area of a figure-eight comes out a number and
+/// a triangulator hands back a mesh that renders. C0 left a crossing ring solved
+/// and undrawn, which is wasted work in the core and a fact about the job that
+/// nothing said out loud; from C1 the solve refuses it and says why.
+pub fn self_intersects(ring: &[Point]) -> bool {
+    if ring.len() < 4 {
+        return false;
+    }
+    let closed = ring[0] == ring[ring.len() - 1];
+    let ring = if closed { &ring[..ring.len() - 1] } else { ring };
+    let n = ring.len();
+    if n < 4 {
+        return false;
+    }
+    for i in 0..n {
+        for j in (i + 1)..n {
+            if j == (i + 1) % n || (j + 1) % n == i {
+                continue;
+            }
+            if segments_cross(ring[i], ring[(i + 1) % n], ring[j], ring[(j + 1) % n]) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 #[cfg(test)]

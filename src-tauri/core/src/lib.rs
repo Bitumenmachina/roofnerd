@@ -23,19 +23,23 @@
 // No window, no file system, no network: `cargo test -p roofnerd-core` runs the
 // whole thing with nothing on screen.
 //
-// C0 is the seam and nothing more. `taper.rs` reproduces the cone the drawing
-// draws TODAY, to the float, so that the change the estimator can see is none at
-// all. The layout that replaces the cone is C1, and it lands behind this seam.
+// C0 was the seam and nothing more: `taper.rs` reproduced the cone the drawing
+// drew then, to the float, so that the change an estimator could see was none at
+// all. C1 is the roof. The field is laid out the trade's way — drainage regions
+// off the perpendicular bisectors between the drains, four planes to a region,
+// valleys where two of them tie at 45 degrees, the plateau where the cap binds —
+// and every window moved with it because none of them holds an opinion about the
+// roof any more (D149).
 
 pub mod geom;
 pub mod model;
 pub mod scope;
 pub mod taper;
 
-pub use geom::{bounds, inside, Bounds, Plane, Point};
+pub use geom::{bounds, inside, Bounds, Edge, HalfPlane, Plane, Point, Shape};
 pub use model::{
-    CapReason, Condition, Cricket, Document, FlowArrow, Grid, NotSolvedYet, Page, Solved,
-    SolvedTaper, TaperField, Trace, Valley, ValleySample,
+    CapReason, Condition, Crease, Cricket, Document, Facet, FlowArrow, NotSolvedYet, Page, Refused,
+    RidgeSegment, Solved, SolvedTaper, TaperField, TaperRegion, Trace,
 };
 pub use scope::Scopes;
 
@@ -75,36 +79,44 @@ mod tests {
 
     /// ── THE PIN ──────────────────────────────────────────────────────────
     ///
-    /// Three points on the demo roof, and the field's own aggregates, held
-    /// against what `packages/app/src/editors/model.ts` produces today. Same
-    /// inputs, same outputs, to the float — which is the whole claim C0 makes.
+    /// The demo roof, laid out. Four places on it and the field's own aggregates,
+    /// each one worked out from what the job says rather than from what this
+    /// program printed. `packages/engine/test/takeoff.test.mjs` holds the same
+    /// four places from the other side, so the two copies of the one expression
+    /// that reads a plane cannot drift apart.
     ///
-    /// How the right-hand sides were got, so the next seat can get them again
-    /// rather than trust them. Every expression in `taperSurface`, `nearest`,
-    /// `capInches` and `inside` was run on `jobs/demo-job` under node and
-    /// printed at 21 significant figures. The job states: three drains at
-    /// (36, 98), (74, 98) and (112, 98) feet; the field T = 1/2 in, TAPER =
-    /// 1/4 in per foot, BOARDS = 3; a parapet 3 ft 6 in high and a curb 2 ft
-    /// high, so the lowest thing the roof flashes against is 24 in. Then:
+    /// What the job states, in feet: a field 14…122 by 42…134 with a bump in its
+    /// north side; three drains in a row on y = 98, at x 36, 74 and 112; T = 1/2
+    /// in at the drain, TAPER = 1/4 in per foot, BOARDS = 3; a parapet 3 ft 6 in
+    /// and a curb 2 ft, so the lowest thing the roof flashes against is 24 in.
+    /// Then, by hand:
     ///
     ///   cap        min(24 − 8, 0.5 + 3 × 4.5) = min(16, 14) = 14 in, and the
     ///              boards are what ran out first, not the wall
-    ///   (36, 98)   the first drain itself: run 0, so 0.5 in
-    ///   (55, 98)   midway between drains one and two: run 19 ft exactly, so
-    ///              0.5 + 19 × 0.25 = 5.25 in
-    ///   (16, 132)  two feet inboard of the far south-west corner: run
-    ///              sqrt(20² + 34²) = 39.4461658466320415073 ft, so
-    ///              10.3615414616580103768 in — an irrational run, which is
-    ///              the one of the three that can catch a difference in how
-    ///              the distance itself is worked out
-    ///   thin/thick 0.5 in at a drain; 14 in wherever the cone has run past
-    ///              its ceiling — the 14 in the Northgate legend shows, and
-    ///              the reason C1 exists
-    ///   no fall    34 cells of 2 ft × 2 ft = 136 SF, up in the north bump
-    ///              where the cone reaches 56 ft from the nearest drain
+    ///   the axes   the longest side is the south wall, 108 ft of it, so the
+    ///              boards run east and west and the layout is square to it
+    ///   the ridges the bisectors of the three drains: x = 55 between the first
+    ///              two and x = 93 between the last two. The pair either end of
+    ///              the row do not touch, so there is no third ridge
+    ///   (36, 98)   the first drain itself: no run, so 1/2 in exactly
+    ///   (46, 108)  ten feet along and ten across from that drain — a valley, by
+    ///              construction, because the two runs are equal. 0.5 + 10 ×
+    ///              0.25 = 3 in from either of the two planes that tie there
+    ///   (16, 132)  two feet inboard of the far south-west corner: 20 ft along
+    ///              and 34 across, so the greater run is 34 and the roof is
+    ///              0.5 + 34 × 0.25 = 9 in. THE CONE MADE IT 10.3615… in, off
+    ///              the diagonal — this one number is the whole of C1 on the
+    ///              screen
+    ///   (52, 43)   up in the bump, 55 ft across from the drain: 0.5 + 55 ×
+    ///              0.25 = 14.25 in, which is past the cap, so the roof is 14 in
+    ///              and flat, and the water stops there
+    ///   the high   56 ft across from a drain at the bump's own north wall, which
+    ///              wants 14 1/2 in and gets the cap's 14 in. Every region
+    ///              reaches it, because the three drains stand in a row
     #[test]
-    fn the_cone_is_the_cone_the_drawing_draws_today() {
+    fn the_field_is_laid_out_the_way_the_book_lays_it_out() {
         let taper = solved();
+        assert!(taper.refused.is_empty(), "{:?}", taper.refused);
         assert_eq!(taper.drains.len(), 3, "three drains");
         let field = &taper.fields[0];
         assert_eq!(field.condition_id, "c-field");
@@ -113,68 +125,242 @@ mod tests {
         assert_eq!(field.cap_inches, Some(14.0));
         assert_eq!(field.cap_reason, Some(CapReason::Boards));
 
-        let read = |x: f64, y: f64| {
-            taper::read_at(
-                Point::new(x, y),
-                &field.apexes,
-                field.start_inches,
-                field.slope_inches_per_foot,
-                field.cap_inches,
-            )
-        };
-        assert_eq!(read(36.0, 98.0).thickness_inches, 0.5);
-        assert_eq!(read(55.0, 98.0).thickness_inches, 5.25);
-        assert_eq!(read(16.0, 132.0).run_feet, 39.4461658466320415073);
-        assert_eq!(read(16.0, 132.0).thickness_inches, 10.3615414616580103768);
+        // One region per drain, each round its own drain, in the order the job
+        // lists them.
+        assert_eq!(field.regions.len(), taper.drains.len());
+        for (region, drain) in field.regions.iter().zip(&taper.drains) {
+            assert_eq!(region.drain, *drain);
+        }
 
-        assert_eq!((field.grid.cols, field.grid.rows), (55, 47));
-        assert_eq!((field.grid.step_x, field.grid.step_y), (2.0, 2.0));
+        // The axes are the field's longest side: the south wall.
+        assert_eq!(field.axis_along, Point::new(1.0, -0.0));
+        assert_eq!(field.axis_across, Point::new(0.0, 1.0));
+        assert_eq!(field.axis_edge, [Point::new(122.0, 134.0), Point::new(14.0, 134.0)]);
+
+        let read = |x: f64, y: f64| {
+            taper::read_field_at(field, Point::new(x, y)).expect("the place is on the field")
+        };
+        // At the drain, on a plane, on a valley, and out on the plateau.
+        assert_eq!(read(36.0, 98.0).thickness_inches, 0.5);
+        assert_eq!(read(36.0, 98.0).run_feet, 0.0);
+        assert_eq!(read(46.0, 108.0).thickness_inches, 3.0);
+        assert_eq!(read(16.0, 132.0).run_feet, 34.0);
+        assert_eq!(read(16.0, 132.0).thickness_inches, 9.0);
+        assert_eq!(read(52.0, 43.0).thickness_inches, 14.0);
+        assert!(read(52.0, 43.0).flat, "the bump is past the cap and the water stays");
+        assert!(!read(16.0, 132.0).flat);
+
         assert_eq!(field.thin_inches, Some(0.5));
         assert_eq!(field.thick_inches, Some(14.0));
-        assert_eq!(field.no_fall_square_feet, 136.0);
+        assert_eq!(field.square_feet, 9600.0);
     }
 
-    /// The arrows are part of the picture, so they are part of the pin: 139 of
-    /// them, and the first one where the TypeScript puts it.
+    /// Every valley is at 45 degrees to the boards, and nothing else can happen.
     ///
-    /// The angle is the one number in the whole port that is not bit-for-bit
-    /// the TypeScript's. `atan2` is a library function, and this machine's and
-    /// V8's disagree in the last bit: 1.9010936816241502 against
-    /// 1.9010936816241504, which is 2 parts in 10^16 of a radian. Everything
-    /// that is arithmetic — the runs, the thicknesses, the areas, the cricket's
-    /// vertices — matches exactly, and that is where a difference would mean
-    /// something. This one turns a cone that is a tenth of a foot long by two
-    /// ten-thousandths of a nanometre, so it is held to 1e-15 rather than
-    /// written down as equal when it is not.
+    /// NRCA p.166: "all valley centrelines should be 45 degrees from the direction
+    /// of slope; that is, the valley centrelines are 90 degrees apart." Here that
+    /// is not a rule applied but a consequence: a valley IS where two planes at
+    /// right angles have risen equally, and equal runs in two square directions is
+    /// the diagonal between them. So this reads the solved creases back and holds
+    /// each one to equal runs along both axes — four to a region, out of the drain.
     #[test]
-    fn the_water_leaves_the_way_it_left_before() {
+    fn every_valley_is_at_45_degrees_because_that_is_what_a_tie_is() {
+        let taper = solved();
+        let field = &taper.fields[0];
+        let mut counted = 0;
+        for region in &field.regions {
+            assert_eq!(region.valleys.len(), 4, "four ties to a drain");
+            for valley in &region.valleys {
+                assert_eq!(valley.a, region.drain, "a valley starts at the drain");
+                let dx = valley.b.x - valley.a.x;
+                let dy = valley.b.y - valley.a.y;
+                let along = dx * field.axis_along.x + dy * field.axis_along.y;
+                let across = dx * field.axis_across.x + dy * field.axis_across.y;
+                assert!(
+                    (along.abs() - across.abs()).abs() < 1e-6,
+                    "the crease runs {along} along and {across} across, which is not 45 degrees"
+                );
+                // It lies IN the surface: the depth at each end is the depth the
+                // planes make there, so the drawn line cannot float over the roof.
+                assert_eq!(valley.a_inches, 0.5);
+                assert!(valley.b_inches > valley.a_inches);
+                counted += 1;
+            }
+        }
+        assert_eq!(counted, 12);
+    }
+
+    /// The ridge between two drains is the same depth from both sides.
+    ///
+    /// Which is what NRCA p.166 asks for — "a common, uniform thickness occurs at
+    /// the ridge line" — and it is not automatic: one slope and one set of axes
+    /// give it where the line joining the two drains is square to the axes, and
+    /// not where that line is slanted, which is why the disagreement is measured
+    /// and carried rather than assumed. On this roof the three drains stand in a
+    /// row along the boards, so it is zero to the float.
+    ///
+    /// The bisectors are x = 55 and x = 93. Each is cut into the pieces on which
+    /// both sides are straight — four of them, folded where the governing plane
+    /// changes hands at the two 45 degree ties and where the cap takes over — so
+    /// the depth at the ends says all of each piece. The outer two drains do not
+    /// share a boundary, so neither carries a ridge to the other.
+    #[test]
+    fn the_ridge_between_two_drains_is_one_thickness_from_both_sides() {
+        let taper = solved();
+        let field = &taper.fields[0];
+        for (index, region) in field.regions.iter().enumerate() {
+            // Four pieces to a boundary — folded at the two 45 degree ties and
+            // where the cap takes over — and the middle region has two boundaries.
+            assert_eq!(region.ridges.len(), if index == 1 { 8 } else { 4 });
+            for ridge in &region.ridges {
+                assert_eq!(
+                    ridge.disagreement_inches, 0.0,
+                    "the two patterns disagree by {} in at {:?}",
+                    ridge.disagreement_inches, ridge.a
+                );
+                assert_ne!(ridge.a, ridge.b);
+            }
+        }
+        // Which regions touch: the middle one touches both, the ends touch only it.
+        let meets: Vec<Vec<usize>> = field
+            .regions
+            .iter()
+            .map(|r| {
+                let mut ids: Vec<usize> = r.ridges.iter().map(|x| x.meets).collect();
+                ids.dedup();
+                ids
+            })
+            .collect();
+        assert_eq!(meets, vec![vec![1], vec![0, 2], vec![1]]);
+
+        // The piece of the first bisector that spans the drains' own line: 19 ft
+        // of run either side, and LEVEL along it — which is the four-way pattern
+        // and not a cone. Between two drains the ground between the two 45 degree
+        // ties is a flat-bottomed trough, so there is no valley along the line
+        // joining them at all; C0 drew one there and called it the valley between
+        // drains, and this is why that line is gone.
+        let ridge = field.regions[0]
+            .ridges
+            .iter()
+            .find(|r| (r.a.y - 98.0) * (r.b.y - 98.0) <= 0.0)
+            .expect("the ridge spans the drains' own line");
+        assert_eq!(ridge.a.x, 55.0);
+        assert_eq!(ridge.b.x, 55.0);
+        assert_eq!(ridge.a_inches, 5.25);
+        assert_eq!(ridge.b_inches, 5.25);
+    }
+
+    /// The ground with no fall is the square the cap draws, and it is reported.
+    ///
+    /// 54 ft of run is where 1/4 in to the foot off a 1/2 in drain reaches the
+    /// 14 in the boards allow, so the sloping ground is the 108 ft square about
+    /// each drain and what is left over is flat. On this roof that is a 2 ft strip
+    /// inside the bump's north wall — 54 ft of the 56 the wall stands off the
+    /// drains — which comes to 2 ft × (5 + 38 + 23) ft = 132 SF.
+    ///
+    /// It is held to a hundredth rather than to the float: `geo`'s boolean cuts go
+    /// through a fixed-point grid (i_overlay), so a cut corner lands within about
+    /// three ten-millionths of a foot of where the arithmetic puts it — a fraction
+    /// of a thousandth of an inch on the roof, and a few hundred-thousandths of a
+    /// square foot in an area. The figure an estimator reads is whole square feet.
+    #[test]
+    fn the_ground_with_no_fall_is_the_plateau_the_cap_makes() {
+        let taper = solved();
+        let field = &taper.fields[0];
+        assert!(
+            (field.no_fall_square_feet - 132.0).abs() < 0.01,
+            "the plateau came to {} SF",
+            field.no_fall_square_feet
+        );
+        // Each region's own share of it, and every flat facet accounted for.
+        let mut flat = 0.0;
+        for region in &field.regions {
+            let mine: f64 =
+                region.facets.iter().filter(|f| f.flat).map(|f| f.shape.square_feet()).sum();
+            assert!((mine - region.no_fall_square_feet).abs() < 1e-9);
+            flat += mine;
+        }
+        assert!((flat - field.no_fall_square_feet).abs() < 1e-9);
+
+        // The facets tile the region: every piece of ground is on exactly one
+        // plane or on the flat, and none of it is left out.
+        for region in &field.regions {
+            let facets: f64 = region.facets.iter().map(|f| f.shape.square_feet()).sum();
+            assert!(
+                (facets - region.square_feet).abs() < 0.01,
+                "the facets come to {facets} SF and the region is {} SF",
+                region.square_feet
+            );
+        }
+        let regions: f64 = field.regions.iter().map(|r| r.square_feet).sum();
+        assert!((regions - field.square_feet).abs() < 0.01, "the regions come to {regions} SF");
+    }
+
+    /// The arrows run down the plane a place is on, and not at the drain.
+    ///
+    /// One every eight feet over the field's box, kept where it lands on ground
+    /// that is still falling. The first one is up in the bump on the north-facing
+    /// plane, so it runs straight down the sheet — south, a quarter turn, which is
+    /// square to the boards. The cone pointed it at the nearest drain instead, on
+    /// a slant of 1.90 radians.
+    #[test]
+    fn the_water_runs_down_the_plane_it_is_on() {
         let taper = solved();
         let flow = &taper.fields[0].flow;
         assert_eq!(flow.len(), 139);
-        assert_eq!(flow[0].x, 52.57142857142857);
-        assert_eq!(flow[0].y, 49.666666666666664);
-        assert_eq!(flow[0].thickness_inches, 13.2738095238095237249);
-        assert!(
-            (flow[0].angle - 1.90109368162415037773).abs() < 1e-15,
-            "the fall points at {}, the TypeScript says 1.90109368162415037773",
-            flow[0].angle
-        );
+        let first = flow[0];
+        assert_eq!(first.angle, std::f64::consts::FRAC_PI_2);
+        assert_eq!(first.thickness_inches, 12.583333333333334);
+        // No arrow stands on flat ground: every one of them is under the cap.
+        for arrow in flow {
+            assert!(arrow.thickness_inches < 14.0, "an arrow stands on the plateau");
+        }
     }
 
-    /// Three drains in a row read as two valleys and not as three, and each one
-    /// is sampled every two feet onto the surface it lies in.
+    /// A trace the layout cannot lay out is refused, with the reason, not hidden.
+    ///
+    /// C0 solved a crossing ring and the drawing quietly declined to triangulate
+    /// it, which is wasted work in here and a fact about the job that nothing said
+    /// out loud (C0's pushback 3). A tapered area with no drain on it is the same
+    /// kind of fact: there is nowhere for the water to go, and that is the
+    /// estimator's to fix rather than the solve's to average away.
     #[test]
-    fn three_drains_in_a_row_are_two_valleys() {
-        let taper = solved();
-        assert_eq!(taper.valleys.len(), 2);
-        for valley in &taper.valleys {
-            assert_eq!(valley.samples.len(), 20);
-            assert_eq!(valley.elevation, 0.0);
-        }
-        // Halfway along the first valley the roof is at the ridge between two
-        // drains: 19 ft of fall from either, capped by nothing, so 5 in.
-        let mid = taper.valleys[0].samples[10];
-        assert_eq!((mid.x, mid.y, mid.thickness_inches), (56.0, 98.0, 5.0));
+    fn a_field_the_layout_cannot_lay_out_says_so_and_says_why() {
+        let crossed = serde_json::json!({
+            "pages": [{ "id": "page-1", "feetPerUnit": 1.0 }],
+            "conditions": [
+                {
+                    "id": "c-bowtie", "kind": "area", "properties": { "T": 0.5, "TAPER": 0.25 },
+                    "traces": [{ "pageId": "page-1", "points": [
+                        { "x": 0.0, "y": 0.0 }, { "x": 40.0, "y": 40.0 },
+                        { "x": 40.0, "y": 0.0 }, { "x": 0.0, "y": 40.0 }
+                    ] }]
+                },
+                {
+                    "id": "c-drains", "kind": "count", "role": "drain",
+                    "traces": [{ "pageId": "page-1", "points": [{ "x": 20.0, "y": 10.0 }] }]
+                }
+            ],
+        });
+        let taper = solve(&crossed, 1).expect("the job solves").taper;
+        assert!(taper.fields.is_empty(), "a crossing ring was laid out anyway");
+        assert_eq!(taper.refused.len(), 1);
+        assert_eq!(taper.refused[0].condition_id, "c-bowtie");
+        assert!(taper.refused[0].why.contains("crosses itself"), "{}", taper.refused[0].why);
+
+        let no_drain = serde_json::json!({
+            "pages": [{ "id": "page-1", "feetPerUnit": 1.0 }],
+            "conditions": [{
+                "id": "c-field", "kind": "area", "properties": { "T": 0.5, "TAPER": 0.25 },
+                "traces": [{ "pageId": "page-1", "points": [
+                    { "x": 0.0, "y": 0.0 }, { "x": 40.0, "y": 0.0 },
+                    { "x": 40.0, "y": 40.0 }, { "x": 0.0, "y": 40.0 }
+                ] }]
+            }],
+        });
+        let taper = solve(&no_drain, 1).expect("the job solves").taper;
+        assert!(taper.fields.is_empty());
+        assert!(taper.refused[0].why.contains("no drainage point"), "{}", taper.refused[0].why);
     }
 
     /// The cricket is the one behind the curb, and it is the same wedge, vertex
@@ -226,8 +412,8 @@ mod tests {
         assert_eq!(reason, Some(CapReason::Flashing));
     }
 
-    /// The solved model serializes in the words the front end reads, and the
-    /// grid travels as three parallel lists the drawing can walk in one pass.
+    /// The solved model serializes in the words the front end reads, and a region
+    /// travels whole: its ground, its planes, its facets and its creases.
     #[test]
     fn the_payload_speaks_camel_case() {
         let out = serde_json::to_value(solved()).expect("it serializes");
@@ -235,8 +421,20 @@ mod tests {
         assert!(field["startInches"].is_number());
         assert!(field["slopeInchesPerFoot"].is_number());
         assert_eq!(field["capReason"], "boards");
-        assert!(field["grid"]["thicknessInches"].is_array());
+        assert!(field["axisEdge"].is_array());
         assert!(field["noFallSquareFeet"].is_number());
         assert!(out["solveId"].is_number());
+        assert!(out["refused"].is_array());
+
+        let region = &field["regions"][0];
+        assert!(region["drain"]["x"].is_number());
+        assert!(region["shapes"][0]["ring"].is_array());
+        assert!(region["planes"][0]["direction"]["y"].is_number());
+        assert!(region["planes"][0]["slope"].is_number());
+        assert!(region["facets"][0]["flat"].is_boolean());
+        assert!(region["facets"][0]["plane"].is_number());
+        assert!(region["valleys"][0]["aInches"].is_number());
+        assert!(region["ridges"][0]["disagreementInches"].is_number());
+        assert!(region["noFallSquareFeet"].is_number());
     }
 }

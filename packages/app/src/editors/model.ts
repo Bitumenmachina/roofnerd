@@ -21,12 +21,15 @@
 //   the coping  formed metal over a wall or a curb, as wide as the detail says
 //               and not as wide as the wall. A surface, not a plate: 24 ga is
 //               twenty-eight thousandths of an inch
-//   the taper   thickness at the drain, plus the slope, over the distance to
-//               the nearest drain — sampled on a grid and drawn as a surface
+//   the taper   the field laid out from its drains: one drainage region per
+//               drain, four planes falling from each, drawn as the facets those
+//               planes govern
 //   a sump      the square the field is cut down in at each drain, at the side
 //               the condition states
-//   a valley    the low line between two drains, sampled onto the surface it
-//               lies in rather than drawn straight through it
+//   a valley    where two planes of a region tie, at 45 degrees to the boards,
+//               drawn on the surface it lies in rather than through it
+//   a ridge     the boundary between two regions: equidistant between their
+//               drains and square to the line joining them
 //   a cricket   two planes falling from a ridge the drains put there, not a
 //               ridge somebody drew
 //   no fall     where the build-up has hit its ceiling and the roof goes flat,
@@ -42,10 +45,13 @@
 // what they say. That order matters: it was the other way round once, and the
 // check passed fourteen out of fourteen against geometry nobody had checked.
 //
-// WHERE THE GEOMETRY COMES FROM (C0, 2026-09-12). This file used to work the
-// roof out. It does not any more: the thickness, the fall, the no-fall ground,
-// the valleys and the crickets are solved in `roofnerd-core` and arrive through
-// `solve_get("taper")` when the solve moves. Patrick's ruling is that the model
+// WHERE THE GEOMETRY COMES FROM (C0, 2026-09-12; C1, D149). This file used to work
+// the roof out. It does not any more: the regions, the planes, the facets, the
+// valleys, the ridges, the no-fall ground and the crickets are solved in
+// `roofnerd-core` and arrive through `solve_get("taper")` when the solve moves.
+// C1 replaced the cone with the layout NRCA lays out, and this file changed by
+// drawing the facets it is handed instead of a lattice of samples — which is the
+// point of having put the solve behind a seam. Patrick's ruling is that the model
 // is the function rather than a view — the same solved roof has to feed the
 // Section, the tapered layout drawing and the estimate, and a second arithmetic
 // in here is a second answer. So the drawing draws. The one number it still
@@ -62,9 +68,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
   CRICKET_SLOPE_MULTIPLE, MIN_FLASHING_INCHES, NOTHING_SOLVED, SINGLE_LAYER_MAX_INCHES,
-  buildUpInches, cricketOf, fieldOf, formatFeetInches, pointInPolygon, readTaperAt, selfIntersects,
+  buildUpInches, cricketOf, fieldOf, formatFeetInches, pointInPolygon, readFacetAt, readTaperAt,
+  selfIntersects,
   type CapReason, type Condition, type Page, type Point, type Properties,
-  type SolvedCricket, type SolvedTaper, type SolvedTaperField, type SolvedValley,
+  type SolvedCrease, type SolvedCricket, type SolvedRefusal, type SolvedRidge,
+  type SolvedTaper, type SolvedTaperField, type SolvedTaperRegion,
 } from '@roofnerd/engine';
 import { at, doc, solveId, solveTaper, subscribe, type Doc } from '../doc.js';
 import { feet, feetPerUnit } from '../scale.js';
@@ -97,8 +105,8 @@ const inches = (n: number) => n / 12;
 // another layer rather than the roof going flat. The ceiling an estimator
 // actually hits is flashing height against a wall the building already has.
 
-// How fine the taper is sampled is the core's (`taper.rs`, GRID_FEET), and C1
-// retires the grid altogether: planes need no sampling.
+// Nothing here is sampled. The surface arrives as facets, each one exactly planar,
+// so a corner lifted to its own depth is the roof and not an approximation of it.
 
 /**
  * How far apart the flow arrows are placed, in feet.
@@ -328,10 +336,22 @@ function readAt(canvas: HTMLCanvasElement, event: PointerEvent): readonly StripR
     ];
   }
 
-  // The solved field, read where the pointer is. Not the two foot grid the
-  // surface is drawn from: sampling that would move every number in this strip
-  // by up to an eighth, and the strip is the roof's own answer about itself.
+  // The solved field, read where the pointer is: the greatest of the four planes
+  // of whichever drainage region holds this place. Nothing is sampled and nothing
+  // is recomputed — the planes were solved in Rust and this multiplies a run by a
+  // slope, which is the one expression that exists in both languages.
   const here = readTaperAt(field, p);
+  if (!here) {
+    // Inside the trace and on no region, which the layout should not allow. Said
+    // out loud rather than answered with a depth nobody solved.
+    return [
+      { key: 'Cursor', value: where },
+      { key: 'Slope', value: `${inchLabel(field.slopeInchesPerFoot)} in 12` },
+      { key: 'Insulation here', value: null },
+      { key: 'Flow', value: 'no drainage region covers this point', warn: true },
+      { key: '', value: null },
+    ];
+  }
   const thickness = here.thicknessInches;
   if (here.flat) {
     // No fall is the one thing on a low-slope roof that decides whether the
@@ -352,8 +372,8 @@ function readAt(canvas: HTMLCanvasElement, event: PointerEvent): readonly StripR
     { key: 'Cursor', value: where },
     { key: 'Slope', value: `${inchLabel(field.slopeInchesPerFoot)} in 12` },
     { key: 'Insulation here', value: inchLabel(thickness) },
-    { key: 'Flow', value: here.toward ? `runs ${compass(p, here.toward)}` : null, water: true },
-    { key: '', value: `${here.runFeet.toFixed(1)} ft to the drain it reaches` },
+    { key: 'Flow', value: `runs ${compass(p, here.toward)}`, water: true },
+    { key: '', value: `${here.runFeet.toFixed(1)} ft of run to the drain it falls to` },
   ];
 }
 
@@ -773,7 +793,7 @@ function compass(from: Point, to: Point): string {
   return points[Math.round(((deg + 360) % 360) / 45) % 8]!;
 }
 
-// Which drain the water reaches, and how far it runs to get there, is the
+// Which drain the water falls to, and how far the fall runs to get there, is the
 // solved field read at a point — `readTaperAt` in the engine, which is the one
 // expression the core is pinned to. Point-in-polygon is the engine's
 // `pointInPolygon`; this file carried its own copy of the same ray cast.
@@ -819,7 +839,13 @@ function build(d: Doc, taper: SolvedTaper): Built {
   const box = new THREE.Box3();
   let anything = false;
   let noFallSquares = 0;
-  let taperedFacets = 0;
+  let taperedFields = 0;
+  let regions = 0;
+  let valleys = 0;
+  let ridges = 0;
+  /// The worst a ridge disagrees with its neighbour, in inches. Nought is a roof
+  /// whose two patterns meet at one thickness, which is what NRCA asks for.
+  let ridgeUneven = 0;
   let crickets = 0;
   let thin = Infinity;
   let thick = -Infinity;
@@ -864,12 +890,35 @@ function build(d: Doc, taper: SolvedTaper): Built {
           // Solved and undrawable, or not solved yet: no surface, and the key
           // says how many tapered facets there are, so nothing is invented to
           // stand in for one.
-          const built = solvedField ? taperSurface(solvedField, colour, c) : null;
-          if (built && solvedField) {
-            world.add(built.mesh);
-            world.add(built.flow);
+          let drawn = 0;
+          if (solvedField) {
+            solvedField.regions.forEach((region, regionIndex) => {
+              const mesh = regionSurface(solvedField, region, colour, c);
+              if (!mesh) return;
+              world.add(mesh);
+              drawn += 1;
+              for (const valley of region.valleys) {
+                world.add(creaseLine(solvedField, valley, 'valley'));
+                valleys += 1;
+              }
+              // A ridge belongs to both the regions it divides, so it is drawn
+              // once — by the earlier of the two — rather than twice in the same
+              // place, which would double every count in the key.
+              for (const ridge of region.ridges) {
+                if (ridge.meets < regionIndex) continue;
+                world.add(creaseLine(solvedField, ridge, 'ridge'));
+                ridges += 1;
+                if (ridge.disagreementInches > 1 / 8) {
+                  ridgeUneven = Math.max(ridgeUneven, ridge.disagreementInches);
+                }
+              }
+            });
+          }
+          if (solvedField && drawn > 0) {
+            world.add(flowField(solvedField));
             noFallSquares += solvedField.noFallSquareFeet;
-            taperedFacets += 1;
+            taperedFields += 1;
+            regions += drawn;
             if (solvedField.thinInches !== null) thin = Math.min(thin, solvedField.thinInches);
             if (solvedField.thickInches !== null) thick = Math.max(thick, solvedField.thickInches);
             if (solvedField.thickInches !== null && solvedField.thickInches > SINGLE_LAYER_MAX_INCHES) {
@@ -933,15 +982,12 @@ function build(d: Doc, taper: SolvedTaper): Built {
     }
   });
 
-  // The valleys, as the core solved them: two drains with roof between them
-  // meet along the line joining them, water off both sides runs to it and then
-  // along it, and each drain is joined to its nearest neighbour so three in a
-  // row read as two valleys and not as three.
-  let valleys = 0;
-  for (const low of taper.valleys) {
-    world.add(valleyLine(low));
-    valleys += 1;
-  }
+  // The valleys and the ridges were drawn with the regions they belong to: both
+  // are folds in the solved surface rather than lines of their own, which is the
+  // whole difference between this and the version that drew a valley down the
+  // line joining two drains. There is no such line in a four-way layout — between
+  // two drains the ground between the two 45 degree ties is level across, so the
+  // water runs to the valleys either side of it and not along the middle.
 
   highlight();
 
@@ -956,10 +1002,11 @@ function build(d: Doc, taper: SolvedTaper): Built {
     thin: Number.isFinite(thin) ? thin : null,
     thick: Number.isFinite(thick) ? thick : null,
     legend: legendFor({
-      taperedFacets, noFallSquareFeet: noFallSquares, drains: drains.length, crickets,
+      taperedFields, regions, noFallSquareFeet: noFallSquares, drains: drains.length, crickets,
       thin, thick, capReason, unstatedBuildUp, outOfProportion, ridgeOffSquare,
       cricketSlopeOff, overOneLayer, unbuiltCrickets, crossedTraces, unstatedWall,
-      unstatedCap, copings, curbs, valleys,
+      unstatedCap, copings, curbs, valleys, ridges, ridgeUneven,
+      refused: taper.refused,
       ramp: (tapered?.color ?? '#4a6b8a'),
     }),
     note: anything
@@ -1031,43 +1078,54 @@ function buildUp(ring: Point[], elevation: number, thick: number, colour: string
 }
 
 /**
- * The tapered surface, as one heightfield the core solved.
+ * One drainage region, drawn from the facets the core cut it into.
  *
- * Two triangles a cell, coloured lighter where it is thicker and amber where the
- * fall has run out, with an arrow field over it showing where the water goes.
- * Every number in here arrived solved: the grid, its step, the thickness at each
- * sample, whether each sample is on the roof, and whether the roof had already
- * hit its ceiling there. This function turns those into vertices.
+ * A facet is a piece of ground with one plane over it — or with the cap over it,
+ * and then the roof is flat there. Either way the surface is exactly planar on it,
+ * so triangulating the polygon and lifting each corner to its own depth IS the
+ * roof rather than a sampling of it: a few dozen triangles to a region where the
+ * cone needed a lattice of two and a half thousand. Lighter where it is thicker,
+ * amber where the fall has run out.
  *
- * A cell is drawn only when all four of its corners are on the roof, which is
- * what keeps the surface inside the trace instead of squaring off its corners.
+ * Every number in here arrived solved — the polygons, which plane governs each of
+ * them, where the cap binds. The one thing this works out is the height of a
+ * corner, which is `readFacetAt` in the engine: the same expression the core is
+ * pinned to, evaluated at a point the core chose.
  */
-function taperSurface(field: SolvedTaperField, colour: string, c: Condition) {
-  const { minX, minY, stepX, stepY, cols, rows } = field.grid;
-  const thickness = field.grid.thicknessInches;
-  const within = field.grid.within;
-  const flat = field.grid.flat;
+function regionSurface(
+  field: SolvedTaperField, region: SolvedTaperRegion, colour: string, c: Condition,
+) {
   const elevation = field.elevation;
-
   const positions: number[] = [];
   const colours: number[] = [];
   const base = new THREE.Color(colour);
   const noFall = new THREE.Color('#c98a1d');
 
-  const push = (col: number, r: number) => {
-    const i = r * cols + col;
-    positions.push(minX + col * stepX, elevation + inches(thickness[i]!), minY + r * stepY);
-    const shade = flat[i] ? noFall : base.clone().lerp(new THREE.Color('#ffffff'), Math.min(0.65, inches(thickness[i]!) * 1.4));
-    colours.push(shade.r, shade.g, shade.b);
-  };
-
-  for (let r = 0; r < rows - 1; r += 1) {
-    for (let col = 0; col < cols - 1; col += 1) {
-      const corners = [r * cols + col, r * cols + col + 1, (r + 1) * cols + col, (r + 1) * cols + col + 1];
-      if (!corners.every((i) => within[i])) continue;
-      push(col, r); push(col + 1, r); push(col, r + 1);
-      push(col + 1, r); push(col + 1, r + 1); push(col, r + 1);
+  for (const facet of region.facets) {
+    const ring = facet.shape.ring;
+    if (ring.length < 3) continue;
+    const shape = new THREE.Shape(ring.map((p) => new THREE.Vector2(p.x, p.y)));
+    for (const hole of facet.shape.holes) {
+      if (hole.length < 3) continue;
+      shape.holes.push(new THREE.Path(hole.map((p) => new THREE.Vector2(p.x, p.y))));
     }
+    // Earcut, through three.js, on a polygon that is planar by construction. The
+    // corners it hands back are the corners it was given: it adds no points, so
+    // every vertex has a depth the solved plane can be asked for.
+    const flat = new THREE.ShapeGeometry(shape);
+    const xy = flat.getAttribute('position');
+    const index = flat.getIndex();
+    const order = index ? Array.from(index.array) : [...Array(xy.count).keys()];
+    for (const i of order) {
+      const at = { x: xy.getX(i), y: xy.getY(i) };
+      const depth = readFacetAt(field, region, facet, at);
+      positions.push(at.x, elevation + inches(depth), at.y);
+      const shade = facet.flat
+        ? noFall
+        : base.clone().lerp(new THREE.Color('#ffffff'), Math.min(0.65, inches(depth) * 1.4));
+      colours.push(shade.r, shade.g, shade.b);
+    }
+    flat.dispose();
   }
 
   if (positions.length === 0) return null;
@@ -1081,54 +1139,60 @@ function taperSurface(field: SolvedTaperField, colour: string, c: Condition) {
     vertexColors: true, side: THREE.DoubleSide,
   }));
   mesh.userData = { conditionId: c.id, kind: 'taper' };
+  return mesh;
+}
 
-  // Where the water goes, as arrows: one every few feet, pointing at the drain
-  // that part of the roof falls to. Flat ground gets none — there is nothing to
-  // point at when the fall has run out — and the core leaves those out.
-  //
-  // One mesh for every arrow, not one object each. `ArrowHelper` is an Object3D
-  // carrying a line and a cone, so a field of them is two draw calls apiece —
-  // fine on a demo, and on a real 36 by 24 sheet it is hundreds before the
-  // estimator has done anything. The fall direction is known at every sample, so
-  // the whole field is one instanced cone with a rotation per instance. This came
-  // out of the prior 3D work on this machine rather than out of a profiler, which
-  // is the cheaper way to learn it.
+/**
+ * Where the water goes, as arrows: one every few feet, pointing down the plane.
+ *
+ * The core places them and points them — down the gradient of whichever plane
+ * governs, which on a four-way layout is square to the boards and not at the
+ * drain, because water runs down the fall and then along the valley. Flat ground
+ * gets none: there is nothing to point at when the fall has run out, and the core
+ * leaves those out.
+ *
+ * One mesh for every arrow, not one object each. `ArrowHelper` is an Object3D
+ * carrying a line and a cone, so a field of them is two draw calls apiece — fine
+ * on a demo, and on a real 36 by 24 sheet it is hundreds before the estimator has
+ * done anything. The whole field is one instanced cone with a rotation per
+ * instance. This came out of the prior 3D work on this machine rather than out of
+ * a profiler, which is the cheaper way to learn it.
+ */
+function flowField(field: SolvedTaperField) {
   const flow = new THREE.Group();
   const arrowAt = field.flow.map((a) => ({
-    x: a.x, y: elevation + inches(a.thicknessInches) + 0.08, z: a.y, angle: a.angle,
+    x: a.x, y: field.elevation + inches(a.thicknessInches) + 0.08, z: a.y, angle: a.angle,
   }));
+  if (arrowAt.length === 0) return flow;
 
-  if (arrowAt.length > 0) {
-    // Slim and long, so it reads as a dart pointing somewhere. The first pass at
-    // instancing used the same proportions as the ArrowHelper's head without its
-    // shaft, and a field of them read as a scatter of blobs — caught by opening
-    // the screenshot rather than by any check, which is the only way a thing like
-    // this ever gets caught.
-    const cone = new THREE.ConeGeometry(ARROW_FEET * 0.06, ARROW_FEET * 0.55, 6);
-    // A cone points up its own +Y; lay it on its side so it points along +X,
-    // which is what the angle is measured from.
-    cone.rotateZ(-Math.PI / 2);
-    const arrows = new THREE.InstancedMesh(
-      cone,
-      new THREE.MeshLambertMaterial({ color: 0x1f7a8c }),
-      arrowAt.length,
-    );
-    const placed = new THREE.Object3D();
-    for (let i = 0; i < arrowAt.length; i += 1) {
-      const a = arrowAt[i]!;
-      placed.position.set(a.x, a.y, a.z);
-      placed.rotation.set(0, -a.angle, 0);
-      placed.updateMatrix();
-      arrows.setMatrixAt(i, placed.matrix);
-    }
-    arrows.instanceMatrix.needsUpdate = true;
-    // Not pickable: an arrow is the drawing explaining itself, not a thing on
-    // the roof. Clicking one should select the field under it.
-    arrows.raycast = () => {};
-    flow.add(arrows);
+  // Slim and long, so it reads as a dart pointing somewhere. The first pass at
+  // instancing used the same proportions as the ArrowHelper's head without its
+  // shaft, and a field of them read as a scatter of blobs — caught by opening the
+  // screenshot rather than by any check, which is the only way a thing like this
+  // ever gets caught.
+  const cone = new THREE.ConeGeometry(ARROW_FEET * 0.06, ARROW_FEET * 0.55, 6);
+  // A cone points up its own +Y; lay it on its side so it points along +X, which
+  // is what the angle is measured from.
+  cone.rotateZ(-Math.PI / 2);
+  const arrows = new THREE.InstancedMesh(
+    cone,
+    new THREE.MeshLambertMaterial({ color: 0x1f7a8c }),
+    arrowAt.length,
+  );
+  const placed = new THREE.Object3D();
+  for (let i = 0; i < arrowAt.length; i += 1) {
+    const a = arrowAt[i]!;
+    placed.position.set(a.x, a.y, a.z);
+    placed.rotation.set(0, -a.angle, 0);
+    placed.updateMatrix();
+    arrows.setMatrixAt(i, placed.matrix);
   }
-
-  return { mesh, flow };
+  arrows.instanceMatrix.needsUpdate = true;
+  // Not pickable: an arrow is the drawing explaining itself, not a thing on the
+  // roof. Clicking one should select the field under it.
+  arrows.raycast = () => {};
+  flow.add(arrows);
+  return flow;
 }
 
 /**
@@ -1258,26 +1322,32 @@ function standUp(
 const GALVANIZED = '#b9c4c9';
 
 /**
- * The valley between two drains, drawn on the surface it lies in.
+ * A line the boards are cut along, drawn on the surface it lies in.
  *
- * Which drains have a valley between them, and how thick the roof is along it,
- * are solved (`taper.rs`): each drain joined to its nearest neighbour, taken
- * once, sampled every two feet and lifted onto the field. Dashed, because that
- * is what a low line is on a roof plan and what Frame 2 draws.
+ * Which lines those are is solved (`taper.rs`). A valley is where two of a
+ * region's four planes have risen equally, which is at 45 degrees to the boards
+ * exactly — NRCA p.166, and the reason the boards can be cut corner to corner. A
+ * ridge is the boundary between two regions: equidistant between their drains and
+ * square to the line joining them. Both arrive as two ends with the depth at each,
+ * because the surface is planar along them and two numbers say all of it.
+ *
+ * Dashed, because that is what a low line is on a roof plan and what Frame 2
+ * draws. A ridge is drawn the same way in the same colour: it is the same kind of
+ * mark, and the key names both.
  */
-function valleyLine(low: SolvedValley) {
-  const points = low.samples.map((sample) => new THREE.Vector3(
-    sample.x, low.elevation + inches(sample.thicknessInches) + 0.12, sample.y,
-  ));
-  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+function creaseLine(field: SolvedTaperField, crease: SolvedCrease | SolvedRidge, kind: string) {
+  const geometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(crease.a.x, field.elevation + inches(crease.aInches) + 0.12, crease.a.y),
+    new THREE.Vector3(crease.b.x, field.elevation + inches(crease.bInches) + 0.12, crease.b.y),
+  ]);
   const line = new THREE.Line(geometry, new THREE.LineDashedMaterial({
     color: new THREE.Color(WATER), dashSize: 2, gapSize: 1.4,
   }));
   line.computeLineDistances();
-  // The valley is the drawing explaining the roof, not a thing on it: a click
-  // here should pick the field it lies in.
+  // A crease is the drawing explaining the roof, not a thing on it: a click here
+  // should pick the field it lies in.
   line.raycast = () => {};
-  line.userData = { conditionId: null, kind: 'valley' };
+  line.userData = { conditionId: null, kind };
   return line;
 }
 
@@ -1426,13 +1496,16 @@ function thicknessScale(thin: number, thick: number, base: string): HTMLElement 
 
 /** Everything the legend has to be able to say. */
 type Reading = {
-  taperedFacets: number; noFallSquareFeet: number; drains: number; crickets: number;
+  taperedFields: number; regions: number; noFallSquareFeet: number; drains: number;
+  crickets: number;
   thin: number; thick: number;
   capReason: CapReason;
   unstatedBuildUp: number; outOfProportion: number; ridgeOffSquare: number;
   cricketSlopeOff: number; overOneLayer: boolean; unbuiltCrickets: number;
   crossedTraces: number; unstatedWall: number;
-  unstatedCap: number; copings: number; curbs: number; valleys: number;
+  unstatedCap: number; copings: number; curbs: number;
+  valleys: number; ridges: number; ridgeUneven: number;
+  refused: readonly SolvedRefusal[];
   /** The tapered field's own colour, which the ramp is drawn in. */
   ramp: string;
 };
@@ -1463,22 +1536,33 @@ function legendFor(r: Reading): HTMLElement[] {
     out.push(el);
   };
 
-  if (r.taperedFacets > 0 && Number.isFinite(r.thin) && Number.isFinite(r.thick)) {
+  if (r.taperedFields > 0 && Number.isFinite(r.thin) && Number.isFinite(r.thick)) {
     out.push(thicknessScale(r.thin, r.thick, r.ramp));
-    // The surface is the fall. It is not the layout, and it must not be read as
-    // one: a real taper is a schedule of lettered boards on a four foot module,
-    // in panel repeats, with flat fill under them — thickness steps at a board
-    // edge rather than sliding. Saying so is the difference between a drawing
-    // that helps and one that gets ordered from.
-    say('the surface is the fall, not the board layout');
+    // The surface is now the layout — planes off the drains, valleys where they
+    // tie — and it is still not the board schedule: a real taper is lettered
+    // boards on a four foot module, in panel repeats, with flat fill under them,
+    // so the thickness steps at a board edge rather than sliding. Saying which of
+    // the two this is, is the difference between a drawing that helps and one that
+    // gets ordered from.
+    say('the planes and the valleys are the layout; the lettered boards are not on it yet');
   }
 
   // The key: what the marks on the roof are, and only the marks that are on it.
   // A key that names a thing the drawing does not carry is a sentence that is
   // not true of this roof, which is the same defect as a wrong number.
-  if (r.drains > 0) row(WATER, 'arrows follow the fall to the drain');
+  if (r.drains > 0) row(WATER, 'arrows follow the fall down the plane it is on');
   if (r.noFallSquareFeet > 0) row('#c98a1d', 'no fall');
-  if (r.valleys > 0) row(WATER, 'dashed: the valley between drains');
+  if (r.valleys > 0) row(WATER, 'dashed: the valleys, at 45° to the boards');
+  if (r.ridges > 0) {
+    row(WATER, r.ridges === 1
+      ? 'dashed: the ridge, halfway between two drains'
+      : `dashed: the ${r.ridges} ridges, halfway between two drains`);
+  }
+  if (r.regions > 1) {
+    row(r.ramp, r.regions === 2
+      ? 'the field falls to 2 drains, one region each'
+      : `the field falls to ${r.regions} drains, one region each`);
+  }
   if (r.drains > 0) row(WATER, r.drains === 1 ? '1 drain, on its sump' : `${r.drains} drains, each on its sump`);
   if (r.copings > 0) row(GALVANIZED, r.copings === 1 ? 'coping on the wall' : 'coping on the walls');
   if (r.curbs > 0) row(GALVANIZED, r.curbs === 1 ? '1 curb' : `${r.curbs} curbs`);
@@ -1491,6 +1575,21 @@ function legendFor(r: Reading): HTMLElement[] {
     row('#c98a1d', `${Math.round(r.noFallSquareFeet).toLocaleString('en-US')} SF with no fall — ${why}`);
   }
   if (r.overOneLayer) say(`over ${SINGLE_LAYER_MAX_INCHES}" — this is a second layer of board, not a thicker one`);
+  // NRCA p.166: two adjoining patterns should meet at one common thickness, and
+  // where they cannot an area divider is what carries the step. With one slope over
+  // the whole field they meet wherever the line joining two drains is square to
+  // the boards, and they do not where it is slanted — so the drawing says by how
+  // much rather than letting the mesh average it.
+  if (r.ridgeUneven > 0) {
+    say(`the two patterns meet ${inchLabel(r.ridgeUneven)} apart at a ridge`
+      + ' — NRCA wants one thickness there, or an area divider to carry the step');
+  }
+  // And a tapered area the layout would not lay out at all says so in its own
+  // words. The core is the only thing that knows why, so the sentence is the
+  // core's; what would be wrong is silence, or a surface standing in for one.
+  for (const refused of r.refused) {
+    say(`a tapered area is not laid out: ${refused.why}`);
+  }
   if (r.capReason === 'flashing') {
     say(`capped by flashing height — NRCA wants ${MIN_FLASHING_INCHES}" above the finished roof`);
   }
@@ -1655,7 +1754,9 @@ function screenPointAt(x: number, y: number): {
   const at = { x, y };
   const field = fieldsNow.find((f) => pointInPolygon(at, f.ring));
   if (!field) return null;
-  const height = field.elevation + inches(readTaperAt(field, at).thicknessInches);
+  const here = readTaperAt(field, at);
+  if (!here) return null;
+  const height = field.elevation + inches(here.thicknessInches);
   const rect = surface.getBoundingClientRect();
   const v = world.localToWorld(new THREE.Vector3(x, height, y)).project(camera);
   const on = {

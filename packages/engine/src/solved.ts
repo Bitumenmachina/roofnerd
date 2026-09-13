@@ -8,34 +8,98 @@
 // exist in another (D108). Nothing in here has a window near it.
 //
 // WHAT IS IN HERE AND WHAT IS NOT. The solve is Rust's: which fields there are,
-// where the fall runs to, what caps it, where the valleys and the crickets are.
-// This file EVALUATES a solved field at a point — one expression, the one the
-// core is pinned to — so the strip under the pointer can answer in the inches
-// the roof actually is instead of in whatever the nearest grid sample happens to
-// say. Sampling the grid would move every number in the readout, and the readout
-// is the roof's own answer about itself.
+// how they are cut into drainage regions, which planes lay each one out, what caps
+// them, and where the valleys, the ridges and the crickets are. This file
+// EVALUATES a shipped plane at a point — one expression, the one the core is
+// pinned to — so the strip under the pointer answers in the inches the roof
+// actually is. Nothing in here decides what the roof is.
 //
-// The grid is C0's. C1 ships planes instead and the grid goes; when it does,
-// `readTaperAt` is the one thing that changes, and every surface that reads it
-// moves together.
+// C1 (D149) retired the grid. The field arrives as drainage regions, each with the
+// four planes that lay it out, the facets those planes govern, the creases they
+// fold along and the plateau where the cap binds. `readTaperAt` evaluates a plane
+// where the pointer is; `readFacetAt` does the same at a facet's own corner, where
+// no search can find the region because the corner is on its boundary.
 
 import type { CapReason, Spot } from './roof.js';
 import { pointInPolygon } from './geometry.js';
 
-/** The thickness of a field, sampled every `stepX` by `stepY` feet. */
-export interface SolvedGrid {
-  readonly minX: number;
-  readonly minY: number;
-  readonly stepX: number;
-  readonly stepY: number;
-  readonly cols: number;
-  readonly rows: number;
-  /** Row by row, `cols` to a row, in inches. */
-  readonly thicknessInches: readonly number[];
-  /** Whether each sample is on the roof at all. */
-  readonly within: readonly boolean[];
-  /** Whether the fall had already run out there. */
-  readonly flat: readonly boolean[];
+/** A polygon in feet: an outline and whatever holes it has. */
+export interface SolvedShape {
+  readonly ring: readonly Spot[];
+  readonly holes: readonly (readonly Spot[])[];
+}
+
+/**
+ * A sloping plane on the roof.
+ *
+ * `origin` is a point it passes through at its own low edge — the drain — and
+ * `direction` is the unit vector the fall rises along in plan, with `slope` in
+ * inches per foot. Four of these come off every drainage region, and the
+ * thickness is the greatest rise of the four.
+ */
+export interface SolvedPlane {
+  readonly origin: Spot;
+  readonly direction: Spot;
+  readonly slope: number;
+}
+
+/**
+ * A piece of ground one plane governs — or the cap does, and the roof is flat.
+ *
+ * Either way the surface over it is exactly planar, which is the whole point: a
+ * facet can be triangulated and each corner lifted to its own depth with no fold
+ * left inside it, so the mesh is a few dozen triangles instead of a lattice.
+ */
+export interface SolvedFacet {
+  readonly shape: SolvedShape;
+  /** Which of the region's planes governs here. */
+  readonly plane: number;
+  /** True where the cap binds: the roof is flat, and the water stops moving. */
+  readonly flat: boolean;
+}
+
+/** A line the boards are cut along, with the depth at each end. */
+export interface SolvedCrease {
+  readonly a: Spot;
+  readonly b: Spot;
+  readonly aInches: number;
+  readonly bInches: number;
+}
+
+/** The boundary two regions share, and whether the two patterns agree on it. */
+export interface SolvedRidge {
+  readonly a: Spot;
+  readonly b: Spot;
+  readonly aInches: number;
+  readonly bInches: number;
+  /** Which region is on the other side, by its place in the field's own list. */
+  readonly meets: number;
+  /**
+   * The worst gap between the depth this region's planes make here and the depth
+   * the neighbour's make. NRCA wants one common thickness at a ridge and offers an
+   * area divider where the patterns cannot give one, so it is carried rather than
+   * averaged away.
+   */
+  readonly disagreementInches: number;
+}
+
+/** One drainage region: the ground one drain takes, and the fall over it. */
+export interface SolvedTaperRegion {
+  readonly drain: Spot;
+  /** The ground, in pieces — a concave field can hand one drain two of them. */
+  readonly shapes: readonly SolvedShape[];
+  readonly squareFeet: number;
+  readonly axisAlong: Spot;
+  readonly axisAcross: Spot;
+  readonly planes: readonly SolvedPlane[];
+  readonly capInches: number | null;
+  readonly facets: readonly SolvedFacet[];
+  /** The 45 degree ties, cut to this region. */
+  readonly valleys: readonly SolvedCrease[];
+  readonly ridges: readonly SolvedRidge[];
+  readonly noFallSquareFeet: number;
+  readonly thinInches: number;
+  readonly thickInches: number;
 }
 
 /** One arrow: where the water is, and which way it leaves. */
@@ -47,7 +111,7 @@ export interface SolvedFlowArrow {
   readonly angle: number;
 }
 
-/** One tapered field: one trace on one condition, solved. */
+/** One tapered field: one trace on one condition, laid out. */
 export interface SolvedTaperField {
   readonly conditionId: string;
   readonly trace: number;
@@ -62,26 +126,25 @@ export interface SolvedTaperField {
    */
   readonly capInches: number | null;
   readonly capReason: CapReason;
-  /** The drainage points the fall runs to. */
-  readonly apexes: readonly Spot[];
-  readonly grid: SolvedGrid;
+  /** The axes the layout is laid out on: the field's longest side, and square to it. */
+  readonly axisAlong: Spot;
+  readonly axisAcross: Spot;
+  /** That side itself, so a drawing can say which wall the boards were laid to. */
+  readonly axisEdge: readonly Spot[];
+  /** One region per drainage point on this field. */
+  readonly regions: readonly SolvedTaperRegion[];
   readonly flow: readonly SolvedFlowArrow[];
+  readonly squareFeet: number;
   readonly noFallSquareFeet: number;
   readonly thinInches: number | null;
   readonly thickInches: number | null;
 }
 
-/** One sample along a valley, lifted onto the surface it lies in. */
-export interface SolvedValleySample {
-  readonly x: number;
-  readonly y: number;
-  readonly thicknessInches: number;
-}
-
-/** The low line between two drains. */
-export interface SolvedValley {
-  readonly elevation: number;
-  readonly samples: readonly SolvedValleySample[];
+/** A trace the layout would not lay out, and why. */
+export interface SolvedRefusal {
+  readonly conditionId: string;
+  readonly trace: number;
+  readonly why: string;
 }
 
 /** A cricket, as triangles and as the facts the key has to say about it. */
@@ -102,8 +165,9 @@ export interface SolvedTaper {
   readonly solveId: number;
   readonly drains: readonly Spot[];
   readonly fields: readonly SolvedTaperField[];
-  readonly valleys: readonly SolvedValley[];
   readonly crickets: readonly SolvedCricket[];
+  /** What the layout would not lay out, and why. */
+  readonly refused: readonly SolvedRefusal[];
 }
 
 /** A part of the model nobody has solved yet, said out loud rather than empty. */
@@ -123,41 +187,96 @@ export type Scopes = Readonly<Record<string, Readonly<Record<string, number | nu
 
 /** What the roof is doing at one place on it. */
 export interface TaperReading {
-  /** How far the water has to run to get off, in feet. */
+  /**
+   * How far the fall has run to get here, in feet, along the boards.
+   *
+   * This is the run a tapered schedule means: thickness = T + TAPER x run. It is
+   * not the straight line to the drain, and on a four-way layout the two differ
+   * by as much as a diagonal does.
+   */
   readonly runFeet: number;
   readonly thicknessInches: number;
   /** The fall has run out here: the roof is flat and the water stops moving. */
   readonly flat: boolean;
-  /** Which drainage point it reaches. */
-  readonly toward: Spot | null;
+  /** Which drainage point it falls to. */
+  readonly toward: Spot;
+  /** Which of the region's planes governs. Two tie along a valley. */
+  readonly plane: number;
+}
+
+/** How far above its own low edge a plane has risen at a point, in inches. */
+function riseAt(plane: SolvedPlane, p: Spot): number {
+  return ((p.x - plane.origin.x) * plane.direction.x
+    + (p.y - plane.origin.y) * plane.direction.y) * plane.slope;
+}
+
+/** Is this point inside this ring? Ray casting, the engine's own. */
+const within = (p: Spot, shape: SolvedShape): boolean =>
+  pointInPolygon(p, shape.ring) && !shape.holes.some((hole) => pointInPolygon(p, hole));
+
+/** Which region a place is on, or none — a place can be off the field. */
+export function regionAt(field: SolvedTaperField, p: Spot): SolvedTaperRegion | null {
+  return field.regions.find((region) => region.shapes.some((shape) => within(p, shape))) ?? null;
 }
 
 /**
  * Read a solved field at a point.
  *
- * The same expression the core samples its own grid with, evaluated where the
- * pointer is. It is not a second solve: which fields exist, what their apexes
- * are and where they stop rising are all decided in Rust and shipped — this
- * multiplies a distance by a slope. `src-tauri/core/src/taper.rs` (`read_at`)
- * is the other copy, and the two are pinned to the same three points.
+ * The greatest of the region's four planes, capped — one expression, and the same
+ * one `read_at` in `src-tauri/core/src/taper.rs` evaluates, pinned to the same
+ * four places on both sides. It is not a second solve: which regions exist, which
+ * planes are on them, where they are cut and where they stop rising are all
+ * decided in Rust and shipped. This multiplies a run by a slope.
+ *
+ * `null` where no region holds the place, which is a place off the field — never a
+ * roof of no thickness.
  */
-export function readTaperAt(field: SolvedTaperField, p: Spot): TaperReading {
-  let runFeet = Infinity;
-  let toward: Spot | null = null;
-  for (const apex of field.apexes) {
-    const dx = p.x - apex.x;
-    const dy = p.y - apex.y;
-    const r = Math.sqrt(dx * dx + dy * dy);
-    if (r < runFeet) { runFeet = r; toward = apex; }
-  }
-  const raw = field.startInches + runFeet * field.slopeInchesPerFoot;
-  const cap = field.capInches;
+export function readTaperAt(field: SolvedTaperField, p: Spot): TaperReading | null {
+  const region = regionAt(field, p);
+  if (!region) return null;
+  return readRegionAt(field, region, p);
+}
+
+/** The same reading, where the region is already known. */
+export function readRegionAt(
+  field: SolvedTaperField, region: SolvedTaperRegion, p: Spot,
+): TaperReading | null {
+  let plane = -1;
+  let most = -Infinity;
+  region.planes.forEach((each, i) => {
+    const rise = riseAt(each, p);
+    if (rise > most) { most = rise; plane = i; }
+  });
+  if (plane < 0) return null;
+  const slope = region.planes[plane]!.slope;
+  const raw = field.startInches + most;
+  const cap = region.capInches;
   return {
-    runFeet,
+    runFeet: Math.abs(slope) < 1e-12 ? 0 : most / slope,
     thicknessInches: cap === null ? raw : Math.min(raw, cap),
     flat: cap !== null && raw > cap,
-    toward,
+    toward: region.drain,
+    plane,
   };
+}
+
+/**
+ * How deep the roof is at a corner of one facet, in inches.
+ *
+ * The facet says which plane governs it, so this needs no search — which matters
+ * because a facet's corners lie ON the boundaries of the region that holds it,
+ * and a point on a polygon's own edge is neither in nor out of it. It is the
+ * same expression as above with the search taken out.
+ */
+export function readFacetAt(
+  field: SolvedTaperField, region: SolvedTaperRegion, facet: SolvedFacet, p: Spot,
+): number {
+  const cap = region.capInches;
+  if (facet.flat && cap !== null) return cap;
+  const plane = region.planes[facet.plane];
+  if (!plane) return field.startInches;
+  const raw = field.startInches + riseAt(plane, p);
+  return cap === null ? raw : Math.min(raw, cap);
 }
 
 /** Which solved field a point is on, or none — a point can be off the roof. */
@@ -186,5 +305,5 @@ export function cricketOf(
 
 /** Nothing solved yet: what a window holds before the first solve arrives. */
 export const NOTHING_SOLVED: SolvedTaper = {
-  solveId: 0, drains: [], fields: [], valleys: [], crickets: [],
+  solveId: 0, drains: [], fields: [], crickets: [], refused: [],
 };

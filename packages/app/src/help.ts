@@ -67,7 +67,7 @@ Getting around a big sheet: scroll to move, hold Ctrl and scroll to zoom where t
 
   Model: `The roof, stood up. Everything here comes off the same traces and properties as the estimate, so it cannot disagree with what you are pricing.
 
-An area lies at its elevation. A run with a height stands up off its base. Where a field has a taper and the roof has drains, the thickness at any point is what you put at the drain plus the slope times how far that point is from the nearest drain — the same arithmetic you could write on a line by hand.
+An area lies at its elevation. A run with a height stands up off its base. Where a field has a taper and the roof has drains, it is laid out the way a tapered package is laid out: the roof is split between the drains, each one gets its own ground, and the boards fall from it four ways along the walls. The thickness at a point is what you put at the drain plus the slope times the run — and the run is how far the boards have come in the direction they are laid, not how far the drain is in a straight line. Where two of those falls meet you get a valley, at 45° to the walls, which is the miter a board is cut on. Halfway between two drains you get a ridge.
 
 The field is lighter where it is thicker. Amber is where the boards run out: the taper has built as high as it can, the roof goes flat, and flat is where water stays. Walk that area before you bid it.
 

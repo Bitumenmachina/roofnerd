@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::geom::Point;
+use crate::geom::{Plane, Point, Shape};
 
 // ── the job, arriving ──────────────────────────────────────────────────────
 
@@ -128,27 +128,79 @@ pub enum CapReason {
     Boards,
 }
 
-/// The thickness of the field, sampled on a grid.
+/// A piece of ground the layout holds, with the depths that go with it.
 ///
-/// The grid is C0's, and C0's only: it is what the drawing does today, so it is
-/// what C0 reproduces. C1 replaces it with the planes in `geom.rs`, at which
-/// point the surface is exact everywhere instead of every two feet.
+/// One plane governs a facet, or the cap does and the roof is flat on it. Either
+/// way the surface over it is exactly planar, which is what lets the drawing
+/// triangulate it and lift each corner without inventing a fold in between.
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Grid {
-    pub min_x: f64,
-    pub min_y: f64,
-    pub step_x: f64,
-    pub step_y: f64,
-    pub cols: usize,
-    pub rows: usize,
-    /// Row by row, `cols` to a row. Inches.
-    pub thickness_inches: Vec<f64>,
-    /// Whether each sample is on the roof at all.
-    pub within: Vec<bool>,
-    /// Whether the field had already hit its ceiling at that sample, so the
-    /// water stops moving there.
-    pub flat: Vec<bool>,
+pub struct Facet {
+    pub shape: Shape,
+    /// Which of the region's planes governs here.
+    pub plane: usize,
+    /// True where the cap binds: the roof is flat, and the water stops moving.
+    pub flat: bool,
+}
+
+/// A line the boards are cut along, and how deep the roof is at each end.
+///
+/// Two ends and two depths say all of it, exactly: a crease lies where one plane
+/// governs on each side, so the depth along it is a straight line between the
+/// ends. C0 shipped twenty samples of a valley because the surface underneath was
+/// sampled too; a laid-out field needs none.
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Crease {
+    pub a: Point,
+    pub b: Point,
+    pub a_inches: f64,
+    pub b_inches: f64,
+}
+
+/// The boundary a region shares with a neighbour, and whether the two agree on it.
+///
+/// NRCA p.166 wants a common, uniform thickness at a ridge and offers an area
+/// divider where the two patterns cannot give one. `disagreement_inches` is the
+/// worst gap between what this region's planes make the roof here and what the
+/// neighbour's make it — zero wherever the line joining the two drains is square
+/// to the field's axes, which is the layout an estimator would draw, and a real
+/// number where it is slanted. It is reported, never averaged away.
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RidgeSegment {
+    pub a: Point,
+    pub b: Point,
+    pub a_inches: f64,
+    pub b_inches: f64,
+    /// Which region is on the other side, by its place in the field's own list.
+    pub meets: usize,
+    pub disagreement_inches: f64,
+}
+
+/// One drainage region: the ground one drain takes, and the fall over it.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaperRegion {
+    /// The drainage point this ground falls to.
+    pub drain: Point,
+    /// The ground itself. In pieces, because a concave field can hand one drain
+    /// two separate pieces of roof, and dropping one would drop roof.
+    pub shapes: Vec<Shape>,
+    pub square_feet: f64,
+    /// The field's axes, carried here too so a region is complete on its own.
+    pub axis_along: Point,
+    pub axis_across: Point,
+    /// The four planes of the four-way layout, all rising from the drain.
+    pub planes: Vec<Plane>,
+    pub cap_inches: Option<f64>,
+    pub facets: Vec<Facet>,
+    /// The 45 degree ties, cut to this region.
+    pub valleys: Vec<Crease>,
+    pub ridges: Vec<RidgeSegment>,
+    pub no_fall_square_feet: f64,
+    pub thin_inches: f64,
+    pub thick_inches: f64,
 }
 
 /// Which way the water leaves a place on the roof, for one arrow.
@@ -162,7 +214,7 @@ pub struct FlowArrow {
     pub angle: f64,
 }
 
-/// One tapered field: one trace on one condition, solved.
+/// One tapered field: one trace on one condition, laid out.
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaperField {
@@ -182,33 +234,32 @@ pub struct TaperField {
     /// height to flash against.
     pub cap_inches: Option<f64>,
     pub cap_reason: Option<CapReason>,
-    /// The drainage points the fall runs to. C0's fall is radial from these —
-    /// today's cone — and the readout evaluates it here rather than sampling
-    /// the grid, so the strip answers in the inches the roof actually is.
-    pub apexes: Vec<Point>,
-    pub grid: Grid,
+    /// The axes the whole layout is laid out on: along the field's longest side,
+    /// and square to it.
+    pub axis_along: Point,
+    pub axis_across: Point,
+    /// The side itself, so a drawing can say which wall the boards were laid to.
+    pub axis_edge: [Point; 2],
+    /// One region per drainage point on this field.
+    pub regions: Vec<TaperRegion>,
     pub flow: Vec<FlowArrow>,
+    pub square_feet: f64,
     pub no_fall_square_feet: f64,
     pub thin_inches: Option<f64>,
     pub thick_inches: Option<f64>,
 }
 
-/// One sample along a valley: where it is in plan, and how thick the roof is
-/// there, so the line sits on the surface instead of over it.
-#[derive(Clone, Copy, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ValleySample {
-    pub x: f64,
-    pub y: f64,
-    pub thickness_inches: f64,
-}
-
-/// The low line between two drains.
+/// A trace the layout would not lay out, and why.
+///
+/// Not silence and not an empty field: a crossing ring, or a tapered area with no
+/// drain on it, is a fact about the job that somebody has to fix, and the solve
+/// is the one place that knows it.
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Valley {
-    pub elevation: f64,
-    pub samples: Vec<ValleySample>,
+pub struct Refused {
+    pub condition_id: String,
+    pub trace: usize,
+    pub why: String,
 }
 
 /// A cricket, as triangles and as the two facts the legend has to say about it.
@@ -239,8 +290,9 @@ pub struct SolvedTaper {
     /// Every drainage point on the roof, in feet.
     pub drains: Vec<Point>,
     pub fields: Vec<TaperField>,
-    pub valleys: Vec<Valley>,
     pub crickets: Vec<Cricket>,
+    /// What the layout would not lay out, and why.
+    pub refused: Vec<Refused>,
 }
 
 /// A part of the model that is not solved yet, said out loud.

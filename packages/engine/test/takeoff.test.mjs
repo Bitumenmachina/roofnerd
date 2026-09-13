@@ -6,7 +6,7 @@ import {
   polygonArea, polygonPerimeter, polylineLength, calibrateFromTwoPoints, calibrateFromScale,
   pitchFactor, distanceToShape, parseFeet, formatFeetInches, ARCHITECTURAL_SCALES,
   measure, scopeFor, parse, evaluate, run, namesUsed, measureJob, scopeOf, emptyJob,
-  unitDisagreement, DerivedNameError, readTaperAt, priceLine,
+  unitDisagreement, DerivedNameError, readTaperAt, readFacetAt, regionAt, priceLine,
 } from '../dist/index.js';
 
 const square = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }];
@@ -419,13 +419,50 @@ test('the model may not take a name the estimator types into', () => {
 });
 
 // ── reading a solved field where the pointer is ────────────────────────────
-// The mirror of `read_at` in `src-tauri/core/src/taper.rs`. The core samples its
-// grid with that expression and this answers the status strip with this one, so
-// the two are held to the same three points — the same three the Rust test pins,
-// on the same made-up field: three drains in a row 38 ft apart, half an inch at
-// the drain, a quarter inch to the foot, and the boards running out at 14.
+// The mirror of `read_at` in `src-tauri/core/src/taper.rs`. The core reads its own
+// facet corners with that expression and this answers the status strip with this
+// one, so the two are held to the same four places — the same four the Rust test
+// pins (`the_field_is_laid_out_the_way_the_book_lays_it_out`), on a made-up field
+// with the same shape: 108 by 92 ft, three drains in a row 38 ft apart, half an
+// inch at the drain, a quarter inch to the foot, and the boards running out at 14.
+//
+// Laid out rather than coned (D149). The field is cut into one drainage region per
+// drain by the perpendicular bisectors between them — at x 55 and x 93 — and each
+// region carries the four planes that fall from its drain along the field's axes.
+// The thickness is the greatest of the four runs, so:
+//
+//   (36, 98)   the first drain: no run, 1/2 in
+//   (46, 108)  ten along and ten across from it: a valley, where two of the four
+//              planes tie, and 3 in from either
+//   (16, 132)  the far corner: 20 ft along, 34 across, so 34 governs and the roof
+//              is 9 in. THE CONE SAID 10.3615… in, off the diagonal
+//   (52, 43)   55 ft across: 14 1/4 in wanted, 14 in allowed, so flat
 
-const cone = {
+const axisAlong = { x: 1, y: 0 };
+const axisAcross = { x: 0, y: 1 };
+const fallsFrom = (drain) => [axisAlong, { x: -1, y: 0 }, axisAcross, { x: 0, y: -1 }]
+  .map((direction) => ({ origin: drain, direction, slope: 0.25 }));
+const box = (minX, maxX) => ({
+  ring: [{ x: minX, y: 42 }, { x: maxX, y: 42 }, { x: maxX, y: 134 }, { x: minX, y: 134 }],
+  holes: [],
+});
+const regionOf = (drain, minX, maxX) => ({
+  drain,
+  shapes: [box(minX, maxX)],
+  squareFeet: (maxX - minX) * 92,
+  axisAlong,
+  axisAcross,
+  planes: fallsFrom(drain),
+  capInches: 14,
+  facets: [],
+  valleys: [],
+  ridges: [],
+  noFallSquareFeet: 0,
+  thinInches: 0.5,
+  thickInches: 14,
+});
+
+const laidOut = {
   conditionId: 'c-field',
   trace: 0,
   ring: [{ x: 14, y: 42 }, { x: 122, y: 42 }, { x: 122, y: 134 }, { x: 14, y: 134 }],
@@ -434,50 +471,87 @@ const cone = {
   slopeInchesPerFoot: 0.25,
   capInches: 14,
   capReason: 'boards',
-  apexes: [{ x: 36, y: 98 }, { x: 74, y: 98 }, { x: 112, y: 98 }],
-  grid: { minX: 14, minY: 42, stepX: 2, stepY: 2, cols: 55, rows: 47, thicknessInches: [], within: [], flat: [] },
+  axisAlong,
+  axisAcross,
+  axisEdge: [{ x: 122, y: 134 }, { x: 14, y: 134 }],
+  regions: [
+    regionOf({ x: 36, y: 98 }, 14, 55),
+    regionOf({ x: 74, y: 98 }, 55, 93),
+    regionOf({ x: 112, y: 98 }, 93, 122),
+  ],
   flow: [],
-  noFallSquareFeet: 136,
+  squareFeet: 9936,
+  noFallSquareFeet: 0,
   thinInches: 0.5,
   thickInches: 14,
 };
 
 test('at a drain the roof is what the estimator said it is there', () => {
-  const at = readTaperAt(cone, { x: 36, y: 98 });
+  const at = readTaperAt(laidOut, { x: 36, y: 98 });
   assert.equal(at.thicknessInches, 0.5);
   assert.equal(at.runFeet, 0);
   assert.equal(at.flat, false);
   assert.deepEqual(at.toward, { x: 36, y: 98 });
 });
 
-test('on the ridge between two drains it is the slope times half the span', () => {
-  const at = readTaperAt(cone, { x: 55, y: 98 });
-  assert.equal(at.runFeet, 19);
-  assert.equal(at.thicknessInches, 5.25);
+test('on a valley two of the four planes tie, and the reading is what they agree on', () => {
+  const at = readTaperAt(laidOut, { x: 46, y: 108 });
+  assert.equal(at.runFeet, 10);
+  assert.equal(at.thicknessInches, 3);
+  // Ten feet along and ten across: the run is the same either way, which is what
+  // puts every valley in this scheme at 45 degrees to the boards.
+  assert.equal(at.toward.x, 36);
 });
 
-test('and out at the far corner it is the long run, to the last figure', () => {
-  const at = readTaperAt(cone, { x: 16, y: 132 });
-  assert.equal(at.runFeet, 39.4461658466320415073);
-  assert.equal(at.thicknessInches, 10.3615414616580103768);
+test('and out at the far corner it is the greater of the two runs, not the diagonal', () => {
+  const at = readTaperAt(laidOut, { x: 16, y: 132 });
+  assert.equal(at.runFeet, 34);
+  assert.equal(at.thicknessInches, 9);
+  // The straight line to that drain is 39.44 ft, which would have made it
+  // 10.3615… in. A tapered board is cut across its own run, not along a diagonal.
+  assert.notEqual(at.runFeet, Math.hypot(20, 34));
 });
 
 test('past the ceiling the roof is flat, and the reading says so', () => {
-  // Fifty-six feet from the nearest drain is 14.5 in of board, and the boards
-  // ran out at 14: the water stops moving here, which is the whole reason C1
-  // replaces this cone with a layout.
-  const at = readTaperAt(cone, { x: 52, y: 44 });
+  // Fifty-five feet of run is 14.25 in of board, and the boards ran out at 14: the
+  // water stops moving here, and this is the ground the estimator walks.
+  const at = readTaperAt(laidOut, { x: 52, y: 43 });
   assert.ok(at.runFeet > 54);
   assert.equal(at.thicknessInches, 14);
   assert.equal(at.flat, true);
 });
 
 test('a field with nothing capping it rises, and is not flat anywhere', () => {
-  const at = readTaperAt({ ...cone, capInches: null, capReason: null }, { x: 52, y: 44 });
+  const uncapped = {
+    ...laidOut,
+    capInches: null,
+    capReason: null,
+    regions: laidOut.regions.map((r) => ({ ...r, capInches: null })),
+  };
+  const at = readTaperAt(uncapped, { x: 52, y: 43 });
   assert.ok(at.thicknessInches > 14);
   assert.equal(at.flat, false);
 });
 
+test('a place on no region is no reading, not a roof of no thickness', () => {
+  assert.equal(readTaperAt(laidOut, { x: 200, y: 200 }), null);
+  assert.equal(regionAt(laidOut, { x: 200, y: 200 }), null);
+  assert.deepEqual(regionAt(laidOut, { x: 60, y: 98 }).drain, { x: 74, y: 98 });
+});
+
+test('a facet is read off the plane it says governs it, with no search', () => {
+  // A facet's corners lie ON the boundary of the region that holds it, and a point
+  // on a polygon's own edge is neither in nor out — so the drawing is told which
+  // plane governs rather than left to look it up. Plane 3 falls from the drain
+  // toward the north wall: 48 ft of run at (40, 50) is 12 1/2 in.
+  const region = laidOut.regions[0];
+  const sloping = { shape: box(14, 55), plane: 3, flat: false };
+  assert.equal(readFacetAt(laidOut, region, sloping, { x: 40, y: 50 }), 12.5);
+  // On a flat facet it is the cap, wherever on it you stand.
+  const flat = { shape: box(14, 55), plane: 3, flat: true };
+  assert.equal(readFacetAt(laidOut, region, flat, { x: 40, y: 50 }), 14);
+  assert.equal(readFacetAt(laidOut, region, flat, { x: 20, y: 43 }), 14);
+});
 // ── does the unit follow from the formula (D-unit) ─────────────────────────
 // Narrow on purpose: it speaks only where every name is a known measure and no
 // bare constant is multiplying or dividing. Everything else is out of scope,
