@@ -151,8 +151,10 @@ fn every_drain_gets_a_cut_and_it_runs_along_the_boards() {
 ///
 /// The deck it lands on, the flat board by the course, the lettered panel, the
 /// sump at the drain, and then whatever the condition's own lines say goes over
-/// it — in the order the condition lists them, because nothing in the job format
-/// states a layer order and the list is the only order there is.
+/// it — sorted by what each line says it DOES in the roof, which is the `layer`
+/// on the item, against the trade's own order from the deck up. The demo lists
+/// the membrane before the cover board and gets them the right way round here,
+/// which is the whole point of asking the line rather than the list.
 #[test]
 fn the_section_stacks_the_roof_the_way_it_gets_built() {
     let (document, taper, all) = drawn();
@@ -176,6 +178,16 @@ fn the_section_stacks_the_roof_the_way_it_gets_built() {
         .expect("the field is in the job");
     let stated: Vec<String> = field.layers().iter().map(|l| l.description.clone()).collect();
     assert_eq!(stated.len(), 2, "the demo states a cover board and a membrane");
+    // The cover board goes on and then the membrane goes over it, whichever way
+    // round the estimator listed the two lines — and on this demo they are
+    // listed the other way.
+    let listed: Vec<&str> =
+        field.items.iter().filter_map(|i| i.layer.as_deref()).take(2).collect();
+    assert_eq!(listed, vec!["membrane", "cover board"], "the demo lists them membrane first");
+    assert_eq!(
+        field.layers().iter().filter_map(|l| l.layer.as_deref()).collect::<Vec<_>>(),
+        vec!["cover board", "membrane"]
+    );
 
     let mut want = vec!["deck".to_string(), "fill".to_string(), "panel".to_string(), "sump".to_string()];
     want.extend(stated);
@@ -278,4 +290,32 @@ fn dimension(drawing: &Drawing, what: &str) -> String {
         })
         .text
         .clone()
+}
+
+/// The core and the engine name the layers of a roof in the same order.
+///
+/// Written twice for the reason every convention in this crate is — the engine
+/// states it where the money is and the core needs it for the geometry — so this
+/// reads the TypeScript itself at test time rather than restating the list here.
+/// Change one and this says which.
+#[test]
+fn the_core_and_the_engine_stack_a_roof_in_the_same_order() {
+    let source = std::fs::read_to_string(
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../packages/engine/src/model.ts"),
+    )
+    .expect("the engine's layer order is in the repository");
+
+    const LEAD: &str = "export const LAYER_FUNCTIONS: readonly string[] = [";
+    let at = source.find(LEAD).expect("`LAYER_FUNCTIONS` is not in model.ts");
+    let rest = &source[at + LEAD.len()..];
+    let list = &rest[..rest.find(']').expect("the list is not closed")];
+    let engine: Vec<String> = list
+        .split(',')
+        .map(|piece| piece.trim().trim_matches('\'').trim_matches('"').trim().to_string())
+        .filter(|word| !word.is_empty())
+        .collect();
+
+    assert!(!engine.is_empty(), "the list read empty: {list}");
+    assert_eq!(engine, roofnerd_core::LAYER_ORDER.to_vec());
 }

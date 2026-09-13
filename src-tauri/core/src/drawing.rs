@@ -1022,8 +1022,9 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
         ));
     }
     if !layers.is_empty() {
-        d.key
-            .push("the layers over the boards are the condition's own, in the order it lists them".to_string());
+        d.key.push(
+            "the layers over the boards are what each line says it is, from the deck up".to_string(),
+        );
     }
     let at_key = run * 0.55;
     d.key_from = Some(Point::new(at_key, -cut.depth_at(at_key) / 12.0 - over / 12.0));

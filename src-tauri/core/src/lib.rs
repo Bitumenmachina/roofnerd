@@ -47,7 +47,7 @@ pub use geom::{bounds, inside, Bounds, Edge, HalfPlane, Plane, Point, Shape};
 pub use model::{
     Board, BoardBill, CapReason, Condition, Crease, Cricket, Document, Facet, FlowArrow, Line,
     NotSolvedYet, Page, Refused, RidgeSegment, Solved, SolvedTaper, Sump, TaperField, TaperRegion,
-    Trace,
+    Trace, LAYER_ORDER,
 };
 pub use profile::{LetterRow, Panel, ProfileSet, Schedule};
 pub use scope::Scopes;

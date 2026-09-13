@@ -64,11 +64,15 @@ it is asked for.
 **And the money knows.** With a cut up, the Estimate names the lines the plane goes through —
 `LINES CUT BY SECTION A–A · 28` — and marks their groups. It names, it does not filter.
 
-**Two things the job format does not state, decided (D155).** A condition's lines that carry a
-thickness are its LAYERS, in the order it lists them, bottom to top — the demo is re-ordered so the
-cover board goes on before the membrane. And the flashing height is a typed `FLASHUP` (24" on the
-parapet, 18" on the curb) until C3 solves one; where nobody types one the drawing goes to the least
-NRCA accepts and says so.
+**How the layers stack was already in the box (D155).** A line that carries a thickness is a layer,
+and what it DOES in the roof is on the line — `layer`, against `LAYER_FUNCTIONS` in
+`packages/engine/src/model.ts`, which runs from the deck up. The first version of this stacked them
+in the order the condition listed its lines and re-ordered the demo to suit; the demo lists the
+membrane first because it is priced first, and the order a crew builds in was on every one of those
+lines already. The core carries the list and a test reads the TypeScript at test time, the way
+`nrca_figures.rs` already pins the conventions in `roof.ts`. The one gap that stands is the flashing
+height: a typed `FLASHUP` (24" on the parapet, 18" on the curb) until C3 solves one, and where nobody
+types one the drawing goes to the least NRCA accepts and says so.
 
 **Checks.** `cargo test --workspace` is 35 + 7 + 10 + 6 + 14 — the 6 are
 `src-tauri/core/tests/the_drawings.rs`, which works the three cuts out by hand from the job's own

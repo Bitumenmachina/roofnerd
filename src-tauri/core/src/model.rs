@@ -86,17 +86,67 @@ pub struct Line {
     pub id: String,
     #[serde(default)]
     pub description: String,
+    /// What it does in the roof: `membrane`, `cover board`, `vapour barrier`.
+    /// A free string, because neither IFC nor FreeCAD closes this set.
+    #[serde(default)]
+    pub layer: Option<String>,
     #[serde(default)]
     pub thickness: Option<f64>,
 }
 
+/// What a layer does in a roof, bottom-up from the deck.
+///
+/// The copy for the model, of `LAYER_FUNCTIONS` in
+/// `packages/engine/src/model.ts`. It is written twice for the reason every
+/// other convention in this crate is — the engine states it for the money and
+/// the core needs it for the geometry — and
+/// `tests/the_drawings.rs` reads the TypeScript at test time so the two cannot
+/// drift.
+///
+/// It is an ORDER and not a set. A layer whose function is a word this list does
+/// not carry is still a layer; it goes above the ones that are, because the list
+/// runs from the deck up and a function nobody charted has no stated place under
+/// anything.
+pub const LAYER_ORDER: &[&str] = &[
+    "primer",
+    "vapour barrier",
+    "thermal barrier",
+    "insulation",
+    "tapered insulation",
+    "cover board",
+    "reinforcement",
+    "membrane",
+    "top coat",
+    "flashing",
+    "edge metal",
+    "fastening",
+    "adhesive",
+];
+
 impl Condition {
-    /// The lines on it that take up room in a section, in the order they are
-    /// listed — which is the order they go on, bottom to top. Nothing in the job
-    /// format states a layer order, and the list is the only order there is; the
-    /// drawing says so on itself rather than guessing at a stack.
+    /// The lines on it that take up room in a section, bottom to top.
+    ///
+    /// A line says what it DOES in the roof — `layer` on the item, which the
+    /// library, the book and the demo already carry — and the trade's own order
+    /// for those runs from the deck up. So the stack is not a guess and it is not
+    /// the order somebody happened to type the lines in: it is what each line
+    /// says it is, sorted by where that goes.
     pub fn layers(&self) -> Vec<&Line> {
-        self.items.iter().filter(|i| i.thickness.map(|t| t > 0.0).unwrap_or(false)).collect()
+        let mut out: Vec<&Line> = self
+            .items
+            .iter()
+            .filter(|i| i.thickness.map(|t| t > 0.0).unwrap_or(false))
+            .collect();
+        let rank = |line: &Line| {
+            line.layer
+                .as_deref()
+                .and_then(|word| LAYER_ORDER.iter().position(|f| *f == word))
+                .unwrap_or(LAYER_ORDER.len())
+        };
+        // Stable, so two lines with the same function stay in the order the
+        // estimator listed them — two boards of one function is two courses.
+        out.sort_by_key(|line| rank(line));
+        out
     }
 }
 

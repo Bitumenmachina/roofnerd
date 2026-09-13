@@ -63,7 +63,7 @@ const shot = async (session, name) =>
   writeFile(join(EVIDENCE, `${name}-${COMMIT}.png`), Buffer.from(await session.screenshot(), 'base64'));
 
 // ── what this roof comes to, worked out from what is on disk ───────────────
-const { capInches } = await import('../../packages/engine/dist/index.js');
+const { LAYER_FUNCTIONS, capInches } = await import('../../packages/engine/dist/index.js');
 const jobFolder = join(ROOT, 'jobs/demo-job');
 const read = async (rel) => JSON.parse(
   await readFile(join(rel.startsWith('data/') ? ROOT : jobFolder, rel), 'utf8'));
@@ -510,12 +510,20 @@ try {
     assert.ok(drawing.layers.length >= 4,
       `the section draws ${drawing.layers.length} layers: ${JSON.stringify(drawing.layers)}`);
     // Bottom to top: the deck it lands on, the flat board, the lettered panel,
-    // and then whatever the condition's own layers say goes over it, in the order
-    // the condition lists them.
+    // and then whatever the condition's own lines say goes over it — sorted by
+    // what each one says it DOES in the roof, against the trade's own order from
+    // the deck up. Which is not the order the condition lists them in: this demo
+    // lists the membrane first and it belongs on top.
     const order = drawing.layers.filter((l, i) => drawing.layers.indexOf(l) === i);
+    const rank = (line) => {
+      const at = LAYER_FUNCTIONS.indexOf(line.layer);
+      return at < 0 ? LAYER_FUNCTIONS.length : at;
+    };
     const stated = (fieldCondition.items ?? [])
-      .filter((i) => typeof i.thickness === 'number')
-      .map((i) => i.description);
+      .filter((i) => typeof i.thickness === 'number' && i.thickness > 0)
+      .map((line, i) => ({ line, i }))
+      .sort((a, b) => rank(a.line) - rank(b.line) || a.i - b.i)
+      .map(({ line }) => line.description);
     assert.equal(order[0], 'deck', `the bottom layer is "${order[0]}"`);
     assert.ok(order.includes('fill'), `there is no flat board in ${JSON.stringify(order)}`);
     assert.ok(order.includes('panel'), `there is no tapered panel in ${JSON.stringify(order)}`);
@@ -524,7 +532,7 @@ try {
     for (const [i, name] of stated.entries()) {
       assert.equal(order[order.length - stated.length + i], name,
         `the stated layers come out ${JSON.stringify(order.slice(-stated.length))}`
-        + ` and the condition lists ${JSON.stringify(stated)}`);
+        + ` and the condition's lines stack ${JSON.stringify(stated)}`);
     }
   });
 
