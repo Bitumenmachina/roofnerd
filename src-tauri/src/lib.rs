@@ -155,6 +155,22 @@ fn solve_get(state: State<'_, Document>, part: String) -> Result<Value, String> 
             let solved = guard.solved.as_ref().ok_or("this roof did not solve")?;
             serde_json::to_value(&solved.taper).map_err(|e| e.to_string())
         }
+        // The named numbers, for a window that has just connected. They ride
+        // `doc:changed` for every window that is already listening, but a window
+        // opened AFTER the job was opened has heard no change yet — and before
+        // this existed it priced the whole job with an empty scope, so a cost
+        // panel torn off into its own window showed every derived line pending
+        // and a selling price short by the whole tapered package. Money in two
+        // windows disagreeing is the defect this shell exists to prevent.
+        // Hundreds of bytes, so pulling them costs nothing.
+        "scopes" => {
+            if guard.solved.is_none() {
+                let solved = roofnerd_core::solve(&guard.doc, guard.solve_id)?;
+                guard.solved = Some(solved);
+            }
+            let solved = guard.solved.as_ref().ok_or("this roof did not solve")?;
+            serde_json::to_value(&solved.scopes).map_err(|e| e.to_string())
+        }
         "walls" | "fastening" | "drawing" => {
             serde_json::to_value(roofnerd_core::NotSolvedYet::new(&part, guard.solve_id))
                 .map_err(|e| e.to_string())

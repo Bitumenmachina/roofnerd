@@ -48,10 +48,21 @@ function publish(change: Changed) {
 
 /** Read what the shell has, and follow it from here on. */
 export async function connect(): Promise<Doc> {
-  // `doc_get` answers with the document alone. The solve arrives with the first
-  // change, and until one does there is nothing open to have solved: a window
-  // opened on the start screen draws no roof.
-  publish({ document: await invoke<Doc>('doc_get'), solveId: currentSolveId, scopes: currentScopes });
+  // The document AND the named numbers. `doc_get` answers with the document
+  // alone, and the scopes ride `doc:changed` — which a window opened after the
+  // job was opened has not heard. It used to connect with an empty scope and
+  // price every derived line as pending, so a cost panel torn into its own
+  // window showed the tapered package with no money on it and a selling price
+  // short by the whole of it, until the estimator happened to type something.
+  // Two windows disagreeing about money is the one thing this layer exists to
+  // prevent (C0's pushback 6, now that the scopes carry money).
+  //
+  // A job that is not open yet has no solve, and the shell says so rather than
+  // answering with an empty map — so that is caught and left as nothing, which
+  // is what a window on the start screen should have.
+  const document = await invoke<Doc>('doc_get');
+  const scopes = await invoke<Scopes>('solve_get', { part: 'scopes' }).catch(() => currentScopes);
+  publish({ document, solveId: currentSolveId, scopes });
   await listen<Changed>('doc:changed', (event) => publish(event.payload));
   return current;
 }
