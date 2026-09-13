@@ -28,6 +28,60 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## C3 — walls, curbs, coping, the wall section (2026-09-13)
+
+**A parapet and a curb are now solved, not typed and drawn.** `src-tauri/core/src/walls.rs` and
+`coping.rs` land the S2 solver the plan named: `trace + H + WALL` grows the traced line inboard by a
+true polyline offset (`cavalier_contours`, D147, unused since C0) instead of `model.ts`'s retired
+per-segment "turn toward the ring's own middle" — a heuristic that cannot survive a concave ring (the
+field's own bump has one) or an open run (which has no middle to turn toward at all). At a place on
+that inboard face, the membrane's ceiling is `min(FLASHUP, wallTop − finishedRoof(p))`, clipped at
+zero, and `FLASH_SF` is the exact sum of trapezoids between the run's own breakpoints — never
+sampled (D153). `CURB_RAISE_IN` is written on every wall and curb condition, not curbs alone. Cap
+width, gauge, sections, corners and cleat follow in `coping.rs` (D154), each against the book where
+the book has a rule and typed with the gap recorded where it does not.
+
+**Six new names on the money seam.** `FLASH_SF`, `FLASH_MIN_IN`, `CURB_RAISE_IN`, `COPING_LF`,
+`COPING_PCS_EA`, `CLEAT_LF` per wall and curb condition. `make-demo-prices.mjs`'s parapet and curb
+lines move off `LF * H` and off `SEGMENTS` onto them; `FASTEN_OC` is typed on the demo (12 in) because
+`metal-fasteners` is the one line that reaches it directly in a formula. Selling price $165,328.20 to
+**$168,956.54**, up $3,628.34 — almost all of it `mitre`, whose `COPING_PCS_EA` (48: sections and
+corners together) replaced a `SEGMENTS` count (8) that was only ever the corners; the item's own note
+said so and was corrected.
+
+**The Section draws what it prices.** `drawing.rs`'s `wall_at` reads the solved walls instead of the
+job's properties a second time, and the flashing line reads `walls::flashing_at` — the same clipped
+ceiling `FLASH_SF` sums, evaluated at the section's own point — so a section and the estimate can no
+longer disagree about how far the membrane runs. C5's own test (`the_drawings.rs`, "wall flashing
+24\" up") passed unchanged: the demo's parapet never clips, so the solved answer and the typed
+`FLASHUP` agree to the inch, and the test that already asserted this is now proof the wiring is right
+rather than proof of what was typed.
+
+**A boundary bug found and fixed along the way, generally.** Reading whether a point is on a field's
+own ring with plain ray casting is genuinely ambiguous exactly on an edge, and a wall standing exactly
+on the field's traced line — every parapet does — then has every one of its own corners sitting on
+that blind spot. Fixed once in `geom::on_or_in`, a boundary-distance fallback, rather than special-cased
+in the one place it was first noticed.
+
+**Checks.** `cargo test --workspace` is 40 (core) + 7 (`nrca_figures.rs`) + 10 (`the_bill.rs`) + 7
+(`the_drawings.rs`) + 7 (`the_walls.rs`, new) + 14 (shell) = 85, `packages/engine` 172, `packages/app`
+9, all three gates PASS. Every commit went through the hook.
+
+**Not run here: the probe.** `tools/probe/section-walls.mjs` landed first and red by construction — at
+this batch's own starting commit there is no `FLASH_SF` anywhere and the flashing line still reads
+`LF * H` — and it has never executed; no binary, no `pnpm build:app`, no window to open in this clone.
+Every figure it holds the program to is worked out from the job's own trace, never typed: the retired
+`LF * H` it must NOT equal, and a coping piece count from the trace's own corners. Pictures wanted:
+the Model with the wall solids, offset correctly on the parapet's bump; the Condition panel on the
+parapet and the curb; the curb's raise finding, whatever it comes to.
+
+**Open for Patrick:** `mitre`'s price moved by $3,628 because the catalogue prices one shop-formed EA
+line for both a coping run's straight sections and its corners, and `COPING_PCS_EA` now counts both —
+correct against the charter's own naming, and worth a second catalogue line if a real estimate should
+price plain lengths differently from corners.
+
+**Next: C4 — zones, pressures, counts, adhesive.**
+
 ## C5 — the Section view, the two Plan overlays, and the look (2026-09-13)
 
 **The roof stopped reading like a debugger.** C1 laid the field out and C2 turned it into a bill, and
