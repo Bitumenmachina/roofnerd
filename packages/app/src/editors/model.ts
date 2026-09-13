@@ -70,14 +70,17 @@ import {
   CRICKET_SLOPE_MULTIPLE, MIN_FLASHING_INCHES, NOTHING_SOLVED, SINGLE_LAYER_MAX_INCHES,
   buildUpInches, cricketOf, fieldAt, fieldOf, formatFeetInches, pointInPolygon, readFacetAt,
   readTaperAt, selfIntersects, sumpOf,
-  type CapReason, type Condition, type Page, type Point, type Properties,
+  type CapReason, type Condition, type Drawing, type Page, type Point, type Properties,
   type SolvedCrease, type SolvedCricket, type SolvedRefusal, type SolvedRidge, type SolvedSump,
   type SolvedTaper, type SolvedTaperField, type SolvedTaperRegion,
 } from '@roofnerd/engine';
 import { at, doc, solveId, solveTaper, subscribe, type Doc } from '../doc.js';
 import { feet, feetPerUnit } from '../scale.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
-import { stripField, type RailTool, type Reading as StripReading, type SurfaceChrome } from '../chrome.js';
+import {
+  derivedField, stripField,
+  type RailTool, type Reading as StripReading, type SurfaceChrome,
+} from '../chrome.js';
 import { watchTheme } from '../theme.js';
 import { hueFor } from '../icons.js';
 
@@ -109,13 +112,37 @@ const inches = (n: number) => n / 12;
 // so a corner lifted to its own depth is the roof and not an approximation of it.
 
 /**
- * How far apart the flow arrows are placed, in feet.
+ * The thickness ramp, from the handoff's own token table: charcoal where the
+ * roof is thin and grey where it is thick.
  *
- * The core places them — this is the same spacing, and it is here only to size
- * the dart against it. A dart is a mark on a drawing and how big it is drawn is
- * the drawing's business; where it goes and which way it points are the roof's.
+ * It used to be the CONDITION's colour lightened toward white, which made the
+ * roof read as a blue shape rather than as a roof and put the field's identity
+ * colour — a thing for telling one traced condition from another — on a scale
+ * that means a depth. Frame 2 shades by thickness in four greys and nothing
+ * else, and it is right: the one loud colour on this drawing is the water.
  */
-const ARROW_FEET = 8;
+const RAMP = ['#2b3136', '#4a5359', '#7c878d', '#a9b4b9'] as const;
+
+/** Where a fraction of the way up the ramp lands, as a colour. */
+function rampAt(t: number): THREE.Color {
+  const held = Math.min(1, Math.max(0, Number.isFinite(t) ? t : 0));
+  const along = held * (RAMP.length - 1);
+  const first = Math.min(RAMP.length - 2, Math.floor(along));
+  return new THREE.Color(RAMP[first]!).lerp(new THREE.Color(RAMP[first + 1]!), along - first);
+}
+
+/**
+ * A wall is masonry and reads as masonry.
+ *
+ * The handoff draws the parapet in three greys by face and its edges in a fourth
+ * — stone, not the condition's identity colour, which belongs in the swatch
+ * beside its name in the list. The light already separates the faces, so one
+ * stone and a sun is the whole of it.
+ */
+const MASONRY = '#3b4247';
+
+/** The dashes a valley and a ridge are drawn in: pale, and not the water's. */
+const CREASE = '#cfd8dd';
 
 /**
  * The four corners the roof is offered from.
@@ -164,6 +191,10 @@ let framed = false;
 let lastSpan = 0;
 let stopObserving: (() => void) | null = null;
 let stopSubscribing: (() => void) | null = null;
+/** The section this drawing is cut along, or none — the Model view has none. */
+let cutting: Drawing | null = null;
+/** Does this mounting own the rail and the strip, or is it a pane in something? */
+let ownsChrome = true;
 /** The canvas this view is drawn on, for turning world points into screen ones. */
 let surface: HTMLCanvasElement | null = null;
 
@@ -441,6 +472,14 @@ function viewChips(surroundings: SurfaceChrome): void {
     }));
   }
 
+  // The board grid, beside the vertical, because it is the same kind of thing:
+  // a way of looking at the one roof that changes nothing about it.
+  const boards = chip('boards', () => {
+    showBoards = !showBoards;
+    redrawWorld();
+    refreshChips();
+  });
+
   const look = chip('look around', () => {
     looking = !looking;
     if (controls) controls.enabled = looking;
@@ -448,6 +487,7 @@ function viewChips(surroundings: SurfaceChrome): void {
   });
 
   refreshChips = () => {
+    boards.classList.toggle('on', showBoards);
     (Object.keys(CORNERS) as Corner[]).forEach((id, i) => {
       corners[i]!.classList.toggle('on', id === corner && !looking);
     });
@@ -458,24 +498,57 @@ function viewChips(surroundings: SurfaceChrome): void {
   };
   refreshChips();
 
-  surroundings.setViewTools([chipGroup(...corners), chipGroup(fit), chipGroup(...verts), chipGroup(look)]);
+  surroundings.setViewTools([
+    chipGroup(...corners), chipGroup(fit), chipGroup(...verts),
+    chipGroup(boards), chipGroup(look),
+  ]);
 }
 
-export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void {
+/** Draw the roof again with nothing re-pulled. A chip that changes what is on
+ *  the roof and not what the roof IS needs no solve. */
+let redrawWorld: () => void = () => undefined;
+
+/**
+ * What a view that is not the Model view wants of it.
+ *
+ * The Section stands the same roof up behind a clipping plane, and it is the
+ * SAME roof: one solve, one set of meshes, one place that knows how to draw a
+ * facet. Two copies of this file would be two roofs, and two roofs disagree.
+ */
+export interface ModelOptions {
+  /**
+   * A section drawing to cut the roof along. The plane is where the drawing says
+   * the cut is, the face it exposes is the drawing's own polygons stood up, and
+   * the vertical is stretched by the exaggeration the drawing states.
+   */
+  readonly cut?: Drawing | null;
+  /** False where the view around this one owns the rail and the strip. */
+  readonly ownsChrome?: boolean;
+}
+
+export function mountModel(
+  host: HTMLElement, surroundings: SurfaceChrome, options: ModelOptions = {},
+): void {
   unmount();
   chrome = surroundings;
-  surroundings.setTools(modelTools(() => undefined));
-  surroundings.setActiveTool('select');
-  surroundings.setViewTools([]);
-  surroundings.setReadout(EMPTY_READING);
-  surroundings.strip.show('Select', [
-    stripField('On the roof', 'click to pick what you are looking at'),
-    stripField('Units', 'SF · LF · EA · SQ'),
-  ]);
+  cutting = options.cut ?? null;
+  ownsChrome = options.ownsChrome !== false;
+  if (ownsChrome) {
+    surroundings.setTools(modelTools(() => undefined));
+    surroundings.setActiveTool('select');
+    surroundings.setViewTools([]);
+    surroundings.setReadout(EMPTY_READING);
+    surroundings.strip.show('Select', [
+      stripField('On the roof', 'click to pick what you are looking at'),
+      stripField('Units', 'SF · LF · EA · SQ'),
+    ]);
+  }
   framed = false;
   corner = 'NE';
-  exaggeration = 1;
+  exaggeration = cutting ? cutting.verticalExaggeration : 1;
   looking = false;
+  showBoards = false;
+  labelsNow = [];
   host.replaceChildren();
   host.classList.add('model-editor');
 
@@ -504,17 +577,29 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
 
   overlay.append(legend, note);
 
+  // The words that stand on the roof. Their own layer over the canvas, because
+  // they have to be readable at any camera and a mesh cannot be: a word lying on
+  // a tapered plane in a fixed isometric is a word at an angle. Frame 2 draws
+  // them upright, and so does every roof plan ever printed.
+  const words = document.createElement('div');
+  words.className = 'model-labels';
+  labelHost = words;
+
   // What the roof does where the pointer is reads in the window's status strip
   // now, which is where the handoff puts it: a continuous readout under the
   // cursor, in the same region whatever the surface is showing. It used to be a
   // line of its own under this canvas, which meant the Plan had nowhere to put
   // the same four facts when it learns to compute them.
-  host.append(canvas, overlay);
+  host.append(canvas, words, overlay);
 
   viewChips(surroundings);
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // A section is a plane through the roof with everything in front of it taken
+  // away. three.js will take it away and will not cap what it cut, so the face
+  // is drawn: the section drawing's own polygons, stood up at the plane.
+  renderer.localClippingEnabled = cutting !== null;
 
   scene = new THREE.Scene();
   // The ground the drawing lies on is the room the estimator is in — the same
@@ -556,6 +641,8 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
     } catch (e) {
       world.clear();
       legend.replaceChildren();
+      labelsNow = [];
+      words.replaceChildren();
       note.textContent = `This roof did not draw, so nothing is shown — what you would have seen would not have been this job. ${e instanceof Error ? e.message : String(e)}`;
       note.classList.add('model-broke');
       return;
@@ -563,6 +650,8 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
     note.classList.remove('model-broke');
     legend.replaceChildren(...built.legend);
     note.textContent = built.note;
+    labelsNow = cutting ? [] : built.labels;
+    if (ownsChrome) chrome?.strip.show('Select', built.strip);
     if (solveTrouble) {
       // The roof did not solve. Nothing tapered is drawn, and the window says
       // why rather than showing a deck with no fall on it as though that were
@@ -571,13 +660,19 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
       note.classList.add('model-broke');
     }
     if (!controls) controls = projection(canvas);
+    // The plane has to be back on every material every time the world is rebuilt
+    // — the meshes are new objects and the old materials went with the old ones.
+    if (cutting) clipTo(cutting);
     lastSpan = built.span;
     resize(canvas);
     // Once they have looked around it is their camera. Until then the view
     // follows the roof, so tracing something new does not leave it off screen —
     // and so the roof is in the window the first time it is opened, in every
-    // window it is opened in.
-    if (!framed && built.span > 0) frame();
+    // window it is opened in. A section looks at its own cut instead.
+    if (!framed && built.span > 0) {
+      if (cutting) aimAtCut(cutting);
+      else frame();
+    }
     controls.update();
   };
 
@@ -678,6 +773,7 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
     draw();
   };
 
+  redrawWorld = () => draw();
   stopSubscribing = subscribe(() => void refresh());
   stopWatching = watchSelection(() => highlight());
 
@@ -708,8 +804,223 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
     frameHandle = requestAnimationFrame(tick);
     controls?.update();
     if (renderer && camera) renderer.render(scene, camera);
+    placeWords();
   };
   tick();
+}
+
+/**
+ * Cut the roof along the plane the section states, and draw the face it exposes.
+ *
+ * Three things, and none of them is geometry this file worked out. The PLANE is
+ * where the drawing says the cut is — a vertical plane through the drain, square
+ * to the way the cut runs — and everything on the near side of it is taken away,
+ * which is what a section IS. The FACE is the section drawing's own polygons,
+ * stood up at that plane: the boards by the course, the lettered panel, the sump,
+ * the wall. three.js caps nothing it clips, so without this the roof would be
+ * hollow where it was cut, which is the one thing a section must not be. And the
+ * CAMERA looks square at the plane from the side that was taken away, tipped a
+ * little so the roof running away behind the cut reads as roof.
+ *
+ * The vertical stretch is the world's own — the same one the Model's chips set —
+ * so the face and the roof behind it are stretched together and the picture has
+ * one scale in it.
+ */
+function clipTo(drawing: Drawing) {
+  if (!camera || !controls || !renderer || !world) return;
+  const at = drawing.cutAt;
+  const along = drawing.cutAlong;
+  if (!at || !along) return;
+
+  // Square to the way the cut runs, pointing at the half that is kept.
+  const away = new THREE.Vector3(-along.y, 0, along.x).normalize();
+  const through = new THREE.Vector3(at.x, drawing.cutElevation, at.y);
+  const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(away, through);
+
+  world.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    const material = mesh.material as THREE.Material | THREE.Material[] | undefined;
+    if (!material) return;
+    // The face is ON the plane; clipping it against its own plane is a coin toss
+    // decided by the last bit of a float.
+    const planes = mesh.userData['kind'] === 'cut-face' ? null : [plane];
+    for (const one of Array.isArray(material) ? material : [material]) {
+      one.clippingPlanes = planes;
+      one.needsUpdate = true;
+    }
+  });
+}
+
+/**
+ * Stand where the half that was taken away used to be, and look at the cut.
+ *
+ * Square on, and a little above: a section looked at dead square is an
+ * elevation, and an elevation drawn in three dimensions is a picture that could
+ * have been a flat one. The window is sized on the FACE rather than on the whole
+ * roof, because most of the roof is behind the plane and fitting to it would put
+ * the cut in the corner of the pane as a sliver.
+ */
+function aimAtCut(drawing: Drawing) {
+  if (!camera || !controls || !world) return;
+  const at = drawing.cutAt;
+  const along = drawing.cutAlong;
+  if (!at || !along) return;
+  const away = new THREE.Vector3(-along.y, 0, along.x).normalize();
+
+  const face = new THREE.Box3();
+  world.traverse((object) => {
+    if (object.userData['kind'] === 'cut-face') face.expandByObject(object);
+  });
+  const middle = face.isEmpty()
+    ? new THREE.Vector3(
+      at.x - along.x * drawing.cutRunFeet * 0.5,
+      drawing.cutElevation,
+      at.y - along.y * drawing.cutRunFeet * 0.5,
+    )
+    : face.getCenter(new THREE.Vector3());
+
+  const back = away.clone().negate().add(new THREE.Vector3(0, 0.35, 0)).normalize();
+  const far = Math.max(drawing.cutRunFeet * 4, 120);
+  controls.target.copy(middle);
+  camera.position.copy(middle).add(back.multiplyScalar(far));
+  camera.up.set(0, 1, 0);
+  camera.lookAt(middle);
+  camera.zoom = 1;
+  controls.update();
+  // A margin round the face, so the roof beyond the cut is visible as the thing
+  // the cut was taken out of.
+  if (!face.isEmpty()) {
+    const wide = face.getSize(new THREE.Vector3()).length() * 0.35;
+    face.expandByScalar(Math.max(wide, 2));
+    fitFrustum(face);
+  }
+}
+
+/**
+ * Cut the roof somewhere else, without taking the view down and putting it up.
+ *
+ * A drain picker is pressed while the roof is on screen; rebuilding the renderer
+ * for it would drop a WebGL context on the floor every time, and the roof itself
+ * has not changed at all — only the plane through it has.
+ */
+export function recutModel(drawing: Drawing | null): void {
+  cutting = drawing;
+  if (renderer) renderer.localClippingEnabled = drawing !== null;
+  if (drawing) exaggeration = drawing.verticalExaggeration;
+  if (world) world.scale.set(1, exaggeration, 1);
+  framed = false;
+  redrawWorld();
+}
+
+/**
+ * The cut face itself: the section drawing stood back up where it was cut from.
+ *
+ * The drawing is in its own frame — x from the far end of the cut to the drain,
+ * y the height off the top of deck with up negative — so putting it back is two
+ * lines of arithmetic and no decisions. Every polygon in it was cut in the core
+ * off the solved planes and the boards C2 billed, so the face is the bill, seen
+ * edge on.
+ */
+function cutFace(drawing: Drawing): THREE.Object3D[] {
+  const at = drawing.cutAt;
+  const along = drawing.cutAlong;
+  if (!at || !along) return [];
+  const away = { x: -along.y, y: along.x };
+  const out: THREE.Object3D[] = [];
+
+  // Forward of the plane by a hair, so the face is not clipped by the plane it
+  // lies in. A thousandth of a foot is a hundredth of an inch on the roof.
+  const forward = 0.02;
+  const place = (x: number, y: number) => new THREE.Vector3(
+    at.x - along.x * (drawing.cutRunFeet - x) - away.x * forward,
+    drawing.cutElevation - y,
+    at.y - along.y * (drawing.cutRunFeet - x) - away.y * forward,
+  );
+
+  for (const shape of drawing.shapes) {
+    const ring = shape.shape.ring;
+    if (ring.length < 3) continue;
+    const flat = new THREE.Shape(ring.map((p) => new THREE.Vector2(p.x, p.y)));
+    for (const hole of shape.shape.holes) {
+      if (hole.length < 3) continue;
+      flat.holes.push(new THREE.Path(hole.map((p) => new THREE.Vector2(p.x, p.y))));
+    }
+    const cut = new THREE.ShapeGeometry(flat);
+    const xy = cut.getAttribute('position');
+    const index = cut.getIndex();
+    const order = index ? Array.from(index.array) : [...Array(xy.count).keys()];
+    const positions: number[] = [];
+    for (const i of order) {
+      const p = place(xy.getX(i), xy.getY(i));
+      positions.push(p.x, p.y, p.z);
+    }
+    cut.dispose();
+    if (positions.length === 0) continue;
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.computeVertexNormals();
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+      color: new THREE.Color(FACE[shape.role] ?? '#6b757c'),
+      side: THREE.DoubleSide,
+    }));
+    mesh.raycast = () => {};
+    mesh.userData = { conditionId: null, kind: 'cut-face' };
+    out.push(mesh);
+  }
+  return out;
+}
+
+/** What each course of the cut face is drawn in. The stylesheet's greys. */
+const FACE: Readonly<Record<string, string>> = {
+  fill: '#4a5359',
+  panel: '#a9b4b9',
+  sump: '#1f7a8c',
+  cover: '#7c878d',
+  wall: MASONRY,
+};
+
+/**
+ * Put the words where the roof they name is drawn, this frame.
+ *
+ * They follow the camera, so this runs with the render rather than with the
+ * document: a preset corner, a fit, the vertical stretch and the orbit all move
+ * the picture without changing the roof, and a word that stayed put would be
+ * pointing at nothing. It is a handful of labels, and each one is a projection
+ * and two style properties.
+ *
+ * A word whose place is off the canvas is hidden rather than clamped to the
+ * edge: a label stuck to the frame is a label pointing at the wrong thing.
+ */
+function placeWords() {
+  if (!labelHost || !camera || !surface || !world) return;
+  const rect = surface.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) return;
+
+  // One element per label, kept between frames. Rebuilding them every frame
+  // would be a hundred nodes a second for a picture nobody is touching.
+  while (labelHost.children.length > labelsNow.length) labelHost.lastElementChild?.remove();
+  while (labelHost.children.length < labelsNow.length) {
+    const el = document.createElement('span');
+    el.className = 'model-label';
+    labelHost.append(el);
+  }
+
+  labelsNow.forEach((label, i) => {
+    const el = labelHost!.children[i] as HTMLElement;
+    if (el.textContent !== label.text) el.textContent = label.text;
+    if (el.getAttribute('data-label-kind') !== label.kind) {
+      el.setAttribute('data-label-kind', label.kind);
+    }
+    const v = world.localToWorld(label.at.clone()).project(camera);
+    const x = (v.x * 0.5 + 0.5) * rect.width;
+    const y = (-v.y * 0.5 + 0.5) * rect.height;
+    const on = v.z < 1 && x >= 0 && x <= rect.width && y >= 0 && y <= rect.height;
+    el.hidden = !on;
+    if (!on) return;
+    el.style.left = `${Math.round(x)}px`;
+    el.style.top = `${Math.round(y)}px`;
+  });
 }
 
 /** Put the Model down. The surface switches views in place; this is the other half. */
@@ -735,6 +1046,11 @@ function unmount() {
   stopWatchingTheme?.();
   stopWatchingTheme = null;
   refreshChips = () => undefined;
+  redrawWorld = () => undefined;
+  labelHost = null;
+  labelsNow = [];
+  cutting = null;
+  ownsChrome = true;
 }
 
 /**
@@ -803,6 +1119,10 @@ function compass(from: Point, to: Point): string {
 type Built = {
   centre: THREE.Vector3; span: number; legend: HTMLElement[]; note: string;
   thin: number | null; thick: number | null;
+  /** The words standing on the roof, for the overlay to place. */
+  labels: RoofLabel[];
+  /** What the tool settings strip says about this roof. */
+  strip: Node[];
 };
 
 /**
@@ -813,6 +1133,26 @@ type Built = {
  * see. These are the ones that got drawn, in the solve's own words.
  */
 let fieldsNow: SolvedTaperField[] = [];
+
+/**
+ * The words that stand ON the roof, and where each of them stands.
+ *
+ * Frame 2's whole argument: each drain says its own sump depth, the curb says
+ * what stands behind it, and the flat patch says how many square feet of it
+ * there are and what stopped the fall. They are HTML over the canvas rather than
+ * geometry in it — a label has to stay upright and readable at any camera, which
+ * a mesh does not — and they are placed every frame by projecting the point on
+ * the roof they belong to.
+ *
+ * Every number in one of them is the solve's. There is no second arithmetic here
+ * and there must never be: a word on a roof is a number an estimator will act on.
+ */
+type RoofLabel = { kind: string; at: THREE.Vector3; text: string };
+let labelsNow: RoofLabel[] = [];
+/** Where they are drawn. One element per label, moved rather than rebuilt. */
+let labelHost: HTMLElement | null = null;
+/** Has the estimator asked for the board grid? */
+let showBoards = false;
 
 /** The solved roof this drawing was built from. */
 let solvedNow: SolvedTaper = NOTHING_SOLVED;
@@ -860,6 +1200,8 @@ function build(d: Doc, taper: SolvedTaper): Built {
   let crossedTraces = 0;
   let unstatedWall = 0;
   let unstatedCap = 0;
+  let boards = 0;
+  const labels: RoofLabel[] = [];
   let sumps = 0;
   let unsumpedDrains = 0;
   let clippedSumps = 0;
@@ -894,10 +1236,17 @@ function build(d: Doc, taper: SolvedTaper): Built {
           let drawn = 0;
           if (solvedField) {
             solvedField.regions.forEach((region, regionIndex) => {
-              const mesh = regionSurface(solvedField, region, colour, c);
+              const mesh = regionSurface(solvedField, region, c);
               if (!mesh) return;
               world.add(mesh);
               drawn += 1;
+              // The layout drawing, in three dimensions: C2's bill on the roof
+              // it was billed off. Off until the chip is pressed, because seven
+              // hundred marks over the fall is not what Frame 2 is for.
+              if (showBoards) {
+                for (const board of boardGrid(solvedField, region)) world.add(board);
+                boards += region.boards.length;
+              }
               for (const valley of region.valleys) {
                 world.add(creaseLine(solvedField, valley, 'valley'));
                 valleys += 1;
@@ -918,6 +1267,28 @@ function build(d: Doc, taper: SolvedTaper): Built {
           if (solvedField && drawn > 0) {
             world.add(flowField(solvedField));
             noFallSquares += solvedField.noFallSquareFeet;
+            // The flat ground, named where it lies. How much of it there is and
+            // what stopped the fall are the two facts an estimator acts on —
+            // extend the run, add a drain, or accept that it will hold water —
+            // and they belong on the patch rather than in a key three inches
+            // away from it.
+            if (solvedField.noFallSquareFeet > 0 && solvedField.capInches !== null) {
+              const patch = widestFlat(solvedField);
+              if (patch) {
+                labels.push({
+                  kind: 'nofall',
+                  at: new THREE.Vector3(
+                    patch.x,
+                    solvedField.elevation + inches(solvedField.capInches) + 0.4,
+                    patch.y,
+                  ),
+                  text: `no fall · ${Math.round(solvedField.noFallSquareFeet).toLocaleString('en-US')} SF`
+                    + ` · ${solvedField.capReason === 'flashing'
+                      ? 'the wall will not take another layer'
+                      : 'the boards run out'}`,
+                });
+              }
+            }
             taperedFields += 1;
             regions += drawn;
             if (solvedField.thinInches !== null) thin = Math.min(thin, solvedField.thinInches);
@@ -962,7 +1333,24 @@ function build(d: Doc, taper: SolvedTaper): Built {
           if (wall === undefined) unstatedWall += 1;
           const stood = standUp(ring, elevation, height, wall, colour, c);
           world.add(stood.mesh);
-          if (c.role === 'curb') curbs += 1;
+          if (c.role === 'curb') {
+            curbs += 1;
+            // Its own name, and the cricket behind it where one is traced
+            // against it. Which cricket that is, is the job's own answer: a
+            // ridge condition names what it serves in `between`, and that is
+            // what the core sizes the wedge off.
+            const behind = list.find((other) => other.role === 'ridge' && !other.hidden
+              && (other.between ?? []).includes(c.id));
+            const middle = {
+              x: ring.reduce((sum, q) => sum + q.x, 0) / ring.length,
+              y: ring.reduce((sum, q) => sum + q.y, 0) / ring.length,
+            };
+            labels.push({
+              kind: 'curb',
+              at: new THREE.Vector3(middle.x, elevation + height + 0.4, middle.y),
+              text: behind ? `${c.name} · cricket behind` : c.name,
+            });
+          }
           // The cap on top of it. A coping is formed metal over a wall and a
           // curb cap is formed metal over a curb; both are as wide as the
           // detail says and neither is as wide as the wall. With no width
@@ -983,6 +1371,19 @@ function build(d: Doc, taper: SolvedTaper): Built {
               sumps += 1;
               if (sump.clipped) clippedSumps += 1;
             }
+            // Its own name and the sump it sits in, on the roof beside it. The
+            // number is the depth the layout falls from the sump's rim to the
+            // drain, read off the solved planes — the same figure the section
+            // dimensions and the same one the sump panel is bought against.
+            const which = drains.findIndex((d) => d.x === p.x && d.y === p.y) + 1;
+            const deckHere = fieldAt(taper, p)?.elevation ?? elevation;
+            labels.push({
+              kind: 'drain',
+              at: new THREE.Vector3(p.x, deckHere + inches(sump?.rimInches ?? 0) + 0.6, p.y),
+              text: sump === null
+                ? `Drain ${which} · no sump stated`
+                : `Drain ${which} · sump ${inchLabel(sump.depthInches)} deep`,
+            });
           }
           // The deck the sump is cut into is the field's, read off the solve. A
           // drain on no tapered field has none, and the drain's own datum stands.
@@ -1003,6 +1404,10 @@ function build(d: Doc, taper: SolvedTaper): Built {
   // two drains the ground between the two 45 degree ties is level across, so the
   // water runs to the valleys either side of it and not along the middle.
 
+  // And, where this is a section, the face the cut exposes. It goes in last
+  // because it stands in front of everything the plane took away.
+  if (cutting) for (const piece of cutFace(cutting)) world.add(piece);
+
   highlight();
 
   const centre = anything ? box.getCenter(new THREE.Vector3()) : new THREE.Vector3();
@@ -1019,15 +1424,100 @@ function build(d: Doc, taper: SolvedTaper): Built {
       taperedFields, regions, noFallSquareFeet: noFallSquares, drains: drains.length, crickets,
       thin, thick, capReason, unstatedBuildUp, outOfProportion, ridgeOffSquare,
       cricketSlopeOff, overOneLayer, unbuiltCrickets, crossedTraces, unstatedWall,
-      unstatedCap, copings, curbs, valleys, ridges, ridgeUneven,
+      unstatedCap, copings, curbs, valleys, ridges, ridgeUneven, boards,
       sumps, unsumpedDrains, clippedSumps,
       refused: taper.refused,
-      ramp: (tapered?.color ?? '#4a6b8a'),
+      ramp: RAMP[2],
     }),
+    labels,
+    strip: stripFor(fields, list),
     note: anything
       ? (unscaled ? 'Some of this roof is on a sheet nobody has scaled, so it is not drawn.' : '')
       : 'Nothing traced yet. Trace a roof on the Plan and it stands up here.',
   };
+}
+
+/**
+ * The widest piece of ground the cap holds flat, and where the middle of it is.
+ *
+ * For the word that stands on it. The largest flat facet rather than all of
+ * them, because one label on the biggest patch is a drawing and one on every
+ * patch is a lawn — and the number on it is the WHOLE field's no-fall area,
+ * which is what an estimator is deciding about.
+ */
+function widestFlat(field: SolvedTaperField): Point | null {
+  let best: { size: number; at: Point } | null = null;
+  for (const region of field.regions) {
+    for (const facet of region.facets) {
+      if (!facet.flat || facet.shape.ring.length < 3) continue;
+      const ring = facet.shape.ring;
+      let twice = 0;
+      let cx = 0;
+      let cy = 0;
+      for (let i = 0; i < ring.length; i += 1) {
+        const a = ring[i]!;
+        const b = ring[(i + 1) % ring.length]!;
+        const cross = a.x * b.y - b.x * a.y;
+        twice += cross;
+        cx += (a.x + b.x) * cross;
+        cy += (a.y + b.y) * cross;
+      }
+      if (Math.abs(twice) < 1e-9) continue;
+      const size = Math.abs(twice) / 2;
+      if (best === null || size > best.size) {
+        best = { size, at: { x: cx / (3 * twice), y: cy / (3 * twice) } };
+      }
+    }
+  }
+  return best?.at ?? null;
+}
+
+/**
+ * What the tool settings strip says about this roof.
+ *
+ * Frame 2's strip, in this program's own numbers: the high side and the low
+ * point, the slope and the sump the estimator typed, and — the one that is worth
+ * the room — how many courses of board the layout NEEDS beside how many it was
+ * allowed. On the demo those are four and three, and the difference is a
+ * purchase somebody has to make (C2's pushback 8). It is a readout and not a
+ * control: "Set high and low" is a verb and verbs are C6's.
+ */
+function stripFor(fields: SolvedTaperField[], list: Condition[]): Node[] {
+  const out: Node[] = [
+    stripField('On the roof', 'click to pick what you are looking at'),
+  ];
+  const field = fields[0];
+  if (!field) {
+    out.push(stripField('Units', 'SF · LF · EA · SQ'));
+    return out;
+  }
+
+  if (field.thickInches !== null) {
+    out.push(derivedField('High', inchLabel(field.thickInches),
+      'The thickest the layout gets: the longest run on it, times the slope, held to the ceiling.'));
+  }
+  out.push(derivedField('Low', `${inchLabel(field.startInches)} at the drains`,
+    'What the estimator stated at the drain. Everything on the roof is measured up from it.'));
+  out.push(stripField('Slope', `${inchLabel(field.slopeInchesPerFoot)} in 12`));
+
+  const allowed = list.find((c) => c.id === field.conditionId)?.properties?.['BOARDS'];
+  const needed = field.bill?.coursesMax;
+  if (needed !== undefined) {
+    out.push(derivedField('Boards', allowed === undefined
+      ? `${needed} courses`
+      : `${needed} courses against ${allowed} allowed`,
+    'How many layers of board the deepest position takes, the tapered panel included,'
+      + ' beside the ceiling the job typed.'));
+  }
+
+  const sump = field.sumps[0];
+  if (sump) {
+    out.push(stripField('Sump width', formatFeetInches(sump.sideFeet)));
+    out.push(derivedField('Sump depth', inchLabel(sump.depthInches),
+      'The roof at the sump\'s own rim, less the thickness at the drain:'
+      + ' the thickness at the drain, the slope, the sump width and the board module.'));
+  }
+  return out;
 }
 
 /**
@@ -1108,13 +1598,19 @@ function buildUp(ring: Point[], elevation: number, thick: number, colour: string
  * pinned to, evaluated at a point the core chose.
  */
 function regionSurface(
-  field: SolvedTaperField, region: SolvedTaperRegion, colour: string, c: Condition,
+  field: SolvedTaperField, region: SolvedTaperRegion, c: Condition,
 ) {
   const elevation = field.elevation;
   const positions: number[] = [];
   const colours: number[] = [];
-  const base = new THREE.Color(colour);
   const noFall = new THREE.Color('#c98a1d');
+  // The ramp is read across the whole FIELD, not across this region, so one
+  // depth is one grey wherever it stands. Shading each region against its own
+  // thin and thick would make two places at the same thickness two colours,
+  // which is the one thing a scale must not do.
+  const thin = field.thinInches ?? 0;
+  const thick = field.thickInches ?? thin + 1;
+  const span = thick - thin > 1e-9 ? thick - thin : 1;
 
   for (const facet of region.facets) {
     const ring = facet.shape.ring;
@@ -1135,9 +1631,7 @@ function regionSurface(
       const at = { x: xy.getX(i), y: xy.getY(i) };
       const depth = readFacetAt(field, region, facet, at);
       positions.push(at.x, elevation + inches(depth), at.y);
-      const shade = facet.flat
-        ? noFall
-        : base.clone().lerp(new THREE.Color('#ffffff'), Math.min(0.65, inches(depth) * 1.4));
+      const shade = facet.flat ? noFall : rampAt((depth - thin) / span);
       colours.push(shade.r, shade.g, shade.b);
     }
     flat.dispose();
@@ -1158,56 +1652,175 @@ function regionSurface(
 }
 
 /**
- * Where the water goes, as arrows: one every few feet, pointing down the plane.
+ * Where the water goes: one long arrow down each piece of ground one plane
+ * governs.
  *
- * The core places them and points them — down the gradient of whichever plane
- * governs, which on a four-way layout is square to the boards and not at the
- * drain, because water runs down the fall and then along the valley. Flat ground
- * gets none: there is nothing to point at when the fall has run out, and the core
- * leaves those out.
+ * The core places them, points them and says how long each one has to be — down
+ * the gradient of whichever plane governs, which on a four-way layout is square
+ * to the boards and not at the drain, because water runs down the fall and then
+ * along the valley. Flat ground gets none: there is nothing to point at when the
+ * fall has run out.
  *
- * One mesh for every arrow, not one object each. `ArrowHelper` is an Object3D
- * carrying a line and a cone, so a field of them is two draw calls apiece — fine
- * on a demo, and on a real 36 by 24 sheet it is hundreds before the estimator has
- * done anything. The whole field is one instanced cone with a rotation per
- * instance. This came out of the prior 3D work on this machine rather than out of
- * a profiler, which is the cheaper way to learn it.
+ * ONE TO A FACET (C5, D156). It was one every eight feet, which on the demo is a
+ * hundred and thirty-nine identical darts — a lawn, and the thing Frame 2 most
+ * obviously is not. A facet is the ground a single plane governs, so the water
+ * does exactly one thing over the whole of it; one mark that reaches across it
+ * says so, and a scatter of short ones only implies it.
+ *
+ * A shaft and a head, because a dart with no shaft reads as a blob — which is
+ * what the instanced version looked like, caught by opening the screenshot and
+ * not by any check. There are a dozen of them now, so they are ordinary meshes.
  */
 function flowField(field: SolvedTaperField) {
   const flow = new THREE.Group();
-  const arrowAt = field.flow.map((a) => ({
-    x: a.x, y: field.elevation + inches(a.thicknessInches) + 0.08, z: a.y, angle: a.angle,
-  }));
-  if (arrowAt.length === 0) return flow;
+  const water = new THREE.MeshLambertMaterial({ color: new THREE.Color(WATER) });
+  for (const a of field.flow) {
+    const long = Math.max(a.lengthFeet, 3);
+    const head = Math.min(long * 0.3, 3.5);
+    const shaft = Math.max(long - head, 0.5);
+    const wide = Math.max(long * 0.022, 0.18);
 
-  // Slim and long, so it reads as a dart pointing somewhere. The first pass at
-  // instancing used the same proportions as the ArrowHelper's head without its
-  // shaft, and a field of them read as a scatter of blobs — caught by opening the
-  // screenshot rather than by any check, which is the only way a thing like this
-  // ever gets caught.
-  const cone = new THREE.ConeGeometry(ARROW_FEET * 0.06, ARROW_FEET * 0.55, 6);
-  // A cone points up its own +Y; lay it on its side so it points along +X, which
-  // is what the angle is measured from.
-  cone.rotateZ(-Math.PI / 2);
-  const arrows = new THREE.InstancedMesh(
-    cone,
-    new THREE.MeshLambertMaterial({ color: 0x1f7a8c }),
-    arrowAt.length,
-  );
-  const placed = new THREE.Object3D();
-  for (let i = 0; i < arrowAt.length; i += 1) {
-    const a = arrowAt[i]!;
-    placed.position.set(a.x, a.y, a.z);
-    placed.rotation.set(0, -a.angle, 0);
-    placed.updateMatrix();
-    arrows.setMatrixAt(i, placed.matrix);
+    const mark = new THREE.Group();
+    const stick = new THREE.Mesh(new THREE.BoxGeometry(shaft, wide * 0.7, wide), water);
+    stick.position.x = -head / 2;
+    const point = new THREE.ConeGeometry(wide * 1.9, head, 7);
+    point.rotateZ(-Math.PI / 2);
+    const tip = new THREE.Mesh(point, water);
+    tip.position.x = shaft / 2;
+    mark.add(stick, tip);
+
+    mark.position.set(a.x, field.elevation + inches(a.thicknessInches) + 0.1, a.y);
+    mark.rotation.set(0, -a.angle, 0);
+    // Not pickable: an arrow is the drawing explaining itself, not a thing on
+    // the roof. Clicking one should select the field under it.
+    stick.raycast = () => {};
+    tip.raycast = () => {};
+    flow.add(mark);
   }
-  arrows.instanceMatrix.needsUpdate = true;
-  // Not pickable: an arrow is the drawing explaining itself, not a thing on the
-  // roof. Clicking one should select the field under it.
-  arrows.raycast = () => {};
-  flow.add(arrows);
   return flow;
+}
+
+/**
+ * The board grid, on the roof, with the letter of each board on it.
+ *
+ * This is C2's bill, drawn: one mesh per board POSITION, cut to the same shape
+ * the boards were cut to, tinted by the letter printed on it, and a letter
+ * standing on every one of them. Nothing here works a board out — the grid, the
+ * cut, the letter and the depth all arrive solved, and the same list is what the
+ * Estimate is priced off. A board drawn here is a board that got bought.
+ *
+ * It is off until the estimator asks for it, because it is seven hundred marks
+ * on this roof and the thing Frame 2 is for is the fall.
+ */
+function boardGrid(field: SolvedTaperField, region: SolvedTaperRegion): THREE.Object3D[] {
+  const out: THREE.Object3D[] = [];
+  const byLetter = new Map<string, { x: number; y: number; z: number }[]>();
+
+  for (const board of region.boards) {
+    const positions: number[] = [];
+    const top = field.elevation + inches(board.thicknessInches) + 0.06;
+    for (const piece of board.shapes) {
+      if (piece.ring.length < 3) continue;
+      const shape = new THREE.Shape(piece.ring.map((p) => new THREE.Vector2(p.x, p.y)));
+      for (const hole of piece.holes) {
+        if (hole.length < 3) continue;
+        shape.holes.push(new THREE.Path(hole.map((p) => new THREE.Vector2(p.x, p.y))));
+      }
+      const flat = new THREE.ShapeGeometry(shape);
+      const xy = flat.getAttribute('position');
+      const index = flat.getIndex();
+      const order = index ? Array.from(index.array) : [...Array(xy.count).keys()];
+      for (const i of order) positions.push(xy.getX(i), top, xy.getY(i));
+      flat.dispose();
+    }
+    if (positions.length === 0) continue;
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.computeVertexNormals();
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+      color: tintOf(board.letter),
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: board.cut ? 0.92 : 0.8,
+    }));
+    // A board is the layout drawn on the roof, not a thing to pick: clicking one
+    // should select the field it is laid on, and seven hundred of them in the
+    // raycast would make the pointer readout crawl.
+    mesh.raycast = () => {};
+    mesh.userData = { conditionId: null, kind: 'board' };
+    out.push(mesh);
+
+    if (board.letter) {
+      const where = byLetter.get(board.letter) ?? [];
+      where.push({ x: board.centre.x, y: top + 0.04, z: board.centre.y });
+      byLetter.set(board.letter, where);
+    }
+  }
+
+  // The letters, one instanced quad per letter of the chart. Four textures for
+  // seven hundred boards: a canvas each, drawn once and kept, so a re-solve does
+  // not leave a texture behind every time anybody types.
+  for (const [letter, where] of byLetter) {
+    const quad = new THREE.PlaneGeometry(2.4, 2.4);
+    quad.rotateX(-Math.PI / 2);
+    const faces = new THREE.InstancedMesh(
+      quad,
+      new THREE.MeshBasicMaterial({
+        map: letterFace(letter), transparent: true, depthWrite: false,
+      }),
+      where.length,
+    );
+    const placed = new THREE.Object3D();
+    where.forEach((p, i) => {
+      placed.position.set(p.x, p.y, p.z);
+      placed.updateMatrix();
+      faces.setMatrixAt(i, placed.matrix);
+    });
+    faces.instanceMatrix.needsUpdate = true;
+    faces.raycast = () => {};
+    faces.userData = { conditionId: null, kind: 'board-letter' };
+    out.push(faces);
+  }
+
+  return out;
+}
+
+/** One tint per letter, off the same ramp the field is shaded on. */
+function tintOf(letter: string | null): THREE.Color {
+  if (letter === null) return new THREE.Color('#8a5a1d');
+  let sum = 0;
+  for (const ch of letter) sum += ch.charCodeAt(0) - 64;
+  return rampAt(((sum % 7) + 1) / 8);
+}
+
+/** The letters already drawn, so a re-solve reuses them rather than leaking. */
+const letterFaces = new Map<string, THREE.CanvasTexture>();
+
+/**
+ * A letter, drawn once into a canvas and used as a texture.
+ *
+ * There is no font loader here and there is no network, so a glyph in three
+ * dimensions is a picture of a glyph. Seven hundred boards share four of them.
+ */
+function letterFace(letter: string): THREE.CanvasTexture {
+  const had = letterFaces.get(letter);
+  if (had) return had;
+  const canvas = document.createElement('canvas');
+  canvas.width = 96;
+  canvas.height = 96;
+  const ink = canvas.getContext('2d');
+  if (ink) {
+    ink.clearRect(0, 0, 96, 96);
+    ink.fillStyle = '#10161a';
+    ink.font = 'bold 54px system-ui, sans-serif';
+    ink.textAlign = 'center';
+    ink.textBaseline = 'middle';
+    ink.fillText(letter, 48, 52);
+  }
+  const face = new THREE.CanvasTexture(canvas);
+  letterFaces.set(letter, face);
+  return face;
 }
 
 /**
@@ -1311,7 +1924,7 @@ function standUp(
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.computeVertexNormals();
   const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
-    color: new THREE.Color(colour), side: THREE.DoubleSide,
+    color: new THREE.Color(MASONRY), side: THREE.DoubleSide,
   }));
   // A curb is a run with a height, the same as a parapet is, and it is drawn by
   // the same arithmetic. What it is called here is what it is: a parapet is the
@@ -1356,7 +1969,7 @@ function creaseLine(field: SolvedTaperField, crease: SolvedCrease | SolvedRidge,
     new THREE.Vector3(crease.b.x, field.elevation + inches(crease.bInches) + 0.12, crease.b.y),
   ]);
   const line = new THREE.Line(geometry, new THREE.LineDashedMaterial({
-    color: new THREE.Color(WATER), dashSize: 2, gapSize: 1.4,
+    color: new THREE.Color(CREASE), dashSize: 2, gapSize: 1.4, transparent: true, opacity: 0.75,
   }));
   line.computeLineDistances();
   // A crease is the drawing explaining the roof, not a thing on it: a click here
@@ -1490,7 +2103,7 @@ function inchLabel(v: number): string {
  * "Thicker where it is lighter" is a sentence, not a scale — nobody can read a
  * depth off it, which is what an estimator actually wants from a shaded field.
  */
-function thicknessScale(thin: number, thick: number, base: string): HTMLElement {
+function thicknessScale(thin: number, thick: number): HTMLElement {
   const wrap = document.createElement('span');
   wrap.className = 'model-scale';
 
@@ -1501,9 +2114,9 @@ function thicknessScale(thin: number, thick: number, base: string): HTMLElement 
 
   const ramp = document.createElement('i');
   ramp.className = 'model-ramp';
-  // The same lerp the surface uses, so the ramp is the field's own colouring
-  // rather than a second palette that happens to look like it.
-  ramp.style.background = `linear-gradient(to right, ${base}, #ffffff)`;
+  // The same four greys the surface is shaded in, in the same order, so the ramp
+  // IS the field's colouring rather than a second palette that looks like it.
+  ramp.style.background = `linear-gradient(to right, ${RAMP.join(', ')})`;
   wrap.append(ramp);
 
   const ticks = document.createElement('span');
@@ -1533,6 +2146,8 @@ type Reading = {
   crossedTraces: number; unstatedWall: number;
   unstatedCap: number; copings: number; curbs: number;
   valleys: number; ridges: number; ridgeUneven: number;
+  /** Board positions drawn on the roof, when the grid is up. */
+  boards: number;
   sumps: number; unsumpedDrains: number; clippedSumps: number;
   refused: readonly SolvedRefusal[];
   /** The tapered field's own colour, which the ramp is drawn in. */
@@ -1559,46 +2174,54 @@ function legendFor(r: Reading): HTMLElement[] {
     out.push(el);
   };
   const say = (text: string) => {
+    // Not a `model-key`: what the drawing cannot say is not a mark ON it, and a
+    // key that grows a row every time the job has a gap in it stops being a key.
     const el = document.createElement('span');
-    el.className = 'model-key model-says';
+    el.className = 'model-said';
     el.textContent = text;
     out.push(el);
   };
 
   if (r.taperedFields > 0 && Number.isFinite(r.thin) && Number.isFinite(r.thick)) {
-    out.push(thicknessScale(r.thin, r.thick, r.ramp));
-    // The surface is now the layout — planes off the drains, valleys where they
-    // tie — and it is still not the board schedule: a real taper is lettered
-    // boards on a four foot module, in panel repeats, with flat fill under them,
-    // so the thickness steps at a board edge rather than sliding. Saying which of
-    // the two this is, is the difference between a drawing that helps and one that
-    // gets ordered from.
-    say('the planes and the valleys are the layout; the lettered boards are not on it yet');
+    out.push(thicknessScale(r.thin, r.thick));
   }
 
-  // The key: what the marks on the roof are, and only the marks that are on it.
-  // A key that names a thing the drawing does not carry is a sentence that is
-  // not true of this roof, which is the same defect as a wrong number.
+  // ── the key: four rows, and the ramp ──────────────────────────────────────
+  //
+  // It had ten and it read as a table of contents. Frame 2 gives a drawing three
+  // marks and a scale, and everything else it has to say it says ON THE ROOF —
+  // each drain with its sump depth, the curb with what stands behind it, the
+  // flat ground with its square feet. That is the difference between a drawing
+  // and a debugger, and it is C5's acceptance (D156).
+  //
+  // What a key must never do is name a mark that is not on this roof, so every
+  // row still comes off what actually got drawn.
   if (r.drains > 0) row(WATER, 'arrows follow the fall down the plane it is on');
-  if (r.noFallSquareFeet > 0) row('#c98a1d', 'no fall');
-  if (r.valleys > 0) row(WATER, 'dashed: the valleys, at 45° to the boards');
-  if (r.ridges > 0) {
-    row(WATER, r.ridges === 1
-      ? 'dashed: the ridge, halfway between two drains'
-      : `dashed: the ${r.ridges} ridges, halfway between two drains`);
+  if (r.valleys > 0 || r.ridges > 0) {
+    const valleys = r.valleys > 0 ? 'the valleys, at 45° to the boards' : '';
+    const ridges = r.ridges > 0
+      ? `the ${r.ridges === 1 ? 'ridge' : `${r.ridges} ridges`}, halfway between two drains`
+      : '';
+    row(CREASE, `dashed: ${[valleys, ridges].filter(Boolean).join(', and ')}`);
   }
-  // The count of them, in the words a roofer would use for it. "Region" is the
-  // core's word for the ground one drain takes and it is not a word on a roof, so
-  // the key says what happened to the field instead of naming the type.
+  if (r.noFallSquareFeet > 0) {
+    const why = r.capReason === 'flashing'
+      ? 'the roof has reached 8" under the wall it flashes against'
+      : 'the boards run out before the water gets anywhere';
+    row('#c98a1d', `${Math.round(r.noFallSquareFeet).toLocaleString('en-US')} SF with no fall — ${why}`);
+  }
   if (r.regions > 1) row(r.ramp, `the field is split between its ${r.regions} drains`);
-  if (r.sumps > 0) {
-    row(WATER, r.sumps === 1
-      ? '1 drain, in the sump the layout cuts for it'
-      : `${r.sumps} drains, each in the sump the layout cuts for it`);
+  if (r.boards > 0) {
+    row(r.ramp, `${r.boards.toLocaleString('en-US')} boards, each one lettered off the table`);
   }
-  // A drain nobody sized a sump for used to get a four foot one drawn anyway. NRCA
-  // p.164 sizes it off the bowl — bowl plus about 24 in — and nothing in the job
-  // says the bowl, so there is nothing to draw and this says which drains.
+
+  // ── and what the drawing cannot say, said out loud ────────────────────────
+  //
+  // Half of what follows is the drawing admitting what it does not know, and it
+  // belongs under the key rather than in it. A view that quietly draws its way
+  // around a missing build-up, or calls a cricket well-proportioned because it
+  // never looked, is worse than one that says so — that is the whole lesson of
+  // the version of this file that passed fourteen checks it had written itself.
   if (r.unsumpedDrains > 0) {
     say(r.unsumpedDrains === 1
       ? 'a drain has no sump: nothing states its bowl or its width'
@@ -1606,39 +2229,22 @@ function legendFor(r: Reading): HTMLElement[] {
   }
   if (r.clippedSumps > 0) {
     say(r.clippedSumps === 1
-      ? "a sump runs off the edge of the roof it is cut into"
+      ? 'a sump runs off the edge of the roof it is cut into'
       : `${r.clippedSumps} sumps run off the edge of the roof they are cut into`);
-  }
-  if (r.copings > 0) row(GALVANIZED, r.copings === 1 ? 'coping on the wall' : 'coping on the walls');
-  if (r.curbs > 0) row(GALVANIZED, r.curbs === 1 ? '1 curb' : `${r.curbs} curbs`);
-  if (r.crickets > 0) row('#8a5a1d', r.crickets === 1 ? '1 cricket' : `${r.crickets} crickets`);
-
-  if (r.noFallSquareFeet > 0) {
-    const why = r.capReason === 'flashing'
-      ? 'the roof has reached 8" under the wall it flashes against'
-      : 'the boards run out before the water gets anywhere';
-    row('#c98a1d', `${Math.round(r.noFallSquareFeet).toLocaleString('en-US')} SF with no fall — ${why}`);
   }
   if (r.overOneLayer) say(`over ${SINGLE_LAYER_MAX_INCHES}" — this is a second layer of board, not a thicker one`);
   // NRCA p.166: two adjoining patterns should meet at one common thickness, and
-  // where they cannot an area divider is what carries the step. With one slope over
-  // the whole field they meet wherever the line joining two drains is square to
-  // the boards, and they do not where it is slanted — so the drawing says by how
-  // much rather than letting the mesh average it.
+  // where they cannot an area divider is what carries the step.
   if (r.ridgeUneven > 0) {
     say(`the two patterns meet ${inchLabel(r.ridgeUneven)} apart at a ridge`
       + ' — NRCA wants one thickness there, or an area divider to carry the step');
   }
-  // And a tapered area the layout would not lay out at all says so in its own
-  // words. The core is the only thing that knows why, so the sentence is the
-  // core's; what would be wrong is silence, or a surface standing in for one.
   for (const refused of r.refused) {
     say(`a tapered area is not laid out: ${refused.why}`);
   }
   if (r.capReason === 'flashing') {
     say(`capped by flashing height — NRCA wants ${MIN_FLASHING_INCHES}" above the finished roof`);
   }
-
   if (r.crossedTraces > 0) {
     say(r.crossedTraces === 1
       ? 'a traced area crosses itself, so it is not drawn — its square footage would come out zero'

@@ -1224,3 +1224,26 @@ button.quiet:hover { border-color: var(--rule); }
 }
 .lens-sheet th { color: var(--ink-faint); font-weight: 500; }
 .lens-sheet .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── The words that stand on the roof ──────────────────────────────────────
+   Frame 2's whole argument. Each drain says its own sump depth, the curb says
+   what stands behind it, the flat patch says how many square feet of it there
+   are — on the roof, where the thing is, rather than in a key three inches
+   away from it. They are placed every frame by projecting the point on the
+   roof they belong to, so this only has to make them readable over a drawing
+   that is dark at one end and pale at the other. */
+.model-labels { position: absolute; inset: 0; pointer-events: none; }
+.model-label {
+  position: absolute; transform: translate(-50%, -100%);
+  padding: 3px 7px; white-space: nowrap;
+  font-family: var(--mono); font-size: var(--t-micro); line-height: 1.2;
+  color: var(--rn-ink); background: color-mix(in srgb, var(--rn-panel) 88%, transparent);
+  border: 1px solid var(--rn-hairline-strong); border-radius: var(--radius);
+}
+.model-label[data-label-kind="drain"] { color: var(--rn-water-ink); border-color: var(--rn-water-border); }
+.model-label[data-label-kind="nofall"] { color: var(--rn-warn); border-color: var(--rn-warn-border); }
+/* What the drawing cannot say, under the key rather than in it. */
+.model-said {
+  font-style: italic; color: var(--rn-ink-dim); font-size: var(--t-micro); line-height: 1.35;
+}
+
