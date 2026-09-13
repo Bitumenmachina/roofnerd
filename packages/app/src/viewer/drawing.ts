@@ -243,7 +243,10 @@ export function spreadWords(marks: SVGGElement, gap = 2): void {
     const role = el.getAttribute('data-role');
     const free = role === 'label' || role === 'dimension'
       || el.classList.contains('dim-text');
-    if (free) movable.push({ el, at, limit: role === 'label' ? Infinity : b.height * 2.5 });
+    // A word is lifted far enough to clear what is under it and no further:
+    // a label given its head floated halfway up the sheet, away from the thing
+    // it names, which is a different way of being unreadable.
+    if (free) movable.push({ el, at, limit: b.height * (role === 'label' ? 4 : 2.5) });
     else taken.push(at);
   }
 

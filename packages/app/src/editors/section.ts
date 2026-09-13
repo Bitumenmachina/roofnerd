@@ -155,11 +155,15 @@ export function mountSection(host: HTMLElement, surroundings: SurfaceChrome): vo
         wordSize: 11,
         letterSize: 13,
       });
-      spreadWords(marks);
       feetPerInch = scale;
+      // The scale is chosen on the drawing as the core placed it. Spreading the
+      // words first and measuring after made the choice circular: every word
+      // lifted made the drawing taller, which came down a scale, which left
+      // room for the words to lift into.
       const box = extentOf(marks);
       if (box && box.width + MARGIN <= wide && box.height + MARGIN <= tall) break;
     }
+    spreadWords(marks);
     const { drawnToFit } = fitDrawing(surface, marks, MARGIN / 2, footer);
     // The horizontal is the PANE's to state, because the pane is what knows how
     // much room there is; everything else on the line is the drawing's own.

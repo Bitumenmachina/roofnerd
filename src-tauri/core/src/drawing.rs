@@ -728,6 +728,18 @@ fn first_edge(ring: &[Point]) -> Option<(Point, Point)> {
 
 // ── the section ────────────────────────────────────────────────────────────
 
+/// A gap between a word and the thing it names, in the feet a section is drawn
+/// in.
+///
+/// The vertical on a section is stretched four times so a half-inch board reads
+/// at all, and a gap written in plain feet gets stretched with it: "a foot above
+/// the cap" came out four feet above the cap, and the labels up the parapet
+/// alone were half the height of the whole drawing (C8 §8). A gap is white
+/// space, not a length on the roof, so it is divided back out.
+fn gap(feet: f64) -> f64 {
+    feet / SECTION_EXAGGERATION
+}
+
 /// Where a cut runs, and what it ends against.
 struct Cut<'a> {
     field: &'a TaperField,
@@ -1001,7 +1013,7 @@ fn section_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls, cut
     // section have to stand clear of each other or the drawing is a paragraph
     // with lines through it.
     d.text(
-        Point::new(0.2, deck_feet + 0.45),
+        Point::new(0.2, deck_feet + gap(0.45)),
         match deck_inches {
             Some(deep) => format!(
                 "existing deck {} · the datum · existing construction, not in the bill",
@@ -1142,7 +1154,7 @@ fn section_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls, cut
         // Above the cap, where there is nothing else. Beside the wall it lands on
         // top of its own height dimension, which is what Frame 3 does and what a
         // drawing should not.
-        d.text(Point::new(-0.25, top - 1.15), w.name.clone(), "label", "start");
+        d.text(Point::new(-0.25, top - gap(1.15)), w.name.clone(), "label", "start");
         // Outboard of the wall, which is where a parapet height is dimensioned
         // and the only side of it with room.
         d.dimension(
@@ -1178,7 +1190,7 @@ fn section_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls, cut
                 false,
             );
             d.text(
-                Point::new(inner + 0.4, top - 0.45),
+                Point::new(inner + 0.4, top - gap(0.45)),
                 match w.coping.girth_inches {
                     Some(g) => format!("coping cap · {} girth", inches_written(g)),
                     None => "coping cap · no girth stated".to_string(),
@@ -1234,7 +1246,7 @@ fn section_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls, cut
         // Two short words rather than one long one: a label that reaches half way
         // across a drawing lands on whatever is there.
         d.text(
-            Point::new(face + 0.8, top_of_flashing + 0.55),
+            Point::new(face + 0.8, top_of_flashing + gap(0.55)),
             if solved {
                 format!("wall flashing {} up", inches_written(up_inches))
             } else {
@@ -1247,14 +1259,14 @@ fn section_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls, cut
             "start",
         );
         d.text(
-            Point::new(face + 0.8, top_of_flashing - 0.12),
+            Point::new(face + 0.8, top_of_flashing - gap(0.12)),
             "termination bar and sealant".to_string(),
             "label",
             "start",
         );
     } else {
         d.text(
-            Point::new(0.0, roof_at_wall - 1.0),
+            Point::new(0.0, roof_at_wall - gap(1.0)),
             match cut.at_edge {
                 true => "the roof's own edge · no wall on the job flashes against it here".to_string(),
                 false => "the ridge this ground shares with the next drain".to_string(),
@@ -1281,7 +1293,7 @@ fn section_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls, cut
         false,
     );
     d.text(
-        Point::new(run - 0.4, LEADER_FEET + 0.5),
+        Point::new(run - 0.4, LEADER_FEET + gap(0.5)),
         match &drain_named {
             Some(_) => format!("Drain {drain_number} · drawn as a symbol; nothing states the bowl"),
             None => "the low point · nothing counted a drain here".to_string(),
@@ -1356,8 +1368,8 @@ fn section_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls, cut
     // wall it lands on top of the words on the flashing, which is the collision
     // a five-line key is most likely to make.
     let key_top = match &wall {
-        Some(w) => -w.height_feet + 0.35,
-        None => -cut.depth_at(0.0) / 12.0 - 1.9,
+        Some(w) => -w.height_feet + gap(0.35),
+        None => -cut.depth_at(0.0) / 12.0 - gap(1.9),
     };
     d.key_at = Some(Point::new(run * 0.62, key_top));
 
