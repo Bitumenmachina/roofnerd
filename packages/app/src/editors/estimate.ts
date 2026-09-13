@@ -357,10 +357,15 @@ function compactLine(
     why.textContent = result.formulaError;
     row.append(why);
   } else if (result.unitNote) {
+    // The sentence itself, on the line. The engine writes it to be read — "this
+    // works out to an area, and the line is priced as LF" — and it was being
+    // hidden behind "check the unit" with the reason in a tooltip. That is the
+    // defect §1.9 already names in the other direction: what the program
+    // noticed goes on screen, not only where a hand has to hover to find it.
+    // It advises and never overrules: the declared unit is untouched.
     const note = document.createElement('span');
     note.className = 'formula-note';
-    note.textContent = 'check the unit';
-    note.title = result.unitNote;
+    note.textContent = result.unitNote;
     row.append(note);
   }
   void index;
