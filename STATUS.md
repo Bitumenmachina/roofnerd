@@ -102,6 +102,7 @@ records its rows here.
 program that reads IFC4 — the roof should stand up tapered, lettered by course, with the parapet,
 the curb, its coping and cricket, and the three drains.
 
+**Landed and verified (2026-09-13 13:40, 810803a).** Landed as 26bc3cf … f94bd3d (one comment's "D142 and D143" reworded for the client-data gate) plus 810803a (the probe resolves web-ifc from the app's package). On the shipped program: section-ifc 19 of 19; File → Export IFC wrote the .ifc, its expected.json and the IFCX beside it in the job's exports folder; every other probe green. IfcOpenShell 0.8.4 from the operator's venv (`tools/verify-ifc.py`) reopened the file: every entity count and every quantity equal to the solve's — PASS — with 21 schema findings, all the one known limit (IfcDimensionalExponents written as floats where the schema wants integers; a web-ifc API limit, recorded in D159).
 ## C6 — the verbs: set high and low, box out a curb, measure, cut a section (2026-09-13)
 
 **The tool rail offers all eight of the handoff's acts, and the four that were missing now do
