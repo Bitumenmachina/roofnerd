@@ -28,6 +28,80 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## C7 — IFC from the solved model (2026-09-13)
+
+**File → Export IFC writes the whole solved roof as IFC4, and IfcOpenShell — not this program's own
+account of itself — says the numbers agree.** `roofPlan` used to read `jobs/demo-job`'s traces
+directly and work the build-up out by hand, which was exactly the recomputation `CLAUDE.md` names
+twice; it now reads the three solves `solve_get` already produced (D159). Every quantity in the file
+is one of those numbers, read once: `IfcSlab` ROOF per tapered field, its facets triangulated (ear
+clipping with holes bridged in, `packages/app/src/ifc/triangulate.ts`) and each vertex at the depth
+`readFacetAt` reads off the same plane the Model view stands the roof up with; `IfcCovering`
+INSULATION per lettered course and the flat fill, board count and area off the bill, the letter's own
+printed thin and thick edge read off the manufacturer's chart on disk (`profile-data.ts`, the same
+file `profile.rs` compiles into the core) rather than off the bill's own aggregate; cover board and
+membrane off the condition's own thickness-carrying items; `IfcWall` PARAPET or SOLIDWALL, the outer
+trace and the line `WALL` grows in from as one profile with a void; `IfcCovering` COPING
+(USERDEFINED — IFC4's own enum has no such value) with gauge and stretch-out in a Qto;
+`IfcFlowTerminal` per traced drain point, the sump as a property rather than a cut into the slab (the
+charter's own "or a property"); `IfcSlab` per cricket, built straight from the solve's own triangles;
+a `Fastening` property set — zones, class, counts, standard, basis — on the base course covering
+alone. `Pset_CostAxis`, `Pset_TimeAxis` and `Pset_Authority` land on every element; the vocabulary
+gate now carries one exception for `packages/app/src/ifc`, proven red before it was added, because
+"authority" there is buildingSMART's own word for a property set and not this program's governance
+language.
+
+**A Node test cannot run the Rust solver, so it hands the writer a made-up solve of the exact shape
+`packages/engine/src/solved.ts` declares** — C1's own convention — paired to the real demo job's
+condition ids, and reads every asserted number back off the SAME made-up solve rather than a second
+typed copy. `expectedOf(plan)` is the numbers the file should carry, read off the same `RoofPlan` the
+bytes came from, never off the bytes; a dedicated test reads every one of its entries back out of the
+actual file and found a real bug on its first run (three drains from one condition all sharing one
+`Name`, now numbered "Roof Drains — 1", "— 2", "— 3"). 41/41 app tests, 172/172 engine, 64 core.
+
+**IfcOpenShell's own validator, run against a real exported file before `tools/verify-ifc.py` existed
+to do it automatically, found two real schema defects and fixed both:** `FILE_NAME`'s `author` and
+`organization` are non-optional `LIST`s in IFC4 and `CreateModel` was leaving them null; a profile's
+own boundary curves have to be `Dim == 2` and the wall and coping profiles were built from 3D points
+carrying a z of zero rather than no z at all. What is left and named rather than chased:
+`IfcDimensionalExponents`'s seven fields print as `1.` where the schema wants an INTEGER, on all three
+unit definitions — nothing in web-ifc's public API distinguishes an integer attribute from a real one
+for a bare EXPRESS simple type. 21 findings, all the same one, none of them a count or a quantity a
+formula reads.
+
+**`tools/verify-ifc.py`, run from `~/venvs/ifc` (IfcOpenShell 0.8.4.post1):** opens the file, counts
+entities by class against `expected.json`, walks every entry by (class, the element's own Name — several
+coverings share one condition's Tag) and reads its Qto or Pset with
+`ifcopenshell.util.element.get_psets`, the same function the IFC5 bridge's own `authority.py` uses.
+Proved end to end against a real generated file: every count and all 172 entries passed on the first
+real run; a deliberately wrong `expected.json`, a missing `.ifc` and no arguments each fail or refuse
+correctly.
+
+**The alpha IFCX bridge lands beside the `.ifc` and the `expected.json`, written in TypeScript rather
+than by shelling out to `~/three-axis/tools/ifc5-bridge`** (Python, reads an IFC4 file back in with
+IfcOpenShell — the venv this batch was told to use for `tools/verify-ifc.py` only, and a tool whose
+own CLAUDE.md says "no npm/node"). What is reused is the shape its `schema_map.py` settled on —
+header, `children`, bare-UUID `path`, `bsi::ifc::class`, `pset::<Name>::<Prop>` — not the file. Two
+gaps recorded rather than smoothed over: several concerns land on one node per element here where the
+reference tool emits one per concern, and `authority.py`'s own same-path weighted override needs five
+fields (`AuthorityWeight` among them) this program's `Pset_Authority` does not carry — D159's shape is
+`src`/`hier`/`constraint`/`overridable`, so `Pset_Authority` goes through the ordinary mapping and the
+weighted scheme is not attempted.
+
+**No money moved.** Nothing in this batch prices anything.
+
+**`tools/probe/section-ifc.mjs`, front door throughout — the start screen, the demo button, the File
+menu, the Export IFC item.** Nothing typed in: the field's own square feet, the drain count and which
+walls have a real inboard offset all come off `solve_get('taper')`/`solve_get('walls')` read straight
+off the window; the file is reopened with `web-ifc` in the probe itself, never through the program
+that wrote it. Never run here — no binary in this clone and a probe opens a window this sandbox has
+none of. The orchestrator runs it, then runs `tools/verify-ifc.py` against the file it writes and
+records its rows here.
+
+**For Patrick to look at:** File → Export IFC with the demo job open, then open the file in any
+program that reads IFC4 — the roof should stand up tapered, lettered by course, with the parapet,
+the curb, its coping and cricket, and the three drains.
+
 ## C6 — the verbs: set high and low, box out a curb, measure, cut a section (2026-09-13)
 
 **The tool rail offers all eight of the handoff's acts, and the four that were missing now do
