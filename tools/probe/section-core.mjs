@@ -353,6 +353,17 @@ try {
     await wait(500);
     was = JSON.parse((await fieldValue(session, 'Thickness')) ?? 'null');
   }
+  // Say what the panel held at that moment, so a miss can be read off the log
+  // rather than reproduced by hand.
+  console.log(`  REPORT  the panel when the thickness was looked for: ${await session.execute(function () {
+    const m = window.__roofnerdModel ? window.__roofnerdModel() : null;
+    const labels = [...document.querySelectorAll('.condition-panel label')]
+      .map(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim(); });
+    const tab = [...document.querySelectorAll('.cost-tabs .cost-tab')]
+      .find(function (e) { return e.classList.contains('active') || e.getAttribute('aria-selected') === 'true'; });
+    return JSON.stringify({ selected: m && m.selectedConditionId, tab: tab ? tab.textContent.trim() : null,
+      panels: document.querySelectorAll('.condition-panel').length, labels: labels.slice(0, 6), handles: 1 });
+  })}`);
   const solveWas = JSON.parse(await modelNow(session)).solveId;
   // An inch thicker at the drain than the job says, whatever the job says. The
   // ceiling moves with it — another inch of board is another inch the wall has
