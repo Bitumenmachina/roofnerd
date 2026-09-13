@@ -32,7 +32,7 @@
 
 use serde::Serialize;
 
-use crate::fastening::{FastenedField, SolvedFastening};
+use crate::fastening::SolvedFastening;
 use crate::geom::{bounds, distance_to_segment, inside_ring, Point, Shape};
 use crate::model::{Board, Condition, Document, Line, SolvedTaper, TaperField, TaperRegion};
 use crate::taper::{read_at, MIN_FLASHING_INCHES};
@@ -585,10 +585,18 @@ fn fastening_of(fastening: &SolvedFastening) -> Drawing {
                         .clone()
                         .unwrap_or_else(|| "no pattern printed".to_string()),
                 };
+                // The pressure the zone is fastened FOR, on the zone's own row.
+                // The plan named the standard and the class it bought and never
+                // the figure between them, so an estimator who typed a pressure
+                // could not see it anywhere on the drawing it moved (C8 §9).
+                let at_psf = match zone.required_psf {
+                    Some(psf) => format!("{} psf · ", psf.round() as i64),
+                    None => String::new(),
+                };
                 line(
                     &mut d,
                     format!(
-                        "{} {} · {rated} · {per} · {} boards",
+                        "{} {} · {at_psf}{rated} · {per} · {} boards",
                         zone.zone, zone.label, zone.boards
                     ),
                 );
@@ -597,6 +605,29 @@ fn fastening_of(fastening: &SolvedFastening) -> Drawing {
                 line(
                     &mut d,
                     format!("{plates} fasteners and plates in all, one plate to a fastener"),
+                );
+            }
+            // The two findings, with the counts they are about. They were the
+            // seventh and eighth clauses of a paragraph lying across the corner
+            // of the roof, which is where nobody read them, and each one is a
+            // thing to ring the manufacturer about (C8 §7).
+            if roof.straddling > 0 {
+                line(
+                    &mut d,
+                    format!(
+                        "{} of them lie across a zone line and take the higher zone",
+                        roof.straddling
+                    ),
+                );
+            }
+            if roof.thin_boards > 0 {
+                line(
+                    &mut d,
+                    format!(
+                        "{} have the tapered panel straight on the deck — less under the \
+                         fastener than the row is drawn for",
+                        roof.thin_boards
+                    ),
                 );
             }
         }
@@ -615,24 +646,65 @@ fn fastening_of(fastening: &SolvedFastening) -> Drawing {
         }
     }
 
-    d.note = note_of(roof);
+    // The title line, and the standard is on it. It was nine clauses of prose
+    // laid across the corner of the roof and running off the sheet, with two
+    // real findings buried in the middle of it (C8 §7). What a fastening plan
+    // is called, and what it was drawn to, is one line.
+    d.note = format!("Fastening plan · {}", roof.standard);
 
-    // The key rides in the payload whether or not a window has room to stack it,
-    // because what a fastening plan was read off is part of the fastening plan.
-    d.key.push(roof.standard.clone());
-    d.key.push(format!("zones per {}", roof.zone_rule));
+    // Then three lines of key, drawn on the sheet where a key goes: how the
+    // zones were set out, where the pattern came from, and what the fasteners
+    // go through. Everything else the paragraph carried is either on the
+    // statement block already or is a finding, and a finding goes with the
+    // counts it is about.
+    d.key.push(format!(
+        "zones {} wide · {} · {}",
+        roof.a_feet.map(feet_written).unwrap_or_else(|| "not set out".to_string()),
+        roof.zone_rule,
+        match roof.basis.as_str() {
+            "strength" => "pressures at strength design, reduced by 0.6".to_string(),
+            "working load" => "pressures at working load".to_string(),
+            other => format!("pressures on a {other} basis"),
+        }
+    ));
     if let Some(printed) = roof.zones.iter().find_map(|z| z.pattern.as_ref()) {
         d.key.push(format!(
-            "{} {} {} · {}",
+            "patterns per {} {} {} · {}",
             printed.publisher, printed.document_id, printed.document_date, printed.product
         ));
     }
-    d.key.push(roof.minimum_thickness_note.clone());
-    d.key.push(roof.adhesive_basis.clone());
-    d.key.push(roof.zone_one_prime.clone());
+    if let (Some(inches), false) = (roof.base_board_inches, roof.board_size.is_empty()) {
+        d.key.push(format!(
+            "through {} {} fastened · everything over it adhered at {} on centre",
+            inches_written(inches),
+            roof.product_family,
+            inches_written(roof.ribbon_spacing_inches)
+        ));
+    }
+    // The key sits clear of the roof, below its own outline, with a leader up to
+    // the ground it is a key to.
+    if let Some(extent) = extent_of(&roof.ring) {
+        d.key_at = Some(Point::new(extent.0.x, extent.1.y + BLOCK_STEP_FEET));
+        d.key_from = Some(Point::new(extent.0.x, extent.1.y));
+    }
 
     d.measure();
     d
+}
+
+/// The lowest-leftmost and highest-rightmost corners of a ring, for putting
+/// something beside it rather than on it.
+fn extent_of(ring: &[Point]) -> Option<(Point, Point)> {
+    let first = ring.first()?;
+    let mut low = *first;
+    let mut high = *first;
+    for p in ring {
+        low.x = low.x.min(p.x);
+        low.y = low.y.min(p.y);
+        high.x = high.x.max(p.x);
+        high.y = high.y.max(p.y);
+    }
+    Some((low, high))
 }
 
 /// A piece of a zone smaller than this gets no number on it: the mark would be
@@ -652,52 +724,6 @@ fn first_edge(ring: &[Point]) -> Option<(Point, Point)> {
         return None;
     }
     Some((here, Point::new((next.x - here.x) / run, (next.y - here.y) / run)))
-}
-
-/// Everything the drawing has to say in one sentence apiece.
-fn note_of(roof: &FastenedField) -> String {
-    let mut said = vec![format!("Fastening plan · {}", roof.standard)];
-    if let Some(a) = roof.a_feet {
-        said.push(format!("zones {} wide, {}", feet_written(a), roof.a_bound));
-    }
-    said.push(match roof.basis.as_str() {
-        "strength" => "pressures typed at strength design and reduced by 0.6 to working load"
-            .to_string(),
-        "working load" => "pressures typed at working load".to_string(),
-        other => format!("pressures typed on a {other} basis"),
-    });
-    if let (Some(inches), false) = (roof.base_board_inches, roof.board_size.is_empty()) {
-        said.push(format!(
-            "base layer {} {} {}, fastened; everything over it adhered",
-            roof.board_size,
-            inches_written(inches),
-            roof.product_family
-        ));
-    }
-    if let Some(printed) = roof.zones.iter().find_map(|z| z.pattern.as_ref()) {
-        said.push(format!(
-            "patterns per {} {} {}",
-            printed.publisher, printed.document_id, printed.document_date
-        ));
-    }
-    if roof.straddling > 0 {
-        said.push(format!(
-            "{} boards lie across a zone boundary and take the higher zone",
-            roof.straddling
-        ));
-    }
-    if roof.thin_boards > 0 {
-        said.push(format!(
-            "{} board positions have the tapered panel straight on the deck, which is less \
-             under the fastener than the row it is fastened to is drawn for",
-            roof.thin_boards
-        ));
-    }
-    said.push(format!(
-        "insulation adhesive at {} on centre",
-        inches_written(roof.ribbon_spacing_inches)
-    ));
-    said.join(" · ")
 }
 
 // ── the section ────────────────────────────────────────────────────────────

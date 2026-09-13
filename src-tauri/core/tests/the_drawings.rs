@@ -173,16 +173,24 @@ fn the_fastening_plan_draws_the_zones_and_says_what_they_were_set_out_to() {
     assert!((run - a).abs() < 1e-9, "the dimension measures {run} against a band of {a}");
     assert!(measured.derived, "it came out of the solve, so it reads as derived");
 
+    // The title line is the drawing and the standard it was set out to, and
+    // everything else that used to be strung after it in one nine-clause
+    // paragraph is three lines of key. C8 §7: the paragraph lay across the
+    // corner zone of the roof and ran off the sheet.
     assert!(plan.note.contains("ASCE 7-22"), "{}", plan.note);
-    assert!(plan.note.contains("strength design"), "{}", plan.note);
+    assert!(plan.note.len() < 80, "the title line is a title again: {}", plan.note);
+    assert!(plan.key.len() <= 3, "the key is short: {:?}", plan.key);
+    let key = plan.key.join(" · ");
+    assert!(key.contains("strength design"), "{key}");
     assert!(
-        plan.note.contains("adhesive"),
-        "the plan says what the layers over the fastened one are stuck down at"
+        key.contains("adhered at"),
+        "the plan says what the layers over the fastened one are stuck down at: {key}"
     );
     assert!(
         plan.key.iter().any(|row| row.contains("DR-05")),
         "the document the pattern came out of travels with the drawing"
     );
+    assert!(plan.key_at.is_some(), "a key nothing places is a key nothing draws");
 }
 
 /// One cut per drain, each along the boards, each ending where it should.
