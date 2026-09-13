@@ -322,27 +322,37 @@ fn open_editor(app: AppHandle, editor: String) -> Result<(), String> {
 ///
 /// Rather than subtract a magic 47 somewhere — which would be right on this
 /// desktop and wrong on the next one — the page measures what it actually got
-/// and says how much it is short by. This grows the outer size by that much.
-/// The page asks again until the shortfall is gone, so it converges whichever
-/// way the window manager counts, and it stops when there is nothing to fix.
+/// and says how much it is short by. This adds it to the size the page has, and
+/// the page asks again until the shortfall is gone, so it converges whichever
+/// way the window manager counts and stops when there is nothing to fix.
+///
+/// The size it adds to is the INSIDE, and that is the whole of this function's
+/// history. It used to read `outer_size` and write the answer back through
+/// `set_size`, which is not the round trip it looks like: on this toolkit the
+/// getter reports the frame and the setter sets the client area, so every call
+/// quietly moved the decoration from the outside of the window to the inside of
+/// it. A window asked to grow 47 px taller came back 52 px wider, twice, at two
+/// different widths — the main window 1492 against a 1440 page and the cost
+/// window 652 against 600 — and re-stating the dimension that was already right
+/// was what did it. A dimension the page is not short of is not touched now:
+/// nought is added to what it already has, and nought is a real nought.
 ///
 /// It is deliberately dumb: no target sizes live here. The anatomy is the front
 /// end's, and it is the front end that knows a document bar is 44 px.
 #[tauri::command]
 fn fit_window(window: Window, grow_width: f64, grow_height: f64) -> Result<(), String> {
-    if grow_width.abs() < 1.0 && grow_height.abs() < 1.0 {
+    let wider = if grow_width.abs() >= 1.0 { grow_width } else { 0.0 };
+    let taller = if grow_height.abs() >= 1.0 { grow_height } else { 0.0 };
+    if wider == 0.0 && taller == 0.0 {
         return Ok(());
     }
     let scale = window.scale_factor().map_err(|e| e.to_string())?;
-    let outer = window
-        .outer_size()
+    let inner = window
+        .inner_size()
         .map_err(|e| e.to_string())?
         .to_logical::<f64>(scale);
     window
-        .set_size(LogicalSize::new(
-            outer.width + grow_width,
-            outer.height + grow_height,
-        ))
+        .set_size(LogicalSize::new(inner.width + wider, inner.height + taller))
         .map_err(|e| e.to_string())
 }
 
