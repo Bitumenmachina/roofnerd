@@ -335,8 +335,12 @@ try {
 
     if (lens.money) {
       check(`${lens.name}: the file's total is the screen's total, to the cent`, () => {
+        // The TABLE's rows, both sides. The recap's file carries the ladder
+        // from job cost to selling price under its table now (C8 §4), and
+        // those rows are money in the same column — adding them to the class
+        // totals is adding a job to itself several times over.
         const screen = totalOf(before.headings, before.rows);
-        const file = totalOf(csv[0], csv.slice(1));
+        const file = totalOf(csv[0], csv.slice(1, 1 + before.rows.length));
         assert.ok(screen, `no cost column on screen: ${before.headings.join(', ')}`);
         assert.ok(file, `no cost column in the file: ${csv[0].join(', ')}`);
         assert.ok(screen.cells > 0, 'no money on the screen to compare');
