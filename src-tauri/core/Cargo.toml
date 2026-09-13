@@ -1,0 +1,13 @@
+[package]
+name = "roofnerd-core"
+version = "0.0.0"
+description = "The solvers: what the roof actually has to be, in feet and inches"
+edition = "2021"
+rust-version = "1.77"
+license = "MIT"
+
+[dependencies]
+cavalier_contours = "0.4.0"
+geo = "0.29.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

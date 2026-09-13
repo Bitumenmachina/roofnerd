@@ -9,7 +9,7 @@
     "dev": "tauri dev",
     "gates": "bash tools/gate-language.sh && bash tools/gate-egress.sh && bash tools/gate-clientdata.sh --all",
     "build:app": "NO_STRIP=true tauri build",
-    "test:shell": "cargo test --quiet --manifest-path src-tauri/Cargo.toml"
+    "test:shell": "cargo test --quiet --workspace --manifest-path src-tauri/Cargo.toml"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.11.4",

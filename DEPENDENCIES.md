@@ -15,6 +15,29 @@ ISC. Nothing copyleft in the shipped application.
 | @tauri-apps/plugin-dialog | 2.x | MIT / Apache-2.0 | The window's side of that |
 | pdfjs-dist | 6.3.289 | Apache-2.0 | Painting a PDF page onto the trace surface. Worker bundled as a local file; nothing is fetched |
 | three | 0.185.1 | MIT | The Model editor. Verified from the package's own LICENSE file, not a badge. Bundled by Vite as a local file — the view is derived geometry drawn on a canvas, and it reaches nothing |
+| geo | 0.29.3 | MIT / Apache-2.0 | Polygon work in the core: area, contains, boolean ops for drainage regions and zone bands (C1 on). Its boolean backend `i_overlay` comes with it |
+| cavalier_contours | 0.4.0 | MIT / Apache-2.0 | Polyline offset — the zone bands and the parapet's inboard line, which the Model editor does by hand today |
+
+**Where those two licences were read (D147).** Neither package ships a LICENSE file inside its
+published crate: `geo-0.29.3` and `cavalier_contours-0.4.0` unpack to source, a README and a
+`Cargo.toml` and nothing else. The licence above is the `license` field of each package's own
+`Cargo.toml` as published, read off this machine at
+`~/.cargo/registry/src/index.crates.io-<index>/<name>-<version>/Cargo.toml` — `"MIT OR Apache-2.0"`
+in both. That is the publisher's own statement travelling with the code, which is what a LICENSE
+file in a package would have been; the full texts live in each project's repository
+(`github.com/georust/geo`, `github.com/jbuckmccready/cavalier_contours`). Recorded rather than
+rounded off, because "read from the LICENSE file" was the instruction and there is no such file.
+
+**The versions are what the toolchain floor picks.** `rust-version = "1.77"` — Tauri 2's, and this
+workspace's — resolves to geo 0.29.3 and cavalier_contours 0.4.0; 0.33 and 0.9 are published and
+want a newer compiler. Raising the floor is a decision about the shell, not about geometry, so it
+is not taken here.
+
+**What they bring.** 50 crates in the core's tree, every one permissive: 43 are MIT / Apache-2.0 or
+plain MIT, and the rest are `byteorder` and `memchr` (Unlicense OR MIT), `earcutr` (ISC), `approx`
+(Apache-2.0), `foldhash` (Zlib) and `unicode-ident` ((MIT OR Apache-2.0) AND Unicode-3.0). Nothing
+copyleft, which is the rule at the top of this file. The heavy ones are `rayon` and `spade`, pulled
+in by geo; nothing in this program calls them yet.
 
 ## Build only — not shipped
 

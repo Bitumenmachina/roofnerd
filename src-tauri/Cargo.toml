@@ -1,3 +1,9 @@
+# The workspace is the shell and the core beside it. `cargo test --workspace`
+# runs both, and `pnpm test:shell` is that line: a solver with no test that runs
+# is a solver nobody is holding to anything.
+[workspace]
+members = ["core"]
+
 [package]
 name = "roofnerd"
 version = "0.0.0"
@@ -14,6 +20,11 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# The solvers. Rust owns the model — the tapered package, the walls, the
+# fastening — and the shell calls in there and hands the answer to every window
+# (Patrick, 2026-09-12; D146). It brings no window, no disk and no network with
+# it, so it can be tested with nothing on screen.
+roofnerd-core = { path = "core" }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 # No `preserve_order`: serde_json then backs objects with a BTreeMap and writes
