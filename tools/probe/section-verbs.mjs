@@ -473,8 +473,11 @@ try {
    * with" about a sheet that had four of them on it.
    */
   const letterOf = (line) => {
-    const m = /^tapered\s+([a-z]+[0-9]*)\b/i.exec((line.description || '').trim());
-    return m === null ? null : m[1].toUpperCase();
+    // A designation is what the chart prints — one to three capitals and at most
+    // one digit, ending the name or followed by the thickness — never a word.
+    // "Tapered sump panel" is a sump line, not a letter.
+    const m = /^Tapered\s+([A-Z]{1,3}[0-9]?)(?=\s*(?:·|$))/.exec((line.description || '').trim());
+    return m === null ? null : m[1];
   };
   const lettersOn = (lines) =>
     [...new Set(lines.map(letterOf).filter((l) => l !== null))].sort();
