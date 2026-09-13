@@ -93,6 +93,25 @@ export interface Properties {
   readonly SIDES?: number;
   /** Stretch-out in inches: flat width of metal a formed profile eats. */
   readonly STRETCHOUT?: number;
+  /**
+   * How high the membrane is DETAILED to run up a wall or curb, in inches.
+   * Untyped, it defaults to the wall's own height — flash the whole thing,
+   * which is what a run nobody has drawn a detail for yet gets.
+   */
+  readonly FLASHUP?: number;
+  /**
+   * How far a coping cap overhangs the wall it caps, each side, in inches —
+   * only read where `W` is not typed. NRCA gives no minimum; this is a GAP.
+   */
+  readonly CAP_OVERHANG_IN?: number;
+  /** Coping section length, feet, where nobody states one. */
+  readonly COPING_SECTION_FT?: number;
+  /**
+   * Cleat and termination-bar spacing, inches, where nobody states one — a
+   * GAP: Versico's own term bar is punched every 6 in, which says how the
+   * bar is made and not how many of those holes get a fastener.
+   */
+  readonly FASTEN_OC?: number;
   /** Anything else the estimator names, as a number. */
   readonly [name: string]: number | undefined;
 }
@@ -100,6 +119,7 @@ export interface Properties {
 /** The reserved property names. The last three only some details use. */
 export const PROPERTY_NAMES = [
   'H', 'W', 'T', 'WALL', 'PITCH', 'TAPER', 'ELEV', 'SUMP', 'BOARDS', 'SIDES', 'STRETCHOUT',
+  'FLASHUP', 'CAP_OVERHANG_IN', 'COPING_SECTION_FT', 'FASTEN_OC',
 ] as const;
 
 /**

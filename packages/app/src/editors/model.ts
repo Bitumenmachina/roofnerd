@@ -67,14 +67,16 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
-  CRICKET_SLOPE_MULTIPLE, MIN_FLASHING_INCHES, NOTHING_SOLVED, SINGLE_LAYER_MAX_INCHES,
+  CRICKET_SLOPE_MULTIPLE, MIN_FLASHING_INCHES, NOTHING_SOLVED, NOTHING_SOLVED_WALLS,
+  SINGLE_LAYER_MAX_INCHES,
   buildUpInches, cricketOf, fieldAt, fieldOf, formatFeetInches, pointInPolygon, readFacetAt,
-  readTaperAt, selfIntersects, sumpOf,
+  readTaperAt, selfIntersects, sumpOf, wallOf,
   type CapReason, type Condition, type Drawing, type Page, type Point, type Properties,
   type SolvedCrease, type SolvedCricket, type SolvedRefusal, type SolvedRidge, type SolvedSump,
-  type SolvedTaper, type SolvedTaperField, type SolvedTaperRegion,
+  type SolvedTaper, type SolvedTaperField, type SolvedTaperRegion, type SolvedWallRun,
+  type SolvedWalls,
 } from '@roofnerd/engine';
-import { at, doc, solveId, solveTaper, subscribe, type Doc } from '../doc.js';
+import { at, doc, solveId, solveTaper, solveWalls, subscribe, type Doc } from '../doc.js';
 import { feet, feetPerUnit } from '../scale.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
 import {
@@ -637,7 +639,7 @@ export function mountModel(
   const draw = () => {
     let built: Built;
     try {
-      built = build(doc(), solvedNow);
+      built = build(doc(), solvedNow, solvedWallsNow);
     } catch (e) {
       world.clear();
       legend.replaceChildren();
@@ -758,14 +760,16 @@ export function mountModel(
       const token = pulling + 1;
       pulling = token;
       try {
-        const got = await solveTaper();
+        const [got, gotWalls] = await Promise.all([solveTaper(), solveWalls()]);
         if (token !== pulling) return;
         solvedNow = got;
+        solvedWallsNow = gotWalls;
         drawnSolveId = got.solveId;
         solveTrouble = null;
       } catch (e) {
         if (token !== pulling) return;
         solvedNow = NOTHING_SOLVED;
+        solvedWallsNow = NOTHING_SOLVED_WALLS;
         drawnSolveId = want;
         solveTrouble = e instanceof Error ? e.message : String(e);
       }
@@ -1156,6 +1160,8 @@ let showBoards = false;
 
 /** The solved roof this drawing was built from. */
 let solvedNow: SolvedTaper = NOTHING_SOLVED;
+/** The solved walls and curbs this drawing was built from. */
+let solvedWallsNow: SolvedWalls = NOTHING_SOLVED_WALLS;
 /** Which solve is on screen. Nothing is, until the first one is pulled. */
 let drawnSolveId = -1;
 /** The pull in flight, so an overtaken answer is dropped rather than drawn. */
@@ -1163,7 +1169,7 @@ let pulling = 0;
 /** Why the roof did not solve, when it did not. */
 let solveTrouble: string | null = null;
 
-function build(d: Doc, taper: SolvedTaper): Built {
+function build(d: Doc, taper: SolvedTaper, walls: SolvedWalls): Built {
   world.clear();
 
   const list = conditionsOf(d);
@@ -1329,10 +1335,24 @@ function build(d: Doc, taper: SolvedTaper): Built {
             unbuiltCrickets += 1;
           }
         } else if (height > 0) {
-          const wall = props['WALL'];
-          if (wall === undefined) unstatedWall += 1;
-          const stood = standUp(ring, elevation, height, wall, colour, c);
-          world.add(stood.mesh);
+          // The solid and the cap are both C3's (`walls.rs`, `coping.rs`):
+          // `WALL` grows the traced line inboard by a true polyline offset,
+          // not a per-segment guess at where the ring's own middle is, and
+          // the cap is that same offset again, centred on the wall, at
+          // whatever width `W` states or `WALL + 2 x CAP_OVERHANG_IN` derives.
+          // This file draws the rings it is handed; it computes no offset.
+          const run = wallOf(walls, c.id, traceIndex);
+          if (run?.wallInches === null) unstatedWall += 1;
+          if (run) {
+            world.add(wallSolid(run, c));
+            const cap = copingCap(run);
+            if (cap) { world.add(cap); copings += 1; }
+            // A cap width is always derivable once a wall thickness is —
+            // `WALL + 2 x CAP_OVERHANG_IN` sees to that — so the only way a
+            // stated or derived width draws no cap is a width with no wall to
+            // centre it on: `W` typed, `WALL` not.
+            else if (run.coping.capWidthFeet !== null) unstatedCap += 1;
+          }
           if (c.role === 'curb') {
             curbs += 1;
             // Its own name, and the cricket behind it where one is traced
@@ -1351,13 +1371,6 @@ function build(d: Doc, taper: SolvedTaper): Built {
               text: behind ? `${c.name} · cricket behind` : c.name,
             });
           }
-          // The cap on top of it. A coping is formed metal over a wall and a
-          // curb cap is formed metal over a curb; both are as wide as the
-          // detail says and neither is as wide as the wall. With no width
-          // stated nothing is drawn and the legend says so, which is the same
-          // rule the wall thickness already follows.
-          if (stood.cap) { world.add(stood.cap); copings += 1; }
-          else if (wall !== undefined && props['W'] === undefined) unstatedCap += 1;
         } else {
           world.add(runLine(ring, elevation, colour, c));
         }
@@ -1824,126 +1837,86 @@ function letterFace(letter: string): THREE.CanvasTexture {
 }
 
 /**
- * A parapet: the run, stood up off its base, at the thickness it is told.
+ * A parapet or a curb: the solid the solve already built, stood up from its
+ * base to its own height (C3, `walls.rs`).
  *
- * The traced line is the **reference line**, and by the convention every real
- * tool keeps, it is the *exterior* face — Bonsai's offset default is EXTERIOR
- * with `OffsetFromReferenceLine` at zero, and a parapet traced on a roof plan is
- * traced round the outside of the building. So the wall grows inboard from the
- * line, and up.
+ * `run.outer` is the traced line and `run.inboard` — where `WALL` is typed —
+ * is that same line offset toward the roof by a true polyline offset
+ * (`cavalier_contours`, not a per-segment guess at the ring's own middle). A
+ * closed ring with both is an annulus: `THREE.Shape` with `run.inboard`'s
+ * ring as a hole, extruded from the deck to the wall's own height by
+ * `THREE.ExtrudeGeometry`'s own triangulator, which owes the two rings no
+ * correspondence in vertex count — the offset can and does add one at a
+ * reflex corner the outer trace never had. Without an inboard line the wall
+ * stays the ribbon it has always been: one vertical face, no thickness.
  *
- * Growing inboard is the one thing here that has to be worked out rather than
- * assumed, and it is worked out per segment rather than once for the run.
- *
- * The first attempt took the side off the ring's winding, which is right for a
- * closed ring and wrong for the thing an estimator actually traces: a parapet
- * round three sides of a building is an open polyline, and its two legs run in
- * opposite directions, so one leg's wall came out inboard and the other's
- * outboard. Caught by checking the drawn solid against its own trace rather than
- * by looking at it — from the outside it looked like a parapet.
- *
- * So each segment offsets toward the middle of the run. For a rectangle that is
- * the inside; for a three-sided run it is the building. Which is the same thing
- * said twice, and it is what the trace itself already knows.
- *
- * With no thickness stated it stays a ribbon, and the legend says the thickness
- * is not stated. That is not the same as inventing one.
+ * This function computes no offset. It draws the two rings it is handed.
  */
-function standUp(
-  ring: Point[], elevation: number, height: number, thick: number | undefined,
-  colour: string, c: Condition,
-): { mesh: THREE.Mesh; cap: THREE.Mesh | null } {
+function wallSolid(run: SolvedWallRun, c: Condition): THREE.Object3D {
+  const low = run.elevationFeet;
+  const material = new THREE.MeshLambertMaterial({
+    color: new THREE.Color(MASONRY), side: THREE.DoubleSide,
+  });
+  // A curb is a run with a height, the same as a parapet is, and it is drawn
+  // by the same solid. What it is called here is what it is: a parapet is the
+  // edge of the roof and a curb is a thing standing on it, and a check
+  // counting one must not find the other.
+  const kind = c.role === 'curb' ? 'curb' : (run.inboard ? 'parapet' : 'parapet-ribbon');
+
+  if (!run.inboard) {
+    const mesh = ribbon(run.outer.ring, low, low + run.heightFeet, material);
+    mesh.userData = { conditionId: c.id, kind };
+    return mesh;
+  }
+
+  const shape = new THREE.Shape(run.outer.ring.map((p) => new THREE.Vector2(p.x, p.y)));
+  shape.holes.push(new THREE.Path(run.inboard.ring.map((p) => new THREE.Vector2(p.x, p.y))));
+  const geometry = new THREE.ExtrudeGeometry(shape, { depth: run.heightFeet, bevelEnabled: false });
+  // The same rotation and lift `buildUp` uses: the extrusion runs from the
+  // deck up, so its top lands at the wall's own height and not the other way.
+  geometry.rotateX(Math.PI / 2);
+  geometry.translate(0, low + run.heightFeet, 0);
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.userData = { conditionId: c.id, kind };
+  return mesh;
+}
+
+/** A vertical face along a ring, no thickness — the ribbon a `WALL`-less run has always been. */
+function ribbon(ring: readonly Point[], low: number, high: number, material: THREE.Material): THREE.Mesh {
   const positions: number[] = [];
-  /** The top of the wall, segment by segment, for the cap that goes on it. */
-  const capPositions: number[] = [];
-  const capWidth = c.properties?.['W'];
-  const low = elevation;
-  const high = elevation + height;
-
-  const middle = {
-    x: ring.reduce((sum, p) => sum + p.x, 0) / ring.length,
-    y: ring.reduce((sum, p) => sum + p.y, 0) / ring.length,
-  };
-  const t = thick === undefined ? 0 : inches(thick);
-
-  const quad = (
-    a: { x: number; y: number }, b: { x: number; y: number }, yA: number, yB: number,
-  ) => {
-    positions.push(a.x, yA, a.y, b.x, yA, b.y, a.x, yB, a.y);
-    positions.push(b.x, yA, b.y, b.x, yB, b.y, a.x, yB, a.y);
-  };
-
   for (let i = 0; i < ring.length - 1; i += 1) {
     const a = ring[i]!;
     const b = ring[i + 1]!;
-    quad(a, b, low, high);
-    if (t > 0) {
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const len = Math.hypot(dx, dy) || 1;
-      // Square to the run, by the wall's own thickness, on whichever side of
-      // this segment faces the middle of the run.
-      const ux = -dy / len;
-      const uy = dx / len;
-      const mx = (a.x + b.x) / 2;
-      const my = (a.y + b.y) / 2;
-      const inboard = (middle.x - mx) * ux + (middle.y - my) * uy >= 0 ? 1 : -1;
-      const nx = ux * t * inboard;
-      const ny = uy * t * inboard;
-      const a2 = { x: a.x + nx, y: a.y + ny };
-      const b2 = { x: b.x + nx, y: b.y + ny };
-      quad(a2, b2, low, high);          // the inboard face
-      quad(a, a2, low, high);           // and the two ends close it
-      quad(b, b2, low, high);
-      // The cap, which is where the coping goes.
-      positions.push(a.x, high, a.y, b.x, high, b.y, a2.x, high, a2.y);
-      positions.push(b.x, high, b.y, b2.x, high, b2.y, a2.x, high, a2.y);
-
-      // And the formed metal over it, as wide as the detail says. It is drawn
-      // as a surface and not a solid on purpose: 24 ga is twenty-eight
-      // thousandths of an inch, and a plate thick enough to see would be a
-      // thickness nobody stated.
-      if (capWidth !== undefined && capWidth > 0) {
-        // Centred on the wall, so it overhangs both faces the way a cap does.
-        const mx2 = ux * (t / 2) * inboard;
-        const my2 = uy * (t / 2) * inboard;
-        const outX = ux * (capWidth / 2) * inboard;
-        const outY = uy * (capWidth / 2) * inboard;
-        const top = high + 0.02;
-        const cA = { x: a.x + mx2 - outX, y: a.y + my2 - outY };
-        const cB = { x: b.x + mx2 - outX, y: b.y + my2 - outY };
-        const cC = { x: b.x + mx2 + outX, y: b.y + my2 + outY };
-        const cD = { x: a.x + mx2 + outX, y: a.y + my2 + outY };
-        capPositions.push(cA.x, top, cA.y, cB.x, top, cB.y, cC.x, top, cC.y);
-        capPositions.push(cA.x, top, cA.y, cC.x, top, cC.y, cD.x, top, cD.y);
-      }
-    }
+    positions.push(a.x, low, a.y, b.x, low, b.y, a.x, high, a.y);
+    positions.push(b.x, low, b.y, b.x, high, b.y, a.x, high, a.y);
   }
-
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.computeVertexNormals();
-  const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
-    color: new THREE.Color(MASONRY), side: THREE.DoubleSide,
-  }));
-  // A curb is a run with a height, the same as a parapet is, and it is drawn by
-  // the same arithmetic. What it is called here is what it is: a parapet is the
-  // edge of the roof and a curb is a thing standing on it, and a check counting
-  // one must not find the other.
-  const kind = c.role === 'curb' ? 'curb' : (t > 0 ? 'parapet' : 'parapet-ribbon');
-  mesh.userData = { conditionId: c.id, kind };
+  return new THREE.Mesh(geometry, material);
+}
 
-  let cap: THREE.Mesh | null = null;
-  if (capPositions.length > 0) {
-    const capGeometry = new THREE.BufferGeometry();
-    capGeometry.setAttribute('position', new THREE.Float32BufferAttribute(capPositions, 3));
-    capGeometry.computeVertexNormals();
-    cap = new THREE.Mesh(capGeometry, new THREE.MeshLambertMaterial({
-      color: new THREE.Color(GALVANIZED), side: THREE.DoubleSide,
-    }));
-    cap.userData = { conditionId: c.id, kind: 'coping' };
-  }
-  return { mesh, cap };
+/**
+ * The formed metal over a wall or a curb, as wide as the detail says — C3's
+ * `coping.rs`, centred on the wall by the same kind of offset the wall's own
+ * inboard face is. Drawn as a surface and not a solid on purpose: 24 ga is
+ * twenty-eight thousandths of an inch, and a plate thick enough to see would
+ * be a thickness nobody stated. `null` where there is no wall thickness to
+ * centre a cap on, even if a width is typed or derived.
+ */
+function copingCap(run: SolvedWallRun): THREE.Mesh | null {
+  const { capOuter, capInner } = run.coping;
+  if (!capOuter) return null;
+  const shape = new THREE.Shape(capOuter.ring.map((p) => new THREE.Vector2(p.x, p.y)));
+  if (capInner) shape.holes.push(new THREE.Path(capInner.ring.map((p) => new THREE.Vector2(p.x, p.y))));
+  const geometry = new THREE.ShapeGeometry(shape);
+  geometry.rotateX(Math.PI / 2);
+  geometry.translate(0, run.elevationFeet + run.heightFeet + 0.02, 0);
+  const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
+    color: new THREE.Color(GALVANIZED), side: THREE.DoubleSide,
+  }));
+  mesh.userData = { conditionId: run.conditionId, kind: 'coping' };
+  return mesh;
 }
 
 /** Formed metal, in the colour of the material rather than of the condition. */
@@ -2257,8 +2230,8 @@ function legendFor(r: Reading): HTMLElement[] {
   }
   if (r.unstatedCap > 0) {
     say(r.unstatedCap === 1
-      ? '1 wall has no cap width stated, so no coping is drawn on it'
-      : `${r.unstatedCap} walls have no cap width stated, so no coping is drawn on them`);
+      ? '1 wall has a cap width typed but no wall thickness to centre it on, so no coping is drawn'
+      : `${r.unstatedCap} walls have a cap width typed but no wall thickness to centre it on`);
   }
   if (r.unstatedBuildUp > 0) {
     say(r.unstatedBuildUp === 1

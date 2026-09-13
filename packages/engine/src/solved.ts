@@ -473,6 +473,13 @@ const DERIVED_LABELS: Readonly<Record<string, DerivedLabel>> = {
   NOFALL_SF: { label: 'No fall', unit: 'SF', order: 40 },
   SUMP_PANELS_EA: { label: 'Sump panels', unit: 'EA', order: 50 },
   CRICKET_SF: { label: 'Cricket', unit: 'SF', order: 60 },
+  // The walls and curbs, C3.
+  FLASH_SF: { label: 'Wall flashing', unit: 'SF', order: 70 },
+  FLASH_MIN_IN: { label: 'Flashing height, least', unit: 'IN', order: 71 },
+  CURB_RAISE_IN: { label: 'Raise needed', unit: 'IN', order: 72 },
+  COPING_LF: { label: 'Coping', unit: 'LF', order: 80 },
+  COPING_PCS_EA: { label: 'Coping pieces', unit: 'EA', order: 81 },
+  CLEAT_LF: { label: 'Cleat', unit: 'LF', order: 82 },
 };
 
 /** The lettered panels, which are one name per letter and cannot be listed. */
@@ -518,6 +525,85 @@ export function sumpOf(taper: SolvedTaper, conditionId: string, at: Spot): Solve
   return taper.sumps.find(
     (s) => s.conditionId === conditionId && s.at.x === at.x && s.at.y === at.y,
   ) ?? null;
+}
+
+// ── the walls and curbs ─────────────────────────────────────────────────────
+// The mirror of `src-tauri/core/src/walls.rs` and `coping.rs` (C3). A run's
+// solid (its outer line, and the inboard line `WALL` grows toward — offset by
+// a true polyline offset, not a per-segment guess at where the ring's middle
+// is) and how far the membrane is allowed to climb it, which is a function of
+// position along the run and not a single typed number.
+
+/** A coping cap, as far as the bill and the section need it. */
+export interface SolvedCoping {
+  readonly capWidthFeet: number | null;
+  readonly capWidthStated: boolean;
+  readonly girthInches: number | null;
+  /** What the girth leaves over the cap, each side — what a gauge reads off. */
+  readonly faceHeightInches: number | null;
+  /** 24 or 22. `null` past 10 in, which Fig. 2-3 has no row for. */
+  readonly gaugeGa: number | null;
+  /**
+   * The cap's own two edges, centred on the wall. `null` wherever
+   * `capWidthFeet` or the wall's own thickness is — a cap centred on a wall
+   * with no stated thickness has nothing to centre on.
+   */
+  readonly capOuter: SolvedShape | null;
+  readonly capInner: SolvedShape | null;
+  readonly sectionFeet: number;
+  readonly sectionStated: boolean;
+  readonly sectionOutOfRange: boolean;
+  readonly cornersOutside: number;
+  readonly cornersInside: number;
+  readonly runFeet: number;
+  readonly piecesEa: number;
+  readonly cleatFeet: number;
+  readonly fastenOcInches: number;
+  readonly fastenOcStated: boolean;
+}
+
+/** One wall or curb run, solved. */
+export interface SolvedWallRun {
+  readonly conditionId: string;
+  readonly trace: number;
+  /** `curb`, or absent — a run with no stated role is a parapet. */
+  readonly role: string | null;
+  readonly name: string;
+  readonly outer: SolvedShape;
+  /** The outer line offset inboard by `WALL`. Absent where nobody typed one. */
+  readonly inboard: SolvedShape | null;
+  readonly elevationFeet: number;
+  readonly heightFeet: number;
+  readonly wallInches: number | null;
+  /** How high the membrane is detailed to run, in inches: typed, or the
+   * wall's own height where nobody said. */
+  readonly flashupInches: number;
+  readonly flashupStated: boolean;
+  /** The least the flashing ceiling comes to anywhere on the run. Absent
+   * only where the roof beneath could not be read at all. */
+  readonly flashMinInches: number | null;
+  /** The exact area under the flashing ceiling along the whole run. */
+  readonly flashSquareFeet: number | null;
+  /** `max(0, MIN_FLASHING_INCHES - flashMinInches)`. */
+  readonly curbRaiseInches: number | null;
+  /** Why the flashing ceiling could not be read everywhere, where it could not. */
+  readonly refused: string | null;
+  readonly coping: SolvedCoping;
+}
+
+export interface SolvedWalls {
+  readonly solveId: number;
+  readonly runs: readonly SolvedWallRun[];
+}
+
+/** Nothing solved yet: what a window holds before the first solve arrives. */
+export const NOTHING_SOLVED_WALLS: SolvedWalls = { solveId: 0, runs: [] };
+
+/** The wall or curb run for one trace on one condition, or none. */
+export function wallOf(
+  walls: SolvedWalls, conditionId: string, trace: number,
+): SolvedWallRun | null {
+  return walls.runs.find((r) => r.conditionId === conditionId && r.trace === trace) ?? null;
 }
 
 // ── the drawings ───────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
-import type { Drawings, NotSolvedYet, Scopes, SolvedTaper } from '@roofnerd/engine';
+import type { Drawings, NotSolvedYet, Scopes, SolvedTaper, SolvedWalls } from '@roofnerd/engine';
 
 /**
  * The open job as the shell holds it: keyed by the file each part came from,
@@ -98,7 +98,15 @@ export const solveTaper = () => invoke<SolvedTaper>('solve_get', { part: 'taper'
  * pulled when `solveId` moves, never pushed.
  */
 export const solveDrawings = () => invoke<Drawings>('solve_get', { part: 'drawing' });
-export const solvePart = (part: 'walls' | 'fastening') =>
+/**
+ * The walls and curbs: their solids, and how far the membrane may climb them.
+ *
+ * Pulled when `solveId` moves, same as `solveTaper` — the offset lines and the
+ * cap edges are the same order of size as the board grid, and no window that
+ * never opens the Model or a section should pay for them on a keystroke.
+ */
+export const solveWalls = () => invoke<SolvedWalls>('solve_get', { part: 'walls' });
+export const solvePart = (part: 'fastening') =>
   invoke<NotSolvedYet>('solve_get', { part });
 
 export function subscribe(fn: Subscriber): () => void {

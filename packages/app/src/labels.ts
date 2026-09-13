@@ -40,6 +40,16 @@ export const PROPERTY_LABELS: Readonly<Record<string, { label: string; hint: str
   BOARDS: { label: 'Boards', hint: 'how many the taper runs over', group: 'Geometry' },
   SIDES: { label: 'Sides', hint: 'how many', group: 'Geometry' },
   STRETCHOUT: { label: 'Girth', hint: 'inches — flat width of coil this profile eats', group: 'Metal' },
+  FLASHUP: {
+    label: 'Flash up', hint: 'inches — how far the membrane is detailed to run up this wall',
+    group: 'Geometry',
+  },
+  CAP_OVERHANG_IN: {
+    label: 'Cap overhang', hint: 'inches, each side — only read where Width is not typed',
+    group: 'Metal',
+  },
+  COPING_SECTION_FT: { label: 'Section length', hint: 'feet — 8 to 20, generally 10', group: 'Metal' },
+  FASTEN_OC: { label: 'Fastener spacing', hint: 'inches — cleat and termination bar', group: 'Metal' },
 };
 
 /**
