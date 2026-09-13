@@ -28,6 +28,88 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## C0 — the core exists, and the Model draws from it (2026-09-12)
+
+**Patrick ruled that the 3D model is the function, not a view.** What has to get built — the
+tapered package laid out the trade's way, the walls and curbs with their flashing heights, the
+fastening pattern by wind zone — is the model, and the 2D outputs are produced from it: the
+tapered layout drawing, the fastening plan, the section details, the estimate lines, the IFC
+file. The estimate is produced from the model as derived (◈) lines, which reverses Q4 and D100 on
+record. C0 puts the core in place and proves the seam with a change nobody can see.
+
+**What was built.** `src-tauri/core` is `roofnerd-core`: `geom`, `model`, `scope`, `taper`, no
+window and no disk, 17 tests, `pnpm test:shell` now `cargo test --workspace` (D147).
+`taper.rs` reproduces TODAY'S CONE exactly — the grid, the arrows, the valleys between nearest
+neighbours, the cricket behind the curb — and the pinned test holds it against what
+`model.ts` prints at 21 significant figures on `jobs/demo-job`: 1/2 in at the first drain, 5
+1/4 in on the ridge between the first two, 10.3615414616580103768 in four feet inboard of the
+far corner, a 55 × 47 grid, 136 SF of no fall, 139 arrows, two valleys, the cricket's twelve
+vertices — every one equal bit for bit. One number is not: an arrow's fall direction, because
+this machine's `atan2` and V8's differ in the last bit (2 parts in 10^16 of a radian, held to
+1e-15 and written down rather than called equal).
+
+**The seam.** `doc_set` and `doc_open` solve under the one document lock and emit
+`doc:changed` with `{document, solveId, scopes}`; `solve_get(part)` hands over the geometry
+when a window's id is stale (`walls`, `fastening`, `drawing` answer that they are not solved
+yet). `packages/engine/src/solved.ts` is the one TypeScript copy of the types (D148) and
+carries `readTaperAt`, which the status strip reads so it answers in the inches the roof
+actually is rather than sampling the grid. `scopeFor` takes a third argument — what the model
+solved for this condition — merged after the estimator's own fields and refused a name they
+own; threaded through `scopeOf`, `priceJob` and all four places the app prices from. Every map
+is empty in C0 on purpose: the seam is what is being proven and the board bill is C2. About
+300 lines came out of `model.ts` — `taperSurface`, `nearest`, `nearestDrain`,
+`nearestNeighbours`, `perimeterInches`, its own ray cast, both cricket builders — and what is
+left draws. `__roofnerdModel()` says `source: "solve_get"` with the id on screen.
+
+**B1's two red window rows are fixed.** Both windows stood 52 px wide of the handoff's frame
+and stayed there: the page reported only what it was SHORT of, and the shell corrected against
+a size the toolkit reported rather than against what it had asked for, which has a fixed point
+at `want + the toolkit's own offset`. The page now reports the signed difference and the shell
+corrects its own last request — no 52 anywhere in the code — and a Rust test proves it
+converges in at most two corrections from either side, against a stand-in toolkit that takes
+one constant off a request and reports another.
+
+**The check, to be run by the orchestrator** (probes open windows; nothing was run from the
+build clone): `pnpm build:app`, then `node tools/probe/section-core.mjs`. It asks the window
+where its roof came from, reads the thickness at three places off the strip against the
+arithmetic worked out from `jobs/demo-job`, types a thickness into the Condition panel and
+holds the strip to the new depth, and takes `evidence/section-core-model-<c>.png` in the state
+the pre-change picture was taken in. **That picture against
+`evidence/section-model-frame2-light-7cb2559.png` is the claim C0 makes.** Nothing about the
+solve is drawn, so a difference in that pair is a difference in the roof. The regressions it
+touches are `section-model`, `section6-model`, `section10a-chrome` (the two frame rows) and
+`section7-legibility` (§1.9) — both windows.
+
+**Next: C1 — regions and planes.** The cone is retired for the half-plane partition NRCA
+draws: valleys at 45°, saddles, thickness piecewise-planar on drainage regions and
+perpendicular rather than radial, and the `roof.ts` ↔ core constant test. The 14 in the
+Northgate legend shows is the cone reaching a corner 56 ft from the nearest drain, and it is
+the reason C1 exists.
+
+## B1 — the Model is Frame 2, and the demo is Northgate (2026-09-12)
+
+Never written up when it landed; recorded here from the proof run at `7cb2559`.
+
+Checks first at `d5123ba`, red 15 of 22 on the roof as it stood. Then `1b4333a`: the demo job
+becomes the handoff's Northgate Retail Center — 9,600 SF field, 400 LF of parapet at 42 in,
+three drains, tapered ¼:12, 4 ft sumps, labor a roofer would recognise — which moved the
+selling price from $10,995.39 to $170,517.77 (D135). Then `f5c32f4`: the Model is Frame 2, one
+canvas, a fixed isometric from four preset corners with a fit and a vertical exaggeration
+(D131, Q7). Then `54c2e9e`: the view says where the roof landed on the canvas, so a check can
+see it is small. Fix round `9c2aa9c` / `31494ba` / `def9910` / `7cb2559`: the cricket is the
+one behind the curb rather than a saddle between two drains, the line says on the line what it
+noticed about its unit, the window grows from the inside, and the checks read the window they
+are actually in.
+
+**At `7cb2559`:** section-model 23/23 · section6-model 36/36 · section1-trace 12/12 ·
+section2-sheet 17/17 · front-door 18/18 · runtime-check 9/9 · section10a-chrome 33/35 ·
+section7-legibility 27/28. The cricket reads as a small wedge behind the curb and two valleys
+show. The two red rows are the same defect in both windows — the page 52 px wider than the
+frame it is specified at — and C0 fixes it.
+
+**Pictures:** `section-model-frame2-light-7cb2559.png` and `-dark-`, `-ne-`, `-nw-`, `-se-`,
+`-sw-`, `-vert3-`, `-torn-off-`.
+
 ## Batch 6c — the caret, the cent, and the driver's own words (2026-09-12)
 
 Checks first at `b2401f0`, red on the program as it stood: a field keeps its second character (the

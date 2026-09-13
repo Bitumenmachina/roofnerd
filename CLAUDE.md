@@ -9,6 +9,15 @@ Roofing estimating software. Trace the roof on one screen, watch the money move 
 other. `README.md` explains it the way a roofer would want it explained; `STATUS.md` says
 where the build actually is; `DECISIONS.md` says what was decided and why.
 
+**The 3D model is the function, not a view** (Patrick, 2026-09-12; D146). What has to get
+built — the tapered package laid out the trade's way, the walls and curbs with their
+flashing heights, the fastening pattern by wind zone — is solved in `src-tauri/core`
+(`roofnerd-core`), and the 2D outputs are produced FROM it: the tapered layout drawing, the
+fastening plan, the section details, the estimate lines, the IFC file. The core owns the
+solvers and nothing else: no window, no disk, no network, and no money. What a solved number
+costs is `packages/engine`, which is plain arithmetic. Every window and every export reads
+the one solve, pulled with `solve_get(part)` when the solve id on `doc:changed` moves.
+
 The ruling documents — the handoff and its addenda — are in `refs/`, which is local-only.
 If `refs/` is empty on this clone, ask before assuming what the project wants.
 
@@ -76,6 +85,11 @@ storage. Two documents have already been lost this way.
 - **The vocabulary in `README.md` is the only vocabulary.** Job, Scenario, Page, Condition,
   Item, Formula, Order unit, Assembly, Library, Cost code, Class, Recap, Lens. Units are SF,
   LF, EA, SQ. No synonyms in the UI, the file format, the types or the comments.
+- **A quantity that can be derived from the model is derived in the core and shows ◈; the
+  front end never recomputes.** Two arithmetics for one number disagree eventually, and the
+  one that disagrees silently is the drawing — it looked right for a week while the engine
+  and the Model editor each worked out the taper their own way. Anything typed over a derived
+  number underlines, and stays typed.
 - **Nothing is ever silently zero.** A quantity off an unscaled sheet is pending. A line
   with no price says so. A total that leaves something out says what it left out. This is not
   a principle you prove once — it has been closed at the engine, found again in the formula
@@ -132,6 +146,8 @@ storage. Two documents have already been lost this way.
     pnpm install
     pnpm dev                                    # the application
     pnpm -r test                                # the engine
+    pnpm test                                   # the engine, the app's types, and the shell
+    cargo test --workspace --manifest-path src-tauri/Cargo.toml   # the shell and the core
     pnpm gates                                  # vocabulary, egress, client data
     pnpm build:app                              # deb, rpm, AppImage
     node tools/probe/front-door.mjs             # start screen → buttons → fields

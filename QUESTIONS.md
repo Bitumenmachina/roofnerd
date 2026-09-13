@@ -37,7 +37,7 @@ placeholder? That is the only part that widens the item, and it is the only part
 to validity — three axes, never collapsed. Built with the library in section 4, where a price gets
 its source anyway.
 
-## Q7 — orbit camera, or fixed isometric?
+## Q7 — orbit camera, or fixed isometric? — CLOSED 2026-09-12
 
 **Built:** nothing yet. When section 6 renders, it builds **orbit, per §4.10**, which is the ruling
 document.
@@ -49,12 +49,20 @@ RAISE work was also isometric — though RAISE itself is not on this machine and
 that description comes from prose about it, not from anything anybody has opened.
 See the carry-forward register, items 20 and 23.
 
-**Why it waits, and what makes it cheap either way:** a half-inch-over-twenty-two-feet fall is
+**Why it waited, and what made it cheap either way:** a half-inch-over-twenty-two-feet fall is
 invisible at true scale, which is an argument for exaggeration over orbit. But §4.10 is the ruling
-document and this is not the executor's call. **Build orbit, and keep the projection behind one
+document and this was not the executor's call. **Build orbit, and keep the projection behind one
 function** so switching is a small change rather than a rewrite.
 
-## Q6 — window anatomy: Appendix A3, or the design bundle's?
+**CLOSED 2026-09-12 by Addendum 7 and D131: fixed isometric, four preset corners, a fit and a
+vertical exaggeration, with the orbit kept as one more preset ("look around").** The designer's
+argument turned out to be an estimator's: at true scale a quarter in twelve is a fortieth of a
+degree, and an estimator fighting a camera to find an angle where the fall reads is an estimator
+who stops opening the view. The orbit code was not thrown away and is one chip. Built and on
+screen at `f5c32f4`; `tools/probe/section-model.mjs` holds the presets to moving the camera and
+nothing else.
+
+## Q6 — window anatomy: Appendix A3, or the design bundle's? — CLOSED 2026-09-12
 
 **Built:** A3, throughout. Sections 1, 2 and 7 are built to it and section 7 closed twelve defects
 against it.
@@ -74,10 +82,17 @@ anatomy wins:**
   costs no 3D at all.
 - **One roof-area figure in the document bar that everything reconciles to.**
 
-**Why it waits:** rebuilding the chrome on a reading of a reference bundle would discard a completed
+**Why it waited:** rebuilding the chrome on a reading of a reference bundle would discard a completed
 section. The bundle is marked reference, not exact.
 
-## Q4 — the heightfield is view-only, with a seam — ANSWERED 2026-09-08
+**CLOSED 2026-09-12 by Addendum 7 and D132: the handoff's anatomy wins.** A 52 px tool rail, a 364
+px cost panel, a document bar and a tool settings strip; no tree and no separate properties panel —
+conditions live in the cost panel's Condition tab and in the Plan's list, and `tree.ts` is retired.
+All three of the additive things above were kept, and the live readout under the cursor turned out
+to be the load-bearing one: it is where the Model says what the roof is doing under the pointer, and
+since C0 it reads the solved field directly. The section drawings themselves are C5.
+
+## Q4 — does the heightfield feed the estimate? — RE-ANSWERED 2026-09-12: it does
 
 **Built:** nothing yet — section 6 has not opened. When it does, the heightfield is **view-only**
 until this is answered, which is what Addendum 4 §5 instructs.
@@ -110,6 +125,21 @@ question before it was asked, and neither said view-only:
 **ANSWERED 2026-09-08: view-only, and build the seam.** The heightfield stays a view. The thickness
 at a point is computed in one place, so a measure can be hung off it later without restructuring
 anything — which is what the evidence above says will eventually be wanted.
+
+**RE-ANSWERED 2026-09-12, the other way, by Patrick: the model feeds the estimate.** "Board bill,
+fill, sump panels, cricket fill, fastener counts by zone, adhesive by zone, flashing LF×H, coping
+all arrive as derived (◈) lines; any can be overridden by typing." The 3D model is the function, not
+a view — it is what has to get built — so the estimate is produced from it, and the heightfield
+stops being a view and becomes a measure. Every rule that governs a measure now applies: the names
+appear on the condition, a formula uses them by name, and each is pending rather than zero when the
+inputs are not there.
+
+Nothing was thrown away, which is what the seam was for. D146 puts the solvers in
+`src-tauri/core`; C0 wires the whole path — `doc:changed` carries the per-condition map of named
+numbers, `scopeFor` merges it after the estimator's own fields and refuses a name they own, and the
+engine's tests hold an unsolved name to PENDING rather than zero — and solves none of them. The
+board bill against a manufacturer's tapered table is C2, and it lands on a seam that already works.
+Recorded in D146; D100 is superseded in the same direction.
 
 ## Q3 — the formula stays visible on the line — ANSWERED 2026-09-08
 
