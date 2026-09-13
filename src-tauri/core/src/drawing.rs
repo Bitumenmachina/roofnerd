@@ -356,7 +356,7 @@ fn layout_of(taper: &SolvedTaper) -> Drawing {
         d.through.push(field.condition_id.clone());
         d.line(field.ring.clone(), "outline", false, true);
 
-        for region in &field.regions {
+        for (index, region) in field.regions.iter().enumerate() {
             for board in &region.boards {
                 for piece in &board.shapes {
                     d.shape(piece.clone(), "board", board.letter.clone(), None);
@@ -376,7 +376,11 @@ fn layout_of(taper: &SolvedTaper) -> Drawing {
             for valley in &region.valleys {
                 d.line(vec![valley.a, valley.b], "valley", true, false);
             }
-            for ridge in &region.ridges {
+            // A ridge belongs to BOTH the regions it divides, so it is drawn
+            // once — by the earlier of the two — rather than twice in the same
+            // place. Two dashed lines at one x with different dash phases read
+            // as a doubled line, which is a mark that is not on the roof.
+            for ridge in region.ridges.iter().filter(|r| r.meets > index) {
                 d.line(vec![ridge.a, ridge.b], "ridge", true, false);
             }
             // What the roof comes to at the drain and at the far corner of this
@@ -694,12 +698,14 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
         false,
         Some("deck"),
     );
+    // Under the deck line and hard left, where there is nothing else: the words
+    // on a section have to stand clear of each other or the drawing is a
+    // paragraph with lines through it.
     d.text(
-        Point::new(run / 2.0, 0.0),
-        "existing deck · the top of it is the datum, and nothing in the job states its thickness"
-            .to_string(),
+        Point::new(0.2, 0.55),
+        "existing deck · the datum · nothing states its thickness".to_string(),
         "label",
-        "middle",
+        "start",
     );
 
     // ── the boards, cell by cell, the way they get laid ─────────────────────
@@ -828,16 +834,16 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
             None,
             None,
         );
-        d.text(
-            Point::new(face / 2.0, top / 2.0),
-            w.name.clone(),
-            "label",
-            "middle",
-        );
+        // Above the cap, where there is nothing else. Beside the wall it lands on
+        // top of its own height dimension, which is what Frame 3 does and what a
+        // drawing should not.
+        d.text(Point::new(-0.25, top - 1.15), w.name.clone(), "label", "start");
+        // Outboard of the wall, which is where a parapet height is dimensioned
+        // and the only side of it with room.
         d.dimension(
             Point::new(0.0, top),
             Point::new(0.0, 0.0),
-            -1.5,
+            3.0,
             format!("{} parapet", inches_written(w.height_feet * 12.0)),
             false,
         );
@@ -866,10 +872,10 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
                 false,
             );
             d.text(
-                Point::new(inner, top - 0.5),
+                Point::new(inner + 0.4, top - 0.45),
                 match w.girth_inches {
                     Some(g) => format!("coping cap · {} girth", inches_written(g)),
-                    None => "coping cap · nothing states its girth".to_string(),
+                    None => "coping cap · no girth stated".to_string(),
                 },
                 "label",
                 "start",
@@ -916,19 +922,24 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
             false,
             false,
         );
+        // Two short words rather than one long one: a label that reaches half way
+        // across a drawing lands on whatever is there.
         d.text(
-            Point::new(face + 0.8, top_of_flashing),
+            Point::new(face + 0.8, top_of_flashing + 0.55),
             if stated {
-                format!(
-                    "wall flashing · {} up the wall · termination bar and sealant at the top edge",
-                    inches_written(up_inches)
-                )
+                format!("wall flashing {} up", inches_written(up_inches))
             } else {
                 format!(
-                    "wall flashing · nobody states how far it runs up, so it is drawn at the {} NRCA wants above the finished roof",
+                    "wall flashing · nobody states how far it runs up, so it is drawn at NRCA's least, {}",
                     inches_written(up_inches)
                 )
             },
+            "label",
+            "start",
+        );
+        d.text(
+            Point::new(face + 0.8, top_of_flashing - 0.12),
+            "termination bar and sealant".to_string(),
             "label",
             "start",
         );
@@ -961,15 +972,13 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
         false,
     );
     d.text(
-        Point::new(run, LEADER_FEET + 0.4),
+        Point::new(run - 0.4, LEADER_FEET + 0.5),
         match &drain_named {
-            Some(_) => format!(
-                "Drain {drain_number} · the leader is a symbol, because nothing in the job states the bowl"
-            ),
+            Some(_) => format!("Drain {drain_number} · drawn as a symbol; nothing states the bowl"),
             None => "the low point · nothing counted a drain here".to_string(),
         },
         "label",
-        "middle",
+        "end",
     );
 
     // ── the measures ────────────────────────────────────────────────────────
@@ -980,17 +989,22 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
         format!("{} high point to drain", feet_written(run)),
         true,
     );
+    // The two ends of the fall, each dimensioned on the side with room: the
+    // drain's outboard of the drain, the thick end inboard of the wall.
     d.dimension(
         Point::new(run, 0.0),
         Point::new(run, -start / 12.0),
-        -1.0,
+        1.2,
         format!("{} at the drain", inches_written(start)),
         false,
     );
+    // Measured AT the far end, where the layout's run ends and the traced line
+    // is, and drawn inboard of it, which is the side with room on it. The offset
+    // moves the line and not the two points it is between.
     d.dimension(
         Point::new(0.0, 0.0),
         Point::new(0.0, -cut.depth_at(0.0) / 12.0),
-        0.8,
+        1.8,
         format!(
             "{} at the {}",
             inches_written(cut.depth_at(0.0)),
@@ -1008,7 +1022,7 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
             bill.courses_max.saturating_sub(1)
         ));
         d.key.push(format!(
-            "{} tapered panel · {} in 12 · {}",
+            "{} · {} in 12 · {}",
             bill.product,
             inches_written(bill.slope_inches_per_foot).trim_end_matches('"'),
             bill.by_letter.keys().cloned().collect::<Vec<_>>().join(", ")
@@ -1022,13 +1036,18 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
         ));
     }
     if !layers.is_empty() {
-        d.key.push(
-            "the layers over the boards are what each line says it is, from the deck up".to_string(),
-        );
+        d.key.push("the layers over the boards are what each line says it is".to_string());
     }
-    let at_key = run * 0.55;
+    let at_key = run * 0.72;
     d.key_from = Some(Point::new(at_key, -cut.depth_at(at_key) / 12.0 - over / 12.0));
-    d.key_at = Some(Point::new(run * 0.35, -cut.depth_at(0.0) / 12.0 - 2.5));
+    // In the open ground over the roof, on the far half of the cut: beside the
+    // wall it lands on top of the words on the flashing, which is the collision
+    // a five-line key is most likely to make.
+    let key_top = match &wall {
+        Some(w) => -w.height_feet + 0.35,
+        None => -cut.depth_at(0.0) / 12.0 - 1.9,
+    };
+    d.key_at = Some(Point::new(run * 0.62, key_top));
 
     d.measure();
     d

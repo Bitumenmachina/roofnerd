@@ -94,11 +94,16 @@ fn the_layout_draws_the_bill_and_nothing_else() {
         field.no_fall_square_feet
     );
 
-    // The creases are the solve's, drawn once each.
+    // The creases are the solve's, drawn ONCE each. A valley belongs to one
+    // region; a ridge belongs to both the regions it divides, and two dashed
+    // lines at one x with different dash phases read as a doubled line — a mark
+    // that is not on the roof.
     let valleys = layout.lines.iter().filter(|l| l.role == "valley").count();
     let ridges = layout.lines.iter().filter(|l| l.role == "ridge").count();
     assert_eq!(valleys, field.regions.iter().map(|r| r.valleys.len()).sum::<usize>());
-    assert_eq!(ridges, field.regions.iter().map(|r| r.ridges.len()).sum::<usize>());
+    let both: usize = field.regions.iter().map(|r| r.ridges.len()).sum();
+    assert_eq!(ridges, both / 2, "{both} ridge pieces on the regions, {ridges} drawn");
+    assert!(ridges > 0);
 }
 
 /// The fastening plan is empty, and the emptiness is a sentence.
@@ -268,7 +273,7 @@ fn the_sump_and_the_wall_are_the_job_own_numbers() {
         .iter()
         .find(|t| t.text.contains("wall flashing"))
         .expect("the membrane turns up the wall");
-    assert!(flashing.text.contains("24\" up the wall"), "{}", flashing.text);
+    assert!(flashing.text.contains("24\" up"), "{}", flashing.text);
 
     // And the conditions the plane passed through are named, so the Estimate can
     // say which lines the cut is of.
