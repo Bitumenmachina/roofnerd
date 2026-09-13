@@ -480,6 +480,26 @@ const DERIVED_LABELS: Readonly<Record<string, DerivedLabel>> = {
   COPING_LF: { label: 'Coping', unit: 'LF', order: 80 },
   COPING_PCS_EA: { label: 'Coping pieces', unit: 'EA', order: 81 },
   CLEAT_LF: { label: 'Cleat', unit: 'LF', order: 82 },
+  // The wind zones and what holds the base layer down, C4. The width of the
+  // band and the rating of each zone are not things anybody buys, and they are
+  // listed all the same: they are what the counts under them were worked out
+  // from, and a quantity whose basis is only on a drawing is one nobody can
+  // check from the sheet.
+  ZONE_A_FT: { label: 'Zone band width', unit: 'LF', order: 83 },
+  WIND_ASD_Z3_PSF: { label: 'Corner uplift, working load', unit: 'psf', order: 84 },
+  FM_CLASS_Z1: { label: 'Uplift rating, field', unit: 'psf', order: 85 },
+  FM_CLASS_Z2: { label: 'Uplift rating, perimeter', unit: 'psf', order: 86 },
+  FM_CLASS_Z3: { label: 'Uplift rating, corner', unit: 'psf', order: 87 },
+  BASE_BOARD_IN: { label: 'Base board', unit: 'IN', order: 88 },
+  FASTENERS_Z1_EA: { label: 'Base fasteners, field', unit: 'EA', order: 89 },
+  FASTENERS_Z2_EA: { label: 'Base fasteners, perimeter', unit: 'EA', order: 90 },
+  FASTENERS_Z3_EA: { label: 'Base fasteners, corner', unit: 'EA', order: 91 },
+  PLATES_EA: { label: 'Fastener plates', unit: 'EA', order: 92 },
+  BASE_THIN_EA: { label: 'Positions under the rated thickness', unit: 'EA', order: 93 },
+  ADHESIVE_SETS_Z1_EA: { label: 'Insulation adhesive, field', unit: 'EA', order: 94 },
+  ADHESIVE_SETS_Z2_EA: { label: 'Insulation adhesive, perimeter', unit: 'EA', order: 95 },
+  ADHESIVE_SETS_Z3_EA: { label: 'Insulation adhesive, corner', unit: 'EA', order: 96 },
+  BONDING_GAL: { label: 'Bonding adhesive', unit: 'GAL', order: 97 },
 };
 
 /** The lettered panels, which are one name per letter and cannot be listed. */
@@ -496,7 +516,7 @@ export function derivedLabel(name: string): DerivedLabel {
   return {
     label: name.replace(/_(SF|LF|EA|SQ)$/, '').toLowerCase().replace(/_/g, ' '),
     unit: /_(SF|LF|EA|SQ)$/.exec(name)?.[1] ?? '',
-    order: 90,
+    order: 99,
   };
 }
 
@@ -604,6 +624,100 @@ export function wallOf(
   walls: SolvedWalls, conditionId: string, trace: number,
 ): SolvedWallRun | null {
   return walls.runs.find((r) => r.conditionId === conditionId && r.trace === trace) ?? null;
+}
+
+// ── the wind zones and the fastening ────────────────────────────────────────
+// The mirror of `src-tauri/core/src/wind.rs` and `fastening.rs` (C4). The three
+// zones a roof is divided into, the uplift rating each one asks for, and the
+// pattern the manufacturer's table prints for it.
+//
+// Every pressure is nullable for the same reason every solved figure here is:
+// a roof nobody has typed a design pressure for has no rating, and nought would
+// read as a roof the wind does not pull on.
+
+/** One printed fastening pattern, chosen for a board on a roof. */
+export interface SolvedPattern {
+  readonly board: string;
+  readonly fasteners: number;
+  /** The rating the printed row carries — at or above the one asked for. */
+  readonly fmClass: number;
+  readonly product: string;
+  /** The least thickness that row is written for, in inches. */
+  readonly minimumInches: number;
+  readonly publisher: string;
+  readonly documentId: string;
+  readonly documentDate: string;
+}
+
+/** One zone, fastened. */
+export interface SolvedZone {
+  /** `1`, `2` or `3`, as the appendix numbers them. */
+  readonly zone: string;
+  /** What a roofer calls it: the field, the perimeter, a corner. */
+  readonly label: string;
+  readonly shapes: readonly SolvedShape[];
+  readonly squareFeet: number;
+  readonly designPsf: number | null;
+  readonly asdPsf: number | null;
+  readonly requiredPsf: number | null;
+  /** The rating this zone ASKS for. */
+  readonly fmClass: number | null;
+  readonly boards: number;
+  readonly straddling: number;
+  readonly thinBoards: number;
+  readonly fastenersPerBoard: number | null;
+  readonly pattern: SolvedPattern | null;
+  readonly fasteners: number | null;
+  readonly adheredSquareFeet: number;
+  readonly adhesiveSets: number | null;
+  readonly refused: string | null;
+}
+
+/** One roof, fastened. */
+export interface SolvedFastenedField {
+  readonly conditionId: string;
+  readonly trace: number;
+  readonly ring: readonly Spot[];
+  readonly squareFeet: number;
+  readonly standard: string;
+  readonly zoneRule: string;
+  /** `strength` or `working load`, off which family of names was typed. */
+  readonly basis: string;
+  readonly basisStated: boolean;
+  readonly heightFeet: number | null;
+  readonly leastDimensionFeet: number;
+  readonly aFeet: number | null;
+  readonly aBound: string;
+  readonly zoneOnePrime: string;
+  readonly baseBoards: number;
+  readonly straddling: number;
+  readonly baseBoardInches: number | null;
+  readonly thinBoards: number;
+  readonly boardSize: string;
+  readonly productFamily: string;
+  readonly membrane: string | null;
+  readonly minimumThicknessNote: string;
+  readonly ribbonSpacingInches: number;
+  readonly adhesiveBasis: string;
+  readonly bondingGallons: number | null;
+  readonly plates: number | null;
+  readonly zones: readonly SolvedZone[];
+  readonly refused: string | null;
+}
+
+export interface SolvedFastening {
+  readonly solveId: number;
+  readonly fields: readonly SolvedFastenedField[];
+}
+
+/** Nothing solved yet: what a window holds before the first solve arrives. */
+export const NOTHING_SOLVED_FASTENING: SolvedFastening = { solveId: 0, fields: [] };
+
+/** The fastening for one trace on one condition, or none. */
+export function fastenedOf(
+  fastening: SolvedFastening, conditionId: string, trace: number,
+): SolvedFastenedField | null {
+  return fastening.fields.find((f) => f.conditionId === conditionId && f.trace === trace) ?? null;
 }
 
 // ── the drawings ───────────────────────────────────────────────────────────

@@ -82,18 +82,99 @@
       },
       {
         "costCode": "07-100-170",
-        "description": "Fasteners and plates",
-        "formula": "SQ * 10",
-        "id": "plates",
+        "description": "Base layer fasteners, field",
+        "formula": "FASTENERS_Z1_EA",
+        "id": "base-fasteners-field",
         "layer": "fastening",
-        "notes": "One fastener to ten square feet through the field. The perimeter and the corners take more, and they are priced with the metal.",
+        "notes": "One fastened board to a board position, and the pattern for the field zone off the manufacturer's own sheet at the uplift rating the field pressure asks for. Everything above the base layer is adhered.",
         "order": {
           "name": "BOX",
           "per": 1000,
           "rule": "exact"
         },
         "unit": "EA",
-        "unitCost": 441.05
+        "unitCost": 289.91
+      },
+      {
+        "costCode": "07-100-170",
+        "description": "Base layer fasteners, perimeter",
+        "formula": "FASTENERS_Z2_EA",
+        "id": "base-fasteners-perimeter",
+        "layer": "fastening",
+        "order": {
+          "name": "BOX",
+          "per": 1000,
+          "rule": "exact"
+        },
+        "unit": "EA",
+        "unitCost": 289.91
+      },
+      {
+        "costCode": "07-100-170",
+        "description": "Base layer fasteners, corner",
+        "formula": "FASTENERS_Z3_EA",
+        "id": "base-fasteners-corner",
+        "layer": "fastening",
+        "order": {
+          "name": "BOX",
+          "per": 1000,
+          "rule": "exact"
+        },
+        "unit": "EA",
+        "unitCost": 289.91
+      },
+      {
+        "costCode": "07-100-170",
+        "description": "Barbed plates, 3 in",
+        "formula": "PLATES_EA",
+        "id": "base-plates",
+        "layer": "fastening",
+        "notes": "One plate to a fastener, which is how the sheet prints them: \"Insulation Fasteners & Plates\".",
+        "order": {
+          "name": "BOX",
+          "per": 1000,
+          "rule": "exact"
+        },
+        "unit": "EA",
+        "unitCost": 217.95
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Insulation adhesive, dual tank set, field",
+        "formula": "ADHESIVE_SETS_Z1_EA",
+        "id": "iso-adhesive-field",
+        "layer": "adhesive",
+        "unit": "EA",
+        "unitCost": 1249.62
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Insulation adhesive, dual tank set, perimeter",
+        "formula": "ADHESIVE_SETS_Z2_EA",
+        "id": "iso-adhesive-perimeter",
+        "layer": "adhesive",
+        "unit": "EA",
+        "unitCost": 1249.62
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Insulation adhesive, dual tank set, corner",
+        "formula": "ADHESIVE_SETS_Z3_EA",
+        "id": "iso-adhesive-corner",
+        "layer": "adhesive",
+        "notes": "Every board course above the fastened one, and the cover board over the lot, at the ribbon spacing the manufacturer's warranty table gives for this wind speed. The table stops below this coast; the top row it prints is what this rests on, and the fastening plan says so on its face.",
+        "unit": "EA",
+        "unitCost": 1249.62
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Bonding adhesive, 5 gallon pail",
+        "formula": "BONDING_GAL / 5",
+        "id": "bonding-adhesive",
+        "layer": "adhesive",
+        "notes": "Gallons into five gallon pails. The coverage rate the manual prints already carries both faces, so it is not doubled here.",
+        "unit": "EA",
+        "unitCost": 246.09
       },
       {
         "costCode": "07-100-210",

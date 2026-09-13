@@ -108,8 +108,39 @@ const CATALOGUE = [
   // average thickness somebody guessed, which is the money seam D146 named.
   { id: 'coverboard', description: 'High density cover board, 1/2 in', costCode: '07-100-100', unit: 'SQ',
     band: [88, 104], waste: 8 },
-  { id: 'plates', description: 'Fasteners and plates', costCode: '07-100-170', unit: 'EA',
-    order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [420, 500] },
+  // ── what holds the base layer down, by zone ───────────────────────────
+  // One fastener is one fastener wherever it goes in, so the three zone lines
+  // share ONE price draw (`priceAs`) rather than three: a sheet that charged
+  // more for a corner fastener than a field one would be saying something about
+  // the fastener that is not true. What differs by zone is how many of them.
+  //
+  // The retired `plates` line was `SQ * 10` — ten fasteners-and-plates to the
+  // square, everywhere, off the traced area. It knew nothing about a corner.
+  { id: 'base-fasteners-field', description: 'Base layer fasteners, field',
+    costCode: '07-100-170', unit: 'EA', layer: 'fastening', priceAs: 'base-fastener',
+    order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [240, 290] },
+  { id: 'base-fasteners-perimeter', description: 'Base layer fasteners, perimeter',
+    costCode: '07-100-170', unit: 'EA', layer: 'fastening', priceAs: 'base-fastener',
+    order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [240, 290] },
+  { id: 'base-fasteners-corner', description: 'Base layer fasteners, corner',
+    costCode: '07-100-170', unit: 'EA', layer: 'fastening', priceAs: 'base-fastener',
+    order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [240, 290] },
+  { id: 'base-plates', description: 'Barbed plates, 3 in', costCode: '07-100-170', unit: 'EA',
+    layer: 'fastening', order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [180, 220] },
+  // ── and what sticks the layers over it down ───────────────────────────
+  // Also one price for three lines, and for the same reason: a set of tanks is
+  // a set of tanks. The zones differ in area and in how many courses stand on
+  // them, not in what the adhesive costs.
+  { id: 'iso-adhesive-field', description: 'Insulation adhesive, dual tank set, field',
+    costCode: '07-100-100', unit: 'EA', layer: 'adhesive', priceAs: 'iso-adhesive', band: [1050, 1320] },
+  { id: 'iso-adhesive-perimeter', description: 'Insulation adhesive, dual tank set, perimeter',
+    costCode: '07-100-100', unit: 'EA', layer: 'adhesive', priceAs: 'iso-adhesive', band: [1050, 1320] },
+  { id: 'iso-adhesive-corner', description: 'Insulation adhesive, dual tank set, corner',
+    costCode: '07-100-100', unit: 'EA', layer: 'adhesive', priceAs: 'iso-adhesive', band: [1050, 1320] },
+  // Bought by the pail, which is why the line divides: the solve answers in
+  // gallons because that is the unit the coverage rate is printed in.
+  { id: 'bonding-adhesive', description: 'Bonding adhesive, 5 gallon pail',
+    costCode: '07-100-100', unit: 'EA', layer: 'adhesive', band: [205, 255] },
   // ── the parapet ───────────────────────────────────────────────────────
   { id: 'wallflash', description: 'TPO wall flashing, 60 mil', costCode: '07-100-100', unit: 'SF',
     band: [1.02, 1.18], waste: 10 },
@@ -288,6 +319,38 @@ const DERIVED = [
   { condition: 'c-parapet', id: 'metal-fasteners', formula: 'CLEAT_LF * (12 / FASTEN_OC)' },
   { condition: 'c-curb', id: 'curbflash', formula: 'FLASH_SF' },
   { condition: 'c-curb', id: 'curbcap', formula: 'COPING_LF * (STRETCHOUT / 12)' },
+  // C4: the base layer, by zone, and the adhesive over it. Three fastener lines
+  // rather than one, because the zone is the whole point — a sheet with one
+  // fastener line on it cannot be read to find out whether the corners were
+  // counted, and this roof's corners take two and a half times what its field
+  // does, board for board.
+  {
+    condition: 'c-field', id: 'base-fasteners-field', formula: 'FASTENERS_Z1_EA',
+    notes: 'One fastened board to a board position, and the pattern for the field '
+      + "zone off the manufacturer's own sheet at the uplift rating the field "
+      + 'pressure asks for. Everything above the base layer is adhered.',
+  },
+  { condition: 'c-field', id: 'base-fasteners-perimeter', formula: 'FASTENERS_Z2_EA' },
+  { condition: 'c-field', id: 'base-fasteners-corner', formula: 'FASTENERS_Z3_EA' },
+  {
+    condition: 'c-field', id: 'base-plates', formula: 'PLATES_EA',
+    notes: 'One plate to a fastener, which is how the sheet prints them: '
+      + '"Insulation Fasteners & Plates".',
+  },
+  { condition: 'c-field', id: 'iso-adhesive-field', formula: 'ADHESIVE_SETS_Z1_EA' },
+  { condition: 'c-field', id: 'iso-adhesive-perimeter', formula: 'ADHESIVE_SETS_Z2_EA' },
+  {
+    condition: 'c-field', id: 'iso-adhesive-corner', formula: 'ADHESIVE_SETS_Z3_EA',
+    notes: 'Every board course above the fastened one, and the cover board over the '
+      + "lot, at the ribbon spacing the manufacturer's warranty table gives for this "
+      + 'wind speed. The table stops below this coast; the top row it prints is what '
+      + 'this rests on, and the fastening plan says so on its face.',
+  },
+  {
+    condition: 'c-field', id: 'bonding-adhesive', formula: 'BONDING_GAL / 5',
+    notes: 'Gallons into five gallon pails. The coverage rate the manual prints '
+      + 'already carries both faces, so it is not doubled here.',
+  },
 ];
 
 /**
@@ -343,12 +406,16 @@ const WIND_DEMO = {
 };
 
 /** Lines a solved bill replaces. Left on the job they would charge it twice. */
-const RETIRED = ['iso-tapered'];
+const RETIRED = ['iso-tapered', 'plates'];
 
-const library = CATALOGUE.map(({ band, labor, ...item }) => ({
+// `priceAs` is how two or three lines for the SAME product carry the same
+// price. The draw is seeded on the id so that adding a line never re-prices the
+// rest; a product sold once and billed on three lines needs one seed for all
+// three, and saying which is better than three bands that happen to coincide.
+const library = CATALOGUE.map(({ band, labor, priceAs, ...item }) => ({
   ...item,
   ...(labor ?? {}),
-  unitCost: between(item.id, band[0], band[1]),
+  unitCost: between(priceAs ?? item.id, band[0], band[1]),
 }));
 
 const out = {
@@ -420,6 +487,16 @@ for (const condition of conditions) {
     item.description = priced.description;
     item.costCode = priced.costCode;
     item.unit = priced.unit;
+    // The steps between the quantity and the money come with the product, the
+    // same as its unit does. They were hand-authored on the demo's own lines
+    // before this pass existed, which worked while every line with a step on it
+    // was older than the catalogue — and would have priced the first derived
+    // line that needed one as though the supplier sold single fasteners.
+    if (priced.order !== undefined) item.order = priced.order;
+    if (priced.price !== undefined) item.price = priced.price;
+    // What the line IS in the roof, where the catalogue says. A line with no
+    // thickness draws nothing in a section, and it is still true.
+    if (priced.layer !== undefined) item.layer = priced.layer;
     item.formula = line.formula;
     if (priced.waste !== undefined) item.waste = priced.waste;
     if (line.notes !== undefined) item.notes = line.notes;

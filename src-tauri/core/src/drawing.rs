@@ -32,6 +32,7 @@
 
 use serde::Serialize;
 
+use crate::fastening::{FastenedField, SolvedFastening};
 use crate::geom::{bounds, distance_to_segment, inside_ring, Point, Shape};
 use crate::model::{Board, Condition, Document, Line, SolvedTaper, TaperField, TaperRegion};
 use crate::taper::{read_at, MIN_FLASHING_INCHES};
@@ -318,11 +319,16 @@ fn compass(u: Point) -> &'static str {
 // ── the drawings ───────────────────────────────────────────────────────────
 
 /// Every drawing this job comes to.
-pub fn drawings(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls) -> Drawings {
+pub fn drawings(
+    document: &Document,
+    taper: &SolvedTaper,
+    walls: &SolvedWalls,
+    fastening: &SolvedFastening,
+) -> Drawings {
     Drawings {
         solve_id: taper.solve_id,
         layout: layout_of(taper),
-        fastening: fastening_of(taper),
+        fastening: fastening_of(fastening),
         sections: sections_of(document, taper, walls),
     }
 }
@@ -486,23 +492,168 @@ fn plan_of(positions: &[f64]) -> Vec<Point> {
 
 // ── the fastening plan ─────────────────────────────────────────────────────
 
-/// Empty, and saying so.
+/// The zones, what goes in a board in each, and what the whole thing was set
+/// out and rated to.
 ///
-/// The zones, the pressures and the counts are C4's. An overlay that drew a
-/// pattern from nothing would be the worst thing in this program: a fastening
-/// plan is what a crew works to, and one that looks solved and is not would be
-/// followed.
-fn fastening_of(taper: &SolvedTaper) -> Drawing {
+/// This is the drawing a crew works to and an inspector checks, so everything it
+/// rests on is ON it: the standard, the rule the bands follow, the width of the
+/// band, the basis of the pressure, the document the pattern came out of, and
+/// the two things about this roof that a reader has to be told rather than left
+/// to notice — how many boards lie across a boundary, and how many positions
+/// have less under the fastener than the row is drawn for.
+fn fastening_of(fastening: &SolvedFastening) -> Drawing {
     let mut d = Drawing::new("fastening", "Fastening plan", 8.0, 1.0);
-    d.note = "The fastening plan".to_string();
-    d.nothing_yet = Some(
-        "Nothing is drawn here yet. The corner and edge zones come off the wind \
-         pressure for this building and its exposure, and nothing has worked those \
-         out, so there is no pattern to lay down."
-            .to_string(),
-    );
-    let _ = taper;
+
+    let Some(roof) = fastening.fields.first() else {
+        d.note = "The fastening plan".to_string();
+        d.nothing_yet = Some(
+            "Nothing tapered is traced yet, so there is no roof to set the corner and \
+             edge zones out on."
+                .to_string(),
+        );
+        return d;
+    };
+
+    if roof.zones.is_empty() {
+        d.note = "The fastening plan".to_string();
+        d.nothing_yet = Some(match &roof.refused {
+            Some(why) => format!("There is no fastening plan to draw: {why}."),
+            None => "There is no fastening plan to draw.".to_string(),
+        });
+        return d;
+    }
+
+    d.through.push(roof.condition_id.clone());
+    d.line(roof.ring.clone(), "outline", false, true);
+
+    for zone in &roof.zones {
+        let role = match zone.zone.as_str() {
+            "1" => "zone-field",
+            "2" => "zone-perimeter",
+            _ => "zone-corner",
+        };
+        for piece in &zone.shapes {
+            d.shape(piece.clone(), role, None, None);
+        }
+    }
+
+    // A word in each band, on the band's own biggest piece. Two lines: what the
+    // zone is and what it is rated to, and then what that comes to here.
+    for zone in &roof.zones {
+        let Some(widest) = zone
+            .shapes
+            .iter()
+            .max_by(|a, b| a.square_feet().total_cmp(&b.square_feet()))
+        else {
+            continue;
+        };
+        let Some(at) = crate::taper::middle_of(widest) else { continue };
+        let rated = match (zone.fm_class, &zone.pattern) {
+            (Some(wanted), Some(printed)) if printed.fm_class > wanted => format!(
+                "FM 1-{} wanted, fastened to FM 1-{}",
+                wanted as i64, printed.fm_class as i64
+            ),
+            (Some(wanted), _) => format!("FM 1-{}", wanted as i64),
+            (None, _) => "no pressure typed, so nothing rates it".to_string(),
+        };
+        d.text(at, format!("{} · {rated}", zone.label), "label", "middle");
+
+        let counted = match (zone.fasteners_per_board, zone.fasteners) {
+            (Some(per), Some(all)) => {
+                format!("{per} per board · {} boards · {all} fasteners and plates", zone.boards)
+            }
+            _ => format!(
+                "{} boards · {}",
+                zone.boards,
+                zone.refused.clone().unwrap_or_else(|| "no pattern".to_string())
+            ),
+        };
+        d.text(Point::new(at.x, at.y + 4.0), counted, "label", "middle");
+    }
+
+    // The band's own width, dimensioned along the edge it was set out from.
+    if let Some(a) = roof.a_feet {
+        if let Some((here, along)) = first_edge(&roof.ring) {
+            d.dimension(
+                here,
+                Point::new(here.x + along.x * a, here.y + along.y * a),
+                -a / 4.0,
+                feet_written(a),
+                true,
+            );
+        }
+    }
+
+    d.note = note_of(roof);
+
+    // The key rides in the payload whether or not a window has room to stack it,
+    // because what a fastening plan was read off is part of the fastening plan.
+    d.key.push(roof.standard.clone());
+    d.key.push(format!("zones per {}", roof.zone_rule));
+    if let Some(printed) = roof.zones.iter().find_map(|z| z.pattern.as_ref()) {
+        d.key.push(format!(
+            "{} {} {} · {}",
+            printed.publisher, printed.document_id, printed.document_date, printed.product
+        ));
+    }
+    d.key.push(roof.minimum_thickness_note.clone());
+    d.key.push(roof.adhesive_basis.clone());
+    d.key.push(roof.zone_one_prime.clone());
+
+    d.measure();
     d
+}
+
+/// A corner of the outline and the way the next edge runs out of it, for the
+/// one dimension this drawing carries.
+fn first_edge(ring: &[Point]) -> Option<(Point, Point)> {
+    let here = *ring.first()?;
+    let next = *ring.get(1)?;
+    let run = (next.x - here.x).hypot(next.y - here.y);
+    if run < 1e-9 {
+        return None;
+    }
+    Some((here, Point::new((next.x - here.x) / run, (next.y - here.y) / run)))
+}
+
+/// Everything the drawing has to say in one sentence apiece.
+fn note_of(roof: &FastenedField) -> String {
+    let mut said = vec![format!("Fastening plan · {}", roof.standard)];
+    if let Some(a) = roof.a_feet {
+        said.push(format!("zones {} wide, {}", feet_written(a), roof.a_bound));
+    }
+    said.push(match roof.basis.as_str() {
+        "strength" => "pressures typed at strength design and reduced by 0.6 to working load"
+            .to_string(),
+        "working load" => "pressures typed at working load".to_string(),
+        other => format!("pressures typed on a {other} basis"),
+    });
+    if let (Some(inches), false) = (roof.base_board_inches, roof.board_size.is_empty()) {
+        said.push(format!(
+            "base layer {} {} {}, fastened; everything over it adhered",
+            roof.board_size,
+            inches_written(inches),
+            roof.product_family
+        ));
+    }
+    if roof.straddling > 0 {
+        said.push(format!(
+            "{} boards lie across a zone boundary and take the higher zone",
+            roof.straddling
+        ));
+    }
+    if roof.thin_boards > 0 {
+        said.push(format!(
+            "{} board positions have the tapered panel straight on the deck, which is less \
+             under the fastener than the row it is fastened to is drawn for",
+            roof.thin_boards
+        ));
+    }
+    said.push(format!(
+        "insulation adhesive at {} on centre",
+        inches_written(roof.ribbon_spacing_inches)
+    ));
+    said.join(" · ")
 }
 
 // ── the section ────────────────────────────────────────────────────────────

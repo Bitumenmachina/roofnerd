@@ -25,7 +25,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use roofnerd_core::drawing::{drawings, feet_written, inches_written, Drawing, Drawings};
-use roofnerd_core::{taper, Document, Point};
+use roofnerd_core::{solve, taper, Document, Point};
 
 fn demo() -> serde_json::Value {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../jobs/demo-job");
@@ -40,7 +40,7 @@ fn drawn() -> (Document, roofnerd_core::SolvedTaper, Drawings) {
     let raw = demo();
     let solved = roofnerd_core::solve(&raw, 1).expect("the demo job solves");
     let document = Document::read(&raw).expect("the document reads");
-    let all = drawings(&document, &solved.taper, &solved.walls);
+    let all = drawings(&document, &solved.taper, &solved.walls, &solved.fastening);
     (document, solved.taper, all)
 }
 
@@ -106,19 +106,79 @@ fn the_layout_draws_the_bill_and_nothing_else() {
     assert!(ridges > 0);
 }
 
-/// The fastening plan is empty, and the emptiness is a sentence.
+/// The fastening plan draws the zones, and every number on it is the solve's.
 ///
-/// C4 solves the zones. Until it does, a plan with bands drawn on it would be a
-/// pattern a crew could work to, which is the worst thing this program could put
-/// on a screen.
+/// C5 left this drawing empty with a sentence on it, because a plan with bands
+/// drawn on it would be a pattern a crew could work to and nothing had worked
+/// the zones out. C4 worked them out, so the row moves — and it asks for more
+/// than it did: three named bands, a count in each, the band's own width
+/// dimensioned, and the standard and the basis on the drawing rather than in a
+/// comment beside it.
 #[test]
-fn the_fastening_plan_says_it_is_not_solved_rather_than_drawing_one() {
+fn the_fastening_plan_draws_the_zones_and_says_what_they_were_set_out_to() {
     let (_, _, all) = drawn();
+    let solved = solve(&demo(), 1).expect("the demo job solves");
+    let roof = solved.fastening.fields.first().expect("the roof is fastened");
     let plan = &all.fastening;
-    assert!(plan.shapes.is_empty());
-    assert!(plan.lines.is_empty());
-    let why = plan.nothing_yet.as_ref().expect("an empty drawing with nothing to say");
-    assert!(why.contains("wind"), "{why}");
+
+    assert_eq!(plan.nothing_yet, None, "there is a plan now");
+    let roles: Vec<&str> = plan.shapes.iter().map(|s| s.role.as_str()).collect();
+    for role in ["zone-field", "zone-perimeter", "zone-corner"] {
+        assert!(roles.contains(&role), "nothing on the drawing is a {role}");
+    }
+    assert!(
+        plan.lines.iter().any(|l| l.role == "outline"),
+        "the roof's own outline is drawn under the bands"
+    );
+
+    let said = plan.texts.iter().map(|t| t.text.clone()).collect::<Vec<_>>().join(" | ");
+    for zone in &roof.zones {
+        assert!(said.contains(&zone.label), "the drawing never says {}", zone.label);
+        let rating = zone.fm_class.expect("this roof rates every zone");
+        assert!(
+            said.contains(&format!("FM 1-{}", rating as i64)),
+            "the drawing never names the rating {} asks for",
+            zone.label
+        );
+        let per = zone.fasteners_per_board.expect("and prints a pattern for it");
+        assert!(
+            said.contains(&format!("{per} per board")),
+            "the drawing never says what goes in a board in {}",
+            zone.label
+        );
+        let all_of_them = zone.fasteners.expect("and a count");
+        assert!(
+            said.contains(&format!("{all_of_them} fasteners and plates")),
+            "the drawing never says what {} comes to",
+            zone.label
+        );
+    }
+
+    // A word standing on ground that is not its own zone is a word in the wrong
+    // place, and on a roof with a bump in it that is not a theoretical worry.
+    for word in plan.texts.iter().filter(|t| t.role == "label") {
+        let held = roof.zones.iter().any(|z| {
+            z.shapes.iter().any(|piece| roofnerd_core::geom::on_or_in(word.at, &piece.ring))
+        });
+        assert!(held, "\"{}\" is drawn off every zone", word.text);
+    }
+
+    let a = roof.a_feet.expect("the zones are set out");
+    let measured = plan.dimensions.first().expect("the band's own width is dimensioned");
+    let run = (measured.b.x - measured.a.x).hypot(measured.b.y - measured.a.y);
+    assert!((run - a).abs() < 1e-9, "the dimension measures {run} against a band of {a}");
+    assert!(measured.derived, "it came out of the solve, so it reads as derived");
+
+    assert!(plan.note.contains("ASCE 7-22"), "{}", plan.note);
+    assert!(plan.note.contains("strength design"), "{}", plan.note);
+    assert!(
+        plan.note.contains("adhesive"),
+        "the plan says what the layers over the fastened one are stuck down at"
+    );
+    assert!(
+        plan.key.iter().any(|row| row.contains("DR-05")),
+        "the document the pattern came out of travels with the drawing"
+    );
 }
 
 /// One cut per drain, each along the boards, each ending where it should.

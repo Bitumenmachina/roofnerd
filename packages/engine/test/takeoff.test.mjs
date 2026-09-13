@@ -646,6 +646,9 @@ test('every derived name has a trade label, and no label carries the identifier'
   const names = [
     'TAPER_X_SF', 'TAPER_ZZ_SF', 'FILL_SF', 'FILL_BOARDS_EA', 'BOARD_WASTE_SF',
     'BOARDS_MAX', 'NOFALL_SF', 'SUMP_PANELS_EA', 'CRICKET_SF',
+    'FLASH_SF', 'COPING_LF', 'COPING_PCS_EA', 'CLEAT_LF',
+    'ZONE_A_FT', 'FASTENERS_Z1_EA', 'FASTENERS_Z2_EA', 'FASTENERS_Z3_EA',
+    'PLATES_EA', 'BASE_THIN_EA', 'ADHESIVE_SETS_Z1_EA', 'ADHESIVE_SETS_Z3_EA',
   ];
   for (const name of names) {
     const { label, unit } = derivedLabel(name);
@@ -658,10 +661,26 @@ test('every derived name has a trade label, and no label carries the identifier'
     assert.ok(/^[A-Z]?[a-z]/.test(label), `"${label}" does not start like a word`);
     assert.ok(['SF', 'LF', 'EA', 'SQ'].includes(unit), `${name} is counted in "${unit}"`);
   }
+  // Some solved numbers are not quantities anybody orders — a rating, a
+  // pressure, a thickness, a pail of adhesive. They are listed beside the
+  // counts because they are what the counts were worked out from, and the same
+  // rule holds: a word, and a stated unit, never the identifier.
+  for (const name of [
+    'FLASH_MIN_IN', 'CURB_RAISE_IN',
+    'WIND_ASD_Z3_PSF', 'FM_CLASS_Z1', 'FM_CLASS_Z2', 'FM_CLASS_Z3',
+    'BASE_BOARD_IN', 'BONDING_GAL',
+  ]) {
+    const { label, unit } = derivedLabel(name);
+    assert.ok(label.length > 0, `${name} has no label`);
+    assert.ok(!label.includes('_'), `"${label}" reads like an identifier`);
+    assert.ok(/^[A-Z]?[a-z]/.test(label), `"${label}" does not start like a word`);
+    assert.ok(unit.length > 0, `${name} says nothing about what it is counted in`);
+  }
+
   // A name nobody has labelled falls back to its own words, lower case — which
   // reads as English and cannot be mistaken for the identifier.
   assert.equal(derivedLabel('ADHESIVE_GAL').label, 'adhesive gal');
-  assert.equal(derivedLabel('FASTENERS_Z1_EA').label, 'fasteners z1');
+  assert.equal(derivedLabel('GUTTER_LF').label, 'gutter');
 
   // And the panel's order is the order a bill is read in, not the alphabet.
   assert.deepEqual(

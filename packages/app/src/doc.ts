@@ -7,7 +7,9 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
-import type { Drawings, NotSolvedYet, Scopes, SolvedTaper, SolvedWalls } from '@roofnerd/engine';
+import type {
+  Drawings, Scopes, SolvedFastening, SolvedTaper, SolvedWalls,
+} from '@roofnerd/engine';
 
 /**
  * The open job as the shell holds it: keyed by the file each part came from,
@@ -106,8 +108,15 @@ export const solveDrawings = () => invoke<Drawings>('solve_get', { part: 'drawin
  * never opens the Model or a section should pay for them on a keystroke.
  */
 export const solveWalls = () => invoke<SolvedWalls>('solve_get', { part: 'walls' });
-export const solvePart = (part: 'fastening') =>
-  invoke<NotSolvedYet>('solve_get', { part });
+/**
+ * The wind zones, what holds the base layer down in each and what the layers
+ * over it are stuck with.
+ *
+ * Pulled on the same rule as the rest: the zone bands are polygons and the
+ * counts ride with them, and a window that never opens the fastening plan never
+ * asks for either.
+ */
+export const solveFastening = () => invoke<SolvedFastening>('solve_get', { part: 'fastening' });
 
 export function subscribe(fn: Subscriber): () => void {
   subscribers.add(fn);

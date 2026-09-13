@@ -1031,7 +1031,7 @@ fn flow_over(regions: &[TaperRegion], start_inches: f64) -> Vec<FlowArrow> {
 /// off it, and a mark standing off its own ground is worse than no mark, so the
 /// fallback walks a coarse lattice of the facet's own box and takes the inside
 /// point nearest the centroid.
-fn middle_of(shape: &Shape) -> Option<Point> {
+pub fn middle_of(shape: &Shape) -> Option<Point> {
     let ring = &shape.ring;
     let mut twice_area = 0.0;
     let mut cx = 0.0;

@@ -29,16 +29,88 @@
       "unitCost": 93.3
     },
     {
-      "id": "plates",
-      "description": "Fasteners and plates",
+      "id": "base-fasteners-field",
+      "description": "Base layer fasteners, field",
       "costCode": "07-100-170",
       "unit": "EA",
+      "layer": "fastening",
       "order": {
         "name": "BOX",
         "per": 1000,
         "rule": "exact"
       },
-      "unitCost": 441.05
+      "unitCost": 289.91
+    },
+    {
+      "id": "base-fasteners-perimeter",
+      "description": "Base layer fasteners, perimeter",
+      "costCode": "07-100-170",
+      "unit": "EA",
+      "layer": "fastening",
+      "order": {
+        "name": "BOX",
+        "per": 1000,
+        "rule": "exact"
+      },
+      "unitCost": 289.91
+    },
+    {
+      "id": "base-fasteners-corner",
+      "description": "Base layer fasteners, corner",
+      "costCode": "07-100-170",
+      "unit": "EA",
+      "layer": "fastening",
+      "order": {
+        "name": "BOX",
+        "per": 1000,
+        "rule": "exact"
+      },
+      "unitCost": 289.91
+    },
+    {
+      "id": "base-plates",
+      "description": "Barbed plates, 3 in",
+      "costCode": "07-100-170",
+      "unit": "EA",
+      "layer": "fastening",
+      "order": {
+        "name": "BOX",
+        "per": 1000,
+        "rule": "exact"
+      },
+      "unitCost": 217.95
+    },
+    {
+      "id": "iso-adhesive-field",
+      "description": "Insulation adhesive, dual tank set, field",
+      "costCode": "07-100-100",
+      "unit": "EA",
+      "layer": "adhesive",
+      "unitCost": 1249.62
+    },
+    {
+      "id": "iso-adhesive-perimeter",
+      "description": "Insulation adhesive, dual tank set, perimeter",
+      "costCode": "07-100-100",
+      "unit": "EA",
+      "layer": "adhesive",
+      "unitCost": 1249.62
+    },
+    {
+      "id": "iso-adhesive-corner",
+      "description": "Insulation adhesive, dual tank set, corner",
+      "costCode": "07-100-100",
+      "unit": "EA",
+      "layer": "adhesive",
+      "unitCost": 1249.62
+    },
+    {
+      "id": "bonding-adhesive",
+      "description": "Bonding adhesive, 5 gallon pail",
+      "costCode": "07-100-100",
+      "unit": "EA",
+      "layer": "adhesive",
+      "unitCost": 246.09
     },
     {
       "id": "wallflash",

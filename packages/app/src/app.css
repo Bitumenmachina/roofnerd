@@ -1258,6 +1258,12 @@ button.quiet:hover { border-color: var(--rule); }
 .drawing-marks .board { fill: var(--rn-water-ground); fill-opacity: 0.28; stroke: var(--rn-hairline-strong); stroke-width: 0.75; }
 .drawing-marks .sump { fill: var(--rn-water); fill-opacity: 0.3; stroke: var(--rn-water-border); stroke-width: 1; }
 .drawing-marks .nofall { fill: var(--rn-warn); fill-opacity: 0.22; stroke: var(--rn-warn-border); stroke-width: 1; }
+/* The wind zones, darkening outward: the field, the perimeter band, the corners.
+   One hue with three weights, so the drawing reads as one thing getting worse
+   toward the edge rather than as three unrelated colours. */
+.drawing-marks .zone-field { fill: var(--rn-ink-3); fill-opacity: 0.1; stroke: var(--rn-hairline-strong); stroke-width: 0.75; }
+.drawing-marks .zone-perimeter { fill: var(--rn-ink-2); fill-opacity: 0.22; stroke: var(--rn-ink-3); stroke-width: 1; }
+.drawing-marks .zone-corner { fill: var(--rn-warn); fill-opacity: 0.34; stroke: var(--rn-warn-border); stroke-width: 1.25; }
 .drawing-marks .fill { fill: var(--rn-metal-3); fill-opacity: 0.5; stroke: var(--rn-hairline-strong); stroke-width: 0.75; }
 .drawing-marks .panel { fill: var(--rn-metal-1); fill-opacity: 0.45; stroke: var(--rn-ink-off); stroke-width: 0.75; }
 .drawing-marks .cover { fill: var(--rn-metal-2); fill-opacity: 0.4; stroke: var(--rn-ink-off); stroke-width: 0.75; }
