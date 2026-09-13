@@ -1012,8 +1012,11 @@ fn section_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls, cut
     // Under the deck and hard left, where there is nothing else: the words on a
     // section have to stand clear of each other or the drawing is a paragraph
     // with lines through it.
+    // Well under it: this is the one word on the cut with the whole of the sheet
+    // below the drawing to itself, and at a tighter gap it ran into the letter
+    // of the half-inch board at the drain, where the package is thinnest.
     d.text(
-        Point::new(0.2, deck_feet + gap(0.45)),
+        Point::new(0.2, deck_feet + gap(1.8)),
         match deck_inches {
             Some(deep) => format!(
                 "existing deck {} · the datum · existing construction, not in the bill",
