@@ -28,6 +28,56 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## C4 — wind zones, uplift ratings, fastener counts, adhesive (2026-09-13)
+
+**The roof knows where its corners are, and the sheet buys accordingly.**
+`src-tauri/core/src/wind.rs` divides the traced outline into the three zones NRCA's Appendix 1
+draws — a corner region at each corner that turns outward, a perimeter band of the same width along
+every edge, the field inside — off `a = min(0.1 x least side, 0.4 x mean roof height)`, floored, with
+the solve saying which of the three terms bound it. On the demo that is 8 ft 9 5/8 in, set by 0.4 of
+the typed height. The bands are cut with the same polyline offset the parapet's inboard face uses
+(D147, D153), they tile the roof to a hundredth of a square foot, and where two corner regions
+overlap the shared ground is corner ground once.
+
+`fastening.rs` turns that into a count. Design pressures are TYPED on the roof with the basis in the
+name of the field — `WIND_PSF_*` is strength design and is reduced by 0.6, `WIND_ASD_*` is already at
+working load — then doubled for the safety factor and covered by the next published uplift rating of
+fifteen at or above. The pattern comes out of the manufacturer's sheet on disk by board size, rating
+and which printed row the base board actually matches; one board per board position is fastened and
+everything over it is adhered. The whole chain and its two gaps are D157.
+
+**Fifteen new names on the solve**, all with trade labels: `ZONE_A_FT`, `WIND_ASD_Z3_PSF`,
+`FM_CLASS_Z1`…`Z3`, `BASE_BOARD_IN`, `FASTENERS_Z1_EA`…`Z3_EA`, `PLATES_EA`, `BASE_THIN_EA`,
+`ADHESIVE_SETS_Z1_EA`…`Z3_EA`, `BONDING_GAL`. Seven new typed property names beside them, in a new
+"Wind" group on the Condition panel: `ROOF_HEIGHT_FT` and the two families of three pressures.
+
+**The Plan's fastening overlay draws something now.** Three hatched bands, the zone's own number on
+every piece of them, one statement block in the field naming each zone's rating, pattern and board
+count, the band's width dimensioned, and a note carrying the standard, the rule, the basis, the base
+board, the document the patterns came from, and the two things a reader has to be told: 109 boards
+lie across a zone boundary and take the higher zone, and 24 board positions have the tapered panel
+straight on the deck, which is less under the fastener than the row it is fastened to is drawn for.
+
+**The money.** `$168,956.54` → `$212,153.98`, up `$43,197.44`. Almost all of it is that an adhered
+roof had no adhesive on it: insulation adhesive by zone and bonding adhesive by the pail come to
+$31,618 of direct material where there was none. The FASTENING itself came down — $2,284 against the
+retired `SQ * 10` line's $4,234 — because ten fasteners to the square everywhere is more than the
+manufacturer's pattern asks for in the field and less than it asks for at a corner, and there is far
+more field than corner.
+
+**Two latent defects in the catalogue pass, both fixed here.** `tools/make-demo-prices.mjs` never
+wrote a line's ORDER STEP or its layer: the demo's own lines carried theirs from the day they were
+hand-written, so the omission was invisible until a derived line needed one — and the first three
+that did would have been priced as though the supplier sold single fasteners, a hundred and twenty
+times over. No existing line moved.
+
+**For Patrick to look at:** the fastening overlay on the Plan — three bands, a count in each, the
+pressure named. And two things on the record rather than hidden: the three typed pressures come from
+a brief that tabulates them at Exposure C while this building is Exposure D (the corner figure is
+right for Exposure D by the brief's own text; the other two are a floor), and the adhesive spacing
+for a 130 mph roof is not in the box — the manufacturer's warranty table stops at 120 and the HVHZ
+sheet sends the reader to an evaluation report that is not on this machine.
+
 ## C3 — walls, curbs, coping, the wall section (2026-09-13)
 
 **A parapet and a curb are now solved, not typed and drawn.** `src-tauri/core/src/walls.rs` and

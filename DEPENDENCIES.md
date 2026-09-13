@@ -16,7 +16,7 @@ ISC. Nothing copyleft in the shipped application.
 | pdfjs-dist | 6.3.289 | Apache-2.0 | Painting a PDF page onto the trace surface. Worker bundled as a local file; nothing is fetched |
 | three | 0.185.1 | MIT | The Model editor. Verified from the package's own LICENSE file, not a badge. Bundled by Vite as a local file — the view is derived geometry drawn on a canvas, and it reaches nothing |
 | geo | 0.29.3 | MIT / Apache-2.0 | Polygon work in the core: area, contains, boolean ops for drainage regions and zone bands (C1 on). Its boolean backend `i_overlay` comes with it |
-| cavalier_contours | 0.4.0 | MIT / Apache-2.0 | Polyline offset (C3 on) — a wall or curb's own inboard line and its coping's two edges, replacing the Model editor's retired per-segment hand offset; the zone bands are still to come |
+| cavalier_contours | 0.4.0 | MIT / Apache-2.0 | Polyline offset (C3 on) — a wall or curb's own inboard line, its coping's two edges, and the inboard line the wind zones' perimeter band is cut from, all replacing the Model editor's retired per-segment hand offset |
 
 **Where those two licences were read (D147).** Neither package ships a LICENSE file inside its
 published crate: `geo-0.29.3` and `cavalier_contours-0.4.0` unpack to source, a README and a

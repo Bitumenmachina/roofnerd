@@ -5,7 +5,10 @@ Vendor data the solvers read off disk instead of a PDF.
 - `profiles/` — tapered-insulation panel profiles (panel size, slopes, designations,
   thin/thick edge and fill thickness), read for the tapered-package solver (C2).
 - `fastening/` — insulation fastening patterns (fastener count, layout, FM ratings),
-  read for the fastening solver (C4).
+  compiled into `src-tauri/core/src/fastening.rs` and read by the fastening solver.
+  The pattern for a zone is chosen by the board's size, the uplift rating the zone
+  asks for, and which printed row the base board on the roof actually meets — the
+  document's own minimum-thickness note is what makes that last one a comparison.
 
 Each file carries its own publisher, document id, fetched date and source, and is
 transcribed from the manufacturer's own page images — product names only, no prices,
