@@ -28,6 +28,67 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## C5 — the Section view, the two Plan overlays, and the look (2026-09-13)
+
+**The roof stopped reading like a debugger.** C1 laid the field out and C2 turned it into a bill, and
+what was on screen was still an engineering view: a grey field, a lawn of a hundred and thirty-nine
+identical darts, a ten-row key, and not one word on the roof. The handoff's Frame 2 and Frame 3 are
+what a roofer was promised, and matching them is this batch's acceptance rather than something parked
+to the persona pass (D156).
+
+**Words on the roof, each carrying a solved number.** Every drain says which drain it is and how far
+its sump falls to it (`Drain 1 · sump 1/2" deep`); the curb says what stands behind it, read off the
+ridge condition that names it; the flat ground says how many square feet of it there are and which
+ceiling stopped the fall (`no fall · 132 SF · the boards run out`). One long arrow down each piece of
+ground a plane governs — twelve on this roof instead of a hundred and thirty-nine, each as long as the
+ground it speaks for. The field in the handoff's four greys by thickness. The key at four rows, with
+what the drawing cannot say under it rather than in it. A **boards** chip draws C2's bill on the roof:
+one mesh per board position, cut to the shape the board was cut to, with its letter standing on it.
+
+**A third view: the Section.** One `Drawing` model in `src-tauri/core/src/drawing.rs` and ONE renderer
+in `packages/app/src/viewer/drawing.ts`, serving three drawings through `solve_get("drawing")` (D155).
+The Section cuts through a drain ALONG THE BOARDS and out to the wall the roof stops against — on the
+demo **22'-0" west through Drain 1 to the parapet, 6" at the wall and 1/2" at the drain**, with
+19'-0" to a ridge at Drain 2 and 10'-0" east at Drain 3. Two panes: the Model's own three.js world with
+a clipping plane through the cut and the face it exposes drawn in (three.js caps nothing it clips), and
+the drawing itself at 1" = 4'-0" with the vertical stretched ×4 and saying so. The stack is the bill
+seen edge on — the deck, the flat board course by course, the lettered panel whose top IS the solved
+surface, the sump, then the cover board and the membrane — with the parapet, its coping at the girth
+the job states, the cleat, the flashing and the termination bar.
+
+**Two overlays on the Plan.** "layout" lays the board grid over the sheet it was traced off, in the
+sheet's own units, with a letter on every one of the 697 boards; "fastening" is empty and says the
+wind zones are not solved yet rather than drawing a pattern a crew could work to. Neither is on until
+it is asked for.
+
+**And the money knows.** With a cut up, the Estimate names the lines the plane goes through —
+`LINES CUT BY SECTION A–A · 28` — and marks their groups. It names, it does not filter.
+
+**Two things the job format does not state, decided (D155).** A condition's lines that carry a
+thickness are its LAYERS, in the order it lists them, bottom to top — the demo is re-ordered so the
+cover board goes on before the membrane. And the flashing height is a typed `FLASHUP` (24" on the
+parapet, 18" on the curb) until C3 solves one; where nobody types one the drawing goes to the least
+NRCA accepts and says so.
+
+**Checks.** `cargo test --workspace` is 35 + 7 + 10 + 6 + 14 — the 6 are
+`src-tauri/core/tests/the_drawings.rs`, which works the three cuts out by hand from the job's own
+outline and drains (22, 19 and 10 feet; 6", 5 1/4" and 3" at the far end) and holds every panel's top
+to the solved surface at its own corners. `packages/engine` is 171, the app 9, all three gates PASS.
+Every commit went through the hook.
+
+**Not run here: the probe.** `tools/probe/section-section.mjs` landed first and red by construction,
+and has never executed — it opens a window. Front door throughout, nothing typed: the board count and
+the flat ground come off a quarter-foot lattice this file walks itself, and the three cuts are worked
+out from the drains and the outline. It takes four pictures — `section-section-model-<c>.png` to sit
+beside Frame 2, `-cut-<c>.png` beside Frame 3, `-boards-<c>.png` and `-layout-<c>.png`.
+
+**Open for Patrick, and now on the strip where he will see it:** the layout needs **4 courses** of
+board and the job types **3** (C2's finding, D150). The Model's tool settings strip reads
+`Boards 4 courses against 3 allowed`.
+
+**Next: C3 — walls, curbs, coping, the wall section.** The section already draws the parapet off what
+the job types; C3 gives it a solved flashing height to draw instead of `FLASHUP`.
+
 ## C2 — boards, letters, fill, sumps, crickets, the bill (2026-09-13)
 
 **The layout became a bill, and the money on the demo moved.** C1 laid the field out and the estimate
