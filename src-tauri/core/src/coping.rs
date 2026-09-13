@@ -30,7 +30,7 @@
 //                     how many of those holes get a fastener; nothing else in
 //                     the box states a spacing.
 
-use crate::geom::{run_length, Point};
+use crate::geom::{offset_ring, run_length, Point, Shape};
 use crate::model::Condition;
 
 /// A coping cap, as far as the bill and the section need it.
@@ -46,6 +46,13 @@ pub struct Coping {
     /// 24 or 22. `None` past 10 in, which is reported rather than invented —
     /// Fig. 2-3 has no row for it.
     pub gauge_ga: Option<u32>,
+    /// The cap's own two edges, centred on the wall — each the outer trace
+    /// offset by half the wall thickness, then out or in again by half the
+    /// cap's own width. `None` wherever `cap_width_feet` or `wall_inches` is,
+    /// because a cap centred on a wall with no stated thickness has nothing to
+    /// centre on.
+    pub cap_outer: Option<Shape>,
+    pub cap_inner: Option<Shape>,
     pub section_feet: f64,
     pub section_stated: bool,
     pub section_out_of_range: bool,
@@ -110,6 +117,24 @@ pub fn solve_one(
     };
     let gauge_ga = face_height_inches.and_then(gauge_of);
 
+    // The cap centred on the wall: its own centreline is the outer trace
+    // offset inboard by half the wall's thickness, and the cap's two edges
+    // are that centreline offset out and in again by half its own width —
+    // the same offset the wall's own inboard face uses, at different
+    // distances, so a cap on a reflex corner is exactly as sound as the wall
+    // under it is.
+    let (cap_outer, cap_inner) = match (wall_inches, cap_width_feet) {
+        (Some(wall), Some(width)) => {
+            let centre = wall / 2.0 / 12.0;
+            let half = width / 2.0;
+            (
+                offset_ring(outer_ring, closed, sign, centre - half),
+                offset_ring(outer_ring, closed, sign, centre + half),
+            )
+        }
+        _ => (None, None),
+    };
+
     let section_feet = c.property("COPING_SECTION_FT").unwrap_or(COPING_SECTION_DEFAULT_FT);
     let section_stated = c.property("COPING_SECTION_FT").is_some();
     let section_out_of_range =
@@ -133,6 +158,8 @@ pub fn solve_one(
         girth_inches,
         face_height_inches,
         gauge_ga,
+        cap_outer,
+        cap_inner,
         section_feet,
         section_stated,
         section_out_of_range,
@@ -273,5 +300,16 @@ mod tests {
         // so 24 gauge.
         assert_eq!(coping.face_height_inches, Some(2.75));
         assert_eq!(coping.gauge_ga, Some(24));
+
+        // Centred on the wall: the outer edge overhangs the traced line by
+        // exactly `CAP_OVERHANG_IN` (3 in = 0.25 ft, since W derived FROM that
+        // overhang in the first place), and the inner edge sits at half the
+        // wall's own 8 in plus that same 0.25 ft inboard of it — 11/12 ft.
+        let outer = coping.cap_outer.expect("a wall with a wall thickness gets a cap outer edge");
+        let inner = coping.cap_inner.expect("and an inner edge");
+        let box_of = |shape: &crate::geom::Shape| crate::geom::bounds(&shape.ring).unwrap();
+        let (ob, ib) = (box_of(&outer), box_of(&inner));
+        assert!((ob.min_x - (-0.25)).abs() < 1e-9, "the cap's outer edge came to {}", ob.min_x);
+        assert!((ib.min_x - 11.0 / 12.0).abs() < 1e-9, "the cap's inner edge came to {}", ib.min_x);
     }
 }

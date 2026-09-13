@@ -5,7 +5,7 @@
 // `lib.rs`'s own pin does; the rest build the smallest fixture that puts the
 // claim beyond doubt.
 
-use roofnerd_core::geom::{signed_area, Point};
+use roofnerd_core::geom::{offset_ring, signed_area, Point};
 use roofnerd_core::{taper, walls, Document};
 use serde_json::json;
 use std::fs;
@@ -250,7 +250,7 @@ fn the_offset_is_proved_on_an_l_shaped_ring() {
     assert!((signed_area(&ring[..6]).abs() / 2.0 - 64.0).abs() < 1e-9, "the outer L is 64 SF");
     assert!(signed_area(&ring[..6]) > 0.0, "traced CCW, so the interior is on the left");
 
-    let inboard = walls::inboard_of(&ring, true, 1.0, 1.0).expect("a concave ring still offsets");
+    let inboard = offset_ring(&ring, true, 1.0, 1.0).expect("a concave ring still offsets");
     assert_eq!(inboard.ring.len(), 7, "a direct join at the reflex corner, not a mitre");
 
     let has = |x: f64, y: f64| {

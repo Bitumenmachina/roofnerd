@@ -36,10 +36,8 @@
 // wall and curb condition, not curbs alone: a parapet standing over ground that
 // has piled up thick enough can fail the same check a short curb does.
 
-use cavalier_contours::polyline::{PlineCreation, PlineSource, PlineVertex, Polyline};
-
 use crate::coping::{self, Coping};
-use crate::geom::{on_or_in, Point, Shape};
+use crate::geom::{dedup_closing, offset_ring, on_or_in, ring_is_closed, Point, Shape};
 use crate::model::{Condition, Document, Line, SolvedTaper};
 use crate::taper::{depth_inches_at, folds_along, MIN_FLASHING_INCHES};
 
@@ -127,7 +125,7 @@ fn run_of(
     // corners alike — so a wall traced the other way round always answers the
     // same way about itself.
     let sign = inboard_sign(document, ring);
-    let inboard = wall_inches.filter(|w| *w > 0.0).and_then(|w| inboard_of(ring, closed, sign, w / 12.0));
+    let inboard = wall_inches.filter(|w| *w > 0.0).and_then(|w| offset_ring(ring, closed, sign, w / 12.0));
 
     let flashup_stated_value = c.property("FLASHUP");
     let flashup_inches = flashup_stated_value.unwrap_or(height_feet * 12.0);
@@ -167,23 +165,6 @@ fn run_of(
 }
 
 // ── the solid: an offset ring, not a per-segment guess ─────────────────────
-
-/// A trace closes itself by repeating its first point at the end
-/// (`c-parapet`, `c-curb`); a run drawn along one wall only need not.
-fn ring_is_closed(ring: &[Point]) -> bool {
-    ring.len() > 2 && ring[0] == ring[ring.len() - 1]
-}
-
-/// The distinct vertices, the closing repeat dropped where there is one — what
-/// every geometry routine here actually wants, and what `cavalier_contours`
-/// insists on for a polyline told `is_closed: true`.
-fn dedup_closing(ring: &[Point]) -> Vec<Point> {
-    let mut pts = ring.to_vec();
-    if ring_is_closed(&pts) {
-        pts.pop();
-    }
-    pts
-}
 
 /// Which side of a wall's first segment the roof is on: `+1.0` if a hair to the
 /// left of its own tangent lands inside a traced roof, `-1.0` if a hair to the
@@ -227,71 +208,6 @@ fn is_over_a_roof(document: &Document, p: Point) -> bool {
                 ring.len() >= 3 && on_or_in(p, &ring)
             })
     })
-}
-
-/// The wall's own inboard line: the traced ring, offset toward the roof by its
-/// thickness.
-///
-/// `cavalier_contours::Polyline::parallel_offset` is a true polyline offset —
-/// proved by its own test suite on self-intersecting and concave cases a
-/// per-segment "turn toward the middle" heuristic cannot survive, because the
-/// middle of a concave ring is not guaranteed to sit inside it (and does not,
-/// on this field's own bump). Its offset is signed by each segment's own
-/// tangent, left or right, and `sign` (`inboard_sign`) says which of the two
-/// this job calls inboard.
-pub fn inboard_of(ring: &[Point], closed: bool, sign: f64, thickness_feet: f64) -> Option<Shape> {
-    let pts = dedup_closing(ring);
-    if pts.len() < 2 || thickness_feet <= 0.0 {
-        return None;
-    }
-    if closed && pts.len() < 3 {
-        return None;
-    }
-
-    let pline: Polyline<f64> = Polyline::from_iter(
-        pts.iter().map(|p| PlineVertex { x: p.x, y: p.y, bulge: 0.0 }),
-        closed,
-    );
-    let offsets = pline.parallel_offset(sign * thickness_feet);
-
-    // A thickness close to the ring's narrowest dimension can split a closed
-    // offset into several loops; the wall's own is the longest one, because a
-    // sliver pinched off at a tight corner is not the wall. The same measure
-    // works for an open run's offset, which has no enclosed area to compare by
-    // in the first place.
-    let mut best: Option<(f64, Vec<Point>)> = None;
-    for pl in &offsets {
-        let count = pl.vertex_count();
-        if count < 2 {
-            continue;
-        }
-        let pts: Vec<Point> = (0..count)
-            .map(|i| {
-                let v = pl.at(i);
-                Point::new(v.x, v.y)
-            })
-            .collect();
-        let mut length = run_length_closed(&pts, pl.is_closed());
-        if !length.is_finite() {
-            length = 0.0;
-        }
-        if best.as_ref().map(|(l, _)| length > *l).unwrap_or(true) {
-            best = Some((length, pts));
-        }
-    }
-    best.map(|(_, ring)| Shape::of(ring))
-}
-
-/// A ring's own run, closing it first if it says it is closed.
-fn run_length_closed(ring: &[Point], closed: bool) -> f64 {
-    if ring.is_empty() {
-        return 0.0;
-    }
-    let mut traced = ring.to_vec();
-    if closed {
-        traced.push(ring[0]);
-    }
-    crate::geom::run_length(&traced)
 }
 
 // ── the finished roof under a wall ──────────────────────────────────────────

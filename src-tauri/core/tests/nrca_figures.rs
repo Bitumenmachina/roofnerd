@@ -406,4 +406,62 @@ fn the_core_and_the_engine_state_the_same_conventions() {
     let (cap, reason) = roofnerd_core::taper::cap_inches(0.5, Some(3.0), Some(24.0));
     assert_eq!(cap, Some(14.0));
     assert_eq!(reason, Some(roofnerd_core::CapReason::Boards));
+
+    // C3's own conventions, pinned the same way: read off the TypeScript
+    // rather than restated here.
+    assert_eq!(
+        roofnerd_core::coping::CAP_OVERHANG_DEFAULT_IN,
+        after(&source, "export const CAP_OVERHANG_IN = ")
+    );
+    assert_eq!(
+        roofnerd_core::coping::COPING_SECTION_DEFAULT_FT,
+        after(&source, "export const COPING_SECTION_FT = ")
+    );
+    assert_eq!(
+        roofnerd_core::coping::COPING_SECTION_MIN_FT,
+        after(&source, "export const COPING_SECTION_MIN_FT = ")
+    );
+    assert_eq!(
+        roofnerd_core::coping::COPING_SECTION_MAX_FT,
+        after(&source, "export const COPING_SECTION_MAX_FT = ")
+    );
+    assert_eq!(
+        roofnerd_core::coping::FASTEN_OC_DEFAULT_IN,
+        after(&source, "export const FASTEN_OC_IN = ")
+    );
+
+    // Gauge steps at the same two places on both sides.
+    for face in [7.99, 8.0, 8.01, 10.0, (10.0 + 0.01)] {
+        assert_eq!(
+            roofnerd_core::coping::gauge_of(face),
+            gauge_ga_from_ts(&source, face),
+            "the two files disagree about {face} in of face"
+        );
+    }
+}
+
+/// `copingGaugeGa` in `roof.ts`, read rather than restated: two `if` lines,
+/// each `<= number) return number;`, and `null` past both.
+fn gauge_ga_from_ts(source: &str, face: f64) -> Option<u32> {
+    let start = source.find("export function copingGaugeGa").expect("copingGaugeGa is not in roof.ts");
+    let body = &source[start..];
+    for line in body.lines().skip(1) {
+        let line = line.trim();
+        if let Some(rest) = line.strip_prefix("if (faceHeightInches <= ") {
+            let end = rest.find(')').unwrap();
+            let threshold: f64 = rest[..end].parse().unwrap();
+            let value: u32 = rest[rest.find("return ").unwrap() + "return ".len()..]
+                .trim_end_matches(';')
+                .parse()
+                .unwrap();
+            if face <= threshold {
+                return Some(value);
+            }
+            continue;
+        }
+        if line.starts_with("return null") {
+            return None;
+        }
+    }
+    panic!("copingGaugeGa's body did not end the way this reader expects");
 }

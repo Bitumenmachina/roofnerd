@@ -244,3 +244,54 @@ export function buildUpInches(
  * stack.
  */
 export const GROWS_UP_FROM_DECK = 1;
+
+// ── Walls, curbs and coping (C3) ────────────────────────────────────────────
+
+/**
+ * How far a coping cap overhangs the wall it caps, each side, in inches,
+ * where nobody states the cap's own width.
+ *
+ * NRCA *Architectural Metal Flashing* 2022, §2.1 (p.58), shows a cap
+ * overhanging both faces of the wall it caps but gives no minimum for how
+ * far — a GAP, recorded rather than invented as a rule. 3 in a side is why
+ * the demo's 14 in cap sits on its 8 in wall exactly: `8 + 2 x 3 = 14`.
+ */
+export const CAP_OVERHANG_IN = 3;
+
+/**
+ * Coping section length, feet, where nobody states one.
+ *
+ * NRCA *Architectural Metal Flashing* 2022, p.58: "sections are generally
+ * fabricated in lengths of 8 to 10 feet, although they can be ordered in
+ * lengths from 8 to 20 feet." 10 is the generally-fabricated length; a
+ * length outside 8–20 is warned rather than refused.
+ */
+export const COPING_SECTION_FT = 10;
+export const COPING_SECTION_MIN_FT = 8;
+export const COPING_SECTION_MAX_FT = 20;
+
+/**
+ * Cleat and termination-bar spacing, inches, where nobody states one.
+ *
+ * A GAP: Versico's own termination bar comes punched every 6 in (Versico
+ * Manual PDF p.42), which states how the bar is made and not how many of
+ * those holes get a fastener, and nothing else in the box states a spacing
+ * either.
+ */
+export const FASTEN_OC_IN = 12;
+
+/**
+ * The gauge a coping cap is formed from, off its own face height — what the
+ * girth leaves over the cap, each side.
+ *
+ * NRCA *Architectural Metal Flashing* 2022, Fig. 2-3 (p.58): 24 gauge
+ * galvanized steel up to 8 in of face, 22 gauge from 8 to 10 in. Past 10 in
+ * the figure has no third row — "designers may consider... breaks to
+ * stiffen the face, or specifying a two-piece coping cap" — so this reports
+ * rather than invents a heavier gauge.
+ */
+export function copingGaugeGa(faceHeightInches: number): number | null {
+  if (faceHeightInches <= 8) return 24;
+  if (faceHeightInches <= 10) return 22;
+  return null;
+}
