@@ -270,6 +270,16 @@ fn flashing_height_at(
     Some(flashup_inches.min(wall_top_inches - roof).max(0.0))
 }
 
+/// The flashing ceiling at a place on a solved run, in inches — the same
+/// expression `flashing_along` sums as trapezoids, evaluated at one point
+/// rather than walked along the whole run. `drawing.rs`'s section reads this
+/// at the point its cut stands, so the height it draws is the run's own
+/// clipped answer there and not the flat `FLASHUP` the run happens to carry.
+pub fn flashing_at(document: &Document, taper: &SolvedTaper, run: &WallRun, p: Point) -> Option<f64> {
+    let wall_top_inches = run.elevation_feet * 12.0 + run.height_feet * 12.0;
+    flashing_height_at(document, taper, p, wall_top_inches, run.flashup_inches)
+}
+
 /// Walk a closed line and sum the flashing ceiling as trapezoids between exact
 /// breakpoints: the run's own corners, every place the roof beneath crosses
 /// from one governing plane or drainage region to another, and every place the

@@ -35,6 +35,7 @@ use serde::Serialize;
 use crate::geom::{bounds, distance_to_segment, inside_ring, Point, Shape};
 use crate::model::{Board, Condition, Document, Line, SolvedTaper, TaperField, TaperRegion};
 use crate::taper::{read_at, MIN_FLASHING_INCHES};
+use crate::walls::{self, SolvedWalls, WallRun};
 
 // ── the model ──────────────────────────────────────────────────────────────
 
@@ -317,12 +318,12 @@ fn compass(u: Point) -> &'static str {
 // ── the drawings ───────────────────────────────────────────────────────────
 
 /// Every drawing this job comes to.
-pub fn drawings(document: &Document, taper: &SolvedTaper) -> Drawings {
+pub fn drawings(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls) -> Drawings {
     Drawings {
         solve_id: taper.solve_id,
         layout: layout_of(taper),
         fastening: fastening_of(taper),
-        sections: sections_of(document, taper),
+        sections: sections_of(document, taper, walls),
     }
 }
 
@@ -539,13 +540,13 @@ impl Cut<'_> {
 }
 
 /// One section for every drain on the roof.
-fn sections_of(document: &Document, taper: &SolvedTaper) -> Vec<Drawing> {
+fn sections_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls) -> Vec<Drawing> {
     let mut out = Vec::new();
     let mut at = 0usize;
     for field in &taper.fields {
         for region in &field.regions {
             let Some(cut) = cut_for(field, region) else { continue };
-            out.push(section_of(document, taper, &cut, at));
+            out.push(section_of(document, taper, walls, &cut, at));
             at += 1;
         }
     }
@@ -647,7 +648,7 @@ const LEADER_FEET: f64 = 1.5;
 /// the band is that and the label says so.
 const DECK_SYMBOL_INCHES: f64 = 1.5;
 
-fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize) -> Drawing {
+fn section_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls, cut: &Cut, index: usize) -> Drawing {
     let letter = (b'A' + (index % 26) as u8) as char;
     let named = format!("Cut {letter}\u{2013}{letter}");
     let mut d = Drawing::new(
@@ -673,7 +674,7 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
 
     // ── what the cut ends against ───────────────────────────────────────────
     let far = cut.plan_at(0.0);
-    let wall = if cut.at_edge { wall_at(document, far) } else { None };
+    let wall = if cut.at_edge { wall_at(walls, far) } else { None };
     let drain_named = drain_at(document, cut.drain);
     let drain_number = which_drain(taper, cut.drain);
     if let Some(id) = &drain_named {
@@ -696,7 +697,7 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
         ),
     });
     if let Some(w) = &wall {
-        d.through.push(w.id.clone());
+        d.through.push(w.condition_id.clone());
     }
 
     // ── the deck it all lands on ────────────────────────────────────────────
@@ -850,7 +851,7 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
     // ── the wall it stops against ───────────────────────────────────────────
     let roof_at_wall = -cut.depth_at(0.0) / 12.0 - over / 12.0;
     if let Some(w) = &wall {
-        let face = w.thick_feet.unwrap_or(0.0);
+        let face = w.wall_inches.map(|t| t / 12.0).unwrap_or(0.0);
         let top = -w.height_feet;
         d.shape(
             Shape::of(vec![
@@ -881,9 +882,10 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
         // long as the girth has left over after the cap's own width. That is what
         // a stretch-out IS — the flat width of coil the profile eats — so the legs
         // are read off the job rather than drawn at a length somebody liked.
-        if let Some(cap) = w.cap_feet {
+        if let Some(cap) = w.coping.cap_width_feet {
             let over_hang = (cap - face) / 2.0;
             let leg = w
+                .coping
                 .girth_inches
                 .map(|g| ((g - cap * 12.0) / 2.0 / 12.0).max(0.0))
                 .unwrap_or(0.0);
@@ -902,7 +904,7 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
             );
             d.text(
                 Point::new(inner + 0.4, top - 0.45),
-                match w.girth_inches {
+                match w.coping.girth_inches {
                     Some(g) => format!("coping cap · {} girth", inches_written(g)),
                     None => "coping cap · no girth stated".to_string(),
                 },
@@ -925,10 +927,13 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
             }
         }
 
-        // The membrane, turned up the wall. How far up is typed as `FLASHUP`
-        // until the wall solver works it out; where nobody typed one, it is drawn
-        // at the least NRCA will accept and the drawing says which.
-        let (up_inches, stated) = match w.flash_up_inches {
+        // The membrane, turned up the wall. `walls::flashing_at` is C3's own
+        // clipped ceiling at this exact point — `FLASHUP`, or the wall's own
+        // remaining height above the finished roof, whichever binds — so the
+        // height a section draws is the same one the estimate is priced off.
+        // Where the roof beneath could not be read at all, the drawing falls
+        // back to NRCA's least and says so.
+        let (up_inches, solved) = match walls::flashing_at(document, taper, w, far) {
             Some(up) => (up, true),
             None => (MIN_FLASHING_INCHES, false),
         };
@@ -955,11 +960,11 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
         // across a drawing lands on whatever is there.
         d.text(
             Point::new(face + 0.8, top_of_flashing + 0.55),
-            if stated {
+            if solved {
                 format!("wall flashing {} up", inches_written(up_inches))
             } else {
                 format!(
-                    "wall flashing · nobody states how far it runs up, so it is drawn at NRCA's least, {}",
+                    "wall flashing · the roof under this wall could not be read, so it is drawn at NRCA's least, {}",
                     inches_written(up_inches)
                 )
             },
@@ -1124,51 +1129,19 @@ fn surface_line(cut: &Cut, panel_feet: f64) -> Vec<Point> {
     at.into_iter().map(|x| Point::new(x, -cut.depth_at(x) / 12.0)).collect()
 }
 
-/// A wall the roof flashes against, as far as a section needs it.
-struct Wall {
-    id: String,
-    name: String,
-    height_feet: f64,
-    thick_feet: Option<f64>,
-    cap_feet: Option<f64>,
-    girth_inches: Option<f64>,
-    flash_up_inches: Option<f64>,
-}
-
-/// The wall standing at a place on the plan, or none.
+/// The solved wall or curb standing at a place on the plan, or none.
 ///
 /// A traced run passes through the point, within a foot of it — which is the
-/// tolerance a traced line off a sheet deserves and is well inside the distance
-/// between two walls of a building.
-fn wall_at(document: &Document, at: Point) -> Option<Wall> {
+/// tolerance a traced line off a sheet deserves and is well inside the
+/// distance between two walls of a building. Reads C3's own solve
+/// (`walls.rs`) rather than the job's properties directly, so a section draws
+/// the same cap width, girth and flashing ceiling the estimate is priced off
+/// — a derived cap width included, where `W` is untyped and `WALL` is not.
+fn wall_at<'a>(walls: &'a SolvedWalls, at: Point) -> Option<&'a WallRun> {
     const NEAR_FEET: f64 = 1.0;
-    let scales = document.scales();
-    for c in &document.conditions {
-        if c.hidden || c.kind != "line" || c.has_role("ridge") {
-            continue;
-        }
-        let height = c.property("H").unwrap_or(0.0);
-        if height <= 0.0 {
-            continue;
-        }
-        for trace in &c.traces {
-            let ring = document.feet(trace, &scales);
-            for pair in ring.windows(2) {
-                if distance_to_segment(at, pair[0], pair[1]) <= NEAR_FEET {
-                    return Some(Wall {
-                        id: c.id.clone(),
-                        name: if c.name.is_empty() { "the wall".to_string() } else { c.name.clone() },
-                        height_feet: height,
-                        thick_feet: c.property("WALL").map(|w| w / 12.0),
-                        cap_feet: c.property("W"),
-                        girth_inches: c.property("STRETCHOUT"),
-                        flash_up_inches: c.property("FLASHUP"),
-                    });
-                }
-            }
-        }
-    }
-    None
+    walls.runs.iter().find(|run| {
+        run.outer.ring.windows(2).any(|pair| distance_to_segment(at, pair[0], pair[1]) <= NEAR_FEET)
+    })
 }
 
 /// Which condition counted the drain at a place, or none.

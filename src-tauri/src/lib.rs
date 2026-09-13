@@ -182,7 +182,7 @@ fn solve_get(state: State<'_, Document>, part: String) -> Result<Value, String> 
             }
             let document = roofnerd_core::Document::read(&guard.doc)?;
             let solved = guard.solved.as_ref().ok_or("this roof did not solve")?;
-            serde_json::to_value(roofnerd_core::drawing::drawings(&document, &solved.taper))
+            serde_json::to_value(roofnerd_core::drawing::drawings(&document, &solved.taper, &solved.walls))
                 .map_err(|e| e.to_string())
         }
         // The walls and curbs: their solids, and how high the membrane may

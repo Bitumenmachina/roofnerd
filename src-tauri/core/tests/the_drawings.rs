@@ -40,7 +40,7 @@ fn drawn() -> (Document, roofnerd_core::SolvedTaper, Drawings) {
     let raw = demo();
     let solved = roofnerd_core::solve(&raw, 1).expect("the demo job solves");
     let document = Document::read(&raw).expect("the document reads");
-    let all = drawings(&document, &solved.taper);
+    let all = drawings(&document, &solved.taper, &solved.walls);
     (document, solved.taper, all)
 }
 
