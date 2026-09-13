@@ -902,9 +902,13 @@ fn section_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls, cut
         SECTION_FEET_PER_INCH,
         SECTION_EXAGGERATION,
     );
+    // The horizontal scale is NOT in here. A section is drawn at the biggest
+    // scale off an architect's rule that its own pane has room for, and only the
+    // pane knows that — the core's `feet_per_inch` is what it would like, and
+    // the view says what it got. What stays here is the part that is a fact
+    // about the drawing whatever size it comes out: the vertical is stretched.
     d.note = format!(
-        "Section {letter}\u{2013}{letter} · horizontal 1\" = {} · vertical exaggerated \u{d7}{} so the board thickness reads",
-        feet_written(SECTION_FEET_PER_INCH),
+        "vertical exaggerated \u{d7}{} so the board thickness reads",
         SECTION_EXAGGERATION as i64,
     );
 

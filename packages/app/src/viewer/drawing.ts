@@ -192,6 +192,76 @@ function wordOf(word: DrawnText, view: DrawingView): SVGElement {
   return text;
 }
 
+/** How big what was drawn actually came out, or null where nothing did. */
+export function extentOf(marks: SVGGElement): DOMRect | null {
+  try {
+    const box = marks.getBBox();
+    return box.width < 0.01 || box.height < 0.01 ? null : box;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Move the words on a drawing off each other.
+ *
+ * A label on a section is placed where the thing it names is, and the things it
+ * names are stacked in half-inch courses along a twenty-foot run — so the words
+ * land on top of one another however carefully the core places them. On the
+ * demo, "existing deck 1 1/2 in · the datum" was drawn through the wall's own
+ * dimension, "the ridge this ground shares with the next drain" ran into the
+ * layer key, and the drain's note landed on the sheet's footer (C8 §8).
+ *
+ * What moves: labels. What does not: the letter on a board, a dimension's own
+ * figure, and the key — a dimension figure moved off its line is a dimension
+ * that measures nothing, and a letter belongs to the board under it.
+ *
+ * A label that has to move goes UP, in steps of its own height, because a
+ * section is drawn with the sky above it and the build-up below: up is where
+ * there is room and down is the drawing. The x never moves, so a label stays
+ * over the thing it names.
+ */
+export function spreadWords(marks: SVGGElement, gap = 2): void {
+  const box = (el: SVGGraphicsElement) => {
+    try { return el.getBBox(); } catch { return null; }
+  };
+  type Taken = { x: number; y: number; w: number; h: number };
+  const clash = (a: Taken, b: Taken) => a.x < b.x + b.w + gap && b.x < a.x + a.w + gap
+    && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
+
+  const taken: Taken[] = [];
+  const movable: { el: SVGTextElement; at: Taken }[] = [];
+  for (const el of Array.from(marks.querySelectorAll<SVGTextElement>('text'))) {
+    const b = box(el);
+    if (!b || b.width < 0.01) continue;
+    const at = { x: b.x, y: b.y, w: b.width, h: b.height };
+    if (el.getAttribute('data-role') === 'label') movable.push({ el, at });
+    else taken.push(at);
+  }
+
+  // Highest first, so a stack of labels settles from the top down rather than
+  // pushing the same one up twice.
+  movable.sort((a, b) => a.at.y - b.at.y);
+  for (const word of movable) {
+    let lifted = 0;
+    // Enough tries to climb clear of a full stack of layer labels and no more:
+    // a label that cannot find room in eight steps is on a drawing with a
+    // different problem, and it stays where the core put it.
+    for (let pass = 0; pass < 8; pass += 1) {
+      const over = taken.find((t) => clash(word.at, t));
+      if (!over) break;
+      const step = over.y + over.h - word.at.y + gap;
+      word.at.y -= step;
+      lifted += step;
+    }
+    if (lifted > 0) {
+      const y = Number(word.el.getAttribute('y') ?? 0);
+      word.el.setAttribute('y', String(y - lifted));
+    }
+    taken.push(word.at);
+  }
+}
+
 /**
  * Fit an SVG round what was drawn into it, at the scale the drawing states.
  *
@@ -206,7 +276,7 @@ function wordOf(word: DrawnText, view: DrawingView): SVGElement {
  * the thing it names.
  */
 export function fitDrawing(
-  surface: SVGSVGElement, marks: SVGGElement, pad: number,
+  surface: SVGSVGElement, marks: SVGGElement, pad: number, footer = 0,
 ): { drawnToFit: boolean } {
   let box: DOMRect;
   try {
@@ -222,8 +292,11 @@ export function fitDrawing(
   const height = box.height + pad * 2;
   surface.setAttribute('viewBox', `${box.x - pad} ${box.y - pad} ${width} ${height}`);
 
+  // The footer note is drawn over the bottom of the pane, so the room a drawing
+  // has is the pane less that band — otherwise the lowest label on the sheet is
+  // laid across the sentence that says what the sheet is.
   const room = surface.parentElement?.getBoundingClientRect();
-  const fits = !!room && width <= room.width && height <= room.height;
+  const fits = !!room && width <= room.width && height <= room.height - footer;
   if (fits) {
     // One drawn unit to one pixel, which is the stated scale.
     surface.setAttribute('width', String(Math.round(width)));

@@ -26,7 +26,7 @@ import { NOTHING_TO_DRAW, type Drawing, type Drawings } from '@roofnerd/engine';
 import { solveDrawings, solveId, subscribe } from '../doc.js';
 import { cutWanted, showingCut, watchWantedCut } from '../cut.js';
 import { stripField, type RailTool, type SurfaceChrome } from '../chrome.js';
-import { fitDrawing, renderDrawing } from '../viewer/drawing.js';
+import { extentOf, fitDrawing, renderDrawing, spreadWords } from '../viewer/drawing.js';
 import { mountModel, recutModel, unmountModel } from './model.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -34,12 +34,29 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 /**
  * A CSS pixel is a ninety-sixth of an inch, so 1" = 4'-0" is twenty-four pixels
  * to the foot. The drawing states the scale; this is what the state means on a
- * screen, and it is kept where the pane has the room for it.
+ * screen.
  */
 const PIXELS_PER_INCH = 96;
 
 /** How much white there is round the drawing, in pixels. */
 const MARGIN = 22;
+
+/**
+ * The scales a section may be drawn at, in feet to the inch, biggest drawing
+ * first.
+ *
+ * An architect's rule and nothing else: 3" = 1'-0" down to 1/16" = 1'-0". The
+ * pane picks the first of them the drawing fits in, so a cut through a short
+ * run fills its sheet at 1/2" = 1'-0" and a cut across the building comes down
+ * the ladder until it fits — and whichever it lands on is a scale somebody can
+ * put a rule on, which is the whole reason a drawing states one.
+ *
+ * Before this the drawing was always laid out at the core's 1" = 4'-0": a short
+ * cut sat in the middle of a pane a third empty, and a long one was too big and
+ * got squashed to fit, under a note that admitted it — "brought down to fit the
+ * window" — which is a drawing stating a scale it is not drawn at (C8 §8).
+ */
+const SCALES_FEET_PER_INCH = [1 / 3, 2 / 3, 1, 4 / 3, 2, 8 / 3, 4, 16 / 3, 8, 32 / 3, 16];
 
 let chrome: SurfaceChrome | null = null;
 let stopSubscribing: (() => void) | null = null;
@@ -119,19 +136,35 @@ export function mountSection(host: HTMLElement, surroundings: SurfaceChrome): vo
     }
     nothing.hidden = true;
 
-    // The scale the drawing states, in the pixels a screen measures in, with the
-    // vertical stretched by the exaggeration the drawing carries.
-    const perFootX = PIXELS_PER_INCH / cut.feetPerInch;
-    const drawn = renderDrawing(marks, cut, {
-      perFootX,
-      perFootY: perFootX * cut.verticalExaggeration,
-      wordSize: 11,
-      letterSize: 13,
-    });
-    const { drawnToFit } = fitDrawing(surface, marks, MARGIN);
-    note.textContent = drawnToFit
-      ? `${drawn.note} · brought down to fit the window`
-      : drawn.note;
+    // Down the rule until it fits, and then it is drawn at that and says so.
+    //
+    // The room is the pane less the footer note, which sits over the bottom of
+    // it: the drain's own label was landing on that sentence because nothing
+    // reserved the band it occupies.
+    const room = sheet.getBoundingClientRect();
+    const footer = note.getBoundingClientRect().height || 0;
+    const wide = room.width - MARGIN;
+    const tall = room.height - footer - MARGIN;
+    let drawn = null as ReturnType<typeof renderDrawing> | null;
+    let feetPerInch = SCALES_FEET_PER_INCH[SCALES_FEET_PER_INCH.length - 1]!;
+    for (const scale of SCALES_FEET_PER_INCH) {
+      const perFoot = PIXELS_PER_INCH / scale;
+      drawn = renderDrawing(marks, cut, {
+        perFootX: perFoot,
+        perFootY: perFoot * cut.verticalExaggeration,
+        wordSize: 11,
+        letterSize: 13,
+      });
+      spreadWords(marks);
+      feetPerInch = scale;
+      const box = extentOf(marks);
+      if (box && box.width + MARGIN <= wide && box.height + MARGIN <= tall) break;
+    }
+    const { drawnToFit } = fitDrawing(surface, marks, MARGIN / 2, footer);
+    // The horizontal is the PANE's to state, because the pane is what knows how
+    // much room there is; everything else on the line is the drawing's own.
+    const said = `${cut.title} · horizontal 1" = ${feetInches(feetPerInch)} · ${drawn!.note}`;
+    note.textContent = drawnToFit ? `${said} · brought down to fit the window` : said;
 
     // The same cut, in three dimensions, beside it.
     if (!cutPane.firstElementChild) {

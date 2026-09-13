@@ -600,6 +600,13 @@ export function mountModel(
   note.className = 'model-note';
 
   overlay.append(legend, note);
+  // Not beside a section. The key is a dozen lines about the whole roof, the
+  // pane the Section mounts this in is 282px tall, and twelve lines do not fit
+  // in it — so the last row read "over 4.5 in — this is a second layer of
+  // board" with its bottom sliced off (C8 §8). The sheet beside it carries a
+  // key of its own for what the cut is showing, which is the key that belongs
+  // to a cut.
+  overlay.hidden = cutting !== null;
 
   // The words that stand on the roof. Their own layer over the canvas, because
   // they have to be readable at any camera and a mesh cannot be: a word lying on
