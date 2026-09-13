@@ -259,7 +259,7 @@ export function spreadWords(marks: SVGGElement, gap = 2): void {
     // A word is lifted far enough to clear what is under it and no further:
     // a label given its head floated halfway up the sheet, away from the thing
     // it names, which is a different way of being unreadable.
-    if (free) movable.push({ el, at, limit: b.height * (role === 'label' ? 4 : 2.5) });
+    if (free) movable.push({ el, at, limit: b.height * (role === 'label' ? 4 : 3) });
     else taken.push(at);
   }
 
@@ -277,9 +277,13 @@ export function spreadWords(marks: SVGGElement, gap = 2): void {
     for (let pass = 0; pass < 8; pass += 1) {
       const over = taken.find((t) => clash(word.at, t));
       if (!over) break;
+      // Clear of it, not merely off it: going up, the word's foot lands above
+      // the obstacle's head; going down, its head lands below the obstacle's
+      // foot. The first arithmetic here moved each word by how far the two
+      // boxes overlapped, which lands them edge to edge and clashing again.
       const step = away < 0
-        ? over.y + over.h - word.at.y + gap
-        : word.at.y + word.at.h - over.y + gap;
+        ? word.at.y + word.at.h + gap - over.y
+        : over.y + over.h + gap - word.at.y;
       if (lifted + step > word.limit) { lifted = 0; break; }
       word.at.y += away * step;
       lifted += step;

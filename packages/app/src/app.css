@@ -1129,6 +1129,11 @@ button.quiet:hover { border-color: var(--rule); }
   display: block; background: var(--desk);
 }
 
+/* `display: flex` on a class beats the browser's own rule for [hidden], so a
+   hidden overlay went on being drawn — which is how the roof's twelve-line key
+   was still standing in the Section's 282px cut pane after it had been told not
+   to be (C8 §8). */
+.model-overlay[hidden] { display: none; }
 .model-overlay {
   position: absolute; left: 14px; top: 14px; z-index: 10;
   display: flex; flex-direction: column; gap: var(--gap-2);
