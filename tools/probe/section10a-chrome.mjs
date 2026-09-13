@@ -11,7 +11,7 @@
 //
 //   pnpm build:app && node tools/probe/section10a-chrome.mjs
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import {
@@ -22,6 +22,18 @@ import {
 const ROOT = resolve(import.meta.dirname, '../..');
 const EVIDENCE = join(ROOT, 'evidence');
 const COMMIT = commitStamp();
+
+/**
+ * The Plan rail's own acts, in the order it draws them — off `plan.ts`'s
+ * `ACTS`, the one array the rail is built from, rather than a list typed here
+ * that goes stale the day a ninth act lands. C6 put four verbs on the rail
+ * where this row used to find none, and typing the old eight straight into an
+ * assertion is exactly the kind of copy that outlives what it was copied from.
+ */
+const planActsSource = await readFile(
+  join(ROOT, 'packages/app/src/editors/plan.ts'), 'utf8',
+);
+const railActs = [...planActsSource.matchAll(/label:\s*'([^']+)'/g)].map((m) => m[1]);
 
 const results = [];
 const check = (name, fn) => {
@@ -269,12 +281,9 @@ try {
       .map((b) => b.getAttribute('aria-label')));
   }));
   check('the rail is the acts this program can carry out, in the trade\'s words', () => {
-    for (const want of ['Select', 'Trace an area', 'Run a parapet', 'Drop a drain', 'Cricket', 'Scale']) {
-      assert.ok(railNow.includes(want), `no act called "${want}" — the rail offers ${JSON.stringify(railNow)}`);
-    }
-    for (const notYet of ['Set high and low', 'Box out a curb', 'Measure', 'Section']) {
-      assert.ok(!railNow.includes(notYet), `"${notYet}" is offered and does nothing`);
-    }
+    assert.ok(railActs.length > 0, 'plan.ts carries no ACTS to check the rail against');
+    assert.deepEqual(railNow, railActs,
+      `the rail reads ${JSON.stringify(railNow)} and plan.ts's ACTS reads ${JSON.stringify(railActs)}`);
   });
 
   // 1 to 9 picks the nth condition — VES muscle memory, and the number is
