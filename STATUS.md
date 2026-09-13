@@ -115,6 +115,7 @@ lines" against 45 rows; the start screen still has no recent jobs.
 `-08-fastening-` — three lines of key instead of a paragraph. And `.scratch/c8-persona.md`, which is
 the twenty minutes as they happened.
 
+**Landed (2026-09-13 16:05, f4fa9ca).** Twenty-one of the batch's twenty-two commits, in order, through the hook; the twenty-second was the clone's own rewrite of a figure-range comment that the landing had already reworded for the client-data gate, so it had nothing left to commit. Two quoted figures in the STATUS entry and one code comment were written as whole numbers for the same gate. Built in the foreground, then every probe on the shipped program: the persona pass 28 of 28, and all twenty-four others green; the real job 13 of 13; the fixtures within a hundredth of a percent. The bid on the demo reads $228,099.66.
 ## C9 — the labor basis: the sheet prices the way a roofer states it (2026-09-13)
 
 **Every line now says what kind of cost it is, what crew puts it in and how fast they go, and the
