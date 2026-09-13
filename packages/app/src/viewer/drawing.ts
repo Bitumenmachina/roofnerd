@@ -212,30 +212,38 @@ export function extentOf(marks: SVGGElement): DOMRect | null {
  * dimension, "the ridge this ground shares with the next drain" ran into the
  * layer key, and the drain's note landed on the sheet's footer (C8 §8).
  *
- * What moves: labels. What does not: the letter on a board, a dimension's own
- * figure, and the key — a dimension figure moved off its line is a dimension
- * that measures nothing, and a letter belongs to the board under it.
+ * What moves: labels, and a dimension's own figure. What does not: the letter
+ * on a board, and the key. A letter belongs to the board under it and there is
+ * nowhere else for it to be; a dimension's figure belongs ABOVE its line, which
+ * is where lifting it keeps it — that is how a crowded dimension is drawn by
+ * hand, and "6 in at the wall" was sitting on a board letter until it was.
  *
- * A label that has to move goes UP, in steps of its own height, because a
+ * A word that has to move goes UP, in steps of its own height, because a
  * section is drawn with the sky above it and the build-up below: up is where
- * there is room and down is the drawing. The x never moves, so a label stays
- * over the thing it names.
+ * there is room and down is the drawing. The x never moves, so a word stays
+ * over the thing it names. A dimension's figure is held to a short lift — far
+ * enough to clear a letter, not far enough to look like it belongs to
+ * something else.
  */
 export function spreadWords(marks: SVGGElement, gap = 2): void {
   const box = (el: SVGGraphicsElement) => {
     try { return el.getBBox(); } catch { return null; }
   };
   type Taken = { x: number; y: number; w: number; h: number };
+  type Word = { el: SVGTextElement; at: Taken; limit: number };
   const clash = (a: Taken, b: Taken) => a.x < b.x + b.w + gap && b.x < a.x + a.w + gap
     && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
 
   const taken: Taken[] = [];
-  const movable: { el: SVGTextElement; at: Taken }[] = [];
+  const movable: Word[] = [];
   for (const el of Array.from(marks.querySelectorAll<SVGTextElement>('text'))) {
     const b = box(el);
     if (!b || b.width < 0.01) continue;
     const at = { x: b.x, y: b.y, w: b.width, h: b.height };
-    if (el.getAttribute('data-role') === 'label') movable.push({ el, at });
+    const role = el.getAttribute('data-role');
+    const free = role === 'label' || role === 'dimension'
+      || el.classList.contains('dim-text');
+    if (free) movable.push({ el, at, limit: role === 'label' ? Infinity : b.height * 2.5 });
     else taken.push(at);
   }
 
@@ -251,12 +259,18 @@ export function spreadWords(marks: SVGGElement, gap = 2): void {
       const over = taken.find((t) => clash(word.at, t));
       if (!over) break;
       const step = over.y + over.h - word.at.y + gap;
+      if (lifted + step > word.limit) { lifted = 0; break; }
       word.at.y -= step;
       lifted += step;
     }
     if (lifted > 0) {
       const y = Number(word.el.getAttribute('y') ?? 0);
       word.el.setAttribute('y', String(y - lifted));
+    } else {
+      // It could not find room inside its own limit, so it stays where the core
+      // put it and is not treated as taking room it does not hold.
+      const b = box(word.el);
+      if (b) { word.at.x = b.x; word.at.y = b.y; word.at.w = b.width; word.at.h = b.height; }
     }
     taken.push(word.at);
   }

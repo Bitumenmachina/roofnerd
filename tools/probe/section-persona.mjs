@@ -73,6 +73,7 @@ const sheetNow = (session) => session.execute(function () {
     };
     return {
       item: text('.line-item'),
+      condition: text('.line-basis > span'),
       formula: text('.line-formula'),
       quantity: text('.line-qty'),
       unit: text('.line-unit'),
@@ -90,8 +91,10 @@ const totalsNow = (session) => session.execute(function () {
 
 /** The Recap's own table and the ladder under it. */
 const recapNow = (session) => session.execute(function () {
+  // NOT trimmed: a row under a class is marked by the space it is indented by,
+  // and trimming it away is how this read six classes and no adders.
   const rows = [...document.querySelectorAll('.cost-body tbody tr')].map(function (tr) {
-    return [...tr.querySelectorAll('td')].map(function (td) { return (td.textContent || '').trim(); });
+    return [...tr.querySelectorAll('td')].map(function (td) { return td.textContent || ''; });
   });
   const summary = [...document.querySelectorAll('.summary-row')].map(function (r) {
     return [
@@ -201,12 +204,13 @@ const drawingNow = (session, pane) => session.execute(function (sel) {
   const room = host.getBoundingClientRect();
   const drawn = marks ? marks.getBoundingClientRect() : null;
   const note = document.querySelector('.drawing-note');
+  const footer = note && !note.hidden ? note.getBoundingClientRect().height : 0;
   return JSON.stringify({
     there: true,
     note: note && !note.hidden ? (note.textContent || '').replace(/\s+/g, ' ').trim() : '',
     words,
     keys: words.filter(function (w) { return w.role === 'key'; }).length,
-    room: { w: Math.round(room.width), h: Math.round(room.height) },
+    room: { w: Math.round(room.width), h: Math.round(room.height - footer) },
     drawn: drawn ? { w: Math.round(drawn.width), h: Math.round(drawn.height) } : null,
   });
 }, pane);
@@ -283,16 +287,22 @@ try {
     assert.deepEqual(pending.map((l) => l.item), [], 'these lines could not be worked out');
   });
 
+  // Each line against ITS OWN condition's scope. A curb and a parapet both
+  // carry FLASH_SF and they are different walls with different flashing on
+  // them, so a check that looked the name up in one bag would hold the curb's
+  // twenty-nine feet against the parapet's seven hundred.
+  const byName = new Map(conditions.map((c) => [c.name, scopes[c.id] ?? {}]));
   check('the numbers the sheet shows are the solve\'s, name by name', () => {
     let checked = 0;
     for (const line of lines) {
       const name = (line.formula ?? '').trim();
       if (!/^[A-Z][A-Z0-9_]*$/.test(name)) continue;
-      const want = fieldScope[name] ?? wallScope[name];
+      const scope = byName.get((line.condition ?? '').trim());
+      const want = scope?.[name];
       if (want === undefined || want === null) continue;
       const said = number(line.quantity);
       assert.ok(said !== null && Math.abs(said - want) < 0.01,
-        `"${line.item}" reads ${line.quantity} where the solve makes ${name} ${want}`);
+        `"${line.item}" reads ${line.quantity} where ${line.condition}'s ${name} is ${want}`);
       checked += 1;
     }
     assert.ok(checked >= 5, `only ${checked} lines could be held against the solve`);
@@ -534,10 +544,11 @@ try {
     assert.ok(picked, 'the Drawing lens could not be picked');
     const qty = lens.head.indexOf('Quantity');
     assert.ok(qty >= 0, `the lens has no quantity column: ${lens.head.join(', ')}`);
+    const item = lens.head.indexOf('Item');
+    assert.ok(item >= 0, `the lens has no item column: ${lens.head.join(', ')}`);
     let held = 0;
     for (const row of lens.rows) {
-      const name = row.find((cell) => /^[A-Z]/.test(cell) && cell.length > 4);
-      const on = measured.find((l) => l.item === name);
+      const on = measured.find((l) => l.item === (row[item] ?? '').trim());
       if (!on) continue;
       assert.equal(number(row[qty]), number(on.quantity),
         `"${name}" is ${row[qty]} to the subcontractor and ${on.quantity} on the estimate`);
