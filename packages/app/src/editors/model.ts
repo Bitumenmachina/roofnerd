@@ -68,10 +68,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
   CRICKET_SLOPE_MULTIPLE, MIN_FLASHING_INCHES, NOTHING_SOLVED, SINGLE_LAYER_MAX_INCHES,
-  buildUpInches, cricketOf, fieldOf, formatFeetInches, pointInPolygon, readFacetAt, readTaperAt,
-  selfIntersects,
+  buildUpInches, cricketOf, fieldAt, fieldOf, formatFeetInches, pointInPolygon, readFacetAt,
+  readTaperAt, selfIntersects, sumpOf,
   type CapReason, type Condition, type Page, type Point, type Properties,
-  type SolvedCrease, type SolvedCricket, type SolvedRefusal, type SolvedRidge,
+  type SolvedCrease, type SolvedCricket, type SolvedRefusal, type SolvedRidge, type SolvedSump,
   type SolvedTaper, type SolvedTaperField, type SolvedTaperRegion,
 } from '@roofnerd/engine';
 import { at, doc, solveId, solveTaper, subscribe, type Doc } from '../doc.js';
@@ -829,12 +829,10 @@ function build(d: Doc, taper: SolvedTaper): Built {
   const list = conditionsOf(d);
   const scales = feetPerUnit((at('/pages', d) as Page[]) ?? []);
   const drains = taper.drains;
-  // What the roof is at a drain, which the sump sits on. It is the tapered
-  // field's own starting thickness — the same number the solve begins from, not
-  // a second one.
-  const tapered = list.find((c) => c.kind === 'area' && !c.hidden && c.properties?.['TAPER'] !== undefined);
-  const atDrain = tapered?.properties?.['T'] ?? 0;
-  const fallPerFoot = tapered?.properties?.['TAPER'] ?? 0;
+  // The tapered field's own colour, which the ramp and the key are drawn in.
+  const tapered = list.find(
+    (c) => c.kind === 'area' && !c.hidden && c.properties?.['TAPER'] !== undefined,
+  );
 
   const box = new THREE.Box3();
   let anything = false;
@@ -862,6 +860,9 @@ function build(d: Doc, taper: SolvedTaper): Built {
   let crossedTraces = 0;
   let unstatedWall = 0;
   let unstatedCap = 0;
+  let sumps = 0;
+  let unsumpedDrains = 0;
+  let clippedSumps = 0;
   let copings = 0;
   let curbs = 0;
 
@@ -974,7 +975,20 @@ function build(d: Doc, taper: SolvedTaper): Built {
         }
         anything = true;
       } else if (c.kind === 'count') {
-        for (const p of ring) world.add(...marker(p, elevation, c, props, atDrain, fallPerFoot));
+        for (const p of ring) {
+          const sump = sumpOf(taper, c.id, p);
+          if (c.role === 'drain') {
+            if (sump === null) unsumpedDrains += 1;
+            else {
+              sumps += 1;
+              if (sump.clipped) clippedSumps += 1;
+            }
+          }
+          // The deck the sump is cut into is the field's, read off the solve. A
+          // drain on no tapered field has none, and the drain's own datum stands.
+          const deck = fieldAt(taper, p)?.elevation ?? elevation;
+          world.add(...marker(p, elevation, c, sump, deck));
+        }
         anything = true;
       }
 
@@ -1006,6 +1020,7 @@ function build(d: Doc, taper: SolvedTaper): Built {
       thin, thick, capReason, unstatedBuildUp, outOfProportion, ridgeOffSquare,
       cricketSlopeOff, overOneLayer, unbuiltCrickets, crossedTraces, unstatedWall,
       unstatedCap, copings, curbs, valleys, ridges, ridgeUneven,
+      sumps, unsumpedDrains, clippedSumps,
       refused: taper.refused,
       ramp: (tapered?.color ?? '#4a6b8a'),
     }),
@@ -1395,15 +1410,16 @@ function runLine(ring: Point[], elevation: number, colour: string, c: Condition)
 /**
  * A counted thing. A drain gets its sump and its bowl; anything else gets a mark.
  *
- * The sump is the square the tapered field is cut down in to meet the drain —
- * four feet a side on this roof, which is what the condition says, and a square
- * rather than a dish because that is how it is bought and how it is drawn. It
- * sits at the thickness the field is at a drain, because that is where the
- * roof is there: the same number the heightfield starts from.
+ * THE SUMP IS SOLVED NOW, NOT DRAWN. It used to be a 4 ft square — four feet
+ * because that was the fallback when nothing said otherwise — set at a height this
+ * file worked out for itself out of `T`, `SUMP` and `TAPER`. Both are gone: the
+ * shape is the cut the core made, clipped to the roof where the roof's own edge
+ * takes some of it, and the height is the depth the core read off the solved planes
+ * at the sump's rim. A drain with no sump stated gets no sump, and the legend says
+ * so rather than the drawing inventing one.
  */
 function marker(
-  p: Point, elevation: number, c: Condition, props: Properties,
-  atDrain: number, fallPerFoot: number,
+  p: Point, elevation: number, c: Condition, sump: SolvedSump | null, deck: number,
 ): THREE.Object3D[] {
   if (c.role !== 'drain') {
     const mark = new THREE.Mesh(
@@ -1415,32 +1431,44 @@ function marker(
     return [mark];
   }
 
-  const side = props['SUMP'] ?? 4;
-  // The square is the CUT, so it is drawn where the cut is: at the roof the
-  // sump is let into, which is the thickness the field has at the sump's rim —
-  // half a sump width out from the drain, at the field's own fall. Drawn at the
-  // drain's own thickness instead it would sit under the roof around it and
-  // read as nothing at all.
-  const surfaceAt = elevation + inches(atDrain + (side / 2) * fallPerFoot);
-
-  const sumpGeometry = new THREE.PlaneGeometry(side, side);
-  sumpGeometry.rotateX(-Math.PI / 2);
-  sumpGeometry.translate(p.x, surfaceAt + 0.03, p.y);
-  const sump = new THREE.Mesh(sumpGeometry, new THREE.MeshLambertMaterial({
-    color: new THREE.Color(WATER), side: THREE.DoubleSide, transparent: true, opacity: 0.55,
-  }));
-  sump.userData = { conditionId: c.id, kind: 'sump' };
-
-  // The bowl, proud of the sump floor so it is not swallowed by it. A mark on a
-  // drawing, not a modelled casting.
+  // The bowl sits at the roof the drain is in, which is the deck plus whatever the
+  // tapered package is there. With no sump solved that is the drain's own datum.
+  const at = sump === null ? elevation : deck + inches(sump.rimInches);
   const bowl = new THREE.Mesh(
     new THREE.CylinderGeometry(0.7, 0.55, 0.35, 16),
     new THREE.MeshLambertMaterial({ color: new THREE.Color(WATER) }),
   );
-  bowl.position.set(p.x, surfaceAt + 0.22, p.y);
+  bowl.position.set(p.x, at + 0.22, p.y);
   bowl.userData = { conditionId: c.id, kind: 'drain' };
+  if (sump === null) return [bowl];
 
-  return [sump, bowl];
+  // The cut, as the core cut it. Earcut on a polygon the core handed over; nothing
+  // here decides its shape or its height.
+  const positions: number[] = [];
+  for (const piece of sump.shapes) {
+    if (piece.ring.length < 3) continue;
+    const shape = new THREE.Shape(piece.ring.map((q) => new THREE.Vector2(q.x, q.y)));
+    for (const hole of piece.holes) {
+      if (hole.length < 3) continue;
+      shape.holes.push(new THREE.Path(hole.map((q) => new THREE.Vector2(q.x, q.y))));
+    }
+    const flat = new THREE.ShapeGeometry(shape);
+    const xy = flat.getAttribute('position');
+    const index = flat.getIndex();
+    const order = index ? Array.from(index.array) : [...Array(xy.count).keys()];
+    for (const i of order) positions.push(xy.getX(i), at + 0.03, xy.getY(i));
+    flat.dispose();
+  }
+  if (positions.length === 0) return [bowl];
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.computeVertexNormals();
+  const cut = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
+    color: new THREE.Color(WATER), side: THREE.DoubleSide, transparent: true, opacity: 0.55,
+  }));
+  cut.userData = { conditionId: c.id, kind: 'sump' };
+  return [cut, bowl];
 }
 
 // ── the legend, in trade words ─────────────────────────────────────────────
@@ -1505,6 +1533,7 @@ type Reading = {
   crossedTraces: number; unstatedWall: number;
   unstatedCap: number; copings: number; curbs: number;
   valleys: number; ridges: number; ridgeUneven: number;
+  sumps: number; unsumpedDrains: number; clippedSumps: number;
   refused: readonly SolvedRefusal[];
   /** The tapered field's own colour, which the ramp is drawn in. */
   ramp: string;
@@ -1562,7 +1591,24 @@ function legendFor(r: Reading): HTMLElement[] {
   // core's word for the ground one drain takes and it is not a word on a roof, so
   // the key says what happened to the field instead of naming the type.
   if (r.regions > 1) row(r.ramp, `the field is split between its ${r.regions} drains`);
-  if (r.drains > 0) row(WATER, r.drains === 1 ? '1 drain, on its sump' : `${r.drains} drains, each on its sump`);
+  if (r.sumps > 0) {
+    row(WATER, r.sumps === 1
+      ? '1 drain, in the sump the layout cuts for it'
+      : `${r.sumps} drains, each in the sump the layout cuts for it`);
+  }
+  // A drain nobody sized a sump for used to get a four foot one drawn anyway. NRCA
+  // p.164 sizes it off the bowl — bowl plus about 24 in — and nothing in the job
+  // says the bowl, so there is nothing to draw and this says which drains.
+  if (r.unsumpedDrains > 0) {
+    say(r.unsumpedDrains === 1
+      ? 'a drain has no sump: nothing states its bowl or its width'
+      : `${r.unsumpedDrains} drains have no sump: nothing states a bowl or a width`);
+  }
+  if (r.clippedSumps > 0) {
+    say(r.clippedSumps === 1
+      ? "a sump runs off the edge of the roof it is cut into"
+      : `${r.clippedSumps} sumps run off the edge of the roof they are cut into`);
+  }
   if (r.copings > 0) row(GALVANIZED, r.copings === 1 ? 'coping on the wall' : 'coping on the walls');
   if (r.curbs > 0) row(GALVANIZED, r.curbs === 1 ? '1 curb' : `${r.curbs} curbs`);
   if (r.crickets > 0) row('#8a5a1d', r.crickets === 1 ? '1 cricket' : `${r.crickets} crickets`);

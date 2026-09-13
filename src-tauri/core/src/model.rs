@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::geom::{Plane, Point, Shape};
+use crate::profile::{LetterRow, ProfileSet};
 
 // ── the job, arriving ──────────────────────────────────────────────────────
 
@@ -178,6 +179,107 @@ pub struct RidgeSegment {
     pub disagreement_inches: f64,
 }
 
+/// One board position: a 4 ft panel, where it lies, how thick and which letter.
+///
+/// A cut board is still one board, because one is what gets bought — `shapes` is
+/// what is left of it after the region's edges and the roof's outline have had
+/// their say, and `waste_square_feet` is what the cut took off. `centre` is the
+/// middle of the WHOLE cell whether or not the cut left that middle on the roof,
+/// because that is where the thickness is read and where the board is set out from.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Board {
+    pub centre: Point,
+    /// What is left of the board after the cut. In pieces, because a concave
+    /// outline can cut one cell twice.
+    pub shapes: Vec<Shape>,
+    /// Square feet of it that land on the roof.
+    pub square_feet: f64,
+    /// Square feet of it that got bought: a whole board, cut or not.
+    pub board_square_feet: f64,
+    pub cut: bool,
+    pub waste_square_feet: f64,
+    /// The roof's depth at the board's middle, in inches, off the solved plane.
+    pub thickness_inches: f64,
+    /// True where the cap binds here and the board sits on flat ground.
+    pub flat: bool,
+    /// The letter printed on the tapered panel, or nothing where the table has none.
+    pub letter: Option<String>,
+    /// How thick the tapered panel itself is here, in inches.
+    pub panel_inches: f64,
+    pub fill_inches: f64,
+    pub fill_boards: usize,
+    /// Layers of board at this position: the fill boards and the tapered one.
+    pub courses: usize,
+}
+
+/// What a run of boards comes to, in the words a supply house quotes.
+///
+/// Nought against a letter is not a collapsed unknown: it means the layout uses
+/// none of that panel, which is a fact about the layout. A name nobody solved is
+/// absent, and reads as pending on a line. The two are different and they stay
+/// different.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BoardBill {
+    pub manufacturer: String,
+    pub product: String,
+    pub document_id: String,
+    pub profile_set: ProfileSet,
+    pub slope_inches_per_foot: f64,
+    /// The flat board the lettered panels stack on, in inches.
+    pub fill_step_inches: f64,
+    pub panel_feet: f64,
+    /// How far each course under the top one is offset, in feet.
+    pub stagger_feet: f64,
+    pub by_letter: std::collections::BTreeMap<String, LetterRow>,
+    pub boards: usize,
+    pub cut_boards: usize,
+    /// Square feet of tapered panel bought: a whole board apiece.
+    pub square_feet: f64,
+    /// Of that, what the cuts take off. Not the item's waste allowance — that is
+    /// for damage and trim, and adding the two would charge the cut twice.
+    pub waste_square_feet: f64,
+    /// What lands on the roof.
+    pub laid_square_feet: f64,
+    pub fill_boards: usize,
+    pub fill_square_feet: f64,
+    /// The most courses at any one position, the tapered panel included. This is
+    /// what the layout actually needs, and it is not what `BOARDS` was typed as
+    /// unless the board ceiling is what bound.
+    pub courses_max: usize,
+    /// Positions the table has no letter for, counted rather than hidden.
+    pub unlettered: usize,
+}
+
+/// The square the field is cut down in to meet a drain bowl.
+///
+/// `rim_inches` is read off the solved planes at the sump's own edge, which on a
+/// four-way layout is the same number all the way round it — the thickness is the
+/// greater of two square runs, so a square standing square to the boards is a
+/// contour. The drawing reads this instead of working it out again.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Sump {
+    pub condition_id: String,
+    pub trace: usize,
+    pub at: Point,
+    pub side_feet: f64,
+    /// The side the bowl-plus-24-inches rule wants, where a bowl was stated.
+    pub from_bowl_feet: Option<f64>,
+    /// The cut, in pieces where the roof's edge takes some of it.
+    pub shapes: Vec<Shape>,
+    pub square_feet: f64,
+    /// True where the roof's own edge cut the square short.
+    pub clipped: bool,
+    /// The roof's depth at the sump's rim, in inches: where the cut is.
+    pub rim_inches: f64,
+    /// How far the sump falls from that rim to the drain, in inches.
+    pub depth_inches: f64,
+    pub panels: usize,
+    pub panel_feet: f64,
+}
+
 /// One drainage region: the ground one drain takes, and the fall over it.
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -201,6 +303,11 @@ pub struct TaperRegion {
     pub no_fall_square_feet: f64,
     pub thin_inches: f64,
     pub thick_inches: f64,
+    /// The board grid over this region's own ground, one entry per position.
+    pub boards: Vec<Board>,
+    /// What those boards come to. `None` where the table prints no chart for this
+    /// slope, and `TaperField::bill_refused` says so in words.
+    pub bill: Option<BoardBill>,
 }
 
 /// Which way the water leaves a place on the roof, for one arrow.
@@ -247,6 +354,18 @@ pub struct TaperField {
     pub no_fall_square_feet: f64,
     pub thin_inches: Option<f64>,
     pub thick_inches: Option<f64>,
+    /// Four ways off each drain, or two. Typed as `LAYOUT`.
+    pub layout: String,
+    /// A typed `LAYOUT` that named neither, so the default was used.
+    pub layout_refused: Option<f64>,
+    /// A typed `PROFILE_SET` that named neither set, so the default was used.
+    pub profile_set_refused: Option<f64>,
+    /// The whole field's bill: its regions' added up.
+    pub bill: Option<BoardBill>,
+    /// Why there is no bill, where there is none.
+    pub bill_refused: Option<String>,
+    /// The sumps cut into it, which the boards are laid around.
+    pub sumps: Vec<Sump>,
 }
 
 /// A trace the layout would not lay out, and why.
@@ -278,6 +397,18 @@ pub struct Cricket {
     pub off_by: Option<f64>,
     /// True when the ridge slope is not twice the field it sits in.
     pub slope_disagrees: bool,
+    /// Its footprint on the plan, in square feet. Cricket stock is its own
+    /// lettered series and the bulletin in `data/profiles` carries only the
+    /// primary-slope chart, so a cricket is billed by area and not by letter.
+    pub plan_square_feet: f64,
+    pub slope_inches_per_foot: f64,
+    /// True where the solve put it there rather than an estimator tracing it: the
+    /// saddle a two-way layout needs between two drains.
+    pub derived: bool,
+    /// True where every vertex was lifted by the roof's own depth under it. False
+    /// is a cricket on no tapered field, sitting on the estimator's typed datum
+    /// because there is no solved surface to sit on.
+    pub from_solved_surface: bool,
 }
 
 /// Everything the tapered package comes to.
@@ -290,6 +421,8 @@ pub struct SolvedTaper {
     /// Every drainage point on the roof, in feet.
     pub drains: Vec<Point>,
     pub fields: Vec<TaperField>,
+    /// Every sump on the roof, in the order the drains are listed.
+    pub sumps: Vec<Sump>,
     pub crickets: Vec<Cricket>,
     /// What the layout would not lay out, and why.
     pub refused: Vec<Refused>,

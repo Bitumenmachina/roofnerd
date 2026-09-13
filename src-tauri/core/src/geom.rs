@@ -234,25 +234,30 @@ fn half_plane_of(half: HalfPlane, reach: f64) -> Polygon<f64> {
 /// the cap binds along is a square standing square to the boards, not a ring at
 /// a radius. Where the fall runs out is a fact about the layout.
 pub fn square_of(centre: Point, u: Point, v: Point, half: f64) -> Shape {
-    let corner = |a: f64, b: f64| {
-        Point::new(centre.x + u.x * a + v.x * b, centre.y + u.y * a + v.y * b)
-    };
-    Shape::of(vec![
-        corner(-half, -half),
-        corner(half, -half),
-        corner(half, half),
-        corner(-half, half),
-    ])
+    rectangle_of(centre, u, v, half, half)
 }
 
-/// The wedge one plane governs: where its own run is the greater of the two.
-pub fn wedge_of(centre: Point, along: Point, across: Point) -> [HalfPlane; 2] {
-    // `along · (p − drain) >= across · (p − drain)` and the same against
-    // `−across`, which is the 45 degree pair NRCA's valleys fall on.
-    [
-        HalfPlane { at: centre, normal: Point::new(across.x - along.x, across.y - along.y) },
-        HalfPlane { at: centre, normal: Point::new(-across.x - along.x, -across.y - along.y) },
-    ]
+/// The ground one plane of a set governs: where its own rise is the greatest.
+///
+/// Every plane in a drainage region rises from the same drain at the same slope,
+/// so one has risen further than another exactly where the run in its direction is
+/// longer — `(p − drain) · (theirs − mine) <= 0`, one half plane per other plane.
+/// Nothing about 45 degrees is written here and that is the point: on a four-way
+/// layout the four wedges come out bounded by the diagonals, which is where NRCA's
+/// valleys are (p.166, Figs. 4-15 and 4-16), and on a two-way layout the same
+/// expression gives each plane a half of the region. The pattern decides; this
+/// does not.
+pub fn governed_by(origin: Point, directions: &[Point], mine: usize) -> Vec<HalfPlane> {
+    let me = directions[mine];
+    directions
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| *i != mine)
+        .map(|(_, theirs)| HalfPlane {
+            at: origin,
+            normal: Point::new(theirs.x - me.x, theirs.y - me.y),
+        })
+        .collect()
 }
 
 /// Cut shapes by half planes, one after another.
@@ -270,6 +275,57 @@ pub fn cut_by(shapes: &[Shape], halves: &[HalfPlane], reach: f64) -> Vec<Shape> 
 /// What is left of one shape when another is taken out of it.
 pub fn take_out(shape: &Shape, out: &Shape) -> Vec<Shape> {
     shapes_of(&polygon_of(shape).difference(&polygon_of(out)))
+}
+
+/// What one shape and a set of shapes have in common.
+///
+/// The board grid is this and nothing else: a 4 ft cell laid on the plan, kept
+/// only where the ground it is laid on is. A cell that hangs off the roof comes
+/// back as the piece that is on it — or as nothing, where none of it is — and a
+/// cell a concave outline cuts twice comes back as two pieces, which is why the
+/// answer is a list and not a shape.
+pub fn common_with(cell: &Shape, ground: &[Shape]) -> Vec<Shape> {
+    if ground.is_empty() {
+        return Vec::new();
+    }
+    let mut all: MultiPolygon<f64> = MultiPolygon::new(ground.iter().map(polygon_of).collect());
+    all = all.intersection(&MultiPolygon::new(vec![polygon_of(cell)]));
+    shapes_of(&all)
+}
+
+/// What is left of a set of shapes when several others are taken out of them.
+///
+/// The sumps come out of the ground the boards are laid on: a sump is a hole cut
+/// down to the drain and the field boards do not run through it, so counting a
+/// board and a sump panel on the same square feet would buy the same ground twice.
+pub fn take_out_all(shapes: &[Shape], outs: &[Shape]) -> Vec<Shape> {
+    let mut now: MultiPolygon<f64> = MultiPolygon::new(shapes.iter().map(polygon_of).collect());
+    for out in outs {
+        if now.0.is_empty() {
+            return Vec::new();
+        }
+        now = now.difference(&MultiPolygon::new(vec![polygon_of(out)]));
+    }
+    shapes_of(&now)
+}
+
+/// A rectangle on the plan, in a pair of axes rather than in x and y.
+///
+/// `centre` is the middle of it, `u` and `v` are the axes it is square to, and
+/// the two halves are how far it reaches along each. `square_of` is this with one
+/// half; the board grid needs the general one because a cell at the edge of a
+/// region is still a whole 4 ft cell — what makes it a cut board is the ground
+/// under it, not a smaller rectangle.
+pub fn rectangle_of(centre: Point, u: Point, v: Point, half_u: f64, half_v: f64) -> Shape {
+    let corner = |a: f64, b: f64| {
+        Point::new(centre.x + u.x * a + v.x * b, centre.y + u.y * a + v.y * b)
+    };
+    Shape::of(vec![
+        corner(-half_u, -half_v),
+        corner(half_u, -half_v),
+        corner(half_u, half_v),
+        corner(-half_u, half_v),
+    ])
 }
 
 /// How far apart the two furthest corners of a ring are — the size of the thing

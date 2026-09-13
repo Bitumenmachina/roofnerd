@@ -504,7 +504,6 @@
     "kind": "line",
     "name": "Cricket behind RTU-1",
     "properties": {
-      "ELEV": 0.75,
       "TAPER": 0.5
     },
     "role": "ridge",

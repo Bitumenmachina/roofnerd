@@ -83,6 +83,108 @@ export interface SolvedRidge {
   readonly disagreementInches: number;
 }
 
+/**
+ * One board position: a 4 ft panel, where it lies, how thick and which letter.
+ *
+ * A cut board is still one board, because one is what gets bought. `shapes` is what
+ * is left of it after the region's edges, the roof's outline and the sumps have had
+ * their say, and `wasteSquareFeet` is what the cut took off — which is NOT the
+ * item's waste allowance on an estimate line. That is for damage and trim; this is
+ * board bought and thrown away at a known place, and adding the two charges the cut
+ * twice.
+ */
+export interface SolvedBoard {
+  readonly centre: Spot;
+  readonly shapes: readonly SolvedShape[];
+  /** Square feet of it that land on the roof. */
+  readonly squareFeet: number;
+  /** Square feet of it that got bought: a whole board, cut or not. */
+  readonly boardSquareFeet: number;
+  readonly cut: boolean;
+  readonly wasteSquareFeet: number;
+  /** The roof's depth at the board's middle, in inches, off the solved plane. */
+  readonly thicknessInches: number;
+  readonly flat: boolean;
+  /** The letter printed on the tapered panel, or null where the table has none. */
+  readonly letter: string | null;
+  readonly panelInches: number;
+  readonly fillInches: number;
+  readonly fillBoards: number;
+  /** Layers of board here: the fill boards and the tapered one. */
+  readonly courses: number;
+}
+
+/** How many boards of one letter, and how many square feet that is. */
+export interface SolvedLetterRow {
+  readonly boards: number;
+  readonly squareFeet: number;
+}
+
+/**
+ * What a run of boards comes to, in the words a supply house quotes.
+ *
+ * Nought against a letter means the layout uses none of that panel, which is a
+ * fact about the layout. A name nobody solved is ABSENT and reads as pending on a
+ * line. The two are different and they stay different.
+ */
+export interface SolvedBoardBill {
+  readonly manufacturer: string;
+  readonly product: string;
+  readonly documentId: string;
+  /** Which of the two printed charts: the 4 in fill or the 2 in one. */
+  readonly profileSet: 'standard' | 'extended';
+  readonly slopeInchesPerFoot: number;
+  readonly fillStepInches: number;
+  readonly panelFeet: number;
+  /** How far each course under the top one is offset, in feet. */
+  readonly staggerFeet: number;
+  readonly byLetter: Readonly<Record<string, SolvedLetterRow>>;
+  readonly boards: number;
+  readonly cutBoards: number;
+  /** Square feet of tapered panel bought: a whole board apiece. */
+  readonly squareFeet: number;
+  readonly wasteSquareFeet: number;
+  /** What lands on the roof. */
+  readonly laidSquareFeet: number;
+  readonly fillBoards: number;
+  readonly fillSquareFeet: number;
+  /**
+   * The most courses at any one position, the tapered panel included. What the
+   * layout actually needs — which is not what `BOARDS` was typed as unless the
+   * board ceiling is what bound.
+   */
+  readonly coursesMax: number;
+  /** Positions the table has no letter for, counted rather than hidden. */
+  readonly unlettered: number;
+}
+
+/**
+ * The square the field is cut down in to meet a drain bowl.
+ *
+ * `rimInches` is read off the solved planes at the sump's own edge, so the drawing
+ * places it instead of working it out again. On a four-way layout it is the same
+ * number all the way round: the thickness is the greater of two square runs, so a
+ * square standing square to the boards is a contour of it.
+ */
+export interface SolvedSump {
+  readonly conditionId: string;
+  readonly trace: number;
+  readonly at: Spot;
+  readonly sideFeet: number;
+  /** The side the bowl-plus-24-inches rule wants, where a bowl was stated. */
+  readonly fromBowlFeet: number | null;
+  readonly shapes: readonly SolvedShape[];
+  readonly squareFeet: number;
+  /** True where the roof's own edge cut the square short. */
+  readonly clipped: boolean;
+  /** The roof's depth at the sump's rim, in inches: where the cut is. */
+  readonly rimInches: number;
+  /** How far the sump falls from that rim to the drain, in inches. */
+  readonly depthInches: number;
+  readonly panels: number;
+  readonly panelFeet: number;
+}
+
 /** One drainage region: the ground one drain takes, and the fall over it. */
 export interface SolvedTaperRegion {
   readonly drain: Spot;
@@ -100,6 +202,10 @@ export interface SolvedTaperRegion {
   readonly noFallSquareFeet: number;
   readonly thinInches: number;
   readonly thickInches: number;
+  /** The board grid over this region's own ground, one entry per position. */
+  readonly boards: readonly SolvedBoard[];
+  /** What those boards come to, or null where the table charts no such slope. */
+  readonly bill: SolvedBoardBill | null;
 }
 
 /** One arrow: where the water is, and which way it leaves. */
@@ -138,6 +244,18 @@ export interface SolvedTaperField {
   readonly noFallSquareFeet: number;
   readonly thinInches: number | null;
   readonly thickInches: number | null;
+  /** Four ways off each drain, or two. Typed as `LAYOUT`. */
+  readonly layout: string;
+  /** A typed `LAYOUT` that named neither, so the default was used. */
+  readonly layoutRefused: number | null;
+  /** A typed `PROFILE_SET` that named neither chart, so the default was used. */
+  readonly profileSetRefused: number | null;
+  /** The whole field's bill: its regions' added up. */
+  readonly bill: SolvedBoardBill | null;
+  /** Why there is no bill, where there is none. */
+  readonly billRefused: string | null;
+  /** The sumps cut into it, which the boards are laid around. */
+  readonly sumps: readonly SolvedSump[];
 }
 
 /** A trace the layout would not lay out, and why. */
@@ -158,6 +276,17 @@ export interface SolvedCricket {
   /** How far the traced ridge is off the one the roof implies, in degrees. */
   readonly offBy: number | null;
   readonly slopeDisagrees: boolean;
+  /**
+   * Its footprint on the plan, in square feet. Cricket stock is its own lettered
+   * series and the chart in `data/profiles` carries only the primary slope, so a
+   * cricket is billed by area and not by letter.
+   */
+  readonly planSquareFeet: number;
+  readonly slopeInchesPerFoot: number;
+  /** True where the solve put it there: the saddle a two-way layout needs. */
+  readonly derived: boolean;
+  /** True where every vertex was lifted by the roof's own depth under it. */
+  readonly fromSolvedSurface: boolean;
 }
 
 /** Everything the tapered package comes to. */
@@ -165,6 +294,8 @@ export interface SolvedTaper {
   readonly solveId: number;
   readonly drains: readonly Spot[];
   readonly fields: readonly SolvedTaperField[];
+  /** Every sump on the roof, in the order the drains are listed. */
+  readonly sumps: readonly SolvedSump[];
   readonly crickets: readonly SolvedCricket[];
   /** What the layout would not lay out, and why. */
   readonly refused: readonly SolvedRefusal[];
@@ -305,5 +436,12 @@ export function cricketOf(
 
 /** Nothing solved yet: what a window holds before the first solve arrives. */
 export const NOTHING_SOLVED: SolvedTaper = {
-  solveId: 0, drains: [], fields: [], crickets: [], refused: [],
+  solveId: 0, drains: [], fields: [], sumps: [], crickets: [], refused: [],
 };
+
+/** The sump at one drainage point on one condition, or none. */
+export function sumpOf(taper: SolvedTaper, conditionId: string, at: Spot): SolvedSump | null {
+  return taper.sumps.find(
+    (s) => s.conditionId === conditionId && s.at.x === at.x && s.at.y === at.y,
+  ) ?? null;
+}

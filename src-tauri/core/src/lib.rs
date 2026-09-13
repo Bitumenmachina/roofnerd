@@ -31,16 +31,23 @@
 // and every window moved with it because none of them holds an opinion about the
 // roof any more (D149).
 
+pub mod boards;
+pub mod cricket;
 pub mod geom;
 pub mod model;
+pub mod profile;
 pub mod scope;
+pub mod sump;
 pub mod taper;
 
+pub use cricket::Layout;
 pub use geom::{bounds, inside, Bounds, Edge, HalfPlane, Plane, Point, Shape};
 pub use model::{
-    CapReason, Condition, Crease, Cricket, Document, Facet, FlowArrow, NotSolvedYet, Page, Refused,
-    RidgeSegment, Solved, SolvedTaper, TaperField, TaperRegion, Trace,
+    Board, BoardBill, CapReason, Condition, Crease, Cricket, Document, Facet, FlowArrow,
+    NotSolvedYet, Page, Refused, RidgeSegment, Solved, SolvedTaper, Sump, TaperField, TaperRegion,
+    Trace,
 };
+pub use profile::{LetterRow, Panel, ProfileSet, Schedule};
 pub use scope::Scopes;
 
 /// Solve the open job.
@@ -363,13 +370,30 @@ mod tests {
         assert!(taper.refused[0].why.contains("no drainage point"), "{}", taper.refused[0].why);
     }
 
-    /// The cricket is the one behind the curb, and it is the same wedge, vertex
-    /// for vertex. Its ridge starts at the middle of the curb's south face and
-    /// runs 5 ft upslope; it is 2 ft wide each side, which is half that face;
-    /// and it rises 1 in — 1/2 in per foot over 2 ft — above the curb's own
-    /// 9 in datum.
+    /// ── THE CRICKET IS ON THE ROOF NOW, NOT OVER IT ─────────────────────
+    ///
+    /// Same wedge, same place, same proportions — and every vertex lifted by the
+    /// depth the tapered package makes under it instead of by a typed `ELEV`.
+    /// That closes the B1 pushback the plan names at S1 step 4: the demo used to
+    /// carry `ELEV: 0.75` on this condition, so the whole cricket sat at nine
+    /// inches over a roof that runs from a half inch to fourteen.
+    ///
+    /// By hand, from what the job states. The ridge starts at the middle of the
+    /// curb's south face at (55, 76) and runs 5 ft north to (55, 71); it is 2 ft
+    /// wide each side, which is half that 4 ft face; and it is cut at 1/2 in per
+    /// foot, so it rises 1 in over those 2 ft. The roof under it, off the layout:
+    ///
+    ///   (55, 76)  19 ft along and 22 across from a drain, so 22 governs:
+    ///             0.5 + 22 x 0.25 = 6 in = 1/2 ft
+    ///   (55, 71)  19 along, 27 across: 0.5 + 27 x 0.25 = 7 1/4 in
+    ///   (53, .)   17 along, same across as above — 22 and 27 still govern, so the
+    ///   (57, .)   feet either side sit at the same two depths as the ridge ends
+    ///
+    /// So the ridge runs from 6 + 1 = 7 in up to 7 1/4 + 1 = 8 1/4 in, and the feet
+    /// from 6 in to 7 1/4 in. The wedge FOLLOWS THE FALL, which is what a cricket
+    /// does and what a wedge at one elevation cannot.
     #[test]
-    fn the_cricket_behind_the_curb_is_the_same_wedge() {
+    fn the_cricket_behind_the_curb_stands_on_the_roof_it_sheds() {
         let taper = solved();
         assert_eq!(taper.crickets.len(), 1);
         let cricket = &taper.crickets[0];
@@ -378,15 +402,31 @@ mod tests {
         assert_eq!(cricket.max_length_to_width, 3.0);
         assert_eq!(cricket.off_by, Some(0.0));
         assert!(!cricket.slope_disagrees);
+        assert!(!cricket.derived, "nobody traced a saddle here");
+        assert!(cricket.from_solved_surface, "it is sitting on a typed elevation");
+        // 5 ft of ridge, 2 ft of fall each side.
+        assert_eq!(cricket.plan_square_feet, 20.0);
+        assert_eq!(cricket.slope_inches_per_foot, 0.5);
+
+        let inches = |v: f64| v * 12.0;
+        let field = &taper.fields[0];
+        let at = |x: f64, y: f64| taper::surface_feet(field, Point::new(x, y));
+        assert_eq!(inches(at(55.0, 76.0)), 6.0);
+        assert_eq!(inches(at(55.0, 71.0)), 7.25);
         assert_eq!(
             cricket.positions,
             vec![
-                55.0, 0.8333333333333334, 76.0, 55.0, 0.8333333333333334, 71.0, 57.0, 0.75, 76.0,
-                55.0, 0.8333333333333334, 71.0, 57.0, 0.75, 71.0, 57.0, 0.75, 76.0,
-                55.0, 0.8333333333333334, 76.0, 55.0, 0.8333333333333334, 71.0, 53.0, 0.75, 76.0,
-                55.0, 0.8333333333333334, 71.0, 53.0, 0.75, 71.0, 53.0, 0.75, 76.0,
+                55.0, 0.5833333333333334, 76.0, 55.0, 0.6875, 71.0, 57.0, 0.5, 76.0,
+                55.0, 0.6875, 71.0, 57.0, 0.6041666666666666, 71.0, 57.0, 0.5, 76.0,
+                55.0, 0.5833333333333334, 76.0, 55.0, 0.6875, 71.0, 53.0, 0.5, 76.0,
+                55.0, 0.6875, 71.0, 53.0, 0.6041666666666666, 71.0, 53.0, 0.5, 76.0,
             ]
         );
+        // The ridge is 1 in above the roof at each of its own ends — the cricket's
+        // own rise, and nothing else. A thousandth of an inch of slack, because a
+        // foot converted to inches and back does not land on the same last bit.
+        assert!((inches(0.5833333333333334 - at(55.0, 76.0)) - 1.0).abs() < 1e-3);
+        assert!((inches(0.6875 - at(55.0, 71.0)) - 1.0).abs() < 1e-3);
     }
 
     /// Nothing open is not an error and not an empty roof: it is a solve with
