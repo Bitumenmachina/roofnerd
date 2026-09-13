@@ -26,13 +26,16 @@ import { followSelection, select, selectedConditionId, watchSelection } from './
 import { costPanel } from './cost-panel.js';
 import { mountPlan, unmountPlan } from './editors/plan.js';
 import { mountModel, unmountModel } from './editors/model.js';
+import { mountSection, unmountSection } from './editors/section.js';
 import { quantity } from './labels.js';
 
 /**
- * The two views of the one geometry that exist today.
+ * The three views of the one geometry.
  *
- * Section arrives with the renderers; it is not in here, because a view switch
- * offering a view nobody built is a button that does nothing.
+ * Plan, Model and Section are one solve read three ways — the sheet it was
+ * traced off, the roof stood up, and the roof cut open at a drain. Section
+ * joined them with the drawings (C5): a view switch offering a view nobody built
+ * is a button that does nothing, and this one draws.
  */
 interface View {
   readonly title: string;
@@ -44,10 +47,13 @@ interface View {
 const VIEWS: Record<string, View> = {
   plan: { title: 'Plan', mount: mountPlan, unmount: unmountPlan, help: HELP['Plan']! },
   model: { title: 'Model', mount: mountModel, unmount: unmountModel, help: HELP['Model']! },
+  section: {
+    title: 'Section', mount: mountSection, unmount: unmountSection, help: HELP['Section']!,
+  },
 };
 
-/** The order they are offered in. Section joins them with the renderers. */
-const VIEW_ORDER = ['plan', 'model'] as const;
+/** The order they are offered in: the sheet, the roof, and the cut through it. */
+const VIEW_ORDER = ['plan', 'model', 'section'] as const;
 
 const params = new URLSearchParams(window.location.search);
 
@@ -111,7 +117,7 @@ for (const id of VIEW_ORDER) {
 
 const viewCaption = document.createElement('span');
 viewCaption.className = 'view-caption';
-viewCaption.textContent = 'one geometry · two views';
+viewCaption.textContent = 'one geometry · three views';
 
 const viewNav = document.createElement('div');
 viewNav.className = 'view-nav';

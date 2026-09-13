@@ -1247,3 +1247,91 @@ button.quiet:hover { border-color: var(--rule); }
   font-style: italic; color: var(--rn-ink-dim); font-size: var(--t-micro); line-height: 1.35;
 }
 
+/* ── A drawing ─────────────────────────────────────────────────────────────
+   One renderer, three drawings (D155), so one set of rules paints the tapered
+   layout, the fastening plan and the section. A role travels as a WORD and is
+   painted here: the payload carries no colour, because a second palette on the
+   wire is a palette that goes stale. */
+.drawing-marks .mark { vector-effect: non-scaling-stroke; }
+
+/* the ground */
+.drawing-marks .board { fill: var(--rn-water-ground); fill-opacity: 0.28; stroke: var(--rn-hairline-strong); stroke-width: 0.75; }
+.drawing-marks .sump { fill: var(--rn-water); fill-opacity: 0.3; stroke: var(--rn-water-border); stroke-width: 1; }
+.drawing-marks .nofall { fill: var(--rn-warn); fill-opacity: 0.22; stroke: var(--rn-warn-border); stroke-width: 1; }
+.drawing-marks .fill { fill: var(--rn-metal-3); fill-opacity: 0.5; stroke: var(--rn-hairline-strong); stroke-width: 0.75; }
+.drawing-marks .panel { fill: var(--rn-metal-1); fill-opacity: 0.45; stroke: var(--rn-ink-off); stroke-width: 0.75; }
+.drawing-marks .cover { fill: var(--rn-metal-2); fill-opacity: 0.4; stroke: var(--rn-ink-off); stroke-width: 0.75; }
+.drawing-marks .wall { fill: var(--rn-metal-3); fill-opacity: 0.7; stroke: var(--rn-metal-2); stroke-width: 1.25; }
+
+/* the lines */
+.drawing-marks .line { fill: none; stroke: var(--rn-ink-2); stroke-width: 1; }
+.drawing-marks .line.dashed { stroke-dasharray: 7 5; }
+.drawing-marks .outline { stroke: var(--rn-ink); stroke-width: 2; }
+.drawing-marks .valley, .drawing-marks .ridge { stroke: var(--rn-ink-3); stroke-width: 1; }
+.drawing-marks .cricket { stroke: #8a5a1d; stroke-width: 1.5; fill: #8a5a1d; fill-opacity: 0.18; }
+.drawing-marks .deck { stroke: var(--rn-ink); stroke-width: 3; }
+.drawing-marks .membrane { stroke: var(--rn-ink); stroke-width: 3; }
+.drawing-marks .coping { stroke: var(--rn-metal-1); stroke-width: 2.5; }
+.drawing-marks .cleat { stroke: var(--rn-metal-2); stroke-width: 1.75; }
+.drawing-marks .flashing { stroke: var(--rn-ink); stroke-width: 2.5; }
+.drawing-marks .termbar { stroke: var(--rn-metal-1); stroke-width: 2.5; }
+.drawing-marks .drain { stroke: var(--rn-water); stroke-width: 3; }
+.drawing-marks .leader { stroke: var(--rn-ink-3); stroke-width: 1; stroke-dasharray: 3 3; }
+
+/* the words */
+.drawing-marks text { font-family: var(--mono); fill: var(--rn-ink-2); }
+.drawing-marks .board-letter { fill: var(--rn-ink); text-anchor: middle; }
+.drawing-marks .thickness { fill: var(--rn-water-ink); font-weight: 600; }
+.drawing-marks .key-row { fill: var(--rn-ink-2); }
+.drawing-marks .dim-text { fill: var(--rn-ink); }
+.drawing-marks .dimension.derived .dim-text { fill: var(--rn-water-ink); }
+.drawing-marks .witness, .drawing-marks .dim-line {
+  stroke: var(--rn-ink-3); stroke-width: 1; fill: none; vector-effect: non-scaling-stroke;
+}
+
+/* ── The Section view ──────────────────────────────────────────────────────
+   The cut in three dimensions on the left, the section drawing on the right.
+   The drawing takes the larger share because it is the half that carries the
+   numbers; the model beside it is what says where on the roof it was taken. */
+.section-editor { display: flex; min-height: 0; overflow: hidden; }
+.section-cut {
+  position: relative; flex: 0 0 36%; min-width: 0; min-height: 0;
+  border-right: 1px solid var(--rn-hairline);
+}
+.section-cut .model-canvas { display: block; width: 100%; height: 100%; }
+.section-drawing {
+  position: relative; flex: 1 1 auto; min-width: 0; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: auto; background: var(--rn-viewport);
+}
+.section-drawing .drawing { display: block; max-width: 100%; max-height: 100%; }
+.section-drawing .drawing.to-fit { width: 100%; height: 100%; }
+.drawing-note {
+  position: absolute; left: var(--gap-3); bottom: var(--gap-2); margin: 0;
+  font-family: var(--mono); font-size: var(--t-micro); color: var(--rn-ink-dim);
+  pointer-events: none;
+}
+.drawing-nothing {
+  margin: 0; max-width: 46ch; padding: var(--gap-4);
+  font-size: var(--t-small); color: var(--rn-ink-2); line-height: 1.5;
+}
+
+/* ── What the cut goes through, in the money ───────────────────────────────
+   Frame 3 puts it at the top of the panel. It names, it does not filter: what
+   is hidden from an estimate is a lens, and a lens is a thing somebody picks. */
+.cut-lines {
+  margin: 0; padding: 6px var(--gap-3);
+  border-bottom: 1px solid var(--rn-hairline);
+  font-family: var(--mono); font-size: var(--t-micro); letter-spacing: 0.04em;
+  color: var(--rn-water-ink); background: var(--rn-water-ground);
+}
+.cost-group.cut { background: var(--rn-row-lit); }
+
+/* On the Plan the note shares the bottom of the drawing with the scale badge,
+   so it stands to the right of it rather than under it. */
+.plan-editor .drawing-note {
+  left: auto; right: var(--gap-3); bottom: var(--gap-3); z-index: 3;
+  max-width: 52ch; text-align: right;
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  border: 1px solid var(--rule); border-radius: var(--radius); padding: 3px 8px;
+}

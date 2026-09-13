@@ -34,6 +34,16 @@ export class Surface {
   readonly scratch: SVGGElement;
   /** Where finished traces are drawn. */
   readonly shapes: SVGGElement;
+  /**
+   * Where a solved drawing is laid over the sheet: the tapered layout, the
+   * fastening plan.
+   *
+   * UNDER the traces, and that order is the point. A trace is what the estimator
+   * drew and it has to stay pickable and on top; an overlay is what the solve
+   * made OF that trace, and a board grid painted over the outline it was cut
+   * from would hide the thing it came from.
+   */
+  readonly drawing: SVGGElement;
 
   private sheet: Sheet | null = null;
   private zoomLevel = 1;
@@ -75,9 +85,10 @@ export class Surface {
 
     this.overlay = document.createElementNS(SVG_NS, 'svg');
     this.overlay.classList.add('surface-overlay');
+    this.drawing = document.createElementNS(SVG_NS, 'g');
     this.shapes = document.createElementNS(SVG_NS, 'g');
     this.scratch = document.createElementNS(SVG_NS, 'g');
-    this.overlay.append(this.shapes, this.scratch);
+    this.overlay.append(this.drawing, this.shapes, this.scratch);
 
     this.stack.append(this.canvas, this.overlay);
     this.scroller.append(this.stack);
@@ -114,6 +125,7 @@ export class Surface {
     context?.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.canvas.width = 0;
     this.canvas.height = 0;
+    this.drawing.replaceChildren();
     this.shapes.replaceChildren();
     this.scratch.replaceChildren();
   }

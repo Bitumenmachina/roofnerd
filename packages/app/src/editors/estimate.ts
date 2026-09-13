@@ -21,6 +21,7 @@ import {
   type Condition, type Item, type Measures, type Page,
 } from '@roofnerd/engine';
 import { at, derivedFor, doc, set, subscribe, type Doc } from '../doc.js';
+import { cutOnScreen, watchCut } from '../cut.js';
 import { heldCaret, named, restoreCaret } from '../caret.js';
 import { icon } from '../icons.js';
 import { PENDING_REASON, money, plural, quantity } from '../labels.js';
@@ -33,6 +34,7 @@ let openLineId: string | null = null;
 
 let stopSubscribing: (() => void) | null = null;
 let stopWatching: (() => void) | null = null;
+let stopWatchingCut: (() => void) | null = null;
 let widthChanged: (open: boolean) => void = () => undefined;
 /**
  * Draw the lines again.
@@ -98,13 +100,19 @@ export function mountEstimate(host: HTMLElement, options: EstimateOptions): void
   redraw = () => draw(doc());
   stopSubscribing = subscribe((d: Doc) => draw(d));
   stopWatching = watchSelection(() => draw(doc()));
+  // And the cut on the surface beside it, when there is one. A section is a
+  // reading of the same job the lines are, and the handoff's Frame 3 says so at
+  // the top of this panel: these are the lines the plane goes through.
+  stopWatchingCut = watchCut(() => draw(doc()));
 }
 
 export function unmountEstimate(): void {
   stopSubscribing?.();
   stopWatching?.();
+  stopWatchingCut?.();
   stopSubscribing = null;
   stopWatching = null;
+  stopWatchingCut = null;
   redraw = () => undefined;
 }
 
@@ -193,8 +201,31 @@ function render(head: HTMLElement, host: HTMLElement, d: Doc): void {
 
   head.append(what, bar, count);
 
+  // ── what the cut on the surface goes through ─────────────────────────────
+  //
+  // Frame 3 puts it at the top of this panel and it is the right place: a
+  // section is a reading of the same job these lines are, and the question an
+  // estimator asks looking at one is "what am I buying here". So the conditions
+  // the plane passes through are named, their lines counted, and their groups
+  // marked — no filter, because hiding the rest would be a lens, and a lens is a
+  // thing somebody chooses.
+  const cut = cutOnScreen();
+  const through = cut === null
+    ? []
+    : conditions.filter((c) => cut.through.includes(c.id));
+
   // ── the lines ────────────────────────────────────────────────────────────
   host.replaceChildren();
+  if (cut !== null) {
+    const banner = document.createElement('p');
+    banner.className = 'cut-lines';
+    const lines = through.reduce((n, c) => n + (c.items ?? []).length, 0);
+    banner.textContent = `LINES CUT BY SECTION ${cut.named.replace(/^Section /, '')} · ${lines}`;
+    banner.title = through.length === 0
+      ? 'The plane passes through nothing that carries a line.'
+      : `The plane passes through ${through.map((c) => c.name).join(', ')}.`;
+    host.append(banner);
+  }
   if (!conditions.length) {
     const empty = document.createElement('p');
     empty.className = 'empty-note';
@@ -219,6 +250,7 @@ function render(head: HTMLElement, host: HTMLElement, d: Doc): void {
     const group = document.createElement('button');
     group.type = 'button';
     group.className = condition.id === selectedConditionId() ? 'cost-group on' : 'cost-group';
+    if (through.some((c) => c.id === condition.id)) group.classList.add('cut');
     const swatch = document.createElement('span');
     swatch.className = 'swatch';
     swatch.style.background = condition.color ?? '#5f5f5f';

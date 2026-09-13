@@ -16,8 +16,12 @@ import {
   formatFeetInches, parseFeet,
   type Condition, type ConditionRole, type Page, type Point, type Trace,
 } from '@roofnerd/engine';
-import { at, addPage, doc, pageBytes, pickFile, set, subscribe, type Doc } from '../doc.js';
+import { NOTHING_TO_DRAW, type Drawings } from '@roofnerd/engine';
+import {
+  at, addPage, doc, pageBytes, pickFile, set, solveDrawings, solveId, subscribe, type Doc,
+} from '../doc.js';
 import { Surface, svg, pointsAttribute } from '../viewer/surface.js';
+import { renderDrawing } from '../viewer/drawing.js';
 import { Tools, type ToolName, type ToolProgress } from '../viewer/tools.js';
 import { loadSheet, type Sheet } from '../viewer/page-source.js';
 import {
@@ -80,6 +84,23 @@ let chrome: SurfaceChrome | null = null;
 let stopSubscribing: (() => void) | null = null;
 let stopWatching: (() => void) | null = null;
 
+/**
+ * Which solved drawing is laid over the sheet, if any.
+ *
+ * The handoff puts the tapered layout and the fastening plan on the Plan's own
+ * view switch, which is right: they are drawings OF the sheet's own roof, in the
+ * sheet's own place, and looking at one means looking at the drawing it was
+ * taken off. Neither is on until it is asked for — the Plan is for tracing, and
+ * seven hundred lettered boards over a drawing somebody is tracing is in the way.
+ */
+type Overlay = 'layout' | 'fastening' | null;
+let overlay: Overlay = null;
+let drawings: Drawings = NOTHING_TO_DRAW;
+let drawnSolveId = -1;
+let pulling = 0;
+let refreshOverlayChips: () => void = () => undefined;
+let paintOverlay: () => void = () => undefined;
+
 /** The Plan's acts, for the window's rail. */
 export const planTools = (pick: (id: string) => void): readonly RailTool[] =>
   ACTS.map((a) => ({ id: a.id, label: a.label, icon: a.icon, onPick: () => pick(a.id) }));
@@ -100,6 +121,14 @@ export function mountPlan(host: HTMLElement, surroundings: SurfaceChrome): void 
   const scaleBadge = document.createElement('div');
   scaleBadge.className = 'scale-badge';
   surface.root.append(scaleBadge);
+
+  // What the overlay on the sheet is, and what it is drawn at — or why there is
+  // nothing on it. It sits on the drawing beside the scale, because that is
+  // where somebody reading a drawing looks for what it is of.
+  const overlayNote = document.createElement('div');
+  overlayNote.className = 'drawing-note';
+  overlayNote.hidden = true;
+  surface.root.append(overlayNote);
 
   // The surface is the drawing (D148, Frame 1). The list of what has been
   // traced folded into the cost panel's Condition tab: it was 320px of the
@@ -138,11 +167,73 @@ export function mountPlan(host: HTMLElement, surroundings: SurfaceChrome): void 
   // (§1.5); it is now an overlay at the top right of the drawing, where the
   // handoff puts view navigation, and an overlay cannot cover a control because
   // there is no row for it to be in.
+  // The two solved drawings, on the view switch beside getting around the sheet.
+  // They are the same kind of thing as a zoom: a way of looking at what is
+  // already there, which changes nothing about the job.
+  const overlayChips: HTMLButtonElement[] = [];
+  for (const id of ['layout', 'fastening'] as const) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'view-chip';
+    chip.textContent = id;
+    chip.addEventListener('click', () => {
+      overlay = overlay === id ? null : id;
+      if (overlay === null) paintOverlay();
+      else void pullDrawings();
+      refreshOverlayChips();
+    });
+    overlayChips.push(chip);
+  }
+  refreshOverlayChips = () => {
+    overlayChips[0]!.classList.toggle('on', overlay === 'layout');
+    overlayChips[1]!.classList.toggle('on', overlay === 'fastening');
+  };
+  refreshOverlayChips();
+  const chipGroup = document.createElement('div');
+  chipGroup.className = 'chip-group';
+  chipGroup.append(...overlayChips);
+
   surroundings.setViewTools([
+    chipGroup,
     iconButton('zoomOut', 'Zoom out', () => void surface.setZoom(surface.zoom / 1.25)),
     iconButton('zoomIn', 'Zoom in', () => void surface.setZoom(surface.zoom * 1.25)),
     iconButton('fit', 'Fit the sheet in the window', () => void surface.fit()),
   ]);
+
+  /**
+   * Lay the solved drawing over the sheet, in the sheet's own units.
+   *
+   * A drawing is in FEET on the roof and the sheet is in page units, and the one
+   * turns into the other by the scale the estimator set — the same scale, the
+   * same direction, so the board grid lands exactly on the outline it was cut
+   * from. A sheet nobody has scaled cannot carry an overlay at all, and says so
+   * rather than drawing one somewhere.
+   */
+  paintOverlay = () => {
+    const page = currentPage();
+    const drawing = overlay === 'layout' ? drawings.layout
+      : overlay === 'fastening' ? drawings.fastening : null;
+    if (!drawing || !page?.feetPerUnit) {
+      surface.drawing.replaceChildren();
+      overlayNote.hidden = overlay === null;
+      overlayNote.textContent = overlay === null ? ''
+        : 'This sheet has no scale yet, so there is nothing to lay over it.';
+      return;
+    }
+    const perFoot = 1 / page.feetPerUnit;
+    const drawn = renderDrawing(surface.drawing, drawing, {
+      perFootX: perFoot,
+      perFootY: perFoot,
+      // A word on a plan is drawn at a size on the ROOF, not on the screen, so
+      // it stays inside the board it names at every zoom. Two feet of letter on
+      // a four foot board is what a tapered layout prints.
+      wordSize: perFoot * 2.2,
+      letterSize: perFoot * 2,
+    });
+    overlayNote.hidden = false;
+    overlayNote.textContent = drawn.nothingYet ?? drawn.note;
+    if (drawn.nothingYet) surface.drawing.replaceChildren();
+  };
 
   chooseAct('select');
 
@@ -153,8 +244,29 @@ export function mountPlan(host: HTMLElement, surroundings: SurfaceChrome): void 
     if (progress.points > 0) chrome?.setMeasuringInto(measuringInto(progress.tool));
   });
 
+  const pullDrawings = async () => {
+    const want = solveId();
+    if (want === drawnSolveId) { paintOverlay(); return; }
+    const token = pulling + 1;
+    pulling = token;
+    try {
+      const got = await solveDrawings();
+      if (token !== pulling) return;
+      drawings = got;
+      drawnSolveId = got.solveId;
+    } catch {
+      // A roof that did not solve has no drawing to lay over the sheet. The
+      // Model says why; the Plan is still a drawing somebody can trace on.
+      if (token !== pulling) return;
+      drawings = NOTHING_TO_DRAW;
+      drawnSolveId = want;
+    }
+    paintOverlay();
+  };
+
   stopSubscribing = subscribe((d: Doc) => {
     const pages = (at('/pages', d) as Page[]) ?? [];
+    if (overlay !== null) void pullDrawings();
     if (!currentPageId && pages[0]) showPage(pages[0].id).catch((e) => report('opening the drawing', e));
     else if (currentPageId) refreshSheetIfChanged(pages).catch((e) => report('opening the drawing', e));
     drawTraces(d);
@@ -188,6 +300,11 @@ export function unmountPlan(): void {
   currentPageId = null;
   loadedSource = null;
   progress = { tool: 'select', points: 0, pageArea: null, pageLength: null };
+  overlay = null;
+  drawings = NOTHING_TO_DRAW;
+  drawnSolveId = -1;
+  paintOverlay = () => undefined;
+  refreshOverlayChips = () => undefined;
 }
 
 /**

@@ -75,6 +75,18 @@ Move the pointer over the roof and the strip at the bottom of the window says wh
 
 Clicking picks a condition and picks it everywhere else too. Nothing in this window changes the job — there is no editing in 3D.`,
 
+  Section: `The roof, cut open at a drain, so you can see what you are buying.
+
+A tapered package is bought as boards, and nobody can see a board in a plan or in a shaded surface. This cuts through one drain along the direction the boards are laid and shows the stack: the deck it lands on, the flat board by the course, the lettered panel with its own letter on it, the sump cut down to the bowl, and the wall it stops against with the flashing, the coping, the cleat and the bar.
+
+There is one cut for every drain on the roof, and the chips at the top right switch between them. A cut runs out to the wall where there is one, because a section detail is where you prove the flashing; where a drain's ground reaches no wall, it runs to the ridge it shares with the next drain and says so.
+
+The horizontal is 1" = 4'-0". The vertical is stretched four times, and the drawing says so on itself: a board is half an inch over a run of twenty feet, and at true scale the whole build-up would be a line. Never scale a thickness off it — the dimensions are the numbers.
+
+Beside the drawing the same cut in three dimensions, with everything in front of the plane taken away, so you can see where on the roof it was taken from.
+
+While a cut is up, the Estimate names the lines the plane goes through: the field it cut, the drain it cut down to, and the wall it ended against.`,
+
   Estimate: `Every line here is one thing a condition consumes, grouped under the condition it comes off.
 
 The line is short on purpose: what it is, how much of it, in what unit, and what it costs. A diamond after the unit means the program worked the quantity out from what you traced; a dotted underline means you typed it. There is no third kind.
