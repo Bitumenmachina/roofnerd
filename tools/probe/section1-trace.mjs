@@ -146,8 +146,8 @@ try {
     assert.match(count, /\bEA\b/, count);
   });
 
-  // ── pitch lifts the surface off the footprint ────────────────────────────
-  const pitched = JSON.parse(await session.execute(function () {
+  // ── the area on the screen is the area of the shape on the sheet ─────────
+  const traced = JSON.parse(await session.execute(function () {
     return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
       const c = d.conditions.find(function (x) { return x.id === 'c-field'; });
       const page = d.pages.find(function (p) { return p.id === c.traces[0].pageId; });
@@ -158,26 +158,31 @@ try {
       });
     });
   }));
-  check('pitch lifted the surface off its own footprint', () => {
+  check('the area shown is the traced corners and the scale, and nothing else', () => {
     // Worked out from the traced corners and the scale on the page, not from the
     // number the window printed. The version this replaces divided the displayed
     // area by itself and compared the result to the pitch factor — true of any
     // number at all, and a check confirming its own input is the defect this
     // whole pass exists to remove.
-    assert.ok(pitched.pitch > 0, 'the field has no pitch to lift it');
-    const p = pitched.points;
+    //
+    // The demo's roof is a low-slope retrofit on a dead-flat deck, so it states
+    // no pitch and the sloped area IS the footprint. That is the claim here: the
+    // pitch factor is one when nothing says otherwise, and the window prints the
+    // shoelace of the traced corners at the page's own scale. The factor itself
+    // is proved against its sources in the engine's own tests, on a roof that
+    // has one.
+    const p = traced.points;
     let twice = 0;
     for (let i = 0; i < p.length; i += 1) {
       const q = p[(i + 1) % p.length];
       twice += p[i].x * q.y - q.x * p[i].y;
     }
-    const planSF = Math.abs(twice / 2) * pitched.feetPerUnit ** 2;
-    const factor = Math.sqrt(1 + (pitched.pitch / 12) ** 2);
+    const planSF = Math.abs(twice / 2) * traced.feetPerUnit ** 2;
+    const factor = traced.pitch === undefined ? 1 : Math.sqrt(1 + (traced.pitch / 12) ** 2);
     const area = rows.find((r) => /Main Roof Field/.test(r)) ?? '';
     const shown = Number((area.match(/([\d,.]+)\s*SF/) ?? [])[1]?.replace(/,/g, ''));
     assert.ok(shown > 0, `the row read "${area}"`);
-    assert.ok(shown > planSF, `${shown} SF sloped is not more than ${planSF.toFixed(2)} SF flat`);
-    nearly(shown / planSF, factor, `a ${pitched.pitch}:12 pitch factor`, 0.002);
+    nearly(shown, planSF * factor, 'the traced area at the page\'s scale', 0.002);
   });
 
   // ── the drawing is referenced, never swallowed ───────────────────────────

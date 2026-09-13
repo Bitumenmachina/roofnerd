@@ -511,26 +511,39 @@ try {
       `the job holds ${heightInJob} for the parapet's height`);
   });
 
-  // Put the height back, whatever happened.
-  await session.execute(function (value) {
-    const label = [...document.querySelectorAll('.condition-panel label')]
-      .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Height'; });
-    const input = label ? label.querySelector('input') : null;
-    if (!input) return false;
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-    setter.call(input, String(value));
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    return true;
-  }, heightWas ? heightWas.value : '1');
-  await wait(1200);
+  // Put the height back to what the field was actually holding, and to nothing
+  // else. The figure that used to stand here as a fallback was the warehouse
+  // parapet's 1 ft; this demo's wall is 42 in, and a check that writes its own
+  // idea of a height into the job leaves the fixture behind it wrong for every
+  // row that runs after it.
+  if (heightWas) {
+    await session.execute(function (value) {
+      const label = [...document.querySelectorAll('.condition-panel label')]
+        .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Height'; });
+      const input = label ? label.querySelector('input') : null;
+      if (!input) return false;
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      setter.call(input, String(value));
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return true;
+    }, heightWas.value);
+    await wait(1200);
+  }
 
   // ── and the formula on the line, which is the field this program is for ─
   // It is edited where it always was — on the line — and the line is opened to
   // its whole chain to get at it, which is the act a person performs.
   await showTab(session, 'Estimate');
-  await session.execute(function () {
+  // Which line was opened, in the words the row shows, so the row below can find
+  // it in the document. It used to be looked up as the first item on the first
+  // condition, which was the same line on the warehouse this demo used to be.
+  // The roof it ships now carries thirteen lines on the field alone, and "the
+  // first one" is an accident of document order rather than a claim worth making.
+  const openedLine = await session.execute(function () {
     const line = document.querySelector('.cost-line .line-what');
-    if (line) line.click();
+    if (!line) return null;
+    line.click();
+    return ((line.querySelector('.line-item') || {}).textContent || '').trim();
   });
   await wait(900);
 
@@ -588,20 +601,26 @@ try {
   await wait(1400);
 
   const formulaAfter = JSON.parse((await formulaField()) ?? 'null');
-  const formulaInJob = await session.execute(function () {
+  const formulaInJob = await session.execute(function (what) {
     return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
-      return JSON.stringify(((d.conditions[0] || {}).items || [])[0]?.formula ?? null);
+      for (const c of d.conditions) {
+        for (const item of c.items || []) {
+          if ((item.description || '') === what) return JSON.stringify(item.formula ?? null);
+        }
+      }
+      return JSON.stringify(null);
     });
-  });
+  }, openedLine);
 
   check(`the open line keeps the formula being typed into — "12", not "1" (${formulaPath})`, () => {
+    assert.ok(openedLine, 'there is no line in the estimate to open');
     assert.ok(formulaEmpty, 'no formula field on the open line to type into');
     assert.equal(formulaAfter && formulaAfter.value, '12',
       `the field reads "${formulaAfter && formulaAfter.value}" after 1 then 2`
       + ` — after the first key the focus was on ${formulaFocus}`
       + `${formulaSecond && formulaSecond.wentNowhere ? ' and the second key went nowhere' : ''}`);
     assert.equal(JSON.parse(formulaInJob), '12',
-      `the job holds ${formulaInJob} as that line's formula`);
+      `the job holds ${formulaInJob} as the formula on "${openedLine}"`);
   });
 
   await writeFile(join(EVIDENCE, `section6b-typing-${COMMIT}.png`),

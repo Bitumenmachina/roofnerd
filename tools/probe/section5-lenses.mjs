@@ -175,7 +175,10 @@ try {
   });
   check('and looking through a lens changed nothing', () => {
     const state = JSON.parse(untouched);
-    assert.equal(state.items, 4);
+    // Eight lines on the parapet since the demo became the handoff's roof:
+    // flashing, coping, cleat, corners, termination bar, fasteners, the crew
+    // that flashes the wall and the shop that forms and sets the metal.
+    assert.equal(state.items, 8);
     assert.equal(state.first, 'LF * H');
   });
 } catch (e) {

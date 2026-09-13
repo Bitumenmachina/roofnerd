@@ -76,7 +76,7 @@ try {
   // ── pick a traced condition, then load a generic assembly onto it ───────
   const picked = await session.execute(function () {
     const row = [...document.querySelectorAll('.cost-condition .condition')]
-      .find((e) => /Low Roof/.test(e.textContent || ''));
+      .find((e) => /Main Roof Field/.test(e.textContent || ''));
     if (!row) return null;
     row.click();
     return true;
@@ -111,11 +111,18 @@ try {
 
   const before = JSON.parse(await session.execute(function () {
     return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
-      const c = d.conditions.find(function (x) { return x.id === 'c-tapered'; });
+      const c = d.conditions.find(function (x) { return x.id === 'c-field'; });
       return JSON.stringify({ items: (c.items || []).length });
     });
   }));
-  check('and it starts with no items on it', () => assert.equal(before.items, 0));
+  check('and it starts with the lines the demo ships on it', () => {
+    // It used to start with none, because the fixture's second roof was traced
+    // and priced by nothing. The demo is one roof now and it carries its whole
+    // build-up, so what this row owes is the count to measure the load against
+    // — an assembly that landed on an empty condition and one that landed on a
+    // full one fail differently, and only the second is what a person does.
+    assert.ok(before.items > 0, 'the roof field ships with nothing priced on it');
+  });
 
   const loaded = await session.execute(function () {
     const b = [...document.querySelectorAll('.library-load')].find((e) => !e.disabled);
@@ -132,7 +139,7 @@ try {
 
   const after = JSON.parse(await session.execute(function () {
     return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
-      const c = d.conditions.find(function (x) { return x.id === 'c-tapered'; });
+      const c = d.conditions.find(function (x) { return x.id === 'c-field'; });
       const ids = (c.items || []).map(function (i) { return i.id; });
       return JSON.stringify({
         items: ids.length,
@@ -144,7 +151,8 @@ try {
   }));
 
   check('the assembly landed on the condition', () => {
-    assert.ok(after.items >= 3, `${after.items} items`);
+    assert.ok(after.items >= before.items + 3,
+      `${before.items} lines before and ${after.items} after`);
     assert.ok(after.assemblyId, 'the condition does not say which assembly it came from');
   });
   check('its items carry their own ids, so two conditions cannot share a price', () => {
@@ -178,8 +186,13 @@ try {
   // Give the second scenario a price for one of the loaded items, then switch.
   await session.execute(function () {
     return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
-      const c = d.conditions.find(function (x) { return x.id === 'c-tapered'; });
-      const first = (c.items || [])[0];
+      const c = d.conditions.find(function (x) { return x.id === 'c-field'; });
+      // The LAST line, which is one the book just put there. A line the demo
+      // ships carries a price typed on it, and a price on the line wins over
+      // the book — so pricing one of those in the second scenario would move
+      // nothing and the row below would go red on a program that was right.
+      const items = c.items || [];
+      const first = items[items.length - 1];
       const job = JSON.parse(JSON.stringify(d.job));
       job.scenarios[1].prices = {};
       job.scenarios[1].prices[first.id] = 999;

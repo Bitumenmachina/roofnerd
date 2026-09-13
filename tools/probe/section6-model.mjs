@@ -373,6 +373,9 @@ try {
 
   // ── the parapet stands off its reference line, on the inboard side ──────
   const parapetTrace = () => {
+    // By kind, and 'curb' is a kind of its own: the demo stands a curb up as
+    // well, and a wall check that took whichever run was drawn first would be
+    // measuring the box round the unit against the parapet's own trace.
     const wall = scene.find((m) => m.kind === 'parapet');
     const run = (job.conditions ?? []).find((c) => c.id === wall.conditionId);
     return { wall, run, ring: inFeet(run), thick: (run?.properties?.WALL ?? 0) / 12 };
@@ -526,7 +529,7 @@ try {
     // flat. This is a property edit on the condition, through the one document.
     return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
       const list = d.conditions.map(function (c) {
-        if (c.id !== 'c-tapered') return c;
+        if (c.id !== 'c-field') return c;
         const props = Object.assign({}, c.properties, { TAPER: 0.5 });
         return Object.assign({}, c, { properties: props });
       });
@@ -587,17 +590,20 @@ try {
   }));
   const jobBeforeSelecting = await jobNow(session);
 
-  // ── (a) point at the Low Roof in 3D ─────────────────────────────────────
+  // ── (a) point at the roof field in 3D ───────────────────────────────────
+  // The demo is one roof now, and it is the tapered field: the Low Roof this
+  // used to aim at was the second area on a two-roof fixture that no longer
+  // exists. Same claim, same condition kind, the roof that is there.
   const aim = JSON.parse(await session.execute(function (id) {
     const m = window.__roofnerdModel ? window.__roofnerdModel() : null;
     const p = m && m.screenPointOf ? m.screenPointOf(id) : null;
     return JSON.stringify(p);
-  }, 'c-tapered'));
+  }, 'c-field'));
 
-  check('the view can say where on screen the Low Roof is drawn', () => {
+  check('the view can say where on screen the roof field is drawn', () => {
     assert.ok(aim, 'nothing in the scene carries that condition');
     assert.ok(aim.inside, `it projects to ${aim.x}, ${aim.y}, which is not on the canvas`);
-    assert.equal(aim.hits, 'c-tapered',
+    assert.equal(aim.hits, 'c-field',
       `a ray cast at that point finds ${aim.hits ?? 'nothing'} — the point is not on it`);
   });
 
@@ -629,9 +635,9 @@ try {
 
   const pickedA = JSON.parse(await modelNow(session));
 
-  check(`picking the Low Roof in 3D selects it (${pickPath})`, () => {
+  check(`picking the roof field in 3D selects it (${pickPath})`, () => {
     assert.ok(pickedA.there, 'the view has nothing to say about itself');
-    assert.equal(pickedA.selectedConditionId, 'c-tapered',
+    assert.equal(pickedA.selectedConditionId, 'c-field',
       `the view believes ${pickedA.selectedConditionId ?? 'nothing'} is selected`);
   });
 
@@ -640,21 +646,21 @@ try {
   // mark the condition, and the Condition tab names it with its measures and
   // what it costs.
   let sheetB = null;
-  let panelLowRoof = null;
+  let panelField = null;
   if (B) {
     await session.switchTo(B);
     await until(session, () => !!document.querySelector('.cost-estimate'), { what: 'the lines' });
     await wait(800);
     sheetB = JSON.parse(await sheetNow(session));
     await showTab(session, 'Condition');
-    panelLowRoof = JSON.parse(await panelNow(session));
+    panelField = JSON.parse(await panelNow(session));
   }
-  const lowRoofRow = sheetB?.groups.find((g) => g.text.includes(names['c-tapered'])) ?? null;
+  const fieldRow = sheetB?.groups.find((g) => g.text.includes(names['c-field'])) ?? null;
 
   check('and the lines in the other window mark the same condition', () => {
     assert.ok(sheetB, 'there is no second window to look in');
-    assert.ok(lowRoofRow, `the panel has no group for "${names['c-tapered']}"`);
-    assert.ok(lowRoofRow.on,
+    assert.ok(fieldRow, `the panel has no group for "${names['c-field']}"`);
+    assert.ok(fieldRow.on,
       'the group is not marked — a pick in 3D did not cross the window frame');
     const others = sheetB.groups.filter((g) => g.on).length;
     assert.equal(others, 1, `${others} groups are marked at once`);
@@ -664,30 +670,32 @@ try {
     // to 6b, which is the check about how many panels a window has. Asking for
     // a field the reader does not return is a row that fails on its own
     // bookkeeping and says nothing about the program.
-    assert.ok(panelLowRoof && panelLowRoof.there,
+    assert.ok(panelField && panelField.there,
       'no Properties panel in the window the cost panel is in');
-    assert.equal(panelLowRoof.name, names['c-tapered'],
-      `the panel names "${panelLowRoof.name}"`);
-    assert.match(panelLowRoof.measure?.['Area'] ?? '', /\d/,
-      `its area reads "${panelLowRoof.measure?.['Area']}"`);
-    assert.match(panelLowRoof.measure?.['Squares'] ?? '', /\d/,
-      `its squares read "${panelLowRoof.measure?.['Squares']}"`);
+    assert.equal(panelField.name, names['c-field'],
+      `the panel names "${panelField.name}"`);
+    assert.match(panelField.measure?.['Area'] ?? '', /\d/,
+      `its area reads "${panelField.measure?.['Area']}"`);
+    assert.match(panelField.measure?.['Squares'] ?? '', /\d/,
+      `its squares read "${panelField.measure?.['Squares']}"`);
   });
-  check('and says what it costs — in words, because nothing is priced on it', () => {
-    // The demo's Low Roof is traced and carries no line. $0.00 would be a lie
-    // an estimator could bid on, and this is the row that makes sure it is not
-    // what the panel says.
-    assert.equal(panelLowRoof && panelLowRoof.cost, 'nothing priced on it',
-      `the panel's cost line reads "${panelLowRoof && panelLowRoof.cost}"`);
+  check('and says what it costs, in money, because it carries lines', () => {
+    // This used to read the other way round, on a fixture whose second roof was
+    // traced and priced by nothing: the row asserted the panel said so in words
+    // rather than $0.00. The roof the demo ships now carries the whole build-up,
+    // so what it owes is the money — and the row below holds that money against
+    // the lines' own, to the cent.
+    assert.match(String(panelField && panelField.cost), /\$/,
+      `the panel's cost line reads "${panelField && panelField.cost}"`);
   });
   check('and both windows print the same area for it', () => {
     // The panel's figure against the group row's, in the two windows they are
     // drawn in. One measurement, two surfaces, and they cannot be allowed to
     // differ by so much as a digit.
-    const inPanel = (panelLowRoof?.measure?.['Area'] ?? '').replace(/[^\d.]/g, '');
+    const inPanel = (panelField?.measure?.['Area'] ?? '').replace(/[^\d.]/g, '');
     assert.ok(inPanel.length > 0, 'the panel shows no area');
-    assert.ok(lowRoofRow && lowRoofRow.measures.includes(inPanel),
-      `the panel says ${inPanel} and the group row says "${lowRoofRow?.measures}"`);
+    assert.ok(fieldRow && fieldRow.measures.includes(inPanel),
+      `the panel says ${inPanel} and the group row says "${fieldRow?.measures}"`);
   });
 
   // ── (c) and back the other way: pick on the lines, watch the roof ───────
@@ -758,9 +766,11 @@ try {
   check('and selecting changed nothing about the job — there is no editing in 3D', () => {
     assert.equal(jobAfterSelecting, jobBeforeSelecting,
       'the job moved while nothing but selections happened');
-    const c = JSON.parse(jobAfterSelecting).find((x) => x.id === 'c-tapered');
+    const c = JSON.parse(jobAfterSelecting).find((x) => x.id === 'c-field');
     assert.equal((c.traces || []).length, 1);
-    assert.equal(c.traces[0].points.length, 4);
+    // Six outside corners and two inside, which is the outline the demo ships
+    // and the only shape that is 9,600 SF and 400 LF at the same time.
+    assert.equal(c.traces[0].points.length, 8);
   });
 
   await writeFile(join(EVIDENCE, `section6-both-windows-a-${COMMIT}.png`),

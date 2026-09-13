@@ -68,7 +68,14 @@ try {
   const stated = JSON.parse(await session.execute(function () {
     return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
       const c = d.conditions.find(function (x) { return x.id === 'c-parapet'; });
-      return JSON.stringify({ H: c.properties.H, WALL: c.properties.WALL });
+      return JSON.stringify({
+        H: c.properties.H, WALL: c.properties.WALL,
+        // A closed run's corners are the straight pieces between them, which is
+        // one fewer than the points because the last point closes back onto the
+        // first. The mitre line is bought against that, and this is where the
+        // number comes from rather than from a figure typed into this file.
+        corners: ((c.traces || [])[0] || { points: [] }).points.length - 1,
+      });
     });
   }));
 
@@ -128,35 +135,40 @@ try {
     }));
   }));
 
-  const parapet = lines.filter((l) => /flashing|coping|mitre|fabricate/i.test(l.description));
+  const parapet = lines.filter((l) => /flashing|coping|mitre|cleat|termination|corner|metal/i.test(l.description));
   check('the formula is on the line, and it is what the library put there', () => {
     const formulas = parapet.map((l) => l.formula);
     assert.ok(formulas.includes('LF * H'), `formulas read ${JSON.stringify(formulas)}`);
     assert.ok(formulas.includes('LF'), `formulas read ${JSON.stringify(formulas)}`);
-    assert.ok(formulas.includes('VERTICES'), `formulas read ${JSON.stringify(formulas)}`);
+    assert.ok(formulas.includes('SEGMENTS'), `formulas read ${JSON.stringify(formulas)}`);
   });
   check('one traced run feeds three different units', () => {
     const units = new Set(parapet.map((l) => l.unit));
-    assert.ok(units.has('LF'), `units read ${[...units].join(', ')}`);
-    assert.ok(units.has('EA'), `units read ${[...units].join(', ')}`);
+    for (const want of ['LF', 'EA', 'SF']) {
+      assert.ok(units.has(want), `units read ${[...units].join(', ')}`);
+    }
   });
   check('LF * H turned a run into an area, and it is the run times the height', () => {
     const flash = parapet.find((l) => l.formula === 'LF * H');
-    const coping = parapet.find((l) => l.formula === 'LF');
-    assert.ok(flash && coping, 'the parapet is missing a line');
-    nearly(flash.quantity, Number(coping.quantity.replace(/,/g, '')) * stated.H, 'wall flashing', 0.05);
+    const run = parapet.find((l) => l.formula === 'LF');
+    assert.ok(flash && run, 'the parapet is missing a line');
+    nearly(flash.quantity, Number(run.quantity.replace(/,/g, '')) * stated.H, 'wall flashing', 0.05);
   });
-  check('and the line says so, because feet times feet is not feet', () => {
-    // The dimension flag, on the shipped screen rather than in a unit test. The
-    // demo declares this line in LF on purpose: an estimator may mean it, and
-    // the program's job is to say what it noticed, not to overrule them.
+  check('and the unit on it is an area, because feet times feet is not feet', () => {
+    // The other side of the dimension flag, and the side worth shipping: the
+    // demo used to declare this line in LF on purpose so the advisory would
+    // show, which meant the fixture an estimator opens first carried a line
+    // with the wrong unit on it. It declares the area it works out to, the
+    // advisory stays quiet because there is nothing to say, and the advisory
+    // itself is proved below on a line changed while the window is open.
     const flash = parapet.find((l) => l.formula === 'LF * H');
-    assert.match(flash.note, /check the unit/i, `the line's note read "${flash.note}"`);
-    assert.equal(flash.unit, 'LF', 'the flag changed the declared unit — it must only advise');
+    assert.equal(flash.unit, 'SF', `the line is priced as ${flash.unit}`);
+    assert.equal(flash.note, '', `the line carries an advisory it should not: "${flash.note}"`);
   });
-  check('the corners are counted', () => {
-    const mitre = parapet.find((l) => l.formula === 'VERTICES');
-    nearly(mitre.quantity, 4, 'corners');
+  check('the corners are counted, and they are the run\'s own', () => {
+    const mitre = parapet.find((l) => l.formula === 'SEGMENTS');
+    assert.ok(mitre, 'no line bought against the corners');
+    nearly(mitre.quantity, stated.corners, 'corners');
   });
   check('each line extends at its own price', () => {
     for (const l of parapet) {
@@ -188,6 +200,48 @@ try {
   // The formula is edited where it always was: on the line. The line is opened
   // to its chain first, which is the act a person performs to get at it — and
   // the field it opens to is the same field writing to the same pointer.
+  // ── the dimension advisory, on a line changed in front of us ────────────
+  // Typed into the shipped window rather than asserted in a unit test, and
+  // typed rather than shipped: a fixture line carrying a unit that disagrees
+  // with its own formula is a demo that teaches the wrong thing. `LF` declared
+  // in LF is a length; `LF * H` is an area, and the line has to say so without
+  // overruling the estimator who declared it.
+  const advised = await session.execute(function () {
+    const line = [...document.querySelectorAll('.cost-line')]
+      .find(function (r) {
+        const chip = r.querySelector('.line-formula');
+        return chip && (chip.textContent || '').trim() === 'LF';
+      });
+    if (!line) return null;
+    line.querySelector('.line-what').click();
+    return true;
+  });
+  await wait(900);
+  await session.execute(function () {
+    const field = document.querySelector('.line-chain input.formula');
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(field, 'LF * H');
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await wait(1200);
+  const flagged = JSON.parse(await session.execute(function () {
+    const line = document.querySelector('.cost-line.open');
+    if (!line) return JSON.stringify({ found: false });
+    const note = line.querySelector('.formula-note');
+    return JSON.stringify({
+      found: true,
+      unit: ((line.querySelector('.line-unit') || {}).textContent || '').replace('◈', '').trim(),
+      note: note ? (note.textContent || '').trim() : '',
+    });
+  }));
+  check('a unit that does not follow from the formula is said, never overruled', () => {
+    assert.ok(advised, 'no line carrying the formula LF to change');
+    assert.ok(flagged.found, 'the line did not stay open');
+    assert.match(flagged.note, /area/i, `the line's note read "${flagged.note}"`);
+    assert.equal(flagged.unit, 'LF', 'the advisory changed the declared unit — it must only advise');
+  });
+
   const opened = await session.execute(function () {
     const line = [...document.querySelectorAll('.cost-line')]
       .find(function (r) {
