@@ -851,6 +851,13 @@ body.cost-window { background: var(--rn-panel); }
    being checked, and it gives way last: the run's own name is directly above in
    the group heading, so that is what shortens when the row is tight. */
 .line-crew { flex: none; color: var(--rn-ink-3); white-space: nowrap; }
+/* What the line buys, where that is not what it measures. In the mono face
+   because it is a figure to be checked against the money at the end of the row,
+   and it gives way last for the same reason the crew does. */
+.line-ordered {
+  flex: none; white-space: nowrap; color: var(--rn-ink-3);
+  font-family: var(--mono); font-size: var(--t-micro);
+}
 .line-quoted { flex: none; color: var(--rn-ink-3); white-space: nowrap; font-style: italic; }
 .line-quoted.none { color: var(--rn-ink-off); }
 .cost-line .formula-error, .cost-line .formula-note { grid-column: 1 / -1; }

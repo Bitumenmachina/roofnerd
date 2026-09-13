@@ -369,6 +369,28 @@ function compactLine(
   formula.className = 'formula line-formula';
   formula.textContent = item.formula;
   basis.append(from, formula);
+  // What you BUY, where that is not what the line is measured in.
+  //
+  // A line shows its estimating quantity and is charged on its order quantity,
+  // and where an order step is on the item those are different numbers: the
+  // dumpster line read "6.86 EA" against $5,813.50, which is seven dumpsters'
+  // money, and the coping read "650.00 SF" against a price per pound. An
+  // estimator multiplies the two figures in front of him, gets a third, and
+  // stops trusting the column (C8 §3b). Frame 3 of the handoff prints this line
+  // as 826.5 LB for the same reason. The chain is on the priced line already;
+  // this is it reaching the sheet, beside the measure it came off rather than
+  // instead of it.
+  if (result.orderQuantity !== null && result.orderUnitName !== null
+    && (result.orderUnitName !== result.unit
+      || Math.abs(result.orderQuantity - (result.quantity ?? result.orderQuantity)) > 0.005)) {
+    const bought = document.createElement('span');
+    bought.className = 'line-ordered';
+    bought.textContent = `buy ${quantity(result.orderQuantity)} ${result.orderUnitName}`;
+    bought.title = 'What this line orders, once waste and the supplier\'s package are on it.'
+      + ' The money is on this figure.';
+    basis.append(bought);
+  }
+
   // The crew and the rate, on the line. A labor line whose rate is only visible
   // three clicks away is a labor line nobody checks, and "how many squares a
   // day did you give it" is the first question asked of one.
