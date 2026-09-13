@@ -620,13 +620,26 @@ try {
   await wait(900);
   const rolled = JSON.parse(await recapNow(session));
 
-  check(`the job rolls up to $${withTheBill.sellingPrice.toFixed(2)}, the bill included`, () => {
+  // The whole job's own solve, pulled the way `doc.ts` pulls it on connect —
+  // not this file's own `wanted`, which only ever modelled the tapered
+  // package on the field, the sumps and the cricket. C3 put six more names on
+  // the wall and the curb (`FLASH_SF`, `COPING_LF`, `COPING_PCS_EA`,
+  // `CLEAT_LF`...), and a roll-up missing those prices the job short by
+  // exactly what they are worth — which is what this row went red over: a
+  // recap built from `wanted` alone left the whole wall and curb bill
+  // pending, and came up short of the panel's own figure by the same amount.
+  // The full solve, not a partial one this file happens to model, is the
+  // second arithmetic a roll-up check owes the screen.
+  const solvedScopes = JSON.parse(await scopesNow(session));
+  const wholeJob = recap(jobDocument, scenario, solvedScopes);
+
+  check(`the job rolls up to $${wholeJob.sellingPrice.toFixed(2)}, the whole solve included`, () => {
     assert.ok(rolled.there, 'the cost panel pins no selling price');
     const shown = money(rolled.selling);
-    const want = Number(withTheBill.sellingPrice.toFixed(2));
+    const want = Number(wholeJob.sellingPrice.toFixed(2));
     assert.ok(shown !== null, `the selling price reads "${rolled.selling}"`);
     assert.ok(Math.abs(shown - want) < 0.02,
-      `the panel says ${shown} and this file's own bill comes to ${want}`);
+      `the panel says ${shown} and the whole solve's own recap comes to ${want}`);
   });
 
   check('and every line is in it — nothing about the package is pending', () => {
@@ -643,7 +656,9 @@ try {
   await until(session, () => !!document.querySelector('.condition-panel'), { what: 'the panel' });
   const picked = await pickCondition(session, fieldCondition.name);
   const panel = JSON.parse(await panelNow(session));
-  const solvedScopes = JSON.parse(await scopesNow(session));
+  // Read once, above, right after the Recap tab — `solve_get('scopes')`
+  // answers for the whole job regardless of what is selected or which tab is
+  // up, so the same pull serves both checks.
 
   check('the Condition panel lists exactly the names the field carries', () => {
     assert.ok(picked, `"${fieldCondition.name}" is not in the tree to pick`);

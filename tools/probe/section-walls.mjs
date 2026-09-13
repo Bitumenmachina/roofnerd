@@ -35,8 +35,8 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import {
-  centreOf, errorsSoFar, launch, openDemoJob, showTab, showView, until, wait, watchErrors,
-  commitStamp,
+  centreOf, errorsSoFar, launch, openDemoJob, pointerClick, showTab, showView, until, wait,
+  watchErrors, commitStamp,
 } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
@@ -157,17 +157,38 @@ const panelNow = (session) => session.execute(function () {
   });
 });
 
-/** Pick a condition in the tree beside the panel, the way a hand picks it. */
+/**
+ * Pick a condition from its own group row on the Estimate tab, the way a hand
+ * picks it — there is no tree (D132); a condition is picked on the lines it
+ * carries. A real pointer click where the driver allows one, a dispatched
+ * click on the row otherwise — the same fallback `section6-model.mjs` already
+ * proved for exactly this row.
+ */
 const pickCondition = async (session, name) => {
-  const found = await session.execute(function (want) {
-    const row = [...document.querySelectorAll('.cost-condition .condition-list .condition')]
-      .find(function (e) { return (e.textContent || '').indexOf(want) >= 0; });
-    if (!row) return false;
-    row.click();
-    return true;
-  }, name);
+  await showTab(session, 'Estimate');
+  await wait(500);
+  const at = await centreOf(session, '.cost-group', name);
+  let clicked = false;
+  if (at) {
+    try {
+      const p = JSON.parse(at);
+      await pointerClick(session, p.x, p.y);
+      clicked = true;
+    } catch {
+      clicked = false;
+    }
+  }
+  if (!clicked) {
+    clicked = await session.execute(function (want) {
+      const row = [...document.querySelectorAll('.cost-group')]
+        .find(function (r) { return (r.textContent || '').indexOf(want) >= 0; });
+      if (!row) return false;
+      row.click();
+      return true;
+    }, name);
+  }
   await wait(800);
-  return found;
+  return clicked;
 };
 
 /** The named numbers the shell solved, pulled the way the app pulls them. */
@@ -210,11 +231,11 @@ try {
     assert.equal(scopes[parapetJob.id].COPING_PCS_EA, parapetPieces);
   });
 
-  // ── the Estimate names it as a derived line ───────────────────────────────
-  await showTab(session, 'Estimate');
-  await wait(500);
+  // ── pick the parapet on its own group row, and the Estimate shows it ──────
+  const parapetPicked = await pickCondition(session, parapetJob.name);
   await shot(session, 'section-walls-estimate');
   const lines = JSON.parse(await linesNow(session));
+  check('the parapet is reachable on the sheet — there is no tree (D132)', () => assert.ok(parapetPicked));
   check('the flashing line on the sheet carries ◈ and is not LF x H\'s own number', () => {
     const flashing = lines.find((l) => (l.condition || '').indexOf('Parapet') >= 0
       && /flash/i.test(l.description || ''));
@@ -224,14 +245,10 @@ try {
   });
 
   // ── the parapet's own panel ────────────────────────────────────────────────
-  await showView(session, 'Model');
-  await wait(300);
-  const parapetPicked = await pickCondition(session, 'Parapet Wall Flashing');
   await showTab(session, 'Condition');
   await wait(500);
   await shot(session, 'section-walls-condition-parapet');
   const parapetPanel = JSON.parse(await panelNow(session));
-  check('the parapet is reachable in the tree', () => assert.ok(parapetPicked));
   check('the panel lists the parapet\'s flashing and coping names', () => {
     const byName = Object.fromEntries((parapetPanel.rows || []).map((r) => [r.name, r]));
     assert.ok(byName.FLASH_SF, 'FLASH_SF is on the panel');
@@ -241,12 +258,12 @@ try {
   });
 
   // ── the curb: a raise finding, or its stated absence ──────────────────────
-  const curbPicked = await pickCondition(session, 'RTU-1 Curb');
+  const curbPicked = await pickCondition(session, curbJob.name);
   await showTab(session, 'Condition');
   await wait(500);
   await shot(session, 'section-walls-condition-curb');
   const curbPanel = JSON.parse(await panelNow(session));
-  check('the curb is reachable in the tree', () => assert.ok(curbPicked));
+  check('the curb is reachable on the sheet — there is no tree (D132)', () => assert.ok(curbPicked));
   check('the curb\'s panel states a raise finding, never a blank', () => {
     const byName = Object.fromEntries((curbPanel.rows || []).map((r) => [r.name, r]));
     assert.ok(byName.CURB_RAISE_IN, 'CURB_RAISE_IN is on the curb\'s own panel');

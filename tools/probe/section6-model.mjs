@@ -75,6 +75,7 @@ const panelNow = (session) => session.execute(function () {
     note: ((el.querySelector('.panel-money-note') || {}).textContent || '').trim(),
     empty: ((el.querySelector('.panel-empty') || {}).textContent || '').trim(),
     height: named('Height'),
+    flashup: named('Flash up'),
     text: (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim(),
   });
 });
@@ -121,6 +122,13 @@ const jobNow = (session) => session.execute(function () {
   return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
     return JSON.stringify(d.conditions);
   });
+});
+
+/** The named numbers the shell solved, pulled the way the app pulls them on connect. */
+const scopesNow = (session) => session.execute(function () {
+  return window.__TAURI_INTERNALS__.invoke('solve_get', { part: 'scopes' })
+    .then(function (s) { return JSON.stringify(s); })
+    .catch(function (e) { return JSON.stringify({ error: String(e) }); });
 });
 
 /** What the 3D view says about itself: the selection, and what is lit. */
@@ -920,22 +928,33 @@ try {
   // in — the panel is the thing that detaches, so the fields are on the second
   // monitor and the roof is here. The claim is the same and it now runs the
   // other way round: type beside the money and watch the roof follow.
+  //
+  // This used to type the parapet's own Height, which used to move the wall
+  // flashing line directly — `LF * H`. C3 put a solved ceiling on that line
+  // instead (`FLASH_SF`, `min(FLASHUP, wallTop - finishedRoof(p))`), and the
+  // demo's parapet has 27+ in of clearance under a 24 in `FLASHUP` everywhere
+  // on the run, so doubling H only widens a margin the line was never reading
+  // — the selling price does not move and the row that expected it to went
+  // red honestly. `FLASHUP` is what the line reads now, so that is what is
+  // typed here; the cross-window claim (type beside the money, watch the roof
+  // and the sheet both follow) is unchanged.
   if (B) {
     await session.switchTo(B);
     await showTab(session, 'Condition');
     await wait(600);
   }
-  const heightBefore = Number(panelParapet && panelParapet.height);
+  const flashupBefore = Number(panelParapet && panelParapet.flashup);
+  const scopesBefore = JSON.parse(await scopesNow(session));
   const typed = await session.execute(function (value) {
     const label = [...document.querySelectorAll('.condition-panel label')]
-      .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Height'; });
+      .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Flash up'; });
     const input = label ? label.querySelector('input') : null;
     if (!input) return false;
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
     setter.call(input, String(value));
     input.dispatchEvent(new Event('input', { bubbles: true }));
     return true;
-  }, heightBefore * 2);
+  }, flashupBefore * 2);
   await wait(1600);
 
   let sheetAfter = null;
@@ -951,64 +970,78 @@ try {
   // What the window with the roof in it now says the parapet is, read off the
   // job as that window holds it — one document, two windows.
   let roofAfterTyping = null;
+  let scopesAfter = null;
   if (B) {
     await session.switchTo(A);
     await wait(1200);
     roofAfterTyping = await session.execute(function () {
       return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
         const c = d.conditions.find(function (x) { return x.id === 'c-parapet'; });
-        return String((c.properties || {}).H ?? '');
+        return String((c.properties || {}).FLASHUP ?? '');
       });
     });
+    scopesAfter = JSON.parse(await scopesNow(session));
     await session.switchTo(B);
     await wait(400);
   }
 
-  check('a height typed in the panel moves the selling price pinned under it', () => {
-    assert.ok(typed, 'the panel has no Height field to type in');
-    assert.ok(Number.isFinite(heightBefore),
-      `the panel read its height as "${panelParapet && panelParapet.height}"`);
+  check('a typed FLASHUP moves the selling price pinned under it', () => {
+    assert.ok(typed, 'the panel has no Flash up field to type in');
+    assert.ok(Number.isFinite(flashupBefore),
+      `the panel read its flash-up height as "${panelParapet && panelParapet.flashup}"`);
     assert.ok(sheetAfter, 'there is no cost panel to read the price in');
     assert.notEqual(cents(sheetAfter.selling), cents(sheetParapet.selling),
       `the selling price stayed at ${sheetAfter.selling}`);
   });
-  check('and the roof in the other window took the new height', () => {
+  check('and the roof in the other window took the new FLASHUP', () => {
     // The cross-window half, at the new anatomy: the fields are here and the
-    // geometry is there, so what has to travel is the height itself.
+    // geometry is there, so what has to travel is FLASHUP itself.
     assert.ok(roofAfterTyping !== null, 'there is no other window to look in');
-    assert.ok(roofAfterTyping.includes(String(heightBefore * 2)),
-      `the roof's parapet reads "${roofAfterTyping}" and the height was set to ${heightBefore * 2}`);
+    assert.ok(roofAfterTyping.includes(String(flashupBefore * 2)),
+      `the roof's parapet reads "${roofAfterTyping}" and FLASHUP was set to ${flashupBefore * 2}`);
   });
-  check('and it is the one line the height is in that moved, and it doubled', () => {
+  check('and it is the one line FLASHUP is in that moved, to the solve\'s own number', () => {
     const was = (parapetRowBefore?.money ?? []).map((m) => cents(m.extended));
     const now = (parapetRowAfter?.money ?? []).map((m) => cents(m.extended));
     assert.equal(now.length, was.length, `${was.length} lines before and ${now.length} after`);
     const moved = now.map((v, i) => (v !== was[i] ? i : -1)).filter((i) => i >= 0);
     assert.equal(moved.length, 1,
-      `${moved.length} lines changed when one formula reads the height: ${JSON.stringify({ was, now })}`);
+      `${moved.length} lines changed when one formula reads FLASHUP: ${JSON.stringify({ was, now })}`);
     const i = moved[0];
-    // Doubling H doubles `LF * H`, and the cent it is displayed at is the same
-    // arithmetic rounded once, so this is exact. One cent of tolerance because
-    // a half-cent at the boundary is a display question, not a money question.
-    assert.ok(Math.abs(now[i] - was[i] * 2) <= 1,
-      `the line went from ${was[i]} to ${now[i]} cents when its height doubled`);
+    const flashSfBefore = scopesBefore?.['c-parapet']?.FLASH_SF;
+    const flashSfAfter = scopesAfter?.['c-parapet']?.FLASH_SF;
+    assert.ok(Number.isFinite(flashSfBefore) && Number.isFinite(flashSfAfter),
+      `the solve carries FLASH_SF ${flashSfBefore} before and ${flashSfAfter} after`);
+    // Raising FLASHUP can only raise the ceiling the flashing is clipped at —
+    // never lower it — so the direction is not in question even where the
+    // exact new figure depends on how the wall's own remaining clearance
+    // varies along the run. What IS checked exactly: the line's own money
+    // implies the same FLASH_SF the solve now carries, at the rate `was[i]`
+    // already implied against `flashSfBefore` — the sheet reading the solve's
+    // own number, not a guessed one.
+    assert.ok(flashSfAfter > flashSfBefore,
+      `FLASH_SF went from ${flashSfBefore} to ${flashSfAfter}, which is not up`);
+    const rate = was[i] / flashSfBefore;
+    const impliedNow = now[i] / rate;
+    assert.ok(Math.abs(impliedNow - flashSfAfter) < 0.5,
+      `the line's own money implies ${impliedNow} SF and the solve carries ${flashSfAfter}`);
   });
 
-  // Put the height back, so nothing after this reads a job this check moved.
+  // Put FLASHUP back, so nothing after this reads a job this check moved.
   if (B) {
     await showTab(session, 'Condition');
     await wait(600);
   }
   await session.execute(function (value) {
     const label = [...document.querySelectorAll('.condition-panel label')]
-      .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Height'; });
+      .find(function (l) { return ((l.querySelector('span') || {}).textContent || '').trim() === 'Flash up'; });
     const input = label ? label.querySelector('input') : null;
     if (!input) return false;
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
     setter.call(input, String(value));
     input.dispatchEvent(new Event('input', { bubbles: true }));
     return true;
-  }, heightBefore);
+  }, flashupBefore);
   await wait(1200);
 
   if (B) {

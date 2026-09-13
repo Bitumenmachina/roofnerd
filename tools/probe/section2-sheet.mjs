@@ -135,12 +135,26 @@ try {
     }));
   }));
 
+  // The named numbers the shell solved, pulled the way the app pulls them on
+  // connect — needed below because `FLASH_SF` is a solved ceiling and not a
+  // formula this file can reproduce from two other numbers on the sheet.
+  const solvedScopes = JSON.parse(await session.execute(function () {
+    return window.__TAURI_INTERNALS__.invoke('solve_get', { part: 'scopes' })
+      .then(function (s) { return JSON.stringify(s); })
+      .catch(function (e) { return JSON.stringify({ error: String(e) }); });
+  }));
+
   const parapet = lines.filter((l) => /flashing|coping|mitre|cleat|termination|corner|metal/i.test(l.description));
   check('the formula is on the line, and it is what the library put there', () => {
+    // C3 moved the wall flashing and coping lines off `LF * H` and `SEGMENTS`
+    // onto the names the wall solver carries: `FLASH_SF` is the exact area
+    // under the flashing ceiling (not the whole height of the wall whether or
+    // not the detail is drawn to flash that far), and `COPING_PCS_EA` is the
+    // run's own sections and corners together (not a plain corner count).
     const formulas = parapet.map((l) => l.formula);
-    assert.ok(formulas.includes('LF * H'), `formulas read ${JSON.stringify(formulas)}`);
+    assert.ok(formulas.includes('FLASH_SF'), `formulas read ${JSON.stringify(formulas)}`);
     assert.ok(formulas.includes('LF'), `formulas read ${JSON.stringify(formulas)}`);
-    assert.ok(formulas.includes('SEGMENTS'), `formulas read ${JSON.stringify(formulas)}`);
+    assert.ok(formulas.includes('COPING_PCS_EA'), `formulas read ${JSON.stringify(formulas)}`);
   });
   check('one traced run feeds three different units', () => {
     const units = new Set(parapet.map((l) => l.unit));
@@ -148,11 +162,19 @@ try {
       assert.ok(units.has(want), `units read ${[...units].join(', ')}`);
     }
   });
-  check('LF * H turned a run into an area, and it is the run times the height', () => {
-    const flash = parapet.find((l) => l.formula === 'LF * H');
-    const run = parapet.find((l) => l.formula === 'LF');
-    assert.ok(flash && run, 'the parapet is missing a line');
-    nearly(flash.quantity, Number(run.quantity.replace(/,/g, '')) * stated.H, 'wall flashing', 0.05);
+  check('FLASH_SF turned a run into an area, and it is the solve\'s own', () => {
+    // No longer a hand check against `run x H` — `FLASH_SF` is
+    // `min(FLASHUP, wallTop - finishedRoof(p))` summed as trapezoids along the
+    // run, not a plain product this file can reproduce from two numbers on the
+    // sheet. What it CAN check without re-deriving the solver: the line's own
+    // quantity is exactly what `solve_get('scopes')` carries for this
+    // condition, because a `◈` line naming one derived name alone shows that
+    // name's own value with nothing else applied to it.
+    const flash = parapet.find((l) => l.formula === 'FLASH_SF');
+    assert.ok(flash, 'the parapet is missing a line');
+    const solved = solvedScopes?.['c-parapet']?.FLASH_SF;
+    assert.ok(Number.isFinite(solved), `the solve carries no FLASH_SF: ${solved}`);
+    nearly(flash.quantity, solved, 'wall flashing', 0.5);
   });
   check('and the unit on it is an area, because feet times feet is not feet', () => {
     // The other side of the dimension flag, and the side worth shipping: the
@@ -161,14 +183,22 @@ try {
     // with the wrong unit on it. It declares the area it works out to, the
     // advisory stays quiet because there is nothing to say, and the advisory
     // itself is proved below on a line changed while the window is open.
-    const flash = parapet.find((l) => l.formula === 'LF * H');
+    const flash = parapet.find((l) => l.formula === 'FLASH_SF');
     assert.equal(flash.unit, 'SF', `the line is priced as ${flash.unit}`);
     assert.equal(flash.note, '', `the line carries an advisory it should not: "${flash.note}"`);
   });
-  check('the corners are counted, and they are the run\'s own', () => {
-    const mitre = parapet.find((l) => l.formula === 'SEGMENTS');
-    assert.ok(mitre, 'no line bought against the corners');
-    nearly(mitre.quantity, stated.corners, 'corners');
+  check('the corners are bought inside the run\'s own pieces, not typed', () => {
+    // `COPING_PCS_EA` is sections plus corners together (the catalogue prices
+    // one shop-formed line for a coping run's plain lengths and its corners
+    // rather than carrying two) — so the exact claim `SEGMENTS` let this row
+    // make (one piece a corner) no longer holds, and the honest one is that
+    // the run's own corner count is a LOWER BOUND: the pieces this line buys
+    // can never be fewer than the corners the trace itself turns.
+    const mitre = parapet.find((l) => l.formula === 'COPING_PCS_EA');
+    assert.ok(mitre, 'no line bought against the coping pieces');
+    const pieces = Number(String(mitre.quantity).replace(/,/g, ''));
+    assert.ok(pieces >= stated.corners,
+      `the sheet buys ${pieces} coping pieces and the trace turns ${stated.corners} corners`);
   });
   check('each line extends at its own price', () => {
     for (const l of parapet) {

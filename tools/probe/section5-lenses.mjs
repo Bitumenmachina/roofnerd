@@ -53,6 +53,20 @@ try {
   await openDemoJob(session);
   await wait(1200);
 
+  /** The parapet's own item count and first formula, read off the open job. */
+  const parapetState = () => session.execute(function () {
+    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+      const c = d.conditions.find(function (x) { return x.id === 'c-parapet'; });
+      return JSON.stringify({ items: (c.items || []).length, first: (c.items || [])[0].formula });
+    });
+  });
+  // Read once, before any lens is picked, so "changed nothing" is checked
+  // against what the job actually said when this file opened it — never
+  // against a formula typed into this file, which is exactly what broke the
+  // day the wall solver renamed the parapet's own first line's formula and
+  // the check kept comparing against the retired one.
+  const beforeAnyLens = JSON.parse(await parapetState());
+
   // Who the estimate is being shown to is asked once, in the document bar —
   // the handoff's "WHO IS LOOKING" menu — and the answer is drawn in the cost
   // panel over the same document. There is no Reports editor to switch to.
@@ -167,19 +181,17 @@ try {
   });
 
   // ── a lens never edits the estimate ─────────────────────────────────────
-  const untouched = await session.execute(function () {
-    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
-      const c = d.conditions.find(function (x) { return x.id === 'c-parapet'; });
-      return JSON.stringify({ items: (c.items || []).length, first: (c.items || [])[0].formula });
-    });
-  });
+  const afterEveryLens = JSON.parse(await parapetState());
   check('and looking through a lens changed nothing', () => {
-    const state = JSON.parse(untouched);
-    // Eight lines on the parapet since the demo became the handoff's roof:
-    // flashing, coping, cleat, corners, termination bar, fasteners, the crew
-    // that flashes the wall and the shop that forms and sets the metal.
-    assert.equal(state.items, 8);
-    assert.equal(state.first, 'LF * H');
+    // Against what this file read off the job itself before picking a single
+    // lens — never a formula typed into this file, which is a copy of a
+    // fixture value and goes stale the moment the fixture legitimately
+    // changes (found here: the wall solver renamed the parapet's own first
+    // line's formula, and a hardcoded 'LF * H' kept comparing against the
+    // retired one instead of against whatever the job actually says).
+    assert.deepEqual(afterEveryLens, beforeAnyLens,
+      `the parapet read ${JSON.stringify(beforeAnyLens)} before a lens was picked and `
+      + `${JSON.stringify(afterEveryLens)} after`);
   });
 } catch (e) {
   results.push('FAIL');
