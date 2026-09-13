@@ -22,10 +22,10 @@
 //   dollars adrift of the report it is being checked against.
 
 import type {
-  ClassAdders, ClassName, CostCode, JobDocument, Money, Percent, Scenario,
+  Basis, ClassAdders, ClassName, CostCode, JobDocument, Money, Percent, Scenario,
 } from './model.js';
-import { CLASS_NAMES } from './model.js';
-import { priceLine, type LineResult } from './line.js';
+import { BASES, BASIS_WORDS, CLASS_NAMES } from './model.js';
+import { linesFrom, priceLine, type LineResult } from './line.js';
 import { plural } from './words.js';
 import { measureJob } from './takeoff.js';
 import { scopeFor } from './measures.js';
@@ -51,6 +51,34 @@ export interface ClassLine {
   readonly perSquare: Money | null;
 }
 
+/**
+ * What one kind of cost comes to.
+ *
+ * The class table answers "which bucket does this land in for the adders"; this
+ * answers the question a roofer asks first, which is a different one: how much
+ * of this job is my crew, how much is the shop, how much is somebody else's
+ * truck. A job that is two thirds subcontract is a job run differently from one
+ * that is two thirds our own labor, and the class table cannot say which it is
+ * because Sub and Labor both have codes scattered across it.
+ */
+export interface BasisLine {
+  readonly basis: Basis;
+  readonly subtotal: Money;
+  /** Hours in this kind, at full precision. Nought on everything but work. */
+  readonly hours: number;
+  readonly lines: number;
+}
+
+/** A line carried on the sheet and out of the total, with its reason. */
+export interface OffLine {
+  readonly where: string;
+  readonly what: string;
+  readonly basis: Basis;
+  readonly reason: string;
+  /** What it would have come to. Null where it was never priced. */
+  readonly amount: Money | null;
+}
+
 export interface Recap {
   readonly classes: readonly ClassLine[];
   readonly jobCost: Money;
@@ -68,6 +96,26 @@ export interface Recap {
   readonly squaresLeftOut: readonly string[];
   readonly totalHours: number;
   readonly perSquare: Money | null;
+  /** The same job rolled up by what each line IS, rather than by its bucket. */
+  readonly bases: readonly BasisLine[];
+  /**
+   * Hours over squares — the first figure a roofer checks on a recap.
+   *
+   * A dollar rate can be argued about all day; hours a square is the one number
+   * that says whether the estimator believed something the crew can do. Null
+   * where nothing is priced on any traced area, because a rate with no divisor
+   * is two unrelated numbers in a fraction.
+   */
+  readonly hoursPerSquare: number | null;
+  /**
+   * Lines kept on the sheet and out of every total, each with its reason.
+   *
+   * Not the same list as `pending`, and it matters that they are apart: a
+   * pending line is one nobody could work out, and an off line is one somebody
+   * decided about. Deleting the second kind is how a bid loses the argument it
+   * was carrying.
+   */
+  readonly off: readonly OffLine[];
   /**
    * Lines whose money could not be worked out. They are named, not counted as
    * zero. A total taken over an unpriced line is a total that lies.
@@ -156,6 +204,10 @@ export function totalOfLines(lines: readonly PricedLine[]): LineTotal {
   let priced = 0;
   let unpriced = 0;
   for (const line of lines) {
+    // A struck line is on the sheet and out of every total — including this
+    // one, which is what the condition panel and the Condition Summary lens
+    // both add up. It is not unpriced either: somebody decided about it.
+    if (line.off !== null) continue;
     if (line.extended === null) { unpriced += 1; continue; }
     cents += centsOf(line.extended);
     priced += 1;
@@ -182,13 +234,19 @@ export function priceJob(doc: JobDocument, scenario: Scenario, solved?: Scopes):
     const measures = measured.get(condition.id);
     if (!measures) continue;
     const scope = scopeFor(measures, condition.properties ?? {}, solved?.[condition.id]);
-    for (const item of condition.items ?? []) {
-      out.push({
-        ...priceLine(item, scope, scenario.prices ?? {}, condition.waste ?? 0),
-        conditionId: condition.id,
-        conditionName: condition.name,
-        class: classOf(doc.costCodes, item.costCode) ?? null,
-      });
+    for (const stored of condition.items ?? []) {
+      const cls = classOf(doc.costCodes, stored.costCode) ?? null;
+      // One stored item can be a family — one line per lettered panel the
+      // layout reached. `linesFrom` answers with the item itself for every
+      // other line there has ever been.
+      for (const item of linesFrom(stored, scope)) {
+        out.push({
+          ...priceLine(item, scope, scenario.prices ?? {}, condition.waste ?? 0, cls),
+          conditionId: condition.id,
+          conditionName: condition.name,
+          class: cls,
+        });
+      }
     }
   }
   return out;
@@ -239,7 +297,11 @@ export function squaresOf(doc: JobDocument): {
   for (const condition of doc.conditions) {
     if (condition.kind !== 'area') continue;
     const sq = measured.get(condition.id)?.SQ;
-    if ((condition.items?.length ?? 0) === 0) {
+    // A line struck off the sheet is not a line this area carries, so an area
+    // whose every line is struck leaves the divisor the same way an area with
+    // no lines at all does — and says so, for the same reason.
+    const carried = (condition.items ?? []).filter((i) => i.off === undefined).length;
+    if (carried === 0) {
       if (sq) leftOut.push(`${condition.name}: ${sq.toFixed(2)} SQ traced, with nothing priced on it`);
       continue;
     }
@@ -267,10 +329,27 @@ export function recap(doc: JobDocument, scenario: Scenario, solved?: Scopes): Re
   // rule above. Dollars are only ever made from these at the end.
   const centsBy = new Map<ClassName, number>(CLASS_NAMES.map((c) => [c, 0]));
   const hoursBy = new Map<ClassName, number>(CLASS_NAMES.map((c) => [c, 0]));
+  const basisCents = new Map<Basis, number>(BASES.map((b) => [b, 0]));
+  const basisHours = new Map<Basis, number>(BASES.map((b) => [b, 0]));
+  const basisLines = new Map<Basis, number>(BASES.map((b) => [b, 0]));
   const pending: string[] = [];
+  const off: OffLine[] = [];
 
   for (const line of lines) {
     const where = `${line.conditionName} → ${line.item.description || line.item.id}`;
+    // Struck first, before anything else has an opinion about it. An off line
+    // with no price is still an off line; sending it to the pending list would
+    // say nobody could work it out, when somebody decided it was not ours.
+    if (line.off !== null) {
+      off.push({
+        where: line.conditionName,
+        what: line.item.description || line.item.id,
+        basis: line.basis,
+        reason: line.off,
+        amount: line.extended,
+      });
+      continue;
+    }
     if (line.class === null) {
       pending.push(`${where}: cost code "${line.item.costCode}" is in no class`);
       continue;
@@ -279,6 +358,9 @@ export function recap(doc: JobDocument, scenario: Scenario, solved?: Scopes): Re
       pending.push(`${where}: ${line.pending ?? 'no money'}`);
       continue;
     }
+    basisCents.set(line.basis, (basisCents.get(line.basis) ?? 0) + centsOf(line.extended));
+    basisLines.set(line.basis, (basisLines.get(line.basis) ?? 0) + 1);
+    if (line.hours !== null) basisHours.set(line.basis, (basisHours.get(line.basis) ?? 0) + line.hours);
     centsBy.set(line.class, (centsBy.get(line.class) ?? 0) + centsOf(line.extended));
     // Full precision, deliberately, and deliberately NOT the rule the money
     // above follows. Summing displayed hours is how a labor total ends up
@@ -303,6 +385,13 @@ export function recap(doc: JobDocument, scenario: Scenario, solved?: Scopes): Re
     };
   });
 
+  const bases: BasisLine[] = BASES.map((b) => ({
+    basis: b,
+    subtotal: fromCents(basisCents.get(b) ?? 0),
+    hours: basisHours.get(b) ?? 0,
+    lines: basisLines.get(b) ?? 0,
+  }));
+
   const jobCost = classes.reduce((sum, c) => sum + c.total, 0);
   const overhead = pct(jobCost, scenario.overhead);
   const profit = pct(jobCost + overhead, scenario.profit);
@@ -323,6 +412,9 @@ export function recap(doc: JobDocument, scenario: Scenario, solved?: Scopes): Re
     squaresLeftOut,
     totalHours,
     perSquare: totalSquares ? sellingPrice / totalSquares : null,
+    bases,
+    hoursPerSquare: totalSquares ? totalHours / totalSquares : null,
+    off,
     pending,
   };
 }
@@ -355,8 +447,29 @@ export function formatRecap(r: Recap): string {
   rows.push('-'.repeat(52));
   line('SELLING PRICE', r.sellingPrice);
 
+  // What a roofer reads before any of the above: how much roof, how many hours,
+  // and the two divided. Hours a square is the figure that says whether the
+  // estimator believed something the crew can actually do.
   if (r.totalSquares) rows.push(`\nTotal SQ    ${num(r.totalSquares)}`);
   if (r.totalHours) rows.push(`Total hours ${num(r.totalHours)}`);
+  if (r.hoursPerSquare !== null) rows.push(`Hours/SQ    ${num(r.hoursPerSquare)}`);
+
+  const worked = r.bases.filter((b) => b.lines > 0);
+  if (worked.length) {
+    rows.push('', 'By what each line is:');
+    for (const b of worked) {
+      const hrs = b.hours ? `   ${num(b.hours)} hrs` : '';
+      rows.push(`  ${BASIS_WORDS[b.basis].padEnd(14)}${money(b.subtotal).padStart(16)}${hrs}`);
+    }
+  }
+
+  if (r.off.length) {
+    rows.push('', `${plural(r.off.length, 'line')} on the sheet and out of the total:`);
+    for (const o of r.off) {
+      const amount = o.amount === null ? 'never priced' : money(o.amount);
+      rows.push(`  ${o.where} → ${o.what}: ${o.reason} (${amount})`);
+    }
+  }
 
   if (r.pending.length) {
     rows.push('', `${plural(r.pending.length, 'line')} not in the total:`);

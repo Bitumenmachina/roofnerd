@@ -94,7 +94,9 @@ test('a broken formula reports itself and prices nothing', () => {
 });
 
 test('labor hours come from a production rate, never typed', () => {
-  const r = priceLine(item({ formula: 'LF', unit: 'LF', productionRate: 40, unitCost: 1 }), scope);
+  const r = priceLine(item({
+    formula: 'LF', unit: 'LF', production: { rate: 40, per: 'man-hour' }, unitCost: 1,
+  }), scope);
   assert.equal(r.hours, 400 / 40);
 });
 

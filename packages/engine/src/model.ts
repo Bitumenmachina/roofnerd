@@ -111,6 +111,143 @@ export interface UnitStep {
   readonly rule: RoundingRule;
 }
 
+// ── What a line is, and what it takes to build it ──────────────────────────
+//
+// A commercial estimate is read kind by kind. Material is bought, labor is put
+// in by a crew at a rate, metal is fabricated in a shop before anybody carries
+// it up a ladder, a subcontractor's work arrives as a number with a name on it,
+// equipment is rented by the day or the week, and everything else is other.
+//
+// None of that is typed on a line. The line says what it is by what it carries
+// — a production rate makes it labor, a shop rate makes it fabrication, the
+// cost code's own class decides the rest — because a dropdown asking an
+// estimator to classify what they just wrote is a question the sheet can
+// already answer.
+
+/**
+ * How a production rate is stated. The unit a foreman says it in.
+ *
+ * `crew-day` — forty squares a day, with a crew of six. The usual.
+ * `crew-hour` — what the same crew does in an hour.
+ * `man-hour` — one pair of hands for an hour; what a rate book prints.
+ * `shop-hour` — an hour at the brake. Its own word because it is its own
+ *   building: the shop runs while the roof does, and a coping cap fabricated
+ *   on Tuesday is set on Thursday by somebody else.
+ */
+export type ProductionPer = 'crew-day' | 'crew-hour' | 'man-hour' | 'shop-hour';
+
+export const PRODUCTION_PER: readonly ProductionPer[] =
+  ['crew-day', 'crew-hour', 'man-hour', 'shop-hour'] as const;
+
+/** What a rate is called where a person reads it, not where it is divided. */
+export const PRODUCTION_PER_WORDS: Readonly<Record<ProductionPer, string>> = {
+  'crew-day': 'a crew-day',
+  'crew-hour': 'a crew-hour',
+  'man-hour': 'a man-hour',
+  'shop-hour': 'a shop hour',
+};
+
+/** How fast the work goes, stated the way the person doing it states it. */
+export interface Production {
+  /** How many estimating units go in per `per`. */
+  readonly rate: number;
+  readonly per: ProductionPer;
+  /**
+   * How many are in the crew. A crew-day and a crew-hour need it; a man-hour
+   * rate does not, and a shop hour is one pair of hands unless it says more.
+   */
+  readonly crew?: number;
+}
+
+/** Hours in a crew's working day. A library number later; this is the default. */
+export const HOURS_PER_CREW_DAY = 8;
+
+/**
+ * The rate as the arithmetic needs it: estimating units per MAN-hour.
+ *
+ * One conversion, in the engine, from the one place the rate is stated. It used
+ * to happen in a helper in the demo's price script, which meant the crew size
+ * that divided the rate and the crew size printed on the line were two facts
+ * that agreed only as long as somebody kept them agreeing.
+ *
+ * Null where the rate cannot be carried — a crew-day rate with no crew is a
+ * sentence missing half of itself, and it reads as pending rather than as a
+ * number somebody guessed.
+ */
+export function perManHour(production: Production): number | null {
+  if (!(production.rate > 0)) return null;
+  switch (production.per) {
+    case 'man-hour':
+      return production.rate;
+    case 'shop-hour':
+      // One hand at the brake unless the shop says two.
+      return production.rate / (production.crew && production.crew > 0 ? production.crew : 1);
+    case 'crew-hour':
+      return production.crew && production.crew > 0 ? production.rate / production.crew : null;
+    case 'crew-day':
+      return production.crew && production.crew > 0
+        ? production.rate / (production.crew * HOURS_PER_CREW_DAY)
+        : null;
+  }
+}
+
+/** Why a line is on the sheet and out of the total. */
+export interface OffTheSheet {
+  /** In the words you would say across the table: by others, not in scope, alternate. */
+  readonly reason: string;
+}
+
+/** The reasons that recur. A suggestion for a picklist, not a closed set. */
+export const OFF_REASONS: readonly string[] = ['by others', 'not in scope', 'alternate'];
+
+/**
+ * What kind of cost a line is.
+ *
+ * The same five an estimating system prints, plus the one every sheet-metal
+ * roofer keeps separate and no system does: what the shop makes, before
+ * anybody installs it.
+ */
+export type Basis = 'material' | 'labor' | 'fabrication' | 'sub' | 'equipment' | 'other';
+
+export const BASES: readonly Basis[] =
+  ['material', 'labor', 'fabrication', 'sub', 'equipment', 'other'] as const;
+
+/** What each kind is called where a person reads it. */
+export const BASIS_WORDS: Readonly<Record<Basis, string>> = {
+  material: 'Material',
+  labor: 'Labor',
+  fabrication: 'Fabrication',
+  sub: 'Subcontract',
+  equipment: 'Equipment',
+  other: 'Other',
+};
+
+/**
+ * What kind of cost this line is — never typed, always read off the line.
+ *
+ * The order matters and it is the order an estimator reads in. A rate at the
+ * brake is fabrication whatever bucket its code sits in; anything else with a
+ * rate on it is labor; and with no rate the cost code's own class already says
+ * what it is, which is the whole reason a cost code exists.
+ */
+export function basisOf(item: Item, cls: ClassName | null | undefined): Basis {
+  if (item.production?.per === 'shop-hour') return 'fabrication';
+  if (item.production !== undefined) return 'labor';
+  switch (cls) {
+    case 'Labor':
+    case 'Supervision':
+      return 'labor';
+    case 'Sub':
+      return 'sub';
+    case 'Equipment':
+      return 'equipment';
+    case 'Material':
+      return 'material';
+    default:
+      return 'other';
+  }
+}
+
 /**
  * One thing a condition consumes.
  *
@@ -143,14 +280,48 @@ export interface Item {
   /** The price, per price unit — or per order unit, or per estimating unit, whichever is last. */
   readonly unitCost?: Money;
   /**
-   * Units this crew puts in per hour. On a labor line this IS the order-step
-   * conversion: the order unit is HOURS and the rate turns the measure into
-   * them. Crew days come from hours; hours are never typed directly, except on
-   * supervision, which is entered as hours to begin with.
+   * How fast the work goes, and the crew it assumes.
+   *
+   * On a labor line this IS the order-step conversion: the order unit is HOURS
+   * and the rate turns the measure into them. Crew days come from hours; hours
+   * are never typed directly, except on supervision, which is stated as days of
+   * a foreman and reaches hours the same way everything else does.
+   *
+   * It replaced a bare `productionRate` in units per man-hour. That number was
+   * right and nobody says it: a foreman states forty squares a crew-day and a
+   * shop states eighty feet an hour at the brake, and the conversion into man
+   * hours was being done in a script's helper with the crew size beside it in a
+   * comment. A basis in a comment is a basis nobody can check on the sheet.
    */
-  readonly productionRate?: number;
-  /** How many are in the crew. Derives crew-days for the labor lens only. */
-  readonly crewSize?: number;
+  readonly production?: Production;
+  /**
+   * This is one line standing for a family of them, one per name the model
+   * found: `TAPER_*_SF`, where the star is a lettered panel.
+   *
+   * The fastener lines are three because a roof has three wind zones, and three
+   * is a fact about wind that does not change. How many lettered panels a
+   * tapered package buys is NOT like that: a quarter in twelve buys X, Y, Z and
+   * ZZ and an eighth buys a different series entirely, so a job file with four
+   * lettered lines typed into it prices nothing at all the moment somebody
+   * moves the slope — and says so honestly, line by line, which is worse than
+   * useless because the sheet then shows four panels this roof does not buy.
+   *
+   * So the estimator writes one line, and the sheet shows one per letter the
+   * layout actually reached. The price comes off the scenario for each
+   * generated line's own id, which is what a price book is: the supply house
+   * quotes a panel, not this job's opinion of one.
+   */
+  readonly eachOf?: string;
+  /**
+   * Carried on the sheet and out of every total, with the reason.
+   *
+   * A line that is somebody else's, or not in this scope, or an alternate to
+   * something else on the sheet, does not get deleted — a line that vanishes is
+   * a line nobody argues about, and the argument is the point of an estimate.
+   * It keeps its basis, so the recap can still say what taking the alternate
+   * would add back.
+   */
+  readonly off?: OffTheSheet;
   /** Where the price came from and how firm it is. */
   readonly priceSource?: PriceSource;
   /** The profile this item is formed from, when it is sheet metal. */

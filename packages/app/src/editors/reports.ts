@@ -46,6 +46,15 @@ type Row = Record<string, string>;
 /** How many squares the recap's rates were taken over. Printed beside them. */
 let perSquareOver: number | null = null;
 
+/**
+ * The three figures a recap carries that are not rows in its table.
+ *
+ * A report prints them under the ladder, where a roofer looks first: how much
+ * roof, how many hours, and hours a square. Held here between building the
+ * rows and drawing the sheet, the same way the divisor above is.
+ */
+let recapSummary: readonly (readonly [string, string])[] = [];
+
 function drawLens(host: HTMLElement, d: Doc, lensId: string): void {
   host.replaceChildren();
   const lens = lensById(lensId);
@@ -100,8 +109,10 @@ function drawLens(host: HTMLElement, d: Doc, lensId: string): void {
   host.append(head);
 
   perSquareOver = null;
+  recapSummary = [];
   const rows = rowsFor(lens, d);
   const left = leftOut(lens, d);
+  const struck = takenOff(lens, d);
 
   const table = document.createElement('table');
   const thead = document.createElement('thead');
@@ -127,6 +138,45 @@ function drawLens(host: HTMLElement, d: Doc, lensId: string): void {
   table.append(thead, tbody);
   host.append(table);
 
+  // Under the ladder: how much roof, how many hours, and the two divided. The
+  // last of those is the figure an estimator checks before any of the money
+  // above it — it says whether somebody believed a week the crew can work.
+  if (recapSummary.length > 0) {
+    const summary = document.createElement('div');
+    summary.className = 'lens-summary';
+    for (const [name, value] of recapSummary) {
+      const row = document.createElement('div');
+      row.className = 'summary-row';
+      const k = document.createElement('span');
+      k.className = 'summary-name';
+      k.textContent = name;
+      const v = document.createElement('span');
+      v.className = 'summary-value num';
+      v.textContent = value;
+      row.append(k, v);
+      summary.append(row);
+    }
+    host.append(summary);
+  }
+
+  // Lines somebody took off the bid, kept where they can be argued about. Not
+  // the same list as the one below it: that is what nobody could work out, and
+  // this is what somebody decided.
+  if (struck.length > 0) {
+    const note = document.createElement('div');
+    note.className = 'lens-struck';
+    const h = document.createElement('strong');
+    h.textContent = `On the sheet and out of this total (${struck.length}):`;
+    const ul = document.createElement('ul');
+    for (const o of struck) {
+      const li = document.createElement('li');
+      li.textContent = o;
+      ul.append(li);
+    }
+    note.append(h, ul);
+    host.append(note);
+  }
+
   // A total that leaves something out says what it left out. The recap's own
   // arithmetic already knows — it collects every line it could not add — and a
   // sheet that showed the total without it would be the silent zero this
@@ -148,7 +198,7 @@ function drawLens(host: HTMLElement, d: Doc, lensId: string): void {
 
   // Built once, from the rows the table above was drawn from. The clipboard and
   // the file cannot disagree because there is nothing for them to disagree about.
-  const csv = csvFor(lens, rows, left);
+  const csv = csvFor(lens, rows, left, recapSummary, struck);
 
   download.addEventListener('click', () => {
     void navigator.clipboard?.writeText(csv);
@@ -205,7 +255,11 @@ const headingOf = (c: LensColumn): string =>
  * place it matters most: after it has left the building. Padded to the table's
  * width so the file is still a rectangle anything can read.
  */
-function csvFor(lens: Lens, rows: Row[], left: readonly string[]): string {
+function csvFor(
+  lens: Lens, rows: Row[], left: readonly string[],
+  summary: readonly (readonly [string, string])[] = [],
+  struck: readonly string[] = [],
+): string {
   const width = lens.columns.length;
   const line = (cells: readonly string[]) =>
     Array.from({ length: width }, (_, i) => quote(cells[i] ?? '')).join(',');
@@ -214,6 +268,17 @@ function csvFor(lens: Lens, rows: Row[], left: readonly string[]): string {
     line(lens.columns.map(headingOf)),
     ...rows.map((r) => line(lens.columns.map((c) => r[c.key] ?? ''))),
   ];
+  // What is on the screen is what is in the file. Hours a square is a figure
+  // somebody will check the attached sheet for, and a file that carried the
+  // ladder without it would be a different report from the one on screen.
+  if (summary.length > 0) {
+    out.push(line([]));
+    for (const [name, value] of summary) out.push(line([name, value]));
+  }
+  if (struck.length > 0) {
+    out.push(line([]), line([`On the sheet and out of this total (${struck.length})`]));
+    for (const o of struck) out.push(line([o]));
+  }
   if (left.length > 0) {
     out.push(line([]), line([`Not in this total (${left.length})`]));
     for (const p of left) out.push(line([p]));
@@ -270,6 +335,28 @@ function leftOut(lens: Lens, d: Doc): string[] {
   return [...r.pending, ...r.squaresLeftOut];
 }
 
+/**
+ * The lines this lens is carrying and not adding up, each with its reason.
+ *
+ * Every lens that totals anything owes this the same way it owes the pending
+ * footnote. A sheet that printed the number without the struck lines under it
+ * would be the silent zero at the one place it matters most — after the sheet
+ * has left the building and somebody is reading it without us in the room.
+ */
+function takenOff(lens: Lens, d: Doc): string[] {
+  if (lens.id !== 'recap' && lens.id !== 'condition-summary') return [];
+  const job = at('/job', d) as
+    { scenarios?: { id: string }[]; activeScenarioId?: string } | undefined;
+  const scenario = job?.scenarios?.find((s) => s.id === job.activeScenarioId) ?? job?.scenarios?.[0];
+  if (!scenario) return [];
+  return recapOf(
+    { ...(d as object) } as Parameters<typeof recapOf>[0],
+    scenario as Parameters<typeof recapOf>[1],
+    derived(),
+  ).off.map((o) => `${o.where} → ${o.what}: ${o.reason}`
+    + (o.amount === null ? '' : ` (${money(o.amount)})`));
+}
+
 const quote = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 const num = (v: number | null, places = 2) =>
   (v === null ? '' : v.toLocaleString('en-US', { minimumFractionDigits: places, maximumFractionDigits: places }));
@@ -297,10 +384,21 @@ function rowsFor(lens: Lens, d: Doc): Row[] {
     // beside them, and every check passed because none of them read the recap.
     // Found by opening a real job and looking at the sheet.
     perSquareOver = r.totalSquares;
+    // Held for the summary block under the table. A lens draws rows; this one
+    // also has three figures that are not rows — how much roof, how many hours,
+    // and the two divided — and they are what a roofer reads first.
+    recapSummary = [
+      ['Total SQ', r.totalSquares === null ? '—' : num(r.totalSquares)],
+      ['Total hours', num(r.totalHours)],
+      ['Hours/SQ', r.hoursPerSquare === null ? '—' : num(r.hoursPerSquare)],
+    ];
     return r.classes.map((c) => ({
       class: c.class,
       cost: money(c.total),
       perSquare: c.perSquare === null ? '' : `${money(c.perSquare)}/SQ`,
+      // Nought hours against Material is a fact and reads as one; a blank would
+      // read as a figure nobody worked out.
+      hours: num(c.hours),
     }));
   }
 

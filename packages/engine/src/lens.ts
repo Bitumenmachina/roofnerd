@@ -76,7 +76,12 @@ export const LENSES: readonly Lens[] = [
     id: 'recap',
     name: 'Recap',
     audience: 'accounting, and the owner',
-    columns: [col('class', 'Class'), col('cost', 'Cost', true), col('perSquare', 'Per SQ', true)],
+    // Hours beside the money, because a labor total nobody can check against a
+    // crew and a calendar is a labor total nobody checks at all.
+    columns: [
+      col('class', 'Class'), col('cost', 'Cost', true),
+      col('perSquare', 'Per SQ', true), col('hours', 'Hours', true),
+    ],
     conceal: ['waste', 'notes', 'derivation'],
     note: 'The roll-up to selling price, by class.',
   },

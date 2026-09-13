@@ -62,14 +62,17 @@ If a screen says something else, that is a defect — report it.
 | **Elevation** | How high something sits, in feet. Top of the deck on an area; the base of the run on a line. |
 | **Sump** | The square cut down around a drain so the tapered field can meet the bowl. Four foot or eight, off the thickness at the drain. |
 | **Girth** | The flat width of coil a formed profile eats — the blank strip a piece is rolled from. The shop calls the same measure the *stretch-out*; a quote written either way is read the same. |
-| **Item** | One thing a condition consumes: material, labor, equipment, a sub, or something else. |
+| **Item** | One thing a condition consumes: material, labor, fabrication, a sub, equipment, or something else. |
+| **Kind** | What an item is, in those words. Never typed: a rate at the brake makes it fabrication, any other rate makes it labor, and with no rate the cost code's own class already says. |
+| **Rate** | How fast the work goes, said the way a foreman says it — forty squares a crew-day with six men, eighty feet a shop hour. The hours follow from it and are never typed. |
+| **Off the sheet** | A line carried and not counted, with the reason beside it: by others, not in scope, an alternate. It stays struck on the estimate, because a line that vanishes is a line nobody argues about. |
 | **Formula** | The arithmetic that turns what you measured into how much of an item you need. It is printed on the estimate line and you can edit it there. A formula you cannot see is a formula you cannot trust. |
 | **Order unit** | What the supply house actually sells — a roll, a sheet, a box, a 5-gallon pail — and the conversion from what you measured to what you order, waste included. |
 | **Assembly** | A saved set of items for a condition. Generic, or a specific manufacturer's system. |
 | **Library** | The folder of assemblies, profiles, prices and codes. Optional. You can bid a job without ever opening it. |
 | **Cost code** | Your own bucket for a cost. Defaults to an 07-xxx pattern; rename them all if you want. |
 | **Class** | The recap bucket a cost rolls into, each with its own adders: Material, Labor, Sub, Equipment, Other, Supervision. |
-| **Recap** | The roll-up to selling price. Every adder — tax, burden, escalation, overhead, profit, bond — is editable. |
+| **Recap** | The roll-up to selling price. Every adder — tax, burden, escalation, overhead, profit, bond — is editable, and it prints **Hours/SQ**, which is the first figure a roofer checks. |
 | **Lens** | A report. One estimate, filtered for one party. |
 
 Units are **SF**, **LF**, **EA** and **SQ**. Those four, spelled that way, everywhere.

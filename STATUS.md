@@ -28,6 +28,55 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## C9 — the labor basis: the sheet prices the way a roofer states it (2026-09-13)
+
+**Every line now says what kind of cost it is, what crew puts it in and how fast they go, and the
+recap prints Hours/SQ.** The rates are written the way a foreman says them — forty squares a
+crew-day with six men, seventy feet an hour at the brake — and the engine does the one conversion
+into man-hours. Before this, an item carried a units-per-man-hour figure with the crew size beside
+it in a comment in the demo's price script, so the crew that divided the rate and the crew printed
+on the line were two facts kept in step by hand, and neither was on screen.
+
+**What kind of cost a line is is never typed.** An hour at the brake is fabrication whatever bucket
+its code sits in; anything else with a rate is labor; with no rate the cost code's own class already
+answered it. A subcontract line carries the name it was quoted by and no hours against it. And a
+line can be OFF: struck, still on the sheet, out of the class subtotals, the condition's total and
+the per-square divisor, with the reason in the words you would say across the table — kept apart
+from the pending list, because a pending line is one nobody could work out and an off line is one
+somebody decided about (D161).
+
+**The demo restated, and the money moved.** $212,153.98 → $230,496.85, and the hours are most of
+it: 405.51 → 796.59, which is 8.30 Hours/SQ on the recap where it can be argued with. Two production
+rates moved and not on anybody's taste — the supervision line carries fifteen foreman days and, at
+the rates the file held, the whole roof went on in about four and a half. The tapered package came
+off sixty squares a crew-day (that is the rate for one mechanically attached board, not a four
+course ribbon-adhered package), the membrane off sixty to forty and the cover board off eighty to
+fifty, all adhered. Tear off, the wall flashing and the curb did not move. Six men now get through
+about ten squares a day all in, tear-off included: a fortnight on ninety-six squares, which
+reconciles with the supervision beside it. The metal became fabricate-and-install pairs for the coping and the
+cleat, with the metal sub's own number for the same work struck as the alternate; a crane and the
+curb rework arrived as somebody else's day with a name on it; and supervision and the permit left
+the roof field for a General Conditions group, where they stop being inside every dollar-a-square
+figure the field reports.
+
+**And the tapered lines are generated from the letters the roof bought** (D162). C6's fix round
+found four items typed for X, Y, Z and ZZ that priced nothing the moment somebody set the high and
+low points and landed in another chart's series. One line stands for the package now and the sheet
+draws one per letter the solve found, priced from the job's own price set — which carries every
+lettered panel in every chart of the manufacturer's document, not only the four today's slope
+reaches. A family the model found none of stays one line and says so.
+
+**What Patrick should look at.** Hours/SQ at 8.30 and the two rates behind it; whether a six-man
+crew on this roof is the crew he would carry. The General Conditions group, and whether the permit
+belongs in it or stays on the field. The struck metal line: whether an alternate kept on the sheet
+reads right, or whether he wants it out of the file.
+
+**Checks.** `pnpm -r build && pnpm test && pnpm gates` green at every commit through the hook —
+engine 191, app 41, shell 14, core 64 plus its five suites, three gates PASS (rebased onto C7).
+`tools/probe/section-labor.mjs` was written first and red, and **has not been run**: no binary in
+this clone and `pnpm build:app` is outside this batch. It wants `pnpm build:app && node
+tools/probe/section-labor.mjs`, and the pictures it takes want opening.
+
 ## C7 — IFC from the solved model (2026-09-13)
 
 **File → Export IFC writes the whole solved roof as IFC4, and IfcOpenShell — not this program's own

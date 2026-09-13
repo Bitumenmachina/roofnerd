@@ -7,8 +7,8 @@
 // and a number they have to hunt for is a number they will not check.
 
 import {
-  conditionTotal, derivedLabel, derivedOrder, measure, priceJob,
-  type Condition, type LineTotal, type Measures, type Page, type TraceKind,
+  BASES, BASIS_WORDS, conditionTotal, derivedLabel, derivedOrder, measure, priceJob,
+  type Basis, type Condition, type LineTotal, type Measures, type Page, type TraceKind,
 } from '@roofnerd/engine';
 import { at, derived, derivedFor, set, type Doc } from '../doc.js';
 import { heldCaret, named, restoreCaret } from '../caret.js';
@@ -138,6 +138,26 @@ export function renderConditionPanel(
   }
   row.append(costLabel, costValue);
   host.append(row);
+
+  // ── what kinds of cost it carries ───────────────────────────────────────
+  // A condition is read by what it takes to build: material and labor on a
+  // roof field, material, the shop and the crew on a parapet, somebody else's
+  // truck on a curb. None of it is typed — each line already said what it was
+  // — and the words are the ones the recap rolls up under, so the panel and
+  // the recap cannot be read as saying two different things.
+  const kinds = kindsOf(condition, d);
+  if (kinds.length > 0) {
+    const list = document.createElement('p');
+    list.className = 'panel-bases';
+    for (const [basis, hours] of kinds) {
+      const chip = document.createElement('span');
+      chip.className = 'basis-word';
+      chip.textContent = BASIS_WORDS[basis];
+      if (hours > 0) chip.title = `${quantity(hours)} hours of it.`;
+      list.append(chip);
+    }
+    host.append(list);
+  }
   if (cost.unpriced > 0) {
     const short = document.createElement('small');
     short.className = 'panel-money-note';
@@ -325,6 +345,33 @@ export function renderConditionPanel(
  * A job with no scenario, or a document too young to price, answers "no total"
  * rather than zero.
  */
+/**
+ * What kinds of cost this condition carries, in the order the recap rolls up.
+ *
+ * Off `priceJob`, which is the same call the cost figure above comes from — so
+ * a kind listed here is a kind with a line behind it on the sheet. A struck
+ * line is left out: it is on the sheet and out of every total, and listing its
+ * kind here would say the condition carries work it does not.
+ */
+function kindsOf(condition: Condition, d: Doc): [Basis, number][] {
+  const job = at('/job', d) as
+    { scenarios?: { id: string }[]; activeScenarioId?: string } | undefined;
+  const scenario = job?.scenarios?.find((s) => s.id === job.activeScenarioId) ?? job?.scenarios?.[0];
+  if (!scenario) return [];
+  try {
+    const lines = priceJob(
+      { ...(d as object) } as Parameters<typeof priceJob>[0],
+      scenario as Parameters<typeof priceJob>[1],
+      derived(),
+    ).filter((l) => l.conditionId === condition.id && l.off === null);
+    const hours = new Map<Basis, number>();
+    for (const l of lines) hours.set(l.basis, (hours.get(l.basis) ?? 0) + (l.hours ?? 0));
+    return BASES.filter((b) => hours.has(b)).map((b) => [b, hours.get(b) ?? 0]);
+  } catch {
+    return [];
+  }
+}
+
 function costOf(condition: Condition, d: Doc): LineTotal {
   const job = at('/job', d) as
     { scenarios?: { id: string }[]; activeScenarioId?: string } | undefined;

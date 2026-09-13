@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { priceLine, recap, priceJob, conditionTotal, centsOf, totalSquaresOf, emptyJob, CLASS_NAMES, girthOf } from '../dist/index.js';
+import { priceLine, recap, priceJob, conditionTotal, centsOf, totalSquaresOf, emptyJob, CLASS_NAMES, girthOf, basisOf, perManHour, HOURS_PER_CREW_DAY } from '../dist/index.js';
 
 const scope = { SF: 1000, LF: 500, EA: 5, SQ: 10, PLAN_SF: 1000, VERTICES: 5, SEGMENTS: 4, H: 1.5 };
 const item = (over) => ({ id: 'i1', description: 'x', costCode: '07-100-100', unit: 'SF', formula: 'SF', ...over });
@@ -91,7 +91,7 @@ test('a conversion that was never filled in says so instead of pricing', () => {
 test('a labor line orders in hours, and the production rate is the conversion', () => {
   const r = priceLine(item({
     formula: 'LF', unit: 'LF', costCode: '07-100-300',
-    productionRate: 5, unitCost: 50,
+    production: { rate: 5, per: 'man-hour' }, unitCost: 50,
   }), scope);
   assert.equal(r.orderUnitName, 'HOURS');
   assert.equal(r.orderQuantity, 100);
@@ -101,20 +101,120 @@ test('a labor line orders in hours, and the production rate is the conversion', 
 
 test('labor hours are never rounded up to a package', () => {
   // A thousand feet at three feet an hour is 333.33… hours, not 334.
-  const r = priceLine(item({ formula: '1000', unit: 'LF', productionRate: 3, unitCost: 50 }), scope);
+  const r = priceLine(item({
+    formula: '1000', unit: 'LF', production: { rate: 3, per: 'man-hour' }, unitCost: 50,
+  }), scope);
   assert.equal(r.hours, 1000 / 3);
   assert.notEqual(r.hours, Math.ceil(1000 / 3));
   assert.equal(r.extended, (1000 / 3) * 50);
 });
 
 test('crew days come from hours and crew size, and are never entered', () => {
-  const r = priceLine(item({ formula: 'LF', productionRate: 5, crewSize: 5, unitCost: 50 }), scope);
+  const r = priceLine(item({
+    formula: 'LF', production: { rate: 25, per: 'crew-hour', crew: 5 }, unitCost: 50,
+  }), scope);
   assert.equal(r.hours, 100);
   assert.equal(r.crewDays, 100 / 5 / 8);
 });
 
 test('a line with no production rate has no hours, not zero hours', () => {
   assert.equal(priceLine(item({ unitCost: 1 }), scope).hours, null);
+});
+
+// ── the rate as a roofer states it ────────────────────────────────────────
+//
+// A foreman says "six men, forty squares a day". Nobody says "0.83 squares a
+// man-hour", and the conversion between them used to live in a helper in the
+// demo's price script with the crew size beside it in a comment — so the crew
+// that divided the rate and the crew printed on the line were two facts kept
+// in step by hand.
+
+test('a crew-day rate reaches hours through the crew it names', () => {
+  const r = priceLine(item({
+    formula: 'SQ', unit: 'SQ',
+    production: { rate: 40, per: 'crew-day', crew: 6 }, unitCost: 60,
+  }), scope);
+  // Ten squares at forty a day by six men: a quarter of a crew-day, which is
+  // twelve man-hours.
+  assert.equal(r.hours, 10 / (40 / (6 * HOURS_PER_CREW_DAY)));
+  assert.equal(r.hours, 12);
+  assert.equal(r.crewDays, 0.25);
+  assert.equal(r.orderUnitName, 'HOURS');
+  assert.equal(r.extended, 720);
+});
+
+test('a crew-day rate with no crew under it says so, and prices nothing', () => {
+  const r = priceLine(item({
+    formula: 'SQ', unit: 'SQ', production: { rate: 40, per: 'crew-day' }, unitCost: 60,
+  }), scope);
+  assert.equal(r.hours, null);
+  assert.equal(r.extended, null);
+  assert.match(r.pending, /crew/);
+});
+
+test('the rate says itself the way it was stated, not the way it is divided', () => {
+  const r = priceLine(item({
+    formula: 'SQ', unit: 'SQ',
+    production: { rate: 40, per: 'crew-day', crew: 6 }, unitCost: 60,
+  }), scope);
+  assert.equal(r.rateSaid, '6 at 40 a crew-day');
+});
+
+test('every way of stating a rate lands on the same man-hour', () => {
+  const day = perManHour({ rate: 40, per: 'crew-day', crew: 6 });
+  assert.equal(perManHour({ rate: 5, per: 'crew-hour', crew: 6 }), day);
+  assert.equal(perManHour({ rate: day, per: 'man-hour' }), day);
+  // A shop hour is one pair of hands unless the shop says otherwise.
+  assert.equal(perManHour({ rate: 80, per: 'shop-hour' }), 80);
+  assert.equal(perManHour({ rate: 80, per: 'shop-hour', crew: 2 }), 40);
+});
+
+// ── what kind of line it is ───────────────────────────────────────────────
+
+test('an hour at the brake is fabrication, and an hour on the roof is labor', () => {
+  const shop = item({ production: { rate: 80, per: 'shop-hour' }, costCode: '07-100-320' });
+  const roof = item({ production: { rate: 40, per: 'crew-day', crew: 6 }, costCode: '07-100-230' });
+  assert.equal(basisOf(shop, 'Labor'), 'fabrication');
+  assert.equal(basisOf(roof, 'Labor'), 'labor');
+  assert.equal(priceLine(shop, scope).basis, 'fabrication');
+});
+
+test('a line with no rate takes its kind from the class its cost code sits in', () => {
+  assert.equal(basisOf(item({}), 'Material'), 'material');
+  assert.equal(basisOf(item({}), 'Sub'), 'sub');
+  assert.equal(basisOf(item({}), 'Equipment'), 'equipment');
+  assert.equal(basisOf(item({}), 'Supervision'), 'labor');
+  assert.equal(basisOf(item({}), 'Other'), 'other');
+  assert.equal(basisOf(item({}), null), 'other');
+});
+
+test('a subcontract line carries the name it was quoted by, and no hours', () => {
+  const r = priceLine(item({
+    formula: 'LF', unit: 'LF', costCode: '07-100-900', unitCost: 8,
+    priceSource: { from: 'Ridgeline Rigging', firmness: 'firm' },
+  }), scope, {}, 0, 'Sub');
+  assert.equal(r.basis, 'sub');
+  assert.equal(r.quotedBy, 'Ridgeline Rigging');
+  assert.equal(r.hours, null);
+  assert.equal(r.extended, 4000);
+});
+
+test('a quote with nobody\u2019s name on it says nothing rather than a name', () => {
+  const r = priceLine(item({ costCode: '07-100-900', unitCost: 1 }), scope, {}, 0, 'Sub');
+  assert.equal(r.quotedBy, null);
+});
+
+// ── a line that is off ────────────────────────────────────────────────────
+
+test('a struck line keeps its money and says why it is off', () => {
+  const r = priceLine(item({
+    formula: 'SF', unitCost: 2, off: { reason: 'by others' },
+  }), scope);
+  assert.equal(r.off, 'by others');
+  // The money is still worked out, because the question about an alternate is
+  // always what it would have cost.
+  assert.equal(r.extended, 2000);
+  assert.equal(r.pending, null);
 });
 
 // ── the recap ladder ───────────────────────────────────────────────────────
@@ -172,7 +272,7 @@ test('the ladder walks job cost, profit, contract amount, bond, selling price', 
 
 test('supervision carries its own burden, not the field labor rate', () => {
   const doc = job([
-    { id: 'l', description: 'crew', costCode: 'LAB', unit: 'SF', formula: '1000', productionRate: 10, unitCost: 50 },
+    { id: 'l', description: 'crew', costCode: 'LAB', unit: 'SF', formula: '1000', production: { rate: 10, per: 'man-hour' }, unitCost: 50 },
     { id: 's', description: 'super', costCode: 'SUP', unit: 'EA', formula: '100', unitCost: 75 },
   ], { Labor: { burden: 10 }, Supervision: { burden: 50 } });
   const r = recap(doc, doc.job.scenarios[0]);
@@ -202,7 +302,7 @@ test('material contains only material — a dumpster is not roofing material', (
 
 test('hours are summed at full precision, and money is not', () => {
   const doc = job([
-    { id: 'a', description: 'fab', costCode: 'LAB', unit: 'SF', formula: '10000', productionRate: 3, unitCost: 50 },
+    { id: 'a', description: 'fab', costCode: 'LAB', unit: 'SF', formula: '10000', production: { rate: 3, per: 'man-hour' }, unitCost: 50 },
   ], { Labor: { burden: 10 } });
   const r = recap(doc, doc.job.scenarios[0]);
   const labor = r.classes.find((c) => c.class === 'Labor');
@@ -522,4 +622,87 @@ test('and a name the solve cannot answer leaves the recap saying which', () => {
   assert.ok(!/CRICKET_SF/.test(r.pending[0]), `it says "${r.pending[0]}"`);
   // Never a silent zero in the class it belongs to.
   assert.equal(r.classes.find((c) => c.class === 'Material').subtotal, 0);
+});
+
+// ── the recap, read the way a roofer reads one ─────────────────────────────
+//
+// Hours a square is the first figure anybody checks. A dollar rate can be
+// argued about all day; hours a square says whether the estimator believed
+// something the crew can actually do.
+
+test('the recap prints hours over squares, and it is the hours over the squares', () => {
+  // A hundred squares of roof. Twenty-five squares a crew-day is four crew-days,
+  // and four days of six men is 192 man-hours — 1.92 hours a square.
+  const doc = job([
+    { id: 'l', description: 'lay the package', costCode: 'LAB', unit: 'SQ', formula: 'SQ',
+      production: { rate: 25, per: 'crew-day', crew: 6 }, unitCost: 50 },
+  ]);
+  const r = recap(doc, doc.job.scenarios[0]);
+  assert.equal(r.totalSquares, 100);
+  assert.equal(r.totalHours, 192);
+  assert.equal(r.hoursPerSquare, 1.92);
+});
+
+test('with nothing priced on any traced roof there is no hours a square, not nought', () => {
+  const doc = job([]);
+  const r = recap(doc, doc.job.scenarios[0]);
+  assert.equal(r.totalSquares, null);
+  assert.equal(r.hoursPerSquare, null);
+});
+
+test('the recap rolls the same job up by what each line is', () => {
+  const doc = job([
+    { id: 'm', description: 'membrane', costCode: 'MAT', unit: 'SF', formula: '1000', unitCost: 1 },
+    { id: 'l', description: 'weld the membrane', costCode: 'LAB', unit: 'SQ', formula: 'SQ',
+      production: { rate: 40, per: 'crew-day', crew: 6 }, unitCost: 50 },
+    { id: 'f', description: 'fabricate the coping', costCode: 'LAB', unit: 'LF', formula: '200',
+      production: { rate: 80, per: 'shop-hour' }, unitCost: 50 },
+    { id: 's', description: 'crane', costCode: 'SUB', unit: 'EA', formula: '1', unitCost: 4000 },
+  ]);
+  const r = recap(doc, doc.job.scenarios[0]);
+  const by = (b) => r.bases.find((x) => x.basis === b);
+  assert.equal(by('material').subtotal, 1000);
+  assert.equal(by('sub').subtotal, 4000);
+  // The shop and the roof are two kinds of hour, and the class table cannot
+  // tell them apart because both codes sit in Labor.
+  assert.equal(by('fabrication').hours, 200 / 80);
+  assert.equal(by('labor').hours, 100 / (40 / (6 * HOURS_PER_CREW_DAY)));
+  assert.equal(by('fabrication').lines, 1);
+  assert.equal(by('equipment').lines, 0);
+  // And what it rolls up to is still the same job.
+  const classes = r.classes.reduce((sum, c) => sum + c.subtotal, 0);
+  const bases = r.bases.reduce((sum, b) => sum + b.subtotal, 0);
+  assert.equal(centsOf(bases), centsOf(classes));
+});
+
+test('a struck line is out of every total and still on the sheet, with its reason', () => {
+  const doc = job([
+    { id: 'm', description: 'membrane', costCode: 'MAT', unit: 'SF', formula: '1000', unitCost: 1 },
+    { id: 'x', description: 'lightning protection', costCode: 'SUB', unit: 'EA', formula: '1',
+      unitCost: 5000, off: { reason: 'by others' } },
+  ]);
+  const r = recap(doc, doc.job.scenarios[0]);
+  assert.equal(r.classes.find((c) => c.class === 'Sub').subtotal, 0);
+  assert.equal(r.jobCost, 1000);
+  // Not pending: pending is a line nobody could work out, and this is a line
+  // somebody decided about. Keeping them apart is the whole point.
+  assert.deepEqual(r.pending, []);
+  assert.equal(r.off.length, 1);
+  assert.equal(r.off[0].reason, 'by others');
+  assert.equal(r.off[0].basis, 'sub');
+  // What it would have come to, because that is what gets asked about it.
+  assert.equal(r.off[0].amount, 5000);
+  // And the condition it sits on does not count it either.
+  assert.equal(conditionTotal(priceJob(doc, doc.job.scenarios[0]), 'c1').total, 1000);
+});
+
+test('an area whose every line is struck leaves the per-square divisor, and says so', () => {
+  const doc = job([
+    { id: 'x', description: 'by somebody else', costCode: 'MAT', unit: 'SF', formula: '1000',
+      unitCost: 1, off: { reason: 'not in scope' } },
+  ]);
+  const r = recap(doc, doc.job.scenarios[0]);
+  assert.equal(r.totalSquares, null);
+  assert.equal(r.squaresLeftOut.length, 1);
+  assert.match(r.squaresLeftOut[0], /nothing priced on it/);
 });

@@ -54,7 +54,7 @@ const WIDE = 420;
 const LENS_COLUMN: Readonly<Record<string, number>> = {
   class: 120, condition: 130, item: 150, costCode: 96, formula: 160,
   quantity: 84, unit: 48, waste: 62, orderQuantity: 84, orderUnit: 80,
-  cost: 92, perSquare: 96, sent: 60, returned: 74, notes: 140,
+  cost: 92, perSquare: 96, hours: 76, sent: 60, returned: 74, notes: 140,
 };
 const LENS_CAP = 620;
 

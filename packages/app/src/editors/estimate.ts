@@ -17,8 +17,9 @@
 // same pointer it always did.
 
 import {
-  measure, priceLine, scopeFor,
-  type Condition, type Item, type Measures, type Page,
+  BASIS_WORDS, classOf, linesFrom, measure, priceLine, PRODUCTION_PER, PRODUCTION_PER_WORDS,
+  scopeFor,
+  type Condition, type CostCode, type Item, type Measures, type Page, type ProductionPer,
 } from '@roofnerd/engine';
 import { at, derivedFor, doc, set, subscribe, type Doc } from '../doc.js';
 import { cutOnScreen, watchCut } from '../cut.js';
@@ -139,6 +140,7 @@ function render(head: HTMLElement, host: HTMLElement, d: Doc): void {
 
   const conditions = (at('/conditions', d) as Condition[]) ?? [];
   const pages = (at('/pages', d) as Page[]) ?? [];
+  const costCodes = (at('/costCodes', d) as CostCode[]) ?? [];
   const scenario = activeScenario(d);
 
   const calibrations: Record<string, { feetPerUnit: number } | undefined> = {};
@@ -272,11 +274,19 @@ function render(head: HTMLElement, host: HTMLElement, d: Doc): void {
     group.addEventListener('click', () => select({ kind: 'condition', id: condition.id }));
     host.append(group);
 
-    for (const [itemIndex, item] of (condition.items ?? []).entries()) {
-      const result = priceLine(item, scope, scenario?.prices ?? {}, condition.waste ?? 0);
-      host.append(compactLine(condition, index, itemIndex, item, result));
-      if (item.id === openLineId) {
-        host.append(chain(condition, conditions, index, itemIndex, item, result));
+    for (const [itemIndex, stored] of (condition.items ?? []).entries()) {
+      // One stored line can be a family — one per lettered panel the layout
+      // reached. They all open to the SAME chain, because they are one line in
+      // the job file and editing one of them is editing the family.
+      for (const item of linesFrom(stored, scope)) {
+        const result = priceLine(
+          item, scope, scenario?.prices ?? {}, condition.waste ?? 0,
+          classOf(costCodes, item.costCode) ?? null,
+        );
+        host.append(compactLine(condition, index, itemIndex, item, result));
+        if (item.id === openLineId) {
+          host.append(chain(condition, conditions, index, itemIndex, stored, result));
+        }
       }
     }
 
@@ -314,6 +324,9 @@ function compactLine(
   row.className = 'cost-line';
   if (item.id === openLineId) row.classList.add('open');
   if (item.id === selectedItemId()) row.classList.add('on');
+  // Struck, and still here. A line taken off the total does not leave the
+  // sheet — the argument about whether it belongs is the reason it exists.
+  if (result.off !== null) row.classList.add('off');
 
   const what = document.createElement('button');
   what.type = 'button';
@@ -333,6 +346,25 @@ function compactLine(
   formula.className = 'formula line-formula';
   formula.textContent = item.formula;
   basis.append(from, formula);
+  // The crew and the rate, on the line. A labor line whose rate is only visible
+  // three clicks away is a labor line nobody checks, and "how many squares a
+  // day did you give it" is the first question asked of one.
+  if (result.rateSaid !== null) {
+    const crew = document.createElement('span');
+    crew.className = 'line-crew';
+    crew.textContent = result.rateSaid;
+    crew.title = `${BASIS_WORDS[result.basis]} — what this rate assumes.`;
+    basis.append(crew);
+  }
+  // And the name on a quote. A subcontract number nobody can chase is a number
+  // that gets carried into a buyout meeting and cannot be defended there.
+  if (result.basis === 'sub') {
+    const quoted = document.createElement('span');
+    quoted.className = 'line-quoted';
+    quoted.textContent = result.quotedBy ?? 'quoted by nobody named';
+    if (result.quotedBy === null) quoted.classList.add('none');
+    basis.append(quoted);
+  }
   what.append(title, basis);
   // Opening a line selects it too, so the geometry it came off lights up in
   // whatever view the surface is showing.
@@ -371,6 +403,13 @@ function compactLine(
     unit.append(mark);
   }
 
+  // The money, and the hours under it. Three figures on a labor line, the way a
+  // report prints them: how much of it, how long it takes, what it costs. The
+  // panel is 364 wide and there is no room for a fifth column, so the hours sit
+  // under the money they produced rather than beside them.
+  const paid = document.createElement('span');
+  paid.className = 'line-paid';
+
   const cost = document.createElement('span');
   cost.className = 'line-money num';
   if (result.extended === null) {
@@ -382,8 +421,30 @@ function compactLine(
   } else {
     cost.textContent = money(result.extended);
   }
+  paid.append(cost);
 
-  row.append(what, qty, unit, cost);
+  if (result.hours !== null) {
+    const hours = document.createElement('span');
+    hours.className = 'line-hours num';
+    hours.textContent = `${quantity(result.hours)} hrs`;
+    const mark = document.createElement('span');
+    mark.className = 'derived';
+    mark.textContent = '◈';
+    mark.title = 'Worked out from the rate and the crew on this line.';
+    hours.append(mark);
+    paid.append(hours);
+  }
+
+  row.append(what, qty, unit, paid);
+  // Why it is off, spanning the row, in the words you would say across the
+  // table. A struck line with no reason on it is a line somebody will quietly
+  // add back.
+  if (result.off !== null) {
+    const why = document.createElement('span');
+    why.className = 'line-off';
+    why.textContent = result.off;
+    row.append(why);
+  }
   // A note about the line goes under it, spanning the row: the formula would
   // not run, or the unit does not follow from it.
   if (result.formulaError) {
@@ -457,6 +518,12 @@ function chain(
 
   table.append(chainRow('Code',
     named(textField(item.costCode, (v) => set(`${base}/costCode`, v), 'code'), `${base}/costCode`)));
+  // What kind of cost this is. A WORD and not a picker: it is read off the line
+  // — a rate at the brake is fabrication, anything else with a rate is labor,
+  // and with no rate the cost code above already answered it. Asking the
+  // estimator to classify what they just wrote is a question the sheet can
+  // answer for itself.
+  table.append(chainRow('Kind', word(BASIS_WORDS[result.basis])));
   table.append(chainRow('Quantity', figure(result.quantity, item.unit, !isTyped(item.formula),
     result.formulaError ?? result.pending)));
   table.append(chainRow('Unit',
@@ -467,11 +534,53 @@ function chain(
   // What you buy, and what it is priced against — three units, because a real
   // supply house uses three. Membrane is estimated in squares, bought by the
   // roll and quoted by the square foot, and each step is where money hides.
+  // The crew and the rate, where they are typed. A production rate is the
+  // order-step conversion on a labor line, so it sits in the chain exactly
+  // where a roll conversion sits on a material one.
+  if (item.production !== undefined) {
+    table.append(chainRow('Crew', named(numberField(
+      item.production.crew,
+      (v) => writeProduction(base, item, { crew: v }),
+      'how many',
+    ), `${base}/production/crew`)));
+    const rate = document.createElement('span');
+    rate.className = 'chain-rate';
+    rate.append(named(numberField(
+      item.production.rate,
+      (v) => writeProduction(base, item, { rate: v ?? 0 }),
+      item.unit,
+    ), `${base}/production/rate`));
+    rate.append(selectField(
+      [...PRODUCTION_PER],
+      item.production.per,
+      (v) => writeProduction(base, item, { per: v as ProductionPer }),
+      (v) => `${item.unit} ${PRODUCTION_PER_WORDS[v as ProductionPer]}`,
+    ));
+    table.append(chainRow('Rate', rate));
+    table.append(chainRow('Hours', figure(result.hours, 'hrs', true, result.pending)));
+    if (result.crewDays !== null) {
+      table.append(chainRow('Crew days', figure(result.crewDays, 'days', true, result.pending)));
+    }
+  }
+  if (result.basis === 'sub') {
+    table.append(chainRow('Quoted by', named(textField(
+      item.priceSource?.from ?? '',
+      (v) => writeQuote(base, item, v),
+      'whose number this is',
+    ), `${base}/priceSource/from`)));
+  }
   table.append(chainRow('Order', figure(result.orderQuantity, result.orderUnitName, true, result.pending)));
   table.append(chainRow('Priced', figure(result.priceQuantity, result.priceUnitName, true, result.pending)));
   table.append(chainRow('Unit cost',
     named(numberField(item.unitCost, (v) => set(`${base}/unitCost`, v), '$'), `${base}/unitCost`)));
   table.append(chainRow('Extended', moneyCell(result.extended, result.pending), 'chain-total'));
+  // Off the sheet, and why. Left empty the line is on the bid; filled in, it is
+  // struck, out of every total, and the reason is the words beside it.
+  table.append(chainRow('Off the sheet', named(textField(
+    item.off?.reason ?? '',
+    (v) => writeOff(base, item, v),
+    'on the sheet',
+  ), `${base}/off/reason`)));
   wrap.append(table);
 
   // ── the arithmetic, written out ─────────────────────────────────────────
@@ -554,7 +663,14 @@ function workings(item: Item, result: ReturnType<typeof priceLine>): Part[][] {
     first.push({ text: ` → with ${waste}% waste ${quantity(result.withWaste)} ${result.unit}` });
   }
   out.push(first);
-  if (result.orderQuantity !== null && result.orderUnitName) {
+  if (result.hours !== null && result.rateSaid !== null) {
+    // The rate as it was stated, not as it was divided. An estimator checking
+    // this line wants to see the crew and the day they gave it.
+    const days = result.crewDays === null ? '' : `, ${quantity(result.crewDays)} crew-days`;
+    out.push([{
+      text: `at ${result.rateSaid} that is ${quantity(result.hours)} hours${days}`,
+    }]);
+  } else if (result.orderQuantity !== null && result.orderUnitName) {
     out.push([{ text: `bought as ${quantity(result.orderQuantity)} ${result.orderUnitName}` }]);
   }
   if (result.priceQuantity !== null && result.priceUnitName && result.unitCost !== null) {
@@ -564,6 +680,55 @@ function workings(item: Item, result: ReturnType<typeof priceLine>): Part[][] {
     }]);
   }
   return out;
+}
+
+/**
+ * Write a change to the rate, the crew or what the rate is per.
+ *
+ * The WHOLE item goes back, not a pointer into it. The shell's `doc_set` walks
+ * to a place that already exists and refuses one that does not, so writing
+ * `…/production/rate` onto a line that has never had a rate would fail with
+ * "nothing at … in this job" — and the field would look like it worked while
+ * nothing happened. An item is small; the whole of it goes.
+ */
+const writeProduction = (
+  base: string, item: Item, patch: Partial<{ rate: number; crew: number | undefined; per: ProductionPer }>,
+): Promise<unknown> => {
+  const now = item.production ?? { rate: 0, per: 'crew-day' as ProductionPer };
+  const production = { ...now, ...patch };
+  // A crew cleared out is a crew nobody stated, which is not the same as nought
+  // of them — and the line says so rather than dividing by it.
+  if (production.crew === undefined || !(production.crew > 0)) delete (production as { crew?: number }).crew;
+  return set(base, { ...item, production });
+};
+
+/** The name on a quote. Same reason the whole item goes back. */
+const writeQuote = (base: string, item: Item, from: string): Promise<unknown> => {
+  const source = { ...(item.priceSource ?? {}), from };
+  if (from.trim() === '') delete (source as { from?: string }).from;
+  const next: Item = Object.keys(source).length === 0
+    ? stripped(item, 'priceSource')
+    : { ...item, priceSource: source };
+  return set(base, next);
+};
+
+/** Struck, or back on the sheet. An empty reason is a line nobody took off. */
+const writeOff = (base: string, item: Item, reason: string): Promise<unknown> =>
+  set(base, reason.trim() === '' ? stripped(item, 'off') : { ...item, off: { reason } });
+
+/** The same item without one field. A key left at undefined is written as null. */
+function stripped(item: Item, key: keyof Item): Item {
+  const copy = { ...item } as Record<string, unknown>;
+  delete copy[key];
+  return copy as unknown as Item;
+}
+
+/** A word the program worked out. Read, never typed — so it is not a field. */
+function word(text: string): HTMLElement {
+  const span = document.createElement('span');
+  span.className = 'chain-word';
+  span.textContent = text;
+  return span;
 }
 
 /** A step in the chain: what it is, and what it reads. */
@@ -677,12 +842,15 @@ function numberField(value: number | undefined, write: (v: number | undefined) =
   return input;
 }
 
-function selectField(options: string[], value: string, write: (v: string) => Promise<unknown>): HTMLSelectElement {
+function selectField(
+  options: string[], value: string, write: (v: string) => Promise<unknown>,
+  say: (v: string) => string = (v) => v,
+): HTMLSelectElement {
   const select_ = document.createElement('select');
   for (const o of options) {
     const opt = document.createElement('option');
     opt.value = o;
-    opt.textContent = o;
+    opt.textContent = say(o);
     select_.append(opt);
   }
   select_.value = value;

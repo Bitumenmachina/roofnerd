@@ -57,12 +57,15 @@
         },
         {
           "costCode": "07-100-230",
-          "crewSize": 6,
           "description": "Install membrane",
           "formula": "SQ",
           "id": "a-install",
           "layer": "membrane",
-          "productionRate": 1.1,
+          "production": {
+            "crew": 6,
+            "per": "crew-day",
+            "rate": 50
+          },
           "unit": "SQ"
         }
       ],
@@ -103,12 +106,14 @@
         },
         {
           "costCode": "07-100-320",
-          "crewSize": 2,
           "description": "Fabricate metal",
           "formula": "LF",
           "id": "a-fab",
           "layer": "edge metal",
-          "productionRate": 40,
+          "production": {
+            "per": "shop-hour",
+            "rate": 40
+          },
           "unit": "LF"
         }
       ],

@@ -13,9 +13,11 @@
 // sells it by the roll, and you estimated it in squares. Collapsing that into
 // one conversion is where a bid quietly gains or loses money.
 
-import type { Item, Money, RoundingRule, UnitStep } from './model.js';
+import type { Basis, ClassName, Item, Money, RoundingRule, UnitStep } from './model.js';
+import type { Production } from './model.js';
+import { basisOf, HOURS_PER_CREW_DAY, perManHour, PRODUCTION_PER_WORDS } from './model.js';
 import { namesUsed, parse, run, type FormulaResult } from './formula.js';
-import { derivedLabel } from './solved.js';
+import { derivedLabel, derivedOrder } from './solved.js';
 import { unitDisagreement } from './dimension.js';
 import { ceilPackages, settle } from './rounding.js';
 
@@ -44,6 +46,28 @@ export interface LineResult {
   readonly hours: number | null;
   /** Crew days, for the labor lens. Derived from hours, never entered. */
   readonly crewDays: number | null;
+  /** What kind of cost this is. Read off the line; never typed on it. */
+  readonly basis: Basis;
+  /**
+   * Why this line is on the sheet and out of every total, or null.
+   *
+   * The money is still worked out and still shown — struck through — because
+   * the question an owner asks about an alternate is what it would have cost.
+   */
+  readonly off: string | null;
+  /**
+   * Whose quote this is, on a subcontract line.
+   *
+   * A sub's number without a name on it is a number nobody can chase, so it is
+   * read off the price source and put on the line rather than left in a field
+   * three clicks away.
+   */
+  readonly quotedBy: string | null;
+  /**
+   * The rate this line was worked out at, in the words it was stated in —
+   * "6 at 40 SQ a crew-day". Null on a line with no rate.
+   */
+  readonly rateSaid: string | null;
   /** Why this line has no money on it, in words an estimator can act on. */
   readonly pending: string | null;
   readonly formulaError?: string;
@@ -58,8 +82,56 @@ export interface LineResult {
   readonly unitNote?: string;
 }
 
-/** Hours in a crew's working day. A library number later; this is the default. */
-export const HOURS_PER_CREW_DAY = 8;
+/**
+ * The lines one stored item becomes.
+ *
+ * Nearly always itself. The exception is an item that stands for a family —
+ * `eachOf: 'TAPER_*_SF'` — which becomes one line per name of that shape the
+ * model actually found, in the order the bill is read in.
+ *
+ * This is the difference between the fastener lines and the tapered ones, and
+ * it is a fact about roofs rather than about software. A roof has three wind
+ * zones and always will, so three fastener lines typed into a job are three
+ * lines that stay true. How many lettered panels a package buys depends on the
+ * slope: a quarter in twelve buys X, Y, Z and ZZ, an eighth buys a different
+ * series altogether, and four letters typed into a job file price nothing the
+ * moment anybody moves the slope — while still showing four panels this roof
+ * does not buy.
+ *
+ * Where the model found none of them, the item comes back UNEXPANDED and
+ * still carrying its pattern, and `priceLine` says so on the line. A family
+ * with no members must not quietly become no line at all: a line that vanishes
+ * is the silent zero wearing a different hat.
+ */
+export function linesFrom(
+  item: Item,
+  scope: Readonly<Record<string, number | null>>,
+): readonly Item[] {
+  if (item.eachOf === undefined) return [item];
+  const pattern = item.eachOf;
+  const star = pattern.indexOf('*');
+  if (star < 0) return [item];
+  const before = pattern.slice(0, star);
+  const after = pattern.slice(star + 1);
+  const found = Object.keys(scope).filter(
+    (name) => name.length > pattern.length - 1
+      && name.startsWith(before) && name.endsWith(after),
+  );
+  if (found.length === 0) return [item];
+  return derivedOrder(found).map((name) => {
+    const part = name.slice(before.length, name.length - after.length);
+    const { eachOf: _pattern, ...rest } = item;
+    return {
+      ...rest,
+      id: `${item.id}-${part.toLowerCase()}`,
+      description: item.description.split('*').join(part),
+      formula: item.formula.split(pattern).join(name),
+      ...(item.libraryId === undefined
+        ? {}
+        : { libraryId: item.libraryId.split('*').join(part.toLowerCase()) }),
+    };
+  });
+}
 
 /** Whether a step has been given a conversion at all. */
 const hasFactor = (step: UnitStep): boolean =>
@@ -125,6 +197,22 @@ function whyThereIsNoNumber(
   return 'the sheet this comes off has no scale yet';
 }
 
+/**
+ * The rate, said the way it was stated: "6 at 40 SQ a crew-day".
+ *
+ * Not the man-hour figure the arithmetic runs on. A foreman checking a bid
+ * reads the crew and the day, and a line that printed 0.83 units a man-hour
+ * would be asking them to do the division back in their head to find out
+ * whether the estimator believed something reasonable.
+ */
+export function rateSaid(production: Production): string {
+  const crew = production.crew && production.crew > 0 ? `${production.crew} at ` : '';
+  return `${crew}${round2(production.rate)} ${PRODUCTION_PER_WORDS[production.per]}`;
+}
+
+/** Two places, and no trailing zeros — 40, never 40 with two zeros after it. */
+const round2 = (v: number): string => String(Math.round(v * 100) / 100);
+
 function applyRule(value: number, rule: RoundingRule): number {
   // Not always up. In one real job rolls and sheets round up while fastener
   // plates order at 4.94 boxes, because that is what the supplier bills.
@@ -149,8 +237,14 @@ export function priceLine(
   scope: Readonly<Record<string, number | null>>,
   scenarioPrices: Readonly<Record<string, Money>> = {},
   conditionWaste = 0,
+  cls: ClassName | null = null,
 ): LineResult {
-  const formula: FormulaResult = run(item.formula, scope);
+  // An unexpanded family carries its pattern in the formula, which is not
+  // arithmetic — `TAPER_*_SF` reads as a multiplication of two names that do
+  // not exist. It is not run: the line says what it is waiting for instead.
+  const formula: FormulaResult = item.eachOf === undefined
+    ? run(item.formula, scope)
+    : { value: null };
 
   // Only worth asking when the formula parses at all.
   let unitNote: string | null = null;
@@ -177,10 +271,15 @@ export function priceLine(
   // On a labor line the order unit is HOURS and the production rate is the
   // conversion, so labor is not a special case here — it is this step with a
   // rate in it and nothing rounded.
+  const perHour = item.production === undefined ? null : perManHour(item.production);
   const orderStep: UnitStep | undefined = item.order
-    ?? (item.productionRate !== undefined && item.productionRate > 0
-      ? { name: 'HOURS', per: item.productionRate, rule: 'exact' }
-      : undefined);
+    ?? (item.production === undefined
+      ? undefined
+      // A rate that cannot be carried — a crew-day with no crew — still makes
+      // this a labor line, and the step with no factor on it is what says so.
+      // Falling back to no step at all would price the line by the square and
+      // look entirely right.
+      : { name: 'HOURS', ...(perHour === null ? {} : { per: perHour }), rule: 'exact' });
 
   const orderIncomplete = orderStep !== undefined && !hasFactor(orderStep);
   const orderCarried = withWaste === null || !orderStep ? null : convert(withWaste, orderStep);
@@ -222,19 +321,34 @@ export function priceLine(
   // Hours at full precision. Rounding here is how a labor total ends up three
   // dollars adrift of the report it is being checked against.
   const hours = orderStep?.name === 'HOURS' ? orderQuantity : null;
-  const crewDays = hours === null || !item.crewSize || item.crewSize <= 0
+  const crew = item.production?.crew;
+  const crewDays = hours === null || !crew || crew <= 0
     ? null
-    : hours / item.crewSize / HOURS_PER_CREW_DAY;
+    : hours / crew / HOURS_PER_CREW_DAY;
 
   let pending: string | null = null;
-  if (formula.error) pending = formula.error;
+  // A family the model found no members of. It is still one line on the sheet,
+  // saying what happened, because a line that disappears is a line nobody can
+  // ask about — and the question here is a real one: the slope may have moved
+  // into a chart this roof has no panels in.
+  if (item.eachOf !== undefined) {
+    pending = `the model found nothing of this kind on this roof (${item.eachOf})`;
+  } else if (formula.error) pending = formula.error;
   else if (quantity === null) pending = whyThereIsNoNumber(item.formula, scope);
-  else if (orderIncomplete) pending = `${orderStep!.name} has no conversion`;
+  // A rate with no crew under it is the one that reads as arithmetic and is
+  // really a sentence with half of it missing, so it says which half.
+  else if (orderIncomplete && orderStep!.name === 'HOURS') {
+    pending = 'this rate says nothing about the crew it assumes';
+  } else if (orderIncomplete) pending = `${orderStep!.name} has no conversion`;
   else if (priceIncomplete) pending = `${item.price!.name} has no conversion`;
   else if (unitCost === null) pending = 'no price';
 
   return {
     item,
+    basis: basisOf(item, cls),
+    off: item.off?.reason ?? null,
+    quotedBy: item.priceSource?.from ?? null,
+    rateSaid: item.production === undefined ? null : rateSaid(item.production),
     quantity,
     unit: item.unit,
     withWaste,

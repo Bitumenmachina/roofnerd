@@ -73,7 +73,8 @@ const between = (id, low, high) => {
   // is the seed run through one step, so close seeds give close first values and
   // `iso-x` and `iso-y` would price nearly the same.
   random();
-  return Math.round((low + random() * (high - low)) * 100) / 100;
+  // A supply house quotes to the quarter dollar; so does this book.
+  return Math.round((low + random() * (high - low)) * 4) / 4;
 };
 
 /**
@@ -87,16 +88,19 @@ const between = (id, low, high) => {
  * square foot. The steps are on the entry beside it, so the two can never
  * drift apart.
  *
- * `labor` is units per MAN-hour, and the money beside it is dollars a man-hour.
- * Crew days come out as hours over the crew size over eight, which is the
- * arithmetic in `line.ts` — so a rate written as though it were units per
- * crew-hour would put every crew day on this job out by a factor of six. The
- * rates below are stated in the form a roofer says them, in the notes on each
- * one, and converted here.
+ * `production` is the rate SAID the way the trade says it — how many units, per
+ * what, and the crew it assumes — and the money beside it is dollars a man-hour.
+ * It used to be converted to units per man-hour here, by a helper with the crew
+ * size sitting beside it, which meant the crew that divided the rate and the
+ * crew printed on the line were two facts kept in step by hand. The engine does
+ * the one conversion now (`perManHour`), off the one place it is written.
+ *
+ * `quotedBy` is whose number a subcontract line is. A sub's figure with no name
+ * on it cannot be chased and cannot be defended in a buyout meeting. The names
+ * below are invented, like every figure in this file.
+ *
+ * `off` takes a line off the bid and leaves it on the sheet, with the reason.
  */
-
-/** Units per man-hour, from the way the trade states a rate: units a crew-day. */
-const perDay = (units, crew) => Math.round((units / (crew * 8)) * 100000) / 100000;
 
 const CATALOGUE = [
   // ── the field ─────────────────────────────────────────────────────────
@@ -167,27 +171,73 @@ const CATALOGUE = [
   { id: 'curbcap', description: 'Curb cap, 24 ga galvanized', costCode: '07-100-150', unit: 'SF',
     order: { name: 'LB', contains: 1.156, rule: 'exact' }, band: [3.4, 3.8], waste: 10 },
   // ── the crews ─────────────────────────────────────────────────────────
-  // Stated the way a roofer states them, and converted above. A six-man crew
-  // lays this system at roughly twenty-two squares a day all in — the three
-  // install lines below add up to that — and tears the old one off faster than
-  // it puts the new one on.
+  //
+  // Stated the way a foreman states them: how many go up, and what they get
+  // through in a day. Two of these moved, and the reason is on the sheet rather
+  // than in anybody's judgement — the supervision line below carries fifteen
+  // foreman days, and at the rates this file used to hold, the whole roof went
+  // on in about four and a half. A production rate that cannot be reconciled
+  // with the days somebody is being paid to stand there is the first thing an
+  // estimator catches on somebody else's bid.
+  //
+  // What moved: the tapered package (a four course, ribbon adhered package on a
+  // solved layout is not a single mechanically attached board, and sixty
+  // squares a day by six men was the rate for the second of those), and the
+  // membrane (adhered and welded, not laid loose). Tear off, the cover board,
+  // the wall and the curb are where they were.
+  //
+  // A six-man crew now gets through about ten squares of this roof a day all
+  // in, tear-off included, which is a fortnight on ninety-six squares and
+  // reconciles with the fifteen days of supervision beside it.
   { id: 'tearoff', description: 'Tear off existing roof', costCode: '07-100-210', unit: 'SQ',
-    labor: { productionRate: perDay(40, 6), crewSize: 6 }, band: [48, 58] },
+    production: { rate: 40, per: 'crew-day', crew: 6 }, band: [48, 58] },
   { id: 'set-insulation', description: 'Lay the tapered package', costCode: '07-100-230', unit: 'SQ',
-    labor: { productionRate: perDay(60, 6), crewSize: 6 }, band: [48, 58] },
+    production: { rate: 25, per: 'crew-day', crew: 6 }, band: [48, 58] },
   { id: 'set-coverboard', description: 'Lay cover board', costCode: '07-100-230', unit: 'SQ',
-    labor: { productionRate: perDay(80, 6), crewSize: 6 }, band: [48, 58] },
+    production: { rate: 50, per: 'crew-day', crew: 6 }, band: [48, 58] },
   { id: 'install-membrane', description: 'Weld the membrane', costCode: '07-100-230', unit: 'SQ',
-    labor: { productionRate: perDay(60, 6), crewSize: 6 }, band: [48, 58] },
+    production: { rate: 40, per: 'crew-day', crew: 6 }, band: [48, 58] },
   { id: 'install-flashing', description: 'Flash the wall', costCode: '07-100-240', unit: 'LF',
-    labor: { productionRate: perDay(120, 2), crewSize: 2 }, band: [48, 58] },
+    production: { rate: 120, per: 'crew-day', crew: 2 }, band: [48, 58] },
   { id: 'set-drain', description: 'Set the drains', costCode: '07-100-240', unit: 'EA',
-    labor: { productionRate: perDay(2.7, 2), crewSize: 2 }, band: [48, 58] },
+    production: { rate: 3, per: 'crew-day', crew: 2 }, band: [48, 58] },
   { id: 'set-curb', description: 'Flash the curb', costCode: '07-100-240', unit: 'LF',
-    labor: { productionRate: perDay(48, 2), crewSize: 2 }, band: [48, 58] },
+    production: { rate: 48, per: 'crew-day', crew: 2 }, band: [48, 58] },
+  // ── the shop, and then the roof ───────────────────────────────────────
+  //
+  // Two lines for every piece of formed metal, which is how a sheet-metal
+  // roofer prices it and how an Edge report prints it: fabricate it at the
+  // brake, then carry it up and set it. They are different buildings, different
+  // people and different weeks — a cap fabricated on Tuesday is set on Thursday
+  // by somebody else — so one line covering both hides which half is slipping
+  // when the job runs late.
+  //
+  // A shop hour is one pair of hands at the brake. Coping is a five-bend piece
+  // with a hem each side and it runs slower than a cleat, which is two bends
+  // and a hem.
+  { id: 'fab-coping', description: 'Fabricate coping cap, 24 ga', costCode: '07-100-320', unit: 'LF',
+    layer: 'edge metal', production: { rate: 70, per: 'shop-hour' }, band: [44, 54] },
+  { id: 'fab-cleat', description: 'Fabricate continuous cleat, 20 ga', costCode: '07-100-320', unit: 'LF',
+    layer: 'edge metal', production: { rate: 200, per: 'shop-hour' }, band: [44, 54] },
+  { id: 'install-coping', description: 'Install coping cap, 24 ga', costCode: '07-100-300', unit: 'LF',
+    layer: 'edge metal', production: { rate: 160, per: 'crew-day', crew: 2 }, band: [48, 58] },
+  { id: 'install-cleat', description: 'Install continuous cleat, 20 ga', costCode: '07-100-300', unit: 'LF',
+    layer: 'edge metal', production: { rate: 300, per: 'crew-day', crew: 2 }, band: [48, 58] },
   // ── bought in ─────────────────────────────────────────────────────────
+  //
+  // The metal sub's own number for the same work the two pairs above do in
+  // house. It stays on the sheet and out of the total: it is the alternate, and
+  // an alternate that gets deleted is one nobody can take when the shop is
+  // three weeks out. Struck, with the reason, and the recap still says what
+  // taking it would add back.
   { id: 'set-metal', description: 'Form and set the metal', costCode: '07-100-900', unit: 'LF',
+    quotedBy: 'Bayside Sheet Metal', off: { reason: 'alternate — the shop is fabricating this' },
     band: [7.6, 9.0] },
+  // Somebody else's crane and somebody else's mechanical crew. A curb that has
+  // to be raised means the unit comes off it and goes back on it, and that is a
+  // rigging day with a name on it and no hours of ours against it.
+  { id: 'crane', description: 'Crane and curb rework', costCode: '07-100-900', unit: 'EA',
+    quotedBy: 'Ridgeline Rigging', band: [2850, 3400] },
   { id: 'lift', description: 'Telehandler rental, weekly', costCode: '07-100-940', unit: 'EA',
     order: { name: 'EA', per: 1, rule: 'ceil' }, band: [1900, 2300] },
   { id: 'dumpster', description: 'Dumpster, 30 yard', costCode: '07-100-950', unit: 'EA',
@@ -196,14 +246,25 @@ const CATALOGUE = [
     band: [980, 1300] },
   { id: 'warranty', description: 'Manufacturer warranty, 20 year NDL', costCode: '07-100-920', unit: 'SQ',
     band: [52, 68] },
+  // A foreman day is a crew of one for a day. Stating it that way puts its
+  // hours in the same column as everybody else's, which is where the Hours/SQ
+  // figure needs them: a job supervised for fifteen days and built in four is
+  // not a job anybody priced correctly, and the recap can only say so if the
+  // supervision hours are in it.
   { id: 'supervision', description: 'Supervision, foreman day', costCode: '07-100-990', unit: 'EA',
-    band: [460, 540] },
+    production: { rate: 1, per: 'crew-day', crew: 1 }, band: [58, 72] },
 ];
 
 // ── the package, by letter ─────────────────────────────────────────────────
-// One entry per lettered panel the layout can actually reach, generated from the
-// manufacturer's own chart rather than typed here — so the catalogue follows the
-// chart and cannot drift from what the solve bills against.
+// One entry per lettered panel the manufacturer's charts NAME — every letter in
+// every slope's set, not only the four this roof's current slope reaches.
+//
+// The reason is the whole of C9's second half. A quarter in twelve buys X, Y, Z
+// and ZZ; an eighth buys AA, A, B, C and more; a half buys Q and QQ. Those are
+// different series and not the same panels with moved edges, so a price book
+// that carried only today's four would have nothing to sell the moment somebody
+// set the high and low points and the solve re-lettered the roof. A supply
+// house prices the panel, not this job's opinion of it.
 //
 // Polyiso is quoted by the square foot per inch of thickness, which is why a
 // band per letter is the honest shape: an X panel averages an inch across its
@@ -227,10 +288,36 @@ if (!charted?.extended) {
   throw new Error(`the chart draws no extended set at ${field.properties.TAPER} in per foot`);
 }
 const fillStep = Number.parseFloat(charted.extended.fill_in);
-/** The panels a layout off this drain thickness can reach: `[T, T + step)`. */
-const letters = charted.extended.panels.filter(
-  (p) => p.thick_edge_in > atDrain + 1e-9 && p.thin_edge_in < atDrain + fillStep - 1e-9,
-);
+void atDrain;
+
+/**
+ * Every lettered panel the whole document names, by designation.
+ *
+ * Across both sets of every slope, because which of them a roof buys is the
+ * solve's answer and can change under the sheet.
+ *
+ * THE EXTENDED SETS FIRST, and the reason is a real collision in the document
+ * rather than a preference: at a half inch in twelve the standard chart's Q1 is
+ * a 2 1/2 to 4 1/2 panel and the extended chart's Q1 is a 4 1/2 to 6 1/2 one.
+ * A designation is unique inside a set and not across the two of them, and the
+ * name the solve puts in the scope (`TAPER_Q1_SF`) carries the letter and not
+ * the set — so a book keyed on the letter alone is right for one of the two.
+ * Extended, because that is the set this program defaults to (D151), and the
+ * collision is printed at the end of this run rather than papered over.
+ */
+const panels = new Map();
+const collisions = [];
+for (const set of ['extended', 'standard']) {
+  for (const slope of profile.slopes) {
+    for (const panel of slope[set]?.panels ?? []) {
+      const held = panels.get(panel.designation);
+      if (held === undefined) { panels.set(panel.designation, panel); continue; }
+      if (held.thin_edge_in !== panel.thin_edge_in || held.thick_edge_in !== panel.thick_edge_in) {
+        collisions.push(panel.designation);
+      }
+    }
+  }
+}
 
 /** As a roofer writes it: 1/2", 2 1/4", 4". */
 const inchLabel = (v) => {
@@ -241,25 +328,44 @@ const inchLabel = (v) => {
   return `${whole || (fraction ? '' : 0)}${fraction}"`.trim();
 };
 
-for (const panel of letters) {
+/** What the supply house quotes each lettered panel at, by the panel's own id. */
+const byLetter = [];
+for (const [designation, panel] of panels) {
   const average = (panel.thin_edge_in + panel.thick_edge_in) / 2;
-  CATALOGUE.push({
-    id: `iso-${panel.designation.toLowerCase()}`,
+  byLetter.push({
+    id: `iso-${designation.toLowerCase()}`,
     // THE LETTER FIRST. The panel is 364 px wide and the line's name ellipsizes
     // in it: "Tapered polyisocyanurate X, 1/4 : 12 — …" cut to "Tapered
     // polyisocyan…" on all four of them, so the sheet showed four lines that
     // read alike and differed only in their money. What an estimator needs to
-    // tell them apart is the letter, so the letter is the third word.
-    description: `Tapered ${panel.designation} · ${inchLabel(panel.thin_edge_in)}`
-      + `–${inchLabel(panel.thick_edge_in)}`,
+    // tell them apart is the letter, and it is the second word.
+    description: `Tapered ${designation}`,
+    thickness: `${inchLabel(panel.thin_edge_in)}–${inchLabel(panel.thick_edge_in)}`,
     costCode: '07-100-100', unit: 'SQ',
     band: [PER_INCH_TAPERED[0] * average, PER_INCH_TAPERED[1] * average],
     waste: 8,
   });
 }
+CATALOGUE.push(...byLetter);
+// The one line an estimator writes for the whole tapered package. The sheet
+// shows one per letter the layout actually reached — the same way the fastener
+// lines are three because a roof has three wind zones, except that how many
+// letters there are is a fact about the SLOPE and changes under the sheet.
+// Nothing about a letter is typed into the job file.
+CATALOGUE.push({
+  id: 'iso',
+  description: 'Tapered *',
+  eachOf: 'TAPER_*_SF',
+  costCode: '07-100-100', unit: 'SQ',
+  waste: 8,
+});
 CATALOGUE.push({
   id: 'iso-fill',
-  description: `Flat polyiso fill · ${inchLabel(fillStep)}`,
+  // No thickness in the name. The flat board under the package is 4 in on the
+  // extended charts and 2 in on the standard ones, and which of those a roof
+  // takes is decided by the solve — so a figure typed here is one that goes
+  // quietly wrong the first time anybody moves the slope.
+  description: 'Flat polyiso fill board',
   costCode: '07-100-100', unit: 'SQ',
   band: [PER_INCH_FLAT[0] * fillStep, PER_INCH_FLAT[1] * fillStep],
   waste: 8,
@@ -282,11 +388,13 @@ CATALOGUE.push({
  * the existing mechanism and nothing about it changes here.
  */
 const DERIVED = [
-  ...letters.map((panel) => ({
-    condition: 'c-field',
-    id: `iso-${panel.designation.toLowerCase()}`,
-    formula: `TAPER_${panel.designation}_SF / 100`,
-  })),
+  {
+    condition: 'c-field', id: 'iso', formula: 'TAPER_*_SF / 100',
+    notes: 'One line for the whole tapered package. The sheet draws one per '
+      + 'lettered panel the layout reached, and each takes its price from the '
+      + "book by its own name — so moving the slope into another chart's series "
+      + 'buys the panels that chart prints rather than pricing nothing.',
+  },
   { condition: 'c-field', id: 'iso-fill', formula: 'FILL_SF / 100' },
   { condition: 'c-drains', id: 'sump-panel', formula: 'SUMP_PANELS_EA' },
   { condition: 'c-cricket', id: 'cricket-stock', formula: 'CRICKET_SF' },
@@ -317,8 +425,22 @@ const DERIVED = [
   },
   { condition: 'c-parapet', id: 'cleat', formula: 'CLEAT_LF' },
   { condition: 'c-parapet', id: 'metal-fasteners', formula: 'CLEAT_LF * (12 / FASTEN_OC)' },
+  // C9: the shop and then the roof, for each of the two formed pieces, off the
+  // same solved run the material lines are priced against. Fabricating and
+  // setting were one bought-in line before this, which could not say which half
+  // of it was ours.
+  { condition: 'c-parapet', id: 'fab-coping', formula: 'COPING_LF' },
+  { condition: 'c-parapet', id: 'install-coping', formula: 'COPING_LF' },
+  { condition: 'c-parapet', id: 'fab-cleat', formula: 'CLEAT_LF' },
+  { condition: 'c-parapet', id: 'install-cleat', formula: 'CLEAT_LF' },
   { condition: 'c-curb', id: 'curbflash', formula: 'FLASH_SF' },
   { condition: 'c-curb', id: 'curbcap', formula: 'COPING_LF * (STRETCHOUT / 12)' },
+  {
+    condition: 'c-curb', id: 'crane', formula: '1',
+    notes: 'One rigging day: the unit comes off the curb and goes back on it so '
+      + 'the curb can be raised and reflashed. A typed one, because it is a '
+      + "quoted day and not a thing the drawing can be asked how many of.",
+  },
   // C4: the base layer, by zone, and the adhesive over it. Three fastener lines
   // rather than one, because the zone is the whole point — a sheet with one
   // fastener line on it cannot be read to find out whether the corners were
@@ -346,6 +468,18 @@ const DERIVED = [
       + 'wind speed. The table stops below this coast; the top row it prints is what '
       + 'this rests on, and the fastening plan says so on its face.',
   },
+  // C9: the two lines that are not work on the roof move off the roof field and
+  // onto the group a sheet keeps them in. They were diluting every per-square
+  // figure the field carried — a permit is not a cost of laying a square, and
+  // reading it as one is exactly what the classes exist to stop.
+  {
+    condition: 'c-general', id: 'supervision', formula: '15',
+    notes: 'Fifteen foreman days: a crew of one for a day apiece, so the hours '
+      + 'land in the same column as everybody else\u2019s and the recap can be '
+      + 'read against them. Typed, because how long somebody stands on a roof is '
+      + 'a judgement and not a thing the drawing can be asked.',
+  },
+  { condition: 'c-general', id: 'permit', formula: '1' },
   {
     condition: 'c-field', id: 'bonding-adhesive', formula: 'BONDING_GAL / 5',
     notes: 'Gallons into five gallon pails. The coverage rate the manual prints '
@@ -405,17 +539,40 @@ const WIND_DEMO = {
   WIND_PSF_CORNER: 122,
 };
 
-/** Lines a solved bill replaces. Left on the job they would charge it twice. */
-const RETIRED = ['iso-tapered', 'plates'];
+/**
+ * Lines a solved bill replaces. Left on the job they would charge it twice.
+ *
+ * The four lettered ones join the list in C9: they were the panels a quarter in
+ * twelve buys, typed into the job as four items, and the one line above stands
+ * for all of them however many the slope turns out to want.
+ */
+const RETIRED = ['iso-tapered', 'plates', 'iso-x', 'iso-y', 'iso-z', 'iso-zz'];
+
+/**
+ * When the quotes on this job were good.
+ *
+ * A price with no date is a price nobody can defend — it is the first question
+ * asked of a sub's number six weeks after it was given. Invented, like every
+ * other figure here.
+ */
+const QUOTED_ON = '2026-09-02';
 
 // `priceAs` is how two or three lines for the SAME product carry the same
 // price. The draw is seeded on the id so that adding a line never re-prices the
 // rest; a product sold once and billed on three lines needs one seed for all
 // three, and saying which is better than three bands that happen to coincide.
-const library = CATALOGUE.map(({ band, labor, priceAs, ...item }) => ({
+const library = CATALOGUE.map(({ band, priceAs, quotedBy, ...item }) => ({
   ...item,
-  ...(labor ?? {}),
-  unitCost: between(priceAs ?? item.id, band[0], band[1]),
+  // A family line has no price of its own: each letter the sheet draws from it
+  // takes the book's price for that letter.
+  ...(band === undefined ? {} : {}),
+  // Whose number it is, where somebody quoted it. `priceSource` is where a
+  // price says where it came from and how firm it is, and a subcontract line
+  // is the case that has to carry a name.
+  ...(quotedBy === undefined
+    ? {}
+    : { priceSource: { from: quotedBy, firmness: 'firm', on: QUOTED_ON } }),
+  ...(band === undefined ? {} : { unitCost: between(priceAs ?? item.id, band[0], band[1]) }),
 }));
 
 const out = {
@@ -455,6 +612,38 @@ if (parapet && parapet.properties?.FASTEN_OC === undefined) {
 
 // And the wind, for the same reason: the zones are set out from a height and
 // rated from a pressure, and neither is anything a drawing can be asked for.
+/**
+ * General Conditions, as its own group on the sheet.
+ *
+ * Every commercial estimate this program is modelled on carries one: a
+ * condition with nothing traced on it, holding what the job costs that is not
+ * work on any particular part of the roof. Supervision and the permit sat on
+ * the roof field before this, where they quietly went into every dollar a
+ * square the field reported.
+ *
+ * Created here rather than hand-written into the job, so the file stays
+ * regenerable from one source, and last in the list because the sheet reads in
+ * the order a crew builds in.
+ */
+if (!conditions.some((c) => c.id === 'c-general')) {
+  conditions.push({
+    id: 'c-general',
+    name: 'General Conditions — Labor & Misc',
+    kind: 'count',
+    traces: [],
+    properties: {},
+    items: [],
+    color: '#7a7a82',
+  });
+}
+// And off the roof field, where they were.
+for (const condition of conditions) {
+  if (condition.id !== 'c-field') continue;
+  condition.items = (condition.items ?? []).filter(
+    (i) => !['supervision', 'permit'].includes(i.id),
+  );
+}
+
 const roof = conditions.find((c) => c.id === 'c-field');
 if (roof) {
   for (const [name, value] of Object.entries(WIND_DEMO)) {
@@ -497,6 +686,8 @@ for (const condition of conditions) {
     // What the line IS in the roof, where the catalogue says. A line with no
     // thickness draws nothing in a section, and it is still true.
     if (priced.layer !== undefined) item.layer = priced.layer;
+    if (priced.eachOf !== undefined) item.eachOf = priced.eachOf;
+    else delete item.eachOf;
     item.formula = line.formula;
     if (priced.waste !== undefined) item.waste = priced.waste;
     if (line.notes !== undefined) item.notes = line.notes;
@@ -508,9 +699,21 @@ for (const condition of conditions) {
   for (const item of condition.items ?? []) {
     const priced = byId.get(item.id);
     if (!priced) { missing.push(`${condition.name} → ${item.id}`); continue; }
-    item.unitCost = priced.unitCost;
-    if (priced.productionRate !== undefined) item.productionRate = priced.productionRate;
-    if (priced.crewSize !== undefined) item.crewSize = priced.crewSize;
+    if (priced.unitCost === undefined) delete item.unitCost;
+    else item.unitCost = priced.unitCost;
+    // The rate, the name on the quote and whether the line is off the bid all
+    // come off the catalogue, and all three are REMOVED where it no longer
+    // carries them. A rate left behind on a line the catalogue has stopped
+    // calling labor is a line with hours nobody can account for.
+    for (const field of ['production', 'priceSource', 'off']) {
+      if (priced[field] !== undefined) item[field] = priced[field];
+      else delete item[field];
+    }
+    // The two fields the rate used to be written in. Left behind they are a
+    // second, stale statement of the same fact — which is the shape of defect
+    // this whole pass exists to remove.
+    delete item.productionRate;
+    delete item.crewSize;
     moved += 1;
   }
 }
@@ -525,6 +728,26 @@ const job = readJob((rel) => {
   catch (e) { if (e.code === 'ENOENT') return null; throw e; }
 });
 job.conditions = conditions;
+
+// ── and the letters, into the price set where a book belongs ───────────────
+//
+// A scenario IS a set of prices for the job, and this is the one thing on the
+// demo that has to be priced from a book rather than on a line: the lettered
+// panels are drawn from one item, so there is no line to type a price on, and
+// which letters get drawn is the solve's answer rather than the estimator's.
+//
+// Every letter of every chart goes in, not only the four this slope reaches —
+// so moving the high and low points buys the panels the new chart prints
+// instead of a sheet of lines with no price against them.
+//
+// Into every price set, because this fixture's two differ in their adders and
+// not in what the supply house charges. A second house that really quoted
+// differently would take a second draw here.
+const letterPrices = Object.fromEntries(byLetter.map((e) => [e.id, byId.get(e.id).unitCost]));
+for (const scenario of job.job.scenarios) {
+  scenario.prices = { ...(scenario.prices ?? {}), ...letterPrices };
+}
+
 writeJob(job, (rel, contents) => writeFileSync(join(folder, rel), contents));
 
 console.log(`${library.length} synthetic prices → jobs/demo-job/prices.json`);
@@ -535,5 +758,12 @@ if (missing.length) {
   // carry is a line whose price nobody regenerated.
   console.log('not in the catalogue, so left alone:');
   for (const m of missing) console.log(`  ${m}`);
+}
+if (collisions.length) {
+  // Said out loud every run. A letter that means two panels is a fact about the
+  // manufacturer's document, and the price book can only be right about one of
+  // them until the solve says which set a roof is on.
+  console.log('one designation is drawn at two thicknesses across the sets, '
+    + `and the extended one is priced: ${[...new Set(collisions)].join(', ')}`);
 }
 console.log('Seeded, so the same run gives the same prices and screenshots do not churn.');

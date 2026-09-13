@@ -18,7 +18,7 @@
         "rule": "exact"
       },
       "waste": 10,
-      "unitCost": 1.17
+      "unitCost": 1.25
     },
     {
       "id": "coverboard",
@@ -26,7 +26,7 @@
       "costCode": "07-100-100",
       "unit": "SQ",
       "waste": 8,
-      "unitCost": 93.3
+      "unitCost": 93.25
     },
     {
       "id": "base-fasteners-field",
@@ -39,7 +39,7 @@
         "per": 1000,
         "rule": "exact"
       },
-      "unitCost": 289.91
+      "unitCost": 290
     },
     {
       "id": "base-fasteners-perimeter",
@@ -52,7 +52,7 @@
         "per": 1000,
         "rule": "exact"
       },
-      "unitCost": 289.91
+      "unitCost": 290
     },
     {
       "id": "base-fasteners-corner",
@@ -65,7 +65,7 @@
         "per": 1000,
         "rule": "exact"
       },
-      "unitCost": 289.91
+      "unitCost": 290
     },
     {
       "id": "base-plates",
@@ -78,7 +78,7 @@
         "per": 1000,
         "rule": "exact"
       },
-      "unitCost": 217.95
+      "unitCost": 218
     },
     {
       "id": "iso-adhesive-field",
@@ -86,7 +86,7 @@
       "costCode": "07-100-100",
       "unit": "EA",
       "layer": "adhesive",
-      "unitCost": 1249.62
+      "unitCost": 1249.5
     },
     {
       "id": "iso-adhesive-perimeter",
@@ -94,7 +94,7 @@
       "costCode": "07-100-100",
       "unit": "EA",
       "layer": "adhesive",
-      "unitCost": 1249.62
+      "unitCost": 1249.5
     },
     {
       "id": "iso-adhesive-corner",
@@ -102,7 +102,7 @@
       "costCode": "07-100-100",
       "unit": "EA",
       "layer": "adhesive",
-      "unitCost": 1249.62
+      "unitCost": 1249.5
     },
     {
       "id": "bonding-adhesive",
@@ -110,7 +110,7 @@
       "costCode": "07-100-100",
       "unit": "EA",
       "layer": "adhesive",
-      "unitCost": 246.09
+      "unitCost": 246
     },
     {
       "id": "wallflash",
@@ -118,7 +118,7 @@
       "costCode": "07-100-100",
       "unit": "SF",
       "waste": 10,
-      "unitCost": 1.1
+      "unitCost": 1
     },
     {
       "id": "coping",
@@ -131,7 +131,7 @@
         "rule": "exact"
       },
       "waste": 10,
-      "unitCost": 3.55
+      "unitCost": 3.5
     },
     {
       "id": "cleat",
@@ -139,14 +139,14 @@
       "costCode": "07-100-150",
       "unit": "LF",
       "waste": 5,
-      "unitCost": 2.06
+      "unitCost": 2
     },
     {
       "id": "mitre",
       "description": "Shop-formed corner, mitre welded",
       "costCode": "07-100-150",
       "unit": "EA",
-      "unitCost": 89.39
+      "unitCost": 89.5
     },
     {
       "id": "termbar",
@@ -165,21 +165,21 @@
         "per": 1000,
         "rule": "exact"
       },
-      "unitCost": 353.37
+      "unitCost": 353.25
     },
     {
       "id": "drain",
       "description": "Retrofit drain, 4 in",
       "costCode": "07-100-100",
       "unit": "EA",
-      "unitCost": 478.45
+      "unitCost": 478.5
     },
     {
       "id": "sump-panel",
       "description": "Tapered sump panel, 4 ft square",
       "costCode": "07-100-100",
       "unit": "EA",
-      "unitCost": 187.16
+      "unitCost": 187.25
     },
     {
       "id": "curbflash",
@@ -187,7 +187,7 @@
       "costCode": "07-100-100",
       "unit": "SF",
       "waste": 10,
-      "unitCost": 1.14
+      "unitCost": 1.25
     },
     {
       "id": "curbcap",
@@ -200,77 +200,168 @@
         "rule": "exact"
       },
       "waste": 10,
-      "unitCost": 3.43
+      "unitCost": 3.5
     },
     {
       "id": "tearoff",
       "description": "Tear off existing roof",
       "costCode": "07-100-210",
       "unit": "SQ",
-      "productionRate": 0.83333,
-      "crewSize": 6,
-      "unitCost": 53.47
+      "production": {
+        "rate": 40,
+        "per": "crew-day",
+        "crew": 6
+      },
+      "unitCost": 53.5
     },
     {
       "id": "set-insulation",
       "description": "Lay the tapered package",
       "costCode": "07-100-230",
       "unit": "SQ",
-      "productionRate": 1.25,
-      "crewSize": 6,
-      "unitCost": 48.16
+      "production": {
+        "rate": 25,
+        "per": "crew-day",
+        "crew": 6
+      },
+      "unitCost": 48.25
     },
     {
       "id": "set-coverboard",
       "description": "Lay cover board",
       "costCode": "07-100-230",
       "unit": "SQ",
-      "productionRate": 1.66667,
-      "crewSize": 6,
-      "unitCost": 53.16
+      "production": {
+        "rate": 50,
+        "per": "crew-day",
+        "crew": 6
+      },
+      "unitCost": 53.25
     },
     {
       "id": "install-membrane",
       "description": "Weld the membrane",
       "costCode": "07-100-230",
       "unit": "SQ",
-      "productionRate": 1.25,
-      "crewSize": 6,
-      "unitCost": 56.27
+      "production": {
+        "rate": 40,
+        "per": "crew-day",
+        "crew": 6
+      },
+      "unitCost": 56.25
     },
     {
       "id": "install-flashing",
       "description": "Flash the wall",
       "costCode": "07-100-240",
       "unit": "LF",
-      "productionRate": 7.5,
-      "crewSize": 2,
-      "unitCost": 56.89
+      "production": {
+        "rate": 120,
+        "per": "crew-day",
+        "crew": 2
+      },
+      "unitCost": 57
     },
     {
       "id": "set-drain",
       "description": "Set the drains",
       "costCode": "07-100-240",
       "unit": "EA",
-      "productionRate": 0.16875,
-      "crewSize": 2,
-      "unitCost": 49.47
+      "production": {
+        "rate": 3,
+        "per": "crew-day",
+        "crew": 2
+      },
+      "unitCost": 49.5
     },
     {
       "id": "set-curb",
       "description": "Flash the curb",
       "costCode": "07-100-240",
       "unit": "LF",
-      "productionRate": 3,
-      "crewSize": 2,
-      "unitCost": 55.8
+      "production": {
+        "rate": 48,
+        "per": "crew-day",
+        "crew": 2
+      },
+      "unitCost": 55.75
+    },
+    {
+      "id": "fab-coping",
+      "description": "Fabricate coping cap, 24 ga",
+      "costCode": "07-100-320",
+      "unit": "LF",
+      "layer": "edge metal",
+      "production": {
+        "rate": 70,
+        "per": "shop-hour"
+      },
+      "unitCost": 47.25
+    },
+    {
+      "id": "fab-cleat",
+      "description": "Fabricate continuous cleat, 20 ga",
+      "costCode": "07-100-320",
+      "unit": "LF",
+      "layer": "edge metal",
+      "production": {
+        "rate": 200,
+        "per": "shop-hour"
+      },
+      "unitCost": 47
+    },
+    {
+      "id": "install-coping",
+      "description": "Install coping cap, 24 ga",
+      "costCode": "07-100-300",
+      "unit": "LF",
+      "layer": "edge metal",
+      "production": {
+        "rate": 160,
+        "per": "crew-day",
+        "crew": 2
+      },
+      "unitCost": 51.75
+    },
+    {
+      "id": "install-cleat",
+      "description": "Install continuous cleat, 20 ga",
+      "costCode": "07-100-300",
+      "unit": "LF",
+      "layer": "edge metal",
+      "production": {
+        "rate": 300,
+        "per": "crew-day",
+        "crew": 2
+      },
+      "unitCost": 53
     },
     {
       "id": "set-metal",
       "description": "Form and set the metal",
       "costCode": "07-100-900",
       "unit": "LF",
-      "unitCost": 8.36
+      "off": {
+        "reason": "alternate — the shop is fabricating this"
+      },
+      "priceSource": {
+        "from": "Bayside Sheet Metal",
+        "firmness": "firm",
+        "on": "2026-09-02"
+      },
+      "unitCost": 8.25
+    },
+    {
+      "id": "crane",
+      "description": "Crane and curb rework",
+      "costCode": "07-100-900",
+      "unit": "EA",
+      "priceSource": {
+        "from": "Ridgeline Rigging",
+        "firmness": "firm",
+        "on": "2026-09-02"
+      },
+      "unitCost": 3053
     },
     {
       "id": "lift",
@@ -282,7 +373,7 @@
         "per": 1,
         "rule": "ceil"
       },
-      "unitCost": 2268.85
+      "unitCost": 2268.75
     },
     {
       "id": "dumpster",
@@ -294,68 +385,337 @@
         "per": 1,
         "rule": "ceil"
       },
-      "unitCost": 830.6
+      "unitCost": 830.5
     },
     {
       "id": "permit",
       "description": "Permit and inspections",
       "costCode": "07-100-950",
       "unit": "EA",
-      "unitCost": 1039.8
+      "unitCost": 1039.75
     },
     {
       "id": "warranty",
       "description": "Manufacturer warranty, 20 year NDL",
       "costCode": "07-100-920",
       "unit": "SQ",
-      "unitCost": 53.86
+      "unitCost": 53.75
     },
     {
       "id": "supervision",
       "description": "Supervision, foreman day",
       "costCode": "07-100-990",
       "unit": "EA",
-      "unitCost": 525.27
+      "production": {
+        "rate": 1,
+        "per": "crew-day",
+        "crew": 1
+      },
+      "unitCost": 69.5
+    },
+    {
+      "id": "iso-aa",
+      "description": "Tapered AA",
+      "thickness": "1/2\"–1\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 37.75
+    },
+    {
+      "id": "iso-a",
+      "description": "Tapered A",
+      "thickness": "1\"–1 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 69.75
+    },
+    {
+      "id": "iso-b",
+      "description": "Tapered B",
+      "thickness": "1 1/2\"–2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 87.75
+    },
+    {
+      "id": "iso-c",
+      "description": "Tapered C",
+      "thickness": "2\"–2 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 119
+    },
+    {
+      "id": "iso-d",
+      "description": "Tapered D",
+      "thickness": "2 1/2\"–3\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 144.25
+    },
+    {
+      "id": "iso-e",
+      "description": "Tapered E",
+      "thickness": "3\"–3 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 162.75
+    },
+    {
+      "id": "iso-f",
+      "description": "Tapered F",
+      "thickness": "3 1/2\"–4\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 216
+    },
+    {
+      "id": "iso-ff",
+      "description": "Tapered FF",
+      "thickness": "4\"–4 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 209.75
+    },
+    {
+      "id": "iso-aa1",
+      "description": "Tapered AA1",
+      "thickness": "4 1/2\"–5\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 275.25
+    },
+    {
+      "id": "iso-a1",
+      "description": "Tapered A1",
+      "thickness": "5\"–5 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 292
+    },
+    {
+      "id": "iso-b1",
+      "description": "Tapered B1",
+      "thickness": "5 1/2\"–6\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 282.25
+    },
+    {
+      "id": "iso-c1",
+      "description": "Tapered C1",
+      "thickness": "6\"–6 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 313.5
+    },
+    {
+      "id": "iso-d1",
+      "description": "Tapered D1",
+      "thickness": "6 1/2\"–7\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 374.25
+    },
+    {
+      "id": "iso-e1",
+      "description": "Tapered E1",
+      "thickness": "7\"–7 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 360.5
+    },
+    {
+      "id": "iso-f1",
+      "description": "Tapered F1",
+      "thickness": "7 1/2\"–8\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 431.75
+    },
+    {
+      "id": "iso-ff1",
+      "description": "Tapered FF1",
+      "thickness": "8\"–8 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 436
     },
     {
       "id": "iso-x",
-      "description": "Tapered X · 1/2\"–1 1/2\"",
+      "description": "Tapered X",
+      "thickness": "1/2\"–1 1/2\"",
       "costCode": "07-100-100",
       "unit": "SQ",
       "waste": 8,
-      "unitCost": 51.66
+      "unitCost": 51.75
     },
     {
       "id": "iso-y",
-      "description": "Tapered Y · 1 1/2\"–2 1/2\"",
+      "description": "Tapered Y",
+      "thickness": "1 1/2\"–2 1/2\"",
       "costCode": "07-100-100",
       "unit": "SQ",
       "waste": 8,
-      "unitCost": 110.7
+      "unitCost": 110.75
     },
     {
       "id": "iso-z",
-      "description": "Tapered Z · 2 1/2\"–3 1/2\"",
+      "description": "Tapered Z",
+      "thickness": "2 1/2\"–3 1/2\"",
       "costCode": "07-100-100",
       "unit": "SQ",
       "waste": 8,
-      "unitCost": 161.97
+      "unitCost": 162
     },
     {
       "id": "iso-zz",
-      "description": "Tapered ZZ · 3 1/2\"–4 1/2\"",
+      "description": "Tapered ZZ",
+      "thickness": "3 1/2\"–4 1/2\"",
       "costCode": "07-100-100",
       "unit": "SQ",
       "waste": 8,
-      "unitCost": 216.66
+      "unitCost": 216.75
+    },
+    {
+      "id": "iso-x1",
+      "description": "Tapered X1",
+      "thickness": "4 1/2\"–5 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 261.25
+    },
+    {
+      "id": "iso-y1",
+      "description": "Tapered Y1",
+      "thickness": "5 1/2\"–6 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 340.25
+    },
+    {
+      "id": "iso-z1",
+      "description": "Tapered Z1",
+      "thickness": "6 1/2\"–7 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 391.5
+    },
+    {
+      "id": "iso-zz1",
+      "description": "Tapered ZZ1",
+      "thickness": "7 1/2\"–8 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 413.5
+    },
+    {
+      "id": "iso-q",
+      "description": "Tapered Q",
+      "thickness": "1/2\"–2 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 72.25
+    },
+    {
+      "id": "iso-qq",
+      "description": "Tapered QQ",
+      "thickness": "2 1/2\"–4 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 175
+    },
+    {
+      "id": "iso-q1",
+      "description": "Tapered Q1",
+      "thickness": "4 1/2\"–6 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 303.75
+    },
+    {
+      "id": "iso-qq1",
+      "description": "Tapered QQ1",
+      "thickness": "6 1/2\"–8 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 419.75
+    },
+    {
+      "id": "iso-q2",
+      "description": "Tapered Q2",
+      "thickness": "4 1/2\"–6 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 282
+    },
+    {
+      "id": "iso-q3",
+      "description": "Tapered Q3",
+      "thickness": "6 1/2\"–8 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 410
+    },
+    {
+      "id": "iso-q4",
+      "description": "Tapered Q4",
+      "thickness": "8 1/2\"–10 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 518.25
+    },
+    {
+      "id": "iso-q5",
+      "description": "Tapered Q5",
+      "thickness": "10 1/2\"–12 1/2\"",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8,
+      "unitCost": 585
+    },
+    {
+      "id": "iso",
+      "description": "Tapered *",
+      "eachOf": "TAPER_*_SF",
+      "costCode": "07-100-100",
+      "unit": "SQ",
+      "waste": 8
     },
     {
       "id": "iso-fill",
-      "description": "Flat polyiso fill · 4\"",
+      "description": "Flat polyiso fill board",
       "costCode": "07-100-100",
       "unit": "SQ",
       "waste": 8,
-      "unitCost": 170.36
+      "unitCost": 170.25
     },
     {
       "id": "cricket-stock",
@@ -363,7 +723,7 @@
       "costCode": "07-100-100",
       "unit": "SF",
       "waste": 10,
-      "unitCost": 2.43
+      "unitCost": 2.5
     }
   ]
 }
