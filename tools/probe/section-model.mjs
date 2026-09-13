@@ -51,7 +51,7 @@ const shot = async (session, name) =>
   writeFile(join(EVIDENCE, `${name}-${COMMIT}.png`), Buffer.from(await session.screenshot(), 'base64'));
 
 // ── what the job itself comes to, worked out here rather than typed here ───
-const { capInches, measure, readJob, recap } = await import('../../packages/engine/dist/index.js');
+const { capInches, measure, pointInPolygon, readJob, recap } = await import('../../packages/engine/dist/index.js');
 const jobFolder = join(ROOT, 'jobs/demo-job');
 const readFile8 = async (rel) => {
   try { return await readFile(join(jobFolder, rel), 'utf8'); } catch { return null; }
@@ -116,6 +116,28 @@ for (const c of demoDoc.conditions) {
   if (m.SF !== null) roofSquareFeet += m.SF;
 }
 const fieldSquareFeet = field ? measureOf(field).SF : null;
+
+/**
+ * The drainage points on this roof, in feet, and how many of them are ON the
+ * tapered field.
+ *
+ * The second number is what the layout is cut by (D149): a field is split into the
+ * ground each of its own drains takes, by the perpendicular bisector between them,
+ * and a drain on another area drains that area. Both are read off the job — the
+ * traces, the sheet's scale, and the engine's own ray cast — so neither is a figure
+ * this file carries.
+ */
+const feetOf = (trace) => {
+  const scale = calibrations[trace.pageId]?.feetPerUnit;
+  return scale ? trace.points.map((p) => ({ x: p.x * scale, y: p.y * scale })) : [];
+};
+const fieldRing = field ? feetOf((field.traces ?? [])[0] ?? { pageId: '', points: [] }) : [];
+const drainPoints = [];
+for (const c of demoDoc.conditions) {
+  if (c.role !== 'drain' || c.hidden) continue;
+  for (const t of c.traces ?? []) drainPoints.push(...feetOf(t));
+}
+const drainsOnField = drainPoints.filter((p) => pointInPolygon(p, fieldRing)).length;
 /** The number out of a figure on screen, whatever is written around it. */
 const numberIn = (text) => Number((/[\d,]+(?:\.\d+)?/.exec(String(text ?? '')) ?? [''])[0].replace(/,/g, ''));
 
@@ -283,13 +305,29 @@ try {
     assert.ok((first.kinds.coping ?? 0) >= 1,
       `${first.kinds.coping ?? 0} copings — the parapet states a cap width, so one is owed`);
   });
-  check('and the drains, their sumps, the valley between them and the curb', () => {
-    const drains = demoDoc.conditions.filter((c) => c.role === 'drain')
-      .reduce((n, c) => n + (c.traces ?? []).reduce((m, t) => m + t.points.length, 0), 0);
+  check('and the drains, their sumps, the ground each one takes, its valleys and the curb', () => {
+    const drains = drainPoints.length;
     assert.equal(first.kinds.drain ?? 0, drains, `${first.kinds.drain ?? 0} drains against ${drains} in the job`);
     assert.equal(first.kinds.sump ?? 0, drains, `${first.kinds.sump ?? 0} sumps against ${drains} drains`);
-    assert.equal(first.kinds.valley ?? 0, Math.max(0, drains - 1),
-      `${first.kinds.valley ?? 0} valleys between ${drains} drains`);
+    // One tapered surface per drain ON the field. C1 (D149) retired the cone for
+    // the layout NRCA lays out: the field is cut into the ground each of its
+    // drains takes, by the perpendicular bisector between them (p.166, Fig. 4-17),
+    // and each of those grounds is one mesh.
+    assert.equal(first.kinds.taper ?? 0, drainsOnField,
+      `${first.kinds.taper ?? 0} tapered surfaces against ${drainsOnField} drains on the field`);
+    // Four valleys to each of them. A valley is where two of the four planes have
+    // risen equally, there are four such pairs round a drain, and a tie between two
+    // runs square to each other is at 45° — which is the miter a board is cut on
+    // (p.166, Figs. 4-15 and 4-16). THIS ROW USED TO READ `drains - 1`, one valley
+    // down the line joining each pair of drains; there is no valley there in a
+    // four-way layout, because the ground between the two ties is level across.
+    assert.equal(first.kinds.valley ?? 0, 4 * drainsOnField,
+      `${first.kinds.valley ?? 0} valleys for ${drainsOnField} drains on the field, which want four each`);
+    // And a ridge wherever two of those grounds meet, drawn once by the earlier of
+    // the pair and cut into the pieces on which both patterns are straight — so the
+    // count is the roof's own and what this refuses is none at all.
+    assert.ok((first.kinds.ridge ?? 0) >= Math.max(0, drainsOnField - 1),
+      `${first.kinds.ridge ?? 0} ridges between ${drainsOnField} drains on the field`);
     assert.ok((first.kinds.curb ?? 0) >= 1, `${first.kinds.curb ?? 0} curbs`);
   });
   check('and the cricket, as two planes', () => {
@@ -311,10 +349,13 @@ try {
       return Number(m[1] ?? 0) + (m[2] ? Number(m[2]) / Number(m[3]) : 0);
     };
     const [thin, middle, thickest] = first.ticks.map(asInches);
-    // At the drains, and never under them. The surface is sampled on a two foot
-    // grid that does not land exactly on a drain, so the thinnest board DRAWN
-    // sits an eighth or two over the half inch the estimator stated. Under it
-    // would mean the ramp had been labelled from something other than this roof.
+    // At the drains, and never under them. The bound was slack because the surface
+    // used to be sampled on a two foot grid that never landed exactly on a drain;
+    // since D149 nothing is sampled and the drain is a corner of all four facets
+    // round it, so the thin end is the stated depth to the float. The slack is left
+    // where it is rather than tightened here, because what this row is for is the
+    // ramp being labelled from THIS roof, and under the stated depth is the failure
+    // that would mean it was not.
     assert.ok(thin >= thinnest - 0.07 && thin < thinnest + 1,
       `the thin end reads ${first.ticks[0]} and the drains are at ${thinnest} in`);
     assert.ok(Math.abs(thickest - cappedAt) < 0.13,
@@ -327,8 +368,20 @@ try {
   });
 
   check('and the key names the marks that are on this roof', () => {
-    for (const want of ['fall to the drain', 'no fall', 'valley between drains']) {
+    // The marks C1 put on it, in the words the key uses for them: the arrows run
+    // down the plane a place is on rather than at the nearest drain, the valleys
+    // are the 45° ties, and the ridge is halfway between two drains. The key said
+    // "arrows follow the fall to the drain" and "dashed: the valley between drains"
+    // before D149, and both were the cone's shape talking.
+    for (const want of ['the fall down the plane', 'no fall', 'valleys, at 45°',
+      'halfway between two drains']) {
       assert.ok(first.legend.includes(want), `the key reads "${first.legend}"`);
+    }
+    // And it says how the field was split, once there is more than one drain on it
+    // to split it between.
+    if (drainsOnField > 1) {
+      assert.ok(first.legend.includes(`split between its ${drainsOnField} drains`),
+        `${drainsOnField} drains are on the field and the key reads "${first.legend}"`);
     }
     // And it says WHICH ceiling the roof reached, because the two are not the
     // same problem and the legend is where an estimator finds out which one he
