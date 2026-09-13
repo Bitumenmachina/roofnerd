@@ -73,7 +73,10 @@ pub struct HighAndLowAnswer {
     pub drain_at: Option<Point>,
     /// What the drain is called, so the strip can say which one it took.
     pub drain_named: Option<String>,
-    /// Which of that condition's counted points it is, from one.
+    /// Which drain on the ROOF it is, from one — the same number the drawing
+    /// writes on it and the same one the Model's own label carries. Numbered
+    /// across the job and not within one condition, because "Drain 2" has to
+    /// mean the same drain wherever it is written.
     pub drain_number: Option<usize>,
     /// The run along the boards from the drain to the high pick, in feet. This is
     /// the run a tapered schedule states its thickness against — not the straight
@@ -141,17 +144,20 @@ struct Counted {
 
 /// Every drainage point in the job, in feet, with what it is called.
 ///
-/// `taper.rs` gathers the same points for the layout and keeps the sump with
-/// them; this keeps the NAME, because a strip that says "Low ½″ at Drain 1" is
-/// the estimator's own confirmation that the pick took the drain they meant.
+/// `taper.rs` gathers the same points for the layout in this same order; this
+/// keeps the NAME and the NUMBER, because a strip that says "Low 1/2\" at Drain
+/// 1" is the estimator's own confirmation that the pick took the drain they
+/// meant — and it can only be that if the number is the one written on the same
+/// drain everywhere else. So it runs across the whole job, the way
+/// `drawing::which_drain` numbers them, and not within one condition.
 fn counted_drains(document: &Document) -> Vec<Counted> {
     let scales = document.scales();
     let mut out = Vec::new();
+    let mut number = 0usize;
     for c in &document.conditions {
         if !c.has_role("drain") || c.hidden {
             continue;
         }
-        let mut number = 0usize;
         for trace in &c.traces {
             for at in document.feet(trace, &scales) {
                 number += 1;

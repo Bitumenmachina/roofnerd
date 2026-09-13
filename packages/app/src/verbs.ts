@@ -31,7 +31,7 @@
 
 import {
   formatFeetInches, parseFeet,
-  type Condition, type Item, type Page, type Spot, type Trace,
+  type Condition, type Item, type Page, type Spot,
 } from '@roofnerd/engine';
 import type { BetweenAnswer, CricketBehindAnswer, HighAndLowAnswer } from '@roofnerd/engine';
 import {
@@ -39,7 +39,7 @@ import {
 } from './doc.js';
 import { derivedField, stripButton, stripField } from './chrome.js';
 import { wantCut } from './cut.js';
-import { inches, quantity } from './labels.js';
+import { inches } from './labels.js';
 import { select } from './selection.js';
 import { hueFor } from './icons.js';
 
@@ -218,12 +218,17 @@ const letterOf = (index: number): string => {
   return `${letter}–${letter}`;
 };
 
-/** Which drain the low pick took, in the words the strip says it in. */
+/**
+ * Which drain the low pick took, in the words the roof itself writes on it.
+ *
+ * "Drain 2", the same as the label standing on it in the Model and the same as
+ * the section's own title. Not the condition's name: one count condition carries
+ * every drain on this roof, so its name is "Roof Drains" and calling the pick
+ * that would be a second word for the thing the estimator is looking at.
+ */
 function drainWords(): string {
-  if (!highLow?.drainNamed) return '';
-  const named = highLow.drainNamed;
-  const number = highLow.drainNumber;
-  return number && number > 1 ? `${named} ${number}` : named;
+  const number = highLow?.drainNumber ?? null;
+  return number === null ? '' : `Drain ${number}`;
 }
 
 // ── asking ─────────────────────────────────────────────────────────────────
@@ -720,9 +725,3 @@ function pageForFeet(): (Page & { feetPerUnit: number }) | null {
 /** Feet back into the page units a trace is stored in. */
 const toPage = (ring: readonly Spot[], page: Page & { feetPerUnit: number }) =>
   ring.map((p) => ({ x: p.x / page.feetPerUnit, y: p.y / page.feetPerUnit }));
-
-/** What a length is called in the strip, for a view that wants the same words. */
-export { formatFeetInches, quantity };
-
-/** Nothing in this file is a Trace by itself; the type is here for the writes. */
-export type { Trace };
