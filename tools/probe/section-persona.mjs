@@ -202,6 +202,8 @@ const drawingNow = (session, pane) => session.execute(function (sel) {
     };
   }) : [];
   const room = host.getBoundingClientRect();
+  const page = host.querySelector('.page, .sheet, img, canvas');
+  const paper = page ? page.getBoundingClientRect() : room;
   const drawn = marks ? marks.getBoundingClientRect() : null;
   const note = document.querySelector('.drawing-note');
   const footer = note && !note.hidden ? note.getBoundingClientRect().height : 0;
@@ -211,6 +213,7 @@ const drawingNow = (session, pane) => session.execute(function (sel) {
     words,
     keys: words.filter(function (w) { return w.role === 'key'; }).length,
     room: { w: Math.round(room.width), h: Math.round(room.height - footer) },
+    page: { right: Math.round(paper.right), left: Math.round(paper.left) },
     drawn: drawn ? { w: Math.round(drawn.width), h: Math.round(drawn.height) } : null,
   });
 }, pane);
@@ -481,13 +484,19 @@ try {
 
   check('the fastening plan is titled with the standard it was set out to', () => {
     assert.match(fastening.note, /^Fastening plan · /, `the title line reads "${fastening.note}"`);
-    assert.ok(fastening.note.length < 80,
+    assert.ok(fastening.note.length < 140,
       `the title line is a paragraph again: "${fastening.note}"`);
   });
 
   check('and its key is short enough to read on the drawing', () => {
     assert.ok(fastening.keys > 0, 'the key rides in the payload and is drawn nowhere');
     assert.ok(fastening.keys <= 3, `the key is ${fastening.keys} lines`);
+    // And it is ON the sheet. The paragraph it replaced ran off the right-hand
+    // edge of the drawing, and three long lines would do the same thing.
+    for (const row of fastening.words.filter((w) => w.role === 'key')) {
+      assert.ok(row.x + row.w <= fastening.page.right,
+        `"${row.text}" runs ${Math.round(row.x + row.w - fastening.page.right)}px past the sheet`);
+    }
   });
 
   check('every band names the pressure it is fastened for', () => {

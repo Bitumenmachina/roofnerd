@@ -178,7 +178,8 @@ fn the_fastening_plan_draws_the_zones_and_says_what_they_were_set_out_to() {
     // paragraph is three lines of key. C8 §7: the paragraph lay across the
     // corner zone of the roof and ran off the sheet.
     assert!(plan.note.contains("ASCE 7-22"), "{}", plan.note);
-    assert!(plan.note.len() < 80, "the title line is a title again: {}", plan.note);
+    assert!(plan.note.len() < 140, "the title line is a title again: {}", plan.note);
+    assert!(plan.key.iter().all(|r| r.len() < 60), "a key row is a paragraph: {:?}", plan.key);
     assert!(plan.key.len() <= 3, "the key is short: {:?}", plan.key);
     let key = plan.key.join(" · ");
     assert!(key.contains("strength design"), "{key}");

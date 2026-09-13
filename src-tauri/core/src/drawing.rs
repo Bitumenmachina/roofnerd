@@ -614,20 +614,13 @@ fn fastening_of(fastening: &SolvedFastening) -> Drawing {
             if roof.straddling > 0 {
                 line(
                     &mut d,
-                    format!(
-                        "{} of them lie across a zone line and take the higher zone",
-                        roof.straddling
-                    ),
+                    format!("{} of them straddle a zone line, and take the higher", roof.straddling),
                 );
             }
             if roof.thin_boards > 0 {
                 line(
                     &mut d,
-                    format!(
-                        "{} have the tapered panel straight on the deck — less under the \
-                         fastener than the row is drawn for",
-                        roof.thin_boards
-                    ),
+                    format!("{} sit straight on the deck, under the rated thickness", roof.thin_boards),
                 );
             }
         }
@@ -650,34 +643,39 @@ fn fastening_of(fastening: &SolvedFastening) -> Drawing {
     // laid across the corner of the roof and running off the sheet, with two
     // real findings buried in the middle of it (C8 §7). What a fastening plan
     // is called, and what it was drawn to, is one line.
-    d.note = format!("Fastening plan · {}", roof.standard);
+    // The title line: what the drawing is, and the two documents it was set out
+    // to. It sits in the corner of the window rather than on the roof, so it
+    // has room for a citation that a key drawn at roof scale has not.
+    d.note = format!("Fastening plan · {} · zones per {}", roof.standard, roof.zone_rule);
 
     // Then three lines of key, drawn on the sheet where a key goes: how the
     // zones were set out, where the pattern came from, and what the fasteners
     // go through. Everything else the paragraph carried is either on the
     // statement block already or is a finding, and a finding goes with the
     // counts it is about.
+    // Three SHORT lines. Long ones are the same defect in a different shape:
+    // the first cut of this key carried the whole citation and the whole
+    // product name and ran off the sheet on the right, which is where the
+    // paragraph it replaced was going.
     d.key.push(format!(
-        "zones {} wide · {} · {}",
+        "zones {} wide · {}",
         roof.a_feet.map(feet_written).unwrap_or_else(|| "not set out".to_string()),
-        roof.zone_rule,
         match roof.basis.as_str() {
-            "strength" => "pressures at strength design, reduced by 0.6".to_string(),
-            "working load" => "pressures at working load".to_string(),
-            other => format!("pressures on a {other} basis"),
+            "strength" => "pressures at strength design, \u{d7}0.6",
+            "working load" => "pressures at working load",
+            _ => "pressures on a stated basis",
         }
     ));
     if let Some(printed) = roof.zones.iter().find_map(|z| z.pattern.as_ref()) {
         d.key.push(format!(
-            "patterns per {} {} {} · {}",
-            printed.publisher, printed.document_id, printed.document_date, printed.product
+            "patterns per {} {}",
+            printed.publisher, printed.document_id
         ));
     }
-    if let (Some(inches), false) = (roof.base_board_inches, roof.board_size.is_empty()) {
+    if let Some(inches) = roof.base_board_inches {
         d.key.push(format!(
-            "through {} {} fastened · everything over it adhered at {} on centre",
+            "through {} board · adhered at {} above",
             inches_written(inches),
-            roof.product_family,
             inches_written(roof.ribbon_spacing_inches)
         ));
     }
