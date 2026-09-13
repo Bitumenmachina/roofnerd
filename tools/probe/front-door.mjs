@@ -117,9 +117,21 @@ try {
     });
   });
   const p = JSON.parse(plan);
+  // What the page itself says it is drawn at, so the row does not carry a
+  // fraction of its own. It used to look for 1/4, which was the warehouse
+  // demo's scale; the roof the demo ships now is drawn at 1/16 and the row went
+  // red on a badge that was telling the truth.
+  const statedScale = await session.execute(function () {
+    return window.__TAURI_INTERNALS__.invoke('doc_get').then(function (d) {
+      const page = (d.pages || [])[0] || {};
+      return String(page.scaleNote || '');
+    });
+  });
   check('the demo job opens to a drawing with work already on it', () => {
     assert.ok(p.conditions >= 3, `${p.conditions} condition(s)`);
-    assert.match(p.badge, /1\/4|Scaled/, p.badge);
+    assert.ok(statedScale.length > 0, 'the drawing states no scale to check the badge against');
+    assert.ok(p.badge.includes(statedScale) || /Scaled/.test(p.badge),
+      `the page is drawn at ${statedScale} and the badge reads "${p.badge}"`);
   });
   check('and its conditions carry real measures', () => {
     assert.ok(p.measures.some((m) => /SF/.test(m)), p.measures.join(' | '));

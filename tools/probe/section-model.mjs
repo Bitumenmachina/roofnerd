@@ -51,7 +51,7 @@ const shot = async (session, name) =>
   writeFile(join(EVIDENCE, `${name}-${COMMIT}.png`), Buffer.from(await session.screenshot(), 'base64'));
 
 // ── what the job itself comes to, worked out here rather than typed here ───
-const { capInches, readJob, recap } = await import('../../packages/engine/dist/index.js');
+const { capInches, measure, readJob, recap } = await import('../../packages/engine/dist/index.js');
 const jobFolder = join(ROOT, 'jobs/demo-job');
 const readFile8 = async (rel) => {
   try { return await readFile(join(jobFolder, rel), 'utf8'); } catch { return null; }
@@ -69,9 +69,9 @@ const field = demoDoc.conditions.find((c) => c.properties?.TAPER !== undefined &
 const thinnest = field?.properties?.T ?? 0;
 /**
  * The lowest thing on this roof the membrane has to turn up and flash against,
- * in inches above the deck. Read off the document: a parapet at 42 in and a curb
- * at 24 in, and it is the curb that decides, because the roof cannot rise past
- * the lowest of them and still be flashed.
+ * in inches above the deck. Read off the document rather than written down
+ * here: the roof carries a parapet and a curb, and it is whichever of them is
+ * lower that decides, because the roof cannot rise past it and still be flashed.
  */
 let flashesAgainst = Infinity;
 for (const c of demoDoc.conditions) {
@@ -94,6 +94,30 @@ const { cap: cappedAt, reason: cappedBy } = capInches(
   field?.properties?.BOARDS,
   Number.isFinite(flashesAgainst) ? flashesAgainst : undefined,
 );
+
+/**
+ * How much roof this job is, and how much of it the tapered field is — measured
+ * by the engine off the same folder the window opened, never typed here.
+ *
+ * A check carrying its own copy of a fixture's area is wrong twice over. It goes
+ * stale the day the demo is re-traced, and it goes on passing while the window
+ * is wrong and the fixture has been moved to match it. It is also how a figure
+ * that happens to match a real job's ends up in a public tree.
+ */
+const calibrations = {};
+for (const page of demoDoc.pages ?? []) {
+  if (page.feetPerUnit) calibrations[page.id] = { feetPerUnit: page.feetPerUnit };
+}
+const measureOf = (c) => measure(c.kind, c.traces ?? [], c.properties ?? {}, calibrations);
+let roofSquareFeet = 0;
+for (const c of demoDoc.conditions) {
+  if (c.kind !== 'area' || c.hidden) continue;
+  const m = measureOf(c);
+  if (m.SF !== null) roofSquareFeet += m.SF;
+}
+const fieldSquareFeet = field ? measureOf(field).SF : null;
+/** The number out of a figure on screen, whatever is written around it. */
+const numberIn = (text) => Number((/[\d,]+(?:\.\d+)?/.exec(String(text ?? '')) ?? [''])[0].replace(/,/g, ''));
 
 // ── what the window says about the roof it is drawing ──────────────────────
 const modelNow = (session) => session.execute(function () {
@@ -199,7 +223,9 @@ try {
 
   check('the demo opens as the handoff\'s job, at its own roof area', () => {
     assert.match(opened.job, /Northgate/, `the document bar reads "${opened.job}"`);
-    assert.match(opened.area, /9,600/, `the roof area reads "${opened.area}"`);
+    assert.ok(roofSquareFeet > 0, 'the job on disk measures no roof at all');
+    assert.ok(Math.abs(numberIn(opened.area) - roofSquareFeet) < 0.01,
+      `the roof area reads "${opened.area}" and the job on disk measures ${roofSquareFeet} SF`);
   });
   check('and the selling price is what the engine makes of the same folder', () => {
     // Not a figure typed into this file. The engine reads `jobs/demo-job` off
@@ -436,7 +462,9 @@ try {
       `the view believes ${picked.selectedConditionId ?? 'nothing'} is selected`);
     assert.ok(panel.there, 'no Condition tab to read it in');
     assert.equal(panel.name, field?.name, `the panel names "${panel.name}"`);
-    assert.match(panel.measure?.['Area'] ?? '', /9,600/, `its area reads "${panel.measure?.['Area']}"`);
+    assert.ok(fieldSquareFeet !== null, 'the field on disk measures no area');
+    assert.ok(Math.abs(numberIn(panel.measure?.['Area']) - fieldSquareFeet) < 0.01,
+      `its area reads "${panel.measure?.['Area']}" and the field measures ${fieldSquareFeet} SF`);
     assert.match(panel.cost ?? '', /\$/, `its money reads "${panel.cost}"`);
   });
 
@@ -472,13 +500,37 @@ try {
   });
   await shot(session, 'section-model-torn-off');
 
+  // Home again, pressed in the window the button is in. "dock it back" lives on
+  // the torn-off panel and nowhere else, so pressing it from the main window
+  // pressed nothing, the second window stayed open, and every row after this
+  // ran against whichever handle the driver happened to hand back — which is
+  // how a picture of the cost panel in daylight came to be filed as the dark
+  // Model. The main window is switched to BY THE HANDLE THIS RUN OPENED IN,
+  // never by position in a list, and the error watch is armed again because it
+  // was armed on a page this session has not been on since.
   if (torn) {
+    await session.switchTo(torn);
+    await wait(1200);
     await dockCostPanel(session);
     await wait(2500);
-    const back = await session.handles();
-    await session.switchTo(back[0]);
+    await session.switchTo(oneWindow[0]);
     await wait(1500);
   }
+  await watchErrors(session);
+  const home = JSON.parse(await session.execute(function () {
+    return JSON.stringify({
+      panels: document.querySelectorAll('.cost-panel').length,
+      bar: !!document.querySelector('.doc-bar'),
+      canvas: !!document.querySelector('.model-canvas'),
+    });
+  }));
+  check('the panel comes home and the window with the roof in it is the one in front', () => {
+    // The row that would have caught the picture below being taken of the wrong
+    // window. A cost window has no document bar and no drawing in it.
+    assert.ok(home.bar, 'this is not the window the job was opened in');
+    assert.ok(home.canvas, 'the roof is not in the window the pictures are being taken of');
+    assert.equal(home.panels, 1, `${home.panels} cost panels in it`);
+  });
 
   // ── the same roof in the other room ─────────────────────────────────────
   const flipped = await session.execute(function () {

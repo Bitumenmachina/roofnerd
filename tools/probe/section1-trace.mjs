@@ -182,7 +182,12 @@ try {
     const area = rows.find((r) => /Main Roof Field/.test(r)) ?? '';
     const shown = Number((area.match(/([\d,.]+)\s*SF/) ?? [])[1]?.replace(/,/g, ''));
     assert.ok(shown > 0, `the row read "${area}"`);
-    nearly(shown, planSF * factor, 'the traced area at the page\'s scale', 0.002);
+    // Half of the last place the window prints. The row compares a figure the
+    // page has rounded to two decimals against one that is not rounded at all,
+    // so the only tolerance that means anything here is that rounding. A
+    // tolerance tighter than the last printed digit calls the page wrong for
+    // printing what it prints, which is what two thousandths was doing.
+    nearly(shown, planSF * factor, 'the traced area at the page\'s scale', 0.01 / 2);
   });
 
   // ── the drawing is referenced, never swallowed ───────────────────────────

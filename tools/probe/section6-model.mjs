@@ -283,13 +283,22 @@ try {
   const inFeet = (c) => (c.traces ?? []).flatMap((t) =>
     (scales[t.pageId] ? t.points.map((p) => ({ x: p.x * scales[t.pageId], y: p.y * scales[t.pageId] })) : []));
 
-  const drains = (job.conditions ?? []).filter((c) => c.role === 'drain').flatMap(inFeet);
   const ridge = (job.conditions ?? []).find((c) => c.role === 'ridge');
   const field = (job.conditions ?? []).find((c) => c.kind === 'area' && c.properties?.TAPER !== undefined);
+  const curb = (job.conditions ?? []).find((c) => c.role === 'curb');
+  const curbRing = curb ? inFeet(curb) : [];
   const cricket = scene.find((m) => m.kind === 'cricket');
 
-  check('the cricket is drawn from the drains it serves', () => {
+  check('the cricket is drawn behind the curb it serves', () => {
+    // The demo's cricket is the one behind RTU-1, and `between` says so. It used
+    // to say `c-drains`, which made it the saddle between two drainage points —
+    // a different thing with a different rule, and drawn to the drains' own
+    // spacing it came out 38 ft across and covered a third of the roof.
     assert.ok(ridge, 'the demo job has no ridge condition');
+    assert.ok(curb, 'the demo job has no curb for a cricket to sit behind');
+    assert.ok((ridge.between ?? []).includes(curb.id),
+      `the cricket says it serves ${JSON.stringify(ridge.between ?? [])}`);
+    assert.ok(curbRing.length >= 4, `the curb is traced with ${curbRing.length} points`);
     assert.ok(cricket, 'no cricket in the scene');
     assert.ok(cricket.points && cricket.points.length >= 18, 'the cricket has no readable geometry');
   });
@@ -308,49 +317,84 @@ try {
     return { a, b, top, low: Math.min(...pts.map((p) => p.y)) };
   };
 
-  check('and its ridge runs square to the line joining them', () => {
-    // NRCA pp.166-168: the ridge is perpendicular to the line connecting the two
-    // drainage points. A cricket built by hanging planes off a traced line
-    // passes this only by luck.
+  /**
+   * The curb face this cricket sits against, worked out from the drawn shape.
+   *
+   * Nothing here reads the code's own bookkeeping: the ridge comes off the
+   * triangles that were drawn, the face comes off the curb the estimator traced,
+   * and the rules are applied to the two of them here.
+   */
+  const faceOf = () => {
     const { a, b } = ridgePoints();
-    const byRange = [...drains].sort((p, q) => {
-      const m = { x: (a.x + b.x) / 2, y: (a.z + b.z) / 2 };
-      return Math.hypot(p.x - m.x, p.y - m.y) - Math.hypot(q.x - m.x, q.y - m.y);
-    });
-    assert.ok(byRange.length >= 2, `only ${byRange.length} drain(s) to sit between`);
-    const dx = byRange[1].x - byRange[0].x;
-    const dy = byRange[1].y - byRange[0].y;
-    const span = Math.hypot(dx, dy);
-    const rx = b.x - a.x;
-    const rz = b.z - a.z;
-    const run = Math.hypot(rx, rz);
-    assert.ok(run > 1e-6 && span > 1e-6, 'the ridge or the drain pair is degenerate');
-    // Perpendicular means the dot product of the two unit vectors is zero.
-    const dot = Math.abs((dx / span) * (rx / run) + (dy / span) * (rz / run));
-    assert.ok(dot < 0.02, `the ridge is ${(Math.acos(Math.min(1, dot)) * 180 / Math.PI).toFixed(1)}° off square to its drains`);
+    const centre = { x: 0, y: 0 };
+    for (const p of curbRing) { centre.x += p.x / curbRing.length; centre.y += p.y / curbRing.length; }
+    const ends = [{ x: a.x, y: a.z }, { x: b.x, y: b.z }];
+    const range = (p) => Math.hypot(p.x - centre.x, p.y - centre.y);
+    const near = range(ends[0]) <= range(ends[1]) ? ends[0] : ends[1];
+    const far = near === ends[0] ? ends[1] : ends[0];
+    let face = null;
+    for (let i = 0; i < curbRing.length - 1; i += 1) {
+      const p = curbRing[i];
+      const q = curbRing[i + 1];
+      const run = Math.hypot(q.x - p.x, q.y - p.y);
+      if (run < 1e-6) continue;
+      const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+      const off = Math.hypot(mid.x - near.x, mid.y - near.y);
+      if (!face || off < face.off) face = { off, mid, run, dir: { x: (q.x - p.x) / run, y: (q.y - p.y) / run } };
+    }
+    return { near, far, face, centre };
+  };
+
+  check('and its ridge leaves the middle of that curb\'s face, square to it', () => {
+    // NRCA Figs. 8-1, 10-13 and 10-14 draw one ridge square to the curb's
+    // upslope face and centred on it. Both halves are read off the drawing: the
+    // near end of the ridge against the middle of the face, and the ridge's own
+    // direction against the face's.
+    const { near, far, face, centre } = faceOf();
+    assert.ok(face, 'the curb has no face to sit against');
+    assert.ok(Math.hypot(near.x - face.mid.x, near.y - face.mid.y) < 0.5,
+      `the ridge starts ${Math.hypot(near.x - face.mid.x, near.y - face.mid.y).toFixed(1)} ft off the middle of the face`);
+    const rx = far.x - near.x;
+    const ry = far.y - near.y;
+    const run = Math.hypot(rx, ry);
+    assert.ok(run > 1e-6, 'the ridge has no length to measure');
+    const dot = Math.abs((rx / run) * face.dir.x + (ry / run) * face.dir.y);
+    assert.ok(dot < 0.02,
+      `the ridge is ${(Math.acos(Math.min(1, dot)) * 180 / Math.PI).toFixed(1)}\u00b0 off square to the face`);
+    // And it runs OUT of the curb rather than into it.
+    assert.ok(Math.hypot(far.x - centre.x, far.y - centre.y) > Math.hypot(near.x - centre.x, near.y - centre.y),
+      'the cricket runs back over the curb instead of away from it');
   });
 
-  check('and it sits equidistant between them', () => {
-    const { a, b } = ridgePoints();
-    const mid = { x: (a.x + b.x) / 2, y: (a.z + b.z) / 2 };
-    const byRange = [...drains].sort((p, q) =>
-      Math.hypot(p.x - mid.x, p.y - mid.y) - Math.hypot(q.x - mid.x, q.y - mid.y));
-    const d0 = Math.hypot(byRange[0].x - mid.x, byRange[0].y - mid.y);
-    const d1 = Math.hypot(byRange[1].x - mid.x, byRange[1].y - mid.y);
-    assert.ok(Math.abs(d0 - d1) < 0.5, `${d0.toFixed(1)} ft to one drain and ${d1.toFixed(1)} ft to the other`);
+  check('and it spans that face, and no more of the roof than that', () => {
+    // The one row the slab would have failed loudest. Every drawn vertex is
+    // projected onto the face's own direction: what the cricket covers across
+    // the roof is the width of the curb face, not the spacing of the drains.
+    const { face } = faceOf();
+    assert.ok(face, 'the curb has no face to measure against');
+    let low = Infinity;
+    let high = -Infinity;
+    for (let i = 0; i < cricket.points.length; i += 3) {
+      const along = cricket.points[i] * face.dir.x + cricket.points[i + 2] * face.dir.y;
+      low = Math.min(low, along);
+      high = Math.max(high, along);
+    }
+    assert.ok(Math.abs((high - low) - face.run) < 0.5,
+      `the cricket is ${(high - low).toFixed(1)} ft across a ${face.run.toFixed(1)} ft face`);
+    const middle = (low + high) / 2;
+    const faceMiddle = face.mid.x * face.dir.x + face.mid.y * face.dir.y;
+    assert.ok(Math.abs(middle - faceMiddle) < 0.5,
+      `it sits ${Math.abs(middle - faceMiddle).toFixed(1)} ft off centre on the face`);
   });
 
   check('and it is cut at twice the slope of the field it sits in', () => {
-    // NRCA p.79 and p.165. Read off the drawn shape: the ridge rise over the
-    // fall run has to be twice the field's own taper.
-    const { a, b, top, low } = ridgePoints();
+    // NRCA p.79 and p.165. Read off the drawn shape: the rise at the ridge over
+    // the run water travels to get round the curb, which is half the face.
+    const { top, low } = ridgePoints();
+    const { face } = faceOf();
+    assert.ok(face && face.run > 1e-6, 'no face to measure the fall across');
     const rise = (top - low) * 12;
-    const mid = { x: (a.x + b.x) / 2, y: (a.z + b.z) / 2 };
-    const byRange = [...drains].sort((p, q) =>
-      Math.hypot(p.x - mid.x, p.y - mid.y) - Math.hypot(q.x - mid.x, q.y - mid.y));
-    const run = Math.hypot(byRange[0].x - mid.x, byRange[0].y - mid.y);
-    assert.ok(run > 1e-6, 'no fall run to measure against');
-    const drawn = rise / run;
+    const drawn = rise / (face.run / 2);
     const want = (field?.properties?.TAPER ?? 0) * 2;
     assert.ok(want > 0, 'the field has no taper to double');
     assert.ok(Math.abs(drawn - want) < 0.02,
@@ -360,12 +404,10 @@ try {
   check('and it is not too long for its width to drain', () => {
     // NRCA Fig. 4-13: 3:1 at an eighth or a quarter, 4:1 at a half. Width is what
     // moves water along the valley, and no amount of slope makes up for it.
-    const { a, b } = ridgePoints();
-    const length = Math.hypot(b.x - a.x, b.z - a.z);
-    const mid = { x: (a.x + b.x) / 2, y: (a.z + b.z) / 2 };
-    const byRange = [...drains].sort((p, q) =>
-      Math.hypot(p.x - mid.x, p.y - mid.y) - Math.hypot(q.x - mid.x, q.y - mid.y));
-    const width = Math.hypot(byRange[0].x - mid.x, byRange[0].y - mid.y);
+    const { near, far, face } = faceOf();
+    assert.ok(face, 'no face to measure against');
+    const length = Math.hypot(far.x - near.x, far.y - near.y);
+    const width = face.run / 2;
     const ceiling = (field?.properties?.TAPER ?? 0) >= 0.5 ? 4 : 3;
     assert.ok(length / width <= ceiling,
       `${(length / width).toFixed(1)}:1 against a ceiling of ${ceiling}:1`);
@@ -692,9 +734,21 @@ try {
     // The panel's figure against the group row's, in the two windows they are
     // drawn in. One measurement, two surfaces, and they cannot be allowed to
     // differ by so much as a digit.
-    const inPanel = (panelField?.measure?.['Area'] ?? '').replace(/[^\d.]/g, '');
-    assert.ok(inPanel.length > 0, 'the panel shows no area');
-    assert.ok(fieldRow && fieldRow.measures.includes(inPanel),
+    //
+    // Read as a number rather than as a substring. The group row carries three
+    // measures now — an area, a run and a corner count, with a thousands
+    // separator — and the panel prints the area without one, so a row that
+    // looked for one string inside the other went red on two spellings of a
+    // single figure. It would also have gone green on squares found inside
+    // square feet, which is the worse half: the same digits, a hundredth of the
+    // quantity. Neither spelling nor substring; the numbers themselves.
+    const number = (text) => Number(String(text).replace(/,/g, ''));
+    const inPanel = number((panelField?.measure?.['Area'] ?? '').replace(/[^\d.,]/g, ''));
+    assert.ok(Number.isFinite(inPanel) && inPanel > 0,
+      `the panel shows no area: "${panelField?.measure?.['Area']}"`);
+    const sf = /([\d,]+(?:\.\d+)?)\s*SF/.exec(fieldRow?.measures ?? '');
+    assert.ok(sf, `the group row prints no square feet: "${fieldRow?.measures}"`);
+    assert.equal(number(sf[1]), inPanel,
       `the panel says ${inPanel} and the group row says "${fieldRow?.measures}"`);
   });
 
@@ -767,10 +821,15 @@ try {
     assert.equal(jobAfterSelecting, jobBeforeSelecting,
       'the job moved while nothing but selections happened');
     const c = JSON.parse(jobAfterSelecting).find((x) => x.id === 'c-field');
-    assert.equal((c.traces || []).length, 1);
-    // Six outside corners and two inside, which is the outline the demo ships
-    // and the only shape that is 9,600 SF and 400 LF at the same time.
-    assert.equal(c.traces[0].points.length, 8);
+    const was = JSON.parse(jobBeforeSelecting).find((x) => x.id === 'c-field');
+    assert.equal((c.traces || []).length, 1, `${(c.traces || []).length} traces on the field`);
+    // Corner for corner what it was before anything was picked. The count is
+    // not written down here: a figure of the demo's own, typed into a check, is
+    // a figure that goes stale the day the demo is re-traced — and this row is
+    // about selecting not being an edit, not about how many corners this roof
+    // happens to have.
+    assert.deepEqual(c.traces[0].points, was.traces[0].points,
+      'the outline moved while nothing but selections happened');
   });
 
   await writeFile(join(EVIDENCE, `section6-both-windows-a-${COMMIT}.png`),

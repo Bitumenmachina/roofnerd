@@ -15,7 +15,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import {
-  detachCostPanel, errorsSoFar, launch, openDemoJob, pickLens, showTab, showView,
+  centreOf, detachCostPanel, errorsSoFar, launch, openDemoJob, pickLens, showTab, showView,
   tool, until, wait, watchErrors, commitStamp,
 } from './tauri-harness.mjs';
 

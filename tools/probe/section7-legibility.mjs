@@ -436,10 +436,20 @@ try {
         `it is ${tornPanel.windowHeight}px tall and is specified at 860`);
     });
     check('§1.9 every column heading is visible with nothing drawn over it', () => {
-      const covered = tornPanel.heads.filter((h) => h.owner !== 'itself')
+      // The columns that carry a word, named rather than counted. The unit
+      // column carries none on purpose — the unit is printed on each line
+      // beside its quantity, so the header over it is an empty span with no box
+      // at all, and reading "it has no box" as "something is drawn over it"
+      // reported a defect that was the design. Naming the three is what keeps
+      // this from being a loophole: a heading that lost its word would leave
+      // the set, and that is a red row.
+      const written = tornPanel.heads.filter((h) => h.text !== '(unit)');
+      assert.deepEqual(written.map((h) => h.text), ['ITEM', 'QTY', 'COST'],
+        `the columns are headed ${tornPanel.heads.map((h) => h.text).join(', ')}`);
+      const covered = written.filter((h) => h.owner !== 'itself')
         .map((h) => `${h.text} under ${h.owner}`);
       assert.deepEqual(covered, [], `covered: ${covered.join(' | ')}`);
-      const cut = tornPanel.heads.filter((h) => h.clipped).map((h) => h.text);
+      const cut = written.filter((h) => h.clipped).map((h) => h.text);
       assert.deepEqual(cut, [], `cut off by their own box: ${cut.join(', ')}`);
     });
     check('§1.9 and every number holds one line, inside the panel', () => {
