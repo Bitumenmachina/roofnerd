@@ -58,23 +58,36 @@ export const PROPERTY_LABELS: Readonly<Record<string, { label: string; hint: str
     label: 'Mean roof height', hint: 'feet — what the corner and edge zones are set out from',
     group: 'Wind',
   },
+  //
+  // The basis is on the LABEL and not only in the hint. These six sat in one
+  // group as three pairs, each pair reading "Uplift, field", "Uplift,
+  // perimeter", "Uplift, corner" — the same three names twice, one of each
+  // holding the number and the other empty, and the only thing telling them
+  // apart was a line of grey type under the box. A pressure typed into the
+  // wrong one of a pair is a pressure that does not get its 0.6, so the corner
+  // pattern comes out for 122 psf where the roof needs one for 73, and nothing
+  // anywhere says so (C8 §5b).
   WIND_PSF_FIELD: {
-    label: 'Uplift, field', hint: 'psf, strength design — reduced to working load by 0.6',
+    label: 'Uplift, field · strength', hint: 'psf — reduced to working load by 0.6',
     group: 'Wind',
   },
   WIND_PSF_PERIMETER: {
-    label: 'Uplift, perimeter', hint: 'psf, strength design — reduced to working load by 0.6',
+    label: 'Uplift, perimeter · strength', hint: 'psf — reduced to working load by 0.6',
     group: 'Wind',
   },
   WIND_PSF_CORNER: {
-    label: 'Uplift, corner', hint: 'psf, strength design — reduced to working load by 0.6',
+    label: 'Uplift, corner · strength', hint: 'psf — reduced to working load by 0.6',
     group: 'Wind',
   },
-  WIND_ASD_FIELD: { label: 'Uplift, field', hint: 'psf, already at working load', group: 'Wind' },
-  WIND_ASD_PERIMETER: {
-    label: 'Uplift, perimeter', hint: 'psf, already at working load', group: 'Wind',
+  WIND_ASD_FIELD: {
+    label: 'Uplift, field · working load', hint: 'psf — taken as it stands', group: 'Wind',
   },
-  WIND_ASD_CORNER: { label: 'Uplift, corner', hint: 'psf, already at working load', group: 'Wind' },
+  WIND_ASD_PERIMETER: {
+    label: 'Uplift, perimeter · working load', hint: 'psf — taken as it stands', group: 'Wind',
+  },
+  WIND_ASD_CORNER: {
+    label: 'Uplift, corner · working load', hint: 'psf — taken as it stands', group: 'Wind',
+  },
 };
 
 /**

@@ -247,8 +247,16 @@ export function renderConditionPanel(
   from.addEventListener('change', () => {
     void set(`${base}/from`, from.value === '' ? undefined : from.value).then(onChanged);
   });
+  // What the field does, and what THIS condition is doing — not an example of
+  // another one. The help under it read "one run, measured once — a coping and
+  // its parapet cannot drift apart" on every condition in the job, so a count
+  // of three drains was told about a coping and a parapet (C8 §5c). The example
+  // is the right example and it belongs where it is true.
+  const takesFrom = others.find((c) => c.id === condition.from);
   host.append(field('Measures', named(from, `${base}/from`),
-    'one run, measured once — a coping and its parapet cannot drift apart'));
+    takesFrom
+      ? `measured once, on ${takesFrom.name} — the two cannot drift apart`
+      : 'its own traces, or another condition\'s where the two are one measurement'));
 
   // ── the properties, grouped ─────────────────────────────────────────────
   for (const group of GROUPS) {
