@@ -37,12 +37,17 @@ import {
 import { realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
-import * as WebIFC from 'web-ifc';
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import {
   centreOf, errorsSoFar, launch, openDemoJob, until, wait, watchErrors, commitStamp,
 } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
+// web-ifc is the app's dependency, not the root's: resolve it from the app's own
+// package so this probe reopens the file with the same build the program ships.
+const WebIFC = await import(pathToFileURL(createRequire(join(ROOT, 'packages/app/package.json')).resolve('web-ifc')).href);
+
 const EVIDENCE = join(ROOT, 'evidence');
 const COMMIT = commitStamp();
 
