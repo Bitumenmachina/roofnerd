@@ -589,8 +589,12 @@ fn fastening_of(fastening: &SolvedFastening) -> Drawing {
                 // The plan named the standard and the class it bought and never
                 // the figure between them, so an estimator who typed a pressure
                 // could not see it anywhere on the drawing it moved (C8 §9).
+                // "needs", because this is the RATING the zone asks for and not
+                // the wind on it: the design pressure is what somebody typed and
+                // the working-load figure is 0.6 of that, and a bare "146 psf"
+                // beside a corner reads as either of them.
                 let at_psf = match zone.required_psf {
-                    Some(psf) => format!("{} psf · ", psf.round() as i64),
+                    Some(psf) => format!("needs {} psf · ", psf.round() as i64),
                     None => String::new(),
                 };
                 line(
