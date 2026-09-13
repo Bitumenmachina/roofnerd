@@ -5,28 +5,54 @@ acceptance does not pause the build.
 
 ## Where the build is
 
-**Sections 1, 2, 3, 4, 5, 6 and 7 are built, and the seven things run end to end on a real job.**
-`tools/probe/real-job.mjs` — **13/13** — opens a real 36 × 24 architectural sheet at full size, sets
-its scale from two points and a real dimension, traces the field, the parapet, the drains, a tapered
-area and a cricket, loads the coping assembly out of the book and watches the parapet yield children
-in mixed units, buys coping in pounds through its girth, moves the money when the parapet height
-doubles, stands the roof up in the Model, and sends the supply house a list with no cost on it.
+**Plan v3 is built: the model is what has to get built, and everything a person reads comes out
+of it.** Pushed 2026-09-13 as one line of 116 commits on `28b7adf`. On the shipped program every
+probe is green: the persona pass 28 of 28, the twenty-four section probes, the real job 13 of 13,
+the fixtures within a hundredth of a percent, the IFC export reopened by IfcOpenShell with every
+count and quantity equal to the solve's. The demo, Northgate Retail Center, bids at $228,099.66
+and 8.30 hours a square.
 
-**The Model was rebuilt on the trade's conventions rather than on assumptions** — see the pass below.
-The Gantt bonus is the only thing in the handoff still unbuilt — and Addendum 6 (2026-09-12) lifts its bonus status: it is section 8, after 9a and 6b.
+**What was done, in the order it landed (the D-numbers say why):**
+C0 the Rust core and the seam (D146–D148) · C1 the field on drainage regions with four-way planes,
+valleys at 45°, the cone retired (D149) · C2 boards by letter and fill off Versico's printed table,
+sumps, the cricket on the surface, the bill on the sheet (D150–D152) · C5 the Model matched to the
+handoff's Frame 2, the Section to Frame 3, one drawing model and one renderer for the layout and
+fastening overlays (D155–D156) · C3 walls and curbs, flashing as the exact integral, the coping
+bill (D153–D154) · C4 wind zones, FM class per zone, fasteners and plates board by board, adhesive
+by zone (D157) · C6 the verbs: set high and low, box out a curb, measure, cut a section (D158) ·
+C7 IFC4 out of the solve, verified by the reference toolkit (D159) · C9 the labor basis, roofer
+first: crew and rate on the line, hours worked out, fabrication and sub their own kinds, a struck
+line that stays, Hours/SQ (D161–D162) · C8 a roofer opened it cold and used it; five money items
+and twelve misleading behaviours found and fixed; the demo opens on a roof plan (D160).
 
-Addendum 4 §2 put 6 ahead of 4 and 5 because nothing in either fed it.
+**For the next session, first act, before anything else is built:** `cd ~/projects/roofnerd &&
+CARGO_BUILD_JOBS=4 pnpm build:app` in the foreground, open the AppImage from
+`src-tauri/target/release/bundle/appimage/`, press "Open the demo job", and leave it open for
+Patrick's review. Then read, in this order: the plan file at
+`~/.claude/plans/handoff-is-complete-and-foamy-ember.md` (Handoff sections at the end), the C8
+entry below and `.scratch/c8-persona.md`, and `.scratch/c9-notes.md`'s questions. Do not start a
+batch until Patrick has looked and said what he thinks.
 
-It was built out of order on purpose: Addendum 4 §2 moved 6 ahead of 4 and 5, because nothing in
-either feeds it and it depends on sections 1 and 2 only. The tapered inputs it needs are condition
-properties, and their library defaults arrive with section 4, afterwards.
+**What needs doing next, as it stands (none of it blocks the review):**
+- Patrick's open calls: boards 4 courses against the 3 typed on the demo; the demo's field and
+  perimeter wind pressures are an Exposure C floor from the brief (retype from the ASCE 7-22
+  figure when it is in the box); the 130 mph adhesive rate uses the 120 mph row until the NEMO
+  report is in the box; a six-man crew at 8.30 hours a square; whether the permit belongs in
+  General Conditions; whether a struck alternate kept on the sheet reads right.
+- Parked as taste by the persona pass (listed in its notes, not built): panel field noise,
+  selection lighting the whole roof, "Taper" against "Slope", the help sheet over the panel,
+  697 letters at default zoom, no recent-jobs list, the 3D cut pane's size.
+- Not in plan v3 and still owed from the handoff: the Schedule (§4.12, section 8), Undo (D136),
+  IFC import, the "Start a roof" first-open frame.
+- Records the grant rewrote this round: `refs/estimating-application-proposal.md` §3.2
+  (superseded, original quoted), `refs/carry-forward-register.md` #45, `refs/vendor/` (six public
+  PDFs with URLs and dates), `CLAUDE.md`, `QUESTIONS.md` Q4 re-answered and Q6, Q7 closed.
 
-**Its precondition is satisfied, and it opens now.** Addendum 4's standing instruction is that
-nothing opens until the front door is fixed *and Patrick has opened a job himself*. He did open the
-application — and it would not load anything. That attempt is what produced the defect report, and
-the fix exists because of it. The door has had a person's hands on it, it failed, it was repaired,
-and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
-buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
+**Two lessons the next session pays for if it forgets them:** the client-data gate refuses any
+four-digit decimal and any two numbers joined by a slash that happen to match a real report —
+write figures in prose as whole numbers and ranges with "and"; and this machine's harness kills
+background jobs during a Rust compile or a long probe run because it reads the page cache as used
+memory — build and probe in the foreground.
 
 ## C8 — a roofer opens it cold: the persona pass, and what it found (2026-09-13)
 
