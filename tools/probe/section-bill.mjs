@@ -694,7 +694,21 @@ try {
       assert.ok(row.label, `"${row.name}" is listed with no words on it`);
       assert.ok(!row.label.includes('_'), `"${row.label}" reads like an identifier`);
       assert.ok(!row.label.includes(row.name), `"${row.label}" is the identifier`);
-      assert.match(row.label, / · (SF|LF|EA|SQ)$/, `"${row.label}" says no unit`);
+      // Every row states what it is counted in. A quantity somebody ORDERS is
+      // counted in one of the four order units and the suffix on its own name
+      // says which, so those two are held to each other. The rest are readings
+      // rather than quantities — a flashing height, an uplift rating, a
+      // pressure, a gallon of adhesive — and they state a real unit that is not
+      // one of the four. That is not a synonym for an order unit; it is a
+      // different kind of number, and a panel that refused to print it would be
+      // a panel that could not show what a count was worked out from.
+      const said = / · ([A-Za-z]{1,4})$/.exec(row.label);
+      assert.ok(said, `"${row.label}" says no unit`);
+      const ordered = /_(SF|LF|EA|SQ)$/.exec(row.name);
+      if (ordered) {
+        assert.equal(said[1], ordered[1],
+          `"${row.label}" is counted in ${said[1]} and its name says ${ordered[1]}`);
+      }
     }
     // In the order a bill is read in: the lettered panels first.
     assert.match(panel.rows[0].label, /^Tapered panel/,

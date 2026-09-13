@@ -687,11 +687,20 @@ try {
   await wait(1200);
   const fastening = JSON.parse(await drawingNow(session, '.surface-overlay'));
 
-  check('and it says the fastening plan is not solved yet rather than drawing one', () => {
+  check('and the other overlay is a fastening plan, in zones and not in boards', () => {
+    // This row used to read "it says the fastening plan is not solved yet",
+    // because at C5's head it was empty and said so. C4 solved the zones, so the
+    // claim moves with the program: the second overlay is a DIFFERENT drawing of
+    // the same roof — bands, not a board grid — and it names what it was set out
+    // to on its own face.
     assert.ok(pressedFastening, 'the Plan offers no fastening overlay');
-    assert.equal(fastening.letters.length, 0, 'the fastening overlay drew boards');
-    assert.ok(fastening.note.length > 0,
-      'the fastening overlay is empty and says nothing about why');
+    assert.ok(fastening.marks > 0, 'the fastening overlay is empty');
+    assert.equal(fastening.letters.length, 0,
+      'the fastening overlay drew boards, which is the layout\'s drawing and not this one');
+    const bands = (fastening.roles ?? []).filter((r) => String(r).startsWith('zone-'));
+    assert.ok(bands.length >= 3, `the fastening overlay draws ${bands.length} zone bands`);
+    assert.match(fastening.note, /ASCE/,
+      `the fastening overlay never names the standard: "${fastening.note}"`);
   });
 
   const errors = await errorsSoFar(session);

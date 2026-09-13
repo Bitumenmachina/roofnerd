@@ -454,7 +454,12 @@ fn field_of(c: &Condition, plan: &WindPlan, field: &crate::model::TaperField) ->
         minimum_thickness_note: minimum_thickness_note().to_string(),
         ribbon_spacing_inches: TABLE_TOP_SPACING_IN,
         adhesive_basis: ADHESIVE_BASIS.to_string(),
-        bonding_gallons: None,
+        // The membrane's own bonding adhesive is not a wind question: one rate,
+        // over the finished surface, whatever the zones come to. So it is
+        // answered before anything about the zones is, and a roof nobody has
+        // typed a height or a pressure for still knows what it takes to stick
+        // its membrane down.
+        bonding_gallons: Some(plan.square_feet / BONDING_SQUARE_FEET_PER_GALLON),
         plates: None,
         zones: Vec::new(),
         refused: plan.refused.clone(),
@@ -568,7 +573,6 @@ fn field_of(c: &Condition, plan: &WindPlan, field: &crate::model::TaperField) ->
     }
 
     out.plates = if every_zone_answered { Some(all_fasteners) } else { None };
-    out.bonding_gallons = Some(plan.square_feet / BONDING_SQUARE_FEET_PER_GALLON);
     out
 }
 
@@ -580,6 +584,16 @@ pub fn named(field: &FastenedField) -> BTreeMap<String, Option<f64>> {
     out.insert("BASE_THIN_EA".to_string(), Some(field.thin_boards as f64));
     out.insert("PLATES_EA".to_string(), field.plates.map(|n| n as f64));
     out.insert("BONDING_GAL".to_string(), field.bonding_gallons);
+    // The three zones are named whether or not they could be set out. A roof
+    // whose height nobody typed HAS corners; what it has not got is a width to
+    // set them out at, and that is an unanswered name (which reads as pending
+    // and says which name), not a missing one.
+    for n in ["Z1", "Z2", "Z3"] {
+        out.insert(format!("FASTENERS_{n}_EA"), None);
+        out.insert(format!("FM_CLASS_{n}"), None);
+        out.insert(format!("ADHESIVE_SETS_{n}_EA"), None);
+    }
+    out.insert("WIND_ASD_Z3_PSF".to_string(), None);
     for zone in &field.zones {
         let n = match zone.zone.as_str() {
             "1" => "Z1",
@@ -590,9 +604,9 @@ pub fn named(field: &FastenedField) -> BTreeMap<String, Option<f64>> {
         out.insert(format!("FASTENERS_{n}_EA"), zone.fasteners.map(|c| c as f64));
         out.insert(format!("FM_CLASS_{n}"), zone.fm_class);
         out.insert(format!("ADHESIVE_SETS_{n}_EA"), zone.adhesive_sets.map(|c| c as f64));
-    }
-    if let Some(corner) = field.zones.iter().find(|z| z.zone == "3") {
-        out.insert("WIND_ASD_Z3_PSF".to_string(), corner.asd_psf);
+        if zone.zone == "3" {
+            out.insert("WIND_ASD_Z3_PSF".to_string(), zone.asd_psf);
+        }
     }
     out
 }

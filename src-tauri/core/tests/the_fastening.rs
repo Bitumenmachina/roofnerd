@@ -251,3 +251,46 @@ fn a_roof_with_no_typed_pressure_gets_zones_and_no_pattern() {
     let document = Document::read(&value).expect("it reads");
     assert!(document.conditions.iter().any(|c| c.id == "c-field"));
 }
+
+/// A roof with no typed HEIGHT has no zones set out, and still names all three.
+///
+/// A roof has corners whether or not anybody has said how tall it is. What is
+/// missing is the width to set them out at, so the names are there and
+/// unanswered — which reads as pending on a line and says which name — rather
+/// than absent, which would read as a roof that has no corners.
+#[test]
+fn a_roof_with_no_typed_height_names_its_zones_and_answers_none_of_them() {
+    let value = serde_json::json!({
+        "pages": [{ "id": "page-1", "feetPerUnit": 1.0 }],
+        "conditions": [
+            {
+                "id": "c-field", "kind": "area",
+                "properties": { "T": 0.5, "TAPER": 0.25, "WIND_PSF_CORNER": 100.0 },
+                "traces": [{ "pageId": "page-1", "points": [
+                    { "x": 0.0, "y": 0.0 }, { "x": 60.0, "y": 0.0 },
+                    { "x": 60.0, "y": 60.0 }, { "x": 0.0, "y": 60.0 }
+                ] }]
+            },
+            {
+                "id": "c-drains", "kind": "count", "role": "drain",
+                "traces": [{ "pageId": "page-1", "points": [{ "x": 30.0, "y": 30.0 }] }]
+            }
+        ],
+    });
+    let solved = roofnerd_core::solve(&value, 1).expect("it solves");
+    let roof = solved.fastening.fields.first().expect("there is still a roof");
+    assert!(roof.zones.is_empty());
+    let scope = &solved.scopes["c-field"];
+    for name in [
+        "FASTENERS_Z1_EA", "FASTENERS_Z2_EA", "FASTENERS_Z3_EA",
+        "FM_CLASS_Z1", "FM_CLASS_Z2", "FM_CLASS_Z3",
+        "ADHESIVE_SETS_Z1_EA", "ADHESIVE_SETS_Z2_EA", "ADHESIVE_SETS_Z3_EA",
+        "WIND_ASD_Z3_PSF", "ZONE_A_FT", "PLATES_EA",
+    ] {
+        assert!(scope.contains_key(name), "{name} is not even named");
+        assert_eq!(scope[name], None, "{name} is answered on a roof with no height");
+    }
+    // And the membrane's own bonding adhesive is not a wind question at all, so
+    // it is answered.
+    assert!(scope["BONDING_GAL"].is_some());
+}
