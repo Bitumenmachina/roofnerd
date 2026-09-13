@@ -47,6 +47,13 @@ struct OpenJob {
 
 struct Document(Mutex<OpenJob>);
 
+/// The inner size each window was last ASKED for, by label.
+///
+/// Not what it got — what it was asked for. `fit_window` corrects against this,
+/// and the difference between the two is the whole reason both windows came up
+/// 52 px too wide and stayed there.
+struct Frames(Mutex<std::collections::HashMap<String, (f64, f64)>>);
+
 /// Canonical JSON: sorted keys (serde_json's BTreeMap does this for us), two
 /// spaces, one trailing newline. The same bytes the engine writes, so a job
 /// saved here and a job saved from the command line diff to nothing.
@@ -311,39 +318,45 @@ fn open_editor(app: AppHandle, editor: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Make the window's INNER size what the design asks for.
+/// Make the window's INNER size what the design asks for, from either side.
 ///
-/// The sizes in `tauri.conf.json` and in `open_editor` are what the window is
-/// asked for, and on this desktop they are not what the webview gets: the main
-/// window opens with 900 px of height and the page measures 853, and the cost
-/// window 860 against 813 — 47 px of window decoration, taken off the inside
-/// rather than added to the outside. The width is exact, so it is the title bar
-/// and nothing else.
+/// The sizes in `tauri.conf.json` and in `open_editor` are what the WINDOW is
+/// asked for, and on this desktop they are not what the page gets. The page is
+/// the only thing that can measure what it actually got, so it measures, says
+/// how far off it is — signed: positive is too big — and this corrects it.
 ///
-/// Rather than subtract a magic 47 somewhere — which would be right on this
-/// desktop and wrong on the next one — the page measures what it actually got
-/// and says how much it is short by. This adds it to the size the page has, and
-/// the page asks again until the shortfall is gone, so it converges whichever
-/// way the window manager counts and stops when there is nothing to fix.
+/// The correction is applied to WHAT THIS FUNCTION LAST ASKED FOR, and that is
+/// the whole of this function's history. It used to add the difference to a
+/// size it read back out of the toolkit, and a getter and a setter on this
+/// toolkit do not count from the same edge. Write it out: let the page end up
+/// `asked + c` for whatever constant `c` the toolkit takes or adds, and let the
+/// getter report `page + d`. Then `getter + (want − page)` lands the page at
+/// `want + d`, and asking again lands it at `want + d` for ever — a fixed point
+/// 52 px wide of the frame, which is exactly what was on screen: the main
+/// window's page 1492 against a 1440 design and the cost panel's 652 against
+/// 600, both windows, both dimensions that were already right when the height
+/// was corrected.
 ///
-/// The size it adds to is the INSIDE, and that is the whole of this function's
-/// history. It used to read `outer_size` and write the answer back through
-/// `set_size`, which is not the round trip it looks like: on this toolkit the
-/// getter reports the frame and the setter sets the client area, so every call
-/// quietly moved the decoration from the outside of the window to the inside of
-/// it. A window asked to grow 47 px taller came back 52 px wider, twice, at two
-/// different widths — the main window 1492 against a 1440 page and the cost
-/// window 652 against 600 — and re-stating the dimension that was already right
-/// was what did it. A dimension the page is not short of is not touched now:
-/// nought is added to what it already has, and nought is a real nought.
+/// Against the last REQUEST there is no such fixed point. The first correction
+/// has to seed itself from the getter, so it can still land wrong once; from
+/// then on the base is a number this function chose, the offset cancels, and
+/// the page converges on the design in one more step — whether it was too big
+/// or too small. `the_window_converges_from_either_side` proves that against a
+/// toolkit that adds a constant, with no 52 written down anywhere.
+///
+/// A dimension the page is right about is re-asked at the size it was already
+/// asked for, which is a no-op rather than a nudge.
 ///
 /// It is deliberately dumb: no target sizes live here. The anatomy is the front
 /// end's, and it is the front end that knows a document bar is 44 px.
 #[tauri::command]
-fn fit_window(window: Window, grow_width: f64, grow_height: f64) -> Result<(), String> {
-    let wider = if grow_width.abs() >= 1.0 { grow_width } else { 0.0 };
-    let taller = if grow_height.abs() >= 1.0 { grow_height } else { 0.0 };
-    if wider == 0.0 && taller == 0.0 {
+fn fit_window(
+    window: Window,
+    state: State<'_, Frames>,
+    over_width: f64,
+    over_height: f64,
+) -> Result<(), String> {
+    if over_width.abs() < 1.0 && over_height.abs() < 1.0 {
         return Ok(());
     }
     let scale = window.scale_factor().map_err(|e| e.to_string())?;
@@ -351,9 +364,30 @@ fn fit_window(window: Window, grow_width: f64, grow_height: f64) -> Result<(), S
         .inner_size()
         .map_err(|e| e.to_string())?
         .to_logical::<f64>(scale);
+    let label = window.label().to_string();
+
+    let next = {
+        let mut asked = state.0.lock().map_err(|_| "the window sizes lock is poisoned".to_string())?;
+        let last = asked.get(&label).copied().unwrap_or((inner.width, inner.height));
+        let next = next_request(last, (over_width, over_height));
+        asked.insert(label, next);
+        next
+    };
+
     window
-        .set_size(LogicalSize::new(inner.width + wider, inner.height + taller))
+        .set_size(LogicalSize::new(next.0, next.1))
         .map_err(|e| e.to_string())
+}
+
+/// What to ask for next: the last request, less how far the page overshot it.
+///
+/// A dimension the page is within a pixel of is left exactly as it was asked
+/// for. Nothing in here knows what a decoration is, which is the point.
+fn next_request(asked: (f64, f64), over: (f64, f64)) -> (f64, f64) {
+    (
+        if over.0.abs() >= 1.0 { asked.0 - over.0 } else { asked.0 },
+        if over.1.abs() >= 1.0 { asked.1 - over.1 } else { asked.1 },
+    )
 }
 
 /// WebKitGTK renders through DMABUF by default, and that path is broken against
@@ -384,6 +418,7 @@ pub fn run() {
             folder: None,
             doc: json!({}),
         })))
+        .manage(Frames(Mutex::new(std::collections::HashMap::new())))
         .invoke_handler(tauri::generate_handler![
             doc_get,
             doc_folder,
@@ -572,5 +607,63 @@ mod tests {
             write_export(None, "recap-2026-01-02.csv", "Class,Cost\n"),
             Err("no job is open".to_string())
         );
+    }
+
+    /// The window converges on the page the design asks for, from either side.
+    ///
+    /// A stand-in for the toolkit: it gives the page `taken` more than the size
+    /// it is asked for, and its getter reports `counted` more than the page. Two
+    /// separate constants on purpose — the whole defect was that they are not
+    /// the same number on this desktop, and a test that assumed they were would
+    /// have passed on the broken code.
+    ///
+    /// Returns how many corrections it took, or `None` if it never got there.
+    fn corrections(taken: (f64, f64), counted: (f64, f64), opened_at: (f64, f64), want: (f64, f64)) -> Option<usize> {
+        let mut page = (opened_at.0 + taken.0, opened_at.1 + taken.1);
+        let mut remembered: Option<(f64, f64)> = None;
+        // The page asks four times, which is what `fitTheWindow` does.
+        for tries in 0..4 {
+            let over = (page.0 - want.0, page.1 - want.1);
+            if over.0.abs() < 1.0 && over.1.abs() < 1.0 {
+                return Some(tries);
+            }
+            let reported = (page.0 + counted.0, page.1 + counted.1);
+            let next = next_request(remembered.unwrap_or(reported), over);
+            remembered = Some(next);
+            page = (next.0 + taken.0, next.1 + taken.1);
+        }
+        None
+    }
+
+    #[test]
+    fn the_window_converges_from_either_side() {
+        let want = (1440.0, 900.0);
+        // This desktop, as the probes found it: the height comes up 47 px short
+        // and the width is counted 52 px wider than the page. Both windows had
+        // stuck at want + 52 wide.
+        assert_eq!(corrections((0.0, -47.0), (52.0, 0.0), (1440.0, 900.0), want), Some(2));
+        // Too wide to begin with — the state the program was actually left in.
+        assert_eq!(corrections((0.0, 0.0), (52.0, 0.0), (1492.0, 900.0), want), Some(2));
+        // Too small in both dimensions, which is the case that used to work.
+        // Two again: the first correction is spent learning what this toolkit
+        // does with a request, because the only base it has to start from is a
+        // number the toolkit gave it.
+        assert_eq!(corrections((-30.0, -47.0), (0.0, 0.0), (1440.0, 900.0), want), Some(2));
+        // A toolkit that hands over exactly what it was asked for needs nothing.
+        assert_eq!(corrections((0.0, 0.0), (0.0, 0.0), (1440.0, 900.0), want), Some(0));
+        // And the cost panel, whose frame is its own (D137).
+        assert_eq!(corrections((0.0, -47.0), (52.0, 0.0), (600.0, 860.0), (600.0, 860.0)), Some(2));
+        // The size it was stuck at is not a fixed point any more: 1492 wide is
+        // corrected, and 1440 wide is then left there however often it is asked.
+        assert_eq!(corrections((0.0, 0.0), (52.0, 0.0), (1440.0, 900.0), want), Some(0));
+    }
+
+    /// A dimension the page is right about is asked for at the size it was
+    /// already asked for. Correcting a height must not move a width.
+    #[test]
+    fn a_dimension_that_is_right_is_left_alone() {
+        assert_eq!(next_request((1440.0, 853.0), (0.0, -47.0)), (1440.0, 900.0));
+        assert_eq!(next_request((1440.0, 900.0), (52.0, 0.0)), (1388.0, 900.0));
+        assert_eq!(next_request((1440.0, 900.0), (0.4, -0.6)), (1440.0, 900.0));
     }
 }

@@ -426,12 +426,15 @@ async function showStart() {
  *
  * The handoff's frame is 1440 x 900 and the detached cost panel is 600 x 860
  * (D137), and those are sizes of the PAGE — every region in it is specified
- * against them. The shell asks the window manager for them and this desktop
- * takes the title bar out of the inside, so the page comes up 47 px short. The
- * page is the only thing that can measure that, so it does, and asks the shell
- * to make up the difference. It asks again until there is nothing left to make
- * up, because which side of the frame a window manager counts from is not
- * something to guess at from in here.
+ * against them. The shell asks the window manager for them and does not get
+ * them: this desktop takes the title bar out of the inside and hands back 47 px
+ * less height, and it counts a width 52 px wider than the page. The page is the
+ * only thing that can measure either, so it measures, says how far off it is —
+ * signed, both ways — and asks again until it is there.
+ *
+ * Signed is the fix. It used to report only what it was SHORT of, and a page
+ * that was too wide never got narrower: both windows stood 52 px wide of the
+ * design, which is where section 10a and section 7 found them.
  */
 const WANTED: Readonly<Record<string, readonly [number, number]>> = {
   main: [1440, 900],
@@ -442,10 +445,10 @@ async function fitTheWindow(): Promise<void> {
   const want = WANTED[role];
   if (!want) return;
   for (let tries = 0; tries < 4; tries += 1) {
-    const short = [want[0] - window.innerWidth, want[1] - window.innerHeight] as const;
-    if (Math.abs(short[0]) < 1 && Math.abs(short[1]) < 1) return;
+    const over = [window.innerWidth - want[0], window.innerHeight - want[1]] as const;
+    if (Math.abs(over[0]) < 1 && Math.abs(over[1]) < 1) return;
     try {
-      await fitWindow(short[0], short[1]);
+      await fitWindow(over[0], over[1]);
     } catch {
       // A window that cannot be resized is a window the estimator can resize.
       return;

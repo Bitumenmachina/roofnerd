@@ -108,15 +108,20 @@ export async function pickFile(): Promise<string | null> {
 export const tearOff = (editor: string) => invoke<void>('open_editor', { editor });
 
 /**
- * Grow this window by what the page is short of.
+ * Tell the shell how far off the size the design asks for this page is.
  *
- * The shell asks for a size and the window manager takes the decoration out of
- * the inside of it, so a window asked for 900 gives the page 853. The page is
- * the only thing that knows what it actually got; this tells the shell, and the
- * shell adds it to the outside.
+ * Signed, and the sign is the whole point: positive is too big. The shell asks
+ * the window manager for a size and does not get it — this desktop takes the
+ * title bar out of the inside and counts the width from the other edge — and
+ * the page is the only thing that knows what it actually got. It says how far
+ * off it is, in both directions, and the shell corrects what it asked for.
+ *
+ * It used to say how much it was SHORT, which reads the same and is not: a
+ * window that was too wide was never made narrower, and both windows sat 52 px
+ * wide of the design from the moment their height was corrected.
  */
-export const fitWindow = (growWidth: number, growHeight: number) =>
-  invoke<void>('fit_window', { growWidth, growHeight });
+export const fitWindow = (overWidth: number, overHeight: number) =>
+  invoke<void>('fit_window', { overWidth, overHeight });
 
 /** Read a value out of the document by pointer. Returns undefined if absent. */
 export function at(pointer: string, from: Doc = current): unknown {
