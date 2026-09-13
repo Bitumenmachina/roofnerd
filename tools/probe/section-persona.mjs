@@ -551,7 +551,7 @@ try {
       const on = measured.find((l) => l.item === (row[item] ?? '').trim());
       if (!on) continue;
       assert.equal(number(row[qty]), number(on.quantity),
-        `"${name}" is ${row[qty]} to the subcontractor and ${on.quantity} on the estimate`);
+        `"${on.item}" is ${row[qty]} to the subcontractor and ${on.quantity} on the estimate`);
       held += 1;
     }
     assert.ok(held >= 5, `only ${held} lines could be held against the sheet`);
