@@ -193,6 +193,7 @@
     "name": "Main Roof Field",
     "properties": {
       "BOARDS": 3,
+      "DECK": 1.5,
       "ELEV": 0,
       "SIDES": 8,
       "T": 0.5,

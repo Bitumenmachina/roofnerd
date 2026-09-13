@@ -165,13 +165,17 @@ fn the_section_stacks_the_roof_the_way_it_gets_built() {
     let (document, taper, all) = drawn();
     let cut = &all.sections[0];
 
+    // In the order they are drawn, which is the order they are laid: the ground
+    // goes down before the lines over it, and the deck goes down before
+    // everything. A window reads the stack off this, so the order the marks come
+    // out in IS the claim.
     let mut order: Vec<String> = Vec::new();
-    for layer in cut.lines.iter().filter_map(|l| l.layer.clone()) {
-        if !order.contains(&layer) {
-            order.push(layer);
-        }
-    }
-    for layer in cut.shapes.iter().filter_map(|s| s.layer.clone()) {
+    for layer in cut
+        .shapes
+        .iter()
+        .filter_map(|s| s.layer.clone())
+        .chain(cut.lines.iter().filter_map(|l| l.layer.clone()))
+    {
         if !order.contains(&layer) {
             order.push(layer);
         }
@@ -202,6 +206,29 @@ fn the_section_stacks_the_roof_the_way_it_gets_built() {
     // three of them and the joints are what a section is read for.
     let courses = cut.shapes.iter().filter(|s| s.layer.as_deref() == Some("fill")).count();
     assert!(courses >= 2, "{courses} courses of flat board on a 22 ft cut");
+
+    // And the deck is drawn as a band under the datum — existing construction,
+    // under everything, out of the bill. It was a line, and a line comes out of
+    // the renderer after the ground does, so a window reading the stack in the
+    // order the marks arrive had the flat board at the bottom of the roof.
+    let deck = cut
+        .shapes
+        .iter()
+        .find(|s| s.layer.as_deref() == Some("deck"))
+        .expect("the section draws the deck it lands on");
+    assert_eq!(deck.shape.ring.len(), 4);
+    assert!(
+        deck.shape.ring.iter().all(|p| p.y >= 0.0),
+        "the deck is drawn above the datum, and the datum is the top of it"
+    );
+    let deep = deck.shape.ring.iter().map(|p| p.y).fold(0.0, f64::max) * 12.0;
+    let stated = document
+        .conditions
+        .iter()
+        .find(|c| c.id == taper.fields[0].condition_id)
+        .and_then(|c| c.property("DECK"))
+        .expect("the demo states its deck");
+    assert!((deep - stated).abs() < 1e-9, "the deck is drawn {deep} in and the job states {stated}");
 }
 
 /// Nothing on the section is a number this file made up: every panel's top is

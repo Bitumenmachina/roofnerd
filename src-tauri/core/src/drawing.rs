@@ -638,6 +638,15 @@ const SECTION_FEET_PER_INCH: f64 = 4.0;
 /// How far below the deck the drain's leader is drawn, in feet.
 const LEADER_FEET: f64 = 1.5;
 
+/// How deep the deck is DRAWN where nothing states how deep it is, in inches.
+///
+/// A symbol, the same kind of thing as the drain's leader: a section that stops
+/// at the datum with nothing under it reads as a roof floating in air, and Frame
+/// 3 draws the deck it lands on. So a band goes in, no dimension is put on it,
+/// and the label says nothing in the job states it. Where the field types `DECK`
+/// the band is that and the label says so.
+const DECK_SYMBOL_INCHES: f64 = 1.5;
+
 fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize) -> Drawing {
     let letter = (b'A' + (index % 26) as u8) as char;
     let named = format!("Cut {letter}\u{2013}{letter}");
@@ -691,19 +700,40 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
     }
 
     // ── the deck it all lands on ────────────────────────────────────────────
-    d.layered(
-        vec![Point::new(0.0, 0.0), Point::new(run, 0.0)],
+    //
+    // Existing construction: it is under the datum, it is not in the bill, and
+    // it is the bottom of the stack a section is read up from. Drawn as a band
+    // because a section that stops at the datum with nothing under it reads as a
+    // roof in mid air — and at a SYMBOL depth with no dimension on it where
+    // nobody states one, which is the same rule the drain's leader follows.
+    let field_condition = document.conditions.iter().find(|c| c.id == field.condition_id);
+    let deck_inches = field_condition.and_then(|c| c.property("DECK"));
+    let deck_feet = deck_inches.unwrap_or(DECK_SYMBOL_INCHES) / 12.0;
+    d.shape(
+        Shape::of(vec![
+            Point::new(0.0, 0.0),
+            Point::new(run, 0.0),
+            Point::new(run, deck_feet),
+            Point::new(0.0, deck_feet),
+        ]),
         "deck",
-        false,
-        false,
+        None,
         Some("deck"),
     );
-    // Under the deck line and hard left, where there is nothing else: the words
-    // on a section have to stand clear of each other or the drawing is a
-    // paragraph with lines through it.
+    d.line(vec![Point::new(0.0, 0.0), Point::new(run, 0.0)], "deck", false, false);
+    // Under the deck and hard left, where there is nothing else: the words on a
+    // section have to stand clear of each other or the drawing is a paragraph
+    // with lines through it.
     d.text(
-        Point::new(0.2, 0.55),
-        "existing deck · the datum · nothing states its thickness".to_string(),
+        Point::new(0.2, deck_feet + 0.45),
+        match deck_inches {
+            Some(deep) => format!(
+                "existing deck {} · the datum · existing construction, not in the bill",
+                inches_written(deep)
+            ),
+            None => "existing deck · the datum · nothing states its thickness, so it is drawn as a symbol"
+                .to_string(),
+        },
         "label",
         "start",
     );
@@ -794,7 +824,6 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
     // ── the surface, and everything the condition says goes over it ─────────
     let surface = surface_line(cut, panel_feet);
     let mut over = 0.0;
-    let field_condition = document.conditions.iter().find(|c| c.id == field.condition_id);
     let layers: Vec<&Line> = field_condition.map(Condition::layers).unwrap_or_default();
     for layer in &layers {
         let thick = layer.thickness.unwrap_or(0.0);
@@ -1014,7 +1043,10 @@ fn section_of(document: &Document, taper: &SolvedTaper, cut: &Cut, index: usize)
     );
 
     // ── the key, bottom to top, in the words the job uses for each course ───
-    d.key.push("existing deck".to_string());
+    d.key.push(match deck_inches {
+        Some(deep) => format!("existing deck · {}", inches_written(deep)),
+        None => "existing deck · no thickness stated".to_string(),
+    });
     if let Some(bill) = &field.bill {
         d.key.push(format!(
             "flat board {} · {} courses at the deepest",

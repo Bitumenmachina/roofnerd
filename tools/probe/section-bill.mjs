@@ -440,6 +440,14 @@ const modelNow = (session) => session.execute(function () {
     selectedConditionId: m.selectedConditionId,
     view: m.view,
     legend: ((document.querySelector('.model-legend') || {}).innerText || '').replace(/\s+/g, ' ').trim(),
+    // The words standing ON the roof. The key came down to four rows in C5 and
+    // what it stopped saying, each drain says for itself where it stands.
+    labels: [...document.querySelectorAll('.model-label')].map(function (e) {
+      return {
+        kind: e.getAttribute('data-label-kind'),
+        text: (e.textContent || '').replace(/\s+/g, ' ').trim(),
+      };
+    }),
     page: { w: window.innerWidth, h: window.innerHeight },
   });
 });
@@ -701,8 +709,32 @@ try {
       `${drawn.kinds.sump ?? 0} sumps in the scene and ${drains.length} drains on the roof`);
   });
 
-  check('the key says the drains are in the sumps the layout cuts for them', () => {
-    assert.match(drawn.legend, /sump/, `the key reads "${drawn.legend.slice(0, 200)}"`);
+  check('every drain says the sump it sits in, and how far it falls to it', () => {
+    // It was the key that said this — "3 drains, each in the sump the layout cuts
+    // for it" — until C5 brought the key down to four rows and put the words on
+    // the roof instead (D156). That is the better place for it: a depth in a key
+    // is a depth somebody has to match up to a diamond, and the estimator is
+    // looking at the diamond. So the claim is unchanged and the row reads where
+    // the program says it now.
+    //
+    // The depth is this file's own: half a sump out along an axis is where the
+    // cut meets the field, so the fall from the rim to the drain is
+    // `T + (side/2) x TAPER`, capped, less `T`.
+    const said = drawn.labels.filter((l) => l.kind === 'drain');
+    assert.equal(said.length, drains.length,
+      `${said.length} drains carry a label and ${drains.length} are on the roof:`
+      + ` ${JSON.stringify(drawn.labels)}`);
+    const depth = Math.min(atDrain + (sumpFeet / 2) * slope, ceiling) - atDrain;
+    for (const label of said) {
+      assert.ok(/sump/.test(label.text), `a drain label reads "${label.text}"`);
+      const inches = /(?:(\d+)\s+)?(?:(\d+)\/(\d+)|(\d+))\s*["″]/.exec(label.text);
+      assert.ok(inches, `no depth in "${label.text}"`);
+      const read = Number(inches[1] ?? inches[4] ?? 0)
+        + (inches[2] ? Number(inches[2]) / Number(inches[3]) : 0);
+      assert.ok(Math.abs(read - depth) < 1 / 32,
+        `the label says the sump falls ${read} in and the layout makes it ${depth} in`);
+    }
+    // And nothing anywhere reports a drain with no sump on a job that states one.
     assert.ok(!/no sump/.test(drawn.legend),
       `the key says "${/[^·]*no sump[^·]*/.exec(drawn.legend)?.[0]}" on a job that states one`);
   });

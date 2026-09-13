@@ -224,16 +224,24 @@ console.log(`  REPORT  this file's own bill: ${boardCount} board positions`
 // wall wins, because a section detail exists to prove the assembly where the roof
 // stops; where neither reaches one, the longer wins and the far end is a ridge.
 
-/** How far a ray from `d` along `u` gets before it leaves the ring. */
+/**
+ * How far a ray from `d` along `u` gets before it leaves the ring.
+ *
+ * `d + t·u = a + s·e` for each edge, solved with the two-dimensional cross
+ * product: `t = ((a−d) × e) / (u × e)` and `s = ((a−d) × u) / (u × e)`. THE
+ * SECOND ONE HAD ITS SIGN WRONG and every ray that should have struck the west
+ * wall reported that it never struck anything — see the note at `cuts` below.
+ */
 function toTheRing(d, u) {
+  const cross = (px, py, qx, qy) => px * qy - py * qx;
   let best = Infinity;
   for (let i = 0; i < ring.length; i += 1) {
     const a = ring[i]; const b = ring[(i + 1) % ring.length];
     const ex = b.x - a.x; const ey = b.y - a.y;
-    const denominator = u.x * ey - u.y * ex;
+    const denominator = cross(u.x, u.y, ex, ey);
     if (Math.abs(denominator) < 1e-12) continue;
-    const t = ((a.x - d.x) * ey - (a.y - d.y) * ex) / denominator;
-    const s = ((a.x - d.x) * u.y - (a.y - d.y) * u.x) / -denominator;
+    const t = cross(a.x - d.x, a.y - d.y, ex, ey) / denominator;
+    const s = cross(a.x - d.x, a.y - d.y, u.x, u.y) / denominator;
     if (t > 1e-9 && s >= -1e-9 && s <= 1 + 1e-9) best = Math.min(best, t);
   }
   return best;
@@ -273,6 +281,25 @@ const cuts = drains.map((d, index) => {
     highInches: Math.min(atDrain + from.run * slope, ceiling),
   };
 });
+
+/**
+ * A run that came out infinite is a defect IN THIS FILE, and it says so here
+ * rather than being carried into the checks.
+ *
+ * It was carried once. `toTheRing` had a sign wrong, so two of the three cuts
+ * reported that the ray never left the roof; the run came back `Infinity`, the
+ * row that walks out board by board along the cut was bounded by it, and the
+ * probe ran for nine hundred seconds and took none of its remaining pictures.
+ * Nothing is silently zero in this program and nothing is silently infinite
+ * either: a figure this file cannot work out stops the run here, before a window
+ * is opened, with the arithmetic named.
+ */
+for (const cut of cuts) {
+  assert.ok(Number.isFinite(cut.run) && cut.run > 0,
+    `${cut.name} came out ${cut.run} ft long, which is this file's arithmetic and not the program's`);
+  assert.ok(Number.isFinite(cut.highInches),
+    `${cut.name} is ${cut.highInches} in at its far end`);
+}
 
 console.log(`  REPORT  the cuts this job comes to: ${cuts.map((c) =>
   `${c.name} ${c.run.toFixed(2)} ft to ${c.atWall ? 'a wall' : 'a ridge'},`
@@ -546,7 +573,10 @@ try {
     // Along a cut from the drain to the far end, the thickness only rises, so the
     // letters come out in the chart's own order and never repeat out of turn.
     const reached = [];
-    for (let out = 0; out * panelFeet <= cuts[0].run + 1e-9; out += 1) {
+    // Bounded by a count as well as by the run: a loop whose only bound is a
+    // derived figure is a loop that runs for ever the day the figure is wrong.
+    const most = Math.ceil(cuts[0].run / panelFeet) + 1;
+    for (let out = 0; out <= most && out * panelFeet <= cuts[0].run + 1e-9; out += 1) {
       // The sump takes the boards over the drain out of the layout, so they are
       // not on the cut either: a sump panel is bought instead of a field board.
       if (sumpFeet !== undefined && out * panelFeet < sumpFeet / 2) continue;
