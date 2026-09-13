@@ -478,7 +478,18 @@ function rowsFor(lens: Lens, d: Doc): Row[] {
         condition: l.conditionName,
         item: l.item.description,
         costCode: l.item.costCode,
-        quantity: num(l.withWaste ?? l.quantity),
+        // What was MEASURED, not what was measured plus the estimator's
+        // cushion. This column read `withWaste`, so the Drawing lens — headed
+        // "quantities as measured, no costs and no internal assumptions", and
+        // with its waste column deliberately concealed because waste "is the
+        // estimator's cushion, not the supplier's business" — handed a
+        // subcontractor 105.60 SQ of a 96 SQ roof and called it a
+        // measurement. He prices it, adds his own waste to it, and the same
+        // cushion is paid for twice (C8 §10). Waste belongs to the order
+        // quantity beside this, which is what you actually buy, and to the
+        // Consolidated lens's own Waste column — both of which read it off the
+        // line without this column repeating it.
+        quantity: num(l.quantity ?? l.withWaste),
         unit: l.unit,
         // With no order step you buy what you measured — that is what the model
         // means by an absent step, and a stocking list that printed a blank
