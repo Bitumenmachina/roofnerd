@@ -20,11 +20,20 @@ cd "$(dirname "$0")/.."
 # like "authority" would arrive from the documents they are built on (C0).
 WHERE=(packages/engine/src packages/engine/bin packages/app/src src-tauri/src src-tauri/core/src)
 SKIP=(--exclude-dir=node_modules --exclude-dir=target --exclude-dir=dist)
+SKIP_IFC=(--exclude-dir=node_modules --exclude-dir=target --exclude-dir=dist --exclude-dir=ifc)
 fail=0
 
 echo "vocabulary gate"
 
-if hits=$(grep -rniE "${SKIP[@]}" -e 'authorized|deferred|authority' -e '\bverify\b' "${WHERE[@]}"); then
+# `packages/app/src/ifc` carries one literal exception: `Pset_Authority`, the
+# property set name IFC5/buildingSMART itself gives a `src`/`hier`/`constraint`/
+# `overridable` record — the operator's own cross-project shorthand for it,
+# named in the charter (C7, D159). That is buildingSMART's word for a property
+# set, not this program's governance language, and the exception is confined to
+# that one directory: it is still read for everything else this rule protects
+# against — "authorized", "deferred", a stray `verify`.
+if hits=$(grep -rniE "${SKIP_IFC[@]}" -e 'authorized|deferred|authority' -e '\bverify\b' "${WHERE[@]}") \
+  || hits=$(grep -rniE "${SKIP[@]}" -e 'authorized|deferred' -e '\bverify\b' packages/app/src/ifc); then
   echo "  governance language in the product:"
   echo "$hits" | sed 's/^/    /'
   fail=1
