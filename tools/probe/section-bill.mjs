@@ -225,6 +225,44 @@ for (const out of positions.values()) {
   coursesMax = Math.max(coursesMax, courses + 1);
 }
 
+/**
+ * The cricket's footprint, worked out the way NRCA sizes one.
+ *
+ * Figs. 8-1 and 10-13/10-14: the ridge is square to the curb's face and centred
+ * on it, and the cricket is half that face wide on each side. So the plan area is
+ * the ridge's own run times the whole face. Cricket stock is its own lettered
+ * series and the chart on disk carries only the primary slope, which is why this
+ * is an area and not a count of boards.
+ */
+const cricketCondition = conditions.find(
+  (c) => c.kind === 'line' && c.role === 'ridge' && !c.hidden,
+);
+const cricketSquareFeet = (() => {
+  if (!cricketCondition) return null;
+  const traced = feet(cricketCondition.traces[0]);
+  if (traced.length < 2) return null;
+  const curb = conditions.find(
+    (c) => (cricketCondition.between ?? []).includes(c.id) && c.role === 'curb' && !c.hidden,
+  );
+  if (!curb) return null;
+  const ring = feet(curb.traces[0]);
+  let length = 0;
+  for (let i = 1; i < traced.length; i += 1) {
+    length += Math.hypot(traced[i].x - traced[i - 1].x, traced[i].y - traced[i - 1].y);
+  }
+  // The face the estimator started their ridge at.
+  let face = null;
+  for (let i = 1; i < ring.length; i += 1) {
+    const a = ring[i - 1]; const b = ring[i];
+    const run = Math.hypot(b.x - a.x, b.y - a.y);
+    if (run < 1e-6) continue;
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const off = Math.hypot(mid.x - traced[0].x, mid.y - traced[0].y);
+    if (!face || off < face.off) face = { off, run };
+  }
+  return face === null ? null : length * face.run;
+})();
+
 /** What the solve should be handing the estimate, by name. */
 const wanted = {};
 for (const [letter, boards] of boardsByLetter) {
@@ -237,7 +275,8 @@ wanted.BOARDS_MAX = coursesMax;
 console.log(`  REPORT  this file's own bill: ${positions.size} board positions`
   + ` — ${[...boardsByLetter].sort().map(([l, n]) => `${l} ${n}`).join(', ')}`
   + `; ${fillBoards} flat boards under them; ${coursesMax} courses at the deepest;`
-  + ` ${sumpPanels} sump panels; ${Math.round(laidSquareFeet).toLocaleString('en-US')} SF laid`);
+  + ` ${sumpPanels} sump panels; ${cricketSquareFeet} SF of cricket;`
+  + ` ${Math.round(laidSquareFeet).toLocaleString('en-US')} SF laid`);
 
 /** The whole job, as the engine reads it off disk, for the recap either way. */
 const jobDocument = readJob((rel) => {
@@ -251,6 +290,9 @@ const scenario = jobDocument.job.scenarios.find((s) => s.id === jobDocument.job.
 const scopes = {
   [fieldCondition.id]: wanted,
   [drainCondition.id]: { SUMP_PANELS_EA: sumpPanels },
+  ...(cricketCondition && cricketSquareFeet !== null
+    ? { [cricketCondition.id]: { CRICKET_SF: cricketSquareFeet } }
+    : {}),
 };
 const withTheBill = recap(jobDocument, scenario, scopes);
 const withoutIt = recap(jobDocument, scenario);
@@ -289,31 +331,60 @@ const linesNow = (session) => session.execute(function () {
 /**
  * What the recap on screen rolls the job up to.
  *
- * `.lens-sheet` is where the Recap tab draws, which is what `section10a-chrome.mjs`
- * reads, and the pending list is the footnote under it.
+ * The selling price is PINNED under whatever tab is up, in the cost panel's own
+ * footer (`.selling .value`), and it is drawn straight off `recap()` — the same
+ * arithmetic the Recap tab renders. The class table on the Recap tab
+ * (`.lens-sheet`) carries the classes and their rates and stops there, which is
+ * why reading the last number in it found Supervision's rate and not the job.
+ *
+ * `notCounted` is the footer's own footnote: the lines the recap left out. On a
+ * solved job it is absent, and its presence is a finding in itself.
  */
 const recapNow = (session) => session.execute(function () {
   const sheet = document.querySelector('.lens-sheet');
-  const panel = document.querySelector('.cost-panel');
+  const selling = document.querySelector('.cost-panel .selling .value');
+  const partial = document.querySelector('.cost-panel .selling .partial');
   return JSON.stringify({
-    there: !!sheet,
-    text: sheet ? (sheet.innerText || '').replace(/\s+/g, ' ').trim() : '',
-    footnote: panel ? (panel.innerText || '').replace(/\s+/g, ' ').trim() : '',
+    there: !!selling,
+    selling: selling ? (selling.textContent || '').trim() : null,
+    classes: sheet ? (sheet.innerText || '').replace(/\s+/g, ' ').trim() : '',
+    notCounted: partial ? (partial.textContent || '').trim() : null,
+    why: partial ? (partial.getAttribute('title') || '') : '',
   });
 });
 
-/** The derived names the Condition panel lists, and the fields it shows. */
+/** The derived names the Condition panel lists, with the words beside each. */
 const panelNow = (session) => session.execute(function () {
   const panel = document.querySelector('.condition-panel');
   if (!panel) return JSON.stringify({ there: false });
-  const derived = [...panel.querySelectorAll('.panel-derived .derived-name')]
-    .map(function (e) { return (e.textContent || '').trim(); });
+  const rows = [...panel.querySelectorAll('.panel-derived .derived-row')].map(function (r) {
+    const text = function (sel) {
+      const el = r.querySelector(sel);
+      return el ? (el.textContent || '').trim() : null;
+    };
+    return { name: text('.derived-name'), label: text('.derived-label'), value: text('.derived-value') };
+  });
   return JSON.stringify({
     there: true,
     name: ((panel.querySelector('.panel-name') || {}).value) || null,
-    derived,
+    rows,
     text: (panel.innerText || '').replace(/\s+/g, ' ').trim(),
   });
+});
+
+/**
+ * The named numbers the shell solved, as the window itself holds them.
+ *
+ * Pulled with the same command the app pulls them with when a window connects —
+ * `solve_get('scopes')` — so this reads what the program has rather than what
+ * this file thinks it should have. The bill above is still worked out here, and
+ * the two are compared: this says what the solve produced, that says what the
+ * roof comes to.
+ */
+const scopesNow = (session) => session.execute(function () {
+  return window.__TAURI_INTERNALS__.invoke('solve_get', { part: 'scopes' })
+    .then(function (s) { return JSON.stringify(s); })
+    .catch(function (e) { return JSON.stringify({ error: String(e) }); });
 });
 
 /** The condition panel's field with this label on it, by the words on screen. */
@@ -459,15 +530,42 @@ try {
       `it reads "${line.quantity}" — ${line.why ?? 'no reason given'}`);
   });
 
-  check('the one line for the whole tapered package is gone', () => {
-    // The money seam: `SQ` off the traced area at a price picked for an average
-    // thickness. A bill by letter and that line together would charge the package
-    // twice.
+  check('no MATERIAL line prices the whole tapered package by the square', () => {
+    // The money seam: one line, `SQ` off the traced area, at a price picked for an
+    // average thickness somebody guessed. A bill by letter and that line together
+    // would charge the package twice.
+    //
+    // LABOR IS EXEMPT AND THAT IS DELIBERATE. "Lay the tapered package" is a crew
+    // rate, and a crew rate per square is what a roofer states and what the
+    // production rate in the catalogue is written as — squares a crew-day. It is
+    // not a sketch value standing in for a bill; it is the rate. The plan says so
+    // in as many words ("Labor lines as they are"), and pricing the crew by the
+    // board would be a second decision this batch was not asked to make. So this
+    // row reads the class off the job and asks the question of material only.
     const sketch = onField.filter(
-      (l) => /taper/i.test(l.description ?? '') && (l.formula ?? '').trim() === 'SQ',
+      (l) => /taper/i.test(l.description ?? '')
+        && (l.formula ?? '').trim() === 'SQ'
+        && classOf(l.description) === 'Material',
     );
     assert.equal(sketch.length, 0,
       `"${sketch.map((l) => l.description).join('", "')}" still prices the package by the square`);
+    // And the crew's own line is still there, priced the way a roofer states it.
+    const crew = onField.filter((l) => classOf(l.description) === 'Labor');
+    assert.ok(crew.length > 0, 'no labor line on the field at all');
+  });
+
+  check('and the four letters can be told apart on a 364 px panel', () => {
+    // The estimate picture at the commit before this showed all four reading
+    // "Tapered polyisocyan…" — four lines the same, differing only in their
+    // money, which is worse than no split at all. The letter is the second word
+    // now, so it survives the ellipsis; what this holds is that the descriptions
+    // differ inside their first dozen characters.
+    const heads = [...boardsByLetter.keys()].sort().map((letter) => {
+      const line = named(`TAPER_${letter}_SF`)[0];
+      return (line?.description ?? '').slice(0, 12);
+    });
+    assert.equal(new Set(heads).size, heads.length,
+      `they read "${heads.join('", "')}" where the name is cut off`);
   });
 
   check('no letter line is pending, and none blames the sheet for a solver', () => {
@@ -501,22 +599,22 @@ try {
   await wait(900);
   const rolled = JSON.parse(await recapNow(session));
 
-  check(`the recap rolls up to $${withTheBill.sellingPrice.toFixed(2)}, the bill included`, () => {
-    assert.ok(rolled.there, 'there is no recap on the Recap tab');
-    const shown = rolled.text.match(/-?[\d,]+\.\d\d/g)?.map((m) => Number.parseFloat(m.replace(/,/g, ''))) ?? [];
-    assert.ok(shown.length > 0, `the recap reads "${rolled.text.slice(0, 160)}"`);
+  check(`the job rolls up to $${withTheBill.sellingPrice.toFixed(2)}, the bill included`, () => {
+    assert.ok(rolled.there, 'the cost panel pins no selling price');
+    const shown = money(rolled.selling);
     const want = Number(withTheBill.sellingPrice.toFixed(2));
-    assert.ok(shown.some((v) => Math.abs(v - want) < 0.02),
-      `nothing in the recap is ${want}; it carries ${shown.slice(-4).join(', ')}`);
+    assert.ok(shown !== null, `the selling price reads "${rolled.selling}"`);
+    assert.ok(Math.abs(shown - want) < 0.02,
+      `the panel says ${shown} and this file's own bill comes to ${want}`);
   });
 
-  check('the tapered package is not in the recap\'s pending list', () => {
-    const said = rolled.footnote;
-    assert.ok(!/TAPER_/.test(said), `the recap says "${/[^.]*TAPER_[^.]*/.exec(said)?.[0]}"`);
-    assert.ok(!/has not been solved/.test(said),
-      `the recap says "${/[^.]*has not been solved[^.]*/.exec(said)?.[0]}"`);
-    assert.ok(!/no scale/.test(said),
-      'the recap blames a sheet\'s scale for a derived number');
+  check('and every line is in it — nothing about the package is pending', () => {
+    assert.equal(rolled.notCounted, null,
+      `the panel says "${rolled.notCounted}" — ${rolled.why.replace(/\n/g, ' · ')}`);
+    // And no code word reached the footnote either, which is where the recap's
+    // reasons are read as a sentence.
+    assert.ok(!/TAPER_|FILL_|SUMP_|CRICKET_|BOARDS_/.test(rolled.why),
+      `the footnote says "${rolled.why}"`);
   });
 
   // ── the Condition panel says which names there are ──────────────────────
@@ -524,13 +622,47 @@ try {
   await until(session, () => !!document.querySelector('.condition-panel'), { what: 'the panel' });
   const picked = await pickCondition(session, fieldCondition.name);
   const panel = JSON.parse(await panelNow(session));
+  const solvedScopes = JSON.parse(await scopesNow(session));
 
-  check('the Condition panel lists the names the field carries', () => {
+  check('the Condition panel lists exactly the names the field carries', () => {
     assert.ok(picked, `"${fieldCondition.name}" is not in the tree to pick`);
     assert.ok(panel.there, 'there is no condition panel');
-    const want = Object.keys(wanted).sort();
-    assert.deepEqual([...panel.derived].sort(), want,
-      `the panel lists ${panel.derived.join(', ') || 'nothing'} and the field carries ${want.join(', ')}`);
+    const carried = Object.keys(solvedScopes[fieldCondition.id] ?? {}).sort();
+    const listed = panel.rows.map((r) => r.name).sort();
+    assert.ok(carried.length > 0, 'the solve carries nothing for the field');
+    assert.deepEqual(listed, carried,
+      `the panel lists ${listed.join(', ') || 'nothing'} and the solve carries ${carried.join(', ')}`);
+  });
+
+  check('and the solve carries the bill this file worked out for itself', () => {
+    // The other half: the panel agrees with the solve, and the solve agrees with
+    // the roof. Every name this file can work out is compared; the ones it does
+    // not model — the cut waste and the ground with no fall — are only required
+    // to be there and to be numbers.
+    const carried = solvedScopes[fieldCondition.id] ?? {};
+    for (const [name, value] of Object.entries(wanted)) {
+      assert.ok(Math.abs((carried[name] ?? NaN) - value) < 0.01,
+        `the solve says ${name} is ${carried[name]} and the roof comes to ${value}`);
+    }
+    for (const name of ['BOARD_WASTE_SF', 'NOFALL_SF']) {
+      assert.ok(Number.isFinite(carried[name]), `the solve says ${name} is ${carried[name]}`);
+    }
+    assert.equal((solvedScopes[drainCondition.id] ?? {}).SUMP_PANELS_EA, sumpPanels);
+  });
+
+  check('it says each of them in the trade\'s words, with the identifier beside it', () => {
+    // The vocabulary rule, on the one panel that could break it. `TAPER_ZZ_SF` is
+    // a formula identifier: it belongs in the mono face beside a formula and
+    // nowhere else, and the words an estimator reads are the bill's own.
+    for (const row of panel.rows) {
+      assert.ok(row.label, `"${row.name}" is listed with no words on it`);
+      assert.ok(!row.label.includes('_'), `"${row.label}" reads like an identifier`);
+      assert.ok(!row.label.includes(row.name), `"${row.label}" is the identifier`);
+      assert.match(row.label, / · (SF|LF|EA|SQ)$/, `"${row.label}" says no unit`);
+    }
+    // In the order a bill is read in: the lettered panels first.
+    assert.match(panel.rows[0].label, /^Tapered panel/,
+      `the list starts at "${panel.rows[0].label}"`);
   });
 
   const typedThickness = JSON.parse((await fieldValue(session, 'Thickness')) ?? 'null');

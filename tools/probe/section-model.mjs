@@ -62,7 +62,27 @@ for (const rel of ['job.json', 'conditions.json', 'cost-codes.json', 'pages/page
 const demoDoc = readJob((rel) => files.get(rel) ?? null);
 const demoScenario = demoDoc.job.scenarios.find((s) => s.id === demoDoc.job.activeScenarioId)
   ?? demoDoc.job.scenarios[0];
-const demoRecap = recap(demoDoc, demoScenario);
+/**
+ * The job, rolled up — WITH what the model solved for it.
+ *
+ * The engine prices what it is handed; the board bill, the sump count and the
+ * cricket are the core's, and they arrive on the window rather than on disk. So
+ * this asks the shell for them through the same command the app uses when a
+ * window connects, and hands them to the same `recap()` the panel calls. Pricing
+ * the folder with an empty scope instead reads every derived line as pending and
+ * makes the job $54,000 light against the panel beside it — which is the check
+ * disagreeing with the program about money, not the program being wrong.
+ *
+ * It is filled in once the window is up; the roll-up happens after that.
+ */
+let demoScopes = {};
+let demoRecap = recap(demoDoc, demoScenario);
+const rollUp = () => { demoRecap = recap(demoDoc, demoScenario, demoScopes); };
+const scopesNow = (session) => session.execute(function () {
+  return window.__TAURI_INTERNALS__.invoke('solve_get', { part: 'scopes' })
+    .then(function (s) { return JSON.stringify(s); })
+    .catch(function () { return '{}'; });
+});
 /** The same formatting the panel uses, so the two strings are comparable. */
 const asMoney = (v) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
 const field = demoDoc.conditions.find((c) => c.properties?.TAPER !== undefined && c.kind === 'area');
@@ -241,6 +261,8 @@ try {
       area: ((document.querySelector('.roof-area') || {}).innerText || '').replace(/\s+/g, ' ').trim(),
     });
   }));
+  demoScopes = JSON.parse(await scopesNow(session));
+  rollUp();
   const selling = await sellingNow(session);
 
   check('the demo opens as the handoff\'s job, at its own roof area', () => {
@@ -251,8 +273,9 @@ try {
   });
   check('and the selling price is what the engine makes of the same folder', () => {
     // Not a figure typed into this file. The engine reads `jobs/demo-job` off
-    // disk above and rolls it up; this is that number against the one pinned
-    // under the lines. They are the same arithmetic or one of them is wrong.
+    // disk above and rolls it up, with the named numbers the shell solved for
+    // it; this is that number against the one pinned under the lines. They are
+    // the same arithmetic or one of them is wrong.
     assert.equal(selling, asMoney(demoRecap.sellingPrice),
       `the panel reads "${selling}" and the engine makes it ${asMoney(demoRecap.sellingPrice)}`);
     assert.deepEqual(demoRecap.pending, [], `lines with no money: ${demoRecap.pending.join(' | ')}`);

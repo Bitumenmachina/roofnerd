@@ -289,6 +289,71 @@ try {
   const curbRing = curb ? inFeet(curb) : [];
   const cricket = scene.find((m) => m.kind === 'cricket');
 
+  /**
+   * How high the roof itself is at a place on the plan, in feet.
+   *
+   * THE CRICKET SITS ON THE ROOF, so every rule about it is measured from the
+   * roof under it and not from a level datum. It used to be drawn at one typed
+   * elevation, so the two rows below could read "the highest vertices" and get
+   * the ridge; on a package that climbs from a half inch to fourteen the ridge
+   * is no longer level, and the highest vertices are whichever end of it is
+   * uphill. Both rows measure the RISE above the roof instead.
+   *
+   * The layout, worked out here from what the job states rather than asked of the
+   * program: one drainage region per drain, four planes rising from the drain
+   * along the field's own longest side, the thickness the GREATER of the two runs,
+   * capped by the boards or by what the roof flashes against.
+   */
+  const roofTopAt = (() => {
+    if (!field) return () => 0;
+    const ring = inFeet(field);
+    const drains = (job.conditions ?? [])
+      .filter((c) => c.role === 'drain' && !c.hidden)
+      .flatMap((c) => inFeet(c));
+    const start = field.properties?.T ?? 0;
+    const slope = field.properties?.TAPER ?? 0;
+    const elevation = field.properties?.ELEV ?? 0;
+    let flashes = Infinity;
+    for (const c of job.conditions ?? []) {
+      if (c.kind !== 'line' || c.hidden || c.role === 'ridge') continue;
+      const h = c.properties?.H;
+      if (h !== undefined && h > 0) flashes = Math.min(flashes, h * 12);
+    }
+    // `capInches` in the engine: the lower of the board ceiling and eight inches
+    // under whatever the membrane turns up against. Written out here so that this
+    // file shares no arithmetic with the program it is checking.
+    const boards = field.properties?.BOARDS;
+    const fromBoards = boards === undefined ? Infinity : start + boards * 4.5;
+    const cap = Math.min(fromBoards, Number.isFinite(flashes) ? flashes - 8 : Infinity);
+
+    let longest = null;
+    for (let i = 0; i < ring.length; i += 1) {
+      const a = ring[i]; const b = ring[(i + 1) % ring.length];
+      const run = Math.hypot(b.x - a.x, b.y - a.y);
+      if (run > 1e-9 && (longest === null || run > longest.run)) {
+        longest = { run, u: { x: (b.x - a.x) / run, y: (b.y - a.y) / run } };
+      }
+    }
+    if (!longest || drains.length === 0) return () => elevation;
+    let along = longest.u;
+    if (along.x < -1e-12 || (Math.abs(along.x) <= 1e-12 && along.y < 0)) {
+      along = { x: -along.x, y: -along.y };
+    }
+    const across = { x: -along.y, y: along.x };
+    return (x, y) => {
+      let best = Infinity;
+      for (const d of drains) {
+        const a = Math.abs((x - d.x) * along.x + (y - d.y) * along.y);
+        const b = Math.abs((x - d.x) * across.x + (y - d.y) * across.y);
+        best = Math.min(best, Math.max(a, b));
+      }
+      return elevation + Math.min(start + best * slope, cap) / 12;
+    };
+  })();
+
+  /** How far a drawn vertex stands above the roof under it, in feet. */
+  const riseOf = (p) => p.y - roofTopAt(p.x, p.z);
+
   check('the cricket is drawn behind the curb it serves', () => {
     // The demo's cricket is the one behind RTU-1, and `between` says so. It used
     // to say `c-drains`, which made it the saddle between two drainage points —
@@ -309,12 +374,18 @@ try {
     for (let i = 0; i < cricket.points.length; i += 3) {
       pts.push({ x: cricket.points[i], y: cricket.points[i + 1], z: cricket.points[i + 2] });
     }
-    const top = Math.max(...pts.map((p) => p.y));
-    const high = pts.filter((p) => Math.abs(p.y - top) < 1e-4);
+    // The ridge is where the wedge stands FURTHEST ABOVE THE ROOF, not where it is
+    // highest in the world: the roof under it climbs, so the two ends of a level
+    // ridge would be two different heights and the uphill one would look like the
+    // whole ridge. Rise above the surface is flat along a cricket's ridge and
+    // nought at its feet, which is what a cricket is.
+    const rises = pts.map(riseOf);
+    const most = Math.max(...rises);
+    const high = pts.filter((p, i) => most - rises[i] < 1e-4);
     const a = high[0];
     const b = high.reduce((far, p) =>
       Math.hypot(p.x - a.x, p.z - a.z) > Math.hypot(far.x - a.x, far.z - a.z) ? p : far, a);
-    return { a, b, top, low: Math.min(...pts.map((p) => p.y)) };
+    return { a, b, rise: most, foot: Math.min(...rises) };
   };
 
   /**
@@ -390,10 +461,18 @@ try {
   check('and it is cut at twice the slope of the field it sits in', () => {
     // NRCA p.79 and p.165. Read off the drawn shape: the rise at the ridge over
     // the run water travels to get round the curb, which is half the face.
-    const { top, low } = ridgePoints();
+    //
+    // ABOVE THE ROOF, not above a datum. The cricket stands on the tapered
+    // package now, so its own fall is what it adds to the surface under it —
+    // measuring from the lowest vertex in the world would count the roof's own
+    // climb along the ridge as part of the cricket's slope, which on this roof
+    // made a half inch to the foot read as one and an eighth.
+    const { rise: atRidge, foot } = ridgePoints();
     const { face } = faceOf();
     assert.ok(face && face.run > 1e-6, 'no face to measure the fall across');
-    const rise = (top - low) * 12;
+    assert.ok(Math.abs(foot) < 0.02,
+      `its feet stand ${(foot * 12).toFixed(2)} in off the roof instead of on it`);
+    const rise = (atRidge - foot) * 12;
     const drawn = rise / (face.run / 2);
     const want = (field?.properties?.TAPER ?? 0) * 2;
     assert.ok(want > 0, 'the field has no taper to double');
