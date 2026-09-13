@@ -28,6 +28,81 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## C2 — boards, letters, fill, sumps, crickets, the bill (2026-09-13)
+
+**The layout became a bill, and the money on the demo moved.** C1 laid the field out and the estimate
+still carried ONE line for the whole tapered package — `SQ` off the traced area at a price picked for
+an average thickness somebody guessed. A crew does not buy that. It buys 4 ft boards off a printed
+table, lettered, stacked on flat fill to a thickness, cut at the region's edges and at the roof's,
+counted, sumped and cricketed. That is what the core solves now and what the sheet prices (D150).
+
+**The demo's tapered package, solved:** 697 board positions — **X 175, Y 229, Z 138, ZZ 155** — over
+**880 flat 4 in boards**, four courses at the deepest, 11,152 SF of tapered panel and 14,080 SF of
+flat bought, **1,600 SF of it cut away**, laid on 9,552 SF of roof (9,600 less three 4 ft sumps).
+**Three sump panels**, one a drain, each cut at 1 in — the thickness the field has at the sump's rim,
+read off the solved planes and not computed a second time by the drawing. **The cricket is 20 SF** and
+it is priced by area, because cricket stock is its own lettered series and the chart on disk carries
+only the primary slope.
+
+**The selling price goes from $170,517.77 to $165,328.20.** $2,477.64 of that is the package itself,
+now bought by letter instead of at a guessed average — the solved average thickness is 8.7 in and the
+retired line's own comment said seven. The rest is a one-time reseed: demo prices are drawn from the
+item's own id now instead of its place in the catalogue, so a later batch adding a fastener line
+cannot quietly re-price the coping. **What the seam carries is far larger than either: $54,358.67.**
+With the solve out of `recap()`, seven lines go pending and that much of the job goes with them — C0
+threaded the money through `priceJob` and left `recap()` to make its own call, so the sheet and the
+recap would have priced different sets of lines the moment a bill arrived. `recap()` takes the solve
+now and three call sites in the app pass it.
+
+**The number Patrick should look at is `BOARDS_MAX` = 4 against a typed `BOARDS` of 3.** `capInches`
+reads as "each board adds up to 4½ in of rise", which gives 14 in on this roof; the manufacturer's
+scheme is flat 4 in boards under one tapered panel, so three courses reach 12½ in and the layout
+needs four. Neither number is wrong — they describe different products — and nothing was changed to
+hide the gap. The slope stays at ¼:12 (D152): ⅛:12 would rename every line on the sheet, because that
+chart is AA through FF where ¼:12 is X/Y/Z/ZZ, and the four scope names the plan fixed would price
+nothing.
+
+**The cricket stands on the roof it sheds.** It carried a typed `ELEV: 0.75` on the demo, so the whole
+wedge sat at nine inches over a roof running from a half inch to fourteen. Every vertex is lifted by
+the depth the package makes under it now: the ridge climbs from 7 in to 8¼ in with the field beside
+it, and that property is out of the fixture. This closes the B1 pushback the plan names at S1 step 4.
+`LAYOUT` arrives with it, typed as the number of ways the field falls — four (the default) or two —
+and a two-way field gets the saddle every pair of drains needs, or a refusal naming the ratio where
+Fig 4-13 will not have it.
+
+**The Condition panel lists the names.** What a formula on this condition can name was answerable only
+by reading the plan; the panel shows each one with ◈ and what it is worth, read-only, and a name the
+solve cannot answer says "not solved" rather than showing a dash that looks like nought. On the line,
+`pending` stopped blaming the estimator's sheet for the solver: a null derived name is NAMED
+("CRICKET_SF has not been solved."), and the test C0 left asserting the wrong sentence is flipped.
+
+**Checks.** `cargo test --workspace` is 33 + 7 + 10 + 14. The 10 are
+`src-tauri/core/tests/the_bill.rs`: the plan's own hand-checked 64 × 128 roof worked out whole in the
+doc comment (578 boards, X 194 · Y 96 · Z 128 · ZZ 160, 608 flat boards, three courses), the cut board
+that is also that roof's corner (one board, 4 SF laid, 12 SF cut away, 8½ in, an X over 8 in of fill),
+the letter on a shared edge and mid range, the fill stepping across a boundary, the sump off a 12 in
+and a 60 in bowl, the two-way saddle, the saddle Fig 4-13 refuses, the slope the chart does not draw,
+and the sump rule pinned to `roof.ts`. `packages/engine` is 170. Every commit went through the hook,
+so each is green on `pnpm -r build && pnpm test && pnpm gates`.
+
+**The C2 vendor data landed before this batch and is not ours:** `915e06d`, `f617d7e` and `c22bfea` —
+Versico's tapered profile chart, Carlisle's DR-05 fastening patterns and a test over both, transcribed
+off the page images. `profile.rs` compiles the first of them in with `include_str!` rather than reading
+it at run time, because the core touches no disk; the file on disk stays the one copy.
+
+**Not run here: the probe.** `tools/probe/section-bill.mjs` is written, landed first and red by
+construction, and has never executed. Front door throughout. It works the whole bill out for itself
+off `jobs/demo-job` and the chart — and it does it by sampling the roof on a quarter-foot lattice and
+marking which grid cells any of it lands in, which is an integral against the polygon clipper it holds
+to account. **The two agree exactly: 697 positions and 175 · 229 · 138 · 155.** It takes two pictures,
+`section-bill-estimate-<c>.png` and `section-bill-frame2-<c>.png`. **The Estimate picture will differ
+from every earlier one on purpose** — five material lines where there was one, each with ◈ — and Frame
+2 differs in two places: the sumps are the cut the layout makes rather than a 4 ft square drawn at a
+height the view worked out, and the cricket follows the fall.
+
+**Next: C3 — walls, curbs, coping, the wall section.** The flashing height at a wall needs the finished
+roof at that wall, which is what this batch's planes and courses now give.
+
 ## C1 — regions and planes (2026-09-13)
 
 **The field is laid out the trade's way now, and it is the first change in this run an estimator
