@@ -55,8 +55,11 @@ let refreshChips: () => void = () => undefined;
 
 /**
  * The Section's own acts. One, and it is the same one the Model has: pointing at
- * the roof picks what you are looking at. Cutting a section somewhere the drains
- * are not is a verb, and the verbs are C6's.
+ * the roof picks what you are looking at.
+ *
+ * "Cut a section" is not offered HERE. It is a pick on the roof, so it belongs
+ * where the roof is — the Plan and the Model both carry it — and this view is
+ * where its answer lands.
  */
 export const sectionTools = (pick: (id: string) => void): readonly RailTool[] =>
   [{ id: 'select', label: 'Select', icon: 'select', onPick: () => pick('select') }];

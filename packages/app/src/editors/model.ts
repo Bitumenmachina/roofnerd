@@ -1554,8 +1554,11 @@ function widestFlat(field: SolvedTaperField): Point | null {
  * point, the slope and the sump the estimator typed, and — the one that is worth
  * the room — how many courses of board the layout NEEDS beside how many it was
  * allowed. On the demo those are four and three, and the difference is a
- * purchase somebody has to make (C2's pushback 8). It is a readout and not a
- * control: "Set high and low" is a verb and verbs are C6's.
+ * purchase somebody has to make (C2's pushback 8).
+ *
+ * This is what the strip says with NO act up: the roof as it stands, under
+ * Select. The same six readings under the act that changes them are the act's
+ * own (`verbs.ts`), where two of them are fields somebody types into.
  */
 function stripFor(fields: SolvedTaperField[], list: Condition[]): Node[] {
   const out: Node[] = [

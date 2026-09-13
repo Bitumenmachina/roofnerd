@@ -28,6 +28,60 @@ the fix exists because of it. The door has had a person's hands on it, it failed
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
 
+## C6 — the verbs: set high and low, box out a curb, measure, cut a section (2026-09-13)
+
+**The tool rail offers all eight of the handoff's acts, and the four that were missing now do
+something.** Trace an area, set high and low, drop a drain, run a parapet, box out a curb, add a
+cricket, measure, cut a section. The four new ones are the ones that work ON the roof rather than
+tracing something new onto the sheet, and they are two steps each: the window hands the core two
+places in feet and asks what they would MEAN, and then writes what the answer said. The core solves
+the whole model again from the document afterwards, exactly as it does after any other edit. Nothing
+in the window computes a slope, a run, a face or a cut line (D158).
+
+**Set high and low is Frame 2's strip as an act.** Two picks — the high side, then the drain the
+water goes to — and the strip fills with what the roof is at each of them, off the solve. Type a
+thickness at each end and the slope those two imply appears with the cyan mark on it: the fall over
+the run along the boards, which on a four-way layout is not the straight line to the drain. Press the
+word and `TAPER` and `T` go onto the field and `SUMP` onto the drain; the bill re-solves, and on a
+roof lettered by depth that changes which panels are bought. The two picks stay marked on the roof
+until the next act, the low one standing on the drain the pick actually took rather than on the pixel
+that was clicked. A pick that cannot be honoured — low above high, a place off the roof, a field with
+no drain on it — is a sentence in the strip, and a high side past where the boards run out is a
+sentence too rather than a refusal, because a flat patch is a roof this program already draws.
+
+**Box out a curb writes two conditions in one act.** Two corners and a height in the strip: a curb
+with the lines this job's own curb detail carries — their formulas, their waste, their prices, so it
+prices the moment it exists — and behind it a cricket, as an ordinary traced ridge on the upslope
+face, which `cricket.rs` cuts its wedge from the way it does for one somebody drew by hand. The face
+is the one the water arrives at, read off the governing plane at the curb's own middle; a curb no
+more than two feet across the fall is told the water goes round it and gets none, which is what the
+figures are drawn for.
+
+**Measure writes nothing.** Two clicks, a ruler on the roof, the distance in feet and inches, the
+rise between the two ends off the solved surface, and the package's depth at each — with an honest
+blank at an end that is on no tapered area. Escape clears it.
+
+**Cut a section is a pick on the roof.** Click a drain, or anywhere on the ground it drains, and the
+Section view opens on the cut that goes through it with the cut line left drawn on the roof. It is
+offered on the Plan and on the Model, not in the Section itself: a pick belongs where the roof is,
+and this is where its answer lands.
+
+**No money moved.** Nothing in this batch prices anything and no fixture changed — the demo job is
+untouched, and the selling price is C4's $212,153.98. What moves is what an estimator can now do to
+it: setting the demo's slope to an eighth in twelve through the rail re-letters the whole tapered
+package, which is the point.
+
+**One new module either side of the seam.** `src-tauri/core/src/verbs.rs` answers the four questions
+and `src-tauri/core/tests/the_verbs.rs` holds them to the demo roof and to a forty-foot square with
+the arithmetic in the doc comment; `packages/app/src/verbs.ts` is the one act, fed by both views.
+`drawing.rs` gains `section_at`, which walks the same list `sections_of` walks so an index can never
+name the wrong drawing.
+
+**For Patrick to look at:** press "Set high and low" in the rail with the Model up, click the high
+side and then a drain, and watch the slope appear with its cyan mark before anything is written —
+then press the word and watch the Estimate re-letter. And box out a curb anywhere on the roof: the
+cricket behind it should be on the side the water comes from, not the side it leaves by.
+
 ## C4 — wind zones, uplift ratings, fastener counts, adhesive (2026-09-13)
 
 **The roof knows where its corners are, and the sheet buys accordingly.**
