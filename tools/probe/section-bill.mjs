@@ -75,6 +75,19 @@ const read = async (rel) => JSON.parse(await readFile(join(rel.startsWith('data/
 const conditions = await read('conditions.json');
 const pages = await read('pages/pages.json');
 const profile = await read('data/profiles/versico-versicore-mp-h.json');
+const priceBook = await read('prices.json');
+const costCodes = await read('cost-codes.json');
+// A line on the sheet is known by its description; the class it is priced in
+// comes off the price book's entry for that description and the cost code's
+// own class — the two files the demo is priced from, read rather than typed.
+const classOf = (description) => {
+  const entries = Array.isArray(priceBook) ? priceBook : (priceBook.items ?? priceBook.prices ?? []);
+  const entry = entries.find((e) => (e.description ?? '').trim() === (description ?? '').trim());
+  if (!entry) return null;
+  const codes = Array.isArray(costCodes) ? costCodes : (costCodes.codes ?? []);
+  const code = codes.find((c) => c.code === entry.costCode);
+  return code ? code.class : null;
+};
 
 /** Feet to the page unit. A sheet nobody scaled has none, and no trace on it. */
 const scales = {};
