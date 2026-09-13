@@ -289,12 +289,30 @@ try {
       assert.ok(acts.some((a) => a.label === want), `no act called "${want}"`);
     }
   });
+  // "Does nothing" used to mean the rail offered a word for an act nobody had
+  // wired, and the four here were exactly that. C6 wired them, so the row's own
+  // notion of "does something" is stale in the other direction now — a fixed
+  // act that still fails this row on the old (absence) reading would be a
+  // regression this check could no longer see. What "does something" means for
+  // any act on this rail, wired or not, is the one thing every act does before
+  // anything is picked: choosing it puts its OWN strip up, named for it — the
+  // same observation §1.5's other rows already make of `Scale` and of the
+  // traced acts above. So each of the four is chosen in turn and the strip is
+  // read, never assumed.
+  const verbStrips = {};
+  for (const label of ['Set high and low', 'Box out a curb', 'Measure', 'Cut a section']) {
+    await tool(session, label);
+    await wait(400);
+    verbStrips[label] = JSON.parse(await session.execute(function () {
+      const bar = document.querySelector('.tool-strip');
+      const named = bar ? bar.querySelector('.tool-strip-name') : null;
+      return JSON.stringify({ found: !!bar, name: named ? (named.textContent || '').trim() : '' });
+    }));
+  }
   check('§1.5 and nothing in the rail is an act this program cannot do', () => {
-    // The handoff names eight. Four of them are not built, and a button that
-    // does nothing is worse than a missing one: it teaches the estimator that
-    // the program is broken rather than that the feature is coming.
-    for (const notYet of ['Set high and low', 'Box out a curb', 'Measure', 'Section']) {
-      assert.ok(!acts.some((a) => a.label === notYet), `"${notYet}" is offered and does nothing`);
+    for (const [label, strip] of Object.entries(verbStrips)) {
+      assert.ok(strip.found, `"${label}" put no tool settings strip up at all`);
+      assert.equal(strip.name, label, `"${label}" put up a strip named "${strip.name}"`);
     }
   });
 
