@@ -479,27 +479,28 @@ const DERIVED_LABELS: Readonly<Record<string, DerivedLabel>> = {
   CURB_RAISE_IN: { label: 'Raise needed', unit: 'IN', order: 72 },
   COPING_LF: { label: 'Coping', unit: 'LF', order: 80 },
   COPING_PCS_EA: { label: 'Coping pieces', unit: 'EA', order: 81 },
-  CLEAT_LF: { label: 'Cleat', unit: 'LF', order: 82 },
+  COPING_CORNERS_EA: { label: 'Coping corners', unit: 'EA', order: 82 },
+  CLEAT_LF: { label: 'Cleat', unit: 'LF', order: 83 },
   // The wind zones and what holds the base layer down, C4. The width of the
   // band and the rating of each zone are not things anybody buys, and they are
   // listed all the same: they are what the counts under them were worked out
   // from, and a quantity whose basis is only on a drawing is one nobody can
   // check from the sheet.
-  ZONE_A_FT: { label: 'Zone band width', unit: 'LF', order: 83 },
-  WIND_ASD_Z3_PSF: { label: 'Corner uplift, working load', unit: 'psf', order: 84 },
-  FM_CLASS_Z1: { label: 'Uplift rating, field', unit: 'psf', order: 85 },
-  FM_CLASS_Z2: { label: 'Uplift rating, perimeter', unit: 'psf', order: 86 },
-  FM_CLASS_Z3: { label: 'Uplift rating, corner', unit: 'psf', order: 87 },
-  BASE_BOARD_IN: { label: 'Base board', unit: 'IN', order: 88 },
-  FASTENERS_Z1_EA: { label: 'Base fasteners, field', unit: 'EA', order: 89 },
-  FASTENERS_Z2_EA: { label: 'Base fasteners, perimeter', unit: 'EA', order: 90 },
-  FASTENERS_Z3_EA: { label: 'Base fasteners, corner', unit: 'EA', order: 91 },
-  PLATES_EA: { label: 'Fastener plates', unit: 'EA', order: 92 },
-  BASE_THIN_EA: { label: 'Positions under the rated thickness', unit: 'EA', order: 93 },
-  ADHESIVE_SETS_Z1_EA: { label: 'Insulation adhesive, field', unit: 'EA', order: 94 },
-  ADHESIVE_SETS_Z2_EA: { label: 'Insulation adhesive, perimeter', unit: 'EA', order: 95 },
-  ADHESIVE_SETS_Z3_EA: { label: 'Insulation adhesive, corner', unit: 'EA', order: 96 },
-  BONDING_GAL: { label: 'Bonding adhesive', unit: 'GAL', order: 97 },
+  ZONE_A_FT: { label: 'Zone band width', unit: 'LF', order: 84 },
+  WIND_ASD_Z3_PSF: { label: 'Corner uplift, working load', unit: 'psf', order: 85 },
+  FM_CLASS_Z1: { label: 'Uplift rating, field', unit: 'psf', order: 86 },
+  FM_CLASS_Z2: { label: 'Uplift rating, perimeter', unit: 'psf', order: 87 },
+  FM_CLASS_Z3: { label: 'Uplift rating, corner', unit: 'psf', order: 88 },
+  BASE_BOARD_IN: { label: 'Base board', unit: 'IN', order: 89 },
+  FASTENERS_Z1_EA: { label: 'Base fasteners, field', unit: 'EA', order: 90 },
+  FASTENERS_Z2_EA: { label: 'Base fasteners, perimeter', unit: 'EA', order: 91 },
+  FASTENERS_Z3_EA: { label: 'Base fasteners, corner', unit: 'EA', order: 92 },
+  PLATES_EA: { label: 'Fastener plates', unit: 'EA', order: 93 },
+  BASE_THIN_EA: { label: 'Positions under the rated thickness', unit: 'EA', order: 94 },
+  ADHESIVE_SETS_Z1_EA: { label: 'Insulation adhesive, field', unit: 'EA', order: 95 },
+  ADHESIVE_SETS_Z2_EA: { label: 'Insulation adhesive, perimeter', unit: 'EA', order: 96 },
+  ADHESIVE_SETS_Z3_EA: { label: 'Insulation adhesive, corner', unit: 'EA', order: 97 },
+  BONDING_GAL: { label: 'Bonding adhesive', unit: 'GAL', order: 98 },
 };
 
 /** The lettered panels, which are one name per letter and cannot be listed. */

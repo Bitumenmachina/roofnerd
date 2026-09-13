@@ -53,6 +53,8 @@
 //   COPING_LF           the condition's own `LF`, named so a formula never
 //                       spells `LF * (STRETCHOUT / 12)` again
 //   COPING_PCS_EA       sections plus corners
+//   COPING_CORNERS_EA   the run's own turns, outside and inside together —
+//                       the pieces that are mitred, which is not every piece
 //   CLEAT_LF            both faces: `LF * 2`
 
 use std::collections::BTreeMap;
@@ -142,6 +144,17 @@ pub fn scopes_of(
         if run.coping.cap_width_feet.is_some() {
             add(mine, "COPING_LF", Some(run.coping.run_feet));
             add(mine, "COPING_PCS_EA", Some(run.coping.pieces_ea as f64));
+            // The turns, apart from the count of pieces, because a mitred
+            // corner and a straight length are not the same thing to buy and
+            // pricing every piece at the corner's rate put about three and a
+            // half thousand dollars of shop work on forty straight lengths
+            // (C8 §3a). Outside and inside together: both are mitred, and which
+            // way a corner turns changes the fabrication and not the count.
+            add(
+                mine,
+                "COPING_CORNERS_EA",
+                Some((run.coping.corners_outside + run.coping.corners_inside) as f64),
+            );
             add(mine, "CLEAT_LF", Some(run.coping.cleat_feet));
         }
     }
@@ -250,6 +263,40 @@ mod tests {
         assert!(!field.contains_key("TAPER_X1_SF"));
         // The drains carry their own panels, on their own condition.
         assert_eq!(scopes["c-drains"]["SUMP_PANELS_EA"], Some(1.0));
+    }
+
+    /// A parapet round a rectangle: four corners, and more pieces than corners.
+    ///
+    /// The run closes back on its first point, so all four turns are turns. 128
+    /// ft of coping cut into 10 ft sections is 13 sections plus the 4 turns —
+    /// seventeen pieces, of which four are mitred. The line that prices a mitred
+    /// corner priced all seventeen before C8, which is what this pins: the two
+    /// names are different numbers and a formula can ask for either.
+    #[test]
+    fn a_parapet_carries_its_corners_apart_from_its_pieces() {
+        let doc = Document::read(&json!({
+            "pages": [{ "id": "page-1", "feetPerUnit": 1.0 }],
+            "conditions": [
+                {
+                    "id": "c-parapet", "kind": "line",
+                    "properties": { "H": 3.5, "WALL": 8.0, "W": 1.17, "FLASHUP": 24.0 },
+                    "traces": [{ "pageId": "page-1", "points": [
+                        { "x": 0.0, "y": 0.0 }, { "x": 40.0, "y": 0.0 },
+                        { "x": 40.0, "y": 24.0 }, { "x": 0.0, "y": 24.0 },
+                        { "x": 0.0, "y": 0.0 }
+                    ] }]
+                }
+            ],
+        }))
+        .expect("the document reads");
+        let scopes = scopes(&doc);
+        let wall = &scopes["c-parapet"];
+        assert_eq!(wall["COPING_CORNERS_EA"], Some(4.0), "a rectangle turns four times");
+        let pieces = wall["COPING_PCS_EA"].expect("the run is cut into pieces");
+        assert!(
+            pieces > 4.0,
+            "every piece was priced as a corner: {pieces} pieces against 4 corners"
+        );
     }
 
     /// A slope the chart does not draw: the names are there and unanswered.

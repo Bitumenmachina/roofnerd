@@ -155,8 +155,14 @@ const CATALOGUE = [
     order: { name: 'LB', contains: 1.156, rule: 'exact' }, band: [3.35, 3.7], waste: 10 },
   { id: 'cleat', description: 'Continuous cleat, 20 ga', costCode: '07-100-150', unit: 'LF',
     band: [1.95, 2.32], waste: 5 },
+  // A corner is cut, folded and welded; a straight length is run off the brake
+  // and cut square. They are two prices, and pricing every piece at the
+  // corner's rate put about three and a half thousand dollars of shop work on
+  // forty straight lengths of this roof's parapet (C8 §3a).
   { id: 'mitre', description: 'Shop-formed corner, mitre welded', costCode: '07-100-150', unit: 'EA',
     band: [78, 100] },
+  { id: 'coping-length', description: 'Coping length, shop-formed', costCode: '07-100-150', unit: 'EA',
+    layer: 'edge metal', band: [18, 26] },
   { id: 'termbar', description: 'Termination bar and sealant', costCode: '07-100-160', unit: 'LF',
     band: [3.1, 3.7] },
   { id: 'metal-fasteners', description: 'Fasteners, cleat and termination bar', costCode: '07-100-170', unit: 'EA',
@@ -417,11 +423,15 @@ const DERIVED = [
   { condition: 'c-parapet', id: 'wallflash', formula: 'FLASH_SF' },
   { condition: 'c-parapet', id: 'coping', formula: 'COPING_LF * (STRETCHOUT / 12)' },
   {
-    condition: 'c-parapet', id: 'mitre', formula: 'COPING_PCS_EA',
-    notes: 'Every coping piece the run is cut into, corners and the straight '
-      + 'sections between them alike — this fixture prices one shop-formed line '
-      + 'for both rather than carrying a second for plain lengths. The corners '
-      + "are the least of it: six outside, two inside on this roof's own trace.",
+    condition: 'c-parapet', id: 'mitre', formula: 'COPING_CORNERS_EA',
+    notes: "Every turn the run makes: six outside and two inside on this roof's "
+      + 'own trace, and both kinds are mitred. The straight lengths between them '
+      + 'are the line under this one.',
+  },
+  {
+    condition: 'c-parapet', id: 'coping-length', formula: 'COPING_PCS_EA - COPING_CORNERS_EA',
+    notes: 'The pieces the run is cut into that are not corners — run off the '
+      + 'brake, cut square, no weld. The section length sets how many there are.',
   },
   { condition: 'c-parapet', id: 'cleat', formula: 'CLEAT_LF' },
   { condition: 'c-parapet', id: 'metal-fasteners', formula: 'CLEAT_LF * (12 / FASTEN_OC)' },

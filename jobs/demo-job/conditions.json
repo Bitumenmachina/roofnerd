@@ -339,10 +339,10 @@
       {
         "costCode": "07-100-150",
         "description": "Shop-formed corner, mitre welded",
-        "formula": "COPING_PCS_EA",
+        "formula": "COPING_CORNERS_EA",
         "id": "mitre",
         "layer": "edge metal",
-        "notes": "Every coping piece the run is cut into, corners and the straight sections between them alike — this fixture prices one shop-formed line for both rather than carrying a second for plain lengths. The corners are the least of it: six outside, two inside on this roof's own trace.",
+        "notes": "Every turn the run makes: six outside and two inside on this roof's own trace, and both kinds are mitred. The straight lengths between them are the line under this one.",
         "unit": "EA",
         "unitCost": 89.5
       },
@@ -453,6 +453,16 @@
         },
         "unit": "LF",
         "unitCost": 53
+      },
+      {
+        "costCode": "07-100-150",
+        "description": "Coping length, shop-formed",
+        "formula": "COPING_PCS_EA - COPING_CORNERS_EA",
+        "id": "coping-length",
+        "layer": "edge metal",
+        "notes": "The pieces the run is cut into that are not corners — run off the brake, cut square, no weld. The section length sets how many there are.",
+        "unit": "EA",
+        "unitCost": 24.75
       }
     ],
     "kind": "line",

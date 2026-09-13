@@ -149,6 +149,14 @@
       "unitCost": 89.5
     },
     {
+      "id": "coping-length",
+      "description": "Coping length, shop-formed",
+      "costCode": "07-100-150",
+      "unit": "EA",
+      "layer": "edge metal",
+      "unitCost": 24.75
+    },
+    {
       "id": "termbar",
       "description": "Termination bar and sealant",
       "costCode": "07-100-160",
