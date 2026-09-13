@@ -1,6 +1,6 @@
 # Status
 
-Current as of 2026-09-12. One file, short. Patrick accepts against this whenever he chooses;
+Current as of 2026-09-13. One file, short. Patrick accepts against this whenever he chooses;
 acceptance does not pause the build.
 
 ## Where the build is
@@ -27,6 +27,78 @@ application — and it would not load anything. That attempt is what produced th
 the fix exists because of it. The door has had a person's hands on it, it failed, it was repaired,
 and `tools/probe/front-door.mjs` now walks it end to end at 17/17 through the start screen, the
 buttons and the fields. Patrick is not a gate on this and the build does not wait on him.
+
+## C1 — regions and planes (2026-09-13)
+
+**The field is laid out the trade's way now, and it is the first change in this run an estimator
+can see.** C0 put the solve in Rust and changed nothing on screen: the field was a cone from each
+drain, sampled onto a two foot grid. NRCA lays a tapered package out from its drains instead
+(Membrane Roof Systems 2019, ch.4 pp.163–168) — one drainage region per drain, cut out by the
+perpendicular bisector between them; four planes to a region, rising from the drain along the
+field's own longest side; the thickness the greater of the two runs; the valleys where two planes
+tie, which is 45° exactly; the plateau where the cap binds. That is what the core solves and what
+the Model draws (D149).
+
+**The demo's solved high side is 14 in, on the north wall of the bump** — the same figure the
+legend showed before C1, and it does not mean the same thing. The layout wants **14½ in** there:
+that wall stands 56 ft of run from the nearest drain in each of the three regions, and a quarter
+inch to the foot off a half inch drain reaches 14½ in at 56 ft. The boards allow 14 (three layers
+at 4½ in on ½ in, and the wall it flashes against would allow 16), so the top half inch is
+refused and the roof goes flat for the last two feet. **The no-fall ground is 132 SF**, in a 2 ft
+strip inside that wall — where the cone put 136 SF up in the bump, quantized to 2 ft cells. Where
+the numbers really move is inside the field: four feet inboard of the far south-west corner the
+cone charged **10.36 in** and the layout wants **9 in**, because the run of a board is 34 ft across
+the field's axis and not the 39.4 ft diagonal to the drain. The cone was buying an inch and a third
+of board that no board cut can produce.
+
+**What the payload carries now:** per field, its axes and the side they came off, and one region per
+drain — the region's ground (in pieces; the demo's bump would split one if it had to), its four
+planes, the facet each plane governs, the valley creases as two ends with a depth at each, the ridge
+segments cut into the pieces on which both sides are straight, the plateau, and the square feet of
+each. The 2 ft grid is gone from the core, the payload and `packages/engine/src/solved.ts`. The
+drawing triangulates a facet and lifts each corner: **36 triangles on the demo roof** where the grid
+needed about 5,000, and the surface is exact everywhere instead of every two feet.
+
+**Two things the old shape hid are said out loud.** A ridge carries how far the two patterns
+disagree about the depth on it — zero on this roof, because the three drains stand in a row along
+the boards, and a real number where a pair is slanted, which is the case NRCA answers with an area
+divider. And a trace the layout will not lay out — a ring that crosses itself, or a tapered area
+with no drain on it — is refused with the reason instead of being solved and quietly not drawn
+(C0's pushback 3 closed).
+
+**The dashed line down the middle between two drains is gone.** There is no valley there in a
+four-way layout: between two drains the ground between the two 45° ties is level across, so the
+water runs to the valleys either side of it. C0 drew one and the key called it "the valley between
+drains"; the key now names the 45° valleys and the ridges, and says that the planes and the valleys
+are the layout while the lettered boards are not on it yet.
+
+**Checks.** `cargo test -p roofnerd-core` is 20 + 7: the pinned demo (four places — the drain, a
+plane, a valley, the plateau — the axes, the regions, the ridges, the plateau's square feet and the
+arrows) and `src-tauri/core/tests/nrca_figures.rs`, which holds the solver to Figs 4-9, 4-10, 4-11
+and 4-15 on roofs invented for the purpose, to a concave field, to the cap plateau, and to p.166's
+case of two patterns that will not meet. The last test in that file reads
+`packages/engine/src/roof.ts` at test time and holds the core's copies of its conventions to the
+numbers in that file, so the two cannot drift — the pair C0 left as two copies agreeing by
+inspection. `packages/engine/test/takeoff.test.mjs` pins `readTaperAt` to the same four places from
+the other side. Every commit went through the hook, so each is green on `pnpm -r build && pnpm test
+&& pnpm gates`.
+
+**Not run here: the probe.** `tools/probe/section-taper.mjs` is written and has never executed —
+front door throughout, every figure worked out from `jobs/demo-job`, and the plateau measured by
+sampling the roof on a quarter-foot lattice so that it is an integral rather than a second copy of
+the clipper it holds to account. It takes two pictures, `section-taper-frame2-<c>.png` in the state
+C0's capture was taken in and `section-taper-vert3-<c>.png`. **The picture WILL differ from C0's,
+and that is the point of C1:** the ramp steps across four planes instead of sliding out of a cone,
+the valleys are dashed at 45°, the ridges stand between the drains, and the arrows run down the
+plane a place is on rather than at the nearest drain. `section-core.mjs`'s own arithmetic moved with
+the program (one expression; the old one is written in the comment beside it), so its three
+thickness rows should still be green — the far-corner row at 9 in now, not 10.36 in.
+
+**Next: C2 — boards, letters, fill, sumps, crickets, the bill.** The layout is what a board bill is
+cut from, and the facets are the pieces to lay them on. The demo's slope is the decision waiting
+there: ¼:12 wants 14½ in at the bump's north wall and the boards allow 14, so either a fourth layer
+is bought or the field goes to ⅛:12 — which is the retrofit-typical answer and the one that wants
+deciding with the bill in hand.
 
 ## C0 — the core exists, and the Model draws from it (2026-09-12)
 
@@ -101,7 +173,8 @@ followed. The records commit was refused once by the client-data gate for a ques
 draws: valleys at 45°, saddles, thickness piecewise-planar on drainage regions and
 perpendicular rather than radial, and the `roof.ts` ↔ core constant test. The 14 in the
 Northgate legend shows is the cone reaching a corner 56 ft from the nearest drain, and it is
-the reason C1 exists.
+the reason C1 exists. *(Landed — see the C1 entry above. The 14 in stayed and stopped meaning
+what it meant: the layout wants 14½ in at that wall and the boards allow 14.)*
 
 ## B1 — the Model is Frame 2, and the demo is Northgate (2026-09-12)
 
