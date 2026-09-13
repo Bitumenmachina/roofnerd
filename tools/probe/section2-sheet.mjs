@@ -148,13 +148,14 @@ try {
   check('the formula is on the line, and it is what the library put there', () => {
     // C3 moved the wall flashing and coping lines off `LF * H` and `SEGMENTS`
     // onto the names the wall solver carries: `FLASH_SF` is the exact area
-    // under the flashing ceiling (not the whole height of the wall whether or
-    // not the detail is drawn to flash that far), and `COPING_PCS_EA` is the
-    // run's own sections and corners together (not a plain corner count).
+    // under the flashing ceiling, not the whole height of the wall whether or
+    // not the detail is drawn to flash that far. C8 then split the one
+    // shop-formed line in two, so the pieces are named by what they are —
+    // `COPING_CORNERS_EA` for the turns, the rest for the plain lengths.
     const formulas = parapet.map((l) => l.formula);
     assert.ok(formulas.includes('FLASH_SF'), `formulas read ${JSON.stringify(formulas)}`);
     assert.ok(formulas.includes('LF'), `formulas read ${JSON.stringify(formulas)}`);
-    assert.ok(formulas.includes('COPING_PCS_EA'), `formulas read ${JSON.stringify(formulas)}`);
+    assert.ok(formulas.includes('COPING_CORNERS_EA'), `formulas read ${JSON.stringify(formulas)}`);
   });
   check('one traced run feeds three different units', () => {
     const units = new Set(parapet.map((l) => l.unit));
@@ -187,18 +188,21 @@ try {
     assert.equal(flash.unit, 'SF', `the line is priced as ${flash.unit}`);
     assert.equal(flash.note, '', `the line carries an advisory it should not: "${flash.note}"`);
   });
-  check('the corners are bought inside the run\'s own pieces, not typed', () => {
-    // `COPING_PCS_EA` is sections plus corners together (the catalogue prices
-    // one shop-formed line for a coping run's plain lengths and its corners
-    // rather than carrying two) — so the exact claim `SEGMENTS` let this row
-    // make (one piece a corner) no longer holds, and the honest one is that
-    // the run's own corner count is a LOWER BOUND: the pieces this line buys
-    // can never be fewer than the corners the trace itself turns.
-    const mitre = parapet.find((l) => l.formula === 'COPING_PCS_EA');
-    assert.ok(mitre, 'no line bought against the coping pieces');
-    const pieces = Number(String(mitre.quantity).replace(/,/g, ''));
-    assert.ok(pieces >= stated.corners,
-      `the sheet buys ${pieces} coping pieces and the trace turns ${stated.corners} corners`);
+  check('the corners are bought at the run\'s own turns, and the lengths apart from them', () => {
+    // C8 §3a split what was one line. `COPING_PCS_EA` was sections and corners
+    // together and the line that bought it was called a mitred corner, so the
+    // sheet priced forty-eight of them on a roof that turns eight times. The
+    // corners are their own line now and the plain lengths are the rest, so the
+    // two together are the pieces and neither is the whole of them.
+    const mitre = parapet.find((l) => l.formula === 'COPING_CORNERS_EA');
+    assert.ok(mitre, 'no line on the parapet is bought against the run\'s own corners');
+    const corners = Number(String(mitre.quantity).replace(/,/g, ''));
+    assert.equal(corners, stated.corners,
+      `the sheet buys ${corners} corners and the trace turns ${stated.corners}`);
+    const lengths = parapet.find((l) => /COPING_PCS_EA - COPING_CORNERS_EA/.test(l.formula ?? ''));
+    assert.ok(lengths, 'nothing buys the plain lengths between the corners');
+    assert.ok(Number(String(lengths.quantity).replace(/,/g, '')) > 0,
+      'the run is all corners and no lengths, which cannot be');
   });
   check('each line extends at its own price', () => {
     for (const l of parapet) {
