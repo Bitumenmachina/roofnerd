@@ -451,13 +451,26 @@ export function writeIfc(
  */
 export function writeRoof(plan: RoofPlan, api: WEBIFC.IfcAPI): Uint8Array {
   const { IFC4 } = WEBIFC;
-  const model = api.CreateModel({ schema: WEBIFC.Schemas.IFC4, name: `${plan.job}.ifc` });
+  // `authors`/`organizations`/`authorization`: IFC4's own `FILE_NAME` header
+  // declares these non-optional (`LIST [1:?] OF STRING`, `STRING`), and
+  // leaving them out writes a null IfcOpenShell's strict validator refuses —
+  // found running it, not assumed.
+  const model = api.CreateModel({
+    schema: WEBIFC.Schemas.IFC4, name: `${plan.job}.ifc`,
+    authors: ['roofnerd'], organizations: ['roofnerd'], authorization: 'none',
+  });
 
   const length = (v: number) => new IFC4.IfcLengthMeasure(v);
   const ratio = (v: number) => new IFC4.IfcReal(v);
   const label = (v: string) => new IFC4.IfcLabel(v);
   const identifier = (v: string) => new IFC4.IfcIdentifier(v);
   const point = (x: number, y: number, z: number) => new IFC4.IfcCartesianPoint([length(x), length(y), length(z)]);
+  // Two coordinates, not three at z = 0: `IfcArbitraryClosedProfileDef.WR1`
+  // and `IfcArbitraryProfileDefWithVoids.WR2` both require a profile's own
+  // curves to be `Dim == 2` — found running IfcOpenShell's own validator
+  // against the file, which reads `Dim` off how many coordinates a point
+  // actually carries rather than whether the third happens to be zero.
+  const point2 = (x: number, y: number) => new IFC4.IfcCartesianPoint([length(x), length(y)]);
   const direction = (x: number, y: number, z: number) => new IFC4.IfcDirection([ratio(x), ratio(y), ratio(z)]);
   const placement = (x: number, y: number, z: number) => new IFC4.IfcAxis2Placement3D(point(x, y, z), null, null);
 
@@ -526,10 +539,10 @@ export function writeRoof(plan: RoofPlan, api: WEBIFC.IfcAPI): Uint8Array {
   const wound = (ring: readonly Point[], ccw: boolean): Point[] =>
     (signedArea(ring) > 0) === ccw ? ring.slice() : ring.slice().reverse();
 
-  /** A closed polyline in the XY plane at z = 0, from plan points. */
+  /** A closed 2D polyline, from plan points — a profile boundary, never a 3D solid's own vertex. */
   const polyline = (ring: readonly Point[]) => {
     const closed = [...ring, ring[0]!].map(toIfc);
-    return new IFC4.IfcPolyline(closed.map((p) => point(p.x, p.y, 0)));
+    return new IFC4.IfcPolyline(closed.map((p) => point2(p.x, p.y)));
   };
 
   /** A profile with one hole in it — a wall's outer trace and the line `WALL` grows in from. */
