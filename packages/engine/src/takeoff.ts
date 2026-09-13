@@ -6,6 +6,7 @@
 import type { Condition, JobDocument, Page } from './model.js';
 import type { Calibrations, Measures } from './measures.js';
 import { measure, scopeFor } from './measures.js';
+import type { Scopes } from './solved.js';
 
 /** What each page's scale is, keyed by page. Absent means nobody has scaled it. */
 export function calibrationsOf(pages: readonly Page[]): Calibrations {
@@ -63,10 +64,19 @@ export function measureJob(doc: JobDocument): Map<string, Measures> {
   return done;
 }
 
-/** Everything a formula on this condition's lines can see. */
-export function scopeOf(doc: JobDocument, conditionId: string): Record<string, number | null> {
+/**
+ * Everything a formula on this condition's lines can see.
+ *
+ * `solved` is what the model derived, per condition — the board bill, the
+ * fastener counts, the flashing area — as it arrives on `doc:changed`. Left off,
+ * the scope is the trace and the estimator's own fields, which is every caller
+ * that has no solve to hand.
+ */
+export function scopeOf(
+  doc: JobDocument, conditionId: string, solved?: Scopes,
+): Record<string, number | null> {
   const condition = doc.conditions.find((c) => c.id === conditionId);
   if (!condition) throw new InheritanceError(`there is no condition ${conditionId}`);
   const measures = measureJob(doc).get(conditionId)!;
-  return scopeFor(measures, condition.properties);
+  return scopeFor(measures, condition.properties, solved?.[conditionId]);
 }

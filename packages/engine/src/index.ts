@@ -19,3 +19,4 @@ export * from './job.js';
 export * from './recap.js';
 export * from './compare.js';
 export * from './roof.js';
+export * from './solved.js';

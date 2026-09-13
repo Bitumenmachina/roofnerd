@@ -29,6 +29,7 @@ import { priceLine, type LineResult } from './line.js';
 import { plural } from './words.js';
 import { measureJob } from './takeoff.js';
 import { scopeFor } from './measures.js';
+import type { Scopes } from './solved.js';
 
 export interface ClassAdderLine {
   readonly name: string;
@@ -173,14 +174,14 @@ export interface PricedLine extends LineResult {
   readonly class: ClassName | null;
 }
 
-export function priceJob(doc: JobDocument, scenario: Scenario): PricedLine[] {
+export function priceJob(doc: JobDocument, scenario: Scenario, solved?: Scopes): PricedLine[] {
   const measured = measureJob(doc);
   const out: PricedLine[] = [];
 
   for (const condition of doc.conditions) {
     const measures = measured.get(condition.id);
     if (!measures) continue;
-    const scope = scopeFor(measures, condition.properties ?? {});
+    const scope = scopeFor(measures, condition.properties ?? {}, solved?.[condition.id]);
     for (const item of condition.items ?? []) {
       out.push({
         ...priceLine(item, scope, scenario.prices ?? {}, condition.waste ?? 0),

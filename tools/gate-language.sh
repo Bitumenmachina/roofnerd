@@ -16,7 +16,9 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-WHERE=(packages/engine/src packages/engine/bin packages/app/src src-tauri/src)
+# The core is product source and the gate reads it: the solvers are where a word
+# like "authority" would arrive from the documents they are built on (C0).
+WHERE=(packages/engine/src packages/engine/bin packages/app/src src-tauri/src src-tauri/core/src)
 SKIP=(--exclude-dir=node_modules --exclude-dir=target --exclude-dir=dist)
 fail=0
 

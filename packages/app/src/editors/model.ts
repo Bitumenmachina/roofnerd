@@ -42,18 +42,31 @@
 // what they say. That order matters: it was the other way round once, and the
 // check passed fourteen out of fourteen against geometry nobody had checked.
 //
+// WHERE THE GEOMETRY COMES FROM (C0, 2026-09-12). This file used to work the
+// roof out. It does not any more: the thickness, the fall, the no-fall ground,
+// the valleys and the crickets are solved in `roofnerd-core` and arrive through
+// `solve_get("taper")` when the solve moves. Patrick's ruling is that the model
+// is the function rather than a view — the same solved roof has to feed the
+// Section, the tapered layout drawing and the estimate, and a second arithmetic
+// in here is a second answer. So the drawing draws. The one number it still
+// works out is where a vertex goes on the screen.
+//
+// The seam was proven by a change nobody can see: the picture at C0 is the
+// picture before it, pixel for pixel, and `tools/probe/section-core.mjs` asks
+// the window where its roof came from to tell the difference.
+//
 // There is no editing in this window. Clicking selects, and selecting is not
 // editing — it is the same one selection every other editor watches.
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
-  CRICKET_SLOPE_MULTIPLE, MIN_FLASHING_INCHES, SINGLE_LAYER_MAX_INCHES,
-  buildUpInches, capInches, formatFeetInches, maxLengthToWidth, ridgeBetween, ridgeDisagreement,
-  selfIntersects,
-  type CapReason, type Condition, type Page, type Point, type Properties, type Spot,
+  CRICKET_SLOPE_MULTIPLE, MIN_FLASHING_INCHES, NOTHING_SOLVED, SINGLE_LAYER_MAX_INCHES,
+  buildUpInches, cricketOf, fieldOf, formatFeetInches, pointInPolygon, readTaperAt, selfIntersects,
+  type CapReason, type Condition, type Page, type Point, type Properties,
+  type SolvedCricket, type SolvedTaper, type SolvedTaperField, type SolvedValley,
 } from '@roofnerd/engine';
-import { at, doc, subscribe, type Doc } from '../doc.js';
+import { at, doc, solveId, solveTaper, subscribe, type Doc } from '../doc.js';
 import { feet, feetPerUnit } from '../scale.js';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
 import { stripField, type RailTool, type Reading as StripReading, type SurfaceChrome } from '../chrome.js';
@@ -84,8 +97,17 @@ const inches = (n: number) => n / 12;
 // another layer rather than the roof going flat. The ceiling an estimator
 // actually hits is flashing height against a wall the building already has.
 
-/** How fine the taper is sampled, in feet. Small enough to see a sump. */
-const GRID_FEET = 2;
+// How fine the taper is sampled is the core's (`taper.rs`, GRID_FEET), and C1
+// retires the grid altogether: planes need no sampling.
+
+/**
+ * How far apart the flow arrows are placed, in feet.
+ *
+ * The core places them — this is the same spacing, and it is here only to size
+ * the dart against it. A dart is a mark on a drawing and how big it is drawn is
+ * the drawing's business; where it goes and which way it points are the roof's.
+ */
+const ARROW_FEET = 8;
 
 /**
  * The four corners the roof is offered from.
@@ -295,7 +317,7 @@ function readAt(canvas: HTMLCanvasElement, event: PointerEvent): readonly StripR
 
   const p = { x: hit.point.x, y: hit.point.z };
   const where = `${formatFeetInches(p.x)}, ${formatFeetInches(p.y)}`;
-  const field = fieldsNow.find((f) => inside(p, f.ring));
+  const field = fieldsNow.find((f) => pointInPolygon(p, f.ring));
   if (!field) {
     return [
       { key: 'Cursor', value: where },
@@ -306,11 +328,12 @@ function readAt(canvas: HTMLCanvasElement, event: PointerEvent): readonly StripR
     ];
   }
 
-  const run = nearest(p, drainsNow);
-  const raw = field.start + run * field.slope;
-  const flat = raw > field.cap;
-  const thickness = Math.min(raw, field.cap);
-  if (flat) {
+  // The solved field, read where the pointer is. Not the two foot grid the
+  // surface is drawn from: sampling that would move every number in this strip
+  // by up to an eighth, and the strip is the roof's own answer about itself.
+  const here = readTaperAt(field, p);
+  const thickness = here.thicknessInches;
+  if (here.flat) {
     // No fall is the one thing on a low-slope roof that decides whether the
     // water leaves, so it says which ceiling was hit rather than only that one
     // was. Amber, and only here.
@@ -319,19 +342,18 @@ function readAt(canvas: HTMLCanvasElement, event: PointerEvent): readonly StripR
       : 'no fall — the boards have run out here';
     return [
       { key: 'Cursor', value: where },
-      { key: 'Slope', value: `${inchLabel(field.slope)} in 12` },
+      { key: 'Slope', value: `${inchLabel(field.slopeInchesPerFoot)} in 12` },
       { key: 'Insulation here', value: inchLabel(thickness) },
       { key: 'Flow', value: why, warn: true },
       { key: '', value: null },
     ];
   }
-  const to = nearestDrain(p, drainsNow);
   return [
     { key: 'Cursor', value: where },
-    { key: 'Slope', value: `${inchLabel(field.slope)} in 12` },
+    { key: 'Slope', value: `${inchLabel(field.slopeInchesPerFoot)} in 12` },
     { key: 'Insulation here', value: inchLabel(thickness) },
-    { key: 'Flow', value: to ? `runs ${compass(p, to)}` : null, water: true },
-    { key: '', value: `${run.toFixed(1)} ft to the drain it reaches` },
+    { key: 'Flow', value: here.toward ? `runs ${compass(p, here.toward)}` : null, water: true },
+    { key: '', value: `${here.runFeet.toFixed(1)} ft to the drain it reaches` },
   ];
 }
 
@@ -510,7 +532,7 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
   const draw = () => {
     let built: Built;
     try {
-      built = build(doc());
+      built = build(doc(), solvedNow);
     } catch (e) {
       world.clear();
       legend.replaceChildren();
@@ -521,6 +543,13 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
     note.classList.remove('model-broke');
     legend.replaceChildren(...built.legend);
     note.textContent = built.note;
+    if (solveTrouble) {
+      // The roof did not solve. Nothing tapered is drawn, and the window says
+      // why rather than showing a deck with no fall on it as though that were
+      // the answer.
+      note.textContent = `This roof did not solve, so the taper is not shown. ${solveTrouble}`;
+      note.classList.add('model-broke');
+    }
     if (!controls) controls = projection(canvas);
     lastSpan = built.span;
     resize(canvas);
@@ -575,8 +604,14 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
     // on reading it: `JSON.stringify` of an array carries the elements and
     // nothing else, and these are asked for by name.
     return Object.assign(meshes, {
+      // Where this roof came from. Before C0 there was nothing to ask: the
+      // drawing worked the roof out itself, so a check could not tell a view
+      // that draws a solved model from one that solves its own.
+      source: 'solve_get',
+      solveId: drawnSolveId,
       selectedConditionId: selectedConditionId(),
       screenPointOf: (id: string) => screenPointOf(id),
+      screenPointAt: (x: number, y: number) => screenPointAt(x, y),
       // Where the camera is standing and how the vertical is stretched, so a
       // check can hold a preset against what it claims to have changed. The
       // meshes above are the other half of that: a preset moves this and
@@ -593,7 +628,37 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
     });
   };
 
-  stopSubscribing = subscribe(() => draw());
+  /**
+   * Pull the solved roof when the solve moves, then draw.
+   *
+   * The document event carries the solve's id and the named numbers — hundreds
+   * of bytes, which can ride a keystroke — and the geometry is pulled, because on
+   * a real roof it is hundreds of kilobytes and must not. A pull that has been
+   * overtaken by a later one is dropped rather than drawn: two changes in flight
+   * would otherwise land in whichever order the shell answered in.
+   */
+  const refresh = async () => {
+    const want = solveId();
+    if (want !== drawnSolveId) {
+      const token = pulling + 1;
+      pulling = token;
+      try {
+        const got = await solveTaper();
+        if (token !== pulling) return;
+        solvedNow = got;
+        drawnSolveId = got.solveId;
+        solveTrouble = null;
+      } catch (e) {
+        if (token !== pulling) return;
+        solvedNow = NOTHING_SOLVED;
+        drawnSolveId = want;
+        solveTrouble = e instanceof Error ? e.message : String(e);
+      }
+    }
+    draw();
+  };
+
+  stopSubscribing = subscribe(() => void refresh());
   stopWatching = watchSelection(() => highlight());
 
   canvas.addEventListener('click', (e) => pick(canvas, e));
@@ -687,54 +752,11 @@ function resize(canvas: HTMLCanvasElement) {
 
 const conditionsOf = (d: Doc): Condition[] => (at('/conditions', d) as Condition[]) ?? [];
 
-/** Every drain on the roof, in feet. A drain is a point, not a condition. */
-/**
- * The drains named by a cricket's `between`, and only those.
- *
- * A cricket serves a pair of drainage points, not every drain on the roof, and
- * `between` is how the estimator says which. Falling back to all of them would
- * quietly draw a cricket between two drains at the far end of the building.
- */
-function drainsNamedBy(
-  list: Condition[], scales: Record<string, number>, names: readonly string[] | undefined,
-): Point[] {
-  if (!names || names.length === 0) return [];
-  const wanted = new Set(names);
-  const out: Point[] = [];
-  for (const c of list) {
-    if (!wanted.has(c.id) || c.hidden) continue;
-    for (const t of c.traces ?? []) out.push(...feet(t, scales));
-  }
-  return out;
-}
-
-/**
- * The lowest thing the roof has to flash against, in inches above the deck.
- *
- * NRCA wants 8 in of flashing above the finished membrane, so this is what caps
- * the build-up long before any board does. A parapet the estimator has already
- * traced and given a height to is exactly this number, and it was sitting in the
- * document unused while the field was capped at an invented four inches a board.
- */
-function perimeterInches(list: Condition[]): number | undefined {
-  let lowest = Infinity;
-  for (const c of list) {
-    if (c.kind !== 'line' || c.hidden || c.role === 'ridge') continue;
-    const h = c.properties?.['H'];
-    if (h === undefined || h <= 0) continue;
-    lowest = Math.min(lowest, h * 12);
-  }
-  return Number.isFinite(lowest) ? lowest : undefined;
-}
-
-function drainPoints(list: Condition[], scales: Record<string, number>): Point[] {
-  const out: Point[] = [];
-  for (const c of list) {
-    if (c.role !== 'drain' || c.hidden) continue;
-    for (const t of c.traces ?? []) out.push(...feet(t, scales));
-  }
-  return out;
-}
+// Which drains a cricket serves, which of them the roof falls to, what the
+// lowest thing the membrane flashes against is, and therefore where the field
+// stops rising — all of that is `src-tauri/core/src/taper.rs` now. It was here,
+// and a copy of it was in the engine's `capInches`, and the two agreed until
+// one of them was edited. What is left in this file is drawing.
 
 /**
  * Which way the water leaves this point, as a bearing a person can act on.
@@ -751,39 +773,10 @@ function compass(from: Point, to: Point): string {
   return points[Math.round(((deg + 360) % 360) / 45) % 8]!;
 }
 
-/** Which drain this point falls to — the one it is closest to. */
-const nearestDrain = (p: Point, drains: Point[]): Point | null => {
-  let best: Point | null = null;
-  let far = Infinity;
-  for (const d of drains) {
-    const r = Math.hypot(p.x - d.x, p.y - d.y);
-    if (r < far) { far = r; best = d; }
-  }
-  return best;
-};
-
-const nearest = (p: Point, drains: Point[]): number => {
-  let best = Infinity;
-  for (const d of drains) {
-    const dx = p.x - d.x;
-    const dy = p.y - d.y;
-    const r = Math.sqrt(dx * dx + dy * dy);
-    if (r < best) best = r;
-  }
-  return best;
-};
-
-/** Ray casting. A textbook primitive, and three.js does not hand one out. */
-function inside(p: Point, ring: Point[]): boolean {
-  let hit = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const a = ring[i]!;
-    const b = ring[j]!;
-    if ((a.y > p.y) !== (b.y > p.y)
-      && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) hit = !hit;
-  }
-  return hit;
-}
+// Which drain the water reaches, and how far it runs to get there, is the
+// solved field read at a point — `readTaperAt` in the engine, which is the one
+// expression the core is pinned to. Point-in-polygon is the engine's
+// `pointInPolygon`; this file carried its own copy of the same ray cast.
 
 // ── building the world ─────────────────────────────────────────────────────
 
@@ -792,28 +785,33 @@ type Built = {
   thin: number | null; thick: number | null;
 };
 
-/** A tapered facet, kept so the cursor can be asked what the roof does here. */
-type Field = {
-  ring: Point[]; start: number; slope: number; elevation: number;
-  cap: number;
-  /** Which constraint bound — they fail differently and the readout says which. */
-  capReason: CapReason;
-};
+/**
+ * The tapered fields ON SCREEN, for the readout.
+ *
+ * The solve's own list is not the same list: a trace that crosses itself is
+ * solved and not drawn, and the strip must not answer over a surface nobody can
+ * see. These are the ones that got drawn, in the solve's own words.
+ */
+let fieldsNow: SolvedTaperField[] = [];
 
-/** The tapered fields on screen, for the readout. Rebuilt with the world. */
-let fieldsNow: Field[] = [];
-let drainsNow: Point[] = [];
+/** The solved roof this drawing was built from. */
+let solvedNow: SolvedTaper = NOTHING_SOLVED;
+/** Which solve is on screen. Nothing is, until the first one is pulled. */
+let drawnSolveId = -1;
+/** The pull in flight, so an overtaken answer is dropped rather than drawn. */
+let pulling = 0;
+/** Why the roof did not solve, when it did not. */
+let solveTrouble: string | null = null;
 
-function build(d: Doc): Built {
+function build(d: Doc, taper: SolvedTaper): Built {
   world.clear();
 
   const list = conditionsOf(d);
   const scales = feetPerUnit((at('/pages', d) as Page[]) ?? []);
-  const drains = drainPoints(list, scales);
-  const perimeter = perimeterInches(list);
-  // What the roof is at a drain, which the sump and the valley between drains
-  // both sit on. It is the tapered field's own starting thickness — the same
-  // number the heightfield begins from, not a second one.
+  const drains = taper.drains;
+  // What the roof is at a drain, which the sump sits on. It is the tapered
+  // field's own starting thickness — the same number the solve begins from, not
+  // a second one.
   const tapered = list.find((c) => c.kind === 'area' && !c.hidden && c.properties?.['TAPER'] !== undefined);
   const atDrain = tapered?.properties?.['T'] ?? 0;
   const fallPerFoot = tapered?.properties?.['TAPER'] ?? 0;
@@ -825,7 +823,7 @@ function build(d: Doc): Built {
   let crickets = 0;
   let thin = Infinity;
   let thick = -Infinity;
-  const fields: Field[] = [];
+  const fields: SolvedTaperField[] = [];
   const unscaled = list.some((c) => (c.traces ?? []).some((t) => !scales[t.pageId]));
   // Things the drawing has to say out loud rather than paper over.
   let unstatedBuildUp = 0;
@@ -847,7 +845,7 @@ function build(d: Doc): Built {
     const props = c.properties ?? {};
     const elevation = props['ELEV'] ?? 0;
 
-    for (const trace of c.traces ?? []) {
+    for (const [traceIndex, trace] of (c.traces ?? []).entries()) {
       const ring = feet(trace, scales);
       if (ring.length === 0) continue;
       // A ring that crosses itself triangulates to overlapping faces and gaps,
@@ -860,22 +858,25 @@ function build(d: Doc): Built {
       }
 
       if (c.kind === 'area') {
+        const solvedField = fieldOf(taper, c.id, traceIndex);
         const tapered = props['TAPER'] !== undefined && drains.length > 0;
         if (tapered) {
-          const built = taperSurface(ring, props, elevation, drains, colour, c, perimeter);
-          if (built) {
+          // Solved and undrawable, or not solved yet: no surface, and the key
+          // says how many tapered facets there are, so nothing is invented to
+          // stand in for one.
+          const built = solvedField ? taperSurface(solvedField, colour, c) : null;
+          if (built && solvedField) {
             world.add(built.mesh);
             world.add(built.flow);
-            noFallSquares += built.noFallSquareFeet;
+            noFallSquares += solvedField.noFallSquareFeet;
             taperedFacets += 1;
-            if (built.thin !== null) thin = Math.min(thin, built.thin);
-            if (built.thick !== null) thick = Math.max(thick, built.thick);
-            if (built.thick !== null && built.thick > SINGLE_LAYER_MAX_INCHES) overOneLayer = true;
-            if (built.capReason !== null) capReason = built.capReason;
-            fields.push({
-              ring: built.ring, start: built.start, slope: built.slope,
-              cap: built.cap, capReason: built.capReason, elevation,
-            });
+            if (solvedField.thinInches !== null) thin = Math.min(thin, solvedField.thinInches);
+            if (solvedField.thickInches !== null) thick = Math.max(thick, solvedField.thickInches);
+            if (solvedField.thickInches !== null && solvedField.thickInches > SINGLE_LAYER_MAX_INCHES) {
+              overOneLayer = true;
+            }
+            if (solvedField.capReason !== null) capReason = solvedField.capReason;
+            fields.push(solvedField);
           }
         } else {
           // Not tapered, so the build-up is whatever the layers on it say. Null
@@ -890,28 +891,16 @@ function build(d: Doc): Built {
       } else if (c.kind === 'line') {
         const height = props['H'] ?? 0;
         if (c.role === 'ridge') {
-          // The field this cricket sits in, for the slope it should be cut at.
-          const fieldSlope = list.find((o) => o.kind === 'area' && o.properties?.['TAPER'] !== undefined)
-            ?.properties?.['TAPER'] ?? 0;
-          // What this cricket serves, said in the document rather than guessed
-          // at from the shape. A cricket behind a curb and a saddle between two
-          // drains are two different things with two different rules, and the
-          // one thing that cannot tell them apart is the traced line, which is
-          // a ridge either way. `between` already names what is served; a curb
-          // named there says this is the cricket behind it.
-          const behind = curbNamedBy(list, scales, c.between);
-          const pair = behind ? null : pairFor(ring, drainsNamedBy(list, scales, c.between));
-          const built = behind
-            ? cricketBehind(ring, behind, props, fieldSlope, elevation, colour, c)
-            : pair
-              ? cricketBetween(ring, props, fieldSlope, elevation, pair, colour, c)
-              : null;
-          if (built) {
-            world.add(built.mesh);
+          // Which pair of drains a cricket serves, or which curb it stands
+          // behind, and therefore where its ridge lies and how wide it is, is
+          // the core's (`taper.rs`). What reaches here is the wedge.
+          const solvedCricket = cricketOf(taper, c.id, traceIndex);
+          if (solvedCricket) {
+            world.add(cricketMesh(solvedCricket, colour, c));
             crickets += 1;
-            if (built.lengthToWidth > built.maxLengthToWidth) outOfProportion += 1;
-            if (built.offBy !== null && built.offBy > 15) ridgeOffSquare += 1;
-            if (built.slopeDisagrees) cricketSlopeOff += 1;
+            if (solvedCricket.lengthToWidth > solvedCricket.maxLengthToWidth) outOfProportion += 1;
+            if (solvedCricket.offBy !== null && solvedCricket.offBy > 15) ridgeOffSquare += 1;
+            if (solvedCricket.slopeDisagrees) cricketSlopeOff += 1;
           } else {
             // Nothing to derive it from. A ridge line on its own is a line, and
             // drawing a cricket off it would be inventing the shape again.
@@ -944,20 +933,14 @@ function build(d: Doc): Built {
     }
   });
 
-  // The valley between drains. Two drains with roof between them meet along the
-  // line joining them — water off both sides runs to it and then along it — and
-  // it is derived from the same heightfield the surface is drawn from rather
-  // than being a line anybody drew. Each drain is joined to its nearest
-  // neighbour, so three in a row read as two valleys and not as three.
+  // The valleys, as the core solved them: two drains with roof between them
+  // meet along the line joining them, water off both sides runs to it and then
+  // along it, and each drain is joined to its nearest neighbour so three in a
+  // row read as two valleys and not as three.
   let valleys = 0;
-  if (tapered && drains.length > 1) {
-    const slope = tapered.properties?.['TAPER'] ?? 0;
-    const { cap } = capInches(atDrain, tapered.properties?.['BOARDS'], perimeter);
-    const elevation = tapered.properties?.['ELEV'] ?? 0;
-    for (const [a, b] of nearestNeighbours(drains)) {
-      world.add(valleyLine(a, b, drains, atDrain, slope, cap, elevation));
-      valleys += 1;
-    }
+  for (const low of taper.valleys) {
+    world.add(valleyLine(low));
+    valleys += 1;
   }
 
   highlight();
@@ -966,7 +949,6 @@ function build(d: Doc): Built {
   const span = anything ? Math.max(box.getSize(new THREE.Vector3()).length(), 20) : 0;
 
   fieldsNow = fields;
-  drainsNow = drains;
 
   return {
     centre,
@@ -1049,58 +1031,28 @@ function buildUp(ring: Point[], elevation: number, thick: number, colour: string
 }
 
 /**
- * The tapered field.
+ * The tapered surface, as one heightfield the core solved.
  *
- * Thickness at any point is what the estimator put at the drain, plus the slope
- * times how far that point is from the nearest drain. That is the whole model,
- * it is the same arithmetic a formula on the sheet can write out by hand, and it
- * is why this view can never disagree with the takeoff.
+ * Two triangles a cell, coloured lighter where it is thicker and amber where the
+ * fall has run out, with an arrow field over it showing where the water goes.
+ * Every number in here arrived solved: the grid, its step, the thickness at each
+ * sample, whether each sample is on the roof, and whether the roof had already
+ * hit its ceiling there. This function turns those into vertices.
  *
- * It stops rising when the boards run out. Where it stops, the roof is flat, and
- * flat is where water stays.
+ * A cell is drawn only when all four of its corners are on the roof, which is
+ * what keeps the surface inside the trace instead of squaring off its corners.
  */
-function taperSurface(
-  ring: Point[], props: Properties, elevation: number,
-  drains: Point[], colour: string, c: Condition, perimeter: number | undefined,
-) {
-  const start = props['T'] ?? 0;
-  const slope = props['TAPER'] ?? 0;
-  // Whichever binds first, and which one it was. Boards mean buy another layer;
-  // flashing means the wall will not have it. Not the same problem.
-  const { cap, reason: capReason } = capInches(start, props['BOARDS'], perimeter);
-
-  let minX = Infinity; let maxX = -Infinity; let minY = Infinity; let maxY = -Infinity;
-  for (const p of ring) {
-    minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
-    minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
-  }
-  const cols = Math.max(2, Math.ceil((maxX - minX) / GRID_FEET) + 1);
-  const rows = Math.max(2, Math.ceil((maxY - minY) / GRID_FEET) + 1);
-  if (cols * rows > 40_000) return null;
-
-  const stepX = (maxX - minX) / (cols - 1);
-  const stepY = (maxY - minY) / (rows - 1);
-
-  const thickness: number[] = [];
-  const within: boolean[] = [];
-  const flat: boolean[] = [];
-  for (let r = 0; r < rows; r += 1) {
-    for (let col = 0; col < cols; col += 1) {
-      const p = { x: minX + col * stepX, y: minY + r * stepY };
-      const isIn = inside(p, ring);
-      const raw = start + nearest(p, drains) * slope;
-      const capped = Math.min(raw, cap);
-      within.push(isIn);
-      thickness.push(capped);
-      flat.push(isIn && raw > cap);
-    }
-  }
+function taperSurface(field: SolvedTaperField, colour: string, c: Condition) {
+  const { minX, minY, stepX, stepY, cols, rows } = field.grid;
+  const thickness = field.grid.thicknessInches;
+  const within = field.grid.within;
+  const flat = field.grid.flat;
+  const elevation = field.elevation;
 
   const positions: number[] = [];
   const colours: number[] = [];
   const base = new THREE.Color(colour);
   const noFall = new THREE.Color('#c98a1d');
-  let noFallCells = 0;
 
   const push = (col: number, r: number) => {
     const i = r * cols + col;
@@ -1115,7 +1067,6 @@ function taperSurface(
       if (!corners.every((i) => within[i])) continue;
       push(col, r); push(col + 1, r); push(col, r + 1);
       push(col + 1, r); push(col + 1, r + 1); push(col, r + 1);
-      if (corners.every((i) => flat[i])) noFallCells += 1;
     }
   }
 
@@ -1130,51 +1081,32 @@ function taperSurface(
     vertexColors: true, side: THREE.DoubleSide,
   }));
   mesh.userData = { conditionId: c.id, kind: 'taper' };
-  // Where the water goes, as arrows. One every few feet, pointing at the drain
-  // that part of the roof falls to — which is the nearest one, because that is
-  // what the heightfield already says. Flat ground gets none: there is nothing
-  // to point at when the fall has run out.
-  // One mesh for every arrow, not one object each.
+
+  // Where the water goes, as arrows: one every few feet, pointing at the drain
+  // that part of the roof falls to. Flat ground gets none — there is nothing to
+  // point at when the fall has run out — and the core leaves those out.
   //
-  // `ArrowHelper` is an Object3D carrying a line and a cone, so a field of them
-  // is two draw calls apiece — fine on a demo, and on a real 36 by 24 sheet it
-  // is hundreds before the estimator has done anything. The direction is known
-  // analytically at every sample (it points at the drain whose cell the sample
-  // is in), so the whole field is one instanced cone with a rotation per
-  // instance. This came out of the prior 3D work on this machine rather than
-  // out of a profiler, which is the cheaper way to learn it.
+  // One mesh for every arrow, not one object each. `ArrowHelper` is an Object3D
+  // carrying a line and a cone, so a field of them is two draw calls apiece —
+  // fine on a demo, and on a real 36 by 24 sheet it is hundreds before the
+  // estimator has done anything. The fall direction is known at every sample, so
+  // the whole field is one instanced cone with a rotation per instance. This came
+  // out of the prior 3D work on this machine rather than out of a profiler, which
+  // is the cheaper way to learn it.
   const flow = new THREE.Group();
-  const ARROW_FEET = 8;
-  const arrowAt: { x: number; y: number; z: number; angle: number }[] = [];
-  const cols2 = Math.max(2, Math.round((maxX - minX) / ARROW_FEET));
-  const rows2 = Math.max(2, Math.round((maxY - minY) / ARROW_FEET));
-  for (let r = 1; r < rows2; r += 1) {
-    for (let col = 1; col < cols2; col += 1) {
-      const p = { x: minX + (col * (maxX - minX)) / cols2, y: minY + (r * (maxY - minY)) / rows2 };
-      if (!inside(p, ring)) continue;
-      const raw = start + nearest(p, drains) * slope;
-      if (raw > cap) continue;
-      const to = nearestDrain(p, drains);
-      if (!to) continue;
-      const dx = to.x - p.x;
-      const dy = to.y - p.y;
-      const len = Math.hypot(dx, dy);
-      if (len < 1) continue;
-      const y = elevation + inches(Math.min(raw, cap)) + 0.08;
-      // The angle about the vertical that turns +X onto the fall direction.
-      arrowAt.push({ x: p.x, y, z: p.y, angle: Math.atan2(dy, dx) });
-    }
-  }
+  const arrowAt = field.flow.map((a) => ({
+    x: a.x, y: elevation + inches(a.thicknessInches) + 0.08, z: a.y, angle: a.angle,
+  }));
 
   if (arrowAt.length > 0) {
-    // Slim and long, so it reads as a dart pointing somewhere. The first pass
-    // at instancing used the same proportions as the ArrowHelper's head without
-    // its shaft, and a field of them read as a scatter of blobs — caught by
-    // opening the screenshot rather than by any check, which is the only way a
-    // thing like this ever gets caught.
+    // Slim and long, so it reads as a dart pointing somewhere. The first pass at
+    // instancing used the same proportions as the ArrowHelper's head without its
+    // shaft, and a field of them read as a scatter of blobs — caught by opening
+    // the screenshot rather than by any check, which is the only way a thing like
+    // this ever gets caught.
     const cone = new THREE.ConeGeometry(ARROW_FEET * 0.06, ARROW_FEET * 0.55, 6);
     // A cone points up its own +Y; lay it on its side so it points along +X,
-    // which is what the angle above is measured from.
+    // which is what the angle is measured from.
     cone.rotateZ(-Math.PI / 2);
     const arrows = new THREE.InstancedMesh(
       cone,
@@ -1196,21 +1128,7 @@ function taperSurface(
     flow.add(arrows);
   }
 
-  let thin = Infinity;
-  let thick = -Infinity;
-  for (let i = 0; i < thickness.length; i += 1) {
-    if (!within[i]) continue;
-    thin = Math.min(thin, thickness[i]!);
-    thick = Math.max(thick, thickness[i]!);
-  }
-
-  return {
-    mesh, flow,
-    noFallSquareFeet: noFallCells * stepX * stepY,
-    thin: Number.isFinite(thin) ? thin : null,
-    thick: Number.isFinite(thick) ? thick : null,
-    start, slope, cap, capReason, ring,
-  };
+  return { mesh, flow };
 }
 
 /**
@@ -1340,52 +1258,17 @@ function standUp(
 const GALVANIZED = '#b9c4c9';
 
 /**
- * Which drains sit next to which, for the valleys between them.
- *
- * Each drain joined to its nearest neighbour, taken once. It is the cheap end
- * of a spanning tree and it is the right shape for the question: a valley runs
- * between two drains that share roof, and three drains along a building share
- * roof in a line, not in a triangle.
- */
-function nearestNeighbours(drains: Point[]): [Point, Point][] {
-  const out: [Point, Point][] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < drains.length; i += 1) {
-    let best = -1;
-    let far = Infinity;
-    for (let j = 0; j < drains.length; j += 1) {
-      if (i === j) continue;
-      const r = Math.hypot(drains[i]!.x - drains[j]!.x, drains[i]!.y - drains[j]!.y);
-      if (r < far) { far = r; best = j; }
-    }
-    if (best < 0) continue;
-    const key = i < best ? `${i}:${best}` : `${best}:${i}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push([drains[i]!, drains[best]!]);
-  }
-  return out;
-}
-
-/**
  * The valley between two drains, drawn on the surface it lies in.
  *
- * Sampled along the line and lifted to whatever the heightfield says the roof is
- * at each point, so it sits on the roof rather than hovering over it. Dashed,
- * because that is what a low line is on a roof plan and what Frame 2 draws.
+ * Which drains have a valley between them, and how thick the roof is along it,
+ * are solved (`taper.rs`): each drain joined to its nearest neighbour, taken
+ * once, sampled every two feet and lifted onto the field. Dashed, because that
+ * is what a low line is on a roof plan and what Frame 2 draws.
  */
-function valleyLine(
-  a: Point, b: Point, drains: Point[], start: number, slope: number, cap: number, elevation: number,
-) {
-  const run = Math.hypot(b.x - a.x, b.y - a.y);
-  const steps = Math.max(2, Math.ceil(run / 2));
-  const points: THREE.Vector3[] = [];
-  for (let i = 0; i <= steps; i += 1) {
-    const t = i / steps;
-    const p = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
-    const thickness = Math.min(start + nearest(p, drains) * slope, cap);
-    points.push(new THREE.Vector3(p.x, elevation + inches(thickness) + 0.12, p.y));
-  }
+function valleyLine(low: SolvedValley) {
+  const points = low.samples.map((sample) => new THREE.Vector3(
+    sample.x, low.elevation + inches(sample.thicknessInches) + 0.12, sample.y,
+  ));
   const geometry = new THREE.BufferGeometry().setFromPoints(points);
   const line = new THREE.Line(geometry, new THREE.LineDashedMaterial({
     color: new THREE.Color(WATER), dashSize: 2, gapSize: 1.4,
@@ -1401,239 +1284,32 @@ function valleyLine(
 /** The one loud colour: drainage, and everything the water does. */
 const WATER = '#1f7a8c';
 
-/** What a cricket came out as, so the legend can say if it will not drain. */
-type Cricket = {
-  readonly mesh: THREE.Mesh;
-  readonly lengthToWidth: number;
-  readonly maxLengthToWidth: number;
-  /** How far the traced ridge is off the one the drains imply, in degrees. */
-  readonly offBy: number | null;
-  /** True when the ridge slope is not twice the field it sits in. */
-  readonly slopeDisagrees: boolean;
-};
-
 /**
- * A cricket: two planes falling from the ridge the drains put there.
+ * A cricket: the wedge the core solved, drawn.
  *
- * The ridge is derived. NRCA is explicit about it (pp.166–168): the ridge line
- * sits equidistant between the drainage points and runs perpendicular to the
- * line joining them. It is where two drainage fields meet, not a line somebody
- * draws and hangs planes off — and the old version of this function had that
- * backwards, taking a traced ridge and a `W` property I had invented, with a
- * default of four feet that came from nowhere.
+ * Everything that makes a cricket what it is happens in `taper.rs` now, and it
+ * is worth saying what that is, because it is the part of this drawing that was
+ * wrong longest. NRCA is explicit (pp.166–168): the ridge of a saddle between
+ * two drains sits equidistant between them and runs perpendicular to the line
+ * joining them — it is where two drainage fields meet, not a line somebody drew
+ * and hung planes off. Behind a curb it is the curb's own upslope face that
+ * sizes it (§8.1 p.252, Figs. 10-13/10-14). Width is derived either way, and
+ * width is the load-bearing number: widening a cricket is what steepens its
+ * valley, and steepening the surface does nothing for it.
  *
- * Width is derived too, and it is the single most load-bearing number here.
- * Water leaves the ridge and runs half the drain-to-drain span to get away, so
- * that half-span *is* the width, and NRCA's length-to-width table (Fig. 4-13)
- * bounds it — because widening a cricket is what steepens the valley, and
- * steepening the surface does nothing for it. A cricket long and thin enough
- * ponds at its own valley however sharp the boards are.
- *
- * What the trace is still worth is how far the cricket runs, which no amount of
- * drain geometry knows. So: position, direction, width and rise come off the
- * drains; extent comes off the trace; and if the two disagree about square, the
- * legend says so instead of the code quietly preferring one.
+ * What the traced line is still worth is how far the cricket runs, which no
+ * amount of drain geometry knows. That division — their line for the extent, the
+ * thing served for the shape — is the core's; this places triangles.
  */
-function cricketBetween(
-  traced: Point[], props: Properties, fieldSlope: number,
-  elevation: number, pair: readonly [Spot, Spot], colour: string, c: Condition,
-): Cricket | null {
-  const derived = ridgeBetween(pair[0], pair[1]);
-  if (!derived) return null;
-
-  // Twice the field, unless the estimator said otherwise — in which case theirs
-  // is drawn and the disagreement is reported. Their number may be right; a
-  // manufacturer's cricket stock comes in the slopes it comes in.
-  const stated = props['TAPER'];
-  const wanted = fieldSlope * CRICKET_SLOPE_MULTIPLE;
-  const slope = stated ?? wanted;
-  const slopeDisagrees = stated !== undefined && fieldSlope > 0
-    && Math.abs(stated - wanted) > 1e-6;
-
-  // How far it runs: what was traced.
-  let length = 0;
-  for (let i = 0; i < traced.length - 1; i += 1) {
-    length += Math.hypot(traced[i + 1]!.x - traced[i]!.x, traced[i + 1]!.y - traced[i]!.y);
-  }
-  if (length < 1e-6) return null;
-
-  const width = derived.width;
-  const rise = inches(slope * width);
-  const half = length / 2;
-  // Along the ridge, and square to it — square to the ridge is the direction the
-  // water falls, which is the line joining the two drains.
-  const ax = derived.along.x; const ay = derived.along.y;
-  const fx = -ay; const fy = ax;
-
-  const ridgeA = { x: derived.at.x - ax * half, y: derived.at.y - ay * half };
-  const ridgeB = { x: derived.at.x + ax * half, y: derived.at.y + ay * half };
-
-  const positions: number[] = [];
-  for (const side of [1, -1]) {
-    const footA = { x: ridgeA.x + fx * width * side, y: ridgeA.y + fy * width * side };
-    const footB = { x: ridgeB.x + fx * width * side, y: ridgeB.y + fy * width * side };
-    const top = elevation + rise;
-    positions.push(ridgeA.x, top, ridgeA.y, ridgeB.x, top, ridgeB.y, footA.x, elevation, footA.y);
-    positions.push(ridgeB.x, top, ridgeB.y, footB.x, elevation, footB.y, footA.x, elevation, footA.y);
-  }
-
+function cricketMesh(cricket: SolvedCricket, colour: string, c: Condition) {
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute([...cricket.positions], 3));
   geometry.computeVertexNormals();
   const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
     color: new THREE.Color(colour), side: THREE.DoubleSide,
   }));
   mesh.userData = { conditionId: c.id, kind: 'cricket' };
-
-  return {
-    mesh,
-    lengthToWidth: length / width,
-    maxLengthToWidth: maxLengthToWidth(fieldSlope || slope / CRICKET_SLOPE_MULTIPLE),
-    offBy: ridgeDisagreement(traced, derived.along),
-    slopeDisagrees,
-  };
-}
-
-/**
- * The curb a cricket says it is behind, as a ring in feet.
- *
- * `between` names what a cricket serves. Where that is a run with the curb role
- * on it, the cricket is the one behind that curb and the curb is what sizes it.
- */
-function curbNamedBy(
-  list: Condition[], scales: Record<string, number>, names: readonly string[] | undefined,
-): Point[] | null {
-  if (!names || names.length === 0) return null;
-  const wanted = new Set(names);
-  for (const c of list) {
-    if (!wanted.has(c.id) || c.hidden || c.role !== 'curb') continue;
-    for (const t of c.traces ?? []) {
-      const ring = feet(t, scales);
-      if (ring.length >= 3) return ring;
-    }
-  }
-  return null;
-}
-
-/**
- * A cricket behind a curb, sized off the curb rather than off the drains.
- *
- * NRCA wants one wherever a curb is 24 in or wider (Membrane Roof Systems 2019,
- * §8.1 p.252, Fig. 8-1) and draws it spanning that curb's upslope face, with one
- * ridge square to the face and centred on it (Figs. 10-13 and 10-14, pp.309-310).
- * Water falls from the ridge to each side of the curb, so what it has to travel
- * is half the face — the same quantity `ridgeBetween` calls the width, and the
- * one the length-to-width table is written against (Fig. 4-13, p.166).
- *
- * The manual states no depth for it. How far it runs upslope is the estimator's
- * and comes off their traced line, drawn as drawn and reported when it is too
- * long for its width to drain. So the document is read in two halves, which is
- * the same division this file already uses for the saddle: their line says where
- * it starts and how far it goes, and the thing it serves says everything else
- * about the shape.
- *
- * This is not the saddle between two drains. That one has a written rule of its
- * own — equidistant, square to the line joining them — and a function of its own.
- */
-function cricketBehind(
-  traced: Point[], curb: Point[], props: Properties, fieldSlope: number,
-  elevation: number, colour: string, c: Condition,
-): Cricket | null {
-  if (traced.length < 2 || curb.length < 3) return null;
-
-  const middle = {
-    x: curb.reduce((sum, p) => sum + p.x, 0) / curb.length,
-    y: curb.reduce((sum, p) => sum + p.y, 0) / curb.length,
-  };
-
-  // Which face of the curb this cricket sits against: the one the estimator
-  // started their ridge at. Reading it off a slope direction instead would have
-  // to break a tie on a curb standing between two drains, and this curb does.
-  const start = traced[0]!;
-  let face: { mid: Point; half: number; across: Point; along: Point } | null = null;
-  let nearest = Infinity;
-  for (let i = 0; i < curb.length - 1; i += 1) {
-    const a = curb[i]!;
-    const b = curb[i + 1]!;
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const run = Math.hypot(dx, dy);
-    if (run < 1e-6) continue;
-    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    const range = Math.hypot(mid.x - start.x, mid.y - start.y);
-    if (range >= nearest) continue;
-    nearest = range;
-    // Square to the face and pointing away from the curb, so the cricket is
-    // always outside the thing it sheds water around.
-    const out = (middle.x - mid.x) * (-dy / run) + (middle.y - mid.y) * (dx / run) >= 0 ? -1 : 1;
-    face = {
-      mid,
-      half: run / 2,
-      across: { x: dx / run, y: dy / run },
-      along: { x: (-dy / run) * out, y: (dx / run) * out },
-    };
-  }
-  if (!face || face.half < 1e-6) return null;
-
-  const stated = props['TAPER'];
-  const wanted = fieldSlope * CRICKET_SLOPE_MULTIPLE;
-  const slope = stated ?? wanted;
-  const slopeDisagrees = stated !== undefined && fieldSlope > 0
-    && Math.abs(stated - wanted) > 1e-6;
-
-  let length = 0;
-  for (let i = 0; i < traced.length - 1; i += 1) {
-    length += Math.hypot(traced[i + 1]!.x - traced[i]!.x, traced[i + 1]!.y - traced[i]!.y);
-  }
-  if (length < 1e-6) return null;
-
-  const rise = inches(slope * face.half);
-  const top = elevation + rise;
-  const ridgeA = face.mid;
-  const ridgeB = { x: face.mid.x + face.along.x * length, y: face.mid.y + face.along.y * length };
-
-  const positions: number[] = [];
-  for (const side of [1, -1]) {
-    const footA = { x: ridgeA.x + face.across.x * face.half * side, y: ridgeA.y + face.across.y * face.half * side };
-    const footB = { x: ridgeB.x + face.across.x * face.half * side, y: ridgeB.y + face.across.y * face.half * side };
-    positions.push(ridgeA.x, top, ridgeA.y, ridgeB.x, top, ridgeB.y, footA.x, elevation, footA.y);
-    positions.push(ridgeB.x, top, ridgeB.y, footB.x, elevation, footB.y, footA.x, elevation, footA.y);
-  }
-
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.computeVertexNormals();
-  const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
-    color: new THREE.Color(colour), side: THREE.DoubleSide,
-  }));
-  mesh.userData = { conditionId: c.id, kind: 'cricket' };
-
-  return {
-    mesh,
-    lengthToWidth: length / face.half,
-    maxLengthToWidth: maxLengthToWidth(fieldSlope || slope / CRICKET_SLOPE_MULTIPLE),
-    // Square to the curb's face is what the figures draw, so that is what the
-    // traced line is held against here — the saddle holds it against the line
-    // joining its drains, which is the same question asked of a different thing.
-    offBy: ridgeDisagreement(traced, face.along),
-    slopeDisagrees,
-  };
-}
-
-/**
- * The two drainage points a cricket sits between.
- *
- * `between` names conditions, and one count condition can hold every drain on
- * the roof, so the pair still has to be picked. The two nearest the ridge the
- * estimator drew is the honest reading of what they meant — their line says
- * which pair, and the drains say everything else about the shape.
- */
-function pairFor(traced: Point[], candidates: Spot[]): readonly [Spot, Spot] | null {
-  if (candidates.length < 2 || traced.length === 0) return null;
-  const mid = traced[Math.floor(traced.length / 2)]!;
-  const byRange = [...candidates].sort((a, b) =>
-    Math.hypot(a.x - mid.x, a.y - mid.y) - Math.hypot(b.x - mid.x, b.y - mid.y));
-  return [byRange[0]!, byRange[1]!];
+  return mesh;
 }
 
 /** A run with no height: drawn as a line on the deck, so it is still visible. */
@@ -1959,6 +1635,37 @@ function screenPointOf(conditionId: string): {
     x: at.x, y: at.y,
     inside: within(at), of: first.of,
     hits: within(at) ? whatIsAt(rect, at) : null,
+  };
+}
+
+/**
+ * Where a place ON THE ROOF lands on the screen, in feet on the plan.
+ *
+ * For checking only, like the rest of `__roofnerdModel`. `screenPointOf` aims at
+ * a condition, which is enough to pick one; a check that reads the thickness at
+ * three places has to aim at the places, and the only thing that knows where a
+ * place on the roof is drawn is the drawing. The height comes off the solved
+ * field, so the point is on the surface rather than over it, and the answer says
+ * what a ray through it would actually strike.
+ */
+function screenPointAt(x: number, y: number): {
+  x: number; y: number; inside: boolean; of: string | null; hits: string | null;
+} | null {
+  if (!camera || !surface || !world) return null;
+  const at = { x, y };
+  const field = fieldsNow.find((f) => pointInPolygon(at, f.ring));
+  if (!field) return null;
+  const height = field.elevation + inches(readTaperAt(field, at).thicknessInches);
+  const rect = surface.getBoundingClientRect();
+  const v = world.localToWorld(new THREE.Vector3(x, height, y)).project(camera);
+  const on = {
+    x: Math.round(rect.left + (v.x * 0.5 + 0.5) * rect.width),
+    y: Math.round(rect.top + (-v.y * 0.5 + 0.5) * rect.height),
+  };
+  const within = on.x >= rect.left && on.x <= rect.right && on.y >= rect.top && on.y <= rect.bottom;
+  return {
+    x: on.x, y: on.y, inside: within, of: 'taper',
+    hits: within ? whatIsAt(rect, on) : null,
   };
 }
 

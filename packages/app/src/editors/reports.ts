@@ -18,7 +18,7 @@ import {
   conceals, conditionTotal, lensById, priceJob, recap as recapOf,
   type Lens, type LensColumn,
 } from '@roofnerd/engine';
-import { at, doc, subscribe, writeExport, type Doc } from '../doc.js';
+import { at, derived, doc, subscribe, writeExport, type Doc } from '../doc.js';
 import { sayInStatus } from '../chrome.js';
 
 let stopSubscribing: (() => void) | null = null;
@@ -253,6 +253,7 @@ function leftOut(lens: Lens, d: Doc): string[] {
     return priceJob(
       { ...(d as object) } as Parameters<typeof priceJob>[0],
       scenario as Parameters<typeof priceJob>[1],
+      derived(),
     )
       .filter((l) => l.extended === null)
       .map((l) => `${l.conditionName} → ${l.item.description || l.item.id}: ${l.pending ?? 'no money'}`);
@@ -302,7 +303,7 @@ function rowsFor(lens: Lens, d: Doc): Row[] {
     }));
   }
 
-  const lines = priceJob(document_, scenario as Parameters<typeof priceJob>[1]);
+  const lines = priceJob(document_, scenario as Parameters<typeof priceJob>[1], derived());
   const showLabor = !conceals(lens, 'labor');
   const showCost = !conceals(lens, 'cost');
 

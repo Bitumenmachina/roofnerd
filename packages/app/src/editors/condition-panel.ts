@@ -10,7 +10,7 @@ import {
   conditionTotal, measure, priceJob,
   type Condition, type LineTotal, type Measures, type Page, type TraceKind,
 } from '@roofnerd/engine';
-import { at, set, type Doc } from '../doc.js';
+import { at, derived, set, type Doc } from '../doc.js';
 import { heldCaret, named, restoreCaret } from '../caret.js';
 import { icon } from '../icons.js';
 import { KIND_LABELS, MEASURE_LABELS, PENDING_REASON, PROPERTY_LABELS, money, plural, quantity } from '../labels.js';
@@ -265,6 +265,7 @@ function costOf(condition: Condition, d: Doc): LineTotal {
     const lines = priceJob(
       { ...(d as object) } as Parameters<typeof priceJob>[0],
       scenario as Parameters<typeof priceJob>[1],
+      derived(),
     );
     return conditionTotal(lines, condition.id);
   } catch {

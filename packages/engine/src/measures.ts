@@ -210,8 +210,28 @@ export function measure(
   return { SF: sf, PLAN_SF: planSf, SQ: sf / 100, LF: lf, ...counts };
 }
 
-/** The names a formula may use, and what each is worth right now. */
-export function scopeFor(measures: Measures, properties: Properties): Record<string, number | null> {
+/** A derived name that is already one of the estimator's own. */
+export class DerivedNameError extends Error {}
+
+/**
+ * The names a formula may use, and what each is worth right now.
+ *
+ * Three sources, in this order: what the trace measures, what the estimator
+ * typed on the condition, and what the model solved for it. Later wins, which
+ * is why the third one is refused a name the second one owns — a solver that
+ * quietly overwrote a typed `T` would move money with nothing on screen saying
+ * it had. The reserved names are `PROPERTY_NAMES` above, and a collision is a
+ * defect in the solver, not in the job, so it is thrown rather than shown.
+ *
+ * `null` travels. A derived name the solve did not produce reads as pending on
+ * the line and never as zero (`formula.ts`), which is the whole reason the
+ * values are nullable.
+ */
+export function scopeFor(
+  measures: Measures,
+  properties: Properties,
+  derived?: Readonly<Record<string, number | null>>,
+): Record<string, number | null> {
   const scope: Record<string, number | null> = {
     SF: measures.SF,
     PLAN_SF: measures.PLAN_SF,
@@ -223,6 +243,14 @@ export function scopeFor(measures: Measures, properties: Properties): Record<str
   };
   for (const [name, value] of Object.entries(properties)) {
     if (value !== undefined) scope[name] = value;
+  }
+  for (const [name, value] of Object.entries(derived ?? {})) {
+    if ((PROPERTY_NAMES as readonly string[]).includes(name)) {
+      throw new DerivedNameError(
+        `the model solved a "${name}", which is the estimator's own field to type`,
+      );
+    }
+    scope[name] = value;
   }
   return scope;
 }

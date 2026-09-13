@@ -7,6 +7,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import type { NotSolvedYet, Scopes, SolvedTaper } from '@roofnerd/engine';
 
 /**
  * The open job as the shell holds it: keyed by the file each part came from,
@@ -17,20 +18,69 @@ export type Doc = Record<string, unknown>;
 
 type Subscriber = (doc: Doc) => void;
 
+/**
+ * One change to the job, as the shell tells every window about it.
+ *
+ * Three things, and the split is deliberate. The DOCUMENT is what the estimator
+ * changed. The SOLVE ID says the model was solved again, so a window that draws
+ * geometry knows to come and get it — the geometry itself is hundreds of
+ * kilobytes on a real roof and must not ride a keystroke. The SCOPES are the
+ * named numbers each condition now carries, which are hundreds of bytes and go
+ * straight onto the formula lines.
+ */
+interface Changed {
+  readonly document: Doc;
+  readonly solveId: number;
+  readonly scopes: Scopes;
+}
+
 let current: Doc = {};
+let currentSolveId = 0;
+let currentScopes: Scopes = {};
 const subscribers = new Set<Subscriber>();
 
-function publish(doc: Doc) {
-  current = doc;
-  for (const fn of subscribers) fn(doc);
+function publish(change: Changed) {
+  current = change.document;
+  currentSolveId = change.solveId;
+  currentScopes = change.scopes ?? {};
+  for (const fn of subscribers) fn(current);
 }
 
 /** Read what the shell has, and follow it from here on. */
 export async function connect(): Promise<Doc> {
-  publish(await invoke<Doc>('doc_get'));
-  await listen<Doc>('doc:changed', (event) => publish(event.payload));
+  // `doc_get` answers with the document alone. The solve arrives with the first
+  // change, and until one does there is nothing open to have solved: a window
+  // opened on the start screen draws no roof.
+  publish({ document: await invoke<Doc>('doc_get'), solveId: currentSolveId, scopes: currentScopes });
+  await listen<Changed>('doc:changed', (event) => publish(event.payload));
   return current;
 }
+
+/**
+ * Which solve the shell has done. It moves on every change to the job.
+ *
+ * A window that draws the model watches this rather than the document: the
+ * document says what the estimator typed, and this says the roof it means has
+ * been worked out and is there to be fetched.
+ */
+export const solveId = () => currentSolveId;
+
+/** The named numbers one condition carries, from the last solve. */
+export const derivedFor = (conditionId: string) => currentScopes[conditionId];
+
+/** The same, for every condition — what `priceJob` prices a whole job against. */
+export const derived = () => currentScopes;
+
+/**
+ * The solved geometry of one part of the model.
+ *
+ * Pulled when `solveId` moves, never pushed. `walls`, `fastening` and `drawing`
+ * answer that they are not solved yet, which is not the same as answering with
+ * nothing.
+ */
+export const solveTaper = () => invoke<SolvedTaper>('solve_get', { part: 'taper' });
+export const solvePart = (part: 'walls' | 'fastening' | 'drawing') =>
+  invoke<NotSolvedYet>('solve_get', { part });
 
 export function subscribe(fn: Subscriber): () => void {
   subscribers.add(fn);

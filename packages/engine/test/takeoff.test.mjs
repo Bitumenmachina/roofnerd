@@ -6,7 +6,7 @@ import {
   polygonArea, polygonPerimeter, polylineLength, calibrateFromTwoPoints, calibrateFromScale,
   pitchFactor, distanceToShape, parseFeet, formatFeetInches, ARCHITECTURAL_SCALES,
   measure, scopeFor, parse, evaluate, run, namesUsed, measureJob, scopeOf, emptyJob,
-  unitDisagreement,
+  unitDisagreement, DerivedNameError, readTaperAt, priceLine,
 } from '../dist/index.js';
 
 const square = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }];
@@ -354,6 +354,128 @@ test('a formula can reach the sump and the board count by name', () => {
   assert.equal(run('BOARDS', scope).value, 3);
   // Thickness at the sump's outer edge, four feet out from the drain.
   assert.equal(run('T + SUMP * TAPER', scope).value, 1.5);
+});
+
+// ── what the model solved, on a formula line (C0's seam) ───────────────────
+// The third source a formula sees, after the trace and the estimator's own
+// fields: the numbers the core derived for this condition. C0 wires the seam and
+// solves none of them, so every test here is about the seam holding rather than
+// about a board bill.
+
+test('a derived name the model solved is worth what it solved', () => {
+  const m = measure('area', trace(square), {}, oneFoot);
+  const scope = scopeFor(m, { T: 0.5 }, { TAPER_X_SF: 240 });
+  assert.equal(run('TAPER_X_SF', scope).value, 240);
+  // And it is one scope: a line can multiply a solved quantity by a typed one.
+  assert.equal(run('TAPER_X_SF * T', scope).value, 120);
+});
+
+test('a derived name the model did not solve leaves the line pending, never zero', () => {
+  const m = measure('area', trace(square), {}, oneFoot);
+  // The solve reached this condition and carries nothing for it yet — which is
+  // exactly where C0 leaves every condition.
+  const scope = scopeFor(m, {}, {});
+  const line = priceLine(
+    {
+      id: 'i1', description: 'tapered polyiso', costCode: '07-220-100',
+      unit: 'SF', formula: 'FILL_BOARDS_EA * 4', unitCost: 3,
+    },
+    scope,
+  );
+  assert.equal(line.quantity, null, 'an unsolved name came out as a quantity');
+  assert.equal(line.extended, null, 'and it was priced anyway');
+  assert.ok(line.pending, 'the line does not say why it has no money');
+  assert.match(line.pending, /FILL_BOARDS_EA/, `the line says "${line.pending}"`);
+});
+
+test('a name the solve carries but cannot answer leaves the line pending too', () => {
+  const m = measure('area', trace(square), {}, oneFoot);
+  const scope = scopeFor(m, {}, { CRICKET_SF: null });
+  assert.equal(run('CRICKET_SF', scope).value, null);
+  const line = priceLine(
+    {
+      id: 'i2', description: 'cricket stock', costCode: '07-220-100',
+      unit: 'SF', formula: 'CRICKET_SF', unitCost: 3,
+    },
+    scope,
+  );
+  assert.equal(line.quantity, null);
+  assert.equal(line.extended, null);
+  assert.ok(line.pending, 'the line does not say why it has no money');
+  // WHAT it says is wrong, and it is C2's to fix rather than C0's: `pending` in
+  // `packages/engine/src/line.ts` blames the sheet's scale for any null
+  // quantity, which was the only way one could happen until there were derived
+  // names. C0 solves none of them, so nothing can reach this branch yet; C2 puts
+  // the board bill in and owes the line the real reason.
+  assert.match(line.pending, /scale/);
+});
+
+test('the model may not take a name the estimator types into', () => {
+  const m = measure('area', trace(square), { T: 0.5 }, oneFoot);
+  assert.throws(() => scopeFor(m, { T: 0.5 }, { T: 9 }), DerivedNameError);
+  assert.throws(() => scopeFor(m, {}, { BOARDS: 4 }), DerivedNameError);
+  // A typed field still wins over a measure, which is the order it always was.
+  assert.equal(scopeFor(m, { SF: 1 }, { CRICKET_SF: 2 }).SF, 1);
+});
+
+// ── reading a solved field where the pointer is ────────────────────────────
+// The mirror of `read_at` in `src-tauri/core/src/taper.rs`. The core samples its
+// grid with that expression and this answers the status strip with this one, so
+// the two are held to the same three points — the same three the Rust test pins,
+// on the same made-up field: three drains in a row 38 ft apart, half an inch at
+// the drain, a quarter inch to the foot, and the boards running out at 14.
+
+const cone = {
+  conditionId: 'c-field',
+  trace: 0,
+  ring: [{ x: 14, y: 42 }, { x: 122, y: 42 }, { x: 122, y: 134 }, { x: 14, y: 134 }],
+  elevation: 0,
+  startInches: 0.5,
+  slopeInchesPerFoot: 0.25,
+  capInches: 14,
+  capReason: 'boards',
+  apexes: [{ x: 36, y: 98 }, { x: 74, y: 98 }, { x: 112, y: 98 }],
+  grid: { minX: 14, minY: 42, stepX: 2, stepY: 2, cols: 55, rows: 47, thicknessInches: [], within: [], flat: [] },
+  flow: [],
+  noFallSquareFeet: 136,
+  thinInches: 0.5,
+  thickInches: 14,
+};
+
+test('at a drain the roof is what the estimator said it is there', () => {
+  const at = readTaperAt(cone, { x: 36, y: 98 });
+  assert.equal(at.thicknessInches, 0.5);
+  assert.equal(at.runFeet, 0);
+  assert.equal(at.flat, false);
+  assert.deepEqual(at.toward, { x: 36, y: 98 });
+});
+
+test('on the ridge between two drains it is the slope times half the span', () => {
+  const at = readTaperAt(cone, { x: 55, y: 98 });
+  assert.equal(at.runFeet, 19);
+  assert.equal(at.thicknessInches, 5.25);
+});
+
+test('and out at the far corner it is the long run, to the last figure', () => {
+  const at = readTaperAt(cone, { x: 16, y: 132 });
+  assert.equal(at.runFeet, 39.4461658466320415073);
+  assert.equal(at.thicknessInches, 10.3615414616580103768);
+});
+
+test('past the ceiling the roof is flat, and the reading says so', () => {
+  // Fifty-six feet from the nearest drain is 14.5 in of board, and the boards
+  // ran out at 14: the water stops moving here, which is the whole reason C1
+  // replaces this cone with a layout.
+  const at = readTaperAt(cone, { x: 52, y: 44 });
+  assert.ok(at.runFeet > 54);
+  assert.equal(at.thicknessInches, 14);
+  assert.equal(at.flat, true);
+});
+
+test('a field with nothing capping it rises, and is not flat anywhere', () => {
+  const at = readTaperAt({ ...cone, capInches: null, capReason: null }, { x: 52, y: 44 });
+  assert.ok(at.thicknessInches > 14);
+  assert.equal(at.flat, false);
 });
 
 // ── does the unit follow from the formula (D-unit) ─────────────────────────

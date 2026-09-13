@@ -5,10 +5,20 @@
 // subscribes, and every change arrives as an event. That is the only reason two
 // windows can never disagree: there is only ever one document, and it is here.
 //
-// No estimating logic lives in this file, and none ever will. Rust holds the
-// document, opens windows, and touches the disk. Every number in this program
-// is computed in packages/engine, which is plain arithmetic with no window
-// anywhere near it.
+// Rust owns the SOLVERS and the engine owns the MONEY. That line moved on
+// 2026-09-12, on Patrick's ruling that the 3D model is the function rather than
+// a view: what has to get built — the tapered package, the walls and curbs with
+// their flashing heights, the fastening pattern by zone — is solved once in
+// `core/` (`roofnerd-core`), and the drawings, the section and the estimate are
+// produced from that one result. It is the handoff README's own architecture
+// sentence, adopted (D146).
+//
+// So: no estimating logic in this file, and none ever will be. The solvers are
+// next door in `core/`, with no window and no disk anywhere near them. What money
+// does with a solved number — formulas, lines, waste, prices, the recap — is
+// packages/engine, which is plain arithmetic. This file holds the one open job,
+// solves it when it changes, hands the same answer to every window, opens those
+// windows, and touches the disk.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -39,10 +49,19 @@ const JOB_PARTS: [(&str, &str); 5] = [
     ("library", "library.json"),
 ];
 
-/// The open job: where it came from, and what it currently says.
+/// The open job: where it came from, what it currently says, and what that
+/// means the roof is.
+///
+/// The solve lives beside the document under the one lock, so a window can never
+/// read a document and a roof that disagree. `solve_id` moves on every change:
+/// the windows are told it, and the ones that draw geometry come and fetch the
+/// geometry. `solved` is a cache of the last answer, not a second truth — drop
+/// it and the next pull works it out again.
 struct OpenJob {
     folder: Option<PathBuf>,
     doc: Value,
+    solve_id: u64,
+    solved: Option<roofnerd_core::Solved>,
 }
 
 struct Document(Mutex<OpenJob>);
@@ -79,11 +98,69 @@ fn read_folder(folder: &Path) -> Result<Value, String> {
     Ok(doc)
 }
 
+/// Solve the job as it now stands, and say what to tell the windows.
+///
+/// The geometry is kept here; the named numbers go out with the event, because
+/// they are hundreds of bytes and belong on a formula line the moment they
+/// change. A solve that fails is not fatal to the estimator's edit: the change
+/// stands, the windows hear about it, and the scopes go out empty — which reads
+/// as pending on every line rather than as zero — while `solve_get` answers with
+/// the reason so the window can say it.
+fn solve_into(job: &mut OpenJob) -> Value {
+    job.solve_id += 1;
+    match roofnerd_core::solve(&job.doc, job.solve_id) {
+        Ok(solved) => {
+            let scopes = serde_json::to_value(&solved.scopes).unwrap_or_else(|_| json!({}));
+            job.solved = Some(solved);
+            scopes
+        }
+        Err(_) => {
+            job.solved = None;
+            json!({})
+        }
+    }
+}
+
+/// What every window is told when the job changes.
+fn changed(document: Value, solve_id: u64, scopes: Value) -> Value {
+    json!({ "document": document, "solveId": solve_id, "scopes": scopes })
+}
+
 /// Hand a window the document as it stands.
 #[tauri::command]
 fn doc_get(state: State<'_, Document>) -> Result<Value, String> {
     let guard = state.0.lock().map_err(|_| "the document lock is poisoned".to_string())?;
     Ok(guard.doc.clone())
+}
+
+/// The solved geometry of one part of the model.
+///
+/// Pulled by a window when the solve id it heard about is not the one it drew,
+/// which is why this exists as a command rather than as more payload on the
+/// event: the tapered boards on a real roof are hundreds of kilobytes, and a
+/// keystroke must not carry them to three windows.
+///
+/// Walls, fastening and the drawing answer that they are not solved yet (C3, C4,
+/// C5). That is not the same answer as an empty roof, and a window that got an
+/// empty roof would draw one.
+#[tauri::command]
+fn solve_get(state: State<'_, Document>, part: String) -> Result<Value, String> {
+    let mut guard = state.0.lock().map_err(|_| "the document lock is poisoned".to_string())?;
+    match part.as_str() {
+        "taper" => {
+            if guard.solved.is_none() {
+                let solved = roofnerd_core::solve(&guard.doc, guard.solve_id)?;
+                guard.solved = Some(solved);
+            }
+            let solved = guard.solved.as_ref().ok_or("this roof did not solve")?;
+            serde_json::to_value(&solved.taper).map_err(|e| e.to_string())
+        }
+        "walls" | "fastening" | "drawing" => {
+            serde_json::to_value(roofnerd_core::NotSolvedYet::new(&part, guard.solve_id))
+                .map_err(|e| e.to_string())
+        }
+        other => Err(format!("there is no {other} in this model")),
+    }
 }
 
 /// Where the open job came from, so a window can show it. None until one opens.
@@ -116,17 +193,19 @@ fn doc_set(app: AppHandle, state: State<'_, Document>, pointer: String, value: V
     // Take the lock, make the change, take a copy, and then LET GO. The lock is
     // never held while the document is being serialized out to every window: one
     // slow or hung window must not be able to stall the job for the others.
-    let snapshot = {
+    let (snapshot, solve_id, scopes) = {
         let mut guard = state.0.lock().map_err(|_| "the document lock is poisoned".to_string())?;
         let slot = guard
             .doc
             .pointer_mut(&pointer)
             .ok_or_else(|| format!("nothing at {pointer} in this job"))?;
         *slot = value;
-        guard.doc.clone()
+        let scopes = solve_into(&mut guard);
+        (guard.doc.clone(), guard.solve_id, scopes)
     };
 
-    app.emit("doc:changed", snapshot).map_err(|e| e.to_string())
+    app.emit("doc:changed", changed(snapshot, solve_id, scopes))
+        .map_err(|e| e.to_string())
 }
 
 /// Open a job folder. Replaces whatever was open; every window follows.
@@ -135,14 +214,16 @@ fn doc_open(app: AppHandle, state: State<'_, Document>, folder: String) -> Resul
     let path = PathBuf::from(&folder);
     let doc = read_folder(&path)?;
 
-    let snapshot = {
+    let (snapshot, solve_id, scopes) = {
         let mut guard = state.0.lock().map_err(|_| "the document lock is poisoned".to_string())?;
         guard.folder = Some(path);
         guard.doc = doc;
-        guard.doc.clone()
+        let scopes = solve_into(&mut guard);
+        (guard.doc.clone(), guard.solve_id, scopes)
     };
 
-    app.emit("doc:changed", snapshot).map_err(|e| e.to_string())
+    app.emit("doc:changed", changed(snapshot, solve_id, scopes))
+        .map_err(|e| e.to_string())
 }
 
 /// Write the open job back to its folder, from the one document.
@@ -417,10 +498,13 @@ pub fn run() {
         .manage(Document(Mutex::new(OpenJob {
             folder: None,
             doc: json!({}),
+            solve_id: 0,
+            solved: None,
         })))
         .manage(Frames(Mutex::new(std::collections::HashMap::new())))
         .invoke_handler(tauri::generate_handler![
             doc_get,
+            solve_get,
             doc_folder,
             demo_folder,
             doc_set,

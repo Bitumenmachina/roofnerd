@@ -20,7 +20,7 @@ import {
   measure, priceLine, scopeFor,
   type Condition, type Item, type Measures, type Page,
 } from '@roofnerd/engine';
-import { at, doc, set, subscribe, type Doc } from '../doc.js';
+import { at, derivedFor, doc, set, subscribe, type Doc } from '../doc.js';
 import { heldCaret, named, restoreCaret } from '../caret.js';
 import { icon } from '../icons.js';
 import { PENDING_REASON, money, plural, quantity } from '../labels.js';
@@ -211,7 +211,10 @@ function render(head: HTMLElement, host: HTMLElement, d: Doc): void {
 
   for (const [index, condition] of conditions.entries()) {
     const measures = measured.get(condition.id)!;
-    const scope = scopeFor(measures, condition.properties ?? {});
+    // What the trace measures, what the estimator typed, and what the model
+    // solved for this condition — one scope, in that order, so a solved number
+    // can be read by name on a line. Empty until C2 puts the board bill in it.
+    const scope = scopeFor(measures, condition.properties ?? {}, derivedFor(condition.id));
 
     const group = document.createElement('button');
     group.type = 'button';
