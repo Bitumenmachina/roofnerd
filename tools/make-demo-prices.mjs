@@ -210,13 +210,17 @@ const inchLabel = (v) => {
   return `${whole || (fraction ? '' : 0)}${fraction}"`.trim();
 };
 
-const slopeLabel = charted.label;
 for (const panel of letters) {
   const average = (panel.thin_edge_in + panel.thick_edge_in) / 2;
   CATALOGUE.push({
     id: `iso-${panel.designation.toLowerCase()}`,
-    description: `Tapered polyisocyanurate ${panel.designation}, ${slopeLabel} : 12`
-      + ` — ${inchLabel(panel.thin_edge_in)} to ${inchLabel(panel.thick_edge_in)}`,
+    // THE LETTER FIRST. The panel is 364 px wide and the line's name ellipsizes
+    // in it: "Tapered polyisocyanurate X, 1/4 : 12 — …" cut to "Tapered
+    // polyisocyan…" on all four of them, so the sheet showed four lines that
+    // read alike and differed only in their money. What an estimator needs to
+    // tell them apart is the letter, so the letter is the third word.
+    description: `Tapered ${panel.designation} · ${inchLabel(panel.thin_edge_in)}`
+      + `–${inchLabel(panel.thick_edge_in)}`,
     costCode: '07-100-100', unit: 'SQ',
     band: [PER_INCH_TAPERED[0] * average, PER_INCH_TAPERED[1] * average],
     waste: 8,
@@ -224,7 +228,7 @@ for (const panel of letters) {
 }
 CATALOGUE.push({
   id: 'iso-fill',
-  description: `Flat polyisocyanurate fill, ${inchLabel(fillStep)}`,
+  description: `Flat polyiso fill · ${inchLabel(fillStep)}`,
   costCode: '07-100-100', unit: 'SQ',
   band: [PER_INCH_FLAT[0] * fillStep, PER_INCH_FLAT[1] * fillStep],
   waste: 8,
@@ -235,7 +239,7 @@ CATALOGUE.push({
   // the primary one. So this is priced by the square foot of footprint and not by
   // letter, and that gap is on the record rather than papered over with the
   // field's own table.
-  id: 'cricket-stock', description: 'Tapered cricket stock, cut to the saddle',
+  id: 'cricket-stock', description: 'Cricket stock, cut to the saddle',
   costCode: '07-100-100', unit: 'SF', band: [2.15, 2.6], waste: 10,
 });
 

@@ -7,6 +7,7 @@ import {
   pitchFactor, distanceToShape, parseFeet, formatFeetInches, ARCHITECTURAL_SCALES,
   measure, scopeFor, parse, evaluate, run, namesUsed, measureJob, scopeOf, emptyJob,
   unitDisagreement, DerivedNameError, readTaperAt, readFacetAt, regionAt, priceLine,
+  derivedLabel, derivedOrder,
 } from '../dist/index.js';
 
 const square = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }];
@@ -388,7 +389,7 @@ test('a derived name the model did not solve leaves the line pending, never zero
   assert.match(line.pending, /FILL_BOARDS_EA/, `the line says "${line.pending}"`);
 });
 
-test('a name the solve carries but cannot answer is NAMED on the line', () => {
+test('a name the solve carries but cannot answer is NAMED on the line, in trade words', () => {
   const m = measure('area', trace(square), {}, oneFoot);
   const scope = scopeFor(m, {}, { CRICKET_SF: null });
   assert.equal(run('CRICKET_SF', scope).value, null);
@@ -406,8 +407,14 @@ test('a name the solve carries but cannot answer is NAMED on the line', () => {
   // C2 owed the fix: `pending` blamed the sheet's scale for any null quantity,
   // because until there were derived names that was the only way one could
   // happen. The estimator's sheet is scaled and it is not their sheet that is
-  // short — it is the solver, and the line says which name.
-  assert.match(line.pending, /CRICKET_SF/, `the line says "${line.pending}"`);
+  // short — it is the solver, and the line says WHICH THING.
+  //
+  // In the trade's words, not the formula's. `pending` is rendered as a sentence
+  // in a tooltip and in the recap's own footnote, and a code word never reaches a
+  // screen in this program — the identifier is already on the line beside it, in
+  // the mono face, where a formula belongs.
+  assert.match(line.pending, /Cricket/, `the line says "${line.pending}"`);
+  assert.ok(!/CRICKET_SF/.test(line.pending), `the line says "${line.pending}"`);
   assert.ok(!/scale/.test(line.pending), `the line still says "${line.pending}"`);
 });
 
@@ -444,7 +451,7 @@ test('a formula with two nulls names the one nobody has solved', () => {
     scope,
   );
   assert.equal(line.quantity, null);
-  assert.match(line.pending, /CRICKET_SF/, `the line says "${line.pending}"`);
+  assert.match(line.pending, /Cricket/, `the line says "${line.pending}"`);
 });
 
 test('the model may not take a name the estimator types into', () => {
@@ -630,4 +637,35 @@ test('a count priced as a length is called out', () => {
 
 test('ceil keeps the dimension it was handed', () => {
   assert.match(unitDisagreement(parse('ceil(LF * H)'), 'LF') ?? '', /an area/);
+});
+
+test('every derived name has a trade label, and no label carries the identifier', () => {
+  // The vocabulary rule, held at the one place the solve's names become words. A
+  // label that still had the formula's own key in it would put a code word on
+  // screen wherever a sentence is rendered, which is what this pair is for.
+  const names = [
+    'TAPER_X_SF', 'TAPER_ZZ_SF', 'FILL_SF', 'FILL_BOARDS_EA', 'BOARD_WASTE_SF',
+    'BOARDS_MAX', 'NOFALL_SF', 'SUMP_PANELS_EA', 'CRICKET_SF',
+  ];
+  for (const name of names) {
+    const { label, unit } = derivedLabel(name);
+    assert.ok(label.length > 0, `${name} has no label`);
+    // Not the identifier, and not a fragment of one. ZZ is allowed and is not a
+    // code word: it is the designation the manufacturer prints on the panel, and
+    // an estimator says it out loud.
+    assert.ok(!label.includes('_'), `"${label}" reads like an identifier`);
+    assert.ok(!label.includes(name), `"${label}" is the identifier`);
+    assert.ok(/^[A-Z]?[a-z]/.test(label), `"${label}" does not start like a word`);
+    assert.ok(['SF', 'LF', 'EA', 'SQ'].includes(unit), `${name} is counted in "${unit}"`);
+  }
+  // A name nobody has labelled falls back to its own words, lower case — which
+  // reads as English and cannot be mistaken for the identifier.
+  assert.equal(derivedLabel('ADHESIVE_GAL').label, 'adhesive gal');
+  assert.equal(derivedLabel('FASTENERS_Z1_EA').label, 'fasteners z1');
+
+  // And the panel's order is the order a bill is read in, not the alphabet.
+  assert.deepEqual(
+    derivedOrder(['NOFALL_SF', 'BOARD_WASTE_SF', 'TAPER_Y_SF', 'FILL_SF', 'TAPER_X_SF']),
+    ['TAPER_X_SF', 'TAPER_Y_SF', 'FILL_SF', 'BOARD_WASTE_SF', 'NOFALL_SF'],
+  );
 });

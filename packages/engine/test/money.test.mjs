@@ -497,10 +497,12 @@ test('the recap rolls up the model\'s numbers, not only the traced ones', () => 
   const scenario = doc.job.scenarios[0];
   const solved = { c1: { TAPER_X_SF: 2800 } };
 
+  // Nothing in scope at all: the formula names something the line has never heard
+  // of, which is the parser's own answer and it names the line.
   const blind = recap(doc, scenario);
   assert.equal(blind.classes.find((c) => c.class === 'Material').subtotal, 0);
   assert.equal(blind.pending.length, 1);
-  assert.match(blind.pending[0], /TAPER_X_SF/, `it says "${blind.pending[0]}"`);
+  assert.match(blind.pending[0], /X panel/, `it says "${blind.pending[0]}"`);
 
   const seeing = recap(doc, scenario, solved);
   assert.equal(seeing.classes.find((c) => c.class === 'Material').subtotal, 2800);
@@ -515,7 +517,9 @@ test('and a name the solve cannot answer leaves the recap saying which', () => {
   ]);
   const r = recap(doc, doc.job.scenarios[0], { c1: { CRICKET_SF: null } });
   assert.equal(r.pending.length, 1);
-  assert.match(r.pending[0], /CRICKET_SF has not been solved/, `it says "${r.pending[0]}"`);
+  assert.match(r.pending[0], /Cricket has not been worked out/, `it says "${r.pending[0]}"`);
+  // And never the identifier: the recap's pending list is a sentence on screen.
+  assert.ok(!/CRICKET_SF/.test(r.pending[0]), `it says "${r.pending[0]}"`);
   // Never a silent zero in the class it belongs to.
   assert.equal(r.classes.find((c) => c.class === 'Material').subtotal, 0);
 });

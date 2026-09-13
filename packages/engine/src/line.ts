@@ -15,6 +15,7 @@
 
 import type { Item, Money, RoundingRule, UnitStep } from './model.js';
 import { namesUsed, parse, run, type FormulaResult } from './formula.js';
+import { derivedLabel } from './solved.js';
 import { unitDisagreement } from './dimension.js';
 import { ceilPackages, settle } from './rounding.js';
 
@@ -111,7 +112,11 @@ function whyThereIsNoNumber(
   try {
     for (const name of namesUsed(parse(formula))) {
       if (scope[name] === null && !FROM_THE_SHEET.includes(name)) {
-        return `${name} has not been solved.`;
+        // In the trade's words and not the formula's. The identifier is already
+        // on the line in the mono face, where a formula belongs; a sentence
+        // carrying `TAPER_ZZ_SF` is a code word on screen, which this program
+        // does not do.
+        return `${derivedLabel(name).label} has not been worked out.`;
       }
     }
   } catch {

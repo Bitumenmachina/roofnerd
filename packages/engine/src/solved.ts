@@ -434,6 +434,71 @@ export function cricketOf(
   return taper.crickets.find((c) => c.conditionId === conditionId && c.trace === trace) ?? null;
 }
 
+/**
+ * What a derived name is called on screen, and what it is counted in.
+ *
+ * THE NAME IS CODE AND THE LABEL IS THE TRADE'S. `TAPER_ZZ_SF` is a formula
+ * identifier — an estimator types it into a formula on purpose, and it belongs in
+ * the mono face beside one, the same way `LF * H` does. It does not belong in a
+ * sentence, a tooltip or a column of a panel, and the vocabulary check reads all
+ * three. So every name the solve can produce has a trade label and a unit here,
+ * once, and both the engine's own sentences and the app's panel read it.
+ *
+ * A name with no entry falls back to the words inside it, lower case — which
+ * reads acceptably ("board waste") and, being lower case, cannot be mistaken for
+ * the identifier by a reader or by the check.
+ */
+export interface DerivedLabel {
+  readonly label: string;
+  readonly unit: string;
+  /** Where it sits in the panel's list: the order a bill is read in. */
+  readonly order: number;
+}
+
+const DERIVED_LABELS: Readonly<Record<string, DerivedLabel>> = {
+  // The boards first, because that is what the bill is.
+  FILL_SF: { label: 'Flat board', unit: 'SF', order: 20 },
+  FILL_BOARDS_EA: { label: 'Flat board', unit: 'EA', order: 21 },
+  BOARD_WASTE_SF: { label: 'Board waste', unit: 'SF', order: 30 },
+  BOARDS_MAX: { label: 'Courses needed', unit: 'EA', order: 31 },
+  NOFALL_SF: { label: 'No fall', unit: 'SF', order: 40 },
+  SUMP_PANELS_EA: { label: 'Sump panels', unit: 'EA', order: 50 },
+  CRICKET_SF: { label: 'Cricket', unit: 'SF', order: 60 },
+};
+
+/** The lettered panels, which are one name per letter and cannot be listed. */
+const TAPERED_PANEL = /^TAPER_([A-Z]+[0-9]*)_SF$/;
+
+/** What to call a derived name on screen, and what it is counted in. */
+export function derivedLabel(name: string): DerivedLabel {
+  const known = DERIVED_LABELS[name];
+  if (known) return known;
+  const panel = TAPERED_PANEL.exec(name);
+  // In the chart's own order, so the panel reads X, Y, Z, ZZ rather than
+  // alphabetically — and a letter the table adds later still lands among them.
+  if (panel) return { label: `Tapered panel ${panel[1]}`, unit: 'SF', order: 10 };
+  return {
+    label: name.replace(/_(SF|LF|EA|SQ)$/, '').toLowerCase().replace(/_/g, ' '),
+    unit: /_(SF|LF|EA|SQ)$/.exec(name)?.[1] ?? '',
+    order: 90,
+  };
+}
+
+/**
+ * The names one condition carries, in the order a bill is read in.
+ *
+ * Stated rather than alphabetical: the lettered panels, then the flat board under
+ * them, then what the cuts took, then the courses, then the ground with no fall,
+ * then the sumps and the cricket. Within a group, by name, so two runs of the
+ * same job list them the same way.
+ */
+export function derivedOrder(names: readonly string[]): string[] {
+  return [...names].sort((a, b) => {
+    const by = derivedLabel(a).order - derivedLabel(b).order;
+    return by !== 0 ? by : a.localeCompare(b);
+  });
+}
+
 /** Nothing solved yet: what a window holds before the first solve arrives. */
 export const NOTHING_SOLVED: SolvedTaper = {
   solveId: 0, drains: [], fields: [], sumps: [], crickets: [], refused: [],

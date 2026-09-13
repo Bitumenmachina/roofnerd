@@ -26,7 +26,7 @@
       },
       {
         "costCode": "07-100-100",
-        "description": "Tapered polyisocyanurate X, 1/4\" : 12 — 1/2\" to 1 1/2\"",
+        "description": "Tapered X · 1/2\"–1 1/2\"",
         "formula": "TAPER_X_SF / 100",
         "id": "iso-x",
         "unit": "SQ",
@@ -35,7 +35,7 @@
       },
       {
         "costCode": "07-100-100",
-        "description": "Tapered polyisocyanurate Y, 1/4\" : 12 — 1 1/2\" to 2 1/2\"",
+        "description": "Tapered Y · 1 1/2\"–2 1/2\"",
         "formula": "TAPER_Y_SF / 100",
         "id": "iso-y",
         "unit": "SQ",
@@ -44,7 +44,7 @@
       },
       {
         "costCode": "07-100-100",
-        "description": "Tapered polyisocyanurate Z, 1/4\" : 12 — 2 1/2\" to 3 1/2\"",
+        "description": "Tapered Z · 2 1/2\"–3 1/2\"",
         "formula": "TAPER_Z_SF / 100",
         "id": "iso-z",
         "unit": "SQ",
@@ -53,7 +53,7 @@
       },
       {
         "costCode": "07-100-100",
-        "description": "Tapered polyisocyanurate ZZ, 1/4\" : 12 — 3 1/2\" to 4 1/2\"",
+        "description": "Tapered ZZ · 3 1/2\"–4 1/2\"",
         "formula": "TAPER_ZZ_SF / 100",
         "id": "iso-zz",
         "unit": "SQ",
@@ -62,7 +62,7 @@
       },
       {
         "costCode": "07-100-100",
-        "description": "Flat polyisocyanurate fill, 4\"",
+        "description": "Flat polyiso fill · 4\"",
         "formula": "FILL_SF / 100",
         "id": "iso-fill",
         "unit": "SQ",
@@ -537,7 +537,7 @@
     "items": [
       {
         "costCode": "07-100-100",
-        "description": "Tapered cricket stock, cut to the saddle",
+        "description": "Cricket stock, cut to the saddle",
         "formula": "CRICKET_SF",
         "id": "cricket-stock",
         "unit": "SF",

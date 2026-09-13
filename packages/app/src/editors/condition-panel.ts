@@ -7,7 +7,7 @@
 // and a number they have to hunt for is a number they will not check.
 
 import {
-  conditionTotal, measure, priceJob,
+  conditionTotal, derivedLabel, derivedOrder, measure, priceJob,
   type Condition, type LineTotal, type Measures, type Page, type TraceKind,
 } from '@roofnerd/engine';
 import { at, derived, derivedFor, set, type Doc } from '../doc.js';
@@ -149,16 +149,28 @@ export function renderConditionPanel(
 
   // ── and what the model solved for it ────────────────────────────────────
   //
-  // The names a formula on this condition can use, which is the question an
-  // estimator asks before writing one. They are not fields: nothing here is
-  // editable, because a derived number is the model's and typing over it happens
-  // on the line where the money is (the formula, which then reads as typed).
+  // What a formula on this condition can be written against, which is the
+  // question an estimator asks before writing one. They are not fields: nothing
+  // here is editable, because a derived number is the model's and typing over it
+  // happens on the line where the money is (the formula, which then reads as
+  // typed).
+  //
+  // THE TRADE'S WORDS ON TOP AND THE IDENTIFIER UNDER THEM. `TAPER_ZZ_SF` is a
+  // formula identifier and it belongs in the mono face beside a formula, not in a
+  // column an estimator reads — so the row is labelled the way the bill is read
+  // and the name sits under it as a chip, exactly the way a line on the sheet
+  // carries its own formula. That is what the vocabulary check is for and it
+  // caught this.
+  //
+  // In a stated order — the lettered panels, the flat board, the waste, the
+  // courses, the ground with no fall, the sumps, the cricket — and not
+  // alphabetically, which would put "board waste" before the boards.
   //
   // A name the solve carries and cannot answer says so rather than showing a dash
   // that looks like nought. That is the same rule the measures above follow, and
   // the same rule `line.ts` follows on the line.
   const solved = derivedFor(condition.id) ?? {};
-  const names = Object.keys(solved).sort();
+  const names = derivedOrder(Object.keys(solved));
   if (names.length > 0) {
     const heading = document.createElement('p');
     heading.className = 'panel-group';
@@ -168,29 +180,39 @@ export function renderConditionPanel(
     const list = document.createElement('div');
     list.className = 'panel-derived';
     for (const key of names) {
+      const { label, unit } = derivedLabel(key);
       const row = document.createElement('div');
       row.className = 'derived-row';
+
+      const what = document.createElement('span');
+      what.className = 'derived-what';
       const mark = document.createElement('span');
       mark.className = 'derived';
       mark.textContent = '◈';
-      mark.title = 'Worked out from the model. Usable in a formula on this condition by this name.';
-      const name = document.createElement('span');
-      // `formula` puts it in the mono face, which is what it is: a term an
-      // estimator types into one. The vocabulary check exempts the formula
-      // wherever the program renders it.
-      name.className = 'formula derived-name';
-      name.textContent = key;
+      mark.title = 'Worked out from the model, and not typed.';
+      const words = document.createElement('span');
+      words.className = 'derived-label';
+      words.textContent = unit ? `${label} · ${unit}` : label;
+      what.append(mark, words);
+
       const value = document.createElement('span');
       value.className = 'derived-value num';
       const held = solved[key];
       if (held === null || held === undefined) {
         value.classList.add('none');
-        value.textContent = 'not solved';
-        value.title = `The model reached this condition and could not work ${key} out.`;
+        value.textContent = 'not worked out';
+        value.title = `The model reached this condition and could not work the ${label.toLowerCase()} out.`;
       } else {
         value.textContent = quantity(held, Number.isInteger(held) ? 0 : 2);
       }
-      row.append(mark, name, value);
+
+      // The identifier, in the mono face, the way the sheet carries a formula.
+      // This is the thing an estimator copies into one.
+      const name = document.createElement('span');
+      name.className = 'formula derived-name';
+      name.textContent = key;
+
+      row.append(what, value, name);
       list.append(row);
     }
     host.append(list);
