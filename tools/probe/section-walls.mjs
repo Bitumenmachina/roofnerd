@@ -53,6 +53,7 @@ const shot = async (session, name) =>
   writeFile(join(EVIDENCE, `${name}-${COMMIT}.png`), Buffer.from(await session.screenshot(), 'base64'));
 
 // ── what the job itself says, worked out here rather than typed ────────────
+const { COPING_SECTION_FT } = await import('../../packages/engine/dist/index.js');
 const jobFolder = join(ROOT, 'jobs/demo-job');
 const read = async (rel) => JSON.parse(await readFile(join(jobFolder, rel), 'utf8'));
 const conditions = await read('conditions.json');
@@ -106,7 +107,7 @@ const parapetRing = feet(parapetJob.traces[0]);
 const parapetLf = lfOf(parapetRing);
 const parapetOldFlash = parapetLf * (parapetJob.properties.H ?? 0); // the retired LF x H
 const parapetCorners = cornersOf(parapetRing);
-const section = parapetJob.properties.COPING_SECTION_FT ?? 10;
+const section = parapetJob.properties.COPING_SECTION_FT ?? COPING_SECTION_FT;
 const parapetPieces = Math.ceil(parapetLf / section) + parapetCorners;
 
 const money = (text) => {
