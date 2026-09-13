@@ -570,6 +570,7 @@ export function mountModel(host: HTMLElement, surroundings: SurfaceChrome): void
         position: [camera.position.x, camera.position.y, camera.position.z],
         target: controls ? [controls.target.x, controls.target.y, controls.target.z] : null,
         frustum: [camera.left, camera.right, camera.top, camera.bottom],
+        onScreen: roofOnScreen(),
       } : null,
     });
   };
@@ -1727,7 +1728,7 @@ function pick(canvas: HTMLCanvasElement, event: MouseEvent) {
  *
  * For checking only, like the rest of `__roofnerdModel`. Nothing in the program
  * calls it: a person aims with their hand, and this exists so that a check can
- * aim at the Low Roof without a coordinate typed into it by somebody who had
+ * aim at the roof field without a coordinate typed into it by somebody who had
  * the camera in front of them.
  *
  * It does not merely project a centre and hope. A heightfield's bounding-box
@@ -1800,6 +1801,42 @@ function screenPointOf(conditionId: string): {
     x: Math.round(first.at.x), y: Math.round(first.at.y),
     inside: within(first.at), of: first.of,
     hits: within(first.at) ? whatIsAt(rect, first.at) : null,
+  };
+}
+
+/**
+ * Where the whole roof lands on the canvas, in the canvas's own pixels.
+ *
+ * For checking only, like the rest of `__roofnerdModel`. "The roof fits the
+ * window" is the one claim in this view that a count of meshes cannot reach: a
+ * roof drawn at a twentieth of the size it should be has every mesh a check
+ * could ask for and is still the defect. This answers with the rectangle the
+ * roof actually occupies and the rectangle it had to fill, and lets the check do
+ * the division.
+ */
+function roofOnScreen(): {
+  x: number; y: number; w: number; h: number; of: { w: number; h: number };
+} | null {
+  if (!camera || !surface || !world) return null;
+  const box = new THREE.Box3().setFromObject(world);
+  if (box.isEmpty()) return null;
+  const rect = surface.getBoundingClientRect();
+  let minX = Infinity; let maxX = -Infinity; let minY = Infinity; let maxY = -Infinity;
+  for (const x of [box.min.x, box.max.x]) {
+    for (const y of [box.min.y, box.max.y]) {
+      for (const z of [box.min.z, box.max.z]) {
+        const v = new THREE.Vector3(x, y, z).project(camera);
+        const sx = (v.x * 0.5 + 0.5) * rect.width;
+        const sy = (-v.y * 0.5 + 0.5) * rect.height;
+        minX = Math.min(minX, sx); maxX = Math.max(maxX, sx);
+        minY = Math.min(minY, sy); maxY = Math.max(maxY, sy);
+      }
+    }
+  }
+  return {
+    x: Math.round(minX), y: Math.round(minY),
+    w: Math.round(maxX - minX), h: Math.round(maxY - minY),
+    of: { w: Math.round(rect.width), h: Math.round(rect.height) },
   };
 }
 
