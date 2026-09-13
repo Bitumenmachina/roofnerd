@@ -387,7 +387,7 @@ function readAt(canvas: HTMLCanvasElement, event: PointerEvent): readonly StripR
       { key: 'Slope', value: `${inchLabel(field.slopeInchesPerFoot)} in 12` },
       { key: 'Insulation here', value: null },
       { key: 'Flow', value: 'no drainage region covers this point', warn: true },
-      { key: '', value: null },
+      { key: 'Run to the drain', value: null },
     ];
   }
   const thickness = here.thicknessInches;
@@ -403,7 +403,7 @@ function readAt(canvas: HTMLCanvasElement, event: PointerEvent): readonly StripR
       { key: 'Slope', value: `${inchLabel(field.slopeInchesPerFoot)} in 12` },
       { key: 'Insulation here', value: inchLabel(thickness) },
       { key: 'Flow', value: why, warn: true },
-      { key: '', value: null },
+      { key: 'Run to the drain', value: null },
     ];
   }
   return [
@@ -411,7 +411,10 @@ function readAt(canvas: HTMLCanvasElement, event: PointerEvent): readonly StripR
     { key: 'Slope', value: `${inchLabel(field.slopeInchesPerFoot)} in 12` },
     { key: 'Insulation here', value: inchLabel(thickness) },
     { key: 'Flow', value: `runs ${compass(p, here.toward)}`, water: true },
-    { key: '', value: `${here.runFeet.toFixed(1)} ft of run to the drain it falls to` },
+    // Named, like every other reading beside it. It stood in the row with no
+    // key at all — a sentence where the other four are a word and a figure —
+    // so the strip read four labelled readings and one remark (C8 §6).
+    { key: 'Run to the drain', value: `${here.runFeet.toFixed(1)} ft` },
   ];
 }
 
@@ -1050,6 +1053,9 @@ function placeWords() {
     labelHost.append(el);
   }
 
+  // Where each one wants to be, before anything is moved out of anything
+  // else's way.
+  const placed: { el: HTMLElement; x: number; y: number; w: number; h: number }[] = [];
   labelsNow.forEach((label, i) => {
     const el = labelHost!.children[i] as HTMLElement;
     if (el.textContent !== label.text) el.textContent = label.text;
@@ -1064,7 +1070,31 @@ function placeWords() {
     if (!on) return;
     el.style.left = `${Math.round(x)}px`;
     el.style.top = `${Math.round(y)}px`;
+    placed.push({ el, x, y, w: el.offsetWidth, h: el.offsetHeight });
   });
+
+  // And then out of each other's way.
+  //
+  // "Drain 2 · sump 1/2" deep" was overwritten by "RTU-1 Curb · cricket behind"
+  // at the opening camera on the demo — twenty-three pixels of overlap, and a
+  // label you cannot read is a label that is not there (C8 §6b). Each word
+  // stands ABOVE the thing it names (the stylesheet translates it up by its own
+  // height), so a word in the way is lifted clear rather than dropped: down
+  // would put it over the roof it is pointing at. The order is the order the
+  // labels were made in, so the same picture settles the same way every frame.
+  // `top` is where the word's FOOT sits: the stylesheet centres it on x and
+  // lifts it by its own height, so the box runs from `y - h` to `y`.
+  const CLEAR = 3;
+  for (let i = 1; i < placed.length; i += 1) {
+    const a = placed[i]!;
+    for (let pass = 0; pass < placed.length; pass += 1) {
+      const over = placed.slice(0, i).find((b) => Math.abs(a.x - b.x) < (a.w + b.w) / 2 + CLEAR
+        && a.y > b.y - b.h - CLEAR && a.y - a.h < b.y + CLEAR);
+      if (!over) break;
+      a.y = over.y - over.h - CLEAR;
+      a.el.style.top = `${Math.round(a.y)}px`;
+    }
+  }
 }
 
 /**
@@ -1248,7 +1278,10 @@ function build(d: Doc, taper: SolvedTaper, walls: SolvedWalls): Built {
   let taperedFields = 0;
   let regions = 0;
   let valleys = 0;
-  let ridges = 0;
+  /// Which pairs of drainage regions share a boundary. A ridge is a place two
+  /// drains meet, and the core ships that boundary as its several segments, so
+  /// the key counts the pairs and not the pieces.
+  const ridgePairs = new Set<string>();
   /// The worst a ridge disagrees with its neighbour, in inches. Nought is a roof
   /// whose two patterns meet at one thickness, which is what NRCA asks for.
   let ridgeUneven = 0;
@@ -1325,7 +1358,15 @@ function build(d: Doc, taper: SolvedTaper, walls: SolvedWalls): Built {
               for (const ridge of region.ridges) {
                 if (ridge.meets < regionIndex) continue;
                 world.add(creaseLine(solvedField, ridge, 'ridge'));
-                ridges += 1;
+                // The BOUNDARY between two drains, not the pieces it is drawn
+                // in. A boundary is a polyline and the core ships it segment by
+                // segment, so counting segments told an estimator there were
+                // eight ridges on a roof with three drains — and six when he
+                // flattened the slope, because the plateau adds segments and no
+                // drains (C8 §6c). A ridge is a place two drainage regions
+                // meet; there are as many as there are pairs that meet.
+                ridgePairs.add(regionIndex < ridge.meets
+                  ? `${regionIndex}-${ridge.meets}` : `${ridge.meets}-${regionIndex}`);
                 if (ridge.disagreementInches > 1 / 8) {
                   ridgeUneven = Math.max(ridgeUneven, ridge.disagreementInches);
                 }
@@ -1499,7 +1540,7 @@ function build(d: Doc, taper: SolvedTaper, walls: SolvedWalls): Built {
       taperedFields, regions, noFallSquareFeet: noFallSquares, drains: drains.length, crickets,
       thin, thick, capReason, unstatedBuildUp, outOfProportion, ridgeOffSquare,
       cricketSlopeOff, overOneLayer, unbuiltCrickets, crossedTraces, unstatedWall,
-      unstatedCap, copings, curbs, valleys, ridges, ridgeUneven, boards,
+      unstatedCap, copings, curbs, valleys, ridges: ridgePairs.size, ridgeUneven, boards,
       sumps, unsumpedDrains, clippedSumps,
       refused: taper.refused,
       ramp: RAMP[2],
@@ -1578,12 +1619,18 @@ function stripFor(fields: SolvedTaperField[], list: Condition[]): Node[] {
     'What the estimator stated at the drain. Everything on the roof is measured up from it.'));
   out.push(stripField('Slope', `${inchLabel(field.slopeInchesPerFoot)} in 12`));
 
+  // A finding, not a complaint. "4 courses against 3 allowed" reads as the
+  // program telling an estimator he broke a rule; what it actually is, is the
+  // layout's own answer — the deepest position takes a fourth course, the job
+  // was written for three, and somebody buys the course or flattens the slope
+  // (C8 §6a). Patrick's open question, stated the way a finding is stated.
   const allowed = list.find((c) => c.id === field.conditionId)?.properties?.['BOARDS'];
   const needed = field.bill?.coursesMax;
   if (needed !== undefined) {
-    out.push(derivedField('Boards', allowed === undefined
+    const over = allowed === undefined ? 0 : needed - allowed;
+    out.push(derivedField('Boards', allowed === undefined || over <= 0
       ? `${needed} courses`
-      : `${needed} courses against ${allowed} allowed`,
+      : `${needed} courses, ${over === 1 ? 'one over' : `${over} over`} the ${allowed} allowed`,
     'How many layers of board the deepest position takes, the tapered panel included,'
       + ' beside the ceiling the job typed.'));
   }
@@ -2029,7 +2076,7 @@ const WATER = '#1f7a8c';
  * two drains sits equidistant between them and runs perpendicular to the line
  * joining them — it is where two drainage fields meet, not a line somebody drew
  * and hung planes off. Behind a curb it is the curb's own upslope face that
- * sizes it (§8.1 p.252, Figs. 10-13/10-14). Width is derived either way, and
+ * sizes it (§8.1 p.252, Figs. 10-13 and 10-14). Width is derived either way, and
  * width is the load-bearing number: widening a cricket is what steepens its
  * valley, and steepening the surface does nothing for it.
  *
