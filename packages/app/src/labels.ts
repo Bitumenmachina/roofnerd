@@ -20,7 +20,7 @@ export const MEASURE_LABELS: Readonly<Record<string, string>> = {
 };
 
 /** What a property is called, and the trade words that say what it is for. */
-export const PROPERTY_LABELS: Readonly<Record<string, { label: string; hint: string; group: 'Geometry' | 'Metal' }>> = {
+export const PROPERTY_LABELS: Readonly<Record<string, { label: string; hint: string; group: 'Geometry' | 'Metal' | 'Wind' }>> = {
   H: { label: 'Height', hint: 'feet — how far the flashing runs up', group: 'Geometry' },
   // Not cricket width any more. A cricket's width is half the span between the
   // drains it serves, and NRCA bounds it against the length — it is worked out,
@@ -50,6 +50,31 @@ export const PROPERTY_LABELS: Readonly<Record<string, { label: string; hint: str
   },
   COPING_SECTION_FT: { label: 'Section length', hint: 'feet — 8 to 20, generally 10', group: 'Metal' },
   FASTEN_OC: { label: 'Fastener spacing', hint: 'inches — cleat and termination bar', group: 'Metal' },
+  // The wind. The zones are set out from the height by a published rule; the
+  // pressure on the building is an engineered figure for that building, and the
+  // basis is in the name because a property in this program is a number and a
+  // word typed beside one would be wiped by the first edit of its own field.
+  ROOF_HEIGHT_FT: {
+    label: 'Mean roof height', hint: 'feet — what the corner and edge zones are set out from',
+    group: 'Wind',
+  },
+  WIND_PSF_FIELD: {
+    label: 'Uplift, field', hint: 'psf, strength design — reduced to working load by 0.6',
+    group: 'Wind',
+  },
+  WIND_PSF_PERIMETER: {
+    label: 'Uplift, perimeter', hint: 'psf, strength design — reduced to working load by 0.6',
+    group: 'Wind',
+  },
+  WIND_PSF_CORNER: {
+    label: 'Uplift, corner', hint: 'psf, strength design — reduced to working load by 0.6',
+    group: 'Wind',
+  },
+  WIND_ASD_FIELD: { label: 'Uplift, field', hint: 'psf, already at working load', group: 'Wind' },
+  WIND_ASD_PERIMETER: {
+    label: 'Uplift, perimeter', hint: 'psf, already at working load', group: 'Wind',
+  },
+  WIND_ASD_CORNER: { label: 'Uplift, corner', hint: 'psf, already at working load', group: 'Wind' },
 };
 
 /**

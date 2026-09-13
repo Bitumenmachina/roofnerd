@@ -302,6 +302,46 @@ const DERIVED = [
  */
 const FASTEN_OC_DEMO_IN = 12;
 
+/**
+ * What the demo's wind zones are set out and rated from.
+ *
+ * TYPED, never computed. The zone geometry follows a published rule (NRCA
+ * *Membrane Roof Systems* 2019 Appendix 1, p.553) and the program works it; the
+ * PRESSURE on a building is an engineered figure for that building, and a
+ * program that invented one would be inventing the whole fastening plan under it.
+ *
+ * Where these four came from:
+ *
+ * - `ROOF_HEIGHT_FT` — the mean roof height the handoff gives this building.
+ * - the three pressures — the coastal envelope brief in the box
+ *   (`KNOWLEDGE/GOVERNANCE`), which tabulates ASCE 7 component-and-cladding roof
+ *   pressures for this coast at 130 mph: the field at -42 to -71, the perimeter
+ *   strip at -86 to -96 and the corners at -107 to -122 pounds a square foot.
+ *   The upper end of each range is taken, because the most restrictive
+ *   requirement governs and because the upper end of the corner range is the one
+ *   computed at the same GCp the appendix itself prints for a corner (3.2, Fig
+ *   1-2 p.546) — so the three upper figures are one consistent set rather than
+ *   three separate picks.
+ *
+ * The names say the basis: `WIND_PSF_*` is strength design, which is what ASCE
+ * 7's own maps produce (Appendix 1 p.546), and the solver reduces it by 0.6 to
+ * working load. A job holding figures already at working load types
+ * `WIND_ASD_FIELD` and so on instead, and nothing is reduced twice.
+ *
+ * GAP, on the record: the brief's own roof table is captioned at Exposure C and
+ * this building is Exposure D, which is a higher pressure at the same speed. The
+ * brief names -122 at the corner for Exposure D in its own text, so the corner
+ * figure is right for this building and the other two are a floor. The ASCE
+ * 7-22 figure itself is not on this machine; when it is, these three are the
+ * three numbers to change, and everything under them re-solves.
+ */
+const WIND_DEMO = {
+  ROOF_HEIGHT_FT: 22,
+  WIND_PSF_FIELD: 71,
+  WIND_PSF_PERIMETER: 96,
+  WIND_PSF_CORNER: 122,
+};
+
 /** Lines a solved bill replaces. Left on the job they would charge it twice. */
 const RETIRED = ['iso-tapered'];
 
@@ -344,6 +384,17 @@ const missing = [];
 const parapet = conditions.find((c) => c.id === 'c-parapet');
 if (parapet && parapet.properties?.FASTEN_OC === undefined) {
   parapet.properties = { ...(parapet.properties ?? {}), FASTEN_OC: FASTEN_OC_DEMO_IN };
+}
+
+// And the wind, for the same reason: the zones are set out from a height and
+// rated from a pressure, and neither is anything a drawing can be asked for.
+const roof = conditions.find((c) => c.id === 'c-field');
+if (roof) {
+  for (const [name, value] of Object.entries(WIND_DEMO)) {
+    if (roof.properties?.[name] === undefined) {
+      roof.properties = { ...(roof.properties ?? {}), [name]: value };
+    }
+  }
 }
 
 for (const condition of conditions) {

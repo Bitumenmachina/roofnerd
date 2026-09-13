@@ -15,7 +15,7 @@ import { heldCaret, named, restoreCaret } from '../caret.js';
 import { icon } from '../icons.js';
 import { KIND_LABELS, MEASURE_LABELS, PENDING_REASON, PROPERTY_LABELS, money, plural, quantity } from '../labels.js';
 
-const GROUPS = ['Geometry', 'Metal'] as const;
+const GROUPS = ['Geometry', 'Metal', 'Wind'] as const;
 
 /**
  * The measures an estimator glances at — but only the ones this kind of thing

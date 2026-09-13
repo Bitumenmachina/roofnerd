@@ -112,6 +112,24 @@ export interface Properties {
    * bar is made and not how many of those holes get a fastener.
    */
   readonly FASTEN_OC?: number;
+  /**
+   * Mean roof height in feet. What the corner and edge wind zones are set out
+   * from — `a` is the smaller of a tenth of the least side and 0.4 of this.
+   */
+  readonly ROOF_HEIGHT_FT?: number;
+  /**
+   * Design uplift on this roof, in pounds a square foot, by zone — TYPED, with
+   * the basis in the name. `WIND_PSF_*` is strength design, which is what ASCE
+   * 7's own maps produce, and is reduced to working load by 0.6; `WIND_ASD_*`
+   * is already at working load and is not reduced again. A pressure is an
+   * engineered figure for one building and nothing here computes one.
+   */
+  readonly WIND_PSF_FIELD?: number;
+  readonly WIND_PSF_PERIMETER?: number;
+  readonly WIND_PSF_CORNER?: number;
+  readonly WIND_ASD_FIELD?: number;
+  readonly WIND_ASD_PERIMETER?: number;
+  readonly WIND_ASD_CORNER?: number;
   /** Anything else the estimator names, as a number. */
   readonly [name: string]: number | undefined;
 }
@@ -120,6 +138,9 @@ export interface Properties {
 export const PROPERTY_NAMES = [
   'H', 'W', 'T', 'WALL', 'PITCH', 'TAPER', 'ELEV', 'SUMP', 'BOARDS', 'SIDES', 'STRETCHOUT',
   'FLASHUP', 'CAP_OVERHANG_IN', 'COPING_SECTION_FT', 'FASTEN_OC',
+  'ROOF_HEIGHT_FT',
+  'WIND_PSF_FIELD', 'WIND_PSF_PERIMETER', 'WIND_PSF_CORNER',
+  'WIND_ASD_FIELD', 'WIND_ASD_PERIMETER', 'WIND_ASD_CORNER',
 ] as const;
 
 /**

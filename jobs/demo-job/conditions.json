@@ -195,9 +195,13 @@
       "BOARDS": 3,
       "DECK": 1.5,
       "ELEV": 0,
+      "ROOF_HEIGHT_FT": 22,
       "SIDES": 8,
       "T": 0.5,
-      "TAPER": 0.25
+      "TAPER": 0.25,
+      "WIND_PSF_CORNER": 122,
+      "WIND_PSF_FIELD": 71,
+      "WIND_PSF_PERIMETER": 96
     },
     "traces": [
       {

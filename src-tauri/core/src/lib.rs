@@ -42,6 +42,7 @@ pub mod scope;
 pub mod sump;
 pub mod taper;
 pub mod walls;
+pub mod wind;
 
 pub use coping::Coping;
 pub use cricket::Layout;
@@ -55,6 +56,7 @@ pub use model::{
 pub use profile::{LetterRow, Panel, ProfileSet, Schedule};
 pub use scope::Scopes;
 pub use walls::{SolvedWalls, WallRun};
+pub use wind::{SolvedWind, WindPlan, Zone};
 
 /// Solve the open job.
 ///
