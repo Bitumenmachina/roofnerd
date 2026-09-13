@@ -312,7 +312,11 @@ export function roofPlan(d: Doc, taper: SolvedTaper, walls: SolvedWalls, fasteni
       drawn.forEach((ring) => {
         ring.forEach((at, i) => {
           any = true;
-          drains.push({ conditionId: c.id, name, costCode, at, sump: sumps[i] ?? null });
+          // A condition's own name is not a name for ONE of its drains — every
+          // fitting on "Roof Drains" would share one identity — so the point's
+          // own place in the trace numbers it, the same order the sumps and
+          // `taper.drains` are already in.
+          drains.push({ conditionId: c.id, name: `${name} — ${i + 1}`, costCode, at, sump: sumps[i] ?? null });
         });
       });
       if (!any) leftOut.push({ name, why: 'the sheet it was traced on has no scale yet' });
@@ -383,6 +387,47 @@ const csiDivision = (code: string): string => code.split('-')[0] ?? '';
 
 /** A plan point in three feet — x and the plan's own y, plus a height. */
 export interface Point3 { readonly x: number; readonly y: number; readonly z: number; }
+
+/** Plan (x, y) becomes IFC (x, -y): the sheet keeps its own orientation, north up. */
+function toIfcPoint(p: { x: number; y: number }): { x: number; y: number } {
+  return { x: p.x, y: -p.y };
+}
+
+/**
+ * A tapered field's own top surface, as triangles in IFC feet — each vertex's
+ * height is `readFacetAt`, the one expression `taper.rs` is pinned to (D148).
+ *
+ * Shared between the writer and `expectedOf`, so the one real computation this
+ * file does over the solve — turning a facet's plane into a height at a point
+ * — happens once and the two can never read a different roof.
+ */
+export function slabTriangles(field: SolvedTaperField): [Point3, Point3, Point3][] {
+  const triangles: [Point3, Point3, Point3][] = [];
+  for (const region of field.regions) {
+    for (const facet of region.facets) {
+      for (const [a, b, c] of triangulateShape(facet.shape)) {
+        const at3 = (p: { x: number; y: number }): Point3 => {
+          const q = toIfcPoint(p);
+          return { x: q.x, y: q.y, z: inchesToFeet(readFacetAt(field, region, facet, p)) };
+        };
+        triangles.push([at3(a), at3(b), at3(c)]);
+      }
+    }
+  }
+  return triangles;
+}
+
+/**
+ * The volume between the deck and a set of triangles describing the top
+ * surface, in cubic feet — a prism per triangle, its own footprint area times
+ * the average of its three corners' heights.
+ */
+export function prismVolume(triangles: readonly (readonly [Point3, Point3, Point3])[]): number {
+  return triangles.reduce((sum, [a, b, c]) => {
+    const area2 = Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y));
+    return sum + (area2 / 2) * ((a.z + b.z + c.z) / 3);
+  }, 0);
+}
 
 /**
  * The job as IFC4 bytes.
@@ -465,9 +510,7 @@ export function writeRoof(plan: RoofPlan, api: WEBIFC.IfcAPI): Uint8Array {
   const lines: WEBIFC.IfcLineObject[] = [project, site, building, storey];
   const elements: WEBIFC.IFC4.IfcProduct[] = [];
   const push = (...items: WEBIFC.IfcLineObject[]) => { lines.push(...items); };
-
-  // ── plan (x, y) becomes IFC (x, -y): the sheet keeps its own orientation ──
-  const toIfc = (p: { x: number; y: number }) => ({ x: p.x, y: -p.y });
+  const toIfc = toIfcPoint;
 
   /** Twice the signed area of a plan ring: positive counter-clockwise. */
   const signedArea = (ring: readonly { x: number; y: number }[]): number => {
@@ -587,18 +630,7 @@ export function writeRoof(plan: RoofPlan, api: WEBIFC.IfcAPI): Uint8Array {
   // ── the roof slabs: one per solved tapered field, its facets triangulated ──
   for (const [n, slab] of plan.slabs.entries()) {
     const field = slab.field;
-    const triangles: [Point3, Point3, Point3][] = [];
-    for (const region of field.regions) {
-      for (const facet of region.facets) {
-        for (const [a, b, c] of triangulateShape(facet.shape)) {
-          const at3 = (p: { x: number; y: number }): Point3 => {
-            const q = toIfc(p);
-            return { x: q.x, y: q.y, z: inchesToFeet(readFacetAt(field, region, facet, p)) };
-          };
-          triangles.push([at3(a), at3(b), at3(c)]);
-        }
-      }
-    }
+    const triangles = slabTriangles(field);
     const body = tessellatedBody(triangles);
     if (!body) {
       // Every facet failed to triangulate — a field with a ring `geo` handed
@@ -618,13 +650,7 @@ export function writeRoof(plan: RoofPlan, api: WEBIFC.IfcAPI): Uint8Array {
       { name: 'NetArea', kind: 'area', value: field.squareFeet },
       { name: 'ThinEdge', kind: 'length', value: inchesToFeet(field.thinInches ?? 0) },
       { name: 'ThickEdge', kind: 'length', value: inchesToFeet(field.thickInches ?? 0) },
-      {
-        name: 'NetVolume', kind: 'volume',
-        value: triangles.reduce((sum, [a, b, c]) => {
-          const area2 = Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y));
-          return sum + (area2 / 2) * ((a.z + b.z + c.z) / 3);
-        }, 0),
-      },
+      { name: 'NetVolume', kind: 'volume', value: prismVolume(triangles) },
     ], element);
     axes(key, element, { division: csiDivision(slab.costCode), code: slab.costCode, quantity: field.squareFeet, unit: 'SF' }, {
       src: 'the roof plan trace and the job’s typed T, TAPER and BOARDS',
@@ -842,6 +868,205 @@ export function writeRoof(plan: RoofPlan, api: WEBIFC.IfcAPI): Uint8Array {
   const bytes = api.SaveModel(model);
   api.CloseModel(model);
   return bytes;
+}
+
+// ── Part 2: what the verifier should find, read off the same plan ─────────
+
+/** One quantity or property the writer put on one element, for the verifier to check. */
+export interface ExpectedEntry {
+  /** The element's own `Name` — unique in this job, and the only safe key: several
+   * coverings share one condition's `Tag`, so the verifier matches on this instead. */
+  readonly name: string;
+  readonly class: string;
+  readonly tag: string;
+  readonly set: string;
+  readonly kind: 'quantity' | 'property';
+  readonly key: string;
+  readonly value: number | string | boolean;
+}
+
+export interface ExpectedRoof {
+  readonly job: string;
+  readonly counts: Readonly<Record<string, number>>;
+  readonly entries: readonly ExpectedEntry[];
+}
+
+/**
+ * What `writeRoof` should have put in the file, read off the same `RoofPlan` —
+ * never off the bytes it wrote. The landing chain's IfcOpenShell script opens
+ * the file and checks every entry here against what it finds; this
+ * function and `writeRoof` are proved to agree by
+ * `ifc-write.test.mjs`'s "expectedOf matches the file" check, which reads
+ * every one of these entries back off the actual bytes.
+ */
+export function expectedOf(plan: RoofPlan): ExpectedRoof {
+  const entries: ExpectedEntry[] = [];
+  const counts: Record<string, number> = { IFCPROJECT: 1, IFCSITE: 1, IFCBUILDING: 1, IFCBUILDINGSTOREY: 1 };
+  const bump = (cls: string) => { counts[cls] = (counts[cls] ?? 0) + 1; };
+  const put = (
+    name: string, cls: string, tag: string, set: string, kind: 'quantity' | 'property', key: string,
+    value: number | string | boolean,
+  ) => { entries.push({ name, class: cls, tag, set, kind, key, value }); };
+  const axesExpected = (name: string, cls: string, tag: string, cost: CostAxisInfo, authority: AuthorityInfo) => {
+    put(name, cls, tag, 'Pset_CostAxis', 'property', 'division', cost.division);
+    put(name, cls, tag, 'Pset_CostAxis', 'property', 'code', cost.code);
+    put(name, cls, tag, 'Pset_CostAxis', 'property', 'quantity', cost.quantity);
+    put(name, cls, tag, 'Pset_CostAxis', 'property', 'unit', cost.unit);
+    put(name, cls, tag, 'Pset_TimeAxis', 'property', 'phase', 'new work');
+    put(name, cls, tag, 'Pset_Authority', 'property', 'src', authority.src);
+    put(name, cls, tag, 'Pset_Authority', 'property', 'hier', authority.hier);
+    put(name, cls, tag, 'Pset_Authority', 'property', 'constraint', authority.constraint);
+    put(name, cls, tag, 'Pset_Authority', 'property', 'overridable', authority.overridable);
+  };
+
+  for (const slab of plan.slabs) {
+    const field = slab.field;
+    const triangles = slabTriangles(field);
+    if (triangles.length === 0) continue; // matches writeRoof's own skip
+    bump('IFCSLAB');
+    put(slab.name, 'IFCSLAB', slab.conditionId, 'Qto_SlabBaseQuantities', 'quantity', 'NetArea', field.squareFeet);
+    put(slab.name, 'IFCSLAB', slab.conditionId, 'Qto_SlabBaseQuantities', 'quantity', 'ThinEdge', inchesToFeet(field.thinInches ?? 0));
+    put(slab.name, 'IFCSLAB', slab.conditionId, 'Qto_SlabBaseQuantities', 'quantity', 'ThickEdge', inchesToFeet(field.thickInches ?? 0));
+    put(slab.name, 'IFCSLAB', slab.conditionId, 'Qto_SlabBaseQuantities', 'quantity', 'NetVolume', prismVolume(triangles));
+    axesExpected(slab.name, 'IFCSLAB', slab.conditionId, {
+      division: csiDivision(slab.costCode), code: slab.costCode, quantity: field.squareFeet, unit: 'SF',
+    }, {
+      src: 'the roof plan trace and the job’s typed T, TAPER and BOARDS',
+      hier: 'FIELD', constraint: 'NRCA Membrane Roof Systems 2019 pp.162-169 (D149)', overridable: true,
+    });
+  }
+
+  for (const covering of plan.coverings) {
+    bump('IFCCOVERING');
+    put(covering.name, 'IFCCOVERING', covering.conditionId, 'Qto_CoveringBaseQuantities', 'quantity', 'NetArea', covering.squareFeet);
+    if (covering.boards !== undefined) {
+      put(covering.name, 'IFCCOVERING', covering.conditionId, 'Qto_CoveringBaseQuantities', 'quantity', 'BoardCount', covering.boards);
+    }
+    if (covering.thicknessInches !== undefined) {
+      put(covering.name, 'IFCCOVERING', covering.conditionId, 'Qto_CoveringBaseQuantities', 'quantity', 'Width', inchesToFeet(covering.thicknessInches));
+    }
+    if (covering.role === 'insulation-letter' || covering.role === 'insulation-fill') {
+      put(covering.name, 'IFCCOVERING', covering.conditionId, 'InsulationPanel', 'property', 'letter', covering.letter ?? 'fill');
+      if (covering.thinEdgeInches !== undefined) {
+        put(covering.name, 'IFCCOVERING', covering.conditionId, 'InsulationPanel', 'property', 'thinEdgeInches', covering.thinEdgeInches);
+      }
+      if (covering.thickEdgeInches !== undefined) {
+        put(covering.name, 'IFCCOVERING', covering.conditionId, 'InsulationPanel', 'property', 'thickEdgeInches', covering.thickEdgeInches);
+      }
+      if (covering.thicknessInches !== undefined) {
+        put(covering.name, 'IFCCOVERING', covering.conditionId, 'InsulationPanel', 'property', 'thicknessInches', covering.thicknessInches);
+      }
+      put(covering.name, 'IFCCOVERING', covering.conditionId, 'InsulationPanel', 'property', 'manufacturer', covering.manufacturer ?? '');
+      put(covering.name, 'IFCCOVERING', covering.conditionId, 'InsulationPanel', 'property', 'product', covering.product ?? '');
+      put(covering.name, 'IFCCOVERING', covering.conditionId, 'InsulationPanel', 'property', 'documentId', covering.documentId ?? '');
+      axesExpected(covering.name, 'IFCCOVERING', covering.conditionId, {
+        division: csiDivision(covering.costCode), code: covering.costCode, quantity: covering.squareFeet, unit: 'SF',
+      }, {
+        src: `${covering.manufacturer ?? ''} ${covering.product ?? ''} (${covering.documentId ?? ''})`.trim(),
+        hier: 'MFR', constraint: 'the panel’s own printed thin and thick edge', overridable: false,
+      });
+    } else {
+      axesExpected(covering.name, 'IFCCOVERING', covering.conditionId, {
+        division: csiDivision(covering.costCode), code: covering.costCode, quantity: covering.squareFeet, unit: 'SF',
+      }, {
+        src: covering.item ? covering.item.description : 'the condition’s own line',
+        hier: 'FIELD', constraint: 'none stated', overridable: true,
+      });
+    }
+    if (covering.role === 'insulation-fill') {
+      const fastened = plan.fastening.find((f) => f.conditionId === covering.conditionId);
+      if (fastened) {
+        const f = fastened.field;
+        put(covering.name, 'IFCCOVERING', covering.conditionId, 'Fastening', 'property', 'standard', f.standard);
+        put(covering.name, 'IFCCOVERING', covering.conditionId, 'Fastening', 'property', 'basis', f.basis);
+        for (const zone of f.zones) {
+          put(covering.name, 'IFCCOVERING', covering.conditionId, 'Fastening', 'property', `zone${zone.zone}Label`, zone.label);
+          if (zone.fmClass !== null) {
+            put(covering.name, 'IFCCOVERING', covering.conditionId, 'Fastening', 'property', `zone${zone.zone}FmClass`, zone.fmClass);
+          }
+          if (zone.fasteners !== null) {
+            put(covering.name, 'IFCCOVERING', covering.conditionId, 'Fastening', 'property', `zone${zone.zone}Fasteners`, zone.fasteners);
+          }
+        }
+      }
+    }
+  }
+
+  for (const wall of plan.walls) {
+    bump('IFCWALL');
+    const run = wall.run;
+    put(wall.name, 'IFCWALL', wall.conditionId, 'Qto_WallBaseQuantities', 'quantity', 'Height', run.heightFeet);
+    put(wall.name, 'IFCWALL', wall.conditionId, 'Qto_WallBaseQuantities', 'quantity', 'Width', inchesToFeet(run.wallInches ?? 0));
+    if (run.flashSquareFeet !== null) {
+      put(wall.name, 'IFCWALL', wall.conditionId, 'Qto_WallBaseQuantities', 'quantity', 'FlashingArea', run.flashSquareFeet);
+    }
+    if (run.flashMinInches !== null) {
+      put(wall.name, 'IFCWALL', wall.conditionId, 'Qto_WallBaseQuantities', 'quantity', 'FlashingHeightLeast', inchesToFeet(run.flashMinInches));
+    }
+    if (run.curbRaiseInches !== null) {
+      put(wall.name, 'IFCWALL', wall.conditionId, 'Qto_WallBaseQuantities', 'quantity', 'RaiseNeeded', inchesToFeet(run.curbRaiseInches));
+    }
+    axesExpected(wall.name, 'IFCWALL', wall.conditionId, {
+      division: csiDivision(wall.costCode), code: wall.costCode, quantity: run.heightFeet, unit: 'LF',
+    }, {
+      src: 'NRCA Membrane Roof Systems 2019 p.285 (D153)', hier: 'CODE',
+      constraint: 'the least flashing height a curb or a parapet is raised to meet', overridable: false,
+    });
+  }
+
+  for (const coping of plan.copings) {
+    bump('IFCCOVERING');
+    const c = coping.coping;
+    put(coping.name, 'IFCCOVERING', coping.conditionId, 'Qto_CoveringBaseQuantities', 'quantity', 'Length', c.runFeet);
+    put(coping.name, 'IFCCOVERING', coping.conditionId, 'Qto_CoveringBaseQuantities', 'quantity', 'Width', c.capWidthFeet ?? 0);
+    put(coping.name, 'IFCCOVERING', coping.conditionId, 'Qto_CoveringBaseQuantities', 'quantity', 'PieceCount', c.piecesEa);
+    put(coping.name, 'IFCCOVERING', coping.conditionId, 'Qto_CoveringBaseQuantities', 'quantity', 'CleatLength', c.cleatFeet);
+    axesExpected(coping.name, 'IFCCOVERING', coping.conditionId, {
+      division: csiDivision(coping.costCode), code: coping.costCode, quantity: c.runFeet, unit: 'LF',
+    }, {
+      src: `NRCA Architectural Metal Flashing 2022 p.58 — ${c.gaugeGa ?? 'no'} gauge`,
+      hier: 'CODE', constraint: 'section length 8–20 ft; gauge by face height (Fig. 2-3)', overridable: false,
+    });
+  }
+
+  for (const drain of plan.drains) {
+    bump('IFCFLOWTERMINAL');
+    if (drain.sump) {
+      put(drain.name, 'IFCFLOWTERMINAL', drain.conditionId, 'Sump', 'property', 'sumpSideFeet', drain.sump.sideFeet);
+      put(drain.name, 'IFCFLOWTERMINAL', drain.conditionId, 'Sump', 'property', 'sumpSquareFeet', drain.sump.squareFeet);
+      put(drain.name, 'IFCFLOWTERMINAL', drain.conditionId, 'Sump', 'property', 'sumpDepthInches', drain.sump.depthInches);
+      put(drain.name, 'IFCFLOWTERMINAL', drain.conditionId, 'Sump', 'property', 'sumpPanels', drain.sump.panels);
+    } else {
+      put(drain.name, 'IFCFLOWTERMINAL', drain.conditionId, 'Sump', 'property', 'sump',
+        'a drain has no sump: nothing states its bowl or its width');
+    }
+    axesExpected(drain.name, 'IFCFLOWTERMINAL', drain.conditionId, {
+      division: csiDivision(drain.costCode), code: drain.costCode, quantity: 1, unit: 'EA',
+    }, { src: 'the roof plan trace', hier: 'FIELD', constraint: 'none stated', overridable: true });
+  }
+
+  for (const cricket of plan.crickets) {
+    const cr = cricket.cricket;
+    if (cr.positions.length < 9) continue; // matches writeRoof's own skip
+    bump('IFCSLAB');
+    put(cricket.name, 'IFCSLAB', cricket.conditionId, 'Qto_SlabBaseQuantities', 'quantity', 'NetArea', cr.planSquareFeet);
+    put(cricket.name, 'IFCSLAB', cricket.conditionId, 'Cricket', 'property', 'lengthToWidth', cr.lengthToWidth);
+    put(cricket.name, 'IFCSLAB', cricket.conditionId, 'Cricket', 'property', 'derived', cr.derived);
+    if (cricket.ridge) {
+      put(cricket.name, 'IFCSLAB', cricket.conditionId, 'Cricket', 'property', 'ridgeFromX', cricket.ridge[0].x);
+      put(cricket.name, 'IFCSLAB', cricket.conditionId, 'Cricket', 'property', 'ridgeFromY', cricket.ridge[0].y);
+      put(cricket.name, 'IFCSLAB', cricket.conditionId, 'Cricket', 'property', 'ridgeToX', cricket.ridge[1].x);
+      put(cricket.name, 'IFCSLAB', cricket.conditionId, 'Cricket', 'property', 'ridgeToY', cricket.ridge[1].y);
+    }
+    axesExpected(cricket.name, 'IFCSLAB', cricket.conditionId, {
+      division: csiDivision(cricket.costCode), code: cricket.costCode, quantity: cr.planSquareFeet, unit: 'SF',
+    }, {
+      src: cr.derived ? 'the box-out-a-curb solve (C6)' : 'the ridge as traced',
+      hier: 'FIELD', constraint: 'NRCA Figs. 8-1, 10-13 and 10-14', overridable: true,
+    });
+  }
+
+  return { job: plan.job, counts, entries };
 }
 
 /**

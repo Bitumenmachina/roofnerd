@@ -28,7 +28,7 @@ import * as WebIFC from 'web-ifc';
 
 // Imported after the hook above has been registered, which a static import
 // cannot be: the whole graph is resolved before any of it runs.
-const { roofPlan, writeIfc, writeRoof } = await import('../src/ifc/write.ts');
+const { roofPlan, writeIfc, writeRoof, expectedOf } = await import('../src/ifc/write.ts');
 const { NOTHING_SOLVED, NOTHING_SOLVED_WALLS, NOTHING_SOLVED_FASTENING } = await import('@roofnerd/engine');
 
 const ROOT = resolve(import.meta.dirname, '../../..');
@@ -485,6 +485,38 @@ test('a tapered field with no solved bill still stands as a slab, and the insula
   const plan = roofPlan(doc, noBill, walls, fastening);
   assert.equal(plan.slabs.length, 1, 'the roof surface does not depend on the bill');
   assert.ok(plan.leftOut.some((l) => l.name.includes('insulation') && /chart has no letter/.test(l.why)));
+});
+
+test('expectedOf matches the file, entry by entry — the shape tools/verify-ifc.py checks', () => {
+  const doc = demoJob();
+  const { taper, walls, fastening } = madeUpSolve();
+  const plan = roofPlan(doc, taper, walls, fastening);
+  const expected = expectedOf(plan);
+  assert.equal(expected.job, plan.job);
+
+  const back = readBack(writeRoof(plan, api));
+  const CLASS_TYPE = {
+    IFCSLAB: WebIFC.IFCSLAB, IFCWALL: WebIFC.IFCWALL,
+    IFCCOVERING: WebIFC.IFCCOVERING, IFCFLOWTERMINAL: WebIFC.IFCFLOWTERMINAL,
+  };
+  for (const [cls, count] of Object.entries(expected.counts)) {
+    const type = CLASS_TYPE[cls] ?? WebIFC[cls];
+    assert.ok(type !== undefined, `expectedOf named a class the test does not know: ${cls}`);
+    assert.equal(back.count(type), count, `${cls} count`);
+  }
+
+  const byNameAndClass = new Map();
+  for (const cls of Object.keys(CLASS_TYPE)) {
+    for (const line of back.every(CLASS_TYPE[cls])) byNameAndClass.set(`${cls}:${say(line.Name)}`, line);
+  }
+  for (const e of expected.entries) {
+    const line = byNameAndClass.get(`${e.class}:${e.name}`);
+    assert.ok(line, `${e.name} (${e.class}) is in expectedOf but not in the file`);
+    const sets = propsOn(back, line);
+    assert.ok(sets[e.set], `${e.name}: no ${e.set} in the file`);
+    assert.equal(sets[e.set][e.key], e.value, `${e.name} ${e.set}.${e.key}`);
+  }
+  back.close();
 });
 
 test('the file says its numbers are feet, against the metre', () => {
