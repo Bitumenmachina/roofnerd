@@ -208,13 +208,22 @@ export interface SolvedTaperRegion {
   readonly bill: SolvedBoardBill | null;
 }
 
-/** One arrow: where the water is, and which way it leaves. */
+/** One arrow: where the water is, which way it leaves, and how far it runs. */
 export interface SolvedFlowArrow {
   readonly x: number;
   readonly y: number;
   readonly thicknessInches: number;
   /** The angle about the vertical that turns plan +x onto the fall direction. */
   readonly angle: number;
+  /**
+   * How far the fall runs across the ground this arrow stands on, in feet.
+   *
+   * There is one arrow to a facet, so a mark that says "the water goes this way
+   * over all of this" has to reach across the ground it speaks for. A field of
+   * identical darts did not: every one of them was the same size wherever it
+   * stood, and there were a hundred and thirty-nine of them.
+   */
+  readonly lengthFeet: number;
 }
 
 /** One tapered field: one trace on one condition, laid out. */
@@ -510,3 +519,145 @@ export function sumpOf(taper: SolvedTaper, conditionId: string, at: Spot): Solve
     (s) => s.conditionId === conditionId && s.at.x === at.x && s.at.y === at.y,
   ) ?? null;
 }
+
+// ── the drawings ───────────────────────────────────────────────────────────
+// The mirror of `src-tauri/core/src/drawing.rs`. One drawing model, three
+// drawings, and ONE renderer on the front end — the Plan's two overlays and the
+// Section view are the same code pointed at different drawings (D155).
+//
+// Everything in here is in FEET. A plan drawing is in the roof's own plan
+// coordinates, so the Plan lays it straight over the sheet it was traced off; a
+// section is in its own frame, x from the far end of the cut to the drain and y
+// the height off the top of deck with UP NEGATIVE — the same direction plan y
+// goes, so one renderer draws both with no special case in it.
+//
+// Nothing here computes. A role is a word the stylesheet knows, a dimension
+// arrives with its measure already written the way a roofer writes it, and the
+// vertical exaggeration is stated so the renderer can stretch the picture
+// without any number on it moving.
+
+/** A filled shape on a drawing. */
+export interface DrawnShape {
+  readonly shape: SolvedShape;
+  /** What it is, in one word: `board`, `sump`, `nofall`, `fill`, `panel`, … */
+  readonly role: string;
+  /** The letter printed on the panel, where it carries one. */
+  readonly letter: string | null;
+  /** Which course of the build-up this is. Null on a plan, which has no layers. */
+  readonly layer: string | null;
+}
+
+/** A line, open or closed. */
+export interface DrawnLine {
+  readonly points: readonly Spot[];
+  readonly role: string;
+  readonly dashed: boolean;
+  readonly closed: boolean;
+  /** Its place in the build-up, where it has one — the deck is a line. */
+  readonly layer: string | null;
+}
+
+/** A word on the drawing, at a place on it. */
+export interface DrawnText {
+  readonly at: Spot;
+  readonly text: string;
+  /** `letter`, `label`, `thickness` or `key`. */
+  readonly role: string;
+  readonly anchor: 'start' | 'middle' | 'end';
+  readonly leader: Spot | null;
+}
+
+/** A measure between two places, written the way a roofer writes it. */
+export interface Dimension {
+  readonly a: Spot;
+  readonly b: Spot;
+  /** How far off the two points the line sits, square to them, in feet. */
+  readonly offset: number;
+  readonly text: string;
+  /** True where the number came out of the solve rather than off the job. */
+  readonly derived: boolean;
+}
+
+/** The box a drawing needs, in its own feet. */
+export interface Extent {
+  readonly minX: number;
+  readonly minY: number;
+  readonly maxX: number;
+  readonly maxY: number;
+}
+
+/** One drawing: everything on it, in feet. */
+export interface Drawing {
+  readonly id: string;
+  readonly title: string;
+  /** What it is OF: which cut, through which drain, to which wall. */
+  readonly subtitle: string | null;
+  /** What it is drawn at, and how far the vertical is stretched, in words. */
+  readonly note: string;
+  readonly feetPerInch: number;
+  readonly verticalExaggeration: number;
+  /** Nothing to draw, and why — never an empty picture with no word on it. */
+  readonly nothingYet: string | null;
+  readonly shapes: readonly DrawnShape[];
+  readonly lines: readonly DrawnLine[];
+  readonly texts: readonly DrawnText[];
+  readonly dimensions: readonly Dimension[];
+  /** The layer key, bottom to top. */
+  readonly key: readonly string[];
+  readonly keyAt: Spot | null;
+  readonly keyFrom: Spot | null;
+  readonly extent: Extent | null;
+  /** Every condition the drawing goes through, so the Estimate can name them. */
+  readonly through: readonly string[];
+  /**
+   * Where the cut is on the PLAN, for a view that stands the drawing up again:
+   * the drain it runs out of, the way out of it, how far it runs, and the datum
+   * it is measured from. Null on a plan drawing, which is already where the roof
+   * is.
+   */
+  readonly cutAt: Spot | null;
+  readonly cutAlong: Spot | null;
+  readonly cutRunFeet: number;
+  readonly cutElevation: number;
+}
+
+/** The three drawings the 2D outputs are made of. */
+export interface Drawings {
+  readonly solveId: number;
+  readonly layout: Drawing;
+  readonly fastening: Drawing;
+  /** One section per drain on the roof, cut along the boards. */
+  readonly sections: readonly Drawing[];
+}
+
+/** An empty drawing, for a window that has not pulled one yet. */
+const NOTHING_DRAWN = (id: string, title: string): Drawing => ({
+  id,
+  title,
+  subtitle: null,
+  note: '',
+  feetPerInch: 8,
+  verticalExaggeration: 1,
+  nothingYet: 'Nothing is open, so there is nothing to draw.',
+  shapes: [],
+  lines: [],
+  texts: [],
+  dimensions: [],
+  key: [],
+  keyAt: null,
+  keyFrom: null,
+  extent: null,
+  through: [],
+  cutAt: null,
+  cutAlong: null,
+  cutRunFeet: 0,
+  cutElevation: 0,
+});
+
+/** What a window holds before the first drawing is pulled. */
+export const NOTHING_TO_DRAW: Drawings = {
+  solveId: 0,
+  layout: NOTHING_DRAWN('layout', 'Tapered layout'),
+  fastening: NOTHING_DRAWN('fastening', 'Fastening plan'),
+  sections: [],
+};

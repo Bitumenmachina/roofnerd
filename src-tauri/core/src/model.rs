@@ -61,6 +61,43 @@ pub struct Condition {
     /// What a ridge serves: the drains, or the curb it stands behind.
     #[serde(default)]
     pub between: Vec<String>,
+    /// What the estimator called it. A solver has no use for a name; a DRAWING
+    /// does, because every label on a section is the estimator's own word for the
+    /// thing it points at, and inventing one here would be the drawing naming the
+    /// job back at them.
+    #[serde(default)]
+    pub name: String,
+    /// The lines on it. Only the two fields a drawing reads: what each one is
+    /// called and how thick it is where a thickness is stated. Money is the
+    /// engine's and nothing here prices anything.
+    #[serde(default)]
+    pub items: Vec<Line>,
+}
+
+/// One line on a condition, as far as a drawing is concerned.
+///
+/// A line that carries a thickness is a LAYER: it is something that goes on the
+/// roof and takes up room in a section. A line with no thickness is labour, a
+/// dumpster or a warranty, and a section has nothing to draw for it.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Line {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub thickness: Option<f64>,
+}
+
+impl Condition {
+    /// The lines on it that take up room in a section, in the order they are
+    /// listed — which is the order they go on, bottom to top. Nothing in the job
+    /// format states a layer order, and the list is the only order there is; the
+    /// drawing says so on itself rather than guessing at a stack.
+    pub fn layers(&self) -> Vec<&Line> {
+        self.items.iter().filter(|i| i.thickness.map(|t| t > 0.0).unwrap_or(false)).collect()
+    }
 }
 
 impl Condition {
@@ -319,6 +356,13 @@ pub struct FlowArrow {
     pub thickness_inches: f64,
     /// The angle about the vertical that turns plan +x onto the fall direction.
     pub angle: f64,
+    /// How far the fall runs across the ground this arrow stands on, in feet.
+    ///
+    /// One arrow to a facet needs a length, because a mark that says "the water
+    /// goes this way over all of this" has to reach across the ground it is
+    /// speaking for. A field of identical darts did not: every one of them was
+    /// the same size wherever it stood.
+    pub length_feet: f64,
 }
 
 /// One tapered field: one trace on one condition, laid out.

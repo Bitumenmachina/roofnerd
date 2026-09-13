@@ -7,7 +7,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
-import type { NotSolvedYet, Scopes, SolvedTaper } from '@roofnerd/engine';
+import type { Drawings, NotSolvedYet, Scopes, SolvedTaper } from '@roofnerd/engine';
 
 /**
  * The open job as the shell holds it: keyed by the file each part came from,
@@ -85,12 +85,20 @@ export const derived = () => currentScopes;
 /**
  * The solved geometry of one part of the model.
  *
- * Pulled when `solveId` moves, never pushed. `walls`, `fastening` and `drawing`
- * answer that they are not solved yet, which is not the same as answering with
- * nothing.
+ * Pulled when `solveId` moves, never pushed. `walls` and `fastening` answer that
+ * they are not solved yet, which is not the same as answering with nothing.
  */
 export const solveTaper = () => invoke<SolvedTaper>('solve_get', { part: 'taper' });
-export const solvePart = (part: 'walls' | 'fastening' | 'drawing') =>
+/**
+ * The three drawings: the tapered layout, the fastening plan and one section
+ * per drain.
+ *
+ * Built off the solved taper on the way out rather than kept beside it, so a
+ * window that never opens a drawing never pays for one. Same rule as the taper:
+ * pulled when `solveId` moves, never pushed.
+ */
+export const solveDrawings = () => invoke<Drawings>('solve_get', { part: 'drawing' });
+export const solvePart = (part: 'walls' | 'fastening') =>
   invoke<NotSolvedYet>('solve_get', { part });
 
 export function subscribe(fn: Subscriber): () => void {

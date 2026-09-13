@@ -33,6 +33,7 @@
 
 pub mod boards;
 pub mod cricket;
+pub mod drawing;
 pub mod geom;
 pub mod model;
 pub mod profile;
@@ -41,9 +42,10 @@ pub mod sump;
 pub mod taper;
 
 pub use cricket::Layout;
+pub use drawing::{Dimension, DrawnLine, DrawnShape, DrawnText, Drawing, Drawings};
 pub use geom::{bounds, inside, Bounds, Edge, HalfPlane, Plane, Point, Shape};
 pub use model::{
-    Board, BoardBill, CapReason, Condition, Crease, Cricket, Document, Facet, FlowArrow,
+    Board, BoardBill, CapReason, Condition, Crease, Cricket, Document, Facet, FlowArrow, Line,
     NotSolvedYet, Page, Refused, RidgeSegment, Solved, SolvedTaper, Sump, TaperField, TaperRegion,
     Trace,
 };
@@ -303,22 +305,55 @@ mod tests {
 
     /// The arrows run down the plane a place is on, and not at the drain.
     ///
-    /// One every eight feet over the field's box, kept where it lands on ground
-    /// that is still falling. The first one is up in the bump on the north-facing
-    /// plane, so it runs straight down the sheet — south, a quarter turn, which is
-    /// square to the boards. The cone pointed it at the nearest drain instead, on
-    /// a slant of 1.90 radians.
+    /// ONE TO A FACET (C5, D156). A facet is the ground a single plane governs, so
+    /// the water does exactly one thing over the whole of it: one long mark down
+    /// the middle says that, and the hundred and thirty-nine identical eight-foot
+    /// darts this used to place said it a hundred and thirty-nine times without
+    /// saying how far any of them reached. Four planes off each of three drains,
+    /// and every one of those wedges reaches ground that is still falling, so the
+    /// demo comes to twelve.
+    ///
+    /// Every angle is a quarter turn or a half of one, because the fall on a
+    /// four-way layout is square to the boards — the axes here are the south wall
+    /// and square to it — and never a slant at the nearest drain, which is what
+    /// the cone drew.
     #[test]
     fn the_water_runs_down_the_plane_it_is_on() {
         let taper = solved();
-        let flow = &taper.fields[0].flow;
-        assert_eq!(flow.len(), 139);
-        let first = flow[0];
-        assert_eq!(first.angle, std::f64::consts::FRAC_PI_2);
-        assert_eq!(first.thickness_inches, 12.583333333333334);
-        // No arrow stands on flat ground: every one of them is under the cap.
+        let field = &taper.fields[0];
+        let flow = &field.flow;
+        let falling: usize =
+            field.regions.iter().map(|r| r.facets.iter().filter(|f| !f.flat).count()).sum();
+        assert_eq!(flow.len(), falling, "one arrow to each piece of ground a plane governs");
+        assert_eq!(flow.len(), 12, "four ways off each of three drains");
+
         for arrow in flow {
+            // No arrow stands on flat ground: every one of them is under the cap.
             assert!(arrow.thickness_inches < 14.0, "an arrow stands on the plateau");
+            // Square to the boards, to the float: a quarter turn from the axis.
+            let quarters = arrow.angle / std::f64::consts::FRAC_PI_2;
+            assert!(
+                (quarters - quarters.round()).abs() < 1e-12,
+                "an arrow runs at {} radians, which is not square to the boards",
+                arrow.angle
+            );
+            // And it is long enough to speak for the ground it stands on: a fall
+            // of 54 ft of run is the widest a wedge gets here, so every mark is
+            // several feet and none of them is the whole roof.
+            assert!(
+                arrow.length_feet > 1.0 && arrow.length_feet < 60.0,
+                "an arrow is drawn {} ft long",
+                arrow.length_feet
+            );
+        }
+
+        // The four off the first drain run four different ways, which is what
+        // makes them one to a plane rather than four copies of one mark.
+        let first: Vec<f64> = flow[..4].iter().map(|a| a.angle).collect();
+        for (i, a) in first.iter().enumerate() {
+            for b in &first[i + 1..] {
+                assert!((a - b).abs() > 1e-9, "two of a drain's four arrows run the same way");
+            }
         }
     }
 

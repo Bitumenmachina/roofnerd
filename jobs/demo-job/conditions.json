@@ -339,6 +339,7 @@
     "name": "Parapet Wall Flashing",
     "properties": {
       "ELEV": 0,
+      "FLASHUP": 24,
       "H": 3.5,
       "STRETCHOUT": 19.5,
       "W": 1.17,
@@ -493,6 +494,7 @@
     "name": "RTU-1 Curb",
     "properties": {
       "ELEV": 0,
+      "FLASHUP": 18,
       "H": 2,
       "STRETCHOUT": 26,
       "W": 1.5,

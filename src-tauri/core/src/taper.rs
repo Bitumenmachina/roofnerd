@@ -69,9 +69,6 @@ pub const MIN_FLASHING_INCHES: f64 = 8.0;
 /// `roof.ts` — NRCA p.79 and p.165.
 pub const CRICKET_SLOPE_MULTIPLE: f64 = 2.0;
 
-/// One flow arrow every few feet. `model.ts` inside `taperSurface`.
-const ARROW_FEET: f64 = 8.0;
-
 /// Two lengths in feet this close together are the same length.
 ///
 /// A hundredth of an inch. Everything here is a roof measured in feet and cut in
@@ -733,7 +730,7 @@ fn taper_field(
         axis_along: along,
         axis_across: across,
         axis_edge: [edge.a, edge.b],
-        flow: flow_over(&setting, &regions, ARROW_FEET),
+        flow: flow_over(&regions, setting.start_inches),
         square_feet: Shape::of(ring.to_vec()).square_feet(),
         regions,
         no_fall_square_feet: no_fall,
@@ -958,56 +955,107 @@ fn region_of(setting: &Setting, drains: &[Point], index: usize) -> TaperRegion {
     }
 }
 
-/// Where the water goes, as arrows down the plane each place is on.
+/// Where the water goes: ONE arrow down each piece of ground one plane governs.
 ///
-/// One every few feet over the field's box, kept where it lands on a facet that
-/// is still falling. Flat ground gets none: there is nothing to point at when the
-/// fall has run out. The direction is the governing plane's own, downhill — which
-/// is square to the boards on a four-way layout and never at the drain, because
-/// water on a tapered roof runs down the fall and then along the valley.
-fn flow_over(setting: &Setting, regions: &[TaperRegion], every: f64) -> Vec<FlowArrow> {
-    let Some(b) = bounds(setting.ring) else { return Vec::new() };
-    let across = ((b.max_x - b.min_x) / every).round().max(2.0) as usize;
-    let down = ((b.max_y - b.min_y) / every).round().max(2.0) as usize;
+/// It used to be one every eight feet over the field's box — a hundred and
+/// thirty-nine identical darts on the demo, which is a lawn and not a drawing.
+/// A facet is the ground a single plane governs, so the water does exactly one
+/// thing over the whole of it, and one long arrow down the middle says that where
+/// a scatter of short ones only implies it. The handoff's Frame 2 draws it this
+/// way and the reason is legibility, which is the acceptance (D156).
+///
+/// Flat ground gets none: there is nothing to point at when the fall has run out.
+/// The direction is the governing plane's own, downhill — square to the boards on
+/// a four-way layout and never at the drain, because water on a tapered roof runs
+/// down the fall and then along the valley.
+///
+/// The length is the ground's own: how far the facet reaches along the fall,
+/// taken at three fifths so the mark sits inside the ground it speaks for.
+fn flow_over(regions: &[TaperRegion], start_inches: f64) -> Vec<FlowArrow> {
+    /// How much of the facet's reach the mark takes up.
+    const OF_THE_REACH: f64 = 0.6;
 
     let mut out = Vec::new();
-    for r in 1..down {
-        for col in 1..across {
-            let p = Point::new(
-                b.min_x + (col as f64 * (b.max_x - b.min_x)) / across as f64,
-                b.min_y + (r as f64 * (b.max_y - b.min_y)) / down as f64,
-            );
-            let Some((region, facet)) = facet_at(p, regions) else { continue };
-            if facet.flat {
+    for region in regions {
+        for facet in &region.facets {
+            if facet.flat || facet.shape.ring.len() < 3 {
                 continue;
             }
-            let Some(reading) =
-                read_at(p, &region.planes, setting.start_inches, setting.cap_inches)
-            else {
+            let Some(plane) = region.planes.get(facet.plane) else { continue };
+            let Some(p) = middle_of(&facet.shape) else { continue };
+            let Some(reading) = read_at(p, &region.planes, start_inches, region.cap_inches) else {
                 continue;
             };
-            let fall = region.planes[facet.plane].direction;
+            let fall = plane.direction;
+            // How far the ground reaches along the fall, which is what the mark
+            // has to be long enough to speak for and short enough to stay inside.
+            let mut least = f64::INFINITY;
+            let mut most = f64::NEG_INFINITY;
+            for q in &facet.shape.ring {
+                let along = q.x * fall.x + q.y * fall.y;
+                least = least.min(along);
+                most = most.max(along);
+            }
+            let reach = if most > least { most - least } else { 0.0 };
             out.push(FlowArrow {
                 x: p.x,
                 y: p.y,
                 thickness_inches: reading.thickness_inches,
                 angle: (-fall.y).atan2(-fall.x),
+                length_feet: reach * OF_THE_REACH,
             });
         }
     }
     out
 }
 
-/// Which facet of which region a place is on, or none — it can be off the roof.
-fn facet_at<'a>(p: Point, regions: &'a [TaperRegion]) -> Option<(&'a TaperRegion, &'a Facet)> {
-    for region in regions {
-        for facet in &region.facets {
-            if inside(p, &facet.shape.ring)
-                && !facet.shape.holes.iter().any(|hole| inside(p, hole))
-            {
-                return Some((region, facet));
+/// A point inside a polygon, for a mark to stand on.
+///
+/// The area-weighted centroid where that lands inside — which it does on every
+/// convex facet, and every facet of a four-way layout on a convex field is one.
+/// A region cut out of a concave outline can hand back a facet whose centroid is
+/// off it, and a mark standing off its own ground is worse than no mark, so the
+/// fallback walks a coarse lattice of the facet's own box and takes the inside
+/// point nearest the centroid.
+fn middle_of(shape: &Shape) -> Option<Point> {
+    let ring = &shape.ring;
+    let mut twice_area = 0.0;
+    let mut cx = 0.0;
+    let mut cy = 0.0;
+    for i in 0..ring.len() {
+        let a = ring[i];
+        let b = ring[(i + 1) % ring.len()];
+        let cross = a.x * b.y - b.x * a.y;
+        twice_area += cross;
+        cx += (a.x + b.x) * cross;
+        cy += (a.y + b.y) * cross;
+    }
+    let held = |p: Point| {
+        inside(p, ring) && !shape.holes.iter().any(|hole| inside(p, hole))
+    };
+    if twice_area.abs() > 1e-12 {
+        let centre = Point::new(cx / (3.0 * twice_area), cy / (3.0 * twice_area));
+        if held(centre) {
+            return Some(centre);
+        }
+    }
+    let b = bounds(ring)?;
+    const STEPS: usize = 12;
+    let mut best: Option<(f64, Point)> = None;
+    for i in 1..STEPS {
+        for j in 1..STEPS {
+            let p = Point::new(
+                b.min_x + (b.max_x - b.min_x) * (i as f64 / STEPS as f64),
+                b.min_y + (b.max_y - b.min_y) * (j as f64 / STEPS as f64),
+            );
+            if !held(p) {
+                continue;
+            }
+            let away = (p.x - cx).hypot(p.y - cy);
+            if best.map(|(far, _)| away < far).unwrap_or(true) {
+                best = Some((away, p));
             }
         }
     }
-    None
+    best.map(|(_, p)| p)
 }
