@@ -17,7 +17,7 @@
 // same pointer it always did.
 
 import {
-  BASIS_WORDS, classOf, linesFrom, measure, priceLine, PRODUCTION_PER, PRODUCTION_PER_WORDS,
+  BASIS_WORDS, classOf, linesFrom, measure, namesUsed, parse, priceLine, PRODUCTION_PER, PRODUCTION_PER_WORDS,
   scopeFor,
   type Condition, type CostCode, type Item, type Measures, type Page, type ProductionPer,
 } from '@roofnerd/engine';
@@ -336,6 +336,20 @@ function render(head: HTMLElement, host: HTMLElement, d: Doc): void {
  */
 const isTyped = (formula: string): boolean => /^\s*-?[\d.,]+\s*$/.test(formula ?? '');
 
+/**
+ * Did the core solve a number this line reads? The mark means "worked out from
+ * the model", and it went on every line — a traced LF as much as a solved
+ * COPING_LF — so it marked nothing. It is on a line only where a name in its
+ * formula is one the solve produced for this condition (R13).
+ */
+function readsTheSolve(formula: string, solved: Readonly<Record<string, number | null>> | undefined): boolean {
+  if (!solved) return false;
+  try {
+    for (const name of namesUsed(parse(formula ?? ''))) if (name in solved) return true;
+  } catch { /* a formula that does not parse reads nothing */ }
+  return false;
+}
+
 function compactLine(
   condition: Condition, index: number, itemIndex: number, item: Item,
   result: ReturnType<typeof priceLine>,
@@ -469,6 +483,8 @@ function compactLine(
   if (isTyped(item.formula)) {
     unitWord.classList.add('typed');
     unitWord.title = 'Typed by the estimator.';
+  } else if (!readsTheSolve(item.formula, derivedFor(condition.id))) {
+    // Traced, or typed and worked: not the model's, so no mark.
   } else {
     const mark = document.createElement('span');
     mark.className = 'derived';
@@ -501,11 +517,7 @@ function compactLine(
     const hours = document.createElement('span');
     hours.className = 'line-hours num';
     hours.textContent = `${quantity(result.hours)} hrs`;
-    const mark = document.createElement('span');
-    mark.className = 'derived';
-    mark.textContent = '◈';
-    mark.title = 'Worked out from the rate and the crew on this line.';
-    hours.append(mark);
+    hours.title = 'Worked out from the rate and the crew on this line.';
     basis.append(hours);
   }
 
@@ -589,13 +601,14 @@ function chain(
   // estimator to classify what they just wrote is a question the sheet can
   // answer for itself.
   table.append(chainRow('Kind', word(BASIS_WORDS[result.basis])));
-  table.append(chainRow('Quantity', figure(result.quantity, item.unit, !isTyped(item.formula),
+  const solved = readsTheSolve(item.formula, derivedFor(condition.id));
+  table.append(chainRow('Quantity', figure(result.quantity, item.unit, solved,
     result.formulaError ?? result.pending)));
   table.append(chainRow('Unit',
     named(selectField(UNITS, item.unit, (v) => set(`${base}/unit`, v)), `${base}/unit`)));
   table.append(chainRow('Waste',
     named(numberField(item.waste ?? 0, (v) => set(`${base}/waste`, v), '0'), `${base}/waste`)));
-  table.append(chainRow('With waste', figure(result.withWaste, item.unit, true, result.pending)));
+  table.append(chainRow('With waste', figure(result.withWaste, item.unit, solved, result.pending)));
   // What you buy, and what it is priced against — three units, because a real
   // supply house uses three. Membrane is estimated in squares, bought by the
   // roll and quoted by the square foot, and each step is where money hides.
@@ -622,9 +635,9 @@ function chain(
       (v) => `${item.unit} ${PRODUCTION_PER_WORDS[v as ProductionPer]}`,
     ));
     table.append(chainRow('Rate', rate));
-    table.append(chainRow('Hours', figure(result.hours, 'hrs', true, result.pending)));
+    table.append(chainRow('Hours', figure(result.hours, 'hrs', false, result.pending)));
     if (result.crewDays !== null) {
-      table.append(chainRow('Crew days', figure(result.crewDays, 'days', true, result.pending)));
+      table.append(chainRow('Crew days', figure(result.crewDays, 'days', false, result.pending)));
     }
   }
   if (result.basis === 'sub') {
@@ -634,8 +647,8 @@ function chain(
       'whose number this is',
     ), `${base}/priceSource/from`)));
   }
-  table.append(chainRow('Order', figure(result.orderQuantity, result.orderUnitName, true, result.pending)));
-  table.append(chainRow('Priced', figure(result.priceQuantity, result.priceUnitName, true, result.pending)));
+  table.append(chainRow('Order', figure(result.orderQuantity, result.orderUnitName, solved, result.pending)));
+  table.append(chainRow('Priced', figure(result.priceQuantity, result.priceUnitName, solved, result.pending)));
   table.append(chainRow('Unit cost',
     named(numberField(item.unitCost, (v) => set(`${base}/unitCost`, v), '$'), `${base}/unitCost`)));
   table.append(chainRow('Extended', moneyCell(result.extended, result.pending), 'chain-total'));
