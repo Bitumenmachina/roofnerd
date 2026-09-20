@@ -973,8 +973,11 @@ body.cost-window { background: var(--rn-panel); }
   padding: 9px 12px; background: var(--rn-panel-head);
   border-bottom: 1px solid var(--rn-hairline);
 }
-.condition-list { flex: none; padding: var(--gap-2); border-bottom: 1px solid var(--rn-hairline); }
-.cost-condition > .condition-panel { flex: none; width: auto; border-left: 0; overflow: visible; }
+/* The list takes what it needs up to half the tab and scrolls past that, so the
+   picked condition's own figures are whole under it at the design frame — they
+   were under the money footer at 1440 x 900 (R9). */
+.condition-list { flex: 0 1 auto; max-height: 50%; overflow-y: auto; padding: var(--gap-2); border-bottom: 1px solid var(--rn-hairline); }
+.cost-condition > .condition-panel { flex: 1 1 auto; min-height: 0; width: auto; border-left: 0; overflow-y: auto; }
 .cost-load, .cost-back {
   flex: none; margin: 0 var(--gap-3) var(--gap-3); border-radius: 0;
   border: 1px solid var(--rn-hairline-strong); background: transparent; color: var(--rn-ink);
