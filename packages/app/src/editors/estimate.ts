@@ -471,8 +471,12 @@ function compactLine(
     qty.classList.add('none');
     qty.title = result.formulaError ?? result.pending ?? PENDING_REASON;
   } else {
-    // A count is whole: 8 EA, not 8.00 EA (R12).
-    qty.textContent = quantity(result.quantity, item.unit === 'EA' ? 0 : 2);
+    // A whole count prints whole: 8 EA, not 8.00 EA. A count the formula worked
+    // out to a fraction — 6.86 dumpsters off the squares — keeps its fraction,
+    // because the sheet shows what was measured and the buy line beside it
+    // shows the 7 that is bought (R12; C8's own distinction).
+    const whole = item.unit === 'EA' && result.quantity !== null && Math.abs(result.quantity - Math.round(result.quantity)) < 1e-9;
+    qty.textContent = quantity(result.quantity, whole ? 0 : 2);
   }
 
   const unit = document.createElement('span');

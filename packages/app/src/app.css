@@ -868,6 +868,8 @@ body.cost-window { background: var(--rn-panel); }
 .line-ordered {
   flex: none; white-space: nowrap; color: var(--rn-ink-3);
   font-family: var(--mono); font-size: var(--t-micro);
+  /* The same line box as the rest of the row: a taller one made a 51 px row among 50s (R10). */
+  line-height: 1; align-self: center;
 }
 .line-quoted { flex: none; color: var(--rn-ink-3); white-space: nowrap; font-style: italic; }
 .line-quoted.none { color: var(--rn-ink-off); }
