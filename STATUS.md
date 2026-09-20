@@ -1,9 +1,40 @@
 # Status
 
-Current as of 2026-09-13. One file, short. Patrick accepts against this whenever he chooses;
-acceptance does not pause the build.
+Current as of 2026-09-20. One file; the head is one screen and the history is under it. Patrick
+accepts against this whenever he chooses; acceptance does not pause the build.
 
 ## Where the build is
+
+**Round 2 of the review is landed on `repair/hands`: usable by hand, and the screens tell the
+truth.** Fifteen items from the web seat's repair order, each with its check first, its fix, its
+picture read cold by an auditor that never saw the diff, and its D-row (D163–D177). No solver
+moved. On the shipped program in the review container, under a virtual display: every probe
+green, `section-repair` 18/18, engine 193, app 41, shell 14, core 122, three gates PASS.
+
+**What changed for a hand.** The File menu paints (it had been clipped to a sliver since the
+chrome of 2026-09-12 while every probe clicked through it). Every probe click now proves a hand
+could make it, and a refusal is red. "New job…" on the start screen and in File. The recap foots
+by hand to the cent. A closed run counts its corners. What a line stands in for is said on the
+line, and the fastening plan, the Wind group and the Section say which rule they follow and what
+is under review. One scale on the Section. The header counts the rows. The picked condition's
+figures are whole. One-piece item names. Stretch-out everywhere. Hours once, counts whole. The
+◈ only where the core solved. Whole boxes on the demo — selling price $228,099.66 → $228,894.06,
+a cent of it R4's footing and the rest R14's boxes.
+
+**Not done here, on purpose:** the wind geometry (B1: the three-zone rule under a 7-22 label) and
+the course lettering (B2) are labelled, not changed — each waits for an outside oracle. The
+first-open frame is Q10. `compare-fixtures` cannot run on this clone.
+
+**For Patrick, one sitting on the repair build (round-2 §5):** new empty folder → New job… → add
+a real roof plan → scale off a printed dimension → trace the field, run the parapet, drop the
+drains → two items with typed prices, open one formula and change it → Recap foots? → Save,
+close, reopen → Export CSV. The first place the hands stop is the next work order.
+
+**Next session, first act:** read `review-shots/round2/RETURN-PACKET.md` on `repair/hands`,
+then the head of this file. Do not start a batch until Patrick has walked §5.
+
+## Where the build was — 2026-09-13, before round 1 and round 2 (kept whole)
+
 
 **Plan v3 is built: the model is what has to get built, and everything a person reads comes out
 of it.** Pushed 2026-09-13 as one line of 116 commits on `28b7adf`. On the shipped program every
