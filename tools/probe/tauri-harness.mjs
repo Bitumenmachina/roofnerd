@@ -53,6 +53,37 @@ class WebDriverError extends Error {
 }
 
 /** The bits of the WebDriver protocol this project uses. */
+// ── Can a hand reach it? ─────────────────────────────────────────────────
+// A probe that clicks through the DOM lands on an element a hand cannot: one
+// clipped by an ancestor, one under something else, one off the window. The
+// File menu was that for eight days — every probe picked its items while no
+// person could see them. So every click a helper makes proves reach first:
+// the target's middle hit-tests to the target or a child of it, inside the
+// viewport. A refusal is printed, the click is NOT made, and the probe's own
+// assertion goes red. Round-2 repair order, R1 and R2.
+const REACH_SRC = `function reachOf(el) {
+  if (!el) return { ok: false, why: 'there is nothing to click' };
+  const r = el.getBoundingClientRect();
+  if (r.width < 1 || r.height < 1) return { ok: false, why: 'it has no size on screen' };
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  if (cx < 0 || cy < 0 || cx > window.innerWidth || cy > window.innerHeight) return { ok: false, why: 'its middle is outside the window' };
+  const hit = document.elementFromPoint(cx, cy);
+  if (!hit) return { ok: false, why: 'nothing is under its middle' };
+  if (hit !== el && !el.contains(hit)) {
+    const name = hit.className && String(hit.className).trim() ? '.' + String(hit.className).trim().split(/\\s+/).join('.') : hit.tagName.toLowerCase();
+    return { ok: false, why: 'something else is on top of it: ' + name };
+  }
+  return { ok: true, x: Math.round(cx), y: Math.round(cy) };
+}`;
+
+const refusals = [];
+/** Every click a helper refused this run, with why. A row for probes to assert on. */
+export const reachRefusals = () => refusals.slice();
+const refuse = (what, why) => {
+  refusals.push({ what, why });
+  console.log(`  REACH  ${what}: ${why}`);
+};
+
 class Session {
   constructor(base, id, capabilities) {
     this.base = base;
@@ -114,8 +145,30 @@ class Session {
   releaseActions() { return this.call('DELETE', '/actions'); }
 
   /** Run a function in the page and get its return value back. */
-  execute(fn, ...args) {
-    return this.call('POST', '/execute/sync', { script: `return (${fn}).apply(null, arguments)`, args });
+  async execute(fn, ...args) {
+    // Every click a probe's script makes goes through the reach gate: the
+    // element's own click() is replaced for the length of the script, refuses
+    // and records where a hand could not have landed, and is restored after.
+    // The page's own code is not gated — the swap lives only inside the script.
+    const script = `${REACH_SRC}
+      const __refused = [];
+      const __orig = HTMLElement.prototype.click;
+      const __name = (el) => (el.tagName || '?').toLowerCase()
+        + (el.className && String(el.className).trim() ? '.' + String(el.className).trim().split(/\\s+/).join('.') : '')
+        + ' "' + ((el.innerText || el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 40)) + '"';
+      HTMLElement.prototype.click = function () {
+        const r = reachOf(this);
+        if (!r.ok) { __refused.push({ what: __name(this), why: r.why }); return; }
+        return __orig.apply(this, arguments);
+      };
+      let __value;
+      try { __value = (${fn}).apply(null, arguments); }
+      finally { HTMLElement.prototype.click = __orig; }
+      return JSON.stringify({ value: __value === undefined ? null : __value, refused: __refused });`;
+    const raw = await this.call('POST', '/execute/sync', { script, args });
+    const { value, refused } = JSON.parse(raw);
+    for (const r of refused) refuse(r.what, r.why);
+    return value;
   }
 
   /** Run a function that is handed a `done` callback as its last argument. */
@@ -179,6 +232,14 @@ export async function launch({ timeout = 60000 } = {}) {
     async close() {
       await session.end();
       driver.kill();
+      // A click a hand could not have made is a red row, whatever the probe's
+      // own tally says (R2; D140 reversed).
+      const r = reachRefusals();
+      if (r.length) {
+        console.log(`FAIL — reach: ${r.length} click${r.length === 1 ? '' : 's'} refused because a hand could not have made ${r.length === 1 ? 'it' : 'them'}`);
+        for (const x of r) console.log(`        ${x.what}: ${x.why}`);
+        process.exitCode = 1;
+      }
     },
   };
 }
@@ -413,37 +474,6 @@ export async function typeKeys(session, text) {
     throw error;
   }
 }
-
-// ── Can a hand reach it? ─────────────────────────────────────────────────
-// A probe that clicks through the DOM lands on an element a hand cannot: one
-// clipped by an ancestor, one under something else, one off the window. The
-// File menu was that for eight days — every probe picked its items while no
-// person could see them. So every click a helper makes proves reach first:
-// the target's middle hit-tests to the target or a child of it, inside the
-// viewport. A refusal is printed, the click is NOT made, and the probe's own
-// assertion goes red. Round-2 repair order, R1 and R2.
-const REACH_SRC = `function reachOf(el) {
-  if (!el) return { ok: false, why: 'there is nothing to click' };
-  const r = el.getBoundingClientRect();
-  if (r.width < 1 || r.height < 1) return { ok: false, why: 'it has no size on screen' };
-  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-  if (cx < 0 || cy < 0 || cx > window.innerWidth || cy > window.innerHeight) return { ok: false, why: 'its middle is outside the window' };
-  const hit = document.elementFromPoint(cx, cy);
-  if (!hit) return { ok: false, why: 'nothing is under its middle' };
-  if (hit !== el && !el.contains(hit)) {
-    const name = hit.className && String(hit.className).trim() ? '.' + String(hit.className).trim().split(/\\s+/).join('.') : hit.tagName.toLowerCase();
-    return { ok: false, why: 'something else is on top of it: ' + name };
-  }
-  return { ok: true, x: Math.round(cx), y: Math.round(cy) };
-}`;
-
-const refusals = [];
-/** Every click a helper refused this run, with why. A row for probes to assert on. */
-export const reachRefusals = () => refusals.slice();
-const refuse = (what, why) => {
-  refusals.push({ what, why });
-  console.log(`  REACH  ${what}: ${why}`);
-};
 
 /**
  * Is the first element matching `selector` (and carrying `text`, if given) where a

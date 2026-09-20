@@ -249,6 +249,10 @@ try {
   console.log(`  REPORT  real pointer input: ${pointerPath === 'actions'
     ? 'available — every pick below is a driver click'
     : `refused, so every pick below is a dispatched event — ${pointerRefused.split('\n')[0]}`}`);
+  // D140 made this a report line. A driver that will not click where a hand
+  // would is a check that cannot prove a hand's path, so it is red (R2).
+  check('the driver clicks where a hand would', () =>
+    assert.equal(pointerPath, 'actions', pointerRefused.split('\n')[0] || 'the pointer ran synthetic'));
 
   if (pointerPath !== 'actions') await openDemoJob(session);
   await until(session, () => !document.querySelector('.start'), { what: 'the job to open' });
