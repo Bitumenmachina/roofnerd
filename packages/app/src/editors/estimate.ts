@@ -213,8 +213,9 @@ function render(head: HTMLElement, host: HTMLElement, d: Doc): void {
 
   const count = document.createElement('span');
   count.className = 'cost-head-count';
-  const total = conditions.reduce((n, c) => n + (c.items ?? []).length, 0);
-  count.textContent = plural(total, 'line');
+  // Filled in once the rows are drawn (R8): an item that stands for one line
+  // per letter is several rows, and a count of items read "42 lines" over 45.
+  count.textContent = '';
 
   head.append(what, bar, count);
 
@@ -316,6 +317,10 @@ function render(head: HTMLElement, host: HTMLElement, d: Doc): void {
     add.addEventListener('click', () => void addItem(index, condition));
     host.append(add);
   }
+
+  // The header counts the rows a person can scroll to, not the items in the file.
+  const drawn = head.querySelector<HTMLElement>('.cost-head-count');
+  if (drawn) drawn.textContent = plural(host.querySelectorAll('.cost-line').length, 'line');
 
   restoreCaret(host, caret);
 }
