@@ -17,7 +17,7 @@
 // same pointer it always did.
 
 import {
-  BASIS_WORDS, classOf, linesFrom, measure, priceLine, PRODUCTION_PER, PRODUCTION_PER_WORDS,
+  BASIS_WORDS, classOf, linesFrom, measure, namesUsed, parse, priceLine, PRODUCTION_PER, PRODUCTION_PER_WORDS,
   scopeFor,
   type Condition, type CostCode, type Item, type Measures, type Page, type ProductionPer,
 } from '@roofnerd/engine';
@@ -213,8 +213,9 @@ function render(head: HTMLElement, host: HTMLElement, d: Doc): void {
 
   const count = document.createElement('span');
   count.className = 'cost-head-count';
-  const total = conditions.reduce((n, c) => n + (c.items ?? []).length, 0);
-  count.textContent = plural(total, 'line');
+  // Filled in once the rows are drawn (R8): an item that stands for one line
+  // per letter is several rows, and a count of items read "42 lines" over 45.
+  count.textContent = '';
 
   head.append(what, bar, count);
 
@@ -317,6 +318,10 @@ function render(head: HTMLElement, host: HTMLElement, d: Doc): void {
     host.append(add);
   }
 
+  // The header counts the rows a person can scroll to, not the items in the file.
+  const drawn = head.querySelector<HTMLElement>('.cost-head-count');
+  if (drawn) drawn.textContent = plural(host.querySelectorAll('.cost-line').length, 'line');
+
   restoreCaret(host, caret);
 }
 
@@ -330,6 +335,20 @@ function render(head: HTMLElement, host: HTMLElement, d: Doc): void {
  * quantity somebody typed, and it reads as one.
  */
 const isTyped = (formula: string): boolean => /^\s*-?[\d.,]+\s*$/.test(formula ?? '');
+
+/**
+ * Did the core solve a number this line reads? The mark means "worked out from
+ * the model", and it went on every line — a traced LF as much as a solved
+ * COPING_LF — so it marked nothing. It is on a line only where a name in its
+ * formula is one the solve produced for this condition (R13).
+ */
+function readsTheSolve(formula: string, solved: Readonly<Record<string, number | null>> | undefined): boolean {
+  if (!solved) return false;
+  try {
+    for (const name of namesUsed(parse(formula ?? ''))) if (name in solved) return true;
+  } catch { /* a formula that does not parse reads nothing */ }
+  return false;
+}
 
 function compactLine(
   condition: Condition, index: number, itemIndex: number, item: Item,
@@ -355,18 +374,15 @@ function compactLine(
   // tells them apart is the last one, which is exactly the word an ellipsis at
   // the end eats (C8 §3c). So the tail after the last comma is held back from
   // shrinking and the head gives way instead: "Base layer faste…, corner".
+  // One span, ellipsized at its end, the whole name in its title. The two-span
+  // form kept the tail and lost the middle, and drew a gap and an orphaned comma
+  // ("Continuous cleat     , 20 ga") where a name should be; every line stays
+  // one height, which is the rule the sheet keeps (R10).
   const title = document.createElement('span');
   title.className = 'line-item';
   const whole = item.description || 'Untitled line';
-  const comma = whole.lastIndexOf(', ');
-  const head = document.createElement('span');
-  head.className = 'item-head';
-  const tail = document.createElement('span');
-  tail.className = 'item-tail';
-  head.textContent = comma > 0 ? whole.slice(0, comma) : whole;
-  tail.textContent = comma > 0 ? whole.slice(comma) : '';
+  title.textContent = whole;
   title.title = whole;
-  title.append(head, tail);
   what.append(title);
   // The second row, and EVERY line has one, which is what makes them all the
   // same height. It was inside the item's own cell, sharing about 126 px with
@@ -398,7 +414,9 @@ function compactLine(
   // as 826.5 LB for the same reason. The chain is on the priced line already;
   // this is it reaching the sheet, beside the measure it came off rather than
   // instead of it.
+  // Hours are not bought; a labor line prints them once, at the row's end (R12).
   if (result.orderQuantity !== null && result.orderUnitName !== null
+    && result.orderUnitName !== 'HOURS'
     && (result.orderUnitName !== result.unit
       || Math.abs(result.orderQuantity - (result.quantity ?? result.orderQuantity)) > 0.005)) {
     const bought = document.createElement('span');
@@ -453,7 +471,12 @@ function compactLine(
     qty.classList.add('none');
     qty.title = result.formulaError ?? result.pending ?? PENDING_REASON;
   } else {
-    qty.textContent = quantity(result.quantity);
+    // A whole count prints whole: 8 EA, not 8.00 EA. A count the formula worked
+    // out to a fraction — 6.86 dumpsters off the squares — keeps its fraction,
+    // because the sheet shows what was measured and the buy line beside it
+    // shows the 7 that is bought (R12; C8's own distinction).
+    const whole = item.unit === 'EA' && result.quantity !== null && Math.abs(result.quantity - Math.round(result.quantity)) < 1e-9;
+    qty.textContent = quantity(result.quantity, whole ? 0 : 2);
   }
 
   const unit = document.createElement('span');
@@ -464,6 +487,8 @@ function compactLine(
   if (isTyped(item.formula)) {
     unitWord.classList.add('typed');
     unitWord.title = 'Typed by the estimator.';
+  } else if (!readsTheSolve(item.formula, derivedFor(condition.id))) {
+    // Traced, or typed and worked: not the model's, so no mark.
   } else {
     const mark = document.createElement('span');
     mark.className = 'derived';
@@ -496,11 +521,7 @@ function compactLine(
     const hours = document.createElement('span');
     hours.className = 'line-hours num';
     hours.textContent = `${quantity(result.hours)} hrs`;
-    const mark = document.createElement('span');
-    mark.className = 'derived';
-    mark.textContent = '◈';
-    mark.title = 'Worked out from the rate and the crew on this line.';
-    hours.append(mark);
+    hours.title = 'Worked out from the rate and the crew on this line.';
     basis.append(hours);
   }
 
@@ -584,13 +605,14 @@ function chain(
   // estimator to classify what they just wrote is a question the sheet can
   // answer for itself.
   table.append(chainRow('Kind', word(BASIS_WORDS[result.basis])));
-  table.append(chainRow('Quantity', figure(result.quantity, item.unit, !isTyped(item.formula),
+  const solved = readsTheSolve(item.formula, derivedFor(condition.id));
+  table.append(chainRow('Quantity', figure(result.quantity, item.unit, solved,
     result.formulaError ?? result.pending)));
   table.append(chainRow('Unit',
     named(selectField(UNITS, item.unit, (v) => set(`${base}/unit`, v)), `${base}/unit`)));
   table.append(chainRow('Waste',
     named(numberField(item.waste ?? 0, (v) => set(`${base}/waste`, v), '0'), `${base}/waste`)));
-  table.append(chainRow('With waste', figure(result.withWaste, item.unit, true, result.pending)));
+  table.append(chainRow('With waste', figure(result.withWaste, item.unit, solved, result.pending)));
   // What you buy, and what it is priced against — three units, because a real
   // supply house uses three. Membrane is estimated in squares, bought by the
   // roll and quoted by the square foot, and each step is where money hides.
@@ -617,9 +639,9 @@ function chain(
       (v) => `${item.unit} ${PRODUCTION_PER_WORDS[v as ProductionPer]}`,
     ));
     table.append(chainRow('Rate', rate));
-    table.append(chainRow('Hours', figure(result.hours, 'hrs', true, result.pending)));
+    table.append(chainRow('Hours', figure(result.hours, 'hrs', false, result.pending)));
     if (result.crewDays !== null) {
-      table.append(chainRow('Crew days', figure(result.crewDays, 'days', true, result.pending)));
+      table.append(chainRow('Crew days', figure(result.crewDays, 'days', false, result.pending)));
     }
   }
   if (result.basis === 'sub') {
@@ -629,8 +651,8 @@ function chain(
       'whose number this is',
     ), `${base}/priceSource/from`)));
   }
-  table.append(chainRow('Order', figure(result.orderQuantity, result.orderUnitName, true, result.pending)));
-  table.append(chainRow('Priced', figure(result.priceQuantity, result.priceUnitName, true, result.pending)));
+  table.append(chainRow('Order', figure(result.orderQuantity, result.orderUnitName, solved, result.pending)));
+  table.append(chainRow('Priced', figure(result.priceQuantity, result.priceUnitName, solved, result.pending)));
   table.append(chainRow('Unit cost',
     named(numberField(item.unitCost, (v) => set(`${base}/unitCost`, v), '$'), `${base}/unitCost`)));
   table.append(chainRow('Extended', moneyCell(result.extended, result.pending), 'chain-total'));
@@ -739,6 +761,10 @@ function workings(item: Item, result: ReturnType<typeof priceLine>): Part[][] {
         + ` at ${money(result.unitCost)} = ${money(result.extended)}`,
     }]);
   }
+  // What the line has to say for itself — which row of a table it was priced
+  // from, what it stands in for. The job file carried these words all along and
+  // no screen printed them (R6).
+  if (item.notes) out.push([{ text: item.notes }]);
   return out;
 }
 

@@ -103,7 +103,7 @@ try {
   });
   check('a profile shows its girth, as the sum it is', () => {
     assert.ok(book.girths.length >= 1, 'no profiles');
-    for (const g of book.girths) assert.match(g, /in girth/, `girth read "${g}"`);
+    for (const g of book.girths) assert.match(g, /in stretch-out/, `stretch-out read "${g}"`);
   });
   check('and the card names the condition it will load onto', () => {
     assert.match(book.loadLabel, /Load onto /, `button read "${book.loadLabel}"`);

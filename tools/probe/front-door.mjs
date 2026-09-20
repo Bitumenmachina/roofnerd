@@ -16,7 +16,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import {
-  detachCostPanel, launch, scratchJob, showTab, tool, until, wait, commitStamp,
+  detachCostPanel, launch, scratchJob, showTab, tool, until, wait, commitStamp, reach, reachRefusals,
 } from './tauri-harness.mjs';
 
 const ROOT = resolve(import.meta.dirname, '../..');
@@ -58,12 +58,48 @@ try {
     assert.match(start, /Trace the roof/);
   });
 
+  // ── the File menu is where a hand can reach it ──────────────────────────
+  // Every probe that used the menu clicked its items through the DOM, and for
+  // eight days no person could see them: the document bar clipped the list to a
+  // sliver. A click has to prove reach first (R1, R2).
+  const menuOpened = await session.execute(function () {
+    const b = document.querySelector('.menu .menu-button');
+    if (!b) return false;
+    b.click();
+    return true;
+  });
+  await wait(400);
+  const items = await session.execute(function () {
+    return JSON.stringify([...document.querySelectorAll('.menu .menu-item')].map((e) => (e.textContent || '').trim()));
+  });
+  const reaches = [];
+  for (const label of JSON.parse(items)) reaches.push({ label, ...(await reach(session, '.menu .menu-item', label)) });
+  check('the File menu opens', () => assert.equal(menuOpened, true));
+  check('and every item on it is where a hand can reach it', () => {
+    assert.ok(reaches.length >= 2, `the menu lists ${reaches.length} items`);
+    const blocked = reaches.filter((r) => !r.ok);
+    assert.equal(blocked.length, 0, blocked.map((r) => `"${r.label}": ${r.why}`).join('; '));
+  });
+  await session.execute(function () { document.body.click(); });
+  await wait(300);
+
   // ── open a job the way a person does ────────────────────────────────────
   // Through the button on the start screen. The other way in — "Open a job…" —
   // raises the operating system's own folder picker, which no probe can click
   // through; that one is checked by hand and noted in STATUS.md. This one is a
   // real front door, it is the one somebody opening the program for the first
   // time will use, and it goes through exactly the same code.
+  // A roofer's first act is a bid of their own. The door to one is on the start
+  // screen and in the File menu, where a hand can reach both (R3).
+  const newDoor = await reach(session, '.start-new', 'New job…');
+  check('the start screen offers a new job, where a hand can reach it', () => {
+    assert.ok(newDoor.ok, newDoor.why || 'no New job… on the start screen');
+  });
+  check('and the File menu offers it too', () => {
+    assert.ok(reaches.some((r) => r.label === 'New job…' && r.ok),
+      `the menu lists ${reaches.map((r) => r.label).join(', ')}`);
+  });
+
   check('the start screen offers the demo job', () => {
     assert.match(start, /Open the demo job/, start);
   });
@@ -245,6 +281,10 @@ try {
 } catch (e) {
   results.push('FAIL');
   console.log(`  FAIL  the check stopped: ${e.message}`);
+  check('no click a helper made this run was refused for reach', () => {
+    const r = reachRefusals();
+    assert.equal(r.length, 0, r.map((x) => `${x.what}: ${x.why}`).join('; '));
+  });
 } finally {
   await app.close();
   await job.remove();

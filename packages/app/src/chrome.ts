@@ -70,6 +70,11 @@ export function menu(label: string, items: readonly MenuItem[]): HTMLElement {
 
   button.addEventListener('click', (e) => {
     e.stopPropagation();
+    // The list is fixed-positioned so the bar's own overflow clip cannot hide
+    // it (R1); it stands just under the button, wherever the button is.
+    const box = button.getBoundingClientRect();
+    list.style.top = `${Math.round(box.bottom + 2)}px`;
+    list.style.left = `${Math.round(box.left)}px`;
     list.hidden = !list.hidden;
   });
   document.addEventListener('click', () => { list.hidden = true; });
@@ -198,6 +203,11 @@ export function documentBar(options: {
 
   button.addEventListener('click', (e) => {
     e.stopPropagation();
+    // The list is fixed-positioned so the bar's own overflow clip cannot hide
+    // it (R1); it stands just under the button, wherever the button is.
+    const box = button.getBoundingClientRect();
+    list.style.top = `${Math.round(box.bottom + 2)}px`;
+    list.style.left = `${Math.round(box.left)}px`;
     list.hidden = !list.hidden;
   });
   document.addEventListener('click', () => { list.hidden = true; });
@@ -532,6 +542,8 @@ export function statusStrip(): {
  */
 export function startScreen(options: {
   onOpen: () => void;
+  /** Start a job of the estimator's own, in a folder they pick (R3). */
+  onNew: () => void;
   recent: readonly { path: string; name: string }[];
   onOpenRecent: (path: string) => void;
   /** The demo job, when this build can still find one. */
@@ -556,7 +568,22 @@ export function startScreen(options: {
   open.append(openText);
   open.addEventListener('click', options.onOpen);
 
-  root.append(title, line, open);
+  // The door to a job that does not exist yet. There were two buttons and both
+  // opened something already there; a roofer's first act is a bid of their own
+  // (round-2 repair order, R3).
+  const fresh = document.createElement('button');
+  fresh.type = 'button';
+  fresh.className = 'start-new';
+  fresh.append(icon('page', 18));
+  const freshText = document.createElement('span');
+  freshText.textContent = 'New job…';
+  fresh.append(freshText);
+  fresh.addEventListener('click', options.onNew);
+
+  const doors = document.createElement('div');
+  doors.className = 'start-doors';
+  doors.append(fresh, open);
+  root.append(title, line, doors);
 
   // The demo job, when there is one. It is the product's first screen: somebody
   // opening this for the first time should see a roof, not a file browser. It

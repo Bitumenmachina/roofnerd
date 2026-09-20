@@ -16,6 +16,11 @@ import { icon } from '../icons.js';
 import { KIND_LABELS, MEASURE_LABELS, PENDING_REASON, PROPERTY_LABELS, money, plural, quantity } from '../labels.js';
 
 const GROUPS = ['Geometry', 'Metal', 'Wind'] as const;
+/** What a group has to say for itself under its heading, where it has anything to. */
+const GROUP_NOTES: Readonly<Partial<Record<(typeof GROUPS)[number], string>>> = {
+  Wind: "Zones follow NRCA Appendix 1's three-zone rule — a off the least side and the roof height — "
+    + "not yet ASCE 7-22's four zones at 60 ft and under. The pressures are typed as ASCE 7-22 gives them.",
+};
 
 /**
  * The measures an estimator glances at — but only the ones this kind of thing
@@ -267,6 +272,13 @@ export function renderConditionPanel(
     heading.className = 'panel-group';
     heading.textContent = group;
     host.append(heading);
+    const say = GROUP_NOTES[group];
+    if (say) {
+      const note = document.createElement('p');
+      note.className = 'panel-note';
+      note.textContent = say;
+      host.append(note);
+    }
 
     for (const [key, { label, hint }] of known) {
       const input = numberInput(properties[key], (v) => writeProperty(base, condition, key, v));

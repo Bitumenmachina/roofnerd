@@ -273,15 +273,17 @@ try {
 
   // ── 1. a labor line shows Quantity · Hours · $, and the hours are derived ──
 
-  check('every labor line on the sheet shows its hours, marked as worked out', () => {
+  check('every labor line on the sheet shows its hours, unmarked, because the rate is the line\u2019s own', () => {
     assert.ok(crewLines.length > 0, 'the demo carries no labor line with a crew rate on it');
     for (const want of crewLines) {
       const row = byWhat.get(want.description);
       assert.ok(row, `"${want.description}" is not on the Estimate`);
       assert.ok(row.hours !== null, `"${want.description}" shows no hours`);
       assert.ok(figure(row.hours) > 0, `"${want.description}" shows hours of "${row.hours}"`);
-      assert.ok(row.hoursDerived,
-        `"${want.description}" shows hours with no worked-out mark on them`);
+      // The hours are the engine's arithmetic off the rate the line states, not
+      // the model's; the mark is the core's alone (R13, D175), so they carry none.
+      assert.equal(row.hoursDerived, false,
+        `"${want.description}" shows hours with the model's mark on them`);
     }
   });
 

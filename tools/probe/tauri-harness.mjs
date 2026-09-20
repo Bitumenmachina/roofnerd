@@ -53,6 +53,44 @@ class WebDriverError extends Error {
 }
 
 /** The bits of the WebDriver protocol this project uses. */
+// ── Can a hand reach it? ─────────────────────────────────────────────────
+// A probe that clicks through the DOM lands on an element a hand cannot: one
+// clipped by an ancestor, one under something else, one off the window. The
+// File menu was that for eight days — every probe picked its items while no
+// person could see them. So every click a helper makes proves reach first:
+// the target's middle hit-tests to the target or a child of it, inside the
+// viewport. A refusal is printed, the click is NOT made, and the probe's own
+// assertion goes red. Round-2 repair order, R1 and R2.
+const REACH_SRC = `function reachOf(el) {
+  if (!el) return { ok: false, why: 'there is nothing to click' };
+  let r = el.getBoundingClientRect();
+  if (r.width < 1 || r.height < 1) return { ok: false, why: 'it has no size on screen' };
+  let cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  // A hand scrolls a list to the row it wants before it clicks; so does this,
+  // once, and only as far as the nearest edge. What it cannot scroll to (a
+  // clip that is not a scroll) still fails the hit-test below.
+  if (cx < 0 || cy < 0 || cx > window.innerWidth || cy > window.innerHeight || document.elementFromPoint(cx, cy) !== el && !el.contains(document.elementFromPoint(cx, cy))) {
+    el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    r = el.getBoundingClientRect(); cx = r.left + r.width / 2; cy = r.top + r.height / 2;
+  }
+  if (cx < 0 || cy < 0 || cx > window.innerWidth || cy > window.innerHeight) return { ok: false, why: 'its middle is outside the window' };
+  const hit = document.elementFromPoint(cx, cy);
+  if (!hit) return { ok: false, why: 'nothing is under its middle' };
+  if (hit !== el && !el.contains(hit)) {
+    const name = hit.className && String(hit.className).trim() ? '.' + String(hit.className).trim().split(/\\s+/).join('.') : hit.tagName.toLowerCase();
+    return { ok: false, why: 'something else is on top of it: ' + name };
+  }
+  return { ok: true, x: Math.round(cx), y: Math.round(cy) };
+}`;
+
+const refusals = [];
+/** Every click a helper refused this run, with why. A row for probes to assert on. */
+export const reachRefusals = () => refusals.slice();
+const refuse = (what, why) => {
+  refusals.push({ what, why });
+  console.log(`  REACH  ${what}: ${why}`);
+};
+
 class Session {
   constructor(base, id, capabilities) {
     this.base = base;
@@ -114,8 +152,32 @@ class Session {
   releaseActions() { return this.call('DELETE', '/actions'); }
 
   /** Run a function in the page and get its return value back. */
-  execute(fn, ...args) {
-    return this.call('POST', '/execute/sync', { script: `return (${fn}).apply(null, arguments)`, args });
+  async execute(fn, ...args) {
+    // Every click a probe's script makes goes through the reach gate: the
+    // element's own click() is replaced for the length of the script, refuses
+    // and records where a hand could not have landed, and is restored after.
+    // The page's own code is not gated — the swap lives only inside the script.
+    const script = `${REACH_SRC}
+      const __refused = [];
+      const __orig = HTMLElement.prototype.click;
+      const __name = (el) => (el.tagName || '?').toLowerCase()
+        + (el.className && String(el.className).trim() ? '.' + String(el.className).trim().split(/\\s+/).join('.') : '')
+        + ' "' + ((el.innerText || el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 40)) + '"';
+      HTMLElement.prototype.click = function () {
+        const r = reachOf(this);
+        if (!r.ok) { __refused.push({ what: __name(this), why: r.why }); return; }
+        return __orig.apply(this, arguments);
+      };
+      let __value;
+      try { __value = (${fn}).apply(null, arguments); }
+      finally { HTMLElement.prototype.click = __orig; }
+      const __pack = (v) => JSON.stringify({ value: v === undefined ? null : v, refused: __refused });
+      // A script that hands back a promise is awaited by the driver, as before.
+      return (__value && typeof __value.then === 'function') ? __value.then(__pack) : __pack(__value);`;
+    const raw = await this.call('POST', '/execute/sync', { script, args });
+    const { value, refused } = JSON.parse(raw);
+    for (const r of refused) refuse(r.what, r.why);
+    return value;
   }
 
   /** Run a function that is handed a `done` callback as its last argument. */
@@ -179,6 +241,14 @@ export async function launch({ timeout = 60000 } = {}) {
     async close() {
       await session.end();
       driver.kill();
+      // A click a hand could not have made is a red row, whatever the probe's
+      // own tally says (R2; D140 reversed).
+      const r = reachRefusals();
+      if (r.length) {
+        console.log(`FAIL — reach: ${r.length} click${r.length === 1 ? '' : 's'} refused because a hand could not have made ${r.length === 1 ? 'it' : 'them'}`);
+        for (const x of r) console.log(`        ${x.what}: ${x.why}`);
+        process.exitCode = 1;
+      }
     },
   };
 }
@@ -414,6 +484,45 @@ export async function typeKeys(session, text) {
   }
 }
 
+/**
+ * Is the first element matching `selector` (and carrying `text`, if given) where a
+ * hand can reach it? Answers `{ ok, why | x, y }` without clicking anything.
+ */
+export const reach = async (session, selector, text) => {
+  const raw = await session.execute(`function (sel, want) {
+    ${REACH_SRC}
+    const all = [...document.querySelectorAll(sel)];
+    const el = want ? all.find((e) => (e.innerText || e.textContent || '').trim() === want || (e.getAttribute('aria-label') || '') === want) : all[0];
+    return JSON.stringify(reachOf(el));
+  }`, selector, text ?? null);
+  return JSON.parse(raw);
+};
+
+/**
+ * Click the element by its words, a hand's way: prove reach, then click. `false`
+ * when it is not there or cannot be reached, and the refusal is on the record.
+ */
+export const clickReach = async (session, selector, text, what = `${selector} "${text}"`) => {
+  const raw = await session.execute(`function (sel, want) {
+    ${REACH_SRC}
+    const all = [...document.querySelectorAll(sel)];
+    const el = want ? all.find((e) => (e.innerText || e.textContent || '').trim() === want || (e.getAttribute('aria-label') || '') === want) : all[0];
+    const r = reachOf(el);
+    if (r.ok) el.click();
+    return JSON.stringify(r);
+  }`, selector, text ?? null);
+  const r = JSON.parse(raw);
+  if (!r.ok) refuse(what, r.why);
+  return r.ok;
+};
+
+/** Open the File menu and pick an item by its words, proving reach on both. */
+export const pickMenu = async (session, label) => {
+  if (!(await clickReach(session, '.menu .menu-button', null, 'the File menu button'))) return false;
+  await wait(250);
+  return clickReach(session, '.menu .menu-item', label, `File → ${label}`);
+};
+
 /** Release everything the driver holds. Cheap insurance in a `finally`. */
 export const pointerRelease = (session) => session.releaseActions().catch(() => undefined);
 
@@ -500,10 +609,18 @@ export const showTab = async (session, title) => {
  * does: the lens selector is a closed word until somebody asks it.
  */
 export const pickLens = async (session, name) => {
-  const found = await session.execute(function (want) {
+  // Two acts, two scripts, with the menu given time to stand up between them:
+  // a row clicked in the same tick it was asked for has no size yet, and a hand
+  // does not click what it cannot see (R2).
+  const opened = await session.execute(function () {
     const open = document.querySelector('.lens-selector .lens-button');
     if (!open) return false;
     open.click();
+    return true;
+  });
+  if (!opened) return false;
+  await wait(350);
+  const found = await session.execute(function (want) {
     const row = [...document.querySelectorAll('.lens-menu .lens')]
       .find((e) => ((e.querySelector('strong') || {}).textContent || '') === want);
     if (!row) return false;

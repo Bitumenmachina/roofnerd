@@ -90,7 +90,8 @@ try {
     });
   }));
   check('the panel offers the properties a roofing detail asks for', () => {
-    for (const want of [/Height/i, /Girth/i]) {
+    // Stretch-out is the screen word (D134, R11).
+    for (const want of [/Height/i, /Stretch-out/i]) {
       assert.match(panel.text, want, `panel read "${panel.text.replace(/\s+/g, ' ').slice(0, 160)}"`);
     }
   });
@@ -215,10 +216,13 @@ try {
     // The handoff's provenance contract, on the line where an estimator reads
     // it: a formula over what was traced carries the cyan mark; there is no
     // third state. This is new and it is the frame's own rule.
-    const worked = parapet.filter((l) => !/^\s*-?[\d.,]+\s*$/.test(l.formula));
+    // The mark means the core solved a number this line reads (R13, D175). A
+    // line off the trace's own LF is the trace's, and carries neither mark.
+    const solvedName = /\b(FLASH_SF|FLASH_MIN_IN|CURB_RAISE_IN|COPING_LF|COPING_PCS_EA|COPING_CORNERS_EA|CLEAT_LF)\b/;
+    const worked = parapet.filter((l) => solvedName.test(l.formula));
     assert.ok(worked.length > 0, `the parapet's formulas read ${JSON.stringify(parapet.map((l) => l.formula))}`);
     for (const l of worked) {
-      assert.equal(l.derived, true, `"${l.description}" is worked out from ${l.formula} and carries no mark`);
+      assert.equal(l.derived, true, `"${l.description}" reads ${l.formula} off the solve and carries no mark`);
     }
   });
 

@@ -107,7 +107,10 @@ storage. Two documents have already been lost this way.
   clean it looks.
 - **A check that bypasses the path a person uses is not a check.** Every runtime probe
   starts at the start screen and goes through the menu, the buttons and the fields. None of
-  them calls `doc_open` — or any other command — to get a job open. This is not a
+  them calls `doc_open` — or any other command — to get a job open, with one named
+  exception: `tools/probe/real-job.mjs` opens a job under `fixtures/` through `doc_open`,
+  because the only door to a folder of one's own is the operating-system picker, which no
+  probe can drive; it checks the money on a real roof, not the door. This is not a
   preference: every probe passed for days while the program could not be given a job at all,
   because File → Open a job called `window.prompt`, which this webview does not implement,
   so it returned nothing and the handler gave up quietly. "8/8" only counts when it went

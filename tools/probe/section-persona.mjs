@@ -280,9 +280,14 @@ try {
 
   check('every line on the sheet carries a mark: worked out, or typed', () => {
     assert.ok(lines.length > 0, 'the sheet has no lines on it');
-    const bare = lines.filter((l) => !l.derived && !/^\s*-?[\d.,]+\s*$/.test(l.formula ?? ''));
+    // Three states since R13 (D175): solved by the core and marked, typed and
+    // marked typed, or read off the trace's own measures and marked with
+    // neither — the formula chip on the line says which. What must never happen
+    // is a line that reads a solved name and carries no mark.
+    const solvedName = /_(SF|EA|LF|IN|GAL|PSF)\b|BOARDS_MAX|NOFALL_SF/;
+    const bare = lines.filter((l) => !l.derived && !/^\s*-?[\d.,]+\s*$/.test(l.formula ?? '') && solvedName.test(l.formula ?? ''));
     assert.deepEqual(bare.map((l) => l.item), [],
-      'these lines are neither derived nor typed, so nothing says where they came from');
+      'these lines read a solved name and carry no mark, so nothing says where they came from');
   });
 
   check('nothing on the demo is pending: every line has a quantity and a price', () => {

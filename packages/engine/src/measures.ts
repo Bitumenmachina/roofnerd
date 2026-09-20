@@ -210,8 +210,15 @@ export function measure(
     // one continuous curve, and nothing on it gets mitred. A closed area has as
     // many segments as corners, because the last one closes back to the first.
     if (!trace.arc) {
-      vertices += points.length;
-      segments += kind === 'area' ? points.length : Math.max(0, points.length - 1);
+      // A run traced back to where it began is a ring: its last point is its
+      // first point again, not a ninth corner on a roof that turns eight times.
+      // The parapet read 9 EA and the curb 5 EA for that (R5).
+      const first = points[0]!;
+      const last = points[points.length - 1]!;
+      const closedRun = kind === 'line' && points.length > 2 && first.x === last.x && first.y === last.y;
+      const corners = closedRun ? points.length - 1 : points.length;
+      vertices += corners;
+      segments += kind === 'area' || closedRun ? corners : Math.max(0, corners - 1);
     }
 
     const calibration = calibrations[trace.pageId];
