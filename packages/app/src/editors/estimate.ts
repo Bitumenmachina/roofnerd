@@ -739,6 +739,10 @@ function workings(item: Item, result: ReturnType<typeof priceLine>): Part[][] {
         + ` at ${money(result.unitCost)} = ${money(result.extended)}`,
     }]);
   }
+  // What the line has to say for itself — which row of a table it was priced
+  // from, what it stands in for. The job file carried these words all along and
+  // no screen printed them (R6).
+  if (item.notes) out.push([{ text: item.notes }]);
   return out;
 }
 

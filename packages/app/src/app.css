@@ -1030,6 +1030,7 @@ body.cost-window { background: var(--rn-panel); }
 .panel-money .value.none { font-size: var(--t-small); color: var(--ink-faint); }
 .panel-money-note { display: block; color: var(--ink-faint); font-size: var(--t-micro); padding: 0 var(--gap-3) var(--gap-2); }
 
+.panel-note { font-size: var(--t-micro); line-height: 1.35; color: var(--ink-soft); margin: 0 0 var(--gap-2); }
 .panel-group { font-size: var(--t-micro); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); font-weight: 600; margin: var(--gap-3) 0 var(--gap-2); }
 .condition-panel label { display: block; margin-bottom: var(--gap-2); }
 .condition-panel label > span { display: block; font-size: var(--t-small); margin-bottom: 2px; }

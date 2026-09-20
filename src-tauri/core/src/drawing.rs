@@ -650,7 +650,14 @@ fn fastening_of(fastening: &SolvedFastening) -> Drawing {
     // The title line: what the drawing is, and the two documents it was set out
     // to. It sits in the corner of the window rather than on the roof, so it
     // has room for a citation that a key drawn at roof scale has not.
-    d.note = format!("Fastening plan · {} · zones per {}", roof.standard, roof.zone_rule);
+    // The zones are NRCA Appendix 1's three — a off the least side and the height
+    // — and not yet the four ASCE 7-16 and 7-22 draw at 60 ft and under; the
+    // plan says so on its face while the pressures are typed to 7-22 (R6, B1).
+    d.note = format!(
+        "Fastening plan · {} pressures · zones per NRCA Appendix 1's three-zone rule, not yet 7-22's four",
+        roof.standard,
+    );
+    let _ = &roof.zone_rule;
 
     // Then three lines of key, drawn on the sheet where a key goes: how the
     // zones were set out, where the pattern came from, and what the fasteners
@@ -948,7 +955,7 @@ fn section_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls, cut
     // the view says what it got. What stays here is the part that is a fact
     // about the drawing whatever size it comes out: the vertical is stretched.
     d.note = format!(
-        "vertical exaggerated \u{d7}{} so the board thickness reads",
+        "vertical exaggerated \u{d7}{} so the board thickness reads · the letter on each course is under review against the manufacturer's chart",
         SECTION_EXAGGERATION as i64,
     );
 
