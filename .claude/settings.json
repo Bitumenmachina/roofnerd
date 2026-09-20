@@ -1,0 +1,8 @@
+{
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
+    "CLAUDE_CODE_FORK_SUBAGENT": "0",
+    "CLAUDE_CODE_DISABLE_EXPLORE_PLAN_AGENTS": "1"
+  },
+  "permissions": { "deny": ["Agent(fork)", "Agent(general-purpose)", "Agent(claude)"] }
+}
