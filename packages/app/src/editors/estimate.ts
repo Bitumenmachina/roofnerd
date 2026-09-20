@@ -400,7 +400,9 @@ function compactLine(
   // as 826.5 LB for the same reason. The chain is on the priced line already;
   // this is it reaching the sheet, beside the measure it came off rather than
   // instead of it.
+  // Hours are not bought; a labor line prints them once, at the row's end (R12).
   if (result.orderQuantity !== null && result.orderUnitName !== null
+    && result.orderUnitName !== 'HOURS'
     && (result.orderUnitName !== result.unit
       || Math.abs(result.orderQuantity - (result.quantity ?? result.orderQuantity)) > 0.005)) {
     const bought = document.createElement('span');
@@ -455,7 +457,8 @@ function compactLine(
     qty.classList.add('none');
     qty.title = result.formulaError ?? result.pending ?? PENDING_REASON;
   } else {
-    qty.textContent = quantity(result.quantity);
+    // A count is whole: 8 EA, not 8.00 EA (R12).
+    qty.textContent = quantity(result.quantity, item.unit === 'EA' ? 0 : 2);
   }
 
   const unit = document.createElement('span');
