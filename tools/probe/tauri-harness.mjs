@@ -63,9 +63,16 @@ class WebDriverError extends Error {
 // assertion goes red. Round-2 repair order, R1 and R2.
 const REACH_SRC = `function reachOf(el) {
   if (!el) return { ok: false, why: 'there is nothing to click' };
-  const r = el.getBoundingClientRect();
+  let r = el.getBoundingClientRect();
   if (r.width < 1 || r.height < 1) return { ok: false, why: 'it has no size on screen' };
-  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  let cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  // A hand scrolls a list to the row it wants before it clicks; so does this,
+  // once, and only as far as the nearest edge. What it cannot scroll to (a
+  // clip that is not a scroll) still fails the hit-test below.
+  if (cx < 0 || cy < 0 || cx > window.innerWidth || cy > window.innerHeight || document.elementFromPoint(cx, cy) !== el && !el.contains(document.elementFromPoint(cx, cy))) {
+    el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    r = el.getBoundingClientRect(); cx = r.left + r.width / 2; cy = r.top + r.height / 2;
+  }
   if (cx < 0 || cy < 0 || cx > window.innerWidth || cy > window.innerHeight) return { ok: false, why: 'its middle is outside the window' };
   const hit = document.elementFromPoint(cx, cy);
   if (!hit) return { ok: false, why: 'nothing is under its middle' };
@@ -602,10 +609,18 @@ export const showTab = async (session, title) => {
  * does: the lens selector is a closed word until somebody asks it.
  */
 export const pickLens = async (session, name) => {
-  const found = await session.execute(function (want) {
+  // Two acts, two scripts, with the menu given time to stand up between them:
+  // a row clicked in the same tick it was asked for has no size yet, and a hand
+  // does not click what it cannot see (R2).
+  const opened = await session.execute(function () {
     const open = document.querySelector('.lens-selector .lens-button');
     if (!open) return false;
     open.click();
+    return true;
+  });
+  if (!opened) return false;
+  await wait(350);
+  const found = await session.execute(function (want) {
     const row = [...document.querySelectorAll('.lens-menu .lens')]
       .find((e) => ((e.querySelector('strong') || {}).textContent || '') === want);
     if (!row) return false;
