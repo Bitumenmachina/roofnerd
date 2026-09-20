@@ -360,18 +360,15 @@ function compactLine(
   // tells them apart is the last one, which is exactly the word an ellipsis at
   // the end eats (C8 §3c). So the tail after the last comma is held back from
   // shrinking and the head gives way instead: "Base layer faste…, corner".
+  // One span, ellipsized at its end, the whole name in its title. The two-span
+  // form kept the tail and lost the middle, and drew a gap and an orphaned comma
+  // ("Continuous cleat     , 20 ga") where a name should be; every line stays
+  // one height, which is the rule the sheet keeps (R10).
   const title = document.createElement('span');
   title.className = 'line-item';
   const whole = item.description || 'Untitled line';
-  const comma = whole.lastIndexOf(', ');
-  const head = document.createElement('span');
-  head.className = 'item-head';
-  const tail = document.createElement('span');
-  tail.className = 'item-tail';
-  head.textContent = comma > 0 ? whole.slice(0, comma) : whole;
-  tail.textContent = comma > 0 ? whole.slice(comma) : '';
+  title.textContent = whole;
   title.title = whole;
-  title.append(head, tail);
   what.append(title);
   // The second row, and EVERY line has one, which is what makes them all the
   // same height. It was inside the item's own cell, sharing about 126 px with

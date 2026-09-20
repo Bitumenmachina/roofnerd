@@ -829,13 +829,8 @@ body.cost-window { background: var(--rn-panel); }
 .cost-line .line-basis { grid-column: 1 / -1; }
 .line-item {
   font-size: var(--t-micro); line-height: 1.3; color: var(--rn-ink);
-  display: flex; min-width: 0; white-space: nowrap;
+  display: block; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* What distinguishes one line from the next is at the END of its name — the
-   zone, the gauge, the thickness — so the head gives way and the tail does not.
-   The tail is still capped, because a long one would leave the head nothing. */
-.item-head { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.item-tail { flex: 0 0 auto; max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
 .line-basis {
   display: flex; gap: 6px; align-items: baseline; min-width: 0;
   font-size: 10px; line-height: 1.4; color: var(--rn-ink-dim);
