@@ -3,6 +3,17 @@
 Things where a wrong call would waste work. Each one names the smallest version built so
 the rest could proceed. Not a stop — the build continues past every entry here.
 
+## Q10 — the first-open frame — OPEN 2026-09-20
+
+**Built:** the door only. "New job…" on the start screen and in the File menu picks an empty folder and
+opens it as an empty job with the folder's name and one scenario; the Plan's hint line says to add a
+drawing first (D165).
+
+**The question:** the handoff's first-open frame — "Start a roof", named in `STATUS.md` among the
+things still owed — lives in `refs/`, which this clone does not carry. Whether that frame is the new-job
+door, a screen before it, or something the demo job already stands in for, is not answerable from the
+tracked tree. Built the smallest door so a roofer can start a bid; the frame waits for the document.
+
 ## Q9 — a price carries its firmness — ANSWERED 2026-09-08
 
 **Built:** nothing. `priceSource` is a string on the item, as it has been since section 3.
