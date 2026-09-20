@@ -133,7 +133,10 @@ function addersFor(cls: ClassName, a: ClassAdders | undefined, subtotal: Money):
   const take = (name: string, rate: Percent | undefined) => {
     // Each one on the SUBTOTAL, not on the running total. Tax and escalation
     // sit side by side on subtotal material; they do not compound.
-    if (rate) out.push({ name, rate, amount: pct(subtotal, rate) });
+    // To the cent, because that is what the recap prints and what a reader adds
+    // up; an unrounded adder is how the classes and the job cost came to differ
+    // by a cent on the face of the sheet (R4).
+    if (rate) out.push({ name, rate, amount: fromCents(centsOf(pct(subtotal, rate))) });
   };
   switch (cls) {
     case 'Material':
@@ -374,7 +377,7 @@ export function recap(doc: JobDocument, scenario: Scenario, solved?: Scopes): Re
   const classes: ClassLine[] = CLASS_NAMES.map((cls) => {
     const subtotal = fromCents(centsBy.get(cls) ?? 0);
     const adders = addersFor(cls, scenario.adders[cls], subtotal);
-    const total = adders.reduce((sum, a) => sum + a.amount, subtotal);
+    const total = fromCents(adders.reduce((sum, a) => sum + centsOf(a.amount), centsOf(subtotal)));
     return {
       class: cls,
       subtotal,
@@ -392,12 +395,15 @@ export function recap(doc: JobDocument, scenario: Scenario, solved?: Scopes): Re
     lines: basisLines.get(b) ?? 0,
   }));
 
-  const jobCost = classes.reduce((sum, c) => sum + c.total, 0);
-  const overhead = pct(jobCost, scenario.overhead);
-  const profit = pct(jobCost + overhead, scenario.profit);
-  const contractAmount = jobCost + overhead + profit;
-  const bond = pct(contractAmount, scenario.bond);
-  const sellingPrice = contractAmount + bond;
+  // One summation path, in cents: the job cost IS the sum of the printed class
+  // totals, and every step of the ladder is a printed figure added to printed
+  // figures, so the sheet foots by hand (R4).
+  const jobCost = fromCents(classes.reduce((sum, c) => sum + centsOf(c.total), 0));
+  const overhead = fromCents(centsOf(pct(jobCost, scenario.overhead)));
+  const profit = fromCents(centsOf(pct(jobCost + overhead, scenario.profit)));
+  const contractAmount = fromCents(centsOf(jobCost) + centsOf(overhead) + centsOf(profit));
+  const bond = fromCents(centsOf(pct(contractAmount, scenario.bond)));
+  const sellingPrice = fromCents(centsOf(contractAmount) + centsOf(bond));
   const totalHours = classes.reduce((sum, c) => sum + c.hours, 0);
 
   return {
