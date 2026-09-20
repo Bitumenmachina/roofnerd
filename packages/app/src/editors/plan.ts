@@ -500,9 +500,12 @@ function drawStrip(): void {
 
   // A job with no drawing says so, and says what comes first, in the hint line
   // where the tools already speak (R3).
-  if (!page) {
-    const hint = document.querySelector<HTMLElement>('.hint');
-    if (hint) hint.textContent = NO_DRAWING_HINT;
+  const hint = document.querySelector<HTMLElement>('.hint');
+  if (hint) {
+    if (!page) hint.textContent = NO_DRAWING_HINT;
+    // The strip is drawn before the first drawing lands as well as after, so a
+    // hint set for no drawing has to give way once there is one.
+    else if (hint.textContent === NO_DRAWING_HINT) hint.textContent = 'click a trace to select it';
   }
 }
 
