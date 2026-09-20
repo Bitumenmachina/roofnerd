@@ -39,7 +39,7 @@ export const PROPERTY_LABELS: Readonly<Record<string, { label: string; hint: str
   SUMP: { label: 'Sump width', hint: 'feet — the square cut down to the drain', group: 'Geometry' },
   BOARDS: { label: 'Boards', hint: 'how many the taper runs over', group: 'Geometry' },
   SIDES: { label: 'Sides', hint: 'how many', group: 'Geometry' },
-  STRETCHOUT: { label: 'Stretch-out', hint: 'inches — flat width of coil this profile eats; the specification calls it girth', group: 'Metal' },
+  STRETCHOUT: { label: 'Stretch-out', hint: 'inches — the flat width of coil this profile eats', group: 'Metal' },
   FLASHUP: {
     label: 'Flash up', hint: 'inches — how far the membrane is detailed to run up this wall',
     group: 'Geometry',
