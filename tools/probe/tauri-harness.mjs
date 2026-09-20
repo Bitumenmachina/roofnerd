@@ -164,7 +164,9 @@ class Session {
       let __value;
       try { __value = (${fn}).apply(null, arguments); }
       finally { HTMLElement.prototype.click = __orig; }
-      return JSON.stringify({ value: __value === undefined ? null : __value, refused: __refused });`;
+      const __pack = (v) => JSON.stringify({ value: v === undefined ? null : v, refused: __refused });
+      // A script that hands back a promise is awaited by the driver, as before.
+      return (__value && typeof __value.then === 'function') ? __value.then(__pack) : __pack(__value);`;
     const raw = await this.call('POST', '/execute/sync', { script, args });
     const { value, refused } = JSON.parse(raw);
     for (const r of refused) refuse(r.what, r.why);
