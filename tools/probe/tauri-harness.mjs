@@ -414,6 +414,76 @@ export async function typeKeys(session, text) {
   }
 }
 
+// ── Can a hand reach it? ─────────────────────────────────────────────────
+// A probe that clicks through the DOM lands on an element a hand cannot: one
+// clipped by an ancestor, one under something else, one off the window. The
+// File menu was that for eight days — every probe picked its items while no
+// person could see them. So every click a helper makes proves reach first:
+// the target's middle hit-tests to the target or a child of it, inside the
+// viewport. A refusal is printed, the click is NOT made, and the probe's own
+// assertion goes red. Round-2 repair order, R1 and R2.
+const REACH_SRC = `function reachOf(el) {
+  if (!el) return { ok: false, why: 'there is nothing to click' };
+  const r = el.getBoundingClientRect();
+  if (r.width < 1 || r.height < 1) return { ok: false, why: 'it has no size on screen' };
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  if (cx < 0 || cy < 0 || cx > window.innerWidth || cy > window.innerHeight) return { ok: false, why: 'its middle is outside the window' };
+  const hit = document.elementFromPoint(cx, cy);
+  if (!hit) return { ok: false, why: 'nothing is under its middle' };
+  if (hit !== el && !el.contains(hit)) {
+    const name = hit.className && String(hit.className).trim() ? '.' + String(hit.className).trim().split(/\\s+/).join('.') : hit.tagName.toLowerCase();
+    return { ok: false, why: 'something else is on top of it: ' + name };
+  }
+  return { ok: true, x: Math.round(cx), y: Math.round(cy) };
+}`;
+
+const refusals = [];
+/** Every click a helper refused this run, with why. A row for probes to assert on. */
+export const reachRefusals = () => refusals.slice();
+const refuse = (what, why) => {
+  refusals.push({ what, why });
+  console.log(`  REACH  ${what}: ${why}`);
+};
+
+/**
+ * Is the first element matching `selector` (and carrying `text`, if given) where a
+ * hand can reach it? Answers `{ ok, why | x, y }` without clicking anything.
+ */
+export const reach = async (session, selector, text) => {
+  const raw = await session.execute(`function (sel, want) {
+    ${REACH_SRC}
+    const all = [...document.querySelectorAll(sel)];
+    const el = want ? all.find((e) => (e.innerText || e.textContent || '').trim() === want || (e.getAttribute('aria-label') || '') === want) : all[0];
+    return JSON.stringify(reachOf(el));
+  }`, selector, text ?? null);
+  return JSON.parse(raw);
+};
+
+/**
+ * Click the element by its words, a hand's way: prove reach, then click. `false`
+ * when it is not there or cannot be reached, and the refusal is on the record.
+ */
+export const clickReach = async (session, selector, text, what = `${selector} "${text}"`) => {
+  const raw = await session.execute(`function (sel, want) {
+    ${REACH_SRC}
+    const all = [...document.querySelectorAll(sel)];
+    const el = want ? all.find((e) => (e.innerText || e.textContent || '').trim() === want || (e.getAttribute('aria-label') || '') === want) : all[0];
+    const r = reachOf(el);
+    if (r.ok) el.click();
+    return JSON.stringify(r);
+  }`, selector, text ?? null);
+  const r = JSON.parse(raw);
+  if (!r.ok) refuse(what, r.why);
+  return r.ok;
+};
+
+/** Open the File menu and pick an item by its words, proving reach on both. */
+export const pickMenu = async (session, label) => {
+  if (!(await clickReach(session, '.menu .menu-button', null, 'the File menu button'))) return false;
+  await wait(250);
+  return clickReach(session, '.menu .menu-item', label, `File → ${label}`);
+};
+
 /** Release everything the driver holds. Cheap insurance in a `finally`. */
 export const pointerRelease = (session) => session.releaseActions().catch(() => undefined);
 
