@@ -89,6 +89,17 @@ try {
   // through; that one is checked by hand and noted in STATUS.md. This one is a
   // real front door, it is the one somebody opening the program for the first
   // time will use, and it goes through exactly the same code.
+  // A roofer's first act is a bid of their own. The door to one is on the start
+  // screen and in the File menu, where a hand can reach both (R3).
+  const newDoor = await reach(session, '.start-new', 'New job…');
+  check('the start screen offers a new job, where a hand can reach it', () => {
+    assert.ok(newDoor.ok, newDoor.why || 'no New job… on the start screen');
+  });
+  check('and the File menu offers it too', () => {
+    assert.ok(reaches.some((r) => r.label === 'New job…' && r.ok),
+      `the menu lists ${reaches.map((r) => r.label).join(', ')}`);
+  });
+
   check('the start screen offers the demo job', () => {
     assert.match(start, /Open the demo job/, start);
   });

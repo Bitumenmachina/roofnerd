@@ -12,9 +12,9 @@
 
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { emit, listen } from '@tauri-apps/api/event';
-import { LENSES, measure, type Condition, type Page } from '@roofnerd/engine';
+import { LENSES, emptyJob, measure, type Condition, type Page } from '@roofnerd/engine';
 import {
-  at, connect, demoFolder, fitWindow, folder, open, pickFolder, save, subscribe, tearOff, type Doc,
+  at, connect, demoFolder, fitWindow, folder, open, pickFolder, save, set, subscribe, tearOff, type Doc,
 } from './doc.js';
 import {
   documentBar, menu, startScreen, statusStrip, toolRail, toolStrip,
@@ -204,6 +204,7 @@ const surfaceChrome: SurfaceChrome = {
 
 // ── the document bar ───────────────────────────────────────────────────────
 const fileMenu = menu('File', [
+  { label: 'New job…', onSelect: () => void newJob() },
   { label: 'Open a job…', onSelect: () => void openJob() },
   { label: 'Save', onSelect: () => void saveJob() },
   { label: 'Export IFC', onSelect: () => void exportIfc(fileMenu).catch((e) => status.say(message(e))) },
@@ -424,6 +425,7 @@ async function showStart() {
   const demo = await demoFolder().catch(() => null);
   surface.replaceChildren(startScreen({
     onOpen: () => void openJob(),
+    onNew: () => void newJob(),
     recent: [],
     onOpenRecent: (path) => void openJob(path),
     demo: demo ? { path: demo } : null,
@@ -492,6 +494,30 @@ async function openJob(path?: string) {
     await showPath();
     select({ kind: 'job' });
     status.say('Opened');
+  } catch (e) {
+    status.say(message(e));
+  }
+}
+
+/**
+ * A job of the estimator's own: an empty folder they pick, opened, and given
+ * its name and one scenario if it has no job file yet. The shell reads a
+ * folder with nothing in it as an empty document, so this is the same door as
+ * Open a job with the one thing a new job needs written through it. The
+ * folder is not written to disk until File → Save, like every other edit.
+ */
+async function newJob() {
+  const target = await pickFolder(null, 'Choose an empty folder for the new job');
+  if (!target) return;
+  try {
+    await open(target);
+    if (!at('/job/name')) {
+      const name = target.split(/[\\/]/).filter(Boolean).pop() ?? 'New job';
+      await set('/job', emptyJob(name).job);
+    }
+    await showPath();
+    select({ kind: 'job' });
+    status.say('New job — add a drawing to start');
   } catch (e) {
     status.say(message(e));
   }

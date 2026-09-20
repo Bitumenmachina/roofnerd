@@ -589,6 +589,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   padding: 9px 18px; background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
 }
 .start-open:hover { filter: brightness(1.08); border-color: var(--accent); }
+.start-doors { display: flex; gap: var(--gap-2); justify-content: center; flex-wrap: wrap; }
+.start-new {
+  display: inline-flex; align-items: center; gap: var(--gap-2);
+  padding: 9px 18px; background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+}
+.start-new:hover { filter: brightness(1.08); border-color: var(--accent); }
 .start h3 { font-size: var(--t-small); color: var(--ink-faint); font-weight: 500; margin: var(--gap-5) 0 var(--gap-2); text-transform: uppercase; letter-spacing: 0.04em; }
 .start-recent { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
 .start-recent button { width: 100%; border-color: transparent; background: transparent; }

@@ -198,11 +198,11 @@ export async function pageBytes(relative: string): Promise<ArrayBuffer> {
  * exactly what happened: the program could not be given a job at all, and
  * every check passed because every check called the command directly.
  */
-export async function pickFolder(startAt?: string | null): Promise<string | null> {
+export async function pickFolder(startAt?: string | null, title = 'Open a job'): Promise<string | null> {
   const picked = await openDialog({
     directory: true,
     multiple: false,
-    title: 'Open a job',
+    title,
     ...(startAt ? { defaultPath: startAt } : {}),
   });
   return typeof picked === 'string' ? picked : null;

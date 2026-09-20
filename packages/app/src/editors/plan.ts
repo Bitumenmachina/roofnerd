@@ -30,6 +30,9 @@ import {
 } from '../chrome.js';
 import { hueFor, type IconName } from '../icons.js';
 import { KIND_LABELS, PENDING_REASON, quantity } from '../labels.js';
+
+/** What an empty job asks for first (R3). */
+const NO_DRAWING_HINT = 'This job has no drawing yet. Add a drawing — the roof plan as a PDF or an image — then set its scale and trace the field.';
 import { select, selectedConditionId, watchSelection } from '../selection.js';
 import {
   clearVerbPicks, isVerb, useVerb, verbMarks, verbNow, verbPick, verbStrip, watchVerb,
@@ -494,6 +497,13 @@ function drawStrip(): void {
   if (act.tool === 'line') fields.push(soFar('Run so far', progress.pageLength, 1, page, 'LF'));
 
   chrome.strip.show(act.id === 'scale' && page?.feetPerUnit ? 'Rescale' : act.label, fields);
+
+  // A job with no drawing says so, and says what comes first, in the hint line
+  // where the tools already speak (R3).
+  if (!page) {
+    const hint = document.querySelector<HTMLElement>('.hint');
+    if (hint) hint.textContent = NO_DRAWING_HINT;
+  }
 }
 
 /**
