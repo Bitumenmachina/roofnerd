@@ -163,6 +163,7 @@ export function mountSection(host: HTMLElement, surroundings: SurfaceChrome): vo
       const box = extentOf(marks);
       if (box && box.width + MARGIN <= wide && box.height + MARGIN <= tall) break;
     }
+    drawnFeetPerInch = feetPerInch;
     spreadWords(marks);
     const { drawnToFit } = fitDrawing(surface, marks, MARGIN / 2, footer);
     // The horizontal is the PANE's to state, because the pane is what knows how
@@ -286,13 +287,17 @@ function viewChips(): void {
   chrome.setViewTools([group]);
 }
 
+/** The horizontal scale the pane last drew at; the strip reads this, not the core's wish. */
+let drawnFeetPerInch: number | null = null;
+
 /** What the strip says about the cut that is up. */
 function drawStrip(cut: Drawing): void {
   if (!chrome) return;
   chrome.strip.show('Cut a section', [
     stripField('Showing', cut.subtitle ?? cut.title),
     stripField('Vertical scale', `×${cut.verticalExaggeration}`),
-    stripField('Horizontal', `1" = ${feetInches(cut.feetPerInch)}`),
+    // The scale the pane DREW at — one source with the drawing's own note (R7).
+    stripField('Horizontal', `1" = ${feetInches(drawnFeetPerInch ?? cut.feetPerInch)}`),
     stripField('Run length', `${feetInches(cut.cutRunFeet)}`, undefined, true),
   ]);
 }

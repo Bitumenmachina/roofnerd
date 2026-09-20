@@ -230,7 +230,8 @@ try {
   await wait(900);
   const opened = await read(session, function () {
     const open = document.querySelector('.cost-line.open');
-    return JSON.stringify(open ? (open.innerText || '') : '');
+    const chain = document.querySelector('.line-chain');
+    return JSON.stringify(((open ? open.innerText : '') + '\n' + (chain ? chain.innerText : '')) || '');
   });
   check('R6 · the adhesive line says on its face which row it is priced from and why', () => {
     assert.match(opened, /120 mph/, `the open line reads: ${opened.slice(0, 200)}`);
@@ -247,4 +248,5 @@ check('no click a helper made this run was refused for reach', () => {
 });
 const failed = results.filter((r) => r === 'FAIL').length;
 console.log(failed ? `FAIL — ${failed} of ${results.length}` : `PASS — ${results.length}/${results.length}`);
-process.exitCode = failed ? 1 : 0;
+// The driver's own child keeps the loop alive after close(); every other probe exits by hand too.
+process.exit(failed ? 1 : 0);
