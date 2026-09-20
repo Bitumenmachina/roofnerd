@@ -232,7 +232,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .menu-button { border: 0; background: transparent; padding: 4px 10px; border-radius: var(--radius); }
 .menu-button:hover { background: var(--rule-soft); }
 .menu-list {
-  position: absolute; top: 100%; left: 0; z-index: 40; min-width: 190px;
+  /* Fixed, not absolute: the document bar clips its own overflow (it has to, so a
+     long job name cannot widen the page), and an absolute list inside it was
+     clipped to a sliver for eight days while every probe clicked its items
+     through the DOM. A fixed box escapes the clip; menu() puts it under the
+     button. Round-2 repair order, R1. */
+  position: fixed; z-index: 40; min-width: 190px;
   background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius);
   padding: var(--gap-1); display: flex; flex-direction: column;
 }

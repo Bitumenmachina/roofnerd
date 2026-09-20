@@ -70,6 +70,11 @@ export function menu(label: string, items: readonly MenuItem[]): HTMLElement {
 
   button.addEventListener('click', (e) => {
     e.stopPropagation();
+    // The list is fixed-positioned so the bar's own overflow clip cannot hide
+    // it (R1); it stands just under the button, wherever the button is.
+    const box = button.getBoundingClientRect();
+    list.style.top = `${Math.round(box.bottom + 2)}px`;
+    list.style.left = `${Math.round(box.left)}px`;
     list.hidden = !list.hidden;
   });
   document.addEventListener('click', () => { list.hidden = true; });
@@ -198,6 +203,11 @@ export function documentBar(options: {
 
   button.addEventListener('click', (e) => {
     e.stopPropagation();
+    // The list is fixed-positioned so the bar's own overflow clip cannot hide
+    // it (R1); it stands just under the button, wherever the button is.
+    const box = button.getBoundingClientRect();
+    list.style.top = `${Math.round(box.bottom + 2)}px`;
+    list.style.left = `${Math.round(box.left)}px`;
     list.hidden = !list.hidden;
   });
   document.addEventListener('click', () => { list.hidden = true; });
