@@ -61,7 +61,7 @@ If a screen says something else, that is a defect — report it.
 | **Taper** | Slope added by the insulation, in inches per foot, on top of whatever the deck already does. Sold as 1/8, 1/4, 1/2. |
 | **Elevation** | How high something sits, in feet. Top of the deck on an area; the base of the run on a line. |
 | **Sump** | The square cut down around a drain so the tapered field can meet the bowl. Four foot or eight, off the thickness at the drain. |
-| **Girth** | The flat width of coil a formed profile eats — the blank strip a piece is rolled from. The shop calls the same measure the *stretch-out*; a quote written either way is read the same. |
+| **Stretch-out** | The flat width of coil a formed profile eats — the blank strip a piece is rolled from. The specification's word for the same measure is *girth*; a quote written either way is read the same, and the screen says stretch-out (D134). |
 | **Item** | One thing a condition consumes: material, labor, fabrication, a sub, equipment, or something else. |
 | **Kind** | What an item is, in those words. Never typed: a rate at the brake makes it fabrication, any other rate makes it labor, and with no rate the cost code's own class already says. |
 | **Rate** | How fast the work goes, said the way a foreman says it — forty squares a crew-day with six men, eighty feet a shop hour. The hours follow from it and are never typed. |

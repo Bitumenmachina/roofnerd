@@ -1204,7 +1204,7 @@ fn section_of(document: &Document, taper: &SolvedTaper, walls: &SolvedWalls, cut
             d.text(
                 Point::new(inner + 0.4, top - gap(0.45)),
                 match w.coping.girth_inches {
-                    Some(g) => format!("coping cap · {} girth", inches_written(g)),
+                    Some(g) => format!("coping cap · {} stretch-out", inches_written(g)),
                     None => "coping cap · no girth stated".to_string(),
                 },
                 "label",

@@ -157,7 +157,7 @@ function profileCard(p: Profile): HTMLElement {
   girth.className = 'library-girth';
   // The number the formula language exists for. Shown as the sum it is, so an
   // estimator can see it is the legs and the hems rather than a magic figure.
-  girth.textContent = `${girthOf(p)} in girth`;
+  girth.textContent = `${girthOf(p)} in stretch-out`;
   head.append(name, girth);
   card.append(head);
 

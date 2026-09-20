@@ -158,7 +158,7 @@ export function propertyPhrase(name: string, value: number): string {
     case 'H': return `${value} ft high`;
     case 'W': return `${value} ft wide`;
     case 'T': return `${value} in thick`;
-    case 'STRETCHOUT': return `${value} in girth`;
+    case 'STRETCHOUT': return `${value} in stretch-out`;
     // A thickness with no unit beside it is a number nobody can act on, and the
     // default arm prints exactly that. Eight what — inches, or feet of wall?
     case 'WALL': return `${value} in wall`;
