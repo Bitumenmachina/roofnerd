@@ -30,7 +30,7 @@
         "eachOf": "TAPER_*_SF",
         "formula": "TAPER_*_SF / 100",
         "id": "iso",
-        "notes": "One line per letter the layout bought. The letter on each course is under review against the manufacturer’s chart: the panels read half an inch off the surface they are drawn under in the Section, and which side of the tie the trade takes is not settled.",
+        "notes": "One line for the whole tapered package. The sheet draws one per lettered panel the layout reached, and each takes its price from the book by its own name — so moving the slope into another chart's series buys the panels that chart prints rather than pricing nothing.",
         "unit": "SQ",
         "waste": 8
       },
@@ -64,7 +64,7 @@
         "order": {
           "name": "BOX",
           "per": 1000,
-          "rule": "exact"
+          "rule": "ceil"
         },
         "unit": "EA",
         "unitCost": 290
@@ -78,7 +78,7 @@
         "order": {
           "name": "BOX",
           "per": 1000,
-          "rule": "exact"
+          "rule": "ceil"
         },
         "unit": "EA",
         "unitCost": 290
@@ -92,7 +92,7 @@
         "order": {
           "name": "BOX",
           "per": 1000,
-          "rule": "exact"
+          "rule": "ceil"
         },
         "unit": "EA",
         "unitCost": 290
@@ -107,7 +107,7 @@
         "order": {
           "name": "BOX",
           "per": 1000,
-          "rule": "exact"
+          "rule": "ceil"
         },
         "unit": "EA",
         "unitCost": 218
@@ -367,7 +367,7 @@
         "order": {
           "name": "BOX",
           "per": 1000,
-          "rule": "exact"
+          "rule": "ceil"
         },
         "unit": "EA",
         "unitCost": 353.25

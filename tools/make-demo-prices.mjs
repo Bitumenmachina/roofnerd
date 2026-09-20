@@ -122,15 +122,15 @@ const CATALOGUE = [
   // square, everywhere, off the traced area. It knew nothing about a corner.
   { id: 'base-fasteners-field', description: 'Base layer fasteners, field',
     costCode: '07-100-170', unit: 'EA', layer: 'fastening', priceAs: 'base-fastener',
-    order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [240, 290] },
+    order: { name: 'BOX', per: 1000, rule: 'ceil' }, band: [240, 290] },
   { id: 'base-fasteners-perimeter', description: 'Base layer fasteners, perimeter',
     costCode: '07-100-170', unit: 'EA', layer: 'fastening', priceAs: 'base-fastener',
-    order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [240, 290] },
+    order: { name: 'BOX', per: 1000, rule: 'ceil' }, band: [240, 290] },
   { id: 'base-fasteners-corner', description: 'Base layer fasteners, corner',
     costCode: '07-100-170', unit: 'EA', layer: 'fastening', priceAs: 'base-fastener',
-    order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [240, 290] },
+    order: { name: 'BOX', per: 1000, rule: 'ceil' }, band: [240, 290] },
   { id: 'base-plates', description: 'Barbed plates, 3 in', costCode: '07-100-170', unit: 'EA',
-    layer: 'fastening', order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [180, 220] },
+    layer: 'fastening', order: { name: 'BOX', per: 1000, rule: 'ceil' }, band: [180, 220] },
   // ── and what sticks the layers over it down ───────────────────────────
   // Also one price for three lines, and for the same reason: a set of tanks is
   // a set of tanks. The zones differ in area and in how many courses stand on
@@ -166,7 +166,7 @@ const CATALOGUE = [
   { id: 'termbar', description: 'Termination bar and sealant', costCode: '07-100-160', unit: 'LF',
     band: [3.1, 3.7] },
   { id: 'metal-fasteners', description: 'Fasteners, cleat and termination bar', costCode: '07-100-170', unit: 'EA',
-    order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [340, 420] },
+    order: { name: 'BOX', per: 1000, rule: 'ceil' }, band: [340, 420] },
   // ── the drains and the curb ───────────────────────────────────────────
   { id: 'drain', description: 'Retrofit drain, 4 in', costCode: '07-100-100', unit: 'EA',
     band: [420, 520] },
