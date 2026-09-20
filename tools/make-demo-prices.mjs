@@ -122,15 +122,15 @@ const CATALOGUE = [
   // square, everywhere, off the traced area. It knew nothing about a corner.
   { id: 'base-fasteners-field', description: 'Base layer fasteners, field',
     costCode: '07-100-170', unit: 'EA', layer: 'fastening', priceAs: 'base-fastener',
-    order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [240, 290] },
+    order: { name: 'BOX', per: 1000, rule: 'ceil' }, band: [240, 290] },
   { id: 'base-fasteners-perimeter', description: 'Base layer fasteners, perimeter',
     costCode: '07-100-170', unit: 'EA', layer: 'fastening', priceAs: 'base-fastener',
-    order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [240, 290] },
+    order: { name: 'BOX', per: 1000, rule: 'ceil' }, band: [240, 290] },
   { id: 'base-fasteners-corner', description: 'Base layer fasteners, corner',
     costCode: '07-100-170', unit: 'EA', layer: 'fastening', priceAs: 'base-fastener',
-    order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [240, 290] },
+    order: { name: 'BOX', per: 1000, rule: 'ceil' }, band: [240, 290] },
   { id: 'base-plates', description: 'Barbed plates, 3 in', costCode: '07-100-170', unit: 'EA',
-    layer: 'fastening', order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [180, 220] },
+    layer: 'fastening', order: { name: 'BOX', per: 1000, rule: 'ceil' }, band: [180, 220] },
   // ── and what sticks the layers over it down ───────────────────────────
   // Also one price for three lines, and for the same reason: a set of tanks is
   // a set of tanks. The zones differ in area and in how many courses stand on
@@ -166,7 +166,7 @@ const CATALOGUE = [
   { id: 'termbar', description: 'Termination bar and sealant', costCode: '07-100-160', unit: 'LF',
     band: [3.1, 3.7] },
   { id: 'metal-fasteners', description: 'Fasteners, cleat and termination bar', costCode: '07-100-170', unit: 'EA',
-    order: { name: 'BOX', per: 1000, rule: 'exact' }, band: [340, 420] },
+    order: { name: 'BOX', per: 1000, rule: 'ceil' }, band: [340, 420] },
   // ── the drains and the curb ───────────────────────────────────────────
   { id: 'drain', description: 'Retrofit drain, 4 in', costCode: '07-100-100', unit: 'EA',
     band: [420, 520] },
@@ -364,6 +364,10 @@ CATALOGUE.push({
   eachOf: 'TAPER_*_SF',
   costCode: '07-100-100', unit: 'SQ',
   waste: 8,
+  notes: 'One line per letter the layout bought. The letter on each course is under review '
+    + 'against the manufacturer\u2019s chart: the panels read half an inch off the surface '
+    + 'they are drawn under in the Section, and which side of the tie the trade takes is '
+    + 'not settled.',
 });
 CATALOGUE.push({
   id: 'iso-fill',
@@ -403,7 +407,12 @@ const DERIVED = [
   },
   { condition: 'c-field', id: 'iso-fill', formula: 'FILL_SF / 100' },
   { condition: 'c-drains', id: 'sump-panel', formula: 'SUMP_PANELS_EA' },
-  { condition: 'c-cricket', id: 'cricket-stock', formula: 'CRICKET_SF' },
+  {
+    condition: 'c-cricket', id: 'cricket-stock', formula: 'CRICKET_SF',
+    notes: 'Priced by the square foot of footprint off the field\u2019s own chart. Cricket '
+      + 'stock is its own lettered series and the chart on disk carries only the primary '
+      + 'slope, so this is an approximation until that chart is in hand.',
+  },
   // C3: the wall and curb lines move off LF * H and off SEGMENTS, onto the
   // names the wall solver carries. wallflash/curbflash were the wall's own
   // height times its run, which is every inch of the wall whether or not the
@@ -469,14 +478,16 @@ const DERIVED = [
     notes: 'One plate to a fastener, which is how the sheet prints them: '
       + '"Insulation Fasteners & Plates".',
   },
-  { condition: 'c-field', id: 'iso-adhesive-field', formula: 'ADHESIVE_SETS_Z1_EA' },
-  { condition: 'c-field', id: 'iso-adhesive-perimeter', formula: 'ADHESIVE_SETS_Z2_EA' },
+  { condition: 'c-field', id: 'iso-adhesive-field', formula: 'ADHESIVE_SETS_Z1_EA',
+    notes: "The manufacturer's ribbon-spacing table stops at 120 mph and this roof is designed for 130, so the 120 mph row is used until the evaluation report is in hand. Priced at the spacing that row prints." },
+  { condition: 'c-field', id: 'iso-adhesive-perimeter', formula: 'ADHESIVE_SETS_Z2_EA',
+    notes: "The manufacturer's ribbon-spacing table stops at 120 mph and this roof is designed for 130, so the 120 mph row is used until the evaluation report is in hand. Priced at the spacing that row prints." },
   {
     condition: 'c-field', id: 'iso-adhesive-corner', formula: 'ADHESIVE_SETS_Z3_EA',
     notes: 'Every board course above the fastened one, and the cover board over the '
-      + "lot, at the ribbon spacing the manufacturer's warranty table gives for this "
-      + 'wind speed. The table stops below this coast; the top row it prints is what '
-      + 'this rests on, and the fastening plan says so on its face.',
+      + "lot, at the ribbon spacing the manufacturer's warranty table gives. The table "
+      + 'stops at 120 mph and this roof is designed for 130, so the 120 mph row is used '
+      + 'until the evaluation report is in hand.',
   },
   // C9: the two lines that are not work on the roof move off the roof field and
   // onto the group a sheet keeps them in. They were diluting every per-square

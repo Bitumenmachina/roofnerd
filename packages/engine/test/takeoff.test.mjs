@@ -688,3 +688,19 @@ test('every derived name has a trade label, and no label carries the identifier'
     ['TAPER_X_SF', 'TAPER_Y_SF', 'FILL_SF', 'BOARD_WASTE_SF', 'NOFALL_SF'],
   );
 });
+
+// ── Round 2, R5: a run traced back to its start is a ring ────────────────
+// The demo's parapet read 9 EA on a roof that turns eight times, and its curb
+// 5 EA on four corners: the point a closed run ends on is its first point
+// again, not a corner.
+test('a run closed back on its first point counts its corners, not the closing point', () => {
+  const square = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }, { x: 0, y: 0 }];
+  const m = measure('line', trace(square), {}, oneFoot);
+  assert.equal(m.VERTICES, 4);
+  assert.equal(m.EA, 4);
+  assert.equal(m.SEGMENTS, 4);
+  assert.equal(m.LF, 40);
+  const open = measure('line', trace(square.slice(0, 4)), {}, oneFoot);
+  assert.equal(open.VERTICES, 4);
+  assert.equal(open.SEGMENTS, 3);
+});

@@ -37,7 +37,7 @@
       "order": {
         "name": "BOX",
         "per": 1000,
-        "rule": "exact"
+        "rule": "ceil"
       },
       "unitCost": 290
     },
@@ -50,7 +50,7 @@
       "order": {
         "name": "BOX",
         "per": 1000,
-        "rule": "exact"
+        "rule": "ceil"
       },
       "unitCost": 290
     },
@@ -63,7 +63,7 @@
       "order": {
         "name": "BOX",
         "per": 1000,
-        "rule": "exact"
+        "rule": "ceil"
       },
       "unitCost": 290
     },
@@ -76,7 +76,7 @@
       "order": {
         "name": "BOX",
         "per": 1000,
-        "rule": "exact"
+        "rule": "ceil"
       },
       "unitCost": 218
     },
@@ -171,7 +171,7 @@
       "order": {
         "name": "BOX",
         "per": 1000,
-        "rule": "exact"
+        "rule": "ceil"
       },
       "unitCost": 353.25
     },
@@ -715,7 +715,8 @@
       "eachOf": "TAPER_*_SF",
       "costCode": "07-100-100",
       "unit": "SQ",
-      "waste": 8
+      "waste": 8,
+      "notes": "One line per letter the layout bought. The letter on each course is under review against the manufacturer’s chart: the panels read half an inch off the surface they are drawn under in the Section, and which side of the tie the trade takes is not settled."
     },
     {
       "id": "iso-fill",

@@ -706,3 +706,35 @@ test('an area whose every line is struck leaves the per-square divisor, and says
   assert.equal(r.squaresLeftOut.length, 1);
   assert.match(r.squaresLeftOut[0], /nothing priced on it/);
 });
+
+// ── Round 2, R4: the recap foots by hand ──────────────────────────────────
+// The classes printed and the job cost printed under them differed by a cent
+// on the demo, because the adders were summed unrounded and the job cost was
+// summed from unrounded class totals. One path, in cents.
+test('the job cost is the sum of the printed class totals, to the cent', () => {
+  const doc = emptyJob('Foots');
+  const scenario = {
+    ...doc.job.scenarios[0], profit: 15, bond: 2,
+    prices: { a: 10.005, b: 3.335, c: 7.777 },
+    adders: { Material: { tax: 7, escalation: 3 }, Labor: { burden: 10 } },
+  };
+  doc.pages.push({ id: 'p', name: 'P', feetPerUnit: 1 });
+  doc.conditions.push({
+    id: 'c', name: 'C', kind: 'count', properties: {},
+    traces: [{ id: 't', pageId: 'p', points: [{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 2 }] }],
+    items: [
+      { id: 'a', description: 'a', costCode: '07-100-100', formula: 'EA * 7', unit: 'EA' },
+      { id: 'b', description: 'b', costCode: '07-100-100', formula: 'EA * 11', unit: 'EA' },
+      { id: 'c', description: 'c', costCode: '07-100-240', formula: 'EA * 13', unit: 'EA' },
+    ],
+  });
+  doc.costCodes.push({ code: '07-100-100', name: 'm', class: 'Material' }, { code: '07-100-240', name: 'l', class: 'Labor' });
+  const r = recap(doc, scenario);
+  const cents = (v) => Math.round(v * 100);
+  for (const c of r.classes) {
+    assert.equal(cents(c.total), cents(c.subtotal) + c.adders.reduce((n, a) => n + cents(a.amount), 0), `${c.class} does not foot`);
+  }
+  assert.equal(cents(r.jobCost), r.classes.reduce((n, c) => n + cents(c.total), 0));
+  assert.equal(cents(r.contractAmount), cents(r.jobCost) + cents(r.overhead) + cents(r.profit));
+  assert.equal(cents(r.sellingPrice), cents(r.contractAmount) + cents(r.bond));
+});

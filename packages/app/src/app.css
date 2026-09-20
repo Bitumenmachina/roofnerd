@@ -829,13 +829,8 @@ body.cost-window { background: var(--rn-panel); }
 .cost-line .line-basis { grid-column: 1 / -1; }
 .line-item {
   font-size: var(--t-micro); line-height: 1.3; color: var(--rn-ink);
-  display: flex; min-width: 0; white-space: nowrap;
+  display: block; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* What distinguishes one line from the next is at the END of its name — the
-   zone, the gauge, the thickness — so the head gives way and the tail does not.
-   The tail is still capped, because a long one would leave the head nothing. */
-.item-head { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.item-tail { flex: 0 0 auto; max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
 .line-basis {
   display: flex; gap: 6px; align-items: baseline; min-width: 0;
   font-size: 10px; line-height: 1.4; color: var(--rn-ink-dim);
@@ -973,8 +968,11 @@ body.cost-window { background: var(--rn-panel); }
   padding: 9px 12px; background: var(--rn-panel-head);
   border-bottom: 1px solid var(--rn-hairline);
 }
-.condition-list { flex: none; padding: var(--gap-2); border-bottom: 1px solid var(--rn-hairline); }
-.cost-condition > .condition-panel { flex: none; width: auto; border-left: 0; overflow: visible; }
+/* The list takes what it needs up to half the tab and scrolls past that, so the
+   picked condition's own figures are whole under it at the design frame — they
+   were under the money footer at 1440 x 900 (R9). */
+.condition-list { flex: 0 1 auto; max-height: 50%; overflow-y: auto; padding: var(--gap-2); border-bottom: 1px solid var(--rn-hairline); }
+.cost-condition > .condition-panel { flex: 1 1 auto; min-height: 0; width: auto; border-left: 0; overflow-y: auto; }
 .cost-load, .cost-back {
   flex: none; margin: 0 var(--gap-3) var(--gap-3); border-radius: 0;
   border: 1px solid var(--rn-hairline-strong); background: transparent; color: var(--rn-ink);
@@ -1030,6 +1028,7 @@ body.cost-window { background: var(--rn-panel); }
 .panel-money .value.none { font-size: var(--t-small); color: var(--ink-faint); }
 .panel-money-note { display: block; color: var(--ink-faint); font-size: var(--t-micro); padding: 0 var(--gap-3) var(--gap-2); }
 
+.panel-note { font-size: var(--t-micro); line-height: 1.35; color: var(--ink-soft); margin: 0 0 var(--gap-2); }
 .panel-group { font-size: var(--t-micro); text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); font-weight: 600; margin: var(--gap-3) 0 var(--gap-2); }
 .condition-panel label { display: block; margin-bottom: var(--gap-2); }
 .condition-panel label > span { display: block; font-size: var(--t-small); margin-bottom: 2px; }
