@@ -202,11 +202,13 @@ try {
     const buyingHours = est.items.filter((i) => /buy [\d.,]+ HOURS/.test(i.basis));
     assert.equal(buyingHours.length, 0, `${buyingHours.length} rows read "buy … HOURS"`);
   });
-  check('R12 · a count prints whole', () => {
+  check('R12 · a whole count prints whole, and a count worked out to a fraction keeps it', () => {
     const eaRows = est.items.filter((i) => /^EA/.test(i.unit.trim()));
     assert.ok(eaRows.length > 0, 'no EA rows');
-    const fractional = eaRows.filter((i) => /\.\d\d$/.test(i.qty.trim()));
-    assert.equal(fractional.length, 0, `${fractional.length} counts carry decimals: ${fractional.slice(0, 3).map((i) => i.qty).join(', ')}`);
+    const padded = eaRows.filter((i) => /\.00$/.test(i.qty.trim()));
+    assert.equal(padded.length, 0, `${padded.length} whole counts carry .00: ${padded.slice(0, 3).map((i) => i.qty).join(', ')}`);
+    const dumpster = est.items.find((i) => /^Dumpster/.test(i.item));
+    assert.ok(dumpster && /\.\d\d$/.test(dumpster.qty.trim()), `the dumpster count reads "${dumpster ? dumpster.qty : 'nothing'}" — 6.86 measured, 7 bought`);
   });
   check('R13 · the mark is on a line the core solved and off a line that is only traced', () => {
     const traced = est.items.find((i) => /^Flash the wall/.test(i.item));
