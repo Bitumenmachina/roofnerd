@@ -297,6 +297,10 @@ impl<'a> Scan<'a> {
         if !x.is_finite() {
             return Err("is not a usable number".into());
         }
+        // Written as something, held as nothing: too small for a 64-bit number.
+        if x == 0.0 && text.bytes().any(|c| (b'1'..=b'9').contains(&c)) {
+            return Err("is too small a number to hold; it would be stored as zero".into());
+        }
         // A fraction after a whole number: "6 1/2" or "6-1/2".
         let save = self.at;
         if self.eat(b' ') || self.eat(b'-') {
@@ -378,8 +382,14 @@ pub fn parse_length(text: &str) -> Result<(Len, &'static str), String> {
             if scan.done() {
                 return Ok((Len::One(sign * first + 0.0), FT));
             }
-            // 25'-6": the dash between feet and inches is a separator, not a minus.
+            // 25'-6" and 25' - 6": the dash between feet and inches is a separator, not a
+            // minus. A dash hard against the inches with a space before it (25' -6") reads
+            // as a minus on the inches, which means nothing; it is refused, not dropped.
+            let spaced = scan.at > 0 && scan.s[scan.at - 1] == b' ';
             if scan.eat(b'-') {
+                if spaced && scan.peek() != Some(b' ') {
+                    return Err(fail("has a minus on the inches; a length below zero carries its minus in front (-2' 6\"), and the dash in 25'-6\" goes hard against the feet mark".into()));
+                }
                 scan.spaces();
             }
             let (inches, _) = scan.quantity().map_err(&fail)?;
@@ -403,7 +413,8 @@ pub fn parse_length(text: &str) -> Result<(Len, &'static str), String> {
 }
 
 /// Read a pitch as typed: rise in inches for 12 of run. `6`, `6:12`, `6/12`, `6 in/12`,
-/// `1/4:12`, `1/4 in/ft`. Anything else (degrees, percent, a run other than 12) is refused.
+/// `1/4:12`, `1/4 in/ft`. Anything else (degrees, percent, a run other than 12, a bare
+/// fraction such as `3/4`) is refused.
 pub fn parse_pitch(text: &str) -> Result<f64, String> {
     let typed = text.trim();
     let s: String = plain(text).replace('"', " in ");
@@ -416,6 +427,7 @@ pub fn parse_pitch(text: &str) -> Result<f64, String> {
         return Err(format!("{typed:?} is a percentage; {how}"));
     }
     let mut body = squeezed.as_str();
+    let mut run_given = false;
     if !squeezed.is_ascii() {
         return Err(format!("{typed:?} has a character that is not part of a pitch; {how}"));
     }
@@ -423,8 +435,16 @@ pub fn parse_pitch(text: &str) -> Result<f64, String> {
     for suffix in [" in per ft", " in per foot", " in/ft", "in/ft", " in/12", "in/12", " in 12", ":12", "/12"] {
         if let Some(rest) = body.strip_suffix(suffix) {
             body = rest.trim_end();
+            run_given = true;
             break;
         }
+    }
+    // A bare fraction is two things to two people: 3/4 is a rise of 3/4 in 12 to one and
+    // 3 in 4 (9:12) to another, and "1/2 pitch" once meant 12:12. Only a/12 is read
+    // without its run, as a in 12. Any other fraction has to say its run.
+    let bare = body.trim_start_matches(['-', '+']);
+    if !run_given && bare.contains('/') && !bare.contains(' ') && !bare.contains('-') {
+        return Err(format!("{typed:?} could be a rise of {bare} in 12 or a rise of {} in {}; write the rise with its run, like {bare}:12; {how}", bare.split('/').next().unwrap_or(""), bare.split('/').nth(1).unwrap_or("")));
     }
     let mut scan = Scan::new(body);
     let negative = scan.eat(b'-');

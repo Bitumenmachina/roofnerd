@@ -117,16 +117,56 @@ pub fn signed_offset(p: P2, a: P2, b: P2) -> Option<f64> {
     Some(((ex * (p[1] - a[1])) - (ey * (p[0] - a[0]))) / len)
 }
 
-/// Does the whole segment run along the outline? Tested at its ends and three points
-/// between, so a line that only touches the outline at its ends and cuts across the
-/// plane, or across a notch outside it, does not pass.
+/// Does the whole segment run along the outline? Every stretch of it has to lie on an
+/// outline edge: the edges within `tolerance` of the segment's line are laid along it and
+/// have to cover it from end to end. A line that touches the outline at its ends and cuts
+/// across the plane, or across a notch outside it, does not pass, however short the gap.
+/// On failure: how far along the segment (0 to 1) the first uncovered stretch is, and how
+/// far that point is from the outline.
 pub fn runs_along_outline(a: P2, b: P2, pts: &[P2], tolerance: f64) -> Result<(), (f64, f64)> {
-    for t in [0.0, 0.25, 0.5, 0.75, 1.0] {
-        let p = [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
-        let off = point_to_outline(p, pts);
-        if off > tolerance {
-            return Err((t, off));
+    let len = dist(a, b);
+    if len == 0.0 {
+        return Ok(());
+    }
+    let along = |x: P2| ((x[0] - a[0]) * (b[0] - a[0]) + (x[1] - a[1]) * (b[1] - a[1])) / len;
+    let n = pts.len();
+    let mut covered: Vec<(f64, f64)> = Vec::new();
+    for i in 0..n {
+        let (p, q) = (pts[i], pts[(i + 1) % n]);
+        let (Some(d0), Some(d1)) = (signed_offset(p, a, b), signed_offset(q, a, b)) else { continue };
+        // The part of this edge within `tolerance` of the segment's line, as a range of
+        // s from 0 at p to 1 at q. The offset runs straight from d0 to d1 along the edge.
+        let (s0, s1) = if d0.abs() <= tolerance && d1.abs() <= tolerance {
+            (0.0, 1.0)
+        } else if d0 == d1 {
+            continue;
+        } else {
+            let (x, y) = ((-tolerance - d0) / (d1 - d0), (tolerance - d0) / (d1 - d0));
+            (x.min(y).max(0.0), x.max(y).min(1.0))
+        };
+        if s1 < s0 {
+            continue;
         }
+        let at = |s: f64| [p[0] + s * (q[0] - p[0]), p[1] + s * (q[1] - p[1])];
+        let (t0, t1) = (along(at(s0)), along(at(s1)));
+        covered.push((t0.min(t1), t0.max(t1)));
+    }
+    covered.sort_by(|x, y| x.0.total_cmp(&y.0));
+    let mut reach = 0.0;
+    let fail = |t: f64| {
+        let p = [a[0] + t / len * (b[0] - a[0]), a[1] + t / len * (b[1] - a[1])];
+        Err((t / len, point_to_outline(p, pts)))
+    };
+    for (lo, hi) in covered {
+        if lo > reach + tolerance {
+            break;
+        }
+        reach = reach.max(hi);
+    }
+    if reach < len - tolerance {
+        // Report where cover runs out: the start if nothing reaches it, else just past
+        // the last covered point.
+        return fail(if reach <= tolerance { 0.0 } else { (reach + tolerance).min(len) });
     }
     Ok(())
 }

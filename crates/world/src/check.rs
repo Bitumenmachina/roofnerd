@@ -81,6 +81,22 @@ pub fn eave_edge(pts: &[P2], eave: [P2; 2]) -> Result<[P2; 2], String> {
     if geom::dist(a, b) <= FIT_TOLERANCE_FT {
         return Err("has no length".into());
     }
+    // An edge traced with a point part-way along it is still one edge: points that sit on
+    // the straight line between their neighbours are passed over when finding the eave's edge.
+    let mut straight: Vec<P2> = pts.to_vec();
+    let mut i = 0;
+    while straight.len() > 3 && i < straight.len() {
+        let m = straight.len();
+        let (prev, here, next) = (straight[(i + m - 1) % m], straight[i], straight[(i + 1) % m]);
+        if geom::point_to_segment(here, prev, next) <= FIT_TOLERANCE_FT {
+            straight.remove(i);
+            i = 0;
+        } else {
+            i += 1;
+        }
+    }
+    let all = pts;
+    let pts = &straight[..];
     let n = pts.len();
     let holding: Vec<usize> = (0..n)
         .filter(|&i| {
@@ -93,7 +109,7 @@ pub fn eave_edge(pts: &[P2], eave: [P2; 2]) -> Result<[P2; 2], String> {
         [i] => [pts[*i], pts[(*i + 1) % n]],
         _ => return Err("is too short to tell which edge of the outline it lies along".into()),
     };
-    let offsets: Vec<f64> = pts.iter().filter_map(|p| geom::signed_offset(*p, edge[0], edge[1])).collect();
+    let offsets: Vec<f64> = all.iter().filter_map(|p| geom::signed_offset(*p, edge[0], edge[1])).collect();
     let (lo, hi) = offsets.iter().fold((f64::MAX, f64::MIN), |(lo, hi), x| (lo.min(*x), hi.max(*x)));
     if lo < -FIT_TOLERANCE_FT && hi > FIT_TOLERANCE_FT {
         return Err("part of the outline lies on the low side of it; the eave is the plane's lowest edge, and the plane rises one way from it".into());
@@ -176,8 +192,12 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
         if line.description.trim().is_empty() {
             return Err(format!("{path} cost line: has no description"));
         }
-        if c.lines[..i].iter().any(|other| other.description == line.description) {
-            return Err(format!("{path}: has two cost lines described as {:?}; a line is known by its description, so each one on an element is different", line.description));
+        if line.description != line.description.trim() {
+            return Err(format!("{path} cost line {:?}: its description starts or ends with a space; a line is known by its description, and a space nobody can see makes two lines out of one", line.description));
+        }
+        let same = |a: &str, b: &str| a.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase() == b.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+        if let Some(other) = c.lines[..i].iter().find(|other| same(&other.description, &line.description)) {
+            return Err(format!("{path}: has two cost lines described as {:?} and {:?}; a line is known by its description, so each one on an element is different in more than capitals and spacing", other.description, line.description));
         }
         let what = format!("{path} cost line {:?}", line.description);
         let Some((_, unit)) = kind.measures().iter().find(|(name, _)| *name == line.quantity) else {

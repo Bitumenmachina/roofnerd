@@ -20,7 +20,17 @@ use plumbline_world::value::Status;
 use plumbline_world::{file, roof, sample, view};
 
 fn main() -> ExitCode {
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    // An argument that is not text is refused, not a panic.
+    let mut args: Vec<String> = Vec::new();
+    for a in std::env::args_os().skip(1) {
+        match a.into_string() {
+            Ok(s) => args.push(s),
+            Err(bad) => {
+                eprintln!("plumbline: the argument {:?} is not readable text", bad.to_string_lossy());
+                return ExitCode::FAILURE;
+            }
+        }
+    }
     match run(&args) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {

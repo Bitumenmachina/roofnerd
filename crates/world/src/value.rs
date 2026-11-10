@@ -142,6 +142,11 @@ impl Derived {
         if value.is_some_and(|v| !v.is_finite()) {
             return Derived::refused(unit, formula, inputs, "the inputs are too large to give a usable figure");
         }
+        // Nothing is silently zero: a figure that is something, but less than the four
+        // decimals it is written to, is not shown as 0.
+        if value.is_some_and(|v| v != 0.0 && round4(v) == 0.0) {
+            return Derived::refused(unit, formula, inputs, "the figure is smaller than 0.0001 and would be written as zero");
+        }
         let status = statuses.iter().copied().max().unwrap_or(Status::Unknown);
         let value = if status == Status::Unknown { None } else { value.map(round4) };
         let status = if value.is_none() { Status::Unknown } else { status };

@@ -204,8 +204,9 @@ inline to label a diff and read registry replies. None of these is part of the p
 * **A line's kind says how it slopes.** An eave, a ridge and a headwall are level. A rake,
   a hip and a valley climb. A line that breaks this gets no length. It is the main guard
   against a plane whose eave was entered on the wrong edge.
-* **A line runs along the outline of each plane it names**, tested at its ends and three
-  points between. Touching the outline at the ends is not enough.
+* **A line runs along the outline of each plane it names.** Touching the outline at the
+  ends is not enough. (First tested at five points; the third judgment ran a line across
+  a notch between them, so the outline's edges now have to cover the line end to end.)
 * **The same key twice in one JSON object is refused**, anywhere in the file.
 * **A pitch above 240 in 12 is refused** as a wall. A coordinate beyond 1,000,000 ft is
   refused. Both are sanity limits against typing errors, not building rules.
@@ -312,3 +313,24 @@ here, and its model (a document of traced conditions with typed properties) is n
 project's (one entity per element), so the port is a re-fit, not a copy. Whether this
 project is meant to take over that program's ground is the owner's to say (QUESTIONS.md
 Q11).
+
+### 19. Calls made fixing what the third judgment found
+* **One line that contradicts a plane's eave takes the length off every line on that
+  plane.** An eave that climbs, or a rake that runs level, is evidence about the plane,
+  not only about that line. Without this a rake that climbs under both readings kept a
+  wrong length marked Known. The cost: one mis-entered line flags its neighbours, which is
+  the safe direction.
+* **A bare fraction is refused as a pitch.** `3/4` was read as a rise of 0.75 in 12 while
+  `6/12` was read as 6 in 12: one notation, two meanings, both stored Known. `a/12` keeps
+  its reading; every other fraction has to carry its run (`3/4:12`).
+* **A dash before the inches is a separator only hard against the feet mark or with a
+  space both sides.** `0' -6"` reads as a minus on the inches and is refused.
+* **A derived figure that is not zero but rounds to 0.0000 is Unknown.** Nothing is
+  silently zero.
+* **Any attribute under `pl::` that is not one of this program's components is refused.**
+  It was kept as someone else's attribute, so a pitch under `pl::Pitch` sat in the file
+  unread and the plane said it had none.
+* **Cost lines are told apart ignoring capitals and spacing**, and a description may not
+  start or end with a space.
+* **Points on the straight line between their neighbours are passed over when finding the
+  eave's edge**, so an eave may span an edge traced in two pieces.

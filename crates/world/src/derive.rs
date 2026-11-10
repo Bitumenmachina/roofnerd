@@ -126,6 +126,41 @@ pub fn derive(world: &mut World) -> Vec<String> {
     let mut q_ids = world.query::<(Entity, &Node)>();
     let ids: HashMap<String, Entity> = q_ids.iter(world).map(|(e, n)| (n.path.clone(), e)).collect();
 
+    // Lines first. Each line's length, and the plane (if any) that the line shows to have
+    // its eave on the wrong edge: an eave that climbs on it, a rake that runs level. One
+    // such line is evidence about the whole plane, so every other line on that plane
+    // loses its length too. A rake can climb under both readings of the plane and would
+    // otherwise keep a wrong length.
+    let mut lengths: HashMap<String, Derived> = HashMap::new();
+    let mut wrong_eave: BTreeMap<String, String> = BTreeMap::new();
+    let mut q_lines = world.query::<(&Node, &Kind, &Run)>();
+    for (node, kind, run) in q_lines.iter(world) {
+        if !kind.is_run() || *kind == Kind::Parapet {
+            continue;
+        }
+        let plan = run.ends_ft().map(|[a, b]| geom::dist(a, b));
+        let mut shows = None;
+        lengths.insert(node.path.clone(), true_length(*kind, Some(run), plan, &planes, &format!("{}#{K_RUN}", node.path), &mut shows));
+        if let Some(plane) = shows {
+            let first = wrong_eave.entry(plane).or_insert_with(|| node.path.clone());
+            if node.path < *first {
+                *first = node.path.clone();
+            }
+        }
+    }
+    let mut q_lines = world.query::<(&Node, &Kind, &Run)>();
+    for (node, kind, run) in q_lines.iter(world) {
+        if !kind.is_run() || *kind == Kind::Parapet {
+            continue;
+        }
+        let Some((plane, witness)) = run.planes.iter().find_map(|p| wrong_eave.get(p).filter(|w| **w != node.path).map(|w| (p, w))) else { continue };
+        let Some(d) = lengths.get_mut(&node.path) else { continue };
+        // A line refused for a reason of its own keeps that reason.
+        if d.value.is_some() {
+            *d = Derived::refused("LF", &d.formula.clone(), &d.inputs.clone(), &format!("plane {plane} has its eave entered on the wrong edge, by the evidence of {witness}; no length on that plane is given until its eave is settled"));
+        }
+    }
+
     let mut changed = Vec::new();
     let mut to_insert: Vec<(Entity, Option<Measure>, Option<LineQuantities>)> = Vec::new();
     let mut to_remove: Vec<Entity> = Vec::new();
@@ -211,7 +246,8 @@ pub fn derive(world: &mut World) -> Vec<String> {
                     },
                 );
             } else {
-                m.insert("true_length".into(), true_length(*kind, run, plan, &planes, &in_run));
+                let d = lengths.remove(me).unwrap_or_else(|| true_length(*kind, run, plan, &planes, &in_run, &mut None));
+                m.insert("true_length".into(), d);
             }
         }
 
@@ -299,7 +335,9 @@ fn sheet_area(me: &str, line: &CostLine, so: &crate::value::Val<units::Len>, bas
 
 /// The length of a line along the slope. The line has to fit every plane it names: on the
 /// plane's outline at both ends, and at the same height on every plane at both ends.
-fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMap<String, PlaneGeom>, in_run: &str) -> Derived {
+/// `shows_wrong_eave` is set to the plane's path when this line's kind and its slope on
+/// that plane disagree, which is evidence the plane's eave is on the wrong edge.
+fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMap<String, PlaneGeom>, in_run: &str, shows_wrong_eave: &mut Option<String>) -> Derived {
     let base = "√(plan_length² + rise²); rise = the difference in height between the two ends, each height = eave height + pitch ÷ 12 × distance from the plane's eave line";
     let mut inputs = vec![in_run.to_string()];
     let Some(run) = run else {
@@ -348,7 +386,7 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
         let (Some([a, b]), Some(pts)) = (run.ends_ft(), g.points.as_ref()) else { continue };
         if let Err((t, off)) = geom::runs_along_outline(a, b, pts, FIT_TOLERANCE_FT) {
             let whereabouts = if t == 0.0 { "its start is".to_string() } else if t == 1.0 { "its end is".to_string() } else { format!("{:.0}% of the way along it is", t * 100.0) };
-            return refuse(format!("the line does not run along the outline of plane {p}: {whereabouts} {off:.2} ft off it"));
+            return refuse(format!("the line does not run along the outline of plane {p}: {whereabouts} {off:.4} ft off it"));
         }
         if let (Some(za), Some(zb)) = (g.height_at(a), g.height_at(b)) {
             heights.push((p, [za, zb]));
@@ -381,9 +419,11 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
             };
             match kind {
                 Kind::Eave | Kind::Ridge | Kind::Headwall if !level => {
+                    *shows_wrong_eave = Some((*p).clone());
                     return refuse(format!("{name} is level, but plane {p} puts this line's ends at {:.2} ft and {:.2} ft; check which edge of the plane is entered as its eave", z[0], z[1]));
                 }
                 Kind::Rake | Kind::Hip | Kind::Valley if level && could_climb => {
+                    *shows_wrong_eave = Some((*p).clone());
                     return refuse(format!("{name} climbs the slope, but plane {p} puts both ends of this line at {:.2} ft; check which edge of the plane is entered as its eave", z[0]));
                 }
                 _ => {}

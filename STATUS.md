@@ -11,8 +11,8 @@ run again and each gave what this file said they gave.
 | # | Deliverable | State |
 |---|---|---|
 | D0 | Landscape decision | Demonstrated, with limits below. Judged twice. |
-| D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged twice; the fixes from the second judgment have not themselves been judged. |
-| D1 amendment | Units (owner ruling) | Demonstrated at the command line. **Not yet judged.** |
+| D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged three times. The third judgment found the second round's fixes closed except one, and found four new ways to a wrong figure not marked Unknown; all are fixed. See "Third judgment" and "Fourth judgment". |
+| D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged once: the five demonstrations held; two entry forms were misread and are fixed. See "Third judgment" and "Fourth judgment". |
 | D2 | 3D roof slice | **Not demonstrated; nothing of its demonstration runs.** One piece of groundwork is built and tested (lines read off planes). The roof solver waits on the BIMCraft source (Q10) and the window on the toolchain and a display (Q4). |
 | D3 | Derived conditions and stretch-out | Not started. Reference estimate missing (Q5). |
 | D4 | Macro to micro | Not started. |
@@ -80,7 +80,7 @@ element. Changing one pitch changes, in a file diff, only that entity and the co
 derived from it. Assumed and Unknown values display as flagged.
 
 **How it is run:** `demos/d1.sh`. It uses the built-in sample job, which is made up.
-`cargo test` runs 33 checks on the same model.
+`cargo test` runs 42 checks on the same model.
 
 The figures below are as rerun after the units amendment. The amendment added one
 sheet-metal cost line to the sample job's porch headwall, which moved the counts of Known,
@@ -118,7 +118,7 @@ Nothing else in this demonstration moved.
 * Hip: 15 over and 15 up on plan = 21.2132 LF; climbs 7.5 ft; √(450 + 56.25) = 22.5 LF.
 * Porch rake: 8 ft run at 3:12 climbs 2 ft; √68 = 8.2462 LF.
 
-**`cargo test`: 33 passed, 0 failed.**
+**`cargo test`: 42 passed, 0 failed** (41 on the model, 1 on the command line).
 
 **What remains**
 
@@ -134,11 +134,11 @@ Nothing else in this demonstration moved.
   be edited from the command line. Outlines, eave lines, line ends and cost lines are
   edited in the file.
 * The limits listed in SPEC.md section 7, in particular the 0.01 ft fit tolerance (Q9).
-* **Rule 4 was broken twice by a judge after being reported sound.** Each judgment found
-  ordinary hand edits that produced a wrong length marked Known. The fixes for the second
-  set are covered by regression tests and by rerunning the judge's own cases, and have
-  not been attacked by a separate agent. Treat "nothing wrong is shown as Known" as the
-  model's intent backed by 33 tests, not as proven.
+* **Rule 4 has been broken by a judge three times**, each time after the previous round's
+  fixes. Each judgment found ordinary entries that produced a wrong figure marked Known.
+  Treat "nothing wrong is shown as Known" as the model's intent backed by 42 tests and
+  three attacks, not as proven. The pattern so far is that each attack finds a
+  neighbouring case, so expect the next one to as well.
 * Planes are checked one at a time and each line against the planes it names. Nothing
   checks planes against each other (overlaps, gaps).
 * **Process note:** the brief asks that each demonstration be written down before the
@@ -202,7 +202,11 @@ with the stated reason.
 
 **What remains**
 
-* **Not judged.** No separate agent has attacked the units change.
+* **Judged once** (third judgment, below). The five demonstrations held. Two entry forms
+  were read as something other than what an estimator means (a pitch written as a bare
+  fraction; a minus on the inches) and are fixed.
+* A pitch is shown as a decimal rise (`1/4:12` shows as `0.25 in/12`). Same unit, not the
+  same spelling.
 * **Stretch-out is the first step of D3 only.** A line's length becomes an area. Sheets,
   pounds, waste, and the conditions a parapet produces are not built.
 * **A cost line cannot be added from the command line.** The demonstration uses the line
@@ -230,7 +234,7 @@ marked Known. All twelve, and what was done:
 | # | What the judge found | What was done | Regression test |
 |---|---|---|---|
 | 1 | Re-ordering an outline's points silently turned the eave into a rake; wrong lengths marked Known | The eave is now its own line on the plane. (Only partly closed by this: see the second judgment) | `reordering_an_outline_does_not_move_the_eave`, `an_eave_that_is_not_level_on_its_plane_is_flagged` |
-| 2 | Units were decorative: 30 in read as 30 ft, metres read as feet | Each field takes one unit; anything else is refused. No conversion | `a_value_in_the_wrong_unit_is_refused_not_read_as_feet` |
+| 2 | Units were decorative: 30 in read as 30 ft, metres read as feet | Each field takes one unit; anything else is refused. No conversion. (Since overruled by the owner: see "D1 amendment. Units". What is kept is that an unknown unit is refused.) | `a_unit_the_program_does_not_know_is_refused_by_name_never_read_as_feet` (the original test, `a_value_in_the_wrong_unit_is_refused_not_read_as_feet`, was rewritten with the ruling) |
 | 3 | A loop in `children` passed loading and hung `show` | The tree is checked on load: one job, first, and everything leads back to it | `a_loop_of_children_is_refused` |
 | 4 | Load and save silently dropped unknown fields, header keys, `inherits`; altered some floats | Unknown keys are kept everywhere except inside our own components, where they are refused by name. Numbers round-trip exactly | `nothing_is_dropped_quietly`, `a_coordinate_comes_back_as_the_same_number` |
 | 5 | Deleting a component made its Unknowns vanish from the list | Every quantity is always listed; a missing input makes it Unknown with the reason | `a_missing_component_shows_as_unknown_instead_of_vanishing` |
@@ -269,8 +273,46 @@ Left as the judge found it, and recorded in SPEC.md section 7: an eave entered o
 parallel to the true one passes (every length is still right, but the plane's heights run
 the wrong way); two identical cost lines on one element are accepted.
 
-**These second-round fixes have not been judged by a separate agent.** They were checked
-by the tests above and by rerunning the judge's own reproductions.
+These second-round fixes were judged in the third judgment, below.
+
+### Third judgment: the claims held, the second round is closed but for one, and rule 4 broke four more ways
+
+A fresh agent (Opus), working in its own clone at the commit that added units, reran
+every command, checked every figure in this file against its own arithmetic, repeated the
+second judgment's attacks, attacked those fixes, and attacked the units change with about
+ninety ways of writing a length. It was not asked to judge the lines-from-planes
+groundwork, which did not exist when it started.
+
+**What held.** Every figure stated above for D1 and for the units amendment. All five of
+the ruling's demonstrations, rerun with the judge's own values. Second-judgment items 2,
+3, 5, 7/8, 9 and 10, each attacked again. A sample of the first judgment's twelve; none
+reopened. Outlines, eaves and line ends in inches against feet in every mix. Limits
+applied after conversion. Every malformed feet-and-inches pair it tried.
+
+**What it found, and what was done.** Each fix was checked by rerunning the judge's own
+reproduction as well as by the test named.
+
+| # | What the third judge found | What was done | Regression test |
+|---|---|---|---|
+| J3-1 | **Wrong figure, Known.** A plane with its eave entered on the wrong edge still gave its rake a length (11.4564 LF where 12.2474 is right) when the rake climbs under both readings. The eave line on the same plane was flagged; the flag did not reach the rake. Second-judgment item 1c was only partly closed | One line whose kind contradicts a plane's eave now takes the length off every line on that plane | `a_line_that_shows_the_eave_is_on_the_wrong_edge_takes_the_length_off_every_line_on_that_plane` |
+| J3-2 | **Wrong figure, Known.** A line drawn across a 5 ft notch got its full 30 LF: the five points tested all landed on edges. SPEC had listed this as a limit; the judge turned it into a number | The outline's edges have to cover the line end to end. No sampling | `a_line_across_a_notch_does_not_run_along_the_outline_however_the_gap_falls` |
+| J3-3 | **Misread, Known.** A pitch typed `3/4` was stored as 0.75 in 12 while `6/12` was stored as 6 in 12. Read as a ratio, 3/4 is 9:12 | A bare fraction is refused as a pitch and told to carry its run (`3/4:12`). Only `a/12` is read without more | `a_bare_fraction_is_not_read_as_a_pitch_and_a_minus_on_the_inches_is_not_dropped` |
+| J3-4 | **Misread, Known.** `0' -6"` was stored as plus 6 in: the minus was taken for the dash in `25'-6"` | A dash is a separator only hard against the feet mark or spaced both sides; otherwise refused | same |
+| J3-5 | **Panic.** An argument that is not valid text crashed the command line. The file was not touched | Refused with a message | `an_argument_that_is_not_text_is_refused_not_a_panic` |
+| J3-6 | DECISIONS call 16 and SPEC said a reader multiplying the figures on the page gets the figure on the page. Not so: figures are worked from unrounded inputs (375 × 1.118 is 419.25; the page shows 419.2627) | Both documents corrected. The arithmetic is unchanged | |
+| J3-7 | Cost lines differing only in capitals or a trailing space were accepted as different lines, so one flashing could be priced twice | Descriptions are compared ignoring capitals and spacing; a description may not start or end with a space | `nothing_is_silently_zero_or_silently_unread` |
+| J3-8 | This file cited a test that had been renamed; SPEC said `FT` is refused, which is true in the file and not at the keyboard | Both corrected | |
+| J3-9 | An eave spanning an edge traced with a point part-way along it was refused | Points on the straight line between their neighbours are passed over when finding the eave's edge | `an_edge_traced_with_a_point_part_way_along_it_is_still_one_edge` |
+| J3-10 | A minus zero in the file showed as `-0`; a number too small to hold was stored as `0 ft` Known; a refusal printed a 0.0108 ft miss as "0.01 ft" | Each fixed. Left: a pitch typed `1/4:12` is shown as `0.25 in/12` | `nothing_is_silently_zero_or_silently_unread` |
+| J3-11 | A pitch under the mis-cased key `pl::Pitch` was kept as a foreign attribute and the plane said it had no pitch | Any key under `pl::` that is not one of this program's components is refused, naming the one it resembles | same |
+| suspected, not run by the judge | A very small stretch-out would round to `0 SF`, Known | Confirmed and fixed: a derived figure that is not zero but would be written 0.0000 is Unknown with the reason | same |
+
+**What the third judge did not do:** rerun the D0 landscape script; check second-judgment
+item 6 (the BIMCraft tolerance note) against its source; check DECISIONS' rating-table
+cells; large jobs; a valley with both of its planes mis-entered.
+
+**Left as found:** a plane whose eave is on the wrong edge is caught only when some line
+entered on it contradicts it. With only a rake entered, nothing does (SPEC.md section 7).
 
 ---
 

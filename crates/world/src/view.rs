@@ -31,7 +31,8 @@ pub struct ElementRows {
 }
 
 fn num(x: f64) -> String {
-    let s = format!("{x:.4}");
+    // Adding zero shows a "-0" from a file as plain 0.
+    let s = format!("{:.4}", x + 0.0);
     let s = s.trim_end_matches('0').trim_end_matches('.');
     s.to_string()
 }

@@ -252,6 +252,13 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                 K_LINE_QUANTITIES => {
                     file_line_quantities.insert(path.clone(), parse(&path, &k, v)?);
                 }
+                _ if k.to_lowercase().starts_with("pl::") => {
+                    let near = KNOWN_KEYS.iter().find(|known| known.eq_ignore_ascii_case(&k));
+                    return Err(format!(
+                        "{path} carries {k:?}, which is under this program's own prefix but is not one of its components{}; a value under a key the program does not read would sit in the file unused",
+                        near.map(|n| format!(" (did you mean {n:?}?)")).unwrap_or_default()
+                    ));
+                }
                 _ => {
                     foreign.insert(k, v);
                 }

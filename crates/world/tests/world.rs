@@ -430,7 +430,6 @@ fn a_pitch_is_read_the_ways_a_drawing_writes_it() {
         ("6 in 12", 6.0),
         ("4.5:12", 4.5),
         ("1/4:12", 0.25),
-        ("1/4", 0.25),
         ("1/4 in/ft", 0.25),
         ("1/4\" per ft", 0.25),
         ("12/12", 12.0),
@@ -441,7 +440,7 @@ fn a_pitch_is_read_the_ways_a_drawing_writes_it() {
     ] {
         assert_eq!(parse_pitch(typed).unwrap_or_else(|e| panic!("{typed:?} refused: {e}")), rise, "{typed}");
     }
-    for (typed, says) in [("6:10", "not a pitch"), ("26.57 deg", "degrees"), ("26.57\u{00B0}", "degrees"), ("50%", "percentage"), ("1e300", "not a pitch"), ("six", "is not a number"), ("6 12", "not a pitch"), ("", "is not a number")] {
+    for (typed, says) in [("1/4", "could be"), ("6:10", "not a pitch"), ("26.57 deg", "degrees"), ("26.57\u{00B0}", "degrees"), ("50%", "percentage"), ("1e300", "not a pitch"), ("six", "is not a number"), ("6 12", "not a pitch"), ("", "is not a number")] {
         let e = parse_pitch(typed).expect_err(typed);
         assert!(e.contains(says), "{typed:?}: {e}");
     }
@@ -935,4 +934,139 @@ fn a_wing_meeting_a_main_roof_makes_two_valleys() {
     // Two valleys, two ridges, three main eaves (the south one in two pieces), two wing
     // eaves, six rakes.
     assert_eq!(found.lines.len(), 2 + 2 + 3 + 2 + 6);
+}
+
+// ---- Regression checks for what the third independent judgment found ----
+
+/// A one-plane job: a trapezoid whose low edge is y = 0 and whose right side is a rake.
+fn trapezoid(eave: [P2; 2], points: Vec<P2>, lines: &[(Kind, &str, [P2; 2])]) -> Job {
+    let mut job = Job::new("Trapezoid", "test", "test");
+    let plane = job.add("job-0001", Kind::RoofPlane, "plane").unwrap();
+    job.put(&plane, Outline { points: Val::known(points, "ft", "test"), eave: Val::known(eave, "ft", "test"), eave_height: Val::known(Len::One(0.0), "ft", "test") }).unwrap();
+    job.put(&plane, Pitch(Val::known(6.0, "in/12", "test"))).unwrap();
+    for (kind, name, ends) in lines {
+        let p = job.add("job-0001", *kind, name).unwrap();
+        job.put(&p, Run { ends: Val::known(*ends, "ft", "test"), planes: vec![plane.clone()] }).unwrap();
+    }
+    job.derive();
+    let (job, _) = load(&save(&mut job)).unwrap();
+    job
+}
+
+#[test]
+fn a_line_that_shows_the_eave_is_on_the_wrong_edge_takes_the_length_off_every_line_on_that_plane() {
+    let outline = vec![[0.0, 0.0], [20.0, 0.0], [25.0, 10.0], [0.0, 10.0]];
+    let lines = [(Kind::Rake, "rake", [[20.0, 0.0], [25.0, 10.0]]), (Kind::Eave, "eave", [[0.0, 0.0], [20.0, 0.0]])];
+    // Entered right: the eave is the low edge, y = 0. The rake runs 5 over and 10 up on
+    // plan (11.1803 LF) and climbs 10 ft of run at 6:12 = 5 ft: sqrt(125 + 25) = 12.2474.
+    let mut right = trapezoid([[0.0, 0.0], [20.0, 0.0]], outline.clone(), &lines);
+    assert_eq!(measure(&mut right, "rake-0003", "true_length").value, Some(12.2474));
+    assert_eq!(measure(&mut right, "eave-0004", "true_length").value, Some(20.0));
+    // Entered wrong: the eave on the left edge, x = 0. The rake still climbs on that
+    // reading (it would come out 11.4564), so its own kind does not give it away. The
+    // eave line does: it climbs, which an eave cannot. That takes the rake's length too.
+    let mut wrong = trapezoid([[0.0, 10.0], [0.0, 0.0]], outline, &lines);
+    let eave = measure(&mut wrong, "eave-0004", "true_length");
+    assert!(eave.value.is_none() && eave.note.contains("an eave is level"), "{}", eave.note);
+    let rake = measure(&mut wrong, "rake-0003", "true_length");
+    assert_eq!((rake.value, rake.status), (None, Status::Unknown));
+    assert!(rake.note.contains("eave entered on the wrong edge") && rake.note.contains("eave-0004"), "{}", rake.note);
+}
+
+#[test]
+fn a_line_across_a_notch_does_not_run_along_the_outline_however_the_gap_falls() {
+    // The low edge has a 5 ft notch in it, from x = 9 to x = 14. An eave line drawn
+    // straight across from 0 to 30 has 5 ft of itself where there is no roof. The five
+    // points once tested (x = 0, 7.5, 15, 22.5, 30) all landed on edges.
+    let notched = vec![[0.0, 0.0], [9.0, 0.0], [9.0, 5.0], [14.0, 5.0], [14.0, 0.0], [30.0, 0.0], [30.0, 20.0], [0.0, 20.0]];
+    let mut job = trapezoid([[14.0, 0.0], [30.0, 0.0]], notched.clone(), &[(Kind::Eave, "across", [[0.0, 0.0], [30.0, 0.0]]), (Kind::Eave, "left", [[0.0, 0.0], [9.0, 0.0]]), (Kind::Eave, "right", [[14.0, 0.0], [30.0, 0.0]])]);
+    let d = measure(&mut job, "eave-0003", "true_length");
+    assert_eq!(d.value, None);
+    assert!(d.note.contains("does not run along the outline"), "{}", d.note);
+    // The two real pieces of eave are 9 and 16 LF.
+    assert_eq!(measure(&mut job, "eave-0004", "true_length").value, Some(9.0));
+    assert_eq!(measure(&mut job, "eave-0005", "true_length").value, Some(16.0));
+    // A gap of an inch is still a gap.
+    let hairline = vec![[0.0, 0.0], [9.0, 0.0], [9.0, 5.0], [9.0833, 5.0], [9.0833, 0.0], [30.0, 0.0], [30.0, 20.0], [0.0, 20.0]];
+    let mut job = trapezoid([[9.0833, 0.0], [30.0, 0.0]], hairline, &[(Kind::Eave, "across", [[0.0, 0.0], [30.0, 0.0]])]);
+    assert_eq!(measure(&mut job, "eave-0003", "true_length").value, None);
+}
+
+#[test]
+fn an_edge_traced_with_a_point_part_way_along_it_is_still_one_edge() {
+    // The low edge traced as two pieces, 0 to 10 and 10 to 20. The eave is the whole of
+    // it, and a line along the whole of it runs along the outline.
+    let outline = vec![[0.0, 0.0], [10.0, 0.0], [20.0, 0.0], [20.0, 10.0], [0.0, 10.0]];
+    let mut job = trapezoid([[0.0, 0.0], [20.0, 0.0]], outline, &[(Kind::Eave, "eave", [[0.0, 0.0], [20.0, 0.0]]), (Kind::Rake, "rake", [[20.0, 0.0], [20.0, 10.0]])]);
+    assert_eq!(measure(&mut job, "eave-0003", "true_length").value, Some(20.0));
+    // 10 ft of run at 6:12 climbs 5 ft: sqrt(100 + 25) = 11.1803.
+    assert_eq!(measure(&mut job, "rake-0004", "true_length").value, Some(11.1803));
+}
+
+#[test]
+fn a_bare_fraction_is_not_read_as_a_pitch_and_a_minus_on_the_inches_is_not_dropped() {
+    use units::{parse_length, parse_pitch};
+    // 3/4 is a rise of 3/4 in 12 to one estimator and 3 in 4 to another. Refused; with
+    // its run it is read.
+    for typed in ["3/4", "4/8", "8/16", "6/8", "1/2", "1/4", "-1/4"] {
+        let e = parse_pitch(typed).expect_err(typed);
+        assert!(e.contains("could be a rise of"), "{typed}: {e}");
+    }
+    assert_eq!(parse_pitch("3/4:12").unwrap(), 0.75);
+    assert_eq!(parse_pitch("3/4 in/12").unwrap(), 0.75);
+    assert_eq!(parse_pitch("6/12").unwrap(), 6.0);
+    assert_eq!(parse_pitch("6 1/2").unwrap(), 6.5);
+    // Nothing reaches the job.
+    let mut job = sample();
+    let before = save(&mut job);
+    assert!(job.set("plane-0017", "pitch", Some("3/4"), Status::Known, "x").is_err());
+    assert_eq!(save(&mut job), before);
+
+    // 25'-6" and 25' - 6" use the dash as a separator. 0' -6" is a minus on the inches.
+    for typed in ["0' -6\"", "25' -6\"", "1' -6 1/2\"", "25 ft -6 in"] {
+        let e = parse_length(typed).expect_err(typed);
+        assert!(e.contains("minus on the inches"), "{typed}: {e}");
+    }
+    assert_eq!(feet_of("25'-6\""), 25.5);
+    assert_eq!(feet_of("25' - 6\""), 25.5);
+    assert_eq!(feet_of("25'- 6\""), 25.5);
+    assert!(job.set("parapet-0024", "height", Some("0' -6\""), Status::Known, "x").is_err());
+    assert_eq!(save(&mut job), before);
+    // A number written as something that a 64-bit number holds as nothing.
+    let tiny = format!("0.{}1 ft", "0".repeat(400));
+    assert!(parse_length(&tiny).unwrap_err().contains("too small a number"));
+}
+
+#[test]
+fn nothing_is_silently_zero_or_silently_unread() {
+    let text = save(&mut sample());
+    let err = |t: String| load(&t).err().expect("should be refused");
+    // A figure that is something but would be written 0.0000 is not shown as zero.
+    let mut job = sample();
+    job.set("headwall-0021", "stretch_out", Some("0.00001 in"), Status::Known, "x").unwrap();
+    job.derive();
+    let e = job.find("headwall-0021").unwrap();
+    let d = job.world.get::<LineQuantities>(e).unwrap().0["Copper headwall flashing"].clone();
+    assert_eq!((d.value, d.status), (None, Status::Unknown));
+    assert!(d.note.contains("smaller than 0.0001"), "{}", d.note);
+    // A value under a mis-cased key of this program's own is refused, not carried unread.
+    let e = err(edit(&text, |v| {
+        let pitch = attrs(v, "plane-0017").as_object_mut().unwrap().remove("pl::pitch").unwrap();
+        attrs(v, "plane-0017")["pl::Pitch"] = pitch;
+    }));
+    assert!(e.contains("\"pl::Pitch\"") && e.contains("did you mean \"pl::pitch\""), "{e}");
+    assert!(err(edit(&text, |v| attrs(v, "plane-0017")["pl::slope"] = 3.into())).contains("not one of its components"));
+    // Another program's attributes are still kept.
+    assert!(load(&edit(&text, |v| attrs(v, "plane-0017")["other::Pitch"] = 3.into())).is_ok());
+    // Two cost lines that differ only in capitals or spacing are one line entered twice.
+    let line = |d: &str| serde_json::json!({"description": d, "quantity": "true_length", "stretch_out": {"value": 12.0, "unit": "in", "status": "Known", "source": "x"}, "unit_cost": {"value": null, "unit": "$/SF", "status": "Unknown", "source": "x"}});
+    for near in ["copper headwall flashing", "Copper  headwall flashing", "COPPER HEADWALL FLASHING"] {
+        let e = err(edit(&text, |v| attrs(v, "headwall-0021")["pl::cost"]["lines"].as_array_mut().unwrap().push(line(near))));
+        assert!(e.contains("two cost lines"), "{near}: {e}");
+    }
+    assert!(err(edit(&text, |v| attrs(v, "headwall-0021")["pl::cost"]["lines"].as_array_mut().unwrap().push(line("Copper headwall flashing ")))).contains("starts or ends with a space"));
+    assert!(load(&edit(&text, |v| attrs(v, "headwall-0021")["pl::cost"]["lines"].as_array_mut().unwrap().push(line("Copper counterflashing")))).is_ok());
+    // A minus zero typed into the file is shown as zero.
+    let (mut job, _) = load(&edit(&text, |v| attrs(v, "lowslope-0023")["pl::pitch"]["value"] = (-0.0).into())).unwrap();
+    assert!(show_rows(&mut job, "lowslope-0023").contains(&("pitch".to_string(), "0 in/12".to_string(), Status::Known)));
 }
