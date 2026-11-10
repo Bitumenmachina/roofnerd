@@ -15,7 +15,7 @@ run again and each gave what this file said they gave.
 | D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged twice: the five demonstrations held both times; two entry forms misread in the first are fixed and held in the second. |
 | D2 | 3D roof slice | **Not demonstrated; nothing of its demonstration runs.** One piece of groundwork is built and tested (lines read off planes). The roof solver waits on the BIMCraft source (Q10) and the window on the toolchain and a display (Q4). |
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). **Not yet judged.** |
-| D4 | Macro to micro | Not started. |
+| D4 | Macro to micro | Not started. How its demonstration will be run is written at the end of this file. |
 | D5 | Estimate sheet and money | Not started. Reference estimate missing (Q5). |
 | D6 | Interchange and reports | Not started. |
 | D7 | Capture | Waiting on the owner's ruling. |
@@ -531,3 +531,50 @@ values and recipes that do not make sense, each refused with the stated reason.
 * The model calls behind this are DECISIONS.md call 21, each recorded so it can be
   overruled. The one most worth the owner's eye: a recipe carries no typical stretch-out,
   waste or sheet size, so a newly applied condition prices nothing until they are entered.
+
+---
+
+## D4. How its demonstration will be run (written before any D4 work)
+
+**Demonstration as the brief states it:** A design-phase job is priced from $/SF and $/LF.
+Detailing the same entities rolls back up to $/SF and $/LF, and the two reconcile.
+
+**What exists that it stands on:** every element has its SF or LF worked out with a status
+(D1); a cost line works out a quantity, with waste and order units (D3). **What does not
+exist:** nothing multiplies a quantity by a price. There is no extension, no total, and no
+command that enters a unit cost. D4 is the first deliverable on the money path.
+
+**How it will be run:** a script, `demos/d4.sh`, at the command line until the window
+exists, on the sample job, with made-up prices that are stated in the script. Every
+figure is worked by hand in its comments.
+
+1. *Design phase.* Each roof plane is given an allowance in $/SF of its surface, and each
+   run of flashing an allowance in $/LF, each with its status and source. The job is
+   priced from those alone: each element's quantity times its rate, and a total. An
+   element with no allowance is listed as not priced, and the total says how many elements
+   it leaves out. It is never a silent zero.
+2. *An assumed input shows in the money.* The porch plane's pitch is Assumed, so its
+   area, and so its price, is flagged Assumed, and the total says how much of itself rests
+   on assumptions.
+3. *Detail the same entities.* The same planes and lines get their cost lines priced
+   (unit costs entered on the lines D3 built). Each element's lines are extended and
+   summed.
+4. *Roll back up.* Each detailed element's sum is divided by the same SF or LF the
+   allowance was priced on, giving the $/SF or $/LF the detail comes to, shown beside the
+   allowance.
+5. *Reconcile.* Per element and for the job: the allowance figure, the detailed figure,
+   and the difference in dollars and percent. An element whose detail is incomplete (a
+   line with no price, or no quantity) is said to be incomplete and is not rolled up as if
+   it were whole.
+6. *The geometry still drives both.* Change one pitch: the allowance figure and the
+   detailed figure for that plane both move, and the file diff shows that plane and what
+   derives from it.
+
+**What the brief's rule 4 demands of it:** no assumed or unknown value reaches a price
+without the price carrying the flag; a total never leaves something out without saying
+what. QUESTIONS.md Q1 (MasterFormat or UniFormat) bites here: design-phase rates read
+naturally by element and detailed lines by work result. Each code carries its scheme, so
+the demonstration can run before the ruling; no total will be grouped by code until then.
+
+**The judge** prices a job of its own both ways and tries to make the two disagree
+without the program saying so, or to get a flagged value into a total that looks clean.
