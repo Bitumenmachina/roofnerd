@@ -1,0 +1,4 @@
+/target
+# Owner reference estimates and any real job, client or supplier data: local only, never committed.
+/refs/
+*.local.json

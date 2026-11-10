@@ -1,0 +1,155 @@
+# SPEC: the world data model
+
+What D1 built. Later deliverables add components and views; they do not change these rules.
+
+## 1. The job is one world
+
+A job is a single entity-component world (`bevy_ecs`). Every building element is an
+entity. An element is whatever an estimator would point at and name: a roof plane, an
+eave, a hip, a parapet. What an element *is* comes from the components it carries. A hip
+has a run and names the planes it sits between. A parapet has a run and a height. Either
+can carry a condition, a cost code with lines, and a schedule code.
+
+Nothing is stored twice. A quantity is not typed into the sheet and again into the model;
+it is worked out from the geometry on the element and read from there by every view.
+
+## 2. Every value says how sure it is and where it came from
+
+| Status | Meaning | Carries a value | Flag |
+|---|---|---|---|
+| Known | Read off a plan, measured, or typed from a quote | yes | none |
+| Assumed | A working figure chosen because the real one is not in hand | yes | `~` |
+| Unknown | Nobody has it | **no** | `?` |
+
+Rules, enforced when a job is loaded and when a value is set:
+
+1. Every entered value has a non-empty `source`.
+2. Unknown carries no value. Known and Assumed carry one.
+3. A derived value takes the **worst** status among its inputs. An Assumed pitch makes an
+   Assumed area. An Unknown height leaves the wall area with no number at all.
+4. A derived value shows its `formula` and lists its `inputs` (`path#component`).
+5. When inputs contradict each other, the derived value is Unknown and its `note` gives
+   both figures. See 5.3.
+
+## 3. The saved job
+
+The saved job is the world written out as JSON in IFC5's entity-and-component layout.
+IFC5 is the pattern only; no IFC5 schema is imported and the file is not claimed to be
+valid IFCX.
+
+```
+{
+  "header":  { "id", "ifcxVersion": "ifcx_alpha", "dataVersion", "author", "timestamp" },
+  "imports": [],
+  "schemas": { "pl::pitch": { "value": { "dataType": "Object" } }, ... },
+  "data": [
+    { "path": "plane-0017",
+      "children":   { "<name>": "<path>" },
+      "attributes": { "pl::class": "RoofPlane", "pl::pitch": { ... }, ... } }
+  ]
+}
+```
+
+* **One entry per element.** A path appears once. A file with a repeated path is refused.
+* **Paths are permanent.** A new element's path is its kind and the job's next number
+  (`plane-0017`). Renaming an element changes its name under its parent, never its path.
+* **The tree** is carried by `children`: each parent lists its children by name. Exactly
+  one element has no parent: the job.
+* **Entries are in the order elements were added.**
+* **Saving is repeatable.** The same world writes the same bytes. Nothing is stamped at
+  save time; `timestamp` is when the job was started. So a diff between two saves shows
+  what was edited and what followed from it, and nothing else.
+* **Readable.** One key per line; a point or a row of points stays on one line.
+* **Nothing is dropped.** Attributes the program does not know are kept and written back.
+* **Lengths and plan coordinates are in feet**, 64-bit. Each value also names its own unit.
+
+### Loading checks the file
+
+A file is refused if a value breaks the rules in section 2, a pitch or height is negative,
+an outline has fewer than three points, a path repeats, a child points at nothing, an
+element has two parents or no kind, or there is not exactly one job element.
+
+Measures in the file are **never trusted**. They are recomputed from the geometry on every
+load, the recomputed figures are the ones used, and any element whose stored measure does
+not match is reported.
+
+## 4. Components
+
+| Key in the file | On | Holds |
+|---|---|---|
+| `pl::class` | every element | The kind: Job, Roof, RoofPlane, LowSlopeArea, Eave, Rake, Ridge, Hip, Valley, Headwall, Parapet |
+| `pl::job` | the job | Title, length unit, the next path number |
+| `pl::outline` | areas | `points`: the footprint traced on the plan, counter-clockwise. `eave_height`. For a pitched plane the **first edge (point 0 to point 1) is the eave**, the low edge the pitch rises from. |
+| `pl::pitch` | areas | Rise in inches per 12 inches of run |
+| `pl::run` | lines | `ends`: the two ends on the plan. `planes`: paths of the planes the line lies on (a hip names two, a rake one, a parapet none). |
+| `pl::height` | parapets | Height in feet |
+| `pl::condition` | any | The assigned condition, by name |
+| `pl::cost` | any | `code` (scheme, code, title) and `lines`. Each line names the measure it is priced by and carries a `unit_cost`. |
+| `pl::schedule` | any | `wbs`: the work breakdown code |
+| `pl::measure` | any with geometry | Derived quantities by name. Never typed. |
+
+An entered value is written `{ "value", "unit", "status", "source" }`.
+A derived value is written `{ "value", "unit", "status", "formula", "inputs", "note" }`.
+
+## 5. Derived quantities
+
+Derived figures are written to four decimal places.
+
+### 5.1 Areas (RoofPlane, LowSlopeArea)
+
+| Measure | Formula | Inputs |
+|---|---|---|
+| `plan_area` (SF) | area of the outline on the plan | outline |
+| `slope_factor` | √(1 + (pitch ÷ 12)²) | pitch |
+| `surface_area` (SF) | plan_area × slope_factor | outline, pitch |
+| `squares` (SQ) | surface_area ÷ 100 | outline, pitch |
+
+### 5.2 Lines
+
+| Measure | On | Formula | Inputs |
+|---|---|---|---|
+| `plan_length` (LF) | every line | length of the line on the plan | run |
+| `true_length` (LF) | eave, rake, ridge, hip, valley, headwall | √(plan_length² + rise²) | run, and the outline and pitch of each plane named |
+| `face_area` (SF) | parapet | plan_length × height | run, height |
+
+The height of a plane above a plan point is its eave height plus pitch ÷ 12 × the point's
+distance from the plane's eave line, measured square to the eave. A line's rise is the
+difference between the heights of its two ends.
+
+### 5.3 A line has to fit its planes
+
+A line that lies on two planes has to be at the same height on both, at both ends. If the
+planes put an end more than 0.01 ft (about 1/8 in) apart, `true_length` is Unknown and the
+note gives each plane's figure. Example: steepen one plane of a hip roof while the hips
+stay where they were traced, and those hips and the ridge are flagged. The roof as drawn
+no longer closes.
+
+## 6. Cost code scheme
+
+Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores its
+`scheme` beside it. No total is grouped by code in D1.
+
+## 7. What D1 does not do
+
+* **It does not re-solve the roof.** Ridge, hip and valley positions are entered, not
+  worked out from the footprint and pitches. D2 does that with the skeleton (DECISIONS.md
+  call 3); until then a pitch change the linework cannot follow is flagged per 5.3.
+* **No window.** The world is read and edited through the command line. The same rows the
+  command line prints (`view::elements`) are what the sheet and the 3D view will read.
+* **No money.** Cost lines exist and carry unit costs with statuses; nothing is extended
+  or totalled. That is D5.
+* **No undo, no conditions library, no derived conditions** (D3).
+* **Not checked:** overlapping outlines, clockwise outlines, a line that does not touch
+  the plane it names, and a `pl::cost` line whose `quantity` names a measure the element
+  does not have.
+* **Paths are counter-based**, so two copies of a job edited apart can mint the same path
+  (PROPOSALS.md item 4).
+
+## 8. Code layout
+
+| Crate | Depends on | Holds |
+|---|---|---|
+| `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json` | The model: values, components, derivation, the saved file, the sample job, the flat view |
+| `crates/cli` (`plumbline`) | `plumbline-world` | `sample`, `show`, `set`, `check` |
+
+The world crate does not depend on any renderer or window, and must not.
