@@ -48,3 +48,11 @@ go-ahead. Not needed before D6.
 "plumbline" is a working name. It appears in the crate names, the binary name, and the
 `pl::` prefix on component keys in the saved file. Renaming before real jobs are saved
 costs a search-and-replace; after, it costs a file migration.
+
+## Q9. How tightly must a traced line fit its planes?
+A hip is refused a length unless both planes put each of its ends within 0.01 ft (1/8 in)
+of the same height, and its ends sit within 0.01 ft of both outlines. That is right for
+geometry the program solves. On a hand trace of a scanned plan it will flag most hips.
+**Assumption in use:** 0.01 ft, because D2 replaces hand-entered hips with solved ones.
+If you want hand tracing to be a first-class route, this needs a snap step or a looser
+figure, and you would know what tolerance a trace deserves better than a default does.

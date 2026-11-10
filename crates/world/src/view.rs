@@ -56,11 +56,17 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
     let mut out = Vec::new();
     let order = job.order.clone();
     let w = &job.world;
+    // How deep each element sits. The tree was checked on load; the step limit is only
+    // so that a world built wrongly in code cannot hang a view.
+    let parents: std::collections::HashMap<String, Option<String>> = order.iter().filter_map(|e| w.get::<Node>(*e)).map(|n| (n.path.clone(), n.parent.clone())).collect();
     let depth_of = |mut parent: Option<String>| -> usize {
         let mut d = 0;
         while let Some(p) = parent {
             d += 1;
-            parent = order.iter().filter_map(|e| w.get::<Node>(*e)).find(|n| n.path == p).and_then(|n| n.parent.clone());
+            if d > parents.len() {
+                break;
+            }
+            parent = parents.get(&p).cloned().flatten();
         }
         d
     };
@@ -71,6 +77,7 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         let mut rows = Vec::new();
         if let Some(o) = w.get::<Outline>(e) {
             rows.push(entered(p, "outline", &o.points, |pts| format!("{} points", pts.len())));
+            rows.push(entered(p, "eave line", &o.eave, |[a, b]| format!("({}, {}) to ({}, {})", num(a[0]), num(a[1]), num(b[0]), num(b[1]))));
             rows.push(entered(p, "eave height", &o.eave_height, |x| num(*x)));
         }
         if let Some(c) = w.get::<Pitch>(e) {

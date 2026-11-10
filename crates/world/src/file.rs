@@ -6,15 +6,19 @@
 //! Saving is repeatable: the same world always writes the same bytes, so a diff between
 //! two saves shows exactly what was edited and what followed from it, and nothing else.
 //!
-//! Loading checks the file. A value with no source, an Unknown carrying a number, or a
-//! child that points nowhere is refused. Measures are recomputed from the geometry, and
-//! any measure in the file that does not match its recomputed figure is reported.
+//! Loading checks the file against the rules in `check.rs` and refuses what breaks them.
+//! Nothing is dropped quietly: a key this program does not know is either kept and
+//! written back (at the top of the file, in the header, on an entry, or as an attribute)
+//! or, inside one of this program's own components, refused with its name.
+//! Measures are recomputed from the geometry, and any measure in the file that does not
+//! match its recomputed figure is reported.
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
+use crate::check;
 use crate::components::*;
 use crate::job::{Header, Job};
 
@@ -26,6 +30,8 @@ struct FileRoot {
     #[serde(default)]
     schemas: BTreeMap<String, Value>,
     data: Vec<Entry>,
+    #[serde(flatten)]
+    extra: BTreeMap<String, Value>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -37,6 +43,8 @@ struct Entry {
     inherits: BTreeMap<String, String>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     attributes: BTreeMap<String, Value>,
+    #[serde(flatten)]
+    extra: BTreeMap<String, Value>,
 }
 
 const KNOWN_KEYS: [&str; 10] = [K_CLASS, K_JOB, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_MEASURE];
@@ -44,7 +52,7 @@ const KNOWN_KEYS: [&str; 10] = [K_CLASS, K_JOB, K_OUTLINE, K_PITCH, K_RUN, K_HEI
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
 pub struct LoadReport {
-    /// Measures in the file that did not match what the geometry gives.
+    /// Elements whose measures in the file did not match what the geometry gives.
     pub stale: Vec<String>,
 }
 
@@ -81,14 +89,28 @@ pub fn save(job: &mut Job) -> String {
                 a.insert(k.clone(), v.clone());
             }
         }
-        data.push(Entry { path: node.path.clone(), children: children.get(&node.path).cloned().unwrap_or_default(), inherits: BTreeMap::new(), attributes: a });
+        data.push(Entry {
+            path: node.path.clone(),
+            children: children.get(&node.path).cloned().unwrap_or_default(),
+            inherits: node.inherits.clone(),
+            attributes: a,
+            extra: node.extra.clone(),
+        });
     }
-    let schemas: BTreeMap<String, Value> = KNOWN_KEYS.iter().map(|k| (k.to_string(), json!({ "value": { "dataType": if *k == K_CLASS { "String" } else { "Object" } } }))).collect();
-    let root = FileRoot { header: job.header.clone(), imports: job.imports.clone(), schemas, data };
+    // The file's own schema entries are kept; ours are added beside them.
+    let mut schemas = job.schemas.clone();
+    for k in KNOWN_KEYS {
+        schemas.entry(k.to_string()).or_insert_with(|| json!({ "value": { "dataType": if k == K_CLASS { "String" } else { "Object" } } }));
+    }
+    let root = FileRoot { header: job.header.clone(), imports: job.imports.clone(), schemas, data, extra: job.extra.clone() };
     let mut out = String::new();
     write_pretty(&serde_json::to_value(&root).expect("the job serialises"), 0, &mut out);
     out.push('\n');
     out
+}
+
+fn parse<T: DeserializeOwned>(path: &str, key: &str, v: Value) -> Result<T, String> {
+    serde_json::from_value(v).map_err(|e| format!("{path} {key}: {e}"))
 }
 
 pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
@@ -98,6 +120,9 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
     }
     let mut seen = BTreeSet::new();
     for entry in &root.data {
+        if entry.path.trim().is_empty() {
+            return Err("an element has a blank path".into());
+        }
         if !seen.insert(entry.path.clone()) {
             return Err(format!("{} appears twice; a job has one entry per element", entry.path));
         }
@@ -106,6 +131,9 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
     let mut parent_of: BTreeMap<String, (String, String)> = BTreeMap::new();
     for entry in &root.data {
         for (name, child) in &entry.children {
+            if name.trim().is_empty() {
+                return Err(format!("{} lists a child with a blank name", entry.path));
+            }
             if !seen.contains(child) {
                 return Err(format!("{} lists child {name:?} at {child}, which is not in the file", entry.path));
             }
@@ -114,109 +142,112 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
             }
         }
     }
+    // The tree: the first entry is the job, it alone has no parent, and every other
+    // element leads back up to it. A loop of children cut off from the job is refused.
+    let top = root.data[0].path.clone();
+    if parent_of.contains_key(&top) {
+        return Err(format!("the first element, {top}, has to be the job and cannot be anyone's child"));
+    }
+    for entry in &root.data[1..] {
+        let mut at = &entry.path;
+        let mut steps = 0;
+        loop {
+            match parent_of.get(at) {
+                Some((parent, _)) => at = parent,
+                None if *at == top => break,
+                None => return Err(format!("{} is not under the job: {at} has no parent", entry.path)),
+            }
+            steps += 1;
+            if steps > root.data.len() {
+                return Err(format!("{} is in a loop of children that never reaches the job", entry.path));
+            }
+        }
+    }
 
-    let mut job = Job { header: root.header, world: bevy_ecs::world::World::new(), order: Vec::new(), imports: root.imports };
+    let mut job = Job { header: root.header, world: bevy_ecs::world::World::new(), order: Vec::new(), imports: root.imports, schemas: root.schemas, extra: root.extra };
+    for k in KNOWN_KEYS {
+        // Ours are rewritten on save; do not keep a stale copy.
+        if job.schemas.get(k) == Some(&json!({ "value": { "dataType": if k == K_CLASS { "String" } else { "Object" } } })) {
+            job.schemas.remove(k);
+        }
+    }
     let mut file_measures: BTreeMap<String, Measure> = BTreeMap::new();
-    let mut roots = 0;
 
-    for entry in root.data {
+    for (i, entry) in root.data.into_iter().enumerate() {
         let path = entry.path.clone();
-        let bad = |k: &str, e: serde_json::Error| format!("{path} {k}: {e}");
         let (parent, name) = match parent_of.get(&path) {
             Some((p, n)) => (Some(p.clone()), n.clone()),
             None => (None, path.clone()),
         };
-        if parent.is_none() {
-            roots += 1;
+        let mut attributes = entry.attributes;
+        let kind: Kind = match attributes.remove(K_CLASS) {
+            Some(v) => parse(&path, K_CLASS, v)?,
+            None => return Err(format!("{path} has no {K_CLASS}; every element says what it is")),
+        };
+        if (kind == Kind::Job) != (i == 0) {
+            return Err(if i == 0 { format!("the first element, {path}, has to be the job; it is a {kind:?}") } else { format!("{path} is a second job element; a file holds one job") });
         }
-        let id = job.world.spawn(Node { path: path.clone(), name, parent }).id();
+        if (i == 0) != attributes.contains_key(K_JOB) {
+            return Err(if i == 0 { format!("the job element {path} must carry {K_JOB}") } else { format!("{path} carries {K_JOB}; only the job element does") });
+        }
+        let node = Node { path: path.clone(), name, parent, inherits: entry.inherits, extra: entry.extra };
+        let id = job.world.spawn((node, kind)).id();
         job.order.push(id);
         let mut foreign = BTreeMap::new();
-        let mut has_class = false;
-        for (k, v) in entry.attributes {
+        for (k, v) in attributes {
             let mut ent = job.world.entity_mut(id);
             match k.as_str() {
-                K_CLASS => {
-                    ent.insert(serde_json::from_value::<Kind>(v).map_err(|e| bad(&k, e))?);
-                    has_class = true;
-                }
                 K_JOB => {
-                    ent.insert(serde_json::from_value::<JobInfo>(v).map_err(|e| bad(&k, e))?);
+                    let c: JobInfo = parse(&path, &k, v)?;
+                    check::job_info(&path, &c)?;
+                    ent.insert(c);
                 }
                 K_OUTLINE => {
-                    let c: Outline = serde_json::from_value(v).map_err(|e| bad(&k, e))?;
-                    c.points.check(&format!("{path} outline points"))?;
-                    c.eave_height.check(&format!("{path} eave height"))?;
-                    if let Some(pts) = &c.points.value {
-                        if pts.len() < 3 {
-                            return Err(format!("{path} outline: an area needs at least three points"));
-                        }
-                        if pts.iter().flatten().any(|x| !x.is_finite()) {
-                            return Err(format!("{path} outline: a coordinate is not a usable number"));
-                        }
-                    }
+                    let c: Outline = parse(&path, &k, v)?;
+                    check::outline(&path, kind, &c)?;
                     ent.insert(c);
                 }
                 K_PITCH => {
-                    let c: Pitch = serde_json::from_value(v).map_err(|e| bad(&k, e))?;
-                    c.0.check(&format!("{path} pitch"))?;
-                    if c.0.value.is_some_and(|p| !p.is_finite() || p < 0.0) {
-                        return Err(format!("{path} pitch: must be zero or more"));
-                    }
+                    let c: Pitch = parse(&path, &k, v)?;
+                    check::pitch(&path, kind, &c)?;
                     ent.insert(c);
                 }
                 K_RUN => {
-                    let c: Run = serde_json::from_value(v).map_err(|e| bad(&k, e))?;
-                    c.ends.check(&format!("{path} run ends"))?;
+                    let c: Run = parse(&path, &k, v)?;
+                    check::run(&path, kind, &c)?;
                     ent.insert(c);
                 }
                 K_HEIGHT => {
-                    let c: Height = serde_json::from_value(v).map_err(|e| bad(&k, e))?;
-                    c.0.check(&format!("{path} height"))?;
-                    if c.0.value.is_some_and(|h| !h.is_finite() || h < 0.0) {
-                        return Err(format!("{path} height: must be zero or more"));
-                    }
+                    let c: Height = parse(&path, &k, v)?;
+                    check::height(&path, kind, &c)?;
                     ent.insert(c);
                 }
                 K_CONDITION => {
-                    let c: Condition = serde_json::from_value(v).map_err(|e| bad(&k, e))?;
-                    c.0.check(&format!("{path} condition"))?;
+                    let c: Condition = parse(&path, &k, v)?;
+                    check::condition(&path, &c)?;
                     ent.insert(c);
                 }
                 K_COST => {
-                    let c: Cost = serde_json::from_value(v).map_err(|e| bad(&k, e))?;
-                    c.code.check(&format!("{path} cost code"))?;
-                    for line in &c.lines {
-                        line.unit_cost.check(&format!("{path} cost line {:?} unit cost", line.description))?;
-                    }
+                    let c: Cost = parse(&path, &k, v)?;
+                    check::cost(&path, kind, &c)?;
                     ent.insert(c);
                 }
                 K_SCHEDULE => {
-                    let c: WorkCode = serde_json::from_value(v).map_err(|e| bad(&k, e))?;
-                    c.wbs.check(&format!("{path} schedule code"))?;
+                    let c: WorkCode = parse(&path, &k, v)?;
+                    check::work_code(&path, &c)?;
                     ent.insert(c);
                 }
                 K_MEASURE => {
-                    file_measures.insert(path.clone(), serde_json::from_value(v).map_err(|e| bad(&k, e))?);
+                    file_measures.insert(path.clone(), parse(&path, &k, v)?);
                 }
                 _ => {
                     foreign.insert(k, v);
                 }
             }
         }
-        if !has_class {
-            return Err(format!("{path} has no {K_CLASS}; every element says what it is"));
-        }
         if !foreign.is_empty() {
             job.world.entity_mut(id).insert(Foreign(foreign));
         }
-    }
-    if roots != 1 {
-        return Err(format!("the file has {roots} elements with no parent; a job has exactly one, the job itself"));
-    }
-    let root = job.root();
-    if job.world.get::<JobInfo>(root).is_none() {
-        return Err(format!("the first element must be the job and carry {K_JOB}"));
     }
 
     // Measures are never trusted from the file. Work them out again and compare.

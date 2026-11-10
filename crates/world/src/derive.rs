@@ -6,127 +6,154 @@
 //! for every element, writes the result into the element's `pl::measure`, and reports
 //! which elements' measures actually changed.
 //!
-//! Two rules hold throughout:
+//! Three rules hold throughout:
 //! * a result is only as good as its worst input (see `value.rs`);
-//! * when the inputs disagree, no number is given. A hip sits on two planes, and a line
-//!   that sits on two planes has to be at the same height on both, at both of its ends.
-//!   If their pitches or eave heights put an end at two different heights, the line is
-//!   flagged with both figures instead of quietly taking one.
+//! * every element of a geometric kind gets every one of its quantities, always. If an
+//!   input is missing the quantity is still listed, as Unknown, with the reason. A
+//!   quantity never just disappears;
+//! * when the inputs do not fit together, no number is given. A hip sits on two planes,
+//!   and it has to be on both outlines and at the same height on both, at both ends. An
+//!   eave has to be level. If not, the line is flagged with the figures instead of
+//!   quietly taking one.
 
 use std::collections::{BTreeMap, HashMap};
 
 use bevy_ecs::prelude::*;
 
+use crate::check::FIT_TOLERANCE_FT;
 use crate::components::*;
+use crate::geom;
 use crate::value::{Derived, Status};
 
-/// Two planes agree on a height when they are within this many feet (about 1/8 inch).
-const HEIGHT_TOLERANCE_FT: f64 = 0.01;
-
-/// What a run needs to know about a plane it lies on.
+/// What a line needs to know about an element it names as one of its planes.
 struct PlaneGeom {
+    kind: Kind,
     points: Option<Vec<P2>>,
-    points_status: Status,
+    eave: Option<[P2; 2]>,
     pitch: Option<f64>,
-    pitch_status: Status,
     eave_height: Option<f64>,
-    eave_height_status: Status,
+    /// The worst status among the plane's entered values; Unknown if any is missing.
+    status: Status,
+    /// What the plane lacks, in words, if anything.
+    lacks: Option<&'static str>,
 }
 
 impl PlaneGeom {
     /// The height of the plane above a plan point, in feet: the eave height plus the climb
-    /// from the eave to that point.
+    /// from the eave line to that point.
     fn height_at(&self, p: P2) -> Option<f64> {
-        let pts = self.points.as_ref()?;
-        let pitch = self.pitch?;
-        let eave_height = self.eave_height?;
-        if pts.len() < 2 {
-            return None;
-        }
-        let (a, b) = (pts[0], pts[1]);
-        let (ex, ey) = (b[0] - a[0], b[1] - a[1]);
-        let len = (ex * ex + ey * ey).sqrt();
-        if len == 0.0 {
-            return None;
-        }
-        // Distance from the eave line, measured square to it on the plan.
-        let off = ((ex * (p[1] - a[1])) - (ey * (p[0] - a[0]))).abs() / len;
-        Some(eave_height + off * pitch / 12.0)
+        let [a, b] = self.eave?;
+        let off = geom::point_to_line(p, a, b)?;
+        Some(self.eave_height? + off * self.pitch? / 12.0)
     }
 }
 
-fn plan_area(pts: &[P2]) -> f64 {
-    let n = pts.len();
-    let mut twice = 0.0;
-    for i in 0..n {
-        let (p, q) = (pts[i], pts[(i + 1) % n]);
-        twice += p[0] * q[1] - q[0] * p[1];
-    }
-    twice.abs() / 2.0
-}
-
-fn dist(a: P2, b: P2) -> f64 {
-    ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2)).sqrt()
-}
-
-/// Recompute every element's measure. Returns the paths whose measure changed, in job order.
+/// Recompute every element's measure. Returns the paths whose measure changed.
 pub fn derive(world: &mut World) -> Vec<String> {
     let mut planes: HashMap<String, PlaneGeom> = HashMap::new();
-    let mut q = world.query::<(&Node, &Outline, &Pitch)>();
-    for (node, outline, pitch) in q.iter(world) {
+    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>)>();
+    for (node, kind, outline, pitch) in q.iter(world) {
+        let mut status = Status::Known;
+        let mut lacks = None;
+        match outline {
+            Some(o) => status = status.max(o.points.status).max(o.eave.status).max(o.eave_height.status),
+            None => lacks = Some("no outline entered"),
+        }
+        match pitch {
+            Some(p) => status = status.max(p.0.status),
+            None => lacks = lacks.or(Some("no pitch entered")),
+        }
+        if lacks.is_some() {
+            status = Status::Unknown;
+        }
         planes.insert(
             node.path.clone(),
             PlaneGeom {
-                points: outline.points.value.clone(),
-                points_status: outline.points.status,
-                pitch: pitch.0.value,
-                pitch_status: pitch.0.status,
-                eave_height: outline.eave_height.value,
-                eave_height_status: outline.eave_height.status,
+                kind: *kind,
+                points: outline.and_then(|o| o.points.value.clone()),
+                eave: outline.and_then(|o| o.eave.value),
+                pitch: pitch.and_then(|p| p.0.value),
+                eave_height: outline.and_then(|o| o.eave_height.value),
+                status,
+                lacks,
             },
         );
     }
 
-    let mut changed = Vec::new();
-    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Run>, Option<&Height>, Option<&mut Measure>)>();
-    let mut to_insert: Vec<(Entity, Measure)> = Vec::new();
     let mut q_ids = world.query::<(Entity, &Node)>();
     let ids: HashMap<String, Entity> = q_ids.iter(world).map(|(e, n)| (n.path.clone(), e)).collect();
 
+    let mut changed = Vec::new();
+    let mut to_insert: Vec<(Entity, Measure)> = Vec::new();
+    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Run>, Option<&Height>, Option<&mut Measure>)>();
     for (node, kind, outline, pitch, run, height, measure) in q.iter_mut(world) {
-        let mut m = BTreeMap::new();
         let me = &node.path;
+        let mut m = BTreeMap::new();
 
         if kind.is_area() {
-            if let (Some(outline), Some(pitch)) = (outline, pitch) {
-                let in_outline = format!("{me}#{K_OUTLINE}");
-                let in_pitch = format!("{me}#{K_PITCH}");
-                let area = outline.points.value.as_ref().map(|p| plan_area(p));
-                let factor = pitch.0.value.map(|p| (1.0 + (p / 12.0).powi(2)).sqrt());
-                let surface = area.zip(factor).map(|(a, f)| a * f);
-                let both = [outline.points.status, pitch.0.status];
-                m.insert("plan_area".into(), Derived::new(area, "SF", &[outline.points.status], "area of the outline on the plan", &[in_outline.clone()]));
-                m.insert("slope_factor".into(), Derived::new(factor, "", &[pitch.0.status], "√(1 + (pitch ÷ 12)²)", &[in_pitch.clone()]));
-                m.insert("surface_area".into(), Derived::new(surface, "SF", &both, "plan_area × slope_factor", &[in_outline.clone(), in_pitch.clone()]));
-                m.insert("squares".into(), Derived::new(surface.map(|s| s / 100.0), "SQ", &both, "surface_area ÷ 100", &[in_outline, in_pitch]));
-            }
+            let in_outline = format!("{me}#{K_OUTLINE}");
+            let in_pitch = format!("{me}#{K_PITCH}");
+            let both = [in_outline.clone(), in_pitch.clone()];
+            let f_area = "area of the outline on the plan";
+            let f_factor = "√(1 + (pitch ÷ 12)²)";
+            let f_surface = "plan_area × slope_factor";
+            let f_squares = "surface_area ÷ 100";
+            let area = outline.and_then(|o| o.points.value.as_ref().map(|p| geom::plan_area(p)));
+            let factor = pitch.and_then(|p| p.0.value.map(|p| (1.0 + (p / 12.0).powi(2)).sqrt()));
+            let surface = area.zip(factor).map(|(a, f)| a * f);
+            m.insert(
+                "plan_area".into(),
+                match outline {
+                    Some(o) => Derived::new(area, "SF", &[o.points.status], f_area, &[in_outline.clone()]),
+                    None => Derived::refused("SF", f_area, &[in_outline.clone()], "no outline entered"),
+                },
+            );
+            m.insert(
+                "slope_factor".into(),
+                match pitch {
+                    Some(p) => Derived::new(factor, "", &[p.0.status], f_factor, &[in_pitch.clone()]),
+                    None => Derived::refused("", f_factor, &[in_pitch.clone()], "no pitch entered"),
+                },
+            );
+            let (surface_d, squares_d) = match (outline, pitch) {
+                (Some(o), Some(p)) => {
+                    let s = [o.points.status, p.0.status];
+                    (Derived::new(surface, "SF", &s, f_surface, &both), Derived::new(surface.map(|s| s / 100.0), "SQ", &s, f_squares, &both))
+                }
+                _ => {
+                    let why = if outline.is_none() { "no outline entered" } else { "no pitch entered" };
+                    (Derived::refused("SF", f_surface, &both, why), Derived::refused("SQ", f_squares, &both, why))
+                }
+            };
+            m.insert("surface_area".into(), surface_d);
+            m.insert("squares".into(), squares_d);
         }
 
         if kind.is_run() {
-            if let Some(run) = run {
-                let in_run = format!("{me}#{K_RUN}");
-                let plan = run.ends.value.map(|[a, b]| dist(a, b));
-                m.insert("plan_length".into(), Derived::new(plan, "LF", &[run.ends.status], "length of the line on the plan", &[in_run.clone()]));
-
-                if *kind == Kind::Parapet {
-                    if let Some(height) = height {
-                        let in_h = format!("{me}#{K_HEIGHT}");
-                        let face = plan.zip(height.0.value).map(|(l, h)| l * h);
-                        m.insert("face_area".into(), Derived::new(face, "SF", &[run.ends.status, height.0.status], "plan_length × height", &[in_run.clone(), in_h]));
-                    }
-                } else {
-                    m.insert("true_length".into(), true_length(run, plan, &planes, &in_run));
-                }
+            let in_run = format!("{me}#{K_RUN}");
+            let f_plan = "length of the line on the plan";
+            let plan = run.and_then(|r| r.ends.value.map(|[a, b]| geom::dist(a, b)));
+            m.insert(
+                "plan_length".into(),
+                match run {
+                    Some(r) => Derived::new(plan, "LF", &[r.ends.status], f_plan, &[in_run.clone()]),
+                    None => Derived::refused("LF", f_plan, &[in_run.clone()], "no line entered"),
+                },
+            );
+            if *kind == Kind::Parapet {
+                let in_h = format!("{me}#{K_HEIGHT}");
+                let f_face = "plan_length × height";
+                let inputs = [in_run.clone(), in_h];
+                m.insert(
+                    "face_area".into(),
+                    match (run, height) {
+                        (Some(r), Some(h)) => Derived::new(plan.zip(h.0.value).map(|(l, h)| l * h), "SF", &[r.ends.status, h.0.status], f_face, &inputs),
+                        (None, _) => Derived::refused("SF", f_face, &inputs, "no line entered"),
+                        (_, None) => Derived::refused("SF", f_face, &inputs, "no height entered"),
+                    },
+                );
+            } else {
+                m.insert("true_length".into(), true_length(*kind, run, plan, &planes, &in_run));
             }
         }
 
@@ -151,39 +178,72 @@ pub fn derive(world: &mut World) -> Vec<String> {
     changed
 }
 
-/// The length of a run along the slope. Every plane the run lies on gives a height at
-/// each of the run's two ends; they have to agree.
-fn true_length(run: &Run, plan: Option<f64>, planes: &HashMap<String, PlaneGeom>, in_run: &str) -> Derived {
-    let formula = "√(plan_length² + rise²); rise = the difference in height between the two ends, each height = eave height + pitch ÷ 12 × distance from the plane's eave";
+/// The length of a line along the slope. The line has to fit every plane it names: on the
+/// plane's outline at both ends, and at the same height on every plane at both ends.
+fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMap<String, PlaneGeom>, in_run: &str) -> Derived {
+    let formula = "√(plan_length² + rise²); rise = the difference in height between the two ends, each height = eave height + pitch ÷ 12 × distance from the plane's eave line";
     let mut inputs = vec![in_run.to_string()];
+    let Some(run) = run else {
+        return Derived::refused("LF", formula, &inputs, "no line entered");
+    };
     for p in &run.planes {
         inputs.push(format!("{p}#{K_OUTLINE}"));
         inputs.push(format!("{p}#{K_PITCH}"));
     }
-    if run.planes.is_empty() {
-        return Derived::refused("LF", formula, &inputs, "no plane is named for this line, so its slope length cannot be worked out");
+    let refuse = |why: String| Derived::refused("LF", formula, &inputs, &why);
+
+    let (fewest, most) = kind.planes_allowed();
+    let n = run.planes.len();
+    if n < fewest || n > most {
+        let want = if fewest == most { format!("{fewest}") } else { format!("{fewest} or {most}") };
+        return refuse(format!("a {kind:?} lies on {want} plane(s); this one names {n}"));
     }
+    let mut seen = Vec::new();
+    for p in &run.planes {
+        if seen.contains(&p) {
+            return refuse(format!("names plane {p} twice"));
+        }
+        seen.push(p);
+    }
+
     let mut statuses = vec![run.ends.status];
-    // For each plane: its name and the height it gives each end.
-    let mut heights: Vec<(String, [f64; 2])> = Vec::new();
+    // For each plane: its path and the height it gives each end of the line.
+    let mut heights: Vec<(&String, [f64; 2])> = Vec::new();
     for p in &run.planes {
         let Some(g) = planes.get(p) else {
-            return Derived::refused("LF", formula, &inputs, &format!("names plane {p}, which is not in the job"));
+            return refuse(format!("names plane {p}, which is not in the job"));
         };
-        statuses.extend([g.points_status, g.pitch_status, g.eave_height_status]);
-        if let Some([a, b]) = run.ends.value {
-            if let (Some(za), Some(zb)) = (g.height_at(a), g.height_at(b)) {
-                heights.push((p.clone(), [za, zb]));
+        if !g.kind.is_area() {
+            return refuse(format!("names {p} as a plane, but {p} is a {:?}", g.kind));
+        }
+        if let Some(lacks) = g.lacks {
+            return refuse(format!("plane {p} has {lacks}"));
+        }
+        statuses.push(g.status);
+        let (Some([a, b]), Some(pts)) = (run.ends.value, g.points.as_ref()) else { continue };
+        for (end, label) in [(a, "start"), (b, "end")] {
+            let off = geom::point_to_outline(end, pts);
+            if off > FIT_TOLERANCE_FT {
+                return refuse(format!("the line's {label} is {off:.2} ft off the outline of plane {p}; the line does not lie on that plane as drawn"));
             }
         }
+        if let (Some(za), Some(zb)) = (g.height_at(a), g.height_at(b)) {
+            heights.push((p, [za, zb]));
+        }
     }
-    let all_given = heights.len() == run.planes.len();
+    let all_given = heights.len() == n;
     if all_given {
         for (end, label) in [(0, "start"), (1, "end")] {
             let (lo, hi) = heights.iter().fold((f64::MAX, f64::MIN), |(lo, hi), (_, z)| (lo.min(z[end]), hi.max(z[end])));
-            if hi - lo > HEIGHT_TOLERANCE_FT {
+            if hi - lo > FIT_TOLERANCE_FT {
                 let each: Vec<String> = heights.iter().map(|(p, z)| format!("{p} puts it at {:.2} ft", z[end])).collect();
-                return Derived::refused("LF", formula, &inputs, &format!("the planes disagree about the height of the line's {label}: {}. The line as drawn does not fit these pitches and eave heights", each.join("; ")));
+                return refuse(format!("the planes disagree about the height of the line's {label}: {}. The line as drawn does not fit these pitches and eave heights", each.join("; ")));
+            }
+        }
+        if kind == Kind::Eave {
+            let (p, z) = heights[0];
+            if (z[1] - z[0]).abs() > FIT_TOLERANCE_FT {
+                return refuse(format!("an eave is level, but plane {p} puts this line's ends at {:.2} ft and {:.2} ft; check which edge of the plane is entered as its eave", z[0], z[1]));
             }
         }
     }

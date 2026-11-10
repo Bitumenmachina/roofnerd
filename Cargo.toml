@@ -13,4 +13,5 @@ rust-version = "1.95"
 bevy_ecs = { version = "0.20.1", default-features = false, features = ["std"] }
 serde = { version = "1", features = ["derive"] }
 # preserve_order: fields are written in the order the structs declare them, so the file reads value, unit, status, source.
-serde_json = { version = "1", features = ["preserve_order"] }
+# float_roundtrip: a number read from a file is written back as the same number.
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }

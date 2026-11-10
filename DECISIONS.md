@@ -5,7 +5,7 @@ D0: the landscape, checked, and a call per component.
 **How each entry was checked (2026-11-10).** Versions, licenses and last-publish dates
 come from the crates.io registry API. Last-commit dates and license files were read from a
 shallow clone of each source repository. Where neither was reachable the entry says so.
-The commands are in STATUS.md under D0.
+`tools/landscape.sh` re-runs all of it; its output is kept in `evidence/d0-landscape.txt`.
 
 A call is one of: **build on** (a linked dependency), **borrow** (port code or a pattern,
 with attribution where code moves), **write** (ours), **reference only** (read, never
@@ -28,6 +28,48 @@ linked, no code taken), or **not used**.
 | ProTakeoff (Driven-Waterproofing/take-off) | **Not reachable** at that address or three near spellings. A listing site calls it MIT. Nothing could be verified. |
 | ConstructCAD | **Not located** by search or by guessed addresses. Nothing could be verified. |
 | bimifc: v0.3 on Bevy 0.18 | Confirmed, and it has not moved: last commit 2026-05-20, still on Bevy 0.18. `Cargo.toml` says MPL-2.0; the repository root has no license file. |
+
+## Every candidate, rated
+
+**Maintained** is the last commit in the source repository. **Linux** says only what was
+actually seen: "builds here" means compiled in this Linux workspace; "own CI on Linux"
+means the project's own workflows name a Linux runner (count from
+`evidence/d0-landscape.txt`); neither is a claim that it was run here.
+
+| Candidate | Maintained (last commit) | License fit | Linux | Call |
+|---|---|---|---|---|
+| bevy_ecs 0.20.1 | 2026-11-10 | yes: MIT OR Apache-2.0 | **builds here** (rustc 1.95+) | build on (call 1) |
+| Bevy 0.20.1 (engine) | 2026-11-10 | yes: MIT OR Apache-2.0 | own CI on Linux (14 of 14); **not built here**, needs rustc 1.97.1 | build on, unproven (call 2) |
+| bimifc 0.3 | 2026-05-20; still on Bevy 0.18 | MPL-2.0 (Q3); no license file at root | own CI on Linux (3 of 3); not built here | not used (call 6) |
+| BIMCraft 0.11.0 | 2026-11-09 | yes: MIT OR Apache-2.0 | own CI on Linux (2 of 2); not built here | borrow (calls 3, 4) |
+| ConstructCAD | not located | GPL-3.0 per the brief; unverified | not checked | not used |
+| ifc-lite (core 28.2.0) | 2026-11-10 | MPL-2.0 (Q3) | own CI on Linux (47 of 49); not built here | not used (call 6) |
+| IfcOpenShell | 2026-11-10 | no: LGPL-3.0 | own CI on Linux (43 of 44); not installed here | separate tool at D6, never linked |
+| IFC5-development | 2026-09-08 | no license file at root | not applicable (a format) | pattern only (call 5) |
+| z3 crate 0.22.0 | 2026-11-10 | yes: MIT | own CI on Linux (3 of 3); not built here; C++ library | not used (call 8) |
+| monstertruck 0.4.1 | 2026-10-07 | yes: Apache-2.0 | own CI on Linux (1 of 1); not built here | not used now (call 7) |
+| truck (upstream) | 2026-11-02; last crate release 2024-09 | yes: Apache-2.0 | no CI workflows in the repository; not built here | not used now (call 7) |
+| opencascade-rs 0.3.0 | 2026-11-03 | no: LGPL-2.1 | own CI on Linux (4 of 4); not built here; C++ kernel | not used (call 7) |
+| cadrum 0.9.1 | 2026-11-07 | MIT wrapper over an LGPL-2.1 kernel | own CI on Linux (3 of 3); not built here | not used (call 7) |
+| Fornjot | shut down (README); last crate release 2024-03 | 0BSD | not checked | not used |
+| straight-skeleton 0.2.1 | 2026-07-17 | no: GPL-2.0-or-later | own CI on Linux (2 of 2) | reference only (call 3) |
+| IronCalc 0.9.1 | 2026-11-10 | yes: MIT OR Apache-2.0 | own CI on Linux (6 of 6); not built here | candidate at D3 (call 9) |
+| hayro 0.9.0 | 2026-11-09 | yes: Apache-2.0 OR MIT | own CI on Linux (2 of 3); not built here | build on at D2 (call 10) |
+| pdfium-render 0.9.5 | 2026-11-08 | wrapper yes; PDFium itself not checked | own CI on Linux (1 of 1); needs a native library | fallback (call 10) |
+| OpenTakeoff | 2026-11-07 | no: AGPL-3.0-only | a web application; not run here | reference only (call 11) |
+| ProTakeoff | not reachable | unverified | not checked | not used |
+| OpenConstructionERP (`datadrivenconstruction/OpenConstructionERP`) | 2026-11-10 | no: AGPL-3.0 | own CI on Linux (24 of 26); not run here | reference only (call 11) |
+| OpenAEC (`open-pdf-studio` checked) | 2026-11-10 | no: LGPL-3.0 | own CI on Linux (4 of 8); not run here | not used (call 11) |
+| Brush | 2026-10-03 | yes: Apache-2.0 | own CI on Linux (3 of 3); not built here | no call until D7 (call 12) |
+| OpenDroneMap | 2026-10-28 | no: AGPL-3.0 | own CI on Linux (4 of 5); not run here | separate tool only (call 12) |
+| *newer:* rust_xlsxwriter 0.102.0 | 2026-11-08 | yes: MIT OR Apache-2.0 | own CI on Linux (18 of 18); not built here | build on at D6 (call 9) |
+| *newer:* egui / eframe 0.37.0 | published 2026-10-15 | yes: MIT OR Apache-2.0 | not built here | fallback window (call 2) |
+| *newer:* bevy_egui 0.43.1 | published 2026-10-10 | yes: MIT | not built here | build on at D2 (call 2) |
+| *newer:* i_overlay 9.1.0, earcutr 0.5.0 | published 2026-10-14, 2025-05-29 | yes: MIT OR Apache-2.0, ISC | not built here | candidates (call 7) |
+
+Only one candidate has been compiled in this workspace. "Works on Linux" for the rest is
+their own CI's word, not this project's, until each is built at the deliverable that
+needs it.
 
 ## Calls
 
@@ -68,6 +110,10 @@ linked, because BIMCraft's core crate brings its whole document model. The port 
 NOTICE entry and a header naming the source file and commit. The `straight-skeleton` crate
 (GPL-2.0-or-later, confirmed) stays reference only.
 **Not yet done:** nothing has been ported. The port is D2 work.
+**To watch in the port:** BIMCraft works in millimetres. Its skeleton has tolerances
+written for that (`EPS` of 1e-6, and an edge shorter than half a unit is rejected). Carried
+over unchanged into feet, the second would reject any edge under six inches. Every
+tolerance in the port has to be restated in feet and tested on a short edge.
 
 ### 4. BIMCraft as a whole: borrow from, do not build on
 v0.11.0, MIT OR Apache-2.0, active. It is the closest permissive match and it is a
@@ -136,3 +182,20 @@ adds a patent grant. Code borrowed under either can be carried with its notice.
 ### 14. Platform exceptions to "Rust by default"
 None in the application. Two helper scripts are shell (`demos/d1.sh`, `tools/licenses.sh`);
 the demonstration script calls Python to label a diff. They are not part of the program.
+
+### 15. Model calls made in D1 (ours to make; recorded so they can be overruled)
+* **Feet only, no conversion.** A value in any other unit is refused with a message to
+  convert it. Converting silently is how a 30 in parapet becomes a 30 ft one.
+* **The eave is its own line on the plane**, not "whichever edge was traced first".
+  Re-tracing an outline cannot change which edge the pitch rises from.
+* **A pitch above 240 in 12 is refused** as a wall. A coordinate beyond 1,000,000 ft is
+  refused. Both are sanity limits against typing errors, not building rules.
+* **A line has to fit its planes to 0.01 ft** (about 1/8 in) or it gets no length. That
+  suits lines the program places itself (D2). It is tighter than a hand trace on a scanned
+  plan can hold, so hand-entered lines will be flagged often until D2 snaps them.
+* **References and labels carry no status.** The planes a line names, a cost line's
+  description and the measure it is priced by are structure, not quantities. They are
+  checked (a line off its plane is flagged; a cost line priced by a measure the element
+  lacks is refused) but they do not carry Known/Assumed/Unknown.
+* **An unknown field inside one of our own components is refused**, not kept. Anything
+  else unknown in the file is kept and written back.

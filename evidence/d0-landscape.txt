@@ -1,0 +1,57 @@
+D0 landscape evidence, gathered 2026-11-10 by tools/landscape.sh
+
+== Registry (crates.io API) ==
+crate | newest version | minimum rustc | declared license | last published | repository
+bevy | 0.20.1 | 1.97.1 | MIT OR Apache-2.0 | 2026-10-28 | https://github.com/bevyengine/bevy
+bevy_ecs | 0.20.1 | 1.95.0 | MIT OR Apache-2.0 | 2026-10-28 | https://github.com/bevyengine/bevy
+bevy_egui | 0.43.1 | 1.95.0 | MIT | 2026-10-10 | https://github.com/vladbat00/bevy_egui
+egui | 0.37.0 | 1.95 | MIT OR Apache-2.0 | 2026-10-15 | https://github.com/emilk/egui
+eframe | 0.37.0 | 1.95 | MIT OR Apache-2.0 | 2026-10-15 | https://github.com/emilk/egui/tree/main/crates/eframe
+hecs | 0.11.2 | 1.81 | MIT OR Apache-2.0 | 2026-10-04 | https://github.com/Ralith/hecs
+z3 | 0.22.0 | 1.88.0 | MIT | 2026-10-28 | https://github.com/prove-rs/z3.rs.git
+monstertruck | 0.4.1 | not stated | Apache-2.0 | 2026-09-19 | https://github.com/virtualritz/monstertruck
+truck-modeling | 0.6.0 | not stated | Apache-2.0 | 2024-09-20 | https://github.com/ricosjp/truck
+opencascade | 0.3.0 | not stated | LGPL-2.1 | 2026-08-24 | https://github.com/bschwind/opencascade-rs
+cadrum | 0.9.1 | not stated | MIT | 2026-10-21 | https://github.com/lzpel/cadrum
+fj | 0.49.0 | not stated | 0BSD | 2024-03-21 | https://github.com/hannobraun/fornjot
+straight-skeleton | 0.2.1 | 1.75 | GPL-2.0-or-later | 2026-07-17 | https://github.com/lizelive/straight-skeleton
+ironcalc | 0.9.1 | not stated | MIT OR Apache-2.0 | 2026-10-21 | https://github.com/ironcalc/ironcalc/
+rust_xlsxwriter | 0.102.0 | 1.88.0 | MIT OR Apache-2.0 | 2026-10-29 | https://github.com/jmcnamara/rust_xlsxwriter
+calamine | 0.38.0 | 1.88 | MIT | 2026-11-02 | https://github.com/tafia/calamine
+hayro | 0.9.0 | 1.92 | Apache-2.0 OR MIT | 2026-11-02 | https://github.com/LaurenzV/hayro
+pdfium-render | 0.9.5 | 1.61 | MIT OR Apache-2.0 | 2026-11-01 | https://github.com/ajrcarey/pdfium-render
+ifc-lite-core | 28.2.0 | not stated | MPL-2.0 | 2026-11-02 | https://github.com/LTplus-AG/ifc-lite
+bimifc-parser | 0.3.0 | not stated | MPL-2.0 | 2026-05-19 | https://github.com/holg/bimifc
+ifc_rs | 0.1.0-alpha.9 | not stated | MIT | 2024-12-04 | https://github.com/MetabuildDev/ifc_rs
+i_overlay | 9.1.0 | 1.88 | MIT OR Apache-2.0 | 2026-10-14 | https://github.com/iShape-Rust/iOverlay
+earcutr | 0.5.0 | not stated | ISC | 2025-05-29 | https://github.com/frewsxcv/earcutr/
+boolmesh | 0.2.2 | 1.88 | MPL-2.0 | 2026-10-27 | https://github.com/komietty/boolmesh
+serde | 1.0.229 | 1.56 | MIT OR Apache-2.0 | 2026-07-18 | https://github.com/serde-rs/serde
+serde_json | 1.0.154 | 1.71 | MIT OR Apache-2.0 | 2026-10-11 | https://github.com/serde-rs/json
+
+== Repositories (shallow clone, nothing executed) ==
+repository | last commit | license files (first line of each) | CI workflows that run on Linux
+bevyengine/bevy | 2026-11-10 | [LICENSE-APACHE: Apache License] [LICENSE-MIT: MIT License] | 14 of 14
+holg/bimifc | 2026-05-20 | none at the repository root| 3 of 3
+IPedrax/BIMCraft | 2026-11-09 | [LICENSE-APACHE: Apache License] [LICENSE-MIT: MIT License] | 2 of 2
+louistrue/ifc-lite | 2026-11-10 | [LICENSE: Mozilla Public License Version 2.0] [LICENSE_HEADER.md: License Headers for ifc-lite] | 47 of 49
+LTplus-AG/ifc-lite | 2026-11-10 | [LICENSE: Mozilla Public License Version 2.0] [LICENSE_HEADER.md: License Headers for ifc-lite] | 47 of 49
+IfcOpenShell/IfcOpenShell | 2026-11-10 | [COPYING: GNU GENERAL PUBLIC LICENSE] [COPYING.LESSER: GNU LESSER GENERAL PUBLIC LICENSE] | 43 of 44
+buildingSMART/IFC5-development | 2026-09-08 | none at the repository root| 2 of 2
+prove-rs/z3.rs | 2026-11-10 | none at the repository root| 3 of 3
+virtualritz/monstertruck | 2026-10-07 | [LICENSE: Apache License] | 1 of 1
+ricosjp/truck | 2026-11-02 | [LICENSE: Apache License] | 0 of 0
+bschwind/opencascade-rs | 2026-11-03 | [LICENSE: GNU LESSER GENERAL PUBLIC LICENSE] | 4 of 4
+lzpel/cadrum | 2026-11-07 | [LICENSE: MIT License] | 3 of 3
+hannobraun/fornjot | 2026-06-19 | [LICENSE.md: Zero-Clause BSD License] | 2 of 2
+lizelive/straight-skeleton | 2026-07-17 | [LICENSE: GNU GENERAL PUBLIC LICENSE] | 2 of 2
+ironcalc/IronCalc | 2026-11-10 | [LICENSE-Apache-2.0: Apache License] [LICENSE-MIT: MIT License] | 6 of 6
+LaurenzV/hayro | 2026-11-09 | [LICENSE-APACHE: Apache License] [LICENSE-MIT: Copyright (c) The Hayro Authors] | 2 of 3
+ajrcarey/pdfium-render | 2026-11-08 | [LICENSE.md: Licensed under either of] | 1 of 1
+Kentucky-ai/OpenTakeoff | 2026-11-07 | [LICENSE: GNU AFFERO GENERAL PUBLIC LICENSE] | 2 of 2
+Driven-Waterproofing/take-off | NOT REACHABLE (private, renamed, or gone)
+ArthurBrussee/brush | 2026-10-03 | [LICENSE: Apache License] | 3 of 3
+OpenDroneMap/ODM | 2026-10-28 | [LICENSE: GNU AFFERO GENERAL PUBLIC LICENSE] | 4 of 5
+datadrivenconstruction/OpenConstructionERP | 2026-11-10 | [LICENSE: GNU AFFERO GENERAL PUBLIC LICENSE] | 24 of 26
+OpenAEC-Foundation/open-pdf-studio | 2026-11-10 | [LICENSE.md: GNU LESSER GENERAL PUBLIC LICENSE] | 4 of 8
+jmcnamara/rust_xlsxwriter | 2026-11-08 | [LICENSE_Apache2.0: Apache License] [LICENSE_MIT: MIT License] | 18 of 18

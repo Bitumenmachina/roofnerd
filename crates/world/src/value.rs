@@ -4,7 +4,7 @@
 //! * **Assumed**: a working number someone chose because the real one is not in hand yet.
 //! * **Unknown**: nobody has it. It carries no number at all.
 //!
-//! Each one also says where it came from. A value with no source is refused on load.
+//! Each one also says where it came from. A value with no source is refused.
 //! A value worked out from others (an area from an outline and a pitch) takes the worst
 //! status among what it was worked out from, so an assumed pitch makes an assumed area,
 //! and an unknown height makes an unknown wall area rather than a guessed one.
@@ -31,7 +31,9 @@ impl Status {
 }
 
 /// An entered value: what it is, its unit, how sure we are, and where it came from.
+/// A field this program does not know inside a value is refused, not dropped.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Val<T> {
     /// `null` exactly when the status is Unknown.
     pub value: Option<T>,
@@ -52,10 +54,19 @@ impl<T> Val<T> {
         Val { value: None, unit: unit.into(), status: Status::Unknown, source: source.into() }
     }
 
-    /// The rules a stored value has to meet. `what` names it in the error.
-    pub fn check(&self, what: &str) -> Result<(), String> {
+    /// The rules every stored value has to meet. `what` names it in the error. `unit` is
+    /// the one unit this value is allowed to be in: the program does no converting, so a
+    /// height in inches or an outline in metres is refused rather than read as feet.
+    pub fn check(&self, what: &str, unit: &str) -> Result<(), String> {
         if self.source.trim().is_empty() {
             return Err(format!("{what}: no source given; every value says where it came from"));
+        }
+        if self.unit != unit {
+            return Err(if unit.is_empty() {
+                format!("{what}: carries the unit {:?} but takes none", self.unit)
+            } else {
+                format!("{what}: its unit is {:?} but it has to be {unit:?}; convert it before entering it", self.unit)
+            });
         }
         match (self.status, self.value.is_some()) {
             (Status::Unknown, true) => Err(format!("{what}: marked Unknown but carries a value")),
@@ -70,6 +81,7 @@ impl<T> Val<T> {
 /// A value worked out from other values. It shows its formula and names its inputs,
 /// so anyone reading the file can see how the number was reached and what feeds it.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Derived {
     pub value: Option<f64>,
     pub unit: String,
@@ -77,24 +89,23 @@ pub struct Derived {
     pub formula: String,
     /// Each input as `entity-path#component`.
     pub inputs: Vec<String>,
-    /// Why it is flagged, when it is.
+    /// Why it is flagged, when there is a reason beyond a flagged input.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub note: String,
 }
 
 impl Derived {
     /// A derived number. The status is the worst among its inputs; an Unknown input
-    /// leaves no number behind.
+    /// leaves no number behind, and so does arithmetic that runs off the end of the
+    /// number line.
     pub fn new(value: Option<f64>, unit: &str, statuses: &[Status], formula: &str, inputs: &[String]) -> Self {
+        if value.is_some_and(|v| !v.is_finite()) {
+            return Derived::refused(unit, formula, inputs, "the inputs are too large to give a usable figure");
+        }
         let status = statuses.iter().copied().max().unwrap_or(Status::Unknown);
         let value = if status == Status::Unknown { None } else { value.map(round4) };
         let status = if value.is_none() { Status::Unknown } else { status };
         Derived { value, unit: unit.into(), status, formula: formula.into(), inputs: inputs.to_vec(), note: String::new() }
-    }
-
-    pub fn with_note(mut self, note: &str) -> Self {
-        self.note = note.into();
-        self
     }
 
     /// A derived value that cannot be given, with the reason.
@@ -106,5 +117,5 @@ impl Derived {
 /// Derived numbers are written to four decimals: finer than a sixteenth of an inch on a
 /// length in feet, and it keeps the saved file readable and its diffs free of float noise.
 pub fn round4(x: f64) -> f64 {
-    (x * 10_000.0).round() / 10_000.0
+    (x * 10_000.0).round() / 10_000.0 + 0.0
 }

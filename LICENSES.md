@@ -6,9 +6,12 @@ No dependency is linked before its license is confirmed.
 ## Linked crates
 
 Everything the workspace links, direct and transitive, with the license each crate
-declares in the registry. Regenerate with `tools/licenses.sh`, which exits non-zero if any
-crate is outside the permissive list (MIT, Apache-2.0, BSD-2/3-Clause, ISC, Zlib, 0BSD,
-Unicode-3.0, CC0-1.0, BSL-1.0, Unlicense).
+declares in the registry. Regenerate with `tools/licenses.sh`. It parses each license
+expression properly (brackets, then AND, then OR) and exits non-zero if any crate can
+only be used by accepting a license outside the permissive list (MIT, MIT-0, Apache-2.0,
+BSD-2/3-Clause, ISC, Zlib, 0BSD, Unicode-3.0, CC0-1.0, BSL-1.0, Unlicense).
+`tools/licenses.sh --self-test` checks that logic against 19 cases, including
+`GPL-3.0 AND (MIT OR Apache-2.0)`, which has to fail.
 
 Direct dependencies: `bevy_ecs` 0.20.1, `serde` 1, `serde_json` 1. The rest come in through
 those three.
@@ -81,7 +84,8 @@ those three.
 
 ## Candidates checked and not linked
 
-Checked 2026-11-10. "Registry" is the crates.io API; "repository" is the license file read
+Checked 2026-11-10; the raw output is in `evidence/d0-landscape.txt`. "Registry" is the
+crates.io API; "repository" is the license file read
 from a shallow clone of the source.
 
 | Candidate | License | Checked against | Call |

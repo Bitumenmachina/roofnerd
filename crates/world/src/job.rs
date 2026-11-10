@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, HashMap};
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::check;
 use crate::components::*;
 use crate::derive;
 use crate::value::{Status, Val};
@@ -23,6 +24,9 @@ pub struct Header {
     /// When the job was started. Saving does not touch it, so a save changes nothing
     /// in the file except what was actually edited.
     pub timestamp: String,
+    /// Anything else the header held when it was read. Kept and written back.
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
 }
 
 pub struct Job {
@@ -30,8 +34,10 @@ pub struct Job {
     pub world: World,
     /// Entities in the order they were added. The file is written in this order.
     pub order: Vec<Entity>,
-    /// Parts of the file kept as they were read.
+    /// Parts of the file this program does not use, kept as they were read.
     pub imports: Vec<serde_json::Value>,
+    pub schemas: BTreeMap<String, serde_json::Value>,
+    pub extra: BTreeMap<String, serde_json::Value>,
 }
 
 impl Job {
@@ -43,17 +49,15 @@ impl Job {
                 data_version: "1.0.0".into(),
                 author: author.into(),
                 timestamp: started.into(),
+                extra: BTreeMap::new(),
             },
             world: World::new(),
             order: Vec::new(),
             imports: Vec::new(),
+            schemas: BTreeMap::new(),
+            extra: BTreeMap::new(),
         };
-        let root = job.world.spawn((
-            Node { path: "job-0001".into(), name: slug(title), parent: None },
-            Kind::Job,
-            JobInfo { title: title.into(), length_unit: "ft".into(), next_id: 2 },
-        ));
-        let id = root.id();
+        let id = job.world.spawn((Node::new("job-0001", "job-0001", None), Kind::Job, JobInfo { title: title.into(), length_unit: U_LENGTH.into(), next_id: 2 })).id();
         job.order.push(id);
         job
     }
@@ -71,94 +75,96 @@ impl Job {
         self.index().get(path).copied()
     }
 
+    pub fn kind(&mut self, path: &str) -> Option<Kind> {
+        let e = self.find(path)?;
+        self.world.get::<Kind>(e).copied()
+    }
+
     /// Add an element under `parent`. Its path is its kind and the job's next number,
-    /// and it keeps that path for good.
-    pub fn add(&mut self, parent: &str, kind: Kind, name: &str) -> String {
+    /// and it keeps that path for good. Two children of one parent cannot share a name.
+    pub fn add(&mut self, parent: &str, kind: Kind, name: &str) -> Result<String, String> {
+        if name.trim().is_empty() {
+            return Err("an element needs a name".into());
+        }
+        if kind == Kind::Job {
+            return Err("a job has one job element, and it is already there".into());
+        }
+        if self.find(parent).is_none() {
+            return Err(format!("no element {parent} to add under"));
+        }
+        if self.children().get(parent).is_some_and(|c| c.contains_key(name)) {
+            return Err(format!("{parent} already has a child named {name:?}"));
+        }
         let root = self.root();
-        let mut info = self.world.get_mut::<JobInfo>(root).expect("the root carries the job info");
+        let mut info = self.world.get_mut::<JobInfo>(root).ok_or("the job element carries no job information")?;
         let path = format!("{}-{:04}", kind.stem(), info.next_id);
         info.next_id += 1;
-        let id = self.world.spawn((Node { path: path.clone(), name: name.into(), parent: Some(parent.into()) }, kind)).id();
+        let id = self.world.spawn((Node::new(&path, name, Some(parent)), kind)).id();
         self.order.push(id);
-        path
+        Ok(path)
     }
 
-    pub fn put<C: Component>(&mut self, path: &str, component: C) {
-        let e = self.find(path).unwrap_or_else(|| panic!("no element {path}"));
+    /// Put a component on an element, unchecked. For building jobs in code; `file::load`
+    /// and `set` are the checked routes.
+    pub fn put<C: Component>(&mut self, path: &str, component: C) -> Result<(), String> {
+        let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         self.world.entity_mut(e).insert(component);
+        Ok(())
     }
 
-    /// Recompute what follows from the geometry. Returns the paths whose measures changed.
+    /// Recompute what follows from the geometry. Returns the paths whose measures
+    /// changed, in job order.
     pub fn derive(&mut self) -> Vec<String> {
         let changed = derive::derive(&mut self.world);
-        // Report in job order.
         let mut q = self.world.query::<&Node>();
         self.order.iter().filter_map(|e| q.get(&self.world, *e).ok()).map(|n| n.path.clone()).filter(|p| changed.contains(p)).collect()
     }
 
     /// Change one entered value by element path and field name. The fields are the ones an
-    /// estimator would edit: pitch, height, eave_height, condition, wbs.
+    /// estimator would edit: pitch, height, eave_height, condition, wbs. The new value has
+    /// to pass the same checks a loaded file does.
     pub fn set(&mut self, path: &str, field: &str, value: Option<&str>, status: Status, source: &str) -> Result<(), String> {
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
         let number = |unit: &str| -> Result<Val<f64>, String> {
             let v = match value {
-                Some(s) => Some(s.parse::<f64>().map_err(|_| format!("{s:?} is not a number"))?),
+                // Adding zero turns a typed "-0" into plain 0.
+                Some(s) => Some(s.parse::<f64>().map_err(|_| format!("{s:?} is not a number"))? + 0.0),
                 None => None,
             };
-            if let Some(x) = v {
-                if !x.is_finite() {
-                    return Err(format!("{x} is not a usable number"));
-                }
+            if v.is_some_and(|x| !x.is_finite()) {
+                return Err(format!("{} is not a usable number", value.unwrap_or_default()));
             }
-            let val = Val { value: v, unit: unit.into(), status, source: source.into() };
-            val.check(&format!("{path} {field}"))?;
-            Ok(val)
+            Ok(Val { value: v, unit: unit.into(), status, source: source.into() })
         };
-        let text = || -> Result<Val<String>, String> {
-            let val = Val { value: value.map(str::to_string), unit: String::new(), status, source: source.into() };
-            val.check(&format!("{path} {field}"))?;
-            Ok(val)
-        };
+        let text = || Val { value: value.map(str::to_string), unit: String::new(), status, source: source.into() };
         let missing = |what: &str| format!("{path} has no {what} to set");
         match field {
             "pitch" => {
-                let v = number("in/12")?;
-                if v.value.is_some_and(|p| p < 0.0) {
-                    return Err("a pitch cannot be negative".into());
-                }
-                let mut c = self.world.get_mut::<Pitch>(e).ok_or_else(|| missing("pitch"))?;
-                c.0 = v;
+                let new = Pitch(number(U_PITCH)?);
+                check::pitch(path, kind, &new)?;
+                *self.world.get_mut::<Pitch>(e).ok_or_else(|| missing("pitch"))? = new;
             }
             "height" => {
-                let v = number("ft")?;
-                if v.value.is_some_and(|h| h < 0.0) {
-                    return Err("a height cannot be negative".into());
-                }
-                let mut c = self.world.get_mut::<Height>(e).ok_or_else(|| missing("height"))?;
-                c.0 = v;
+                let new = Height(number(U_LENGTH)?);
+                check::height(path, kind, &new)?;
+                *self.world.get_mut::<Height>(e).ok_or_else(|| missing("height"))? = new;
             }
             "eave_height" => {
-                let v = number("ft")?;
-                let mut c = self.world.get_mut::<Outline>(e).ok_or_else(|| missing("outline"))?;
-                c.eave_height = v;
+                let mut new = self.world.get::<Outline>(e).ok_or_else(|| missing("outline"))?.clone();
+                new.eave_height = number(U_LENGTH)?;
+                check::outline(path, kind, &new)?;
+                *self.world.get_mut::<Outline>(e).ok_or_else(|| missing("outline"))? = new;
             }
             "condition" => {
-                let v = text()?;
-                match self.world.get_mut::<Condition>(e) {
-                    Some(mut c) => c.0 = v,
-                    None => {
-                        self.world.entity_mut(e).insert(Condition(v));
-                    }
-                }
+                let new = Condition(text());
+                check::condition(path, &new)?;
+                self.world.entity_mut(e).insert(new);
             }
             "wbs" => {
-                let v = text()?;
-                match self.world.get_mut::<WorkCode>(e) {
-                    Some(mut c) => c.wbs = v,
-                    None => {
-                        self.world.entity_mut(e).insert(WorkCode { wbs: v });
-                    }
-                }
+                let new = WorkCode { wbs: text() };
+                check::work_code(path, &new)?;
+                self.world.entity_mut(e).insert(new);
             }
             other => return Err(format!("{other:?} is not a field that can be set; use pitch, height, eave_height, condition or wbs")),
         }
