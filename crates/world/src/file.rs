@@ -48,12 +48,13 @@ struct Entry {
     extra: BTreeMap<String, Value>,
 }
 
-const KNOWN_KEYS: [&str; 10] = [K_CLASS, K_JOB, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_MEASURE];
+const KNOWN_KEYS: [&str; 11] = [K_CLASS, K_JOB, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_MEASURE, K_LINE_QUANTITIES];
 
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
 pub struct LoadReport {
-    /// Elements whose measures in the file did not match what the geometry gives.
+    /// Elements whose measures or line quantities in the file did not match what the
+    /// geometry gives.
     pub stale: Vec<String>,
 }
 
@@ -83,6 +84,11 @@ pub fn save(job: &mut Job) -> String {
         if let Some(m) = w.get::<Measure>(e) {
             if !m.0.is_empty() {
                 a.insert(K_MEASURE.to_string(), serde_json::to_value(m).expect("measures serialise"));
+            }
+        }
+        if let Some(q) = w.get::<LineQuantities>(e) {
+            if !q.0.is_empty() {
+                a.insert(K_LINE_QUANTITIES.to_string(), serde_json::to_value(q).expect("line quantities serialise"));
             }
         }
         if let Some(f) = w.get::<Foreign>(e) {
@@ -174,6 +180,7 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
         }
     }
     let mut file_measures: BTreeMap<String, Measure> = BTreeMap::new();
+    let mut file_line_quantities: BTreeMap<String, LineQuantities> = BTreeMap::new();
 
     for (i, entry) in root.data.into_iter().enumerate() {
         let path = entry.path.clone();
@@ -242,6 +249,9 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                 K_MEASURE => {
                     file_measures.insert(path.clone(), parse(&path, &k, v)?);
                 }
+                K_LINE_QUANTITIES => {
+                    file_line_quantities.insert(path.clone(), parse(&path, &k, v)?);
+                }
                 _ => {
                     foreign.insert(k, v);
                 }
@@ -267,11 +277,13 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
     // Measures are never trusted from the file. Work them out again and compare.
     job.derive();
     let mut report = LoadReport::default();
-    let mut q = job.world.query::<(&Node, Option<&Measure>)>();
-    for (node, measure) in q.iter(&job.world) {
+    let mut q = job.world.query::<(&Node, Option<&Measure>, Option<&LineQuantities>)>();
+    for (node, measure, line_quantities) in q.iter(&job.world) {
         let now = measure.cloned().unwrap_or_default();
         let then = file_measures.remove(&node.path).unwrap_or_default();
-        if now != then {
+        let now_lq = line_quantities.cloned().unwrap_or_default();
+        let then_lq = file_line_quantities.remove(&node.path).unwrap_or_default();
+        if now != then || now_lq != then_lq {
             report.stale.push(node.path.clone());
         }
     }

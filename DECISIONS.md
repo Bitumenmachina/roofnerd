@@ -182,14 +182,15 @@ The pairing most of the Rust ecosystem uses. Both disclaim warranty and liabilit
 adds a patent grant. Code borrowed under either can be carried with its notice.
 
 ### 14. Platform exceptions to "Rust by default"
-None in the application. Outside it: three shell scripts (`demos/d1.sh`,
+None in the application. Outside it: four shell scripts (`demos/d1.sh`, `demos/units.sh`,
 `tools/licenses.sh`, `tools/landscape.sh`) and one Python file (`tools/license_expr.py`,
 the license-expression checker). The demonstration and landscape scripts also call Python
 inline to label a diff and read registry replies. None of these is part of the program.
 
 ### 15. Model calls made in D1 (ours to make; recorded so they can be overruled)
-* **Feet only, no conversion.** A value in any other unit is refused with a message to
-  convert it. Converting silently is how a 30 in parapet becomes a 30 ft one.
+* ~~**Feet only, no conversion.** A value in any other unit is refused with a message to
+  convert it.~~ **Overruled by the owner; see call 16.** What survives of it: a unit the
+  program does not know is still refused, and nothing is ever read as feet by default.
 * **The eave is its own line on the plane**, not "whichever edge was traced first".
   Re-tracing an outline cannot change which edge the pitch rises from. The eave has to
   lie along one outline edge and be the plane's low edge (no part of the outline on the
@@ -212,3 +213,49 @@ inline to label a diff and read registry replies. None of these is part of the p
   lacks is refused) but they do not carry Known/Assumed/Unknown.
 * **An unknown field inside one of our own components is refused**, not kept. Anything
   else unknown in the file is kept and written back.
+
+### 16. Units: held as entered, converted only for arithmetic (owner ruling, 2026-11-10)
+**The ruling** (the handoff that followed D1; it overrules call 15's first bullet): "Feet
+only, nothing converted" is rejected. US measurements stay, and the program takes more
+than feet. An estimator enters what the drawing or the tape says. How units are held
+internally was left to this project; metric was not asked for.
+
+**The calls made under it:**
+* **Three length units: `ft`, `in`, `ft-in`.** They are the three ways a US drawing or a
+  tape gives a length. Yards and anything else are refused by name.
+* **A value is stored exactly as entered: its number and its unit.** `30 in` is the number
+  30 and the unit `in`. There is no second, normalised copy in the file or in the world,
+  so the two cannot disagree. Conversion to feet happens inside `derive` and the checks,
+  nowhere else (`Len::feet`, `Outline::points_ft`, `Run::ends_ft`).
+* **Feet-and-inches is the pair `[feet, inches]`**, not text and not a count of inches.
+  A pair is numbers a person can read and edit in the file, and inch fractions down to
+  1/64 are exact in a 64-bit number, so nothing is rounded on the way in or out. It is
+  converted through inches, (feet × 12 + inches) ÷ 12, so `25' 6 1/2"` and `306.5 in` are
+  bit-for-bit the same number of feet.
+* **A formula shows its conversion.** `plan_length × height ÷ 12` when the height is in
+  inches. A reader multiplying the figures on the page gets the figure on the page. The
+  cost: changing only the unit a value is written in also changes the formula text of what
+  derives from it. That is the ruling's "that value and what derives from it".
+* **A bare number is refused for a length** (`30`), at the keyboard and in the file. It is
+  the one input that could silently become feet. A pitch typed bare is accepted, because a
+  pitch has only one unit.
+* **Plan coordinates take `ft` or `in`, not `ft-in`.** Coordinates are plain numbers; a
+  traced outline is in the plan's unit and a shop detail is in inches.
+* **Fractions are halves to sixty-fourths.** The ruling says "to the sixteenth"; a tape
+  reads to 1/32 and a rule to 1/64, both are exact, and refusing them would be an
+  arbitrary limit. `1/3` is refused: it cannot be held exactly.
+* **Stretch-out lives on the cost line, and is brought forward from D3** because the
+  ruling's fifth demonstration needs it: a stretch-out in inches against a length in feet.
+  The brief says the stretch-out is editable on the line; the same material has a
+  different stretch-out at every detail, so it cannot live on the material. Only the first
+  step of D3's chain is built (LF × stretch-out ÷ 12 = SF); sheets, pounds and waste are
+  D3. The derived area is kept in `pl::line_quantities`, by the line's description, so
+  **two lines on one element can no longer share a description** (a gap SPEC section 7
+  used to list).
+* **`set` will not put a stretch-out on a line that already has a per-LF price.** The line
+  would change from $/LF to $/SF under a price entered for the other. It is refused with
+  the reason; the line is re-priced in the file.
+* **The job's `length_unit` stays `ft`** and now means the unit derived lengths are worked
+  out in. LF, SF and SQ follow from it.
+* **Metric is refused and called metric** (PROPOSALS.md item 5). Degrees and percent for a
+  pitch are refused too (item 6): the ruling was about lengths, and nobody asked.

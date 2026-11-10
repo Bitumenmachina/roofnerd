@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::check;
 use crate::components::*;
 use crate::derive;
+use crate::units::{self, Len};
 use crate::value::{Status, Val};
 
 /// The top of the saved file, in the IFC5 layout.
@@ -125,40 +126,76 @@ impl Job {
     }
 
     /// Change one entered value by element path and field name. The fields are the ones an
-    /// estimator would edit: pitch, height, eave_height, condition, wbs. The new value has
-    /// to pass the same checks a loaded file does.
+    /// estimator would edit: pitch, height, eave_height, stretch_out, condition, wbs. The
+    /// value is read as typed, units and all (`30 in`, `25' 6 1/2"`, `6:12`), kept in the
+    /// unit it was typed in, and has to pass the same checks a loaded file does. `line`
+    /// picks the cost line for a stretch-out when the element has more than one.
     pub fn set(&mut self, path: &str, field: &str, value: Option<&str>, status: Status, source: &str) -> Result<(), String> {
+        self.set_on_line(path, field, None, value, status, source)
+    }
+
+    pub fn set_on_line(&mut self, path: &str, field: &str, line: Option<&str>, value: Option<&str>, status: Status, source: &str) -> Result<(), String> {
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
-        let number = |unit: &str| -> Result<Val<f64>, String> {
-            let v = match value {
-                // Adding zero turns a typed "-0" into plain 0.
-                Some(s) => Some(s.parse::<f64>().map_err(|_| format!("{s:?} is not a number"))? + 0.0),
-                None => None,
-            };
-            if v.is_some_and(|x| !x.is_finite()) {
-                return Err(format!("{} is not a usable number", value.unwrap_or_default()));
+        if line.is_some() && field != "stretch_out" {
+            return Err(format!("a cost line is named only when setting a stretch_out, not a {field}"));
+        }
+        // A length keeps the unit it is typed in. Marked unknown, it keeps the unit the
+        // value it replaces had, so nothing but the value changes in the file.
+        let length = |was: Option<&Val<Len>>| -> Result<Val<Len>, String> {
+            match value {
+                Some(s) => {
+                    let (len, unit) = units::parse_length(s)?;
+                    Ok(Val { value: Some(len), unit: unit.into(), status, source: source.into() })
+                }
+                None => Ok(Val { value: None, unit: was.map(|v| v.unit.clone()).unwrap_or_else(|| units::FT.into()), status, source: source.into() }),
             }
-            Ok(Val { value: v, unit: unit.into(), status, source: source.into() })
         };
         let text = || Val { value: value.map(str::to_string), unit: String::new(), status, source: source.into() };
         let missing = |what: &str| format!("{path} has no {what} to set");
         match field {
             "pitch" => {
-                let new = Pitch(number(U_PITCH)?);
+                let rise = value.map(units::parse_pitch).transpose()?;
+                let new = Pitch(Val { value: rise, unit: U_PITCH.into(), status, source: source.into() });
                 check::pitch(path, kind, &new)?;
                 *self.world.get_mut::<Pitch>(e).ok_or_else(|| missing("pitch"))? = new;
             }
             "height" => {
-                let new = Height(number(U_LENGTH)?);
+                let new = Height(length(self.world.get::<Height>(e).map(|h| &h.0))?);
                 check::height(path, kind, &new)?;
                 *self.world.get_mut::<Height>(e).ok_or_else(|| missing("height"))? = new;
             }
             "eave_height" => {
                 let mut new = self.world.get::<Outline>(e).ok_or_else(|| missing("outline"))?.clone();
-                new.eave_height = number(U_LENGTH)?;
+                new.eave_height = length(Some(&new.eave_height))?;
                 check::outline(path, kind, &new)?;
                 *self.world.get_mut::<Outline>(e).ok_or_else(|| missing("outline"))? = new;
+            }
+            "stretch_out" => {
+                let mut new = self.world.get::<Cost>(e).ok_or_else(|| missing("cost line"))?.clone();
+                let at = match line {
+                    Some(description) => new.lines.iter().position(|l| l.description == description).ok_or_else(|| {
+                        let have: Vec<String> = new.lines.iter().map(|l| format!("{:?}", l.description)).collect();
+                        format!("{path} has no cost line described as {description:?} (it has: {})", have.join(", "))
+                    })?,
+                    None if new.lines.len() == 1 => 0,
+                    None if new.lines.is_empty() => return Err(missing("cost line")),
+                    None => {
+                        let have: Vec<String> = new.lines.iter().map(|l| format!("{:?}", l.description)).collect();
+                        return Err(format!("{path} has {} cost lines; say which one the stretch-out is for (it has: {})", new.lines.len(), have.join(", ")));
+                    }
+                };
+                // A line priced per LF becomes a line priced per SF when it gains a
+                // stretch-out. Its unit cost was per LF; that price no longer applies.
+                if new.lines[at].stretch_out.is_none() && new.lines[at].unit_cost.value.is_some() {
+                    return Err(format!("{path} cost line {:?} is priced by the LF; giving it a stretch-out prices it by the SF, so its unit cost has to be re-entered. Edit the line in the file", new.lines[at].description));
+                }
+                new.lines[at].stretch_out = Some(length(new.lines[at].stretch_out.as_ref())?);
+                if new.lines[at].unit_cost.unit != "$/SF" {
+                    new.lines[at].unit_cost.unit = "$/SF".into();
+                }
+                check::cost(path, kind, &new)?;
+                *self.world.get_mut::<Cost>(e).ok_or_else(|| missing("cost line"))? = new;
             }
             "condition" => {
                 let new = Condition(text());
@@ -170,9 +207,32 @@ impl Job {
                 check::work_code(path, &new)?;
                 self.world.entity_mut(e).insert(new);
             }
-            other => return Err(format!("{other:?} is not a field that can be set; use pitch, height, eave_height, condition or wbs")),
+            other => return Err(format!("{other:?} is not a field that can be set; use pitch, height, eave_height, stretch_out, condition or wbs")),
         }
         Ok(())
+    }
+
+    /// One entered value as it would be shown, for reporting an edit back: the text in
+    /// the unit it was entered in, or "unknown".
+    pub fn shown(&mut self, path: &str, field: &str, line: Option<&str>) -> Option<String> {
+        let e = self.find(path)?;
+        let length = |v: &Val<Len>| v.value.as_ref().map(|len| units::show_length(len, &v.unit)).unwrap_or_else(|| "unknown".into());
+        match field {
+            "pitch" => self.world.get::<Pitch>(e).map(|p| p.0.value.map(|x| format!("{x} {}", p.0.unit)).unwrap_or_else(|| "unknown".into())),
+            "height" => self.world.get::<Height>(e).map(|h| length(&h.0)),
+            "eave_height" => self.world.get::<Outline>(e).map(|o| length(&o.eave_height)),
+            "stretch_out" => {
+                let cost = self.world.get::<Cost>(e)?;
+                let l = match line {
+                    Some(d) => cost.lines.iter().find(|l| l.description == d)?,
+                    None => cost.lines.first()?,
+                };
+                l.stretch_out.as_ref().map(length)
+            }
+            "condition" => self.world.get::<Condition>(e).map(|c| c.0.value.clone().unwrap_or_else(|| "unknown".into())),
+            "wbs" => self.world.get::<WorkCode>(e).map(|c| c.wbs.value.clone().unwrap_or_else(|| "unknown".into())),
+            _ => None,
+        }
     }
 
     /// Children of each element, by name, as the file lists them.

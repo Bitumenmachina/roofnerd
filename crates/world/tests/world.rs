@@ -94,7 +94,7 @@ fn a_derived_value_takes_the_worst_status_of_its_inputs() {
     let face = measure(&mut job, "parapet-0024", "face_area");
     assert_eq!((face.value, face.status), (None, Status::Unknown));
     // Enter the height and the face area appears: 20 LF x 2.5 ft = 50 SF, Assumed.
-    job.set("parapet-0024", "height", Some("2.5"), Status::Assumed, "typical; confirm on site").unwrap();
+    job.set("parapet-0024", "height", Some("2.5 ft"), Status::Assumed, "typical; confirm on site").unwrap();
     job.derive();
     let face = measure(&mut job, "parapet-0024", "face_area");
     assert_eq!((face.value, face.status), (Some(50.0), Status::Assumed));
@@ -243,24 +243,370 @@ fn an_eave_that_is_not_level_on_its_plane_is_flagged() {
 }
 
 #[test]
-fn a_value_in_the_wrong_unit_is_refused_not_read_as_feet() {
+fn a_unit_the_program_does_not_know_is_refused_by_name_never_read_as_feet() {
     let text = save(&mut sample());
     let err = |t: String| load(&t).err().expect("should be refused");
-    // A parapet height typed in inches.
-    assert!(err(edit(&text, |v| attrs(v, "parapet-0024")["pl::height"] = serde_json::json!({"value": 30.0, "unit": "in", "status": "Known", "source": "x"}))).contains("has to be \"ft\""));
-    // An outline in metres.
-    assert!(err(edit(&text, |v| attrs(v, "plane-0017")["pl::outline"]["points"]["unit"] = "m".into())).contains("has to be \"ft\""));
-    // A pitch in degrees.
+    let height = |unit: &str| edit(&text, |v| attrs(v, "parapet-0024")["pl::height"] = serde_json::json!({"value": 30.0, "unit": unit, "status": "Known", "source": "x"}));
+    // Metric is refused, and called metric.
+    for unit in ["m", "mm", "cm", "metres"] {
+        let e = err(height(unit));
+        assert!(e.contains(&format!("{unit:?}")) && e.contains("metric"), "{e}");
+    }
+    // A unit nobody has heard of is refused by name.
+    let e = err(height("cubits"));
+    assert!(e.contains("\"cubits\"") && e.contains("not a unit this program knows"), "{e}");
+    // Yards, and feet spelled some other way: the file's units are exactly ft, in, ft-in.
+    assert!(err(height("yd")).contains("\"yd\""));
+    assert!(err(height("FT")).contains("\"FT\""));
+    // No unit at all is not feet.
+    let e = err(edit(&text, |v| attrs(v, "parapet-0024")["pl::height"] = serde_json::json!({"value": 30.0, "status": "Known", "source": "x"})));
+    assert!(e.contains("has no unit") && e.contains("never read as feet"), "{e}");
+    // An outline in metres, and an eave line with no unit.
+    assert!(err(edit(&text, |v| attrs(v, "plane-0017")["pl::outline"]["points"]["unit"] = "m".into())).contains("metric"));
+    assert!(err(edit(&text, |v| {
+        attrs(v, "plane-0017")["pl::outline"]["eave"].as_object_mut().unwrap().remove("unit");
+    }))
+    .contains("has no unit"));
+    // Coordinates are plain numbers: feet-and-inches is for a single dimension.
+    assert!(err(edit(&text, |v| attrs(v, "rake-0019")["pl::run"]["ends"]["unit"] = "ft-in".into())).contains("plan coordinates are plain numbers"));
+    // The number has to suit the unit: a pair is ft-in, a single number is not.
+    let pair = |unit: &str, value: Value| edit(&text, |v| attrs(v, "parapet-0024")["pl::height"] = serde_json::json!({"value": value, "unit": unit, "status": "Known", "source": "x"}));
+    assert!(err(pair("ft", serde_json::json!([2, 6]))).contains("the unit for a pair is \"ft-in\""));
+    assert!(err(pair("ft-in", serde_json::json!(30.0))).contains("write it as [feet, inches]"));
+    assert!(err(pair("ft-in", serde_json::json!([2.5, 6]))).contains("whole number"));
+    assert!(err(pair("ft-in", serde_json::json!([2, 14]))).contains("less than 12"));
+    assert!(err(pair("ft-in", serde_json::json!([2, -6]))).contains("opposite signs"));
+    assert!(err(pair("ft-in", serde_json::json!([2, 6, 1]))).contains("exactly two numbers"));
+    assert!(err(pair("ft-in", serde_json::json!("2' 6\""))).contains("a length"));
+    // A pitch has one unit. Degrees are refused; so is none.
     assert!(err(edit(&text, |v| attrs(v, "plane-0017")["pl::pitch"]["unit"] = "deg".into())).contains("has to be \"in/12\""));
-    // No unit at all.
     assert!(err(edit(&text, |v| {
         attrs(v, "plane-0017")["pl::pitch"].as_object_mut().unwrap().remove("unit");
     }))
     .contains("has to be \"in/12\""));
-    // A job declared in metres.
-    assert!(err(edit(&text, |v| attrs(v, "job-0001")["pl::job"]["length_unit"] = "m".into())).contains("works in \"ft\" only"));
+    // Derived lengths are worked out in feet; a job declared in metres is refused.
+    assert!(err(edit(&text, |v| attrs(v, "job-0001")["pl::job"]["length_unit"] = "m".into())).contains("metric"));
     // A unit cost priced per LF against an SF quantity.
     assert!(err(edit(&text, |v| attrs(v, "plane-0003")["pl::cost"]["lines"][0]["unit_cost"]["unit"] = "$/LF".into())).contains("has to be \"$/SF\""));
+
+    // The same at the keyboard. A bare number is not feet; metric is named; nothing is stored.
+    let mut job = sample();
+    let before = save(&mut job);
+    let mut refuse = |typed: &str| job.set("parapet-0024", "height", Some(typed), Status::Known, "x").unwrap_err();
+    let e = refuse("30");
+    assert!(e.contains("has no unit") && e.contains("never read as feet"), "{e}");
+    assert!(refuse("0.76 m").contains("metric"));
+    assert!(refuse("762mm").contains("metric"));
+    assert!(refuse("3 cubits").contains("\"cubits\""));
+    assert!(refuse("1 yd").contains("\"yd\""));
+    assert_eq!(save(&mut job), before);
+}
+
+#[test]
+fn a_parapet_height_in_inches_gives_the_same_face_area_as_in_feet() {
+    // The sample parapet is 20 LF. 30 in of height is 2.5 ft: 50 SF either way.
+    let mut inches = sample();
+    inches.set("parapet-0024", "height", Some("30 in"), Status::Known, "detail 3/A-501").unwrap();
+    inches.derive();
+    let mut feet = sample();
+    feet.set("parapet-0024", "height", Some("2.5 ft"), Status::Known, "detail 3/A-501").unwrap();
+    feet.derive();
+    let (a, b) = (measure(&mut inches, "parapet-0024", "face_area"), measure(&mut feet, "parapet-0024", "face_area"));
+    assert_eq!((a.value, a.status), (Some(50.0), Status::Known));
+    assert_eq!((b.value, b.status), (Some(50.0), Status::Known));
+    // Each formula says what was done to the height it was given.
+    assert_eq!(a.formula, "plan_length × height ÷ 12");
+    assert_eq!(b.formula, "plan_length × height");
+    // 30 in was not read as 30 ft: that would be 600 SF.
+    assert_ne!(a.value, Some(600.0));
+}
+
+fn feet_of(typed: &str) -> f64 {
+    let (len, unit) = units::parse_length(typed).unwrap_or_else(|e| panic!("{typed:?} refused: {e}"));
+    len.feet(unit).unwrap()
+}
+
+#[test]
+fn each_way_of_writing_a_length_means_what_it_says() {
+    use units::{parse_length, Len};
+    // The four in the ruling. Three of them are the same length; the fourth is half an inch more.
+    assert_eq!(parse_length("25' 6\"").unwrap(), (Len::FtIn([25.0, 6.0]), "ft-in"));
+    assert_eq!(parse_length("25.5 ft").unwrap(), (Len::One(25.5), "ft"));
+    assert_eq!(parse_length("306 in").unwrap(), (Len::One(306.0), "in"));
+    assert_eq!(parse_length("25' 6 1/2\"").unwrap(), (Len::FtIn([25.0, 6.5]), "ft-in"));
+    assert_eq!(feet_of("25' 6\""), 25.5);
+    assert_eq!(feet_of("25.5 ft"), 25.5);
+    assert_eq!(feet_of("306 in"), 25.5);
+    assert_eq!(feet_of("25' 6 1/2\"") * 12.0, 306.5);
+    // To the sixteenth: each sixteenth from 25' 6" to 25' 7" is its own length, exactly
+    // 1/16 in more than the last, and the same number of feet as the same length in inches.
+    for n in 0..=15u32 {
+        let (mut num, mut den) = (n, 16);
+        while num != 0 && num % 2 == 0 {
+            num /= 2;
+            den /= 2;
+        }
+        let typed = if num == 0 { "25' 6\"".to_string() } else { format!("25' 6 {num}/{den}\"") };
+        let inches = 306.0 + f64::from(n) / 16.0;
+        assert_eq!(feet_of(&typed), inches / 12.0, "{typed}");
+        assert_eq!(feet_of(&typed), feet_of(&format!("{inches} in")), "{typed}");
+        // And it is shown back exactly as it was written.
+        let (len, unit) = parse_length(&typed).unwrap();
+        assert_eq!(units::show_length(&len, unit), typed);
+    }
+    // Other ways the same things get written on drawings and tapes.
+    for (typed, feet) in [
+        ("25'-6\"", 25.5),
+        ("25' - 6\"", 25.5),
+        ("25'6\"", 25.5),
+        ("25' 6", 25.5),
+        ("25 ft 6 in", 25.5),
+        ("25 feet 6 inches", 25.5),
+        ("25ft 6in", 25.5),
+        ("25'", 25.0),
+        ("25.5'", 25.5),
+        ("25.5 feet", 25.5),
+        ("306\"", 25.5),
+        ("306 inches", 25.5),
+        ("306in", 25.5),
+        ("0' 6\"", 0.5),
+        ("6 1/2\"", 6.5 / 12.0),
+        ("6-1/2\"", 6.5 / 12.0),
+        ("1/2 in", 0.5 / 12.0),
+        ("19 1/2 in", 19.5 / 12.0),
+        ("25'-6 1/2\"", 306.5 / 12.0),
+        ("25' 6-1/2\"", 306.5 / 12.0),
+        ("25' 6.5\"", 306.5 / 12.0),
+        ("25\u{2032} 6\u{00BD}\u{2033}", 306.5 / 12.0),
+        ("25\u{2019}-6\u{201D}", 25.5),
+        ("19\u{00BD}\u{2033}", 19.5 / 12.0),
+        ("-2' 6\"", -2.5),
+        ("-30 in", -2.5),
+        (".5 ft", 0.5),
+        ("3/64 in", 3.0 / 64.0 / 12.0),
+    ] {
+        assert_eq!(feet_of(typed), feet, "{typed}");
+    }
+    // What is refused, each with its reason. None of these is read as anything.
+    for (typed, says) in [
+        ("25.5", "has no unit"),
+        ("25", "has no unit"),
+        ("", "is not a number"),
+        ("ft", "is not a number"),
+        ("25.5' 6\"", "whole number"),
+        ("25' 14\"", "less than 12"),
+        ("25' 12\"", "less than 12"),
+        ("25' 6' ", "gives feet twice"),
+        ("25' 6\" 3", "something after the inches"),
+        ("6 1/3 in", "halves, quarters"),
+        ("6 3/2 in", "less than one"),
+        ("6 0/2 in", "more than nothing"),
+        ("6.5 1/2 in", "both a decimal point and a fraction"),
+        ("1e3 ft", "\"e\""),
+        ("1,200 ft", "not a measurement"),
+        ("12 m", "metric"),
+        ("12 metres", "metric"),
+        ("12 mm", "metric"),
+        ("12 yd", "\"yd\""),
+        ("twelve ft", "is not a number"),
+        ("12 ft ft", "is not a number"),
+        ("--12 ft", "is not a number"),
+        ("12 \u{00B0}", "not part of a measurement"),
+    ] {
+        let e = parse_length(typed).expect_err(typed);
+        assert!(e.contains(says), "{typed:?}: {e}");
+    }
+}
+
+#[test]
+fn a_pitch_is_read_the_ways_a_drawing_writes_it() {
+    use units::parse_pitch;
+    for (typed, rise) in [
+        ("6", 6.0),
+        ("6:12", 6.0),
+        ("6/12", 6.0),
+        ("6 in/12", 6.0),
+        ("6in/12", 6.0),
+        ("6 in 12", 6.0),
+        ("4.5:12", 4.5),
+        ("1/4:12", 0.25),
+        ("1/4", 0.25),
+        ("1/4 in/ft", 0.25),
+        ("1/4\" per ft", 0.25),
+        ("12/12", 12.0),
+        ("1/12", 1.0),
+        ("6 1/2:12", 6.5),
+        ("\u{00BC}:12", 0.25),
+        ("-0", 0.0),
+    ] {
+        assert_eq!(parse_pitch(typed).unwrap_or_else(|e| panic!("{typed:?} refused: {e}")), rise, "{typed}");
+    }
+    for (typed, says) in [("6:10", "not a pitch"), ("26.57 deg", "degrees"), ("26.57\u{00B0}", "degrees"), ("50%", "percentage"), ("1e300", "not a pitch"), ("six", "is not a number"), ("6 12", "not a pitch"), ("", "is not a number")] {
+        let e = parse_pitch(typed).expect_err(typed);
+        assert!(e.contains(says), "{typed:?}: {e}");
+    }
+}
+
+#[test]
+fn a_value_is_shown_and_saved_in_the_unit_it_was_entered_in() {
+    let mut job = sample();
+    job.set("parapet-0024", "height", Some("30 in"), Status::Known, "detail 3/A-501").unwrap();
+    job.derive();
+    let inches = save(&mut job);
+    // Saved as typed: 30, in inches, with its status and source. Not 2.5 and not feet.
+    let v: Value = serde_json::from_str(&inches).unwrap();
+    let h = &v["data"].as_array().unwrap().iter().find(|e| e["path"] == "parapet-0024").unwrap()["attributes"]["pl::height"];
+    assert_eq!(h, &serde_json::json!({"value": 30.0, "unit": "in", "status": "Known", "source": "detail 3/A-501"}));
+    // Shown as typed.
+    assert!(show_rows(&mut job, "parapet-0024").contains(&("height".to_string(), "30 in".to_string(), Status::Known)));
+    // And it loads back as the same thing and saves to the same bytes.
+    let (mut again, report) = load(&inches).unwrap();
+    assert!(report.stale.is_empty());
+    assert_eq!(save(&mut again), inches);
+
+    // Change only the unit it is written in: 30 in becomes 2.5 ft. The diff is that value
+    // and the one figure derived from it (its formula no longer divides by 12).
+    job.set("parapet-0024", "height", Some("2.5 ft"), Status::Known, "detail 3/A-501").unwrap();
+    let changed = job.derive();
+    let feet = save(&mut job);
+    assert_eq!(touched(&inches, &feet), ["parapet-0024"]);
+    assert_eq!(changed, ["parapet-0024"]);
+    let (a, b) = (entries(&inches), entries(&feet));
+    let (a, b) = (&a.iter().find(|e| e.0 == "parapet-0024").unwrap().1["attributes"], &b.iter().find(|e| e.0 == "parapet-0024").unwrap().1["attributes"]);
+    for (key, value) in a.as_object().unwrap() {
+        assert_eq!(value == &b[key], !(key == "pl::height" || key == "pl::measure"), "{key}");
+    }
+    assert_eq!(a["pl::measure"]["plan_length"], b["pl::measure"]["plan_length"]);
+    assert_eq!(a["pl::measure"]["face_area"]["value"], b["pl::measure"]["face_area"]["value"]);
+    assert_ne!(a["pl::measure"]["face_area"]["formula"], b["pl::measure"]["face_area"]["formula"]);
+
+    // Feet and inches are saved as the pair and shown the way they are written.
+    job.set("parapet-0024", "height", Some("25' 6 1/2\""), Status::Assumed, "scaled off the elevation").unwrap();
+    job.derive();
+    let text = save(&mut job);
+    assert!(text.contains("\"value\": [25.0, 6.5],\n          \"unit\": \"ft-in\""), "{text}");
+    assert!(show_rows(&mut job, "parapet-0024").contains(&("height".to_string(), "25' 6 1/2\"".to_string(), Status::Assumed)));
+    // 20 LF x 306.5 in / 12 = 510.8333 SF.
+    assert_eq!(measure(&mut job, "parapet-0024", "face_area").value, Some(510.8333));
+    assert_eq!(measure(&mut job, "parapet-0024", "face_area").formula, "plan_length × height (feet + inches ÷ 12)");
+    let (mut again, report) = load(&text).unwrap();
+    assert!(report.stale.is_empty());
+    assert_eq!(save(&mut again), text);
+
+    // Marked unknown, it keeps the unit that was there and loses the number.
+    job.set("parapet-0024", "height", None, Status::Unknown, "elevation superseded").unwrap();
+    job.derive();
+    assert_eq!(measure(&mut job, "parapet-0024", "face_area").value, None);
+    assert!(save(&mut job).contains("\"value\": null,\n          \"unit\": \"ft-in\""));
+
+    // An eave height takes the same units. The porch eave at 9 ft is 108 in is 9' 0".
+    let base = save(&mut sample());
+    for typed in ["108 in", "9' 0\"", "9 ft"] {
+        let mut job = sample();
+        job.set("plane-0017", "eave_height", Some(typed), Status::Known, "sample plan A-201").unwrap();
+        job.derive();
+        assert_eq!(measure(&mut job, "rake-0019", "true_length").value, Some(8.2462), "{typed}");
+        // Only the plane and its four lines can differ from the sample, and only in how
+        // the figure is written.
+        for path in touched(&base, &save(&mut job)) {
+            assert!(["plane-0017", "eave-0018", "rake-0019", "rake-0020", "headwall-0021"].contains(&path.as_str()), "{typed}: {path}");
+        }
+    }
+}
+
+#[test]
+fn a_stretch_out_in_inches_works_against_a_length_in_feet() {
+    // The sample porch headwall is 12 LF and carries a copper flashing line whose
+    // stretch-out the detail gives as 24 in. Nobody converts anything:
+    // 12 LF x 24 in / 12 = 24 SF.
+    let mut job = sample();
+    let area = |job: &mut Job| {
+        let e = job.find("headwall-0021").unwrap();
+        job.world.get::<LineQuantities>(e).unwrap().0["Copper headwall flashing"].clone()
+    };
+    let d = area(&mut job);
+    assert_eq!((d.value, d.unit.as_str()), (Some(24.0), "SF"));
+    assert_eq!(d.formula, "true_length × stretch_out ÷ 12");
+    assert_eq!(d.inputs, ["headwall-0021#pl::measure", "headwall-0021#pl::cost"]);
+    // The headwall's length leans on the porch's assumed pitch, so the area is Assumed too.
+    assert_eq!(d.status, Status::Assumed);
+    // It is on the sheet with its stretch-out in inches and its area in SF.
+    let rows = show_rows(&mut job, "headwall-0021");
+    assert!(rows.contains(&("stretch-out: Copper headwall flashing".to_string(), "24 in".to_string(), Status::Known)), "{rows:?}");
+    assert!(rows.contains(&("sheet area: Copper headwall flashing".to_string(), "24 SF".to_string(), Status::Assumed)), "{rows:?}");
+    // It is in the file, and the file loads back to the same bytes.
+    let text = save(&mut job);
+    assert!(text.contains("\"pl::line_quantities\""));
+    let (mut again, report) = load(&text).unwrap();
+    assert!(report.stale.is_empty());
+    assert_eq!(save(&mut again), text);
+
+    // The brief's four stretch-outs on the same 12 LF: eave 12 in, step flashing 8 in,
+    // valley 36 in, headwall 24 in give 12, 8, 36 and 24 SF.
+    for (typed, sf) in [("12 in", 12.0), ("8 in", 8.0), ("36 in", 36.0), ("24 in", 24.0), ("2 ft", 24.0), ("2' 0\"", 24.0), ("19 1/2\"", 19.5), ("1' 7 1/2\"", 19.5)] {
+        job.set("headwall-0021", "stretch_out", Some(typed), Status::Known, "detail").unwrap();
+        let changed = job.derive();
+        assert_eq!(area(&mut job).value, Some(sf), "{typed}");
+        assert!(changed.is_empty() || changed == ["headwall-0021"], "{typed}: {changed:?}");
+    }
+    // Entered in feet, the formula does not divide.
+    job.set("headwall-0021", "stretch_out", Some("2 ft"), Status::Known, "detail").unwrap();
+    job.derive();
+    assert_eq!(area(&mut job).formula, "true_length × stretch_out");
+    // Nobody has the stretch-out: there is no area, not a zero one.
+    job.set("headwall-0021", "stretch_out", None, Status::Unknown, "detail not issued").unwrap();
+    job.derive();
+    assert_eq!((area(&mut job).value, area(&mut job).status), (None, Status::Unknown));
+    // A stretch-out of nothing, or with no unit, or in metric, is refused.
+    assert!(job.set("headwall-0021", "stretch_out", Some("0 in"), Status::Known, "x").unwrap_err().contains("more than zero"));
+    assert!(job.set("headwall-0021", "stretch_out", Some("24"), Status::Known, "x").unwrap_err().contains("has no unit"));
+    assert!(job.set("headwall-0021", "stretch_out", Some("610 mm"), Status::Known, "x").unwrap_err().contains("metric"));
+    // An element with no cost line says so.
+    assert!(job.set("eave-0018", "stretch_out", Some("12 in"), Status::Known, "x").unwrap_err().contains("no cost line"));
+
+    // In the file: a stretch-out on an area line is refused, a forged area is caught, and
+    // two lines with one description are refused.
+    let err = |t: String| load(&t).err().expect("should be refused");
+    assert!(err(edit(&text, |v| attrs(v, "plane-0003")["pl::cost"]["lines"][0]["stretch_out"] = serde_json::json!({"value": 24.0, "unit": "in", "status": "Known", "source": "x"}))).contains("turns a length (LF) into an area"));
+    assert!(err(edit(&text, |v| attrs(v, "headwall-0021")["pl::cost"]["lines"][0]["unit_cost"]["unit"] = "$/LF".into())).contains("has to be \"$/SF\""));
+    assert!(err(edit(&text, |v| attrs(v, "headwall-0021")["pl::cost"]["lines"][0]["stretch_out"]["unit"] = "mm".into())).contains("metric"));
+    let (mut forged, report) = load(&edit(&text, |v| attrs(v, "headwall-0021")["pl::line_quantities"]["Copper headwall flashing"]["value"] = 999.0.into())).unwrap();
+    assert_eq!(report.stale, ["headwall-0021"]);
+    assert_eq!(area(&mut forged).value, Some(24.0));
+    assert!(err(edit(&text, |v| {
+        let line = attrs(v, "headwall-0021")["pl::cost"]["lines"][0].clone();
+        attrs(v, "headwall-0021")["pl::cost"]["lines"].as_array_mut().unwrap().push(line);
+    }))
+    .contains("two cost lines"));
+}
+
+#[test]
+fn an_outline_entered_in_inches_measures_the_same_as_in_feet() {
+    // The porch plane and its rake with every coordinate in inches, against lines and an
+    // eave height left in feet. Same areas, same lengths; the formulas say what was divided.
+    let text = save(&mut sample());
+    let (mut job, report) = load(&edit(&text, |v| {
+        let o = &mut attrs(v, "plane-0017")["pl::outline"];
+        o["points"] = serde_json::json!({"value": [[528.0, 0.0], [672.0, 0.0], [672.0, 96.0], [528.0, 96.0]], "unit": "in", "status": "Known", "source": "x"});
+        o["eave"] = serde_json::json!({"value": [[528.0, 0.0], [672.0, 0.0]], "unit": "in", "status": "Known", "source": "x"});
+        attrs(v, "rake-0019")["pl::run"]["ends"] = serde_json::json!({"value": [[528.0, 0.0], [528.0, 96.0]], "unit": "in", "status": "Known", "source": "x"});
+    }))
+    .unwrap();
+    assert_eq!(report.stale, ["eave-0018", "headwall-0021", "plane-0017", "rake-0019", "rake-0020"]);
+    assert_eq!(measure(&mut job, "plane-0017", "plan_area").value, Some(96.0));
+    assert_eq!(measure(&mut job, "plane-0017", "surface_area").value, Some(98.9545));
+    assert_eq!(measure(&mut job, "plane-0017", "plan_area").formula, "area of the outline on the plan ÷ 144 (entered in inches)");
+    assert_eq!(measure(&mut job, "rake-0019", "plan_length").value, Some(8.0));
+    assert_eq!(measure(&mut job, "rake-0019", "plan_length").formula, "length of the line on the plan ÷ 12 (entered in inches)");
+    for (line, lf) in [("eave-0018", 12.0), ("rake-0019", 8.2462), ("rake-0020", 8.2462), ("headwall-0021", 12.0)] {
+        let d = measure(&mut job, line, "true_length");
+        assert_eq!(d.value, Some(lf), "{line}");
+        assert!(d.formula.ends_with("converted to feet first (inches ÷ 12)"), "{line}: {}", d.formula);
+    }
+    // The limits are in feet whatever the unit: a coordinate of 13,000,000 in is past the
+    // 1,000,000 ft limit.
+    let err = load(&edit(&text, |v| attrs(v, "rake-0019")["pl::run"]["ends"] = serde_json::json!({"value": [[13.0e6, 0.0], [528.0, 96.0]], "unit": "in", "status": "Known", "source": "x"}))).err().unwrap();
+    assert!(err.contains("not a usable number"), "{err}");
 }
 
 #[test]
@@ -352,7 +698,12 @@ fn a_missing_component_shows_as_unknown_instead_of_vanishing() {
 #[test]
 fn numbers_too_large_to_mean_anything_are_refused() {
     let mut job = sample();
-    assert!(job.set("plane-0017", "pitch", Some("1e300"), Status::Known, "typo").unwrap_err().contains("is a wall"));
+    // At the keyboard 1e300 is not something an estimator writes; in a file it is a number
+    // and is refused as a wall.
+    assert!(job.set("plane-0017", "pitch", Some("1e300"), Status::Known, "typo").unwrap_err().contains("not a pitch"));
+    assert!(job.set("plane-0017", "pitch", Some("300"), Status::Known, "typo").unwrap_err().contains("is a wall"));
+    let wall = load(&edit(&save(&mut sample()), |v| attrs(v, "plane-0017")["pl::pitch"]["value"] = 1e300.into())).err().unwrap();
+    assert!(wall.contains("is a wall"), "{wall}");
     assert!(job.set("plane-0017", "pitch", Some("241"), Status::Known, "typo").is_err());
     assert!(job.set("plane-0017", "pitch", Some("-0"), Status::Known, "flat").is_ok());
     let text = save(&mut sample());

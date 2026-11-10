@@ -3,7 +3,12 @@
 //!
 //!   plumbline sample <file>                      write the sample job
 //!   plumbline show   <file>                      every element and value, flagged
-//!   plumbline set    <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source "<where from>"
+//!   plumbline set    <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source "<where from>" [--line "<cost line>"]
+//!
+//! A value is typed the way the drawing or the tape gives it and is kept in that unit:
+//! a length as `2.5 ft`, `30 in`, `19 1/2"` or `25' 6 1/2"`; a pitch as `6`, `6:12` or
+//! `1/4:12`. A length with no unit is refused, never read as feet.
+//!
 //!   plumbline check  <file>                      load, re-derive, confirm the file is exactly what a save would write
 
 use std::fmt::Write as _;
@@ -25,7 +30,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\"\n  plumbline check <file>".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"]\n  plumbline check <file>\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs".to_string()
 }
 
 fn read(path: &str) -> Result<(plumbline_world::Job, file::LoadReport), String> {
@@ -67,10 +72,12 @@ fn run(args: &[String]) -> Result<(), String> {
             let [_, path, element, field, value, rest @ ..] = args else { return Err(usage()) };
             let mut status = None;
             let mut source = None;
+            let mut line = None;
             let mut it = rest.iter();
             while let Some(a) = it.next() {
                 match a.as_str() {
-                    "--status" | "--source" if (a == "--status" && status.is_some()) || (a == "--source" && source.is_some()) => return Err(format!("{a} given twice")),
+                    "--status" | "--source" | "--line" if (a == "--status" && status.is_some()) || (a == "--source" && source.is_some()) || (a == "--line" && line.is_some()) => return Err(format!("{a} given twice")),
+                    "--line" => line = Some(it.next().cloned().ok_or("--line needs the cost line's description")?),
                     "--status" => status = Some(it.next().cloned().ok_or("--status needs a value")?),
                     "--source" => source = Some(it.next().cloned().ok_or("--source needs a value")?),
                     other => return Err(format!("unexpected {other:?}\n{}", usage())),
@@ -89,15 +96,12 @@ fn run(args: &[String]) -> Result<(), String> {
             if !report.stale.is_empty() {
                 println!("WARNING: before this edit, the file's measures did not match its geometry for: {}. They have been recomputed.", report.stale.join(", "));
             }
-            job.set(element, field, value, status, &source)?;
+            job.set_on_line(element, field, line.as_deref(), value, status, &source)?;
             let changed = job.derive();
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
-            let unit = match field.as_str() {
-                "pitch" => " in/12",
-                "height" | "eave_height" => " ft",
-                _ => "",
-            };
-            println!("set {element} {field} = {}{} ({status:?})", value.unwrap_or("unknown"), if value.is_some() { unit } else { "" });
+            // Reported back as the job now holds it, in the unit it was entered in.
+            let shown = job.shown(element, field, line.as_deref()).unwrap_or_else(|| value.unwrap_or("unknown").to_string());
+            println!("set {element} {field} = {shown} ({status:?})");
             if changed.is_empty() && !report.stale.is_empty() {
                 println!("no measure changed beyond those recomputed above");
             } else if changed.is_empty() {

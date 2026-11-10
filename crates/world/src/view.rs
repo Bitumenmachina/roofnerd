@@ -4,6 +4,7 @@
 
 use crate::components::*;
 use crate::job::Job;
+use crate::units::{self, Len};
 use crate::value::{Derived, Status, Val};
 
 #[derive(Clone, Debug)]
@@ -38,6 +39,15 @@ fn num(x: f64) -> String {
 fn entered<T>(path: &str, label: &str, v: &Val<T>, show: impl Fn(&T) -> String) -> Row {
     let text = match &v.value {
         Some(x) => format!("{} {}", show(x), v.unit).trim().to_string(),
+        None => "unknown".to_string(),
+    };
+    Row { path: path.into(), label: label.into(), text, status: v.status, basis: v.source.clone(), note: String::new(), derived: false }
+}
+
+/// An entered length, shown in the unit it was entered in: `30 in`, `2.5 ft`, `25' 6 1/2"`.
+fn length(path: &str, label: &str, v: &Val<Len>) -> Row {
+    let text = match &v.value {
+        Some(len) => units::show_length(len, &v.unit),
         None => "unknown".to_string(),
     };
     Row { path: path.into(), label: label.into(), text, status: v.status, basis: v.source.clone(), note: String::new(), derived: false }
@@ -78,7 +88,7 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         if let Some(o) = w.get::<Outline>(e) {
             rows.push(entered(p, "outline", &o.points, |pts| format!("{} points", pts.len())));
             rows.push(entered(p, "eave line", &o.eave, |[a, b]| format!("({}, {}) to ({}, {})", num(a[0]), num(a[1]), num(b[0]), num(b[1]))));
-            rows.push(entered(p, "eave height", &o.eave_height, |x| num(*x)));
+            rows.push(length(p, "eave height", &o.eave_height));
         }
         if let Some(c) = w.get::<Pitch>(e) {
             rows.push(entered(p, "pitch", &c.0, |x| num(*x)));
@@ -87,7 +97,7 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
             rows.push(entered(p, "line ends", &c.ends, |[a, b]| format!("({}, {}) to ({}, {})", num(a[0]), num(a[1]), num(b[0]), num(b[1]))));
         }
         if let Some(c) = w.get::<Height>(e) {
-            rows.push(entered(p, "height", &c.0, |x| num(*x)));
+            rows.push(length(p, "height", &c.0));
         }
         if let Some(c) = w.get::<Condition>(e) {
             rows.push(entered(p, "condition", &c.0, |s| s.clone()));
@@ -95,6 +105,9 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         if let Some(c) = w.get::<Cost>(e) {
             rows.push(entered(p, "cost code", &c.code, |k| format!("{} {} {}", k.scheme, k.code, k.title)));
             for line in &c.lines {
+                if let Some(so) = &line.stretch_out {
+                    rows.push(length(p, &format!("stretch-out: {}", line.description), so));
+                }
                 rows.push(entered(p, &format!("unit cost: {}", line.description), &line.unit_cost, |x| num(*x)));
             }
         }
@@ -104,6 +117,11 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         if let Some(m) = w.get::<Measure>(e) {
             for (name, d) in &m.0 {
                 rows.push(derived(p, name, d));
+            }
+        }
+        if let Some(q) = w.get::<LineQuantities>(e) {
+            for (description, d) in &q.0 {
+                rows.push(derived(p, &format!("sheet area: {description}"), d));
             }
         }
         out.push(ElementRows { path: p.clone(), name: node.name.clone(), kind, depth: depth_of(node.parent.clone()), rows });

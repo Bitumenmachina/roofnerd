@@ -3,12 +3,14 @@
 //! * A hip roof over a 40 ft by 30 ft footprint, 6:12 all round: four planes, four eaves,
 //!   four hips and a ridge.
 //! * A porch shed roof, 12 ft by 8 ft, whose pitch is not on the plan. It is Assumed.
+//!   Its headwall carries a sheet-metal flashing line with a 24 in stretch-out.
 //! * A low-slope area with a parapet whose height is not on the plan. It is Unknown.
 //!
 //! No prices are entered. Every unit cost is Unknown, because nobody has given one.
 
 use crate::components::*;
 use crate::job::Job;
+use crate::units::Len;
 use crate::value::Val;
 
 const PLAN: &str = "sample plan A-201";
@@ -28,7 +30,7 @@ pub fn sample() -> Job {
             "",
             "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)",
         ),
-        lines: vec![CostLine { description: "Copper standing seam, installed".into(), quantity: "surface_area".into(), unit_cost: Val::unknown("$/SF", "no price entered") }],
+        lines: vec![CostLine { description: "Copper standing seam, installed".into(), quantity: "surface_area".into(), stretch_out: None, unit_cost: Val::unknown("$/SF", "no price entered") }],
     };
     let unscheduled = || WorkCode { wbs: Val::unknown("", "schedule not built") };
 
@@ -36,7 +38,7 @@ pub fn sample() -> Job {
         let p = job.add(parent, Kind::RoofPlane, name).expect(OK);
         // Every outline here is traced starting along its eave.
         let eave = [pts[0], pts[1]];
-        job.put(&p, Outline { points: Val::known(pts, "ft", PLAN), eave: Val::known(eave, "ft", PLAN), eave_height: Val::known(eave_h, "ft", PLAN) }).expect(OK);
+        job.put(&p, Outline { points: Val::known(pts, "ft", PLAN), eave: Val::known(eave, "ft", PLAN), eave_height: Val::known(Len::One(eave_h), "ft", PLAN) }).expect(OK);
         job.put(&p, Pitch(pitch)).expect(OK);
         p
     };
@@ -84,7 +86,26 @@ pub fn sample() -> Job {
     run(&mut job, &porch, Kind::Eave, "eave", [44.0, 0.0], [56.0, 0.0], &[&shed]);
     run(&mut job, &porch, Kind::Rake, "rake-west", [44.0, 0.0], [44.0, 8.0], &[&shed]);
     run(&mut job, &porch, Kind::Rake, "rake-east", [56.0, 0.0], [56.0, 8.0], &[&shed]);
-    run(&mut job, &porch, Kind::Headwall, "headwall", [44.0, 8.0], [56.0, 8.0], &[&shed]);
+    let headwall = run(&mut job, &porch, Kind::Headwall, "headwall", [44.0, 8.0], [56.0, 8.0], &[&shed]);
+    // The headwall flashing is sheet metal: priced by its area, which is the headwall's
+    // length times the flashing's stretch-out. The detail gives the stretch-out in inches.
+    job.put(
+        &headwall,
+        Cost {
+            code: Val::assumed(
+                CostCode { scheme: "MasterFormat".into(), code: "07 62 00".into(), title: "Sheet Metal Flashing and Trim".into() },
+                "",
+                "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)",
+            ),
+            lines: vec![CostLine {
+                description: "Copper headwall flashing".into(),
+                quantity: "true_length".into(),
+                stretch_out: Some(Val::known(Len::One(24.0), "in", "sample detail 4/A-501")),
+                unit_cost: Val::unknown("$/SF", "no price entered"),
+            }],
+        },
+    )
+    .expect(OK);
 
     // ---- Low-slope area with a parapet of unknown height ----
     let flat = job.add(&root, Kind::Roof, "low-slope-roof").expect(OK);
@@ -94,7 +115,7 @@ pub fn sample() -> Job {
         Outline {
             points: Val::known(vec![[60.0, 0.0], [80.0, 0.0], [80.0, 20.0], [60.0, 20.0]], "ft", PLAN),
             eave: Val::known([[60.0, 0.0], [80.0, 0.0]], "ft", PLAN),
-            eave_height: Val::known(11.0, "ft", PLAN),
+            eave_height: Val::known(Len::One(11.0), "ft", PLAN),
         },
     )
     .expect(OK);

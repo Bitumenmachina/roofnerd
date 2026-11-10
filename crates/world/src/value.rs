@@ -11,6 +11,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::units::{self, Len};
+
 /// Ordered from best to worst so `max` gives the status a derived value inherits.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Status {
@@ -54,9 +56,28 @@ impl<T> Val<T> {
         Val { value: None, unit: unit.into(), status: Status::Unknown, source: source.into() }
     }
 
-    /// The rules every stored value has to meet. `what` names it in the error. `unit` is
-    /// the one unit this value is allowed to be in: the program does no converting, so a
-    /// height in inches or an outline in metres is refused rather than read as feet.
+    /// The rules every stored value has to meet whatever it measures: it says where it
+    /// came from, and it carries a value exactly when it is not Unknown.
+    pub fn check_basics(&self, what: &str) -> Result<(), String> {
+        if self.source.trim().is_empty() {
+            return Err(format!("{what}: no source given; every value says where it came from"));
+        }
+        self.check_carries(what)
+    }
+
+    fn check_carries(&self, what: &str) -> Result<(), String> {
+        match (self.status, self.value.is_some()) {
+            (Status::Unknown, true) => Err(format!("{what}: marked Unknown but carries a value")),
+            (Status::Known | Status::Assumed, false) => {
+                Err(format!("{what}: marked {:?} but carries no value", self.status))
+            }
+            _ => Ok(()),
+        }
+    }
+
+    /// The rules for a value whose field takes exactly one unit (a pitch, a unit cost, a
+    /// name, which takes none). `what` names it in the error. A length takes more than
+    /// one unit and is checked by `check_length` or in `check.rs`.
     pub fn check(&self, what: &str, unit: &str) -> Result<(), String> {
         if self.source.trim().is_empty() {
             return Err(format!("{what}: no source given; every value says where it came from"));
@@ -65,16 +86,35 @@ impl<T> Val<T> {
             return Err(if unit.is_empty() {
                 format!("{what}: carries the unit {:?} but takes none", self.unit)
             } else {
-                format!("{what}: its unit is {:?} but it has to be {unit:?}; convert it before entering it", self.unit)
+                format!("{what}: its unit is {:?} but it has to be {unit:?}", self.unit)
             });
         }
-        match (self.status, self.value.is_some()) {
-            (Status::Unknown, true) => Err(format!("{what}: marked Unknown but carries a value")),
-            (Status::Known | Status::Assumed, false) => {
-                Err(format!("{what}: marked {:?} but carries no value", self.status))
-            }
-            _ => Ok(()),
+        self.check_carries(what)
+    }
+}
+
+impl Val<Len> {
+    /// This length in feet, for arithmetic. None when there is no value, or when the unit
+    /// is not one this program converts: it is never read as feet.
+    pub fn feet(&self) -> Option<f64> {
+        self.value.as_ref().and_then(|len| len.feet(&self.unit).ok())
+    }
+
+    /// The rules for an entered length: the basics, a unit this program knows, and a
+    /// number that suits the unit.
+    pub fn check_length(&self, what: &str) -> Result<(), String> {
+        if self.source.trim().is_empty() {
+            return Err(format!("{what}: no source given; every value says where it came from"));
         }
+        units::scalar_unit(&self.unit).map_err(|why| format!("{what}: {why}"))?;
+        self.check_carries(what)?;
+        if let Some(len) = &self.value {
+            let feet = len.feet(&self.unit).map_err(|why| format!("{what}: {why}"))?;
+            if !feet.is_finite() {
+                return Err(format!("{what}: is not a usable number"));
+            }
+        }
+        Ok(())
     }
 }
 

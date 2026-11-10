@@ -15,6 +15,10 @@
 //!   and it has to run along both outlines and be at the same height on both, at both
 //!   ends. An eave, a ridge and a headwall are level; a rake, a hip and a valley climb.
 //!   If not, the line is flagged with the figures instead of quietly taking one.
+//!
+//! All arithmetic here is in feet. An entered value keeps the unit it was typed in and is
+//! converted on the way in (`points_ft`, `ends_ft`, `feet`); the formula written beside
+//! each result says where a conversion happened.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -23,7 +27,19 @@ use bevy_ecs::prelude::*;
 use crate::check::{self, FIT_TOLERANCE_FT};
 use crate::components::*;
 use crate::geom;
+use crate::units;
 use crate::value::{Derived, Status};
+
+const NOT_CONVERTED: &str = "is in a unit this program does not convert";
+
+/// The words added to a formula when an input was entered in inches.
+fn entered_in(unit: &str, divisor: &str) -> String {
+    if unit == units::IN {
+        format!(" ÷ {divisor} (entered in inches)")
+    } else {
+        String::new()
+    }
+}
 
 /// What a line needs to know about an element it names as one of its planes.
 struct PlaneGeom {
@@ -37,6 +53,8 @@ struct PlaneGeom {
     status: Status,
     /// What the plane lacks, in words, if anything.
     lacks: Option<&'static str>,
+    /// Was any of its geometry entered in something other than feet?
+    converted: bool,
 }
 
 impl PlaneGeom {
@@ -65,14 +83,26 @@ pub fn derive(world: &mut World) -> Vec<String> {
             None => lacks = lacks.or(Some("no pitch entered")),
         }
         // The eave as the outline edge it lies along. A plane built in code without the
-        // entry checks may have an eave that fits no edge; it then gives no heights.
+        // entry checks may have an eave that fits no edge, or a unit this program does not
+        // convert; it then gives no heights.
+        let points = outline.and_then(|o| o.points_ft());
         let mut eave = None;
+        let mut converted = false;
         if let Some(o) = outline {
-            if let (Some(pts), Some(line)) = (o.points.value.as_ref(), o.eave.value) {
-                match check::eave_edge(pts, line) {
+            converted = [&o.points.unit, &o.eave.unit, &o.eave_height.unit].iter().any(|u| *u != units::FT);
+            if o.points.value.is_some() && points.is_none() {
+                lacks = lacks.or(Some("no outline in a unit this program converts"));
+            }
+            match (points.as_ref(), o.eave_ft()) {
+                (Some(pts), Some(line)) => match check::eave_edge(pts, line) {
                     Ok(edge) => eave = Some(edge),
-                    Err(_) => lacks = lacks.or(Some("an eave line that fits its outline")),
-                }
+                    Err(_) => lacks = lacks.or(Some("no eave line that fits its outline")),
+                },
+                (Some(_), None) if o.eave.value.is_some() => lacks = lacks.or(Some("no eave line in a unit this program converts")),
+                _ => {}
+            }
+            if o.eave_height.value.is_some() && o.eave_height.feet().is_none() {
+                lacks = lacks.or(Some("no eave height in a unit this program converts"));
             }
         }
         if lacks.is_some() {
@@ -82,12 +112,13 @@ pub fn derive(world: &mut World) -> Vec<String> {
             node.path.clone(),
             PlaneGeom {
                 kind: *kind,
-                points: outline.and_then(|o| o.points.value.clone()),
+                points,
                 eave,
                 pitch: pitch.and_then(|p| p.0.value),
-                eave_height: outline.and_then(|o| o.eave_height.value),
+                eave_height: outline.and_then(|o| o.eave_height.feet()),
                 status,
                 lacks,
+                converted,
             },
         );
     }
@@ -96,9 +127,11 @@ pub fn derive(world: &mut World) -> Vec<String> {
     let ids: HashMap<String, Entity> = q_ids.iter(world).map(|(e, n)| (n.path.clone(), e)).collect();
 
     let mut changed = Vec::new();
-    let mut to_insert: Vec<(Entity, Measure)> = Vec::new();
-    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Run>, Option<&Height>, Option<&mut Measure>)>();
-    for (node, kind, outline, pitch, run, height, measure) in q.iter_mut(world) {
+    let mut to_insert: Vec<(Entity, Option<Measure>, Option<LineQuantities>)> = Vec::new();
+    let mut to_remove: Vec<Entity> = Vec::new();
+    #[allow(clippy::type_complexity)]
+    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Run>, Option<&Height>, Option<&Cost>, Option<&mut Measure>, Option<&mut LineQuantities>)>();
+    for (node, kind, outline, pitch, run, height, cost, measure, line_quantities) in q.iter_mut(world) {
         let me = &node.path;
         let mut m = BTreeMap::new();
 
@@ -106,18 +139,21 @@ pub fn derive(world: &mut World) -> Vec<String> {
             let in_outline = format!("{me}#{K_OUTLINE}");
             let in_pitch = format!("{me}#{K_PITCH}");
             let both = [in_outline.clone(), in_pitch.clone()];
-            let f_area = "area of the outline on the plan";
+            let f_area = format!("area of the outline on the plan{}", outline.map(|o| entered_in(&o.points.unit, "144")).unwrap_or_default());
             let f_factor = "√(1 + (pitch ÷ 12)²)";
             let f_surface = "plan_area × slope_factor";
             let f_squares = "surface_area ÷ 100";
-            let area = outline.and_then(|o| o.points.value.as_ref().map(|p| geom::plan_area(p)));
+            let pts = outline.and_then(|o| o.points_ft());
+            let area = pts.as_ref().map(|p| geom::plan_area(p));
             let factor = pitch.and_then(|p| p.0.value.map(|p| (1.0 + (p / 12.0).powi(2)).sqrt()));
             let surface = area.zip(factor).map(|(a, f)| a * f);
+            let unit_fault = outline.is_some_and(|o| o.points.value.is_some() && pts.is_none());
             m.insert(
                 "plan_area".into(),
                 match outline {
-                    Some(o) => Derived::new(area, "SF", &[o.points.status], f_area, &[in_outline.clone()]),
-                    None => Derived::refused("SF", f_area, &[in_outline.clone()], "no outline entered"),
+                    Some(_) if unit_fault => Derived::refused("SF", &f_area, &[in_outline.clone()], &format!("the outline {NOT_CONVERTED}")),
+                    Some(o) => Derived::new(area, "SF", &[o.points.status], &f_area, &[in_outline.clone()]),
+                    None => Derived::refused("SF", &f_area, &[in_outline.clone()], "no outline entered"),
                 },
             );
             m.insert(
@@ -128,6 +164,10 @@ pub fn derive(world: &mut World) -> Vec<String> {
                 },
             );
             let (surface_d, squares_d) = match (outline, pitch) {
+                (Some(_), Some(_)) if unit_fault => {
+                    let why = format!("the outline {NOT_CONVERTED}");
+                    (Derived::refused("SF", f_surface, &both, &why), Derived::refused("SQ", f_squares, &both, &why))
+                }
                 (Some(o), Some(p)) => {
                     let s = [o.points.status, p.0.status];
                     (Derived::new(surface, "SF", &s, f_surface, &both), Derived::new(surface.map(|s| s / 100.0), "SQ", &s, f_squares, &both))
@@ -143,25 +183,31 @@ pub fn derive(world: &mut World) -> Vec<String> {
 
         if kind.is_run() {
             let in_run = format!("{me}#{K_RUN}");
-            let f_plan = "length of the line on the plan";
-            let plan = run.and_then(|r| r.ends.value.map(|[a, b]| geom::dist(a, b)));
+            let f_plan = format!("length of the line on the plan{}", run.map(|r| entered_in(&r.ends.unit, "12")).unwrap_or_default());
+            let ends = run.and_then(|r| r.ends_ft());
+            let plan = ends.map(|[a, b]| geom::dist(a, b));
+            let unit_fault = run.is_some_and(|r| r.ends.value.is_some() && ends.is_none());
             m.insert(
                 "plan_length".into(),
                 match run {
-                    Some(r) => Derived::new(plan, "LF", &[r.ends.status], f_plan, &[in_run.clone()]),
-                    None => Derived::refused("LF", f_plan, &[in_run.clone()], "no line entered"),
+                    Some(_) if unit_fault => Derived::refused("LF", &f_plan, &[in_run.clone()], &format!("the line {NOT_CONVERTED}")),
+                    Some(r) => Derived::new(plan, "LF", &[r.ends.status], &f_plan, &[in_run.clone()]),
+                    None => Derived::refused("LF", &f_plan, &[in_run.clone()], "no line entered"),
                 },
             );
             if *kind == Kind::Parapet {
                 let in_h = format!("{me}#{K_HEIGHT}");
-                let f_face = "plan_length × height";
+                // The formula shows the conversion: a height in inches is ÷ 12.
+                let f_face = format!("plan_length × {}", units::to_feet_text("height", height.map(|h| h.0.unit.as_str()).unwrap_or(units::FT)));
                 let inputs = [in_run.clone(), in_h];
                 m.insert(
                     "face_area".into(),
                     match (run, height) {
-                        (Some(r), Some(h)) => Derived::new(plan.zip(h.0.value).map(|(l, h)| l * h), "SF", &[r.ends.status, h.0.status], f_face, &inputs),
-                        (None, _) => Derived::refused("SF", f_face, &inputs, "no line entered"),
-                        (_, None) => Derived::refused("SF", f_face, &inputs, "no height entered"),
+                        (Some(_), Some(_)) if unit_fault => Derived::refused("SF", &f_face, &inputs, &format!("the line {NOT_CONVERTED}")),
+                        (Some(_), Some(h)) if h.0.value.is_some() && h.0.feet().is_none() => Derived::refused("SF", &f_face, &inputs, &format!("the height {NOT_CONVERTED}")),
+                        (Some(r), Some(h)) => Derived::new(plan.zip(h.0.feet()).map(|(l, h)| l * h), "SF", &[r.ends.status, h.0.status], &f_face, &inputs),
+                        (None, _) => Derived::refused("SF", &f_face, &inputs, "no line entered"),
+                        (_, None) => Derived::refused("SF", &f_face, &inputs, "no height entered"),
                     },
                 );
             } else {
@@ -169,35 +215,102 @@ pub fn derive(world: &mut World) -> Vec<String> {
             }
         }
 
+        // Cost lines whose quantity is more than a measure as it stands. A sheet-metal
+        // line is its length times its stretch-out.
+        let mut lq = BTreeMap::new();
+        if let Some(cost) = cost {
+            for line in &cost.lines {
+                if let Some(so) = &line.stretch_out {
+                    lq.insert(line.description.clone(), sheet_area(me, line, so, m.get(&line.quantity)));
+                }
+            }
+        }
+
         let new = Measure(m);
+        let new_lq = LineQuantities(lq);
+        let mut moved = false;
+        let mut insert_m = None;
+        let mut insert_lq = None;
         match measure {
             Some(mut old) => {
                 if *old != new {
                     *old = new;
-                    changed.push(node.path.clone());
+                    moved = true;
                 }
             }
             None if !new.0.is_empty() => {
-                to_insert.push((ids[&node.path], new));
-                changed.push(node.path.clone());
+                insert_m = Some(new);
+                moved = true;
             }
             None => {}
         }
+        match line_quantities {
+            Some(mut old) => {
+                if new_lq.0.is_empty() {
+                    to_remove.push(ids[&node.path]);
+                    moved = true;
+                } else if *old != new_lq {
+                    *old = new_lq;
+                    moved = true;
+                }
+            }
+            None if !new_lq.0.is_empty() => {
+                insert_lq = Some(new_lq);
+                moved = true;
+            }
+            None => {}
+        }
+        if insert_m.is_some() || insert_lq.is_some() {
+            to_insert.push((ids[&node.path], insert_m, insert_lq));
+        }
+        if moved {
+            changed.push(node.path.clone());
+        }
     }
-    for (e, m) in to_insert {
-        world.entity_mut(e).insert(m);
+    for (e, m, lq) in to_insert {
+        if let Some(m) = m {
+            world.entity_mut(e).insert(m);
+        }
+        if let Some(lq) = lq {
+            world.entity_mut(e).insert(lq);
+        }
+    }
+    for e in to_remove {
+        world.entity_mut(e).remove::<LineQuantities>();
     }
     changed
+}
+
+/// A sheet-metal line's area: the length it is priced by times its stretch-out. The
+/// stretch-out stays in the unit the detail gave it (inches, usually) and the formula
+/// shows the ÷ 12. The length is the measure as the file shows it, so the figure can be
+/// checked by hand from what is on the page.
+fn sheet_area(me: &str, line: &CostLine, so: &crate::value::Val<units::Len>, base: Option<&Derived>) -> Derived {
+    let formula = format!("{} × {}", line.quantity, units::to_feet_text("stretch_out", &so.unit));
+    let inputs = [format!("{me}#{K_MEASURE}"), format!("{me}#{K_COST}")];
+    let Some(base) = base else {
+        return Derived::refused("SF", &formula, &inputs, &format!("this element has no {}", line.quantity));
+    };
+    if so.value.is_some() && so.feet().is_none() {
+        return Derived::refused("SF", &formula, &inputs, &format!("the stretch-out {NOT_CONVERTED}"));
+    }
+    Derived::new(base.value.zip(so.feet()).map(|(length, width)| length * width), "SF", &[base.status, so.status], &formula, &inputs)
 }
 
 /// The length of a line along the slope. The line has to fit every plane it names: on the
 /// plane's outline at both ends, and at the same height on every plane at both ends.
 fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMap<String, PlaneGeom>, in_run: &str) -> Derived {
-    let formula = "√(plan_length² + rise²); rise = the difference in height between the two ends, each height = eave height + pitch ÷ 12 × distance from the plane's eave line";
+    let base = "√(plan_length² + rise²); rise = the difference in height between the two ends, each height = eave height + pitch ÷ 12 × distance from the plane's eave line";
     let mut inputs = vec![in_run.to_string()];
     let Some(run) = run else {
-        return Derived::refused("LF", formula, &inputs, "no line entered");
+        return Derived::refused("LF", base, &inputs, "no line entered");
     };
+    // Say so when anything feeding this was entered in inches rather than feet.
+    let converted = run.ends.unit != units::FT || run.planes.iter().any(|p| planes.get(p).is_some_and(|g| g.converted));
+    let formula = &if converted { format!("{base}; lengths not entered in feet are converted to feet first (inches ÷ 12)") } else { base.to_string() };
+    if run.ends.value.is_some() && run.ends_ft().is_none() {
+        return Derived::refused("LF", formula, &inputs, &format!("the line {NOT_CONVERTED}"));
+    }
     for p in &run.planes {
         inputs.push(format!("{p}#{K_OUTLINE}"));
         inputs.push(format!("{p}#{K_PITCH}"));
@@ -232,7 +345,7 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
             return refuse(format!("plane {p} has {lacks}"));
         }
         statuses.push(g.status);
-        let (Some([a, b]), Some(pts)) = (run.ends.value, g.points.as_ref()) else { continue };
+        let (Some([a, b]), Some(pts)) = (run.ends_ft(), g.points.as_ref()) else { continue };
         if let Err((t, off)) = geom::runs_along_outline(a, b, pts, FIT_TOLERANCE_FT) {
             let whereabouts = if t == 0.0 { "its start is".to_string() } else if t == 1.0 { "its end is".to_string() } else { format!("{:.0}% of the way along it is", t * 100.0) };
             return refuse(format!("the line does not run along the outline of plane {p}: {whereabouts} {off:.2} ft off it"));

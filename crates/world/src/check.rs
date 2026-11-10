@@ -4,7 +4,12 @@
 
 use crate::components::*;
 use crate::geom;
+use crate::units;
 use crate::value::Val;
+
+// Every limit and tolerance here is in feet. Entered values are converted to feet before
+// they are tested, so 0.01 ft is the same closeness whether the outline was entered in
+// feet or in inches.
 
 /// The eave has to sit on an outline edge to within this many feet (about 1/8 inch).
 pub const FIT_TOLERANCE_FT: f64 = 0.01;
@@ -16,6 +21,13 @@ pub const MAX_PITCH: f64 = 240.0;
 /// A unit cost beyond this is a typing error, not a price.
 pub const MAX_UNIT_COST: f64 = 1.0e9;
 
+/// A set of plan coordinates: the basics, and a unit coordinates can be in.
+fn coords_ok<T>(what: &str, v: &Val<T>) -> Result<(), String> {
+    v.check_basics(what)?;
+    units::coord_divisor(&v.unit).map(|_| ()).map_err(|why| format!("{what}: {why}"))
+}
+
+/// `p` is in feet.
 fn point_ok(what: &str, p: P2) -> Result<(), String> {
     if p.iter().any(|x| !x.is_finite() || x.abs() > MAX_COORDINATE_FT) {
         return Err(format!("{what}: a coordinate is not a usable number (limit {MAX_COORDINATE_FT:e} ft either way)"));
@@ -35,10 +47,11 @@ pub fn outline(path: &str, kind: Kind, o: &Outline) -> Result<(), String> {
     if !kind.is_area() {
         return Err(format!("{path}: a {kind:?} cannot carry an outline; only a roof plane or a low-slope area can"));
     }
-    o.points.check(&format!("{path} outline points"), U_LENGTH)?;
-    o.eave.check(&format!("{path} eave line"), U_LENGTH)?;
-    o.eave_height.check(&format!("{path} eave height"), U_LENGTH)?;
-    if let Some(pts) = &o.points.value {
+    coords_ok(&format!("{path} outline points"), &o.points)?;
+    coords_ok(&format!("{path} eave line"), &o.eave)?;
+    o.eave_height.check_length(&format!("{path} eave height"))?;
+    let pts = o.points_ft();
+    if let Some(pts) = &pts {
         for p in pts {
             point_ok(&format!("{path} outline"), *p)?;
         }
@@ -46,22 +59,22 @@ pub fn outline(path: &str, kind: Kind, o: &Outline) -> Result<(), String> {
             return Err(format!("{path} outline: {fault}"));
         }
     }
-    if let Some([a, b]) = o.eave.value {
+    if let Some([a, b]) = o.eave_ft() {
         point_ok(&format!("{path} eave line"), a)?;
         point_ok(&format!("{path} eave line"), b)?;
-        if let Some(pts) = &o.points.value {
+        if let Some(pts) = &pts {
             eave_edge(pts, [a, b]).map_err(|why| format!("{path} eave line: {why}"))?;
         }
     }
-    if o.eave_height.value.is_some_and(|h| !h.is_finite() || h.abs() > MAX_COORDINATE_FT) {
-        return Err(format!("{path} eave height: is not a usable number"));
+    if o.eave_height.feet().is_some_and(|h| h.abs() > MAX_COORDINATE_FT) {
+        return Err(format!("{path} eave height: is not a usable number (limit {MAX_COORDINATE_FT:e} ft either way)"));
     }
     Ok(())
 }
 
 /// The edge of the outline an eave line lies along. The plane's slope is measured from
 /// this edge's own line, not from the eave line as typed, so a short or slightly crooked
-/// eave entry cannot tilt the plane. The eave has to be the plane's low edge: no part of
+/// eave entry cannot tilt the plane. Both arguments are in feet. The eave has to be the plane's low edge: no part of
 /// the outline may lie on the other side of it, or the plane would fold.
 pub fn eave_edge(pts: &[P2], eave: [P2; 2]) -> Result<[P2; 2], String> {
     let [a, b] = eave;
@@ -109,8 +122,8 @@ pub fn run(path: &str, kind: Kind, r: &Run) -> Result<(), String> {
     if !kind.is_run() {
         return Err(format!("{path}: a {kind:?} cannot carry a line"));
     }
-    r.ends.check(&format!("{path} line ends"), U_LENGTH)?;
-    if let Some([a, b]) = r.ends.value {
+    coords_ok(&format!("{path} line ends"), &r.ends)?;
+    if let Some([a, b]) = r.ends_ft() {
         point_ok(&format!("{path} line ends"), a)?;
         point_ok(&format!("{path} line ends"), b)?;
         if geom::dist(a, b) == 0.0 {
@@ -130,11 +143,11 @@ pub fn height(path: &str, kind: Kind, h: &Height) -> Result<(), String> {
     if kind != Kind::Parapet {
         return Err(format!("{path}: a {kind:?} cannot carry a height; only a parapet can"));
     }
-    h.0.check(&format!("{path} height"), U_LENGTH)?;
-    if h.0.value.is_some_and(|x| !x.is_finite() || x < 0.0) {
+    h.0.check_length(&format!("{path} height"))?;
+    if h.0.feet().is_some_and(|x| x < 0.0) {
         return Err(format!("{path} height: must be zero or more"));
     }
-    if h.0.value.is_some_and(|x| x > MAX_COORDINATE_FT) {
+    if h.0.feet().is_some_and(|x| x > MAX_COORDINATE_FT) {
         return Err(format!("{path} height: is not a usable number (limit {MAX_COORDINATE_FT:e} ft)"));
     }
     Ok(())
@@ -148,8 +161,10 @@ pub fn work_code(path: &str, w: &WorkCode) -> Result<(), String> {
     text_ok(&format!("{path} schedule code"), &w.wbs)
 }
 
-/// A cost line has to say what it is, be priced by a quantity this kind of element
-/// actually has, in that quantity's unit, at a price that is not negative.
+/// A cost line has to say what it is (and no two lines on one element say the same thing),
+/// be priced by a quantity this kind of element actually has, in the unit the line comes
+/// out in, at a price that is not negative. A stretch-out goes on a line priced by a
+/// length, and is more than nothing.
 pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
     c.code.check(&format!("{path} cost code"), "")?;
     if let Some(code) = &c.code.value {
@@ -157,9 +172,12 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
             return Err(format!("{path} cost code: needs both a scheme and a code; mark it Unknown if it has not been coded"));
         }
     }
-    for line in &c.lines {
+    for (i, line) in c.lines.iter().enumerate() {
         if line.description.trim().is_empty() {
             return Err(format!("{path} cost line: has no description"));
+        }
+        if c.lines[..i].iter().any(|other| other.description == line.description) {
+            return Err(format!("{path}: has two cost lines described as {:?}; a line is known by its description, so each one on an element is different", line.description));
         }
         let what = format!("{path} cost line {:?}", line.description);
         let Some((_, unit)) = kind.measures().iter().find(|(name, _)| *name == line.quantity) else {
@@ -169,6 +187,19 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
         if unit.is_empty() {
             return Err(format!("{what}: is priced by {:?}, which is a factor, not a quantity", line.quantity));
         }
+        if let Some(so) = &line.stretch_out {
+            if *unit != "LF" {
+                return Err(format!("{what}: has a stretch-out but is priced by {:?}, which is in {unit}; a stretch-out turns a length (LF) into an area", line.quantity));
+            }
+            so.check_length(&format!("{what} stretch-out"))?;
+            if so.feet().is_some_and(|x| x <= 0.0) {
+                return Err(format!("{what} stretch-out: must be more than zero; it is the width of the flat sheet. Mark it Unknown if nobody has it"));
+            }
+            if so.feet().is_some_and(|x| x > MAX_COORDINATE_FT) {
+                return Err(format!("{what} stretch-out: is not a usable number (limit {MAX_COORDINATE_FT:e} ft)"));
+            }
+        }
+        let unit = line.priced_in(unit);
         line.unit_cost.check(&format!("{what} unit cost"), &format!("$/{unit}"))?;
         if line.unit_cost.value.is_some_and(|x| !x.is_finite() || x < 0.0) {
             return Err(format!("{what} unit cost: must be zero or more"));
@@ -182,7 +213,10 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
 
 pub fn job_info(path: &str, j: &JobInfo) -> Result<(), String> {
     if j.length_unit != U_LENGTH {
-        return Err(format!("{path}: the job's length unit is {:?}; this program works in {U_LENGTH:?} only", j.length_unit));
+        if j.length_unit.trim().is_empty() {
+            return Err(format!("{path}: the job's length unit is blank; derived lengths are worked out in {U_LENGTH:?}"));
+        }
+        return Err(format!("{path}: the job's length unit {}; derived lengths are worked out in {U_LENGTH:?} only (LF, SF, SQ), and each entered value carries its own unit", units::refuse_length_unit(&j.length_unit, "\"ft\"")));
     }
     Ok(())
 }

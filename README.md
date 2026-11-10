@@ -23,10 +23,15 @@ Where things stand is in [STATUS.md](STATUS.md). The model is in [SPEC.md](SPEC.
 cargo test                 # the world-model checks
 tools/landscape.sh         # re-run the D0 landscape checks (needs network)
 demos/d1.sh                # the D1 demonstration
+demos/units.sh             # the units demonstration: 30 in, 25' 6 1/2", stretch-out
 tools/licenses.sh          # every linked crate and its license; fails on a non-permissive one
 cargo run -p plumbline -- sample job.json
 cargo run -p plumbline -- show job.json
+cargo run -p plumbline -- set job.json parapet-0024 height "30 in" --status Known --source "detail 3/A-501"
 ```
+
+A length is typed the way the drawing or the tape gives it (`2.5 ft`, `30 in`, `19 1/2"`,
+`25' 6 1/2"`) and is kept in that unit. A length with no unit is refused, never read as feet.
 
 `refs/` is for the owner's reference estimates. Git ignores it. Nothing in it is ever committed.
 

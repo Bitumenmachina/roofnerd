@@ -3,13 +3,16 @@
 Each claim gives its scope, its evidence, and what remains. Evidence is output from a
 command anyone can run again from the repository root.
 
-Workspace this was run in: Linux, rustc 1.97.0, 2 cores, no display. The repository has no
-remote (QUESTIONS.md Q2).
+Workspace this was last run in: Linux, rustc 1.97.0, no display. The repository has no
+remote (QUESTIONS.md Q2). It arrived here as a git bundle; on arrival `cargo test` (27
+passed), `demos/d1.sh`, `tools/licenses.sh` and `tools/licenses.sh --self-test` were each
+run again and each gave what this file said they gave.
 
 | # | Deliverable | State |
 |---|---|---|
 | D0 | Landscape decision | Demonstrated, with limits below. Judged twice. |
 | D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged twice; the fixes from the second judgment have not themselves been judged. |
+| D1 amendment | Units (owner ruling) | Demonstrated at the command line. **Not yet judged.** |
 | D2 | 3D roof slice | Not started. Its opening proof is blocked in this workspace (QUESTIONS.md Q4). |
 | D3 | Derived conditions and stretch-out | Not started. Reference estimate missing (Q5). |
 | D4 | Macro to micro | Not started. |
@@ -77,7 +80,12 @@ element. Changing one pitch changes, in a file diff, only that entity and the co
 derived from it. Assumed and Unknown values display as flagged.
 
 **How it is run:** `demos/d1.sh`. It uses the built-in sample job, which is made up.
-`cargo test` runs 27 checks on the same model.
+`cargo test` runs 33 checks on the same model.
+
+The figures below are as rerun after the units amendment. The amendment added one
+sheet-metal cost line to the sample job's porch headwall, which moved the counts of Known,
+Assumed and Unknown values (they were 86, 13, 13 before the change and 94, 5, 13 after).
+Nothing else in this demonstration moved.
 
 **What was run and what it showed** (output of `demos/d1.sh`, exit 0)
 
@@ -93,11 +101,11 @@ derived from it. Assumed and Unknown values display as flagged.
    rakes: true length 8.2462 to 8.4327 LF. On the eave and headwall: status only, because
    they are level; their length does not move but it no longer rests on an assumption.
    The script fails if any other entry changes.
-4. *Flags.* Before the change `show` reports "86 Known, 13 Assumed, 13 Unknown" and lists
+4. *Flags.* Before the change `show` reports "87 Known, 15 Assumed, 14 Unknown" and lists
    each flagged value with its reason: the assumed porch pitch and the seven figures that
    follow from it, the unknown parapet height and the face area that cannot be given
    without it, the unpriced cost lines, the unbuilt schedule codes, and the cost codes
-   that wait on Q1. After the change: "94 Known, 5 Assumed, 13 Unknown".
+   that wait on Q1. After the change: "96 Known, 6 Assumed, 14 Unknown".
 5. *A contradiction is flagged, not resolved by guess.* Steepening one plane of the hip
    roof to 8:12 leaves its two hips and the ridge with no length and the note "the planes
    disagree about the height of the line's end: plane-0003 puts it at 20.00 ft; plane-0006
@@ -110,7 +118,7 @@ derived from it. Assumed and Unknown values display as flagged.
 * Hip: 15 over and 15 up on plan = 21.2132 LF; climbs 7.5 ft; √(450 + 56.25) = 22.5 LF.
 * Porch rake: 8 ft run at 3:12 climbs 2 ft; √68 = 8.2462 LF.
 
-**`cargo test`: 27 passed, 0 failed.**
+**`cargo test`: 33 passed, 0 failed.**
 
 **What remains**
 
@@ -122,19 +130,88 @@ derived from it. Assumed and Unknown values display as flagged.
   brief wants (move with the pitch). SPEC.md section 7.
 * **The sample job is the only job this has been run on.** No real job, no reference
   estimate.
-* Only pitch, height, eave height, condition and schedule code can be edited from the
-  command line. Outlines, eave lines and line ends are edited in the file.
+* Only pitch, height, eave height, a line's stretch-out, condition and schedule code can
+  be edited from the command line. Outlines, eave lines, line ends and cost lines are
+  edited in the file.
 * The limits listed in SPEC.md section 7, in particular the 0.01 ft fit tolerance (Q9).
 * **Rule 4 was broken twice by a judge after being reported sound.** Each judgment found
   ordinary hand edits that produced a wrong length marked Known. The fixes for the second
   set are covered by regression tests and by rerunning the judge's own cases, and have
   not been attacked by a separate agent. Treat "nothing wrong is shown as Known" as the
-  model's intent backed by 27 tests, not as proven.
+  model's intent backed by 33 tests, not as proven.
 * Planes are checked one at a time and each line against the planes it names. Nothing
   checks planes against each other (overlaps, gaps).
 * **Process note:** the brief asks that each demonstration be written down before the
   deliverable is built. For D0 and D1 the demonstration was written alongside the work,
   not ahead of it. D2's is written below, ahead.
+
+---
+
+## D1 amendment. Units
+
+**The ruling** (owner, in the handoff after D1; it overrules DECISIONS.md call 15, first
+bullet): "Feet only, nothing converted" is rejected. US measurements stay, and the program
+takes more than feet. An estimator enters what the drawing or the tape says.
+
+**Demonstration as the ruling states it**, in the application:
+
+1. A parapet height entered as `30 in` gives the same face area as `2.5 ft`.
+2. `25' 6"`, `25.5 ft`, `306 in` and `25' 6 1/2"` are each accepted and each mean what
+   they say, to the sixteenth.
+3. A value is shown and saved in the unit it was entered in, with its status and source,
+   and is converted only for arithmetic. The file diff for a unit change shows that value
+   and what derives from it, nothing else.
+4. A unit the program does not know is still refused by name. It is never read as feet.
+5. A stretch-out in inches against a length in feet (the D3 case) works without the
+   estimator converting anything.
+
+**How it is run:** `demos/units.sh`, on the sample job. The script exits non-zero if any
+step does not do what it says. Its output is kept in `evidence/units-demo.txt`.
+
+**What was run and what it showed** (output of `demos/units.sh`, exit 0)
+
+1. `set parapet-0024 height "30 in"` and, on a second copy, `"2.5 ft"`. Both give
+   face_area 50 SF on the 20 LF parapet. Read as feet, 30 would have given 600.
+2. `25' 6"`, `25.5 ft` and `306 in` each give 510 SF. `25' 6 1/2"` gives 510.8333 SF
+   (20 × 306.5 ÷ 12). `25' 6 1/16"` gives 510.1042 SF: one sixteenth of an inch is
+   0.1042 SF on 20 LF, and it shows. Each is echoed back as typed and each file passes
+   `check`.
+3. After `30 in` the file holds `"value": 30.0, "unit": "in"` with its status and source,
+   and `show` prints `height 30 in`. Re-entering it as `2.5 ft` changes, in the file diff,
+   the parapet's height (value and unit) and the formula of its face area
+   (`plan_length × height ÷ 12` becomes `plan_length × height`); the face area's number
+   does not move and no other element changes. Re-entering it as `2' 7 1/2"`, Assumed,
+   changes the height (`[2.0, 7.5]`, `ft-in`, status, source) and the face area (50 to
+   52.5 SF, status, formula) and nothing else.
+4. Refused by name at the keyboard: `30` (no unit; "never read as feet"), `762 mm` and
+   `0.76 m` (called metric), `3 cubits`, `1 yd`, and a pitch of `14 deg`. After all six
+   the job file is byte-for-byte unchanged. Typed straight into the file: a height in
+   `mm`, in `furlong`, and with its unit removed are each refused on load.
+5. The sample porch headwall is 12 LF and carries a copper flashing line with a 24 in
+   stretch-out. Its sheet area is 24 SF, saved with the formula
+   `true_length × stretch_out ÷ 12`. The brief's stretch-outs on the same 12 LF: 12 in
+   gives 12 SF, 8 in gives 8, 36 in gives 36, 24 in gives 24; `19 1/2"` gives 19.5; `2 ft`
+   gives 24. Changing 24 in to 36 in changes, in the file diff, that line's stretch-out
+   and its area on the headwall, and nothing else.
+
+**Hand checks** (in `crates/world/tests/world.rs`): every sixteenth from `25' 6"` to
+`25' 6 15/16"` is exactly its own number of inches ÷ 12, equals the same length typed in
+inches, and is shown back as typed; 28 other spellings (`25'-6"`, `25 ft 6 in`, `6-1/2"`,
+pasted ′ ″ ½) each give the stated number of feet; 23 malformed entries are each refused
+with the stated reason.
+
+**What remains**
+
+* **Not judged.** No separate agent has attacked the units change.
+* **Stretch-out is the first step of D3 only.** A line's length becomes an area. Sheets,
+  pounds, waste, and the conditions a parapet produces are not built.
+* **A cost line cannot be added from the command line.** The demonstration uses the line
+  the sample job carries. `set` changes its stretch-out.
+* **Outlines and line ends in inches are loaded from the file only.** There is no command
+  that enters them. They are covered by a test, not by the demonstration script.
+* Metric, and pitch in degrees or percent, are refused, not converted (PROPOSALS.md 5, 6).
+* The reference copper estimate is not in `refs/` (Q5). The four stretch-outs are the
+  brief's; the lengths they are applied to here are the sample job's.
 
 ---
 

@@ -12,15 +12,24 @@ use std::collections::BTreeMap;
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::units::{self, Len};
 use crate::value::{Derived, Val};
 
-/// A point on the plan, in feet: `[x, y]`.
+/// A point on the plan: `[x, y]`, in the unit its value carries (feet or inches).
 pub type P2 = [f64; 2];
 
-/// The one length unit plan geometry is held in. The program converts nothing.
-pub const U_LENGTH: &str = "ft";
+/// The unit derived lengths are worked out in (LF, SF and SQ follow from it). Entered
+/// values each carry their own unit and are converted to this only for arithmetic.
+pub const U_LENGTH: &str = units::FT;
 /// Pitch: inches of rise for every 12 inches of run.
-pub const U_PITCH: &str = "in/12";
+pub const U_PITCH: &str = units::PITCH;
+
+/// Plan points in feet, from points in `unit`. None if the unit is not one this program
+/// converts.
+fn points_in_feet<const N: usize>(pts: &[P2; N], unit: &str) -> Option<[P2; N]> {
+    let d = units::coord_divisor(unit).ok()?;
+    Some(pts.map(|p| [p[0] / d, p[1] / d]))
+}
 
 /// Where the element sits in the job: its permanent path, its name under its parent, and
 /// the parent's path. The path never changes once given; the name can.
@@ -112,14 +121,15 @@ impl Kind {
 #[serde(deny_unknown_fields)]
 pub struct JobInfo {
     pub title: String,
-    /// Plan coordinates and lengths are in this unit. Only "ft" is accepted.
+    /// The unit derived lengths are worked out in. Only "ft" is accepted. Entered values
+    /// carry their own units.
     pub length_unit: String,
     /// The number the next new element's path will take.
     pub next_id: u32,
 }
 
-/// `pl::outline`: the footprint of an area as traced on the plan, in feet, traced either
-/// way round. `eave` is the low edge the pitch rises from, given as its own line so that
+/// `pl::outline`: the footprint of an area as traced on the plan, in feet or in inches,
+/// traced either way round. `eave` is the low edge the pitch rises from, given as its own line so that
 /// re-tracing or re-ordering the outline cannot quietly change which edge is the eave.
 /// It has to lie along one edge of the outline. `eave_height` is that edge's height.
 #[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -127,7 +137,19 @@ pub struct JobInfo {
 pub struct Outline {
     pub points: Val<Vec<P2>>,
     pub eave: Val<[P2; 2]>,
-    pub eave_height: Val<f64>,
+    pub eave_height: Val<Len>,
+}
+
+impl Outline {
+    /// The outline's points in feet, whatever unit they were entered in.
+    pub fn points_ft(&self) -> Option<Vec<P2>> {
+        let d = units::coord_divisor(&self.points.unit).ok()?;
+        self.points.value.as_ref().map(|pts| pts.iter().map(|p| [p[0] / d, p[1] / d]).collect())
+    }
+    /// The eave line in feet.
+    pub fn eave_ft(&self) -> Option<[P2; 2]> {
+        self.eave.value.as_ref().and_then(|line| points_in_feet(line, &self.eave.unit))
+    }
 }
 
 /// `pl::pitch`: rise in inches for every 12 inches of run.
@@ -144,9 +166,17 @@ pub struct Run {
     pub planes: Vec<String>,
 }
 
-/// `pl::height`: how tall a wall-like element stands, in feet (a parapet above the deck).
+impl Run {
+    /// The line's two ends in feet, whatever unit they were entered in.
+    pub fn ends_ft(&self) -> Option<[P2; 2]> {
+        self.ends.value.as_ref().and_then(|ends| points_in_feet(ends, &self.ends.unit))
+    }
+}
+
+/// `pl::height`: how tall a wall-like element stands (a parapet above the deck), in the
+/// unit it was entered in.
 #[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Height(pub Val<f64>);
+pub struct Height(pub Val<Len>);
 
 /// `pl::condition`: the condition assigned to the element, by name.
 #[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -164,12 +194,32 @@ pub struct CostCode {
 
 /// One priced line hanging off an element. `quantity` names the measure on this element
 /// the line is priced by, so the line follows the geometry.
+///
+/// A sheet-metal line also carries its `stretch_out`: the width of the flat sheet the
+/// profile is bent from, as the detail gives it (usually in inches). It belongs to the
+/// line, not to the material: the same copper is 12 in at an eave and 36 in in a valley.
+/// With it the line is priced by area, length × stretch-out, worked out in
+/// `pl::line_quantities`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CostLine {
     pub description: String,
     pub quantity: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stretch_out: Option<Val<Len>>,
     pub unit_cost: Val<f64>,
+}
+
+impl CostLine {
+    /// The unit this line is priced in: the measure's own unit, or SF when a stretch-out
+    /// turns a length into an area.
+    pub fn priced_in(&self, measure_unit: &'static str) -> &'static str {
+        if self.stretch_out.is_some() {
+            "SF"
+        } else {
+            measure_unit
+        }
+    }
 }
 
 /// `pl::cost`: the element's cost code and its lines.
@@ -193,6 +243,13 @@ pub struct WorkCode {
 #[derive(Component, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Measure(pub BTreeMap<String, Derived>);
 
+/// `pl::line_quantities`: the quantity worked out for a cost line whose quantity is more
+/// than a measure taken as it stands, by the line's description. Today that is a
+/// sheet-metal line: length × stretch-out. Nobody types these; like measures they are
+/// recomputed on every change and every load.
+#[derive(Component, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct LineQuantities(pub BTreeMap<String, Derived>);
+
 /// Attributes in the file this program does not know. They are kept and written back
 /// untouched, so a file that passes through loses nothing.
 #[derive(Component, Clone, Debug, Default, PartialEq)]
@@ -208,3 +265,4 @@ pub const K_CONDITION: &str = "pl::condition";
 pub const K_COST: &str = "pl::cost";
 pub const K_SCHEDULE: &str = "pl::schedule";
 pub const K_MEASURE: &str = "pl::measure";
+pub const K_LINE_QUANTITIES: &str = "pl::line_quantities";
