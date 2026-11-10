@@ -164,6 +164,16 @@ formulas, which is D6's demonstration. It was not in the starting landscape. Iro
 spreadsheet engine or a small expression evaluator of our own serves "the formula is
 visible and editable on the line" better is decided when D3 opens, with both tried on the
 stretch-out formula. `calamine` 0.38 (MIT) reads XLSX if reference estimates need reading.
+**Decided when D3 opened (2026-11-10): write a small evaluator of our own for line
+formulas.** Both were tried on the stretch-out formula. IronCalc 0.9.1, in a scratch
+program outside this repository, with 12 in A1 and 24 in B1: `=A1*B1/12` gave 24. With the
+stretch-out cell left empty it gave **0**, where this project has to give no number at
+all. A name in place of a cell address (`=A1*STRETCH/12`) gave `#NAME?`. So the formula on
+the line would read in cell addresses, units and statuses would have to be carried beside
+it by hand, and every Unknown would have to be kept out of it before it was asked. It
+would add 74 crates. An evaluator that knows names, feet and inches, and
+Known/Assumed/Unknown is a few hundred lines (`crates/world/src/formula.rs`). IronCalc is
+not linked. XLSX with live formulas (D6) is still `rust_xlsxwriter`'s job.
 
 ### 10. Plans and images to trace: build on `hayro` for PDF, `image` for images
 `hayro` 0.9.0 (MIT OR Apache-2.0, pure Rust, last commit 2026-11-09). `pdfium-render`
