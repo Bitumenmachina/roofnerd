@@ -315,5 +315,66 @@ pub const K_CONDITION: &str = "pl::condition";
 pub const K_COST: &str = "pl::cost";
 pub const K_SCHEDULE: &str = "pl::schedule";
 pub const K_MEASURE: &str = "pl::measure";
+/// How one edge of a footprint rises: at a pitch, or not at all (a gable end, which stands
+/// upright and carries no roof plane of its own). In the file a pitch is its number of
+/// inches in 12 and a gable is the word `"gable"`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Rise {
+    Pitch(f64),
+    Gable,
+}
+
+impl Serialize for Rise {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Rise::Pitch(x) => x.serialize(s),
+            Rise::Gable => "gable".serialize(s),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Rise {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        match serde_json::Value::deserialize(d)? {
+            serde_json::Value::Number(n) => n.as_f64().map(Rise::Pitch).ok_or_else(|| serde::de::Error::custom("a pitch is a number")),
+            serde_json::Value::String(s) if s == "gable" => Ok(Rise::Gable),
+            other => Err(serde::de::Error::custom(format!("an edge rises at a pitch (a number of inches in 12) or is \"gable\"; {other} is neither"))),
+        }
+    }
+}
+
+/// `pl::footprint`: on a Roof, the outline the roof stands on, the height of its eaves, and
+/// how each edge rises. Edge i runs from point i to the next. From these the roof is
+/// solved: where the slopes meet gives the planes, and the planes give the hips, valleys
+/// and ridges. Nobody enters those; change a pitch or move a corner and they follow.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Footprint {
+    pub points: Val<Vec<P2>>,
+    pub eave_height: Val<Len>,
+    pub edges: Vec<Val<Rise>>,
+}
+
+impl Footprint {
+    /// The footprint's points in feet, whatever unit they were entered in.
+    pub fn points_ft(&self) -> Option<Vec<P2>> {
+        let d = units::coord_divisor(&self.points.unit).ok()?;
+        self.points.value.as_ref().map(|pts| pts.iter().map(|p| [p[0] / d, p[1] / d]).collect())
+    }
+}
+
+/// `pl::solved`: on a plane or a line the solver made, the roof it was solved from and,
+/// for a plane, which edge of the footprint it rises from (counted from 1). The solver
+/// replaces what carries this and leaves alone what does not.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Solved {
+    pub from: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub edge: Option<usize>,
+}
+
 pub const K_LINE_QUANTITIES: &str = "pl::line_quantities";
+pub const K_FOOTPRINT: &str = "pl::footprint";
+pub const K_SOLVED: &str = "pl::solved";
 pub const K_RECIPE: &str = "pl::recipe";

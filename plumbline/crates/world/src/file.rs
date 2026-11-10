@@ -48,7 +48,7 @@ struct Entry {
     extra: BTreeMap<String, Value>,
 }
 
-const KNOWN_KEYS: [&str; 12] = [K_CLASS, K_JOB, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES];
+const KNOWN_KEYS: [&str; 14] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES];
 
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
@@ -74,6 +74,8 @@ pub fn save(job: &mut Job) -> String {
         }
         put!(Kind, K_CLASS);
         put!(JobInfo, K_JOB);
+        put!(Footprint, K_FOOTPRINT);
+        put!(Solved, K_SOLVED);
         put!(Outline, K_OUTLINE);
         put!(Pitch, K_PITCH);
         put!(Run, K_RUN);
@@ -245,6 +247,16 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                 K_SCHEDULE => {
                     let c: WorkCode = parse(&path, &k, v)?;
                     check::work_code(&path, &c)?;
+                    ent.insert(c);
+                }
+                K_FOOTPRINT => {
+                    let c: Footprint = parse(&path, &k, v)?;
+                    check::footprint(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_SOLVED => {
+                    let c: Solved = parse(&path, &k, v)?;
+                    check::solved(&path, kind, &c)?;
                     ent.insert(c);
                 }
                 K_RECIPE => {

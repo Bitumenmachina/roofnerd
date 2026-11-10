@@ -12,13 +12,19 @@
 //!   plumbline check  <file>                      load, re-derive, confirm the file is exactly what a save would write
 //!   plumbline lines  <file>                      the lines the planes imply, set against the lines entered
 //!   plumbline apply  <file> <path> <condition> --source "<who says>"   give an element a condition's cost lines
+//!   plumbline roof   <file> <name> --points "0,0 40,0 40,30 0,30" --pitch 6:12 --eave-height "10 ft" --status <S> --source "<where from>"
+//!                                                a new roof solved from a footprint (coordinates in feet)
+//!
+//! On a roof solved from a footprint, `set` also takes `edge:<n>` (a pitch, or `gable`) and
+//! `move:<n>` (a length; the edge moves out by it, in if it is negative), and solves again.
 
 use std::fmt::Write as _;
 use std::io::Write as _;
 use std::process::ExitCode;
 
 use plumbline_world::value::Status;
-use plumbline_world::{file, roof, sample, view};
+use plumbline_world::units::{self, Len};
+use plumbline_world::{file, roof, sample, solve, view, Footprint, Rise, Val};
 
 /// Print a line. A reader that has stopped listening (`| head -1`) is not an error and
 /// must not be a panic, which is what `println!` makes of it.
@@ -62,6 +68,9 @@ fn run(args: &[String]) -> Result<(), String> {
     let cmd = args.first().map(String::as_str).ok_or_else(usage)?;
     // A command that takes one file takes nothing after it: an argument that would be
     // ignored is refused instead.
+    if cmd == "roof" {
+        return new_roof(args);
+    }
     if matches!(cmd, "sample" | "show" | "check" | "lines") && args.len() > 2 {
         return Err(format!("{cmd} takes one file and nothing else; {:?} would be ignored\n{}", args[2], usage()));
     }
@@ -154,6 +163,32 @@ fn run(args: &[String]) -> Result<(), String> {
             let (mut job, report) = read(path)?;
             if !report.stale.is_empty() {
                 say!("WARNING: before this edit, the file's measures did not match its geometry for: {}. They have been recomputed.", report.stale.join(", "));
+            }
+            // A roof solved from a footprint: change the footprint and solve again.
+            let on_footprint = field.starts_with("edge:") || field.starts_with("move:") || (field == "eave_height" && job.find(element).is_some_and(|e| job.world.get::<Footprint>(e).is_some()));
+            if on_footprint {
+                let typed = value.ok_or("mark an edge unknown in the file; a roof with an edge of no pitch cannot be solved")?;
+                let number = |text: &str| text.parse::<usize>().map_err(|_| format!("{text:?} is not an edge number"));
+                let change = if let Some(n) = field.strip_prefix("edge:") {
+                    let rise = if typed.trim().eq_ignore_ascii_case("gable") { Val { value: Some(Rise::Gable), unit: String::new(), status, source: source.clone() } } else { Val { value: Some(Rise::Pitch(units::parse_pitch(typed)?)), unit: units::PITCH.into(), status, source: source.clone() } };
+                    solve::Change::Rise { edge: number(n)?, rise }
+                } else if let Some(n) = field.strip_prefix("move:") {
+                    let (len, unit) = units::parse_length(typed)?;
+                    solve::Change::MoveEdge { edge: number(n)?, by_ft: len.feet(unit)?, status, source: source.clone() }
+                } else {
+                    let (len, unit) = units::parse_length(typed)?;
+                    solve::Change::EaveHeight(Val { value: Some(len), unit: unit.into(), status, source: source.clone() })
+                };
+                let before = file::save(&mut job);
+                let solved = solve::edit(&mut job, element, change)?;
+                let after = file::save(&mut job);
+                std::fs::write(path, &after).map_err(|e| format!("cannot write {path}: {e}"))?;
+                say!("set {element} {field} = {typed} ({status:?}) and solved the roof again");
+                say_solve(&solved);
+                if before == after {
+                    say!("nothing changed");
+                }
+                return Ok(());
             }
             if !with.is_empty() && field != "quantity" {
                 return Err("--with goes with a new quantity formula: it gives a value to a name the formula brings in".into());
@@ -282,4 +317,64 @@ fn lines(job: &mut plumbline_world::Job) -> String {
         }
     }
     out
+}
+
+fn say_solve(report: &solve::Report) {
+    say!("  {} planes, {} lines", report.planes, report.lines);
+    if !report.added.is_empty() {
+        say!("  new: {}", report.added.join(", "));
+    }
+    for (path, carried) in &report.removed {
+        say!("  gone: {path}{}", if *carried { "  (it carried a condition or cost lines, which went with it)" } else { "" });
+    }
+    for note in &report.notes {
+        say!("  note: {note}");
+    }
+}
+
+/// `plumbline roof <file> <name> --points "x,y x,y ..." --pitch <p> --eave-height <len> --status <S> --source <where>`
+fn new_roof(args: &[String]) -> Result<(), String> {
+    let [_, path, name, rest @ ..] = args else { return Err(usage()) };
+    let (mut points, mut pitch, mut eave, mut status, mut source) = (None, None, None, None, None);
+    let mut it = rest.iter();
+    while let Some(flag) = it.next() {
+        let slot = match flag.as_str() {
+            "--points" => &mut points,
+            "--pitch" => &mut pitch,
+            "--eave-height" => &mut eave,
+            "--status" => &mut status,
+            "--source" => &mut source,
+            other => return Err(format!("unexpected {other:?}\n{}", usage())),
+        };
+        if slot.is_some() {
+            return Err(format!("{flag} given twice"));
+        }
+        *slot = Some(it.next().cloned().ok_or_else(|| format!("{flag} needs a value"))?);
+    }
+    let status = match status.as_deref() {
+        Some("Known") => Status::Known,
+        Some("Assumed") => Status::Assumed,
+        Some(other) => return Err(format!("{other:?} is not a status a roof can be entered with; use Known or Assumed")),
+        None => return Err("--status is required: say whether the footprint is Known or Assumed".into()),
+    };
+    let source = source.ok_or("--source is required: say where the footprint came from")?;
+    let mut pts = Vec::new();
+    for pair in points.ok_or("--points is required: the footprint's corners in feet, like \"0,0 40,0 40,30 0,30\"")?.split_whitespace() {
+        let (x, y) = pair.split_once(',').ok_or_else(|| format!("{pair:?} is not a corner; write it x,y in feet"))?;
+        pts.push([units::parse_number(x)?, units::parse_number(y)?]);
+    }
+    let rise = units::parse_pitch(&pitch.ok_or("--pitch is required: the pitch every edge starts at, like 6:12")?)?;
+    let (len, unit) = units::parse_length(&eave.ok_or("--eave-height is required, like \"10 ft\"")?)?;
+    let footprint = Footprint {
+        edges: pts.iter().map(|_| Val { value: Some(Rise::Pitch(rise)), unit: units::PITCH.into(), status, source: source.clone() }).collect(),
+        points: Val { value: Some(pts), unit: units::FT.into(), status, source: source.clone() },
+        eave_height: Val { value: Some(len), unit: unit.into(), status, source: source.clone() },
+    };
+    let (mut job, _) = read(path)?;
+    let (roof_path, report) = solve::new_roof(&mut job, name, footprint)?;
+    std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+    say!("{roof_path} {name:?} solved from its footprint");
+    say_solve(&report);
+    let _: Option<Len> = None;
+    Ok(())
 }

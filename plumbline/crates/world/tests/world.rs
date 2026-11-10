@@ -1662,3 +1662,193 @@ fn a_formula_too_long_to_read_is_refused_and_a_factor_is_not_a_count() {
     assert_eq!(figures(&mut job, "parapet-0024", "Copper coping cap").order.unwrap().value, Some(65.0));
     assert!(job.set_on_line("parapet-0024", "order", Some("Copper coping cap"), Some("30 SF/she et"), Status::Known, "x").is_err());
 }
+
+// ---- D2: a roof solved from its footprint ----
+
+fn footprint(points: Vec<P2>, rises: &[Rise], eave_ft: f64) -> Footprint {
+    Footprint {
+        points: Val::known(points, "ft", "test plan"),
+        eave_height: Val::known(Len::One(eave_ft), "ft", "test plan"),
+        edges: rises.iter().map(|r| Val::known(*r, if matches!(r, Rise::Gable) { "" } else { "in/12" }, "test plan")).collect(),
+    }
+}
+
+fn child(job: &mut Job, parent: &str, name: &str) -> String {
+    job.children()[parent][name].clone()
+}
+
+#[test]
+fn a_footprint_solves_into_the_roof_that_was_entered_by_hand() {
+    // The sample's main roof was entered plane by plane and line by line. The same roof
+    // from its footprint alone: 40 x 30, 6:12 all round, eaves at 10 ft.
+    let mut job = Job::new("Solved", "test", "test");
+    let (roof_path, report) = solve::new_roof(&mut job, "main", footprint(vec![[0.0, 0.0], [40.0, 0.0], [40.0, 30.0], [0.0, 30.0]], &[Rise::Pitch(6.0); 4], 10.0)).unwrap();
+    assert_eq!((report.planes, report.lines), (4, 9));
+    assert!(report.notes.is_empty(), "{:?}", report.notes);
+    // South plane: 375 SF on plan, 419.2627 SF on the slope, as worked by hand for the sample.
+    let south = child(&mut job, &roof_path, "plane 1");
+    assert_eq!(measure(&mut job, &south, "plan_area").value, Some(375.0));
+    assert_eq!(measure(&mut job, &south, "surface_area").value, Some(419.2627));
+    let east = child(&mut job, &roof_path, "plane 2");
+    assert_eq!(measure(&mut job, &east, "plan_area").value, Some(225.0));
+    // The ridge is 10 LF and level; each hip is 22.5 LF on the slope.
+    let ridge = child(&mut job, &roof_path, "ridge 1-3");
+    assert_eq!(measure(&mut job, &ridge, "true_length").value, Some(10.0));
+    for hip in ["hip 1-2", "hip 2-3", "hip 3-4", "hip 1-4"] {
+        let path = child(&mut job, &roof_path, hip);
+        assert_eq!(measure(&mut job, &path, "true_length").value, Some(22.5), "{hip}");
+    }
+    for (eave, lf) in [("eave 1", 40.0), ("eave 2", 30.0), ("eave 3", 40.0), ("eave 4", 30.0)] {
+        let path = child(&mut job, &roof_path, eave);
+        assert_eq!(measure(&mut job, &path, "true_length").value, Some(lf), "{eave}");
+    }
+    // The four planes cover the footprint: 1,200 SF on plan.
+    let total: f64 = (1..=4).map(|i| { let p = child(&mut job, &roof_path, &format!("plane {i}")); measure(&mut job, &p, "plan_area").value.unwrap() }).sum();
+    assert_eq!(total, 1200.0);
+    // It is a job like any other: it saves, loads, and saves to the same bytes, and the
+    // lines the planes imply are exactly the lines the solver wrote.
+    let text = save(&mut job);
+    let (mut again, report) = load(&text).unwrap();
+    assert!(report.stale.is_empty());
+    assert_eq!(save(&mut again), text);
+    let (solid, _) = roof::solid_planes(&mut again);
+    let found = roof::lines_of(&solid);
+    let cmp = roof::compare(&mut again, &found);
+    assert_eq!((cmp.agree.len(), cmp.entered_only.len(), cmp.implied_only.len()), (9, 0, 0));
+    // Solving again changes nothing.
+    solve::solve(&mut again, &roof_path).unwrap();
+    assert_eq!(save(&mut again), text);
+}
+
+#[test]
+fn changing_a_pitch_moves_the_ridge_and_keeps_every_element_it_can() {
+    // 60 x 30, 6:12 all round, eaves at 10 ft: the ridge runs at y = 15 from x = 15 to 45.
+    let mut job = Job::new("Solved", "test", "test");
+    let (roof_path, _) = solve::new_roof(&mut job, "main", footprint(vec![[0.0, 0.0], [60.0, 0.0], [60.0, 30.0], [0.0, 30.0]], &[Rise::Pitch(6.0); 4], 10.0)).unwrap();
+    let south = child(&mut job, &roof_path, "plane 1");
+    let ridge = child(&mut job, &roof_path, "ridge 1-3");
+    assert_eq!(measure(&mut job, &ridge, "true_length").value, Some(30.0));
+    // Put a condition on the south plane, as an estimator would.
+    job.set(&south, "condition", Some("Standing seam copper"), Status::Known, "finish schedule").unwrap();
+    let paths_before: Vec<String> = job.children()[&roof_path].values().cloned().collect();
+    let before = save(&mut job);
+
+    // Steepen the south edge to 12:12. Entered by hand, this broke a roof (the hips no
+    // longer fitted). Solved, the ridge moves to where the two slopes now meet: south
+    // rises 1 ft per ft and north 0.5 ft per ft, so y = (30 - y) / 2, y = 10.
+    let e = job.find(&roof_path).unwrap();
+    let mut fp = job.world.get::<Footprint>(e).unwrap().clone();
+    fp.edges[0] = Val::known(Rise::Pitch(12.0), "in/12", "revised elevation");
+    job.put(&roof_path, fp).unwrap();
+    let report = solve::solve(&mut job, &roof_path).unwrap();
+    assert!(report.removed.is_empty() && report.added.is_empty(), "{report:?}");
+    // Same elements, same paths; the south plane still has its condition.
+    let paths_after: Vec<String> = job.children()[&roof_path].values().cloned().collect();
+    assert_eq!(paths_before, paths_after);
+    let s = job.find(&south).unwrap();
+    assert_eq!(job.world.get::<Condition>(s).unwrap().0.value.as_deref(), Some("Standing seam copper"));
+    // The ridge is at y = 10 now, from x = 20 to x = 40: 20 LF, level, 10 ft above the eaves.
+    let r = job.find(&ridge).unwrap();
+    let ends = job.world.get::<Run>(r).unwrap().ends.value.unwrap();
+    assert!(ends.iter().all(|p| (p[1] - 10.0).abs() < 1e-6), "{ends:?}");
+    assert_eq!(measure(&mut job, &ridge, "true_length").value, Some(20.0));
+    // South plane: trapezoid (60 + 20) / 2 x 10 = 400 SF on plan, x sqrt(2) = 565.6854 SF.
+    // North plane: (60 + 20) / 2 x 20 = 800 SF on plan, x 1.118034 = 894.4272 SF.
+    assert_eq!(measure(&mut job, &south, "plan_area").value, Some(400.0));
+    assert_eq!(measure(&mut job, &south, "surface_area").value, Some(565.6854));
+    let north = child(&mut job, &roof_path, "plane 3");
+    assert_eq!(measure(&mut job, &north, "surface_area").value, Some(894.4272));
+    // No line on it is flagged: the planes fit each other because they were solved together.
+    for (_, path) in job.children()[&roof_path].clone() {
+        if job.kind(&path).is_some_and(|k| k.is_run()) {
+            assert!(measure(&mut job, &path, "true_length").value.is_some(), "{path}");
+        }
+    }
+    // In the file, everything that changed is the roof and what was solved from it.
+    let after = save(&mut job);
+    assert!(touched(&before, &after).iter().all(|p| *p == roof_path || paths_after.contains(p)));
+
+    // On a 40 x 30 footprint the same change closes the roof to a point at (20, 10): the
+    // west hip (x / 2 = y) and the east hip ((40 - x) / 2 = y) both reach y = 10 at x = 20.
+    // The ridge has no length left, so it is removed, and the solve says so.
+    let mut job = Job::new("Pyramid", "test", "test");
+    let (roof_path, _) = solve::new_roof(&mut job, "main", footprint(vec![[0.0, 0.0], [40.0, 0.0], [40.0, 30.0], [0.0, 30.0]], &[Rise::Pitch(6.0); 4], 10.0)).unwrap();
+    let ridge = child(&mut job, &roof_path, "ridge 1-3");
+    let e = job.find(&roof_path).unwrap();
+    let mut fp = job.world.get::<Footprint>(e).unwrap().clone();
+    fp.edges[0] = Val::known(Rise::Pitch(12.0), "in/12", "revised elevation");
+    job.put(&roof_path, fp).unwrap();
+    let report = solve::solve(&mut job, &roof_path).unwrap();
+    assert_eq!(report.removed, [(ridge, false)]);
+    assert!(load(&save(&mut job)).is_ok());
+}
+
+#[test]
+fn an_l_shaped_footprint_gets_its_valley_and_a_gable_gets_its_rakes() {
+    // An L: 40 x 20 with a 20 x 20 wing to the north on its west half, 6:12 all round.
+    // One inside corner at (20, 20), so one valley, running to where the two ridges meet.
+    let mut job = Job::new("L", "test", "test");
+    let l = vec![[0.0, 0.0], [40.0, 0.0], [40.0, 20.0], [20.0, 20.0], [20.0, 40.0], [0.0, 40.0]];
+    let (roof_path, report) = solve::new_roof(&mut job, "main", footprint(l, &[Rise::Pitch(6.0); 6], 10.0)).unwrap();
+    assert!(report.notes.is_empty(), "{:?}", report.notes);
+    let kinds: Vec<Kind> = job.children()[&roof_path].values().filter_map(|p| job.kind(p)).collect();
+    let count = |k: Kind| kinds.iter().filter(|x| **x == k).count();
+    assert_eq!((count(Kind::RoofPlane), count(Kind::Eave), count(Kind::Valley), count(Kind::Rake)), (6, 6, 1, 0));
+    // The valley runs from the inside corner (20, 20) to (10, 10): 14.1421 LF on plan,
+    // climbing 10 ft of run at 6:12 = 5 ft: sqrt(200 + 25) = 15 LF.
+    let valley = job.children()[&roof_path].iter().find(|(n, _)| n.starts_with("valley")).map(|(_, p)| p.clone()).unwrap();
+    assert_eq!(measure(&mut job, &valley, "true_length").value, Some(15.0));
+    // The planes cover the footprint: 40 x 20 + 20 x 20 = 1,200 SF on plan.
+    let total: f64 = job.children()[&roof_path].clone().values().filter(|p| p.starts_with("plane")).map(|p| measure(&mut job, p, "plan_area").value.unwrap()).sum();
+    assert!((total - 1200.0).abs() < 1e-3, "{total}");
+
+    // A gable roof: the two short ends upright. Two planes, a ridge end to end, four rakes.
+    let mut job = Job::new("Gable", "test", "test");
+    let (roof_path, _) = solve::new_roof(&mut job, "main", footprint(vec![[0.0, 0.0], [40.0, 0.0], [40.0, 20.0], [0.0, 20.0]], &[Rise::Pitch(6.0), Rise::Gable, Rise::Pitch(6.0), Rise::Gable], 10.0)).unwrap();
+    let kinds: Vec<Kind> = job.children()[&roof_path].values().filter_map(|p| job.kind(p)).collect();
+    let count = |k: Kind| kinds.iter().filter(|x| **x == k).count();
+    assert_eq!((count(Kind::RoofPlane), count(Kind::Eave), count(Kind::Ridge), count(Kind::Rake), count(Kind::Hip)), (2, 2, 1, 4, 0));
+    let ridge = child(&mut job, &roof_path, "ridge 1-3");
+    assert_eq!(measure(&mut job, &ridge, "true_length").value, Some(40.0));
+    // Each rake: 10 ft of run at 6:12 climbs 5 ft: sqrt(100 + 25) = 11.1803 LF.
+    for (name, path) in job.children()[&roof_path].clone() {
+        if name.starts_with("rake") {
+            assert_eq!(measure(&mut job, &path, "true_length").value, Some(11.1803), "{name}");
+        }
+    }
+    // Turning a hipped end into a gable removes the hips and says so; an edge with no
+    // pitch entered cannot be solved, and says which.
+    let mut job = Job::new("Change", "test", "test");
+    let (roof_path, _) = solve::new_roof(&mut job, "main", footprint(vec![[0.0, 0.0], [40.0, 0.0], [40.0, 20.0], [0.0, 20.0]], &[Rise::Pitch(6.0); 4], 10.0)).unwrap();
+    let e = job.find(&roof_path).unwrap();
+    let mut fp = job.world.get::<Footprint>(e).unwrap().clone();
+    fp.edges[1] = Val::known(Rise::Gable, "", "elevation");
+    job.put(&roof_path, fp.clone()).unwrap();
+    let report = solve::solve(&mut job, &roof_path).unwrap();
+    assert_eq!(report.removed.len(), 4, "{report:?}"); // the east plane, its eave, its two hips
+    assert_eq!(report.added.len(), 2, "{report:?}"); // two rakes
+    assert!(load(&save(&mut job)).is_ok());
+    fp.edges[0] = Val::unknown("in/12", "not on the drawings");
+    job.put(&roof_path, fp).unwrap();
+    assert!(solve::solve(&mut job, &roof_path).unwrap_err().contains("edge 1 has no pitch entered"));
+}
+
+#[test]
+fn the_skeleton_holds_in_feet_on_a_short_edge_and_a_long_way_from_the_origin() {
+    // The port restated BIMCraft's fixed millimetre tolerance as a share of the footprint's
+    // size. A 40 x 30 roof with a 3 in jog in one eave (an edge a quarter of a foot long),
+    // a mile from the origin: it still solves, and its planes still cover its footprint.
+    let o = 5280.0;
+    let pts = vec![[o, o], [o + 20.0, o], [o + 20.0, o + 0.25], [o + 40.0, o + 0.25], [o + 40.0, o + 30.0], [o, o + 30.0]];
+    let area = geom::plan_area(&pts);
+    let mut job = Job::new("Far", "test", "test");
+    let (roof_path, report) = solve::new_roof(&mut job, "main", footprint(pts, &[Rise::Pitch(6.0); 6], 10.0)).unwrap();
+    assert!(report.notes.is_empty(), "{:?}", report.notes);
+    let total: f64 = job.children()[&roof_path].clone().values().filter(|p| p.starts_with("plane")).map(|p| measure(&mut job, p, "plan_area").value.unwrap()).sum();
+    assert!((total - area).abs() < 1e-3, "{total} vs {area}");
+    for (_, path) in job.children()[&roof_path].clone() {
+        if job.kind(&path).is_some_and(|k| k.is_run()) {
+            assert!(measure(&mut job, &path, "true_length").value.is_some(), "{path}: {}", measure(&mut job, &path, "true_length").note);
+        }
+    }
+}

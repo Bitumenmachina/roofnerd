@@ -9,6 +9,8 @@
 //! * `geom`: plan geometry.
 //! * `derive`: quantities worked out from geometry.
 //! * `roof`: the lines a set of planes implies (ridge, hip, valley, eave, rake).
+//! * `skeleton`: where a footprint's slopes meet (ported from BIMCraft; see the file).
+//! * `solve`: a roof's planes and lines made from its footprint and kept in step with it.
 //! * `job`: the world and the edits made to it.
 //! * `file`: the saved job.
 //! * `sample`: a small made-up job for demonstrations and tests.
@@ -23,6 +25,8 @@ pub mod job;
 pub mod lines;
 pub mod roof;
 pub mod sample;
+pub mod skeleton;
+pub mod solve;
 pub mod units;
 pub mod value;
 pub mod view;

@@ -110,6 +110,20 @@ impl Job {
         Ok(path)
     }
 
+    /// Take an element out of the job. It must have no children.
+    pub fn remove(&mut self, path: &str) -> Result<(), String> {
+        let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
+        if e == self.root() {
+            return Err("the job element cannot be removed".into());
+        }
+        if self.children().get(path).is_some_and(|c| !c.is_empty()) {
+            return Err(format!("{path} has elements under it; remove those first"));
+        }
+        self.order.retain(|x| *x != e);
+        self.world.despawn(e);
+        Ok(())
+    }
+
     /// Put a component on an element, unchecked. For building jobs in code; `file::load`
     /// and `set` are the checked routes.
     pub fn put<C: Component>(&mut self, path: &str, component: C) -> Result<(), String> {

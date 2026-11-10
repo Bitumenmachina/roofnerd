@@ -127,6 +127,62 @@ pub fn eave_edge(pts: &[P2], eave: [P2; 2]) -> Result<[P2; 2], String> {
     Ok(edge)
 }
 
+/// A footprint goes on a Roof: an outline that makes sense, an eave height, and a rise for
+/// every edge.
+pub fn footprint(path: &str, kind: Kind, f: &Footprint) -> Result<(), String> {
+    if kind != Kind::Roof {
+        return Err(format!("{path}: a {kind:?} cannot carry a footprint; only a Roof can"));
+    }
+    coords_ok(&format!("{path} footprint points"), &f.points)?;
+    f.eave_height.check_length(&format!("{path} eave height"))?;
+    if f.eave_height.feet().is_some_and(|h| h.abs() > MAX_COORDINATE_FT) {
+        return Err(format!("{path} eave height: is not a usable number (limit {MAX_COORDINATE_FT:e} ft either way)"));
+    }
+    if let Some(pts) = f.points_ft() {
+        for p in &pts {
+            point_ok(&format!("{path} footprint"), *p)?;
+        }
+        if let Some(fault) = geom::outline_fault(&pts) {
+            return Err(format!("{path} footprint: {fault}"));
+        }
+        if f.edges.len() != pts.len() {
+            return Err(format!("{path} footprint: has {} points and {} edge rises; each edge, from one point to the next, has one", pts.len(), f.edges.len()));
+        }
+    }
+    for (i, e) in f.edges.iter().enumerate() {
+        let what = format!("{path} footprint edge {}", i + 1);
+        match e.value {
+            Some(Rise::Gable) => e.check(&what, "")?,
+            Some(Rise::Pitch(x)) => {
+                e.check(&what, U_PITCH)?;
+                if !x.is_finite() || x <= 0.0 {
+                    return Err(format!("{what}: a sloping edge has a pitch above zero; an edge that does not slope is a gable"));
+                }
+                if x > MAX_PITCH {
+                    return Err(format!("{what}: {x} in 12 is steeper than {MAX_PITCH} in 12, which is a wall; make it a gable"));
+                }
+            }
+            None => {
+                e.check_basics(&what)?;
+                if e.unit != U_PITCH && !e.unit.is_empty() {
+                    return Err(format!("{what}: its unit is {:?}; a pitch is in {U_PITCH:?} and a gable has none", e.unit));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+pub fn solved(path: &str, kind: Kind, s: &Solved) -> Result<(), String> {
+    if !(kind.is_area() || kind.is_run()) {
+        return Err(format!("{path}: a {kind:?} is not something the solver makes"));
+    }
+    if s.from.trim().is_empty() {
+        return Err(format!("{path}: is marked as solved but does not say from which roof"));
+    }
+    Ok(())
+}
+
 pub fn pitch(path: &str, kind: Kind, p: &Pitch) -> Result<(), String> {
     if !kind.is_area() {
         return Err(format!("{path}: a {kind:?} cannot carry a pitch; only a roof plane or a low-slope area can"));
