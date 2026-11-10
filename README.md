@@ -21,6 +21,7 @@ Where things stand is in [STATUS.md](STATUS.md). The model is in [SPEC.md](SPEC.
 
 ```
 cargo test                 # the world-model checks
+tools/landscape.sh         # re-run the D0 landscape checks (needs network)
 demos/d1.sh                # the D1 demonstration
 tools/licenses.sh          # every linked crate and its license; fails on a non-permissive one
 cargo run -p plumbline -- sample job.json
