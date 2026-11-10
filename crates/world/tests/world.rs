@@ -230,6 +230,13 @@ fn an_eave_that_is_not_level_on_its_plane_is_flagged() {
     let d = measure(&mut job, "eave-0018", "true_length");
     assert_eq!((d.value, d.status), (None, Status::Unknown));
     assert!(d.note.contains("an eave is level"), "{}", d.note);
+    // The rakes come out level and the headwall climbs, so they are flagged too: nothing
+    // on a plane whose eave is on the wrong edge is left looking Known.
+    for (line, says) in [("rake-0019", "a rake climbs"), ("rake-0020", "a rake climbs"), ("headwall-0021", "a headwall is level")] {
+        let d = measure(&mut job, line, "true_length");
+        assert_eq!(d.value, None, "{line}");
+        assert!(d.note.contains(says), "{line}: {}", d.note);
+    }
     // An eave line that is not along any edge of the outline is refused outright.
     let err = load(&edit(&text, |v| attrs(v, "plane-0017")["pl::outline"]["eave"]["value"] = serde_json::json!([[44.0, 0.0], [56.0, 8.0]]))).err().unwrap();
     assert!(err.contains("does not lie along any one edge"), "{err}");
@@ -365,7 +372,7 @@ fn outlines_and_lines_that_make_no_sense_are_refused_or_flagged() {
     assert!(err(edit(&text, |v| attrs(v, "hip-0012")["pl::outline"] = attrs(&mut serde_json::from_str(&text).unwrap(), "plane-0003")["pl::outline"].clone())).contains("cannot carry an outline"));
     // A ridge naming a plane it does not lie on: flagged, no length.
     let (mut job, _) = load(&edit(&text, |v| attrs(v, "ridge-0011")["pl::run"]["planes"] = serde_json::json!(["plane-0017"]))).unwrap();
-    assert!(measure(&mut job, "ridge-0011", "true_length").note.contains("off the outline"));
+    assert!(measure(&mut job, "ridge-0011", "true_length").note.contains("does not run along the outline"));
     // A hip naming one plane, and a line naming another line as its plane.
     let (mut job, _) = load(&edit(&text, |v| attrs(v, "hip-0012")["pl::run"]["planes"] = serde_json::json!(["plane-0003"]))).unwrap();
     assert!(measure(&mut job, "hip-0012", "true_length").note.contains("lies on 2 plane(s)"));
@@ -395,4 +402,102 @@ fn two_children_of_one_parent_cannot_share_a_name() {
     job.add("roof-0002", Kind::Valley, "valley-1").unwrap();
     let text = save(&mut job);
     assert!(load(&text).is_ok());
+}
+
+// ---- Regression checks for what the second independent judgment found ----
+
+fn porch(v: &mut Value, points: Value, eave: Value) {
+    attrs(v, "plane-0017")["pl::outline"]["points"]["value"] = points;
+    attrs(v, "plane-0017")["pl::outline"]["eave"]["value"] = eave;
+}
+
+#[test]
+fn the_eave_has_to_be_the_low_edge_of_its_plane() {
+    let text = save(&mut sample());
+    // A stepped outline with the eave entered on the stepped-back edge: part of the plane
+    // would lie below its own eave. Refused.
+    let stepped = serde_json::json!([[44.0, 0.0], [50.0, 0.0], [50.0, 2.0], [56.0, 2.0], [56.0, 8.0], [44.0, 8.0]]);
+    let err = load(&edit(&text, |v| porch(v, stepped.clone(), serde_json::json!([[50.0, 2.0], [56.0, 2.0]])))).err().unwrap();
+    assert!(err.contains("low side"), "{err}");
+    // An L-shaped outline with the eave on the inside of the L: same.
+    let ell = serde_json::json!([[44.0, 0.0], [56.0, 0.0], [56.0, 8.0], [50.0, 8.0], [50.0, 4.0], [44.0, 4.0]]);
+    let err = load(&edit(&text, |v| porch(v, ell.clone(), serde_json::json!([[50.0, 4.0], [44.0, 4.0]])))).err().unwrap();
+    assert!(err.contains("low side"), "{err}");
+    // The stepped outline with its true low edge as the eave is fine, and a rake up its
+    // full 8 ft of run at 12:12 is sqrt(64 + 64) = 11.3137 LF.
+    let (mut job, _) = load(&edit(&text, |v| {
+        porch(v, stepped.clone(), serde_json::json!([[44.0, 0.0], [50.0, 0.0]]));
+        attrs(v, "plane-0017")["pl::pitch"] = serde_json::json!({"value": 12.0, "unit": "in/12", "status": "Known", "source": "x"});
+        attrs(v, "eave-0018")["pl::run"]["ends"]["value"] = serde_json::json!([[44.0, 0.0], [50.0, 0.0]]);
+        attrs(v, "rake-0020")["pl::run"]["ends"]["value"] = serde_json::json!([[56.0, 2.0], [56.0, 8.0]]);
+    }))
+    .unwrap();
+    assert_eq!(measure(&mut job, "rake-0019", "true_length").value, Some(11.3137));
+    // The short rake runs 6 ft: sqrt(36 + 36) = 8.4853.
+    assert_eq!(measure(&mut job, "rake-0020", "true_length").value, Some(8.4853));
+}
+
+#[test]
+fn a_crooked_sliver_of_an_eave_cannot_tilt_the_plane() {
+    // A 0.028 ft eave entry lying at 45 degrees across the true eave edge. The slope is
+    // measured from the outline edge it lies along, so the figures are the right ones.
+    let text = save(&mut sample());
+    let (mut job, _) = load(&edit(&text, |v| attrs(v, "plane-0017")["pl::outline"]["eave"]["value"] = serde_json::json!([[50.0, 0.0099], [50.0198, -0.0099]]))).unwrap();
+    job.set("plane-0017", "pitch", Some("4"), Status::Known, "field measured").unwrap();
+    job.derive();
+    assert_eq!(measure(&mut job, "eave-0018", "true_length").value, Some(12.0));
+    assert_eq!(measure(&mut job, "rake-0019", "true_length").value, Some(8.4327));
+    assert_eq!(measure(&mut job, "rake-0020", "true_length").value, Some(8.4327));
+    assert_eq!(measure(&mut job, "headwall-0021", "true_length").value, Some(12.0));
+}
+
+#[test]
+fn the_same_key_twice_is_refused_anywhere() {
+    let text = save(&mut sample());
+    // Two values and two statuses on one pitch. Kept silently, the last would win.
+    let doubled = text.replacen("\"value\": 3.0,", "\"value\": 3.0,\n          \"value\": 12.0,", 1);
+    assert_ne!(doubled, text);
+    assert!(load(&doubled).err().unwrap().contains("appears twice"));
+    // Two kinds on one element.
+    let doubled = text.replacen("\"pl::class\": \"Rake\",", "\"pl::class\": \"Rake\",\n        \"pl::class\": \"Eave\",", 1);
+    assert_ne!(doubled, text);
+    assert!(load(&doubled).err().unwrap().contains("appears twice"));
+}
+
+#[test]
+fn a_line_has_to_run_along_its_plane_not_just_touch_it() {
+    // An L-shaped porch with its true eave. A "rake" from one inside corner to another
+    // has both ends on the outline but runs through the notch, outside the plane.
+    let text = save(&mut sample());
+    let ell = serde_json::json!([[44.0, 0.0], [56.0, 0.0], [56.0, 8.0], [50.0, 8.0], [50.0, 4.0], [44.0, 4.0]]);
+    let (mut job, _) = load(&edit(&text, |v| {
+        porch(v, ell.clone(), serde_json::json!([[44.0, 0.0], [56.0, 0.0]]));
+        attrs(v, "rake-0019")["pl::run"]["ends"]["value"] = serde_json::json!([[44.0, 4.0], [50.0, 8.0]]);
+    }))
+    .unwrap();
+    let d = measure(&mut job, "rake-0019", "true_length");
+    assert_eq!(d.value, None);
+    assert!(d.note.contains("does not run along the outline"), "{}", d.note);
+}
+
+#[test]
+fn the_path_counter_cannot_hand_out_a_path_twice() {
+    let text = save(&mut sample());
+    // A counter set back below paths already in use is refused on load...
+    let err = load(&edit(&text, |v| attrs(v, "job-0001")["pl::job"]["next_id"] = 3.into())).err().unwrap();
+    assert!(err.contains("next_id"), "{err}");
+    // ...and add skips a taken path even if the counter is wrong in memory.
+    let mut job = sample();
+    let root = job.root();
+    job.world.get_mut::<JobInfo>(root).unwrap().next_id = 3;
+    let path = job.add("roof-0002", Kind::RoofPlane, "new-plane").unwrap();
+    assert_eq!(path, "plane-0025");
+    assert!(load(&save(&mut job)).is_ok());
+}
+
+#[test]
+fn a_parapet_names_no_plane() {
+    let text = save(&mut sample());
+    let err = load(&edit(&text, |v| attrs(v, "parapet-0024")["pl::run"]["planes"] = serde_json::json!(["lowslope-0023"]))).err().unwrap();
+    assert!(err.contains("a parapet lies on no plane"), "{err}");
 }

@@ -18,6 +18,9 @@ PERMISSIVE = {
 }
 
 
+EXCEPTIONS = {"LLVM-exception"}
+
+
 def tokens(expr):
     return re.findall(r"\(|\)|[^\s()]+", expr.replace("/", " OR "))
 
@@ -61,9 +64,9 @@ def permissive(expr):
         if t in (")", "AND", "OR", "WITH"):
             raise ValueError(f"unexpected {t}")
         ok = t in PERMISSIVE
-        if peek() == "WITH":  # an exception clause does not make a license permissive
+        if peek() == "WITH":  # an exception never makes a license permissive, and only known ones are accepted
             take()
-            take()
+            ok = (take() in EXCEPTIONS) and ok
         return ok
 
     try:
@@ -91,6 +94,11 @@ def self_test():
         "MIT AND GPL-2.0-or-later": False,
         "Apache-2.0 WITH LLVM-exception": True,
         "GPL-2.0 WITH Classpath-exception-2.0": False,
+        "MIT WITH GPL-3.0": False,
+        "MIT WITH": False,
+        "mit or apache-2.0": False,
+        "Apache-2.0+": False,
+        "GPL-2.0+ OR MIT": True,
         "": False,
         "License": False,
         "(MIT": False,

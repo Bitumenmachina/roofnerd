@@ -96,9 +96,13 @@ impl Job {
             return Err(format!("{parent} already has a child named {name:?}"));
         }
         let root = self.root();
+        // A path number is never given out twice, whatever the counter says: the next
+        // number is past every number already in use.
+        let highest = self.index().keys().filter_map(|p| p.rsplit('-').next()?.parse::<u32>().ok()).max().unwrap_or(0);
         let mut info = self.world.get_mut::<JobInfo>(root).ok_or("the job element carries no job information")?;
-        let path = format!("{}-{:04}", kind.stem(), info.next_id);
-        info.next_id += 1;
+        let number = info.next_id.max(highest.checked_add(1).ok_or("the job has run out of path numbers")?);
+        info.next_id = number.checked_add(1).ok_or("the job has run out of path numbers")?;
+        let path = format!("{}-{:04}", kind.stem(), number);
         let id = self.world.spawn((Node::new(&path, name, Some(parent)), kind)).id();
         self.order.push(id);
         Ok(path)

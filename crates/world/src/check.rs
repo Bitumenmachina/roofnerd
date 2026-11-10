@@ -13,6 +13,8 @@ pub const FIT_TOLERANCE_FT: f64 = 0.01;
 pub const MAX_COORDINATE_FT: f64 = 1.0e6;
 /// Steeper than this (87 degrees) is a wall, not a roof plane.
 pub const MAX_PITCH: f64 = 240.0;
+/// A unit cost beyond this is a typing error, not a price.
+pub const MAX_UNIT_COST: f64 = 1.0e9;
 
 fn point_ok(what: &str, p: P2) -> Result<(), String> {
     if p.iter().any(|x| !x.is_finite() || x.abs() > MAX_COORDINATE_FT) {
@@ -47,19 +49,43 @@ pub fn outline(path: &str, kind: Kind, o: &Outline) -> Result<(), String> {
     if let Some([a, b]) = o.eave.value {
         point_ok(&format!("{path} eave line"), a)?;
         point_ok(&format!("{path} eave line"), b)?;
-        if geom::dist(a, b) <= FIT_TOLERANCE_FT {
-            return Err(format!("{path} eave line: has no length"));
-        }
         if let Some(pts) = &o.points.value {
-            if geom::edge_holding(a, b, pts, FIT_TOLERANCE_FT).is_none() {
-                return Err(format!("{path} eave line: does not lie along any one edge of the outline"));
-            }
+            eave_edge(pts, [a, b]).map_err(|why| format!("{path} eave line: {why}"))?;
         }
     }
     if o.eave_height.value.is_some_and(|h| !h.is_finite() || h.abs() > MAX_COORDINATE_FT) {
         return Err(format!("{path} eave height: is not a usable number"));
     }
     Ok(())
+}
+
+/// The edge of the outline an eave line lies along. The plane's slope is measured from
+/// this edge's own line, not from the eave line as typed, so a short or slightly crooked
+/// eave entry cannot tilt the plane. The eave has to be the plane's low edge: no part of
+/// the outline may lie on the other side of it, or the plane would fold.
+pub fn eave_edge(pts: &[P2], eave: [P2; 2]) -> Result<[P2; 2], String> {
+    let [a, b] = eave;
+    if geom::dist(a, b) <= FIT_TOLERANCE_FT {
+        return Err("has no length".into());
+    }
+    let n = pts.len();
+    let holding: Vec<usize> = (0..n)
+        .filter(|&i| {
+            let (p, q) = (pts[i], pts[(i + 1) % n]);
+            geom::point_to_segment(a, p, q) <= FIT_TOLERANCE_FT && geom::point_to_segment(b, p, q) <= FIT_TOLERANCE_FT
+        })
+        .collect();
+    let edge = match holding.as_slice() {
+        [] => return Err("does not lie along any one edge of the outline".into()),
+        [i] => [pts[*i], pts[(*i + 1) % n]],
+        _ => return Err("is too short to tell which edge of the outline it lies along".into()),
+    };
+    let offsets: Vec<f64> = pts.iter().filter_map(|p| geom::signed_offset(*p, edge[0], edge[1])).collect();
+    let (lo, hi) = offsets.iter().fold((f64::MAX, f64::MIN), |(lo, hi), x| (lo.min(*x), hi.max(*x)));
+    if lo < -FIT_TOLERANCE_FT && hi > FIT_TOLERANCE_FT {
+        return Err("part of the outline lies on the low side of it; the eave is the plane's lowest edge, and the plane rises one way from it".into());
+    }
+    Ok(edge)
 }
 
 pub fn pitch(path: &str, kind: Kind, p: &Pitch) -> Result<(), String> {
@@ -94,6 +120,9 @@ pub fn run(path: &str, kind: Kind, r: &Run) -> Result<(), String> {
     if r.planes.iter().any(|p| p.trim().is_empty()) {
         return Err(format!("{path} line: names a plane with a blank path"));
     }
+    if kind == Kind::Parapet && !r.planes.is_empty() {
+        return Err(format!("{path} line: a parapet lies on no plane, but this one names {}", r.planes.join(", ")));
+    }
     Ok(())
 }
 
@@ -102,8 +131,11 @@ pub fn height(path: &str, kind: Kind, h: &Height) -> Result<(), String> {
         return Err(format!("{path}: a {kind:?} cannot carry a height; only a parapet can"));
     }
     h.0.check(&format!("{path} height"), U_LENGTH)?;
-    if h.0.value.is_some_and(|x| !x.is_finite() || x < 0.0 || x > MAX_COORDINATE_FT) {
+    if h.0.value.is_some_and(|x| !x.is_finite() || x < 0.0) {
         return Err(format!("{path} height: must be zero or more"));
+    }
+    if h.0.value.is_some_and(|x| x > MAX_COORDINATE_FT) {
+        return Err(format!("{path} height: is not a usable number (limit {MAX_COORDINATE_FT:e} ft)"));
     }
     Ok(())
 }
@@ -140,6 +172,9 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
         line.unit_cost.check(&format!("{what} unit cost"), &format!("$/{unit}"))?;
         if line.unit_cost.value.is_some_and(|x| !x.is_finite() || x < 0.0) {
             return Err(format!("{what} unit cost: must be zero or more"));
+        }
+        if line.unit_cost.value.is_some_and(|x| x > MAX_UNIT_COST) {
+            return Err(format!("{what} unit cost: is beyond {MAX_UNIT_COST:e} per unit, which is not a usable price"));
         }
     }
     Ok(())

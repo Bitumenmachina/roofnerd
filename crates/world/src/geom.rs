@@ -105,3 +105,28 @@ pub fn outline_fault(pts: &[P2]) -> Option<String> {
     }
     None
 }
+
+/// Which side of the line through `a` and `b` a point is on, and how far: positive to the
+/// left of the direction a to b, negative to the right.
+pub fn signed_offset(p: P2, a: P2, b: P2) -> Option<f64> {
+    let (ex, ey) = (b[0] - a[0], b[1] - a[1]);
+    let len = (ex * ex + ey * ey).sqrt();
+    if len == 0.0 {
+        return None;
+    }
+    Some(((ex * (p[1] - a[1])) - (ey * (p[0] - a[0]))) / len)
+}
+
+/// Does the whole segment run along the outline? Tested at its ends and three points
+/// between, so a line that only touches the outline at its ends and cuts across the
+/// plane, or across a notch outside it, does not pass.
+pub fn runs_along_outline(a: P2, b: P2, pts: &[P2], tolerance: f64) -> Result<(), (f64, f64)> {
+    for t in [0.0, 0.25, 0.5, 0.75, 1.0] {
+        let p = [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
+        let off = point_to_outline(p, pts);
+        if off > tolerance {
+            return Err((t, off));
+        }
+    }
+    Ok(())
+}

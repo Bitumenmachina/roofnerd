@@ -84,22 +84,36 @@ valid IFCX.
 | Top level of the file, the header, a `schemas` entry, a data entry, IFC5's `inherits` | Kept and written back unchanged |
 | An attribute whose key this program does not know | Kept and written back unchanged |
 | A field inside one of this program's own components (`pl::pitch`, a cost line, ...) | **Refused**, naming the field |
+| The same key twice in one object, anywhere in the file | **Refused**, naming the key |
 
-The last row is deliberate. A cost line with an extra `extended_total` is a price with no
+The third row is deliberate. A cost line with an extra `extended_total` is a price with no
 status and no source; it is refused, not carried.
 
 ### Loading checks the file
 
-A file is refused if: a value breaks the rules in section 2; a component sits on a kind
-that cannot carry it (an outline on a hip); an outline has fewer than three points, a
-repeated point, crossing or touching edges, or no area; an eave line has no length or
-does not lie along one edge of its outline; a pitch is negative or above 240 in 12; a
-parapet height is negative; a line's two ends are the same point; a coordinate is not
-finite or is beyond 1,000,000 ft; a cost line has no description, is priced by a measure
-its element does not have, is priced in the wrong unit, or has a negative unit cost; a
-cost code lacks a scheme or a code; a path is blank or repeats; a child name is blank; a
-child points at nothing; an element has two parents; the tree does not lead back to one
-job. An eave height may be negative: it is a level relative to the job's datum.
+A file is refused if:
+
+* *Values:* a value breaks the rules in section 2; a condition or schedule code is blank
+  text; a number is not finite.
+* *Kinds:* a component sits on a kind that cannot carry it (an outline on a hip, a height
+  on anything but a parapet).
+* *Outlines:* fewer than three points; a repeated point; crossing or touching edges; no
+  area; a coordinate beyond 1,000,000 ft.
+* *Eaves:* an eave line with no length; one that does not lie along one edge of its
+  outline, or is too short to tell which edge; one with part of the outline on its low
+  side (the eave is the plane's lowest edge); an eave height beyond 1,000,000 ft.
+* *Pitches and heights:* a pitch negative or above 240 in 12; a parapet height negative or
+  beyond 1,000,000 ft.
+* *Lines:* two ends at the same point; a blank plane path; a parapet that names a plane.
+* *Cost:* a code lacking a scheme or a code; a line with no description; a line priced by
+  a measure its element does not have, or by a factor (`slope_factor`) and not a
+  quantity; a unit cost in the wrong unit, negative, or beyond 1e9.
+* *Structure:* the same key twice in an object; an unknown field inside one of this
+  program's components; no elements; a blank or repeated path; a blank child name; a
+  child that points at nothing; an element with two parents; a tree that does not lead
+  back to one job, first in the file; a `next_id` not higher than every path number in use.
+
+An eave height may be negative: it is a level relative to the job's datum.
 
 Measures in the file are **never trusted**. They are recomputed from the geometry on every
 load, the recomputed figures are the ones used, and any element whose stored measure does
@@ -111,7 +125,7 @@ not match is reported by `show`, `check` and `set`.
 |---|---|---|---|
 | `pl::class` | every element | The kind: Job, Roof, RoofPlane, LowSlopeArea, Eave, Rake, Ridge, Hip, Valley, Headwall, Parapet | |
 | `pl::job` | the job | Title, length unit (`ft`), the next path number | |
-| `pl::outline` | areas | `points`: the footprint traced on the plan, either way round. `eave`: the low edge the pitch rises from, as its own line along one edge of the outline. `eave_height`. | ft |
+| `pl::outline` | areas | `points`: the footprint traced on the plan, either way round. `eave`: the low edge the pitch rises from, as its own line along one edge of the outline, with no part of the outline on its other side. The slope is measured from that edge's line. `eave_height`. | ft |
 | `pl::pitch` | areas | Rise in inches per 12 inches of run | in/12 |
 | `pl::run` | lines | `ends`: the two ends on the plan. `planes`: paths of the planes the line lies on. | ft |
 | `pl::height` | parapets | Height | ft |
@@ -148,7 +162,8 @@ Derived figures are written to four decimal places.
 | `face_area` (SF) | parapet | plan_length × height | run, height |
 
 The height of a plane above a plan point is its eave height plus pitch ÷ 12 × the point's
-distance from the plane's eave line, measured square to the eave. A line's rise is the
+distance from the plane's eave line (the line of the outline edge the eave lies along),
+measured square to it. A line's rise is the
 difference between the heights of its two ends. Its status is the worst among its own
 ends and every entered value on each plane it names (outline, eave line, eave height,
 pitch).
@@ -160,9 +175,12 @@ pitch).
 * the line names the wrong number of planes for its kind, the same plane twice, a plane
   that is not in the job, or an element that is not a plane;
 * a named plane lacks its outline or its pitch;
-* either end of the line is more than 0.01 ft off the outline of a plane it names;
+* the line does not run along the outline of a plane it names: its ends and three points
+  between are each tested, and any more than 0.01 ft off the outline fails it;
 * the planes put either end more than 0.01 ft (about 1/8 in) apart in height;
-* the line is an eave and its plane does not make it level.
+* the line's kind and its slope disagree: an eave, ridge or headwall that is not level on
+  its plane, or a rake, hip or valley that is level on a plane with enough pitch to lift
+  it more than 0.1 ft over its length.
 
 Example: steepen one plane of a hip roof while the hips stay where they were traced, and
 those hips and the ridge are flagged with both heights. The roof as drawn no longer closes.
@@ -182,10 +200,13 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
 * **No money.** Cost lines exist and carry unit costs with statuses; nothing is extended
   or totalled. Tying a line's status to its quantity's status is D5.
 * **No undo, no conditions library, no derived conditions** (D3).
-* **Not checked:** outlines that overlap each other; a line that touches a plane's outline
-  only at a point but is drawn across its interior; whether a rake, ridge or headwall is
-  the kind of edge its name says (only an eave is checked for being level); whether a
-  cost code is a real code in its scheme.
+* **Not checked:** outlines that overlap each other or leave gaps; a plane whose eave is
+  entered on the edge parallel to the true one (every line still fits and every length is
+  right, but its heights run downhill); a line that leaves the outline and returns between
+  the five points tested; two identical cost lines on one element; whether a cost code is
+  a real code in its scheme.
+* **A plane with an eave that steps** (around a bay) takes its lowest edge as the eave;
+  the stepped-back eave is entered as its own Eave line and comes out level and higher.
 * **The 0.01 ft fit tolerance** is tighter than a hand trace of a scanned plan can hold
   (QUESTIONS.md Q9).
 * **Paths are counter-based**, so two copies of a job edited apart can mint the same path

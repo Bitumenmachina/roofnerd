@@ -12,15 +12,15 @@
 //!   input is missing the quantity is still listed, as Unknown, with the reason. A
 //!   quantity never just disappears;
 //! * when the inputs do not fit together, no number is given. A hip sits on two planes,
-//!   and it has to be on both outlines and at the same height on both, at both ends. An
-//!   eave has to be level. If not, the line is flagged with the figures instead of
-//!   quietly taking one.
+//!   and it has to run along both outlines and be at the same height on both, at both
+//!   ends. An eave, a ridge and a headwall are level; a rake, a hip and a valley climb.
+//!   If not, the line is flagged with the figures instead of quietly taking one.
 
 use std::collections::{BTreeMap, HashMap};
 
 use bevy_ecs::prelude::*;
 
-use crate::check::FIT_TOLERANCE_FT;
+use crate::check::{self, FIT_TOLERANCE_FT};
 use crate::components::*;
 use crate::geom;
 use crate::value::{Derived, Status};
@@ -29,6 +29,7 @@ use crate::value::{Derived, Status};
 struct PlaneGeom {
     kind: Kind,
     points: Option<Vec<P2>>,
+    /// The outline edge the eave lies along. Heights are measured from this edge's line.
     eave: Option<[P2; 2]>,
     pitch: Option<f64>,
     eave_height: Option<f64>,
@@ -63,6 +64,17 @@ pub fn derive(world: &mut World) -> Vec<String> {
             Some(p) => status = status.max(p.0.status),
             None => lacks = lacks.or(Some("no pitch entered")),
         }
+        // The eave as the outline edge it lies along. A plane built in code without the
+        // entry checks may have an eave that fits no edge; it then gives no heights.
+        let mut eave = None;
+        if let Some(o) = outline {
+            if let (Some(pts), Some(line)) = (o.points.value.as_ref(), o.eave.value) {
+                match check::eave_edge(pts, line) {
+                    Ok(edge) => eave = Some(edge),
+                    Err(_) => lacks = lacks.or(Some("an eave line that fits its outline")),
+                }
+            }
+        }
         if lacks.is_some() {
             status = Status::Unknown;
         }
@@ -71,7 +83,7 @@ pub fn derive(world: &mut World) -> Vec<String> {
             PlaneGeom {
                 kind: *kind,
                 points: outline.and_then(|o| o.points.value.clone()),
-                eave: outline.and_then(|o| o.eave.value),
+                eave,
                 pitch: pitch.and_then(|p| p.0.value),
                 eave_height: outline.and_then(|o| o.eave_height.value),
                 status,
@@ -221,11 +233,9 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
         }
         statuses.push(g.status);
         let (Some([a, b]), Some(pts)) = (run.ends.value, g.points.as_ref()) else { continue };
-        for (end, label) in [(a, "start"), (b, "end")] {
-            let off = geom::point_to_outline(end, pts);
-            if off > FIT_TOLERANCE_FT {
-                return refuse(format!("the line's {label} is {off:.2} ft off the outline of plane {p}; the line does not lie on that plane as drawn"));
-            }
+        if let Err((t, off)) = geom::runs_along_outline(a, b, pts, FIT_TOLERANCE_FT) {
+            let whereabouts = if t == 0.0 { "its start is".to_string() } else if t == 1.0 { "its end is".to_string() } else { format!("{:.0}% of the way along it is", t * 100.0) };
+            return refuse(format!("the line does not run along the outline of plane {p}: {whereabouts} {off:.2} ft off it"));
         }
         if let (Some(za), Some(zb)) = (g.height_at(a), g.height_at(b)) {
             heights.push((p, [za, zb]));
@@ -240,10 +250,30 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
                 return refuse(format!("the planes disagree about the height of the line's {label}: {}. The line as drawn does not fit these pitches and eave heights", each.join("; ")));
             }
         }
-        if kind == Kind::Eave {
-            let (p, z) = heights[0];
-            if (z[1] - z[0]).abs() > FIT_TOLERANCE_FT {
-                return refuse(format!("an eave is level, but plane {p} puts this line's ends at {:.2} ft and {:.2} ft; check which edge of the plane is entered as its eave", z[0], z[1]));
+        // What the kind of line says about its slope. This is what catches a plane whose
+        // eave was entered on the wrong edge: its rakes come out level and its eave climbs.
+        for (p, z) in &heights {
+            let rise = (z[1] - z[0]).abs();
+            let level = rise <= FIT_TOLERANCE_FT;
+            let pitch = planes.get(*p).and_then(|g| g.pitch).unwrap_or(0.0);
+            // Would this line climb noticeably if it ran straight up the slope?
+            let could_climb = plan.is_some_and(|l| l * pitch / 12.0 > 10.0 * FIT_TOLERANCE_FT);
+            let name = match kind {
+                Kind::Eave => "an eave",
+                Kind::Ridge => "a ridge",
+                Kind::Headwall => "a headwall",
+                Kind::Rake => "a rake",
+                Kind::Hip => "a hip",
+                _ => "a valley",
+            };
+            match kind {
+                Kind::Eave | Kind::Ridge | Kind::Headwall if !level => {
+                    return refuse(format!("{name} is level, but plane {p} puts this line's ends at {:.2} ft and {:.2} ft; check which edge of the plane is entered as its eave", z[0], z[1]));
+                }
+                Kind::Rake | Kind::Hip | Kind::Valley if level && could_climb => {
+                    return refuse(format!("{name} climbs the slope, but plane {p} puts both ends of this line at {:.2} ft; check which edge of the plane is entered as its eave", z[0]));
+                }
+                _ => {}
             }
         }
     }

@@ -92,8 +92,15 @@ fn run(args: &[String]) -> Result<(), String> {
             job.set(element, field, value, status, &source)?;
             let changed = job.derive();
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
-            println!("set {element} {field}");
-            if changed.is_empty() {
+            let unit = match field.as_str() {
+                "pitch" => " in/12",
+                "height" | "eave_height" => " ft",
+                _ => "",
+            };
+            println!("set {element} {field} = {}{} ({status:?})", value.unwrap_or("unknown"), if value.is_some() { unit } else { "" });
+            if changed.is_empty() && !report.stale.is_empty() {
+                println!("no measure changed beyond those recomputed above");
+            } else if changed.is_empty() {
                 println!("no measure changed");
             } else {
                 println!("measures re-derived on: {}", changed.join(", "));

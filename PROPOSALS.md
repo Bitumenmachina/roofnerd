@@ -7,9 +7,9 @@ Work outside a deliverable. Nothing here is built until the owner accepts it.
    if rules must be solved in both directions at once across cost, schedule and geometry.
    It adds a C++ dependency. Not needed by D1 through D6 as written.
 2. **License checking in a pre-commit hook.** `tools/licenses.sh` is run by hand now.
-3. **More geometric consistency checks.** D1 flags a shared line whose planes disagree on
-   its height. Outlines that overlap, planes with a clockwise outline, and lines that do
-   not touch the plane they name are not checked.
+3. **More geometric consistency checks.** D1 checks each plane and each line against the
+   planes it names. It does not check planes against each other: two outlines that
+   overlap, or a gap between planes that should meet, pass unnoticed.
 4. **UUID paths.** Element paths are short readable strings (`plane-0003`). IFC5 examples
    use UUIDs. If jobs are ever merged from several machines, the counter-based paths will
    collide and UUIDs would be needed.

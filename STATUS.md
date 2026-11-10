@@ -9,7 +9,7 @@ remote (QUESTIONS.md Q2).
 | # | Deliverable | State |
 |---|---|---|
 | D0 | Landscape decision | Demonstrated, with limits below. Judged twice. |
-| D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged twice. |
+| D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged twice; the fixes from the second judgment have not themselves been judged. |
 | D2 | 3D roof slice | Not started. Its opening proof is blocked in this workspace (QUESTIONS.md Q4). |
 | D3 | Derived conditions and stretch-out | Not started. Reference estimate missing (Q5). |
 | D4 | Macro to micro | Not started. |
@@ -33,7 +33,7 @@ dependency is linked before its license is confirmed.
 2. For the candidates neither route reached, a web search.
 3. `tools/licenses.sh`: every crate the workspace links, with its declared license,
    checked against a permissive list. `tools/licenses.sh --self-test`: the checker's logic
-   against 19 expressions.
+   against 24 expressions.
 
 **What it showed**
 
@@ -45,9 +45,9 @@ dependency is linked before its license is confirmed.
   * A permissive weighted straight skeleton exists (BIMCraft, MIT OR Apache-2.0), which
     closes the gap the brief named.
   * Bevy is at 0.20.1, and the full engine needs a newer compiler than this workspace has.
-* `tools/licenses.sh` exits 0: 62 linked crates, all MIT, Apache-2.0, Zlib, Unicode-3.0 or
-  Unlicense-or-MIT. The self-test passes 19 of 19, including
-  `GPL-3.0 AND (MIT OR Apache-2.0)`, which fails as it must.
+* `tools/licenses.sh` exits 0: 61 linked crates (63 rows; two are linked in two versions),
+  all MIT, Apache-2.0, Zlib, Unicode-3.0 or Unlicense-or-MIT. The self-test passes 24 of
+  24, including `GPL-3.0 AND (MIT OR Apache-2.0)`, which fails as it must.
 
 **What remains**
 
@@ -62,7 +62,7 @@ dependency is linked before its license is confirmed.
   open-pdf-studio, were not checked. Neither is used.
 * The spreadsheet formula engine (IronCalc or our own evaluator) is left to the start of
   D3, with the test that decides it named in DECISIONS.md call 9.
-* License data is what each crate declares in the registry. No license text inside the 62
+* License data is what each crate declares in the registry. No license text inside the
   linked crates was read.
 * "No dependency linked before its license is confirmed" rests on this record: the three
   direct dependencies were looked up in the registry before `Cargo.toml` named them. The
@@ -77,7 +77,7 @@ element. Changing one pitch changes, in a file diff, only that entity and the co
 derived from it. Assumed and Unknown values display as flagged.
 
 **How it is run:** `demos/d1.sh`. It uses the built-in sample job, which is made up.
-`cargo test` runs 21 checks on the same model.
+`cargo test` runs 27 checks on the same model.
 
 **What was run and what it showed** (output of `demos/d1.sh`, exit 0)
 
@@ -85,8 +85,8 @@ derived from it. Assumed and Unknown values display as flagged.
    distinct paths. `plumbline check` confirms the file loads, its measures match its
    geometry, and saving it back writes the same bytes.
 2. *One pitch changed.* `plumbline set after.json plane-0017 pitch 4 --status Known
-   --source "field measured"` reports measures re-derived on plane-0017, eave-0018,
-   rake-0019, rake-0020, headwall-0021.
+   --source "field measured"` prints "set plane-0017 pitch = 4 in/12 (Known)" and reports
+   measures re-derived on plane-0017, eave-0018, rake-0019, rake-0020, headwall-0021.
 3. *The file diff.* Changes fall in exactly those five entries out of 24. On the plane:
    the pitch (3.0 Assumed to 4.0 Known, with its source) and its measure (slope factor
    1.0308 to 1.0541, surface 98.9545 to 101.1929 SF, squares 0.9895 to 1.0119). On the two
@@ -110,7 +110,7 @@ derived from it. Assumed and Unknown values display as flagged.
 * Hip: 15 over and 15 up on plan = 21.2132 LF; climbs 7.5 ft; √(450 + 56.25) = 22.5 LF.
 * Porch rake: 8 ft run at 3:12 climbs 2 ft; √68 = 8.2462 LF.
 
-**`cargo test`: 21 passed, 0 failed.**
+**`cargo test`: 27 passed, 0 failed.**
 
 **What remains**
 
@@ -125,6 +125,13 @@ derived from it. Assumed and Unknown values display as flagged.
 * Only pitch, height, eave height, condition and schedule code can be edited from the
   command line. Outlines, eave lines and line ends are edited in the file.
 * The limits listed in SPEC.md section 7, in particular the 0.01 ft fit tolerance (Q9).
+* **Rule 4 was broken twice by a judge after being reported sound.** Each judgment found
+  ordinary hand edits that produced a wrong length marked Known. The fixes for the second
+  set are covered by regression tests and by rerunning the judge's own cases, and have
+  not been attacked by a separate agent. Treat "nothing wrong is shown as Known" as the
+  model's intent backed by 27 tests, not as proven.
+* Planes are checked one at a time and each line against the planes it names. Nothing
+  checks planes against each other (overlaps, gaps).
 * **Process note:** the brief asks that each demonstration be written down before the
   deliverable is built. For D0 and D1 the demonstration was written alongside the work,
   not ahead of it. D2's is written below, ahead.
@@ -145,7 +152,7 @@ marked Known. All twelve, and what was done:
 
 | # | What the judge found | What was done | Regression test |
 |---|---|---|---|
-| 1 | Re-ordering an outline's points silently turned the eave into a rake; wrong lengths marked Known | The eave is now its own line on the plane. A line has to sit on the outline of every plane it names, and an eave has to be level, or it gets no length | `reordering_an_outline_does_not_move_the_eave`, `an_eave_that_is_not_level_on_its_plane_is_flagged` |
+| 1 | Re-ordering an outline's points silently turned the eave into a rake; wrong lengths marked Known | The eave is now its own line on the plane. (Only partly closed by this: see the second judgment) | `reordering_an_outline_does_not_move_the_eave`, `an_eave_that_is_not_level_on_its_plane_is_flagged` |
 | 2 | Units were decorative: 30 in read as 30 ft, metres read as feet | Each field takes one unit; anything else is refused. No conversion | `a_value_in_the_wrong_unit_is_refused_not_read_as_feet` |
 | 3 | A loop in `children` passed loading and hung `show` | The tree is checked on load: one job, first, and everything leads back to it | `a_loop_of_children_is_refused` |
 | 4 | Load and save silently dropped unknown fields, header keys, `inherits`; altered some floats | Unknown keys are kept everywhere except inside our own components, where they are refused by name. Numbers round-trip exactly | `nothing_is_dropped_quietly`, `a_coordinate_comes_back_as_the_same_number` |
@@ -155,16 +162,38 @@ marked Known. All twelve, and what was done:
 | 8 | Bowtie and collinear outlines, a ridge on a plane it does not touch, a hip naming one plane, a hip used as a plane: all accepted | Refused on load or flagged with no length | `outlines_and_lines_that_make_no_sense_are_refused_or_flagged` |
 | 9 | SPEC claimed checks the code did not make; some values carry no status | SPEC rewritten against the code; the job-element checks added; what counts as a value is now stated (SPEC 2), with references and labels checked instead | `a_loop_of_children_is_refused` |
 | 10 | Cost lines accepted anything | A line needs a description, a measure its element has, that measure's unit, and a non-negative price. Tying line status to quantity status is D5 | `cost_lines_have_to_make_sense` |
-| 11 | `show \| head` panicked; repeated `--status` took the last; `set` hid stale measures; two siblings could share a name; `-0` stored | Each fixed. The tolerance point is now Q9; the BIMCraft millimetre tolerances are noted in DECISIONS.md call 3 | `two_children_of_one_parent_cannot_share_a_name` and others |
+| 11 | `show \| head` panicked; repeated `--status` took the last; `set` hid stale measures; two siblings could share a name; `-0` stored | Each fixed. The tolerance point is now Q9. The judge's note about a BIMCraft tolerance was copied into DECISIONS.md unchecked and was wrong (second judgment, item 6) | `two_children_of_one_parent_cannot_share_a_name` and others |
 | 12 | D0 evidence could not be re-run; no Linux rating per candidate | `tools/landscape.sh` and `evidence/d0-landscape.txt`; a rating table in DECISIONS.md | re-run the script |
 
 Not changed, and why: a line's `planes` list still carries no status of its own (SPEC 2
 says so and says why); the fit tolerance stays at 0.01 ft pending Q9.
 
-### Second judgment
+### Second judgment: the twelve are closed or partly closed; five new defects, three of them rule 4 again
 
-Pending: a fresh agent is asked to confirm each fix by its own reproduction and to look
-for what the fixes broke.
+A fresh agent reran every command (all figures matched; the landscape script reproduced
+the evidence file byte for byte), repeated each first-round attack, and attacked the fixes.
+Nine of the twelve were closed outright. Three were partly closed, and it found new ones.
+No hang, no panic, and no status better than its worst input were found.
+
+| # | What the second judge found | What was done | Regression test |
+|---|---|---|---|
+| 1 | An eave entered on a stepped-back or inside edge folded the plane: a rake read 8.9443 LF, Known, where 11.3137 is right | The eave has to be the plane's low edge: an outline with points on both sides of it is refused | `the_eave_has_to_be_the_low_edge_of_its_plane` |
+| 2 | A 0.028 ft eave entry at 45° tilted the whole plane; lengths Known and wrong | The slope is measured from the outline edge the eave lies along, not from the eave line as typed | `a_crooked_sliver_of_an_eave_cannot_tilt_the_plane` |
+| 1c | An eave entered on the rake edge flagged the eave but left the rakes at 8 LF Known | A line's kind now says how it slopes: eave, ridge and headwall are level; rake, hip and valley climb. All four porch lines are flagged in that case | `an_eave_that_is_not_level_on_its_plane_is_flagged` |
+| 3 | The same key twice inside an element's attributes: the last one won silently and the other was deleted on the next save | The file is parsed strictly; a repeated key anywhere is refused | `the_same_key_twice_is_refused_anywhere` |
+| 4 | A line with both ends on the outline but running outside the plane got a Known length | A line has to run along the outline: ends and three points between are tested | `a_line_has_to_run_along_its_plane_not_just_touch_it` |
+| 5 | A lowered `next_id` made `Job::add` mint a path already in use | Refused on load; `add` takes the next number past every one in use | `the_path_counter_cannot_hand_out_a_path_twice` |
+| 6 | DECISIONS.md call 3 misstated a BIMCraft tolerance | Corrected, with the history of the error. Checked against the source this time | |
+| 7, 8 | Two rating-table cells disagreed with the evidence file; "62 crates" was 61 crates in 63 rows; lists of scripts and of accepted licenses were stale | Corrected | |
+| 9 | SPEC said a parapet names no plane but the code allowed it; several checks the code makes were not in SPEC | A parapet naming a plane is refused; SPEC's list of refusals rewritten from the code | `a_parapet_names_no_plane` |
+| 10 | `MIT WITH GPL-3.0` passed the license checker; a parapet height over the limit got the wrong message; a unit cost of 1e308 was accepted; `set` did not say what unit it applied | Each fixed | `tools/licenses.sh --self-test` (24 cases) |
+
+Left as the judge found it, and recorded in SPEC.md section 7: an eave entered on the edge
+parallel to the true one passes (every length is still right, but the plane's heights run
+the wrong way); two identical cost lines on one element are accepted.
+
+**These second-round fixes have not been judged by a separate agent.** They were checked
+by the tests above and by rerunning the judge's own reproductions.
 
 ---
 

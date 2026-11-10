@@ -15,7 +15,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::de::{self, DeserializeOwned, MapAccess, SeqAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{json, Map, Value};
 
 use crate::check;
@@ -114,7 +115,8 @@ fn parse<T: DeserializeOwned>(path: &str, key: &str, v: Value) -> Result<T, Stri
 }
 
 pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
-    let root: FileRoot = serde_json::from_str(text).map_err(|e| format!("not a job file: {e}"))?;
+    let strict: Strict = serde_json::from_str(text).map_err(|e| format!("not a job file: {e}"))?;
+    let root: FileRoot = serde_json::from_value(strict.0).map_err(|e| format!("not a job file: {e}"))?;
     if root.data.is_empty() {
         return Err("the file has no elements".into());
     }
@@ -250,6 +252,18 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
         }
     }
 
+    // The path counter has to be past every number already in use.
+    let root_id = job.root();
+    let next_id = job.world.get::<JobInfo>(root_id).map(|j| j.next_id).unwrap_or(0);
+    for path in &seen {
+        let digits = path.rsplit('-').next().unwrap_or("");
+        if let Ok(n) = digits.parse::<u32>() {
+            if n >= next_id {
+                return Err(format!("the job's next_id is {next_id}, but {path} already uses {n}; next_id has to be higher than every path number in use"));
+            }
+        }
+    }
+
     // Measures are never trusted from the file. Work them out again and compare.
     job.derive();
     let mut report = LoadReport::default();
@@ -263,6 +277,61 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
     }
     report.stale.sort();
     Ok((job, report))
+}
+
+/// JSON read strictly: the same key twice in one object is an error, anywhere in the
+/// file. Left alone, the parser would keep the last one and drop the other without a word.
+struct Strict(Value);
+
+impl<'de> Deserialize<'de> for Strict {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        d.deserialize_any(StrictVisitor).map(Strict)
+    }
+}
+
+struct StrictVisitor;
+
+impl<'de> Visitor<'de> for StrictVisitor {
+    type Value = Value;
+    fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        f.write_str("JSON")
+    }
+    fn visit_bool<E>(self, v: bool) -> Result<Value, E> {
+        Ok(Value::Bool(v))
+    }
+    fn visit_i64<E>(self, v: i64) -> Result<Value, E> {
+        Ok(Value::from(v))
+    }
+    fn visit_u64<E>(self, v: u64) -> Result<Value, E> {
+        Ok(Value::from(v))
+    }
+    fn visit_f64<E: de::Error>(self, v: f64) -> Result<Value, E> {
+        serde_json::Number::from_f64(v).map(Value::Number).ok_or_else(|| E::custom("a number is not finite"))
+    }
+    fn visit_str<E>(self, v: &str) -> Result<Value, E> {
+        Ok(Value::String(v.to_string()))
+    }
+    fn visit_unit<E>(self) -> Result<Value, E> {
+        Ok(Value::Null)
+    }
+    fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<Value, A::Error> {
+        let mut out = Vec::new();
+        while let Some(item) = seq.next_element::<Strict>()? {
+            out.push(item.0);
+        }
+        Ok(Value::Array(out))
+    }
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Value, A::Error> {
+        let mut out = Map::new();
+        while let Some(key) = map.next_key::<String>()? {
+            if out.contains_key(&key) {
+                return Err(de::Error::custom(format!("the key {key:?} appears twice in one object; one of them would be lost")));
+            }
+            let value = map.next_value::<Strict>()?;
+            out.insert(key, value.0);
+        }
+        Ok(Value::Object(out))
+    }
 }
 
 /// JSON laid out for reading: one key per line, but a list of plain numbers (a point, a

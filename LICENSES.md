@@ -9,9 +9,12 @@ Everything the workspace links, direct and transitive, with the license each cra
 declares in the registry. Regenerate with `tools/licenses.sh`. It parses each license
 expression properly (brackets, then AND, then OR) and exits non-zero if any crate can
 only be used by accepting a license outside the permissive list (MIT, MIT-0, Apache-2.0,
-BSD-2/3-Clause, ISC, Zlib, 0BSD, Unicode-3.0, CC0-1.0, BSL-1.0, Unlicense).
-`tools/licenses.sh --self-test` checks that logic against 19 cases, including
+BSD-2/3-Clause, ISC, Zlib, 0BSD, Unicode-3.0, Unicode-DFS-2016, CC0-1.0, BSL-1.0,
+Unlicense; the only exception clause accepted is `WITH LLVM-exception`).
+`tools/licenses.sh --self-test` checks that logic against 24 cases, including
 `GPL-3.0 AND (MIT OR Apache-2.0)`, which has to fail.
+
+The table has 63 rows for 61 crates: `hashbrown` and `syn` are each linked in two versions.
 
 Direct dependencies: `bevy_ecs` 0.20.1, `serde` 1, `serde_json` 1. The rest come in through
 those three.
