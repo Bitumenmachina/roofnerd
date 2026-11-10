@@ -30,6 +30,24 @@ toolchain changes files outside the repository, which needs your go-ahead.
 The D2 viewport proof (DECISIONS.md, call 2) cannot run in this workspace until this is
 ruled on, or the repository is on a machine with a current toolchain.
 
+**Facts gathered since, to help you rule** (second stretch, 2026-11-10; a scratch folder
+outside the repository, nothing added to the project, nothing installed):
+* `cargo build` of a one-line Bevy 0.20.1 program on rustc 1.97.0 is refused, as expected.
+* The same build with cargo's `--ignore-rust-version` **compiles** (6 min 29 s on 4 cores,
+  with a 3D feature set and audio and gamepad left off). So the toolchain update may not
+  be needed to build; whether to build against a compiler the engine says it does not
+  support is yours to say. It was compiled, not run past start-up, so nothing is known
+  about whether it behaves.
+* **It cannot open a window in that workspace regardless.** Under a virtual display
+  (`Xvfb`, already installed) it stops at start-up: the window library needs
+  `libxkbcommon-x11.so.0`, which is not installed. Installing it is a system package.
+  A software renderer was present (SwiftShader, shipped with the workspace's browser) but
+  was never reached, so rendering is untested.
+* So the opening proof needs one of: a machine with a display; or your go-ahead to install
+  `libxkbcommon-x11-0` there and try the virtual display, which would prove the window,
+  the second window and the readout, and leave "picked with the mouse" to a simulated
+  pointer.
+
 ## Q5. Reference estimates
 `refs/` is empty: no copper sheet-metal estimate and no whole-job estimate were provided.
 **Assumption in use:** D3 will be built against the numbers in the brief (eave 12 in, step
