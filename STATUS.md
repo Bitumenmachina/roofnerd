@@ -80,7 +80,7 @@ element. Changing one pitch changes, in a file diff, only that entity and the co
 derived from it. Assumed and Unknown values display as flagged.
 
 **How it is run:** `demos/d1.sh`. It uses the built-in sample job, which is made up.
-`cargo test` runs 60 checks on the same model.
+`cargo test` runs 54 checks on the same model.
 
 The figures below are as rerun after the units amendment and D3. Those added to the
 sample job one sheet-metal cost line on the porch headwall and two conditions as recipes,
@@ -120,7 +120,7 @@ still touches the same five entries and no others.
 * Hip: 15 over and 15 up on plan = 21.2132 LF; climbs 7.5 ft; √(450 + 56.25) = 22.5 LF.
 * Porch rake: 8 ft run at 3:12 climbs 2 ft; √68 = 8.2462 LF.
 
-**`cargo test`: 60 passed, 0 failed** (59 on the model, 1 on the command line).
+**`cargo test`: 54 passed, 0 failed** (53 on the model, 1 on the command line).
 
 **What remains**
 
@@ -138,7 +138,7 @@ still touches the same five entries and no others.
 * The limits listed in SPEC.md section 7, in particular the 0.01 ft fit tolerance (Q9).
 * **Rule 4 has been broken by a judge four times**, each time after the previous round's
   fixes. Each judgment found entries that produced a wrong figure marked Known. Treat
-  "nothing wrong is shown as Known" as the model's intent backed by 60 tests and four
+  "nothing wrong is shown as Known" as the model's intent backed by 54 tests and four
   attacks, not as proven. Every attack so far has found a case next to the last fix, the
   fourth round's fixes have not been attacked, and the cases are getting more contrived
   (the fourth needed a line on two planes with one eave wrong, or a hundred hairline
@@ -504,8 +504,8 @@ plan above was written first; two things changed from it while building, both no
 6. *Units.* Every length above was typed as written; ten values are saved in inches.
 
 **Hand checks** (in `crates/world/tests/world.rs`): the figures above; fasteners at 18 in
-(26.67, so 27); 60 SF at 30 SF to the sheet is 2 sheets, not 3; nineteen formulas and
-recipes that do not make sense, each refused with the stated reason.
+(26.67, so 27); 60 SF at 30 SF to the sheet is 2 sheets, not 3; thirty-two formulas, line
+values and recipes that do not make sense, each refused with the stated reason.
 
 **Changed from the plan written beforehand**
 * The plan said a cleat stretch-out would be entered. The cleat is counted by the LF on
