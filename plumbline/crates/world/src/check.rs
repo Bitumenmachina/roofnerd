@@ -1,0 +1,326 @@
+//! The rules an entered component has to meet before the world will hold it. The same
+//! checks run when a job is loaded and when a value is set, so there is one standard
+//! and no way round it. Each returns a sentence an estimator can act on.
+
+use crate::components::*;
+use crate::formula;
+use crate::geom;
+use crate::lines;
+use crate::units;
+use crate::value::Val;
+
+// Every limit and tolerance here is in feet. Entered values are converted to feet before
+// they are tested, so 0.01 ft is the same closeness whether the outline was entered in
+// feet or in inches.
+
+/// The eave has to sit on an outline edge to within this many feet (about 1/8 inch).
+pub const FIT_TOLERANCE_FT: f64 = 0.01;
+/// Plan coordinates beyond this are refused: far enough for any site, near enough that
+/// a sixteenth of an inch is still exact in a 64-bit number.
+pub const MAX_COORDINATE_FT: f64 = 1.0e6;
+/// Steeper than this (87 degrees) is a wall, not a roof plane.
+pub const MAX_PITCH: f64 = 240.0;
+/// A unit cost beyond this is a typing error, not a price.
+pub const MAX_UNIT_COST: f64 = 1.0e9;
+
+/// A set of plan coordinates: the basics, and a unit coordinates can be in.
+fn coords_ok<T>(what: &str, v: &Val<T>) -> Result<(), String> {
+    v.check_basics(what)?;
+    units::coord_divisor(&v.unit).map(|_| ()).map_err(|why| format!("{what}: {why}"))
+}
+
+/// `p` is in feet.
+fn point_ok(what: &str, p: P2) -> Result<(), String> {
+    if p.iter().any(|x| !x.is_finite() || x.abs() > MAX_COORDINATE_FT) {
+        return Err(format!("{what}: a coordinate is not a usable number (limit {MAX_COORDINATE_FT:e} ft either way)"));
+    }
+    Ok(())
+}
+
+fn text_ok(what: &str, v: &Val<String>) -> Result<(), String> {
+    v.check(what, "")?;
+    if v.value.as_ref().is_some_and(|s| s.trim().is_empty()) {
+        return Err(format!("{what}: is blank; mark it Unknown if nobody has it"));
+    }
+    Ok(())
+}
+
+pub fn outline(path: &str, kind: Kind, o: &Outline) -> Result<(), String> {
+    if !kind.is_area() {
+        return Err(format!("{path}: a {kind:?} cannot carry an outline; only a roof plane or a low-slope area can"));
+    }
+    coords_ok(&format!("{path} outline points"), &o.points)?;
+    coords_ok(&format!("{path} eave line"), &o.eave)?;
+    o.eave_height.check_length(&format!("{path} eave height"))?;
+    let pts = o.points_ft();
+    if let Some(pts) = &pts {
+        for p in pts {
+            point_ok(&format!("{path} outline"), *p)?;
+        }
+        if let Some(fault) = geom::outline_fault(pts) {
+            return Err(format!("{path} outline: {fault}"));
+        }
+    }
+    if let Some([a, b]) = o.eave_ft() {
+        point_ok(&format!("{path} eave line"), a)?;
+        point_ok(&format!("{path} eave line"), b)?;
+        if let Some(pts) = &pts {
+            eave_edge(pts, [a, b]).map_err(|why| format!("{path} eave line: {why}"))?;
+        }
+    }
+    if o.eave_height.feet().is_some_and(|h| h.abs() > MAX_COORDINATE_FT) {
+        return Err(format!("{path} eave height: is not a usable number (limit {MAX_COORDINATE_FT:e} ft either way)"));
+    }
+    Ok(())
+}
+
+/// The edge of the outline an eave line lies along. The plane's slope is measured from
+/// this edge's own line, not from the eave line as typed, so a short or slightly crooked
+/// eave entry cannot tilt the plane. Both arguments are in feet. The eave has to be the plane's low edge: no part of
+/// the outline may lie on the other side of it, or the plane would fold.
+pub fn eave_edge(pts: &[P2], eave: [P2; 2]) -> Result<[P2; 2], String> {
+    let [a, b] = eave;
+    if geom::dist(a, b) <= FIT_TOLERANCE_FT {
+        return Err("has no length".into());
+    }
+    // The outline edges each end of the eave sits on. If one edge holds both, that is the
+    // eave's edge. If not, the eave may span an edge traced in pieces: a straight run of
+    // edges from one holding one end to one holding the other. A run counts as straight
+    // only if every corner inside it is within the tolerance of the one line from the
+    // run's start to its end, so small bends cannot add up into a curve.
+    let n = pts.len();
+    let on = |x: P2, i: usize| geom::point_to_segment(x, pts[i], pts[(i + 1) % n]) <= FIT_TOLERANCE_FT;
+    let a_edges: Vec<usize> = (0..n).filter(|&i| on(a, i)).collect();
+    let b_edges: Vec<usize> = (0..n).filter(|&i| on(b, i)).collect();
+    let mut candidates: Vec<[P2; 2]> = a_edges.iter().filter(|i| b_edges.contains(i)).map(|&i| [pts[i], pts[(i + 1) % n]]).collect();
+    for &i in &a_edges {
+        for &j in &b_edges {
+            for (start, end) in [(i, j), (j, i)] {
+                let steps = (end + n - start) % n;
+                if steps == 0 || steps >= n - 1 {
+                    continue;
+                }
+                let (p, q) = (pts[start], pts[(end + 1) % n]);
+                let straight = (1..=steps).all(|k| geom::point_to_segment(pts[(start + k) % n], p, q) <= FIT_TOLERANCE_FT);
+                if straight && geom::point_to_segment(a, p, q) <= FIT_TOLERANCE_FT && geom::point_to_segment(b, p, q) <= FIT_TOLERANCE_FT {
+                    candidates.push([p, q]);
+                }
+            }
+        }
+    }
+    candidates.sort_by(|x, y| geom::dist(y[0], y[1]).total_cmp(&geom::dist(x[0], x[1])));
+    let Some(&edge) = candidates.first() else {
+        return Err("does not lie along any one edge of the outline".into());
+    };
+    // Several candidates are fine if they are pieces of the same straight line; the
+    // longest stands for them. If they are different lines, the eave is too short to say.
+    let same_line = |c: &[P2; 2]| c.iter().all(|x| geom::point_to_line(*x, edge[0], edge[1]).is_some_and(|d| d <= FIT_TOLERANCE_FT));
+    if !candidates.iter().all(same_line) {
+        return Err("is too short to tell which edge of the outline it lies along".into());
+    }
+    let all = pts;
+    let offsets: Vec<f64> = all.iter().filter_map(|p| geom::signed_offset(*p, edge[0], edge[1])).collect();
+    let (lo, hi) = offsets.iter().fold((f64::MAX, f64::MIN), |(lo, hi), x| (lo.min(*x), hi.max(*x)));
+    if lo < -FIT_TOLERANCE_FT && hi > FIT_TOLERANCE_FT {
+        return Err("part of the outline lies on the low side of it; the eave is the plane's lowest edge, and the plane rises one way from it".into());
+    }
+    Ok(edge)
+}
+
+pub fn pitch(path: &str, kind: Kind, p: &Pitch) -> Result<(), String> {
+    if !kind.is_area() {
+        return Err(format!("{path}: a {kind:?} cannot carry a pitch; only a roof plane or a low-slope area can"));
+    }
+    p.0.check(&format!("{path} pitch"), U_PITCH)?;
+    if let Some(x) = p.0.value {
+        if !x.is_finite() || x < 0.0 {
+            return Err(format!("{path} pitch: must be zero or more"));
+        }
+        if x > MAX_PITCH {
+            let shown = if x > 1.0e6 { format!("{x:e}") } else { format!("{x}") };
+            return Err(format!("{path} pitch: {shown} in 12 is steeper than {MAX_PITCH} in 12, which is a wall, not a roof plane"));
+        }
+    }
+    Ok(())
+}
+
+pub fn run(path: &str, kind: Kind, r: &Run) -> Result<(), String> {
+    if !kind.is_run() {
+        return Err(format!("{path}: a {kind:?} cannot carry a line"));
+    }
+    coords_ok(&format!("{path} line ends"), &r.ends)?;
+    if let Some([a, b]) = r.ends_ft() {
+        point_ok(&format!("{path} line ends"), a)?;
+        point_ok(&format!("{path} line ends"), b)?;
+        if geom::dist(a, b) == 0.0 {
+            return Err(format!("{path} line ends: the two ends are the same point"));
+        }
+    }
+    if r.planes.iter().any(|p| p.trim().is_empty()) {
+        return Err(format!("{path} line: names a plane with a blank path"));
+    }
+    if kind == Kind::Parapet && !r.planes.is_empty() {
+        return Err(format!("{path} line: a parapet lies on no plane, but this one names {}", r.planes.join(", ")));
+    }
+    Ok(())
+}
+
+pub fn height(path: &str, kind: Kind, h: &Height) -> Result<(), String> {
+    if kind != Kind::Parapet {
+        return Err(format!("{path}: a {kind:?} cannot carry a height; only a parapet can"));
+    }
+    h.0.check_length(&format!("{path} height"))?;
+    if h.0.feet().is_some_and(|x| x < 0.0) {
+        return Err(format!("{path} height: must be zero or more"));
+    }
+    if h.0.feet().is_some_and(|x| x > MAX_COORDINATE_FT) {
+        return Err(format!("{path} height: is not a usable number (limit {MAX_COORDINATE_FT:e} ft)"));
+    }
+    Ok(())
+}
+
+pub fn condition(path: &str, c: &Condition) -> Result<(), String> {
+    text_ok(&format!("{path} condition"), &c.0)
+}
+
+pub fn work_code(path: &str, w: &WorkCode) -> Result<(), String> {
+    text_ok(&format!("{path} schedule code"), &w.wbs)
+}
+
+/// A cost line has to say what it is (and no two lines on one element say the same
+/// thing), carry a formula that makes sense on this kind of element, use every value
+/// entered on it, and be priced in the unit it comes out in, at a price that is not
+/// negative.
+pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
+    c.code.check(&format!("{path} cost code"), "")?;
+    if let Some(code) = &c.code.value {
+        if code.scheme.trim().is_empty() || code.code.trim().is_empty() {
+            return Err(format!("{path} cost code: needs both a scheme and a code; mark it Unknown if it has not been coded"));
+        }
+    }
+    for (i, line) in c.lines.iter().enumerate() {
+        if line.description.trim().is_empty() {
+            return Err(format!("{path} cost line: has no description"));
+        }
+        if line.description != line.description.trim() {
+            return Err(format!("{path} cost line {:?}: its description starts or ends with a space; a line is known by its description, and a space nobody can see makes two lines out of one", line.description));
+        }
+        if let Some(c) = line.description.chars().find(|c| c.is_control() || matches!(*c, '\u{00AD}' | '\u{200B}'..='\u{200F}' | '\u{2028}'..='\u{202F}' | '\u{2060}'..='\u{2064}' | '\u{FEFF}')) {
+            return Err(format!("{path} cost line {:?}: its description holds a character nobody can see (U+{:04X}); two lines could look the same and be different", line.description, c as u32));
+        }
+        let same = |a: &str, b: &str| a.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase() == b.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+        if let Some(other) = c.lines[..i].iter().find(|other| same(&other.description, &line.description)) {
+            return Err(format!("{path}: has two cost lines described as {:?} and {:?}; a line is known by its description, so each one on an element is different in more than capitals and spacing", other.description, line.description));
+        }
+        let what = format!("{path} cost line {:?}", line.description);
+
+        if let Some(so) = &line.stretch_out {
+            so.check_length(&format!("{what} stretch-out"))?;
+            if so.feet().is_some_and(|x| x <= 0.0) {
+                return Err(format!("{what} stretch-out: must be more than zero; it is the width of the flat sheet. Mark it Unknown if nobody has it"));
+            }
+            if so.feet().is_some_and(|x| x > MAX_COORDINATE_FT) {
+                return Err(format!("{what} stretch-out: is not a usable number (limit {MAX_COORDINATE_FT:e} ft)"));
+            }
+        }
+        for (name, v) in &line.inputs {
+            if let Some(fault) = lines::input_name_fault(kind, name) {
+                return Err(format!("{what}: its input {fault}"));
+            }
+            let named = format!("{what} {name}");
+            if v.unit.is_empty() {
+                // A plain number: a count, a number of sides.
+                v.check_basics(&named)?;
+                match v.value {
+                    None => {}
+                    Some(units::Len::One(x)) if x.is_finite() && x.abs() <= MAX_UNIT_COST => {}
+                    Some(units::Len::One(_)) => return Err(format!("{named}: is not a usable number")),
+                    Some(units::Len::FtIn(_)) => return Err(format!("{named}: is a [feet, inches] pair with no unit; the unit for a pair is \"ft-in\"")),
+                }
+            } else {
+                v.check_length(&named)?;
+                if v.feet().is_some_and(|x| x.abs() > MAX_COORDINATE_FT) {
+                    return Err(format!("{named}: is not a usable number (limit {MAX_COORDINATE_FT:e} ft)"));
+                }
+            }
+        }
+
+        // The formula, read against this kind of element with no figures in it.
+        let on = lines::On { kind, measure: None, height: None };
+        let read = lines::read(&on, line).map_err(|why| format!("{what}: its quantity {:?} {why}", line.quantity))?;
+        let used = formula::names(&read.expr);
+        if line.stretch_out.is_some() && !used.iter().any(|n| n == lines::STRETCH_OUT) {
+            return Err(format!("{what}: carries a stretch-out that its quantity, {:?}, does not use. A stretch-out turns a length (LF) into an area: write the quantity as a length times stretch_out", line.quantity));
+        }
+        if let Some(unused) = line.inputs.keys().find(|k| !used.contains(k)) {
+            return Err(format!("{what}: carries {unused:?}, which its quantity, {:?}, does not use; a value the formula does not read would sit on the line unused", line.quantity));
+        }
+
+        if let Some(w) = &line.waste {
+            w.check(&format!("{what} waste"), "%")?;
+            if w.value.is_some_and(|x| !x.is_finite() || !(0.0..=1000.0).contains(&x)) {
+                return Err(format!("{what} waste: is a percentage from 0 to 1000"));
+            }
+        }
+        if let Some(o) = &line.order {
+            if o.unit.is_empty() || o.unit.chars().any(char::is_whitespace) || o.unit.contains('/') || o.unit.contains('$') {
+                return Err(format!("{what}: its order unit {:?} is not a usable name for what is bought (sheet, lb, box)", o.unit));
+            }
+            lines::order_multiplies(o, read.unit).map_err(|why| format!("{what}: {why}"))?;
+            o.factor.check_basics(&format!("{what} order factor"))?;
+            if o.factor.value.is_some_and(|x| !x.is_finite() || x <= 0.0 || x > MAX_UNIT_COST) {
+                return Err(format!("{what} order factor: must be more than zero (and not beyond {MAX_UNIT_COST:e})"));
+            }
+        }
+
+        let unit = lines::priced_in(line, read.unit);
+        line.unit_cost.check(&format!("{what} unit cost"), &format!("$/{unit}"))?;
+        if line.unit_cost.value.is_some_and(|x| !x.is_finite() || x < 0.0) {
+            return Err(format!("{what} unit cost: must be zero or more"));
+        }
+        if line.unit_cost.value.is_some_and(|x| x > MAX_UNIT_COST) {
+            return Err(format!("{what} unit cost: is beyond {MAX_UNIT_COST:e} per unit, which is not a usable price"));
+        }
+    }
+    Ok(())
+}
+
+/// A condition's recipe has to say what kinds of element it is for, and its lines have
+/// to make sense on each of them.
+pub fn recipe(path: &str, kind: Kind, t: &Recipe) -> Result<(), String> {
+    if kind != Kind::Condition {
+        return Err(format!("{path}: a {kind:?} cannot carry a condition's recipe; only a Condition element can"));
+    }
+    if t.applies_to.is_empty() {
+        return Err(format!("{path}: the condition does not say what kind of element it applies to"));
+    }
+    for (i, k) in t.applies_to.iter().enumerate() {
+        if !(k.is_area() || k.is_run()) {
+            return Err(format!("{path}: a condition applies to roof planes, low-slope areas and lines, not to a {k:?}"));
+        }
+        if t.applies_to[..i].contains(k) {
+            return Err(format!("{path}: names {k:?} twice in what it applies to"));
+        }
+        cost(&format!("{path} (applied to a {k:?})"), *k, &t.cost)?;
+    }
+    // The stretch-out belongs to the detail, so a recipe never carries one. Anything else
+    // a recipe states (a number of sides, a waste, a price) goes onto the element with the
+    // recipe's status and source, where it can be seen.
+    if let Some(line) = t.cost.lines.iter().find(|l| l.stretch_out.as_ref().is_some_and(|so| so.value.is_some())) {
+        return Err(format!("{path} recipe line {:?}: carries a stretch-out. A stretch-out belongs to the detail it is bent for, not to a recipe; leave it Unknown here and enter it on the element", line.description));
+    }
+    if t.cost.lines.is_empty() {
+        return Err(format!("{path}: the condition has no lines; applying it would do nothing"));
+    }
+    Ok(())
+}
+
+pub fn job_info(path: &str, j: &JobInfo) -> Result<(), String> {
+    if j.length_unit != U_LENGTH {
+        if j.length_unit.trim().is_empty() {
+            return Err(format!("{path}: the job's length unit is blank; derived lengths are worked out in {U_LENGTH:?}"));
+        }
+        return Err(format!("{path}: the job's length unit {}; derived lengths are worked out in {U_LENGTH:?} only (LF, SF, SQ), and each entered value carries its own unit", units::refuse_length_unit(&j.length_unit, "\"ft\"")));
+    }
+    Ok(())
+}

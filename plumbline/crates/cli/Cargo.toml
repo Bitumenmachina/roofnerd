@@ -1,0 +1,14 @@
+[package]
+name = "plumbline"
+description = "Command-line front end over the job world"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "plumbline"
+path = "src/main.rs"
+
+[dependencies]
+plumbline-world = { path = "../world" }

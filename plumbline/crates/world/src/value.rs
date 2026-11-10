@@ -1,0 +1,166 @@
+//! Every number on a job is one of three things, and an estimator needs to see which:
+//!
+//! * **Known**: read off a plan, measured in the field, or typed from a quote.
+//! * **Assumed**: a working number someone chose because the real one is not in hand yet.
+//! * **Unknown**: nobody has it. It carries no number at all.
+//!
+//! Each one also says where it came from. A value with no source is refused.
+//! A value worked out from others (an area from an outline and a pitch) takes the worst
+//! status among what it was worked out from, so an assumed pitch makes an assumed area,
+//! and an unknown height makes an unknown wall area rather than a guessed one.
+
+use serde::{Deserialize, Serialize};
+
+use crate::units::{self, Len};
+
+/// Ordered from best to worst so `max` gives the status a derived value inherits.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum Status {
+    Known,
+    Assumed,
+    Unknown,
+}
+
+impl Status {
+    /// The mark shown beside a value everywhere it is displayed.
+    pub fn flag(self) -> &'static str {
+        match self {
+            Status::Known => " ",
+            Status::Assumed => "~",
+            Status::Unknown => "?",
+        }
+    }
+}
+
+/// An entered value: what it is, its unit, how sure we are, and where it came from.
+/// A field this program does not know inside a value is refused, not dropped.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Val<T> {
+    /// `null` exactly when the status is Unknown.
+    pub value: Option<T>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub unit: String,
+    pub status: Status,
+    pub source: String,
+}
+
+impl<T> Val<T> {
+    pub fn known(value: T, unit: &str, source: &str) -> Self {
+        Val { value: Some(value), unit: unit.into(), status: Status::Known, source: source.into() }
+    }
+    pub fn assumed(value: T, unit: &str, source: &str) -> Self {
+        Val { value: Some(value), unit: unit.into(), status: Status::Assumed, source: source.into() }
+    }
+    pub fn unknown(unit: &str, source: &str) -> Self {
+        Val { value: None, unit: unit.into(), status: Status::Unknown, source: source.into() }
+    }
+
+    /// The rules every stored value has to meet whatever it measures: it says where it
+    /// came from, and it carries a value exactly when it is not Unknown.
+    pub fn check_basics(&self, what: &str) -> Result<(), String> {
+        if self.source.trim().is_empty() {
+            return Err(format!("{what}: no source given; every value says where it came from"));
+        }
+        self.check_carries(what)
+    }
+
+    fn check_carries(&self, what: &str) -> Result<(), String> {
+        match (self.status, self.value.is_some()) {
+            (Status::Unknown, true) => Err(format!("{what}: marked Unknown but carries a value")),
+            (Status::Known | Status::Assumed, false) => {
+                Err(format!("{what}: marked {:?} but carries no value", self.status))
+            }
+            _ => Ok(()),
+        }
+    }
+
+    /// The rules for a value whose field takes exactly one unit (a pitch, a unit cost, a
+    /// name, which takes none). `what` names it in the error. A length takes more than
+    /// one unit and is checked by `check_length` or in `check.rs`.
+    pub fn check(&self, what: &str, unit: &str) -> Result<(), String> {
+        if self.source.trim().is_empty() {
+            return Err(format!("{what}: no source given; every value says where it came from"));
+        }
+        if self.unit != unit {
+            return Err(if unit.is_empty() {
+                format!("{what}: carries the unit {:?} but takes none", self.unit)
+            } else {
+                format!("{what}: its unit is {:?} but it has to be {unit:?}", self.unit)
+            });
+        }
+        self.check_carries(what)
+    }
+}
+
+impl Val<Len> {
+    /// This length in feet, for arithmetic. None when there is no value, or when the unit
+    /// is not one this program converts: it is never read as feet.
+    pub fn feet(&self) -> Option<f64> {
+        self.value.as_ref().and_then(|len| len.feet(&self.unit).ok())
+    }
+
+    /// The rules for an entered length: the basics, a unit this program knows, and a
+    /// number that suits the unit.
+    pub fn check_length(&self, what: &str) -> Result<(), String> {
+        if self.source.trim().is_empty() {
+            return Err(format!("{what}: no source given; every value says where it came from"));
+        }
+        units::scalar_unit(&self.unit).map_err(|why| format!("{what}: {why}"))?;
+        self.check_carries(what)?;
+        if let Some(len) = &self.value {
+            let feet = len.feet(&self.unit).map_err(|why| format!("{what}: {why}"))?;
+            if !feet.is_finite() {
+                return Err(format!("{what}: is not a usable number"));
+            }
+        }
+        Ok(())
+    }
+}
+
+/// A value worked out from other values. It shows its formula and names its inputs,
+/// so anyone reading the file can see how the number was reached and what feeds it.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Derived {
+    pub value: Option<f64>,
+    pub unit: String,
+    pub status: Status,
+    pub formula: String,
+    /// Each input as `entity-path#component`.
+    pub inputs: Vec<String>,
+    /// Why it is flagged, when there is a reason beyond a flagged input.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub note: String,
+}
+
+impl Derived {
+    /// A derived number. The status is the worst among its inputs; an Unknown input
+    /// leaves no number behind, and so does arithmetic that runs off the end of the
+    /// number line.
+    pub fn new(value: Option<f64>, unit: &str, statuses: &[Status], formula: &str, inputs: &[String]) -> Self {
+        if value.is_some_and(|v| !v.is_finite()) {
+            return Derived::refused(unit, formula, inputs, "the inputs are too large to give a usable figure");
+        }
+        // Nothing is silently zero: a figure that is something, but less than the four
+        // decimals it is written to, is not shown as 0.
+        if value.is_some_and(|v| v != 0.0 && round4(v) == 0.0) {
+            return Derived::refused(unit, formula, inputs, "the figure is smaller than 0.0001 and would be written as zero");
+        }
+        let status = statuses.iter().copied().max().unwrap_or(Status::Unknown);
+        let value = if status == Status::Unknown { None } else { value.map(round4) };
+        let status = if value.is_none() { Status::Unknown } else { status };
+        Derived { value, unit: unit.into(), status, formula: formula.into(), inputs: inputs.to_vec(), note: String::new() }
+    }
+
+    /// A derived value that cannot be given, with the reason.
+    pub fn refused(unit: &str, formula: &str, inputs: &[String], why: &str) -> Self {
+        Derived { value: None, unit: unit.into(), status: Status::Unknown, formula: formula.into(), inputs: inputs.to_vec(), note: why.into() }
+    }
+}
+
+/// Derived numbers are written to four decimals: finer than a sixteenth of an inch on a
+/// length in feet, and it keeps the saved file readable and its diffs free of float noise.
+pub fn round4(x: f64) -> f64 {
+    (x * 10_000.0).round() / 10_000.0 + 0.0
+}

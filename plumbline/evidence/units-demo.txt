@@ -1,0 +1,109 @@
+== 1. A parapet height of 30 in gives the same face area as 2.5 ft ==
+set parapet-0024 height = 30 in (Known)
+set parapet-0024 height = 2.5 ft (Known)
+  entered as 30 in:  face_area 50 SF     entered as 2.5 ft:  face_area 50 SF     (20 LF of parapet)
+  PASS
+
+== 2. 25' 6", 25.5 ft, 306 in and 25' 6 1/2" are each accepted and each mean what they say ==
+  typed 25' 6"        set parapet-0024 height = 25' 6" (Known)       face_area 510 SF
+  typed 25.5 ft       set parapet-0024 height = 25.5 ft (Known)      face_area 510 SF
+  typed 306 in        set parapet-0024 height = 306 in (Known)       face_area 510 SF
+  typed 25' 6 1/2"    set parapet-0024 height = 25' 6 1/2" (Known)   face_area 510.8333 SF
+  typed 25' 6 1/16"   set parapet-0024 height = 25' 6 1/16" (Known)  face_area 510.1042 SF
+  PASS: three ways of writing 25.5 ft agree; a half inch and a sixteenth each show
+
+== 3. A value is shown and saved in the unit it was entered in; a unit change touches that value and what derives from it ==
+  as saved after entering 30 in:
+    "pl::height": {
+      "value": 30.0,
+      "unit": "in",
+      "status": "Known",
+      "source": "sample detail 3/A-501"
+    }
+    shown:  height           30 in
+    shown:  =   face_area        50 SF
+  set parapet-0024 height = 2.5 ft (Known)
+  measures re-derived on: parapet-0024
+  the file diff for 30 in -> 2.5 ft (same height, written the other way):
+  [parapet-0024]
+    - "value": 30.0,
+    - "unit": "in",
+    + "value": 2.5,
+    + "unit": "ft",
+    - "formula": "plan_length × height ÷ 12",
+    + "formula": "plan_length × height",
+elements with any change: parapet-0024
+  set parapet-0024 height = 2' 7 1/2" (Assumed)
+  measures re-derived on: parapet-0024
+  the file diff for 30 in -> 2' 7 1/2" Assumed (a different height, a different unit, a different status):
+  [parapet-0024]
+    - "value": 30.0,
+    - "unit": "in",
+    - "status": "Known",
+    - "source": "sample detail 3/A-501"
+    + "value": [2.0, 7.5],
+    + "unit": "ft-in",
+    + "status": "Assumed",
+    + "source": "scaled off the elevation"
+    - "value": 50.0,
+    + "value": 52.5,
+    - "status": "Known",
+    - "formula": "plan_length × height ÷ 12",
+    + "status": "Assumed",
+    + "formula": "plan_length × height (feet + inches ÷ 12)",
+elements with any change: parapet-0024
+    shown:  ~ height           2' 7 1/2"
+    shown:  = ~ face_area        52.5 SF
+  PASS: only the parapet changed, and on it only the height and the figure derived from it
+
+== 4. A unit the program does not know is refused by name; nothing is read as feet ==
+  refused: plumbline: "30" has no unit; say which it is: 25.5 ft, 306 in, or 25' 6". A number with no unit is never read as feet
+  refused: plumbline: "762 mm" is in "mm", which is metric; this program takes US measurements only (feet (25.5 ft), inches (306 in) or feet and inches (25' 6 1/2")) and does not convert metric
+  refused: plumbline: "0.76 m" is in "m", which is metric; this program takes US measurements only (feet (25.5 ft), inches (306 in) or feet and inches (25' 6 1/2")) and does not convert metric
+  refused: plumbline: "3 cubits" is in "cubits", which is not a unit this program knows; it takes feet (25.5 ft), inches (306 in) or feet and inches (25' 6 1/2") and reads nothing else as feet
+  refused: plumbline: "1 yd" is in "yd", which is not a unit this program knows; it takes feet (25.5 ft), inches (306 in) or feet and inches (25' 6 1/2") and reads nothing else as feet
+  refused: plumbline: "14 deg" is in degrees; a pitch is the rise in inches for 12 of run: write 6, 6:12 or 1/4:12
+  and typed straight into the file:
+  refused: plumbline: <tmp>/mm.json: parapet-0024 height: is in "mm", which is metric; this program takes US measurements only ("ft", "in" or "ft-in") and does not convert metric
+  refused: plumbline: <tmp>/furlong.json: parapet-0024 height: is in "furlong", which is not a unit this program knows; it takes "ft", "in" or "ft-in" and reads nothing else as feet
+  refused: plumbline: <tmp>/nounit.json: parapet-0024 height: has no unit; say which it is ("ft", "in" or "ft-in"). A number with no unit is never read as feet
+  PASS: every one refused by name, and the job file is untouched
+
+== 5. A stretch-out in inches against a length in feet, with nobody converting anything ==
+    stretch-out: Copper headwall flashing 24 in
+    = ~ true_length      12 LF
+    = ~ quantity: Copper headwall flashing 24 SF
+  the line's quantity as saved, formula and all:
+    "pl::line_quantities": {
+      "Copper headwall flashing": {
+        "quantity": {
+          "value": 24.0,
+          "unit": "SF",
+          "status": "Assumed",
+          "formula": "true_length × stretch_out ÷ 12",
+          "inputs": [
+            "headwall-0021#pl::measure",
+            "headwall-0021#pl::cost"
+          ]
+        }
+      }
+    }
+  the brief's stretch-outs on the same 12 LF, each typed as the detail gives it:
+    stretch-out 12 in     x 12 LF  =  12 SF
+    stretch-out 8 in      x 12 LF  =  8 SF
+    stretch-out 36 in     x 12 LF  =  36 SF
+    stretch-out 24 in     x 12 LF  =  24 SF
+    stretch-out 19 1/2"   x 12 LF  =  19.5 SF
+    stretch-out 2 ft      x 12 LF  =  24 SF
+  set headwall-0021 stretch_out = 36 in (Known)
+  measures re-derived on: headwall-0021
+  the file diff for stretch-out 24 in -> 36 in:
+  [headwall-0021]
+    - "value": 24.0,
+    + "value": 36.0,
+    - "source": "sample detail 4/A-501"
+    + "source": "sample detail 5/A-501"
+    - "value": 24.0,
+    + "value": 36.0,
+elements with any change: headwall-0021
+  PASS

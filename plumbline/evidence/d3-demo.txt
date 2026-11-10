@@ -1,0 +1,84 @@
+== 0. The condition, as it sits in the job ==
+    condition-0025  Parapet with copper coping  [Condition]
+          applies to: Parapet
+          line: Copper wall flashing = plan_length * height   (price: blank)
+          line: Copper coping cap = plan_length * stretch_out   (stretch-out: blank; waste: blank; ordered by the sheet: blank; price: blank)
+          line: Continuous cleat = plan_length * sides   (sides: 2; price: blank)
+          line: Cleat fasteners = plan_length * sides / spacing   (sides: 2; spacing: blank; price: blank)
+
+== 1. One parapet, one condition, four lines; nothing assumed for them ==
+  parapet-0024 is now "Parapet with copper coping" and has gained 4 cost lines:
+    Copper wall flashing
+    Copper coping cap
+    Continuous cleat
+    Cleat fasteners
+    quantity: Copper wall flashing     unknown
+    quantity: Copper coping cap        unknown
+    to order: Copper coping cap        unknown
+    quantity: Continuous cleat         40 LF
+    quantity: Cleat fasteners          unknown
+  PASS: four lines, each with its formula; three wait on what the detail gives
+
+== 2. Enter what the detail gives, each as it is written ==
+  set parapet-0024 height = 30 in (Known)
+  set parapet-0024 stretch_out = 19 1/2 in (Known)
+  set parapet-0024 spacing = 12 in (Known)
+    quantity: Copper wall flashing     50 SF
+    quantity: Copper coping cap        32.5 SF
+    quantity: Continuous cleat         40 LF
+    quantity: Cleat fasteners          40 EA
+  PASS
+
+== 3. The sheet-metal chain on the coping line, each step with its formula ==
+    with waste: Copper coping cap      unknown
+  set parapet-0024 waste = 10 % (Assumed)
+  set parapet-0024 order = 30 SF/sheet, whole ones (Known)
+    with waste: Copper coping cap      35.75 SF
+    to order: Copper coping cap        2 sheet
+    as saved:  quantity       32.5 SF     Known    = plan_length × stretch_out ÷ 12
+    as saved:  with_waste    35.75 SF     Assumed  = quantity × (1 + waste ÷ 100)
+    as saved:  order           2.0 sheet  Assumed  = with_waste ÷ factor, rounded up to a whole sheet
+  set parapet-0024 order = 1.25 lb/SF (Known)
+    to order: Copper coping cap        44.6875 lb
+    flags:  =   quantity: Copper coping cap 32.5 SF
+    flags:  = ~ with waste: Copper coping cap 35.75 SF
+    flags:  = ~ to order: Copper coping cap 2 sheet
+  set parapet-0024 stretch_out = unknown (Unknown)
+    quantity: Copper coping cap        unknown
+    with waste: Copper coping cap      unknown
+    to order: Copper coping cap        unknown
+  PASS: LF x stretch-out / 12 to SF, plus waste, to sheets or pounds; an Unknown leaves no number after it
+
+== 4. Edit on the line: that line changes and nothing else does ==
+  set parapet-0024 stretch_out = 24 in (Known)
+    quantity: Copper coping cap        40 SF
+    with waste: Copper coping cap      44 SF
+    elements changed besides parapet-0024: none
+    lines on it whose figures changed: Copper coping cap
+  set parapet-0024 quantity = plan_length
+    sides is no longer used by the formula and has been taken off the line
+    quantity: Continuous cleat         20 LF
+    elements changed besides parapet-0024: none
+    lines on it whose figures changed: Continuous cleat
+  set parapet-0024 quantity = plan_length * (height + turn_out)
+    with turn_out = 8 in (Known)
+    quantity: Copper wall flashing     63.3333 SF
+    elements changed besides parapet-0024: none
+    lines on it whose figures changed: Copper wall flashing
+  a formula that does not make sense is refused, and says why:
+    refused: plumbline: parapet-0024 cost line "Copper wall flashing": its quantity "plan_length + face_area" adds what cannot be added: plan_length is a length and face_area is an area
+    refused: plumbline: parapet-0024 cost line "Copper wall flashing": its quantity "plan_length * hieght" uses "hieght", which a Parapet does not have (it has: plan_length, face_area, height) and which is not a value entered on t
+    refused: plumbline: "12" has no unit; say which it is: 25.5 ft, 306 in, or 25' 6". A number with no unit is never read as feet
+  PASS
+
+== 5. The brief's four stretch-outs, each on a line of the sample roof ==
+  eave-0007  stretch-out 12 in     quantity: Copper flashing          40 SF
+  rake-0019  stretch-out 8 in      quantity: Copper flashing          5.4975 SF
+  hip-0012   stretch-out 36 in     quantity: Copper flashing          67.5 SF
+  headwall-0021 stretch-out 24 in     quantity: Copper headwall flashing 24 SF
+  PASS (the arithmetic; the owner's estimate itself is not in refs/, so its reproduction is pending)
+
+== 6. Nobody converted anything ==
+  entered above as written: 30 in, 19 1/2", 12 in, 24 in, 8 in, 36 in, 10%, 30 SF/sheet, 1.25 lb/SF
+  values saved in inches: 10
+  PASS
