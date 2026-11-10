@@ -20,6 +20,14 @@ use std::process::ExitCode;
 use plumbline_world::value::Status;
 use plumbline_world::{file, roof, sample, view};
 
+/// Print a line. A reader that has stopped listening (`| head -1`) is not an error and
+/// must not be a panic, which is what `println!` makes of it.
+macro_rules! say {
+    ($($arg:tt)*) => {{
+        let _ = writeln!(std::io::stdout(), $($arg)*);
+    }};
+}
+
 fn main() -> ExitCode {
     // An argument that is not text is refused, not a panic.
     let mut args: Vec<String> = Vec::new();
@@ -62,7 +70,7 @@ fn run(args: &[String]) -> Result<(), String> {
             let out = args.get(1).ok_or_else(usage)?;
             let mut job = sample::sample();
             std::fs::write(out, file::save(&mut job)).map_err(|e| format!("cannot write {out}: {e}"))?;
-            println!("wrote {out}");
+            say!("wrote {out}");
             Ok(())
         }
         "show" => {
@@ -82,7 +90,7 @@ fn run(args: &[String]) -> Result<(), String> {
             if file::save(&mut job) != text {
                 return Err("the file is not byte-for-byte what saving this job writes".into());
             }
-            println!("{path}: loads, measures match the geometry, and saving it back writes the same bytes");
+            say!("{path}: loads, measures match the geometry, and saving it back writes the same bytes");
             Ok(())
         }
         "lines" => {
@@ -99,14 +107,14 @@ fn run(args: &[String]) -> Result<(), String> {
             };
             let (mut job, report) = read(path)?;
             if !report.stale.is_empty() {
-                println!("WARNING: before this edit, the file's measures did not match its geometry for: {}. They have been recomputed.", report.stale.join(", "));
+                say!("WARNING: before this edit, the file's measures did not match its geometry for: {}. They have been recomputed.", report.stale.join(", "));
             }
             let added = job.apply(element, condition, source)?;
             job.derive();
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
-            println!("{element} is now {:?} and has gained {} cost lines:", job.shown(element, "condition", None).unwrap_or_default(), added.len());
+            say!("{element} is now {:?} and has gained {} cost lines:", job.shown(element, "condition", None).unwrap_or_default(), added.len());
             for d in added {
-                println!("  {d}");
+                say!("  {d}");
             }
             Ok(())
         }
@@ -124,6 +132,9 @@ fn run(args: &[String]) -> Result<(), String> {
                     "--with" => {
                         let pair = it.next().ok_or("--with needs name=value, like --with \"turn_up=8 in\"")?;
                         let (name, typed) = pair.split_once('=').ok_or_else(|| format!("--with {pair:?} is not name=value"))?;
+                        if with.iter().any(|(have, _)| have == name.trim()) {
+                            return Err(format!("--with gives {:?} twice", name.trim()));
+                        }
                         with.push((name.trim().to_string(), typed.trim().to_string()));
                     }
                     "--status" => status = Some(it.next().cloned().ok_or("--status needs a value")?),
@@ -142,11 +153,12 @@ fn run(args: &[String]) -> Result<(), String> {
             let value = if value == "unknown" { None } else { Some(value.as_str()) };
             let (mut job, report) = read(path)?;
             if !report.stale.is_empty() {
-                println!("WARNING: before this edit, the file's measures did not match its geometry for: {}. They have been recomputed.", report.stale.join(", "));
+                say!("WARNING: before this edit, the file's measures did not match its geometry for: {}. They have been recomputed.", report.stale.join(", "));
             }
             if !with.is_empty() && field != "quantity" {
                 return Err("--with goes with a new quantity formula: it gives a value to a name the formula brings in".into());
             }
+            let units_before = job.line_units(element, line.as_deref());
             let dropped = if field == "quantity" {
                 let formula = value.ok_or("a quantity is a formula; it cannot be marked unknown")?;
                 job.set_formula(element, line.as_deref(), formula, &with, status, &source)?
@@ -159,22 +171,31 @@ fn run(args: &[String]) -> Result<(), String> {
             // Reported back as the job now holds it, in the unit it was entered in.
             let shown = job.shown(element, field, line.as_deref()).unwrap_or_else(|| value.unwrap_or("unknown").to_string());
             if field == "quantity" {
-                println!("set {element} {field} = {shown}");
+                say!("set {element} {field} = {shown}");
                 for (name, _) in &with {
-                    println!("  with {name} = {} ({status:?})", job.shown(element, name, line.as_deref()).unwrap_or_default());
+                    say!("  with {name} = {} ({status:?})", job.shown(element, name, line.as_deref()).unwrap_or_default());
                 }
                 for name in &dropped {
-                    println!("  {name} is no longer used by the formula and has been taken off the line");
+                    say!("  {name} is no longer used by the formula and has been taken off the line");
                 }
             } else {
-                println!("set {element} {field} = {shown} ({status:?})");
+                say!("set {element} {field} = {shown} ({status:?})");
+            }
+            // A line that now comes out in another unit, or is priced by another, says so.
+            if let (Some((was, was_priced)), Some((now, now_priced))) = (units_before, job.line_units(element, line.as_deref())) {
+                if was != now {
+                    say!("  the line now comes out in {now}; it came out in {was}");
+                }
+                if was_priced != now_priced {
+                    say!("  it is now priced in {now_priced}; it was priced in {was_priced}");
+                }
             }
             if changed.is_empty() && !report.stale.is_empty() {
-                println!("no measure changed beyond those recomputed above");
+                say!("no measure changed beyond those recomputed above");
             } else if changed.is_empty() {
-                println!("no measure changed");
+                say!("no measure changed");
             } else {
-                println!("measures re-derived on: {}", changed.join(", "));
+                say!("measures re-derived on: {}", changed.join(", "));
             }
             Ok(())
         }

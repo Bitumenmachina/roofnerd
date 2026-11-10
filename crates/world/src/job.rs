@@ -284,7 +284,15 @@ impl Job {
                         let how = format!("write it as a number and what per what, like 30 {unit}/sheet or 1.25 lb/{unit}");
                         let (number, per) = text.trim().split_once(' ').ok_or_else(|| format!("{text:?} is not an order conversion; {how}"))?;
                         let factor = units::parse_number(number)?;
-                        let per = per.trim();
+                        // An optional last word says whether whole ones are bought.
+                        let (per, said) = match per.trim().rsplit_once(' ') {
+                            Some((rest, "whole")) => (rest.trim(), Some(true)),
+                            Some((rest, "exact")) => (rest.trim(), Some(false)),
+                            _ => (per.trim(), None),
+                        };
+                        if per.chars().any(char::is_whitespace) {
+                            return Err(format!("{text:?} is not an order conversion; {how}, with whole or exact after it if it needs saying"));
+                        }
                         let (top, bottom) = per.split_once('/').ok_or_else(|| format!("{text:?} is not an order conversion; {how}"))?;
                         let (order_unit, round_up) = if top == unit && bottom != unit {
                             (bottom, true)
@@ -295,7 +303,7 @@ impl Job {
                         };
                         // Buying whole ones is the rule for a package (a sheet, a box) and
                         // not for a weight; a line that already says keeps what it says.
-                        let round_up = l.order.as_ref().filter(|o| o.unit == order_unit).map(|o| o.round_up).unwrap_or(round_up);
+                        let round_up = said.or(l.order.as_ref().filter(|o| o.unit == order_unit).map(|o| o.round_up)).unwrap_or(round_up);
                         l.order = Some(Order { unit: order_unit.to_string(), factor: Val { value: Some(factor), unit: per.to_string(), status, source: source.into() }, round_up });
                     }
                 }
@@ -357,11 +365,31 @@ impl Job {
             }
         };
         check::cost(path, kind, &new)?;
+        // An element is one condition. A second recipe's lines would sit under the first
+        // one's name, or the first one's name would be written over.
+        if let Some(have) = self.world.get::<Condition>(e).and_then(|c| c.0.value.clone()) {
+            if have != name {
+                return Err(format!("{path} is already {have:?}; applying {name:?} would put its lines under another condition's name. Mark its condition unknown first if this replaces it"));
+            }
+        }
         let assigned = Condition(Val { value: Some(name.clone()), unit: String::new(), status: Status::Known, source: source.into() });
         check::condition(path, &assigned)?;
         let added = recipe.cost.lines.iter().map(|l| l.description.clone()).collect();
         self.world.entity_mut(e).insert((new, assigned));
         Ok(added)
+    }
+
+    /// The unit a cost line comes out in, and the unit it is priced in.
+    pub fn line_units(&mut self, path: &str, line: Option<&str>) -> Option<(String, String)> {
+        let e = self.find(path)?;
+        let kind = *self.world.get::<Kind>(e)?;
+        let cost = self.world.get::<Cost>(e)?;
+        let l = match line {
+            Some(d) => cost.lines.iter().find(|l| l.description == d)?,
+            None => cost.lines.first()?,
+        };
+        let read = lines::read(&lines::On { kind, measure: None, height: None }, l).ok()?;
+        Some((read.unit.to_string(), l.unit_cost.unit.clone()))
     }
 
     /// One entered value as it would be shown, for reporting an edit back: the text in

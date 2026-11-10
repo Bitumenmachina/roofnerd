@@ -353,9 +353,10 @@ Q11).
   refused first for the planes disagreeing, and recorded only the first plane.
 * **Gaps under a line add up.** The total uncovered length has to stay inside the
   tolerance, not each gap.
-* **A key a slip away from one of ours is refused** (edit distance of two, ignoring
-  capitals and spaces). The cost: another program cannot use a key that close to one of
-  ours.
+* **A key that is a mistyping of one of ours is refused.** First done as "within two
+  edits of one of ours", which the fifth judgment showed refusing `ex::cost` and `my::job`
+  and calling them ours. Now: under our prefix however it is spelled, or a prefix one
+  letter off with one of our names exactly.
 * **A description may not hold a character nobody can see.** Look-alike letters from
   other alphabets are not caught; that would take a table of them (SPEC.md section 7).
 * **In `lines`, two edges share a stretch only between corners**: an end of one that sits
@@ -391,10 +392,13 @@ copied. The calls:
   element then carries its own lines, which is the brief's "editable on the line", and the
   recipe is in the job file where it can be read. The cost: a recipe changed later does
   not reach elements it was applied to before.
-* **A recipe leaves the stretch-out, the spacing, the waste and the sheet size blank.**
-  They are the detail's and the supplier's. A typical value in the recipe would be an
-  invented number one keystroke from a price. The only value the parapet recipe states is
-  `sides: 2`, which is the brief's "cleat on both sides".
+* **The sample recipes leave the stretch-out, the spacing, the waste and the sheet size
+  blank.** They are the detail's and the supplier's. A typical value would be an invented
+  number one keystroke from a price. The only value the parapet recipe states is
+  `sides: 2`, which is the brief's "cleat on both sides". **A stretch-out in a recipe is
+  refused outright**; other values a recipe states are allowed, are copied with their
+  status and source, and are shown where the recipe is read (fifth judgment: they were
+  allowed and hidden, against what this document said).
 * **Waste is one percentage per line.** The earlier program keeps a material's waste and a
   condition's waste apart. There is no material library here yet to hold the first.
 * **The order conversion carries its direction in its unit**: `SF/sheet` divides,
@@ -402,3 +406,18 @@ copied. The calls:
   is bought whole unless the line says otherwise; a weight is not rounded.
 * **Each step is worked from the step before as shown** (four decimals), so the page can
   be followed by hand.
+
+### 22. Calls made fixing what the fifth judgment found
+* **A count is tested for being below zero before it is rounded up.** Rounding first
+  turned -40 fasteners into 0, Known.
+* **A line's length is not decided until every plane it names has been looked at.** Call
+  20's rule still lost its evidence when the line was refused early for another plane.
+* **An element is one condition.** Applying a second recipe to an element that already
+  carries another condition's name is refused; it used to write over the name.
+* **A formula holds at most 200 tokens.** A 2,500-term one ran every command out of stack.
+* **A change in the unit a line comes out in, or is priced in, is said when it happens.**
+  `--with spacing=12` (no unit) makes the spacing a plain number and the line a length
+  instead of a count. It cannot be refused, because a new name's kind is whatever is
+  typed; it is reported.
+* **Every command tolerates a reader that stops listening.** `set ... | head -1` was a
+  panic.

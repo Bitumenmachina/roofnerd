@@ -11,10 +11,10 @@ run again and each gave what this file said they gave.
 | # | Deliverable | State |
 |---|---|---|
 | D0 | Landscape decision | Demonstrated, with limits below. Judged twice. |
-| D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged four times. Every judgment has found a new way to a wrong figure marked Known, each next to the last fix. All found are fixed. **The fourth round's fixes have not been judged.** |
+| D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged five times. Every judgment has found a new way to a wrong figure marked Known, each next to the last fix. All found are fixed. **The fifth round's fixes have not been judged.** |
 | D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged twice: the five demonstrations held both times; two entry forms misread in the first are fixed and held in the second. |
 | D2 | 3D roof slice | **Not demonstrated; nothing of its demonstration runs.** One piece of groundwork is built and tested (lines read off planes). The roof solver waits on the BIMCraft source (Q10) and the window on the toolchain and a display (Q4). |
-| D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). **Not yet judged.** |
+| D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
 | D4 | Macro to micro | Not started. How its demonstration will be run is written at the end of this file. |
 | D5 | Estimate sheet and money | Not started. Reference estimate missing (Q5). |
 | D6 | Interchange and reports | Not started. |
@@ -80,7 +80,7 @@ element. Changing one pitch changes, in a file diff, only that entity and the co
 derived from it. Assumed and Unknown values display as flagged.
 
 **How it is run:** `demos/d1.sh`. It uses the built-in sample job, which is made up.
-`cargo test` runs 54 checks on the same model.
+`cargo test` runs 59 checks on the same model.
 
 The figures below are as rerun after the units amendment and D3. Those added to the
 sample job one sheet-metal cost line on the porch headwall and two conditions as recipes,
@@ -120,7 +120,7 @@ still touches the same five entries and no others.
 * Hip: 15 over and 15 up on plan = 21.2132 LF; climbs 7.5 ft; √(450 + 56.25) = 22.5 LF.
 * Porch rake: 8 ft run at 3:12 climbs 2 ft; √68 = 8.2462 LF.
 
-**`cargo test`: 54 passed, 0 failed** (53 on the model, 1 on the command line).
+**`cargo test`: 59 passed, 0 failed** (57 on the model, 2 on the command line).
 
 **What remains**
 
@@ -136,13 +136,13 @@ still touches the same five entries and no others.
   be edited from the command line. Outlines, eave lines, line ends and cost lines are
   edited in the file.
 * The limits listed in SPEC.md section 7, in particular the 0.01 ft fit tolerance (Q9).
-* **Rule 4 has been broken by a judge four times**, each time after the previous round's
+* **Rule 4 has been broken by a judge five times**, each time after the previous round's
   fixes. Each judgment found entries that produced a wrong figure marked Known. Treat
-  "nothing wrong is shown as Known" as the model's intent backed by 54 tests and four
+  "nothing wrong is shown as Known" as the model's intent backed by 59 tests and five
   attacks, not as proven. Every attack so far has found a case next to the last fix, the
-  fourth round's fixes have not been attacked, and the cases are getting more contrived
-  (the fourth needed a line on two planes with one eave wrong, or a hundred hairline
-  notches) but have not stopped.
+  fifth round's fixes have not been attacked, and the wrong-eave case in particular has
+  now been reopened three times, each time by a path that returned before the evidence
+  was looked at. The cases are getting more contrived but have not stopped.
 * Planes are checked one at a time and each line against the planes it names. Nothing
   checks planes against each other (overlaps, gaps).
 * **Process note:** the brief asks that each demonstration be written down before the
@@ -347,7 +347,47 @@ with a valley, mixed inches and feet, and three planes on one line. No panic or 
 check; corner snapping to an unrelated plane's corner. Suspected and not reproduced: a
 wrong merge of two found lines.
 
-**These fourth-round fixes have not been judged.**
+These fourth-round fixes were judged in the fifth judgment, below.
+
+### Fifth judgment: D3's figures held; a negative count was a silent zero; J4-1 reopened again
+
+A fresh agent (Opus), in its own clone, judged D3 and the fourth round's fixes. For D3 it
+reran the demonstration, then ran it again on a parapet and three recipes of its own: a
+diagonal parapet 32.5959 LF long entered in inches, 3' 4 1/2" high, with a coping at
+1' 7 1/2" and screws by `(plan_length - 2 * end_gap) * sides / spacing`; a rake recipe;
+a roof-plane recipe ordering shingles by the bundle and underlayment by the roll.
+
+**What held.** Every figure stated for D3 above, and every step of the judge's own lines
+worked by hand (120.8765 SF, 52.9683 SF, 56.9409 with waste, 3 sheets, 65.1918 LF, 49
+screws, and the rest). Twenty-five formulas chosen to trip the bracketing of the worked
+formula: each saved text gives its figure. Dimension refusals. Unknown anywhere leaves no
+number after it, never a zero. Ten sequences of edits trying to leave a price in one unit
+on a quantity in another: none got through. Forged or missing line figures in the file.
+J4-2, J4-7 and J4-8, each attacked again.
+
+**What it found, and what was done.** Each fix was rerun against the judge's own files.
+
+| # | What the fifth judge found | What was done | Regression test |
+|---|---|---|---|
+| J5-1 | **A silent zero, Known.** A count formula that comes out below zero (a spacing typed `-12 in`, or a formula that takes off more than there is) was rounded "up" to `0 EA` and shown Known. The same formula in LF was refused | Below zero is refused before rounding. A count above zero but under a billionth is refused as too small to tell from zero. A count with waste is rounded up too | `a_count_below_zero_is_refused_not_rounded_up_to_nothing` |
+| J5-2 | **Wrong figure, Known. J4-1 reopened.** The evidence of a wrong eave was still lost when the contradicting line was refused early for its other plane (no pitch, not in the job, or traced 0.05 ft off) | Nothing about a line is decided until every plane it names has been looked at | `a_line_refused_for_one_plane_is_still_evidence_about_another` |
+| J5-3 | **Lost without a word.** Applying a second recipe wrote over the element's condition name and its source | Refused: an element is one condition | `an_element_is_one_condition_and_a_recipe_carries_no_stretch_out` |
+| J5-4 | SPEC and DECISIONS said a recipe leaves stretch-out, waste and prices blank. Nothing enforced it, and `show` hid a recipe's stated values | A stretch-out in a recipe is refused. Other stated values are allowed, copied with their status and source, and shown. Both documents corrected | same |
+| J5-5 | **Crash.** A formula of about 2,500 terms ran every command out of stack | A formula holds at most 200 tokens | `a_formula_too_long_to_read_is_refused_and_a_factor_is_not_a_count` |
+| J5-6 | `--with spacing=12` (no unit) made the spacing a plain number and the fastener line a length, with no message | Cannot be refused, since a new name is whatever is typed. A change in what a line comes out in, or is priced in, is now said | |
+| J5-7 | J4-9's fix refused other programs' keys (`ex::cost`, `my::job`) and called them this program's | Narrowed to real mistypings of this program's keys; the message says what is so | same as J5-5 |
+| smaller | The minus in a saved formula could not be typed back; `slope_factor * 1` gave `2 EA`; `--with` twice for one name; a count with waste showed `53.9 EA`; an order unit with a space in it; no way to say a divide-form order is not rounded; `lines` said "no edge of any plane" for a line on a plane it had left out; this file said none of an applied recipe's values is Assumed when its cost code is | Each fixed | same, and `a_count_below_zero…` |
+| found while rerunning | **Panic.** `set` and `apply` crashed when their output was piped to a reader that stopped (`| head -1`), which the first judgment had found on `show` | Every command tolerates it | `a_reader_that_stops_listening_is_not_a_panic` |
+
+**Left as found:** a line's figure is worked from the measures as shown, so it can differ
+from the same measure in its last place (`face_area` 110.0111 SF beside a
+`plan_length * height` line of 110.0112 SF). SPEC.md section 5.4 says so. A new name
+cannot be brought into a formula as Unknown.
+
+**What the fifth judge did not do:** whether a recipe edited after being applied partly
+reaches the element; a Condition element carrying cost lines of its own; a dormer.
+
+**These fifth-round fixes have not been judged.**
 
 ---
 
@@ -480,7 +520,8 @@ plan above was written first; two things changed from it while building, both no
    (`plan_length * height`), coping cap (`plan_length * stretch_out`), cleat
    (`plan_length * sides`), fasteners (`plan_length * sides / spacing`). With the height
    not on the plan and nothing else entered, the flashing, the coping and the fasteners
-   show `unknown`, and none of the new values is Assumed. The cleat shows 40 LF: it needs
+   show `unknown`, and none of the new values is Assumed (the cost code the recipe
+   brings is Assumed, because the scheme waits on Q1). The cleat shows 40 LF: it needs
    only the length and the recipe's own `sides: 2`, which is the brief's "both sides".
 2. *Entered as the detail gives it.* Height `30 in`, coping stretch-out `19 1/2"`, spacing
    `12 in`. Flashing 50 SF (20 × 30 ÷ 12). Coping 32.5 SF (20 × 19.5 ÷ 12). Cleat 40 LF.
@@ -515,7 +556,7 @@ values and recipes that do not make sense, each refused with the stated reason.
 
 **What remains**
 
-* **Not judged.**
+* **Judged once** (fifth judgment, below); its fixes are not judged.
 * **The owner's copper estimate is not reproduced.** There is no estimate in `refs/`
   (Q5). Step 5 proves the arithmetic on made-up lengths. "With any difference explained"
   cannot start until the estimate is there.

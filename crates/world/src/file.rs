@@ -258,11 +258,10 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                 K_LINE_QUANTITIES => {
                     file_line_quantities.insert(path.clone(), parse(&path, &k, v)?);
                 }
-                _ if k.to_lowercase().starts_with("pl::") || near_miss(&k).is_some() => {
-                    let near = near_miss(&k);
+                _ if near_miss(&k).is_some() => {
+                    let near = near_miss(&k).unwrap_or(K_CLASS);
                     return Err(format!(
-                        "{path} carries {k:?}, which is under this program's own prefix but is not one of its components{}; a value under a key the program does not read would sit in the file unused",
-                        near.map(|n| format!(" (did you mean {n:?}?)")).unwrap_or_default()
+                        "{path} carries {k:?}, which is not one of this program's components but is spelled like one (did you mean {near:?}?); a value under a key the program does not read would sit in the file unused"
                     ));
                 }
                 _ => {
@@ -307,26 +306,43 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
     Ok((job, report))
 }
 
-/// One of this program's keys that `key` is a slip away from: the same but for capitals,
-/// spaces, or one or two characters (`pI::pitch`, `pl;;pitch`, ` pl::pitch`). An attribute
-/// that close to one of ours is a mistyped one of ours, not another program's.
+/// One of this program's keys that `key` is a mistyping of, if it is one. Two ways:
+/// the key is under our prefix, however the prefix and its colons are spelled (`PL::`,
+/// `pl:`, ` pl ::`, `pl;;`), and is not one of our components; or its prefix is one
+/// letter off ours (`pI::`, `p1::`) and the rest is exactly one of our names. Another
+/// program's key (`ex::cost`, `ifc::class`) is neither, and is kept.
 fn near_miss(key: &str) -> Option<&'static str> {
-    let squeezed: Vec<char> = key.chars().filter(|c| !c.is_whitespace()).flat_map(|c| c.to_lowercase()).collect();
-    KNOWN_KEYS.iter().copied().find(|known| {
-        let k: Vec<char> = known.chars().collect();
-        // Edit distance, small strings.
-        let mut row: Vec<usize> = (0..=k.len()).collect();
-        for (i, a) in squeezed.iter().enumerate() {
-            let mut prev = row[0];
-            row[0] = i + 1;
-            for (j, b) in k.iter().enumerate() {
-                let cost = if a == b { prev } else { prev + 1 };
-                prev = row[j + 1];
-                row[j + 1] = cost.min(row[j] + 1).min(prev + 1);
+    let squeezed: String = key.chars().filter(|c| !c.is_whitespace()).flat_map(|c| c.to_lowercase()).map(|c| if matches!(c, ';' | '\u{FF1A}' | '\u{FF1B}') { ':' } else { c }).collect();
+    if KNOWN_KEYS.contains(&key) {
+        return None;
+    }
+    let (prefix, rest) = squeezed.split_once(':')?;
+    let name = rest.trim_start_matches(':');
+    let nearest = |name: &str| {
+        // The known key whose name is fewest edits from this one.
+        KNOWN_KEYS.iter().copied().min_by_key(|known| {
+            let k: Vec<char> = known.trim_start_matches("pl::").chars().collect();
+            let mut row: Vec<usize> = (0..=k.len()).collect();
+            for (i, a) in name.chars().enumerate() {
+                let mut prev = row[0];
+                row[0] = i + 1;
+                for (j, b) in k.iter().enumerate() {
+                    let cost = if a == *b { prev } else { prev + 1 };
+                    prev = row[j + 1];
+                    row[j + 1] = cost.min(row[j] + 1).min(prev + 1);
+                }
             }
-        }
-        row[k.len()] <= 2
-    })
+            row[k.len()]
+        })
+    };
+    if prefix == "pl" {
+        return nearest(name);
+    }
+    let one_off = prefix.chars().count() == 2 && prefix.chars().zip("pl".chars()).filter(|(a, b)| a != b).count() == 1 && prefix.starts_with('p');
+    if one_off && KNOWN_KEYS.iter().any(|known| known.trim_start_matches("pl::") == name) {
+        return nearest(name);
+    }
+    None
 }
 
 /// JSON read strictly: the same key twice in one object is an error, anywhere in the

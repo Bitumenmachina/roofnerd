@@ -338,44 +338,51 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
     }
     let refuse = |why: String| Derived::refused("LF", formula, &inputs, &why);
 
+    // Nothing below returns until every plane the line names has been looked at. The
+    // first thing wrong with the line is what it will say, but a line that is refused for
+    // one plane is still evidence about another, and that evidence must not be lost.
+    let mut first_fault: Option<String> = None;
     let (fewest, most) = kind.planes_allowed();
     let n = run.planes.len();
     if n < fewest || n > most {
         let want = if fewest == most { format!("{fewest}") } else { format!("{fewest} or {most}") };
-        return refuse(format!("a {kind:?} lies on {want} plane(s); this one names {n}"));
+        first_fault.get_or_insert(format!("a {kind:?} lies on {want} plane(s); this one names {n}"));
     }
-    let mut seen = Vec::new();
-    for p in &run.planes {
-        if seen.contains(&p) {
-            return refuse(format!("names plane {p} twice"));
-        }
-        seen.push(p);
-    }
-
     let mut statuses = vec![run.ends.status];
     // For each plane: its path and the height it gives each end of the line.
     let mut heights: Vec<(&String, [f64; 2])> = Vec::new();
+    let mut seen: Vec<&String> = Vec::new();
     for p in &run.planes {
+        if seen.contains(&p) {
+            first_fault.get_or_insert(format!("names plane {p} twice"));
+            continue;
+        }
+        seen.push(p);
         let Some(g) = planes.get(p) else {
-            return refuse(format!("names plane {p}, which is not in the job"));
+            first_fault.get_or_insert(format!("names plane {p}, which is not in the job"));
+            continue;
         };
         if !g.kind.is_area() {
-            return refuse(format!("names {p} as a plane, but {p} is a {:?}", g.kind));
+            first_fault.get_or_insert(format!("names {p} as a plane, but {p} is a {:?}", g.kind));
+            continue;
         }
         if let Some(lacks) = g.lacks {
-            return refuse(format!("plane {p} has {lacks}"));
+            first_fault.get_or_insert(format!("plane {p} has {lacks}"));
+            continue;
         }
         statuses.push(g.status);
         let (Some([a, b]), Some(pts)) = (run.ends_ft(), g.points.as_ref()) else { continue };
         if let Err((t, off)) = geom::runs_along_outline(a, b, pts, FIT_TOLERANCE_FT) {
+            // A line that is not on this plane's outline says nothing about this plane.
             let whereabouts = if t == 0.0 { "its start is".to_string() } else if t == 1.0 { "its end is".to_string() } else { format!("{:.0}% of the way along it is", t * 100.0) };
-            return refuse(format!("the line does not run along the outline of plane {p}: {whereabouts} {off:.4} ft off it"));
+            first_fault.get_or_insert(format!("the line does not run along the outline of plane {p}: {whereabouts} {off:.4} ft off it"));
+            continue;
         }
         if let (Some(za), Some(zb)) = (g.height_at(a), g.height_at(b)) {
             heights.push((p, [za, zb]));
         }
     }
-    let all_given = heights.len() == n;
+    let all_given = first_fault.is_none() && heights.len() == n;
     // What the kind of line says about its slope, on every plane it names. This is what
     // catches a plane whose eave was entered on the wrong edge: its rakes come out level
     // and its eave climbs. It is asked of each plane before the planes are compared with
@@ -405,6 +412,9 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
             shows_wrong_eave.push((*p).clone());
             kind_fault.get_or_insert(fault);
         }
+    }
+    if let Some(fault) = first_fault {
+        return refuse(fault);
     }
     if all_given {
         for (end, label) in [(0, "start"), (1, "end")] {

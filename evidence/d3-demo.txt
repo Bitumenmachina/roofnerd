@@ -1,10 +1,10 @@
 == 0. The condition, as it sits in the job ==
     condition-0025  Parapet with copper coping  [Condition]
           applies to: Parapet
-          line: Copper wall flashing = plan_length * height
-          line: Copper coping cap = plan_length * stretch_out   (takes a stretch-out, waste, ordered by the sheet)
-          line: Continuous cleat = plan_length * sides   (takes sides)
-          line: Cleat fasteners = plan_length * sides / spacing   (takes sides, spacing)
+          line: Copper wall flashing = plan_length * height   (price: blank)
+          line: Copper coping cap = plan_length * stretch_out   (stretch-out: blank; waste: blank; ordered by the sheet: blank; price: blank)
+          line: Continuous cleat = plan_length * sides   (sides: 2; price: blank)
+          line: Cleat fasteners = plan_length * sides / spacing   (sides: 2; spacing: blank; price: blank)
 
 == 1. One parapet, one condition, four lines; nothing assumed for them ==
   parapet-0024 is now "Parapet with copper coping" and has gained 4 cost lines:

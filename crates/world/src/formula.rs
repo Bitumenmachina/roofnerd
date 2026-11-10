@@ -40,8 +40,13 @@ fn tokens(text: &str) -> Result<Vec<Tok>, String> {
         let c = chars[i];
         match c {
             ' ' | '\t' => i += 1,
-            '+' | '-' => {
-                out.push(Tok::Op(c));
+            '+' => {
+                out.push(Tok::Op('+'));
+                i += 1;
+            }
+            // The minus a worked formula is written with reads back as a minus.
+            '-' | '\u{2212}' => {
+                out.push(Tok::Op('-'));
                 i += 1;
             }
             '*' | '\u{00D7}' => {
@@ -87,6 +92,9 @@ fn tokens(text: &str) -> Result<Vec<Tok>, String> {
     }
     Ok(out)
 }
+
+/// The most names, numbers, signs and brackets a formula may hold.
+pub const MAX_TOKENS: usize = 200;
 
 struct Parser {
     toks: Vec<Tok>,
@@ -157,7 +165,13 @@ pub fn parse(text: &str) -> Result<Expr, String> {
     if text.trim().is_empty() {
         return Err("is blank".into());
     }
-    let mut p = Parser { toks: tokens(text)?, at: 0, depth: 0 };
+    let toks = tokens(text)?;
+    // A line's formula is something a person reads on the line. Past this it is not, and
+    // working it would go deeper than the program can.
+    if toks.len() > MAX_TOKENS {
+        return Err(format!("is {} names, numbers and signs long; a line's formula holds at most {MAX_TOKENS}", toks.len()));
+    }
+    let mut p = Parser { toks, at: 0, depth: 0 };
     let expr = p.sum()?;
     match p.peek() {
         None => Ok(expr),

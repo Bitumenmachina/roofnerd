@@ -263,7 +263,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
             }
         }
         if let Some(o) = &line.order {
-            if o.unit.trim().is_empty() || o.unit != o.unit.trim() || o.unit.contains('/') || o.unit.contains('$') {
+            if o.unit.is_empty() || o.unit.chars().any(char::is_whitespace) || o.unit.contains('/') || o.unit.contains('$') {
                 return Err(format!("{what}: its order unit {:?} is not a usable name for what is bought (sheet, lb, box)", o.unit));
             }
             lines::order_multiplies(o, read.unit).map_err(|why| format!("{what}: {why}"))?;
@@ -302,6 +302,12 @@ pub fn recipe(path: &str, kind: Kind, t: &Recipe) -> Result<(), String> {
             return Err(format!("{path}: names {k:?} twice in what it applies to"));
         }
         cost(&format!("{path} (applied to a {k:?})"), *k, &t.cost)?;
+    }
+    // The stretch-out belongs to the detail, so a recipe never carries one. Anything else
+    // a recipe states (a number of sides, a waste, a price) goes onto the element with the
+    // recipe's status and source, where it can be seen.
+    if let Some(line) = t.cost.lines.iter().find(|l| l.stretch_out.as_ref().is_some_and(|so| so.value.is_some())) {
+        return Err(format!("{path} recipe line {:?}: carries a stretch-out. A stretch-out belongs to the detail it is bent for, not to a recipe; leave it Unknown here and enter it on the element", line.description));
     }
     if t.cost.lines.is_empty() {
         return Err(format!("{path}: the condition has no lines; applying it would do nothing"));

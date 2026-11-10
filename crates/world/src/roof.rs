@@ -419,8 +419,13 @@ pub fn compare(job: &mut Job, found: &Found) -> Comparison {
         }
     }
     // Then say what is wrong with each of the rest.
+    let placed: Vec<String> = solid_planes(job).0.into_iter().map(|p| p.path).collect();
     for (ei, en) in entered.iter().enumerate() {
         if matched[ei] {
+            continue;
+        }
+        if let Some(out_of_it) = en.planes.iter().find(|p| !placed.contains(p)) {
+            out.entered_only.push(format!("{} ({:?}) names {out_of_it}, which could not be placed (see the planes left out), so nothing is said about this line", en.path, en.kind));
             continue;
         }
         let Some(ends) = en.ends else {

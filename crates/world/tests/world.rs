@@ -1065,7 +1065,7 @@ fn nothing_is_silently_zero_or_silently_unread() {
         attrs(v, "plane-0017")["pl::Pitch"] = pitch;
     }));
     assert!(e.contains("\"pl::Pitch\"") && e.contains("did you mean \"pl::pitch\""), "{e}");
-    assert!(err(edit(&text, |v| attrs(v, "plane-0017")["pl::slope"] = 3.into())).contains("not one of its components"));
+    assert!(err(edit(&text, |v| attrs(v, "plane-0017")["pl::slope"] = 3.into())).contains("not one of this program's components"));
     // Another program's attributes are still kept.
     assert!(load(&edit(&text, |v| attrs(v, "plane-0017")["other::Pitch"] = 3.into())).is_ok());
     // Two cost lines that differ only in capitals or spacing are one line entered twice.
@@ -1533,4 +1533,132 @@ fn lines_says_what_is_so_about_overlaps_steps_and_lines_entered_twice() {
     assert!(cmp.entered_only.iter().any(|e| e.contains("entered twice")));
     assert!(cmp.entered_only.iter().any(|e| e.contains("covers only part of the Eave")));
     assert!(!cmp.entered_only.iter().any(|e| e.contains("no edge of any plane runs there")));
+}
+
+// ---- Regression checks for what the fifth independent judgment found ----
+
+#[test]
+fn a_count_below_zero_is_refused_not_rounded_up_to_nothing() {
+    let mut job = parapet_job();
+    // A spacing typed with a minus: 20 x 2 / (-12 in / 12) = -40. Not zero fasteners.
+    job.set_on_line("parapet-0024", "spacing", Some("Cleat fasteners"), Some("-12 in"), Status::Known, "typo").unwrap();
+    job.derive();
+    let f = figures(&mut job, "parapet-0024", "Cleat fasteners").quantity;
+    assert_eq!((f.value, f.status), (None, Status::Unknown));
+    assert!(f.note.contains("below zero"), "{}", f.note);
+    // The same without a typo: a formula that takes off more than there is.
+    // (20 - 2 x 17) x 2 / (16 in / 12) = -21.
+    job.set_formula("parapet-0024", Some("Cleat fasteners"), "(plan_length - 2 * end_gap) * sides / spacing", &[("end_gap".to_string(), "17 ft".to_string()), ("spacing".to_string(), "16 in".to_string())], Status::Known, "x").unwrap();
+    job.derive();
+    let f = figures(&mut job, "parapet-0024", "Cleat fasteners").quantity;
+    assert_eq!(f.value, None);
+    assert!(f.note.contains("below zero"), "{}", f.note);
+    // With a 3 in gap each end: (20 - 0.5) x 2 / 1.3333 = 29.25, so 30.
+    job.set_on_line("parapet-0024", "end_gap", Some("Cleat fasteners"), Some("3 in"), Status::Known, "x").unwrap();
+    job.derive();
+    assert_eq!(figures(&mut job, "parapet-0024", "Cleat fasteners").quantity.value, Some(30.0));
+    // A count too small to tell from zero is neither zero nor one.
+    job.set_formula("parapet-0024", Some("Cleat fasteners"), "plan_length / plan_length * 0.0000000001", &[], Status::Known, "x").unwrap();
+    job.derive();
+    let f = figures(&mut job, "parapet-0024", "Cleat fasteners").quantity;
+    assert_eq!(f.value, None);
+    assert!(f.note.contains("too small to tell from zero"), "{}", f.note);
+    // An exact count is not pushed up by a crumb, and a real zero is zero.
+    job.set_formula("parapet-0024", Some("Cleat fasteners"), "plan_length * 0.1 * 3 / 0.3 / plan_length", &[], Status::Known, "x").unwrap();
+    job.derive();
+    assert_eq!(figures(&mut job, "parapet-0024", "Cleat fasteners").quantity.value, Some(1.0));
+    job.set_formula("parapet-0024", Some("Cleat fasteners"), "(plan_length - plan_length) / plan_length", &[], Status::Known, "x").unwrap();
+    job.derive();
+    assert_eq!(figures(&mut job, "parapet-0024", "Cleat fasteners").quantity.value, Some(0.0));
+    // A count with waste on it is still a count: 40 fasteners + 5 percent = 42.
+    job.set_formula("parapet-0024", Some("Cleat fasteners"), "plan_length * sides / spacing", &[("sides".to_string(), "2".to_string()), ("spacing".to_string(), "12 in".to_string())], Status::Known, "x").unwrap();
+    job.set_on_line("parapet-0024", "waste", Some("Cleat fasteners"), Some("5"), Status::Known, "x").unwrap();
+    job.derive();
+    let f = figures(&mut job, "parapet-0024", "Cleat fasteners");
+    assert_eq!((f.quantity.value, f.with_waste.unwrap().value), (Some(40.0), Some(42.0)));
+}
+
+#[test]
+fn a_line_refused_for_one_plane_is_still_evidence_about_another() {
+    // The roof of the fourth judgment's case: the south plane's eave on the wrong edge,
+    // the ridge naming both planes. Here the ridge is refused for the north plane before
+    // its slope on the south plane is looked at: the north plane's ridge edge is traced
+    // 0.05 ft off. The south plane's rake still loses its wrong length, whichever plane
+    // the ridge names first.
+    let south = (vec![[0.0, 0.0], [30.0, 0.0], [30.0, 15.0], [5.0, 15.0]], [[30.0, 0.0], [30.0, 15.0]]);
+    let north = (vec![[0.0, 30.0], [30.0, 30.0], [30.0, 15.05], [5.0, 15.05]], [[0.0, 30.0], [30.0, 30.0]]);
+    for order in [[0usize, 1], [1, 0]] {
+        let lines: [(Kind, [P2; 2], &[usize]); 2] = [(Kind::Rake, [[0.0, 0.0], [5.0, 15.0]], &[0]), (Kind::Ridge, [[5.0, 15.0], [30.0, 15.0]], &order)];
+        let mut job = roof_job(&[south.clone(), north.clone()], &lines).unwrap();
+        assert!(length_of(&mut job, "line-1").value.is_none());
+        let rake = length_of(&mut job, "line-0");
+        assert_eq!(rake.value, None, "{order:?}");
+        assert!(rake.note.contains("eave entered on the wrong edge"), "{}", rake.note);
+    }
+    // And when the other plane named does not exist at all.
+    let mut job = roof_job(&[south.clone()], &[(Kind::Rake, [[0.0, 0.0], [5.0, 15.0]], &[0]), (Kind::Ridge, [[5.0, 15.0], [30.0, 15.0]], &[0])]).unwrap();
+    let text = edit(&save(&mut job), |v| attrs(v, "ridge-0004")["pl::run"]["planes"] = serde_json::json!(["plane-9999", "plane-0002"]));
+    let (mut job, _) = load(&text).unwrap();
+    assert!(measure(&mut job, "ridge-0004", "true_length").note.contains("not in the job"));
+    assert_eq!(measure(&mut job, "rake-0003", "true_length").value, None);
+}
+
+#[test]
+fn an_element_is_one_condition_and_a_recipe_carries_no_stretch_out() {
+    // The south plane is already "Standing seam copper, 16 oz". A second condition is not
+    // written over it.
+    let text = save(&mut sample());
+    let with_recipe = edit(&text, |v| {
+        let mut recipe = attrs(v, "condition-0026").clone();
+        recipe["pl::recipe"]["applies_to"] = serde_json::json!(["RoofPlane"]);
+        recipe["pl::recipe"]["cost"]["lines"] = serde_json::json!([{"description": "Underlayment", "quantity": "surface_area", "unit_cost": {"value": null, "unit": "$/SF", "status": "Unknown", "source": "x"}}]);
+        recipe["pl::recipe"]["cost"]["code"] = attrs(v, "plane-0003")["pl::cost"]["code"].clone();
+        v["data"].as_array_mut().unwrap().push(serde_json::json!({"path": "condition-0027", "attributes": recipe}));
+        entry(v, "job-0001")["children"]["Underlayment only"] = "condition-0027".into();
+        attrs(v, "job-0001")["pl::job"]["next_id"] = 28.into();
+    });
+    let (mut job, _) = load(&with_recipe).unwrap();
+    let before = save(&mut job);
+    let e = job.apply("plane-0003", "Underlayment only", "x").unwrap_err();
+    assert!(e.contains("is already \"Standing seam copper, 16 oz\""), "{e}");
+    assert_eq!(save(&mut job), before);
+    // A recipe with a stretch-out filled in is refused: it belongs to the detail.
+    let e = load(&edit(&text, |v| attrs(v, "condition-0026")["pl::recipe"]["cost"]["lines"][0]["stretch_out"] = serde_json::json!({"value": 12.0, "unit": "in", "status": "Known", "source": "x"}))).err().unwrap();
+    assert!(e.contains("belongs to the detail"), "{e}");
+    // What else a recipe states is shown where the recipe is read.
+    let mut job = sample();
+    let notes = plumbline_world::view::elements(&mut job).into_iter().find(|e| e.path == "condition-0025").unwrap().notes;
+    assert!(notes.iter().any(|n| n.contains("Continuous cleat") && n.contains("sides: 2") && n.contains("price: blank")), "{notes:?}");
+    assert!(notes.iter().any(|n| n.contains("Copper coping cap") && n.contains("stretch-out: blank") && n.contains("waste: blank")), "{notes:?}");
+}
+
+#[test]
+fn a_formula_too_long_to_read_is_refused_and_a_factor_is_not_a_count() {
+    // 2,500 terms once ran the program out of stack. It is refused at 200 tokens.
+    let long = vec!["plan_length"; 2500].join(" + ");
+    assert!(formula::parse(&long).unwrap_err().contains("holds at most 200"));
+    let text = save(&mut sample());
+    let e = load(&edit(&text, |v| attrs(v, "plane-0003")["pl::cost"]["lines"][0]["quantity"] = long.clone().into())).err().unwrap();
+    assert!(e.contains("holds at most 200"), "{}", &e[e.len().saturating_sub(120)..]);
+    let just_fits = vec!["plan_area"; 100].join(" + ");
+    assert!(formula::parse(&just_fits).is_ok());
+    // The minus a worked formula is written with can be typed back.
+    assert!(formula::parse("plan_length \u{2212} 2").is_ok());
+    // A factor times one is still a factor.
+    let e = load(&edit(&text, |v| attrs(v, "plane-0003")["pl::cost"]["lines"][0]["quantity"] = "slope_factor * 1".into())).err().unwrap();
+    assert!(e.contains("a factor, not a quantity"), "{e}");
+    // Another program's key that only resembles ours is kept; a slip of ours is not.
+    for key in ["ex::cost", "my::job", "ui::run", "op::pitch", "x::job", "ifc::class"] {
+        assert!(load(&edit(&text, |v| attrs(v, "plane-0017")[key] = 3.into())).is_ok(), "{key}");
+    }
+    let e = load(&edit(&text, |v| attrs(v, "plane-0017")["pI::cost"] = 3.into())).err().unwrap();
+    assert!(e.contains("spelled like one") && !e.contains("own prefix"), "{e}");
+    // An order conversion says whether whole ones are bought, and its unit is one word.
+    let mut job = parapet_job();
+    job.set_on_line("parapet-0024", "stretch_out", Some("Copper coping cap"), Some("19 1/2 in"), Status::Known, "x").unwrap();
+    job.set_on_line("parapet-0024", "waste", Some("Copper coping cap"), Some("0"), Status::Known, "x").unwrap();
+    job.set_on_line("parapet-0024", "order", Some("Copper coping cap"), Some("0.5 SF/lb exact"), Status::Known, "x").unwrap();
+    job.derive();
+    assert_eq!(figures(&mut job, "parapet-0024", "Copper coping cap").order.unwrap().value, Some(65.0));
+    assert!(job.set_on_line("parapet-0024", "order", Some("Copper coping cap"), Some("30 SF/she et"), Status::Known, "x").is_err());
 }

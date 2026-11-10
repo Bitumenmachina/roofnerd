@@ -102,6 +102,13 @@ pub fn read(on: &On, line: &CostLine) -> Result<Read, String> {
     }
     let worked = formula::work(&expr, &|name| operand(on, line, name))?;
     let unit = formula::unit_of(worked.dim)?;
+    // A factor dressed as a formula (`slope_factor * 1`) is still a factor, not a count.
+    let names = formula::names(&expr);
+    let is_factor = |n: &String| on.kind.measures().iter().any(|(m, u)| m == n && u.is_empty());
+    let has_size = |n: &String| operand(on, line, n).is_ok_and(|o| o.dim > 0);
+    if worked.dim == 0 && names.iter().any(is_factor) && !names.iter().any(has_size) {
+        return Err("is made of a factor and plain numbers, which is a factor, not a quantity".into());
+    }
     Ok(Read { expr, unit, worked, plain_measure: false })
 }
 
@@ -127,9 +134,25 @@ pub fn order_multiplies(order: &Order, quantity_unit: &str) -> Result<bool, Stri
 }
 
 /// Up to the next whole number, without being pushed over by the crumbs binary
-/// arithmetic leaves (30.000000000000004 is 30).
+/// arithmetic leaves (30.000000000000004 is 30). Only for a figure that is zero or more:
+/// the caller refuses what is below zero first. A figure above zero but too small to tell
+/// from a crumb is neither zero nor one, and is given back as it is for the caller to
+/// refuse.
 fn whole_up(x: f64) -> f64 {
-    (x - 1e-9).ceil().max(0.0)
+    if x > 0.0 && x < 1e-9 {
+        return x;
+    }
+    (x - 1e-9 * x.abs().max(1.0)).ceil().max(0.0)
+}
+
+/// A count rounded up, or the reason it cannot be.
+fn count(value: Option<f64>) -> Result<Option<f64>, &'static str> {
+    match value {
+        Some(v) if v < 0.0 => Err("the formula comes out below zero"),
+        Some(v) if v > 0.0 && v < 1e-9 => Err("the formula comes out too small to tell from zero"),
+        Some(v) => Ok(Some(whole_up(v))),
+        None => Ok(None),
+    }
 }
 
 /// Everything one line works out to on one element.
@@ -156,21 +179,26 @@ pub fn figures(me: &str, on: &On, line: &CostLine) -> LineFigures {
     }
 
     let mut text = read.worked.text.clone();
-    let mut value = read.worked.value;
-    // A count is whole: 26.67 fasteners is 27.
-    if read.unit == "EA" && !read.plain_measure {
-        value = value.map(whole_up);
+    // A count is whole: 26.67 fasteners is 27. What is below zero is refused before it is
+    // rounded, so it is never rounded up to nothing.
+    let is_count = read.unit == "EA" && !read.plain_measure;
+    let value = if is_count {
         text.push_str(", rounded up to a whole number");
-    }
-    let quantity = if value.is_some_and(|v| v < 0.0) {
-        Derived::refused(read.unit, &text, &inputs, "the formula comes out below zero")
+        count(read.worked.value)
     } else {
-        Derived::new(value, read.unit, &[read.worked.status], &text, &inputs)
+        Ok(read.worked.value)
+    };
+    let quantity = match value {
+        Err(why) => Derived::refused(read.unit, &text, &inputs, why),
+        Ok(Some(v)) if v < 0.0 => Derived::refused(read.unit, &text, &inputs, "the formula comes out below zero"),
+        Ok(v) => Derived::new(v, read.unit, &[read.worked.status], &text, &inputs),
     };
 
     let with_waste = line.waste.as_ref().map(|w| {
         let v = quantity.value.zip(w.value).map(|(q, w)| q * (1.0 + w / 100.0));
-        Derived::new(v, read.unit, &[quantity.status, w.status], "quantity × (1 + waste ÷ 100)", std::slice::from_ref(&cost_in))
+        // A count with waste on it is still a count.
+        let (v, formula) = if is_count { (v.map(whole_up), "quantity × (1 + waste ÷ 100), rounded up to a whole number") } else { (v, "quantity × (1 + waste ÷ 100)") };
+        Derived::new(v, read.unit, &[quantity.status, w.status], formula, std::slice::from_ref(&cost_in))
     });
 
     let order = line.order.as_ref().map(|o| {

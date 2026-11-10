@@ -153,18 +153,24 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         if let Some(t) = w.get::<Recipe>(e) {
             notes.push(format!("applies to: {}", t.applies_to.iter().map(|k| format!("{k:?}")).collect::<Vec<_>>().join(", ")));
             for line in &t.cost.lines {
+                // What the line takes, and what the recipe already states for it. A value a
+                // recipe states goes onto an element with that status, so it is shown here.
+                let stated = |status: Status, text: String| if status == Status::Unknown { "blank".to_string() } else { format!("{}{text}", if status == Status::Assumed { "~ " } else { "" }) };
                 let mut extra = Vec::new();
                 if line.stretch_out.is_some() {
-                    extra.push("a stretch-out".to_string());
+                    extra.push("stretch-out: blank".to_string());
                 }
-                extra.extend(line.inputs.keys().cloned());
-                if line.waste.is_some() {
-                    extra.push("waste".to_string());
+                for (name, v) in &line.inputs {
+                    extra.push(format!("{name}: {}", stated(v.status, v.value.as_ref().map(|len| units::show_length(len, &v.unit)).unwrap_or_default())));
+                }
+                if let Some(w) = &line.waste {
+                    extra.push(format!("waste: {}", stated(w.status, w.value.map(|x| format!("{} %", num(x))).unwrap_or_default())));
                 }
                 if let Some(o) = &line.order {
-                    extra.push(format!("ordered by the {}", o.unit));
+                    extra.push(format!("ordered by the {}: {}", o.unit, stated(o.factor.status, o.factor.value.map(|x| format!("{} {}", num(x), o.factor.unit)).unwrap_or_default())));
                 }
-                notes.push(format!("line: {} = {}{}", line.description, line.quantity, if extra.is_empty() { String::new() } else { format!("   (takes {})", extra.join(", ")) }));
+                extra.push(format!("price: {}", stated(line.unit_cost.status, line.unit_cost.value.map(|x| format!("{} {}", num(x), line.unit_cost.unit)).unwrap_or_default())));
+                notes.push(format!("line: {} = {}   ({})", line.description, line.quantity, extra.join("; ")));
             }
         }
         out.push(ElementRows { path: p.clone(), name: node.name.clone(), kind, depth: depth_of(node.parent.clone()), rows, notes });

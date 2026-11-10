@@ -140,7 +140,7 @@ valid IFCX.
 |---|---|
 | Top level of the file, the header, a `schemas` entry, a data entry, IFC5's `inherits` | Kept and written back unchanged |
 | An attribute whose key this program does not know | Kept and written back unchanged |
-| An attribute under this program's own `pl::` prefix that is not one of its components, or a slip away from one of them: capitals, spaces, or one or two characters (`pl::Pitch`, `pI::pitch`, `pl;;pitch`) | **Refused**, naming the key and the one it resembles |
+| An attribute that is a mistyping of one of this program's: under its prefix however the prefix and colons are spelled (`pl::Pitch`, `PL::pitch`, `pl;;pitch`, ` pl::pitch`, `pl::pich`), or with a prefix one letter off and one of its names exactly (`pI::pitch`). Another program's key that merely resembles one (`ex::cost`) is kept | **Refused**, naming the key and the one it resembles |
 | A field inside one of this program's own components (`pl::pitch`, a cost line, ...) | **Refused**, naming the field |
 | The same key twice in one object, anywhere in the file | **Refused**, naming the key |
 
@@ -224,7 +224,7 @@ order units.
 | `stretch_out` | Optional. The width of the flat sheet the profile is bent from, as the detail gives it. | `ft`, `in` or `ft-in` |
 | `inputs` | Optional. Any other values the formula names, by name: a `spacing`, a number of `sides`. | a length, or none for a plain number |
 | `waste` | Optional. Percent added to the quantity. | `%` |
-| `order` | Optional. `unit`: what is bought (`sheet`, `lb`). `factor`: the conversion. `round_up`: buy whole ones. | `factor`: `SF/sheet` (divide) or `lb/SF` (multiply) |
+| `order` | Optional. `unit`: what is bought, one word (`sheet`, `lb`). `factor`: the conversion. `round_up`: buy whole ones. Typed as `30 SF/sheet` or `1.25 lb/SF`, with `whole` or `exact` after it to say which; unsaid, a package (the divide form) is whole and a weight is exact. | `factor`: `SF/sheet` (divide) or `lb/SF` (multiply) |
 | `unit_cost` | The price. | `$/` + the order unit, or the unit the quantity comes out in |
 
 **The formula.** Names, numbers, `+ - * /` (or `×`, `÷`) and brackets. A name is one of:
@@ -237,17 +237,27 @@ the element's measures (`plan_length`, `true_length`, `face_area`, `plan_area`,
   comes out in follows from the formula: a count (EA), a length (LF) or an area (SF).
   Nobody types `/ 12`.
 * **A count is whole.** A formula that comes out as a count is rounded up to the next
-  whole number, and the worked formula says so.
+  whole number, and the worked formula says so; so is a count with waste added. A count
+  that comes out below zero is refused before it is rounded, so it is never rounded up to
+  nothing, and one above zero but too small to tell from zero (under a billionth) is
+  refused as that.
+* **A formula is something read on a line.** It holds at most 200 names, numbers, signs
+  and brackets. A formula made only of a factor and plain numbers (`slope_factor * 1`) is
+  a factor, not a quantity, and is refused.
 * **Status is carried through it.** The result is as good as its worst operand. An Unknown
   operand leaves no result at all, never a zero.
 * **Stretch-out belongs to the line, not to the material.** The same copper is 12 in at an
-  eave and 36 in in a valley. A recipe leaves it blank; it is not a default.
+  eave and 36 in in a valley. A recipe cannot carry one: a recipe line with a stretch-out
+  filled in is refused.
 
 **A condition as a recipe.** A Condition is an element of the job. Applying it to an
 element of a kind it is for gives that element the condition's name, its cost code, and a
 copy of its lines. The copies are then edited on the element. What the recipe leaves blank
-is Unknown on the element until someone enters it. Applying the same recipe twice is
-refused (its lines would be there twice).
+is Unknown on the element until someone enters it. Anything else a recipe states (a number
+of sides, a waste, a price) is copied with the recipe's status and source, and `show`
+lists it where the recipe is read. Applying the same recipe twice is refused (its lines
+would be there twice), and so is applying a recipe to an element that already has another
+condition's name: an element is one condition.
 
 How many planes a line names: a hip or valley, two; an eave, rake or headwall, one; a
 ridge, one or two; a parapet, none.
@@ -308,8 +318,10 @@ pitch).
   is evidence the plane's eave is entered on the wrong edge, and a rake can climb under
   both readings of a plane, so every line on that plane loses its length until the eave is
   settled. The test is made on every plane a line names, before the planes are compared
-  with each other, so the evidence counts even when the line is refused for something
-  else, and counts against each plane it shows wrong.
+  with each other, and nothing about the line is decided until every plane it names has
+  been looked at, so the evidence counts even when the line is refused for something else
+  (another plane it names is missing, lacks a pitch, or is not where the line runs), and
+  counts against each plane it shows wrong.
 
 Example: steepen one plane of a hip roof while the hips stay where they were traced, and
 those hips and the ridge are flagged with both heights. The roof as drawn no longer closes.
