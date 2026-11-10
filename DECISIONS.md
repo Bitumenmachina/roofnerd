@@ -110,6 +110,11 @@ linked, because BIMCraft's core crate brings its whole document model. The port 
 NOTICE entry and a header naming the source file and commit. The `straight-skeleton` crate
 (GPL-2.0-or-later, confirmed) stays reference only.
 **Not yet done:** nothing has been ported. The port is D2 work.
+**Still not done (2026-11-10, second stretch):** the session that picked the work up runs
+in a workspace whose repository access is limited to one repository, and a request to add
+BIMCraft was declined. The source was not fetched another way. The port waits on the owner
+(QUESTIONS.md Q10). Nothing was written in its place: the call is to port a tested
+skeleton, not to write a second one.
 **To watch in the port:** BIMCraft works in millimetres, and its skeleton's closeness
 tolerance (`EPS` of 1e-6) is written for that. Every tolerance in the port has to be
 restated in feet and tested on a short edge. (An earlier version of this note said the
@@ -259,3 +264,48 @@ internally was left to this project; metric was not asked for.
   out in. LF, SF and SQ follow from it.
 * **Metric is refused and called metric** (PROPOSALS.md item 5). Degrees and percent for a
   pitch are refused too (item 6): the ruling was about lengths, and nobody asked.
+
+### 17. A roof's lines are read off its planes: write (D2 groundwork)
+`crates/world/src/roof.rs`. Whatever produces planes (the skeleton of call 3, or an
+estimator entering them) hands them to one place that says where the ridges, hips,
+valleys, eaves and rakes are. A shared edge is classed by its slope and by which way each
+plane falls from it; an unshared edge by whether it is on the eave line, climbs, or is a
+level high edge. It needs no skeleton and no window, so it was built while both were
+blocked. Calls made in it:
+* **A level top edge on one plane is a Ridge to the planes and may be a Headwall to the
+  estimator.** The planes cannot know a wall stands there. The comparison treats the two
+  as the same line.
+* **A fold where one plane falls toward the line and the other away (a change of pitch)
+  is reported, not classed.** There is no kind of line for it yet.
+* **Line ends are snapped to traced corners** within the 0.01 ft tolerance, so a found
+  line's end is the corner's own coordinates.
+* **It changes nothing in the job.** `plumbline lines` reports implied lines against
+  entered ones. Replacing entered lines with solved ones is the solver's step, because
+  that is where the question of keeping an element's path, cost lines and condition
+  through a re-solve has to be answered.
+
+### 18. Low-slope solvers already exist in the owner's earlier program: borrow candidate
+Found on the machine this stretch ran on: `roofnerd`, the same owner's earlier estimating
+program, MIT (`LICENSE`; `src-tauri/core/Cargo.toml` says `license = "MIT"`), last change
+to its core 2026-09-13. Its Rust crate `roofnerd-core` holds solvers with no window, disk
+or network in them. Read this stretch, file headers and function lists only:
+* `taper.rs` (1,075 lines): the tapered insulation package laid out per drain, citing NRCA
+  *Membrane Roof Systems* 2019 ch. 4.
+* `cricket.rs` (522 lines): a cricket behind a curb and a saddle between two drains, cut
+  at twice the field's slope, held to a length-to-width table, sitting on the solved
+  surface.
+* `coping.rs` (320 lines): cap width, gauge by face height, sections, corners and cleat,
+  citing NRCA *Architectural Metal Flashing* 2022; the stretch-out stays typed against the
+  detail.
+* `walls.rs` (423 lines): a parapet or curb as a run with a height and a thickness, and
+  how high the flashing runs up it.
+It depends on `geo` 0.29 and `cavalier_contours` 0.4 (both MIT OR Apache-2.0 per its own
+`DEPENDENCIES.md`; not re-checked in the registry here, and neither is linked by this
+project yet).
+**Call:** borrow, by porting with a NOTICE entry, when D2 reaches "a low-slope area with
+tapered crickets" and D3 reaches the parapet's coping and flashing. It was not in the
+brief's appendix. **Not done:** nothing has been ported, none of it was built or run
+here, and its model (a document of traced conditions with typed properties) is not this
+project's (one entity per element), so the port is a re-fit, not a copy. Whether this
+project is meant to take over that program's ground is the owner's to say (QUESTIONS.md
+Q11).

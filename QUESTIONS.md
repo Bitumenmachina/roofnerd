@@ -56,3 +56,22 @@ geometry the program solves. On a hand trace of a scanned plan it will flag most
 **Assumption in use:** 0.01 ft, because D2 replaces hand-entered hips with solved ones.
 If you want hand tracing to be a first-class route, this needs a snap step or a looser
 figure, and you would know what tolerance a trace deserves better than a default does.
+
+## Q10. The BIMCraft source for the skeleton port
+**Open; blocks the roof solver.** DECISIONS.md call 3 is to port BIMCraft's weighted
+straight skeleton (`IPedrax/BIMCraft`, `crates/core/src/skeleton.rs`, MIT OR Apache-2.0).
+The workspace the second stretch ran in may read one repository only, and the request to
+add BIMCraft was declined, so the file was not fetched. Any of these unblocks it: allow
+that repository to be read; start the work somewhere that can clone it; or put
+`skeleton.rs`, its `geom` module and the commit they came from in `refs/`.
+**Assumption in use:** none. Nothing was written in place of the port. The work done
+meanwhile is what the port will plug into (DECISIONS.md call 17).
+
+## Q11. Is this project meant to take over the ground of the earlier program?
+The earlier estimating program on the same machine already solves the low-slope side:
+tapered packages, crickets, copings, parapet flashing heights (DECISIONS.md call 18). D2
+asks for "a low-slope area with tapered crickets" and D3 for a parapet's coping and
+flashing.
+**Assumption in use:** borrow its solvers by porting them when D2 and D3 reach those
+steps, with attribution, and leave that program alone. If you would rather the two share
+one core crate, or that this project not touch that ground yet, say so before the port.

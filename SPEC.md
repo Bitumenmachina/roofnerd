@@ -279,6 +279,10 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
   the file.** `set` edits pitch, height, eave height, a line's stretch-out, condition and
   schedule code.
 * **No undo, no conditions library, no derived conditions** (D3).
+* **Planes are checked against each other only where they share an edge, and only on
+  request.** `plumbline lines` reports two planes that share an edge and disagree about
+  its height, and sets the lines the planes imply against the lines entered (DECISIONS.md
+  call 17). Loading a job does not run it, and it changes nothing.
 * **Not checked:** outlines that overlap each other or leave gaps; a plane whose eave is
   entered on the edge parallel to the true one (every line still fits and every length is
   right, but its heights run downhill); a line that leaves the outline and returns between
@@ -296,7 +300,7 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
 
 | Crate | Depends on | Holds |
 |---|---|---|
-| `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json` | The model: values, units, components, checks, plan geometry, derivation, the saved file, the sample job, the flat view |
-| `crates/cli` (`plumbline`) | `plumbline-world` | `sample`, `show`, `set`, `check` |
+| `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json` | The model: values, units, components, checks, plan geometry, derivation, the lines planes imply, the saved file, the sample job, the flat view |
+| `crates/cli` (`plumbline`) | `plumbline-world` | `sample`, `show`, `set`, `check`, `lines` |
 
 The world crate does not depend on any renderer or window, and must not.
