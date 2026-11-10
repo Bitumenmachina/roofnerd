@@ -3,7 +3,7 @@
 # crates.io registry says; for each repository, its last commit, its license files, and
 # whether its own CI runs on Linux. Needs network access to crates.io and github.com.
 #
-#   tools/landscape.sh > evidence/d0-landscape.txt
+#   tools/landscape.sh > demos/captured/d0-landscape.txt
 #
 # Clones go to a temporary folder and nothing from them is executed.
 set -uo pipefail

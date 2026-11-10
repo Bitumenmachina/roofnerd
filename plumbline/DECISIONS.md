@@ -5,7 +5,7 @@ D0: the landscape, checked, and a call per component.
 **How each entry was checked (2026-11-10).** Versions, licenses and last-publish dates
 come from the crates.io registry API. Last-commit dates and license files were read from a
 shallow clone of each source repository. Where neither was reachable the entry says so.
-`tools/landscape.sh` re-runs all of it; its output is kept in `evidence/d0-landscape.txt`.
+`tools/landscape.sh` re-runs all of it; its output is kept in `demos/captured/d0-landscape.txt`.
 
 A call is one of: **build on** (a linked dependency), **borrow** (port code or a pattern,
 with attribution where code moves), **write** (ours), **reference only** (read, never
@@ -34,7 +34,7 @@ linked, no code taken), or **not used**.
 **Maintained** is the last commit in the source repository. **Linux** says only what was
 actually seen: "builds here" means compiled in this Linux workspace; "own CI on Linux"
 means the project's own workflows name a Linux runner (count from
-`evidence/d0-landscape.txt`); neither is a claim that it was run here.
+`demos/captured/d0-landscape.txt`); neither is a claim that it was run here.
 
 | Candidate | Maintained (last commit) | License fit | Linux | Call |
 |---|---|---|---|---|
@@ -82,7 +82,7 @@ because call 2 wants the same world the renderer reads.
 **Proven:** D1 runs on it. A 1/16 in difference a mile from the origin survives a save and
 a load (test `a_sixteenth_of_an_inch_survives_a_mile_from_the_origin`).
 
-### 2. The 3D window: build on Bevy 0.20 with `bevy_egui`. Not yet proven.
+### 2. The 3D window: build on Bevy 0.20. Proven on a virtual display (see call 23).
 Bevy 0.20.1 (MIT OR Apache-2.0) supplies mesh picking, the pan-orbit camera and more than
 one OS window; its feature list names `mesh_picking`, `pan_orbit_camera` and `bevy_gizmos`.
 The brief credits 0.19 with a transform gizmo; that was not confirmed in the 0.20 feature
@@ -110,7 +110,10 @@ linked, because BIMCraft's core crate brings its whole document model. The port 
 NOTICE entry and a header naming the source file and commit. The `straight-skeleton` crate
 (GPL-2.0-or-later, confirmed) stays reference only.
 **Not yet done:** nothing has been ported. The port is D2 work.
-**Still not done (2026-11-10, second stretch):** the session that picked the work up runs
+**Done (2026-11-10): ported**, at commit `f202abd`, as `crates/world/src/skeleton.rs`,
+with the tolerance restated as a share of the footprint's size and a test on a 3 in edge a
+mile from the origin. See call 23. What follows is the history.
+**Was not done earlier the same day:** the session that picked the work up ran
 in a workspace whose repository access is limited to one repository, and a request to add
 BIMCraft was declined. The source was not fetched another way. The port waits on the owner
 (QUESTIONS.md Q10). Nothing was written in its place: the call is to port a tested
@@ -421,3 +424,45 @@ copied. The calls:
   typed; it is reported.
 * **Every command tolerates a reader that stops listening.** `set ... | head -1` was a
   panic.
+
+### 23. Decisions made on the way to the 3D prototype (the owner handed them over)
+On 2026-11-10 the owner said: make the decisions yourself until there is a working 3D
+prototype. These had been his (QUESTIONS.md Q4, Q7-style approvals, Q10). Each is
+recorded so he can overrule it.
+* **Compiler: rustc 1.97.1, pinned in `rust-toolchain.toml`.** Bevy 0.20.1 asks for it.
+  Building against 1.97.0 with cargo's version check overridden also compiled, but the
+  supported compiler was one command away, so that is the one used.
+* **System packages installed in the workspace: `libxkbcommon-x11-0`, `xdotool`,
+  `mesa-vulkan-drivers`.** The first is what the window needs to start on X11. The other
+  two are for running the demonstration with no desktop: a pointer and keyboard that the
+  program cannot tell from real ones, and a software Vulkan driver. A desktop with a
+  graphics card needs only the first, and usually has it.
+* **BIMCraft's skeleton is ported, not rewritten** (call 3). Read access to its
+  repository turned out to be available; the file was cloned, read in full, and ported
+  with its tests.
+* **The sheet is drawn with Bevy's own text, not `bevy_egui`** (call 2 said `bevy_egui`).
+  The prototype's sheet only shows. Bevy's text needed no second library and no question
+  of whether `bevy_egui` 0.43 fits Bevy 0.20. When the sheet takes input (cells, formulas
+  edited in place), this is decided again with that need in hand.
+* **The orbit camera is ours**: thirty lines, right-drag and scroll. Bevy 0.20 ships a
+  pan-orbit camera; it wants an input plugin of its own, and the prototype did not need it.
+* **Wayland is left out of the build.** It needs libwayland's development files at
+  compile time. X11 runs on a Wayland desktop too.
+* **A roof solved from a footprint is a new component (`pl::footprint`) beside D1's
+  hand-entered planes, not a replacement for them.** Both are jobs the program opens.
+  What the solver makes is marked `pl::solved`, and it replaces only what carries that
+  mark.
+* **A solve keeps identity by edge number and by line name.** The plane on edge 3 stays
+  the plane on edge 3 (path, condition, cost lines); a line is known by its kind and the
+  edges of the planes it lies between (`hip 1-2`). What no longer exists is removed and
+  reported, with a warning if it carried a condition or cost lines.
+* **A solved plane's outline takes the worst status in the whole footprint**, because one
+  pitch moves every plane's outline. So one assumed pitch flags the whole roof.
+* **A value set in the 3D view is Assumed**, with its source saying where it was set. The
+  estimator chose it and has not said where it comes from; rule 4 does not let that be
+  Known.
+* **Solved coordinates are written to a millionth of a foot**, so a re-solve that changes
+  nothing writes the same bytes.
+* **Demo output moved from `evidence/` to `demos/captured/`.** The repository this lives
+  in ignores any folder named `evidence`, for its own good reasons; the captures here are
+  of made-up jobs and are meant to be tracked.

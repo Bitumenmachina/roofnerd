@@ -484,3 +484,19 @@ pub fn parse_number(text: &str) -> Result<f64, String> {
     let x = if negative { -x } else { x };
     Ok(x + 0.0)
 }
+
+/// A number of feet written as feet and inches to the nearest `denominator`th of an inch
+/// (16 for a sixteenth), the way a tape reads: `25' 6 3/16"`. For showing a position; an
+/// entered value is shown as it was entered.
+pub fn feet_as_ft_in(feet: f64, denominator: u32) -> String {
+    if !feet.is_finite() {
+        return "unknown".into();
+    }
+    let parts = (feet.abs() * 12.0 * f64::from(denominator)).round();
+    let per_foot = 12.0 * f64::from(denominator);
+    let whole_feet = (parts / per_foot).floor();
+    let inch_parts = parts - whole_feet * per_foot;
+    let inches = inch_parts / f64::from(denominator);
+    let minus = if feet < 0.0 && parts > 0.0 { "-" } else { "" };
+    show_length(&Len::FtIn([whole_feet, inches]), FT_IN).replacen("", minus, 1)
+}

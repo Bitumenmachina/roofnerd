@@ -190,3 +190,58 @@ pub fn tally(elements: &[ElementRows]) -> (usize, usize, usize) {
     }
     t
 }
+
+/// A sum over part of the job, honest about what it could not include.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Sum {
+    /// The total, when every member has a figure. None when any does not: a total that
+    /// leaves something out is not a total.
+    pub value: Option<f64>,
+    pub unit: &'static str,
+    /// The worst status among the members.
+    pub status: Status,
+    pub members: usize,
+    /// The members that have no figure, by path.
+    pub missing: Vec<String>,
+}
+
+fn sum_of(unit: &'static str, figures: &[(String, Option<f64>, Status)]) -> Sum {
+    let missing: Vec<String> = figures.iter().filter(|f| f.1.is_none()).map(|f| f.0.clone()).collect();
+    let status = if figures.is_empty() { Status::Known } else { figures.iter().map(|f| f.2).max().unwrap_or(Status::Unknown) };
+    let value = if missing.is_empty() { Some(crate::value::round4(figures.iter().filter_map(|f| f.1).sum())) } else { None };
+    Sum { value, unit, status: if missing.is_empty() { status } else { Status::Unknown }, members: figures.len(), missing }
+}
+
+/// What a roof comes to: its planes' surface in SF, and its lines' length in LF by kind.
+#[derive(Clone, Debug)]
+pub struct RoofTotals {
+    pub surface: Sum,
+    pub lines: Vec<(Kind, Sum)>,
+}
+
+/// Total the elements directly under `roof_path`.
+pub fn roof_totals(job: &mut Job, roof_path: &str) -> RoofTotals {
+    let children: Vec<String> = job.children().get(roof_path).map(|c| c.values().cloned().collect()).unwrap_or_default();
+    let mut areas = Vec::new();
+    let mut by_kind: Vec<(Kind, Vec<(String, Option<f64>, Status)>)> = Vec::new();
+    // In job order, so the sheet reads the same every time.
+    for &e in &job.order {
+        let w = &job.world;
+        let (Some(node), Some(kind)) = (w.get::<Node>(e), w.get::<Kind>(e)) else { continue };
+        if !children.contains(&node.path) {
+            continue;
+        }
+        let figure = |name: &str| w.get::<Measure>(e).and_then(|m| m.0.get(name)).map(|d| (d.value, d.status)).unwrap_or((None, Status::Unknown));
+        if kind.is_area() {
+            let (v, s) = figure("surface_area");
+            areas.push((node.path.clone(), v, s));
+        } else if kind.is_run() && *kind != Kind::Parapet {
+            let (v, s) = figure("true_length");
+            match by_kind.iter_mut().find(|(k, _)| k == kind) {
+                Some((_, list)) => list.push((node.path.clone(), v, s)),
+                None => by_kind.push((*kind, vec![(node.path.clone(), v, s)])),
+            }
+        }
+    }
+    RoofTotals { surface: sum_of("SF", &areas), lines: by_kind.into_iter().map(|(k, list)| (k, sum_of("LF", &list))).collect() }
+}

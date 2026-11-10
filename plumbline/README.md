@@ -25,6 +25,8 @@ tools/landscape.sh         # re-run the D0 landscape checks (needs network)
 demos/d1.sh                # the D1 demonstration
 demos/units.sh             # the units demonstration: 30 in, 25' 6 1/2", stretch-out
 demos/d3.sh                # the D3 demonstration: a parapet's four lines, sheets and pounds
+demos/d2.sh                # the 3D prototype, driven on a virtual display; pictures in demos/captured/d2
+cargo run -p plumbline-app -- job.json    # the 3D window and the sheet window
 tools/licenses.sh          # every linked crate and its license; fails on a non-permissive one
 cargo run -p plumbline -- sample job.json
 cargo run -p plumbline -- show job.json

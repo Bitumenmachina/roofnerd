@@ -1,0 +1,25 @@
+[package]
+name = "plumbline-app"
+description = "The 3D window and the sheet window over the job world"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version = "1.97.1"
+
+[[bin]]
+name = "plumbline-app"
+path = "src/main.rs"
+
+[dependencies]
+plumbline-world = { path = "../world" }
+# The engine, with audio and gamepads left off: they need system development packages
+# and an estimating program has no use for them. Wayland is left off too: it needs
+# libwayland's development files to build. The window is X11, which a Wayland desktop
+# also runs.
+bevy = { version = "=0.20.1", default-features = false, features = [
+  "default_app", "std", "multi_threaded", "bevy_winit", "x11",
+  "common_api", "bevy_light", "bevy_render", "bevy_core_pipeline", "bevy_pbr",
+  "bevy_gizmos_render", "bevy_picking", "mesh_picking",
+  "bevy_ui", "bevy_ui_render", "bevy_input_focus", "default_font",
+  "ktx2", "zstd_rust", "tonemapping_luts",
+] }

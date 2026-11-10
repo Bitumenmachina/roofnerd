@@ -1,0 +1,4 @@
+# The 3D window is built on Bevy 0.20.1, which asks for rustc 1.97.1. The world crate and
+# the command line build on 1.95 and later.
+[toolchain]
+channel = "1.97.1"

@@ -6,8 +6,9 @@
 //!   Its headwall carries a sheet-metal flashing line with a 24 in stretch-out.
 //! * A low-slope area with a parapet whose height is not on the plan. It is Unknown.
 //!
-//! * Two conditions as recipes: "Parapet with copper coping" (four lines) and "Copper
-//!   flashing" (one). Neither is applied to anything in the sample.
+//! * Three conditions as recipes: "Parapet with copper coping" (four lines), "Copper
+//!   flashing" (one) and "Standing seam copper roof" (two). None is applied to anything
+//!   in the sample.
 //!
 //! No prices are entered. Every unit cost is Unknown, because nobody has given one.
 
@@ -178,6 +179,23 @@ pub fn sample() -> Job {
                     "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)",
                 ),
                 lines: vec![CostLine { stretch_out: Some(Val::unknown("in", blank)), ..CostLine::of("Copper flashing", "true_length * stretch_out", Val::unknown("$/SF", "no price entered")) }],
+            },
+        },
+    )
+    .expect(OK);
+
+    // ---- And a recipe for a roof surface, so a plane picked in the 3D view has one to take ----
+    let seam = job.add(&root, Kind::Condition, "Standing seam copper roof").expect(OK);
+    job.put(
+        &seam,
+        Recipe {
+            applies_to: vec![Kind::RoofPlane],
+            cost: Cost {
+                code: Val::assumed(CostCode { scheme: "MasterFormat".into(), code: "07 61 00".into(), title: "Sheet Metal Roofing".into() }, "", "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)"),
+                lines: vec![
+                    CostLine { waste: Some(Val::unknown("%", "not entered")), ..CostLine::of("Copper standing seam panels", "surface_area", Val::unknown("$/SF", "no price entered")) },
+                    CostLine::of("Underlayment", "surface_area", Val::unknown("$/SF", "no price entered")),
+                ],
             },
         },
     )

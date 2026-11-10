@@ -38,7 +38,7 @@ fn the_file_has_one_entry_per_element() {
     unique.sort();
     unique.dedup();
     assert_eq!(paths.len(), unique.len());
-    assert_eq!(paths.len(), 26);
+    assert_eq!(paths.len(), 27);
 }
 
 #[test]
@@ -841,7 +841,7 @@ fn the_path_counter_cannot_hand_out_a_path_twice() {
     let root = job.root();
     job.world.get_mut::<JobInfo>(root).unwrap().next_id = 3;
     let path = job.add("roof-0002", Kind::RoofPlane, "new-plane").unwrap();
-    assert_eq!(path, "plane-0027");
+    assert_eq!(path, "plane-0028");
     assert!(load(&save(&mut job)).is_ok());
 }
 
@@ -1613,9 +1613,9 @@ fn an_element_is_one_condition_and_a_recipe_carries_no_stretch_out() {
         recipe["pl::recipe"]["applies_to"] = serde_json::json!(["RoofPlane"]);
         recipe["pl::recipe"]["cost"]["lines"] = serde_json::json!([{"description": "Underlayment", "quantity": "surface_area", "unit_cost": {"value": null, "unit": "$/SF", "status": "Unknown", "source": "x"}}]);
         recipe["pl::recipe"]["cost"]["code"] = attrs(v, "plane-0003")["pl::cost"]["code"].clone();
-        v["data"].as_array_mut().unwrap().push(serde_json::json!({"path": "condition-0027", "attributes": recipe}));
-        entry(v, "job-0001")["children"]["Underlayment only"] = "condition-0027".into();
-        attrs(v, "job-0001")["pl::job"]["next_id"] = 28.into();
+        v["data"].as_array_mut().unwrap().push(serde_json::json!({"path": "condition-0028", "attributes": recipe}));
+        entry(v, "job-0001")["children"]["Underlayment only"] = "condition-0028".into();
+        attrs(v, "job-0001")["pl::job"]["next_id"] = 29.into();
     });
     let (mut job, _) = load(&with_recipe).unwrap();
     let before = save(&mut job);

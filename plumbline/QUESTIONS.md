@@ -29,7 +29,10 @@ program, but changes to its own files must be published.
 **Assumption in use:** not linked. Nothing needs one before D6.
 
 ## Q4. Toolchain for the 3D window
-**Open.** Bevy 0.20 needs rustc 1.97.1 or newer. This workspace has 1.97.0. Updating the
+**Decided for you, on your instruction, 2026-11-10** (DECISIONS.md call 23): rustc 1.97.1
+is installed and pinned, `libxkbcommon-x11-0` is installed, and the window runs on a
+virtual display. Still yours: nothing. What follows is the history.
+**Was open.** Bevy 0.20 needs rustc 1.97.1 or newer. This workspace has 1.97.0. Updating the
 toolchain changes files outside the repository, which needs your go-ahead.
 **Assumption in use:** not updated. The world crate needs only rustc 1.95 and builds here.
 The D2 viewport proof (DECISIONS.md, call 2) cannot run in this workspace until this is
@@ -81,7 +84,9 @@ If you want hand tracing to be a first-class route, this needs a snap step or a 
 figure, and you would know what tolerance a trace deserves better than a default does.
 
 ## Q10. The BIMCraft source for the skeleton port
-**Open; blocks the roof solver.** DECISIONS.md call 3 is to port BIMCraft's weighted
+**Closed, 2026-11-10.** Read access was available after all; the skeleton is ported
+(DECISIONS.md calls 3 and 23). What follows is the history.
+**Was open; it blocked the roof solver.** DECISIONS.md call 3 is to port BIMCraft's weighted
 straight skeleton (`IPedrax/BIMCraft`, `crates/core/src/skeleton.rs`, MIT OR Apache-2.0).
 The workspace the second stretch ran in may read one repository only, and the request to
 add BIMCraft was declined, so the file was not fetched. Any of these unblocks it: allow

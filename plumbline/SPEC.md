@@ -201,6 +201,8 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 |---|---|---|---|
 | `pl::class` | every element | The kind: Job, Roof, RoofPlane, LowSlopeArea, Eave, Rake, Ridge, Hip, Valley, Headwall, Parapet, Condition | |
 | `pl::job` | the job | Title, the unit derived lengths are worked out in (`ft`), the next path number | |
+| `pl::footprint` | a Roof | The outline the roof stands on (`points`), its `eave_height`, and how each edge rises (`edges`, edge i from point i to the next): a pitch, or `"gable"` for an edge that stands upright. The roof is solved from these (section 5.5). | `points`: `ft` or `in`. `eave_height`: `ft`, `in` or `ft-in`. An edge: `in/12`, or none for a gable |
+| `pl::solved` | planes and lines the solver made | `from`: the roof it was solved from. `edge`: for a plane, the footprint edge it rises from, counted from 1. | |
 | `pl::outline` | areas | `points`: the footprint traced on the plan, either way round. `eave`: the low edge the pitch rises from, as its own line along one edge of the outline (an edge traced in pieces is one edge when every corner inside it is within 0.01 ft of the one line from its start to its end), with no part of the outline on its other side. The slope is measured from that edge's line. `eave_height`. | `points`, `eave`: `ft` or `in`. `eave_height`: `ft`, `in` or `ft-in` |
 | `pl::pitch` | areas | Rise in inches per 12 inches of run | `in/12` |
 | `pl::run` | lines | `ends`: the two ends on the plan. `planes`: paths of the planes the line lies on. | `ft` or `in` |
@@ -345,6 +347,35 @@ crumbs binary arithmetic leaves, so 60 SF at 30 to the sheet is 2 sheets, not 3.
 A step whose input is Unknown has no number. A formula that comes out below zero has no
 number, with the reason.
 
+### 5.5 A roof solved from its footprint
+
+A Roof that carries a `pl::footprint` is solved: each sloping edge moves in at 12 ÷ pitch
+for every foot of height, a gable edge stays where it is, and where the moving edges meet
+is where the slopes meet (a weighted straight skeleton; `skeleton.rs`, ported from
+BIMCraft). That gives one plane to each sloping edge. The planes give the lines, read off
+them the way `plumbline lines` reads them (DECISIONS.md call 17): eaves, rakes, ridges,
+hips, valleys.
+Planes and lines are written into the job as elements under the roof, each marked
+`pl::solved`, and from there they are ordinary elements: derived, checked, priced and
+saved like any other.
+
+* **Solving again keeps what it can.** The plane on edge 3 is still the plane on edge 3:
+  same path, same condition, same cost lines. A line is known by its kind and the edges of
+  its planes (`hip 1-2`, `ridge 1-3`). What no longer exists is removed and reported.
+* **Only what the solver made is replaced.** Elements under the roof without `pl::solved`
+  are left alone.
+* **Status.** A solved plane's outline takes the worst status among the footprint's
+  points and every edge's rise; its pitch takes its own edge's; its eave height the
+  footprint's.
+* **Coordinates** are written to a millionth of a foot.
+* **Refused:** a footprint on anything but a Roof; an outline that is not a simple loop;
+  a number of rises other than the number of points; a pitch of zero or less, or above
+  240 in 12; an edge with no rise entered (the roof cannot be solved); every edge a gable;
+  a slope that closes round a hole (courtyards are not solved yet).
+* **Edits** (`set <roof> edge:<n>`, `set <roof> move:<n>`, `set <roof> eave_height`, and
+  the 3D window): the footprint is changed and the roof solved again; if the changed
+  footprint is refused or cannot be solved, the job is left as it was.
+
 ## 6. Cost code scheme
 
 Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores its
@@ -355,8 +386,10 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
 * **It does not re-solve the roof.** Ridge, hip and valley positions are entered, not
   worked out from the footprint and pitches. D2 does that with the skeleton (DECISIONS.md
   call 3); until then a pitch change the linework cannot follow is flagged per 5.3.
-* **No window.** The world is read and edited through the command line. The same rows the
-  command line prints (`view::elements`) are what the sheet and the 3D view will read.
+* **The window is a prototype** (`crates/app`): it shows one roof and its sheet, and
+  changes a solved roof's pitches, eaves and conditions. Everything else is still read and
+  edited through the command line. Both read the same rows (`view::elements`,
+  `view::roof_totals`); the window works out no quantity of its own.
 * **No money.** Cost lines exist and carry unit costs with statuses; nothing is extended
   or totalled. Tying a line's status to its quantity's status is D5.
 * **A recipe's lines are copied, not linked.** Changing a recipe does not change the
@@ -400,6 +433,8 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
 | Crate | Depends on | Holds |
 |---|---|---|
 | `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json` | The model: values, units, components, checks, plan geometry, derivation, line formulas and the steps a line is worked in, the lines planes imply, the saved file, the sample job, the flat view |
-| `crates/cli` (`plumbline`) | `plumbline-world` | `sample`, `show`, `set`, `check`, `lines`, `apply` |
+| `crates/cli` (`plumbline`) | `plumbline-world` | `sample`, `show`, `set`, `check`, `lines`, `apply`, `roof` |
+| `crates/app` (`plumbline-app`) | `plumbline-world`, `bevy` | The 3D window and the sheet window |
 
-The world crate does not depend on any renderer or window, and must not.
+The world crate does not depend on any renderer or window, and must not. The engine is
+linked by the application crate alone.

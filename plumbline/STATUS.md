@@ -3,7 +3,9 @@
 Each claim gives its scope, its evidence, and what remains. Evidence is output from a
 command anyone can run again from the repository root.
 
-Workspace this was last run in: Linux, rustc 1.97.0, no display. On the owner's go-ahead
+Workspace this was last run in: Linux, rustc 1.97.1 (installed for the 3D window; the
+world crate and the command line also build on 1.97.0), no display: the window was run on
+a virtual one with a software renderer. On the owner's go-ahead
 (QUESTIONS.md Q2) the repository is pushed, as a `plumbline/` folder with its history, to
 a working branch of the public repository of his earlier program. It arrived here as a
 git bundle; on arrival `cargo test` (27
@@ -15,7 +17,7 @@ run again and each gave what this file said they gave.
 | D0 | Landscape decision | Demonstrated, with limits below. Judged twice. |
 | D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged five times. Every judgment has found a new way to a wrong figure marked Known, each next to the last fix. All found are fixed. **The fifth round's fixes have not been judged.** |
 | D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged twice: the five demonstrations held both times; two entry forms misread in the first are fixed and held in the second. |
-| D2 | 3D roof slice | **Not demonstrated; nothing of its demonstration runs.** One piece of groundwork is built and tested (lines read off planes). The roof solver waits on the BIMCraft source (Q10) and the window on the toolchain and a display (Q4). |
+| D2 | 3D roof slice | **A working 3D prototype, not the whole deliverable.** In a window: a roof solved from its footprint, a plane picked with the mouse, its pitch changed and its eave moved with the lines and totals following, a surface given its condition, and the sheet in a second window updating live. Not built: tracing a calibrated plan, a dormer, a parapet and tapered crickets in 3D, dragging with the mouse, editing in the sheet. **Not judged.** See "D2. What was run". |
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
 | D4 | Macro to micro | Not started. How its demonstration will be run is written at the end of this file. |
 | D5 | Estimate sheet and money | Not started. Reference estimate missing (Q5). |
@@ -31,7 +33,7 @@ dependency is linked before its license is confirmed.
 
 **What was run**
 
-1. `tools/landscape.sh > evidence/d0-landscape.txt`: for 26 crates, the crates.io registry
+1. `tools/landscape.sh > demos/captured/d0-landscape.txt`: for 26 crates, the crates.io registry
    (newest version, minimum compiler, declared license, last publish); for 24 repository
    addresses, a shallow clone (last commit, license files, and how many of the project's
    own CI workflows name a Linux runner). 23 were reachable.
@@ -82,10 +84,10 @@ element. Changing one pitch changes, in a file diff, only that entity and the co
 derived from it. Assumed and Unknown values display as flagged.
 
 **How it is run:** `demos/d1.sh`. It uses the built-in sample job, which is made up.
-`cargo test` runs 59 checks on the same model.
+`cargo test` runs 71 checks on the same model.
 
 The figures below are as rerun after the units amendment and D3. Those added to the
-sample job one sheet-metal cost line on the porch headwall and two conditions as recipes,
+sample job one sheet-metal cost line on the porch headwall and three conditions as recipes,
 and every cost line now shows its worked quantity, which moved the count of entries (24
 when D1 was first run) and the counts of Known, Assumed and Unknown values (86, 13, 13
 before the pitch change and 94, 5, 13 after, when D1 was first run). The pitch change
@@ -93,13 +95,13 @@ still touches the same five entries and no others.
 
 **What was run and what it showed** (output of `demos/d1.sh`, exit 0)
 
-1. *One entity per element, readable JSON.* The sample job saves as 26 entries with 26
+1. *One entity per element, readable JSON.* The sample job saves as 27 entries with 27
    distinct paths. `plumbline check` confirms the file loads, its measures match its
    geometry, and saving it back writes the same bytes.
 2. *One pitch changed.* `plumbline set after.json plane-0017 pitch 4 --status Known
    --source "field measured"` prints "set plane-0017 pitch = 4 in/12 (Known)" and reports
    measures re-derived on plane-0017, eave-0018, rake-0019, rake-0020, headwall-0021.
-3. *The file diff.* Changes fall in exactly those five entries out of 26. On the plane:
+3. *The file diff.* Changes fall in exactly those five entries out of 27. On the plane:
    the pitch (3.0 Assumed to 4.0 Known, with its source) and its measure (slope factor
    1.0308 to 1.0541, surface 98.9545 to 101.1929 SF, squares 0.9895 to 1.0119). On the two
    rakes: true length 8.2462 to 8.4327 LF. On the eave and headwall: status only, because
@@ -122,7 +124,8 @@ still touches the same five entries and no others.
 * Hip: 15 over and 15 up on plan = 21.2132 LF; climbs 7.5 ft; √(450 + 56.25) = 22.5 LF.
 * Porch rake: 8 ft run at 3:12 climbs 2 ft; √68 = 8.2462 LF.
 
-**`cargo test`: 59 passed, 0 failed** (57 on the model, 2 on the command line).
+**`cargo test`: 71 passed, 0 failed** (61 on the model, 8 on the ported skeleton, which
+are BIMCraft's own, and 2 on the command line).
 
 **What remains**
 
@@ -172,7 +175,7 @@ takes more than feet. An estimator enters what the drawing or the tape says.
    estimator converting anything.
 
 **How it is run:** `demos/units.sh`, on the sample job. The script exits non-zero if any
-step does not do what it says. Its output is kept in `evidence/units-demo.txt`.
+step does not do what it says. Its output is kept in `demos/captured/units-demo.txt`.
 
 **What was run and what it showed** (output of `demos/units.sh`, exit 0)
 
@@ -247,7 +250,7 @@ marked Known. All twelve, and what was done:
 | 9 | SPEC claimed checks the code did not make; some values carry no status | SPEC rewritten against the code; the job-element checks added; what counts as a value is now stated (SPEC 2), with references and labels checked instead | `a_loop_of_children_is_refused` |
 | 10 | Cost lines accepted anything | A line needs a description, a measure its element has, that measure's unit, and a non-negative price. Tying line status to quantity status is D5 | `cost_lines_have_to_make_sense` |
 | 11 | `show \| head` panicked; repeated `--status` took the last; `set` hid stale measures; two siblings could share a name; `-0` stored | Each fixed. The tolerance point is now Q9. The judge's note about a BIMCraft tolerance was copied into DECISIONS.md unchecked and was wrong (second judgment, item 6) | `two_children_of_one_parent_cannot_share_a_name` and others |
-| 12 | D0 evidence could not be re-run; no Linux rating per candidate | `tools/landscape.sh` and `evidence/d0-landscape.txt`; a rating table in DECISIONS.md | re-run the script |
+| 12 | D0 evidence could not be re-run; no Linux rating per candidate | `tools/landscape.sh` and `demos/captured/d0-landscape.txt`; a rating table in DECISIONS.md | re-run the script |
 
 Not changed, and why: a line's `planes` list still carries no status of its own (SPEC 2
 says so and says why); the fit tolerance stays at 0.01 ft pending Q9.
@@ -416,47 +419,102 @@ for each step:
 
 The judge runs steps 3 through 7 on a footprint of its own choosing.
 
-### What exists toward D2, and what blocks the rest
+## D2. What was run and what it showed
 
-None of the nine steps above runs. This is groundwork, not a demonstration.
+**The owner's instruction for this stretch:** make the decisions and get to a working 3D
+prototype. The three things that had blocked D2 were his to decide and he handed them
+over: the compiler, the system library the window needs, and reading BIMCraft's source.
+What was decided is DECISIONS.md call 23.
 
-**Built: a roof's lines read off its planes** (`crates/world/src/roof.rs`, DECISIONS.md
-call 17). Given planes, it says where the ridges, hips, valleys, eaves and rakes are, and
-reports planes that share an edge and disagree about its height. `plumbline lines <file>`
-prints it and sets it against the lines entered. It reads the job and changes nothing.
+**How it is run:** `demos/d2.sh`. It drives the real program with a real pointer and
+keyboard (`xdotool`) on a virtual display (`Xvfb`) with Mesa's software Vulkan driver, has
+the program save a picture of both windows after each step, and then reads the saved job
+back with the command line. It exits non-zero if a step fails. The 14 pictures are in
+`demos/captured/d2/`. On a desktop the same thing is `plumbline-app <job file>` and a
+mouse.
 
-*What was run and what it showed*
-* `plumbline lines` on the sample job: 6 planes placed, 17 lines implied; all 13 roof
-  lines entered in the sample agree with the planes (the porch headwall is, to the
-  planes, a one-plane ridge); the 4 not entered are the deck's own edges.
-* The same after `set plane-0003 pitch 8:12`: the ridge and the two hips on that plane are
-  reported as running along edges their planes do not agree about, with each plane's
-  heights (20.00 ft against 17.50 ft).
-* Test `a_wing_meeting_a_main_roof_makes_two_valleys`: a 40 × 20 gable roof with a 10 ft
-  gabled wing, entered as four planes, gives two valleys from the inside corners to
-  (20, 5), two ridges, five eaves and six rakes, and no hips. Worked by hand in the test.
-*What remains of it*
-* **Judged once** (fourth judgment, below), which found it stating things that were not
-  so; those are fixed and the fixes are not judged.
-* It has been run on made-up roofs only, all with planes entered by hand.
-* It does not replace entered lines with solved ones. That is the solver's step.
-* A change of pitch along a shared edge (a gambrel break) is reported, not classed. A
-  level valley (a trough) would be classed a valley and then flagged by D1's rule that a
-  valley climbs.
-* An edge shared for only part of its length is split at the other plane's corners; this
-  is exercised by the wing test only.
+**What was run and what it showed** (output of `demos/d2.sh`, exit 0; every picture was
+opened and read)
 
-**Blocked: the roof solver** (steps 2 to 6). The call is to port BIMCraft's weighted
-straight skeleton (DECISIONS.md call 3). Its source could not be read from the workspace
-this stretch ran in (QUESTIONS.md Q10). Nothing was written in its place.
+1. *A roof from its footprint.* `plumbline roof` on an L-shaped footprint (40 × 20 with a
+   20 × 20 wing, 6:12 all round, eaves at 10 ft) writes 6 planes and 14 lines: 6 eaves, 5
+   hips, 2 ridges and the valley at the inside corner. Nobody entered a hip or a ridge.
+   The file passes `check`.
+2. *The window* (`01-roof.png`, `01-sheet.png`). The roof in 3D with eaves green, hips
+   orange, ridges white, the valley blue. A second operating-system window holds the
+   sheet: each plane's pitch and surface, each line's length, and totals (1,341.6408 SF,
+   13.4164 SQ, which is 1,200 SF on plan × 1.118034; 160 LF of eave, 75 of hip, 40 of
+   ridge, 15 of valley).
+3. *A plane picked with the mouse* (`02`). A click on the south plane turns it gold, the
+   sheet marks its row, and the view lists its corners from the model to the sixteenth
+   (east 100' 0" to 140' 0", north 0' 0" and 10' 0") and reads the pointer's position.
+4. *Its pitch changed in the 3D view* (`03`). Two presses raise it from 6 to 8 in 12. The
+   roof is solved again: the ridge moves, a short hip appears where the main ridge now
+   meets the wing's at a different height, and the sheet shows 15 lines and a new total
+   (1,362.1672 SF). Everything that rests on the new pitch is flagged Assumed.
+5. *Its eave moved* (`04`). One press moves the south eave out 6 in; the plane's corners
+   read north -0' 6".
+6. *A dimension typed* (`05`, `06`). `P`, then `9:12` typed and Enter: the pitch is 9 in
+   12 and the roof is solved again.
+7. *A surface given its condition* (`07`). `C` gives the selected plane "Standing seam
+   copper roof"; the sheet lists its two cost lines worked out (283.925 SF each; the
+   panels' with-waste figure is unknown because no waste is entered).
+8. *What was left in the saved job.* It passes `check`. Besides the roof and what is
+   solved from it, only the job's path counter changed (by 1, for the new hip).
+   Footprint edge 1 is 9 in 12, Assumed, source "set in the 3D view; not yet confirmed
+   against a drawing". The south edge is at y = -0.5 ft. The plane kept its path through
+   four solves and carries the condition and its two lines.
 
-**Blocked: the window** (the opening proof and every step that says "in the 3D view").
-Bevy 0.20.1 declares rustc 1.97.1; this workspace has 1.97.0 and no display, and updating
-the toolchain needs the owner's go-ahead (QUESTIONS.md Q4).
+**Hand checks**
+* After the session the south plane is a trapezoid 40 ft at the eave and 15.4 ft at the
+  ridge, 8.2 ft deep on plan (the 9:12 slope from y = -0.5 meets the 6:12 slope from
+  y = 20 at y = 7.7): (40 + 15.4) ÷ 2 × 8.2 = 227.14 SF, × 1.25 = 283.925 SF. The program
+  saved 283.925.
+* In `crates/world/tests/world.rs`: a 40 × 30 hip roof solved from its footprint gives
+  the planes, hips and ridge of the sample roof that was entered by hand (419.2627 SF,
+  22.5 LF, 10 LF); a 60 × 30 roof with one slope at 12:12 puts its ridge at y = 10, 20 LF
+  long, with planes of 565.6854 and 894.4272 SF; an L-shaped roof gets one valley of
+  15 LF; a gable roof gets a 40 LF ridge and four 11.1803 LF rakes; a footprint with a
+  3 in jog, a mile from the origin, still solves and its planes cover it.
+* The ported skeleton passes BIMCraft's own eight tests here, including 2,000 random
+  footprints.
 
-**Found, not used yet:** the owner's earlier program has low-slope solvers (tapered
-package, crickets, coping, parapet flashing height) under MIT (DECISIONS.md call 18,
-QUESTIONS.md Q11). They are the candidate for step 8.
+**The opening proof** (DECISIONS.md call 2): a window showing a roof, a plane picked with
+the mouse, a second OS window on the same world updating live. All three are in the
+pictures. The fourth, "a coordinate readout holding 1/16 in at the far corner of a real
+footprint", is met in part: the corners listed come from the 64-bit model and read to the
+sixteenth; the pointer's own position is as fine as the picture is, and no real job has
+been opened.
+
+**What is not built, of the demonstration as the brief states it**
+* **Trace a calibrated plan or image.** The footprint is typed as coordinates.
+* **A dormer.**
+* **A parapet and a low-slope area with tapered crickets**, in the 3D view or from a
+  solve. The window draws only the planes and lines of one roof.
+* **Dragging.** The pitch and the eave are changed with keys and typed values on the
+  selected plane, not by dragging in the view.
+* **Editing in the sheet.** The sheet shows; it does not take input. "Editing a line's
+  dimension updates the 3D model" is done by typing in the 3D window.
+* **Choosing a condition.** `C` gives the first condition in the job that fits the
+  element's kind.
+* **Courtyards.** The skeleton handles them; the solver refuses a slope that closes
+  round a hole.
+
+**What remains**
+* **Not judged.** No separate agent has attacked the solver, the footprint edits or the
+  window.
+* **It has only been run on a virtual display with a software renderer**, at a few frames
+  a second. It has not been run on a desktop, with a graphics card, or on two monitors.
+  The second window is a real second window; "pops out to another monitor" is untested.
+* **Wayland is not built in** (it needs a system development package); the window is X11.
+* **A value set in the view is Assumed**, and a roof's solved outlines rest on every
+  pitch of its footprint, so one edit in the view flags the whole roof Assumed until the
+  value is confirmed from the command line.
+* **Undo does not exist.** F2 saves over the file.
+* The view redraws the whole roof on every change, which is fine for one house and
+  untried on anything large.
+* `plumbline lines` and the solver agree by construction on solved roofs; hand-entered
+  roofs still go through D1's checks only.
 
 ---
 
@@ -512,7 +570,7 @@ a wrong figure, or a figure where there should be none, onto a line.
 ## D3. What was run and what it showed
 
 **How it is run:** `demos/d3.sh`, on the sample job (20 LF of parapet). It exits non-zero
-if any step does not do what it says. Its output is kept in `evidence/d3-demo.txt`. The
+if any step does not do what it says. Its output is kept in `demos/captured/d3-demo.txt`. The
 plan above was written first; two things changed from it while building, both noted below.
 
 **What was run and what it showed** (output of `demos/d3.sh`, exit 0)
