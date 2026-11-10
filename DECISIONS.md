@@ -238,9 +238,12 @@ internally was left to this project; metric was not asked for.
   converted through inches, (feet × 12 + inches) ÷ 12, so `25' 6 1/2"` and `306.5 in` are
   bit-for-bit the same number of feet.
 * **A formula shows its conversion.** `plan_length × height ÷ 12` when the height is in
-  inches. A reader multiplying the figures on the page gets the figure on the page. The
-  cost: changing only the unit a value is written in also changes the formula text of what
-  derives from it. That is the ruling's "that value and what derives from it".
+  inches, so nobody reading the page has to guess whether 30 was feet. The cost: changing
+  only the unit a value is written in also changes the formula text of what derives from
+  it. That is the ruling's "that value and what derives from it". (Figures are still
+  worked from unrounded inputs and shown to four decimals, as in D1, so multiplying the
+  rounded figures on the page can differ in the last place. A sheet-metal area is the
+  exception: it is worked from the length as shown.)
 * **A bare number is refused for a length** (`30`), at the keyboard and in the file. It is
   the one input that could silently become feet. A pitch typed bare is accepted, because a
   pitch has only one unit.

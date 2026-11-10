@@ -218,8 +218,9 @@ Derived figures are written to four decimal places.
 | `true_length` (LF) | eave, rake, ridge, hip, valley, headwall | √(plan_length² + rise²) | run, and the outline and pitch of each plane named |
 | `face_area` (SF) | parapet | plan_length × height, the height in feet: `height` as entered in `ft`, `height ÷ 12` in `in`, `height (feet + inches ÷ 12)` in `ft-in` | run, height |
 
-The formula saved beside each figure is the one that was used, conversion included, so
-the figure can be checked by hand from what the file shows. A `true_length` that leans on
+The formula saved beside each figure is the one that was used, conversion included.
+Figures are worked from unrounded inputs and written to four decimals, so multiplying the
+rounded figures in the file can differ from the figure shown in its last place. A `true_length` that leans on
 anything entered in inches ends "lengths not entered in feet are converted to feet first
 (inches ÷ 12)".
 
