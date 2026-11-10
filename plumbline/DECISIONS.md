@@ -452,10 +452,10 @@ recorded so he can overrule it.
   hand-entered planes, not a replacement for them.** Both are jobs the program opens.
   What the solver makes is marked `pl::solved`, and it replaces only what carries that
   mark.
-* **A solve keeps identity by edge number and by line name.** The plane on edge 3 stays
-  the plane on edge 3 (path, condition, cost lines); a line is known by its kind and the
-  edges of the planes it lies between (`hip 1-2`). What no longer exists is removed and
-  reported, with a warning if it carried a condition or cost lines.
+* **A solve keeps identity by place, then by number** (first done by edge number alone;
+  see call 24). A line is known by its kind and the edges of the planes it lies between
+  (`hip 1-2`). What no longer exists is removed and reported, with a warning if it carried
+  a condition or cost lines.
 * **A solved plane's outline takes the worst status in the whole footprint**, because one
   pitch moves every plane's outline. So one assumed pitch flags the whole roof.
 * **A value set in the 3D view is Assumed**, with its source saying where it was set. The
@@ -466,3 +466,30 @@ recorded so he can overrule it.
 * **Demo output moved from `evidence/` to `demos/captured/`.** The repository this lives
   in ignores any folder named `evidence`, for its own good reasons; the captures here are
   of made-up jobs and are meant to be tracked.
+
+### 24. Calls made fixing what the sixth judgment found
+* **What is solved is derived, so it is solved again on every load.** A footprint edited
+  in the file left the planes of the earlier solve standing as Known. Now the planes and
+  lines are recomputed like measures, and a roof that cannot be solved has the geometry
+  taken off its planes and lines; they are not left looking true.
+* **A plane keeps the slope it is on, not the number of its edge.** Identity by edge
+  number moved a plane's condition to another slope when a point was added to the
+  footprint. A plane is now matched to the edge its eave lies along; by number only for an
+  edge moved square to itself.
+* **A line on one plane is named for the footprint edge it stands over** (`rake 1 at 4`).
+  Two rakes on one plane were told apart by which the solver found first, and swapped.
+* **`PitchBreak` is a kind of line.** Mixed-pitch roofs have creases where one slope falls
+  to the line and the other on from it; they had no line and no kind. The trade calls it a
+  change of pitch or a pitch break.
+* **Planes that share an edge on plan at different heights each keep an edge there**, with
+  a note on the roof. With a gable beside an inside corner that is a wall, and it was left
+  with no line at all.
+* **A footprint has to be clean to be solved**: no edge under 0.02 ft, no corner a hair
+  off straight, no pitch under 0.01 in 12. Each made slivers, invented hips, or dropped
+  eaves. A hand trace will have these and will be refused with what to do; when tracing is
+  built it has to clean its own output (QUESTIONS.md Q9 is the same question).
+* **An edit that fails puts the job back from a saved copy**, not by undoing its steps.
+* **A condition given in the 3D view is Assumed**, like every other value set there.
+* **Not done:** a slope pinched by gables into two pieces joined at a point is refused,
+  as courtyards are. A plane entered by hand under a solved roof is noted, not checked for
+  overlap.

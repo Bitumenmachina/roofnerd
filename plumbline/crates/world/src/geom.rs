@@ -79,7 +79,7 @@ pub fn outline_fault(pts: &[P2]) -> Option<String> {
     }
     for i in 0..n {
         if dist(pts[i], pts[(i + 1) % n]) == 0.0 {
-            return Some(format!("points {i} and {} are the same point", (i + 1) % n));
+            return Some(format!("points {} and {} are the same point", i + 1, (i + 1) % n + 1));
         }
     }
     for i in 0..n {
@@ -89,7 +89,7 @@ pub fn outline_fault(pts: &[P2]) -> Option<String> {
                 continue;
             }
             if segments_meet(pts[i], pts[(i + 1) % n], pts[j], pts[(j + 1) % n]) {
-                return Some(format!("edge {i} and edge {j} cross or touch; the outline has to be a simple loop"));
+                return Some(format!("edge {} and edge {} cross or touch; the outline has to be a simple loop", i + 1, j + 1));
             }
         }
     }
@@ -97,7 +97,7 @@ pub fn outline_fault(pts: &[P2]) -> Option<String> {
     for i in 0..n {
         let (a, b, c) = (pts[i], pts[(i + 1) % n], pts[(i + 2) % n]);
         if orient(a, b, c) == 0.0 && on_segment(a, b, c) && dist(b, c) > 0.0 && ((c[0] - b[0]) * (a[0] - b[0]) + (c[1] - b[1]) * (a[1] - b[1])) > 0.0 {
-            return Some(format!("the outline doubles back on itself at point {}", (i + 1) % n));
+            return Some(format!("the outline doubles back on itself at point {}", (i + 1) % n + 1));
         }
     }
     if plan_area(pts) == 0.0 {

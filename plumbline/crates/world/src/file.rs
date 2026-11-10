@@ -48,7 +48,7 @@ struct Entry {
     extra: BTreeMap<String, Value>,
 }
 
-const KNOWN_KEYS: [&str; 14] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES];
+const KNOWN_KEYS: [&str; 15] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES];
 
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
@@ -75,6 +75,7 @@ pub fn save(job: &mut Job) -> String {
         put!(Kind, K_CLASS);
         put!(JobInfo, K_JOB);
         put!(Footprint, K_FOOTPRINT);
+        put!(SolveState, K_SOLVE);
         put!(Solved, K_SOLVED);
         put!(Outline, K_OUTLINE);
         put!(Pitch, K_PITCH);
@@ -184,6 +185,7 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
     }
     let mut file_measures: BTreeMap<String, Measure> = BTreeMap::new();
     let mut file_line_quantities: BTreeMap<String, LineQuantities> = BTreeMap::new();
+    let mut file_solve: BTreeMap<String, SolveState> = BTreeMap::new();
 
     for (i, entry) in root.data.into_iter().enumerate() {
         let path = entry.path.clone();
@@ -254,6 +256,11 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                     check::footprint(&path, kind, &c)?;
                     ent.insert(c);
                 }
+                K_SOLVE => {
+                    // Worked out, like a measure: read only to see whether it still holds.
+                    let c: SolveState = parse(&path, &k, v)?;
+                    file_solve.insert(path.clone(), c);
+                }
                 K_SOLVED => {
                     let c: Solved = parse(&path, &k, v)?;
                     check::solved(&path, kind, &c)?;
@@ -301,16 +308,48 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
         }
     }
 
+    // What was solved from a footprint is never trusted from the file either. Every such
+    // roof is solved again; what the file held for its planes and lines is compared with
+    // what the footprint gives now, and a roof whose footprint can no longer be solved
+    // does not keep the planes of an earlier solve as if they still stood.
+    let solved_now = |job: &mut Job| -> BTreeMap<String, String> {
+        let mut out = BTreeMap::new();
+        let mut q = job.world.query::<(&Node, Option<&Solved>, Option<&Outline>, Option<&Pitch>, Option<&Run>)>();
+        for (node, solved, outline, pitch, run) in q.iter(&job.world) {
+            if solved.is_some() {
+                out.insert(node.path.clone(), format!("{:?}", (&node.name, solved, outline, pitch, run)));
+            }
+        }
+        out
+    };
+    let solved_before = solved_now(&mut job);
+    crate::solve::solve_all(&mut job);
+    let solved_after = solved_now(&mut job);
+    let mut report = LoadReport::default();
+    for path in solved_before.keys().chain(solved_after.keys()) {
+        if solved_before.get(path) != solved_after.get(path) && !report.stale.contains(path) {
+            report.stale.push(path.clone());
+        }
+    }
+    {
+        let mut q = job.world.query::<(&Node, Option<&SolveState>)>();
+        for (node, state) in q.iter(&job.world) {
+            let then = file_solve.remove(&node.path);
+            if then.as_ref() != state && !report.stale.contains(&node.path) {
+                report.stale.push(node.path.clone());
+            }
+        }
+    }
+
     // Measures are never trusted from the file. Work them out again and compare.
     job.derive();
-    let mut report = LoadReport::default();
     let mut q = job.world.query::<(&Node, Option<&Measure>, Option<&LineQuantities>)>();
     for (node, measure, line_quantities) in q.iter(&job.world) {
         let now = measure.cloned().unwrap_or_default();
         let then = file_measures.remove(&node.path).unwrap_or_default();
         let now_lq = line_quantities.cloned().unwrap_or_default();
         let then_lq = file_line_quantities.remove(&node.path).unwrap_or_default();
-        if now != then || now_lq != then_lq {
+        if (now != then || now_lq != then_lq) && !report.stale.contains(&node.path) {
             report.stale.push(node.path.clone());
         }
     }

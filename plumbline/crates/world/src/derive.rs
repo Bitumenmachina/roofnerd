@@ -401,7 +401,9 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
             Kind::Headwall => "a headwall",
             Kind::Rake => "a rake",
             Kind::Hip => "a hip",
-            _ => "a valley",
+            Kind::Valley => "a valley",
+            // A change of pitch runs level or climbs; its kind says nothing about which.
+            _ => continue,
         };
         let fault = match kind {
             Kind::Eave | Kind::Ridge | Kind::Headwall if !level => Some(format!("{name} is level, but plane {p} puts this line's ends at {:.2} ft and {:.2} ft; check which edge of the plane is entered as its eave", z[0], z[1])),

@@ -199,9 +199,10 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 
 | Key in the file | On | Holds | Unit |
 |---|---|---|---|
-| `pl::class` | every element | The kind: Job, Roof, RoofPlane, LowSlopeArea, Eave, Rake, Ridge, Hip, Valley, Headwall, Parapet, Condition | |
+| `pl::class` | every element | The kind: Job, Roof, RoofPlane, LowSlopeArea, Eave, Rake, Ridge, Hip, Valley, Headwall, PitchBreak, Parapet, Condition | |
 | `pl::job` | the job | Title, the unit derived lengths are worked out in (`ft`), the next path number | |
 | `pl::footprint` | a Roof | The outline the roof stands on (`points`), its `eave_height`, and how each edge rises (`edges`, edge i from point i to the next): a pitch, or `"gable"` for an edge that stands upright. The roof is solved from these (section 5.5). | `points`: `ft` or `in`. `eave_height`: `ft`, `in` or `ft-in`. An edge: `in/12`, or none for a gable |
+| `pl::solve` | a Roof with a footprint | What the last solve came to: `not_solved`, with the reason, when the footprint cannot be solved; `notes` on how the planes meet. Worked out, never typed. | |
 | `pl::solved` | planes and lines the solver made | `from`: the roof it was solved from. `edge`: for a plane, the footprint edge it rises from, counted from 1. | |
 | `pl::outline` | areas | `points`: the footprint traced on the plan, either way round. `eave`: the low edge the pitch rises from, as its own line along one edge of the outline (an edge traced in pieces is one edge when every corner inside it is within 0.01 ft of the one line from its start to its end), with no part of the outline on its other side. The slope is measured from that edge's line. `eave_height`. | `points`, `eave`: `ft` or `in`. `eave_height`: `ft`, `in` or `ft-in` |
 | `pl::pitch` | areas | Rise in inches per 12 inches of run | `in/12` |
@@ -261,7 +262,7 @@ lists it where the recipe is read. Applying the same recipe twice is refused (it
 would be there twice), and so is applying a recipe to an element that already has another
 condition's name: an element is one condition.
 
-How many planes a line names: a hip or valley, two; an eave, rake or headwall, one; a
+How many planes a line names: a hip, valley or pitch break, two; an eave, rake or headwall, one; a
 ridge, one or two; a parapet, none.
 
 An entered value is written `{ "value", "unit", "status", "source" }`.
@@ -359,9 +360,25 @@ Planes and lines are written into the job as elements under the roof, each marke
 `pl::solved`, and from there they are ordinary elements: derived, checked, priced and
 saved like any other.
 
-* **Solving again keeps what it can.** The plane on edge 3 is still the plane on edge 3:
-  same path, same condition, same cost lines. A line is known by its kind and the edges of
-  its planes (`hip 1-2`, `ridge 1-3`). What no longer exists is removed and reported.
+* **Solving again keeps what it can, and goes by where things are.** A plane stays with
+  the edge its eave lies along: same path, same condition, same cost lines. If a point is
+  added to the footprint and the edges after it take new numbers, the plane keeps its
+  slope and takes the new number, and the solve says so. An edge moved square to itself
+  lies along nothing it did before and keeps its plane by its number. A line is known by
+  its kind and the edges of its planes (`hip 1-2`, `ridge 1-3`); a line on one plane also
+  says which footprint edge it stands over (`rake 1 at 4`), so a plane's two rakes are
+  told apart by where they are. What no longer exists is removed and reported.
+* **What is solved is never trusted from the file.** Every roof with a footprint is solved
+  again on load. Planes and lines that no longer match the footprint are put right and
+  reported, as stale measures are. If the footprint cannot be solved (an edge with no
+  pitch), the planes and lines of an earlier solve lose their geometry and show Unknown,
+  and the roof shows `not solved` with the reason.
+* **A change of pitch is a line.** Where two slopes of different pitch meet and both fall
+  the same way, the line between them is a `PitchBreak`. It has a length like any line and
+  no rule about being level or climbing.
+* **A wall between two planes.** Where two planes share an edge on plan at different
+  heights (a gable beside a lower roof), each has an edge of its own there with its own
+  line, and the roof carries a note saying so.
 * **Only what the solver made is replaced.** Elements under the roof without `pl::solved`
   are left alone.
 * **Status.** A solved plane's outline takes the worst status among the footprint's
@@ -369,12 +386,15 @@ saved like any other.
   footprint's.
 * **Coordinates** are written to a millionth of a foot.
 * **Refused:** a footprint on anything but a Roof; an outline that is not a simple loop;
-  a number of rises other than the number of points; a pitch of zero or less, or above
-  240 in 12; an edge with no rise entered (the roof cannot be solved); every edge a gable;
-  a slope that closes round a hole (courtyards are not solved yet).
+  a number of rises other than the number of points; an edge under 0.02 ft long (about
+  1/4 in); a point more than nothing and up to 0.01 ft off the straight line between its
+  neighbours (it would get a hip of its own); a pitch under 0.01 or above 240 in 12; every
+  edge a gable; gables that fence in part of the roof; a slope that closes round a hole
+  (courtyards) or comes back to touch itself at a point (not solved yet); a move of an
+  edge that would take it past the other side of the footprint.
 * **Edits** (`set <roof> edge:<n>`, `set <roof> move:<n>`, `set <roof> eave_height`, and
   the 3D window): the footprint is changed and the roof solved again; if the changed
-  footprint is refused or cannot be solved, the job is left as it was.
+  footprint is refused or cannot be solved, the job is put back exactly as it was.
 
 ## 6. Cost code scheme
 

@@ -350,6 +350,14 @@ impl Job {
     /// onto the element, where each can then be edited; what the condition leaves blank
     /// stays Unknown on the element until someone enters it.
     pub fn apply(&mut self, path: &str, condition: &str, source: &str) -> Result<Vec<String>, String> {
+        self.apply_as(path, condition, Status::Known, source)
+    }
+
+    /// As `apply`, saying how sure the assignment is.
+    pub fn apply_as(&mut self, path: &str, condition: &str, status: Status, source: &str) -> Result<Vec<String>, String> {
+        if status == Status::Unknown {
+            return Err("a condition is applied as Known or Assumed; to say nobody knows it, mark the element's condition unknown".into());
+        }
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
         let mut found: Vec<(String, String, Recipe)> = Vec::new();
@@ -386,7 +394,7 @@ impl Job {
                 return Err(format!("{path} is already {have:?}; applying {name:?} would put its lines under another condition's name. Mark its condition unknown first if this replaces it"));
             }
         }
-        let assigned = Condition(Val { value: Some(name.clone()), unit: String::new(), status: Status::Known, source: source.into() });
+        let assigned = Condition(Val { value: Some(name.clone()), unit: String::new(), status, source: source.into() });
         check::condition(path, &assigned)?;
         let added = recipe.cost.lines.iter().map(|l| l.description.clone()).collect();
         self.world.entity_mut(e).insert((new, assigned));

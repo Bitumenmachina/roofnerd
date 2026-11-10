@@ -324,6 +324,9 @@ fn say_solve(report: &solve::Report) {
     if !report.added.is_empty() {
         say!("  new: {}", report.added.join(", "));
     }
+    for moved in &report.renumbered {
+        say!("  {moved}");
+    }
     for (path, carried) in &report.removed {
         say!("  gone: {path}{}", if *carried { "  (it carried a condition or cost lines, which went with it)" } else { "" });
     }

@@ -1852,3 +1852,270 @@ fn the_skeleton_holds_in_feet_on_a_short_edge_and_a_long_way_from_the_origin() {
         }
     }
 }
+
+// ---- Regression checks for what the sixth independent judgment found (the solved roof) ----
+
+fn hip_roof() -> (Job, String) {
+    let mut job = sample();
+    let (roof_path, _) = solve::new_roof(&mut job, "house", footprint(vec![[0.0, 0.0], [40.0, 0.0], [40.0, 30.0], [0.0, 30.0]], &[Rise::Pitch(6.0); 4], 10.0)).unwrap();
+    (job, roof_path)
+}
+
+#[test]
+fn a_footprint_changed_in_the_file_does_not_leave_the_old_roof_standing() {
+    let (mut job, roof_path) = hip_roof();
+    let south = child(&mut job, &roof_path, "plane 1");
+    let text = save(&mut job);
+    // Edge 1's pitch struck out by hand. The planes of the earlier solve were 419.2627 SF
+    // and Known; they must not stay so.
+    let struck = edit(&text, |v| attrs(v, &roof_path)["pl::footprint"]["edges"][0] = serde_json::json!({"value": null, "unit": "in/12", "status": "Unknown", "source": "not on the drawing"}));
+    let (mut loaded, report) = load(&struck).unwrap();
+    assert!(report.stale.contains(&south) && report.stale.contains(&roof_path), "{:?}", report.stale);
+    let d = measure(&mut loaded, &south, "surface_area");
+    assert_eq!((d.value, d.status), (None, Status::Unknown));
+    let rows = show_rows(&mut loaded, &roof_path);
+    assert!(rows.contains(&("solved roof".to_string(), "not solved".to_string(), Status::Unknown)), "{rows:?}");
+    assert!(rows.contains(&("edge 1".to_string(), "unknown".to_string(), Status::Unknown)), "{rows:?}");
+    // No line under it has a length, and no total is given.
+    let totals = plumbline_world::view::roof_totals(&mut loaded, &roof_path);
+    assert_eq!(totals.surface.value, None);
+    assert!(totals.lines.iter().all(|(_, sum)| sum.value.is_none()));
+    // Entering the pitch again solves it again: same planes, same paths.
+    solve::edit(&mut loaded, &roof_path, solve::Change::Rise { edge: 1, rise: Val::known(Rise::Pitch(6.0), "in/12", "elevation A-301") }).unwrap();
+    assert_eq!(measure(&mut loaded, &south, "surface_area").value, Some(419.2627));
+    // A solved plane's pitch forged in the file is put back from the footprint, and said.
+    let forged = edit(&text, |v| attrs(v, &south)["pl::pitch"]["value"] = 12.0.into());
+    let (mut loaded, report) = load(&forged).unwrap();
+    assert!(report.stale.contains(&south));
+    assert_eq!(measure(&mut loaded, &south, "surface_area").value, Some(419.2627));
+    // A footprint point moved in the file moves the roof with it: 42 x 30 now.
+    let moved = edit(&text, |v| {
+        let pts = &mut attrs(v, &roof_path)["pl::footprint"]["points"]["value"];
+        pts[1][0] = 42.0.into();
+        pts[2][0] = 42.0.into();
+    });
+    let (mut loaded, _) = load(&moved).unwrap();
+    let total: f64 = (1..=4).map(|i| { let p = child(&mut loaded, &roof_path, &format!("plane {i}")); measure(&mut loaded, &p, "plan_area").value.unwrap() }).sum();
+    assert_eq!(total, 1260.0);
+}
+
+#[test]
+fn an_eave_cannot_be_moved_through_the_far_wall_and_a_footprint_has_to_be_clean() {
+    let (mut job, roof_path) = hip_roof();
+    let before = save(&mut job);
+    for by_ft in [-31.0, -30.0, -60.0, -100.0] {
+        let e = solve::edit(&mut job, &roof_path, solve::Change::MoveEdge { edge: 1, by_ft, status: Status::Known, source: "tape".into() }).unwrap_err();
+        assert!(e.contains("inside out") || e.contains("same point") || e.contains("long"), "{by_ft}: {e}");
+        assert_eq!(save(&mut job), before, "{by_ft}");
+    }
+    // A move that leaves a roof is taken: in by 10 ft leaves 40 x 20.
+    solve::edit(&mut job, &roof_path, solve::Change::MoveEdge { edge: 1, by_ft: -10.0, status: Status::Known, source: "tape".into() }).unwrap();
+    let total: f64 = (1..=4).map(|i| { let p = child(&mut job, &roof_path, &format!("plane {i}")); measure(&mut job, &p, "plan_area").value.unwrap() }).sum();
+    assert_eq!(total, 800.0);
+
+    // A corner 1/16 in off straight would get a hip of its own; an edge 1/16 in long is a
+    // slip; a pitch of a thousandth is flat. Each is refused, with what to do.
+    let refuse = |pts: Vec<P2>, rises: &[Rise]| solve::new_roof(&mut sample(), "x", footprint(pts, rises, 10.0)).unwrap_err();
+    assert!(refuse(vec![[0.0, 0.0], [20.0, -0.005], [40.0, 0.0], [40.0, 30.0], [0.0, 30.0]], &[Rise::Pitch(6.0); 5]).contains("off the straight line"));
+    assert!(refuse(vec![[0.0, 0.0], [40.0, 0.0], [40.0, 30.0], [20.0, 30.0], [20.0, 30.0052083], [0.0, 30.0052083]], &[Rise::Pitch(6.0); 6]).contains("slip of the trace"));
+    assert!(refuse(vec![[0.0, 0.0], [40.0, 0.0], [40.0, 30.0], [0.0, 30.0]], &[Rise::Pitch(0.001); 4]).contains("is flat"));
+    // A point exactly on the line is allowed, and a refused roof leaves no trace in the job.
+    let mut job = sample();
+    let clean = save(&mut job);
+    assert!(solve::new_roof(&mut job, "x", footprint(vec![[0.0, 0.0], [20.0, -0.005], [40.0, 0.0], [40.0, 30.0], [0.0, 30.0]], &[Rise::Pitch(6.0); 5], 10.0)).is_err());
+    assert_eq!(save(&mut job), clean);
+    assert!(solve::new_roof(&mut job, "x", footprint(vec![[0.0, 0.0], [20.0, 0.0], [40.0, 0.0], [40.0, 30.0], [0.0, 30.0]], &[Rise::Pitch(6.0); 5], 10.0)).is_ok());
+}
+
+#[test]
+fn what_was_entered_on_a_slope_or_a_rake_stays_on_that_slope_or_rake() {
+    // Two rakes. The west end is made a gable and its rake given a flashing and a
+    // stretch-out; then the east end is made a gable too. The west rake keeps both.
+    let (mut job, roof_path) = hip_roof();
+    let gable = |edge| solve::Change::Rise { edge, rise: Val::known(Rise::Gable, "", "elevation") };
+    solve::edit(&mut job, &roof_path, gable(4)).unwrap();
+    let west_of = |job: &mut Job| -> Vec<String> {
+        job.children()[&roof_path].clone().into_values().filter(|p| job.kind(p) == Some(Kind::Rake) && { let e = job.find(p).unwrap(); job.world.get::<Run>(e).unwrap().ends.value.unwrap().iter().all(|q| q[0].abs() < 1e-6) }).collect()
+    };
+    let west = west_of(&mut job);
+    assert_eq!(west.len(), 2);
+    let rake = west[0].clone();
+    job.apply(&rake, "Copper flashing", "west rake detail").unwrap();
+    job.set_on_line(&rake, "stretch_out", None, Some("7 in"), Status::Known, "detail 4/A5").unwrap();
+    let report = solve::edit(&mut job, &roof_path, gable(2)).unwrap();
+    assert!(report.removed.iter().all(|r| !r.1), "{report:?}");
+    // Same path, still on the west side (x = 0), still with its line.
+    assert!(west_of(&mut job).contains(&rake));
+    let e = job.find(&rake).unwrap();
+    assert_eq!(job.world.get::<Cost>(e).unwrap().lines[0].description, "Copper flashing");
+
+    // A plane with a condition. A point is then added to the footprint by hand, on the
+    // south edge, so every edge after it takes a new number. The condition stays on the
+    // north slope; the solve says the plane is on a different edge number now.
+    let (mut job, roof_path) = hip_roof();
+    let north = child(&mut job, &roof_path, "plane 3");
+    job.apply(&north, "Standing seam copper roof", "north slope, sheet A2").unwrap();
+    let e = job.find(&roof_path).unwrap();
+    let mut fp = job.world.get::<Footprint>(e).unwrap().clone();
+    let pts = fp.points.value.as_mut().unwrap();
+    pts.insert(1, [20.0, -5.0]);
+    fp.edges.insert(1, Val::known(Rise::Pitch(6.0), "in/12", "test plan"));
+    job.put(&roof_path, fp).unwrap();
+    let report = solve::solve(&mut job, &roof_path).unwrap();
+    assert!(report.renumbered.iter().any(|r| r.starts_with(&north) && r.contains("edge 4")), "{report:?}");
+    let e = job.find(&north).unwrap();
+    let eave = job.world.get::<Outline>(e).unwrap().eave.value.unwrap();
+    assert!(eave.iter().all(|p| (p[1] - 30.0).abs() < 1e-6), "the north plane's eave is {eave:?}");
+    assert_eq!(job.world.get::<Condition>(e).unwrap().0.value.as_deref(), Some("Standing seam copper roof"));
+    assert_eq!(job.children()[&roof_path]["plane 4"], north);
+    assert!(load(&save(&mut job)).is_ok());
+}
+
+#[test]
+fn every_edge_of_a_solved_roof_has_a_line_or_a_note_that_stays_with_the_roof() {
+    let all_lined = |job: &mut Job| {
+        let (solid, _) = roof::solid_planes(job);
+        let found = roof::lines_of(&solid);
+        let cmp = roof::compare(job, &found);
+        (cmp.implied_only.len(), cmp.entered_only.len())
+    };
+    // A 3:12 bay on a 12:12 house: where the bay's slope meets the main slopes both fall
+    // the same way at different pitches. That is a change of pitch, and it gets a line.
+    let mut job = Job::new("Bay", "test", "test");
+    let mut rises = [Rise::Pitch(12.0); 5];
+    rises[1] = Rise::Pitch(3.0);
+    rises[2] = Rise::Pitch(3.0);
+    let (roof_path, report) = solve::new_roof(&mut job, "house", footprint(vec![[0.0, 0.0], [40.0, 0.0], [50.0, 10.0], [40.0, 20.0], [0.0, 20.0]], &rises, 10.0)).unwrap();
+    let breaks: Vec<String> = job.children()[&roof_path].clone().into_values().filter(|p| job.kind(p) == Some(Kind::PitchBreak)).collect();
+    assert_eq!(breaks.len(), 2, "{report:?}");
+    for b in &breaks {
+        assert!(measure(&mut job, b, "true_length").value.is_some(), "{}", measure(&mut job, b, "true_length").note);
+    }
+    assert_eq!(all_lined(&mut job), (0, 0));
+    assert!(load(&save(&mut job)).is_ok());
+
+    // A gable beside an inside corner: a wall stands between the higher roof and the
+    // lower one. Each plane has its own edge there, with a line, and the roof carries a
+    // note saying so that `show` lists and the file keeps.
+    let mut job = Job::new("Step", "test", "test");
+    let (roof_path, _) = solve::new_roof(&mut job, "house", footprint(vec![[0.0, 0.0], [40.0, 0.0], [40.0, 40.0], [20.0, 40.0], [20.0, 20.0], [0.0, 20.0]], &[Rise::Pitch(6.0); 6], 10.0)).unwrap();
+    solve::edit(&mut job, &roof_path, solve::Change::Rise { edge: 4, rise: Val::known(Rise::Gable, "", "elevation") }).unwrap();
+    assert_eq!(all_lined(&mut job), (0, 0));
+    let rows = show_rows(&mut job, &roof_path);
+    assert!(rows.iter().any(|(label, _, status)| label == "solved roof" && *status == Status::Assumed), "{rows:?}");
+    let text = save(&mut job);
+    assert!(text.contains("\"pl::solve\"") && text.contains("A wall stands between them"));
+    let (mut again, report) = load(&text).unwrap();
+    assert!(report.stale.is_empty(), "{:?}", report.stale);
+    assert_eq!(save(&mut again), text);
+    // The planes still cover the footprint: 40 x 20 + 20 x 20 = 1,200 SF.
+    let total: f64 = job.children()[&roof_path].clone().values().filter(|p| p.starts_with("plane")).map(|p| measure(&mut job, p, "plan_area").value.unwrap()).sum();
+    assert!((total - 1200.0).abs() < 1e-3, "{total}");
+}
+
+#[test]
+fn a_condition_can_be_applied_as_assumed_and_a_hand_made_name_in_the_solvers_way_says_so() {
+    let (mut job, roof_path) = hip_roof();
+    let south = child(&mut job, &roof_path, "plane 1");
+    job.apply_as(&south, "Standing seam copper roof", Status::Assumed, "set in the 3D view").unwrap();
+    let e = job.find(&south).unwrap();
+    assert_eq!(job.world.get::<Condition>(e).unwrap().0.status, Status::Assumed);
+    assert!(job.apply_as(&south, "Standing seam copper roof", Status::Unknown, "x").is_err());
+    // A plane entered by hand under the roof, with the name the solver would use, after
+    // the solver's own plane lost its mark: the solve says what is in its way.
+    let text = edit(&save(&mut job), |v| {
+        attrs(v, &south).as_object_mut().unwrap().remove("pl::solved");
+    });
+    let e = load(&text).err().or_else(|| load(&text).ok().and_then(|(mut j, _)| solve::solve(&mut j, &roof_path).err()));
+    // Loading solves again; the roof is left unsolved with the reason on it, or refused.
+    match e {
+        Some(why) => assert!(why.contains("did not make that element"), "{why}"),
+        None => {
+            let (mut loaded, _) = load(&text).unwrap();
+            let rows = plumbline_world::view::elements(&mut loaded).into_iter().find(|e| e.path == roof_path).unwrap().rows;
+            assert!(rows.iter().any(|r| r.label == "solved roof" && r.note.contains("did not make that element")), "{:?}", rows.iter().map(|r| (&r.label, &r.note)).collect::<Vec<_>>());
+        }
+    }
+}
+
+#[test]
+fn random_house_footprints_solve_whole_with_every_edge_lined() {
+    // Stepped footprints (a staircase up the right side and down the left, in whole
+    // feet), with pitches drawn from the ones roofs are built at and some ends gabled.
+    // For each one that solves: the planes cover the footprint, every line has a length,
+    // the planes imply no line the solver did not write and the solver wrote none the
+    // planes do not imply, and the job loads back as it was saved.
+    let mut seed = 20261110u64;
+    let mut rand = move || {
+        seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        (seed >> 33) as f64 / (1u64 << 31) as f64
+    };
+    let pitches = [3.0, 4.0, 6.0, 8.0, 9.0, 12.0];
+    let (mut solved, mut refused) = (0, 0);
+    for round in 0..300 {
+        let steps = 1 + (rand() * 3.0) as usize;
+        let (mut right, mut left): (Vec<P2>, Vec<P2>) = (Vec::new(), Vec::new());
+        let mut y = 0.0;
+        for _ in 0..steps {
+            let (xr, xl, h) = (16.0 + (rand() * 6.0).floor() * 4.0, -8.0 - (rand() * 6.0).floor() * 4.0, 12.0 + (rand() * 4.0).floor() * 4.0);
+            right.extend([[xr, y], [xr, y + h]]);
+            left.splice(0..0, [[xl, y + h], [xl, y]]);
+            y += h;
+        }
+        let mut ring: Vec<P2> = right;
+        ring.extend(left);
+        // Take out repeated points and points on the straight line between their neighbours.
+        loop {
+            let n = ring.len();
+            let drop = (0..n).find(|&i| {
+                let (a, b, c) = (ring[(i + n - 1) % n], ring[i], ring[(i + 1) % n]);
+                geom::dist(a, b) < 1e-9 || geom::point_to_segment(b, a, c) < 1e-9
+            });
+            match drop {
+                Some(i) => {
+                    ring.remove(i);
+                }
+                None => break,
+            }
+        }
+        if ring.len() < 4 {
+            continue;
+        }
+        let mixed = round % 2 == 1;
+        let rises: Vec<Rise> = (0..ring.len()).map(|_| if rand() < 0.15 { Rise::Gable } else if mixed { Rise::Pitch(pitches[(rand() * 6.0) as usize % 6]) } else { Rise::Pitch(6.0) }).collect();
+        let area = geom::plan_area(&ring);
+        let mut job = Job::new("Fuzz", "test", "test");
+        let (roof_path, report) = match solve::new_roof(&mut job, "house", footprint(ring.clone(), &rises, 10.0)) {
+            Ok(x) => x,
+            // Gables that fence in part of the roof, or every edge a gable, cannot be a roof.
+            // Nor can gables that pinch a slope into two pieces joined at a point; that one
+            // is a limit of this program, said as such.
+            Err(e) if e.contains("fence in") || e.contains("none of its edges slopes") || e.contains("comes back to touch itself") => {
+                refused += 1;
+                continue;
+            }
+            Err(e) => panic!("round {round}: {e}\n{ring:?}\n{rises:?}"),
+        };
+        solved += 1;
+        let context = format!("round {round}\n{ring:?}\n{rises:?}\n{:?}", report.notes);
+        let under: Vec<String> = job.children()[&roof_path].values().cloned().collect();
+        let total: f64 = under.iter().filter(|p| p.starts_with("plane")).map(|p| measure(&mut job, p, "plan_area").value.unwrap_or(f64::NAN)).sum();
+        assert!((total - area).abs() < 1e-3 * area.max(1.0), "planes cover {total} of {area}: {context}");
+        for path in &under {
+            if job.kind(path).is_some_and(|k| k.is_run()) {
+                let d = measure(&mut job, path, "true_length");
+                assert!(d.value.is_some(), "{path} has no length ({}): {context}", d.note);
+            }
+        }
+        let (solid, left_out) = roof::solid_planes(&mut job);
+        assert!(left_out.is_empty(), "{left_out:?}: {context}");
+        let found = roof::lines_of(&solid);
+        let cmp = roof::compare(&mut job, &found);
+        assert!(cmp.implied_only.is_empty() && cmp.entered_only.is_empty(), "implied only {:?}; entered only {:?}: {context}", cmp.implied_only, cmp.entered_only);
+        let text = save(&mut job);
+        let (mut again, report) = load(&text).unwrap_or_else(|e| panic!("{e}: {context}"));
+        assert!(report.stale.is_empty(), "{:?}: {context}", report.stale);
+        assert_eq!(save(&mut again), text, "{context}");
+    }
+    assert!(solved > 200, "only {solved} solved, {refused} refused");
+}

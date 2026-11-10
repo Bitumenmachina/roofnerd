@@ -65,6 +65,9 @@ pub enum Kind {
     Valley,
     /// Where a roof plane dies into a wall above it.
     Headwall,
+    /// Where two slopes of different pitch meet and both fall the same way: one falls
+    /// to the line, the other on from it. A change of pitch, not a ridge, hip or valley.
+    PitchBreak,
     Parapet,
     /// A condition as a recipe: the cost lines an element gets when the condition is
     /// applied to it. It is an element of the job so it can be read and edited there.
@@ -85,6 +88,7 @@ impl Kind {
             Kind::Hip => "hip",
             Kind::Valley => "valley",
             Kind::Headwall => "headwall",
+            Kind::PitchBreak => "break",
             Kind::Parapet => "parapet",
             Kind::Condition => "condition",
         }
@@ -93,14 +97,14 @@ impl Kind {
         matches!(self, Kind::RoofPlane | Kind::LowSlopeArea)
     }
     pub fn is_run(self) -> bool {
-        matches!(self, Kind::Eave | Kind::Rake | Kind::Ridge | Kind::Hip | Kind::Valley | Kind::Headwall | Kind::Parapet)
+        matches!(self, Kind::Eave | Kind::Rake | Kind::Ridge | Kind::Hip | Kind::Valley | Kind::Headwall | Kind::PitchBreak | Kind::Parapet)
     }
     /// How many planes a line of this kind lies on: (fewest, most). A hip or a valley is
     /// where two planes meet. An eave, a rake or a headwall is the edge of one. A ridge is
     /// two planes meeting, or the top edge of one shed plane. A parapet is on none.
     pub fn planes_allowed(self) -> (usize, usize) {
         match self {
-            Kind::Hip | Kind::Valley => (2, 2),
+            Kind::Hip | Kind::Valley | Kind::PitchBreak => (2, 2),
             Kind::Eave | Kind::Rake | Kind::Headwall => (1, 1),
             Kind::Ridge => (1, 2),
             _ => (0, 0),
@@ -375,6 +379,20 @@ pub struct Solved {
 }
 
 pub const K_LINE_QUANTITIES: &str = "pl::line_quantities";
+/// `pl::solve`: on a Roof with a footprint, what the last solve came to: whether the roof
+/// could be solved, and what there is to know about how its planes meet. Worked out, never
+/// typed; it is worked out again on every load.
+#[derive(Component, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SolveState {
+    /// Empty when the roof is solved. Otherwise why it could not be.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub not_solved: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<String>,
+}
+
+pub const K_SOLVE: &str = "pl::solve";
 pub const K_FOOTPRINT: &str = "pl::footprint";
 pub const K_SOLVED: &str = "pl::solved";
 pub const K_RECIPE: &str = "pl::recipe";

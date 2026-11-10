@@ -20,6 +20,10 @@ pub const FIT_TOLERANCE_FT: f64 = 0.01;
 pub const MAX_COORDINATE_FT: f64 = 1.0e6;
 /// Steeper than this (87 degrees) is a wall, not a roof plane.
 pub const MAX_PITCH: f64 = 240.0;
+/// A footprint edge shorter than this (about 1/4 in) is a slip of the trace.
+pub const MIN_FOOTPRINT_EDGE_FT: f64 = 0.02;
+/// A footprint edge flatter than this is not a slope the roof can be solved from.
+pub const MIN_FOOTPRINT_PITCH: f64 = 0.01;
 /// A unit cost beyond this is a typing error, not a price.
 pub const MAX_UNIT_COST: f64 = 1.0e9;
 
@@ -148,6 +152,24 @@ pub fn footprint(path: &str, kind: Kind, f: &Footprint) -> Result<(), String> {
         if f.edges.len() != pts.len() {
             return Err(format!("{path} footprint: has {} points and {} edge rises; each edge, from one point to the next, has one", pts.len(), f.edges.len()));
         }
+        // A footprint the roof is solved from has to be clean: an edge too short to be a
+        // wall, or a corner a hair off straight, each makes planes and hips of its own.
+        let n = pts.len();
+        // Short edges first: a short edge also puts its ends a hair off the line through
+        // their neighbours, and the short edge is the cause.
+        for i in 0..n {
+            let len = geom::dist(pts[i], pts[(i + 1) % n]);
+            if len < MIN_FOOTPRINT_EDGE_FT {
+                return Err(format!("{path} footprint: edge {} is {:.4} ft long; an edge under {MIN_FOOTPRINT_EDGE_FT} ft (about 1/4 in) is a slip of the trace, not a wall. Take one of its points out", i + 1, len));
+            }
+        }
+        for i in 0..n {
+            let (a, b, c) = (pts[i], pts[(i + 1) % n], pts[(i + 2) % n]);
+            let off = geom::point_to_segment(b, a, c);
+            if off > 1e-9 && off <= FIT_TOLERANCE_FT {
+                return Err(format!("{path} footprint: point {} is {:.4} ft off the straight line between its neighbours; a kink that small would get a hip or a valley of its own. Put it on the line, or take it out", (i + 1) % n + 1, off));
+            }
+        }
     }
     for (i, e) in f.edges.iter().enumerate() {
         let what = format!("{path} footprint edge {}", i + 1);
@@ -160,6 +182,9 @@ pub fn footprint(path: &str, kind: Kind, f: &Footprint) -> Result<(), String> {
                 }
                 if x > MAX_PITCH {
                     return Err(format!("{what}: {x} in 12 is steeper than {MAX_PITCH} in 12, which is a wall; make it a gable"));
+                }
+                if x < MIN_FOOTPRINT_PITCH {
+                    return Err(format!("{what}: {x} in 12 is flat; a roof is solved from slopes of {MIN_FOOTPRINT_PITCH} in 12 or more, and a flat roof is a low-slope area"));
                 }
             }
             None => {

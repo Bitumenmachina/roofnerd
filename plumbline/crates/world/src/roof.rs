@@ -290,7 +290,11 @@ pub fn lines_of(planes: &[SolidPlane]) -> Found {
                         say(&mut found, format!("{} and {} meet on plan {span} at different heights ({:.2} ft and {:.2} ft): a step with a wall between them, or pitches that do not fit. Each plane's own edge is listed", a.path, b.path, za, zb0));
                         own_edge(&mut found);
                     } else {
-                        say(&mut found, format!("{} and {} share an edge {span} but disagree about its height: {} puts its ends at {:.2} ft and {:.2} ft, {} at {:.2} ft and {:.2} ft", a.path, b.path, a.path, za, zb, b.path, zb0, zb1));
+                        // Not level, and not at one height: a wall between them where a
+                        // gable stands beside a lower roof, or planes that do not fit.
+                        // Either way each plane has an edge of its own there.
+                        say(&mut found, format!("{} and {} share an edge {span} but disagree about its height: {} puts its ends at {:.2} ft and {:.2} ft, {} at {:.2} ft and {:.2} ft. A wall stands between them there, or they do not fit. Each plane's own edge is listed", a.path, b.path, a.path, za, zb, b.path, zb0, zb1));
+                        own_edge(&mut found);
                     }
                     continue;
                 }
@@ -298,6 +302,9 @@ pub fn lines_of(planes: &[SolidPlane]) -> Found {
                     (Fall::Away, Fall::Away) if level => Kind::Ridge,
                     (Fall::Away, Fall::Away) => Kind::Hip,
                     (Fall::Toward, Fall::Toward) => Kind::Valley,
+                    // One falls to the line and the other on from it, at different pitches:
+                    // a change of pitch.
+                    (Fall::Away, Fall::Toward) | (Fall::Toward, Fall::Away) if a.pitch != b.pitch => Kind::PitchBreak,
                     (fa, fb) => {
                         let (ua, ub) = (a.uphill(), b.uphill());
                         let one_plane = a.pitch == b.pitch && a.pitch != 0.0 && ua[0] * ub[0] + ua[1] * ub[1] > 1.0 - 1e-9;
@@ -310,7 +317,7 @@ pub fn lines_of(planes: &[SolidPlane]) -> Found {
                             } else if fa == Fall::Neither || fb == Fall::Neither {
                                 format!("{} and {} meet {span} where one of them is flat or runs straight up the slope beside the line; that is not a ridge, a hip or a valley", a.path, b.path)
                             } else {
-                                format!("{} and {} meet {span} where one falls toward the line and the other away: a change of pitch, which is not a ridge, a hip or a valley", a.path, b.path)
+                                format!("{} and {} meet {span} at one pitch, one falling toward the line and the other away, but not in the same direction; that is not a ridge, a hip, a valley or a change of pitch", a.path, b.path)
                             },
                         );
                         continue;

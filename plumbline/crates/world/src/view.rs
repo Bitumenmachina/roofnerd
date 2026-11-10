@@ -88,6 +88,25 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         let kind = *w.get::<Kind>(e).expect("every element has a kind");
         let p = &node.path;
         let mut rows = Vec::new();
+        // A roof's footprint: what it is solved from, each value with its flag.
+        if let Some(f) = w.get::<Footprint>(e) {
+            rows.push(entered(p, "footprint", &f.points, |pts| format!("{} points", pts.len())));
+            rows.push(length(p, "eave height", &f.eave_height));
+            for (i, edge) in f.edges.iter().enumerate() {
+                rows.push(entered(p, &format!("edge {}", i + 1), edge, |r| match r {
+                    Rise::Pitch(x) => num(*x),
+                    Rise::Gable => "gable".to_string(),
+                }));
+            }
+        }
+        if let Some(state) = w.get::<SolveState>(e) {
+            if !state.not_solved.is_empty() {
+                rows.push(Row { path: p.clone(), label: "solved roof".into(), text: "not solved".into(), status: Status::Unknown, basis: "the planes and lines under this roof".into(), note: state.not_solved.clone(), derived: true });
+            }
+            for note in &state.notes {
+                rows.push(Row { path: p.clone(), label: "solved roof".into(), text: "see note".into(), status: Status::Assumed, basis: "the planes and lines under this roof".into(), note: note.clone(), derived: true });
+            }
+        }
         if let Some(o) = w.get::<Outline>(e) {
             rows.push(entered(p, "outline", &o.points, |pts| format!("{} points", pts.len())));
             rows.push(entered(p, "eave line", &o.eave, |[a, b]| format!("({}, {}) to ({}, {})", num(a[0]), num(a[1]), num(b[0]), num(b[1]))));

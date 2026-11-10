@@ -137,7 +137,7 @@ fn setup(mut commands: Commands) {
     commands.insert_resource(GlobalAmbientLight { brightness: 140.0, ..default() });
 
     // What the pointer and the selection say, over the 3D view.
-    commands.spawn((Node { position_type: PositionType::Absolute, top: px(10.0), left: px(12.0), ..default() },)).with_child((Text::new(""), TextFont::from_font_size(15.0), TextColor(Color::srgb(0.92, 0.93, 0.95)), HudText));
+    commands.spawn((Node { position_type: PositionType::Absolute, top: px(10.0), left: px(12.0), max_width: px(1070.0), ..default() },)).with_child((Text::new(""), TextFont::from_font_size(15.0), TextColor(Color::srgb(0.92, 0.93, 0.95)), HudText));
 
     // The sheet: a second window on the same world.
     let sheet = commands.spawn((Window { title: "plumbline: sheet".into(), resolution: (640u32, 760u32).into(), position: WindowPosition::At(IVec2::new(1110, 0)), ..default() }, SheetWindow)).id();
@@ -145,7 +145,7 @@ fn setup(mut commands: Commands) {
     // the sheet. Text and panels are not on layers and still show.
     let sheet_camera = commands.spawn((Camera2d, RenderLayers::layer(1), RenderTarget::Window(WindowRef::Entity(sheet)))).id();
     commands
-        .spawn((Node { position_type: PositionType::Absolute, top: px(10.0), left: px(12.0), ..default() }, UiTargetCamera(sheet_camera)))
+        .spawn((Node { position_type: PositionType::Absolute, top: px(10.0), left: px(12.0), max_width: px(616.0), ..default() }, UiTargetCamera(sheet_camera)))
         .with_child((Text::new(""), TextFont::from_font_size(14.0), TextColor(Color::srgb(0.92, 0.93, 0.95)), SheetText));
 }
 
@@ -324,6 +324,15 @@ fn sheet_text(doc: &mut Doc, roof_path: &str) -> String {
         let (len, s) = row(el, "true_length").unwrap_or(("unknown".into(), Status::Unknown));
         out.push_str(&format!(" {:<13} {:<16} {:<9} {}{}\n", el.path, el.name, format!("{:?}", el.kind), mark(s), len));
     }
+    // What the solve had to say, and the roof's own flagged values, before any total.
+    if let Some(el) = elements.iter().find(|e| e.path == roof_path) {
+        for r in el.rows.iter().filter(|r| r.label == "solved roof") {
+            out.push_str(&format!("\n{}{}: {}\n", mark(r.status), if r.text == "not solved" { "NOT SOLVED" } else { "note" }, r.note));
+        }
+        for r in el.rows.iter().filter(|r| r.status != Status::Known && r.label != "solved roof") {
+            out.push_str(&format!("{}{} {}: {}\n", mark(r.status), roof_path, r.label, r.text));
+        }
+    }
     let totals = view::roof_totals(&mut doc.job, roof_path);
     out.push_str("\nTOTALS\n");
     let line = |label: &str, sum: &view::Sum| {
@@ -397,6 +406,7 @@ fn draw_lines(doc: Res<Doc>, mut gizmos: Gizmos) {
                 Kind::Valley => Color::srgb(0.35, 0.65, 1.0),
                 Kind::Eave => Color::srgb(0.45, 0.85, 0.50),
                 Kind::Rake => Color::srgb(0.80, 0.60, 0.95),
+                Kind::PitchBreak => Color::srgb(0.95, 0.90, 0.35),
                 _ => Color::srgb(0.7, 0.7, 0.7),
             }
         };
@@ -425,7 +435,16 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
             if doc.selected.as_ref().is_some_and(|s| doc.job.find(s).is_none()) {
                 doc.selected = None;
             }
-            let gone = if report.removed.is_empty() { String::new() } else { format!("; gone: {}", report.removed.iter().map(|r| r.0.clone()).collect::<Vec<_>>().join(", ")) };
+            let lost: Vec<String> = report.removed.iter().filter(|r| r.1).map(|r| r.0.clone()).collect();
+            let mut gone = if report.removed.is_empty() { String::new() } else { format!("; gone: {}", report.removed.iter().map(|r| r.0.clone()).collect::<Vec<_>>().join(", ")) };
+            if !lost.is_empty() {
+                gone.push_str(&format!("\nLOST WITH THEM: the condition or cost lines on {}", lost.join(", ")));
+            }
+            for moved in &report.renumbered {
+                gone.push_str(&format!("\n{moved}"));
+            }
+            // The roof under the pointer has moved; what the pointer read is no longer so.
+            doc.pointer = None;
             format!("{what} on edge {edge} of {roof_path}; solved again: {} planes, {} lines{gone}", report.planes, report.lines)
         }
         Err(why) => format!("refused: {why}"),
@@ -544,7 +563,7 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut typed: MessageReader<K
                 }
                 match recipes.first() {
                     None => format!("refused: the job has no condition that goes on a {}", kind.map(|k| format!("{k:?}")).unwrap_or_default()),
-                    Some(name) => match doc.job.apply(&sel, name, SOURCE) {
+                    Some(name) => match doc.job.apply_as(&sel, name, Status::Assumed, SOURCE) {
                         Ok(lines) => {
                             doc.job.derive();
                             format!("{sel} is now {name:?}: {} cost lines", lines.len())

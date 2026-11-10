@@ -17,7 +17,7 @@ run again and each gave what this file said they gave.
 | D0 | Landscape decision | Demonstrated, with limits below. Judged twice. |
 | D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged five times. Every judgment has found a new way to a wrong figure marked Known, each next to the last fix. All found are fixed. **The fifth round's fixes have not been judged.** |
 | D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged twice: the five demonstrations held both times; two entry forms misread in the first are fixed and held in the second. |
-| D2 | 3D roof slice | **A working 3D prototype, not the whole deliverable.** In a window: a roof solved from its footprint, a plane picked with the mouse, its pitch changed and its eave moved with the lines and totals following, a surface given its condition, and the sheet in a second window updating live. Not built: tracing a calibrated plan, a dormer, a parapet and tapered crickets in 3D, dragging with the mouse, editing in the sheet. **Not judged.** See "D2. What was run". |
+| D2 | 3D roof slice | **A working 3D prototype, not the whole deliverable.** In a window: a roof solved from its footprint, a plane picked with the mouse, its pitch changed and its eave moved with the lines and totals following, a surface given its condition, and the sheet in a second window updating live. Not built: tracing a calibrated plan, a dormer, a parapet and tapered crickets in 3D, dragging with the mouse, editing in the sheet. Judged once: the solver's areas and lengths held on every ordinary roof; it found stale planes left Known, an eave moved through the far wall, and an estimator's entries moving to another slope, among others. All fixed. **Those fixes are not judged.** See "D2. What was run". |
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
 | D4 | Macro to micro | Not started. How its demonstration will be run is written at the end of this file. |
 | D5 | Estimate sheet and money | Not started. Reference estimate missing (Q5). |
@@ -84,7 +84,7 @@ element. Changing one pitch changes, in a file diff, only that entity and the co
 derived from it. Assumed and Unknown values display as flagged.
 
 **How it is run:** `demos/d1.sh`. It uses the built-in sample job, which is made up.
-`cargo test` runs 71 checks on the same model.
+`cargo test` runs 77 checks on the same model.
 
 The figures below are as rerun after the units amendment and D3. Those added to the
 sample job one sheet-metal cost line on the porch headwall and three conditions as recipes,
@@ -124,7 +124,7 @@ still touches the same five entries and no others.
 * Hip: 15 over and 15 up on plan = 21.2132 LF; climbs 7.5 ft; √(450 + 56.25) = 22.5 LF.
 * Porch rake: 8 ft run at 3:12 climbs 2 ft; √68 = 8.2462 LF.
 
-**`cargo test`: 71 passed, 0 failed** (61 on the model, 8 on the ported skeleton, which
+**`cargo test`: 77 passed, 0 failed** (67 on the model, 8 on the ported skeleton, which
 are BIMCraft's own, and 2 on the command line).
 
 **What remains**
@@ -500,9 +500,51 @@ been opened.
 * **Courtyards.** The skeleton handles them; the solver refuses a slope that closes
   round a hole.
 
+### Sixth judgment: the solver's figures held; what it leaves behind did not
+
+A fresh agent (Opus), in its own clone, solved some forty roofs of its own with every
+figure worked by hand first, attacked the edits, and drove the window with a pointer and
+keyboard, reading the pictures.
+
+**What held.** Every area and length on rectangles with four different pitches, a
+pyramid, a 200 × 2 strip, a triangle, a parallelogram, a trapezoid, a pentagon, a hexagon,
+L, T, U, X, Z, H and stepped footprints, sheds and gables, clockwise and anticlockwise, in
+inches and in feet, a mile from the origin. Every figure stated in this section. A
+re-solve with no change wrote the same bytes on 12 roofs. Every refused edit left the file
+byte-identical. In the window: the sheet matched the command line row for row; no crash or
+hang from any key sequence; a pitch below zero, above 240, `3/4`, `abc`, and a move with
+no unit were each refused with a message.
+
+**What it found, and what was done.** Each fix was rerun on the judge's own cases.
+
+| # | What the sixth judge found | What was done | Regression test |
+|---|---|---|---|
+| J6-1 | **Wrong figures, Known.** A footprint edited in the file (an edge's pitch struck out) left the earlier solve's planes Known at their old areas, and no command could clear them | What is solved is solved again on every load; a roof that cannot be solved has the geometry taken off its planes and lines and shows `not solved` | `a_footprint_changed_in_the_file_does_not_leave_the_old_roof_standing` |
+| J6-2 | **Wrong figures, Known.** An eave moved past the opposite wall was accepted and the roof turned inside out (40 SF, Known) | Refused: the moved edge and the two beside it have to keep pointing the way they did | `an_eave_cannot_be_moved_through_the_far_wall_and_a_footprint_has_to_be_clean` |
+| J6-3 | **An invented line, Known.** A corner 1/16 in off straight got a 16.77 LF hip of its own | A footprint corner up to 0.01 ft off straight is refused, with what to do | same |
+| J6-4 | **Lost without a word.** A rake's flashing and stretch-out jumped to the other rake when a second gable was made | A line on one plane is named for the footprint edge it stands over | `what_was_entered_on_a_slope_or_a_rake_stays_on_that_slope_or_rake` |
+| J6-5 | **Lost without a word.** A point added to the footprint renumbered the edges, and a plane's condition moved to another slope | A plane keeps the edge its eave lies along; the solve says when its number changed | same |
+| J6-6 | The window did not say that a removed plane carried cost lines; long messages ran off the window | It says so; messages wrap | |
+| J6-7 | Mixed-pitch roofs had creases with no line; a gable beside an inside corner left a wall with no line; the note about either was printed once and kept nowhere | A change of pitch is a line (`PitchBreak`); planes at different heights each keep their edge; notes stay on the roof and `show` and the sheet list them | `every_edge_of_a_solved_roof_has_a_line_or_a_note_that_stays_with_the_roof` |
+| J6-8 | A 1/16 in jog failed with "a fault in the program"; a 1/8 in jog made slivers | A footprint edge under 0.02 ft is refused as a slip of the trace | as J6-2 |
+| J6-9 | A condition given in the window was saved Known, against what this file said | Assumed | `a_condition_can_be_applied_as_assumed…` |
+| J6-10 | A hand-entered plane under a solved roof was not checked; a name clash was not explained | Noted on the roof; the clash says what is in the way. **Overlap is still not checked** | same |
+| J6-11 | A pitch of 0.001 dropped 8 of 9 lines | A footprint pitch under 0.01 in 12 is refused as flat | as J6-2 |
+| smaller | The pointer readout went stale after an edit; outline faults counted edges from 0; a move replaced the footprint's source; an eave height of 126 in was stored on planes as 10.5 ft | Each fixed | |
+| found while fixing | A slope pinched by three gables comes back to touch itself, which the plane model cannot hold | Refused, saying so (as courtyards are) | `random_house_footprints_solve_whole_with_every_edge_lined` |
+
+That last test is new: 300 random stepped footprints with mixed pitches and gables. Every
+one that solves has to cover its footprint, give every line a length, leave no plane edge
+without a line, and load back as it was saved.
+
+**Left as found:** the sheet's total is the sum of the figures as shown, so it can differ
+from the exact figure in its last place (1,341.6406 against 1,341.6408).
+
+**What the sixth judge did not do:** two solved roofs in the window at once; two monitors;
+a graphics card.
+
 **What remains**
-* **Not judged.** No separate agent has attacked the solver, the footprint edits or the
-  window.
+* **The sixth round's fixes are not judged.**
 * **It has only been run on a virtual display with a software renderer**, at a few frames
   a second. It has not been run on a desktop, with a graphics card, or on two monitors.
   The second window is a real second window; "pops out to another monitor" is untested.
