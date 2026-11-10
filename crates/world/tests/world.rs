@@ -852,3 +852,87 @@ fn a_parapet_names_no_plane() {
     let err = load(&edit(&text, |v| attrs(v, "parapet-0024")["pl::run"]["planes"] = serde_json::json!(["lowslope-0023"]))).err().unwrap();
     assert!(err.contains("a parapet lies on no plane"), "{err}");
 }
+
+// ---- D2 groundwork: the lines a set of planes implies ----
+
+#[test]
+fn the_planes_of_the_sample_job_imply_the_lines_that_were_entered() {
+    let mut job = sample();
+    let (planes, left_out) = roof::solid_planes(&mut job);
+    assert_eq!(planes.len(), 6);
+    assert!(left_out.is_empty(), "{left_out:?}");
+    let found = roof::lines_of(&planes);
+    assert!(found.problems.is_empty(), "{:?}", found.problems);
+    let count = |k: Kind| found.lines.iter().filter(|l| l.kind == k).count();
+    // Hip roof: 4 eaves, 4 hips, 1 ridge. Porch shed: eave, 2 rakes, and its level top
+    // edge, which the planes can only call a ridge. Deck: its eave, two sloped sides, top.
+    assert_eq!((count(Kind::Eave), count(Kind::Hip), count(Kind::Ridge), count(Kind::Rake), count(Kind::Valley)), (6, 4, 3, 4, 0));
+    // The southwest hip: from the corner to the ridge end, on the south and west planes.
+    let hip = found.lines.iter().find(|l| l.kind == Kind::Hip && l.planes == ["plane-0003", "plane-0006"]).unwrap();
+    assert!(hip.ends == [[0.0, 0.0], [15.0, 15.0]] || hip.ends == [[15.0, 15.0], [0.0, 0.0]], "{:?}", hip.ends);
+    // Every roof line entered in the sample is one the planes imply, the headwall included.
+    let cmp = roof::compare(&mut job, &found);
+    assert_eq!(cmp.agree.len(), 13);
+    assert!(cmp.entered_only.is_empty(), "{:?}", cmp.entered_only);
+    // What nobody entered: the deck's four edges.
+    assert_eq!(cmp.implied_only.len(), 4);
+    assert!(cmp.implied_only.iter().all(|l| l.planes == ["lowslope-0023"]));
+}
+
+#[test]
+fn planes_that_disagree_along_a_shared_edge_are_reported_against_each_other() {
+    // Steepen the south plane only. It shares the ridge with the north plane and a hip
+    // with each of the east and west planes, and no longer agrees with any of them.
+    let mut job = sample();
+    job.set("plane-0003", "pitch", Some("8"), Status::Known, "revised").unwrap();
+    job.derive();
+    let (planes, _) = roof::solid_planes(&mut job);
+    let found = roof::lines_of(&planes);
+    assert_eq!(found.problems.len(), 3, "{:?}", found.problems);
+    assert!(found.problems.iter().all(|p| p.contains("plane-0003") && p.contains("disagree about its height")));
+    // The lines that do not touch the south plane's high edges are still found.
+    assert_eq!(found.lines.iter().filter(|l| l.kind == Kind::Hip).count(), 2);
+    assert_eq!(found.lines.iter().filter(|l| l.kind == Kind::Ridge && l.planes.len() == 2).count(), 0);
+}
+
+#[test]
+fn a_wing_meeting_a_main_roof_makes_two_valleys() {
+    // A gable roof 40 x 20 with its ridge east-west, and a 10 ft wide gabled wing running
+    // south from it, all 6:12 from 10 ft. The wing's ridge (5 ft of run above its eaves)
+    // meets the main south plane 5 ft up it, at (20, 5); a valley runs to that point from
+    // each inside corner, (15, 0) and (25, 0).
+    let mut job = Job::new("Cross gable", "test", "test");
+    let roof_path = job.add("job-0001", Kind::Roof, "roof").unwrap();
+    let mut plane = |name: &str, pts: Vec<P2>, eave: [P2; 2]| {
+        let p = job.add(&roof_path, Kind::RoofPlane, name).unwrap();
+        job.put(&p, Outline { points: Val::known(pts, "ft", "test"), eave: Val::known(eave, "ft", "test"), eave_height: Val::known(Len::One(10.0), "ft", "test") }).unwrap();
+        job.put(&p, Pitch(Val::known(6.0, "in/12", "test"))).unwrap();
+        p
+    };
+    let south = plane("south", vec![[0.0, 0.0], [15.0, 0.0], [20.0, 5.0], [25.0, 0.0], [40.0, 0.0], [40.0, 10.0], [0.0, 10.0]], [[0.0, 0.0], [15.0, 0.0]]);
+    let north = plane("north", vec![[40.0, 20.0], [0.0, 20.0], [0.0, 10.0], [40.0, 10.0]], [[40.0, 20.0], [0.0, 20.0]]);
+    let west = plane("wing-west", vec![[15.0, -10.0], [15.0, 0.0], [20.0, 5.0], [20.0, -10.0]], [[15.0, -10.0], [15.0, 0.0]]);
+    let east = plane("wing-east", vec![[25.0, 0.0], [25.0, -10.0], [20.0, -10.0], [20.0, 5.0]], [[25.0, 0.0], [25.0, -10.0]]);
+    // The job as built passes the entry checks.
+    let (mut job, _) = load(&save(&mut job)).unwrap();
+    let (planes, left_out) = roof::solid_planes(&mut job);
+    assert!(left_out.is_empty(), "{left_out:?}");
+    let found = roof::lines_of(&planes);
+    assert!(found.problems.is_empty(), "{:?}", found.problems);
+    let has = |kind: Kind, a: P2, b: P2, on: &[&String]| {
+        found.lines.iter().any(|l| l.kind == kind && (l.ends == [a, b] || l.ends == [b, a]) && l.planes.iter().collect::<Vec<_>>() == on)
+    };
+    assert!(has(Kind::Valley, [15.0, 0.0], [20.0, 5.0], &[&south, &west]), "{:#?}", found.lines);
+    assert!(has(Kind::Valley, [25.0, 0.0], [20.0, 5.0], &[&south, &east]));
+    assert!(has(Kind::Ridge, [0.0, 10.0], [40.0, 10.0], &[&south, &north]));
+    assert!(has(Kind::Ridge, [20.0, -10.0], [20.0, 5.0], &[&west, &east]));
+    // The main eave is in two pieces, one each side of the wing; both are eaves.
+    assert!(has(Kind::Eave, [0.0, 0.0], [15.0, 0.0], &[&south]));
+    assert!(has(Kind::Eave, [25.0, 0.0], [40.0, 0.0], &[&south]));
+    // Gable ends are rakes: four on the main roof, two on the wing.
+    assert_eq!(found.lines.iter().filter(|l| l.kind == Kind::Rake).count(), 6);
+    assert_eq!(found.lines.iter().filter(|l| l.kind == Kind::Hip).count(), 0);
+    // Two valleys, two ridges, three main eaves (the south one in two pieces), two wing
+    // eaves, six rakes.
+    assert_eq!(found.lines.len(), 2 + 2 + 3 + 2 + 6);
+}

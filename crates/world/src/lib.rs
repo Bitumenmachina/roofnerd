@@ -6,6 +6,7 @@
 //! * `check`: the rules an entered component has to meet.
 //! * `geom`: plan geometry.
 //! * `derive`: quantities worked out from geometry.
+//! * `roof`: the lines a set of planes implies (ridge, hip, valley, eave, rake).
 //! * `job`: the world and the edits made to it.
 //! * `file`: the saved job.
 //! * `sample`: a small made-up job for demonstrations and tests.
@@ -16,6 +17,7 @@ pub mod derive;
 pub mod file;
 pub mod geom;
 pub mod job;
+pub mod roof;
 pub mod sample;
 pub mod units;
 pub mod value;

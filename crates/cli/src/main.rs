@@ -10,13 +10,14 @@
 //! `1/4:12`. A length with no unit is refused, never read as feet.
 //!
 //!   plumbline check  <file>                      load, re-derive, confirm the file is exactly what a save would write
+//!   plumbline lines  <file>                      the lines the planes imply, set against the lines entered
 
 use std::fmt::Write as _;
 use std::io::Write as _;
 use std::process::ExitCode;
 
 use plumbline_world::value::Status;
-use plumbline_world::{file, sample, view};
+use plumbline_world::{file, roof, sample, view};
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -30,7 +31,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"]\n  plumbline check <file>\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"]\n  plumbline check <file>\n  plumbline lines <file>\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs".to_string()
 }
 
 fn read(path: &str) -> Result<(plumbline_world::Job, file::LoadReport), String> {
@@ -66,6 +67,12 @@ fn run(args: &[String]) -> Result<(), String> {
                 return Err("the file is not byte-for-byte what saving this job writes".into());
             }
             println!("{path}: loads, measures match the geometry, and saving it back writes the same bytes");
+            Ok(())
+        }
+        "lines" => {
+            let path = args.get(1).ok_or_else(usage)?;
+            let (mut job, _) = read(path)?;
+            let _ = std::io::stdout().write_all(lines(&mut job).as_bytes());
             Ok(())
         }
         "set" => {
@@ -148,6 +155,47 @@ fn show(job: &mut plumbline_world::Job, report: &file::LoadReport) -> String {
     if !report.stale.is_empty() {
         let _ = writeln!(out);
         let _ = writeln!(out, "WARNING: the file's measures did not match its geometry for: {}. The figures above are the recomputed ones.", report.stale.join(", "));
+    }
+    out
+}
+
+/// The lines the job's planes imply, set against the lines that were entered. It reads
+/// the job and changes nothing.
+fn lines(job: &mut plumbline_world::Job) -> String {
+    let mut out = String::new();
+    let (planes, left_out) = roof::solid_planes(job);
+    let found = roof::lines_of(&planes);
+    let cmp = roof::compare(job, &found);
+    let point = |p: [f64; 2]| format!("({}, {})", p[0], p[1]);
+    let _ = writeln!(out, "{} planes placed; they imply {} lines (coordinates in feet):", planes.len(), found.lines.len());
+    for l in &found.lines {
+        let _ = writeln!(out, "  {} {:<7} {} to {}  on {}", l.status.flag(), format!("{:?}", l.kind), point(l.ends[0]), point(l.ends[1]), l.planes.join(" and "));
+    }
+    let _ = writeln!(out);
+    let _ = writeln!(out, "{} entered lines agree with the planes.", cmp.agree.len());
+    if !cmp.entered_only.is_empty() {
+        let _ = writeln!(out, "Entered, but not what the planes imply:");
+        for e in &cmp.entered_only {
+            let _ = writeln!(out, "  {e}");
+        }
+    }
+    if !cmp.implied_only.is_empty() {
+        let _ = writeln!(out, "Implied by the planes, but not entered:");
+        for l in &cmp.implied_only {
+            let _ = writeln!(out, "  {:?} {} to {} on {}", l.kind, point(l.ends[0]), point(l.ends[1]), l.planes.join(" and "));
+        }
+    }
+    if !found.problems.is_empty() {
+        let _ = writeln!(out, "Planes that do not fit each other:");
+        for p in &found.problems {
+            let _ = writeln!(out, "  {p}");
+        }
+    }
+    if !left_out.is_empty() {
+        let _ = writeln!(out, "Planes left out:");
+        for p in &left_out {
+            let _ = writeln!(out, "  {p}");
+        }
     }
     out
 }
