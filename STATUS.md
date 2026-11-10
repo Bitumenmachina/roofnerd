@@ -13,7 +13,7 @@ run again and each gave what this file said they gave.
 | D0 | Landscape decision | Demonstrated, with limits below. Judged twice. |
 | D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged twice; the fixes from the second judgment have not themselves been judged. |
 | D1 amendment | Units (owner ruling) | Demonstrated at the command line. **Not yet judged.** |
-| D2 | 3D roof slice | Not started. Its opening proof is blocked in this workspace (QUESTIONS.md Q4). |
+| D2 | 3D roof slice | **Not demonstrated; nothing of its demonstration runs.** One piece of groundwork is built and tested (lines read off planes). The roof solver waits on the BIMCraft source (Q10) and the window on the toolchain and a display (Q4). |
 | D3 | Derived conditions and stretch-out | Not started. Reference estimate missing (Q5). |
 | D4 | Macro to micro | Not started. |
 | D5 | Estimate sheet and money | Not started. Reference estimate missing (Q5). |
@@ -296,3 +296,46 @@ for each step:
 9. Pop the sheet out to a second window; repeat step 3 and watch it update.
 
 The judge runs steps 3 through 7 on a footprint of its own choosing.
+
+### What exists toward D2, and what blocks the rest
+
+None of the nine steps above runs. This is groundwork, not a demonstration.
+
+**Built: a roof's lines read off its planes** (`crates/world/src/roof.rs`, DECISIONS.md
+call 17). Given planes, it says where the ridges, hips, valleys, eaves and rakes are, and
+reports planes that share an edge and disagree about its height. `plumbline lines <file>`
+prints it and sets it against the lines entered. It reads the job and changes nothing.
+
+*What was run and what it showed*
+* `plumbline lines` on the sample job: 6 planes placed, 17 lines implied; all 13 roof
+  lines entered in the sample agree with the planes (the porch headwall is, to the
+  planes, a one-plane ridge); the 4 not entered are the deck's own edges.
+* The same after `set plane-0003 pitch 8:12`: the ridge and the two hips on that plane are
+  reported as running along edges their planes do not agree about, with each plane's
+  heights (20.00 ft against 17.50 ft).
+* Test `a_wing_meeting_a_main_roof_makes_two_valleys`: a 40 × 20 gable roof with a 10 ft
+  gabled wing, entered as four planes, gives two valleys from the inside corners to
+  (20, 5), two ridges, five eaves and six rakes, and no hips. Worked by hand in the test.
+* `cargo test`: 36 passed.
+
+*What remains of it*
+* **Not judged.**
+* It has been run on three roofs, all made up, all with planes entered by hand.
+* It does not replace entered lines with solved ones. That is the solver's step.
+* A change of pitch along a shared edge (a gambrel break) is reported, not classed. A
+  level valley (a trough) would be classed a valley and then flagged by D1's rule that a
+  valley climbs.
+* An edge shared for only part of its length is split at the other plane's corners; this
+  is exercised by the wing test only.
+
+**Blocked: the roof solver** (steps 2 to 6). The call is to port BIMCraft's weighted
+straight skeleton (DECISIONS.md call 3). Its source could not be read from the workspace
+this stretch ran in (QUESTIONS.md Q10). Nothing was written in its place.
+
+**Blocked: the window** (the opening proof and every step that says "in the 3D view").
+Bevy 0.20.1 declares rustc 1.97.1; this workspace has 1.97.0 and no display, and updating
+the toolchain needs the owner's go-ahead (QUESTIONS.md Q4).
+
+**Found, not used yet:** the owner's earlier program has low-slope solvers (tapered
+package, crickets, coping, parapet flashing height) under MIT (DECISIONS.md call 18,
+QUESTIONS.md Q11). They are the candidate for step 8.
