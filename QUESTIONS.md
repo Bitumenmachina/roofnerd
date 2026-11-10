@@ -13,9 +13,14 @@ primary and both can coexist. The sample job's codes are MasterFormat and marked
 No total is grouped by code yet.
 
 ## Q2. Where does this repository live?
-**Open.** It was started in a session workspace that has no remote and does not outlast
-the session. Pushing to a remote needs your go-ahead.
-**Assumption in use:** local commits only. The repository is handed over as a git bundle.
+**Answered by the owner, 2026-11-10.** Asked whether to push it to the public repository
+of his earlier program, on the working branch of the session that carried this work on,
+as a `plumbline/` folder with its history, he said yes. He also said that "local only"
+in his rules is about job data, not about the code. It lives there until he says
+otherwise. Job, client and supplier data and the ruling documents still never go in:
+`refs/` is ignored by git and the sample job is made up.
+**Still open:** whether that is its permanent home or it gets a repository of its own,
+and whether the working branch is merged (QUESTIONS.md Q11 is the related question).
 
 ## Q3. Are MPL-2.0 crates allowed?
 **Open.** Rule 1 names GPL and AGPL as reference-only. MPL-2.0 (ifc-lite, bimifc,

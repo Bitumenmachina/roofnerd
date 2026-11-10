@@ -3,8 +3,10 @@
 Each claim gives its scope, its evidence, and what remains. Evidence is output from a
 command anyone can run again from the repository root.
 
-Workspace this was last run in: Linux, rustc 1.97.0, no display. The repository has no
-remote (QUESTIONS.md Q2). It arrived here as a git bundle; on arrival `cargo test` (27
+Workspace this was last run in: Linux, rustc 1.97.0, no display. On the owner's go-ahead
+(QUESTIONS.md Q2) the repository is pushed, as a `plumbline/` folder with its history, to
+a working branch of the public repository of his earlier program. It arrived here as a
+git bundle; on arrival `cargo test` (27
 passed), `demos/d1.sh`, `tools/licenses.sh` and `tools/licenses.sh --self-test` were each
 run again and each gave what this file said they gave.
 
