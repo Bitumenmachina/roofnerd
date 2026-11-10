@@ -181,9 +181,13 @@ pub fn show_length(len: &Len, unit: &str) -> String {
         (IN, Len::One(x)) => format!("{}{} in", if *x < 0.0 { "-" } else { "" }, inches_text(x.abs())),
         (FT_IN, Len::FtIn([feet, inches])) => {
             let minus = if *feet < 0.0 || *inches < 0.0 { "-" } else { "" };
-            format!("{minus}{}' {}\"", feet.abs(), inches_text(inches.abs()))
+            // 25' 0 1/2", not 25' 1/2": after feet, the whole inches are written even when none.
+            let inch = inches_text(inches.abs());
+            let inch = if inches.abs() > 0.0 && inches.abs() < 1.0 && inch.contains('/') { format!("0 {inch}") } else { inch };
+            format!("{minus}{}' {inch}\"", feet.abs())
         }
-        (_, Len::One(x)) => format!("{x} {unit}").trim().to_string(),
+        // Adding zero shows a "-0" from a file as plain 0.
+        (_, Len::One(x)) => format!("{} {unit}", *x + 0.0).trim().to_string(),
         (_, Len::FtIn([feet, inches])) => format!("[{feet}, {inches}] {unit}").trim().to_string(),
     }
 }
@@ -208,7 +212,8 @@ fn plain(text: &str) -> String {
             c => out.extend(c.to_lowercase()),
         }
     }
-    out.trim().to_string()
+    // Two apostrophes are an inch mark typed the long way.
+    out.replace("''", "\"").trim().to_string()
 }
 
 struct Scan<'a> {
@@ -417,8 +422,9 @@ pub fn parse_length(text: &str) -> Result<(Len, &'static str), String> {
 /// fraction such as `3/4`) is refused.
 pub fn parse_pitch(text: &str) -> Result<f64, String> {
     let typed = text.trim();
-    let s: String = plain(text).replace('"', " in ");
-    let squeezed: String = s.split_whitespace().collect::<Vec<_>>().join(" ");
+    let s: String = plain(text).replace('"', " in ").replace("in.", "in");
+    // One space between words, none around the marks that join a rise to its run.
+    let squeezed: String = s.split_whitespace().collect::<Vec<_>>().join(" ").replace(" /", "/").replace("/ ", "/").replace(" :", ":").replace(": ", ":");
     let how = "a pitch is the rise in inches for 12 of run: write 6, 6:12 or 1/4:12";
     if squeezed.contains("deg") || squeezed.contains('°') {
         return Err(format!("{typed:?} is in degrees; {how}"));
@@ -432,7 +438,7 @@ pub fn parse_pitch(text: &str) -> Result<f64, String> {
         return Err(format!("{typed:?} has a character that is not part of a pitch; {how}"));
     }
     // The most specific ending first, so "6in/12" is not read as "6in" over 12.
-    for suffix in [" in per ft", " in per foot", " in/ft", "in/ft", " in/12", "in/12", " in 12", ":12", "/12"] {
+    for suffix in [" in per ft", " in per foot", " in/ft", "in/ft", " in/12", "in/12", " in:12", "in:12", " in 12", ":12", "/12"] {
         if let Some(rest) = body.strip_suffix(suffix) {
             body = rest.trim_end();
             run_given = true;

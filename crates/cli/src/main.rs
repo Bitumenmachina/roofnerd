@@ -52,6 +52,11 @@ fn read(path: &str) -> Result<(plumbline_world::Job, file::LoadReport), String> 
 
 fn run(args: &[String]) -> Result<(), String> {
     let cmd = args.first().map(String::as_str).ok_or_else(usage)?;
+    // A command that takes one file takes nothing after it: an argument that would be
+    // ignored is refused instead.
+    if matches!(cmd, "sample" | "show" | "check" | "lines") && args.len() > 2 {
+        return Err(format!("{cmd} takes one file and nothing else; {:?} would be ignored\n{}", args[2], usage()));
+    }
     match cmd {
         "sample" => {
             let out = args.get(1).ok_or_else(usage)?;
@@ -244,7 +249,7 @@ fn lines(job: &mut plumbline_world::Job) -> String {
         }
     }
     if !found.problems.is_empty() {
-        let _ = writeln!(out, "Planes that do not fit each other:");
+        let _ = writeln!(out, "How the planes meet, where it is not a plain ridge, hip or valley:");
         for p in &found.problems {
             let _ = writeln!(out, "  {p}");
         }

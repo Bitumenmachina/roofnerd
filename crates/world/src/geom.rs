@@ -152,21 +152,35 @@ pub fn runs_along_outline(a: P2, b: P2, pts: &[P2], tolerance: f64) -> Result<()
         covered.push((t0.min(t1), t0.max(t1)));
     }
     covered.sort_by(|x, y| x.0.total_cmp(&y.0));
-    let mut reach = 0.0;
-    let fail = |t: f64| {
+    // Walk the cover. What is not covered is added up: a hundred hairline gaps are as
+    // much missing roof as one wide one, so it is the total that has to stay inside the
+    // tolerance, not each gap.
+    let fail = |from: f64, to: f64| {
+        let t = (from + to) / 2.0;
         let p = [a[0] + t / len * (b[0] - a[0]), a[1] + t / len * (b[1] - a[1])];
         Err((t / len, point_to_outline(p, pts)))
     };
+    let (mut reach, mut bare) = (0.0_f64, 0.0_f64);
+    let mut widest: Option<(f64, f64)> = None;
+    let mut gap = |from: f64, to: f64, bare: &mut f64| {
+        if to > from {
+            *bare += to - from;
+            if widest.is_none_or(|(f, t)| to - from > t - f) {
+                widest = Some((from, to));
+            }
+        }
+    };
     for (lo, hi) in covered {
-        if lo > reach + tolerance {
+        if lo >= len {
             break;
         }
+        gap(reach, lo.max(0.0), &mut bare);
         reach = reach.max(hi);
     }
-    if reach < len - tolerance {
-        // Report where cover runs out: the start if nothing reaches it, else just past
-        // the last covered point.
-        return fail(if reach <= tolerance { 0.0 } else { (reach + tolerance).min(len) });
+    gap(reach, len, &mut bare);
+    if bare > tolerance {
+        let (from, to) = widest.unwrap_or((0.0, len));
+        return fail(from, to);
     }
     Ok(())
 }

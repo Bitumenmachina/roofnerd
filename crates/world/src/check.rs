@@ -83,34 +83,42 @@ pub fn eave_edge(pts: &[P2], eave: [P2; 2]) -> Result<[P2; 2], String> {
     if geom::dist(a, b) <= FIT_TOLERANCE_FT {
         return Err("has no length".into());
     }
-    // An edge traced with a point part-way along it is still one edge: points that sit on
-    // the straight line between their neighbours are passed over when finding the eave's edge.
-    let mut straight: Vec<P2> = pts.to_vec();
-    let mut i = 0;
-    while straight.len() > 3 && i < straight.len() {
-        let m = straight.len();
-        let (prev, here, next) = (straight[(i + m - 1) % m], straight[i], straight[(i + 1) % m]);
-        if geom::point_to_segment(here, prev, next) <= FIT_TOLERANCE_FT {
-            straight.remove(i);
-            i = 0;
-        } else {
-            i += 1;
+    // The outline edges each end of the eave sits on. If one edge holds both, that is the
+    // eave's edge. If not, the eave may span an edge traced in pieces: a straight run of
+    // edges from one holding one end to one holding the other. A run counts as straight
+    // only if every corner inside it is within the tolerance of the one line from the
+    // run's start to its end, so small bends cannot add up into a curve.
+    let n = pts.len();
+    let on = |x: P2, i: usize| geom::point_to_segment(x, pts[i], pts[(i + 1) % n]) <= FIT_TOLERANCE_FT;
+    let a_edges: Vec<usize> = (0..n).filter(|&i| on(a, i)).collect();
+    let b_edges: Vec<usize> = (0..n).filter(|&i| on(b, i)).collect();
+    let mut candidates: Vec<[P2; 2]> = a_edges.iter().filter(|i| b_edges.contains(i)).map(|&i| [pts[i], pts[(i + 1) % n]]).collect();
+    for &i in &a_edges {
+        for &j in &b_edges {
+            for (start, end) in [(i, j), (j, i)] {
+                let steps = (end + n - start) % n;
+                if steps == 0 || steps >= n - 1 {
+                    continue;
+                }
+                let (p, q) = (pts[start], pts[(end + 1) % n]);
+                let straight = (1..=steps).all(|k| geom::point_to_segment(pts[(start + k) % n], p, q) <= FIT_TOLERANCE_FT);
+                if straight && geom::point_to_segment(a, p, q) <= FIT_TOLERANCE_FT && geom::point_to_segment(b, p, q) <= FIT_TOLERANCE_FT {
+                    candidates.push([p, q]);
+                }
+            }
         }
     }
-    let all = pts;
-    let pts = &straight[..];
-    let n = pts.len();
-    let holding: Vec<usize> = (0..n)
-        .filter(|&i| {
-            let (p, q) = (pts[i], pts[(i + 1) % n]);
-            geom::point_to_segment(a, p, q) <= FIT_TOLERANCE_FT && geom::point_to_segment(b, p, q) <= FIT_TOLERANCE_FT
-        })
-        .collect();
-    let edge = match holding.as_slice() {
-        [] => return Err("does not lie along any one edge of the outline".into()),
-        [i] => [pts[*i], pts[(*i + 1) % n]],
-        _ => return Err("is too short to tell which edge of the outline it lies along".into()),
+    candidates.sort_by(|x, y| geom::dist(y[0], y[1]).total_cmp(&geom::dist(x[0], x[1])));
+    let Some(&edge) = candidates.first() else {
+        return Err("does not lie along any one edge of the outline".into());
     };
+    // Several candidates are fine if they are pieces of the same straight line; the
+    // longest stands for them. If they are different lines, the eave is too short to say.
+    let same_line = |c: &[P2; 2]| c.iter().all(|x| geom::point_to_line(*x, edge[0], edge[1]).is_some_and(|d| d <= FIT_TOLERANCE_FT));
+    if !candidates.iter().all(same_line) {
+        return Err("is too short to tell which edge of the outline it lies along".into());
+    }
+    let all = pts;
     let offsets: Vec<f64> = all.iter().filter_map(|p| geom::signed_offset(*p, edge[0], edge[1])).collect();
     let (lo, hi) = offsets.iter().fold((f64::MAX, f64::MIN), |(lo, hi), x| (lo.min(*x), hi.max(*x)));
     if lo < -FIT_TOLERANCE_FT && hi > FIT_TOLERANCE_FT {
@@ -196,6 +204,9 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
         }
         if line.description != line.description.trim() {
             return Err(format!("{path} cost line {:?}: its description starts or ends with a space; a line is known by its description, and a space nobody can see makes two lines out of one", line.description));
+        }
+        if let Some(c) = line.description.chars().find(|c| c.is_control() || matches!(*c, '\u{00AD}' | '\u{200B}'..='\u{200F}' | '\u{2028}'..='\u{202F}' | '\u{2060}'..='\u{2064}' | '\u{FEFF}')) {
+            return Err(format!("{path} cost line {:?}: its description holds a character nobody can see (U+{:04X}); two lines could look the same and be different", line.description, c as u32));
         }
         let same = |a: &str, b: &str| a.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase() == b.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
         if let Some(other) = c.lines[..i].iter().find(|other| same(&other.description, &line.description)) {

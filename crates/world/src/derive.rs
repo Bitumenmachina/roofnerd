@@ -140,9 +140,9 @@ pub fn derive(world: &mut World) -> Vec<String> {
             continue;
         }
         let plan = run.ends_ft().map(|[a, b]| geom::dist(a, b));
-        let mut shows = None;
+        let mut shows = Vec::new();
         lengths.insert(node.path.clone(), true_length(*kind, Some(run), plan, &planes, &format!("{}#{K_RUN}", node.path), &mut shows));
-        if let Some(plane) = shows {
+        for plane in shows {
             let first = wrong_eave.entry(plane).or_insert_with(|| node.path.clone());
             if node.path < *first {
                 *first = node.path.clone();
@@ -247,7 +247,7 @@ pub fn derive(world: &mut World) -> Vec<String> {
                     },
                 );
             } else {
-                let d = lengths.remove(me).unwrap_or_else(|| true_length(*kind, run, plan, &planes, &in_run, &mut None));
+                let d = lengths.remove(me).unwrap_or_else(|| true_length(*kind, run, plan, &planes, &in_run, &mut Vec::new()));
                 m.insert("true_length".into(), d);
             }
         }
@@ -318,9 +318,9 @@ pub fn derive(world: &mut World) -> Vec<String> {
 
 /// The length of a line along the slope. The line has to fit every plane it names: on the
 /// plane's outline at both ends, and at the same height on every plane at both ends.
-/// `shows_wrong_eave` is set to the plane's path when this line's kind and its slope on
-/// that plane disagree, which is evidence the plane's eave is on the wrong edge.
-fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMap<String, PlaneGeom>, in_run: &str, shows_wrong_eave: &mut Option<String>) -> Derived {
+/// `shows_wrong_eave` gains the path of every plane on which this line's kind and its
+/// slope disagree, which is evidence that plane's eave is on the wrong edge.
+fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMap<String, PlaneGeom>, in_run: &str, shows_wrong_eave: &mut Vec<String>) -> Derived {
     let base = "√(plan_length² + rise²); rise = the difference in height between the two ends, each height = eave height + pitch ÷ 12 × distance from the plane's eave line";
     let mut inputs = vec![in_run.to_string()];
     let Some(run) = run else {
@@ -376,6 +376,36 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
         }
     }
     let all_given = heights.len() == n;
+    // What the kind of line says about its slope, on every plane it names. This is what
+    // catches a plane whose eave was entered on the wrong edge: its rakes come out level
+    // and its eave climbs. It is asked of each plane before the planes are compared with
+    // each other, and every plane that fails is recorded, not only the first: the line is
+    // evidence about each of them whatever else is wrong with it.
+    let mut kind_fault: Option<String> = None;
+    for (p, z) in &heights {
+        let rise = (z[1] - z[0]).abs();
+        let level = rise <= FIT_TOLERANCE_FT;
+        let pitch = planes.get(*p).and_then(|g| g.pitch).unwrap_or(0.0);
+        // Would this line climb noticeably if it ran straight up the slope?
+        let could_climb = plan.is_some_and(|l| l * pitch / 12.0 > 10.0 * FIT_TOLERANCE_FT);
+        let name = match kind {
+            Kind::Eave => "an eave",
+            Kind::Ridge => "a ridge",
+            Kind::Headwall => "a headwall",
+            Kind::Rake => "a rake",
+            Kind::Hip => "a hip",
+            _ => "a valley",
+        };
+        let fault = match kind {
+            Kind::Eave | Kind::Ridge | Kind::Headwall if !level => Some(format!("{name} is level, but plane {p} puts this line's ends at {:.2} ft and {:.2} ft; check which edge of the plane is entered as its eave", z[0], z[1])),
+            Kind::Rake | Kind::Hip | Kind::Valley if level && could_climb => Some(format!("{name} climbs the slope, but plane {p} puts both ends of this line at {:.2} ft; check which edge of the plane is entered as its eave", z[0])),
+            _ => None,
+        };
+        if let Some(fault) = fault {
+            shows_wrong_eave.push((*p).clone());
+            kind_fault.get_or_insert(fault);
+        }
+    }
     if all_given {
         for (end, label) in [(0, "start"), (1, "end")] {
             let (lo, hi) = heights.iter().fold((f64::MAX, f64::MIN), |(lo, hi), (_, z)| (lo.min(z[end]), hi.max(z[end])));
@@ -384,34 +414,9 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
                 return refuse(format!("the planes disagree about the height of the line's {label}: {}. The line as drawn does not fit these pitches and eave heights", each.join("; ")));
             }
         }
-        // What the kind of line says about its slope. This is what catches a plane whose
-        // eave was entered on the wrong edge: its rakes come out level and its eave climbs.
-        for (p, z) in &heights {
-            let rise = (z[1] - z[0]).abs();
-            let level = rise <= FIT_TOLERANCE_FT;
-            let pitch = planes.get(*p).and_then(|g| g.pitch).unwrap_or(0.0);
-            // Would this line climb noticeably if it ran straight up the slope?
-            let could_climb = plan.is_some_and(|l| l * pitch / 12.0 > 10.0 * FIT_TOLERANCE_FT);
-            let name = match kind {
-                Kind::Eave => "an eave",
-                Kind::Ridge => "a ridge",
-                Kind::Headwall => "a headwall",
-                Kind::Rake => "a rake",
-                Kind::Hip => "a hip",
-                _ => "a valley",
-            };
-            match kind {
-                Kind::Eave | Kind::Ridge | Kind::Headwall if !level => {
-                    *shows_wrong_eave = Some((*p).clone());
-                    return refuse(format!("{name} is level, but plane {p} puts this line's ends at {:.2} ft and {:.2} ft; check which edge of the plane is entered as its eave", z[0], z[1]));
-                }
-                Kind::Rake | Kind::Hip | Kind::Valley if level && could_climb => {
-                    *shows_wrong_eave = Some((*p).clone());
-                    return refuse(format!("{name} climbs the slope, but plane {p} puts both ends of this line at {:.2} ft; check which edge of the plane is entered as its eave", z[0]));
-                }
-                _ => {}
-            }
-        }
+    }
+    if let Some(fault) = kind_fault {
+        return refuse(fault);
     }
     let value = match (plan, heights.first()) {
         (Some(l), Some((_, z))) if all_given => Some((l * l + (z[1] - z[0]).powi(2)).sqrt()),

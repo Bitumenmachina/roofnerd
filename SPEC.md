@@ -91,7 +91,9 @@ nothing; the program converts only inside arithmetic, and says where it did.
 * A number too small for a 64-bit number to hold (it would be stored as zero) is refused.
 * A pitch typed as a bare number is rise in 12. A pitch has one unit, so there is nothing
   else it could be read as.
-* Marks and fractions pasted from a drawing are read: ′ ″ ’ ” and ½ ¼ ¾ ⅛ ⅜ ⅝ ⅞.
+* Marks and fractions pasted from a drawing are read: ′ ″ ’ ” and ½ ¼ ¾ ⅛ ⅜ ⅝ ⅞. Two
+  apostrophes are an inch mark (`6''`). A pitch is also read as `1/4"/ft`, `1/4":12` and
+  `6 in./12`.
 
 ## 3. The saved job
 
@@ -135,7 +137,7 @@ valid IFCX.
 |---|---|
 | Top level of the file, the header, a `schemas` entry, a data entry, IFC5's `inherits` | Kept and written back unchanged |
 | An attribute whose key this program does not know | Kept and written back unchanged |
-| An attribute under this program's own `pl::` prefix that is not one of its components (`pl::Pitch`) | **Refused**, naming the key and the one it resembles |
+| An attribute under this program's own `pl::` prefix that is not one of its components, or a slip away from one of them: capitals, spaces, or one or two characters (`pl::Pitch`, `pI::pitch`, `pl;;pitch`) | **Refused**, naming the key and the one it resembles |
 | A field inside one of this program's own components (`pl::pitch`, a cost line, ...) | **Refused**, naming the field |
 | The same key twice in one object, anywhere in the file | **Refused**, naming the key |
 
@@ -164,7 +166,8 @@ A file is refused if:
   beyond 1,000,000 ft.
 * *Lines:* two ends at the same point; a blank plane path; a parapet that names a plane.
 * *Cost:* a code lacking a scheme or a code; a line with no description, or one that
-  starts or ends with a space; two lines on one element whose descriptions differ only in
+  starts or ends with a space or holds a character nobody can see (a zero-width space, a
+  tab); two lines on one element whose descriptions differ only in
   capitals or spacing; a line priced by a measure its element does not
   have, or by a factor (`slope_factor`) and not a quantity; a stretch-out on a line not
   priced by a length, or of zero or less, or beyond 1,000,000 ft; a unit cost in the wrong
@@ -186,7 +189,7 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 |---|---|---|---|
 | `pl::class` | every element | The kind: Job, Roof, RoofPlane, LowSlopeArea, Eave, Rake, Ridge, Hip, Valley, Headwall, Parapet | |
 | `pl::job` | the job | Title, the unit derived lengths are worked out in (`ft`), the next path number | |
-| `pl::outline` | areas | `points`: the footprint traced on the plan, either way round. `eave`: the low edge the pitch rises from, as its own line along one edge of the outline (an edge traced with a point part-way along it is one edge), with no part of the outline on its other side. The slope is measured from that edge's line. `eave_height`. | `points`, `eave`: `ft` or `in`. `eave_height`: `ft`, `in` or `ft-in` |
+| `pl::outline` | areas | `points`: the footprint traced on the plan, either way round. `eave`: the low edge the pitch rises from, as its own line along one edge of the outline (an edge traced in pieces is one edge when every corner inside it is within 0.01 ft of the one line from its start to its end), with no part of the outline on its other side. The slope is measured from that edge's line. `eave_height`. | `points`, `eave`: `ft` or `in`. `eave_height`: `ft`, `in` or `ft-in` |
 | `pl::pitch` | areas | Rise in inches per 12 inches of run | `in/12` |
 | `pl::run` | lines | `ends`: the two ends on the plan. `planes`: paths of the planes the line lies on. | `ft` or `in` |
 | `pl::height` | parapets | Height | `ft`, `in` or `ft-in` |
@@ -250,15 +253,19 @@ pitch).
   that is not in the job, or an element that is not a plane;
 * a named plane lacks its outline or its pitch;
 * the line does not run along the outline of a plane it names: the outline edges within
-  0.01 ft of the line are laid along it and have to cover it end to end, so a line that
-  crosses a notch or cuts across the plane fails however short the gap;
+  0.01 ft of the line are laid along it and have to cover it end to end. What is not
+  covered is added up, and the total has to stay within 0.01 ft: a line that crosses a
+  notch, or a hundred hairline notches, or cuts across the plane, fails;
 * the planes put either end more than 0.01 ft (about 1/8 in) apart in height;
 * the line's kind and its slope disagree: an eave, ridge or headwall that is not level on
   its plane, or a rake, hip or valley that is level on a plane with enough pitch to lift
   it more than 0.1 ft over its length;
-* another line on one of its planes fails the test just above. That line is evidence the
-  plane's eave is entered on the wrong edge, and a rake can climb under both readings of
-  a plane, so every line on that plane loses its length until the eave is settled.
+* another line on one of its planes fails the test just above on that plane. That line
+  is evidence the plane's eave is entered on the wrong edge, and a rake can climb under
+  both readings of a plane, so every line on that plane loses its length until the eave is
+  settled. The test is made on every plane a line names, before the planes are compared
+  with each other, so the evidence counts even when the line is refused for something
+  else, and counts against each plane it shows wrong.
 
 Example: steepen one plane of a hip roof while the hips stay where they were traced, and
 those hips and the ridge are flagged with both heights. The roof as drawn no longer closes.
@@ -303,8 +310,9 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
   entered on the edge parallel to the true one (every line still fits and every length is
   right, but its heights run downhill); a plane whose eave is entered on the wrong edge
   when no line entered on it is level where it should climb or climbs where it should be
-  level (with only a rake entered, nothing contradicts the eave); whether a cost code is a
-  real code in its scheme.
+  level (with only a rake entered, nothing contradicts the eave); two cost lines whose
+  descriptions look alike but are spelled with different letters (a Cyrillic о, an ﬂ
+  ligature); whether a cost code is a real code in its scheme.
 * **A plane with an eave that steps** (around a bay) takes its lowest edge as the eave;
   the stepped-back eave is entered as its own Eave line and comes out level and higher.
 * **The 0.01 ft fit tolerance** is tighter than a hand trace of a scanned plan can hold

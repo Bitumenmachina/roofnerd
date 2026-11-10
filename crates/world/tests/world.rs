@@ -888,10 +888,20 @@ fn planes_that_disagree_along_a_shared_edge_are_reported_against_each_other() {
     let (planes, _) = roof::solid_planes(&mut job);
     let found = roof::lines_of(&planes);
     assert_eq!(found.problems.len(), 3, "{:?}", found.problems);
-    assert!(found.problems.iter().all(|p| p.contains("plane-0003") && p.contains("disagree about its height")));
-    // The lines that do not touch the south plane's high edges are still found.
-    assert_eq!(found.lines.iter().filter(|l| l.kind == Kind::Hip).count(), 2);
+    assert!(found.problems.iter().all(|p| p.contains("plane-0003")));
+    // The two hips climb to a top the planes put at different heights: they do not fit.
+    assert_eq!(found.problems.iter().filter(|p| p.contains("disagree about its height")).count(), 2);
+    // The ridge is level on both planes, at 20 ft on one and 17.5 ft on the other. That is
+    // a step or a misfit; the planes cannot say which, and each keeps its own top edge.
+    assert_eq!(found.problems.iter().filter(|p| p.contains("at different heights (20.00 ft and 17.50 ft)")).count(), 1);
     assert_eq!(found.lines.iter().filter(|l| l.kind == Kind::Ridge && l.planes.len() == 2).count(), 0);
+    assert!(found.lines.iter().any(|l| l.kind == Kind::Ridge && l.planes == ["plane-0003"]));
+    assert!(found.lines.iter().any(|l| l.kind == Kind::Ridge && l.planes == ["plane-0005"]));
+    // The hips that do not touch the south plane are still found.
+    assert_eq!(found.lines.iter().filter(|l| l.kind == Kind::Hip).count(), 2);
+    // The entered ridge and hips are reported as lying on edges the planes dispute.
+    let cmp = roof::compare(&mut job, &found);
+    assert_eq!(cmp.entered_only.iter().filter(|e| e.contains("do not agree about")).count(), 3, "{:?}", cmp.entered_only);
 }
 
 #[test]
@@ -1326,4 +1336,201 @@ fn a_condition_in_the_file_has_to_be_a_recipe_that_makes_sense() {
     assert!(err(edit(&text, |v| coping(v, "waste", serde_json::json!({"value": -5.0, "unit": "%", "status": "Known", "source": "x"})))).contains("percentage from 0"));
     assert!(err(edit(&text, |v| coping(v, "waste", serde_json::json!({"value": 5.0, "unit": "", "status": "Known", "source": "x"})))).contains("has to be \"%\""));
     assert!(err(edit(&text, |v| coping(v, "unit_cost", serde_json::json!({"value": null, "unit": "$/SF", "status": "Unknown", "source": "x"})))).contains("has to be \"$/sheet\""));
+}
+
+// ---- Regression checks for what the fourth independent judgment found ----
+
+/// A job of planes (outline, eave line; all 6:12 from 10 ft) and lines on them, built
+/// unchecked and then loaded, so it has passed the entry checks.
+fn roof_job(planes: &[(Vec<P2>, [P2; 2])], lines: &[(Kind, [P2; 2], &[usize])]) -> Result<Job, String> {
+    let mut job = Job::new("Roof", "test", "test");
+    let mut paths = Vec::new();
+    for (i, (points, eave)) in planes.iter().enumerate() {
+        let p = job.add("job-0001", Kind::RoofPlane, &format!("plane-{i}")).unwrap();
+        job.put(&p, Outline { points: Val::known(points.clone(), "ft", "test"), eave: Val::known(*eave, "ft", "test"), eave_height: Val::known(Len::One(10.0), "ft", "test") }).unwrap();
+        job.put(&p, Pitch(Val::known(6.0, "in/12", "test"))).unwrap();
+        paths.push(p);
+    }
+    for (i, (kind, ends, on)) in lines.iter().enumerate() {
+        let p = job.add("job-0001", *kind, &format!("line-{i}")).unwrap();
+        job.put(&p, Run { ends: Val::known(*ends, "ft", "test"), planes: on.iter().map(|k| paths[*k].clone()).collect() }).unwrap();
+    }
+    job.derive();
+    load(&save(&mut job)).map(|(job, _)| job)
+}
+
+fn length_of(job: &mut Job, name: &str) -> Derived {
+    let path = job.children()["job-0001"][name].clone();
+    measure(job, &path, "true_length")
+}
+
+#[test]
+fn evidence_of_a_wrong_eave_is_not_lost_behind_another_fault_or_another_plane() {
+    // Two planes either side of a ridge at y = 15. Entered right, each has its eave on its
+    // long outer edge and the rake from (0, 0) to (5, 15) is sqrt(250 + 7.5 x 7.5) = 17.5 LF.
+    let (south, north) = (vec![[0.0, 0.0], [30.0, 0.0], [30.0, 15.0], [5.0, 15.0]], vec![[0.0, 30.0], [30.0, 30.0], [30.0, 15.0], [5.0, 15.0]]);
+    let (south_eave, north_eave) = ([[0.0, 0.0], [30.0, 0.0]], [[0.0, 30.0], [30.0, 30.0]]);
+    let wrong_south = [[30.0, 0.0], [30.0, 15.0]];
+    let wrong_north = [[30.0, 30.0], [30.0, 15.0]];
+    let lines: [(Kind, [P2; 2], &[usize]); 3] = [(Kind::Rake, [[0.0, 0.0], [5.0, 15.0]], &[0]), (Kind::Rake, [[0.0, 30.0], [5.0, 15.0]], &[1]), (Kind::Ridge, [[5.0, 15.0], [30.0, 15.0]], &[0, 1])];
+    let mut right = roof_job(&[(south.clone(), south_eave), (north.clone(), north_eave)], &lines).unwrap();
+    assert_eq!(length_of(&mut right, "line-0").value, Some(17.5));
+    assert_eq!(length_of(&mut right, "line-2").value, Some(25.0));
+
+    // The south eave on the wrong edge. The ridge climbs on the south plane, and the two
+    // planes also disagree about its height. The disagreement is what the ridge reports,
+    // but the climb is still evidence about the south plane: its rake has no length.
+    let mut job = roof_job(&[(south.clone(), wrong_south), (north.clone(), north_eave)], &lines).unwrap();
+    assert!(length_of(&mut job, "line-2").note.contains("disagree"));
+    let rake = length_of(&mut job, "line-0");
+    assert_eq!(rake.value, None);
+    assert!(rake.note.contains("eave entered on the wrong edge"), "{}", rake.note);
+    // The north plane is entered right and its rake keeps its length.
+    assert_eq!(length_of(&mut job, "line-1").value, Some(17.5));
+
+    // Both eaves wrong the same way: the ridge climbs on both planes and they agree about
+    // its height. Both planes are shown wrong, whichever the ridge names first.
+    for order in [[0usize, 1], [1, 0]] {
+        let lines: [(Kind, [P2; 2], &[usize]); 3] = [lines[0], lines[1], (Kind::Ridge, [[5.0, 15.0], [30.0, 15.0]], &order)];
+        let mut job = roof_job(&[(south.clone(), wrong_south), (north.clone(), wrong_north)], &lines).unwrap();
+        for rake in ["line-0", "line-1"] {
+            let d = length_of(&mut job, rake);
+            assert_eq!(d.value, None, "{order:?} {rake}");
+            assert!(d.note.contains("eave entered on the wrong edge"), "{}", d.note);
+        }
+    }
+}
+
+#[test]
+fn gaps_under_a_line_add_up_and_bends_in_an_eave_do_not() {
+    // A 10 ft rake edge with a hundred notches each 0.009 ft wide: 0.9 ft of it has no roof
+    // under it. Each gap is inside the tolerance; together they are not.
+    let mut outline: Vec<P2> = vec![[0.0, 0.0], [10.0, 0.0]];
+    for k in 0..100 {
+        let y = 0.05 + 0.1 * k as f64;
+        outline.extend([[10.0, y], [9.5, y], [9.5, y + 0.009], [10.0, y + 0.009]]);
+    }
+    outline.extend([[10.0, 10.0], [0.0, 10.0]]);
+    let mut job = roof_job(&[(outline, [[0.0, 0.0], [10.0, 0.0]])], &[(Kind::Rake, [[10.0, 0.0], [10.0, 10.0]], &[0])]).unwrap();
+    let d = length_of(&mut job, "line-0");
+    assert_eq!(d.value, None);
+    assert!(d.note.contains("does not run along the outline"), "{}", d.note);
+
+    // A low edge traced as 400 points on a sag 1 ft deep. Each point is within the
+    // tolerance of the line between its neighbours; the edge as a whole is not straight,
+    // and an eave drawn straight across it is refused.
+    let mut sag: Vec<P2> = (0..=400).map(|k| {
+        let x = 40.0 * k as f64 / 400.0;
+        [x, 1.0 - (x - 20.0).powi(2) / 400.0]
+    }).collect();
+    sag[0] = [0.0, 0.0];
+    sag[400] = [40.0, 0.0];
+    sag.extend([[40.0, 20.0], [0.0, 20.0]]);
+    let err = roof_job(&[(sag, [[0.0, 0.0], [40.0, 0.0]])], &[]).err().unwrap();
+    assert!(err.contains("does not lie along any one edge"), "{err}");
+    // Three pieces of one straight edge are still one edge, and an eave on the middle
+    // piece, or across all three, is taken.
+    let pieces = vec![[0.0, 0.0], [10.0, 0.0], [20.0, 0.0], [30.0, 0.0], [30.0, 10.0], [0.0, 10.0]];
+    for eave in [[[10.0, 0.0], [20.0, 0.0]], [[0.0, 0.0], [30.0, 0.0]], [[5.0, 0.0], [25.0, 0.0]]] {
+        let mut job = roof_job(&[(pieces.clone(), eave)], &[(Kind::Rake, [[30.0, 0.0], [30.0, 10.0]], &[0])]).unwrap();
+        assert_eq!(length_of(&mut job, "line-0").value, Some(11.1803), "{eave:?}");
+    }
+}
+
+#[test]
+fn a_mistyped_key_of_ours_and_a_description_with_an_unseen_character_are_refused() {
+    let text = save(&mut sample());
+    let err = |t: String| load(&t).err().expect("should be refused");
+    for key in [" pl::pitch", "pl: :pitch", "pI::pitch", "pl;;pitch", "pl\u{FF1A}\u{FF1A}pitch", "PL::PITCH", "pl::pich"] {
+        let e = err(edit(&text, |v| {
+            let pitch = attrs(v, "plane-0017").as_object_mut().unwrap().remove("pl::pitch").unwrap();
+            attrs(v, "plane-0017")[key] = pitch;
+        }));
+        assert!(e.contains("did you mean \"pl::pitch\""), "{key:?}: {e}");
+    }
+    // Something that is plainly another program's is still kept.
+    for key in ["other::pitch", "ifc::Pitch", "note", "pitch"] {
+        assert!(load(&edit(&text, |v| attrs(v, "plane-0017")[key] = 3.into())).is_ok(), "{key}");
+    }
+    let line = |d: &str| serde_json::json!({"description": d, "quantity": "true_length * stretch_out", "stretch_out": {"value": 12.0, "unit": "in", "status": "Known", "source": "x"}, "unit_cost": {"value": null, "unit": "$/SF", "status": "Unknown", "source": "x"}});
+    for unseen in ["Copper headwall flashing\u{200B}", "Copper\u{00AD} headwall flashing", "Copper headwall\tflashing"] {
+        let e = err(edit(&text, |v| attrs(v, "headwall-0021")["pl::cost"]["lines"].as_array_mut().unwrap().push(line(unseen))));
+        assert!(e.contains("nobody can see"), "{unseen:?}: {e}");
+    }
+}
+
+#[test]
+fn more_ways_a_drawing_writes_a_pitch_and_an_inch() {
+    use units::{parse_length, parse_pitch, show_length};
+    for (typed, rise) in [("1/4\"/ft", 0.25), ("1/4\":12", 0.25), ("1/4 in./ft", 0.25), ("6 in./12", 6.0), ("6 / 12", 6.0), ("6 :12", 6.0)] {
+        assert_eq!(parse_pitch(typed).unwrap_or_else(|e| panic!("{typed:?} refused: {e}")), rise, "{typed}");
+    }
+    // Two apostrophes are an inch mark.
+    assert_eq!(feet_of("6''"), 0.5);
+    assert_eq!(feet_of("25'6''"), 25.5);
+    // After feet the whole inches are written even when there are none.
+    let (len, unit) = parse_length("25' 0 1/2\"").unwrap();
+    assert_eq!(show_length(&len, unit), "25' 0 1/2\"");
+    assert_eq!(show_length(&units::Len::One(-0.0), "ft"), "0 ft");
+}
+
+#[test]
+fn what_lines_says_does_not_depend_on_which_plane_comes_first() {
+    // Two planes whose shared edge is traced a hair (0.009 ft) out of line. The valley
+    // between them is found, once, and no stretch of it is also called a rake.
+    let a = (vec![[20.0, 40.0], [20.0, 20.0], [30.0, 10.0], [30.0, 30.0]], [[20.0, 40.0], [20.0, 20.0]]);
+    let b = (vec![[20.0, 20.0], [10.0, 20.0], [25.0064, 15.0064]], [[20.0, 20.0], [10.0, 20.0]]);
+    for planes in [[a.clone(), b.clone()], [b.clone(), a.clone()]] {
+        let mut job = roof_job(&planes, &[(Kind::Valley, [[20.0, 20.0], [25.0, 15.0]], &[0, 1])]).unwrap();
+        let (solid, _) = roof::solid_planes(&mut job);
+        let found = roof::lines_of(&solid);
+        assert_eq!(found.lines.iter().filter(|l| l.kind == Kind::Valley).count(), 1, "{:#?}", found.lines);
+        assert!(!found.lines.iter().any(|l| l.kind != Kind::Valley && l.ends.contains(&[20.0, 20.0]) && l.ends.contains(&[25.0064, 15.0064])));
+        let cmp = roof::compare(&mut job, &found);
+        assert_eq!(cmp.agree.len(), 1, "{:?}", cmp.entered_only);
+    }
+}
+
+#[test]
+fn lines_says_what_is_so_about_overlaps_steps_and_lines_entered_twice() {
+    let shed = |y0: f64, y1: f64| (vec![[0.0, y0], [12.0, y0], [12.0, y1], [0.0, y1]], [[0.0, y0], [12.0, y0]]);
+    // The same plane entered twice: an overlap, and no valley invented along its eave.
+    let mut job = roof_job(&[shed(0.0, 8.0), shed(0.0, 8.0)], &[]).unwrap();
+    let (solid, _) = roof::solid_planes(&mut job);
+    let found = roof::lines_of(&solid);
+    assert!(found.lines.iter().all(|l| l.kind != Kind::Valley && l.planes.len() == 1), "{:#?}", found.lines);
+    assert!(found.problems.iter().any(|p| p.contains("one overlaps the other")), "{:?}", found.problems);
+
+    // A stepped roof: a lower shed whose top edge (y = 8, at 14 ft) is the plan line of an
+    // upper shed's eave (at 10 ft here; both from 10 ft, so the lower top is 4 ft above).
+    // One line on plan, two in the air. Each plane keeps its own edge and the entered
+    // headwall and eave both agree.
+    let mut job = roof_job(&[shed(0.0, 8.0), shed(8.0, 20.0)], &[(Kind::Headwall, [[0.0, 8.0], [12.0, 8.0]], &[0]), (Kind::Eave, [[0.0, 8.0], [12.0, 8.0]], &[1])]).unwrap();
+    let (solid, _) = roof::solid_planes(&mut job);
+    let found = roof::lines_of(&solid);
+    assert_eq!(found.problems.len(), 1, "{:?}", found.problems);
+    assert!(found.problems[0].contains("a step with a wall between them"));
+    assert_eq!(roof::compare(&mut job, &found).agree.len(), 2);
+
+    // One plane traced in two pieces is one plane.
+    let halves = [(vec![[0.0, 0.0], [6.0, 0.0], [6.0, 8.0], [0.0, 8.0]], [[0.0, 0.0], [6.0, 0.0]]), (vec![[6.0, 0.0], [12.0, 0.0], [12.0, 8.0], [6.0, 8.0]], [[6.0, 0.0], [12.0, 0.0]])];
+    let mut job = roof_job(&halves, &[]).unwrap();
+    let (solid, _) = roof::solid_planes(&mut job);
+    let found = roof::lines_of(&solid);
+    assert!(found.problems.iter().any(|p| p.contains("one plane traced in two pieces")), "{:?}", found.problems);
+    assert!(!found.problems.iter().any(|p| p.contains("change of pitch")));
+
+    // On one shed: a wrong valley entered on the left edge before the right rake, the
+    // eave entered twice, and half an eave. The right rake still agrees; each of the
+    // others is told what it is.
+    let lines: [(Kind, [P2; 2], &[usize]); 5] = [(Kind::Valley, [[0.0, 0.0], [0.0, 8.0]], &[0]), (Kind::Rake, [[0.0, 8.0], [0.0, 0.0]], &[0]), (Kind::Eave, [[0.0, 0.0], [12.0, 0.0]], &[0]), (Kind::Eave, [[12.0, 0.0], [0.0, 0.0]], &[0]), (Kind::Eave, [[0.0, 0.0], [6.0, 0.0]], &[0])];
+    let mut job = roof_job(&[shed(0.0, 8.0)], &lines).unwrap();
+    let (solid, _) = roof::solid_planes(&mut job);
+    let found = roof::lines_of(&solid);
+    let cmp = roof::compare(&mut job, &found);
+    assert_eq!(cmp.agree.iter().map(|a| a.1).collect::<Vec<_>>(), [Kind::Rake, Kind::Eave]);
+    assert!(cmp.entered_only.iter().any(|e| e.contains("entered as a Valley") && e.contains("a Rake")), "{:?}", cmp.entered_only);
+    assert!(cmp.entered_only.iter().any(|e| e.contains("entered twice")));
+    assert!(cmp.entered_only.iter().any(|e| e.contains("covers only part of the Eave")));
+    assert!(!cmp.entered_only.iter().any(|e| e.contains("no edge of any plane runs there")));
 }

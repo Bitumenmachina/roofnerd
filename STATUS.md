@@ -11,8 +11,8 @@ run again and each gave what this file said they gave.
 | # | Deliverable | State |
 |---|---|---|
 | D0 | Landscape decision | Demonstrated, with limits below. Judged twice. |
-| D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged three times. The third judgment found the second round's fixes closed except one, and found four new ways to a wrong figure not marked Unknown; all are fixed. See "Third judgment" and "Fourth judgment". |
-| D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged once: the five demonstrations held; two entry forms were misread and are fixed. See "Third judgment" and "Fourth judgment". |
+| D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged four times. Every judgment has found a new way to a wrong figure marked Known, each next to the last fix. All found are fixed. **The fourth round's fixes have not been judged.** |
+| D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged twice: the five demonstrations held both times; two entry forms misread in the first are fixed and held in the second. |
 | D2 | 3D roof slice | **Not demonstrated; nothing of its demonstration runs.** One piece of groundwork is built and tested (lines read off planes). The roof solver waits on the BIMCraft source (Q10) and the window on the toolchain and a display (Q4). |
 | D3 | Derived conditions and stretch-out | Not started. Reference estimate missing (Q5). |
 | D4 | Macro to micro | Not started. |
@@ -80,7 +80,7 @@ element. Changing one pitch changes, in a file diff, only that entity and the co
 derived from it. Assumed and Unknown values display as flagged.
 
 **How it is run:** `demos/d1.sh`. It uses the built-in sample job, which is made up.
-`cargo test` runs 42 checks on the same model.
+`cargo test` runs 54 checks on the same model.
 
 The figures below are as rerun after the units amendment. The amendment added one
 sheet-metal cost line to the sample job's porch headwall, which moved the counts of Known,
@@ -118,7 +118,7 @@ Nothing else in this demonstration moved.
 * Hip: 15 over and 15 up on plan = 21.2132 LF; climbs 7.5 ft; √(450 + 56.25) = 22.5 LF.
 * Porch rake: 8 ft run at 3:12 climbs 2 ft; √68 = 8.2462 LF.
 
-**`cargo test`: 42 passed, 0 failed** (41 on the model, 1 on the command line).
+**`cargo test`: 54 passed, 0 failed** (53 on the model, 1 on the command line).
 
 **What remains**
 
@@ -134,11 +134,13 @@ Nothing else in this demonstration moved.
   be edited from the command line. Outlines, eave lines, line ends and cost lines are
   edited in the file.
 * The limits listed in SPEC.md section 7, in particular the 0.01 ft fit tolerance (Q9).
-* **Rule 4 has been broken by a judge three times**, each time after the previous round's
-  fixes. Each judgment found ordinary entries that produced a wrong figure marked Known.
-  Treat "nothing wrong is shown as Known" as the model's intent backed by 42 tests and
-  three attacks, not as proven. The pattern so far is that each attack finds a
-  neighbouring case, so expect the next one to as well.
+* **Rule 4 has been broken by a judge four times**, each time after the previous round's
+  fixes. Each judgment found entries that produced a wrong figure marked Known. Treat
+  "nothing wrong is shown as Known" as the model's intent backed by 54 tests and four
+  attacks, not as proven. Every attack so far has found a case next to the last fix, the
+  fourth round's fixes have not been attacked, and the cases are getting more contrived
+  (the fourth needed a line on two planes with one eave wrong, or a hundred hairline
+  notches) but have not stopped.
 * Planes are checked one at a time and each line against the planes it names. Nothing
   checks planes against each other (overlaps, gaps).
 * **Process note:** the brief asks that each demonstration be written down before the
@@ -314,6 +316,40 @@ cells; large jobs; a valley with both of its planes mis-entered.
 **Left as found:** a plane whose eave is on the wrong edge is caught only when some line
 entered on it contradicts it. With only a rake entered, nothing does (SPEC.md section 7).
 
+### Fourth judgment: J3-1 reopened two ways; `lines` said things that were not so
+
+A fresh agent (Opus), in its own clone at the commit that fixed the third round, attacked
+those fixes and the lines-from-planes groundwork, which no judge had seen. It did not see
+D3, which was not built when it started.
+
+**What held.** Every spot-checked claim in this file. J3-2 in substance, J3-3 (66 pitch
+spellings), J3-4 (60 length spellings), J3-5, J3-8, J3-10, and the rounds-to-zero rule
+(real zeros stay Known). `lines` on a hip roof with unequal pitches, an L-shaped hip roof
+with a valley, mixed inches and feet, and three planes on one line. No panic or hang.
+
+**What it found, and what was done.** Each fix was rerun against the judge's own files.
+
+| # | What the fourth judge found | What was done | Regression test |
+|---|---|---|---|
+| J4-1 | **Wrong figure, Known.** J3-1's rule lost its evidence when the contradicting line sat on two planes that also disagreed about its height: the line was refused for the disagreement before its slope was looked at, so a rake on the wrong-eave plane kept 16.0078 LF where 17.5 is right | A line's slope is tested on every plane it names before the planes are compared | `evidence_of_a_wrong_eave_is_not_lost_behind_another_fault_or_another_plane` |
+| J4-2 | **Wrong figure, Known.** With both planes of a ridge wrong, only the plane the ridge named first was caught | Every plane a line shows wrong is recorded | same |
+| J4-8 | **Wrong figure, Known** (contrived). A hundred notches each 0.009 ft wide under a 10 ft rake passed: each gap was inside the tolerance | The uncovered length is added up and the total held to the tolerance | `gaps_under_a_line_add_up_and_bends_in_an_eave_do_not` |
+| J4-7 | An eave was accepted across an edge with a 1 ft sag in it, traced as 400 points: J3-9's fix dropped points one at a time and the bends added up. No wrong length came of it | A run of edges is one edge only if every corner in it is within the tolerance of the one line from its start to its end | same |
+| J4-9 | J3-11's neighbours: `pI::pitch`, `pl;;pitch`, ` pl::pitch` and the like were still kept unread | A key a slip away from one of this program's is refused | `a_mistyped_key_of_ours_and_a_description_with_an_unseen_character_are_refused` |
+| J4-10 | J3-7's neighbours: a description with a zero-width space, a Cyrillic о or an ﬂ ligature was a different line | Unseen characters are refused. **Look-alike letters are not caught** (SPEC.md section 7) | same |
+| J4-11 | Common pitch spellings refused (`1/4"/ft`, `6 in./12`); `6''` refused with a misleading reason | Read | `more_ways_a_drawing_writes_a_pitch_and_an_inch` |
+| J4-12 | `-0` shown for a minus-zero eave height; a 5 ft gap reported as "0.0100 ft off"; `25' 0 1/2"` shown as `25' 1/2"`; extra arguments ignored | Each fixed. Left: a file starting with a byte-order mark is refused as unreadable; a control character is accepted in a source; finding an eave's edge is slow on outlines of thousands of points (1.2 s at 4,000) | same |
+| J4-3 | **`lines` said what was not so.** With a shared edge traced 0.009 ft out of line, a valley was reported as a rake, or twice, depending on which plane came first in the file | Two edges share a stretch between corners, whichever is asked; each shared stretch is said once | `what_lines_says_does_not_depend_on_which_plane_comes_first` |
+| J4-4 | The same plane entered twice gave a "valley" along its eave | Planes on the same side of a shared edge are reported as an overlap and give no line | `lines_says_what_is_so_about_overlaps_steps_and_lines_entered_twice` |
+| J4-5 | A correct entered line was reported as "no edge of any plane runs there" when a wrong one was entered before it on the same edge; so were a duplicate and a part-length line | Exact matches are taken first; the rest are told what they are (wrong kind, entered twice, part of a line) | same |
+| J4-6 | A stepped roof was reported as planes that do not fit; one plane traced in two pieces, and two flat areas, as "a change of pitch" | Said as what they are; the heading no longer calls them misfits | same |
+
+**What the fourth judge did not do:** a dormer with side walls; large jobs beyond a timing
+check; corner snapping to an unrelated plane's corner. Suspected and not reproduced: a
+wrong merge of two found lines.
+
+**These fourth-round fixes have not been judged.**
+
 ---
 
 ## D2. How its demonstration will be run (written before any D2 work)
@@ -358,11 +394,10 @@ prints it and sets it against the lines entered. It reads the job and changes no
 * Test `a_wing_meeting_a_main_roof_makes_two_valleys`: a 40 × 20 gable roof with a 10 ft
   gabled wing, entered as four planes, gives two valleys from the inside corners to
   (20, 5), two ridges, five eaves and six rakes, and no hips. Worked by hand in the test.
-* `cargo test`: 36 passed.
-
 *What remains of it*
-* **Not judged.**
-* It has been run on three roofs, all made up, all with planes entered by hand.
+* **Judged once** (fourth judgment, below), which found it stating things that were not
+  so; those are fixed and the fixes are not judged.
+* It has been run on made-up roofs only, all with planes entered by hand.
 * It does not replace entered lines with solved ones. That is the solver's step.
 * A change of pitch along a shared edge (a gambrel break) is reported, not classed. A
   level valley (a trough) would be classed a valley and then flagged by D1's rule that a

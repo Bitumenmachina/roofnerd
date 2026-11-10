@@ -110,8 +110,9 @@ pub struct FoundLine {
 #[derive(Clone, Debug, Default)]
 pub struct Found {
     pub lines: Vec<FoundLine>,
-    /// What does not fit, in sentences: planes that disagree about a shared edge, an edge
-    /// three planes claim, a fold this program has no kind of line for.
+    /// What a reader should know about how the planes meet, in sentences: planes that
+    /// disagree about a shared edge, a step, an overlap, an edge three planes claim, a fold
+    /// this program has no kind of line for.
     pub problems: Vec<String>,
     /// Shared edges that gave no line because of a problem above.
     pub disputed: Vec<[P2; 2]>,
@@ -145,11 +146,35 @@ pub fn solid_planes(job: &mut Job) -> (Vec<SolidPlane>, Vec<String>) {
     (planes, left_out)
 }
 
-/// A stretch of one plane's edge, by distance along it, and the other plane on it if any.
-struct Piece {
-    from: f64,
-    to: f64,
-    other: Option<usize>,
+/// The stretch of edge p-q that edge r-s lies along, as a range of distance along p-q.
+///
+/// A shared stretch ends at a corner: an end of one edge that sits on the other. So the
+/// stretch runs between corners of r-s that are within `tol` of the line through p-q and
+/// corners of p-q that are within `tol` of r-s. An edge that only crosses, or only touches
+/// at a corner, has no two such corners apart and shares nothing. Two edges a hair out of
+/// line with each other share the same stretch whichever of the two is asked.
+fn alongside(p: P2, q: P2, r: P2, s: P2, tol: f64) -> Option<(f64, f64)> {
+    let len = geom::dist(p, q);
+    let along = |x: P2| (((x[0] - p[0]) * (q[0] - p[0]) + (x[1] - p[1]) * (q[1] - p[1])) / len).clamp(0.0, len);
+    let mut at: Vec<f64> = Vec::new();
+    for x in [r, s] {
+        if geom::point_to_line(x, p, q).is_some_and(|d| d <= tol) {
+            at.push(along(x));
+        }
+    }
+    if geom::point_to_segment(p, r, s) <= tol {
+        at.push(0.0);
+    }
+    if geom::point_to_segment(q, r, s) <= tol {
+        at.push(len);
+    }
+    let lo = at.iter().copied().fold(f64::MAX, f64::min);
+    let hi = at.iter().copied().fold(f64::MIN, f64::max);
+    (at.len() >= 2 && hi - lo > tol).then_some((lo, hi))
+}
+
+fn same_segment(a: [P2; 2], b: [P2; 2], tol: f64) -> bool {
+    (geom::dist(a[0], b[0]) <= tol && geom::dist(a[1], b[1]) <= tol) || (geom::dist(a[0], b[1]) <= tol && geom::dist(a[1], b[0]) <= tol)
 }
 
 /// The lines these planes imply.
@@ -160,12 +185,16 @@ pub fn lines_of(planes: &[SolidPlane]) -> Found {
     // point worked out along an edge that lands a hair off it.
     let corners: Vec<P2> = planes.iter().flat_map(|p| p.points.iter().copied()).collect();
     let snap = |x: P2| corners.iter().copied().find(|c| geom::dist(*c, x) <= tol).unwrap_or(x);
+    // Each shared stretch is seen from both of its planes. What is said about it is kept
+    // with the pair and the stretch, so it is said once, whichever plane comes first.
+    let mut said: Vec<(usize, usize, [P2; 2])> = Vec::new();
+    let mut flat_noted: Vec<usize> = Vec::new();
+
     for (ai, a) in planes.iter().enumerate() {
         let n = a.points.len();
         for i in 0..n {
             let (p, q) = (a.points[i], a.points[(i + 1) % n]);
             let len = geom::dist(p, q);
-            let along = |x: P2| ((x[0] - p[0]) * (q[0] - p[0]) + (x[1] - p[1]) * (q[1] - p[1])) / len;
             let at = |t: f64| [p[0] + (q[0] - p[0]) * t / len, p[1] + (q[1] - p[1]) * t / len];
 
             // Every stretch of this edge that another plane's edge lies along.
@@ -176,13 +205,7 @@ pub fn lines_of(planes: &[SolidPlane]) -> Found {
                 }
                 let m = b.points.len();
                 for j in 0..m {
-                    let (r, s) = (b.points[j], b.points[(j + 1) % m]);
-                    let off = |x: P2| geom::point_to_line(x, p, q).unwrap_or(f64::MAX);
-                    if off(r) > tol || off(s) > tol {
-                        continue;
-                    }
-                    let (lo, hi) = (along(r).min(along(s)).max(0.0), along(r).max(along(s)).min(len));
-                    if hi - lo > tol {
+                    if let Some((lo, hi)) = alongside(p, q, b.points[j], b.points[(j + 1) % m], tol) {
                         shared.push((lo, hi, bi, j));
                     }
                 }
@@ -191,72 +214,111 @@ pub fn lines_of(planes: &[SolidPlane]) -> Found {
 
             // Walk the edge: shared stretches, and the gaps between them that only this
             // plane has.
-            let mut pieces: Vec<(Piece, Option<usize>)> = Vec::new();
+            let mut pieces: Vec<(f64, f64, Option<(usize, usize)>)> = Vec::new();
             let mut cursor = 0.0;
             for (lo, hi, bi, j) in &shared {
                 if *lo < cursor - tol {
-                    found.problems.push(format!("more than two planes meet along one line near ({:.2}, {:.2}): {} and {} and another; a line has two sides", at(*lo)[0], at(*lo)[1], a.path, planes[*bi].path));
+                    let near = snap(at(*lo));
+                    found.problems.push(format!("more than two planes meet along one line near ({:.2}, {:.2}), {} and {} among them; a line has two sides", near[0], near[1], a.path, planes[*bi].path));
                     continue;
                 }
                 if *lo - cursor > tol {
-                    pieces.push((Piece { from: cursor, to: *lo, other: None }, None));
+                    pieces.push((cursor, *lo, None));
                 }
-                pieces.push((Piece { from: *lo, to: *hi, other: Some(*bi) }, Some(*j)));
+                pieces.push((*lo, *hi, Some((*bi, *j))));
                 cursor = *hi;
             }
             if len - cursor > tol {
-                pieces.push((Piece { from: cursor, to: len, other: None }, None));
+                pieces.push((cursor, len, None));
             }
 
-            for (piece, other_edge) in pieces {
-                let ends = [snap(at(piece.from)), snap(at(piece.to))];
+            for (from, to, other) in pieces {
+                let ends = [snap(at(from)), snap(at(to))];
                 let (za, zb) = (a.height_at(ends[0]), a.height_at(ends[1]));
                 let level = (za - zb).abs() <= tol;
-                match (piece.other, other_edge) {
-                    (Some(bi), Some(j)) => {
-                        // Each shared stretch is seen from both planes; report it once.
-                        if bi < ai {
-                            continue;
+                // This plane's own edge here, when no other plane meets it in space.
+                let mut own_edge = |found: &mut Found| {
+                    if a.pitch == 0.0 {
+                        if !flat_noted.contains(&ai) {
+                            flat_noted.push(ai);
+                            found.problems.push(format!("{} is flat (no pitch): its edges are not eaves, rakes or ridges, so none are listed for it", a.path));
                         }
-                        let b = &planes[bi];
-                        let (zb0, zb1) = (b.height_at(ends[0]), b.height_at(ends[1]));
-                        if (za - zb0).abs() > tol || (zb - zb1).abs() > tol {
-                            found.problems.push(format!(
-                                "{} and {} share an edge from ({:.2}, {:.2}) to ({:.2}, {:.2}) but disagree about its height: {} puts its ends at {:.2} ft and {:.2} ft, {} at {:.2} ft and {:.2} ft",
-                                a.path, b.path, ends[0][0], ends[0][1], ends[1][0], ends[1][1], a.path, za, zb, b.path, zb0, zb1
-                            ));
-                            found.disputed.push(ends);
-                            continue;
-                        }
-                        let kind = match (a.falls(i), b.falls(j)) {
-                            (Fall::Away, Fall::Away) if level => Kind::Ridge,
-                            (Fall::Away, Fall::Away) => Kind::Hip,
-                            (Fall::Toward, Fall::Toward) => Kind::Valley,
-                            _ => {
-                                found.problems.push(format!(
-                                    "{} and {} meet from ({:.2}, {:.2}) to ({:.2}, {:.2}) where one falls toward the line and the other away, or one is flat: a change of pitch, which is not a ridge, a hip or a valley",
-                                    a.path, b.path, ends[0][0], ends[0][1], ends[1][0], ends[1][1]
-                                ));
-                                found.disputed.push(ends);
-                                continue;
-                            }
-                        };
-                        found.lines.push(FoundLine { kind, ends, planes: vec![a.path.clone(), b.path.clone()], status: a.status.max(b.status) });
+                        return;
                     }
-                    _ => {
-                        let on_eave = geom::point_to_line(ends[0], a.eave[0], a.eave[1]).unwrap_or(f64::MAX) <= tol && geom::point_to_line(ends[1], a.eave[0], a.eave[1]).unwrap_or(f64::MAX) <= tol;
-                        let kind = if on_eave {
-                            Kind::Eave
-                        } else if !level {
-                            Kind::Rake
-                        } else if a.falls(i) == Fall::Away {
-                            Kind::Ridge
-                        } else {
-                            // Level, not the eave line, and not the high side: a stepped-back eave.
-                            Kind::Eave
-                        };
-                        found.lines.push(FoundLine { kind, ends, planes: vec![a.path.clone()], status: a.status });
+                    let on_eave = geom::point_to_line(ends[0], a.eave[0], a.eave[1]).unwrap_or(f64::MAX) <= tol && geom::point_to_line(ends[1], a.eave[0], a.eave[1]).unwrap_or(f64::MAX) <= tol;
+                    let kind = if on_eave {
+                        Kind::Eave
+                    } else if !level {
+                        Kind::Rake
+                    } else if a.falls(i) == Fall::Away {
+                        Kind::Ridge
+                    } else {
+                        // Level, not the eave line, and not the high side: a stepped-back eave.
+                        Kind::Eave
+                    };
+                    found.lines.push(FoundLine { kind, ends, planes: vec![a.path.clone()], status: a.status });
+                };
+                let Some((bi, j)) = other else {
+                    own_edge(&mut found);
+                    continue;
+                };
+                let b = &planes[bi];
+                let (lo_i, hi_i) = (ai.min(bi), ai.max(bi));
+                let first_time = !said.iter().any(|(x, y, seg)| *x == lo_i && *y == hi_i && same_segment(*seg, ends, 3.0 * tol));
+                let mut say = |found: &mut Found, text: String| {
+                    if first_time {
+                        said.push((lo_i, hi_i, ends));
+                        found.problems.push(text);
+                        found.disputed.push(ends);
                     }
+                };
+                let span = format!("from ({:.2}, {:.2}) to ({:.2}, {:.2})", ends[0][0], ends[0][1], ends[1][0], ends[1][1]);
+                // Two planes meet along an edge from opposite sides of it. On the same
+                // side, one lies over the other.
+                let (na, nb) = (a.inward(i), b.inward(j));
+                if na[0] * nb[0] + na[1] * nb[1] > 0.0 {
+                    say(&mut found, format!("{} and {} both lie on the same side of an edge they share {span}: one overlaps the other, and no line is read there", a.path, b.path));
+                    continue;
+                }
+                let (zb0, zb1) = (b.height_at(ends[0]), b.height_at(ends[1]));
+                if (za - zb0).abs() > tol || (zb - zb1).abs() > tol {
+                    let b_level = (zb0 - zb1).abs() <= tol;
+                    if level && b_level {
+                        // Level on both, at two heights: on plan one line, in the air two.
+                        // A step with a wall between them, or pitches that do not fit; the
+                        // planes cannot say which. Each plane keeps its own edge.
+                        say(&mut found, format!("{} and {} meet on plan {span} at different heights ({:.2} ft and {:.2} ft): a step with a wall between them, or pitches that do not fit. Each plane's own edge is listed", a.path, b.path, za, zb0));
+                        own_edge(&mut found);
+                    } else {
+                        say(&mut found, format!("{} and {} share an edge {span} but disagree about its height: {} puts its ends at {:.2} ft and {:.2} ft, {} at {:.2} ft and {:.2} ft", a.path, b.path, a.path, za, zb, b.path, zb0, zb1));
+                    }
+                    continue;
+                }
+                let kind = match (a.falls(i), b.falls(j)) {
+                    (Fall::Away, Fall::Away) if level => Kind::Ridge,
+                    (Fall::Away, Fall::Away) => Kind::Hip,
+                    (Fall::Toward, Fall::Toward) => Kind::Valley,
+                    (fa, fb) => {
+                        let (ua, ub) = (a.uphill(), b.uphill());
+                        let one_plane = a.pitch == b.pitch && a.pitch != 0.0 && ua[0] * ub[0] + ua[1] * ub[1] > 1.0 - 1e-9;
+                        say(
+                            &mut found,
+                            if one_plane {
+                                format!("{} and {} are one plane traced in two pieces, joined {span}; there is no line there", a.path, b.path)
+                            } else if a.pitch == 0.0 && b.pitch == 0.0 {
+                                format!("{} and {} are both flat and meet {span}; there is no line there", a.path, b.path)
+                            } else if fa == Fall::Neither || fb == Fall::Neither {
+                                format!("{} and {} meet {span} where one of them is flat or runs straight up the slope beside the line; that is not a ridge, a hip or a valley", a.path, b.path)
+                            } else {
+                                format!("{} and {} meet {span} where one falls toward the line and the other away: a change of pitch, which is not a ridge, a hip or a valley", a.path, b.path)
+                            },
+                        );
+                        continue;
+                    }
+                };
+                if first_time {
+                    said.push((lo_i, hi_i, ends));
+                    found.lines.push(FoundLine { kind, ends, planes: vec![planes[lo_i].path.clone(), planes[hi_i].path.clone()], status: a.status.max(b.status) });
                 }
             }
         }
@@ -313,10 +375,6 @@ pub struct Comparison {
     pub implied_only: Vec<FoundLine>,
 }
 
-fn same_segment(a: [P2; 2], b: [P2; 2], tol: f64) -> bool {
-    (geom::dist(a[0], b[0]) <= tol && geom::dist(a[1], b[1]) <= tol) || (geom::dist(a[0], b[1]) <= tol && geom::dist(a[1], b[0]) <= tol)
-}
-
 /// A level top edge on one plane is a ridge to the planes and may be a headwall to the
 /// estimator, who knows there is a wall there. The two are the same line.
 fn same_kind(entered: Kind, implied: &FoundLine) -> bool {
@@ -328,41 +386,75 @@ fn same_kind(entered: Kind, implied: &FoundLine) -> bool {
 pub fn compare(job: &mut Job, found: &Found) -> Comparison {
     let tol = FIT_TOLERANCE_FT;
     let mut out = Comparison::default();
-    let mut taken = vec![false; found.lines.len()];
+    struct Entered {
+        path: String,
+        kind: Kind,
+        ends: Option<[P2; 2]>,
+        planes: Vec<String>,
+    }
+    let mut entered: Vec<Entered> = Vec::new();
     for &e in &job.order {
         let w = &job.world;
         let (Some(node), Some(kind), Some(run)) = (w.get::<Node>(e), w.get::<Kind>(e), w.get::<Run>(e)) else { continue };
-        if *kind == Kind::Parapet {
-            continue;
-        }
-        let Some(ends) = run.ends_ft() else {
-            out.entered_only.push(format!("{} ({kind:?}): its ends are unknown", node.path));
-            continue;
-        };
-        let mut planes = run.planes.clone();
-        planes.sort();
-        let here: Vec<usize> = (0..found.lines.len()).filter(|&i| !taken[i] && same_segment(ends, found.lines[i].ends, tol)).collect();
-        let exact = here.iter().copied().find(|&i| {
-            let mut theirs = found.lines[i].planes.clone();
-            theirs.sort();
-            same_kind(*kind, &found.lines[i]) && theirs == planes
-        });
-        match (exact, here.first()) {
-            (Some(i), _) => {
-                taken[i] = true;
-                out.agree.push((node.path.clone(), *kind));
-            }
-            (None, Some(&i)) => {
-                taken[i] = true;
-                let f = &found.lines[i];
-                out.entered_only.push(format!("{} is entered as a {kind:?} on {}; the planes make that line a {:?} on {}", node.path, if run.planes.is_empty() { "no plane".to_string() } else { run.planes.join(" and ") }, f.kind, f.planes.join(" and ")));
-            }
-            (None, None) if found.disputed.iter().any(|d| same_segment(ends, *d, tol)) => {
-                out.entered_only.push(format!("{} ({kind:?}) runs along an edge its planes do not agree about; see the planes that do not fit each other", node.path))
-            }
-            (None, None) => out.entered_only.push(format!("{} ({kind:?}) from ({}, {}) to ({}, {}): no edge of any plane runs there", node.path, ends[0][0], ends[0][1], ends[1][0], ends[1][1])),
+        if *kind != Kind::Parapet {
+            entered.push(Entered { path: node.path.clone(), kind: *kind, ends: run.ends_ft(), planes: run.planes.clone() });
         }
     }
-    out.implied_only = found.lines.iter().zip(&taken).filter(|(_, t)| !**t).map(|(l, _)| l.clone()).collect();
+    let sorted = |v: &[String]| {
+        let mut v = v.to_vec();
+        v.sort();
+        v
+    };
+    // First, every entered line that is exactly an implied one takes it. A right line is
+    // never crowded out by a wrong one entered before it on the same edge.
+    let mut taken_by: Vec<Option<usize>> = vec![None; found.lines.len()];
+    let mut matched = vec![false; entered.len()];
+    for (ei, en) in entered.iter().enumerate() {
+        let Some(ends) = en.ends else { continue };
+        let hit = (0..found.lines.len()).find(|&i| taken_by[i].is_none() && same_segment(ends, found.lines[i].ends, tol) && same_kind(en.kind, &found.lines[i]) && sorted(&found.lines[i].planes) == sorted(&en.planes));
+        if let Some(i) = hit {
+            taken_by[i] = Some(ei);
+            matched[ei] = true;
+            out.agree.push((en.path.clone(), en.kind));
+        }
+    }
+    // Then say what is wrong with each of the rest.
+    for (ei, en) in entered.iter().enumerate() {
+        if matched[ei] {
+            continue;
+        }
+        let Some(ends) = en.ends else {
+            out.entered_only.push(format!("{} ({:?}): its ends are unknown", en.path, en.kind));
+            continue;
+        };
+        let on = if en.planes.is_empty() { "no plane".to_string() } else { en.planes.join(" and ") };
+        let here = (0..found.lines.len()).find(|&i| same_segment(ends, found.lines[i].ends, tol));
+        let within = (0..found.lines.len()).find(|&i| {
+            let f = found.lines[i].ends;
+            geom::point_to_segment(ends[0], f[0], f[1]) <= tol && geom::point_to_segment(ends[1], f[0], f[1]) <= tol
+        });
+        // An edge the planes dispute is said first: what the planes make of the line is
+        // not to be relied on there.
+        if found.disputed.iter().any(|d| same_segment(ends, *d, tol)) {
+            out.entered_only.push(format!("{} ({:?}) runs along an edge its planes do not agree about; see what is said about those planes", en.path, en.kind));
+            continue;
+        }
+        out.entered_only.push(match (here, within) {
+            (Some(i), _) => {
+                let f = &found.lines[i];
+                let exact = same_kind(en.kind, f) && sorted(&f.planes) == sorted(&en.planes);
+                match taken_by[i] {
+                    Some(other) if exact => format!("{} is the same line as {}, entered twice", en.path, entered[other].path),
+                    _ => format!("{} is entered as a {:?} on {on}; the planes make that line a {:?} on {}", en.path, en.kind, f.kind, f.planes.join(" and ")),
+                }
+            }
+            (None, Some(i)) => {
+                let f = &found.lines[i];
+                format!("{} ({:?}) covers only part of the {:?} the planes make from ({}, {}) to ({}, {})", en.path, en.kind, f.kind, f.ends[0][0], f.ends[0][1], f.ends[1][0], f.ends[1][1])
+            }
+            (None, None) => format!("{} ({:?}) from ({}, {}) to ({}, {}): no edge of any plane runs there", en.path, en.kind, ends[0][0], ends[0][1], ends[1][0], ends[1][1]),
+        });
+    }
+    out.implied_only = found.lines.iter().zip(&taken_by).filter(|(_, t)| t.is_none()).map(|(l, _)| l.clone()).collect();
     out
 }

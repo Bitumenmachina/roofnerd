@@ -72,18 +72,20 @@ elements with any change: parapet-0024
 == 5. A stretch-out in inches against a length in feet, with nobody converting anything ==
     stretch-out: Copper headwall flashing 24 in
     = ~ true_length      12 LF
-    = ~ sheet area: Copper headwall flashing 24 SF
+    = ~ quantity: Copper headwall flashing 24 SF
   the line's quantity as saved, formula and all:
     "pl::line_quantities": {
       "Copper headwall flashing": {
-        "value": 24.0,
-        "unit": "SF",
-        "status": "Assumed",
-        "formula": "true_length × stretch_out ÷ 12",
-        "inputs": [
-          "headwall-0021#pl::measure",
-          "headwall-0021#pl::cost"
-        ]
+        "quantity": {
+          "value": 24.0,
+          "unit": "SF",
+          "status": "Assumed",
+          "formula": "true_length × stretch_out ÷ 12",
+          "inputs": [
+            "headwall-0021#pl::measure",
+            "headwall-0021#pl::cost"
+          ]
+        }
       }
     }
   the brief's stretch-outs on the same 12 LF, each typed as the detail gives it:

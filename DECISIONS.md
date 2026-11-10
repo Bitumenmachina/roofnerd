@@ -342,5 +342,25 @@ Q11).
   unread and the plane said it had none.
 * **Cost lines are told apart ignoring capitals and spacing**, and a description may not
   start or end with a space.
-* **Points on the straight line between their neighbours are passed over when finding the
-  eave's edge**, so an eave may span an edge traced in two pieces.
+* **An eave may span an edge traced in pieces**, when every corner inside the run is
+  within the tolerance of the one line from the run's start to its end. (First done by
+  dropping points one at a time, each tested against its neighbours; the fourth judgment
+  showed 400 such points adding up to a 1 ft sag.)
+
+### 20. Calls made fixing what the fourth judgment found
+* **A line is asked about each plane it names before the planes are compared, and every
+  plane it shows wrong is recorded.** Call 19's rule lost its evidence when the line was
+  refused first for the planes disagreeing, and recorded only the first plane.
+* **Gaps under a line add up.** The total uncovered length has to stay inside the
+  tolerance, not each gap.
+* **A key a slip away from one of ours is refused** (edit distance of two, ignoring
+  capitals and spaces). The cost: another program cannot use a key that close to one of
+  ours.
+* **A description may not hold a character nobody can see.** Look-alike letters from
+  other alphabets are not caught; that would take a table of them (SPEC.md section 7).
+* **In `lines`, two edges share a stretch only between corners**: an end of one that sits
+  on the other. An edge that crosses or touches at a corner shares nothing, and two edges
+  a hair out of line share the same stretch whichever is asked first.
+* **In `lines`, two planes level along one plan line at two heights are a step, or a
+  misfit; the planes cannot say which.** It is said as that, and each plane's own edge is
+  listed. Two planes on the same side of a shared edge are an overlap and give no line.

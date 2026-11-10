@@ -258,8 +258,8 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                 K_LINE_QUANTITIES => {
                     file_line_quantities.insert(path.clone(), parse(&path, &k, v)?);
                 }
-                _ if k.to_lowercase().starts_with("pl::") => {
-                    let near = KNOWN_KEYS.iter().find(|known| known.eq_ignore_ascii_case(&k));
+                _ if k.to_lowercase().starts_with("pl::") || near_miss(&k).is_some() => {
+                    let near = near_miss(&k);
                     return Err(format!(
                         "{path} carries {k:?}, which is under this program's own prefix but is not one of its components{}; a value under a key the program does not read would sit in the file unused",
                         near.map(|n| format!(" (did you mean {n:?}?)")).unwrap_or_default()
@@ -305,6 +305,28 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
     }
     report.stale.sort();
     Ok((job, report))
+}
+
+/// One of this program's keys that `key` is a slip away from: the same but for capitals,
+/// spaces, or one or two characters (`pI::pitch`, `pl;;pitch`, ` pl::pitch`). An attribute
+/// that close to one of ours is a mistyped one of ours, not another program's.
+fn near_miss(key: &str) -> Option<&'static str> {
+    let squeezed: Vec<char> = key.chars().filter(|c| !c.is_whitespace()).flat_map(|c| c.to_lowercase()).collect();
+    KNOWN_KEYS.iter().copied().find(|known| {
+        let k: Vec<char> = known.chars().collect();
+        // Edit distance, small strings.
+        let mut row: Vec<usize> = (0..=k.len()).collect();
+        for (i, a) in squeezed.iter().enumerate() {
+            let mut prev = row[0];
+            row[0] = i + 1;
+            for (j, b) in k.iter().enumerate() {
+                let cost = if a == b { prev } else { prev + 1 };
+                prev = row[j + 1];
+                row[j + 1] = cost.min(row[j] + 1).min(prev + 1);
+            }
+        }
+        row[k.len()] <= 2
+    })
 }
 
 /// JSON read strictly: the same key twice in one object is an error, anywhere in the
