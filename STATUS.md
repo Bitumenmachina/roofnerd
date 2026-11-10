@@ -14,7 +14,7 @@ run again and each gave what this file said they gave.
 | D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged four times. Every judgment has found a new way to a wrong figure marked Known, each next to the last fix. All found are fixed. **The fourth round's fixes have not been judged.** |
 | D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged twice: the five demonstrations held both times; two entry forms misread in the first are fixed and held in the second. |
 | D2 | 3D roof slice | **Not demonstrated; nothing of its demonstration runs.** One piece of groundwork is built and tested (lines read off planes). The roof solver waits on the BIMCraft source (Q10) and the window on the toolchain and a display (Q4). |
-| D3 | Derived conditions and stretch-out | Not started. Reference estimate missing (Q5). |
+| D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). **Not yet judged.** |
 | D4 | Macro to micro | Not started. |
 | D5 | Estimate sheet and money | Not started. Reference estimate missing (Q5). |
 | D6 | Interchange and reports | Not started. |
@@ -80,32 +80,34 @@ element. Changing one pitch changes, in a file diff, only that entity and the co
 derived from it. Assumed and Unknown values display as flagged.
 
 **How it is run:** `demos/d1.sh`. It uses the built-in sample job, which is made up.
-`cargo test` runs 54 checks on the same model.
+`cargo test` runs 60 checks on the same model.
 
-The figures below are as rerun after the units amendment. The amendment added one
-sheet-metal cost line to the sample job's porch headwall, which moved the counts of Known,
-Assumed and Unknown values (they were 86, 13, 13 before the change and 94, 5, 13 after).
-Nothing else in this demonstration moved.
+The figures below are as rerun after the units amendment and D3. Those added to the
+sample job one sheet-metal cost line on the porch headwall and two conditions as recipes,
+and every cost line now shows its worked quantity, which moved the count of entries (24
+when D1 was first run) and the counts of Known, Assumed and Unknown values (86, 13, 13
+before the pitch change and 94, 5, 13 after, when D1 was first run). The pitch change
+still touches the same five entries and no others.
 
 **What was run and what it showed** (output of `demos/d1.sh`, exit 0)
 
-1. *One entity per element, readable JSON.* The sample job saves as 24 entries with 24
+1. *One entity per element, readable JSON.* The sample job saves as 26 entries with 26
    distinct paths. `plumbline check` confirms the file loads, its measures match its
    geometry, and saving it back writes the same bytes.
 2. *One pitch changed.* `plumbline set after.json plane-0017 pitch 4 --status Known
    --source "field measured"` prints "set plane-0017 pitch = 4 in/12 (Known)" and reports
    measures re-derived on plane-0017, eave-0018, rake-0019, rake-0020, headwall-0021.
-3. *The file diff.* Changes fall in exactly those five entries out of 24. On the plane:
+3. *The file diff.* Changes fall in exactly those five entries out of 26. On the plane:
    the pitch (3.0 Assumed to 4.0 Known, with its source) and its measure (slope factor
    1.0308 to 1.0541, surface 98.9545 to 101.1929 SF, squares 0.9895 to 1.0119). On the two
    rakes: true length 8.2462 to 8.4327 LF. On the eave and headwall: status only, because
    they are level; their length does not move but it no longer rests on an assumption.
    The script fails if any other entry changes.
-4. *Flags.* Before the change `show` reports "87 Known, 15 Assumed, 14 Unknown" and lists
+4. *Flags.* Before the change `show` reports "91 Known, 16 Assumed, 14 Unknown" and lists
    each flagged value with its reason: the assumed porch pitch and the seven figures that
    follow from it, the unknown parapet height and the face area that cannot be given
    without it, the unpriced cost lines, the unbuilt schedule codes, and the cost codes
-   that wait on Q1. After the change: "96 Known, 6 Assumed, 14 Unknown".
+   that wait on Q1. After the change: "101 Known, 6 Assumed, 14 Unknown".
 5. *A contradiction is flagged, not resolved by guess.* Steepening one plane of the hip
    roof to 8:12 leaves its two hips and the ridge with no length and the note "the planes
    disagree about the height of the line's end: plane-0003 puts it at 20.00 ft; plane-0006
@@ -118,7 +120,7 @@ Nothing else in this demonstration moved.
 * Hip: 15 over and 15 up on plan = 21.2132 LF; climbs 7.5 ft; √(450 + 56.25) = 22.5 LF.
 * Porch rake: 8 ft run at 3:12 climbs 2 ft; √68 = 8.2462 LF.
 
-**`cargo test`: 54 passed, 0 failed** (53 on the model, 1 on the command line).
+**`cargo test`: 60 passed, 0 failed** (59 on the model, 1 on the command line).
 
 **What remains**
 
@@ -136,7 +138,7 @@ Nothing else in this demonstration moved.
 * The limits listed in SPEC.md section 7, in particular the 0.01 ft fit tolerance (Q9).
 * **Rule 4 has been broken by a judge four times**, each time after the previous round's
   fixes. Each judgment found entries that produced a wrong figure marked Known. Treat
-  "nothing wrong is shown as Known" as the model's intent backed by 54 tests and four
+  "nothing wrong is shown as Known" as the model's intent backed by 60 tests and four
   attacks, not as proven. Every attack so far has found a case next to the last fix, the
   fourth round's fixes have not been attacked, and the cases are getting more contrived
   (the fourth needed a line on two planes with one eave wrong, or a hundred hairline
@@ -209,10 +211,7 @@ with the stated reason.
   fraction; a minus on the inches) and are fixed.
 * A pitch is shown as a decimal rise (`1/4:12` shows as `0.25 in/12`). Same unit, not the
   same spelling.
-* **Stretch-out is the first step of D3 only.** A line's length becomes an area. Sheets,
-  pounds, waste, and the conditions a parapet produces are not built.
-* **A cost line cannot be added from the command line.** The demonstration uses the line
-  the sample job carries. `set` changes its stretch-out.
+* Sheets, pounds, waste and the conditions a parapet produces came with D3, below.
 * **Outlines and line ends in inches are loaded from the file only.** There is no command
   that enters them. They are covered by a test, not by the demonstration script.
 * Metric, and pitch in degrees or percent, are refused, not converted (PROPOSALS.md 5, 6).
@@ -467,3 +466,68 @@ sample job's lengths, which proves the arithmetic and not the reproduction.
 
 **The judge** runs steps 1 to 4 on a parapet and a condition of its own, and tries to get
 a wrong figure, or a figure where there should be none, onto a line.
+
+## D3. What was run and what it showed
+
+**How it is run:** `demos/d3.sh`, on the sample job (20 LF of parapet). It exits non-zero
+if any step does not do what it says. Its output is kept in `evidence/d3-demo.txt`. The
+plan above was written first; two things changed from it while building, both noted below.
+
+**What was run and what it showed** (output of `demos/d3.sh`, exit 0)
+
+1. *One parapet, one condition, four lines.* `apply parapet-0024 "Parapet with copper
+   coping"` gives the parapet the condition's name and four lines: wall flashing
+   (`plan_length * height`), coping cap (`plan_length * stretch_out`), cleat
+   (`plan_length * sides`), fasteners (`plan_length * sides / spacing`). With the height
+   not on the plan and nothing else entered, the flashing, the coping and the fasteners
+   show `unknown`, and none of the new values is Assumed. The cleat shows 40 LF: it needs
+   only the length and the recipe's own `sides: 2`, which is the brief's "both sides".
+2. *Entered as the detail gives it.* Height `30 in`, coping stretch-out `19 1/2"`, spacing
+   `12 in`. Flashing 50 SF (20 × 30 ÷ 12). Coping 32.5 SF (20 × 19.5 ÷ 12). Cleat 40 LF.
+   Fasteners 40 (20 × 2 ÷ 1 ft).
+3. *The sheet-metal chain.* Before any waste is entered the "with waste" step shows
+   `unknown`, not the quantity again. Waste `10%`, Assumed: 35.75 SF, Assumed. Ordered at
+   `30 SF/sheet`: 2 sheets (35.75 ÷ 30 = 1.19, rounded up), Assumed. Or at `1.25 lb/SF`:
+   44.6875 lb, not rounded. Each step is saved with its formula
+   (`plan_length × stretch_out ÷ 12`; `quantity × (1 + waste ÷ 100)`;
+   `with_waste ÷ factor, rounded up to a whole sheet`). With the stretch-out marked
+   unknown, all three steps show `unknown`.
+4. *Edited on the line.* Stretch-out to `24 in`: 40 SF, 44 SF with waste; in the saved
+   file only the parapet changed, and on it only the coping line's figures. Cleat formula
+   to `plan_length`: 20 LF, `sides` taken off the line and reported; only the cleat line
+   changed. Flashing formula to `plan_length * (height + turn_out)` with `turn_out=8 in`:
+   63.3333 SF; only the flashing line changed. Refused, with the reason: a length added to
+   an area; a misspelled name; a spacing with no unit.
+5. *The brief's four stretch-outs.* Eave 12 in on 40 LF: 40 SF. Step flashing 8 in on the
+   8.2462 LF porch rake: 5.4975 SF. Valley 36 in, worked on a 22.5 LF hip because the
+   sample roof has no valley: 67.5 SF. Headwall 24 in on 12 LF: 24 SF.
+6. *Units.* Every length above was typed as written; ten values are saved in inches.
+
+**Hand checks** (in `crates/world/tests/world.rs`): the figures above; fasteners at 18 in
+(26.67, so 27); 60 SF at 30 SF to the sheet is 2 sheets, not 3; nineteen formulas and
+recipes that do not make sense, each refused with the stated reason.
+
+**Changed from the plan written beforehand**
+* The plan said a cleat stretch-out would be entered. The cleat is counted by the LF on
+  both sides, as the brief words it, and has no stretch-out.
+* The plan said the cleat's formula would be changed "from both sides to one". It is, by
+  rewriting the formula to `plan_length`, which takes `sides` off the line.
+
+**What remains**
+
+* **Not judged.**
+* **The owner's copper estimate is not reproduced.** There is no estimate in `refs/`
+  (Q5). Step 5 proves the arithmetic on made-up lengths. "With any difference explained"
+  cannot start until the estimate is there.
+* **The valley figure is on a hip.** The sample roof has no valley.
+* **At the command line, not in a window.**
+* **A unit cost cannot be entered from the command line, and a line cannot be removed.**
+  Both are done in the file. Nothing is priced or totalled (D5).
+* **A recipe is written in the file.** There is no command that makes or edits one.
+* **Sheets or pounds is entered per line.** Nothing knows that copper is sold by the
+  pound; there is no material library.
+* **Fasteners are a count by spacing.** There is no end fastener (+1), no box size unless
+  an order conversion is entered, and no spacing rule beyond one spacing.
+* The model calls behind this are DECISIONS.md call 21, each recorded so it can be
+  overruled. The one most worth the owner's eye: a recipe carries no typical stretch-out,
+  waste or sheet size, so a newly applied condition prices nothing until they are entered.

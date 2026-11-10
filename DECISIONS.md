@@ -170,8 +170,8 @@ program outside this repository, with 12 in A1 and 24 in B1: `=A1*B1/12` gave 24
 stretch-out cell left empty it gave **0**, where this project has to give no number at
 all. A name in place of a cell address (`=A1*STRETCH/12`) gave `#NAME?`. So the formula on
 the line would read in cell addresses, units and statuses would have to be carried beside
-it by hand, and every Unknown would have to be kept out of it before it was asked. It
-would add 74 crates. An evaluator that knows names, feet and inches, and
+it by hand, and every Unknown would have to be kept out of it before it was asked. Its
+dependency tree is about 70 crates. An evaluator that knows names, feet and inches, and
 Known/Assumed/Unknown is a few hundred lines (`crates/world/src/formula.rs`). IronCalc is
 not linked. XLSX with live formulas (D6) is still `rust_xlsxwriter`'s job.
 
@@ -197,8 +197,8 @@ The pairing most of the Rust ecosystem uses. Both disclaim warranty and liabilit
 adds a patent grant. Code borrowed under either can be carried with its notice.
 
 ### 14. Platform exceptions to "Rust by default"
-None in the application. Outside it: four shell scripts (`demos/d1.sh`, `demos/units.sh`,
-`tools/licenses.sh`, `tools/landscape.sh`) and one Python file (`tools/license_expr.py`,
+None in the application. Outside it: five shell scripts (`demos/d1.sh`, `demos/units.sh`,
+`demos/d3.sh`, `tools/licenses.sh`, `tools/landscape.sh`) and one Python file (`tools/license_expr.py`,
 the license-expression checker). The demonstration and landscape scripts also call Python
 inline to label a diff and read registry replies. None of these is part of the program.
 
@@ -364,3 +364,41 @@ Q11).
 * **In `lines`, two planes level along one plan line at two heights are a step, or a
   misfit; the planes cannot say which.** It is said as that, and each plane's own edge is
   listed. Two planes on the same side of a shared edge are an overlap and give no line.
+
+### 21. Model calls made in D3 (ours to make; recorded so they can be overruled)
+The pattern is the owner's earlier program's: a line is worked formula, quantity, waste,
+order units, each step shown (call 18). Its code was read for the pattern; none of it was
+copied. The calls:
+* **A line's quantity is a formula, and the D1 form is the simplest one.** A line priced
+  by `surface_area` is a formula of one name. There is one field, `quantity`, not a
+  measure name and a formula beside it.
+* **Units are carried through the formula, so nobody writes `/ 12`.** The earlier program
+  wrote `COPING_LF * (STRETCHOUT / 12)` with the stretch-out a bare number of inches. Under
+  the units ruling the stretch-out carries its unit and the program converts; the worked
+  formula saved beside the figure shows the `÷ 12`. A formula is also checked for sense by
+  its units: a length added to an area is refused, and the unit a line is priced in
+  follows from its formula and is not typed separately.
+* **A formula that comes out as a count is rounded up to a whole number**, and says so.
+  26.67 fasteners is 27. Order quantities are rounded only where the line says to.
+* **The stretch-out is a field of its own on the line; other named values go in
+  `inputs`.** The brief names the stretch-out; a spacing or a number of sides is whatever
+  the formula calls it.
+* **Every value on a line has to be used by its formula.** A stretch-out or a `sides: 2`
+  sitting on a line whose formula ignores it reads as if it counted. Rewriting a formula
+  takes off the values it no longer names and reports them; a new name comes in with its
+  value in the same edit (`--with`).
+* **A condition is an element holding a recipe, and applying it copies the lines.** Every
+  element then carries its own lines, which is the brief's "editable on the line", and the
+  recipe is in the job file where it can be read. The cost: a recipe changed later does
+  not reach elements it was applied to before.
+* **A recipe leaves the stretch-out, the spacing, the waste and the sheet size blank.**
+  They are the detail's and the supplier's. A typical value in the recipe would be an
+  invented number one keystroke from a price. The only value the parapet recipe states is
+  `sides: 2`, which is the brief's "cleat on both sides".
+* **Waste is one percentage per line.** The earlier program keeps a material's waste and a
+  condition's waste apart. There is no material library here yet to hold the first.
+* **The order conversion carries its direction in its unit**: `SF/sheet` divides,
+  `lb/SF` multiplies. Typed as `30 SF/sheet` or `1.25 lb/SF`. A package (the divide form)
+  is bought whole unless the line says otherwise; a weight is not rounded.
+* **Each step is worked from the step before as shown** (four decimals), so the page can
+  be followed by hand.

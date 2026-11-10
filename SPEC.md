@@ -1,7 +1,8 @@
 # SPEC: the world data model
 
-What D1 built, as amended by the owner's ruling on units (DECISIONS.md call 16). Later
-deliverables add components and views; they do not change these rules.
+What D1 built, as amended by the owner's ruling on units (DECISIONS.md call 16), and
+what D3 added to the cost line (sections 4 and 5.4). Later deliverables add components
+and views; they do not change these rules.
 
 ## 1. The job is one world
 
@@ -40,9 +41,11 @@ Rules. The same checks (`check.rs`) run when a job is loaded and when a value is
 8. Arithmetic that overflows gives Unknown, not infinity. A figure that is not zero but
    would be written as 0.0000 is Unknown with the reason, not shown as zero.
 
-**What counts as a value.** Dimensions, pitches, heights, stretch-outs, outlines, line
-ends, assigned conditions, cost codes, unit costs and schedule codes carry a status and a
-source.
+**What counts as a value.** Dimensions, pitches, heights, stretch-outs, the other values
+a line's formula names (a spacing, a number of sides), waste, order factors, outlines,
+line ends, assigned conditions, cost codes, unit costs and schedule codes carry a status
+and a source. A number written into a formula (`* 2`) is part of the formula, which is on
+the line to be read.
 References and labels do not: the planes a line names, an element's name, a cost line's
 description and the measure it is priced by. Those are checked for sense instead.
 
@@ -156,7 +159,8 @@ A file is refused if:
   opposite signs); plan coordinates in `ft-in`; a pitch not in `in/12`; a unit cost not in
   `$/` and the unit its line comes out in; a job whose `length_unit` is not `ft`.
 * *Kinds:* a component sits on a kind that cannot carry it (an outline on a hip, a height
-  on anything but a parapet).
+  on anything but a parapet, a recipe on anything but a Condition); a Condition with no
+  recipe.
 * *Outlines:* fewer than three points; a repeated point; crossing or touching edges; no
   area; a coordinate beyond 1,000,000 ft.
 * *Eaves:* an eave line with no length; one that does not lie along one edge of its
@@ -168,10 +172,18 @@ A file is refused if:
 * *Cost:* a code lacking a scheme or a code; a line with no description, or one that
   starts or ends with a space or holds a character nobody can see (a zero-width space, a
   tab); two lines on one element whose descriptions differ only in
-  capitals or spacing; a line priced by a measure its element does not
-  have, or by a factor (`slope_factor`) and not a quantity; a stretch-out on a line not
-  priced by a length, or of zero or less, or beyond 1,000,000 ft; a unit cost in the wrong
-  unit, negative, or beyond 1e9.
+  capitals or spacing; a quantity formula that cannot be read, names something the
+  element does not have and the line does not carry, adds a length to an area, comes out
+  as a volume or as one over a length, divides by a zero, or is a factor (`slope_factor`)
+  standing alone; a stretch-out of zero or less, or beyond 1,000,000 ft; a stretch-out or
+  any other value on the line that the formula does not use; a value named like a measure,
+  or not in lower-case letters, digits and underscores; waste outside 0 to 1000 percent; an
+  order unit that is blank or the unit the line already comes out in; an order factor of
+  zero or less, or not in the line's unit per order unit or the other way up; a unit cost
+  in the wrong unit, negative, or beyond 1e9.
+* *Recipes:* one that names no kind to apply to, or a Job, Roof or Condition, or a kind
+  twice; one with no lines; one whose lines do not pass every check above on every kind it
+  applies to.
 * *Structure:* the same key twice in an object; an unknown field inside one of this
   program's components; an attribute under `pl::` that is not one of them; no elements; a blank or repeated path; a blank child name; a
   child that points at nothing; an element with two parents; a tree that does not lead
@@ -187,23 +199,55 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 
 | Key in the file | On | Holds | Unit |
 |---|---|---|---|
-| `pl::class` | every element | The kind: Job, Roof, RoofPlane, LowSlopeArea, Eave, Rake, Ridge, Hip, Valley, Headwall, Parapet | |
+| `pl::class` | every element | The kind: Job, Roof, RoofPlane, LowSlopeArea, Eave, Rake, Ridge, Hip, Valley, Headwall, Parapet, Condition | |
 | `pl::job` | the job | Title, the unit derived lengths are worked out in (`ft`), the next path number | |
 | `pl::outline` | areas | `points`: the footprint traced on the plan, either way round. `eave`: the low edge the pitch rises from, as its own line along one edge of the outline (an edge traced in pieces is one edge when every corner inside it is within 0.01 ft of the one line from its start to its end), with no part of the outline on its other side. The slope is measured from that edge's line. `eave_height`. | `points`, `eave`: `ft` or `in`. `eave_height`: `ft`, `in` or `ft-in` |
 | `pl::pitch` | areas | Rise in inches per 12 inches of run | `in/12` |
 | `pl::run` | lines | `ends`: the two ends on the plan. `planes`: paths of the planes the line lies on. | `ft` or `in` |
 | `pl::height` | parapets | Height | `ft`, `in` or `ft-in` |
 | `pl::condition` | any | The assigned condition, by name | none |
-| `pl::cost` | any | `code` (scheme, code, title) and `lines`. Each line has a `description` (no two alike on one element), the `quantity` (a measure on this element) it is priced by, an optional `stretch_out`, and a `unit_cost`. | `stretch_out`: `ft`, `in` or `ft-in`. `unit_cost`: `$/` + the unit the line comes out in |
+| `pl::cost` | any | `code` (scheme, code, title) and `lines`. Each line is described below. | see below |
 | `pl::schedule` | any | `wbs`: the work breakdown code | none |
+| `pl::recipe` | a Condition | `applies_to`: the kinds of element the condition goes on. `cost`: the cost code and lines an element gets when it is applied. | as `pl::cost` |
 | `pl::measure` | any with geometry | Derived quantities by name. Never typed. | |
-| `pl::line_quantities` | any with a sheet-metal line | The derived quantity of each cost line that has a stretch-out, by the line's description. Never typed. | SF |
+| `pl::line_quantities` | any with cost lines | What each cost line works out to, by the line's description: `quantity`, and `with_waste` and `order` when the line has them. Never typed. | |
 
-**Stretch-out.** A sheet-metal line carries the width of the flat sheet its profile is
-bent from, as the detail gives it. It belongs to the line, not to the material: the same
-copper is 12 in at an eave and 36 in in a valley. It goes on a line priced by a length
-(LF), and the line then comes out in SF and is priced in `$/SF`. Sheets, pounds and waste
-are D3.
+### 4.1 A cost line
+
+A line is worked in steps that each stay visible: formula, then quantity, then waste, then
+order units.
+
+| Field | Holds | Unit |
+|---|---|---|
+| `description` | What the line is. No two alike on one element, ignoring capitals and spacing. | |
+| `quantity` | The line's formula, as the estimator writes it. | |
+| `stretch_out` | Optional. The width of the flat sheet the profile is bent from, as the detail gives it. | `ft`, `in` or `ft-in` |
+| `inputs` | Optional. Any other values the formula names, by name: a `spacing`, a number of `sides`. | a length, or none for a plain number |
+| `waste` | Optional. Percent added to the quantity. | `%` |
+| `order` | Optional. `unit`: what is bought (`sheet`, `lb`). `factor`: the conversion. `round_up`: buy whole ones. | `factor`: `SF/sheet` (divide) or `lb/SF` (multiply) |
+| `unit_cost` | The price. | `$/` + the order unit, or the unit the quantity comes out in |
+
+**The formula.** Names, numbers, `+ - * /` (or `×`, `÷`) and brackets. A name is one of:
+the element's measures (`plan_length`, `true_length`, `face_area`, `plan_area`,
+`surface_area`, `slope_factor`); a parapet's `height`; `stretch_out`; a name in `inputs`.
+`squares` can stand alone as a quantity and cannot be mixed into a formula.
+
+* **Units are carried through it.** Every length is brought to feet, whatever it was
+  entered in. Length × length is an area; length ÷ length is a count. The unit the line
+  comes out in follows from the formula: a count (EA), a length (LF) or an area (SF).
+  Nobody types `/ 12`.
+* **A count is whole.** A formula that comes out as a count is rounded up to the next
+  whole number, and the worked formula says so.
+* **Status is carried through it.** The result is as good as its worst operand. An Unknown
+  operand leaves no result at all, never a zero.
+* **Stretch-out belongs to the line, not to the material.** The same copper is 12 in at an
+  eave and 36 in in a valley. A recipe leaves it blank; it is not a default.
+
+**A condition as a recipe.** A Condition is an element of the job. Applying it to an
+element of a kind it is for gives that element the condition's name, its cost code, and a
+copy of its lines. The copies are then edited on the element. What the recipe leaves blank
+is Unknown on the element until someone enters it. Applying the same recipe twice is
+refused (its lines would be there twice).
 
 How many planes a line names: a hip or valley, two; an eave, rake or headwall, one; a
 ridge, one or two; a parapet, none.
@@ -272,13 +316,22 @@ those hips and the ridge are flagged with both heights. The roof as drawn no lon
 
 ### 5.4 Line quantities
 
-| Quantity | On | Formula | Inputs |
-|---|---|---|---|
-| sheet area (SF) | a cost line with a `stretch_out`, priced by a length | *length* × stretch_out, the stretch-out in feet: `true_length × stretch_out ÷ 12` when it was entered in inches | the element's measure, the element's cost lines |
+Each step is saved with the formula that was worked, its unit and its status.
 
-The length is the measure as the file shows it (four decimals), so 12 LF × 24 in ÷ 12 =
-24 SF can be checked from the page. Its status is the worst of the length's and the
-stretch-out's: an Unknown stretch-out leaves no area, not a zero one.
+| Step | Formula as saved | Unit |
+|---|---|---|
+| `quantity` | The line's formula with each conversion written in: `plan_length × stretch_out ÷ 12`, `plan_length × sides ÷ (spacing ÷ 12), rounded up to a whole number`, `plan_length × (height ÷ 12 + turn_out ÷ 12)` | EA, LF or SF by the formula; a measure standing alone keeps its own |
+| `with_waste` | `quantity × (1 + waste ÷ 100)` | the quantity's |
+| `order` | `with_waste ÷ factor, rounded up to a whole sheet`, or `with_waste × factor` (from `quantity` when the line has no waste) | the order unit |
+
+Each step is worked from the step before as the file shows it (four decimals), and the
+quantity from the element's measures as the file shows them, so a line can be followed by
+hand from the page: 20 LF × 19 1/2 in ÷ 12 = 32.5 SF; plus 10 percent, 35.75 SF; at 30 SF
+to the sheet, 2 sheets; or at 1.25 lb to the SF, 44.6875 lb. Rounding up allows for the
+crumbs binary arithmetic leaves, so 60 SF at 30 to the sheet is 2 sheets, not 3.
+
+A step whose input is Unknown has no number. A formula that comes out below zero has no
+number, with the reason.
 
 ## 6. Cost code scheme
 
@@ -294,13 +347,21 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
   command line prints (`view::elements`) are what the sheet and the 3D view will read.
 * **No money.** Cost lines exist and carry unit costs with statuses; nothing is extended
   or totalled. Tying a line's status to its quantity's status is D5.
-* **Sheet metal stops at area.** A stretch-out turns a line's length into SF. Sheets,
-  pounds, waste, and the conditions one parapet produces are D3.
+* **A recipe's lines are copied, not linked.** Changing a recipe does not change the
+  elements it was applied to before.
+* **Waste is one percentage on the line.** There is no separate waste for the material
+  and for the condition.
+* **An order factor is a number** (30 SF to the sheet). A sheet size is not entered as
+  3 ft × 10 ft and multiplied out.
+* **Whether a sheet-metal line orders by the sheet or by the pound is entered, not known
+  from the material.** There is no library of materials.
 * **Metric, and pitch in degrees or percent, are refused**, not converted (PROPOSALS.md
   items 5 and 6).
-* **Adding or removing a cost line, and re-entering outlines and line ends, are done in
-  the file.** `set` edits pitch, height, eave height, a line's stretch-out, condition and
-  schedule code.
+* **Removing a cost line, entering a unit cost, writing a recipe, and re-entering outlines
+  and line ends are done in the file.** `set` edits pitch, height, eave height, condition
+  and schedule code on an element, and on a cost line its stretch-out, its formula (with
+  the values the formula brings in), its waste, its order conversion, and any value its
+  formula names. `apply` gives an element a condition's lines.
 * **No undo, no conditions library, no derived conditions** (D3).
 * **Planes are checked against each other only where they share an edge, and only on
   request.** `plumbline lines` reports two planes that share an edge and disagree about
@@ -326,7 +387,7 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
 
 | Crate | Depends on | Holds |
 |---|---|---|
-| `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json` | The model: values, units, components, checks, plan geometry, derivation, the lines planes imply, the saved file, the sample job, the flat view |
-| `crates/cli` (`plumbline`) | `plumbline-world` | `sample`, `show`, `set`, `check`, `lines` |
+| `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json` | The model: values, units, components, checks, plan geometry, derivation, line formulas and the steps a line is worked in, the lines planes imply, the saved file, the sample job, the flat view |
+| `crates/cli` (`plumbline`) | `plumbline-world` | `sample`, `show`, `set`, `check`, `lines`, `apply` |
 
 The world crate does not depend on any renderer or window, and must not.
