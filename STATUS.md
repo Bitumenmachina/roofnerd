@@ -381,3 +381,54 @@ the toolchain needs the owner's go-ahead (QUESTIONS.md Q4).
 **Found, not used yet:** the owner's earlier program has low-slope solvers (tapered
 package, crickets, coping, parapet flashing height) under MIT (DECISIONS.md call 18,
 QUESTIONS.md Q11). They are the candidate for step 8.
+
+---
+
+## D3. How its demonstration will be run (written before any D3 work)
+
+**Demonstration as the brief states it:** One parapet produces wall flashing (a height on
+its LF), a coping cap, cleat on both sides, and fasteners by spacing rule. Sheet metal
+converts LF × stretch-out ÷ 12 to SF, then to sheets or pounds, plus waste. Stretch-out is
+editable on the line, and the formula is visible on the line. The owner's copper
+sheet-metal estimate is reproduced line by line (eave 12 in, step flashing 8 in, valley
+36 in, headwall 24 in), with any difference explained.
+
+**What already exists, from the units amendment:** a cost line can carry a stretch-out,
+and its length × stretch-out is derived as SF with the formula saved beside it. Nothing
+else of D3 is built.
+
+**Where the pattern comes from:** the owner's earlier program works a line as formula,
+then quantity, then waste, then order units, and its sample parapet condition carries
+exactly the four lines the brief names (DECISIONS.md call 18). D3 follows that pattern on
+this project's model. Nothing is copied until it is read in full and attributed.
+
+**How it will be run:** a script, `demos/d3.sh`, at the command line until the window
+exists, on the sample job, printing the saved-job diff at each step and failing if a step
+does not do what it says.
+
+1. *One parapet, one condition, four lines.* Assign the sample parapet a parapet
+   condition. It gains a wall flashing line, a coping cap line, a cleat line counted on
+   both sides, and a fastener line by spacing. Each shows its formula. With the height
+   unknown and no stretch-out or spacing entered, each shows Unknown with its reason and
+   no number, and nothing is assumed for them.
+2. *Enter what the detail gives.* Height `30 in`, coping stretch-out `19 1/2 in`, cleat
+   stretch-out and fastener spacing as typed. Each line gets its number. The figures are
+   worked by hand in the script's comments from the 20 LF parapet.
+3. *The sheet-metal chain, each step visible.* On the coping line: LF × stretch-out ÷ 12
+   gives SF; waste is added as a stated percentage; the result converts to sheets of a
+   stated size, rounded up, or to pounds at a stated weight per SF. Each step is a figure
+   with its own formula and status. An Unknown anywhere leaves no number after it.
+4. *Edit on the line.* Change the coping stretch-out on its line: that line's figures
+   change in the file diff and nothing else does. Change the cleat line's formula from
+   both sides to one: the same.
+5. *The brief's four stretch-outs.* Eave 12 in, step flashing 8 in, valley 36 in and
+   headwall 24 in, each on a line of the sample roof, each worked by hand.
+6. *Units.* Every stretch-out and spacing is entered as the detail gives it and nobody
+   converts anything.
+
+**Pending from the start:** the line-by-line reproduction of the owner's copper estimate.
+`refs/` holds no estimate (QUESTIONS.md Q5). Step 5 uses the brief's stretch-outs on the
+sample job's lengths, which proves the arithmetic and not the reproduction.
+
+**The judge** runs steps 1 to 4 on a parapet and a condition of its own, and tries to get
+a wrong figure, or a figure where there should be none, onto a line.
