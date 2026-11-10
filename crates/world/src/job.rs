@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::check;
 use crate::components::*;
 use crate::derive;
+use crate::lines;
 use crate::units::{self, Len};
 use crate::value::{Status, Val};
 
@@ -125,11 +126,12 @@ impl Job {
         self.order.iter().filter_map(|e| q.get(&self.world, *e).ok()).map(|n| n.path.clone()).filter(|p| changed.contains(p)).collect()
     }
 
-    /// Change one entered value by element path and field name. The fields are the ones an
-    /// estimator would edit: pitch, height, eave_height, stretch_out, condition, wbs. The
-    /// value is read as typed, units and all (`30 in`, `25' 6 1/2"`, `6:12`), kept in the
-    /// unit it was typed in, and has to pass the same checks a loaded file does. `line`
-    /// picks the cost line for a stretch-out when the element has more than one.
+    /// Change one entered value by element path and field name. On the element: pitch,
+    /// height, eave_height, condition, wbs. On one of its cost lines: stretch_out,
+    /// quantity (the formula), waste, order, or any value the formula names. The value is
+    /// read as typed, units and all (`30 in`, `25' 6 1/2"`, `6:12`), kept in the unit it
+    /// was typed in, and has to pass the same checks a loaded file does. `line` picks the
+    /// cost line when the element has more than one.
     pub fn set(&mut self, path: &str, field: &str, value: Option<&str>, status: Status, source: &str) -> Result<(), String> {
         self.set_on_line(path, field, None, value, status, source)
     }
@@ -137,20 +139,16 @@ impl Job {
     pub fn set_on_line(&mut self, path: &str, field: &str, line: Option<&str>, value: Option<&str>, status: Status, source: &str) -> Result<(), String> {
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
-        if line.is_some() && field != "stretch_out" {
-            return Err(format!("a cost line is named only when setting a stretch_out, not a {field}"));
+        let on_element = matches!(field, "pitch" | "height" | "eave_height" | "condition" | "wbs");
+        if line.is_some() && on_element {
+            return Err(format!("{field} belongs to the element, not to one of its cost lines; leave --line off"));
+        }
+        if !on_element {
+            return self.set_line_value(e, path, kind, field, line, value, &[], status, source).map(|_| ());
         }
         // A length keeps the unit it is typed in. Marked unknown, it keeps the unit the
         // value it replaces had, so nothing but the value changes in the file.
-        let length = |was: Option<&Val<Len>>| -> Result<Val<Len>, String> {
-            match value {
-                Some(s) => {
-                    let (len, unit) = units::parse_length(s)?;
-                    Ok(Val { value: Some(len), unit: unit.into(), status, source: source.into() })
-                }
-                None => Ok(Val { value: None, unit: was.map(|v| v.unit.clone()).unwrap_or_else(|| units::FT.into()), status, source: source.into() }),
-            }
-        };
+        let length = |was: Option<&Val<Len>>| typed_length(value, was, status, source);
         let text = || Val { value: value.map(str::to_string), unit: String::new(), status, source: source.into() };
         let missing = |what: &str| format!("{path} has no {what} to set");
         match field {
@@ -171,45 +169,199 @@ impl Job {
                 check::outline(path, kind, &new)?;
                 *self.world.get_mut::<Outline>(e).ok_or_else(|| missing("outline"))? = new;
             }
-            "stretch_out" => {
-                let mut new = self.world.get::<Cost>(e).ok_or_else(|| missing("cost line"))?.clone();
-                let at = match line {
-                    Some(description) => new.lines.iter().position(|l| l.description == description).ok_or_else(|| {
-                        let have: Vec<String> = new.lines.iter().map(|l| format!("{:?}", l.description)).collect();
-                        format!("{path} has no cost line described as {description:?} (it has: {})", have.join(", "))
-                    })?,
-                    None if new.lines.len() == 1 => 0,
-                    None if new.lines.is_empty() => return Err(missing("cost line")),
-                    None => {
-                        let have: Vec<String> = new.lines.iter().map(|l| format!("{:?}", l.description)).collect();
-                        return Err(format!("{path} has {} cost lines; say which one the stretch-out is for (it has: {})", new.lines.len(), have.join(", ")));
-                    }
-                };
-                // A line priced per LF becomes a line priced per SF when it gains a
-                // stretch-out. Its unit cost was per LF; that price no longer applies.
-                if new.lines[at].stretch_out.is_none() && new.lines[at].unit_cost.value.is_some() {
-                    return Err(format!("{path} cost line {:?} is priced by the LF; giving it a stretch-out prices it by the SF, so its unit cost has to be re-entered. Edit the line in the file", new.lines[at].description));
-                }
-                new.lines[at].stretch_out = Some(length(new.lines[at].stretch_out.as_ref())?);
-                if new.lines[at].unit_cost.unit != "$/SF" {
-                    new.lines[at].unit_cost.unit = "$/SF".into();
-                }
-                check::cost(path, kind, &new)?;
-                *self.world.get_mut::<Cost>(e).ok_or_else(|| missing("cost line"))? = new;
-            }
             "condition" => {
                 let new = Condition(text());
                 check::condition(path, &new)?;
                 self.world.entity_mut(e).insert(new);
             }
-            "wbs" => {
+            _ => {
                 let new = WorkCode { wbs: text() };
                 check::work_code(path, &new)?;
                 self.world.entity_mut(e).insert(new);
             }
-            other => return Err(format!("{other:?} is not a field that can be set; use pitch, height, eave_height, stretch_out, condition or wbs")),
         }
         Ok(())
+    }
+
+    /// Which cost line an edit is for: the one named, or the only one there is.
+    fn line_at(cost: &Cost, path: &str, line: Option<&str>, what: &str) -> Result<usize, String> {
+        let have = || cost.lines.iter().map(|l| format!("{:?}", l.description)).collect::<Vec<_>>().join(", ");
+        match line {
+            Some(description) => cost.lines.iter().position(|l| l.description == description).ok_or_else(|| format!("{path} has no cost line described as {description:?} (it has: {})", have())),
+            None if cost.lines.len() == 1 => Ok(0),
+            None if cost.lines.is_empty() => Err(format!("{path} has no cost line to set a {what} on")),
+            None => Err(format!("{path} has {} cost lines; say which one with --line (it has: {})", cost.lines.len(), have())),
+        }
+    }
+
+    /// Rewrite a cost line's formula. `with` gives a value for each name the new formula
+    /// brings in (`("turn_up", "8 in")`), entered with this status and source. Values the
+    /// new formula no longer names are taken off the line; their names are returned, so
+    /// the caller can say so.
+    pub fn set_formula(&mut self, path: &str, line: Option<&str>, formula: &str, with: &[(String, String)], status: Status, source: &str) -> Result<Vec<String>, String> {
+        let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
+        self.set_line_value(e, path, kind, "quantity", line, Some(formula), with, status, source)
+    }
+
+    /// Change something on one cost line: its `stretch_out`, its `quantity` (the formula),
+    /// its `waste`, its `order` conversion, or one of the values its formula names.
+    /// Returns the names of values a new formula dropped.
+    #[allow(clippy::too_many_arguments)]
+    fn set_line_value(&mut self, e: Entity, path: &str, kind: Kind, field: &str, line: Option<&str>, value: Option<&str>, with: &[(String, String)], status: Status, source: &str) -> Result<Vec<String>, String> {
+        let Some(cost) = self.world.get::<Cost>(e) else {
+            return Err(if matches!(field, "stretch_out" | "quantity" | "waste" | "order") {
+                format!("{path} has no cost line to set a {field} on")
+            } else {
+                format!("{field:?} is not a field that can be set on {path}; an element takes pitch, height, eave_height, condition or wbs, and a cost line takes stretch_out, quantity, waste, order or a value its formula names")
+            });
+        };
+        let mut new = cost.clone();
+        let at = Self::line_at(&new, path, line, field)?;
+        let l = &mut new.lines[at];
+        let what = format!("{path} cost line {:?}", l.description);
+        let mut dropped = Vec::new();
+        // A value for a name the formula uses: a plain number where the line holds a plain
+        // number or holds nothing yet, otherwise a length with its unit.
+        let named = |name: &str, text: Option<&str>, was: Option<&Val<Len>>| -> Result<Val<Len>, String> {
+            if let Some(fault) = lines::input_name_fault(kind, name) {
+                return Err(format!("{what}: {fault}"));
+            }
+            match (text, was) {
+                (None, Some(was)) => Ok(Val { value: None, unit: was.unit.clone(), status, source: source.into() }),
+                (None, None) => Err(format!("{what} has no {name} to mark unknown")),
+                (Some(text), was) if units::parse_number(text).is_ok() && was.is_none_or(|w| w.unit.is_empty()) => Ok(Val { value: Some(Len::One(units::parse_number(text)?)), unit: String::new(), status, source: source.into() }),
+                (Some(text), Some(was)) if was.unit.is_empty() => Err(format!("{what}: {name} is a plain number on this line, and {text:?} is not one")),
+                (Some(_), _) => typed_length(text, was, status, source),
+            }
+        };
+        match field {
+            "stretch_out" => l.stretch_out = Some(typed_length(value, l.stretch_out.as_ref(), status, source)?),
+            "quantity" => {
+                let Some(text) = value else {
+                    return Err(format!("{what}: a quantity is a formula, not a value; it cannot be marked unknown. Mark what it uses unknown instead"));
+                };
+                l.quantity = text.trim().to_string();
+                for (name, typed) in with {
+                    if name == lines::STRETCH_OUT {
+                        l.stretch_out = Some(typed_length(Some(typed), l.stretch_out.as_ref(), status, source)?);
+                    } else {
+                        let v = named(name, Some(typed), l.inputs.get(name))?;
+                        l.inputs.insert(name.clone(), v);
+                    }
+                }
+                // What the new formula no longer names comes off the line, and is reported.
+                if let Ok(expr) = crate::formula::parse(&l.quantity) {
+                    let used = crate::formula::names(&expr);
+                    if let Some((unused, _)) = with.iter().find(|(name, _)| !used.contains(name)) {
+                        return Err(format!("{what}: a value is given for {unused:?}, which the formula {:?} does not use", l.quantity));
+                    }
+                    let gone: Vec<String> = l.inputs.keys().filter(|k| !used.contains(k)).cloned().collect();
+                    for name in gone {
+                        l.inputs.remove(&name);
+                        dropped.push(name);
+                    }
+                    if l.stretch_out.is_some() && !used.iter().any(|n| n == lines::STRETCH_OUT) {
+                        l.stretch_out = None;
+                        dropped.push(lines::STRETCH_OUT.to_string());
+                    }
+                }
+            }
+            "waste" => {
+                let percent = value.map(|s| units::parse_number(s.trim().trim_end_matches('%').trim_end())).transpose()?;
+                l.waste = Some(Val { value: percent, unit: "%".into(), status, source: source.into() });
+            }
+            "order" => {
+                let on = lines::On { kind, measure: None, height: None };
+                let unit = lines::read(&on, l).map_err(|why| format!("{what}: its quantity {:?} {why}", l.quantity))?.unit;
+                match value {
+                    None => {
+                        let o = l.order.as_mut().ok_or_else(|| format!("{what} has no order conversion to mark unknown"))?;
+                        o.factor = Val { value: None, unit: o.factor.unit.clone(), status, source: source.into() };
+                    }
+                    Some(text) => {
+                        // "30 SF/sheet" or "1.25 lb/SF": a number, then what per what.
+                        let how = format!("write it as a number and what per what, like 30 {unit}/sheet or 1.25 lb/{unit}");
+                        let (number, per) = text.trim().split_once(' ').ok_or_else(|| format!("{text:?} is not an order conversion; {how}"))?;
+                        let factor = units::parse_number(number)?;
+                        let per = per.trim();
+                        let (top, bottom) = per.split_once('/').ok_or_else(|| format!("{text:?} is not an order conversion; {how}"))?;
+                        let (order_unit, round_up) = if top == unit && bottom != unit {
+                            (bottom, true)
+                        } else if bottom == unit && top != unit {
+                            (top, false)
+                        } else {
+                            return Err(format!("{text:?} does not convert this line, which comes out in {unit}; {how}"));
+                        };
+                        // Buying whole ones is the rule for a package (a sheet, a box) and
+                        // not for a weight; a line that already says keeps what it says.
+                        let round_up = l.order.as_ref().filter(|o| o.unit == order_unit).map(|o| o.round_up).unwrap_or(round_up);
+                        l.order = Some(Order { unit: order_unit.to_string(), factor: Val { value: Some(factor), unit: per.to_string(), status, source: source.into() }, round_up });
+                    }
+                }
+            }
+            name => {
+                let v = named(name, value, l.inputs.get(name))?;
+                l.inputs.insert(name.to_string(), v);
+            }
+        }
+        // The line may now come out in another unit. A price entered for the old unit does
+        // not carry over; a line with no price yet just changes what it is priced by.
+        let on = lines::On { kind, measure: None, height: None };
+        if let Ok(read) = lines::read(&on, &new.lines[at]) {
+            let priced = format!("$/{}", lines::priced_in(&new.lines[at], read.unit));
+            let l = &mut new.lines[at];
+            if l.unit_cost.unit != priced {
+                if l.unit_cost.value.is_some() {
+                    return Err(format!("{what} is priced in {}; this change would make it a line in {priced}, and a price does not carry from one to the other. Re-enter the unit cost in the file", l.unit_cost.unit));
+                }
+                l.unit_cost.unit = priced;
+            }
+        }
+        check::cost(path, kind, &new)?;
+        *self.world.get_mut::<Cost>(e).ok_or_else(|| format!("{path} has no cost lines"))? = new;
+        Ok(dropped)
+    }
+
+    /// Apply a condition to an element: the element takes the condition's name and its
+    /// cost lines. The condition is found by its path or its name. The lines are copied
+    /// onto the element, where each can then be edited; what the condition leaves blank
+    /// stays Unknown on the element until someone enters it.
+    pub fn apply(&mut self, path: &str, condition: &str, source: &str) -> Result<Vec<String>, String> {
+        let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
+        let mut found: Vec<(String, String, Recipe)> = Vec::new();
+        let mut q = self.world.query::<(&Node, &Recipe)>();
+        for (node, t) in q.iter(&self.world) {
+            if node.path == condition || node.name == condition {
+                found.push((node.path.clone(), node.name.clone(), t.clone()));
+            }
+        }
+        let (_, name, recipe) = match found.len() {
+            1 => found.remove(0),
+            0 => return Err(format!("no condition {condition:?} in this job")),
+            _ => return Err(format!("{condition:?} names {} conditions ({}); use the path", found.len(), found.iter().map(|f| f.0.clone()).collect::<Vec<_>>().join(", "))),
+        };
+        if !recipe.applies_to.contains(&kind) {
+            return Err(format!("{name:?} applies to {}, and {path} is a {kind:?}", recipe.applies_to.iter().map(|k| format!("a {k:?}")).collect::<Vec<_>>().join(" or ")));
+        }
+        let new = match self.world.get::<Cost>(e) {
+            None => recipe.cost.clone(),
+            Some(have) => {
+                if have.code.value != recipe.cost.code.value {
+                    return Err(format!("{path} already carries a cost code of its own, and {name:?} brings another; an element has one cost code"));
+                }
+                let mut joined = have.clone();
+                joined.lines.extend(recipe.cost.lines.iter().cloned());
+                joined
+            }
+        };
+        check::cost(path, kind, &new)?;
+        let assigned = Condition(Val { value: Some(name.clone()), unit: String::new(), status: Status::Known, source: source.into() });
+        check::condition(path, &assigned)?;
+        let added = recipe.cost.lines.iter().map(|l| l.description.clone()).collect();
+        self.world.entity_mut(e).insert((new, assigned));
+        Ok(added)
     }
 
     /// One entered value as it would be shown, for reporting an edit back: the text in
@@ -217,21 +369,27 @@ impl Job {
     pub fn shown(&mut self, path: &str, field: &str, line: Option<&str>) -> Option<String> {
         let e = self.find(path)?;
         let length = |v: &Val<Len>| v.value.as_ref().map(|len| units::show_length(len, &v.unit)).unwrap_or_else(|| "unknown".into());
+        let number = |v: &Val<f64>| v.value.map(|x| format!("{x} {}", v.unit)).unwrap_or_else(|| "unknown".into());
         match field {
-            "pitch" => self.world.get::<Pitch>(e).map(|p| p.0.value.map(|x| format!("{x} {}", p.0.unit)).unwrap_or_else(|| "unknown".into())),
+            "pitch" => self.world.get::<Pitch>(e).map(|p| number(&p.0)),
             "height" => self.world.get::<Height>(e).map(|h| length(&h.0)),
             "eave_height" => self.world.get::<Outline>(e).map(|o| length(&o.eave_height)),
-            "stretch_out" => {
+            "condition" => self.world.get::<Condition>(e).map(|c| c.0.value.clone().unwrap_or_else(|| "unknown".into())),
+            "wbs" => self.world.get::<WorkCode>(e).map(|c| c.wbs.value.clone().unwrap_or_else(|| "unknown".into())),
+            _ => {
                 let cost = self.world.get::<Cost>(e)?;
                 let l = match line {
                     Some(d) => cost.lines.iter().find(|l| l.description == d)?,
                     None => cost.lines.first()?,
                 };
-                l.stretch_out.as_ref().map(length)
+                match field {
+                    "stretch_out" => l.stretch_out.as_ref().map(length),
+                    "quantity" => Some(l.quantity.clone()),
+                    "waste" => l.waste.as_ref().map(number),
+                    "order" => l.order.as_ref().map(|o| format!("{}{}", number(&o.factor), if o.round_up { ", whole ones" } else { "" })),
+                    name => l.inputs.get(name).map(length),
+                }
             }
-            "condition" => self.world.get::<Condition>(e).map(|c| c.0.value.clone().unwrap_or_else(|| "unknown".into())),
-            "wbs" => self.world.get::<WorkCode>(e).map(|c| c.wbs.value.clone().unwrap_or_else(|| "unknown".into())),
-            _ => None,
         }
     }
 
@@ -258,4 +416,16 @@ pub fn slug(s: &str) -> String {
         }
     }
     out.trim_end_matches('-').to_string()
+}
+
+/// A length as typed, kept in the unit it was typed in. Marked unknown, it keeps the unit
+/// of the value it replaces, so nothing but the value changes in the file.
+fn typed_length(value: Option<&str>, was: Option<&Val<Len>>, status: Status, source: &str) -> Result<Val<Len>, String> {
+    match value {
+        Some(s) => {
+            let (len, unit) = units::parse_length(s)?;
+            Ok(Val { value: Some(len), unit: unit.into(), status, source: source.into() })
+        }
+        None => Ok(Val { value: None, unit: was.map(|v| v.unit.clone()).unwrap_or_else(|| units::FT.into()), status, source: source.into() }),
+    }
 }

@@ -66,6 +66,9 @@ pub enum Kind {
     /// Where a roof plane dies into a wall above it.
     Headwall,
     Parapet,
+    /// A condition as a recipe: the cost lines an element gets when the condition is
+    /// applied to it. It is an element of the job so it can be read and edited there.
+    Condition,
 }
 
 impl Kind {
@@ -83,6 +86,7 @@ impl Kind {
             Kind::Valley => "valley",
             Kind::Headwall => "headwall",
             Kind::Parapet => "parapet",
+            Kind::Condition => "condition",
         }
     }
     pub fn is_area(self) -> bool {
@@ -192,14 +196,22 @@ pub struct CostCode {
     pub title: String,
 }
 
-/// One priced line hanging off an element. `quantity` names the measure on this element
-/// the line is priced by, so the line follows the geometry.
+/// One priced line hanging off an element, worked in steps that each stay visible:
+/// formula, then quantity, then waste, then order units.
 ///
-/// A sheet-metal line also carries its `stretch_out`: the width of the flat sheet the
-/// profile is bent from, as the detail gives it (usually in inches). It belongs to the
-/// line, not to the material: the same copper is 12 in at an eave and 36 in in a valley.
-/// With it the line is priced by area, length × stretch-out, worked out in
-/// `pl::line_quantities`.
+/// `quantity` is the line's formula, readable and editable on the line: a measure of this
+/// element taken as it stands (`surface_area`), or arithmetic over the element's measures,
+/// a parapet's `height`, and the values entered on the line
+/// (`plan_length * stretch_out`, `plan_length * sides / spacing`). So the line follows the
+/// geometry.
+///
+/// `stretch_out` is the width of the flat sheet a profile is bent from, as the detail
+/// gives it (usually in inches). It belongs to the line, not to the material: the same
+/// copper is 12 in at an eave and 36 in in a valley. `inputs` are any other values the
+/// formula names: a spacing, a number of sides.
+///
+/// `waste` is a percentage added to the quantity. `order` turns the result into what is
+/// bought: sheets of so many SF, pounds at so many per SF.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CostLine {
@@ -207,19 +219,34 @@ pub struct CostLine {
     pub quantity: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stretch_out: Option<Val<Len>>,
+    /// Each a length (`ft`, `in`, `ft-in`) or a plain number (no unit).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub inputs: BTreeMap<String, Val<Len>>,
+    /// Percent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub waste: Option<Val<f64>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub order: Option<Order>,
     pub unit_cost: Val<f64>,
 }
 
 impl CostLine {
-    /// The unit this line is priced in: the measure's own unit, or SF when a stretch-out
-    /// turns a length into an area.
-    pub fn priced_in(&self, measure_unit: &'static str) -> &'static str {
-        if self.stretch_out.is_some() {
-            "SF"
-        } else {
-            measure_unit
-        }
+    /// A line priced by one measure and nothing else.
+    pub fn of(description: &str, quantity: &str, unit_cost: Val<f64>) -> CostLine {
+        CostLine { description: description.into(), quantity: quantity.into(), stretch_out: None, inputs: BTreeMap::new(), waste: None, order: None, unit_cost }
     }
+}
+
+/// How a line's quantity becomes what is bought. `factor` carries the conversion in its
+/// unit: `SF/sheet` (the quantity is divided: 30 SF to a sheet) or `lb/SF` (multiplied:
+/// 1.25 lb to the SF). `round_up` buys whole ones.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Order {
+    pub unit: String,
+    pub factor: Val<f64>,
+    #[serde(default)]
+    pub round_up: bool,
 }
 
 /// `pl::cost`: the element's cost code and its lines.
@@ -243,12 +270,35 @@ pub struct WorkCode {
 #[derive(Component, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Measure(pub BTreeMap<String, Derived>);
 
-/// `pl::line_quantities`: the quantity worked out for a cost line whose quantity is more
-/// than a measure taken as it stands, by the line's description. Today that is a
-/// sheet-metal line: length × stretch-out. Nobody types these; like measures they are
-/// recomputed on every change and every load.
+/// What one cost line works out to, step by step. Each step is a figure with its own
+/// formula, unit and status.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LineFigures {
+    /// The line's formula worked out.
+    pub quantity: Derived,
+    /// With the line's waste added, when it has waste.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub with_waste: Option<Derived>,
+    /// In order units, when the line has them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub order: Option<Derived>,
+}
+
+/// `pl::line_quantities`: what each cost line on the element works out to, by the line's
+/// description. Nobody types these; like measures they are recomputed on every change and
+/// every load.
 #[derive(Component, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
-pub struct LineQuantities(pub BTreeMap<String, Derived>);
+pub struct LineQuantities(pub BTreeMap<String, LineFigures>);
+
+/// `pl::recipe`: on a Condition element, the kinds of element the condition can be
+/// applied to and the cost code and lines an element gets when it is.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Recipe {
+    pub applies_to: Vec<Kind>,
+    pub cost: Cost,
+}
 
 /// Attributes in the file this program does not know. They are kept and written back
 /// untouched, so a file that passes through loses nothing.
@@ -266,3 +316,4 @@ pub const K_COST: &str = "pl::cost";
 pub const K_SCHEDULE: &str = "pl::schedule";
 pub const K_MEASURE: &str = "pl::measure";
 pub const K_LINE_QUANTITIES: &str = "pl::line_quantities";
+pub const K_RECIPE: &str = "pl::recipe";

@@ -137,16 +137,16 @@ echo "  PASS: every one refused by name, and the job file is untouched"
 
 echo
 echo "== 5. A stretch-out in inches against a length in feet, with nobody converting anything =="
-"$P" show "$T/job.json" | grep -A12 "^ *headwall-0021 " | grep -E "true_length|stretch-out|sheet area" | sed 's/^ */    /'
+"$P" show "$T/job.json" | grep -A12 "^ *headwall-0021 " | grep -E "true_length|stretch-out|quantity:" | sed 's/^ */    /'
 echo "  the line's quantity as saved, formula and all:"
 saved "$T/job.json" headwall-0021 pl::line_quantities
-[ "$(figure "$T/job.json" headwall-0021 "sheet area: Copper headwall flashing")" = "24 SF" ] || { echo "FAIL: 12 LF x 24 in / 12 should be 24 SF"; exit 1; }
+[ "$(figure "$T/job.json" headwall-0021 "quantity: Copper headwall flashing")" = "24 SF" ] || { echo "FAIL: 12 LF x 24 in / 12 should be 24 SF"; exit 1; }
 echo "  the brief's stretch-outs on the same 12 LF, each typed as the detail gives it:"
 for pair in "12 in=12 SF" "8 in=8 SF" "36 in=36 SF" "24 in=24 SF" "19 1/2\"=19.5 SF" "2 ft=24 SF"; do
   typed="${pair%%=*}"; want="${pair##*=}"
   cp "$T/job.json" "$T/s.json"
   "$P" set "$T/s.json" headwall-0021 stretch_out "$typed" --status Known --source "detail" >/dev/null
-  got="$(figure "$T/s.json" headwall-0021 "sheet area: Copper headwall flashing")"
+  got="$(figure "$T/s.json" headwall-0021 "quantity: Copper headwall flashing")"
   printf '    stretch-out %-9s x 12 LF  =  %s\n' "$typed" "$got"
   [ "$got" = "$want" ] || { echo "FAIL: expected $want"; exit 1; }
   "$P" check "$T/s.json" >/dev/null

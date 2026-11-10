@@ -28,6 +28,8 @@ pub struct ElementRows {
     pub kind: Kind,
     pub depth: usize,
     pub rows: Vec<Row>,
+    /// Things to read that are not values on the job: a condition's recipe.
+    pub notes: Vec<String>,
 }
 
 fn num(x: f64) -> String {
@@ -109,6 +111,15 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
                 if let Some(so) = &line.stretch_out {
                     rows.push(length(p, &format!("stretch-out: {}", line.description), so));
                 }
+                for (name, v) in &line.inputs {
+                    rows.push(length(p, &format!("{name}: {}", line.description), v));
+                }
+                if let Some(w) = &line.waste {
+                    rows.push(entered(p, &format!("waste: {}", line.description), w, |x| num(*x)));
+                }
+                if let Some(o) = &line.order {
+                    rows.push(entered(p, &format!("order factor: {}", line.description), &o.factor, |x| num(*x)));
+                }
                 rows.push(entered(p, &format!("unit cost: {}", line.description), &line.unit_cost, |x| num(*x)));
             }
         }
@@ -121,11 +132,42 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
             }
         }
         if let Some(q) = w.get::<LineQuantities>(e) {
-            for (description, d) in &q.0 {
-                rows.push(derived(p, &format!("sheet area: {description}"), d));
+            // In the order the lines are entered, each line's steps together.
+            let order: Vec<&String> = match w.get::<Cost>(e) {
+                Some(c) => c.lines.iter().map(|l| &l.description).collect(),
+                None => q.0.keys().collect(),
+            };
+            for description in order {
+                let Some(f) = q.0.get(description) else { continue };
+                rows.push(derived(p, &format!("quantity: {description}"), &f.quantity));
+                if let Some(d) = &f.with_waste {
+                    rows.push(derived(p, &format!("with waste: {description}"), d));
+                }
+                if let Some(d) = &f.order {
+                    rows.push(derived(p, &format!("to order: {description}"), d));
+                }
             }
         }
-        out.push(ElementRows { path: p.clone(), name: node.name.clone(), kind, depth: depth_of(node.parent.clone()), rows });
+        // A condition's recipe is read, not counted: its blanks are not this job's unknowns.
+        let mut notes = Vec::new();
+        if let Some(t) = w.get::<Recipe>(e) {
+            notes.push(format!("applies to: {}", t.applies_to.iter().map(|k| format!("{k:?}")).collect::<Vec<_>>().join(", ")));
+            for line in &t.cost.lines {
+                let mut extra = Vec::new();
+                if line.stretch_out.is_some() {
+                    extra.push("a stretch-out".to_string());
+                }
+                extra.extend(line.inputs.keys().cloned());
+                if line.waste.is_some() {
+                    extra.push("waste".to_string());
+                }
+                if let Some(o) = &line.order {
+                    extra.push(format!("ordered by the {}", o.unit));
+                }
+                notes.push(format!("line: {} = {}{}", line.description, line.quantity, if extra.is_empty() { String::new() } else { format!("   (takes {})", extra.join(", ")) }));
+            }
+        }
+        out.push(ElementRows { path: p.clone(), name: node.name.clone(), kind, depth: depth_of(node.parent.clone()), rows, notes });
     }
     out
 }

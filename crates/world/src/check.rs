@@ -3,7 +3,9 @@
 //! and no way round it. Each returns a sentence an estimator can act on.
 
 use crate::components::*;
+use crate::formula;
 use crate::geom;
+use crate::lines;
 use crate::units;
 use crate::value::Val;
 
@@ -177,10 +179,10 @@ pub fn work_code(path: &str, w: &WorkCode) -> Result<(), String> {
     text_ok(&format!("{path} schedule code"), &w.wbs)
 }
 
-/// A cost line has to say what it is (and no two lines on one element say the same thing),
-/// be priced by a quantity this kind of element actually has, in the unit the line comes
-/// out in, at a price that is not negative. A stretch-out goes on a line priced by a
-/// length, and is more than nothing.
+/// A cost line has to say what it is (and no two lines on one element say the same
+/// thing), carry a formula that makes sense on this kind of element, use every value
+/// entered on it, and be priced in the unit it comes out in, at a price that is not
+/// negative.
 pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
     c.code.check(&format!("{path} cost code"), "")?;
     if let Some(code) = &c.code.value {
@@ -200,17 +202,8 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
             return Err(format!("{path}: has two cost lines described as {:?} and {:?}; a line is known by its description, so each one on an element is different in more than capitals and spacing", other.description, line.description));
         }
         let what = format!("{path} cost line {:?}", line.description);
-        let Some((_, unit)) = kind.measures().iter().find(|(name, _)| *name == line.quantity) else {
-            let have: Vec<&str> = kind.measures().iter().map(|(n, _)| *n).collect();
-            return Err(format!("{what}: is priced by {:?}, which a {kind:?} does not have (it has: {})", line.quantity, have.join(", ")));
-        };
-        if unit.is_empty() {
-            return Err(format!("{what}: is priced by {:?}, which is a factor, not a quantity", line.quantity));
-        }
+
         if let Some(so) = &line.stretch_out {
-            if *unit != "LF" {
-                return Err(format!("{what}: has a stretch-out but is priced by {:?}, which is in {unit}; a stretch-out turns a length (LF) into an area", line.quantity));
-            }
             so.check_length(&format!("{what} stretch-out"))?;
             if so.feet().is_some_and(|x| x <= 0.0) {
                 return Err(format!("{what} stretch-out: must be more than zero; it is the width of the flat sheet. Mark it Unknown if nobody has it"));
@@ -219,7 +212,57 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
                 return Err(format!("{what} stretch-out: is not a usable number (limit {MAX_COORDINATE_FT:e} ft)"));
             }
         }
-        let unit = line.priced_in(unit);
+        for (name, v) in &line.inputs {
+            if let Some(fault) = lines::input_name_fault(kind, name) {
+                return Err(format!("{what}: its input {fault}"));
+            }
+            let named = format!("{what} {name}");
+            if v.unit.is_empty() {
+                // A plain number: a count, a number of sides.
+                v.check_basics(&named)?;
+                match v.value {
+                    None => {}
+                    Some(units::Len::One(x)) if x.is_finite() && x.abs() <= MAX_UNIT_COST => {}
+                    Some(units::Len::One(_)) => return Err(format!("{named}: is not a usable number")),
+                    Some(units::Len::FtIn(_)) => return Err(format!("{named}: is a [feet, inches] pair with no unit; the unit for a pair is \"ft-in\"")),
+                }
+            } else {
+                v.check_length(&named)?;
+                if v.feet().is_some_and(|x| x.abs() > MAX_COORDINATE_FT) {
+                    return Err(format!("{named}: is not a usable number (limit {MAX_COORDINATE_FT:e} ft)"));
+                }
+            }
+        }
+
+        // The formula, read against this kind of element with no figures in it.
+        let on = lines::On { kind, measure: None, height: None };
+        let read = lines::read(&on, line).map_err(|why| format!("{what}: its quantity {:?} {why}", line.quantity))?;
+        let used = formula::names(&read.expr);
+        if line.stretch_out.is_some() && !used.iter().any(|n| n == lines::STRETCH_OUT) {
+            return Err(format!("{what}: carries a stretch-out that its quantity, {:?}, does not use. A stretch-out turns a length (LF) into an area: write the quantity as a length times stretch_out", line.quantity));
+        }
+        if let Some(unused) = line.inputs.keys().find(|k| !used.contains(k)) {
+            return Err(format!("{what}: carries {unused:?}, which its quantity, {:?}, does not use; a value the formula does not read would sit on the line unused", line.quantity));
+        }
+
+        if let Some(w) = &line.waste {
+            w.check(&format!("{what} waste"), "%")?;
+            if w.value.is_some_and(|x| !x.is_finite() || !(0.0..=1000.0).contains(&x)) {
+                return Err(format!("{what} waste: is a percentage from 0 to 1000"));
+            }
+        }
+        if let Some(o) = &line.order {
+            if o.unit.trim().is_empty() || o.unit != o.unit.trim() || o.unit.contains('/') || o.unit.contains('$') {
+                return Err(format!("{what}: its order unit {:?} is not a usable name for what is bought (sheet, lb, box)", o.unit));
+            }
+            lines::order_multiplies(o, read.unit).map_err(|why| format!("{what}: {why}"))?;
+            o.factor.check_basics(&format!("{what} order factor"))?;
+            if o.factor.value.is_some_and(|x| !x.is_finite() || x <= 0.0 || x > MAX_UNIT_COST) {
+                return Err(format!("{what} order factor: must be more than zero (and not beyond {MAX_UNIT_COST:e})"));
+            }
+        }
+
+        let unit = lines::priced_in(line, read.unit);
         line.unit_cost.check(&format!("{what} unit cost"), &format!("$/{unit}"))?;
         if line.unit_cost.value.is_some_and(|x| !x.is_finite() || x < 0.0) {
             return Err(format!("{what} unit cost: must be zero or more"));
@@ -227,6 +270,30 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
         if line.unit_cost.value.is_some_and(|x| x > MAX_UNIT_COST) {
             return Err(format!("{what} unit cost: is beyond {MAX_UNIT_COST:e} per unit, which is not a usable price"));
         }
+    }
+    Ok(())
+}
+
+/// A condition's recipe has to say what kinds of element it is for, and its lines have
+/// to make sense on each of them.
+pub fn recipe(path: &str, kind: Kind, t: &Recipe) -> Result<(), String> {
+    if kind != Kind::Condition {
+        return Err(format!("{path}: a {kind:?} cannot carry a condition's recipe; only a Condition element can"));
+    }
+    if t.applies_to.is_empty() {
+        return Err(format!("{path}: the condition does not say what kind of element it applies to"));
+    }
+    for (i, k) in t.applies_to.iter().enumerate() {
+        if !(k.is_area() || k.is_run()) {
+            return Err(format!("{path}: a condition applies to roof planes, low-slope areas and lines, not to a {k:?}"));
+        }
+        if t.applies_to[..i].contains(k) {
+            return Err(format!("{path}: names {k:?} twice in what it applies to"));
+        }
+        cost(&format!("{path} (applied to a {k:?})"), *k, &t.cost)?;
+    }
+    if t.cost.lines.is_empty() {
+        return Err(format!("{path}: the condition has no lines; applying it would do nothing"));
     }
     Ok(())
 }

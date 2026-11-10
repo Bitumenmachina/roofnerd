@@ -27,6 +27,7 @@ use bevy_ecs::prelude::*;
 use crate::check::{self, FIT_TOLERANCE_FT};
 use crate::components::*;
 use crate::geom;
+use crate::lines;
 use crate::units;
 use crate::value::{Derived, Status};
 
@@ -251,18 +252,16 @@ pub fn derive(world: &mut World) -> Vec<String> {
             }
         }
 
-        // Cost lines whose quantity is more than a measure as it stands. A sheet-metal
-        // line is its length times its stretch-out.
+        // Every cost line, worked out against this element's figures: quantity, then
+        // waste, then order units.
+        let new = Measure(m);
         let mut lq = BTreeMap::new();
         if let Some(cost) = cost {
+            let on = lines::On { kind: *kind, measure: Some(&new), height };
             for line in &cost.lines {
-                if let Some(so) = &line.stretch_out {
-                    lq.insert(line.description.clone(), sheet_area(me, line, so, m.get(&line.quantity)));
-                }
+                lq.insert(line.description.clone(), lines::figures(me, &on, line));
             }
         }
-
-        let new = Measure(m);
         let new_lq = LineQuantities(lq);
         let mut moved = false;
         let mut insert_m = None;
@@ -315,22 +314,6 @@ pub fn derive(world: &mut World) -> Vec<String> {
         world.entity_mut(e).remove::<LineQuantities>();
     }
     changed
-}
-
-/// A sheet-metal line's area: the length it is priced by times its stretch-out. The
-/// stretch-out stays in the unit the detail gave it (inches, usually) and the formula
-/// shows the ÷ 12. The length is the measure as the file shows it, so the figure can be
-/// checked by hand from what is on the page.
-fn sheet_area(me: &str, line: &CostLine, so: &crate::value::Val<units::Len>, base: Option<&Derived>) -> Derived {
-    let formula = format!("{} × {}", line.quantity, units::to_feet_text("stretch_out", &so.unit));
-    let inputs = [format!("{me}#{K_MEASURE}"), format!("{me}#{K_COST}")];
-    let Some(base) = base else {
-        return Derived::refused("SF", &formula, &inputs, &format!("this element has no {}", line.quantity));
-    };
-    if so.value.is_some() && so.feet().is_none() {
-        return Derived::refused("SF", &formula, &inputs, &format!("the stretch-out {NOT_CONVERTED}"));
-    }
-    Derived::new(base.value.zip(so.feet()).map(|(length, width)| length * width), "SF", &[base.status, so.status], &formula, &inputs)
 }
 
 /// The length of a line along the slope. The line has to fit every plane it names: on the

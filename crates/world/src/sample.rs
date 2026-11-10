@@ -6,6 +6,9 @@
 //!   Its headwall carries a sheet-metal flashing line with a 24 in stretch-out.
 //! * A low-slope area with a parapet whose height is not on the plan. It is Unknown.
 //!
+//! * Two conditions as recipes: "Parapet with copper coping" (four lines) and "Copper
+//!   flashing" (one). Neither is applied to anything in the sample.
+//!
 //! No prices are entered. Every unit cost is Unknown, because nobody has given one.
 
 use crate::components::*;
@@ -30,7 +33,7 @@ pub fn sample() -> Job {
             "",
             "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)",
         ),
-        lines: vec![CostLine { description: "Copper standing seam, installed".into(), quantity: "surface_area".into(), stretch_out: None, unit_cost: Val::unknown("$/SF", "no price entered") }],
+        lines: vec![CostLine::of("Copper standing seam, installed", "surface_area", Val::unknown("$/SF", "no price entered"))],
     };
     let unscheduled = || WorkCode { wbs: Val::unknown("", "schedule not built") };
 
@@ -98,10 +101,8 @@ pub fn sample() -> Job {
                 "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)",
             ),
             lines: vec![CostLine {
-                description: "Copper headwall flashing".into(),
-                quantity: "true_length".into(),
                 stretch_out: Some(Val::known(Len::One(24.0), "in", "sample detail 4/A-501")),
-                unit_cost: Val::unknown("$/SF", "no price entered"),
+                ..CostLine::of("Copper headwall flashing", "true_length * stretch_out", Val::unknown("$/SF", "no price entered"))
             }],
         },
     )
@@ -124,6 +125,63 @@ pub fn sample() -> Job {
     let parapet = job.add(&flat, Kind::Parapet, "parapet-south").expect(OK);
     job.put(&parapet, Run { ends: Val::known([[60.0, 0.0], [80.0, 0.0]], "ft", PLAN), planes: vec![] }).expect(OK);
     job.put(&parapet, Height(Val::unknown("ft", "parapet height not shown on the sample plan"))).expect(OK);
+
+    // ---- A condition as a recipe: what a parapet with a copper coping is made of ----
+    // The stretch-out, the spacing, the waste and the sheet size are the detail's and the
+    // supplier's to give. The recipe leaves them blank; it does not guess them.
+    let blank = "not entered; the detail gives it";
+    let recipe = job.add(&root, Kind::Condition, "Parapet with copper coping").expect(OK);
+    let sides = || [("sides".to_string(), Val::known(Len::One(2.0), "", "the condition: one each side of the coping"))].into_iter().collect::<std::collections::BTreeMap<_, _>>();
+    job.put(
+        &recipe,
+        Recipe {
+            applies_to: vec![Kind::Parapet],
+            cost: Cost {
+                code: Val::assumed(
+                    CostCode { scheme: "MasterFormat".into(), code: "07 62 00".into(), title: "Sheet Metal Flashing and Trim".into() },
+                    "",
+                    "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)",
+                ),
+                lines: vec![
+                    CostLine::of("Copper wall flashing", "plan_length * height", Val::unknown("$/SF", "no price entered")),
+                    CostLine {
+                        stretch_out: Some(Val::unknown("in", blank)),
+                        waste: Some(Val::unknown("%", "not entered")),
+                        order: Some(Order { unit: "sheet".into(), factor: Val::unknown("SF/sheet", "not entered; the supplier's sheet size"), round_up: true }),
+                        ..CostLine::of("Copper coping cap", "plan_length * stretch_out", Val::unknown("$/sheet", "no price entered"))
+                    },
+                    CostLine { inputs: sides(), ..CostLine::of("Continuous cleat", "plan_length * sides", Val::unknown("$/LF", "no price entered")) },
+                    CostLine {
+                        inputs: {
+                            let mut m = sides();
+                            m.insert("spacing".to_string(), Val::unknown("in", blank));
+                            m
+                        },
+                        ..CostLine::of("Cleat fasteners", "plan_length * sides / spacing", Val::unknown("$/EA", "no price entered"))
+                    },
+                ],
+            },
+        },
+    )
+    .expect(OK);
+
+    // ---- And a one-line recipe for any run of copper flashing ----
+    let flashing = job.add(&root, Kind::Condition, "Copper flashing").expect(OK);
+    job.put(
+        &flashing,
+        Recipe {
+            applies_to: vec![Kind::Eave, Kind::Rake, Kind::Valley, Kind::Hip, Kind::Ridge, Kind::Headwall],
+            cost: Cost {
+                code: Val::assumed(
+                    CostCode { scheme: "MasterFormat".into(), code: "07 62 00".into(), title: "Sheet Metal Flashing and Trim".into() },
+                    "",
+                    "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)",
+                ),
+                lines: vec![CostLine { stretch_out: Some(Val::unknown("in", blank)), ..CostLine::of("Copper flashing", "true_length * stretch_out", Val::unknown("$/SF", "no price entered")) }],
+            },
+        },
+    )
+    .expect(OK);
 
     job.derive();
     job

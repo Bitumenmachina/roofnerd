@@ -48,7 +48,7 @@ struct Entry {
     extra: BTreeMap<String, Value>,
 }
 
-const KNOWN_KEYS: [&str; 11] = [K_CLASS, K_JOB, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_MEASURE, K_LINE_QUANTITIES];
+const KNOWN_KEYS: [&str; 12] = [K_CLASS, K_JOB, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES];
 
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
@@ -81,6 +81,7 @@ pub fn save(job: &mut Job) -> String {
         put!(Condition, K_CONDITION);
         put!(Cost, K_COST);
         put!(WorkCode, K_SCHEDULE);
+        put!(Recipe, K_RECIPE);
         if let Some(m) = w.get::<Measure>(e) {
             if !m.0.is_empty() {
                 a.insert(K_MEASURE.to_string(), serde_json::to_value(m).expect("measures serialise"));
@@ -246,6 +247,11 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                     check::work_code(&path, &c)?;
                     ent.insert(c);
                 }
+                K_RECIPE => {
+                    let c: Recipe = parse(&path, &k, v)?;
+                    check::recipe(&path, kind, &c)?;
+                    ent.insert(c);
+                }
                 K_MEASURE => {
                     file_measures.insert(path.clone(), parse(&path, &k, v)?);
                 }
@@ -266,6 +272,9 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
         }
         if !foreign.is_empty() {
             job.world.entity_mut(id).insert(Foreign(foreign));
+        }
+        if kind == Kind::Condition && job.world.get::<Recipe>(id).is_none() {
+            return Err(format!("{path} is a Condition with no {K_RECIPE}; a condition is its recipe"));
         }
     }
 

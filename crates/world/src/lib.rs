@@ -4,6 +4,8 @@
 //! * `units`: feet, inches, feet-and-inches; what is typed, shown, and converted.
 //! * `components`: what an element can carry.
 //! * `check`: the rules an entered component has to meet.
+//! * `formula`: the formula on a cost line, with units and statuses carried through it.
+//! * `lines`: a cost line worked out: quantity, waste, order units.
 //! * `geom`: plan geometry.
 //! * `derive`: quantities worked out from geometry.
 //! * `roof`: the lines a set of planes implies (ridge, hip, valley, eave, rake).
@@ -15,8 +17,10 @@ pub mod check;
 pub mod components;
 pub mod derive;
 pub mod file;
+pub mod formula;
 pub mod geom;
 pub mod job;
+pub mod lines;
 pub mod roof;
 pub mod sample;
 pub mod units;

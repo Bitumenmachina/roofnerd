@@ -38,7 +38,7 @@ fn the_file_has_one_entry_per_element() {
     unique.sort();
     unique.dedup();
     assert_eq!(paths.len(), unique.len());
-    assert_eq!(paths.len(), 24);
+    assert_eq!(paths.len(), 26);
 }
 
 #[test]
@@ -77,7 +77,7 @@ fn changing_one_pitch_touches_only_that_plane_and_what_is_derived_from_it() {
     let (a, b) = (&a.iter().find(|e| e.0 == "plane-0017").unwrap().1["attributes"], &b.iter().find(|e| e.0 == "plane-0017").unwrap().1["attributes"]);
     for (key, value) in a.as_object().unwrap() {
         let same = value == &b[key];
-        assert_eq!(same, !(key == "pl::pitch" || key == "pl::measure"), "{key}");
+        assert_eq!(same, !(key == "pl::pitch" || key == "pl::measure" || key == "pl::line_quantities"), "{key}");
     }
 }
 
@@ -521,7 +521,7 @@ fn a_stretch_out_in_inches_works_against_a_length_in_feet() {
     let mut job = sample();
     let area = |job: &mut Job| {
         let e = job.find("headwall-0021").unwrap();
-        job.world.get::<LineQuantities>(e).unwrap().0["Copper headwall flashing"].clone()
+        job.world.get::<LineQuantities>(e).unwrap().0["Copper headwall flashing"].quantity.clone()
     };
     let d = area(&mut job);
     assert_eq!((d.value, d.unit.as_str()), (Some(24.0), "SF"));
@@ -532,7 +532,7 @@ fn a_stretch_out_in_inches_works_against_a_length_in_feet() {
     // It is on the sheet with its stretch-out in inches and its area in SF.
     let rows = show_rows(&mut job, "headwall-0021");
     assert!(rows.contains(&("stretch-out: Copper headwall flashing".to_string(), "24 in".to_string(), Status::Known)), "{rows:?}");
-    assert!(rows.contains(&("sheet area: Copper headwall flashing".to_string(), "24 SF".to_string(), Status::Assumed)), "{rows:?}");
+    assert!(rows.contains(&("quantity: Copper headwall flashing".to_string(), "24 SF".to_string(), Status::Assumed)), "{rows:?}");
     // It is in the file, and the file loads back to the same bytes.
     let text = save(&mut job);
     assert!(text.contains("\"pl::line_quantities\""));
@@ -569,7 +569,7 @@ fn a_stretch_out_in_inches_works_against_a_length_in_feet() {
     assert!(err(edit(&text, |v| attrs(v, "plane-0003")["pl::cost"]["lines"][0]["stretch_out"] = serde_json::json!({"value": 24.0, "unit": "in", "status": "Known", "source": "x"}))).contains("turns a length (LF) into an area"));
     assert!(err(edit(&text, |v| attrs(v, "headwall-0021")["pl::cost"]["lines"][0]["unit_cost"]["unit"] = "$/LF".into())).contains("has to be \"$/SF\""));
     assert!(err(edit(&text, |v| attrs(v, "headwall-0021")["pl::cost"]["lines"][0]["stretch_out"]["unit"] = "mm".into())).contains("metric"));
-    let (mut forged, report) = load(&edit(&text, |v| attrs(v, "headwall-0021")["pl::line_quantities"]["Copper headwall flashing"]["value"] = 999.0.into())).unwrap();
+    let (mut forged, report) = load(&edit(&text, |v| attrs(v, "headwall-0021")["pl::line_quantities"]["Copper headwall flashing"]["quantity"]["value"] = 999.0.into())).unwrap();
     assert_eq!(report.stale, ["headwall-0021"]);
     assert_eq!(area(&mut forged).value, Some(24.0));
     assert!(err(edit(&text, |v| {
@@ -841,7 +841,7 @@ fn the_path_counter_cannot_hand_out_a_path_twice() {
     let root = job.root();
     job.world.get_mut::<JobInfo>(root).unwrap().next_id = 3;
     let path = job.add("roof-0002", Kind::RoofPlane, "new-plane").unwrap();
-    assert_eq!(path, "plane-0025");
+    assert_eq!(path, "plane-0027");
     assert!(load(&save(&mut job)).is_ok());
 }
 
@@ -1046,7 +1046,7 @@ fn nothing_is_silently_zero_or_silently_unread() {
     job.set("headwall-0021", "stretch_out", Some("0.00001 in"), Status::Known, "x").unwrap();
     job.derive();
     let e = job.find("headwall-0021").unwrap();
-    let d = job.world.get::<LineQuantities>(e).unwrap().0["Copper headwall flashing"].clone();
+    let d = job.world.get::<LineQuantities>(e).unwrap().0["Copper headwall flashing"].quantity.clone();
     assert_eq!((d.value, d.status), (None, Status::Unknown));
     assert!(d.note.contains("smaller than 0.0001"), "{}", d.note);
     // A value under a mis-cased key of this program's own is refused, not carried unread.
@@ -1059,7 +1059,7 @@ fn nothing_is_silently_zero_or_silently_unread() {
     // Another program's attributes are still kept.
     assert!(load(&edit(&text, |v| attrs(v, "plane-0017")["other::Pitch"] = 3.into())).is_ok());
     // Two cost lines that differ only in capitals or spacing are one line entered twice.
-    let line = |d: &str| serde_json::json!({"description": d, "quantity": "true_length", "stretch_out": {"value": 12.0, "unit": "in", "status": "Known", "source": "x"}, "unit_cost": {"value": null, "unit": "$/SF", "status": "Unknown", "source": "x"}});
+    let line = |d: &str| serde_json::json!({"description": d, "quantity": "true_length * stretch_out", "stretch_out": {"value": 12.0, "unit": "in", "status": "Known", "source": "x"}, "unit_cost": {"value": null, "unit": "$/SF", "status": "Unknown", "source": "x"}});
     for near in ["copper headwall flashing", "Copper  headwall flashing", "COPPER HEADWALL FLASHING"] {
         let e = err(edit(&text, |v| attrs(v, "headwall-0021")["pl::cost"]["lines"].as_array_mut().unwrap().push(line(near))));
         assert!(e.contains("two cost lines"), "{near}: {e}");
@@ -1069,4 +1069,261 @@ fn nothing_is_silently_zero_or_silently_unread() {
     // A minus zero typed into the file is shown as zero.
     let (mut job, _) = load(&edit(&text, |v| attrs(v, "lowslope-0023")["pl::pitch"]["value"] = (-0.0).into())).unwrap();
     assert!(show_rows(&mut job, "lowslope-0023").contains(&("pitch".to_string(), "0 in/12".to_string(), Status::Known)));
+}
+
+// ---- D3: derived conditions and stretch-out ----
+
+fn figures(job: &mut Job, path: &str, line: &str) -> LineFigures {
+    let e = job.find(path).unwrap();
+    job.world.get::<LineQuantities>(e).unwrap().0[line].clone()
+}
+
+/// The sample parapet (20 LF) with the parapet condition applied and nothing entered yet.
+fn parapet_job() -> Job {
+    let mut job = sample();
+    let added = job.apply("parapet-0024", "Parapet with copper coping", "sample finish schedule").unwrap();
+    assert_eq!(added, ["Copper wall flashing", "Copper coping cap", "Continuous cleat", "Cleat fasteners"]);
+    job.derive();
+    job
+}
+
+#[test]
+fn one_parapet_and_one_condition_make_four_lines_and_nothing_is_assumed_for_them() {
+    let mut job = parapet_job();
+    // The parapet carries the condition's name and the four lines, each with its formula.
+    let e = job.find("parapet-0024").unwrap();
+    assert_eq!(job.world.get::<Condition>(e).unwrap().0.value.as_deref(), Some("Parapet with copper coping"));
+    let lines: Vec<(String, String)> = job.world.get::<Cost>(e).unwrap().lines.iter().map(|l| (l.description.clone(), l.quantity.clone())).collect();
+    assert_eq!(
+        lines,
+        [
+            ("Copper wall flashing".to_string(), "plan_length * height".to_string()),
+            ("Copper coping cap".to_string(), "plan_length * stretch_out".to_string()),
+            ("Continuous cleat".to_string(), "plan_length * sides".to_string()),
+            ("Cleat fasteners".to_string(), "plan_length * sides / spacing".to_string()),
+        ]
+    );
+    // The height is not on the plan and no stretch-out or spacing has been entered: three
+    // lines have no number. Nothing was filled in for them, and nothing on them is Assumed.
+    for line in ["Copper wall flashing", "Copper coping cap", "Cleat fasteners"] {
+        let f = figures(&mut job, "parapet-0024", line);
+        assert_eq!((f.quantity.value, f.quantity.status), (None, Status::Unknown), "{line}");
+    }
+    let coping = figures(&mut job, "parapet-0024", "Copper coping cap");
+    assert_eq!(coping.with_waste.as_ref().map(|d| d.value), Some(None));
+    assert_eq!(coping.order.as_ref().map(|d| d.value), Some(None));
+    // The cleat needs only the parapet's length and the condition's rule, a cleat each
+    // side: 20 LF x 2 = 40 LF.
+    let cleat = figures(&mut job, "parapet-0024", "Continuous cleat");
+    assert_eq!((cleat.quantity.value, cleat.quantity.unit.as_str(), cleat.quantity.status), (Some(40.0), "LF", Status::Known));
+    assert_eq!(cleat.quantity.formula, "plan_length × sides");
+    // It saves, loads and saves to the same bytes, and the recipe is still in the job.
+    let text = save(&mut job);
+    let (mut again, report) = load(&text).unwrap();
+    assert!(report.stale.is_empty());
+    assert_eq!(save(&mut again), text);
+    // Only the parapet changed when the condition was applied.
+    assert_eq!(touched(&save(&mut sample()), &text), ["parapet-0024"]);
+
+    // A condition goes on the kind of element it is for, once.
+    let mut job = sample();
+    assert!(job.apply("plane-0003", "Parapet with copper coping", "x").unwrap_err().contains("applies to a Parapet"));
+    assert!(job.apply("parapet-0024", "No such condition", "x").unwrap_err().contains("no condition"));
+    job.apply("parapet-0024", "condition-0025", "x").unwrap();
+    assert!(job.apply("parapet-0024", "condition-0025", "x").unwrap_err().contains("two cost lines"));
+}
+
+#[test]
+fn the_sheet_metal_chain_is_worked_step_by_step_and_an_unknown_stops_it() {
+    let mut job = parapet_job();
+    let k = |job: &mut Job, field: &str, line: Option<&str>, typed: &str| {
+        job.set_on_line("parapet-0024", field, line, Some(typed), Status::Known, "detail 3/A-501").unwrap();
+        job.derive();
+    };
+    // Wall flashing: a height on its LF. 20 LF x 30 in / 12 = 50 SF.
+    k(&mut job, "height", None, "30 in");
+    let f = figures(&mut job, "parapet-0024", "Copper wall flashing");
+    assert_eq!((f.quantity.value, f.quantity.unit.as_str(), f.quantity.status), (Some(50.0), "SF", Status::Known));
+    assert_eq!(f.quantity.formula, "plan_length × height ÷ 12");
+    assert_eq!(f.quantity.inputs, ["parapet-0024#pl::measure", "parapet-0024#pl::height"]);
+    // Coping: 20 LF x 19 1/2 in / 12 = 32.5 SF. With no waste and no sheet size yet, the
+    // steps after it have no number.
+    k(&mut job, "stretch_out", Some("Copper coping cap"), "19 1/2\"");
+    let f = figures(&mut job, "parapet-0024", "Copper coping cap");
+    assert_eq!((f.quantity.value, f.quantity.formula.as_str()), (Some(32.5), "plan_length × stretch_out ÷ 12"));
+    assert_eq!(f.with_waste.as_ref().unwrap().value, None);
+    assert_eq!(f.order.as_ref().unwrap().value, None);
+    // Waste of 10 percent, assumed: 32.5 x 1.10 = 35.75 SF, Assumed.
+    job.set_on_line("parapet-0024", "waste", Some("Copper coping cap"), Some("10%"), Status::Assumed, "shop rule of thumb").unwrap();
+    job.derive();
+    let f = figures(&mut job, "parapet-0024", "Copper coping cap");
+    let w = f.with_waste.as_ref().unwrap();
+    assert_eq!((w.value, w.status, w.formula.as_str()), (Some(35.75), Status::Assumed, "quantity × (1 + waste ÷ 100)"));
+    assert_eq!(f.order.as_ref().unwrap().value, None);
+    // Sheets of 30 SF (3 ft x 10 ft): 35.75 / 30 = 1.19, so 2 sheets.
+    k(&mut job, "order", Some("Copper coping cap"), "30 SF/sheet");
+    let o = figures(&mut job, "parapet-0024", "Copper coping cap").order.unwrap();
+    assert_eq!((o.value, o.unit.as_str(), o.status), (Some(2.0), "sheet", Status::Assumed));
+    assert_eq!(o.formula, "with_waste ÷ factor, rounded up to a whole sheet");
+    let e = job.find("parapet-0024").unwrap();
+    assert_eq!(job.world.get::<Cost>(e).unwrap().lines[1].unit_cost.unit, "$/sheet");
+    // Or pounds, at 1.25 lb to the SF (20 oz copper): 35.75 x 1.25 = 44.6875 lb, not rounded.
+    k(&mut job, "order", Some("Copper coping cap"), "1.25 lb/SF");
+    let o = figures(&mut job, "parapet-0024", "Copper coping cap").order.unwrap();
+    assert_eq!((o.value, o.unit.as_str(), o.formula.as_str()), (Some(44.6875), "lb", "with_waste × factor"));
+    assert_eq!(job.world.get::<Cost>(e).unwrap().lines[1].unit_cost.unit, "$/lb");
+    // Fasteners by spacing, a cleat each side: 20 LF x 2 / (12 in / 12) = 40. At 18 in it
+    // is 26.67, and a fastener is a whole thing: 27.
+    k(&mut job, "spacing", Some("Cleat fasteners"), "12 in");
+    assert_eq!(figures(&mut job, "parapet-0024", "Cleat fasteners").quantity.value, Some(40.0));
+    k(&mut job, "spacing", Some("Cleat fasteners"), "18 in");
+    let f = figures(&mut job, "parapet-0024", "Cleat fasteners").quantity;
+    assert_eq!((f.value, f.unit.as_str()), (Some(27.0), "EA"));
+    assert_eq!(f.formula, "plan_length × sides ÷ (spacing ÷ 12), rounded up to a whole number");
+    // A sheet that the coping fills exactly is not rounded past: 20 LF x 36 in = 60 SF,
+    // no waste, 30 SF sheets: 2, not 3.
+    k(&mut job, "stretch_out", Some("Copper coping cap"), "36 in");
+    k(&mut job, "waste", Some("Copper coping cap"), "0");
+    k(&mut job, "order", Some("Copper coping cap"), "30 SF/sheet");
+    assert_eq!(figures(&mut job, "parapet-0024", "Copper coping cap").order.unwrap().value, Some(2.0));
+
+    // Take the stretch-out away: every step after it loses its number. None becomes zero.
+    job.set_on_line("parapet-0024", "stretch_out", Some("Copper coping cap"), None, Status::Unknown, "detail withdrawn").unwrap();
+    job.derive();
+    let f = figures(&mut job, "parapet-0024", "Copper coping cap");
+    for d in [&f.quantity, f.with_waste.as_ref().unwrap(), f.order.as_ref().unwrap()] {
+        assert_eq!((d.value, d.status), (None, Status::Unknown));
+    }
+    // The file still round-trips.
+    let text = save(&mut job);
+    let (mut again, report) = load(&text).unwrap();
+    assert!(report.stale.is_empty());
+    assert_eq!(save(&mut again), text);
+}
+
+#[test]
+fn an_edit_on_a_line_changes_that_line_and_nothing_else() {
+    let mut job = parapet_job();
+    for (field, line, typed) in [("height", None, "30 in"), ("stretch_out", Some("Copper coping cap"), "19 1/2 in"), ("spacing", Some("Cleat fasteners"), "12 in")] {
+        job.set_on_line("parapet-0024", field, line, Some(typed), Status::Known, "detail").unwrap();
+    }
+    job.derive();
+    let before = save(&mut job);
+    let quantities = |text: &str| entries(text).into_iter().find(|e| e.0 == "parapet-0024").unwrap().1["attributes"]["pl::line_quantities"].clone();
+    // The coping's stretch-out, on its line.
+    job.set_on_line("parapet-0024", "stretch_out", Some("Copper coping cap"), Some("24 in"), Status::Known, "detail rev B").unwrap();
+    assert_eq!(job.derive(), ["parapet-0024"]);
+    let after = save(&mut job);
+    assert_eq!(touched(&before, &after), ["parapet-0024"]);
+    let (a, b) = (quantities(&before), quantities(&after));
+    for line in ["Copper wall flashing", "Continuous cleat", "Cleat fasteners"] {
+        assert_eq!(a[line], b[line], "{line}");
+    }
+    assert_eq!((a["Copper coping cap"]["quantity"]["value"].as_f64(), b["Copper coping cap"]["quantity"]["value"].as_f64()), (Some(32.5), Some(40.0)));
+
+    // The cleat's formula, on its line: one side instead of two. The value the formula no
+    // longer names comes off the line and the caller is told.
+    let dropped = job.set_formula("parapet-0024", Some("Continuous cleat"), "plan_length", &[], Status::Known, "detail rev B").unwrap();
+    assert_eq!(dropped, ["sides"]);
+    job.derive();
+    let last = save(&mut job);
+    assert_eq!(touched(&after, &last), ["parapet-0024"]);
+    let c = quantities(&last);
+    for line in ["Copper wall flashing", "Copper coping cap", "Cleat fasteners"] {
+        assert_eq!(b[line], c[line], "{line}");
+    }
+    assert_eq!(c["Continuous cleat"]["quantity"]["value"].as_f64(), Some(20.0));
+
+    // A formula can bring in a value of its own: the flashing turned out 8 in onto the
+    // roof. 20 LF x (30 in + 8 in) / 12 = 63.3333 SF.
+    job.set_formula("parapet-0024", Some("Copper wall flashing"), "plan_length * (height + turn_out)", &[("turn_out".to_string(), "8 in".to_string())], Status::Known, "detail rev B").unwrap();
+    job.derive();
+    let f = figures(&mut job, "parapet-0024", "Copper wall flashing").quantity;
+    assert_eq!(f.value, Some(63.3333));
+    assert_eq!(f.formula, "plan_length × (height ÷ 12 + turn_out ÷ 12)");
+    assert_eq!(f.inputs, ["parapet-0024#pl::measure", "parapet-0024#pl::height", "parapet-0024#pl::cost"]);
+    assert!(load(&save(&mut job)).is_ok());
+}
+
+#[test]
+fn the_briefs_four_stretch_outs_each_worked_by_hand() {
+    let mut job = sample();
+    // Eave 12 in, on the south eave, 40 LF: 40 SF.
+    // Step flashing 8 in, up the porch's west rake, 8.2462 LF: 8.2462 x 8 / 12 = 5.4975 SF.
+    // Valley 36 in. The sample roof has no valley; the figure is on a hip, 22.5 LF, which
+    // is the same arithmetic: 22.5 x 36 / 12 = 67.5 SF.
+    // Headwall 24 in, on the porch headwall, 12 LF: 24 SF (the line the sample carries).
+    for (path, typed, sf) in [("eave-0007", "12 in", 40.0), ("rake-0019", "8 in", 5.4975), ("hip-0012", "36 in", 67.5)] {
+        job.apply(path, "Copper flashing", "sample finish schedule").unwrap();
+        job.set_on_line(path, "stretch_out", None, Some(typed), Status::Known, "the brief").unwrap();
+        job.derive();
+        let f = figures(&mut job, path, "Copper flashing").quantity;
+        assert_eq!((f.value, f.unit.as_str()), (Some(sf), "SF"), "{path}");
+        assert_eq!(f.formula, "true_length × stretch_out ÷ 12");
+    }
+    assert_eq!(figures(&mut job, "headwall-0021", "Copper headwall flashing").quantity.value, Some(24.0));
+    // The step flashing rests on the porch's assumed pitch, so it is Assumed; the eave is not.
+    assert_eq!(figures(&mut job, "rake-0019", "Copper flashing").quantity.status, Status::Assumed);
+    assert_eq!(figures(&mut job, "eave-0007", "Copper flashing").quantity.status, Status::Known);
+}
+
+#[test]
+fn a_formula_that_does_not_make_sense_is_refused_with_the_reason() {
+    use formula::parse;
+    for (text, says) in [("", "is blank"), ("plan_length *", "stops where"), ("(plan_length", "never closed"), ("plan_length)", "closing bracket"), ("plan_length 2", "side by side"), ("2 ^ 3", "not something a formula can hold"), ("* 2", "nothing before it"), ("1.2.3", "not a number"), ("=A1*B1", "not something a formula can hold")] {
+        let e = parse(text).expect_err(text);
+        assert!(e.contains(says), "{text:?}: {e}");
+    }
+    // On a line: names the element does not have, lengths added to areas, volumes,
+    // one-over-a-length, and division by a zero.
+    let mut job = parapet_job();
+    let mut refuse = |formula: &str, with: &[(&str, &str)]| {
+        let with: Vec<(String, String)> = with.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect();
+        job.set_formula("parapet-0024", Some("Copper wall flashing"), formula, &with, Status::Known, "x").unwrap_err()
+    };
+    assert!(refuse("plan_length * hieght", &[]).contains("does not have"));
+    assert!(refuse("true_length * height", &[]).contains("does not have"));
+    assert!(refuse("plan_length + face_area", &[]).contains("adds what cannot be added"));
+    assert!(refuse("plan_length * height * height", &[]).contains("volume"));
+    assert!(refuse("height / face_area", &[]).contains("one over a length"));
+    assert!(refuse("slope_factor", &[]).contains("does not have"));
+    assert!(refuse("plan_length * height", &[("extra", "2")]).contains("does not use"));
+    assert!(refuse("plan_length * height * Sides", &[("Sides", "2")]).contains("lower-case"));
+    assert!(refuse("plan_length * waste", &[("waste", "2")]).contains("already means something"));
+    // Nothing above changed the line.
+    assert_eq!(figures(&mut job, "parapet-0024", "Copper wall flashing").quantity.formula, "plan_length × height");
+    // A spacing of zero does not divide: it is refused as it is entered, and says why.
+    let e = job.set_on_line("parapet-0024", "spacing", Some("Cleat fasteners"), Some("0 in"), Status::Known, "x").unwrap_err();
+    assert!(e.contains("divides by") && e.contains("zero"), "{e}");
+    // A plain number where a length is wanted is refused, and the other way about.
+    assert!(job.set_on_line("parapet-0024", "spacing", Some("Cleat fasteners"), Some("12"), Status::Known, "x").unwrap_err().contains("has no unit"));
+    assert!(job.set_on_line("parapet-0024", "sides", Some("Cleat fasteners"), Some("2 ft"), Status::Known, "x").unwrap_err().contains("plain number"));
+    // A plane's squares stand alone as a quantity, and cannot be mixed into a formula.
+    let text = save(&mut sample());
+    assert!(load(&edit(&text, |v| attrs(v, "plane-0003")["pl::cost"]["lines"][0] = serde_json::json!({"description": "x", "quantity": "squares", "unit_cost": {"value": null, "unit": "$/SQ", "status": "Unknown", "source": "x"}}))).is_ok());
+    let e = load(&edit(&text, |v| attrs(v, "plane-0003")["pl::cost"]["lines"][0]["quantity"] = "squares * 2".into())).err().unwrap();
+    assert!(e.contains("which is in SQ"), "{e}");
+}
+
+#[test]
+fn a_condition_in_the_file_has_to_be_a_recipe_that_makes_sense() {
+    let text = save(&mut sample());
+    let err = |t: String| load(&t).err().expect("should be refused");
+    assert!(err(edit(&text, |v| {
+        attrs(v, "condition-0025").as_object_mut().unwrap().remove("pl::recipe");
+    }))
+    .contains("a condition is its recipe"));
+    assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!([]))).contains("does not say what kind"));
+    assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!(["Job"]))).contains("not to a Job"));
+    // A recipe line has to make sense on every kind it applies to: a hip has no height.
+    assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!(["Parapet", "Hip"]))).contains("does not have"));
+    assert!(err(edit(&text, |v| attrs(v, "plane-0003")["pl::recipe"] = attrs(&mut serde_json::from_str(&text).unwrap(), "condition-0025")["pl::recipe"].clone())).contains("only a Condition element can"));
+    // The order conversion has to be between the line's unit and the order unit, and waste
+    // is a percentage.
+    let coping = |v: &mut Value, key: &str, val: Value| attrs(v, "condition-0025")["pl::recipe"]["cost"]["lines"][1][key] = val;
+    assert!(err(edit(&text, |v| coping(v, "order", serde_json::json!({"unit": "sheet", "factor": {"value": 30.0, "unit": "LF/sheet", "status": "Known", "source": "x"}, "round_up": true})))).contains("order factor in"));
+    assert!(err(edit(&text, |v| coping(v, "order", serde_json::json!({"unit": "sheet", "factor": {"value": 0.0, "unit": "SF/sheet", "status": "Known", "source": "x"}, "round_up": true})))).contains("more than zero"));
+    assert!(err(edit(&text, |v| coping(v, "waste", serde_json::json!({"value": -5.0, "unit": "%", "status": "Known", "source": "x"})))).contains("percentage from 0"));
+    assert!(err(edit(&text, |v| coping(v, "waste", serde_json::json!({"value": 5.0, "unit": "", "status": "Known", "source": "x"})))).contains("has to be \"%\""));
+    assert!(err(edit(&text, |v| coping(v, "unit_cost", serde_json::json!({"value": null, "unit": "$/SF", "status": "Unknown", "source": "x"})))).contains("has to be \"$/sheet\""));
 }

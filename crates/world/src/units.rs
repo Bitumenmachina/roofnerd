@@ -458,3 +458,23 @@ pub fn parse_pitch(text: &str) -> Result<f64, String> {
     let rise = if negative { -x } else { x };
     Ok(rise + 0.0)
 }
+
+/// Read a plain number as typed: `2`, `10`, `1.25`, `1/2`. No unit, no exponent, no comma.
+pub fn parse_number(text: &str) -> Result<f64, String> {
+    let typed = text.trim();
+    let s = plain(text);
+    if !s.is_ascii() {
+        return Err(format!("{typed:?} has a character that is not part of a number"));
+    }
+    let mut scan = Scan::new(&s);
+    let negative = scan.eat(b'-');
+    if !negative {
+        scan.eat(b'+');
+    }
+    let (x, _) = scan.quantity().map_err(|why| format!("{typed:?} {why}"))?;
+    if !scan.done() {
+        return Err(format!("{typed:?} is not a plain number"));
+    }
+    let x = if negative { -x } else { x };
+    Ok(x + 0.0)
+}

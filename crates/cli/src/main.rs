@@ -11,6 +11,7 @@
 //!
 //!   plumbline check  <file>                      load, re-derive, confirm the file is exactly what a save would write
 //!   plumbline lines  <file>                      the lines the planes imply, set against the lines entered
+//!   plumbline apply  <file> <path> <condition> --source "<who says>"   give an element a condition's cost lines
 
 use std::fmt::Write as _;
 use std::io::Write as _;
@@ -41,7 +42,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"]\n  plumbline check <file>\n  plumbline lines <file>\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), or a value the formula names (spacing \"12 in\")".to_string()
 }
 
 fn read(path: &str) -> Result<(plumbline_world::Job, file::LoadReport), String> {
@@ -85,16 +86,41 @@ fn run(args: &[String]) -> Result<(), String> {
             let _ = std::io::stdout().write_all(lines(&mut job).as_bytes());
             Ok(())
         }
+        "apply" => {
+            let [_, path, element, condition, rest @ ..] = args else { return Err(usage()) };
+            let source = match rest {
+                [flag, source] if flag == "--source" => source,
+                _ => return Err("--source is required: say who says this element is that condition".into()),
+            };
+            let (mut job, report) = read(path)?;
+            if !report.stale.is_empty() {
+                println!("WARNING: before this edit, the file's measures did not match its geometry for: {}. They have been recomputed.", report.stale.join(", "));
+            }
+            let added = job.apply(element, condition, source)?;
+            job.derive();
+            std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+            println!("{element} is now {:?} and has gained {} cost lines:", job.shown(element, "condition", None).unwrap_or_default(), added.len());
+            for d in added {
+                println!("  {d}");
+            }
+            Ok(())
+        }
         "set" => {
             let [_, path, element, field, value, rest @ ..] = args else { return Err(usage()) };
             let mut status = None;
             let mut source = None;
             let mut line = None;
+            let mut with: Vec<(String, String)> = Vec::new();
             let mut it = rest.iter();
             while let Some(a) = it.next() {
                 match a.as_str() {
                     "--status" | "--source" | "--line" if (a == "--status" && status.is_some()) || (a == "--source" && source.is_some()) || (a == "--line" && line.is_some()) => return Err(format!("{a} given twice")),
                     "--line" => line = Some(it.next().cloned().ok_or("--line needs the cost line's description")?),
+                    "--with" => {
+                        let pair = it.next().ok_or("--with needs name=value, like --with \"turn_up=8 in\"")?;
+                        let (name, typed) = pair.split_once('=').ok_or_else(|| format!("--with {pair:?} is not name=value"))?;
+                        with.push((name.trim().to_string(), typed.trim().to_string()));
+                    }
                     "--status" => status = Some(it.next().cloned().ok_or("--status needs a value")?),
                     "--source" => source = Some(it.next().cloned().ok_or("--source needs a value")?),
                     other => return Err(format!("unexpected {other:?}\n{}", usage())),
@@ -113,12 +139,31 @@ fn run(args: &[String]) -> Result<(), String> {
             if !report.stale.is_empty() {
                 println!("WARNING: before this edit, the file's measures did not match its geometry for: {}. They have been recomputed.", report.stale.join(", "));
             }
-            job.set_on_line(element, field, line.as_deref(), value, status, &source)?;
+            if !with.is_empty() && field != "quantity" {
+                return Err("--with goes with a new quantity formula: it gives a value to a name the formula brings in".into());
+            }
+            let dropped = if field == "quantity" {
+                let formula = value.ok_or("a quantity is a formula; it cannot be marked unknown")?;
+                job.set_formula(element, line.as_deref(), formula, &with, status, &source)?
+            } else {
+                job.set_on_line(element, field, line.as_deref(), value, status, &source)?;
+                Vec::new()
+            };
             let changed = job.derive();
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
             // Reported back as the job now holds it, in the unit it was entered in.
             let shown = job.shown(element, field, line.as_deref()).unwrap_or_else(|| value.unwrap_or("unknown").to_string());
-            println!("set {element} {field} = {shown} ({status:?})");
+            if field == "quantity" {
+                println!("set {element} {field} = {shown}");
+                for (name, _) in &with {
+                    println!("  with {name} = {} ({status:?})", job.shown(element, name, line.as_deref()).unwrap_or_default());
+                }
+                for name in &dropped {
+                    println!("  {name} is no longer used by the formula and has been taken off the line");
+                }
+            } else {
+                println!("set {element} {field} = {shown} ({status:?})");
+            }
             if changed.is_empty() && !report.stale.is_empty() {
                 println!("no measure changed beyond those recomputed above");
             } else if changed.is_empty() {
@@ -141,6 +186,9 @@ fn show(job: &mut plumbline_world::Job, report: &file::LoadReport) -> String {
     for el in &elements {
         let pad = "  ".repeat(el.depth);
         let _ = writeln!(out, "{pad}{}  {}  [{:?}]", el.path, el.name, el.kind);
+        for n in &el.notes {
+            let _ = writeln!(out, "{pad}      {n}");
+        }
         for r in &el.rows {
             let eq = if r.derived { "=" } else { " " };
             let _ = writeln!(out, "{pad}    {eq} {} {:<16} {}", r.status.flag(), r.label, r.text);
