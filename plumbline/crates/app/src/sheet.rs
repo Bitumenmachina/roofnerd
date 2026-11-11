@@ -393,7 +393,7 @@ fn systems(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     h.spawn(text(fonts, t.classification.clone(), 12.0, Weight::Regular, theme::ink_faint()));
                     status_chip(h, fonts, t.flag);
                     h.spawn(Node { flex_grow: 1.0, ..default() });
-                    h.spawn(text(fonts, format!("{} runs", t.runs.members), 12.0, Weight::Regular, theme::ink_faint()));
+                    h.spawn(text(fonts, format!("{} straight pieces", t.runs.members), 12.0, Weight::Regular, theme::ink_faint()));
                     h.spawn(text(fonts, total(&t.runs), 13.0, Weight::Semibold, if t.runs.members == 0 { theme::ink_faint() } else { theme::status_ink(t.runs.status) }));
                 })
                 .observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {

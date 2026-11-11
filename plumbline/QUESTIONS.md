@@ -117,15 +117,19 @@ every machine and having no text at all on one with no fonts.
 
 ## Q13. The whole building: what comes next, and where it sits against the brief
 You widened the work from the envelope to the whole house and its services (DECISIONS.md
-call 26). The first stretch is built: the model, the takeoff, and a window to see and walk
-it. It is outside the brief's numbered deliverables, and those (D4 macro to micro, D5 the
-estimate sheet and money, D6 interchange) are still where they were.
-**Changed by DECISIONS.md call 28:** step zero is now re-basing the building model on
-BIMCraft's, which already has (2) and the tools for (1).
+call 26). The model, the takeoff, and a window to see and walk it are built. It is outside
+the brief's numbered deliverables, and those (D4 macro to micro, D5 the estimate sheet and
+money, D6 interchange) are still where they were.
+**Done, 2026-11-11 (DECISIONS.md call 29):** the building model is re-based on BIMCraft's
+shapes, with fittings as elements, connectors, a network that says what is joined and
+what is open, and rooms found from their walls. So (2) of the list below is built, on
+BIMCraft's model and not from nothing.
 **Assumption in use:** the next stretch of the whole building is, in this order, (1)
-drawing and editing it in the window instead of in a file, (2) fittings and connections,
-so a system can be checked and its fittings counted by type, (3) clashes. The brief's D4
-to D6 wait behind those unless you say otherwise. If you would rather money (D5) came to
-the building before any of that, say so: a pipe can already carry a cost line, and no
-recipe for one is written.
-
+drawing and editing it in the window instead of in a file, (3) clashes. The brief's D4 to
+D6 wait behind those unless you say otherwise. If you would rather money (D5) came to the
+building before any of that, say so: a pipe, a fitting and a room can each carry a cost
+line (a room's floor area and perimeter are figures a flooring or a paint line can use),
+and no recipe for one is written.
+**New, for you to rule on when you reach them** (each is in PROPOSALS.md, none is built):
+whether equipment joins the runs that meet it into one network (11); whether three run
+ends meeting with no fitting should be warned of (8).

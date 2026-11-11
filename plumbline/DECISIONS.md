@@ -821,3 +821,36 @@ tolerance 1 mm (`network.rs:23`). Here both are this program's fit tolerance,
 `FIT_TOLERANCE_FT`, 0.01 ft (about 1/8 in), which is already what a line has to fit its
 planes by (Q9). BIMCraft's cut height for finding a room's walls, 1200 mm
 (`model.rs:43`), is 4 ft here: a decision, and a level can say otherwise.
+
+**As built (the same day), where the mapping above was changed in the doing.**
+* *BIMCraft's `Run` is `Segment` here, `pl::segment`, and its `RunType` is `SegmentType`,
+  `pl::segment_type`.* The table above says `pl::run`. That key and the name `Run` were
+  already a roof line's plan run in this program (`components.rs`), which was found when
+  the code was opened. A segment is IFC's word for the same thing (BIMCraft `runs.rs:25`
+  to 37 writes a pipe as IFCPIPESEGMENT, a duct as IFCDUCTSEGMENT, conduit as
+  IFCCABLECARRIERSEGMENT, a cable as IFCCABLESEGMENT), so nothing was coined. In what a
+  person reads, a run is still a run.
+* *A cable turns a corner with no fitting.* The old "bends" counted a cable's corners
+  with everything else's. A corner of a duct, a pipe or a conduit is a bend fitting; a
+  cable's is not, so the twelve bends the sample's two cable lines counted became no
+  element.
+* *A run and a placed thing have to be under a storey*, since their heights are now above
+  one. A job with a run directly under the job element does not load.
+* *A run's `join` was not taken after all*: in BIMCraft it shapes the mitred plan outline
+  of runs that meet, which is drawing. Whether runs are joined is the network's to say.
+* *Room figures.* Three are given: the floor inside the wall faces, the area to the wall
+  centre lines, and the distance round at the faces. *A wall that cannot be placed* is
+  ours to rule on, BIMCraft having no such thing as a wall with an unknown height: under
+  the room's own storey it leaves the storey's rooms with no figure; under another it
+  makes them Assumed and the figure says what was assumed. Leaving such a wall out and
+  saying nothing would let two rooms run together into one area marked Known.
+* *A total is the sum of its lines as shown.* A storey's rooms come to 1,057.9532 SF,
+  which is the five figures as each is written, to four decimals, added up; the unrounded
+  areas add to 1,057.953125. This is how every total in the program already worked
+  (`view::sum_of`); it is written down here because a hand check met it.
+* *A wall that cannot be drawn stays in its storey's table in the sheet.* It used to be
+  filed under no storey and so shown in none: a row dropped without a word. Found while
+  adding rooms to the same table, and fixed.
+* *Flags on the network's rows.* An open end, a join with no fitting and a warning are
+  facts about the job as entered, so the windows show them unflagged. Only what could not
+  be checked is flagged, Unknown.

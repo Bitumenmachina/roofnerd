@@ -107,6 +107,9 @@ pub struct Drawing {
     pub surfaces: Vec<Surface>,
     /// The outlines of what is drawn as glass, by path, so the building keeps its shape.
     pub ghosts: Vec<String>,
+    /// The fittings, by path. When a system is picked out its runs are drawn over in its
+    /// colour; an elbow's twelve edges drawn over at that size are a blot, so they are not.
+    pub fittings: Vec<String>,
     /// How far from the middle the ground's grid reaches, in feet.
     pub reach: f32,
 }
@@ -409,6 +412,7 @@ pub fn rebuild(
     drawing.lines.clear();
     drawing.runs.clear();
     drawing.ghosts.clear();
+    drawing.fittings.clear();
     drawing.frames.clear();
     drawing.surfaces.clear();
     let drawing = &mut *drawing;
@@ -503,7 +507,10 @@ pub fn rebuild(
                             let dir = (s[1] - s[0]).normalize_or(Vec3::X);
                             // Lying flat, the depth is up and down; standing, the width runs east-west.
                             let side = if dir.y.abs() > 0.99 { Vec3::X } else { dir.cross(Vec3::Y).normalize() };
-                            let upward = side.cross(dir).normalize();
+                            // The three have to be a right-handed set (side × upward = dir)
+                            // or they are a mirror and not a turn: a riser drawn with a
+                            // mirror for its turn is not drawn where it stands.
+                            let upward = dir.cross(side).normalize();
                             let turn = Quat::from_mat3(&Mat3::from_cols(side, upward, dir));
                             let (from, to) = (s[0], s[1]);
                             build.piece(&p.path, p.system.as_ref(), solids.cube.clone(), Transform { translation: (from + to) / 2.0, rotation: turn, scale: Vec3::new(w, d, from.distance(to)) }, colour, 0.5, metal, false);
@@ -520,6 +527,7 @@ pub fn rebuild(
                 // Turned counter-clockwise from east, seen from above: about the upright axis.
                 let turn = Quat::from_rotation_y((*angle as f32).to_radians());
                 if p.kind == Kind::Fitting {
+                    build.drawing.fittings.push(p.path.clone());
                     // A fitting is drawn in its system's colour, like the runs it joins: a
                     // ball where its section is round, a block where it is not.
                     let metal = if p.discipline == Discipline::Plumbing { 0.15 } else { 0.55 };
@@ -821,7 +829,7 @@ pub fn draw_lines(doc: Res<Doc>, drawing: Res<Drawing>, graphics: Res<Graphics>,
         // half-inch pipe can be followed through the building.
         let mut done: Vec<&str> = Vec::new();
         for surface in drawing.surfaces.iter().filter(|s| s.system.as_ref() == Some(selected)) {
-            if done.contains(&surface.path.as_str()) {
+            if done.contains(&surface.path.as_str()) || drawing.fittings.contains(&surface.path) {
                 continue;
             }
             done.push(&surface.path);

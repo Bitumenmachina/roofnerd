@@ -199,7 +199,7 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 
 | Key in the file | On | Holds | Unit |
 |---|---|---|---|
-| `pl::class` | every element | The kind: Job, Roof, RoofPlane, LowSlopeArea, Eave, Rake, Ridge, Hip, Valley, Headwall, PitchBreak, Parapet, Condition; and for the rest of the building (section 5.6) Storey, Wall, Door, Window, Floor, System, Duct, Pipe, Conduit, Cable, Equipment, Fixture | |
+| `pl::class` | every element | The kind: Job, Roof, RoofPlane, LowSlopeArea, Eave, Rake, Ridge, Hip, Valley, Headwall, PitchBreak, Parapet, Condition; and for the rest of the building (section 5.6) Storey, Wall, Door, Window, Floor, Room, System, Duct, Pipe, Conduit, Cable, Fitting, Equipment, Fixture, Type | |
 | `pl::job` | the job | Title, the unit derived lengths are worked out in (`ft`), the next path number | |
 | `pl::footprint` | a Roof | The outline the roof stands on (`points`), its `eave_height`, and how each edge rises (`edges`, edge i from point i to the next): a pitch, or `"gable"` for an edge that stands upright. The roof is solved from these (section 5.5). | `points`: `ft` or `in`. `eave_height`: `ft`, `in` or `ft-in`. An edge: `in/12`, or none for a gable |
 | `pl::solve` | a Roof with a footprint | What the last solve came to: `not_solved`, with the reason, when the footprint cannot be solved; `notes` on how the planes meet. Worked out, never typed. | |
@@ -214,15 +214,25 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 | `pl::recipe` | a Condition | `applies_to`: the kinds of element the condition goes on. `cost`: the cost code and lines an element gets when it is applied. | as `pl::cost` |
 | `pl::measure` | any with geometry | Derived quantities by name. Never typed. | |
 | `pl::line_quantities` | any with cost lines | What each cost line works out to, by the line's description: `quantity`, and `with_waste` and `order` when the line has them. Never typed. | |
-| `pl::level` | a Storey | `elevation`: how high its floor is above the job's datum. `height`: how far up to the next floor. | each `ft`, `in` or `ft-in` |
-| `pl::wall` | a Wall, under a Storey | `line`: its centre line on the plan. `thickness`. `height`. It stands on its storey's floor. | `line`: `ft` or `in`. The others: `ft`, `in` or `ft-in` |
-| `pl::opening` | a Door or Window, under a Wall | `along`: how far from the wall line's first end it starts. `width`, `height`. `sill`: how high its bottom is above the floor. | each `ft`, `in` or `ft-in` |
-| `pl::floor` | a Floor, under a Storey | `boundary` on the plan and `thickness`. Its top is at its storey's elevation. | `boundary`: `ft` or `in` |
-| `pl::route` | a Duct, Pipe, Conduit or Cable | `points`: the centre line, point to point in space: east, north, height above the datum. | `ft` or `in` |
-| `pl::size` | a Duct, Pipe, Conduit or Cable | Round by `diameter`, or rectangular by `width` and `depth`. One or the other. | each `ft`, `in` or `ft-in` |
-| `pl::placed` | Equipment or a Fixture | `what` it is, `at`: the middle of its base in space, `size`: east-west, north-south, tall. | `at`, `size`: `ft` or `in` |
+| `pl::level` | a Storey | `elevation`: how high its floor is above the job's datum. `height`: how far up to the next floor. `computation_height`, when it is not the usual 4 ft: how far above its floor its rooms find the walls that bound them. | each `ft`, `in` or `ft-in` |
+| `pl::wall_type` | a Type | `thickness`. `layers`, when it is built up: each a `function` (structure, substrate, thermal, membrane, finish), a `material` and a `thickness`, from the exterior in. They add up to the thickness. | each `ft`, `in` or `ft-in` |
+| `pl::floor_type` | a Type | `thickness`, and `layers` from the top down, as a wall type's. | each `ft`, `in` or `ft-in` |
+| `pl::opening_type` | a Type | `category`: Door or Window. `width`, `height`. | each `ft`, `in` or `ft-in` |
+| `pl::segment_type` | a Type | `category`: Duct, Pipe, Conduit or Cable. `round` and `width` (the diameter), or `width` and `depth`. | each `ft`, `in` or `ft-in` |
+| `pl::wall` | a Wall, under a Storey | `type`: the path of a Type with a `pl::wall_type`. `line`: its location line on the plan, first end to second; its exterior side is to the left of that. `location`, when the line is not its centre line: `core-centre`, `exterior-finish`, `interior-finish`, `exterior-core`, `interior-core`. `top_level` (the path of the Storey its top is held to) with `top_offset` if any, or `height`: one or the other. `base_offset`, when it does not stand on its storey's floor. `room_bounding: false` and `join: false` when it does not bound rooms or join its neighbours. | `line`: `ft` or `in`. The others: `ft`, `in` or `ft-in` |
+| `pl::opening` | a Door or Window, under its Wall | `type`: the path of a Type with a `pl::opening_type` of its kind. `offset`: how far its **centre** is along the wall's line from the line's first end. `sill`: how high its bottom is above the wall's base. | each `ft`, `in` or `ft-in` |
+| `pl::floor` | a Floor, under a Storey | `type`: the path of a Type with a `pl::floor_type`. `boundary` on the plan. `offset`, when its top is not at its storey's floor level. | `boundary`: `ft` or `in` |
+| `pl::room` | a Room, under a Storey | `point`: a point inside it. `number`: what the plan calls it. Its boundary is not stored: it is found from the walls. | `point`: `ft` or `in` |
+| `pl::segment` | a Duct, Pipe, Conduit or Cable, under a Storey | One straight piece. `type`: the path of a Type with a `pl::segment_type` of its kind. `line`: its two ends on the plan. `offset`: how high it is above its storey's floor at the first end; `end_offset` at the second, when it is not level. `justify`, when its heights are those of its `top` or `bottom` and not its centre. | `line`: `ft` or `in`. The others: `ft`, `in` or `ft-in` |
+| `pl::placed` | Equipment, a Fixture or a Fitting, under a Storey | `what` it is. `at`: the middle of its base on the plan. `offset`: how high that is above its storey's floor. `angle`, when it is turned: degrees counter-clockwise from east. `size`: along its own x, along its own y, tall. | `at`, `size`: `ft` or `in`. `offset`: `ft`, `in` or `ft-in`. `angle`: `deg` |
+| `pl::fitting` | a Fitting | `kind`: bend, tee, cross, transition or coupling. | |
+| `pl::connectors` | Equipment, a Fixture or a Fitting | A list. Each: `name`; `kind` (pipe, duct, conduit, power); for a pipe, `domain` (cold, hot, waste, vent, storm, gas); `flow` (in, out) when it is not both; `at`, in the thing's own axes (x along its angle, y to its left, z up from its base); `size`. | `at`: `ft` or `in` |
 | `pl::system` | a System | `discipline` (Mechanical, Electrical, Plumbing) and `classification`: Supply Air, Return Air, Exhaust Air, Refrigerant, Domestic Cold Water, Domestic Hot Water, Sanitary, Vent, Power, Lighting. | |
-| `pl::in_system` | a run, Equipment or a Fixture | The system it belongs to, by the system's path. It has to be a System in the job. | none |
+| `pl::in_system` | a run, Equipment, a Fixture or a Fitting | The system it belongs to, by the system's path. It has to be a System in the job. | none |
+
+A file saved before the building model was re-based on BIMCraft's shapes (DECISIONS.md
+call 29) does not load: its `pl::route` and `pl::size` are not keys this program knows,
+and its walls and openings lack a type. No job had been saved with them but the samples.
 
 ### 4.1 A cost line
 
@@ -407,40 +417,85 @@ saved like any other.
 
 ### 5.6 The rest of the building
 
-Worked out in `building.rs`, under the same three rules as the roof (section 5).
+Worked out in `building.rs`, under the same three rules as the roof (section 5). The
+shapes are BIMCraft's, ported (`building/model.rs` and beside it; `PORTMAP.md`).
+
+**Types.** A Type is an element directly under the job. It carries one of the four type
+components, and a wall, floor, door, window or run names its type by path. A size is
+entered once. A type that is not known, or is not in the job, leaves what depends on it
+with no figure and the reason; nothing falls back to a number.
+
+**Heights.** A wall's base is its storey's elevation plus its `base_offset`. Its top is its
+`top_level`'s elevation plus its `top_offset`, or its base plus its `height`. A run's and
+a placed thing's heights are above the storey they are under.
 
 | Kind | Quantity | How |
 |---|---|---|
 | Wall | `plan_length` LF | length of its line on the plan |
+| Wall | `height` ft | its `height`, or from its base up to its top level. Refused when the top is not above the base, or an elevation it needs is not known. |
 | Wall | `face_area` SF | `plan_length × height`: one face, with nothing taken out |
 | Wall | `opening_area` SF | the `opening_area` of each door and window under it, added up. A wall with none has 0, and that zero is Known. |
-| Wall | `net_area` SF | `face_area − opening_area`. Refused, with the reason, when an opening runs past the end of the wall, stands taller than it, or lies over another, or when an opening has no area. The gross face still stands. |
+| Wall | `net_area` SF | `face_area − opening_area`. Refused, with the reason, when an opening starts before the wall does, runs past its end, stands taller than it, or lies over another, or when an opening has no area. The gross face still stands. |
+| Door, Window | `width`, `height` ft | its type's |
 | Door, Window | `opening_area` SF | `width × height` |
 | Floor | `plan_area` SF | area of its boundary on the plan |
-| Duct, Pipe, Conduit, Cable | `true_length` LF | the lengths of the centre line's segments, in space, added up. A riser counts for its height. |
-| Duct, Pipe, Conduit, Cable | `bends` EA | corners in the centre line: turns of more than 1°. A straight run has 0, Known. |
-| Duct | `surface_area` SF | `true_length ×` the distance round it: `π × diameter`, or `2 × (width + depth)`. Refused when it has no size. |
+| Room | `floor_area` SF | the floor inside the faces of the walls round its point, less any island of walls standing in it |
+| Room | `gross_area` SF | the same to those walls' centre lines |
+| Room | `perimeter` LF | the distance round the room at the faces of its walls, an island's faces included |
+| Duct, Pipe, Conduit, Cable | `true_length` LF | the length of its line on the plan when it is level; through its rise, `√(plan² + rise²)`, when its two ends are at different heights. A riser is its rise. |
+| Duct | `surface_area` SF | `true_length ×` the distance round it: `π × diameter`, or `2 × (width + depth)`, its type's. Refused when its type or its size is not known. |
 
-A run with no size keeps its length. It has no surface, and on a takeoff it is on a line
-of its own, "size unknown". It is never left out and never given a size.
+**Rooms.** A storey's rooms are found among the walls that bound rooms and stand at the
+storey's computation height (4 ft above its floor unless the storey says otherwise),
+whatever storey those walls are under. A room is the smallest loop round its point. Where
+walls meet they are joined as BIMCraft joins them: end to end at any angle, or one ending
+on another; their centre lines run on to meet, so a room closes whatever line of a wall
+was drawn. A room has no figure, and says why, when no loop closes round its point, when
+its point is inside a wall, or when a room added before it has the space. A wall under
+the room's own storey that cannot be placed (no height, no type, no thickness) leaves
+every room of that storey with no figure: whether it closes a room off is not known. One
+under another storey makes the figure Assumed, and the figure's note says what is assumed.
+A figure is no surer than the walls it is measured to, and names them.
 
-`building::takeoff` gives each system's runs by kind and size, with the length and bends
-of each line as a sum that says what it could not include (a sum over nothing has no
-figure; it is not a Known zero), and its equipment and fixtures counted by what each is
-said to be. Runs are grouped by their size as a size, said in inches, whatever unit each
-was entered in, and listed smallest first with "size unknown" last. A line is no surer
-than that its runs are on the system: an Assumed membership makes the line Assumed. After
-the systems come two groups, each only when it has something in it: "On no system" (no
-`pl::in_system` at all, which is Known) and "System not known" (a `pl::in_system` that is
-Unknown), flagged Unknown. Nothing is off the takeoff for want of a system. A storey has
-to be directly under the job, and each wall and floor counts on its nearest storey only. `building::storey_totals` gives each storey's walls and floors.
+**Runs and fittings.** A run of duct or pipe that turns corners is one element for each
+straight piece and a Fitting at each corner. Length is measured through fittings, centre
+to centre. A run with no size keeps its length. It has no surface, and on a takeoff it is
+on a line of its own, "size unknown". It is never left out and never given a size.
+
+**The network** (`building::network::network`, ported from BIMCraft's `network.rs`) is
+worked out when asked and never stored. The ends of runs and the connectors of placed
+things that are within 0.01 ft of each other are one node; only points of one kind of run
+join. An end on another run's length is a node that splits that run without splitting
+the element. A fitting's connectors are joined through it; a fixture's and equipment's are
+not. It gives the nodes, the edges, the groups of what is joined, the open ends, and
+warnings: two systems in one network, two pipe domains in one, a run met along its length
+with no fitting, a drain narrower downstream. It never refuses a job. What cannot be
+placed is listed in `left_out` with why.
+
+`building::takeoff` gives each system's runs by kind and size, with the length of each
+line as a sum that says what it could not include (a sum over nothing has no figure; it
+is not a Known zero); its fittings counted by kind and by what each is said to be; its
+equipment and fixtures counted by what each is said to be; and how it is `joined`: how
+many separate networks its runs fall into, each open end by name and place, each place a
+run meets another along its length with no fitting, and the other warnings, each said on
+the systems of the runs it is about. Runs are grouped by their size as a size, said in
+inches, whatever unit each was entered in, and listed smallest first with "size unknown"
+last. A line is no surer than that its runs are on the system: an Assumed membership
+makes the line Assumed. After the systems come two groups, each only when it has
+something in it: "On no system" (no `pl::in_system` at all, which is Known) and "System
+not known" (a `pl::in_system` that is Unknown), flagged Unknown. Nothing is off the
+takeoff for want of a system. A storey has to be directly under the job, and each wall,
+floor and room counts on its nearest storey only. `building::storey_totals` gives each
+storey's walls, floors and rooms.
 `building::placements` gives every element's shape in feet, in space, for a window to
 draw, and beside it the list of elements that have no shape and why. A window has to say
 the second list: an element that cannot be drawn does not just go missing. A door or
 window that cannot be cut in its wall (it has no size, it runs past the wall's end, it
 stands taller than the wall) is on that list too.
 
-Not modelled yet: fittings and whether runs join; rooms; structure; clashes.
+Not modelled yet: curved walls; openings in a floor; a wall's top following a roof;
+room heights and volumes; families; structure; stairs; clashes; sizing and code checks.
+PROPOSALS.md has each.
 
 ## 6. Cost code scheme
 

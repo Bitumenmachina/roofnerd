@@ -18,7 +18,7 @@ run again and each gave what this file said they gave.
 | D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged five times. Every judgment has found a new way to a wrong figure marked Known, each next to the last fix. All found are fixed. **The fifth round's fixes have not been judged.** |
 | D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged twice: the five demonstrations held both times; two entry forms misread in the first are fixed and held in the second. |
 | D2 | 3D roof slice | **A working 3D prototype, not the whole deliverable.** In a window: a roof solved from its footprint, a plane picked with the mouse, its pitch changed and its eave moved with the lines and totals following, a surface given its condition, and the sheet in a second window updating live. The windows were drawn again on 2026-11-11 after the owner said the first looked cheap and tacky (DECISIONS.md call 25). Not built: tracing a calibrated plan, a dormer, a parapet and tapered crickets in 3D, dragging with the mouse, editing in the sheet. Judged once: the solver's areas and lengths held on every ordinary roof; it found stale planes left Known, an eave moved through the far wall, and an estimator's entries moving to another slope, among others. All fixed. **Those fixes are not judged.** See "D2. What was run". |
-| — | The whole building (owner, 2026-11-11) | **A working model of a whole house, read and walked, not yet drawn in the window.** The owner widened the brief from the envelope to the building and its services (DECISIONS.md call 26). In the world: storeys, walls with doors and windows, floors, ducts, pipes, conduit, cable, equipment, fixtures and systems, each value flagged, with lengths, areas, bends and a takeoff by system. In the window: the whole house under a sky, seen through, a system or a storey at a time, on plan, and on foot inside. Nothing of the building can be edited in the window yet. Judged once: the wall, run and takeoff figures held and nothing crashed; it found a nested storey counted twice as Known and a run whose system was uncertain totalled without a flag, among eight. All fixed. **Those fixes are not judged.** See "The whole building". |
+| — | The whole building (owner, 2026-11-11) | **A working model of a whole house on BIMCraft's shapes, read and walked, not yet drawn in the window.** The owner widened the brief from the envelope to the building and its services (DECISIONS.md call 26). The model was first written from nothing, then, the same day, re-based on BIMCraft's (call 29; `HANDOFF_REBASE.md`): storeys, walls of a type with a top held to a storey or a height, doors and windows of a type placed by their centre, floors, rooms found from their walls, straight runs of a type joined by fittings, equipment and fixtures with connectors, systems, and a network that says what is joined and what is open. Each value flagged; a takeoff by system. In the window: the whole house under a sky, seen through, a system or a storey at a time, on plan, and on foot inside. Nothing of the building can be edited in the window yet. Judged twice: see "The whole building" and "The re-base on BIMCraft". |
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
 | D4 | Macro to micro | Not started. How its demonstration will be run is written at the end of this file. |
 | D5 | Estimate sheet and money | Not started. Reference estimate missing (Q5). |
@@ -714,9 +714,9 @@ without opening it. DECISIONS.md call 28 sets out what it has, what it lacks (fl
 sources, net wall area, systems as elements, a takeoff by system), and the decision: the
 building model is re-based on its shapes before anything more is built on `building.rs`.
 
-**Handed over.** The re-base is the next session's task, set out in `HANDOFF_REBASE.md`.
-`tools/portmap.sh` is the gate for it and is red until it is done: it fails today with 59
-public items of the building model not yet accounted for against BIMCraft's source.
+**Re-based.** The next session did it: see "The re-base on BIMCraft" below. What follows in
+this section, written before it, describes the model as it was first built; where the two
+differ the later section is what is true now.
 
 **What is not built**
 * **Nothing of the building can be drawn or edited in the window.** It is entered in a
@@ -776,6 +776,113 @@ wall, every measure stripped from the file): the browser and the Mechanical tab 
 wall has no figure: door-0012 ends 42.00 ft along a wall 40.00 ft long" and "door-0012 is
 not drawn: it runs past the end of wall-0004"; and the sheet keeps its columns under a
 message naming over a hundred elements. That picture is not in `demos/captured/`.
+
+## The re-base on BIMCraft. What was run and what it showed
+
+**The task** was the previous session's handoff, `HANDOFF_REBASE.md`: replace the shapes in
+`building.rs` with BIMCraft's shapes for the same things, ported with attribution, and
+keep on top of them everything this project has that BIMCraft does not. It was done in
+the order the handoff gives, with a commit after each step. What each thing became, and
+the reading behind it, is DECISIONS.md call 29.
+
+**How it is run:** `tools/portmap.sh`; `cargo test --workspace`; `demos/house.sh`; and the
+other four demos, which it must not have moved.
+
+**What was run and what it showed**
+
+1. *The reading came first, and the gate held me to it.* BIMCraft's `network.rs`,
+   `runs.rs` and `rooms.rs` were read whole, and the parts of `model.rs`, `walls.rs`,
+   `geom.rs`, `family.rs` and `schedule.rs` that call 29 lists by line. The map and the
+   decision were committed before any model code (`aa46576`). Over three runs
+   `tools/portmap.sh` caught five lines of mine that did not hold the symbol I had named
+   (a commit message of that day says four); each was corrected by opening the source.
+2. *The port map is green.* `tools/portmap.sh`: "PASS. 136 public items: 73 ported from
+   BIMCraft at f202abd85d1c, 63 ours, each with its search."
+3. *The three things the handoff listed as not known are settled* (call 29): the ten
+   system classifications are **not** IFC's (`IfcDistributionSystemEnum` has 44 values,
+   read from the schema's generated source and buildingSMART's own definitions; six of
+   ours have a value that says the same thing); BIMCraft joins runs end to end with no
+   fitting and warns only where one ends on another's length; a door's and a window's
+   size is on `OpeningType`. Whether the ten are Revit's was only partly checked, and
+   call 26's sentence that they are is withdrawn for eight of them.
+4. *The figures that must not move did not* (handoff section 8). The sample house's
+   takeoff before and after, line by line:
+   * each storey's walls (8, 210.00 LF), gross face (2,026.00 and 1,816.00 SF), net face
+     (1,793.02 and 1,580.53 SF) and floor (1,120.00 SF): unchanged;
+   * each system's length: unchanged (supply air 195.00, return air 22.20, refrigerant
+     34.50, cold water 69.62, hot water 50.00, sanitary 54.80, vent 12.10, power 98.80,
+     lighting 84.00 LF);
+   * the count of runs became the count of straight pieces (supply air 13 to 20, return
+     air 2 to 3, refrigerant 1 to 4, cold water 12 to 22, hot water 8 to 17, sanitary 9 to
+     19, vent 1 to 1, power 3 to 10, lighting 2 to 8), and the windows and the command
+     line now say "straight pieces" where they count them;
+   * "bends" is gone. Every corner of a duct, a pipe or a conduit is a bend fitting, an
+     element, counted on its system by size: the same number as the bends each such line
+     had. A cable turns a corner with no fitting, so the twelve bends the two cable lines
+     counted became no element (call 29, "as built").
+5. *What is new in the model, each with hand-worked figures in a test.*
+   * **Types.** A size is entered once. Make the sample's 5 ft window type 6 ft wide and
+     both south windows are 30 SF, the wall's openings 80.01 SF and its net 319.99 SF.
+   * **A wall held to the storey above.** The first floor's outside walls are as tall as
+     the storeys are apart: 10 ft. Raise the second floor a foot and the south wall is
+     11 ft and 440 SF with nothing typed on the wall. An assumed elevation makes its area
+     Assumed; an unknown one leaves no area and says which elevation.
+   * **Rooms.** The living room is 614.7188 SF inside its walls, 640 SF to their centre
+     lines and 110.125 LF round; a floor's five rooms come to its 1,120 SF at centre
+     lines and 1,057.9532 SF inside the walls. These were worked by hand before the
+     program was run and matched on the first run, as did a room with a free-standing box
+     of walls in it (360 SF, 384 SF, 96 LF) and a square drawn on its walls' outside
+     faces (81 SF, 90.25 SF, 36 LF).
+   * **The network.** Supply air is two networks with four open trunk ends and ten places
+     a branch meets a trunk with no fitting; cold water is one network, open only where
+     the service comes in; the drain and its vent are joined and that is said. None of it
+     is made up: the sample's plans are read as drawn, and no tee was added to them.
+6. *The house in the window* (`demos/house.sh`, exit 0; 16 pictures in
+   `demos/captured/house/`, each opened and read at full size on 2026-11-11 after the last
+   change to what they show). The house as opened; seen through; supply air picked out,
+   with its pieces, its fittings and what is joined in the inspector and the same lines
+   on the sheet's Mechanical tab; hot water, with its unsized branch and its two unsized
+   elbows red in both windows; the first floor alone; its plan; a cable picked on the
+   plan; on foot in the living room. The sheet's Building tab lists each storey's rooms
+   under its walls. The job saved from the window is byte for byte the one opened.
+7. *Two faults were found by reading those pictures, and fixed.* (a) With a system picked
+   out, each elbow was drawn over with all twelve of its edges and read as a blot at
+   every corner; fittings are no longer drawn over. (b) **An older fault, there since the
+   building was first drawn:** a rectangular duct was given a mirror, not a turn, for its
+   direction (`scene.rs`), so the trunks lying east-west and every rectangular riser were
+   not drawn where they are. It was in the committed pictures of the eighth judgment and
+   nobody saw it, I think because a selected system's centre lines were drawn over the
+   place the ducts should have been. A new elbow hanging in the air over a missing riser
+   is what showed it. The trunks, the riser to the attic and the return riser are now
+   drawn.
+8. *The other demos.* `demos/d1.sh`, `demos/units.sh`, `demos/d3.sh` and `demos/d2.sh`
+   each exit 0. The 16 pictures `demos/d2.sh` saved were compared with the ones committed
+   before, pixel by pixel: in none does any pixel differ by more than a tenth of full
+   scale. One was opened by eye; the others are the pictures already on record.
+9. *Licences and gates.* `tools/licenses.sh` exits 0. The repository's three gates
+   (language, egress, client data) exit 0.
+
+**What a reader should know that the figures do not say**
+* The sample's riser to the attic is entered, attic piece and all, on the first floor. So
+  the first floor shown alone shows a duct standing 20 ft up and running south at attic
+  height, and its plan shows that piece across the bath. That is the job as entered,
+  drawn truthfully; a plan cut by height is not built.
+* A fitting sits on the joint and has no length of its own: runs are measured through
+  fittings, centre to centre.
+* Equipment does not join the runs that meet it (BIMCraft's rule), which is why the two
+  supply trunks off one air handler are two networks (PROPOSALS 11).
+* Fittings are listed in the order of their names, so "1 in elbow" comes before
+  "1/2 in elbow" (PROPOSALS 9).
+* A job file saved before the re-base does not load. None existed but the samples.
+
+**What is not built** (each is in PROPOSALS.md 7 to 11, or was already listed above)
+* What BIMCraft's model has that was read and not taken: curved walls, a wall's top
+  following a roof, openings in a floor, room heights, room separation lines, families,
+  an opening rising past its wall's top, project parameters.
+* Nothing of the building can be drawn or edited in the window. No clash check. No cost
+  recipe for a pipe, a fitting or a room. No IFC in or out. No sizing or code check.
+* A real desktop and a real graphics card: everything still ran on a virtual display
+  with a software renderer.
 
 ## D3. How its demonstration will be run (written before any D3 work)
 

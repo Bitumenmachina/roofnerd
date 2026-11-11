@@ -350,7 +350,10 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
         }
     }
     for (path, why) in &s.not_drawn {
-        s.notes.push((Status::Unknown, format!("{path} is not drawn"), why.clone()));
+        // Said by its name, with its path after it: a person reads the name.
+        let name = elements.iter().find(|e| e.path == *path).map(|e| e.name.as_str()).filter(|n| !n.is_empty());
+        let called = name.map(|n| format!("{n} ({path})")).unwrap_or_else(|| path.clone());
+        s.notes.push((Status::Unknown, format!("{called} is not drawn"), why.clone()));
     }
     for (status, why, said) in groups {
         let what = if said.len() == 1 { said[0].clone() } else { format!("{} values, the first: {}", said.len(), said[0]) };

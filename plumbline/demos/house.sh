@@ -36,14 +36,14 @@ check "first floor: 8 walls, 210 LF" "walls 8            210.00 LF"
 check "first floor: 5 rooms, 1,057.95 SF inside their walls" "rooms 5            1,057.95 SF"
 # Hot water: two lavatory branches of 1.9 LF and two tub branches of 2.5 LF, each of them
 # two straight pieces with an elbow between.
-check "hot water, 1/2 in: 8 straight pieces, 8.80 LF" "Pipe     1/2 in round      8 runs       8.80 LF"
+check "hot water, 1/2 in: 8 straight pieces, 8.80 LF" "Pipe     1/2 in round      8 pieces     8.80 LF"
 check "hot water, 1/2 in: 4 elbows" "Bend      1/2 in elbow: 4 EA"
 # The kitchen's hot branch has no size on the plan. Its 9.40 LF is there, on a line of its
 # own, and its two elbows are counted and not sized.
-check "hot water with no size: 9.40 LF, flagged Unknown, on a line of its own" "? Pipe     size unknown      3 runs       9.40 LF"
+check "hot water with no size: 9.40 LF, flagged Unknown, on a line of its own" "? Pipe     size unknown      3 pieces     9.40 LF"
 check "its two elbows: counted, flagged Unknown" "? Bend      not said: 2 EA"
 # The west trunk: up 3.4, south 8, west 17. Its size is assumed, and says so.
-check "supply air, 16 x 8: 3 straight pieces, 28.40 LF, flagged Assumed" "~ Duct     16 in × 8 in      3 runs      28.40 LF"
+check "supply air, 16 x 8: 3 straight pieces, 28.40 LF, flagged Assumed" "~ Duct     16 in × 8 in      3 pieces    28.40 LF"
 # What is joined: the first floor's ducts and the attic's are two networks; each trunk's
 # two ends are open; ten branches leave a trunk along its length with no fitting entered.
 check "supply air: 2 networks, 4 open ends, 10 joins with no fitting" "joined: 2 networks; 4 open ends; 10 places where a run meets another along its length with no fitting"

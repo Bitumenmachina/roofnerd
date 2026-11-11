@@ -84,9 +84,9 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
     }
     for t in building::takeoff(job) {
         let what = if !t.classification.is_empty() { t.classification.as_str() } else if t.flag == Status::Unknown { "which system is not known" } else { "no system" };
-        let _ = writeln!(out, "\n{}{}  ({what}; {} runs, {})", if t.flag == Status::Known { String::new() } else { format!("{} ", t.flag.flag()) }, t.name, t.runs.members, said(&t.runs));
+        let _ = writeln!(out, "\n{}{}  ({what}; {} straight pieces, {})", if t.flag == Status::Known { String::new() } else { format!("{} ", t.flag.flag()) }, t.name, t.runs.members, said(&t.runs));
         for line in &t.lines {
-            let _ = writeln!(out, "  {} {:<8} {:<16} {:>2} runs  {:>12}", line.size_status.max(line.length.status).flag(), format!("{:?}", line.kind), line.size, line.length.members, said(&line.length));
+            let _ = writeln!(out, "  {} {:<8} {:<16} {:>2} pieces  {:>10}", line.size_status.max(line.length.status).flag(), format!("{:?}", line.kind), line.size, line.length.members, said(&line.length));
         }
         for (kind, what, count, status) in &t.fittings {
             let _ = writeln!(out, "  {} {:<9} {what}: {count} EA", status.flag(), kind.map(|k| k.title()).unwrap_or("Fitting"));
