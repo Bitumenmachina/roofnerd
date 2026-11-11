@@ -422,6 +422,9 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                         Entry::Move => format!("Move the eave of {name}"),
                         Entry::Allowance => format!("Allowance for {name}"),
                         Entry::UnitCost => format!("Unit cost of {:?} on {name}", doc.entry_line.clone().unwrap_or_default()),
+                        Entry::Material => format!("What {name} is made of"),
+                        Entry::Overhead => "Overhead on the job".to_string(),
+                        Entry::Profit => "Profit on the job".to_string(),
                     };
                     c.spawn(text(fonts, title, 13.0, Weight::Semibold, theme::ink()));
                     c.spawn((rounded(Node { padding: UiRect::axes(px(10.0), px(7.0)), border: UiRect::all(px(1.5)), min_height: px(36.0), align_items: AlignItems::Center, ..default() }, 7.0), BackgroundColor(theme::panel()), BorderColor::all(theme::accent()))).with_children(|f| {
@@ -434,6 +437,9 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                             Entry::Move => "Out is +, like 1' 6\" or -6 in",
                             Entry::Allowance => "Dollars per SF or LF, like 28 or $28.00",
                             Entry::UnitCost => "Dollars for what the line is priced in, like 31.50",
+                            Entry::Material => "A material of the job, by name",
+                            Entry::Overhead => "A percentage of the job cost, like 12",
+                            Entry::Profit => "A percentage of cost and overhead, like 8",
                         };
                         h.spawn(text(fonts, hint, 11.5, Weight::Regular, theme::ink_faint()));
                         h.spawn(Node { flex_grow: 1.0, ..default() });
@@ -532,8 +538,14 @@ fn inspector(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
                 shortcut(c, fonts, &["B"], &format!("Type an allowance, $ per {unit}"));
             }
             shortcut(c, fonts, &["U"], "Type the unit cost of its next unpriced line");
+            // Only what is built is made of a material, and carries labor of its own.
+            if !matches!(el.kind, Kind::Job | Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey) {
+                shortcut(c, fonts, &["N"], "Name the material it is made of");
+                shortcut(c, fonts, &["L"], "Switch its labor line off or on");
+            }
             shortcut(c, fonts, &["Esc"], "Let go of it");
         }
+        shortcut(c, fonts, &["O", "R"], "Type the job's overhead, or its profit");
         shortcut(c, fonts, &["W", "A", "S", "D"], "Move over the ground");
         shortcut(c, fonts, &["Q", "E"], "Down and up");
         shortcut(c, fonts, &["T"], if doc.plan { "Back to 3D" } else { "Plan: straight down" });

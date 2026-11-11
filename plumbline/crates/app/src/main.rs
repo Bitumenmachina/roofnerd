@@ -295,6 +295,37 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                     }
                     doc.redraw();
                 }
+                // What it is made of, and the job's overhead and profit: Assumed, like the rest.
+                Entry::Material | Entry::Overhead | Entry::Profit => {
+                    let root = doc.job.world.get::<plumbline_world::Node>(doc.job.root()).map(|n| n.path.clone()).unwrap_or_default();
+                    let (target, what) = match field {
+                        Entry::Material => (doc.selected.clone(), "material"),
+                        Entry::Overhead => (Some(root), "overhead"),
+                        _ => (Some(root), "profit"),
+                    };
+                    match target {
+                        None => doc.say(Tone::Refused, "refused: select something first"),
+                        Some(path) => match doc.job.set(&path, what, Some(text.trim()), Status::Assumed, SOURCE) {
+                            Ok(()) => {
+                                doc.job.derive();
+                                doc.edited = true;
+                                // A material the job does not have is said at once: the
+                                // lines made of it now have no figure.
+                                let known = field != Entry::Material || {
+                                    let mut q = doc.job.world.query::<(&plumbline_world::Node, &plumbline_world::Kind)>();
+                                    q.iter(&doc.job.world).any(|(n, k)| *k == plumbline_world::Kind::Material && (n.name == text.trim() || n.path == text.trim()))
+                                };
+                                if known {
+                                    doc.say(Tone::Done, format!("{path}: {what} set to {}", text.trim()));
+                                } else {
+                                    doc.say(Tone::Warned, format!("{path}: material set to {:?}, which is not a material of this job; the lines made of it have no figure", text.trim()));
+                                }
+                            }
+                            Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+                        },
+                    }
+                    doc.redraw();
+                }
                 Entry::Pitch => change(doc, &format!("pitch {text}"), |_, _, edge| Ok(solve::Change::Rise { edge, rise: pitch_val(units::parse_pitch(&text)?) })),
                 Entry::Move => change(doc, &format!("eave moved {text}"), |_, _, edge| {
                     let (len, unit) = units::parse_length(&text)?;
@@ -358,6 +389,41 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
             }
             doc.touch();
         }
+    }
+
+    // N names what the selected element is made of; O and R type the job's overhead and
+    // profit; L switches the selected element's Labor line off or on.
+    for (key, field) in [(KeyCode::KeyN, Entry::Material), (KeyCode::KeyO, Entry::Overhead), (KeyCode::KeyR, Entry::Profit)] {
+        if keys.just_pressed(key) {
+            if field == Entry::Material && doc.selected.is_none() {
+                doc.say(Tone::Refused, "refused: select something first");
+            } else {
+                doc.entry_line = None;
+                doc.entry = Some((field, String::new()));
+            }
+            doc.touch();
+        }
+    }
+    if keys.just_pressed(KeyCode::KeyL) {
+        match doc.selected.clone() {
+            None => doc.say(Tone::Refused, "refused: select something first"),
+            Some(sel) => {
+                let labor: Vec<(String, bool)> = doc.job.find(&sel).and_then(|e| doc.job.world.get::<plumbline_world::Cost>(e)).map(|c| c.lines.iter().filter(|l| l.class == Some(plumbline_world::Class::Labor)).map(|l| (l.description.clone(), l.off)).collect()).unwrap_or_default();
+                match labor.as_slice() {
+                    [] => doc.say(Tone::Refused, format!("refused: {sel} has no Labor line to switch")),
+                    [(line, off)] => match doc.job.set_off(&sel, Some(line), !off) {
+                        Ok(()) => {
+                            doc.job.derive();
+                            doc.edited = true;
+                            doc.say(Tone::Done, format!("{sel}: {line:?} switched {}", if *off { "on" } else { "off" }));
+                        }
+                        Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+                    },
+                    many => doc.say(Tone::Refused, format!("refused: {sel} has {} Labor lines; say which with `plumbline labor <job> {sel} off --line \"<line>\"`", many.len())),
+                }
+            }
+        }
+        doc.redraw();
     }
 
     // What is on show.

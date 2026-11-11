@@ -22,6 +22,12 @@ pub enum Entry {
     Allowance,
     /// The price of the selected element's cost line.
     UnitCost,
+    /// What the selected element is made of: a material's name.
+    Material,
+    /// The job's overhead, a percentage.
+    Overhead,
+    /// The job's profit, a percentage.
+    Profit,
 }
 
 /// How the last action went. Said by what happened, not read back out of the words.
@@ -41,6 +47,8 @@ pub enum Tab {
     Of(Discipline),
     /// The job priced from its allowances and from its cost lines, and the two compared.
     Money,
+    /// The estimate sheet: every cost line in its column, the recap, and the suppliers.
+    Estimate,
 }
 
 /// What of the building is on show.
@@ -186,6 +194,8 @@ pub struct Snapshot {
     pub tally: (usize, usize, usize),
     /// What the job comes to both ways (`view::pricing`).
     pub pricing: Option<view::Pricing>,
+    /// The estimate sheet and its recap (`view::estimate`).
+    pub estimate: Option<view::Estimate>,
     pub totals: Option<view::RoofTotals>,
     pub planes: Vec<PlaneInfo>,
     pub lines: Vec<LineInfo>,
@@ -233,6 +243,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     let elements = view::elements(&mut doc.job);
     s.tally = view::tally(&elements);
     s.pricing = Some(view::pricing(&mut doc.job));
+    s.estimate = Some(view::estimate(&mut doc.job));
     if doc.selected.as_ref().is_some_and(|sel| doc.job.find(sel).is_none()) {
         doc.selected = None;
     }

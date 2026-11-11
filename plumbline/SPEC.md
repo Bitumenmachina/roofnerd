@@ -213,7 +213,12 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 | `pl::schedule` | any | `wbs`: the work breakdown code | none |
 | `pl::recipe` | a Condition | `applies_to`: the kinds of element the condition goes on. `cost`: the cost code and lines an element gets when it is applied. | as `pl::cost` |
 | `pl::measure` | any with geometry | Derived quantities by name. Never typed. | |
-| `pl::line_quantities` | any with cost lines | What each cost line works out to, by the line's description: `quantity`, and `with_waste` and `order` when the line has them. Never typed. | |
+| `pl::line_quantities` | any with cost lines | What each cost line works out to, by the line's description: `quantity`; `with_waste` and `order` when the line has them; `extension`, what it comes to in dollars; and for a line made of the element's material, `quotes`: what it comes to at each supplier's price. Never typed. | |
+| `pl::allowance` | an element with one figure it is bought by | `rate`: a design-phase price for the whole element (section 5.7). | `$/SF` or `$/LF` |
+| `pl::priced` | any with an allowance or cost lines | What the element comes to both ways, by name: `allowance`, `detail`, `detail_rate`, `difference`, `difference_percent`. Never typed. | |
+| `pl::material` | an element that is built | What it is made of: the name of a Material element of the job. | none |
+| `pl::supply` | a Material | How it is bought and what it costs. `order`, as a cost line's: the unit it is bought by and the factor (`1.25 lb/SF`, `30 SF/sheet`). `price`: the generic price. `quotes`: the same from suppliers, by the supplier's name. | `$/` + the unit it is bought by |
+| `pl::markup` | the job | `overhead` and `profit`. Neither has a default. | `%` |
 | `pl::level` | a Storey | `elevation`: how high its floor is above the job's datum. `height`: how far up to the next floor. `computation_height`, when it is not the usual 4 ft: how far above its floor its rooms find the walls that bound them. | each `ft`, `in` or `ft-in` |
 | `pl::wall_type` | a Type | `thickness`. `layers`, when it is built up: each a `function` (structure, substrate, thermal, membrane, finish), a `material` and a `thickness`, from the exterior in. They add up to the thickness. | each `ft`, `in` or `ft-in` |
 | `pl::floor_type` | a Type | `thickness`, and `layers` from the top down, as a wall type's. | each `ft`, `in` or `ft-in` |
@@ -247,7 +252,10 @@ order units.
 | `inputs` | Optional. Any other values the formula names, by name: a `spacing`, a number of `sides`. | a length, or none for a plain number |
 | `waste` | Optional. Percent added to the quantity. | `%` |
 | `order` | Optional. `unit`: what is bought, one word (`sheet`, `lb`). `factor`: the conversion. `round_up`: buy whole ones. Typed as `30 SF/sheet` or `1.25 lb/SF`, with `whole` or `exact` after it to say which; unsaid, a package (the divide form) is whole and a weight is exact. | `factor`: `SF/sheet` (divide) or `lb/SF` (multiply) |
-| `unit_cost` | The price. | `$/` + the order unit, or the unit the quantity comes out in |
+| `unit_cost` | The price. Absent on a line made of the element's material. | `$/` + the order unit, or the unit the quantity comes out in |
+| `class` | Optional. Which row of the recap the line lands in: `Material`, `Labor`, `Fabrication`, `Supervision`, `Subcontract` or `General`. | |
+| `off` | Optional, on a Labor line: switched off. It stays on the sheet and is out of every total. | |
+| `of_material` | Optional. The line is made of the element's material: it is ordered and priced as that material is, and carries no `order` or `unit_cost` of its own. Its class is Material. | |
 
 **The formula.** Names, numbers, `+ - * /` (or `×`, `÷`) and brackets. A name is one of:
 the element's measures (`plan_length`, `true_length`, `face_area`, `plan_area`,
@@ -504,6 +512,51 @@ Not modelled yet: curved walls; openings in a floor; a wall's top following a ro
 room heights and volumes; families; structure; stairs; clashes; sizing and code checks.
 PROPOSALS.md has each.
 
+### 5.7 Money
+
+Every amount of money is worked out in the world crate (`lines.rs`, `view.rs`) and is
+written to the cent. A total is the sum of the amounts as they are shown. Half a cent
+rounds up, as on paper. An amount above zero and under half a cent, or over $10 trillion,
+is refused. Nothing is $0.00 unless it comes to nothing: a line with no price, no
+quantity or no class has no figure and is named by every total that leaves it out; a
+line whose quantity is 0 comes to $0.00 and says that is why.
+
+**A line's extension** is what it is priced in (its order quantity, else its quantity
+with waste, else its quantity) times its unit cost. It is as sure as the worst of: the
+quantity, the price, the order factor, the waste, and whether the element is the
+condition its lines came from (an Assumed condition makes assumed money; a condition
+that is not known leaves no figure).
+
+**An allowance** is a rate on the one figure a thing of its kind is bought by: a roof
+plane's surface area, a wall's net area, a floor's area, a room's floor area, the length
+of a parapet, a roof line or a run. **An element's detail** is its lines' extensions
+added up, when every one of them has a figure, and none otherwise; lines switched off
+are not in it. The detail over the same figure is the rate it rolls up to, and the
+difference from the allowance is given in dollars and as a percentage of the allowance.
+`view::pricing` adds these up for the job: each total says how much of itself rests on
+something assumed and names what it leaves out, and the like-for-like comparison is over
+the elements that have both figures and no others.
+
+**Classes.** A line with a class lands in that row of the recap and in no other. In-house
+work (Labor, Fabrication, Supervision) is a line in hours: its order unit is `hr`, its
+order factor is the production rate (`25 SF/hr`, or `0.25 hr/LF`) and its unit cost is
+dollars an hour. No other line is in hours, and a Subcontract line is refused a
+production rate. The estimate sheet has three money columns: Material; Labor (with
+Fabrication and Supervision); General (Subcontract and General conditions). General
+conditions are cost lines on the job element itself.
+
+**A material** is an element. A line made of its element's material takes the material's
+order factor and price, and is extended again at each supplier's quote. Naming another
+material on the element reprices those lines and no others. A material the job does not
+have, or one priced in a unit the line does not come out in, leaves the line with no
+figure and the reason.
+
+**The recap** (`view::estimate`): each class's total and, for in-house work, its hours;
+the job cost, their sum; overhead, a percentage of the job cost; profit, a percentage of
+the job cost and the overhead together; the price, the three added. With overhead or
+profit not entered there is no price. A supplier's total is over the lines it has quoted
+and names the rest.
+
 ## 6. Cost code scheme
 
 Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores its
@@ -518,20 +571,23 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
   changes a solved roof's pitches, eaves and conditions. Everything else is still read and
   edited through the command line. Both read the same rows (`view::elements`,
   `view::roof_totals`); the window works out no quantity of its own.
-* **No money.** Cost lines exist and carry unit costs with statuses; nothing is extended
-  or totalled. Tying a line's status to its quantity's status is D5.
+* **Money is section 5.7** (D4 and D5). Not there: tax, burden, escalation, general
+  liability and bond (PROPOSALS.md item 12); a production rate by the crew-day (13);
+  pricing the job at a chosen supplier (14).
 * **A recipe's lines are copied, not linked.** Changing a recipe does not change the
   elements it was applied to before.
 * **Waste is one percentage on the line.** There is no separate waste for the material
   and for the condition.
 * **An order factor is a number** (30 SF to the sheet). A sheet size is not entered as
   3 ft × 10 ft and multiplied out.
-* **Whether a sheet-metal line orders by the sheet or by the pound is entered, not known
-  from the material.** There is no library of materials.
+* **A material is one price and one order factor.** There is no library of materials
+  beyond the job's own Material elements, and an element is made of one.
 * **Metric, and pitch in degrees or percent, are refused**, not converted (PROPOSALS.md
   items 5 and 6).
-* **Removing a cost line, entering a unit cost, writing a recipe, and re-entering outlines
-  and line ends are done in the file.** `set` edits pitch, height, eave height, condition
+* **Removing a cost line, writing a recipe, and re-entering outlines and line ends are
+  done in the file.** (`line` adds a cost line; `set` enters a unit cost, an allowance, a
+  material, a material's price and quotes, and the job's overhead and profit; `class` and
+  `labor` set a line's class and switch.) `set` edits pitch, height, eave height, condition
   and schedule code on an element, and on a cost line its stretch-out, its formula (with
   the values the formula brings in), its waste, its order conversion, and any value its
   formula names. `apply` gives an element a condition's lines.

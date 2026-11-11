@@ -35,6 +35,17 @@ fn stat_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: St
     });
 }
 
+/// The first cell of a row that names a thing at length: what it is, on as many lines as
+/// it needs, and a small word about it underneath. It takes the room that is left.
+fn named(p: &mut ChildSpawnerCommands, fonts: &Fonts, what: String, ink: Color, about: String, about_ink: Color) {
+    p.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(5.0)), row_gap: px(1.0), overflow: Overflow::clip(), ..default() }).with_children(|c| {
+        c.spawn(text(fonts, what, 12.5, Weight::Regular, ink));
+        if !about.is_empty() {
+            c.spawn((text(fonts, about, 11.0, Weight::Regular, about_ink), TextLayout::no_wrap()));
+        }
+    });
+}
+
 /// One cell of a table row. A width of 0 takes the room that is left.
 fn cell(p: &mut ChildSpawnerCommands, width: f32, right: bool, build: impl FnOnce(&mut ChildSpawnerCommands)) {
     let mut node = Node { align_items: AlignItems::Center, column_gap: px(7.0), overflow: Overflow::clip(), justify_content: if right { JustifyContent::FlexEnd } else { JustifyContent::FlexStart }, ..default() };
@@ -110,7 +121,10 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
         commands.entity(e).despawn();
     }
     let fonts = &*fonts;
-    commands.spawn((Node { width: percent(100.0), max_width: percent(100.0), height: percent(100.0), flex_direction: FlexDirection::Column, overflow: Overflow::clip(), ..default() }, BackgroundColor(theme::canvas()), UiTargetCamera(cameras.sheet), SheetUi)).with_children(|root| {
+    // `min_width` 0: the sheet is as wide as its window and no wider, however long a line
+    // of text in it is. Without it the window's own layout lets the sheet grow to fit its
+    // longest line, and the right-hand columns fall off the edge.
+    commands.spawn((Node { width: percent(100.0), max_width: percent(100.0), min_width: px(0.0), height: percent(100.0), flex_direction: FlexDirection::Column, overflow: Overflow::clip(), ..default() }, BackgroundColor(theme::canvas()), UiTargetCamera(cameras.sheet), SheetUi)).with_children(|root| {
         // The sheet's own title bar.
         root.spawn((Node { height: px(52.0), flex_shrink: 0.0, padding: UiRect::horizontal(px(18.0)), align_items: AlignItems::Center, column_gap: px(12.0), border: UiRect::bottom(px(1.0)), overflow: Overflow::clip(), ..default() }, BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()))).with_children(|bar| {
             wordmark(bar, fonts);
@@ -128,6 +142,8 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             }
             // Money is offered once anything has an allowance or a cost line.
             all.push((Tab::Money, "Money".to_string(), snap.pricing.as_ref().map(|p| p.elements.len()).unwrap_or(0)));
+            // The estimate, once anything has a cost line.
+            all.push((Tab::Estimate, "Estimate".to_string(), snap.estimate.as_ref().map(|e| e.lines.len()).unwrap_or(0)));
             for (tab, name, count) in all {
                 let on = doc.tab == tab;
                 // A job with nothing under a tab does not offer it.
@@ -160,6 +176,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
                 Tab::Building => building(body, fonts, &doc, &snap),
                 Tab::Of(discipline) => systems(body, fonts, &doc, &snap, discipline),
                 Tab::Money => money(body, fonts, &doc, &snap),
+                Tab::Estimate => estimate(body, fonts, &doc, &snap),
             }
             notes(body, fonts, &snap);
             cost_lines(body, fonts, &snap);
@@ -387,6 +404,176 @@ fn dollars(d: Option<&plumbline_world::Derived>) -> (String, Status) {
             Some(x) => (format!("${}", view::figure(x, 2)), d.status),
             None => ("no figure".into(), Status::Unknown),
         },
+    }
+}
+
+/// The estimate sheet: every cost line under its element with its amount in one of three
+/// columns, the recap, and the suppliers side by side. Every figure is the world's
+/// (`view::estimate`); nothing is added up here.
+fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
+    use plumbline_world::{Class, Column};
+    let Some(est) = &snap.estimate else { return };
+    if est.lines.is_empty() {
+        nothing(p, fonts, "Nothing in this job has a cost line.");
+        return;
+    }
+    let money = |d: &plumbline_world::Derived| dollars(Some(d));
+    table(p, fonts, "The sheet", format!("{} lines", est.lines.len()), |t| {
+        header_row(t, fonts, &[("", 7.0, false), ("Line", 0.0, false), ("Priced", 96.0, true), ("At", 92.0, true), ("Material", 96.0, true), ("Labor", 96.0, true), ("General", 96.0, true)]);
+        let mut last = String::new();
+        for l in &est.lines {
+            let selected = doc.selected.as_deref() == Some(l.path.as_str());
+            if l.path != last {
+                last = l.path.clone();
+                row(t, selected, Some(l.path.clone()), |r| {
+                    cell(r, 7.0, false, |_| {});
+                    cell(r, 0.0, false, |c| {
+                        words(c, fonts, l.element.clone(), 12.5, Weight::Semibold, theme::ink());
+                        words(c, fonts, l.path.clone(), 11.0, Weight::Regular, theme::ink_faint());
+                    });
+                });
+            }
+            let status = if l.amount.value.is_some() { l.amount.status } else { Status::Unknown };
+            row(t, selected, Some(l.path.clone()), |r| {
+                cell(r, 7.0, false, |c| dot(c, if l.off { Status::Known } else { status }));
+                let tag = match (l.class, &l.material) {
+                    (_, Some(m)) if !m.is_empty() => format!("made of {m}"),
+                    (_, Some(_)) => "material not said".to_string(),
+                    (Some(c), None) if !matches!(c, Class::Material | Class::Labor) => c.title().to_string(),
+                    (None, None) => "no class".to_string(),
+                    _ => String::new(),
+                };
+                named(r, fonts, l.description.clone(), if l.off { theme::ink_faint() } else { theme::ink() }, tag, if l.class.is_none() { theme::status_ink(Status::Unknown) } else { theme::ink_faint() });
+                cell(r, 96.0, true, |c| words(c, fonts, amount(l.priced.value, 2, &l.priced.unit), 12.5, Weight::Regular, theme::status_ink(l.priced.status)));
+                cell(r, 92.0, true, |c| match l.unit_cost.as_ref().and_then(|v| v.value.map(|x| (x, v))) {
+                    Some((x, v)) => words(c, fonts, format!("${}/{}", view::rate(x), v.unit.trim_start_matches("$/")), 12.5, Weight::Regular, theme::status_ink(v.status)),
+                    None => words(c, fonts, "no price", 12.5, Weight::Regular, theme::status_ink(Status::Unknown)),
+                });
+                let (said, ink) = match (l.off, l.amount.value) {
+                    (true, _) => (format!("off ({})", money(&l.amount).0), theme::ink_faint()),
+                    (false, Some(_)) => (money(&l.amount).0, theme::status_ink(l.amount.status)),
+                    (false, None) => ("no figure".to_string(), theme::status_ink(Status::Unknown)),
+                };
+                for col in [Column::Material, Column::Labor, Column::General] {
+                    // A line with no class stands in no column; its amount is said in the last.
+                    let here = l.class.map(Class::column) == Some(col) || (l.class.is_none() && col == Column::General);
+                    cell(r, 96.0, true, |c| words(c, fonts, if here { said.clone() } else { String::new() }, 12.5, Weight::Regular, ink));
+                }
+            });
+            if l.amount.value.is_none() || !l.amount.note.is_empty() {
+                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(7.0) }, ..default() }).with_child(text(fonts, l.amount.note.clone(), 11.5, Weight::Regular, theme::status_ink(if l.amount.value.is_none() { Status::Unknown } else { Status::Assumed })));
+            }
+        }
+        row(t, false, None, |r| {
+            cell(r, 7.0, false, |_| {});
+            cell(r, 0.0, false, |c| words(c, fonts, "Column totals", 12.5, Weight::Semibold, theme::ink()));
+            cell(r, 96.0, true, |_| {});
+            cell(r, 92.0, true, |_| {});
+            for col in [Column::Material, Column::Labor, Column::General] {
+                let total = est.columns.iter().find(|x| x.0 == col).map(|x| &x.1);
+                cell(r, 96.0, true, |c| match total.and_then(|t| t.value.map(|x| (x, t.status))) {
+                    Some((x, status)) => words(c, fonts, format!("${}", view::figure(x, 2)), 12.5, Weight::Semibold, theme::status_ink(status)),
+                    None => words(c, fonts, "none", 12.5, Weight::Semibold, theme::ink_faint()),
+                });
+            }
+        });
+    });
+    table(p, fonts, "The recap", String::new(), |t| {
+        let line = |t: &mut ChildSpawnerCommands, name: String, about: String, note: String, said: String, status: Status, strong: bool| {
+            row(t, false, None, |r| {
+                cell(r, 7.0, false, |c| dot(c, status));
+                cell(r, 0.0, false, |c| {
+                    words(c, fonts, name, 12.5, if strong { Weight::Semibold } else { Weight::Medium }, theme::ink());
+                    words(c, fonts, about, 11.5, Weight::Regular, theme::ink_faint());
+                });
+                cell(r, 250.0, true, |c| words(c, fonts, note, 11.5, Weight::Regular, theme::status_ink(Status::Assumed)));
+                cell(r, 130.0, true, |c| words(c, fonts, said, if strong { 13.5 } else { 12.5 }, Weight::Semibold, theme::status_ink(status)));
+            });
+        };
+        let lines_of = |n: usize| format!("{n} line{}", if n == 1 { "" } else { "s" });
+        let rests = |assumed: f64| if assumed != 0.0 { format!("${} of it rests on something assumed", view::figure(assumed, 2)) } else { String::new() };
+        for c in &est.classes {
+            match c.total.value {
+                Some(x) => {
+                    let hours = c.hours.map(|(h, _)| format!("  {} hr", view::figure(h, 2))).unwrap_or_default();
+                    line(t, c.class.title().to_string(), format!("{}{hours}", lines_of(c.total.members)), rests(c.total.assumed), format!("${}", view::figure(x, 2)), c.total.status, false);
+                }
+                None => row(t, false, None, |r| {
+                    cell(r, 7.0, false, |_| {});
+                    cell(r, 0.0, false, |c2| words(c2, fonts, c.class.title(), 12.5, Weight::Medium, theme::ink_soft()));
+                    cell(r, 130.0, true, |c2| words(c2, fonts, "none", 12.5, Weight::Regular, theme::ink_faint()));
+                }),
+            }
+        }
+        match est.job_cost.value {
+            Some(x) => line(t, "Job cost".to_string(), lines_of(est.job_cost.members), rests(est.job_cost.assumed), format!("${}", view::figure(x, 2)), est.job_cost.status, true),
+            None => line(t, "Job cost".to_string(), "no classed line comes to a figure".to_string(), String::new(), "none".to_string(), Status::Unknown, true),
+        }
+        let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!("at {} %", view::figure(x, 2)))).unwrap_or_default();
+        for (name, d, at, strong) in [("Overhead", &est.overhead, rate(est.markup.as_ref().map(|m| &m.overhead)), false), ("Profit", &est.profit, rate(est.markup.as_ref().map(|m| &m.profit)), false), ("Price", &est.price, String::new(), true)] {
+            let (said, status) = money(d);
+            line(t, name.to_string(), at, String::new(), said, status, strong);
+            if d.value.is_none() {
+                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(6.0) }, ..default() }).with_child(text(fonts, d.note.clone(), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
+            }
+        }
+        for (who, why) in &est.job_cost.left_out {
+            t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, ..default() }).with_child(text(fonts, format!("left out of the job cost: {who}: {why}"), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
+        }
+        for l in est.lines.iter().filter(|l| l.off) {
+            t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, ..default() }).with_child(text(fonts, format!("switched off, out of every total: {}: {:?} ({})", l.path, l.description, money(&l.amount).0), 11.5, Weight::Regular, theme::ink_soft()));
+        }
+    });
+    let made: Vec<&view::SheetLine> = est.lines.iter().filter(|l| l.material.is_some() && !l.off).collect();
+    if !made.is_empty() {
+        table(p, fonts, "Suppliers, side by side", format!("{} lines made of a material", made.len()), |t| {
+            let width = if est.suppliers.len() > 3 { 96.0 } else { 118.0 };
+            let mut columns: Vec<(&str, f32, bool)> = vec![("", 7.0, false), ("Line", 0.0, false), ("Generic", width, true)];
+            columns.extend(est.suppliers.iter().map(|s| (s.as_str(), width, true)));
+            header_row(t, fonts, &columns);
+            for l in &made {
+                row(t, doc.selected.as_deref() == Some(l.path.as_str()), Some(l.path.clone()), |r| {
+                    cell(r, 7.0, false, |c| dot(c, if l.amount.value.is_some() { l.amount.status } else { Status::Unknown }));
+                    named(r, fonts, format!("{}: {}", l.element, l.description), theme::ink(), l.material.clone().unwrap_or_default(), theme::ink_faint());
+                    let (said, status) = money(&l.amount);
+                    cell(r, width, true, |c| words(c, fonts, said, 12.5, Weight::Medium, theme::status_ink(status)));
+                    for s in &est.suppliers {
+                        cell(r, width, true, |c| match l.quotes.get(s) {
+                            Some(d) => {
+                                let (said, status) = money(d);
+                                words(c, fonts, said, 12.5, Weight::Regular, theme::status_ink(status))
+                            }
+                            None => words(c, fonts, "no quote", 12.5, Weight::Regular, theme::status_ink(Status::Unknown)),
+                        });
+                    }
+                });
+            }
+            let totals: Vec<&view::MoneyTotal> = std::iter::once(&est.at_generic).chain(est.at_supplier.iter().map(|x| &x.1)).collect();
+            row(t, false, None, |r| {
+                cell(r, 7.0, false, |_| {});
+                cell(r, 0.0, false, |c| words(c, fonts, "Total", 12.5, Weight::Semibold, theme::ink()));
+                for total in &totals {
+                    cell(r, width, true, |c| match total.value {
+                        Some(x) => words(c, fonts, format!("${}", view::figure(x, 2)), 12.5, Weight::Semibold, theme::status_ink(total.status)),
+                        None => words(c, fonts, "none", 12.5, Weight::Semibold, theme::ink_faint()),
+                    });
+                }
+            });
+            // A total over fewer lines is not the same job: each says how many it is over.
+            row(t, false, None, |r| {
+                cell(r, 7.0, false, |_| {});
+                cell(r, 0.0, false, |c| words(c, fonts, "Lines in the total", 11.5, Weight::Regular, theme::ink_soft()));
+                for total in &totals {
+                    let short = total.members < made.len();
+                    cell(r, width, true, |c| words(c, fonts, format!("{} of {}", total.members, made.len()), 11.5, Weight::Regular, if short { theme::status_ink(Status::Unknown) } else { theme::ink_soft() }));
+                }
+            });
+            for (s, total) in std::iter::once(("generic", &est.at_generic)).chain(est.at_supplier.iter().map(|(s, t)| (s.as_str(), t))) {
+                for (who, why) in &total.left_out {
+                    t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, ..default() }).with_child(text(fonts, format!("{s} leaves out {who}: {why}"), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
+                }
+            }
+        });
     }
 }
 

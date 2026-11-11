@@ -21,7 +21,7 @@ run again and each gave what this file said they gave.
 | — | The whole building (owner, 2026-11-11) | **A working model of a whole house on BIMCraft's shapes, read and walked, not yet drawn in the window.** The owner widened the brief from the envelope to the building and its services (DECISIONS.md call 26). The model was first written from nothing, then, the same day, re-based on BIMCraft's (call 29; `HANDOFF_REBASE.md`): storeys, walls of a type with a top held to a storey or a height, doors and windows of a type placed by their centre, floors, rooms found from their walls, straight runs of a type joined by fittings, equipment and fixtures with connectors, systems, and a network that says what is joined and what is open. Each value flagged; a takeoff by system. In the window: the whole house under a sky, seen through, a system or a storey at a time, on plan, and on foot inside. Nothing of the building can be edited in the window yet. Judged twice: see "The whole building" and "The re-base on BIMCraft". |
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
 | D4 | Macro to micro | **Demonstrated at the command line and in the window, and judged (tenth judgment, below): thirteen findings, twelve fixed with tests, one minor one left and said. The fixes have not themselves been judged.** An element takes an allowance in $/SF or $/LF; a cost line's quantity is extended by its unit cost; an element's detail is rolled back up to the same $/SF or $/LF; the two are reconciled by element and for the job, each total saying what it leaves out and how much of it rests on an assumption. Prices are entered at the command line or typed in the window. See "D4. What was run". |
-| D5 | Estimate sheet and money | **In progress: built in the core and at the command line, with tests; no demonstration script, nothing in the window, not judged.** Reproducing the owner's whole-job estimate is pending: there is no estimate in `refs/` (Q5). See "D5. How its demonstration will be run". |
+| D5 | Estimate sheet and money | **Demonstrated at the command line and in the window (`demos/d5.sh`, `demos/d5w.sh`). Not yet judged.** A cost line has a class and lands in one column and one row of the recap; in-house work is a production rate into hours; a labor line can be switched off; a material is an element with a generic price and suppliers' quotes, and changing what an element is made of reprices the lines made of it; overhead and profit are entered and have no default. See "D5. What was run". Reproducing the owner's whole-job estimate is pending: there is no estimate in `refs/` (Q5). See "D5. How its demonstration will be run". |
 | D6 | Interchange and reports | Not started. |
 | D7 | Capture | Waiting on the owner's ruling. |
 
@@ -1232,12 +1232,6 @@ element's material is changed, a labor line switched off and the overhead typed 
 keyboard, and the sheet follows; the job is saved and the file holds what was typed,
 flagged.
 
-**So far (2026-11-11):** steps 1 to 11 run at the command line: `demos/d5.sh` exits 0
-with every figure above matching the hand-worked one (job cost $25,292.43 as the job
-starts; $28,442.43 with two typed general-conditions lines; price $34,403.96 at 12 % and
-8 %; $35,659.14 after the south plane is changed to 20 oz copper, with only that plane
-changed in the file). Nothing of D5 is in the window yet, and none of it has been judged.
-
 **Pending, and said so:** "The owner's whole-job estimate is reproduced within rounding."
 `refs/` holds no estimate (QUESTIONS.md Q5). D5 is built against the brief's words, and
 that reproduction stays pending until the spreadsheet is there.
@@ -1246,6 +1240,90 @@ The judge prices a job of its own, and tries to get a line into the wrong class,
 the recap without being named, or counted twice; to make a column total differ from the
 sum of what is shown; and to get an assumed price into a total that looks clean.
 
+
+## D5. What was run and what it showed
+
+**Not judged yet.** Everything below was run by the session that built it.
+
+**At the command line** (`demos/d5.sh`, exit 0; every figure worked by hand in the
+script before it was run, and each matched):
+
+1. *The sheet.* `plumbline estimate` on the made-up priced job: sixteen lines under
+   their elements, each amount in one of three columns. Column totals: material
+   $8,628.10, labor $6,350.47, general $10,313.86 (then $13,463.86 with the typed lines).
+2. *Production rates.* South plane, 419.2627 SF at 25 SF to the hour: 16.7705 hours, at
+   $72.00: $1,207.48. Headwall, 12 LF at 0.25 hours each: 3 hours, $216.00, flagged.
+   Labor row: $2,147.97, 29.83 hours.
+3. *The labor switch.* The south plane's install line switched off: labor $940.49 and
+   13.06 hours, job cost $24,084.95, the line still on the sheet as "off ($1,207.48)"
+   and named under the recap. Switched on: back to $2,147.97 and $25,292.43.
+4. *Subcontract.* West plane, 251.5576 SF at $41.00: $10,313.86 in its own row.
+   Making a line in hours Subcontract is refused.
+5. *Fabrication and supervision.* Fabrication $402.50, 6.71 hours. Supervision
+   $3,800.00, 40 hours (a foreman, five days of eight hours, on the job itself).
+6. *General conditions, typed.* "Dumpster", 2, typed onto the job: named as having no
+   price, and general conditions still "none". Priced at $650.00, and a permit at
+   $1,850.00: general conditions $3,150.00.
+7. *The recap.* Job cost $28,442.43 over 15 lines; the north plane's line, which has no
+   class and no price, named and left out; no price, "overhead has not been entered".
+8. *O&P.* Overhead 10 %: $2,844.24, and still no price. Profit 8 %: $2,502.93, price
+   $33,789.60. Overhead changed to 12 %: $3,413.09, profit $2,548.44, price $34,403.96.
+9. *Three suppliers.* Generic $8,024.36; Harbor Metals $7,861.41; Ridge Supply $8,254.95,
+   each over 4 of 4 lines; Tinners Yard $6,714.91 over 2 of 4, and the two it leaves out
+   named with why (it has not quoted the 20 oz copper).
+10. *A change of material.* South plane from 16 oz to 20 oz copper: its panels go from
+    461.19 lb and $4,150.70 to 576.49 lb and $5,188.38; its underlayment, shop work and
+    install do not move; material $9,665.78, job cost $29,480.11, price $35,659.14. In
+    the file only that plane changed.
+11. *Refused:* a non-hours line made Labor; the switch on a Fabrication line; a quote by
+    the SF for a material sold by the pound; a unit cost on a line made of its material;
+    an overhead of "ten". A material the job does not have is accepted and leaves its
+    lines with no figure and the reason.
+
+**In the window** (`demos/d5w.sh`, exit 0; pictures in `demos/captured/d5/`). The script
+opens the made-up priced job with the two typed general-conditions lines, the way a
+person does, and drives it with the pointer and keyboard. All twenty pictures were
+opened and read at full size (the ten sheet pictures are byte for byte those of a trial
+run read first; the model pictures were read from this run).
+
+* *01.* As opened: the roof, and the sheet's Roof tab.
+* *02, 03, 04.* The sheet's Estimate tab, top, middle and bottom: the sixteen lines in
+  their three columns with their column totals; the recap with its six rows, job cost
+  $28,442.43, and "no figure" for overhead, profit and price, each with why; the
+  suppliers side by side, with "2 of 4" in red under Tinners Yard and what it leaves out.
+* *05, 06.* `O` opens "Overhead on the job"; 12 entered; `R`, 8 entered. The recap reads
+  overhead $3,413.09, profit $2,548.44, price $34,403.96, in amber: what is typed in the
+  window is Assumed.
+* *07, 08.* The south plane picked in the model; `N` opens "What south is made of";
+  "Copper, 20 oz" entered. Its card shows the material, Assumed, with its source. The
+  recap reads material $9,665.78, job cost $29,480.11, price $35,659.14.
+* *09.* `L`: "Install panels" switched off. Labor $940.49 and 13.06 hours, job cost
+  $28,272.63, price $34,198.58, and the line named under the recap as switched off.
+* *10.* An overhead of "ten" is refused in red on both windows and nothing changes.
+
+The script then saves with the keyboard and reads the file: the two changed elements are
+the job and the south plane; the material, the overhead and the profit are Assumed with
+the window as their source; the labor line is off.
+
+**Found by looking at the first trial's pictures, and fixed before these were taken:**
+the sheet was wider than its window on the Estimate tab, so the General column and the
+right edge of every card were cut off. The window's layout let the sheet grow to its
+longest line of text. The sheet is now held to its window, and a long line name wraps
+with its class or material under it.
+
+**Seen and left:** on the entry card for the overhead the hint wraps onto a second line;
+the model window has no way to pick which Labor line to switch when an element has more
+than one (it says so and gives the command).
+
+**Tests** (`crates/world/tests/world.rs`, seven for D5, each figure worked by hand in its
+comments): the classes, columns and job cost; overhead and profit with no default; the
+labor switch; production rates and what a subcontract line is refused; a change of
+material; suppliers side by side; lines typed onto the job.
+
+**What remains for D5:** an independent judge has not yet tried to break it. The owner's
+whole-job estimate is not reproduced (there is none in `refs/`, Q5). Whether the sheet's
+columns and the labor switch are what the owner's sheet has is Q14. Tax, burden, bond,
+crew-day rates and pricing at a chosen supplier are proposals 12 to 14, not built.
 
 ## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
 
