@@ -2119,3 +2119,45 @@ fn random_house_footprints_solve_whole_with_every_edge_lined() {
     }
     assert!(solved > 200, "only {solved} solved, {refused} refused");
 }
+
+#[test]
+fn a_roof_summary_counts_facets_and_names_the_pitch_most_of_it_is_at() {
+    use plumbline_world::view::{figure, roof_totals};
+    // 60 x 30, the south slope at 12:12 and the rest at 6:12. On plan: south 400, north
+    // 800, and each end a triangle 30 wide and 20 deep, 300; 1,800 SF in all, the whole
+    // footprint. On the slope: south 400 x 1.414214 = 565.6854; north 800 x 1.118034 =
+    // 894.4272; each end 300 x 1.118034 = 335.4102. The three at 6:12 come to 1,565.2476
+    // SF against 565.6854 at 12:12, so most of it is at 6:12. Total 2,130.933 SF.
+    let mut job = Job::new("Summary", "test", "test");
+    let (roof_path, _) = solve::new_roof(&mut job, "main", footprint(vec![[0.0, 0.0], [60.0, 0.0], [60.0, 30.0], [0.0, 30.0]], &[Rise::Pitch(12.0), Rise::Pitch(6.0), Rise::Pitch(6.0), Rise::Pitch(6.0)], 10.0)).unwrap();
+    let totals = roof_totals(&mut job, &roof_path);
+    assert_eq!(totals.facets, 4);
+    assert_eq!(totals.predominant_pitch, Some((6.0, Status::Known)));
+    assert_eq!(totals.surface.value, Some(2130.933));
+    // The same surface in squares: 100 SF each, same status, nothing added or left out.
+    let squares = plumbline_world::view::in_squares(&totals.surface);
+    assert_eq!((squares.value, squares.unit, squares.status, squares.members), (Some(21.3093), "SQ", Status::Known, 4));
+    // A worked-out row carries its figure as a number for a view to set; an entered one does not.
+    let rows = plumbline_world::view::elements(&mut job);
+    let plane = rows.iter().find(|e| e.kind == Kind::RoofPlane).unwrap();
+    let area = plane.rows.iter().find(|r| r.label == "surface_area").unwrap();
+    assert_eq!((area.number, area.unit.as_str()), (Some(565.6854), "SF"));
+    assert_eq!(plane.rows.iter().find(|r| r.label == "pitch").unwrap().number, None);
+    // An assumed pitch on the planes that carry most of the roof flags the pitch named.
+    solve::edit(&mut job, &roof_path, solve::Change::Rise { edge: 3, rise: Val::assumed(Rise::Pitch(6.0), "in/12", "guess") }).unwrap();
+    assert_eq!(roof_totals(&mut job, &roof_path).predominant_pitch, Some((6.0, Status::Assumed)));
+    // Figures as a sheet shows them.
+    assert_eq!(figure(2130.933, 2), "2,130.93");
+    assert_eq!(figure(1341.6408, 0), "1,342");
+    assert_eq!(figure(40.0, 2), "40.00");
+    assert_eq!(figure(1234567.5, 1), "1,234,567.5");
+    assert_eq!(figure(-0.001, 2), "0.00");
+    assert_eq!(figure(-12.5, 1), "-12.5");
+    // A view may round, but not round a figure away: one that is not zero never prints as zero.
+    use plumbline_world::view::figure_shown;
+    assert_eq!(figure_shown(2130.933, 2), "2,130.93");
+    assert_eq!(figure_shown(0.004, 2), "0.004");
+    assert_eq!(figure_shown(0.4, 0), "0.4");
+    assert_eq!(figure_shown(-0.0003, 2), "-0.0003");
+    assert_eq!(figure_shown(0.0, 2), "0.00");
+}

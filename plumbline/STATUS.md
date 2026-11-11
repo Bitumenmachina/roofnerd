@@ -17,7 +17,7 @@ run again and each gave what this file said they gave.
 | D0 | Landscape decision | Demonstrated, with limits below. Judged twice. |
 | D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged five times. Every judgment has found a new way to a wrong figure marked Known, each next to the last fix. All found are fixed. **The fifth round's fixes have not been judged.** |
 | D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged twice: the five demonstrations held both times; two entry forms misread in the first are fixed and held in the second. |
-| D2 | 3D roof slice | **A working 3D prototype, not the whole deliverable.** In a window: a roof solved from its footprint, a plane picked with the mouse, its pitch changed and its eave moved with the lines and totals following, a surface given its condition, and the sheet in a second window updating live. Not built: tracing a calibrated plan, a dormer, a parapet and tapered crickets in 3D, dragging with the mouse, editing in the sheet. Judged once: the solver's areas and lengths held on every ordinary roof; it found stale planes left Known, an eave moved through the far wall, and an estimator's entries moving to another slope, among others. All fixed. **Those fixes are not judged.** See "D2. What was run". |
+| D2 | 3D roof slice | **A working 3D prototype, not the whole deliverable.** In a window: a roof solved from its footprint, a plane picked with the mouse, its pitch changed and its eave moved with the lines and totals following, a surface given its condition, and the sheet in a second window updating live. The windows were drawn again on 2026-11-11 after the owner said the first looked cheap and tacky (DECISIONS.md call 25). Not built: tracing a calibrated plan, a dormer, a parapet and tapered crickets in 3D, dragging with the mouse, editing in the sheet. Judged once: the solver's areas and lengths held on every ordinary roof; it found stale planes left Known, an eave moved through the far wall, and an estimator's entries moving to another slope, among others. All fixed. **Those fixes are not judged.** See "D2. What was run". |
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
 | D4 | Macro to micro | Not started. How its demonstration will be run is written at the end of this file. |
 | D5 | Estimate sheet and money | Not started. Reference estimate missing (Q5). |
@@ -84,7 +84,7 @@ element. Changing one pitch changes, in a file diff, only that entity and the co
 derived from it. Assumed and Unknown values display as flagged.
 
 **How it is run:** `demos/d1.sh`. It uses the built-in sample job, which is made up.
-`cargo test` runs 77 checks on the same model.
+`cargo test` runs 78 checks on the same model.
 
 The figures below are as rerun after the units amendment and D3. Those added to the
 sample job one sheet-metal cost line on the porch headwall and three conditions as recipes,
@@ -124,7 +124,7 @@ still touches the same five entries and no others.
 * Hip: 15 over and 15 up on plan = 21.2132 LF; climbs 7.5 ft; √(450 + 56.25) = 22.5 LF.
 * Porch rake: 8 ft run at 3:12 climbs 2 ft; √68 = 8.2462 LF.
 
-**`cargo test`: 77 passed, 0 failed** (67 on the model, 8 on the ported skeleton, which
+**`cargo test`: 78 passed, 0 failed** (68 on the model, 8 on the ported skeleton, which
 are BIMCraft's own, and 2 on the command line).
 
 **What remains**
@@ -429,41 +429,71 @@ What was decided is DECISIONS.md call 23.
 **How it is run:** `demos/d2.sh`. It drives the real program with a real pointer and
 keyboard (`xdotool`) on a virtual display (`Xvfb`) with Mesa's software Vulkan driver, has
 the program save a picture of both windows after each step, and then reads the saved job
-back with the command line. It exits non-zero if a step fails. The 14 pictures are in
+back with the command line. It exits non-zero if a step fails. The 16 pictures are in
 `demos/captured/d2/`. On a desktop the same thing is `plumbline-app <job file>` and a
 mouse.
 
-**What was run and what it showed** (output of `demos/d2.sh`, exit 0; every picture was
-opened and read)
+**The windows were drawn again** (2026-11-11). The owner looked at the first pictures and
+said the prototype looked cheap and tacky. He was right: it was a dark screen with a block
+of monospaced text over it. What was looked at and what was decided is DECISIONS.md call
+25. In short: the roof is drawn the way the trade's own measurement reports draw one
+(facets labelled with area and pitch, lines coloured by kind with a legend, lengths
+written on the lines, a plan view), it sits on a building and a ground with a shadow, the
+values on the selection are listed beside it with their flags and sources, and the sheet
+is a set of tables. The steps and the figures below are the same session as before, run
+again in the new windows.
+
+**What was run and what it showed** (output of `demos/d2.sh`, exit 0; every one of the 16
+pictures was opened and read at full size)
 
 1. *A roof from its footprint.* `plumbline roof` on an L-shaped footprint (40 × 20 with a
    20 × 20 wing, 6:12 all round, eaves at 10 ft) writes 6 planes and 14 lines: 6 eaves, 5
    hips, 2 ridges and the valley at the inside corner. Nobody entered a hip or a ridge.
    The file passes `check`.
-2. *The window* (`01-roof.png`, `01-sheet.png`). The roof in 3D with eaves green, hips
-   orange, ridges white, the valley blue. A second operating-system window holds the
-   sheet: each plane's pitch and surface, each line's length, and totals (1,341.6408 SF,
-   13.4164 SQ, which is 1,200 SF on plan × 1.118034; 160 LF of eave, 75 of hip, 40 of
-   ridge, 15 of valley).
-3. *A plane picked with the mouse* (`02`). A click on the south plane turns it gold, the
-   sheet marks its row, and the view lists its corners from the model to the sixteenth
-   (east 100' 0" to 140' 0", north 0' 0" and 10' 0") and reads the pointer's position.
+2. *The windows* (`01-roof.png`, `01-sheet.png`). The roof in 3D on its walls, with eaves
+   green, hips orange, ridges red and the valley blue, and a legend that says so and gives
+   each kind's count and length. Each facet carries its number, area and pitch. Beside the
+   view: 1,341.64 SF, 13.42 SQ, predominant pitch 6:12, 6 facets (1,200 SF on plan ×
+   1.118034); 160 LF of eave, 75 of hip, 40 of ridge, 15 of valley. The title bar counts
+   the job's values by flag. A second operating-system window holds the sheet: the same
+   summary, then each plane's pitch and surface and each line's length as rows.
+3. *A plane picked with the mouse* (`02`). A click on the south plane outlines it in blue
+   and marks its row in the sheet. The inspector lists its four corners from the model to
+   the sixteenth (east 100' 0" to 140' 0", north 0' 0" and 10' 0", height 10' 0" and
+   15' 0"), every value entered on it with its source, and every figure worked out from
+   them with its formula. The status bar reads the pointer's position on the roof (east
+   117' 0 7/8", north 2' 1 15/16", height 11' 0 15/16": 10 ft plus half of 2.16).
 4. *Its pitch changed in the 3D view* (`03`). Two presses raise it from 6 to 8 in 12. The
    roof is solved again: the ridge moves, a short hip appears where the main ridge now
    meets the wing's at a different height, and the sheet shows 15 lines and a new total
-   (1,362.1672 SF). Everything that rests on the new pitch is flagged Assumed.
-5. *Its eave moved* (`04`). One press moves the south eave out 6 in; the plane's corners
-   read north -0' 6".
-6. *A dimension typed* (`05`, `06`). `P`, then `9:12` typed and Enter: the pitch is 9 in
-   12 and the roof is solved again.
+   (1,362.17 SF). Everything that rests on the new pitch turns amber and carries an
+   "Assumed" chip, in both windows, and the sheet lists the edge under "To settle" with
+   its source.
+5. *Its eave moved* (`04`). One press moves the south eave out 6 in; the eave line reads
+   (100, -0.5) to (140, -0.5) and the eave is 40' 0" still, the eaves either side 20' 6".
+6. *A dimension typed* (`05`, `06`). `P` opens a field over the view; `9:12` typed and
+   Enter: the pitch is 9 in 12 and the roof is solved again (283.93 SF on the plane,
+   1,393.98 SF in all).
 7. *A surface given its condition* (`07`). `C` gives the selected plane "Standing seam
-   copper roof"; the sheet lists its two cost lines worked out (283.925 SF each; the
-   panels' with-waste figure is unknown because no waste is entered).
-8. *What was left in the saved job.* It passes `check`. Besides the roof and what is
+   copper roof". The plane is drawn in copper, its row in the sheet names the condition,
+   and the inspector lists the condition and its cost code as Assumed.
+8. *The same roof on plan* (`08`). `T` looks straight down: the L, every line with its
+   length written on it, every facet with its area and pitch. The sheet, scrolled down,
+   lists the plane's two cost lines worked out step by step (283.93 SF each, Assumed; the
+   panels' waste, with-waste figure and both prices are red and say unknown, because none
+   is entered).
+9. *What was left in the saved job.* It passes `check`. Besides the roof and what is
    solved from it, only the job's path counter changed (by 1, for the new hip).
    Footprint edge 1 is 9 in 12, Assumed, source "set in the 3D view; not yet confirmed
    against a drawing". The south edge is at y = -0.5 ft. The plane kept its path through
    four solves and carries the condition and its two lines.
+
+Also run by hand on the virtual display and looked at, not in the script: the sample's
+hand-entered hip roof (it is drawn, in copper, and an edit key on it is refused with the
+reason in a red card); an edge made a gable on a plane that carried a condition (the gable
+wall is drawn under its rakes, and an amber card names what was lost); a key pressed with
+nothing selected (refused, said why); the wheel scrolling the inspector and the sheet; the
+main window made smaller (the panels keep their places).
 
 **Hand checks**
 * After the session the south plane is a trapezoid 40 ft at the eave and 15.4 ft at the
@@ -482,9 +512,9 @@ opened and read)
 **The opening proof** (DECISIONS.md call 2): a window showing a roof, a plane picked with
 the mouse, a second OS window on the same world updating live. All three are in the
 pictures. The fourth, "a coordinate readout holding 1/16 in at the far corner of a real
-footprint", is met in part: the corners listed come from the 64-bit model and read to the
-sixteenth; the pointer's own position is as fine as the picture is, and no real job has
-been opened.
+footprint", is met in part: the corners the inspector lists come from the 64-bit model and
+read to the sixteenth; the pointer's own position is as fine as the picture is, and no
+real job has been opened.
 
 **What is not built, of the demonstration as the brief states it**
 * **Trace a calibrated plan or image.** The footprint is typed as coordinates.
@@ -497,6 +527,10 @@ been opened.
   dimension updates the 3D model" is done by typing in the 3D window.
 * **Choosing a condition.** `C` gives the first condition in the job that fits the
   element's kind.
+* **One roof at a time.** The window shows the roof named on the command line, or the
+  first one solved from a footprint. The job's other roofs are not in the scene.
+* **A real desktop.** Everything was run on a virtual display with a software renderer.
+  It has not been run on a graphics card, on Wayland, or across two monitors.
 * **Courtyards.** The skeleton handles them; the solver refuses a slope that closes
   round a hole.
 

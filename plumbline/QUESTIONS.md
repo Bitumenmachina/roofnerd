@@ -103,3 +103,15 @@ flashing.
 **Assumption in use:** borrow its solvers by porting them when D2 and D3 reach those
 steps, with attribution, and leave that program alone. If you would rather the two share
 one core crate, or that this project not touch that ground yet, say so before the port.
+
+## Q12. Is the SIL Open Font License acceptable for the program's typeface?
+The windows are set in Inter, which is built into `plumbline-app`. Inter is under the SIL
+Open Font License 1.1, not MIT or Apache. The OFL allows a font to be bundled, embedded
+and redistributed with any software, including sold software; what it restricts is the
+font itself (a changed font must stay under the OFL and cannot be sold on its own). It
+places nothing on the program. `tools/licenses.sh` checks crates, not fonts, so this is
+recorded by hand in LICENSES.md.
+**Assumption in use:** yes. If not, the alternative is to use whatever sans-serif the
+machine has (`FontSource::sans_serif()`), at the cost of the program looking different on
+every machine and having no text at all on one with no fonts.
+

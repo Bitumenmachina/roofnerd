@@ -493,3 +493,59 @@ recorded so he can overrule it.
 * **Not done:** a slope pinched by gables into two pieces joined at a point is refused,
   as courtyards are. A plane entered by hand under a solved roof is noted, not checked for
   overlap.
+
+### 25. The windows drawn again (owner, 2026-11-11: the prototype "looks cheap and tacky")
+The first window was a dark screen with one block of monospaced text over it and a second
+block of text for a sheet. The owner asked for the toolkit's real use to be looked at and
+for work of a higher standard. What was looked at, and what was decided from it:
+* **What a roof is shown as, in this trade.** The measurement reports estimators already
+  read (EagleView, RoofSnap, GAF QuickMeasure) all show the same things: a plan diagram
+  with each facet labelled with its area and pitch, each line's length written on it, the
+  lines coloured by kind, totals by kind of line, the predominant pitch and the facet
+  count. None of that is ours to invent, so the windows now show those. RoofSnap's own word
+  for the line where one slope changes to another is "pitch change"; the windows use it
+  for `PitchBreak`. No vendor's colours could be confirmed from a public source, so the
+  colours here are ours and **every window carries a legend**.
+* **What the engine offers.** Bevy 0.20 has real-time shadows, anti-aliasing, distance
+  fog, a layout engine with rounded corners, borders and shadows, picking for panels as
+  well as meshes, and OpenType text with tabular figures. The first window used none of
+  them. It now uses all of them. `bevy_feathers` (Bevy's own widget set) was read and not
+  used: it is styled for a dark editor and is marked experimental.
+* **A light drafting look, not a dark game look.** A pale canvas, white panels with a
+  hairline edge, ink-dark text. Colour is kept for meaning and means one thing each:
+  amber is Assumed, red is Unknown, blue is the selection, and each kind of line has one
+  colour in the drawing, the legend and the sheet.
+* **A plane's colour is what it is covered with, not its status.** The first window
+  painted a whole plane gold, red or tan by status, so one assumed pitch turned the roof
+  into a warning sign and the copper could not be seen. Status is now on the figure it
+  belongs to: an amber or red figure, a chip that says Assumed or Unknown, a dot on the
+  facet's label. A plane with no area at all is still drawn in a red wash.
+* **The roof sits on something.** Under each eave and rake a fascia and a wall are drawn
+  down to the datum, on a ground with a ten-foot grid and a shadow. **They are for the eye
+  only**: not elements, not saved, not measured, not selectable. The ground has no edge:
+  it is one sheet in a colour that comes out as the canvas when lit.
+* **Two views of the one roof: 3D, and plan.** `T` looks straight down without
+  perspective, north up, with every line's length written on it: the diagram a roof report
+  gives. It is the same scene and the same labels from another eye, not a second drawing.
+* **An inspector beside the view.** With nothing selected it summarises the roof; with a
+  plane or a line selected it lists every value on it with its flag and, under each, its
+  source or the formula it is worked out by, and the plane's corners to the sixteenth.
+* **The sheet is a sheet.** Summary figures, then a table of planes and a table of lines
+  with figures in aligned columns, then the selected element's cost lines step by step.
+  A click on a row selects it in the 3D view. It still takes no input (call 23).
+* **Typeface: Inter, built into the program** (SIL Open Font License 1.1; QUESTIONS.md
+  Q12). Three weights, 1.8 MB. Figures are set tabular so columns line up. The program
+  must look the same on a machine with no fonts installed, so it is not left to the system.
+* **A window may round a figure but not round it away.** Figures show to two places. One
+  that is not zero and would print as zero is shown to as many places as it takes
+  (`view::figure_shown`). The model still keeps four.
+* **The windows still work nothing out.** What was added to `plumbline-world` for them:
+  the facet count and predominant pitch on `view::roof_totals`, a surface said in squares
+  (`view::in_squares`), and each derived row's figure as a number so a view can set its
+  own decimal places. Where a label is placed on the screen is worked out in the window;
+  no quantity is.
+* **Added to the keys:** `T` plan or 3D, `F` frame the roof, `Esc` let go of the
+  selection, middle-drag to pan, and a click on the ground lets go.
+* **Not done:** the windows are still not judged on a real graphics card or a real
+  desktop; everything above was run on the virtual display.
+

@@ -32,18 +32,18 @@ surface() { "$P" show "$1" | awk -v p="$PLANE1" '$1==p{on=1} on&&/surface_area/{
 echo "the roof is $ROOF; the plane on its south edge is $PLANE1, $(surface "$T/job.json") SF"
 
 echo
-echo "== The session: pick a plane, raise its pitch twice, move its eave, type a pitch, give it a condition, save =="
+echo "== The session: pick a plane, raise its pitch twice, move its eave, type a pitch, give it a condition, look at the plan, save =="
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
 export VK_ICD_FILENAMES="$ICD" WGPU_BACKEND=vulkan PLUMBLINE_SHOTS="$OUT"
 "$APP" "$T/job.json" > "$T/app.log" 2>&1 &
 APP_PID=\$!
 for i in \$(seq 1 60); do xdotool search --name "plumbline: roof" >/dev/null 2>&1 && break; sleep 1; done
-sleep 15   # the first frames are slow on a software renderer
+sleep 18   # the first frames are slow on a software renderer
 xdotool windowfocus "\$(xdotool search --name 'plumbline: roof' | head -1)"; sleep 1
-shot() { xdotool key F12; sleep 4; }
+shot() { xdotool key F12; sleep 5; }
 shot                                                    # 01 as opened
-xdotool mousemove 700 590; sleep 1; xdotool click 1; sleep 2; xdotool mousemove 705 592; sleep 1
+xdotool mousemove 640 505; sleep 1; xdotool click 1; sleep 2; xdotool mousemove 646 509; sleep 1
 shot                                                    # 02 a plane picked with the mouse
 xdotool key equal; sleep 2; xdotool key equal; sleep 2
 shot                                                    # 03 its pitch raised twice: 6 to 8 in 12
@@ -55,17 +55,21 @@ xdotool key Return; sleep 2
 shot                                                    # 06 the typed pitch set
 xdotool key c; sleep 2
 shot                                                    # 07 a condition given to the surface
+xdotool mousemove 1880 500; sleep 1; for i in \$(seq 1 16); do xdotool click 5; sleep 0.2; done; sleep 1
+xdotool mousemove 1300 500; sleep 1; for i in \$(seq 1 5); do xdotool click 5; sleep 0.2; done; sleep 1
+xdotool mousemove 646 509; sleep 1; xdotool key t; sleep 2
+shot                                                    # 08 the same roof on plan; the sheet scrolled to its cost lines
 xdotool key F2; sleep 2                                 # save
 kill \$APP_PID; wait \$APP_PID 2>/dev/null
 SESSION
 chmod +x "$T/session.sh"
-timeout 300 xvfb-run -a -s "-screen 0 1760x780x24" "$T/session.sh" || true
+timeout 400 xvfb-run -a -s "-screen 0 2320x920x24" "$T/session.sh" || true
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
 ls "$OUT" | tr '\n' ' '; echo
-for n in 01 02 03 04 05 06 07; do
+for n in 01 02 03 04 05 06 07 08; do
   [ -s "$OUT/$n-roof.png" ] && [ -s "$OUT/$n-sheet.png" ] || { echo "FAIL: no picture $n of both windows"; exit 1; }
 done
-echo "  14 pictures saved to $OUT (roof and sheet, after each of 7 steps)"
+echo "  16 pictures saved to $OUT (roof and sheet, after each of 8 steps)"
 
 echo
 echo "== What the session left in the saved job =="

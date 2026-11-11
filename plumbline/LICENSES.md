@@ -416,3 +416,14 @@ from a shallow clone of the source.
 
 Nothing else is borrowed. The owner's earlier program was read for the pattern a cost line
 is worked in (DECISIONS.md call 18); none of its code was copied.
+
+## Bundled fonts
+
+`tools/licenses.sh` lists crates. Fonts are not crates, so they are listed here by hand.
+
+| What | From | License | Where |
+|---|---|---|---|
+| Inter, three weights (Regular, Medium, SemiBold), unmodified | The Inter Project (https://rsms.me/inter/), version 4.0, as packaged by Debian (`fonts-inter` 4.0+ds-1) | SIL Open Font License 1.1 | `crates/app/assets/fonts/`, built into `plumbline-app`. The copyright notice and the license are in `crates/app/assets/fonts/OFL.txt` and referred to from `NOTICE`. |
+
+The OFL is not one of the permissive software licenses rule 1 names. It restricts the
+font, not the program that carries it (QUESTIONS.md Q12).

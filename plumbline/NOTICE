@@ -33,3 +33,17 @@ states that it is ported and lists what was changed.
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
+
+==============================================================================
+Inter typeface
+==============================================================================
+
+crates/app/assets/fonts/Inter-Regular.otf, Inter-Medium.otf and
+Inter-SemiBold.otf are the Inter typeface, unmodified, and are built into the
+plumbline-app program.
+
+    Copyright 2016-2023 The Inter Project Authors (https://github.com/rsms/inter)
+
+Inter is licensed under the SIL Open Font License, Version 1.1. The license is
+in full in crates/app/assets/fonts/OFL.txt. It covers the font files only.
+
