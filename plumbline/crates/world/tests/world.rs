@@ -5266,7 +5266,8 @@ fn j12_10_11_13_17_18_sources_names_and_what_goes_where() {
     }
     assert_eq!(source(&mut job), (Status::Assumed, "plan A; moved (guess)".to_string()));
     ed::move_by(&mut job, &wall[0], 1.0, 0.0, ed::Entered { status: Status::Known, source: "survey" }).unwrap();
-    assert_eq!(source(&mut job), (Status::Assumed, "plan A; moved (survey)".to_string()));
+    // (Call 46: a source loses nothing; each change of hand adds its note.)
+    assert_eq!(source(&mut job), (Status::Assumed, "plan A; moved (guess); moved (survey)".to_string()));
     // A move by nothing is not a move.
     let before = save(&mut job);
     assert_eq!(ed::move_by(&mut job, &wall[0], 0.0, 0.0, guess).unwrap_err(), format!("{} is moved by nothing", wall[0]));
@@ -5317,7 +5318,7 @@ fn a_drawing_gets_its_scale_from_one_dimension_and_what_is_traced_over_it_says_s
     // Its 30 ft dimension line runs from (126, 90) to (666, 90): 540 points. 30 / 540 is
     // 1/18 ft to the point. The dimension is read off the drawing, so it is Assumed.
     let read = ed::Entered { status: Status::Assumed, source: "read off the drawing" };
-    let k = plans::calibrate(&mut job, &d, [126.0, 90.0], [666.0, 90.0], "30 ft", read).unwrap();
+    let k = plans::calibrate(&mut job, &d, [126.0, 90.0], [666.0, 90.0], "30 ft", read).unwrap().feet_per_unit;
     assert!((k - 1.0 / 18.0).abs() < 1.0e-12, "{k}");
     let near = |a: Option<[f64; 2]>, b: [f64; 2]| a.is_some_and(|a| (a[0] - b[0]).abs() < 1.0e-9 && (a[1] - b[1]).abs() < 1.0e-9);
     // The page's lower-left corner is the plan's corner until it is lined up: the house's
@@ -5638,16 +5639,16 @@ fn j13_10_11_12_13_18_hours_names_sources_systems_and_a_cut_runs_name() {
         let mut q = job.world.query::<(&Node, &Supply)>();
         q.iter(&job.world).map(|(n, _)| n.path.clone()).next().unwrap()
     };
-    for by_the_hour in ["2 lb/hr", "2 lb/hour", "2 lb/h", "2 lb/HR", "0.5 hours/lb"] {
+    for by_the_hour in ["2 lb/hr", "2 lb/hour", "2 lb/h", "2 lb/HR", "0.5 hours/lb", "2 lb/MH", "2 lb/man-hour", "2 lb/manhour", "2 lb/hr.", "2 lb/day", "2 lb/min", "2 lb/shift"] {
         let why = job.set(&material, "order", Some(by_the_hour), Status::Known, "test").unwrap_err();
         assert!(why.contains("by the hour"), "{by_the_hour}: {why}");
     }
     // One name: capitals, spaces run together or beside a comma, a full stop that is
     // not a decimal point. Not one name: figures a space apart, a different figure.
-    for (a, b) in [("Copper,16 oz", "Copper, 16 oz."), ("Grade No. 1", "grade no 1"), ("No 1.", "No 1"), ("Supply  air.", "supply air"), ("g", "G")] {
+    for (a, b) in [("Copper,16 oz", "Copper, 16 oz."), ("Grade No. 1", "grade no 1"), ("No 1.", "No 1"), ("Supply  air.", "supply air"), ("g", "G"), ("Copper, 16 oz", "Copper 16 oz"), ("Pipe 1-1/2 in", "Pipe 1 1/2 in"), ("Cu 16oz", "Cu 16 oz"), ("No. 1", "No.1"), ("Type X", "Type-X"), ("2x4", "2 x 4")] {
         assert!(same_name(a, b), "{a:?} and {b:?}");
     }
-    for (a, b) in [("Pipe 1 1/2 in", "Pipe 11/2 in"), ("Copper 1 6 oz", "Copper 16 oz"), ("Pipe 1.5 in", "Pipe 15 in"), ("Pipe 1.5 in", "Pipe 1 5 in")] {
+    for (a, b) in [("Pipe 1 1/2 in", "Pipe 11/2 in"), ("Copper 1 6 oz", "Copper 16 oz"), ("Pipe 1.5 in", "Pipe 15 in"), ("Pipe 1.5 in", "Pipe 1 5 in"), ("a.b", "ab"), ("Pipe 1,2", "Pipe 1, 2"), ("Copper, 16 oz", "Copper, 20 oz")] {
         assert!(!same_name(a, b), "{a:?} and {b:?}");
     }
     // What a person wrote as a source stays, whatever words are in it.
@@ -5659,7 +5660,7 @@ fn j13_10_11_12_13_18_hours_names_sources_systems_and_a_cut_runs_name() {
     ed::move_by(&mut job, &wall[0], 1.0, 0.0, by_eye).unwrap();
     assert_eq!(source(&mut job), "A-101; cut (section 3) shows this wall at grid C, rev B; moved (by eye)");
     ed::move_by(&mut job, &wall[0], 1.0, 0.0, ed::Entered { status: Status::Assumed, source: "by tape" }).unwrap();
-    assert_eq!(source(&mut job), "A-101; cut (section 3) shows this wall at grid C, rev B; moved (by tape)");
+    assert_eq!(source(&mut job), "A-101; cut (section 3) shows this wall at grid C, rev B; moved (by eye); moved (by tape)");
 
     // A duct is not joined to a lavatory on the cold water.
     let (mut job, s, _, _, pieces) = ducted();
@@ -5680,4 +5681,112 @@ fn j13_10_11_12_13_18_hours_names_sources_systems_and_a_cut_runs_name() {
     }
     let named = ed::split(&mut job, &pieces[1], [10.0, 8.0], how).unwrap();
     assert_eq!(name(&mut job, &named), format!("trunk to the bedrooms, cut at {}", named.rsplit('-').next().unwrap().parse::<u32>().unwrap()));
+}
+
+// ---------------------------------------------------------------- the fourteenth judgment
+
+#[test]
+fn j14_2_3_a_scale_set_again_says_what_it_left_and_keeps_a_drawing_lined_up() {
+    use plumbline_world::editing as ed;
+    use plumbline_world::plans;
+    let how = ed::Entered { status: Status::Known, source: "made-up plan" };
+    let read = ed::Entered { status: Status::Assumed, source: "read off the drawing" };
+    let (mut job, s, wt, ..) = drawn();
+    let d = plans::add(&mut job, &s, "A-1", plans::Read { file: "a-1.pdf", page: 1, bytes: 10, checksum: "0123456789abcdef", size: [792.0, 612.0] }, how).unwrap();
+    // A dimension misread as 15 ft over 540 points: 36 to the foot. The house's corner,
+    // (126, 126) on the page, lined up to the plan's (0, 0): the sheet's own corner is
+    // then at -126 / 36 = -3.5 each way.
+    let first = plans::calibrate(&mut job, &d, [126.0, 90.0], [666.0, 90.0], "15 ft", read).unwrap();
+    assert!(first.left_at_earlier_scale.is_empty() && !first.lined_up_again);
+    plans::line_up(&mut job, &d, [126.0, 126.0], [0.0, 0.0], how).unwrap();
+    let drawing = |job: &mut Job| job.find(&d).and_then(|e| job.world.get::<plans::Drawing>(e).cloned()).unwrap();
+    assert_eq!(drawing(&mut job).at.value, Some([-3.5, -3.5]));
+    // A wall traced along the outline's south side, 540 points: 15 ft at that scale.
+    let source = plans::traced_from(&mut job, &d).unwrap();
+    let traced = ed::Entered { status: Status::Assumed, source: &source };
+    let (a, b) = (drawing(&mut job).to_plan([126.0, 126.0]).unwrap(), drawing(&mut job).to_plan([666.0, 126.0]).unwrap());
+    let wall = ed::walls(&mut job, &s, &wt, &[a, b], false, ed::Top::Height("8 ft"), traced).unwrap();
+    assert_eq!(measure_of(&mut job, &wall[0], "plan_length").value, Some(15.0));
+    assert_eq!(plans::traced_over(&mut job, &d).unwrap(), wall);
+    // The dimension read again, rightly, as 30 ft: 18 to the foot. The wall is where it
+    // was, 15 ft long, and is named as left at the earlier scale; the corner the drawing
+    // was lined up by is still the plan's (0, 0), so the sheet's own corner is at -7.
+    let again = plans::calibrate(&mut job, &d, [126.0, 90.0], [666.0, 90.0], "30 ft", read).unwrap();
+    assert!((again.feet_per_unit - 1.0 / 18.0).abs() < 1.0e-12);
+    assert_eq!((again.left_at_earlier_scale.clone(), again.lined_up_again), (wall.clone(), true));
+    assert_eq!(drawing(&mut job).at.value, Some([-7.0, -7.0]));
+    let corner = drawing(&mut job).to_plan([126.0, 126.0]).unwrap();
+    assert!(corner[0].abs() < 1.0e-9 && corner[1].abs() < 1.0e-9, "{corner:?}");
+    assert_eq!(measure_of(&mut job, &wall[0], "plan_length").value, Some(15.0));
+    // It stays said: by the drawing, after a save and a load, until the wall is gone.
+    let (mut back, _) = load(&save(&mut job)).unwrap();
+    let earlier = plans::at_earlier_scales(&mut back, &d).unwrap();
+    assert_eq!(earlier.len(), 1);
+    assert!((earlier[0].0 - 1.0 / 36.0).abs() < 1.0e-12 && earlier[0].1 == wall);
+    ed::remove(&mut back, &wall[0]).unwrap();
+    assert!(plans::at_earlier_scales(&mut back, &d).unwrap().is_empty());
+    // The same scale given again leaves nothing behind: nothing changed.
+    let same = plans::calibrate(&mut job, &d, [126.0, 90.0], [666.0, 90.0], "30 ft", read).unwrap();
+    assert!(same.left_at_earlier_scale.is_empty());
+    // Two points a thousandth of a unit apart, or off the page, are no scale.
+    let before = save(&mut job);
+    assert!(plans::calibrate(&mut job, &d, [126.0, 90.0], [126.001, 90.0], "30 ft", read).unwrap_err().contains("its two points are one point"));
+    assert!(plans::calibrate(&mut job, &d, [-5000.0, 90.0], [666.0, 90.0], "30 ft", read).unwrap_err().contains("not both on the page"));
+    assert_eq!(save(&mut job), before);
+}
+
+#[test]
+fn j14_5_6_7_walls_at_an_angle_are_walls_and_a_lateral_is_a_joint() {
+    use plumbline_world::editing as ed;
+    let how = ed::Entered { status: Status::Known, source: "made-up plan" };
+    // Walls crossing at 25, 20 and 10 degrees, and one meeting another's end at 10: each
+    // is a wall. (Tangents: 0.4663, 0.3640, 0.1763.)
+    let (mut job, s, wt, ..) = drawn();
+    ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [40.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap();
+    for (x, tangent) in [(5.0, 0.4663), (15.0, 0.3640), (25.0, 0.1763)] {
+        ed::walls(&mut job, &s, &wt, &[[x - 4.0, -4.0 * tangent], [x + 4.0, 4.0 * tangent]], false, ed::Top::Height("9 ft"), how).unwrap();
+    }
+    ed::walls(&mut job, &s, &wt, &[[40.0, 0.0], [50.0, 1.763]], false, ed::Top::Height("9 ft"), how).unwrap();
+    // One a degree off the first, crossing it along its length, is the first drawn again.
+    let before = save(&mut job);
+    assert!(ed::walls(&mut job, &s, &wt, &[[0.0, -0.1], [40.0, 0.6]], false, ed::Top::Height("9 ft"), how).unwrap_err().contains("lies along"));
+    assert_eq!(save(&mut job), before);
+
+    // Two walls an inch apart for 20 ft, of a type whose thickness nobody knows: the
+    // second is refused all the same.
+    let (mut job, s, ..) = drawn();
+    let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).unwrap();
+    let unsized_type = job.add(&root, Kind::Type, "wall, thickness not known").unwrap();
+    job.put(&unsized_type, WallType { thickness: Val::unknown("in", "not on the drawings"), layers: Vec::new() }).unwrap();
+    ed::walls(&mut job, &s, &unsized_type, &[[0.0, 0.0], [20.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap();
+    assert!(ed::walls(&mut job, &s, &unsized_type, &[[0.0, 1.0 / 12.0], [20.0, 1.0 / 12.0]], false, ed::Top::Height("9 ft"), how).unwrap_err().contains("lies along"));
+
+    // A ground-floor wall held up to the roof's level, 16 ft up, and a wall on the floor
+    // above on the same line: the upper one stands inside the lower. Refused.
+    let (mut job, s, wt, ..) = drawn();
+    let upper = ed::storey(&mut job, "upper", "8 ft", "8 ft", how).unwrap();
+    let roof = ed::storey(&mut job, "roof", "16 ft", "1 ft", how).unwrap();
+    ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [20.0, 0.0]], false, ed::Top::Level(&roof), how).unwrap();
+    assert!(ed::walls(&mut job, &upper, &wt, &[[0.0, 0.0], [20.0, 0.0]], false, ed::Top::Height("8 ft"), how).unwrap_err().contains("lies along"));
+    // One on the floor above over a wall that stops at that floor is two walls.
+    let (mut job, s, wt, ..) = drawn();
+    let upper = ed::storey(&mut job, "upper", "9 ft", "8 ft", how).unwrap();
+    ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [20.0, 0.0]], false, ed::Top::Level(&upper), how).unwrap();
+    ed::walls(&mut job, &upper, &wt, &[[0.0, 0.0], [20.0, 0.0]], false, ed::Top::Height("8 ft"), how).unwrap();
+
+    // Two 4 in pipes, the branch leaving the main's side at 30 degrees: a lateral. The
+    // branch is inside the main for (2 + 2) in / sin 30 = 8 in, and that is the joint.
+    let (mut job, s, ..) = drawn();
+    let pipe = ed::segment_type(&mut job, "4 in", Kind::Pipe, "4 in", None, how).unwrap();
+    ed::runs(&mut job, &s, Kind::Pipe, &pipe, &[[0.0, 0.0], [20.0, 0.0]], "8 ft", None, how).unwrap();
+    ed::runs(&mut job, &s, Kind::Pipe, &pipe, &[[10.0, 0.0], [10.0 + 6.0 * 0.866_025_4, 3.0]], "8 ft", None, how).unwrap();
+    assert!(clashes_of(&mut job, None).is_empty(), "{:?}", clashes_of(&mut job, None));
+    ed::fitting(&mut job, &s, [10.0, 0.0], None, None, how).unwrap();
+    assert!(clashes_of(&mut job, None).is_empty(), "{:?}", clashes_of(&mut job, None));
+    // A branch only 5 degrees off the main, 10 ft of it, lies along the main: a clash.
+    let (mut job, s, ..) = drawn();
+    let pipe = ed::segment_type(&mut job, "4 in", Kind::Pipe, "4 in", None, how).unwrap();
+    ed::runs(&mut job, &s, Kind::Pipe, &pipe, &[[0.0, 0.0], [20.0, 0.0]], "8 ft", None, how).unwrap();
+    ed::runs(&mut job, &s, Kind::Pipe, &pipe, &[[10.0, 0.0], [10.0 + 10.0 * 0.996_194_7, 0.871_557]], "8 ft", None, how).unwrap();
+    assert_eq!(clashes_of(&mut job, None).len(), 1);
 }

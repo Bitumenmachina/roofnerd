@@ -52,6 +52,43 @@ pub struct Drawing {
     pub scale: Option<Scale>,
     /// Where the page's lower-left corner sits on the plan, in feet.
     pub at: Val<P2>,
+    /// What it was lined up by: a place on the page and the place on the plan that is.
+    /// Kept so that a scale set again leaves that place where it was put.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lined_up: Option<LinedUp>,
+    /// Scales it had before, each with what was traced over it at that scale and is
+    /// still where that scale put it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub earlier: Vec<Earlier>,
+}
+
+/// A place on a drawing's page and the place on the plan, in feet, it was said to be.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LinedUp {
+    pub page: P2,
+    pub plan: P2,
+}
+
+/// A scale a drawing had and no longer has, and what was traced at it.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Earlier {
+    pub feet_per_unit: f64,
+    pub traced: Vec<String>,
+}
+
+/// What setting a drawing's scale did.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Calibrated {
+    /// Feet on the building to one unit of the page.
+    pub feet_per_unit: f64,
+    /// What was traced over the drawing at the scale it had before, by path. None of it
+    /// was moved: a length typed off a dimension is right whatever the sheet's scale was,
+    /// and a point picked on the sheet is not, and the two cannot be told apart here.
+    pub left_at_earlier_scale: Vec<String>,
+    /// The drawing had been lined up, and the place it was lined up by is where it was.
+    pub lined_up_again: bool,
 }
 
 impl Drawing {
@@ -127,12 +164,28 @@ pub fn check(path: &str, kind: Kind, d: &Drawing) -> Result<(), String> {
         if !ok(s.from) || !ok(s.to) {
             return Err(format!("{path} scale: its two points are not usable numbers"));
         }
-        if (s.to[0] - s.from[0]).hypot(s.to[1] - s.from[1]) <= f64::EPSILON * 1.0e6 {
+        // Less than one unit of the page apart (a point, a dot) is one point: no
+        // dimension on a drawing is that short, and a scale from it would be noise.
+        if (s.to[0] - s.from[0]).hypot(s.to[1] - s.from[1]) < 1.0 {
             return Err(format!("{path} scale: its two points are one point; a scale is the distance between two places on the drawing"));
+        }
+        let on_page = |p: P2| p[0] >= -1.0 && p[1] >= -1.0 && p[0] <= d.size[0] + 1.0 && p[1] <= d.size[1] + 1.0;
+        if !on_page(s.from) || !on_page(s.to) {
+            return Err(format!("{path} scale: its two points are not both on the page, which is {} by {}", crate::view::num(d.size[0]), crate::view::num(d.size[1])));
         }
         s.distance.check_length(&format!("{path} scale distance"))?;
         if s.distance.feet().is_some_and(|f| !(f > 0.0)) {
             return Err(format!("{path} scale distance: is more than nothing"));
+        }
+    }
+    if let Some(l) = &d.lined_up {
+        if !l.page.iter().chain(&l.plan).all(|x| x.is_finite() && x.abs() <= crate::check::MAX_COORDINATE_FT * 1.0e3) {
+            return Err(format!("{path}: what it was lined up by is not two usable points"));
+        }
+    }
+    for e in &d.earlier {
+        if !(e.feet_per_unit.is_finite() && e.feet_per_unit > 0.0) {
+            return Err(format!("{path}: an earlier scale of it is not a scale"));
         }
     }
     Ok(())
@@ -164,6 +217,8 @@ pub fn add(job: &mut Job, storey: &str, name: &str, read: Read, how: Entered) ->
             size: read.size,
             scale: None,
             at: Val { value: Some([0.0, 0.0]), unit: units::FT.into(), status: Status::Assumed, source: "its lower-left corner put at the plan's corner; not yet lined up with anything".into() },
+            lined_up: None,
+            earlier: Vec::new(),
         };
         let path = job.add(storey, Kind::Drawing, name)?;
         check(&path, Kind::Drawing, &drawing)?;
@@ -177,19 +232,54 @@ fn drawing_of(job: &mut Job, path: &str) -> Result<Drawing, String> {
     job.world.get::<Drawing>(e).cloned().ok_or_else(|| format!("{path} is not a drawing"))
 }
 
+/// The source a thing traced over this drawing carries.
+fn traced_text(job: &mut Job, drawing: &str, d: &Drawing) -> String {
+    let name = job.find(drawing).and_then(|e| job.world.get::<Node>(e).map(|n| n.name.clone())).unwrap_or_default();
+    format!("traced from {name} ({}, page {})", d.file.value.clone().unwrap_or_default(), d.page)
+}
+
+/// Every element with a value traced over this drawing, by path, in the job's order.
+pub fn traced_over(job: &mut Job, drawing: &str) -> Result<Vec<String>, String> {
+    let d = drawing_of(job, drawing)?;
+    let text = traced_text(job, drawing, &d);
+    Ok(crate::view::elements(job).into_iter().filter(|e| e.rows.iter().any(|r| !r.derived && r.basis.starts_with(&text))).map(|e| e.path).collect())
+}
+
 /// Give a drawing its scale: two points on the page (in its own units, from its
-/// lower-left corner) and the distance between them. Returns feet to one unit of the page.
-/// What was already traced over the drawing does not move: it was traced at the scale the
-/// drawing had then, and that is said in the result of whoever calls this.
-pub fn calibrate(job: &mut Job, drawing: &str, from: P2, to: P2, distance: &str, how: Entered) -> Result<f64, String> {
+/// lower-left corner) and the distance between them.
+///
+/// Set again on a drawing that had one, it moves nothing that was traced: those things
+/// are listed in what comes back and kept on the drawing as traced at its earlier scale,
+/// so the sheet and what was traced over it are never silently at two scales. A drawing
+/// that was lined up stays lined up: the place it was lined up by is where it was.
+pub fn calibrate(job: &mut Job, drawing: &str, from: P2, to: P2, distance: &str, how: Entered) -> Result<Calibrated, String> {
     all_or_nothing(job, |job| {
         let mut d = drawing_of(job, drawing)?;
+        let was = d.feet_per_unit();
         let (len, unit) = units::parse_length(distance)?;
         d.scale = Some(Scale { from, to, distance: Val { value: Some(len), unit: unit.into(), status: how.status, source: how.source.to_string() } });
         check(drawing, Kind::Drawing, &d)?;
         let k = d.feet_per_unit().ok_or_else(|| format!("{drawing}: that scale does not work out to a distance"))?;
+        let mut left = Vec::new();
+        if let Some(was) = was.filter(|was| (was / k - 1.0).abs() > 1.0e-9) {
+            // What is traced now and is not already down as traced at a scale before that.
+            let already: Vec<&String> = d.earlier.iter().flat_map(|e| &e.traced).collect();
+            left = traced_over(job, drawing)?.into_iter().filter(|p| !already.contains(&p)).collect();
+            if !left.is_empty() {
+                d.earlier.push(Earlier { feet_per_unit: was, traced: left.clone() });
+            }
+        }
+        let lined_up_again = match &d.lined_up {
+            Some(l) => {
+                let tidy = |x: f64| (x * 1.0e6).round() / 1.0e6 + 0.0;
+                d.at.value = Some([tidy(l.plan[0] - l.page[0] * k), tidy(l.plan[1] - l.page[1] * k)]);
+                was.is_some()
+            }
+            None => false,
+        };
+        check(drawing, Kind::Drawing, &d)?;
         job.put(drawing, d)?;
-        Ok(k)
+        Ok(Calibrated { feet_per_unit: k, left_at_earlier_scale: left, lined_up_again })
     })
 }
 
@@ -202,9 +292,23 @@ pub fn line_up(job: &mut Job, drawing: &str, on_page: P2, on_plan: P2, how: Ente
         let corner = [on_plan[0] - on_page[0] * k, on_plan[1] - on_page[1] * k];
         let tidy = |x: f64| (x * 1.0e6).round() / 1.0e6 + 0.0;
         d.at = Val { value: Some([tidy(corner[0]), tidy(corner[1])]), unit: units::FT.into(), status: how.status, source: how.source.to_string() };
+        d.lined_up = Some(LinedUp { page: on_page, plan: on_plan });
         check(drawing, Kind::Drawing, &d)?;
         job.put(drawing, d)
     })
+}
+
+/// What was traced over a drawing at a scale it no longer has and is still in the job:
+/// each earlier scale (feet to a unit of the page) with those things' paths.
+pub fn at_earlier_scales(job: &mut Job, drawing: &str) -> Result<Vec<(f64, Vec<String>)>, String> {
+    let d = drawing_of(job, drawing)?;
+    Ok(d.earlier.iter().map(|e| (e.feet_per_unit, e.traced.iter().filter(|p| job.find(p).is_some()).cloned().collect::<Vec<_>>())).filter(|(_, t)| !t.is_empty()).collect())
+}
+
+/// The storey a drawing is a plan of.
+pub fn storey_of(job: &mut Job, drawing: &str) -> Result<String, String> {
+    drawing_of(job, drawing)?;
+    job.find(drawing).and_then(|e| job.world.get::<Node>(e).and_then(|n| n.parent.clone())).ok_or_else(|| format!("{drawing} is under no storey"))
 }
 
 /// How a thing traced over a drawing is entered: Assumed, and saying which drawing. Refused
@@ -214,6 +318,5 @@ pub fn traced_from(job: &mut Job, drawing: &str) -> Result<String, String> {
     if d.feet_per_unit().is_none() {
         return Err(format!("{drawing} has no scale: calibrate it from one dimension before tracing over it"));
     }
-    let name = job.find(drawing).and_then(|e| job.world.get::<Node>(e).map(|n| n.name.clone())).unwrap_or_default();
-    Ok(format!("traced from {name} ({}, page {})", d.file.value.unwrap_or_default(), d.page))
+    Ok(traced_text(job, drawing, &d))
 }

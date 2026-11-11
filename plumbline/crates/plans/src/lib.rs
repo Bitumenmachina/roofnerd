@@ -8,13 +8,15 @@
 //! world crate holds the drawing and its scale, and reads no disk.
 //!
 //! What a file could not give is said, not dropped (`Page::lost`): a curve is known by
-//! its two ends only; words are drawn and not read; a picture has no lines at all.
+//! its two ends only; words are drawn and not read; a picture has no lines at all; lines
+//! under a point long, lines in white, dashed lines and lines under a mask are each
+//! counted and said. The edges of filled shapes are lines, as strokes are.
 
 use hayro::hayro_interpret::font::GlyphRun;
 use hayro::hayro_interpret::util::TransformExt;
 use hayro::hayro_interpret::{interpret_page, BlendMode, ClipPath, Context, Device, DrawMode, DrawProps, ImageDrawProps, InterpreterSettings, SoftMask};
 use hayro::hayro_syntax::Pdf;
-use hayro::kurbo::{BezPath, PathEl, Point, Rect};
+use hayro::kurbo::{BezPath, PathEl, Point, Rect, Shape};
 use hayro::vello_cpu::color::palette::css::WHITE;
 use hayro::{render, PixmapSettings, RenderCache, RenderSettings};
 
@@ -94,7 +96,9 @@ pub fn checksum(bytes: &[u8]) -> String {
     format!("{h:016x}")
 }
 
-/// Collects what a page draws: its straight strokes, and a count of what is not a line.
+/// Collects what a page draws: its straight lines (strokes, and the edges of filled
+/// shapes), and a count of everything that is not a line or was not read as drawn.
+#[derive(Default)]
 struct Lines {
     height: f64,
     kept: Vec<[[f64; 2]; 2]>,
@@ -102,24 +106,82 @@ struct Lines {
     curves: usize,
     pictures: usize,
     words: usize,
+    /// Lines under `SHORTEST_LINE_PT` long, which are not kept.
+    short: usize,
+    /// Lines drawn in white, or in no colour at all: not ink, and not kept.
+    white: usize,
+    /// Lines drawn dashed, kept whole.
+    dashed: usize,
+    /// Lines cut to what a square clip shows of them, and lines a clip hides whole.
+    cut: usize,
+    hidden: usize,
+    /// Clips that are not a square: lines under them are kept whole.
+    odd_clips: usize,
+    /// The clips in force, each a square (left, top, right, bottom, as the page is
+    /// drawn) or, for a clip of another shape, none.
+    clips: Vec<Option<[f64; 4]>>,
+}
+
+/// The part of a line inside a square, or none of it.
+fn inside(a: Point, b: Point, [x0, y0, x1, y1]: [f64; 4]) -> Option<(Point, Point)> {
+    let (dx, dy) = (b.x - a.x, b.y - a.y);
+    let (mut from, mut to) = (0.0_f64, 1.0_f64);
+    for (p, q) in [(-dx, a.x - x0), (dx, x1 - a.x), (-dy, a.y - y0), (dy, y1 - a.y)] {
+        if p.abs() < 1.0e-12 {
+            if q < 0.0 {
+                return None;
+            }
+            continue;
+        }
+        let r = q / p;
+        if p < 0.0 {
+            from = from.max(r);
+        } else {
+            to = to.min(r);
+        }
+    }
+    (to > from).then(|| (Point::new(a.x + dx * from, a.y + dy * from), Point::new(a.x + dx * to, a.y + dy * to)))
 }
 
 impl Lines {
-    fn stroke(&mut self, path: &BezPath, to_page: hayro::kurbo::Affine) {
+    fn line(&mut self, a: Point, b: Point, dashed: bool) {
+        if ![a.x, a.y, b.x, b.y].iter().all(|v| v.is_finite()) {
+            return;
+        }
+        // What the clips in force show of it.
+        let (mut a, mut b) = (a, b);
+        for clip in self.clips.clone().into_iter().flatten() {
+            match inside(a, b, clip) {
+                None => {
+                    self.hidden += 1;
+                    return;
+                }
+                Some((c, d)) => {
+                    if (c - a).hypot() > 1.0e-6 || (d - b).hypot() > 1.0e-6 {
+                        self.cut += 1;
+                    }
+                    (a, b) = (c, d);
+                }
+            }
+        }
+        if (b - a).hypot() < SHORTEST_LINE_PT {
+            self.short += 1;
+            return;
+        }
+        if self.kept.len() >= MOST_LINES {
+            self.over += 1;
+            return;
+        }
+        if dashed {
+            self.dashed += 1;
+        }
+        // The page is drawn from its top; lines are kept from its lower-left corner up.
+        self.kept.push([[a.x, self.height - a.y], [b.x, self.height - b.y]]);
+    }
+
+    fn path(&mut self, path: &BezPath, to_page: hayro::kurbo::Affine, dashed: bool) {
         let mut start: Option<Point> = None;
         let mut at: Option<Point> = None;
-        let line = |a: Point, b: Point, me: &mut Lines| {
-            let (a, b) = (to_page * a, to_page * b);
-            if (b - a).hypot() < SHORTEST_LINE_PT || ![a.x, a.y, b.x, b.y].iter().all(|v| v.is_finite()) {
-                return;
-            }
-            if me.kept.len() >= MOST_LINES {
-                me.over += 1;
-                return;
-            }
-            // The page is drawn from its top; lines are kept from its lower-left corner up.
-            me.kept.push([[a.x, me.height - a.y], [b.x, me.height - b.y]]);
-        };
         for el in path.elements() {
             match *el {
                 PathEl::MoveTo(p) => {
@@ -128,7 +190,7 @@ impl Lines {
                 }
                 PathEl::LineTo(p) => {
                     if let Some(a) = at {
-                        line(a, p, self);
+                        self.line(to_page * a, to_page * p, dashed);
                     }
                     at = Some(p);
                 }
@@ -138,7 +200,9 @@ impl Lines {
                 }
                 PathEl::ClosePath => {
                     if let (Some(a), Some(s)) = (at, start) {
-                        line(a, s, self);
+                        if (a - s).hypot() > 1.0e-9 {
+                            self.line(to_page * a, to_page * s, dashed);
+                        }
                     }
                     at = start;
                 }
@@ -147,15 +211,47 @@ impl Lines {
     }
 }
 
+/// How many straight pieces a path has.
+fn straight_pieces(path: &BezPath) -> usize {
+    path.elements().iter().filter(|el| matches!(el, PathEl::LineTo(_) | PathEl::ClosePath)).count()
+}
+
 impl<'a> Device<'a> for Lines {
     fn draw_path(&mut self, path: &BezPath, props: DrawProps<'a>, mode: &DrawMode) {
-        // A line on a drawing is a stroke. A filled shape (a wall poche, a hatch block) is
-        // not a line to snap to, though its outline is when it is stroked as well.
-        if matches!(mode, DrawMode::Stroke(_) | DrawMode::FillAndStroke(..)) {
-            self.stroke(path, props.transform);
+        // White on white paper, or no colour at all, is not ink: such a line is not one
+        // to snap to. A pattern is ink.
+        if let hayro::hayro_interpret::Paint::Color(c) = &props.paint {
+            let [r, g, b, alpha] = c.to_rgba().to_rgba8();
+            if alpha == 0 || (r >= 250 && g >= 250 && b >= 250) {
+                self.white += straight_pieces(path);
+                return;
+            }
+        }
+        match mode {
+            // A stroke is a line. So are the edges of a filled shape: walls are often
+            // drawn as solid bars, and a bar's edges are the wall's faces.
+            DrawMode::Stroke(stroke) | DrawMode::FillAndStroke(_, stroke) => self.path(path, props.transform, !stroke.dash_array.is_empty()),
+            DrawMode::Fill(_) => self.path(path, props.transform, false),
+            DrawMode::Invisible => {}
         }
     }
-    fn push_clip_path(&mut self, _: &ClipPath) {}
+    fn push_clip_path(&mut self, clip: &ClipPath) {
+        // A clip that is a square with its sides level and upright is kept as one; any
+        // other shape is not worked out, and lines under it are kept whole.
+        let corners: Vec<Point> = clip.path.elements().iter().filter_map(|el| match el {
+            PathEl::MoveTo(p) | PathEl::LineTo(p) => Some(*p),
+            _ => None,
+        }).collect();
+        let straight = clip.path.elements().iter().all(|el| matches!(el, PathEl::MoveTo(_) | PathEl::LineTo(_) | PathEl::ClosePath));
+        let bounds = clip.path.bounding_box();
+        let on_corner = |p: &Point| ((p.x - bounds.x0).abs() < 1.0e-6 || (p.x - bounds.x1).abs() < 1.0e-6) && ((p.y - bounds.y0).abs() < 1.0e-6 || (p.y - bounds.y1).abs() < 1.0e-6);
+        if straight && (4..=5).contains(&corners.len()) && corners.iter().all(on_corner) {
+            self.clips.push(Some([bounds.x0, bounds.y0, bounds.x1, bounds.y1]));
+        } else {
+            self.odd_clips += 1;
+            self.clips.push(None);
+        }
+    }
     fn push_transparency_group(&mut self, _: f32, _: Option<SoftMask<'a>>, _: BlendMode) {}
     fn draw_glyph_run(&mut self, _: &GlyphRun<'_, 'a>, _: DrawProps<'a>, _: &DrawMode) {
         self.words += 1;
@@ -163,8 +259,30 @@ impl<'a> Device<'a> for Lines {
     fn draw_image(&mut self, _: hayro::hayro_interpret::Image<'a, '_>, _: ImageDrawProps<'a>) {
         self.pictures += 1;
     }
-    fn pop_clip(&mut self) {}
+    fn pop_clip(&mut self) {
+        self.clips.pop();
+    }
     fn pop_transparency_group(&mut self) {}
+}
+
+/// The most dots a picture may have for it to be opened at all: a sheet four feet by
+/// three scanned at 300 to the inch is 155 million.
+pub const MOST_DOTS: u64 = 250_000_000;
+
+/// A picture file opened and turned the way its own note says it is to be seen (a
+/// camera's or a scanner's), with its size as it is then.
+fn opened(bytes: &[u8]) -> Result<(image::DynamicImage, bool), String> {
+    use image::ImageDecoder;
+    let bad = |e: image::ImageError| format!("the picture could not be read ({e})");
+    let mut decoder = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format().map_err(|e| format!("the picture could not be read ({e})"))?.into_decoder().map_err(bad)?;
+    let (width, height) = decoder.dimensions();
+    if u64::from(width) * u64::from(height) > MOST_DOTS {
+        return Err(format!("the picture is {width} by {height} dots, more than this program opens ({} million): save it smaller", MOST_DOTS / 1_000_000));
+    }
+    let turn = decoder.orientation().unwrap_or(image::metadata::Orientation::NoTransforms);
+    let mut picture = image::DynamicImage::from_decoder(decoder).map_err(bad)?;
+    picture.apply_orientation(turn);
+    Ok((picture, turn != image::metadata::Orientation::NoTransforms))
 }
 
 /// Read one page (counted from 1) of a plan file.
@@ -176,19 +294,26 @@ pub fn read(bytes: &[u8], page: usize) -> Result<Page, String> {
             if page != 1 {
                 return Err(format!("a picture has one page; page {page} was asked for"));
             }
-            let decoded = image::load_from_memory(bytes).map_err(|e| format!("the picture could not be read ({e})"))?.to_rgba8();
-            let (width, height) = decoded.dimensions();
+            let (opened, turned) = opened(bytes)?;
+            let (width, height) = (opened.width(), opened.height());
             if width == 0 || height == 0 {
                 return Err("the picture has no size".into());
             }
-            Ok(Page {
-                sort,
-                pages: 1,
-                size: [f64::from(width), f64::from(height)],
-                picture: Picture { width, height, rgba: decoded.into_raw() },
-                lines: Vec::new(),
-                lost: vec!["it is a picture: it has no lines of its own to snap to, and is traced over by eye".into()],
-            })
+            let mut lost = vec!["it is a picture: it has no lines of its own to snap to, and is traced over by eye".to_string()];
+            if turned {
+                lost.push("the picture's own note says which way up it is seen, and it is shown that way; its size is as shown".into());
+            }
+            // Shown at no more than LONG_SIDE dots on its longer side, as a PDF's page is.
+            // Its size stays its own dots, so a scale picked on it is right.
+            let shown = if width.max(height) > LONG_SIDE {
+                let k = f64::from(LONG_SIDE) / f64::from(width.max(height));
+                let (w, h) = (((f64::from(width) * k).round() as u32).max(1), ((f64::from(height) * k).round() as u32).max(1));
+                lost.push(format!("the picture is {width} by {height} dots and is shown at {w} by {h}: close in, fine detail is blurred"));
+                opened.resize_exact(w, h, image::imageops::FilterType::Triangle).to_rgba8()
+            } else {
+                opened.to_rgba8()
+            };
+            Ok(Page { sort, pages: 1, size: [f64::from(width), f64::from(height)], picture: Picture { width: shown.width(), height: shown.height(), rgba: shown.into_raw() }, lines: Vec::new(), lost })
         }
     }
 }
@@ -202,40 +327,63 @@ pub fn size_of(bytes: &[u8], page: usize) -> Result<(Sort, usize, [f64; 2]), Str
             let pdf = Pdf::new(bytes.to_vec()).map_err(|e| format!("the PDF could not be read ({e:?})"))?;
             let pages = pdf.pages();
             let count = pages.len();
-            if page == 0 || page > count {
-                return Err(format!("the file has {count} page{}; page {page} was asked for", if count == 1 { "" } else { "s" }));
-            }
-            let (width, height) = pages[page - 1].render_dimensions();
-            if !(width > 0.0 && height > 0.0) {
-                return Err(format!("page {page} has no size"));
-            }
+            let (width, height) = page_size(&pages, page)?;
             Ok((Sort::Pdf, count, [f64::from(width), f64::from(height)]))
         }
         Some(sort) => {
             if page != 1 {
                 return Err(format!("a picture has one page; page {page} was asked for"));
             }
-            let (width, height) = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format().map_err(|e| format!("the picture could not be read ({e})"))?.into_dimensions().map_err(|e| format!("the picture could not be read ({e})"))?;
+            // Its size as it is seen: a picture whose own note turns it on its side is as
+            // wide as it was tall.
+            use image::ImageDecoder;
+            let bad = |e: image::ImageError| format!("the picture could not be read ({e})");
+            let mut decoder = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format().map_err(|e| format!("the picture could not be read ({e})"))?.into_decoder().map_err(bad)?;
+            let (mut width, mut height) = decoder.dimensions();
             if width == 0 || height == 0 {
                 return Err("the picture has no size".into());
+            }
+            if u64::from(width) * u64::from(height) > MOST_DOTS {
+                return Err(format!("the picture is {width} by {height} dots, more than this program opens ({} million): save it smaller", MOST_DOTS / 1_000_000));
+            }
+            use image::metadata::Orientation as O;
+            if matches!(decoder.orientation().unwrap_or(O::NoTransforms), O::Rotate90 | O::Rotate270 | O::Rotate90FlipH | O::Rotate270FlipH) {
+                std::mem::swap(&mut width, &mut height);
             }
             Ok((sort, 1, [f64::from(width), f64::from(height)]))
         }
     }
 }
 
-fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
-    let pdf = Pdf::new(bytes.to_vec()).map_err(|e| format!("the PDF could not be read ({e:?})"))?;
-    let pages = pdf.pages();
+/// The size of one page of a PDF as it is seen, in points, or why it has none.
+fn page_size(pages: &[hayro::hayro_syntax::page::Page<'_>], page: usize) -> Result<(f32, f32), String> {
     let count = pages.len();
+    if count == 0 {
+        return Err("the file has no pages: it may be cut short or damaged".into());
+    }
     if page == 0 || page > count {
         return Err(format!("the file has {count} page{}; page {page} was asked for", if count == 1 { "" } else { "s" }));
     }
     let p = &pages[page - 1];
+    // A page whose own box has no size is drawn by the library as a sheet of A4. That
+    // would be a size nobody gave: refused instead.
+    let own = p.intersected_crop_box();
+    if !(own.width() > 0.5 && own.height() > 0.5) {
+        return Err(format!("page {page} gives no size of its own (its box is {} by {} points)", own.width(), own.height()));
+    }
     let (width, height) = p.render_dimensions();
     if !(width > 0.0 && height > 0.0) {
         return Err(format!("page {page} has no size"));
     }
+    Ok((width, height))
+}
+
+fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
+    let pdf = Pdf::new(bytes.to_vec()).map_err(|e| format!("the PDF could not be read ({e:?})"))?;
+    let pages = pdf.pages();
+    let count = pages.len();
+    let (width, height) = page_size(&pages, page)?;
+    let p = &pages[page - 1];
     let settings = InterpreterSettings::default();
     // The picture, at no more than LONG_SIDE dots on its longer side.
     let scale = LONG_SIDE as f32 / width.max(height);
@@ -243,7 +391,7 @@ fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
     let pixmap = render(p, &cache, &settings, &RenderSettings::default(), &PixmapSettings { x_scale: scale, y_scale: scale, bg_color: WHITE });
     let picture = Picture { width: u32::from(pixmap.width()), height: u32::from(pixmap.height()), rgba: pixmap.data_as_u8_slice().to_vec() };
     // The lines: the page drawn again into a device that keeps its straight strokes.
-    let mut lines = Lines { height: f64::from(height), kept: Vec::new(), over: 0, curves: 0, pictures: 0, words: 0 };
+    let mut lines = Lines { height: f64::from(height), ..Lines::default() };
     let to_page = p.initial_transform(true).to_kurbo();
     let mut context = Context::new(to_page, Rect::new(0.0, 0.0, f64::from(width), f64::from(height)), &hayro::hayro_interpret::InterpreterCache::new(), p.xref(), settings);
     interpret_page(p, &mut context, &mut lines);
@@ -258,6 +406,28 @@ fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
     }
     if lines.words > 0 {
         lost.push("the words and figures on the page are drawn and not read: a dimension is typed by whoever reads it".into());
+    }
+    // A PDF ends with a mark. One that does not may have been cut short in the sending:
+    // the library reads what is left of it, and what is left may not be all of the page.
+    let tail = &bytes[bytes.len().saturating_sub(1024)..];
+    if !tail.windows(5).any(|w| w == b"%%EOF") {
+        lost.push("the file does not end as a PDF does: it may be cut short, and what is on the page may not be all there was".into());
+    }
+    let some = |n: usize, one: &str, many: &str| if n == 1 { format!("1 {one}") } else { format!("{n} {many}") };
+    if lines.short > 0 {
+        lost.push(format!("{} not kept to snap to (hatching, arrowheads, ticks)", some(lines.short, "line under a point long is", "lines under a point long are")));
+    }
+    if lines.white > 0 {
+        lost.push(format!("{} not ink, and not kept to snap to", some(lines.white, "line drawn in white or in no colour is", "lines drawn in white or in no colour are")));
+    }
+    if lines.dashed > 0 {
+        lost.push(format!("{} kept whole: the gaps in it are places to snap to as well", some(lines.dashed, "dashed line is", "dashed lines are")));
+    }
+    if lines.cut > 0 || lines.hidden > 0 {
+        lost.push(format!("part of the page is masked off: {} cut to what shows, {} left out", some(lines.cut, "line is", "lines are"), some(lines.hidden, "hidden line is", "hidden lines are")));
+    }
+    if lines.odd_clips > 0 {
+        lost.push(format!("{} not a square: lines under {} are kept whole, hidden parts and all", some(lines.odd_clips, "mask on the page is", "masks on the page are"), if lines.odd_clips == 1 { "it" } else { "them" }));
     }
     if lines.over > 0 {
         lost.push(format!("{} lines beyond the first {MOST_LINES} are not kept", lines.over));

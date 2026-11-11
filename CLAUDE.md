@@ -164,6 +164,7 @@ Each of these was paid for at least once.
     cargo test --workspace                      # the model, the command line, the window's crate
     tools/portmap.sh                            # every public item against BIMCraft's source
     tools/licenses.sh                           # every linked crate's licence
+    tools/committed.sh                          # the last commit builds and passes from what is in it; before a push
     demos/draw.sh                               # each demonstration is a script; README.md lists them
     cargo run -p plumbline -- house house.json  # a made-up whole house
     cargo run -p plumbline-app -- house.json    # the model window and the sheet window

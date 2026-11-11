@@ -118,6 +118,9 @@ fn drawings(job: &mut plumbline_world::Job, path: &str) -> String {
                 let _ = writeln!(out, "    scale: none. Nothing can be traced over it until it is calibrated from one dimension.");
             }
         }
+        for (was, traced) in plans::at_earlier_scales(job, &path).unwrap_or_default() {
+            let _ = writeln!(out, "    TRACED AT AN EARLIER SCALE ({} to the foot) and not moved: {}", view::num((1.0e4 / was).round() / 1.0e4), traced.join(", "));
+        }
         match std::fs::read(folder.join(&file)) {
             Err(e) => {
                 let _ = writeln!(out, "    file: cannot be read ({e}). The drawing cannot be shown.");
@@ -134,6 +137,9 @@ fn drawings(job: &mut plumbline_world::Job, path: &str) -> String {
                     }
                     Ok(page) => {
                         let _ = writeln!(out, "    page: {}, {} by {} {}, {}", page.sort.said(), view::num(page.size[0]), view::num(page.size[1]), page_unit(page.sort), lines_said(page.lines.len()));
+                        if (page.size[0] - d.size[0]).abs() > 0.01 || (page.size[1] - d.size[1]).abs() > 0.01 {
+                            let _ = writeln!(out, "    page: IS NOT THE SIZE THIS DRAWING WAS MADE AT, {} by {}. The sheet does not fit what was traced over it; it is not shown.", view::num(d.size[0]), view::num(d.size[1]));
+                        }
                         for lost in &page.lost {
                             let _ = writeln!(out, "    not read: {lost}");
                         }
@@ -1232,6 +1238,16 @@ fn draw(args: &[String]) -> Result<(), String> {
             }
             let source = plans::traced_from(&mut job, d)?;
             let drawing = job.find(d).and_then(|e| job.world.get::<plans::Drawing>(e).cloned()).ok_or_else(|| format!("{d} is not a drawing"))?;
+            // A drawing is a plan of one storey: what is traced over it is on that storey.
+            let its = plans::storey_of(&mut job, d)?;
+            let onto = match (cmd, plain.first()) {
+                ("door" | "window", Some(wall)) => job.find(wall).and_then(|e| job.world.get::<plumbline_world::Node>(e).and_then(|n| n.parent.clone())),
+                (_, Some(storey)) => Some(storey.to_string()),
+                _ => None,
+            };
+            if let Some(onto) = onto.filter(|s| *s != its) {
+                return Err(format!("{d} is a plan of {its}, not of {onto}: what is traced over a drawing is on the storey it is a plan of"));
+            }
             Some((drawing, source))
         }
     };
@@ -1277,8 +1293,16 @@ fn draw(args: &[String]) -> Result<(), String> {
             };
             let (from, to) = (one("--from", flag("--from"))?, one("--to", flag("--to"))?);
             let distance = need(flag("--distance"), "--distance", "\"30 ft\" (the dimension between the two points)")?;
-            let k = plans::calibrate(&mut job, drawing, from, to, &distance, ed::Entered { status, source: &source })?;
-            format!("{drawing}: {} is {} on its page: {} to the foot", distance.trim(), view::num(((to[0] - from[0]).hypot(to[1] - from[1]) * 1.0e4).round() / 1.0e4), view::num((1.0e4_f64 / k).round() / 1.0e4))
+            let done = plans::calibrate(&mut job, drawing, from, to, &distance, ed::Entered { status, source: &source })?;
+            let k = done.feet_per_unit;
+            let mut said = format!("{drawing}: {} is {} on its page: {} to the foot", distance.trim(), view::num(((to[0] - from[0]).hypot(to[1] - from[1]) * 1.0e4).round() / 1.0e4), view::num((1.0e4_f64 / k).round() / 1.0e4));
+            if done.lined_up_again {
+                said.push_str("\n  it was lined up, and the place it was lined up by is where it was");
+            }
+            if !done.left_at_earlier_scale.is_empty() {
+                said.push_str(&format!("\n  NOT MOVED: {} traced over it at the scale it had before: {}. Each is where that scale put it: check it against the sheet, or remove it and trace it again", count(done.left_at_earlier_scale.len(), "thing was", "things were"), done.left_at_earlier_scale.join(", ")));
+            }
+            said
         }
         ("lineup", [drawing]) => {
             let (status, source) = how(&status, &source)?;

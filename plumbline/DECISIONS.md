@@ -1550,3 +1550,65 @@ lists in its own JSON only. On the registry, 2026-11-11:
 * **A workbook's first sheet is read unless one is named.** The others are named as not
   read. A formula is read as what it last worked out to, and how many there were is
   said.
+
+### Call 46. The fourteenth judgment: what was decided in fixing it (2026-11-11)
+
+The findings are in STATUS.md, "Fourteenth judgment". Each fix that changed what the
+program accepts, refuses or reports is a decision, and is here before the test that
+holds it was written or changed.
+
+* **What is committed has to build (J14-1).** The ignore line for fetched plan sets was
+  `plans/`, which also caught `crates/plans` and `demos/plans`. It is `/plans/` now.
+  `tools/committed.sh` lays the last commit out as git holds it and builds and tests it;
+  it is run before a push. It fails on `939e6aa`, `719ff91` and `f449a57`.
+* **A scale set again moves nothing that was traced, and says what it left (J14-2).** A
+  length typed off a dimension is right whatever the sheet's scale was; a point picked
+  on the sheet is not; the two cannot be told apart afterwards, so moving what was
+  traced would spoil the first to mend the second. What was traced at the earlier scale
+  is listed when the scale is set, kept on the drawing (`earlier`), listed by `drawings`
+  from then on, and said in the window in the tone of a refusal.
+* **A drawing remembers what it was lined up by (J14-3)**: the place on the page and the
+  place on the plan. A scale set again puts the corner where that place stays put.
+* **A scale's two points are on the page and at least one unit of it apart (J14-14).**
+* **A picture is shown at no more than 4,096 dots on its long side, as a PDF page is
+  (J14-4).** Its size in the job is still its own dots, so a scale picked on it is right.
+  That it is shown smaller than it is, is said.
+* **Walls over walls (J14-5, J14-6; this replaces part of call 44).** Walls at an angle
+  to each other (more than about three degrees) are never one over another, however
+  sharp the angle: they are in each other only where they meet. Walls running the same
+  way may not overlap at all. A wall whose thickness is not known counts as three
+  inches thick for this test. Walls on different storeys are compared too, by where each
+  stands above the datum; where that is not known for either, walls of one storey are
+  taken to stand together and walls of two storeys apart.
+* **How much of a joint is excused depends on the angle (J14-7; this replaces part of
+  call 44).** Between two runs: the sum of their half-widths over the sine of the angle
+  between them, each way along each run; for anything under fifteen degrees, what
+  fifteen degrees gives. A 30 degree lateral is a joint. Two runs along one another
+  for more than about four times their combined half-widths are a clash.
+* **What a PDF page could not give (J14-8).** The edges of filled shapes are read as
+  lines (walls are often drawn as solid bars). Lines under a point long are counted and
+  said. A line is cut to what a square clip shows of it. A line drawn in white is not
+  ink and is not read, and how many is said. Dashed lines are read whole, and that is
+  said. A page that gives no size of its own is refused. A file with no pages is said
+  to be perhaps cut short.
+* **A drawing is traced over on its own storey only (J14-9).** `--on` a drawing of
+  another storey is refused. In the window what is traced takes its source from the
+  drawing the pick is on; a pick off every sheet is drawn in the window, not traced.
+* **A drawing whose stored page size is not its file's is said (J14-10)** by `drawings`
+  and is not shown in the window.
+* **No measure of time is what a material is bought by (J14-11)**: hours and man-hours
+  however spelled, minutes, days, shifts, weeks, months.
+* **A source loses nothing (J14-12; this replaces calls 41 and 44 on it).** A note of
+  what was done is added after what the source says, and is not added twice running. It
+  can grow, one note for each change of hand; it never drops what a person wrote. The
+  twelfth judge's complaint was unbounded growth on repeated moves by one hand, which
+  this still prevents.
+* **What makes two names one name (J14-13; this replaces call 44 on it).** A comma, a
+  hyphen, an underscore and a full stop part words and are not part of a name, except a
+  point or a comma between two figures. A figure and the letters beside it are two
+  words. So "Copper, 16 oz" and "copper 16oz" are one; "Type X" and "Type-X" are one;
+  "a.b" and "ab" are two; "Pipe 1,2" and "Pipe 1, 2" are two.
+* **A move in the window is sourced as a move in the window (J14-14)**, not as traced.
+  Removing a drawing says how many things were traced from it; they stay.
+* **Not done:** a JPEG turned by its EXIF tag is still shown unturned (said in STATUS);
+  the words on screen ("drawing-0003", "(os error 2)") go to the language pass.

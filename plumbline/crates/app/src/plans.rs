@@ -213,12 +213,19 @@ pub fn read(mut doc: ResMut<Doc>, mut plans: ResMut<Plans>, mut images: ResMut<A
         if plans.read.contains_key(&l.path) || plans.faults.contains_key(&l.path) || plans.reading.contains_key(&l.path) {
             continue;
         }
-        let (file, page, bytes, checksum) = (folder.join(&key.0), key.1, l.drawing.bytes, l.drawing.checksum.clone());
+        let (file, page, bytes, checksum, size) = (folder.join(&key.0), key.1, l.drawing.bytes, l.drawing.checksum.clone(), l.drawing.size);
         let (send, receive) = channel::<Arrived>();
         std::thread::spawn(move || {
             let result = std::fs::read(&file).map_err(|e| format!("{} cannot be read ({e})", file.display())).and_then(|data| {
                 let changed = data.len() as u64 != bytes || plumbline_plans::checksum(&data) != checksum;
-                plumbline_plans::read(&data, page).map(|p| (p, changed))
+                plumbline_plans::read(&data, page).and_then(|p| {
+                    // A drawing made at one size and a page of another do not fit: the
+                    // sheet would lie wrong under what was traced over it.
+                    if (p.size[0] - size[0]).abs() > 0.01 || (p.size[1] - size[1]).abs() > 0.01 {
+                        return Err(format!("its page is {} by {} in the file, and the drawing was made at {} by {}", p.size[0], p.size[1], size[0], size[1]));
+                    }
+                    Ok((p, changed))
+                })
             });
             let _ = send.send(result);
         });
@@ -254,7 +261,8 @@ pub fn add(doc: &mut Doc, text: &str) {
         // scale are not, and say so themselves.
         let how = ed::Entered { status: Status::Known, source: "the file laid under the plan in the window" };
         let path = world_plans::add(&mut doc.job, &storey, &name, world_plans::Read { file: &kept, page, bytes: bytes.len() as u64, checksum: &plumbline_plans::checksum(&bytes), size }, how)?;
-        Ok(format!("{path}: {name} is laid under the plan; it has no scale yet: set it from one dimension"))
+        let twice = laid(&mut doc.job).iter().filter(|l| l.storey == storey && l.drawing.file.value.as_deref() == Some(kept.as_str()) && l.drawing.page == page).count() > 1;
+        Ok(format!("{path}: {name} is laid under the plan; it has no scale yet: set it from one dimension{}", if twice { ". This page of this file was already laid under this storey: there are two of it now" } else { "" }))
     })();
     match made {
         Ok(said) => {
@@ -301,14 +309,16 @@ pub fn under(doc: &mut Doc, storey: &str, at: [f64; 2]) -> Option<Laid> {
     laid(&mut doc.job).into_iter().filter(|l| l.storey == storey && l.holds(at)).next_back()
 }
 
-/// How something drawn on a storey is entered. Over a drawing it is traced: Assumed, and
-/// saying which drawing. A storey with a drawing that has no scale is not traced over.
-pub fn source_for(doc: &mut Doc, storey: &str) -> Result<String, String> {
+/// How something drawn at a place on a storey is entered. On a drawing it is traced:
+/// Assumed, and saying which drawing, the one the place is on (the last laid, where two
+/// lie over one another). Off every sheet it is drawn in the window. While any drawing
+/// under the storey has no scale, nothing is drawn on the storey at all.
+pub fn source_for(doc: &mut Doc, storey: &str, at: [f64; 2]) -> Result<String, String> {
     let here: Vec<Laid> = laid(&mut doc.job).into_iter().filter(|l| l.storey == storey).collect();
     if let Some(l) = here.iter().find(|l| l.drawing.feet_per_unit().is_none()) {
         return Err(format!("{} has no scale: set it from one dimension before tracing over it", l.name));
     }
-    match here.last() {
+    match here.iter().rev().find(|l| l.holds(at)) {
         Some(l) => world_plans::traced_from(&mut doc.job, &l.path),
         None => Ok(crate::model::SOURCE.to_string()),
     }

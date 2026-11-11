@@ -491,21 +491,43 @@ pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
 /// Whether two names are the same but for capitals, spacing and a full stop at the end:
 /// "Copper, 16 oz", "copper,16 OZ" and "Copper, 16 oz." are one name.
 pub fn same_name(a: &str, b: &str) -> bool {
-    // One space where there is any, none beside a comma, and no full stop that is not a
-    // decimal point: "No. 1" is "No 1", and "1.5 in" keeps its point. Spaces between
-    // figures stay: "1 1/2 in" is not "11/2 in".
+    // What parts words is not part of the name: a comma, a hyphen, a full stop, a run of
+    // spaces. A stroke stays (1/2), and so does a point or a comma between two figures
+    // (1.5, 1,200). A figure and the letters beside it are two words: "16oz" is "16 oz"
+    // and "2x4" is "2 x 4". So "Copper, 16 oz", "copper 16oz." and "COPPER-16 OZ" are one
+    // name; "Pipe 1 1/2 in" and "Pipe 11/2 in" are two, and so are "a.b" and "ab".
     let plain = |s: &str| {
-        let spaced = s.to_lowercase().split_whitespace().collect::<Vec<_>>().join(" ").replace(", ", ",").replace(" ,", ",");
-        let chars: Vec<char> = spaced.chars().collect();
-        let kept: String = chars.iter().enumerate().filter(|(i, c)| **c != '.' || (*i > 0 && chars[*i - 1].is_ascii_digit() && chars.get(*i + 1).is_some_and(char::is_ascii_digit))).map(|(_, c)| *c).collect();
-        kept.split_whitespace().collect::<Vec<_>>().join(" ")
+        let chars: Vec<char> = s.to_lowercase().chars().collect();
+        let mut out = String::new();
+        for (i, c) in chars.iter().enumerate() {
+            let figure_each_side = i > 0 && chars[i - 1].is_ascii_digit() && chars.get(i + 1).is_some_and(char::is_ascii_digit);
+            match c {
+                '.' | ',' if figure_each_side => out.push(*c),
+                '.' | ',' | '-' | '_' => out.push(' '),
+                c => {
+                    // A figure next to a letter: two words.
+                    if let Some(last) = out.chars().last() {
+                        if (last.is_ascii_digit() && c.is_alphabetic()) || (last.is_alphabetic() && c.is_ascii_digit()) {
+                            out.push(' ');
+                        }
+                    }
+                    out.push(*c);
+                }
+            }
+        }
+        out.split_whitespace().collect::<Vec<_>>().join(" ")
     };
     plain(a) == plain(b)
 }
 
-/// Whether a unit is the hour, however it is written.
+/// Whether a unit is the hour, or any other measure of time, however it is written: a
+/// material is bought by weight, by size or by the piece, never by time.
 pub fn is_hours(unit: &str) -> bool {
-    matches!(unit.to_ascii_lowercase().as_str(), "hr" | "hrs" | "h" | "hour" | "hours")
+    let plain: String = unit.to_ascii_lowercase().chars().filter(|c| c.is_ascii_alphabetic()).collect();
+    matches!(
+        plain.as_str(),
+        "hr" | "hrs" | "h" | "hour" | "hours" | "mh" | "mhr" | "mhrs" | "manhour" | "manhours" | "manhr" | "manhrs" | "min" | "mins" | "minute" | "minutes" | "day" | "days" | "manday" | "mandays" | "shift" | "shifts" | "week" | "weeks" | "wk" | "wks" | "month" | "months" | "mo" | "year" | "years" | "yr" | "yrs" | "sec" | "secs" | "second" | "seconds"
+    )
 }
 
 /// Overhead and profit are percentages, on the job.

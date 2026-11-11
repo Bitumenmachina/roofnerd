@@ -7,8 +7,8 @@
 # (COMMIT=<commit> checks that one instead of the last.)
 #   --quick  stop after cargo has found every crate of the workspace and the files the
 #            demonstrations read; do not build
-# It reuses this folder's build of what the workspace is built on, so it compiles only
-# the workspace's own crates.
+# It links in this folder's build of what the workspace is built on, and compiles the
+# workspace's own crates afresh in a build folder of its own, which it removes.
 set -euo pipefail
 ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 HERE="$ROOT/plumbline"
@@ -23,9 +23,19 @@ for f in $(grep -rhoE 'demos/(plans|tables)/[A-Za-z0-9._-]+\.[a-z]+' demos/*.sh 
 done
 [ "$missing" = 0 ] || { echo "committed: FAIL."; exit 1; }
 if [ "${1:-}" = "--quick" ]; then echo "committed: PASS (quick). Every crate and every file the demonstrations read is in the last commit."; exit 0; fi
-# The same build folder: what the workspace is built on is found built; the workspace's own
-# crates are built again from the archive, since they are at another place.
-export CARGO_TARGET_DIR="$HERE/target"
+# A build folder of its own, so nothing built from the archive is ever taken for a build of
+# the working folder or the other way round. What the workspace is built on is linked in
+# from this folder's build (hard links: no copying, no rebuilding); the workspace's own
+# crates are always built afresh from the archive.
+SCRATCH="$HERE/target/committed"
+rm -rf "$SCRATCH"; mkdir -p "$SCRATCH/debug"
+for part in deps build .fingerprint; do
+  [ -d "$HERE/target/debug/$part" ] && cp -al "$HERE/target/debug/$part" "$SCRATCH/debug/$part"
+done
+rm -rf "$SCRATCH"/debug/.fingerprint/plumbline* "$SCRATCH"/debug/build/plumbline*
+find "$SCRATCH/debug/deps" -maxdepth 1 \( -name 'plumbline*' -o -name 'libplumbline*' \) -delete
+trap 'rm -rf "$T" "$SCRATCH"' EXIT
+export CARGO_TARGET_DIR="$SCRATCH"
 cargo test --workspace --offline 2>&1 | grep -E "^test result|^error|FAILED" > "$T/out.txt" || true
 if grep -qE "^error|FAILED" "$T/out.txt" || ! grep -q "^test result" "$T/out.txt"; then cat "$T/out.txt"; echo "committed: FAIL. The last commit does not build and pass its tests from what is in it."; exit 1; fi
 echo "committed: PASS. The last commit builds and passes its tests from what is in it ($(grep -c '^test result: ok' "$T/out.txt") test runs)."

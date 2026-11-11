@@ -258,16 +258,19 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
     }
     // Over a drawing a thing is traced, and says which drawing. Over one with no scale
     // nothing is traced: the scale comes first.
-    let traced = if matches!(tool, Tool::Scale | Tool::LineUp) {
-        String::new()
-    } else {
-        match crate::plans::source_for(doc, &storey) {
-            Ok(traced) => traced,
-            Err(why) => {
-                doc.say(Tone::Refused, format!("refused: {why}"));
-                doc.touch();
-                return;
-            }
+    // What is drawn on a sheet is traced from it. A thing moved, a fitting put on a
+    // joint and a run joined to what it ends at are done in the window, whatever lies
+    // under them. Nothing but the scale and the line-up is done on a storey while a
+    // drawing under it has no scale.
+    let setting_up = matches!(tool, Tool::Scale | Tool::LineUp);
+    let traced = match crate::plans::source_for(doc, &storey, at) {
+        Ok(_) if setting_up || matches!(tool, Tool::Move | Tool::Fitting | Tool::Join) => SOURCE.to_string(),
+        Ok(traced) => traced,
+        Err(_) if setting_up => SOURCE.to_string(),
+        Err(why) => {
+            doc.say(Tone::Refused, format!("refused: {why}"));
+            doc.touch();
+            return;
         }
     };
     let traced = traced.as_str();
@@ -400,16 +403,23 @@ pub fn scale_entered(doc: &mut Doc, text: &str) {
             None => Err("the first point is not on a drawing".to_string()),
             Some(l) => {
                 let (from, to) = (l.on_page(*a), l.on_page(*b));
-                plumbline_world::plans::calibrate(&mut doc.job, &l.path, from, to, text, ed::Entered { status: Status::Assumed, source: "read off the drawing" }).map(|k| format!("{}: {} between the two points; the drawing is {} wide", l.name, text.trim(), units::feet_as_ft_in(l.drawing.size[0] * k, 16)))
+                plumbline_world::plans::calibrate(&mut doc.job, &l.path, from, to, text, ed::Entered { status: Status::Assumed, source: "read off the drawing" }).map(|done| {
+                    let mut said = format!("{}: {} between the two points; the drawing is {} wide", l.name, text.trim(), units::feet_as_ft_in(l.drawing.size[0] * done.feet_per_unit, 16));
+                    if !done.left_at_earlier_scale.is_empty() {
+                        said.push_str(&format!(". NOT MOVED: {} traced at the scale it had before; check {} against the sheet", if done.left_at_earlier_scale.len() == 1 { "1 thing".to_string() } else { format!("{} things", done.left_at_earlier_scale.len()) }, if done.left_at_earlier_scale.len() == 1 { "it" } else { "them" }));
+                    }
+                    (said, !done.left_at_earlier_scale.is_empty())
+                })
             }
         },
         _ => Err("pick the two ends of a dimension first".to_string()),
     };
     match made {
-        Ok(said) => {
+        Ok((said, warned)) => {
             doc.edit("scale");
             doc.framed = false;
-            doc.say(Tone::Done, said);
+            // What was left at the old scale is said the way a refusal is: it has to be seen.
+            doc.say(if warned { Tone::Refused } else { Tone::Done }, said);
         }
         Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
     }
@@ -448,15 +458,23 @@ pub fn step(doc: &mut Doc, redo: bool) {
 pub fn delete(doc: &mut Doc) {
     match doc.selected.clone() {
         None => doc.say(Tone::Refused, "refused: select what is to be removed first"),
-        Some(sel) => match ed::remove(&mut doc.job, &sel) {
+        Some(sel) => {
+            // A drawing taken away leaves what was traced over it: how much is said.
+            let traced = plumbline_world::plans::traced_over(&mut doc.job, &sel).ok().map(|t| (doc.job.find(&sel).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e).map(|n| n.name.clone())).unwrap_or_default(), t.len()));
+            match ed::remove(&mut doc.job, &sel) {
             Ok(gone) => {
                 doc.selected = None;
                 doc.hover = None;
                 doc.edit("remove");
-                doc.say(Tone::Done, format!("removed {}", gone.join(", ")));
+                let said = match &traced {
+                    Some((name, n)) if *n > 0 => format!("removed {name}. {} traced over it {} where {} and still {} so", if *n == 1 { "1 thing".to_string() } else { format!("{n} things") }, if *n == 1 { "stays" } else { "stay" }, if *n == 1 { "it was" } else { "they were" }, if *n == 1 { "says" } else { "say" }),
+                    _ => format!("removed {}", gone.join(", ")),
+                };
+                doc.say(Tone::Done, said);
             }
             Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
-        },
+            }
+        }
     }
     doc.redraw();
 }

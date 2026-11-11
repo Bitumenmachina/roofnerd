@@ -134,16 +134,20 @@ pub fn run_goes_on(kind: Kind) -> &'static [&'static str] {
 }
 
 /// How far one wall's body lies in another's, in feet along it: none when the two bodies
-/// do not overlap, or overlap no more than walls that meet or cross do. Each wall is its
-/// centre line and its thickness; a thickness that is not known is none, and then it is
-/// the lines that are compared.
+/// do not overlap, or overlap only as walls that meet or cross do. Each wall is its centre
+/// line and its thickness. A thickness that is not known is taken as three inches for
+/// this test and no other: no wall in a house is thinner, and two lines an inch apart for
+/// twenty feet are one wall drawn twice whatever its type says.
 ///
-/// Two walls back to back, sharing a face, do not overlap. Two that meet at a corner or
-/// cross are in each other for about their own thickness: more than twice both
-/// thicknesses is one wall drawn over another. Two that run the same way (within about
-/// three degrees) and overlap at all are.
+/// Two walls back to back, sharing a face, do not overlap. Two that run the same way
+/// (within about three degrees) and overlap at all are one drawn over another. Two at an
+/// angle are a corner, a T or a crossing, however sharp: they are in each other only
+/// where they meet, and that is how walls are built.
 fn bodies_overlap(a: [P2; 2], thick_a: f64, b: [P2; 2], thick_b: f64) -> Option<f64> {
     let tol = crate::check::FIT_TOLERANCE_FT;
+    const THINNEST_WALL_FT: f64 = 0.25;
+    let known = |t: f64| if t > 0.0 { t } else { THINNEST_WALL_FT };
+    let (thick_a, thick_b) = (known(thick_a), known(thick_b));
     // How near the two centre lines have to be for the bodies to be in each other.
     let reach = ((thick_a + thick_b) / 2.0 - tol).max(tol);
     // How much of `b`'s centre line is within `reach` of `a`'s, beside `a`'s length.
@@ -179,8 +183,7 @@ fn bodies_overlap(a: [P2; 2], thick_a: f64, b: [P2; 2], thick_b: f64) -> Option<
         return None;
     }
     let sine = ((a[1][0] - a[0][0]) * (b[1][1] - b[0][1]) - (a[1][1] - a[0][1]) * (b[1][0] - b[0][0])).abs() / (la * lb);
-    let allowed = if sine < 0.05 { tol } else { 2.0 * (thick_a + thick_b) + tol };
-    (shared > allowed).then_some(shared)
+    (sine < 0.05 && shared > tol).then_some(shared)
 }
 
 /// `pl::in_system`: the system an element belongs to, by the system's path.
@@ -447,14 +450,19 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
     standing.sort_by(|x, y| x.0.cmp(&y.0));
     for (i, (a, storey, line, thick, stands)) in standing.iter().enumerate() {
         for (b, other, its, as_thick, theirs) in &standing[i + 1..] {
-            if storey != other {
-                continue;
-            }
             let tol = crate::check::FIT_TOLERANCE_FT;
-            if let (Some((lo, hi)), Some((lo2, hi2))) = (stands, theirs) {
-                if *hi <= lo2 + tol || *hi2 <= lo + tol {
-                    continue;
+            // Where each stands, above the datum: walls on two storeys are compared too
+            // (a wall held up to the roof and another on the floor above, on one line).
+            // Where that is not known, walls of one storey are taken to stand together
+            // and walls of two storeys apart.
+            match (stands, theirs) {
+                (Some((lo, hi)), Some((lo2, hi2))) => {
+                    if *hi <= lo2 + tol || *hi2 <= lo + tol {
+                        continue;
+                    }
                 }
+                _ if storey != other => continue,
+                _ => {}
             }
             if let Some(shared) = bodies_overlap(*line, *thick, *its, *as_thick) {
                 return Err(format!("{b}: lies along {a} for {} ft: one wall drawn over another would be counted twice", view::figure_shown(shared, 2)));

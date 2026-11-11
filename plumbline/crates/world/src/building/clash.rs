@@ -20,7 +20,8 @@
 //! * the joint itself where two things are joined (the job's network says where): two
 //!   runs that meet there, a run and its fitting, a run and the thing its end is
 //!   connected to. Only the joint is excused. Each run is left out for a little way
-//!   either side of it (three times the half-width of the larger run; into a fixture,
+//!   either side of it (between two runs, the sum of their half-widths over the sine of
+//!   the angle they meet at, and no more than that at fifteen degrees; into a fixture,
 //!   equipment or a fitting, as deep as the joint is in it) and what is left of the two
 //!   is tested like anything else: a run laid over another, folded back along it, or
 //!   carried on through the tank it is joined to is a clash. A stub shorter than that
@@ -397,7 +398,17 @@ fn away_from_joints(p: &Placement, other: &Placement, places: &[P3], owner: usiz
         .map(|n| {
             let t = ((n[0] - a[0]) * along[0] + (n[1] - a[1]) * along[1] + (n[2] - a[2]) * along[2]).clamp(0.0, length);
             let excused = match &other.shape {
-                Shape::Run { .. } => 3.0 * mine.max(half_across(&other.shape)),
+                // Two runs meeting at an angle are in each other, along either, for the
+                // sum of their half-widths over the sine of the angle: that much is the
+                // joint. Runs within fifteen degrees of one line are excused no more
+                // than runs at fifteen degrees: past that they lie along each other.
+                Shape::Run { a: oa, b: ob, .. } => {
+                    let od = [ob[0] - oa[0], ob[1] - oa[1], ob[2] - oa[2]];
+                    let ol = (od[0] * od[0] + od[1] * od[1] + od[2] * od[2]).sqrt().max(1.0e-12);
+                    let cross = [along[1] * od[2] - along[2] * od[1], along[2] * od[0] - along[0] * od[2], along[0] * od[1] - along[1] * od[0]];
+                    let sine = (cross[0] * cross[0] + cross[1] * cross[1] + cross[2] * cross[2]).sqrt() / ol;
+                    (mine + half_across(&other.shape)) / sine.max(0.258_819)
+                }
                 Shape::Box { at, size, angle } => deep_in_box(at, size, *angle, *n) + mine,
                 _ => 0.0,
             } + FIT_TOLERANCE_FT;

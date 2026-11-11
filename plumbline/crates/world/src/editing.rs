@@ -380,19 +380,19 @@ pub fn move_by(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -
     })
 }
 
-/// A source after something was done to the value it stands on: where the value first
-/// came from, then what was done last and on whose word. It does not grow with each move,
-/// and it does not lose where the thing came from.
+/// A source after something was done to the value it stands on: where the value came
+/// from, then each thing done to it since and on whose word. It loses nothing.
 pub(crate) fn after(source: &str, done: &str, by: &str) -> String {
-    // Only a note this wrote is replaced: the last "; moved (...)" or "; cut (...)", and
-    // only where the source ends with it. The same words in the middle of what a person
-    // wrote are that person's, and stay.
-    let noted = [source.rfind("; moved ("), source.rfind("; cut (")].into_iter().flatten().max().filter(|i| {
-        let note = &source[*i..];
-        note.ends_with(')') && !note[..note.len() - 1].contains(')')
-    });
-    let first = noted.map(|i| &source[..i]).unwrap_or(source);
-    format!("{first}; {done} ({by})")
+    // Nothing a source says is taken out of it: what a person wrote and a note this
+    // wrote look alike, and a guess at which is which would cut a person's words. The
+    // one thing not done is saying the same thing twice running: a wall moved four
+    // times on one person's word says so once.
+    let note = format!("; {done} ({by})");
+    if source.ends_with(&note) {
+        source.to_string()
+    } else {
+        format!("{source}{note}")
+    }
 }
 
 /// Take an element out of the job. A wall's doors and windows go with it. Anything else

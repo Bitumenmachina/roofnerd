@@ -2062,9 +2062,41 @@ window; lining up in the window; the USDA scan traced in the window.
 Judged and found wanting: J13-1 (J14-7), J13-8 (J14-5, J14-6), J13-10 (J14-11), J13-11
 (J14-13), J13-12 (J14-12). Not judged: J12-8, 11, 12, 15, 19; J13-4, 5, 7, 9, 16, 17, 18.
 
-**Where the fixes to the fourteenth stand:** J14-1 is fixed in the commit that holds this
-text (the ignore line is anchored to the one folder it was meant for, and the plans
-crate and the made-up plan files are committed); `tools/committed.sh` now builds an
-archive of the last commit and is run before a push. Commits `939e6aa`, `719ff91` and
-`f449a57` do not build from a clean clone and what STATUS said of them was true only of
-the working folder. None of the others is fixed yet.
+**Where the fixes to the fourteenth stand (2026-11-11).** What was decided is DECISIONS.md
+call 46. **None of these fixes has been judged.** Commits `939e6aa`, `719ff91` and
+`f449a57` do not build from a clean clone, and what STATUS said of them was true only of
+the working folder.
+
+| # | What was done | Held by |
+|---|---|---|
+| J14-1 | The ignore line is anchored to the one folder it was meant for; the plans crate and the made-up plan files are committed. `tools/committed.sh` lays out the last commit as git holds it, in a build folder of its own, and builds and tests it; it is run before a push. | the check itself: it fails on each of the three commits named above (`COMMIT=719ff91 tools/committed.sh --quick`) |
+| J14-2 | A scale set again moves nothing; what was traced at the earlier scale is listed when it is set, kept on the drawing, listed by `drawings` from then on, and said in the window in the tone of a refusal. | `j14_2_3_...` |
+| J14-3 | A drawing remembers what it was lined up by; a scale set again leaves that place where it was put. | `j14_2_3_...` (the corner at -7, the lined-up place still at 0, 0) |
+| J14-4 | A picture is shown at no more than 4,096 dots on its long side and keeps its own size; that it is shown smaller is said. One over 250 million dots is refused. | `a_picture_too_big_...` in the plans crate; the judge's 20,000 by 12,000 picture reads and says so. **Not shown in the window.** |
+| J14-5 | A wall of unknown thickness counts as 3 in thick for the test; walls on different storeys are compared by where each stands. | `j14_5_6_7_...` |
+| J14-6 | Walls at an angle (more than about three degrees) are never one over another. | `j14_5_6_7_...` (25, 20 and 10 degrees accepted; one degree refused) |
+| J14-7 | A joint between two runs is excused for the sum of their half-widths over the sine of the angle. | `j14_5_6_7_...` (a 30 degree lateral clear; a 5 degree branch a clash) |
+| J14-8 | Filled shapes' edges are read as lines; lines under a point long, lines in white, dashed lines and lines under a mask are counted and said, and a line is cut to what a square mask shows; a page with no size of its own is refused; a file with no pages says it may be cut short; a PDF that does not end as one says so. | `what_a_drawn_page_holds_...` in the plans crate; the judge's files `fills`, `short`, `clip`, `white`, `dashed`, `zero`, `truncated` each read as it now should |
+| J14-9 | `--on` a drawing of another storey is refused. In the window what is traced takes its source from the drawing the pick is on, and a pick off every sheet is drawn in the window. | **The command line: not held by a test or a demonstration line yet. The window: not shown.** |
+| J14-10 | `drawings` says when the file's page is not the size the drawing was made at; the window does not show such a sheet and says why. | **Not held by a test.** |
+| J14-11 | No measure of time is what a material is ordered by. | `j13_10_11_12_13_18_...`, with the judge's spellings added |
+| J14-12 | A source loses nothing: a note is added and never twice running. | `j12_10_...` and `j13_10_...`, both changed after call 46 |
+| J14-13 | Names: a comma, a hyphen, an underscore and a full stop part words; a figure and the letters beside it are two words. | `j13_10_...`, with the judge's pairs added |
+| J14-14 | A scale's points are on the page and at least a unit apart. A move, a fitting and a join in the window are sourced as done in the window. Removing a drawing says how many things were traced over it. Laying the same page twice is said. A JPEG is shown the way its own note says. **Not done:** a height and a type typed with `--on` still say "traced from"; the words on screen go to the language pass. | `j14_2_3_...` for the scale's points; the rest not held by tests |
+
+**What these changed that was so before:**
+
+* A scale set again on a lined-up drawing moves the sheet (its corner), where before the
+  corner stayed and the lined-up place moved.
+* Walls crossing or meeting at any angle over about three degrees are accepted; under
+  call 44 those under about 29 degrees were refused.
+* A second wall on a line where a wall of another storey already stands at the same
+  height is refused; it was accepted.
+* A wall's or a run's source after a move by a new hand reads "...; moved (first);
+  moved (second)" where it read "...; moved (second)".
+* "Copper, 16 oz" and "Copper 16 oz" are one name; "a.b" and "ab" are two.
+* A PDF whose walls are filled bars gives their edges as lines to snap to; it gave none.
+* The made-up vector plan still reads as 8 lines; the USDA scan as none.
+* `cargo test --workspace`: 178 passing (153 on the model, 8 on the skeleton, 4 on plan
+  files, 4 on tables, 3 on the spreadsheet reader, 3 on the STEP reader, 3 on the
+  command line).

@@ -648,8 +648,9 @@ the sheet's Clashes tab. Worked out from the job each time and never stored.
 * **A joint is not a clash, and what is joined is still tested away from its joint**
   (call 44). Where two runs meet, or a run meets its fitting or the thing it is
   connected to, each run is left out for a little way either side of the joint: between
-  two runs, three times the half-width of the larger; into a fixture, equipment or a
-  fitting, as deep as the joint is in it plus the run's half-width. What is left of the
+  two runs, the sum of their half-widths over the sine of the angle they meet at (for
+  anything under fifteen degrees, what fifteen degrees gives); into a fixture, equipment
+  or a fitting, as deep as the joint is in it plus the run's half-width. What is left of the
   two is tested like anything else. A stub shorter than that is not seen.
 * **Not tested, and listed with why:** anything with no shape.
 * **A clash takes the worse status of its two shapes.** A shape is no surer than the
@@ -678,14 +679,26 @@ window, the left panel's Drawings to trace.
   fingerprint, and says so when the file is no longer the one the drawing was made from.
   The picture is never in the job.
 * **A plan file is a PDF, a PNG or a JPEG.** A page is read to a picture no more than
-  4,096 dots on its long side and, for a PDF, to the straight lines drawn on it. What
-  the page could not give is listed: curves (known by their ends only), words (drawn,
-  not read), pictures inside the page, and a scan or a picture (nothing to snap to).
-* **Its scale is one dimension**: two places on the page and the distance between them.
-  A place on the page is then a place on the plan: `at` plus the page place times the
-  feet to a unit. Lining up moves `at` so a place on the page is a place on the plan.
+  4,096 dots on its long side (a bigger picture is shown smaller and keeps its own size
+  in dots) and, for a PDF, to the straight lines drawn on it: strokes, and the edges of
+  filled shapes. What the page could not give is listed: curves (known by their ends
+  only), words (drawn, not read), pictures inside the page, a scan or a picture (nothing
+  to snap to), lines under a point long, lines in white, dashed lines (kept whole),
+  lines cut or hidden by a mask, a mask that is not a square, a file that does not end
+  as a PDF does. A page with no size of its own and a file with no pages are refused.
+* **Its scale is one dimension**: two places on the page, both on it and at least one
+  unit of it apart, and the distance between them. A place on the page is then a place
+  on the plan: `at` plus the page place times the feet to a unit. Lining up moves `at`
+  so a place on the page is a place on the plan, and the drawing keeps the two places
+  (`lined_up`).
+* **A scale set again moves nothing that was traced** (call 46). What was traced at the
+  earlier scale is listed, kept on the drawing (`earlier`: the scale and the paths) and
+  listed by `drawings` until each is gone. A drawing that was lined up stays lined up:
+  its corner moves so the place it was lined up by does not.
 * **Nothing is traced over a drawing with no scale.** In the window, a storey with such
   a drawing under it draws nothing until the scale is set.
+* **A drawing is traced over on its own storey.** In the window what is drawn takes its
+  source from the drawing the pick is on; off every sheet it is drawn in the window.
 * **What is traced is Assumed** and its source is `traced from <name> (<file>, page
   <n>)`. A status or a source cannot be given with `--on`. The scale's distance is as
   sure as whoever gave it says; read off the drawing in the window, it is Assumed.
