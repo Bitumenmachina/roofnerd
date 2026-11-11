@@ -133,24 +133,54 @@ pub fn run_goes_on(kind: Kind) -> &'static [&'static str] {
     }
 }
 
-/// How far two walls' lines lie along each other, in feet: none when they do not share
-/// a line, or share no more of it than a point.
-fn lie_along(a: [P2; 2], b: [P2; 2]) -> Option<f64> {
+/// How far one wall's body lies in another's, in feet along it: none when the two bodies
+/// do not overlap, or overlap no more than walls that meet or cross do. Each wall is its
+/// centre line and its thickness; a thickness that is not known is none, and then it is
+/// the lines that are compared.
+///
+/// Two walls back to back, sharing a face, do not overlap. Two that meet at a corner or
+/// cross are in each other for about their own thickness: more than twice both
+/// thicknesses is one wall drawn over another. Two that run the same way (within about
+/// three degrees) and overlap at all are.
+fn bodies_overlap(a: [P2; 2], thick_a: f64, b: [P2; 2], thick_b: f64) -> Option<f64> {
     let tol = crate::check::FIT_TOLERANCE_FT;
-    let (dx, dy) = (a[1][0] - a[0][0], a[1][1] - a[0][1]);
-    let len = dx.hypot(dy);
-    if len <= tol {
+    // How near the two centre lines have to be for the bodies to be in each other.
+    let reach = ((thick_a + thick_b) / 2.0 - tol).max(tol);
+    // How much of `b`'s centre line is within `reach` of `a`'s, beside `a`'s length.
+    let inside = |a: [P2; 2], b: [P2; 2]| -> f64 {
+        let (dx, dy) = (a[1][0] - a[0][0], a[1][1] - a[0][1]);
+        let len = dx.hypot(dy);
+        if len <= tol {
+            return 0.0;
+        }
+        let (ux, uy) = (dx / len, dy / len);
+        let off = |p: P2| ux * (p[1] - a[0][1]) - uy * (p[0] - a[0][0]);
+        let along = |p: P2| ux * (p[0] - a[0][0]) + uy * (p[1] - a[0][1]);
+        // Along `b` from 0 to 1, each of those is a straight line: keep where it is
+        // between its two limits.
+        let (mut from, mut to) = (0.0_f64, 1.0_f64);
+        for (f0, f1, low, high) in [(off(b[0]), off(b[1]), -reach, reach), (along(b[0]), along(b[1]), 0.0, len)] {
+            let d = f1 - f0;
+            if d.abs() < 1.0e-12 {
+                if f0 < low || f0 > high {
+                    return 0.0;
+                }
+                continue;
+            }
+            let (s0, s1) = ((low - f0) / d, (high - f0) / d);
+            from = from.max(s0.min(s1));
+            to = to.min(s0.max(s1));
+        }
+        (to - from).max(0.0) * (b[1][0] - b[0][0]).hypot(b[1][1] - b[0][1])
+    };
+    let shared = inside(a, b).max(inside(b, a));
+    let (la, lb) = ((a[1][0] - a[0][0]).hypot(a[1][1] - a[0][1]), (b[1][0] - b[0][0]).hypot(b[1][1] - b[0][1]));
+    if la <= tol || lb <= tol {
         return None;
     }
-    let (ux, uy) = (dx / len, dy / len);
-    let off = |p: P2| (ux * (p[1] - a[0][1]) - uy * (p[0] - a[0][0])).abs();
-    let along = |p: P2| ux * (p[0] - a[0][0]) + uy * (p[1] - a[0][1]);
-    if off(b[0]) > tol || off(b[1]) > tol {
-        return None;
-    }
-    let (t0, t1) = (along(b[0]).min(along(b[1])), along(b[0]).max(along(b[1])));
-    let shared = t1.min(len) - t0.max(0.0);
-    (shared > tol).then_some(shared)
+    let sine = ((a[1][0] - a[0][0]) * (b[1][1] - b[0][1]) - (a[1][1] - a[0][1]) * (b[1][0] - b[0][0])).abs() / (la * lb);
+    let allowed = if sine < 0.05 { tol } else { 2.0 * (thick_a + thick_b) + tol };
+    (shared > allowed).then_some(shared)
 }
 
 /// `pl::in_system`: the system an element belongs to, by the system's path.
@@ -315,7 +345,9 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         q.iter(&job.world).map(|(n, s)| (n.path.clone(), s.classification.clone())).collect()
     };
     // Each wall's storey, its line, and how high it stands where that is entered outright.
-    let mut standing: Vec<(String, String, [P2; 2], Option<(f64, f64)>)> = Vec::new();
+    // Each wall with a line: its storey, its centre line, its thickness (none when its
+    // type's is not known) and the heights it stands between, where both are known.
+    let mut standing: Vec<(String, String, [P2; 2], f64, Option<(f64, f64)>)> = Vec::new();
     let mut q = job.world.query::<(&Node, &Kind, Option<&InSystem>, Option<&Wall>, Option<&Opening>, Option<&Floor>, Option<&Segment>)>();
     for (node, kind, in_system, wall, opening, floor, segment) in q.iter(&job.world) {
         let me = &node.path;
@@ -328,6 +360,9 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         }
         if matches!(kind, Kind::Wall | Kind::Floor) && parent != Some(Kind::Storey) {
             return Err(format!("{me}: a {kind:?} stands on a storey and has to be under one"));
+        }
+        if *kind == Kind::Drawing && parent != Some(Kind::Storey) {
+            return Err(format!("{me}: a drawing is a plan of a storey and has to be directly under one"));
         }
         if *kind == Kind::Storey && parent != Some(Kind::Job) {
             return Err(format!("{me}: a storey is a floor of the building and has to be directly under the job, not under {}", node.parent.as_deref().unwrap_or("nothing")));
@@ -353,12 +388,21 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         }
         if let Some(w) = wall {
             if let (Some(line), Some(storey)) = (w.line_ft(), node.parent.as_ref()) {
-                let base = match &w.base_offset {
-                    None => Some(0.0),
-                    Some(b) => b.feet(),
+                // Its body, not the line it was drawn on: the centre line lies to the
+                // left of the drawn line by what its `location` says.
+                let (thick, centre) = match wall_section(&tree, w) {
+                    Ok((thickness, layers, _)) => {
+                        let off = walls::centre(thickness, &layers, w.location);
+                        let length = geom::dist(line[0], line[1]).max(1.0e-12);
+                        let left = [-(line[1][1] - line[0][1]) / length * off, (line[1][0] - line[0][0]) / length * off];
+                        (thickness, [[line[0][0] + left[0], line[0][1] + left[1]], [line[1][0] + left[0], line[1][1] + left[1]]])
+                    }
+                    Err(_) => (0.0, line),
                 };
-                let stands = base.zip(w.height.as_ref().and_then(|h| h.feet())).filter(|_| w.top_level.is_none()).map(|(b, h)| (b, b + h));
-                standing.push((me.clone(), storey.clone(), line, stands));
+                // Where it stands, however its top is said: by a height or by a level.
+                let heights = wall_heights(&tree, me, w);
+                let stands = heights.base.ok().zip(heights.height.ok()).map(|(b, h)| (b, b + h));
+                standing.push((me.clone(), storey.clone(), centre, thick, stands));
             }
             if let Some(p) = &w.type_name.value {
                 if !tree.wall_types.contains_key(p) {
@@ -396,10 +440,10 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         }
     }
     // One wall drawn over another on a storey is the same wall counted twice. Two that
-    // stand one over the other, each with its own height entered, are two walls.
+    // stand one over the other (a wall on a knee wall) are two walls.
     standing.sort_by(|x, y| x.0.cmp(&y.0));
-    for (i, (a, storey, line, stands)) in standing.iter().enumerate() {
-        for (b, other, its, theirs) in &standing[i + 1..] {
+    for (i, (a, storey, line, thick, stands)) in standing.iter().enumerate() {
+        for (b, other, its, as_thick, theirs) in &standing[i + 1..] {
             if storey != other {
                 continue;
             }
@@ -409,7 +453,7 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
                     continue;
                 }
             }
-            if let Some(shared) = lie_along(*line, *its) {
+            if let Some(shared) = bodies_overlap(*line, *thick, *its, *as_thick) {
                 return Err(format!("{b}: lies along {a} for {} ft: one wall drawn over another would be counted twice", view::figure_shown(shared, 2)));
             }
         }
@@ -1246,6 +1290,8 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
         // Where its storey's floor is: None when it is under no storey, Some(None) when
         // the storey's elevation is not known.
         let base = storey.as_ref().map(|s| tree.levels.get(s).and_then(|l| l.elevation.feet()));
+        // A shape stands no surer than the height of the floor it is measured from.
+        let floor_status = storey.as_ref().and_then(|s| tree.levels.get(s)).map(|l| l.elevation.status).unwrap_or(Status::Known);
         // Openings under this wall that cannot be cut in it, each with why.
         let mut uncut: Vec<(String, String)> = Vec::new();
         let shape: Result<(Shape, Status), String> = match kind {
@@ -1256,7 +1302,9 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
                 let base = heights.base.clone()?;
                 let height = heights.height.clone()?;
                 let (thickness, layers, section_status) = wall_section(&tree, c)?;
-                let mut status = c.line.status.max(heights.status).max(section_status);
+                // Where it stands as well as how tall it is: its storey's floor and its
+                // base offset are part of its shape (`span`, not the height's own status).
+                let mut status = c.line.status.max(heights.span).max(section_status);
                 let length = geom::dist(a, b);
                 // The shape is drawn about the wall's centre line, which lies to the left
                 // of the line that was drawn by as much as the wall's `location` says.
@@ -1287,6 +1335,11 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
                         }
                     }
                 }
+                // A wall with an opening that could not be cut is drawn solid where the
+                // opening is: its shape is not known to be right there.
+                if !uncut.is_empty() {
+                    status = status.max(Status::Assumed);
+                }
                 Ok((Shape::Wall { a, b, base, height, thickness, holes }, status))
             })(),
             Kind::Floor => (|| {
@@ -1299,7 +1352,7 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
                 };
                 let (_, t) = typed(&tree.floor_types, &c.type_name, "a floor")?;
                 let thickness = t.thickness.feet().ok_or("its type's thickness is not known")?;
-                Ok((Shape::Floor { boundary, top: level + offset, thickness }, c.boundary.status.max(c.type_name.status).max(t.thickness.status).max(offset_status)))
+                Ok((Shape::Floor { boundary, top: level + offset, thickness }, c.boundary.status.max(c.type_name.status).max(t.thickness.status).max(offset_status).max(floor_status)))
             })(),
             k if k.is_segment() => (|| {
                 let c = w.get::<Segment>(e).ok_or("it has no line")?;
@@ -1315,7 +1368,7 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
                 let (width, depth) = section.unwrap_or((0.0, 0.0));
                 let g = runs::Geom::of(level, p, q, z0, z1, c.justify, width, depth, round.is_some());
                 let sized = if section.is_some() { t.map(|t| t.status().max(c.type_name.status)).unwrap_or(Status::Unknown) } else { Status::Unknown };
-                let status = c.line.status.max(c.offset.status).max(c.end_offset.as_ref().map(|e| e.status).unwrap_or(Status::Known)).max(sized);
+                let status = c.line.status.max(c.offset.status).max(c.end_offset.as_ref().map(|e| e.status).unwrap_or(Status::Known)).max(sized).max(floor_status);
                 Ok((Shape::Run { a: g.a, b: g.b, round, rect }, status))
             })(),
             _ => (|| {
@@ -1325,7 +1378,7 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
                 let offset = c.offset.feet().ok_or("its height above its storey is not known")?;
                 let size = c.size_ft().ok_or("its size is not known")?;
                 let angle = c.angle_deg().ok_or("how far it is turned is not known")?;
-                let status = c.at.status.max(c.offset.status).max(c.size.status).max(c.angle.as_ref().map(|a| a.status).unwrap_or(Status::Known));
+                let status = c.at.status.max(c.offset.status).max(c.size.status).max(c.angle.as_ref().map(|a| a.status).unwrap_or(Status::Known)).max(floor_status);
                 Ok((Shape::Box { at: [at[0], at[1], level + offset], size, angle }, status))
             })(),
         };

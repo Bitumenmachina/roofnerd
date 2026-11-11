@@ -1431,3 +1431,77 @@ and committed, marked as made up.
 * **A page is drawn at no more than 4,096 dots on its long side.** A 36 in sheet comes
   out at about 113 dots to the inch, which reads. Sharper tiles on zooming in are not
   built.
+
+### Call 44. The thirteenth judgment: what was decided in fixing it (2026-11-11)
+
+The findings are in STATUS.md, "Thirteenth judgment". Each fix that changed what the
+program accepts, refuses or reports is a decision, and is here before the test that
+holds it was written.
+
+* **Being joined excuses the joint, not the two things (J13-1).** Before, any two
+  elements that shared a joint were never tested against each other, so a run laid over
+  another, folded back along it, or carried through the tank it was joined to was
+  missed. Now each run is left out for a little way either side of each joint and what
+  is left of the two is tested like anything else. The little way: between two runs,
+  three times the half-width of the larger (which clears every joint down to a 45
+  degree wye); into a fixture, equipment or a fitting, as deep as the joint is in it
+  (to its nearest face) plus the run's half-width. A run joined to the middle of a tank
+  and leaving by the nearest face is clear; one that goes on through is not. A stub
+  shorter than the little way is not seen, and the file's head says so. No clearance is
+  asked between things that are joined. Two fixtures or fittings joined to each other
+  with no run are still not tested.
+* **The sample house gains three clashes by this**, each checked by hand: the hot branch
+  to lavatory 1 drawn a foot back up inside the hot main (1/4 + 3/8 = 5/8 in), and two
+  pipes whose centre lines lie in the water heater's face, each in it by its own radius
+  (1/2 in and 3/8 in). 18 becomes 21. The house is drawn, not engineered; they stay.
+* **Two ends leaving a joint the same way make no fitting (J13-1)**, for three and four
+  ends as for two. They are one over the other, which is a clash.
+* **A wall's solid pieces are its face less its holes, whatever the holes do (J13-2).**
+  `geom::face_less_holes` cuts every hole out of every strip. The clash test and the
+  window draw from the same pieces.
+* **A shape is no surer than its storey's floor height; a wall's also no surer than its
+  base offset (J13-3).** `placements` now carries both into every shape's status, and a
+  fitting's and a connector's status carries the floor height's. A job drawn in the
+  window, where the storey's height is typed and Assumed, therefore has no findings,
+  only questions for the field, until that height is made Known. That is ruling 2.
+* **A wall with an opening that could not be cut is Assumed at best (J13-4).** It is
+  drawn solid where the opening would be, so a clash with it there is a question.
+* **Against a wall or a floor, depth is the least way out that clears all of it
+  (J13-5).** A wall or a floor is several solids; each one's own way out counts only if
+  the thing, moved that far, is clear of every piece; straight out through the face (a
+  wall) or the top or bottom (a floor) always counts.
+* **Two round runs are measured by plain geometry (J13-17)** where it is exact: side by
+  side, one in the other, or crossing well inside both lengths. Sum of the radii less
+  the distance between centre lines. The library's figure was half a percent short.
+* **Where a clash is (J13-16):** the middle of the two boxes' overlap if that place is
+  inside both things; otherwise a place the measure of depth found in both.
+* **A fitting is turned to lie along the first run it joins (J13-6).** Its box is still
+  the run's size and still not the part that is bought.
+* **A quantity that names no measure is a typed number (J13-7)**, however written:
+  `2 * 2`, `-(-4)`. A run carrying one is not cut.
+* **One wall over another is judged by their bodies (J13-8).** Each wall is its centre
+  line (from its drawn line and its `location`) and its thickness. Two bodies overlap
+  where the centre lines are nearer than half of both thicknesses. Walls running the
+  same way (within about three degrees) may not overlap at all; walls at an angle may be
+  in each other for up to twice both thicknesses, which is a corner or a crossing. Walls
+  back to back on a shared face are two walls. Where each stands is taken from its base
+  and its top however the top is said, so a wall on a knee wall is two walls. Walls
+  meeting at less than about ten degrees are refused by this; none has been drawn.
+* **An opening's point is measured from the wall's middle (J13-9)**, not from the line
+  it was drawn on.
+* **The hour is the hour however it is spelled (J13-10):** hr, hrs, h, hour, hours, in
+  any capitals.
+* **What makes two names one name is narrower (J13-11).** Capitals, runs of spaces,
+  spaces beside a comma, and a full stop that is not a decimal point. A space between
+  two figures is kept: "1 1/2 in" is not "11/2 in". This replaces call 41's "all
+  spacing". Removing a condition matches its name the same way a material's is matched.
+* **Only a note this program wrote is replaced in a source (J13-12):** the last
+  "; moved (...)" or "; cut (...)", and only at the end. The same words inside what a
+  person wrote stay.
+* **A run is not joined to a thing on a system it cannot go on (J13-13).**
+* **The second piece of a cut run keeps the run's name (J13-18)** when somebody named
+  it: "<name>, cut at <number>".
+* **Not done, and why.** J13-14 (a pipe's and a duct's ends at one place: which fitting)
+  and J13-15 (a tee on an upright run; joints `fitting --all` passes over without
+  listing) need a way to say which run or a cut by height. They are next in the fixes,
+  after these are judged.

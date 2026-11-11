@@ -233,3 +233,45 @@ pub fn triangles(pts: &[P2]) -> (Vec<[usize; 3]>, bool) {
     }
     (out, clean)
 }
+
+/// What is left of a wall's face, `length` along by `height` up, when each hole
+/// (`[from, to, low, high]`) is cut out of it: solid pieces `[x0, x1, z0, z1]`, none over
+/// another. Holes may lie over one another or stand one above another (a transom over a
+/// door, a window over a window): what one hole cuts, another does not fill.
+pub fn face_less_holes(length: f64, height: f64, holes: &[[f64; 4]]) -> Vec<[f64; 4]> {
+    const THIN: f64 = 1.0e-6;
+    let mut xs: Vec<f64> = vec![0.0, length];
+    for h in holes {
+        xs.push(h[0].clamp(0.0, length));
+        xs.push(h[1].clamp(0.0, length));
+    }
+    xs.sort_by(f64::total_cmp);
+    xs.dedup_by(|a, b| (*a - *b).abs() < THIN);
+    // Each strip between two of those places, with what is solid in it from the bottom up.
+    let mut strips: Vec<(f64, f64, Vec<[f64; 2]>)> = Vec::new();
+    for pair in xs.windows(2) {
+        let (x0, x1) = (pair[0], pair[1]);
+        if x1 - x0 < THIN {
+            continue;
+        }
+        let mut cut: Vec<[f64; 2]> = holes.iter().filter(|h| h[0] <= x0 + THIN && h[1] >= x1 - THIN).map(|h| [h[2].clamp(0.0, height), h[3].clamp(0.0, height)]).filter(|c| c[1] - c[0] > THIN).collect();
+        cut.sort_by(|a, b| a[0].total_cmp(&b[0]));
+        let mut solid: Vec<[f64; 2]> = Vec::new();
+        let mut at = 0.0;
+        for [low, high] in cut {
+            if low - at > THIN {
+                solid.push([at, low]);
+            }
+            at = at.max(high);
+        }
+        if height - at > THIN {
+            solid.push([at, height]);
+        }
+        // A strip that is solid where the one before it is is one piece with it.
+        match strips.last_mut() {
+            Some((_, end, was)) if (*end - x0).abs() < THIN && was.len() == solid.len() && was.iter().zip(&solid).all(|(a, b)| (a[0] - b[0]).abs() < THIN && (a[1] - b[1]).abs() < THIN) => *end = x1,
+            _ => strips.push((x0, x1, solid)),
+        }
+    }
+    strips.into_iter().flat_map(|(x0, x1, solid)| solid.into_iter().map(move |[z0, z1]| [x0, x1, z0, z1])).collect()
+}

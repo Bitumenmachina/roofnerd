@@ -26,7 +26,7 @@ use std::process::ExitCode;
 
 use plumbline_world::value::Status;
 use plumbline_world::units::{self, Len};
-use plumbline_world::{file, roof, sample, solve, view, Footprint, Rise, Val};
+use plumbline_world::{file, plans, roof, sample, solve, view, Footprint, Rise, Val};
 
 /// Print a line. A reader that has stopped listening (`| head -1`) is not an error and
 /// must not be a panic, which is what `println!` makes of it.
@@ -58,7 +58,91 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline clashes <file> [--clearance \"2 in\"]\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--class <class>] [--of-material]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline storey <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <storey> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <storey>)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline room <file> <storey> \"<name>\" --at \"6,8\"\n  plumbline run <file> <storey> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline place <file> <storey> <fixture|equipment> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline move <file> <path> --by \"3,2\"\n  plumbline remove <file> <path>\n  plumbline fitting <file> <storey> --at \"10,2\" [--height \"8 ft\"] [--kind <bend|tee|cross|transition|coupling>]\n  plumbline fitting <file> --all [--system <system>]\n  plumbline connect <file> <fixture or equipment> <run>\n  plumbline split <file> <run> --at \"6,2\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline drawings <file>\n  plumbline clashes <file> [--clearance \"2 in\"]\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--class <class>] [--of-material]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline storey <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <storey> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <storey>)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline room <file> <storey> \"<name>\" --at \"6,8\"\n  plumbline run <file> <storey> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline place <file> <storey> <fixture|equipment> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline drawing <file> <storey> \"<name>\" --file <a PDF, PNG or JPEG of the plan> [--page 1]\n  plumbline calibrate <file> <drawing> --from \"126,90\" --to \"666,90\" --distance \"30 ft\"   (two places on the page and the dimension between them)\n  plumbline lineup <file> <drawing> --page-point \"126,126\" --plan-point \"0,0\"\n  tracing: wall, door, window, room, run and place take --on <drawing> in place of --status and --source; their points are then places on the drawing's page\n  plumbline move <file> <path> --by \"3,2\"\n  plumbline remove <file> <path>\n  plumbline fitting <file> <storey> --at \"10,2\" [--height \"8 ft\"] [--kind <bend|tee|cross|transition|coupling>]\n  plumbline fitting <file> --all [--system <system>]\n  plumbline connect <file> <fixture or equipment> <run>\n  plumbline split <file> <run> --at \"6,2\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
+}
+
+/// What a page is measured in until its drawing has a scale.
+fn page_unit(sort: plumbline_plans::Sort) -> &'static str {
+    if sort == plumbline_plans::Sort::Pdf { "points" } else { "dots" }
+}
+
+fn lines_said(n: usize) -> String {
+    match n {
+        0 => "no lines to snap to".to_string(),
+        1 => "1 straight line to snap to".to_string(),
+        n => format!("{n} straight lines to snap to"),
+    }
+}
+
+/// A plan file's path as the job keeps it: from the folder the job is in.
+fn from_the_jobs_folder(job: &str, file: &str) -> Result<String, String> {
+    use std::path::{Component, Path, PathBuf};
+    let folder = Path::new(job).parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    let folder = folder.canonicalize().map_err(|e| format!("cannot find the job's folder: {e}"))?;
+    let file = Path::new(file).canonicalize().map_err(|e| format!("cannot find {file}: {e}"))?;
+    let (a, b): (Vec<Component>, Vec<Component>) = (folder.components().collect(), file.components().collect());
+    let shared = a.iter().zip(&b).take_while(|(x, y)| x == y).count();
+    let mut out = PathBuf::new();
+    for _ in shared..a.len() {
+        out.push("..");
+    }
+    for part in &b[shared..] {
+        out.push(part);
+    }
+    out.to_str().map(str::to_string).ok_or_else(|| "the plan file's path is not text this program can keep".to_string())
+}
+
+/// Each drawing in the job: its file and page, its scale, and whether the file is still
+/// the one the drawing was made from. The file is read again here, so what it cannot
+/// give is said again.
+fn drawings(job: &mut plumbline_world::Job, path: &str) -> String {
+    let folder = std::path::Path::new(path).parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(std::path::Path::new(".")).to_path_buf();
+    let all: Vec<(String, String, plans::Drawing)> = {
+        let mut q = job.world.query::<(&plumbline_world::Node, &plans::Drawing)>();
+        let mut all: Vec<(String, String, plans::Drawing)> = q.iter(&job.world).map(|(n, d)| (n.path.clone(), n.name.clone(), d.clone())).collect();
+        all.sort_by(|a, b| a.0.cmp(&b.0));
+        all
+    };
+    let mut out = String::new();
+    if all.is_empty() {
+        let _ = writeln!(out, "No drawings: nothing is laid under the tracing.");
+    }
+    for (path, name, d) in all {
+        let file = d.file.value.clone().unwrap_or_default();
+        let _ = writeln!(out, "{} {name} [{path}]: page {} of {file}", d.status().flag(), d.page);
+        match (&d.scale, d.feet_per_unit()) {
+            (Some(s), Some(k)) => {
+                let _ = writeln!(out, "    scale: {} between ({}, {}) and ({}, {}) on its page: {} to the foot  ({})", s.distance.value.as_ref().map(|l| units::show_length(l, &s.distance.unit)).unwrap_or_default(), view::num(s.from[0]), view::num(s.from[1]), view::num(s.to[0]), view::num(s.to[1]), view::num((1.0e4 / k).round() / 1.0e4), s.distance.source);
+            }
+            _ => {
+                let _ = writeln!(out, "    scale: none. Nothing can be traced over it until it is calibrated from one dimension.");
+            }
+        }
+        match std::fs::read(folder.join(&file)) {
+            Err(e) => {
+                let _ = writeln!(out, "    file: cannot be read ({e}). The drawing cannot be shown.");
+            }
+            Ok(bytes) => {
+                if bytes.len() as u64 != d.bytes || plumbline_plans::checksum(&bytes) != d.checksum {
+                    let _ = writeln!(out, "    file: HAS CHANGED since this drawing was made from it. What was traced over it may no longer lie on it.");
+                } else {
+                    let _ = writeln!(out, "    file: as it was when the drawing was made");
+                }
+                match plumbline_plans::read(&bytes, d.page) {
+                    Err(why) => {
+                        let _ = writeln!(out, "    page: cannot be read: {why}");
+                    }
+                    Ok(page) => {
+                        let _ = writeln!(out, "    page: {}, {} by {} {}, {}", page.sort.said(), view::num(page.size[0]), view::num(page.size[1]), page_unit(page.sort), lines_said(page.lines.len()));
+                        for lost in &page.lost {
+                            let _ = writeln!(out, "    not read: {lost}");
+                        }
+                    }
+                }
+            }
+        }
+    }
+    out
 }
 
 /// What is in the same space as what, what passes through a wall or a floor, and, when a
@@ -458,7 +542,7 @@ fn run(args: &[String]) -> Result<(), String> {
     if cmd == "roof" {
         return new_roof(args);
     }
-    if matches!(cmd, "new" | "storey" | "type" | "system" | "wall" | "door" | "window" | "room" | "run" | "place" | "move" | "remove" | "split" | "fitting" | "connect") {
+    if matches!(cmd, "new" | "storey" | "type" | "system" | "wall" | "door" | "window" | "room" | "run" | "place" | "move" | "remove" | "split" | "fitting" | "connect" | "drawing" | "calibrate" | "lineup") {
         return draw(args);
     }
     if matches!(cmd, "sample" | "house" | "priced" | "show" | "check" | "lines" | "takeoff" | "price" | "estimate") && args.len() > 2 {
@@ -506,6 +590,12 @@ fn run(args: &[String]) -> Result<(), String> {
             let path = args.get(1).ok_or_else(usage)?;
             let (mut job, _) = read(path)?;
             let _ = std::io::stdout().write_all(takeoff(&mut job).as_bytes());
+            Ok(())
+        }
+        "drawings" => {
+            let path = args.get(1).ok_or_else(usage)?;
+            let (mut job, _) = read(path)?;
+            let _ = std::io::stdout().write_all(drawings(&mut job, path).as_bytes());
             Ok(())
         }
         "clashes" => {
@@ -911,7 +1001,79 @@ fn draw(args: &[String]) -> Result<(), String> {
         Ok((status, source.clone().ok_or("--source is required: say where it came from")?))
     };
     let (mut job, _) = read(path)?;
+    // What is traced over a drawing is Assumed and says which drawing. `--on <drawing>`
+    // stands in place of --status and --source, and the points given are then places on
+    // the drawing's page, turned into places on the plan by its scale.
+    let on = if matches!(cmd, "wall" | "door" | "window" | "room" | "run" | "place") { flag("--on") } else { None };
+    let traced = match &on {
+        None => None,
+        Some(d) => {
+            if status.is_some() || source.is_some() {
+                return Err("with --on, what is drawn is Assumed and its source is the drawing: --status and --source are not given".into());
+            }
+            let source = plans::traced_from(&mut job, d)?;
+            let drawing = job.find(d).and_then(|e| job.world.get::<plans::Drawing>(e).cloned()).ok_or_else(|| format!("{d} is not a drawing"))?;
+            Some((drawing, source))
+        }
+    };
+    let how = |status: &Option<String>, source: &Option<String>| -> Result<(Status, String), String> {
+        match &traced {
+            Some((_, source)) => Ok((Status::Assumed, source.clone())),
+            None => how(status, source),
+        }
+    };
+    let points = |text: &str| -> Result<Vec<[f64; 2]>, String> {
+        let pts = points(text)?;
+        match &traced {
+            None => Ok(pts),
+            Some((drawing, _)) => pts.into_iter().map(|p| drawing.to_plan(p).map(|q| q.map(|x| (x * 1.0e4).round() / 1.0e4 + 0.0)).ok_or_else(|| "the drawing's scale does not work out".to_string())).collect(),
+        }
+    };
     let said: String = match (cmd, plain) {
+        ("drawing", [storey, name]) => {
+            let (status, source) = how(&status, &source)?;
+            let given = need(flag("--file"), "--file", "plans.pdf")?;
+            let page = match flag("--page") {
+                None => 1,
+                Some(p) => p.parse::<usize>().map_err(|_| format!("--page {p:?} is not a page number"))?,
+            };
+            let bytes = std::fs::read(&given).map_err(|e| format!("cannot read {given}: {e}"))?;
+            let read = plumbline_plans::read(&bytes, page).map_err(|why| format!("{given}: {why}"))?;
+            // Kept in the job by its path from the job's folder, so the two can be moved together.
+            let kept = from_the_jobs_folder(path, &given)?;
+            let made = plans::add(&mut job, storey, name, plans::Read { file: &kept, page, bytes: bytes.len() as u64, checksum: &plumbline_plans::checksum(&bytes), size: read.size }, ed::Entered { status, source: &source })?;
+            let mut out = format!("{made}: drawing {name:?}: page {page} of {} of {kept} ({}), {} by {} {}, {}; no scale yet", read.pages, read.sort.said(), view::num(read.size[0]), view::num(read.size[1]), page_unit(read.sort), lines_said(read.lines.len()));
+            for lost in &read.lost {
+                out.push_str(&format!("\n  not read: {lost}"));
+            }
+            out
+        }
+        ("calibrate", [drawing]) => {
+            let (status, source) = how(&status, &source)?;
+            let one = |name: &'static str, text: Option<String>| -> Result<[f64; 2], String> {
+                match points(&need(text, name, "\"126,90\" (a place on the page)")?)?.as_slice() {
+                    [p] => Ok(*p),
+                    _ => Err(format!("{name} is one point, x,y on the page")),
+                }
+            };
+            let (from, to) = (one("--from", flag("--from"))?, one("--to", flag("--to"))?);
+            let distance = need(flag("--distance"), "--distance", "\"30 ft\" (the dimension between the two points)")?;
+            let k = plans::calibrate(&mut job, drawing, from, to, &distance, ed::Entered { status, source: &source })?;
+            format!("{drawing}: {} is {} on its page: {} to the foot", distance.trim(), view::num(((to[0] - from[0]).hypot(to[1] - from[1]) * 1.0e4).round() / 1.0e4), view::num((1.0e4_f64 / k).round() / 1.0e4))
+        }
+        ("lineup", [drawing]) => {
+            let (status, source) = how(&status, &source)?;
+            let one = |name: &'static str, text: Option<String>, like: &str| -> Result<[f64; 2], String> {
+                match points(&need(text, name, like)?)?.as_slice() {
+                    [p] => Ok(*p),
+                    _ => Err(format!("{name} is one point, x,y")),
+                }
+            };
+            let on_page = one("--page-point", flag("--page-point"), "\"126,126\" (a place on the page)")?;
+            let on_plan = one("--plan-point", flag("--plan-point"), "\"0,0\" (the place on the plan it is, in feet)")?;
+            plans::line_up(&mut job, drawing, on_page, on_plan, ed::Entered { status, source: &source })?;
+            format!("{drawing}: ({}, {}) on its page is ({}, {}) on the plan", view::num(on_page[0]), view::num(on_page[1]), view::num(on_plan[0]), view::num(on_plan[1]))
+        }
         ("storey", [name]) => {
             let (status, source) = how(&status, &source)?;
             let made = ed::storey(&mut job, name, &need(flag("--elevation"), "--elevation", "\"0 ft\"")?, &need(flag("--height"), "--height", "\"9 ft\"")?, ed::Entered { status, source: &source })?;

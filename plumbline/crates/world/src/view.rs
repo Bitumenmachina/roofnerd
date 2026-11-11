@@ -195,6 +195,7 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
             rows.push(entered(p, "profit", &m.profit, |x| num(*x)));
         }
         rows.extend(crate::building::rows(w, e, p, &names));
+        rows.extend(crate::plans::rows(w, e, p));
         if let Some(c) = w.get::<WorkCode>(e) {
             rows.push(entered(p, "schedule code", &c.wbs, |s| s.clone()));
         }

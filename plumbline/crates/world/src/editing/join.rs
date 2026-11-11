@@ -25,7 +25,7 @@ use super::{add_numbered, all_or_nothing, storey_of, Entered};
 use crate::building::{self, network, InSystem, SystemInfo};
 use crate::check::FIT_TOLERANCE_FT;
 use crate::components::*;
-use crate::formula::{self, Expr};
+use crate::formula;
 use crate::job::Job;
 use crate::units::{self, Len};
 use crate::value::{Status, Val};
@@ -73,10 +73,13 @@ fn run_info(job: &mut Job, path: &str) -> Result<RunInfo, String> {
     let section = segment.type_name.value.as_ref().and_then(|t| index.get(t)).and_then(|t| job.world.get::<SegmentType>(*t)).cloned();
     let system = job.world.get::<InSystem>(e).and_then(|s| s.0.value.clone());
     let tree = building::Tree::of(&mut job.world);
-    let base = tree.storey_of(path).and_then(|s| tree.levels.get(s)).and_then(|l| l.elevation.feet()).ok_or_else(|| format!("{path} is under no storey whose floor height is known"))?;
+    let level = tree.storey_of(path).and_then(|s| tree.levels.get(s));
+    let base = level.and_then(|l| l.elevation.feet()).ok_or_else(|| format!("{path} is under no storey whose floor height is known"))?;
+    // Where a run is in space is no surer than its storey's floor height.
+    let floor_status = level.map(|l| l.elevation.status).unwrap_or(Status::Unknown);
     let [p, q] = segment.line_ft().ok_or_else(|| format!("{path}'s line is not known"))?;
     let (z0, z1) = segment.offsets_ft().ok_or_else(|| format!("{path}'s height above its storey is not known"))?;
-    let mut status = segment.type_name.status.max(segment.line.status).max(segment.offset.status);
+    let mut status = segment.type_name.status.max(segment.line.status).max(segment.offset.status).max(floor_status);
     if let Some(end) = &segment.end_offset {
         status = status.max(end.status);
     }
@@ -116,7 +119,9 @@ fn split_at(job: &mut Job, run: &str, at: P2, how: Entered) -> Result<String, St
     }
     if let Some(cost) = job.world.get::<Cost>(e) {
         for line in &cost.lines {
-            if matches!(formula::parse(&line.quantity), Ok(Expr::Num(_))) {
+            // A quantity that names no measure is a typed number however it is written:
+            // `4`, `2 * 2`, `-(-4)`.
+            if formula::parse(&line.quantity).is_ok_and(|q| formula::names(&q).is_empty()) {
                 return Err(format!(
                     "{run} has a cost line, {:?}, whose quantity is a typed number ({}): cut in two it would be counted on both pieces. Take the line off or make its quantity a formula first",
                     line.description, line.quantity
@@ -146,6 +151,16 @@ fn split_at(job: &mut Job, run: &str, at: P2, how: Entered) -> Result<String, St
     }
     let parent = job.world.get::<Node>(e).and_then(|n| n.parent.clone()).ok_or_else(|| format!("{run} is under nothing"))?;
     let new = add_numbered(job, &parent, info.kind)?;
+    // A run somebody named keeps its name on both pieces: the second says it was cut off
+    // the first. One with only its number for a name gets its own number.
+    let was = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_default();
+    let own_number = run.rsplit('-').next().and_then(|n| n.parse::<u32>().ok()).map(|n| format!("{} {n}", info.kind.stem()));
+    if !was.is_empty() && Some(&was) != own_number.as_ref() {
+        let number = new.rsplit('-').next().and_then(|n| n.parse::<u32>().ok()).unwrap_or(0);
+        if let Some(mut node) = job.find(&new).and_then(|n| job.world.get_mut::<Node>(n)) {
+            node.name = format!("{was}, cut at {number}");
+        }
+    }
     building::check_segment(run, info.kind, &first)?;
     building::check_segment(&new, info.kind, &second)?;
     job.put(run, first)?;
@@ -280,15 +295,21 @@ fn fit_at(job: &mut Job, storey: &str, at: P2, z: Option<f64>, kind: Option<Fitt
         .collect();
     // Each run's section, in feet: across, deep, and whether it is round.
     let sections: Vec<Option<(f64, f64, bool)>> = runs.iter().map(|r| r.section.as_ref().and_then(|t| t.round_ft().map(|d| (d, d, true)).or_else(|| t.rect_ft().map(|(w, d)| (w, d, false))))).collect();
+    // No two of them leave it the same way: those lie one over the other, which is a
+    // clash and not a joint.
+    let dot_of = |i: usize, j: usize| away[i][0] * away[j][0] + away[i][1] * away[j][1] + away[i][2] * away[j][2];
+    for i in 0..ends.len() {
+        for j in i + 1..ends.len() {
+            if dot_of(i, j) >= IN_LINE {
+                return Err(format!("{} and {} leave {place} the same way, one over the other", ends[i].0, ends[j].0));
+            }
+        }
+    }
     let worked = match ends.len() {
         3 => FittingKind::Tee,
         4 => FittingKind::Cross,
         _ => {
-            let dot = away[0][0] * away[1][0] + away[0][1] * away[1][1] + away[0][2] * away[1][2];
-            if dot >= IN_LINE {
-                return Err(format!("{} and {} leave {place} the same way, one over the other", ends[0].0, ends[1].0));
-            }
-            if dot > -IN_LINE {
+            if dot_of(0, 1) > -IN_LINE {
                 FittingKind::Bend
             } else {
                 match (sections[0], sections[1]) {
@@ -368,7 +389,9 @@ fn fit_at(job: &mut Job, storey: &str, at: P2, z: Option<f64>, kind: Option<Fitt
         what,
         at: Val { value: Some([tidy(node.at[0]), tidy(node.at[1])]), unit: units::FT.into(), status, source: source.clone() },
         offset: Val { value: Some(Len::One(tidy(node.at[2] - base - deep_ft / 2.0))), unit: units::FT.into(), status, source: source.clone() },
-        angle: None,
+        // Turned to lie along the first of its runs that has a way on the plan, so its
+        // box is square to that run and not to the page. None when every run is upright.
+        angle: away.iter().find(|d| d[0].hypot(d[1]) > 1.0e-6).map(|d| tidy(d[1].atan2(d[0]).to_degrees())).filter(|a| a.abs() > 1.0e-9).map(|a| Val { value: Some(a), unit: "deg".into(), status, source: "turned to lie along the first run it joins".to_string() }),
         size,
     };
     let path = add_numbered(job, storey, Kind::Fitting)?;
@@ -462,6 +485,15 @@ pub fn connect(job: &mut Job, thing: &str, run: &str, how: Entered) -> Result<us
         }
         let r = run_info(job, run)?;
         let e = job.find(thing).ok_or_else(|| format!("no element {thing}"))?;
+        // A duct is not joined to a thing on a water system: the thing's system has to be
+        // one a run of this kind goes on.
+        if let Some(on) = job.world.get::<InSystem>(e).and_then(|s| s.0.value.clone()) {
+            let class = job.find(&on).and_then(|s| job.world.get::<SystemInfo>(s)).map(|s| s.classification.clone());
+            let goes_on = building::run_goes_on(r.kind);
+            if let Some(class) = class.filter(|c| !goes_on.is_empty() && !goes_on.contains(&c.as_str())) {
+                return Err(format!("{thing} is on {on}, a {class} system: a {} is not joined to it (a {} goes on: {})", r.kind.stem(), r.kind.stem(), goes_on.join(", ")));
+            }
+        }
         let placed = job.world.get::<Placed>(e).cloned().ok_or_else(|| format!("{thing} has no position"))?;
         let tree = building::Tree::of(&mut job.world);
         let base = tree.storey_of(thing).and_then(|s| tree.levels.get(s)).and_then(|l| l.elevation.feet()).ok_or_else(|| format!("{thing} is under no storey whose floor height is known"))?;

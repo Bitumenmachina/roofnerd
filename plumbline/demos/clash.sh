@@ -132,6 +132,11 @@ grep -E "^(In the same space|Through a wall|Closer than|Tested|Not tested)" "$T/
 # The house is drawn, not engineered: its trunk duct is drawn through its soil stack.
 grep -qF "first-floor trunk, west, piece 2 of 3 [duct-0100] and soil stack [pipe-0246]: in each other by 3.50 in" "$T/house.txt" || { echo "FAIL: the duct through the soil stack is not reported"; exit 1; }
 echo "    first-floor trunk, west, piece 2 of 3 and soil stack: in each other by 3.50 in"
+# A hot branch to a lavatory is drawn a foot back up inside the hot main it comes off: a
+# 1/2 in pipe in a 3/4 in pipe, in each other by both radii, 1/4 + 3/8 = 5/8 in. The two
+# are joined at the main's end. That excuses the joint, not the foot of pipe.
+grep -qF "hot main to the baths, piece 3 of 4 [pipe-0185] and hot to lavatory 1, piece 1 of 2 [pipe-0202]: in each other by 0.62 in" "$T/house.txt" || { echo "FAIL: the hot branch drawn back up inside the hot main is not reported"; exit 1; }
+echo "    hot main to the baths, piece 3 of 4 and hot to lavatory 1, piece 1 of 2: in each other by 0.62 in (joined at one end, and one inside the other for a foot)"
 
 echo
-echo "PASS: what is in the same space is found with how far and how sure; what passes through a wall is counted apart; what is joined is not a clash"
+echo "PASS: what is in the same space is found with how far and how sure; what passes through a wall is counted apart; a joint is not a clash, and what is joined is still tested away from its joint"

@@ -34,6 +34,10 @@ pub enum Tool {
     Fitting,
     /// A run joined to the fixture or the equipment its end is at: one pick on that end.
     Join,
+    /// A drawing's scale: the two ends of a dimension on it, then the dimension typed.
+    Scale,
+    /// A drawing lined up: a place on it, then the place on the plan that is.
+    LineUp,
 }
 
 impl Tool {
@@ -54,6 +58,8 @@ impl Tool {
             Tool::Move => "Move",
             Tool::Fitting => "Fitting",
             Tool::Join => "Join",
+            Tool::Scale => "Scale",
+            Tool::LineUp => "Line up",
         }
     }
 
@@ -65,7 +71,7 @@ impl Tool {
             Tool::Door | Tool::Window => "Width, height, sill",
             Tool::Run(_) => "Size across, height above the floor, system",
             Tool::Thing(_) => "What it is, size (along x across x up, in feet), height above the floor",
-            Tool::Move | Tool::Fitting | Tool::Join => "",
+            Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => "",
         }
     }
 
@@ -79,7 +85,7 @@ impl Tool {
             Tool::Run(Kind::Pipe) => "like 3/4 in, 1 ft, Domestic Cold Water",
             Tool::Run(_) => "like 3/4 in, 8 ft, Power",
             Tool::Thing(_) => "like Lavatory, 2 x 1.5 x 3, 0 ft",
-            Tool::Move | Tool::Fitting | Tool::Join => "",
+            Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => "",
         }
     }
 
@@ -88,7 +94,7 @@ impl Tool {
     pub fn takes(self) -> usize {
         match self {
             Tool::Wall => 2,
-            Tool::Move | Tool::Fitting | Tool::Join => 0,
+            Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => 0,
             _ => 3,
         }
     }
@@ -120,11 +126,13 @@ pub struct Draw {
     pub swallow: bool,
     /// The plan's snap scene, with the drawing and the storey it was made for and the
     /// element left out of it (what is being moved does not snap to itself).
-    pub scene: Option<(u64, String, Option<String>, snap::Scene)>,
+    pub scene: Option<(u64, String, Option<String>, usize, snap::Scene)>,
 }
 
-fn how() -> ed::Entered<'static> {
-    ed::Entered { status: Status::Assumed, source: SOURCE }
+/// What the window enters is Assumed, and says where it came from: the window itself, or
+/// the drawing it was traced from.
+fn how(source: &str) -> ed::Entered<'_> {
+    ed::Entered { status: Status::Assumed, source }
 }
 
 /// A tool's settings, split and checked as far as they can be without the job: each
@@ -164,7 +172,7 @@ fn parts(tool: Tool, text: &str) -> Result<Vec<String>, String> {
             size(&parts[1])?;
             length(&parts[2], true)?;
         }
-        Tool::Move | Tool::Fitting | Tool::Join => {}
+        Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => {}
     }
     Ok(parts)
 }
@@ -188,6 +196,8 @@ pub fn start(doc: &mut Doc, tool: Tool) {
         doc.say(Tone::Refused, "refused: drawing is done on the plan (T)");
     } else if tool == Tool::Move && doc.selected.is_none() {
         doc.say(Tone::Refused, "refused: select what is to be moved first");
+    } else if matches!(tool, Tool::Scale | Tool::LineUp) && !doc.show.storey.clone().is_some_and(|s| crate::plans::laid(&mut doc.job).iter().any(|l| l.storey == s)) {
+        doc.say(Tone::Refused, "refused: no drawing is laid under this storey");
     } else if tool.takes() > 0 && !doc.draw.settings.contains_key(tool.name()) {
         doc.entry_line = None;
         doc.entry = Some((Entry::Settings(tool), String::new()));
@@ -200,6 +210,8 @@ pub fn start(doc: &mut Doc, tool: Tool) {
             Tool::Move => "Move: pick a point on it, then where that point goes".to_string(),
             Tool::Fitting => "Fitting: pick where runs meet".to_string(),
             Tool::Join => "Join: pick where a run ends at a fixture or a piece of equipment".to_string(),
+            Tool::Scale => "Scale: pick the two ends of a dimension on the drawing, then type the dimension".to_string(),
+            Tool::LineUp => "Line up: pick a place on the drawing, then the place on the plan it is".to_string(),
         });
     }
     doc.touch();
@@ -221,7 +233,7 @@ pub fn settings_entered(doc: &mut Doc, tool: Tool, text: &str) {
 pub fn new_storey(doc: &mut Doc, text: &str) {
     let parts: Vec<&str> = text.split(',').map(str::trim).collect();
     let made = match parts.as_slice() {
-        [name, elevation, height] if !name.is_empty() => ed::storey(&mut doc.job, name, elevation, height, how()),
+        [name, elevation, height] if !name.is_empty() => ed::storey(&mut doc.job, name, elevation, height, how(SOURCE)),
         _ => Err("a storey takes: name, the height of its floor, how far up to the next (like Ground, 0 ft, 9 ft)".to_string()),
     };
     match made {
@@ -244,6 +256,21 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
         doc.draw.picked.clear();
         doc.draw.picked_on = Some(storey.clone());
     }
+    // Over a drawing a thing is traced, and says which drawing. Over one with no scale
+    // nothing is traced: the scale comes first.
+    let traced = if matches!(tool, Tool::Scale | Tool::LineUp) {
+        String::new()
+    } else {
+        match crate::plans::source_for(doc, &storey) {
+            Ok(traced) => traced,
+            Err(why) => {
+                doc.say(Tone::Refused, format!("refused: {why}"));
+                doc.touch();
+                return;
+            }
+        }
+    };
+    let traced = traced.as_str();
     let said = doc.draw.settings.get(tool.name()).cloned().unwrap_or_default();
     let s: Vec<&str> = said.split(',').map(str::trim).collect();
     // What the pick made, or why not; and the points still in hand afterwards.
@@ -258,13 +285,13 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             let pts = [*a, *b];
             let result = ed::all_or_nothing(&mut doc.job, |job| match tool {
                 Tool::Wall => {
-                    let t = ed::wall_type_for(job, s[0], how())?;
-                    ed::walls(job, &storey, &t, &pts, false, ed::Top::Height(s[1]), how())
+                    let t = ed::wall_type_for(job, s[0], how(SOURCE))?;
+                    ed::walls(job, &storey, &t, &pts, false, ed::Top::Height(s[1]), how(traced))
                 }
                 Tool::Run(kind) => {
-                    let t = ed::segment_type_for(job, kind, s[0], how())?;
+                    let t = ed::segment_type_for(job, kind, s[0], how(SOURCE))?;
                     let system = ed::system_of_class(job, s[2])?;
-                    ed::runs(job, &storey, kind, &t, &pts, s[1], Some(&system), how())
+                    ed::runs(job, &storey, kind, &t, &pts, s[1], Some(&system), how(traced))
                 }
                 _ => unreachable!("only a wall or a run is drawn point to point"),
             });
@@ -277,18 +304,50 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             Some(match source.filter(|p| doc.job.kind(p) == Some(Kind::Wall)) {
                 None => Err(format!("a {} goes in a wall: point at one", tool.name().to_lowercase())),
                 Some(wall) => ed::all_or_nothing(&mut doc.job, |job| {
-                    let t = ed::opening_type_for(job, kind, s[0], s[1], how())?;
-                    ed::opening(job, &wall, kind, &t, ed::OnWall::Point(at), s[2], how())
+                    let t = ed::opening_type_for(job, kind, s[0], s[1], how(SOURCE))?;
+                    ed::opening(job, &wall, kind, &t, ed::OnWall::Point(at), s[2], how(traced))
                 })
                 .map(|made| format!("{made} in {wall}")),
             })
         }
-        Tool::Thing(kind) => Some(size(s[1]).and_then(|size| ed::place(&mut doc.job, &storey, kind, s[0], at, s[2], Some(size), None, how())).map(|made| format!("{made}: {}", s[0]))),
-        Tool::Fitting => Some(ed::fitting(&mut doc.job, &storey, at, None, None, how()).map(|f| {
+        Tool::Thing(kind) => Some(size(s[1]).and_then(|size| ed::place(&mut doc.job, &storey, kind, s[0], at, s[2], Some(size), None, how(traced))).map(|made| format!("{made}: {}", s[0]))),
+        Tool::Fitting => Some(ed::fitting(&mut doc.job, &storey, at, None, None, how(traced)).map(|f| {
             let cut: Vec<&str> = f.cut.iter().map(|c| c.0.as_str()).collect();
             format!("{}: a {}{}", f.path, f.kind.title().to_lowercase(), if cut.is_empty() { String::new() } else { format!("; {} cut there", cut.join(", ")) })
         })),
-        Tool::Join => Some(ed::connect_at(&mut doc.job, &storey, at, how()).map(|(thing, run, which)| format!("{thing} is joined to {run} by its connector {which}"))),
+        Tool::Join => Some(ed::connect_at(&mut doc.job, &storey, at, how(traced)).map(|(thing, run, which)| format!("{thing} is joined to {run} by its connector {which}"))),
+        Tool::Scale => {
+            doc.draw.picked.push(at);
+            if doc.draw.picked.len() < 2 {
+                doc.say(Tone::Done, "Scale: from here; pick the other end of the dimension");
+            } else {
+                // Both ends are picked: the dimension between them is typed next.
+                doc.entry_line = None;
+                doc.entry = Some((Entry::Distance, String::new()));
+                doc.say(Tone::Done, "Scale: type the dimension between the two points");
+            }
+            doc.touch();
+            return;
+        }
+        Tool::LineUp => {
+            doc.draw.picked.push(at);
+            let [a, b] = doc.draw.picked.as_slice() else {
+                doc.say(Tone::Done, "Line up: from here; pick the place on the plan it is");
+                doc.touch();
+                return;
+            };
+            let (a, b) = (*a, *b);
+            doc.draw.picked.clear();
+            doc.draw.tool = None;
+            doc.draw.swallow = true;
+            Some(match crate::plans::under(doc, &storey, a) {
+                None => Err("the first point is not on a drawing".to_string()),
+                Some(l) => {
+                    let on_page = l.on_page(a);
+                    plumbline_world::plans::line_up(&mut doc.job, &l.path, on_page, b, ed::Entered { status: Status::Assumed, source: "lined up in the window" }).map(|()| format!("{} is lined up: that place on it is ({}, {}) on the plan", l.name, units::feet_as_ft_in(b[0], 16), units::feet_as_ft_in(b[1], 16)))
+                }
+            })
+        }
         Tool::Move => {
             doc.draw.picked.push(at);
             let [a, b] = doc.draw.picked.as_slice() else {
@@ -302,7 +361,7 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             doc.draw.swallow = true;
             Some(match doc.selected.clone() {
                 None => Err("nothing is selected to move".to_string()),
-                Some(sel) => ed::move_by(&mut doc.job, &sel, east, north, how()).map(|()| format!("{sel} moved {} east, {} north", units::feet_as_ft_in(east, 16), units::feet_as_ft_in(north, 16))),
+                Some(sel) => ed::move_by(&mut doc.job, &sel, east, north, how(traced)).map(|()| format!("{sel} moved {} east, {} north", units::feet_as_ft_in(east, 16), units::feet_as_ft_in(north, 16))),
             })
         }
     };
@@ -328,6 +387,33 @@ pub fn typed_length(doc: &mut Doc, text: &str) {
         Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
     }
     doc.touch();
+}
+
+/// The dimension typed for a drawing's scale, after its two ends were picked. The
+/// dimension is read off the drawing, so the scale is Assumed.
+pub fn scale_entered(doc: &mut Doc, text: &str) {
+    let picked = doc.draw.picked.clone();
+    doc.draw.picked.clear();
+    doc.draw.tool = None;
+    let made = match (picked.as_slice(), doc.show.storey.clone()) {
+        ([a, b], Some(storey)) => match crate::plans::under(doc, &storey, *a) {
+            None => Err("the first point is not on a drawing".to_string()),
+            Some(l) => {
+                let (from, to) = (l.on_page(*a), l.on_page(*b));
+                plumbline_world::plans::calibrate(&mut doc.job, &l.path, from, to, text, ed::Entered { status: Status::Assumed, source: "read off the drawing" }).map(|k| format!("{}: {} between the two points; the drawing is {} wide", l.name, text.trim(), units::feet_as_ft_in(l.drawing.size[0] * k, 16)))
+            }
+        },
+        _ => Err("pick the two ends of a dimension first".to_string()),
+    };
+    match made {
+        Ok(said) => {
+            doc.edit("scale");
+            doc.framed = false;
+            doc.say(Tone::Done, said);
+        }
+        Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+    }
+    doc.redraw();
 }
 
 /// Take the last step back, or with `redo` do it again.
@@ -381,7 +467,7 @@ fn over_model(window: &Window, at: Vec2) -> bool {
 }
 
 /// Where the pointer is on the storey's floor, snapped, while a tool is in hand.
-pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, keys: Res<ButtonInput<KeyCode>>, windows: Query<&Window, With<PrimaryWindow>>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>) {
+pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, plans: Res<crate::plans::Plans>, keys: Res<ButtonInput<KeyCode>>, windows: Query<&Window, With<PrimaryWindow>>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>) {
     let doc = doc.bypass_change_detection();
     let (Some(tool), Some(storey), true) = (doc.draw.tool, doc.show.storey.clone(), doc.plan) else {
         doc.draw.found = None;
@@ -413,11 +499,21 @@ pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, keys: Res<ButtonI
     // The plan's scene, made again when what is drawn has changed. What is being moved
     // is left out of it: it does not snap to where it was.
     let skip = if tool == Tool::Move { doc.selected.clone() } else { None };
-    if !doc.draw.scene.as_ref().is_some_and(|(geometry, of, without, _)| *geometry == doc.geometry && *of == storey && *without == skip) {
-        let scene = snap::scene(&mut doc.job, &storey, skip.as_deref());
-        doc.draw.scene = Some((doc.geometry, storey.clone(), skip.clone(), scene));
+    let pages = plans.read.len();
+    if !doc.draw.scene.as_ref().is_some_and(|(geometry, of, without, read, _)| *geometry == doc.geometry && *of == storey && *without == skip && *read == pages) {
+        let mut scene = snap::scene(&mut doc.job, &storey, skip.as_deref());
+        // A drawing's own lines, where its file has them: their ends, their middles and
+        // their crossings are places to pick, as a wall's are.
+        for l in snap_shot.drawings.iter().filter(|l| l.storey == storey) {
+            if let Some(read) = plans.read.get(&l.path) {
+                for line in &read.lines {
+                    scene.segment(l.on_plan(line[0]), l.on_plan(line[1]), None);
+                }
+            }
+        }
+        doc.draw.scene = Some((doc.geometry, storey.clone(), skip.clone(), pages, scene));
     }
-    let Some((_, _, _, scene)) = &doc.draw.scene else { return };
+    let Some((_, _, _, _, scene)) = &doc.draw.scene else { return };
     // A chain begun on another storey is not carried on here.
     let picked: &[[f64; 2]] = if doc.draw.picked_on.as_deref() == Some(storey.as_str()) { &doc.draw.picked } else { &[] };
     // Shift holds the next point square to the last: due east, west, north or south of it.
@@ -426,7 +522,7 @@ pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, keys: Res<ButtonI
         // A door or a window goes on a wall's line and nowhere else.
         Tool::Door | Tool::Window => snap::snap(scene, p, reach, &[], false, &snap::Snaps { nearest: true, ..snap::Snaps::none() }),
         Tool::Wall | Tool::Run(_) | Tool::Move => snap::snap(scene, p, reach, picked, square, &snap::Snaps::default()),
-        Tool::Thing(_) | Tool::Fitting | Tool::Join => snap::snap(scene, p, reach, &[], false, &snap::Snaps::default()),
+        Tool::Thing(_) | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => snap::snap(scene, p, reach, &[], false, &snap::Snaps::default()),
     };
     doc.pointer = Some([found.at[0], found.at[1], elevation]);
     doc.draw.scale = scale;

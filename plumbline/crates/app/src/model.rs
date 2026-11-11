@@ -34,6 +34,10 @@ pub enum Entry {
     Length,
     /// A new storey: its name, its floor's height, and how far up to the next.
     Storey,
+    /// A plan to lay under the storey on show: its file, and its page.
+    Drawing,
+    /// The distance between the two points picked on a drawing: its scale.
+    Distance,
 }
 
 /// How the last action went. Said by what happened, not read back out of the words.
@@ -213,6 +217,8 @@ pub struct Snapshot {
     pub pricing: Option<view::Pricing>,
     /// The estimate sheet and its recap (`view::estimate`).
     pub estimate: Option<view::Estimate>,
+    /// The drawings laid under the storeys.
+    pub drawings: Vec<crate::plans::Laid>,
     /// What clashes (`building::clash::clashes`), or why that could not be worked out.
     pub clashes: Option<Result<plumbline_world::building::clash::Clashes, String>>,
     pub totals: Option<view::RoofTotals>,
@@ -349,6 +355,13 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     }
     s.drawn = drawn;
     s.not_drawn = not_drawn;
+    // A drawing laid under a storey is part of what there is to look at.
+    s.drawings = crate::plans::laid(&mut doc.job);
+    for l in &s.drawings {
+        let (a, b) = (l.on_plan([0.0, 0.0]), l.on_plan(l.drawing.size));
+        reach([a[0], a[1], 0.0]);
+        reach([b[0], b[1], 0.0]);
+    }
 
     if lo[0] <= hi[0] {
         s.extent = Some((lo, hi, top));

@@ -68,7 +68,7 @@ xdotool key t; sleep 6                  # the plan
 click 1970 73                           # the sheet's Clashes tab
 xdotool mousemove 1000 850; sleep 1
 shot                                    # 01 two clashes listed, and marked on the plan
-click 101 665                           # Fitting where runs meet
+click 101 727                           # Fitting where runs meet
 xdotool mousemove 736 672; sleep 2      # the duct's corner, (10, 2)
 shot                                    # 02 about to put a fitting on the corner
 xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 4
@@ -78,7 +78,7 @@ click 608 672                           # where the branch meets the duct's side
 xdotool mousemove 1000 850; sleep 1
 shot                                    # 04 a tee, and the duct cut there
 esc
-click 113 692                           # Join a run to what it ends at
+click 113 754                           # Join a run to what it ends at
 click 480 672                           # the duct's end in the air handler, (2, 2)
 esc
 xdotool mousemove 1000 850; sleep 1

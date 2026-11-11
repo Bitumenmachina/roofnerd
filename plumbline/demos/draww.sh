@@ -55,7 +55,7 @@ len() { xdotool mousemove \$1 \$2; sleep 2; xdotool type "\${3:0:1}"; sleep 3; x
 xdotool key t; sleep 4
 shot                                    # 01 the empty job on plan: nothing to draw on yet
 tool 64 184 "Ground, 0 ft, 9 ft"        # New storey
-tool 44 257 "6 in, 9 ft" yes            # 02 Wall: what it draws with, being typed
+tool 44 319 "6 in, 9 ft" yes            # 02 Wall: what it draws with, being typed
 click 600 600                           # the first corner
 len 900 605 "24 ft" yes                 # 03 east: a length being typed
 len 922 400 "16 ft"                     # north
@@ -67,32 +67,32 @@ esc
 click 760 602                           # the middle of the south wall
 len 760 400 "16 ft"                     # a partition north from it
 esc; esc
-tool 45 297 "3 ft, 7 ft, 0 ft"          # Door
+tool 45 359 "3 ft, 7 ft, 0 ft"          # Door
 click 680 600                           # in the south wall
 click 760 500                           # in the partition
 esc
-tool 55 337 "4 ft, 3 ft, 3 ft"          # Window
+tool 55 399 "4 ft, 3 ft, 3 ft"          # Window
 click 919 500                           # in the east wall
 click 680 387                           # two in the north wall
 click 860 387
 esc
 xdotool mousemove 1000 800; sleep 1
 shot                                    # 05 walls, doors and windows
-tool 45 377 "6 in, 8 ft, Supply Air"    # Duct
+tool 45 439 "6 in, 8 ft, Supply Air"    # Duct
 click 630 570
 len 760 572 "8 ft"
 len 737 400 "12 ft"
 esc; esc
-tool 44 417 "3/4 in, 1 ft, Domestic Cold Water"   # Pipe
+tool 44 479 "3/4 in, 1 ft, Domestic Cold Water"   # Pipe
 click 780 585
 len 780 400 "14 ft"
 esc; esc
-tool 51 537 "Lavatory, 2 x 1.5 x 3, 0 ft"         # Fixture
+tool 51 599 "Lavatory, 2 x 1.5 x 3, 0 ft"         # Fixture
 xdotool mousemove 781 398; sleep 2
 shot                                    # 06 about to stand it on the pipe's end
 xdotool click 1; sleep 3
 esc
-tool 62 577 "Air handler, 2 x 2 x 4, 0 ft"        # Equipment
+tool 62 639 "Air handler, 2 x 2 x 4, 0 ft"        # Equipment
 click 631 571                           # on the duct's start
 esc
 xdotool mousemove 1000 800; sleep 1
@@ -101,12 +101,12 @@ xdotool key z; sleep 4
 shot                                    # 08 the last step undone: the equipment is gone
 xdotool key y; sleep 4                  # and done again
 click 760 450                           # the partition, selected
-click 97 611                            # Move what is selected
+click 97 673                            # Move what is selected
 click 760 493                           # from its middle
 len 900 494 "1 ft"                      # a foot east
 xdotool mousemove 1000 800; sleep 1
 shot                                    # 09 the partition a foot east, its door with it
-click 44 257                            # Wall again: a stray one, to be removed
+click 44 319                            # Wall again: a stray one, to be removed
 click 1000 700
 len 1100 702 "5 ft"
 esc; esc
@@ -120,7 +120,7 @@ shot                                    # 12 the window selected, not its wall
 xdotool key Delete; sleep 4
 xdotool mousemove 1000 800; sleep 1
 shot                                    # 13 the window taken out
-tool 54 457 "3/4 in, 8 ft, Steam"       # Conduit, on a system no conduit goes on
+tool 54 519 "3/4 in, 8 ft, Steam"       # Conduit, on a system no conduit goes on
 xdotool mousemove 1000 800; sleep 1
 shot                                    # 14 refused where it was typed, not at the second pick
 xdotool key t; sleep 6

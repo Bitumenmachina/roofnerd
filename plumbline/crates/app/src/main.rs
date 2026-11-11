@@ -35,10 +35,12 @@
 //! * `theme`: the palette, the typeface, and what panels are made of.
 //! * `scene`: the building in space.
 //! * `panels`: the main window's panels, and what is written on the model.
+//! * `plans`: the drawings laid under the storeys, read off their files.
 //! * `sheet`: the sheet window.
 
 mod model;
 mod panels;
+mod plans;
 mod scene;
 mod sheet;
 mod theme;
@@ -133,12 +135,13 @@ fn main() {
         .insert_resource(graphics)
         .init_resource::<Snapshot>()
         .init_resource::<scene::Drawing>()
+        .init_resource::<plans::Plans>()
         .init_resource::<panels::Scrolls>()
         .insert_resource(Orbit::new())
         .add_systems(Startup, (scene::setup, setup).chain())
         .add_systems(
             Update,
-            (keys, tools::clicks, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, scene::place_camera, tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels).chain(),
+            (keys, plans::dropped, plans::read, tools::clicks, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, scene::place_camera, tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels).chain(),
         )
         .run();
 }
@@ -172,7 +175,8 @@ pub fn set_view(doc: &mut Doc, orbit: &mut Orbit, snap: &Snapshot, plan: bool, w
     }
     doc.plan = plan;
     doc.walk = walk;
-    doc.touch();
+    // A drawing under the plan lies over the floor on plan and under it in 3D.
+    doc.redraw();
 }
 
 /// The selected plane's roof and the edge of the footprint it rises from.
@@ -276,6 +280,10 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                 doc.entry = Some((field, text));
             }
             Some(false) => {
+                if field == Entry::Distance {
+                    // The two points picked for a scale go with the dimension not typed.
+                    doc.draw.picked.clear();
+                }
                 doc.say(Tone::Done, "entry cancelled");
                 doc.touch();
             }
@@ -302,6 +310,8 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                 Entry::Settings(tool) => tools::settings_entered(doc, tool, &text),
                 Entry::Length => tools::typed_length(doc, &text),
                 Entry::Storey => tools::new_storey(doc, &text),
+                Entry::Drawing => plans::add(doc, &text),
+                Entry::Distance => tools::scale_entered(doc, &text),
                 // What it is made of, and the job's overhead and profit: Assumed, like the rest.
                 Entry::Material | Entry::Overhead | Entry::Profit => {
                     let root = doc.job.world.get::<plumbline_world::Node>(doc.job.root()).map(|n| n.path.clone()).unwrap_or_default();

@@ -49,7 +49,7 @@ struct Entry {
     extra: BTreeMap<String, Value>,
 }
 
-const KNOWN_KEYS: [&str; 35] = [K_MATERIAL, K_SUPPLY, K_MARKUP, K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_ALLOWANCE, K_PRICED, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_SEGMENT, K_SEGMENT_TYPE, K_FITTING, K_CONNECTORS, K_ROOM, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
+const KNOWN_KEYS: [&str; 36] = [crate::plans::K_DRAWING, K_MATERIAL, K_SUPPLY, K_MARKUP, K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_ALLOWANCE, K_PRICED, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_SEGMENT, K_SEGMENT_TYPE, K_FITTING, K_CONNECTORS, K_ROOM, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
 
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
@@ -90,6 +90,7 @@ pub fn save(job: &mut Job) -> String {
         put!(MadeOf, K_MATERIAL);
         put!(Supply, K_SUPPLY);
         put!(Markup, K_MARKUP);
+        put!(crate::plans::Drawing, crate::plans::K_DRAWING);
         put!(Level, K_LEVEL);
         put!(Wall, K_WALL);
         put!(Opening, K_OPENING);
@@ -285,6 +286,11 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                 K_MARKUP => {
                     let c: Markup = parse(&path, &k, v)?;
                     check::markup(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                crate::plans::K_DRAWING => {
+                    let c: crate::plans::Drawing = parse(&path, &k, v)?;
+                    crate::plans::check(&path, kind, &c)?;
                     ent.insert(c);
                 }
                 K_SCHEDULE => {

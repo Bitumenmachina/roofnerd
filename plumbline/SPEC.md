@@ -233,6 +233,7 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 | `pl::fitting` | a Fitting | `kind`: bend, tee, cross, transition or coupling. | |
 | `pl::connectors` | Equipment, a Fixture or a Fitting | A list. Each: `name`; `kind` (pipe, duct, conduit, power); for a pipe, `domain` (cold, hot, waste, vent, storm, gas); `flow` (in, out) when it is not both; `at`, in the thing's own axes (x along its angle, y to its left, z up from its base); `size`. | `at`: `ft` or `in` |
 | `pl::system` | a System | `discipline` (Mechanical, Electrical, Plumbing) and `classification`: Supply Air, Return Air, Exhaust Air, Refrigerant, Domestic Cold Water, Domestic Hot Water, Sanitary, Vent, Power, Lighting. | |
+| `pl::drawing` | a Drawing, under a Storey | One page of a plan file laid under the tracing (section 5.11). `file`: where the file is, from the folder the job is in. `page`, counted from 1. `bytes` and `checksum`: the file's length and fingerprint when the drawing was made from it. `size`: the page's width and height in its own units (a PDF's points, a picture's dots). `scale`, when it has one: `from` and `to`, two places on the page, and the `distance` between them. `at`: where the page's lower-left corner is on the plan. | `distance`: `ft`, `in` or `ft-in`; `at`: `ft` or `in` |
 | `pl::in_system` | a run, Equipment, a Fixture or a Fitting | The system it belongs to, by the system's path. It has to be a System in the job. | none |
 
 A file saved before the building model was re-based on BIMCraft's shapes (DECISIONS.md
@@ -604,19 +605,23 @@ one end of a wall; moving or removing several things at once.
   in line of one size, a coupling; two in line of two sizes, a transition; three, a tee;
   four, a cross. A run that passes through the point is cut there first. The fitting has
   a connector for each run, takes the runs' system, and is as sure as the least sure of
-  them. Refused: one end, five or more, runs of two systems, a fixture's connector at
-  the joint, cable, a joint that already has its fitting, a kind asked for that is not
-  the kind the joint takes. `--all` does every joint that has none and lists what it
+  them, and no surer than its storey's floor height. Its box is the size of its largest
+  run and is turned to lie along the first run it joins. Refused: one end, five or more,
+  two ends that leave the joint the same way (they lie one over the other), runs of two
+  systems, a fixture's connector at the joint, cable, a joint that already has its
+  fitting, a kind asked for that is not the kind the joint takes. `--all` does every joint that has none and lists what it
   passed over; it does not put a coupling between two runs of one size in line.
 * **`split`** (`plumbline split <file> <run> --at "x,y"`): a run cut in two at a point on
   its line. The first piece keeps the path; the second is new and carries what the first
-  carries. A run that climbs is as high at the cut as its line is there. Refused: a
+  carries; a run somebody named keeps its name on the second piece ("<name>, cut at
+  <number>"). A run that climbs is as high at the cut as its line is there. Refused: a
   point off the run or at its end, an upright run, a run with a cost line whose quantity
-  is a typed number.
+  names no measure (a typed number, however it is written: `4`, `2 * 2`).
 * **`connect`** (`plumbline connect <file> <thing> <run>`): a fixture or a piece of
   equipment given a connector where the run's end is, in the thing's own axes, of the
   run's kind and size. Refused: a run neither of whose ends is in the thing's box, both
-  of whose ends are, a thing with no size, a connector already there.
+  of whose ends are, a thing with no size, a connector already there, a thing on a
+  system a run of that kind does not go on (a duct to a lavatory on the cold water).
 
 After these the takeoff's "joined" line (section 5.6) says how many networks a system
 is in, how many ends are open, and where a run still meets another with no fitting.
@@ -627,7 +632,8 @@ is in, how many ends are open, and where a run still meets another with no fitti
 the sheet's Clashes tab. Worked out from the job each time and never stored.
 
 * **What is tested** is every element `building::placements` gives a shape: a wall as
-  its solid pieces round its doors and windows, a floor as its outline cut into slabs,
+  its face less every hole in it (`geom::face_less_holes`: what one opening cuts,
+  another over it does not fill), a floor as its outline cut into slabs,
   a run as a cylinder or a box, a fixture, equipment and a fitting as boxes.
 * **In the same space** (a hard clash): two solids in each other by more than the fit
   tolerance, 0.01 ft. Reported with how far one would have to move to clear the other,
@@ -636,15 +642,54 @@ the sheet's Clashes tab. Worked out from the job each time and never stored.
   with no depth: a hole to cut.
 * **Closer than a clearance** (a clearance clash): only when one is asked for, up to
   10 ft. Reported with how far apart.
-* **Never tested:** walls and floors against each other; what is joined (two runs at a
-  joint, a run and its fitting, a run and the thing it is connected to); what fills a
-  door or a window; the roof's planes.
+* **Never tested:** walls and floors against each other, wall against wall, floor
+  against floor; what fills a door or a window; the roof's planes.
+* **A joint is not a clash, and what is joined is still tested away from its joint**
+  (call 44). Where two runs meet, or a run meets its fitting or the thing it is
+  connected to, each run is left out for a little way either side of the joint: between
+  two runs, three times the half-width of the larger; into a fixture, equipment or a
+  fitting, as deep as the joint is in it plus the run's half-width. What is left of the
+  two is tested like anything else. A stub shorter than that is not seen.
 * **Not tested, and listed with why:** anything with no shape.
-* **A clash takes the worse status of its two shapes.**
+* **A clash takes the worse status of its two shapes.** A shape is no surer than the
+  floor height of its storey; a wall is also no surer than its base offset, and is
+  Assumed at best while it has an opening that could not be cut in it.
+* **How deep.** Two round runs side by side, one in the other, or crossing well inside
+  both lengths: the sum of their radii less the distance between their centre lines.
+  Against a wall or a floor, which is several solids: the least way out that clears
+  every piece, straight out through the face among them. Otherwise the library's
+  measure between the two solids.
+* **Where.** The middle of where the boxes round the two things overlap, if that place
+  is inside both; otherwise a place the measure of depth found in both.
 
 The solid geometry is `parry3d-f64`'s. Its measure of how deep two solids are in each
 other answers zero when one is dead centre in the other, so the yes or no is its
 overlap test and the depth is asked for separately (call 40).
+
+### 5.11 Plans under the tracing
+
+`plans.rs` in the world crate, `crates/plans` (DECISIONS.md call 43); `plumbline drawing`,
+`calibrate`, `lineup`, `drawings`, and `--on <drawing>` on the drawing verbs; in the
+window, the left panel's Drawings to trace.
+
+* **A Drawing is one page of a plan file**, an element under the storey it is a plan of.
+  The file stays where it is, beside the job; the job keeps its path, its length and a
+  fingerprint, and says so when the file is no longer the one the drawing was made from.
+  The picture is never in the job.
+* **A plan file is a PDF, a PNG or a JPEG.** A page is read to a picture no more than
+  4,096 dots on its long side and, for a PDF, to the straight lines drawn on it. What
+  the page could not give is listed: curves (known by their ends only), words (drawn,
+  not read), pictures inside the page, and a scan or a picture (nothing to snap to).
+* **Its scale is one dimension**: two places on the page and the distance between them.
+  A place on the page is then a place on the plan: `at` plus the page place times the
+  feet to a unit. Lining up moves `at` so a place on the page is a place on the plan.
+* **Nothing is traced over a drawing with no scale.** In the window, a storey with such
+  a drawing under it draws nothing until the scale is set.
+* **What is traced is Assumed** and its source is `traced from <name> (<file>, page
+  <n>)`. A status or a source cannot be given with `--on`. The scale's distance is as
+  sure as whoever gave it says; read off the drawing in the window, it is Assumed.
+* **Snapping.** A calibrated PDF's own lines are places to pick in the window: their
+  ends, their middles, their crossings and along them, as a wall's line is.
 
 ## 6. Cost code scheme
 
@@ -707,8 +752,9 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
 | Crate | Depends on | Holds |
 |---|---|---|
 | `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json`, `parry3d-f64` (solid geometry, for clashes) | The model: values, units, components, checks, plan geometry, derivation, line formulas and the steps a line is worked in, the lines planes imply, the saved file, the sample job, the flat view |
-| `crates/cli` (`plumbline`) | `plumbline-world` | The command line: the samples, `show`, `check`, `lines`, `takeoff`, `price`, `estimate`, the entry commands (`set`, `apply`, `line`, `class`, `labor`, `material`, `roof`) and the drawing verbs of sections 5.8 and 5.9, and `clashes` |
-| `crates/app` (`plumbline-app`) | `plumbline-world`, `bevy` | The 3D window and the sheet window |
+| `crates/plans` (`plumbline-plans`) | `hayro` (PDF), `image` (PNG, JPEG) | Reading a plan file's page: its picture, its straight lines, and what it could not give |
+| `crates/cli` (`plumbline`) | `plumbline-world`, `plumbline-plans` | The command line: the samples, `show`, `check`, `lines`, `takeoff`, `price`, `estimate`, the entry commands (`set`, `apply`, `line`, `class`, `labor`, `material`, `roof`) and the drawing verbs of sections 5.8 and 5.9, `clashes`, and the plans of section 5.11 |
+| `crates/app` (`plumbline-app`) | `plumbline-world`, `plumbline-plans`, `bevy` | The 3D window and the sheet window |
 
 The world crate does not depend on any renderer or window, and must not. The engine is
 linked by the application crate alone.

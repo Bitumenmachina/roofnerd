@@ -91,6 +91,7 @@ pub fn kind_name(kind: Kind) -> &'static str {
         Kind::Fitting => "Fitting",
         Kind::Room => "Room",
         Kind::Material => "Material",
+        Kind::Drawing => "Drawing",
     }
 }
 

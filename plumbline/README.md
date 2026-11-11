@@ -18,7 +18,7 @@ Where things stand is in [STATUS.md](STATUS.md). The model is in [SPEC.md](SPEC.
 | PROPOSALS.md | Work outside a deliverable. Not built until accepted. |
 | HANDOFF_REBASE.md | The task that re-based the building model on BIMCraft, and the rules it was done under (done; STATUS.md has the account) |
 | HANDOFF_DRAW.md | The task of drawing and editing in the window, its fence, and where it stands |
-| HANDOFF_CLASH.md | The next task: fittings, connections and clash detection |
+| HANDOFF_CLASH.md | The task of fittings, connections and clash detection, and where it stands |
 | PORTMAP.md | Each public item of the building model: ported from where, or ours and how that was checked |
 
 ## Run it
@@ -36,6 +36,10 @@ demos/draw.sh              # a small house modelled from an empty job at the com
 demos/draww.sh             # the same house drawn in the window's plan view with the pointer and typed lengths; pictures in demos/captured/draw
 demos/fit.sh               # fittings worked out from the runs that meet, runs joined to what they serve, and what the takeoff says is still open
 demos/clash.sh             # what is in the same space as what, what passes through a wall, and what is only close
+demos/clashw.sh            # fittings, a connection and the clashes in the window; pictures in demos/captured/clash
+demos/plan.sh              # a plan laid under a storey, given its scale from one dimension and traced over, at the command line
+demos/planw.sh             # the same in the window, on a real scanned sheet and on a vector plan; pictures in demos/captured/plan
+tools/fetch-plans.sh       # fetches the public-domain plan set the demonstrations trace (USDA Plan No. 7213) into plans/
 demos/d4w.sh               # the same in the window: the sheet's Money tab, and prices typed on what is selected
 demos/d2.sh                # the 3D prototype, driven on a virtual display; pictures in demos/captured/d2
 demos/house.sh             # a whole house with its heating, plumbing and wiring, walked round; pictures in demos/captured/house
@@ -83,6 +87,30 @@ like `Ground, 0 ft, 9 ft`). Then:
 * Z undoes and Y does again. F2 saves.
 * The sheet's Clashes tab lists what is in the same space as what and what passes
   through a wall or a floor; with it open, each clash is marked on the model in red.
+
+## Trace a plan
+
+The plan you were given goes under the storey it is a plan of: a PDF (drawn or scanned),
+a PNG or a JPEG. On the plan (T), with the storey chosen:
+
+* "Lay a drawing under this storey": type the file's name, and its page if it is not the
+  first (`plans/a-1.pdf, 2`). Or drop the file on the window. The sheet appears under the
+  plan and says it has no scale yet. Nothing can be traced over it until it has one.
+* "Set the scale from one dimension": click the two ends of a dimension on the sheet,
+  then type what the dimension says (`41' 3"`). The sheet is now to scale. On a PDF that
+  was drawn, not scanned, the pointer snaps to the sheet's own lines.
+* "Line the drawing up": click a place on the sheet, then the place on the plan it is.
+* Then draw over it with the tools above. What is traced is flagged Assumed and says
+  which drawing it was traced from. A length typed off a dimension goes that far, to a
+  ten-thousandth of a foot.
+
+The job keeps where the plan file is, never the plan itself. If the file changes or
+moves, the drawing says so.
+
+At the command line: `plumbline drawing job.json <storey> "A-1" --file plans/a-1.pdf`,
+`plumbline calibrate job.json <drawing> --from "126,90" --to "666,90" --distance "30 ft"`,
+`plumbline drawings job.json`, and `--on <drawing>` on `wall`, `door`, `window`, `room`,
+`run` and `place` to give points as places on the page.
 
 Everything drawn in the window is flagged Assumed and says it was drawn there. Rooms are
 placed at the command line: `plumbline room job.json <storey> "name" --at "6,8" --status

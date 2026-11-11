@@ -99,6 +99,8 @@ pub enum Kind {
     /// A material: what something is made of, how it is bought and what it costs. An
     /// element says what it is made of by the material's name.
     Material,
+    /// A sheet of the plans laid under the tracing of the storey it is under.
+    Drawing,
 }
 
 impl Kind {
@@ -134,6 +136,7 @@ impl Kind {
             Kind::Fitting => "fitting",
             Kind::Room => "room",
             Kind::Material => "material",
+            Kind::Drawing => "drawing",
         }
     }
     pub fn is_area(self) -> bool {

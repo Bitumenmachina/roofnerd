@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/world", "crates/cli", "crates/app"]
+members = ["crates/world", "crates/plans", "crates/cli", "crates/app"]
 
 [workspace.package]
 version = "0.1.0"
@@ -18,3 +18,11 @@ serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 # Solid geometry for clash detection: do two shapes overlap, and how far apart are they.
 # The 64-bit build, without the triangulation it can also do.
 parry3d-f64 = { version = "0.31.1", default-features = false, features = ["required-features", "std", "alloc"] }
+
+# What this workspace is built on is built optimised even while its own crates are not:
+# drawing a scanned plan's page, and the window's frames on a machine with no graphics
+# card, are many times slower without it. Its own crates keep their checks and their
+# debug information.
+[profile.dev.package."*"]
+opt-level = 3
+debug = false

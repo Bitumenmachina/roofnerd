@@ -24,10 +24,13 @@ first three and what they bring; the engine is linked by the 3D application alon
 
 | Crate | Version | License |
 |---|---|---|
+| ab_glyph_rasterizer | 0.1.10 | Apache-2.0 |
 | accesskit_winit | 0.33.2 | Apache-2.0 |
 | accesskit | 0.24.1 | MIT OR Apache-2.0 |
 | adler2 | 2.0.1 | 0BSD OR MIT OR Apache-2.0 |
 | aho-corasick | 1.1.5 | Unlicense OR MIT |
+| alloc-no-stdlib | 2.0.4 | BSD-3-Clause |
+| alloc-stdlib | 0.2.4 | BSD-3-Clause |
 | allocator-api2 | 0.2.21 | MIT OR Apache-2.0 |
 | annotate-snippets | 0.12.17 | MIT OR Apache-2.0 |
 | anstream | 1.0.0 | MIT OR Apache-2.0 |
@@ -115,6 +118,8 @@ first three and what they bring; the engine is linked by the 3D application alon
 | bitvec | 1.1.1 | MIT |
 | blake3 | 1.8.7 | CC0-1.0 OR Apache-2.0 OR Apache-2.0 WITH LLVM-exception |
 | blocking | 1.7.0 | Apache-2.0 OR MIT |
+| brotli-decompressor | 5.0.3 | BSD-3-Clause/MIT |
+| brotli | 8.0.4 | BSD-3-Clause AND MIT |
 | bumpalo | 3.20.3 | MIT OR Apache-2.0 |
 | bytemuck_derive | 1.12.1 | Zlib OR Apache-2.0 OR MIT |
 | bytemuck | 1.25.2 | Zlib OR Apache-2.0 OR MIT |
@@ -126,6 +131,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | cfg_aliases | 0.2.2 | MIT |
 | codespan-reporting | 0.13.1 | Apache-2.0 |
 | colorchoice | 1.0.5 | MIT OR Apache-2.0 |
+| color | 0.3.3 | Apache-2.0 OR MIT |
 | concurrent-queue | 2.5.0 | Apache-2.0 OR MIT |
 | const-fnv1a-hash | 1.1.0 | MIT |
 | const_panic | 0.2.17 | Zlib |
@@ -160,6 +166,8 @@ first three and what they bring; the engine is linked by the 3D application alon
 | event-listener | 5.4.2 | Apache-2.0 OR MIT |
 | fastrand | 2.5.0 | Apache-2.0 OR MIT |
 | fdeflate | 0.3.7 | MIT OR Apache-2.0 |
+| fearless_simd | 0.7.0 | Apache-2.0 OR MIT |
+| fearless_simd | 1.2.0 | Apache-2.0 OR MIT |
 | find-msvc-tools | 0.1.15 | MIT OR Apache-2.0 |
 | fixedbitset | 0.5.9 | MIT OR Apache-2.0 |
 | flate2 | 1.1.11 | MIT OR Apache-2.0 |
@@ -188,6 +196,15 @@ first three and what they bring; the engine is linked by the 3D application alon
 | hashbrown | 0.15.5 | MIT OR Apache-2.0 |
 | hashbrown | 0.16.1 | MIT OR Apache-2.0 |
 | hashbrown | 0.17.1 | MIT OR Apache-2.0 |
+| hayro-ccitt | 0.5.0 | Apache-2.0 OR MIT |
+| hayro-cmap | 0.1.1 | Apache-2.0 OR MIT |
+| hayro-font | 0.5.0 | Apache-2.0 OR MIT |
+| hayro-interpret | 0.9.0 | Apache-2.0 OR MIT |
+| hayro-jbig2 | 0.4.0 | Apache-2.0 OR MIT |
+| hayro-jpeg2000 | 0.5.0 | Apache-2.0 OR MIT |
+| hayro-postscript | 0.2.0 | Apache-2.0 OR MIT |
+| hayro-syntax | 0.9.0 | Apache-2.0 OR MIT |
+| hayro | 0.9.0 | Apache-2.0 OR MIT |
 | heapless | 0.8.0 | MIT OR Apache-2.0 |
 | hexasphere | 19.0.0 | MIT OR Apache-2.0 |
 | icu_collections | 2.4.0 | Unicode-3.0 |
@@ -209,6 +226,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | itertools | 0.15.0 | MIT OR Apache-2.0 |
 | itoa | 1.0.19 | MIT OR Apache-2.0 |
 | ktx2 | 0.5.0 | Apache-2.0 |
+| kurbo | 0.13.1 | Apache-2.0 OR MIT |
 | lalrpop-util | 0.23.2 | Apache-2.0 OR MIT |
 | lazy_static | 1.5.1 | MIT OR Apache-2.0 |
 | lexical-core | 1.0.6 | MIT/Apache-2.0 |
@@ -256,13 +274,20 @@ first three and what they bring; the engine is linked by the 3D application alon
 | parley_data | 0.11.1 | Apache-2.0 OR MIT |
 | parley | 0.11.1 | Apache-2.0 OR MIT |
 | parry3d-f64 | 0.31.1 | Apache-2.0 |
+| peniko | 0.6.1 | Apache-2.0 OR MIT |
 | percent-encoding | 2.3.2 | MIT OR Apache-2.0 |
 | petgraph | 0.8.3 | MIT OR Apache-2.0 |
+| phf_generator | 0.13.1 | MIT |
+| phf_macros | 0.13.1 | MIT |
+| phf_shared | 0.13.1 | MIT |
+| phf | 0.13.1 | MIT |
+| pic-scale | 0.7.12 | BSD-3-Clause OR Apache-2.0 |
 | pin-project-lite | 0.2.17 | Apache-2.0 OR MIT |
 | piper | 0.2.5 | MIT OR Apache-2.0 |
 | pkg-config | 0.3.34 | MIT OR Apache-2.0 |
 | png | 0.18.1 | MIT OR Apache-2.0 |
 | polling | 3.11.0 | Apache-2.0 OR MIT |
+| polycool | 0.4.0 | MIT OR Apache-2.0 |
 | potential_utf | 0.1.6 | Unicode-3.0 |
 | presser | 0.3.1 | MIT OR Apache-2.0 |
 | proc-macro2 | 1.0.107 | MIT OR Apache-2.0 |
@@ -276,6 +301,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | rand | 0.10.3 | MIT OR Apache-2.0 |
 | raw-window-handle | 0.6.2 | MIT OR Apache-2.0 OR Zlib |
 | read-fonts | 0.41.0 | MIT OR Apache-2.0 |
+| read-fonts | 0.46.0 | MIT OR Apache-2.0 |
 | rectangle-pack | 0.4.2 | MIT/Apache-2.0 |
 | regex-automata | 0.4.18 | MIT OR Apache-2.0 |
 | regex-syntax | 0.8.11 | MIT OR Apache-2.0 |
@@ -300,7 +326,9 @@ first three and what they bring; the engine is linked by the 3D application alon
 | shlex | 2.0.1 | MIT OR Apache-2.0 |
 | simba | 0.10.2 | Apache-2.0 |
 | simd-adler32 | 0.3.10 | MIT |
+| siphasher | 1.0.4 | MIT OR Apache-2.0 |
 | skrifa | 0.44.0 | MIT OR Apache-2.0 |
+| skrifa | 0.49.0 | MIT OR Apache-2.0 |
 | slab | 0.4.12 | MIT |
 | slotmap | 1.1.1 | Zlib |
 | smallvec | 1.16.5 | MIT OR Apache-2.0 |
@@ -346,6 +374,8 @@ first three and what they bring; the engine is linked by the 3D application alon
 | utf_types | 1.0.0 | Apache-2.0 OR MIT |
 | uuid | 1.29.2 | Apache-2.0 OR MIT |
 | variadics_please | 2.0.0 | MIT OR Apache-2.0 |
+| vello_common | 0.3.0 | Apache-2.0 OR MIT |
+| vello_cpu | 0.3.0 | Apache-2.0 OR MIT |
 | version_check | 0.9.5 | MIT/Apache-2.0 |
 | weak-table | 0.4.0 | MIT |
 | wesl-core | 0.1.0 | MIT OR Apache-2.0 |
@@ -380,7 +410,10 @@ first three and what they bring; the engine is linked by the 3D application alon
 | zerotrie | 0.2.5 | Unicode-3.0 |
 | zerovec-derive | 0.11.7 | Unicode-3.0 |
 | zerovec | 0.11.9 | Unicode-3.0 |
+| zlib-rs | 0.6.8 | Zlib |
 | zmij | 1.0.23 | MIT |
+| zune-core | 0.5.3 | MIT OR Apache-2.0 OR Zlib |
+| zune-jpeg | 0.5.15 | MIT OR Apache-2.0 OR Zlib |
 
 ## Candidates checked and not linked
 
@@ -421,6 +454,9 @@ from a shallow clone of the source.
 | IFC5-development | no license file at the root; README says the viewer is MIT | repository | pattern only; no code or schema taken |
 | ProTakeoff | not verified (address not reachable) | | not used |
 | ConstructCAD | not verified (not located) | | not used |
+| pdfium-render 0.9.5 | MIT OR Apache-2.0, over Google's PDFium (BSD-3-Clause and Apache-2.0) | registry, 2026-11-11 | not linked: it needs PDFium's compiled library fetched or shipped beside the program (call 43) |
+| MuPDF | AGPL-3.0 | its own licence page, 2026-11-11 | reference only, never linked (call 43) |
+| Poppler | GPL-2.0 or GPL-3.0 | its own licence page, 2026-11-11 | reference only, never linked; `pdftoppm` was run once by hand to look at the plan set (call 43) |
 
 ## Borrowed code
 

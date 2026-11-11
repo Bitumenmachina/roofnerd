@@ -292,7 +292,7 @@ pub fn allowance(path: &str, kind: Kind, a: &Allowance) -> Result<(), String> {
 pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
     // Cost lines are on what is built and on the job. A condition's lines are its recipe;
     // a material's cost is its price; a type is not a thing that is bought.
-    if matches!(kind, Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey) && !c.lines.is_empty() {
+    if matches!(kind, Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey | Kind::Drawing) && !c.lines.is_empty() {
         return Err(format!("{path}: a {kind:?} cannot carry cost lines; they go on what is built, or on the job for general conditions{}", if kind == Kind::Condition { " (a condition's own lines are its recipe)" } else { "" }));
     }
     c.code.check(&format!("{path} cost code"), "")?;
@@ -422,7 +422,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
 
 /// What an element is made of is a material's name.
 pub fn made_of(path: &str, kind: Kind, m: &MadeOf) -> Result<(), String> {
-    if matches!(kind, Kind::Job | Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey) {
+    if matches!(kind, Kind::Job | Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey | Kind::Drawing) {
         return Err(format!("{path}: a {kind:?} is not made of a material"));
     }
     text_ok(&format!("{path} material"), &m.0)
@@ -439,11 +439,11 @@ pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
         if o.unit.is_empty() || o.unit.chars().any(char::is_whitespace) || o.unit.contains('/') || o.unit.contains('$') {
             return Err(format!("{path}: its order unit {:?} is not a usable name for what is bought (sheet, lb, box)", o.unit));
         }
-        if o.unit == HOURS {
+        if is_hours(&o.unit) {
             return Err(format!("{path}: a material is not bought by the hour"));
         }
         let (a, b) = o.factor.unit.split_once('/').unwrap_or(("", ""));
-        if a == HOURS || b == HOURS {
+        if is_hours(a) || is_hours(b) {
             return Err(format!("{path}: its order factor is in {:?}; a material is not ordered by the hour", o.factor.unit));
         }
         if !((a == o.unit && !b.is_empty() && b != o.unit) || (b == o.unit && !a.is_empty() && a != o.unit)) {
@@ -460,7 +460,7 @@ pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
         if !ok {
             return Err(format!("{what}: its unit is {:?}; a price is dollars for a unit, like \"$/lb\" or \"$/SF\"", v.unit));
         }
-        if v.unit == format!("$/{HOURS}") {
+        if v.unit.strip_prefix("$/").is_some_and(is_hours) {
             return Err(format!("{what}: a material is not bought by the hour"));
         }
         let wanted = per.get_or_insert_with(|| v.unit.clone()).clone();
@@ -491,8 +491,21 @@ pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
 /// Whether two names are the same but for capitals, spacing and a full stop at the end:
 /// "Copper, 16 oz", "copper,16 OZ" and "Copper, 16 oz." are one name.
 pub fn same_name(a: &str, b: &str) -> bool {
-    let plain = |s: &str| s.split_whitespace().collect::<String>().to_lowercase().trim_end_matches('.').to_string();
+    // One space where there is any, none beside a comma, and no full stop that is not a
+    // decimal point: "No. 1" is "No 1", and "1.5 in" keeps its point. Spaces between
+    // figures stay: "1 1/2 in" is not "11/2 in".
+    let plain = |s: &str| {
+        let spaced = s.to_lowercase().split_whitespace().collect::<Vec<_>>().join(" ").replace(", ", ",").replace(" ,", ",");
+        let chars: Vec<char> = spaced.chars().collect();
+        let kept: String = chars.iter().enumerate().filter(|(i, c)| **c != '.' || (*i > 0 && chars[*i - 1].is_ascii_digit() && chars.get(*i + 1).is_some_and(char::is_ascii_digit))).map(|(_, c)| *c).collect();
+        kept.split_whitespace().collect::<Vec<_>>().join(" ")
+    };
     plain(a) == plain(b)
+}
+
+/// Whether a unit is the hour, however it is written.
+pub fn is_hours(unit: &str) -> bool {
+    matches!(unit.to_ascii_lowercase().as_str(), "hr" | "hrs" | "h" | "hour" | "hours")
 }
 
 /// Overhead and profit are percentages, on the job.

@@ -95,6 +95,9 @@ pub struct Surface {
     pub colour: Color,
 }
 
+/// On plan the view is this much of the camera's distance tall, in feet.
+const PLAN_HEIGHT: f32 = 0.62;
+
 /// What is drawn as lines every frame, in view coordinates.
 #[derive(Resource, Default)]
 pub struct Drawing {
@@ -113,6 +116,8 @@ pub struct Drawing {
     /// Each door and window as a plan draws it: what it is, and the four corners of its
     /// span through the wall, just over the wall's top.
     pub openings: Vec<(String, Kind, [Vec3; 4])>,
+    /// Each wall as a plan draws it: the four corners of its top.
+    pub walls: Vec<[Vec3; 4]>,
     /// How far from the middle the ground's grid reaches, in feet.
     pub reach: f32,
 }
@@ -342,6 +347,7 @@ pub fn rebuild(
     mut drawing: ResMut<Drawing>,
     solids: Res<Solids>,
     graphics: Res<Graphics>,
+    plans: Res<crate::plans::Plans>,
     old: Query<Entity, With<SceneMesh>>,
     ground: Query<Entity, With<Ground>>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -388,11 +394,36 @@ pub fn rebuild(
         }
     }
 
+    // ---- The drawings laid under the storeys: each sheet flat at its storey's floor ----
+    // On the plan the sheet is over the floor, to be traced; in 3D it is under it. It is
+    // shown as it is, unlit, and takes no click: what is picked is the place on the floor.
+    for l in &snap.drawings {
+        if show.storey.as_ref().is_some_and(|s| *s != l.storey) {
+            continue;
+        }
+        let Some(read) = plans.read.get(&l.path) else { continue };
+        let floor = snap.storeys.iter().find(|s| s.path == l.storey).and_then(|s| s.elevation).unwrap_or(0.0) + if doc.plan { 0.02 } else { -0.02 };
+        let [w, h] = l.drawing.size;
+        let corner = |x: f64, y: f64| {
+            let p = l.on_plan([x, y]);
+            let v = to_view(origin, [p[0], p[1], floor]);
+            [v.x, v.y, v.z]
+        };
+        let sheet = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::MAIN_WORLD | RenderAssetUsages::RENDER_WORLD)
+            .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![corner(0.0, 0.0), corner(w, 0.0), corner(w, h), corner(0.0, h)])
+            .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0f32, 1.0, 0.0]; 4])
+            .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0.0f32, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]])
+            .with_inserted_indices(Indices::U32(vec![0, 1, 2, 0, 2, 3]));
+        let paper = StandardMaterial { base_color: Color::WHITE, base_color_texture: Some(read.image.clone()), unlit: true, double_sided: true, cull_mode: None, ..default() };
+        commands.spawn((Mesh3d(meshes.add(sheet)), MeshMaterial3d(materials.add(paper)), Transform::IDENTITY, SceneMesh, NotShadowCaster, Pickable::IGNORE));
+    }
+
     drawing.lines.clear();
     drawing.runs.clear();
     drawing.ghosts.clear();
     drawing.fittings.clear();
     drawing.openings.clear();
+    drawing.walls.clear();
     drawing.frames.clear();
     drawing.surfaces.clear();
     let drawing = &mut *drawing;
@@ -421,16 +452,17 @@ pub fn rebuild(
                     let centre = va + along * ((x0 + x1) / 2.0) + Vec3::Y * ((y0 + y1) / 2.0);
                     build.piece(&p.path, None, solids.cube.clone(), Transform { translation: centre, rotation: turn, scale: Vec3::new(x1 - x0, y1 - y0, t) }, paint, 0.92, 0.0, true);
                 };
-                let mut cuts: Vec<&(String, Kind, [f64; 4])> = holes.iter().collect();
-                cuts.sort_by(|x, y| x.2[0].total_cmp(&y.2[0]));
-                let mut at = 0.0f32;
-                for (hole_path, kind, [from, to, sill, head]) in cuts {
+                // The wall round its doors and windows: the same pieces the clash test
+                // uses, so what is drawn solid is what is tested as solid. On plan a piece
+                // over or under an opening is the opening, and a click on it selects it.
+                let spans: Vec<[f64; 4]> = holes.iter().map(|hole| hole.2).collect();
+                for [x0, x1, y0, y1] in plumbline_world::geom::face_less_holes(f64::from(length), *height, &spans) {
+                    build.on_plan = holes.iter().find(|hole| hole.2[0] <= x0 + 1e-6 && hole.2[1] >= x1 - 1e-6).map(|hole| hole.0.clone());
+                    slab(&mut build, x0 as f32, x1 as f32, y0 as f32, y1 as f32);
+                }
+                build.on_plan = None;
+                for (hole_path, kind, [from, to, sill, head]) in holes {
                     let (from, to, sill, head) = (*from as f32, *to as f32, *sill as f32, *head as f32);
-                    slab(&mut build, at, from, 0.0, h);
-                    build.on_plan = Some(hole_path.clone());
-                    slab(&mut build, from, to, 0.0, sill);
-                    slab(&mut build, from, to, head, h);
-                    build.on_plan = None;
                     // What fills the opening: glass in a window, a leaf in a door.
                     let centre = va + along * ((from + to) / 2.0) + Vec3::Y * ((sill + head) / 2.0);
                     let (fill, thick, rough) = if *kind == Kind::Window { (theme::glass(), 0.08, 0.08) } else { (theme::door_leaf(), 0.14, 0.6) };
@@ -442,12 +474,14 @@ pub fn rebuild(
                     let over = Vec3::Y * (h + 0.06);
                     let (j0, j1) = (va + along * from + over, va + along * to + over);
                     build.drawing.openings.push((hole_path.clone(), *kind, [j0 - half, j1 - half, j1 + half, j0 + half]));
-                    at = at.max(to);
                 }
-                slab(&mut build, at, length, 0.0, h);
                 let half = turn * Vec3::Z * (t / 2.0);
                 let up = Vec3::Y * h;
                 build.drawing.frames.push((p.path.clone(), box_edges([va - half, vb - half, vb + half, va + half, va - half + up, vb - half + up, vb + half + up, va + half + up])));
+                // On plan a wall is its two faces and its ends, in ink: a wall traced over
+                // a drawing has to read against the sheet.
+                let over = up + Vec3::Y * 0.05;
+                build.drawing.walls.push([va - half + over, vb - half + over, vb + half + over, va + half + over]);
             }
             Shape::Floor { boundary, top, thickness } => {
                 let tris = triangles(boundary);
@@ -685,7 +719,7 @@ pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mu
     } else if overhead {
         // Straight down with north up, drawn without perspective: a plan.
         *t = Transform::from_translation(at.with_y(orbit.home.0.y * 2.4 + 80.0)).looking_at(at.with_y(0.0), Vec3::NEG_Z);
-        let height = distance * 0.62;
+        let height = distance * PLAN_HEIGHT;
         let same = matches!(&*projection, Projection::Orthographic(o) if matches!(o.scaling_mode, ScalingMode::FixedVertical { viewport_height } if (viewport_height - height).abs() < 1e-3));
         if !same {
             *projection = Projection::from(OrthographicProjection { scaling_mode: ScalingMode::FixedVertical { viewport_height: height }, far: 2000.0, ..OrthographicProjection::default_3d() });
@@ -728,13 +762,23 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, buttons: Res<ButtonInput<MouseButto
     let toward = Vec3::new(sy, 0.0, cy);
     if !doc.walk && (buttons.pressed(MouseButton::Middle) || (buttons.pressed(MouseButton::Right) && doc.plan)) {
         // Drag the ground under the pointer: a pixel moves the target by what a pixel covers.
-        let per_px = orbit.distance * 0.56 / window.height().max(1.0);
+        // (On plan that is exact: the view is PLAN_HEIGHT of the distance tall.)
+        let per_px = orbit.distance * if doc.plan { PLAN_HEIGHT } else { 0.56 } / window.height().max(1.0);
         let shift = right * (-motion.delta.x * per_px) + toward * (-motion.delta.y * per_px);
         orbit.target += shift;
     }
     if inside && scroll.delta.y != 0.0 && !doc.walk {
         let steps = if scroll.unit == MouseScrollUnit::Pixel { scroll.delta.y / 40.0 } else { scroll.delta.y };
+        let was = orbit.distance;
         orbit.distance = (orbit.distance * (1.0 - steps * 0.12)).clamp(4.0, 6000.0);
+        // On plan the wheel zooms about the pointer: the place under it stays under it,
+        // which is how a dimension's end on a drawing is closed in on.
+        if let (true, Some(cursor)) = (doc.plan, window.cursor_position()) {
+            let per_px = was * PLAN_HEIGHT / window.height().max(1.0);
+            let off = cursor - Vec2::new(window.width(), window.height()) / 2.0;
+            let under = orbit.target + right * (off.x * per_px) + toward * (off.y * per_px);
+            orbit.target = under + (orbit.target - under) * (orbit.distance / was);
+        }
     }
     if doc.entry.is_some() {
         return;
@@ -807,6 +851,11 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, gra
     // the wall over it hides it. A window has its glass down the middle. Which way a door
     // swings is not in the model, so no swing is drawn.
     if doc.plan {
+        for c in &drawing.walls {
+            for i in 0..4 {
+                lines.line(c[i], c[(i + 1) % 4], theme::ink());
+            }
+        }
         for (path, kind, c) in &drawing.openings {
             // The selected one is drawn over in the accent, as anything selected is.
             if doc.selected.as_ref() == Some(path) {

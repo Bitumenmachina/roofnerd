@@ -12,6 +12,7 @@
 //! * `skeleton`: where a footprint's slopes meet (ported from BIMCraft; see the file).
 //! * `solve`: a roof's planes and lines made from its footprint and kept in step with it.
 //! * `building`: storeys, walls, floors, and the ducts, pipes, cables and equipment in them.
+//! * `plans`: a sheet of the plans laid under the tracing, and its scale.
 //! * `job`: the world and the edits made to it.
 //! * `file`: the saved job.
 //! * `sample`: a small made-up job for demonstrations and tests.
@@ -26,6 +27,7 @@ pub mod formula;
 pub mod geom;
 pub mod job;
 pub mod lines;
+pub mod plans;
 pub mod roof;
 pub mod sample;
 pub mod skeleton;

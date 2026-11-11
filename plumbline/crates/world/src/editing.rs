@@ -236,12 +236,20 @@ pub fn opening(job: &mut Job, wall: &str, kind: Kind, type_path: &str, at: OnWal
                 if !(0.0..=length).contains(&along) {
                     return Err(format!("the point ({}, {}) falls {} ft along {wall}, which is {} ft long: it is not on the wall", p[0], p[1], crate::view::figure(along, 2), crate::view::figure(length, 2)));
                 }
-                // And it is on the wall, not out in the room: within half the wall's
-                // thickness of its line, where that is known.
-                let off = ((p[0] - a[0]) * dy - (p[1] - a[1]) * dx).abs() / length;
-                let half = host.type_name.value.as_ref().and_then(|t| job.find(t)).and_then(|t| job.world.get::<WallType>(t).and_then(|t| t.thickness.feet())).map(|t| t / 2.0).unwrap_or(0.0);
+                // And it is in the wall, not out in the room: within half the wall's
+                // thickness of its centre line, which lies to the left of the line it
+                // was drawn on by what its `location` says.
+                let section = {
+                    let tree = crate::building::Tree::of(&mut job.world);
+                    crate::building::wall_section(&tree, &host).ok()
+                };
+                let (half, centre) = match section {
+                    Some((thickness, layers, _)) => (thickness / 2.0, crate::building::walls::centre(thickness, &layers, host.location)),
+                    None => (0.0, 0.0),
+                };
+                let off = (((p[1] - a[1]) * dx - (p[0] - a[0]) * dy) / length - centre).abs();
                 if off > half + crate::check::FIT_TOLERANCE_FT {
-                    return Err(format!("the point ({}, {}) is {} ft off {wall}'s line: it is not on the wall", p[0], p[1], crate::view::figure(off, 2)));
+                    return Err(format!("the point ({}, {}) is {} ft off the middle of {wall}, which is {} ft thick: it is not on the wall", p[0], p[1], crate::view::figure(off, 2), crate::view::figure(half * 2.0, 2)));
                 }
                 how.val(Len::One((along * 10_000.0).round() / 10_000.0), "ft")
             }
@@ -376,7 +384,14 @@ pub fn move_by(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -
 /// came from, then what was done last and on whose word. It does not grow with each move,
 /// and it does not lose where the thing came from.
 pub(crate) fn after(source: &str, done: &str, by: &str) -> String {
-    let first = [source.find("; moved ("), source.find("; cut (")].into_iter().flatten().min().map(|i| &source[..i]).unwrap_or(source);
+    // Only a note this wrote is replaced: the last "; moved (...)" or "; cut (...)", and
+    // only where the source ends with it. The same words in the middle of what a person
+    // wrote are that person's, and stay.
+    let noted = [source.rfind("; moved ("), source.rfind("; cut (")].into_iter().flatten().max().filter(|i| {
+        let note = &source[*i..];
+        note.ends_with(')') && !note[..note.len() - 1].contains(')')
+    });
+    let first = noted.map(|i| &source[..i]).unwrap_or(source);
     format!("{first}; {done} ({by})")
 }
 
@@ -412,7 +427,7 @@ pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
         }
         if kind == Kind::Condition {
             let mut q = job.world.query::<(&Node, &Condition)>();
-            let mut by: Vec<String> = q.iter(&job.world).filter(|(n, c)| n.path != path && c.0.value.as_ref().is_some_and(|v| v == path || *v == name)).map(|(n, _)| n.path.clone()).collect();
+            let mut by: Vec<String> = q.iter(&job.world).filter(|(n, c)| n.path != path && c.0.value.as_ref().is_some_and(|v| v == path || crate::check::same_name(v, &name))).map(|(n, _)| n.path.clone()).collect();
             by.sort();
             if !by.is_empty() {
                 return Err(format!("{path} is the condition of {}: give {} another first", listed(&by), if by.len() == 1 { "it" } else { "them" }));

@@ -165,7 +165,7 @@ fn floating(mut node: Node) -> impl Bundle {
 
 /// Draw the panels again whenever the snapshot has changed.
 #[allow(clippy::too_many_arguments)]
-pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts: Res<Fonts>, cameras: Res<Cameras>, scrolls: Res<Scrolls>, old: Query<Entity, With<MainUi>>, mut drawn: Local<u64>) {
+pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, plans: Res<crate::plans::Plans>, fonts: Res<Fonts>, cameras: Res<Cameras>, scrolls: Res<Scrolls>, old: Query<Entity, With<MainUi>>, mut drawn: Local<u64>) {
     if *drawn == snap.revision {
         return;
     }
@@ -177,8 +177,8 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
     commands.spawn((Node { width: percent(100.0), height: percent(100.0), ..default() }, UiTargetCamera(cameras.ui), Pickable::IGNORE, MainUi)).with_children(|root| {
         overlay(root, fonts, &doc, &snap);
         title_bar(root, fonts, &doc, &snap);
-        browser(root, fonts, &doc, &snap, scrolls.browser);
-        inspector(root, fonts, &doc, &snap, scrolls.inspector);
+        browser(root, fonts, &doc, &snap, &plans, scrolls.browser);
+        inspector(root, fonts, &doc, &snap, &plans, scrolls.inspector);
         status_bar(root, fonts, &doc);
     });
 }
@@ -225,7 +225,7 @@ fn browser_row(p: &mut ChildSpawnerCommands, on: bool, act: impl Fn(&mut Doc) + 
 
 /// What of the building is on show, and its systems. The browser is the legend too: a
 /// system's swatch here is the colour its runs are drawn in.
-fn browser(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, scrolled: f32) {
+fn browser(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, plans: &crate::plans::Plans, scrolled: f32) {
     // It scrolls when it holds more than fits: a row is never squeezed, so a row stays
     // where it is whatever else the panel comes to hold.
     p.spawn((
@@ -283,12 +283,49 @@ fn browser(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         // that has not been told what to draw with asks before it draws.
         if doc.plan {
             use crate::tools::{self, Tool};
-            heading(c, fonts, "Draw");
             let plain = |c: &mut ChildSpawnerCommands, said: &str, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
                 browser_row(c, false, move |doc| act(doc), |r| {
                     r.spawn(text(fonts, said, 12.5, Weight::Medium, theme::ink()));
                 });
             };
+            // First, the drawings laid under the storey on show: what is traced over. Each
+            // says its scale, or that it has none yet. What its file could not give is
+            // said when it is selected.
+            if let Some(storey) = doc.show.storey.clone() {
+                heading(c, fonts, "Drawings to trace");
+                for l in snap.drawings.iter().filter(|l| l.storey == storey) {
+                    let path = l.path.clone();
+                    let (said, ink) = if plans.is_reading(&l.path) {
+                        ("reading its page".to_string(), theme::ink_soft())
+                    } else if plans.faults.contains_key(&l.path) {
+                        ("its page cannot be shown".to_string(), theme::red())
+                    } else if plans.read.get(&l.path).is_some_and(|r| r.changed) {
+                        ("its file has changed since it was laid here".to_string(), theme::red())
+                    } else {
+                        // The scale in the colour of how sure it is, as every figure is.
+                        match l.scale_said() {
+                            Some(said) => (said, theme::status_ink(l.drawing.status())),
+                            None => ("no scale yet".to_string(), theme::red()),
+                        }
+                    };
+                    browser_row(c, doc.selected.as_deref() == Some(l.path.as_str()), move |doc| doc.select(&path), |r| {
+                        r.spawn(Node { flex_direction: FlexDirection::Column, min_width: px(0.0), flex_grow: 1.0, flex_basis: px(0.0), overflow: Overflow::clip(), ..default() }).with_children(|col| {
+                            col.spawn((text(fonts, l.name.clone(), 12.5, Weight::Medium, theme::ink()), TextLayout::no_wrap()));
+                            col.spawn((text(fonts, said.clone(), 11.0, Weight::Regular, ink), TextLayout::no_wrap()));
+                        });
+                    });
+                }
+                plain(c, "Lay a drawing under this storey", Box::new(|doc| {
+                    doc.entry_line = None;
+                    doc.entry = Some((Entry::Drawing, String::new()));
+                    doc.touch();
+                }));
+                if snap.drawings.iter().any(|l| l.storey == storey) {
+                    plain(c, "Set the scale from one dimension", Box::new(|doc| tools::start(doc, Tool::Scale)));
+                    plain(c, "Line the drawing up", Box::new(|doc| tools::start(doc, Tool::LineUp)));
+                }
+            }
+            heading(c, fonts, "Draw");
             if doc.show.storey.is_none() {
                 let said = if snap.storeys.is_empty() { "This job has no storey to draw on yet." } else { "Choose the storey to draw on, above." };
                 c.spawn(Node { padding: UiRect::axes(px(8.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_child(text(fonts, said, 11.5, Weight::Regular, theme::ink_soft()));
@@ -486,6 +523,8 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                         Entry::Settings(tool) => format!("{}: {}", tool.name(), tool.asks().to_lowercase()),
                         Entry::Length => if doc.draw.tool == Some(crate::tools::Tool::Move) { "How far to move it".to_string() } else { "Length of this piece".to_string() },
                         Entry::Storey => "New storey: name, floor height, height to the next".to_string(),
+                        Entry::Drawing => "Drawing to lay under this storey".to_string(),
+                        Entry::Distance => "Dimension between the two points".to_string(),
                     };
                     c.spawn(text(fonts, title, 13.0, Weight::Semibold, theme::ink()));
                     c.spawn((rounded(Node { padding: UiRect::axes(px(10.0), px(7.0)), border: UiRect::all(px(1.5)), min_height: px(36.0), align_items: AlignItems::Center, ..default() }, 7.0), BackgroundColor(theme::panel()), BorderColor::all(theme::accent()))).with_children(|f| {
@@ -504,6 +543,8 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                             Entry::Settings(tool) => tool.like(),
                             Entry::Length => "Toward the pointer, like 24 ft or 12' 6\"",
                             Entry::Storey => "like Ground, 0 ft, 9 ft",
+                            Entry::Drawing => "A PDF, PNG or JPEG, like plans/a-1.pdf, 2",
+                            Entry::Distance => "As the drawing says it, like 41' 3\" or 30 ft",
                         };
                         h.spawn(text(fonts, hint, 11.5, Weight::Regular, theme::ink_faint()));
                         h.spawn(Node { flex_grow: 1.0, ..default() });
@@ -574,7 +615,7 @@ fn shortcut(p: &mut ChildSpawnerCommands, fonts: &Fonts, keys: &[&str], what: &s
     });
 }
 
-fn inspector(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, scrolled: f32) {
+fn inspector(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, plans: &crate::plans::Plans, scrolled: f32) {
     p.spawn((
         floating(Node { top: px(BAR_H + GAP * 2.0), right: px(GAP), bottom: px(STATUS_H + GAP * 2.0), width: px(INSPECTOR_W), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(18.0), px(16.0)), overflow: Overflow::scroll_y(), ..default() }),
         ScrollPosition(Vec2::new(0.0, scrolled)),
@@ -584,6 +625,10 @@ fn inspector(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         let editable = snap.rises_from.is_some();
         match &snap.selected {
             Some(el) if el.kind == Kind::System => system(c, fonts, snap, el),
+            Some(el) if el.kind == Kind::Drawing => {
+                selection(c, fonts, snap, el);
+                drawing(c, fonts, snap, plans, el);
+            }
             Some(el) => selection(c, fonts, snap, el),
             None => summary(c, fonts, snap),
         }
@@ -619,6 +664,43 @@ fn inspector(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         shortcut(c, fonts, &["F2"], "Save the job");
         c.spawn(Node { margin: UiRect::top(px(8.0)), ..default() }).with_child(text(fonts, "Right-drag to turn, middle-drag to pan, wheel to zoom. Click anything to select it.", 11.5, Weight::Regular, theme::ink_faint()));
     });
+}
+
+/// A selected drawing: its scale, how big its sheet is on the ground, what there is on
+/// it to snap to, and everything its file could not give.
+fn drawing(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, plans: &crate::plans::Plans, el: &view::ElementRows) {
+    let Some(l) = snap.drawings.iter().find(|l| l.path == el.path) else { return };
+    let line = |p: &mut ChildSpawnerCommands, said: String, ink: Color| {
+        p.spawn(Node { margin: UiRect::top(px(4.0)), ..default() }).with_child(text(fonts, said, 12.0, Weight::Regular, ink));
+    };
+    heading(p, fonts, "Scale");
+    match l.scale_said() {
+        Some(said) => line(p, said, theme::status_ink(l.drawing.status())),
+        None => line(p, "No scale yet. Set it from one dimension; nothing is traced over this drawing until then.".to_string(), theme::red()),
+    }
+    if let Some(s) = &l.drawing.scale {
+        line(p, format!("from a dimension of {} ({})", s.distance.value.as_ref().map(|d| units::show_length(d, &s.distance.unit)).unwrap_or_default(), s.distance.source), theme::ink_soft());
+    }
+    heading(p, fonts, "Its file");
+    line(p, format!("{}, page {}", l.drawing.file.value.clone().unwrap_or_default(), l.drawing.page), theme::ink_soft());
+    if plans.is_reading(&l.path) {
+        line(p, "Its page is being read.".to_string(), theme::ink_soft());
+    }
+    if let Some((_, why)) = plans.faults.get(&l.path) {
+        line(p, format!("Its page cannot be shown: {why}"), theme::red());
+    }
+    if let Some(read) = plans.read.get(&l.path) {
+        if read.changed {
+            line(p, "The file has changed since this drawing was laid here. What was traced over it may no longer lie on it.".to_string(), theme::red());
+        }
+        line(p, match read.lines.len() { 0 => "Nothing on it to snap to.".to_string(), 1 => "1 straight line to snap to.".to_string(), n => format!("{n} straight lines to snap to.") }, theme::ink_soft());
+        if !read.lost.is_empty() {
+            heading(p, fonts, "Not read from it");
+            for lost in &read.lost {
+                line(p, lost.clone(), theme::ink_soft());
+            }
+        }
+    }
 }
 
 fn title_block(p: &mut ChildSpawnerCommands, fonts: &Fonts, kind: &str, name: &str, under: String) {
