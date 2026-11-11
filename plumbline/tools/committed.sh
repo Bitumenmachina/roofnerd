@@ -22,7 +22,9 @@ for f in $(grep -rhoE 'demos/(plans|tables)/[A-Za-z0-9._-]+\.[a-z]+' demos/*.sh 
 done
 [ "$missing" = 0 ] || { echo "committed: FAIL."; exit 1; }
 if [ "${1:-}" = "--quick" ]; then echo "committed: PASS (quick). Every crate and every file the demonstrations read is in the last commit."; exit 0; fi
-export CARGO_TARGET_DIR="$HERE/target/committed"
+# The same build folder: what the workspace is built on is found built; the workspace's own
+# crates are built again from the archive, since they are at another place.
+export CARGO_TARGET_DIR="$HERE/target"
 cargo test --workspace --offline 2>&1 | grep -E "^test result|^error|FAILED" > "$T/out.txt" || true
 if grep -qE "^error|FAILED" "$T/out.txt" || ! grep -q "^test result" "$T/out.txt"; then cat "$T/out.txt"; echo "committed: FAIL. The last commit does not build and pass its tests from what is in it."; exit 1; fi
 echo "committed: PASS. The last commit builds and passes its tests from what is in it ($(grep -c '^test result: ok' "$T/out.txt") test runs)."
