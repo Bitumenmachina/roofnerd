@@ -120,8 +120,11 @@ shot                                    # 12 the window selected, not its wall
 xdotool key Delete; sleep 4
 xdotool mousemove 1000 800; sleep 1
 shot                                    # 13 the window taken out
+tool 54 457 "3/4 in, 8 ft, Steam"       # Conduit, on a system no conduit goes on
+xdotool mousemove 1000 800; sleep 1
+shot                                    # 14 refused where it was typed, not at the second pick
 xdotool key t; sleep 6
-shot                                    # 14 the house in 3D
+shot                                    # 15 the house in 3D
 xdotool key F2; sleep 3                 # save
 kill \$APP_PID; wait \$APP_PID 2>/dev/null
 SESSION
@@ -129,10 +132,10 @@ chmod +x "$T/session.sh"
 timeout 1500 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
 ls "$OUT" | tr '\n' ' '; echo
-for n in 01 02 03 04 05 06 07 08 09 10 11 12 13 14; do
+for n in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do
   [ "$OUT/$n-model.png" -nt "$T/before.json" ] && [ "$OUT/$n-sheet.png" -nt "$T/before.json" ] || { echo "FAIL: no picture $n of both windows from this run"; exit 1; }
 done
-echo "  28 pictures saved to $OUT (model and sheet, after each of 14 steps)"
+echo "  30 pictures saved to $OUT (model and sheet, after each of 15 steps)"
 
 echo
 echo "== What the session left in the saved job =="

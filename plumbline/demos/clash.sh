@@ -49,7 +49,7 @@ says "by how much" "in each other by 6.00 in"
 clashes
 says "touching" "In the same space: 0"
 clashes --clearance "2 in"
-says "touching, and a clearance asked for" "Closer than 2.00 in: 1, 1 of them resting on something assumed"
+says "touching, and a clearance asked for" "Closer than 2.00 in: 1 (1 to verify in the field)"
 says "how far apart" "0.00 in apart"
 "$P" move "$J" "$B" --by "20,0" "${K[@]}" >/dev/null
 
@@ -62,7 +62,7 @@ X="$(last "$("$P" run "$J" "$S" pipe "$PIPE" --points "5,0 5,10" --height "8 ft"
 clashes
 says "the crossing, flagged" "~ duct"
 says "the crossing" "in each other by 3.50 in, at (5, 5, 8)"
-says "one of one assumed" "In the same space: 1, 1 of them resting on something assumed"
+says "one of one assumed" "In the same space: 1 (1 to verify in the field)"
 "$P" remove "$J" "$X" >/dev/null
 # The pipe 5 in higher: the centre lines are 5 in apart and the surfaces 5 − 3.5 = 1.5 in.
 X="$(last "$("$P" run "$J" "$S" pipe "$PIPE" --points "5,0 5,10" --height "8 ft 5 in" "${K[@]}")")"

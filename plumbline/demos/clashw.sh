@@ -116,7 +116,7 @@ says "the tee" "Tee 6 in round tee: 1 EA" "$T/takeoff.txt"
 says "what is joined" "joined: 1 network; 2 open ends; 0 places" "$T/takeoff.txt"
 # One clash left: the pipe through the duct, 3 in + 1/2 in. It rests on the duct, whose
 # line was cut in the window, so it is flagged.
-says "one clash left" "In the same space: 1, 1 of them resting on something assumed" "$T/after.txt"
+says "one clash left" "In the same space: 1 (1 to verify in the field)" "$T/after.txt"
 says "which" "in each other by 3.50 in, at (4, 2, 8)" "$T/after.txt"
 python3 - "$J" <<'PY'
 import sys, json

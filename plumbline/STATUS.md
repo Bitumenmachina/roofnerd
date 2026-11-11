@@ -1406,7 +1406,7 @@ something that is not there.
   walls 96 LF; net faces 123, 132, 144, 195 and 204 SF; two doors, two windows; duct
   20 LF; pipe 14 LF. Every wall's line is Assumed and says it was drawn in the window.
   Rooms placed at the command line inside the drawn walls come to 193.75 and 162.75 SF.
-  The twenty-eight pictures are in `demos/captured/draw/` and each was opened and read.
+  The thirty pictures are in `demos/captured/draw/` and each was opened and read.
 
 **What reading the pictures found, and what was done:**
 
@@ -1440,7 +1440,7 @@ something that is not there.
 * Conduit and cable are the duct and pipe tool with another kind. Neither demonstration
   draws one.
 
-**What remains of this stretch:** the judge.
+**Judged: the twelfth judgment, below.**
 
 ## Fittings, connections and clashes. What was run and what it showed
 
@@ -1687,17 +1687,18 @@ system selected, F2 then undo, typed lengths of 0, the sheet. Two of its three w
 runs were partly spoiled by its own script, so J12-8 and J12-9 rest on one picture each
 and J12-16 on reading the code.
 
-**Where the fixes stand (2026-11-11, at the commit that records this).** Each of J12-1 to
-J12-6, J12-10 to J12-14, J12-17 and J12-18 is fixed in the core with a test named for it
-(`j12_...` in `crates/world/tests/world.rs`, six tests, figures worked by hand); J12-20 at
-the command line with a line in `demos/draw.sh`; J12-15 in PORTMAP.md; J12-19 by
-correcting the document (DECISIONS.md call 41; no code changed). J12-7, 8, 9, 16 and 21
-are changed in the window's code (`crates/app/src/tools.rs`, `scene.rs`) and **have not
-been run in the window**: `demos/draww.sh` and `demos/clashw.sh` have not been rerun
-since, so the pictures in `demos/captured/draw/` and `demos/captured/clash/` are of the
-build before those five changes. The fourteen pictures in `demos/captured/clash/` are a
-second run whose only difference from the run that was read is the "Not tested" heading
-on the sheet; its seven model pictures and seven sheets have not each been read again.
-What was decided is call 41. **None of these fixes has been judged.** All 154 tests,
-the port map gate (193 items), the licence gate, the repository's three gates and the
-eight command-line demonstrations pass at this commit.
+**Where the fixes stand (2026-11-11).** Each of J12-1 to J12-6, J12-10 to J12-14, J12-17
+and J12-18 is fixed in the core with a test named for it (`j12_...` in
+`crates/world/tests/world.rs`, six tests, figures worked by hand); J12-20 at the command
+line with lines in `demos/draw.sh`; J12-15 in PORTMAP.md; J12-19 by correcting the
+document (DECISIONS.md call 41; no code changed). J12-7, 8, 9, 16 and 21 are changed in
+the window's code. After them `demos/draww.sh` and `demos/clashw.sh` were both run again
+and both exit 0, and their pictures are of this build: every picture that differed from
+the set read before was read again (the left panel's two new rows account for the model
+pictures; the sheet gains a Clashes tab once the drawn house has a pipe ending in a
+lavatory). **Of the five window changes only J12-21 is shown in the window**: picture
+`draw/14` is a conduit refused, where its settings were typed, for a system no conduit
+goes on. The square held by Shift (J12-7), the snap scene that leaves out what is being
+moved (J12-8), a chain let go on a change of storey (J12-9) and the click that ends a
+move (J12-16) are in the code and no demonstration exercises them. What was decided is
+call 41. **None of these fixes has been judged.**

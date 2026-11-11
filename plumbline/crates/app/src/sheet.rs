@@ -409,8 +409,18 @@ fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         None => return nothing(p, fonts, "Clashes have not been worked out."),
     };
     let list = |p: &mut ChildSpawnerCommands, title: &str, rows: Vec<&Clash>, depth: bool| {
-        let assumed = rows.iter().filter(|c| c.status != Status::Known).count();
-        let count = if assumed == 0 { rows.len().to_string() } else { format!("{}  ·  {assumed} resting on something assumed", rows.len()) };
+        // Between things that are Known a clash is a finding; where either rests on
+        // something assumed it is a question for the field.
+        let field = rows.iter().filter(|c| c.status != Status::Known).count();
+        let found = rows.len() - field;
+        let mut parts = vec![rows.len().to_string()];
+        if found > 0 {
+            parts.push(format!("{found} {}", if found == 1 { "finding" } else { "findings" }));
+        }
+        if field > 0 {
+            parts.push(format!("{field} to verify in the field"));
+        }
+        let count = parts.join("  ·  ");
         table(p, fonts, title, count, |t| {
             let mut columns = vec![("", 7.0, false), ("What", 0.0, false)];
             if depth {

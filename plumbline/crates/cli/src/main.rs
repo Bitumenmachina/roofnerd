@@ -69,9 +69,19 @@ fn clashes(job: &mut plumbline_world::Job, clearance: Option<f64>) -> Result<Str
     let inches = |feet: f64| format!("{:.2} in", feet * 12.0 + 0.0);
     let place = |c: &clash::Clash| format!("({}, {}, {})", view::num(c.at[0]), view::num(c.at[1]), view::num(c.at[2]));
     let pairs = |c: &clash::Clash| format!("{} {} [{}] and {} [{}]", c.status.flag(), c.a_name, c.a, c.b_name, c.b);
-    let assumed = |list: &[&clash::Clash]| match list.iter().filter(|c| c.status != Status::Known).count() {
-        0 => String::new(),
-        n => format!(", {n} of them resting on something assumed"),
+    // Between things that are Known a clash is a finding; where either rests on something
+    // assumed it is a question for the field.
+    let assumed = |list: &[&clash::Clash]| {
+        let field = list.iter().filter(|c| c.status != Status::Known).count();
+        let found = list.len() - field;
+        let mut parts = Vec::new();
+        if found > 0 {
+            parts.push(format!("{found} {}", if found == 1 { "finding" } else { "findings" }));
+        }
+        if field > 0 {
+            parts.push(format!("{field} to verify in the field"));
+        }
+        if parts.is_empty() { String::new() } else { format!(" ({})", parts.join(", ")) }
     };
     let mut out = String::new();
     let hard: Vec<&clash::Clash> = found.found.iter().filter(|c| c.how == ClashKind::Hard && !c.through).collect();
