@@ -746,6 +746,29 @@ window, the left panel's Drawings to trace.
   so. Then the job's lines the prior estimate does not name, and the prior's the job
   does not. A line with no figure is "no figure", not zero.
 
+### 5.13 A model brought in
+
+`crates/ifc` (DECISIONS.md call 47); `plumbline import ifc <file> <model.ifc> --status
+... --source ...`.
+
+* **Read:** an IFC2x3 or IFC4 file, with BIMCraft's STEP reader. Each building storey
+  (its floor height; its height is the way up to the next, and the top one's is
+  Unknown). Each wall whose body is a rectangle pushed straight up: its centre line, its
+  thickness, its height, its base where that is not its storey's floor. Each door and
+  window that fills a hole in such a wall: its width and height, its middle along the
+  wall, its sill. Each slab whose body is an outline pushed straight up or down. Each
+  space, as a room at a point inside it. Each duct, pipe, cable tray and cable whose
+  body is a circle or a rectangle pushed along its run, level, sloping or upright, on
+  the system the file puts it on where that is one of section 4's.
+* **Listed and not brought in:** everything else that has a place in the model, by what
+  the file calls it, how many, and why.
+* **Lengths** are turned into feet from the file's unit and kept to a ten-thousandth of
+  a foot. The report says the unit.
+* **Certainty:** as whoever brings the model in says. Each value's source is that, the
+  file's name, and the thing in the file it was read off.
+* **All or nothing:** the job is checked whole afterwards; if that fails, or nothing
+  but storeys could be brought in, the job is as it was.
+
 ## 6. Cost code scheme
 
 Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores its
@@ -809,7 +832,8 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
 | `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json`, `parry3d-f64` (solid geometry, for clashes) | The model: values, units, components, checks, plan geometry, derivation, line formulas and the steps a line is worked in, the lines planes imply, the saved file, the sample job, the flat view |
 | `crates/plans` (`plumbline-plans`) | `hayro` (PDF), `image` (PNG, JPEG) | Reading a plan file's page: its picture, its straight lines, and what it could not give |
 | `crates/sheets` (`plumbline-sheets`) | `csv`, `calamine` (XLSX) | Reading a table out of a CSV file or a workbook's sheet as rows of text, with what was not read; writing CSV |
-| `crates/cli` (`plumbline`) | `plumbline-world`, `plumbline-plans`, `plumbline-sheets` | The command line: the samples, `show`, `check`, `lines`, `takeoff`, `price`, `estimate`, the entry commands (`set`, `apply`, `line`, `class`, `labor`, `material`, `roof`) and the drawing verbs of sections 5.8 and 5.9, `clashes`, the plans of section 5.11 and the tables of 5.12 |
+| `crates/ifc` (`plumbline-ifc`) | `plumbline-world` | A STEP reader ported from BIMCraft, and a model (IFC) brought into a job over it |
+| `crates/cli` (`plumbline`) | `plumbline-world`, `plumbline-plans`, `plumbline-sheets`, `plumbline-ifc` | The command line: the samples, `show`, `check`, `lines`, `takeoff`, `price`, `estimate`, the entry commands (`set`, `apply`, `line`, `class`, `labor`, `material`, `roof`) and the drawing verbs of sections 5.8 and 5.9, `clashes`, the plans of section 5.11 and the tables of 5.12 |
 | `crates/app` (`plumbline-app`) | `plumbline-world`, `plumbline-plans`, `bevy` | The 3D window and the sheet window |
 
 The world crate does not depend on any renderer or window, and must not. The engine is

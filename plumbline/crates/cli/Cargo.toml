@@ -14,6 +14,7 @@ path = "src/main.rs"
 plumbline-world = { path = "../world" }
 plumbline-plans = { path = "../plans" }
 plumbline-sheets = { path = "../sheets" }
+plumbline-ifc = { path = "../ifc" }
 
 [dev-dependencies]
 # For the tests only: a job file is edited as data. Already linked by plumbline-world.

@@ -38,7 +38,7 @@ CLAUDE.md, "Order of work"; step 1 of it is under way.
 | # | Item | Where it stands |
 |---|---|---|
 | 1 | A clean clone installs on Linux from the README in one pass | **Not shown.** The README lists the commands; nobody has followed it on a clean machine. |
-| 2 | Every import works as stated: PDF (vector and scanned), PNG, JPEG, aerial images, CSV and XLSX (price lists, prior estimates, assembly libraries), IFC, the job file | **Five of seven at the command line; plans only in the window.** The job file loads and saves to the same bytes. A PDF plan (drawn or scanned), a PNG and a JPEG are read, laid under a storey and traced over, with what each could not give listed (`demos/plan.sh`, `demos/planw.sh`; with the judge). A CSV or XLSX price list, an assembly library and a prior estimate are brought in at the command line with every unused row and column said, and a price list and an assembly library go out as CSV and come back the same (`demos/imports.sh`; not judged). Not built: any of those tables in the window, an aerial image shown as such, IFC. |
+| 2 | Every import works as stated: PDF (vector and scanned), PNG, JPEG, aerial images, CSV and XLSX (price lists, prior estimates, assembly libraries), IFC, the job file | **Each import named by the rule is read at the command line; only plans are in the window.** The job file loads and saves to the same bytes. A PDF plan (drawn or scanned), a PNG and a JPEG are laid under a storey and traced over, with what each could not give listed (`demos/plan.sh`, `demos/planw.sh`; judged, fixes not judged). A CSV or XLSX price list, an assembly library and a prior estimate are brought in with every unused row and column said, and a price list and an assembly library go out as CSV and come back the same (`demos/imports.sh`; not judged). A plain IFC model comes in as storeys, walls, openings, floors, rooms and runs, with the rest listed (`demos/model.sh`; not judged; one made-up model only). Not built: tables and models in the window; an aerial picture shown as such; an estimate's own lines out and back. |
 | 3 | From an empty job: open a real residential plan PDF, calibrate, trace walls, openings, floors, rooms and the roof; the 3D house builds from the tracing | **Part.** From an empty job the window opens USDA Plan No. 7213 (public domain; a scan), sets its scale from its 41 ft 3 in dimension, and traces its outside walls; the 3D house stands on the sheet (`demos/planw.sh`, pictures 01 to 08; not judged). Not built: openings, floors, rooms and the roof traced over it. |
 | 4 | Clashes show their certainty; the VIF list is sorted by dollars | **Half.** A clash is Known or Assumed from its two shapes and says so (command line and the sheet's Clashes tab; not judged). There is no VIF list and no dollars on a clash. |
 | 5 | A typed or lasered measurement makes a value Known; the clash confirms or clears; the price changes live in the second window | **Not built in the window.** A value is made Known at the command line. The window cannot. |
@@ -1723,6 +1723,55 @@ three repository gates: exit 0.
   reads IFC2x3 and IFC4 (`import.rs`, 4,895 lines, over `step.rs`) and writes IFC4
   (`ifc.rs`); both are to be ported, item by item.
 * **The language pass over every screen is not started.**
+
+## A model brought in. What was run and what it showed
+
+The second half of step 3's imports, on the commit that holds this. **Not judged.** Its
+demonstration was not written in STATUS before it was built, as the practice asks; the
+made-up model's own description (`tools/made-up-ifc.py`, written first) holds the hand
+figures. Built: BIMCraft's STEP reader ported into a new crate with its three tests,
+and an importer over it (SPEC.md 5.13; DECISIONS.md call 47); `import ifc` at the
+command line. Nothing of it is in the window.
+
+The made-up model (`demos/ifc/made-up-house.ifc`, 253 entities, IFC4, in metres) was
+written by hand and checked once with IfcOpenShell's validator as a separate program: 0
+messages.
+
+**`demos/model.sh`**, exit 0:
+
+| Step | Worked by hand | The program |
+|---|---|---|
+| The model into an empty job | two storeys, four walls, a door, a window, a slab, a space, a duct, a pipe; a beam, a stair and a chair with no element here | 2 storeys, 4 walls, 1 door, 1 window, 1 floor, 1 room, 1 duct, 1 pipe; "not brought in: 3 things", each named with why; "the model is in metres" |
+| Walls | 9.144 m and 6.096 m are 30 and 20 ft; 2.4384 m is 8 ft: 100 LF, 800 SF gross, less a 3 x 7 door and a 4 x 3 window, 767 SF | 100.00 LF, 800.00 SF, 767.00 SF, Assumed |
+| The door and the window | middles 3.048 m, 10 ft, along their walls; the window's sill 0.9144 m, 3 ft, up | 10 ft and 0; 10 ft and 3 ft (the test) |
+| The slab and the room | 30 x 20 = 600 SF; inside 6 in walls on their centre lines 29.5 x 19.5 = 575.25 SF | 600.00 SF, 575.25 SF |
+| The duct and the pipe | 6.096 m = 20 LF; 3.048 m = 10 LF | 20.00 LF on Supply Air, 10.00 LF on Domestic Cold Water |
+| The clash the model hid | both 7 ft up, crossing at (10, 10): a 6 in duct and a 1 in pipe, 3 in + 1/2 in | "in each other by 3.50 in, at (10, 10, 7)", to verify in the field |
+| Refused, job unchanged | no status and source; a file that is no model; an option it does not take | all three |
+
+`cargo test --workspace`: 180 passing (2 on the importer, new).
+
+**What is not right, or not built:**
+
+* **It has met one model, and that one made up and plain.** No model written by a design
+  program has been brought in: none with a clear licence was looked for yet. What such a
+  model does with wall axes, layers, mapped shapes and types is not tried.
+* **Only plain pushed shapes are read.** A wall cut to a roof, a curved wall, anything
+  drawn as a mesh or a brep, a mapped item (a shape used many times) is listed, not
+  brought in. BIMCraft reads those; that part is not ported.
+* **Fixtures, equipment and fittings are not brought in at all** (flow terminals, air
+  handlers, elbows): listed as having no element, though this program has elements for
+  them. A model's clashes against equipment are therefore not found.
+* **A wall is always taken on the middle of its body.** Its layers and which face it
+  was drawn to are not read.
+* **A space is a point**: the room's area is found from the walls that came in, not
+  read from the model, and a space with no walls round it has no area.
+* **Roofs are not brought in.**
+* **Not in the window.**
+* **An aerial picture** is a picture: it is laid under a storey, given its scale from
+  one known length and traced, by the same code as a scanned plan
+  (`demos/plan.sh` reads a JPEG and a PNG). No demonstration uses an aerial picture as
+  such, and none is committed.
 
 ## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
 

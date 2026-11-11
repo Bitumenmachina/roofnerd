@@ -206,3 +206,15 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `Clash` | ours |  |  | clash detection is this program's; `grep -rni clash crates/core/src`: six lines, two comments (`inquiry.rs:3`, `link.rs:72`) and a variable in `import.rs` (3273 to 3364) for parameter names that collide on import; nothing tests one solid against another. |
 | `Clashes` | ours |  |  | clash detection is this program's; `grep -rni clash crates/core/src`: six lines, two comments (`inquiry.rs:3`, `link.rs:72`) and a variable in `import.rs` (3273 to 3364) for parameter names that collide on import; nothing tests one solid against another. |
 | `clashes` | ours |  |  | clash detection is this program's; `grep -rni clash crates/core/src`: six lines, two comments (`inquiry.rs:3`, `link.rs:72`) and a variable in `import.rs` (3273 to 3364) for parameter names that collide on import; nothing tests one solid against another. The solid geometry is `parry3d-f64`'s, not written here. |
+
+## Ported outside the building model
+
+`tools/portmap.sh` covers the building model and its editing only. What else is ported
+from BIMCraft at the same commit is listed here by hand, and is checked by its own tests.
+
+- `crates/ifc/src/step.rs`, all of it, from `crates/core/src/step.rs`: the values `V`
+  (line 9), `Entity` (24), `File` (30), `parse` (39), the `Parser` (107) and `decode`
+  (314), with its three tests (354). Changed: two `if let ... && let ...` chains in
+  `decode` are written with `and_then`, because this workspace is on the 2021 edition.
+- `crates/ifc/src/lib.rs`, the importer over it, is ours (DECISIONS.md call 47):
+  BIMCraft's `import.rs` builds BIMCraft's model and was read, not ported.

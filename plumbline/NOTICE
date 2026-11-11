@@ -12,6 +12,10 @@ f202abd85d1cf165325e2f7b250da0b5e51f5b71. BIMCraft is licensed MIT OR
 Apache-2.0; the code is used here under the MIT license. The file's header
 states that it is ported and lists what was changed.
 
+crates/ifc/src/step.rs is ported from the same project at the same commit,
+crates/core/src/step.rs (the reader of the STEP file IFC models are written
+in), under the same license. Its header lists the one change made to it.
+
 The building model is ported from the same project at the same commit, under
 the same license:
 

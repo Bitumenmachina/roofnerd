@@ -39,6 +39,7 @@ demos/clash.sh             # what is in the same space as what, what passes thro
 demos/clashw.sh            # fittings, a connection and the clashes in the window; pictures in demos/captured/clash
 demos/plan.sh              # a plan laid under a storey, given its scale from one dimension and traced over, at the command line
 demos/imports.sh           # a price list and an assembly library out as CSV and back; a supplier's list from CSV and from a workbook; a prior estimate set against the job
+demos/model.sh             # another trade's model (IFC) brought in: what comes in, what is listed instead, and the clash it hid
 demos/planw.sh             # the same in the window, on a real scanned sheet and on a vector plan; pictures in demos/captured/plan
 tools/fetch-plans.sh       # fetches the public-domain plan set the demonstrations trace (USDA Plan No. 7213) into plans/
 demos/d4w.sh               # the same in the window: the sheet's Money tab, and prices typed on what is selected
@@ -121,13 +122,16 @@ plumbline export prices job.json prices.csv
 plumbline import assemblies job.json assemblies.csv
 plumbline import prior job.json last-estimate.csv --status Assumed --source "our estimate of last year"
 plumbline compare job.json
+plumbline import ifc job.json their-model.ifc --status Assumed --source "the mechanical contractor's model of 3 March"
 ```
 
 A price list is a CSV file or a workbook with a row of headings: what is priced, what
 it is bought by, and the price. The program finds the headings, sets the prices it can,
 and lists every row and column it did not use and why. An estimate made before is kept
 beside the job and set against it line by line with `compare`; it adds nothing to the
-job's price.
+job's price. A model from another trade or a designer (IFC) comes in as storeys, walls
+with their doors and windows, floors, rooms, ducts, pipes, trays and cables; what the
+program has no element for, or cannot read the shape of, is listed with why.
 
 Everything drawn in the window is flagged Assumed and says it was drawn there. Rooms are
 placed at the command line: `plumbline room job.json <storey> "name" --at "6,8" --status

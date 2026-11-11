@@ -1612,3 +1612,44 @@ holds it was written or changed.
   Removing a drawing says how many things were traced from it; they stay.
 * **Not done:** a JPEG turned by its EXIF tag is still shown unturned (said in STATUS);
   the words on screen ("drawing-0003", "(os error 2)") go to the language pass.
+
+### Call 47. A model brought in: what is read, and what is listed instead (2026-11-11)
+
+The second half of step 3: IFC models from other trades and designers.
+
+**Searched first.** BIMCraft reads IFC2x3 and IFC4 (`import.rs`, 4,895 lines, with
+`import/shapes.rs`, 931) over its own STEP reader (`step.rs`, 408). Its import builds
+BIMCraft's own model and measures every shape it can (curved walls, breps, meshes,
+splines). IfcOpenShell (LGPL) reads everything and is never linked; it is installed in
+scratch as a separate program and was used once here, to check that the made-up model
+written by hand is IFC4 (0 messages from its validator).
+
+**What was decided.**
+
+* **The STEP reader is ported whole** into a new crate, `plumbline-ifc`, with its three
+  tests; two `if let` chains are rewritten for the 2021 edition, nothing else. PORTMAP.md
+  and NOTICE say so.
+* **The importer is ours, and reads the plain shapes.** A wall whose body is a rectangle
+  pushed straight up; a door or a window by its width and height, filling a hole in such
+  a wall; a slab whose body is an outline pushed straight up or down; a space, as a
+  point inside it; a duct, a pipe, a tray or a cable whose body is a circle or a
+  rectangle pushed along its run. That is how nearly everything in a house model is
+  made. Porting BIMCraft's shape-measuring (some five thousand lines) is not done; what
+  it would have read and this does not is listed, never dropped.
+* **Everything not brought in is listed**, by what the file calls it, how many, and why:
+  no element for it here (a beam, a stair, furniture), a body that is not one of the
+  plain shapes, a wall that leans, a door in no wall that came in, a hole with nothing
+  in it.
+* **A model is as sure as whoever brings it in says** (`--status`, `--source`), and each
+  value's source also names the thing in the file it was read off.
+* **Lengths are turned into feet** from the unit the file says (metres, millimetres,
+  feet or inches as a converted unit), kept to a ten-thousandth of a foot, and that is
+  said. A file that names no length unit is in metres, as the standard has it, and that
+  is said too.
+* **The top storey's height is Unknown.** Each storey is as tall as it is to the next
+  one up; nothing in the file says how tall the last is.
+* **A system the file names is used where it is one this program has** (supply air,
+  exhaust, cold and hot water, sanitary, vent, refrigerant, power, lighting). A run on
+  any other sort of system comes in on no system, and how many is said.
+* **A thing the model puts on no storey goes on the highest storey whose floor is not
+  above it**, and how many were placed that way is said.
