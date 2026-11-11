@@ -337,7 +337,6 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     cell(r, 7.0, false, |c| dot(c, worst));
                     cell(r, 0.0, false, |c| {
                         words(c, fonts, el.name.clone(), 12.5, Weight::Medium, theme::ink());
-                        words(c, fonts, el.path.clone(), 11.0, Weight::Regular, theme::ink_faint());
                     });
                     if el.kind == Kind::Wall {
                         for (name, unit, width) in [("plan_length", "LF", 100.0), ("face_area", "SF", 110.0), ("opening_area", "SF", 100.0), ("net_area", "SF", 110.0)] {
@@ -372,8 +371,7 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                         cell(r, 7.0, false, |c| dot(c, worst));
                         cell(r, 0.0, false, |c| {
                             words(c, fonts, el.name.clone(), 12.5, Weight::Medium, theme::ink());
-                            words(c, fonts, el.path.clone(), 11.0, Weight::Regular, theme::ink_faint());
-                        });
+                            });
                         for (name, unit, width) in [("perimeter", "LF", 100.0), ("gross_area", "SF", 110.0), ("", "", 100.0), ("floor_area", "SF", 110.0)] {
                             if name.is_empty() {
                                 cell(r, width, true, |_| {});
@@ -432,7 +430,7 @@ fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 let selected = doc.selected.as_deref() == Some(c.b.as_str()) || doc.selected.as_deref() == Some(c.a.as_str());
                 row(t, selected, Some(c.b.clone()), |r| {
                     cell(r, 7.0, false, |x| dot(x, c.status));
-                    cell(r, 0.0, false, |x| named(x, fonts, format!("{} and {}", c.a_name, c.b_name), theme::ink(), format!("{} and {}", c.a, c.b), theme::ink_faint()));
+                    cell(r, 0.0, false, |x| named(x, fonts, format!("{} and {}", c.a_name, c.b_name), theme::ink(), format!("{} and {}", theme::kind_name(c.a_kind).to_lowercase(), theme::kind_name(c.b_kind).to_lowercase()), theme::ink_faint()));
                     if depth {
                         let by = c.by.map(|by| format!("{:.2} in", by * 12.0 + 0.0)).unwrap_or("not worked out".into());
                         cell(r, 120.0, true, |x| words(x, fonts, by, 12.5, Weight::Medium, theme::status_ink(c.status)));

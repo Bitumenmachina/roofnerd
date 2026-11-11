@@ -165,7 +165,29 @@ pub fn parse(text: &str) -> Result<Expr, String> {
     if text.trim().is_empty() {
         return Err("is blank".into());
     }
-    let toks = tokens(text)?;
+    // A name can be typed as its words: `plan length * stretch out` is `plan_length *
+    // stretch_out`. Two names never stand side by side in a formula, so words in a row,
+    // with only spaces between them, are one name.
+    let chars: Vec<char> = text.chars().collect();
+    let mut joined = String::with_capacity(text.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i] == ' ' {
+            let mut j = i;
+            while j < chars.len() && chars[j] == ' ' {
+                j += 1;
+            }
+            let word = |c: char| c.is_ascii_alphabetic() || c == '_';
+            if i > 0 && j < chars.len() && word(chars[i - 1]) && word(chars[j]) {
+                joined.push('_');
+                i = j;
+                continue;
+            }
+        }
+        joined.push(chars[i]);
+        i += 1;
+    }
+    let toks = tokens(&joined)?;
     // A line's formula is something a person reads on the line. Past this it is not, and
     // working it would go deeper than the program can.
     if toks.len() > MAX_TOKENS {

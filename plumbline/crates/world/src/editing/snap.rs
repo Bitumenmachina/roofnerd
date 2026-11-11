@@ -65,13 +65,14 @@ impl SnapKind {
     /// What it is called where a person reads it.
     pub fn name(self) -> &'static str {
         match self {
-            SnapKind::Endpoint => "Endpoint",
-            SnapKind::Midpoint => "Midpoint",
-            SnapKind::Intersection => "Intersection",
-            SnapKind::Centre => "Centre",
-            SnapKind::Perpendicular => "Perpendicular",
-            SnapKind::Nearest => "Nearest",
-            SnapKind::Angle => "Angle",
+            // What a person at a drawing board would call the place the pointer is on.
+            SnapKind::Endpoint => "On an end",
+            SnapKind::Midpoint => "On a middle",
+            SnapKind::Intersection => "Where two cross",
+            SnapKind::Centre => "On a centre",
+            SnapKind::Perpendicular => "Square to it",
+            SnapKind::Nearest => "On a line",
+            SnapKind::Angle => "On the angle",
             SnapKind::Free => "",
         }
     }

@@ -266,6 +266,8 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     s.title = doc.job.world.get::<JobInfo>(doc.job.root()).map(|j| j.title.clone()).unwrap_or_default();
     s.file = doc.path.file_name().and_then(|f| f.to_str()).unwrap_or("").to_string();
     let elements = view::elements(&mut doc.job);
+    // What each thing is called, for everything written on screen (`theme::spoken`).
+    crate::theme::name_these(elements.iter().map(|e| (e.path.clone(), e.name.clone())).collect());
     s.tally = view::tally(&elements);
     s.pricing = Some(view::pricing(&mut doc.job));
     s.estimate = Some(view::estimate(&mut doc.job));

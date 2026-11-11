@@ -528,7 +528,7 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     };
                     c.spawn(text(fonts, title, 13.0, Weight::Semibold, theme::ink()));
                     c.spawn((rounded(Node { padding: UiRect::axes(px(10.0), px(7.0)), border: UiRect::all(px(1.5)), min_height: px(36.0), align_items: AlignItems::Center, ..default() }, 7.0), BackgroundColor(theme::panel()), BorderColor::all(theme::accent()))).with_children(|f| {
-                        f.spawn(text(fonts, typed.clone(), 15.0, Weight::Medium, theme::ink()));
+                        f.spawn(theme::typed(fonts, typed.clone(), 15.0, Weight::Medium, theme::ink()));
                         f.spawn((Node { width: px(1.5), height: px(18.0), margin: UiRect::left(px(1.0)), ..default() }, BackgroundColor(theme::accent())));
                     });
                     c.spawn(Node { align_items: AlignItems::Center, column_gap: px(6.0), ..default() }).with_children(|h| {
@@ -794,7 +794,7 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
 /// A selected system: what it is and what it comes to.
 fn system(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, el: &view::ElementRows) {
     let Some(t) = snap.system(&el.path) else { return };
-    title_block(p, fonts, &format!("{} system", theme::discipline_name(t.discipline)), &t.name, format!("{}  ·  {}", el.path, t.classification));
+    title_block(p, fonts, &format!("{} system", theme::discipline_name(t.discipline)), &t.name, t.classification.clone());
     p.spawn(Node { margin: UiRect::top(px(16.0)), column_gap: px(12.0), ..default() }).with_children(|r| {
         match (t.runs.value, t.runs.members) {
             (_, 0) => stat(r, fonts, "Runs", "none".into(), "", Status::Known),
@@ -863,8 +863,8 @@ pub fn takeoff(p: &mut ChildSpawnerCommands, fonts: &Fonts, t: &SystemTakeoff) {
 
 fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, el: &view::ElementRows) {
     let under = match &snap.rises_from {
-        Some((_, edge)) => format!("{}  ·  rises from edge {edge} of {}", el.path, snap.roof_name),
-        None => el.path.clone(),
+        Some((_, edge)) => format!("rises from edge {edge} of {}", snap.roof_name),
+        None => String::new(),
     };
     title_block(p, fonts, theme::kind_name(el.kind), &el.name, under);
     let find = |label: &str| el.rows.iter().find(|r| r.label == label);

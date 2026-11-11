@@ -725,7 +725,7 @@ fn outlines_and_lines_that_make_no_sense_are_refused_or_flagged() {
     assert!(measure(&mut job, "ridge-0011", "true_length").note.contains("does not run along the outline"));
     // A hip naming one plane, and a line naming another line as its plane.
     let (mut job, _) = load(&edit(&text, |v| attrs(v, "hip-0012")["pl::run"]["planes"] = serde_json::json!(["plane-0003"]))).unwrap();
-    assert!(measure(&mut job, "hip-0012", "true_length").note.contains("lies on 2 plane(s)"));
+    assert!(measure(&mut job, "hip-0012", "true_length").note.contains("lies on 2 planes"));
     let (mut job, _) = load(&edit(&text, |v| attrs(v, "rake-0019")["pl::run"]["planes"] = serde_json::json!(["hip-0012"]))).unwrap();
     assert!(measure(&mut job, "rake-0019", "true_length").note.contains("is a Hip"));
 }
@@ -5789,4 +5789,17 @@ fn j14_5_6_7_walls_at_an_angle_are_walls_and_a_lateral_is_a_joint() {
     ed::runs(&mut job, &s, Kind::Pipe, &pipe, &[[0.0, 0.0], [20.0, 0.0]], "8 ft", None, how).unwrap();
     ed::runs(&mut job, &s, Kind::Pipe, &pipe, &[[10.0, 0.0], [10.0 + 10.0 * 0.996_194_7, 0.871_557]], "8 ft", None, how).unwrap();
     assert_eq!(clashes_of(&mut job, None).len(), 1);
+}
+
+#[test]
+fn a_formula_can_be_typed_as_its_words() {
+    use plumbline_world::formula::{names, parse};
+    // Words in a row are one name: `plan length` is `plan_length`.
+    let typed = parse("plan length * stretch out").unwrap();
+    assert_eq!(names(&typed), ["plan_length", "stretch_out"]);
+    assert_eq!(names(&parse("plan_length*stretch_out").unwrap()), ["plan_length", "stretch_out"]);
+    assert_eq!(names(&parse("( face area - opening area ) * 2").unwrap()), ["face_area", "opening_area"]);
+    // A number and a name side by side are still two things with nothing between them.
+    assert!(parse("2 height").is_err());
+    assert!(parse("height 2").is_err());
 }

@@ -398,8 +398,8 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
     let (fewest, most) = kind.planes_allowed();
     let n = run.planes.len();
     if n < fewest || n > most {
-        let want = if fewest == most { format!("{fewest}") } else { format!("{fewest} or {most}") };
-        first_fault.get_or_insert(format!("a {kind:?} lies on {want} plane(s); this one names {n}"));
+        let want = if fewest == most { format!("{fewest} plane{}", if fewest == 1 { "" } else { "s" }) } else { format!("{fewest} or {most} planes") };
+        first_fault.get_or_insert(format!("a {kind:?} lies on {want}; this one names {n}"));
     }
     let mut statuses = vec![run.ends.status];
     // For each plane: its path and the height it gives each end of the line.

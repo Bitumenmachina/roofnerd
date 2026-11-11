@@ -1653,3 +1653,33 @@ written by hand is IFC4 (0 messages from its validator).
   any other sort of system comes in on no system, and how many is said.
 * **A thing the model puts on no storey goes on the highest storey whose floor is not
   above it**, and how many were placed that way is said.
+
+### Call 48. The language pass: one place where every word on screen is said (2026-11-11)
+
+Step 3's language pass (ruling 4: every word on screen is a builder's or estimator's
+word; no software term anywhere a user sees).
+
+* **Every string either window draws goes through one function, `theme::spoken`.** It
+  is the only way text reaches the screen (`theme::text`), so a new message cannot
+  miss it. It says a thing's path in the file (`wall-0008`) as the thing's name ("wall
+  8"), says a name followed by its own path once, says a figure's name in a formula
+  (`plan_length`) as its words ("plan length"), and leaves out the machine's number for
+  a failure ("(os error 2)"). The field a person is typing in shows what was typed.
+* **A path is never shown.** It was under each title, beside each row of the sheet and
+  under each clash. A clash's second line says what the two things are (duct and
+  equipment).
+* **A formula can be typed as its words.** Two names never stand side by side in a
+  formula, so words in a row with only spaces between them are one name: `plan length *
+  stretch out` is `plan_length * stretch_out`. Both are read; the screen shows words.
+* **The places the pointer catches on are said as at a drawing board:** on an end, on a
+  middle, where two cross, on a centre, square to it, on a line, on the angle.
+* **"plane(s)" and "opening(s)" are written out** (1 plane, 2 planes; the one opening,
+  each of the 3 openings). One test's expected words change with this.
+* **A model's source names the thing as the model does, less its "IFC"**, and its
+  number in the file: `"Front door", door 113 in the file`.
+* **The command line is not a screen in this sense.** It is how the demonstrations and
+  the tests drive the program; its words are plain but it shows paths, because a path is
+  what its commands take. The windows are what a user sees.
+* **Not yet settled by this pass:** kinds of element are still said as the model names
+  them where a message is built in the core ("a Wall", "Kind"); a judge is to list every
+  word on every screen (release-candidate item 9) and what it finds is fixed then.

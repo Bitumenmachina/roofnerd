@@ -305,7 +305,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     // Every value says the thing in the file it was read off.
     let from = |e: &Entity, id: u64| -> String {
         let called = r.name(e);
-        format!("{}: {name}, {}{} (#{id})", how.source, if called.is_empty() { String::new() } else { format!("\"{called}\", ") }, e.name)
+        // The model's own word for the thing, less the "IFC" every one of them starts
+        // with, and its number in the file, so it can be found there again.
+        let its = e.name.strip_prefix("IFC").unwrap_or(&e.name).to_lowercase();
+        format!("{}: {name}, {}{its} {id} in the file", how.source, if called.is_empty() { String::new() } else { format!("\"{called}\", ") })
     };
     let val = |source: &str, len: f64| Val { value: Some(Len::One(tidy(len))), unit: "ft".to_string(), status: how.status, source: source.to_string() };
     let path_val = |source: &str, path: &str| Val { value: Some(path.to_string()), unit: String::new(), status: how.status, source: source.to_string() };

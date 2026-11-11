@@ -128,6 +128,80 @@ pub fn load_fonts(fonts: &mut Assets<Font>) -> Fonts {
 }
 
 /// A run of text. Figures are set tabular, so columns of numbers line up.
+/// What each element of the job is called, by its path in the job's file. Kept for
+/// `spoken`: a path is how the file names a thing and is never shown.
+static NAMES: std::sync::OnceLock<std::sync::RwLock<std::collections::HashMap<String, String>>> = std::sync::OnceLock::new();
+
+/// Tell `spoken` what the job's elements are called now.
+pub fn name_these(names: std::collections::HashMap<String, String>) {
+    let held = NAMES.get_or_init(Default::default);
+    if let Ok(mut held) = held.write() {
+        *held = names;
+    }
+}
+
+/// Text as it is written on screen. Every word either window draws passes through
+/// here, so that none of the program's own shorthand reaches a person:
+///
+/// * a thing's path in the file (`wall-0008`) is said as the thing's name ("wall 8"),
+///   and a name followed by its own path in brackets is said once;
+/// * a figure's name in a formula (`plan_length`) is said as its words ("plan length");
+///   a formula can be typed either way;
+/// * the machine's number for a failure ("(os error 2)") is left out.
+pub fn spoken(text: &str) -> String {
+    let names = NAMES.get().and_then(|n| n.read().ok());
+    let mut said: Vec<String> = Vec::new();
+    let mut out = String::with_capacity(text.len());
+    for (i, word) in text.split(' ').enumerate() {
+        if i > 0 {
+            out.push(' ');
+        }
+        let inner = |c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-';
+        let start = word.find(inner).unwrap_or(word.len());
+        let end = word.rfind(inner).map(|k| k + 1).unwrap_or(start);
+        let (before, core, after) = (&word[..start], &word[start..end.max(start)], &word[end.max(start)..]);
+        let is_path = core.rsplit_once('-').is_some_and(|(stem, number)| !stem.is_empty() && stem.chars().all(|c| c.is_ascii_lowercase()) && number.len() >= 4 && number.chars().all(|c| c.is_ascii_digit()));
+        let is_name = core.contains('_') && !core.starts_with('_') && !core.ends_with('_') && core.chars().all(|c| c.is_ascii_lowercase() || c == '_');
+        out.push_str(before);
+        match (is_path, is_name) {
+            (true, _) => match names.as_ref().and_then(|n| n.get(core)) {
+                Some(name) => {
+                    out.push_str(name);
+                    said.push(name.clone());
+                }
+                None => out.push_str(core),
+            },
+            (_, true) => out.push_str(&core.replace('_', " ")),
+            _ => out.push_str(core),
+        }
+        out.push_str(after);
+    }
+    for name in said {
+        let twice = format!("{name} ({name})");
+        if out.contains(&twice) {
+            out = out.replace(&twice, &name);
+        }
+    }
+    // "(os error 2)": the machine's number for why a file could not be read.
+    while let Some(at) = out.find(" (os error ") {
+        match out[at..].find(')') {
+            Some(close) => out.replace_range(at..at + close + 1, ""),
+            None => break,
+        }
+    }
+    out
+}
+
+/// Text exactly as it was typed, for the field a person is typing in.
+pub fn typed(fonts: &Fonts, s: impl Into<String>, size: f32, weight: Weight, colour: Color) -> impl Bundle {
+    let font = match weight {
+        Weight::Regular => fonts.regular.clone(),
+        Weight::Medium => fonts.medium.clone(),
+        Weight::Semibold => fonts.semibold.clone(),
+    };
+    (Text::new(s), TextFont { font: FontSource::Handle(font), font_size: FontSize::Px(size), ..default() }, TextColor(colour))
+}
+
 pub fn text(fonts: &Fonts, s: impl Into<String>, size: f32, weight: Weight, colour: Color) -> impl Bundle {
     let font = match weight {
         Weight::Regular => fonts.regular.clone(),
@@ -135,7 +209,7 @@ pub fn text(fonts: &Fonts, s: impl Into<String>, size: f32, weight: Weight, colo
         Weight::Semibold => fonts.semibold.clone(),
     };
     let features: FontFeatures = FontFeatures::builder().enable(FontFeatureTag::TABULAR_FIGURES).build();
-    (Text::new(s), TextFont { font: FontSource::Handle(font), font_size: FontSize::Px(size), font_features: features, ..default() }, TextColor(colour))
+    (Text::new(spoken(&s.into())), TextFont { font: FontSource::Handle(font), font_size: FontSize::Px(size), font_features: features, ..default() }, TextColor(colour))
 }
 
 /// A white card with a hairline border and a soft shadow. The node says how it is laid
@@ -268,4 +342,30 @@ pub fn plan_window() -> Color {
 /// Where two things are in the same space.
 pub fn clash() -> Color {
     Color::srgb(0.86, 0.12, 0.16)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn what_is_written_on_screen_is_in_words_not_in_the_files_shorthand() {
+        name_these([("wall-0008", "wall 8"), ("type-0004", "wall 6 in"), ("drawing-0003", "A-1 floor plan")].into_iter().map(|(p, n)| (p.to_string(), n.to_string())).collect());
+        // A path is said as the thing's name, wherever it stands in the sentence.
+        assert_eq!(spoken("removed wall-0008"), "removed wall 8");
+        assert_eq!(spoken("wall-0008: 24' 0\" long"), "wall 8: 24' 0\" long");
+        assert_eq!(spoken("(wall-0008)"), "(wall 8)");
+        // A name with its own path after it in brackets is said once.
+        assert_eq!(spoken("Type of wall 8: wall 6 in (type-0004)"), "Type of wall 8: wall 6 in");
+        // A figure's name is said as its words; so is every one in a formula.
+        assert_eq!(spoken("plan_length × height"), "plan length × height");
+        assert_eq!(spoken("face_area − opening_area"), "face area − opening area");
+        // The machine's number for a failure is left out.
+        assert_eq!(spoken("cannot read a-1.pdf: No such file or directory (os error 2)"), "cannot read a-1.pdf: No such file or directory");
+        // What is not the program's shorthand is left as it is: a file's name, a size, a
+        // thing nobody has named.
+        assert_eq!(spoken("made_up_plan.pdf, page 2"), "made_up_plan.pdf, page 2");
+        assert_eq!(spoken("3/4 in x 1-1/2 in"), "3/4 in x 1-1/2 in");
+        assert_eq!(spoken("pipe-0099 is not in the job"), "pipe-0099 is not in the job");
+    }
 }

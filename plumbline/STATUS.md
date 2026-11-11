@@ -1773,6 +1773,26 @@ messages.
   (`demos/plan.sh` reads a JPEG and a PNG). No demonstration uses an aerial picture as
   such, and none is committed.
 
+## The language pass. What was done
+
+The last part of step 3; DECISIONS.md call 48. **Not judged; no screen has been looked at
+since it was made** (the window demonstrations are being run again on this build, and
+every picture is to be read before any of this is called shown).
+
+* Every string either window draws now passes through one function (`theme::spoken`): a
+  thing's path in the file is said as the thing's name, a figure's name is said as its
+  words, and the machine's number for a failure is left out. Held by a test in the
+  window's crate.
+* Paths are gone from under each title, beside each row of the sheet and under each
+  clash.
+* A formula can be typed as its words (`plan length * stretch out`). Held by a test.
+* The places the pointer catches on are said as at a drawing board.
+* `cargo test --workspace`: 182 passing. The eleven command-line demonstrations exit 0.
+
+**Not done:** release-candidate item 9 (a judge lists every word on every screen) is
+what settles this, and has not been run. Known already: the core still says "a Wall",
+"a Duct" in some refusals, as the model names kinds.
+
 ## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
 
 An independent judge (Opus; it did not build any of this) was given commit `1886693`, a

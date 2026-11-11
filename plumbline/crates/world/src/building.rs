@@ -690,7 +690,7 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 let mine = holes.get(me).map(Vec::as_slice).unwrap_or(&[]);
                 let mut inputs: Vec<String> = mine.iter().flat_map(|h| h.inputs.iter().cloned()).collect();
                 inputs.dedup();
-                let f_open = if mine.is_empty() { "the openings under this wall (it has none)".to_string() } else { format!("the opening_area of each of the {} opening(s) under this wall, added up", mine.len()) };
+                let f_open = if mine.is_empty() { "the openings under this wall (it has none)".to_string() } else { if mine.len() == 1 { "the opening_area of the one opening in this wall".to_string() } else { format!("the opening_area of each of the {} openings in this wall, added up", mine.len()) } };
                 let total = mine.iter().map(|h| h.area).sum::<Option<f64>>();
                 // What the openings come to is as sure as their sizes. Where each one is
                 // matters to the net, not to this.
