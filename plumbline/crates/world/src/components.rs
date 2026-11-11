@@ -89,6 +89,9 @@ pub enum Kind {
     Equipment,
     /// What a system ends at in a room: a register, a lavatory, a receptacle, a light.
     Fixture,
+    /// A type: what walls, floors, doors or windows of one sort have in common (a
+    /// thickness, a size), entered once. An element points at its type by the type's path.
+    Type,
 }
 
 impl Kind {
@@ -120,6 +123,7 @@ impl Kind {
             Kind::Cable => "cable",
             Kind::Equipment => "equipment",
             Kind::Fixture => "fixture",
+            Kind::Type => "type",
         }
     }
     pub fn is_area(self) -> bool {
@@ -148,9 +152,9 @@ impl Kind {
         } else if self.is_run() {
             &[("plan_length", "LF"), ("true_length", "LF")]
         } else if self == Kind::Wall {
-            &[("plan_length", "LF"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF")]
+            &[("plan_length", "LF"), ("height", "ft"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF")]
         } else if matches!(self, Kind::Door | Kind::Window) {
-            &[("opening_area", "SF")]
+            &[("width", "ft"), ("height", "ft"), ("opening_area", "SF")]
         } else if self == Kind::Floor {
             &[("plan_area", "SF")]
         } else if self == Kind::Duct {

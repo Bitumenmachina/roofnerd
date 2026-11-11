@@ -32,6 +32,11 @@ use crate::units::{self, Len};
 use crate::value::{Derived, Status, Val};
 use crate::view::{self, Row, Sum};
 
+pub mod model;
+pub mod walls;
+
+pub use model::*;
+
 /// A point in space: east, north, height above the datum.
 pub type P3 = [f64; 3];
 
@@ -42,66 +47,16 @@ pub const MAX_SECTION_FT: f64 = 20.0;
 
 pub const K_LEVEL: &str = "pl::level";
 pub const K_WALL: &str = "pl::wall";
+pub const K_WALL_TYPE: &str = "pl::wall_type";
 pub const K_OPENING: &str = "pl::opening";
+pub const K_OPENING_TYPE: &str = "pl::opening_type";
 pub const K_FLOOR: &str = "pl::floor";
+pub const K_FLOOR_TYPE: &str = "pl::floor_type";
 pub const K_ROUTE: &str = "pl::route";
 pub const K_SIZE: &str = "pl::size";
 pub const K_PLACED: &str = "pl::placed";
 pub const K_SYSTEM: &str = "pl::system";
 pub const K_IN_SYSTEM: &str = "pl::in_system";
-
-/// `pl::level`: on a Storey, how high its floor is above the datum and how far it is up to
-/// the next floor.
-#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Level {
-    pub elevation: Val<Len>,
-    pub height: Val<Len>,
-}
-
-/// `pl::wall`: a wall by its centre line on the plan, how thick it is and how tall. It
-/// stands on its storey's floor.
-#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Wall {
-    pub line: Val<[P2; 2]>,
-    pub thickness: Val<Len>,
-    pub height: Val<Len>,
-}
-
-impl Wall {
-    pub fn line_ft(&self) -> Option<[P2; 2]> {
-        let d = units::coord_divisor(&self.line.unit).ok()?;
-        self.line.value.map(|l| l.map(|p| [p[0] / d, p[1] / d]))
-    }
-}
-
-/// `pl::opening`: on a Door or a Window under a wall. `along` is how far from the wall
-/// line's first end the opening starts; `sill` is how high its bottom is above the floor.
-#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Opening {
-    pub along: Val<Len>,
-    pub width: Val<Len>,
-    pub height: Val<Len>,
-    pub sill: Val<Len>,
-}
-
-/// `pl::floor`: a floor by its boundary on the plan and how thick it is. Its top is at its
-/// storey's elevation.
-#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Floor {
-    pub boundary: Val<Vec<P2>>,
-    pub thickness: Val<Len>,
-}
-
-impl Floor {
-    pub fn boundary_ft(&self) -> Option<Vec<P2>> {
-        let d = units::coord_divisor(&self.boundary.unit).ok()?;
-        self.boundary.value.as_ref().map(|pts| pts.iter().map(|p| [p[0] / d, p[1] / d]).collect())
-    }
-}
 
 /// `pl::route`: the centre line of a duct, pipe, conduit or cable, point to point in space.
 #[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -248,7 +203,7 @@ impl Kind {
 
 // ---------------------------------------------------------------- the entry checks
 
-fn positive(what: &str, v: &Val<Len>, zero_ok: bool) -> Result<(), String> {
+pub(crate) fn positive(what: &str, v: &Val<Len>, zero_ok: bool) -> Result<(), String> {
     v.check_length(what)?;
     if let Some(x) = v.feet() {
         if x < 0.0 || (!zero_ok && x == 0.0) {
@@ -261,70 +216,16 @@ fn positive(what: &str, v: &Val<Len>, zero_ok: bool) -> Result<(), String> {
     Ok(())
 }
 
-fn coords<T>(what: &str, v: &Val<T>) -> Result<f64, String> {
+pub(crate) fn coords<T>(what: &str, v: &Val<T>) -> Result<f64, String> {
     v.check_basics(what)?;
     units::coord_divisor(&v.unit).map_err(|why| format!("{what}: {why}"))
 }
 
-fn usable(what: &str, xs: &[f64], divisor: f64) -> Result<(), String> {
+pub(crate) fn usable(what: &str, xs: &[f64], divisor: f64) -> Result<(), String> {
     if xs.iter().any(|x| !x.is_finite() || (x / divisor).abs() > MAX_COORDINATE_FT) {
         return Err(format!("{what}: a coordinate is not a usable number (limit {MAX_COORDINATE_FT:e} ft either way)"));
     }
     Ok(())
-}
-
-pub fn check_level(path: &str, kind: Kind, l: &Level) -> Result<(), String> {
-    if kind != Kind::Storey {
-        return Err(format!("{path}: a {kind:?} cannot carry a level; only a storey can"));
-    }
-    l.elevation.check_length(&format!("{path} elevation"))?;
-    if l.elevation.feet().is_some_and(|x| x.abs() > MAX_COORDINATE_FT) {
-        return Err(format!("{path} elevation: is not a usable number (limit {MAX_COORDINATE_FT:e} ft either way)"));
-    }
-    positive(&format!("{path} storey height"), &l.height, false)
-}
-
-pub fn check_wall(path: &str, kind: Kind, w: &Wall) -> Result<(), String> {
-    if kind != Kind::Wall {
-        return Err(format!("{path}: a {kind:?} cannot carry a wall's line; only a wall can"));
-    }
-    let d = coords(&format!("{path} wall line"), &w.line)?;
-    if let Some([a, b]) = w.line.value {
-        usable(&format!("{path} wall line"), &[a[0], a[1], b[0], b[1]], d)?;
-        if a == b {
-            return Err(format!("{path} wall line: the two ends are the same point"));
-        }
-    }
-    positive(&format!("{path} wall thickness"), &w.thickness, false)?;
-    positive(&format!("{path} wall height"), &w.height, false)
-}
-
-pub fn check_opening(path: &str, kind: Kind, o: &Opening) -> Result<(), String> {
-    if !kind.is_opening() {
-        return Err(format!("{path}: a {kind:?} cannot carry an opening; only a door or a window can"));
-    }
-    positive(&format!("{path} distance along the wall"), &o.along, true)?;
-    positive(&format!("{path} opening width"), &o.width, false)?;
-    positive(&format!("{path} opening height"), &o.height, false)?;
-    positive(&format!("{path} sill height"), &o.sill, true)
-}
-
-pub fn check_floor(path: &str, kind: Kind, f: &Floor) -> Result<(), String> {
-    if kind != Kind::Floor {
-        return Err(format!("{path}: a {kind:?} cannot carry a floor's boundary; only a floor can"));
-    }
-    let d = coords(&format!("{path} floor boundary"), &f.boundary)?;
-    if let Some(pts) = &f.boundary.value {
-        for p in pts {
-            usable(&format!("{path} floor boundary"), p, d)?;
-        }
-    }
-    if let Some(pts) = f.boundary_ft() {
-        if let Some(fault) = geom::outline_fault(&pts) {
-            return Err(format!("{path} floor boundary: {fault}"));
-        }
-    }
-    positive(&format!("{path} floor thickness"), &f.thickness, false)
 }
 
 pub fn check_route(path: &str, kind: Kind, r: &Route) -> Result<(), String> {
@@ -408,29 +309,132 @@ pub fn check_in_system(path: &str, kind: Kind, s: &InSystem) -> Result<(), Strin
     Ok(())
 }
 
-/// What can only be checked once every element is in: an opening is under a wall, a wall
-/// and a floor are under a storey, and a system named is a system in the job.
-pub fn check_whole(job: &mut Job) -> Result<(), String> {
-    let mut kinds: HashMap<String, Kind> = HashMap::new();
-    let mut q = job.world.query::<(&Node, &Kind)>();
-    for (node, kind) in q.iter(&job.world) {
-        kinds.insert(node.path.clone(), *kind);
+/// What `check_whole`, `measures` and `placements` need to know of the job besides the
+/// element in hand: who is under whom, each storey's level, and the types.
+pub(crate) struct Tree {
+    pub(crate) parents: HashMap<String, Option<String>>,
+    pub(crate) kinds: HashMap<String, Kind>,
+    pub(crate) names: HashMap<String, String>,
+    pub(crate) levels: HashMap<String, Level>,
+    pub(crate) wall_types: HashMap<String, WallType>,
+    pub(crate) floor_types: HashMap<String, FloorType>,
+    pub(crate) opening_types: HashMap<String, OpeningType>,
+}
+
+impl Tree {
+    pub(crate) fn of(world: &mut World) -> Tree {
+        let mut t = Tree { parents: HashMap::new(), kinds: HashMap::new(), names: HashMap::new(), levels: HashMap::new(), wall_types: HashMap::new(), floor_types: HashMap::new(), opening_types: HashMap::new() };
+        let mut q = world.query::<(&Node, &Kind, Option<&Level>, Option<&WallType>, Option<&FloorType>, Option<&OpeningType>)>();
+        for (node, kind, level, wall, floor, opening) in q.iter(world) {
+            let p = node.path.clone();
+            t.parents.insert(p.clone(), node.parent.clone());
+            t.kinds.insert(p.clone(), *kind);
+            t.names.insert(p.clone(), node.name.clone());
+            if let (Kind::Storey, Some(l)) = (kind, level) {
+                t.levels.insert(p.clone(), l.clone());
+            }
+            if *kind == Kind::Type {
+                if let Some(c) = wall {
+                    t.wall_types.insert(p.clone(), c.clone());
+                }
+                if let Some(c) = floor {
+                    t.floor_types.insert(p.clone(), c.clone());
+                }
+                if let Some(c) = opening {
+                    t.opening_types.insert(p.clone(), c.clone());
+                }
+            }
+        }
+        t
     }
-    let mut q = job.world.query::<(&Node, &Kind, Option<&InSystem>)>();
-    for (node, kind, in_system) in q.iter(&job.world) {
+
+    /// The storey an element stands on: the nearest one above it in the tree.
+    pub(crate) fn storey_of(&self, path: &str) -> Option<&str> {
+        let mut at = self.parents.get(path)?.as_deref();
+        let mut steps = 0;
+        while let Some(p) = at {
+            if self.kinds.get(p) == Some(&Kind::Storey) {
+                return self.kinds.get_key_value(p).map(|(k, _)| k.as_str());
+            }
+            at = self.parents.get(p)?.as_deref();
+            steps += 1;
+            if steps > self.parents.len() {
+                return None;
+            }
+        }
+        None
+    }
+
+    /// What an element is called, for a message: its name, or its path when it has none.
+    pub(crate) fn called(&self, path: &str) -> String {
+        self.names.get(path).filter(|n| !n.is_empty()).cloned().unwrap_or_else(|| path.to_string())
+    }
+}
+
+/// The type a reference names, from a table of them, or why there is none.
+pub(crate) fn typed<'a, T>(table: &'a HashMap<String, T>, r: &'a Val<String>, what: &str) -> Result<(&'a str, &'a T), String> {
+    match &r.value {
+        None => Err(format!("its type is not known ({})", r.source)),
+        Some(p) => table.get(p).map(|t| (p.as_str(), t)).ok_or_else(|| format!("its type, {p}, is not {what} type in this job")),
+    }
+}
+
+/// What can only be checked once every element is in: an opening is under a wall, a wall
+/// and a floor are under a storey, a type is under the job and says what it is a type of,
+/// a type named is a type of the right sort, a top level named is a storey, and a system
+/// named is a system in the job.
+pub fn check_whole(job: &mut Job) -> Result<(), String> {
+    let tree = Tree::of(&mut job.world);
+    let kinds = &tree.kinds;
+    let mut q = job.world.query::<(&Node, &Kind, Option<&InSystem>, Option<&Wall>, Option<&Opening>, Option<&Floor>)>();
+    for (node, kind, in_system, wall, opening, floor) in q.iter(&job.world) {
+        let me = &node.path;
         let parent = node.parent.as_ref().and_then(|p| kinds.get(p)).copied();
         if kind.is_opening() && parent != Some(Kind::Wall) {
-            return Err(format!("{}: a {kind:?} is an opening in a wall and has to be under one", node.path));
+            return Err(format!("{me}: a {kind:?} is an opening in a wall and has to be under one"));
         }
         if matches!(kind, Kind::Wall | Kind::Floor) && parent != Some(Kind::Storey) {
-            return Err(format!("{}: a {kind:?} stands on a storey and has to be under one", node.path));
+            return Err(format!("{me}: a {kind:?} stands on a storey and has to be under one"));
         }
         if *kind == Kind::Storey && parent != Some(Kind::Job) {
-            return Err(format!("{}: a storey is a floor of the building and has to be directly under the job, not under {}", node.path, node.parent.as_deref().unwrap_or("nothing")));
+            return Err(format!("{me}: a storey is a floor of the building and has to be directly under the job, not under {}", node.parent.as_deref().unwrap_or("nothing")));
+        }
+        if *kind == Kind::Type {
+            if parent != Some(Kind::Job) {
+                return Err(format!("{me}: a type belongs to the whole job and has to be directly under it, not under {}", node.parent.as_deref().unwrap_or("nothing")));
+            }
+            let sorts = [tree.wall_types.contains_key(me), tree.floor_types.contains_key(me), tree.opening_types.contains_key(me)].into_iter().filter(|x| *x).count();
+            if sorts != 1 {
+                return Err(format!("{me}: a type is one sort of type (of a wall, a floor, a door or a window); this one carries {sorts}"));
+            }
         }
         if let Some(named) = in_system.and_then(|s| s.0.value.as_ref()) {
             if kinds.get(named) != Some(&Kind::System) {
-                return Err(format!("{}: says it belongs to {named:?}, which is not a system in this job", node.path));
+                return Err(format!("{me}: says it belongs to {named:?}, which is not a system in this job"));
+            }
+        }
+        if let Some(w) = wall {
+            if let Some(p) = &w.type_name.value {
+                if !tree.wall_types.contains_key(p) {
+                    return Err(format!("{me}: its type is {p:?}, which is not a wall type in this job"));
+                }
+            }
+            if let Some(p) = w.top_level.as_ref().and_then(|t| t.value.as_ref()) {
+                if kinds.get(p) != Some(&Kind::Storey) {
+                    return Err(format!("{me}: its top level is {p:?}, which is not a storey in this job"));
+                }
+            }
+        }
+        if let Some(p) = opening.and_then(|o| o.type_name.value.as_ref()) {
+            match tree.opening_types.get(p) {
+                None => return Err(format!("{me}: its type is {p:?}, which is not a door or window type in this job")),
+                Some(t) if t.category != *kind => return Err(format!("{me}: is a {kind:?}, but its type, {p}, is a {:?}'s", t.category)),
+                Some(_) => {}
+            }
+        }
+        if let Some(p) = floor.and_then(|f| f.type_name.value.as_ref()) {
+            if !tree.floor_types.contains_key(p) {
+                return Err(format!("{me}: its type is {p:?}, which is not a floor type in this job"));
             }
         }
     }
@@ -468,14 +472,115 @@ struct Hole {
     span: Option<[f64; 4]>,
     area: Option<f64>,
     status: Status,
+    /// What its area was worked out from.
+    inputs: Vec<String>,
+}
+
+/// A door or window worked out against its type: the hole it makes, and its type's width
+/// and height, or why it has none.
+fn hole_of(tree: &Tree, me: &str, o: &Opening) -> (Hole, Result<(Val<Len>, Val<Len>), String>) {
+    let mut inputs = vec![format!("{me}#{K_OPENING}")];
+    match typed(&tree.opening_types, &o.type_name, "a door or window") {
+        Err(why) => (Hole { path: me.into(), span: None, area: None, status: Status::Unknown, inputs }, Err(why)),
+        Ok((type_path, t)) => {
+            inputs.push(format!("{type_path}#{K_OPENING_TYPE}"));
+            let (w, h) = (t.width.feet(), t.height.feet());
+            let span = o.offset.feet().zip(w).zip(o.sill.feet().zip(h)).map(|((at, w), (s, h))| [at - w / 2.0, at + w / 2.0, s, s + h]);
+            let status = [o.type_name.status, t.width.status, t.height.status, o.offset.status, o.sill.status].into_iter().max().unwrap_or(Status::Unknown);
+            let area = w.zip(h).map(|(w, h)| w * h);
+            (Hole { path: me.into(), span, area, status, inputs }, Ok((t.width.clone(), t.height.clone())))
+        }
+    }
+}
+
+/// A wall's base and its height, worked out from its storey, its top level and its
+/// offsets, each with why it has none when it has none.
+pub(crate) struct WallHeights {
+    /// Its base above the datum.
+    pub(crate) base: Result<f64, String>,
+    pub(crate) height: Result<f64, String>,
+    /// The worst status among what the height was worked out from.
+    pub(crate) status: Status,
+    pub(crate) formula: String,
+    pub(crate) inputs: Vec<String>,
+}
+
+/// BIMCraft's `own_base` and `own_top` (`model.rs:3890`, `3896`): a wall's base is its
+/// level plus its base offset; its top is its top level plus its top offset, or its base
+/// plus its height.
+pub(crate) fn wall_heights(tree: &Tree, me: &str, w: &Wall) -> WallHeights {
+    let mut inputs = vec![format!("{me}#{K_WALL}")];
+    let storey = tree.storey_of(me);
+    let own = storey.and_then(|s| tree.levels.get(s));
+    let own_elevation: Result<f64, String> = match (storey, own) {
+        (None, _) => Err("it is under no storey".into()),
+        (Some(_), None) => Err("its storey has no level entered".into()),
+        (Some(_), Some(l)) => l.elevation.feet().ok_or_else(|| "its storey's elevation is not known".to_string()),
+    };
+    let (base_offset, base_status): (Result<f64, String>, Status) = match &w.base_offset {
+        None => (Ok(0.0), Status::Known),
+        Some(o) => (o.feet().ok_or_else(|| "its base offset is not known".to_string()), o.status),
+    };
+    let base = own_elevation.clone().and_then(|e| base_offset.clone().map(|o| e + o));
+    let (height, status, formula) = match (&w.top_level, &w.height) {
+        (None, Some(h)) => (h.feet().ok_or_else(|| "its height is not known".to_string()), h.status, units::to_feet_text("height", &h.unit)),
+        (Some(t), _) => {
+            let top = t.value.as_ref().ok_or_else(|| "its top level is not known".to_string()).and_then(|p| {
+                inputs.push(format!("{p}#{K_LEVEL}"));
+                let l = tree.levels.get(p).ok_or_else(|| format!("its top level, {p}, is not a storey with a level in this job"))?;
+                let e = l.elevation.feet().ok_or_else(|| format!("the elevation of {}, its top level, is not known", tree.called(p)))?;
+                Ok((e, l.elevation.status))
+            });
+            if let Some(s) = storey {
+                inputs.push(format!("{s}#{K_LEVEL}"));
+            }
+            let (top_offset, top_offset_status) = match &w.top_offset {
+                None => (Ok(0.0), Status::Known),
+                Some(o) => (o.feet().ok_or_else(|| "its top offset is not known".to_string()), o.status),
+            };
+            let own_status = own.map(|l| l.elevation.status).unwrap_or(Status::Unknown);
+            let status = [t.status, top.as_ref().map(|x| x.1).unwrap_or(Status::Unknown), own_status, base_status, top_offset_status].into_iter().max().unwrap_or(Status::Unknown);
+            let height = top.and_then(|(e, _)| top_offset.map(|o| e + o)).and_then(|top| base.clone().map(|b| top - b));
+            let mut f = "elevation of its top level".to_string();
+            if w.top_offset.is_some() {
+                f.push_str(" + top_offset");
+            }
+            f.push_str(" − elevation of its storey");
+            if w.base_offset.is_some() {
+                f.push_str(" − base_offset");
+            }
+            (height, status, f)
+        }
+        (None, None) => (Err("it has no top level and no height".into()), Status::Unknown, String::new()),
+    };
+    let height = height.and_then(|h| if h > 0.0 { Ok(h) } else { Err(format!("its top is {} ft above its base; a wall's top is above its base", view::figure_shown(h, 2))) });
+    WallHeights { base, height, status, formula, inputs }
+}
+
+/// A wall's thickness and its layers (function and thickness, exterior first) in feet, or
+/// why they are not to be had. The layers are empty when a layer's thickness is not known
+/// and the wall's line does not need them.
+pub(crate) fn wall_section(tree: &Tree, w: &Wall) -> Result<(f64, Vec<(Function, f64)>, Status), String> {
+    let (_, t) = typed(&tree.wall_types, &w.type_name, "a wall")?;
+    let thickness = t.thickness.feet().ok_or("its type's thickness is not known")?;
+    let layers: Option<Vec<(Function, f64)>> = t.layers.iter().map(|l| l.thickness.feet().map(|x| (l.function, x))).collect();
+    let needs_core = matches!(w.location, Location::CoreCentre | Location::ExteriorCore | Location::InteriorCore);
+    let layers = match layers {
+        Some(l) => l,
+        None if needs_core => return Err("a layer of its type has no thickness, so its core line cannot be placed".into()),
+        None => Vec::new(),
+    };
+    let status = t.layers.iter().map(|l| l.thickness.status).fold(w.type_name.status.max(t.thickness.status), Status::max);
+    Ok((thickness, layers, status))
 }
 
 /// The figures of every element this module knows, by path. `derive` adds them to the
 /// element's measure beside whatever else it carries.
 pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>> {
     let mut out: HashMap<String, BTreeMap<String, Derived>> = HashMap::new();
+    let tree = Tree::of(world);
 
-    // Openings first: each one's area, and each wall's list of them.
+    // Openings first: each one's size and area, and each wall's list of them.
     let mut holes: HashMap<String, Vec<Hole>> = HashMap::new();
     let mut q = world.query::<(&Node, &Kind, Option<&Opening>)>();
     for (node, kind, opening) in q.iter(world) {
@@ -483,19 +588,34 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
             continue;
         }
         let me = &node.path;
-        let input = [format!("{me}#{K_OPENING}")];
-        let (d, hole) = match opening {
-            None => (Derived::refused("SF", "width × height", &input, "no opening entered"), Hole { path: me.clone(), span: None, area: None, status: Status::Unknown }),
+        let mut m = BTreeMap::new();
+        let hole = match opening {
+            None => {
+                let input = [format!("{me}#{K_OPENING}")];
+                for (name, unit) in kind.measures() {
+                    m.insert(name.to_string(), Derived::refused(unit, "", &input, "no opening entered"));
+                }
+                Hole { path: me.clone(), span: None, area: None, status: Status::Unknown, inputs: input.to_vec() }
+            }
             Some(o) => {
-                let f = format!("{} × {}", feet_text("width", &o.width), feet_text("height", &o.height));
-                let area = o.width.feet().zip(o.height.feet()).map(|(w, h)| w * h);
-                let d = Derived::new(area, "SF", &[o.width.status, o.height.status], &f, &input);
-                let span = o.along.feet().zip(o.width.feet()).zip(o.sill.feet().zip(o.height.feet())).map(|((a, w), (s, h))| [a, a + w, s, s + h]);
-                let status = [o.along.status, o.width.status, o.height.status, o.sill.status].into_iter().max().unwrap_or(Status::Unknown);
-                (d.clone(), Hole { path: me.clone(), span, area: d.value, status })
+                let (hole, sizes) = hole_of(&tree, me, o);
+                match sizes {
+                    Err(why) => {
+                        m.insert("width".into(), Derived::refused("ft", "its type's width", &hole.inputs, &why));
+                        m.insert("height".into(), Derived::refused("ft", "its type's height", &hole.inputs, &why));
+                        m.insert("opening_area".into(), Derived::refused("SF", "width × height", &hole.inputs, &why));
+                    }
+                    Ok((width, height)) => {
+                        let sure = o.type_name.status;
+                        m.insert("width".into(), Derived::new(width.feet(), "ft", &[sure, width.status], &units::to_feet_text("its type's width", &width.unit), &hole.inputs));
+                        m.insert("height".into(), Derived::new(height.feet(), "ft", &[sure, height.status], &units::to_feet_text("its type's height", &height.unit), &hole.inputs));
+                        m.insert("opening_area".into(), Derived::new(hole.area, "SF", &[sure, width.status, height.status], "width × height", &hole.inputs));
+                    }
+                }
+                hole
             }
         };
-        out.entry(me.clone()).or_default().insert("opening_area".into(), d);
+        out.entry(me.clone()).or_default().extend(m);
         if let Some(parent) = &node.parent {
             holes.entry(parent.clone()).or_default().push(hole);
         }
@@ -520,12 +640,23 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 let length = line.map(|[a, b]| geom::dist(a, b));
                 let unit_fault = w.line.value.is_some() && line.is_none();
                 let plan = if unit_fault { Derived::refused("LF", &f_len, &input, &format!("the wall line {NOT_CONVERTED}")) } else { Derived::new(length, "LF", &[w.line.status], &f_len, &input) };
-                let f_face = format!("plan_length × {}", feet_text("height", &w.height));
-                let face = if unit_fault { Derived::refused("SF", &f_face, &input, &format!("the wall line {NOT_CONVERTED}")) } else { Derived::new(length.zip(w.height.feet()).map(|(l, h)| l * h), "SF", &[w.line.status, w.height.status], &f_face, &input) };
+                // Its height: entered, or from its storey up to its top level.
+                let heights = wall_heights(&tree, me, w);
+                let tall = match &heights.height {
+                    Ok(h) => Derived::new(Some(*h), "ft", &[heights.status], &heights.formula, &heights.inputs),
+                    Err(why) => Derived::refused("ft", &heights.formula, &heights.inputs, why),
+                };
+                let f_face = "plan_length × height";
+                let face = match (&heights.height, unit_fault) {
+                    (_, true) => Derived::refused("SF", f_face, &heights.inputs, &format!("the wall line {NOT_CONVERTED}")),
+                    (Err(why), _) => Derived::refused("SF", f_face, &heights.inputs, why),
+                    (Ok(h), _) => Derived::new(length.map(|l| l * h), "SF", &[w.line.status, heights.status], f_face, &heights.inputs),
+                };
                 // Its openings: every one has to have an area, lie within the wall, and
                 // not lie over another, or the wall has no net area.
                 let mine = holes.get(me).map(Vec::as_slice).unwrap_or(&[]);
-                let mut inputs: Vec<String> = mine.iter().map(|h| format!("{}#{K_OPENING}", h.path)).collect();
+                let mut inputs: Vec<String> = mine.iter().flat_map(|h| h.inputs.iter().cloned()).collect();
+                inputs.dedup();
                 let f_open = if mine.is_empty() { "the openings under this wall (it has none)".to_string() } else { format!("the opening_area of each of the {} opening(s) under this wall, added up", mine.len()) };
                 let total = mine.iter().map(|h| h.area).sum::<Option<f64>>();
                 let mut statuses: Vec<Status> = mine.iter().map(|h| if h.area.is_some() { h.status } else { Status::Unknown }).collect();
@@ -534,15 +665,22 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                     Some(h) => Derived::refused("SF", &f_open, &inputs, &format!("{} has no area", h.path)),
                     None => Derived::new(total, "SF", &statuses, &f_open, &inputs),
                 };
-                inputs.insert(0, input[0].clone());
+                for i in heights.inputs.iter().rev() {
+                    if !inputs.contains(i) {
+                        inputs.insert(0, i.clone());
+                    }
+                }
                 let mut fault = None;
-                if let (Some(l), Some(h)) = (length, w.height.feet()) {
+                if let (Some(l), Ok(h)) = (length, &heights.height) {
                     for (i, hole) in mine.iter().enumerate() {
                         let Some([from, to, sill, head]) = hole.span else { continue };
-                        if to > l + crate::check::FIT_TOLERANCE_FT {
+                        // It fits its wall from end to end (BIMCraft `model.rs:6678`).
+                        if from < -crate::check::FIT_TOLERANCE_FT {
+                            fault = Some(format!("{} starts {} ft before the start of its wall", hole.path, view::figure_shown(-from, 2)));
+                        } else if to > l + crate::check::FIT_TOLERANCE_FT {
                             fault = Some(format!("{} ends {} ft along a wall {} ft long", hole.path, view::figure_shown(to, 2), view::figure_shown(l, 2)));
                         } else if head > h + crate::check::FIT_TOLERANCE_FT {
-                            fault = Some(format!("{} reaches {} ft up a wall {} ft tall", hole.path, view::figure_shown(head, 2), view::figure_shown(h, 2)));
+                            fault = Some(format!("{} reaches {} ft up a wall {} ft tall", hole.path, view::figure_shown(head, 2), view::figure_shown(*h, 2)));
                         } else if let Some(other) = mine[..i].iter().find(|o| o.span.is_some_and(|s| from < s[1] && s[0] < to && sill < s[3] && s[2] < head)) {
                             fault = Some(format!("{} and {} lie over each other", other.path, hole.path));
                         }
@@ -559,10 +697,11 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                         s.push(face.status);
                         Derived::new(Some(a - b), "SF", &s, f_net, &inputs)
                     }
-                    (None, None, _) => Derived::refused("SF", f_net, &inputs, "the wall has no face area"),
+                    (None, None, _) => Derived::refused("SF", f_net, &inputs, if face.note.is_empty() { "the wall has no face area" } else { &face.note }),
                     (None, _, None) => Derived::refused("SF", f_net, &inputs, "an opening under this wall has no area"),
                 };
                 m.insert("plan_length".into(), plan);
+                m.insert("height".into(), tall);
                 m.insert("face_area".into(), face);
                 m.insert("opening_area".into(), open);
                 m.insert("net_area".into(), net);
@@ -630,24 +769,67 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
     let mut rows = Vec::new();
     let pair = |[a, b]: &[P2; 2]| format!("({}, {}) to ({}, {})", view::num(a[0]), view::num(a[1]), view::num(b[0]), view::num(b[1]));
     let triple = |p: &P3| format!("({}, {}, {})", view::num(p[0]), view::num(p[1]), view::num(p[2]));
+    let plain = |label: &str, text: String, basis: &str| Row { path: path.into(), label: label.into(), text, status: Status::Known, basis: basis.into(), note: String::new(), derived: false, number: None, unit: String::new() };
+    let named = |p: &String| names.get(p).map(|n| format!("{n} ({p})")).unwrap_or_else(|| p.clone());
+    let layers = |rows: &mut Vec<Row>, list: &[Layer]| {
+        for (i, l) in list.iter().enumerate() {
+            rows.push(view::entered(path, &format!("layer {}, {:?}", i + 1, l.function).to_lowercase(), &l.material, |m| m.clone()));
+            rows.push(view::length(path, &format!("layer {} thickness", i + 1), &l.thickness));
+        }
+    };
     if let Some(c) = w.get::<Level>(e) {
         rows.push(view::length(path, "elevation", &c.elevation));
         rows.push(view::length(path, "storey height", &c.height));
     }
-    if let Some(c) = w.get::<Wall>(e) {
-        rows.push(view::entered(path, "wall line", &c.line, pair));
-        rows.push(view::length(path, "thickness", &c.thickness));
-        rows.push(view::length(path, "height", &c.height));
+    if let Some(c) = w.get::<WallType>(e) {
+        rows.push(view::length(path, "wall thickness", &c.thickness));
+        layers(&mut rows, &c.layers);
     }
-    if let Some(c) = w.get::<Opening>(e) {
-        rows.push(view::length(path, "along the wall", &c.along));
+    if let Some(c) = w.get::<FloorType>(e) {
+        rows.push(view::length(path, "floor thickness", &c.thickness));
+        layers(&mut rows, &c.layers);
+    }
+    if let Some(c) = w.get::<OpeningType>(e) {
+        rows.push(plain("a type of", format!("{:?}", c.category).to_lowercase(), "what the type is for"));
         rows.push(view::length(path, "width", &c.width));
         rows.push(view::length(path, "height", &c.height));
+    }
+    if let Some(c) = w.get::<Wall>(e) {
+        rows.push(view::entered(path, "type", &c.type_name, named));
+        rows.push(view::entered(path, "wall line", &c.line, pair));
+        if let Some(t) = &c.top_level {
+            rows.push(view::entered(path, "top level", t, named));
+        }
+        if let Some(h) = &c.height {
+            rows.push(view::length(path, "height", h));
+        }
+        if let Some(o) = &c.base_offset {
+            rows.push(view::length(path, "base offset", o));
+        }
+        if let Some(o) = &c.top_offset {
+            rows.push(view::length(path, "top offset", o));
+        }
+        if c.location != Location::Centre {
+            rows.push(plain("its line is its", c.location.label().into(), "which line of the wall was drawn"));
+        }
+        if !c.room_bounding {
+            rows.push(plain("bounds rooms", "no".into(), "a room runs past it"));
+        }
+        if !c.join {
+            rows.push(plain("joins its neighbours", "no".into(), "its ends stay square"));
+        }
+    }
+    if let Some(c) = w.get::<Opening>(e) {
+        rows.push(view::entered(path, "type", &c.type_name, named));
+        rows.push(view::length(path, "centre, along the wall", &c.offset));
         rows.push(view::length(path, "sill", &c.sill));
     }
     if let Some(c) = w.get::<Floor>(e) {
+        rows.push(view::entered(path, "type", &c.type_name, named));
         rows.push(view::entered(path, "boundary", &c.boundary, |pts| format!("{} points", pts.len())));
-        rows.push(view::length(path, "thickness", &c.thickness));
+        if let Some(o) = &c.offset {
+            rows.push(view::length(path, "offset", o));
+        }
     }
     if let Some(c) = w.get::<Placed>(e) {
         rows.push(view::entered(path, "what it is", &c.what, |s| s.clone()));
@@ -707,26 +889,10 @@ pub struct Placement {
 /// an element that cannot be drawn does not just go missing from the picture.
 pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
     let order = job.order.clone();
+    let tree = Tree::of(&mut job.world);
     let w = &job.world;
     let node = |e: Entity| w.get::<Node>(e);
     let index: HashMap<String, Entity> = order.iter().filter_map(|e| node(*e).map(|n| (n.path.clone(), *e))).collect();
-    // The storey an element stands on: the nearest one above it in the tree.
-    let storey_of = |start: &Node| -> Option<(String, Option<f64>)> {
-        let mut at = start.parent.clone();
-        let mut steps = 0;
-        while let Some(p) = at {
-            let e = *index.get(&p)?;
-            if w.get::<Kind>(e) == Some(&Kind::Storey) {
-                return Some((p, w.get::<Level>(e).and_then(|l| l.elevation.feet())));
-            }
-            at = node(e)?.parent.clone();
-            steps += 1;
-            if steps > order.len() {
-                return None;
-            }
-        }
-        None
-    };
     let mut drawn = Vec::new();
     let mut not_drawn = Vec::new();
     for &e in &order {
@@ -734,21 +900,29 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
         if !(matches!(kind, Kind::Wall | Kind::Floor) || kind.is_route() || kind.is_placed()) {
             continue;
         }
-        let storey = storey_of(n);
+        let storey = tree.storey_of(&n.path).map(str::to_string);
         let system = w.get::<InSystem>(e).and_then(|s| s.0.value.clone());
         let discipline = system.as_ref().and_then(|p| index.get(p)).and_then(|s| w.get::<SystemInfo>(*s)).map(|s| s.discipline).unwrap_or(kind.discipline());
-        let base = storey.as_ref().map(|s| s.1);
+        // Where its storey's floor is: None when it is under no storey, Some(None) when
+        // the storey's elevation is not known.
+        let base = storey.as_ref().map(|s| tree.levels.get(s).and_then(|l| l.elevation.feet()));
         // Openings under this wall that cannot be cut in it, each with why.
         let mut uncut: Vec<(String, String)> = Vec::new();
         let shape: Result<(Shape, Status), String> = match kind {
             Kind::Wall => (|| {
                 let c = w.get::<Wall>(e).ok_or("it has no wall line")?;
                 let [a, b] = c.line_ft().ok_or("its line is not known")?;
-                let base = base.ok_or("it is under no storey")?.ok_or("its storey's elevation is not known")?;
-                let height = c.height.feet().ok_or("its height is not known")?;
-                let thickness = c.thickness.feet().ok_or("its thickness is not known")?;
-                let mut status = c.line.status.max(c.height.status).max(c.thickness.status);
+                let heights = wall_heights(&tree, &n.path, c);
+                let base = heights.base.clone()?;
+                let height = heights.height.clone()?;
+                let (thickness, layers, section_status) = wall_section(&tree, c)?;
+                let mut status = c.line.status.max(heights.status).max(section_status);
                 let length = geom::dist(a, b);
+                // The shape is drawn about the wall's centre line, which lies to the left
+                // of the line that was drawn by as much as the wall's `location` says.
+                let off = walls::centre(thickness, &layers, c.location);
+                let left = [-(b[1] - a[1]) / length * off, (b[0] - a[0]) / length * off];
+                let (a, b) = ([a[0] + left[0], a[1] + left[1]], [b[0] + left[0], b[1] + left[1]]);
                 let mut holes = Vec::new();
                 for &child in &order {
                     let Some(cn) = node(child) else { continue };
@@ -762,13 +936,14 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
                     };
                     // An opening is cut only where it is known and lies in the wall. One
                     // that is not cut is said, with why: it does not just go missing.
-                    match o.along.feet().zip(o.width.feet()).zip(o.sill.feet().zip(o.height.feet())) {
+                    let (hole, _) = hole_of(&tree, &cn.path, o);
+                    match hole.span {
                         None => uncut.push((cn.path.clone(), "where it is or how big it is is not known, so it is not cut in its wall".into())),
-                        Some(((from, width), _)) if from + width > length + crate::check::FIT_TOLERANCE_FT => uncut.push((cn.path.clone(), format!("it runs past the end of {}, so it is not cut in it", n.path))),
-                        Some((_, (sill, tall))) if sill + tall > height + crate::check::FIT_TOLERANCE_FT => uncut.push((cn.path.clone(), format!("it stands taller than {}, so it is not cut in it", n.path))),
-                        Some(((from, width), (sill, tall))) => {
-                            holes.push((cn.path.clone(), k, [from, from + width, sill, sill + tall]));
-                            status = status.max(o.along.status).max(o.width.status).max(o.sill.status).max(o.height.status);
+                        Some([from, to, _, _]) if from < -crate::check::FIT_TOLERANCE_FT || to > length + crate::check::FIT_TOLERANCE_FT => uncut.push((cn.path.clone(), format!("it runs past the end of {}, so it is not cut in it", n.path))),
+                        Some([_, _, _, head]) if head > height + crate::check::FIT_TOLERANCE_FT => uncut.push((cn.path.clone(), format!("it stands taller than {}, so it is not cut in it", n.path))),
+                        Some(span) => {
+                            holes.push((cn.path.clone(), k, span));
+                            status = status.max(hole.status);
                         }
                     }
                 }
@@ -777,9 +952,14 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
             Kind::Floor => (|| {
                 let c = w.get::<Floor>(e).ok_or("it has no boundary")?;
                 let boundary = c.boundary_ft().ok_or("its boundary is not known")?;
-                let top = base.ok_or("it is under no storey")?.ok_or("its storey's elevation is not known")?;
-                let thickness = c.thickness.feet().ok_or("its thickness is not known")?;
-                Ok((Shape::Floor { boundary, top, thickness }, c.boundary.status.max(c.thickness.status)))
+                let level = base.ok_or("it is under no storey")?.ok_or("its storey's elevation is not known")?;
+                let (offset, offset_status) = match &c.offset {
+                    None => (0.0, Status::Known),
+                    Some(o) => (o.feet().ok_or("its offset is not known")?, o.status),
+                };
+                let (_, t) = typed(&tree.floor_types, &c.type_name, "a floor")?;
+                let thickness = t.thickness.feet().ok_or("its type's thickness is not known")?;
+                Ok((Shape::Floor { boundary, top: level + offset, thickness }, c.boundary.status.max(c.type_name.status).max(t.thickness.status).max(offset_status)))
             })(),
             k if k.is_route() => (|| {
                 let c = w.get::<Route>(e).ok_or("it has no centre line")?;
@@ -796,7 +976,7 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
             })(),
         };
         match shape {
-            Ok((shape, status)) => drawn.push(Placement { path: n.path.clone(), name: n.name.clone(), kind, storey: storey.map(|s| s.0), system, discipline, shape, status }),
+            Ok((shape, status)) => drawn.push(Placement { path: n.path.clone(), name: n.name.clone(), kind, storey, system, discipline, shape, status }),
             Err(why) => not_drawn.push((n.path.clone(), why)),
         }
         not_drawn.extend(uncut);

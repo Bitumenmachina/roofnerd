@@ -49,7 +49,7 @@ struct Entry {
     extra: BTreeMap<String, Value>,
 }
 
-const KNOWN_KEYS: [&str; 24] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_LEVEL, K_WALL, K_OPENING, K_FLOOR, K_ROUTE, K_SIZE, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
+const KNOWN_KEYS: [&str; 27] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_ROUTE, K_SIZE, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
 
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
@@ -90,6 +90,9 @@ pub fn save(job: &mut Job) -> String {
         put!(Wall, K_WALL);
         put!(Opening, K_OPENING);
         put!(Floor, K_FLOOR);
+        put!(WallType, K_WALL_TYPE);
+        put!(FloorType, K_FLOOR_TYPE);
+        put!(OpeningType, K_OPENING_TYPE);
         put!(Route, K_ROUTE);
         put!(Size, K_SIZE);
         put!(Placed, K_PLACED);
@@ -299,6 +302,21 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                 K_FLOOR => {
                     let c: Floor = parse(&path, &k, v)?;
                     building::check_floor(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_WALL_TYPE => {
+                    let c: WallType = parse(&path, &k, v)?;
+                    building::check_wall_type(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_FLOOR_TYPE => {
+                    let c: FloorType = parse(&path, &k, v)?;
+                    building::check_floor_type(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_OPENING_TYPE => {
+                    let c: OpeningType = parse(&path, &k, v)?;
+                    building::check_opening_type(&path, kind, &c)?;
                     ent.insert(c);
                 }
                 K_ROUTE => {

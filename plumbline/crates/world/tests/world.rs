@@ -2223,6 +2223,13 @@ fn path_named(job: &mut Job, name: &str) -> String {
     plumbline_world::view::elements(job).into_iter().find(|e| e.name == name).map(|e| e.path).unwrap_or_else(|| panic!("no element named {name}"))
 }
 
+/// A door or window type of a size, added to the job for a test.
+fn opening_type(job: &mut Job, kind: Kind, width: Val<Len>, height: Val<Len>) -> Val<String> {
+    let t = job.add("job-0001", Kind::Type, &format!("test type {}", job.order.len())).unwrap();
+    job.put(&t, plumbline_world::OpeningType { category: kind, width, height }).unwrap();
+    Val::known(t, "", "test")
+}
+
 #[test]
 fn the_sample_house_saves_and_loads_to_the_same_bytes_and_nothing_is_stale() {
     let mut job = plumbline_world::sample::house();
@@ -2258,21 +2265,24 @@ fn an_opening_that_does_not_fit_its_wall_leaves_no_net_area() {
     let first = path_named(&mut job, "first floor");
     let south = job.children().get(&first).unwrap().get("south wall").unwrap().clone();
     let len = |x: f64| Val::known(Len::One(x), "ft", "test");
-    // A window that runs past the end of the wall.
+    // A window 4 ft wide centred 40 ft along a 40 ft wall runs past its end.
+    let four_by_three = opening_type(&mut job, Kind::Window, len(4.0), len(3.0));
     let w = job.add(&south, Kind::Window, "too far").unwrap();
-    job.put(&w, Opening { along: len(38.0), width: len(4.0), height: len(3.0), sill: len(3.0) }).unwrap();
+    job.put(&w, Opening { type_name: four_by_three, offset: len(40.0), sill: len(3.0) }).unwrap();
     job.derive();
     let net = measure_of(&mut job, &south, "net_area");
     assert_eq!((net.value, net.status), (None, Status::Unknown));
     assert!(net.note.contains("ends 42.00 ft along a wall 40.00 ft long"), "{}", net.note);
-    // One that lies over another.
-    job.put(&w, Opening { along: len(6.0), width: len(2.0), height: len(3.0), sill: len(3.0) }).unwrap();
+    // One that lies over another: 2 ft wide centred at 7 ft, over the west window (5 to 10 ft).
+    let two_by_three = opening_type(&mut job, Kind::Window, len(2.0), len(3.0));
+    job.put(&w, Opening { type_name: two_by_three, offset: len(7.0), sill: len(3.0) }).unwrap();
     job.derive();
     let net = measure_of(&mut job, &south, "net_area");
     assert_eq!(net.value, None);
     assert!(net.note.contains("lie over each other"), "{}", net.note);
     // One whose width nobody has: no opening area, so no net area, and the gross stands.
-    job.put(&w, Opening { along: len(12.0), width: Val::unknown("ft", "not on the plan"), height: len(3.0), sill: len(3.0) }).unwrap();
+    let no_width = opening_type(&mut job, Kind::Window, Val::unknown("ft", "not on the plan"), len(3.0));
+    job.put(&w, Opening { type_name: no_width, offset: len(13.0), sill: len(3.0) }).unwrap();
     job.derive();
     assert_eq!(measure_of(&mut job, &south, "opening_area").value, None);
     assert_eq!(measure_of(&mut job, &south, "net_area").value, None);
@@ -2460,7 +2470,9 @@ fn an_opening_that_cannot_be_cut_is_said_and_a_listing_keeps_a_door_under_its_wa
     let door = job.children().get(&south).unwrap().get("front door").unwrap().clone();
     let len = |x: f64| Val::known(Len::One(x), "ft", "test");
     // A door moved past the end of its wall is not cut, and is listed as not cut, with why.
-    job.put(&door, Opening { along: len(39.0), width: len(3.0), height: len(6.67), sill: len(0.0) }).unwrap();
+    let door_entity = job.find(&door).unwrap();
+    let door_type = job.world.get::<Opening>(door_entity).unwrap().type_name.clone();
+    job.put(&door, Opening { type_name: door_type, offset: len(40.5), sill: len(0.0) }).unwrap();
     job.derive();
     let (drawn, not_drawn) = placements(&mut job);
     let wall = drawn.iter().find(|p| p.path == south).unwrap();
@@ -2470,7 +2482,8 @@ fn an_opening_that_cannot_be_cut_is_said_and_a_listing_keeps_a_door_under_its_wa
     }
     assert_eq!(not_drawn, vec![(door.clone(), format!("it runs past the end of {south}, so it is not cut in it"))]);
     // One whose width nobody has is said too.
-    job.put(&door, Opening { along: len(18.5), width: Val::unknown("ft", "not on the plan"), height: len(6.67), sill: len(0.0) }).unwrap();
+    let no_width = opening_type(&mut job, Kind::Door, Val::unknown("ft", "not on the plan"), len(6.67));
+    job.put(&door, Opening { type_name: no_width, offset: len(20.0), sill: len(0.0) }).unwrap();
     let (_, not_drawn) = placements(&mut job);
     assert_eq!(not_drawn.len(), 1);
     assert!(not_drawn[0].1.contains("is not known"), "{}", not_drawn[0].1);
@@ -2481,4 +2494,220 @@ fn an_opening_that_cannot_be_cut_is_said_and_a_listing_keeps_a_door_under_its_wa
     assert_eq!((rows[at + 1].path.as_str(), rows[at + 1].depth), (door.as_str(), rows[at].depth + 1));
     assert!(rows[at + 1..at + 4].iter().all(|e| e.kind.is_opening()));
     assert_eq!(rows.len(), job.order.len());
+}
+
+// ---------------------------------------------------------------- the re-base on BIMCraft: walls, openings, floors and their types
+
+fn ft(x: f64) -> Val<Len> {
+    Val::known(Len::One(x), "ft", "test")
+}
+
+fn named(path: &str) -> Val<String> {
+    Val::known(path.to_string(), "", "test")
+}
+
+#[test]
+fn a_wall_held_to_the_storey_above_is_as_tall_as_the_storeys_are_apart() {
+    use plumbline_world::{Level, Wall};
+    let mut job = plumbline_world::sample::house();
+    let (first, second) = (path_named(&mut job, "first floor"), path_named(&mut job, "second floor"));
+    let south = job.children().get(&first).unwrap().get("south wall").unwrap().clone();
+    // The sample's first-floor outside walls run up to the second floor: 10 ft − 0 ft.
+    let h = measure_of(&mut job, &south, "height");
+    assert_eq!((h.value, h.status), (Some(10.0), Status::Known));
+    assert!(h.inputs.contains(&format!("{second}#pl::level")), "{:?}", h.inputs);
+    // Raise the second floor a foot and the wall is 11 ft tall and 440 SF, with nothing
+    // typed on the wall. The door and two windows are still 70.01 SF: 369.99 net.
+    job.put(&second, Level { elevation: ft(11.0), height: ft(9.0) }).unwrap();
+    job.derive();
+    assert_eq!(measure_of(&mut job, &south, "height").value, Some(11.0));
+    assert_eq!(measure_of(&mut job, &south, "face_area").value, Some(440.0));
+    assert_eq!(measure_of(&mut job, &south, "net_area").value, Some(369.99));
+    // An elevation somebody assumed makes the height, the face and the net Assumed.
+    job.put(&second, Level { elevation: Val::assumed(Len::One(11.0), "ft", "scaled off a section"), height: ft(9.0) }).unwrap();
+    job.derive();
+    for name in ["height", "face_area", "net_area"] {
+        assert_eq!(measure_of(&mut job, &south, name).status, Status::Assumed, "{name}");
+    }
+    // One nobody has leaves no height and no area, and says which elevation.
+    job.put(&second, Level { elevation: Val::unknown("ft", "not surveyed"), height: ft(9.0) }).unwrap();
+    job.derive();
+    let face = measure_of(&mut job, &south, "face_area");
+    assert_eq!((face.value, face.status), (None, Status::Unknown));
+    assert!(face.note.contains("the elevation of second floor, its top level, is not known"), "{}", face.note);
+    assert_eq!(measure_of(&mut job, &south, "plan_length").value, Some(40.0));
+    // Offsets: a top 1 ft 6 in under the storey above and a base 6 in above its own floor.
+    // 11 − 1.5 − 0.5 = 9 ft.
+    job.put(&second, Level { elevation: ft(11.0), height: ft(9.0) }).unwrap();
+    let e = job.find(&south).unwrap();
+    let mut wall = job.world.get::<Wall>(e).unwrap().clone();
+    wall.top_offset = Some(Val::known(Len::FtIn([-1.0, -6.0]), "ft-in", "test"));
+    wall.base_offset = Some(Val::known(Len::One(6.0), "in", "test"));
+    job.put(&south, wall.clone()).unwrap();
+    job.derive();
+    assert_eq!(measure_of(&mut job, &south, "height").value, Some(9.0));
+    assert_eq!(measure_of(&mut job, &south, "face_area").value, Some(360.0));
+    // A top at or under its base is not a wall: no height, and why.
+    wall.top_offset = Some(ft(-10.5));
+    job.put(&south, wall).unwrap();
+    job.derive();
+    let h = measure_of(&mut job, &south, "height");
+    assert_eq!(h.value, None);
+    assert!(h.note.contains("a wall's top is above its base"), "{}", h.note);
+}
+
+#[test]
+fn a_size_is_entered_once_on_a_type_and_every_opening_of_it_follows() {
+    use plumbline_world::OpeningType;
+    let mut job = plumbline_world::sample::house();
+    let first = path_named(&mut job, "first floor");
+    let south = job.children().get(&first).unwrap().get("south wall").unwrap().clone();
+    let west_window = job.children().get(&south).unwrap().get("west window").unwrap().clone();
+    // A window's width, height and area are its type's: 5 ft by 5 ft is 25 SF.
+    assert_eq!(measure_of(&mut job, &west_window, "width").value, Some(5.0));
+    assert_eq!(measure_of(&mut job, &west_window, "opening_area").value, Some(25.0));
+    // Make the 5 ft by 5 ft type 6 ft wide. Both south windows are of it: each is 30 SF,
+    // the wall's openings are 20.01 + 60 = 80.01 SF and its net is 319.99.
+    let five = path_named(&mut job, "Window 5 ft × 5 ft");
+    job.put(&five, OpeningType { category: Kind::Window, width: ft(6.0), height: ft(5.0) }).unwrap();
+    job.derive();
+    assert_eq!(measure_of(&mut job, &west_window, "opening_area").value, Some(30.0));
+    assert_eq!(measure_of(&mut job, &south, "opening_area").value, Some(80.01));
+    assert_eq!(measure_of(&mut job, &south, "net_area").value, Some(319.99));
+    // A width in inches on the type is the same width: 72 in.
+    job.put(&five, OpeningType { category: Kind::Window, width: Val::known(Len::One(72.0), "in", "test"), height: ft(5.0) }).unwrap();
+    job.derive();
+    assert_eq!(measure_of(&mut job, &south, "net_area").value, Some(319.99));
+    // An assumed size on the type makes every wall with one of its windows Assumed.
+    job.put(&five, OpeningType { category: Kind::Window, width: Val::assumed(Len::One(6.0), "ft", "scaled"), height: ft(5.0) }).unwrap();
+    job.derive();
+    assert_eq!(measure_of(&mut job, &south, "net_area").status, Status::Assumed);
+    // An opening is placed by its centre. The sample's front door is 3 ft wide, centred
+    // 20 ft along. Centred 1 ft along it would start half a foot before the wall does.
+    let door = job.children().get(&south).unwrap().get("front door").unwrap().clone();
+    let e = job.find(&door).unwrap();
+    let mut o = job.world.get::<plumbline_world::Opening>(e).unwrap().clone();
+    assert_eq!(o.offset.feet(), Some(20.0));
+    o.offset = ft(1.0);
+    job.put(&door, o).unwrap();
+    job.derive();
+    let net = measure_of(&mut job, &south, "net_area");
+    assert!(net.note.contains("starts 0.50 ft before the start of its wall"), "{}", net.note);
+    // An opening whose type nobody knows has no size, and its wall no net area.
+    job.put(&door, plumbline_world::Opening { type_name: Val::unknown("", "not on the door schedule"), offset: ft(20.0), sill: ft(0.0) }).unwrap();
+    job.derive();
+    let area = measure_of(&mut job, &door, "opening_area");
+    assert_eq!(area.value, None);
+    assert!(area.note.contains("its type is not known"), "{}", area.note);
+    assert_eq!(measure_of(&mut job, &south, "net_area").value, None);
+}
+
+#[test]
+fn a_walls_line_can_be_any_line_of_the_wall_and_its_layers_add_up() {
+    use plumbline_world::building::{check_wall, check_wall_type, placements, walls, Shape};
+    use plumbline_world::{Function, Layer, Location, Wall, WallType};
+    // A wall 0.4 ft thick: finish 0.05, structure 0.3, finish 0.05, from the exterior in.
+    let layers = [(Function::Finish, 0.05), (Function::Structure, 0.3), (Function::Finish, 0.05)];
+    // How far in from the exterior face each line lies.
+    assert_eq!(walls::depth(0.4, &layers, Location::Centre), 0.2);
+    assert_eq!(walls::depth(0.4, &layers, Location::ExteriorFinish), 0.0);
+    assert_eq!(walls::depth(0.4, &layers, Location::InteriorFinish), 0.4);
+    assert_eq!(walls::depth(0.4, &layers, Location::ExteriorCore), 0.05);
+    assert!((walls::depth(0.4, &layers, Location::InteriorCore) - 0.35).abs() < 1e-12);
+    assert!((walls::depth(0.4, &layers, Location::CoreCentre) - 0.2).abs() < 1e-12);
+    // With no structure layer the core is the whole wall.
+    assert_eq!(walls::depth(0.4, &[], Location::InteriorCore), 0.4);
+    // The exterior is to the left of the line. Drawn on its exterior face, a wall's
+    // faces are at 0 and −0.4, and its centre line is 0.2 to the right.
+    assert_eq!(walls::faces(0.4, &layers, Location::ExteriorFinish), (0.0, -0.4));
+    assert_eq!(walls::centre(0.4, &layers, Location::ExteriorFinish), -0.2);
+
+    // In a job: the sample's south wall is 6 in thick, drawn west to east along y = 0, so
+    // its exterior is to the north of the line as drawn. Say the line is its exterior
+    // face and the wall is drawn about a centre line 3 in to the south.
+    let mut job = plumbline_world::sample::house();
+    let first = path_named(&mut job, "first floor");
+    let south = job.children().get(&first).unwrap().get("south wall").unwrap().clone();
+    let e = job.find(&south).unwrap();
+    let mut wall = job.world.get::<Wall>(e).unwrap().clone();
+    wall.location = Location::ExteriorFinish;
+    job.put(&south, wall.clone()).unwrap();
+    let (drawn, _) = placements(&mut job);
+    match &drawn.iter().find(|p| p.path == south).unwrap().shape {
+        Shape::Wall { a, b, thickness, .. } => assert_eq!((*a, *b, *thickness), ([0.0, -0.25], [40.0, -0.25], 0.5)),
+        other => panic!("{other:?}"),
+    }
+    // Its length and its areas do not move: they are the line's.
+    assert_eq!(measure_of(&mut job, &south, "plan_length").value, Some(40.0));
+
+    // A type's layers add up to its thickness, or it is refused.
+    let layer = |function, name: &str, inches: f64| Layer { function, material: Val::known(name.to_string(), "", "test"), thickness: Val::known(Len::One(inches), "in", "test") };
+    let built_up = |thickness: f64| WallType { thickness: Val::known(Len::One(thickness), "in", "test"), layers: vec![layer(Function::Finish, "siding", 0.75), layer(Function::Membrane, "housewrap", 0.0), layer(Function::Structure, "2x6 studs", 5.5), layer(Function::Finish, "gypsum board", 0.5)] };
+    assert!(check_wall_type("t", Kind::Type, &built_up(6.75)).is_ok());
+    let err = check_wall_type("t", Kind::Type, &built_up(6.0)).unwrap_err();
+    assert!(err.contains("its layers add up to 0.5625 ft, not its thickness, 0.5 ft"), "{err}");
+    // Only a membrane may be as thin as nothing.
+    let mut thin = built_up(6.75);
+    thin.layers[0].thickness = Val::known(Len::One(0.0), "in", "test");
+    assert!(check_wall_type("t", Kind::Type, &thin).is_err());
+    assert!(check_wall_type("t", Kind::Wall, &built_up(6.75)).is_err());
+    // A wall is a height tall or is held to a level: one, and not both or neither.
+    let both = Wall { top_level: Some(named("storey-0003")), ..Wall::tall(named("type-0002"), Val::known([[0.0, 0.0], [1.0, 0.0]], "ft", "test"), ft(8.0)) };
+    assert!(check_wall("w", Kind::Wall, &both).unwrap_err().contains("one or the other"));
+    let neither = Wall { height: None, ..both.clone() };
+    assert!(check_wall("w", Kind::Wall, &Wall { top_level: None, ..neither }).is_err());
+    let offset_with_no_level = Wall { top_offset: Some(ft(1.0)), ..Wall::tall(named("type-0002"), Val::known([[0.0, 0.0], [1.0, 0.0]], "ft", "test"), ft(8.0)) };
+    assert!(check_wall("w", Kind::Wall, &offset_with_no_level).unwrap_err().contains("top offset but no top level"));
+}
+
+#[test]
+fn a_type_named_has_to_be_a_type_of_the_right_sort() {
+    let mut job = plumbline_world::sample::house();
+    let text = file::save(&mut job);
+    let outside = path_named(&mut job, "Outside wall, 6 in");
+    let slab = path_named(&mut job, "Slab on grade, 4 in");
+    let door = path_named(&mut job, "Door 3 ft × 6.67 ft");
+    let window = path_named(&mut job, "Window 5 ft × 5 ft");
+    let first = path_named(&mut job, "first floor");
+    let swap = |from: &str, to: &str, n: usize| text.replacen(&format!("\"value\": \"{from}\""), &format!("\"value\": \"{to}\""), n);
+    // A wall that names a floor type; a floor that names a wall type; a type that is not there.
+    let err = file::load(&swap(&outside, &slab, 1)).err().expect("a wall of a floor type");
+    assert!(err.contains("which is not a wall type in this job"), "{err}");
+    let err = file::load(&swap(&slab, &outside, 1)).err().expect("a floor of a wall type");
+    assert!(err.contains("which is not a floor type in this job"), "{err}");
+    let err = file::load(&swap(&door, "type-9999", 1)).err().expect("a type that is not there");
+    assert!(err.contains("which is not a door or window type in this job"), "{err}");
+    // A door of a window's type.
+    let err = file::load(&swap(&door, &window, 1)).err().expect("a door of a window type");
+    assert!(err.contains("is a Door, but its type") && err.contains("is a Window's"), "{err}");
+    // A top level that is not a storey.
+    let second = path_named(&mut job, "second floor");
+    let _ = second;
+    let mut doc: serde_json::Value = serde_json::from_str(&text).unwrap();
+    let wall = doc["data"].as_array_mut().unwrap().iter_mut().find(|e| !e["attributes"]["pl::wall"]["top_level"].is_null()).expect("the saved job has a wall with a top level");
+    wall["attributes"]["pl::wall"]["top_level"]["value"] = outside.clone().into();
+    let broken = doc.to_string();
+    let err = file::load(&broken).err().expect("a top level that is a type");
+    assert!(err.contains("which is not a storey in this job"), "{err}");
+    // A type under a storey instead of under the job.
+    let mut doc: serde_json::Value = serde_json::from_str(&text).unwrap();
+    for entry in doc["data"].as_array_mut().unwrap() {
+        let path = entry["path"].as_str().unwrap().to_string();
+        if path == "job-0001" {
+            entry["children"].as_object_mut().unwrap().remove("Slab on grade, 4 in");
+        } else if path == first {
+            entry["children"].as_object_mut().unwrap().insert("Slab on grade, 4 in".into(), slab.clone().into());
+        }
+    }
+    let err = file::load(&doc.to_string()).err().expect("a type under a storey");
+    assert!(err.contains("a type belongs to the whole job"), "{err}");
+    // Taken out of a job that is open, a type leaves its walls with no thickness to draw
+    // and its openings with no size, each said: nothing falls back to a number.
+    job.remove(&window).unwrap();
+    job.derive();
+    let south = job.children().get(&first).unwrap().get("south wall").unwrap().clone();
+    let net = measure_of(&mut job, &south, "net_area");
+    assert_eq!(net.value, None);
+    let (_, not_drawn) = plumbline_world::building::placements(&mut job);
+    assert!(not_drawn.iter().any(|(_, why)| why.contains("is not known, so it is not cut in its wall")), "{not_drawn:?}");
 }

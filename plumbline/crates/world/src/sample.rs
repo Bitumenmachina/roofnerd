@@ -229,32 +229,77 @@ pub fn house() -> Job {
     let ft = |x: f64, src: &str| Val::known(Len::One(x), "ft", src);
     let inch = |x: f64, src: &str| Val::known(Len::One(x), "in", src);
 
+    // ---- Types: what walls, floors, doors and windows of one sort have in common ----
+    let named = |p: &str, src: &str| Val::known(p.to_string(), "", src);
+    let wall_type = |job: &mut Job, name: &str, thick: f64| -> String {
+        let t = job.add(&root, Kind::Type, name).expect(OK);
+        job.put(&t, WallType { thickness: inch(thick, A), layers: Vec::new() }).expect(OK);
+        t
+    };
+    let outside = wall_type(&mut job, "Outside wall, 6 in", 6.0);
+    let partition = wall_type(&mut job, "Partition, 4 1/2 in", 4.5);
+    let wet_wall = wall_type(&mut job, "Wet wall, 6 in", 6.0);
+    let floor_type = |job: &mut Job, name: &str, thick: f64| -> String {
+        let t = job.add(&root, Kind::Type, name).expect(OK);
+        job.put(&t, FloorType { thickness: inch(thick, A), layers: Vec::new() }).expect(OK);
+        t
+    };
+    let slab = floor_type(&mut job, "Slab on grade, 4 in", 4.0);
+    let framed = floor_type(&mut job, "Framed floor, 12 in", 12.0);
+    // A door or window type is made the first time a size is met on the plan.
+    let mut opening_types: Vec<(Kind, f64, f64, String)> = Vec::new();
+    let mut opening_type = |job: &mut Job, kind: Kind, width: f64, height: f64| -> String {
+        if let Some(t) = opening_types.iter().find(|t| t.0 == kind && t.1 == width && t.2 == height) {
+            return t.3.clone();
+        }
+        let name = format!("{} {} ft × {} ft", if kind == Kind::Door { "Door" } else { "Window" }, crate::view::num(width), crate::view::num(height));
+        let t = job.add(&root, Kind::Type, &name).expect(OK);
+        job.put(&t, OpeningType { category: kind, width: ft(width, A), height: ft(height, A) }).expect(OK);
+        opening_types.push((kind, width, height, t.clone()));
+        t
+    };
+
     // ---- Storeys, floors, walls, openings ----
     let mut storeys = Vec::new();
-    for (name, elevation, height, wall_height, floor_thickness) in [("first floor", 0.0, 10.0, 9.0, 4.0), ("second floor", 10.0, 9.0, 8.0, 12.0)] {
+    for (name, elevation, height) in [("first floor", 0.0, 10.0), ("second floor", 10.0, 9.0)] {
         let s = job.add(&root, Kind::Storey, name).expect(OK);
         job.put(&s, Level { elevation: ft(elevation, A), height: ft(height, A) }).expect(OK);
+        storeys.push(s);
+    }
+    for (i, (wall_height, floor)) in [(9.0, &slab), (8.0, &framed)].into_iter().enumerate() {
+        let s = storeys[i].clone();
         let f = job.add(&s, Kind::Floor, "floor").expect(OK);
-        job.put(&f, Floor { boundary: Val::known(vec![[0.0, 0.0], [40.0, 0.0], [40.0, 28.0], [0.0, 28.0]], "ft", A), thickness: inch(floor_thickness, A) }).expect(OK);
-        let wall = |job: &mut Job, name: &str, a: P2, b: P2, thick: f64, tall: f64| -> String {
+        job.put(&f, Floor { type_name: named(floor, A), boundary: Val::known(vec![[0.0, 0.0], [40.0, 0.0], [40.0, 28.0], [0.0, 28.0]], "ft", A), offset: None }).expect(OK);
+        // The first floor's outside walls run up to the second floor; the second floor's
+        // are 9 ft tall. Partitions stop under the ceiling.
+        let outside_wall = |job: &mut Job, name: &str, a: P2, b: P2| -> String {
             let w = job.add(&s, Kind::Wall, name).expect(OK);
-            job.put(&w, Wall { line: Val::known([a, b], "ft", A), thickness: inch(thick, A), height: ft(tall, A) }).expect(OK);
+            let line = Val::known([a, b], "ft", A);
+            let wall = if i == 0 { Wall::up_to(named(&outside, A), line, named(&storeys[1], A)) } else { Wall::tall(named(&outside, A), line, ft(9.0, A)) };
+            job.put(&w, wall).expect(OK);
             w
         };
-        let open = |job: &mut Job, wall: &str, kind: Kind, name: &str, along: f64, width: f64, height: f64, sill: f64| {
-            let o = job.add(wall, kind, name).expect(OK);
-            job.put(&o, Opening { along: ft(along, A), width: ft(width, A), height: ft(height, A), sill: ft(sill, A) }).expect(OK);
+        let inside_wall = |job: &mut Job, name: &str, a: P2, b: P2, of: &str| -> String {
+            let w = job.add(&s, Kind::Wall, name).expect(OK);
+            job.put(&w, Wall::tall(named(of, A), Val::known([a, b], "ft", A), ft(wall_height, A))).expect(OK);
+            w
         };
-        let south = wall(&mut job, "south wall", [0.0, 0.0], [40.0, 0.0], 6.0, height);
-        let east = wall(&mut job, "east wall", [40.0, 0.0], [40.0, 28.0], 6.0, height);
-        let north = wall(&mut job, "north wall", [40.0, 28.0], [0.0, 28.0], 6.0, height);
-        let west = wall(&mut job, "west wall", [0.0, 28.0], [0.0, 0.0], 6.0, height);
-        let hall = wall(&mut job, "hall partition", [0.0, 16.0], [40.0, 16.0], 4.5, wall_height);
-        let p14 = wall(&mut job, "partition at 14", [14.0, 16.0], [14.0, 28.0], 4.5, wall_height);
-        let p24 = wall(&mut job, "partition at 24", [24.0, 16.0], [24.0, 28.0], 4.5, wall_height);
-        let wet = wall(&mut job, "wet wall", [14.0, 22.0], [24.0, 22.0], 6.0, wall_height);
+        // An opening is given the way a framing plan dimensions it: to its centre.
+        let mut open = |job: &mut Job, wall: &str, kind: Kind, name: &str, starts: f64, width: f64, height: f64, sill: f64| {
+            let t = opening_type(job, kind, width, height);
+            let o = job.add(wall, kind, name).expect(OK);
+            job.put(&o, Opening { type_name: named(&t, A), offset: ft(starts + width / 2.0, A), sill: ft(sill, A) }).expect(OK);
+        };
+        let south = outside_wall(&mut job, "south wall", [0.0, 0.0], [40.0, 0.0]);
+        let east = outside_wall(&mut job, "east wall", [40.0, 0.0], [40.0, 28.0]);
+        let north = outside_wall(&mut job, "north wall", [40.0, 28.0], [0.0, 28.0]);
+        let west = outside_wall(&mut job, "west wall", [0.0, 28.0], [0.0, 0.0]);
+        let hall = inside_wall(&mut job, "hall partition", [0.0, 16.0], [40.0, 16.0], &partition);
+        let p14 = inside_wall(&mut job, "partition at 14", [14.0, 16.0], [14.0, 28.0], &partition);
+        let p24 = inside_wall(&mut job, "partition at 24", [24.0, 16.0], [24.0, 28.0], &partition);
+        let wet = inside_wall(&mut job, "wet wall", [14.0, 22.0], [24.0, 22.0], &wet_wall);
         let _ = wet;
-        if elevation == 0.0 {
+        if i == 0 {
             open(&mut job, &south, Kind::Door, "front door", 18.5, 3.0, 6.67, 0.0);
         } else {
             open(&mut job, &south, Kind::Window, "window over the door", 17.5, 5.0, 4.5, 2.5);
@@ -272,7 +317,6 @@ pub fn house() -> Job {
         open(&mut job, &hall, Kind::Door, "east door", 28.0, 2.67, 6.67, 0.0);
         open(&mut job, &p14, Kind::Door, "door", 8.0, 2.5, 6.67, 0.0);
         let _ = p24;
-        storeys.push(s);
     }
     let (first, second) = (storeys[0].clone(), storeys[1].clone());
 
