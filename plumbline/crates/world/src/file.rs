@@ -49,7 +49,7 @@ struct Entry {
     extra: BTreeMap<String, Value>,
 }
 
-const KNOWN_KEYS: [&str; 28] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_SEGMENT, K_SEGMENT_TYPE, K_FITTING, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
+const KNOWN_KEYS: [&str; 29] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_SEGMENT, K_SEGMENT_TYPE, K_FITTING, K_CONNECTORS, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
 
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
@@ -96,6 +96,7 @@ pub fn save(job: &mut Job) -> String {
         put!(Segment, K_SEGMENT);
         put!(SegmentType, K_SEGMENT_TYPE);
         put!(Fitting, K_FITTING);
+        put!(Connectors, K_CONNECTORS);
         put!(Placed, K_PLACED);
         put!(SystemInfo, K_SYSTEM);
         put!(InSystem, K_IN_SYSTEM);
@@ -333,6 +334,11 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                 K_FITTING => {
                     let c: Fitting = parse(&path, &k, v)?;
                     building::check_fitting(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_CONNECTORS => {
+                    let c: Connectors = parse(&path, &k, v)?;
+                    building::check_connectors(&path, kind, &c)?;
                     ent.insert(c);
                 }
                 K_PLACED => {

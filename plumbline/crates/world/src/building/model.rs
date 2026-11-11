@@ -3,8 +3,8 @@
 //! its type, a thing set at a place, and a fitting.
 //!
 //! PORTED CODE. The structs, their fields and the rules checked on them are ported from
-//! BIMCraft, `crates/core/src/model.rs` (and the kinds of a fitting from
-//! `crates/core/src/family.rs`), at commit
+//! BIMCraft, `crates/core/src/model.rs` (and the kinds of a fitting and the connectors
+//! from `crates/core/src/family.rs`), at commit
 //! f202abd85d1cf165325e2f7b250da0b5e51f5b71 (2026-11-10), https://github.com/IPedrax/bimcraft,
 //! Copyright (c) 2026 IPedrax and the BIMCraft contributors, used under the MIT license
 //! (BIMCraft is MIT OR Apache-2.0). The notice is in NOTICE at the repository root.
@@ -46,6 +46,13 @@
 //! * A fitting is a kind of element of its own here, carrying its kind (BIMCraft: a
 //!   component of a family of the pipe-fitting category with a `kind`). The five kinds
 //!   are BIMCraft's for a pipe fitting and are used for every kind of run.
+//! * A connector is on the placed thing itself here, where BIMCraft's is on a family and
+//!   worked out for a type. Its `at` and `size` are values, not formulas. Two kinds are
+//!   added, `duct` and `conduit`: BIMCraft's network joins pipes only so far (its
+//!   `docs/areas/structure-and-mep.md`: "Conduits and the other electrical runs are not in
+//!   it yet"). Not taken: the `switch`, `data` and `earthing` kinds, a connector's id and
+//!   Guid, its `direction`, and what sizes a circuit (`system`, `poles`, `voltage`,
+//!   `load_va`, `power_factor`, `classification`).
 //! * An opening whose head is above its wall's top is not allowed here; BIMCraft allows
 //!   it (DECISIONS.md call 29).
 //! * The checks are the `Val` rules of this project around BIMCraft's rules; each rule
@@ -407,6 +414,95 @@ pub struct Fitting {
     pub kind: FittingKind,
 }
 
+/// What a connector joins: `pipe` a pipe of its `domain`, `duct` a duct, `conduit` a
+/// conduit, `power` a cable.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ConnectorKind {
+    Power,
+    Pipe,
+    Duct,
+    Conduit,
+}
+
+impl ConnectorKind {
+    /// The kind of run that joins a connector of this kind.
+    pub fn joins(self) -> Kind {
+        match self {
+            ConnectorKind::Power => Kind::Cable,
+            ConnectorKind::Pipe => Kind::Pipe,
+            ConnectorKind::Duct => Kind::Duct,
+            ConnectorKind::Conduit => Kind::Conduit,
+        }
+    }
+    /// The kind of connector a run of `kind` joins.
+    pub fn of(kind: Kind) -> Option<ConnectorKind> {
+        [ConnectorKind::Power, ConnectorKind::Pipe, ConnectorKind::Duct, ConnectorKind::Conduit].into_iter().find(|k| k.joins() == kind)
+    }
+}
+
+/// What a pipe connector carries: cold or hot water, waste (sewage), vent, storm water or gas.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Domain {
+    Cold,
+    Hot,
+    Waste,
+    Vent,
+    Storm,
+    Gas,
+}
+
+/// Which way what it carries goes through it: into the thing (`in`, as water into a
+/// basin), out of it (`out`, as waste from a water closet) or either way (`both`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Flow {
+    In,
+    Out,
+    #[default]
+    Both,
+}
+
+fn is_both(f: &Flow) -> bool {
+    *f == Flow::Both
+}
+
+/// Where a placed thing joins a system: where a pipe, a duct, a conduit or a cable meets
+/// it. `at` is in the thing's own axes: x along its angle, y to its left, z up from its
+/// base.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Connector {
+    /// What it is called on the thing (`Waste`, `Cold water`), for people; none is fine.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name: String,
+    pub kind: ConnectorKind,
+    /// What a `pipe` connector carries; none on a fitting, which takes its pipe's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain: Option<Domain>,
+    #[serde(default, skip_serializing_if = "is_both")]
+    pub flow: Flow,
+    pub at: Val<P3>,
+    /// Its size: a pipe connector's nominal diameter.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<Val<Len>>,
+}
+
+impl Connector {
+    pub fn at_ft(&self) -> Option<P3> {
+        let d = units::coord_divisor(&self.at.unit).ok()?;
+        self.at.value.map(|p| p.map(|x| x / d))
+    }
+}
+
+/// `pl::connectors`: on Equipment, a Fixture or a Fitting, where runs meet it.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Connectors(pub Vec<Connector>);
+
+/// The most connectors one thing may have.
+pub const MAX_CONNECTORS: usize = 64;
+
 // ---------------------------------------------------------------- the entry checks
 
 /// A reference to a type: a path, flagged and sourced, not blank.
@@ -624,6 +720,33 @@ pub fn check_placed(path: &str, kind: Kind, p: &Placed) -> Result<(), String> {
 pub fn check_fitting(path: &str, kind: Kind, _f: &Fitting) -> Result<(), String> {
     if kind != Kind::Fitting {
         return Err(format!("{path}: a {kind:?} cannot carry a fitting's kind; only a fitting can"));
+    }
+    Ok(())
+}
+
+pub fn check_connectors(path: &str, kind: Kind, c: &Connectors) -> Result<(), String> {
+    if !kind.is_placed() {
+        return Err(format!("{path}: a {kind:?} cannot carry connectors; only equipment, a fixture or a fitting can"));
+    }
+    if c.0.len() > MAX_CONNECTORS {
+        return Err(format!("{path}: has {} connectors; a thing takes up to {MAX_CONNECTORS}", c.0.len()));
+    }
+    for (i, k) in c.0.iter().enumerate() {
+        let who = format!("{path} connector {}", i + 1);
+        // Only a pipe connector carries a domain (BIMCraft `family.rs`, `Family::check`).
+        if k.domain.is_some() && k.kind != ConnectorKind::Pipe {
+            return Err(format!("{who}: is a {:?} connector and says what it carries; only a pipe connector does", k.kind).to_lowercase());
+        }
+        let d = coords(&format!("{who} position"), &k.at)?;
+        if let Some(at) = &k.at.value {
+            usable(&format!("{who} position"), at, d)?;
+        }
+        if let Some(size) = &k.size {
+            positive(&format!("{who} size"), size, false)?;
+            if size.feet().is_some_and(|x| x > MAX_SECTION_FT) {
+                return Err(format!("{who} size: is over {MAX_SECTION_FT} ft across"));
+            }
+        }
     }
     Ok(())
 }

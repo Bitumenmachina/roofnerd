@@ -402,14 +402,20 @@ pub fn house() -> Job {
                         (what, Val::assumed([tidy(across), tidy(across), tidy(deep)], "in", "drawn at its run's size; the fitting is not selected"), deep)
                     }
                 };
+                // An elbow joins the piece that ends here to the one that starts here: a
+                // connector for each, both on the joint, of the run's size.
+                let end = Connector { name: String::new(), kind: ConnectorKind::of(kind).expect(OK), domain: None, flow: Flow::Both, at: Val::known([0.0, 0.0, tidy(deep / 2.0)], "in", "on the joint"), size: section.as_ref().map(|t| t.width.clone()) };
+                job.put(&f, Connectors(vec![end.clone(), end])).expect(OK);
                 job.put(&f, Fitting { kind: FittingKind::Bend }).expect(OK);
                 job.put(&f, Placed { what, at: Val::known([b[0], b[1]], "ft", src), offset: ft(tidy(b[2] - base - deep / 24.0), src), angle: None, size }).expect(OK);
                 job.put(&f, InSystem(Val::known(sys.to_string(), "", src))).expect(OK);
             }
         }
     };
-    let thing = |job: &mut Job, storey: &str, kind: Kind, name: &str, sys: &str, src: &str, what: Val<String>, at: P3, size: Val<P3>| {
+    let mut set: Vec<(String, String, P3)> = Vec::new();
+    let mut thing = |job: &mut Job, storey: &str, kind: Kind, name: &str, sys: &str, src: &str, what: Val<String>, at: P3, size: Val<P3>| {
         let t = job.add(storey, kind, name).expect(OK);
+        set.push((name.to_string(), t.clone(), at));
         job.put(&t, Placed { what, at: Val::known([at[0], at[1]], "ft", src), offset: ft(tidy(at[2] - base_of(storey)), src), angle: None, size }).expect(OK);
         job.put(&t, InSystem(Val::known(sys.to_string(), "", src))).expect(OK);
     };
@@ -491,6 +497,62 @@ pub fn house() -> Job {
     thing(&mut job, &first, Kind::Fixture, "light, living", &lighting, E, said("Ceiling light", E), [20.0, 8.0, 8.8], boxed(1.0, 1.0, 0.2, E));
     run(&mut job, &second, Kind::Cable, "second-floor lights", &lighting, E, cable(), &[[39.55, 21.0, 6.1], [39.55, 21.0, 19.3], [20.0, 21.0, 19.3], [20.0, 7.0, 19.3], [20.0, 7.0, 18.0]]);
     thing(&mut job, &second, Kind::Fixture, "light, hall", &lighting, E, said("Ceiling light", E), [20.0, 7.0, 17.8], boxed(1.0, 1.0, 0.2, E));
+
+
+    // ---- Connectors: where each run meets the thing it serves ----
+    // Each is given where the plan shows the run arriving, and kept on the thing as a
+    // point in the thing's own axes.
+    let mut plugs: Vec<(String, &str, ConnectorKind, Option<Domain>, Flow, P3)> = vec![
+        ("air handler".into(), "Supply, first floor", ConnectorKind::Duct, None, Flow::Out, [19.0, 25.0, 5.0]),
+        ("air handler".into(), "Supply, attic", ConnectorKind::Duct, None, Flow::Out, [18.4, 26.2, 5.0]),
+        ("air handler".into(), "Return", ConnectorKind::Duct, None, Flow::In, [20.0, 25.8, 0.9]),
+        ("air handler".into(), "Refrigerant", ConnectorKind::Pipe, None, Flow::Both, [20.0, 25.0, 5.0]),
+        ("heat pump".into(), "Refrigerant", ConnectorKind::Pipe, None, Flow::Both, [41.5, 25.0, 1.0]),
+        ("return grille, first floor".into(), "Return", ConnectorKind::Duct, None, Flow::Out, [21.2, 23.0, 0.9]),
+        ("return grille, second floor".into(), "Return", ConnectorKind::Duct, None, Flow::Out, [21.2, 27.0, 17.4]),
+        ("water heater".into(), "Cold water", ConnectorKind::Pipe, Some(Domain::Cold), Flow::In, [15.7, 26.5, 5.0]),
+        ("water heater".into(), "Hot water", ConnectorKind::Pipe, Some(Domain::Hot), Flow::Out, [16.3, 26.5, 5.0]),
+        ("kitchen sink".into(), "Cold water", ConnectorKind::Pipe, Some(Domain::Cold), Flow::In, [10.6, 27.5, 2.3]),
+        ("kitchen sink".into(), "Hot water", ConnectorKind::Pipe, Some(Domain::Hot), Flow::In, [11.4, 27.3, 2.3]),
+        ("kitchen sink".into(), "Waste", ConnectorKind::Pipe, Some(Domain::Waste), Flow::Out, [11.0, 27.2, 1.5]),
+        ("meter".into(), "Service", ConnectorKind::Conduit, None, Flow::Both, [40.45, 20.0, 4.0]),
+        ("panel".into(), "Kitchen circuit", ConnectorKind::Power, None, Flow::Out, [39.55, 20.0, 6.1]),
+        ("panel".into(), "Living circuit", ConnectorKind::Power, None, Flow::Out, [39.55, 19.5, 6.1]),
+        ("panel".into(), "First-floor lights", ConnectorKind::Power, None, Flow::Out, [39.55, 20.5, 6.1]),
+        ("panel".into(), "Second-floor lights", ConnectorKind::Power, None, Flow::Out, [39.55, 21.0, 6.1]),
+        ("receptacle, kitchen".into(), "Power", ConnectorKind::Power, None, Flow::In, [8.0, 27.6, 3.6]),
+        ("receptacle, living".into(), "Power", ConnectorKind::Power, None, Flow::In, [30.0, 0.35, 1.4]),
+        ("light, living".into(), "Power", ConnectorKind::Power, None, Flow::In, [20.0, 8.0, 9.0]),
+        ("light, hall".into(), "Power", ConnectorKind::Power, None, Flow::In, [20.0, 7.0, 18.0]),
+    ];
+    for (name, to) in [("living west", [6.0, 6.0]), ("living middle", [22.0, 6.0]), ("living east", [34.0, 6.0]), ("kitchen", [8.0, 24.0]), ("office", [32.0, 24.0])] {
+        plugs.push((format!("register, {name}"), "Supply", ConnectorKind::Duct, None, Flow::In, [to[0], to[1], 8.4]));
+    }
+    for (name, x, y) in [("bedroom 1", 6.0, 6.0), ("bedroom 2", 34.0, 6.0), ("bedroom 3", 8.0, 23.0), ("bedroom 4", 32.0, 23.0)] {
+        plugs.push((format!("register, {name}"), "Supply", ConnectorKind::Duct, None, Flow::In, [x, y, 18.15]));
+    }
+    for (z, n) in [(0.0, 1), (10.0, 2)] {
+        plugs.push((format!("lavatory {n}"), "Cold water", ConnectorKind::Pipe, Some(Domain::Cold), Flow::In, [16.0, 21.8, z + 2.0]));
+        plugs.push((format!("lavatory {n}"), "Hot water", ConnectorKind::Pipe, Some(Domain::Hot), Flow::In, [16.3, 21.8, z + 2.0]));
+        plugs.push((format!("lavatory {n}"), "Waste", ConnectorKind::Pipe, Some(Domain::Waste), Flow::Out, [16.0, 21.6, z + 1.5]));
+        plugs.push((format!("water closet {n}"), "Cold water", ConnectorKind::Pipe, Some(Domain::Cold), Flow::In, [18.2, 21.8, z + 0.7]));
+        plugs.push((format!("water closet {n}"), "Waste", ConnectorKind::Pipe, Some(Domain::Waste), Flow::Out, [18.5, 21.0, z]));
+        plugs.push((format!("tub {n}"), "Cold water", ConnectorKind::Pipe, Some(Domain::Cold), Flow::In, [22.6, 21.7, z + 2.5]));
+        plugs.push((format!("tub {n}"), "Hot water", ConnectorKind::Pipe, Some(Domain::Hot), Flow::In, [22.3, 21.7, z + 2.5]));
+        plugs.push((format!("tub {n}"), "Waste", ConnectorKind::Pipe, Some(Domain::Waste), Flow::Out, [22.6, 20.5, z]));
+    }
+    for (path, at) in set.iter().map(|(_, path, at)| (path.clone(), *at)).collect::<Vec<_>>() {
+        let name = set.iter().find(|x| x.1 == path).map(|x| x.0.clone()).expect(OK);
+        let mine: Vec<Connector> = plugs
+            .iter()
+            .filter(|p| p.0 == name)
+            .map(|(_, label, kind, domain, flow, to)| Connector { name: label.to_string(), kind: *kind, domain: *domain, flow: *flow, at: Val::known([tidy(to[0] - at[0]), tidy(to[1] - at[1]), tidy(to[2] - at[2])], "ft", "where the plan shows the run arriving"), size: None })
+            .collect();
+        if !mine.is_empty() {
+            job.put(&path, Connectors(mine)).expect(OK);
+        }
+    }
+    assert!(plugs.iter().all(|p| set.iter().any(|x| x.0 == p.0)), "every connector in the sample is on a thing that is in it");
 
     job.derive();
     job

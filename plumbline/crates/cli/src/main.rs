@@ -91,6 +91,24 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
         for (kind, what, count, status) in &t.placed {
             let _ = writeln!(out, "  {} {:<9} {what}: {count} EA", status.flag(), format!("{kind:?}"));
         }
+        // How it hangs together: said only where there are runs to join.
+        let j = &t.joined;
+        if t.runs.members > 0 {
+            let plural = |n: usize, one: &str, many: &str| format!("{n} {}", if n == 1 { one } else { many });
+            let _ = writeln!(out, "    joined: {}; {}; {}", plural(j.networks, "network", "networks"), plural(j.open.len(), "open end", "open ends"), plural(j.no_fitting.len(), "place where a run meets another along its length with no fitting", "places where a run meets another along its length with no fitting"));
+        }
+        for o in &j.open {
+            let _ = writeln!(out, "      open: {} at ({}, {}, {})", o.said, view::num(o.at[0]), view::num(o.at[1]), view::num(o.at[2]));
+        }
+        for at in &j.no_fitting {
+            let _ = writeln!(out, "      no fitting at ({}, {}, {})", view::num(at[0]), view::num(at[1]), view::num(at[2]));
+        }
+        for warning in &j.warnings {
+            let _ = writeln!(out, "      {warning}");
+        }
+        for (path, why) in &j.left_out {
+            let _ = writeln!(out, "    ? not checked: {path}: {why}");
+        }
     }
     out
 }

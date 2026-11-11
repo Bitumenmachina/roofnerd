@@ -33,6 +33,7 @@ use crate::value::{Derived, Status, Val};
 use crate::view::{self, Row, Sum};
 
 pub mod model;
+pub mod network;
 pub mod runs;
 pub mod walls;
 
@@ -51,6 +52,7 @@ pub const K_FLOOR_TYPE: &str = "pl::floor_type";
 pub const K_SEGMENT: &str = "pl::segment";
 pub const K_SEGMENT_TYPE: &str = "pl::segment_type";
 pub const K_FITTING: &str = "pl::fitting";
+pub const K_CONNECTORS: &str = "pl::connectors";
 pub const K_PLACED: &str = "pl::placed";
 pub const K_SYSTEM: &str = "pl::system";
 pub const K_IN_SYSTEM: &str = "pl::in_system";
@@ -722,6 +724,16 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         }
         rows.push(view::entered(path, "size", &c.size, |s| format!("{} × {} × {}", view::num(s[0]), view::num(s[1]), view::num(s[2]))));
     }
+    if let Some(c) = w.get::<Connectors>(e) {
+        for (i, k) in c.0.iter().enumerate() {
+            let what = [Some(format!("{:?}", k.kind).to_lowercase()), k.domain.map(|d| format!("{d:?}").to_lowercase()), (k.flow != Flow::Both).then(|| format!("{:?}", k.flow).to_lowercase())].into_iter().flatten().collect::<Vec<_>>().join(", ");
+            let label = if k.name.is_empty() { format!("connector {} ({what})", i + 1) } else { format!("connector {}: {} ({what})", i + 1, k.name) };
+            rows.push(view::entered(path, &label, &k.at, |p| format!("({}, {}, {})", view::num(p[0]), view::num(p[1]), view::num(p[2]))));
+            if let Some(size) = &k.size {
+                rows.push(view::length(path, &format!("connector {} size", i + 1), size));
+            }
+        }
+    }
     if let Some(c) = w.get::<SystemInfo>(e) {
         rows.push(Row { path: path.into(), label: "classification".into(), text: format!("{} ({:?})", c.classification, c.discipline), status: Status::Known, basis: "what the system is".into(), note: String::new(), derived: false, number: None, unit: String::new() });
     }
@@ -907,6 +919,36 @@ pub struct SystemTakeoff {
     /// The fittings on the system, counted by kind and by what each is said to be, with
     /// the worst status among those. A fitting with no kind entered is counted under None.
     pub fittings: Vec<(Option<FittingKind>, String, usize, Status)>,
+    /// How its runs hang together: what is joined, what is open, what has no fitting.
+    pub joined: Continuity,
+}
+
+/// One end of a run, or one connector, that meets nothing.
+#[derive(Clone, Debug, PartialEq)]
+pub struct OpenEnd {
+    /// The run or the placed thing, by path.
+    pub element: String,
+    /// Said for a person: "hot riser: its second end", "lavatory 1: its Waste connector".
+    pub said: String,
+    pub at: P3,
+}
+
+/// How a system's runs hang together, read off the job's network (`network.rs`). Nothing
+/// here stops a job from loading or a length from being counted: a job being entered has
+/// open ends. It is what an estimator checks before trusting a count of fittings.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Continuity {
+    /// How many separate networks its runs fall into. One, when every run on the system
+    /// is joined to every other.
+    pub networks: usize,
+    pub open: Vec<OpenEnd>,
+    /// Where a run or a connector meets a run along its length with no fitting entered:
+    /// each is a tee, or a mistake.
+    pub no_fitting: Vec<P3>,
+    /// What else looks wrong, said in a sentence each.
+    pub warnings: Vec<String>,
+    /// What could not be placed, and so was not checked, each with why.
+    pub left_out: Vec<(String, String)>,
 }
 
 /// A size in feet, said in inches: `6 in`, `3/4 in`.
@@ -929,9 +971,10 @@ fn in_inches(feet: f64) -> String {
 /// dropped and not guessed.
 pub fn takeoff(job: &mut Job) -> Vec<SystemTakeoff> {
     let order = job.order.clone();
+    let net = network::network(job, None, None, network::TOLERANCE_FT);
     let tree = Tree::of(&mut job.world);
     let w = &job.world;
-    let blank = |name: &str, flag: Status| SystemTakeoff { path: String::new(), name: name.into(), discipline: Discipline::Architecture, classification: String::new(), flag, runs: view::sum_of("LF", &[]), lines: Vec::new(), placed: Vec::new(), fittings: Vec::new() };
+    let blank = |name: &str, flag: Status| SystemTakeoff { path: String::new(), name: name.into(), discipline: Discipline::Architecture, classification: String::new(), flag, runs: view::sum_of("LF", &[]), lines: Vec::new(), placed: Vec::new(), fittings: Vec::new(), joined: Continuity::default() };
     let mut systems: Vec<SystemTakeoff> = Vec::new();
     for &e in &order {
         if let (Some(n), Some(info)) = (w.get::<Node>(e), w.get::<SystemInfo>(e)) {
@@ -1017,6 +1060,68 @@ pub fn takeoff(job: &mut Job) -> Vec<SystemTakeoff> {
     }
     for t in &mut systems {
         t.fittings.sort_by(|x, y| (x.0.is_none(), x.0, &x.1).cmp(&(y.0.is_none(), y.0, &y.1)));
+    }
+    // How each hangs together. An element is checked with the group its system puts it in.
+    let group_of = |path: &str| -> usize {
+        let e = order.iter().find(|e| w.get::<Node>(**e).is_some_and(|n| n.path == path));
+        match e.and_then(|e| w.get::<InSystem>(*e)) {
+            None => named,
+            Some(s) => match s.0.value.as_ref().and_then(|p| systems[..named].iter().position(|x| x.path == *p)) {
+                Some(i) if s.0.status != Status::Unknown => i,
+                _ => named + 1,
+            },
+        }
+    };
+    match net {
+        Err(why) => {
+            for t in &mut systems {
+                t.joined.warnings.push(format!("what is joined to what was not worked out: {why}"));
+            }
+        }
+        Ok(net) => {
+            let groups_of = |elements: &[String]| -> std::collections::BTreeSet<usize> { elements.iter().map(|p| group_of(p)).collect() };
+            let mut found: Vec<Continuity> = vec![Continuity::default(); systems.len()];
+            for g in &net.groups {
+                // A network counts for each system that has a run in it.
+                let runs: Vec<String> = g.elements.iter().filter(|p| tree.kinds.get(*p).is_some_and(|k| k.is_segment())).cloned().collect();
+                for i in groups_of(&runs) {
+                    found[i].networks += 1;
+                }
+            }
+            for &n in &net.open {
+                let node = &net.nodes[n];
+                let Some(joint) = node.joints.first() else { continue };
+                let name = tree.called(joint.element());
+                let said = match joint {
+                    network::Joint::RunEnd { end, .. } => format!("{name}: its {} end", if *end { "second" } else { "first" }),
+                    network::Joint::RunSide { .. } => format!("{name}: along its length"),
+                    network::Joint::Connector { element, index, .. } => {
+                        let e = order.iter().find(|e| w.get::<Node>(**e).is_some_and(|n| n.path == *element));
+                        let label = e.and_then(|e| w.get::<Connectors>(*e)).and_then(|c| c.0.get(*index)).map(|k| k.name.clone()).filter(|s| !s.is_empty()).unwrap_or_else(|| format!("connector {}", index + 1));
+                        format!("{name}: its {label} connector")
+                    }
+                };
+                found[group_of(joint.element())].open.push(OpenEnd { element: joint.element().to_string(), said, at: node.at });
+            }
+            for warning in &net.warnings {
+                // A warning is said on the systems of the runs it is about. (A water closet
+                // is on the cold water system and its waste connector is in the drain's
+                // network: a fault in the drain is not the cold water's.)
+                let runs: Vec<String> = warning.elements.iter().filter(|p| tree.kinds.get(*p).is_some_and(|k| k.is_segment())).cloned().collect();
+                for i in groups_of(if runs.is_empty() { &warning.elements } else { &runs }) {
+                    match (warning.kind, warning.at) {
+                        ("joined_mid_run", Some(at)) => found[i].no_fitting.push(at),
+                        _ => found[i].warnings.push(warning.message.clone()),
+                    }
+                }
+            }
+            for (path, why) in &net.left_out {
+                found[group_of(path)].left_out.push((path.clone(), why.clone()));
+            }
+            for (t, joined) in systems.iter_mut().zip(found) {
+                t.joined = joined;
+            }
+        }
     }
     systems.into_iter().enumerate().filter(|(i, t)| *i < named || !t.lines.is_empty() || !t.placed.is_empty() || !t.fittings.is_empty()).map(|(_, t)| t).collect()
 }

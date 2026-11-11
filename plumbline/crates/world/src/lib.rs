@@ -33,7 +33,7 @@ pub mod units;
 pub mod value;
 pub mod view;
 
-pub use building::{Discipline, Fitting, FittingKind, Floor, FloorType, Function, InSystem, Justify, Layer, Level, Location, Opening, OpeningType, Placed, Segment, SegmentType, SystemInfo, Wall, WallType, P3};
+pub use building::{Connector, ConnectorKind, Connectors, Discipline, Domain, Flow, Fitting, FittingKind, Floor, FloorType, Function, InSystem, Justify, Layer, Level, Location, Opening, OpeningType, Placed, Segment, SegmentType, SystemInfo, Wall, WallType, P3};
 pub use components::*;
 pub use job::{Header, Job};
 pub use units::Len;

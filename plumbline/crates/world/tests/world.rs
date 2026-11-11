@@ -2828,3 +2828,272 @@ fn a_type_named_has_to_be_a_type_of_the_right_sort() {
     let (_, not_drawn) = plumbline_world::building::placements(&mut job);
     assert!(not_drawn.iter().any(|(_, why)| why.contains("is not known, so it is not cut in its wall")), "{not_drawn:?}");
 }
+
+// ---------------------------------------------------------------- the re-base on BIMCraft: connectors and the network
+
+/// A job with one storey at the datum and a 2 in pipe type, a 1 in pipe type and a duct
+/// type, for the network's tests: (job, storey, 2 in pipe, 1 in pipe, duct).
+fn piping() -> (Job, String, String, String, String) {
+    use plumbline_world::{Level, SegmentType};
+    let mut job = Job::new("network test (not a real job)", "test", "test");
+    let storey = job.add("job-0001", Kind::Storey, "ground").unwrap();
+    job.put(&storey, Level { elevation: ft(0.0), height: ft(10.0) }).unwrap();
+    let inch = |x: f64| Val::known(Len::One(x), "in", "test");
+    let mut kind = |job: &mut Job, name: &str, t: SegmentType| {
+        let p = job.add("job-0001", Kind::Type, name).unwrap();
+        job.put(&p, t).unwrap();
+        p
+    };
+    let two = kind(&mut job, "pipe 2 in", SegmentType::round(Kind::Pipe, inch(2.0)));
+    let one = kind(&mut job, "pipe 1 in", SegmentType::round(Kind::Pipe, inch(1.0)));
+    let duct = kind(&mut job, "duct 6 in", SegmentType::round(Kind::Duct, inch(6.0)));
+    (job, storey, two, one, duct)
+}
+
+/// One straight piece from `a` to `b`, each [east, north, height above the storey].
+fn piece(job: &mut Job, storey: &str, kind: Kind, name: &str, type_path: &str, a: [f64; 3], b: [f64; 3]) -> String {
+    use plumbline_world::{Justify, Segment};
+    let p = job.add(storey, kind, name).unwrap();
+    job.put(&p, Segment { type_name: named(type_path), line: Val::known([[a[0], a[1]], [b[0], b[1]]], "ft", "test"), offset: ft(a[2]), end_offset: (a[2] != b[2]).then(|| ft(b[2])), justify: Justify::Centre }).unwrap();
+    p
+}
+
+/// A placed thing with connectors, each (kind, domain, [x, y, z] in the thing's own axes).
+fn thing(job: &mut Job, storey: &str, kind: Kind, name: &str, at: [f64; 3], angle: Option<f64>, connectors: &[(plumbline_world::ConnectorKind, Option<plumbline_world::Domain>, [f64; 3])]) -> String {
+    use plumbline_world::{Connector, Connectors, Flow, Placed};
+    let p = job.add(storey, kind, name).unwrap();
+    job.put(&p, Placed { what: named(name), at: Val::known([at[0], at[1]], "ft", "test"), offset: ft(at[2]), angle: angle.map(|a| Val::known(a, "deg", "test")), size: Val::known([1.0, 1.0, 1.0], "ft", "test") }).unwrap();
+    job.put(&p, Connectors(connectors.iter().map(|(kind, domain, at)| Connector { name: String::new(), kind: *kind, domain: *domain, flow: Flow::Both, at: Val::known(*at, "ft", "test"), size: None }).collect())).unwrap();
+    p
+}
+
+fn net(job: &mut Job) -> plumbline_world::building::network::Network {
+    use plumbline_world::building::network::{network, TOLERANCE_FT};
+    network(job, None, None, TOLERANCE_FT).unwrap()
+}
+
+fn kinds(n: &plumbline_world::building::network::Network) -> Vec<&'static str> {
+    n.warnings.iter().map(|w| w.kind).collect()
+}
+
+#[test]
+fn pipes_end_to_end_are_one_network_with_two_open_ends() {
+    let (mut job, s, two, ..) = piping();
+    // 10 ft east, then 6 ft north, 1 ft above the floor.
+    piece(&mut job, &s, Kind::Pipe, "a", &two, [0.0, 0.0, 1.0], [10.0, 0.0, 1.0]);
+    piece(&mut job, &s, Kind::Pipe, "b", &two, [10.0, 0.0, 1.0], [10.0, 6.0, 1.0]);
+    let n = net(&mut job);
+    assert_eq!((n.nodes.len(), n.edges.len(), n.groups.len()), (3, 2, 1));
+    assert_eq!(n.open.len(), 2, "the first pipe's start and the last's end");
+    assert_eq!((n.edges[0].length, n.edges[1].length), (Some(10.0), Some(6.0)));
+    assert!(n.warnings.is_empty() && n.left_out.is_empty());
+    // Nothing is stored: the saved job is the same before and after asking.
+    let before = file::save(&mut job);
+    net(&mut job);
+    assert_eq!(file::save(&mut job), before);
+}
+
+#[test]
+fn a_connector_is_a_node_a_fitting_joins_through_it_and_a_fixture_does_not() {
+    use plumbline_world::building::network::Joint;
+    use plumbline_world::{ConnectorKind::Pipe, Domain};
+    let (mut job, s, two, ..) = piping();
+    // A water closet whose waste outlet is a foot to the north of its middle, at the
+    // floor. A drain starts there. Its cold inlet meets nothing: it is open.
+    let wc = thing(&mut job, &s, Kind::Fixture, "wc", [5.0, 5.0, 0.0], None, &[(Pipe, Some(Domain::Waste), [0.0, 1.0, 0.0]), (Pipe, Some(Domain::Cold), [-0.5, 0.0, 1.0])]);
+    let drain = piece(&mut job, &s, Kind::Pipe, "drain", &two, [5.0, 6.0, 0.0], [12.0, 6.0, -0.2]);
+    let n = net(&mut job);
+    let at_outlet = n.nodes.iter().find(|x| x.at == [5.0, 6.0, 0.0]).expect("a node at the outlet");
+    assert_eq!(at_outlet.joints, vec![Joint::Connector { element: wc.clone(), index: 0, domain: Some(Domain::Waste) }, Joint::RunEnd { run: drain.clone(), end: false }]);
+    // Open: the cold inlet, and the far end of the drain.
+    assert_eq!(n.open.len(), 2);
+    assert!(n.open.iter().any(|&i| n.nodes[i].joints == vec![Joint::Connector { element: wc.clone(), index: 1, domain: Some(Domain::Cold) }]));
+    // A pipe to the cold inlet is a second network: a fixture's waste and its water are
+    // not joined through it.
+    piece(&mut job, &s, Kind::Pipe, "cold", &two, [4.5, 5.0, 1.0], [4.5, 0.0, 1.0]);
+    let n = net(&mut job);
+    assert_eq!(n.groups.len(), 2);
+    assert!(kinds(&n).is_empty(), "waste and cold are in networks of their own: {:?}", n.warnings);
+
+    // A fitting does join what meets its two ends. Two pipes that stop half a foot short
+    // of a corner are two networks; an elbow whose legs reach them makes them one, and
+    // the way through it is an edge with no length.
+    let (mut job, s, two, ..) = piping();
+    piece(&mut job, &s, Kind::Pipe, "a", &two, [0.0, 0.0, 1.0], [9.5, 0.0, 1.0]);
+    piece(&mut job, &s, Kind::Pipe, "b", &two, [10.0, 0.5, 1.0], [10.0, 6.0, 1.0]);
+    assert_eq!(net(&mut job).groups.len(), 2);
+    let elbow = thing(&mut job, &s, Kind::Fitting, "elbow", [10.0, 0.0, 1.0], None, &[(Pipe, None, [-0.5, 0.0, 0.0]), (Pipe, None, [0.0, 0.5, 0.0])]);
+    let n = net(&mut job);
+    assert_eq!((n.groups.len(), n.open.len()), (1, 2));
+    assert!(n.edges.iter().any(|e| e.element == elbow && e.length.is_none()));
+    // Turned a quarter turn counter-clockwise, a point (x, y) of the elbow goes to
+    // (−y, x). The leg that was at (9.5, 0) is at (10, −0.5) and meets nothing; the leg
+    // that was at (10, 0.5) is at (9.5, 0), on the end of pipe a. Pipe b is on its own.
+    let e = job.find(&elbow).unwrap();
+    job.world.get_mut::<plumbline_world::Placed>(e).unwrap().angle = Some(Val::known(90.0, "deg", "test"));
+    let n = net(&mut job);
+    let near = |x: &plumbline_world::building::network::Node, e: f64, nn: f64| (x.at[0] - e).abs() < 1e-9 && (x.at[1] - nn).abs() < 1e-9;
+    let loose = n.nodes.iter().find(|x| near(x, 10.0, -0.5)).expect("a node at (10, −0.5)");
+    assert_eq!(loose.joints, vec![Joint::Connector { element: elbow.clone(), index: 0, domain: None }]);
+    let on_a = n.nodes.iter().find(|x| near(x, 9.5, 0.0)).expect("a node at (9.5, 0)");
+    assert!(on_a.joints.contains(&Joint::Connector { element: elbow.clone(), index: 1, domain: None }) && on_a.joints.len() == 2);
+    assert_eq!(n.groups.len(), 2);
+}
+
+#[test]
+fn what_looks_wrong_in_a_network_is_a_warning_and_never_a_refusal() {
+    use plumbline_world::building::network::{network, Joint};
+    use plumbline_world::{ConnectorKind::Pipe, Domain, InSystem, SystemInfo};
+    // Two systems in one network.
+    let (mut job, s, two, one, _) = piping();
+    let mut system = |job: &mut Job, name: &str, classification: &str| {
+        let p = job.add("job-0001", Kind::System, name).unwrap();
+        job.put(&p, SystemInfo { discipline: plumbline_world::Discipline::Plumbing, classification: classification.into() }).unwrap();
+        p
+    };
+    let (cold, hot) = (system(&mut job, "Cold", "Domestic Cold Water"), system(&mut job, "Hot", "Domestic Hot Water"));
+    let a = piece(&mut job, &s, Kind::Pipe, "a", &two, [0.0, 0.0, 1.0], [10.0, 0.0, 1.0]);
+    let b = piece(&mut job, &s, Kind::Pipe, "b", &two, [10.0, 0.0, 1.0], [10.0, 6.0, 1.0]);
+    job.put(&a, InSystem(named(&cold))).unwrap();
+    job.put(&b, InSystem(named(&hot))).unwrap();
+    let n = net(&mut job);
+    assert_eq!(kinds(&n), ["systems_meet"]);
+    assert_eq!(n.warnings[0].message, "runs of the systems Cold, Hot are joined in one network");
+    // Asked for one system, the network is what that system's runs are joined to.
+    assert_eq!(network(&mut job, Some(&cold), None, 0.01).unwrap().groups.len(), 1);
+    let c = piece(&mut job, &s, Kind::Pipe, "c", &one, [0.0, 20.0, 1.0], [5.0, 20.0, 1.0]);
+    assert_eq!(net(&mut job).groups.len(), 2);
+    assert_eq!(network(&mut job, Some(&cold), None, 0.01).unwrap().groups.len(), 1, "c is on no system and joins nothing of Cold's");
+    let _ = c;
+
+    // A waste connector and a cold-water connector in one network.
+    let (mut job, s, two, ..) = piping();
+    thing(&mut job, &s, Kind::Fixture, "basin", [0.0, 0.0, 0.0], None, &[(Pipe, Some(Domain::Waste), [0.0, 0.0, 0.0])]);
+    thing(&mut job, &s, Kind::Fixture, "heater", [10.0, 0.0, 0.0], None, &[(Pipe, Some(Domain::Cold), [0.0, 0.0, 0.0])]);
+    piece(&mut job, &s, Kind::Pipe, "between", &two, [0.0, 0.0, 0.0], [10.0, 0.0, 0.0]);
+    let n = net(&mut job);
+    assert_eq!(kinds(&n), ["domains_meet"]);
+    assert_eq!(n.warnings[0].message, "connectors of cold, waste are joined in one network");
+
+    // A branch drawn to a main's centre line, 4 ft along it, with no fitting: the main is
+    // two edges, 4 ft and 6 ft, of the one element, and the join is warned of.
+    let (mut job, s, two, one, _) = piping();
+    let main = piece(&mut job, &s, Kind::Pipe, "main", &two, [0.0, 0.0, 1.0], [10.0, 0.0, 1.0]);
+    piece(&mut job, &s, Kind::Pipe, "branch", &one, [4.0, 0.0, 1.0], [4.0, 3.0, 1.0]);
+    let n = net(&mut job);
+    let on_main: Vec<Option<f64>> = n.edges.iter().filter(|e| e.element == main).map(|e| e.length).collect();
+    assert_eq!(on_main, [Some(4.0), Some(6.0)]);
+    assert_eq!(kinds(&n), ["joined_mid_run"]);
+    assert!(n.nodes.iter().any(|x| x.joints.contains(&Joint::RunSide { run: main.clone() })));
+    assert_eq!((n.groups.len(), n.open.len()), (1, 3));
+
+    // A drain that narrows on its way down: 2 in coming down a stack to a 1 in pipe
+    // leaving below it. Read where a waste connector says the network is a drain.
+    let (mut job, s, two, one, _) = piping();
+    thing(&mut job, &s, Kind::Fixture, "wc", [0.0, 0.0, 8.0], None, &[(Pipe, Some(Domain::Waste), [0.0, 0.0, 0.0])]);
+    piece(&mut job, &s, Kind::Pipe, "stack", &two, [0.0, 0.0, 8.0], [0.0, 0.0, 0.0]);
+    piece(&mut job, &s, Kind::Pipe, "drain", &one, [0.0, 0.0, 0.0], [10.0, 0.0, -0.5]);
+    let n = net(&mut job);
+    assert_eq!(kinds(&n), ["smaller_downstream"]);
+    assert_eq!(n.warnings[0].message, "a drain narrows downstream: 1 in leaving where 2 in comes in");
+    // The same two pipes the right way round say nothing; nor does one nobody has sized.
+    let (mut job, s, two, one, _) = piping();
+    thing(&mut job, &s, Kind::Fixture, "wc", [0.0, 0.0, 8.0], None, &[(Pipe, Some(Domain::Waste), [0.0, 0.0, 0.0])]);
+    piece(&mut job, &s, Kind::Pipe, "stack", &one, [0.0, 0.0, 8.0], [0.0, 0.0, 0.0]);
+    let drain = piece(&mut job, &s, Kind::Pipe, "drain", &two, [0.0, 0.0, 0.0], [10.0, 0.0, -0.5]);
+    assert!(kinds(&net(&mut job)).is_empty());
+    let e = job.find(&drain).unwrap();
+    job.world.get_mut::<plumbline_world::Segment>(e).unwrap().type_name = Val::unknown("", "not on the plan");
+    let n = net(&mut job);
+    assert!(kinds(&n).is_empty() && n.left_out.is_empty() && n.groups.len() == 1, "a run with no size is still joined: {n:?}");
+}
+
+#[test]
+fn how_close_is_one_node_and_what_cannot_be_placed_is_said() {
+    use plumbline_world::building::network::network;
+    let (mut job, s, two, _, duct) = piping();
+    // Two pipes whose ends are 0.03 ft apart: two networks at the usual 0.01 ft, one at
+    // 0.05 ft. Asked for a foot, it is held to 2 in.
+    piece(&mut job, &s, Kind::Pipe, "a", &two, [0.0, 0.0, 1.0], [10.0, 0.0, 1.0]);
+    piece(&mut job, &s, Kind::Pipe, "b", &two, [10.03, 0.0, 1.0], [20.0, 0.0, 1.0]);
+    assert_eq!(network(&mut job, None, None, 0.01).unwrap().groups.len(), 2);
+    assert_eq!(network(&mut job, None, None, 0.05).unwrap().groups.len(), 1);
+    piece(&mut job, &s, Kind::Pipe, "c", &two, [20.5, 0.0, 1.0], [30.0, 0.0, 1.0]);
+    assert_eq!(network(&mut job, None, None, 1.0).unwrap().groups.len(), 2, "half a foot is not one node at any tolerance");
+    // A duct that ends on the very point a pipe ends at does not join it: a run joins its
+    // own kind.
+    piece(&mut job, &s, Kind::Duct, "d", &duct, [0.0, 0.0, 1.0], [0.0, 9.0, 1.0]);
+    let n = network(&mut job, None, None, 0.05).unwrap();
+    assert_eq!(n.groups.len(), 3);
+    assert!(n.warnings.is_empty());
+    // A second storey whose elevation nobody has: what is on it cannot be placed, so it
+    // is in no network, and it is listed with why. It is not joined at a guessed height.
+    let upper = job.add("job-0001", Kind::Storey, "upper").unwrap();
+    job.put(&upper, plumbline_world::Level { elevation: Val::unknown("ft", "not surveyed"), height: ft(9.0) }).unwrap();
+    let lost = piece(&mut job, &upper, Kind::Pipe, "upstairs", &two, [0.0, 0.0, 1.0], [10.0, 0.0, 1.0]);
+    let n = network(&mut job, None, None, 0.05).unwrap();
+    assert_eq!(n.left_out, vec![(lost.clone(), "its storey's elevation is not known".to_string())]);
+    assert_eq!(n.groups.len(), 3);
+    // Asked for one storey, only what is under it.
+    assert_eq!(network(&mut job, None, Some(&upper), 0.05).unwrap().groups.len(), 0);
+    assert_eq!(network(&mut job, None, Some(&s), 0.05).unwrap().left_out.len(), 0);
+}
+
+#[test]
+fn the_sample_house_says_what_is_joined_what_is_open_and_where_a_tee_is_missing() {
+    use plumbline_world::building::takeoff;
+    let mut job = plumbline_world::sample::house();
+    let systems = takeoff(&mut job);
+    let of = |name: &str| &systems.iter().find(|s| s.name == name).unwrap().joined;
+    // Supply air. The first floor's ducts and the attic's each start at the air handler,
+    // and equipment does not join what meets it: two networks. The two ends of each
+    // trunk are open (four). Five branches leave the first-floor trunks along their
+    // length, the riser meets the attic trunk along its length, and four branches leave
+    // the attic trunk: ten places with no fitting entered.
+    let supply = of("Supply air");
+    assert_eq!((supply.networks, supply.open.len(), supply.no_fitting.len()), (2, 4, 10));
+    assert!(supply.open.iter().any(|o| o.said == "attic trunk: its first end" && o.at == [4.0, 14.0, 20.0]), "{:?}", supply.open);
+    // Return air and refrigerant are each one network with nothing open: every end is on
+    // a grille, a unit, or an elbow.
+    for name in ["Return air", "Refrigerant"] {
+        assert_eq!((of(name).networks, of(name).open.len(), of(name).no_fitting.len()), (1, 0, 0), "{name}");
+    }
+    // Cold water is one network; the only open end is the service where it comes in from
+    // the street.
+    let cold = of("Cold water");
+    assert_eq!((cold.networks, cold.open.len()), (1, 1));
+    assert_eq!(cold.open[0].said, "water service, piece 1 of 4: its first end");
+    assert!(cold.warnings.is_empty(), "the drain's warnings are not the cold water's: {:?}", cold.warnings);
+    // The drain and its vent are joined, as they are built, and that is said on both.
+    for name in ["Sanitary", "Vent"] {
+        assert_eq!(of(name).warnings, ["runs of the systems Sanitary, Vent are joined in one network"], "{name}");
+    }
+    assert_eq!(of("Sanitary").open.iter().map(|o| o.said.as_str()).collect::<Vec<_>>(), ["building drain: its second end"]);
+    // Every fixture's connector is met by a run: no connector is among the open ends.
+    assert!(systems.iter().flat_map(|s| &s.joined.open).all(|o| !o.said.contains("connector")));
+    // Nothing was left out of the check.
+    assert!(systems.iter().all(|s| s.joined.left_out.is_empty()));
+    // The sample saves and loads with its connectors and fittings, to the same bytes.
+    let text = file::save(&mut job);
+    let (mut again, report) = file::load(&text).unwrap();
+    assert!(report.stale.is_empty());
+    assert_eq!(file::save(&mut again), text);
+}
+
+#[test]
+fn a_connector_has_to_make_sense() {
+    use plumbline_world::building::check_connectors;
+    use plumbline_world::{Connector, ConnectorKind, Connectors, Domain, Flow};
+    let at = |unit: &str| Val::known([0.0, 0.0, 0.0], unit, "test");
+    let one = |kind, domain, unit: &str| Connectors(vec![Connector { name: "x".into(), kind, domain, flow: Flow::In, at: at(unit), size: None }]);
+    assert!(check_connectors("f", Kind::Fixture, &one(ConnectorKind::Pipe, Some(Domain::Cold), "ft")).is_ok());
+    assert!(check_connectors("f", Kind::Fitting, &one(ConnectorKind::Pipe, None, "in")).is_ok());
+    // Only a pipe connector says what it carries; a wall has no connectors; a position
+    // has a unit, and not a metric one.
+    assert!(check_connectors("f", Kind::Fixture, &one(ConnectorKind::Duct, Some(Domain::Cold), "ft")).is_err());
+    assert!(check_connectors("f", Kind::Wall, &one(ConnectorKind::Pipe, None, "ft")).is_err());
+    assert!(check_connectors("f", Kind::Fixture, &one(ConnectorKind::Pipe, None, "")).is_err());
+    assert!(check_connectors("f", Kind::Fixture, &one(ConnectorKind::Pipe, None, "mm")).is_err());
+    let sized = Connectors(vec![Connector { name: String::new(), kind: ConnectorKind::Pipe, domain: None, flow: Flow::Both, at: at("ft"), size: Some(Val::known(Len::One(0.0), "in", "test")) }]);
+    assert!(check_connectors("f", Kind::Fixture, &sized).is_err(), "a size of nothing");
+}

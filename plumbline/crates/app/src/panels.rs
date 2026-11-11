@@ -648,6 +648,27 @@ pub fn takeoff(p: &mut ChildSpawnerCommands, fonts: &Fonts, t: &SystemTakeoff) {
             });
         }
     }
+    // How it hangs together: what is joined, what is open, where a tee is not entered.
+    // Each is a fact about the job as entered, so none is flagged as a doubtful value;
+    // only what could not be checked is flagged, as not known.
+    if t.runs.members > 0 {
+        let j = &t.joined;
+        heading(p, fonts, "Joined");
+        let plural = |n: usize, one: &str, many: &str| format!("{n} {}", if n == 1 { one } else { many });
+        listed(p, fonts, None, &plural(j.networks, "network", "networks"), "runs joined end to end, through fittings".into(), String::new(), plumbline_world::Status::Known);
+        if !j.no_fitting.is_empty() {
+            listed(p, fonts, None, &plural(j.no_fitting.len(), "join with no fitting", "joins with no fitting"), "a run meets another along its length".into(), String::new(), plumbline_world::Status::Known);
+        }
+        for o in &j.open {
+            listed(p, fonts, None, &o.said, "open end".into(), format!("{}, {}, {}", view::num(o.at[0]), view::num(o.at[1]), view::num(o.at[2])), plumbline_world::Status::Known);
+        }
+        for warning in &j.warnings {
+            listed(p, fonts, None, warning, "to look at".into(), String::new(), plumbline_world::Status::Known);
+        }
+        for (path, why) in &j.left_out {
+            listed(p, fonts, None, &format!("{path}: {why}"), "not checked".into(), String::new(), plumbline_world::Status::Unknown);
+        }
+    }
     if !t.fittings.is_empty() {
         heading(p, fonts, "Fittings");
         for (kind, what, count, status) in &t.fittings {
