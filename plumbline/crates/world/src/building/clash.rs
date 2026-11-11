@@ -75,7 +75,7 @@ pub const MAX_CLEARANCE_FT: f64 = 10.0;
 /// What is never tested against what, for a report to say.
 pub const NEVER_TESTED: [&str; 4] = [
     "walls and floors are not tested against each other, nor wall against wall, nor floor against floor",
-    "a joint is not a clash: where runs meet, where a run meets its fitting or the thing it is connected to, each run is left out for a little way either side",
+    "a joint is not a clash: each run is left out a little way either side of where it is joined",
     "a door or a window is a hole in its wall: nothing is tested against what fills it",
     "the roof's planes are not tested",
 ];

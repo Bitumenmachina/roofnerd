@@ -68,3 +68,9 @@ Work outside a deliverable. Nothing here is built until the owner accepts it.
 18. **Finding lines in a scanned plan or an aerial image**, so a tracing snaps to a
     picture as it does to a vector PDF's own lines (QUESTIONS.md Q18).
 
+19. **Squaring up a scan that lies crooked on its page.** A drawing has a scale and a
+    place on the plan and no turn. USDA Plan No. 7213's floor plan lies about a quarter
+    of a degree off square on its scan: its 41 ft 3 in dimension line climbs 3 pixels in
+    619. Walls traced square by their typed lengths are right; the sheet under them
+    drifts by about 2 1/2 in from one end of the house to the other. Two points picked on
+    a line known to be level would give the turn.

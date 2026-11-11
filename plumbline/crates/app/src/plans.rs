@@ -46,9 +46,12 @@ impl Laid {
         }
     }
     /// A place on the plan as a place on the page, as shown.
+    /// To a millionth of a unit: the division leaves a last digit that is not on the
+    /// page (126 comes back as 125.99999999999999).
     pub fn on_page(&self, plan: [f64; 2]) -> [f64; 2] {
         let (k, corner) = self.shown();
-        [(plan[0] - corner[0]) / k, (plan[1] - corner[1]) / k]
+        let tidy = |x: f64| (x * 1.0e6).round() / 1.0e6 + 0.0;
+        [tidy((plan[0] - corner[0]) / k), tidy((plan[1] - corner[1]) / k)]
     }
     pub fn on_plan(&self, page: [f64; 2]) -> [f64; 2] {
         let (k, corner) = self.shown();

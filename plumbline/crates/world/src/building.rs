@@ -1215,7 +1215,8 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         rows.push(view::entered(path, "position", &c.at, |p| format!("({}, {})", view::num(p[0]), view::num(p[1]))));
         rows.push(view::length(path, "height above its storey", &c.offset));
         if let Some(a) = &c.angle {
-            rows.push(view::entered(path, "turned", a, |x| format!("{}°", view::num(*x))));
+            // `entered` writes the unit after the figure: "180 deg".
+            rows.push(view::entered(path, "turned", a, |x| view::num(*x)));
         }
         rows.push(view::entered(path, "size", &c.size, |s| format!("{} × {} × {}", view::num(s[0]), view::num(s[1]), view::num(s[2]))));
     }

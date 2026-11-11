@@ -236,6 +236,13 @@ fn fit_at(job: &mut Job, storey: &str, at: P2, z: Option<f64>, kind: Option<Fitt
             [] => return Err(format!("nothing meets at {place}: a fitting goes where runs meet")),
             [one] => (*one).clone(),
             many => {
+                // Two kinds of run ending at one place and one height: a height does
+                // not tell them apart, and asking for one would be asking for nothing.
+                let level = many.iter().all(|n| (n.at[2] - many[0].at[2]).abs() <= FIT_TOLERANCE_FT);
+                if level {
+                    let kinds: Vec<String> = many.iter().map(|n| format!("a {}'s", n.kind.stem())).collect();
+                    return Err(format!("{} joints are both at {place}, {} ft above the floor, and which is meant cannot be said here: put each fitting on before the other run is drawn to that place", kinds.join(" and "), tidy(many[0].at[2] - base)));
+                }
                 let heights: Vec<String> = many.iter().map(|n| format!("{} ft", tidy(n.at[2] - base))).collect();
                 return Err(format!("{} joints lie over one another at {place}, at {} above the floor: say which with a height", many.len(), heights.join(" and ")));
             }

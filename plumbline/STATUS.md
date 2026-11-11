@@ -24,6 +24,7 @@ run again and each gave what this file said they gave.
 | D4 | Macro to micro | **Demonstrated at the command line and in the window, and judged (tenth judgment, below): thirteen findings, twelve fixed with tests, one minor one left and said. The fixes have not themselves been judged.** An element takes an allowance in $/SF or $/LF; a cost line's quantity is extended by its unit cost; an element's detail is rolled back up to the same $/SF or $/LF; the two are reconciled by element and for the job, each total saying what it leaves out and how much of it rests on an assumption. Prices are entered at the command line or typed in the window. See "D4. What was run". |
 | D5 | Estimate sheet and money | **Demonstrated at the command line and in the window (`demos/d5.sh`, `demos/d5w.sh`), and judged (eleventh judgment, below): fourteen findings, each fixed with a test. The fixes have not themselves been judged.** A cost line has a class and lands in one column and one row of the recap; in-house work is a production rate into hours; a labor line can be switched off; a material is an element with a generic price and suppliers' quotes, and changing what an element is made of reprices the lines made of it; overhead and profit are entered and have no default. See "D5. What was run". Reproducing the owner's whole-job estimate is pending: there is no estimate in `refs/` (Q5). See "D5. How its demonstration will be run". |
 | — | Fittings, connections and clashes (the owner's loop, stretch c) | **Demonstrated at the command line and in the window (`demos/fit.sh`, `demos/clash.sh`, `demos/clashw.sh`). Judged at the command line (thirteenth judgment: 18 findings, among them a missed clash, false clashes and a doubled total). Sixteen are fixed with tests (call 44), two are not (J13-14, J13-15); none of the fixes is judged, and the window part is not judged.** A fitting is worked out from the runs that meet (elbow, tee, cross, transition, coupling) and a branch on a run's side cuts the run; a run is joined to a fixture or to equipment; the takeoff says what is joined and what is open. Clash detection finds what is in the same space with how far and how sure, lists runs through walls and floors apart, and tests a clearance only when one is asked for. See "Fittings, connections and clashes. What was run". |
+| — | Plans under the tracing (order step 2) | **Demonstrated at the command line and in the window (`demos/plan.sh`, `demos/planw.sh`). Not judged.** A PDF (drawn or scanned), a PNG or a JPEG is laid under a storey, given its scale from one dimension and traced over; what is traced is Assumed and names the drawing; a drawn PDF's own lines are snapped to. A real public sheet, USDA Plan No. 7213, was traced in the window to its dimensions: 130.33 LF of outside wall. Only walls are traced so far. See "Plans under the tracing. What was run". |
 | D6 | Interchange and reports | Not started. |
 | D7 | Capture | Waiting on the owner's ruling. |
 
@@ -37,8 +38,8 @@ CLAUDE.md, "Order of work"; step 1 of it is under way.
 | # | Item | Where it stands |
 |---|---|---|
 | 1 | A clean clone installs on Linux from the README in one pass | **Not shown.** The README lists the commands; nobody has followed it on a clean machine. |
-| 2 | Every import works as stated: PDF (vector and scanned), PNG, JPEG, aerial images, CSV and XLSX (price lists, prior estimates, assembly libraries), IFC, the job file | **Only the job file**, which loads and saves to the same bytes. None of the others is built. |
-| 3 | From an empty job: open a real residential plan PDF, calibrate, trace walls, openings, floors, rooms and the roof; the 3D house builds from the tracing | **Not built.** Walls, openings, runs, fixtures and equipment are drawn in the window on a blank plan with nothing under it; floors, rooms and roofs are not drawn in the window; there is no underlay and no plan set (Q15). |
+| 2 | Every import works as stated: PDF (vector and scanned), PNG, JPEG, aerial images, CSV and XLSX (price lists, prior estimates, assembly libraries), IFC, the job file | **Three of seven.** The job file loads and saves to the same bytes. A PDF plan (drawn or scanned), a PNG and a JPEG are read, laid under a storey and traced over, and what each could not give is listed (`demos/plan.sh`, `demos/planw.sh`; not judged). Not built: an aerial image as such, CSV and XLSX price lists, prior estimates and assembly libraries, IFC. |
+| 3 | From an empty job: open a real residential plan PDF, calibrate, trace walls, openings, floors, rooms and the roof; the 3D house builds from the tracing | **Part.** From an empty job the window opens USDA Plan No. 7213 (public domain; a scan), sets its scale from its 41 ft 3 in dimension, and traces its outside walls; the 3D house stands on the sheet (`demos/planw.sh`, pictures 01 to 08; not judged). Not built: openings, floors, rooms and the roof traced over it. |
 | 4 | Clashes show their certainty; the VIF list is sorted by dollars | **Half.** A clash is Known or Assumed from its two shapes and says so (command line and the sheet's Clashes tab; not judged). There is no VIF list and no dollars on a clash. |
 | 5 | A typed or lasered measurement makes a value Known; the clash confirms or clears; the price changes live in the second window | **Not built in the window.** A value is made Known at the command line. The window cannot. |
 | 6 | A design-phase price per SF or LF grows into line items for the same condition, and the detail rolls back up | **Demonstrated on the roof** (D4: `demos/d4.sh`, `demos/d4w.sh`), judged, fixes not judged. Not shown on a wall, a floor or a run. |
@@ -1541,6 +1542,104 @@ The judge tries to trace at the wrong scale without being told, to calibrate int
 Known figure, to lose a drawing or a tracing on save and load, and to get the program to
 read a file it should refuse.
 
+## Plans under the tracing. What was run and what it showed
+
+Step 2 of the order of work, on commit `939e6aa` and the one after it, which holds the pictures. **Not judged.**
+What was built: a Drawing (one page of a PDF, a PNG or a JPEG laid under the storey it
+is a plan of); its scale from one dimension; lining it up; tracing over it with the
+tools that were there, each thing traced flagged Assumed and naming the drawing; a
+crate that reads plan files and says what a page could not give; in the window, the
+sheet under the plan, the wheel closing in on what the pointer is on, the scale picked
+on the sheet, and the pointer snapping to a drawn PDF's own lines. SPEC.md section 5.11;
+DECISIONS.md call 43.
+
+**`demos/plan.sh`** (command line), exit 0:
+
+| Step | Worked by hand | The program |
+|---|---|---|
+| The made-up vector plan read | a letter sheet on its side, 792 by 612 points; 8 straight lines (outline 4, partition, dimension line, 2 ticks); 1 curve (the door swing) | 792 by 612 points, 8 straight lines to snap to; not read: 1 curved piece of line, the words and figures |
+| A wall traced before a scale | refused | refused: "has no scale: calibrate it from one dimension"; file unchanged |
+| Scale: 30 ft between two places 540 points apart | 18 points to the foot | 18 to the foot |
+| The outline traced by four page places | 540 points is 30.0 ft, 360 points is 20.0 ft; south face 30 x 8 = 240 SF | 30.0, 20.0, 240.0, each Assumed, "traced from A-1 floor plan (made-up-plan.pdf, page 1)" |
+| The same plan as a PNG and as a JPEG, two dots to the point | 1,584 by 1,224 dots; 1,080 dots for 30 ft is 36 to the foot | the same; "it is a picture: it has no lines of its own to snap to" |
+| Refused, file unchanged | a missing file, page 2 of 1, a file that is no plan, two points that are one, a dimension with no unit, a status given with `--on`, `--on` a wall | all seven |
+| The plan file changed after the drawing was made | said | "file: HAS CHANGED since this drawing was made from it" |
+| USDA Plan No. 7213, sheet 4 | a scan | page 4 of 4, 789 by 613 points, a scan, nothing to snap to |
+
+**`demos/planw.sh`** (the window, two sessions from empty jobs), exit 0, 22 pictures in
+`demos/captured/plan` and `demos/captured/plan/made-up`, every one read:
+
+| Picture | What it shows |
+|---|---|
+| 01 | USDA Plan No. 7213's floor-plan sheet under the Ground storey, whole. The left panel lists it with "no scale yet" in red; selected, the right panel says Scale: Unknown, none, and what was not read from it (a scan, nothing to snap to; words and figures not read). The title bar counts 1 unknown. |
+| 02 | Two steps of the wheel in on the floor plan: the dimension figures on the scan are readable. A wall tried: refused in the banner and the bar, "has no scale: set it from one dimension before tracing over it". |
+| 03 | The two ends of the 41 ft 3 in overall dimension picked, a line between them, and `41' 3"` being typed. |
+| 04 | To scale: the panel says "sheet 88' 2" x 68' 6"" in the Assumed colour; the count of unknowns is gone. |
+| 05, 06 | The first outside wall going east with `41' 3"` being typed; then three walls, the pointer on the first corner about to close: 106.42 LF, 851.33 SF. |
+| 07 | Four walls in ink on the sheet's own outside wall lines, all four sides: Walls 4, 130.33 LF, 1,042.67 SF, Assumed. |
+| 08 | The same in 3D: the four walls standing on the sheet. |
+| made-up/01 | The vector plan under the storey; with the scale tool the pointer is on the west end of the PDF's dimension line and the bar says it is on an end. |
+| made-up/02, 03 | The outline traced by four clicks near its corners: 100.00 LF, 800.00 SF. The drawing, selected, reads `1/4" = 1'-0"`, "8 straight lines to snap to", and what was not read. |
+
+The saved jobs, read back by the script:
+
+| Figure | Worked by hand | In the saved job |
+|---|---|---|
+| The farmhouse's outside walls | 41 ft 3 in is 41.25; 23 ft 11 in is 23.9167 to the ten-thousandth of a foot a place is kept to; 2 x (41.25 + 23.9167) = 130.3334 LF; x 8 ft = 1,042.6672 SF | 4 walls: 41.25, 23.9167, 41.25, 23.9167; 130.3334; 1,042.6672; each Assumed, "traced from usda-7213, page 4 (usda-7213.pdf, page 4)" |
+| The farmhouse sheet's scale | 41 ft 3 in read off the sheet, Assumed; on the whole sheet (766 pixels wide) the dimension is 360 pixels, so the sheet is about 41.25 x 766 / 360 = 87.8 ft wide | 41' 3" over 369.2 points, Assumed, "read off the drawing"; the sheet 88.2 ft wide |
+| The vector plan's scale | the dimension line's ends are (126, 90) and (666, 90): 540 points for 30 ft, 18 to the foot | from (126, 90) to (666, 90) exactly |
+| The vector plan's outline | (126, 126) and (666, 486) over 18: (7, 7) to (37, 27); 30, 20, 30, 20 ft | walls from (7, 7), (37, 7), (37, 27), (7, 27): exact, with no length typed |
+
+**What is not right, or not shown:**
+
+* **Only walls are traced.** Openings, floors, rooms and the roof over a drawing are
+  release-candidate item 3 and are not shown; floors, rooms and roofs cannot be drawn in
+  the window at all yet (order step 5).
+* **Lining a drawing up is in the window and no demonstration clicks it.** It is used
+  at the command line in `demos/plan.sh`.
+* **A PNG or a JPEG is read at the command line; none is laid in the window in a
+  demonstration.** The window reads them by the same code.
+* **The scan lies a quarter of a degree crooked on its page** and a drawing cannot be
+  turned: the sheet drifts about 2 1/2 in under the traced walls from one end of the
+  house to the other. PROPOSALS.md 19.
+* **Two hand figures of mine were wrong and the program right**, both in the script's
+  own checks and both corrected before this was written: the sheet's width (I had 52 to
+  53 ft, from pixels of one zoom and points of another; it is 88 ft) and the total
+  round the house (130.3333 against the 130.3334 that 23.9167 gives).
+* **A typed length is kept to a ten-thousandth of a foot**, so 23 ft 11 in is 0.0004 in
+  long. It shows as 23.92 and adds as 130.33.
+* **The paper shows grey**, and the sky and grass are still behind the 3D view: the
+  look is order step 7.
+* **A page is read at up to 4,096 dots on its long side.** Close in on a big sheet it
+  will blur; sharper pieces on zooming in are not built.
+* **A PDF with more than 400,000 straight lines** keeps the first 400,000 and says so;
+  how the pointer's snapping holds up near that many has not been tried.
+
+**What changed that was so before:**
+
+* The left panel on plan has a new section, "Drawings to trace", between the storeys
+  and the drawing tools. The tools are 62 pixels lower; `demos/draww.sh` and
+  `demos/clashw.sh` click the new places.
+* On plan a wall is drawn with its two faces and ends in ink.
+* On plan the wheel closes in on the place under the pointer, not on the middle of the
+  window; a drag moves the plan by exactly what a pixel covers.
+* A wall type, an opening type and a run type made by a drawing tool say "set in the
+  3D view" as before; what is traced with them says which drawing.
+* The dependencies are built optimised in a debug build (`[profile.dev.package."*"]`):
+  reading the scanned sheet took 65 s without it.
+* A placed thing's angle shows as "180 deg"; it showed "180° deg".
+
+**What was run on this build:** `cargo test --workspace` (164 passing);
+`tools/portmap.sh` (193 items, PASS); `tools/licenses.sh` (391 crates, exit 0; LICENSES.md
+brought up to it, 33 more than before: hayro's and image's); the repository's three
+gates (exit 0); `demos/d1.sh`, `units.sh`, `d3.sh`, `d4.sh`, `d5.sh`, `draw.sh`, `fit.sh`,
+`clash.sh`, `plan.sh` (each exit 0); `demos/planw.sh`, `demos/clashw.sh`, `demos/draww.sh`
+(each exit 0; 22, 14 and 30 pictures, every one read). `demos/draww.sh` was run one small
+change before the last (a place on a page rounded to a millionth of a unit, an angle
+shown with one unit, one line of the Clashes tab shortened), none of which it shows. **Not rerun on this build:** `demos/d2.sh`, `d4w.sh`, `d5w.sh` and
+`house.sh`; their pictures under `demos/captured` are of commit `b566079` and the
+window's drawing of walls has changed since.
+
 ## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
 
 An independent judge (Opus; it did not build any of this) was given commit `1886693`, a
@@ -1804,7 +1903,7 @@ call 44. **None of these fixes has been judged.**
 | J13-11 | Names: capitals, runs of spaces, spaces beside a comma and a full stop that is not a decimal point are ignored; a space between figures is not. Removing a condition matches its name the same way. | the same |
 | J13-12 | Only a note this program wrote, at the end of a source, is replaced. | the same |
 | J13-13 | A run is not joined to a thing on a system it cannot go on. | the same |
-| J13-14 | **Not fixed.** A pipe's and a duct's ends at one place still cannot be given either fitting. | |
+| J13-14 | **Not fixed.** A pipe's and a duct's ends at one place still cannot be given either fitting. The refusal no longer asks for a height that would not help; it says the two cannot be told apart and to put each fitting on before the other run is drawn there. | |
 | J13-15 | **Not fixed.** No tee on an upright run; `fitting --all` still passes over some joints without listing them. | |
 | J13-16 | The place reported is inside both things: the middle of the boxes' overlap if it is, otherwise a place the measure of depth found. | not held by a test of its own |
 | J13-17 | Two round runs are measured by plain geometry where it is exact. | `j13_1_...` (1 in pipes in each other by 0.0833 ft) |
