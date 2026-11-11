@@ -2012,3 +2012,59 @@ number):
 * A second piece cut off a named run is named after it, not numbered.
 * `cargo test --workspace`: 164 tests (151 on the model, 8 on the skeleton, 2 on plan
   files, 3 on the command line), all passing; it was 154.
+
+## Fourteenth judgment (2026-11-11): plans under the tracing, and the fixes to the thirteenth
+
+An independent judge (Opus; it did not build any of this) was given commit `719ff91`, a
+frozen copy of the source, the built command line and the built window, and the brief to
+break plans under the tracing, the thirteenth judgment's fixes, and the window fixes of
+the twelfth that nobody had judged. Fourteen findings, no panic. It used three window
+runs of the eight it was allowed. Its reproductions are kept outside the repository
+(scratch files). As it reported them; what was done about each goes in the table that
+follows this one once the fix is in.
+
+| # | Finding (the judge's words, shortened) | Severity it gave |
+|---|---|---|
+| J14-1 | **The commit cannot be built from a clean clone.** `.gitignore`'s line `plans/` ignores every folder of that name: `crates/plans/` and `demos/plans/` are in no commit. `cargo metadata` on an archive of `719ff91` fails; `demos/plan.sh` and `planw.sh` need files that are not committed. STATUS claims work that is not in the commit. | release-candidate item 1 fails; false claim |
+| J14-2 | Setting a drawing's scale again after tracing leaves what was traced at the old scale, and nobody is told: two equal lines on one page come out 30 LF and 60 LF, both "traced from" the same drawing. In the window a wall stays 60.00 LF and runs off the sheet beside "Scale dimension 30 ft". | wrong figure, unflagged as stale |
+| J14-3 | Setting the scale after lining a drawing up breaks the line-up, silently: the corner stays where the old scale put it, still Known. | wrong figure, false Known |
+| J14-4 | A picture more than 16,384 dots across kills the window with nothing said, and the job cannot be opened in it again. PDF pages are capped at 4,096 dots; pictures are not. | loads what it should refuse |
+| J14-5 | Walls are double-counted as Known: (a) two walls of a type with no thickness, 1 in apart for 20 ft, are both accepted; (b) a ground wall held up to the roof storey and an upper-storey wall on the same line are both counted (480 SF where 320 exist): walls are only compared on one storey. | wrong figure unflagged |
+| J14-6 | The J13-8 fix refuses legitimate layouts: walls crossing at 25 and 20 degrees, a T and a V at 10 degrees. Every crossing under about 29 degrees is refused. | refuses what is right |
+| J14-7 | The J13-1 fix reports a 30 degree lateral (two 4 in pipes) as a Known hard clash, 0.056 ft, with or without its fitting. | false finding |
+| J14-8 | Hand-made PDFs lose things without saying so: walls drawn as filled bars give no lines and an empty "not read" list; 200 hatch ticks under 1 pt are dropped unsaid; a clipped line is reported at its unclipped length; a white line is a snap line with no ink under it; dashed lines become solid and the dashes are not mentioned; a page with no size is given A4's; a truncated file is refused as "0 pages". | loss not reported |
+| J14-9 | A drawing under one storey is accepted for tracing on another (`--on`). In the window the source is taken from the last drawing on the storey, not the one under the pick (read in the code, not seen). | loss of provenance |
+| J14-10 | A drawing whose page size is edited by hand loads, `check` passes, and `drawings` does not say the file's page differs. | loads what it should refuse |
+| J14-11 | The J13-10 fix is not closed: "2 lb/MH", "lb/man-hour", "lb/manhour", "lb/hr.", lb/day, lb/min, lb/shift are accepted as a material's order. | loads what it should refuse |
+| J14-12 | The J13-12 fix still cuts a person's own note when it ends in the same words: "A-101 rev B; moved (per RFI 12, architect)" becomes "A-101 rev B; moved (tape)". | minor |
+| J14-13 | The J13-11 names rule keeps plainly one name as two ("Copper, 16 oz" and "Copper 16 oz"; "Pipe 1-1/2 in" and "Pipe 1 1/2 in"; "Cu 16oz" and "Cu 16 oz"; "No. 1" and "No.1"; "Type X" and "Type-X") and makes weak merges ("a.b" and "ab"; "Pipe 1,2" and "Pipe 1, 2"). | minor |
+| J14-14 | Minor: a scale from points 0.001 apart is accepted ("0 to the foot"); scale points far off the page are accepted; a height and a type typed with `--on`, and a move in the window, are sourced "traced from"; deleting a drawing says nothing of what was traced from it; software terms on screen ("(os error 2)", "drawing-0003", "(type-0004)"); a JPEG turned by its EXIF tag is shown unturned, unsaid; one file can be laid twice with no notice. | minor |
+
+**What held under attack** (the judge's list): no traced value came out Known by any
+route; the arithmetic of a scale on a slant, a line-up to a negative place, and a door by
+a point on a traced wall; a moved, changed or missing plan file each said, and the rest of
+the job working without it; paths kept from the job's folder; save, load, save the same
+bytes; pictures of every sort read by what is in them; rotated pages, a crop box, an
+offset page, flipped and scaled coordinates, forms, a layer switched off, two pages, text
+and a curve in hand-made PDFs. In the window: a wrong path, a text file and a page that
+is not there refused; every tool and the line-up refused before a scale; Escape at each
+point of the scale tool; undo and redo; a reopened job showing its drawing to scale; the
+wheel keeping the place under the pointer. Of the twelfth judgment's window fixes: J12-7,
+J12-9, J12-16 and J12-21 held. Of the thirteenth's: stacked openings (J13-2), status
+(J13-3), a duct to a water fixture (J13-13), the fitting's turn (J13-6), and the sample
+house's three new clashes, each right by hand.
+
+**Not reached by the judge:** J12-8; the depth figures of J13-2, 4 and 5 by hand; J13-9;
+J13-14 to 18; encrypted PDFs; a transparent PNG and two drawings on one storey in the
+window; lining up in the window; the USDA scan traced in the window.
+
+**Where this leaves earlier fixes.** Judged and held: J12-7, 9, 16, 21; J13-2, 3, 6, 13.
+Judged and found wanting: J13-1 (J14-7), J13-8 (J14-5, J14-6), J13-10 (J14-11), J13-11
+(J14-13), J13-12 (J14-12). Not judged: J12-8, 11, 12, 15, 19; J13-4, 5, 7, 9, 16, 17, 18.
+
+**Where the fixes to the fourteenth stand:** J14-1 is fixed in the commit that holds this
+text (the ignore line is anchored to the one folder it was meant for, and the plans
+crate and the made-up plan files are committed); `tools/committed.sh` now builds an
+archive of the last commit and is run before a push. Commits `939e6aa`, `719ff91` and
+`f449a57` do not build from a clean clone and what STATUS said of them was true only of
+the working folder. None of the others is fixed yet.

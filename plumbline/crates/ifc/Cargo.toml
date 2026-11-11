@@ -1,0 +1,10 @@
+[package]
+name = "plumbline-ifc"
+description = "IFC models from other trades and designers, brought into a job: storeys, walls with their doors and windows, floors, rooms, ducts and pipes, and a list of everything that was not brought in"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+plumbline-world = { path = "../world" }

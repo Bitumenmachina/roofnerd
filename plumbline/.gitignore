@@ -2,4 +2,6 @@
 # Owner reference estimates and any real job, client or supplier data: local only, never committed.
 /refs/
 *.local.json
-plans/
+# Plan sets fetched for the demonstrations (tools/fetch-plans.sh): this folder only. Anchored,
+# so crates/plans and demos/plans, which are the program's own, are not caught by it.
+/plans/

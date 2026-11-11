@@ -4124,6 +4124,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "plumbline-ifc"
+version = "0.1.0"
+dependencies = [
+ "plumbline-world",
+]
+
+[[package]]
 name = "plumbline-plans"
 version = "0.1.0"
 dependencies = [
