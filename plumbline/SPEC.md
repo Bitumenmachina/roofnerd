@@ -427,11 +427,18 @@ of its own, "size unknown". It is never left out and never given a size.
 `building::takeoff` gives each system's runs by kind and size, with the length and bends
 of each line as a sum that says what it could not include (a sum over nothing has no
 figure; it is not a Known zero), and its equipment and fixtures counted by what each is
-said to be. Elements on no system come last, under no name, so nothing is off the takeoff
-for want of a system. `building::storey_totals` gives each storey's walls and floors.
+said to be. Runs are grouped by their size as a size, said in inches, whatever unit each
+was entered in, and listed smallest first with "size unknown" last. A line is no surer
+than that its runs are on the system: an Assumed membership makes the line Assumed. After
+the systems come two groups, each only when it has something in it: "On no system" (no
+`pl::in_system` at all, which is Known) and "System not known" (a `pl::in_system` that is
+Unknown), flagged Unknown. Nothing is off the takeoff for want of a system. A storey has
+to be directly under the job, and each wall and floor counts on its nearest storey only. `building::storey_totals` gives each storey's walls and floors.
 `building::placements` gives every element's shape in feet, in space, for a window to
 draw, and beside it the list of elements that have no shape and why. A window has to say
-the second list: an element that cannot be drawn does not just go missing.
+the second list: an element that cannot be drawn does not just go missing. A door or
+window that cannot be cut in its wall (it has no size, it runs past the wall's end, it
+stands taller than the wall) is on that list too.
 
 Not modelled yet: fittings and whether runs join; rooms; structure; clashes.
 

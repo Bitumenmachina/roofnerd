@@ -18,7 +18,7 @@ run again and each gave what this file said they gave.
 | D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged five times. Every judgment has found a new way to a wrong figure marked Known, each next to the last fix. All found are fixed. **The fifth round's fixes have not been judged.** |
 | D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged twice: the five demonstrations held both times; two entry forms misread in the first are fixed and held in the second. |
 | D2 | 3D roof slice | **A working 3D prototype, not the whole deliverable.** In a window: a roof solved from its footprint, a plane picked with the mouse, its pitch changed and its eave moved with the lines and totals following, a surface given its condition, and the sheet in a second window updating live. The windows were drawn again on 2026-11-11 after the owner said the first looked cheap and tacky (DECISIONS.md call 25). Not built: tracing a calibrated plan, a dormer, a parapet and tapered crickets in 3D, dragging with the mouse, editing in the sheet. Judged once: the solver's areas and lengths held on every ordinary roof; it found stale planes left Known, an eave moved through the far wall, and an estimator's entries moving to another slope, among others. All fixed. **Those fixes are not judged.** See "D2. What was run". |
-| — | The whole building (owner, 2026-11-11) | **A working model of a whole house, read and walked, not yet drawn in the window.** The owner widened the brief from the envelope to the building and its services (DECISIONS.md call 26). In the world: storeys, walls with doors and windows, floors, ducts, pipes, conduit, cable, equipment, fixtures and systems, each value flagged, with lengths, areas, bends and a takeoff by system. In the window: the whole house under a sky, seen through, a system or a storey at a time, on plan, and on foot inside. Nothing of the building can be edited in the window yet. **Not judged.** See "The whole building". |
+| — | The whole building (owner, 2026-11-11) | **A working model of a whole house, read and walked, not yet drawn in the window.** The owner widened the brief from the envelope to the building and its services (DECISIONS.md call 26). In the world: storeys, walls with doors and windows, floors, ducts, pipes, conduit, cable, equipment, fixtures and systems, each value flagged, with lengths, areas, bends and a takeoff by system. In the window: the whole house under a sky, seen through, a system or a storey at a time, on plan, and on foot inside. Nothing of the building can be edited in the window yet. Judged once: the wall, run and takeoff figures held and nothing crashed; it found a nested storey counted twice as Known and a run whose system was uncertain totalled without a flag, among eight. All fixed. **Those fixes are not judged.** See "The whole building". |
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
 | D4 | Macro to micro | Not started. How its demonstration will be run is written at the end of this file. |
 | D5 | Estimate sheet and money | Not started. Reference estimate missing (Q5). |
@@ -85,7 +85,7 @@ element. Changing one pitch changes, in a file diff, only that entity and the co
 derived from it. Assumed and Unknown values display as flagged.
 
 **How it is run:** `demos/d1.sh`. It uses the built-in sample job, which is made up.
-`cargo test` runs 86 checks on the same model.
+`cargo test` runs 89 checks on the same model.
 
 The figures below are as rerun after the units amendment and D3. Those added to the
 sample job one sheet-metal cost line on the porch headwall and three conditions as recipes,
@@ -125,7 +125,7 @@ still touches the same five entries and no others.
 * Hip: 15 over and 15 up on plan = 21.2132 LF; climbs 7.5 ft; √(450 + 56.25) = 22.5 LF.
 * Porch rake: 8 ft run at 3:12 climbs 2 ft; √68 = 8.2462 LF.
 
-**`cargo test`: 86 passed, 0 failed** (76 on the model, 8 on the ported skeleton, which
+**`cargo test`: 89 passed, 0 failed** (79 on the model, 8 on the ported skeleton, which
 are BIMCraft's own, and 2 on the command line).
 
 **What remains**
@@ -633,7 +633,7 @@ other and with the command line on every surface and length compared.
 | J7-12 | A surface under 0.005 SF was 0 SQ, Known; `figure(-inf)` lost its sign; a job with no roof opened to a blank window that never said so | Too small to say in squares is no figure, not zero; a figure that is not a number says so; a job with nothing in it says so | `a_roof_summary_does_not_say_more_than_it_knows`, `a_roof_summary_counts_facets...` |
 
 **These fixes have not been judged.** The windows they were made in were then rebuilt for
-the whole building (next section), and that rebuild has not been judged either.
+the whole building (next section), and that rebuild was judged next (the eighth judgment, under "The whole building").
 
 ## The whole building. What was run and what it showed
 
@@ -649,7 +649,8 @@ arithmetic, then drives the real program with a real pointer and keyboard on a v
 display and has it save a picture of both windows after each of eight steps. It ends by
 saving the job from the window and comparing it byte for byte with what was opened. It
 exits non-zero if any step fails. The 16 pictures and the takeoff are in
-`demos/captured/house/`.
+`demos/captured/house/`. It was run again after the eighth judgment's fixes and every
+picture opened again.
 
 **The job** is made up: two storeys, 40 ft by 28 ft, under a hip roof solved from its
 footprint. 16 walls with 9 doors and 17 windows, 2 floors, 9 systems, 51 runs (15 ducts,
@@ -721,8 +722,49 @@ opened and read at full size)
   a software renderer, at a frame every second or so. Whether it is smooth on real
   hardware has not been seen. The code is written to be (the camera eases; nothing is
   rebuilt on a hover), and that is a claim about the code, not a measurement.
-* **Judgment.** No independent judge has tried to break the building model or the
-  rebuilt window.
+
+### Eighth judgment: the building's figures held; what could be nested, unsure or uncut did not
+
+A fresh agent (Opus), working only in scratch copies, wrote job files by hand from the
+sample house and ran `check`, `show` and `takeoff` on them, and drove the window through
+odd jobs and odd key orders, reading the pictures. (Its first run was lost when the
+machine restarted; this is the second.)
+
+**What held.** A wall's net area: an Unknown `along` or `sill` makes it Unknown, never
+Known; an Assumed width makes it Assumed; an overlap, an opening past the end and one
+above the top are each refused with the reason; an opening in inches on a wall in feet
+converts. Metric, unitless and not-a-number lengths, a run of one point and a diameter of
+zero are refused on load. Stale measures are reported and recomputed. `house` then `check`
+gives the same bytes. A sum over nothing reads "none" in the command line and both
+windows. The four hand checks in `demos/house.sh` are right. No panic from any key order
+or any odd job; each refusal was red. The windows do no arithmetic but for placing things
+on the screen.
+
+**What it found, and what was done.**
+
+| # | What the eighth judge found | What was done | Regression test |
+|---|---|---|---|
+| J8-1 | **Doubled, and Known.** A storey moved under another storey loaded, and the first floor showed 16 walls, 420 LF and two floors, Known | A storey has to be directly under the job; and each wall and floor counts on the nearest storey above it and no other | `a_storey_stands_under_the_job_and_counts_only_what_is_nearest_it` |
+| J8-2 | **A flag dropped.** A run only assumed to be on a system was totalled under it as Known | A run's length on a line is no surer than that the run is on the system | `a_takeoff_is_no_surer_than_what_is_on_the_system_and_one_size_is_one_line` |
+| J8-3 | **Gone from the windows.** A run whose system is Unknown was listed as "on no system", unflagged, and both windows left that group out altogether | Not knowing the system is not having none: such a run is in a group of its own, "System not known", flagged Unknown, with its length. Both groups are listed in the browser and on every discipline's tab | same |
+| J8-4 | A long opening message pushed every figure column off the sheet | A bar holds one line cut to fit; the whole message is in the card over the model. Checked by eye on a file with 40 stale measures | |
+| J8-5 | A figure refused for a reason of its own (two openings lying over each other) showed a bare red "unknown"; the reason could be read only by selecting the wall | Every refusal reason is listed under "To settle" | |
+| J8-6 | **Gone from the picture.** An opening that could not be cut in its wall was not drawn and was in no list | `placements` lists each one with why, and the windows show the list | `an_opening_that_cannot_be_cut_is_said_and_a_listing_keeps_a_door_under_its_wall` |
+| J8-7 | One size was three takeoff lines when typed as `6 in`, `0.5 ft` and `0' 6"`; lines sorted as text, 12 in before 6 in | Runs are grouped by their size as a size and said in inches; lines are in order of size, with no size last | `a_takeoff_is_no_surer_than...` |
+| J8-8 | `show` listed every door and window after the last wall, indented as if under it | A flat reading is in tree order: each element, then what is under it | `an_opening_that_cannot_be_cut_is_said...` |
+
+Not confirmed by the judge and not changed: a very short segment in a run adds a bend
+(it is a bend; whether so short a one is a slip of the hand is for when runs are drawn in
+the window, as it was for traced roofs). On foot with a storey of unknown elevation the eye
+stands at the datum.
+
+**These fixes have not been judged.** They were seen in the window once, by hand, on a
+job made for it (a pipe on a system marked Unknown, a door moved past the end of its
+wall, every measure stripped from the file): the browser and the Mechanical tab list
+"System not known, 34.50 LF" with an Unknown chip; "To settle" lists "Net area of south
+wall has no figure: door-0012 ends 42.00 ft along a wall 40.00 ft long" and "door-0012 is
+not drawn: it runs past the end of wall-0004"; and the sheet keeps its columns under a
+message naming over a hundred elements. That picture is not in `demos/captured/`.
 
 ## D3. How its demonstration will be run (written before any D3 work)
 

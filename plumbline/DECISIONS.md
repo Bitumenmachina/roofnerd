@@ -619,3 +619,26 @@ building envelope first" to the building and its services, and it is his to wide
   structure; rooms; structure itself; editing any of this in the window (it is read and
   walked, not yet drawn); IFC in and out (D6); cost recipes for MEP.
 
+### 27. Calls made fixing what the eighth judgment found
+* **A storey is a floor of the building, directly under the job.** Nothing else is a
+  storey's parent. And a total counts each wall and floor on its nearest storey only, so
+  a job built in code that breaks the rule still cannot count anything twice.
+* **Not knowing which system is not the same as being on none.** A takeoff has two groups
+  after the systems, each only when it has something in it: "On no system", which is a
+  Known fact about what is in it, and "System not known", which is flagged Unknown. A run
+  in either keeps its length. Neither is a system and neither can be selected as one.
+* **A takeoff line is no surer than the membership of what is on it.** A run assumed to be
+  on a system makes its line, and the system's total, Assumed.
+* **A size is a size, however it was typed.** Runs are grouped by their size in feet and
+  the line is said in inches, the way pipe and duct are sold. The value on the run itself
+  is still held and shown in the unit it was entered in (call 16); only the takeoff's
+  grouping converts.
+* **An opening that is not cut is said.** It is in the not-drawn list with why. Its wall is
+  still drawn, whole where the opening would have been.
+* **A flat reading of the job is in tree order**, not the order things were added in. The
+  saved file is still written in the order things were added, so a save changes nothing
+  it did not have to.
+* **A one-line bar shows one line.** A message is cut to fit it and shown whole in the
+  card over the model. It is formatting; nothing is hidden that is not shown elsewhere in
+  the same window.
+

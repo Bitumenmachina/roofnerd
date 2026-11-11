@@ -80,7 +80,8 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
         let _ = writeln!(out, "    doors {}, windows {}", s.doors, s.windows);
     }
     for t in building::takeoff(job) {
-        let _ = writeln!(out, "\n{}  ({}; {} runs, {})", t.name, if t.classification.is_empty() { "no system" } else { &t.classification }, t.runs.members, said(&t.runs));
+        let what = if !t.classification.is_empty() { t.classification.as_str() } else if t.flag == Status::Unknown { "which system is not known" } else { "no system" };
+        let _ = writeln!(out, "\n{}{}  ({what}; {} runs, {})", if t.flag == Status::Known { String::new() } else { format!("{} ", t.flag.flag()) }, t.name, t.runs.members, said(&t.runs));
         for line in &t.lines {
             let _ = writeln!(out, "  {} {:<8} {:<16} {:>2} runs  {:>12}   bends {}", line.size_status.max(line.length.status).flag(), format!("{:?}", line.kind), line.size, line.length.members, said(&line.length), said(&line.bends));
         }

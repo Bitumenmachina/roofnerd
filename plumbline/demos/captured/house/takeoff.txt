@@ -15,10 +15,10 @@ second floor  (storey-0025)
     doors 4, windows 9
 
 Supply air  (Supply Air; 13 runs, 195.00 LF)
+  ~ Duct     6 in round        9 runs      88.40 LF   bends 4 EA
   ~ Duct     12 in × 8 in      2 runs      59.20 LF   bends 1 EA
   ~ Duct     14 in × 8 in      1 runs      19.00 LF   bends 0 EA
   ~ Duct     16 in × 8 in      1 runs      28.40 LF   bends 2 EA
-  ~ Duct     6 in round        9 runs      88.40 LF   bends 4 EA
   ~ Equipment Air handler, vertical: 1 EA
     Fixture   Ceiling register, 4 × 10: 9 EA
 
@@ -31,9 +31,9 @@ Refrigerant  (Refrigerant; 1 runs, 34.50 LF)
   ~ Equipment Heat pump, outdoor unit: 1 EA
 
 Cold water  (Domestic Cold Water; 12 runs, 69.62 LF)
-    Pipe     1 in round        1 runs      22.70 LF   bends 3 EA
     Pipe     1/2 in round      7 runs      11.60 LF   bends 4 EA
     Pipe     3/4 in round      4 runs      35.32 LF   bends 3 EA
+    Pipe     1 in round        1 runs      22.70 LF   bends 3 EA
     Fixture   Lavatory: 2 EA
     Fixture   Water closet: 2 EA
     Fixture   Bathtub, 5 ft: 2 EA
@@ -55,8 +55,8 @@ Vent  (Vent; 1 runs, 12.10 LF)
     Pipe     2 in round        1 runs      12.10 LF   bends 0 EA
 
 Power  (Power; 3 runs, 98.80 LF)
-  ~ Cable    0.4 in round      2 runs      89.25 LF   bends 6 EA
     Conduit  2 in round        1 runs       9.55 LF   bends 1 EA
+  ~ Cable    0.4 in round      2 runs      89.25 LF   bends 6 EA
     Equipment Meter socket, 200 A: 1 EA
     Equipment Panelboard, 200 A: 1 EA
     Fixture   Duplex receptacle: 2 EA

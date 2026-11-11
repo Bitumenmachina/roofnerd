@@ -109,6 +109,17 @@ pub fn shown(row: &view::Row) -> String {
     }
 }
 
+/// A message cut to what a one-line bar can hold. The whole of it is in the card over
+/// the model whenever it is more than a plain "done".
+pub fn one_line(message: &str, most: usize) -> String {
+    let first = message.lines().next().unwrap_or("");
+    if first.chars().count() <= most {
+        return first.to_string();
+    }
+    let cut: String = first.chars().take(most.saturating_sub(1)).collect();
+    format!("{}…", cut.trim_end())
+}
+
 pub fn tone_ink(tone: Tone) -> (Color, Color) {
     match tone {
         Tone::Done => (theme::green(), theme::ink_soft()),
@@ -185,7 +196,7 @@ fn title_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
 }
 
 fn status_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
-    let first = doc.message.lines().next().unwrap_or("").to_string();
+    let first = one_line(&doc.message, 150);
     let (dot, ink) = tone_ink(doc.tone);
     p.spawn(floating(Node { bottom: px(GAP), left: px(GAP), right: px(GAP), height: px(STATUS_H), padding: UiRect::horizontal(px(16.0)), align_items: AlignItems::Center, column_gap: px(9.0), overflow: Overflow::clip(), ..default() })).with_children(|bar| {
         bar.spawn((rounded(Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, 4.0), BackgroundColor(dot)));
@@ -295,13 +306,17 @@ fn browser(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             heading(c, fonts, "Systems");
             for system in &snap.systems {
                 let t = &system.takeoff;
-                if t.path.is_empty() {
-                    continue;
-                }
                 let path = t.path.clone();
-                browser_row(c, doc.selected.as_deref() == Some(t.path.as_str()), move |doc| doc.select(&path), |r| {
-                    swatch(r, theme::system_colour(&t.classification));
-                    r.spawn((text(fonts, t.name.clone(), 12.5, Weight::Medium, theme::ink()), TextLayout::no_wrap()));
+                // What is on no system, or on one nobody has named, is listed too. It is
+                // not a system and cannot be selected as one.
+                let act = move |doc: &mut Doc| {
+                    if !path.is_empty() {
+                        doc.select(&path);
+                    }
+                };
+                browser_row(c, !t.path.is_empty() && doc.selected.as_deref() == Some(t.path.as_str()), act, |r| {
+                    swatch(r, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::system_colour(&t.classification) });
+                    r.spawn((text(fonts, t.name.clone(), 12.5, Weight::Medium, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::ink() }), TextLayout::no_wrap()));
                     r.spawn(Node { flex_grow: 1.0, ..default() });
                     r.spawn((text(fonts, total(&t.runs), 11.5, Weight::Regular, if t.runs.members == 0 { theme::ink_faint() } else { theme::status_ink(t.runs.status) }), TextLayout::no_wrap()));
                 });

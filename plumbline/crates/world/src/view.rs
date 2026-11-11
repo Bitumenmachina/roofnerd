@@ -68,10 +68,38 @@ fn derived(path: &str, label: &str, d: &Derived) -> Row {
     Row { path: path.into(), label: label.into(), text, status: d.status, basis: d.formula.clone(), note: d.note.clone(), derived: true, number: d.value, unit: d.unit.clone() }
 }
 
-/// Every element in job order, each with all of its values.
+/// Every element in tree order (each one, then what is under it), each with all of its
+/// values.
 pub fn elements(job: &mut Job) -> Vec<ElementRows> {
     let mut out = Vec::new();
-    let order = job.order.clone();
+    // Tree order: each element, then everything under it, with brothers in the order they
+    // were added. A door is listed under its own wall, whenever it was added.
+    let order = {
+        let w = &job.world;
+        let path_of = |e: &bevy_ecs::entity::Entity| w.get::<Node>(*e).map(|n| n.path.clone());
+        let known: std::collections::HashSet<String> = job.order.iter().filter_map(path_of).collect();
+        let mut under: std::collections::HashMap<Option<String>, Vec<bevy_ecs::entity::Entity>> = std::collections::HashMap::new();
+        for e in &job.order {
+            // An element whose parent is not in the job is listed at the top, not lost.
+            let parent = w.get::<Node>(*e).and_then(|n| n.parent.clone()).filter(|p| known.contains(p));
+            under.entry(parent).or_default().push(*e);
+        }
+        let mut out = Vec::with_capacity(job.order.len());
+        let mut stack: Vec<bevy_ecs::entity::Entity> = under.get(&None).cloned().unwrap_or_default().into_iter().rev().collect();
+        while let Some(e) = stack.pop() {
+            out.push(e);
+            if let Some(children) = path_of(&e).and_then(|p| under.get(&Some(p))) {
+                stack.extend(children.iter().rev());
+            }
+        }
+        // A loop of parents (which a loaded file cannot have) would leave some out.
+        for e in &job.order {
+            if !out.contains(e) {
+                out.push(*e);
+            }
+        }
+        out
+    };
     let w = &job.world;
     // How deep each element sits. The tree was checked on load; the step limit is only
     // so that a world built wrongly in code cannot hang a view.

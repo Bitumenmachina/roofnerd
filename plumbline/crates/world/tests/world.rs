@@ -2377,3 +2377,108 @@ fn the_building_checks_refuse_what_cannot_be() {
     let err = file::load(&broken).err().expect("a dangling system is refused");
     assert!(err.contains("which is not a system in this job"), "{err}");
 }
+
+// ---------------------------------------------------------------- the eighth judgment
+
+#[test]
+fn a_storey_stands_under_the_job_and_counts_only_what_is_nearest_it() {
+    use plumbline_world::building::storey_totals;
+    // A file with the second floor moved under the first does not load.
+    let mut job = plumbline_world::sample::house();
+    let text = file::save(&mut job);
+    let (first, second) = (path_named(&mut job, "first floor"), path_named(&mut job, "second floor"));
+    let mut doc: serde_json::Value = serde_json::from_str(&text).unwrap();
+    for entry in doc["data"].as_array_mut().unwrap() {
+        let path = entry["path"].as_str().unwrap().to_string();
+        if path == "job-0001" {
+            entry["children"].as_object_mut().unwrap().remove("second floor");
+        } else if path == first {
+            entry["children"].as_object_mut().unwrap().insert("second floor".into(), second.clone().into());
+        }
+    }
+    let err = file::load(&doc.to_string()).err().expect("a storey under a storey is refused");
+    assert!(err.contains("has to be directly under the job"), "{err}");
+    // Built in code, where nothing stops it, each wall still counts once, on its own storey.
+    let e = job.find(&second).unwrap();
+    job.world.get_mut::<plumbline_world::Node>(e).unwrap().parent = Some(first.clone());
+    let totals = storey_totals(&mut job);
+    assert_eq!((totals[0].walls.members, totals[0].walls.value), (8, Some(210.0)));
+    assert_eq!((totals[1].walls.members, totals[1].floors.value), (8, Some(1120.0)));
+}
+
+#[test]
+fn a_takeoff_is_no_surer_than_what_is_on_the_system_and_one_size_is_one_line() {
+    use plumbline_world::building::takeoff;
+    use plumbline_world::{InSystem, Size};
+    let mut job = plumbline_world::sample::house();
+    let line_set = path_named(&mut job, "refrigerant line set");
+    let system = path_named(&mut job, "Refrigerant");
+    // Said to be on the system, but only assumed so: its line is Assumed, and so is the total.
+    job.put(&line_set, InSystem(Val::assumed(system.clone(), "", "guessed from where it runs"))).unwrap();
+    let t = takeoff(&mut job);
+    let refrigerant = t.iter().find(|s| s.name == "Refrigerant").unwrap();
+    assert_eq!((refrigerant.lines[0].length.value, refrigerant.lines[0].length.status), (Some(34.5), Status::Assumed));
+    assert_eq!(refrigerant.runs.status, Status::Assumed);
+    // On a system nobody can name: not "on no system". It is in a group of its own,
+    // flagged Unknown, with its length; and the system it left has no runs.
+    job.put(&line_set, InSystem(Val::unknown("", "not marked on the plan"))).unwrap();
+    let t = takeoff(&mut job);
+    assert_eq!(t.iter().find(|s| s.name == "Refrigerant").unwrap().runs.members, 0);
+    assert!(t.iter().all(|s| s.name != "On no system"));
+    let lost = t.iter().find(|s| s.name == "System not known").expect("a group for what is on an unknown system");
+    assert_eq!((lost.flag, lost.path.as_str(), lost.runs.value, lost.runs.members), (Status::Unknown, "", Some(34.5), 1));
+    // With no system entered at all it is on no system, and that is Known.
+    let e = job.find(&line_set).unwrap();
+    job.world.entity_mut(e).remove::<InSystem>();
+    let t = takeoff(&mut job);
+    let none = t.iter().find(|s| s.name == "On no system").unwrap();
+    assert_eq!((none.flag, none.runs.value), (Status::Known, Some(34.5)));
+
+    // One size is one line, however each run's was typed, and lines are in order of size.
+    let mut job = plumbline_world::sample::house();
+    let a = path_named(&mut job, "branch to living west");
+    let b = path_named(&mut job, "branch to kitchen");
+    job.put(&a, Size::round(Val::known(Len::One(0.5), "ft", "test"))).unwrap();
+    job.put(&b, Size::round(Val::known(Len::FtIn([0.0, 6.0]), "ft-in", "test"))).unwrap();
+    job.derive();
+    let t = takeoff(&mut job);
+    let supply = t.iter().find(|s| s.name == "Supply air").unwrap();
+    let sizes: Vec<&str> = supply.lines.iter().map(|l| l.size.as_str()).collect();
+    assert_eq!(sizes, ["6 in round", "12 in × 8 in", "14 in × 8 in", "16 in × 8 in"]);
+    assert_eq!((supply.lines[0].length.members, supply.lines[0].length.value), (9, Some(88.4)));
+    // The two typed in feet are Known where the rest are Assumed: the line is still Assumed.
+    assert_eq!(supply.lines[0].size_status, Status::Assumed);
+}
+
+#[test]
+fn an_opening_that_cannot_be_cut_is_said_and_a_listing_keeps_a_door_under_its_wall() {
+    use plumbline_world::building::placements;
+    use plumbline_world::Opening;
+    let mut job = plumbline_world::sample::house();
+    let first = path_named(&mut job, "first floor");
+    let south = job.children().get(&first).unwrap().get("south wall").unwrap().clone();
+    let door = job.children().get(&south).unwrap().get("front door").unwrap().clone();
+    let len = |x: f64| Val::known(Len::One(x), "ft", "test");
+    // A door moved past the end of its wall is not cut, and is listed as not cut, with why.
+    job.put(&door, Opening { along: len(39.0), width: len(3.0), height: len(6.67), sill: len(0.0) }).unwrap();
+    job.derive();
+    let (drawn, not_drawn) = placements(&mut job);
+    let wall = drawn.iter().find(|p| p.path == south).unwrap();
+    match &wall.shape {
+        plumbline_world::building::Shape::Wall { holes, .. } => assert!(holes.iter().all(|h| h.0 != door)),
+        other => panic!("{other:?}"),
+    }
+    assert_eq!(not_drawn, vec![(door.clone(), format!("it runs past the end of {south}, so it is not cut in it"))]);
+    // One whose width nobody has is said too.
+    job.put(&door, Opening { along: len(18.5), width: Val::unknown("ft", "not on the plan"), height: len(6.67), sill: len(0.0) }).unwrap();
+    let (_, not_drawn) = placements(&mut job);
+    assert_eq!(not_drawn.len(), 1);
+    assert!(not_drawn[0].1.contains("is not known"), "{}", not_drawn[0].1);
+    // A flat reading lists each door and window straight after its own wall's rows, one
+    // level in, whenever it was added: the front door is under the south wall.
+    let rows = plumbline_world::view::elements(&mut job);
+    let at = rows.iter().position(|e| e.path == south).unwrap();
+    assert_eq!((rows[at + 1].path.as_str(), rows[at + 1].depth), (door.as_str(), rows[at].depth + 1));
+    assert!(rows[at + 1..at + 4].iter().all(|e| e.kind.is_opening()));
+    assert_eq!(rows.len(), job.order.len());
+}

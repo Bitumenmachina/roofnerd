@@ -331,6 +331,12 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
                 continue;
             }
             if r.derived {
+                // A figure refused for a reason of its own (an opening that does not fit,
+                // a line that does not fit its planes) is said with the reason. One that
+                // is only flagged because an input is, is covered by that input's entry.
+                if !r.note.is_empty() {
+                    s.notes.push((r.status, format!("{} of {} has no figure", crate::panels::pretty(&r.label), el.name), r.note.clone()));
+                }
                 continue;
             }
             let mut what = r.label.clone();

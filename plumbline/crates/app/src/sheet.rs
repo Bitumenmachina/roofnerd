@@ -10,7 +10,7 @@ use bevy::picking::pointer::PointerButton;
 use bevy::prelude::*;
 
 use crate::model::{Doc, Snapshot, Tab};
-use crate::panels::{amount, pretty, shown, tally_chips, tone_ink, total, wordmark, Cameras, Scrolls};
+use crate::panels::{amount, one_line, pretty, shown, tally_chips, tone_ink, total, wordmark, Cameras, Scrolls};
 use crate::theme::{self, rounded, status_chip, swatch, text, Fonts, Weight};
 use plumbline_world::value::Status;
 use plumbline_world::{units, view, Discipline, Kind};
@@ -110,7 +110,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
         commands.entity(e).despawn();
     }
     let fonts = &*fonts;
-    commands.spawn((Node { width: percent(100.0), height: percent(100.0), flex_direction: FlexDirection::Column, ..default() }, BackgroundColor(theme::canvas()), UiTargetCamera(cameras.sheet), SheetUi)).with_children(|root| {
+    commands.spawn((Node { width: percent(100.0), max_width: percent(100.0), height: percent(100.0), flex_direction: FlexDirection::Column, overflow: Overflow::clip(), ..default() }, BackgroundColor(theme::canvas()), UiTargetCamera(cameras.sheet), SheetUi)).with_children(|root| {
         // The sheet's own title bar.
         root.spawn((Node { height: px(52.0), flex_shrink: 0.0, padding: UiRect::horizontal(px(18.0)), align_items: AlignItems::Center, column_gap: px(12.0), border: UiRect::bottom(px(1.0)), overflow: Overflow::clip(), ..default() }, BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()))).with_children(|bar| {
             wordmark(bar, fonts);
@@ -162,7 +162,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             cost_lines(body, fonts, &snap);
         });
         // The last thing that happened. It cannot push the sheet wider than its window.
-        let first = doc.message.lines().next().unwrap_or("").to_string();
+        let first = one_line(&doc.message, 110);
         let (tone_dot, ink) = tone_ink(doc.tone);
         root.spawn((Node { height: px(32.0), flex_shrink: 0.0, padding: UiRect::horizontal(px(16.0)), align_items: AlignItems::Center, column_gap: px(9.0), border: UiRect::top(px(1.0)), overflow: Overflow::clip(), ..default() }, BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()))).with_children(|bar| {
             bar.spawn((rounded(Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, 4.0), BackgroundColor(tone_dot)));
@@ -343,7 +343,9 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
 
 /// One discipline's systems: each one's runs by kind and size, and what is set on it.
 fn systems(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, discipline: Discipline) {
-    let mine: Vec<_> = snap.systems.iter().map(|s| &s.takeoff).filter(|t| t.discipline == discipline && !t.path.is_empty()).collect();
+    // The two groups that are not systems (on none, or on one that is not known) belong
+    // to no discipline, so every discipline's tab lists them: they are somebody's.
+    let mine: Vec<_> = snap.systems.iter().map(|s| &s.takeoff).filter(|t| t.discipline == discipline || t.path.is_empty()).collect();
     if mine.is_empty() {
         nothing(p, fonts, &format!("This job has no {} systems.", theme::discipline_name(discipline).to_lowercase()));
     }
@@ -353,15 +355,16 @@ fn systems(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         p.spawn(theme::card(Node { flex_direction: FlexDirection::Column, overflow: Overflow::clip(), flex_shrink: 0.0, ..default() })).with_children(|c| {
             c.spawn((Node { align_items: AlignItems::Center, column_gap: px(9.0), padding: UiRect { left: px(16.0), right: px(16.0), top: px(12.0), bottom: px(11.0) }, ..default() }, BackgroundColor(if selected { theme::accent_wash() } else { Color::NONE })))
                 .with_children(|h| {
-                    swatch(h, theme::system_colour(&t.classification));
-                    h.spawn(text(fonts, t.name.clone(), 14.0, Weight::Semibold, theme::ink()));
+                    swatch(h, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::system_colour(&t.classification) });
+                    h.spawn(text(fonts, t.name.clone(), 14.0, Weight::Semibold, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::ink() }));
                     h.spawn(text(fonts, t.classification.clone(), 12.0, Weight::Regular, theme::ink_faint()));
+                    status_chip(h, fonts, t.flag);
                     h.spawn(Node { flex_grow: 1.0, ..default() });
                     h.spawn(text(fonts, format!("{} runs", t.runs.members), 12.0, Weight::Regular, theme::ink_faint()));
                     h.spawn(text(fonts, total(&t.runs), 13.0, Weight::Semibold, if t.runs.members == 0 { theme::ink_faint() } else { theme::status_ink(t.runs.status) }));
                 })
                 .observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
-                    if press.button == PointerButton::Primary && doc.entry.is_none() {
+                    if press.button == PointerButton::Primary && doc.entry.is_none() && !path.is_empty() {
                         doc.select(&path);
                     }
                 });

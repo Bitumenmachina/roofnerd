@@ -425,6 +425,9 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         if matches!(kind, Kind::Wall | Kind::Floor) && parent != Some(Kind::Storey) {
             return Err(format!("{}: a {kind:?} stands on a storey and has to be under one", node.path));
         }
+        if *kind == Kind::Storey && parent != Some(Kind::Job) {
+            return Err(format!("{}: a storey is a floor of the building and has to be directly under the job, not under {}", node.path, node.parent.as_deref().unwrap_or("nothing")));
+        }
         if let Some(named) = in_system.and_then(|s| s.0.value.as_ref()) {
             if kinds.get(named) != Some(&Kind::System) {
                 return Err(format!("{}: says it belongs to {named:?}, which is not a system in this job", node.path));
@@ -735,6 +738,8 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
         let system = w.get::<InSystem>(e).and_then(|s| s.0.value.clone());
         let discipline = system.as_ref().and_then(|p| index.get(p)).and_then(|s| w.get::<SystemInfo>(*s)).map(|s| s.discipline).unwrap_or(kind.discipline());
         let base = storey.as_ref().map(|s| s.1);
+        // Openings under this wall that cannot be cut in it, each with why.
+        let mut uncut: Vec<(String, String)> = Vec::new();
         let shape: Result<(Shape, Status), String> = match kind {
             Kind::Wall => (|| {
                 let c = w.get::<Wall>(e).ok_or("it has no wall line")?;
@@ -750,10 +755,18 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
                     if cn.parent.as_deref() != Some(n.path.as_str()) {
                         continue;
                     }
-                    let (Some(k), Some(o)) = (w.get::<Kind>(child).copied(), w.get::<Opening>(child)) else { continue };
-                    // An opening is cut only where it is known and lies in the wall.
-                    if let Some(((from, width), (sill, tall))) = o.along.feet().zip(o.width.feet()).zip(o.sill.feet().zip(o.height.feet())) {
-                        if from + width <= length + crate::check::FIT_TOLERANCE_FT && sill + tall <= height + crate::check::FIT_TOLERANCE_FT {
+                    let Some(k) = w.get::<Kind>(child).copied().filter(|k| k.is_opening()) else { continue };
+                    let Some(o) = w.get::<Opening>(child) else {
+                        uncut.push((cn.path.clone(), "it has no opening entered, so it is not cut in its wall".into()));
+                        continue;
+                    };
+                    // An opening is cut only where it is known and lies in the wall. One
+                    // that is not cut is said, with why: it does not just go missing.
+                    match o.along.feet().zip(o.width.feet()).zip(o.sill.feet().zip(o.height.feet())) {
+                        None => uncut.push((cn.path.clone(), "where it is or how big it is is not known, so it is not cut in its wall".into())),
+                        Some(((from, width), _)) if from + width > length + crate::check::FIT_TOLERANCE_FT => uncut.push((cn.path.clone(), format!("it runs past the end of {}, so it is not cut in it", n.path))),
+                        Some((_, (sill, tall))) if sill + tall > height + crate::check::FIT_TOLERANCE_FT => uncut.push((cn.path.clone(), format!("it stands taller than {}, so it is not cut in it", n.path))),
+                        Some(((from, width), (sill, tall))) => {
                             holes.push((cn.path.clone(), k, [from, from + width, sill, sill + tall]));
                             status = status.max(o.along.status).max(o.width.status).max(o.sill.status).max(o.height.status);
                         }
@@ -786,6 +799,7 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
             Ok((shape, status)) => drawn.push(Placement { path: n.path.clone(), name: n.name.clone(), kind, storey: storey.map(|s| s.0), system, discipline, shape, status }),
             Err(why) => not_drawn.push((n.path.clone(), why)),
         }
+        not_drawn.extend(uncut);
     }
     (drawn, not_drawn)
 }
@@ -794,6 +808,8 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
 #[derive(Clone, Debug)]
 pub struct TakeoffLine {
     pub kind: Kind,
+    /// The size, said in inches whatever unit each run's was entered in, so that one
+    /// size is one line.
     pub size: String,
     /// The worst status among the sizes of the runs on this line.
     pub size_status: Status,
@@ -803,86 +819,114 @@ pub struct TakeoffLine {
 
 #[derive(Clone, Debug)]
 pub struct SystemTakeoff {
+    /// The system's path. Empty for the two groups that are not systems: what is on no
+    /// system, and what is on a system nobody has named.
     pub path: String,
     pub name: String,
     pub discipline: Discipline,
     pub classification: String,
+    /// How sure it is that what is listed here belongs here. Known for a system and for
+    /// what is on none; Unknown for what is on a system that is not known.
+    pub flag: Status,
     /// All of its runs, whatever their size: how many and how far.
     pub runs: Sum,
     pub lines: Vec<TakeoffLine>,
     /// Equipment and fixtures on the system: what each is, how many, and the worst status
-    /// among what they are said to be.
+    /// among what they are said to be and whether they are on this system.
     pub placed: Vec<(Kind, String, usize, Status)>,
 }
 
+/// A size in feet, said in inches: `6 in`, `3/4 in`.
+fn in_inches(feet: f64) -> String {
+    units::show_length(&Len::One((feet * 12.0 * 1.0e6).round() / 1.0e6), units::IN)
+}
+
 /// What each system comes to: its runs by kind and size with their length and bends, and
-/// its equipment and fixtures counted by what they are. Elements on no system come last,
-/// under an empty path, so nothing is left off the takeoff for want of a system.
+/// its equipment and fixtures counted by what they are.
+///
+/// A run said to be on a system with less than certainty (Assumed) carries that onto its
+/// line: the line's length is no surer than that the run is on this system. Two groups
+/// come after the systems, when there is anything in them, so nothing is left off for
+/// want of a system: what is on no system, and what is on a system that is not known.
+/// Not knowing the system is not the same as having none.
+///
+/// Runs are grouped by their size as a size, not as it was typed: 6 in, 0.5 ft and 0' 6"
+/// are one line. Lines are in order of size, smallest first, with no size last.
 pub fn takeoff(job: &mut Job) -> Vec<SystemTakeoff> {
     let order = job.order.clone();
     let w = &job.world;
+    let blank = |name: &str, flag: Status| SystemTakeoff { path: String::new(), name: name.into(), discipline: Discipline::Architecture, classification: String::new(), flag, runs: view::sum_of("LF", &[]), lines: Vec::new(), placed: Vec::new() };
     let mut systems: Vec<SystemTakeoff> = Vec::new();
     for &e in &order {
         if let (Some(n), Some(info)) = (w.get::<Node>(e), w.get::<SystemInfo>(e)) {
-            systems.push(SystemTakeoff { path: n.path.clone(), name: n.name.clone(), discipline: info.discipline, classification: info.classification.clone(), runs: view::sum_of("LF", &[]), lines: Vec::new(), placed: Vec::new() });
+            systems.push(SystemTakeoff { path: n.path.clone(), name: n.name.clone(), discipline: info.discipline, classification: info.classification.clone(), ..blank("", Status::Known) });
         }
     }
+    let named = systems.len();
+    systems.push(blank("On no system", Status::Known));
+    systems.push(blank("System not known", Status::Unknown));
     type Figures = Vec<(String, Option<f64>, Status)>;
-    let mut runs: BTreeMap<(usize, String, String), (Kind, Status, Figures, Figures)> = BTreeMap::new();
-    let mut none = SystemTakeoff { path: String::new(), name: "On no system".into(), discipline: Discipline::Architecture, classification: String::new(), runs: view::sum_of("LF", &[]), lines: Vec::new(), placed: Vec::new() };
+    // By system, then kind, then size: round before rectangular, small before large, and
+    // a run with no size last.
+    let mut runs: BTreeMap<(usize, u8, u8, i64, i64), (Kind, String, Status, Figures, Figures)> = BTreeMap::new();
     for &e in &order {
         let (Some(n), Some(kind)) = (w.get::<Node>(e), w.get::<Kind>(e).copied()) else { continue };
         if !(kind.is_route() || kind.is_placed()) {
             continue;
         }
-        let named = w.get::<InSystem>(e).and_then(|s| s.0.value.clone());
-        let at = named.as_ref().and_then(|p| systems.iter().position(|s| s.path == *p)).unwrap_or(systems.len());
+        // Which group it goes in, and how sure that is.
+        let (at, sure) = match w.get::<InSystem>(e) {
+            None => (named, Status::Known),
+            Some(s) => match s.0.value.as_ref().and_then(|p| systems[..named].iter().position(|x| x.path == *p)) {
+                Some(i) if s.0.status != Status::Unknown => (i, s.0.status),
+                _ => (named + 1, Status::Known),
+            },
+        };
         if kind.is_placed() {
             let what = w.get::<Placed>(e).map(|p| (p.what.value.clone().unwrap_or_else(|| "not said".into()), p.what.status)).unwrap_or(("not said".into(), Status::Unknown));
-            let list = if at < systems.len() { &mut systems[at].placed } else { &mut none.placed };
+            let list = &mut systems[at].placed;
             match list.iter_mut().find(|x| x.0 == kind && x.1 == what.0) {
                 Some(entry) => {
                     entry.2 += 1;
-                    entry.3 = entry.3.max(what.1);
+                    entry.3 = entry.3.max(what.1).max(sure);
                 }
-                None => list.push((kind, what.0, 1, what.1)),
+                None => list.push((kind, what.0, 1, what.1.max(sure))),
             }
             continue;
         }
         let size = w.get::<Size>(e);
-        let said = size.map(|s| s.said()).unwrap_or_else(|| "size unknown".into());
+        let micro = |feet: f64| (feet * 12.0 * 1.0e6).round() as i64;
+        let (shape, a, b, said) = match size.map(|s| (s.round_ft(), s.rect_ft())) {
+            Some((Some(d), _)) => (0, micro(d), 0, format!("{} round", in_inches(d))),
+            Some((None, Some((width, depth)))) => (1, micro(width), micro(depth), format!("{} × {}", in_inches(width), in_inches(depth))),
+            _ => (2, 0, 0, "size unknown".to_string()),
+        };
+        let rank = match kind {
+            Kind::Duct => 0,
+            Kind::Pipe => 1,
+            Kind::Conduit => 2,
+            _ => 3,
+        };
         let figure = |name: &str| w.get::<Measure>(e).and_then(|m| m.0.get(name)).map(|d| (d.value, d.status)).unwrap_or((None, Status::Unknown));
-        let entry = runs.entry((at, format!("{kind:?}"), said)).or_insert((kind, Status::Known, Vec::new(), Vec::new()));
-        entry.1 = entry.1.max(size.map(|s| s.status()).unwrap_or(Status::Unknown));
+        let entry = runs.entry((at, rank, shape, a, b)).or_insert((kind, said, Status::Known, Vec::new(), Vec::new()));
+        entry.2 = entry.2.max(if shape == 2 { Status::Unknown } else { size.map(|s| s.status()).unwrap_or(Status::Unknown) });
+        // A figure that is there is no surer than that the run is on this system.
         let (l, ls) = figure("true_length");
-        let (b, bs) = figure("bends");
-        entry.2.push((n.path.clone(), l, ls));
-        entry.3.push((n.path.clone(), b, bs));
+        let (bends, bs) = figure("bends");
+        entry.3.push((n.path.clone(), l, if l.is_some() { ls.max(sure) } else { ls }));
+        entry.4.push((n.path.clone(), bends, if bends.is_some() { bs.max(sure) } else { bs }));
     }
-    let mut all: Vec<Figures> = vec![Vec::new(); systems.len() + 1];
-    for ((at, _, _), (_, _, lengths, _)) in &runs {
+    let mut all: Vec<Figures> = vec![Vec::new(); systems.len()];
+    for ((at, ..), (_, _, _, lengths, _)) in &runs {
         all[*at].extend(lengths.iter().cloned());
     }
     for (i, figures) in all.iter().enumerate() {
-        let total = view::sum_of("LF", figures);
-        if i < systems.len() {
-            systems[i].runs = total;
-        } else {
-            none.runs = total;
-        }
+        systems[i].runs = view::sum_of("LF", figures);
     }
-    for ((at, _, size), (kind, size_status, lengths, bends)) in runs {
-        let line = TakeoffLine { kind, size, size_status, length: view::sum_of("LF", &lengths), bends: view::sum_of("EA", &bends) };
-        if at < systems.len() {
-            systems[at].lines.push(line);
-        } else {
-            none.lines.push(line);
-        }
+    for ((at, ..), (kind, size, size_status, lengths, bends)) in runs {
+        systems[at].lines.push(TakeoffLine { kind, size, size_status, length: view::sum_of("LF", &lengths), bends: view::sum_of("EA", &bends) });
     }
-    if !none.lines.is_empty() || !none.placed.is_empty() {
-        systems.push(none);
-    }
-    systems
+    systems.into_iter().enumerate().filter(|(i, t)| *i < named || !t.lines.is_empty() || !t.placed.is_empty()).map(|(_, t)| t).collect()
 }
 
 /// What a storey's walls and floors come to.
@@ -903,12 +947,14 @@ pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
     let order = job.order.clone();
     let w = &job.world;
     let parents: HashMap<String, Option<String>> = order.iter().filter_map(|e| w.get::<Node>(*e)).map(|n| (n.path.clone(), n.parent.clone())).collect();
+    let storeys: Vec<String> = order.iter().filter(|e| w.get::<Kind>(**e) == Some(&Kind::Storey)).filter_map(|e| w.get::<Node>(*e)).map(|n| n.path.clone()).collect();
+    // An element counts on the nearest storey above it in the tree, and on no other.
     let under = |path: &str, storey: &str| {
         let mut at = parents.get(path).cloned().flatten();
         let mut steps = 0;
         while let Some(p) = at {
-            if p == storey {
-                return true;
+            if storeys.contains(&p) {
+                return p == storey;
             }
             at = parents.get(&p).cloned().flatten();
             steps += 1;
