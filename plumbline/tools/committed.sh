@@ -4,6 +4,7 @@
 # workspace there. A file the build needs that is in the folder and not in git, because an
 # ignore line caught it or it was never added, fails here and nowhere else.
 # Run from anywhere in the repository:  plumbline/tools/committed.sh [--quick]
+# (COMMIT=<commit> checks that one instead of the last.)
 #   --quick  stop after cargo has found every crate of the workspace and the files the
 #            demonstrations read; do not build
 # It reuses this folder's build of what the workspace is built on, so it compiles only
@@ -12,7 +13,7 @@ set -euo pipefail
 ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 HERE="$ROOT/plumbline"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-git -C "$ROOT" archive HEAD plumbline | tar -x -C "$T"
+git -C "$ROOT" archive "${COMMIT:-HEAD}" plumbline | tar -x -C "$T"
 cd "$T/plumbline"
 cargo metadata --offline --no-deps --format-version 1 >/dev/null || { echo "committed: FAIL. The last commit is not a workspace cargo can read: a crate is missing from it."; exit 1; }
 missing=0
