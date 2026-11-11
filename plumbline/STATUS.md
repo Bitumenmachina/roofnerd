@@ -2084,6 +2084,13 @@ the working folder.
 | J14-13 | Names: a comma, a hyphen, an underscore and a full stop part words; a figure and the letters beside it are two words. | `j13_10_...`, with the judge's pairs added |
 | J14-14 | A scale's points are on the page and at least a unit apart. A move, a fitting and a join in the window are sourced as done in the window. Removing a drawing says how many things were traced over it. Laying the same page twice is said. A JPEG is shown the way its own note says. **Not done:** a height and a type typed with `--on` still say "traced from"; the words on screen go to the language pass. | `j14_2_3_...` for the scale's points; the rest not held by tests |
 
+**The window pictures are stale.** Every picture under `demos/captured` was taken on
+commit `719ff91` or before. Commit `67b3e4e` changed the window's code (where a traced
+thing's source comes from, what a second scale says, what removing a drawing says, a
+picture's size); `demos/planw.sh`, `clashw.sh` and `draww.sh` have not been run on it.
+They are to be run again, and every picture read again, after the language pass, which
+changes the words on every screen.
+
 **What these changed that was so before:**
 
 * A scale set again on a lined-up drawing moves the sheet (its corner), where before the
