@@ -46,3 +46,31 @@ fn a_reader_that_stops_listening_is_not_a_panic() {
     }
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+/// A system's total length is no surer than the runs in it, and the takeoff marks it so
+/// (ninth judgment): one piece only assumed to be on a system makes its heading read `~`.
+#[test]
+fn a_takeoffs_heading_carries_the_flag_of_its_total() {
+    let dir = std::env::temp_dir().join(format!("plumbline-takeoff-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let job = dir.join("house.json");
+    let bin = env!("CARGO_BIN_EXE_plumbline");
+    assert!(Command::new(bin).arg("house").arg(&job).output().unwrap().status.success());
+    let takeoff = |job: &std::path::Path| String::from_utf8(Command::new(bin).arg("takeoff").arg(job).output().unwrap().stdout).unwrap();
+    // As written, every run on the vent is known to be on it: 12.10 LF, no mark, one piece.
+    let before = takeoff(&job);
+    assert!(before.contains("Vent  (Vent; 1 straight piece, 12.10 LF)"), "{before}");
+    assert!(before.contains(" 1 piece "), "one piece is not \"1 pieces\": {before}");
+    // Mark that run as only assumed to be on the vent system.
+    let mut doc: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&job).unwrap()).unwrap();
+    let vent = doc["data"].as_array().unwrap().iter().find(|e| e["attributes"]["pl::system"]["classification"] == "Vent").unwrap()["path"].as_str().unwrap().to_string();
+    for entry in doc["data"].as_array_mut().unwrap() {
+        if entry["attributes"]["pl::class"] == "Pipe" && entry["attributes"]["pl::in_system"]["value"] == vent.as_str() {
+            entry["attributes"]["pl::in_system"]["status"] = "Assumed".into();
+        }
+    }
+    std::fs::write(&job, serde_json::to_string_pretty(&doc).unwrap()).unwrap();
+    let after = takeoff(&job);
+    assert!(after.contains("Vent  (Vent; 1 straight piece, ~12.10 LF)"), "{after}");
+    std::fs::remove_dir_all(&dir).unwrap();
+}

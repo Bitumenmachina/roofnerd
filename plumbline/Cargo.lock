@@ -3659,6 +3659,7 @@ name = "plumbline"
 version = "0.1.0"
 dependencies = [
  "plumbline-world",
+ "serde_json",
 ]
 
 [[package]]

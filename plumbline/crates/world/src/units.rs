@@ -466,6 +466,30 @@ pub fn parse_pitch(text: &str) -> Result<f64, String> {
 }
 
 /// Read a plain number as typed: `2`, `10`, `1.25`, `1/2`. No unit, no exponent, no comma.
+/// A price as it is typed: `4.25`, `$4.25`, `$4.25/SF`, `4.25 $/SF`. `per` is the unit the
+/// price is for (`$/SF`); a unit that is typed has to be that one. Thousands may be
+/// written with commas.
+pub fn parse_price(text: &str, per: &str) -> Result<f64, String> {
+    let t = text.trim();
+    let wanted = per.trim_start_matches('$').trim_start_matches('/');
+    let (number, unit) = match t.find('/') {
+        Some(i) => (t[..i].trim(), Some(t[i + 1..].trim())),
+        None => (t, None),
+    };
+    let number = number.trim_end_matches('$').trim().trim_start_matches('$').trim();
+    if let Some(unit) = unit {
+        if unit != wanted {
+            return Err(format!("{text:?} is a price per {unit}, and this is priced per {wanted}; a price does not carry from one unit to another"));
+        }
+    }
+    let plain: String = number.chars().filter(|c| *c != ',').collect();
+    let value = parse_number(&plain).map_err(|_| format!("{text:?} is not a price; write it as a number of dollars, like 4.25 or $4.25/{wanted}"))?;
+    if value < 0.0 {
+        return Err(format!("{text:?} is below zero; a price is zero or more"));
+    }
+    Ok(value)
+}
+
 pub fn parse_number(text: &str) -> Result<f64, String> {
     let typed = text.trim();
     let s = plain(text);

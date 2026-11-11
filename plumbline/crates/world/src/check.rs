@@ -272,6 +272,23 @@ pub fn work_code(path: &str, w: &WorkCode) -> Result<(), String> {
 /// thing), carry a formula that makes sense on this kind of element, use every value
 /// entered on it, and be priced in the unit it comes out in, at a price that is not
 /// negative.
+/// An allowance is a rate, in dollars per SF or per LF, on the one figure a thing of its
+/// kind is bought by.
+pub fn allowance(path: &str, kind: Kind, a: &Allowance) -> Result<(), String> {
+    let Some((figure, unit)) = kind.priced_by() else {
+        return Err(format!("{path}: a {kind:?} cannot carry an allowance; it has no area or length a rate could be on"));
+    };
+    let what = format!("{path} allowance");
+    a.rate.check(&what, &format!("$/{unit}")).map_err(|why| format!("{why} (a {kind:?} is priced by its {figure}, in {unit})"))?;
+    if a.rate.value.is_some_and(|x| !x.is_finite() || x < 0.0) {
+        return Err(format!("{what}: must be zero or more"));
+    }
+    if a.rate.value.is_some_and(|x| x > MAX_UNIT_COST) {
+        return Err(format!("{what}: is beyond {MAX_UNIT_COST:e} per unit, which is not a usable price"));
+    }
+    Ok(())
+}
+
 pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
     c.code.check(&format!("{path} cost code"), "")?;
     if let Some(code) = &c.code.value {

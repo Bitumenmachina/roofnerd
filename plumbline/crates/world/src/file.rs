@@ -49,7 +49,7 @@ struct Entry {
     extra: BTreeMap<String, Value>,
 }
 
-const KNOWN_KEYS: [&str; 30] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_SEGMENT, K_SEGMENT_TYPE, K_FITTING, K_CONNECTORS, K_ROOM, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
+const KNOWN_KEYS: [&str; 32] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_ALLOWANCE, K_PRICED, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_SEGMENT, K_SEGMENT_TYPE, K_FITTING, K_CONNECTORS, K_ROOM, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
 
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
@@ -86,6 +86,7 @@ pub fn save(job: &mut Job) -> String {
         put!(Cost, K_COST);
         put!(WorkCode, K_SCHEDULE);
         put!(Recipe, K_RECIPE);
+        put!(Allowance, K_ALLOWANCE);
         put!(Level, K_LEVEL);
         put!(Wall, K_WALL);
         put!(Opening, K_OPENING);
@@ -109,6 +110,11 @@ pub fn save(job: &mut Job) -> String {
         if let Some(q) = w.get::<LineQuantities>(e) {
             if !q.0.is_empty() {
                 a.insert(K_LINE_QUANTITIES.to_string(), serde_json::to_value(q).expect("line quantities serialise"));
+            }
+        }
+        if let Some(p) = w.get::<Priced>(e) {
+            if !p.0.is_empty() {
+                a.insert(K_PRICED.to_string(), serde_json::to_value(p).expect("prices serialise"));
             }
         }
         if let Some(f) = w.get::<Foreign>(e) {
@@ -201,6 +207,7 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
     }
     let mut file_measures: BTreeMap<String, Measure> = BTreeMap::new();
     let mut file_line_quantities: BTreeMap<String, LineQuantities> = BTreeMap::new();
+    let mut file_priced: BTreeMap<String, Priced> = BTreeMap::new();
     let mut file_solve: BTreeMap<String, SolveState> = BTreeMap::new();
 
     for (i, entry) in root.data.into_iter().enumerate() {
@@ -368,6 +375,15 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                 K_LINE_QUANTITIES => {
                     file_line_quantities.insert(path.clone(), parse(&path, &k, v)?);
                 }
+                K_ALLOWANCE => {
+                    let c: Allowance = parse(&path, &k, v)?;
+                    check::allowance(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_PRICED => {
+                    // Worked out, like a measure: read only to see whether it still holds.
+                    file_priced.insert(path.clone(), parse(&path, &k, v)?);
+                }
                 _ if near_miss(&k).is_some() => {
                     let near = near_miss(&k).unwrap_or(K_CLASS);
                     return Err(format!(
@@ -436,13 +452,15 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
 
     // Measures are never trusted from the file. Work them out again and compare.
     job.derive();
-    let mut q = job.world.query::<(&Node, Option<&Measure>, Option<&LineQuantities>)>();
-    for (node, measure, line_quantities) in q.iter(&job.world) {
+    let mut q = job.world.query::<(&Node, Option<&Measure>, Option<&LineQuantities>, Option<&Priced>)>();
+    for (node, measure, line_quantities, priced) in q.iter(&job.world) {
         let now = measure.cloned().unwrap_or_default();
         let then = file_measures.remove(&node.path).unwrap_or_default();
         let now_lq = line_quantities.cloned().unwrap_or_default();
         let then_lq = file_line_quantities.remove(&node.path).unwrap_or_default();
-        if (now != then || now_lq != then_lq) && !report.stale.contains(&node.path) {
+        let now_p = priced.cloned().unwrap_or_default();
+        let then_p = file_priced.remove(&node.path).unwrap_or_default();
+        if (now != then || now_lq != then_lq || now_p != then_p) && !report.stale.contains(&node.path) {
             report.stale.push(node.path.clone());
         }
     }

@@ -58,7 +58,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), or a value the formula names (spacing \"12 in\")".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline price <file>\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF)\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
 }
 
 /// What the building comes to: each storey's walls and floors, then each system's runs by
@@ -84,9 +84,11 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
     }
     for t in building::takeoff(job) {
         let what = if !t.classification.is_empty() { t.classification.as_str() } else if t.flag == Status::Unknown { "which system is not known" } else { "no system" };
-        let _ = writeln!(out, "\n{}{}  ({what}; {} straight pieces, {})", if t.flag == Status::Known { String::new() } else { format!("{} ", t.flag.flag()) }, t.name, t.runs.members, said(&t.runs));
+        // The length is no surer than the runs it is the sum of, and is marked so.
+        let pieces = |n: usize| format!("{n} straight piece{}", if n == 1 { "" } else { "s" });
+        let _ = writeln!(out, "\n{}{}  ({what}; {}, {}{})", if t.flag == Status::Known { String::new() } else { format!("{} ", t.flag.flag()) }, t.name, pieces(t.runs.members), t.runs.status.flag().trim_end(), said(&t.runs));
         for line in &t.lines {
-            let _ = writeln!(out, "  {} {:<8} {:<16} {:>2} pieces  {:>10}", line.size_status.max(line.length.status).flag(), format!("{:?}", line.kind), line.size, line.length.members, said(&line.length));
+            let _ = writeln!(out, "  {} {:<8} {:<16} {:>2} {:<6}  {:>10}", line.size_status.max(line.length.status).flag(), format!("{:?}", line.kind), line.size, line.length.members, if line.length.members == 1 { "piece" } else { "pieces" }, said(&line.length));
         }
         for (kind, what, count, status) in &t.fittings {
             let _ = writeln!(out, "  {} {:<9} {what}: {count} EA", status.flag(), kind.map(|k| k.title()).unwrap_or("Fitting"));
@@ -116,6 +118,87 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
     out
 }
 
+/// The job priced both ways and the two set against each other: each element that has an
+/// allowance or a cost line, then the totals, each saying what it rests on and what it
+/// leaves out. Every figure is worked out in the world; this only prints them.
+fn price(job: &mut plumbline_world::Job) -> String {
+    let p = view::pricing(job);
+    let money = |x: f64| format!("{}${}", if x < 0.0 { "-" } else { "" }, view::figure(x.abs(), 2));
+    let amount = |d: &Option<plumbline_world::Derived>| match d {
+        None => "none entered".to_string(),
+        Some(d) => match d.value {
+            Some(x) if d.unit == "$" => format!("{}{}", d.status.flag().trim_end(), money(x)).trim().to_string(),
+            Some(x) if d.unit == "%" => format!("{}{} %", d.status.flag().trim_end(), view::figure(x, 2)).trim().to_string(),
+            Some(x) => format!("{}${} per {}", d.status.flag().trim_end(), view::figure(x, 2), d.unit.trim_start_matches("$/")).trim().to_string(),
+            None => "no figure".to_string(),
+        },
+    };
+    let mut out = String::from("flags:  ~ Assumed    ? Unknown    (no mark) Known\n");
+    if p.elements.is_empty() {
+        out.push_str("\nNothing in this job has an allowance or a cost line.\n");
+    }
+    for e in &p.elements {
+        let _ = writeln!(out, "\n{}  [{:?}]  ({})", e.name, e.kind, e.path);
+        if let Some((name, unit, d)) = &e.figure {
+            let _ = writeln!(out, "    priced by its {name}: {}", d.value.map(|x| format!("{}{} {unit}", d.status.flag().trim_end(), view::figure(x, 2))).unwrap_or_else(|| format!("no figure ({})", d.note)));
+        }
+        let rate = e.rate.as_ref().map(|r| match r.value {
+            Some(x) => format!(" at {}${} per {}", r.status.flag().trim_end(), view::figure(x, 2), r.unit.trim_start_matches("$/")),
+            None => format!(" (rate not known: {})", r.source),
+        });
+        let _ = writeln!(out, "    allowance   {}{}", amount(&e.allowance), rate.unwrap_or_default());
+        let _ = writeln!(out, "    detail      {}{}", amount(&e.detail), e.detail_rate.as_ref().filter(|d| d.value.is_some()).map(|d| format!(", which is {}", amount(&Some(d.clone())))).unwrap_or_default());
+        if let Some(d) = e.detail.as_ref().filter(|d| d.value.is_none()) {
+            let _ = writeln!(out, "      ? {}", d.note);
+        }
+        if let Some(d) = e.allowance.as_ref().filter(|d| d.value.is_none()) {
+            let _ = writeln!(out, "      ? {}", d.note);
+        }
+        if let (Some(diff), Some(pct)) = (&e.difference, &e.difference_percent) {
+            if let Some(x) = diff.value {
+                let word = if x > 0.0 { "over" } else if x < 0.0 { "under" } else { "the same as" };
+                let _ = writeln!(out, "    the detail is {}{} {word} the allowance{}", diff.status.flag().trim_end(), money(x.abs()), pct.value.map(|v| format!(" ({} %)", view::figure(v, 2))).unwrap_or_default());
+            }
+        }
+    }
+    let total = |name: &str, t: &view::MoneyTotal, what: &str| {
+        let mut s = String::new();
+        match t.value {
+            None => {
+                let _ = writeln!(s, "  {name:<12} none: no element has {what}");
+            }
+            Some(x) => {
+                let _ = writeln!(s, "  {name:<12} {}{} over {} element{}", t.status.flag().trim_end(), money(x), t.members, if t.members == 1 { "" } else { "s" });
+                if t.assumed != 0.0 {
+                    let _ = writeln!(s, "               of which {} rests on something assumed", money(t.assumed));
+                }
+            }
+        }
+        for (path, why) in &t.left_out {
+            let _ = writeln!(s, "             ? left out: {path}: {why}");
+        }
+        s
+    };
+    out.push_str("\nThe job\n");
+    out.push_str(&total("allowances", &p.allowance, "an allowance that comes to a figure"));
+    out.push_str(&total("detail", &p.detail, "a detail that is whole"));
+    match p.both {
+        None => out.push_str("  like for like: no element has both an allowance and a whole detail to compare\n"),
+        Some((a, d, status, n)) => {
+            let diff = d - a;
+            let word = if diff > 0.0 { "over" } else if diff < 0.0 { "under" } else { "the same as" };
+            let pct = if a != 0.0 { format!(" ({} %)", view::figure(diff / a * 100.0, 2)) } else { String::new() };
+            let _ = writeln!(out, "  like for like, over the {n} element{} that have both: allowances {}, detail {}: the detail is {}{} {word}{pct}", if n == 1 { "" } else { "s" }, money(a), money(d), status.flag().trim_end(), money(diff.abs()));
+        }
+    }
+    if !p.not_priced.is_empty() {
+        let n: usize = p.not_priced.iter().map(|x| x.1).sum();
+        let kinds: Vec<String> = p.not_priced.iter().map(|(k, n)| format!("{n} {k:?}")).collect();
+        let _ = writeln!(out, "  not priced at all: {n} element{} that could be ({})", if n == 1 { "" } else { "s" }, kinds.join(", "));
+    }
+    out
+}
+
 fn read(path: &str) -> Result<(plumbline_world::Job, file::LoadReport), String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {path}: {e}"))?;
     file::load(&text).map_err(|e| format!("{path}: {e}"))
@@ -128,7 +211,7 @@ fn run(args: &[String]) -> Result<(), String> {
     if cmd == "roof" {
         return new_roof(args);
     }
-    if matches!(cmd, "sample" | "house" | "show" | "check" | "lines" | "takeoff") && args.len() > 2 {
+    if matches!(cmd, "sample" | "house" | "show" | "check" | "lines" | "takeoff" | "price") && args.len() > 2 {
         return Err(format!("{cmd} takes one file and nothing else; {:?} would be ignored\n{}", args[2], usage()));
     }
     match cmd {
@@ -169,6 +252,12 @@ fn run(args: &[String]) -> Result<(), String> {
             let path = args.get(1).ok_or_else(usage)?;
             let (mut job, _) = read(path)?;
             let _ = std::io::stdout().write_all(takeoff(&mut job).as_bytes());
+            Ok(())
+        }
+        "price" => {
+            let path = args.get(1).ok_or_else(usage)?;
+            let (mut job, _) = read(path)?;
+            let _ = std::io::stdout().write_all(price(&mut job).as_bytes());
             Ok(())
         }
         "apply" => {

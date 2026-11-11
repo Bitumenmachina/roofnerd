@@ -14,15 +14,28 @@
 //! here, never in a window, takes the worst status of what it was worked out from, and is
 //! refused with the reason when its inputs do not fit together (a window wider than its
 //! wall gives no net area); a system is an element; a takeoff is by system; what cannot
-//! be drawn is listed with why. Five small things in it are BIMCraft's and are marked
-//! ported in `PORTMAP.md`: the point type `P3`, a run's system (`InSystem`), and which
-//! kinds are runs, openings and placed things (`is_segment`, `is_opening`, `is_placed`).
-//! They are from BIMCraft, `crates/core/src/model.rs` and `crates/core/src/view3d.rs`, at
-//! commit f202abd85d1cf165325e2f7b250da0b5e51f5b71, https://github.com/IPedrax/bimcraft,
-//! Copyright (c) 2026 IPedrax and the BIMCraft contributors, used under the MIT license;
-//! the notice is in NOTICE at the repository root. What was changed in them: a run's
-//! system is a component pointing at a system element, where BIMCraft's is a name on the
-//! run; the three lists of kinds are of this program's kinds.
+//! be drawn is listed with why.
+//!
+//! PORTED CODE is in it too, of two sorts, both from BIMCraft, `crates/core/src/model.rs`,
+//! `runs.rs` and `view3d.rs`, at commit f202abd85d1cf165325e2f7b250da0b5e51f5b71,
+//! https://github.com/IPedrax/bimcraft, Copyright (c) 2026 IPedrax and the BIMCraft
+//! contributors, used under the MIT license; the notice is in NOTICE at the repository
+//! root.
+//! * Five public items, marked ported in `PORTMAP.md`: the point type `P3`, a run's
+//!   system (`InSystem`), and which kinds are runs, openings and placed things
+//!   (`is_segment`, `is_opening`, `is_placed`). Changed: a run's system is a component
+//!   pointing at a system element, where BIMCraft's is a name on the run; the three lists
+//!   of kinds are of this program's kinds.
+//! * Four rules of BIMCraft's that the figures here are worked out by, each cited at the
+//!   place it is used: a wall's base is its level plus its base offset and its top is its
+//!   top level plus its top offset or its base plus its height (`own_base`, `own_top`,
+//!   `model.rs:3890`, `3896`), in `wall_heights`; an opening fits its wall from end to end
+//!   (`model.rs:6678`), in the net area; a wall bounds a storey's rooms when it spans the
+//!   storey's computation height (`bounding`, `model.rs:3932`; `spans`, `model.rs:3960`),
+//!   in `room_measures`; a run's true length is through its rise (`runs.rs:107`), in
+//!   `measures`. Changed in each: the inputs are flagged values in feet, the result takes
+//!   the worst status among them, and where BIMCraft refuses the model the figure is
+//!   refused with the reason and the job still loads.
 //!
 //! The names are the trade's and the open standard's, not ours: storey, wall, opening,
 //! floor (IFC's slab), room, duct, pipe, conduit, cable, fitting, equipment, fixture,
@@ -30,9 +43,10 @@
 //! will be exported as is in DECISIONS.md call 29.
 //!
 //! Heights. A storey's floor is at its `elevation` above the job's datum. A wall, a
-//! floor, an opening, a room, a run and a placed thing each stand on the storey they are
-//! under in the job, and a height entered on one is above that storey's floor. A riser
-//! is a run whose two ends are one point on the plan at two heights.
+//! floor, a room, a run and a placed thing each stand on the storey they are under in the
+//! job, and a height entered on one is above that storey's floor. An opening's sill is
+//! above the base of the wall it is in. A riser is a run whose two ends are one point on
+//! the plan at two heights.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -346,7 +360,10 @@ struct Hole {
     path: String,
     span: Option<[f64; 4]>,
     area: Option<f64>,
+    /// The worst status among everything about it: its type, its size, where it is.
     status: Status,
+    /// The worst status among what its area alone rests on: its type and its size.
+    area_status: Status,
     /// What its area was worked out from.
     inputs: Vec<String>,
 }
@@ -356,14 +373,15 @@ struct Hole {
 fn hole_of(tree: &Tree, me: &str, o: &Opening) -> (Hole, Result<(Val<Len>, Val<Len>), String>) {
     let mut inputs = vec![format!("{me}#{K_OPENING}")];
     match typed(&tree.opening_types, &o.type_name, "a door or window") {
-        Err(why) => (Hole { path: me.into(), span: None, area: None, status: Status::Unknown, inputs }, Err(why)),
+        Err(why) => (Hole { path: me.into(), span: None, area: None, status: Status::Unknown, area_status: Status::Unknown, inputs }, Err(why)),
         Ok((type_path, t)) => {
             inputs.push(format!("{type_path}#{K_OPENING_TYPE}"));
             let (w, h) = (t.width.feet(), t.height.feet());
             let span = o.offset.feet().zip(w).zip(o.sill.feet().zip(h)).map(|((at, w), (s, h))| [at - w / 2.0, at + w / 2.0, s, s + h]);
             let status = [o.type_name.status, t.width.status, t.height.status, o.offset.status, o.sill.status].into_iter().max().unwrap_or(Status::Unknown);
             let area = w.zip(h).map(|(w, h)| w * h);
-            (Hole { path: me.into(), span, area, status, inputs }, Ok((t.width.clone(), t.height.clone())))
+            let area_status = o.type_name.status.max(t.width.status).max(t.height.status);
+            (Hole { path: me.into(), span, area, status, area_status, inputs }, Ok((t.width.clone(), t.height.clone())))
         }
     }
 }
@@ -376,6 +394,10 @@ pub(crate) struct WallHeights {
     pub(crate) height: Result<f64, String>,
     /// The worst status among what the height was worked out from.
     pub(crate) status: Status,
+    /// The worst status among everything its base and its top rest on: its storey's
+    /// elevation and its base offset as well as what its height does. It is what "does
+    /// this wall stand at such a height?" is no surer than.
+    pub(crate) span: Status,
     pub(crate) formula: String,
     pub(crate) inputs: Vec<String>,
 }
@@ -429,7 +451,9 @@ pub(crate) fn wall_heights(tree: &Tree, me: &str, w: &Wall) -> WallHeights {
         (None, None) => (Err("it has no top level and no height".into()), Status::Unknown, String::new()),
     };
     let height = height.and_then(|h| if h > 0.0 { Ok(h) } else { Err(format!("its top is {} ft above its base; a wall's top is above its base", view::figure_shown(h, 2))) });
-    WallHeights { base, height, status, formula, inputs }
+    let own_status = own.map(|l| l.elevation.status).unwrap_or(Status::Unknown);
+    let span = status.max(own_status).max(base_status);
+    WallHeights { base, height, status, span, formula, inputs }
 }
 
 /// A wall's thickness and its layers (function and thickness, exterior first) in feet, or
@@ -470,7 +494,7 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 for (name, unit) in kind.measures() {
                     m.insert(name.to_string(), Derived::refused(unit, "", &input, "no opening entered"));
                 }
-                Hole { path: me.clone(), span: None, area: None, status: Status::Unknown, inputs: input.to_vec() }
+                Hole { path: me.clone(), span: None, area: None, status: Status::Unknown, area_status: Status::Unknown, inputs: input.to_vec() }
             }
             Some(o) => {
                 let (hole, sizes) = hole_of(&tree, me, o);
@@ -534,7 +558,9 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 inputs.dedup();
                 let f_open = if mine.is_empty() { "the openings under this wall (it has none)".to_string() } else { format!("the opening_area of each of the {} opening(s) under this wall, added up", mine.len()) };
                 let total = mine.iter().map(|h| h.area).sum::<Option<f64>>();
-                let mut statuses: Vec<Status> = mine.iter().map(|h| if h.area.is_some() { h.status } else { Status::Unknown }).collect();
+                // What the openings come to is as sure as their sizes. Where each one is
+                // matters to the net, not to this.
+                let mut statuses: Vec<Status> = mine.iter().map(|h| if h.area.is_some() { h.area_status } else { Status::Unknown }).collect();
                 statuses.push(Status::Known);
                 let open = match mine.iter().find(|h| h.area.is_none()) {
                     Some(h) => Derived::refused("SF", &f_open, &inputs, &format!("{} has no area", h.path)),
@@ -546,7 +572,11 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                     }
                 }
                 let mut fault = None;
-                if let (Some(l), Ok(h)) = (length, &heights.height) {
+                // An opening that has a size and no place cannot be checked for fit.
+                if let Some(h) = mine.iter().find(|h| h.area.is_some() && h.span.is_none()) {
+                    fault = Some(format!("where {} is in the wall is not known, so whether it fits cannot be checked", h.path));
+                }
+                if let (None, Some(l), Ok(h)) = (&fault, length, &heights.height) {
                     for (i, hole) in mine.iter().enumerate() {
                         let Some([from, to, sill, head]) = hole.span else { continue };
                         // It fits its wall from end to end (BIMCraft `model.rs:6678`).
@@ -568,8 +598,9 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 let net = match (fault, face.value, open.value) {
                     (Some(why), _, _) => Derived::refused("SF", f_net, &inputs, &why),
                     (None, Some(a), Some(b)) => {
-                        let mut s = statuses.clone();
-                        s.push(face.status);
+                        // The net rests on where each opening is as well as on its size.
+                        let mut s: Vec<Status> = mine.iter().map(|h| h.status).collect();
+                        s.extend([face.status, open.status]);
                         Derived::new(Some(a - b), "SF", &s, f_net, &inputs)
                     }
                     (None, None, _) => Derived::refused("SF", f_net, &inputs, if face.note.is_empty() { "the wall has no face area" } else { &face.note }),
@@ -653,9 +684,10 @@ fn path_number(path: &str) -> u64 {
     path.rsplit('-').next().and_then(|n| n.parse().ok()).unwrap_or(u64::MAX)
 }
 
-/// A wall as the walls round it see it on the plan, with the worst status among what
-/// that was worked out from; or why it cannot be placed.
-fn plan_wall(tree: &Tree, me: &str, w: &Wall) -> Result<(walls::PlanWall, Status), String> {
+/// A wall as the walls round it see it on the plan; the worst status among what its line
+/// and its thickness were worked out from; and the worst among what its base and top rest
+/// on. Or why it cannot be placed.
+fn plan_wall(tree: &Tree, me: &str, w: &Wall) -> Result<(walls::PlanWall, Status, Status), String> {
     use crate::skeleton::P2 as V;
     let [a, b] = w.line_ft().ok_or("its line is not known")?;
     let heights = wall_heights(tree, me, w);
@@ -663,30 +695,94 @@ fn plan_wall(tree: &Tree, me: &str, w: &Wall) -> Result<(walls::PlanWall, Status
     let height = heights.height.clone()?;
     let (thickness, layers, section_status) = wall_section(tree, w)?;
     let (ext, int) = walls::wall_faces(thickness, &layers, w.location);
-    Ok((walls::PlanWall { start: V(a[0], a[1]), end: V(b[0], b[1]), ext, int, base, top: base + height, join: w.join }, w.line.status.max(heights.status).max(section_status)))
+    Ok((walls::PlanWall { start: V(a[0], a[1]), end: V(b[0], b[1]), ext, int, base, top: base + height, join: w.join }, w.line.status.max(section_status), heights.span))
+}
+
+/// A wall of the job as the rooms see it.
+struct RoomWall {
+    path: String,
+    wall: walls::PlanWall,
+    /// What its line and thickness rest on.
+    shape: Status,
+    /// What its base and top rest on.
+    span: Status,
+    /// Whether it bounds rooms (`room_bounding`).
+    bounds: bool,
+}
+
+/// What one room comes to against one set of walls: the floor inside the faces and the
+/// distance round, and the area to centre lines, each with the walls it is measured to;
+/// or why not.
+#[derive(Clone, PartialEq)]
+struct RoomFigures {
+    finish: Result<(f64, f64, Vec<usize>), rooms::Unbound>,
+    centre: Result<(f64, Vec<usize>), rooms::Unbound>,
+    in_wall: bool,
+}
+
+/// Every room of one storey measured against `walls`, of which those at `bounding` bound
+/// the storey's rooms. Each of `walls` can join the others where they meet (BIMCraft
+/// `rooms.rs:62` and `walls.rs:238`: a bounding wall's outline is cut against every wall
+/// it meets, bounding or not).
+fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], points: &[crate::skeleton::P2], tol: f64) -> Vec<RoomFigures> {
+    use crate::skeleton::P2 as V;
+    use rooms::{Plan, RoomArea};
+    let (centre, finish) = (Plan::of_walls(walls, bounding, RoomArea::Centre, tol), Plan::of_walls(walls, bounding, RoomArea::Finish, tol));
+    let centre_lines: Vec<Vec<(V, V)>> = bounding.iter().map(|&i| walls::centre_line(walls, i, tol)).map(|[a, b]| vec![(a, b)]).collect();
+    let outlines: Vec<Vec<V>> = bounding.iter().map(|&i| walls::outline(walls, i, tol)).collect();
+    let outline_edges: Vec<Vec<(V, V)>> = outlines.iter().map(|ring| ring.iter().copied().zip(ring.iter().copied().cycle().skip(1)).collect()).collect();
+    // The walls a region is measured to: those with a line along one of its edges.
+    let touching = |g: &rooms::Region, lines: &[Vec<(V, V)>]| -> Vec<usize> {
+        let mids: Vec<V> = std::iter::once(&g.outer).chain(g.holes.iter()).flat_map(|ring| ring.iter().zip(ring.iter().cycle().skip(1)).map(|(a, b)| (*a + *b) * 0.5)).collect();
+        (0..bounding.len())
+            .filter(|&k| {
+                lines[k].iter().any(|(a, b)| {
+                    mids.iter().any(|m| {
+                        let d = *b - *a;
+                        let t = if d.dot(d) > 0.0 { ((*m - *a).dot(d) / d.dot(d)).clamp(0.0, 1.0) } else { 0.0 };
+                        m.dist(*a + d * t) <= tol
+                    })
+                })
+            })
+            .map(|k| bounding[k])
+            .collect()
+    };
+    (0..points.len())
+        .map(|i| RoomFigures {
+            finish: finish.bound(points, i, tol).map(|g| (g.area(), g.perimeter(), touching(&g, &outline_edges))),
+            centre: centre.bound(points, i, tol).map(|g| (g.area(), touching(&g, &centre_lines))),
+            in_wall: !points[i].0.is_nan() && outlines.iter().any(|ring| rooms::contains(ring, points[i])),
+        })
+        .collect()
 }
 
 /// Each room's figures: the floor inside the faces of the walls round its point, the area
 /// to those walls' centre lines, and how far it is round the room at their faces.
 ///
 /// A room is found among the walls that stand at its storey's computation height
-/// (BIMCraft `Model::bounding`, `model.rs:3941`) and bound rooms. A wall under the room's
-/// own storey that cannot be placed leaves every room on that storey with no figure:
-/// what bounds them is not known. A figure is no surer than the walls it is measured to.
+/// (BIMCraft `Model::bounding`, `model.rs:3932`, and `Model::spans`, `model.rs:3960`) and
+/// bound rooms. A wall under the room's own storey that cannot be placed leaves every
+/// room on that storey with no figure: what bounds them is not known. A figure is no
+/// surer than the walls it is measured to. And where a wall's base or top rests on
+/// something Assumed, each room is measured again with that wall taken away and with it
+/// standing full height: a room that comes out differently either way is no surer than
+/// that wall's heights, and says so.
 fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTreeMap<String, Derived>>) {
     use crate::skeleton::P2 as V;
-    use rooms::{Plan, RoomArea, Unbound};
+    use rooms::Unbound;
     let tol = crate::check::FIT_TOLERANCE_FT;
-    // Every wall that bounds rooms: placed, or why not.
-    let mut placed: Vec<(String, walls::PlanWall, Status)> = Vec::new();
+    // Every wall of the job: placed, or why not. A wall with nothing entered on it is a
+    // wall that cannot be placed, not a wall that is not there.
+    let mut placed: Vec<RoomWall> = Vec::new();
     let mut unplaced: Vec<(String, String)> = Vec::new();
-    let mut q = world.query::<(&Node, &Kind, &Wall)>();
-    let mut all: Vec<(&Node, &Wall)> = q.iter(world).filter(|(_, k, w)| **k == Kind::Wall && w.room_bounding).map(|(n, _, w)| (n, w)).collect();
+    let mut q = world.query::<(&Node, &Kind, Option<&Wall>)>();
+    let mut all: Vec<(&Node, Option<&Wall>)> = q.iter(world).filter(|(_, k, _)| **k == Kind::Wall).map(|(n, _, w)| (n, w)).collect();
     all.sort_by_key(|(n, _)| path_number(&n.path));
     for (n, w) in all {
-        match plan_wall(tree, &n.path, w) {
-            Ok((pw, status)) => placed.push((n.path.clone(), pw, status)),
-            Err(why) => unplaced.push((n.path.clone(), why)),
+        match w.map(|w| (w, plan_wall(tree, &n.path, w))) {
+            None => unplaced.push((n.path.clone(), "it has no wall line entered".into())),
+            Some((w, Ok((wall, shape, span)))) => placed.push(RoomWall { path: n.path.clone(), wall, shape, span, bounds: w.room_bounding }),
+            Some((_, Err(why))) => unplaced.push((n.path.clone(), why)),
         }
     }
     // The rooms, storey by storey, in the order they were added: the first to be placed
@@ -735,19 +831,55 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
             }
             (Ok(c), None) => c,
         };
-        // A wall bounds this storey's rooms when it spans the height they are found at
-        // (BIMCraft `Model::spans`, `model.rs:3960`).
-        let bounding: Vec<&(String, walls::PlanWall, Status)> = placed.iter().filter(|(_, w, _)| w.base <= cut && cut < w.top).collect();
-        let plan_walls: Vec<walls::PlanWall> = bounding.iter().map(|x| x.1.clone()).collect();
-        // A wall on another storey that could not be placed might rise into this one.
-        let elsewhere: Vec<&(String, String)> = unplaced.iter().collect();
-        let (centre, finish) = (Plan::of_walls(&plan_walls, RoomArea::Centre, tol), Plan::of_walls(&plan_walls, RoomArea::Finish, tol));
-        let centre_lines: Vec<[V; 2]> = (0..plan_walls.len()).map(|i| walls::centre_line(&plan_walls, i, tol)).collect();
-        let outlines: Vec<Vec<V>> = (0..plan_walls.len()).map(|i| walls::outline(&plan_walls, i, tol)).collect();
         // A room with no point entered, or a point nobody has, still takes its place in
         // the order: it is given a point no region can hold.
         let nowhere = V(f64::NAN, f64::NAN);
         let points: Vec<V> = list.iter().map(|(_, r)| r.as_ref().and_then(|r| r.point_ft()).map(|p| V(p[0], p[1])).unwrap_or(nowhere)).collect();
+        // The walls as they stand, and which of them bound this storey's rooms: those that
+        // bound rooms and span the height the rooms are found at.
+        let plan_walls: Vec<walls::PlanWall> = placed.iter().map(|w| w.wall.clone()).collect();
+        let spans = |w: &walls::PlanWall| w.base <= cut && cut < w.top;
+        let bounding: Vec<usize> = (0..placed.len()).filter(|&i| placed[i].bounds && spans(&placed[i].wall)).collect();
+        let as_entered = rooms_among(&plan_walls, &bounding, &points, tol);
+        // Each wall whose base or top rests on something less than Known, tried both other
+        // ways: not there at all, and standing through every height. A room that comes out
+        // differently is no surer than that wall's heights.
+        let mut rests_on: Vec<Vec<usize>> = vec![Vec::new(); list.len()];
+        for k in (0..placed.len()).filter(|&k| placed[k].span != Status::Known) {
+            let without: Vec<walls::PlanWall> = plan_walls.iter().enumerate().filter(|(i, _)| *i != k).map(|(_, w)| w.clone()).collect();
+            let shifted: Vec<usize> = bounding.iter().filter(|&&i| i != k).map(|&i| if i > k { i - 1 } else { i }).collect();
+            let gone = rooms_among(&without, &shifted, &points, tol);
+            let mut tall = plan_walls.clone();
+            tall[k].base = f64::NEG_INFINITY;
+            tall[k].top = f64::INFINITY;
+            let mut with: Vec<usize> = bounding.clone();
+            if placed[k].bounds && !with.contains(&k) {
+                with.push(k);
+                with.sort_unstable();
+            }
+            let standing = rooms_among(&tall, &with, &points, tol);
+            // Compared by what a room comes to, not by which walls are listed (taking a
+            // wall away renumbers the rest).
+            let same = |a: &RoomFigures, b: &RoomFigures| {
+                let near = |x: f64, y: f64| (x - y).abs() <= 1.0e-9;
+                let finish = match (&a.finish, &b.finish) {
+                    (Ok(x), Ok(y)) => near(x.0, y.0) && near(x.1, y.1),
+                    (Err(x), Err(y)) => std::mem::discriminant(x) == std::mem::discriminant(y),
+                    _ => false,
+                };
+                let centre = match (&a.centre, &b.centre) {
+                    (Ok(x), Ok(y)) => near(x.0, y.0),
+                    (Err(x), Err(y)) => std::mem::discriminant(x) == std::mem::discriminant(y),
+                    _ => false,
+                };
+                finish && centre && a.in_wall == b.in_wall
+            };
+            for i in 0..list.len() {
+                if !same(&as_entered[i], &gone[i]) || !same(&as_entered[i], &standing[i]) {
+                    rests_on[i].push(k);
+                }
+            }
+        }
         for (i, (path, room)) in list.iter().enumerate() {
             let input = format!("{path}#{K_ROOM}");
             let Some(room) = room else {
@@ -758,61 +890,58 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                 refuse_all(out, path, &[input], if room.point.value.is_some() { "its point is in a unit this program does not convert" } else { "its point is not known" });
                 continue;
             }
-            let why = |u: Unbound, in_wall: bool| match u {
-                Unbound::NotEnclosed if in_wall => "its point is inside a wall".to_string(),
+            let found = &as_entered[i];
+            let why = |u: Unbound| match u {
+                // A point in the body of a wall is in no room, at its faces or at its
+                // centre line: which side of the wall was meant is not something to guess.
+                _ if found.in_wall => "its point is inside a wall".to_string(),
                 Unbound::NotEnclosed => "no loop of walls closes round its point".to_string(),
                 Unbound::Shared(before) => format!("{} was placed first and has the space this room's point is in", tree.called(&list[before].0)),
             };
-            // The walls a region is measured to: those with a line along one of its edges.
-            let touching = |g: &rooms::Region, lines: &dyn Fn(usize) -> Vec<(V, V)>| -> Vec<usize> {
-                let mids: Vec<V> = std::iter::once(&g.outer).chain(g.holes.iter()).flat_map(|ring| ring.iter().zip(ring.iter().cycle().skip(1)).map(|(a, b)| (*a + *b) * 0.5)).collect();
-                (0..plan_walls.len())
-                    .filter(|&k| {
-                        lines(k).iter().any(|(a, b)| {
-                            mids.iter().any(|m| {
-                                let d = *b - *a;
-                                let t = if d.dot(d) > 0.0 { ((*m - *a).dot(d) / d.dot(d)).clamp(0.0, 1.0) } else { 0.0 };
-                                m.dist(*a + d * t) <= tol
-                            })
-                        })
-                    })
-                    .collect()
-            };
-            let figure = |g: &rooms::Region, lines: &dyn Fn(usize) -> Vec<(V, V)>, value: f64, unit: &str, formula: &str| -> Derived {
-                let mine = touching(g, lines);
+            let figure = |value: f64, mine: &[usize], unit: &str, formula: &str| -> Derived {
                 let mut inputs = vec![input.clone()];
-                inputs.extend(mine.iter().map(|&k| format!("{}#{K_WALL}", bounding[k].0)));
-                let mut statuses: Vec<Status> = mine.iter().map(|&k| bounding[k].2).collect();
+                inputs.extend(mine.iter().map(|&k| format!("{}#{K_WALL}", placed[k].path)));
+                let mut statuses: Vec<Status> = mine.iter().map(|&k| placed[k].shape.max(placed[k].span)).collect();
                 statuses.extend([room.point.status, cut_status]);
+                let mut notes: Vec<String> = Vec::new();
+                for &k in &rests_on[i] {
+                    statuses.push(placed[k].span);
+                    if !inputs.contains(&format!("{}#{K_WALL}", placed[k].path)) {
+                        inputs.push(format!("{}#{K_WALL}", placed[k].path));
+                    }
+                    notes.push(format!("whether {} bounds this room rests on its heights, which are {}", tree.called(&placed[k].path), format!("{:?}", placed[k].span).to_lowercase()));
+                }
                 let mut d = Derived::new(Some(value), unit, &statuses, formula, &inputs);
                 // A wall elsewhere that could not be placed is assumed not to reach this
                 // storey, and the figure says so.
-                if let (Some((wall, why)), true) = (elsewhere.first(), d.value.is_some()) {
+                if let (Some((wall, why)), true) = (unplaced.first(), d.value.is_some()) {
                     d.status = d.status.max(Status::Assumed);
-                    d.note = format!("assumes {} does not bound this room: it cannot be placed ({why})", tree.called(wall));
+                    notes.push(format!("assumes {} does not bound this room: it cannot be placed ({why})", tree.called(wall)));
+                }
+                if d.value.is_some() {
+                    d.note = notes.join("; ");
                 }
                 d
             };
-            let outline_edges = |k: usize| -> Vec<(V, V)> { outlines[k].iter().copied().zip(outlines[k].iter().copied().cycle().skip(1)).collect() };
-            let centre_edge = |k: usize| -> Vec<(V, V)> { vec![(centre_lines[k][0], centre_lines[k][1])] };
-            let in_wall = outlines.iter().any(|ring| rooms::contains(ring, points[i]));
             let m = out.entry(path.clone()).or_default();
-            match finish.bound(&points, i, tol) {
-                Ok(g) => {
-                    m.insert("floor_area".into(), figure(&g, &outline_edges, g.area(), "SF", F_FLOOR));
-                    m.insert("perimeter".into(), figure(&g, &outline_edges, g.perimeter(), "LF", F_ROUND));
+            match (&found.finish, found.in_wall) {
+                (Ok((area, round, mine)), false) => {
+                    m.insert("floor_area".into(), figure(*area, mine, "SF", F_FLOOR));
+                    m.insert("perimeter".into(), figure(*round, mine, "LF", F_ROUND));
                 }
-                Err(u) => {
-                    m.insert("floor_area".into(), Derived::refused("SF", F_FLOOR, &[input.clone()], &why(u, in_wall)));
-                    m.insert("perimeter".into(), Derived::refused("LF", F_ROUND, &[input.clone()], &why(u, in_wall)));
+                (other, _) => {
+                    let reason = why(other.as_ref().err().copied().unwrap_or(Unbound::NotEnclosed));
+                    m.insert("floor_area".into(), Derived::refused("SF", F_FLOOR, &[input.clone()], &reason));
+                    m.insert("perimeter".into(), Derived::refused("LF", F_ROUND, &[input.clone()], &reason));
                 }
             }
-            match centre.bound(&points, i, tol) {
-                Ok(g) => {
-                    m.insert("gross_area".into(), figure(&g, &centre_edge, g.area(), "SF", F_GROSS));
+            match (&found.centre, found.in_wall) {
+                (Ok((area, mine)), false) => {
+                    m.insert("gross_area".into(), figure(*area, mine, "SF", F_GROSS));
                 }
-                Err(u) => {
-                    m.insert("gross_area".into(), Derived::refused("SF", F_GROSS, &[input.clone()], &why(u, false)));
+                (other, _) => {
+                    let reason = why(other.as_ref().err().copied().unwrap_or(Unbound::NotEnclosed));
+                    m.insert("gross_area".into(), Derived::refused("SF", F_GROSS, &[input.clone()], &reason));
                 }
             }
         }
@@ -1303,7 +1432,28 @@ pub fn takeoff(job: &mut Job) -> Vec<SystemTakeoff> {
                         format!("{name}: its {label} connector")
                     }
                 };
-                found[group_of(joint.element())].open.push(OpenEnd { element: joint.element().to_string(), said, at: node.at });
+                // An open end of a run is its system's. A connector that meets nothing has
+                // no run to say whose it is: a pipe connector that says what it carries
+                // is listed on the systems that carry that (a water closet's open waste
+                // outlet is the drain's to deal with, though the fixture is on the cold
+                // water), and any other on the system the thing itself is on.
+                let mut where_to: Vec<usize> = Vec::new();
+                if let network::Joint::Connector { domain: Some(domain), .. } = joint {
+                    let carried = match domain {
+                        Domain::Cold => Some("Domestic Cold Water"),
+                        Domain::Hot => Some("Domestic Hot Water"),
+                        Domain::Waste => Some("Sanitary"),
+                        Domain::Vent => Some("Vent"),
+                        Domain::Storm | Domain::Gas => None,
+                    };
+                    where_to = (0..named).filter(|&i| carried == Some(systems[i].classification.as_str())).collect();
+                }
+                if where_to.is_empty() {
+                    where_to.push(group_of(joint.element()));
+                }
+                for i in where_to {
+                    found[i].open.push(OpenEnd { element: joint.element().to_string(), said: said.clone(), at: node.at });
+                }
             }
             for warning in &net.warnings {
                 // A warning is said on the systems of the runs it is about. (A water closet

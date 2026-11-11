@@ -16,7 +16,7 @@ Where things stand is in [STATUS.md](STATUS.md). The model is in [SPEC.md](SPEC.
 | LICENSES.md | Every linked crate and its license; every candidate's license |
 | QUESTIONS.md | Open questions for the owner and the assumption in use meanwhile |
 | PROPOSALS.md | Work outside a deliverable. Not built until accepted. |
-| HANDOFF_REBASE.md | The task in hand: re-base the building model on BIMCraft, and the rules for doing it |
+| HANDOFF_REBASE.md | The task that re-based the building model on BIMCraft, and the rules it was done under (done; STATUS.md has the account) |
 | PORTMAP.md | Each public item of the building model: ported from where, or ours and how that was checked |
 
 ## Run it
@@ -27,14 +27,17 @@ tools/landscape.sh         # re-run the D0 landscape checks (needs network)
 demos/d1.sh                # the D1 demonstration
 demos/units.sh             # the units demonstration: 30 in, 25' 6 1/2", stretch-out
 demos/d3.sh                # the D3 demonstration: a parapet's four lines, sheets and pounds
+demos/d4.sh                # the D4 demonstration: priced from allowances, priced from its lines, rolled up, reconciled
+demos/d4w.sh               # the same in the window: the sheet's Money tab, and prices typed on what is selected
 demos/d2.sh                # the 3D prototype, driven on a virtual display; pictures in demos/captured/d2
 demos/house.sh             # a whole house with its heating, plumbing and wiring, walked round; pictures in demos/captured/house
 cargo run -p plumbline-app -- job.json    # the 3D window and the sheet window (keys are listed in the window)
 tools/licenses.sh          # every linked crate and its license; fails on a non-permissive one
-tools/portmap.sh           # the building model accounted for against BIMCraft's source (red until the re-base is done)
+tools/portmap.sh           # the building model accounted for against BIMCraft's source, item by item
 cargo run -p plumbline -- sample job.json
 cargo run -p plumbline -- house house.json     # the sample whole house
-cargo run -p plumbline -- takeoff house.json   # its walls and floors, and each system's runs by size
+cargo run -p plumbline -- takeoff house.json   # its walls, floors and rooms, and each system's runs by size, its fittings and what is joined
+cargo run -p plumbline -- price job.json       # what the job comes to from its allowances and from its cost lines, and the two compared
 cargo run -p plumbline -- show job.json
 cargo run -p plumbline -- set job.json parapet-0024 height "30 in" --status Known --source "detail 3/A-501"
 ```

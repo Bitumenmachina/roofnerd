@@ -149,6 +149,21 @@ impl Kind {
             _ => (0, 0),
         }
     }
+    /// The one figure a thing of this kind is bought by, and its unit: what an allowance
+    /// rate multiplies and what a detailed price is divided by to give a rate. None for a
+    /// kind that has no such figure.
+    pub fn priced_by(self) -> Option<(&'static str, &'static str)> {
+        match self {
+            Kind::RoofPlane | Kind::LowSlopeArea => Some(("surface_area", "SF")),
+            Kind::Parapet => Some(("plan_length", "LF")),
+            k if k.is_run() => Some(("true_length", "LF")),
+            Kind::Wall => Some(("net_area", "SF")),
+            Kind::Floor => Some(("plan_area", "SF")),
+            Kind::Room => Some(("floor_area", "SF")),
+            Kind::Duct | Kind::Pipe | Kind::Conduit | Kind::Cable => Some(("true_length", "LF")),
+            _ => None,
+        }
+    }
     /// The quantities worked out for an element of this kind, each with its unit.
     pub fn measures(self) -> &'static [(&'static str, &'static str)] {
         if self.is_area() {
@@ -338,6 +353,11 @@ pub struct LineFigures {
     /// In order units, when the line has them.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub order: Option<Derived>,
+    /// What the line comes to in dollars: what it is priced in, times its unit cost. A
+    /// line with no price has no extension, and its note says so. (Absent only in a file
+    /// saved before lines were extended; it is worked out again on load.)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extension: Option<Derived>,
 }
 
 /// `pl::line_quantities`: what each cost line on the element works out to, by the line's
@@ -430,6 +450,24 @@ pub struct Solved {
 }
 
 pub const K_LINE_QUANTITIES: &str = "pl::line_quantities";
+pub const K_ALLOWANCE: &str = "pl::allowance";
+pub const K_PRICED: &str = "pl::priced";
+
+/// `pl::allowance`: a design-phase price for the element as a whole: so many dollars for
+/// each SF or LF of the one figure a thing of its kind is bought by (`Kind::priced_by`).
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Allowance {
+    pub rate: Val<f64>,
+}
+
+/// `pl::priced`: what the element comes to, both ways, by name: `allowance` (its figure
+/// times its allowance rate), `detail` (its cost lines' extensions added up),
+/// `detail_rate` (the detail over the same figure), `difference` (detail less allowance)
+/// and `difference_percent`. Nobody types these; like measures they are worked out again
+/// on every change and every load.
+#[derive(Component, Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct Priced(pub BTreeMap<String, Derived>);
 /// `pl::solve`: on a Roof with a footprint, what the last solve came to: whether the roof
 /// could be solved, and what there is to know about how its planes meet. Worked out, never
 /// typed; it is worked out again on every load.

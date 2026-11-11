@@ -153,7 +153,7 @@ impl Job {
     pub fn set_on_line(&mut self, path: &str, field: &str, line: Option<&str>, value: Option<&str>, status: Status, source: &str) -> Result<(), String> {
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
-        let on_element = matches!(field, "pitch" | "height" | "eave_height" | "condition" | "wbs");
+        let on_element = matches!(field, "pitch" | "height" | "eave_height" | "condition" | "wbs" | "allowance");
         if line.is_some() && on_element {
             return Err(format!("{field} belongs to the element, not to one of its cost lines; leave --line off"));
         }
@@ -186,6 +186,17 @@ impl Job {
             "condition" => {
                 let new = Condition(text());
                 check::condition(path, &new)?;
+                self.world.entity_mut(e).insert(new);
+            }
+            "allowance" => {
+                // A rate on the one figure a thing of this kind is bought by.
+                let Some((_, unit)) = kind.priced_by() else {
+                    return Err(format!("{path}: a {kind:?} cannot carry an allowance; it has no area or length a rate could be on"));
+                };
+                let per = format!("$/{unit}");
+                let rate = value.map(|text| units::parse_price(text, &per)).transpose()?;
+                let new = Allowance { rate: Val { value: rate, unit: per, status, source: source.into() } };
+                check::allowance(path, kind, &new)?;
                 self.world.entity_mut(e).insert(new);
             }
             _ => {
@@ -224,10 +235,10 @@ impl Job {
     #[allow(clippy::too_many_arguments)]
     fn set_line_value(&mut self, e: Entity, path: &str, kind: Kind, field: &str, line: Option<&str>, value: Option<&str>, with: &[(String, String)], status: Status, source: &str) -> Result<Vec<String>, String> {
         let Some(cost) = self.world.get::<Cost>(e) else {
-            return Err(if matches!(field, "stretch_out" | "quantity" | "waste" | "order") {
+            return Err(if matches!(field, "stretch_out" | "quantity" | "waste" | "order" | "unit_cost") {
                 format!("{path} has no cost line to set a {field} on")
             } else {
-                format!("{field:?} is not a field that can be set on {path}; an element takes pitch, height, eave_height, condition or wbs, and a cost line takes stretch_out, quantity, waste, order or a value its formula names")
+                format!("{field:?} is not a field that can be set on {path}; an element takes pitch, height, eave_height, condition, wbs or allowance, and a cost line takes stretch_out, quantity, waste, order, unit_cost or a value its formula names")
             });
         };
         let mut new = cost.clone();
@@ -322,6 +333,12 @@ impl Job {
                     }
                 }
             }
+            "unit_cost" => {
+                // A price for what the line is priced in: its order unit, else its quantity's.
+                let per = l.unit_cost.unit.clone();
+                let price = value.map(|text| units::parse_price(text, &per)).transpose()?;
+                l.unit_cost = Val { value: price, unit: per, status, source: source.into() };
+            }
             name => {
                 let v = named(name, value, l.inputs.get(name))?;
                 l.inputs.insert(name.to_string(), v);
@@ -335,7 +352,7 @@ impl Job {
             let l = &mut new.lines[at];
             if l.unit_cost.unit != priced {
                 if l.unit_cost.value.is_some() {
-                    return Err(format!("{what} is priced in {}; this change would make it a line in {priced}, and a price does not carry from one to the other. Re-enter the unit cost in the file", l.unit_cost.unit));
+                    return Err(format!("{what} is priced in {}; this change would make it a line in {priced}, and a price does not carry from one to the other. Mark its unit cost unknown first (set unit_cost unknown), make the change, then enter the price for the new unit", l.unit_cost.unit));
                 }
                 l.unit_cost.unit = priced;
             }

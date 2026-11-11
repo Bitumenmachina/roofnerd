@@ -41,6 +41,52 @@ def building_files():
     return out
 
 
+NOTHING = re.compile(r"`(grep [^`]+)`(?: over BIMCraft)?: nothing")
+EACH = re.compile(r"`(grep -c [^`]+)` in each of ((?:[\w./-]+\.rs ?)+): 0")
+
+
+def run_searches(bim, searched):
+    """Run each search an `ours` row says found nothing, in BIMCraft's source. Two forms
+    are run: `grep ...`: nothing   and   `grep -c ...` in each of a.rs b.rs: 0.
+    A path that starts with crates/ (or is .) is from BIMCraft's root; any other is from
+    its crates/core/src. Returns what is wrong."""
+    import shlex
+    out = []
+    core = os.path.join(bim, "crates", "core", "src")
+
+    def run(command, extra=()):
+        try:
+            words = shlex.split(command) + list(extra)
+        except ValueError as e:
+            return None, f"the search `{command}` cannot be read as a command: {e}"
+        if not words or words[0] != "grep":
+            return None, f"the search `{command}` is not a grep"
+        from_root = any(w == "." or w.startswith("crates/") for w in words[1:])
+        try:
+            r = subprocess.run(words, cwd=bim if from_root else core, capture_output=True, text=True, timeout=120)
+        except Exception as e:
+            return None, f"the search `{command}` could not be run: {e}"
+        if r.returncode > 1:
+            return None, f"the search `{command}` failed: {r.stderr.strip()[:120]}"
+        return r.stdout, None
+
+    for command in NOTHING.findall(searched):
+        got, why = run(command)
+        if why:
+            out.append(why)
+        elif got.strip():
+            first = got.strip().split("\n")[0][:110]
+            out.append(f"the search `{command}` is said to find nothing and finds: {first}")
+    for command, files in EACH.findall(searched):
+        for f in files.split():
+            got, why = run(command, [f])
+            if why:
+                out.append(why)
+            elif got.strip() != "0":
+                out.append(f"the search `{command}` is said to count 0 in {f} and counts {got.strip()}")
+    return out
+
+
 def main():
     faults = []
     bim = os.environ.get("BIMCRAFT") or os.path.normpath(os.path.join(ROOT, "..", "..", "ipedrax", "bimcraft"))
@@ -100,6 +146,11 @@ def main():
         elif how == "ours":
             if len(searched) < 12 or "grep" not in searched and "read" not in searched.lower():
                 faults.append(f"PORTMAP.md:{n}: {item}: an `ours` row says what was searched for and where (a grep, or the files read); it has {searched!r}")
+            # A search a row says came back with nothing is run, and has to come back with
+            # nothing. (The ninth judgment found two rows whose search finds something; the
+            # gate had only checked that a search was named.)
+            for fault in run_searches(bim, searched):
+                faults.append(f"PORTMAP.md:{n}: {item}: {fault}")
         else:
             faults.append(f"PORTMAP.md:{n}: {item}: is `ported` or `ours`, not {how!r}")
 

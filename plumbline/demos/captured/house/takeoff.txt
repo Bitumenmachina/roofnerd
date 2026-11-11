@@ -19,7 +19,7 @@ second floor  (storey-0008)
 Supply air  (Supply Air; 20 straight pieces, 195.00 LF)
   ~ Duct     6 in round       13 pieces    88.40 LF
   ~ Duct     12 in × 8 in      3 pieces    59.20 LF
-  ~ Duct     14 in × 8 in      1 pieces    19.00 LF
+  ~ Duct     14 in × 8 in      1 piece     19.00 LF
   ~ Duct     16 in × 8 in      3 pieces    28.40 LF
   ~ Bend      12 in × 8 in elbow: 1 EA
   ~ Bend      16 in × 8 in elbow: 2 EA
@@ -91,7 +91,7 @@ Sanitary  (Sanitary; 19 straight pieces, 54.80 LF)
     Pipe     1 1/2 in round    4 pieces     5.80 LF
     Pipe     2 in round        9 pieces    23.80 LF
     Pipe     3 in round        5 pieces    16.70 LF
-    Pipe     4 in round        1 pieces     8.50 LF
+    Pipe     4 in round        1 piece      8.50 LF
     Bend      1 1/2 in elbow: 2 EA
     Bend      2 in elbow: 6 EA
     Bend      3 in elbow: 2 EA
@@ -103,8 +103,8 @@ Sanitary  (Sanitary; 19 straight pieces, 54.80 LF)
       no fitting at (18.5, 27.6, -1.6)
       runs of the systems Sanitary, Vent are joined in one network
 
-Vent  (Vent; 1 straight pieces, 12.10 LF)
-    Pipe     2 in round        1 pieces    12.10 LF
+Vent  (Vent; 1 straight piece, 12.10 LF)
+    Pipe     2 in round        1 piece     12.10 LF
     joined: 1 network; 1 open end; 0 places where a run meets another along its length with no fitting
       open: vent through the roof: its second end at (18.5, 22, 23.6)
       runs of the systems Sanitary, Vent are joined in one network

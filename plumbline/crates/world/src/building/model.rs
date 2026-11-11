@@ -59,10 +59,19 @@
 //!   it yet"). Not taken: the `switch`, `data` and `earthing` kinds, a connector's id and
 //!   Guid, its `direction`, and what sizes a circuit (`system`, `poles`, `voltage`,
 //!   `load_va`, `power_factor`, `classification`).
+//! * The most connectors on one thing is 64 where BIMCraft's is 8 a family, and the
+//!   largest section is 20 ft where BIMCraft's largest connector is 2000 mm: a panelboard
+//!   has a connector a circuit, and a duct is wider than a pipe.
+//! * A type's layers have to add up to its thickness within a billionth of a foot, where
+//!   BIMCraft's is a millionth of a millimetre.
+//! * BIMCraft refuses a model in which a wall's top is not above its base
+//!   (`model.rs:6592`). Here such a wall loads, has no height, face or net area, and says
+//!   why: whether its top is above its base depends on two storeys' elevations, and a job
+//!   in which one of them is being changed has to stay open.
 //! * An opening whose head is above its wall's top is not allowed here; BIMCraft allows
 //!   it (DECISIONS.md call 29).
 //! * The checks are the `Val` rules of this project around BIMCraft's rules; each rule
-//!   taken from BIMCraft names its line.
+//!   taken from BIMCraft names its line where it is applied.
 
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -532,7 +541,9 @@ impl Connector {
 #[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Connectors(pub Vec<Connector>);
 
-/// The most connectors one thing may have.
+/// The most connectors one thing may have. (BIMCraft's is 8 a family, `family.rs:698`.
+/// Here it is 64: a connector is on the thing itself, and a panelboard is one thing with a
+/// connector for each circuit.)
 pub const MAX_CONNECTORS: usize = 64;
 
 // ---------------------------------------------------------------- the entry checks
@@ -598,7 +609,10 @@ fn check_layers(path: &str, thickness: &Val<Len>, layers: &[Layer]) -> Result<()
     let parts: Option<Vec<f64>> = layers.iter().map(|l| l.thickness.feet()).collect();
     if let (false, Some(parts), Some(whole)) = (layers.is_empty(), parts, thickness.feet()) {
         let sum: f64 = parts.iter().sum();
-        if (sum - whole).abs() > 1.0e-6 {
+        // BIMCraft's allowance is a millionth of a millimetre, on numbers typed in
+        // millimetres. Here the layers may be typed in inches and the whole in feet, so
+        // the allowance is what converting leaves behind and no more: a billionth of a foot.
+        if (sum - whole).abs() > 1.0e-9 {
             return Err(format!("{path}: its layers add up to {} ft, not its thickness, {} ft", crate::view::num(sum), crate::view::num(whole)));
         }
     }
@@ -641,7 +655,14 @@ pub fn check_wall(path: &str, kind: Kind, w: &Wall) -> Result<(), String> {
         if a == b {
             return Err(format!("{path} wall line: the two ends are the same point"));
         }
+        // Too short to be a wall (BIMCraft `line`, `model.rs:7838`: no longer than its
+        // tolerance).
+        let length = crate::geom::dist([a[0] / d, a[1] / d], [b[0] / d, b[1] / d]);
+        if length <= crate::check::FIT_TOLERANCE_FT {
+            return Err(format!("{path} wall line: is {} ft long; a wall is longer than the {} ft two points are told apart by", crate::view::num(length), crate::check::FIT_TOLERANCE_FT));
+        }
     }
+    // Its top is held to a level or it is a height tall (BIMCraft `model.rs:6586`).
     match (&w.top_level, &w.height) {
         (Some(_), Some(_)) => return Err(format!("{path}: has a top level and a height; its top is held to a storey or it is a height tall, one or the other")),
         (None, None) => return Err(format!("{path}: has no top level and no height; enter one, or a height marked Unknown")),
@@ -699,6 +720,7 @@ pub fn check_segment_type(path: &str, kind: Kind, t: &SegmentType) -> Result<(),
     if !t.category.is_segment() {
         return Err(format!("{path} run type: is for a {:?}; a run type is for a Duct, a Pipe, a Conduit or a Cable", t.category));
     }
+    // A round section has one size (BIMCraft `model.rs:6265`: as deep as it is wide).
     match (t.round, &t.depth) {
         (true, Some(_)) => return Err(format!("{path} run type: is round and has a depth; a round section has its diameter, as its width, and nothing else")),
         (false, None) => return Err(format!("{path} run type: is not round and has no depth; a section is round, by a diameter, or rectangular, by a width and a depth")),

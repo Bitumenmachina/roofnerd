@@ -4,6 +4,8 @@
 //! in, and does its formula make sense on this kind of element?) and the derivation (what
 //! does it come to?). The checks pass no figures in; the derivation passes the element's.
 
+use std::collections::BTreeMap;
+
 use crate::components::*;
 use crate::formula::{self, Expr, Operand};
 use crate::units;
@@ -28,7 +30,7 @@ pub fn input_name_fault(kind: Kind, name: &str) -> Option<String> {
     if !ok {
         return Some(format!("{name:?} cannot be used in a formula; an input's name is lower-case letters, digits and underscores, starting with a letter"));
     }
-    if name == HEIGHT || name == STRETCH_OUT || name == "waste" || name == "quantity" || kind.measures().iter().any(|(m, _)| *m == name) {
+    if name == HEIGHT || name == STRETCH_OUT || name == "waste" || name == "quantity" || name == "unit_cost" || name == "order" || kind.measures().iter().any(|(m, _)| *m == name) {
         return Some(format!("{name:?} already means something on a line; give the input another name"));
     }
     None
@@ -155,6 +157,40 @@ fn count(value: Option<f64>) -> Result<Option<f64>, &'static str> {
     }
 }
 
+/// To the cent.
+pub fn cents(x: f64) -> f64 {
+    (x * 100.0).round() / 100.0 + 0.0
+}
+
+/// An amount of money worked out: to the cent, with the worst status of what it came
+/// from. An amount that is more than nothing and less than half a cent is refused: it
+/// would be written as $0.00, and nothing is silently zero.
+pub fn dollars(value: Option<f64>, statuses: &[Status], formula: &str, inputs: &[String]) -> Derived {
+    match value {
+        Some(v) if v != 0.0 && cents(v) == 0.0 => Derived::refused("$", formula, inputs, "it comes to less than half a cent and would be written as $0.00"),
+        Some(v) => Derived::new(Some(cents(v)), "$", statuses, formula, inputs),
+        None => Derived::new(None, "$", statuses, formula, inputs),
+    }
+}
+
+/// What a line comes to in dollars: what it is priced in (its order units, else its
+/// quantity with waste, else its quantity) times its unit cost.
+fn extension(line: &CostLine, quantity: &Derived, with_waste: Option<&Derived>, order: Option<&Derived>, cost_in: &str) -> Derived {
+    let (base, name) = match (order, with_waste) {
+        (Some(o), _) => (o, "order"),
+        (None, Some(w)) => (w, "with_waste"),
+        (None, None) => (quantity, "quantity"),
+    };
+    let formula = format!("{name} × unit_cost");
+    let inputs = [cost_in.to_string()];
+    match (line.unit_cost.value, base.value) {
+        (None, _) => Derived::refused("$", &formula, &inputs, &format!("the line has no price ({})", line.unit_cost.source)),
+        (Some(_), None) if base.note.is_empty() => Derived::refused("$", &formula, &inputs, "the line has no quantity to price: a figure it is worked out from is not known"),
+        (Some(_), None) => Derived::refused("$", &formula, &inputs, &format!("the line has no quantity to price: {}", base.note)),
+        (Some(price), Some(q)) => dollars(Some(q * price), &[base.status, line.unit_cost.status], &formula, &inputs),
+    }
+}
+
 /// Everything one line works out to on one element.
 pub fn figures(me: &str, on: &On, line: &CostLine) -> LineFigures {
     let cost_in = format!("{me}#{K_COST}");
@@ -162,7 +198,8 @@ pub fn figures(me: &str, on: &On, line: &CostLine) -> LineFigures {
         Ok(r) => r,
         Err(why) => {
             let refused = Derived::refused("", &line.quantity, std::slice::from_ref(&cost_in), &format!("the line's quantity {why}"));
-            return LineFigures { quantity: refused, with_waste: None, order: None };
+            let extension = Some(extension(line, &refused, None, None, &cost_in));
+            return LineFigures { quantity: refused, with_waste: None, order: None, extension };
         }
     };
     // What the figure rests on, for a reader following it back.
@@ -219,5 +256,88 @@ pub fn figures(me: &str, on: &On, line: &CostLine) -> LineFigures {
             }
         }
     });
-    LineFigures { quantity, with_waste, order }
+    let extension = Some(extension(line, &quantity, with_waste.as_ref(), order.as_ref(), &cost_in));
+    LineFigures { quantity, with_waste, order, extension }
+}
+
+/// What an element comes to, both ways (`pl::priced`): from its allowance, from its cost
+/// lines, and the two set against each other. `figure` is the one figure a thing of its
+/// kind is bought by. Empty when the element has neither an allowance nor a cost line.
+pub fn priced(me: &str, kind: Kind, measure: &Measure, allowance: Option<&Allowance>, cost: Option<&Cost>, line_quantities: &BTreeMap<String, LineFigures>) -> BTreeMap<String, Derived> {
+    use std::collections::BTreeMap as Map;
+    let mut out: Map<String, Derived> = Map::new();
+    let lines = cost.map(|c| c.lines.as_slice()).unwrap_or(&[]);
+    if allowance.is_none() && lines.is_empty() {
+        return out;
+    }
+    let basis = kind.priced_by().map(|(name, unit)| (name, unit, measure.0.get(name)));
+    let in_measure = format!("{me}#{K_MEASURE}");
+    // From the allowance.
+    if let Some(a) = allowance {
+        let inputs = [in_measure.clone(), format!("{me}#{K_ALLOWANCE}")];
+        let d = match &basis {
+            None => Derived::refused("$", "", &inputs, &format!("a {kind:?} has no figure an allowance is a rate on")),
+            Some((name, _, figure)) => {
+                let f = format!("{name} × allowance rate");
+                match (figure.and_then(|d| d.value), a.rate.value) {
+                    (_, None) => Derived::refused("$", &f, &inputs, &format!("the allowance has no rate ({})", a.rate.source)),
+                    (None, Some(_)) => Derived::refused("$", &f, &inputs, &format!("its {name} has no figure{}", figure.filter(|d| !d.note.is_empty()).map(|d| format!(": {}", d.note)).unwrap_or_default())),
+                    (Some(q), Some(rate)) => dollars(Some(q * rate), &[figure.map(|d| d.status).unwrap_or(Status::Unknown), a.rate.status], &f, &inputs),
+                }
+            }
+        };
+        out.insert("allowance".into(), d);
+    }
+    // From the lines: whole, or not at all.
+    if !lines.is_empty() {
+        let inputs = [format!("{me}#{K_LINE_QUANTITIES}")];
+        let f = if lines.len() == 1 { "its cost line's extension".to_string() } else { format!("its {} cost lines' extensions, added up", lines.len()) };
+        let each: Vec<(&str, Option<&Derived>)> = lines.iter().map(|l| (l.description.as_str(), line_quantities.get(&l.description).and_then(|q| q.extension.as_ref()))).collect();
+        let missing: Vec<&(&str, Option<&Derived>)> = each.iter().filter(|(_, d)| d.and_then(|d| d.value).is_none()).collect();
+        let detail = match missing.first() {
+            Some((description, d)) => {
+                let why = d.map(|d| d.note.clone()).filter(|n| !n.is_empty()).unwrap_or_else(|| "it has no extension".into());
+                let more = if missing.len() > 1 { format!(", and {} more", missing.len() - 1) } else { String::new() };
+                Derived::refused("$", &f, &inputs, &format!("the detail is not whole: {} of its {} lines cannot be extended. {description:?}: {why}{more}", missing.len(), lines.len()))
+            }
+            None => {
+                let statuses: Vec<Status> = each.iter().filter_map(|(_, d)| d.map(|d| d.status)).collect();
+                let sum: f64 = each.iter().filter_map(|(_, d)| d.and_then(|d| d.value)).sum();
+                dollars(Some(sum), &statuses, &f, &inputs)
+            }
+        };
+        // Rolled back up: over the same figure the allowance is priced on.
+        if let Some((name, unit, figure)) = &basis {
+            let inputs = [in_measure.clone(), inputs[0].clone()];
+            let f = format!("detail ÷ {name}");
+            let rate_unit = format!("$/{unit}");
+            let rate = match (detail.value, figure.and_then(|d| d.value)) {
+                (None, _) => Derived::refused(&rate_unit, &f, &inputs, &detail.note),
+                (Some(_), None) => Derived::refused(&rate_unit, &f, &inputs, &format!("its {name} has no figure")),
+                (Some(_), Some(q)) if q <= 0.0 => Derived::refused(&rate_unit, &f, &inputs, &format!("its {name} is nothing, and a price cannot be spread over nothing")),
+                (Some(amount), Some(q)) => Derived::new(Some(amount / q), &rate_unit, &[detail.status, figure.map(|d| d.status).unwrap_or(Status::Unknown)], &f, &inputs),
+            };
+            out.insert("detail_rate".into(), rate);
+        }
+        out.insert("detail".into(), detail);
+    }
+    // Set against each other, when both are there.
+    if let (Some(a), Some(d)) = (out.get("allowance").cloned(), out.get("detail").cloned()) {
+        let inputs = [format!("{me}#{K_PRICED}")];
+        let (difference, percent) = match (a.value, d.value) {
+            (Some(a_v), Some(d_v)) => {
+                let statuses = [a.status, d.status];
+                let diff = Derived::new(Some(cents(d_v - a_v)), "$", &statuses, "detail − allowance", &inputs);
+                let pct = if a_v == 0.0 { Derived::refused("%", "difference ÷ allowance × 100", &inputs, "the allowance is $0.00, and a difference is not a share of nothing") } else { Derived::new(Some((d_v - a_v) / a_v * 100.0), "%", &statuses, "difference ÷ allowance × 100", &inputs) };
+                (diff, pct)
+            }
+            _ => {
+                let why = if a.value.is_none() { format!("the allowance has no figure: {}", a.note) } else { d.note.clone() };
+                (Derived::refused("$", "detail − allowance", &inputs, &why), Derived::refused("%", "difference ÷ allowance × 100", &inputs, &why))
+            }
+        };
+        out.insert("difference".into(), difference);
+        out.insert("difference_percent".into(), percent);
+    }
+    out
 }

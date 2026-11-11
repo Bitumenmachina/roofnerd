@@ -28,7 +28,7 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `K_SYSTEM` | ours |  |  | the saved job's `pl::` keys are this program's (handoff 7.9); `grep -rn pl:: crates/core/src`: nothing |
 | `K_IN_SYSTEM` | ours |  |  | the saved job's `pl::` keys are this program's (handoff 7.9); `grep -rn pl:: crates/core/src`: nothing |
 | `Discipline` | ours |  |  | `grep -rn 'enum Discipline' crates/core/src`: nothing; BIMCraft's disciplines are tabs of its window (read `docs/disciplines.md`) |
-| `SystemInfo` | ours |  |  | a system as an element; BIMCraft's is a name on each run, `model.rs:1605`; `grep -n 'struct System' model.rs`: nothing |
+| `SystemInfo` | ours |  |  | a system as an element with a discipline and a classification; read `model.rs` 1588 to 1612 (a run carries its system's name) and `electrical.rs` 70 to 95 (a `DistributionSystem` is a row of electrical settings: phases, wires, voltages); `grep -n 'struct System' model.rs`: nothing |
 | `CLASSIFICATIONS` | ours |  |  | `grep -rn DOMESTICCOLDWATER .` over BIMCraft: nothing; checked against IFC's enumeration in DECISIONS.md call 29 |
 | `InSystem` | ported | `system` | `crates/core/src/model.rs:1605` | a run's system; here a component of its own pointing at a system element |
 | `is_segment` | ported | `RUN_CATEGORIES` | `crates/core/src/model.rs:2477` |  |
@@ -38,16 +38,16 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `check_system` | ours |  |  | as SystemInfo: `grep -n 'struct System' model.rs`: nothing |
 | `check_in_system` | ours |  |  | as SystemInfo: a system here is a path to an element; read `model.rs` 1588 to 1612 |
 | `check_whole` | ours |  |  | the tree of paths is ours (handoff 7.8); BIMCraft's references are Guids, read `model.rs` 2060 to 2120 |
-| `measures` | ours |  |  | figures with a status and a refusal; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
+| `measures` | ours |  |  | figures with a status and a refusal are ours; four of BIMCraft's rules are applied inside it and cited where they are used (the header of `building.rs` lists them); `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
 | `rows` | ours |  |  | a flat reading with flags; read `schedule.rs` 940 to 975: its rows carry no status |
 | `Shape` | ours |  |  | what a Bevy window draws; read `runs.rs` 153 to 182: BIMCraft's shapes are prisms and tubes for its own egui view |
 | `Placement` | ours |  |  | as Shape: read `runs.rs` 153 to 182 |
 | `placements` | ours |  |  | the list of what is not drawn, with why; `grep -c -i 'not drawn'` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
-| `TakeoffLine` | ours |  |  | `grep -c -i takeoff` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
-| `SystemTakeoff` | ours |  |  | `grep -c -i takeoff` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
+| `TakeoffLine` | ours |  |  | read `schedule.rs` 368 to 398 and 1036 to 1100: BIMCraft's pipe and conduit schedules carry System, Length and Diameter and can be sorted, grouped and totalled, which is the substance of a takeoff by system and size. Ours is the status on every line, the run with no size kept on a line of its own, and membership of a system that is an element; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
+| `SystemTakeoff` | ours |  |  | as TakeoffLine: read `schedule.rs` 368 to 398 and 1036 to 1100 |
 | `OpenEnd` | ours |  |  | an open end said for a person, by system; read `network.rs` whole: its `open` is a list of node numbers |
 | `Continuity` | ours |  |  | the network read by system; read `network.rs` whole: it has no system as an element to read by |
-| `takeoff` | ours |  |  | `grep -c -i takeoff` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
+| `takeoff` | ours |  |  | as TakeoffLine: read `schedule.rs` 368 to 398 and 1036 to 1100; the code is new, the idea of a grouped schedule by system is BIMCraft's and everybody's |
 | `storeys_of` | ours |  |  | the storey an element is under in the tree of paths; read `model.rs` 2060 to 2120: BIMCraft's is a `level` Guid on each element |
 | `StoreyTotals` | ours |  |  | net wall area by storey; `grep -c -i 'net area'` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0; its wall area is length by height, `schedule.rs:955` |
 | `storey_totals` | ours |  |  | as StoreyTotals: `grep -c -i 'net area'` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
@@ -78,7 +78,7 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `round_ft` | ours |  |  | a value held in the unit it was entered in is ours (call 16); read `units.rs` whole: BIMCraft holds millimetres only |
 | `rect_ft` | ours |  |  | a value held in the unit it was entered in is ours (call 16); read `units.rs` whole: BIMCraft holds millimetres only |
 | `perimeter_ft` | ours |  |  | the distance round a section, for a duct's surface; `grep -n -i perimeter runs.rs`: nothing; `geom.rs:119` is a ring's |
-| `said` | ours |  |  | a size said as it was entered; `grep -rn 'fn said' crates/core/src`: nothing |
+| `said` | ours |  |  | a size said as it was entered; `grep -n 'fn said(' model.rs runs.rs family.rs`: nothing (`sketch.rs:221` has a `said` that says a sketch's faults, another thing) |
 | `Segment` | ported | `Run` | `crates/core/src/model.rs:1588` |  |
 | `offsets_ft` | ours |  |  | a value held in the unit it was entered in is ours (call 16); read `units.rs` whole: BIMCraft holds millimetres only |
 | `Placed` | ported | `Component` | `crates/core/src/model.rs:1616` |  |
@@ -95,16 +95,16 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `Flow` | ported | `Flow` | `crates/core/src/family.rs:382` |  |
 | `Connector` | ported | `Connector` | `crates/core/src/family.rs:430` |  |
 | `Connectors` | ours |  |  | the connectors as a component on the placed thing; read `family.rs` 430 to 475: there they are a family's list |
-| `MAX_CONNECTORS` | ours |  |  | a limit on one thing's connectors; `grep -n -i 'MAX_CONNECTORS' family.rs model.rs`: nothing |
+| `MAX_CONNECTORS` | ported | `MAX_CONNECTORS` | `crates/core/src/family.rs:698` | 8 a family there, 64 a thing here; the change is in the header of `building/model.rs` |
 | `check_level` | ours |  |  | the `Val` rules (a unit, a status, a source) round BIMCraft's rule; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
 | `check_room` | ours |  |  | the `Val` rules (a unit, a status, a source) round BIMCraft's rule; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
 | `check_wall_type` | ported | `MAX_LAYERS` | `crates/core/src/model.rs:481` | and the layers adding up to the thickness, `model.rs:6245` |
 | `check_floor_type` | ported | `MAX_LAYERS` | `crates/core/src/model.rs:481` | as check_wall_type |
 | `check_opening_type` | ours |  |  | the `Val` rules (a unit, a status, a source) round BIMCraft's rule; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
-| `check_wall` | ours |  |  | the `Val` rules (a unit, a status, a source) round BIMCraft's rule; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
+| `check_wall` | ported | `top_level` | `crates/core/src/model.rs:6585` | a top held to a level or a height tall; and too short to be a wall, `model.rs:7838`. Not taken: refusing a wall whose top is not above its base (header) |
 | `check_opening` | ported | `sill` | `crates/core/src/model.rs:6691` | a sill on or over the wall's base |
 | `check_floor` | ours |  |  | the `Val` rules (a unit, a status, a source) round BIMCraft's rule; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
-| `check_segment_type` | ours |  |  | the `Val` rules (a unit, a status, a source) round BIMCraft's rule; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
+| `check_segment_type` | ported | `round` | `crates/core/src/model.rs:6266` | a round section has one size; the rest is the `Val` rules |
 | `check_segment` | ported | `check` | `crates/core/src/runs.rs:62` | too short to be a run |
 | `check_placed` | ours |  |  | the `Val` rules (a unit, a status, a source) round BIMCraft's rule; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
 | `check_fitting` | ours |  |  | a fitting's kind is on a fitting; read `family.rs` 28 to 160: there the category is the family's |

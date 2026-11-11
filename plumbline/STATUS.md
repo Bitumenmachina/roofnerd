@@ -20,7 +20,7 @@ run again and each gave what this file said they gave.
 | D2 | 3D roof slice | **A working 3D prototype, not the whole deliverable.** In a window: a roof solved from its footprint, a plane picked with the mouse, its pitch changed and its eave moved with the lines and totals following, a surface given its condition, and the sheet in a second window updating live. The windows were drawn again on 2026-11-11 after the owner said the first looked cheap and tacky (DECISIONS.md call 25). Not built: tracing a calibrated plan, a dormer, a parapet and tapered crickets in 3D, dragging with the mouse, editing in the sheet. Judged once: the solver's areas and lengths held on every ordinary roof; it found stale planes left Known, an eave moved through the far wall, and an estimator's entries moving to another slope, among others. All fixed. **Those fixes are not judged.** See "D2. What was run". |
 | — | The whole building (owner, 2026-11-11) | **A working model of a whole house on BIMCraft's shapes, read and walked, not yet drawn in the window.** The owner widened the brief from the envelope to the building and its services (DECISIONS.md call 26). The model was first written from nothing, then, the same day, re-based on BIMCraft's (call 29; `HANDOFF_REBASE.md`): storeys, walls of a type with a top held to a storey or a height, doors and windows of a type placed by their centre, floors, rooms found from their walls, straight runs of a type joined by fittings, equipment and fixtures with connectors, systems, and a network that says what is joined and what is open. Each value flagged; a takeoff by system. In the window: the whole house under a sky, seen through, a system or a storey at a time, on plan, and on foot inside. Nothing of the building can be edited in the window yet. Judged twice: see "The whole building" and "The re-base on BIMCraft". |
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
-| D4 | Macro to micro | Not started. How its demonstration will be run is written at the end of this file. |
+| D4 | Macro to micro | **Demonstrated at the command line and in the window. Not yet judged.** An element takes an allowance in $/SF or $/LF; a cost line's quantity is extended by its unit cost; an element's detail is rolled back up to the same $/SF or $/LF; the two are reconciled by element and for the job, each total saying what it leaves out and how much of it rests on an assumption. Prices are entered at the command line or typed in the window. See "D4. What was run". |
 | D5 | Estimate sheet and money | Not started. Reference estimate missing (Q5). |
 | D6 | Interchange and reports | Not started. |
 | D7 | Capture | Waiting on the owner's ruling. |
@@ -884,6 +884,51 @@ other four demos, which it must not have moved.
 * A real desktop and a real graphics card: everything still ran on a virtual display
   with a software renderer.
 
+### Ninth judgment: the hand figures held; an assumed height could decide a room's area unflagged, and the map said things that were not so
+
+A fresh agent (Opus), working only in a scratch copy, built some sixty job files by script
+and ran `show` and `takeoff` on them, worked each expected figure by hand, read BIMCraft's
+source beside each ported function, and ran the searches `PORTMAP.md` cites. It did not
+read the window's code, `sample.rs` or `PROPOSALS.md`, and could not build BIMCraft
+offline, so its fourth finding is worked from BIMCraft's code and not from running it.
+
+**What held.** Wall heights every way (a top level that is the wall's own storey, a top
+below the base, offsets in inches and in feet and inches, elevations Assumed and Unknown).
+Openings off either end, overlapping, above the top, touching, stacked. Rooms against
+hand figures: a T-junction, a crossing wall, a partition in two pieces, a triangle,
+corners of 5, 15, 45 and 60 degrees, an island with a room inside it, `join` off,
+duplicate and overlapping walls, all six `location` lines with layers, a wall from the
+storey below rising into this one, two rooms in one space. Sloped runs, risers, duct
+surface. One line for one size however typed. A turned fixture joining at its turned
+connector; a pipe and a duct at one point not joining. Every refusal on load it tried.
+Save, load, save gave the same bytes on every probe file, and a hand-edited figure was
+never trusted. Nothing panicked. Every line `PORTMAP.md` cites holds its symbol, and
+about 45 line citations in DECISIONS.md call 29 were right to within a few lines.
+
+**What it found, and what was done.**
+
+| # | What the ninth judge found | What was done | Regression test |
+|---|---|---|---|
+| J9-1 | **A wrong figure, Known.** A partition with an Assumed base offset of 5 ft was left out of a room (it starts above the 4 ft its storey's rooms find their walls at) and the room was 185.25 SF, Known. With an Assumed base of 1 ft it was 90.25 SF, Known. One assumed value decided between the two and neither was flagged. A wall's entered height also did not carry its base's status | Each wall whose base or top rests on anything less than Known is tried gone and standing full height; a room that comes out differently either way takes its status and names it. A wall's heights carry the status of its storey's elevation and its base offset too (DECISIONS.md call 31) | `a_room_is_no_surer_than_a_height_that_decides_whether_a_wall_bounds_it` |
+| J9-2 | **A silent drop.** A Wall element with no `pl::wall` loaded, and the rooms round it ignored it and stayed Known | A wall with nothing entered on it is a wall that cannot be placed: its storey's rooms have no figure and name it | `a_wall_with_nothing_entered_and_a_point_in_a_wall_leave_no_figure_standing` |
+| J9-3 | **A flag dropped.** The command line's takeoff printed a system's total length with no mark when a run on it was only assumed to be on it | The heading carries the flag of its total | `a_takeoffs_heading_carries_the_flag_of_its_total` (command line) |
+| J9-4 | **A port difference that was not listed, and moved an area.** BIMCraft joins a bounding wall to every wall it meets, bounding or not. The port joined bounding walls only to each other, so a partition ending on a wall that does not bound rooms ran to that wall's centre line: 180.375 SF where BIMCraft's rule gives 180.5 | A bounding wall is joined to every wall of the job it meets, as BIMCraft joins it. The judge's case gives 180.5 SF, 200 SF and 77 LF, worked by hand | `a_partition_stops_at_the_face_of_a_wall_that_does_not_bound_rooms` |
+| J9-5 | An open connector was listed under the fixture's own system: a water closet on cold water with nothing on its waste outlet was said under Cold water, and Sanitary said nothing | An open pipe connector is listed on the systems that carry what it carries; any other on the thing's own system | `an_open_connector_is_listed_where_its_run_would_be` |
+| J9-6 | **False in `PORTMAP.md`.** `MAX_CONNECTORS` was listed as ours with a search said to find nothing. BIMCraft has `MAX_CONNECTORS` (`family.rs:698`, 8) | The row is `ported`, `family.rs:698`; the header of `building/model.rs` says it is 64 here and why | the gate, which now runs the search |
+| J9-7 | **Understated.** `building.rs` said five small things in it were BIMCraft's. Its own code cites BIMCraft for a wall's base and top, the opening fit rule, the height at which walls bound rooms and a run's true length; `check_wall` and `check_segment_type` take rules of BIMCraft's and were listed as ours; one citation pointed at a blank line | `building.rs`'s header lists the four rules of BIMCraft's its figures are worked out by, each cited where it is used; `check_wall` and `check_segment_type` are `ported` rows; the citation is `model.rs:3932` |  |
+| J9-8 | **Misleading.** The takeoff was listed as ours on a search for the word "takeoff". BIMCraft's schedules list pipes and conduit by system with length and diameter, grouped and totalled; and it has a named electrical distribution system | The rows say what BIMCraft's schedules do and what is ours on top; DECISIONS.md call 31 corrects calls 28 and 29 |  |
+| J9-9 | False in `PORTMAP.md`: a search said to find nothing for `fn said` finds `sketch.rs:221`. The gate never ran an "ours" search | The row cites a search that does find nothing. **The gate now runs every search an "ours" row says came back empty**, and was seen to fail on this row and on J9-6's before they were corrected | the gate |
+| J9-10 | A wall's `opening_area` was refused when a window's sill or centre was Unknown, though its area was known; and the reason given for the net was wrong | A wall's opening area is as sure as its openings' sizes; an opening with a size and no known place leaves the net refused, saying the fit cannot be checked | `an_openings_area_is_its_size_and_where_it_is_matters_to_the_net` |
+| J9-11 | A room whose point is inside a wall had no floor area, and a Known gross area | It has no gross area either: which side of the wall was meant is not guessed. A change from BIMCraft, listed in the header | `a_wall_with_nothing_entered_and_a_point_in_a_wall_leave_no_figure_standing` |
+| J9-12 | `check_wall` refused only a wall whose ends are the same point; BIMCraft refuses one shorter than its tolerance. BIMCraft also refuses on load a wall whose top is not above its base; here it loads and its figures are refused. Neither difference was listed | A wall no longer than 0.01 ft is refused. A wall whose top is not above its base still loads, with its figures refused; the difference is listed in the header with the reason | `walls_join_within_a_hundredth_of_a_foot_and_no_further` |
+| J9-13 | DECISIONS.md call 29 says each restated tolerance has a test on it. The tolerance by which walls join had none | A test: 0.005 ft short of a corner joins, 0.02 ft does not | `walls_join_within_a_hundredth_of_a_foot_and_no_further` |
+| J9-14 | Smaller things: a header said a sill is above the storey's floor (it is above the wall's base); a header called 0.01 ft BIMCraft's 1 mm; the largest section was listed as ported at a different value with no note; the layers' sum was checked to 1e-6 ft where BIMCraft's is 1e-6 mm; SPEC.md said "a drain narrower downstream" where only one that drops is checked; "1 pieces" | Each corrected. The layers' sum is held to a billionth of a foot, with the reason in the code | `a_takeoffs_heading_carries_the_flag_of_its_total` for "1 piece" |
+
+Not changed: a drain that narrows on the level is not warned of (BIMCraft's rule looks only
+where a drain drops; SPEC.md now says so).
+
+**These fixes have not been judged.**
+
 ## D3. How its demonstration will be run (written before any D3 work)
 
 **Demonstration as the brief states it:** One parapet produces wall flashing (a height on
@@ -1045,3 +1090,93 @@ the demonstration can run before the ruling; no total will be grouped by code un
 
 **The judge** prices a job of its own both ways and tries to make the two disagree
 without the program saying so, or to get a flagged value into a total that looks clean.
+
+## D4. What was run and what it showed
+
+**How it is run:** `demos/d4.sh` at the command line, and `demos/d4w.sh` in the window. Both
+use the sample roof with made-up prices that are stated in the scripts: a budget rate of
+$28.00 a SF of roof and $40.00 a LF of headwall flashing; quotes of $31.50 a SF for the
+standing seam and $18.25 a SF for the headwall flashing. Every figure is worked by hand
+in the scripts' comments. What was decided on the way is DECISIONS.md call 30.
+
+**What was run and what it showed** (`demos/d4.sh`, exit 0)
+
+1. *Nothing priced.* The job's allowance total and its detail total each read "none".
+   Neither is $0.
+2. *Design phase.* Three planes and the headwall given allowances. South plane:
+   419.2627 SF x 28.00 = $11,739.36. East plane: 251.5576 SF = $7,043.61. Shed:
+   98.9545 SF = $2,770.73. Headwall: 12 LF x 40.00 = $480.00. Total $22,033.70 over four
+   elements. The two planes with no allowance read "none entered", and the 14 elements
+   that could carry a price and carry none are counted by kind.
+3. *An assumed input shows in the money.* The shed's pitch is Assumed, so its area is, and
+   its $2,770.73 is flagged. The headwall lies on the shed, so its length and its $480.00
+   are flagged too. The total says $3,250.73 of itself rests on something assumed. (I had
+   worked the headwall as Known by hand; the program carried the flag further than I did,
+   and was right.)
+4. *Detail.* Unit costs entered on the lines D3 built. South plane: 419.2627 SF x 31.50
+   = $13,206.78. Shed: $3,117.07. Headwall: 12 LF x 24 in ÷ 12 = 24 SF x 18.25 = $438.00.
+5. *Rolled back up.* South plane: $13,206.78 ÷ 419.2627 SF = $31.50 a SF. The headwall's
+   line is priced by the SF and rolls up to the LF its allowance is in: $438.00 ÷ 12 LF
+   = $36.50 a LF.
+6. *Reconciled.* South plane: $1,467.42 over its allowance, 12.50 %. Shed: $346.34 over,
+   12.50 %. Headwall: $42.00 under, -8.75 %. The east plane has an allowance and a line
+   with no price: its detail "is not whole: 1 of its 1 lines cannot be extended", it has
+   no detail figure, and it is not rolled up. Detail total $16,761.85 over three
+   elements, $3,555.07 of it assumed, with the three planes it leaves out named. Like for
+   like, over the three elements that have both: allowances $14,990.09 against detail
+   $16,761.85, $1,771.76 over, 11.82 %.
+7. *The geometry still drives both.* The south plane made 9:12: 375 SF on plan x 1.25
+   = 468.75 SF. Allowance $13,125.00; detail $14,765.63; still $31.50 a SF. In the file,
+   the plane and three lines that lie on it changed, and only the plane's price.
+8. *Refused:* an allowance by the LF on a plane; an allowance on a roof; a unit cost by
+   the LF on a line priced by the SF; a price below zero.
+
+**In the window** (`demos/d4w.sh`; pictures in `demos/captured/d4/`). The script starts
+the program on the job step 6 of the list above leaves (before the pitch change), opens
+it the way a person does, and drives it with the pointer and the keyboard. All fourteen
+pictures were opened and read at full size. What they show:
+
+* *01, 02.* The job as opened, and the sheet's Money tab. South plane: 419.26 SF,
+  allowance $11,739.36, detail $13,206.78, comes to $31.50 / SF, $1,467.42 over,
+  12.50 %. East: allowance $7,043.61, detail "no figure", with the reason under it in
+  red. North and west: allowance "none entered", detail "no figure". Shed and headwall
+  amber (assumed). The job: allowances $22,033.70 over 4 elements, "$3,250.73 of it
+  rests on something assumed"; detail $16,761.85 over 3, with the three planes left out
+  named; like for like $1,771.76 over (11.82 %); "Not priced at all: 14 that could be",
+  counted by kind.
+* *03.* The east row clicked on the sheet: the model selects the east plane and its
+  card shows its allowance, 28.00 $/SF, with its source.
+* *04, 05.* `U` opens a field on the model window, "Unit cost of "Copper standing seam,
+  installed" on east"; 31.50 typed and entered. The sheet's east row now reads detail
+  $7,924.06, $31.50 / SF, $880.45 over, 12.50 %, in amber, because a price typed in the
+  window is Assumed until it is confirmed. Detail total $24,685.91 over 4 elements,
+  $11,479.13 of it assumed; like for like $2,652.21 over (12.04 %). The title bar says
+  "Not saved".
+* *06.* The north row clicked, `B`, 28 entered: north's allowance $11,739.36, amber, its
+  card saying "set in the 3D view; not yet confirmed against a drawing". Allowances
+  $33,773.06 over 5 elements, $14,990.09 of it assumed. Its detail is still "no figure".
+* *07.* "nonsense" typed as a price: refused in red on both windows, `"nonsense" is not
+  a price; write it as a number of dollars, like 4.25 or $4.25/SF`, and nothing changed.
+
+The script then saves with the keyboard and reads the file: the east line's unit cost is
+31.5, Assumed, with the source above; the north plane's line still has no price.
+
+Seen in the pictures and left as it is: the model window's "To settle" list still leads
+with the schedule codes, which nothing in D4 uses; the sheet's Money tab runs its own "To
+settle" list past the bottom of the window; the wheel scrolls it, and nothing on screen
+says so.
+
+**Tests** (`crates/world/tests/world.rs`, three, with the figures above worked in their
+comments): the two ways and their reconciliation; that money is never silently zero (no
+price is no figure, $0 entered is $0.00, less than half a cent is refused, an allowance
+of $0 gives no percentage); that a price is entered for the unit a thing is priced in.
+
+**What remains**
+* A price typed in the window is entered as Assumed, with the window as its source: the
+  window has nowhere to say where a figure came from.
+* The window prices a line's unit cost and an element's allowance. A line's waste, order
+  conversion and stretch-out are still entered at the command line, so a line that needs
+  one of those before it has a quantity cannot be completed in the window.
+* Nothing is grouped by cost code (QUESTIONS.md Q1 is open).
+* An allowance is a rate on one figure per kind of element. A lump sum is not built.
+* D5's columns (material, labour, general), mark-ups and suppliers are D5.

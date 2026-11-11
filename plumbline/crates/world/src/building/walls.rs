@@ -21,7 +21,8 @@
 //! * The corner of two built-up walls where one butts the other's structure
 //!   (`walls/compound.rs`) is how layers are drawn and is not taken: two walls meet in a
 //!   mitre.
-//! * BIMCraft's tolerance of 1 mm is passed in by the caller, in feet.
+//! * Where BIMCraft uses its tolerance of 1 mm, the caller's is used, in feet. This
+//!   program's is 0.01 ft, about 3 mm, the one tolerance it tells two points apart by.
 
 use super::model::{Function, Location};
 use crate::skeleton::P2 as V;

@@ -12,3 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 plumbline-world = { path = "../world" }
+
+[dev-dependencies]
+# For the tests only: a job file is edited as data. Already linked by plumbline-world.
+serde_json = { workspace = true }

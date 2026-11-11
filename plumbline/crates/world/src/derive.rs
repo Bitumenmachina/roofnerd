@@ -169,9 +169,11 @@ pub fn derive(world: &mut World) -> Vec<String> {
     let mut changed = Vec::new();
     let mut to_insert: Vec<(Entity, Option<Measure>, Option<LineQuantities>)> = Vec::new();
     let mut to_remove: Vec<Entity> = Vec::new();
+    // What each element comes to in money, set on it after the loop.
+    let mut priced_now: Vec<(Entity, String, Priced)> = Vec::new();
     #[allow(clippy::type_complexity)]
-    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Run>, Option<&Height>, Option<&Cost>, Option<&mut Measure>, Option<&mut LineQuantities>)>();
-    for (node, kind, outline, pitch, run, height, cost, measure, line_quantities) in q.iter_mut(world) {
+    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Run>, Option<&Height>, Option<&Cost>, Option<&Allowance>, Option<&mut Measure>, Option<&mut LineQuantities>)>();
+    for (node, kind, outline, pitch, run, height, cost, allowance, measure, line_quantities) in q.iter_mut(world) {
         let me = &node.path;
         let mut m = BTreeMap::new();
 
@@ -271,6 +273,8 @@ pub fn derive(world: &mut World) -> Vec<String> {
             }
         }
         let new_lq = LineQuantities(lq);
+        // What it comes to: from its allowance, from its lines, and the two compared.
+        priced_now.push((ids[&node.path], node.path.clone(), Priced(lines::priced(me, *kind, &new, allowance, cost, &new_lq.0))));
         let mut moved = false;
         let mut insert_m = None;
         let mut insert_lq = None;
@@ -320,6 +324,24 @@ pub fn derive(world: &mut World) -> Vec<String> {
     }
     for e in to_remove {
         world.entity_mut(e).remove::<LineQuantities>();
+    }
+    for (e, path, new) in priced_now {
+        let old = world.get::<Priced>(e);
+        let moved = match (old, new.0.is_empty()) {
+            (None, true) => false,
+            (Some(old), false) if *old == new => false,
+            (Some(_), true) => {
+                world.entity_mut(e).remove::<Priced>();
+                true
+            }
+            (_, false) => {
+                world.entity_mut(e).insert(new);
+                true
+            }
+        };
+        if moved && !changed.contains(&path) {
+            changed.push(path);
+        }
     }
     changed
 }

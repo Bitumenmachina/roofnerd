@@ -434,8 +434,8 @@ a placed thing's heights are above the storey they are under.
 | Wall | `plan_length` LF | length of its line on the plan |
 | Wall | `height` ft | its `height`, or from its base up to its top level. Refused when the top is not above the base, or an elevation it needs is not known. |
 | Wall | `face_area` SF | `plan_length × height`: one face, with nothing taken out |
-| Wall | `opening_area` SF | the `opening_area` of each door and window under it, added up. A wall with none has 0, and that zero is Known. |
-| Wall | `net_area` SF | `face_area − opening_area`. Refused, with the reason, when an opening starts before the wall does, runs past its end, stands taller than it, or lies over another, or when an opening has no area. The gross face still stands. |
+| Wall | `opening_area` SF | the `opening_area` of each door and window under it, added up. A wall with none has 0, and that zero is Known. It is as sure as the openings' sizes; where each one is does not come into it. |
+| Wall | `net_area` SF | `face_area − opening_area`. Refused, with the reason, when an opening starts before the wall does, runs past its end, stands taller than it, or lies over another, when an opening has no area, or when where an opening is in the wall is not known. It is as sure as where each opening is as well as its size. The gross face still stands. |
 | Door, Window | `width`, `height` ft | its type's |
 | Door, Window | `opening_area` SF | `width × height` |
 | Floor | `plan_area` SF | area of its boundary on the plan |
@@ -455,7 +455,13 @@ its point is inside a wall, or when a room added before it has the space. A wall
 the room's own storey that cannot be placed (no height, no type, no thickness) leaves
 every room of that storey with no figure: whether it closes a room off is not known. One
 under another storey makes the figure Assumed, and the figure's note says what is assumed.
-A figure is no surer than the walls it is measured to, and names them.
+A figure is no surer than the walls it is measured to, and names them. A bounding wall is
+joined to every wall it meets, bounding or not: a partition that ends on a low wall stops
+at that wall's face. A Wall element with nothing entered on it counts as a wall that
+cannot be placed. Where a wall's base or top rests on anything less than Known, each room
+of the storey is worked out again with that wall gone and with it standing full height,
+and a room that comes out differently either way is no surer than that wall's heights and
+says which wall. A room whose point is inside a wall has no figure at all.
 
 **Runs and fittings.** A run of duct or pipe that turns corners is one element for each
 straight piece and a Fitting at each corner. Length is measured through fittings, centre
@@ -469,7 +475,8 @@ join. An end on another run's length is a node that splits that run without spli
 the element. A fitting's connectors are joined through it; a fixture's and equipment's are
 not. It gives the nodes, the edges, the groups of what is joined, the open ends, and
 warnings: two systems in one network, two pipe domains in one, a run met along its length
-with no fitting, a drain narrower downstream. It never refuses a job. What cannot be
+with no fitting, and, where a drain drops, a pipe leaving the drop narrower than one
+coming down to it (a drain that narrows on the level is not looked for). It never refuses a job. What cannot be
 placed is listed in `left_out` with why.
 
 `building::takeoff` gives each system's runs by kind and size, with the length of each

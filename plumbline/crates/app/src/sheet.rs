@@ -126,6 +126,8 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             for d in [Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing] {
                 all.push((Tab::Of(d), theme::discipline_name(d).to_string(), snap.counts.iter().find(|c| c.0 == d).map(|c| c.1).unwrap_or(0)));
             }
+            // Money is offered once anything has an allowance or a cost line.
+            all.push((Tab::Money, "Money".to_string(), snap.pricing.as_ref().map(|p| p.elements.len()).unwrap_or(0)));
             for (tab, name, count) in all {
                 let on = doc.tab == tab;
                 // A job with nothing under a tab does not offer it.
@@ -157,6 +159,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
                 }
                 Tab::Building => building(body, fonts, &doc, &snap),
                 Tab::Of(discipline) => systems(body, fonts, &doc, &snap, discipline),
+                Tab::Money => money(body, fonts, &doc, &snap),
             }
             notes(body, fonts, &snap);
             cost_lines(body, fonts, &snap);
@@ -372,6 +375,108 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             }
         });
     }
+}
+
+/// A figure of money as the sheet says it: the amount, or that there is none.
+fn dollars(d: Option<&plumbline_world::Derived>) -> (String, Status) {
+    match d {
+        None => ("none entered".into(), Status::Known),
+        Some(d) => match d.value {
+            Some(x) if d.unit == "%" => (format!("{} %", view::figure(x, 2)), d.status),
+            Some(x) if x < 0.0 => (format!("-${}", view::figure(-x, 2)), d.status),
+            Some(x) => (format!("${}", view::figure(x, 2)), d.status),
+            None => ("no figure".into(), Status::Unknown),
+        },
+    }
+}
+
+/// The job priced both ways. Every figure is the world's (`view::pricing`); nothing is
+/// added up here.
+fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
+    let Some(pricing) = &snap.pricing else { return };
+    if pricing.elements.is_empty() {
+        nothing(p, fonts, "Nothing in this job has an allowance or a cost line. Select something in the model and press B to give it an allowance.");
+        return;
+    }
+    table(p, fonts, "Allowance against detail", format!("{} elements", pricing.elements.len()), |t| {
+        header_row(t, fonts, &[("", 7.0, false), ("Element", 0.0, false), ("Priced by", 110.0, true), ("Allowance", 110.0, true), ("Detail", 110.0, true), ("Comes to", 90.0, true), ("Difference", 170.0, true)]);
+        for e in &pricing.elements {
+            let selected = doc.selected.as_deref() == Some(e.path.as_str());
+            let worst = [&e.allowance, &e.detail].iter().filter_map(|d| d.as_ref()).map(|d| d.status).max().unwrap_or(Status::Unknown);
+            row(t, selected, Some(e.path.clone()), |r| {
+                cell(r, 7.0, false, |c| dot(c, worst));
+                cell(r, 0.0, false, |c| {
+                    words(c, fonts, e.name.clone(), 12.5, Weight::Medium, theme::ink());
+                    words(c, fonts, e.path.clone(), 11.0, Weight::Regular, theme::ink_faint());
+                });
+                cell(r, 110.0, true, |c| match &e.figure {
+                    Some((_, unit, d)) => words(c, fonts, amount(d.value, 2, unit), 12.5, Weight::Regular, theme::status_ink(d.status)),
+                    None => words(c, fonts, "nothing", 12.5, Weight::Regular, theme::ink_faint()),
+                });
+                for (d, width, weight) in [(&e.allowance, 110.0, Weight::Regular), (&e.detail, 110.0, Weight::Medium)] {
+                    let (said, status) = dollars(d.as_ref());
+                    cell(r, width, true, |c| words(c, fonts, said, 12.5, weight, if d.is_none() { theme::ink_faint() } else { theme::status_ink(status) }));
+                }
+                cell(r, 90.0, true, |c| match e.detail_rate.as_ref().and_then(|d| d.value.map(|x| (x, d))) {
+                    Some((x, d)) => words(c, fonts, format!("${} / {}", view::figure(x, 2), d.unit.trim_start_matches("$/")), 12.5, Weight::Regular, theme::status_ink(d.status)),
+                    None => words(c, fonts, "", 12.5, Weight::Regular, theme::ink_faint()),
+                });
+                cell(r, 170.0, true, |c| match (e.difference.as_ref().and_then(|d| d.value.map(|x| (x, d.status))), e.difference_percent.as_ref().and_then(|d| d.value)) {
+                    (Some((x, status)), pct) => {
+                        let word = if x > 0.0 { "over" } else if x < 0.0 { "under" } else { "even" };
+                        words(c, fonts, format!("${} {word}{}", view::figure(x.abs(), 2), pct.map(|v| format!("  {} %", view::figure(v, 2))).unwrap_or_default()), 12.5, Weight::Regular, theme::status_ink(status))
+                    }
+                    _ => words(c, fonts, "", 12.5, Weight::Regular, theme::ink_faint()),
+                });
+            });
+            // Why a figure is missing is said under the element, not left for a tooltip.
+            for d in [&e.allowance, &e.detail].iter().filter_map(|d| d.as_ref()).filter(|d| d.value.is_none()) {
+                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(7.0) }, ..default() }).with_child(text(fonts, d.note.clone(), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
+            }
+        }
+    });
+    table(p, fonts, "The job", String::new(), |t| {
+        let line = |t: &mut ChildSpawnerCommands, name: &str, total: &view::MoneyTotal, none: &str| {
+            row(t, false, None, |r| {
+                cell(r, 7.0, false, |c| dot(c, if total.value.is_some() { total.status } else { Status::Unknown }));
+                cell(r, 0.0, false, |c| {
+                    words(c, fonts, name, 12.5, Weight::Semibold, theme::ink());
+                    words(c, fonts, match total.value { Some(_) => format!("over {} element{}", total.members, if total.members == 1 { "" } else { "s" }), None => none.to_string() }, 11.5, Weight::Regular, theme::ink_faint());
+                });
+                cell(r, 260.0, true, |c| {
+                    if total.assumed != 0.0 {
+                        words(c, fonts, format!("${} of it rests on something assumed", view::figure(total.assumed, 2)), 11.5, Weight::Regular, theme::status_ink(Status::Assumed));
+                    }
+                });
+                cell(r, 130.0, true, |c| match total.value {
+                    Some(x) => words(c, fonts, format!("${}", view::figure(x, 2)), 13.5, Weight::Semibold, theme::status_ink(total.status)),
+                    None => words(c, fonts, "none", 13.5, Weight::Semibold, theme::ink_faint()),
+                });
+            });
+            for (path, why) in &total.left_out {
+                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(6.0) }, ..default() }).with_child(text(fonts, format!("left out: {path}: {why}"), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
+            }
+        };
+        line(t, "Allowances", &pricing.allowance, "no element has an allowance that comes to a figure");
+        line(t, "Detail", &pricing.detail, "no element has a detail that is whole");
+        row(t, false, None, |r| {
+            cell(r, 7.0, false, |c| dot(c, pricing.both.map(|b| b.2).unwrap_or(Status::Unknown)));
+            cell(r, 0.0, false, |c| match pricing.both {
+                None => words(c, fonts, "Like for like: no element has both an allowance and a whole detail", 12.5, Weight::Regular, theme::ink_soft()),
+                Some((a, d, status, n)) => {
+                    let diff = d - a;
+                    let word = if diff > 0.0 { "over" } else if diff < 0.0 { "under" } else { "even with" };
+                    let pct = if a != 0.0 { format!(" ({} %)", view::figure(diff / a * 100.0, 2)) } else { String::new() };
+                    words(c, fonts, format!("Like for like, over the {n} with both: allowances ${}, detail ${}: the detail is ${} {word}{pct}", view::figure(a, 2), view::figure(d, 2), view::figure(diff.abs(), 2)), 12.5, Weight::Medium, theme::status_ink(status))
+                }
+            });
+        });
+        if !pricing.not_priced.is_empty() {
+            let n: usize = pricing.not_priced.iter().map(|x| x.1).sum();
+            let kinds: Vec<String> = pricing.not_priced.iter().map(|(k, n)| format!("{n} {}", theme::kind_name(*k).to_lowercase())).collect();
+            t.spawn(Node { padding: UiRect::axes(px(16.0), px(9.0)), ..default() }).with_child(text(fonts, format!("Not priced at all: {n} that could be ({})", kinds.join(", ")), 11.5, Weight::Regular, theme::ink_faint()));
+        }
+    });
 }
 
 /// One discipline's systems: each one's runs by kind and size, and what is set on it.

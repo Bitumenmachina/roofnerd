@@ -89,7 +89,10 @@ import sys, json
 for e in json.load(open(sys.argv[1]))["data"]:
     if e["path"] == "parapet-0024":
         for step, d in e["attributes"]["pl::line_quantities"]["Copper coping cap"].items():
-            print(f'    as saved:  {step:10} {d["value"]:>8} {d["unit"]:6} {d["status"]:8} = {d["formula"]}')
+            # A step with no figure (the line's extension, while it has no price) says why.
+            value = "none" if d["value"] is None else d["value"]
+            why = f'   ({d["note"]})' if d.get("note") else ""
+            print(f'    as saved:  {step:10} {value:>8} {d["unit"]:6} {d["status"]:8} = {d["formula"]}{why}')
 PY
 cp "$T/job.json" "$T/lb.json"
 "$P" set "$T/lb.json" $PARAPET order "1.25 lb/SF" --line "Copper coping cap" --status Known --source "20 oz copper weighs 1.25 lb to the SF" | head -1 | sed 's/^/  /'

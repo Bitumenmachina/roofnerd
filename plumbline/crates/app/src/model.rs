@@ -18,6 +18,10 @@ pub const SOURCE: &str = "set in the 3D view; not yet confirmed against a drawin
 pub enum Entry {
     Pitch,
     Move,
+    /// A design-phase rate on the selected element, in dollars per SF or LF.
+    Allowance,
+    /// The price of the selected element's cost line.
+    UnitCost,
 }
 
 /// How the last action went. Said by what happened, not read back out of the words.
@@ -35,6 +39,8 @@ pub enum Tab {
     Roof,
     Building,
     Of(Discipline),
+    /// The job priced from its allowances and from its cost lines, and the two compared.
+    Money,
 }
 
 /// What of the building is on show.
@@ -89,6 +95,8 @@ pub struct Doc {
     pub geometry: u64,
     /// A value being typed: which field, and the text so far.
     pub entry: Option<(Entry, String)>,
+    /// When a unit cost is being typed: the cost line it is for, by its description.
+    pub entry_line: Option<String>,
     /// The plan point the model's origin is drawn at, in feet. The view is drawn relative
     /// to it in 32-bit numbers; the model itself stays 64-bit.
     pub origin: [f64; 3],
@@ -176,6 +184,8 @@ pub struct Snapshot {
     pub roof_name: String,
     /// Values in the whole job at each status: Known, Assumed, Unknown.
     pub tally: (usize, usize, usize),
+    /// What the job comes to both ways (`view::pricing`).
+    pub pricing: Option<view::Pricing>,
     pub totals: Option<view::RoofTotals>,
     pub planes: Vec<PlaneInfo>,
     pub lines: Vec<LineInfo>,
@@ -222,6 +232,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     s.file = doc.path.file_name().and_then(|f| f.to_str()).unwrap_or("").to_string();
     let elements = view::elements(&mut doc.job);
     s.tally = view::tally(&elements);
+    s.pricing = Some(view::pricing(&mut doc.job));
     if doc.selected.as_ref().is_some_and(|sel| doc.job.find(sel).is_none()) {
         doc.selected = None;
     }
@@ -333,7 +344,12 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
                 // A figure refused for a reason of its own (an opening that does not fit,
                 // a line that does not fit its planes) is said with the reason. One that
                 // is only flagged because an input is, is covered by that input's entry.
-                if !r.note.is_empty() {
+                // What an element comes to follows from its lines' extensions, and a line
+                // with no price is already listed by its unit cost: saying each of those
+                // again would bury the one thing there is to settle. An extension refused
+                // for a reason of its own (less than a cent) is still said.
+                let follows = r.label.starts_with("comes to,") || (r.label.starts_with("extension:") && (r.note.starts_with("the line has no price") || r.note.starts_with("the line has no quantity")));
+                if !r.note.is_empty() && !follows {
                     s.notes.push((r.status, format!("{} of {} has no figure", crate::panels::pretty(&r.label), el.name), r.note.clone()));
                 }
                 continue;

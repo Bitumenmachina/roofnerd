@@ -16,11 +16,16 @@
 //! * Each segment is cut by every other. BIMCraft finds the others through a grid and
 //!   keeps cutting by every other as the tested twin of that (`faces_everywhere`); the
 //!   twin is what is here.
-//! * `bound` is given the storey's bounding walls and its rooms, where BIMCraft's `Rooms`
-//!   holds its model and finds each level's once. A room that another has the space of is
+//! * `bound` is given the storey's rooms, and `Plan::of_walls` every wall of the job and
+//!   which of them bound the storey's rooms, where BIMCraft's `Rooms` holds its model and
+//!   finds each level's once. As there, a bounding wall is joined to every wall it meets,
+//!   bounding or not. A room that another has the space of is
 //!   named by its place in the list given, not by an id.
 //! * Not taken: room separation lines, room-bounding columns, a frozen room and the
 //!   boundary it keeps.
+//! * BIMCraft's centre measure does not look at wall bodies, so a room whose point is
+//!   inside a wall has a boundary at the centre lines there. The caller here
+//!   (`room_measures`) gives such a room no figure at either measure.
 
 use super::walls::{self, PlanWall};
 use crate::skeleton::P2 as V;
@@ -213,16 +218,17 @@ pub struct Plan {
 }
 
 impl Plan {
-    /// The plan of `bounding` (a storey's room-bounding walls, each able to join the
-    /// others) measured at `at`.
-    pub fn of_walls(bounding: &[PlanWall], at: RoomArea, tol: f64) -> Plan {
+    /// The plan of the walls at `bounding` (a storey's room-bounding walls) measured at
+    /// `at`. Each is joined to whichever of `all` it meets, bounding or not: a partition
+    /// that ends on a wall which does not bound rooms still stops at that wall's face.
+    pub fn of_walls(all: &[PlanWall], bounding: &[usize], at: RoomArea, tol: f64) -> Plan {
         match at {
             RoomArea::Centre => {
-                let lines: Vec<(V, V)> = (0..bounding.len()).map(|i| walls::centre_line(bounding, i, tol)).map(|[a, b]| (a, b)).collect();
+                let lines: Vec<(V, V)> = bounding.iter().map(|&i| walls::centre_line(all, i, tol)).map(|[a, b]| (a, b)).collect();
                 Plan { faces: faces(&lines, tol), walls: Vec::new() }
             }
             RoomArea::Finish => {
-                let outlines: Vec<Vec<V>> = (0..bounding.len()).map(|i| walls::outline(bounding, i, tol)).collect();
+                let outlines: Vec<Vec<V>> = bounding.iter().map(|&i| walls::outline(all, i, tol)).collect();
                 let lines: Vec<(V, V)> = outlines.iter().flat_map(|ring| ring_edges(ring)).collect();
                 Plan { faces: faces(&lines, tol), walls: outlines }
             }

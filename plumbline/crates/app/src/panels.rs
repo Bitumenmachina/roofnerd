@@ -417,13 +417,25 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             if let Some((field, typed)) = &doc.entry {
                 let name = snap.selected.as_ref().map(|s| s.name.clone()).unwrap_or_default();
                 mid.spawn(theme::card(Node { width: px(360.0), flex_direction: FlexDirection::Column, padding: UiRect::all(px(14.0)), row_gap: px(9.0), ..default() })).with_children(|c| {
-                    c.spawn(text(fonts, if *field == Entry::Pitch { format!("Pitch of {name}") } else { format!("Move the eave of {name}") }, 13.0, Weight::Semibold, theme::ink()));
+                    let title = match field {
+                        Entry::Pitch => format!("Pitch of {name}"),
+                        Entry::Move => format!("Move the eave of {name}"),
+                        Entry::Allowance => format!("Allowance for {name}"),
+                        Entry::UnitCost => format!("Unit cost of {:?} on {name}", doc.entry_line.clone().unwrap_or_default()),
+                    };
+                    c.spawn(text(fonts, title, 13.0, Weight::Semibold, theme::ink()));
                     c.spawn((rounded(Node { padding: UiRect::axes(px(10.0), px(7.0)), border: UiRect::all(px(1.5)), min_height: px(36.0), align_items: AlignItems::Center, ..default() }, 7.0), BackgroundColor(theme::panel()), BorderColor::all(theme::accent()))).with_children(|f| {
                         f.spawn(text(fonts, typed.clone(), 15.0, Weight::Medium, theme::ink()));
                         f.spawn((Node { width: px(1.5), height: px(18.0), margin: UiRect::left(px(1.0)), ..default() }, BackgroundColor(theme::accent())));
                     });
                     c.spawn(Node { align_items: AlignItems::Center, column_gap: px(6.0), ..default() }).with_children(|h| {
-                        h.spawn(text(fonts, if *field == Entry::Pitch { "Rise in 12, like 8:12" } else { "Out is +, like 1' 6\" or -6 in" }, 11.5, Weight::Regular, theme::ink_faint()));
+                        let hint = match field {
+                            Entry::Pitch => "Rise in 12, like 8:12",
+                            Entry::Move => "Out is +, like 1' 6\" or -6 in",
+                            Entry::Allowance => "Dollars per SF or LF, like 28 or $28.00",
+                            Entry::UnitCost => "Dollars for what the line is priced in, like 31.50",
+                        };
+                        h.spawn(text(fonts, hint, 11.5, Weight::Regular, theme::ink_faint()));
                         h.spawn(Node { flex_grow: 1.0, ..default() });
                         keycap(h, fonts, "Enter");
                         h.spawn(text(fonts, "set", 11.5, Weight::Regular, theme::ink_soft()));
@@ -513,8 +525,13 @@ fn inspector(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
             shortcut(c, fonts, &["M"], "Type a distance to move the eave");
             shortcut(c, fonts, &["G"], "Make its edge a gable");
         }
-        if snap.selected.is_some() {
+        if let Some(el) = &snap.selected {
             shortcut(c, fonts, &["C"], "Give it a condition");
+            // Only what can carry an allowance is offered one, in the unit it is priced by.
+            if let Some((_, unit)) = el.kind.priced_by() {
+                shortcut(c, fonts, &["B"], &format!("Type an allowance, $ per {unit}"));
+            }
+            shortcut(c, fonts, &["U"], "Type the unit cost of its next unpriced line");
             shortcut(c, fonts, &["Esc"], "Let go of it");
         }
         shortcut(c, fonts, &["W", "A", "S", "D"], "Move over the ground");

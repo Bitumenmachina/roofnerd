@@ -854,3 +854,88 @@ planes by (Q9). BIMCraft's cut height for finding a room's walls, 1200 mm
 * *Flags on the network's rows.* An open end, a join with no fitting and a warning are
   facts about the job as entered, so the windows show them unflagged. Only what could not
   be checked is flagged, Unknown.
+
+### 30. Model calls made in D4, macro to micro (ours to make; recorded so they can be overruled)
+Written before the code, 2026-11-11. The demonstration is in STATUS.md, "D4. How its
+demonstration will be run". What was read: this program's `lines.rs`, `derive.rs`,
+`check.rs` (`cost`) and `job.rs` (`set_on_line`), which is where a unit cost already sits
+on every line with nothing multiplying by it. Nothing outside this repository is needed
+or was consulted: an extension is a quantity times a price.
+
+* **A line's extension is what it is priced in, times its unit cost.** A line is priced
+  in its order unit when it has one, else in the unit its quantity comes out in
+  (`lines::priced_in`, already there). So the extension is `order × unit_cost`, or
+  `with_waste × unit_cost` when there is waste and no order unit, or `quantity ×
+  unit_cost`. It is a fourth figure of the line, beside quantity, with_waste and order,
+  worked out and never typed.
+* **Money is in cents.** An extension is rounded to the cent. A total is the sum of the
+  extensions as shown, so adding the lines up by hand gives the total. An amount that is
+  more than nothing and less than half a cent is refused, not written as $0.00.
+* **A line with no price has no extension, and says so.** It is not $0.
+* **An allowance is a rate on the element** (`pl::allowance`): dollars per SF or per LF,
+  with its status and source. What it multiplies is the one figure a thing of its kind is
+  bought by: a roof plane's or a low-slope area's `surface_area`; a roof line's
+  `true_length` (a parapet's `plan_length`); a wall's `net_area`; a floor's `plan_area`;
+  a room's `floor_area`; a run's `true_length`. The rate's unit has to be the figure's
+  (`$/SF` for an area, `$/LF` for a length), or it is refused.
+* **What an element comes to, both ways, is on the element** (`pl::priced`, worked out,
+  never typed): `allowance` ($, the figure times the rate); `detail` ($, its lines'
+  extensions added up); `detail_rate` ($/SF or $/LF: the detail divided by the same
+  figure the allowance is priced on); `difference` ($, detail less allowance) and
+  `difference_percent` (of the allowance).
+* **A detail that is not whole is not rolled up.** If any line of an element has no
+  extension, the element has no `detail`, no `detail_rate` and no `difference`, and the
+  reason names the line. A part-sum would look like a low price.
+* **Every figure takes the worst status of what it was worked out from**, as everywhere:
+  an assumed pitch makes an assumed area, an assumed allowance amount and an assumed
+  difference.
+* **The job's totals say what they leave out.** The allowance total is over the elements
+  that have an allowance and says how many elements that could carry one have none. The
+  detail total is over the elements whose detail is whole and names those whose detail is
+  not. Each total says how many dollars of it rest on anything Assumed. The two are
+  reconciled over the elements that have both figures, and only those.
+* **Cost codes are not used to group anything yet** (QUESTIONS.md Q1 is still open).
+* **Entering them.** `set <path> allowance <rate>` on an element and `set <path> unit_cost
+  <price> --line "<line>"` on a line. The unit is the one the element or the line takes;
+  typed (`$4.25/SF`), it has to be that one. `price <file>` prints the reconciliation.
+
+### 31. Calls made fixing what the ninth judgment found (2026-11-11)
+* **A room is measured again with each uncertain wall taken away and standing full
+  height.** A wall bounds a storey's rooms when it stands at the height they are found
+  at. When its base or its top rests on anything less than Known, that is no surer than
+  they are. Folding every such wall's status into every room would flag rooms a garden
+  wall could never bound. So for each such wall the storey's rooms are worked out twice
+  more, with the wall gone and with it standing through every height, and a room whose
+  area or perimeter comes out differently either way takes that wall's status and says
+  which wall. A room that comes out the same both ways does not depend on it.
+* **A wall's heights have a status of their own**: everything its base and its top rest
+  on (its storey's elevation, its base offset, its height or its top level and offset).
+  A wall with an entered height used to give only the height's.
+* **A Wall element with nothing entered on it is a wall that cannot be placed**, and
+  leaves its storey's rooms with no figure, like one with no height.
+* **A bounding wall is joined to every wall it meets, bounding or not**, as BIMCraft joins
+  it (`rooms.rs:62`, `walls.rs:238`). The port had joined bounding walls to each other
+  only; the difference was not listed and moved an area by an eighth of a square foot.
+* **A room whose point is inside a wall has no area to centre lines either.** BIMCraft
+  gives it one (its centre measure does not look at wall bodies). Here which side of the
+  wall was meant is not guessed. Listed as a change in `building/rooms.rs`'s header.
+* **A wall's opening area is as sure as the openings' sizes; its net area is as sure as
+  where they are too.** An opening with a size and no known place still counts in the
+  opening area, and the net is refused because the fit cannot be checked.
+* **An open connector is listed where its run would be.** A pipe connector says what it
+  carries; one that meets nothing is listed on the systems that carry that. Any other is
+  listed on the system the thing itself is on.
+* **A wall no longer than the fit tolerance is refused**, as BIMCraft refuses one no
+  longer than its own. **A wall whose top is not above its base still loads**, where
+  BIMCraft refuses the model: its figures are refused with the reason. Whether a top is
+  above a base depends on two storeys, and a job in which one is being changed has to
+  stay open. Listed as a change in `building/model.rs`'s header.
+* **`tools/portmap.sh` now runs every search an "ours" row says came back empty.** It had
+  only checked that a search was named, and two rows named searches that find something.
+  It was run red on those two rows before they were corrected. This tightens the gate.
+* **Correction to calls 28 and 29.** They say BIMCraft has no takeoff by system. It has
+  schedules of pipes and conduit with System, Length and Diameter that can be grouped and
+  totalled (`schedule.rs` 368 to 398, 1036 to 1100), which is a takeoff's substance, and
+  a named electrical distribution system (`electrical.rs:75`). What it does not have is a
+  status on a line, a run with no size kept on a line of its own, or a system that is an
+  element. And `MAX_CONNECTORS` is BIMCraft's (`family.rs:698`, 8), ported at 64.

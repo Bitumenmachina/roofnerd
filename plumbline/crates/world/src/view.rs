@@ -201,6 +201,25 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
                 }
             }
         }
+        // Money: what each line comes to (its unit cost is listed with the cost code,
+        // above), the element's allowance, and what the element comes to both ways.
+        if let Some(c) = w.get::<Cost>(e) {
+            for line in &c.lines {
+                if let Some(d) = w.get::<LineQuantities>(e).and_then(|q| q.0.get(&line.description)).and_then(|f| f.extension.as_ref()) {
+                    rows.push(derived(p, &format!("extension: {}", line.description), d));
+                }
+            }
+        }
+        if let Some(a) = w.get::<Allowance>(e) {
+            rows.push(entered(p, "allowance", &a.rate, |x| figure(*x, 2)));
+        }
+        if let Some(priced) = w.get::<Priced>(e) {
+            for name in ["allowance", "detail", "detail_rate", "difference", "difference_percent"] {
+                if let Some(d) = priced.0.get(name) {
+                    rows.push(derived(p, &format!("comes to, {}", name.replace('_', " ")), d));
+                }
+            }
+        }
         // A condition's recipe is read, not counted: its blanks are not this job's unknowns.
         let mut notes = Vec::new();
         if let Some(t) = w.get::<Recipe>(e) {
@@ -390,4 +409,107 @@ pub fn roof_totals(job: &mut Job, roof_path: &str) -> RoofTotals {
         surface: sum_of("SF", &areas),
         lines: by_kind.into_iter().map(|(k, list)| (k, sum_of("LF", &list))).collect(),
     }
+}
+
+/// One element as the reconciliation lists it: what it is bought by, and what it comes to
+/// from its allowance and from its cost lines.
+#[derive(Clone, Debug)]
+pub struct PricedElement {
+    pub path: String,
+    pub name: String,
+    pub kind: Kind,
+    /// The figure it is bought by, with its name and unit (`surface_area`, `SF`).
+    pub figure: Option<(String, String, Derived)>,
+    /// The allowance rate as entered, when it has one.
+    pub rate: Option<Val<f64>>,
+    pub allowance: Option<Derived>,
+    pub detail: Option<Derived>,
+    pub detail_rate: Option<Derived>,
+    pub difference: Option<Derived>,
+    pub difference_percent: Option<Derived>,
+}
+
+/// A total of money that says what it rests on and what it leaves out.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MoneyTotal {
+    /// The sum of what is included, to the cent. None when nothing is included: a sum
+    /// over nothing is not $0.00.
+    pub value: Option<f64>,
+    /// The worst status among what is included.
+    pub status: Status,
+    /// How many elements are included.
+    pub members: usize,
+    /// How many dollars of it are from elements whose figure is Assumed.
+    pub assumed: f64,
+    /// The elements left out, each with why.
+    pub left_out: Vec<(String, String)>,
+}
+
+/// What the job comes to both ways, and the two set against each other.
+#[derive(Clone, Debug)]
+pub struct Pricing {
+    /// Every element that has an allowance or a cost line, in the job's order.
+    pub elements: Vec<PricedElement>,
+    /// Over the elements that have an allowance. Left out: those whose allowance has no
+    /// figure.
+    pub allowance: MoneyTotal,
+    /// Over the elements whose detail is whole. Left out: those whose detail is not.
+    pub detail: MoneyTotal,
+    /// The allowance and the detail of the elements that have both figures, and only
+    /// those: the like-for-like comparison.
+    pub both: Option<(f64, f64, Status, usize)>,
+    /// Elements that could carry a price (they have a figure to be bought by) and carry
+    /// neither an allowance nor a cost line: how many of each kind.
+    pub not_priced: Vec<(Kind, usize)>,
+}
+
+fn money_total(parts: &[(&PricedElement, &Derived)]) -> MoneyTotal {
+    let included: Vec<&(&PricedElement, &Derived)> = parts.iter().filter(|(_, d)| d.value.is_some()).collect();
+    let left_out = parts.iter().filter(|(_, d)| d.value.is_none()).map(|(e, d)| (e.path.clone(), d.note.clone())).collect();
+    let cents = |x: f64| (x * 100.0).round() / 100.0 + 0.0;
+    MoneyTotal {
+        value: if included.is_empty() { None } else { Some(cents(included.iter().filter_map(|(_, d)| d.value).sum())) },
+        status: included.iter().map(|(_, d)| d.status).max().unwrap_or(Status::Unknown),
+        members: included.len(),
+        assumed: cents(included.iter().filter(|(_, d)| d.status == Status::Assumed).filter_map(|(_, d)| d.value).sum()),
+        left_out,
+    }
+}
+
+/// The job priced from its allowances and from its cost lines, and the two reconciled.
+/// Nothing here is arithmetic of its own beyond adding up: each element's figures are
+/// its `pl::priced`, worked out in `derive`.
+pub fn pricing(job: &mut Job) -> Pricing {
+    let order = job.order.clone();
+    let w = &job.world;
+    let mut elements = Vec::new();
+    let mut bare: Vec<(Kind, usize)> = Vec::new();
+    for &e in &order {
+        let (Some(node), Some(kind)) = (w.get::<Node>(e), w.get::<Kind>(e).copied()) else { continue };
+        let priced = w.get::<Priced>(e);
+        let has_lines = w.get::<Cost>(e).is_some_and(|c| !c.lines.is_empty());
+        let rate = w.get::<Allowance>(e).map(|a| a.rate.clone());
+        if rate.is_none() && !has_lines {
+            // It could be priced and is not.
+            if kind.priced_by().is_some() {
+                match bare.iter_mut().find(|b| b.0 == kind) {
+                    Some(b) => b.1 += 1,
+                    None => bare.push((kind, 1)),
+                }
+            }
+            continue;
+        }
+        let figure = kind.priced_by().map(|(name, unit)| {
+            let d = w.get::<Measure>(e).and_then(|m| m.0.get(name)).cloned().unwrap_or_else(|| Derived::refused(unit, "", &[], &format!("it has no {name}")));
+            (name.to_string(), unit.to_string(), d)
+        });
+        let get = |name: &str| priced.and_then(|p| p.0.get(name)).cloned();
+        elements.push(PricedElement { path: node.path.clone(), name: node.name.clone(), kind, figure, rate, allowance: get("allowance"), detail: get("detail"), detail_rate: get("detail_rate"), difference: get("difference"), difference_percent: get("difference_percent") });
+    }
+    let allowances: Vec<(&PricedElement, &Derived)> = elements.iter().filter_map(|e| e.allowance.as_ref().map(|d| (e, d))).collect();
+    let details: Vec<(&PricedElement, &Derived)> = elements.iter().filter_map(|e| e.detail.as_ref().map(|d| (e, d))).collect();
+    let cents = |x: f64| (x * 100.0).round() / 100.0 + 0.0;
+    let pairs: Vec<(f64, f64, Status)> = elements.iter().filter_map(|e| e.allowance.as_ref().zip(e.detail.as_ref())).filter_map(|(a, d)| a.value.zip(d.value).map(|(x, y)| (x, y, a.status.max(d.status)))).collect();
+    let both = if pairs.is_empty() { None } else { Some((cents(pairs.iter().map(|p| p.0).sum()), cents(pairs.iter().map(|p| p.1).sum()), pairs.iter().map(|p| p.2).max().unwrap_or(Status::Unknown), pairs.len())) };
+    Pricing { allowance: money_total(&allowances), detail: money_total(&details), both, not_priced: bare, elements }
 }

@@ -100,6 +100,7 @@ fn main() {
         revision: 1,
         geometry: 1,
         entry: None,
+        entry_line: None,
         origin: [0.0; 3],
         framed: false,
         pointer: None,
@@ -275,6 +276,25 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                 doc.touch();
             }
             Some(true) => match field {
+                // A price typed here is entered as Assumed, like everything set in this
+                // window: there is nowhere in it yet to say where a figure came from.
+                Entry::Allowance | Entry::UnitCost => {
+                    let what = if field == Entry::Allowance { "allowance" } else { "unit_cost" };
+                    let line = if field == Entry::UnitCost { doc.entry_line.take() } else { None };
+                    match doc.selected.clone() {
+                        None => doc.say(Tone::Refused, "refused: select something first"),
+                        Some(sel) => match doc.job.set_on_line(&sel, what, line.as_deref(), Some(text.trim()), Status::Assumed, SOURCE) {
+                            Ok(()) => {
+                                doc.job.derive();
+                                doc.edited = true;
+                                let of = line.map(|l| format!(" of {l:?}")).unwrap_or_default();
+                                doc.say(Tone::Done, format!("{sel}: {}{of} set to {}", what.replace('_', " "), text.trim()));
+                            }
+                            Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+                        },
+                    }
+                    doc.redraw();
+                }
                 Entry::Pitch => change(doc, &format!("pitch {text}"), |_, _, edge| Ok(solve::Change::Rise { edge, rise: pitch_val(units::parse_pitch(&text)?) })),
                 Entry::Move => change(doc, &format!("eave moved {text}"), |_, _, edge| {
                     let (len, unit) = units::parse_length(&text)?;
@@ -302,6 +322,38 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
             // Say why not before a field opens that could only be refused.
             match selected_edge(doc) {
                 Ok(_) => doc.entry = Some((field, String::new())),
+                Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+            }
+            doc.touch();
+        }
+    }
+
+    // A price on what is selected: B for a budget rate (its allowance), U for the unit
+    // cost of its first cost line that has no price yet. Each says why not before a field
+    // opens that could only be refused.
+    for (key, field) in [(KeyCode::KeyB, Entry::Allowance), (KeyCode::KeyU, Entry::UnitCost)] {
+        if keys.just_pressed(key) {
+            let ready: Result<Option<String>, String> = match doc.selected.clone() {
+                None => Err("select something first".into()),
+                Some(sel) => {
+                    let kind = doc.job.kind(&sel);
+                    let lines: Vec<(String, bool)> = doc.job.find(&sel).and_then(|e| doc.job.world.get::<plumbline_world::Cost>(e)).map(|c| c.lines.iter().map(|l| (l.description.clone(), l.unit_cost.value.is_some())).collect()).unwrap_or_default();
+                    match (field, kind.and_then(|k| k.priced_by())) {
+                        (Entry::Allowance, None) => Err(format!("a {} has no area or length an allowance could be a rate on", kind.map(|k| theme::kind_name(k).to_lowercase()).unwrap_or_default())),
+                        (Entry::Allowance, Some(_)) => Ok(None),
+                        _ if lines.is_empty() => Err(format!("{sel} has no cost line to price; give it a condition first (C)")),
+                        _ => match lines.iter().find(|l| !l.1) {
+                            Some((line, _)) => Ok(Some(line.clone())),
+                            None => Err(format!("every cost line of {sel} has a price; to change one, `plumbline set <job> {sel} unit_cost <price> --line \"<line>\"`")),
+                        },
+                    }
+                }
+            };
+            match ready {
+                Ok(line) => {
+                    doc.entry_line = line;
+                    doc.entry = Some((field, String::new()));
+                }
                 Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
             }
             doc.touch();
