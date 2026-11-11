@@ -1377,3 +1377,57 @@ How they were folded in, which is mine to decide:
   validation tool in the workspace needs no approval, and item 8 asks for it), Q11 (the
   whole house is the mission; the earlier program is not built on), Q13 (the order).
 * **Questions it opens** are Q15 to Q18 in QUESTIONS.md, each with the assumption in use.
+
+### Call 43. Plans under the tracing: what is built on, and the plan set (2026-11-11)
+
+Step 2 of Patrick's order: a PDF under the tracing, calibrated from one dimension,
+traced over, snapping to its own lines where it has them.
+
+**Searched first.** On the machine: BIMCraft's `pdf.rs` writes PDFs of its sheets and
+reads none (`grep -rn "underlay\|calibrat" crates/core/src`: nothing but a curve
+digitised for a storm table). The earlier programs on this machine traced over plans in
+a browser, which is no help to a Rust window. On the registry, 2026-11-11:
+
+| Candidate | Licence | Verdict |
+|---|---|---|
+| `hayro` 0.9.0, with `hayro-interpret` and `hayro-syntax` | Apache-2.0 OR MIT | **Build on.** Pure Rust, no unsafe, draws a page to pixels on the processor, and hands each path it draws to a device of ours, which is how a vector plan's own lines are read out. Read in its source before use: `render`, `interpret_page`, the `Device` trait. It says of itself that it is not yet complete (no encrypted files, no blending groups). |
+| `pdfium-render` 0.9.5 | MIT OR Apache-2.0 over Google's PDFium | Not used: it needs PDFium's compiled library fetched or shipped beside the program. |
+| MuPDF, Poppler | AGPL, GPL | Reference only. `pdftoppm` was used once here to look at the plan set before anything was built, as a person would use a viewer. |
+
+**The plan set (answers Q15).** The U.S. National Agricultural Library holds the
+Cooperative Farm Building Plan Exchange's rural house plans, and says of each: "authored
+by federal employees as part of their official duties and is therefore
+non-copyrightable and/or published by the federal government and now in the public
+domain". Plan No. 7213, Two-Bedroom Farmhouse (USDA, 1976), two sheets: a floor plan
+with dimensions, a foundation plan, an electrical plan, door and window schedules, four
+elevations, a wall section and a roof at 3 1/2 in 12. It is a scan, 23 MB. It is not
+committed: `tools/fetch-plans.sh` fetches it from the library and checks its SHA-256,
+into `plans/`, which git ignores. A vector plan is still needed to show snapping to a
+PDF's own lines, and no public vector set with a certain licence was found in two
+searches, so a small made-up plan is written as a vector PDF by `tools/made-up-plan.py`
+and committed, marked as made up.
+
+**What was decided.**
+
+* **A plan under the tracing is a Drawing: an element under the storey it is a plan of.**
+  It holds where its file is (beside the job, by a relative path), which page, the
+  file's length and a checksum so a changed file is noticed, and its scale. The picture
+  is not kept in the job: the job stays readable text, and a client's plans do not ride
+  along inside it.
+* **The scale is one dimension: two points on the page and the distance between them.**
+  That is how a takeoff is calibrated everywhere. Until a drawing has one, nothing can be
+  traced over it: a tracing with no scale is a number nobody entered.
+* **What is traced is Assumed**, and its source names the drawing it was traced from
+  (Patrick's ruling 2). The distance typed for the scale is a dimension read off the
+  drawing and is Assumed too.
+* **A new crate, `plumbline-plans`, reads plan files.** The world crate still reads no
+  disk and draws nothing: it holds the Drawing and the arithmetic of its scale. The
+  plans crate turns a page into a picture and, for a vector PDF, the straight lines on
+  it. The command line and the window both use it.
+* **Loss is reported** (ruling 3). Reading a page says what it could not give: curves
+  (snapped to at their ends only), words (drawn, not read: a dimension's figure is typed
+  by the person), pictures inside a vector page, and a scan (a picture: nothing on it to
+  snap to).
+* **A page is drawn at no more than 4,096 dots on its long side.** A 36 in sheet comes
+  out at about 113 dots to the inch, which reads. Sharper tiles on zooming in are not
+  built.

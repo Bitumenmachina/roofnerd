@@ -23,7 +23,7 @@ run again and each gave what this file said they gave.
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
 | D4 | Macro to micro | **Demonstrated at the command line and in the window, and judged (tenth judgment, below): thirteen findings, twelve fixed with tests, one minor one left and said. The fixes have not themselves been judged.** An element takes an allowance in $/SF or $/LF; a cost line's quantity is extended by its unit cost; an element's detail is rolled back up to the same $/SF or $/LF; the two are reconciled by element and for the job, each total saying what it leaves out and how much of it rests on an assumption. Prices are entered at the command line or typed in the window. See "D4. What was run". |
 | D5 | Estimate sheet and money | **Demonstrated at the command line and in the window (`demos/d5.sh`, `demos/d5w.sh`), and judged (eleventh judgment, below): fourteen findings, each fixed with a test. The fixes have not themselves been judged.** A cost line has a class and lands in one column and one row of the recap; in-house work is a production rate into hours; a labor line can be switched off; a material is an element with a generic price and suppliers' quotes, and changing what an element is made of reprices the lines made of it; overhead and profit are entered and have no default. See "D5. What was run". Reproducing the owner's whole-job estimate is pending: there is no estimate in `refs/` (Q5). See "D5. How its demonstration will be run". |
-| — | Fittings, connections and clashes (the owner's loop, stretch c) | **Demonstrated at the command line and in the window (`demos/fit.sh`, `demos/clash.sh`, `demos/clashw.sh`). Not judged.** A fitting is worked out from the runs that meet (elbow, tee, cross, transition, coupling) and a branch on a run's side cuts the run; a run is joined to a fixture or to equipment; the takeoff says what is joined and what is open. Clash detection finds what is in the same space with how far and how sure, lists runs through walls and floors apart, and tests a clearance only when one is asked for. See "Fittings, connections and clashes. What was run". |
+| — | Fittings, connections and clashes (the owner's loop, stretch c) | **Demonstrated at the command line and in the window (`demos/fit.sh`, `demos/clash.sh`, `demos/clashw.sh`). Judged at the command line (thirteenth judgment: 18 findings, among them a missed clash, false clashes and a doubled total). The fixes are not made yet; the window part is not judged.** A fitting is worked out from the runs that meet (elbow, tee, cross, transition, coupling) and a branch on a run's side cuts the run; a run is joined to a fixture or to equipment; the takeoff says what is joined and what is open. Clash detection finds what is in the same space with how far and how sure, lists runs through walls and floors apart, and tests a clearance only when one is asked for. See "Fittings, connections and clashes. What was run". |
 | D6 | Interchange and reports | Not started. |
 | D7 | Capture | Waiting on the owner's ruling. |
 
@@ -1512,6 +1512,35 @@ something that is not there.
 
 **What remains of this stretch:** the judge.
 
+## Plans under the tracing. How its demonstration will be run (written before it is built)
+
+Step 2 of the order of work; DECISIONS.md call 43. Two demonstrations.
+
+* `demos/plan.sh`, at the command line. (1) The made-up vector plan
+  (`demos/plans/made-up-plan.pdf`, written by `tools/made-up-plan.py`: a 30 ft by 20 ft
+  house drawn at 1/4 in to the foot, so 30 ft is 7.5 in, 540 points, on the page) is
+  added to an empty job as a drawing of its storey. Reading it reports the page's size,
+  how many straight lines it holds, and what was lost. Calibrated from the two ends of
+  its 30 ft dimension line, 540 points apart: 18 points to the foot. A wall traced
+  between two page points 360 points apart is 20.00 LF, Assumed, and says which drawing
+  it was traced from. (2) A PNG and a JPEG of the same plan are added the same way and
+  report that a picture has no lines to snap to. (3) What is refused: a file that is not
+  there, a page the file does not have, a scale from two points on top of each other, a
+  tracing over a drawing with no scale; and a drawing whose file has changed since it
+  was added is said to have changed. (4) If `tools/fetch-plans.sh` has fetched USDA Plan
+  7213, its floor-plan sheet is added and read: a scan, one picture, no lines.
+* `demos/planw.sh`, in the window, on USDA Plan 7213's floor plan from an empty job: the
+  sheet is added, shown under the plan, and calibrated on its 41 ft 3 in overall
+  dimension; the outside walls are traced over it, each side by a typed length off the
+  drawing (41 ft 3 in by 23 ft 11 in: 130.33 LF round, 1,042.67 SF of face at the 8 ft
+  0 in the wall section gives). The saved job has those figures, Assumed, traced from
+  that drawing. Then the made-up vector plan: the pointer snaps to the PDF's own line
+  ends, and the bar says so.
+
+The judge tries to trace at the wrong scale without being told, to calibrate into a
+Known figure, to lose a drawing or a tracing on save and load, and to get the program to
+read a file it should refuse.
+
 ## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
 
 An independent judge (Opus; it did not build any of this) was given commit `1886693`, a
@@ -1702,3 +1731,61 @@ goes on. The square held by Shift (J12-7), the snap scene that leaves out what i
 moved (J12-8), a chain let go on a change of storey (J12-9) and the click that ends a
 move (J12-16) are in the code and no demonstration exercises them. What was decided is
 call 41. **None of these fixes has been judged.**
+
+## Thirteenth judgment (2026-11-11): fittings, connections and clashes, and the fixes to the twelfth
+
+An independent judge (Opus; it did not build any of this) was given commit `b566079`, a
+frozen copy of the source and the built command line, and the brief to break fittings,
+connections and clash detection and the twelfth judgment's fixes. Eighteen findings, no
+panic. It did not build or drive the window. Its reproductions are kept outside the
+repository (scratch files). As it reported them; what was done about each goes in the
+table that follows this one once the fix is in.
+
+| # | Finding (the judge's words, shortened) | Severity it gave |
+|---|---|---|
+| J13-1 | Two runs of one kind that touch at one end are never tested against each other, so whole-length overlaps are missed: a duplicate run, a run folded back over another, a pipe of one system lying in another's, a pipe through a tank once it is joined to it. The sample house has one (a hot branch drawn 1 ft back up inside the hot main) that the clash report does not list. A tee is made where two ends leave a joint the same way. | missed clash |
+| J13-2 | Stacked openings (a window over a window, a transom over a door) fill each other with solid wall: a pipe through either window is reported through the wall, as a Known finding. The same where a door and a window lie over each other. | false clash |
+| J13-3 | A clash between things on two storeys ignores an Assumed storey elevation, and a wall's Assumed base offset is ignored: field questions are reported as findings. Fittings and connectors leave out the storey elevation's status too. | wrong certainty unflagged |
+| J13-4 | A door or window that could not be cut (taller than its wall, place unknown) leaves solid wall, and a pipe through it is a Known finding. | false clash |
+| J13-5 | "In each other by" is short where a solid is in pieces: a box on a floor's diagonal seam reads 3.39 in where it is 10.8 in; a box across a wall's piece joint reads 0.20 ft where it is 0.35 ft. | wrong figure unflagged |
+| J13-6 | A fitting's box is never turned: on a run at 45 degrees its box sticks out and clashes with a pipe that is clear of the duct. | false clash (flagged Assumed) |
+| J13-7 | Cutting a run counts a typed number twice when it is written as a sum (`2 * 2`, `-(-4)`): material $40.00 becomes $80.00. Only a bare number is refused. | wrong figure unflagged |
+| J13-8 | The J12-1 fix (a wall over a wall) misses a wall a quarter inch off another, shallow crossing walls, and one body drawn on two location lines (20 LF where 10 exist), all Known and never reported; and it refuses back-to-back walls on a shared face line and a wall standing on a knee wall. "Never tested" does not say walls are not tested against walls. | wrong figure unflagged; refuses what is right |
+| J13-9 | The J12-5 fix measures an opening's point from the wall's drawn line, not its body: a point inside the body is refused and a point out in the room is accepted. | loads what it should refuse |
+| J13-10 | The J12-18 fix refuses only the spelling "hr": `2 lb/hour`, `2 lb/h`, `2 lb/HR` are accepted. | loads what it should refuse |
+| J13-11 | The J12-13 names rule makes different names one name: "Pipe 1 1/2 in" and "Pipe 11/2 in"; "Copper 1 6 oz" and "Copper 16 oz". "Grade No. 1" and "Grade No 1" are two names while "No 1." and "No 1" are one. Remove matches a condition exactly but a material by the rule. | minor |
+| J13-12 | The J12-10 fix cuts a person's own source short: "A-101; cut (section 3) shows this wall at grid C, rev B", moved, becomes "A-101; moved (by eye)". | minor (provenance lost) |
+| J13-13 | A supply-air duct can be joined to a fixture on a water system, with no warning. | loads what it should refuse |
+| J13-14 | A pipe and a duct ending at one point leave no way to make either fitting: the refusal asks for a height and comes back when one is given. | minor |
+| J13-15 | A tee can never be put on an upright run, and `fitting --all` passes over some joints without listing them. | minor |
+| J13-16 | The place reported for a clash can be outside one of the two things (2 ft off a pipe that a duct crosses at an angle). | minor |
+| J13-17 | Depths between round runs are slightly short: 3.483 in for 3.50, 0.995 in for 1.00. | minor |
+| J13-18 | The second piece of a cut run loses the run's name ("pipe 294"), and the clash report then names it so. | minor |
+
+**What held under attack** (the judge's list): a thin pipe across a duct at 0, 1, 15, 45,
+89 and 90 degrees (4.06 in each), climbing (7.16 in) and upright (6.5 in), all worked by
+hand; a run ending at a wall's face, 0.005 in and 0.011 in in it, and short of it; a pipe
+at a window's edge and under its sill; a box in a box, corner to corner, and turned 45
+degrees (flagged); equipment sunk in an L-shaped floor away from its seams; clearances
+at 2.0004 in against 2 in and either side, and every bad clearance refused. On the sample
+house every wall, floor, run and placed thing is tested or listed as not tested (185 and
+5), and the five clashes reported are right by hand (1.80, 3.50, 6.38, 1.20 and 1.27 in).
+Four thousand parallel pipes in 3.7 s; three thousand crossing in a grid gave exactly the
+2,223,000 that cross. Fittings: bend, coupling and same-way at 0.5, 0.99, 1.0, 1.01, 179
+and 180 degrees; a cut's lengths adding to the last digit and its height on a climbing
+run; formula lines, allowances and priced totals cut without loss; a typed-number line
+refused by every route with the file unchanged; `--all` twice adding nothing. Of the
+twelfth judgment's fixes: J12-2, 3, 4, 6, 14, 17 and 20 held.
+
+**Not reached by the judge:** things on two storeys joined; `--kind` given wrong on a
+transition; save, load, save after every verb; rooms; J12-12 and J12-19; **the window,
+so J12-7, 8, 9, 16 and 21 are still not judged**; runs not justified on their centre;
+clearance between a run and a wall it passes through.
+
+**Where this leaves the twelfth judgment's fixes.** Judged and held: J12-2, 3, 4, 6, 14,
+17, 20. Judged and found wanting: J12-1 (J13-8), J12-5 (J13-9), J12-10 (J13-12), J12-13
+(J13-11), J12-18 (J13-10). Not judged: J12-7, 8, 9, 11, 12, 15, 16, 19, 21.
+
+**Where the fixes to the thirteenth stand:** none is made yet. Order of work: J13-1 to
+J13-7 first (a missed clash, false clashes, wrong certainty, a doubled total), then
+J13-8 to J13-13, then the minor ones.

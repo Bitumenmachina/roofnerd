@@ -149,6 +149,7 @@ a labor amount, with the switch on the labor half, say so: the arithmetic is the
 the rows would be paired.
 
 ## Q15. Which plan set is traced for the release candidate?
+**Answered by a search, 2026-11-11 (DECISIONS.md call 43):** USDA Plan No. 7213, Two-Bedroom Farmhouse, two sheets, public domain by the National Agricultural Library's own statement. It is a scan. If you would rather a set of yours, place a sanitized one in `refs/`.
 Item 3 wants a real residential plan PDF: a public set whose licence allows it, or a
 sanitized set you place in `refs/`. `refs/` has none.
 **Assumption in use:** find a public set on the web whose licence allows it to be used
