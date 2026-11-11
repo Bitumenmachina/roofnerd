@@ -34,6 +34,8 @@ demos/d5.sh                # the D5 demonstration: the estimate sheet, the recap
 demos/d5w.sh               # the same in the window
 demos/draw.sh              # a small house modelled from an empty job at the command line, one verb at a time
 demos/draww.sh             # the same house drawn in the window's plan view with the pointer and typed lengths; pictures in demos/captured/draw
+demos/fit.sh               # fittings worked out from the runs that meet, runs joined to what they serve, and what the takeoff says is still open
+demos/clash.sh             # what is in the same space as what, what passes through a wall, and what is only close
 demos/d4w.sh               # the same in the window: the sheet's Money tab, and prices typed on what is selected
 demos/d2.sh                # the 3D prototype, driven on a virtual display; pictures in demos/captured/d2
 demos/house.sh             # a whole house with its heating, plumbing and wiring, walked round; pictures in demos/captured/house
@@ -43,6 +45,7 @@ tools/portmap.sh           # the building model accounted for against BIMCraft's
 cargo run -p plumbline -- sample job.json
 cargo run -p plumbline -- house house.json     # the sample whole house
 cargo run -p plumbline -- takeoff house.json   # its walls, floors and rooms, and each system's runs by size, its fittings and what is joined
+cargo run -p plumbline -- clashes house.json   # what is in the same space as what; add --clearance "2 in" for what is closer than that
 cargo run -p plumbline -- price job.json       # what the job comes to from its allowances and from its cost lines, and the two compared
 cargo run -p plumbline -- show job.json
 cargo run -p plumbline -- set job.json parapet-0024 height "30 in" --status Known --source "detail 3/A-501"
@@ -73,7 +76,13 @@ like `Ground, 0 ft, 9 ft`). Then:
 * Select something and use "Move what is selected" (two points, or one and a typed
   length) or "Remove what is selected" (or the Delete key).
   On plan, a click on a door or window in its wall selects the opening.
+* "Fitting where runs meet": one click on a joint. What meets says what it is (two ends
+  at an angle, an elbow; three, a tee; a branch on a run's side cuts the run and makes a
+  tee). "Join a run to what it ends at": one click where a run ends at a fixture or a
+  piece of equipment.
 * Z undoes and Y does again. F2 saves.
+* The sheet's Clashes tab lists what is in the same space as what and what passes
+  through a wall or a floor; with it open, each clash is marked on the model in red.
 
 Everything drawn in the window is flagged Assumed and says it was drawn there. Rooms are
 placed at the command line: `plumbline room job.json <storey> "name" --at "6,8" --status

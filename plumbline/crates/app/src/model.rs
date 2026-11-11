@@ -55,6 +55,8 @@ pub enum Tab {
     Money,
     /// The estimate sheet: every cost line in its column, the recap, and the suppliers.
     Estimate,
+    /// What is in the same space as what, and what passes through a wall or a floor.
+    Clashes,
 }
 
 /// What of the building is on show.
@@ -211,6 +213,8 @@ pub struct Snapshot {
     pub pricing: Option<view::Pricing>,
     /// The estimate sheet and its recap (`view::estimate`).
     pub estimate: Option<view::Estimate>,
+    /// What clashes (`building::clash::clashes`), or why that could not be worked out.
+    pub clashes: Option<Result<plumbline_world::building::clash::Clashes, String>>,
     pub totals: Option<view::RoofTotals>,
     pub planes: Vec<PlaneInfo>,
     pub lines: Vec<LineInfo>,
@@ -259,6 +263,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     s.tally = view::tally(&elements);
     s.pricing = Some(view::pricing(&mut doc.job));
     s.estimate = Some(view::estimate(&mut doc.job));
+    s.clashes = Some(plumbline_world::building::clash::clashes(&mut doc.job, None));
     if doc.selected.as_ref().is_some_and(|sel| doc.job.find(sel).is_none()) {
         doc.selected = None;
     }

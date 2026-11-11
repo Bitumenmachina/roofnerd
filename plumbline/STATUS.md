@@ -23,6 +23,7 @@ run again and each gave what this file said they gave.
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
 | D4 | Macro to micro | **Demonstrated at the command line and in the window, and judged (tenth judgment, below): thirteen findings, twelve fixed with tests, one minor one left and said. The fixes have not themselves been judged.** An element takes an allowance in $/SF or $/LF; a cost line's quantity is extended by its unit cost; an element's detail is rolled back up to the same $/SF or $/LF; the two are reconciled by element and for the job, each total saying what it leaves out and how much of it rests on an assumption. Prices are entered at the command line or typed in the window. See "D4. What was run". |
 | D5 | Estimate sheet and money | **Demonstrated at the command line and in the window (`demos/d5.sh`, `demos/d5w.sh`), and judged (eleventh judgment, below): fourteen findings, each fixed with a test. The fixes have not themselves been judged.** A cost line has a class and lands in one column and one row of the recap; in-house work is a production rate into hours; a labor line can be switched off; a material is an element with a generic price and suppliers' quotes, and changing what an element is made of reprices the lines made of it; overhead and profit are entered and have no default. See "D5. What was run". Reproducing the owner's whole-job estimate is pending: there is no estimate in `refs/` (Q5). See "D5. How its demonstration will be run". |
+| — | Fittings, connections and clashes (the owner's loop, stretch c) | **Demonstrated at the command line and in the window (`demos/fit.sh`, `demos/clash.sh`, `demos/clashw.sh`). Not judged.** A fitting is worked out from the runs that meet (elbow, tee, cross, transition, coupling) and a branch on a run's side cuts the run; a run is joined to a fixture or to equipment; the takeoff says what is joined and what is open. Clash detection finds what is in the same space with how far and how sure, lists runs through walls and floors apart, and tests a clearance only when one is asked for. See "Fittings, connections and clashes. What was run". |
 | D6 | Interchange and reports | Not started. |
 | D7 | Capture | Waiting on the owner's ruling. |
 
@@ -1418,6 +1419,76 @@ something that is not there.
 
 **What remains of this stretch:** the judge.
 
+## Fittings, connections and clashes. What was run and what it showed
+
+**Demonstrated at the command line and in the window. Not judged.** The task is
+`HANDOFF_CLASH.md`; what was decided is DECISIONS.md calls 39 and 40; SPEC.md 5.9, 5.10.
+
+* *The gate first.* `tools/portmap.sh` was run red on `editing/join.rs` (eight unlisted
+  items) and again on `building/clash.rs` (six) before either had rows. It is green at
+  192 items, 115 ported and 77 ours. The licence gate passes with the geometry library's
+  twelve crates, all Apache-2.0, MIT or Zlib (LICENSES.md).
+* *Fittings and connections at the command line:* `demos/fit.sh` exits 0. A duct with a
+  corner and a branch, 28 LF: before, "1 network; 3 open ends; 1 place where a run meets
+  another along its length with no fitting". `fitting --all` puts an elbow on the corner
+  and a tee on the branch, cutting the 8 LF piece into 4 and 4; the duct is still 28 LF.
+  Joined to an air handler: 2 open ends. A 3/4 in pipe that becomes 1/2 in: a
+  transition, called "3/4 in to 1/2 in transition"; joined to a lavatory: 1 open end.
+  Eight refusals, and the file unchanged by them.
+* *Clashes at the command line:* `demos/clash.sh` exits 0. Two 2 ft tanks 1 ft 6 in apart:
+  in each other by 6.00 in. Touching: no clash; with a 2 in clearance asked, 0.00 in
+  apart and flagged for the Assumed move. A 6 in duct and a 1 in pipe crossing at one
+  height: 3.50 in, at (5, 5, 8), flagged because the pipe was Assumed. The pipe 5 in
+  higher: clear, 1.50 in apart for a 2 in clearance and nothing for a 1 in one. A pipe
+  through a wall over a window's head: one hole to cut; through the window: nothing. A
+  corner, its elbow and a joined air handler: no clash; the same handler not joined:
+  12.00 in. A thing with no size: listed as not tested. On the sample house: 18 in the
+  same space, 66 through a wall or a floor, 185 elements tested, 5 not; its trunk duct
+  is drawn through its soil stack by 3.50 in.
+* *In the window:* `demos/clashw.sh` exits 0. On a job made at the command line, with a
+  real pointer on a virtual display: the sheet's Clashes tab lists two clashes and the
+  plan marks each in red; one click with "Fitting where runs meet" puts an elbow on the
+  duct's corner, another a tee on its branch (the duct cut there); one click with "Join
+  a run to what it ends at" joins the duct to the air handler, and that clash leaves the
+  list; the clash that is left, picked on the sheet, selects the pipe on the model. The
+  saved job passes `check`: 28 LF, one elbow, one tee, "1 network; 2 open ends; 0
+  places", one clash of 3.50 in at (4, 2, 8), both fittings Assumed and saying which
+  runs they join. The fourteen pictures are in `demos/captured/clash/`, each read.
+* *Tests* (`crates/world/tests/world.rs`, six new, figures worked by hand): a fitting
+  worked out from what meets, with what is refused; every joint of a system fitted and
+  what is passed over said; a run cut in two, on the level and climbing, and the cut
+  refused where a typed quantity would be counted twice; two solids in one space and two
+  only close; runs clashing by how far their surfaces are in each other, round and
+  rectangular; a run through a wall, through a window, and what is joined.
+
+**What building it found:**
+
+* The geometry library's measure of how deep two solids are in each other answers zero
+  when one is dead centre in the other: a duct and a pipe crossing at one height. The
+  first clash test written found it (no clash reported where 3 3/8 in was worked by
+  hand). The yes or no now comes from its overlap test, which does not fail, and the
+  depth is asked for separately (call 40).
+* In the window a click can be lost when the press and the release fall inside one slow
+  frame of the software renderer. The demonstration holds each click for longer than a
+  frame. This is the same fault as the keys lost after a field opens; it has not been
+  seen, or looked for, on a real graphics card, because none was available.
+
+**What is not right, and is said:**
+
+* Joints are found a storey at a time: a riser that meets a run on the storey above is
+  not joined to it by `fitting`.
+* A clash's depth is not given for a run through a wall or a floor, and is "not worked
+  out" where the library cannot measure it even off centre. No case of the second has
+  been seen.
+* The roof's planes are not tested for clashes. A door or a window is a hole: a pipe
+  across a doorway is not reported.
+* The window's Fitting tool cannot say which joint is meant when two lie over one
+  another at different heights; the command line can (`--height`).
+* The status bar shows the storey's floor as the height of a joint the pointer is on,
+  not the joint's own height.
+
+**What remains of this stretch:** the judge.
+
 ## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
 
 An independent judge (Opus; it did not build any of this) was given commit `1886693`, a
@@ -1540,3 +1611,70 @@ bytes on every roof file; J10-3, J10-5, J10-10 and small half-cent amounts; the 
 **Not reached by the judge:** the window and the app's sheet; J10-2 at T-junctions and
 two joins away; `apply` with recipes that carry classes; a material renamed or removed
 in the file by hand; quantity error from four-place rounding at large unit prices.
+
+## Twelfth judgment (2026-11-11): drawing and editing, and the fixes to the eleventh
+
+An independent judge (Opus; it did not build any of this) was given commit `e73eb7e`, a
+frozen copy of the source, the built command line and the built window, and the brief to
+break the drawing stretch and the eleventh judgment's fixes. Twenty-one findings, no
+panic. Its reproductions are kept outside the repository (scratch files). As it reported
+them; what was done about each goes in the table that follows this one once the fix is in.
+
+| # | Finding (the judge's words, shortened) | Severity it gave |
+|---|---|---|
+| J12-1 | A wall drawn on top of another wall, or back over itself (two points `--closed`), is accepted and double-counted as Known: 90 LF where 60 exist. | wrong figure unflagged |
+| J12-2 | `remove` of a solved roof plane or hip writes a file that `check` then refuses, and the plane comes back on load. | the verb leaves an inconsistent file |
+| J12-3 | `remove` of a hand-entered roof plane leaves its lines pointing at it, and `check` passes. | loads what it should refuse |
+| J12-4 | Any run can go on any system, whatever its discipline: a duct on Domestic Cold Water. | loads what it should refuse |
+| J12-5 | An opening placed by a point any distance off its wall is accepted (500 ft off). | loads what it should refuse |
+| J12-6 | A wall's opening area and its door and window counts show as Known when its openings do not fit; only the first misfit is named. | wrong figure unflagged |
+| J12-7 | README says the pointer snaps to "the square"; the window never turns the square on. | false claim in a document |
+| J12-8 | In the window the wall being moved can snap to itself: the snap scene is kept by drawing and storey, not by what is left out of it. | minor; seen in the window once |
+| J12-9 | In the window, changing storey in the middle of a chain keeps the chain's start: a wall is made on one storey from a point picked on another. | minor; seen in the window |
+| J12-10 | A move by a worse status loses the wall's first source; repeated moves grow the source without limit. | minor (provenance) |
+| J12-11 | A move by nothing changes the job (the source gains "; moved"; an Assumed one downgrades the status). | minor |
+| J12-12 | A wall whose top is held to its own storey, or to the one below, is accepted (flagged, but it can never have a height). | loads what it should refuse |
+| J12-13 | Names are not one name consistently: storeys "g" and "G", wall types "w6" and "W6", materials "Copper,16 oz" and "Copper, 16 oz."; `set material` does not match a name the way `material` refuses one. | minor |
+| J12-14 | `remove` of a material that lines are made of, or of a condition in use, is accepted (flagged afterwards); the code's comment says it is refused. | false claim in a comment |
+| J12-15 | Four "ours" rows in PORTMAP (`wall_type_for`, `opening_type_for`, `segment_type_for`, `system_of_class`) rest on a search for this program's own names; BIMCraft's `text.rs:282` `type_for_size` is the same rule. | false claim in a document |
+| J12-16 | In the window the click that ends a Move probably also selects what is under the pointer (read in the code; not seen). | minor; not confirmed |
+| J12-17 | Cost lines are accepted on a System and on a Storey. | minor |
+| J12-18 | A material can still be given an order factor by the hour (`set order "2 lb/hr"`). | minor |
+| J12-19 | The half-cent push is three to six units in the last place, not three as call 37 says; at $1e12 a 0.4999 cent cannot be held at all. | minor |
+| J12-20 | `--status` and `--source` are silently ignored by `system` and `remove`. | minor |
+| J12-21 | The window accepts tool settings that can only be refused at the second pick ("0 in, 9 ft", a system "Steam"). | minor |
+
+**What held under attack** (the judge's list): every refused verb left the file byte for
+byte unchanged, dozens of cases; what `remove` refuses (a type in use, a system with runs,
+a storey with elements, the job); Unknown, empty and whitespace sources, NaN and far
+points, lengths with no unit, all refused by the library, the command line and on load; a
+Known room going Assumed after an Assumed move, with its figures as worked by hand;
+openings that do not fit giving an Unknown net area with the reason; hand figures for a
+three-piece duct and for a drawn, priced, moved and removed job; the recap by hand; undo
+and redo at every step, a failed verb recording nothing, a redo after a new edit refused,
+the limit of 200; snapping (rank, reach, other storeys, the skipped wall), and `toward`
+at five angles; rates printed one way (J11-6); typed and worked counts (J11-3); cost lines
+refused on a condition, a material and a type (J11-8); rounding at the half cent on a
+search of 80,000 products (J11-2); ten ported PORTMAP rows at their lines and four "ours"
+searches.
+
+**Not reached by the judge:** J11-9 (rooms at acute and thick corners); J11-7, 10, 11 and
+13; `apply` with recipes; in the window: Esc in every state, Delete with a type or a
+system selected, F2 then undo, typed lengths of 0, the sheet. Two of its three window
+runs were partly spoiled by its own script, so J12-8 and J12-9 rest on one picture each
+and J12-16 on reading the code.
+
+**Where the fixes stand (2026-11-11, at the commit that records this).** Each of J12-1 to
+J12-6, J12-10 to J12-14, J12-17 and J12-18 is fixed in the core with a test named for it
+(`j12_...` in `crates/world/tests/world.rs`, six tests, figures worked by hand); J12-20 at
+the command line with a line in `demos/draw.sh`; J12-15 in PORTMAP.md; J12-19 by
+correcting the document (DECISIONS.md call 41; no code changed). J12-7, 8, 9, 16 and 21
+are changed in the window's code (`crates/app/src/tools.rs`, `scene.rs`) and **have not
+been run in the window**: `demos/draww.sh` and `demos/clashw.sh` have not been rerun
+since, so the pictures in `demos/captured/draw/` and `demos/captured/clash/` are of the
+build before those five changes. The fourteen pictures in `demos/captured/clash/` are a
+second run whose only difference from the run that was read is the "Not tested" heading
+on the sheet; its seven model pictures and seven sheets have not each been read again.
+What was decided is call 41. **None of these fixes has been judged.** All 154 tests,
+the port map gate (193 items), the licence gate, the repository's three gates and the
+eight command-line demonstrations pass at this commit.

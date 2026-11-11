@@ -184,3 +184,52 @@ pub fn runs_along_outline(a: P2, b: P2, pts: &[P2], tolerance: f64) -> Result<()
     }
     Ok(())
 }
+
+/// Cut a simple outline into triangles by clipping ears. Each triangle is three places in
+/// `pts`. The second value says whether every cut was clean: where an outline is so thin
+/// that no ear is left to clip, a corner is taken anyway so a picture can still be drawn,
+/// and whoever needs the triangles to be true (a solid to test for clashes) must not use
+/// them.
+pub fn triangles(pts: &[P2]) -> (Vec<[usize; 3]>, bool) {
+    let n = pts.len();
+    if n < 3 {
+        return (Vec::new(), false);
+    }
+    let area: f64 = (0..n).map(|i| pts[i][0] * pts[(i + 1) % n][1] - pts[(i + 1) % n][0] * pts[i][1]).sum();
+    let mut ring: Vec<usize> = if area >= 0.0 { (0..n).collect() } else { (0..n).rev().collect() };
+    let cross = |a: P2, b: P2, c: P2| (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    let mut out = Vec::new();
+    let mut clean = true;
+    let mut guard = 0;
+    while ring.len() > 3 && guard < 10_000 {
+        guard += 1;
+        let m = ring.len();
+        let mut cut = None;
+        for i in 0..m {
+            let (a, b, c) = (pts[ring[(i + m - 1) % m]], pts[ring[i]], pts[ring[(i + 1) % m]]);
+            if cross(a, b, c) <= 1e-12 {
+                continue;
+            }
+            let inside = ring.iter().any(|&k| {
+                let p = pts[k];
+                p != a && p != b && p != c && cross(a, b, p) > 1e-12 && cross(b, c, p) > 1e-12 && cross(c, a, p) > 1e-12
+            });
+            if !inside {
+                cut = Some(i);
+                break;
+            }
+        }
+        // A sliver with no clean ear left: take any corner rather than stop.
+        clean &= cut.is_some();
+        let i = cut.unwrap_or(0);
+        let m = ring.len();
+        out.push([ring[(i + m - 1) % m], ring[i], ring[(i + 1) % m]]);
+        ring.remove(i);
+    }
+    if ring.len() == 3 {
+        out.push([ring[0], ring[1], ring[2]]);
+    } else {
+        clean = false;
+    }
+    (out, clean)
+}

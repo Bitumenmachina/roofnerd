@@ -207,42 +207,10 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
     highlight.render_layers = RenderLayers::layer(0);
 }
 
-/// Cut a simple outline into triangles (ear clipping). Indices into `pts`.
+/// Cut a simple outline into triangles, for drawing: the core's cut, taken as it comes
+/// even where an outline was too thin to cut cleanly.
 fn triangles(pts: &[[f64; 2]]) -> Vec<[u32; 3]> {
-    let n = pts.len();
-    let area: f64 = (0..n).map(|i| pts[i][0] * pts[(i + 1) % n][1] - pts[(i + 1) % n][0] * pts[i][1]).sum();
-    let mut ring: Vec<usize> = if area >= 0.0 { (0..n).collect() } else { (0..n).rev().collect() };
-    let cross = |a: [f64; 2], b: [f64; 2], c: [f64; 2]| (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-    let mut out = Vec::new();
-    let mut guard = 0;
-    while ring.len() > 3 && guard < 10_000 {
-        guard += 1;
-        let m = ring.len();
-        let mut cut = None;
-        for i in 0..m {
-            let (a, b, c) = (pts[ring[(i + m - 1) % m]], pts[ring[i]], pts[ring[(i + 1) % m]]);
-            if cross(a, b, c) <= 1e-12 {
-                continue;
-            }
-            let inside = ring.iter().any(|&k| {
-                let p = pts[k];
-                p != a && p != b && p != c && cross(a, b, p) > 1e-12 && cross(b, c, p) > 1e-12 && cross(c, a, p) > 1e-12
-            });
-            if !inside {
-                cut = Some(i);
-                break;
-            }
-        }
-        // A sliver with no clean ear left: take any corner rather than stop drawing.
-        let i = cut.unwrap_or(0);
-        let m = ring.len();
-        out.push([ring[(i + m - 1) % m] as u32, ring[i] as u32, ring[(i + 1) % m] as u32]);
-        ring.remove(i);
-    }
-    if ring.len() == 3 {
-        out.push([ring[0] as u32, ring[1] as u32, ring[2] as u32]);
-    }
-    out
+    plumbline_world::geom::triangles(pts).0.into_iter().map(|t| [t[0] as u32, t[1] as u32, t[2] as u32]).collect()
 }
 
 /// Surfaces, each flat and each lit on the side its normal points to.
@@ -342,7 +310,7 @@ impl Builder<'_, '_, '_> {
         let on_plan = self.on_plan.clone();
         e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
             // With a drawing tool in hand a click is a pick, not a selection.
-            if press.button == PointerButton::Primary && doc.entry.is_none() && doc.draw.tool.is_none() {
+            if press.button == PointerButton::Primary && doc.entry.is_none() && doc.draw.tool.is_none() && !doc.draw.swallow {
                 let path = on_plan.as_ref().filter(|_| doc.plan).unwrap_or(&click).clone();
                 doc.select(&path);
             }
@@ -411,7 +379,7 @@ pub fn rebuild(
                 .spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(24000.0, 24000.0))), MeshMaterial3d(materials.add(material)), Transform::from_xyz(0.0, -0.04, 0.0), Ground))
                 .observe(|press: On<PointerClick>, mut doc: ResMut<Doc>| {
                     // A click on the ground lets go of the selection.
-                    if press.button == PointerButton::Primary && doc.selected.is_some() && doc.entry.is_none() && doc.draw.tool.is_none() {
+                    if press.button == PointerButton::Primary && doc.selected.is_some() && doc.entry.is_none() && doc.draw.tool.is_none() && !doc.draw.swallow {
                         doc.selected = None;
                         doc.say(Tone::Done, "nothing selected");
                         doc.touch();
@@ -799,7 +767,7 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, buttons: Res<ButtonInput<MouseButto
 }
 
 /// The ground's grid, the roof's lines, thin runs, and the outline of what is selected.
-pub fn draw_lines(doc: Res<Doc>, drawing: Res<Drawing>, graphics: Res<Graphics>, mut lines: Gizmos<RoofLines>, mut runs: Gizmos<RunLines>, mut broken: Gizmos<BrokenLines>, mut grid: Gizmos<GridLines>, mut highlight: Gizmos<Highlight>) {
+pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, graphics: Res<Graphics>, mut lines: Gizmos<RoofLines>, mut runs: Gizmos<RunLines>, mut broken: Gizmos<BrokenLines>, mut grid: Gizmos<GridLines>, mut highlight: Gizmos<Highlight>) {
     // The grid: a line every ten feet, a stronger one every fifty, fading out with
     // distance from the building so the ground has no edge.
     let reach = drawing.reach;
@@ -861,6 +829,18 @@ pub fn draw_lines(doc: Res<Doc>, drawing: Res<Drawing>, graphics: Res<Graphics>,
             broken.line(*a, *b, *colour);
         } else {
             runs.line(*a, *b, *colour);
+        }
+    }
+    // With the sheet on its Clashes tab, each place two things are in the same space is
+    // marked on the model: three short strokes, seen through whatever is in front.
+    if doc.tab == crate::model::Tab::Clashes {
+        if let Some(Ok(found)) = &snap.clashes {
+            for c in found.found.iter().filter(|c| !c.through) {
+                let at = to_view(doc.origin, c.at);
+                for axis in [Vec3::X, Vec3::Y, Vec3::Z] {
+                    highlight.line(at - axis * 0.75, at + axis * 0.75, theme::clash());
+                }
+            }
         }
     }
     if let Some(selected) = &doc.selected {

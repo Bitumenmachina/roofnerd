@@ -262,3 +262,8 @@ pub fn plan_door() -> Color {
 pub fn plan_window() -> Color {
     Color::srgb(0.09, 0.15, 0.3)
 }
+
+/// Where two things are in the same space.
+pub fn clash() -> Color {
+    Color::srgb(0.86, 0.12, 0.16)
+}

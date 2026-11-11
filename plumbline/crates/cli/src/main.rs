@@ -58,7 +58,60 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--class <class>] [--of-material]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline storey <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <storey> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <storey>)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline room <file> <storey> \"<name>\" --at \"6,8\"\n  plumbline run <file> <storey> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline place <file> <storey> <fixture|equipment> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline move <file> <path> --by \"3,2\"\n  plumbline remove <file> <path>\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline clashes <file> [--clearance \"2 in\"]\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--class <class>] [--of-material]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline storey <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <storey> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <storey>)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline room <file> <storey> \"<name>\" --at \"6,8\"\n  plumbline run <file> <storey> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline place <file> <storey> <fixture|equipment> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline move <file> <path> --by \"3,2\"\n  plumbline remove <file> <path>\n  plumbline fitting <file> <storey> --at \"10,2\" [--height \"8 ft\"] [--kind <bend|tee|cross|transition|coupling>]\n  plumbline fitting <file> --all [--system <system>]\n  plumbline connect <file> <fixture or equipment> <run>\n  plumbline split <file> <run> --at \"6,2\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
+}
+
+/// What is in the same space as what, what passes through a wall or a floor, and, when a
+/// clearance is asked for, what is closer than it. Lengths are in inches, to two places.
+fn clashes(job: &mut plumbline_world::Job, clearance: Option<f64>) -> Result<String, String> {
+    use plumbline_world::building::clash::{self, ClashKind};
+    let found = clash::clashes(job, clearance)?;
+    let inches = |feet: f64| format!("{:.2} in", feet * 12.0 + 0.0);
+    let place = |c: &clash::Clash| format!("({}, {}, {})", view::num(c.at[0]), view::num(c.at[1]), view::num(c.at[2]));
+    let pairs = |c: &clash::Clash| format!("{} {} [{}] and {} [{}]", c.status.flag(), c.a_name, c.a, c.b_name, c.b);
+    let assumed = |list: &[&clash::Clash]| match list.iter().filter(|c| c.status != Status::Known).count() {
+        0 => String::new(),
+        n => format!(", {n} of them resting on something assumed"),
+    };
+    let mut out = String::new();
+    let hard: Vec<&clash::Clash> = found.found.iter().filter(|c| c.how == ClashKind::Hard && !c.through).collect();
+    let through: Vec<&clash::Clash> = found.found.iter().filter(|c| c.how == ClashKind::Hard && c.through).collect();
+    let close: Vec<&clash::Clash> = found.found.iter().filter(|c| c.how == ClashKind::Clearance).collect();
+    let _ = writeln!(out, "In the same space: {}{}", hard.len(), assumed(&hard));
+    for c in &hard {
+        let by = match c.by {
+            Some(by) => format!("in each other by {}", inches(by)),
+            None => "in each other; by how much could not be worked out".to_string(),
+        };
+        let _ = writeln!(out, "  {}: {by}, at {}", pairs(c), place(c));
+    }
+    let _ = writeln!(out, "Through a wall or a floor (a hole to cut): {}{}", through.len(), assumed(&through));
+    for c in &through {
+        let _ = writeln!(out, "  {}, at {}", pairs(c), place(c));
+    }
+    match clearance {
+        None => {
+            let _ = writeln!(out, "Closer than a clearance: not asked for (--clearance \"2 in\")");
+        }
+        Some(asked) => {
+            let _ = writeln!(out, "Closer than {}: {}{}", inches(asked), close.len(), assumed(&close));
+            for c in &close {
+                let _ = writeln!(out, "  {}: {} apart, at {}", pairs(c), inches(c.by.unwrap_or(0.0)), place(c));
+            }
+        }
+    }
+    let _ = writeln!(out, "Tested: {} element{}", found.tested, if found.tested == 1 { "" } else { "s" });
+    if !found.left_out.is_empty() {
+        let _ = writeln!(out, "Not tested: {}", found.left_out.len());
+        for (path, why) in &found.left_out {
+            let _ = writeln!(out, "  {path}: {why}");
+        }
+    }
+    let _ = writeln!(out, "Never tested:");
+    for note in clash::NEVER_TESTED {
+        let _ = writeln!(out, "  {note}");
+    }
+    Ok(out)
 }
 
 /// What the building comes to: each storey's walls and floors, then each system's runs by
@@ -395,7 +448,7 @@ fn run(args: &[String]) -> Result<(), String> {
     if cmd == "roof" {
         return new_roof(args);
     }
-    if matches!(cmd, "new" | "storey" | "type" | "system" | "wall" | "door" | "window" | "room" | "run" | "place" | "move" | "remove") {
+    if matches!(cmd, "new" | "storey" | "type" | "system" | "wall" | "door" | "window" | "room" | "run" | "place" | "move" | "remove" | "split" | "fitting" | "connect") {
         return draw(args);
     }
     if matches!(cmd, "sample" | "house" | "priced" | "show" | "check" | "lines" | "takeoff" | "price" | "estimate") && args.len() > 2 {
@@ -443,6 +496,20 @@ fn run(args: &[String]) -> Result<(), String> {
             let path = args.get(1).ok_or_else(usage)?;
             let (mut job, _) = read(path)?;
             let _ = std::io::stdout().write_all(takeoff(&mut job).as_bytes());
+            Ok(())
+        }
+        "clashes" => {
+            let path = args.get(1).ok_or_else(usage)?;
+            let clearance = match &args[2..] {
+                [] => None,
+                [flag, typed] if flag == "--clearance" => {
+                    let (len, unit) = units::parse_length(typed)?;
+                    Some(len.feet(unit)?)
+                }
+                _ => return Err(usage()),
+            };
+            let (mut job, _) = read(path)?;
+            let _ = std::io::stdout().write_all(clashes(&mut job, clearance)?.as_bytes());
             Ok(())
         }
         "price" => {
@@ -770,7 +837,7 @@ fn draw(args: &[String]) -> Result<(), String> {
         if given.iter().any(|(f, _)| f == flag) {
             return Err(format!("{flag} given twice"));
         }
-        let value = if flag == "--closed" { String::new() } else { it.next().cloned().ok_or_else(|| format!("{flag} needs a value"))? };
+        let value = if flag == "--closed" || flag == "--all" { String::new() } else { it.next().cloned().ok_or_else(|| format!("{flag} needs a value"))? };
         given.push((flag.clone(), value));
     }
     let mut used: Vec<&str> = Vec::new();
@@ -819,6 +886,11 @@ fn draw(args: &[String]) -> Result<(), String> {
     }
     // Every other verb says how sure what it enters is, and who says so.
     let (status, source) = (flag("--status"), flag("--source"));
+    // A system is named, and a thing is removed: neither is entered with a status, and a
+    // flag that would be ignored is refused, as any other is.
+    if matches!(cmd, "system" | "remove") && (status.is_some() || source.is_some()) {
+        return Err(format!("--status and --source are not something {cmd} takes; they would be ignored\n{}", usage()));
+    }
     let how = |status: &Option<String>, source: &Option<String>| -> Result<(Status, String), String> {
         let status = match status.as_deref() {
             Some("Known") => Status::Known,
@@ -918,6 +990,49 @@ fn draw(args: &[String]) -> Result<(), String> {
         ("remove", [element]) => {
             let gone = ed::remove(&mut job, element)?;
             format!("removed {}", gone.join(", "))
+        }
+        ("split", [run]) => {
+            let (status, source) = how(&status, &source)?;
+            let at = points(&need(flag("--at"), "--at", "\"6,2\" (a point on the run, in feet)")?)?;
+            let [at] = at.as_slice() else { return Err("--at is one point, x,y in feet".into()) };
+            let new = ed::split(&mut job, run, *at, ed::Entered { status, source: &source })?;
+            format!("{run} cut at ({}, {}); its second piece is {new}", view::num(at[0]), view::num(at[1]))
+        }
+        ("fitting", []) => {
+            let (status, source) = how(&status, &source)?;
+            if flag("--all").is_none() {
+                return Err("say where: plumbline fitting <file> <storey> --at \"10,2\", or --all for every joint that has none".into());
+            }
+            let (made, passed) = ed::fit_all(&mut job, flag("--system").as_deref(), ed::Entered { status, source: &source })?;
+            let mut out = format!("{} fitting{}", made.len(), if made.len() == 1 { "" } else { "s" });
+            for f in &made {
+                out.push_str(&format!("\n  {}: a {}{}", f.path, f.kind.title().to_lowercase(), f.cut.iter().map(|(run, new)| format!("; {run} was cut there, its second piece is {new}")).collect::<String>()));
+            }
+            for p in &passed {
+                out.push_str(&format!("\n  passed over on {} at ({}, {}, {}): {}", p.storey, view::num(p.at[0]), view::num(p.at[1]), view::num(p.at[2]), p.why));
+            }
+            out
+        }
+        ("fitting", [storey]) => {
+            let (status, source) = how(&status, &source)?;
+            let at = points(&need(flag("--at"), "--at", "\"10,2\" (where the runs meet, in feet)")?)?;
+            let [at] = at.as_slice() else { return Err("--at is one point, x,y in feet".into()) };
+            let kind = match flag("--kind").as_deref() {
+                None => None,
+                Some("bend") => Some(plumbline_world::FittingKind::Bend),
+                Some("tee") => Some(plumbline_world::FittingKind::Tee),
+                Some("cross") => Some(plumbline_world::FittingKind::Cross),
+                Some("transition") => Some(plumbline_world::FittingKind::Transition),
+                Some("coupling") => Some(plumbline_world::FittingKind::Coupling),
+                Some(other) => return Err(format!("{other:?} is not a kind of fitting; there are: bend, tee, cross, transition, coupling")),
+            };
+            let f = ed::fitting(&mut job, storey, *at, flag("--height").as_deref(), kind, ed::Entered { status, source: &source })?;
+            format!("{}: a {} at ({}, {}){}", f.path, f.kind.title().to_lowercase(), view::num(at[0]), view::num(at[1]), f.cut.iter().map(|(run, new)| format!("; {run} was cut there, its second piece is {new}")).collect::<String>())
+        }
+        ("connect", [thing, run]) => {
+            let (status, source) = how(&status, &source)?;
+            let which = ed::connect(&mut job, thing, run, ed::Entered { status, source: &source })?;
+            format!("{thing} is joined to {run} by its connector {which}")
         }
         _ => return Err(usage()),
     };

@@ -509,7 +509,8 @@ window that cannot be cut in its wall (it has no size, it runs past the wall's e
 stands taller than the wall) is on that list too.
 
 Not modelled yet: curved walls; openings in a floor; a wall's top following a roof;
-room heights and volumes; families; structure; stairs; clashes; sizing and code checks.
+room heights and volumes; families; structure; stairs; sizing and code checks. (Clashes
+are section 5.10.)
 PROPOSALS.md has each.
 
 ### 5.7 Money
@@ -591,8 +592,59 @@ as near); else the foot of the perpendicular from the last point onto a line nea
 pointer; else a guide through the last point every 15 degrees, when the pointer is within
 4 degrees of one; else the nearest point on a wall's line; else the nearest inch.
 
-Not there: a verb for a floor, a fitting or a connector; arcs; a run that changes height
-along its length; moving one end of a wall; moving or removing several things at once.
+Not there: a verb for a floor; arcs; a run that changes height along its length; moving
+one end of a wall; moving or removing several things at once.
+
+### 5.9 Fittings and connections
+
+`editing/join.rs` (DECISIONS.md call 39). Three verbs, each all of its change or none:
+
+* **`fitting`** (`plumbline fitting <file> <storey> --at "x,y"`): a fitting where runs'
+  ends meet. Its kind is worked out from what meets: two ends at an angle, a bend; two
+  in line of one size, a coupling; two in line of two sizes, a transition; three, a tee;
+  four, a cross. A run that passes through the point is cut there first. The fitting has
+  a connector for each run, takes the runs' system, and is as sure as the least sure of
+  them. Refused: one end, five or more, runs of two systems, a fixture's connector at
+  the joint, cable, a joint that already has its fitting, a kind asked for that is not
+  the kind the joint takes. `--all` does every joint that has none and lists what it
+  passed over; it does not put a coupling between two runs of one size in line.
+* **`split`** (`plumbline split <file> <run> --at "x,y"`): a run cut in two at a point on
+  its line. The first piece keeps the path; the second is new and carries what the first
+  carries. A run that climbs is as high at the cut as its line is there. Refused: a
+  point off the run or at its end, an upright run, a run with a cost line whose quantity
+  is a typed number.
+* **`connect`** (`plumbline connect <file> <thing> <run>`): a fixture or a piece of
+  equipment given a connector where the run's end is, in the thing's own axes, of the
+  run's kind and size. Refused: a run neither of whose ends is in the thing's box, both
+  of whose ends are, a thing with no size, a connector already there.
+
+After these the takeoff's "joined" line (section 5.6) says how many networks a system
+is in, how many ends are open, and where a run still meets another with no fitting.
+
+### 5.10 Clashes
+
+`building/clash.rs` (DECISIONS.md call 40); `plumbline clashes <file> [--clearance "2 in"]`;
+the sheet's Clashes tab. Worked out from the job each time and never stored.
+
+* **What is tested** is every element `building::placements` gives a shape: a wall as
+  its solid pieces round its doors and windows, a floor as its outline cut into slabs,
+  a run as a cylinder or a box, a fixture, equipment and a fitting as boxes.
+* **In the same space** (a hard clash): two solids in each other by more than the fit
+  tolerance, 0.01 ft. Reported with how far one would have to move to clear the other,
+  where that can be worked out, and where.
+* **Through a wall or a floor**: a run or a fitting in a wall or a floor. Listed apart,
+  with no depth: a hole to cut.
+* **Closer than a clearance** (a clearance clash): only when one is asked for, up to
+  10 ft. Reported with how far apart.
+* **Never tested:** walls and floors against each other; what is joined (two runs at a
+  joint, a run and its fitting, a run and the thing it is connected to); what fills a
+  door or a window; the roof's planes.
+* **Not tested, and listed with why:** anything with no shape.
+* **A clash takes the worse status of its two shapes.**
+
+The solid geometry is `parry3d-f64`'s. Its measure of how deep two solids are in each
+other answers zero when one is dead centre in the other, so the yes or no is its
+overlap test and the depth is asked for separately (call 40).
 
 ## 6. Cost code scheme
 
@@ -654,8 +706,8 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
 
 | Crate | Depends on | Holds |
 |---|---|---|
-| `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json` | The model: values, units, components, checks, plan geometry, derivation, line formulas and the steps a line is worked in, the lines planes imply, the saved file, the sample job, the flat view |
-| `crates/cli` (`plumbline`) | `plumbline-world` | The command line: the samples, `show`, `check`, `lines`, `takeoff`, `price`, `estimate`, the entry commands (`set`, `apply`, `line`, `class`, `labor`, `material`, `roof`) and the drawing verbs of section 5.8 |
+| `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json`, `parry3d-f64` (solid geometry, for clashes) | The model: values, units, components, checks, plan geometry, derivation, line formulas and the steps a line is worked in, the lines planes imply, the saved file, the sample job, the flat view |
+| `crates/cli` (`plumbline`) | `plumbline-world` | The command line: the samples, `show`, `check`, `lines`, `takeoff`, `price`, `estimate`, the entry commands (`set`, `apply`, `line`, `class`, `labor`, `material`, `roof`) and the drawing verbs of sections 5.8 and 5.9, and `clashes` |
 | `crates/app` (`plumbline-app`) | `plumbline-world`, `bevy` | The 3D window and the sheet window |
 
 The world crate does not depend on any renderer or window, and must not. The engine is

@@ -61,6 +61,7 @@ use crate::units::{self, Len};
 use crate::value::{Derived, Status, Val};
 use crate::view::{self, Row, Sum};
 
+pub mod clash;
 pub mod model;
 pub mod network;
 pub mod rooms;
@@ -119,6 +120,38 @@ pub const CLASSIFICATIONS: [(&str, Discipline); 10] = [
     ("Power", Discipline::Electrical),
     ("Lighting", Discipline::Electrical),
 ];
+
+/// The classifications of system a kind of run goes on: a duct carries air, a pipe a
+/// liquid or a gas, a conduit and a cable power. Empty for what is not a run: a fixture,
+/// a piece of equipment and a fitting go on any system.
+pub fn run_goes_on(kind: Kind) -> &'static [&'static str] {
+    match kind {
+        Kind::Duct => &["Supply Air", "Return Air", "Exhaust Air"],
+        Kind::Pipe => &["Refrigerant", "Domestic Cold Water", "Domestic Hot Water", "Sanitary", "Vent"],
+        Kind::Conduit | Kind::Cable => &["Power", "Lighting"],
+        _ => &[],
+    }
+}
+
+/// How far two walls' lines lie along each other, in feet: none when they do not share
+/// a line, or share no more of it than a point.
+fn lie_along(a: [P2; 2], b: [P2; 2]) -> Option<f64> {
+    let tol = crate::check::FIT_TOLERANCE_FT;
+    let (dx, dy) = (a[1][0] - a[0][0], a[1][1] - a[0][1]);
+    let len = dx.hypot(dy);
+    if len <= tol {
+        return None;
+    }
+    let (ux, uy) = (dx / len, dy / len);
+    let off = |p: P2| (ux * (p[1] - a[0][1]) - uy * (p[0] - a[0][0])).abs();
+    let along = |p: P2| ux * (p[0] - a[0][0]) + uy * (p[1] - a[0][1]);
+    if off(b[0]) > tol || off(b[1]) > tol {
+        return None;
+    }
+    let (t0, t1) = (along(b[0]).min(along(b[1])), along(b[0]).max(along(b[1])));
+    let shared = t1.min(len) - t0.max(0.0);
+    (shared > tol).then_some(shared)
+}
 
 /// `pl::in_system`: the system an element belongs to, by the system's path.
 #[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -277,6 +310,12 @@ pub(crate) fn typed<'a, T>(table: &'a HashMap<String, T>, r: &'a Val<String>, wh
 pub fn check_whole(job: &mut Job) -> Result<(), String> {
     let tree = Tree::of(&mut job.world);
     let kinds = &tree.kinds;
+    let classed: HashMap<String, String> = {
+        let mut q = job.world.query::<(&Node, &SystemInfo)>();
+        q.iter(&job.world).map(|(n, s)| (n.path.clone(), s.classification.clone())).collect()
+    };
+    // Each wall's storey, its line, and how high it stands where that is entered outright.
+    let mut standing: Vec<(String, String, [P2; 2], Option<(f64, f64)>)> = Vec::new();
     let mut q = job.world.query::<(&Node, &Kind, Option<&InSystem>, Option<&Wall>, Option<&Opening>, Option<&Floor>, Option<&Segment>)>();
     for (node, kind, in_system, wall, opening, floor, segment) in q.iter(&job.world) {
         let me = &node.path;
@@ -306,8 +345,21 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
             if kinds.get(named) != Some(&Kind::System) {
                 return Err(format!("{me}: says it belongs to {named:?}, which is not a system in this job"));
             }
+            // A duct does not carry water. A fixture, equipment or a fitting can be on any system.
+            let goes_on = run_goes_on(*kind);
+            if let Some(class) = classed.get(named).filter(|c| !goes_on.is_empty() && !goes_on.contains(&c.as_str())) {
+                return Err(format!("{me}: a {} is on {named}, which is a {class} system; a {} goes on: {}", kind.stem(), kind.stem(), goes_on.join(", ")));
+            }
         }
         if let Some(w) = wall {
+            if let (Some(line), Some(storey)) = (w.line_ft(), node.parent.as_ref()) {
+                let base = match &w.base_offset {
+                    None => Some(0.0),
+                    Some(b) => b.feet(),
+                };
+                let stands = base.zip(w.height.as_ref().and_then(|h| h.feet())).filter(|_| w.top_level.is_none()).map(|(b, h)| (b, b + h));
+                standing.push((me.clone(), storey.clone(), line, stands));
+            }
             if let Some(p) = &w.type_name.value {
                 if !tree.wall_types.contains_key(p) {
                     return Err(format!("{me}: its type is {p:?}, which is not a wall type in this job"));
@@ -341,6 +393,25 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         // A run's heights and a placed thing's are above the storey it is under.
         if (kind.is_segment() || kind.is_placed()) && tree.storey_of(me).is_none() {
             return Err(format!("{me}: a {kind:?} is set at a height above a storey and has to be under one"));
+        }
+    }
+    // One wall drawn over another on a storey is the same wall counted twice. Two that
+    // stand one over the other, each with its own height entered, are two walls.
+    standing.sort_by(|x, y| x.0.cmp(&y.0));
+    for (i, (a, storey, line, stands)) in standing.iter().enumerate() {
+        for (b, other, its, theirs) in &standing[i + 1..] {
+            if storey != other {
+                continue;
+            }
+            let tol = crate::check::FIT_TOLERANCE_FT;
+            if let (Some((lo, hi)), Some((lo2, hi2))) = (stands, theirs) {
+                if *hi <= lo2 + tol || *hi2 <= lo + tol {
+                    continue;
+                }
+            }
+            if let Some(shared) = lie_along(*line, *its) {
+                return Err(format!("{b}: lies along {a} for {} ft: one wall drawn over another would be counted twice", view::figure_shown(shared, 2)));
+            }
         }
     }
     Ok(())
@@ -579,29 +650,37 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                         inputs.insert(0, i.clone());
                     }
                 }
-                let mut fault = None;
+                // Every opening that does not fit is named, not the first alone.
+                let mut faults: Vec<String> = Vec::new();
                 // An opening that has a size and no place cannot be checked for fit.
-                if let Some(h) = mine.iter().find(|h| h.area.is_some() && h.span.is_none()) {
-                    fault = Some(format!("where {} is in the wall is not known, so whether it fits cannot be checked", h.path));
+                for h in mine.iter().filter(|h| h.area.is_some() && h.span.is_none()) {
+                    faults.push(format!("where {} is in the wall is not known, so whether it fits cannot be checked", h.path));
                 }
-                if let (None, Some(l), Ok(h)) = (&fault, length, &heights.height) {
+                if let (Some(l), Ok(h)) = (length, &heights.height) {
                     for (i, hole) in mine.iter().enumerate() {
                         let Some([from, to, sill, head]) = hole.span else { continue };
                         // It fits its wall from end to end (BIMCraft `model.rs:6678`).
                         if from < -crate::check::FIT_TOLERANCE_FT {
-                            fault = Some(format!("{} starts {} ft before the start of its wall", hole.path, view::figure_shown(-from, 2)));
+                            faults.push(format!("{} starts {} ft before the start of its wall", hole.path, view::figure_shown(-from, 2)));
                         } else if to > l + crate::check::FIT_TOLERANCE_FT {
-                            fault = Some(format!("{} ends {} ft along a wall {} ft long", hole.path, view::figure_shown(to, 2), view::figure_shown(l, 2)));
+                            faults.push(format!("{} ends {} ft along a wall {} ft long", hole.path, view::figure_shown(to, 2), view::figure_shown(l, 2)));
                         } else if head > h + crate::check::FIT_TOLERANCE_FT {
-                            fault = Some(format!("{} reaches {} ft up a wall {} ft tall", hole.path, view::figure_shown(head, 2), view::figure_shown(*h, 2)));
+                            faults.push(format!("{} reaches {} ft up a wall {} ft tall", hole.path, view::figure_shown(head, 2), view::figure_shown(*h, 2)));
                         } else if let Some(other) = mine[..i].iter().find(|o| o.span.is_some_and(|s| from < s[1] && s[0] < to && sill < s[3] && s[2] < head)) {
-                            fault = Some(format!("{} and {} lie over each other", other.path, hole.path));
-                        }
-                        if fault.is_some() {
-                            break;
+                            faults.push(format!("{} and {} lie over each other", other.path, hole.path));
                         }
                     }
                 }
+                // An opening whose place is not known still has its size: the openings' area
+                // stands, and it is the net that cannot be had. One that is known not to fit
+                // (past an end, over the top, over another) is another matter: the sum of
+                // the openings is then not what is cut out of this wall, and is not given.
+                let misfit: Vec<&String> = faults.iter().filter(|f| !f.starts_with("where ")).collect();
+                let open = match (misfit.is_empty(), open) {
+                    (false, o) if o.value.is_some() => Derived::refused("SF", &f_open, &o.inputs, &misfit.iter().map(|f| f.as_str()).collect::<Vec<_>>().join("; ")),
+                    (_, o) => o,
+                };
+                let fault = (!faults.is_empty()).then(|| faults.join("; "));
                 let f_net = "face_area − opening_area";
                 let net = match (fault, face.value, open.value) {
                     (Some(why), _, _) => Derived::refused("SF", f_net, &inputs, &why),
@@ -1480,13 +1559,7 @@ pub fn takeoff(job: &mut Job) -> Vec<SystemTakeoff> {
                 // water), and any other on the system the thing itself is on.
                 let mut where_to: Vec<usize> = Vec::new();
                 if let network::Joint::Connector { domain: Some(domain), .. } = joint {
-                    let carried = match domain {
-                        Domain::Cold => Some("Domestic Cold Water"),
-                        Domain::Hot => Some("Domestic Hot Water"),
-                        Domain::Waste => Some("Sanitary"),
-                        Domain::Vent => Some("Vent"),
-                        Domain::Storm | Domain::Gas => None,
-                    };
+                    let carried = domain.system_classification();
                     where_to = (0..named).filter(|&i| carried == Some(systems[i].classification.as_str())).collect();
                 }
                 if where_to.is_empty() {

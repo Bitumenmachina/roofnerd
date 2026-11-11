@@ -1158,3 +1158,139 @@ renderer the demonstrations run on, keys typed in about the second after a field
 are lost. The frame that first draws the field is slow there; whether a real graphics
 card shows it is not known, because none was available. The demonstration types the
 first character, waits, then types the rest.
+
+### Call 39. Fittings, connections and a run cut in two (2026-11-11)
+
+Ours to make; recorded so they can be overruled. The task is `HANDOFF_CLASH.md`.
+What was checked first: BIMCraft places a pipe fitting by hand, as a component of a
+family with its connectors drawn in the family (`fixtures.rs:203`, `family.rs:132`). It
+does not work out which fitting a joint takes and has no verb that joins a run to a
+thing. Its `split` (`commands.rs:12534`) is of a wall. So the rule for cutting is
+ported and the rest is ours (`crates/world/src/editing/join.rs`; PORTMAP.md).
+
+* **A fitting's kind is worked out from what meets, not typed.** Two ends at an angle
+  are a bend; two in line (within a degree) of one size a coupling, of two sizes a
+  transition; three a tee; four a cross. A kind that is given is checked against that
+  and refused if it disagrees. One end, five ends, a fixture's connector at the joint,
+  runs of two systems, or cable: refused, each with its reason. An estimator counts
+  fittings from the runs and has no family library to pick a part from.
+* **Two runs in line with a size not known cannot be told apart as a coupling or a
+  transition**, so the verb refuses unless it is told which.
+* **A fitting is as sure as the runs it joins, never surer**, whatever status it was
+  asked for with; its source says which runs it joins and that which part is bought is
+  not selected. It is drawn at its largest run's size, and that size is Assumed.
+* **A branch on a run's length becomes a tee by cutting the run there.** The network
+  calls a run met along its length a place with no fitting whether or not something
+  stands there (it is ported that way), so a tee has to be three ends. The first piece
+  keeps the run's path, the second is new, and what the run carries (its system, its
+  condition, its allowance, its material, its cost lines) is on both.
+* **A run with a cost line whose quantity is a typed number is not cut.** Four hangers
+  typed on a run would be four on each piece, and which piece they belong to cannot be
+  told. A quantity that is a formula is worked again for each piece. The refusal names
+  the line.
+* **Fittings are not placed by themselves as runs are drawn.** `fitting` places one
+  where it is asked; `fitting --all` places one at every joint that has none and lists
+  what it passed over and why.
+* **`--all` does not put a coupling between two runs of one size in line.** That is most
+  often one run drawn in two picks, and a coupling at every pick would be a count nobody
+  entered. A coupling goes in where it is asked for by name.
+* **Joints are looked for a storey at a time.** A riser that meets a run of the storey
+  above is not joined to it by these verbs. Said, not hidden.
+* **A run is joined to a fixture or to equipment by giving the thing a connector where
+  the run's end is**: of the run's kind and size, carrying what the run's system carries
+  where a connector can say that (cold, hot, waste, vent). The end has to be at the
+  thing: inside its box or within the fit tolerance of it. A thing whose size is not
+  known cannot be joined to: whether the run reaches it cannot be told.
+* **What a pipe connector carries and what a system is classed as are matched in one
+  place** (`Domain::system_classification`), where the takeoff and `connect` both read it.
+
+### Call 40. Clash detection (2026-11-11)
+
+Ours to make. What was checked first: BIMCraft has none (`grep -rni clash
+crates/core/src`: two comments, and a variable in `import.rs` for parameter names that
+collide). The trade's words, from a web search on the day: a hard clash is two things in
+the same space; a soft or clearance clash is two things closer than a distance asked
+for. The solid geometry is `parry3d-f64` 0.31.1 (Apache-2.0; its twelve crates are in
+LICENSES.md), read from its source before a line of it was called.
+
+* **What is tested is what `building::placements` gives a shape, and nothing else.** The
+  window draws from the same list, so what clashes is what is seen.
+* **A clash is two solids in each other by more than the fit tolerance**, a hundredth of
+  a foot: each is drawn in by half of that and what is left is tested for overlap.
+  Touching is not a clash.
+* **The yes or no and the how deep are asked separately, because the library's measure
+  of depth fails where it matters most.** Asked how deep two solids are in each other,
+  it answers zero when one is dead centre in the other: a pipe and a duct drawn at one
+  height, crossing. Found by the first test written (0 clashes where one was worked by
+  hand at 3 3/8 in). Its overlap test does not fail, and that is what decides. The depth
+  is then asked three times, a billionth of a foot off centre, and a clash whose depth
+  still cannot be had is reported with no depth. It is not dropped.
+* **A door or a window is a hole.** A pipe through a window is through nothing.
+* **Walls and floors are not tested against each other**; they are built into one
+  another. Nor is what is joined: two runs at a joint, a run and its fitting, a run and
+  the thing it is connected to. Two runs of one system that cross without being joined
+  are tested.
+* **A run or a fitting that meets a wall or a floor is listed apart, as through it**, with
+  no depth: it is a hole to cut and sleeve, which is a count, not two trades in one
+  place. This model's walls are solid, so a pipe drawn inside a wall is through it.
+* **A clearance is tested only when one is asked for.** There is no default distance.
+  More than ten feet is refused.
+* **A clash is as sure as the two shapes**: Assumed when either is.
+* **What has no shape is listed as not tested, with why**: a thing with no size, a run
+  with no size (a line, not a solid). The roof's planes are not in `placements` and are
+  not tested; every report says so.
+* **Nothing is stored.** Clashes are worked out from the job each time, as the network
+  is, so they cannot go stale.
+
+### Call 41. The twelfth judgment: what was decided in fixing it (2026-11-11)
+
+The findings are in STATUS.md, "Twelfth judgment". What had to be decided:
+
+* **One wall drawn over another on a storey is refused**, by the verbs and on load:
+  two walls that share a line for more than the fit tolerance are the same wall counted
+  twice. Two that stand one over the other, each with its own height entered, are two
+  walls. (J12-1)
+* **What a roof's footprint solves is not removed**; it would come back the next time
+  the roof is solved. The footprint is changed, or the roof removed. **A plane that
+  lines lie on is not removed** while they name it. **Nor a material something is made
+  of, nor a condition something has.** (J12-2, 3, 14)
+* **A run goes on a system that carries what it carries**: a duct on Supply, Return or
+  Exhaust Air; a pipe on Refrigerant, Domestic Cold or Hot Water, Sanitary or Vent; a
+  conduit or a cable on Power or Lighting. Checked by the verbs and on load. A fixture,
+  a piece of equipment and a fitting can be on any system. (J12-4)
+* **An opening placed by a point is on the wall**: within half the wall's thickness of
+  its line. (J12-5)
+* **A wall's opening area is not given when an opening is known not to fit** (past an
+  end, over the top, over another), and every opening that does not fit is named. An
+  opening whose place is not known still has its size, so there the opening area stands
+  and only the net is refused: that part of the earlier rule is kept, and its test with
+  it. The counts of doors and windows are counts of what is entered and are left. (J12-6)
+* **Shift holds the next point square to the last.** The square guide was in the
+  handoff's fence and in the README and was never switched on. (J12-7)
+* **A source keeps where the value first came from and what was done to it last**:
+  "plan A; moved (by eye)". It does not grow with each move, and a move that makes the
+  value less sure no longer wipes where it came from. The same for a cut. This changes
+  two test expectations, which said the worse source replaced the first. (J12-10)
+* **A move by nothing is refused.** (J12-11)
+* **A wall's top cannot be held to its own storey or to one below**, when both floors'
+  heights are known; the verb refuses it. A file that has one still loads, flagged,
+  because a storey's height can be corrected afterwards. (J12-12)
+* **A name that is looked up is one name whatever its capitals, its spacing or a full
+  stop at its end**, and `set material` finds a material the way `material` refuses a
+  second one. Storeys and types are found by path, not by name, and two whose names
+  differ in capitals are left as two. (J12-13)
+* **Cost lines are not accepted on a system or a storey** (they go on what is built and
+  on the job, as call 37 said). **A material is not ordered by the hour.** (J12-17, 18)
+* **`system` and `remove` refuse `--status` and `--source`** rather than ignore them. (J12-20)
+* **The window checks a tool's settings when they are typed**: a size of nothing or less,
+  and a system a run of that kind does not go on, are refused there and not at the
+  second pick. (J12-21)
+* **Correcting call 37 on the half-cent push (J12-19).** It is three times the spacing
+  of numbers at the size of the figure, which is between three and six units in its last
+  place, not three. And above about a trillion dollars a figure cannot hold half a cent
+  at all: 1e12 + 0.004999 is stored as 1e12 + 0.005. Amounts are refused above ten
+  trillion; between one and ten trillion a cent can be off. No code changed.
+* **Left, and said:** four `*_for` rows in PORTMAP are now marked ported from BIMCraft's
+  `type_for_size` (J12-15). The changes to the window (J12-8, 9, 16) are made from the
+  judge's reading of the code and one picture each, and have no test that drives the
+  window; they are covered only by `demos/draww.sh` still passing.

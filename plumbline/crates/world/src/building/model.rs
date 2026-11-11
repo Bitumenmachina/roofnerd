@@ -495,6 +495,25 @@ pub enum Domain {
     Gas,
 }
 
+impl Domain {
+    /// The classification of the system that carries it, where the list of systems has
+    /// one: storm water and gas have none there yet.
+    pub fn system_classification(self) -> Option<&'static str> {
+        match self {
+            Domain::Cold => Some("Domestic Cold Water"),
+            Domain::Hot => Some("Domestic Hot Water"),
+            Domain::Waste => Some("Sanitary"),
+            Domain::Vent => Some("Vent"),
+            Domain::Storm | Domain::Gas => None,
+        }
+    }
+
+    /// What a system of this classification carries, where a connector can say it.
+    pub fn of_system(classification: &str) -> Option<Domain> {
+        [Domain::Cold, Domain::Hot, Domain::Waste, Domain::Vent, Domain::Storm, Domain::Gas].into_iter().find(|d| d.system_classification() == Some(classification))
+    }
+}
+
 /// Which way what it carries goes through it: into the thing (`in`, as water into a
 /// basin), out of it (`out`, as waste from a water closet) or either way (`both`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

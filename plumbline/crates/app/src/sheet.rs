@@ -144,6 +144,8 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             all.push((Tab::Money, "Money".to_string(), snap.pricing.as_ref().map(|p| p.elements.len()).unwrap_or(0)));
             // The estimate, once anything has a cost line.
             all.push((Tab::Estimate, "Estimate".to_string(), snap.estimate.as_ref().map(|e| e.lines.len()).unwrap_or(0)));
+            // Clashes, once anything is in the same space as anything else.
+            all.push((Tab::Clashes, "Clashes".to_string(), snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.len()).unwrap_or(0)));
             for (tab, name, count) in all {
                 let on = doc.tab == tab;
                 // A job with nothing under a tab does not offer it.
@@ -177,6 +179,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
                 Tab::Of(discipline) => systems(body, fonts, &doc, &snap, discipline),
                 Tab::Money => money(body, fonts, &doc, &snap),
                 Tab::Estimate => estimate(body, fonts, &doc, &snap),
+                Tab::Clashes => clashes(body, fonts, &doc, &snap),
             }
             notes(body, fonts, &snap);
             cost_lines(body, fonts, &snap);
@@ -395,6 +398,72 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
 }
 
 /// A figure of money as the sheet says it: the amount, or that there is none.
+/// What is in the same space as what, then what passes through a wall or a floor, then
+/// what was not tested. A row selects the second of its two elements, which is the run or
+/// the thing rather than the wall, so the model shows where.
+fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
+    use plumbline_world::building::clash::{Clash, ClashKind, NEVER_TESTED};
+    let found = match &snap.clashes {
+        Some(Ok(found)) => found,
+        Some(Err(why)) => return nothing(p, fonts, &format!("Clashes could not be worked out: {why}")),
+        None => return nothing(p, fonts, "Clashes have not been worked out."),
+    };
+    let list = |p: &mut ChildSpawnerCommands, title: &str, rows: Vec<&Clash>, depth: bool| {
+        let assumed = rows.iter().filter(|c| c.status != Status::Known).count();
+        let count = if assumed == 0 { rows.len().to_string() } else { format!("{}  ·  {assumed} resting on something assumed", rows.len()) };
+        table(p, fonts, title, count, |t| {
+            let mut columns = vec![("", 7.0, false), ("What", 0.0, false)];
+            if depth {
+                columns.push(("In each other by", 120.0, true));
+            }
+            columns.push(("Where: east, north, up", 190.0, true));
+            header_row(t, fonts, &columns);
+            for c in rows {
+                let selected = doc.selected.as_deref() == Some(c.b.as_str()) || doc.selected.as_deref() == Some(c.a.as_str());
+                row(t, selected, Some(c.b.clone()), |r| {
+                    cell(r, 7.0, false, |x| dot(x, c.status));
+                    cell(r, 0.0, false, |x| named(x, fonts, format!("{} and {}", c.a_name, c.b_name), theme::ink(), format!("{} and {}", c.a, c.b), theme::ink_faint()));
+                    if depth {
+                        let by = c.by.map(|by| format!("{:.2} in", by * 12.0 + 0.0)).unwrap_or("not worked out".into());
+                        cell(r, 120.0, true, |x| words(x, fonts, by, 12.5, Weight::Medium, theme::status_ink(c.status)));
+                    }
+                    let at = format!("{}, {}, {}", units::feet_as_ft_in(c.at[0], 16), units::feet_as_ft_in(c.at[1], 16), units::feet_as_ft_in(c.at[2], 16));
+                    cell(r, 190.0, true, |x| words(x, fonts, at, 12.0, Weight::Regular, theme::ink_soft()));
+                });
+            }
+        });
+    };
+    let hard: Vec<&Clash> = found.found.iter().filter(|c| c.how == ClashKind::Hard && !c.through).collect();
+    let through: Vec<&Clash> = found.found.iter().filter(|c| c.how == ClashKind::Hard && c.through).collect();
+    if hard.is_empty() && through.is_empty() {
+        nothing(p, fonts, &format!("Nothing is in the same space as anything else: {} elements tested.", found.tested));
+    }
+    if !hard.is_empty() {
+        list(p, "In the same space", hard, true);
+    }
+    if !through.is_empty() {
+        list(p, "Through a wall or a floor: holes to cut", through, false);
+    }
+    let count = match found.left_out.len() {
+        0 => "everything with a shape was; what follows never is".to_string(),
+        n => format!("{n} with no shape; and what follows never is"),
+    };
+    table(p, fonts, "Not tested", count, |t| {
+        for (path, why) in &found.left_out {
+            row(t, doc.selected.as_deref() == Some(path.as_str()), Some(path.clone()), |r| {
+                cell(r, 7.0, false, |x| dot(x, Status::Unknown));
+                cell(r, 0.0, false, |x| named(x, fonts, path.clone(), theme::ink(), why.clone(), theme::ink_soft()));
+            });
+        }
+        for note in NEVER_TESTED {
+            row(t, false, None, |r| {
+                cell(r, 7.0, false, |_| {});
+                cell(r, 0.0, false, |x| words(x, fonts, note, 12.0, Weight::Regular, theme::ink_soft()));
+            });
+        }
+    });
+}
+
 fn dollars(d: Option<&plumbline_world::Derived>) -> (String, Status) {
     match d {
         None => ("none entered".into(), Status::Known),

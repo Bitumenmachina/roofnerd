@@ -39,6 +39,10 @@ commit, under the same license:
                                         crates/core/src/draw.rs and
                                         crates/core/src/engine.rs; the file is
                                         otherwise this project's own
+  crates/world/src/editing/join.rs      the rule for cutting a run in two, from
+                                        split in crates/core/src/commands.rs;
+                                        the rest of the file is this project's
+                                        own
 
 Each file's header states what is ported and lists what was changed. PORTMAP.md
 names, for every public item of the building model, the BIMCraft file and line

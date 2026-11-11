@@ -189,7 +189,16 @@ impl Job {
                 self.world.entity_mut(e).insert(new);
             }
             "material" => {
-                let new = MadeOf(text());
+                // A material is known by its name: one typed with other capitals or
+                // spacing is the material already in the job, written as the job has it.
+                let mut new = MadeOf(text());
+                if let Some(typed) = new.0.value.clone() {
+                    let mut q = self.world.query::<(&Node, &Kind)>();
+                    let known = q.iter(&self.world).filter(|(_, k)| **k == Kind::Material).map(|(n, _)| n.name.clone()).find(|n| check::same_name(n, &typed));
+                    if let Some(known) = known {
+                        new.0.value = Some(known);
+                    }
+                }
                 check::made_of(path, kind, &new)?;
                 self.world.entity_mut(e).insert(new);
             }

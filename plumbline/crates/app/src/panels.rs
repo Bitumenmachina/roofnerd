@@ -302,7 +302,7 @@ fn browser(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                         });
                     });
                 }
-                if let Some(tool) = doc.draw.tool.filter(|t| *t != Tool::Move) {
+                if let Some(tool) = doc.draw.tool.filter(|t| t.takes() > 0) {
                     let said = format!("Change what the {} draws with", tool.name().to_lowercase());
                     plain(c, &said, Box::new(move |doc| {
                         let was = doc.draw.settings.get(tool.name()).cloned().unwrap_or_default();
@@ -313,6 +313,8 @@ fn browser(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 }
                 plain(c, "Move what is selected", Box::new(|doc| tools::start(doc, Tool::Move)));
                 plain(c, "Remove what is selected", Box::new(tools::delete));
+                plain(c, "Fitting where runs meet", Box::new(|doc| tools::start(doc, Tool::Fitting)));
+                plain(c, "Join a run to what it ends at", Box::new(|doc| tools::start(doc, Tool::Join)));
             }
             plain(c, "New storey", Box::new(|doc| {
                 doc.entry_line = None;

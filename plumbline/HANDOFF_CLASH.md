@@ -43,8 +43,9 @@ On the machine:
   `sample.rs:402`). `editing::place` refuses a Fitting (`editing.rs:274`).
 * BIMCraft places a fitting as a component of a family, by hand, like a fixture
   (`fixtures.rs:203`, `family.rs:132`); it has no automatic fitting and no clash
-  detection (searched: `clash`, `interfer` in `crates/core/src`; the only hits are a
-  comment in `inquiry.rs` and one in `link.rs`). Its `split` (`commands.rs:12534`) is of
+  detection (searched: `clash`, `interfer` in `crates/core/src`; the hits are a comment
+  in `inquiry.rs`, one in `link.rs`, and a variable in `import.rs` for parameter names
+  that collide on import). Its `split` (`commands.rs:12534`) is of
   a wall or a detail line, not a run: the first piece keeps the id, the second is new,
   and what hangs on the wall goes with the piece it is in.
 * A pipe connector's domain and a system's classification are already matched in one

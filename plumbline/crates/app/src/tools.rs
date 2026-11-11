@@ -30,6 +30,10 @@ pub enum Tool {
     Thing(Kind),
     /// Move what is selected: from one pick to the next.
     Move,
+    /// A fitting where runs meet: one pick on the joint.
+    Fitting,
+    /// A run joined to the fixture or the equipment its end is at: one pick on that end.
+    Join,
 }
 
 impl Tool {
@@ -48,6 +52,8 @@ impl Tool {
             Tool::Thing(Kind::Equipment) => "Equipment",
             Tool::Thing(_) => "Fixture",
             Tool::Move => "Move",
+            Tool::Fitting => "Fitting",
+            Tool::Join => "Join",
         }
     }
 
@@ -59,7 +65,7 @@ impl Tool {
             Tool::Door | Tool::Window => "Width, height, sill",
             Tool::Run(_) => "Size across, height above the floor, system",
             Tool::Thing(_) => "What it is, size (along x across x up, in feet), height above the floor",
-            Tool::Move => "",
+            Tool::Move | Tool::Fitting | Tool::Join => "",
         }
     }
 
@@ -73,15 +79,16 @@ impl Tool {
             Tool::Run(Kind::Pipe) => "like 3/4 in, 1 ft, Domestic Cold Water",
             Tool::Run(_) => "like 3/4 in, 8 ft, Power",
             Tool::Thing(_) => "like Lavatory, 2 x 1.5 x 3, 0 ft",
-            Tool::Move => "",
+            Tool::Move | Tool::Fitting | Tool::Join => "",
         }
     }
 
-    /// How many values its settings are.
-    fn takes(self) -> usize {
+    /// How many values its settings are. A fitting and a join take none: what they make is
+    /// worked out from what is already drawn.
+    pub fn takes(self) -> usize {
         match self {
             Tool::Wall => 2,
-            Tool::Move => 0,
+            Tool::Move | Tool::Fitting | Tool::Join => 0,
             _ => 3,
         }
     }
@@ -106,8 +113,14 @@ pub struct Draw {
     pub edits: u64,
     pub seen: u64,
     pub label: String,
-    /// The plan's snap scene, with the drawing and the storey it was made for.
-    pub scene: Option<(u64, String, snap::Scene)>,
+    /// The storey the points in `picked` were picked on. Picks on another start afresh.
+    pub picked_on: Option<String>,
+    /// Set by the pick that puts a tool down, so the same click's release does not also
+    /// select what is under the pointer. A new press clears it.
+    pub swallow: bool,
+    /// The plan's snap scene, with the drawing and the storey it was made for and the
+    /// element left out of it (what is being moved does not snap to itself).
+    pub scene: Option<(u64, String, Option<String>, snap::Scene)>,
 }
 
 fn how() -> ed::Entered<'static> {
@@ -117,23 +130,41 @@ fn how() -> ed::Entered<'static> {
 /// A tool's settings, split and checked as far as they can be without the job: each
 /// length is a length, a size is three numbers.
 fn parts(tool: Tool, text: &str) -> Result<Vec<String>, String> {
-    let parts: Vec<String> = text.split(',').map(|s| s.trim().to_string()).collect();
+    let mut parts: Vec<String> = text.split(',').map(|s| s.trim().to_string()).collect();
     if parts.len() != tool.takes() || parts.iter().any(String::is_empty) {
         return Err(format!("a {} takes: {} ({})", tool.name().to_lowercase(), tool.asks().to_lowercase(), tool.like()));
     }
-    let length = |s: &str| units::parse_length(s).map(|_| ());
+    // A size is more than nothing; a height above the floor or a sill can be nothing.
+    let length = |s: &str, zero_ok: bool| {
+        let feet = units::parse_length(s).and_then(|(len, unit)| len.feet(unit))?;
+        match feet {
+            f if f < 0.0 => Err(format!("{s:?} is less than nothing")),
+            f if f == 0.0 && !zero_ok => Err(format!("{s:?} is nothing: a size is more than that")),
+            _ => Ok(()),
+        }
+    };
     match tool {
-        Tool::Wall => parts.iter().try_for_each(|p| length(p))?,
-        Tool::Door | Tool::Window => parts.iter().try_for_each(|p| length(p))?,
-        Tool::Run(_) => {
-            length(&parts[0])?;
-            length(&parts[1])?;
+        Tool::Wall => parts.iter().try_for_each(|p| length(p, false))?,
+        Tool::Door | Tool::Window => {
+            length(&parts[0], false)?;
+            length(&parts[1], false)?;
+            length(&parts[2], true)?;
+        }
+        Tool::Run(kind) => {
+            length(&parts[0], false)?;
+            length(&parts[1], true)?;
+            // The system is one a run of this kind goes on.
+            let goes_on = plumbline_world::building::run_goes_on(kind);
+            match goes_on.iter().find(|c| c.eq_ignore_ascii_case(&parts[2])) {
+                Some(class) => parts[2] = class.to_string(),
+                None => return Err(format!("{:?} is not a system a {} goes on; there are: {}", parts[2], tool.name().to_lowercase(), goes_on.join(", "))),
+            }
         }
         Tool::Thing(_) => {
             size(&parts[1])?;
-            length(&parts[2])?;
+            length(&parts[2], true)?;
         }
-        Tool::Move => {}
+        Tool::Move | Tool::Fitting | Tool::Join => {}
     }
     Ok(parts)
 }
@@ -157,7 +188,7 @@ pub fn start(doc: &mut Doc, tool: Tool) {
         doc.say(Tone::Refused, "refused: drawing is done on the plan (T)");
     } else if tool == Tool::Move && doc.selected.is_none() {
         doc.say(Tone::Refused, "refused: select what is to be moved first");
-    } else if tool != Tool::Move && !doc.draw.settings.contains_key(tool.name()) {
+    } else if tool.takes() > 0 && !doc.draw.settings.contains_key(tool.name()) {
         doc.entry_line = None;
         doc.entry = Some((Entry::Settings(tool), String::new()));
     } else {
@@ -167,6 +198,8 @@ pub fn start(doc: &mut Doc, tool: Tool) {
             Tool::Door | Tool::Window => format!("{}: pick the place on a wall", tool.name()),
             Tool::Thing(_) => format!("{}: pick where it stands", tool.name()),
             Tool::Move => "Move: pick a point on it, then where that point goes".to_string(),
+            Tool::Fitting => "Fitting: pick where runs meet".to_string(),
+            Tool::Join => "Join: pick where a run ends at a fixture or a piece of equipment".to_string(),
         });
     }
     doc.touch();
@@ -206,6 +239,11 @@ pub fn new_storey(doc: &mut Doc, text: &str) {
 /// snap came from if it came from one.
 pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
     let (Some(tool), Some(storey)) = (doc.draw.tool, doc.show.storey.clone()) else { return };
+    // A chain begun on one storey does not carry on onto another.
+    if doc.draw.picked_on.as_deref() != Some(storey.as_str()) {
+        doc.draw.picked.clear();
+        doc.draw.picked_on = Some(storey.clone());
+    }
     let said = doc.draw.settings.get(tool.name()).cloned().unwrap_or_default();
     let s: Vec<&str> = said.split(',').map(str::trim).collect();
     // What the pick made, or why not; and the points still in hand afterwards.
@@ -246,6 +284,11 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             })
         }
         Tool::Thing(kind) => Some(size(s[1]).and_then(|size| ed::place(&mut doc.job, &storey, kind, s[0], at, s[2], Some(size), None, how())).map(|made| format!("{made}: {}", s[0]))),
+        Tool::Fitting => Some(ed::fitting(&mut doc.job, &storey, at, None, None, how()).map(|f| {
+            let cut: Vec<&str> = f.cut.iter().map(|c| c.0.as_str()).collect();
+            format!("{}: a {}{}", f.path, f.kind.title().to_lowercase(), if cut.is_empty() { String::new() } else { format!("; {} cut there", cut.join(", ")) })
+        })),
+        Tool::Join => Some(ed::connect_at(&mut doc.job, &storey, at, how()).map(|(thing, run, which)| format!("{thing} is joined to {run} by its connector {which}"))),
         Tool::Move => {
             doc.draw.picked.push(at);
             let [a, b] = doc.draw.picked.as_slice() else {
@@ -256,6 +299,7 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             let (east, north) = (b[0] - a[0], b[1] - a[1]);
             doc.draw.picked.clear();
             doc.draw.tool = None;
+            doc.draw.swallow = true;
             Some(match doc.selected.clone() {
                 None => Err("nothing is selected to move".to_string()),
                 Some(sel) => ed::move_by(&mut doc.job, &sel, east, north, how()).map(|()| format!("{sel} moved {} east, {} north", units::feet_as_ft_in(east, 16), units::feet_as_ft_in(north, 16))),
@@ -337,7 +381,7 @@ fn over_model(window: &Window, at: Vec2) -> bool {
 }
 
 /// Where the pointer is on the storey's floor, snapped, while a tool is in hand.
-pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, windows: Query<&Window, With<PrimaryWindow>>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>) {
+pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, keys: Res<ButtonInput<KeyCode>>, windows: Query<&Window, With<PrimaryWindow>>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>) {
     let doc = doc.bypass_change_detection();
     let (Some(tool), Some(storey), true) = (doc.draw.tool, doc.show.storey.clone(), doc.plan) else {
         doc.draw.found = None;
@@ -369,16 +413,20 @@ pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, windows: Query<&W
     // The plan's scene, made again when what is drawn has changed. What is being moved
     // is left out of it: it does not snap to where it was.
     let skip = if tool == Tool::Move { doc.selected.clone() } else { None };
-    if !doc.draw.scene.as_ref().is_some_and(|(geometry, of, _)| *geometry == doc.geometry && *of == storey) {
+    if !doc.draw.scene.as_ref().is_some_and(|(geometry, of, without, _)| *geometry == doc.geometry && *of == storey && *without == skip) {
         let scene = snap::scene(&mut doc.job, &storey, skip.as_deref());
-        doc.draw.scene = Some((doc.geometry, storey.clone(), scene));
+        doc.draw.scene = Some((doc.geometry, storey.clone(), skip.clone(), scene));
     }
-    let Some((_, _, scene)) = &doc.draw.scene else { return };
+    let Some((_, _, _, scene)) = &doc.draw.scene else { return };
+    // A chain begun on another storey is not carried on here.
+    let picked: &[[f64; 2]] = if doc.draw.picked_on.as_deref() == Some(storey.as_str()) { &doc.draw.picked } else { &[] };
+    // Shift holds the next point square to the last: due east, west, north or south of it.
+    let square = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
     let found = match tool {
         // A door or a window goes on a wall's line and nowhere else.
         Tool::Door | Tool::Window => snap::snap(scene, p, reach, &[], false, &snap::Snaps { nearest: true, ..snap::Snaps::none() }),
-        Tool::Wall | Tool::Run(_) | Tool::Move => snap::snap(scene, p, reach, &doc.draw.picked, false, &snap::Snaps::default()),
-        Tool::Thing(_) => snap::snap(scene, p, reach, &[], false, &snap::Snaps::default()),
+        Tool::Wall | Tool::Run(_) | Tool::Move => snap::snap(scene, p, reach, picked, square, &snap::Snaps::default()),
+        Tool::Thing(_) | Tool::Fitting | Tool::Join => snap::snap(scene, p, reach, &[], false, &snap::Snaps::default()),
     };
     doc.pointer = Some([found.at[0], found.at[1], elevation]);
     doc.draw.scale = scale;
@@ -387,6 +435,9 @@ pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, windows: Query<&W
 
 /// A click on the model with a tool in hand is a pick.
 pub fn clicks(mut doc: ResMut<Doc>, mouse: Res<ButtonInput<MouseButton>>, windows: Query<&Window, With<PrimaryWindow>>) {
+    if mouse.just_pressed(MouseButton::Left) && doc.draw.swallow {
+        doc.bypass_change_detection().draw.swallow = false;
+    }
     if !mouse.just_pressed(MouseButton::Left) || doc.draw.tool.is_none() || doc.entry.is_some() || !doc.plan {
         return;
     }
@@ -415,16 +466,18 @@ pub fn record(mut doc: ResMut<Doc>) {
 /// and a mark there.
 pub fn preview(doc: Res<Doc>, snap_shot: Res<Snapshot>, mut lines: Gizmos<Highlight>) {
     let (Some(_), Some(storey)) = (doc.draw.tool, doc.show.storey.as_ref()) else { return };
+    // Points picked on another storey are not this storey's to show.
+    let picked: &[[f64; 2]] = if doc.draw.picked_on.as_ref() == Some(storey) { &doc.draw.picked } else { &[] };
     let elevation = snap_shot.storeys.iter().find(|s| s.path == *storey).and_then(|s| s.elevation).unwrap_or(0.0);
     let o = doc.origin;
     let place = |p: [f64; 2]| Vec3::new((p[0] - o[0]) as f32, (elevation - o[2]) as f32 + 0.3, -(p[1] - o[1]) as f32);
     let ink = theme::accent();
-    for pair in doc.draw.picked.windows(2) {
+    for pair in picked.windows(2) {
         lines.line(place(pair[0]), place(pair[1]), ink);
     }
     let Some(found) = &doc.draw.found else { return };
     let at = place(found.at);
-    if let Some(last) = doc.draw.picked.last() {
+    if let Some(last) = picked.last() {
         lines.line(place(*last), at, ink);
     }
     // The mark: a cross where nothing was snapped to, a square where something was.

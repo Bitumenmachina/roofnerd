@@ -128,6 +128,10 @@ refused "is not a kind of system" "$P" system "$J" "Steam" "Steam"
 refused "--status is required" "$P" wall "$J" "$S" "$WT" --points "0,20 5,20" --height "9 ft"
 refused "has elements under it" "$P" remove "$J" "$S"
 refused "would be ignored" "$P" move "$J" "$MID" --by "1,0" --height "9 ft" "${K[@]}"
+refused "they would be ignored" "$P" remove "$J" "$S" "${K[@]}"
+refused "counted twice" "$P" wall "$J" "$S" "$WT" --points "0,0 24,0" --height "9 ft" "${K[@]}"
+refused "a duct goes on" "$P" run "$J" "$S" duct "$DUCT" --points "3,3 5,3" --height "8 ft" --system "$COLD" "${K[@]}"
+refused "it is not on the wall" "$P" door "$J" "$SOUTH" "$DT" --at "6,5" --sill "0 ft" "${K[@]}"
 cmp -s "$J" "$T/before.json" || { echo "FAIL: a refused verb changed the file"; exit 1; }
 echo "    the file is byte for byte what it was before the refusals"
 

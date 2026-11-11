@@ -119,6 +119,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | bytemuck_derive | 1.12.1 | Zlib OR Apache-2.0 OR MIT |
 | bytemuck | 1.25.2 | Zlib OR Apache-2.0 OR MIT |
 | byteorder-lite | 0.1.0 | Unlicense OR MIT |
+| byteorder | 1.5.0 | Unlicense OR MIT |
 | calloop | 0.13.0 | MIT |
 | cc | 1.11.1 | MIT OR Apache-2.0 |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 |
@@ -148,6 +149,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | downcast-rs | 2.0.2 | MIT OR Apache-2.0 |
 | dpi | 0.1.2 | Apache-2.0 AND MIT |
 | either | 1.19.0 | MIT OR Apache-2.0 |
+| ena | 0.14.4 | MIT OR Apache-2.0 |
 | encase_derive_impl | 0.12.1 | MIT-0 |
 | encase_derive | 0.12.1 | MIT-0 |
 | encase | 0.12.1 | MIT-0 |
@@ -175,15 +177,18 @@ first three and what they bring; the engine is linked by the 3D application alon
 | futures-util | 0.3.34 | MIT OR Apache-2.0 |
 | gethostname | 1.1.0 | Apache-2.0 |
 | getrandom | 0.4.3 | MIT OR Apache-2.0 |
+| glamx | 0.3.1 | MIT OR Apache-2.0 |
 | glam | 0.33.12 | MIT OR Apache-2.0 |
 | glob | 0.3.4 | MIT OR Apache-2.0 |
 | gpu-allocator | 0.28.0 | MIT OR Apache-2.0 |
 | guillotiere | 0.7.0 | MIT/Apache-2.0 |
 | half | 2.7.1 | MIT OR Apache-2.0 |
 | harfrust | 0.12.0 | MIT |
+| hash32 | 0.3.1 | MIT OR Apache-2.0 |
 | hashbrown | 0.15.5 | MIT OR Apache-2.0 |
 | hashbrown | 0.16.1 | MIT OR Apache-2.0 |
 | hashbrown | 0.17.1 | MIT OR Apache-2.0 |
+| heapless | 0.8.0 | MIT OR Apache-2.0 |
 | hexasphere | 19.0.0 | MIT OR Apache-2.0 |
 | icu_collections | 2.4.0 | Unicode-3.0 |
 | icu_locale_core | 2.4.0 | Unicode-3.0 |
@@ -238,6 +243,8 @@ first three and what they bring; the engine is linked by the 3D application alon
 | nix | 0.31.3 | MIT |
 | nonmax | 0.5.5 | MIT OR Apache-2.0 |
 | nu-ansi-term | 0.50.3 | MIT |
+| num-complex | 0.4.6 | MIT OR Apache-2.0 |
+| num-derive | 0.5.1 | MIT OR Apache-2.0 |
 | num-traits | 0.2.19 | MIT OR Apache-2.0 |
 | offset-allocator | 0.2.0 | MIT |
 | once_cell | 1.21.4 | MIT OR Apache-2.0 |
@@ -248,6 +255,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | parlance | 0.1.1 | Apache-2.0 OR MIT |
 | parley_data | 0.11.1 | Apache-2.0 OR MIT |
 | parley | 0.11.1 | Apache-2.0 OR MIT |
+| parry3d-f64 | 0.31.1 | Apache-2.0 |
 | percent-encoding | 2.3.2 | MIT OR Apache-2.0 |
 | petgraph | 0.8.3 | MIT OR Apache-2.0 |
 | pin-project-lite | 0.2.17 | Apache-2.0 OR MIT |
@@ -273,12 +281,14 @@ first three and what they bring; the engine is linked by the 3D application alon
 | regex-syntax | 0.8.11 | MIT OR Apache-2.0 |
 | renderdoc-sys | 1.1.0 | MIT OR Apache-2.0 |
 | ron | 0.12.3 | MIT OR Apache-2.0 |
+| rstar | 0.13.1 | MIT OR Apache-2.0 |
 | rustc-hash | 1.1.0 | Apache-2.0/MIT |
 | rustc-hash | 2.1.3 | Apache-2.0 OR MIT |
 | rustc_version | 0.4.1 | MIT OR Apache-2.0 |
 | rustix | 0.38.44 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | rustix | 1.1.6 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | ruzstd | 0.9.1 | MIT |
+| safe_arch | 1.2.0 | Zlib OR Apache-2.0 OR MIT |
 | scopeguard | 1.2.0 | MIT OR Apache-2.0 |
 | semver | 1.0.28 | MIT OR Apache-2.0 |
 | serde_core | 1.0.229 | MIT OR Apache-2.0 |
@@ -288,6 +298,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | serde | 1.0.229 | MIT OR Apache-2.0 |
 | sharded-slab | 0.1.7 | MIT |
 | shlex | 2.0.1 | MIT OR Apache-2.0 |
+| simba | 0.10.2 | Apache-2.0 |
 | simd-adler32 | 0.3.10 | MIT |
 | skrifa | 0.44.0 | MIT OR Apache-2.0 |
 | slab | 0.4.12 | MIT |
@@ -348,6 +359,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | wgpu | 30.0.1 | MIT OR Apache-2.0 |
 | wgsl-parse | 0.6.0 | MIT OR Apache-2.0 |
 | wgsl-types | 0.6.0 | MIT OR Apache-2.0 |
+| wide | 1.7.1 | Zlib OR Apache-2.0 OR MIT |
 | winit | 0.30.13 | Apache-2.0 |
 | winnow | 1.0.5 | MIT |
 | writeable | 0.6.4 | Unicode-3.0 |

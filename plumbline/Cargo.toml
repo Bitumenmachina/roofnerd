@@ -15,3 +15,6 @@ serde = { version = "1", features = ["derive"] }
 # preserve_order: fields are written in the order the structs declare them, so the file reads value, unit, status, source.
 # float_roundtrip: a number read from a file is written back as the same number.
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
+# Solid geometry for clash detection: do two shapes overlap, and how far apart are they.
+# The 64-bit build, without the triangulation it can also do.
+parry3d-f64 = { version = "0.31.1", default-features = false, features = ["required-features", "std", "alloc"] }

@@ -26,9 +26,11 @@
 //!   attaching a wall's top or base, moving one end, moving or removing several at once.
 
 pub mod history;
+pub mod join;
 pub mod snap;
 
 pub use history::{History, UNDO_LIMIT};
+pub use join::{connect, connect_at, fit_all, fitting, split, Fitted, PassedOver};
 
 use crate::building::{self, InSystem, SystemInfo};
 use crate::components::*;
@@ -189,6 +191,15 @@ pub fn walls(job: &mut Job, storey: &str, type_path: &str, points: &[P2], closed
         if closed {
             pts.push(pts[0]);
         }
+        // A top held to a storey holds the wall up to it: the storey has to be above.
+        if let Top::Level(level) = &top {
+            let floor = |job: &mut Job, path: &str| job.find(path).and_then(|e| job.world.get::<Level>(e).and_then(|l| l.elevation.feet()));
+            if let (Some(own), Some(held)) = (floor(job, storey), floor(job, level)) {
+                if held <= own + crate::check::FIT_TOLERANCE_FT {
+                    return Err(format!("{level}'s floor is not above {storey}'s: a wall on {storey} cannot have its top held to it"));
+                }
+            }
+        }
         let mut made = Vec::new();
         for pair in pts.windows(2) {
             let line = how.val([pair[0], pair[1]], "ft");
@@ -224,6 +235,13 @@ pub fn opening(job: &mut Job, wall: &str, kind: Kind, type_path: &str, at: OnWal
                 let along = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length;
                 if !(0.0..=length).contains(&along) {
                     return Err(format!("the point ({}, {}) falls {} ft along {wall}, which is {} ft long: it is not on the wall", p[0], p[1], crate::view::figure(along, 2), crate::view::figure(length, 2)));
+                }
+                // And it is on the wall, not out in the room: within half the wall's
+                // thickness of its line, where that is known.
+                let off = ((p[0] - a[0]) * dy - (p[1] - a[1]) * dx).abs() / length;
+                let half = host.type_name.value.as_ref().and_then(|t| job.find(t)).and_then(|t| job.world.get::<WallType>(t).and_then(|t| t.thickness.feet())).map(|t| t / 2.0).unwrap_or(0.0);
+                if off > half + crate::check::FIT_TOLERANCE_FT {
+                    return Err(format!("the point ({}, {}) is {} ft off {wall}'s line: it is not on the wall", p[0], p[1], crate::view::figure(off, 2)));
                 }
                 how.val(Len::One((along * 10_000.0).round() / 10_000.0), "ft")
             }
@@ -319,7 +337,10 @@ pub fn move_by(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -
             let d = units::coord_divisor(unit)?;
             Ok([p[0] + east * d, p[1] + north * d])
         };
-        let moved = |status: Status, source: &str| (status.max(how.status), if how.status > status { how.source.to_string() } else { format!("{source}; moved ({})", how.source) });
+        if east == 0.0 && north == 0.0 {
+            return Err(format!("{path} is moved by nothing"));
+        }
+        let moved = |status: Status, source: &str| (status.max(how.status), after(source, "moved", how.source));
         if let Some(mut w) = job.world.get::<Wall>(e).cloned() {
             let line = w.line.value.ok_or_else(|| format!("{path}'s line is not known, so it cannot be moved"))?;
             let (status, source) = moved(w.line.status, &w.line.source);
@@ -351,12 +372,52 @@ pub fn move_by(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -
     })
 }
 
+/// A source after something was done to the value it stands on: where the value first
+/// came from, then what was done last and on whose word. It does not grow with each move,
+/// and it does not lose where the thing came from.
+pub(crate) fn after(source: &str, done: &str, by: &str) -> String {
+    let first = [source.find("; moved ("), source.find("; cut (")].into_iter().flatten().min().map(|i| &source[..i]).unwrap_or(source);
+    format!("{first}; {done} ({by})")
+}
+
 /// Take an element out of the job. A wall's doors and windows go with it. Anything else
-/// with elements under it, or that something else still points at (a type in use, a
-/// system with runs on it), is refused, and the job is left as it was.
+/// with elements under it, or that something else still points at, is refused, and the
+/// job is left as it was: a type in use, a system with runs on it, a material something
+/// is made of, a condition something has, a roof plane a line names, and what a roof's
+/// footprint solves (it would come back the next time the roof is solved).
 pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
     all_or_nothing(job, |job| {
         let kind = job.kind(path).ok_or_else(|| format!("no element {path}"))?;
+        let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
+        if let Some(solved) = job.world.get::<Solved>(e) {
+            return Err(format!("{path} is solved from {}'s footprint and would come back: change the footprint, or remove {}", solved.from, solved.from));
+        }
+        let name = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_default();
+        let listed = |who: &[String]| format!("{}{}", who.iter().take(3).cloned().collect::<Vec<_>>().join(", "), if who.len() > 3 { format!(" and {} more", who.len() - 3) } else { String::new() });
+        if kind == Kind::RoofPlane {
+            let mut q = job.world.query::<(&Node, &Run)>();
+            let mut by: Vec<String> = q.iter(&job.world).filter(|(_, r)| r.planes.iter().any(|p| p == path)).map(|(n, _)| n.path.clone()).collect();
+            by.sort();
+            if !by.is_empty() {
+                return Err(format!("{path} is the plane {} lie on: remove those first", listed(&by)));
+            }
+        }
+        if kind == Kind::Material {
+            let mut q = job.world.query::<(&Node, &MadeOf)>();
+            let mut by: Vec<String> = q.iter(&job.world).filter(|(_, m)| m.0.value.as_ref().is_some_and(|v| v == path || crate::check::same_name(v, &name))).map(|(n, _)| n.path.clone()).collect();
+            by.sort();
+            if !by.is_empty() {
+                return Err(format!("{path} is what {} {} made of: give {} another material first", listed(&by), if by.len() == 1 { "is" } else { "are" }, if by.len() == 1 { "it" } else { "them" }));
+            }
+        }
+        if kind == Kind::Condition {
+            let mut q = job.world.query::<(&Node, &Condition)>();
+            let mut by: Vec<String> = q.iter(&job.world).filter(|(n, c)| n.path != path && c.0.value.as_ref().is_some_and(|v| v == path || *v == name)).map(|(n, _)| n.path.clone()).collect();
+            by.sort();
+            if !by.is_empty() {
+                return Err(format!("{path} is the condition of {}: give {} another first", listed(&by), if by.len() == 1 { "it" } else { "them" }));
+            }
+        }
         let mut gone = Vec::new();
         if kind == Kind::Wall {
             let under: Vec<String> = job.children().get(path).map(|c| c.values().cloned().collect()).unwrap_or_default();

@@ -292,7 +292,7 @@ pub fn allowance(path: &str, kind: Kind, a: &Allowance) -> Result<(), String> {
 pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
     // Cost lines are on what is built and on the job. A condition's lines are its recipe;
     // a material's cost is its price; a type is not a thing that is bought.
-    if matches!(kind, Kind::Condition | Kind::Material | Kind::Type) && !c.lines.is_empty() {
+    if matches!(kind, Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey) && !c.lines.is_empty() {
         return Err(format!("{path}: a {kind:?} cannot carry cost lines; they go on what is built, or on the job for general conditions{}", if kind == Kind::Condition { " (a condition's own lines are its recipe)" } else { "" }));
     }
     c.code.check(&format!("{path} cost code"), "")?;
@@ -443,6 +443,9 @@ pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
             return Err(format!("{path}: a material is not bought by the hour"));
         }
         let (a, b) = o.factor.unit.split_once('/').unwrap_or(("", ""));
+        if a == HOURS || b == HOURS {
+            return Err(format!("{path}: its order factor is in {:?}; a material is not ordered by the hour", o.factor.unit));
+        }
         if !((a == o.unit && !b.is_empty() && b != o.unit) || (b == o.unit && !a.is_empty() && a != o.unit)) {
             return Err(format!("{path}: its order factor is in {:?}; for a material bought by the {} it is so many {} to the unit it is measured in (\"{}/SF\") or the other way up (\"SF/{}\")", o.factor.unit, o.unit, o.unit, o.unit, o.unit));
         }
@@ -485,9 +488,10 @@ pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
     Ok(())
 }
 
-/// Whether two names are the same but for capitals and spacing.
+/// Whether two names are the same but for capitals, spacing and a full stop at the end:
+/// "Copper, 16 oz", "copper,16 OZ" and "Copper, 16 oz." are one name.
 pub fn same_name(a: &str, b: &str) -> bool {
-    let plain = |s: &str| s.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+    let plain = |s: &str| s.split_whitespace().collect::<String>().to_lowercase().trim_end_matches('.').to_string();
     plain(a) == plain(b)
 }
 

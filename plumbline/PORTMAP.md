@@ -32,6 +32,7 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `Discipline` | ours |  |  | `grep -rn 'enum Discipline' crates/core/src`: nothing; BIMCraft's disciplines are tabs of its window (read `docs/disciplines.md`) |
 | `SystemInfo` | ours |  |  | a system as an element with a discipline and a classification; read `model.rs` 1588 to 1612 (a run carries its system's name) and `electrical.rs` 70 to 95 (a `DistributionSystem` is a row of electrical settings: phases, wires, voltages); `grep -n 'struct System' model.rs`: nothing |
 | `CLASSIFICATIONS` | ours |  |  | `grep -rn DOMESTICCOLDWATER .` over BIMCraft: nothing; checked against IFC's enumeration in DECISIONS.md call 29 |
+| `run_goes_on` | ours |  |  | which classifications of system a kind of run goes on; `grep -rn 'fn run_goes_on' crates/core/src`: nothing (BIMCraft's system is a name on a run, read `model.rs` 1588 to 1612) |
 | `InSystem` | ported | `system` | `crates/core/src/model.rs:1605` | a run's system; here a component of its own pointing at a system element |
 | `is_segment` | ported | `RUN_CATEGORIES` | `crates/core/src/model.rs:2477` |  |
 | `is_opening` | ported | `Door` | `crates/core/src/model.rs:2131` |  |
@@ -94,6 +95,8 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `joins` | ours |  |  | which kind of run meets a connector; read `network.rs` whole: its network is of pipes only |
 | `for_run` | ours |  |  | as joins: read `network.rs` whole |
 | `Domain` | ported | `Domain` | `crates/core/src/family.rs:369` |  |
+| `system_classification` | ours |  |  | which of this program's system classifications carries a pipe connector's domain; `grep -rn system_classification crates/core/src`: nothing (BIMCraft's systems are names on runs) |
+| `of_system` | ours |  |  | the reverse of `system_classification`; `grep -rn 'fn of_system' crates/core/src`: nothing |
 | `Flow` | ported | `Flow` | `crates/core/src/family.rs:382` |  |
 | `Connector` | ported | `Connector` | `crates/core/src/family.rs:430` |  |
 | `Connectors` | ours |  |  | the connectors as a component on the placed thing; read `family.rs` 430 to 475: there they are a family's list |
@@ -185,8 +188,21 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `scene` | ported | `of` | `crates/core/src/snap.rs:267` | the scene of one level's plan; here the walls and runs entered on the storey (header) |
 | `corner` | ported | `corner` | `crates/core/src/snap.rs:633` | the angle a new line makes with the one before |
 | `snap` | ported | `solve` | `crates/core/src/snap.rs:736` | the solver: a point of the plan, the foot of the perpendicular, an angle guide, a wall's line, else the round step |
-| `wall_type_for` | ours |  |  | a type or a system found by the values a person typed, or made; BIMCraft's commands take a type by its name (`type_param`, `commands.rs:2378`); `grep -rn 'fn wall_type_for' crates/core/src`: nothing |
-| `opening_type_for` | ours |  |  | a type or a system found by the values a person typed, or made; BIMCraft's commands take a type by its name (`type_param`, `commands.rs:2378`); `grep -rn 'fn opening_type_for' crates/core/src`: nothing |
-| `segment_type_for` | ours |  |  | a type or a system found by the values a person typed, or made; BIMCraft's commands take a type by its name (`type_param`, `commands.rs:2378`); `grep -rn 'fn segment_type_for' crates/core/src`: nothing |
-| `system_of_class` | ours |  |  | a type or a system found by the values a person typed, or made; BIMCraft's commands take a type by its name (`type_param`, `commands.rs:2378`); `grep -rn 'fn system_of_class' crates/core/src`: nothing |
+| `wall_type_for` | ported | `type_for_size` | `crates/core/src/text.rs:282` | BIMCraft's rule for a text type: the one of that size and nothing else, or a new one named for it. Here the same rule for wall type of this thickness, or a new one named for it |
+| `opening_type_for` | ported | `type_for_size` | `crates/core/src/text.rs:282` | BIMCraft's rule for a text type: the one of that size and nothing else, or a new one named for it. Here the same rule for door or window type of this width and height, or a new one named for them |
+| `segment_type_for` | ported | `type_for_size` | `crates/core/src/text.rs:282` | BIMCraft's rule for a text type: the one of that size and nothing else, or a new one named for it. Here the same rule for round run type of this size, or a new one named for it |
+| `system_of_class` | ported | `type_for_size` | `crates/core/src/text.rs:282` | BIMCraft's rule for a text type: the one of that size and nothing else, or a new one named for it. Here the same rule for job's system of this classification, or a new one named for it |
 | `toward` | ported | `toward` | `crates/core/src/draw.rs:304` | a typed length goes from the last point toward the pointer, east when the pointer is on the point |
+| `split` | ported | `split` | `crates/core/src/commands.rs:12534` | BIMCraft's is of a wall: cut between the ends, the first piece keeps its identity, the second is new, what hangs on it goes with its piece. Here the same rule for a run; a run with a typed-quantity cost line is refused |
+| `Fitted` | ours |  |  | what `fitting` did; `grep -rn 'struct Fitted' crates/core/src`: nothing |
+| `fitting` | ours |  |  | a fitting worked out from the runs that meet; `grep -rn 'fn fitting' crates/core/src`: nothing. BIMCraft places a pipe fitting by hand as a component of a family (read `fixtures.rs` 203 to 250 and `family.rs` 132) |
+| `PassedOver` | ours |  |  | a joint `fit_all` left; `grep -rn PassedOver crates/core/src`: nothing |
+| `fit_all` | ours |  |  | as `fitting`, at every joint; `grep -rn 'fn fit_all' crates/core/src`: nothing |
+| `connect` | ours |  |  | a connector made where a run ends at a thing; `grep -rn 'fn connect(' crates/core/src`: nothing. BIMCraft's connectors are drawn in the family (`family.rs`, `Connector`) |
+| `connect_at` | ours |  |  | `connect`, for a point picked on the plan; `grep -rn 'fn connect_at' crates/core/src`: nothing |
+| `MAX_CLEARANCE_FT` | ours |  |  | clash detection is this program's; `grep -rni clash crates/core/src`: six lines, two comments (`inquiry.rs:3`, `link.rs:72`) and a variable in `import.rs` (3273 to 3364) for parameter names that collide on import; nothing tests one solid against another. |
+| `NEVER_TESTED` | ours |  |  | clash detection is this program's; `grep -rni clash crates/core/src`: six lines, two comments (`inquiry.rs:3`, `link.rs:72`) and a variable in `import.rs` (3273 to 3364) for parameter names that collide on import; nothing tests one solid against another. |
+| `ClashKind` | ours |  |  | clash detection is this program's; `grep -rni clash crates/core/src`: six lines, two comments (`inquiry.rs:3`, `link.rs:72`) and a variable in `import.rs` (3273 to 3364) for parameter names that collide on import; nothing tests one solid against another. Hard and clearance are the trade's words (DECISIONS.md call 40). |
+| `Clash` | ours |  |  | clash detection is this program's; `grep -rni clash crates/core/src`: six lines, two comments (`inquiry.rs:3`, `link.rs:72`) and a variable in `import.rs` (3273 to 3364) for parameter names that collide on import; nothing tests one solid against another. |
+| `Clashes` | ours |  |  | clash detection is this program's; `grep -rni clash crates/core/src`: six lines, two comments (`inquiry.rs:3`, `link.rs:72`) and a variable in `import.rs` (3273 to 3364) for parameter names that collide on import; nothing tests one solid against another. |
+| `clashes` | ours |  |  | clash detection is this program's; `grep -rni clash crates/core/src`: six lines, two comments (`inquiry.rs:3`, `link.rs:72`) and a variable in `import.rs` (3273 to 3364) for parameter names that collide on import; nothing tests one solid against another. The solid geometry is `parry3d-f64`'s, not written here. |
