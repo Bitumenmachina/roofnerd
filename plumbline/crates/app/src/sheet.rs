@@ -444,7 +444,9 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     _ => String::new(),
                 };
                 named(r, fonts, l.description.clone(), if l.off { theme::ink_faint() } else { theme::ink() }, tag, if l.class.is_none() { theme::status_ink(Status::Unknown) } else { theme::ink_faint() });
-                cell(r, 96.0, true, |c| words(c, fonts, amount(l.priced.value, 2, &l.priced.unit), 12.5, Weight::Regular, theme::status_ink(l.priced.status)));
+                // Hours to the four places they are held and added to.
+                let places = if l.priced.unit == plumbline_world::HOURS { 4 } else { 2 };
+                cell(r, 96.0, true, |c| words(c, fonts, amount(l.priced.value, places, &l.priced.unit), 12.5, Weight::Regular, theme::status_ink(l.priced.status)));
                 cell(r, 92.0, true, |c| match l.unit_cost.as_ref().and_then(|v| v.value.map(|x| (x, v))) {
                     Some((x, v)) => words(c, fonts, format!("${}/{}", view::rate(x), v.unit.trim_start_matches("$/")), 12.5, Weight::Regular, theme::status_ink(v.status)),
                     None => words(c, fonts, "no price", 12.5, Weight::Regular, theme::status_ink(Status::Unknown)),
@@ -455,13 +457,23 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     (false, None) => ("no figure".to_string(), theme::status_ink(Status::Unknown)),
                 };
                 for col in [Column::Material, Column::Labor, Column::General] {
-                    // A line with no class stands in no column; its amount is said in the last.
-                    let here = l.class.map(Class::column) == Some(col) || (l.class.is_none() && col == Column::General);
+                    // A line with no class stands in no column: its amount is said under it.
+                    let here = l.class.map(Class::column) == Some(col);
                     cell(r, 96.0, true, |c| words(c, fonts, if here { said.clone() } else { String::new() }, 12.5, Weight::Regular, ink));
                 }
             });
+            let mut under: Vec<(String, Status)> = Vec::new();
             if l.amount.value.is_none() || !l.amount.note.is_empty() {
-                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(7.0) }, ..default() }).with_child(text(fonts, l.amount.note.clone(), 11.5, Weight::Regular, theme::status_ink(if l.amount.value.is_none() { Status::Unknown } else { Status::Assumed })));
+                under.push((l.amount.note.clone(), if l.amount.value.is_none() { Status::Unknown } else { Status::Assumed }));
+            }
+            if l.class.is_none() && !l.off {
+                under.push((format!("no class: it is in no column and no row of the recap{}", l.amount.value.map(|_| format!(" (it comes to {})", money(&l.amount).0)).unwrap_or_default()), Status::Unknown));
+            }
+            if !l.quantity.note.is_empty() && l.quantity.value.is_some() {
+                under.push((format!("its quantity: {}", l.quantity.note), Status::Assumed));
+            }
+            for (said, status) in under {
+                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(7.0) }, ..default() }).with_child(text(fonts, said, 11.5, Weight::Regular, theme::status_ink(status)));
             }
         }
         row(t, false, None, |r| {
@@ -495,7 +507,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         for c in &est.classes {
             match c.total.value {
                 Some(x) => {
-                    let hours = c.hours.map(|(h, _)| format!("  {} hr", view::figure(h, 2))).unwrap_or_default();
+                    let hours = c.hours.map(|(h, _)| format!("  {} hr", view::figure(h, 4))).unwrap_or_default();
                     line(t, c.class.title().to_string(), format!("{}{hours}", lines_of(c.total.members)), rests(c.total.assumed), format!("${}", view::figure(x, 2)), c.total.status, false);
                 }
                 None => row(t, false, None, |r| {
@@ -509,12 +521,14 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             Some(x) => line(t, "Job cost".to_string(), lines_of(est.job_cost.members), rests(est.job_cost.assumed), format!("${}", view::figure(x, 2)), est.job_cost.status, true),
             None => line(t, "Job cost".to_string(), "no classed line comes to a figure".to_string(), String::new(), "none".to_string(), Status::Unknown, true),
         }
-        let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!("at {} %", view::figure(x, 2)))).unwrap_or_default();
+        let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!("at {} %", view::rate(x)))).unwrap_or_default();
         for (name, d, at, strong) in [("Overhead", &est.overhead, rate(est.markup.as_ref().map(|m| &m.overhead)), false), ("Profit", &est.profit, rate(est.markup.as_ref().map(|m| &m.profit)), false), ("Price", &est.price, String::new(), true)] {
             let (said, status) = money(d);
             line(t, name.to_string(), at, String::new(), said, status, strong);
-            if d.value.is_none() {
-                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(6.0) }, ..default() }).with_child(text(fonts, d.note.clone(), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
+            // Why there is no figure; or, on a price over a job cost that leaves lines
+            // out, that it is the price of what is in it and not of the job.
+            if d.value.is_none() || !d.note.is_empty() {
+                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(6.0) }, ..default() }).with_child(text(fonts, d.note.clone(), 11.5, Weight::Regular, theme::status_ink(if d.value.is_none() { Status::Unknown } else { Status::Assumed })));
             }
         }
         for (who, why) in &est.job_cost.left_out {

@@ -1084,3 +1084,35 @@ corner, rank) and 736 to 916 (the solver), and `geom.rs` 330 to 340.
   tested on plans written out by hand.
 * **The walls snapped to are those entered on the storey being drawn on.** BIMCraft takes
   the walls its plan cuts.
+
+### Call 37. The eleventh judgment: what was decided in fixing it (2026-11-11)
+
+* **A total of money that leaves something out is flagged for that alone.** The owner's
+  rule is that such a total says what it left out, and it did, a few lines further down.
+  A price reads on its own line, so it carries the flag and says there how many lines it
+  leaves out. It is not refused: an estimate in progress still has a running price, and
+  a refused one would hide it. This applies to every total: job cost, class, column,
+  the D4 allowance and detail totals, and each supplier's.
+* **A line with no class stands in no column.** It showed in the General column while
+  that column's total left it out. It now says under itself what it comes to and that it
+  is in no column and no row.
+* **A number typed as a whole quantity is not a count to be rounded.** 2.5 is 2.5. A
+  quantity that is a formula coming out as a count is still rounded up (26.67 fasteners
+  is 27) and now says what it was rounded from.
+* **Hours are shown to four places.** Call 32 said they were; the printouts showed two.
+* **The half-cent push is three units in the last place** (correcting call 33, which
+  described a larger one and a wrong bound): a quantity, a price, their product and the
+  hundred are each good to half a unit, so under three in all. It is capped at a
+  thousandth of a cent, which it reaches at about $15 billion; above $10 trillion an
+  amount or a total is refused.
+* **A rate is written as it was entered**, by the shortest decimal that is the number,
+  and never to fewer than two places. One function writes it everywhere.
+* **Cost lines go on what is built and on the job.** Not on a condition (its lines are
+  its recipe), a material (its cost is its price) or a type.
+* **A name is one name.** Suppliers and materials are matched ignoring capitals and
+  spacing when one is entered, as cost lines on an element already are.
+* **With a condition that is not known a line is still measured and ordered**; only what
+  it comes to has no figure. With an Assumed one, the dollars are Assumed and the
+  quantities are not.
+* **A room and the walls its walls are cut to (narrowing call 33):** only where the cut
+  end is at the room.

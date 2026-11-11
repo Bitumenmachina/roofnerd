@@ -95,8 +95,8 @@ says "the south plane's panels, repriced" "Standing seam panels ~576.49 lb \$9.0
 # Material: 8,628.10 + 1,037.68 = 9,665.78.
 says "the material row" "Material ~\$9,665.78 6 lines"
 # Its labor line switched off: Labor 2,147.97 - 1,207.48 = 940.49.
-says "the labor row" "Labor ~\$940.49 2 lines ~13.06 hr"
-says "the line is still on the sheet" "Install panels 16.77 hr \$72.00/hr off (\$1,207.48)"
+says "the labor row" "Labor ~\$940.49 2 lines ~13.0623 hr"
+says "the line is still on the sheet" "Install panels 16.7705 hr \$72.00/hr off (\$1,207.48)"
 # Job cost: 28,442.43 + 1,037.68 - 1,207.48 = 28,272.63.
 says "the job cost" "Job cost ~\$28,272.63 14 lines"
 # Overhead 12 %: 3,392.7156 -> 3,392.72. Profit 8 % of 31,665.35: 2,533.228 -> 2,533.23.

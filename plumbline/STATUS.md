@@ -21,7 +21,7 @@ run again and each gave what this file said they gave.
 | — | The whole building (owner, 2026-11-11) | **A working model of a whole house on BIMCraft's shapes, read and walked, not yet drawn in the window.** The owner widened the brief from the envelope to the building and its services (DECISIONS.md call 26). The model was first written from nothing, then, the same day, re-based on BIMCraft's (call 29; `HANDOFF_REBASE.md`): storeys, walls of a type with a top held to a storey or a height, doors and windows of a type placed by their centre, floors, rooms found from their walls, straight runs of a type joined by fittings, equipment and fixtures with connectors, systems, and a network that says what is joined and what is open. Each value flagged; a takeoff by system. In the window: the whole house under a sky, seen through, a system or a storey at a time, on plan, and on foot inside. Nothing of the building can be edited in the window yet. Judged twice: see "The whole building" and "The re-base on BIMCraft". |
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
 | D4 | Macro to micro | **Demonstrated at the command line and in the window, and judged (tenth judgment, below): thirteen findings, twelve fixed with tests, one minor one left and said. The fixes have not themselves been judged.** An element takes an allowance in $/SF or $/LF; a cost line's quantity is extended by its unit cost; an element's detail is rolled back up to the same $/SF or $/LF; the two are reconciled by element and for the job, each total saying what it leaves out and how much of it rests on an assumption. Prices are entered at the command line or typed in the window. See "D4. What was run". |
-| D5 | Estimate sheet and money | **Demonstrated at the command line and in the window (`demos/d5.sh`, `demos/d5w.sh`). Not yet judged.** A cost line has a class and lands in one column and one row of the recap; in-house work is a production rate into hours; a labor line can be switched off; a material is an element with a generic price and suppliers' quotes, and changing what an element is made of reprices the lines made of it; overhead and profit are entered and have no default. See "D5. What was run". Reproducing the owner's whole-job estimate is pending: there is no estimate in `refs/` (Q5). See "D5. How its demonstration will be run". |
+| D5 | Estimate sheet and money | **Demonstrated at the command line and in the window (`demos/d5.sh`, `demos/d5w.sh`), and judged (eleventh judgment, below): fourteen findings, each fixed with a test. The fixes have not themselves been judged.** A cost line has a class and lands in one column and one row of the recap; in-house work is a production rate into hours; a labor line can be switched off; a material is an element with a generic price and suppliers' quotes, and changing what an element is made of reprices the lines made of it; overhead and profit are entered and have no default. See "D5. What was run". Reproducing the owner's whole-job estimate is pending: there is no estimate in `refs/` (Q5). See "D5. How its demonstration will be run". |
 | D6 | Interchange and reports | Not started. |
 | D7 | Capture | Waiting on the owner's ruling. |
 
@@ -1243,7 +1243,8 @@ sum of what is shown; and to get an assumed price into a total that looks clean.
 
 ## D5. What was run and what it showed
 
-**Not judged yet.** Everything below was run by the session that built it.
+Judged since this was written: see "Eleventh judgment". Where a figure below gives hours
+to two places, the program now gives four (J11-4); the dollars are unchanged.
 
 **At the command line** (`demos/d5.sh`, exit 0; every figure worked by hand in the
 script before it was run, and each matched):
@@ -1433,3 +1434,60 @@ measured, not looked at again.
 **Not reached by the judge:** J9-5 again; J9-4 across storeys; an uncertain storey
 elevation or computation height run (read only); the window; the money path through
 `apply` and through low-slope and parapet lines.
+
+
+## Eleventh judgment (2026-11-11): D5, and the fixes to the tenth
+
+An independent judge (Opus; it did not build any of this) was given commit `016ac79`, a
+frozen copy of the source and a built command line, and the brief to break the estimate
+sheet and the tenth judgment's fixes. Fourteen findings, no panic. As it reported them:
+
+| # | Finding (the judge's words, shortened) | Severity it gave |
+|---|---|---|
+| J11-1 | The PRICE is shown Known and clean when the job cost leaves lines out; it can be below the cost `price` shows. A line with no class shows its amount in the General column, whose total leaves it out. | wrong figure unflagged |
+| J11-2 | Money is pushed across a cent from 0.4999 of a cent at $300 million, well below where call 33 says rounding is exact. | wrong figure unflagged |
+| J11-3 | A typed quantity that is not whole (2.5) is rounded up to 3 with no note on the sheet. | wrong figure unflagged |
+| J11-4 | Hours print to two places: a line's hours do not multiply to its amount, and a class's hours are not the sum of what its lines show. | wrong figure unflagged (display) |
+| J11-5 | `line` on a door writes a file `check` then refuses: the wall's inputs come back in another order. | minor |
+| J11-6 | J10-6 is not closed: `show` writes a rate of 0.00004 as 0, and `show` and `estimate` print the same price differently. | silent zero (display) |
+| J11-7 | The supplier columns give false reasons: "has not quoted" for a line left out because its condition or material is not known. | false claim in a printout |
+| J11-8 | Cost lines on a Condition, a Material or a Type are accepted and counted in the job cost. | loads what it should refuse |
+| J11-9 | J10-2's fix flags a room for a wall that cannot matter to it (met at the far end of one of its walls). | false flag |
+| J11-10 | Switching off an element's only line makes `price` say "detail none entered" and "no cost line on 1 element with an allowance", both false. | false claim in a printout |
+| J11-11 | Totals above $10 trillion are printed to the cent; only the price is refused. | minor |
+| J11-12 | Suppliers and materials whose names differ only in capitals or spacing are kept apart. | minor |
+| J11-13 | Hours can be rounded up to whole hours with `whole`. | minor |
+| J11-14 | An overhead of 0.004 prints "at 0.00 %"; a material can be priced by the hour; a material named by path prints the path; with an Assumed condition the pounds and hours are flagged though the quantity "does not rest on it"; typed lines take their element's condition's status. | minor |
+
+What was done about each. Every fix has a test in `crates/world/tests/world.rs` named
+for its finding (`j11_1_...` and so on), or a line in a demonstration script, with the
+figures worked by hand. **These fixes have not themselves been judged.**
+
+| # | What was done | Test |
+|---|---|---|
+| J11-1 | A total of money that leaves something out is never shown as Known: the job cost, each class, each column, the D4 totals and each supplier's total are flagged for that alone, and the overhead, the profit and the price inherit it. The price also says, on its own line, how many lines it leaves out and that it is "the price of the lines in the job cost, not of the job". A line with no class no longer shows an amount in the General column: it stands in no column and says so under itself, with what it comes to. | `j11_1_...` (a job with nothing assumed: $30,047.40 flagged with one line out; $44,989.93 Known with none) |
+| J11-2 | The push that restores a half cent is now three units in the figure's last place, which is what the arithmetic can have lost, where it was sixteen. $300,000,000.004999 is $300,000,000.00. | `j11_2_...` |
+| J11-3 | A quantity typed as a number is that number: 2.5 months at $650.00 is $1,625.00. A count worked out by a formula is still rounded up, and its quantity now says what it was rounded from; the sheet prints that. | `j11_3_...` |
+| J11-4 | Hours are printed to the four places they are held and added to, on the sheet and in the recap, at the command line and in the window. | `demos/d5.sh` (16.7705 hr, 29.8328 hr) |
+| J11-5 | A wall's openings are read in the order of their paths, not the order the world happens to hold them in. | `j11_5_...` |
+| J11-6 | A rate is written to the cent or to every place it was entered with, by one function, in `show`, `price`, `estimate` and the window. 0.00004 is 0.00004. | `j11_6_...` |
+| J11-7 | A line that has no figure at any price says its own reason in every supplier's column. A line whose condition is not known is still measured and ordered (pounds stay pounds); it is what it comes to that has no figure. A material named by its path is shown by its name. | `j11_7_...` |
+| J11-8 | Cost lines on a Condition, a Material or a Type are refused, at the command line and on load. | `j11_8_...` |
+| J11-9 | A room takes the status of a wall its own wall is cut to only where that end is at the room: a corner of the room lies within the walls' thickness of it. | `j11_9_...`; `j10_2_...` still passes |
+| J11-10 | An element whose every line is switched off reads "none: every cost line it has is switched off", and is not listed as having no cost line. | `j11_10_to_14_...` |
+| J11-11 | A total of more than $10 trillion is not given, and says why. | the same test |
+| J11-12 | A supplier is named one way in a job, and so is a material: a name that differs from one already there only in capitals or spacing is refused, with the name to use. | the same test |
+| J11-13 | Hours rounded up to whole hours are refused. | the same test |
+| J11-14 | A percentage prints with every place it has; a material priced by the hour is refused; with an Assumed condition what a line comes to is Assumed and how much of it there is (SF, pounds, hours) is not. **Left as decided (call 33):** a line typed by hand onto an element takes that element's condition's status like any other line on it. | the same test |
+
+**What held under attack** (the judge's list): every hand figure it worked (overhead and
+profit up to 1000 %, supplier extensions, a change of material, lines typed onto a wall
+and a floor of the house); Assumed overhead, prices, quotes, material and condition each
+flagging what rests on them; no price with overhead or profit missing; a long list of
+refusals at the command line and in a hand-edited file; save, load, save to the same
+bytes on every roof file; J10-3, J10-5, J10-10 and small half-cent amounts; the five
+`check_*` rows in PORTMAP; no panics.
+
+**Not reached by the judge:** the window and the app's sheet; J10-2 at T-junctions and
+two joins away; `apply` with recipes that carry classes; a material renamed or removed
+in the file by hand; quantity error from four-place rounding at large unit prices.

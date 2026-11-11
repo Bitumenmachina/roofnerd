@@ -61,11 +61,11 @@ says "each column is the sum of the amounts shown in it" "column totals ~\$8,628
 echo
 echo "== 2. In-house labor is a production rate =="
 # 419.2627 SF at 25 SF to the hour: 16.7705 hours, shown as 16.77; x 72.00 = 1,207.476.
-says "hours from the rate, then dollars from the hours" "Install panels 16.77 hr \$72.00/hr \$1,207.48"
+says "hours from the rate, then dollars from the hours" "Install panels 16.7705 hr \$72.00/hr \$1,207.48"
 # The other way up: 12 LF at a quarter of an hour each is 3 hours. Assumed, like the headwall.
-says "a rate in hours to the LF" "Install headwall flashing ~3.00 hr \$72.00/hr ~\$216.00"
+says "a rate in hours to the LF" "Install headwall flashing ~3.0000 hr \$72.00/hr ~\$216.00"
 # Labor: 1,207.48 + 724.49 + 216.00 = 2,147.97; 16.7705 + 10.0623 + 3 = 29.8328 hours.
-says "the labor row, with its hours" "Labor ~\$2,147.97 3 lines ~29.83 hr"
+says "the labor row, with its hours" "Labor ~\$2,147.97 3 lines ~29.8328 hr"
 says "how much of it rests on an assumption" "\$216.00 of it rests on something assumed"
 
 echo
@@ -74,14 +74,14 @@ echo "== 3. Labor toggles per line =="
 "$P" check "$J"
 sheet
 # Labor 2,147.97 - 1,207.48 = 940.49; hours 29.8328 - 16.7705 = 13.0623.
-says "the labor row without it" "Labor ~\$940.49 2 lines ~13.06 hr"
+says "the labor row without it" "Labor ~\$940.49 2 lines ~13.0623 hr"
 # Job cost 25,292.43 - 1,207.48 = 24,084.95.
 says "the job cost without it" "Job cost ~\$24,084.95 12 lines"
-says "the line is still on the sheet, marked off, with what it would come to" "Install panels 16.77 hr \$72.00/hr off (\$1,207.48)"
+says "the line is still on the sheet, marked off, with what it would come to" "Install panels 16.7705 hr \$72.00/hr off (\$1,207.48)"
 says "and the recap says so" 'switched off, on the sheet and out of every total: plane-0003: "Install panels" ($1,207.48)'
 "$P" labor "$J" plane-0003 on --line "Install panels" >/dev/null
 sheet
-says "on again, to the cent" "Labor ~\$2,147.97 3 lines ~29.83 hr"
+says "on again, to the cent" "Labor ~\$2,147.97 3 lines ~29.8328 hr"
 says "" "Job cost ~\$25,292.43 13 lines"
 
 echo
@@ -93,10 +93,10 @@ refused "is Subcontract and carries a production rate" "$P" class "$J" plane-000
 echo
 echo "== 5. Fabrication and supervision are lines of their own =="
 # Fabrication: 4.1926 hr x 60 = 251.56 and 2.5156 hr x 60 = 150.94: 402.50, 6.7082 hours.
-says "shop work" "Fabricate panels [Fabrication] 4.19 hr \$60.00/hr \$251.56"
-says "its row" "Fabrication \$402.50 2 lines 6.71 hr"
-says "the foreman, on the job itself" "Foreman, days on site [Supervision] 40.00 hr \$95.00/hr \$3,800.00"
-says "its row" "Supervision \$3,800.00 1 line 40.00 hr"
+says "shop work" "Fabricate panels [Fabrication] 4.1926 hr \$60.00/hr \$251.56"
+says "its row" "Fabrication \$402.50 2 lines 6.7082 hr"
+says "the foreman, on the job itself" "Foreman, days on site [Supervision] 40.0000 hr \$95.00/hr \$3,800.00"
+says "its row" "Supervision \$3,800.00 1 line 40.0000 hr"
 
 echo
 echo "== 6. General conditions, typed by hand =="
@@ -153,7 +153,8 @@ echo "== 9. Three suppliers, side by side =="
 says "the columns" "generic Harbor Metals Ridge Supply Tinners Yard"
 says "a line at all four" "south: Standing seam panels \$4,150.70 \$4,058.46 \$4,266.00 \$4,196.82"
 says "a line one supplier has not quoted" "shed: Standing seam panels ~\$1,113.24 ~\$1,100.87 ~\$1,150.35 no quote"
-says "the totals" "total ~\$8,024.36 ~\$7,861.41 ~\$8,254.95 \$6,714.91"
+# A total that leaves lines out is flagged for that alone: Tinners Yard's is over two of four.
+says "the totals" "total ~\$8,024.36 ~\$7,861.41 ~\$8,254.95 ~\$6,714.91"
 says "how many lines each total is over" "lines in the total 4 of 4 4 of 4 4 of 4 2 of 4"
 says "and what the short one leaves out" '? Tinners Yard leaves out plane-0017: "Standing seam panels": Tinners Yard has not quoted "Copper, 20 oz"'
 
@@ -168,7 +169,7 @@ sheet
 says "the panels, in more pounds" "Standing seam panels 576.49 lb \$9.00/lb \$5,188.38"
 says "now made of" 'made of "Copper, 20 oz"'
 says "the lines not made of it have not moved" "Underlayment 419.26 SF \$0.90/SF \$377.34"
-says "" "Install panels 16.77 hr \$72.00/hr \$1,207.48"
+says "" "Install panels 16.7705 hr \$72.00/hr \$1,207.48"
 # Material 8,628.10 + 1,037.68 = 9,665.78. Job cost 28,442.43 + 1,037.68 = 29,480.11.
 says "the material row" "Material ~\$9,665.78 6 lines"
 says "the job cost" "Job cost ~\$29,480.11 15 lines"

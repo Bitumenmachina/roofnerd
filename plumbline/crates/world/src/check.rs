@@ -290,6 +290,11 @@ pub fn allowance(path: &str, kind: Kind, a: &Allowance) -> Result<(), String> {
 }
 
 pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
+    // Cost lines are on what is built and on the job. A condition's lines are its recipe;
+    // a material's cost is its price; a type is not a thing that is bought.
+    if matches!(kind, Kind::Condition | Kind::Material | Kind::Type) && !c.lines.is_empty() {
+        return Err(format!("{path}: a {kind:?} cannot carry cost lines; they go on what is built, or on the job for general conditions{}", if kind == Kind::Condition { " (a condition's own lines are its recipe)" } else { "" }));
+    }
     c.code.check(&format!("{path} cost code"), "")?;
     if let Some(code) = &c.code.value {
         if code.scheme.trim().is_empty() || code.code.trim().is_empty() {
@@ -365,6 +370,9 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
                 return Err(format!("{what}: its order unit {:?} is not a usable name for what is bought (sheet, lb, box)", o.unit));
             }
             lines::order_multiplies(o, read.unit).map_err(|why| format!("{what}: {why}"))?;
+            if o.unit == HOURS && o.round_up {
+                return Err(format!("{what}: its hours are rounded up to whole hours; hours are not bought whole"));
+            }
             o.factor.check_basics(&format!("{what} order factor"))?;
             if o.factor.value.is_some_and(|x| !x.is_finite() || x <= 0.0 || x > MAX_UNIT_COST) {
                 return Err(format!("{what} order factor: must be more than zero (and not beyond {MAX_UNIT_COST:e})"));
@@ -449,6 +457,9 @@ pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
         if !ok {
             return Err(format!("{what}: its unit is {:?}; a price is dollars for a unit, like \"$/lb\" or \"$/SF\"", v.unit));
         }
+        if v.unit == format!("$/{HOURS}") {
+            return Err(format!("{what}: a material is not bought by the hour"));
+        }
         let wanted = per.get_or_insert_with(|| v.unit.clone()).clone();
         v.check(what, &wanted)?;
         if v.value.is_some_and(|x| !x.is_finite() || x < 0.0) {
@@ -460,13 +471,24 @@ pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
         Ok(())
     };
     price(&format!("{path} price"), &s.price, &mut per)?;
-    for (supplier, quote) in &s.quotes {
+    for (i, (supplier, quote)) in s.quotes.iter().enumerate() {
         if supplier.trim().is_empty() || supplier != supplier.trim() || supplier.chars().any(char::is_control) {
             return Err(format!("{path}: a quote is from {supplier:?}, which is not a usable name for a supplier"));
+        }
+        // One supplier is one name: two that differ only in capitals or spacing are one
+        // supplier written two ways, and would stand in two columns.
+        if let Some((other, _)) = s.quotes.iter().take(i).find(|(other, _)| same_name(other, supplier)) {
+            return Err(format!("{path}: has quotes from {other:?} and {supplier:?}; a supplier is known by its name, so two are different in more than capitals and spacing"));
         }
         price(&format!("{path} quote from {supplier:?}"), quote, &mut per)?;
     }
     Ok(())
+}
+
+/// Whether two names are the same but for capitals and spacing.
+pub fn same_name(a: &str, b: &str) -> bool {
+    let plain = |s: &str| s.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+    plain(a) == plain(b)
 }
 
 /// Overhead and profit are percentages, on the job.

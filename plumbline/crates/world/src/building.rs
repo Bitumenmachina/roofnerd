@@ -485,8 +485,12 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
 
     // Openings first: each one's size and area, and each wall's list of them.
     let mut holes: HashMap<String, Vec<Hole>> = HashMap::new();
+    // In the order of their paths, whatever order the world holds them in: a wall's
+    // list of openings, and so what its figures cite, is the same every time.
     let mut q = world.query::<(&Node, &Kind, Option<&Opening>)>();
-    for (node, kind, opening) in q.iter(world) {
+    let mut openings: Vec<(&Node, &Kind, Option<&Opening>)> = q.iter(world).collect();
+    openings.sort_by_key(|(n, ..)| path_number(&n.path));
+    for (node, kind, opening) in openings {
         if !kind.is_opening() {
             continue;
         }
@@ -724,6 +728,8 @@ struct RoomFigures {
     finish: Result<(f64, f64, Vec<usize>), rooms::Unbound>,
     centre: Result<(f64, Vec<usize>), rooms::Unbound>,
     in_wall: bool,
+    /// The corners of the room at its walls' faces, when it has any: where it is.
+    corners: Vec<crate::skeleton::P2>,
 }
 
 /// Every room of one storey measured against `walls`, of which those at `bounding` bound
@@ -755,6 +761,7 @@ fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], points: &[crate::s
     };
     (0..points.len())
         .map(|i| RoomFigures {
+            corners: finish.bound(points, i, tol).map(|g| std::iter::once(&g.outer).chain(g.holes.iter()).flatten().copied().collect()).unwrap_or_default(),
             finish: finish.bound(points, i, tol).map(|g| (g.area(), g.perimeter(), touching(&g, &outline_edges))),
             centre: centre.bound(points, i, tol).map(|g| (g.area(), touching(&g, &centre_lines))),
             in_wall: !points[i].0.is_nan() && outlines.iter().any(|ring| rooms::contains(ring, points[i])),
@@ -922,10 +929,19 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                     }
                     notes.push(format!("whether {} ({}) bounds this room rests on its heights, which are {}", tree.called(&placed[k].path), placed[k].path, format!("{:?}", placed[k].span).to_lowercase()));
                 }
-                // A wall's ends are cut to the walls it meets, bounding or not: the room is
-                // no surer than the line and thickness of each of those.
-                for &k in mine {
-                    for n in walls::meets(&plan_walls, k, tol) {
+                // A wall's end is cut to the walls it meets there, bounding or not. Where
+                // that end is at this room (a corner of the room lies within the walls'
+                // thickness of it), the room is no surer than the line and thickness of
+                // each of those. An end at the far side of the building is not this room's.
+                let thick = |w: &walls::PlanWall| (w.ext - w.int).abs();
+                for (k, at_end) in mine.iter().flat_map(|&k| [(k, false), (k, true)]) {
+                    let met = walls::meets(&plan_walls, k, at_end, tol);
+                    let node = if at_end { plan_walls[k].end } else { plan_walls[k].start };
+                    let reach = met.iter().map(|&n| thick(&plan_walls[n])).fold(thick(&plan_walls[k]), f64::max) + tol;
+                    if !found.corners.iter().any(|c| c.dist(node) <= reach) {
+                        continue;
+                    }
+                    for n in met {
                         if placed[n].shape != Status::Known && !mine.contains(&n) {
                             statuses.push(placed[n].shape);
                             let cited = format!("{}#{K_WALL}", placed[n].path);

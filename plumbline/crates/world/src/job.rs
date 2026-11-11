@@ -269,6 +269,11 @@ impl Job {
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
         let mut new = self.world.get::<Supply>(e).cloned().ok_or_else(|| format!("{path} is a {kind:?}, not a material; a supplier quotes a material"))?;
+        // A supplier already in the job is named the way it is named there.
+        let mut q = self.world.query::<&Supply>();
+        if let Some(known) = q.iter(&self.world).flat_map(|s| s.quotes.keys()).find(|k| *k != supplier && check::same_name(k, supplier)) {
+            return Err(format!("{supplier:?} is {known:?} written another way; a supplier has one name in a job, so use {known:?}"));
+        }
         let per = new.price.unit.clone();
         new.quotes.insert(supplier.to_string(), Val { value: value.map(|t| units::parse_price(t, &per)).transpose()?, unit: per, status, source: source.into() });
         check::supply(path, kind, &new)?;
@@ -281,8 +286,8 @@ impl Job {
     pub fn add_material(&mut self, name: &str, unit: &str) -> Result<String, String> {
         let root = self.world.get::<Node>(self.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
         let mut q = self.world.query::<(&Node, &Kind)>();
-        if q.iter(&self.world).any(|(n, k)| *k == Kind::Material && n.name == name) {
-            return Err(format!("the job already has a material called {name:?}"));
+        if let Some((known, _)) = q.iter(&self.world).find(|(n, k)| **k == Kind::Material && check::same_name(&n.name, name)) {
+            return Err(format!("the job already has a material called {:?}", known.name));
         }
         let supply = Supply { order: None, price: Val::unknown(&format!("$/{unit}"), "no price entered"), quotes: BTreeMap::new() };
         check::supply("the new material", Kind::Material, &supply)?;

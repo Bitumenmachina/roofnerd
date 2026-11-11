@@ -168,11 +168,11 @@ fn arms(walls: &[PlanWall], i: usize, at_end: bool, tol: f64) -> (Vec<Arm>, bool
     (arms, through)
 }
 
-/// The other walls wall `i` meets at either end, by their place in the list: those that
-/// end where it ends and one it ends on, as `arms` finds them. Its own ends are cut to
-/// these.
-pub(crate) fn meets(walls: &[PlanWall], i: usize, tol: f64) -> Vec<usize> {
-    let mut out: Vec<usize> = [false, true].iter().flat_map(|&at_end| arms(walls, i, at_end, tol).0.into_iter().map(|a| a.wall)).filter(|&w| w != i).collect();
+/// The other walls wall `i` meets at its start (or with `at_end`, its end), by their
+/// place in the list: those that end where it ends and one it ends on, as `arms` finds
+/// them. That end of it is cut to these.
+pub(crate) fn meets(walls: &[PlanWall], i: usize, at_end: bool, tol: f64) -> Vec<usize> {
+    let mut out: Vec<usize> = arms(walls, i, at_end, tol).0.into_iter().map(|a| a.wall).filter(|&w| w != i).collect();
     out.sort_unstable();
     out.dedup();
     out

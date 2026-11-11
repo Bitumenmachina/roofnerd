@@ -174,7 +174,7 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
                     rows.push(entered(p, &format!("order factor: {}", line.description), &o.factor, |x| num(*x)));
                 }
                 if !line.of_material {
-                    rows.push(entered(p, &format!("unit cost: {}", line.description), &line.unit_cost, |x| num(*x)));
+                    rows.push(entered(p, &format!("unit cost: {}", line.description), &line.unit_cost, |x| rate(*x)));
                 }
             }
         }
@@ -373,16 +373,17 @@ pub fn figure_shown(value: f64, decimals: usize) -> String {
     text
 }
 
-/// A rate in dollars as it is written: to the cent, or to as many places (up to six) as
-/// it takes to show what it is. A rate of $0.004 is not written as $0.00.
+/// A rate (dollars for a unit, or a percentage) as it is written: to the cent, or to as
+/// many places as it was entered with. Every place is shown, so a rate of 0.00004 is not
+/// written as 0, and one price is written one way wherever it is printed.
 pub fn rate(value: f64) -> String {
-    for places in 2..=6 {
-        let scale = 10f64.powi(places);
-        if ((value * scale).round() / scale - value).abs() < 1e-9 {
-            return figure(value, places as usize);
-        }
+    if !value.is_finite() {
+        return "not a number".into();
     }
-    figure(value, 6)
+    // The shortest decimal that is this number, which is how it was typed.
+    let shortest = format!("{}", value.abs());
+    let places = shortest.split_once('.').map(|(_, part)| part.len()).unwrap_or(0);
+    figure(value, places.max(2))
 }
 
 /// Total the elements directly under `roof_path`.
@@ -462,6 +463,9 @@ pub struct PricedElement {
     pub detail_rate: Option<Derived>,
     pub difference: Option<Derived>,
     pub difference_percent: Option<Derived>,
+    /// It has cost lines and every one of them is switched off: it has no detail, and
+    /// that is why.
+    pub all_off: bool,
 }
 
 /// A total of money that says what it rests on and what it leaves out.
@@ -504,13 +508,27 @@ fn money_total(parts: &[(&PricedElement, &Derived)]) -> MoneyTotal {
     let included: Vec<&(&PricedElement, &Derived)> = parts.iter().filter(|(_, d)| d.value.is_some()).collect();
     let left_out = parts.iter().filter(|(_, d)| d.value.is_none()).map(|(e, d)| (e.path.clone(), d.note.clone())).collect();
     let cents = crate::lines::cents;
-    MoneyTotal {
+    finish_total(MoneyTotal {
         value: if included.is_empty() { None } else { Some(cents(included.iter().filter_map(|(_, d)| d.value).sum())) },
         status: included.iter().map(|(_, d)| d.status).max().unwrap_or(Status::Unknown),
         members: included.len(),
         assumed: cents(included.iter().filter(|(_, d)| d.status == Status::Assumed).filter_map(|(_, d)| d.value).sum()),
         left_out,
+    })
+}
+
+/// The two things every total of money is held to. A total that leaves something out is
+/// never shown as Known: it is the sum of what is in it, and reads as that. And a total
+/// too large to hold to the cent is not given.
+fn finish_total(mut t: MoneyTotal) -> MoneyTotal {
+    if t.value.is_some_and(|v| v.abs() > crate::lines::MAX_DOLLARS) {
+        t.value = None;
+        t.left_out.insert(0, ("the total".into(), "it comes to more than can be held to the cent".into()));
     }
+    if t.value.is_some() && !t.left_out.is_empty() {
+        t.status = t.status.max(Status::Assumed);
+    }
+    t
 }
 
 /// The job priced from its allowances and from its cost lines, and the two reconciled.
@@ -525,6 +543,7 @@ pub fn pricing(job: &mut Job) -> Pricing {
         let (Some(node), Some(kind)) = (w.get::<Node>(e), w.get::<Kind>(e).copied()) else { continue };
         let priced = w.get::<Priced>(e);
         let has_lines = w.get::<Cost>(e).is_some_and(|c| !c.lines.is_empty());
+        let all_off = has_lines && w.get::<Cost>(e).is_some_and(|c| c.lines.iter().all(|l| l.off));
         let rate = w.get::<Allowance>(e).map(|a| a.rate.clone());
         if rate.is_none() && !has_lines {
             // It could be priced and is not: by its area or length, or by the each.
@@ -541,7 +560,7 @@ pub fn pricing(job: &mut Job) -> Pricing {
             (name.to_string(), unit.to_string(), d)
         });
         let get = |name: &str| priced.and_then(|p| p.0.get(name)).cloned();
-        elements.push(PricedElement { path: node.path.clone(), name: node.name.clone(), kind, figure, rate, allowance: get("allowance"), detail: get("detail"), detail_rate: get("detail_rate"), difference: get("difference"), difference_percent: get("difference_percent") });
+        elements.push(PricedElement { path: node.path.clone(), name: node.name.clone(), kind, figure, rate, allowance: get("allowance"), detail: get("detail"), detail_rate: get("detail_rate"), difference: get("difference"), difference_percent: get("difference_percent"), all_off });
     }
     let allowances: Vec<(&PricedElement, &Derived)> = elements.iter().filter_map(|e| e.allowance.as_ref().map(|d| (e, d))).collect();
     let details: Vec<(&PricedElement, &Derived)> = elements.iter().filter_map(|e| e.detail.as_ref().map(|d| (e, d))).collect();
@@ -615,13 +634,13 @@ pub struct Estimate {
 fn total_of(parts: &[(String, &Derived)]) -> MoneyTotal {
     let included: Vec<&Derived> = parts.iter().map(|(_, d)| *d).filter(|d| d.value.is_some()).collect();
     let cents = crate::lines::cents;
-    MoneyTotal {
+    finish_total(MoneyTotal {
         value: if included.is_empty() { None } else { Some(cents(included.iter().filter_map(|d| d.value).sum())) },
         status: included.iter().map(|d| d.status).max().unwrap_or(Status::Unknown),
         members: included.len(),
         assumed: cents(included.iter().filter(|d| d.status == Status::Assumed).filter_map(|d| d.value).sum()),
         left_out: parts.iter().filter(|(_, d)| d.value.is_none()).map(|(who, d)| (who.clone(), d.note.clone())).collect(),
-    }
+    })
 }
 
 /// The estimate sheet and its recap.
@@ -645,10 +664,13 @@ pub fn estimate(job: &mut Job) -> Estimate {
         let (Some(node), Some(kind), Some(cost)) = (w.get::<Node>(e), w.get::<Kind>(e).copied(), w.get::<Cost>(e)) else { continue };
         // A condition's recipe is not on the job's sheet; it carries its lines in `pl::recipe`.
         let made_of = w.get::<MadeOf>(e).and_then(|m| m.0.value.clone());
-        let supply = made_of.as_ref().and_then(|name| {
+        let found = made_of.as_ref().and_then(|name| {
             let found: Vec<&(String, String, Supply)> = materials.iter().filter(|(n, p, _)| n == name || p == name).collect();
-            (found.len() == 1).then(|| found[0].2.clone())
+            (found.len() == 1).then(|| found[0].clone())
         });
+        // The material by its name, however the element names it (it may name its path).
+        let made_of = found.as_ref().map(|f| f.0.clone()).or(made_of);
+        let supply = found.map(|f| f.2);
         for line in &cost.lines {
             let Some(f) = w.get::<LineQuantities>(e).and_then(|q| q.0.get(&line.description)) else { continue };
             let priced = f.order.as_ref().or(f.with_waste.as_ref()).unwrap_or(&f.quantity).clone();
@@ -724,13 +746,27 @@ pub fn estimate(job: &mut Job) -> Estimate {
         (_, _, None) => Derived::refused("$", "job cost + overhead + profit", &inputs, &profit.note),
     };
 
+    // A price over a job cost that leaves lines out is the price of what is in it, and
+    // says so on its own line: it is not the price of the job.
+    let mut price = price;
+    if let (Some(_), n @ 1..) = (price.value, job_cost.left_out.len()) {
+        price.note = format!("it leaves out {n} line{}, named below: it is the price of the lines in the job cost, not of the job", if n == 1 { "" } else { "s" });
+    }
     // The suppliers, side by side, over the lines made of a material.
     let of_material: Vec<&&SheetLine> = on.iter().filter(|l| l.material.is_some()).collect();
     let at_generic = total_of(&of_material.iter().map(|l| (label(l), &l.amount)).collect::<Vec<_>>());
     let at_supplier = suppliers
         .iter()
         .map(|s| {
-            let none: Vec<Derived> = of_material.iter().map(|l| Derived::refused("$", "", &[], &format!("{s} has not quoted {}", l.material.as_ref().filter(|m| !m.is_empty()).map(|m| format!("{m:?}")).unwrap_or_else(|| "its material".into())))).collect();
+            // Why a line has no figure at this supplier: the line has none at all (and says
+            // why itself), or this supplier has not quoted what it is made of.
+            let none: Vec<Derived> = of_material
+                .iter()
+                .map(|l| match l.amount.value {
+                    None => Derived::refused("$", "", &[], &format!("the line has no figure at any price: {}", l.amount.note)),
+                    Some(_) => Derived::refused("$", "", &[], &format!("{s} has not quoted {}", l.material.as_ref().filter(|m| !m.is_empty()).map(|m| format!("{m:?}")).unwrap_or_else(|| "its material".into()))),
+                })
+                .collect();
             let parts: Vec<(String, &Derived)> = of_material.iter().zip(&none).map(|(l, none)| (label(l), l.quotes.get(s).unwrap_or(none))).collect();
             (s.clone(), total_of(&parts))
         })

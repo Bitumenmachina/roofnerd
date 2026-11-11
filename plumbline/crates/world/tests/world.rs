@@ -4541,3 +4541,211 @@ fn a_point_picked_on_the_plan_snaps_to_what_is_there() {
     assert_eq!(without.walls.len(), 1);
     assert_eq!(snap(&without, [0.2, 0.1], reach, &[], false, &all).kind, SnapKind::Free);
 }
+
+// ---- The eleventh judgment: each finding, as a test that fails without its fix ----
+
+/// The priced job with nothing Assumed in it: the shed's pitch Known, overhead and profit Known.
+fn priced_known() -> Job {
+    let mut job = sample::priced();
+    job.set("plane-0017", "pitch", Some("3"), Status::Known, "made-up dimension").unwrap();
+    job.set("job-0001", "overhead", Some("10"), Status::Known, "made-up markup").unwrap();
+    job.set("job-0001", "profit", Some("8"), Status::Known, "made-up markup").unwrap();
+    job.derive();
+    job
+}
+
+#[test]
+fn j11_1_a_price_over_a_job_cost_that_leaves_a_line_out_does_not_read_as_clean() {
+    let mut job = priced_known();
+    // The north plane's line has no class (and no price): the job cost leaves it out.
+    let est = view::estimate(&mut job);
+    assert_eq!(est.job_cost.left_out.len(), 1);
+    assert_eq!((est.job_cost.value, est.job_cost.status), (Some(25292.43), Status::Assumed));
+    assert_eq!((est.price.value, est.price.status), (Some(30047.40), Status::Assumed));
+    assert!(est.price.note.contains("it leaves out 1 line") && est.price.note.contains("not of the job"), "{}", est.price.note);
+    // Priced, it is still in no class, and the price still says so: $12,577.88 of roof is
+    // not in it.
+    job.set("plane-0005", "unit_cost", Some("30"), Status::Known, "made-up price").unwrap();
+    job.derive();
+    let est = view::estimate(&mut job);
+    assert_eq!((est.price.value, est.price.status), (Some(30047.40), Status::Assumed));
+    assert!(est.price.note.contains("it leaves out 1 line"));
+    // A class's own total is flagged the same way when a line of the class has no figure.
+    job.set_class("plane-0005", None, Class::Material).unwrap();
+    job.set("plane-0005", "unit_cost", None, Status::Unknown, "not quoted").unwrap();
+    job.derive();
+    let est = view::estimate(&mut job);
+    assert_eq!(class_total(&est, Class::Material).total.status, Status::Assumed);
+    assert_eq!(class_total(&est, Class::Fabrication).total.status, Status::Known);
+    // With every line in a class and priced, the price is Known and carries no note:
+    // 419.2627 x 30 = 12,577.88; job cost 37,870.31; overhead 3,787.03; profit
+    // 41,657.34 x 0.08 = 3,332.5872 -> 3,332.59; price 44,989.93.
+    job.set("plane-0005", "unit_cost", Some("30"), Status::Known, "made-up price").unwrap();
+    job.derive();
+    let est = view::estimate(&mut job);
+    assert!(est.job_cost.left_out.is_empty());
+    assert_eq!((est.price.value, est.price.status, est.price.note.as_str()), (Some(44989.93), Status::Known, ""));
+}
+
+#[test]
+fn j11_2_a_half_cent_is_restored_and_0_4999_of_a_cent_is_not_made_into_one() {
+    use plumbline_world::lines::cents;
+    assert_eq!(cents(300_000_000.004999), 300_000_000.00);
+    assert_eq!(cents(30_000_000.0049999), 30_000_000.00);
+    assert_eq!(cents(300_000_000.005), 300_000_000.01);
+    assert_eq!(cents(1.015), 1.02);
+    assert_eq!(cents(2.675), 2.68);
+    assert_eq!(cents(0.004999), 0.0);
+}
+
+#[test]
+fn j11_3_a_quantity_typed_as_a_number_is_what_was_typed() {
+    let mut job = sample::priced();
+    // Two and a half months of a dumpster at 650.00 is 1,625.00, not three months.
+    job.add_line("job-0001", "Dumpster, months", "2.5", Some(Class::General), false).unwrap();
+    job.set_on_line("job-0001", "unit_cost", Some("Dumpster, months"), Some("650"), Status::Known, "made-up price").unwrap();
+    job.derive();
+    let f = figures(&mut job, "job-0001", "Dumpster, months");
+    assert_eq!((f.quantity.value, f.quantity.note.as_str()), (Some(2.5), ""));
+    assert_eq!(f.extension.unwrap().value, Some(1625.00));
+    // A count worked out by a formula is still whole, and now says what it was rounded from.
+    job.add_line("job-0001", "Anchors", "n / spacing", Some(Class::General), false).unwrap_err();
+    job.add_line("job-0001", "Anchors", "5", Some(Class::General), false).unwrap();
+    job.set_formula("job-0001", Some("Anchors"), "n / 2", &[("n".to_string(), "5".to_string())], Status::Known, "made-up").unwrap();
+    job.derive();
+    let f = figures(&mut job, "job-0001", "Anchors");
+    assert_eq!(f.quantity.value, Some(3.0));
+    assert_eq!(f.quantity.note, "2.5 rounded up to 3: a count is whole");
+}
+
+#[test]
+fn j11_5_a_line_typed_onto_a_door_leaves_a_file_that_still_checks() {
+    let mut job = sample::house();
+    let door = job.index().into_iter().map(|(p, _)| p).filter(|p| p.starts_with("door-")).min().unwrap();
+    job.add_line(&door, "Hang door", "1", None, false).unwrap();
+    job.derive();
+    let text = save(&mut job);
+    let (mut again, report) = load(&text).unwrap();
+    assert!(report.stale.is_empty(), "stale after a line on {door}: {:?}", report.stale);
+    assert_eq!(save(&mut again), text);
+}
+
+#[test]
+fn j11_6_a_rate_is_written_as_it_was_entered_wherever_it_is_written() {
+    assert_eq!(view::rate(0.00004), "0.00004");
+    assert_eq!(view::rate(0.0000004), "0.0000004");
+    assert_eq!(view::rate(0.12345678), "0.12345678");
+    assert_eq!(view::rate(31.5), "31.50");
+    assert_eq!(view::rate(1250.0), "1,250.00");
+    assert_eq!(view::rate(12.0), "12.00");
+    // `show` writes a unit cost the same way.
+    let mut job = sample();
+    job.set("plane-0005", "unit_cost", Some("0.00004"), Status::Known, "made-up").unwrap();
+    job.derive();
+    let rows = view::elements(&mut job);
+    let row = rows.iter().find(|e| e.path == "plane-0005").unwrap().rows.iter().find(|r| r.label.starts_with("unit cost")).unwrap().clone();
+    assert!(row.text.starts_with("0.00004"), "{}", row.text);
+}
+
+#[test]
+fn j11_7_a_supplier_column_gives_the_true_reason_a_line_is_not_in_it() {
+    let mut job = sample::priced();
+    job.set("plane-0003", "condition", None, Status::Unknown, "nobody knows").unwrap();
+    job.derive();
+    let est = view::estimate(&mut job);
+    let harbor = est.at_supplier.iter().find(|x| x.0 == "Harbor Metals").unwrap().1.clone();
+    let why = harbor.left_out.iter().find(|(who, _)| who.starts_with("plane-0003")).map(|x| x.1.clone()).unwrap();
+    assert!(why.contains("the element's condition is not known") && !why.contains("has not quoted"), "{why}");
+    // The line is still measured and ordered: 461.189 lb. It is what it comes to that has no figure.
+    let f = figures(&mut job, "plane-0003", "Standing seam panels");
+    assert_eq!((f.order.as_ref().unwrap().value, f.order.as_ref().unwrap().unit.as_str()), (Some(461.189), "lb"));
+    assert_eq!(f.extension.unwrap().value, None);
+    // A material named by its path is shown by its name.
+    let m20 = job.index().into_iter().map(|(p, _)| p).find(|p| job.find(p).and_then(|e| job.world.get::<Node>(e).map(|n| n.name == "Copper, 20 oz")).unwrap_or(false)).unwrap();
+    job.set("plane-0004", "material", Some(&m20), Status::Known, "made-up").unwrap();
+    job.derive();
+    let est = view::estimate(&mut job);
+    let line = est.lines.iter().find(|l| l.path == "plane-0004" && l.description == "Standing seam panels").unwrap();
+    assert_eq!(line.material.as_deref(), Some("Copper, 20 oz"));
+}
+
+#[test]
+fn j11_8_cost_lines_go_on_what_is_built_or_on_the_job_and_nowhere_else() {
+    let mut job = sample::priced();
+    for kind in ["material-", "condition-"] {
+        let path = job.index().into_iter().map(|(p, _)| p).filter(|p| p.starts_with(kind)).min().unwrap();
+        let why = job.add_line(&path, "Freight", "1", Some(Class::General), false).unwrap_err();
+        assert!(why.contains("cannot carry cost lines"), "{path}: {why}");
+    }
+    let mut house = sample::house();
+    let t = house.index().into_iter().map(|(p, _)| p).filter(|p| p.starts_with("type-")).min().unwrap();
+    assert!(house.add_line(&t, "Freight", "1", Some(Class::General), false).unwrap_err().contains("cannot carry cost lines"));
+}
+
+#[test]
+fn j11_9_a_room_is_not_flagged_for_a_wall_met_at_the_far_end_of_one_of_its_walls() {
+    use plumbline_world::WallType;
+    // The 20 by 10 box with a partition at x = 10, the room its west half (9.5 by 9.5 =
+    // 90.25 SF). Only the east wall's thickness is assumed. The south wall is cut to the
+    // east wall at x = 20: ten feet from the room.
+    let (mut job, s, t) = walled();
+    let east_type = job.add("job-0001", Kind::Type, "east's type").unwrap();
+    job.put(&east_type, WallType { thickness: Val::assumed(Len::One(6.0), "in", "not on the wall schedule"), layers: Vec::new() }).unwrap();
+    wall(&mut job, &s, &t, "south", [0.0, 0.0], [20.0, 0.0], 10.0);
+    wall(&mut job, &s, &east_type, "east", [20.0, 0.0], [20.0, 10.0], 10.0);
+    wall(&mut job, &s, &t, "north", [20.0, 10.0], [0.0, 10.0], 10.0);
+    wall(&mut job, &s, &t, "west", [0.0, 10.0], [0.0, 0.0], 10.0);
+    wall(&mut job, &s, &t, "partition", [10.0, 0.0], [10.0, 10.0], 10.0);
+    let west = room(&mut job, &s, "west half", [5.0, 5.0]);
+    let east = room(&mut job, &s, "east half", [15.0, 5.0]);
+    job.derive();
+    let d = measure_of(&mut job, &west, "floor_area");
+    assert_eq!((d.value, d.status, d.note.as_str()), (Some(90.25), Status::Known, ""));
+    // The east half is measured to the east wall, and is as sure as it.
+    assert_eq!(measure_of(&mut job, &east, "floor_area").status, Status::Assumed);
+}
+
+#[test]
+fn j11_10_to_14_the_smaller_findings() {
+    // 10: an element whose only line is switched off has no detail, and is known as that.
+    let mut job = sample::priced();
+    job.add_line("eave-0007", "Install eave trim", "true_length", None, false).unwrap();
+    job.set_on_line("eave-0007", "order", None, Some("0.1 hr/LF"), Status::Known, "made-up rate").unwrap();
+    job.set_on_line("eave-0007", "unit_cost", None, Some("72"), Status::Known, "made-up rate").unwrap();
+    job.set_class("eave-0007", None, Class::Labor).unwrap();
+    job.set_off("eave-0007", None, true).unwrap();
+    job.derive();
+    let p = view::pricing(&mut job);
+    let eave = p.elements.iter().find(|e| e.path == "eave-0007").unwrap();
+    assert!(eave.all_off && eave.detail.is_none() && eave.rate.is_none());
+    // 11: a total past what holds to the cent is not given.
+    let mut job = sample::priced();
+    for i in 0..4 {
+        let name = format!("Big {i}");
+        job.add_line("job-0001", &name, "9999", Some(Class::General), false).unwrap();
+        job.set_on_line("job-0001", "unit_cost", Some(&name), Some("999999999.99"), Status::Known, "made-up").unwrap();
+    }
+    job.derive();
+    let est = view::estimate(&mut job);
+    assert_eq!(class_total(&est, Class::General).total.value, None);
+    assert!(class_total(&est, Class::General).total.left_out.iter().any(|(_, why)| why.contains("more than can be held to the cent")));
+    assert_eq!(est.job_cost.value, None);
+    // 12: one supplier, one name; one material, one name.
+    let mut job = sample::priced();
+    let m20 = job.index().into_iter().map(|(p, _)| p).find(|p| job.find(p).and_then(|e| job.world.get::<Node>(e).map(|n| n.name == "Copper, 20 oz")).unwrap_or(false)).unwrap();
+    assert!(job.set_quote(&m20, "harbor metals", Some("9"), Status::Known, "x").unwrap_err().contains("written another way"));
+    assert!(job.set_quote(&m20, "Ridge  Supply", Some("9"), Status::Known, "x").unwrap_err().contains("written another way"));
+    assert!(job.add_material("copper, 16 OZ", "lb").unwrap_err().contains("already has a material called \"Copper, 16 oz\""));
+    // 13: hours are not rounded up to whole hours.
+    assert!(job.set_on_line("plane-0003", "order", Some("Install panels"), Some("25 SF/hr whole"), Status::Known, "x").unwrap_err().contains("hours are not bought whole"));
+    // 14: a material is not bought by the hour.
+    assert!(job.add_material("Zinc", "hr").unwrap_err().contains("not bought by the hour"));
+    // 14: with an assumed condition, what a line comes to is assumed; how much of it
+    // there is, in SF and in pounds, is not.
+    job.set("plane-0003", "condition", Some("Standing seam copper, 16 oz"), Status::Assumed, "not on the schedule").unwrap();
+    job.derive();
+    let f = figures(&mut job, "plane-0003", "Standing seam panels");
+    assert_eq!((f.quantity.status, f.order.as_ref().unwrap().status, f.extension.as_ref().unwrap().status), (Status::Known, Status::Known, Status::Assumed));
+    let f = figures(&mut job, "plane-0003", "Install panels");
+    assert_eq!((f.order.as_ref().unwrap().status, f.extension.as_ref().unwrap().status), (Status::Known, Status::Assumed));
+}

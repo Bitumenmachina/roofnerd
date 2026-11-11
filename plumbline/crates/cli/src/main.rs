@@ -147,7 +147,8 @@ fn price(job: &mut plumbline_world::Job) -> String {
             None => format!(" (rate not known: {})", r.source),
         });
         let _ = writeln!(out, "    allowance   {}{}", amount(&e.allowance), rate.unwrap_or_default());
-        let _ = writeln!(out, "    detail      {}{}", amount(&e.detail), e.detail_rate.as_ref().filter(|d| d.value.is_some()).map(|d| format!(", which is {}", amount(&Some(d.clone())))).unwrap_or_default());
+        let detail = if e.all_off { "none: every cost line it has is switched off".to_string() } else { amount(&e.detail) };
+        let _ = writeln!(out, "    detail      {detail}{}", e.detail_rate.as_ref().filter(|d| d.value.is_some()).map(|d| format!(", which is {}", amount(&Some(d.clone())))).unwrap_or_default());
         if let Some(d) = e.detail.as_ref().filter(|d| d.value.is_none() || !d.note.is_empty()) {
             let _ = writeln!(out, "      {} {}", if d.value.is_none() { "?" } else { "!" }, d.note);
         }
@@ -199,7 +200,7 @@ fn price(job: &mut plumbline_world::Job) -> String {
         let _ = writeln!(out, "             ? no allowance entered on {} element{} with cost lines: {}", no_allowance.len(), if no_allowance.len() == 1 { "" } else { "s" }, named(no_allowance));
     }
     out.push_str(&total("detail", &p.detail, "a detail that is whole"));
-    let no_lines: Vec<&view::PricedElement> = p.elements.iter().filter(|e| e.detail.is_none()).collect();
+    let no_lines: Vec<&view::PricedElement> = p.elements.iter().filter(|e| e.detail.is_none() && e.rate.is_some() && !e.all_off).collect();
     if !no_lines.is_empty() {
         let _ = writeln!(out, "             ? no cost line on {} element{} with an allowance: {}", no_lines.len(), if no_lines.len() == 1 { "" } else { "s" }, named(no_lines));
     }
@@ -251,8 +252,11 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
             let _ = writeln!(out, "{}  [{:?}]  ({})", l.element, l.kind, l.path);
             last = l.path.clone();
         }
+        // Hours are shown to the four places they are held and added to: at two, a line's
+        // hours would not multiply to its amount, or add to its class.
+        let places = |unit: &str| if unit == plumbline_world::HOURS { 4 } else { 2 };
         let priced = match l.priced.value {
-            Some(x) => format!("{}{} {}", l.priced.status.flag().trim_end(), view::figure(x, 2), l.priced.unit),
+            Some(x) => format!("{}{} {}", l.priced.status.flag().trim_end(), view::figure(x, places(&l.priced.unit)), l.priced.unit),
             None => "no figure".to_string(),
         };
         let at = match l.unit_cost.as_ref() {
@@ -268,7 +272,8 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
             Some(Column::Material) => m = amount,
             Some(Column::Labor) => b = amount,
             Some(Column::General) => g = amount,
-            None => g = format!("no class ({})", flagged(&l.amount)),
+            // A line with no class stands in no column: its amount is said under it.
+            None => {}
         }
         let mut what = l.description.clone();
         if let Some(c) = l.class.filter(|c| !matches!(c, Class::Material | Class::Labor)) {
@@ -283,6 +288,12 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
         } else if !l.amount.note.is_empty() {
             let _ = writeln!(out, "      ! {}", l.amount.note);
         }
+        if l.class.is_none() && !l.off {
+            let _ = writeln!(out, "      ? no class: it is in no column and no row of the recap{}", l.amount.value.map(|_| format!(" (it comes to {})", flagged(&l.amount))).unwrap_or_default());
+        }
+        if !l.quantity.note.is_empty() && l.quantity.value.is_some() {
+            let _ = writeln!(out, "      ! its quantity: {}", l.quantity.note);
+        }
     }
     let col = |c: Column| est.columns.iter().find(|x| x.0 == c).map(|x| &x.1);
     let shown = |t: Option<&view::MoneyTotal>| t.and_then(|t| t.value.map(|x| format!("{}{}", t.status.flag().trim_end(), money(x)))).unwrap_or_else(|| "none".to_string());
@@ -290,7 +301,7 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
 
     let _ = writeln!(out, "\nTHE RECAP");
     for c in &est.classes {
-        let hours = c.hours.filter(|_| c.total.value.is_some()).map(|(h, s)| format!("   {}{} hr", s.flag().trim_end(), view::figure(h, 2))).unwrap_or_default();
+        let hours = c.hours.filter(|_| c.total.value.is_some()).map(|(h, s)| format!("   {}{} hr", s.flag().trim_end(), view::figure(h, 4))).unwrap_or_default();
         match c.total.value {
             Some(x) => {
                 let _ = writeln!(out, "  {:<20}{:>14}   {} line{}{hours}", c.class.title(), format!("{}{}", c.total.status.flag().trim_end(), money(x)), c.total.members, if c.total.members == 1 { "" } else { "s" });
@@ -316,10 +327,13 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
             let _ = writeln!(out, "  {:<20}{:>14}   no classed line comes to a figure", "Job cost", "none");
         }
     }
-    let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!(" at {}{} %", v.status.flag().trim_end(), view::figure(x, 2)))).unwrap_or_default();
+    let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!(" at {}{} %", v.status.flag().trim_end(), view::rate(x)))).unwrap_or_default();
     out.push_str(&line(&format!("Overhead{}", rate(est.markup.as_ref().map(|m| &m.overhead))), &est.overhead));
     out.push_str(&line(&format!("Profit{}", rate(est.markup.as_ref().map(|m| &m.profit))), &est.profit));
     out.push_str(&line("PRICE", &est.price));
+    if est.price.value.is_some() && !est.price.note.is_empty() {
+        let _ = writeln!(out, "  {:<20}{:>14}   ! {}", "", "", est.price.note);
+    }
     if !est.job_cost.left_out.is_empty() {
         let _ = writeln!(out, "  left out of the job cost, and of everything taken on it: {} line{}", est.job_cost.left_out.len(), if est.job_cost.left_out.len() == 1 { "" } else { "s" });
         for (who, why) in &est.job_cost.left_out {

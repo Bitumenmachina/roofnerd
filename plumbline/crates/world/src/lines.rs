@@ -161,10 +161,12 @@ fn count(value: Option<f64>) -> Result<Option<f64>, &'static str> {
 pub fn cents(x: f64) -> f64 {
     // 1.015 is held as 1.01499999999999990230; the half cent that was meant is rounded
     // up, as it would be on paper, and not down by what binary arithmetic lost.
-    // The push is a few units in the last place of the figure itself, and never as much
-    // as a thousandth of a cent: enough to restore a half, too little to make one.
+    // The push is what the arithmetic that made the figure can have lost (a quantity, a
+    // price, their product and the hundred, each good to half a unit in the last place:
+    // under three units in all), and never as much as a thousandth of a cent: enough to
+    // restore a half, too little to make one out of 0.4999 of a cent.
     let y = x * 100.0;
-    let push = (y.abs() * 16.0 * f64::EPSILON).min(1e-3);
+    let push = (y.abs() * 3.0 * f64::EPSILON).min(1e-3);
     (y + y.signum() * push).round() / 100.0 + 0.0
 }
 
@@ -203,9 +205,12 @@ struct Price<'a> {
     at: Result<&'a Val<f64>, String>,
     /// "the line" or the material, for the note of a line with no price.
     whose: String,
-    /// Statuses the order and the extension take besides their own (how sure the element
-    /// is of its material).
+    /// Statuses the extension takes besides its own: how sure the element is of its
+    /// condition and of its material.
     statuses: Vec<Status>,
+    /// Statuses the order quantity takes besides its own: how sure the element is of its
+    /// material. (Not its condition: how much there is of a thing does not rest on that.)
+    order_statuses: Vec<Status>,
     inputs: Vec<String>,
 }
 
@@ -252,46 +257,57 @@ pub fn figures(me: &str, on: &On, line: &CostLine, stock: &Stock, condition: Opt
     let cost_in = format!("{me}#{K_COST}");
     let mut held: Vec<Status> = Vec::new();
     let mut inputs = vec![cost_in];
+    // With a condition that is not known, the line is still measured and ordered; it is
+    // what it comes to that has no figure.
+    let mut refusal: Option<String> = None;
     if let Some(c) = condition {
         inputs.push(format!("{me}#{K_CONDITION}"));
         if c.value.is_none() {
-            let price = Price { at: Err(format!("the element's condition is not known ({}), so what its lines come to is not", c.source)), whose: String::new(), statuses: Vec::new(), inputs };
-            return worked(me, on, line, if line.of_material { None } else { line.order.as_ref() }, &price);
+            refusal = Some(format!("the element's condition is not known ({}), so what its lines come to is not", c.source));
+        } else {
+            held.push(c.status);
         }
-        held.push(c.status);
+    }
+    // The price to extend at, or why there is none to use.
+    fn at<'a>(refusal: &Option<String>, price: &'a Val<f64>) -> Result<&'a Val<f64>, String> {
+        match refusal {
+            Some(why) => Err(why.clone()),
+            None => Ok(price),
+        }
     }
     if !line.of_material {
-        let price = Price { at: Ok(&line.unit_cost), whose: "the line".into(), statuses: held, inputs };
+        let price = Price { at: at(&refusal, &line.unit_cost), whose: "the line".into(), statuses: held, order_statuses: Vec::new(), inputs };
         return worked(me, on, line, line.order.as_ref(), &price);
     }
     let made_of = format!("{me}#{K_MATERIAL}");
     match stock {
         Stock::NotSaid => {
-            let price = Price { at: Err("the line is made of the element's material, and the element does not say what it is made of".into()), whose: String::new(), statuses: Vec::new(), inputs };
+            let why = refusal.clone().unwrap_or_else(|| "the line is made of the element's material, and the element does not say what it is made of".into());
+            let price = Price { at: Err(why), whose: String::new(), statuses: Vec::new(), order_statuses: Vec::new(), inputs };
             worked(me, on, line, None, &price)
         }
         Stock::Missing(why) => {
             inputs.push(made_of);
-            let price = Price { at: Err(why.clone()), whose: String::new(), statuses: Vec::new(), inputs };
+            let price = Price { at: Err(refusal.clone().unwrap_or_else(|| why.clone())), whose: String::new(), statuses: Vec::new(), order_statuses: Vec::new(), inputs };
             worked(me, on, line, None, &price)
         }
         Stock::Found { path, name, status, supply } => {
             inputs.extend([made_of, format!("{path}#{K_SUPPLY}")]);
             let whose = format!("its material, {name:?},");
             held.push(*status);
-            let price = Price { at: Ok(&supply.price), whose: whose.clone(), statuses: held.clone(), inputs: inputs.clone() };
+            let price = Price { at: at(&refusal, &supply.price), whose: whose.clone(), statuses: held.clone(), order_statuses: vec![*status], inputs: inputs.clone() };
             let mut out = worked(me, on, line, supply.order.as_ref(), &price);
             // A price is for a unit. One for another unit is not used.
             let priced = out.order.as_ref().map(|o| o.unit.clone()).unwrap_or_else(|| out.quantity.unit.clone());
             let wrong = |v: &Val<f64>| (v.unit != format!("$/{priced}")).then(|| format!("{whose} is priced in {}, and this line comes out in {priced}", v.unit));
-            if let Some(why) = wrong(&supply.price) {
+            if let (None, Some(why)) = (&refusal, wrong(&supply.price)) {
                 out.extension = Some(Derived::refused("$", "", &inputs, &why));
             }
             for (supplier, quote) in &supply.quotes {
-                let at = Price { at: Ok(quote), whose: format!("{supplier}'s quote for {name:?}"), statuses: held.clone(), inputs: inputs.clone() };
-                let d = match wrong(quote) {
-                    Some(why) => Derived::refused("$", "", &inputs, &why),
-                    None => extension(&at, &out.quantity, out.with_waste.as_ref(), out.order.as_ref()),
+                let quoted = Price { at: at(&refusal, quote), whose: format!("{supplier}'s quote for {name:?}"), statuses: held.clone(), order_statuses: vec![*status], inputs: inputs.clone() };
+                let d = match (&refusal, wrong(quote)) {
+                    (None, Some(why)) => Derived::refused("$", "", &inputs, &why),
+                    _ => extension(&quoted, &out.quantity, out.with_waste.as_ref(), out.order.as_ref()),
                 };
                 out.quotes.insert(supplier.clone(), d);
             }
@@ -328,18 +344,26 @@ fn worked(me: &str, on: &On, line: &CostLine, order_by: Option<&Order>, price: &
     let mut text = read.worked.text.clone();
     // A count is whole: 26.67 fasteners is 27. What is below zero is refused before it is
     // rounded, so it is never rounded up to nothing.
-    let is_count = read.unit == "EA" && !read.plain_measure;
+    // A number typed as the whole quantity (2.5 months of a dumpster) is what was typed.
+    let typed = matches!(read.expr, Expr::Num(_));
+    let is_count = read.unit == "EA" && !read.plain_measure && !typed;
     let value = if is_count {
         text.push_str(", rounded up to a whole number");
         count(read.worked.value)
     } else {
         Ok(read.worked.value)
     };
-    let quantity = match value {
+    let mut quantity = match value {
         Err(why) => Derived::refused(read.unit, &text, &inputs, why),
         Ok(Some(v)) if v < 0.0 => Derived::refused(read.unit, &text, &inputs, "the formula comes out below zero"),
         Ok(v) => Derived::new(v, read.unit, &[read.worked.status], &text, &inputs),
     };
+    // A count that was rounded up says what it was rounded from.
+    if let (true, Some(raw), Some(whole)) = (is_count, read.worked.value, quantity.value) {
+        if (raw - whole).abs() > 1e-9 {
+            quantity.note = format!("{} rounded up to {}: a count is whole", crate::view::num(raw), crate::view::num(whole));
+        }
+    }
 
     let with_waste = line.waste.as_ref().map(|w| {
         let v = quantity.value.zip(w.value).map(|(q, w)| q * (1.0 + w / 100.0));
@@ -363,7 +387,7 @@ fn worked(me: &str, on: &On, line: &CostLine, order_by: Option<&Order>, price: &
                     formula.push_str(&format!(", rounded up to a whole {}", o.unit));
                 }
                 let mut statuses = vec![base.status, o.factor.status];
-                statuses.extend(&price.statuses);
+                statuses.extend(&price.order_statuses);
                 Derived::new(v, &o.unit, &statuses, &formula, &price.inputs)
             }
         }
