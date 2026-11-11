@@ -707,6 +707,13 @@ opened and read at full size)
 * The sample house saves and loads to the same bytes with nothing stale. A file that names
   a system that is not in the job does not load.
 
+**What should have been read first, and was not.** BIMCraft, already on this machine and
+already rated "borrow", has walls, hosted openings, levels, rooms, runs, fittings with
+connectors, a connectivity graph, schedules and IFC4 export. `building.rs` was written
+without opening it. DECISIONS.md call 28 sets out what it has, what it lacks (flags and
+sources, net wall area, systems as elements, a takeoff by system), and the decision: the
+building model is re-based on its shapes before anything more is built on `building.rs`.
+
 **What is not built**
 * **Nothing of the building can be drawn or edited in the window.** It is entered in a
   file or in code, and read, walked and taken off in the window. The roof's edits still

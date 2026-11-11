@@ -120,6 +120,8 @@ You widened the work from the envelope to the whole house and its services (DECI
 call 26). The first stretch is built: the model, the takeoff, and a window to see and walk
 it. It is outside the brief's numbered deliverables, and those (D4 macro to micro, D5 the
 estimate sheet and money, D6 interchange) are still where they were.
+**Changed by DECISIONS.md call 28:** step zero is now re-basing the building model on
+BIMCraft's, which already has (2) and the tools for (1).
 **Assumption in use:** the next stretch of the whole building is, in this order, (1)
 drawing and editing it in the window instead of in a file, (2) fittings and connections,
 so a system can be checked and its fittings counted by type, (3) clashes. The brief's D4

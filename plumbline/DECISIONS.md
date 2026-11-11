@@ -642,3 +642,61 @@ building envelope first" to the building and its services, and it is his to wide
   card over the model. It is formatting; nothing is hidden that is not shown elsewhere in
   the same window.
 
+### 28. What was already on the machine and was not read (owner's question, 2026-11-11)
+The owner asked whether the whole-building work shows what this seat can do, or whether
+it leans on him instead of searching. It leaned on him. This entry is the search that
+should have come before call 26, done after it.
+
+**What was skipped.**
+* **BIMCraft was on this machine, already rated "borrow" (call 4), and was not opened
+  before `building.rs` was written.** Only its skeleton file had ever been read. A survey
+  of its model crate (an Opus agent's reading; the struct names, the `network` function,
+  the IFC class table for runs and the test count below were then checked by hand) found:
+  walls with location lines, layered types, corner joins, base and top levels and offsets
+  (`model.rs:249`); doors and windows hosted in walls and cut in 3D, sections and IFC
+  (`model.rs:827`), with the past-the-top case this project's eighth judge found handled
+  and tested; levels (`model.rs:131`); rooms found from their bounding walls, with area
+  and height (`rooms.rs`); one `Run` for pipe, duct, conduit, cable tray and cable, with
+  its size on a type (`model.rs:1588`, `2467`); fittings as components with connectors,
+  and a connectivity graph with open-end warnings (`network.rs:163`); schedules; IFC4
+  export (IfcBuildingStorey, IfcWall, IfcSlab, IfcOpeningElement, IfcPipeSegment,
+  IfcDuctSegment, IfcCableCarrierSegment, IfcCableSegment, IfcSystem); a section box;
+  plan and section drawing; drawing and snapping tools. 1,648 tests in the crate.
+* **Two things call 26 lists as "not built, and next" already exist there**: fittings and
+  connections, and editing tools.
+* **The web was searched four times per push, and thin results were not followed up.**
+  Call 26 named Qonic and Arcol from memory; the search behind it had returned nothing on
+  either. Both have since been looked up and the sentence stands (Qonic: browser BIM with
+  clash detection, quantities and, from April 2026, drawings; Arcol: browser massing and
+  early design, launched June 2025, not a documentation tool).
+* **"The names are IFC's and Revit's" was written from memory.** Checked since, for IFC:
+  storey is IfcBuildingStorey; floor is IfcSlab; duct, pipe and cable are IfcDuctSegment,
+  IfcPipeSegment and IfcCableSegment; a conduit is an IfcCableCarrierSegment; a fixture is
+  an IfcFlowTerminal; a system with a kind is IfcDistributionSystem with a PredefinedType.
+  Not checked: that the ten classification names in `building.rs` are the values of
+  IfcDistributionSystemEnum or of Revit's list. They are what was remembered of Revit's.
+* **Both jumps in this window's quality came from the owner saying it was not good enough,
+  not from looking first.**
+
+**What BIMCraft does not have, and this project does.** A status and a source on every
+value, carried through to every figure (it has none). Net wall area (its wall area is
+length by height). Systems as elements with a discipline and a classification (its system
+is a name on each run). A takeoff by system that says what it could not size. Clash
+detection is in neither. Its sizing and code checks follow Brazilian standards (NBR 5626,
+8160, 5410, 10844) and are not usable here; its ducts are thin.
+
+**What is decided.**
+* **`building.rs` is not extended further as it stands.** Before the next stretch (drawing
+  in the window, fittings, connections), the building model is re-based on BIMCraft's
+  shapes, ported with attribution as the skeleton was (call 3): the wall with its location
+  line and levels, the hosted opening, the run with its type, the connector and the
+  network, the room. This project's flags, sources, refusals, net area, systems and
+  takeoff are kept on top of them. Call 4 stands: borrow from, do not build on, because
+  its window is egui and its world is not an ECS.
+* **Its IFC4 writer is the starting point for D6**, not a new one.
+* **Its Brazilian sizing is not ported.** Sizing for this market is a separate question
+  for the owner when it is reached.
+* **The search order in the parent repository's instructions applies here**: what is on
+  the machine first, indexes first; then the scored landscape (this file's own table);
+  then the web, with a thin result followed up before anything is written from memory.
+
