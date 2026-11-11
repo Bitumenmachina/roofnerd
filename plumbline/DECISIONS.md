@@ -549,3 +549,73 @@ for work of a higher standard. What was looked at, and what was decided from it:
 * **Not done:** the windows are still not judged on a real graphics card or a real
   desktop; everything above was run on the virtual display.
 
+### 26. The whole building, not the roof alone (owner, 2026-11-11)
+The owner looked at the redrawn roof window and said: better, but think of this for a
+whole house with its MEP; you are limiting yourself; see what is out there now and feel
+free to build your own; it should feel like a video game, with a game's smoothness and
+graphics, and have the power of BIM and Revit. That widens the brief's "proven on the
+building envelope first" to the building and its services, and it is his to widen.
+
+**What was looked at.**
+* *Where the industry is.* Revit holds the model and its data; the picture people enjoy
+  comes from sending that model on to a game engine (Twinmotion, Unreal, Unity Reflect)
+  to look at, with the authoring tool still the record. Modumate put authoring itself on a
+  game engine. Newer tools (Motif, Qonic, Arcol and others) are rebuilding BIM in the
+  browser. The gap the owner is pointing at is real: the data and the good picture are
+  still two programs. This program has one world, and the window is already a game
+  engine, so it does not have to choose.
+* *What gives Revit's MEP its power*, by the accounts of the people who use it: runs are
+  elements with sizes, runs and equipment belong to named **systems** with a
+  classification, and schedules and takeoffs come out of the model, not out of a drawing.
+  That, not the drafting, is what was built here first.
+* *What the engine has.* Bevy 0.20 has a physical sky that lights the scene, ambient
+  occlusion, bloom, temporal anti-aliasing and cascaded shadows. They were read in its own
+  examples and used.
+
+**What was decided.**
+* **The building's elements are in the world, with the same rules as the roof**
+  (`building.rs`): storeys, walls with doors and windows, floors, ducts, pipes, conduit,
+  cable, equipment, fixtures, and systems. Every value flagged and sourced; every figure
+  worked out in the world and refused, with the reason, when its inputs do not fit.
+* **The names are IFC's and Revit's, not ours.** Storey (Revit says level), wall, opening,
+  floor (IFC says slab), duct, pipe, conduit, cable, equipment, fixture, system, and
+  Revit's system classifications (Supply Air, Domestic Hot Water, Sanitary, Power). IFC's
+  own words for the last three kinds are longer (distribution flow element, terminal);
+  the trade's are used.
+* **A run is its centre line in space and a size.** Its length is measured along the
+  centre line, so a riser counts. Each corner is a bend: a fitting to be counted. A duct's
+  surface is its length by the distance round it. Fittings are not yet elements of their
+  own, and nothing checks that runs actually join.
+* **Heights for runs and placed things are above the job's datum, not above their storey.**
+  A riser passes through storeys, and a point read against the wrong one is a wrong point.
+  Walls, floors and openings stand on their storey.
+* **A system is an element**, so it can be selected, read and totalled. A takeoff is the
+  system's runs by kind and size, each line a sum that says what it could not include; a
+  run with no size is not dropped and not guessed: it is on a line of its own, "size
+  unknown", with its length.
+* **A material is a condition**, as it is on the roof. "Type L copper" on a pipe is the
+  same thing as "standing seam copper" on a plane: a name now, a recipe with cost lines
+  when one is written. Cost lines on a run can already use its `true_length` and `bends`.
+* **Colours of systems follow mechanical drawings**: supply air blue, return air pink, hot
+  water red, cold water cyan, waste brown, vent green, power yellow. So red means hot
+  water on a pipe and Unknown on a figure. A run with no size is drawn as a broken red
+  line, which no system's solid colour is.
+* **The window is one model view, not a roof view.** Everything in the job is drawn at
+  its own size and can be clicked. A browser lists storeys, disciplines and systems; each
+  can be shown alone. "See through" draws the building as glass with its edges kept, so
+  what runs inside can be seen and clicked. A selected system keeps its colour and
+  everything on other systems goes grey.
+* **It moves like a game.** The camera eases toward where it is sent instead of cutting.
+  W A S D move over the ground. `V` goes in on foot at eye height: the same world, from
+  inside. `T` is a true plan, of the whole building or of one storey.
+* **It is lit like a game.** A sky, a sun, shadows, ambient occlusion, and light through
+  the windows onto the floor. `PLUMBLINE_GRAPHICS=plain` draws without them, for a machine
+  with no graphics card. The panels float over the picture.
+* **Sizes on the sample that a designer would work out are Assumed and say so** ("sized by
+  rule of thumb; no load calculation has been done"). The sample house is drawn, not
+  engineered, and the program does not pretend otherwise.
+* **Not built, and next:** fittings and connections (so a system can be checked for
+  continuity and its fittings counted by type); clash detection between runs and
+  structure; rooms; structure itself; editing any of this in the window (it is read and
+  walked, not yet drawn); IFC in and out (D6); cost recipes for MEP.
+

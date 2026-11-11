@@ -199,7 +199,7 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 
 | Key in the file | On | Holds | Unit |
 |---|---|---|---|
-| `pl::class` | every element | The kind: Job, Roof, RoofPlane, LowSlopeArea, Eave, Rake, Ridge, Hip, Valley, Headwall, PitchBreak, Parapet, Condition | |
+| `pl::class` | every element | The kind: Job, Roof, RoofPlane, LowSlopeArea, Eave, Rake, Ridge, Hip, Valley, Headwall, PitchBreak, Parapet, Condition; and for the rest of the building (section 5.6) Storey, Wall, Door, Window, Floor, System, Duct, Pipe, Conduit, Cable, Equipment, Fixture | |
 | `pl::job` | the job | Title, the unit derived lengths are worked out in (`ft`), the next path number | |
 | `pl::footprint` | a Roof | The outline the roof stands on (`points`), its `eave_height`, and how each edge rises (`edges`, edge i from point i to the next): a pitch, or `"gable"` for an edge that stands upright. The roof is solved from these (section 5.5). | `points`: `ft` or `in`. `eave_height`: `ft`, `in` or `ft-in`. An edge: `in/12`, or none for a gable |
 | `pl::solve` | a Roof with a footprint | What the last solve came to: `not_solved`, with the reason, when the footprint cannot be solved; `notes` on how the planes meet. Worked out, never typed. | |
@@ -214,6 +214,15 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 | `pl::recipe` | a Condition | `applies_to`: the kinds of element the condition goes on. `cost`: the cost code and lines an element gets when it is applied. | as `pl::cost` |
 | `pl::measure` | any with geometry | Derived quantities by name. Never typed. | |
 | `pl::line_quantities` | any with cost lines | What each cost line works out to, by the line's description: `quantity`, and `with_waste` and `order` when the line has them. Never typed. | |
+| `pl::level` | a Storey | `elevation`: how high its floor is above the job's datum. `height`: how far up to the next floor. | each `ft`, `in` or `ft-in` |
+| `pl::wall` | a Wall, under a Storey | `line`: its centre line on the plan. `thickness`. `height`. It stands on its storey's floor. | `line`: `ft` or `in`. The others: `ft`, `in` or `ft-in` |
+| `pl::opening` | a Door or Window, under a Wall | `along`: how far from the wall line's first end it starts. `width`, `height`. `sill`: how high its bottom is above the floor. | each `ft`, `in` or `ft-in` |
+| `pl::floor` | a Floor, under a Storey | `boundary` on the plan and `thickness`. Its top is at its storey's elevation. | `boundary`: `ft` or `in` |
+| `pl::route` | a Duct, Pipe, Conduit or Cable | `points`: the centre line, point to point in space: east, north, height above the datum. | `ft` or `in` |
+| `pl::size` | a Duct, Pipe, Conduit or Cable | Round by `diameter`, or rectangular by `width` and `depth`. One or the other. | each `ft`, `in` or `ft-in` |
+| `pl::placed` | Equipment or a Fixture | `what` it is, `at`: the middle of its base in space, `size`: east-west, north-south, tall. | `at`, `size`: `ft` or `in` |
+| `pl::system` | a System | `discipline` (Mechanical, Electrical, Plumbing) and `classification`: Supply Air, Return Air, Exhaust Air, Refrigerant, Domestic Cold Water, Domestic Hot Water, Sanitary, Vent, Power, Lighting. | |
+| `pl::in_system` | a run, Equipment or a Fixture | The system it belongs to, by the system's path. It has to be a System in the job. | none |
 
 ### 4.1 A cost line
 
@@ -395,6 +404,36 @@ saved like any other.
 * **Edits** (`set <roof> edge:<n>`, `set <roof> move:<n>`, `set <roof> eave_height`, and
   the 3D window): the footprint is changed and the roof solved again; if the changed
   footprint is refused or cannot be solved, the job is put back exactly as it was.
+
+### 5.6 The rest of the building
+
+Worked out in `building.rs`, under the same three rules as the roof (section 5).
+
+| Kind | Quantity | How |
+|---|---|---|
+| Wall | `plan_length` LF | length of its line on the plan |
+| Wall | `face_area` SF | `plan_length × height`: one face, with nothing taken out |
+| Wall | `opening_area` SF | the `opening_area` of each door and window under it, added up. A wall with none has 0, and that zero is Known. |
+| Wall | `net_area` SF | `face_area − opening_area`. Refused, with the reason, when an opening runs past the end of the wall, stands taller than it, or lies over another, or when an opening has no area. The gross face still stands. |
+| Door, Window | `opening_area` SF | `width × height` |
+| Floor | `plan_area` SF | area of its boundary on the plan |
+| Duct, Pipe, Conduit, Cable | `true_length` LF | the lengths of the centre line's segments, in space, added up. A riser counts for its height. |
+| Duct, Pipe, Conduit, Cable | `bends` EA | corners in the centre line: turns of more than 1°. A straight run has 0, Known. |
+| Duct | `surface_area` SF | `true_length ×` the distance round it: `π × diameter`, or `2 × (width + depth)`. Refused when it has no size. |
+
+A run with no size keeps its length. It has no surface, and on a takeoff it is on a line
+of its own, "size unknown". It is never left out and never given a size.
+
+`building::takeoff` gives each system's runs by kind and size, with the length and bends
+of each line as a sum that says what it could not include (a sum over nothing has no
+figure; it is not a Known zero), and its equipment and fixtures counted by what each is
+said to be. Elements on no system come last, under no name, so nothing is off the takeoff
+for want of a system. `building::storey_totals` gives each storey's walls and floors.
+`building::placements` gives every element's shape in feet, in space, for a window to
+draw, and beside it the list of elements that have no shape and why. A window has to say
+the second list: an element that cannot be drawn does not just go missing.
+
+Not modelled yet: fittings and whether runs join; rooms; structure; clashes.
 
 ## 6. Cost code scheme
 

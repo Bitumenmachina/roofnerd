@@ -162,6 +162,10 @@ pub fn derive(world: &mut World) -> Vec<String> {
         }
     }
 
+    // The rest of the building: walls, floors, ducts, pipes. Worked out in `building.rs`
+    // and added to each element's measure below.
+    let mut building = crate::building::measures(world);
+
     let mut changed = Vec::new();
     let mut to_insert: Vec<(Entity, Option<Measure>, Option<LineQuantities>)> = Vec::new();
     let mut to_remove: Vec<Entity> = Vec::new();
@@ -250,6 +254,10 @@ pub fn derive(world: &mut World) -> Vec<String> {
                 let d = lengths.remove(me).unwrap_or_else(|| true_length(*kind, run, plan, &planes, &in_run, &mut Vec::new()));
                 m.insert("true_length".into(), d);
             }
+        }
+
+        if let Some(more) = building.remove(me) {
+            m.extend(more);
         }
 
         // Every cost line, worked out against this element's figures: quantity, then

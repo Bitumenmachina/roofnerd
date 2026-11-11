@@ -18,6 +18,7 @@ run again and each gave what this file said they gave.
 | D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged five times. Every judgment has found a new way to a wrong figure marked Known, each next to the last fix. All found are fixed. **The fifth round's fixes have not been judged.** |
 | D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged twice: the five demonstrations held both times; two entry forms misread in the first are fixed and held in the second. |
 | D2 | 3D roof slice | **A working 3D prototype, not the whole deliverable.** In a window: a roof solved from its footprint, a plane picked with the mouse, its pitch changed and its eave moved with the lines and totals following, a surface given its condition, and the sheet in a second window updating live. The windows were drawn again on 2026-11-11 after the owner said the first looked cheap and tacky (DECISIONS.md call 25). Not built: tracing a calibrated plan, a dormer, a parapet and tapered crickets in 3D, dragging with the mouse, editing in the sheet. Judged once: the solver's areas and lengths held on every ordinary roof; it found stale planes left Known, an eave moved through the far wall, and an estimator's entries moving to another slope, among others. All fixed. **Those fixes are not judged.** See "D2. What was run". |
+| — | The whole building (owner, 2026-11-11) | **A working model of a whole house, read and walked, not yet drawn in the window.** The owner widened the brief from the envelope to the building and its services (DECISIONS.md call 26). In the world: storeys, walls with doors and windows, floors, ducts, pipes, conduit, cable, equipment, fixtures and systems, each value flagged, with lengths, areas, bends and a takeoff by system. In the window: the whole house under a sky, seen through, a system or a storey at a time, on plan, and on foot inside. Nothing of the building can be edited in the window yet. **Not judged.** See "The whole building". |
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
 | D4 | Macro to micro | Not started. How its demonstration will be run is written at the end of this file. |
 | D5 | Estimate sheet and money | Not started. Reference estimate missing (Q5). |
@@ -84,7 +85,7 @@ element. Changing one pitch changes, in a file diff, only that entity and the co
 derived from it. Assumed and Unknown values display as flagged.
 
 **How it is run:** `demos/d1.sh`. It uses the built-in sample job, which is made up.
-`cargo test` runs 78 checks on the same model.
+`cargo test` runs 86 checks on the same model.
 
 The figures below are as rerun after the units amendment and D3. Those added to the
 sample job one sheet-metal cost line on the porch headwall and three conditions as recipes,
@@ -124,7 +125,7 @@ still touches the same five entries and no others.
 * Hip: 15 over and 15 up on plan = 21.2132 LF; climbs 7.5 ft; √(450 + 56.25) = 22.5 LF.
 * Porch rake: 8 ft run at 3:12 climbs 2 ft; √68 = 8.2462 LF.
 
-**`cargo test`: 78 passed, 0 failed** (68 on the model, 8 on the ported skeleton, which
+**`cargo test`: 86 passed, 0 failed** (76 on the model, 8 on the ported skeleton, which
 are BIMCraft's own, and 2 on the command line).
 
 **What remains**
@@ -450,9 +451,9 @@ pictures was opened and read at full size)
    20 × 20 wing, 6:12 all round, eaves at 10 ft) writes 6 planes and 14 lines: 6 eaves, 5
    hips, 2 ridges and the valley at the inside corner. Nobody entered a hip or a ridge.
    The file passes `check`.
-2. *The windows* (`01-roof.png`, `01-sheet.png`). The roof in 3D on its walls, with eaves
-   green, hips orange, ridges red and the valley blue, and a legend that says so and gives
-   each kind's count and length. Each facet carries its number, area and pitch. Beside the
+2. *The windows* (`01-model.png`, `01-sheet.png`). The roof in 3D on its walls, with eaves
+   green, hips orange, ridges magenta and the valley blue; the panel beside it lists each
+   kind with its colour, its count and its length. Each facet carries its number, area and pitch. Beside the
    view: 1,341.64 SF, 13.42 SQ, predominant pitch 6:12, 6 facets (1,200 SF on plan ×
    1.118034); 160 LF of eave, 75 of hip, 40 of ridge, 15 of valley. The title bar counts
    the job's values by flag. A second operating-system window holds the sheet: the same
@@ -462,7 +463,8 @@ pictures was opened and read at full size)
    the sixteenth (east 100' 0" to 140' 0", north 0' 0" and 10' 0", height 10' 0" and
    15' 0"), every value entered on it with its source, and every figure worked out from
    them with its formula. The status bar reads the pointer's position on the roof (east
-   117' 0 7/8", north 2' 1 15/16", height 11' 0 15/16": 10 ft plus half of 2.16).
+   116' 11 5/16", north 2' 1 15/16", height 11' 1": 10 ft plus half of 2.16, to the
+   sixteenth).
 4. *Its pitch changed in the 3D view* (`03`). Two presses raise it from 6 to 8 in 12. The
    roof is solved again: the ridge moves, a short hip appears where the main ridge now
    meets the wing's at a different height, and the sheet shows 15 lines and a new total
@@ -488,12 +490,17 @@ pictures was opened and read at full size)
    against a drawing". The south edge is at y = -0.5 ft. The plane kept its path through
    four solves and carries the condition and its two lines.
 
-Also run by hand on the virtual display and looked at, not in the script: the sample's
-hand-entered hip roof (it is drawn, in copper, and an edit key on it is refused with the
-reason in a red card); an edge made a gable on a plane that carried a condition (the gable
-wall is drawn under its rakes, and an amber card names what was lost); a key pressed with
-nothing selected (refused, said why); the wheel scrolling the inspector and the sheet; the
-main window made smaller (the panels keep their places).
+**The window was rebuilt once more the same day**, for the whole building (next section
+but one). The eight steps above were run again in it and every picture opened again; the
+figures are the same. What reads differently in the pictures: the panels float over the
+model under a sky; the switch between 3D and plan is in the browser at the left, beside
+"on foot"; the walls under the roof are still the for-the-eye ones, because this job has
+no walls of its own.
+
+Seen by hand in the window before that rebuild, and not repeated since: the sample's
+hand-entered hip roof, drawn in copper, with an edit key on it refused in a red card; an
+edge made a gable on a plane that carried a condition, with an amber card naming what was
+lost; the wheel scrolling both panels; the window made smaller.
 
 **Hand checks**
 * After the session the south plane is a trapezoid 40 ft at the eave and 15.4 ft at the
@@ -593,6 +600,129 @@ a graphics card.
   roofs still go through D1's checks only.
 
 ---
+
+### Seventh judgment: the redrawn windows were honest about most things and not about twelve
+
+A fresh agent (Opus), working only in scratch copies, drove the redrawn windows in nine
+sessions on jobs of its own (no roof, a roof path that names nothing, a hand-entered roof
+with Unknown values, eaves at height 0, a sliver plane, edges gabled until one plane was
+left), read every picture, and probed the new `view` functions from a crate of its own.
+
+**What held.** No panic in any session. A refused edit left the "Saved" chip right. Every
+edit key with nothing selected, on a hand-entered plane, and on the last sloping edge was
+refused with a reason. Values set in the window went in as Assumed with the required
+source and were listed under "To settle". The walls, fascia and ground could not be
+selected and were in no total. Apart from what follows, the two windows agreed with each
+other and with the command line on every surface and length compared.
+
+**What it found, and what was done.**
+
+| # | What the seventh judge found | What was done | Regression test |
+|---|---|---|---|
+| J7-1 | **A Known zero.** A roof with no planes, or a roof path naming nothing, showed "Surface 0.00 SF" in Known ink | A sum over nothing has no figure and is Unknown; the windows say "none". A roof named on the command line has to be a roof in the job | `a_roof_summary_does_not_say_more_than_it_knows` |
+| J7-2 | **Known, and wrong.** The predominant pitch was named, Known, while a plane with no pitch was left out of it | No predominant pitch is named when a plane has no pitch or no surface, or when two pitches cover the same surface; the windows say why | same |
+| J7-3 | A parapet's length showed as unknown in the sheet (the command line had 20 LF), and the low-slope roof looked clean in the main window with an Unknown height on it | A parapet is one of the roof's lines by its plan length; "To settle" lists every flagged value in the job, grouped by what it rests on | same |
+| J7-4 | A failed save was shown with the green dot of success | How an action went is carried as what happened (done, warned, refused), not read back out of its words; a failed save is red | |
+| J7-5 | **Rounded away.** A pitch of 0.004 in 12 showed as "0:12" on the roof and "0.004:12" in the inspector; 6.125 showed as 6.12 | A pitch is said by the model to the places it keeps (`view::pitch_said`), everywhere | `a_roof_summary_counts_facets...` |
+| J7-6 | **Rounded up.** 0.0005 SF showed as "0.001 SF" | A figure that would print as zero is shown as the model has it, to four places, not to the first place that is not zero | same |
+| J7-7 | A long message pushed the sheet wider than its window | The message is clipped to its bar | |
+| J7-8 | The red of a line with no length and the red of a ridge could not be told apart | Red is Unknown and nothing else: a ridge is magenta, and a line with no length is drawn broken as well as red | |
+| J7-9 | A selected facet's label lost its flag | It keeps a dot on the blue | |
+| J7-10 | Line labels on the roof rounded to the whole inch, so a very short line read 0' 0" | Labels are to the sixteenth, like the sheet | |
+| J7-11 | The inspector's cost-line cards dropped each value's flag, source and note | Each step carries its chip and, under it, what it rests on | |
+| J7-12 | A surface under 0.005 SF was 0 SQ, Known; `figure(-inf)` lost its sign; a job with no roof opened to a blank window that never said so | Too small to say in squares is no figure, not zero; a figure that is not a number says so; a job with nothing in it says so | `a_roof_summary_does_not_say_more_than_it_knows`, `a_roof_summary_counts_facets...` |
+
+**These fixes have not been judged.** The windows they were made in were then rebuilt for
+the whole building (next section), and that rebuild has not been judged either.
+
+## The whole building. What was run and what it showed
+
+**The owner's instruction** (2026-11-11, on seeing the redrawn roof window): think of this
+for a whole house with its MEP; see what is out there; build your own; it should feel like
+a video game and have the power of BIM. What was looked at and decided is DECISIONS.md
+call 26. This is the first stretch of it. It is outside the brief's numbered deliverables
+and is not described as one of them.
+
+**How it is run:** `demos/house.sh`. It writes the sample house (`plumbline house`), checks
+it, prints its takeoff (`plumbline takeoff`) and checks four of its figures against hand
+arithmetic, then drives the real program with a real pointer and keyboard on a virtual
+display and has it save a picture of both windows after each of eight steps. It ends by
+saving the job from the window and comparing it byte for byte with what was opened. It
+exits non-zero if any step fails. The 16 pictures and the takeoff are in
+`demos/captured/house/`.
+
+**The job** is made up: two storeys, 40 ft by 28 ft, under a hip roof solved from its
+footprint. 16 walls with 9 doors and 17 windows, 2 floors, 9 systems, 51 runs (15 ducts,
+31 pipes, a conduit and 4 cables), 5 pieces of equipment and 22 fixtures. Sizes a designer
+would work out are entered Assumed, with the source "sized by rule of thumb; no load
+calculation has been done". One hot-water branch has no size at all.
+
+**What was run and what it showed** (output of `demos/house.sh`, exit 0; every picture was
+opened and read at full size)
+
+1. *The model.* The file passes `check`: it loads, its measures match its geometry, and
+   saving it writes the same bytes.
+2. *The takeoff at the command line.* First floor: 8 walls, 210.00 LF, 2,026.00 SF of face
+   and 1,793.02 SF less openings, 1,120.00 SF of floor. Supply air: 13 runs, 195.00 LF, in
+   four sizes, every size flagged Assumed. Hot water: 8 runs, 50.00 LF; its run with no
+   size is on a line of its own, flagged Unknown, with its 9.40 LF.
+3. *The house* (`01-model.png`). The whole building under a sky, lit by a sun, with a
+   shadow on the ground: walls with their windows and front door cut in them, the roof with
+   its lines and facet labels. On the left a browser of storeys, what is on show, and the
+   nine systems, each with its colour and its length. On the right what the job comes to,
+   storey by storey, then the roof, then what is not yet settled.
+4. *Seen through* (`02`). `X` draws the building as glass with its edges kept. The ducts,
+   pipes, cables, equipment and fixtures inside are drawn at their own size in their
+   system's colour.
+5. *One system picked out* (`03`, `04`). A click on "Supply air" in the browser: its ducts
+   keep their colour, everything on other systems goes grey, and the inspector gives its
+   takeoff. The sheet, on its Mechanical tab, lists the same lines. Then "Hot water", with
+   the sheet on Plumbing: the line with no size is red and says Unknown in both windows.
+6. *One storey alone* (`05`). The first floor with everything above it lifted off: rooms,
+   doors, ducts in the soffit, fixtures. The sheet, on its Building tab, lists each wall's
+   length, face, openings and net.
+7. *On plan* (`06`, `07`). `T`: a true plan of that storey with what runs in it. A click on
+   the plan selects what is under the pointer and the inspector lists its values, each
+   with its flag and source, and the status bar reads the pointer's position.
+8. *On foot* (`08`). `V`: standing in the living room at eye height, with the sun coming
+   through the windows onto the floor and a supply duct overhead.
+9. *What was left in the saved job.* It was saved from the window with F2 and is byte for
+   byte the file that was opened. Looking changed nothing.
+
+**Hand checks** (each is a test in `crates/world/tests/world.rs`)
+* The first floor's south wall: 40 ft by 10 ft is 400 SF. A 3 ft by 6.67 ft door and two
+  5 ft by 5 ft windows are 70.01 SF. Net 329.99 SF. A wall with no openings has an opening
+  area of 0, Known, and nets its face.
+* An opening that runs past the end of its wall, or lies over another, leaves the wall
+  with no net area and the reason; one with no width leaves it with no opening area
+  either. The gross face stands in each case.
+* The first-floor trunk, west: up 3.4 ft, south 8 ft, west 17 ft is 28.4 LF and two bends.
+  At 16 in by 8 in it is 4 ft round: 113.6 SF of duct, Assumed because its size is.
+  A 6 in round branch 11 ft long is π × 0.5 × 11 = 17.2788 SF.
+* Hot water at 1/2 in: two branches of 1.9 LF and two of 2.5 LF, 8.8 LF.
+* Every run and every placed thing in the job is on some line of some system's takeoff;
+  every wall, floor, run and placed thing is either drawn or listed as not drawn, with
+  why. Take a storey's elevation away and its 8 walls and its floor are listed, not drawn.
+* The sample house saves and loads to the same bytes with nothing stale. A file that names
+  a system that is not in the job does not load.
+
+**What is not built**
+* **Nothing of the building can be drawn or edited in the window.** It is entered in a
+  file or in code, and read, walked and taken off in the window. The roof's edits still
+  work.
+* **Fittings and connections.** A bend is counted; it is not an element, and nothing
+  checks that one run meets the next or that a fixture is actually supplied.
+* **Clashes.** A pipe can pass through a duct or a wall and nothing says so.
+* **Rooms, structure, stairs, a foundation.**
+* **Cost.** No recipe exists for a pipe or a duct. A cost line on one can use its
+  `true_length`, `bends` and `surface_area`, and none has been written.
+* **IFC in or out** (D6).
+* **A real desktop and a real graphics card.** Everything ran on a virtual display with
+  a software renderer, at a frame every second or so. Whether it is smooth on real
+  hardware has not been seen. The code is written to be (the camera eases; nothing is
+  rebuilt on a hover), and that is a claim about the code, not a measurement.
+* **Judgment.** No independent judge has tried to break the building model or the
+  rebuilt window.
 
 ## D3. How its demonstration will be run (written before any D3 work)
 

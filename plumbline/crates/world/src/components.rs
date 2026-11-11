@@ -72,6 +72,23 @@ pub enum Kind {
     /// A condition as a recipe: the cost lines an element gets when the condition is
     /// applied to it. It is an element of the job so it can be read and edited there.
     Condition,
+    // The rest of the building (see `building.rs`).
+    /// One floor of the building and everything that stands on it.
+    Storey,
+    Wall,
+    Door,
+    Window,
+    /// The floor itself: IFC's slab.
+    Floor,
+    /// A set of ducts, pipes, cables, equipment and fixtures that work as one.
+    System,
+    Duct,
+    Pipe,
+    Conduit,
+    Cable,
+    Equipment,
+    /// What a system ends at in a room: a register, a lavatory, a receptacle, a light.
+    Fixture,
 }
 
 impl Kind {
@@ -91,6 +108,18 @@ impl Kind {
             Kind::PitchBreak => "break",
             Kind::Parapet => "parapet",
             Kind::Condition => "condition",
+            Kind::Storey => "storey",
+            Kind::Wall => "wall",
+            Kind::Door => "door",
+            Kind::Window => "window",
+            Kind::Floor => "floor",
+            Kind::System => "system",
+            Kind::Duct => "duct",
+            Kind::Pipe => "pipe",
+            Kind::Conduit => "conduit",
+            Kind::Cable => "cable",
+            Kind::Equipment => "equipment",
+            Kind::Fixture => "fixture",
         }
     }
     pub fn is_area(self) -> bool {
@@ -118,6 +147,16 @@ impl Kind {
             &[("plan_length", "LF"), ("face_area", "SF")]
         } else if self.is_run() {
             &[("plan_length", "LF"), ("true_length", "LF")]
+        } else if self == Kind::Wall {
+            &[("plan_length", "LF"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF")]
+        } else if matches!(self, Kind::Door | Kind::Window) {
+            &[("opening_area", "SF")]
+        } else if self == Kind::Floor {
+            &[("plan_area", "SF")]
+        } else if self == Kind::Duct {
+            &[("true_length", "LF"), ("bends", "EA"), ("surface_area", "SF")]
+        } else if matches!(self, Kind::Pipe | Kind::Conduit | Kind::Cable) {
+            &[("true_length", "LF"), ("bends", "EA")]
         } else {
             &[]
         }

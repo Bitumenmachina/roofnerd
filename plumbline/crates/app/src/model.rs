@@ -7,8 +7,9 @@
 use std::path::PathBuf;
 
 use bevy::prelude::*;
+use plumbline_world::building::{self, Placement, StoreyTotals, SystemTakeoff};
 use plumbline_world::value::Status;
-use plumbline_world::{roof, view, Condition, Job, JobInfo, Kind, Measure, Pitch, Run, Solved};
+use plumbline_world::{roof, view, Condition, Discipline, Job, JobInfo, Kind, Measure, Pitch, Run, Solved};
 
 /// The source written on a value set in the 3D view.
 pub const SOURCE: &str = "set in the 3D view; not yet confirmed against a drawing";
@@ -19,6 +20,56 @@ pub enum Entry {
     Move,
 }
 
+/// How the last action went. Said by what happened, not read back out of the words.
+#[derive(Clone, Copy, PartialEq)]
+pub enum Tone {
+    Done,
+    /// Done, with something the estimator has to know about.
+    Warned,
+    Refused,
+}
+
+/// Which table the sheet window is on.
+#[derive(Clone, Copy, PartialEq)]
+pub enum Tab {
+    Roof,
+    Building,
+    Of(Discipline),
+}
+
+/// What of the building is on show.
+#[derive(Clone, PartialEq)]
+pub struct Show {
+    pub architecture: bool,
+    pub roof: bool,
+    pub mechanical: bool,
+    pub electrical: bool,
+    pub plumbing: bool,
+    /// The building drawn as glass, so what runs inside it can be seen.
+    pub ghost: bool,
+    /// One storey alone, by path, with everything above it lifted off.
+    pub storey: Option<String>,
+}
+
+impl Show {
+    pub fn discipline(&self, d: Discipline) -> bool {
+        match d {
+            Discipline::Architecture => self.architecture,
+            Discipline::Mechanical => self.mechanical,
+            Discipline::Electrical => self.electrical,
+            Discipline::Plumbing => self.plumbing,
+        }
+    }
+    pub fn toggle(&mut self, d: Discipline) {
+        match d {
+            Discipline::Architecture => self.architecture = !self.architecture,
+            Discipline::Mechanical => self.mechanical = !self.mechanical,
+            Discipline::Electrical => self.electrical = !self.electrical,
+            Discipline::Plumbing => self.plumbing = !self.plumbing,
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct Doc {
     pub job: Job,
@@ -27,30 +78,52 @@ pub struct Doc {
     pub roof: Option<String>,
     /// The selected element, by path.
     pub selected: Option<String>,
-    /// The plane the pointer is over.
+    /// The element the pointer is over.
     pub hover: Option<String>,
     /// What the last action did, or why it was refused.
     pub message: String,
-    /// Goes up on every change, so views know to draw again.
+    pub tone: Tone,
+    /// Goes up on every change, so the panels know to draw again.
     pub revision: u64,
+    /// Goes up when what is drawn in space changes: an edit, or what is on show.
+    pub geometry: u64,
     /// A value being typed: which field, and the text so far.
     pub entry: Option<(Entry, String)>,
     /// The plan point the model's origin is drawn at, in feet. The view is drawn relative
     /// to it in 32-bit numbers; the model itself stays 64-bit.
     pub origin: [f64; 3],
     pub framed: bool,
-    /// Where the pointer is on the roof, in plan feet and height.
+    /// Where the pointer is on the model, in plan feet and height.
     pub pointer: Option<[f64; 3]>,
     pub shots: u32,
     /// Changed since it was last saved.
     pub edited: bool,
-    /// Looking straight down, as a roof plan is drawn.
+    /// Looking straight down, as a plan is drawn.
     pub plan: bool,
+    /// On foot inside the model, at eye height.
+    pub walk: bool,
+    pub show: Show,
+    pub tab: Tab,
 }
 
 impl Doc {
+    /// The panels have something new to show.
     pub fn touch(&mut self) {
         self.revision += 1;
+    }
+    /// What is drawn in space has changed too.
+    pub fn redraw(&mut self) {
+        self.revision += 1;
+        self.geometry += 1;
+    }
+    pub fn say(&mut self, tone: Tone, message: impl Into<String>) {
+        self.tone = tone;
+        self.message = message.into();
+    }
+    pub fn select(&mut self, path: &str) {
+        self.selected = Some(path.to_string());
+        self.say(Tone::Done, format!("selected {path}"));
+        self.touch();
     }
 }
 
@@ -87,6 +160,13 @@ pub struct LineInfo {
     pub planes: Vec<String>,
 }
 
+/// A system as the windows list it.
+pub struct SystemInfoRow {
+    pub takeoff: SystemTakeoff,
+    /// How many of its elements are drawn.
+    pub drawn: usize,
+}
+
 #[derive(Resource, Default)]
 pub struct Snapshot {
     pub revision: u64,
@@ -99,7 +179,7 @@ pub struct Snapshot {
     pub totals: Option<view::RoofTotals>,
     pub planes: Vec<PlaneInfo>,
     pub lines: Vec<LineInfo>,
-    /// What the solve had to say, and the roof's own flagged values: what, and why.
+    /// What is not yet Known, grouped by what it rests on: status, what, why.
     pub notes: Vec<(Status, String, String)>,
     /// The selected element with every value on it.
     pub selected: Option<view::ElementRows>,
@@ -107,8 +187,28 @@ pub struct Snapshot {
     pub rises_from: Option<(String, usize)>,
     /// A selected plane's corners as plan east, plan north and height, in feet.
     pub corners: Vec<[f64; 3]>,
-    /// The roof's extent on plan, low corner and high corner, and its highest point.
+    /// Everything in the job on plan, low corner and high corner, and its highest point.
     pub extent: Option<([f64; 2], [f64; 2], f64)>,
+    /// The rest of the building, placed in space.
+    pub drawn: Vec<Placement>,
+    /// What has no shape to draw, and why.
+    pub not_drawn: Vec<(String, String)>,
+    pub storeys: Vec<StoreyTotals>,
+    pub systems: Vec<SystemInfoRow>,
+    /// How many elements of each discipline are drawn.
+    pub counts: Vec<(Discipline, usize)>,
+    /// Every wall and floor as the sheet lists it: storey path, then the element's rows.
+    pub fabric: Vec<(String, view::ElementRows)>,
+}
+
+impl Snapshot {
+    pub fn system(&self, path: &str) -> Option<&SystemTakeoff> {
+        self.systems.iter().map(|s| &s.takeoff).find(|s| s.path == path)
+    }
+    /// The colour an element of the building is drawn in, by the system it is on.
+    pub fn classification(&self, system: Option<&String>) -> &str {
+        system.and_then(|p| self.system(p)).map(|s| s.classification.as_str()).unwrap_or("")
+    }
 }
 
 /// Read the world again whenever it has changed.
@@ -125,6 +225,17 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     if doc.selected.as_ref().is_some_and(|sel| doc.job.find(sel).is_none()) {
         doc.selected = None;
     }
+    let mut lo = [f64::MAX; 2];
+    let mut hi = [f64::MIN; 2];
+    let mut top = f64::MIN;
+    let mut reach = |p: [f64; 3]| {
+        lo = [lo[0].min(p[0]), lo[1].min(p[1])];
+        hi = [hi[0].max(p[0]), hi[1].max(p[1])];
+        top = top.max(p[2]);
+    };
+
+    // The roof on show.
+    let mut solved: Vec<String> = Vec::new();
     if let Some(roof_path) = doc.roof.clone() {
         s.roof_name = elements.iter().find(|e| e.path == roof_path).map(|e| e.name.clone()).unwrap_or_default();
         let under: Vec<String> = doc.job.children().get(&roof_path).map(|c| c.values().cloned().collect()).unwrap_or_default();
@@ -134,6 +245,9 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
         let measure = |e: Entity, name: &str| w.get::<Measure>(e).and_then(|m| m.0.get(name)).map(|d| (d.value, d.status)).unwrap_or((None, Status::Unknown));
         for el in elements.iter().filter(|e| under.contains(&e.path)) {
             let Some(&e) = index.get(&el.path) else { continue };
+            if w.get::<Solved>(e).is_some() {
+                solved.push(el.path.clone());
+            }
             if el.kind.is_area() {
                 let (area, area_status) = measure(e, "surface_area");
                 let pitch = w.get::<Pitch>(e).map(|p| (p.0.value, p.0.status)).unwrap_or((None, Status::Unknown));
@@ -148,7 +262,8 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
                     solid: solid.iter().find(|p| p.path == el.path).cloned(),
                 });
             } else if el.kind.is_run() {
-                let (length, status) = measure(e, "true_length");
+                // A parapet stands on the plan; every other line is measured on the slope.
+                let (length, status) = measure(e, if el.kind == Kind::Parapet { "plan_length" } else { "true_length" });
                 let run = w.get::<Run>(e);
                 let planes: Vec<String> = run.map(|r| r.planes.clone()).unwrap_or_default();
                 // A line's height comes from a plane it lies on.
@@ -157,40 +272,87 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
                 s.lines.push(LineInfo { path: el.path.clone(), name: el.name.clone(), kind: el.kind, length, status, ends, planes });
             }
         }
-        if let Some(el) = elements.iter().find(|e| e.path == roof_path) {
-            for r in el.rows.iter().filter(|r| r.label == "solved roof") {
-                s.notes.push((r.status, if r.text == "not solved" { "Not solved".to_string() } else { "Solved, with a note".to_string() }, r.note.clone()));
-            }
-            for r in el.rows.iter().filter(|r| r.status != Status::Known && r.label != "solved roof") {
-                let mut what = r.label.clone();
-                if let Some(first) = what.get_mut(0..1) {
-                    first.make_ascii_uppercase();
-                }
-                s.notes.push((r.status, format!("{what} of {}: {}", s.roof_name, crate::theme::trade(&r.text)), r.basis.clone()));
-            }
-        }
-        let placed: Vec<&roof::SolidPlane> = s.planes.iter().filter_map(|p| p.solid.as_ref()).collect();
-        if !placed.is_empty() {
-            let mut lo = [f64::MAX; 2];
-            let mut hi = [f64::MIN; 2];
-            let mut top = f64::MIN;
-            for plane in &placed {
-                for p in &plane.points {
-                    lo = [lo[0].min(p[0]), lo[1].min(p[1])];
-                    hi = [hi[0].max(p[0]), hi[1].max(p[1])];
-                    top = top.max(plane.height_at(*p));
-                }
-            }
-            s.extent = Some((lo, hi, top));
-            // The view's origin: the middle of the roof on plan, at the datum. Set once,
-            // so the picture does not jump when an edit moves the roof.
-            if !doc.framed {
-                doc.origin = [(lo[0] + hi[0]) / 2.0, (lo[1] + hi[1]) / 2.0, 0.0];
+        for plane in s.planes.iter().filter_map(|p| p.solid.as_ref()) {
+            for p in &plane.points {
+                reach([p[0], p[1], plane.height_at(*p)]);
             }
         }
         s.totals = Some(view::roof_totals(&mut doc.job, &roof_path));
         s.roof_path = roof_path;
     }
+
+    // The rest of the building.
+    let (drawn, not_drawn) = building::placements(&mut doc.job);
+    for p in &drawn {
+        match &p.shape {
+            building::Shape::Wall { a, b, base, height, .. } => {
+                reach([a[0], a[1], base + height]);
+                reach([b[0], b[1], base + height]);
+            }
+            building::Shape::Floor { boundary, top, .. } => boundary.iter().for_each(|q| reach([q[0], q[1], *top])),
+            // What runs out of the building (a service, a drain) does not set the frame.
+            _ => {}
+        }
+    }
+    for d in [Discipline::Architecture, Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing] {
+        s.counts.push((d, drawn.iter().filter(|p| p.discipline == d).count()));
+    }
+    s.systems = building::takeoff(&mut doc.job).into_iter().map(|t| SystemInfoRow { drawn: drawn.iter().filter(|p| p.system.as_deref() == Some(t.path.as_str())).count(), takeoff: t }).collect();
+    s.storeys = building::storey_totals(&mut doc.job);
+    for el in elements.iter().filter(|e| matches!(e.kind, Kind::Wall | Kind::Floor)) {
+        if let Some(p) = drawn.iter().find(|p| p.path == el.path).and_then(|p| p.storey.clone()) {
+            s.fabric.push((p, el.clone()));
+        } else {
+            s.fabric.push((String::new(), el.clone()));
+        }
+    }
+    s.drawn = drawn;
+    s.not_drawn = not_drawn;
+
+    if lo[0] <= hi[0] {
+        s.extent = Some((lo, hi, top));
+        // The view's origin: the middle of the building on plan, at the datum. Set once,
+        // so the picture does not jump when an edit moves something.
+        if !doc.framed {
+            doc.origin = [(lo[0] + hi[0]) / 2.0, (lo[1] + hi[1]) / 2.0, 0.0];
+        }
+    }
+
+    // What is not yet Known. Solved planes and lines rest on their roof's footprint, which
+    // is listed itself; a condition's recipe is a blank form, not this job's unknowns.
+    let mut groups: Vec<(Status, String, Vec<String>)> = Vec::new();
+    for el in &elements {
+        if el.kind == Kind::Condition || solved.contains(&el.path) {
+            continue;
+        }
+        for r in el.rows.iter().filter(|r| r.status != Status::Known) {
+            if r.label == "solved roof" {
+                s.notes.push((r.status, if r.text == "not solved" { format!("{}: not solved", el.name) } else { format!("{}: solved, with a note", el.name) }, r.note.clone()));
+                continue;
+            }
+            if r.derived {
+                continue;
+            }
+            let mut what = r.label.clone();
+            if let Some(first) = what.get_mut(0..1) {
+                first.make_ascii_uppercase();
+            }
+            let said = format!("{what} of {}: {}", el.name, crate::theme::trade(&r.text));
+            match groups.iter_mut().find(|g| g.0 == r.status && g.1 == r.basis) {
+                Some(g) => g.2.push(said),
+                None => groups.push((r.status, r.basis.clone(), vec![said])),
+            }
+        }
+    }
+    for (path, why) in &s.not_drawn {
+        s.notes.push((Status::Unknown, format!("{path} is not drawn"), why.clone()));
+    }
+    for (status, why, said) in groups {
+        let what = if said.len() == 1 { said[0].clone() } else { format!("{} values, the first: {}", said.len(), said[0]) };
+        s.notes.push((status, what, why));
+    }
+    s.notes.sort_by(|a, b| b.0.cmp(&a.0));
+
     if let Some(sel) = doc.selected.clone() {
         s.rises_from = doc.job.find(&sel).and_then(|e| doc.job.world.get::<Solved>(e)).and_then(|x| x.edge.map(|edge| (x.from.clone(), edge)));
         if let Some(solid) = s.planes.iter().find(|p| p.path == sel).and_then(|p| p.solid.as_ref()) {

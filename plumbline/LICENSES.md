@@ -14,7 +14,7 @@ Unlicense; the only exception clause accepted is `WITH LLVM-exception`).
 `tools/licenses.sh --self-test` checks that logic against 24 cases, including
 `GPL-3.0 AND (MIT OR Apache-2.0)`, which has to fail.
 
-The table has 343 rows for 332 crates; 10 are linked in more than one version
+The table has 345 rows for 334 crates; 10 are linked in more than one version
 (`foldhash`, `hashbrown`, `itertools`, `linux-raw-sys`, `miniz_oxide`, `rustc-hash`, `rustix`, `syn`, `thiserror`, `thiserror-impl`).
 
 Direct dependencies: `bevy_ecs` 0.20.1, `serde` 1 and `serde_json` 1 in the world crate, and
@@ -52,6 +52,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | bevy_a11y | 0.20.1 | MIT OR Apache-2.0 |
 | bevy_animation_macros | 0.20.1 | MIT OR Apache-2.0 |
 | bevy_animation | 0.20.1 | MIT OR Apache-2.0 |
+| bevy_anti_alias | 0.20.1 | MIT OR Apache-2.0 |
 | bevy_app | 0.20.1 | MIT OR Apache-2.0 |
 | bevy_asset_macros | 0.20.1 | MIT OR Apache-2.0 |
 | bevy_asset | 0.20.1 | MIT OR Apache-2.0 |
@@ -86,6 +87,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | bevy_pbr | 0.20.1 | MIT OR Apache-2.0 |
 | bevy_picking | 0.20.1 | MIT OR Apache-2.0 |
 | bevy_platform | 0.20.1 | MIT OR Apache-2.0 |
+| bevy_post_process | 0.20.1 | MIT OR Apache-2.0 |
 | bevy_ptr | 0.20.1 | MIT OR Apache-2.0 |
 | bevy_reflect_derive | 0.20.1 | MIT OR Apache-2.0 |
 | bevy_reflect | 0.20.1 | MIT OR Apache-2.0 |

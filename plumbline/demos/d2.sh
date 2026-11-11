@@ -17,7 +17,7 @@ ICD="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
 [ -e "$ICD" ] || { echo "demos/d2.sh needs a Vulkan driver; none at $ICD (set VK_ICD_FILENAMES)"; exit 2; }
 cargo build --quiet
 P="$PWD/target/debug/plumbline"; APP="$PWD/target/debug/plumbline-app"
-OUT="${1:-$PWD/demos/captured/d2}"; mkdir -p "$OUT"; rm -f "$OUT"/*.png
+OUT="${1:-$PWD/demos/captured/d2}"; mkdir -p "$OUT"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 
 echo "== The job: the sample, plus an L-shaped house solved from its footprint =="
@@ -38,38 +38,39 @@ cat > "$T/session.sh" <<SESSION
 export VK_ICD_FILENAMES="$ICD" WGPU_BACKEND=vulkan PLUMBLINE_SHOTS="$OUT"
 "$APP" "$T/job.json" > "$T/app.log" 2>&1 &
 APP_PID=\$!
-for i in \$(seq 1 60); do xdotool search --name "plumbline: roof" >/dev/null 2>&1 && break; sleep 1; done
-sleep 18   # the first frames are slow on a software renderer
-xdotool windowfocus "\$(xdotool search --name 'plumbline: roof' | head -1)"; sleep 1
-shot() { xdotool key F12; sleep 5; }
+for i in \$(seq 1 60); do xdotool search --name "plumbline: model" >/dev/null 2>&1 && break; sleep 1; done
+sleep 40   # the first frames are slow on a software renderer
+xdotool windowfocus "\$(xdotool search --name 'plumbline: model' | head -1)"; sleep 1
+shot() { xdotool key F12; sleep 12; }
 shot                                                    # 01 as opened
-xdotool mousemove 640 505; sleep 1; xdotool click 1; sleep 2; xdotool mousemove 646 509; sleep 1
+xdotool mousemove 940 470; sleep 1; xdotool click 1; sleep 3; xdotool mousemove 946 474; sleep 2
 shot                                                    # 02 a plane picked with the mouse
-xdotool key equal; sleep 2; xdotool key equal; sleep 2
+xdotool key equal; sleep 3; xdotool key equal; sleep 3
 shot                                                    # 03 its pitch raised twice: 6 to 8 in 12
-xdotool key bracketright; sleep 2
+xdotool key bracketright; sleep 3
 shot                                                    # 04 its eave moved out 6 in
-xdotool key p; sleep 1; xdotool type --delay 120 "9:12"; sleep 1
+xdotool key p; sleep 2; xdotool type --delay 300 "9:12"; sleep 2
 shot                                                    # 05 a pitch being typed
-xdotool key Return; sleep 2
+xdotool key Return; sleep 3
 shot                                                    # 06 the typed pitch set
-xdotool key c; sleep 2
+xdotool key c; sleep 3
 shot                                                    # 07 a condition given to the surface
-xdotool mousemove 1880 500; sleep 1; for i in \$(seq 1 16); do xdotool click 5; sleep 0.2; done; sleep 1
-xdotool mousemove 1300 500; sleep 1; for i in \$(seq 1 5); do xdotool click 5; sleep 0.2; done; sleep 1
-xdotool mousemove 646 509; sleep 1; xdotool key t; sleep 2
+xdotool mousemove 2050 500; sleep 1; for i in \$(seq 1 16); do xdotool click 5; sleep 0.4; done; sleep 1
+xdotool mousemove 1400 500; sleep 1; for i in \$(seq 1 9); do xdotool click 5; sleep 0.4; done; sleep 1
+xdotool mousemove 946 474; sleep 1; xdotool key t; sleep 9
 shot                                                    # 08 the same roof on plan; the sheet scrolled to its cost lines
-xdotool key F2; sleep 2                                 # save
+xdotool key F2; sleep 3                                 # save
 kill \$APP_PID; wait \$APP_PID 2>/dev/null
 SESSION
 chmod +x "$T/session.sh"
-timeout 400 xvfb-run -a -s "-screen 0 2320x920x24" "$T/session.sh" || true
+timeout 900 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
 ls "$OUT" | tr '\n' ' '; echo
 for n in 01 02 03 04 05 06 07 08; do
-  [ -s "$OUT/$n-roof.png" ] && [ -s "$OUT/$n-sheet.png" ] || { echo "FAIL: no picture $n of both windows"; exit 1; }
+  # Each picture has to be from this run, not left over from an earlier one.
+  [ "$OUT/$n-model.png" -nt "$T/before.json" ] && [ "$OUT/$n-sheet.png" -nt "$T/before.json" ] || { echo "FAIL: no picture $n of both windows from this run"; exit 1; }
 done
-echo "  16 pictures saved to $OUT (roof and sheet, after each of 8 steps)"
+echo "  16 pictures saved to $OUT (model and sheet, after each of 8 steps)"
 
 echo
 echo "== What the session left in the saved job =="

@@ -36,14 +36,14 @@ pub struct ElementRows {
     pub notes: Vec<String>,
 }
 
-fn num(x: f64) -> String {
+pub fn num(x: f64) -> String {
     // Adding zero shows a "-0" from a file as plain 0.
     let s = format!("{:.4}", x + 0.0);
     let s = s.trim_end_matches('0').trim_end_matches('.');
     s.to_string()
 }
 
-fn entered<T>(path: &str, label: &str, v: &Val<T>, show: impl Fn(&T) -> String) -> Row {
+pub(crate) fn entered<T>(path: &str, label: &str, v: &Val<T>, show: impl Fn(&T) -> String) -> Row {
     let text = match &v.value {
         Some(x) => format!("{} {}", show(x), v.unit).trim().to_string(),
         None => "unknown".to_string(),
@@ -52,7 +52,7 @@ fn entered<T>(path: &str, label: &str, v: &Val<T>, show: impl Fn(&T) -> String) 
 }
 
 /// An entered length, shown in the unit it was entered in: `30 in`, `2.5 ft`, `25' 6 1/2"`.
-fn length(path: &str, label: &str, v: &Val<Len>) -> Row {
+pub(crate) fn length(path: &str, label: &str, v: &Val<Len>) -> Row {
     let text = match &v.value {
         Some(len) => units::show_length(len, &v.unit),
         None => "unknown".to_string(),
@@ -87,6 +87,7 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         }
         d
     };
+    let names: std::collections::HashMap<String, String> = order.iter().filter_map(|e| w.get::<Node>(*e)).map(|n| (n.path.clone(), n.name.clone())).collect();
     for &e in &order {
         let node = w.get::<Node>(e).expect("every element has a node");
         let kind = *w.get::<Kind>(e).expect("every element has a kind");
@@ -146,6 +147,7 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
                 rows.push(entered(p, &format!("unit cost: {}", line.description), &line.unit_cost, |x| num(*x)));
             }
         }
+        rows.extend(crate::building::rows(w, e, p, &names));
         if let Some(c) = w.get::<WorkCode>(e) {
             rows.push(entered(p, "schedule code", &c.wbs, |s| s.clone()));
         }
@@ -228,9 +230,14 @@ pub struct Sum {
     pub missing: Vec<String>,
 }
 
-fn sum_of(unit: &'static str, figures: &[(String, Option<f64>, Status)]) -> Sum {
+pub(crate) fn sum_of(unit: &'static str, figures: &[(String, Option<f64>, Status)]) -> Sum {
     let missing: Vec<String> = figures.iter().filter(|f| f.1.is_none()).map(|f| f.0.clone()).collect();
-    let status = if figures.is_empty() { Status::Known } else { figures.iter().map(|f| f.2).max().unwrap_or(Status::Unknown) };
+    // A sum over nothing is not a Known zero: there is nothing there to total, and a view
+    // has to say so (`members` is 0) instead of showing 0.00.
+    if figures.is_empty() {
+        return Sum { value: None, unit, status: Status::Unknown, members: 0, missing };
+    }
+    let status = figures.iter().map(|f| f.2).max().unwrap_or(Status::Unknown);
     let value = if missing.is_empty() { Some(crate::value::round4(figures.iter().filter_map(|f| f.1).sum())) } else { None };
     Sum { value, unit, status: if missing.is_empty() { status } else { Status::Unknown }, members: figures.len(), missing }
 }
@@ -243,20 +250,35 @@ pub struct RoofTotals {
     /// How many planes the roof has: its facets, as a roof report counts them.
     pub facets: usize,
     /// The pitch that covers the most of the roof's surface, in inches in 12, with the
-    /// worst status among the planes at that pitch. None when no plane has both a pitch
-    /// and a surface.
+    /// worst status among the planes at that pitch. None when it cannot be said: a plane
+    /// has no pitch or no surface (it might be the one that tips it), two pitches cover
+    /// the same surface, or there are no planes. `pitch_note` says which.
     pub predominant_pitch: Option<(f64, Status)>,
+    pub pitch_note: String,
+}
+
+/// A pitch as the trade says it, to the four places the model keeps: `6:12`, `6.125:12`.
+pub fn pitch_said(rise: f64) -> String {
+    format!("{}:12", num(rise))
 }
 
 /// A surface in SF, said in roofing squares: one square is 100 SF. The same surface in
 /// the trade's other unit, carrying the same status and the same gaps.
 pub fn in_squares(surface: &Sum) -> Sum {
-    Sum { value: surface.value.map(|sf| crate::value::round4(sf / 100.0)), unit: "SQ", status: surface.status, members: surface.members, missing: surface.missing.clone() }
+    // A surface too small to show in squares at four places is not zero squares.
+    let squares = surface.value.map(|sf| crate::value::round4(sf / 100.0));
+    if surface.value.is_some_and(|sf| sf != 0.0) && squares == Some(0.0) {
+        return Sum { value: None, unit: "SQ", status: Status::Unknown, members: surface.members, missing: surface.missing.clone() };
+    }
+    Sum { value: squares, unit: "SQ", status: surface.status, members: surface.members, missing: surface.missing.clone() }
 }
 
 /// A figure as a person reads it on a sheet: thousands separated, to `decimals` places,
 /// with zeros kept so a column lines up. Formatting only; nothing is worked out here.
 pub fn figure(value: f64, decimals: usize) -> String {
+    if !value.is_finite() {
+        return "not a number".into();
+    }
     let text = format!("{:.*}", decimals, value.abs());
     let (whole, part) = text.split_once('.').unwrap_or((text.as_str(), ""));
     let mut grouped = String::new();
@@ -271,15 +293,12 @@ pub fn figure(value: f64, decimals: usize) -> String {
 }
 
 /// A figure to `decimals` places, unless that would print a figure that is not zero as
-/// zero: then to as many places as it takes to show it, up to the four the model keeps.
-/// A view may round; it may not round something away.
+/// zero: then it is shown to the four places the model keeps, exactly as the model has it.
+/// A view may round; it may not round something away, or up into something else.
 pub fn figure_shown(value: f64, decimals: usize) -> String {
-    let is_zero = |text: &str| !text.chars().any(|c| ('1'..='9').contains(&c));
-    let mut places = decimals;
-    let mut text = figure(value, places);
-    while value != 0.0 && is_zero(&text) && places < 4 {
-        places += 1;
-        text = figure(value, places);
+    let text = figure(value, decimals);
+    if value.is_finite() && value != 0.0 && !text.chars().any(|c| ('1'..='9').contains(&c)) {
+        return num(value);
     }
     text
 }
@@ -291,6 +310,8 @@ pub fn roof_totals(job: &mut Job, roof_path: &str) -> RoofTotals {
     // Surface by pitch, to find the pitch most of the roof is at.
     let mut by_pitch: Vec<(f64, f64, Status)> = Vec::new();
     let mut by_kind: Vec<(Kind, Vec<(String, Option<f64>, Status)>)> = Vec::new();
+    // Planes with no pitch or no surface: any one of them might be what tips the balance.
+    let mut unplaced: Vec<String> = Vec::new();
     // In job order, so the sheet reads the same every time.
     for &e in &job.order {
         let w = &job.world;
@@ -301,7 +322,11 @@ pub fn roof_totals(job: &mut Job, roof_path: &str) -> RoofTotals {
         let figure = |name: &str| w.get::<Measure>(e).and_then(|m| m.0.get(name)).map(|d| (d.value, d.status)).unwrap_or((None, Status::Unknown));
         if kind.is_area() {
             let (v, s) = figure("surface_area");
-            if let (Some(area), Some(pitch)) = (v, w.get::<Pitch>(e).and_then(|p| p.0.value.map(|x| (x, p.0.status)))) {
+            let pitch_of = w.get::<Pitch>(e).and_then(|p| p.0.value.map(|x| (x, p.0.status)));
+            if v.is_none() || pitch_of.is_none() {
+                unplaced.push(node.path.clone());
+            }
+            if let (Some(area), Some(pitch)) = (v, pitch_of) {
                 match by_pitch.iter_mut().find(|(p, _, _)| (*p - pitch.0).abs() < 1e-9) {
                     Some(entry) => {
                         entry.1 += area;
@@ -311,8 +336,9 @@ pub fn roof_totals(job: &mut Job, roof_path: &str) -> RoofTotals {
                 }
             }
             areas.push((node.path.clone(), v, s));
-        } else if kind.is_run() && *kind != Kind::Parapet {
-            let (v, s) = figure("true_length");
+        } else if kind.is_run() {
+            // A parapet stands on the plan: its length is its plan length.
+            let (v, s) = figure(if *kind == Kind::Parapet { "plan_length" } else { "true_length" });
             match by_kind.iter_mut().find(|(k, _)| k == kind) {
                 Some((_, list)) => list.push((node.path.clone(), v, s)),
                 None => by_kind.push((*kind, vec![(node.path.clone(), v, s)])),
@@ -320,9 +346,19 @@ pub fn roof_totals(job: &mut Job, roof_path: &str) -> RoofTotals {
         }
     }
     by_pitch.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.total_cmp(&b.0)));
+    let (predominant_pitch, pitch_note) = if areas.is_empty() {
+        (None, "the roof has no planes".to_string())
+    } else if !unplaced.is_empty() {
+        (None, format!("{} has no pitch or no surface, and might be what tips it", unplaced.join(", ")))
+    } else if by_pitch.len() > 1 && (by_pitch[0].1 - by_pitch[1].1).abs() < 0.00005 {
+        (None, format!("{} and {} cover the same surface", pitch_said(by_pitch[0].0), pitch_said(by_pitch[1].0)))
+    } else {
+        (by_pitch.first().map(|(p, _, s)| (*p, *s)), String::new())
+    };
     RoofTotals {
         facets: areas.len(),
-        predominant_pitch: by_pitch.first().map(|(p, _, s)| (*p, *s)),
+        predominant_pitch,
+        pitch_note,
         surface: sum_of("SF", &areas),
         lines: by_kind.into_iter().map(|(k, list)| (k, sum_of("LF", &list))).collect(),
     }

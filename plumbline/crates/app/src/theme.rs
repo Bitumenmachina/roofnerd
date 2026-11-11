@@ -48,12 +48,14 @@ pub fn roof_other() -> Color { hex(0x6F7F94) }
 pub fn line_colour(kind: Kind) -> Color {
     match kind {
         Kind::Eave => hex(0x1B8A5A),
-        Kind::Rake => hex(0x7B55C7),
-        Kind::Ridge => hex(0xD1344B),
+        Kind::Rake => hex(0x8A5A2B),
+        // Not red: red is Unknown, here as everywhere, and a ridge is not a warning.
+        Kind::Ridge => hex(0xC026D3),
         Kind::Hip => hex(0xE07B00),
         Kind::Valley => hex(0x1F6FEB),
-        Kind::PitchBreak => hex(0x8A6D3B),
+        Kind::PitchBreak => hex(0x7A7F1A),
         Kind::Headwall => hex(0x0F8B8D),
+        Kind::Parapet => hex(0x475569),
         _ => hex(0x5A6676),
     }
 }
@@ -73,6 +75,18 @@ pub fn kind_name(kind: Kind) -> &'static str {
         Kind::Roof => "Roof",
         Kind::Job => "Job",
         Kind::Condition => "Condition",
+        Kind::Storey => "Storey",
+        Kind::Wall => "Wall",
+        Kind::Door => "Door",
+        Kind::Window => "Window",
+        Kind::Floor => "Floor",
+        Kind::System => "System",
+        Kind::Duct => "Duct",
+        Kind::Pipe => "Pipe",
+        Kind::Conduit => "Conduit",
+        Kind::Cable => "Cable",
+        Kind::Equipment => "Equipment",
+        Kind::Fixture => "Fixture",
     }
 }
 
@@ -169,10 +183,9 @@ pub fn swatch(p: &mut ChildSpawnerCommands, colour: Color) {
     p.spawn((rounded(Node { width: px(14.0), height: px(4.0), ..default() }, 2.0), BackgroundColor(colour)));
 }
 
-/// A pitch the way the trade says it: 6:12.
+/// A pitch the way the trade says it: 6:12. Said by the model, to the places it keeps.
 pub fn pitch_text(rise: f64) -> String {
-    let s = format!("{:.2}", rise + 0.0);
-    format!("{}:12", s.trim_end_matches('0').trim_end_matches('.'))
+    plumbline_world::view::pitch_said(rise)
 }
 
 /// An entered value's text as a panel shows it: a pitch said the trade's way, and a set
@@ -186,3 +199,52 @@ pub fn trade(text: &str) -> String {
     }
     text.to_string()
 }
+
+/// The colour a system is drawn in, by its classification. These follow what mechanical
+/// drawings already use: supply air blue, return air pink, hot water red, cold water cyan,
+/// waste brown, vent green, power yellow.
+pub fn system_colour(classification: &str) -> Color {
+    match classification {
+        "Supply Air" => hex(0x3B82F6),
+        "Return Air" => hex(0xEC4899),
+        "Exhaust Air" => hex(0xA3A635),
+        "Refrigerant" => hex(0x8B5CF6),
+        "Domestic Cold Water" => hex(0x06B6D4),
+        "Domestic Hot Water" => hex(0xEF4444),
+        "Sanitary" => hex(0x8B5E34),
+        "Vent" => hex(0x65A30D),
+        "Power" => hex(0xEAB308),
+        "Lighting" => hex(0xF59E0B),
+        _ => hex(0x64748B),
+    }
+}
+
+pub fn discipline_name(d: plumbline_world::Discipline) -> &'static str {
+    use plumbline_world::Discipline::*;
+    match d {
+        Architecture => "Architecture",
+        Mechanical => "Mechanical",
+        Electrical => "Electrical",
+        Plumbing => "Plumbing",
+    }
+}
+
+pub fn discipline_colour(d: plumbline_world::Discipline) -> Color {
+    use plumbline_world::Discipline::*;
+    match d {
+        Architecture => hex(0x94A3B8),
+        Mechanical => hex(0x3B82F6),
+        Electrical => hex(0xEAB308),
+        Plumbing => hex(0x06B6D4),
+    }
+}
+
+/// The building's own materials.
+pub fn wall_outside() -> Color { hex(0xEDE8DF) }
+pub fn wall_inside() -> Color { hex(0xF4F2EE) }
+pub fn floor_colour() -> Color { hex(0xC9B79C) }
+pub fn glass() -> Color { Color::srgba(0.62, 0.80, 0.90, 0.38) }
+pub fn door_leaf() -> Color { hex(0x7A5A3C) }
+pub fn equipment() -> Color { hex(0xC5CBD3) }
+pub fn porcelain() -> Color { hex(0xF8F8F6) }
+pub fn grass() -> Color { hex(0xA9B79A) }

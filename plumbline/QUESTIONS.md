@@ -115,3 +115,15 @@ recorded by hand in LICENSES.md.
 machine has (`FontSource::sans_serif()`), at the cost of the program looking different on
 every machine and having no text at all on one with no fonts.
 
+## Q13. The whole building: what comes next, and where it sits against the brief
+You widened the work from the envelope to the whole house and its services (DECISIONS.md
+call 26). The first stretch is built: the model, the takeoff, and a window to see and walk
+it. It is outside the brief's numbered deliverables, and those (D4 macro to micro, D5 the
+estimate sheet and money, D6 interchange) are still where they were.
+**Assumption in use:** the next stretch of the whole building is, in this order, (1)
+drawing and editing it in the window instead of in a file, (2) fittings and connections,
+so a system can be checked and its fittings counted by type, (3) clashes. The brief's D4
+to D6 wait behind those unless you say otherwise. If you would rather money (D5) came to
+the building before any of that, say so: a pipe can already carry a cost line, and no
+recipe for one is written.
+

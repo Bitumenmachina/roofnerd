@@ -2,6 +2,8 @@
 //! desktop application will.
 //!
 //!   plumbline sample <file>                      write the sample job
+//!   plumbline house <file>                       write the sample whole house, with its MEP
+//!   plumbline takeoff <file>                     each storey's walls and floors, and each system's runs by size
 //!   plumbline show   <file>                      every element and value, flagged
 //!   plumbline set    <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source "<where from>" [--line "<cost line>"]
 //!
@@ -56,7 +58,37 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), or a value the formula names (spacing \"12 in\")".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), or a value the formula names (spacing \"12 in\")".to_string()
+}
+
+/// What the building comes to: each storey's walls and floors, then each system's runs by
+/// kind and size and what is set on it. The same figures the sheet window shows.
+fn takeoff(job: &mut plumbline_world::Job) -> String {
+    use plumbline_world::building;
+    let said = |sum: &view::Sum| match (sum.value, sum.members) {
+        (_, 0) => "none".to_string(),
+        (Some(x), _) => format!("{} {}", view::figure(x, if sum.unit == "EA" { 0 } else { 2 }), sum.unit),
+        (None, n) => format!("no total, {} of {n} missing", sum.missing.len()),
+    };
+    let mut out = String::from("flags:  ~ Assumed    ? Unknown    (no mark) Known\n");
+    for s in building::storey_totals(job) {
+        let _ = writeln!(out, "\n{}  ({})", s.name, s.path);
+        let _ = writeln!(out, "  {} walls {:<12} {}", s.walls.status.flag(), s.walls.members, said(&s.walls));
+        let _ = writeln!(out, "  {} wall face, gross   {}", s.wall_face.status.flag(), said(&s.wall_face));
+        let _ = writeln!(out, "  {} wall face, net     {}", s.wall_net.status.flag(), said(&s.wall_net));
+        let _ = writeln!(out, "  {} floors {:<11} {}", s.floors.status.flag(), s.floors.members, said(&s.floors));
+        let _ = writeln!(out, "    doors {}, windows {}", s.doors, s.windows);
+    }
+    for t in building::takeoff(job) {
+        let _ = writeln!(out, "\n{}  ({}; {} runs, {})", t.name, if t.classification.is_empty() { "no system" } else { &t.classification }, t.runs.members, said(&t.runs));
+        for line in &t.lines {
+            let _ = writeln!(out, "  {} {:<8} {:<16} {:>2} runs  {:>12}   bends {}", line.size_status.max(line.length.status).flag(), format!("{:?}", line.kind), line.size, line.length.members, said(&line.length), said(&line.bends));
+        }
+        for (kind, what, count, status) in &t.placed {
+            let _ = writeln!(out, "  {} {:<9} {what}: {count} EA", status.flag(), format!("{kind:?}"));
+        }
+    }
+    out
 }
 
 fn read(path: &str) -> Result<(plumbline_world::Job, file::LoadReport), String> {
@@ -71,13 +103,13 @@ fn run(args: &[String]) -> Result<(), String> {
     if cmd == "roof" {
         return new_roof(args);
     }
-    if matches!(cmd, "sample" | "show" | "check" | "lines") && args.len() > 2 {
+    if matches!(cmd, "sample" | "house" | "show" | "check" | "lines" | "takeoff") && args.len() > 2 {
         return Err(format!("{cmd} takes one file and nothing else; {:?} would be ignored\n{}", args[2], usage()));
     }
     match cmd {
-        "sample" => {
+        "sample" | "house" => {
             let out = args.get(1).ok_or_else(usage)?;
-            let mut job = sample::sample();
+            let mut job = if cmd == "house" { sample::house() } else { sample::sample() };
             std::fs::write(out, file::save(&mut job)).map_err(|e| format!("cannot write {out}: {e}"))?;
             say!("wrote {out}");
             Ok(())
@@ -106,6 +138,12 @@ fn run(args: &[String]) -> Result<(), String> {
             let path = args.get(1).ok_or_else(usage)?;
             let (mut job, _) = read(path)?;
             let _ = std::io::stdout().write_all(lines(&mut job).as_bytes());
+            Ok(())
+        }
+        "takeoff" => {
+            let path = args.get(1).ok_or_else(usage)?;
+            let (mut job, _) = read(path)?;
+            let _ = std::io::stdout().write_all(takeoff(&mut job).as_bytes());
             Ok(())
         }
         "apply" => {

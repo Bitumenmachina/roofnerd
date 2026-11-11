@@ -19,6 +19,7 @@ use serde::de::{self, DeserializeOwned, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{json, Map, Value};
 
+use crate::building::{self, *};
 use crate::check;
 use crate::components::*;
 use crate::job::{Header, Job};
@@ -48,7 +49,7 @@ struct Entry {
     extra: BTreeMap<String, Value>,
 }
 
-const KNOWN_KEYS: [&str; 15] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES];
+const KNOWN_KEYS: [&str; 24] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_LEVEL, K_WALL, K_OPENING, K_FLOOR, K_ROUTE, K_SIZE, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
 
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
@@ -85,6 +86,15 @@ pub fn save(job: &mut Job) -> String {
         put!(Cost, K_COST);
         put!(WorkCode, K_SCHEDULE);
         put!(Recipe, K_RECIPE);
+        put!(Level, K_LEVEL);
+        put!(Wall, K_WALL);
+        put!(Opening, K_OPENING);
+        put!(Floor, K_FLOOR);
+        put!(Route, K_ROUTE);
+        put!(Size, K_SIZE);
+        put!(Placed, K_PLACED);
+        put!(SystemInfo, K_SYSTEM);
+        put!(InSystem, K_IN_SYSTEM);
         if let Some(m) = w.get::<Measure>(e) {
             if !m.0.is_empty() {
                 a.insert(K_MEASURE.to_string(), serde_json::to_value(m).expect("measures serialise"));
@@ -271,6 +281,51 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                     check::recipe(&path, kind, &c)?;
                     ent.insert(c);
                 }
+                K_LEVEL => {
+                    let c: Level = parse(&path, &k, v)?;
+                    building::check_level(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_WALL => {
+                    let c: Wall = parse(&path, &k, v)?;
+                    building::check_wall(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_OPENING => {
+                    let c: Opening = parse(&path, &k, v)?;
+                    building::check_opening(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_FLOOR => {
+                    let c: Floor = parse(&path, &k, v)?;
+                    building::check_floor(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_ROUTE => {
+                    let c: Route = parse(&path, &k, v)?;
+                    building::check_route(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_SIZE => {
+                    let c: Size = parse(&path, &k, v)?;
+                    building::check_size(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_PLACED => {
+                    let c: Placed = parse(&path, &k, v)?;
+                    building::check_placed(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_SYSTEM => {
+                    let c: SystemInfo = parse(&path, &k, v)?;
+                    building::check_system(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_IN_SYSTEM => {
+                    let c: InSystem = parse(&path, &k, v)?;
+                    building::check_in_system(&path, kind, &c)?;
+                    ent.insert(c);
+                }
                 K_MEASURE => {
                     file_measures.insert(path.clone(), parse(&path, &k, v)?);
                 }
@@ -295,6 +350,8 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
             return Err(format!("{path} is a Condition with no {K_RECIPE}; a condition is its recipe"));
         }
     }
+
+    building::check_whole(&mut job)?;
 
     // The path counter has to be past every number already in use.
     let root_id = job.root();

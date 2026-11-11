@@ -1,22 +1,22 @@
-//! The main window around the 3D view: the title bar, the inspector, the status bar, and
-//! what is written over the roof itself — each facet's number, area and pitch, the length
-//! of each line, and the legend that says which colour is which kind of line.
+//! The main window's panels, floating over the model: the title bar, the model browser on
+//! the left (storeys, disciplines, systems), the inspector on the right, the status bar,
+//! and what is written on the model itself.
 //!
 //! Everything here is drawn from the snapshot. A panel shows what the world holds and how
 //! sure it is; it works nothing out.
 
-use bevy::camera::visibility::RenderLayers;
 use bevy::input::mouse::{AccumulatedMouseScroll, MouseScrollUnit};
 use bevy::picking::pointer::PointerButton;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use crate::model::{to_view, Doc, Entry, Snapshot};
-use crate::scene::{MainCamera, ViewRect, BAR_H, INSPECTOR_W, STATUS_H};
+use crate::model::{to_view, Doc, Entry, Snapshot, Tone};
+use crate::scene::{facing, MainCamera, BAR_H, BROWSER_W, GAP, INSPECTOR_W, STATUS_H};
 use crate::sheet::SheetScroll;
 use crate::theme::{self, chip, heading, keycap, rounded, status_chip, swatch, text, Fonts, Weight};
+use plumbline_world::building::{Shape, SystemTakeoff};
 use plumbline_world::value::Status;
-use plumbline_world::{units, view};
+use plumbline_world::{units, view, Discipline, Kind};
 
 #[derive(Component)]
 pub struct MainUi;
@@ -25,7 +25,7 @@ pub struct PointerText;
 #[derive(Component)]
 pub struct InspectorScroll;
 
-/// Something written over the roof, kept at a point of the model as the view moves.
+/// Something written over the model, kept at a point of it as the view moves.
 #[derive(Component)]
 pub struct Label {
     pub at: Vec3,
@@ -49,18 +49,13 @@ pub struct Scrolls {
     pub sheet: f32,
 }
 
-pub fn ui_camera(commands: &mut Commands) -> Entity {
-    // Its own layer, so the roof's lines are not drawn a second time over the panels.
-    commands.spawn((Camera2d, Camera { order: 1, clear_color: ClearColorConfig::None, ..default() }, RenderLayers::layer(1), IsDefaultUiCamera)).id()
-}
-
 fn divider(p: &mut ChildSpawnerCommands) {
-    p.spawn((Node { width: px(1.0), height: px(22.0), margin: UiRect::horizontal(px(4.0)), ..default() }, BackgroundColor(theme::hairline())));
+    p.spawn((Node { width: px(1.0), height: px(22.0), margin: UiRect::horizontal(px(4.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::hairline())));
 }
 
 /// The wordmark: a plumb line, and the name.
 pub fn wordmark(p: &mut ChildSpawnerCommands, fonts: &Fonts) {
-    p.spawn(Node { align_items: AlignItems::Center, column_gap: px(9.0), ..default() }).with_children(|m| {
+    p.spawn(Node { align_items: AlignItems::Center, column_gap: px(9.0), flex_shrink: 0.0, ..default() }).with_children(|m| {
         m.spawn(Node { flex_direction: FlexDirection::Column, align_items: AlignItems::Center, ..default() }).with_children(|bob| {
             bob.spawn((Node { width: px(2.0), height: px(13.0), ..default() }, BackgroundColor(theme::accent())));
             bob.spawn((rounded(Node { width: px(8.0), height: px(8.0), ..default() }, 4.0), BackgroundColor(theme::accent())));
@@ -87,7 +82,17 @@ pub fn amount(value: Option<f64>, decimals: usize, unit: &str) -> String {
     }
 }
 
-fn pretty(label: &str) -> String {
+/// A total as it is said: the figure, or that there is nothing to total, or what is missing.
+pub fn total(sum: &view::Sum) -> String {
+    match (sum.value, sum.members) {
+        (_, 0) => "none".into(),
+        // A count is a whole number; a length or an area is said to two places.
+        (Some(x), _) => amount(Some(x), if sum.unit == "EA" { 0 } else { 2 }, sum.unit),
+        (None, n) => format!("no total, {} of {n} missing", sum.missing.len()),
+    }
+}
+
+pub fn pretty(label: &str) -> String {
     let s = label.replace('_', " ");
     let mut c = s.chars();
     match c.next() {
@@ -99,8 +104,16 @@ fn pretty(label: &str) -> String {
 /// A row's value as the panels show it: a derived figure to two places, a pitch as 6:12.
 pub fn shown(row: &view::Row) -> String {
     match row.number {
-        Some(x) => amount(Some(x), 2, &row.unit),
+        Some(x) => amount(Some(x), if row.unit == "EA" { 0 } else { 2 }, &row.unit),
         None => theme::trade(&row.text),
+    }
+}
+
+pub fn tone_ink(tone: Tone) -> (Color, Color) {
+    match tone {
+        Tone::Done => (theme::green(), theme::ink_soft()),
+        Tone::Warned => (theme::amber(), theme::amber()),
+        Tone::Refused => (theme::red(), theme::red()),
     }
 }
 
@@ -122,6 +135,18 @@ fn centroid(points: &[[f64; 2]]) -> [f64; 2] {
     [cx / (3.0 * a), cy / (3.0 * a)]
 }
 
+fn floating(mut node: Node) -> impl Bundle {
+    node.position_type = PositionType::Absolute;
+    node.border = UiRect::all(px(1.0));
+    node.border_radius = BorderRadius::all(px(12.0));
+    (
+        node,
+        BackgroundColor(theme::panel().with_alpha(0.955)),
+        BorderColor::all(theme::hairline().with_alpha(0.9)),
+        BoxShadow(vec![ShadowStyle { color: Color::srgba(0.05, 0.08, 0.14, 0.22), x_offset: px(0.0), y_offset: px(6.0), spread_radius: px(0.0), blur_radius: px(22.0) }]),
+    )
+}
+
 /// Draw the panels again whenever the snapshot has changed.
 #[allow(clippy::too_many_arguments)]
 pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts: Res<Fonts>, cameras: Res<Cameras>, scrolls: Res<Scrolls>, old: Query<Entity, With<MainUi>>, mut drawn: Local<u64>) {
@@ -136,27 +161,21 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
     commands.spawn((Node { width: percent(100.0), height: percent(100.0), ..default() }, UiTargetCamera(cameras.ui), Pickable::IGNORE, MainUi)).with_children(|root| {
         overlay(root, fonts, &doc, &snap);
         title_bar(root, fonts, &doc, &snap);
+        browser(root, fonts, &doc, &snap);
         inspector(root, fonts, &doc, &snap, scrolls.inspector);
         status_bar(root, fonts, &doc);
     });
 }
 
 fn title_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
-    p.spawn((
-        Node { position_type: PositionType::Absolute, top: px(0.0), left: px(0.0), right: px(0.0), height: px(BAR_H), padding: UiRect::horizontal(px(18.0)), align_items: AlignItems::Center, column_gap: px(12.0), border: UiRect::bottom(px(1.0)), ..default() },
-        BackgroundColor(theme::panel()),
-        BorderColor::all(theme::hairline()),
-    ))
-    .with_children(|bar| {
+    p.spawn(floating(Node { top: px(GAP), left: px(GAP), right: px(GAP), height: px(BAR_H), padding: UiRect::horizontal(px(18.0)), align_items: AlignItems::Center, column_gap: px(12.0), overflow: Overflow::clip(), ..default() })).with_children(|bar| {
         wordmark(bar, fonts);
         divider(bar);
-        bar.spawn(text(fonts, snap.title.clone(), 13.5, Weight::Medium, theme::ink_soft()));
-        bar.spawn(text(fonts, "›", 14.0, Weight::Regular, theme::ink_faint()));
-        bar.spawn(text(fonts, snap.roof_name.clone(), 13.5, Weight::Semibold, theme::ink()));
+        bar.spawn((text(fonts, snap.title.clone(), 13.5, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
         bar.spawn(Node { flex_grow: 1.0, ..default() });
         tally_chips(bar, fonts, snap.tally);
         divider(bar);
-        bar.spawn(text(fonts, snap.file.clone(), 12.5, Weight::Regular, theme::ink_soft()));
+        bar.spawn((text(fonts, snap.file.clone(), 12.5, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap()));
         if doc.edited {
             chip(bar, fonts, "Not saved", theme::amber(), theme::amber_wash());
         } else {
@@ -167,30 +186,139 @@ fn title_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
 
 fn status_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     let first = doc.message.lines().next().unwrap_or("").to_string();
-    let refused = first.starts_with("refused");
-    p.spawn((
-        Node { position_type: PositionType::Absolute, bottom: px(0.0), left: px(0.0), right: px(0.0), height: px(STATUS_H), padding: UiRect::horizontal(px(16.0)), align_items: AlignItems::Center, column_gap: px(9.0), border: UiRect::top(px(1.0)), overflow: Overflow::clip(), ..default() },
-        BackgroundColor(theme::panel()),
-        BorderColor::all(theme::hairline()),
-    ))
-    .with_children(|bar| {
-        bar.spawn((rounded(Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, 4.0), BackgroundColor(if refused { theme::red() } else { theme::green() })));
-        bar.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_child((text(fonts, first, 12.0, Weight::Regular, if refused { theme::red() } else { theme::ink_soft() }), TextLayout::no_wrap()));
+    let (dot, ink) = tone_ink(doc.tone);
+    p.spawn(floating(Node { bottom: px(GAP), left: px(GAP), right: px(GAP), height: px(STATUS_H), padding: UiRect::horizontal(px(16.0)), align_items: AlignItems::Center, column_gap: px(9.0), overflow: Overflow::clip(), ..default() })).with_children(|bar| {
+        bar.spawn((rounded(Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, 4.0), BackgroundColor(dot)));
+        bar.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_child((text(fonts, first, 12.0, Weight::Regular, ink), TextLayout::no_wrap()));
         bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "", 12.0, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap(), PointerText));
         bar.spawn((Node { width: px(1.0), height: px(16.0), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::hairline())));
-        bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child(text(fonts, if doc.plan { "Plan view" } else { "3D view" }, 12.0, Weight::Medium, theme::ink_soft()));
+        bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child(text(fonts, if doc.walk { "On foot" } else if doc.plan { "Plan" } else { "3D" }, 12.0, Weight::Medium, theme::ink_soft()));
+    });
+}
+
+/// A row of the browser that does something when it is clicked.
+fn browser_row(p: &mut ChildSpawnerCommands, on: bool, act: impl Fn(&mut Doc) + Send + Sync + 'static, build: impl FnOnce(&mut ChildSpawnerCommands)) {
+    p.spawn((rounded(Node { align_items: AlignItems::Center, column_gap: px(8.0), padding: UiRect::axes(px(8.0), px(5.0)), min_height: px(27.0), ..default() }, 7.0), BackgroundColor(if on { theme::accent_wash() } else { Color::NONE })))
+        .with_children(build)
+        .observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
+            if press.button == PointerButton::Primary && doc.entry.is_none() {
+                act(&mut doc);
+            }
+        });
+}
+
+/// What of the building is on show, and its systems. The browser is the legend too: a
+/// system's swatch here is the colour its runs are drawn in.
+fn browser(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
+    p.spawn(floating(Node { top: px(BAR_H + GAP * 2.0), left: px(GAP), width: px(BROWSER_W), max_height: percent(86.0), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(10.0), px(10.0)), overflow: Overflow::clip(), ..default() })).with_children(|c| {
+        // The view.
+        c.spawn((rounded(Node { padding: UiRect::all(px(3.0)), column_gap: px(2.0), ..default() }, 9.0), BackgroundColor(theme::panel_alt()))).with_children(|t| {
+            for (label, plan, walk) in [("3D", false, false), ("Plan", true, false), ("On foot", false, true)] {
+                let on = doc.plan == plan && doc.walk == walk;
+                t.spawn((rounded(Node { flex_grow: 1.0, justify_content: JustifyContent::Center, padding: UiRect::axes(px(6.0), px(5.0)), ..default() }, 7.0), BackgroundColor(if on { theme::panel() } else { Color::NONE })))
+                    .with_child(text(fonts, label, 12.0, Weight::Medium, if on { theme::accent() } else { theme::ink_soft() }))
+                    .observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>, mut orbit: ResMut<crate::scene::Orbit>, snap: Res<Snapshot>| {
+                        if press.button == PointerButton::Primary {
+                            crate::set_view(&mut doc, &mut orbit, &snap, plan, walk);
+                        }
+                    });
+            }
+        });
+
+        if !snap.storeys.is_empty() {
+            heading(c, fonts, "Storeys");
+            browser_row(
+                c,
+                doc.show.storey.is_none(),
+                |doc| {
+                    doc.show.storey = None;
+                    doc.redraw();
+                },
+                |r| {
+                    r.spawn(text(fonts, "Whole building", 12.5, Weight::Medium, theme::ink()));
+                },
+            );
+            for storey in &snap.storeys {
+                let path = storey.path.clone();
+                browser_row(
+                    c,
+                    doc.show.storey.as_deref() == Some(storey.path.as_str()),
+                    move |doc| {
+                        doc.show.storey = Some(path.clone());
+                        doc.redraw();
+                    },
+                    |r| {
+                        r.spawn(text(fonts, pretty(&storey.name), 12.5, Weight::Medium, theme::ink()));
+                        r.spawn(Node { flex_grow: 1.0, ..default() });
+                        r.spawn(text(fonts, storey.elevation.map(|e| units::feet_as_ft_in(e, 16)).unwrap_or("height unknown".into()), 11.5, Weight::Regular, if storey.elevation.is_some() { theme::ink_faint() } else { theme::red() }));
+                    },
+                );
+            }
+        }
+
+        heading(c, fonts, "Show");
+        let layer = |c: &mut ChildSpawnerCommands, name: &str, key: &str, colour: Color, on: bool, count: Option<usize>, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
+            browser_row(c, false, move |doc| act(doc), |r| {
+                r.spawn((rounded(Node { width: px(10.0), height: px(10.0), border: UiRect::all(px(1.5)), flex_shrink: 0.0, ..default() }, 5.0), BackgroundColor(if on { colour } else { Color::NONE }), BorderColor::all(colour)));
+                r.spawn(text(fonts, name, 12.5, Weight::Medium, if on { theme::ink() } else { theme::ink_faint() }));
+                if let Some(count) = count {
+                    r.spawn(text(fonts, count.to_string(), 11.5, Weight::Regular, theme::ink_faint()));
+                }
+                r.spawn(Node { flex_grow: 1.0, ..default() });
+                keycap(r, fonts, key);
+            });
+        };
+        for (i, d) in [Discipline::Architecture, Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing].into_iter().enumerate() {
+            let count = snap.counts.iter().find(|c| c.0 == d).map(|c| c.1).unwrap_or(0);
+            if i == 1 && !snap.planes.is_empty() {
+                layer(c, "Roof", "2", theme::roof_bare(), doc.show.roof, Some(snap.planes.len()), Box::new(|doc| {
+                    doc.show.roof = !doc.show.roof;
+                    doc.redraw();
+                }));
+            }
+            // A job with nothing of a discipline does not offer to show it.
+            if count == 0 {
+                continue;
+            }
+            let key = ["1", "3", "4", "5"][i];
+            layer(c, theme::discipline_name(d), key, theme::discipline_colour(d), doc.show.discipline(d), Some(count), Box::new(move |doc| {
+                doc.show.toggle(d);
+                doc.redraw();
+            }));
+        }
+        layer(c, "See through", "X", theme::accent(), doc.show.ghost, None, Box::new(|doc| {
+            doc.show.ghost = !doc.show.ghost;
+            doc.redraw();
+        }));
+
+        if !snap.systems.is_empty() {
+            heading(c, fonts, "Systems");
+            for system in &snap.systems {
+                let t = &system.takeoff;
+                if t.path.is_empty() {
+                    continue;
+                }
+                let path = t.path.clone();
+                browser_row(c, doc.selected.as_deref() == Some(t.path.as_str()), move |doc| doc.select(&path), |r| {
+                    swatch(r, theme::system_colour(&t.classification));
+                    r.spawn((text(fonts, t.name.clone(), 12.5, Weight::Medium, theme::ink()), TextLayout::no_wrap()));
+                    r.spawn(Node { flex_grow: 1.0, ..default() });
+                    r.spawn((text(fonts, total(&t.runs), 11.5, Weight::Regular, if t.runs.members == 0 { theme::ink_faint() } else { theme::status_ink(t.runs.status) }), TextLayout::no_wrap()));
+                });
+            }
+        }
     });
 }
 
 /// A label's pill: white, hairline edge, and nothing in it takes the pointer, so a click
-/// on a label still lands on the roof under it.
+/// on a label still lands on the model under it.
 fn pill(p: &mut ChildSpawnerCommands, label: Label, selected: bool, build: impl FnOnce(&mut ChildSpawnerCommands)) {
     p.spawn((
         rounded(Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(8.0), px(3.0)), column_gap: px(6.0), align_items: AlignItems::Center, border: UiRect::all(px(1.0)), ..default() }, 999.0),
         UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
         BackgroundColor(if selected { theme::accent() } else { theme::panel().with_alpha(0.94) }),
         BorderColor::all(if selected { theme::accent() } else { theme::hairline() }),
-        BoxShadow(vec![ShadowStyle { color: Color::srgba(0.1, 0.14, 0.2, 0.14), x_offset: px(0.0), y_offset: px(1.0), spread_radius: px(0.0), blur_radius: px(4.0) }]),
+        BoxShadow(vec![ShadowStyle { color: Color::srgba(0.1, 0.14, 0.2, 0.18), x_offset: px(0.0), y_offset: px(1.0), spread_radius: px(0.0), blur_radius: px(4.0) }]),
         Pickable::IGNORE,
         label,
     ))
@@ -202,16 +330,16 @@ fn quiet(p: &mut ChildSpawnerCommands, fonts: &Fonts, s: impl Into<String>, size
 }
 
 fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
-    p.spawn((Node { position_type: PositionType::Absolute, top: px(BAR_H), left: px(0.0), right: px(INSPECTOR_W), bottom: px(STATUS_H), overflow: Overflow::clip(), ..default() }, Pickable::IGNORE)).with_children(|o| {
-        // Each line's length, for the selected plane's own lines, or for all of them on plan.
-        for line in &snap.lines {
+    p.spawn((Node { position_type: PositionType::Absolute, top: px(0.0), left: px(0.0), right: px(0.0), bottom: px(0.0), overflow: Overflow::clip(), ..default() }, Pickable::IGNORE)).with_children(|o| {
+        let roof_on_show = doc.show.roof && !doc.show.ghost && doc.show.storey.is_none() && !doc.walk;
+        // Each roof line's length, for the selected plane's own lines, or for all on plan.
+        for line in snap.lines.iter().filter(|_| roof_on_show) {
             let (Some([a, b]), Some(length)) = (line.ends, line.length) else { continue };
             let chosen = doc.selected.as_ref().is_some_and(|s| *s == line.path || line.planes.contains(s));
             if !(doc.plan || chosen) {
                 continue;
             }
             let at = (to_view(doc.origin, a) + to_view(doc.origin, b)) / 2.0 + Vec3::Y * 0.1;
-            let colour = theme::line_colour(line.kind);
             o.spawn((
                 rounded(Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(5.0), px(1.0)), ..default() }, 4.0),
                 UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
@@ -219,24 +347,15 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 Pickable::IGNORE,
                 Label { at, facing: None, rank: 2 },
             ))
-            .with_children(|l| quiet(l, fonts, units::feet_as_ft_in(length, 1), 11.0, Weight::Medium, if line.status == Status::Known { colour } else { theme::status_ink(line.status) }));
+            .with_children(|l| quiet(l, fonts, units::feet_as_ft_in(length, 16), 11.0, Weight::Medium, if line.status == Status::Known { theme::line_colour(line.kind) } else { theme::status_ink(line.status) }));
         }
-        // Each facet: its number, its area, its pitch.
-        for plane in &snap.planes {
+        // Each facet: its number, its area, its pitch, and its flag.
+        for plane in snap.planes.iter().filter(|_| roof_on_show) {
             let Some(solid) = &plane.solid else { continue };
             let c = centroid(&solid.points);
             let at = to_view(doc.origin, [c[0], c[1], solid.height_at(c)]);
-            // Up the slope and out of it: the eave's direction crossed with the fall line.
             let positions: Vec<Vec3> = solid.points.iter().map(|q| to_view(doc.origin, [q[0], q[1], solid.height_at(*q)])).collect();
-            let mut normal = Vec3::ZERO;
-            for i in 0..positions.len() {
-                let (u, v) = (positions[i], positions[(i + 1) % positions.len()]);
-                normal += Vec3::new((u.y - v.y) * (u.z + v.z), (u.z - v.z) * (u.x + v.x), (u.x - v.x) * (u.y + v.y));
-            }
-            let mut normal = normal.normalize_or_zero();
-            if normal.y < 0.0 {
-                normal = -normal;
-            }
+            let normal = facing(&positions);
             let selected = doc.selected.as_deref() == Some(plane.path.as_str());
             let (main, soft) = if selected { (Color::WHITE, Color::WHITE.with_alpha(0.82)) } else { (theme::ink(), theme::ink_soft()) };
             pill(o, Label { at: at + normal * 0.15, facing: Some(normal), rank: if selected { 0 } else { 1 } }, selected, |l| {
@@ -248,31 +367,41 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 if let Some(pitch) = plane.pitch {
                     quiet(l, fonts, theme::pitch_text(pitch), 11.5, Weight::Regular, soft);
                 }
-                if plane.worst() != Status::Known && !selected {
-                    l.spawn((rounded(Node { width: px(6.0), height: px(6.0), ..default() }, 3.0), BackgroundColor(theme::status_ink(plane.worst())), Pickable::IGNORE));
+                // The flag stays on a selected facet too: a light dot on the blue.
+                if plane.worst() != Status::Known {
+                    let dot = if selected { theme::amber_wash() } else { theme::status_ink(plane.worst()) };
+                    l.spawn((rounded(Node { width: px(6.0), height: px(6.0), ..default() }, 3.0), BackgroundColor(if selected && plane.worst() == Status::Unknown { theme::red_wash() } else { dot }), Pickable::IGNORE));
+                }
+            });
+        }
+        // The selected element of the rest of the building: its name on it.
+        if let Some(placed) = doc.selected.as_ref().and_then(|s| snap.drawn.iter().find(|p| p.path == *s)) {
+            let at = match &placed.shape {
+                Shape::Wall { a, b, base, height, .. } => to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height]),
+                Shape::Floor { boundary, top, .. } => {
+                    let c = centroid(boundary);
+                    to_view(doc.origin, [c[0], c[1], *top])
+                }
+                Shape::Route { points, .. } => {
+                    let i = points.len() / 2;
+                    (to_view(doc.origin, points[i.saturating_sub(1)]) + to_view(doc.origin, points[i.min(points.len() - 1)])) / 2.0
+                }
+                Shape::Box { at, size } => to_view(doc.origin, [at[0], at[1], at[2] + size[2]]),
+            };
+            let figure = snap.selected.as_ref().and_then(|el| el.rows.iter().find(|r| r.label == "true_length" || r.label == "net_area" || r.label == "plan_area")).map(|r| (shown(r), r.status));
+            pill(o, Label { at: at + Vec3::Y * 0.6, facing: None, rank: 0 }, true, |l| {
+                quiet(l, fonts, placed.name.clone(), 12.0, Weight::Semibold, Color::WHITE);
+                if let Some((figure, status)) = figure {
+                    quiet(l, fonts, figure, 12.0, Weight::Medium, Color::WHITE.with_alpha(0.9));
+                    if status != Status::Known {
+                        l.spawn((rounded(Node { width: px(6.0), height: px(6.0), ..default() }, 3.0), BackgroundColor(if status == Status::Unknown { theme::red_wash() } else { theme::amber_wash() }), Pickable::IGNORE));
+                    }
                 }
             });
         }
 
-        // 3D or plan.
-        o.spawn(theme::card(Node { position_type: PositionType::Absolute, top: px(14.0), left: px(14.0), padding: UiRect::all(px(3.0)), column_gap: px(2.0), ..default() })).with_children(|t| {
-            for (label, plan) in [("3D", false), ("Plan", true)] {
-                let on = doc.plan == plan;
-                t.spawn((rounded(Node { padding: UiRect::axes(px(12.0), px(5.0)), ..default() }, 7.0), BackgroundColor(if on { theme::accent_wash() } else { Color::NONE })))
-                    .with_child(text(fonts, label, 12.0, Weight::Medium, if on { theme::accent() } else { theme::ink_soft() }))
-                    .observe(move |click: On<PointerClick>, mut doc: ResMut<Doc>| {
-                        if click.button == PointerButton::Primary && doc.plan != plan {
-                            doc.plan = plan;
-                            doc.touch();
-                        }
-                    });
-            }
-        });
-
-        legend(o, fonts, snap);
-
         // What is being typed, and anything the last action needs said in full.
-        o.spawn((Node { position_type: PositionType::Absolute, top: px(14.0), left: px(128.0), right: px(128.0), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, row_gap: px(10.0), ..default() }, Pickable::IGNORE)).with_children(|mid| {
+        o.spawn((Node { position_type: PositionType::Absolute, top: px(BAR_H + GAP * 2.0), left: px(BROWSER_W + GAP * 2.0), right: px(INSPECTOR_W + GAP * 2.0), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, row_gap: px(10.0), ..default() }, Pickable::IGNORE)).with_children(|mid| {
             if let Some((field, typed)) = &doc.entry {
                 let name = snap.selected.as_ref().map(|s| s.name.clone()).unwrap_or_default();
                 mid.spawn(theme::card(Node { width: px(360.0), flex_direction: FlexDirection::Column, padding: UiRect::all(px(14.0)), row_gap: px(9.0), ..default() })).with_children(|c| {
@@ -291,13 +420,11 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     });
                 });
             }
-            let refused = doc.message.starts_with("refused");
-            if doc.entry.is_none() && (refused || doc.message.lines().count() > 1) {
-                let (ink, wash) = if refused { (theme::red(), theme::red_wash()) } else { (theme::amber(), theme::amber_wash()) };
+            if doc.entry.is_none() && doc.tone != Tone::Done {
+                let (ink, wash) = if doc.tone == Tone::Refused { (theme::red(), theme::red_wash()) } else { (theme::amber(), theme::amber_wash()) };
                 mid.spawn((rounded(Node { max_width: px(560.0), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(14.0), px(10.0)), row_gap: px(3.0), border: UiRect::all(px(1.0)), ..default() }, 9.0), BackgroundColor(wash), BorderColor::all(ink.with_alpha(0.35)))).with_children(|c| {
                     for (i, line) in doc.message.lines().enumerate() {
-                        let line = if i == 0 { line.strip_prefix("refused: ").map(|l| format!("Refused: {l}")).unwrap_or(line.to_string()) } else { line.to_string() };
-                        c.spawn(text(fonts, line, 12.5, if i == 0 { Weight::Medium } else { Weight::Regular }, ink));
+                        c.spawn(text(fonts, if i == 0 { pretty(line) } else { line.to_string() }, 12.5, if i == 0 { Weight::Medium } else { Weight::Regular }, ink));
                     }
                 });
             }
@@ -305,32 +432,7 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     });
 }
 
-/// Which colour is which kind of line, and what each kind comes to.
-fn legend(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
-    let Some(totals) = &snap.totals else { return };
-    if totals.lines.is_empty() {
-        return;
-    }
-    p.spawn(theme::card(Node { position_type: PositionType::Absolute, bottom: px(14.0), left: px(14.0), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(14.0), px(11.0)), row_gap: px(6.0), ..default() })).with_children(|c| {
-        c.spawn(text(fonts, "LINES", 10.5, Weight::Semibold, theme::ink_faint()));
-        for (kind, sum) in &totals.lines {
-            c.spawn(Node { align_items: AlignItems::Center, column_gap: px(9.0), ..default() }).with_children(|r| {
-                swatch(r, theme::line_colour(*kind));
-                r.spawn(Node { width: px(86.0), ..default() }).with_child(text(fonts, theme::kind_name(*kind), 12.0, Weight::Medium, theme::ink()));
-                r.spawn(Node { width: px(18.0), justify_content: JustifyContent::FlexEnd, ..default() }).with_child(text(fonts, sum.members.to_string(), 12.0, Weight::Regular, theme::ink_faint()));
-                r.spawn(Node { width: px(84.0), justify_content: JustifyContent::FlexEnd, ..default() }).with_child(text(fonts, if sum.value.is_some() { amount(sum.value, 2, "LF") } else { "no total".into() }, 12.0, Weight::Medium, theme::status_ink(sum.status)));
-            });
-        }
-        if snap.lines.iter().any(|l| l.length.is_none()) {
-            c.spawn(Node { align_items: AlignItems::Center, column_gap: px(9.0), ..default() }).with_children(|r| {
-                swatch(r, theme::red());
-                r.spawn(text(fonts, "No length worked out", 12.0, Weight::Medium, theme::red()));
-            });
-        }
-    });
-}
-
-fn stat(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: String, unit: &str, status: Status) {
+pub fn stat(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: String, unit: &str, status: Status) {
     p.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(3.0), flex_grow: 1.0, flex_basis: px(0.0), ..default() }).with_children(|s| {
         s.spawn(text(fonts, label.to_uppercase(), 10.0, Weight::Semibold, theme::ink_faint()));
         s.spawn(Node { align_items: AlignItems::Baseline, column_gap: px(4.0), ..default() }).with_children(|v| {
@@ -369,7 +471,7 @@ fn property(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: Str
 
 fn shortcut(p: &mut ChildSpawnerCommands, fonts: &Fonts, keys: &[&str], what: &str) {
     p.spawn(Node { align_items: AlignItems::Center, column_gap: px(5.0), padding: UiRect::vertical(px(3.0)), ..default() }).with_children(|r| {
-        r.spawn(Node { width: px(74.0), column_gap: px(4.0), ..default() }).with_children(|k| {
+        r.spawn(Node { width: px(112.0), column_gap: px(4.0), flex_shrink: 0.0, ..default() }).with_children(|k| {
             for key in keys {
                 keycap(k, fonts, key);
             }
@@ -380,75 +482,164 @@ fn shortcut(p: &mut ChildSpawnerCommands, fonts: &Fonts, keys: &[&str], what: &s
 
 fn inspector(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, scrolled: f32) {
     p.spawn((
-        Node { position_type: PositionType::Absolute, top: px(BAR_H), right: px(0.0), bottom: px(STATUS_H), width: px(INSPECTOR_W), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(18.0), px(16.0)), border: UiRect::left(px(1.0)), overflow: Overflow::scroll_y(), ..default() },
-        BackgroundColor(theme::panel()),
-        BorderColor::all(theme::hairline()),
+        floating(Node { top: px(BAR_H + GAP * 2.0), right: px(GAP), bottom: px(STATUS_H + GAP * 2.0), width: px(INSPECTOR_W), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(18.0), px(16.0)), overflow: Overflow::scroll_y(), ..default() }),
         ScrollPosition(Vec2::new(0.0, scrolled)),
         InspectorScroll,
     ))
     .with_children(|c| {
+        let editable = snap.rises_from.is_some();
         match &snap.selected {
+            Some(el) if el.kind == Kind::System => system(c, fonts, snap, el),
             Some(el) => selection(c, fonts, snap, el),
-            None => roof_summary(c, fonts, snap),
+            None => summary(c, fonts, snap),
         }
-        heading(c, fonts, if snap.selected.is_some() { "Change it" } else { "In this view" });
-        if snap.selected.is_some() {
+        heading(c, fonts, if editable { "Change it" } else { "Keys" });
+        if editable {
             shortcut(c, fonts, &["=", "-"], "Pitch up or down 1 in 12");
             shortcut(c, fonts, &["]", "["], "Eave out or in 6 in");
             shortcut(c, fonts, &["P"], "Type a pitch");
             shortcut(c, fonts, &["M"], "Type a distance to move the eave");
             shortcut(c, fonts, &["G"], "Make its edge a gable");
+        }
+        if snap.selected.is_some() {
             shortcut(c, fonts, &["C"], "Give it a condition");
             shortcut(c, fonts, &["Esc"], "Let go of it");
-        } else {
-            shortcut(c, fonts, &["Tab"], "Select the next plane, or click one");
         }
-        shortcut(c, fonts, &["T"], if doc.plan { "Back to the 3D view" } else { "Look straight down: the plan" });
-        shortcut(c, fonts, &["F"], "Frame the roof");
+        shortcut(c, fonts, &["W", "A", "S", "D"], "Move over the ground");
+        shortcut(c, fonts, &["Q", "E"], "Down and up");
+        shortcut(c, fonts, &["T"], if doc.plan { "Back to 3D" } else { "Plan: straight down" });
+        shortcut(c, fonts, &["V"], if doc.walk { "Back to 3D" } else { "Go in on foot" });
+        shortcut(c, fonts, &["F"], "Frame the building");
+        shortcut(c, fonts, &["Tab"], "Next roof plane");
         shortcut(c, fonts, &["F2"], "Save the job");
-        c.spawn(Node { margin: UiRect::top(px(8.0)), ..default() }).with_child(text(fonts, "Right-drag to orbit, middle-drag to pan, wheel to zoom.", 11.5, Weight::Regular, theme::ink_faint()));
+        c.spawn(Node { margin: UiRect::top(px(8.0)), ..default() }).with_child(text(fonts, "Right-drag to turn, middle-drag to pan, wheel to zoom. Click anything to select it.", 11.5, Weight::Regular, theme::ink_faint()));
     });
 }
 
 fn title_block(p: &mut ChildSpawnerCommands, fonts: &Fonts, kind: &str, name: &str, under: String) {
     p.spawn(text(fonts, kind.to_uppercase(), 10.0, Weight::Semibold, theme::ink_faint()));
     p.spawn(Node { margin: UiRect::top(px(3.0)), ..default() }).with_child(text(fonts, name, 19.0, Weight::Semibold, theme::ink()));
-    p.spawn(Node { margin: UiRect::top(px(2.0)), ..default() }).with_child(text(fonts, under, 11.5, Weight::Regular, theme::ink_faint()));
+    if !under.is_empty() {
+        p.spawn(Node { margin: UiRect::top(px(2.0)), ..default() }).with_child(text(fonts, under, 11.5, Weight::Regular, theme::ink_faint()));
+    }
 }
 
-fn roof_summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
-    title_block(p, fonts, "Roof", &snap.roof_name, snap.roof_path.clone());
-    let Some(totals) = &snap.totals else { return };
-    let squares = view::in_squares(&totals.surface);
-    p.spawn(Node { margin: UiRect::top(px(16.0)), column_gap: px(12.0), ..default() }).with_children(|r| {
-        stat(r, fonts, "Surface", totals.surface.value.map(|x| view::figure_shown(x, 2)).unwrap_or("no total".into()), if totals.surface.value.is_some() { "SF" } else { "" }, totals.surface.status);
-        stat(r, fonts, "Squares", squares.value.map(|x| view::figure_shown(x, 2)).unwrap_or("no total".into()), if squares.value.is_some() { "SQ" } else { "" }, squares.status);
-    });
-    p.spawn(Node { margin: UiRect::top(px(14.0)), column_gap: px(12.0), ..default() }).with_children(|r| {
-        match totals.predominant_pitch {
-            Some((pitch, status)) => stat(r, fonts, "Predominant pitch", theme::pitch_text(pitch), "", status),
-            None => stat(r, fonts, "Predominant pitch", "unknown".into(), "", Status::Unknown),
+/// A line of a list: something on the left, a figure on the right.
+fn listed(p: &mut ChildSpawnerCommands, fonts: &Fonts, colour: Option<Color>, name: &str, count: String, figure: String, status: Status) {
+    p.spawn((Node { align_items: AlignItems::Center, column_gap: px(9.0), padding: UiRect::vertical(px(6.0)), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::hex(0xEEF1F5)))).with_children(|r| {
+        if let Some(colour) = colour {
+            swatch(r, colour);
         }
-        stat(r, fonts, "Facets", totals.facets.to_string(), "", Status::Known);
-    });
-    if !totals.surface.missing.is_empty() {
-        p.spawn(Node { margin: UiRect::top(px(8.0)), ..default() }).with_child(text(fonts, format!("No surface total: {} of {} planes have no area.", totals.surface.missing.len(), totals.surface.members), 11.5, Weight::Regular, theme::red()));
-    }
-    heading(p, fonts, "Lines by kind");
-    for (kind, sum) in &totals.lines {
-        p.spawn((Node { align_items: AlignItems::Center, column_gap: px(9.0), padding: UiRect::vertical(px(6.0)), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::hex(0xEEF1F5)))).with_children(|r| {
-            swatch(r, theme::line_colour(*kind));
-            r.spawn(text(fonts, theme::kind_name(*kind), 12.5, Weight::Medium, theme::ink()));
-            r.spawn(text(fonts, format!("{}", sum.members), 12.0, Weight::Regular, theme::ink_faint()));
-            r.spawn(Node { flex_grow: 1.0, ..default() });
-            status_chip(r, fonts, sum.status);
-            r.spawn(text(fonts, if sum.value.is_some() { amount(sum.value, 2, "LF") } else { format!("no total, {} of {} missing", sum.missing.len(), sum.members) }, 12.5, Weight::Medium, theme::status_ink(sum.status)));
+        // A long name wraps; the figure beside it keeps its place.
+        r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), column_gap: px(7.0), flex_wrap: FlexWrap::Wrap, align_items: AlignItems::Baseline, ..default() }).with_children(|n| {
+            n.spawn(text(fonts, name, 12.5, Weight::Medium, theme::ink()));
+            if !count.is_empty() {
+                n.spawn((text(fonts, count, 12.0, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap()));
+            }
         });
+        status_chip(r, fonts, status);
+        r.spawn((text(fonts, figure, 12.5, Weight::Medium, theme::status_ink(status)), TextLayout::no_wrap()));
+    });
+}
+
+/// Nothing selected: what the job comes to.
+fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
+    title_block(p, fonts, "Job", &snap.title, snap.file.clone());
+    if snap.storeys.is_empty() && snap.totals.is_none() {
+        p.spawn(Node { margin: UiRect::top(px(12.0)), ..default() }).with_child(text(fonts, "This job has no roof and no building in it yet.", 12.5, Weight::Regular, theme::red()));
+    }
+    for storey in &snap.storeys {
+        heading(p, fonts, &storey.name);
+        listed(p, fonts, None, "Walls", storey.walls.members.to_string(), total(&storey.walls), if storey.walls.members == 0 { Status::Known } else { storey.walls.status });
+        listed(p, fonts, None, "Wall face, less openings", String::new(), total(&storey.wall_net), if storey.wall_net.members == 0 { Status::Known } else { storey.wall_net.status });
+        listed(p, fonts, None, "Floor", storey.floors.members.to_string(), total(&storey.floors), if storey.floors.members == 0 { Status::Known } else { storey.floors.status });
+        listed(p, fonts, None, "Doors and windows", String::new(), format!("{} and {}", storey.doors, storey.windows), Status::Known);
+    }
+    if let Some(totals) = &snap.totals {
+        heading(p, fonts, &format!("Roof: {}", snap.roof_name));
+        let squares = view::in_squares(&totals.surface);
+        let big = |sum: &view::Sum| match (sum.value, sum.members) {
+            (_, 0) => ("none".to_string(), ""),
+            (Some(x), _) => (view::figure_shown(x, 2), sum.unit),
+            (None, _) => ("no total".to_string(), ""),
+        };
+        p.spawn(Node { margin: UiRect::top(px(6.0)), column_gap: px(12.0), ..default() }).with_children(|r| {
+            let (s, u) = big(&totals.surface);
+            stat(r, fonts, "Surface", s, u, totals.surface.status);
+            let (s, u) = big(&squares);
+            stat(r, fonts, "Squares", s, u, squares.status);
+        });
+        p.spawn(Node { margin: UiRect::top(px(12.0)), column_gap: px(12.0), ..default() }).with_children(|r| {
+            match totals.predominant_pitch {
+                Some((pitch, status)) => stat(r, fonts, "Predominant pitch", theme::pitch_text(pitch), "", status),
+                None => stat(r, fonts, "Predominant pitch", "not said".into(), "", Status::Unknown),
+            }
+            stat(r, fonts, "Facets", totals.facets.to_string(), "", Status::Known);
+        });
+        if totals.predominant_pitch.is_none() {
+            p.spawn(Node { margin: UiRect::top(px(6.0)), ..default() }).with_child(text(fonts, format!("No predominant pitch: {}.", totals.pitch_note), 11.5, Weight::Regular, theme::red()));
+        }
+        if !totals.surface.missing.is_empty() {
+            p.spawn(Node { margin: UiRect::top(px(6.0)), ..default() }).with_child(text(fonts, format!("No surface total: {} of {} planes have no area.", totals.surface.missing.len(), totals.surface.members), 11.5, Weight::Regular, theme::red()));
+        }
+        for (kind, sum) in &totals.lines {
+            listed(p, fonts, Some(theme::line_colour(*kind)), theme::kind_name(*kind), sum.members.to_string(), total(sum), sum.status);
+        }
+        if snap.lines.iter().any(|l| l.length.is_none()) {
+            listed(p, fonts, Some(theme::red()), "No length worked out", String::new(), "drawn broken".into(), Status::Unknown);
+        }
     }
     if !snap.notes.is_empty() {
         heading(p, fonts, "To settle");
         for (status, what, why) in &snap.notes {
-            property(p, fonts, what, String::new(), *status, why, "");
+            p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(7.0)), row_gap: px(3.0), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::hex(0xEEF1F5)))).with_children(|r| {
+                r.spawn(Node { ..default() }).with_children(|c| status_chip(c, fonts, *status));
+                r.spawn(text(fonts, what.clone(), 12.5, Weight::Medium, theme::status_ink(*status)));
+                r.spawn(text(fonts, why.clone(), 11.0, Weight::Regular, theme::ink_faint()));
+            });
+        }
+    }
+}
+
+/// A selected system: what it is and what it comes to.
+fn system(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, el: &view::ElementRows) {
+    let Some(t) = snap.system(&el.path) else { return };
+    title_block(p, fonts, &format!("{} system", theme::discipline_name(t.discipline)), &t.name, format!("{}  ·  {}", el.path, t.classification));
+    p.spawn(Node { margin: UiRect::top(px(16.0)), column_gap: px(12.0), ..default() }).with_children(|r| {
+        match (t.runs.value, t.runs.members) {
+            (_, 0) => stat(r, fonts, "Runs", "none".into(), "", Status::Known),
+            (Some(x), _) => stat(r, fonts, "Runs", view::figure_shown(x, 2), "LF", t.runs.status),
+            (None, _) => stat(r, fonts, "Runs", "no total".into(), "", Status::Unknown),
+        }
+        stat(r, fonts, "Pieces", t.runs.members.to_string(), "", Status::Known);
+    });
+    takeoff(p, fonts, t);
+}
+
+/// A system's takeoff: its runs by kind and size, then what is set on it.
+pub fn takeoff(p: &mut ChildSpawnerCommands, fonts: &Fonts, t: &SystemTakeoff) {
+    if !t.lines.is_empty() {
+        heading(p, fonts, "Runs by size");
+        for line in &t.lines {
+            p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(6.0)), row_gap: px(2.0), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::hex(0xEEF1F5)))).with_children(|r| {
+                r.spawn(Node { align_items: AlignItems::Center, column_gap: px(8.0), ..default() }).with_children(|top| {
+                    swatch(top, theme::system_colour(&t.classification));
+                    top.spawn((text(fonts, format!("{}, {}", theme::kind_name(line.kind), line.size), 12.5, Weight::Medium, theme::status_ink(line.size_status)), TextLayout::no_wrap()));
+                    top.spawn(Node { flex_grow: 1.0, ..default() });
+                    top.spawn((text(fonts, total(&line.length), 12.5, Weight::Medium, theme::status_ink(line.length.status)), TextLayout::no_wrap()));
+                });
+                r.spawn(Node { align_items: AlignItems::Center, column_gap: px(8.0), ..default() }).with_children(|under| {
+                    under.spawn(text(fonts, format!("{} of them  ·  bends: {}", line.length.members, total(&line.bends)), 11.0, Weight::Regular, theme::ink_faint()));
+                    under.spawn(Node { flex_grow: 1.0, ..default() });
+                    status_chip(under, fonts, line.size_status.max(line.length.status));
+                });
+            });
+        }
+    }
+    if !t.placed.is_empty() {
+        heading(p, fonts, "Equipment and fixtures");
+        for (kind, what, count, status) in &t.placed {
+            listed(p, fonts, None, what, theme::kind_name(*kind).to_lowercase(), format!("{count} EA"), *status);
         }
     }
 }
@@ -460,21 +651,37 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, el: &
     };
     title_block(p, fonts, theme::kind_name(el.kind), &el.name, under);
     let find = |label: &str| el.rows.iter().find(|r| r.label == label);
-    p.spawn(Node { margin: UiRect::top(px(16.0)), column_gap: px(12.0), ..default() }).with_children(|r| {
-        if el.kind.is_area() {
-            match find("surface_area") {
-                Some(row) => stat(r, fonts, "Surface", row.number.map(|x| view::figure_shown(x, 2)).unwrap_or("unknown".into()), if row.number.is_some() { "SF" } else { "" }, row.status),
-                None => stat(r, fonts, "Surface", "unknown".into(), "", Status::Unknown),
+    // The two figures that matter most for this kind of element, large.
+    let lead: &[(&str, &str)] = match el.kind {
+        k if k.is_area() => &[("surface_area", "Surface")],
+        Kind::Parapet => &[("plan_length", "Length"), ("face_area", "Face")],
+        k if k.is_run() => &[("true_length", "Length")],
+        Kind::Wall => &[("net_area", "Net face"), ("plan_length", "Length")],
+        Kind::Door | Kind::Window => &[("opening_area", "Opening")],
+        Kind::Floor => &[("plan_area", "Area")],
+        Kind::Duct => &[("true_length", "Length"), ("surface_area", "Duct surface")],
+        k if k.is_route() => &[("true_length", "Length"), ("bends", "Bends")],
+        _ => &[],
+    };
+    if !lead.is_empty() {
+        p.spawn(Node { margin: UiRect::top(px(16.0)), column_gap: px(12.0), ..default() }).with_children(|r| {
+            for (measure, label) in lead {
+                match find(measure) {
+                    Some(row) => stat(r, fonts, label, row.number.map(|x| view::figure_shown(x, if row.unit == "EA" { 0 } else { 2 })).unwrap_or("unknown".into()), if row.number.is_some() { &row.unit } else { "" }, row.status),
+                    None => stat(r, fonts, label, "unknown".into(), "", Status::Unknown),
+                }
             }
-            match find("pitch") {
-                Some(row) => stat(r, fonts, "Pitch", theme::trade(&row.text), "", row.status),
-                None => stat(r, fonts, "Pitch", "none".into(), "", Status::Known),
+            if el.kind.is_area() {
+                match find("pitch") {
+                    Some(row) => stat(r, fonts, "Pitch", theme::trade(&row.text), "", row.status),
+                    None => stat(r, fonts, "Pitch", "none".into(), "", Status::Known),
+                }
+            } else if lead.len() == 1 && el.kind.is_run() {
+                let row = find("true_length");
+                stat(r, fonts, "On the tape", row.and_then(|r| r.number).map(|x| units::feet_as_ft_in(x, 16)).unwrap_or("unknown".into()), "", row.map(|r| r.status).unwrap_or(Status::Unknown));
             }
-        } else if let Some(row) = find("true_length") {
-            stat(r, fonts, "Length", row.number.map(|x| view::figure_shown(x, 2)).unwrap_or("unknown".into()), if row.number.is_some() { "LF" } else { "" }, row.status);
-            stat(r, fonts, "On the tape", row.number.map(|x| units::feet_as_ft_in(x, 16)).unwrap_or("unknown".into()), "", row.status);
-        }
-    });
+        });
+    }
     // The plane's corners, from the model, to the sixteenth of an inch.
     if !snap.corners.is_empty() {
         heading(p, fonts, "Corners");
@@ -498,9 +705,11 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, el: &
     }
     // A cost line's own values are named "what: line"; everything else is the element's.
     let (own, costed): (Vec<&view::Row>, Vec<&view::Row>) = el.rows.iter().partition(|r| !r.label.contains(": "));
-    heading(p, fonts, "Entered");
-    for row in own.iter().filter(|r| !r.derived) {
-        property(p, fonts, &pretty(&row.label), shown(row), row.status, &row.basis, "");
+    if own.iter().any(|r| !r.derived) {
+        heading(p, fonts, "Entered");
+        for row in own.iter().filter(|r| !r.derived) {
+            property(p, fonts, &pretty(&row.label), shown(row), row.status, &row.basis, "");
+        }
     }
     if own.iter().any(|r| r.derived) {
         heading(p, fonts, "Worked out");
@@ -518,15 +727,21 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, el: &
             }
         }
         for line in lines {
-            p.spawn((rounded(Node { flex_direction: FlexDirection::Column, padding: UiRect::axes(px(11.0), px(9.0)), margin: UiRect::bottom(px(8.0)), row_gap: px(4.0), border: UiRect::all(px(1.0)), ..default() }, 8.0), BackgroundColor(theme::panel_alt()), BorderColor::all(theme::hex(0xE6EAF0)))).with_children(|c| {
+            p.spawn((rounded(Node { flex_direction: FlexDirection::Column, padding: UiRect::axes(px(11.0), px(9.0)), margin: UiRect::bottom(px(8.0)), row_gap: px(5.0), border: UiRect::all(px(1.0)), ..default() }, 8.0), BackgroundColor(theme::panel_alt()), BorderColor::all(theme::hex(0xE6EAF0)))).with_children(|c| {
                 c.spawn(Node { margin: UiRect::bottom(px(2.0)), ..default() }).with_child(text(fonts, line, 12.5, Weight::Semibold, theme::ink()));
                 for row in costed.iter().filter(|r| r.label.split_once(": ").is_some_and(|x| x.1 == line)) {
                     let what = row.label.split_once(": ").map(|x| x.0).unwrap_or("");
+                    // Each step keeps its flag, and under it what it rests on.
                     c.spawn(Node { align_items: AlignItems::Center, column_gap: px(8.0), ..default() }).with_children(|r| {
                         r.spawn(text(fonts, pretty(what), 12.0, if row.derived { Weight::Medium } else { Weight::Regular }, if row.derived { theme::ink() } else { theme::ink_soft() }));
+                        status_chip(r, fonts, row.status);
                         r.spawn(Node { flex_grow: 1.0, ..default() });
                         r.spawn(text(fonts, shown(row), 12.0, Weight::Medium, theme::status_ink(row.status)));
                     });
+                    let basis = if row.note.is_empty() { row.basis.clone() } else { format!("{}  ({})", row.basis, row.note) };
+                    if !basis.is_empty() {
+                        c.spawn(text(fonts, basis, 10.5, Weight::Regular, theme::ink_faint()));
+                    }
                 }
             });
         }
@@ -535,9 +750,8 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, el: &
 
 /// Keep each label at its point of the model as the view moves. Where two would lie over
 /// each other, the one nearer the eye stays and the other waits until there is room.
-pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>, rect: Res<ViewRect>, mut labels: Query<(Entity, &Label, &mut Node, &mut Visibility, &ComputedNode)>) {
+pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>, mut labels: Query<(Entity, &Label, &mut Node, &mut Visibility, &ComputedNode)>) {
     let Ok((camera, eye)) = camera.single() else { return };
-    // Where each label would go, how big it is, and how far off.
     let mut wanted: Vec<(Entity, u8, f32, Vec2, Vec2)> = Vec::new();
     for (entity, label, _, _, computed) in &labels {
         let towards = if doc.plan { Vec3::Y } else { eye.translation() - label.at };
@@ -546,7 +760,7 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
         }
         let Ok(at) = camera.world_to_viewport(eye, label.at) else { continue };
         let half = computed.size * computed.inverse_scale_factor / 2.0 + Vec2::splat(2.0);
-        wanted.push((entity, label.rank, eye.translation().distance(label.at), at - rect.0.min, half));
+        wanted.push((entity, label.rank, eye.translation().distance(label.at), at, half));
     }
     wanted.sort_by(|a, b| a.1.cmp(&b.1).then(a.2.total_cmp(&b.2)));
     let mut kept: Vec<(Entity, Vec2, Vec2)> = Vec::new();
@@ -577,12 +791,12 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
     }
 }
 
-/// Where the pointer is on the roof, to the sixteenth, in the status bar.
+/// Where the pointer is on the model, to the sixteenth, in the status bar.
 pub fn write_pointer(doc: Res<Doc>, mut out: Query<&mut Text, With<PointerText>>) {
     let Ok(mut text) = out.single_mut() else { return };
     let s = match doc.pointer {
         Some(p) => format!("E {}     N {}     H {}", units::feet_as_ft_in(p[0], 16), units::feet_as_ft_in(p[1], 16), units::feet_as_ft_in(p[2], 16)),
-        None => "Point at the roof to read a position".to_string(),
+        None => "Point at the model to read a position".to_string(),
     };
     if text.0 != s {
         text.0 = s;
@@ -606,7 +820,7 @@ pub fn scroll_panels(
         let Some(at) = window.cursor_position() else { continue };
         let limit = |node: &ComputedNode| ((node.content_size.y - node.size.y) * node.inverse_scale_factor).max(0.0);
         if primary {
-            if at.x > window.width() - INSPECTOR_W && at.y > BAR_H {
+            if at.x > window.width() - INSPECTOR_W - GAP && at.y > BAR_H + GAP {
                 if let Ok((mut position, node)) = inspector.single_mut() {
                     scrolls.inspector = (scrolls.inspector - by).clamp(0.0, limit(node));
                     position.0.y = scrolls.inspector;

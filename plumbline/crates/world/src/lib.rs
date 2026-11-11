@@ -11,10 +11,12 @@
 //! * `roof`: the lines a set of planes implies (ridge, hip, valley, eave, rake).
 //! * `skeleton`: where a footprint's slopes meet (ported from BIMCraft; see the file).
 //! * `solve`: a roof's planes and lines made from its footprint and kept in step with it.
+//! * `building`: storeys, walls, floors, and the ducts, pipes, cables and equipment in them.
 //! * `job`: the world and the edits made to it.
 //! * `file`: the saved job.
 //! * `sample`: a small made-up job for demonstrations and tests.
 
+pub mod building;
 pub mod check;
 pub mod components;
 pub mod derive;
@@ -31,6 +33,7 @@ pub mod units;
 pub mod value;
 pub mod view;
 
+pub use building::{Discipline, Floor, InSystem, Level, Opening, Placed, Route, Size, SystemInfo, Wall, P3};
 pub use components::*;
 pub use job::{Header, Job};
 pub use units::Len;
