@@ -16,7 +16,8 @@ Work outside a deliverable. Nothing here is built until the owner accepts it.
 5. **Metric.** The owner ruled that US measurements stay and did not ask for metric. A
    value in mm, cm or m is refused with a message that says it is metric. Taking metric
    would be a fourth and fifth length unit in `units.rs` and a decision about what derived
-   quantities are shown in.
+   quantities are shown in. A laser set to metres types `7.123m` and is refused the
+   same way (QUESTIONS.md Q19).
 6. **Pitch in degrees or percent.** A pitch is entered as rise in 12 (`6:12`, `1/4:12`).
    Degrees and percent are refused by name. Some low-slope drawings give percent and some
    manufacturer data gives degrees; nobody has asked for either.

@@ -392,6 +392,58 @@ pub fn typed_length(doc: &mut Doc, text: &str) {
     doc.touch();
 }
 
+/// What was measured on site, typed or sent by a laser, for the value picked in the
+/// panel: the reading as the tape or the laser has it, or "same" when the value is as
+/// drawn. For a run's height, "bottom" or "top" before the reading says where the shot
+/// was taken to. Who measured can follow a comma. The value becomes Known.
+pub fn measured(doc: &mut Doc, text: &str) {
+    let Some((path, what, _)) = doc.measuring.take() else { return };
+    // A comma inside a figure (8,5 ft) is not the comma before who measured.
+    let (reading, who) = match text.split_once(',') {
+        Some((reading, who)) if !who.trim_start().starts_with(|c: char| c.is_ascii_digit()) => (reading.trim(), who.trim()),
+        _ => (text.trim(), ""),
+    };
+    let line = |word: &&str| match word.to_ascii_lowercase().as_str() {
+        "bottom" => Some(plumbline_world::Justify::Bottom),
+        "top" => Some(plumbline_world::Justify::Top),
+        "centre" | "center" => Some(plumbline_world::Justify::Centre),
+        _ => None,
+    };
+    let mut words: Vec<&str> = reading.split_whitespace().collect();
+    let mut to = None;
+    if let Some(j) = words.first().and_then(line) {
+        to = Some(j);
+        words.remove(0);
+    } else if let Some(j) = words.last().and_then(line) {
+        to = Some(j);
+        words.pop();
+    }
+    let reading = words.join(" ");
+    if reading.is_empty() {
+        doc.say(Tone::Refused, "refused: nothing was typed. Type what the tape or the laser reads, or same if it is as drawn");
+        doc.touch();
+        return;
+    }
+    let same = reading.eq_ignore_ascii_case("same");
+    let by = if same { "checked on site" } else { "measured on site" };
+    let source = if who.is_empty() { by.to_string() } else { format!("{by}: {who}") };
+    match ed::measure(&mut doc.job, &path, &what, if same { ed::Reading::Same } else { ed::Reading::Length(&reading) }, to, &source) {
+        Ok(done) => {
+            doc.edit("measured");
+            // What else moved with it has to be seen: it is said in full over the model.
+            let tone = if done.also.is_empty() { Tone::Done } else { Tone::Warned };
+            let mut said = done.said;
+            for also in &done.also {
+                said.push('\n');
+                said.push_str(also);
+            }
+            doc.say(tone, said);
+        }
+        Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+    }
+    doc.redraw();
+}
+
 /// The dimension typed for a drawing's scale, after its two ends were picked. The
 /// dimension is read off the drawing, so the scale is Assumed.
 pub fn scale_entered(doc: &mut Doc, text: &str) {

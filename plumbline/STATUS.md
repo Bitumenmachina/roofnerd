@@ -41,11 +41,11 @@ CLAUDE.md, "Order of work"; step 1 of it is under way.
 | 2 | Every import works as stated: PDF (vector and scanned), PNG, JPEG, aerial images, CSV and XLSX (price lists, prior estimates, assembly libraries), IFC, the job file | **Each import named by the rule is read at the command line; only plans are in the window.** The job file loads and saves to the same bytes. A PDF plan (drawn or scanned), a PNG and a JPEG are laid under a storey and traced over, with what each could not give listed (`demos/plan.sh`, `demos/planw.sh`; judged, fixes not judged). A CSV or XLSX price list, an assembly library and a prior estimate are brought in with every unused row and column said, and a price list and an assembly library go out as CSV and come back the same (`demos/imports.sh`; not judged). A plain IFC model comes in as storeys, walls, openings, floors, rooms and runs, with the rest listed (`demos/model.sh`; not judged; one made-up model only). Not built: tables and models in the window; an aerial picture shown as such; an estimate's own lines out and back. |
 | 3 | From an empty job: open a real residential plan PDF, calibrate, trace walls, openings, floors, rooms and the roof; the 3D house builds from the tracing | **Part.** From an empty job the window opens USDA Plan No. 7213 (public domain; a scan), sets its scale from its 41 ft 3 in dimension, and traces its outside walls; the 3D house stands on the sheet (`demos/planw.sh`, pictures 01 to 08; not judged). Not built: openings, floors, rooms and the roof traced over it. |
 | 4 | Clashes show their certainty; the VIF list is sorted by dollars | **Half.** A clash is Known or Assumed from its two shapes and says so (command line and the sheet's Clashes tab; not judged). There is no VIF list and no dollars on a clash. |
-| 5 | A typed or lasered measurement makes a value Known; the clash confirms or clears; the price changes live in the second window | **Not built in the window.** A value is made Known at the command line. The window cannot. |
+| 5 | A typed or lasered measurement makes a value Known; the clash confirms or clears; the price changes live in the second window | **Demonstrated, not judged** (`demos/field.sh`, `demos/fieldw.sh`; "Field entry. What was run"). A reading typed as a Leica DISTO in keyboard mode types it, ended by its Tab or Enter, makes a value Known in the window; one clash clears and one becomes a finding; the sheet's price goes from $615.86 to $607.31. No laser was in the loop: the keys were typed by `xdotool` in a burst. A wall's length is not measured as one length yet. |
 | 6 | A design-phase price per SF or LF grows into line items for the same condition, and the detail rolls back up | **Demonstrated on the roof** (D4: `demos/d4.sh`, `demos/d4w.sh`), judged, fixes not judged. Not shown on a wall, a floor or a run. |
 | 7 | The sheet: stretch-out editable on the line, labor switchable per line, editable overhead and profit, three suppliers side by side | **Three of four in the window** (D5: `demos/d5w.sh`): the labor switch, overhead and profit, three suppliers. Stretch-out is editable at the command line and not on the line in the window. |
 | 8 | Exports: xlsx with live formulas, CSV, IFC4 validated by IfcOpenShell; supplier, subcontractor and PM lenses from one estimate | **Not started** (Q17 for what each lens holds). |
-| 9 | A judge lists every word on every screen; none is a software term | **Not done.** No language pass has been made; the screens show paths like `wall-0008` and words like "element". |
+| 9 | A judge lists every word on every screen; none is a software term | **Tried once and failed** (fifteenth judgment, part B): paths, command lines, a backslash before every inch mark, and the machine's own error words reach the screen. Thirteen findings, none fixed yet. |
 | 10 | A fresh judge, briefed as a veteran estimator with no software background, completes a whole-house takeoff from a PDF using only the in-app help | **Not possible yet**: no PDF, no in-app help. |
 | 11 | The visual judge passes every screen against the instrument standard | **Not started.** The 3D view still has the sky, sun and grass that ruling 7 removes. |
 | 12 | A fresh judge walks the whole path cold and cannot break the money path | **Not done.** Twelve judgments so far, each of one stretch; the last fixes of D1, D2, D3, D4, D5 and drawing are not themselves judged. |
@@ -1858,6 +1858,82 @@ change a figure it should not or fail to change one it should, to find a field t
 takes a length and will not take what the laser types, and to break the sheet's price
 with a measurement.
 
+## Field entry. What was run and what it showed
+
+Built as the plan above has it (DECISIONS.md call 49; SPEC.md 5.14). Not judged.
+
+**What was built.**
+
+* `units::parse_length` reads a fraction after the inch mark, the way a laser's display
+  writes it (`2'2"13/32`, `26"13/32`). A figure with no unit, a comma and metres are
+  refused as before; the first two refusals now say how a laser is to be set.
+* `editing::measure` (`crates/world/src/editing/measure.rs`), one verb for the command
+  line and the window: a length replaces an entered value and it is Known; `same` keeps
+  the value and marks it Known; a storey's height moves the floors above; a run's
+  height can be taken to its underside or its top. `editing::takes` says which values
+  of a thing a measurement can be put on.
+* `plumbline measure <file> <path> "<value>" <reading|same> [--to bottom|centre|top]
+  --source "..."`.
+* In the window: every value in the right-hand panel that can be measured says
+  **Measure** (one length) or **Check** (anything else) and a click on it asks for the
+  reading. A storey's row on the left now picks the storey as well as putting it on
+  show, so its floor and its height are on the right. An entry is ended by Enter or by
+  Tab; where an entry takes several things, Tab goes on to the next.
+
+**`demos/field.sh`** (the command line): PASS. Every figure of the plan came out as
+worked by hand: two clashes to verify, 2.00 in and 5.00 in; the wall 216.00 SF,
+$518.40, price $615.86, flagged; after the storey height `8'10"1/2`, the upper floor at
+8' 10 1/2", Known, the wall 213.00 SF, $511.20, price $607.31, no flag; after the
+duct's underside `7'10"3/4`, one clash, a finding, 2.25 in, and pipe A 0.75 in clear.
+Ten refusals, the file byte for byte the same after each. A second storey height that
+contradicts the floor above once that floor is Known is refused and names the three
+values.
+
+**`demos/fieldw.sh`** (the window): PASS. Each reading typed by `xdotool` in one burst
+(20 ms a key), ended by the key a laser sends: `same` and Enter; `8'10"1/2` and Tab;
+`same, JM` and Enter; `bottom ` typed by hand and then `7'10"3/4` and Enter. The job the
+window saved is **byte for byte** the job the command line makes from the same five
+measurements. Pictures in `demos/captured/field`, each read:
+
+| Picture | What it shows |
+|---|---|
+| 01 | The storey picked: Elevation 0 ft and Storey height 9 ft, both Assumed, each with Measure. The sheet's Estimate: 216.00 SF, $518.40, Price $615.86, every figure flagged, "$518.40 of it rests on something assumed". |
+| 02 | The entry: "Measured on site: elevation of ground", and under it "As the tape or laser reads, or same". |
+| 03 | Storey height 8' 10 1/2", "measured on site", no flag; Upper at 8' 10 1/2" in the list of storeys; the message says the upper floor moved and that it is Known. The sheet: 213.00 SF, $511.20, Price $607.31, no flag anywhere on it. |
+| 04 | The duct picked on the plan: Type, Line on the plan (Check) and Height above its storey (Measure), all Assumed. Both crossings marked on the plan. The sheet's Clashes: 2, "2 to verify in the field", 2.00 in and 5.00 in. |
+| 05 | The duct's three values Known with their sources; "Its heights are those of its bottom"; one crossing marked. The sheet's Clashes: 1, "1 finding", 2.25 in. |
+
+**Tests.** `crates/world/tests/field.rs`, ten: what a laser types; the figures above; a
+floor only as sure as the floor below it; a Known floor above refuses the measurement;
+floors further up move by the same and a Known one stops the move; what a measurement
+will not do, each leaving the job as it was; `same` on a value nobody knows; a sloping
+run; a run with no size.
+
+**What this changed that was so before:**
+
+* `1,200 ft` is refused with "has a comma, and 1,234 is a thousand to one reader...";
+  it was refused with "is not a measurement this program can read". One test's expected
+  words changed (call 49).
+* A length with no unit is refused in the same words, with a sentence about a laser
+  added.
+* `2' 6" 1/2` and `26" 1/2` are read; they were refused ("something after the inches").
+* A click on a storey's row picks the storey (the bar says "selected ground" and the
+  right-hand panel shows it); it only put the storey on show before. Delete with a
+  storey picked tries to remove the storey, and is refused while anything is on it.
+* Tab in an entry ends it, or goes on to its next part; it did nothing in an entry.
+
+**What is not right, or not done:**
+
+* A wall's or a run's length cannot be measured as one length: it would move an end and
+  what is joined to it. A line is moved and then checked.
+* A laser shot with no entry open types into whatever the keys do.
+* The hint under the entry wraps to two lines.
+* The pictures show two faults that were there before: a sheet row says its name twice
+  ("wall 7 wall 7"), and Keys offers "Next roof plane" on a job with no roof. Both are
+  in the fifteenth judgment, part B.
+* Only `demos/fieldw.sh` has been run on this code. The other window pictures are still
+  those of `719ff91` or before.
+
 ## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
 
 An independent judge (Opus; it did not build any of this) was given commit `1886693`, a
@@ -2296,3 +2372,44 @@ sourcing on overlapping drawings.
 
 The judge's reproductions are kept outside the repository (the scratch folder
 `judge15/findings/a`), each made up.
+
+## Fifteenth judgment, part B (2026-11-11): every word on the two windows
+
+The second judge (Opus), same frozen copy (`9629e27`), told to list every word on
+every screen and find the ones a builder would not say. Nine window runs. **The
+language pass does not hold.** Thirteen findings, worst first, as the judge gave them;
+none is fixed at the time of writing. Its word lists (every literal with its file and
+line) are in the scratch folder `judge15/findings/words`; they are not grouped by where
+on screen each appears, which the brief asked for and release item 9 will need.
+
+| # | What is wrong | Where the judge saw it |
+|---|---|---|
+| J15-B1 | **Paths are still on screen; `theme::spoken` has at least five holes.** A thing just removed ("removed duct-0015"; "gone: plane-0073, eave-0077, ..."); a path with 's after it ("roof-0072's footprint"); the message card capitalises before `spoken` runs ("Plane-0073: ...", "Drawing-0004: ..."); the job is named by its own path ("job-0001: overhead set to 12", a row "job-0001 job-0001"); and a thing drawn with no name is called by the file's counter ("duct 13", "fixture 18" for a lavatory, walls numbered from 9). | Delete, G on a roof, the card, the Money tab, every panel |
+| J15-B2 | **The window tells a user to type command lines** ("say which with `plumbline labor <job> ...`", "edit it in the file", "join them by name (plumbline connect)"). | L on a plane with two labor lines; three more in the source |
+| J15-B3 | **A backslash before every inch mark** in a line's description, from the program's own quoting (`"Gutter 6\" half round"`). | The entry's title, the Money tab, the Estimate |
+| J15-B4 | **The machine's error words and full folder paths:** "the PDF could not be read (Invalid)", "unexpected end of file", "No such file or directory", a whole scratch path. None says what to do next. | Laying a broken, cut-short or missing file |
+| J15-B5 | **Words a builder would not use:** element(s), network(s), solved and solver, class, values, "under this wall", pan and zoom, "not selected" for a product not chosen, "schedule code", "QUESTIONS.md Q1" as a source; kinds written as the code writes them ("a RoofPlane"), "connector", "mask". | Money tab, system panel, roof messages, sheet, Keys, To settle |
+| J15-B6 | **Units not the trade's way, and mixed:** "28.00 $/SF" beside "$9.00/lb" beside "$15.68 / SF"; hours and a rate to four decimals; "lb" where the rule says LB; places as bare decimal pairs; open ends and a page's size with no unit; clash depths in decimal inches where fractions are used elsewhere; one height three ways on one panel; "1/2 in round" for a pipe. | Panels, sheet, system panel |
+| J15-B7 | **Two words for one thing:** elbow and bend; storey, level and floor; facets and planes; "drawing" for the sheet and for the act; join, connect and connector; "selected" two ways. | Throughout |
+| J15-B8 | **The same text written twice, and a false claim in this file:** "The language pass" says paths are gone from beside each row of the sheet; the code still draws the path and `spoken` turns it into the name: "plane 1 plane 1", "south south", "ROOF: ROOF". | Every tab of the sheet |
+| J15-B9 | **Wrong reason, or no next step:** a fixture's size "2 by 2" refused as "not a plain number"; "the job has no condition that goes on a roof plane" with no way in the window to make one; "undone: remove" does not say what came back. | Tool settings, C, Undo |
+| J15-B10 | **A plan named the way the hint shows is refused:** a name typed relative to the job's folder is read from the folder the program was started in. | Lay a drawing |
+| J15-B11 | **A false source:** what is typed on the plan is sourced "set in the 3D view; not yet confirmed against a drawing". | Anything drawn on the plan |
+| J15-B12 | Minor: British spellings in a US-unit program (storey, centre); "Architecture" for "Architectural"; Keys offers C, U, N, L for a drawing and "Next roof plane" on a job with no roof; "job.json" as the job's subtitle. | Keys, top bar |
+| J15-B13 | **Call 48's and the test's claims are not so:** `theme::text` is not the only way text reaches the screen (the pointer's position, the entry field, the two windows' titles); the test asserts a path left on screen; removing "(os error 2)" leaves the rest. | `theme.rs`, `panels.rs`, `main.rs` |
+
+**What held, in the judge's words:** the refusals for a length with no unit, a pitch in
+degrees, a price in the wrong unit, a word for a number, a file that is not a plan, a
+system that is not there, a door off a wall, a drawing with no scale, and what a door
+takes: each plain, each saying what to do. The names of what the pointer catches on,
+the tab names, the clash and not-tested wording. Pitch as 6:12; SF, LF, SQ, EA in the
+tables; "On the tape". No panic in any run.
+
+**What the judge did not reach:** a condition's panel; the move refusal; the panels of
+a fitting, a room, a picture drawing and a storey; the metric refusal; panels compared
+between plan and 3D.
+
+**The claim this file made that was false** (J15-B8) is in "The language pass. What was
+done": that a path is never shown beside a row of the sheet. It is shown, as the name
+a second time. That section stands as written, with this correction.
+

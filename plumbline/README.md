@@ -38,6 +38,8 @@ demos/fit.sh               # fittings worked out from the runs that meet, runs j
 demos/clash.sh             # what is in the same space as what, what passes through a wall, and what is only close
 demos/clashw.sh            # fittings, a connection and the clashes in the window; pictures in demos/captured/clash
 demos/plan.sh              # a plan laid under a storey, given its scale from one dimension and traced over, at the command line
+demos/field.sh             # what is measured on site put on a traced job: the floor above moves and the price with it, one clash clears, one becomes a finding
+demos/fieldw.sh            # the same in the window, each reading typed as a laser in keyboard mode types it; pictures in demos/captured/field
 demos/imports.sh           # a price list and an assembly library out as CSV and back; a supplier's list from CSV and from a workbook; a prior estimate set against the job
 demos/model.sh             # another trade's model (IFC) brought in: what comes in, what is listed instead, and the clash it hid
 demos/planw.sh             # the same in the window, on a real scanned sheet and on a vector plan; pictures in demos/captured/plan
@@ -132,6 +134,27 @@ beside the job and set against it line by line with `compare`; it adds nothing t
 job's price. A model from another trade or a designer (IFC) comes in as storeys, walls
 with their doors and windows, floors, rooms, ducts, pipes, trays and cables; what the
 program has no element for, or cannot read the shape of, is listed with why.
+
+## Measure on site
+
+```
+plumbline measure job.json storey-0002 "storey height" "8' 10 1/2\"" --source "JM with the laser"
+plumbline measure job.json duct-0011 "height above its storey" "7' 10 3/4\"" --to bottom --source "JM with the laser"
+plumbline measure job.json duct-0011 "line on the plan" same --source "JM on site"
+```
+
+What is traced is Assumed until someone measures it. In the window, pick a thing (a
+storey by its row on the left, anything else on the model); each of its values on the
+right says **Measure** or **Check**. Click the value and type what the tape reads, or
+shoot it with a laser in keyboard mode: the reading lands where it is asked for, and
+the Tab or Enter the laser sends ends it. `same` says the value was looked at and is as
+drawn. For a duct or a pipe, `bottom` or `top` before the reading says where the shot
+was taken to. Who measured can follow a comma. The value is then Known, the clashes
+that rested on it are findings or are gone, and the price in the sheet window follows.
+
+A laser has to send its unit with the reading (Leica calls this its text setting), in
+feet and inches, with a point for the decimal mark. A figure with no unit, a comma, or
+metres is refused, and the refusal says so.
 
 Everything drawn in the window is flagged Assumed and says it was drawn there. Rooms are
 placed at the command line: `plumbline room job.json <storey> "name" --at "6,8" --status

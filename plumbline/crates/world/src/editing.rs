@@ -27,10 +27,12 @@
 
 pub mod history;
 pub mod join;
+pub mod measure;
 pub mod snap;
 
 pub use history::{History, UNDO_LIMIT};
 pub use join::{connect, connect_at, fit_all, fitting, split, Fitted, PassedOver};
+pub use measure::{measure, takes, Measured, Reading};
 
 use crate::building::{self, InSystem, SystemInfo};
 use crate::components::*;

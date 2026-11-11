@@ -403,7 +403,8 @@ fn each_way_of_writing_a_length_means_what_it_says() {
         ("6 0/2 in", "more than nothing"),
         ("6.5 1/2 in", "both a decimal point and a fraction"),
         ("1e3 ft", "\"e\""),
-        ("1,200 ft", "not a measurement"),
+        // Call 49: a comma is refused as before, and now says why.
+        ("1,200 ft", "has a comma"),
         ("12 m", "metric"),
         ("12 metres", "metric"),
         ("12 mm", "metric"),

@@ -267,7 +267,10 @@ fn browser(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     c,
                     doc.show.storey.as_deref() == Some(storey.path.as_str()),
                     move |doc| {
+                        // The storey is put on show, and picked: its floor and its
+                        // height are in the panel on the right, to be measured.
                         doc.show.storey = Some(path.clone());
+                        doc.select(&path);
                         doc.redraw();
                     },
                     |r| {
@@ -525,6 +528,11 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                         Entry::Storey => "New storey: name, floor height, height to the next".to_string(),
                         Entry::Drawing => "Drawing to lay under this storey".to_string(),
                         Entry::Distance => "Dimension between the two points".to_string(),
+                        Entry::Measure => match &doc.measuring {
+                            Some((_, what, true)) => format!("Measured on site: {what} of {name}"),
+                            Some((_, what, false)) => format!("Checked on site: {what} of {name}"),
+                            None => "Measured on site".to_string(),
+                        },
                     };
                     c.spawn(text(fonts, title, 13.0, Weight::Semibold, theme::ink()));
                     c.spawn((rounded(Node { padding: UiRect::axes(px(10.0), px(7.0)), border: UiRect::all(px(1.5)), min_height: px(36.0), align_items: AlignItems::Center, ..default() }, 7.0), BackgroundColor(theme::panel()), BorderColor::all(theme::accent()))).with_children(|f| {
@@ -545,6 +553,11 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                             Entry::Storey => "like Ground, 0 ft, 9 ft",
                             Entry::Drawing => "A PDF, PNG or JPEG, like plans/a-1.pdf, 2",
                             Entry::Distance => "As the drawing says it, like 41' 3\" or 30 ft",
+                            Entry::Measure => match &doc.measuring {
+                                Some((_, what, true)) if what.starts_with("height above its storey") && snap.selected.as_ref().is_some_and(|s| s.kind.is_segment()) => "Like bottom 7' 10 3/4\", or same",
+                                Some((_, _, true)) => "As the tape or laser reads, or same",
+                                _ => "Type same if it is as drawn",
+                            },
                         };
                         h.spawn(text(fonts, hint, 11.5, Weight::Regular, theme::ink_faint()));
                         h.spawn(Node { flex_grow: 1.0, ..default() });
@@ -581,9 +594,12 @@ pub fn stat(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: Str
 
 /// A value in the inspector: its name, a flag when it is not Known, the value, and under
 /// it where it came from, or for a worked-out figure, how. A long value takes its own line.
-fn property(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: String, status: Status, basis: &str, note: &str) {
+/// One value: its name, its flag, what it is, and under it where it came from. `act`,
+/// when there is one, is what a click on the row does ("Measure"), said at the row's foot.
+fn property<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: String, status: Status, basis: &str, note: &str, act: &str) -> EntityCommands<'a> {
     let long = value.chars().count() > 22;
-    p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(7.0)), row_gap: px(3.0), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::hex(0xEEF1F5)))).with_children(|r| {
+    let mut row = p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(7.0)), row_gap: px(3.0), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::hex(0xEEF1F5))));
+    row.with_children(|r| {
         r.spawn(Node { align_items: AlignItems::Center, column_gap: px(8.0), ..default() }).with_children(|top| {
             top.spawn((text(fonts, label, 12.5, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap()));
             status_chip(top, fonts, status);
@@ -595,13 +611,19 @@ fn property(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: Str
         if long {
             r.spawn(text(fonts, value, 12.5, Weight::Medium, theme::status_ink(status)));
         }
-        if !basis.is_empty() {
-            r.spawn(text(fonts, basis, 11.0, Weight::Regular, theme::ink_faint()));
+        if !basis.is_empty() || !act.is_empty() {
+            r.spawn(Node { align_items: AlignItems::FlexStart, column_gap: px(8.0), ..default() }).with_children(|foot| {
+                foot.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, basis, 11.0, Weight::Regular, theme::ink_faint()));
+                if !act.is_empty() {
+                    foot.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, act, 11.0, Weight::Semibold, theme::accent()), TextLayout::no_wrap()));
+                }
+            });
         }
         if !note.is_empty() {
             r.spawn(text(fonts, note, 11.0, Weight::Regular, theme::status_ink(status)));
         }
     });
+    row
 }
 
 fn shortcut(p: &mut ChildSpawnerCommands, fonts: &Fonts, keys: &[&str], what: &str) {
@@ -926,13 +948,30 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, el: &
     if own.iter().any(|r| !r.derived) {
         heading(p, fonts, "Entered");
         for row in own.iter().filter(|r| !r.derived) {
-            property(p, fonts, &pretty(&row.label), shown(row), row.status, &row.basis, "");
+            // A value a measurement can be put on says so, and a click on it asks for
+            // what was read: a length is measured, anything else is checked.
+            match snap.takes.iter().find(|t| t.0 == row.label) {
+                None => {
+                    property(p, fonts, &pretty(&row.label), shown(row), row.status, &row.basis, "", "");
+                }
+                Some((what, length)) => {
+                    let (path, what, length) = (el.path.clone(), what.clone(), *length);
+                    property(p, fonts, &pretty(&row.label), shown(row), row.status, &row.basis, "", if length { "Measure" } else { "Check" }).observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
+                        if press.button == PointerButton::Primary && doc.entry.is_none() {
+                            doc.measuring = Some((path.clone(), what.clone(), length));
+                            doc.entry = Some((Entry::Measure, String::new()));
+                            doc.entry_line = None;
+                            doc.touch();
+                        }
+                    });
+                }
+            }
         }
     }
     if own.iter().any(|r| r.derived) {
         heading(p, fonts, "Worked out");
         for row in own.iter().filter(|r| r.derived) {
-            property(p, fonts, &pretty(&row.label), shown(row), row.status, &row.basis, &row.note);
+            property(p, fonts, &pretty(&row.label), shown(row), row.status, &row.basis, &row.note, "");
         }
     }
     if !costed.is_empty() {

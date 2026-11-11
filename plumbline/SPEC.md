@@ -57,8 +57,8 @@ nothing; the program converts only inside arithmetic, and says where it did.
 | Unit in the file | What it is | `value` in the file | Typed as | Shown as |
 |---|---|---|---|---|
 | `ft` | decimal feet | a number | `25.5 ft`, `25.5'`, `25.5 feet` | `25.5 ft` |
-| `in` | inches | a number | `306 in`, `306"`, `19 1/2 in`, `19-1/2"` | `306 in`, `19 1/2 in` |
-| `ft-in` | feet and inches | `[feet, inches]` | `25' 6 1/2"`, `25'-6 1/2"`, `25 ft 6 in`, `25' 6` | `25' 6 1/2"` |
+| `in` | inches | a number | `306 in`, `306"`, `19 1/2 in`, `19-1/2"`, `26"13/32` | `306 in`, `19 1/2 in` |
+| `ft-in` | feet and inches | `[feet, inches]` | `25' 6 1/2"`, `25'-6 1/2"`, `25 ft 6 in`, `25' 6`, `2'2"13/32` | `25' 6 1/2"` |
 | `in/12` | pitch: inches of rise for 12 of run | a number | `6`, `6:12`, `6/12`, `6 in/12`, `1/4:12`, `1/4 in/ft` | `6 in/12` |
 
 * **A single dimension** (a parapet height, an eave height, a stretch-out) takes `ft`, `in`
@@ -72,6 +72,11 @@ nothing; the program converts only inside arithmetic, and says where it did.
   64-bit number holds exactly. `25' 6 1/2"` is `[25, 6.5]`, and it is the same number of
   feet, to the last bit, as `306.5 in`. Any other fraction (`1/3`) is refused; write it as
   a decimal.
+* **As a laser types it.** A laser in keyboard mode types its display where the cursor is:
+  the fraction after the inch mark and no spaces (`2'2"13/32`, `26"13/32`, `23.46ft`).
+  That is read; the inches before the mark are then a whole number. What a laser can
+  also be set to send is refused, and the refusal says how to set it: a figure with no
+  unit, a comma for the decimal mark, metres (section 5.14; DECISIONS.md call 49).
 * **Feet and inches.** The feet are a whole number, the inches are less than 12, and a
   length below zero carries the minus on both. `25' 14"` and `25.5' 6"` are refused.
   In `25'-6"` the dash is a separator, not a minus.
@@ -768,6 +773,47 @@ window, the left panel's Drawings to trace.
   file's name, and the thing in the file it was read off.
 * **All or nothing:** the job is checked whole afterwards; if that fails, or nothing
   but storeys could be brought in, the job is as it was.
+
+### 5.14 A measurement taken on site
+
+What is traced starts Assumed. `editing::measure` (the command `measure`, and a click on
+a value in the window's right-hand panel) puts what was measured on site on one entered
+value, and the value is Known. DECISIONS.md call 49 has why each rule is as it is.
+
+* **The value is named as the screen names it:** `storey height`, `sill`, `height above
+  its storey`, `wall thickness`. `editing::takes` lists the values of an element a
+  measurement can be put on, and whether each is one length.
+* **A length replaces the value.** Status Known, the source as given. Any entered value
+  that is one length takes one: a storey's floor and height; a type's thickness, width,
+  height, diameter or depth; a wall's height and offsets; an opening's place along its
+  wall and its sill; a run's heights; a placed thing's height; a parapet's height and a
+  roof outline's eave height.
+* **`same` keeps the value and marks it Known.** The source keeps what it said and adds
+  "found as drawn" and who looked. It works on any entered value, a line on the plan, a
+  position or a choice of type included. A value that is not known is refused: there is
+  nothing for it to be the same as.
+* **A line or a position is not one length** and a length for it is refused. It is moved
+  with the move verb and then marked `same`.
+* **A storey's height is floor to floor.** The next storey up is put at this storey's
+  floor plus the measurement: Known if this floor is Known, otherwise as sure as this
+  floor is. Storeys above that move by the same amount, keep their status, and say in
+  their source that they moved. A Known floor is never moved: if it is the next one up
+  and the measurement puts it elsewhere, the measurement is refused and names the three
+  values that disagree; if it is further up, it and every floor above it are left, and
+  that is said.
+* **A run's height can be taken to its underside or its top.** `--to bottom|centre|top`
+  (in the window, the word before the reading) says which line of its section was shot.
+  The run then holds its heights to that line (`justify`), and its centre is worked from
+  its size, as sure as the size is. Refused on a run whose two ends differ and that
+  holds its heights to another line, and on a run whose size is not known.
+* **A measurement says who measured.** No source, no measurement. In the window the
+  source is "measured on site", or "checked on site" for `same`, and whatever is typed
+  after a comma.
+* **All or nothing,** as every verb: a refused measurement leaves the job byte for byte
+  as it was.
+* **In the window** an entry is ended by Enter or by Tab, since a laser sends either.
+  Where an entry takes more than one thing (a storey's name, floor and height; what a
+  tool draws with), Tab goes on to the next and ends the entry after the last.
 
 ## 6. Cost code scheme
 

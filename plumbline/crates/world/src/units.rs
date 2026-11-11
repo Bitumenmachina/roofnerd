@@ -349,9 +349,33 @@ fn mark(scan: &mut Scan, whole_text: &str) -> Result<Mark, String> {
     }
 }
 
+/// The fraction a laser's display writes after the inch mark: `2'2"13/32`, `26"13/32`.
+/// Nothing when the text ends at the mark. The inches before the mark are then whole.
+/// `by_mark` says the inches were closed with `"` and not with the word.
+fn fraction_after_mark(scan: &mut Scan, inches: f64, by_mark: bool) -> Result<f64, String> {
+    scan.spaces();
+    if scan.done() {
+        return Ok(0.0);
+    }
+    let n = scan.digits();
+    if !by_mark || n.is_empty() || !scan.eat(b'/') {
+        return Err("has something after the inches".into());
+    }
+    if inches.fract() != 0.0 {
+        return Err("has a part of an inch before the inch mark and a fraction after it; write one or the other".into());
+    }
+    let fraction = scan.fraction(n)?;
+    scan.spaces();
+    if !scan.done() {
+        return Err("has something after the inches".into());
+    }
+    Ok(fraction)
+}
+
 /// Read a length as typed: `25.5 ft`, `306 in`, `19 1/2"`, `25' 6"`, `25'-6 1/2"`,
-/// `25 ft 6 in`. Gives the number and the unit it was entered in. A bare number is
-/// refused: it is never read as feet.
+/// `25 ft 6 in`, and as a laser types its display: `2'2"13/32`, `26"13/32`, `23.46ft`.
+/// Gives the number and the unit it was entered in. A bare number is refused: it is
+/// never read as feet.
 pub fn parse_length(text: &str) -> Result<(Len, &'static str), String> {
     let typed = text.trim();
     let s = plain(text);
@@ -370,17 +394,17 @@ pub fn parse_length(text: &str) -> Result<(Len, &'static str), String> {
     match mark(&mut scan, typed)? {
         Mark::None => {
             if scan.done() {
-                Err(fail("has no unit; say which it is: 25.5 ft, 306 in, or 25' 6\". A number with no unit is never read as feet".into()))
+                Err(fail("has no unit; say which it is: 25.5 ft, 306 in, or 25' 6\". A number with no unit is never read as feet. A laser has to be set to send its unit with the reading".into()))
+            } else if scan.peek() == Some(b',') {
+                Err(fail("has a comma, and 1,234 is a thousand to one reader and one and a bit to another; write the decimal with a point, like 25.5 ft, and no comma in the thousands (a laser can be set to send a point)".into()))
             } else {
                 Err(fail("is not a measurement this program can read; write it like 25.5 ft, 306 in, or 25' 6 1/2\", with no commas".into()))
             }
         }
         Mark::Inches => {
-            scan.spaces();
-            if !scan.done() {
-                return Err(fail("has something after the inches".into()));
-            }
-            Ok((Len::One(sign * first + 0.0), IN))
+            let by_mark = scan.s[scan.at - 1] == b'"';
+            let fraction = fraction_after_mark(&mut scan, first, by_mark).map_err(&fail)?;
+            Ok((Len::One(sign * (first + fraction) + 0.0), IN))
         }
         Mark::Feet => {
             scan.spaces();
@@ -397,14 +421,19 @@ pub fn parse_length(text: &str) -> Result<(Len, &'static str), String> {
                 }
                 scan.spaces();
             }
-            let (inches, _) = scan.quantity().map_err(&fail)?;
+            let (mut inches, _) = scan.quantity().map_err(&fail)?;
             match mark(&mut scan, typed)? {
                 Mark::Feet => return Err(fail("gives feet twice".into())),
-                Mark::Inches | Mark::None => {}
-            }
-            scan.spaces();
-            if !scan.done() {
-                return Err(fail("has something after the inches".into()));
+                Mark::Inches => {
+                    let by_mark = scan.s[scan.at - 1] == b'"';
+                    inches += fraction_after_mark(&mut scan, inches, by_mark).map_err(&fail)?;
+                }
+                Mark::None => {
+                    scan.spaces();
+                    if !scan.done() {
+                        return Err(fail("has something after the inches".into()));
+                    }
+                }
             }
             if first_decimal || first.fract() != 0.0 {
                 return Err(fail("has a part of a foot and inches as well; write the feet as a whole number, or the whole length as decimal feet".into()));

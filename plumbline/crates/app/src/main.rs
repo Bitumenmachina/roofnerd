@@ -106,6 +106,7 @@ fn main() {
         geometry: 1,
         entry: None,
         entry_line: None,
+        measuring: None,
         origin: [0.0; 3],
         framed: false,
         pointer: None,
@@ -263,6 +264,21 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
             }
             match &event.logical_key {
                 Key::Enter => done = Some(true),
+                // A laser set to send Tab after its reading: Tab ends an entry as Enter
+                // does. Where an entry takes more than one thing, Tab goes on to the
+                // next, and ends the entry after the last.
+                Key::Tab => {
+                    let wanted = match field {
+                        Entry::Storey => 3,
+                        Entry::Settings(tool) => tool.takes(),
+                        _ => 1,
+                    };
+                    if text.matches(',').count() + 1 < wanted {
+                        text.push_str(", ");
+                    } else {
+                        done = Some(true);
+                    }
+                }
                 Key::Escape => done = Some(false),
                 Key::Backspace => {
                     text.pop();
@@ -284,6 +300,7 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                     // The two points picked for a scale go with the dimension not typed.
                     doc.draw.picked.clear();
                 }
+                doc.measuring = None;
                 doc.say(Tone::Done, "entry cancelled");
                 doc.touch();
             }
@@ -312,6 +329,7 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                 Entry::Storey => tools::new_storey(doc, &text),
                 Entry::Drawing => plans::add(doc, &text),
                 Entry::Distance => tools::scale_entered(doc, &text),
+                Entry::Measure => tools::measured(doc, &text),
                 // What it is made of, and the job's overhead and profit: Assumed, like the rest.
                 Entry::Material | Entry::Overhead | Entry::Profit => {
                     let root = doc.job.world.get::<plumbline_world::Node>(doc.job.root()).map(|n| n.path.clone()).unwrap_or_default();

@@ -38,6 +38,8 @@ pub enum Entry {
     Drawing,
     /// The distance between the two points picked on a drawing: its scale.
     Distance,
+    /// What was measured on site for the value picked in the panel on the right.
+    Measure,
 }
 
 /// How the last action went. Said by what happened, not read back out of the words.
@@ -117,6 +119,9 @@ pub struct Doc {
     pub entry: Option<(Entry, String)>,
     /// When a unit cost is being typed: the cost line it is for, by its description.
     pub entry_line: Option<String>,
+    /// When a measurement is being typed: the element, the value's name as the panel
+    /// shows it, and whether it is one length.
+    pub measuring: Option<(String, String, bool)>,
     /// The plan point the model's origin is drawn at, in feet. The view is drawn relative
     /// to it in 32-bit numbers; the model itself stays 64-bit.
     pub origin: [f64; 3],
@@ -228,6 +233,9 @@ pub struct Snapshot {
     pub notes: Vec<(Status, String, String)>,
     /// The selected element with every value on it.
     pub selected: Option<view::ElementRows>,
+    /// Which of the selected element's entered values a measurement can be put on: each
+    /// by its name, and whether it is one length.
+    pub takes: Vec<(String, bool)>,
     /// For a selected plane solved from a footprint: the roof and the edge it rises from.
     pub rises_from: Option<(String, usize)>,
     /// A selected plane's corners as plan east, plan north and height, in feet.
@@ -429,6 +437,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
             s.corners = solid.points.iter().map(|p| [p[0], p[1], solid.height_at(*p)]).collect();
         }
         s.selected = elements.into_iter().find(|e| e.path == sel);
+        s.takes = plumbline_world::editing::takes(&mut doc.job, &sel);
     }
     *snap = s;
 }
