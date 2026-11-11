@@ -28,6 +28,12 @@ pub enum Entry {
     Overhead,
     /// The job's profit, a percentage.
     Profit,
+    /// What a drawing tool draws with (a wall's thickness and height), typed once.
+    Settings(crate::tools::Tool),
+    /// A length typed while a wall or a run is being drawn.
+    Length,
+    /// A new storey: its name, its floor's height, and how far up to the next.
+    Storey,
 }
 
 /// How the last action went. Said by what happened, not read back out of the words.
@@ -120,9 +126,18 @@ pub struct Doc {
     pub walk: bool,
     pub show: Show,
     pub tab: Tab,
+    /// The drawing in hand, and the undo history.
+    pub draw: crate::tools::Draw,
 }
 
 impl Doc {
+    /// The window changed the job: it is no longer what was saved, and what was done is
+    /// a step that can be taken back.
+    pub fn edit(&mut self, what: &str) {
+        self.edited = true;
+        self.draw.edits += 1;
+        self.draw.label = what.to_string();
+    }
     /// The panels have something new to show.
     pub fn touch(&mut self) {
         self.revision += 1;

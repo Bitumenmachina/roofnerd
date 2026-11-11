@@ -334,7 +334,8 @@ impl Builder<'_, '_, '_> {
         }
         let (click, over, out) = (path.to_string(), path.to_string(), path.to_string());
         e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
-            if press.button == PointerButton::Primary && doc.entry.is_none() {
+            // With a drawing tool in hand a click is a pick, not a selection.
+            if press.button == PointerButton::Primary && doc.entry.is_none() && doc.draw.tool.is_none() {
                 doc.select(&click);
             }
         })
@@ -382,7 +383,9 @@ pub fn rebuild(
 
     // Frame the building once, and lay the ground under it.
     if !doc.framed {
-        if let Some((lo, hi, top)) = snap.extent {
+        // A job with nothing in it yet is framed as a plot to draw on: sixty feet by
+        // forty about the origin, so there is ground and a grid before the first wall.
+        if let Some((lo, hi, top)) = snap.extent.or(Some(([-30.0, -20.0], [30.0, 20.0], 10.0))) {
             doc.framed = true;
             let (w, d) = ((hi[0] - lo[0]) as f32, (hi[1] - lo[1]) as f32);
             let size = (w * w + d * d + (top as f32).powi(2)).sqrt();
@@ -400,7 +403,7 @@ pub fn rebuild(
                 .spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(24000.0, 24000.0))), MeshMaterial3d(materials.add(material)), Transform::from_xyz(0.0, -0.04, 0.0), Ground))
                 .observe(|press: On<PointerClick>, mut doc: ResMut<Doc>| {
                     // A click on the ground lets go of the selection.
-                    if press.button == PointerButton::Primary && doc.selected.is_some() && doc.entry.is_none() {
+                    if press.button == PointerButton::Primary && doc.selected.is_some() && doc.entry.is_none() && doc.draw.tool.is_none() {
                         doc.selected = None;
                         doc.say(Tone::Done, "nothing selected");
                         doc.touch();

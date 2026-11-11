@@ -185,3 +185,8 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `scene` | ported | `of` | `crates/core/src/snap.rs:267` | the scene of one level's plan; here the walls and runs entered on the storey (header) |
 | `corner` | ported | `corner` | `crates/core/src/snap.rs:633` | the angle a new line makes with the one before |
 | `snap` | ported | `solve` | `crates/core/src/snap.rs:736` | the solver: a point of the plan, the foot of the perpendicular, an angle guide, a wall's line, else the round step |
+| `wall_type_for` | ours |  |  | a type or a system found by the values a person typed, or made; BIMCraft's commands take a type by its name (`type_param`, `commands.rs:2378`); `grep -rn 'fn wall_type_for' crates/core/src`: nothing |
+| `opening_type_for` | ours |  |  | a type or a system found by the values a person typed, or made; BIMCraft's commands take a type by its name (`type_param`, `commands.rs:2378`); `grep -rn 'fn opening_type_for' crates/core/src`: nothing |
+| `segment_type_for` | ours |  |  | a type or a system found by the values a person typed, or made; BIMCraft's commands take a type by its name (`type_param`, `commands.rs:2378`); `grep -rn 'fn segment_type_for' crates/core/src`: nothing |
+| `system_of_class` | ours |  |  | a type or a system found by the values a person typed, or made; BIMCraft's commands take a type by its name (`type_param`, `commands.rs:2378`); `grep -rn 'fn system_of_class' crates/core/src`: nothing |
+| `toward` | ported | `toward` | `crates/core/src/draw.rs:304` | a typed length goes from the last point toward the pointer, east when the pointer is on the point |

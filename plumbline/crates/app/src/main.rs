@@ -42,6 +42,7 @@ mod panels;
 mod scene;
 mod sheet;
 mod theme;
+mod tools;
 
 use std::path::PathBuf;
 
@@ -89,6 +90,8 @@ fn main() {
     let roof = roof_arg.or_else(|| solve::roofs(&mut job).into_iter().next()).or_else(|| job.order.iter().find_map(|e| (job.world.get::<Kind>(*e) == Some(&Kind::Roof)).then(|| job.world.get::<plumbline_world::Node>(*e).map(|n| n.path.clone())).flatten()));
     let (tone, message) = if report.stale.is_empty() { (Tone::Done, "opened".to_string()) } else { (Tone::Warned, format!("opened; figures in the file did not match its geometry for {} and were worked out again", report.stale.join(", "))) };
     let has_roof = roof.is_some();
+    // The job as it was opened: what the first step undone goes back to.
+    let draw = tools::Draw { last_text: file::save(&mut job), ..default() };
     let doc = Doc {
         job,
         path: PathBuf::from(path),
@@ -110,6 +113,7 @@ fn main() {
         walk: false,
         show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None },
         tab: if has_roof { Tab::Roof } else { Tab::Building },
+        draw,
     };
     let graphics = scene::Graphics { full: std::env::var("PLUMBLINE_GRAPHICS").map(|v| v != "plain").unwrap_or(true) };
 
@@ -134,7 +138,7 @@ fn main() {
         .add_systems(Startup, (scene::setup, setup).chain())
         .add_systems(
             Update,
-            (keys, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, scene::place_camera, scene::draw_lines, panels::place_labels, panels::write_pointer, panels::scroll_panels).chain(),
+            (keys, tools::clicks, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, scene::place_camera, tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels).chain(),
         )
         .run();
 }
@@ -207,7 +211,7 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
             // The roof under the pointer has moved; what the pointer read is no longer so.
             doc.pointer = None;
             doc.hover = None;
-            doc.edited = true;
+            doc.edit(what);
             let tone = if lost.is_empty() && report.renumbered.is_empty() { Tone::Done } else { Tone::Warned };
             doc.say(tone, format!("{what} on edge {edge} of {roof_path}; solved again: {} planes, {} lines{more}", report.planes, report.lines));
         }
@@ -286,7 +290,7 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                         Some(sel) => match doc.job.set_on_line(&sel, what, line.as_deref(), Some(text.trim()), Status::Assumed, SOURCE) {
                             Ok(()) => {
                                 doc.job.derive();
-                                doc.edited = true;
+                                doc.edit(what);
                                 let of = line.map(|l| format!(" of {l:?}")).unwrap_or_default();
                                 doc.say(Tone::Done, format!("{sel}: {}{of} set to {}", what.replace('_', " "), text.trim()));
                             }
@@ -295,6 +299,9 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                     }
                     doc.redraw();
                 }
+                Entry::Settings(tool) => tools::settings_entered(doc, tool, &text),
+                Entry::Length => tools::typed_length(doc, &text),
+                Entry::Storey => tools::new_storey(doc, &text),
                 // What it is made of, and the job's overhead and profit: Assumed, like the rest.
                 Entry::Material | Entry::Overhead | Entry::Profit => {
                     let root = doc.job.world.get::<plumbline_world::Node>(doc.job.root()).map(|n| n.path.clone()).unwrap_or_default();
@@ -308,7 +315,7 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                         Some(path) => match doc.job.set(&path, what, Some(text.trim()), Status::Assumed, SOURCE) {
                             Ok(()) => {
                                 doc.job.derive();
-                                doc.edited = true;
+                                doc.edit(what);
                                 // A material the job does not have is said at once: the
                                 // lines made of it now have no figure.
                                 let known = field != Entry::Material || {
@@ -335,6 +342,32 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
         }
         return;
     }
+    // With a tool in hand: Esc lets go of what is being drawn, then of the tool; a digit
+    // typed while a wall or a run has its start is the beginning of a length.
+    if doc.draw.tool.is_some() {
+        if keys.just_pressed(KeyCode::Escape) {
+            if doc.draw.picked.is_empty() {
+                doc.draw.tool = None;
+                doc.say(Tone::Done, "drawing ended");
+            } else {
+                doc.draw.picked.clear();
+                doc.say(Tone::Done, "let go; pick a new start, or Esc again to end");
+            }
+            doc.redraw();
+            return;
+        }
+        let drawing_a_line = matches!(doc.draw.tool, Some(tools::Tool::Wall | tools::Tool::Run(_))) && doc.draw.picked.len() == 1;
+        for event in typed.read() {
+            if let (true, true, Key::Character(c)) = (drawing_a_line, event.state.is_pressed(), &event.logical_key) {
+                if c.chars().all(|ch| ch.is_ascii_digit() || ch == '.') {
+                    doc.entry_line = None;
+                    doc.entry = Some((Entry::Length, c.to_string()));
+                    doc.touch();
+                    return;
+                }
+            }
+        }
+    }
     typed.clear();
 
     if keys.just_pressed(KeyCode::Equal) || keys.just_pressed(KeyCode::Minus) {
@@ -357,6 +390,17 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
             }
             doc.touch();
         }
+    }
+
+    // Z takes the last step back and Y does it again; Delete removes what is selected.
+    if keys.just_pressed(KeyCode::KeyZ) {
+        tools::step(doc, false);
+    }
+    if keys.just_pressed(KeyCode::KeyY) {
+        tools::step(doc, true);
+    }
+    if keys.just_pressed(KeyCode::Delete) {
+        tools::delete(doc);
     }
 
     // A price on what is selected: B for a budget rate (its allowance), U for the unit
@@ -414,7 +458,7 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                     [(line, off)] => match doc.job.set_off(&sel, Some(line), !off) {
                         Ok(()) => {
                             doc.job.derive();
-                            doc.edited = true;
+                            doc.edit("labor switch");
                             doc.say(Tone::Done, format!("{sel}: {line:?} switched {}", if *off { "on" } else { "off" }));
                         }
                         Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
@@ -495,7 +539,7 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                     Some(name) => match doc.job.apply_as(&sel, name, Status::Assumed, SOURCE) {
                         Ok(lines) => {
                             doc.job.derive();
-                            doc.edited = true;
+                            doc.edit("condition");
                             doc.say(Tone::Done, format!("{sel} is now {name:?}: {} cost lines", lines.len()));
                         }
                         Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),

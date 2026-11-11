@@ -370,3 +370,65 @@ pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
         Ok(gone)
     })
 }
+
+/// The wall type of this thickness with no layers, or a new one named for it ("wall 6 in").
+/// A window draws with a thickness the person typed; this is the type that thickness is.
+pub fn wall_type_for(job: &mut Job, thickness: &str, how: Entered) -> Result<String, String> {
+    let wanted = how.length(thickness)?.feet().ok_or("the thickness is not a length this program converts")?;
+    let mut q = job.world.query::<(&Node, &WallType)>();
+    let mut found: Vec<String> = q.iter(&job.world).filter(|(_, t)| t.layers.is_empty() && t.thickness.feet().is_some_and(|x| (x - wanted).abs() < 1e-9)).map(|(n, _)| n.path.clone()).collect();
+    found.sort();
+    match found.into_iter().next() {
+        Some(path) => Ok(path),
+        None => wall_type(job, &format!("wall {}", thickness.trim()), thickness, how),
+    }
+}
+
+/// The door or window type of this width and height, or a new one named for them.
+pub fn opening_type_for(job: &mut Job, kind: Kind, width: &str, height: &str, how: Entered) -> Result<String, String> {
+    let (w, h) = (how.length(width)?.feet().ok_or("the width is not a length this program converts")?, how.length(height)?.feet().ok_or("the height is not a length this program converts")?);
+    let mut q = job.world.query::<(&Node, &OpeningType)>();
+    let mut found: Vec<String> = q.iter(&job.world).filter(|(_, t)| t.category == kind && t.width.feet().is_some_and(|x| (x - w).abs() < 1e-9) && t.height.feet().is_some_and(|x| (x - h).abs() < 1e-9)).map(|(n, _)| n.path.clone()).collect();
+    found.sort();
+    match found.into_iter().next() {
+        Some(path) => Ok(path),
+        None => opening_type(job, &format!("{} {} by {}", kind.stem(), width.trim(), height.trim()), kind, width, height, how),
+    }
+}
+
+/// The round type of this kind of run and this size across, or a new one named for it.
+pub fn segment_type_for(job: &mut Job, kind: Kind, across: &str, how: Entered) -> Result<String, String> {
+    let wanted = how.length(across)?.feet().ok_or("the size is not a length this program converts")?;
+    let mut q = job.world.query::<(&Node, &SegmentType)>();
+    let mut found: Vec<String> = q.iter(&job.world).filter(|(_, t)| t.category == kind && t.round && t.width.feet().is_some_and(|x| (x - wanted).abs() < 1e-9)).map(|(n, _)| n.path.clone()).collect();
+    found.sort();
+    match found.into_iter().next() {
+        Some(path) => Ok(path),
+        None => segment_type(job, &format!("{} {} round", kind.stem(), across.trim()), kind, across, None, how),
+    }
+}
+
+/// The job's system of this classification, or a new one named for it.
+pub fn system_of_class(job: &mut Job, classification: &str) -> Result<String, String> {
+    let mut q = job.world.query::<(&Node, &SystemInfo)>();
+    let mut found: Vec<String> = q.iter(&job.world).filter(|(_, s)| s.classification.eq_ignore_ascii_case(classification.trim())).map(|(n, _)| n.path.clone()).collect();
+    found.sort();
+    match found.into_iter().next() {
+        Some(path) => Ok(path),
+        None => {
+            let name = building::CLASSIFICATIONS.iter().find(|(c, _)| c.eq_ignore_ascii_case(classification.trim())).map(|c| c.0).unwrap_or(classification.trim()).to_string();
+            system(job, &name, classification)
+        }
+    }
+}
+
+/// Where a length typed while a line is being drawn puts the next point: that far from
+/// the last point toward the pointer, east when the pointer is on the point (BIMCraft
+/// `draw.rs:304`, `toward`).
+pub fn toward(last: P2, pointer: P2, length_ft: f64) -> P2 {
+    let (dx, dy) = (pointer[0] - last[0], pointer[1] - last[1]);
+    let d = (dx * dx + dy * dy).sqrt();
+    let (ux, uy) = if d > crate::check::FIT_TOLERANCE_FT { (dx / d, dy / d) } else { (1.0, 0.0) };
+    let round = |x: f64| (x * 1e4).round() / 1e4 + 0.0;
+    [round(last[0] + ux * length_ft), round(last[1] + uy * length_ft)]
+}

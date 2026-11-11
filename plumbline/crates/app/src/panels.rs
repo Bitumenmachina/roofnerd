@@ -267,6 +267,50 @@ fn browser(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             }
         }
 
+        // Drawing, on the plan: each tool with what it draws with, as it was typed. A tool
+        // that has not been told what to draw with asks before it draws.
+        if doc.plan {
+            use crate::tools::{self, Tool};
+            heading(c, fonts, "Draw");
+            let plain = |c: &mut ChildSpawnerCommands, said: &str, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
+                browser_row(c, false, move |doc| act(doc), |r| {
+                    r.spawn(text(fonts, said, 12.5, Weight::Medium, theme::ink()));
+                });
+            };
+            if doc.show.storey.is_none() {
+                let said = if snap.storeys.is_empty() { "This job has no storey to draw on yet." } else { "Choose the storey to draw on, above." };
+                c.spawn(Node { padding: UiRect::axes(px(8.0), px(4.0)), ..default() }).with_child(text(fonts, said, 11.5, Weight::Regular, theme::ink_soft()));
+            } else {
+                for tool in Tool::DRAWING {
+                    let said = doc.draw.settings.get(tool.name()).cloned().unwrap_or_else(|| "not set yet".to_string());
+                    browser_row(c, doc.draw.tool == Some(tool), move |doc| tools::start(doc, tool), |r| {
+                        r.spawn(Node { flex_direction: FlexDirection::Column, min_width: px(0.0), flex_grow: 1.0, flex_basis: px(0.0), overflow: Overflow::clip(), ..default() }).with_children(|col| {
+                            col.spawn(text(fonts, tool.name(), 12.5, Weight::Medium, theme::ink()));
+                            col.spawn((text(fonts, said.clone(), 11.0, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap()));
+                        });
+                    });
+                }
+                if let Some(tool) = doc.draw.tool.filter(|t| *t != Tool::Move) {
+                    let said = format!("Change what the {} draws with", tool.name().to_lowercase());
+                    plain(c, &said, Box::new(move |doc| {
+                        let was = doc.draw.settings.get(tool.name()).cloned().unwrap_or_default();
+                        doc.entry_line = None;
+                        doc.entry = Some((Entry::Settings(tool), was));
+                        doc.touch();
+                    }));
+                }
+                plain(c, "Move what is selected", Box::new(|doc| tools::start(doc, Tool::Move)));
+                plain(c, "Remove what is selected", Box::new(tools::delete));
+            }
+            plain(c, "New storey", Box::new(|doc| {
+                doc.entry_line = None;
+                doc.entry = Some((Entry::Storey, String::new()));
+                doc.touch();
+            }));
+            plain(c, "Undo", Box::new(|doc| tools::step(doc, false)));
+            plain(c, "Redo", Box::new(|doc| tools::step(doc, true)));
+        }
+
         heading(c, fonts, "Show");
         let layer = |c: &mut ChildSpawnerCommands, name: &str, key: &str, colour: Color, on: bool, count: Option<usize>, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
             browser_row(c, false, move |doc| act(doc), |r| {
@@ -425,6 +469,9 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                         Entry::Material => format!("What {name} is made of"),
                         Entry::Overhead => "Overhead on the job".to_string(),
                         Entry::Profit => "Profit on the job".to_string(),
+                        Entry::Settings(tool) => format!("{}: {}", tool.name(), tool.asks().to_lowercase()),
+                        Entry::Length => "Length of this piece".to_string(),
+                        Entry::Storey => "New storey: name, floor height, height to the next".to_string(),
                     };
                     c.spawn(text(fonts, title, 13.0, Weight::Semibold, theme::ink()));
                     c.spawn((rounded(Node { padding: UiRect::axes(px(10.0), px(7.0)), border: UiRect::all(px(1.5)), min_height: px(36.0), align_items: AlignItems::Center, ..default() }, 7.0), BackgroundColor(theme::panel()), BorderColor::all(theme::accent()))).with_children(|f| {
@@ -440,6 +487,9 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                             Entry::Material => "A material of the job, by name",
                             Entry::Overhead => "A percentage of the job cost, like 12",
                             Entry::Profit => "A percentage of cost and overhead, like 8",
+                            Entry::Settings(tool) => tool.like(),
+                            Entry::Length => "Toward the pointer, like 24 ft or 12' 6\"",
+                            Entry::Storey => "like Ground, 0 ft, 9 ft",
                         };
                         h.spawn(text(fonts, hint, 11.5, Weight::Regular, theme::ink_faint()));
                         h.spawn(Node { flex_grow: 1.0, ..default() });
@@ -866,8 +916,10 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
 /// Where the pointer is on the model, to the sixteenth, in the status bar.
 pub fn write_pointer(doc: Res<Doc>, mut out: Query<&mut Text, With<PointerText>>) {
     let Ok(mut text) = out.single_mut() else { return };
+    // With a tool in hand, what the next pick would snap to is said beside where it is.
+    let snapped = doc.draw.found.as_ref().map(|f| f.kind.name()).filter(|n| !n.is_empty()).map(|n| format!("     {n}")).unwrap_or_default();
     let s = match doc.pointer {
-        Some(p) => format!("E {}     N {}     H {}", units::feet_as_ft_in(p[0], 16), units::feet_as_ft_in(p[1], 16), units::feet_as_ft_in(p[2], 16)),
+        Some(p) => format!("E {}     N {}     H {}{snapped}", units::feet_as_ft_in(p[0], 16), units::feet_as_ft_in(p[1], 16), units::feet_as_ft_in(p[2], 16)),
         None => "Point at the model to read a position".to_string(),
     };
     if text.0 != s {

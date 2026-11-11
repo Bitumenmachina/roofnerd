@@ -35,7 +35,8 @@ commit, under the same license:
   crates/world/src/editing/snap.rs      from crates/core/src/snap.rs and
                                         crates/core/src/geom.rs
   crates/world/src/editing.rs           the verbs' rules, from
-                                        crates/core/src/commands.rs and
+                                        crates/core/src/commands.rs,
+                                        crates/core/src/draw.rs and
                                         crates/core/src/engine.rs; the file is
                                         otherwise this project's own
 
