@@ -162,22 +162,28 @@ job cost $25,292.43). `plumbline check` on both samples: same bytes.
 * `STATUS.md`, `SPEC.md`, `DECISIONS.md`, `PROPOSALS.md`, `README.md`, `NOTICE` and
   `PORTMAP.md` are true.
 
-## 9. Where things stand (updated 2026-11-11, after steps 1 to 4)
+## 9. Where things stand (updated 2026-11-11, after steps 1 to 6)
 
 Branch `claude/nifty-tesla-qmn44n`. D4 and D5 are each judged (tenth and eleventh
 judgments) and their fixes are in; the eleventh's fixes have not themselves been judged.
 
-Of this stretch, **built, tested and pushed, not judged:**
-* Step 1: the gate covers `crates/world/src/editing*.rs`; proven red first. 172 items.
+Of this stretch, **built, tested, demonstrated and pushed, not judged:**
+* Step 1: the gate covers `crates/world/src/editing*.rs`; proven red first. 177 items.
 * Step 3: `editing/history.rs`, undo and redo, the job's saved text kept per step.
 * Step 2: `editing.rs`, the verbs (`storey`, `wall_type`, `opening_type`,
   `segment_type`, `system`, `walls`, `opening`, `room`, `runs`, `place`, `move_by`,
   `remove`), all-or-nothing, and the same at the command line with `plumbline new`.
   `demos/draw.sh` models a house from an empty job against hand-worked figures.
 * Step 4: `editing/snap.rs`, the solver ported, tested on plans written out by hand.
-* DECISIONS.md calls 34, 35, 36. STATUS.md, "Drawing and editing".
+* Step 5: `crates/app/src/tools.rs`, the tools on the window's plan, as section 10 has
+  them; what was decided in building them is DECISIONS.md call 38.
+* Step 6: `demos/draww.sh` draws the house in the window from an empty job and sets the
+  saved job's figures against the command-line house; pictures in
+  `demos/captured/draw/`, each read.
+* DECISIONS.md calls 34, 35, 36, 38. STATUS.md, "Drawing and editing".
 
-**Not built: steps 5, 6 and 7** (the tools in the window, `demos/draww.sh`, the judge).
+**Not done: step 7** (the judge). Not built, and outside this stretch's fence: a floor
+verb; rooms and roofs drawn in the window; a drawn value called Known in the window.
 
 ## 10. The window tools: what was worked out, for whoever builds them
 

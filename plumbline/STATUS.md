@@ -18,7 +18,8 @@ run again and each gave what this file said they gave.
 | D1 | World data model and SPEC.md | Demonstrated at the command line; no window exists yet. Judged five times. Every judgment has found a new way to a wrong figure marked Known, each next to the last fix. All found are fixed. **The fifth round's fixes have not been judged.** |
 | D1 amendment | Units (owner ruling) | Demonstrated at the command line. Judged twice: the five demonstrations held both times; two entry forms misread in the first are fixed and held in the second. |
 | D2 | 3D roof slice | **A working 3D prototype, not the whole deliverable.** In a window: a roof solved from its footprint, a plane picked with the mouse, its pitch changed and its eave moved with the lines and totals following, a surface given its condition, and the sheet in a second window updating live. The windows were drawn again on 2026-11-11 after the owner said the first looked cheap and tacky (DECISIONS.md call 25). Not built: tracing a calibrated plan, a dormer, a parapet and tapered crickets in 3D, dragging with the mouse, editing in the sheet. Judged once: the solver's areas and lengths held on every ordinary roof; it found stale planes left Known, an eave moved through the far wall, and an estimator's entries moving to another slope, among others. All fixed. **Those fixes are not judged.** See "D2. What was run". |
-| — | The whole building (owner, 2026-11-11) | **A working model of a whole house on BIMCraft's shapes, read and walked, not yet drawn in the window.** The owner widened the brief from the envelope to the building and its services (DECISIONS.md call 26). The model was first written from nothing, then, the same day, re-based on BIMCraft's (call 29; `HANDOFF_REBASE.md`): storeys, walls of a type with a top held to a storey or a height, doors and windows of a type placed by their centre, floors, rooms found from their walls, straight runs of a type joined by fittings, equipment and fixtures with connectors, systems, and a network that says what is joined and what is open. Each value flagged; a takeoff by system. In the window: the whole house under a sky, seen through, a system or a storey at a time, on plan, and on foot inside. Nothing of the building can be edited in the window yet. Judged twice: see "The whole building" and "The re-base on BIMCraft". |
+| — | The whole building (owner, 2026-11-11) | **A working model of a whole house on BIMCraft's shapes, read and walked, not yet drawn in the window.** The owner widened the brief from the envelope to the building and its services (DECISIONS.md call 26). The model was first written from nothing, then, the same day, re-based on BIMCraft's (call 29; `HANDOFF_REBASE.md`): storeys, walls of a type with a top held to a storey or a height, doors and windows of a type placed by their centre, floors, rooms found from their walls, straight runs of a type joined by fittings, equipment and fixtures with connectors, systems, and a network that says what is joined and what is open. Each value flagged; a takeoff by system. In the window: the whole house under a sky, seen through, a system or a storey at a time, on plan, and on foot inside. Judged twice: see "The whole building" and "The re-base on BIMCraft". |
+| — | Drawing and editing (the owner's loop, stretch b) | **Demonstrated at the command line and in the window (`demos/draw.sh`, `demos/draww.sh`). Not judged.** From an empty job: a storey, walls, doors, windows, ducts, pipes, conduit, cable, fixtures and equipment drawn with verbs at the command line or with the pointer and typed lengths on the window's plan, snapped; moved and removed; undone and redone. Everything drawn is flagged. Not built: drawing a floor anywhere; drawing a room or a roof in the window (both are at the command line); calling a drawn value Known in the window. See "Drawing and editing. What was run". |
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
 | D4 | Macro to micro | **Demonstrated at the command line and in the window, and judged (tenth judgment, below): thirteen findings, twelve fixed with tests, one minor one left and said. The fixes have not themselves been judged.** An element takes an allowance in $/SF or $/LF; a cost line's quantity is extended by its unit cost; an element's detail is rolled back up to the same $/SF or $/LF; the two are reconciled by element and for the job, each total saying what it leaves out and how much of it rests on an assumption. Prices are entered at the command line or typed in the window. See "D4. What was run". |
 | D5 | Estimate sheet and money | **Demonstrated at the command line and in the window (`demos/d5.sh`, `demos/d5w.sh`), and judged (eleventh judgment, below): fourteen findings, each fixed with a test. The fixes have not themselves been judged.** A cost line has a class and lands in one column and one row of the recap; in-house work is a production rate into hours; a labor line can be switched off; a material is an element with a generic price and suppliers' quotes, and changing what an element is made of reprices the lines made of it; overhead and profit are entered and have no default. See "D5. What was run". Reproducing the owner's whole-job estimate is pending: there is no estimate in `refs/` (Q5). See "D5. How its demonstration will be run". |
@@ -1336,22 +1337,22 @@ The task and its fence are `HANDOFF_DRAW.md`. Two demonstrations:
   a roof; then the partition moved and a window removed. Every figure (wall lengths and
   net faces, room areas, run lengths) is worked by hand in the script before it is run.
   Then what is refused, and that a refusal leaves the file byte for byte what it was.
-* `demos/draww.sh`, in the window (not written yet): the same house drawn in the plan
-  view with the pointer and typed lengths, snapping shown, a step undone and redone, the
-  job saved; and the saved file's takeoff set against the command-line house: the same
-  figures.
+* `demos/draww.sh`, in the window: the same house drawn in the plan view with the pointer
+  and typed lengths, snapping shown, a step undone and redone, the partition moved, a
+  window taken out, the job saved; and the saved file's figures set against the
+  command-line house: the same figures.
 
 The judge tries to draw what should be refused, to get an unflagged value into the file
 through a verb or the window, to undo into a state that never existed, and to snap to
 something that is not there.
 
-## Drawing and editing. What was run and what it showed, so far
+## Drawing and editing. What was run and what it showed
 
-**Not judged. The window part is not built.**
+**Demonstrated at the command line and in the window. Not judged.**
 
 * *The gate was widened first.* `tools/portmap.sh` covers `crates/world/src/editing*.rs`.
   It was run red on the new file (seven unlisted items) before the map had its rows; it
-  is green at 159 items, 100 ported and 59 ours.
+  is green at 177 items, 114 ported and 63 ours.
 * *Undo and redo* (`editing/history.rs`, ported from BIMCraft's `engine.rs`): a test takes
   three steps, steps back and forward, and checks the job's saved text at each point
   against the text it had; all the way back is the job it started as, to the byte.
@@ -1362,12 +1363,60 @@ something that is not there.
   it. The partition moved 1 ft: rooms 193.75 and 162.75 SF, its door still 8 ft along it.
   A window removed: the north wall's net 204 SF. Eight refusals, and the file unchanged
   by them.
+* *Snapping* (`editing/snap.rs`, ported from BIMCraft's `snap.rs`): a test on plans
+  written out by hand: an end, a middle, a crossing, the square, a 15 degree guide, the
+  nearest point on a wall, and the inch when nothing is in reach.
 * *Tests:* a house drawn from nothing with its figures; what cannot be drawn is refused
   and leaves the job as it was (a wall of no length in the middle of three takes the
   first with it); a wall moved takes its openings and a wall removed takes them too.
+* *The window* (`crates/app/src/tools.rs`; DECISIONS.md call 38): `demos/draww.sh` exits
+  0. From a job made by `plumbline new` with nothing in it, with a real pointer and
+  keyboard on a virtual display: a storey; four outside walls by typed lengths (24, 16,
+  24 ft and a click that closes on the first corner) and a partition; a door in the
+  south wall and one in the partition; a window in the east wall and two in the north;
+  a duct of two pieces and a pipe, each on a system the tool made; a lavatory on the
+  pipe's end and an air handler on the duct's start; the last step undone and done
+  again; the partition moved a foot east by a typed length; a stray wall drawn and
+  removed; one north window selected on the plan and removed; saved. The saved job
+  passes `check`, and its figures are the command-line house's after the same two edits:
+  walls 96 LF; net faces 123, 132, 144, 195 and 204 SF; two doors, two windows; duct
+  20 LF; pipe 14 LF. Every wall's line is Assumed and says it was drawn in the window.
+  Rooms placed at the command line inside the drawn walls come to 193.75 and 162.75 SF.
+  The twenty-eight pictures are in `demos/captured/draw/` and each was opened and read.
 
-**What remains of this stretch:** snapping (BIMCraft `snap.rs`), the tools in the window,
-undo in the window, `demos/draww.sh` and its pictures, the judge.
+**What reading the pictures found, and what was done:**
+
+* On plan the doors and windows could not be seen: looking straight down, the wall over
+  an opening hides it, and the only sign of one was its shadow. A plan now draws each
+  opening as its span through the wall (a window with its glass down the middle; a door
+  with no swing, because which way it swings is not in the model).
+* On plan the sun's shadows filled the rooms and hid what was on the floor. A plan has
+  no shadows now. The three older pictures taken on plan were taken again with
+  `demos/house.sh` and `demos/d2.sh` (both exit 0) and read: `house/06-model.png`,
+  `house/07-model.png`, `d2/08-model.png`. The other pictures of those two
+  demonstrations are as they were last read; what draws them has not changed.
+* A click on a window on plan selected its wall, and Delete then took the wall and both
+  its windows. On plan the wall over and under an opening now selects the opening.
+* A selected window on plan was the blue of every other window. Windows are drawn dark
+  now, and the selected opening in the accent.
+* Two rows of the left panel were squeezed when the Systems list appeared, so a click
+  meant for one tool landed on another. The panel scrolls and its rows keep their height.
+
+**What is not right, and is said:**
+
+* On the software renderer the demonstration runs on, keys typed in about the second
+  after a field opens are lost. Not explained. The script types the first character,
+  waits, and types the rest. Whether a real graphics card shows it is not known.
+* The window has no way to call a drawn value Known, or to draw a room or a roof; those
+  are at the command line. Nothing draws a floor yet, in the window or at the command
+  line: a floor is in a job only when the file was made with one (the sample house).
+* A door is drawn on plan with no swing: the model has no hinge side.
+* A selected element's label sits over its middle, so on plan the label of a short wall
+  covers the wall (picture 10).
+* Conduit and cable are the duct and pipe tool with another kind. Neither demonstration
+  draws one.
+
+**What remains of this stretch:** the judge.
 
 ## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
 

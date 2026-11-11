@@ -557,6 +557,43 @@ the job cost and the overhead together; the price, the three added. With overhea
 profit not entered there is no price. A supplier's total is over the lines it has quoted
 and names the rest.
 
+### 5.8 Drawing and editing
+
+`editing.rs` holds the verbs a window or a command line uses to build a job without
+editing its file: `storey`, `wall_type`, `opening_type`, `segment_type`, `system`,
+`walls`, `opening`, `room`, `runs`, `place`, `move_by` and `remove`. The command line has
+one command for each (`plumbline new`, `storey`, `type`, `system`, `wall`, `door`,
+`window`, `room`, `run`, `place`, `move`, `remove`), and the window's tools call the same
+verbs (`crates/app/src/tools.rs`). The rules, each ported from BIMCraft's `commands.rs`
+(PORTMAP.md has the lines):
+
+* **Every value a verb writes has a status and a source**, given by whoever calls it.
+  The command line refuses a verb without `--status` and `--source`. The window writes
+  Assumed, "set in the 3D view; not yet confirmed against a drawing".
+* **Nothing is given a value nobody entered.** A wall has no default height, an opening
+  no default sill or place, a run no default height above the floor.
+* **A verb is all of its change or none of it.** Three walls of which the second cannot
+  be drawn leave the job as it was.
+* **A wall is one element for each pair of points**; `--closed` joins the last to the
+  first. **An opening is placed by its centre along its wall**, from a distance or from
+  a point on the plan; a point past either end of the wall is refused.
+* **A wall moved takes its doors and windows; a wall removed takes them too.** What is
+  moved is no surer than the move. An element with elements under it is not removed.
+* **A room is a point**; its boundary is found from the walls round it (section 5.6).
+
+`editing/history.rs` (ported from BIMCraft's `engine.rs`) keeps the job's saved text
+before each step, up to 200 steps, so a step back is the job exactly as it was. The
+history is the window's, for the time it is open; it is not saved in the job.
+
+`editing/snap.rs` (ported from BIMCraft's `snap.rs`) finds where a pointer on the plan
+means: within reach, the nearest of an end, a crossing or a middle (the end when two are
+as near); else the foot of the perpendicular from the last point onto a line near the
+pointer; else a guide through the last point every 15 degrees, when the pointer is within
+4 degrees of one; else the nearest point on a wall's line; else the nearest inch.
+
+Not there: a verb for a floor, a fitting or a connector; arcs; a run that changes height
+along its length; moving one end of a wall; moving or removing several things at once.
+
 ## 6. Cost code scheme
 
 Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores its
@@ -567,9 +604,10 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
 * **It does not re-solve the roof.** Ridge, hip and valley positions are entered, not
   worked out from the footprint and pitches. D2 does that with the skeleton (DECISIONS.md
   call 3); until then a pitch change the linework cannot follow is flagged per 5.3.
-* **The window is a prototype** (`crates/app`): it shows one roof and its sheet, and
-  changes a solved roof's pitches, eaves and conditions. Everything else is still read and
-  edited through the command line. Both read the same rows (`view::elements`,
+* **The window** (`crates/app`) shows the roof, the building and the sheet. It changes a
+  solved roof's pitches, eaves and conditions, types prices, and draws, moves and
+  removes walls, openings, runs, fixtures and equipment on the plan (section 5.8).
+  Everything else is still entered through the command line. Both read the same rows (`view::elements`,
   `view::roof_totals`); the window works out no quantity of its own.
 * **Money is section 5.7** (D4 and D5). Not there: tax, burden, escalation, general
   liability and bond (PROPOSALS.md item 12); a production rate by the crew-day (13);
@@ -591,7 +629,7 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
   and schedule code on an element, and on a cost line its stretch-out, its formula (with
   the values the formula brings in), its waste, its order conversion, and any value its
   formula names. `apply` gives an element a condition's lines.
-* **No undo, no conditions library, no derived conditions** (D3).
+* **No conditions library.** Undo is in the window only (section 5.8); the command line has none.
 * **Planes are checked against each other only where they share an edge, and only on
   request.** `plumbline lines` reports two planes that share an edge and disagree about
   its height, and sets the lines the planes imply against the lines entered (DECISIONS.md
@@ -617,7 +655,7 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
 | Crate | Depends on | Holds |
 |---|---|---|
 | `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json` | The model: values, units, components, checks, plan geometry, derivation, line formulas and the steps a line is worked in, the lines planes imply, the saved file, the sample job, the flat view |
-| `crates/cli` (`plumbline`) | `plumbline-world` | `sample`, `show`, `set`, `check`, `lines`, `apply`, `roof` |
+| `crates/cli` (`plumbline`) | `plumbline-world` | The command line: the samples, `show`, `check`, `lines`, `takeoff`, `price`, `estimate`, the entry commands (`set`, `apply`, `line`, `class`, `labor`, `material`, `roof`) and the drawing verbs of section 5.8 |
 | `crates/app` (`plumbline-app`) | `plumbline-world`, `bevy` | The 3D window and the sheet window |
 
 The world crate does not depend on any renderer or window, and must not. The engine is

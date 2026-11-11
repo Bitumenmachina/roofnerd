@@ -356,7 +356,8 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
             doc.redraw();
             return;
         }
-        let drawing_a_line = matches!(doc.draw.tool, Some(tools::Tool::Wall | tools::Tool::Run(_))) && doc.draw.picked.len() == 1;
+        // (A move is a line too: from the point picked, so far toward the pointer.)
+        let drawing_a_line = matches!(doc.draw.tool, Some(tools::Tool::Wall | tools::Tool::Run(_) | tools::Tool::Move)) && doc.draw.picked.len() == 1;
         for event in typed.read() {
             if let (true, true, Key::Character(c)) = (drawing_a_line, event.state.is_pressed(), &event.logical_key) {
                 if c.chars().all(|ch| ch.is_ascii_digit() || ch == '.') {

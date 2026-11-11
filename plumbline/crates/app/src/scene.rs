@@ -110,6 +110,9 @@ pub struct Drawing {
     /// The fittings, by path. When a system is picked out its runs are drawn over in its
     /// colour; an elbow's twelve edges drawn over at that size are a blot, so they are not.
     pub fittings: Vec<String>,
+    /// Each door and window as a plan draws it: what it is, and the four corners of its
+    /// span through the wall, just over the wall's top.
+    pub openings: Vec<(String, Kind, [Vec3; 4])>,
     /// How far from the middle the ground's grid reaches, in feet.
     pub reach: f32,
 }
@@ -299,6 +302,9 @@ struct Builder<'a, 'w, 's> {
     materials: &'a mut Assets<StandardMaterial>,
     drawing: &'a mut Drawing,
     ghost: bool,
+    /// Set while the wall over and under an opening is built: on plan those pieces are
+    /// the opening, as a plan draws it, and a click on them selects it rather than the wall.
+    on_plan: Option<String>,
 }
 
 impl Builder<'_, '_, '_> {
@@ -333,10 +339,12 @@ impl Builder<'_, '_, '_> {
             return;
         }
         let (click, over, out) = (path.to_string(), path.to_string(), path.to_string());
+        let on_plan = self.on_plan.clone();
         e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
             // With a drawing tool in hand a click is a pick, not a selection.
             if press.button == PointerButton::Primary && doc.entry.is_none() && doc.draw.tool.is_none() {
-                doc.select(&click);
+                let path = on_plan.as_ref().filter(|_| doc.plan).unwrap_or(&click).clone();
+                doc.select(&path);
             }
         })
         .observe(|moved: On<PointerMove>, mut doc: ResMut<Doc>| {
@@ -416,10 +424,11 @@ pub fn rebuild(
     drawing.runs.clear();
     drawing.ghosts.clear();
     drawing.fittings.clear();
+    drawing.openings.clear();
     drawing.frames.clear();
     drawing.surfaces.clear();
     let drawing = &mut *drawing;
-    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost };
+    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, on_plan: None };
     let has_walls = snap.drawn.iter().any(|p| p.kind == Kind::Wall);
 
     // ---- The rest of the building ----
@@ -450,8 +459,10 @@ pub fn rebuild(
                 for (hole_path, kind, [from, to, sill, head]) in cuts {
                     let (from, to, sill, head) = (*from as f32, *to as f32, *sill as f32, *head as f32);
                     slab(&mut build, at, from, 0.0, h);
+                    build.on_plan = Some(hole_path.clone());
                     slab(&mut build, from, to, 0.0, sill);
                     slab(&mut build, from, to, head, h);
+                    build.on_plan = None;
                     // What fills the opening: glass in a window, a leaf in a door.
                     let centre = va + along * ((from + to) / 2.0) + Vec3::Y * ((sill + head) / 2.0);
                     let (fill, thick, rough) = if *kind == Kind::Window { (theme::glass(), 0.08, 0.08) } else { (theme::door_leaf(), 0.14, 0.6) };
@@ -460,6 +471,9 @@ pub fn rebuild(
                     let (c0, c1) = (va + along * from + Vec3::Y * sill, va + along * to + Vec3::Y * sill);
                     let up = Vec3::Y * (head - sill);
                     build.drawing.frames.push((hole_path.clone(), box_edges([c0 - half, c1 - half, c1 + half, c0 + half, c0 - half + up, c1 - half + up, c1 + half + up, c0 + half + up])));
+                    let over = Vec3::Y * (h + 0.06);
+                    let (j0, j1) = (va + along * from + over, va + along * to + over);
+                    build.drawing.openings.push((hole_path.clone(), *kind, [j0 - half, j1 - half, j1 + half, j0 + half]));
                     at = at.max(to);
                 }
                 slab(&mut build, at, length, 0.0, h);
@@ -666,7 +680,13 @@ pub fn tint(doc: Res<Doc>, drawing: Res<Drawing>, mut materials: ResMut<Assets<S
 }
 
 /// Ease the camera toward where it is going, and set the lens for the view it is in.
-pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>), With<MainCamera>>) {
+pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>), With<MainCamera>>, mut sun: Query<&mut DirectionalLight>) {
+    // A plan is a drawing, not a view: it has no shadows to hide what is on the floor.
+    for mut light in &mut sun {
+        if light.shadow_maps_enabled == doc.plan {
+            light.shadow_maps_enabled = !doc.plan;
+        }
+    }
     let Ok((mut t, mut projection, fog)) = camera.single_mut() else { return };
     // On plan the eye goes straight overhead before the perspective is taken out.
     let (yaw, pitch) = if doc.plan { (0.0, 1.5607) } else { (orbit.yaw, orbit.pitch) };
@@ -813,6 +833,27 @@ pub fn draw_lines(doc: Res<Doc>, drawing: Res<Drawing>, graphics: Res<Graphics>,
     for (_, frame) in drawing.frames.iter().filter(|(p, _)| drawing.ghosts.contains(p)) {
         for (a, b) in frame {
             grid.line(*a, *b, Color::srgba(0.12, 0.16, 0.22, 0.34));
+        }
+    }
+    // On plan a door or a window is its span through the wall: looking straight down,
+    // the wall over it hides it. A window has its glass down the middle. Which way a door
+    // swings is not in the model, so no swing is drawn.
+    if doc.plan {
+        for (path, kind, c) in &drawing.openings {
+            // The selected one is drawn over in the accent, as anything selected is.
+            if doc.selected.as_ref() == Some(path) {
+                for i in 0..4 {
+                    highlight.line(c[i], c[(i + 1) % 4], theme::accent());
+                }
+                continue;
+            }
+            let colour = if *kind == Kind::Window { theme::plan_window() } else { theme::plan_door() };
+            for i in 0..4 {
+                lines.line(c[i], c[(i + 1) % 4], colour);
+            }
+            if *kind == Kind::Window {
+                lines.line((c[0] + c[3]) / 2.0, (c[1] + c[2]) / 2.0, colour);
+            }
         }
     }
     for (a, b, colour, dashed) in &drawing.runs {

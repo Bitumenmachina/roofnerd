@@ -179,7 +179,7 @@ pub fn keycap(p: &mut ChildSpawnerCommands, fonts: &Fonts, key: &str) {
 
 /// A section heading inside a panel: small, quiet, set apart by space.
 pub fn heading(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str) {
-    p.spawn(Node { margin: UiRect { top: px(16.0), bottom: px(6.0), ..default() }, ..default() }).with_child(text(fonts, label.to_uppercase(), 10.5, Weight::Semibold, ink_faint()));
+    p.spawn(Node { margin: UiRect { top: px(16.0), bottom: px(6.0), ..default() }, flex_shrink: 0.0, ..default() }).with_child(text(fonts, label.to_uppercase(), 10.5, Weight::Semibold, ink_faint()));
 }
 
 /// A swatch of a line's colour.
@@ -252,3 +252,13 @@ pub fn door_leaf() -> Color { hex(0x7A5A3C) }
 pub fn equipment() -> Color { hex(0xC5CBD3) }
 pub fn porcelain() -> Color { hex(0xF8F8F6) }
 pub fn grass() -> Color { hex(0xA9B79A) }
+
+/// A door as a plan draws it: its span through the wall.
+pub fn plan_door() -> Color {
+    Color::srgb(0.42, 0.24, 0.1)
+}
+
+/// A window as a plan draws it: its span through the wall, with the glass down the middle.
+pub fn plan_window() -> Color {
+    Color::srgb(0.09, 0.15, 0.3)
+}

@@ -1116,3 +1116,45 @@ corner, rank) and 736 to 916 (the solver), and `geom.rs` 330 to 340.
   quantities are not.
 * **A room and the walls its walls are cut to (narrowing call 33):** only where the cut
   end is at the room.
+
+### Call 38. Drawing and editing: the tools in the window (2026-11-11)
+
+Ours to make; recorded so they can be overruled. The design is `HANDOFF_DRAW.md`
+section 10. What was decided in building it:
+
+* **Drawing is done on the plan, with one storey chosen.** In the 3D view a tool is
+  refused and says to go to the plan. With no storey in the job the panel offers a new
+  one and nothing else.
+* **A tool draws with what was typed for it, and with nothing until something is.** A
+  wall's thickness and height, an opening's width, height and sill, a run's size, height
+  above the floor and system, a thing's name, size and height: one line, typed once per
+  tool, shown under the tool from then on. The first click on a tool that has none opens
+  the field instead of drawing. There is no default wall.
+* **What is drawn in the window is Assumed, and says it was drawn there.** A pointer on a
+  screen is not a measurement. A typed length is no better than the corner it starts
+  from, so it is Assumed too. The window has no way to call a drawn value Known; a
+  Known wall is entered at the command line, where every verb takes a status and a
+  source.
+* **Types and systems are found by what was typed or made:** a wall type of that
+  thickness, an opening type of that width and height, a system of that classification.
+  A second wall type of the same thickness is never made by the tool.
+* **A typed length goes from the last point toward where the pointer's snapped place
+  is**, for walls, runs and a move (BIMCraft `draw.rs`, the `toward` rule). A digit
+  typed with one point picked opens the field.
+* **On plan, the wall over and under an opening is the opening.** A plan draws a door or
+  a window as its span in the wall, and looking straight down the wall above it is all
+  that can be clicked. So on plan a click there selects the opening; in the 3D view the
+  same piece is still the wall.
+* **Undo covers every edit the window makes**, the ones it already made (a value typed,
+  a condition set) as well as the drawing ones: Z and Y, and rows in the panel.
+* **Rooms are not drawn in the window.** The handoff's stretch is walls, openings, runs
+  and fixtures. A room is placed at the command line (`plumbline room --at`), from the
+  walls the window drew, and the demonstration does that.
+* **The left panel scrolls and its rows keep their height.** When the Systems section
+  grew, the rows above it were squeezed and a click meant for one tool landed on another.
+
+A defect that is not explained and is said here rather than hidden: on the software
+renderer the demonstrations run on, keys typed in about the second after a field opens
+are lost. The frame that first draws the field is slow there; whether a real graphics
+card shows it is not known, because none was available. The demonstration types the
+first character, waits, then types the rest.

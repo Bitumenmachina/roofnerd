@@ -47,7 +47,12 @@ pub struct Cameras {
 pub struct Scrolls {
     pub inspector: f32,
     pub sheet: f32,
+    pub browser: f32,
 }
+
+/// The left panel: it scrolls when it holds more than fits.
+#[derive(Component)]
+pub struct BrowserScroll;
 
 fn divider(p: &mut ChildSpawnerCommands) {
     p.spawn((Node { width: px(1.0), height: px(22.0), margin: UiRect::horizontal(px(4.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::hairline())));
@@ -172,7 +177,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
     commands.spawn((Node { width: percent(100.0), height: percent(100.0), ..default() }, UiTargetCamera(cameras.ui), Pickable::IGNORE, MainUi)).with_children(|root| {
         overlay(root, fonts, &doc, &snap);
         title_bar(root, fonts, &doc, &snap);
-        browser(root, fonts, &doc, &snap);
+        browser(root, fonts, &doc, &snap, scrolls.browser);
         inspector(root, fonts, &doc, &snap, scrolls.inspector);
         status_bar(root, fonts, &doc);
     });
@@ -209,7 +214,7 @@ fn status_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
 
 /// A row of the browser that does something when it is clicked.
 fn browser_row(p: &mut ChildSpawnerCommands, on: bool, act: impl Fn(&mut Doc) + Send + Sync + 'static, build: impl FnOnce(&mut ChildSpawnerCommands)) {
-    p.spawn((rounded(Node { align_items: AlignItems::Center, column_gap: px(8.0), padding: UiRect::axes(px(8.0), px(5.0)), min_height: px(27.0), ..default() }, 7.0), BackgroundColor(if on { theme::accent_wash() } else { Color::NONE })))
+    p.spawn((rounded(Node { align_items: AlignItems::Center, column_gap: px(8.0), padding: UiRect::axes(px(8.0), px(5.0)), min_height: px(27.0), flex_shrink: 0.0, ..default() }, 7.0), BackgroundColor(if on { theme::accent_wash() } else { Color::NONE })))
         .with_children(build)
         .observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
             if press.button == PointerButton::Primary && doc.entry.is_none() {
@@ -220,10 +225,17 @@ fn browser_row(p: &mut ChildSpawnerCommands, on: bool, act: impl Fn(&mut Doc) + 
 
 /// What of the building is on show, and its systems. The browser is the legend too: a
 /// system's swatch here is the colour its runs are drawn in.
-fn browser(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
-    p.spawn(floating(Node { top: px(BAR_H + GAP * 2.0), left: px(GAP), width: px(BROWSER_W), max_height: percent(86.0), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(10.0), px(10.0)), overflow: Overflow::clip(), ..default() })).with_children(|c| {
+fn browser(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, scrolled: f32) {
+    // It scrolls when it holds more than fits: a row is never squeezed, so a row stays
+    // where it is whatever else the panel comes to hold.
+    p.spawn((
+        floating(Node { top: px(BAR_H + GAP * 2.0), left: px(GAP), width: px(BROWSER_W), max_height: percent(86.0), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(10.0), px(10.0)), overflow: Overflow::scroll_y(), ..default() }),
+        ScrollPosition(Vec2::new(0.0, scrolled)),
+        BrowserScroll,
+    ))
+    .with_children(|c| {
         // The view.
-        c.spawn((rounded(Node { padding: UiRect::all(px(3.0)), column_gap: px(2.0), ..default() }, 9.0), BackgroundColor(theme::panel_alt()))).with_children(|t| {
+        c.spawn((rounded(Node { padding: UiRect::all(px(3.0)), column_gap: px(2.0), flex_shrink: 0.0, ..default() }, 9.0), BackgroundColor(theme::panel_alt()))).with_children(|t| {
             for (label, plan, walk) in [("3D", false, false), ("Plan", true, false), ("On foot", false, true)] {
                 let on = doc.plan == plan && doc.walk == walk;
                 t.spawn((rounded(Node { flex_grow: 1.0, justify_content: JustifyContent::Center, padding: UiRect::axes(px(6.0), px(5.0)), ..default() }, 7.0), BackgroundColor(if on { theme::panel() } else { Color::NONE })))
@@ -279,7 +291,7 @@ fn browser(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             };
             if doc.show.storey.is_none() {
                 let said = if snap.storeys.is_empty() { "This job has no storey to draw on yet." } else { "Choose the storey to draw on, above." };
-                c.spawn(Node { padding: UiRect::axes(px(8.0), px(4.0)), ..default() }).with_child(text(fonts, said, 11.5, Weight::Regular, theme::ink_soft()));
+                c.spawn(Node { padding: UiRect::axes(px(8.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_child(text(fonts, said, 11.5, Weight::Regular, theme::ink_soft()));
             } else {
                 for tool in Tool::DRAWING {
                     let said = doc.draw.settings.get(tool.name()).cloned().unwrap_or_else(|| "not set yet".to_string());
@@ -470,7 +482,7 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                         Entry::Overhead => "Overhead on the job".to_string(),
                         Entry::Profit => "Profit on the job".to_string(),
                         Entry::Settings(tool) => format!("{}: {}", tool.name(), tool.asks().to_lowercase()),
-                        Entry::Length => "Length of this piece".to_string(),
+                        Entry::Length => if doc.draw.tool == Some(crate::tools::Tool::Move) { "How far to move it".to_string() } else { "Length of this piece".to_string() },
                         Entry::Storey => "New storey: name, floor height, height to the next".to_string(),
                     };
                     c.spawn(text(fonts, title, 13.0, Weight::Semibold, theme::ink()));
@@ -933,8 +945,9 @@ pub fn scroll_panels(
     scroll: Res<AccumulatedMouseScroll>,
     windows: Query<(&Window, Has<PrimaryWindow>)>,
     mut scrolls: ResMut<Scrolls>,
-    mut inspector: Query<(&mut ScrollPosition, &ComputedNode), (With<InspectorScroll>, Without<SheetScroll>)>,
-    mut sheet: Query<(&mut ScrollPosition, &ComputedNode), (With<SheetScroll>, Without<InspectorScroll>)>,
+    mut inspector: Query<(&mut ScrollPosition, &ComputedNode), (With<InspectorScroll>, Without<SheetScroll>, Without<BrowserScroll>)>,
+    mut sheet: Query<(&mut ScrollPosition, &ComputedNode), (With<SheetScroll>, Without<InspectorScroll>, Without<BrowserScroll>)>,
+    mut browser: Query<(&mut ScrollPosition, &ComputedNode), (With<BrowserScroll>, Without<InspectorScroll>, Without<SheetScroll>)>,
 ) {
     if scroll.delta.y == 0.0 {
         return;
@@ -948,6 +961,11 @@ pub fn scroll_panels(
                 if let Ok((mut position, node)) = inspector.single_mut() {
                     scrolls.inspector = (scrolls.inspector - by).clamp(0.0, limit(node));
                     position.0.y = scrolls.inspector;
+                }
+            } else if at.x < BROWSER_W + GAP && at.y > BAR_H + GAP {
+                if let Ok((mut position, node)) = browser.single_mut() {
+                    scrolls.browser = (scrolls.browser - by).clamp(0.0, limit(node));
+                    position.0.y = scrolls.browser;
                 }
             }
         } else if let Ok((mut position, node)) = sheet.single_mut() {
