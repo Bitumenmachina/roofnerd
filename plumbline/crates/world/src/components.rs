@@ -13,7 +13,7 @@ use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::units::{self, Len};
-use crate::value::{Derived, Val};
+use crate::value::{Derived, Status, Val};
 
 /// A point on the plan: `[x, y]`, in the unit its value carries (feet or inches).
 pub type P2 = [f64; 2];
@@ -96,6 +96,9 @@ pub enum Kind {
     Fitting,
     /// A room: the space the walls round a point enclose.
     Room,
+    /// A material: what something is made of, how it is bought and what it costs. An
+    /// element says what it is made of by the material's name.
+    Material,
 }
 
 impl Kind {
@@ -130,6 +133,7 @@ impl Kind {
             Kind::Type => "type",
             Kind::Fitting => "fitting",
             Kind::Room => "room",
+            Kind::Material => "material",
         }
     }
     pub fn is_area(self) -> bool {
@@ -297,14 +301,113 @@ pub struct CostLine {
     pub waste: Option<Val<f64>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub order: Option<Order>,
+    /// Dollars for each of what the line is priced in. A line made of the element's
+    /// material (`of_material`) carries none: its price is the material's.
+    #[serde(default = "CostLine::no_price_of_its_own", skip_serializing_if = "CostLine::is_no_price_of_its_own")]
     pub unit_cost: Val<f64>,
+    /// Which row of the recap the line's amount lands in. A line with none is named by
+    /// the recap and left out of it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub class: Option<Class>,
+    /// Switched off: the line stays on the sheet with what it would come to, and is out
+    /// of every total. Only a Labor line can be.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub off: bool,
+    /// The line is made of the element's material (`pl::material`): how it is ordered and
+    /// what it costs are the material's, so changing the element's material reprices it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub of_material: bool,
 }
 
 impl CostLine {
     /// A line priced by one measure and nothing else.
     pub fn of(description: &str, quantity: &str, unit_cost: Val<f64>) -> CostLine {
-        CostLine { description: description.into(), quantity: quantity.into(), stretch_out: None, inputs: BTreeMap::new(), waste: None, order: None, unit_cost }
+        CostLine { description: description.into(), quantity: quantity.into(), stretch_out: None, inputs: BTreeMap::new(), waste: None, order: None, unit_cost, class: None, off: false, of_material: false }
     }
+    /// A line made of the element's material: ordered and priced as the material is.
+    pub fn of_material(description: &str, quantity: &str) -> CostLine {
+        CostLine { of_material: true, class: Some(Class::Material), ..CostLine::of(description, quantity, CostLine::no_price_of_its_own()) }
+    }
+    /// What stands where a unit cost would on a line that has no price of its own. It is
+    /// not a value anyone can enter: an entered value says where it came from.
+    pub fn no_price_of_its_own() -> Val<f64> {
+        Val { value: None, unit: String::new(), status: Status::Unknown, source: String::new() }
+    }
+    pub fn is_no_price_of_its_own(v: &Val<f64>) -> bool {
+        *v == CostLine::no_price_of_its_own()
+    }
+    /// The line is in-house work: it is priced in hours.
+    pub fn in_hours(&self) -> bool {
+        self.order.as_ref().is_some_and(|o| o.unit == HOURS)
+    }
+}
+
+/// The order unit of in-house work. A line in hours carries a production rate as its
+/// order factor (`SF/hr`: so many to the man-hour; or `hr/SF`) and dollars an hour as its
+/// unit cost.
+pub const HOURS: &str = "hr";
+
+/// The rows of the recap. A line is one of them and its amount lands in that row and no
+/// other.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum Class {
+    Material,
+    /// In-house work on site, by a production rate.
+    Labor,
+    /// In-house work in the shop, by a production rate.
+    Fabrication,
+    /// In-house supervision, in hours.
+    Supervision,
+    /// Somebody else's work: a quantity and a price.
+    Subcontract,
+    /// General conditions: what the job costs that is not built into it.
+    General,
+}
+
+impl Class {
+    pub const ALL: [Class; 6] = [Class::Material, Class::Labor, Class::Fabrication, Class::Supervision, Class::Subcontract, Class::General];
+    pub fn title(self) -> &'static str {
+        match self {
+            Class::Material => "Material",
+            Class::Labor => "Labor",
+            Class::Fabrication => "Fabrication",
+            Class::Supervision => "Supervision",
+            Class::Subcontract => "Subcontract",
+            Class::General => "General conditions",
+        }
+    }
+    /// In-house work, counted in hours.
+    pub fn in_hours(self) -> bool {
+        matches!(self, Class::Labor | Class::Fabrication | Class::Supervision)
+    }
+    /// The column of the estimate sheet the class's amounts stand in.
+    pub fn column(self) -> Column {
+        match self {
+            Class::Material => Column::Material,
+            Class::Labor | Class::Fabrication | Class::Supervision => Column::Labor,
+            Class::Subcontract | Class::General => Column::General,
+        }
+    }
+    /// A class as it is typed: its name, in any capitals; `sub` and `general` are enough.
+    pub fn parse(text: &str) -> Result<Class, String> {
+        match text.trim().to_lowercase().as_str() {
+            "material" => Ok(Class::Material),
+            "labor" => Ok(Class::Labor),
+            "fabrication" => Ok(Class::Fabrication),
+            "supervision" => Ok(Class::Supervision),
+            "subcontract" | "sub" => Ok(Class::Subcontract),
+            "general" | "general conditions" => Ok(Class::General),
+            _ => Err(format!("{text:?} is not a class; a line is material, labor, fabrication, supervision, subcontract or general")),
+        }
+    }
+}
+
+/// The three money columns of the estimate sheet.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Column {
+    Material,
+    Labor,
+    General,
 }
 
 /// How a line's quantity becomes what is bought. `factor` carries the conversion in its
@@ -358,6 +461,10 @@ pub struct LineFigures {
     /// saved before lines were extended; it is worked out again on load.)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extension: Option<Derived>,
+    /// For a line made of the element's material: what it comes to at each supplier's
+    /// price for that material, by the supplier's name.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub quotes: BTreeMap<String, Derived>,
 }
 
 /// `pl::line_quantities`: what each cost line on the element works out to, by the line's
@@ -479,6 +586,38 @@ pub struct SolveState {
     pub not_solved: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub notes: Vec<String>,
+}
+
+pub const K_MATERIAL: &str = "pl::material";
+pub const K_SUPPLY: &str = "pl::supply";
+pub const K_MARKUP: &str = "pl::markup";
+
+/// `pl::material`: what the element is made of, by the name of a Material element of the
+/// job. Its cost lines marked `of_material` are ordered and priced as that material is.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct MadeOf(pub Val<String>);
+
+/// `pl::supply`: on a Material element, how it is bought and what it costs. `order` is
+/// how what is measured becomes what is bought (pounds at so many to the SF, sheets of so
+/// many SF); without one it is bought as it is measured. `price` is the generic price for
+/// each of what is bought (`$/lb`); `quotes` are the same from suppliers, by name.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Supply {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub order: Option<Order>,
+    pub price: Val<f64>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub quotes: BTreeMap<String, Val<f64>>,
+}
+
+/// `pl::markup`: on the job, overhead and profit, each a percentage. Overhead is taken on
+/// the job cost; profit on the job cost and the overhead together.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Markup {
+    pub overhead: Val<f64>,
+    pub profit: Val<f64>,
 }
 
 pub const K_SOLVE: &str = "pl::solve";

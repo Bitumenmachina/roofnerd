@@ -2,6 +2,7 @@
 //! its status. The command line prints this; the sheet and the 3D view will read the
 //! same rows. Nothing here computes a quantity. It only reports what the world holds.
 
+use std::collections::BTreeMap;
 use crate::components::*;
 use crate::job::Job;
 use crate::units::{self, Len};
@@ -172,8 +173,26 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
                 if let Some(o) = &line.order {
                     rows.push(entered(p, &format!("order factor: {}", line.description), &o.factor, |x| num(*x)));
                 }
-                rows.push(entered(p, &format!("unit cost: {}", line.description), &line.unit_cost, |x| num(*x)));
+                if !line.of_material {
+                    rows.push(entered(p, &format!("unit cost: {}", line.description), &line.unit_cost, |x| num(*x)));
+                }
             }
+        }
+        if let Some(m) = w.get::<MadeOf>(e) {
+            rows.push(entered(p, "material", &m.0, |s| s.clone()));
+        }
+        if let Some(supply) = w.get::<Supply>(e) {
+            if let Some(o) = &supply.order {
+                rows.push(entered(p, "order factor", &o.factor, |x| num(*x)));
+            }
+            rows.push(entered(p, "price", &supply.price, |x| figure(*x, 2)));
+            for (supplier, quote) in &supply.quotes {
+                rows.push(entered(p, &format!("quote: {supplier}"), quote, |x| figure(*x, 2)));
+            }
+        }
+        if let Some(m) = w.get::<Markup>(e) {
+            rows.push(entered(p, "overhead", &m.overhead, |x| num(*x)));
+            rows.push(entered(p, "profit", &m.profit, |x| num(*x)));
         }
         rows.extend(crate::building::rows(w, e, p, &names));
         if let Some(c) = w.get::<WorkCode>(e) {
@@ -205,8 +224,12 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         // above), the element's allowance, and what the element comes to both ways.
         if let Some(c) = w.get::<Cost>(e) {
             for line in &c.lines {
-                if let Some(d) = w.get::<LineQuantities>(e).and_then(|q| q.0.get(&line.description)).and_then(|f| f.extension.as_ref()) {
+                let figures = w.get::<LineQuantities>(e).and_then(|q| q.0.get(&line.description));
+                if let Some(d) = figures.and_then(|f| f.extension.as_ref()) {
                     rows.push(derived(p, &format!("extension: {}", line.description), d));
+                }
+                for (supplier, d) in figures.map(|f| &f.quotes).into_iter().flatten() {
+                    rows.push(derived(p, &format!("extension at {supplier}: {}", line.description), d));
                 }
             }
         }
@@ -512,4 +535,189 @@ pub fn pricing(job: &mut Job) -> Pricing {
     let pairs: Vec<(f64, f64, Status)> = elements.iter().filter_map(|e| e.allowance.as_ref().zip(e.detail.as_ref())).filter_map(|(a, d)| a.value.zip(d.value).map(|(x, y)| (x, y, a.status.max(d.status)))).collect();
     let both = if pairs.is_empty() { None } else { Some((cents(pairs.iter().map(|p| p.0).sum()), cents(pairs.iter().map(|p| p.1).sum()), pairs.iter().map(|p| p.2).max().unwrap_or(Status::Unknown), pairs.len())) };
     Pricing { allowance: money_total(&allowances), detail: money_total(&details), both, not_priced: bare, elements }
+}
+
+/// One cost line as the estimate sheet lists it.
+#[derive(Clone, Debug)]
+pub struct SheetLine {
+    pub path: String,
+    pub element: String,
+    pub kind: Kind,
+    pub description: String,
+    pub class: Option<Class>,
+    /// Switched off: on the sheet, out of every total.
+    pub off: bool,
+    /// The material it is made of, when it is made of its element's.
+    pub material: Option<String>,
+    pub quantity: Derived,
+    /// What is priced: its order quantity, else its quantity with waste, else its quantity.
+    pub priced: Derived,
+    /// The price it is extended at: its own, or its material's. None when its material
+    /// cannot be found.
+    pub unit_cost: Option<Val<f64>>,
+    /// What it comes to.
+    pub amount: Derived,
+    /// What it comes to at each supplier's price, when it is made of a material.
+    pub quotes: BTreeMap<String, Derived>,
+}
+
+/// One row of the recap.
+#[derive(Clone, Debug)]
+pub struct ClassTotal {
+    pub class: Class,
+    pub total: MoneyTotal,
+    /// For in-house work: the hours of the lines in the total, and how sure they are.
+    pub hours: Option<(f64, Status)>,
+}
+
+/// The estimate: every cost line, the three columns, the recap, and the suppliers side
+/// by side. Nothing here is arithmetic beyond adding up and the two percentages: each
+/// line's figures are its `pl::line_quantities`, worked out in `derive`.
+#[derive(Clone, Debug)]
+pub struct Estimate {
+    pub lines: Vec<SheetLine>,
+    /// Material, Labor, General: each over the lines whose class stands in that column.
+    pub columns: Vec<(Column, MoneyTotal)>,
+    /// All six classes, in order, whether or not anything is in them.
+    pub classes: Vec<ClassTotal>,
+    /// Lines with no class. They are in no column and no row of the recap.
+    pub not_classed: Vec<(String, String)>,
+    /// The sum of the classes. Left out: every classed line with no figure, and every
+    /// line with no class.
+    pub job_cost: MoneyTotal,
+    pub markup: Option<Markup>,
+    pub overhead: Derived,
+    pub profit: Derived,
+    pub price: Derived,
+    /// The suppliers that have quoted any material of the job, by name.
+    pub suppliers: Vec<String>,
+    /// Over the lines made of a material: at the generic price, then at each supplier's.
+    pub at_generic: MoneyTotal,
+    pub at_supplier: Vec<(String, MoneyTotal)>,
+}
+
+fn total_of(parts: &[(String, &Derived)]) -> MoneyTotal {
+    let included: Vec<&Derived> = parts.iter().map(|(_, d)| *d).filter(|d| d.value.is_some()).collect();
+    let cents = |x: f64| (x * 100.0).round() / 100.0 + 0.0;
+    MoneyTotal {
+        value: if included.is_empty() { None } else { Some(cents(included.iter().filter_map(|d| d.value).sum())) },
+        status: included.iter().map(|d| d.status).max().unwrap_or(Status::Unknown),
+        members: included.len(),
+        assumed: cents(included.iter().filter(|d| d.status == Status::Assumed).filter_map(|d| d.value).sum()),
+        left_out: parts.iter().filter(|(_, d)| d.value.is_none()).map(|(who, d)| (who.clone(), d.note.clone())).collect(),
+    }
+}
+
+/// The estimate sheet and its recap.
+pub fn estimate(job: &mut Job) -> Estimate {
+    let order = job.order.clone();
+    let root = job.root();
+    let w = &job.world;
+    // The job's materials, to show the price a line made of one is extended at.
+    let mut materials: Vec<(String, String, Supply)> = Vec::new();
+    for &e in &order {
+        if let (Some(node), Some(Kind::Material), Some(supply)) = (w.get::<Node>(e), w.get::<Kind>(e).copied(), w.get::<Supply>(e)) {
+            materials.push((node.name.clone(), node.path.clone(), supply.clone()));
+        }
+    }
+    let mut suppliers: Vec<String> = materials.iter().flat_map(|m| m.2.quotes.keys().cloned()).collect();
+    suppliers.sort();
+    suppliers.dedup();
+
+    let mut lines = Vec::new();
+    for &e in &order {
+        let (Some(node), Some(kind), Some(cost)) = (w.get::<Node>(e), w.get::<Kind>(e).copied(), w.get::<Cost>(e)) else { continue };
+        // A condition's recipe is not on the job's sheet; it carries its lines in `pl::recipe`.
+        let made_of = w.get::<MadeOf>(e).and_then(|m| m.0.value.clone());
+        let supply = made_of.as_ref().and_then(|name| {
+            let found: Vec<&(String, String, Supply)> = materials.iter().filter(|(n, p, _)| n == name || p == name).collect();
+            (found.len() == 1).then(|| found[0].2.clone())
+        });
+        for line in &cost.lines {
+            let Some(f) = w.get::<LineQuantities>(e).and_then(|q| q.0.get(&line.description)) else { continue };
+            let priced = f.order.as_ref().or(f.with_waste.as_ref()).unwrap_or(&f.quantity).clone();
+            let amount = f.extension.clone().unwrap_or_else(|| Derived::refused("$", "", &[], "it has no extension"));
+            lines.push(SheetLine {
+                path: node.path.clone(),
+                element: node.name.clone(),
+                kind,
+                description: line.description.clone(),
+                class: line.class,
+                off: line.off,
+                material: if line.of_material { Some(made_of.clone().unwrap_or_default()) } else { None },
+                quantity: f.quantity.clone(),
+                priced,
+                unit_cost: if line.of_material { supply.as_ref().map(|s| s.price.clone()) } else { Some(line.unit_cost.clone()) },
+                amount,
+                quotes: f.quotes.clone(),
+            });
+        }
+    }
+
+    let label = |l: &SheetLine| format!("{}: {:?}", l.path, l.description);
+    let on: Vec<&SheetLine> = lines.iter().filter(|l| !l.off).collect();
+    let classed = |c: Class| -> Vec<(String, &Derived)> { on.iter().filter(|l| l.class == Some(c)).map(|l| (label(l), &l.amount)).collect() };
+    let classes: Vec<ClassTotal> = Class::ALL
+        .iter()
+        .map(|&class| {
+            let total = total_of(&classed(class));
+            let hours = class.in_hours().then(|| {
+                let counted: Vec<&Derived> = on.iter().filter(|l| l.class == Some(class) && l.amount.value.is_some()).map(|l| &l.priced).collect();
+                let sum: f64 = counted.iter().filter_map(|d| d.value).sum();
+                ((sum * 10000.0).round() / 10000.0, counted.iter().map(|d| d.status).max().unwrap_or(Status::Known))
+            });
+            ClassTotal { class, total, hours }
+        })
+        .collect();
+    let columns = [Column::Material, Column::Labor, Column::General]
+        .iter()
+        .map(|&col| {
+            let parts: Vec<(String, &Derived)> = on.iter().filter(|l| l.class.is_some_and(|c| c.column() == col)).map(|l| (label(l), &l.amount)).collect();
+            (col, total_of(&parts))
+        })
+        .collect();
+    let not_classed: Vec<(String, String)> = on.iter().filter(|l| l.class.is_none()).map(|l| (l.path.clone(), l.description.clone())).collect();
+    // The job cost: every classed line that is on. A line with no class is left out and
+    // named with the rest.
+    let no_class = Derived::refused("$", "", &[], "the line has no class, so it is in no row of the recap");
+    let all: Vec<(String, &Derived)> = on.iter().map(|l| (label(l), if l.class.is_some() { &l.amount } else { &no_class })).collect();
+    let job_cost = total_of(&all);
+
+    let markup = w.get::<Markup>(root).cloned();
+    let root_path = w.get::<Node>(root).map(|n| n.path.clone()).unwrap_or_default();
+    let inputs = [format!("{root_path}#{K_MARKUP}")];
+    // A percentage of a base. Neither has a default: one not entered gives no figure.
+    let percent_of = |base: Option<(f64, Status)>, no_base: &str, rate: Option<&Val<f64>>, what: &str, formula: &str| -> Derived {
+        match (rate, base) {
+            (None, _) => Derived::refused("$", formula, &inputs, &format!("{what} has not been entered; enter a percentage, 0 if there is none")),
+            (Some(r), _) if r.value.is_none() => Derived::refused("$", formula, &inputs, &format!("{what} is not known ({})", r.source)),
+            (Some(_), None) => Derived::refused("$", formula, &inputs, no_base),
+            (Some(r), Some((b, status))) => crate::lines::dollars(Some(b * r.value.unwrap_or(0.0) / 100.0), &[status, r.status], formula, &inputs),
+        }
+    };
+    let no_cost = "there is no job cost: no classed line comes to a figure";
+    let cost = job_cost.value.map(|v| (v, job_cost.status));
+    let overhead = percent_of(cost, no_cost, markup.as_ref().map(|m| &m.overhead), "overhead", "job cost × overhead ÷ 100");
+    let with_overhead = cost.zip(overhead.value).map(|((c, s), o)| (crate::lines::cents(c + o), s.max(overhead.status)));
+    let no_base = if cost.is_none() { no_cost.to_string() } else { format!("profit is taken on the job cost and the overhead together, and the overhead has no figure: {}", overhead.note) };
+    let profit = percent_of(with_overhead, &no_base, markup.as_ref().map(|m| &m.profit), "profit", "(job cost + overhead) × profit ÷ 100");
+    let price = match (cost, overhead.value, profit.value) {
+        (Some((c, s)), Some(o), Some(p)) => crate::lines::dollars(Some(c + o + p), &[s, overhead.status, profit.status], "job cost + overhead + profit", &inputs),
+        (None, _, _) => Derived::refused("$", "job cost + overhead + profit", &inputs, no_cost),
+        (_, None, _) => Derived::refused("$", "job cost + overhead + profit", &inputs, &overhead.note),
+        (_, _, None) => Derived::refused("$", "job cost + overhead + profit", &inputs, &profit.note),
+    };
+
+    // The suppliers, side by side, over the lines made of a material.
+    let of_material: Vec<&&SheetLine> = on.iter().filter(|l| l.material.is_some()).collect();
+    let at_generic = total_of(&of_material.iter().map(|l| (label(l), &l.amount)).collect::<Vec<_>>());
+    let at_supplier = suppliers
+        .iter()
+        .map(|s| {
+            let none: Vec<Derived> = of_material.iter().map(|l| Derived::refused("$", "", &[], &format!("{s} has not quoted {}", l.material.as_ref().filter(|m| !m.is_empty()).map(|m| format!("{m:?}")).unwrap_or_else(|| "its material".into())))).collect();
+            let parts: Vec<(String, &Derived)> = of_material.iter().zip(&none).map(|(l, none)| (label(l), l.quotes.get(s).unwrap_or(none))).collect();
+            (s.clone(), total_of(&parts))
+        })
+        .collect();
+    Estimate { lines, columns, classes, not_classed, job_cost, markup, overhead, profit, price, suppliers, at_generic, at_supplier }
 }

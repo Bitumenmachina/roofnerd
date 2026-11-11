@@ -567,3 +567,77 @@ pub fn house() -> Job {
     job.derive();
     job
 }
+
+/// The sample roof with a made-up estimate on it: two materials with prices from three
+/// suppliers, planes made of one of them with panels, underlayment, shop work and site
+/// work on each, a plane done by a subcontractor, a foreman on the job, and one plane
+/// left as the sample has it (a line with no price and no class). Every price, rate and
+/// supplier here is made up. Overhead and profit are not entered.
+pub fn priced() -> Job {
+    use std::collections::BTreeMap;
+    const MADE_UP: &str = "made-up price";
+    const RATE: &str = "made-up rate";
+    let mut job = sample();
+    let named = |job: &mut Job, kind: Kind, name: &str| -> String {
+        let mut q = job.world.query::<(&Node, &Kind)>();
+        q.iter(&job.world).find(|(n, k)| **k == kind && n.name == name).map(|(n, _)| n.path.clone()).expect(OK)
+    };
+    let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).expect(OK);
+
+    // Copper is sold by the pound, and its weight is its name: 16 oz to the SF is 1 lb.
+    let material = |job: &mut Job, name: &str, lb_per_sf: f64, price: f64, quotes: &[(&str, f64)]| {
+        let m = job.add(&root, Kind::Material, name).expect(OK);
+        let supply = Supply {
+            order: Some(Order { unit: "lb".into(), factor: Val::known(lb_per_sf, "lb/SF", "its weight is its name"), round_up: false }),
+            price: Val::known(price, "$/lb", MADE_UP),
+            quotes: quotes.iter().map(|(who, p)| (who.to_string(), Val::known(*p, "$/lb", "made-up quote"))).collect::<BTreeMap<_, _>>(),
+        };
+        job.put(&m, supply).expect(OK);
+    };
+    material(&mut job, "Copper, 16 oz", 1.0, 9.00, &[("Harbor Metals", 8.80), ("Ridge Supply", 9.25), ("Tinners Yard", 9.10)]);
+    material(&mut job, "Copper, 20 oz", 1.25, 9.00, &[("Harbor Metals", 8.90), ("Ridge Supply", 9.30)]);
+
+    let code = |job: &mut Job, path: &str| {
+        let e = job.find(path).expect(OK);
+        job.world.get::<Cost>(e).map(|c| c.code.clone()).expect(OK)
+    };
+    let hours = |per: &str, rate: f64| Some(Order { unit: HOURS.into(), factor: Val::known(rate, per, RATE), round_up: false });
+    let made_of = |name: &str| MadeOf(Val::known(name.to_string(), "", "sample finish schedule"));
+
+    for (plane, waste) in [("south", true), ("east", true)] {
+        let p = named(&mut job, Kind::RoofPlane, plane);
+        let lines = vec![
+            CostLine { waste: waste.then(|| Val::known(10.0, "%", "made-up waste")), ..CostLine::of_material("Standing seam panels", "surface_area") },
+            CostLine { class: Some(Class::Material), ..CostLine::of("Underlayment", "surface_area", Val::known(0.90, "$/SF", MADE_UP)) },
+            CostLine { class: Some(Class::Fabrication), order: hours("SF/hr", 100.0), ..CostLine::of("Fabricate panels", "surface_area", Val::known(60.0, "$/hr", RATE)) },
+            CostLine { class: Some(Class::Labor), order: hours("SF/hr", 25.0), ..CostLine::of("Install panels", "surface_area", Val::known(72.0, "$/hr", RATE)) },
+        ];
+        let cost = Cost { code: code(&mut job, &p), lines };
+        job.put(&p, cost).expect(OK);
+        job.put(&p, made_of("Copper, 16 oz")).expect(OK);
+    }
+    // The west plane is somebody else's work: a quantity and a price.
+    let west = named(&mut job, Kind::RoofPlane, "west");
+    let cost = Cost { code: code(&mut job, &west), lines: vec![CostLine { class: Some(Class::Subcontract), ..CostLine::of("Standing seam roofing, by subcontractor", "surface_area", Val::known(41.0, "$/SF", MADE_UP)) }] };
+    job.put(&west, cost).expect(OK);
+    // The porch is heavier copper. Its pitch is assumed, so everything on it is.
+    let shed = named(&mut job, Kind::RoofPlane, "shed");
+    let cost = Cost { code: code(&mut job, &shed), lines: vec![CostLine::of_material("Standing seam panels", "surface_area")] };
+    job.put(&shed, cost).expect(OK);
+    job.put(&shed, made_of("Copper, 20 oz")).expect(OK);
+    let headwall = named(&mut job, Kind::Headwall, "headwall");
+    let lines = vec![
+        CostLine { stretch_out: Some(Val::known(Len::One(24.0), "in", "sample detail 4/A-501")), ..CostLine::of_material("Headwall flashing", "true_length * stretch_out") },
+        CostLine { class: Some(Class::Labor), order: hours("hr/LF", 0.25), ..CostLine::of("Install headwall flashing", "true_length", Val::known(72.0, "$/hr", RATE)) },
+    ];
+    let cost = Cost { code: code(&mut job, &headwall), lines };
+    job.put(&headwall, cost).expect(OK);
+    job.put(&headwall, made_of("Copper, 20 oz")).expect(OK);
+    // On the job itself: a foreman, five days of eight hours.
+    let lines = vec![CostLine { class: Some(Class::Supervision), order: hours("hr/EA", 8.0), ..CostLine::of("Foreman, days on site", "5", Val::known(95.0, "$/hr", RATE)) }];
+    job.put(&root, Cost { code: Val::unknown("", "not coded"), lines }).expect(OK);
+
+    let stale = job.derive();
+    debug_assert!(!stale.is_empty());
+    job
+}

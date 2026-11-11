@@ -58,7 +58,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline price <file>\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF)\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--class <class>] [--of-material]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
 }
 
 /// What the building comes to: each storey's walls and floors, then each system's runs by
@@ -199,6 +199,144 @@ fn price(job: &mut plumbline_world::Job) -> String {
     out
 }
 
+/// The estimate sheet: every cost line under its element, in three money columns; the
+/// recap; and the suppliers side by side.
+fn estimate(job: &mut plumbline_world::Job) -> String {
+    use plumbline_world::{Class, Column, Derived};
+    let est = view::estimate(job);
+    let money = |x: f64| format!("{}${}", if x < 0.0 { "-" } else { "" }, view::figure(x.abs(), 2));
+    let flagged = |d: &Derived| match d.value {
+        Some(x) => format!("{}{}", d.status.flag().trim_end(), money(x)),
+        None => "no figure".to_string(),
+    };
+    let mut out = String::from("flags:  ~ Assumed    ? Unknown    (no mark) Known\n");
+    if est.lines.is_empty() {
+        out.push_str("\nNothing in this job has a cost line.\n");
+        return out;
+    }
+    let _ = writeln!(out, "\n{:<58}{:>14} {:>16} {:>13} {:>13} {:>13}", "THE SHEET", "priced", "at", "MATERIAL", "LABOR", "GENERAL");
+    let mut last = String::new();
+    for l in &est.lines {
+        if l.path != last {
+            let _ = writeln!(out, "{}  [{:?}]  ({})", l.element, l.kind, l.path);
+            last = l.path.clone();
+        }
+        let priced = match l.priced.value {
+            Some(x) => format!("{}{} {}", l.priced.status.flag().trim_end(), view::figure(x, 2), l.priced.unit),
+            None => "no figure".to_string(),
+        };
+        let at = match l.unit_cost.as_ref() {
+            Some(v) => match v.value {
+                Some(x) => format!("{}${}/{}", v.status.flag().trim_end(), view::figure(x, 2), v.unit.trim_start_matches("$/")),
+                None => "no price".to_string(),
+            },
+            None => "no price".to_string(),
+        };
+        let amount = if l.off { format!("off ({})", flagged(&l.amount)) } else { flagged(&l.amount) };
+        let (mut m, mut b, mut g) = (String::new(), String::new(), String::new());
+        match l.class.map(Class::column) {
+            Some(Column::Material) => m = amount,
+            Some(Column::Labor) => b = amount,
+            Some(Column::General) => g = amount,
+            None => g = format!("no class ({})", flagged(&l.amount)),
+        }
+        let mut what = l.description.clone();
+        if let Some(c) = l.class.filter(|c| !matches!(c, Class::Material | Class::Labor)) {
+            what.push_str(&format!(" [{}]", c.title()));
+        }
+        let _ = writeln!(out, "  {:<56}{:>14} {:>16} {:>13} {:>13} {:>13}", what, priced, at, m, b, g);
+        if let Some(material) = &l.material {
+            let _ = writeln!(out, "      made of {}", if material.is_empty() { "the element's material, which is not said".to_string() } else { format!("{material:?}") });
+        }
+        if l.amount.value.is_none() {
+            let _ = writeln!(out, "      ? {}", l.amount.note);
+        }
+    }
+    let col = |c: Column| est.columns.iter().find(|x| x.0 == c).map(|x| &x.1);
+    let shown = |t: Option<&view::MoneyTotal>| t.and_then(|t| t.value.map(|x| format!("{}{}", t.status.flag().trim_end(), money(x)))).unwrap_or_else(|| "none".to_string());
+    let _ = writeln!(out, "  {:<56}{:>14} {:>16} {:>13} {:>13} {:>13}", "column totals", "", "", shown(col(Column::Material)), shown(col(Column::Labor)), shown(col(Column::General)));
+
+    let _ = writeln!(out, "\nTHE RECAP");
+    for c in &est.classes {
+        let hours = c.hours.filter(|_| c.total.value.is_some()).map(|(h, s)| format!("   {}{} hr", s.flag().trim_end(), view::figure(h, 2))).unwrap_or_default();
+        match c.total.value {
+            Some(x) => {
+                let _ = writeln!(out, "  {:<20}{:>14}   {} line{}{hours}", c.class.title(), format!("{}{}", c.total.status.flag().trim_end(), money(x)), c.total.members, if c.total.members == 1 { "" } else { "s" });
+                if c.total.assumed != 0.0 {
+                    let _ = writeln!(out, "  {:<20}{:>14}   of it rests on something assumed", "", money(c.total.assumed));
+                }
+            }
+            None => {
+                let _ = writeln!(out, "  {:<20}{:>14}", c.class.title(), "none");
+            }
+        }
+    }
+    let line = |name: &str, d: &Derived| {
+        let mut s = String::new();
+        let _ = writeln!(s, "  {:<20}{:>14}{}", name, flagged(d), if d.value.is_none() { format!("   ? {}", d.note) } else { String::new() });
+        s
+    };
+    match est.job_cost.value {
+        Some(x) => {
+            let _ = writeln!(out, "  {:<20}{:>14}   {} line{}", "Job cost", format!("{}{}", est.job_cost.status.flag().trim_end(), money(x)), est.job_cost.members, if est.job_cost.members == 1 { "" } else { "s" });
+        }
+        None => {
+            let _ = writeln!(out, "  {:<20}{:>14}   no classed line comes to a figure", "Job cost", "none");
+        }
+    }
+    let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!(" at {}{} %", v.status.flag().trim_end(), view::figure(x, 2)))).unwrap_or_default();
+    out.push_str(&line(&format!("Overhead{}", rate(est.markup.as_ref().map(|m| &m.overhead))), &est.overhead));
+    out.push_str(&line(&format!("Profit{}", rate(est.markup.as_ref().map(|m| &m.profit))), &est.profit));
+    out.push_str(&line("PRICE", &est.price));
+    if !est.job_cost.left_out.is_empty() {
+        let _ = writeln!(out, "  left out of the job cost, and of everything taken on it: {} line{}", est.job_cost.left_out.len(), if est.job_cost.left_out.len() == 1 { "" } else { "s" });
+        for (who, why) in &est.job_cost.left_out {
+            let _ = writeln!(out, "    ? {who}: {why}");
+        }
+    }
+    let off: Vec<&view::SheetLine> = est.lines.iter().filter(|l| l.off).collect();
+    if !off.is_empty() {
+        let _ = writeln!(out, "  switched off, on the sheet and out of every total: {}", off.iter().map(|l| format!("{}: {:?} ({})", l.path, l.description, flagged(&l.amount))).collect::<Vec<_>>().join("; "));
+    }
+
+    let made: Vec<&view::SheetLine> = est.lines.iter().filter(|l| l.material.is_some() && !l.off).collect();
+    if !made.is_empty() {
+        let _ = writeln!(out, "\nSUPPLIERS, SIDE BY SIDE (the lines made of a material)");
+        let mut head = format!("  {:<42}{:>14}", "", "generic");
+        for s in &est.suppliers {
+            let _ = write!(head, " {:>14}", s);
+        }
+        let _ = writeln!(out, "{head}");
+        for l in &made {
+            let mut row = format!("  {:<42}{:>14}", format!("{}: {}", l.element, l.description), flagged(&l.amount));
+            for s in &est.suppliers {
+                let _ = write!(row, " {:>14}", l.quotes.get(s).map(&flagged).unwrap_or_else(|| "no quote".to_string()));
+            }
+            let _ = writeln!(out, "{row}");
+        }
+        let mut row = format!("  {:<42}{:>14}", "total", shown(Some(&est.at_generic)));
+        for (_, t) in &est.at_supplier {
+            let _ = write!(row, " {:>14}", shown(Some(t)));
+        }
+        let _ = writeln!(out, "{row}");
+        // How many of the lines each total is over: a total over fewer is not the same job.
+        let mut row = format!("  {:<42}{:>14}", "lines in the total", format!("{} of {}", est.at_generic.members, made.len()));
+        for (_, t) in &est.at_supplier {
+            let _ = write!(row, " {:>14}", format!("{} of {}", t.members, made.len()));
+        }
+        let _ = writeln!(out, "{row}");
+        for (s, t) in std::iter::once((&"generic".to_string(), &est.at_generic)).chain(est.at_supplier.iter().map(|(s, t)| (s, t))) {
+            for (who, why) in &t.left_out {
+                let _ = writeln!(out, "    ? {s} leaves out {who}: {why}");
+            }
+        }
+        if est.suppliers.is_empty() {
+            let _ = writeln!(out, "  no supplier has quoted a material of this job");
+        }
+    }
+    out
+}
+
 fn read(path: &str) -> Result<(plumbline_world::Job, file::LoadReport), String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {path}: {e}"))?;
     file::load(&text).map_err(|e| format!("{path}: {e}"))
@@ -211,13 +349,17 @@ fn run(args: &[String]) -> Result<(), String> {
     if cmd == "roof" {
         return new_roof(args);
     }
-    if matches!(cmd, "sample" | "house" | "show" | "check" | "lines" | "takeoff" | "price") && args.len() > 2 {
+    if matches!(cmd, "sample" | "house" | "priced" | "show" | "check" | "lines" | "takeoff" | "price" | "estimate") && args.len() > 2 {
         return Err(format!("{cmd} takes one file and nothing else; {:?} would be ignored\n{}", args[2], usage()));
     }
     match cmd {
-        "sample" | "house" => {
+        "sample" | "house" | "priced" => {
             let out = args.get(1).ok_or_else(usage)?;
-            let mut job = if cmd == "house" { sample::house() } else { sample::sample() };
+            let mut job = match cmd {
+                "house" => sample::house(),
+                "priced" => sample::priced(),
+                _ => sample::sample(),
+            };
             std::fs::write(out, file::save(&mut job)).map_err(|e| format!("cannot write {out}: {e}"))?;
             say!("wrote {out}");
             Ok(())
@@ -260,6 +402,67 @@ fn run(args: &[String]) -> Result<(), String> {
             let _ = std::io::stdout().write_all(price(&mut job).as_bytes());
             Ok(())
         }
+        "estimate" => {
+            let path = args.get(1).ok_or_else(usage)?;
+            let (mut job, _) = read(path)?;
+            let _ = std::io::stdout().write_all(estimate(&mut job).as_bytes());
+            Ok(())
+        }
+        // A material the job can be made of: its name and the unit it is bought and priced by.
+        "material" => {
+            let [_, path, name, unit] = args else { return Err(usage()) };
+            let (mut job, _) = read(path)?;
+            let made = job.add_material(name, unit)?;
+            job.derive();
+            std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+            say!("added material {name:?} as {made}, priced by the {unit}; its price is not entered yet");
+            Ok(())
+        }
+        // A cost line typed by hand onto an element (or onto the job, for general conditions).
+        "line" => {
+            let [_, path, element, description, quantity, rest @ ..] = args else { return Err(usage()) };
+            let (mut class, mut of_material) = (None, false);
+            let mut it = rest.iter();
+            while let Some(a) = it.next() {
+                match a.as_str() {
+                    "--class" => class = Some(plumbline_world::Class::parse(it.next().ok_or("--class needs a class")?)?),
+                    "--of-material" => of_material = true,
+                    other => return Err(format!("unexpected {other:?}\n{}", usage())),
+                }
+            }
+            let (mut job, _) = read(path)?;
+            job.add_line(element, description, quantity, class, of_material)?;
+            job.derive();
+            std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+            say!("added to {element}: {description:?} = {quantity}{}", if of_material { ", made of the element's material".to_string() } else { ", with no price yet".to_string() });
+            Ok(())
+        }
+        // Which row of the recap a line lands in; and a Labor line switched off or on.
+        "class" | "labor" => {
+            let [_, path, element, value, rest @ ..] = args else { return Err(usage()) };
+            let line = match rest {
+                [] => None,
+                [flag, line] if flag == "--line" => Some(line.as_str()),
+                _ => return Err(usage()),
+            };
+            let (mut job, _) = read(path)?;
+            if cmd == "class" {
+                let class = plumbline_world::Class::parse(value)?;
+                job.set_class(element, line, class)?;
+                say!("{element}{}: class is {}", line.map(|l| format!(" {l:?}")).unwrap_or_default(), class.title());
+            } else {
+                let off = match value.as_str() {
+                    "off" => true,
+                    "on" => false,
+                    other => return Err(format!("{other:?} is not on or off")),
+                };
+                job.set_off(element, line, off)?;
+                say!("{element}{}: labor is {value}", line.map(|l| format!(" {l:?}")).unwrap_or_default());
+            }
+            job.derive();
+            std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+            Ok(())
+        }
         "apply" => {
             let [_, path, element, condition, rest @ ..] = args else { return Err(usage()) };
             let source = match rest {
@@ -284,12 +487,14 @@ fn run(args: &[String]) -> Result<(), String> {
             let mut status = None;
             let mut source = None;
             let mut line = None;
+            let mut supplier: Option<String> = None;
             let mut with: Vec<(String, String)> = Vec::new();
             let mut it = rest.iter();
             while let Some(a) = it.next() {
                 match a.as_str() {
                     "--status" | "--source" | "--line" if (a == "--status" && status.is_some()) || (a == "--source" && source.is_some()) || (a == "--line" && line.is_some()) => return Err(format!("{a} given twice")),
                     "--line" => line = Some(it.next().cloned().ok_or("--line needs the cost line's description")?),
+                    "--supplier" => supplier = Some(it.next().cloned().ok_or("--supplier needs the supplier's name")?),
                     "--with" => {
                         let pair = it.next().ok_or("--with needs name=value, like --with \"turn_up=8 in\"")?;
                         let (name, typed) = pair.split_once('=').ok_or_else(|| format!("--with {pair:?} is not name=value"))?;
@@ -344,6 +549,16 @@ fn run(args: &[String]) -> Result<(), String> {
             }
             if !with.is_empty() && field != "quantity" {
                 return Err("--with goes with a new quantity formula: it gives a value to a name the formula brings in".into());
+            }
+            if (field == "quote") != supplier.is_some() {
+                return Err("a quote is a supplier's price for a material: set <material> quote <price> --supplier \"<name>\"".into());
+            }
+            if let Some(supplier) = &supplier {
+                job.set_quote(element, supplier, value, status, &source)?;
+                job.derive();
+                std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+                say!("set {element} quote from {supplier} = {} ({status:?})", value.unwrap_or("unknown"));
+                return Ok(());
             }
             let units_before = job.line_units(element, line.as_deref());
             let dropped = if field == "quantity" {

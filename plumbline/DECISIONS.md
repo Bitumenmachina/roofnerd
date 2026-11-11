@@ -939,3 +939,54 @@ or was consulted: an extension is a quantity times a price.
   a named electrical distribution system (`electrical.rs:75`). What it does not have is a
   status on a line, a run with no size kept on a line of its own, or a system that is an
   element. And `MAX_CONNECTORS` is BIMCraft's (`family.rs:698`, 8), ported at 64.
+
+### Call 32. D5: the estimate sheet, the recap, materials and suppliers (2026-11-11)
+
+Searched first, on this machine: the earlier estimating program in this repository
+(`packages/engine/src/model.ts`, `line.ts`, `recap.ts`) has this ground settled, with the
+reasons written beside the code. What is taken from it, by name, and what is not:
+
+* **In-house labor is a line whose order unit is hours.** Its production rate is the
+  order factor (`SF/hr`: so many to the man-hour, or `hr/SF`), and its unit cost is
+  dollars an hour. The earlier program does the same (`line.ts`: a production rate "IS
+  the order-step conversion: the order unit is HOURS"). No new arithmetic: a quantity,
+  an order factor, a unit cost. Crew-day rates (forty squares a day with a crew of six)
+  are in the earlier program and not here: they need a crew size and the hours in a
+  day, and are in PROPOSALS.md.
+* **A line has one class**, and the recap has one row for each: Material, Labor,
+  Fabrication, Supervision, Subcontract, General conditions. The earlier program's
+  classes are Material, Labor, Sub, Equipment, Other, Supervision, with fabrication kept
+  apart as a "basis"; the brief names the six used here. Equipment and Other are not
+  built (nobody asked). A class is typed on the line and checked against what the line
+  is: a Labor, Fabrication or Supervision line is in hours, and no other line is. A
+  subcontract line is a quantity and a price and is refused a production rate.
+* **The three columns** are Material; Labor (labor, fabrication, supervision); General
+  (subcontract and general conditions). The recap keeps all six classes apart. Which
+  columns the owner's own sheet has is not known (QUESTIONS.md Q14).
+* **"Labor toggles per line"** is read as: a Labor line can be switched off. It stays on
+  the sheet with what it would come to and is out of the element's detail, the columns
+  and the recap. The other reading (one row with a material amount and a labor amount,
+  and a switch on the labor) is a different sheet; Q14 asks.
+* **Money is added the way D4 adds it:** each amount to the cent, a total the sum of the
+  amounts as shown (the earlier program's rule, `recap.ts`), a line with no figure named
+  and left out, never $0.00. Hours are shown to four places and added as shown.
+* **Overhead is a percentage of the job cost; profit is a percentage of the job cost
+  plus overhead** (`recap.ts`). Both are entered on the job. Neither has a default: with
+  one not entered there is no price. The earlier program's class adders (sales tax,
+  escalation, burden, general liability) and bond are not built: the brief asks for O&P.
+  They are in PROPOSALS.md, because a real price needs them.
+* **A material is an element** (`Kind::Material`) carrying how it is bought (an order
+  unit and factor: pounds at so many to the SF) and what it costs (a generic price and
+  a price by supplier). An element says what it is made of by the material's name, the
+  way BIMCraft's layers and run types name a material of the project's library
+  (`model.rs:430`, `2473`; its material is colour and pattern, and is not ported). A
+  cost line marked as made of the element's material takes its order factor and its
+  price from that material, and carries neither itself. Changing the element's material
+  reprices those lines and no others. This replaces the note in `building/model.rs`
+  that "a material here is a condition".
+* **Suppliers are names on a material's prices.** A line made of a material is extended
+  at the generic price and at each supplier's. A supplier's total is over the lines it
+  quoted, and names the ones it did not. The recap is at the generic price; choosing a
+  supplier to price the job by is not asked for and is in PROPOSALS.md.
+* **General conditions are cost lines on the job element itself**, typed by hand: a
+  description, a number, a price.

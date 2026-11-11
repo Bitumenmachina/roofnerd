@@ -133,3 +133,13 @@ and no recipe for one is written.
 **New, for you to rule on when you reach them** (each is in PROPOSALS.md, none is built):
 whether equipment joins the runs that meet it into one network (11); whether three run
 ends meeting with no fitting should be warned of (8).
+
+## Q14. The estimate sheet: what are its columns, and what does a line's labor switch do?
+The brief says "Material, labor, and general columns. Labor toggles per line." Your
+whole-job estimate is not in `refs/` (Q5), so the sheet is built from those words.
+**Assumption in use (DECISIONS.md call 32):** each line is one kind of cost and its
+amount sits in one column: material; labor (with fabrication and supervision); general
+(subcontract and general conditions). A labor line can be switched off and stays on the
+sheet, out of every total. If your sheet has one row carrying both a material amount and
+a labor amount, with the switch on the labor half, say so: the arithmetic is the same and
+the rows would be paired.

@@ -1180,3 +1180,100 @@ of $0 gives no percentage); that a price is entered for the unit a thing is pric
 * Nothing is grouped by cost code (QUESTIONS.md Q1 is open).
 * An allowance is a rate on one figure per kind of element. A lump sum is not built.
 * D5's columns (material, labour, general), mark-ups and suppliers are D5.
+
+## D5. How its demonstration will be run (written before any D5 work)
+
+The brief: "Material, labor, and general columns. Labor toggles per line. Subcontractor
+work is a priced line; in-house labor is a production rate. Fabrication and supervision
+are separate lines. General conditions include hand-typed lines. O&P is editable. Recap
+categories are honest. Generic and supplier-specific pricing are shown side by side for
+three suppliers. Changing an entity's material reprices every dependent line and the
+recap. The owner's whole-job estimate is reproduced within rounding."
+
+`demos/d5.sh` (the command line) and `demos/d5w.sh` (the window) run on a made-up job;
+every price, rate and supplier in them is made up and stated in the script, and every
+figure they expect is worked by hand in the script's comments. Each step fails the
+script if the program does not do what the step says.
+
+1. *The sheet.* `plumbline estimate` prints every cost line under its element with its
+   quantity, what it is priced in, its unit cost and its amount in one of three columns
+   (material, labor, general), and each column's total is the sum of the amounts shown.
+2. *In-house labor is a production rate.* A labor line says so many SF or LF to the
+   hour; the line shows the hours and the hours times the hourly rate. The hours are
+   worked by hand.
+3. *Labor toggles per line.* A labor line is switched off: it stays on the sheet, marked
+   off, and leaves the labor column, the element's detail and the recap by exactly its
+   amount. Switched on again, everything is back to the cent.
+4. *Subcontract is a priced line.* A subcontract line is a quantity times a price, lands
+   in its own class, and is refused a production rate.
+5. *Fabrication and supervision are separate lines*, each in its own class in the recap,
+   with its hours.
+6. *General conditions with hand-typed lines.* A line is typed onto the job itself
+   (a description, a number, a price) and lands in general conditions.
+7. *The recap.* One row for each class, each the sum of its lines as shown; the job cost
+   their sum; overhead and profit by the percentages entered; the price. A line with no
+   class, no price or no quantity is named and left out, never counted as $0.00. With
+   overhead or profit not entered there is no price, and the recap says which is missing.
+8. *O&P is editable.* Overhead and profit are changed; the recap moves by the amounts
+   worked by hand.
+9. *Three suppliers side by side.* A material carries a generic price and a price from
+   each of three suppliers. The sheet shows each line made of it at all four, and each
+   supplier's total with what it leaves out (a material that supplier did not quote).
+10. *Changing an entity's material.* An element's material is changed. Every line on it
+    made of that material reprices (its pounds too, where the new material weighs
+    differently), the lines not made of it do not move, and the recap moves by the
+    difference worked by hand. In the file, only that element changed.
+11. *What is refused:* a production rate on a subcontract line; a labor line not in
+    hours; a material the job does not have; a quote in the wrong unit; a percentage
+    that is not a number.
+
+In the window: the sheet's Estimate tab shows the same sheet, recap and suppliers; an
+element's material is changed, a labor line switched off and the overhead typed with the
+keyboard, and the sheet follows; the job is saved and the file holds what was typed,
+flagged.
+
+**Pending, and said so:** "The owner's whole-job estimate is reproduced within rounding."
+`refs/` holds no estimate (QUESTIONS.md Q5). D5 is built against the brief's words, and
+that reproduction stays pending until the spreadsheet is there.
+
+The judge prices a job of its own, and tries to get a line into the wrong class, out of
+the recap without being named, or counted twice; to make a column total differ from the
+sum of what is shown; and to get an assumed price into a total that looks clean.
+
+
+## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
+
+An independent judge (Opus; it did not build any of this) was given commit `1886693`, a
+frozen copy of the source and a built command line, and the brief to break D4's money
+path and the ninth judgment's fixes. It reported thirteen findings and no panic. Its
+reproductions are kept outside the repository (they are scratch files). What it found,
+as it reported it; what was done about each is in the table that follows this list once
+the fix is in.
+
+| # | Finding (the judge's words, shortened) | Severity it gave |
+|---|---|---|
+| J10-1 | An element's condition can be Assumed or Unknown and its detail, rolled-up rate and difference still show as Known. | wrong figure unflagged |
+| J10-2 | A non-bounding wall's Assumed thickness or line decides a room's area (through the wall that ends on it), and the room stays Known. | wrong figure unflagged |
+| J10-3 | A quantity of zero is priced to a clean $0.00 and rolled up to $0.00 per SF. | silent zero |
+| J10-4 | The like-for-like amounts and every percentage print without the flag. | wrong figure unflagged (printout) |
+| J10-5 | A comma anywhere in a price is deleted: `1,25` is read as 125. | wrong figure unflagged (entry) |
+| J10-6 | A rate under a cent is shown as $0.00 in `price` and `show`. | silent zero (display) |
+| J10-7 | Extensions are not rounded half-up to the cent: 1 x 1.015 gives $1.01. | wrong figure, a cent |
+| J10-8 | "Not priced at all" leaves out every door, window, fitting, fixture and piece of equipment, though each can carry a priced line. | silent drop |
+| J10-9 | STATUS.md and call 30 say the allowance total says how many elements it leaves out. It does not. | false claim in a document |
+| J10-10 | An Assumed height on a second-floor wall flags a first-floor room; the note names a wall by a name two walls share. | false flag |
+| J10-11 | Money beyond about $90 trillion is printed as if exact to the cent. | minor |
+| J10-12 | Printout faults: an empty reason "no figure ()"; a refused roll-up rate printed nowhere; "$0.00 the same as"; a room point on a face corner read as inside a wall. | minor |
+| J10-13 | PORTMAP.md: `StoreyTotals`/`storey_totals` claim net wall area as ours on a search that skips `ifc.rs`, where BIMCraft works it; five `check_*` rows say they wrap BIMCraft's rule and cite none. | false claim in a document |
+
+**What held under attack** (the judge's list): every hand figure for allowances,
+extensions, waste, order rounding, sums and "of which assumed"; statuses carried into the
+money from an assumed waste, order factor and pitch; a price not carrying across a change
+of unit; negatives, `nan`, `inf`, `1e3` and anything past 1e9 refused; an amount under
+half a cent refused; nothing priced printing "none"; a detail not whole refused with its
+line named; a hand-edited derived figure in the file never trusted; save, load, save to
+the same bytes; allowances on a wall, floor, room, duct and pipe; J9-10, J9-11, J9-12.
+
+**Not reached by the judge:** J9-5 again; J9-4 across storeys; an uncertain storey
+elevation or computation height run (read only); the window; the money path through
+`apply` and through low-slope and parapet lines.

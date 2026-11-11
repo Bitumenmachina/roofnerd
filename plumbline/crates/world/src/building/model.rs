@@ -44,8 +44,9 @@
 //!   value, `line`. Its `system` is not a name on it but a component of its own that
 //!   points at a system element. A segment type says which kind of run it is for
 //!   (`category`, the key of BIMCraft's table of run types); it has a `depth` only when it
-//!   is not round. Not taken: a run's `join` and `params`, a run type's `material` (a
-//!   material here is a condition).
+//!   is not round. Not taken: a run's `join` and `params`, a run type's `material` (what
+//!   an element is made of is said on the element, `pl::material`, by the name of a
+//!   Material element that carries a price; BIMCraft's material is colour and pattern).
 //! * BIMCraft's `Component` is `Placed` here. Families are not ported, so in place of a
 //!   component's `family` and `type` it says `what` it is and its `size`. Not taken:
 //!   `mirrored`, `params`.

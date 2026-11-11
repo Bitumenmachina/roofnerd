@@ -171,9 +171,18 @@ pub fn derive(world: &mut World) -> Vec<String> {
     let mut to_remove: Vec<Entity> = Vec::new();
     // What each element comes to in money, set on it after the loop.
     let mut priced_now: Vec<(Entity, String, Priced)> = Vec::new();
+    // The job's materials, by name: what a line made of its element's material is ordered
+    // and priced by.
+    let mut materials: Vec<(String, String, Supply)> = Vec::new();
+    let mut mq = world.query::<(&Node, &Kind, &Supply)>();
+    for (node, kind, supply) in mq.iter(world) {
+        if *kind == Kind::Material {
+            materials.push((node.name.clone(), node.path.clone(), supply.clone()));
+        }
+    }
     #[allow(clippy::type_complexity)]
-    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Run>, Option<&Height>, Option<&Cost>, Option<&Allowance>, Option<&mut Measure>, Option<&mut LineQuantities>)>();
-    for (node, kind, outline, pitch, run, height, cost, allowance, measure, line_quantities) in q.iter_mut(world) {
+    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Run>, Option<&Height>, Option<&Cost>, Option<&Allowance>, Option<&MadeOf>, Option<&mut Measure>, Option<&mut LineQuantities>)>();
+    for (node, kind, outline, pitch, run, height, cost, allowance, made_of, measure, line_quantities) in q.iter_mut(world) {
         let me = &node.path;
         let mut m = BTreeMap::new();
 
@@ -268,8 +277,22 @@ pub fn derive(world: &mut World) -> Vec<String> {
         let mut lq = BTreeMap::new();
         if let Some(cost) = cost {
             let on = lines::On { kind: *kind, measure: Some(&new), height };
+            let stock = match made_of.map(|m| &m.0) {
+                None => lines::Stock::NotSaid,
+                Some(m) => match &m.value {
+                    None => lines::Stock::Missing(format!("what the element is made of is not known ({})", m.source)),
+                    Some(name) => {
+                        let found: Vec<&(String, String, Supply)> = materials.iter().filter(|(n, p, _)| n == name || p == name).collect();
+                        match found.as_slice() {
+                            [(name, path, supply)] => lines::Stock::Found { path, name, status: m.status, supply },
+                            [] => lines::Stock::Missing(format!("the element is made of {name:?}, and the job has no material of that name")),
+                            many => lines::Stock::Missing(format!("the element is made of {name:?}, and the job has {} materials of that name ({}); use the path", many.len(), many.iter().map(|f| f.1.clone()).collect::<Vec<_>>().join(", "))),
+                        }
+                    }
+                },
+            };
             for line in &cost.lines {
-                lq.insert(line.description.clone(), lines::figures(me, &on, line));
+                lq.insert(line.description.clone(), lines::figures(me, &on, line, &stock));
             }
         }
         let new_lq = LineQuantities(lq);

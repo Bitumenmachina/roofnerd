@@ -153,7 +153,7 @@ impl Job {
     pub fn set_on_line(&mut self, path: &str, field: &str, line: Option<&str>, value: Option<&str>, status: Status, source: &str) -> Result<(), String> {
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
-        let on_element = matches!(field, "pitch" | "height" | "eave_height" | "condition" | "wbs" | "allowance");
+        let on_element = matches!(field, "pitch" | "height" | "eave_height" | "condition" | "wbs" | "allowance" | "material" | "overhead" | "profit" | "price") || (field == "order" && kind == Kind::Material);
         if line.is_some() && on_element {
             return Err(format!("{field} belongs to the element, not to one of its cost lines; leave --line off"));
         }
@@ -188,6 +188,61 @@ impl Job {
                 check::condition(path, &new)?;
                 self.world.entity_mut(e).insert(new);
             }
+            "material" => {
+                let new = MadeOf(text());
+                check::made_of(path, kind, &new)?;
+                self.world.entity_mut(e).insert(new);
+            }
+            "overhead" | "profit" => {
+                let percent = value.map(|s| units::parse_number(s.trim().trim_end_matches('%').trim_end())).transpose()?;
+                let entered = Val { value: percent, unit: "%".into(), status, source: source.into() };
+                let blank = || Val::unknown("%", "not entered");
+                let mut new = self.world.get::<Markup>(e).cloned().unwrap_or_else(|| Markup { overhead: blank(), profit: blank() });
+                if field == "overhead" {
+                    new.overhead = entered;
+                } else {
+                    new.profit = entered;
+                }
+                check::markup(path, kind, &new)?;
+                self.world.entity_mut(e).insert(new);
+            }
+            "price" => {
+                let mut new = self.world.get::<Supply>(e).cloned().ok_or_else(|| format!("{path} is a {kind:?}, not a material; a price is set on a material, and a cost line's is its unit_cost"))?;
+                let per = new.price.unit.clone();
+                new.price = Val { value: value.map(|t| units::parse_price(t, &per)).transpose()?, unit: per, status, source: source.into() };
+                check::supply(path, kind, &new)?;
+                self.world.entity_mut(e).insert(new);
+            }
+            "order" => {
+                // On a material: how what is measured becomes what is bought.
+                let mut new = self.world.get::<Supply>(e).cloned().ok_or_else(|| missing("supply"))?;
+                let bought = new.price.unit.trim_start_matches("$/").to_string();
+                match value {
+                    None => {
+                        let o = new.order.as_mut().ok_or_else(|| format!("{path} has no order factor to mark unknown"))?;
+                        o.factor = Val { value: None, unit: o.factor.unit.clone(), status, source: source.into() };
+                    }
+                    Some(text) => {
+                        let how = format!("write it as a number and what per what, like 1.25 {bought}/SF or 30 SF/{bought}");
+                        let (number, per) = text.trim().split_once(' ').ok_or_else(|| format!("{text:?} is not an order factor; {how}"))?;
+                        let factor = units::parse_number(number)?;
+                        let (per, said) = match per.trim().rsplit_once(' ') {
+                            Some((rest, "whole")) => (rest.trim(), Some(true)),
+                            Some((rest, "exact")) => (rest.trim(), Some(false)),
+                            _ => (per.trim(), None),
+                        };
+                        let (top, bottom) = per.split_once('/').ok_or_else(|| format!("{text:?} is not an order factor; {how}"))?;
+                        if (top == bought) == (bottom == bought) {
+                            return Err(format!("{text:?} does not say how many {bought} it takes: this material is priced by the {bought}; {how}"));
+                        }
+                        // Whole ones for a package (so many SF to the sheet), not for a weight.
+                        let round_up = said.or(new.order.as_ref().map(|o| o.round_up)).unwrap_or(bottom == bought);
+                        new.order = Some(Order { unit: bought, factor: Val { value: Some(factor), unit: per.to_string(), status, source: source.into() }, round_up });
+                    }
+                }
+                check::supply(path, kind, &new)?;
+                self.world.entity_mut(e).insert(new);
+            }
             "allowance" => {
                 // A rate on the one figure a thing of this kind is bought by.
                 let Some((_, unit)) = kind.priced_by() else {
@@ -205,6 +260,78 @@ impl Job {
                 self.world.entity_mut(e).insert(new);
             }
         }
+        Ok(())
+    }
+
+    /// A supplier's price for a material. `None` marks it unknown; the quote stays, as a
+    /// price that was asked for and has not come.
+    pub fn set_quote(&mut self, path: &str, supplier: &str, value: Option<&str>, status: Status, source: &str) -> Result<(), String> {
+        let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
+        let mut new = self.world.get::<Supply>(e).cloned().ok_or_else(|| format!("{path} is a {kind:?}, not a material; a supplier quotes a material"))?;
+        let per = new.price.unit.clone();
+        new.quotes.insert(supplier.to_string(), Val { value: value.map(|t| units::parse_price(t, &per)).transpose()?, unit: per, status, source: source.into() });
+        check::supply(path, kind, &new)?;
+        self.world.entity_mut(e).insert(new);
+        Ok(())
+    }
+
+    /// A new material, bought and priced by `unit` (lb, sheet, SF). Its price is Unknown
+    /// until it is entered. Returns its path.
+    pub fn add_material(&mut self, name: &str, unit: &str) -> Result<String, String> {
+        let root = self.world.get::<Node>(self.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
+        let mut q = self.world.query::<(&Node, &Kind)>();
+        if q.iter(&self.world).any(|(n, k)| *k == Kind::Material && n.name == name) {
+            return Err(format!("the job already has a material called {name:?}"));
+        }
+        let supply = Supply { order: None, price: Val::unknown(&format!("$/{unit}"), "no price entered"), quotes: BTreeMap::new() };
+        check::supply("the new material", Kind::Material, &supply)?;
+        let path = self.add(&root, Kind::Material, name)?;
+        self.put(&path, supply)?;
+        Ok(path)
+    }
+
+    /// A new cost line on an element, typed by hand: what it is, its quantity (a number,
+    /// or a formula over the element's figures) and, if it is said, its class. Its unit
+    /// cost is Unknown until it is entered. A line made of the element's material
+    /// (`of_material`) carries no price of its own.
+    pub fn add_line(&mut self, path: &str, description: &str, quantity: &str, class: Option<Class>, of_material: bool) -> Result<(), String> {
+        let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
+        let mut line = if of_material { CostLine::of_material(description, quantity) } else { CostLine::of(description, quantity, Val::unknown("", "no price entered")) };
+        if !of_material {
+            line.class = class;
+            let on = lines::On { kind, measure: None, height: None };
+            let unit = lines::read(&on, &line).map_err(|why| format!("{path} cost line {description:?}: its quantity {quantity:?} {why}"))?.unit;
+            line.unit_cost.unit = format!("$/{unit}");
+        } else if class.is_some_and(|c| c != Class::Material) {
+            return Err(format!("{path} cost line {description:?}: is made of the element's material, so its class is Material"));
+        }
+        let mut new = self.world.get::<Cost>(e).cloned().unwrap_or_else(|| Cost { code: Val::unknown("", "not coded"), lines: Vec::new() });
+        new.lines.push(line);
+        check::cost(path, kind, &new)?;
+        self.world.entity_mut(e).insert(new);
+        Ok(())
+    }
+
+    /// Say which row of the recap a cost line lands in.
+    pub fn set_class(&mut self, path: &str, line: Option<&str>, class: Class) -> Result<(), String> {
+        self.edit_line(path, line, "class", |l| l.class = Some(class))
+    }
+
+    /// Switch a Labor line off or on. Off, it stays on the sheet and is out of every total.
+    pub fn set_off(&mut self, path: &str, line: Option<&str>, off: bool) -> Result<(), String> {
+        self.edit_line(path, line, "switch", |l| l.off = off)
+    }
+
+    fn edit_line(&mut self, path: &str, line: Option<&str>, what: &str, edit: impl FnOnce(&mut CostLine)) -> Result<(), String> {
+        let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
+        let mut new = self.world.get::<Cost>(e).cloned().ok_or_else(|| format!("{path} has no cost line to set a {what} on"))?;
+        let at = Self::line_at(&new, path, line, what)?;
+        edit(&mut new.lines[at]);
+        check::cost(path, kind, &new)?;
+        self.world.entity_mut(e).insert(new);
         Ok(())
     }
 
@@ -320,7 +447,8 @@ impl Job {
                         }
                         let (top, bottom) = per.split_once('/').ok_or_else(|| format!("{text:?} is not an order conversion; {how}"))?;
                         let (order_unit, round_up) = if top == unit && bottom != unit {
-                            (bottom, true)
+                            // Whole ones for a package; hours are not bought whole.
+                            (bottom, bottom != HOURS)
                         } else if bottom == unit && top != unit {
                             (top, false)
                         } else {
@@ -350,7 +478,7 @@ impl Job {
         if let Ok(read) = lines::read(&on, &new.lines[at]) {
             let priced = format!("$/{}", lines::priced_in(&new.lines[at], read.unit));
             let l = &mut new.lines[at];
-            if l.unit_cost.unit != priced {
+            if !l.of_material && l.unit_cost.unit != priced {
                 if l.unit_cost.value.is_some() {
                     return Err(format!("{what} is priced in {}; this change would make it a line in {priced}, and a price does not carry from one to the other. Mark its unit cost unknown first (set unit_cost unknown), make the change, then enter the price for the new unit", l.unit_cost.unit));
                 }

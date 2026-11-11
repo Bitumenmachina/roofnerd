@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use crate::components::*;
 use crate::formula::{self, Expr, Operand};
 use crate::units;
-use crate::value::{Derived, Status};
+use crate::value::{Derived, Status, Val};
 
 /// Names a formula can use that are not measures and not entered on the line.
 pub const HEIGHT: &str = "height";
@@ -173,33 +173,107 @@ pub fn dollars(value: Option<f64>, statuses: &[Status], formula: &str, inputs: &
     }
 }
 
+/// What the element is made of, as a line made of it needs to know it.
+pub enum Stock<'a> {
+    /// The element does not say what it is made of.
+    NotSaid,
+    /// It names a material, and the job has it: the material's path and name, how sure
+    /// the element is that it is made of it, and how the material is bought and priced.
+    Found { path: &'a str, name: &'a str, status: Status, supply: &'a Supply },
+    /// It names one that cannot be used, and why.
+    Missing(String),
+}
+
+/// Whose price a line is extended at, and what else the extension rests on.
+struct Price<'a> {
+    /// The price, or why there is none to use.
+    at: Result<&'a Val<f64>, String>,
+    /// "the line" or the material, for the note of a line with no price.
+    whose: String,
+    /// Statuses the order and the extension take besides their own (how sure the element
+    /// is of its material).
+    statuses: Vec<Status>,
+    inputs: Vec<String>,
+}
+
 /// What a line comes to in dollars: what it is priced in (its order units, else its
 /// quantity with waste, else its quantity) times its unit cost.
-fn extension(line: &CostLine, quantity: &Derived, with_waste: Option<&Derived>, order: Option<&Derived>, cost_in: &str) -> Derived {
+fn extension(price: &Price, quantity: &Derived, with_waste: Option<&Derived>, order: Option<&Derived>) -> Derived {
     let (base, name) = match (order, with_waste) {
         (Some(o), _) => (o, "order"),
         (None, Some(w)) => (w, "with_waste"),
         (None, None) => (quantity, "quantity"),
     };
     let formula = format!("{name} × unit_cost");
-    let inputs = [cost_in.to_string()];
-    match (line.unit_cost.value, base.value) {
-        (None, _) => Derived::refused("$", &formula, &inputs, &format!("the line has no price ({})", line.unit_cost.source)),
-        (Some(_), None) if base.note.is_empty() => Derived::refused("$", &formula, &inputs, "the line has no quantity to price: a figure it is worked out from is not known"),
-        (Some(_), None) => Derived::refused("$", &formula, &inputs, &format!("the line has no quantity to price: {}", base.note)),
-        (Some(price), Some(q)) => dollars(Some(q * price), &[base.status, line.unit_cost.status], &formula, &inputs),
+    let inputs = &price.inputs;
+    let at = match &price.at {
+        Err(why) => return Derived::refused("$", &formula, inputs, why),
+        Ok(v) => *v,
+    };
+    match (at.value, base.value) {
+        (None, _) => Derived::refused("$", &formula, inputs, &format!("{} has no price ({})", price.whose, at.source)),
+        (Some(_), None) if base.note.is_empty() => Derived::refused("$", &formula, inputs, "the line has no quantity to price: a figure it is worked out from is not known"),
+        (Some(_), None) => Derived::refused("$", &formula, inputs, &format!("the line has no quantity to price: {}", base.note)),
+        (Some(p), Some(q)) => {
+            let mut statuses = vec![base.status, at.status];
+            statuses.extend(&price.statuses);
+            dollars(Some(q * p), &statuses, &formula, inputs)
+        }
     }
 }
 
-/// Everything one line works out to on one element.
-pub fn figures(me: &str, on: &On, line: &CostLine) -> LineFigures {
+/// Everything one line works out to on one element. `stock` is what the element is made
+/// of: a line made of it is ordered and priced as that material is.
+pub fn figures(me: &str, on: &On, line: &CostLine, stock: &Stock) -> LineFigures {
+    let cost_in = format!("{me}#{K_COST}");
+    if !line.of_material {
+        let price = Price { at: Ok(&line.unit_cost), whose: "the line".into(), statuses: Vec::new(), inputs: vec![cost_in] };
+        return worked(me, on, line, line.order.as_ref(), &price);
+    }
+    let made_of = format!("{me}#{K_MATERIAL}");
+    match stock {
+        Stock::NotSaid => {
+            let price = Price { at: Err("the line is made of the element's material, and the element does not say what it is made of".into()), whose: String::new(), statuses: Vec::new(), inputs: vec![cost_in] };
+            worked(me, on, line, None, &price)
+        }
+        Stock::Missing(why) => {
+            let price = Price { at: Err(why.clone()), whose: String::new(), statuses: Vec::new(), inputs: vec![cost_in, made_of] };
+            worked(me, on, line, None, &price)
+        }
+        Stock::Found { path, name, status, supply } => {
+            let inputs = vec![cost_in, made_of, format!("{path}#{K_SUPPLY}")];
+            let whose = format!("its material, {name:?},");
+            let price = Price { at: Ok(&supply.price), whose: whose.clone(), statuses: vec![*status], inputs: inputs.clone() };
+            let mut out = worked(me, on, line, supply.order.as_ref(), &price);
+            // A price is for a unit. One for another unit is not used.
+            let priced = out.order.as_ref().map(|o| o.unit.clone()).unwrap_or_else(|| out.quantity.unit.clone());
+            let wrong = |v: &Val<f64>| (v.unit != format!("$/{priced}")).then(|| format!("{whose} is priced in {}, and this line comes out in {priced}", v.unit));
+            if let Some(why) = wrong(&supply.price) {
+                out.extension = Some(Derived::refused("$", "", &inputs, &why));
+            }
+            for (supplier, quote) in &supply.quotes {
+                let at = Price { at: Ok(quote), whose: format!("{supplier}'s quote for {name:?}"), statuses: vec![*status], inputs: inputs.clone() };
+                let d = match wrong(quote) {
+                    Some(why) => Derived::refused("$", "", &inputs, &why),
+                    None => extension(&at, &out.quantity, out.with_waste.as_ref(), out.order.as_ref()),
+                };
+                out.quotes.insert(supplier.clone(), d);
+            }
+            out
+        }
+    }
+}
+
+/// A line worked out with the order and the price it is to use: its own, or its
+/// material's.
+fn worked(me: &str, on: &On, line: &CostLine, order_by: Option<&Order>, price: &Price) -> LineFigures {
     let cost_in = format!("{me}#{K_COST}");
     let read = match read(on, line) {
         Ok(r) => r,
         Err(why) => {
             let refused = Derived::refused("", &line.quantity, std::slice::from_ref(&cost_in), &format!("the line's quantity {why}"));
-            let extension = Some(extension(line, &refused, None, None, &cost_in));
-            return LineFigures { quantity: refused, with_waste: None, order: None, extension };
+            let extension = Some(extension(price, &refused, None, None));
+            return LineFigures { quantity: refused, with_waste: None, order: None, extension, quotes: BTreeMap::new() };
         }
     };
     // What the figure rests on, for a reader following it back.
@@ -238,13 +312,13 @@ pub fn figures(me: &str, on: &On, line: &CostLine) -> LineFigures {
         Derived::new(v, read.unit, &[quantity.status, w.status], formula, std::slice::from_ref(&cost_in))
     });
 
-    let order = line.order.as_ref().map(|o| {
+    let order = order_by.map(|o| {
         let (base, base_name) = match &with_waste {
             Some(w) => (w, "with_waste"),
             None => (&quantity, "quantity"),
         };
         match order_multiplies(o, read.unit) {
-            Err(why) => Derived::refused(&o.unit, "", std::slice::from_ref(&cost_in), &format!("the line {why}")),
+            Err(why) => Derived::refused(&o.unit, "", &price.inputs, &format!("the line {why}")),
             Ok(multiplies) => {
                 let mut formula = format!("{base_name} {} factor", if multiplies { '\u{00D7}' } else { '\u{00F7}' });
                 let mut v = base.value.zip(o.factor.value).map(|(q, f)| if multiplies { q * f } else { q / f });
@@ -252,12 +326,14 @@ pub fn figures(me: &str, on: &On, line: &CostLine) -> LineFigures {
                     v = v.map(whole_up);
                     formula.push_str(&format!(", rounded up to a whole {}", o.unit));
                 }
-                Derived::new(v, &o.unit, &[base.status, o.factor.status], &formula, std::slice::from_ref(&cost_in))
+                let mut statuses = vec![base.status, o.factor.status];
+                statuses.extend(&price.statuses);
+                Derived::new(v, &o.unit, &statuses, &formula, &price.inputs)
             }
         }
     });
-    let extension = Some(extension(line, &quantity, with_waste.as_ref(), order.as_ref(), &cost_in));
-    LineFigures { quantity, with_waste, order, extension }
+    let extension = Some(extension(price, &quantity, with_waste.as_ref(), order.as_ref()));
+    LineFigures { quantity, with_waste, order, extension, quotes: BTreeMap::new() }
 }
 
 /// What an element comes to, both ways (`pl::priced`): from its allowance, from its cost
@@ -266,7 +342,8 @@ pub fn figures(me: &str, on: &On, line: &CostLine) -> LineFigures {
 pub fn priced(me: &str, kind: Kind, measure: &Measure, allowance: Option<&Allowance>, cost: Option<&Cost>, line_quantities: &BTreeMap<String, LineFigures>) -> BTreeMap<String, Derived> {
     use std::collections::BTreeMap as Map;
     let mut out: Map<String, Derived> = Map::new();
-    let lines = cost.map(|c| c.lines.as_slice()).unwrap_or(&[]);
+    // A line switched off is on the sheet and out of the detail.
+    let lines: Vec<&CostLine> = cost.map(|c| c.lines.iter().filter(|l| !l.off).collect()).unwrap_or_default();
     if allowance.is_none() && lines.is_empty() {
         return out;
     }

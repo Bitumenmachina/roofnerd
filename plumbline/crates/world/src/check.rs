@@ -371,13 +371,114 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
             }
         }
 
-        let unit = lines::priced_in(line, read.unit);
-        line.unit_cost.check(&format!("{what} unit cost"), &format!("$/{unit}"))?;
-        if line.unit_cost.value.is_some_and(|x| !x.is_finite() || x < 0.0) {
-            return Err(format!("{what} unit cost: must be zero or more"));
+        if line.of_material {
+            // Ordered and priced as the element's material is: it carries neither itself.
+            if line.order.is_some() {
+                return Err(format!("{what}: is made of the element's material and also carries an order factor; how it is ordered is the material's"));
+            }
+            if !CostLine::is_no_price_of_its_own(&line.unit_cost) {
+                return Err(format!("{what}: is made of the element's material and also carries a unit cost; its price is the material's"));
+            }
+            if line.class != Some(Class::Material) {
+                return Err(format!("{what}: is made of the element's material, so its class is Material"));
+            }
+        } else {
+            if CostLine::is_no_price_of_its_own(&line.unit_cost) {
+                return Err(format!("{what}: has no unit cost; a line carries one (marked Unknown until it is entered) unless it is made of the element's material"));
+            }
+            let unit = lines::priced_in(line, read.unit);
+            line.unit_cost.check(&format!("{what} unit cost"), &format!("$/{unit}"))?;
+            if line.unit_cost.value.is_some_and(|x| !x.is_finite() || x < 0.0) {
+                return Err(format!("{what} unit cost: must be zero or more"));
+            }
+            if line.unit_cost.value.is_some_and(|x| x > MAX_UNIT_COST) {
+                return Err(format!("{what} unit cost: is beyond {MAX_UNIT_COST:e} per unit, which is not a usable price"));
+            }
         }
-        if line.unit_cost.value.is_some_and(|x| x > MAX_UNIT_COST) {
-            return Err(format!("{what} unit cost: is beyond {MAX_UNIT_COST:e} per unit, which is not a usable price"));
+        // A class says what the line is, and the line has to be that. In-house work is in
+        // hours, by a production rate; nothing else is.
+        if let Some(class) = line.class {
+            match (class.in_hours(), line.in_hours()) {
+                (true, false) => return Err(format!("{what}: is {}, which is in-house work, and is not in hours; give it a production rate as its order factor (\"40 SF/{HOURS}\" or \"0.025 {HOURS}/SF\") and dollars an hour as its unit cost", class.title())),
+                (false, true) if class == Class::Subcontract => return Err(format!("{what}: is Subcontract and carries a production rate; a subcontractor's work is a quantity and a price, and in-house work is Labor, Fabrication or Supervision")),
+                (false, true) => return Err(format!("{what}: is {} and is in hours; a line in hours is Labor, Fabrication or Supervision", class.title())),
+                _ => {}
+            }
+        }
+        if line.off && line.class != Some(Class::Labor) {
+            return Err(format!("{what}: is switched off, and only a Labor line can be"));
+        }
+    }
+    Ok(())
+}
+
+/// What an element is made of is a material's name.
+pub fn made_of(path: &str, kind: Kind, m: &MadeOf) -> Result<(), String> {
+    if matches!(kind, Kind::Job | Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey) {
+        return Err(format!("{path}: a {kind:?} is not made of a material"));
+    }
+    text_ok(&format!("{path} material"), &m.0)
+}
+
+/// How a material is bought and what it costs: an order factor that is a usable number
+/// in a unit like `lb/SF`, and prices, each in dollars for the unit it is bought in.
+pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
+    if kind != Kind::Material {
+        return Err(format!("{path}: a {kind:?} cannot carry a material's supply; only a Material element can"));
+    }
+    let mut per = None;
+    if let Some(o) = &s.order {
+        if o.unit.is_empty() || o.unit.chars().any(char::is_whitespace) || o.unit.contains('/') || o.unit.contains('$') {
+            return Err(format!("{path}: its order unit {:?} is not a usable name for what is bought (sheet, lb, box)", o.unit));
+        }
+        if o.unit == HOURS {
+            return Err(format!("{path}: a material is not bought by the hour"));
+        }
+        let (a, b) = o.factor.unit.split_once('/').unwrap_or(("", ""));
+        if !((a == o.unit && !b.is_empty() && b != o.unit) || (b == o.unit && !a.is_empty() && a != o.unit)) {
+            return Err(format!("{path}: its order factor is in {:?}; for a material bought by the {} it is so many {} to the unit it is measured in (\"{}/SF\") or the other way up (\"SF/{}\")", o.factor.unit, o.unit, o.unit, o.unit, o.unit));
+        }
+        o.factor.check_basics(&format!("{path} order factor"))?;
+        if o.factor.value.is_some_and(|x| !x.is_finite() || x <= 0.0 || x > MAX_UNIT_COST) {
+            return Err(format!("{path} order factor: must be more than zero (and not beyond {MAX_UNIT_COST:e})"));
+        }
+        per = Some(format!("$/{}", o.unit));
+    }
+    let price = |what: &str, v: &Val<f64>, per: &mut Option<String>| -> Result<(), String> {
+        let ok = v.unit.strip_prefix("$/").is_some_and(|u| !u.is_empty() && !u.contains('/') && !u.contains('$') && !u.chars().any(char::is_whitespace));
+        if !ok {
+            return Err(format!("{what}: its unit is {:?}; a price is dollars for a unit, like \"$/lb\" or \"$/SF\"", v.unit));
+        }
+        let wanted = per.get_or_insert_with(|| v.unit.clone()).clone();
+        v.check(what, &wanted)?;
+        if v.value.is_some_and(|x| !x.is_finite() || x < 0.0) {
+            return Err(format!("{what}: must be zero or more"));
+        }
+        if v.value.is_some_and(|x| x > MAX_UNIT_COST) {
+            return Err(format!("{what}: is beyond {MAX_UNIT_COST:e} per unit, which is not a usable price"));
+        }
+        Ok(())
+    };
+    price(&format!("{path} price"), &s.price, &mut per)?;
+    for (supplier, quote) in &s.quotes {
+        if supplier.trim().is_empty() || supplier != supplier.trim() || supplier.chars().any(char::is_control) {
+            return Err(format!("{path}: a quote is from {supplier:?}, which is not a usable name for a supplier"));
+        }
+        price(&format!("{path} quote from {supplier:?}"), quote, &mut per)?;
+    }
+    Ok(())
+}
+
+/// Overhead and profit are percentages, on the job.
+pub fn markup(path: &str, kind: Kind, m: &Markup) -> Result<(), String> {
+    if kind != Kind::Job {
+        return Err(format!("{path}: overhead and profit are the job's; a {kind:?} cannot carry them"));
+    }
+    for (what, v) in [("overhead", &m.overhead), ("profit", &m.profit)] {
+        let what = format!("{path} {what}");
+        v.check(&what, "%")?;
+        if v.value.is_some_and(|x| !x.is_finite() || !(0.0..=1000.0).contains(&x)) {
+            return Err(format!("{what}: is a percentage from 0 to 1000"));
         }
     }
     Ok(())
