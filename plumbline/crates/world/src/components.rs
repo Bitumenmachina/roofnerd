@@ -101,6 +101,8 @@ pub enum Kind {
     Material,
     /// A sheet of the plans laid under the tracing of the storey it is under.
     Drawing,
+    /// An estimate made before, brought in to be set against this one. Under the job.
+    Prior,
 }
 
 impl Kind {
@@ -137,6 +139,7 @@ impl Kind {
             Kind::Room => "room",
             Kind::Material => "material",
             Kind::Drawing => "drawing",
+            Kind::Prior => "prior",
         }
     }
     pub fn is_area(self) -> bool {

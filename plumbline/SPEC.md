@@ -234,6 +234,7 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 | `pl::connectors` | Equipment, a Fixture or a Fitting | A list. Each: `name`; `kind` (pipe, duct, conduit, power); for a pipe, `domain` (cold, hot, waste, vent, storm, gas); `flow` (in, out) when it is not both; `at`, in the thing's own axes (x along its angle, y to its left, z up from its base); `size`. | `at`: `ft` or `in` |
 | `pl::system` | a System | `discipline` (Mechanical, Electrical, Plumbing) and `classification`: Supply Air, Return Air, Exhaust Air, Refrigerant, Domestic Cold Water, Domestic Hot Water, Sanitary, Vent, Power, Lighting. | |
 | `pl::drawing` | a Drawing, under a Storey | One page of a plan file laid under the tracing (section 5.11). `file`: where the file is, from the folder the job is in. `page`, counted from 1. `bytes` and `checksum`: the file's length and fingerprint when the drawing was made from it. `size`: the page's width and height in its own units (a PDF's points, a picture's dots). `scale`, when it has one: `from` and `to`, two places on the page, and the `distance` between them. `at`: where the page's lower-left corner is on the plan. | `distance`: `ft`, `in` or `ft-in`; `at`: `ft` or `in` |
+| `pl::prior` | a Prior, under the job | An estimate made before, brought in to be set against this one (section 5.12). `lines`: each a `description` and, as far as the estimate gave them, a `quantity`, a `unit`, a `unit_cost`, an `amount`, a `class` and a `code`, as written. Nothing of it is in the job's price. | none |
 | `pl::in_system` | a run, Equipment, a Fixture or a Fitting | The system it belongs to, by the system's path. It has to be a System in the job. | none |
 
 A file saved before the building model was re-based on BIMCraft's shapes (DECISIONS.md
@@ -691,6 +692,47 @@ window, the left panel's Drawings to trace.
 * **Snapping.** A calibrated PDF's own lines are places to pick in the window: their
   ends, their middles, their crossings and along them, as a wall's line is.
 
+### 5.12 Tables brought in and written out
+
+`tables.rs` in the world crate, `crates/sheets` (DECISIONS.md call 45); `plumbline export
+<prices|assemblies>`, `import <prices|assemblies|prior>`, `compare`.
+
+* **A table is rows of cells as text.** `plumbline-sheets` reads them out of a CSV file
+  or one sheet of an XLSX workbook, and lists what the file held that is not in the
+  rows: a workbook's other sheets, how many cells held a formula (each read as what it
+  last worked out to), an error or a date, merged cells, and how cells were shown; a CSV
+  file that was not UTF-8, or whose cells were parted by semicolons or tabs. CSV written
+  by this program and read back is the same rows.
+* **A price list** is, for each material, its own price and how it is ordered, then
+  each supplier's price: `Material, Bought by, Price, Supplier, How sure, Where from,
+  Ordered at, Whole ones only, Ordered at: how sure, Ordered at: where from`. Written
+  out and brought into a job with none of it (`--add`), it gives the same price list,
+  value for value, and the same CSV.
+* **Somebody else's price list is read by its headings**, found within its first 25
+  rows: what is priced (Material, Item, Description, Product, Name), by what (Bought by,
+  Unit, UOM, U/M, Per, Sold by), the price (Price, Unit price, Cost, Unit cost, Each,
+  Net price), whose (Supplier, Vendor). A list with no column for one of the first three
+  is refused whole. With no columns for how sure and where from, those are asked for
+  (`--status`, `--source`) and the list is refused without them. A material is matched
+  by its name (section 4's one name); its unit has to be the one the job buys it by.
+* **Every row is accounted for**: set, the same as the job already has, or not used
+  with why (no such material, the wrong unit, a price that is not a figure, no price).
+  Every column not used and every row above the headings is named.
+* **An assembly library** is the job's conditions, one row for each line a condition
+  puts on what it goes on, every value with how sure and where from. Only a table this
+  program wrote is read. An assembly the job already has by that name is left as it is:
+  counted as the same if it is, listed if it differs.
+* **A prior estimate** is read by its headings (Description or Item; Quantity; Unit;
+  Unit cost, Unit price or Rate; Amount, Total or Extension; Class; Cost code) into a
+  Prior element under the job, as sure as whoever brought it says. A row with no figure
+  at all is listed as not used. It is no part of the job's price.
+* **`compare`** sets each prior line beside every line of the job called the same (not
+  those switched off): the job's quantity where its lines are in one unit, what they
+  come to, how sure, and the job less the prior in quantity (where the units agree) and
+  in amount. A prior line with no amount is its quantity times its unit cost, and says
+  so. Then the job's lines the prior estimate does not name, and the prior's the job
+  does not. A line with no figure is "no figure", not zero.
+
 ## 6. Cost code scheme
 
 Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores its
@@ -753,7 +795,8 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
 |---|---|---|
 | `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json`, `parry3d-f64` (solid geometry, for clashes) | The model: values, units, components, checks, plan geometry, derivation, line formulas and the steps a line is worked in, the lines planes imply, the saved file, the sample job, the flat view |
 | `crates/plans` (`plumbline-plans`) | `hayro` (PDF), `image` (PNG, JPEG) | Reading a plan file's page: its picture, its straight lines, and what it could not give |
-| `crates/cli` (`plumbline`) | `plumbline-world`, `plumbline-plans` | The command line: the samples, `show`, `check`, `lines`, `takeoff`, `price`, `estimate`, the entry commands (`set`, `apply`, `line`, `class`, `labor`, `material`, `roof`) and the drawing verbs of sections 5.8 and 5.9, `clashes`, and the plans of section 5.11 |
+| `crates/sheets` (`plumbline-sheets`) | `csv`, `calamine` (XLSX) | Reading a table out of a CSV file or a workbook's sheet as rows of text, with what was not read; writing CSV |
+| `crates/cli` (`plumbline`) | `plumbline-world`, `plumbline-plans`, `plumbline-sheets` | The command line: the samples, `show`, `check`, `lines`, `takeoff`, `price`, `estimate`, the entry commands (`set`, `apply`, `line`, `class`, `labor`, `material`, `roof`) and the drawing verbs of sections 5.8 and 5.9, `clashes`, the plans of section 5.11 and the tables of 5.12 |
 | `crates/app` (`plumbline-app`) | `plumbline-world`, `plumbline-plans`, `bevy` | The 3D window and the sheet window |
 
 The world crate does not depend on any renderer or window, and must not. The engine is

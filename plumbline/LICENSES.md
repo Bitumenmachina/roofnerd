@@ -49,6 +49,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | async-io | 2.6.0 | Apache-2.0 OR MIT |
 | async-lock | 3.5.0 | Apache-2.0 OR MIT |
 | async-task | 4.7.1 | Apache-2.0 OR MIT |
+| atoi_simd | 0.18.1 | MIT OR Apache-2.0 |
 | atomic-waker | 1.1.2 | Apache-2.0 OR MIT |
 | atomicow | 1.2.0 | MIT OR Apache-2.0 |
 | autocfg | 1.5.1 | Apache-2.0 OR MIT |
@@ -125,10 +126,12 @@ first three and what they bring; the engine is linked by the 3D application alon
 | bytemuck | 1.25.2 | Zlib OR Apache-2.0 OR MIT |
 | byteorder-lite | 0.1.0 | Unlicense OR MIT |
 | byteorder | 1.5.0 | Unlicense OR MIT |
+| calamine | 0.38.0 | MIT |
 | calloop | 0.13.0 | MIT |
 | cc | 1.11.1 | MIT OR Apache-2.0 |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 |
 | cfg_aliases | 0.2.2 | MIT |
+| codepage | 0.1.3 | Apache-2.0 OR MIT |
 | codespan-reporting | 0.13.1 | Apache-2.0 |
 | colorchoice | 1.0.5 | MIT OR Apache-2.0 |
 | color | 0.3.3 | Apache-2.0 OR MIT |
@@ -137,15 +140,20 @@ first three and what they bring; the engine is linked by the 3D application alon
 | const_panic | 0.2.17 | Zlib |
 | const_soft_float | 0.1.4 | MIT OR Apache-2.0 |
 | constant_time_eq | 0.4.2 | CC0-1.0 OR MIT-0 OR Apache-2.0 |
+| constant_time_eq | 0.6.1 | CC0-1.0 OR MIT-0 OR Apache-2.0 |
 | constgebra | 0.1.4 | MIT OR Apache-2.0 |
 | convert_case | 0.10.0 | MIT |
+| core_detect | 1.0.0 | MIT/Apache-2.0 |
 | cpufeatures | 0.3.1 | MIT OR Apache-2.0 |
 | crc32fast | 1.5.5 | MIT OR Apache-2.0 |
 | crossbeam-channel | 0.5.17 | MIT OR Apache-2.0 |
 | crossbeam-queue | 0.3.14 | MIT OR Apache-2.0 |
 | crossbeam-utils | 0.8.23 | MIT OR Apache-2.0 |
+| csv-core | 0.1.13 | Unlicense/MIT |
+| csv | 1.4.0 | Unlicense/MIT |
 | ctrlc | 3.5.2 | MIT/Apache-2.0 |
 | cursor-icon | 1.2.0 | MIT OR Apache-2.0 OR Zlib |
+| debug_unsafe | 0.1.4 | MIT OR Apache-2.0 |
 | derive_more-impl | 2.1.1 | MIT |
 | derive_more | 2.1.1 | MIT |
 | displaydoc | 0.2.7 | MIT OR Apache-2.0 |
@@ -159,11 +167,13 @@ first three and what they bring; the engine is linked by the 3D application alon
 | encase_derive_impl | 0.12.1 | MIT-0 |
 | encase_derive | 0.12.1 | MIT-0 |
 | encase | 0.12.1 | MIT-0 |
+| encoding_rs | 0.8.44 | (Apache-2.0 OR MIT) AND BSD-3-Clause |
 | equivalent | 1.0.3 | Apache-2.0 OR MIT |
 | erased-serde | 0.4.11 | MIT OR Apache-2.0 |
 | euclid | 0.22.14 | MIT OR Apache-2.0 |
 | event-listener-strategy | 0.5.4 | Apache-2.0 OR MIT |
 | event-listener | 5.4.2 | Apache-2.0 OR MIT |
+| fast-float2 | 0.2.4 | MIT OR Apache-2.0 |
 | fastrand | 2.5.0 | Apache-2.0 OR MIT |
 | fdeflate | 0.3.7 | MIT OR Apache-2.0 |
 | fearless_simd | 0.7.0 | Apache-2.0 OR MIT |
@@ -255,6 +265,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | miniz_oxide | 0.8.9 | MIT OR Zlib OR Apache-2.0 |
 | miniz_oxide | 0.9.1 | MIT OR Zlib OR Apache-2.0 |
 | moxcms | 0.8.1 | BSD-3-Clause OR Apache-2.0 |
+| multiversion_no_op | 1.0.0 | Apache-2.0 OR MIT |
 | mutants | 0.0.3 | MIT |
 | naga-types | 30.0.1 | MIT OR Apache-2.0 |
 | naga | 30.0.1 | MIT OR Apache-2.0 |
@@ -293,6 +304,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | proc-macro2 | 1.0.107 | MIT OR Apache-2.0 |
 | profiling | 1.0.18 | MIT OR Apache-2.0 |
 | pxfm | 0.1.30 | BSD-3-Clause OR Apache-2.0 |
+| quick-xml | 0.42.0 | MIT |
 | quote | 1.0.47 | MIT OR Apache-2.0 |
 | radium | 0.7.0 | MIT |
 | radsort | 0.1.1 | MIT OR Apache-2.0 |
@@ -313,7 +325,9 @@ first three and what they bring; the engine is linked by the 3D application alon
 | rustc_version | 0.4.1 | MIT OR Apache-2.0 |
 | rustix | 0.38.44 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | rustix | 1.1.6 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
+| rustversion | 1.0.23 | MIT OR Apache-2.0 |
 | ruzstd | 0.9.1 | MIT |
+| ryu | 1.0.23 | Apache-2.0 OR BSL-1.0 |
 | safe_arch | 1.2.0 | Zlib OR Apache-2.0 OR MIT |
 | scopeguard | 1.2.0 | MIT OR Apache-2.0 |
 | semver | 1.0.28 | MIT OR Apache-2.0 |
@@ -326,6 +340,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | shlex | 2.0.1 | MIT OR Apache-2.0 |
 | simba | 0.10.2 | Apache-2.0 |
 | simd-adler32 | 0.3.10 | MIT |
+| simdutf8 | 0.1.5 | MIT OR Apache-2.0 |
 | siphasher | 1.0.4 | MIT OR Apache-2.0 |
 | skrifa | 0.44.0 | MIT OR Apache-2.0 |
 | skrifa | 0.49.0 | MIT OR Apache-2.0 |
@@ -362,6 +377,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | tracing-subscriber | 0.3.23 | MIT |
 | tracing | 0.1.44 | MIT |
 | twox-hash | 2.1.5 | MIT |
+| typed-path | 0.13.0 | MIT OR Apache-2.0 |
 | typeid | 1.0.3 | MIT OR Apache-2.0 |
 | typewit | 1.15.2 | Zlib |
 | unicode-ident | 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 |
@@ -407,11 +423,15 @@ first three and what they bring; the engine is linked by the 3D application alon
 | zerocopy | 0.8.63 | BSD-2-Clause OR Apache-2.0 OR MIT |
 | zerofrom-derive | 0.1.8 | Unicode-3.0 |
 | zerofrom | 0.1.8 | Unicode-3.0 |
+| zeroize_derive | 1.5.0 | Apache-2.0 OR MIT |
+| zeroize | 1.9.1 | Apache-2.0 OR MIT |
 | zerotrie | 0.2.5 | Unicode-3.0 |
 | zerovec-derive | 0.11.7 | Unicode-3.0 |
 | zerovec | 0.11.9 | Unicode-3.0 |
+| zip | 9.5.1 | MIT |
 | zlib-rs | 0.6.8 | Zlib |
 | zmij | 1.0.23 | MIT |
+| zopfli | 0.8.4 | Apache-2.0 |
 | zune-core | 0.5.3 | MIT OR Apache-2.0 OR Zlib |
 | zune-jpeg | 0.5.15 | MIT OR Apache-2.0 OR Zlib |
 

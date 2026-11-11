@@ -364,6 +364,9 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         if *kind == Kind::Drawing && parent != Some(Kind::Storey) {
             return Err(format!("{me}: a drawing is a plan of a storey and has to be directly under one"));
         }
+        if *kind == Kind::Prior && parent != Some(Kind::Job) {
+            return Err(format!("{me}: a prior estimate is set against the whole job and has to be directly under it"));
+        }
         if *kind == Kind::Storey && parent != Some(Kind::Job) {
             return Err(format!("{me}: a storey is a floor of the building and has to be directly under the job, not under {}", node.parent.as_deref().unwrap_or("nothing")));
         }

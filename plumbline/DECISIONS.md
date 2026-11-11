@@ -1505,3 +1505,48 @@ holds it was written.
   and J13-15 (a tee on an upright run; joints `fitting --all` passes over without
   listing) need a way to say which run or a cut by height. They are next in the fixes,
   after these are judged.
+
+### Call 45. Tables brought in: what is built on, and what each table is (2026-11-11)
+
+Step 3 of Patrick's order: the remaining imports. Ruling 3 names CSV and XLSX price
+lists, prior estimates and assembly libraries, IFC models, and aerial images; the job
+file and CSV go out and come back without loss; for anything else, loss is reported.
+
+**Searched first.** On the machine: BIMCraft writes one sheet of XLSX by hand
+(`xlsx.rs`, 250 lines, "Nothing is read back"), reads IFC2x3 and IFC4 (`import.rs`,
+4,895 lines, over its own STEP reader, `step.rs`), and writes IFC4 (`ifc.rs`). It has no
+CSV and reads no spreadsheet. The earlier program at the repository root reads price
+lists in its own JSON only. On the registry, 2026-11-11:
+
+| Candidate | Licence | Verdict |
+|---|---|---|
+| `csv` 1.4.0 | MIT OR Unlicense | **Build on** for CSV in and out: RFC 4180's quoting is a solved thing. |
+| `calamine` 0.38.0 | MIT | **Build on** for reading XLSX: cells, formulas (to count what was lost), merged cells, sheet names. Pure Rust. |
+| `rust_xlsxwriter` 0.102.0 | MIT OR Apache-2.0 | For order step 8 (xlsx out with live formulas). Not linked yet. |
+| BIMCraft `import.rs`, `step.rs` | MIT | **Port** for IFC in, item by item in PORTMAP.md, when that part is built. |
+
+**What was decided.**
+
+* **A new crate, `plumbline-sheets`, turns a file into rows of text** and lists what was
+  in the file and is not in the rows. The world crate still reads no disk: its `tables`
+  says what the rows mean. The command line and the window both use the two.
+* **Three tables, each written and read by this program:** a price list (a material,
+  what it is bought by, a price, whose price), an assembly library (conditions and the
+  lines each puts on an element), and an estimate's lines. A table this program wrote
+  comes back as the same values, each with how sure it is and where it came from: those
+  are columns.
+* **Somebody else's table is read by its headings.** A heading is matched to what it
+  means from a short list a trade would use (Item or Material or Description; UOM or
+  Unit; Price or Unit price or Cost). A column that is not used is named. A row that is
+  not used is listed with why. A file with no column for something the table needs is
+  refused whole.
+* **A price brought in is as sure as whoever brought it says** (`--status`,
+  `--source`); a table this program wrote carries its own.
+* **A row for a material the job does not have is not added unasked.** It is listed.
+  `--add` adds them.
+* **A prior estimate is brought in to be set against the job, not added to it.** Its
+  lines would otherwise be counted in the job's price. It is kept in the job as what it
+  is, and `compare` sets it against the job's own lines, line by line.
+* **A workbook's first sheet is read unless one is named.** The others are named as not
+  read. A formula is read as what it last worked out to, and how many there were is
+  said.

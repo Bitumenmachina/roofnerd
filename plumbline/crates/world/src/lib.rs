@@ -28,6 +28,7 @@ pub mod geom;
 pub mod job;
 pub mod lines;
 pub mod plans;
+pub mod tables;
 pub mod roof;
 pub mod sample;
 pub mod skeleton;

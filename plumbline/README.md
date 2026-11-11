@@ -38,6 +38,7 @@ demos/fit.sh               # fittings worked out from the runs that meet, runs j
 demos/clash.sh             # what is in the same space as what, what passes through a wall, and what is only close
 demos/clashw.sh            # fittings, a connection and the clashes in the window; pictures in demos/captured/clash
 demos/plan.sh              # a plan laid under a storey, given its scale from one dimension and traced over, at the command line
+demos/imports.sh           # a price list and an assembly library out as CSV and back; a supplier's list from CSV and from a workbook; a prior estimate set against the job
 demos/planw.sh             # the same in the window, on a real scanned sheet and on a vector plan; pictures in demos/captured/plan
 tools/fetch-plans.sh       # fetches the public-domain plan set the demonstrations trace (USDA Plan No. 7213) into plans/
 demos/d4w.sh               # the same in the window: the sheet's Money tab, and prices typed on what is selected
@@ -111,6 +112,22 @@ At the command line: `plumbline drawing job.json <storey> "A-1" --file plans/a-1
 `plumbline calibrate job.json <drawing> --from "126,90" --to "666,90" --distance "30 ft"`,
 `plumbline drawings job.json`, and `--on <drawing>` on `wall`, `door`, `window`, `room`,
 `run` and `place` to give points as places on the page.
+
+## Bring in what you already have
+
+```
+plumbline import prices job.json list.xlsx --supplier "Their name" --status Known --source "their list of 3 March"
+plumbline export prices job.json prices.csv
+plumbline import assemblies job.json assemblies.csv
+plumbline import prior job.json last-estimate.csv --status Assumed --source "our estimate of last year"
+plumbline compare job.json
+```
+
+A price list is a CSV file or a workbook with a row of headings: what is priced, what
+it is bought by, and the price. The program finds the headings, sets the prices it can,
+and lists every row and column it did not use and why. An estimate made before is kept
+beside the job and set against it line by line with `compare`; it adds nothing to the
+job's price.
 
 Everything drawn in the window is flagged Assumed and says it was drawn there. Rooms are
 placed at the command line: `plumbline room job.json <storey> "name" --at "6,8" --status

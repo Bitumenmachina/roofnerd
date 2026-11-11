@@ -292,7 +292,7 @@ pub fn allowance(path: &str, kind: Kind, a: &Allowance) -> Result<(), String> {
 pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
     // Cost lines are on what is built and on the job. A condition's lines are its recipe;
     // a material's cost is its price; a type is not a thing that is bought.
-    if matches!(kind, Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey | Kind::Drawing) && !c.lines.is_empty() {
+    if matches!(kind, Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey | Kind::Drawing | Kind::Prior) && !c.lines.is_empty() {
         return Err(format!("{path}: a {kind:?} cannot carry cost lines; they go on what is built, or on the job for general conditions{}", if kind == Kind::Condition { " (a condition's own lines are its recipe)" } else { "" }));
     }
     c.code.check(&format!("{path} cost code"), "")?;
@@ -422,7 +422,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
 
 /// What an element is made of is a material's name.
 pub fn made_of(path: &str, kind: Kind, m: &MadeOf) -> Result<(), String> {
-    if matches!(kind, Kind::Job | Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey | Kind::Drawing) {
+    if matches!(kind, Kind::Job | Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey | Kind::Drawing | Kind::Prior) {
         return Err(format!("{path}: a {kind:?} is not made of a material"));
     }
     text_ok(&format!("{path} material"), &m.0)

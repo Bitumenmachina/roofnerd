@@ -1,0 +1,13 @@
+[package]
+name = "plumbline-sheets"
+description = "Tables people already have, read for bringing in: the rows of a CSV file or of an XLSX workbook's sheet as text, with what was not read; and CSV written"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# CSV read and written as RFC 4180 has it: quotes, commas and line breaks inside a cell.
+csv = "1.4.0"
+# An XLSX workbook's cells read, pure Rust.
+calamine = "0.38.0"

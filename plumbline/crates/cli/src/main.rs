@@ -58,7 +58,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline drawings <file>\n  plumbline clashes <file> [--clearance \"2 in\"]\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--class <class>] [--of-material]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline storey <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <storey> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <storey>)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline room <file> <storey> \"<name>\" --at \"6,8\"\n  plumbline run <file> <storey> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline place <file> <storey> <fixture|equipment> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline drawing <file> <storey> \"<name>\" --file <a PDF, PNG or JPEG of the plan> [--page 1]\n  plumbline calibrate <file> <drawing> --from \"126,90\" --to \"666,90\" --distance \"30 ft\"   (two places on the page and the dimension between them)\n  plumbline lineup <file> <drawing> --page-point \"126,126\" --plan-point \"0,0\"\n  tracing: wall, door, window, room, run and place take --on <drawing> in place of --status and --source; their points are then places on the drawing's page\n  plumbline move <file> <path> --by \"3,2\"\n  plumbline remove <file> <path>\n  plumbline fitting <file> <storey> --at \"10,2\" [--height \"8 ft\"] [--kind <bend|tee|cross|transition|coupling>]\n  plumbline fitting <file> --all [--system <system>]\n  plumbline connect <file> <fixture or equipment> <run>\n  plumbline split <file> <run> --at \"6,2\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline drawings <file>\n  plumbline clashes <file> [--clearance \"2 in\"]\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--class <class>] [--of-material]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n  plumbline export <prices|assemblies> <file> <out.csv>\n  plumbline import prices <file> <a price list: CSV or XLSX> [--sheet \"<name>\"] [--supplier \"<whose prices>\"] [--add] [--status <Known|Assumed> --source \"<where from>\"]\n  plumbline import assemblies <file> <an assembly library this program wrote: CSV or XLSX> [--sheet \"<name>\"]\n  plumbline import prior <file> <an estimate made before: CSV or XLSX> [--sheet \"<name>\"] [--name \"<what to call it>\"] --status <Known|Assumed> --source \"<where from>\"\n  plumbline compare <file>\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline storey <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <storey> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <storey>)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline room <file> <storey> \"<name>\" --at \"6,8\"\n  plumbline run <file> <storey> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline place <file> <storey> <fixture|equipment> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline drawing <file> <storey> \"<name>\" --file <a PDF, PNG or JPEG of the plan> [--page 1]\n  plumbline calibrate <file> <drawing> --from \"126,90\" --to \"666,90\" --distance \"30 ft\"   (two places on the page and the dimension between them)\n  plumbline lineup <file> <drawing> --page-point \"126,126\" --plan-point \"0,0\"\n  tracing: wall, door, window, room, run and place take --on <drawing> in place of --status and --source; their points are then places on the drawing's page\n  plumbline move <file> <path> --by \"3,2\"\n  plumbline remove <file> <path>\n  plumbline fitting <file> <storey> --at \"10,2\" [--height \"8 ft\"] [--kind <bend|tee|cross|transition|coupling>]\n  plumbline fitting <file> --all [--system <system>]\n  plumbline connect <file> <fixture or equipment> <run>\n  plumbline split <file> <run> --at \"6,2\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
 }
 
 /// What a page is measured in until its drawing has a scale.
@@ -530,6 +530,214 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
     out
 }
 
+/// A table written out of the job, or brought into it: `export prices <file> <out.csv>`,
+/// `import prices <file> <list.csv or .xlsx> [--sheet "<name>"] [--supplier "<name>"]
+/// [--add] [--status <Known|Assumed> --source "<where from>"]`.
+fn tables(args: &[String]) -> Result<(), String> {
+    use plumbline_world::tables;
+    let cmd = args[0].as_str();
+    let (mut plain, mut flags): (Vec<&str>, Vec<(&str, Option<&str>)>) = (Vec::new(), Vec::new());
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--add" => flags.push(("--add", None)),
+            f @ ("--sheet" | "--supplier" | "--status" | "--source" | "--name") => {
+                let v = args.get(i + 1).ok_or_else(|| format!("{f} needs a value after it"))?;
+                if flags.iter().any(|(known, _)| *known == f) {
+                    return Err(format!("{f} is given twice"));
+                }
+                flags.push((f, Some(v.as_str())));
+                i += 1;
+            }
+            f if f.starts_with("--") => return Err(format!("{cmd} does not take {f}\n{}", usage())),
+            a => plain.push(a),
+        }
+        i += 1;
+    }
+    let flag = |name: &str| flags.iter().find(|(f, _)| *f == name).and_then(|(_, v)| *v);
+    let [what, path, other] = plain.as_slice() else {
+        return Err(format!("{cmd} takes what, the job's file and the table's file\n{}", usage()));
+    };
+    let (mut job, _) = read(path)?;
+    // How sure what is brought in is, and where it came from, when the table does not say.
+    let how = match (flag("--status"), flag("--source")) {
+        (None, None) => None,
+        (Some(status), Some(source)) => {
+            let status = match status {
+                "Known" => Status::Known,
+                "Assumed" => Status::Assumed,
+                other => return Err(format!("--status {other:?}: what is brought in is Known or Assumed")),
+            };
+            if source.trim().is_empty() {
+                return Err("--source says where it came from; it is empty".into());
+            }
+            Some((status, source.to_string()))
+        }
+        _ => return Err("--status and --source go together: how sure it is, and where it came from".into()),
+    };
+    let table = |sheet: Option<&str>| -> Result<plumbline_sheets::Sheet, String> {
+        let bytes = std::fs::read(other).map_err(|e| format!("cannot read {other}: {e}"))?;
+        plumbline_sheets::read(&bytes, sheet).map_err(|why| format!("{other}: {why}"))
+    };
+    let only = |allowed: &[&str]| -> Result<(), String> {
+        match flags.iter().find(|(f, _)| !allowed.contains(f)) {
+            Some((f, _)) => Err(format!("{cmd} {what} does not take {f}")),
+            None => Ok(()),
+        }
+    };
+    match (cmd, *what) {
+        ("export", "assemblies") => {
+            only(&[])?;
+            let rows = tables::assemblies_out(&mut job);
+            std::fs::write(other, plumbline_sheets::csv(&rows)).map_err(|e| format!("cannot write {other}: {e}"))?;
+            say!("wrote {other}: the assemblies of {path}, {} under its headings", count(rows.len() - 1, "row", "rows"));
+            Ok(())
+        }
+        ("import", "assemblies") => {
+            only(&["--sheet"])?;
+            let sheet = table(flag("--sheet"))?;
+            let brought = tables::assemblies_in(&mut job, &sheet.rows).map_err(|why| format!("{other}: {why}"))?;
+            std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+            let _ = std::io::stdout().write_all(brought_said(other, &sheet, &brought).as_bytes());
+            Ok(())
+        }
+        ("import", "prior") => {
+            only(&["--sheet", "--name", "--status", "--source"])?;
+            let (status, source) = how.clone().ok_or("say how sure the prior estimate is and where it came from: --status, --source")?;
+            let sheet = table(flag("--sheet"))?;
+            let name = match flag("--name") {
+                Some(n) => n.to_string(),
+                None => std::path::Path::new(other).file_stem().and_then(|s| s.to_str()).unwrap_or("prior estimate").to_string(),
+            };
+            let (made, brought) = tables::prior_in(&mut job, &name, &sheet.rows, plumbline_world::editing::Entered { status, source: &source }).map_err(|why| format!("{other}: {why}"))?;
+            std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+            say!("{made}: {name}");
+            let _ = std::io::stdout().write_all(brought_said(other, &sheet, &brought).as_bytes());
+            Ok(())
+        }
+        ("export", "prices") => {
+            only(&[])?;
+            let rows = tables::prices_out(&mut job);
+            std::fs::write(other, plumbline_sheets::csv(&rows)).map_err(|e| format!("cannot write {other}: {e}"))?;
+            say!("wrote {other}: the price list of {path}, {} under its headings", count(rows.len() - 1, "row", "rows"));
+            Ok(())
+        }
+        ("import", "prices") => {
+            only(&["--sheet", "--supplier", "--add", "--status", "--source"])?;
+            let sheet = table(flag("--sheet"))?;
+            let entered = how.as_ref().map(|(status, source)| plumbline_world::editing::Entered { status: *status, source });
+            let brought = tables::prices_in(&mut job, &sheet.rows, flag("--supplier"), flags.iter().any(|(f, _)| *f == "--add"), entered).map_err(|why| format!("{other}: {why}"))?;
+            std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+            let _ = std::io::stdout().write_all(brought_said(other, &sheet, &brought).as_bytes());
+            Ok(())
+        }
+        ("export", _) => Err(format!("export {what}: what is written out is prices or assemblies\n{}", usage())),
+        _ => Err(format!("import {what}: what is brought in is prices, assemblies or prior (an estimate made before)\n{}", usage())),
+    }
+}
+
+/// Each prior estimate in the job set against the job's own lines.
+fn compared_said(job: &mut plumbline_world::Job) -> String {
+    use plumbline_world::tables;
+    let money = |x: f64| format!("${}", view::figure(x, 2));
+    let signed = |x: f64| format!("{}${}", if x < 0.0 { "-" } else { "+" }, view::figure(x.abs(), 2));
+    let est = view::estimate(job);
+    let all = tables::compare(job);
+    let mut out = String::from("flags:  ~ Assumed    ? Unknown    (no mark) Known\n");
+    if all.is_empty() {
+        out.push_str("No prior estimate has been brought into this job: plumbline import prior <file> <estimate.csv> --status Assumed --source \"...\"\n");
+    }
+    for c in all {
+        let _ = writeln!(out, "\n{}{} [{}], set against this job  ({})", match c.status { Status::Known => "", Status::Assumed => "~ ", Status::Unknown => "? " }, c.name, c.path, c.source);
+        let _ = writeln!(out, "  LINE BY LINE (each prior line beside every line of this job called the same)");
+        for l in &c.lines {
+            let p = &l.prior;
+            let prior_qty = p.quantity.map(|q| format!("{} {}", view::figure(q, 2), p.unit).trim().to_string()).unwrap_or_else(|| "no quantity".into());
+            let prior_rate = p.unit_cost.map(|x| format!(" at {}", money(x))).unwrap_or_default();
+            let prior_amount = l.prior_amount.map(|a| format!("{}{}", money(a), if l.worked { " (its quantity times its unit cost)" } else { "" })).unwrap_or_else(|| "no amount".into());
+            let _ = writeln!(out, "  {}", p.description);
+            let _ = writeln!(out, "      prior:     {prior_qty}{prior_rate}: {prior_amount}");
+            match &l.job {
+                None => {
+                    let _ = writeln!(out, "      this job:  has no line called that");
+                }
+                Some(j) => {
+                    let flag = match j.status { Status::Known => "", Status::Assumed => "~", Status::Unknown => "?" };
+                    let qty = match j.quantity {
+                        Some(q) => format!("{flag}{} {}", view::figure(q, 2), j.unit),
+                        None if j.unit.is_empty() => "its lines are in more than one unit and do not add".to_string(),
+                        None => "no quantity".to_string(),
+                    };
+                    let amount = j.amount.map(|a| format!("{flag}{}", money(a))).unwrap_or_else(|| format!("no figure: {}", j.why));
+                    let _ = writeln!(out, "      this job:  {qty}: {amount}  ({} on {})", count(j.on.len(), "line", "lines"), j.on.join(", "));
+                    let mut differs = Vec::new();
+                    if let (Some(pq), Some(jq)) = (p.quantity, j.quantity) {
+                        if p.unit.eq_ignore_ascii_case(&j.unit) {
+                            differs.push(format!("quantity {}{} {}", if jq - pq < 0.0 { "-" } else { "+" }, view::figure((jq - pq).abs(), 2), j.unit));
+                        } else {
+                            differs.push(format!("the prior line is in {} and this job's in {}: the quantities are not compared", if p.unit.is_empty() { "no unit" } else { &p.unit }, j.unit));
+                        }
+                    }
+                    if let (Some(pa), Some(ja)) = (l.prior_amount, j.amount) {
+                        differs.push(format!("amount {}", signed(ja - pa)));
+                    }
+                    if !differs.is_empty() {
+                        let _ = writeln!(out, "      this job less the prior: {}", differs.join("; "));
+                    }
+                }
+            }
+        }
+        let _ = writeln!(out, "  IN THIS JOB AND NOT IN THE PRIOR ESTIMATE: {}", c.only_in_job.len());
+        for (description, on, amount, status) in &c.only_in_job {
+            let flag = match status { Status::Known => "", Status::Assumed => "~", Status::Unknown => "?" };
+            let _ = writeln!(out, "    {description}: {}  ({})", amount.map(|a| format!("{flag}{}", money(a))).unwrap_or_else(|| "no figure".into()), on.join(", "));
+        }
+        let unmatched: Vec<&tables::ComparedLine> = c.lines.iter().filter(|l| l.job.is_none()).collect();
+        let _ = writeln!(out, "  IN THE PRIOR ESTIMATE AND NOT IN THIS JOB: {}", unmatched.len());
+        for l in unmatched {
+            let _ = writeln!(out, "    {}: {}", l.prior.description, l.prior_amount.map(money).unwrap_or_else(|| "no amount".into()));
+        }
+        let _ = writeln!(out, "  the prior estimate's lines add to {}{}", money(c.prior_total), if c.prior_left_out > 0 { format!(", leaving out {} with no amount", count(c.prior_left_out, "line", "lines")) } else { String::new() });
+        let job_cost = match est.job_cost.value {
+            Some(x) => format!("{}{}", match est.job_cost.status { Status::Known => "", Status::Assumed => "~", Status::Unknown => "?" }, money(x)),
+            None => "no figure".to_string(),
+        };
+        let _ = writeln!(out, "  this job's cost is {job_cost}; nothing of the prior estimate is in it");
+    }
+    out
+}
+
+fn count(n: usize, one: &str, many: &str) -> String {
+    format!("{n} {}", if n == 1 { one } else { many })
+}
+
+/// What bringing a table in did, said so that every row and column of the file is
+/// accounted for: used, the same as the job already had, or not used and why.
+fn brought_said(file: &str, sheet: &plumbline_sheets::Sheet, b: &plumbline_world::tables::Brought) -> String {
+    let mut out = String::new();
+    let from = if sheet.name.is_empty() { sheet.sort.said().to_string() } else { format!("{}, sheet {:?}", sheet.sort.said(), sheet.name) };
+    let _ = writeln!(out, "{file} ({from}): {} under its headings", count(b.rows, "row", "rows"));
+    let _ = writeln!(out, "  set: {}", b.done.len());
+    for d in &b.done {
+        let _ = writeln!(out, "    {d}");
+    }
+    let _ = writeln!(out, "  the same as the job already has: {}", b.same);
+    let _ = writeln!(out, "  not used: {}", b.not_used.len());
+    for (row, why) in &b.not_used {
+        let _ = writeln!(out, "    row {row}: {why}");
+    }
+    if b.above > 0 {
+        let _ = writeln!(out, "  not read: {} above the headings", count(b.above, "row", "rows"));
+    }
+    for c in &b.columns_not_used {
+        let _ = writeln!(out, "  not read: the column {c:?}");
+    }
+    for lost in &sheet.lost {
+        let _ = writeln!(out, "  not read: {lost}");
+    }
+    out
+}
+
 fn read(path: &str) -> Result<(plumbline_world::Job, file::LoadReport), String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {path}: {e}"))?;
     file::load(&text).map_err(|e| format!("{path}: {e}"))
@@ -541,6 +749,17 @@ fn run(args: &[String]) -> Result<(), String> {
     // ignored is refused instead.
     if cmd == "roof" {
         return new_roof(args);
+    }
+    if matches!(cmd, "export" | "import") {
+        return tables(args);
+    }
+    if cmd == "compare" {
+        let [_, path] = args else {
+            return Err(format!("compare takes one file and nothing else\n{}", usage()));
+        };
+        let (mut job, _) = read(path)?;
+        let _ = std::io::stdout().write_all(compared_said(&mut job).as_bytes());
+        return Ok(());
     }
     if matches!(cmd, "new" | "storey" | "type" | "system" | "wall" | "door" | "window" | "room" | "run" | "place" | "move" | "remove" | "split" | "fitting" | "connect" | "drawing" | "calibrate" | "lineup") {
         return draw(args);

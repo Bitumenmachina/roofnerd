@@ -38,7 +38,7 @@ CLAUDE.md, "Order of work"; step 1 of it is under way.
 | # | Item | Where it stands |
 |---|---|---|
 | 1 | A clean clone installs on Linux from the README in one pass | **Not shown.** The README lists the commands; nobody has followed it on a clean machine. |
-| 2 | Every import works as stated: PDF (vector and scanned), PNG, JPEG, aerial images, CSV and XLSX (price lists, prior estimates, assembly libraries), IFC, the job file | **Three of seven.** The job file loads and saves to the same bytes. A PDF plan (drawn or scanned), a PNG and a JPEG are read, laid under a storey and traced over, and what each could not give is listed (`demos/plan.sh`, `demos/planw.sh`; not judged). Not built: an aerial image as such, CSV and XLSX price lists, prior estimates and assembly libraries, IFC. |
+| 2 | Every import works as stated: PDF (vector and scanned), PNG, JPEG, aerial images, CSV and XLSX (price lists, prior estimates, assembly libraries), IFC, the job file | **Five of seven at the command line; plans only in the window.** The job file loads and saves to the same bytes. A PDF plan (drawn or scanned), a PNG and a JPEG are read, laid under a storey and traced over, with what each could not give listed (`demos/plan.sh`, `demos/planw.sh`; with the judge). A CSV or XLSX price list, an assembly library and a prior estimate are brought in at the command line with every unused row and column said, and a price list and an assembly library go out as CSV and come back the same (`demos/imports.sh`; not judged). Not built: any of those tables in the window, an aerial image shown as such, IFC. |
 | 3 | From an empty job: open a real residential plan PDF, calibrate, trace walls, openings, floors, rooms and the roof; the 3D house builds from the tracing | **Part.** From an empty job the window opens USDA Plan No. 7213 (public domain; a scan), sets its scale from its 41 ft 3 in dimension, and traces its outside walls; the 3D house stands on the sheet (`demos/planw.sh`, pictures 01 to 08; not judged). Not built: openings, floors, rooms and the roof traced over it. |
 | 4 | Clashes show their certainty; the VIF list is sorted by dollars | **Half.** A clash is Known or Assumed from its two shapes and says so (command line and the sheet's Clashes tab; not judged). There is no VIF list and no dollars on a clash. |
 | 5 | A typed or lasered measurement makes a value Known; the clash confirms or clears; the price changes live in the second window | **Not built in the window.** A value is made Known at the command line. The window cannot. |
@@ -1639,6 +1639,90 @@ change before the last (a place on a page rounded to a millionth of a unit, an a
 shown with one unit, one line of the Clashes tab shortened), none of which it shows. **Not rerun on this build:** `demos/d2.sh`, `d4w.sh`, `d5w.sh` and
 `house.sh`; their pictures under `demos/captured` are of commit `b566079` and the
 window's drawing of walls has changed since.
+
+## Tables brought in. How its demonstration will be run (written before it is built)
+
+Step 3 of the order of work; DECISIONS.md call 45. `demos/imports.sh`, at the command
+line, on the priced sample job (`plumbline priced`), whose copper is bought by the pound:
+"Copper, 16 oz" at $9.00/lb with quotes from three made-up suppliers, and "Copper, 20 oz"
+at $9.00/lb with quotes from two of them.
+
+1. **A price list out and back.** The job's price list is written as CSV, read back
+   into a copy of the job from before its prices were entered, and the two jobs' price
+   lists are the same, value for value, status for status, source for source. Then the
+   CSV written from the copy is byte for byte the first CSV.
+2. **A supplier's own list.** A made-up list from one of the suppliers, with its own
+   headings (Item, UOM, Price, Lead time) and five rows: the 16 oz copper at a new
+   price; the 20 oz copper, which that supplier had not quoted, typed "copper,20 OZ" and
+   "LB"; a metal the job does not have; the 16 oz copper again by the sheet; and a row
+   whose price is the word "call". Brought in for that supplier: two prices set (one
+   changed, one new), three rows listed as not used, each with why, and the column
+   "Lead time" named as not used. The estimate's side-by-side then prices every copper
+   line at that supplier, where two were left out before; each new figure is the line's
+   pounds times the new price, worked by hand from the pounds the job shows.
+3. **The same list as a workbook.** The same five rows as an XLSX file with a second
+   sheet and one price that is a formula: the same two prices set, and the report also
+   says the second sheet was not read and one cell's formula was read as its value.
+4. **An assembly library out and back**: the job's conditions as CSV, into an empty
+   job, and out again: the same bytes.
+5. **An estimate's lines out and back** is moved to order step 8, with the estimate's
+   own CSV export (decided before any of this was built: the estimate's table is the
+   export's to define).
+6. **A prior estimate set against the job.** A made-up prior estimate of four lines
+   (description, quantity, unit, unit cost, amount), two of which match lines of the job
+   by description and two of which do not. `compare` lists each prior line beside the
+   job's line of that name with the difference in quantity, unit cost and amount worked
+   by hand, lists the prior lines the job has nothing for and the job's lines the prior
+   estimate has nothing for, and adds none of it to the job's price: the recap is what
+   it was.
+7. **Refused, and the job left as it was:** a file that is neither CSV nor XLSX; a list
+   with no price column; a workbook sheet that does not exist; a price list brought in
+   with no source.
+
+IFC and an aerial picture are the second half of this step and get their own
+demonstration when the first half is judged.
+
+## Tables brought in. What was run and what it showed
+
+The first half of step 3, on the commit that holds this. **Not judged.** Built: a crate
+that reads a CSV file or a workbook's sheet into rows and says what it did not read; a
+price list, an assembly library and a prior estimate as tables (SPEC.md 5.12;
+DECISIONS.md call 45); `export`, `import` and `compare` at the command line. Nothing of
+it is in the window yet.
+
+**`demos/imports.sh`**, exit 0:
+
+| Step | Worked by hand | The program |
+|---|---|---|
+| The job's price list out, into an empty job, and out again | two coppers, each its own price and order factor, three and two suppliers' prices: 7 rows | 7 rows; the second CSV is byte for byte the first; into the job it came from: "the same as the job already has: 7", nothing set |
+| A supplier's list, CSV: 2 rows above its headings, 5 rows | 2 prices to set (one changed from $9.10 to $9.05, one that supplier had not given, typed "copper,20 OZ" by the "LB"); 3 rows not usable (a material the job has not, the wrong unit, the word "call" for a price); 1 column with no use | set 2, not used 3 with those reasons, "not read: 2 rows above the headings", "not read: the column \"Lead time\"" |
+| The copper lines at that supplier | pounds = generic amount / $9.00: 461.1889, 276.7133, 123.6933, 30. x 9.05 or 9.40: $4,173.76, $2,504.26, $1,162.72, $282.00; total $8,122.74; no line left out | the same five figures; "4 of 4" under that supplier, where it was "2 of 4" |
+| The same list as a workbook with a second sheet and a formula | the same two prices; the sheet and the formula said | the same job, byte for byte, as the CSV left; "1 other sheet was not: \"Terms\""; "1 cell holds a formula" |
+| The assemblies out, into an empty job, and out again | 3 conditions | 7 rows; the second CSV is byte for byte the first |
+| A prior estimate of 4 lines set against the job | panels: 700 lb, $5,950.00 against 861.60 lb, $7,754.36 on three lines (+161.60 lb, +$1,804.36), Assumed because the shed's is; underlayment: 650 SF, $585.00 against 670.82 SF, $603.74 (+20.82 SF, +$18.74); gutters, 120 LF x $14.00 = $1,680.00 worked, and a dumpster, $450.00, in no line of the job; 7 kinds of line in the job that the prior does not name; the prior adds to $8,665.00 | the same, figure for figure; the job's cost $25,292.43 before and after |
+| Refused, job unchanged | a file that is no table; no price column; no unit column; a sheet that is not there; a status with no source; Unknown as a status; a prior estimate with no source; a supplier's list as an assembly library; an option the table does not take | all nine |
+
+`cargo test --workspace`: 171 passing (4 on the tables, 3 on the reader, new).
+`tools/licenses.sh`: 411 crates, exit 0 (20 more: csv's, calamine's). Portmap and the
+three repository gates: exit 0.
+
+**What is not right, or not built:**
+
+* **None of this is in the window.** A list cannot be dropped on it or brought in from
+  it. That is still owed for release-candidate item 2.
+* **An assembly library is only read in this program's own form.** Somebody else's
+  library has no agreed headings to find; none has been seen.
+* **An estimate's own lines do not yet go out and come back** (moved to step 8).
+* **`compare` matches lines by what they are called and nothing else.** A prior line
+  called "SS panels" and the job's "Standing seam panels" are two things to it. Cost
+  codes are read and not yet used to match.
+* **A prior line's unit is compared as written**: "LF" and "lf" agree, "LF" and "ft" do
+  not, and then the quantities are not compared, which is said.
+* **A date in a workbook is read as the workbook's day number.**
+* **IFC and an aerial picture, the second half of this step, are not started.** BIMCraft
+  reads IFC2x3 and IFC4 (`import.rs`, 4,895 lines, over `step.rs`) and writes IFC4
+  (`ifc.rs`); both are to be ported, item by item.
+* **The language pass over every screen is not started.**
 
 ## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
 
