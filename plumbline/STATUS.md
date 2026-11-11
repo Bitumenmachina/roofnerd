@@ -714,6 +714,10 @@ without opening it. DECISIONS.md call 28 sets out what it has, what it lacks (fl
 sources, net wall area, systems as elements, a takeoff by system), and the decision: the
 building model is re-based on its shapes before anything more is built on `building.rs`.
 
+**Handed over.** The re-base is the next session's task, set out in `HANDOFF_REBASE.md`.
+`tools/portmap.sh` is the gate for it and is red until it is done: it fails today with 59
+public items of the building model not yet accounted for against BIMCraft's source.
+
 **What is not built**
 * **Nothing of the building can be drawn or edited in the window.** It is entered in a
   file or in code, and read, walked and taken off in the window. The roof's edits still
