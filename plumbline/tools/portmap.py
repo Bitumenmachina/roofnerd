@@ -36,7 +36,8 @@ def building_files():
         for n in sorted(names):
             p = os.path.join(dirpath, n)
             rel = os.path.relpath(p, src)
-            if n.endswith(".rs") and (rel.startswith("building")):
+            # The building model, and (since HANDOFF_DRAW.md) what draws and edits it.
+            if n.endswith(".rs") and rel.startswith(("building", "editing")):
                 out.append(p)
     return out
 

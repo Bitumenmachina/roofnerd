@@ -1,7 +1,9 @@
 # Port map: the building model against BIMCraft
 
 Every public item of the building model (`crates/world/src/building*.rs` and anything
-under `crates/world/src/building/`) is listed here once, as **ported** from BIMCraft or as
+under `crates/world/src/building/`) and of what draws and edits it
+(`crates/world/src/editing*.rs` and anything under `crates/world/src/editing/`) is listed
+here once, as **ported** from BIMCraft or as
 **ours**. `tools/portmap.sh` checks it and cannot be passed from memory: a ported row's
 line has to hold the symbol it names in BIMCraft's source at the pinned commit, and an
 "ours" row has to say what was searched for and where.
@@ -147,3 +149,10 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `cap` | ported | `cap` | `crates/core/src/walls.rs:298` |  |
 | `centre_line` | ported | `centre_line` | `crates/core/src/walls.rs:348` |  |
 | `outline` | ported | `outline` | `crates/core/src/walls.rs:375` |  |
+| `UNDO_LIMIT` | ported | `UNDO_LIMIT` | `crates/core/src/engine.rs:103` | the last 200 steps are kept |
+| `History` | ported | `undo` | `crates/core/src/engine.rs:160` | an undo stack and a redo stack, each step with the model before it; here the model kept is the saved job's text (header) |
+| `before` | ported | `before` | `crates/core/src/engine.rs:386` | the model as it stands before a command runs |
+| `record` | ported | `undo` | `crates/core/src/engine.rs:499` | a step is recorded only when the model changed; the oldest goes past the limit; the redo stack is emptied (`engine.rs:497` to `503`) |
+| `undo` | ported | `step_back` | `crates/core/src/engine.rs:728` | pop one stack, push what stands now onto the other, name the step |
+| `redo` | ported | `step_back` | `crates/core/src/engine.rs:728` | as `undo`, the other way |
+| `labels` | ported | `history` | `crates/core/src/engine.rs:272` | the steps' labels, oldest first |

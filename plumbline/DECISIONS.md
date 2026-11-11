@@ -1018,3 +1018,20 @@ reasons written beside the code. What is taken from it, by name, and what is not
   The ported region test decides it. Said in STATUS.md.
 * **Five `check_*` functions are ported, not ours**: they carry BIMCraft's rule for the
   same thing, and PORTMAP.md now cites the line.
+
+### Call 34. Drawing and editing: the undo history (2026-11-11)
+
+First piece of the stretch in `HANDOFF_DRAW.md`. Read first: BIMCraft
+`crates/core/src/engine.rs` lines 100 to 200, 362 to 400, 494 to 506 and 722 to 749.
+
+* **The gate was widened before any of it was written.** `tools/portmap.sh` now covers
+  `crates/world/src/editing*.rs` and `editing/` as it covers the building model. It was
+  run red on the new file (seven unlisted items) before the map had its rows.
+* **Undo is BIMCraft's: a stack of steps, each with the whole model as it was before
+  the step.** The last 200 are kept; a step that changed nothing is not one; a new step
+  empties the redo stack; stepping back swaps the model with the one kept.
+* **Changed in the port: the model kept is the saved job's text.** BIMCraft keeps a
+  shared copy of its model in memory. A job here is an entity-component world, which is
+  not copied, and its saved text loads back to the same bytes; so the text is kept, and
+  a step undone is the file as it was. The cost is one save of the job for each step.
+  Listed in the file's header.

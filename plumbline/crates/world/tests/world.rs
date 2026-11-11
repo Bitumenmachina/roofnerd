@@ -4248,3 +4248,59 @@ fn j10_10_a_wall_that_starts_above_a_room_does_not_flag_it_whatever_its_top() {
     assert_eq!(d.status, Status::Assumed);
     assert!(d.note.contains(&format!("whether above ({above}) bounds this room rests on its heights")), "{}", d.note);
 }
+
+// ---- Drawing and editing (HANDOFF_DRAW.md) ----
+
+#[test]
+fn any_step_taken_back_leaves_the_job_byte_for_byte_what_it_was() {
+    use plumbline_world::editing::{History, UNDO_LIMIT};
+    let mut job = sample::priced();
+    let mut history = History::default();
+    let start = save(&mut job);
+    // Nothing done: nothing to undo, and it says so.
+    assert_eq!(history.undo(&mut job).unwrap_err(), "nothing to undo");
+    assert_eq!(history.redo(&mut job).unwrap_err(), "nothing to redo");
+    // Three steps.
+    let step = |job: &mut Job, history: &mut History, label: &str, edit: &dyn Fn(&mut Job)| {
+        let before = History::before(job);
+        edit(job);
+        job.derive();
+        history.record(label, before, job)
+    };
+    assert!(step(&mut job, &mut history, "overhead", &|j| j.set("job-0001", "overhead", Some("12"), Status::Known, "made-up").unwrap()));
+    let after_one = save(&mut job);
+    assert!(step(&mut job, &mut history, "material", &|j| j.set("plane-0003", "material", Some("Copper, 20 oz"), Status::Known, "made-up").unwrap()));
+    let after_two = save(&mut job);
+    assert!(step(&mut job, &mut history, "labor off", &|j| j.set_off("plane-0003", Some("Install panels"), true).unwrap()));
+    let after_three = save(&mut job);
+    // A step that changes nothing is not a step.
+    assert!(!step(&mut job, &mut history, "nothing", &|_| {}));
+    assert_eq!(history.labels(false), ["overhead", "material", "labor off"]);
+    // Back, one at a time: each time the job is the text it was.
+    assert_eq!(history.undo(&mut job).unwrap(), "labor off");
+    assert_eq!(save(&mut job), after_two);
+    assert_eq!(history.undo(&mut job).unwrap(), "material");
+    assert_eq!(save(&mut job), after_one);
+    assert_eq!(history.labels(true), ["labor off", "material"]);
+    // Forward again.
+    assert_eq!(history.redo(&mut job).unwrap(), "material");
+    assert_eq!(save(&mut job), after_two);
+    // A new step after an undo empties what could be redone.
+    assert!(step(&mut job, &mut history, "profit", &|j| j.set("job-0001", "profit", Some("8"), Status::Known, "made-up").unwrap()));
+    assert_eq!(history.redo(&mut job).unwrap_err(), "nothing to redo");
+    assert_ne!(save(&mut job), after_three);
+    // All the way back: the job as it started, to the byte, and its figures with it.
+    while history.undo(&mut job).is_ok() {}
+    assert_eq!(save(&mut job), start);
+    assert_eq!(view::estimate(&mut job).job_cost.value, Some(25292.43));
+    // The last 200 steps are kept and the oldest dropped.
+    let mut history = History::default();
+    for i in 0..UNDO_LIMIT + 5 {
+        let percent = format!("{}", i % 50);
+        let before = History::before(&mut job);
+        job.set("job-0001", "overhead", Some(&percent), Status::Known, &format!("step {i}")).unwrap();
+        assert!(history.record(&format!("step {i}"), before, &mut job));
+    }
+    assert_eq!(history.labels(false).len(), UNDO_LIMIT);
+    assert_eq!(history.labels(false)[0], "step 5");
+}

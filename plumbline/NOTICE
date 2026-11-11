@@ -28,6 +28,11 @@ the same license:
                                         crates/core/src/view3d.rs; the rest of
                                         the file is this project's own
 
+What draws and edits the building is ported from the same project at the same
+commit, under the same license:
+
+  crates/world/src/editing/history.rs   from crates/core/src/engine.rs
+
 Each file's header states what is ported and lists what was changed. PORTMAP.md
 names, for every public item of the building model, the BIMCraft file and line
 it came from, or that it is this project's own and how that was checked.
