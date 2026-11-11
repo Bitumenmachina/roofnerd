@@ -1683,3 +1683,76 @@ word; no software term anywhere a user sees).
 * **Not yet settled by this pass:** kinds of element are still said as the model names
   them where a message is built in the core ("a Wall", "Kind"); a judge is to list every
   word on every screen (release-candidate item 9) and what it finds is fixed then.
+
+### Call 49. Field entry: what a laser types, and what a measurement does to the job (2026-11-11)
+
+Order step 4 (ruling 10: any field that takes a length accepts a laser in keyboard
+mode; marking a value Known works in the window). Written before it is built.
+
+**What a laser in keyboard mode types**, from Leica's own Bluetooth guides for the DISTO
+D810 touch and S910 (read 2026-11-11), not from memory:
+
+* The laser joins the computer as a keyboard and types each reading where the cursor is.
+* In its *text* setting it types the reading as its display shows it, unit included and
+  with no space: `7.123m` on a laser set to metres, `2'2"13/32` on one set to feet and
+  inches. The fraction comes after the inch mark.
+* In its *spreadsheet* setting it types the figure alone, `7.123`, with no unit.
+* After each reading it sends Tab, Enter, or nothing, as it is set.
+* The decimal mark is a point, or a comma if it is set so.
+
+What follows from that:
+
+* **A fraction after the inch mark is read:** `2'2"13/32`, `26"13/32`, with or without
+  spaces. It was refused as "something after the inches". The inches before the mark are
+  then a whole number: `2' 6 1/2" 1/4` is refused.
+* **Tab ends an entry as Enter does.** Where an entry takes more than one thing (a
+  storey's name, floor and height), Tab goes on to the next, and ends the entry after
+  the last.
+* **A figure with no unit is still refused** (rule 4; SPEC 5.2: a number with no unit is
+  never read as feet). A laser in its spreadsheet setting sends no unit, so the refusal
+  now says to set the laser to send its unit. This is the ruling's "with units".
+* **A comma is still refused, and now says why:** `1,234 ft` is a thousand feet to one
+  reader and a foot and a bit to another. The laser's decimal mark is to be set to a
+  point.
+* **Metres are still refused by name.** Metric is proposal 5 and Patrick's to rule on
+  (Q19); a laser bought here can be set to feet and inches. Converting would be exact,
+  but a job that shows feet with sources that say metres is a decision about the product.
+
+**What a measurement does.** One verb in the core, `editing::measure`, used by the
+command line (`plumbline measure`) and by the window:
+
+* It takes an element, the name of one of its entered values as the screen shows it
+  ("storey height", "sill", "height above its storey"), and either a length or the word
+  `same`.
+* **A length replaces the value and the value is Known**, with the source given. Any
+  entered value that is one length can be measured: a storey's floor and height; a
+  type's thickness, width, height, diameter or depth; a wall's height and offsets; an
+  opening's place along its wall and its sill; a run's heights; a placed thing's height.
+* **`same` keeps the value and marks it Known**: the person looked and it is as drawn.
+  This works on any entered value, a line on the plan or a position included. A value
+  that is Unknown has nothing to be the same as, and is refused.
+* **A line or a position is not measured in one length** (it is two or three figures).
+  It is moved with the move verb, as before, and can then be marked `same`.
+* **A storey's height is the floor-to-floor a person shoots.** The floors above are
+  where that puts them: the next storey up sits at this floor plus the measurement, and
+  is as sure as the less sure of the two; storeys above that move by the same amount and
+  stay as sure as they were, with the move said in their source. If the next storey up
+  is already Known somewhere else, the measurement is refused and says which three
+  values disagree: one of them is wrong, and the program does not pick. Before this a
+  storey's height was drawn nowhere: walls stand to the next storey's floor.
+* **A run's height can be measured to its underside or its top.** A laser on the floor
+  hits the bottom of a duct, not its centre line. `bottom`, `top` or `centre` before the
+  length says which; the run then holds its heights to that line (BIMCraft's
+  `justify`), and the centre is worked from its size, as sure as the size is. On a run
+  whose two ends differ, the measurement has to be to the line it already holds, or the
+  other end would be moved by a guess; it is refused otherwise.
+* **The source.** At the command line, `--source`, as everywhere. In the window:
+  "measured on site", or "checked on site, as drawn" for `same`, and whatever the person
+  types after a comma (`8' 10 1/2", JM with the laser`). The program does not write the
+  day: it would be the machine's clock stated as a fact (Q19).
+* **Nothing new is worked out in the window.** The clash list and the sheet are read
+  from the job after the verb, as after any edit.
+
+**Not done here:** a wall's or a run's length measured as one length (it moves an end,
+and what is joined to it); a laser shot with no entry open (the characters go to
+whatever the keys do); Bosch GLM over Bluetooth (proposal 17).

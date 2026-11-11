@@ -179,3 +179,17 @@ Ruling 6 says snap to vector lines where they exist.
 PNG, a JPEG or an aerial image is a picture under the tracing: it is calibrated from one
 dimension and traced over by eye, with the program's own snaps (ends, square, angle)
 and none to the picture. Finding lines in a picture is not built.
+
+## Q19. A laser set to metres, and the day of a measurement
+
+Two things field entry (order step 4) had to assume.
+
+1. A Leica DISTO set to metres types `7.123m`. Metric is proposal 5 and is refused by
+   name everywhere; **working assumption: it is refused here too**, and the refusal says
+   to set the laser to feet and inches. If a lasered metre reading should be taken and
+   shown in feet, say so; the arithmetic is exact and the source would keep what was
+   typed.
+2. A value measured in the window is sourced "measured on site" plus whatever the person
+   types after it. **Working assumption: the program does not add the day**, because the
+   only day it has is the machine's clock. If the record should carry the day (or who
+   measured), say what it must hold.

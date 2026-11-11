@@ -1793,6 +1793,69 @@ every picture is to be read before any of this is called shown).
 what settles this, and has not been run. Known already: the core still says "a Wall",
 "a Duct" in some refusals, as the model names kinds.
 
+## Field entry. How its demonstration will be run (written before it is built)
+
+Order step 4; DECISIONS.md call 49 has what a laser types and what a measurement does.
+Two demonstrations, on one made-up job, every figure worked here first.
+
+**The job** (made at the command line, as a tracing would leave it): a ground storey at
+0 ft, 9 ft to the next, and an upper storey at 9 ft, both Assumed, "scaled off a made-up
+plan". Four 6 in walls round 24 ft by 16 ft, Known, standing to the upper storey. A
+12 in by 8 in duct along the middle from (2, 8) to (22, 8), its centre 8 ft above the
+floor, line and height Assumed. Two 2 in pipes across it, Known: pipe A at (12, 2) to
+(12, 14) with its centre at 7 ft 9 in, pipe B at (18, 2) to (18, 14) with its centre at
+8 ft. The south wall carries one line, gypsum board on its net face at $2.40/SF, classed
+material. Overhead 10, profit 8.
+
+**Before any measurement, by hand:**
+
+* The duct is 8 in deep about 8 ft: from 7 ft 8 in to 8 ft 4 in. Pipe A is 2 in about
+  7 ft 9 in: from 7 ft 8 in to 7 ft 10 in. They are in each other by 2.00 in. Pipe B is
+  from 7 ft 11 in to 8 ft 1 in, wholly inside the duct's depth: the least way out is
+  5.00 in, up or down. **Two clashes, both to verify in the field** (the duct and the
+  ground storey are Assumed).
+* The south wall: 24 ft by 9 ft, 216 SF, at $2.40, **$518.40**, flagged Assumed (its
+  top is the upper storey's Assumed floor). Overhead $51.84; profit 8% of $570.24,
+  $45.62; **price $615.86**.
+
+**The measurements,** each typed the way the laser types it:
+
+1. The ground storey's floor: `same`. It is the floor everything is measured from.
+   Known, value unchanged, 0 ft.
+2. The ground storey's height, floor to floor: `8'10"1/2` and Tab. 8 ft 10 1/2 in is
+   8.875 ft. The upper storey's floor is now at 8 ft 10 1/2 in, Known (a Known floor
+   plus a Known measurement). The south wall is 24 by 8.875, **213 SF, $511.20**, no
+   longer flagged. Overhead $51.12; profit 8% of $562.32, $44.99; **price $607.31**:
+   $8.55 less.
+3. The duct's line on the plan: `same`. Known.
+4. The duct's height, shot to its underside: `bottom 7'10"3/4` and Enter. The duct is
+   now from 7 ft 10 3/4 in to 8 ft 6 3/4 in. Pipe A's top is at 7 ft 10 in: 3/4 in
+   clear. **That clash clears.** Pipe B, 7 ft 11 in to 8 ft 1 in, is still inside the
+   duct: down is now 2 1/4 in (its top to the duct's underside), up is 7 3/4 in. **It
+   is in the duct by 2.25 in, and it is now a finding**: everything it rests on is
+   Known. One clash, a finding, where there were two questions.
+
+**`demos/field.sh`, at the command line:** the job; the figures above before; what a
+laser types read as lengths (`2'2"13/32` is 2 ft 2 13/32 in, `26"13/32`, `23.46ft`);
+what is refused and that the file is byte for byte what it was after each: a figure
+with no unit, a comma, metres, a fraction after a fraction, `same` on a value that is
+Unknown, a length for a line on the plan, a storey height that contradicts a Known
+floor above, `bottom` on a sloping run held to its centre; then the four measurements
+with `plumbline measure` and the figures above after.
+
+**`demos/fieldw.sh`, in the window:** the same job opened with both windows up, the
+sheet on Clashes, then on the Estimate. The storey, then the duct, picked on the model;
+each value picked in the panel on the right and the reading typed by `xdotool` as a
+keyboard that types it in one burst, ended by Tab or Enter. A picture before, after the
+storey height (the sheet's price), and after the duct's height (the Clashes tab and the
+marks on the model). The saved job is then read at the command line and has to say
+exactly what `demos/field.sh` ended with.
+
+The judge tries to get a value marked Known that nobody measured, to have a measurement
+change a figure it should not or fail to change one it should, to find a field that
+takes a length and will not take what the laser types, and to break the sheet's price
+with a measurement.
+
 ## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
 
 An independent judge (Opus; it did not build any of this) was given commit `1886693`, a
