@@ -87,8 +87,10 @@ echo "== 5. Reconciled =="
 # Shed:         3,117.07 -  2,770.73 =   346.34 over; 346.34 / 2,770.73 = 12.4999... %.
 # Headwall:       438.00 -    480.00 =    42.00 under; 42 / 480 = 8.75 %.
 says "south plane" "the detail is \$1,467.42 over the allowance (12.50 %)"
-says "shed" "the detail is ~\$346.34 over the allowance (12.50 %)"
-says "headwall" "the detail is ~\$42.00 under the allowance (-8.75 %)"
+says "shed" "the detail is ~\$346.34 over the allowance (~12.50 %)"
+says "headwall" "the detail is ~\$42.00 under the allowance (~-8.75 %)"
+# Each total names what it does not cover at all.
+says "the allowance total names the elements with lines and no allowance" "? no allowance entered on 2 elements with cost lines: plane-0005, plane-0006"
 # The east plane has an allowance and a line with no price: its detail is not whole. It
 # has no detail figure and is not rolled up as if it were whole.
 says "an element whose detail is not whole says so" "the detail is not whole: 1 of its 1 lines cannot be extended. \"Copper standing seam, installed\": the line has no price (no price entered)"
@@ -99,7 +101,7 @@ says "" "of which \$3,555.07 rests on something assumed"
 says "what the detail total leaves out is named" "? left out: plane-0004: the detail is not whole"
 # Like for like, over the three elements that have both: allowances 11,739.36 + 2,770.73
 # + 480.00 = 14,990.09; detail 16,761.85; 1,771.76 over; 1,771.76 / 14,990.09 = 11.82 %.
-says "like for like" "like for like, over the 3 elements that have both: allowances \$14,990.09, detail \$16,761.85: the detail is ~\$1,771.76 over (11.82 %)"
+says "like for like" "like for like, over the 3 elements that have both: allowances ~\$14,990.09, detail ~\$16,761.85: the detail is ~\$1,771.76 over (~11.82 %)"
 
 echo
 echo "== 6. The geometry still drives both =="

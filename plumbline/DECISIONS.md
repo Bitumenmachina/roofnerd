@@ -990,3 +990,31 @@ reasons written beside the code. What is taken from it, by name, and what is not
   supplier to price the job by is not asked for and is in PROPOSALS.md.
 * **General conditions are cost lines on the job element itself**, typed by hand: a
   description, a number, a price.
+
+### Call 33. The tenth judgment: what was decided in fixing it (2026-11-11)
+
+* **What an element's lines come to rests on its condition.** The lines are what the
+  condition is made of. An Assumed condition makes assumed money; one that is not known
+  leaves no figure. The quantity of a line (an area, a length) does not rest on it, and
+  neither does an allowance.
+* **A quantity of 0 is $0.00 with a note, not a refusal.** The judge offered either. A
+  line priced on a figure that is truly nothing (the opening area of a wall with no
+  openings) is right at $0.00, and refusing it would leave the element with no detail.
+  It is never silent: the line, the element's detail and both printouts say so. A price
+  of $0 that somebody entered is an answer and carries no note (call 30).
+* **Money is rounded half up, as on paper.** A product such as 1 x 1.015 is held a hair
+  under the half cent; it is pushed by a few units in its own last place, never by as
+  much as a thousandth of a cent, before it is rounded. Above $2.8 billion the push is
+  capped and a true half cent may round either way; above $10 trillion an amount is
+  refused.
+* **A comma in a price is a thousands mark or the price is refused.** `1,25` is not read
+  as 125, and is not read as 1.25 either: which was meant is not guessed.
+* **A room rests on the walls its walls are cut to.** This is wider than the judge's
+  case: any wall met at an end of a wall the room is measured to counts, bounding or
+  not, because the end is cut to it.
+* **A wall with unsure heights is tried as tall as it could be, from where it is known
+  to start.** Its base is moved only if its base is unsure.
+* **A room point exactly on the corner of two faces is left reading as inside a wall.**
+  The ported region test decides it. Said in STATUS.md.
+* **Five `check_*` functions are ported, not ours**: they carry BIMCraft's rule for the
+  same thing, and PORTMAP.md now cites the line.

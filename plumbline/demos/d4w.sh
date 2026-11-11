@@ -85,7 +85,7 @@ says() { grep -qF -- "$2" "$T/price.txt" || { echo "FAIL: $1: the saved job's pr
 # It is marked Assumed: a figure typed in the window has no source but the window.
 # Against its allowance, 7,043.61: 880.45 over, 12.50 %.
 says "the east plane's detail, typed in the window" "detail      ~\$7,924.06, which is ~\$31.50 per SF"
-says "" "the detail is ~\$880.45 over the allowance (12.50 %)"
+says "" "the detail is ~\$880.45 over the allowance (~12.50 %)"
 # The north plane's allowance, typed in the window: 419.2627 SF x 28 = 11,739.36, Assumed.
 says "the north plane's allowance, typed in the window" "allowance   ~\$11,739.36 at ~\$28.00 per SF"
 # Allowances now: 22,033.70 + 11,739.36 = 33,773.06 over five elements.
@@ -94,7 +94,7 @@ says "the allowance total" "allowances   ~\$33,773.06 over 5 elements"
 says "the detail total" "detail       ~\$24,685.91 over 4 elements"
 # Like for like, over the four with both: allowances 14,990.09 + 7,043.61 = 22,033.70;
 # detail 24,685.91; 2,652.21 over; 2,652.21 / 22,033.70 = 12.04 %.
-says "like for like" "like for like, over the 4 elements that have both: allowances \$22,033.70, detail \$24,685.91: the detail is ~\$2,652.21 over (12.04 %)"
+says "like for like" "like for like, over the 4 elements that have both: allowances ~\$22,033.70, detail ~\$24,685.91: the detail is ~\$2,652.21 over (~12.04 %)"
 # The price that was not a price changed nothing: the north plane's line still has none.
 python3 - "$J" <<'PY'
 import sys, json

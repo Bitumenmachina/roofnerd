@@ -398,6 +398,10 @@ pub(crate) struct WallHeights {
     /// elevation and its base offset as well as what its height does. It is what "does
     /// this wall stand at such a height?" is no surer than.
     pub(crate) span: Status,
+    /// What its base alone rests on: its storey's elevation and its base offset. A wall
+    /// whose base is Known and whose top is not may reach higher or lower, and starts
+    /// where it starts.
+    pub(crate) base_status: Status,
     pub(crate) formula: String,
     pub(crate) inputs: Vec<String>,
 }
@@ -453,7 +457,7 @@ pub(crate) fn wall_heights(tree: &Tree, me: &str, w: &Wall) -> WallHeights {
     let height = height.and_then(|h| if h > 0.0 { Ok(h) } else { Err(format!("its top is {} ft above its base; a wall's top is above its base", view::figure_shown(h, 2))) });
     let own_status = own.map(|l| l.elevation.status).unwrap_or(Status::Unknown);
     let span = status.max(own_status).max(base_status);
-    WallHeights { base, height, status, span, formula, inputs }
+    WallHeights { base, height, status, span, base_status: own_status.max(base_status), formula, inputs }
 }
 
 /// A wall's thickness and its layers (function and thickness, exterior first) in feet, or
@@ -687,7 +691,7 @@ fn path_number(path: &str) -> u64 {
 /// A wall as the walls round it see it on the plan; the worst status among what its line
 /// and its thickness were worked out from; and the worst among what its base and top rest
 /// on. Or why it cannot be placed.
-fn plan_wall(tree: &Tree, me: &str, w: &Wall) -> Result<(walls::PlanWall, Status, Status), String> {
+fn plan_wall(tree: &Tree, me: &str, w: &Wall) -> Result<(walls::PlanWall, Status, Status, Status), String> {
     use crate::skeleton::P2 as V;
     let [a, b] = w.line_ft().ok_or("its line is not known")?;
     let heights = wall_heights(tree, me, w);
@@ -695,7 +699,7 @@ fn plan_wall(tree: &Tree, me: &str, w: &Wall) -> Result<(walls::PlanWall, Status
     let height = heights.height.clone()?;
     let (thickness, layers, section_status) = wall_section(tree, w)?;
     let (ext, int) = walls::wall_faces(thickness, &layers, w.location);
-    Ok((walls::PlanWall { start: V(a[0], a[1]), end: V(b[0], b[1]), ext, int, base, top: base + height, join: w.join }, w.line.status.max(section_status), heights.span))
+    Ok((walls::PlanWall { start: V(a[0], a[1]), end: V(b[0], b[1]), ext, int, base, top: base + height, join: w.join }, w.line.status.max(section_status), heights.span, heights.base_status))
 }
 
 /// A wall of the job as the rooms see it.
@@ -706,6 +710,8 @@ struct RoomWall {
     shape: Status,
     /// What its base and top rest on.
     span: Status,
+    /// What its base alone rests on.
+    base: Status,
     /// Whether it bounds rooms (`room_bounding`).
     bounds: bool,
 }
@@ -781,7 +787,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
     for (n, w) in all {
         match w.map(|w| (w, plan_wall(tree, &n.path, w))) {
             None => unplaced.push((n.path.clone(), "it has no wall line entered".into())),
-            Some((w, Ok((wall, shape, span)))) => placed.push(RoomWall { path: n.path.clone(), wall, shape, span, bounds: w.room_bounding }),
+            Some((w, Ok((wall, shape, span, base)))) => placed.push(RoomWall { path: n.path.clone(), wall, shape, span, base, bounds: w.room_bounding }),
             Some((_, Err(why))) => unplaced.push((n.path.clone(), why)),
         }
     }
@@ -849,11 +855,16 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
             let without: Vec<walls::PlanWall> = plan_walls.iter().enumerate().filter(|(i, _)| *i != k).map(|(_, w)| w.clone()).collect();
             let shifted: Vec<usize> = bounding.iter().filter(|&&i| i != k).map(|&i| if i > k { i - 1 } else { i }).collect();
             let gone = rooms_among(&without, &shifted, &points, tol);
+            // Standing as tall as it could: its top anywhere above, and its base anywhere
+            // below only if its base is itself unsure. A wall that starts at a Known
+            // height does not reach below it whatever its top turns out to be.
             let mut tall = plan_walls.clone();
-            tall[k].base = f64::NEG_INFINITY;
+            if placed[k].base != Status::Known {
+                tall[k].base = f64::NEG_INFINITY;
+            }
             tall[k].top = f64::INFINITY;
             let mut with: Vec<usize> = bounding.clone();
-            if placed[k].bounds && !with.contains(&k) {
+            if placed[k].bounds && spans(&tall[k]) && !with.contains(&k) {
                 with.push(k);
                 with.sort_unstable();
             }
@@ -909,7 +920,21 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                     if !inputs.contains(&format!("{}#{K_WALL}", placed[k].path)) {
                         inputs.push(format!("{}#{K_WALL}", placed[k].path));
                     }
-                    notes.push(format!("whether {} bounds this room rests on its heights, which are {}", tree.called(&placed[k].path), format!("{:?}", placed[k].span).to_lowercase()));
+                    notes.push(format!("whether {} ({}) bounds this room rests on its heights, which are {}", tree.called(&placed[k].path), placed[k].path, format!("{:?}", placed[k].span).to_lowercase()));
+                }
+                // A wall's ends are cut to the walls it meets, bounding or not: the room is
+                // no surer than the line and thickness of each of those.
+                for &k in mine {
+                    for n in walls::meets(&plan_walls, k, tol) {
+                        if placed[n].shape != Status::Known && !mine.contains(&n) {
+                            statuses.push(placed[n].shape);
+                            let cited = format!("{}#{K_WALL}", placed[n].path);
+                            if !inputs.contains(&cited) {
+                                inputs.push(cited);
+                                notes.push(format!("{} ({}) is cut to {} ({}), whose line or thickness is {}", tree.called(&placed[k].path), placed[k].path, tree.called(&placed[n].path), placed[n].path, format!("{:?}", placed[n].shape).to_lowercase()));
+                            }
+                        }
+                    }
                 }
                 let mut d = Derived::new(Some(value), unit, &statuses, formula, &inputs);
                 // A wall elsewhere that could not be placed is assumed not to reach this

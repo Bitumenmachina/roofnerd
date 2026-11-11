@@ -181,8 +181,8 @@ pub fn derive(world: &mut World) -> Vec<String> {
         }
     }
     #[allow(clippy::type_complexity)]
-    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Run>, Option<&Height>, Option<&Cost>, Option<&Allowance>, Option<&MadeOf>, Option<&mut Measure>, Option<&mut LineQuantities>)>();
-    for (node, kind, outline, pitch, run, height, cost, allowance, made_of, measure, line_quantities) in q.iter_mut(world) {
+    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Run>, Option<&Height>, Option<&Cost>, Option<&Allowance>, Option<&MadeOf>, Option<&Condition>, Option<&mut Measure>, Option<&mut LineQuantities>)>();
+    for (node, kind, outline, pitch, run, height, cost, allowance, made_of, condition, measure, line_quantities) in q.iter_mut(world) {
         let me = &node.path;
         let mut m = BTreeMap::new();
 
@@ -292,7 +292,7 @@ pub fn derive(world: &mut World) -> Vec<String> {
                 },
             };
             for line in &cost.lines {
-                lq.insert(line.description.clone(), lines::figures(me, &on, line, &stock));
+                lq.insert(line.description.clone(), lines::figures(me, &on, line, &stock, condition.map(|c| &c.0)));
             }
         }
         let new_lq = LineQuantities(lq);

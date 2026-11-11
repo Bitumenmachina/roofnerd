@@ -3408,7 +3408,8 @@ fn a_job_is_priced_from_allowances_and_from_its_lines_and_the_two_are_set_agains
     assert!(p.detail.left_out.iter().all(|(_, why)| why.contains("the detail is not whole")), "{:?}", p.detail.left_out);
     // Like for like, over the two elements that have both: allowances 11,739.36 + 480.00
     // = 12,219.36 against detail 13,644.78.
-    assert_eq!(p.both, Some((12219.36, 13644.78, Status::Assumed, 2)));
+    // Each side carries its own status (the headwall's share of each is Assumed).
+    assert_eq!(p.both, Some(((12219.36, Status::Assumed), (13644.78, Status::Assumed), Status::Assumed, 2)));
     // What could be priced and is not, by kind: it is said, not left out of sight.
     assert!(p.not_priced.contains(&(Kind::Eave, 5)), "{:?}", p.not_priced);
     assert!(p.not_priced.contains(&(Kind::Hip, 4)), "{:?}", p.not_priced);
@@ -3568,7 +3569,8 @@ fn a_room_is_no_surer_than_a_height_that_decides_whether_a_wall_bounds_it() {
     for name in ["floor_area", "gross_area", "perimeter"] {
         let d = measure_of(&mut job, &r, name);
         assert_eq!(d.status, Status::Assumed, "{name}");
-        assert_eq!(d.note, "whether partition bounds this room rests on its heights, which are assumed", "{name}");
+        // (Named by its path as well as its name since the tenth judgment: two walls can share a name.)
+        assert_eq!(d.note, format!("whether partition ({p}) bounds this room rests on its heights, which are assumed"), "{name}");
         assert!(d.inputs.contains(&format!("{p}#pl::wall")), "{name}: {:?}", d.inputs);
     }
     assert_eq!(figures_of(&mut job, &r), [Some(185.25), Some(200.0), Some(58.0)]);
@@ -3603,7 +3605,7 @@ fn a_room_is_no_surer_than_a_height_that_decides_whether_a_wall_bounds_it() {
     job.derive();
     let d = measure_of(&mut job, &r, "floor_area");
     assert_eq!((d.value, d.status), (Some(185.25), Status::Assumed));
-    assert!(d.note.contains("whether basement partition bounds this room"), "{}", d.note);
+    assert!(d.note.contains("whether basement partition (wall-") && d.note.contains(") bounds this room"), "{}", d.note);
 }
 
 #[test]
@@ -4067,4 +4069,182 @@ fn a_line_typed_by_hand_onto_the_job_lands_in_general_conditions() {
     job.add_line("plane-0006", "Trim", "surface_area", None, true).unwrap();
     job.derive();
     assert!(extension_of(&mut job, "plane-0006", "Trim").note.contains("does not say what it is made of"));
+}
+
+// ---- The tenth judgment: each finding, as a test that fails without its fix ----
+
+#[test]
+fn j10_1_an_assumed_or_unknown_condition_shows_in_what_its_lines_come_to() {
+    let mut job = sample();
+    job.set("plane-0003", "unit_cost", Some("31.50"), Status::Known, "made-up quote").unwrap();
+    job.set("plane-0003", "allowance", Some("28"), Status::Known, "made-up budget rate").unwrap();
+    job.derive();
+    assert_eq!(priced_of(&mut job, "plane-0003", "detail").status, Status::Known);
+    // Only assumed to be that condition: everything its lines come to is assumed.
+    job.set("plane-0003", "condition", Some("Standing seam copper, 16 oz"), Status::Assumed, "not on the finish schedule yet").unwrap();
+    job.derive();
+    for name in ["detail", "detail_rate", "difference", "difference_percent"] {
+        let d = priced_of(&mut job, "plane-0003", name);
+        assert_eq!((d.value.is_some(), d.status), (true, Status::Assumed), "{name}");
+    }
+    assert_eq!(priced_of(&mut job, "plane-0003", "detail").value, Some(13206.78));
+    // The allowance is a rate on its area and does not rest on the condition.
+    assert_eq!(priced_of(&mut job, "plane-0003", "allowance").status, Status::Known);
+    let p = view::pricing(&mut job);
+    assert_eq!((p.detail.status, p.detail.assumed), (Status::Assumed, 13206.78));
+    // Not known: its lines come to no figure, with the reason; nothing is priced as if it were.
+    job.set("plane-0003", "condition", None, Status::Unknown, "nobody knows").unwrap();
+    job.derive();
+    let d = priced_of(&mut job, "plane-0003", "detail");
+    assert_eq!(d.value, None);
+    assert!(d.note.contains("the element's condition is not known (nobody knows)"), "{}", d.note);
+}
+
+#[test]
+fn j10_3_a_line_whose_quantity_is_nothing_says_so() {
+    let mut job = sample();
+    job.set("plane-0003", "unit_cost", Some("31.50"), Status::Known, "made-up quote").unwrap();
+    job.set_formula("plane-0003", None, "surface_area * 0", &[], Status::Known, "made-up").unwrap();
+    job.derive();
+    let d = extension_of(&mut job, "plane-0003", "Copper standing seam, installed");
+    assert_eq!(d.value, Some(0.0));
+    assert_eq!(d.note, "the line's quantity is 0, so it comes to nothing");
+    let detail = priced_of(&mut job, "plane-0003", "detail");
+    assert_eq!(detail.value, Some(0.0));
+    assert!(detail.note.contains("1 of its 1 lines comes to nothing because the quantity is 0"), "{}", detail.note);
+    // A price of $0 that somebody entered is an answer, and carries no note.
+    let mut job = sample();
+    job.set("plane-0003", "unit_cost", Some("0"), Status::Known, "included in the panel price").unwrap();
+    job.derive();
+    let d = extension_of(&mut job, "plane-0003", "Copper standing seam, installed");
+    assert_eq!((d.value, d.note.as_str()), (Some(0.0), ""));
+}
+
+#[test]
+fn j10_5_a_comma_in_a_price_is_a_thousands_mark_or_it_is_refused() {
+    use plumbline_world::units::parse_price;
+    assert_eq!(parse_price("1,250", "$/SF"), Ok(1250.0));
+    assert_eq!(parse_price("$12,500.75/SF", "$/SF"), Ok(12500.75));
+    assert_eq!(parse_price("1,234,567", "$/SF"), Ok(1234567.0));
+    for wrong in ["1,25", ",5", "12,34.5", "1,2345", "1234,567", "1,,250", "1,250,", "1.250,5", "1,25.0"] {
+        let why = parse_price(wrong, "$/SF").unwrap_err();
+        assert!(why.contains("comma") || why.contains("not a price"), "{wrong}: {why}");
+    }
+}
+
+#[test]
+fn j10_6_a_rate_under_a_cent_is_not_written_as_nothing() {
+    assert_eq!(view::rate(28.0), "28.00");
+    assert_eq!(view::rate(31.5), "31.50");
+    assert_eq!(view::rate(0.004), "0.004");
+    assert_eq!(view::rate(1.015), "1.015");
+    assert_eq!(view::rate(1250.0), "1,250.00");
+    assert_eq!(view::rate(0.00305), "0.00305");
+    let mut job = sample();
+    job.set("plane-0004", "allowance", Some("0.004"), Status::Known, "made-up").unwrap();
+    job.derive();
+    let rows = view::elements(&mut job);
+    let row = rows.iter().find(|e| e.path == "plane-0004").unwrap().rows.iter().find(|r| r.label == "allowance").unwrap().clone();
+    assert!(row.text.starts_with("0.004"), "{}", row.text);
+}
+
+#[test]
+fn j10_7_money_is_rounded_to_the_cent_as_it_would_be_on_paper() {
+    use plumbline_world::lines::cents;
+    // 1.015 is held as 1.01499999999999990230...; on paper it is half a cent and goes up.
+    assert_eq!(cents(1.015), 1.02);
+    assert_eq!(cents(4.0 * 0.25375), 1.02);
+    assert_eq!(cents(2.675), 2.68);
+    assert_eq!(cents(1.0149), 1.01);
+    assert_eq!(cents(1.014999), 1.01);
+    assert_eq!(cents(-1.015), -1.02);
+    assert_eq!(cents(0.0), 0.0);
+    let mut job = sample();
+    job.set_formula("plane-0004", None, "n", &[("n".to_string(), "1".to_string())], Status::Known, "made-up").unwrap();
+    job.set("plane-0004", "unit_cost", Some("1.015"), Status::Known, "made-up").unwrap();
+    job.derive();
+    assert_eq!(extension_of(&mut job, "plane-0004", "Copper standing seam, installed").value, Some(1.02));
+}
+
+#[test]
+fn j10_8_what_is_bought_by_the_each_is_counted_when_it_is_not_priced() {
+    let mut job = sample::house();
+    let p = view::pricing(&mut job);
+    let count = |k: Kind| p.not_priced.iter().find(|x| x.0 == k).map(|x| x.1).unwrap_or(0);
+    // The sample house has nine doors and seventeen windows, and none has a price.
+    assert_eq!((count(Kind::Door), count(Kind::Window)), (9, 17));
+    assert!(count(Kind::Fitting) > 0 && count(Kind::Fixture) > 0 && count(Kind::Equipment) > 0);
+    // What is not a thing to price is not counted: a storey, a system, a type.
+    assert_eq!((count(Kind::Storey), count(Kind::System), count(Kind::Type)), (0, 0, 0));
+}
+
+#[test]
+fn j10_11_money_past_what_holds_to_the_cent_is_refused() {
+    let d = plumbline_world::lines::dollars(Some(999_999_999_989_999_861_760.0), &[Status::Known], "", &[]);
+    assert_eq!(d.value, None);
+    assert!(d.note.contains("more than can be held to the cent"));
+    assert_eq!(plumbline_world::lines::dollars(Some(9.9e12), &[Status::Known], "", &[]).value, Some(9.9e12));
+}
+
+#[test]
+fn j10_2_a_room_is_no_surer_than_a_wall_its_walls_are_cut_to() {
+    use plumbline_world::{Wall, WallType};
+    // The box of J9-4: N across the middle, not bounding rooms, and a partition P from N's
+    // line east to the east wall. P is cut to N's face, so the room rests on N's thickness
+    // and line though N bounds nothing.
+    let (mut job, s, t, r) = boxed();
+    let thick = job.add("job-0001", Kind::Type, "N's type").unwrap();
+    job.put(&thick, WallType { thickness: Val::known(Len::One(6.0), "in", "test"), layers: Vec::new() }).unwrap();
+    let n = wall(&mut job, &s, &thick, "N", [10.0, 0.0], [10.0, 10.0], 10.0);
+    let e = job.find(&n).unwrap();
+    job.world.get_mut::<Wall>(e).unwrap().room_bounding = false;
+    wall(&mut job, &s, &t, "P", [10.0, 5.0], [20.0, 5.0], 10.0);
+    job.derive();
+    assert_eq!(figures_of(&mut job, &r), [Some(180.5), Some(200.0), Some(77.0)]);
+    assert_eq!(measure_of(&mut job, &r, "floor_area").status, Status::Known);
+    // N's thickness assumed, 12 in: P stops at x = 10.5, so it is 9.25 ft of a 6 in wall,
+    // 4.625 SF. Floor 185.25 − 4.625 = 180.625; round 58 + 18.5 + 0.5 − 0.5 = 76.5.
+    let te = job.find(&thick).unwrap();
+    job.world.get_mut::<WallType>(te).unwrap().thickness = Val::assumed(Len::One(12.0), "in", "not on the wall schedule");
+    job.derive();
+    assert_eq!(figures_of(&mut job, &r), [Some(180.625), Some(200.0), Some(76.5)]);
+    for name in ["floor_area", "perimeter"] {
+        let d = measure_of(&mut job, &r, name);
+        assert_eq!(d.status, Status::Assumed, "{name}");
+        assert!(d.note.contains(&format!("is cut to N ({n}), whose line or thickness is assumed")), "{name}: {}", d.note);
+        assert!(d.inputs.contains(&format!("{n}#pl::wall")), "{name}: {:?}", d.inputs);
+    }
+    // N's line assumed instead, at x = 11: P is cut at x = 11.25, 8.5 ft of it, 4.25 SF.
+    job.world.get_mut::<WallType>(te).unwrap().thickness = Val::known(Len::One(6.0), "in", "test");
+    job.world.get_mut::<Wall>(e).unwrap().line = Val::assumed([[11.0, 0.0], [11.0, 10.0]], "ft", "scaled off a sketch");
+    let p = path_named(&mut job, "P");
+    let pe = job.find(&p).unwrap();
+    job.world.get_mut::<Wall>(pe).unwrap().line = Val::known([[11.0, 5.0], [20.0, 5.0]], "ft", "test");
+    job.derive();
+    assert_eq!(measure_of(&mut job, &r, "floor_area").value, Some(181.0)); // 185.25 − 4.25
+    assert_eq!(measure_of(&mut job, &r, "floor_area").status, Status::Assumed);
+}
+
+#[test]
+fn j10_10_a_wall_that_starts_above_a_room_does_not_flag_it_whatever_its_top() {
+    use plumbline_world::{Level, Wall};
+    // The box on the ground, and a storey above at 10 ft with a wall across the middle of
+    // the plan whose height is assumed. Its base is Known at 10 ft: however tall it turns
+    // out, it does not come down to the 4 ft the ground-floor room is found at.
+    let (mut job, _s, t, r) = boxed();
+    let upper = job.add("job-0001", Kind::Storey, "upper").unwrap();
+    job.put(&upper, Level { elevation: ft(10.0), height: ft(9.0), computation_height: None }).unwrap();
+    let above = wall(&mut job, &upper, &t, "above", [10.0, 0.0], [10.0, 10.0], 8.0);
+    let e = job.find(&above).unwrap();
+    job.world.get_mut::<Wall>(e).unwrap().height = Some(Val::assumed(Len::One(8.0), "ft", "not dimensioned"));
+    job.derive();
+    let d = measure_of(&mut job, &r, "floor_area");
+    assert_eq!((d.value, d.status, d.note.as_str()), (Some(185.25), Status::Known, ""));
+    // If where it starts is itself unsure, it might come down, and the room says so,
+    // naming the wall by its path as well as its name.
+    job.world.get_mut::<Wall>(e).unwrap().base_offset = Some(Val::assumed(Len::One(0.0), "ft", "not dimensioned"));
+    job.derive();
+    let d = measure_of(&mut job, &r, "floor_area");
+    assert_eq!(d.status, Status::Assumed);
+    assert!(d.note.contains(&format!("whether above ({above}) bounds this room rests on its heights")), "{}", d.note);
 }

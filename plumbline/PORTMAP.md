@@ -49,8 +49,8 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `Continuity` | ours |  |  | the network read by system; read `network.rs` whole: it has no system as an element to read by |
 | `takeoff` | ours |  |  | as TakeoffLine: read `schedule.rs` 368 to 398 and 1036 to 1100; the code is new, the idea of a grouped schedule by system is BIMCraft's and everybody's |
 | `storeys_of` | ours |  |  | the storey an element is under in the tree of paths; read `model.rs` 2060 to 2120: BIMCraft's is a `level` Guid on each element |
-| `StoreyTotals` | ours |  |  | net wall area by storey; `grep -c -i 'net area'` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0; its wall area is length by height, `schedule.rs:955` |
-| `storey_totals` | ours |  |  | as StoreyTotals: `grep -c -i 'net area'` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
+| `StoreyTotals` | ours |  |  | a storey's walls, floors and rooms added up, each total with a status and what it leaves out. BIMCraft works a wall's net side area itself (`ifc.rs:731`, gross less each opening cut to the wall's height) and its schedules can group and total a field (`schedule.rs` 1036 to 1100); what it has no word for is a total that is flagged: `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs ifc.rs: 0 |
+| `storey_totals` | ours |  |  | as StoreyTotals; the wall net area it adds up is worked in `measures`, which refuses an opening that does not fit where BIMCraft cuts it to the wall (`ifc.rs:731`): `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs ifc.rs: 0 |
 | `Level` | ported | `Level` | `crates/core/src/model.rs:131` |  |
 | `COMPUTATION_HEIGHT_FT` | ported | `CUT_HEIGHT` | `crates/core/src/model.rs:43` | 1200 mm there, 4 ft here (DECISIONS.md call 29) |
 | `Location` | ported | `Location` | `crates/core/src/model.rs:352` |  |
@@ -96,17 +96,17 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `Connector` | ported | `Connector` | `crates/core/src/family.rs:430` |  |
 | `Connectors` | ours |  |  | the connectors as a component on the placed thing; read `family.rs` 430 to 475: there they are a family's list |
 | `MAX_CONNECTORS` | ported | `MAX_CONNECTORS` | `crates/core/src/family.rs:698` | 8 a family there, 64 a thing here; the change is in the header of `building/model.rs` |
-| `check_level` | ours |  |  | the `Val` rules (a unit, a status, a source) round BIMCraft's rule; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
-| `check_room` | ours |  |  | the `Val` rules (a unit, a status, a source) round BIMCraft's rule; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
+| `check_level` | ported | `computation_height` | `crates/core/src/model.rs:6498` | a level's elevation and computation height are usable numbers (`model.rs:6497`, `6498`); a storey height above zero and the `Val` rules (a unit, a status, a source) are ours |
+| `check_room` | ported | `point` | `crates/core/src/model.rs:6713` | a room's point is a usable point and its number is text (`model.rs:6713`, `6715`); the rest is the `Val` rules |
 | `check_wall_type` | ported | `MAX_LAYERS` | `crates/core/src/model.rs:481` | and the layers adding up to the thickness, `model.rs:6245` |
 | `check_floor_type` | ported | `MAX_LAYERS` | `crates/core/src/model.rs:481` | as check_wall_type |
-| `check_opening_type` | ours |  |  | the `Val` rules (a unit, a status, a source) round BIMCraft's rule; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
+| `check_opening_type` | ported | `size` | `crates/core/src/model.rs:6673` | an opening's width and height are above zero (`model.rs:6673`, `6674`; `size`, `7593`); the rest is the `Val` rules |
 | `check_wall` | ported | `top_level` | `crates/core/src/model.rs:6585` | a top held to a level or a height tall; and too short to be a wall, `model.rs:7838`. Not taken: refusing a wall whose top is not above its base (header) |
 | `check_opening` | ported | `sill` | `crates/core/src/model.rs:6691` | a sill on or over the wall's base |
-| `check_floor` | ours |  |  | the `Val` rules (a unit, a status, a source) round BIMCraft's rule; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
+| `check_floor` | ported | `boundary` | `crates/core/src/model.rs:6603` | a floor has a known type and a boundary of at least three usable points (`model.rs:6601`, `6603`, `7788`); that the boundary does not cross itself is this program's own outline rule (`geom::outline_fault`), and the rest is the `Val` rules |
 | `check_segment_type` | ported | `round` | `crates/core/src/model.rs:6266` | a round section has one size; the rest is the `Val` rules |
 | `check_segment` | ported | `check` | `crates/core/src/runs.rs:62` | too short to be a run |
-| `check_placed` | ours |  |  | the `Val` rules (a unit, a status, a source) round BIMCraft's rule; `grep -c Assumed` in each of model.rs walls.rs runs.rs network.rs rooms.rs schedule.rs family.rs: 0 |
+| `check_placed` | ported | `point` | `crates/core/src/model.rs:7105` | a component's position, angle and offset are usable numbers (`model.rs:7105` to `7107`); what it is as free text (BIMCraft names a family) and the `Val` rules are ours |
 | `check_fitting` | ours |  |  | a fitting's kind is on a fitting; read `family.rs` 28 to 160: there the category is the family's |
 | `check_connectors` | ported | `domain` | `crates/core/src/family.rs:445` | only a pipe connector carries a domain |
 | `TOLERANCE_FT` | ported | `TOLERANCE` | `crates/core/src/network.rs:23` |  |

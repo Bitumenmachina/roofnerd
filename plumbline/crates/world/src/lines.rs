@@ -159,8 +159,17 @@ fn count(value: Option<f64>) -> Result<Option<f64>, &'static str> {
 
 /// To the cent.
 pub fn cents(x: f64) -> f64 {
-    (x * 100.0).round() / 100.0 + 0.0
+    // 1.015 is held as 1.01499999999999990230; the half cent that was meant is rounded
+    // up, as it would be on paper, and not down by what binary arithmetic lost.
+    // The push is a few units in the last place of the figure itself, and never as much
+    // as a thousandth of a cent: enough to restore a half, too little to make one.
+    let y = x * 100.0;
+    let push = (y.abs() * 16.0 * f64::EPSILON).min(1e-3);
+    (y + y.signum() * push).round() / 100.0 + 0.0
 }
+
+/// The most money that is still exact to the cent in the arithmetic used here.
+pub const MAX_DOLLARS: f64 = 1e13;
 
 /// An amount of money worked out: to the cent, with the worst status of what it came
 /// from. An amount that is more than nothing and less than half a cent is refused: it
@@ -168,10 +177,14 @@ pub fn cents(x: f64) -> f64 {
 pub fn dollars(value: Option<f64>, statuses: &[Status], formula: &str, inputs: &[String]) -> Derived {
     match value {
         Some(v) if v != 0.0 && cents(v) == 0.0 => Derived::refused("$", formula, inputs, "it comes to less than half a cent and would be written as $0.00"),
+        Some(v) if v.abs() > MAX_DOLLARS => Derived::refused("$", formula, inputs, "it comes to more than can be held to the cent"),
         Some(v) => Derived::new(Some(cents(v)), "$", statuses, formula, inputs),
         None => Derived::new(None, "$", statuses, formula, inputs),
     }
 }
+
+/// The note on an extension of $0.00 that is $0.00 because there is nothing to price.
+pub const ZERO_QUANTITY: &str = "the line's quantity is 0, so it comes to nothing";
 
 /// What the element is made of, as a line made of it needs to know it.
 pub enum Stock<'a> {
@@ -217,33 +230,56 @@ fn extension(price: &Price, quantity: &Derived, with_waste: Option<&Derived>, or
         (Some(p), Some(q)) => {
             let mut statuses = vec![base.status, at.status];
             statuses.extend(&price.statuses);
-            dollars(Some(q * p), &statuses, &formula, inputs)
+            let mut d = dollars(Some(q * p), &statuses, &formula, inputs);
+            // Nothing is silently zero: a line that prices nothing says so. A price of
+            // $0 that was entered is an answer and needs no note.
+            if q == 0.0 && d.value.is_some() {
+                d.note = ZERO_QUANTITY.into();
+            }
+            d
         }
     }
 }
 
 /// Everything one line works out to on one element. `stock` is what the element is made
 /// of: a line made of it is ordered and priced as that material is.
-pub fn figures(me: &str, on: &On, line: &CostLine, stock: &Stock) -> LineFigures {
+///
+/// `condition` is the element's condition, when it has one. The lines are what that
+/// condition is made of, so what they come to is no surer than that the element is that
+/// condition: an assumed condition makes assumed money, and one that is not known leaves
+/// none.
+pub fn figures(me: &str, on: &On, line: &CostLine, stock: &Stock, condition: Option<&Val<String>>) -> LineFigures {
     let cost_in = format!("{me}#{K_COST}");
+    let mut held: Vec<Status> = Vec::new();
+    let mut inputs = vec![cost_in];
+    if let Some(c) = condition {
+        inputs.push(format!("{me}#{K_CONDITION}"));
+        if c.value.is_none() {
+            let price = Price { at: Err(format!("the element's condition is not known ({}), so what its lines come to is not", c.source)), whose: String::new(), statuses: Vec::new(), inputs };
+            return worked(me, on, line, if line.of_material { None } else { line.order.as_ref() }, &price);
+        }
+        held.push(c.status);
+    }
     if !line.of_material {
-        let price = Price { at: Ok(&line.unit_cost), whose: "the line".into(), statuses: Vec::new(), inputs: vec![cost_in] };
+        let price = Price { at: Ok(&line.unit_cost), whose: "the line".into(), statuses: held, inputs };
         return worked(me, on, line, line.order.as_ref(), &price);
     }
     let made_of = format!("{me}#{K_MATERIAL}");
     match stock {
         Stock::NotSaid => {
-            let price = Price { at: Err("the line is made of the element's material, and the element does not say what it is made of".into()), whose: String::new(), statuses: Vec::new(), inputs: vec![cost_in] };
+            let price = Price { at: Err("the line is made of the element's material, and the element does not say what it is made of".into()), whose: String::new(), statuses: Vec::new(), inputs };
             worked(me, on, line, None, &price)
         }
         Stock::Missing(why) => {
-            let price = Price { at: Err(why.clone()), whose: String::new(), statuses: Vec::new(), inputs: vec![cost_in, made_of] };
+            inputs.push(made_of);
+            let price = Price { at: Err(why.clone()), whose: String::new(), statuses: Vec::new(), inputs };
             worked(me, on, line, None, &price)
         }
         Stock::Found { path, name, status, supply } => {
-            let inputs = vec![cost_in, made_of, format!("{path}#{K_SUPPLY}")];
+            inputs.extend([made_of, format!("{path}#{K_SUPPLY}")]);
             let whose = format!("its material, {name:?},");
-            let price = Price { at: Ok(&supply.price), whose: whose.clone(), statuses: vec![*status], inputs: inputs.clone() };
+            held.push(*status);
+            let price = Price { at: Ok(&supply.price), whose: whose.clone(), statuses: held.clone(), inputs: inputs.clone() };
             let mut out = worked(me, on, line, supply.order.as_ref(), &price);
             // A price is for a unit. One for another unit is not used.
             let priced = out.order.as_ref().map(|o| o.unit.clone()).unwrap_or_else(|| out.quantity.unit.clone());
@@ -252,7 +288,7 @@ pub fn figures(me: &str, on: &On, line: &CostLine, stock: &Stock) -> LineFigures
                 out.extension = Some(Derived::refused("$", "", &inputs, &why));
             }
             for (supplier, quote) in &supply.quotes {
-                let at = Price { at: Ok(quote), whose: format!("{supplier}'s quote for {name:?}"), statuses: vec![*status], inputs: inputs.clone() };
+                let at = Price { at: Ok(quote), whose: format!("{supplier}'s quote for {name:?}"), statuses: held.clone(), inputs: inputs.clone() };
                 let d = match wrong(quote) {
                     Some(why) => Derived::refused("$", "", &inputs, &why),
                     None => extension(&at, &out.quantity, out.with_waste.as_ref(), out.order.as_ref()),
@@ -380,7 +416,13 @@ pub fn priced(me: &str, kind: Kind, measure: &Measure, allowance: Option<&Allowa
             None => {
                 let statuses: Vec<Status> = each.iter().filter_map(|(_, d)| d.map(|d| d.status)).collect();
                 let sum: f64 = each.iter().filter_map(|(_, d)| d.and_then(|d| d.value)).sum();
-                dollars(Some(sum), &statuses, &f, &inputs)
+                let mut d = dollars(Some(sum), &statuses, &f, &inputs);
+                // A line that comes to nothing because there is nothing to price is named.
+                let nothing: Vec<String> = each.iter().filter(|(_, d)| d.is_some_and(|d| d.note == ZERO_QUANTITY)).map(|(description, _)| format!("{description:?}")).collect();
+                if !nothing.is_empty() && d.value.is_some() {
+                    d.note = format!("{} of its {} lines come{} to nothing because the quantity is 0: {}", nothing.len(), lines.len(), if nothing.len() == 1 { "s" } else { "" }, nothing.join(", "));
+                }
+                d
             }
         };
         // Rolled back up: over the same figure the allowance is priced on.

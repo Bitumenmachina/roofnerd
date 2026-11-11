@@ -185,9 +185,9 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
             if let Some(o) = &supply.order {
                 rows.push(entered(p, "order factor", &o.factor, |x| num(*x)));
             }
-            rows.push(entered(p, "price", &supply.price, |x| figure(*x, 2)));
+            rows.push(entered(p, "price", &supply.price, |x| rate(*x)));
             for (supplier, quote) in &supply.quotes {
-                rows.push(entered(p, &format!("quote: {supplier}"), quote, |x| figure(*x, 2)));
+                rows.push(entered(p, &format!("quote: {supplier}"), quote, |x| rate(*x)));
             }
         }
         if let Some(m) = w.get::<Markup>(e) {
@@ -234,7 +234,7 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
             }
         }
         if let Some(a) = w.get::<Allowance>(e) {
-            rows.push(entered(p, "allowance", &a.rate, |x| figure(*x, 2)));
+            rows.push(entered(p, "allowance", &a.rate, |x| rate(*x)));
         }
         if let Some(priced) = w.get::<Priced>(e) {
             for name in ["allowance", "detail", "detail_rate", "difference", "difference_percent"] {
@@ -373,6 +373,18 @@ pub fn figure_shown(value: f64, decimals: usize) -> String {
     text
 }
 
+/// A rate in dollars as it is written: to the cent, or to as many places (up to six) as
+/// it takes to show what it is. A rate of $0.004 is not written as $0.00.
+pub fn rate(value: f64) -> String {
+    for places in 2..=6 {
+        let scale = 10f64.powi(places);
+        if ((value * scale).round() / scale - value).abs() < 1e-9 {
+            return figure(value, places as usize);
+        }
+    }
+    figure(value, 6)
+}
+
 /// Total the elements directly under `roof_path`.
 pub fn roof_totals(job: &mut Job, roof_path: &str) -> RoofTotals {
     let children: Vec<String> = job.children().get(roof_path).map(|c| c.values().cloned().collect()).unwrap_or_default();
@@ -480,16 +492,18 @@ pub struct Pricing {
     pub detail: MoneyTotal,
     /// The allowance and the detail of the elements that have both figures, and only
     /// those: the like-for-like comparison.
-    pub both: Option<(f64, f64, Status, usize)>,
-    /// Elements that could carry a price (they have a figure to be bought by) and carry
-    /// neither an allowance nor a cost line: how many of each kind.
+    /// Each sum with its own status, then the worse of the two, then how many elements.
+    pub both: Option<((f64, Status), (f64, Status), Status, usize)>,
+    /// Elements that could carry a price (they have a figure to be bought by, or are
+    /// bought by the each) and carry neither an allowance nor a cost line: how many of
+    /// each kind.
     pub not_priced: Vec<(Kind, usize)>,
 }
 
 fn money_total(parts: &[(&PricedElement, &Derived)]) -> MoneyTotal {
     let included: Vec<&(&PricedElement, &Derived)> = parts.iter().filter(|(_, d)| d.value.is_some()).collect();
     let left_out = parts.iter().filter(|(_, d)| d.value.is_none()).map(|(e, d)| (e.path.clone(), d.note.clone())).collect();
-    let cents = |x: f64| (x * 100.0).round() / 100.0 + 0.0;
+    let cents = crate::lines::cents;
     MoneyTotal {
         value: if included.is_empty() { None } else { Some(cents(included.iter().filter_map(|(_, d)| d.value).sum())) },
         status: included.iter().map(|(_, d)| d.status).max().unwrap_or(Status::Unknown),
@@ -513,8 +527,8 @@ pub fn pricing(job: &mut Job) -> Pricing {
         let has_lines = w.get::<Cost>(e).is_some_and(|c| !c.lines.is_empty());
         let rate = w.get::<Allowance>(e).map(|a| a.rate.clone());
         if rate.is_none() && !has_lines {
-            // It could be priced and is not.
-            if kind.priced_by().is_some() {
+            // It could be priced and is not: by its area or length, or by the each.
+            if kind.priced_by().is_some() || matches!(kind, Kind::Door | Kind::Window | Kind::Fitting | Kind::Fixture | Kind::Equipment) {
                 match bare.iter_mut().find(|b| b.0 == kind) {
                     Some(b) => b.1 += 1,
                     None => bare.push((kind, 1)),
@@ -531,9 +545,11 @@ pub fn pricing(job: &mut Job) -> Pricing {
     }
     let allowances: Vec<(&PricedElement, &Derived)> = elements.iter().filter_map(|e| e.allowance.as_ref().map(|d| (e, d))).collect();
     let details: Vec<(&PricedElement, &Derived)> = elements.iter().filter_map(|e| e.detail.as_ref().map(|d| (e, d))).collect();
-    let cents = |x: f64| (x * 100.0).round() / 100.0 + 0.0;
-    let pairs: Vec<(f64, f64, Status)> = elements.iter().filter_map(|e| e.allowance.as_ref().zip(e.detail.as_ref())).filter_map(|(a, d)| a.value.zip(d.value).map(|(x, y)| (x, y, a.status.max(d.status)))).collect();
-    let both = if pairs.is_empty() { None } else { Some((cents(pairs.iter().map(|p| p.0).sum()), cents(pairs.iter().map(|p| p.1).sum()), pairs.iter().map(|p| p.2).max().unwrap_or(Status::Unknown), pairs.len())) };
+    let cents = crate::lines::cents;
+    let pairs: Vec<((f64, Status), (f64, Status))> = elements.iter().filter_map(|e| e.allowance.as_ref().zip(e.detail.as_ref())).filter_map(|(a, d)| a.value.zip(d.value).map(|(x, y)| ((x, a.status), (y, d.status)))).collect();
+    let worst = |side: &dyn Fn(&((f64, Status), (f64, Status))) -> Status| pairs.iter().map(side).max().unwrap_or(Status::Unknown);
+    let (sa, sd) = (worst(&|p| p.0 .1), worst(&|p| p.1 .1));
+    let both = if pairs.is_empty() { None } else { Some(((cents(pairs.iter().map(|p| p.0 .0).sum()), sa), (cents(pairs.iter().map(|p| p.1 .0).sum()), sd), sa.max(sd), pairs.len())) };
     Pricing { allowance: money_total(&allowances), detail: money_total(&details), both, not_priced: bare, elements }
 }
 
@@ -598,7 +614,7 @@ pub struct Estimate {
 
 fn total_of(parts: &[(String, &Derived)]) -> MoneyTotal {
     let included: Vec<&Derived> = parts.iter().map(|(_, d)| *d).filter(|d| d.value.is_some()).collect();
-    let cents = |x: f64| (x * 100.0).round() / 100.0 + 0.0;
+    let cents = crate::lines::cents;
     MoneyTotal {
         value: if included.is_empty() { None } else { Some(cents(included.iter().filter_map(|d| d.value).sum())) },
         status: included.iter().map(|d| d.status).max().unwrap_or(Status::Unknown),

@@ -20,8 +20,8 @@ run again and each gave what this file said they gave.
 | D2 | 3D roof slice | **A working 3D prototype, not the whole deliverable.** In a window: a roof solved from its footprint, a plane picked with the mouse, its pitch changed and its eave moved with the lines and totals following, a surface given its condition, and the sheet in a second window updating live. The windows were drawn again on 2026-11-11 after the owner said the first looked cheap and tacky (DECISIONS.md call 25). Not built: tracing a calibrated plan, a dormer, a parapet and tapered crickets in 3D, dragging with the mouse, editing in the sheet. Judged once: the solver's areas and lengths held on every ordinary roof; it found stale planes left Known, an eave moved through the far wall, and an estimator's entries moving to another slope, among others. All fixed. **Those fixes are not judged.** See "D2. What was run". |
 | — | The whole building (owner, 2026-11-11) | **A working model of a whole house on BIMCraft's shapes, read and walked, not yet drawn in the window.** The owner widened the brief from the envelope to the building and its services (DECISIONS.md call 26). The model was first written from nothing, then, the same day, re-based on BIMCraft's (call 29; `HANDOFF_REBASE.md`): storeys, walls of a type with a top held to a storey or a height, doors and windows of a type placed by their centre, floors, rooms found from their walls, straight runs of a type joined by fittings, equipment and fixtures with connectors, systems, and a network that says what is joined and what is open. Each value flagged; a takeoff by system. In the window: the whole house under a sky, seen through, a system or a storey at a time, on plan, and on foot inside. Nothing of the building can be edited in the window yet. Judged twice: see "The whole building" and "The re-base on BIMCraft". |
 | D3 | Derived conditions and stretch-out | Demonstrated at the command line, except the reproduction of the owner's copper estimate, which is **pending**: no estimate is in `refs/` (Q5). Judged once: every stated figure held, and it found a negative count saved as zero, among others. All found are fixed. **Those fixes have not been judged.** |
-| D4 | Macro to micro | **Demonstrated at the command line and in the window. Not yet judged.** An element takes an allowance in $/SF or $/LF; a cost line's quantity is extended by its unit cost; an element's detail is rolled back up to the same $/SF or $/LF; the two are reconciled by element and for the job, each total saying what it leaves out and how much of it rests on an assumption. Prices are entered at the command line or typed in the window. See "D4. What was run". |
-| D5 | Estimate sheet and money | Not started. Reference estimate missing (Q5). |
+| D4 | Macro to micro | **Demonstrated at the command line and in the window, and judged (tenth judgment, below): thirteen findings, twelve fixed with tests, one minor one left and said. The fixes have not themselves been judged.** An element takes an allowance in $/SF or $/LF; a cost line's quantity is extended by its unit cost; an element's detail is rolled back up to the same $/SF or $/LF; the two are reconciled by element and for the job, each total saying what it leaves out and how much of it rests on an assumption. Prices are entered at the command line or typed in the window. See "D4. What was run". |
+| D5 | Estimate sheet and money | **In progress: built in the core and at the command line, with tests; no demonstration script, nothing in the window, not judged.** Reproducing the owner's whole-job estimate is pending: there is no estimate in `refs/` (Q5). See "D5. How its demonstration will be run". |
 | D6 | Interchange and reports | Not started. |
 | D7 | Capture | Waiting on the owner's ruling. |
 
@@ -1232,6 +1232,12 @@ element's material is changed, a labor line switched off and the overhead typed 
 keyboard, and the sheet follows; the job is saved and the file holds what was typed,
 flagged.
 
+**So far (2026-11-11):** steps 1 to 11 run at the command line: `demos/d5.sh` exits 0
+with every figure above matching the hand-worked one (job cost $25,292.43 as the job
+starts; $28,442.43 with two typed general-conditions lines; price $34,403.96 at 12 % and
+8 %; $35,659.14 after the south plane is changed to 20 oz copper, with only that plane
+changed in the file). Nothing of D5 is in the window yet, and none of it has been judged.
+
 **Pending, and said so:** "The owner's whole-job estimate is reproduced within rounding."
 `refs/` holds no estimate (QUESTIONS.md Q5). D5 is built against the brief's words, and
 that reproduction stays pending until the spreadsheet is there.
@@ -1266,6 +1272,28 @@ the fix is in.
 | J10-12 | Printout faults: an empty reason "no figure ()"; a refused roll-up rate printed nowhere; "$0.00 the same as"; a room point on a face corner read as inside a wall. | minor |
 | J10-13 | PORTMAP.md: `StoreyTotals`/`storey_totals` claim net wall area as ours on a search that skips `ifc.rs`, where BIMCraft works it; five `check_*` rows say they wrap BIMCraft's rule and cite none. | false claim in a document |
 
+What was done about each. Every fix has a test in `crates/world/tests/world.rs` named
+for its finding (`j10_1_...` and so on), with the judge's reproduction in it and the
+figures worked by hand. The six money tests that the pre-fix source can compile were
+run against the judge's frozen copy of commit `1886693`, and all six failed there.
+**These fixes have not themselves been judged.**
+
+| # | What was done | Test |
+|---|---|---|
+| J10-1 | What an element's lines come to now rests on its condition: an Assumed condition makes each extension, the detail, the rate and the difference Assumed; a condition that is not known leaves them with no figure and the reason. The allowance does not rest on the condition and is untouched. | `j10_1_...` |
+| J10-2 | A room is no surer than the line and thickness of every wall its own walls are cut to, bounding or not. It says which wall, by name and path. | `j10_2_...` (180.625 SF and 181 SF worked by hand) |
+| J10-3 | A line whose quantity is 0 still comes to $0.00 (a wall with no openings has no opening trim, and that is an answer), and now says so: the extension carries the note "the line's quantity is 0, so it comes to nothing", the element's detail names such lines, and `price` and `estimate` print the note. It is not refused: refusing would leave every such element with no detail. | `j10_3_...` |
+| J10-4 | The like-for-like amounts each carry their own flag, and the difference and every percentage carry theirs. | `demos/d4.sh` expects the flagged line |
+| J10-5 | A comma in a price is a thousands mark in the right place or the price is refused. `1,25`, `,5` and `12,34.5` are refused. | `j10_5_...` |
+| J10-6 | A rate is written to the cent, or to as many places (up to six) as it takes to show it: $0.004 is $0.004. In `price`, `show`, `estimate` and the sheet. | `j10_6_...` |
+| J10-7 | Money is rounded to the cent as it would be on paper: 1.015 is $1.02. The first fix for this was wrong at large amounts (it moved $9.9 trillion by $9,900); the test for J10-11 caught it before it was committed, and the fix now moves a figure by a few units in its own last place and never by a thousandth of a cent. | `j10_7_...`, `j10_11_...` |
+| J10-8 | "Not priced at all" counts doors, windows, fittings, fixtures and equipment too. | `j10_8_...` |
+| J10-9 | The program now does what the documents said: under the allowance total, the elements with cost lines and no allowance are counted and named; under the detail total, the elements with an allowance and no cost line. | `demos/d4.sh` |
+| J10-10 | When a wall's heights are unsure, it is tried standing as tall as it could: its top anywhere above, its base anywhere below only if its base is itself unsure, and it bounds a storey's rooms only if it then reaches them. A wall that starts at a Known height above a room no longer flags it. The note names the wall by path as well as name. | `j10_10_...` |
+| J10-11 | An amount of more than $10 trillion is refused: it cannot be held to the cent. | `j10_11_...` |
+| J10-12 | The empty reason now reads "a value it is worked out from is not known"; a detail with a figure and no rate prints why it has no rate; a difference of nothing reads "the detail is the same as the allowance". **Left as it is:** a room point exactly on the corner where two wall faces meet reads as inside a wall, where a point on one face reads as in the room. BIMCraft's region test, as ported, decides it, and changing that test is a difference from the port for a point nobody places a room at. A change to it was tried and taken back out. | none for the corner |
+| J10-13 | `StoreyTotals` and `storey_totals` stay ours and now say what BIMCraft has (a wall's net side area, `ifc.rs:731`; schedules that group and total) and what it does not (a total with a status), on a search that includes `ifc.rs`. `check_level`, `check_room`, `check_opening_type`, `check_floor` and `check_placed` are now `ported`, each with the line of BIMCraft's rule it carries. The map is 81 ported, 55 ours. | `tools/portmap.sh` |
+
 **What held under attack** (the judge's list): every hand figure for allowances,
 extensions, waste, order rounding, sums and "of which assumed"; statuses carried into the
 money from an assumed waste, order factor and pitch; a price not carrying across a change
@@ -1273,6 +1301,13 @@ of unit; negatives, `nan`, `inf`, `1e3` and anything past 1e9 refused; an amount
 half a cent refused; nothing priced printing "none"; a detail not whole refused with its
 line named; a hand-edited derived figure in the file never trusted; save, load, save to
 the same bytes; allowances on a wall, floor, room, duct and pipe; J9-10, J9-11, J9-12.
+
+**The demonstrations after these fixes.** `demos/d1.sh`, `units.sh`, `d3.sh`, `d4.sh`,
+`d4w.sh`, `house.sh` and `d2.sh` were run again and exit 0 (`d4.sh` and `d4w.sh` with their
+expected wording changed for J10-4 and J10-9). Every sheet picture came out byte for byte
+the picture already read. Every model picture differs from the one already read by fewer
+than 100 of its 1.5 million pixels (the renderer is not exactly repeatable), which was
+measured, not looked at again.
 
 **Not reached by the judge:** J9-5 again; J9-4 across storeys; an uncertain storey
 elevation or computation height run (read only); the window; the money path through

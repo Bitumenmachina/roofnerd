@@ -418,7 +418,7 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
                     cell(r, width, true, |c| words(c, fonts, said, 12.5, weight, if d.is_none() { theme::ink_faint() } else { theme::status_ink(status) }));
                 }
                 cell(r, 90.0, true, |c| match e.detail_rate.as_ref().and_then(|d| d.value.map(|x| (x, d))) {
-                    Some((x, d)) => words(c, fonts, format!("${} / {}", view::figure(x, 2), d.unit.trim_start_matches("$/")), 12.5, Weight::Regular, theme::status_ink(d.status)),
+                    Some((x, d)) => words(c, fonts, format!("${} / {}", view::rate(x), d.unit.trim_start_matches("$/")), 12.5, Weight::Regular, theme::status_ink(d.status)),
                     None => words(c, fonts, "", 12.5, Weight::Regular, theme::ink_faint()),
                 });
                 cell(r, 170.0, true, |c| match (e.difference.as_ref().and_then(|d| d.value.map(|x| (x, d.status))), e.difference_percent.as_ref().and_then(|d| d.value)) {
@@ -463,11 +463,15 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
             cell(r, 7.0, false, |c| dot(c, pricing.both.map(|b| b.2).unwrap_or(Status::Unknown)));
             cell(r, 0.0, false, |c| match pricing.both {
                 None => words(c, fonts, "Like for like: no element has both an allowance and a whole detail", 12.5, Weight::Regular, theme::ink_soft()),
-                Some((a, d, status, n)) => {
-                    let diff = d - a;
-                    let word = if diff > 0.0 { "over" } else if diff < 0.0 { "under" } else { "even with" };
-                    let pct = if a != 0.0 { format!(" ({} %)", view::figure(diff / a * 100.0, 2)) } else { String::new() };
-                    words(c, fonts, format!("Like for like, over the {n} with both: allowances ${}, detail ${}: the detail is ${} {word}{pct}", view::figure(a, 2), view::figure(d, 2), view::figure(diff.abs(), 2)), 12.5, Weight::Medium, theme::status_ink(status))
+                Some(((a, _), (d, _), status, n)) => {
+                    let diff = plumbline_world::lines::cents(d - a);
+                    let said = if diff == 0.0 {
+                        "the detail is the same".to_string()
+                    } else {
+                        let pct = if a != 0.0 { format!(" ({} %)", view::figure(diff / a * 100.0, 2)) } else { String::new() };
+                        format!("the detail is ${} {}{pct}", view::figure(diff.abs(), 2), if diff > 0.0 { "over" } else { "under" })
+                    };
+                    words(c, fonts, format!("Like for like, over the {n} with both: allowances ${}, detail ${}: {said}", view::figure(a, 2), view::figure(d, 2)), 12.5, Weight::Medium, theme::status_ink(status))
                 }
             });
         });

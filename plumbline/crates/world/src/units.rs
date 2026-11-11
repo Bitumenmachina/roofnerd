@@ -482,6 +482,17 @@ pub fn parse_price(text: &str, per: &str) -> Result<f64, String> {
             return Err(format!("{text:?} is a price per {unit}, and this is priced per {wanted}; a price does not carry from one unit to another"));
         }
     }
+    // A comma is a thousands mark and nothing else: 1,250 and 12,500.75, never 1,25
+    // (which somewhere means one and a quarter, and would be read a hundred times out).
+    if number.contains(',') {
+        let whole = number.split('.').next().unwrap_or("");
+        let groups: Vec<&str> = whole.split(',').collect();
+        let digits = |g: &str| !g.is_empty() && g.chars().all(|c| c.is_ascii_digit());
+        let ok = number.matches('.').count() <= 1 && !number.split('.').nth(1).is_some_and(|f| f.contains(',')) && groups.len() > 1 && digits(groups[0]) && groups[0].len() <= 3 && groups[1..].iter().all(|g| g.len() == 3 && digits(g));
+        if !ok {
+            return Err(format!("{text:?} has a comma that is not a thousands mark; write thousands as 1,250 or 1250, and a decimal with a point, like 1.25"));
+        }
+    }
     let plain: String = number.chars().filter(|c| *c != ',').collect();
     let value = parse_number(&plain).map_err(|_| format!("{text:?} is not a price; write it as a number of dollars, like 4.25 or $4.25/{wanted}"))?;
     if value < 0.0 {

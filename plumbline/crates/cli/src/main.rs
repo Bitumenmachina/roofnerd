@@ -129,7 +129,7 @@ fn price(job: &mut plumbline_world::Job) -> String {
         Some(d) => match d.value {
             Some(x) if d.unit == "$" => format!("{}{}", d.status.flag().trim_end(), money(x)).trim().to_string(),
             Some(x) if d.unit == "%" => format!("{}{} %", d.status.flag().trim_end(), view::figure(x, 2)).trim().to_string(),
-            Some(x) => format!("{}${} per {}", d.status.flag().trim_end(), view::figure(x, 2), d.unit.trim_start_matches("$/")).trim().to_string(),
+            Some(x) => format!("{}${} per {}", d.status.flag().trim_end(), view::rate(x), d.unit.trim_start_matches("$/")).trim().to_string(),
             None => "no figure".to_string(),
         },
     };
@@ -140,24 +140,35 @@ fn price(job: &mut plumbline_world::Job) -> String {
     for e in &p.elements {
         let _ = writeln!(out, "\n{}  [{:?}]  ({})", e.name, e.kind, e.path);
         if let Some((name, unit, d)) = &e.figure {
-            let _ = writeln!(out, "    priced by its {name}: {}", d.value.map(|x| format!("{}{} {unit}", d.status.flag().trim_end(), view::figure(x, 2))).unwrap_or_else(|| format!("no figure ({})", d.note)));
+            let _ = writeln!(out, "    priced by its {name}: {}", d.value.map(|x| format!("{}{} {unit}", d.status.flag().trim_end(), view::figure(x, 2))).unwrap_or_else(|| format!("no figure ({})", if d.note.is_empty() { "a value it is worked out from is not known" } else { d.note.as_str() })));
         }
         let rate = e.rate.as_ref().map(|r| match r.value {
-            Some(x) => format!(" at {}${} per {}", r.status.flag().trim_end(), view::figure(x, 2), r.unit.trim_start_matches("$/")),
+            Some(x) => format!(" at {}${} per {}", r.status.flag().trim_end(), view::rate(x), r.unit.trim_start_matches("$/")),
             None => format!(" (rate not known: {})", r.source),
         });
         let _ = writeln!(out, "    allowance   {}{}", amount(&e.allowance), rate.unwrap_or_default());
         let _ = writeln!(out, "    detail      {}{}", amount(&e.detail), e.detail_rate.as_ref().filter(|d| d.value.is_some()).map(|d| format!(", which is {}", amount(&Some(d.clone())))).unwrap_or_default());
-        if let Some(d) = e.detail.as_ref().filter(|d| d.value.is_none()) {
-            let _ = writeln!(out, "      ? {}", d.note);
+        if let Some(d) = e.detail.as_ref().filter(|d| d.value.is_none() || !d.note.is_empty()) {
+            let _ = writeln!(out, "      {} {}", if d.value.is_none() { "?" } else { "!" }, d.note);
+        }
+        // A detail with a figure and no rate: the rate was refused, and says why.
+        if let (Some(d), Some(r)) = (&e.detail, &e.detail_rate) {
+            if d.value.is_some() && r.value.is_none() {
+                let _ = writeln!(out, "      ? it is not given as a rate: {}", r.note);
+            }
         }
         if let Some(d) = e.allowance.as_ref().filter(|d| d.value.is_none()) {
             let _ = writeln!(out, "      ? {}", d.note);
         }
         if let (Some(diff), Some(pct)) = (&e.difference, &e.difference_percent) {
             if let Some(x) = diff.value {
-                let word = if x > 0.0 { "over" } else if x < 0.0 { "under" } else { "the same as" };
-                let _ = writeln!(out, "    the detail is {}{} {word} the allowance{}", diff.status.flag().trim_end(), money(x.abs()), pct.value.map(|v| format!(" ({} %)", view::figure(v, 2))).unwrap_or_default());
+                let flag = diff.status.flag().trim_end();
+                if x == 0.0 {
+                    let _ = writeln!(out, "    the detail is {flag}the same as the allowance");
+                } else {
+                    let word = if x > 0.0 { "over" } else { "under" };
+                    let _ = writeln!(out, "    the detail is {flag}{} {word} the allowance{}", money(x.abs()), pct.value.map(|v| format!(" ({}{} %)", pct.status.flag().trim_end(), view::figure(v, 2))).unwrap_or_default());
+                }
             }
         }
     }
@@ -181,14 +192,33 @@ fn price(job: &mut plumbline_world::Job) -> String {
     };
     out.push_str("\nThe job\n");
     out.push_str(&total("allowances", &p.allowance, "an allowance that comes to a figure"));
+    // What each total does not cover at all, by name: a total says what it leaves out.
+    let named = |list: Vec<&view::PricedElement>| list.iter().map(|e| e.path.clone()).collect::<Vec<_>>().join(", ");
+    let no_allowance: Vec<&view::PricedElement> = p.elements.iter().filter(|e| e.rate.is_none()).collect();
+    if !no_allowance.is_empty() {
+        let _ = writeln!(out, "             ? no allowance entered on {} element{} with cost lines: {}", no_allowance.len(), if no_allowance.len() == 1 { "" } else { "s" }, named(no_allowance));
+    }
     out.push_str(&total("detail", &p.detail, "a detail that is whole"));
+    let no_lines: Vec<&view::PricedElement> = p.elements.iter().filter(|e| e.detail.is_none()).collect();
+    if !no_lines.is_empty() {
+        let _ = writeln!(out, "             ? no cost line on {} element{} with an allowance: {}", no_lines.len(), if no_lines.len() == 1 { "" } else { "s" }, named(no_lines));
+    }
     match p.both {
         None => out.push_str("  like for like: no element has both an allowance and a whole detail to compare\n"),
         Some((a, d, status, n)) => {
-            let diff = d - a;
-            let word = if diff > 0.0 { "over" } else if diff < 0.0 { "under" } else { "the same as" };
-            let pct = if a != 0.0 { format!(" ({} %)", view::figure(diff / a * 100.0, 2)) } else { String::new() };
-            let _ = writeln!(out, "  like for like, over the {n} element{} that have both: allowances {}, detail {}: the detail is {}{} {word}{pct}", if n == 1 { "" } else { "s" }, money(a), money(d), status.flag().trim_end(), money(diff.abs()));
+            // Each amount carries its own flag, and the difference and the percentage the
+            // worse of the two.
+            let (fa, fd) = (a.1.flag().trim_end().to_string(), d.1.flag().trim_end().to_string());
+            let (a, d) = (a.0, d.0);
+            let diff = plumbline_world::lines::cents(d - a);
+            let flag = status.flag().trim_end();
+            let said = if diff == 0.0 {
+                format!("the detail is {flag}the same")
+            } else {
+                let pct = if a != 0.0 { format!(" ({flag}{} %)", view::figure(diff / a * 100.0, 2)) } else { String::new() };
+                format!("the detail is {flag}{} {}{pct}", money(diff.abs()), if diff > 0.0 { "over" } else { "under" })
+            };
+            let _ = writeln!(out, "  like for like, over the {n} element{} that have both: allowances {fa}{}, detail {fd}{}: {said}", if n == 1 { "" } else { "s" }, money(a), money(d));
         }
     }
     if !p.not_priced.is_empty() {
@@ -227,7 +257,7 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
         };
         let at = match l.unit_cost.as_ref() {
             Some(v) => match v.value {
-                Some(x) => format!("{}${}/{}", v.status.flag().trim_end(), view::figure(x, 2), v.unit.trim_start_matches("$/")),
+                Some(x) => format!("{}${}/{}", v.status.flag().trim_end(), view::rate(x), v.unit.trim_start_matches("$/")),
                 None => "no price".to_string(),
             },
             None => "no price".to_string(),
@@ -250,6 +280,8 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
         }
         if l.amount.value.is_none() {
             let _ = writeln!(out, "      ? {}", l.amount.note);
+        } else if !l.amount.note.is_empty() {
+            let _ = writeln!(out, "      ! {}", l.amount.note);
         }
     }
     let col = |c: Column| est.columns.iter().find(|x| x.0 == c).map(|x| &x.1);

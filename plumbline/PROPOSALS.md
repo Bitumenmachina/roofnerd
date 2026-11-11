@@ -43,3 +43,22 @@ Work outside a deliverable. Nothing here is built until the owner accepts it.
     join what meets it, as BIMCraft has it, so the two supply trunks off one air handler
     are two networks. Whether a unit's supply connectors are one network is a rule this
     market's estimators would have a view on.
+
+12. **Class adders and bond.** The earlier estimating program in this repository adds
+    sales tax and escalation on material, burden on labor and on supervision (each at its
+    own rate), general liability on subcontract, and bond on the contract amount
+    (`packages/engine/src/recap.ts`). The brief's D5 asks for overhead and profit, and
+    those are what is built. A real price needs the rest; none has a default there, and
+    none would here.
+13. **Production by the crew-day.** A foreman says forty squares a day with a crew of
+    six. The earlier program takes a rate that way (`model.ts`, `perManHour`); it needs
+    the crew and the hours in a day entered. Here a rate is so many to the man-hour, or
+    hours to each.
+14. **Pricing the job at a chosen supplier.** The sheet shows the generic price and each
+    supplier's side by side; the recap is at the generic price. Choosing one supplier (or
+    the best quote for each material) to price the job by is not asked for.
+15. **A second material on one element.** An element is made of one material, and its
+    lines are either made of that or carry a price of their own. Underlayment on a copper
+    roof carries its own price and so is not compared across suppliers.
+16. **Equipment and Other as classes of cost.** The earlier program has them; the brief
+    names material, labor, fabrication, supervision, subcontract and general conditions.
