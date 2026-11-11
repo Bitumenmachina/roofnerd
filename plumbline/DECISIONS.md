@@ -700,3 +700,124 @@ detection is in neither. Its sizing and code checks follow Brazilian standards (
   the machine first, indexes first; then the scored landscape (this file's own table);
   then the web, with a thin result followed up before anything is written from memory.
 
+
+### 29. The building model re-based on BIMCraft: what each thing becomes (2026-11-11)
+The mapping asked for by `HANDOFF_REBASE.md`, written before any model code. BIMCraft is
+at `f202abd85d1c` beside this repository; paths are under its `crates/core/src/`.
+
+**What was read, whole unless a range is given.** `network.rs` (428 lines); `runs.rs`
+(719); `rooms.rs` (252); `walls.rs` 1 to 420 (the axis, the faces, the arms round a node,
+the caps, the centre line, the outline); `geom.rs` 336 to 620 (line crossings, the split,
+the faces of a planar graph, `Region`, `region_in`); `family.rs` 28 to 160 and 300 to 510
+(categories and their kinds, connectors); `model.rs` 124 to 180 (`Level`), 240 to 300
+(`Wall`), 340 to 440 (`Location`, `Function`, `Layer`), 560 to 606 (`Floor`), 806 to 905
+(`Opening`, `Room`), 1540 to 1637 (`Justify`, `Run`, `Component`), 2110 to 2175
+(`Element`), 2405 to 2505 (the type structs), 2590 to 2622 (`Types`), 2680 to 2722
+(`RoomArea`), 3300 to 3345 (`component_connectors`), 3780 to 3945 (levels, a wall's base
+and top, what bounds a room), 4168 to 4200 (`opening_dims`), 4990 to 5015 (`run_geom`),
+5784 to 5947 (bounding lines), 5860 to 5880, 6660 to 6720 (the check of a door or window
+in its host); `schedule.rs` 940 to 975; `openings_past_top_tests.rs` 1 to 60;
+`ifc/classes.rs` 1 to 25 and its fitting rows; `docs/areas/structure-and-mep.md` for the
+network and connectors.
+
+**The three things the handoff listed as not known.**
+* *Are the ten system classifications IFC's?* **No.** IFC4 ADD2 TC1's
+  `IfcDistributionSystemEnum` has 44 values: AIRCONDITIONING, AUDIOVISUAL, CHEMICAL,
+  CHILLEDWATER, COMMUNICATION, COMPRESSEDAIR, CONDENSERWATER, CONTROL, CONVEYING, DATA,
+  DISPOSAL, DOMESTICCOLDWATER, DOMESTICHOTWATER, DRAINAGE, EARTHING, ELECTRICAL,
+  ELECTROACOUSTIC, EXHAUST, FIREPROTECTION, FUEL, GAS, HAZARDOUS, HEATING, LIGHTING,
+  LIGHTNINGPROTECTION, MUNICIPALSOLIDWASTE, OIL, OPERATIONAL, POWERGENERATION, RAINWATER,
+  REFRIGERATION, SECURITY, SEWAGE, SIGNAL, STORMWATER, TELEPHONE, TV, VACUUM, VENT,
+  VENTILATION, WASTEWATER, WATERSUPPLY, USERDEFINED, NOTDEFINED. Read from the
+  enumeration's declaration in IfcOpenShell's `src/ifcparse/schemas/Ifc4-schema.cpp` at
+  `75390dab` (its header: "generated from IFC4_ADD2_TC1.exp"; the file was read, nothing
+  of it is copied or linked), with each value's definition from buildingSMART's own
+  `IFC4.3.x-development` at `424cadb1`,
+  `docs/schemas/shared/IfcSharedBldgServiceElements/Types/IfcDistributionSystemEnum.md`.
+  buildingSMART's published pages refuse an automated fetch (HTTP 403); BIMCraft does not
+  hold the enumeration (`grep -rn DOMESTICCOLDWATER` over its tree: nothing), and writes a
+  plain `IFCSYSTEM` (`ifc.rs:1544`).
+  This program's ten are names an estimator reads, and stay. Six have a value of IFC's
+  that says the same thing: Exhaust Air is EXHAUST, Refrigerant is REFRIGERATION,
+  Domestic Cold Water is DOMESTICCOLDWATER, Domestic Hot Water is DOMESTICHOTWATER, Vent
+  is VENT, Lighting is LIGHTING. Power is ELECTRICAL ("a circuit for delivering electrical
+  power"). IFC does not split supply air from return air: both are AIRCONDITIONING
+  ("conditioned air distribution"), and the split is kept here as the name. Sanitary is
+  SEWAGE ("sewage collection system"). The IFC value is what D6's export will write; it
+  is not in the code until the writer is.
+  *Are they Revit's?* **Partly checked.** Autodesk's API reference has an enumeration
+  `MEPSystemClassification` whose members include `SupplyAir` ("a supply air duct system")
+  and `ReturnAir`
+  (https://help.autodesk.com/cloudhelp/2026/ENU/Revit-API-MainReference/files/html/43ec0d75-d6bb-2d08-a920-9715e83040e7.htm,
+  as a search returned it; the page itself would not load here). The other eight were not
+  seen there. Call 26's sentence that the names are "Revit's system classifications" is
+  therefore withdrawn for those eight: they are the trade's words, and nothing more is
+  claimed for them.
+* *What does BIMCraft do where a run meets another with no fitting?* End to end, they are
+  one node and nothing is said (`network.rs:206` to 237: points within the tolerance are
+  one node; a node is open only when one thing is at it, `network.rs:416`). An end on
+  another pipe's length is a node that splits that pipe into two edges without splitting
+  the element, and a warning, `joined_mid_run` (`network.rs:238` to 281, 356 to 371). It
+  never refuses a model.
+* *How do door and window types carry width and height?* `OpeningType { width, height,
+  sill, operation }` (`model.rs:2493`), held by name in `Types.door` and `Types.window`
+  (`model.rs:2598`); an opening of a family takes them from the family's `Width` and
+  `Height` instead (`opening_dims`, `model.rs:4174`).
+
+**What each thing becomes.** BIMCraft holds types in maps by name and points at levels and
+hosts by Guid. Here a thing is an element with a path, and its place in the tree says what
+it stands on (kept: handoff section 7, item 8). So a BIMCraft `level` or `host` field is
+the element's parent, and a BIMCraft `type` name is the path of a type element.
+
+| BIMCraft | Here | What changes in the port |
+|---|---|---|
+| `Level` (`model.rs:131`) | `pl::level` on a storey: `elevation`, `computation_height`; `height` (the storey's, ours) stays | view range, crop, extent, graphics are drawing and are not taken |
+| `WallType`, `Layer`, `Function` (`2417`, `421`, `408`) | a new kind of element, **Type**, carrying `pl::wall_type`: `thickness`, `layers` | a layer's id and Guid go (a path names things here); `variable` is a floor's and is not taken |
+| `Wall` (`249`) | `pl::wall`: `type`, `line` (its `start` and `end`, one flagged value), `top_level`, `height`, `base_offset`, `top_offset`, `location`, `room_bounding`, `join` | `arc`, `attach_top`, `attach_base`, `params` are not taken (PROPOSALS 7); `level` is the parent storey; thickness moves to the type |
+| `OpeningType` (`2493`) | `pl::opening_type` on a Type: `category` (door or window, the name of BIMCraft's map), `width`, `height` | `sill` (a default for drawing) and `operation` are not taken |
+| `Opening` (`827`) | `pl::opening`: `type`, `offset` (to its **centre**, from the wall line's start, as BIMCraft has it), `sill` | `host` is the parent wall; width and height move to the type; `family`, `mark`, the two flips and `params` are not taken |
+| `FloorType` (`2426`), `Floor` (`567`) | `pl::floor_type` on a Type; `pl::floor`: `type`, `boundary`, `offset` | openings in a floor, slope, shape and sketch are not taken (PROPOSALS 7) |
+| `RunType` (`2467`) | `pl::run_type` on a Type: `category` (the key of BIMCraft's `runs` map), `width`, `depth`, `round` | `material` is not taken: a material here is a condition (call 26) |
+| `Run` (`1588`), `Justify` (`1551`), `runs::Geom` (`runs.rs:81`) | `pl::run`: `type`, `line` (plan `start` and `end`), `offset`, `end_offset`, `justify`, `join`. **One straight piece.** Heights are above its storey, as BIMCraft's are above its level | `system` stays a component of its own pointing at a system element (kept: item 5); `params` not taken |
+| `Component` (`1616`) | `pl::placed` on equipment, a fixture or a fitting: `what`, `at` (plan), `offset` above its storey, `angle`, `size` | `family` and `type` become `what` and `size`: families as a system are outside the fence; `mirrored` and `params` not taken |
+| `Connector`, `ConnectorKind`, `Domain`, `Flow` (`family.rs:430`, `350`, `367`, `380`) | `pl::connectors` on the placed thing itself: `name`, `kind`, `domain`, `flow`, `at`, `size` | on the element, not on a family; `at` and `size` are values, not formulas; a kind is added for ducts and one for conduit, which BIMCraft's network does not have yet (its doc: "Conduits and the other electrical runs are not in it yet"); the electrical load fields are sizing and are not taken |
+| pipe fitting kinds (`family.rs:132`) | a new kind of element, **Fitting**, carrying `pl::fitting`: `kind` of bend, tee, cross, transition, coupling | the same five for every kind of run; IFC4 has the same list for pipe and duct fittings (`ifc/classes.rs:140`, `244`) |
+| `network` and its types (`network.rs`) | `network`: nodes, edges, groups, open ends, warnings, for the runs of every kind | lengths in feet; a tolerance restated in feet; a run's system is a path; each kind of run joins its own kind; nothing here is a refusal there, and nothing is here |
+| `Room`, `RoomArea`, `Unbound` (`852`, `2687`, `303`), `rooms.rs`, `geom::faces`, `Region`, `region_in` | a new kind of element, **Room**, carrying `pl::room`: `point`, `number`. Its boundary is the smallest loop of bounding walls round its point, less islands; its area and perimeter are figures | found among every wall each time (BIMCraft's own tested twin of its indexed search); `frozen`, `kept`, `colour`, heights not taken; **both** measures are given as figures (inside the wall faces, and to the centre lines) where BIMCraft has a project setting |
+| wall joins (`walls.rs:213` to 394) | the arms round a node, the cap, the centre line run on to its neighbours', the outline | straight walls only; no index; the compound butt corner (`walls/compound.rs`) is drawing and is not taken |
+
+**Three kinds of element are new: Type, Fitting, Room.** The fence allows a room and what
+fittings need. A type is the third, and is there because the fence's own "run type" has to
+live somewhere, and in this world the only place anything lives is an element: it has a
+path, each of its values is flagged and sourced, and it is saved like anything else.
+
+**What is ours on top, and stays** (handoff section 7): every value a `Val`; lengths held
+as entered, so BIMCraft's millimetres are not adopted and each of its tolerances is
+restated in feet with a test on it; every figure worked out in the world with the worst
+status of its inputs; net wall area; systems as elements; the takeoff by system; what is
+not drawn listed with why; paths; the saved job.
+
+**Where this program's rule differs from BIMCraft's, on purpose.**
+* *An opening taller than its wall.* BIMCraft cuts the wall to its top and lets the
+  opening keep its size (`model.rs:6688`, `openings_past_top_tests.rs`), as Revit does.
+  Here the wall is refused a net area and the opening is listed as not cut, with the
+  reason (eighth judgment). That stands: net area is this program's figure, not
+  BIMCraft's, and a window taller than its wall in a takeoff is far more often a slip
+  than a notch. The gross face still stands.
+* *A run with no type.* BIMCraft has no geometry for it (`run_geom` is `None`,
+  `model.rs:4998`). Here it still has its length, and is on a takeoff line of its own
+  (kept: item 6).
+
+**What a run becomes, and what happens to the figures.** A `pl::route` of n points becomes
+n − 1 runs, each one straight piece, and a bend fitting at each corner. A fitting is
+placed at the joint: pipe and duct are measured through their fittings, centre to centre,
+so **each system's length does not move**. The count of runs goes up to the count of
+straight pieces. "Bends", which was a count of corners in a centre line, goes: what it
+counted is now the bend fittings, which are elements. A size is entered once, on a type,
+and a takeoff line is the runs of one type's size.
+
+**Tolerances restated.** BIMCraft's `TOL` is 1 mm (`model.rs:47`) and its network
+tolerance 1 mm (`network.rs:23`). Here both are this program's fit tolerance,
+`FIT_TOLERANCE_FT`, 0.01 ft (about 1/8 in), which is already what a line has to fit its
+planes by (Q9). BIMCraft's cut height for finding a room's walls, 1200 mm
+(`model.rs:43`), is 4 ft here: a decision, and a level can say otherwise.
