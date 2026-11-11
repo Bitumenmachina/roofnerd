@@ -33,17 +33,13 @@ use crate::value::{Derived, Status, Val};
 use crate::view::{self, Row, Sum};
 
 pub mod model;
+pub mod runs;
 pub mod walls;
 
 pub use model::*;
 
 /// A point in space: east, north, height above the datum.
 pub type P3 = [f64; 3];
-
-/// A turn in a centre line sharper than this many degrees is a bend: a fitting.
-pub const BEND_DEGREES: f64 = 1.0;
-/// A cross-section beyond this (in feet) is a typing error.
-pub const MAX_SECTION_FT: f64 = 20.0;
 
 pub const K_LEVEL: &str = "pl::level";
 pub const K_WALL: &str = "pl::wall";
@@ -52,96 +48,12 @@ pub const K_OPENING: &str = "pl::opening";
 pub const K_OPENING_TYPE: &str = "pl::opening_type";
 pub const K_FLOOR: &str = "pl::floor";
 pub const K_FLOOR_TYPE: &str = "pl::floor_type";
-pub const K_ROUTE: &str = "pl::route";
-pub const K_SIZE: &str = "pl::size";
+pub const K_SEGMENT: &str = "pl::segment";
+pub const K_SEGMENT_TYPE: &str = "pl::segment_type";
+pub const K_FITTING: &str = "pl::fitting";
 pub const K_PLACED: &str = "pl::placed";
 pub const K_SYSTEM: &str = "pl::system";
 pub const K_IN_SYSTEM: &str = "pl::in_system";
-
-/// `pl::route`: the centre line of a duct, pipe, conduit or cable, point to point in space.
-#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Route {
-    pub points: Val<Vec<P3>>,
-}
-
-impl Route {
-    pub fn points_ft(&self) -> Option<Vec<P3>> {
-        let d = units::coord_divisor(&self.points.unit).ok()?;
-        self.points.value.as_ref().map(|pts| pts.iter().map(|p| [p[0] / d, p[1] / d, p[2] / d]).collect())
-    }
-}
-
-/// `pl::size`: the cross-section of a route. Round by its diameter, or rectangular by its
-/// width and depth. One or the other.
-#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Size {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub diameter: Option<Val<Len>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub width: Option<Val<Len>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub depth: Option<Val<Len>>,
-}
-
-impl Size {
-    pub fn round(diameter: Val<Len>) -> Size {
-        Size { diameter: Some(diameter), width: None, depth: None }
-    }
-    pub fn rectangular(width: Val<Len>, depth: Val<Len>) -> Size {
-        Size { diameter: None, width: Some(width), depth: Some(depth) }
-    }
-    /// The worst status among the dimensions it has.
-    pub fn status(&self) -> Status {
-        [&self.diameter, &self.width, &self.depth].into_iter().flatten().map(|v| v.status).max().unwrap_or(Status::Unknown)
-    }
-    /// The diameter in feet, for a round section with one.
-    pub fn round_ft(&self) -> Option<f64> {
-        self.diameter.as_ref().and_then(|d| d.feet())
-    }
-    /// Width and depth in feet, for a rectangular section with both.
-    pub fn rect_ft(&self) -> Option<(f64, f64)> {
-        self.width.as_ref().and_then(|w| w.feet()).zip(self.depth.as_ref().and_then(|d| d.feet()))
-    }
-    /// How far it is round the section, in feet.
-    pub fn perimeter_ft(&self) -> Option<f64> {
-        self.round_ft().map(|d| std::f64::consts::PI * d).or_else(|| self.rect_ft().map(|(w, d)| 2.0 * (w + d)))
-    }
-    /// The size as it is said: `3/4"`, `16" × 8"`, or that it is not known.
-    pub fn said(&self) -> String {
-        let one = |v: &Val<Len>| v.value.as_ref().map(|len| units::show_length(len, &v.unit));
-        match (&self.diameter, &self.width, &self.depth) {
-            (Some(d), _, _) => one(d).map(|s| format!("{s} round")).unwrap_or_else(|| "size unknown".into()),
-            (None, Some(w), Some(d)) => match (one(w), one(d)) {
-                (Some(w), Some(d)) => format!("{w} × {d}"),
-                _ => "size unknown".into(),
-            },
-            _ => "size unknown".into(),
-        }
-    }
-}
-
-/// `pl::placed`: on Equipment or a Fixture. What it is, where the middle of its base is,
-/// and how big it is: east-west, north-south, and tall.
-#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Placed {
-    pub what: Val<String>,
-    pub at: Val<P3>,
-    pub size: Val<P3>,
-}
-
-impl Placed {
-    pub fn at_ft(&self) -> Option<P3> {
-        let d = units::coord_divisor(&self.at.unit).ok()?;
-        self.at.value.map(|p| p.map(|x| x / d))
-    }
-    pub fn size_ft(&self) -> Option<P3> {
-        let d = units::coord_divisor(&self.size.unit).ok()?;
-        self.size.value.map(|p| p.map(|x| x / d))
-    }
-}
 
 /// Whose work an element is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -180,21 +92,22 @@ pub const CLASSIFICATIONS: [(&str, Discipline); 10] = [
 pub struct InSystem(pub Val<String>);
 
 impl Kind {
-    /// A centre line with a size: a duct, a pipe, a conduit or a cable.
-    pub fn is_route(self) -> bool {
+    /// A straight piece with a section: a duct, a pipe, a conduit or a cable.
+    pub fn is_segment(self) -> bool {
         matches!(self, Kind::Duct | Kind::Pipe | Kind::Conduit | Kind::Cable)
     }
     pub fn is_opening(self) -> bool {
         matches!(self, Kind::Door | Kind::Window)
     }
+    /// A thing set at a place: equipment, a fixture, or a fitting.
     pub fn is_placed(self) -> bool {
-        matches!(self, Kind::Equipment | Kind::Fixture)
+        matches!(self, Kind::Equipment | Kind::Fixture | Kind::Fitting)
     }
     /// Whose work an element of this kind is when it belongs to no system.
     pub fn discipline(self) -> Discipline {
         match self {
             Kind::Duct => Discipline::Mechanical,
-            Kind::Pipe => Discipline::Plumbing,
+            Kind::Pipe | Kind::Fitting => Discipline::Plumbing,
             Kind::Conduit | Kind::Cable => Discipline::Electrical,
             _ => Discipline::Architecture,
         }
@@ -228,65 +141,6 @@ pub(crate) fn usable(what: &str, xs: &[f64], divisor: f64) -> Result<(), String>
     Ok(())
 }
 
-pub fn check_route(path: &str, kind: Kind, r: &Route) -> Result<(), String> {
-    if !kind.is_route() {
-        return Err(format!("{path}: a {kind:?} cannot carry a centre line; only a duct, a pipe, a conduit or a cable can"));
-    }
-    let d = coords(&format!("{path} centre line"), &r.points)?;
-    if let Some(pts) = &r.points.value {
-        if pts.len() < 2 {
-            return Err(format!("{path} centre line: has {} point(s); a run goes from one point to another", pts.len()));
-        }
-        for (i, p) in pts.iter().enumerate() {
-            usable(&format!("{path} centre line"), p, d)?;
-            if i > 0 && *p == pts[i - 1] {
-                return Err(format!("{path} centre line: points {i} and {} are the same point", i + 1));
-            }
-        }
-    }
-    Ok(())
-}
-
-pub fn check_size(path: &str, kind: Kind, s: &Size) -> Result<(), String> {
-    if !kind.is_route() {
-        return Err(format!("{path}: a {kind:?} cannot carry a cross-section; only a duct, a pipe, a conduit or a cable can"));
-    }
-    match (&s.diameter, &s.width, &s.depth) {
-        (Some(_), None, None) | (None, Some(_), Some(_)) => {}
-        _ => return Err(format!("{path} size: is round, by a diameter, or rectangular, by a width and a depth; it has to be one or the other")),
-    }
-    for (name, v) in [("diameter", &s.diameter), ("width", &s.width), ("depth", &s.depth)] {
-        let Some(v) = v else { continue };
-        positive(&format!("{path} {name}"), v, false)?;
-        if v.feet().is_some_and(|x| x > MAX_SECTION_FT) {
-            return Err(format!("{path} {name}: is over {MAX_SECTION_FT} ft across; that is not a duct or a pipe"));
-        }
-    }
-    Ok(())
-}
-
-pub fn check_placed(path: &str, kind: Kind, p: &Placed) -> Result<(), String> {
-    if !kind.is_placed() {
-        return Err(format!("{path}: a {kind:?} cannot carry a placement; only equipment or a fixture can"));
-    }
-    p.what.check(&format!("{path} what it is"), "")?;
-    if p.what.value.as_ref().is_some_and(|s| s.trim().is_empty()) {
-        return Err(format!("{path} what it is: is blank; mark it Unknown if nobody has it"));
-    }
-    let d = coords(&format!("{path} position"), &p.at)?;
-    if let Some(at) = &p.at.value {
-        usable(&format!("{path} position"), at, d)?;
-    }
-    let d = coords(&format!("{path} size"), &p.size)?;
-    if let Some(size) = &p.size.value {
-        usable(&format!("{path} size"), size, d)?;
-        if size.iter().any(|x| *x <= 0.0) {
-            return Err(format!("{path} size: each of its three dimensions must be more than zero"));
-        }
-    }
-    Ok(())
-}
-
 pub fn check_system(path: &str, kind: Kind, s: &SystemInfo) -> Result<(), String> {
     if kind != Kind::System {
         return Err(format!("{path}: a {kind:?} cannot carry a system's description; only a system can"));
@@ -299,8 +153,8 @@ pub fn check_system(path: &str, kind: Kind, s: &SystemInfo) -> Result<(), String
 }
 
 pub fn check_in_system(path: &str, kind: Kind, s: &InSystem) -> Result<(), String> {
-    if !(kind.is_route() || kind.is_placed()) {
-        return Err(format!("{path}: a {kind:?} cannot belong to a system; a duct, a pipe, a conduit, a cable, equipment or a fixture can"));
+    if !(kind.is_segment() || kind.is_placed()) {
+        return Err(format!("{path}: a {kind:?} cannot belong to a system; a duct, a pipe, a conduit, a cable, equipment, a fixture or a fitting can"));
     }
     s.0.check(&format!("{path} system"), "")?;
     if s.0.value.as_ref().is_some_and(|p| p.trim().is_empty()) {
@@ -319,13 +173,14 @@ pub(crate) struct Tree {
     pub(crate) wall_types: HashMap<String, WallType>,
     pub(crate) floor_types: HashMap<String, FloorType>,
     pub(crate) opening_types: HashMap<String, OpeningType>,
+    pub(crate) segment_types: HashMap<String, SegmentType>,
 }
 
 impl Tree {
     pub(crate) fn of(world: &mut World) -> Tree {
-        let mut t = Tree { parents: HashMap::new(), kinds: HashMap::new(), names: HashMap::new(), levels: HashMap::new(), wall_types: HashMap::new(), floor_types: HashMap::new(), opening_types: HashMap::new() };
-        let mut q = world.query::<(&Node, &Kind, Option<&Level>, Option<&WallType>, Option<&FloorType>, Option<&OpeningType>)>();
-        for (node, kind, level, wall, floor, opening) in q.iter(world) {
+        let mut t = Tree { parents: HashMap::new(), kinds: HashMap::new(), names: HashMap::new(), levels: HashMap::new(), wall_types: HashMap::new(), floor_types: HashMap::new(), opening_types: HashMap::new(), segment_types: HashMap::new() };
+        let mut q = world.query::<(&Node, &Kind, Option<&Level>, Option<&WallType>, Option<&FloorType>, Option<&OpeningType>, Option<&SegmentType>)>();
+        for (node, kind, level, wall, floor, opening, segment) in q.iter(world) {
             let p = node.path.clone();
             t.parents.insert(p.clone(), node.parent.clone());
             t.kinds.insert(p.clone(), *kind);
@@ -342,6 +197,9 @@ impl Tree {
                 }
                 if let Some(c) = opening {
                     t.opening_types.insert(p.clone(), c.clone());
+                }
+                if let Some(c) = segment {
+                    t.segment_types.insert(p.clone(), c.clone());
                 }
             }
         }
@@ -380,14 +238,14 @@ pub(crate) fn typed<'a, T>(table: &'a HashMap<String, T>, r: &'a Val<String>, wh
 }
 
 /// What can only be checked once every element is in: an opening is under a wall, a wall
-/// and a floor are under a storey, a type is under the job and says what it is a type of,
+/// and a floor are under a storey, a run and a placed thing are under a storey too, a type is under the job and says what it is a type of,
 /// a type named is a type of the right sort, a top level named is a storey, and a system
 /// named is a system in the job.
 pub fn check_whole(job: &mut Job) -> Result<(), String> {
     let tree = Tree::of(&mut job.world);
     let kinds = &tree.kinds;
-    let mut q = job.world.query::<(&Node, &Kind, Option<&InSystem>, Option<&Wall>, Option<&Opening>, Option<&Floor>)>();
-    for (node, kind, in_system, wall, opening, floor) in q.iter(&job.world) {
+    let mut q = job.world.query::<(&Node, &Kind, Option<&InSystem>, Option<&Wall>, Option<&Opening>, Option<&Floor>, Option<&Segment>)>();
+    for (node, kind, in_system, wall, opening, floor, segment) in q.iter(&job.world) {
         let me = &node.path;
         let parent = node.parent.as_ref().and_then(|p| kinds.get(p)).copied();
         if kind.is_opening() && parent != Some(Kind::Wall) {
@@ -403,9 +261,9 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
             if parent != Some(Kind::Job) {
                 return Err(format!("{me}: a type belongs to the whole job and has to be directly under it, not under {}", node.parent.as_deref().unwrap_or("nothing")));
             }
-            let sorts = [tree.wall_types.contains_key(me), tree.floor_types.contains_key(me), tree.opening_types.contains_key(me)].into_iter().filter(|x| *x).count();
+            let sorts = [tree.wall_types.contains_key(me), tree.floor_types.contains_key(me), tree.opening_types.contains_key(me), tree.segment_types.contains_key(me)].into_iter().filter(|x| *x).count();
             if sorts != 1 {
-                return Err(format!("{me}: a type is one sort of type (of a wall, a floor, a door or a window); this one carries {sorts}"));
+                return Err(format!("{me}: a type is one sort of type (of a wall, a floor, a door or a window, or a run); this one carries {sorts}"));
             }
         }
         if let Some(named) = in_system.and_then(|s| s.0.value.as_ref()) {
@@ -437,6 +295,17 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
                 return Err(format!("{me}: its type is {p:?}, which is not a floor type in this job"));
             }
         }
+        if let Some(p) = segment.and_then(|r| r.type_name.value.as_ref()) {
+            match tree.segment_types.get(p) {
+                None => return Err(format!("{me}: its type is {p:?}, which is not a run type in this job")),
+                Some(t) if t.category != *kind => return Err(format!("{me}: is a {kind:?}, but its type, {p}, is a {:?}'s", t.category)),
+                Some(_) => {}
+            }
+        }
+        // A run's heights and a placed thing's are above the storey it is under.
+        if (kind.is_segment() || kind.is_placed()) && tree.storey_of(me).is_none() {
+            return Err(format!("{me}: a {kind:?} is set at a height above a storey and has to be under one"));
+        }
     }
     Ok(())
 }
@@ -447,22 +316,6 @@ const NOT_CONVERTED: &str = "is in a unit this program does not convert";
 
 fn feet_text(name: &str, v: &Val<Len>) -> String {
     units::to_feet_text(name, &v.unit)
-}
-
-fn dist3(a: P3, b: P3) -> f64 {
-    ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2) + (b[2] - a[2]).powi(2)).sqrt()
-}
-
-/// How many corners a centre line has: turns sharper than `BEND_DEGREES`.
-fn bends(pts: &[P3]) -> usize {
-    let limit = BEND_DEGREES.to_radians().cos();
-    (1..pts.len().saturating_sub(1))
-        .filter(|&i| {
-            let (u, v) = ([pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]], [pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1], pts[i + 1][2] - pts[i][2]]);
-            let (lu, lv) = (dist3([0.0; 3], u), dist3([0.0; 3], v));
-            lu > 0.0 && lv > 0.0 && (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / (lu * lv) < limit
-        })
-        .count()
 }
 
 /// One opening as its wall sees it: where it starts and ends along the wall, its sill and
@@ -621,8 +474,8 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
         }
     }
 
-    let mut q = world.query::<(&Node, &Kind, Option<&Wall>, Option<&Floor>, Option<&Route>, Option<&Size>)>();
-    for (node, kind, wall, floor, route, size) in q.iter(world) {
+    let mut q = world.query::<(&Node, &Kind, Option<&Wall>, Option<&Floor>, Option<&Segment>)>();
+    for (node, kind, wall, floor, segment) in q.iter(world) {
         let me = &node.path;
         let mut m = BTreeMap::new();
         match kind {
@@ -718,40 +571,49 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                     },
                 );
             }
-            k if k.is_route() => {
-                let input = [format!("{me}#{K_ROUTE}")];
-                let f_len = format!("the lengths of the centre line's segments, in space, added up{}", route.filter(|r| r.points.unit == units::IN).map(|_| " ÷ 12 (entered in inches)").unwrap_or_default());
-                let f_bends = format!("corners in the centre line (a turn of more than {BEND_DEGREES}°)");
-                let pts = route.and_then(|r| r.points_ft());
-                let length = pts.as_ref().map(|p| p.windows(2).map(|s| dist3(s[0], s[1])).sum::<f64>());
-                let why = match route {
-                    None => Some("no centre line entered".to_string()),
-                    Some(r) if r.points.value.is_some() && pts.is_none() => Some(format!("the centre line {NOT_CONVERTED}")),
-                    _ => None,
+            k if k.is_segment() => {
+                let input = [format!("{me}#{K_SEGMENT}")];
+                let Some(r) = segment else {
+                    for (name, unit) in kind.measures() {
+                        m.insert(name.to_string(), Derived::refused(unit, "", &input, "no line entered"));
+                    }
+                    out.entry(me.clone()).or_default().extend(m);
+                    continue;
                 };
-                let status = route.map(|r| r.points.status).unwrap_or(Status::Unknown);
-                let (len_d, bends_d) = match &why {
-                    Some(why) => (Derived::refused("LF", &f_len, &input, why), Derived::refused("EA", &f_bends, &input, why)),
-                    None => (Derived::new(length, "LF", &[status], &f_len, &input), Derived::new(pts.as_ref().map(|p| bends(p) as f64), "EA", &[status], &f_bends, &input)),
+                // Its true length: along its line on the plan when it is level, and
+                // through its rise when its two ends are at different heights
+                // (BIMCraft `runs.rs:107`).
+                let line = r.line_ft();
+                let plan = line.map(|[a, b]| geom::dist(a, b));
+                let inches = if r.line.unit == units::IN { " ÷ 12 (entered in inches)" } else { "" };
+                let (length, statuses, f_len) = match &r.end_offset {
+                    None => (plan, vec![r.line.status], format!("length of its line on the plan{inches}")),
+                    Some(e) => (
+                        plan.zip(r.offsets_ft()).map(|(p, (z0, z1))| p.hypot(z1 - z0)),
+                        vec![r.line.status, r.offset.status, e.status],
+                        format!("√(length on the plan{inches}² + ({} − {})²)", feet_text("end_offset", e), feet_text("offset", &r.offset)),
+                    ),
                 };
+                let len_d = if r.line.value.is_some() && line.is_none() { Derived::refused("LF", &f_len, &input, &format!("its line {NOT_CONVERTED}")) } else { Derived::new(length, "LF", &statuses, &f_len, &input) };
                 if *k == Kind::Duct {
-                    let inputs = [input[0].clone(), format!("{me}#{K_SIZE}")];
-                    let f = match size {
-                        Some(s) if s.diameter.is_some() => format!("true_length × π × {}", s.diameter.as_ref().map(|d| feet_text("diameter", d)).unwrap_or_default()),
-                        Some(s) => format!("true_length × 2 × ({} + {})", s.width.as_ref().map(|w| feet_text("width", w)).unwrap_or_default(), s.depth.as_ref().map(|d| feet_text("depth", d)).unwrap_or_default()),
-                        None => "true_length × the distance round the duct".to_string(),
+                    let skin = match typed(&tree.segment_types, &r.type_name, "a run") {
+                        Err(why) => Derived::refused("SF", "true_length × the distance round the duct", &input, &why),
+                        Ok((type_path, t)) => {
+                            let inputs = [input[0].clone(), format!("{type_path}#{K_SEGMENT_TYPE}")];
+                            let f = match (t.round, &t.depth) {
+                                (true, _) => format!("true_length × π × {}", feet_text("its type's diameter", &t.width)),
+                                (false, Some(d)) => format!("true_length × 2 × ({} + {})", feet_text("its type's width", &t.width), feet_text("its type's depth", d)),
+                                (false, None) => "true_length × the distance round the duct".to_string(),
+                            };
+                            match len_d.value {
+                                None => Derived::refused("SF", &f, &inputs, "the duct has no length"),
+                                Some(l) => Derived::new(t.perimeter_ft().map(|p| l * p), "SF", &[len_d.status, r.type_name.status, t.status()], &f, &inputs),
+                            }
+                        }
                     };
-                    m.insert(
-                        "surface_area".into(),
-                        match (size, len_d.value) {
-                            (None, _) => Derived::refused("SF", &f, &inputs, "no size entered"),
-                            (Some(_), None) => Derived::refused("SF", &f, &inputs, "the duct has no length"),
-                            (Some(s), Some(l)) => Derived::new(s.perimeter_ft().map(|p| l * p), "SF", &[len_d.status, s.status()], &f, &inputs),
-                        },
-                    );
+                    m.insert("surface_area".into(), skin);
                 }
                 m.insert("true_length".into(), len_d);
-                m.insert("bends".into(), bends_d);
             }
             _ => {}
         }
@@ -768,7 +630,6 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
 pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -> Vec<Row> {
     let mut rows = Vec::new();
     let pair = |[a, b]: &[P2; 2]| format!("({}, {}) to ({}, {})", view::num(a[0]), view::num(a[1]), view::num(b[0]), view::num(b[1]));
-    let triple = |p: &P3| format!("({}, {}, {})", view::num(p[0]), view::num(p[1]), view::num(p[2]));
     let plain = |label: &str, text: String, basis: &str| Row { path: path.into(), label: label.into(), text, status: Status::Known, basis: basis.into(), note: String::new(), derived: false, number: None, unit: String::new() };
     let named = |p: &String| names.get(p).map(|n| format!("{n} ({p})")).unwrap_or_else(|| p.clone());
     let layers = |rows: &mut Vec<Row>, list: &[Layer]| {
@@ -831,20 +692,35 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
             rows.push(view::length(path, "offset", o));
         }
     }
+    if let Some(c) = w.get::<SegmentType>(e) {
+        rows.push(plain("a type of", format!("{:?}", c.category).to_lowercase(), "what the type is for"));
+        rows.push(view::length(path, if c.round { "diameter" } else { "width" }, &c.width));
+        if let Some(d) = &c.depth {
+            rows.push(view::length(path, "depth", d));
+        }
+    }
+    if let Some(c) = w.get::<Segment>(e) {
+        rows.push(view::entered(path, "type", &c.type_name, named));
+        rows.push(view::entered(path, "line on the plan", &c.line, pair));
+        rows.push(view::length(path, if c.end_offset.is_some() { "height above its storey, first end" } else { "height above its storey" }, &c.offset));
+        if let Some(o) = &c.end_offset {
+            rows.push(view::length(path, "height above its storey, second end", o));
+        }
+        if c.justify != Justify::Centre {
+            rows.push(plain("its heights are those of its", format!("{:?}", c.justify).to_lowercase(), "which line of its section the heights were given to"));
+        }
+    }
+    if let Some(c) = w.get::<Fitting>(e) {
+        rows.push(plain("fitting", c.kind.label().to_lowercase(), "what joins the runs here"));
+    }
     if let Some(c) = w.get::<Placed>(e) {
         rows.push(view::entered(path, "what it is", &c.what, |s| s.clone()));
-        rows.push(view::entered(path, "position", &c.at, triple));
-        rows.push(view::entered(path, "size", &c.size, |s| format!("{} × {} × {}", view::num(s[0]), view::num(s[1]), view::num(s[2]))));
-    }
-    if let Some(c) = w.get::<Route>(e) {
-        rows.push(view::entered(path, "centre line", &c.points, |pts| format!("{} points", pts.len())));
-    }
-    if let Some(c) = w.get::<Size>(e) {
-        for (name, v) in [("diameter", &c.diameter), ("width", &c.width), ("depth", &c.depth)] {
-            if let Some(v) = v {
-                rows.push(view::length(path, name, v));
-            }
+        rows.push(view::entered(path, "position", &c.at, |p| format!("({}, {})", view::num(p[0]), view::num(p[1]))));
+        rows.push(view::length(path, "height above its storey", &c.offset));
+        if let Some(a) = &c.angle {
+            rows.push(view::entered(path, "turned", a, |x| format!("{}°", view::num(*x))));
         }
+        rows.push(view::entered(path, "size", &c.size, |s| format!("{} × {} × {}", view::num(s[0]), view::num(s[1]), view::num(s[2]))));
     }
     if let Some(c) = w.get::<SystemInfo>(e) {
         rows.push(Row { path: path.into(), label: "classification".into(), text: format!("{} ({:?})", c.classification, c.discipline), status: Status::Known, basis: "what the system is".into(), note: String::new(), derived: false, number: None, unit: String::new() });
@@ -862,11 +738,12 @@ pub enum Shape {
     /// openings cut in it: each as [from, to] along the wall and [sill, head] above `base`.
     Wall { a: P2, b: P2, base: f64, height: f64, thickness: f64, holes: Vec<(String, Kind, [f64; 4])> },
     Floor { boundary: Vec<P2>, top: f64, thickness: f64 },
-    /// A centre line and its section: round by a diameter, rectangular by width and depth,
-    /// or neither when its size is not known.
-    Route { points: Vec<P3>, round: Option<f64>, rect: Option<(f64, f64)> },
-    /// A box by the middle of its base and its size.
-    Box { at: P3, size: P3 },
+    /// One straight piece from `a` to `b` along its centre line, and its section: round by
+    /// a diameter, rectangular by width and depth, or neither when its size is not known.
+    Run { a: P3, b: P3, round: Option<f64>, rect: Option<(f64, f64)> },
+    /// A box by the middle of its base and its size, turned `angle` degrees
+    /// counter-clockwise from east about that point.
+    Box { at: P3, size: P3, angle: f64 },
 }
 
 #[derive(Clone, Debug)]
@@ -897,7 +774,7 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
     let mut not_drawn = Vec::new();
     for &e in &order {
         let (Some(n), Some(kind)) = (node(e), w.get::<Kind>(e).copied()) else { continue };
-        if !(matches!(kind, Kind::Wall | Kind::Floor) || kind.is_route() || kind.is_placed()) {
+        if !(matches!(kind, Kind::Wall | Kind::Floor) || kind.is_segment() || kind.is_placed()) {
             continue;
         }
         let storey = tree.storey_of(&n.path).map(str::to_string);
@@ -961,18 +838,32 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
                 let thickness = t.thickness.feet().ok_or("its type's thickness is not known")?;
                 Ok((Shape::Floor { boundary, top: level + offset, thickness }, c.boundary.status.max(c.type_name.status).max(t.thickness.status).max(offset_status)))
             })(),
-            k if k.is_route() => (|| {
-                let c = w.get::<Route>(e).ok_or("it has no centre line")?;
-                let points = c.points_ft().ok_or("its centre line is not known")?;
-                let size = w.get::<Size>(e);
-                let status = c.points.status.max(size.map(|s| s.status()).unwrap_or(Status::Unknown));
-                Ok((Shape::Route { points, round: size.and_then(|s| s.round_ft()), rect: size.and_then(|s| s.rect_ft()) }, status))
+            k if k.is_segment() => (|| {
+                let c = w.get::<Segment>(e).ok_or("it has no line")?;
+                let [p, q] = c.line_ft().ok_or("its line is not known")?;
+                let level = base.ok_or("it is under no storey")?.ok_or("its storey's elevation is not known")?;
+                let (z0, z1) = c.offsets_ft().ok_or("its height above its storey is not known")?;
+                let t = typed(&tree.segment_types, &c.type_name, "a run").ok().map(|x| x.1);
+                let (round, rect) = (t.and_then(|t| t.round_ft()), t.and_then(|t| t.rect_ft()));
+                let section = round.map(|d| (d, d)).or(rect);
+                if c.justify != Justify::Centre && section.is_none() {
+                    return Err("its size is not known and its heights are those of its top or its bottom, so its centre line cannot be placed".into());
+                }
+                let (width, depth) = section.unwrap_or((0.0, 0.0));
+                let g = runs::Geom::of(level, p, q, z0, z1, c.justify, width, depth, round.is_some());
+                let sized = if section.is_some() { t.map(|t| t.status().max(c.type_name.status)).unwrap_or(Status::Unknown) } else { Status::Unknown };
+                let status = c.line.status.max(c.offset.status).max(c.end_offset.as_ref().map(|e| e.status).unwrap_or(Status::Known)).max(sized);
+                Ok((Shape::Run { a: g.a, b: g.b, round, rect }, status))
             })(),
             _ => (|| {
                 let c = w.get::<Placed>(e).ok_or("it has no position")?;
                 let at = c.at_ft().ok_or("its position is not known")?;
+                let level = base.ok_or("it is under no storey")?.ok_or("its storey's elevation is not known")?;
+                let offset = c.offset.feet().ok_or("its height above its storey is not known")?;
                 let size = c.size_ft().ok_or("its size is not known")?;
-                Ok((Shape::Box { at, size }, c.at.status.max(c.size.status)))
+                let angle = c.angle_deg().ok_or("how far it is turned is not known")?;
+                let status = c.at.status.max(c.offset.status).max(c.size.status).max(c.angle.as_ref().map(|a| a.status).unwrap_or(Status::Known));
+                Ok((Shape::Box { at: [at[0], at[1], level + offset], size, angle }, status))
             })(),
         };
         match shape {
@@ -994,7 +885,6 @@ pub struct TakeoffLine {
     /// The worst status among the sizes of the runs on this line.
     pub size_status: Status,
     pub length: Sum,
-    pub bends: Sum,
 }
 
 #[derive(Clone, Debug)]
@@ -1014,6 +904,9 @@ pub struct SystemTakeoff {
     /// Equipment and fixtures on the system: what each is, how many, and the worst status
     /// among what they are said to be and whether they are on this system.
     pub placed: Vec<(Kind, String, usize, Status)>,
+    /// The fittings on the system, counted by kind and by what each is said to be, with
+    /// the worst status among those. A fitting with no kind entered is counted under None.
+    pub fittings: Vec<(Option<FittingKind>, String, usize, Status)>,
 }
 
 /// A size in feet, said in inches: `6 in`, `3/4 in`.
@@ -1021,8 +914,8 @@ fn in_inches(feet: f64) -> String {
     units::show_length(&Len::One((feet * 12.0 * 1.0e6).round() / 1.0e6), units::IN)
 }
 
-/// What each system comes to: its runs by kind and size with their length and bends, and
-/// its equipment and fixtures counted by what they are.
+/// What each system comes to: its runs by kind and size with their length, its fittings
+/// counted by kind, and its equipment and fixtures counted by what they are.
 ///
 /// A run said to be on a system with less than certainty (Assumed) carries that onto its
 /// line: the line's length is no surer than that the run is on this system. Two groups
@@ -1030,12 +923,15 @@ fn in_inches(feet: f64) -> String {
 /// want of a system: what is on no system, and what is on a system that is not known.
 /// Not knowing the system is not the same as having none.
 ///
-/// Runs are grouped by their size as a size, not as it was typed: 6 in, 0.5 ft and 0' 6"
-/// are one line. Lines are in order of size, smallest first, with no size last.
+/// A run's size is its type's. Runs are grouped by their size as a size, not as it was
+/// typed: 6 in, 0.5 ft and 0' 6" are one line. Lines are in order of size, smallest
+/// first, with no size last: a run whose type or whose type's size nobody has is not
+/// dropped and not guessed.
 pub fn takeoff(job: &mut Job) -> Vec<SystemTakeoff> {
     let order = job.order.clone();
+    let tree = Tree::of(&mut job.world);
     let w = &job.world;
-    let blank = |name: &str, flag: Status| SystemTakeoff { path: String::new(), name: name.into(), discipline: Discipline::Architecture, classification: String::new(), flag, runs: view::sum_of("LF", &[]), lines: Vec::new(), placed: Vec::new() };
+    let blank = |name: &str, flag: Status| SystemTakeoff { path: String::new(), name: name.into(), discipline: Discipline::Architecture, classification: String::new(), flag, runs: view::sum_of("LF", &[]), lines: Vec::new(), placed: Vec::new(), fittings: Vec::new() };
     let mut systems: Vec<SystemTakeoff> = Vec::new();
     for &e in &order {
         if let (Some(n), Some(info)) = (w.get::<Node>(e), w.get::<SystemInfo>(e)) {
@@ -1048,10 +944,10 @@ pub fn takeoff(job: &mut Job) -> Vec<SystemTakeoff> {
     type Figures = Vec<(String, Option<f64>, Status)>;
     // By system, then kind, then size: round before rectangular, small before large, and
     // a run with no size last.
-    let mut runs: BTreeMap<(usize, u8, u8, i64, i64), (Kind, String, Status, Figures, Figures)> = BTreeMap::new();
+    let mut runs: BTreeMap<(usize, u8, u8, i64, i64), (Kind, String, Status, Figures)> = BTreeMap::new();
     for &e in &order {
         let (Some(n), Some(kind)) = (w.get::<Node>(e), w.get::<Kind>(e).copied()) else { continue };
-        if !(kind.is_route() || kind.is_placed()) {
+        if !(kind.is_segment() || kind.is_placed()) {
             continue;
         }
         // Which group it goes in, and how sure that is.
@@ -1064,6 +960,19 @@ pub fn takeoff(job: &mut Job) -> Vec<SystemTakeoff> {
         };
         if kind.is_placed() {
             let what = w.get::<Placed>(e).map(|p| (p.what.value.clone().unwrap_or_else(|| "not said".into()), p.what.status)).unwrap_or(("not said".into(), Status::Unknown));
+            if kind == Kind::Fitting {
+                let fitting = w.get::<Fitting>(e).map(|f| f.kind);
+                let status = what.1.max(sure).max(if fitting.is_some() { Status::Known } else { Status::Unknown });
+                let list = &mut systems[at].fittings;
+                match list.iter_mut().find(|x| x.0 == fitting && x.1 == what.0) {
+                    Some(entry) => {
+                        entry.2 += 1;
+                        entry.3 = entry.3.max(status);
+                    }
+                    None => list.push((fitting, what.0, 1, status)),
+                }
+                continue;
+            }
             let list = &mut systems[at].placed;
             match list.iter_mut().find(|x| x.0 == kind && x.1 == what.0) {
                 Some(entry) => {
@@ -1074,9 +983,11 @@ pub fn takeoff(job: &mut Job) -> Vec<SystemTakeoff> {
             }
             continue;
         }
-        let size = w.get::<Size>(e);
+        // Its size is its type's. No type, a type nobody knows, or a type with no size:
+        // each is a run of no known size.
+        let sized = w.get::<Segment>(e).and_then(|r| typed(&tree.segment_types, &r.type_name, "a run").ok().map(|(_, t)| (t, r.type_name.status)));
         let micro = |feet: f64| (feet * 12.0 * 1.0e6).round() as i64;
-        let (shape, a, b, said) = match size.map(|s| (s.round_ft(), s.rect_ft())) {
+        let (shape, a, b, said) = match sized.map(|(t, _)| (t.round_ft(), t.rect_ft())) {
             Some((Some(d), _)) => (0, micro(d), 0, format!("{} round", in_inches(d))),
             Some((None, Some((width, depth)))) => (1, micro(width), micro(depth), format!("{} × {}", in_inches(width), in_inches(depth))),
             _ => (2, 0, 0, "size unknown".to_string()),
@@ -1088,25 +999,26 @@ pub fn takeoff(job: &mut Job) -> Vec<SystemTakeoff> {
             _ => 3,
         };
         let figure = |name: &str| w.get::<Measure>(e).and_then(|m| m.0.get(name)).map(|d| (d.value, d.status)).unwrap_or((None, Status::Unknown));
-        let entry = runs.entry((at, rank, shape, a, b)).or_insert((kind, said, Status::Known, Vec::new(), Vec::new()));
-        entry.2 = entry.2.max(if shape == 2 { Status::Unknown } else { size.map(|s| s.status()).unwrap_or(Status::Unknown) });
+        let entry = runs.entry((at, rank, shape, a, b)).or_insert((kind, said, Status::Known, Vec::new()));
+        entry.2 = entry.2.max(if shape == 2 { Status::Unknown } else { sized.map(|(t, sure)| t.status().max(sure)).unwrap_or(Status::Unknown) });
         // A figure that is there is no surer than that the run is on this system.
         let (l, ls) = figure("true_length");
-        let (bends, bs) = figure("bends");
         entry.3.push((n.path.clone(), l, if l.is_some() { ls.max(sure) } else { ls }));
-        entry.4.push((n.path.clone(), bends, if bends.is_some() { bs.max(sure) } else { bs }));
     }
     let mut all: Vec<Figures> = vec![Vec::new(); systems.len()];
-    for ((at, ..), (_, _, _, lengths, _)) in &runs {
+    for ((at, ..), (_, _, _, lengths)) in &runs {
         all[*at].extend(lengths.iter().cloned());
     }
     for (i, figures) in all.iter().enumerate() {
         systems[i].runs = view::sum_of("LF", figures);
     }
-    for ((at, ..), (kind, size, size_status, lengths, bends)) in runs {
-        systems[at].lines.push(TakeoffLine { kind, size, size_status, length: view::sum_of("LF", &lengths), bends: view::sum_of("EA", &bends) });
+    for ((at, ..), (kind, size, size_status, lengths)) in runs {
+        systems[at].lines.push(TakeoffLine { kind, size, size_status, length: view::sum_of("LF", &lengths) });
     }
-    systems.into_iter().enumerate().filter(|(i, t)| *i < named || !t.lines.is_empty() || !t.placed.is_empty()).map(|(_, t)| t).collect()
+    for t in &mut systems {
+        t.fittings.sort_by(|x, y| (x.0.is_none(), x.0, &x.1).cmp(&(y.0.is_none(), y.0, &y.1)));
+    }
+    systems.into_iter().enumerate().filter(|(i, t)| *i < named || !t.lines.is_empty() || !t.placed.is_empty() || !t.fittings.is_empty()).map(|(_, t)| t).collect()
 }
 
 /// What a storey's walls and floors come to.

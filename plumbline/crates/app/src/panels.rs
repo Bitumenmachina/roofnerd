@@ -397,11 +397,8 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     let c = centroid(boundary);
                     to_view(doc.origin, [c[0], c[1], *top])
                 }
-                Shape::Route { points, .. } => {
-                    let i = points.len() / 2;
-                    (to_view(doc.origin, points[i.saturating_sub(1)]) + to_view(doc.origin, points[i.min(points.len() - 1)])) / 2.0
-                }
-                Shape::Box { at, size } => to_view(doc.origin, [at[0], at[1], at[2] + size[2]]),
+                Shape::Run { a, b, .. } => (to_view(doc.origin, *a) + to_view(doc.origin, *b)) / 2.0,
+                Shape::Box { at, size, .. } => to_view(doc.origin, [at[0], at[1], at[2] + size[2]]),
             };
             let figure = snap.selected.as_ref().and_then(|el| el.rows.iter().find(|r| r.label == "true_length" || r.label == "net_area" || r.label == "plan_area")).map(|r| (shown(r), r.status));
             pill(o, Label { at: at + Vec3::Y * 0.6, facing: None, rank: 0 }, true, |l| {
@@ -631,7 +628,7 @@ fn system(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, el: &vie
     takeoff(p, fonts, t);
 }
 
-/// A system's takeoff: its runs by kind and size, then what is set on it.
+/// A system's takeoff: its runs by kind and size, its fittings, then what is set on it.
 pub fn takeoff(p: &mut ChildSpawnerCommands, fonts: &Fonts, t: &SystemTakeoff) {
     if !t.lines.is_empty() {
         heading(p, fonts, "Runs by size");
@@ -644,11 +641,17 @@ pub fn takeoff(p: &mut ChildSpawnerCommands, fonts: &Fonts, t: &SystemTakeoff) {
                     top.spawn((text(fonts, total(&line.length), 12.5, Weight::Medium, theme::status_ink(line.length.status)), TextLayout::no_wrap()));
                 });
                 r.spawn(Node { align_items: AlignItems::Center, column_gap: px(8.0), ..default() }).with_children(|under| {
-                    under.spawn(text(fonts, format!("{} of them  ·  bends: {}", line.length.members, total(&line.bends)), 11.0, Weight::Regular, theme::ink_faint()));
+                    under.spawn(text(fonts, format!("{} straight pieces", line.length.members), 11.0, Weight::Regular, theme::ink_faint()));
                     under.spawn(Node { flex_grow: 1.0, ..default() });
                     status_chip(under, fonts, line.size_status.max(line.length.status));
                 });
             });
+        }
+    }
+    if !t.fittings.is_empty() {
+        heading(p, fonts, "Fittings");
+        for (kind, what, count, status) in &t.fittings {
+            listed(p, fonts, None, what, kind.map(|k| k.label()).unwrap_or("fitting").to_lowercase(), format!("{count} EA"), *status);
         }
     }
     if !t.placed.is_empty() {
@@ -675,7 +678,7 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, el: &
         Kind::Door | Kind::Window => &[("opening_area", "Opening")],
         Kind::Floor => &[("plan_area", "Area")],
         Kind::Duct => &[("true_length", "Length"), ("surface_area", "Duct surface")],
-        k if k.is_route() => &[("true_length", "Length"), ("bends", "Bends")],
+        k if k.is_segment() => &[("true_length", "Length")],
         _ => &[],
     };
     if !lead.is_empty() {

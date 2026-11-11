@@ -2289,27 +2289,77 @@ fn an_opening_that_does_not_fit_its_wall_leaves_no_net_area() {
     assert_eq!(measure_of(&mut job, &south, "face_area").value, Some(400.0));
 }
 
+/// The straight pieces a run of the sample house was entered as, in order: the element
+/// of that name, or the elements named "<name>, piece 1 of n" and on.
+fn pieces(job: &mut Job, name: &str) -> Vec<String> {
+    let lead = format!("{name}, piece ");
+    plumbline_world::view::elements(job).into_iter().filter(|e| e.name == name || e.name.starts_with(&lead)).map(|e| e.path).collect()
+}
+
+fn length_of_pieces(job: &mut Job, name: &str) -> (f64, Status) {
+    let paths = pieces(job, name);
+    assert!(!paths.is_empty(), "no run named {name}");
+    let figures: Vec<plumbline_world::Derived> = paths.iter().map(|p| measure_of(job, p, "true_length")).collect();
+    (plumbline_world::value::round4(figures.iter().map(|d| d.value.expect("a length")).sum()), figures.iter().map(|d| d.status).max().unwrap())
+}
+
 #[test]
-fn a_run_is_measured_along_its_centre_line_in_space_and_its_bends_are_counted() {
+fn a_run_is_straight_pieces_measured_in_space_with_an_elbow_at_each_corner() {
+    use plumbline_world::{Fitting, FittingKind};
     let mut job = plumbline_world::sample::house();
-    // The first-floor trunk, west: up 3.4 ft, south 8 ft, west 17 ft: 28.4 LF and two
-    // bends. It is 16 in by 8 in: 4 ft round, so 113.6 SF of duct. Its size is Assumed.
-    let trunk = path_named(&mut job, "first-floor trunk, west");
-    assert_eq!(measure_of(&mut job, &trunk, "true_length").value, Some(28.4));
-    assert_eq!(measure_of(&mut job, &trunk, "bends").value, Some(2.0));
-    let skin = measure_of(&mut job, &trunk, "surface_area");
-    assert_eq!((skin.value, skin.status), (Some(113.6), Status::Assumed));
-    // A straight run has no bends, and that is a Known zero.
-    let east = path_named(&mut job, "first-floor trunk, east");
-    let b = measure_of(&mut job, &east, "bends");
-    assert_eq!((b.value, b.status), (Some(0.0), Status::Known));
+    // The first-floor trunk, west, is drawn up 3.4 ft, south 8 ft, west 17 ft. It is
+    // three straight pieces of those lengths, 28.4 LF in all, with two elbows.
+    let trunk = pieces(&mut job, "first-floor trunk, west");
+    let lengths: Vec<Option<f64>> = trunk.iter().map(|p| measure_of(&mut job, p, "true_length").value).collect();
+    assert_eq!(lengths, [Some(3.4), Some(8.0), Some(17.0)]);
+    assert_eq!(length_of_pieces(&mut job, "first-floor trunk, west"), (28.4, Status::Known));
+    let elbows: Vec<String> = plumbline_world::view::elements(&mut job).into_iter().filter(|e| e.name.starts_with("first-floor trunk, west, elbow")).map(|e| e.path).collect();
+    assert_eq!(elbows.len(), 2);
+    for path in &elbows {
+        let e = job.find(path).unwrap();
+        assert_eq!(job.world.get::<Fitting>(e).unwrap().kind, FittingKind::Bend);
+    }
+    // It is 16 in by 8 in: 4 ft round, so the three pieces have 13.6 + 32 + 68 = 113.6 SF
+    // of duct. The size is the type's, and Assumed.
+    let skins: Vec<plumbline_world::Derived> = trunk.iter().map(|p| measure_of(&mut job, p, "surface_area")).collect();
+    assert_eq!(skins.iter().map(|d| d.value).collect::<Vec<_>>(), [Some(13.6), Some(32.0), Some(68.0)]);
+    assert!(skins.iter().all(|d| d.status == Status::Assumed));
+    // A riser is a piece whose two ends are one point on the plan at two heights.
+    let riser = measure_of(&mut job, &trunk[0], "true_length");
+    assert!(riser.formula.contains("end_offset"), "{}", riser.formula);
     // A 6 in round branch 11 ft long: π × 0.5 × 11 = 17.2788 SF.
     let branch = path_named(&mut job, "branch to living west");
     assert_eq!(measure_of(&mut job, &branch, "surface_area").value, Some(17.2788));
-    // A pipe with no size still has its length: 0.8 + 4.9 + 3.7 = 9.4 LF.
-    let no_size = path_named(&mut job, "hot to the kitchen sink");
-    let l = measure_of(&mut job, &no_size, "true_length");
-    assert_eq!((l.value, l.status), (Some(9.4), Status::Known));
+    // A pipe with no size still has its length: 0.8 + 4.9 + 3.7 = 9.4 LF. No area and no
+    // size is made up for it.
+    assert_eq!(length_of_pieces(&mut job, "hot to the kitchen sink"), (9.4, Status::Known));
+    // A piece that slopes: 3 ft along and 4 ft up is 5 ft of pipe.
+    let (e, first) = (job.find(&trunk[1]).unwrap(), path_named(&mut job, "first floor"));
+    let mut sloped = job.world.get::<plumbline_world::Segment>(e).unwrap().clone();
+    sloped.line = Val::known([[0.0, 0.0], [3.0, 0.0]], "ft", "test");
+    sloped.offset = ft(1.0);
+    sloped.end_offset = Some(ft(5.0));
+    let p = job.add(&first, Kind::Duct, "a sloped piece").unwrap();
+    job.put(&p, sloped.clone()).unwrap();
+    job.derive();
+    assert_eq!(measure_of(&mut job, &p, "true_length").value, Some(5.0));
+    // The same in inches and in feet and inches is the same 5 ft.
+    sloped.line = Val::known([[0.0, 0.0], [36.0, 0.0]], "in", "test");
+    sloped.end_offset = Some(Val::known(Len::FtIn([5.0, 0.0]), "ft-in", "test"));
+    job.put(&p, sloped.clone()).unwrap();
+    job.derive();
+    assert_eq!(measure_of(&mut job, &p, "true_length").value, Some(5.0));
+    // An end height nobody has leaves a sloped piece with no length; a level piece does
+    // not need its height to have one.
+    sloped.end_offset = Some(Val::unknown("ft", "not on the plan"));
+    job.put(&p, sloped.clone()).unwrap();
+    job.derive();
+    assert_eq!(measure_of(&mut job, &p, "true_length").value, None);
+    sloped.end_offset = None;
+    sloped.offset = Val::unknown("ft", "not on the plan");
+    job.put(&p, sloped).unwrap();
+    job.derive();
+    assert_eq!(measure_of(&mut job, &p, "true_length").value, Some(3.0));
 }
 
 #[test]
@@ -2322,18 +2372,28 @@ fn a_system_takeoff_groups_runs_by_size_and_says_what_it_cannot_size() {
     // Its runs fall on three lines: 1/2 in, 3/4 in, and the one with no size.
     let sizes: Vec<&str> = hot.lines.iter().map(|l| l.size.as_str()).collect();
     assert_eq!(sizes, ["1/2 in round", "3/4 in round", "size unknown"]);
+    // The branch with no size is three straight pieces, 0.8 + 4.9 + 3.7 = 9.4 LF.
     let no_size = hot.lines.iter().find(|l| l.size == "size unknown").unwrap();
-    assert_eq!((no_size.size_status, no_size.length.value, no_size.length.members), (Status::Unknown, Some(9.4), 1));
-    // Hot to a lavatory is 1 + 0.9 = 1.9 LF and to a tub 1.5 + 1 = 2.5: two of each, 8.8 LF.
+    assert_eq!((no_size.size_status, no_size.length.value, no_size.length.members), (Status::Unknown, Some(9.4), 3));
+    // Hot to a lavatory is 1 + 0.9 = 1.9 LF and to a tub 1.5 + 1 = 2.5: two of each, 8.8 LF,
+    // each of them two pieces.
     let half = hot.lines.iter().find(|l| l.size == "1/2 in round").unwrap();
-    assert_eq!((half.length.value, half.length.members, half.length.status), (Some(8.8), 4, Status::Known));
+    assert_eq!((half.length.value, half.length.members, half.length.status), (Some(8.8), 8, Status::Known));
     assert_eq!(hot.placed, vec![(Kind::Equipment, "Water heater, 50 gal".to_string(), 1, Status::Assumed)]);
+    // Its elbows are counted by size: one at the corner of each of the four 1/2 in
+    // branches, three on the 3/4 in main, and the two on the branch with no size are
+    // counted and flagged, not sized by a guess.
+    use plumbline_world::FittingKind::Bend;
+    assert_eq!(
+        hot.fittings,
+        vec![(Some(Bend), "1/2 in elbow".to_string(), 4, Status::Known), (Some(Bend), "3/4 in elbow".to_string(), 3, Status::Known), (Some(Bend), "not said".to_string(), 2, Status::Unknown)]
+    );
     // Every run and every placed thing in the job is on some line of some system.
     let rows = plumbline_world::view::elements(&mut job);
-    let runs = rows.iter().filter(|e| e.kind.is_route()).count();
+    let runs = rows.iter().filter(|e| e.kind.is_segment()).count();
     let placed = rows.iter().filter(|e| e.kind.is_placed()).count();
     assert_eq!(systems.iter().flat_map(|s| &s.lines).map(|l| l.length.members).sum::<usize>(), runs);
-    assert_eq!(systems.iter().flat_map(|s| &s.placed).map(|p| p.2).sum::<usize>(), placed);
+    assert_eq!(systems.iter().map(|s| s.placed.iter().map(|p| p.2).sum::<usize>() + s.fittings.iter().map(|f| f.2).sum::<usize>()).sum::<usize>(), placed);
 }
 
 #[test]
@@ -2347,34 +2407,61 @@ fn a_storey_totals_its_walls_and_floors_and_every_element_is_placed_or_accounted
     assert_eq!(storeys[0].floors.value, Some(1120.0));
     assert_eq!((storeys[0].doors, storeys[0].windows), (5, 8));
     assert_eq!((storeys[1].doors, storeys[1].windows), (4, 9));
+    // Everything with a shape is drawn, but the two elbows on the branch that has no size:
+    // nobody knows how big they are, and each is listed with that.
     let (drawn, not_drawn) = placements(&mut job);
-    assert!(not_drawn.is_empty(), "{not_drawn:?}");
+    assert_eq!(not_drawn.len(), 2, "{not_drawn:?}");
+    assert!(not_drawn.iter().all(|(_, why)| why == "its size is not known"), "{not_drawn:?}");
     let rows = plumbline_world::view::elements(&mut job);
-    let shaped = rows.iter().filter(|e| matches!(e.kind, Kind::Wall | Kind::Floor) || e.kind.is_route() || e.kind.is_placed()).count();
-    assert_eq!(drawn.len(), shaped);
-    // Take a storey's elevation away and what stands on it is not drawn, and says why.
+    let shaped = rows.iter().filter(|e| matches!(e.kind, Kind::Wall | Kind::Floor) || e.kind.is_segment() || e.kind.is_placed()).count();
+    assert_eq!(drawn.len() + not_drawn.len(), shaped);
+    // Take a storey's elevation away and what stands on it is not drawn, and says why:
+    // its walls and its floor, and every run and placed thing under it, whose heights
+    // are above that storey.
     let first = path_named(&mut job, "first floor");
+    let on_first = drawn.iter().filter(|p| p.storey.as_deref() == Some(first.as_str())).count();
+    assert!(on_first > 9, "{on_first}");
     job.put(&first, plumbline_world::Level { elevation: Val::unknown("ft", "not surveyed"), height: Val::known(Len::One(10.0), "ft", "test") }).unwrap();
-    let (_, not_drawn) = placements(&mut job);
-    assert_eq!(not_drawn.len(), 9);
-    assert!(not_drawn.iter().all(|(_, why)| why == "its storey's elevation is not known"));
+    let (still, not_drawn) = placements(&mut job);
+    // (The two elbows with no size are on the first floor too. A thing is listed once,
+    // with the first thing that stops it being drawn.)
+    assert_eq!(not_drawn.iter().filter(|(_, why)| why == "its storey's elevation is not known").count(), on_first + 2);
+    assert_eq!(not_drawn.len(), on_first + 2);
+    assert!(still.iter().all(|p| p.storey.as_deref() != Some(first.as_str())));
+    // The first floor's outside walls stood up to the second floor, whose elevation is
+    // still known: nothing of theirs is drawn against a guessed base.
+    assert_eq!(drawn.len() - still.len(), on_first);
 }
 
 #[test]
 fn the_building_checks_refuse_what_cannot_be() {
     use plumbline_world::building::*;
     let len = |x: f64| Val::known(Len::One(x), "in", "test");
-    // A section is round or rectangular, not both and not half of one.
-    assert!(check_size("p", Kind::Pipe, &Size { diameter: Some(len(1.0)), width: Some(len(2.0)), depth: None }).is_err());
-    assert!(check_size("p", Kind::Duct, &Size { diameter: None, width: Some(len(12.0)), depth: None }).is_err());
-    assert!(check_size("p", Kind::Pipe, &Size::round(len(0.0))).is_err());
-    assert!(check_size("p", Kind::Wall, &Size::round(len(1.0))).is_err());
-    assert!(check_size("p", Kind::Pipe, &Size::round(Val::unknown("in", "not on the plan"))).is_ok());
-    // A run needs two points and no point twice in a row; a length with no unit is refused.
-    assert!(check_route("r", Kind::Pipe, &Route { points: Val::known(vec![[0.0, 0.0, 0.0]], "ft", "test") }).is_err());
-    assert!(check_route("r", Kind::Pipe, &Route { points: Val::known(vec![[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], "ft", "test") }).is_err());
-    assert!(check_route("r", Kind::Pipe, &Route { points: Val::known(vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], "", "test") }).is_err());
-    assert!(check_route("r", Kind::Pipe, &Route { points: Val::known(vec![[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], "m", "test") }).is_err());
+    // A section is round, by a diameter, or rectangular, by a width and a depth.
+    assert!(check_segment_type("t", Kind::Type, &SegmentType { category: Kind::Pipe, width: len(1.0), depth: Some(len(2.0)), round: true }).is_err());
+    assert!(check_segment_type("t", Kind::Type, &SegmentType { category: Kind::Duct, width: len(12.0), depth: None, round: false }).is_err());
+    assert!(check_segment_type("t", Kind::Type, &SegmentType::round(Kind::Pipe, len(0.0))).is_err());
+    assert!(check_segment_type("t", Kind::Type, &SegmentType::round(Kind::Wall, len(1.0))).is_err());
+    assert!(check_segment_type("t", Kind::Pipe, &SegmentType::round(Kind::Pipe, len(1.0))).is_err());
+    assert!(check_segment_type("t", Kind::Type, &SegmentType::round(Kind::Pipe, len(300.0))).is_err());
+    assert!(check_segment_type("t", Kind::Type, &SegmentType::round(Kind::Pipe, Val::unknown("in", "not on the plan"))).is_ok());
+    // A run goes from one point to another; a length with no unit, or a metric one, is refused.
+    let piece = |line: [[f64; 2]; 2], unit: &str, rise: Option<f64>| Segment { type_name: named("type-0002"), line: Val::known(line, unit, "test"), offset: ft(1.0), end_offset: rise.map(ft), justify: Justify::Centre };
+    assert!(check_segment("r", Kind::Pipe, &piece([[0.0, 0.0], [1.0, 0.0]], "ft", None)).is_ok());
+    assert!(check_segment("r", Kind::Pipe, &piece([[0.0, 0.0], [0.0, 0.0]], "ft", None)).unwrap_err().contains("a run goes from one point to another"));
+    assert!(check_segment("r", Kind::Pipe, &piece([[0.0, 0.0], [0.0, 0.0]], "ft", Some(1.0))).is_err(), "a riser that rises nothing");
+    assert!(check_segment("r", Kind::Pipe, &piece([[0.0, 0.0], [0.0, 0.0]], "ft", Some(9.0))).is_ok(), "a riser");
+    assert!(check_segment("r", Kind::Pipe, &piece([[0.0, 0.0], [1.0, 0.0]], "", None)).is_err());
+    assert!(check_segment("r", Kind::Pipe, &piece([[0.0, 0.0], [1.0, 0.0]], "m", None)).is_err());
+    assert!(check_segment("r", Kind::Wall, &piece([[0.0, 0.0], [1.0, 0.0]], "ft", None)).is_err());
+    // A placed thing is turned by an angle in degrees, and has a size in all three.
+    let thing = |angle: Option<Val<f64>>, size: [f64; 3]| Placed { what: named("a thing"), at: Val::known([1.0, 1.0], "ft", "test"), offset: ft(0.0), angle, size: Val::known(size, "ft", "test") };
+    assert!(check_placed("p", Kind::Fixture, &thing(None, [1.0, 1.0, 1.0])).is_ok());
+    assert!(check_placed("p", Kind::Fitting, &thing(Some(Val::known(90.0, "deg", "test")), [1.0, 1.0, 1.0])).is_ok());
+    assert!(check_placed("p", Kind::Fixture, &thing(Some(Val::known(90.0, "", "test")), [1.0, 1.0, 1.0])).is_err(), "an angle with no unit");
+    assert!(check_placed("p", Kind::Fixture, &thing(Some(Val::known(720.0, "deg", "test")), [1.0, 1.0, 1.0])).is_err());
+    assert!(check_placed("p", Kind::Fixture, &thing(None, [1.0, 0.0, 1.0])).is_err());
+    assert!(check_placed("p", Kind::Wall, &thing(None, [1.0, 1.0, 1.0])).is_err());
     // A system's classification is one the program knows, and belongs to its discipline.
     assert!(check_system("s", Kind::System, &SystemInfo { discipline: Discipline::Plumbing, classification: "Supply Air".into() }).is_err());
     assert!(check_system("s", Kind::System, &SystemInfo { discipline: Discipline::Mechanical, classification: "Steam".into() }).is_err());
@@ -2419,45 +2506,74 @@ fn a_storey_stands_under_the_job_and_counts_only_what_is_nearest_it() {
 #[test]
 fn a_takeoff_is_no_surer_than_what_is_on_the_system_and_one_size_is_one_line() {
     use plumbline_world::building::takeoff;
-    use plumbline_world::{InSystem, Size};
+    use plumbline_world::{InSystem, Segment, SegmentType};
     let mut job = plumbline_world::sample::house();
-    let line_set = path_named(&mut job, "refrigerant line set");
+    // The refrigerant line set is four straight pieces: 2 + 8.5 + 19.5 + 4.5 = 34.5 LF.
+    let line_set = pieces(&mut job, "refrigerant line set");
+    assert_eq!(line_set.len(), 4);
     let system = path_named(&mut job, "Refrigerant");
     // Said to be on the system, but only assumed so: its line is Assumed, and so is the total.
-    job.put(&line_set, InSystem(Val::assumed(system.clone(), "", "guessed from where it runs"))).unwrap();
+    for p in &line_set {
+        job.put(p, InSystem(Val::assumed(system.clone(), "", "guessed from where it runs"))).unwrap();
+    }
     let t = takeoff(&mut job);
     let refrigerant = t.iter().find(|s| s.name == "Refrigerant").unwrap();
     assert_eq!((refrigerant.lines[0].length.value, refrigerant.lines[0].length.status), (Some(34.5), Status::Assumed));
     assert_eq!(refrigerant.runs.status, Status::Assumed);
     // On a system nobody can name: not "on no system". It is in a group of its own,
     // flagged Unknown, with its length; and the system it left has no runs.
-    job.put(&line_set, InSystem(Val::unknown("", "not marked on the plan"))).unwrap();
+    for p in &line_set {
+        job.put(p, InSystem(Val::unknown("", "not marked on the plan"))).unwrap();
+    }
     let t = takeoff(&mut job);
     assert_eq!(t.iter().find(|s| s.name == "Refrigerant").unwrap().runs.members, 0);
     assert!(t.iter().all(|s| s.name != "On no system"));
     let lost = t.iter().find(|s| s.name == "System not known").expect("a group for what is on an unknown system");
-    assert_eq!((lost.flag, lost.path.as_str(), lost.runs.value, lost.runs.members), (Status::Unknown, "", Some(34.5), 1));
+    assert_eq!((lost.flag, lost.path.as_str(), lost.runs.value, lost.runs.members), (Status::Unknown, "", Some(34.5), 4));
     // With no system entered at all it is on no system, and that is Known.
-    let e = job.find(&line_set).unwrap();
-    job.world.entity_mut(e).remove::<InSystem>();
+    for p in &line_set {
+        let e = job.find(p).unwrap();
+        job.world.entity_mut(e).remove::<InSystem>();
+    }
     let t = takeoff(&mut job);
     let none = t.iter().find(|s| s.name == "On no system").unwrap();
     assert_eq!((none.flag, none.runs.value), (Status::Known, Some(34.5)));
 
-    // One size is one line, however each run's was typed, and lines are in order of size.
+    // One size is one line, however each type's was typed, and lines are in order of size.
     let mut job = plumbline_world::sample::house();
     let a = path_named(&mut job, "branch to living west");
     let b = path_named(&mut job, "branch to kitchen");
-    job.put(&a, Size::round(Val::known(Len::One(0.5), "ft", "test"))).unwrap();
-    job.put(&b, Size::round(Val::known(Len::FtIn([0.0, 6.0]), "ft-in", "test"))).unwrap();
+    for (path, width) in [(&a, Val::known(Len::One(0.5), "ft", "test")), (&b, Val::known(Len::FtIn([0.0, 6.0]), "ft-in", "test"))] {
+        let t = job.add("job-0001", Kind::Type, &format!("six inches, typed another way {}", job.order.len())).unwrap();
+        job.put(&t, SegmentType::round(Kind::Duct, width)).unwrap();
+        let e = job.find(path).unwrap();
+        let mut piece = job.world.get::<Segment>(e).unwrap().clone();
+        piece.type_name = named(&t);
+        job.put(path, piece).unwrap();
+    }
     job.derive();
     let t = takeoff(&mut job);
     let supply = t.iter().find(|s| s.name == "Supply air").unwrap();
     let sizes: Vec<&str> = supply.lines.iter().map(|l| l.size.as_str()).collect();
     assert_eq!(sizes, ["6 in round", "12 in × 8 in", "14 in × 8 in", "16 in × 8 in"]);
-    assert_eq!((supply.lines[0].length.members, supply.lines[0].length.value), (9, Some(88.4)));
+    // Nine branches: five on the first floor of one piece each and four on the second
+    // of two, thirteen pieces, 88.4 LF.
+    assert_eq!((supply.lines[0].length.members, supply.lines[0].length.value), (13, Some(88.4)));
     // The two typed in feet are Known where the rest are Assumed: the line is still Assumed.
     assert_eq!(supply.lines[0].size_status, Status::Assumed);
+    // A run whose type says a size nobody has is a run of no known size, like one with no type.
+    let unsized_type = job.add("job-0001", Kind::Type, "a duct nobody has sized").unwrap();
+    job.put(&unsized_type, SegmentType::round(Kind::Duct, Val::unknown("in", "not on the schedule"))).unwrap();
+    let e = job.find(&a).unwrap();
+    let mut piece = job.world.get::<Segment>(e).unwrap().clone();
+    piece.type_name = named(&unsized_type);
+    job.put(&a, piece).unwrap();
+    job.derive();
+    let t = takeoff(&mut job);
+    let supply = t.iter().find(|s| s.name == "Supply air").unwrap();
+    let last = supply.lines.last().unwrap();
+    assert_eq!((last.size.as_str(), last.size_status, last.length.value, last.length.members), ("size unknown", Status::Unknown, Some(11.0), 1));
+    assert_eq!(measure_of(&mut job, &a, "surface_area").value, None);
 }
 
 #[test]
@@ -2480,13 +2596,14 @@ fn an_opening_that_cannot_be_cut_is_said_and_a_listing_keeps_a_door_under_its_wa
         plumbline_world::building::Shape::Wall { holes, .. } => assert!(holes.iter().all(|h| h.0 != door)),
         other => panic!("{other:?}"),
     }
-    assert_eq!(not_drawn, vec![(door.clone(), format!("it runs past the end of {south}, so it is not cut in it"))]);
+    assert!(not_drawn.contains(&(door.clone(), format!("it runs past the end of {south}, so it is not cut in it"))), "{not_drawn:?}");
     // One whose width nobody has is said too.
     let no_width = opening_type(&mut job, Kind::Door, Val::unknown("ft", "not on the plan"), len(6.67));
     job.put(&door, Opening { type_name: no_width, offset: len(20.0), sill: len(0.0) }).unwrap();
     let (_, not_drawn) = placements(&mut job);
-    assert_eq!(not_drawn.len(), 1);
-    assert!(not_drawn[0].1.contains("is not known"), "{}", not_drawn[0].1);
+    let said: Vec<&(String, String)> = not_drawn.iter().filter(|x| x.0 == door).collect();
+    assert_eq!(said.len(), 1);
+    assert!(said[0].1.contains("is not known"), "{}", said[0].1);
     // A flat reading lists each door and window straight after its own wall's rows, one
     // level in, whenever it was added: the front door is under the south wall.
     let rows = plumbline_world::view::elements(&mut job);

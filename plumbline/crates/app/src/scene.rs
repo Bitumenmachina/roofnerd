@@ -481,8 +481,9 @@ pub fn rebuild(
                 build.piece(&p.path, None, meshes.add(faces.mesh()), Transform::IDENTITY, theme::floor_colour(), 0.75, 0.0, true);
                 build.drawing.frames.push((p.path.clone(), frame));
             }
-            Shape::Route { points, round, rect } => {
-                let pts: Vec<Vec3> = points.iter().map(|q| to_view(origin, *q)).collect();
+            Shape::Run { a, b, round, rect } => {
+                // One straight piece. Where it meets the next, the fitting there closes the corner.
+                let pts: Vec<Vec3> = [a, b].iter().map(|q| to_view(origin, **q)).collect();
                 let frame: Vec<(Vec3, Vec3)> = pts.windows(2).map(|s| (s[0], s[1])).collect();
                 let metal = if matches!(p.kind, Kind::Duct | Kind::Conduit) { 0.55 } else { 0.15 };
                 match (round, rect) {
@@ -492,25 +493,19 @@ pub fn rebuild(
                             let turn = Quat::from_rotation_arc(Vec3::Y, (s[1] - s[0]).normalize_or(Vec3::Y));
                             build.piece(&p.path, p.system.as_ref(), solids.cylinder.clone(), Transform { translation: (s[0] + s[1]) / 2.0, rotation: turn, scale: Vec3::new(d, s[0].distance(s[1]), d) }, colour, 0.45, metal, false);
                         }
-                        // A ball at each corner closes the bend.
-                        for q in &pts[1..pts.len().saturating_sub(1)] {
-                            build.piece(&p.path, p.system.as_ref(), solids.ball.clone(), Transform { translation: *q, scale: Vec3::splat(d), ..default() }, colour, 0.45, metal, false);
-                        }
                         if d < THIN_FT {
                             build.drawing.runs.extend(frame.iter().map(|(a, b)| (*a, *b, colour, false)));
                         }
                     }
                     (None, Some((w, d))) => {
                         let (w, d) = (*w as f32, *d as f32);
-                        for (i, s) in pts.windows(2).enumerate() {
+                        for s in pts.windows(2) {
                             let dir = (s[1] - s[0]).normalize_or(Vec3::X);
                             // Lying flat, the depth is up and down; standing, the width runs east-west.
                             let side = if dir.y.abs() > 0.99 { Vec3::X } else { dir.cross(Vec3::Y).normalize() };
                             let upward = side.cross(dir).normalize();
                             let turn = Quat::from_mat3(&Mat3::from_cols(side, upward, dir));
-                            // Run on past each corner by half the section, so corners close.
-                            let (lead, tail) = (if i > 0 { w.max(d) / 2.0 } else { 0.0 }, if i + 2 < pts.len() { w.max(d) / 2.0 } else { 0.0 });
-                            let (from, to) = (s[0] - dir * lead, s[1] + dir * tail);
+                            let (from, to) = (s[0], s[1]);
                             build.piece(&p.path, p.system.as_ref(), solids.cube.clone(), Transform { translation: (from + to) / 2.0, rotation: turn, scale: Vec3::new(w, d, from.distance(to)) }, colour, 0.5, metal, false);
                         }
                     }
@@ -519,19 +514,30 @@ pub fn rebuild(
                 }
                 build.drawing.frames.push((p.path.clone(), frame));
             }
-            Shape::Box { at, size } => {
+            Shape::Box { at, size, angle } => {
                 let centre = to_view(origin, [at[0], at[1], at[2] + size[2] / 2.0]);
                 let scale = Vec3::new(size[0] as f32, size[2] as f32, size[1] as f32);
-                let (paint, rough, metal) = match (p.kind, p.discipline) {
-                    (Kind::Equipment, _) => (mix(theme::equipment(), colour, 0.18), 0.4, 0.6),
-                    (_, Discipline::Plumbing) => (theme::porcelain(), 0.2, 0.0),
-                    _ => (mix(theme::porcelain(), colour, 0.35), 0.5, 0.1),
-                };
-                build.piece(&p.path, p.system.as_ref(), solids.cube.clone(), Transform { translation: centre, scale, ..default() }, paint, rough, metal, false);
-                let (lo, hi) = (centre - scale / 2.0, centre + scale / 2.0);
+                // Turned counter-clockwise from east, seen from above: about the upright axis.
+                let turn = Quat::from_rotation_y((*angle as f32).to_radians());
+                if p.kind == Kind::Fitting {
+                    // A fitting is drawn in its system's colour, like the runs it joins: a
+                    // ball where its section is round, a block where it is not.
+                    let metal = if p.discipline == Discipline::Plumbing { 0.15 } else { 0.55 };
+                    let solid = if size[0] == size[2] { solids.ball.clone() } else { solids.cube.clone() };
+                    build.piece(&p.path, p.system.as_ref(), solid, Transform { translation: centre, rotation: turn, scale }, colour, 0.45, metal, false);
+                } else {
+                    let (paint, rough, metal) = match (p.kind, p.discipline) {
+                        (Kind::Equipment, _) => (mix(theme::equipment(), colour, 0.18), 0.4, 0.6),
+                        (_, Discipline::Plumbing) => (theme::porcelain(), 0.2, 0.0),
+                        _ => (mix(theme::porcelain(), colour, 0.35), 0.5, 0.1),
+                    };
+                    build.piece(&p.path, p.system.as_ref(), solids.cube.clone(), Transform { translation: centre, rotation: turn, scale }, paint, rough, metal, false);
+                }
+                let h = scale / 2.0;
+                let corner = |x: f32, y: f32, z: f32| centre + turn * Vec3::new(x * h.x, y * h.y, z * h.z);
                 build.drawing.frames.push((
                     p.path.clone(),
-                    box_edges([Vec3::new(lo.x, lo.y, lo.z), Vec3::new(hi.x, lo.y, lo.z), Vec3::new(hi.x, lo.y, hi.z), Vec3::new(lo.x, lo.y, hi.z), Vec3::new(lo.x, hi.y, lo.z), Vec3::new(hi.x, hi.y, lo.z), Vec3::new(hi.x, hi.y, hi.z), Vec3::new(lo.x, hi.y, hi.z)]),
+                    box_edges([corner(-1.0, -1.0, -1.0), corner(1.0, -1.0, -1.0), corner(1.0, -1.0, 1.0), corner(-1.0, -1.0, 1.0), corner(-1.0, 1.0, -1.0), corner(1.0, 1.0, -1.0), corner(1.0, 1.0, 1.0), corner(-1.0, 1.0, 1.0)]),
                 ));
             }
         }

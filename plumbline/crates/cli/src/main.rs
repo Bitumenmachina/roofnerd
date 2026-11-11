@@ -62,7 +62,7 @@ fn usage() -> String {
 }
 
 /// What the building comes to: each storey's walls and floors, then each system's runs by
-/// kind and size and what is set on it. The same figures the sheet window shows.
+/// kind and size, its fittings by kind, and what is set on it. The same figures the sheet window shows.
 fn takeoff(job: &mut plumbline_world::Job) -> String {
     use plumbline_world::building;
     let said = |sum: &view::Sum| match (sum.value, sum.members) {
@@ -83,7 +83,10 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
         let what = if !t.classification.is_empty() { t.classification.as_str() } else if t.flag == Status::Unknown { "which system is not known" } else { "no system" };
         let _ = writeln!(out, "\n{}{}  ({what}; {} runs, {})", if t.flag == Status::Known { String::new() } else { format!("{} ", t.flag.flag()) }, t.name, t.runs.members, said(&t.runs));
         for line in &t.lines {
-            let _ = writeln!(out, "  {} {:<8} {:<16} {:>2} runs  {:>12}   bends {}", line.size_status.max(line.length.status).flag(), format!("{:?}", line.kind), line.size, line.length.members, said(&line.length), said(&line.bends));
+            let _ = writeln!(out, "  {} {:<8} {:<16} {:>2} runs  {:>12}", line.size_status.max(line.length.status).flag(), format!("{:?}", line.kind), line.size, line.length.members, said(&line.length));
+        }
+        for (kind, what, count, status) in &t.fittings {
+            let _ = writeln!(out, "  {} {:<9} {what}: {count} EA", status.flag(), kind.map(|k| k.label()).unwrap_or("Fitting"));
         }
         for (kind, what, count, status) in &t.placed {
             let _ = writeln!(out, "  {} {:<9} {what}: {count} EA", status.flag(), format!("{kind:?}"));

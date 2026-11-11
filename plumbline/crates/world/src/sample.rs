@@ -15,7 +15,7 @@
 use crate::components::*;
 use crate::job::Job;
 use crate::units::Len;
-use crate::value::Val;
+use crate::value::{Status, Val};
 
 const PLAN: &str = "sample plan A-201";
 /// The sample is fixed data; a failure here is a bug in this file.
@@ -205,6 +205,12 @@ pub fn sample() -> Job {
     job
 }
 
+/// A run's section as a sample plan gives it: a size, or a line drawn with none.
+enum Section {
+    Is(crate::building::SegmentType),
+    NotOnPlan(&'static str),
+}
+
 /// A made-up whole house: two storeys, 40 ft by 28 ft, under a hip roof solved from its
 /// footprint, with its heating and cooling, its plumbing and its wiring. Nothing here is
 /// from a real job, and nothing in it was engineered: sizes that a designer would work out
@@ -344,22 +350,73 @@ pub fn house() -> Job {
     let power = system(&mut job, "Power", Discipline::Electrical, "Power");
     let lighting = system(&mut job, "Lighting", Discipline::Electrical, "Lighting");
 
-    let run = |job: &mut Job, storey: &str, kind: Kind, name: &str, sys: &str, src: &str, size: Size, pts: &[P3]| -> String {
-        let r = job.add(storey, kind, name).expect(OK);
-        job.put(&r, Route { points: Val::known(pts.to_vec(), "ft", src) }).expect(OK);
-        job.put(&r, size).expect(OK);
-        job.put(&r, InSystem(Val::known(sys.to_string(), "", src))).expect(OK);
-        r
+    // A run is drawn on the sample's plans as a line that turns corners. In the job it is
+    // one straight piece from each corner to the next, each of the run's type, with an
+    // elbow at each corner: pipe and duct are measured through their fittings, centre to
+    // centre, so the pieces come to the length of the line. A cable turns a corner with
+    // no fitting. A type is made the first time a size is met.
+    let base_of = |storey: &str| if storey == second { 10.0 } else { 0.0 };
+    let tidy = |x: f64| (x * 1.0e6).round() / 1.0e6;
+    let mut run_types: Vec<(String, String)> = Vec::new();
+    let mut run = |job: &mut Job, storey: &str, kind: Kind, name: &str, sys: &str, src: &str, size: Section, pts: &[P3]| {
+        let base = base_of(storey);
+        // The type, or that nobody has it.
+        let (type_ref, section) = match size {
+            Section::NotOnPlan(why) => (Val::unknown("", why), None),
+            Section::Is(t) => {
+                let t = SegmentType { category: kind, ..t };
+                let label = format!("{kind:?} {}{}", t.said(), if t.status() == Status::Assumed { ", assumed" } else { "" });
+                let path = match run_types.iter().find(|x| x.0 == label) {
+                    Some(x) => x.1.clone(),
+                    None => {
+                        let path = job.add(&root, Kind::Type, &label).expect(OK);
+                        job.put(&path, t.clone()).expect(OK);
+                        run_types.push((label, path.clone()));
+                        path
+                    }
+                };
+                (Val::known(path, "", src), Some(t))
+            }
+        };
+        let pieces = pts.len() - 1;
+        for (i, pair) in pts.windows(2).enumerate() {
+            let (a, b) = (pair[0], pair[1]);
+            let piece = if pieces == 1 { name.to_string() } else { format!("{name}, piece {} of {pieces}", i + 1) };
+            let r = job.add(storey, kind, &piece).expect(OK);
+            let end_offset = (a[2] != b[2]).then(|| ft(tidy(b[2] - base), src));
+            job.put(&r, Segment { type_name: type_ref.clone(), line: Val::known([[a[0], a[1]], [b[0], b[1]]], "ft", src), offset: ft(tidy(a[2] - base), src), end_offset, justify: Justify::Centre }).expect(OK);
+            job.put(&r, InSystem(Val::known(sys.to_string(), "", src))).expect(OK);
+            if i + 1 < pieces && kind != Kind::Cable {
+                // The elbow at the corner this piece ends at. It is the run's size; which
+                // elbow is bought is not selected.
+                let f = job.add(storey, Kind::Fitting, &format!("{name}, elbow {}", i + 1)).expect(OK);
+                // (deep: how tall the elbow is drawn, in inches, so its middle is on the joint.)
+                let (what, size, deep) = match &section {
+                    None => (Val::unknown("", "its run is drawn on the plan with no size"), Val::unknown("in", "its run is drawn on the plan with no size"), 0.0),
+                    Some(t) => {
+                        let across = t.width.value.as_ref().and_then(|v| v.feet(&t.width.unit).ok()).unwrap_or(0.0) * 12.0;
+                        let deep = t.depth.as_ref().and_then(|d| d.feet()).map(|d| d * 12.0).unwrap_or(across);
+                        // A pipe's or a conduit's size is its diameter and is said without "round".
+                        let what = format!("{} elbow", if kind == Kind::Duct { t.said() } else { t.said().replace(" round", "") });
+                        let what = if t.status() == Status::Assumed { Val::assumed(what, "", RULE) } else { Val::known(what, "", src) };
+                        (what, Val::assumed([tidy(across), tidy(across), tidy(deep)], "in", "drawn at its run's size; the fitting is not selected"), deep)
+                    }
+                };
+                job.put(&f, Fitting { kind: FittingKind::Bend }).expect(OK);
+                job.put(&f, Placed { what, at: Val::known([b[0], b[1]], "ft", src), offset: ft(tidy(b[2] - base - deep / 24.0), src), angle: None, size }).expect(OK);
+                job.put(&f, InSystem(Val::known(sys.to_string(), "", src))).expect(OK);
+            }
+        }
     };
     let thing = |job: &mut Job, storey: &str, kind: Kind, name: &str, sys: &str, src: &str, what: Val<String>, at: P3, size: Val<P3>| {
         let t = job.add(storey, kind, name).expect(OK);
-        job.put(&t, Placed { what, at: Val::known(at, "ft", src), size }).expect(OK);
+        job.put(&t, Placed { what, at: Val::known([at[0], at[1]], "ft", src), offset: ft(tidy(at[2] - base_of(storey)), src), angle: None, size }).expect(OK);
         job.put(&t, InSystem(Val::known(sys.to_string(), "", src))).expect(OK);
     };
     let said = |s: &str, src: &str| Val::known(s.to_string(), "", src);
-    let rect = |w: f64, d: f64| Size::rectangular(Val::assumed(Len::One(w), "in", RULE), Val::assumed(Len::One(d), "in", RULE));
-    let round_assumed = |d: f64| Size::round(Val::assumed(Len::One(d), "in", RULE));
-    let round = |d: f64, src: &str| Size::round(Val::known(Len::One(d), "in", src));
+    let rect = |w: f64, d: f64| Section::Is(SegmentType::rectangular(Kind::Duct, Val::assumed(Len::One(w), "in", RULE), Val::assumed(Len::One(d), "in", RULE)));
+    let round_assumed = |d: f64| Section::Is(SegmentType::round(Kind::Duct, Val::assumed(Len::One(d), "in", RULE)));
+    let round = |d: f64, src: &str| Section::Is(SegmentType::round(Kind::Pipe, Val::known(Len::One(d), "in", src)));
     let boxed = |x: f64, y: f64, z: f64, src: &str| Val::known([x, y, z], "ft", src);
     let typical = |x: f64, y: f64, z: f64| Val::assumed([x, y, z], "ft", "a typical size; the product is not selected");
 
@@ -401,7 +458,7 @@ pub fn house() -> Job {
     run(&mut job, &second, Kind::Pipe, "cold header, second floor", &cold, P, round(0.75, P), &[[16.0, 22.4, 10.7], [22.6, 22.4, 10.7]]);
     // Hot water. The kitchen branch is drawn on the sample plan with no size on it.
     run(&mut job, &first, Kind::Pipe, "hot main to the baths", &hot, P, round(0.75, P), &[[16.3, 26.5, 5.0], [16.3, 26.5, 6.0], [16.3, 22.7, 6.0], [16.3, 22.7, 1.0], [22.3, 22.7, 1.0]]);
-    run(&mut job, &first, Kind::Pipe, "hot to the kitchen sink", &hot, P, Size::round(Val::unknown("in", "drawn on the plan with no size")), &[[16.3, 26.5, 6.0], [16.3, 27.3, 6.0], [11.4, 27.3, 6.0], [11.4, 27.3, 2.3]]);
+    run(&mut job, &first, Kind::Pipe, "hot to the kitchen sink", &hot, P, Section::NotOnPlan("drawn on the plan with no size"), &[[16.3, 26.5, 6.0], [16.3, 27.3, 6.0], [11.4, 27.3, 6.0], [11.4, 27.3, 2.3]]);
     run(&mut job, &first, Kind::Pipe, "hot riser", &hot, P, round(0.75, P), &[[17.4, 22.7, 1.0], [17.4, 22.7, 11.0]]);
     run(&mut job, &second, Kind::Pipe, "hot header, second floor", &hot, P, round(0.75, P), &[[16.3, 22.7, 11.0], [22.3, 22.7, 11.0]]);
     for (storey, z, n) in [(&first, 0.0, 1), (&second, 10.0, 2)] {
@@ -425,7 +482,7 @@ pub fn house() -> Job {
     thing(&mut job, &first, Kind::Equipment, "meter", &power, E, said("Meter socket, 200 A", E), [40.45, 20.0, 4.0], boxed(0.4, 1.0, 1.3, E));
     thing(&mut job, &first, Kind::Equipment, "panel", &power, E, said("Panelboard, 200 A", E), [39.55, 20.0, 3.5], boxed(0.35, 1.2, 2.6, E));
     run(&mut job, &first, Kind::Conduit, "service entrance", &power, E, round(2.0, E), &[[40.45, 20.0, 4.0], [40.45, 20.0, -2.0], [44.0, 20.0, -2.0]]);
-    let cable = || Size::round(Val::assumed(Len::One(0.4), "in", "the jacket of a 12-2 cable, roughly; the cable is not selected"));
+    let cable = || Section::Is(SegmentType::round(Kind::Cable, Val::assumed(Len::One(0.4), "in", "the jacket of a 12-2 cable, roughly; the cable is not selected")));
     run(&mut job, &first, Kind::Cable, "kitchen circuit", &power, E, cable(), &[[39.55, 20.0, 6.1], [39.55, 20.0, 9.6], [8.0, 20.0, 9.6], [8.0, 27.6, 9.6], [8.0, 27.6, 3.6]]);
     thing(&mut job, &first, Kind::Fixture, "receptacle, kitchen", &power, E, said("Duplex receptacle", E), [8.0, 27.65, 3.4], boxed(0.25, 0.1, 0.4, E));
     run(&mut job, &first, Kind::Cable, "living circuit", &power, E, cable(), &[[39.55, 19.5, 6.1], [39.55, 19.5, 9.7], [30.0, 19.5, 9.7], [30.0, 0.35, 9.7], [30.0, 0.35, 1.4]]);

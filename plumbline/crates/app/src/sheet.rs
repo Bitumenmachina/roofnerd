@@ -369,7 +369,7 @@ fn systems(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     }
                 });
             if !t.lines.is_empty() {
-                header_row(c, fonts, &[("", 7.0, false), ("Run", 0.0, false), ("Size", 170.0, false), ("Runs", 50.0, true), ("Bends", 80.0, true), ("Length", 120.0, true)]);
+                header_row(c, fonts, &[("", 7.0, false), ("Run", 0.0, false), ("Size", 170.0, false), ("Pieces", 50.0, true), ("", 80.0, true), ("Length", 120.0, true)]);
                 for line in &t.lines {
                     row(c, false, None, |r| {
                         cell(r, 7.0, false, |d| dot(d, line.size_status.max(line.length.status)));
@@ -379,10 +379,23 @@ fn systems(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                             status_chip(d, fonts, line.size_status);
                         });
                         cell(r, 50.0, true, |d| words(d, fonts, line.length.members.to_string(), 12.5, Weight::Regular, theme::ink_soft()));
-                        cell(r, 80.0, true, |d| words(d, fonts, total(&line.bends), 12.5, Weight::Regular, theme::status_ink(line.bends.status)));
+                        cell(r, 80.0, true, |_| {});
                         cell(r, 120.0, true, |d| words(d, fonts, total(&line.length), 12.5, Weight::Medium, theme::status_ink(line.length.status)));
                     });
                 }
+            }
+            for (kind, what, count, status) in &t.fittings {
+                row(c, false, None, |r| {
+                    cell(r, 7.0, false, |d| dot(d, *status));
+                    cell(r, 0.0, false, |d| {
+                        words(d, fonts, what.clone(), 12.5, Weight::Medium, theme::status_ink(*status));
+                        status_chip(d, fonts, *status);
+                    });
+                    cell(r, 170.0, false, |d| words(d, fonts, kind.map(|k| k.label()).unwrap_or("Fitting"), 12.5, Weight::Regular, theme::ink_soft()));
+                    cell(r, 50.0, true, |_| {});
+                    cell(r, 80.0, true, |_| {});
+                    cell(r, 120.0, true, |d| words(d, fonts, format!("{count} EA"), 12.5, Weight::Medium, theme::ink()));
+                });
             }
             for (kind, what, count, status) in &t.placed {
                 row(c, false, None, |r| {

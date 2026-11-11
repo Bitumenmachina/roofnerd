@@ -49,7 +49,7 @@ struct Entry {
     extra: BTreeMap<String, Value>,
 }
 
-const KNOWN_KEYS: [&str; 27] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_ROUTE, K_SIZE, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
+const KNOWN_KEYS: [&str; 28] = [K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_SEGMENT, K_SEGMENT_TYPE, K_FITTING, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
 
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
@@ -93,8 +93,9 @@ pub fn save(job: &mut Job) -> String {
         put!(WallType, K_WALL_TYPE);
         put!(FloorType, K_FLOOR_TYPE);
         put!(OpeningType, K_OPENING_TYPE);
-        put!(Route, K_ROUTE);
-        put!(Size, K_SIZE);
+        put!(Segment, K_SEGMENT);
+        put!(SegmentType, K_SEGMENT_TYPE);
+        put!(Fitting, K_FITTING);
         put!(Placed, K_PLACED);
         put!(SystemInfo, K_SYSTEM);
         put!(InSystem, K_IN_SYSTEM);
@@ -319,14 +320,19 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                     building::check_opening_type(&path, kind, &c)?;
                     ent.insert(c);
                 }
-                K_ROUTE => {
-                    let c: Route = parse(&path, &k, v)?;
-                    building::check_route(&path, kind, &c)?;
+                K_SEGMENT => {
+                    let c: Segment = parse(&path, &k, v)?;
+                    building::check_segment(&path, kind, &c)?;
                     ent.insert(c);
                 }
-                K_SIZE => {
-                    let c: Size = parse(&path, &k, v)?;
-                    building::check_size(&path, kind, &c)?;
+                K_SEGMENT_TYPE => {
+                    let c: SegmentType = parse(&path, &k, v)?;
+                    building::check_segment_type(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_FITTING => {
+                    let c: Fitting = parse(&path, &k, v)?;
+                    building::check_fitting(&path, kind, &c)?;
                     ent.insert(c);
                 }
                 K_PLACED => {
