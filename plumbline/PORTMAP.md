@@ -172,3 +172,16 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `move_by` | ported | `move_elements` | `crates/core/src/commands.rs:12419` | move by a distance east and north; a wall's openings go with it. Not taken: moving one end; several at once |
 | `remove` | ported | `delete` | `crates/core/src/commands.rs:13011` | take an element out, and a wall's doors and windows with it (`commands.rs:13040`) |
 | `room` | ported | `room` | `crates/core/src/commands.rs:7909` | a room placed by a point on a level, with a name. Not taken: a number given when none is said |
+| `STEP_FT` | ported | `STEP` | `crates/core/src/snap.rs:19` | what a point with nothing to snap to rounds to; an inch here, 10 mm there (header) |
+| `SnapKind` | ported | `Kind` | `crates/core/src/snap.rs:34` | what a point snapped to; curves', scans' and annotation's kinds are not taken |
+| `name` | ported | `name` | `crates/core/src/snap.rs:59` | what a snap is called |
+| `Snaps` | ported | `Snaps` | `crates/core/src/snap.rs:79` | the snaps in force |
+| `none` | ported | `none` | `crates/core/src/snap.rs:104` | no snap at all |
+| `Reach` | ported | `Reach` | `crates/core/src/snap.rs:164` | how far a snap reaches, to a point and to a line |
+| `Guide` | ported | `Guide` | `crates/core/src/snap.rs:171` | an angle guide through the last point |
+| `Found` | ported | `Found` | `crates/core/src/snap.rs:180` | where a pick landed, what it snapped to and which element it came from |
+| `Scene` | ported | `Scene` | `crates/core/src/snap.rs:211` | what the plan has to snap to; here it can be written out by hand (header) |
+| `segment` | ported | `segment` | `crates/core/src/snap.rs:226` | a straight piece gives its ends, its middle and its line |
+| `scene` | ported | `of` | `crates/core/src/snap.rs:267` | the scene of one level's plan; here the walls and runs entered on the storey (header) |
+| `corner` | ported | `corner` | `crates/core/src/snap.rs:633` | the angle a new line makes with the one before |
+| `snap` | ported | `solve` | `crates/core/src/snap.rs:736` | the solver: a point of the plan, the foot of the perpendicular, an angle guide, a wall's line, else the round step |

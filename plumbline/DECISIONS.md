@@ -1063,3 +1063,24 @@ and `build_opening` (7473 to 7520), `room` (7909 to 7923), `stood_of` (8662 to 8
 * **A move takes the worse of the thing's status and the mover's**, and adds the move to
   the source of a value that keeps its status.
 * **`plumbline new`** stamps the job with the machine's date. Nothing else reads a clock.
+
+### Call 36. Drawing and editing: snapping (2026-11-11)
+
+Read first: BIMCraft `crates/core/src/snap.rs` lines 1 to 330 (the kinds, the switches,
+the scene and how walls and components enter it), 586 to 662 (crossings, ray_hit, rays,
+corner, rank) and 736 to 916 (the solver), and `geom.rs` 330 to 340.
+
+* **The solver is BIMCraft's, in its order:** a point of the plan within reach (an end
+  before a crossing before a middle where two lie as near); the foot of the
+  perpendicular from the last point; a guide through the last point every 15 degrees
+  from east and from the line before, within 4 degrees, ending where it crosses a wall;
+  the nearest point of a wall's line; else the round step. A square step is pinned to
+  east or north of the last point first.
+* **The round step is an inch.** BIMCraft's is 10 mm. Neither is the other converted.
+* **Runs are snapped to.** BIMCraft's plan scene has no runs in it (its lines are walls,
+  grids and detail lines). A duct here has to start where another ends, so a run gives
+  its ends, its middle and its line. Listed as added in the file's header.
+* **The scene is a value of its own**, made from the job by `scene`, so the solver is
+  tested on plans written out by hand.
+* **The walls snapped to are those entered on the storey being drawn on.** BIMCraft takes
+  the walls its plan cuts.

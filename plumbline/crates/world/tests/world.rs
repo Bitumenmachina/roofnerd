@@ -4457,3 +4457,87 @@ fn a_wall_moved_takes_its_openings_and_a_wall_removed_takes_them_too() {
     assert_eq!(job.index().len(), before - 2);
     assert!(job.find(&door).is_none());
 }
+
+#[test]
+fn a_point_picked_on_the_plan_snaps_to_what_is_there() {
+    use plumbline_world::editing::snap::{corner, scene, snap, Reach, Scene, SnapKind, Snaps};
+    // A plan written out by hand: wall A along the east axis from (0, 0) to (20, 0); wall B
+    // across it from (10, -5) to (10, 5); wall C from (30, 0) to (40, 0). Each 6 in thick.
+    let mut plan = Scene::default();
+    for (name, a, b) in [("A", [0.0, 0.0], [20.0, 0.0]), ("B", [10.0, -5.0], [10.0, 5.0]), ("C", [30.0, 0.0], [40.0, 0.0])] {
+        plan.segment(a, b, Some(name.to_string()));
+        plan.walls.push((a, b, 0.5, name.to_string()));
+    }
+    let reach = Reach { point: 0.5, line: 0.5 };
+    let all = Snaps::default();
+    let at = |p: [f64; 2], from: &[[f64; 2]], square: bool, o: &Snaps| snap(&plan, p, reach, from, square, o);
+    // Near an end: the end, and whose.
+    let f = at([0.2, 0.1], &[], false, &all);
+    assert_eq!((f.at, f.kind, f.source.as_deref()), ([0.0, 0.0], SnapKind::Endpoint, Some("A")));
+    // Where A and B cross is also the middle of each: a crossing ranks before a middle.
+    let f = at([10.1, 0.1], &[], false, &all);
+    assert_eq!((f.at, f.kind), ([10.0, 0.0], SnapKind::Intersection));
+    // The middle of C, where nothing crosses.
+    let f = at([35.2, 0.1], &[], false, &all);
+    assert_eq!((f.at, f.kind, f.source.as_deref()), ([35.0, 0.0], SnapKind::Midpoint, Some("C")));
+    // The foot of the perpendicular from the last point, (5, 4), onto A is (5, 0): straight down.
+    let f = at([5.1, 0.2], &[[5.0, 4.0]], false, &all);
+    assert_eq!((f.at, f.kind), ([5.0, 0.0], SnapKind::Perpendicular));
+    assert_eq!(f.guide.map(|g| g.angle), Some(270.0));
+    // Away from everything, a direction within 4 degrees of a guide goes onto it: from
+    // (0, 10) towards (8, 10.3) is 2.1 degrees off east, so the point is 8 ft due east.
+    let f = at([8.0, 10.3], &[[0.0, 10.0]], false, &all);
+    assert_eq!((f.at, f.kind, f.guide.map(|g| g.angle)), ([8.0, 10.0], SnapKind::Angle, Some(0.0)));
+    // Too far off any guide (7.1 degrees), or with no point before it: the nearest inch.
+    // 8.02 ft is 96.24 in, so 96 in; 10.31 ft is 123.72 in, so 124 in, 10.3333 ft.
+    let f = at([8.0, 11.0], &[[0.0, 10.0]], false, &all);
+    assert_eq!((f.at, f.kind), ([8.0, 11.0], SnapKind::Free));
+    let f = at([8.02, 10.31], &[], false, &all);
+    assert_eq!((f.at, f.kind), ([8.0, 10.3333], SnapKind::Free));
+    // Beside a wall and near none of its points: the nearest inch along its line.
+    // (3.03, 0.4) is 0.15 ft off A's face; 3.03 ft along is 36.36 in, so 36 in.
+    let f = at([3.03, 0.4], &[], false, &all);
+    assert_eq!((f.at, f.kind, f.source.as_deref()), ([3.0, 0.0], SnapKind::Nearest, Some("A")));
+    // Farther than the reach from its face: not the wall's.
+    assert_eq!(at([3.03, 0.9], &[], false, &all).kind, SnapKind::Free);
+    // A square step keeps to east or north of the last point, whichever is nearer.
+    let f = at([9.0, 10.4], &[[2.0, 10.0]], true, &Snaps::none());
+    assert_eq!((f.at, f.kind), ([9.0, 10.0], SnapKind::Free));
+    let f = at([2.3, 14.0], &[[2.0, 10.0]], true, &Snaps::none());
+    assert_eq!((f.at, f.kind), ([2.0, 14.0], SnapKind::Free));
+    // With the snaps off, an end is not snapped to.
+    let f = at([0.2, 0.1], &[], false, &Snaps::none());
+    assert_eq!((f.at, f.kind), ([0.1667, 0.0833], SnapKind::Free));
+    // A guide ends where it crosses a wall: from (15, 5) due south it meets A at (15, 0).
+    let f = at([15.05, 0.2], &[[15.0, 5.0]], false, &Snaps { perpendicular: false, ..all });
+    assert_eq!((f.at, f.kind, f.source.as_deref()), ([15.0, 0.0], SnapKind::Intersection, Some("A")));
+    // The points picked so far are ends too: back to where the run began.
+    let f = at([2.1, 9.9], &[[2.0, 10.0], [6.0, 10.0]], false, &all);
+    assert_eq!((f.at, f.kind, f.source), ([2.0, 10.0], SnapKind::Endpoint, None));
+    // The corner a new line makes with the one before: a right angle, and straight on.
+    assert_eq!(corner([0.0, 0.0], [10.0, 0.0], [10.0, 5.0]), Some(90.0));
+    assert_eq!(corner([0.0, 0.0], [10.0, 0.0], [15.0, 0.0]), Some(180.0));
+    assert_eq!(corner([0.0, 0.0], [0.0, 0.0], [15.0, 0.0]), None);
+
+    // The scene of a job: the walls and runs entered on the storey, and where things stand.
+    use plumbline_world::editing as ed;
+    let how = ed::Entered { status: Status::Known, source: "made-up plan" };
+    let (mut job, s, wt, _dt, _nt) = drawn();
+    let made = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [20.0, 0.0], [20.0, 10.0]], false, ed::Top::Height("9 ft"), how).unwrap();
+    let duct = ed::segment_type(&mut job, "6 in round", Kind::Duct, "6 in", None, how).unwrap();
+    let run = ed::runs(&mut job, &s, Kind::Duct, &duct, &[[2.0, 2.0], [14.0, 2.0]], "8 ft", None, how).unwrap();
+    let thing = ed::place(&mut job, &s, Kind::Fixture, "Register", [14.0, 7.0], "8 ft", None, None, how).unwrap();
+    let plan = scene(&mut job, &s, None);
+    assert_eq!(plan.walls.len(), 2);
+    assert_eq!(plan.walls[0], ([0.0, 0.0], [20.0, 0.0], 0.5, made[0].clone()));
+    let f = snap(&plan, [19.8, 0.2], reach, &[], false, &all);
+    assert_eq!((f.at, f.kind), ([20.0, 0.0], SnapKind::Endpoint));
+    let f = snap(&plan, [8.1, 2.1], reach, &[], false, &all);
+    assert_eq!((f.at, f.kind, f.source), ([8.0, 2.0], SnapKind::Midpoint, Some(run[0].clone())));
+    let f = snap(&plan, [14.1, 7.1], reach, &[], false, &all);
+    assert_eq!((f.at, f.kind, f.source), ([14.0, 7.0], SnapKind::Centre, Some(thing)));
+    // What is being moved does not snap to where it was.
+    let without = scene(&mut job, &s, Some(&made[0]));
+    assert_eq!(without.walls.len(), 1);
+    assert_eq!(snap(&without, [0.2, 0.1], reach, &[], false, &all).kind, SnapKind::Free);
+}

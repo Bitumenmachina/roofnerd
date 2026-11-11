@@ -26,6 +26,7 @@
 //!   attaching a wall's top or base, moving one end, moving or removing several at once.
 
 pub mod history;
+pub mod snap;
 
 pub use history::{History, UNDO_LIMIT};
 
