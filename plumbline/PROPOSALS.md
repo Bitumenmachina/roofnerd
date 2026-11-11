@@ -62,3 +62,9 @@ Work outside a deliverable. Nothing here is built until the owner accepts it.
     roof carries its own price and so is not compared across suppliers.
 16. **Equipment and Other as classes of cost.** The earlier program has them; the brief
     names material, labor, fabrication, supervision, subcontract and general conditions.
+17. **A Bosch GLM laser over Bluetooth** (Patrick, 2026-11-11: to proposals). A laser in
+    keyboard mode types its reading at the cursor and needs nothing from the program. A
+    Bosch GLM speaks over Bluetooth and would need the program to listen for it.
+18. **Finding lines in a scanned plan or an aerial image**, so a tracing snaps to a
+    picture as it does to a vector PDF's own lines (QUESTIONS.md Q18).
+

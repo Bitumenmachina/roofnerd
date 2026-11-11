@@ -1,5 +1,9 @@
 # Handoff: fittings, connections and clash detection (the owner's loop, stretch c)
 
+> The rules this work is done under now live in `CLAUDE.md` at the repository root, once
+> each (DECISIONS.md call 42). Where this file states a rule, that file governs. What
+> follows is the record of the task.
+
 Written 2026-11-11, as the drawing stretch (`HANDOFF_DRAW.md`) went to its judge. Read
 `CLAUDE.md` at the repository root first, then this.
 

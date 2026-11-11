@@ -1,5 +1,9 @@
 # Handoff: re-base the building model on BIMCraft
 
+> The rules this work is done under now live in `CLAUDE.md` at the repository root, once
+> each (DECISIONS.md call 42). Where this file states a rule, that file governs. What
+> follows is the record of the task.
+
 Written 2026-11-11 by the session that built `building.rs`, for the session that takes it
 over. The owner asked for this handoff in these words: *"do the re-basing on BIMCraft now
 as a handoff to new fable ... do not allow it to drift ensure it will search."*

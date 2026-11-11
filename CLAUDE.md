@@ -1,159 +1,197 @@
-# Working on roofnerd
+# Working on this repository
+
+This codebase is yours. You own it, you will maintain it, and its design is your call.
+Product scope and the fixed rules belong to Patrick.
 
 Read this first, every session. A session does not remember the last one; the repository
-does. What follows is the part that is expensive to rediscover.
+does. Each rule is here once. Patrick's rulings of 2026-11-11 are folded in and override
+anything older that conflicts (`plumbline/DECISIONS.md` call 42 has them as he gave them).
 
 ## What this is
 
-Roofing estimating software. Trace the roof on one screen, watch the money move on the
-other. `README.md` explains it the way a roofer would want it explained; `STATUS.md` says
-where the build actually is; `DECISIONS.md` says what was decided and why.
+**plumbline** (`plumbline/`): a 3D estimating program for the whole house, every trade.
+The job is one world; the 3D view, the estimate sheet, the reports and the lists are
+views of it. `plumbline/STATUS.md` says where the build is, `plumbline/SPEC.md` what the
+model is, `plumbline/DECISIONS.md` what was decided and why.
 
-**The 3D model is the function, not a view** (Patrick, 2026-09-12; D146). What has to get
-built — the tapered package laid out the trade's way, the walls and curbs with their
-flashing heights, the fastening pattern by wind zone — is solved in `src-tauri/core`
-(`roofnerd-core`), and the 2D outputs are produced FROM it: the tapered layout drawing, the
-fastening plan, the section details, the estimate lines, the IFC file. The core owns the
-solvers and nothing else: no window, no disk, no network, and no money. What a solved number
-costs is `packages/engine`, which is plain arithmetic. Every window and every export reads
-the one solve, pulled with `solve_get(part)` when the solve id on `doc:changed` moves.
+**The mission.** Trace the drawings we are given, build the 3D house from the tracing,
+and show the clashes the drawings hid. A veteran with simple field tools then confirms or
+clears each one.
 
-The ruling documents — the handoff and its addenda — are in `refs/`, which is local-only.
-If `refs/` is empty on this clone, ask before assuming what the project wants.
+**The loop.** Traced values start as Assumed. A clash between Assumed elements is a
+field question; a clash between Known elements is a finding. The program produces a
+verify-in-field (VIF) list: each question, where it is, and the dollars riding on it,
+sorted by dollars. A field measurement turns Assumed into Known.
 
-`refs/carry-forward-register.md` is the first thing to read there. It is the list of things
-that have been re-derived more than once or lost at least once across this product's
-iterations — every entry was paid for, and the register exists because the standing complaint
-about this work is that each pass drops earned context. It rules nothing; where it disagrees
-with a ruling document, the ruling document wins.
+**The earlier program** (roofnerd: `src-tauri/`, `packages/`, the files at the root) is
+the lineage this came from. It is not being built on. Its own notes are at the end.
 
-## Search before asking — three sources, in order
+## Patrick's fixed rules
 
-This rule exists because it was broken. A session reported sheet-metal stretch-out, dimensioned
-details, gauge tables, the pitch factor and assemblies as "gaps that must be authored from
-nothing." All five were on this machine, and `~/KNOWLEDGE` has a machine-readable index of itself
-that was never opened. Nine questions went to Patrick that a search would have answered.
+- **Open source, permissive licences only.** GPL, AGPL and LGPL code is reference only
+  and is never linked. `plumbline/tools/licenses.sh` checks it.
+- **Real job, client or supplier data never enters the repository.** Nothing out of a
+  real report: no bid names, job numbers, home paths, quantities, prices, hours or
+  margins, in code, tests, comments, demonstrations or commit messages. Invent the
+  number; it reads the same. `refs/`, `fixtures/` and `evidence/` are ignored by git.
+  Anything placed in `refs/` is sanitized first: the model this is built with keeps data
+  for 30 days.
+- **Local-only is about job data and costs when people use the program.** The program
+  sends no job data and no costs anywhere. The code lives in the cloud, on this branch.
+- **Flag, never fabricate.** Every value is Known, Assumed or Unknown and says where it
+  came from. Nothing is silently zero, silently dropped, or shown as Known when it rests
+  on something that is not. A total that leaves something out says what it left out.
+  Prove it at every layer a number can collapse.
+- **Imports matter as much as exports.** People bring in what they already have: PDF
+  plans, vector and scanned; PNG and JPEG plans and aerial images; CSV and XLSX supplier
+  price lists, prior estimates and assembly libraries; IFC models from other trades and
+  designers; the program's own job file. The job file and CSV round-trip without loss.
+  For any other format, loss is reported, never silent.
+- **Speak construction.** Every word on screen is a builder's or estimator's word. Units
+  are written the way trades write them: SF, LF, EA, SQ, LS, LB, sheets, rolls, boxes, M.
+  No software term appears anywhere a user sees.
+- **Teach by doing.** A new user completes a first takeoff from a PDF without a manual.
+  Every number can show what it is made of and where it came from. Depth is on demand:
+  macro to micro means zooming into the same job, never changing screens.
+- **The look is an instrument.** Edges are drawn by line type, surfaces are matte,
+  layouts are dense, and the plan and the sheet read like drawings. 3D stays shaded, with
+  studio light and a neutral ground. No sky, sun or grass.
+- **New features go to `plumbline/PROPOSALS.md`.** Product scope is Patrick's.
+- **Judges and every other subagent run on Opus or Sonnet**, never on the model that
+  builds.
 
-1. **The box** — the repo, `refs/`, `DECISIONS.md`, `QUESTIONS.md`, the carry-forward register,
-   `~/KNOWLEDGE`, the prior lineage's trees. **Where a tree has an index or a manifest, that is the
-   first read, not the last.** `~/KNOWLEDGE/index/index_audit.md` states what the index covers and
-   what it misses — one read instead of a crawl, and the manifest is CSV and JSON, so it needs no
-   model and no retrieval service. A gap claim made without reading an available index is a defect
-   in the same class as a claim made with no search at all.
-2. **The prior sweeps** — scored landscapes that already exist. A scored list that exists and goes
-   unread is worse than no list.
-3. **The open internet** — this is an open-source program built against current public work, not
-   against a model's training weights. The seat has web search. Not using it is a defect, not a
-   style.
+## What needs no approval, and what does
 
-**Do not invent what already has a name.** Roofing is a solved trade with published standards, a
-settled vocabulary and thirty years of geometry literature. Girth, tapered layout, hip-and-valley
-generation, provenance on a measurement — none are novel, and none need a roofnerd-original word,
-table or algorithm. Coining one is drift, and it is the expensive kind because it looks like
-progress.
+Run autonomously. Search the web whenever it helps. These need no approval:
 
-**A question to Patrick is a last resort with a receipt.** Before an entry reaches `QUESTIONS.md`,
-all three sources are searched and the search came back empty. If it came back with something
-merely inconvenient, that is a **decision with a reason** in `DECISIONS.md` — not a question handed
-back to him.
+- anything in the repository or the cloud workspace;
+- installing packages and toolchains there;
+- pushing to the branch;
+- starting judges.
 
-**Anything meant to survive is written to disk in the turn it is produced.** A paste cache is not
-storage. Two documents have already been lost this way.
+**Ask Patrick before** rewriting branch history or touching any other branch. No pull
+request unless he asks for one.
 
-## Never
+Log each call in `plumbline/DECISIONS.md`. A question goes to `plumbline/QUESTIONS.md`
+with the working assumption, and the build keeps going.
 
-- **No client data in the public tree.** Nothing out of `fixtures/`, `refs/` or `evidence/`.
-  No bid names, no job numbers, no home paths, and no quantities, prices, hours or margins
-  lifted from a real report — not in tests, not in comments, not in a commit message. This
-  has gone wrong twice, both times because a real figure was in front of me while writing a
-  test and it made the test feel real. Invent the number. It reads the same.
-  `tools/gate-clientdata.sh` runs as a pre-commit hook; turn it on with
-  `git config core.hooksPath .githooks`.
-- **Never loosen a gate.** If a gate fires on legitimate code, fix the code or narrow the
-  pattern with a comment saying why. The three gates are the vocabulary gate, the egress
-  detector and the client-data gate, and each was proven to fail before it was trusted.
-- **No network call in the product.** The content security policy keeps `connect-src` at
-  `'self'`, there is no HTTP plugin, and `tools/probe/runtime-check.mjs` tests it in the
-  shipped runtime rather than asserting it.
-- **No feature nobody asked for.** Unrequested features are the named defect this project
-  was started to escape. If it is not in the handoff or an addendum, it is not built.
-- **Never force-push.** History is public.
-- **Write only inside this repository.**
+## Order of work
 
-## Always
+The order is Patrick's; how each step is done is yours.
 
-- **The vocabulary in `README.md` is the only vocabulary.** Job, Scenario, Page, Condition,
-  Item, Formula, Order unit, Assembly, Library, Cost code, Class, Recap, Lens. Units are SF,
-  LF, EA, SQ. No synonyms in the UI, the file format, the types or the comments.
-- **A quantity that can be derived from the model is derived in the core and shows ◈; the
-  front end never recomputes.** Two arithmetics for one number disagree eventually, and the
-  one that disagrees silently is the drawing — it looked right for a week while the engine
-  and the Model editor each worked out the taper their own way. Anything typed over a derived
-  number underlines, and stays typed.
-- **Nothing is ever silently zero.** A quantity off an unscaled sheet is pending. A line
-  with no price says so. A total that leaves something out says what it left out. This is not
-  a principle you prove once — it has been closed at the engine, found again in the formula
-  parser, and found again in the library data. Prove it at every layer a number can collapse.
-- **Geometry is an imperative, not a feature.** Open source, import/export, geometry — the three
-  things this program exists for. *"Builders see in 3D — I cannot stress how imperative that is."*
-  It has been slotted late twice and pulled forward twice. It is not a bonus.
-- **A formula is editable on the line, and a validation pass must never strip what the sheet can
-  author.** A library you cannot see into is a library nobody trusts. This has already been ruled,
-  reversed by a sanitizer that deleted line-level formulas on load, and reversed back.
-- **The stretch-out belongs to the detail, not to the material.** It is 19½″ at a coping, 8″ at a
-  gravel-stop edge, 26″ at an equipment curb cap — so it can never be a stored constant on a library
-  item. The sheet-metal case is what the formula language exists for: LF of profile becomes pounds
-  through a width that changes per detail. A formula design that cannot say this is wrong however
-  clean it looks.
-- **A check that bypasses the path a person uses is not a check.** Every runtime probe
-  starts at the start screen and goes through the menu, the buttons and the fields. None of
-  them calls `doc_open` — or any other command — to get a job open. This is not a
-  preference: every probe passed for days while the program could not be given a job at all,
-  because File → Open a job called `window.prompt`, which this webview does not implement,
-  so it returned nothing and the handler gave up quietly. "8/8" only counts when it went
-  through the front door. Use `openDemoJob(session)` from `tools/probe/tauri-harness.mjs`.
-- **No `prompt`, `alert` or `confirm`.** This webview does not implement them: they return
-  nothing, the caller gives up, and the feature silently does not exist. Anything the program
-  asks, it asks in a field in the window. `tools/gate-egress.sh` refuses them.
-- **A section is done when its check passes against the shipped runtime**, not against a
-  browser with the shell stubbed. `pnpm build:app`, then `node tools/probe/front-door.mjs`
-  and `node tools/probe/runtime-check.mjs`. Evidence goes in `evidence/` named with the
-  section and the commit.
-- **Look at every image, as a person, before anything is called green.** A check that passes
-  while the window is wrong is a defect in the check, not a pass. This is the rule that was
-  agreed and then left in a gitignored file, so it bound nobody: three sections were certified
-  without one of their evidence images being opened, and section 7 — twelve defects entirely
-  about how the program looks — was certified with the disproof of its own §1.9 sitting in the
-  "after" screenshot nobody opened. A count of green rows is not a review. The review is
-  opening the picture and reading it the way the estimator will.
-- **Evidence is the product, opened through the front door, and nothing else.** Every capture
-  starts at the start screen and opens the demo job the way a person does — `openDemoJob(session)`
-  — and is stamped with the commit the section closes at. A probe that dresses a scene by calling
-  `doc_open` is photographing a set, not the program. Probe scratch states never land in
-  `evidence/`.
-- **Prove a gate red before trusting it.**
-- **Report at the end of every session** by updating `STATUS.md`: what was built, what check
-  passed, what is next, anything new in `DECISIONS.md` and `QUESTIONS.md`, and what Patrick
-  should look at if he wants to. Reporting is not stopping — the next session opens at the
-  next section without waiting for a reply.
-- **Decide, record, continue.** If something is not covered, make the call and write one
-  line in `DECISIONS.md` saying what and why. If a wrong call would waste work, write it in
-  `QUESTIONS.md` and build the smallest version that lets the rest proceed. Neither is a
-  stop.
+1. Finish fittings and clashes, and have them judged.
+2. PDF underlay: calibrate from one dimension, trace, and snap to vector lines where they
+   exist.
+3. The remaining imports, plus a language pass over every screen.
+4. Field entry. Any field that takes a length accepts a laser in keyboard mode (a Leica
+   DISTO types the reading at the cursor, with units). Marking a value Known works in the
+   window. (Bosch GLM over Bluetooth is in PROPOSALS.md.)
+5. Floors, rooms and roofs drawn in the window.
+6. The VIF list and the teach-by-doing first job.
+7. The visual standard and a visual judge.
+8. IFC export, xlsx export and publishing.
 
-## Running it
+## The deliverable: a release candidate
 
-    pnpm install
-    pnpm dev                                    # the application
-    pnpm -r test                                # the engine
-    pnpm test                                   # the engine, the app's types, and the shell
-    cargo test --workspace --manifest-path src-tauri/Cargo.toml   # the shell and the core
-    pnpm gates                                  # vocabulary, egress, client data
-    pnpm build:app                              # deb, rpm, AppImage
-    node tools/probe/front-door.mjs             # start screen → buttons → fields
-    node tools/probe/runtime-check.mjs          # the shipped runtime, two windows
-    node tools/compare-fixtures.mjs             # needs fixtures/, which is local only
+It is done when `plumbline/STATUS.md` shows each item below with evidence (screenshots or
+a recording, plus command output). Then tag the release candidate on the branch, stop,
+and ask Patrick for the production ruling.
 
-`packages/engine` is pure arithmetic with no window anywhere near it — if a number is wrong,
-it is wrong there, and there is a test there that should have caught it. `src-tauri` holds
-the one open job and hands the same copy to every window. `packages/app` are the editors.
+1. A clean clone installs on Linux by following the README in one pass.
+2. Every import in the fixed rules works as stated.
+3. Starting from an empty job, it opens a real residential plan PDF (a public set whose
+   licence allows it, or a sanitized set Patrick places in `refs/`), calibrates it, and
+   traces walls, openings, floors, rooms and the roof. The 3D house builds from the
+   tracing.
+4. Clashes show their certainty, and the VIF list is sorted by dollars.
+5. A typed or lasered measurement makes a value Known. The clash confirms or clears, and
+   the price changes live in the second window.
+6. A design-phase price per SF or LF grows into line items for the same condition, and
+   the detail rolls back up.
+7. The estimate sheet has stretch-out editable on the line, labor switchable per line,
+   editable overhead and profit, and three suppliers side by side.
+8. Exports: xlsx with live formulas, CSV, and IFC4 validated by IfcOpenShell. Supplier,
+   subcontractor and PM lenses come out of one estimate.
+9. A judge lists every word on every screen, and none is a software term.
+10. A fresh judge, briefed as a veteran estimator with no software background, completes
+    a whole-house takeoff from a PDF using only the in-app help.
+11. The visual judge passes every screen against the instrument standard.
+12. A fresh judge walks the whole path cold and cannot break the money path.
+13. A hand estimate in `refs/` is reproduced, with every difference explained line by
+    line. If `refs/` has none, this item is marked pending.
+
+## How the work is done
+
+Each of these was paid for at least once.
+
+- **Search before asking: the machine, then what was already surveyed, then the web.**
+  Where a tree has an index or a manifest, that is the first read. A claim that
+  something is missing, made without that search, is a defect. A claim about another
+  product or a standard is checked against its source, never written from memory.
+- **Do not invent what already has a name.** Construction is a solved trade with
+  published standards and a settled vocabulary. Coining a word, a table or an algorithm
+  for something that has one is drift that looks like progress.
+- **Port from source that is open in front of you.** What comes from BIMCraft is listed
+  in `plumbline/PORTMAP.md`, item by item, and `plumbline/tools/portmap.sh` checks it.
+  Owning the code includes keeping that map true when the code is moved.
+- **Write each demonstration before building what it demonstrates**, in STATUS.md, with
+  the figures worked by hand.
+- **One arithmetic for one number.** A quantity that can be worked out from the model is
+  worked out in the core; no window recomputes it. A formula is visible and editable on
+  the line. The stretch-out belongs to the detail, not to the material.
+- **A check that bypasses the path a person uses is not a check.** A demonstration
+  drives the real program from an empty job or the start of the path, through the
+  buttons and the fields.
+- **Look at every picture, as a person, before anything is called shown.** A check that
+  passes while the window is wrong is a defect in the check. Evidence is the program as
+  committed; pictures taken before a change to what they show are retaken or said to be
+  stale.
+- **Nothing is done until an agent that did not build it has tried to break it.** A fix
+  is not judged until it has been. The look is judged the same way as the money.
+- **Never loosen a gate, and prove a gate red before trusting it.** If one fires on
+  legitimate work, fix the work or narrow the pattern and say why. A test is not
+  deleted, skipped or weakened to get green; an expectation changes only after the
+  decision behind the change is written down.
+- **Fix what you find, and say what you changed.** A known defect is not left as a
+  report. Every change to an existing behaviour or number is named in STATUS.md.
+- **Anything meant to survive is written to disk in the turn it is produced.**
+- **Report by updating STATUS.md** at each stopping point: what was built, what was run
+  and what it showed, what is next, what is not right. Reporting is not stopping.
+
+## Running plumbline
+
+    cd plumbline
+    cargo test --workspace                      # the model, the command line, the window's crate
+    tools/portmap.sh                            # every public item against BIMCraft's source
+    tools/licenses.sh                           # every linked crate's licence
+    demos/draw.sh                               # each demonstration is a script; README.md lists them
+    cargo run -p plumbline -- house house.json  # a made-up whole house
+    cargo run -p plumbline-app -- house.json    # the model window and the sheet window
+
+From the repository root, the three gates that cover the whole tree:
+
+    tools/gate-language.sh
+    tools/gate-egress.sh
+    tools/gate-clientdata.sh --all              # also a pre-commit hook: git config core.hooksPath .githooks
+
+The window demonstrations run on a virtual display (`xvfb-run`, `xdotool`, Mesa's
+software Vulkan). On that renderer a key or a click that begins and ends inside one slow
+frame can be lost; the scripts hold each one longer than a frame.
+
+`plumbline/refs/` holds Patrick's brief and the first handoff. It is local-only; if it is
+empty on a clone, the rules above still stand.
+
+## The earlier program, at the repository root
+
+roofnerd is roofing estimating software in a Tauri shell: `src-tauri/core` solves,
+`packages/engine` prices, `packages/app` is the editors. Its own `README.md`,
+`STATUS.md` and `DECISIONS.md` are at the root. Work on it only if Patrick asks. If he
+does, three things there are not obvious: its webview has no `prompt`, `alert` or
+`confirm` (they return nothing and the feature silently does not exist); its runtime
+probes go through the start screen with `openDemoJob(session)` from
+`tools/probe/tauri-harness.mjs` and never call `doc_open`; and its screen vocabulary is
+the list in its `README.md`.
+
+    pnpm install && pnpm test && pnpm gates
+    cargo test --workspace --manifest-path src-tauri/Cargo.toml
+    pnpm build:app && node tools/probe/front-door.mjs && node tools/probe/runtime-check.mjs

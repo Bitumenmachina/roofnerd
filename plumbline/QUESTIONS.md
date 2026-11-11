@@ -13,6 +13,7 @@ primary and both can coexist. The sample job's codes are MasterFormat and marked
 No total is grouped by code yet.
 
 ## Q2. Where does this repository live?
+**Ruled, 2026-11-11 (DECISIONS.md call 42, ruling 9):** stay on the branch. Code in the cloud is fine; local-only covers job data and costs when people use the program.
 **Answered by the owner, 2026-11-10.** Asked whether to push it to the public repository
 of his earlier program, on the working branch of the session that carried this work on,
 as a `plumbline/` folder with its history, he said yes. He also said that "local only"
@@ -66,6 +67,7 @@ will be marked pending in STATUS.md until the spreadsheets are in `refs/`.
 The brief says you rule on capture before work starts. No work has started on it.
 
 ## Q7. IfcOpenShell for D6 validation
+**Ruled, 2026-11-11 (call 42, rulings 11 and 12):** installing it in the workspace needs no approval, and the release candidate's IFC4 export is to be validated by it.
 IfcOpenShell (LGPL-3.0) is the validation oracle for IFC4 export. It is run as a separate
 tool and never linked, but running it means installing a package, which needs your
 go-ahead. Not needed before D6.
@@ -96,6 +98,7 @@ that repository to be read; start the work somewhere that can clone it; or put
 meanwhile is what the port will plug into (DECISIONS.md call 17).
 
 ## Q11. Is this project meant to take over the ground of the earlier program?
+**Ruled, 2026-11-11 (call 42, ruling 1):** the mission is the whole house, every trade. The earlier program is not built on; its solvers are ported if a step needs them.
 The earlier estimating program on the same machine already solves the low-slope side:
 tapered packages, crickets, copings, parapet flashing heights (DECISIONS.md call 18). D2
 asks for "a low-slope area with tapered crickets" and D3 for a parapet's coping and
@@ -116,6 +119,7 @@ machine has (`FontSource::sans_serif()`), at the cost of the program looking dif
 every machine and having no text at all on one with no fonts.
 
 ## Q13. The whole building: what comes next, and where it sits against the brief
+**Ruled, 2026-11-11 (call 42, rulings 1, 6 and 12):** call 26 stands, the order of work is his and is in CLAUDE.md, and the thirteen items of the release candidate replace the brief's D0 to D7 as what is owed.
 You widened the work from the envelope to the whole house and its services (DECISIONS.md
 call 26). The model, the takeoff, and a window to see and walk it are built. It is outside
 the brief's numbered deliverables, and those (D4 macro to micro, D5 the estimate sheet and
@@ -143,3 +147,34 @@ amount sits in one column: material; labor (with fabrication and supervision); g
 sheet, out of every total. If your sheet has one row carrying both a material amount and
 a labor amount, with the switch on the labor half, say so: the arithmetic is the same and
 the rows would be paired.
+
+## Q15. Which plan set is traced for the release candidate?
+Item 3 wants a real residential plan PDF: a public set whose licence allows it, or a
+sanitized set you place in `refs/`. `refs/` has none.
+**Assumption in use:** find a public set on the web whose licence allows it to be used
+and kept in the repository (public domain, or a Creative Commons licence without a
+no-derivatives term), record where it came from and its licence beside it, and trace
+that. If none can be found with a licence that is certain, the tracing is demonstrated
+on a plan drawn for the purpose, marked as made up, and item 3 is reported as shown on
+a made-up plan and still owed on a real one.
+
+## Q16. What does M mean on screen?
+Ruling 4 lists M among the units the trades write.
+**Assumption in use:** M is a thousand, as lumber, fasteners and brick are priced (per M,
+MBF). It is not metres: metric is still refused, not converted. If you meant something
+else by it, say so.
+
+## Q17. What is in each lens: supplier, subcontractor and PM?
+Item 8 says three lenses come out of one estimate.
+**Assumption in use:** each is a view of the one estimate that leaves out what its
+reader is not shown. Supplier: the materials to quote, with quantities and order units
+and no prices of ours. Subcontractor: the scope and quantities of the lines classed
+Subcontract for that trade, with no prices of ours. PM: every line with its hours,
+order quantities and cost codes, the budget by class, and the VIF list; no markup.
+
+## Q18. Scanned plans and aerial images: how far does "snap" go?
+Ruling 6 says snap to vector lines where they exist.
+**Assumption in use:** a vector PDF's own lines are read out and snapped to. A scan, a
+PNG, a JPEG or an aerial image is a picture under the tracing: it is calibrated from one
+dimension and traced over by eye, with the program's own snaps (ends, square, angle)
+and none to the picture. Finding lines in a picture is not built.

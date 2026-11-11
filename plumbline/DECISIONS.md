@@ -1294,3 +1294,86 @@ The findings are in STATUS.md, "Twelfth judgment". What had to be decided:
   `type_for_size` (J12-15). The changes to the window (J12-8, 9, 16) are made from the
   judge's reading of the code and one picture each, and have no test that drives the
   window; they are covered only by `demos/draww.sh` still passing.
+
+### Call 42. Patrick's rulings of 2026-11-11, as he gave them, and how they were folded in
+
+He was shown a review of the web seat's brief and an account of what was built, and
+ruled. "These override anything older that conflicts. Fold them into CLAUDE.md, one
+place per rule, and delete what's stale." His words:
+
+1. **Mission: the whole house, every trade.** Call 26 stands. Trace the drawings we're
+   given, build the 3D house from the tracing, and show the clashes the drawings hid. A
+   veteran with simple field tools then confirms or clears each one.
+2. **The loop.** Traced values start as Assumed. A clash between Assumed elements is a
+   field question; a clash between Known elements is a finding. Produce a
+   verify-in-field (VIF) list: each question, where it is, and the dollars riding on it,
+   sorted by dollars. A field measurement turns Assumed into Known.
+3. **Imports matter as much as exports.** People must be able to bring in what they
+   already have: PDF plans, both vector and scanned; PNG and JPEG plans, and aerial
+   images; CSV and XLSX: supplier price lists, prior estimates, and assembly libraries;
+   IFC models from other trades and designers; the program's own job file. The job file
+   and CSV round-trip without loss. For other formats, any loss is reported, never silent.
+4. **Speak construction.** Every word on screen is a builder's or estimator's word.
+   Write units the way trades write them: SF, LF, EA, SQ, LS, LB, sheets, rolls, boxes,
+   M. No software term appears anywhere a user sees.
+5. **Teach by doing.** A new user completes a first takeoff from a PDF without a manual.
+   Every number can show what it is made of and where it came from. Depth is on demand:
+   macro to micro means zooming into the same job, never changing screens. How you teach
+   is your design.
+6. **Order of work.** The order is mine; how you do each step is yours. Finish fittings
+   and clashes, and have them judged. PDF underlay: calibrate from one dimension, trace,
+   and snap to vector lines where they exist. The remaining imports, plus a language
+   pass over every screen. Field entry: any field that takes a length accepts a laser in
+   keyboard mode; a Leica DISTO types the reading at the cursor, with units; marking a
+   value Known works in the window; Bosch GLM Bluetooth goes to PROPOSALS.md. Floors,
+   rooms and roofs drawn in the window. The VIF list and the teach-by-doing first job.
+   The visual standard and a visual judge. Then IFC export, xlsx export and publishing.
+7. **Look: the instrument.** Draw edges by line type, keep surfaces matte, keep layouts
+   dense, and make the plan and the sheet read like drawings. 3D stays shaded, with
+   studio light and a neutral ground. No sky, sun or grass. How you meet this standard
+   is yours.
+8. **Yes: put this at the top of CLAUDE.md:** "This codebase is yours. You own it, you
+   will maintain it, and its design is your call. Product scope and the fixed rules
+   belong to Patrick." Replace the inherited "no feature nobody asked for" line with "New
+   features go to PROPOSALS.md."
+9. **Repository: stay on the branch.** Code in the cloud is fine; local-only covers job
+   data and costs when people use the program.
+10. **Verified:** the model requires 30-day data retention, per its maker's What's new
+    page. Sanitize anything placed in refs/.
+11. **Run autonomously.** Search the web whenever it helps. These need no approval from
+    me: anything in the repository or the cloud workspace; installing packages and
+    toolchains there; pushing to the branch; starting judges, on Opus or Sonnet only. Ask
+    me before rewriting branch history or touching any other branch. Log each call in
+    DECISIONS.md. Questions go to QUESTIONS.md with your working assumption, and you
+    keep building. Real job, client or supplier data never enters the repository.
+12. **The deliverable: a release candidate.** Thirteen items, each with evidence, then
+    tag the release candidate on the branch, stop and ask for the production ruling. The
+    list is in CLAUDE.md, "The deliverable", in his words, and STATUS.md tracks each.
+
+How they were folded in, which is mine to decide:
+
+* **CLAUDE.md is rewritten around plumbline.** It was the earlier program's file. The
+  rules that were that program's alone (its webview's missing dialogs, its probe
+  harness, its screen vocabulary, its run commands) are kept in one short section at the
+  end, because that program is still in the tree. Everything that was a history of how a
+  rule was broken is cut to the practice it taught.
+* **What the rulings replaced, and so was deleted:** "no feature nobody asked for"
+  (ruling 8); "never force-push" and "write only inside this repository" (ruling 11
+  says what needs asking); "no network call in the product" as a rule about the code
+  (ruling 9: it is job data and costs that stay local; the program still sends none of
+  either, and the egress gate still runs); the earlier program's word list as "the only
+  vocabulary" (ruling 4).
+* **The brief's D0 to D7 are no longer the list of what is owed.** The thirteen items of
+  ruling 12 are. STATUS.md keeps the D rows as the record of what was built and judged
+  under them, and gains a table for the thirteen.
+* **The handoffs** (`HANDOFF_REBASE.md`, `HANDOFF_DRAW.md`, `HANDOFF_CLASH.md`) each
+  carry rules that CLAUDE.md now holds. They are the record of three tasks, two of them
+  finished. A line at the head of each says the rules live in CLAUDE.md and that file
+  governs; their task sections stand as written.
+* **The lit scene goes.** Calls 25 and 26 put a sky, a sun, shadows and grass in the 3D
+  view on a reading of "game-grade" that ruling 7 corrects. It is step 7 of the order of
+  work, so it is not changed today; every picture taken before then shows the old look.
+* **Questions this closes:** Q2 (stay on the branch), Q7 (IfcOpenShell: installing a
+  validation tool in the workspace needs no approval, and item 8 asks for it), Q11 (the
+  whole house is the mission; the earlier program is not built on), Q13 (the order).
+* **Questions it opens** are Q15 to Q18 in QUESTIONS.md, each with the assumption in use.

@@ -27,6 +27,29 @@ run again and each gave what this file said they gave.
 | D6 | Interchange and reports | Not started. |
 | D7 | Capture | Waiting on the owner's ruling. |
 
+## The release candidate (Patrick's ruling 12, 2026-11-11)
+
+What is owed now is these thirteen items (CLAUDE.md, "The deliverable"; DECISIONS.md
+call 42). Each is done when this table points at its evidence. The D rows above are the
+record of what was built and judged before the ruling. The order the work is done in is
+CLAUDE.md, "Order of work"; step 1 of it is under way.
+
+| # | Item | Where it stands |
+|---|---|---|
+| 1 | A clean clone installs on Linux from the README in one pass | **Not shown.** The README lists the commands; nobody has followed it on a clean machine. |
+| 2 | Every import works as stated: PDF (vector and scanned), PNG, JPEG, aerial images, CSV and XLSX (price lists, prior estimates, assembly libraries), IFC, the job file | **Only the job file**, which loads and saves to the same bytes. None of the others is built. |
+| 3 | From an empty job: open a real residential plan PDF, calibrate, trace walls, openings, floors, rooms and the roof; the 3D house builds from the tracing | **Not built.** Walls, openings, runs, fixtures and equipment are drawn in the window on a blank plan with nothing under it; floors, rooms and roofs are not drawn in the window; there is no underlay and no plan set (Q15). |
+| 4 | Clashes show their certainty; the VIF list is sorted by dollars | **Half.** A clash is Known or Assumed from its two shapes and says so (command line and the sheet's Clashes tab; not judged). There is no VIF list and no dollars on a clash. |
+| 5 | A typed or lasered measurement makes a value Known; the clash confirms or clears; the price changes live in the second window | **Not built in the window.** A value is made Known at the command line. The window cannot. |
+| 6 | A design-phase price per SF or LF grows into line items for the same condition, and the detail rolls back up | **Demonstrated on the roof** (D4: `demos/d4.sh`, `demos/d4w.sh`), judged, fixes not judged. Not shown on a wall, a floor or a run. |
+| 7 | The sheet: stretch-out editable on the line, labor switchable per line, editable overhead and profit, three suppliers side by side | **Three of four in the window** (D5: `demos/d5w.sh`): the labor switch, overhead and profit, three suppliers. Stretch-out is editable at the command line and not on the line in the window. |
+| 8 | Exports: xlsx with live formulas, CSV, IFC4 validated by IfcOpenShell; supplier, subcontractor and PM lenses from one estimate | **Not started** (Q17 for what each lens holds). |
+| 9 | A judge lists every word on every screen; none is a software term | **Not done.** No language pass has been made; the screens show paths like `wall-0008` and words like "element". |
+| 10 | A fresh judge, briefed as a veteran estimator with no software background, completes a whole-house takeoff from a PDF using only the in-app help | **Not possible yet**: no PDF, no in-app help. |
+| 11 | The visual judge passes every screen against the instrument standard | **Not started.** The 3D view still has the sky, sun and grass that ruling 7 removes. |
+| 12 | A fresh judge walks the whole path cold and cannot break the money path | **Not done.** Twelve judgments so far, each of one stretch; the last fixes of D1, D2, D3, D4, D5 and drawing are not themselves judged. |
+| 13 | A hand estimate in `refs/` is reproduced, every difference explained line by line | **Pending:** `refs/` has no estimate (Q5). |
+
 ---
 
 ## D0. Landscape decision

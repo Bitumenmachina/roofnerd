@@ -1,5 +1,9 @@
 # Handoff: draw and edit the building in the window
 
+> The rules this work is done under now live in `CLAUDE.md` at the repository root, once
+> each (DECISIONS.md call 42). Where this file states a rule, that file governs. What
+> follows is the record of the task.
+
 Written 2026-11-11 by the session that re-based the building model on BIMCraft and built
 D4 and D5, for whichever session takes this stretch (it may be the same one after its
 context turns over). The owner's order of work, set the same day, is: (a) re-base on
