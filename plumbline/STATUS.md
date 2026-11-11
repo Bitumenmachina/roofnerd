@@ -1827,7 +1827,9 @@ material. Overhead 10, profit 8.
    plus a Known measurement). The south wall is 24 by 8.875, **213 SF, $511.20**, no
    longer flagged. Overhead $51.12; profit 8% of $562.32, $44.99; **price $607.31**:
    $8.55 less.
-3. The duct's line on the plan: `same`. Known.
+3. The duct's line on the plan, and which type it is (a 12 by 8): `same`, each. Known.
+   (The type was not in this plan as first written: a traced run's choice of type is
+   Assumed too, and the clash rests on it. Found when the verb was first run.)
 4. The duct's height, shot to its underside: `bottom 7'10"3/4` and Enter. The duct is
    now from 7 ft 10 3/4 in to 8 ft 6 3/4 in. Pipe A's top is at 7 ft 10 in: 3/4 in
    clear. **That clash clears.** Pipe B, 7 ft 11 in to 8 ft 1 in, is still inside the
@@ -1840,7 +1842,7 @@ laser types read as lengths (`2'2"13/32` is 2 ft 2 13/32 in, `26"13/32`, `23.46f
 what is refused and that the file is byte for byte what it was after each: a figure
 with no unit, a comma, metres, a fraction after a fraction, `same` on a value that is
 Unknown, a length for a line on the plan, a storey height that contradicts a Known
-floor above, `bottom` on a sloping run held to its centre; then the four measurements
+floor above, `bottom` on a sloping run held to its centre; then the measurements
 with `plumbline measure` and the figures above after.
 
 **`demos/fieldw.sh`, in the window:** the same job opened with both windows up, the
@@ -2239,3 +2241,58 @@ changes the words on every screen.
 * `cargo test --workspace`: 178 passing (153 on the model, 8 on the skeleton, 4 on plan
   files, 4 on tables, 3 on the spreadsheet reader, 3 on the STEP reader, 3 on the
   command line).
+
+## Fifteenth judgment, part A (2026-11-11): tables and a model brought in, and the fixes to the fourteenth
+
+An independent judge (Opus), on a frozen copy of commit `9629e27`, told to break it. A
+second judge, on the same copy, is listing every word on every screen (part B; not back
+yet). Twenty-five findings, worst first, as the judge gave them. None is fixed at the
+time of writing; what is done about each goes in the table that follows this one.
+
+| # | What the judge did | What is wrong |
+|---|---|---|
+| J15-1 | A CSV parted by semicolons with decimal commas (`9,05`) | **Read 100 times too high: $905.00/lb.** Every comma is dropped as a thousands mark. A prior estimate is read the same way. Wrong figure, unflagged. |
+| J15-2 | `import prices --status Assumed --source ...` on a list with its own "How sure" and "Where from" columns | **The person's word is ignored without a word:** a row saying Known goes in Known. |
+| J15-3 | A model whose building is placed at a height | **The walls stand that far above their storey** ("base offset 164.042 ft"): the storey is taken at its stated elevation, the wall at its full placement. Wrong figure, unflagged. |
+| J15-4 | A drawing lined up again after things were traced over it | **The sheet moves out from under what was traced and nothing is said** (J14-2 by another route). Tracing the same printed line again makes a second wall. |
+| J15-5 | A prior estimate with a "Total" row; an amount that is not quantity times unit cost | **The total row is taken as a line and the prior's total doubled.** A wrong extension is used without a word. |
+| J15-6 | `compare`, one description twice in the prior | **The job's whole quantity is set against each of the two lines.** |
+| J15-7 | `compare`, both sides Assumed | **The difference carries no flag.** |
+| J15-8 | A workbook with a date, and a percent, in the price column | **The date becomes a price, and 9.05% becomes $0.09.** The note gives no row and the row is used. |
+| J15-9 | A workbook whose first sheet is hidden | **The hidden sheet is read and not said to be hidden.** |
+| J15-10 | Blank rows in a CSV; a sheet that does not start at A1 | **The row numbers in "not used" are wrong.** |
+| J15-11 | A wall in a model made of two solids | **The first is kept and the second dropped; "not brought in: 0".** |
+| J15-12 | A product with no placement | **In neither count:** what is not brought in does not add up to the file's products. |
+| J15-13 | A supplier's row with its own "ordered at" | **Dropped, and the row counted as the same as the job has.** |
+| J15-14 | An assembly library with two assemblies of one name | **Merged; the second's "goes on" and cost code lost unsaid.** |
+| J15-15 | Walls left at an earlier scale | **Said only by `drawings`**; the takeoff and `show` say nothing. A scale set back to what a wall was traced at still calls the wall "traced at an earlier scale". |
+| J15-16 | An L-shaped space in a model | **The room's point is outside the room** (the average of its corners). |
+| J15-17 | `tools/committed.sh --quick` on a commit without the made-up model | **Passes.** The check looks only at `demos/plans` and `demos/tables`. The root `.gitignore` still has unanchored names (`fixtures/`, `work/`, `out/`, `evidence/`): the trap of J14-1, waiting. |
+| J15-18 | A PDF line under a white filled box | **Kept to snap to**, and nothing says it is covered. |
+| J15-19 | Two drawings overlapping on one storey in the window | **One is hidden, which one is chance, and a pick goes to the last laid** (the sourcing read from the code, not driven). |
+| J15-20 | A list with a part-number column and a description column | **The part number is taken as the material's name.** |
+| J15-21 | A model with two storeys of one name; the same model brought in twice | **The whole model refused, in the program's own words** ("already has a child named"). |
+| J15-22 | A model with one number on two things | **Taken silently; the later wins.** |
+| J15-23 | Order units "lb/workhour", "lb/crew-day", "lb/LH", "lb/manweek" | **Accepted** (J14-11 still open). The lines price to no figure, so no dollar is wrong. |
+| J15-24 | A PDF line wholly off the page | **Kept to snap to**, unsaid. |
+| J15-25 | Minor, together | A name beginning `=`, `+`, `-` or `@` goes out as a spreadsheet would run it; a name's leading and trailing spaces are lost; blank rows and conflicting duplicate prices pass unsaid; UTF-16 and empty files are refused for the wrong reason; "LBS" and "lb." are refused; a slab with a hole in a model is "may slope, or be a mesh" and is brought in whole; a missing reference is "curved"; a model's walls lose their names; a wall leaning 2 degrees is upright; "IFCBEAM", "system-0004", "type-0003" on screen. |
+
+**What held, in the judge's words:** a price list back into the job it came from, byte
+for byte, and into an empty job whole but for the spaces; BOM, CRLF, tabs and Latin-1
+read and said; 200,001 rows cut and said; a price that is a word, a wrong unit and a
+missing unit column each refused by row; the assembly library's refusals; a prior
+estimate is never added to the job's cost; a model's walls in mm, m, ft, in and no unit,
+straight and turned, against hand figures; a storey below zero, a slanted pipe, a duct
+on its side; cut-short and broken files refused; the made-up house's clash at
+(10, 10, 7), 3.50 in; of the fourteenth's fixes, J14-2's own message, J14-3, J14-4 at the
+command line, J14-9, J14-10, the EXIF turn, a clip under a scale; J13-14 and J13-15's
+`fitting --all`.
+
+**What the judge did not reach:** the whole-workspace mode of `committed.sh`; merged
+cells, error cells and formulas with no saved result; .ods, .xlsm and .xls; curved,
+swept, mapped and mirrored walls in a model, placements three deep, a void with no door,
+elbows; in the window, the stale-scale notice, lining up after tracing, and the
+sourcing on overlapping drawings.
+
+The judge's reproductions are kept outside the repository (the scratch folder
+`judge15/findings/a`), each made up.
