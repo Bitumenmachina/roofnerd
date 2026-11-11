@@ -50,14 +50,14 @@ pub fn depth(thickness: f64, layers: &[(Function, f64)], loc: Location) -> f64 {
 }
 
 /// A wall's exterior and interior faces: how far to the left of its location line they lie.
-pub fn faces(thickness: f64, layers: &[(Function, f64)], loc: Location) -> (f64, f64) {
+pub fn wall_faces(thickness: f64, layers: &[(Function, f64)], loc: Location) -> (f64, f64) {
     let ext = depth(thickness, layers, loc);
     (ext, ext - thickness)
 }
 
 /// How far to the left of its location line a wall's centre line lies.
 pub fn centre(thickness: f64, layers: &[(Function, f64)], loc: Location) -> f64 {
-    let (ext, int) = faces(thickness, layers, loc);
+    let (ext, int) = wall_faces(thickness, layers, loc);
     (ext + int) / 2.0
 }
 

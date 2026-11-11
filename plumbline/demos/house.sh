@@ -31,12 +31,23 @@ echo "== What the takeoff has to say, checked by hand =="
 check() { grep -qF -- "$2" "$OUT/takeoff.txt" || { echo "FAIL: $1: the takeoff does not say: $2"; exit 1; }; echo "  $1"; }
 # Four outside walls (40 + 28 + 40 + 28) and partitions of 40, 12, 12 and 10 LF.
 check "first floor: 8 walls, 210 LF" "walls 8            210.00 LF"
-# Hot water: two lavatory branches of 1.9 LF and two tub branches of 2.5 LF.
-check "hot water, 1/2 in: 4 runs, 8.80 LF" "Pipe     1/2 in round      4 runs       8.80 LF"
-# The kitchen's hot branch has no size on the plan. Its 9.40 LF is there, on a line of its own.
-check "hot water with no size: 9.40 LF, flagged Unknown, on a line of its own" "? Pipe     size unknown      1 runs       9.40 LF"
+# Five rooms a floor, inside the faces of their walls: 614.7188 + 156.8164 + 53.5391 +
+# 52.9375 + 179.9414 = 1,057.9532 SF.
+check "first floor: 5 rooms, 1,057.95 SF inside their walls" "rooms 5            1,057.95 SF"
+# Hot water: two lavatory branches of 1.9 LF and two tub branches of 2.5 LF, each of them
+# two straight pieces with an elbow between.
+check "hot water, 1/2 in: 8 straight pieces, 8.80 LF" "Pipe     1/2 in round      8 runs       8.80 LF"
+check "hot water, 1/2 in: 4 elbows" "Bend      1/2 in elbow: 4 EA"
+# The kitchen's hot branch has no size on the plan. Its 9.40 LF is there, on a line of its
+# own, and its two elbows are counted and not sized.
+check "hot water with no size: 9.40 LF, flagged Unknown, on a line of its own" "? Pipe     size unknown      3 runs       9.40 LF"
+check "its two elbows: counted, flagged Unknown" "? Bend      not said: 2 EA"
 # The west trunk: up 3.4, south 8, west 17. Its size is assumed, and says so.
-check "supply air, 16 x 8: 28.40 LF, flagged Assumed" "~ Duct     16 in × 8 in      1 runs      28.40 LF"
+check "supply air, 16 x 8: 3 straight pieces, 28.40 LF, flagged Assumed" "~ Duct     16 in × 8 in      3 runs      28.40 LF"
+# What is joined: the first floor's ducts and the attic's are two networks; each trunk's
+# two ends are open; ten branches leave a trunk along its length with no fitting entered.
+check "supply air: 2 networks, 4 open ends, 10 joins with no fitting" "joined: 2 networks; 4 open ends; 10 places where a run meets another along its length with no fitting"
+check "cold water is open only where the service comes in" "open: water service, piece 1 of 4: its first end at (-2, 25, -2)"
 
 echo
 echo "== The session: the house, see through it, a system at a time, a storey at a time, a plan, and on foot =="

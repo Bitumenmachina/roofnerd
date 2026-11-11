@@ -428,7 +428,7 @@ pub enum FittingKind {
 
 impl FittingKind {
     /// As a takeoff says it.
-    pub fn label(self) -> &'static str {
+    pub fn title(self) -> &'static str {
         match self {
             FittingKind::Bend => "Bend",
             FittingKind::Tee => "Tee",
@@ -468,7 +468,7 @@ impl ConnectorKind {
         }
     }
     /// The kind of connector a run of `kind` joins.
-    pub fn of(kind: Kind) -> Option<ConnectorKind> {
+    pub fn for_run(kind: Kind) -> Option<ConnectorKind> {
         [ConnectorKind::Power, ConnectorKind::Pipe, ConnectorKind::Duct, ConnectorKind::Conduit].into_iter().find(|k| k.joins() == kind)
     }
 }

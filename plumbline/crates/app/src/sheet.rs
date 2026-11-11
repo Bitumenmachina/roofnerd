@@ -424,7 +424,7 @@ fn systems(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                         words(d, fonts, what.clone(), 12.5, Weight::Medium, theme::status_ink(*status));
                         status_chip(d, fonts, *status);
                     });
-                    cell(r, 170.0, false, |d| words(d, fonts, kind.map(|k| k.label()).unwrap_or("Fitting"), 12.5, Weight::Regular, theme::ink_soft()));
+                    cell(r, 170.0, false, |d| words(d, fonts, kind.map(|k| k.title()).unwrap_or("Fitting"), 12.5, Weight::Regular, theme::ink_soft()));
                     cell(r, 50.0, true, |_| {});
                     cell(r, 80.0, true, |_| {});
                     cell(r, 120.0, true, |d| words(d, fonts, format!("{count} EA"), 12.5, Weight::Medium, theme::ink()));

@@ -1,23 +1,38 @@
-//! The rest of the building: storeys, walls with their doors and windows, floors, and what
-//! runs through them. A duct, a pipe, a conduit and a cable are each a centre line in space
-//! with a size. Equipment and fixtures are things set at a place. Any of them can belong to
-//! a system (supply air, domestic hot water, power), and a system is an element of the job
-//! like any other, so it can be read, counted and totalled.
+//! The rest of the building: storeys, walls with their doors and windows, floors, rooms,
+//! and what runs through them. A duct, a pipe, a conduit and a cable are each straight
+//! pieces with a section, joined by fittings. Equipment and fixtures are things set at a
+//! place. Any of them can belong to a system (supply air, domestic hot water, power), and
+//! a system is an element of the job like any other, so it can be read, counted and
+//! totalled.
+//!
+//! The shapes of these things are BIMCraft's, ported: they are in `building/model.rs`,
+//! with their geometry in `building/walls.rs`, `building/runs.rs`, `building/rooms.rs`
+//! and `building/network.rs`. Each of those files says what it is ported from and what
+//! was changed, and `PORTMAP.md` accounts for every public item, here and there.
+//!
+//! This file is what this program adds on top, and is ours: every figure is worked out
+//! here, never in a window, takes the worst status of what it was worked out from, and is
+//! refused with the reason when its inputs do not fit together (a window wider than its
+//! wall gives no net area); a system is an element; a takeoff is by system; what cannot
+//! be drawn is listed with why. Five small things in it are BIMCraft's and are marked
+//! ported in `PORTMAP.md`: the point type `P3`, a run's system (`InSystem`), and which
+//! kinds are runs, openings and placed things (`is_segment`, `is_opening`, `is_placed`).
+//! They are from BIMCraft, `crates/core/src/model.rs` and `crates/core/src/view3d.rs`, at
+//! commit f202abd85d1cf165325e2f7b250da0b5e51f5b71, https://github.com/IPedrax/bimcraft,
+//! Copyright (c) 2026 IPedrax and the BIMCraft contributors, used under the MIT license;
+//! the notice is in NOTICE at the repository root. What was changed in them: a run's
+//! system is a component pointing at a system element, where BIMCraft's is a name on the
+//! run; the three lists of kinds are of this program's kinds.
 //!
 //! The names are the trade's and the open standard's, not ours: storey, wall, opening,
-//! floor (IFC's slab), duct, pipe, conduit, cable, equipment, fixture, system, and the
-//! system classifications a mechanical model already uses (Supply Air, Sanitary, Power).
+//! floor (IFC's slab), room, duct, pipe, conduit, cable, fitting, equipment, fixture,
+//! system. The ten system classifications are the trade's words; which value of IFC's each
+//! will be exported as is in DECISIONS.md call 29.
 //!
-//! The rules are the same as for the roof. Every entered value is Known, Assumed or Unknown
-//! and says where it came from. Every figure is worked out here, never in a window, takes
-//! the worst status of what it was worked out from, and is refused with the reason when
-//! its inputs do not fit together: a window wider than its wall gives no net area.
-//!
-//! Heights. A storey's floor is at its `elevation` above the job's datum. A wall, a floor
-//! and an opening stand on their storey. A route's points and a placed thing's position
-//! are given in space outright: east, north, and height above the datum. A riser passes
-//! through storeys, and a point that had to be read against one storey or another could be
-//! read wrongly.
+//! Heights. A storey's floor is at its `elevation` above the job's datum. A wall, a
+//! floor, an opening, a room, a run and a placed thing each stand on the storey they are
+//! under in the job, and a height entered on one is above that storey's floor. A riser
+//! is a run whose two ends are one point on the plan at two heights.
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -647,7 +662,7 @@ fn plan_wall(tree: &Tree, me: &str, w: &Wall) -> Result<(walls::PlanWall, Status
     let base = heights.base.clone()?;
     let height = heights.height.clone()?;
     let (thickness, layers, section_status) = wall_section(tree, w)?;
-    let (ext, int) = walls::faces(thickness, &layers, w.location);
+    let (ext, int) = walls::wall_faces(thickness, &layers, w.location);
     Ok((walls::PlanWall { start: V(a[0], a[1]), end: V(b[0], b[1]), ext, int, base, top: base + height, join: w.join }, w.line.status.max(heights.status).max(section_status)))
 }
 
@@ -726,7 +741,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
         let plan_walls: Vec<walls::PlanWall> = bounding.iter().map(|x| x.1.clone()).collect();
         // A wall on another storey that could not be placed might rise into this one.
         let elsewhere: Vec<&(String, String)> = unplaced.iter().collect();
-        let (centre, finish) = (Plan::of(&plan_walls, RoomArea::Centre, tol), Plan::of(&plan_walls, RoomArea::Finish, tol));
+        let (centre, finish) = (Plan::of_walls(&plan_walls, RoomArea::Centre, tol), Plan::of_walls(&plan_walls, RoomArea::Finish, tol));
         let centre_lines: Vec<[V; 2]> = (0..plan_walls.len()).map(|i| walls::centre_line(&plan_walls, i, tol)).collect();
         let outlines: Vec<Vec<V>> = (0..plan_walls.len()).map(|i| walls::outline(&plan_walls, i, tol)).collect();
         // A room with no point entered, or a point nobody has, still takes its place in
@@ -900,7 +915,7 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         }
     }
     if let Some(c) = w.get::<Fitting>(e) {
-        rows.push(plain("fitting", c.kind.label().to_lowercase(), "what joins the runs here"));
+        rows.push(plain("fitting", c.kind.title().to_lowercase(), "what joins the runs here"));
     }
     if let Some(c) = w.get::<Placed>(e) {
         rows.push(view::entered(path, "what it is", &c.what, |s| s.clone()));

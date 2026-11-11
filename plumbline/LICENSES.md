@@ -416,7 +416,11 @@ from a shallow clone of the source.
 |---|---|---|---|
 | The weighted straight skeleton, with the vector type and three geometry helpers it uses | BIMCraft, `crates/core/src/skeleton.rs` and `crates/core/src/geom.rs`, commit `f202abd85d1cf165325e2f7b250da0b5e51f5b71` (https://github.com/IPedrax/bimcraft; MIT OR Apache-2.0) | MIT | `crates/world/src/skeleton.rs`. Its header says it is ported and lists what was changed. The copyright and permission notice are in `NOTICE`. |
 
-Nothing else is borrowed. The owner's earlier program was read for the pattern a cost line
+| The building model: levels, walls and their types and joins, doors and windows and their types, floors, rooms, straight runs and their types, placed things, fittings, connectors, and the network of what is joined | BIMCraft, `crates/core/src/model.rs`, `walls.rs`, `runs.rs`, `network.rs`, `rooms.rs`, `geom.rs` and `family.rs`, commit `f202abd85d1cf165325e2f7b250da0b5e51f5b71` (https://github.com/IPedrax/bimcraft; MIT OR Apache-2.0) | MIT | `crates/world/src/building/model.rs`, `walls.rs`, `runs.rs`, `network.rs` and `rooms.rs`, and five small items in `crates/world/src/building.rs`. Each header says what is ported and lists what was changed; `PORTMAP.md` gives the source line of every public item and is checked by `tools/portmap.sh`. The copyright and permission notice are in `NOTICE`. |
+
+Nothing else is borrowed. IfcOpenShell (LGPL-3.0) and buildingSMART's IFC4.3 documentation
+were read for the values of one IFC enumeration (DECISIONS.md call 29); nothing of either
+is copied or linked. The owner's earlier program was read for the pattern a cost line
 is worked in (DECISIONS.md call 18); none of its code was copied.
 
 ## Bundled fonts

@@ -215,7 +215,7 @@ pub struct Plan {
 impl Plan {
     /// The plan of `bounding` (a storey's room-bounding walls, each able to join the
     /// others) measured at `at`.
-    pub fn of(bounding: &[PlanWall], at: RoomArea, tol: f64) -> Plan {
+    pub fn of_walls(bounding: &[PlanWall], at: RoomArea, tol: f64) -> Plan {
         match at {
             RoomArea::Centre => {
                 let lines: Vec<(V, V)> = (0..bounding.len()).map(|i| walls::centre_line(bounding, i, tol)).map(|[a, b]| (a, b)).collect();

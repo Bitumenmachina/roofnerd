@@ -89,7 +89,7 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
             let _ = writeln!(out, "  {} {:<8} {:<16} {:>2} runs  {:>12}", line.size_status.max(line.length.status).flag(), format!("{:?}", line.kind), line.size, line.length.members, said(&line.length));
         }
         for (kind, what, count, status) in &t.fittings {
-            let _ = writeln!(out, "  {} {:<9} {what}: {count} EA", status.flag(), kind.map(|k| k.label()).unwrap_or("Fitting"));
+            let _ = writeln!(out, "  {} {:<9} {what}: {count} EA", status.flag(), kind.map(|k| k.title()).unwrap_or("Fitting"));
         }
         for (kind, what, count, status) in &t.placed {
             let _ = writeln!(out, "  {} {:<9} {what}: {count} EA", status.flag(), format!("{kind:?}"));

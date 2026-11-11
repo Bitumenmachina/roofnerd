@@ -675,7 +675,7 @@ pub fn takeoff(p: &mut ChildSpawnerCommands, fonts: &Fonts, t: &SystemTakeoff) {
     if !t.fittings.is_empty() {
         heading(p, fonts, "Fittings");
         for (kind, what, count, status) in &t.fittings {
-            listed(p, fonts, None, what, kind.map(|k| k.label()).unwrap_or("fitting").to_lowercase(), format!("{count} EA"), *status);
+            listed(p, fonts, None, what, kind.map(|k| k.title()).unwrap_or("fitting").to_lowercase(), format!("{count} EA"), *status);
         }
     }
     if !t.placed.is_empty() {

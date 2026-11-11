@@ -2736,7 +2736,7 @@ fn a_walls_line_can_be_any_line_of_the_wall_and_its_layers_add_up() {
     assert_eq!(walls::depth(0.4, &[], Location::InteriorCore), 0.4);
     // The exterior is to the left of the line. Drawn on its exterior face, a wall's
     // faces are at 0 and −0.4, and its centre line is 0.2 to the right.
-    assert_eq!(walls::faces(0.4, &layers, Location::ExteriorFinish), (0.0, -0.4));
+    assert_eq!(walls::wall_faces(0.4, &layers, Location::ExteriorFinish), (0.0, -0.4));
     assert_eq!(walls::centre(0.4, &layers, Location::ExteriorFinish), -0.2);
 
     // In a job: the sample's south wall is 6 in thick, drawn west to east along y = 0, so
