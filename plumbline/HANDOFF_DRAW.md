@@ -162,10 +162,68 @@ job cost $25,292.43). `plumbline check` on both samples: same bytes.
 * `STATUS.md`, `SPEC.md`, `DECISIONS.md`, `PROPOSALS.md`, `README.md`, `NOTICE` and
   `PORTMAP.md` are true.
 
-## 9. Where things stand as this is written
+## 9. Where things stand (updated 2026-11-11, after steps 1 to 4)
 
-Branch `claude/nifty-tesla-qmn44n`, commit `016ac79`. D4 is judged (tenth judgment) and
-its fixes are in; D5 is demonstrated at the command line and in the window and is with
-its judge (the eleventh). The brief's D6 (interchange) is the owner's stretch (e) and
-D7 (capture) waits on his ruling. Open questions for the owner: `QUESTIONS.md` Q1, Q3,
-Q5, Q7, Q11, Q13, Q14; none blocks this stretch.
+Branch `claude/nifty-tesla-qmn44n`. D4 and D5 are each judged (tenth and eleventh
+judgments) and their fixes are in; the eleventh's fixes have not themselves been judged.
+
+Of this stretch, **built, tested and pushed, not judged:**
+* Step 1: the gate covers `crates/world/src/editing*.rs`; proven red first. 172 items.
+* Step 3: `editing/history.rs`, undo and redo, the job's saved text kept per step.
+* Step 2: `editing.rs`, the verbs (`storey`, `wall_type`, `opening_type`,
+  `segment_type`, `system`, `walls`, `opening`, `room`, `runs`, `place`, `move_by`,
+  `remove`), all-or-nothing, and the same at the command line with `plumbline new`.
+  `demos/draw.sh` models a house from an empty job against hand-worked figures.
+* Step 4: `editing/snap.rs`, the solver ported, tested on plans written out by hand.
+* DECISIONS.md calls 34, 35, 36. STATUS.md, "Drawing and editing".
+
+**Not built: steps 5, 6 and 7** (the tools in the window, `demos/draww.sh`, the judge).
+
+## 10. The window tools: what was worked out, for whoever builds them
+
+Read in the window's code before this was written: `crates/app/src/model.rs` (`Doc`,
+`Entry`, `Show`), `main.rs` (`keys`: F12 pictures, the typed entry, the key handlers),
+`panels.rs` (`browser`, `browser_row`, the entry card, `write_pointer`), `scene.rs`
+(each mesh has `PointerClick`, `PointerMove`, `PointerOver` observers; the ground has a
+click observer that lets go of the selection; `draw_lines` draws with gizmos).
+
+* **State.** `Doc` gains the tool in hand, the points picked so far, where the next
+  pick would land (`snap::Found`), the `History`, and each tool's current settings as
+  the person typed them (none until typed).
+* **Where the tools are.** A "Draw" section in the left panel (`browser_row` is the
+  clickable row), shown in the plan view with one storey chosen (`doc.show.storey`):
+  Wall, Door, Window, Duct, Pipe, Conduit, Cable, Fixture, Equipment; Move and Delete
+  for what is selected; Undo and Redo. Under each tool, its settings as text. With no
+  storey chosen the section says to choose one; with none in the job it offers a new one.
+* **Settings are typed once per tool, on the existing entry card, and shown.** Wall:
+  thickness and height. Door or window: width, height, sill. A run: size, height above
+  the floor, system. A thing: what it is, its size, its height above the floor. A tool
+  with no settings opens the card instead of drawing. Types and systems are found by
+  those values or made (a wall type of that thickness; a system of that classification).
+* **The pointer on the plan.** The window reads a position only over meshes today. A
+  tool needs it over empty ground: the camera's ray through the pointer, met with the
+  storey's floor plane, in a system that runs each frame while a tool is in hand; then
+  `snap::snap` with a reach of a few pixels turned into feet. Do not `doc.touch()` each
+  frame: only the gizmos and the status bar's pointer text follow it.
+* **A click with a tool in hand picks a point**; the meshes' and the ground's select
+  observers have to stand down while a tool is in hand. Wall and run: each pair of
+  picks is one `editing::walls` or `editing::runs` call, chained from the last point;
+  Esc ends the chain, and again the tool. Door and window: one pick, snapped with only
+  `nearest` on, whose `source` is the wall. Thing: one pick. Move: two picks.
+* **A typed length while a wall or run is being drawn** goes from the last point toward
+  the pointer's snapped place (BIMCraft `draw.rs:266` and the `toward` rule at
+  `draw.rs:303`: east when the pointer is on the point).
+* **Undo for everything.** Count every edit the window makes (a counter beside
+  `doc.edited`); a system that sees the count move saves the job's text and calls
+  `History::record` with the text from before. Undo and redo replace the job and clear
+  a selection that is gone. This covers the edits the window already makes.
+* **The demonstration.** Exact figures come from typed lengths and the angle guides,
+  not from where the pointer happens to be: first point anywhere, then east with 24
+  typed, north with 16, and so on. Lengths and areas do not depend on where the first
+  point fell, so the saved file's takeoff can be set against `demos/draw.sh`'s house.
+  Rooms are added at the command line from the walls' lines read out of the saved file.
+  Starting from an empty job needs the window to open a file made by `plumbline new`.
+
+## 11. Open questions for the owner
+
+`QUESTIONS.md` Q1, Q3, Q5, Q7, Q11, Q13, Q14; none blocks this stretch.
