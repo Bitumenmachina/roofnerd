@@ -19,6 +19,12 @@
 //!   it is under in the tree, an opening's `host` is the wall it is under, and a `type` is
 //!   the path of a Type element that carries the type's component. So `level` and `host`
 //!   are not fields, and a type has a path, flags and sources like anything else.
+//! * A level keeps `height`, the storey's own, which BIMCraft's level does not have. Its
+//!   `computation_height` is absent when it is the usual one, 4 ft here for BIMCraft's
+//!   1200 mm.
+//! * A room's `level` is the storey it is under and its `name` is its element's. Not
+//!   taken: its `colour`, `params`, `base_offset`, `top_level`, `limit_offset`, `frozen`
+//!   and `kept`.
 //! * A wall's `start` and `end` are one value, `line`: a line read off a drawing has one
 //!   source and one status.
 //! * A wall has `top_level` or `height`, never both, where BIMCraft keeps a height it does
@@ -86,7 +92,15 @@ fn is_centre(l: &Location) -> bool {
 pub struct Level {
     pub elevation: Val<Len>,
     pub height: Val<Len>,
+    /// How far above it its rooms find the walls that bound them. None is
+    /// `COMPUTATION_HEIGHT_FT`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub computation_height: Option<Val<Len>>,
 }
+
+/// How far above a storey's floor its rooms find the walls that bound them, unless the
+/// storey says otherwise: 4 ft. (BIMCraft's is 1200 mm, `CUT_HEIGHT`; DECISIONS.md call 29.)
+pub const COMPUTATION_HEIGHT_FT: f64 = 4.0;
 
 /// The line of a wall its ends lie on: its centre, its core's centre, or a face, of its
 /// finish or of its core, on its exterior or its interior side.
@@ -249,6 +263,24 @@ impl Floor {
     pub fn boundary_ft(&self) -> Option<Vec<P2>> {
         let d = units::coord_divisor(&self.boundary.unit).ok()?;
         self.boundary.value.as_ref().map(|pts| pts.iter().map(|p| [p[0] / d, p[1] / d]).collect())
+    }
+}
+
+/// `pl::room`: on a Room under its storey. A point inside the room: its boundary is found
+/// from the walls around the point, so it follows them when they move. `number` is what
+/// the plan calls it.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Room {
+    pub point: Val<P2>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub number: Option<Val<String>>,
+}
+
+impl Room {
+    pub fn point_ft(&self) -> Option<P2> {
+        let d = units::coord_divisor(&self.point.unit).ok()?;
+        self.point.value.map(|p| [p[0] / d, p[1] / d])
     }
 }
 
@@ -528,7 +560,24 @@ pub fn check_level(path: &str, kind: Kind, l: &Level) -> Result<(), String> {
         return Err(format!("{path}: a {kind:?} cannot carry a level; only a storey can"));
     }
     offset_ok(&format!("{path} elevation"), &l.elevation)?;
+    if let Some(c) = &l.computation_height {
+        positive(&format!("{path} computation height"), c, true)?;
+    }
     positive(&format!("{path} storey height"), &l.height, false)
+}
+
+pub fn check_room(path: &str, kind: Kind, r: &Room) -> Result<(), String> {
+    if kind != Kind::Room {
+        return Err(format!("{path}: a {kind:?} cannot carry a room's point; only a room can"));
+    }
+    let d = coords(&format!("{path} room point"), &r.point)?;
+    if let Some(p) = &r.point.value {
+        usable(&format!("{path} room point"), p, d)?;
+    }
+    if let Some(n) = &r.number {
+        n.check(&format!("{path} room number"), "")?;
+    }
+    Ok(())
 }
 
 /// The layers of a type each make sense, and add up to its thickness when every one of

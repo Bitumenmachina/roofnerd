@@ -2421,7 +2421,7 @@ fn a_storey_totals_its_walls_and_floors_and_every_element_is_placed_or_accounted
     let first = path_named(&mut job, "first floor");
     let on_first = drawn.iter().filter(|p| p.storey.as_deref() == Some(first.as_str())).count();
     assert!(on_first > 9, "{on_first}");
-    job.put(&first, plumbline_world::Level { elevation: Val::unknown("ft", "not surveyed"), height: Val::known(Len::One(10.0), "ft", "test") }).unwrap();
+    job.put(&first, plumbline_world::Level { elevation: Val::unknown("ft", "not surveyed"), height: Val::known(Len::One(10.0), "ft", "test"), computation_height: None }).unwrap();
     let (still, not_drawn) = placements(&mut job);
     // (The two elbows with no size are on the first floor too. A thing is listed once,
     // with the first thing that stops it being drawn.)
@@ -2635,19 +2635,19 @@ fn a_wall_held_to_the_storey_above_is_as_tall_as_the_storeys_are_apart() {
     assert!(h.inputs.contains(&format!("{second}#pl::level")), "{:?}", h.inputs);
     // Raise the second floor a foot and the wall is 11 ft tall and 440 SF, with nothing
     // typed on the wall. The door and two windows are still 70.01 SF: 369.99 net.
-    job.put(&second, Level { elevation: ft(11.0), height: ft(9.0) }).unwrap();
+    job.put(&second, Level { elevation: ft(11.0), height: ft(9.0), computation_height: None }).unwrap();
     job.derive();
     assert_eq!(measure_of(&mut job, &south, "height").value, Some(11.0));
     assert_eq!(measure_of(&mut job, &south, "face_area").value, Some(440.0));
     assert_eq!(measure_of(&mut job, &south, "net_area").value, Some(369.99));
     // An elevation somebody assumed makes the height, the face and the net Assumed.
-    job.put(&second, Level { elevation: Val::assumed(Len::One(11.0), "ft", "scaled off a section"), height: ft(9.0) }).unwrap();
+    job.put(&second, Level { elevation: Val::assumed(Len::One(11.0), "ft", "scaled off a section"), height: ft(9.0), computation_height: None }).unwrap();
     job.derive();
     for name in ["height", "face_area", "net_area"] {
         assert_eq!(measure_of(&mut job, &south, name).status, Status::Assumed, "{name}");
     }
     // One nobody has leaves no height and no area, and says which elevation.
-    job.put(&second, Level { elevation: Val::unknown("ft", "not surveyed"), height: ft(9.0) }).unwrap();
+    job.put(&second, Level { elevation: Val::unknown("ft", "not surveyed"), height: ft(9.0), computation_height: None }).unwrap();
     job.derive();
     let face = measure_of(&mut job, &south, "face_area");
     assert_eq!((face.value, face.status), (None, Status::Unknown));
@@ -2655,7 +2655,7 @@ fn a_wall_held_to_the_storey_above_is_as_tall_as_the_storeys_are_apart() {
     assert_eq!(measure_of(&mut job, &south, "plan_length").value, Some(40.0));
     // Offsets: a top 1 ft 6 in under the storey above and a base 6 in above its own floor.
     // 11 − 1.5 − 0.5 = 9 ft.
-    job.put(&second, Level { elevation: ft(11.0), height: ft(9.0) }).unwrap();
+    job.put(&second, Level { elevation: ft(11.0), height: ft(9.0), computation_height: None }).unwrap();
     let e = job.find(&south).unwrap();
     let mut wall = job.world.get::<Wall>(e).unwrap().clone();
     wall.top_offset = Some(Val::known(Len::FtIn([-1.0, -6.0]), "ft-in", "test"));
@@ -2837,7 +2837,7 @@ fn piping() -> (Job, String, String, String, String) {
     use plumbline_world::{Level, SegmentType};
     let mut job = Job::new("network test (not a real job)", "test", "test");
     let storey = job.add("job-0001", Kind::Storey, "ground").unwrap();
-    job.put(&storey, Level { elevation: ft(0.0), height: ft(10.0) }).unwrap();
+    job.put(&storey, Level { elevation: ft(0.0), height: ft(10.0), computation_height: None }).unwrap();
     let inch = |x: f64| Val::known(Len::One(x), "in", "test");
     let mut kind = |job: &mut Job, name: &str, t: SegmentType| {
         let p = job.add("job-0001", Kind::Type, name).unwrap();
@@ -3029,7 +3029,7 @@ fn how_close_is_one_node_and_what_cannot_be_placed_is_said() {
     // A second storey whose elevation nobody has: what is on it cannot be placed, so it
     // is in no network, and it is listed with why. It is not joined at a guessed height.
     let upper = job.add("job-0001", Kind::Storey, "upper").unwrap();
-    job.put(&upper, plumbline_world::Level { elevation: Val::unknown("ft", "not surveyed"), height: ft(9.0) }).unwrap();
+    job.put(&upper, plumbline_world::Level { elevation: Val::unknown("ft", "not surveyed"), height: ft(9.0), computation_height: None }).unwrap();
     let lost = piece(&mut job, &upper, Kind::Pipe, "upstairs", &two, [0.0, 0.0, 1.0], [10.0, 0.0, 1.0]);
     let n = network(&mut job, None, None, 0.05).unwrap();
     assert_eq!(n.left_out, vec![(lost.clone(), "its storey's elevation is not known".to_string())]);
@@ -3096,4 +3096,228 @@ fn a_connector_has_to_make_sense() {
     assert!(check_connectors("f", Kind::Fixture, &one(ConnectorKind::Pipe, None, "mm")).is_err());
     let sized = Connectors(vec![Connector { name: String::new(), kind: ConnectorKind::Pipe, domain: None, flow: Flow::Both, at: at("ft"), size: Some(Val::known(Len::One(0.0), "in", "test")) }]);
     assert!(check_connectors("f", Kind::Fixture, &sized).is_err(), "a size of nothing");
+}
+
+// ---------------------------------------------------------------- the re-base on BIMCraft: rooms
+
+/// A job with one storey at the datum and a 6 in wall type: (job, storey, wall type).
+fn walled() -> (Job, String, String) {
+    use plumbline_world::{Level, WallType};
+    let mut job = Job::new("room test (not a real job)", "test", "test");
+    let storey = job.add("job-0001", Kind::Storey, "ground").unwrap();
+    job.put(&storey, Level { elevation: ft(0.0), height: ft(10.0), computation_height: None }).unwrap();
+    let t = job.add("job-0001", Kind::Type, "wall 6 in").unwrap();
+    job.put(&t, WallType { thickness: Val::known(Len::One(6.0), "in", "test"), layers: Vec::new() }).unwrap();
+    (job, storey, t)
+}
+
+fn wall(job: &mut Job, storey: &str, type_path: &str, name: &str, a: [f64; 2], b: [f64; 2], tall: f64) -> String {
+    let w = job.add(storey, Kind::Wall, name).unwrap();
+    job.put(&w, plumbline_world::Wall::tall(named(type_path), Val::known([a, b], "ft", "test"), ft(tall))).unwrap();
+    w
+}
+
+fn room(job: &mut Job, storey: &str, name: &str, at: [f64; 2]) -> String {
+    let r = job.add(storey, Kind::Room, name).unwrap();
+    job.put(&r, plumbline_world::Room { point: Val::known(at, "ft", "test"), number: None }).unwrap();
+    r
+}
+
+/// Four walls round a rectangle from the origin, drawn counter-clockwise from the
+/// south-west corner: [south, east, north, west].
+fn four_walls(job: &mut Job, storey: &str, type_path: &str, east: f64, north: f64) -> [String; 4] {
+    [
+        wall(job, storey, type_path, "south", [0.0, 0.0], [east, 0.0], 9.0),
+        wall(job, storey, type_path, "east", [east, 0.0], [east, north], 9.0),
+        wall(job, storey, type_path, "north", [east, north], [0.0, north], 9.0),
+        wall(job, storey, type_path, "west", [0.0, north], [0.0, 0.0], 9.0),
+    ]
+}
+
+fn figures_of(job: &mut Job, room: &str) -> [Option<f64>; 3] {
+    ["floor_area", "gross_area", "perimeter"].map(|name| measure_of(job, room, name).value)
+}
+
+#[test]
+fn a_room_is_the_space_its_walls_enclose_measured_inside_their_faces_and_to_their_centres() {
+    let mut job = plumbline_world::sample::house();
+    let first = path_named(&mut job, "first floor");
+    let room_named = |job: &mut Job, name: &str| job.children().get(&first).unwrap().get(name).unwrap().clone();
+    // The sample's first floor is 40 ft by 28 ft to the centres of its outside walls,
+    // which are 6 in thick. A hall partition, 4 1/2 in thick, runs east-west at 16 ft.
+    //
+    // The living room is all of it south of the hall: 40 by 16 to centre lines, 640 SF.
+    // Inside the faces it is 40 − 0.25 − 0.25 = 39.5 ft by 16 − 0.25 − 0.1875 = 15.5625 ft:
+    // 614.7188 SF, and 2 × (39.5 + 15.5625) = 110.125 LF round.
+    let living = room_named(&mut job, "living room");
+    assert_eq!(figures_of(&mut job, &living), [Some(614.7188), Some(640.0), Some(110.125)]);
+    // The bath is between partitions at 14 and 24 ft, the hall, and the wet wall (6 in) at
+    // 22 ft: 10 by 6, 60 SF to centre lines. Inside: 10 − 0.1875 − 0.1875 = 9.625 by
+    // 6 − 0.1875 − 0.25 = 5.5625: 53.5391 SF, 30.375 LF round.
+    let bath = room_named(&mut job, "bath");
+    assert_eq!(figures_of(&mut job, &bath), [Some(53.5391), Some(60.0), Some(30.375)]);
+    // The kitchen: 14 by 12 is 168; inside 13.5625 by 11.5625 is 156.8164; 50.25 round.
+    let kitchen = room_named(&mut job, "kitchen");
+    assert_eq!(figures_of(&mut job, &kitchen), [Some(156.8164), Some(168.0), Some(50.25)]);
+    // The five rooms' areas to centre lines are the whole floor: 640 + 168 + 60 + 60 + 192.
+    let gross: f64 = ["living room", "kitchen", "bath", "utility", "office"].iter().map(|n| room_named(&mut job, n)).collect::<Vec<_>>().iter().map(|r| measure_of(&mut job, r, "gross_area").value.unwrap()).sum();
+    assert_eq!(gross, 1120.0);
+    let totals = plumbline_world::building::storey_totals(&mut job);
+    assert_eq!(totals[0].floors.value, Some(1120.0));
+    // And inside their walls they come to 614.7188 + 156.8164 + 53.5391 + 52.9375 + 179.9414
+    // = 1,057.9532 SF: the rest is under the walls. (A total is the sum of the figures
+    // as each is shown, to four decimals, so it is what adding the lines up gives.)
+    assert_eq!((totals[0].rooms.value, totals[0].rooms.members, totals[0].rooms.status), (Some(1057.9532), 5, Status::Known));
+    // A room's figure names the walls it is measured to, and is Known when they are.
+    let d = measure_of(&mut job, &bath, "floor_area");
+    assert_eq!(d.status, Status::Known);
+    assert_eq!(d.inputs.len(), 5, "the room and its four walls: {:?}", d.inputs);
+
+    // Move the wet wall a foot north, to 23 ft, and the bath grows by 9.625 SF and the
+    // utility room shrinks by as much, with nothing typed on either room.
+    let wet = room_named(&mut job, "wet wall");
+    let e = job.find(&wet).unwrap();
+    job.world.get_mut::<plumbline_world::Wall>(e).unwrap().line = Val::known([[14.0, 23.0], [24.0, 23.0]], "ft", "test");
+    job.derive();
+    assert_eq!(measure_of(&mut job, &bath, "floor_area").value, Some(63.1641));
+    let utility = room_named(&mut job, "utility");
+    assert_eq!(measure_of(&mut job, &utility, "floor_area").value, Some(43.3125));
+    // Say the wet wall does not bound rooms and the bath is both rooms' space: 10 by 12
+    // to centre lines. The utility room, placed after it, is in a space that is taken.
+    job.world.get_mut::<plumbline_world::Wall>(e).unwrap().room_bounding = false;
+    job.derive();
+    assert_eq!(measure_of(&mut job, &bath, "gross_area").value, Some(120.0));
+    let lost = measure_of(&mut job, &utility, "floor_area");
+    assert_eq!((lost.value, lost.status), (None, Status::Unknown));
+    assert_eq!(lost.note, "bath was placed first and has the space this room's point is in");
+}
+
+#[test]
+fn a_room_that_is_not_closed_or_is_in_a_wall_has_no_area_and_says_why() {
+    let (mut job, s, t) = walled();
+    // Three walls of a 20 ft by 12 ft room: open to the west.
+    wall(&mut job, &s, &t, "south", [0.0, 0.0], [20.0, 0.0], 9.0);
+    wall(&mut job, &s, &t, "east", [20.0, 0.0], [20.0, 12.0], 9.0);
+    wall(&mut job, &s, &t, "north", [20.0, 12.0], [0.0, 12.0], 9.0);
+    let r = room(&mut job, &s, "den", [10.0, 6.0]);
+    job.derive();
+    for name in ["floor_area", "gross_area", "perimeter"] {
+        let d = measure_of(&mut job, &r, name);
+        assert_eq!((d.value, d.status, d.note.as_str()), (None, Status::Unknown, "no loop of walls closes round its point"), "{name}");
+    }
+    // Close it. 20 by 12 to centre lines is 240 SF; inside 19.5 by 11.5 is 224.25, 62 LF round.
+    wall(&mut job, &s, &t, "west", [0.0, 12.0], [0.0, 0.0], 9.0);
+    job.derive();
+    assert_eq!(figures_of(&mut job, &r), [Some(224.25), Some(240.0), Some(62.0)]);
+    // A point in the body of a wall is not in a room at its faces.
+    let in_wall = room(&mut job, &s, "in the wall", [10.0, 0.1]);
+    job.derive();
+    assert_eq!(measure_of(&mut job, &in_wall, "floor_area").note, "its point is inside a wall");
+    // A point outside the walls is in no room.
+    let outside = room(&mut job, &s, "outside", [30.0, 6.0]);
+    job.derive();
+    assert_eq!(measure_of(&mut job, &outside, "gross_area").note, "no loop of walls closes round its point");
+    // A wall drawn by somebody's guess makes the room it bounds Assumed.
+    let west = path_named(&mut job, "west");
+    let e = job.find(&west).unwrap();
+    job.world.get_mut::<plumbline_world::Wall>(e).unwrap().line = Val::assumed([[0.0, 12.0], [0.0, 0.0]], "ft", "scaled off a sketch");
+    job.derive();
+    assert_eq!(measure_of(&mut job, &r, "floor_area").status, Status::Assumed);
+    // A wall of the storey that cannot be placed (nobody has its height) leaves every room
+    // on the storey with no figure: whether it closes a room off is not known.
+    job.world.get_mut::<plumbline_world::Wall>(e).unwrap().height = Some(Val::unknown("ft", "not on the section"));
+    job.derive();
+    let d = measure_of(&mut job, &r, "floor_area");
+    assert_eq!(d.value, None);
+    assert_eq!(d.note, "west cannot be placed (its height is not known), so what bounds the rooms of this storey is not known");
+    // A room on another storey is still measured, but is Assumed, and says what it assumes.
+    let upper = job.add("job-0001", Kind::Storey, "upper").unwrap();
+    job.put(&upper, plumbline_world::Level { elevation: ft(10.0), height: ft(9.0), computation_height: None }).unwrap();
+    four_walls(&mut job, &upper, &t, 20.0, 12.0);
+    let up = room(&mut job, &upper, "loft", [10.0, 6.0]);
+    job.derive();
+    let d = measure_of(&mut job, &up, "floor_area");
+    assert_eq!((d.value, d.status), (Some(224.25), Status::Assumed));
+    assert_eq!(d.note, "assumes west does not bound this room: it cannot be placed (its height is not known)");
+}
+
+#[test]
+fn rooms_close_at_corners_whatever_line_a_wall_was_drawn_on_and_an_island_is_taken_out() {
+    use plumbline_world::{Location, Wall};
+    // A 10 ft by 10 ft square drawn clockwise on the walls' outside faces. The exterior
+    // is to the left of the way a wall is drawn, so drawn clockwise the walls stand inside
+    // the square. They are 6 in thick: 9 ft by 9 ft inside, 81 SF, 36 LF round; to their
+    // centre lines 9.5 by 9.5, 90.25 SF. The centre lines are run on to meet at the corners.
+    let (mut job, s, t) = walled();
+    for (name, a, b) in [("west", [0.0, 0.0], [0.0, 10.0]), ("north", [0.0, 10.0], [10.0, 10.0]), ("east", [10.0, 10.0], [10.0, 0.0]), ("south", [10.0, 0.0], [0.0, 0.0])] {
+        let w = job.add(&s, Kind::Wall, name).unwrap();
+        job.put(&w, Wall { location: Location::ExteriorFinish, ..Wall::tall(named(&t), Val::known([a, b], "ft", "test"), ft(9.0)) }).unwrap();
+    }
+    let r = room(&mut job, &s, "box", [5.0, 5.0]);
+    job.derive();
+    assert_eq!(figures_of(&mut job, &r), [Some(81.0), Some(90.25), Some(36.0)]);
+
+    // A 20 ft square of walls with a 4 ft square of walls standing free inside it, all to
+    // centre lines. To centre lines the room is 400 − 16 = 384 SF. Inside the faces it is
+    // 19.5² less the island's outside, 4.5²: 380.25 − 20.25 = 360 SF, and it is
+    // 4 × 19.5 + 4 × 4.5 = 96 LF round, the island's faces included.
+    let (mut job, s, t) = walled();
+    four_walls(&mut job, &s, &t, 20.0, 20.0);
+    for (name, a, b) in [("i south", [8.0, 8.0], [12.0, 8.0]), ("i east", [12.0, 8.0], [12.0, 12.0]), ("i north", [12.0, 12.0], [8.0, 12.0]), ("i west", [8.0, 12.0], [8.0, 8.0])] {
+        wall(&mut job, &s, &t, name, a, b, 9.0);
+    }
+    let r = room(&mut job, &s, "hall", [3.0, 3.0]);
+    let shaft = room(&mut job, &s, "shaft", [10.0, 10.0]);
+    job.derive();
+    assert_eq!(figures_of(&mut job, &r), [Some(360.0), Some(384.0), Some(96.0)]);
+    // The space inside the island is a room of its own: 4 by 4, and 3.5 by 3.5 inside.
+    assert_eq!(figures_of(&mut job, &shaft), [Some(12.25), Some(16.0), Some(14.0)]);
+
+    // A wall that stops short of where a room's walls are found does not bound it. A 3 ft
+    // knee wall across a 20 ft by 12 ft room: at the usual 4 ft the room runs past it; told
+    // to look at 2 ft, the storey finds two rooms.
+    let (mut job, s, t) = walled();
+    four_walls(&mut job, &s, &t, 20.0, 12.0);
+    wall(&mut job, &s, &t, "knee wall", [10.0, 0.0], [10.0, 12.0], 3.0);
+    let r = room(&mut job, &s, "west half", [5.0, 6.0]);
+    job.derive();
+    assert_eq!(measure_of(&mut job, &r, "gross_area").value, Some(240.0));
+    job.put(&s, plumbline_world::Level { elevation: ft(0.0), height: ft(10.0), computation_height: Some(ft(2.0)) }).unwrap();
+    job.derive();
+    assert_eq!(measure_of(&mut job, &r, "gross_area").value, Some(120.0));
+    // Inside: 10 − 0.25 − 0.25 = 9.5 by 11.5 is 109.25.
+    assert_eq!(measure_of(&mut job, &r, "floor_area").value, Some(109.25));
+}
+
+#[test]
+fn a_room_in_the_file_has_to_be_under_a_storey_and_have_a_point_that_makes_sense() {
+    use plumbline_world::building::check_room;
+    use plumbline_world::Room;
+    assert!(check_room("r", Kind::Room, &Room { point: Val::known([1.0, 1.0], "ft", "test"), number: None }).is_ok());
+    assert!(check_room("r", Kind::Room, &Room { point: Val::known([1.0, 1.0], "", "test"), number: None }).is_err());
+    assert!(check_room("r", Kind::Room, &Room { point: Val::known([1.0, 1.0], "m", "test"), number: None }).is_err());
+    assert!(check_room("r", Kind::Wall, &Room { point: Val::known([1.0, 1.0], "ft", "test"), number: None }).is_err());
+    assert!(check_room("r", Kind::Room, &Room { point: Val::unknown("ft", "not placed yet"), number: None }).is_ok());
+    // A room whose point nobody has is listed with no figure, not left out.
+    let (mut job, s, t) = walled();
+    four_walls(&mut job, &s, &t, 20.0, 12.0);
+    let r = job.add(&s, Kind::Room, "somewhere").unwrap();
+    job.put(&r, Room { point: Val::unknown("ft", "not placed yet"), number: None }).unwrap();
+    job.derive();
+    assert_eq!(measure_of(&mut job, &r, "floor_area").note, "its point is not known");
+    // A room under the job, not under a storey, does not load.
+    let mut job = plumbline_world::sample::house();
+    let text = file::save(&mut job);
+    let (first, living) = (path_named(&mut job, "first floor"), path_named(&mut job, "living room"));
+    let mut doc: serde_json::Value = serde_json::from_str(&text).unwrap();
+    for entry in doc["data"].as_array_mut().unwrap() {
+        let path = entry["path"].as_str().unwrap().to_string();
+        if path == first {
+            entry["children"].as_object_mut().unwrap().remove("living room");
+        } else if path == "job-0001" {
+            entry["children"].as_object_mut().unwrap().insert("living room".into(), living.clone().into());
+        }
+    }
+    let err = file::load(&doc.to_string()).err().expect("a room under the job");
+    assert!(err.contains("a room is a space on a storey"), "{err}");
 }

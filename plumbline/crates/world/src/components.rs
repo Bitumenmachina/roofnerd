@@ -94,6 +94,8 @@ pub enum Kind {
     Type,
     /// What joins runs: an elbow, a tee, a cross, a change of size, a coupling.
     Fitting,
+    /// A room: the space the walls round a point enclose.
+    Room,
 }
 
 impl Kind {
@@ -127,6 +129,7 @@ impl Kind {
             Kind::Fixture => "fixture",
             Kind::Type => "type",
             Kind::Fitting => "fitting",
+            Kind::Room => "room",
         }
     }
     pub fn is_area(self) -> bool {
@@ -160,6 +163,8 @@ impl Kind {
             &[("width", "ft"), ("height", "ft"), ("opening_area", "SF")]
         } else if self == Kind::Floor {
             &[("plan_area", "SF")]
+        } else if self == Kind::Room {
+            &[("floor_area", "SF"), ("gross_area", "SF"), ("perimeter", "LF")]
         } else if self == Kind::Duct {
             &[("true_length", "LF"), ("surface_area", "SF")]
         } else if matches!(self, Kind::Pipe | Kind::Conduit | Kind::Cable) {

@@ -197,7 +197,7 @@ pub struct Snapshot {
     pub systems: Vec<SystemInfoRow>,
     /// How many elements of each discipline are drawn.
     pub counts: Vec<(Discipline, usize)>,
-    /// Every wall and floor as the sheet lists it: storey path, then the element's rows.
+    /// Every wall, floor and room as the sheet lists it: storey path, then the element's rows.
     pub fabric: Vec<(String, view::ElementRows)>,
 }
 
@@ -299,12 +299,11 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     }
     s.systems = building::takeoff(&mut doc.job).into_iter().map(|t| SystemInfoRow { drawn: drawn.iter().filter(|p| p.system.as_deref() == Some(t.path.as_str())).count(), takeoff: t }).collect();
     s.storeys = building::storey_totals(&mut doc.job);
-    for el in elements.iter().filter(|e| matches!(e.kind, Kind::Wall | Kind::Floor)) {
-        if let Some(p) = drawn.iter().find(|p| p.path == el.path).and_then(|p| p.storey.clone()) {
-            s.fabric.push((p, el.clone()));
-        } else {
-            s.fabric.push((String::new(), el.clone()));
-        }
+    // By the storey each is under in the job, whether or not it can be drawn: a wall with
+    // no height is still a row of its storey's table.
+    let on = building::storeys_of(&mut doc.job);
+    for el in elements.iter().filter(|e| matches!(e.kind, Kind::Wall | Kind::Floor | Kind::Room)) {
+        s.fabric.push((on.get(&el.path).cloned().unwrap_or_default(), el.clone()));
     }
     s.drawn = drawn;
     s.not_drawn = not_drawn;

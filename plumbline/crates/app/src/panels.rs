@@ -565,6 +565,9 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
         listed(p, fonts, None, "Walls", storey.walls.members.to_string(), total(&storey.walls), if storey.walls.members == 0 { Status::Known } else { storey.walls.status });
         listed(p, fonts, None, "Wall face, less openings", String::new(), total(&storey.wall_net), if storey.wall_net.members == 0 { Status::Known } else { storey.wall_net.status });
         listed(p, fonts, None, "Floor", storey.floors.members.to_string(), total(&storey.floors), if storey.floors.members == 0 { Status::Known } else { storey.floors.status });
+        if storey.rooms.members > 0 {
+            listed(p, fonts, None, "Rooms, inside their walls", storey.rooms.members.to_string(), total(&storey.rooms), storey.rooms.status);
+        }
         listed(p, fonts, None, "Doors and windows", String::new(), format!("{} and {}", storey.doors, storey.windows), Status::Known);
     }
     if let Some(totals) = &snap.totals {
@@ -698,6 +701,7 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, el: &
         Kind::Wall => &[("net_area", "Net face"), ("plan_length", "Length")],
         Kind::Door | Kind::Window => &[("opening_area", "Opening")],
         Kind::Floor => &[("plan_area", "Area")],
+        Kind::Room => &[("floor_area", "Floor inside the walls"), ("perimeter", "Round")],
         Kind::Duct => &[("true_length", "Length"), ("surface_area", "Duct surface")],
         k if k.is_segment() => &[("true_length", "Length")],
         _ => &[],

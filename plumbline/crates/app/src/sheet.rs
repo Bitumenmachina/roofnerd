@@ -306,7 +306,8 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         let at = storey.elevation.map(|e| format!("floor at {}", units::feet_as_ft_in(e, 16))).unwrap_or("height unknown".into());
         table(p, fonts, &pretty(&storey.name), format!("{at}  ·  {} doors, {} windows", storey.doors, storey.windows), |t| {
             header_row(t, fonts, &[("", 7.0, false), ("Wall or floor", 0.0, false), ("Length", 100.0, true), ("Face", 110.0, true), ("Openings", 100.0, true), ("Net", 110.0, true)]);
-            for el in here {
+            let rooms: Vec<&view::ElementRows> = here.iter().copied().filter(|el| el.kind == Kind::Room).collect();
+            for el in here.iter().copied().filter(|el| el.kind != Kind::Room) {
                 let selected = doc.selected.as_deref() == Some(el.path.as_str());
                 let worst = el.rows.iter().filter(|r| r.derived).map(|r| r.status).max().unwrap_or(Status::Unknown);
                 row(t, selected, Some(el.path.clone()), |r| {
@@ -337,6 +338,38 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 cell(r, 100.0, true, |_| {});
                 cell(r, 110.0, true, |c| words(c, fonts, total(&storey.wall_net), 12.5, Weight::Semibold, theme::status_ink(storey.wall_net.status)));
             });
+            // The storey's rooms: how far round each is, its area to the centre lines of
+            // its walls, and the floor inside them.
+            if !rooms.is_empty() {
+                header_row(t, fonts, &[("", 7.0, false), ("Room", 0.0, false), ("Round", 100.0, true), ("To wall centres", 110.0, true), ("", 100.0, true), ("Inside the walls", 110.0, true)]);
+                for el in rooms {
+                    let selected = doc.selected.as_deref() == Some(el.path.as_str());
+                    let worst = el.rows.iter().filter(|r| r.derived).map(|r| r.status).max().unwrap_or(Status::Unknown);
+                    row(t, selected, Some(el.path.clone()), |r| {
+                        cell(r, 7.0, false, |c| dot(c, worst));
+                        cell(r, 0.0, false, |c| {
+                            words(c, fonts, el.name.clone(), 12.5, Weight::Medium, theme::ink());
+                            words(c, fonts, el.path.clone(), 11.0, Weight::Regular, theme::ink_faint());
+                        });
+                        for (name, unit, width) in [("perimeter", "LF", 100.0), ("gross_area", "SF", 110.0), ("", "", 100.0), ("floor_area", "SF", 110.0)] {
+                            if name.is_empty() {
+                                cell(r, width, true, |_| {});
+                                continue;
+                            }
+                            let (value, status) = figure(el, name);
+                            cell(r, width, true, |c| words(c, fonts, amount(value, 2, unit), 12.5, if name == "floor_area" { Weight::Medium } else { Weight::Regular }, theme::status_ink(status)));
+                        }
+                    });
+                }
+                t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(0.0)), min_height: px(34.0), ..default() }, BackgroundColor(theme::panel_alt()))).with_children(|r| {
+                    cell(r, 7.0, false, |c| dot(c, storey.rooms.status));
+                    cell(r, 0.0, false, |c| words(c, fonts, "Rooms, total", 12.5, Weight::Semibold, theme::ink()));
+                    cell(r, 100.0, true, |_| {});
+                    cell(r, 110.0, true, |_| {});
+                    cell(r, 100.0, true, |_| {});
+                    cell(r, 110.0, true, |c| words(c, fonts, total(&storey.rooms), 12.5, Weight::Semibold, theme::status_ink(storey.rooms.status)));
+                });
+            }
         });
     }
 }

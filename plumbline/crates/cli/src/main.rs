@@ -77,6 +77,9 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
         let _ = writeln!(out, "  {} wall face, gross   {}", s.wall_face.status.flag(), said(&s.wall_face));
         let _ = writeln!(out, "  {} wall face, net     {}", s.wall_net.status.flag(), said(&s.wall_net));
         let _ = writeln!(out, "  {} floors {:<11} {}", s.floors.status.flag(), s.floors.members, said(&s.floors));
+        if s.rooms.members > 0 {
+            let _ = writeln!(out, "  {} rooms {:<12} {}  (the floor inside the walls)", s.rooms.status.flag(), s.rooms.members, said(&s.rooms));
+        }
         let _ = writeln!(out, "    doors {}, windows {}", s.doors, s.windows);
     }
     for t in building::takeoff(job) {

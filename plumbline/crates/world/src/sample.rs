@@ -269,7 +269,7 @@ pub fn house() -> Job {
     let mut storeys = Vec::new();
     for (name, elevation, height) in [("first floor", 0.0, 10.0), ("second floor", 10.0, 9.0)] {
         let s = job.add(&root, Kind::Storey, name).expect(OK);
-        job.put(&s, Level { elevation: ft(elevation, A), height: ft(height, A) }).expect(OK);
+        job.put(&s, Level { elevation: ft(elevation, A), height: ft(height, A), computation_height: None }).expect(OK);
         storeys.push(s);
     }
     for (i, (wall_height, floor)) in [(9.0, &slab), (8.0, &framed)].into_iter().enumerate() {
@@ -323,6 +323,16 @@ pub fn house() -> Job {
         open(&mut job, &hall, Kind::Door, "east door", 28.0, 2.67, 6.67, 0.0);
         open(&mut job, &p14, Kind::Door, "door", 8.0, 2.5, 6.67, 0.0);
         let _ = p24;
+        // The rooms: a point inside each. What each comes to is found from its walls.
+        let rooms: [(&str, &str, P2); 5] = if i == 0 {
+            [("living room", "101", [20.0, 8.0]), ("kitchen", "102", [7.0, 22.0]), ("bath", "103", [19.0, 19.0]), ("utility", "104", [19.0, 25.0]), ("office", "105", [32.0, 22.0])]
+        } else {
+            [("south bedrooms", "201", [20.0, 8.0]), ("bedroom 3", "202", [7.0, 22.0]), ("bath", "203", [19.0, 19.0]), ("hall closet", "204", [19.0, 25.0]), ("bedroom 4", "205", [32.0, 22.0])]
+        };
+        for (name, number, point) in rooms {
+            let r = job.add(&s, Kind::Room, name).expect(OK);
+            job.put(&r, Room { point: Val::known(point, "ft", A), number: Some(Val::known(number.to_string(), "", A)) }).expect(OK);
+        }
     }
     let (first, second) = (storeys[0].clone(), storeys[1].clone());
 
