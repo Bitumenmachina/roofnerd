@@ -1035,3 +1035,31 @@ First piece of the stretch in `HANDOFF_DRAW.md`. Read first: BIMCraft
   not copied, and its saved text loads back to the same bytes; so the text is kept, and
   a step undone is the file as it was. The cost is one save of the job for each step.
   Listed in the file's header.
+
+### Call 35. Drawing and editing: the verbs (2026-11-11)
+
+Read first: BIMCraft `crates/core/src/commands.rs`, `wall` (7341 to 7400), `opening_of`
+and `build_opening` (7473 to 7520), `room` (7909 to 7923), `stood_of` (8662 to 8676),
+`runs_of` (8776 to 8800), `move_elements` (12419 to 12435), `delete` (13011 to 13040),
+`level` (6422 to 6436) and the type command (11186 to 11245); `engine.rs` `transaction`
+(644 to 665).
+
+* **Each verb follows BIMCraft's rule for the same thing** (a wall for each pair of
+  points, an opening taken along its wall, a run for each pair of points, a thing stood
+  at a point, a wall's openings moved and removed with it), and `PORTMAP.md` cites the
+  line.
+* **Nothing is given a value nobody entered.** BIMCraft gives a wall a default height or
+  the level above, an opening the middle of its wall, a window type a 900 mm sill, a run
+  the floor's height. Here a verb with one of those unsaid is refused and says what to
+  say. That is rule 4 of the brief, and it is listed as a change in the file's header.
+* **A point for an opening that falls past its wall's end is refused**, where BIMCraft
+  takes it to the end: an opening centred on a wall's end does not fit, and would be
+  written and then flagged.
+* **Every verb is all of its change or none.** If any part fails, or leaves a reference
+  that does not hold, the job is put back from its text as it was. Three walls of which
+  the second has no length leave no wall.
+* **A new element is named for its kind and its number** ("wall 31"). BIMCraft's
+  elements have ids and no names; here a name is what the sheet and the notes say.
+* **A move takes the worse of the thing's status and the mover's**, and adds the move to
+  the source of a value that keeps its status.
+* **`plumbline new`** stamps the job with the machine's date. Nothing else reads a clock.

@@ -32,6 +32,10 @@ What draws and edits the building is ported from the same project at the same
 commit, under the same license:
 
   crates/world/src/editing/history.rs   from crates/core/src/engine.rs
+  crates/world/src/editing.rs           the verbs' rules, from
+                                        crates/core/src/commands.rs and
+                                        crates/core/src/engine.rs; the file is
+                                        otherwise this project's own
 
 Each file's header states what is ported and lists what was changed. PORTMAP.md
 names, for every public item of the building model, the BIMCraft file and line

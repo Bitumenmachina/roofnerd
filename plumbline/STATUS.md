@@ -1325,6 +1325,49 @@ whole-job estimate is not reproduced (there is none in `refs/`, Q5). Whether the
 columns and the labor switch are what the owner's sheet has is Q14. Tax, burden, bond,
 crew-day rates and pricing at a chosen supplier are proposals 12 to 14, not built.
 
+## Drawing and editing. How its demonstration will be run (written as the stretch began)
+
+The task and its fence are `HANDOFF_DRAW.md`. Two demonstrations:
+
+* `demos/draw.sh`, at the command line: from an empty job, with no file edited by hand,
+  a storey, the types, four outside walls and a partition, two doors and three windows,
+  two rooms, a duct and a pipe each on a system, a fixture and a piece of equipment, and
+  a roof; then the partition moved and a window removed. Every figure (wall lengths and
+  net faces, room areas, run lengths) is worked by hand in the script before it is run.
+  Then what is refused, and that a refusal leaves the file byte for byte what it was.
+* `demos/draww.sh`, in the window (not written yet): the same house drawn in the plan
+  view with the pointer and typed lengths, snapping shown, a step undone and redone, the
+  job saved; and the saved file's takeoff set against the command-line house: the same
+  figures.
+
+The judge tries to draw what should be refused, to get an unflagged value into the file
+through a verb or the window, to undo into a state that never existed, and to snap to
+something that is not there.
+
+## Drawing and editing. What was run and what it showed, so far
+
+**Not judged. The window part is not built.**
+
+* *The gate was widened first.* `tools/portmap.sh` covers `crates/world/src/editing*.rs`.
+  It was run red on the new file (seven unlisted items) before the map had its rows; it
+  is green at 159 items, 100 ported and 59 ours.
+* *Undo and redo* (`editing/history.rs`, ported from BIMCraft's `engine.rs`): a test takes
+  three steps, steps back and forward, and checks the job's saved text at each point
+  against the text it had; all the way back is the job it started as, to the byte.
+* *The verbs* (`editing.rs`; each rule ported from BIMCraft's `commands.rs`, each value
+  written with a status and a source, each verb all of its change or none):
+  `demos/draw.sh` exits 0. Walls 96 LF; net faces 195, 123, 132, 192 SF by wall and 786 SF
+  in all; rooms 178.25 SF each, 54 LF round; duct 20 LF; pipe 14 LF; a roof solved over
+  it. The partition moved 1 ft: rooms 193.75 and 162.75 SF, its door still 8 ft along it.
+  A window removed: the north wall's net 204 SF. Eight refusals, and the file unchanged
+  by them.
+* *Tests:* a house drawn from nothing with its figures; what cannot be drawn is refused
+  and leaves the job as it was (a wall of no length in the middle of three takes the
+  first with it); a wall moved takes its openings and a wall removed takes them too.
+
+**What remains of this stretch:** snapping (BIMCraft `snap.rs`), the tools in the window,
+undo in the window, `demos/draww.sh` and its pictures, the judge.
+
 ## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
 
 An independent judge (Opus; it did not build any of this) was given commit `1886693`, a

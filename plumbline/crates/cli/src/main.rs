@@ -58,7 +58,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--class <class>] [--of-material]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--class <class>] [--of-material]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline storey <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <storey> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <storey>)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline room <file> <storey> \"<name>\" --at \"6,8\"\n  plumbline run <file> <storey> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline place <file> <storey> <fixture|equipment> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline move <file> <path> --by \"3,2\"\n  plumbline remove <file> <path>\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
 }
 
 /// What the building comes to: each storey's walls and floors, then each system's runs by
@@ -380,6 +380,9 @@ fn run(args: &[String]) -> Result<(), String> {
     // ignored is refused instead.
     if cmd == "roof" {
         return new_roof(args);
+    }
+    if matches!(cmd, "new" | "storey" | "type" | "system" | "wall" | "door" | "window" | "room" | "run" | "place" | "move" | "remove") {
+        return draw(args);
     }
     if matches!(cmd, "sample" | "house" | "priced" | "show" | "check" | "lines" | "takeoff" | "price" | "estimate") && args.len() > 2 {
         return Err(format!("{cmd} takes one file and nothing else; {:?} would be ignored\n{}", args[2], usage()));
@@ -735,6 +738,183 @@ fn say_solve(report: &solve::Report) {
 }
 
 /// `plumbline roof <file> <name> --points "x,y x,y ..." --pitch <p> --eave-height <len> --status <S> --source <where>`
+/// The drawing verbs: a job started from nothing, and a building put into it a storey, a
+/// type, a wall, an opening, a run and a fixture at a time. Each is one call into
+/// `plumbline_world::editing`, which the window calls too.
+fn draw(args: &[String]) -> Result<(), String> {
+    use plumbline_world::editing as ed;
+    use plumbline_world::Kind;
+    let cmd = args[0].as_str();
+    let path = args.get(1).ok_or_else(usage)?;
+    // What stands before the first flag, and the flags, each given once.
+    let rest = &args[2..];
+    let split = rest.iter().position(|a| a.starts_with("--")).unwrap_or(rest.len());
+    let (plain, flags) = rest.split_at(split);
+    let mut given: Vec<(String, String)> = Vec::new();
+    let mut it = flags.iter();
+    while let Some(flag) = it.next() {
+        if given.iter().any(|(f, _)| f == flag) {
+            return Err(format!("{flag} given twice"));
+        }
+        let value = if flag == "--closed" { String::new() } else { it.next().cloned().ok_or_else(|| format!("{flag} needs a value"))? };
+        given.push((flag.clone(), value));
+    }
+    let mut used: Vec<&str> = Vec::new();
+    let mut flag = |name: &'static str| -> Option<String> {
+        used.push(name);
+        given.iter().find(|(f, _)| f == name).map(|(_, v)| v.clone())
+    };
+    let need = |what: Option<String>, name: &str, like: &str| what.ok_or_else(|| format!("{name} is required, like {like}"));
+    let points = |text: &str| -> Result<Vec<[f64; 2]>, String> {
+        text.split_whitespace()
+            .map(|pair| {
+                let (x, y) = pair.split_once(',').ok_or_else(|| format!("{pair:?} is not a point; write it x,y in feet"))?;
+                Ok([units::parse_number(x)?, units::parse_number(y)?])
+            })
+            .collect()
+    };
+    let kind_of = |word: &str| match word {
+        "door" => Ok(Kind::Door),
+        "window" => Ok(Kind::Window),
+        "duct" => Ok(Kind::Duct),
+        "pipe" => Ok(Kind::Pipe),
+        "conduit" => Ok(Kind::Conduit),
+        "cable" => Ok(Kind::Cable),
+        "fixture" => Ok(Kind::Fixture),
+        "equipment" => Ok(Kind::Equipment),
+        other => Err(format!("{other:?} is not a kind this verb takes")),
+    };
+    if cmd == "new" {
+        let [title] = plain else { return Err(usage()) };
+        if std::path::Path::new(path).exists() {
+            return Err(format!("{path} is already there; a new job is not written over a file"));
+        }
+        // The day it was started, from the machine's clock (days since 1970, as a date).
+        let days = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() / 86_400).unwrap_or(0) as i64;
+        let (z, era) = (days + 719_468, (days + 719_468).div_euclid(146_097));
+        let doe = z.rem_euclid(146_097);
+        let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+        let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+        let mp = (5 * doy + 2) / 153;
+        let (d, m) = (doy - (153 * mp + 2) / 5 + 1, if mp < 10 { mp + 3 } else { mp - 9 });
+        let y = yoe + era * 400 + i64::from(m <= 2);
+        let mut job = plumbline_world::Job::new(title, "plumbline", &format!("{y:04}-{m:02}-{d:02}"));
+        std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+        say!("wrote {path}: a new job, {title:?}, with nothing in it");
+        return Ok(());
+    }
+    // Every other verb says how sure what it enters is, and who says so.
+    let (status, source) = (flag("--status"), flag("--source"));
+    let how = |status: &Option<String>, source: &Option<String>| -> Result<(Status, String), String> {
+        let status = match status.as_deref() {
+            Some("Known") => Status::Known,
+            Some("Assumed") => Status::Assumed,
+            Some(other) => return Err(format!("{other:?} is not a status a thing can be drawn with; use Known or Assumed")),
+            None => return Err("--status is required: say whether what is drawn is Known or Assumed".into()),
+        };
+        Ok((status, source.clone().ok_or("--source is required: say where it came from")?))
+    };
+    let (mut job, _) = read(path)?;
+    let said: String = match (cmd, plain) {
+        ("storey", [name]) => {
+            let (status, source) = how(&status, &source)?;
+            let made = ed::storey(&mut job, name, &need(flag("--elevation"), "--elevation", "\"0 ft\"")?, &need(flag("--height"), "--height", "\"9 ft\"")?, ed::Entered { status, source: &source })?;
+            format!("{made}: storey {name:?}")
+        }
+        ("type", [what, name]) => {
+            let (status, source) = how(&status, &source)?;
+            let how = ed::Entered { status, source: &source };
+            let made = match what.as_str() {
+                "wall" => ed::wall_type(&mut job, name, &need(flag("--thickness"), "--thickness", "\"6 in\"")?, how)?,
+                "door" | "window" => ed::opening_type(&mut job, name, kind_of(what)?, &need(flag("--width"), "--width", "\"3 ft\"")?, &need(flag("--height"), "--height", "\"7 ft\"")?, how)?,
+                "duct" | "pipe" | "conduit" | "cable" => {
+                    let (round, width, depth) = (flag("--round"), flag("--width"), flag("--depth"));
+                    match (round, width, depth) {
+                        (Some(across), None, None) => ed::segment_type(&mut job, name, kind_of(what)?, &across, None, how)?,
+                        (None, Some(width), Some(depth)) => ed::segment_type(&mut job, name, kind_of(what)?, &width, Some(&depth), how)?,
+                        _ => return Err("a run's type is --round \"6 in\", or --width \"12 in\" --depth \"8 in\"".into()),
+                    }
+                }
+                other => return Err(format!("{other:?} has no type here; a type is for a wall, door, window, duct, pipe, conduit or cable")),
+            };
+            format!("{made}: {what} type {name:?}")
+        }
+        ("system", [name, classification]) => {
+            let made = ed::system(&mut job, name, classification)?;
+            format!("{made}: system {name:?}")
+        }
+        ("wall", [storey, type_path]) => {
+            let (status, source) = how(&status, &source)?;
+            let pts = points(&need(flag("--points"), "--points", "\"0,0 20,0 20,10\" (feet)")?)?;
+            let (height, top, closed) = (flag("--height"), flag("--top"), flag("--closed").is_some());
+            let top = match (&height, &top) {
+                (Some(h), None) => ed::Top::Height(h),
+                (None, Some(level)) => ed::Top::Level(level),
+                _ => return Err("say how tall the walls are: --height \"9 ft\", or --top <the storey their top is held to>; one of them".into()),
+            };
+            let made = ed::walls(&mut job, storey, type_path, &pts, closed, top, ed::Entered { status, source: &source })?;
+            format!("{} wall{}: {}", made.len(), if made.len() == 1 { "" } else { "s" }, made.join(", "))
+        }
+        ("door" | "window", [wall, type_path]) => {
+            let (status, source) = how(&status, &source)?;
+            let (offset, at) = (flag("--offset"), flag("--at"));
+            let point = at.as_deref().map(points).transpose()?;
+            let place = match (&offset, &point) {
+                (Some(o), None) => ed::OnWall::Offset(o),
+                (None, Some(p)) if p.len() == 1 => ed::OnWall::Point(p[0]),
+                _ => return Err("say where along the wall its centre is: --offset \"5 ft\" from the wall's first end, or --at \"5,0\" a point on the plan; one of them".into()),
+            };
+            let made = ed::opening(&mut job, wall, kind_of(cmd)?, type_path, place, &need(flag("--sill"), "--sill", "\"0 ft\" for a door, \"3 ft\" for a window")?, ed::Entered { status, source: &source })?;
+            format!("{made}: a {cmd} in {wall}")
+        }
+        ("room", [storey, name]) => {
+            let (status, source) = how(&status, &source)?;
+            let at = points(&need(flag("--at"), "--at", "\"6,8\" (a point inside it, in feet)")?)?;
+            let [at] = at.as_slice() else { return Err("--at is one point, x,y in feet".into()) };
+            let made = ed::room(&mut job, storey, name, *at, ed::Entered { status, source: &source })?;
+            format!("{made}: room {name:?}")
+        }
+        ("run", [storey, what, type_path]) => {
+            let (status, source) = how(&status, &source)?;
+            let pts = points(&need(flag("--points"), "--points", "\"2,2 14,2 14,7\" (feet)")?)?;
+            let made = ed::runs(&mut job, storey, kind_of(what)?, type_path, &pts, &need(flag("--height"), "--height", "\"8 ft\" above the storey's floor")?, flag("--system").as_deref(), ed::Entered { status, source: &source })?;
+            format!("{} straight piece{}: {}", made.len(), if made.len() == 1 { "" } else { "s" }, made.join(", "))
+        }
+        ("place", [storey, what, name]) => {
+            let (status, source) = how(&status, &source)?;
+            let at = points(&need(flag("--at"), "--at", "\"14,7\" (feet)")?)?;
+            let [at] = at.as_slice() else { return Err("--at is one point, x,y in feet".into()) };
+            let size = match flag("--size") {
+                None => None,
+                Some(text) => match text.split(',').map(|x| units::parse_number(x)).collect::<Result<Vec<f64>, String>>()?.as_slice() {
+                    [a, b, c] => Some([*a, *b, *c]),
+                    _ => return Err("--size is along,across,up in feet, like \"2,2,6\"".into()),
+                },
+            };
+            let made = ed::place(&mut job, storey, kind_of(what)?, name, *at, &need(flag("--offset"), "--offset", "\"0 ft\" above the storey's floor")?, size, flag("--system").as_deref(), ed::Entered { status, source: &source })?;
+            format!("{made}: {name:?}")
+        }
+        ("move", [element]) => {
+            let (status, source) = how(&status, &source)?;
+            let by = points(&need(flag("--by"), "--by", "\"3,2\" (feet east, feet north)")?)?;
+            let [by] = by.as_slice() else { return Err("--by is one distance, east,north in feet".into()) };
+            ed::move_by(&mut job, element, by[0], by[1], ed::Entered { status, source: &source })?;
+            format!("{element} moved {} ft east and {} ft north", view::num(by[0]), view::num(by[1]))
+        }
+        ("remove", [element]) => {
+            let gone = ed::remove(&mut job, element)?;
+            format!("removed {}", gone.join(", "))
+        }
+        _ => return Err(usage()),
+    };
+    if let Some((unused, _)) = given.iter().find(|(f, _)| !used.contains(&f.as_str())) {
+        return Err(format!("{unused} is not something {cmd} takes; it would be ignored\n{}", usage()));
+    }
+    std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+    say!("{said}");
+    Ok(())
+}
+
 fn new_roof(args: &[String]) -> Result<(), String> {
     let [_, path, name, rest @ ..] = args else { return Err(usage()) };
     let (mut points, mut pitch, mut eave, mut status, mut source) = (None, None, None, None, None);

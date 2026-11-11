@@ -30,6 +30,7 @@ demos/d3.sh                # the D3 demonstration: a parapet's four lines, sheet
 demos/d4.sh                # the D4 demonstration: priced from allowances, priced from its lines, rolled up, reconciled
 demos/d5.sh                # the D5 demonstration: the estimate sheet, the recap, suppliers side by side, a change of material
 demos/d5w.sh               # the same in the window
+demos/draw.sh              # a small house modelled from an empty job at the command line, one verb at a time
 demos/d4w.sh               # the same in the window: the sheet's Money tab, and prices typed on what is selected
 demos/d2.sh                # the 3D prototype, driven on a virtual display; pictures in demos/captured/d2
 demos/house.sh             # a whole house with its heating, plumbing and wiring, walked round; pictures in demos/captured/house

@@ -156,3 +156,19 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `undo` | ported | `step_back` | `crates/core/src/engine.rs:728` | pop one stack, push what stands now onto the other, name the step |
 | `redo` | ported | `step_back` | `crates/core/src/engine.rs:728` | as `undo`, the other way |
 | `labels` | ported | `history` | `crates/core/src/engine.rs:272` | the steps' labels, oldest first |
+| `Entered` | ours |  |  | how sure a thing being drawn is and who says so; BIMCraft's commands carry no status: `grep -c Assumed` in each of commands.rs engine.rs: 0 |
+| `Top` | ours |  |  | a wall's top as a height or a storey, said every time; BIMCraft's `wall` takes `height` or `top_level` and gives a default when neither is said (`commands.rs:7355` to `7362`); `grep -rn 'enum Top' crates/core/src`: nothing |
+| `OnWall` | ours |  |  | an opening's place as an offset or a point; BIMCraft's `opening_of` takes `at` or `offset` as JSON fields (`commands.rs:7502`); `grep -rn 'enum OnWall' crates/core/src`: nothing |
+| `all_or_nothing` | ported | `transaction` | `crates/core/src/engine.rs:648` | all of a change or none of it; here the job is put back from its saved text |
+| `storey` | ported | `level` | `crates/core/src/commands.rs:6422` | a level by name and elevation; a storey height and the `Val` rules are ours |
+| `wall_type` | ported | `WallType` | `crates/core/src/commands.rs:11188` | a wall type by its thickness; layers are not taken by this verb |
+| `opening_type` | ported | `OpeningType` | `crates/core/src/commands.rs:11206` | a door or window type by width and height; its sill and operation are not taken |
+| `segment_type` | ported | `RunType` | `crates/core/src/commands.rs:11243` | a run type round, or wide by deep; its material is not taken |
+| `system` | ours |  |  | a system as an element is this program's (HANDOFF_REBASE 7); BIMCraft's is a name on a run (`commands.rs:8799`); `grep -rn 'fn system(' crates/core/src`: nothing |
+| `walls` | ported | `wall` | `crates/core/src/commands.rs:7341` | a wall for each pair of points that follow one another, `closed` back to the first. Not taken: a default height or top level |
+| `opening` | ported | `opening_of` | `crates/core/src/commands.rs:7473` | a door or window on a wall, at a point taken along it (`along`, `commands.rs:2426`). Not taken: the middle of the wall when no place is said; moving a point past an end to the end |
+| `runs` | ported | `runs_of` | `crates/core/src/commands.rs:8776` | a run for each pair of points that follow one another, at a height, on a system. Not taken: a default height of 0 |
+| `place` | ported | `stood_of` | `crates/core/src/commands.rs:8662` | a thing stood at a point on a level, so far above it; what it is as text is ours |
+| `move_by` | ported | `move_elements` | `crates/core/src/commands.rs:12419` | move by a distance east and north; a wall's openings go with it. Not taken: moving one end; several at once |
+| `remove` | ported | `delete` | `crates/core/src/commands.rs:13011` | take an element out, and a wall's doors and windows with it (`commands.rs:13040`) |
+| `room` | ported | `room` | `crates/core/src/commands.rs:7909` | a room placed by a point on a level, with a name. Not taken: a number given when none is said |

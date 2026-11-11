@@ -4304,3 +4304,156 @@ fn any_step_taken_back_leaves_the_job_byte_for_byte_what_it_was() {
     assert_eq!(history.labels(false).len(), UNDO_LIMIT);
     assert_eq!(history.labels(false)[0], "step 5");
 }
+
+/// An empty job with a storey, a 6 in wall type, a door type (3 ft by 7 ft) and a window
+/// type (4 ft by 3 ft), every value Known. Returns the job and those four paths.
+fn drawn() -> (Job, String, String, String, String) {
+    use plumbline_world::editing as ed;
+    let how = ed::Entered { status: Status::Known, source: "made-up plan" };
+    let mut job = Job::new("drawn house (not a real job)", "test", "test");
+    let s = ed::storey(&mut job, "ground", "0 ft", "9 ft", how).unwrap();
+    let wt = ed::wall_type(&mut job, "wall 6 in", "6 in", how).unwrap();
+    let dt = ed::opening_type(&mut job, "door 3 by 7", Kind::Door, "3 ft", "7 ft", how).unwrap();
+    let nt = ed::opening_type(&mut job, "window 4 by 3", Kind::Window, "4 ft", "3 ft", how).unwrap();
+    (job, s, wt, dt, nt)
+}
+
+#[test]
+fn a_house_is_drawn_from_nothing_and_its_figures_are_the_ones_worked_by_hand() {
+    use plumbline_world::editing as ed;
+    let how = ed::Entered { status: Status::Known, source: "made-up plan" };
+    let (mut job, s, wt, dt, nt) = drawn();
+    // Four walls round 20 ft by 10 ft, 9 ft tall, closed back to the start.
+    let made = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [20.0, 0.0], [20.0, 10.0], [0.0, 10.0]], true, ed::Top::Height("9 ft"), how).unwrap();
+    assert_eq!(made.len(), 4);
+    // Each wall is named for its kind and its number, and is on the storey.
+    let names: Vec<String> = made.iter().map(|p| job.find(p).and_then(|e| job.world.get::<Node>(e).map(|n| n.name.clone())).unwrap()).collect();
+    assert!(names.iter().zip(&made).all(|(n, p)| *n == format!("wall {}", p.rsplit('-').next().unwrap().parse::<u32>().unwrap())), "{names:?}");
+    // South wall: 20 LF, 9 ft, face 180 SF.
+    assert_eq!(measure_of(&mut job, &made[0], "plan_length").value, Some(20.0));
+    assert_eq!(measure_of(&mut job, &made[0], "face_area").value, Some(180.0));
+    // A door 5 ft along the south wall, and a window where a point falls along the east wall:
+    // (20, 6) is 6 ft from that wall's first end at (20, 0).
+    let door = ed::opening(&mut job, &made[0], Kind::Door, &dt, ed::OnWall::Offset("5 ft"), "0 ft", how).unwrap();
+    let window = ed::opening(&mut job, &made[1], Kind::Window, &nt, ed::OnWall::Point([20.0, 6.0]), "3 ft", how).unwrap();
+    assert_eq!(job.find(&window).and_then(|e| job.world.get::<plumbline_world::Opening>(e).map(|o| o.offset.feet())).unwrap(), Some(6.0));
+    // South wall net of the door: 180 − 3 × 7 = 159. East wall, 10 × 9 = 90, less 4 × 3 = 78.
+    assert_eq!(measure_of(&mut job, &made[0], "net_area").value, Some(159.0));
+    assert_eq!(measure_of(&mut job, &made[1], "net_area").value, Some(78.0));
+    assert_eq!(job.kind(&door), Some(Kind::Door));
+    // A room in it: 19.5 by 9.5 inside the 6 in walls, 185.25 SF (the box of the room tests).
+    let r = room(&mut job, &s, "room", [5.0, 5.0]);
+    job.derive();
+    assert_eq!(figures_of(&mut job, &r), [Some(185.25), Some(200.0), Some(58.0)]);
+    // A supply duct, 6 in round, two straight pieces at 8 ft, on a system: 12 + 5 = 17 LF.
+    let duct = ed::segment_type(&mut job, "6 in round", Kind::Duct, "6 in", None, how).unwrap();
+    let supply = ed::system(&mut job, "Supply air", "supply air").unwrap();
+    let pieces = ed::runs(&mut job, &s, Kind::Duct, &duct, &[[2.0, 2.0], [14.0, 2.0], [14.0, 7.0]], "8 ft", Some(&supply), how).unwrap();
+    assert_eq!(pieces.len(), 2);
+    assert_eq!(measure_of(&mut job, &pieces[0], "true_length").value, Some(12.0));
+    assert_eq!(measure_of(&mut job, &pieces[1], "true_length").value, Some(5.0));
+    // A register stood on it.
+    let reg = ed::place(&mut job, &s, Kind::Fixture, "Ceiling register", [14.0, 7.0], "8 ft", Some([1.0, 1.0, 0.25]), Some(&supply), how).unwrap();
+    assert_eq!(job.kind(&reg), Some(Kind::Fixture));
+    // It saves, loads to the same bytes, and the takeoff has the walls and the duct.
+    let text = save(&mut job);
+    let (mut again, report) = load(&text).unwrap();
+    assert!(report.stale.is_empty(), "{:?}", report.stale);
+    assert_eq!(save(&mut again), text);
+    let totals = plumbline_world::building::storey_totals(&mut job);
+    assert_eq!(totals[0].walls.value, Some(60.0)); // 20 + 10 + 20 + 10
+    // Everything a verb wrote carries the status and source it was given.
+    let how = ed::Entered { status: Status::Assumed, source: "set in the 3D view" };
+    let more = ed::walls(&mut job, &s, &wt, &[[10.0, 0.0], [10.0, 10.0]], false, ed::Top::Height("9 ft"), how).unwrap();
+    let w = job.find(&more[0]).and_then(|e| job.world.get::<plumbline_world::Wall>(e).cloned()).unwrap();
+    assert_eq!((w.line.status, w.line.source.as_str(), w.height.unwrap().status, w.type_name.status), (Status::Assumed, "set in the 3D view", Status::Assumed, Status::Assumed));
+    // The room is now the west half, and no surer than the wall that made it so:
+    // 9.5 by 9.5 = 90.25 SF, Assumed.
+    let d = measure_of(&mut job, &r, "floor_area");
+    assert_eq!((d.value, d.status), (Some(90.25), Status::Assumed));
+}
+
+#[test]
+fn what_cannot_be_drawn_is_refused_and_leaves_the_job_as_it_was() {
+    use plumbline_world::editing as ed;
+    let how = ed::Entered { status: Status::Known, source: "made-up plan" };
+    let (mut job, s, wt, dt, nt) = drawn();
+    let made = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [20.0, 0.0], [20.0, 10.0]], false, ed::Top::Height("9 ft"), how).unwrap();
+    let before = save(&mut job);
+    let refused = |job: &mut Job, got: Result<String, String>, want: &str| {
+        let why = got.expect_err(want);
+        assert!(why.contains(want), "wanted {want:?}, got {why:?}");
+        assert_eq!(save(job), before, "a refusal changed the job: {want}");
+    };
+    let none = |r: Result<Vec<String>, String>| r.map(|v| v.join(","));
+    // One point is not a wall; a wall of no length; a height that is not a length; a
+    // wall with a type that is not a wall type; on something that is not a storey.
+    let got = none(ed::walls(&mut job, &s, &wt, &[[0.0, 0.0]], false, ed::Top::Height("9 ft"), how));
+    refused(&mut job, got, "at least 2 points");
+    // The second of three walls has no length: the first is not left behind.
+    let got = none(ed::walls(&mut job, &s, &wt, &[[0.0, 20.0], [5.0, 20.0], [5.0, 20.0], [9.0, 20.0]], false, ed::Top::Height("9 ft"), how));
+    refused(&mut job, got, "wall line");
+    let got = none(ed::walls(&mut job, &s, &wt, &[[0.0, 20.0], [5.0, 20.0]], false, ed::Top::Height("9"), how));
+    refused(&mut job, got, "9");
+    let got = none(ed::walls(&mut job, &s, &dt, &[[0.0, 20.0], [5.0, 20.0]], false, ed::Top::Height("9 ft"), how));
+    refused(&mut job, got, "type");
+    let got = none(ed::walls(&mut job, &wt, &wt, &[[0.0, 20.0], [5.0, 20.0]], false, ed::Top::Height("9 ft"), how));
+    refused(&mut job, got, "not a storey");
+    let got = none(ed::walls(&mut job, &s, &wt, &[[0.0, 20.0], [5.0, 20.0]], false, ed::Top::Level("storey-9999"), how));
+    refused(&mut job, got, "storey-9999");
+    // A point that is not along the wall; a door of a window's type; on what is not a wall.
+    let got = ed::opening(&mut job, &made[0], Kind::Door, &dt, ed::OnWall::Point([25.0, 0.0]), "0 ft", how);
+    refused(&mut job, got, "it is not on the wall");
+    let got = ed::opening(&mut job, &made[0], Kind::Door, &nt, ed::OnWall::Offset("5 ft"), "0 ft", how);
+    refused(&mut job, got, "type");
+    let got = ed::opening(&mut job, &s, Kind::Door, &dt, ed::OnWall::Offset("5 ft"), "0 ft", how);
+    refused(&mut job, got, "is not a wall");
+    // A run of a kind that is not a run; on a system that is not there.
+    let got = none(ed::runs(&mut job, &s, Kind::Wall, &wt, &[[0.0, 0.0], [5.0, 0.0]], "8 ft", None, how));
+    refused(&mut job, got, "is not a duct");
+    let duct = ed::segment_type(&mut job, "6 in round", Kind::Duct, "6 in", None, how).unwrap();
+    let before = save(&mut job);
+    let refused = |job: &mut Job, got: Result<String, String>, want: &str| {
+        let why = got.expect_err(want);
+        assert!(why.contains(want), "wanted {want:?}, got {why:?}");
+        assert_eq!(save(job), before, "a refusal changed the job: {want}");
+    };
+    let got = none(ed::runs(&mut job, &s, Kind::Duct, &duct, &[[0.0, 0.0], [5.0, 0.0]], "8 ft", Some("system-9999"), how));
+    refused(&mut job, got, "system-9999");
+    let got = ed::system(&mut job, "Steam", "steam");
+    refused(&mut job, got, "is not a kind of system");
+    // A type in use cannot be removed; a storey with walls on it cannot.
+    let got = none(ed::remove(&mut job, &wt));
+    refused(&mut job, got, "type");
+    let got = none(ed::remove(&mut job, &s));
+    refused(&mut job, got, "has elements under it");
+}
+
+#[test]
+fn a_wall_moved_takes_its_openings_and_a_wall_removed_takes_them_too() {
+    use plumbline_world::editing as ed;
+    let how = ed::Entered { status: Status::Known, source: "made-up plan" };
+    let (mut job, s, wt, dt, _nt) = drawn();
+    let made = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [20.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap();
+    let door = ed::opening(&mut job, &made[0], Kind::Door, &dt, ed::OnWall::Offset("5 ft"), "0 ft", how).unwrap();
+    // Moved 3 ft east and 2 ft north by somebody who is not sure: the wall's line is where
+    // it was plus that, and Assumed; its door is still 5 ft along it; its figures hold.
+    let moving = ed::Entered { status: Status::Assumed, source: "set in the 3D view" };
+    ed::move_by(&mut job, &made[0], 3.0, 2.0, moving).unwrap();
+    let w = job.find(&made[0]).and_then(|e| job.world.get::<plumbline_world::Wall>(e).cloned()).unwrap();
+    assert_eq!(w.line.value, Some([[3.0, 2.0], [23.0, 2.0]]));
+    assert_eq!((w.line.status, w.line.source.as_str()), (Status::Assumed, "set in the 3D view"));
+    assert_eq!(job.find(&door).and_then(|e| job.world.get::<plumbline_world::Opening>(e).map(|o| o.offset.feet())).unwrap(), Some(5.0));
+    assert_eq!(measure_of(&mut job, &made[0], "net_area").value, Some(159.0));
+    // A move by a Known amount of something Known keeps its status and adds to its source.
+    ed::walls(&mut job, &s, &wt, &[[0.0, 20.0], [20.0, 20.0]], false, ed::Top::Height("9 ft"), how).unwrap();
+    // What is not moved this way says so.
+    assert!(ed::move_by(&mut job, &wt, 1.0, 0.0, how).unwrap_err().contains("is not moved this way"));
+    assert!(ed::move_by(&mut job, &made[0], f64::NAN, 0.0, how).unwrap_err().contains("not a usable number"));
+    // Removed: the wall and its door, and nothing else.
+    let before = job.index().len();
+    let gone = ed::remove(&mut job, &made[0]).unwrap();
+    assert_eq!(gone, [door.clone(), made[0].clone()]);
+    assert_eq!(job.index().len(), before - 2);
+    assert!(job.find(&door).is_none());
+}
