@@ -630,9 +630,11 @@ pub fn rebuild(
                     if !(x1 > length + 1e-4 && past[1] > 1e-4) {
                         plain.quad([p4(x1, y0, -half_t), p4(x1, y0, half_t), p4(x1, y1, half_t), p4(x1, y1, -half_t)], along, None);
                     }
-                    build.piece(&p.path, None, meshes.add(plain.mesh()), Transform::IDENTITY, theme::wall_inside(), 0.92, 0.0, true);
+                    // A wall priced as concrete (a foundation wall) is concrete on every face.
+                    let cast = wd.is_some_and(|d| d.concrete);
+                    build.piece(&p.path, None, meshes.add(plain.mesh()), Transform::IDENTITY, if cast { theme::concrete() } else { theme::wall_inside() }, 0.92, 0.0, true);
                     if !bare.is_empty() {
-                        build.piece(&p.path, None, meshes.add(bare.mesh()), Transform::IDENTITY, if wrapped { theme::barrier() } else { theme::wall_outside() }, if wrapped { 0.55 } else { 0.92 }, 0.0, true);
+                        build.piece(&p.path, None, meshes.add(bare.mesh()), Transform::IDENTITY, if wrapped { theme::barrier() } else if cast { theme::concrete() } else { theme::wall_outside() }, if wrapped { 0.55 } else { 0.92 }, 0.0, true);
                     }
                     if let (false, Some(pattern)) = (over.is_empty(), &upper) {
                         build.pattern = Some(pattern.clone());

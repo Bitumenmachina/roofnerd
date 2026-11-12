@@ -4918,3 +4918,9 @@ themselves are behind the tool bar at the bottom of the window (the view is fram
 on the house as it was before it had anything under the ground), and the foundation
 walls are the bare off-white of an unfinished wall, not concrete.
 
+**A wall priced as concrete is drawn as concrete.** A wall with a line that says
+concrete and no cladding (the whole house's foundation walls: "Foundation wall, 8 in
+concrete, formed and placed") is drawn in concrete on every face, where it was the
+off-white of a bare framed wall. Built; 280 tests pass. **Not yet seen in a
+picture.**
+

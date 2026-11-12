@@ -211,6 +211,9 @@ pub struct WallDress {
     /// Whether a line priced on it names a weather barrier under its finish ("Sheathing
     /// and weather barrier", "house wrap", "building paper").
     pub barrier: bool,
+    /// Whether a line priced on it says it is concrete and none names a cladding: a
+    /// foundation wall as placed. It is drawn as concrete, not as a bare framed wall.
+    pub concrete: bool,
 }
 
 impl WallDress {
@@ -676,7 +679,8 @@ pub fn dress(job: &mut Job) -> Dress {
         });
         let framing = on.iter().find_map(|(text, _)| crate::building::framing::named(text));
         let barrier = on.iter().any(|(text, _)| barrier_in(text));
-        out.walls.insert(w.path.clone(), WallDress { outside, out: out_way, height: w.h, cladding, wainscot, past, framing, barrier });
+        let concrete = cladding.is_none() && wainscot.is_none() && on.iter().any(|(text, _)| words(text).iter().any(|w| w == "concrete"));
+        out.walls.insert(w.path.clone(), WallDress { outside, out: out_way, height: w.h, cladding, wainscot, past, framing, barrier, concrete });
     }
     // Roof planes, openings, gutters, and the base in rooms.
     let outlines = building::room_outlines(job);
