@@ -36,7 +36,7 @@ fn coords_ok<T>(what: &str, v: &Val<T>) -> Result<(), String> {
 /// `p` is in feet.
 fn point_ok(what: &str, p: P2) -> Result<(), String> {
     if p.iter().any(|x| !x.is_finite() || x.abs() > MAX_COORDINATE_FT) {
-        return Err(format!("{what}: a coordinate is not a usable number (limit {MAX_COORDINATE_FT:e} ft either way)"));
+        return Err(format!("{what}: a coordinate is not a place a job can have: it is not a figure, or it is more than 1,000,000 ft either way"));
     }
     Ok(())
 }
@@ -73,7 +73,7 @@ pub fn outline(path: &str, kind: Kind, o: &Outline) -> Result<(), String> {
         }
     }
     if o.eave_height.feet().is_some_and(|h| h.abs() > MAX_COORDINATE_FT) {
-        return Err(format!("{path} eave height: is not a usable number (limit {MAX_COORDINATE_FT:e} ft either way)"));
+        return Err(format!("{path} eave height: is not a place a job can have: it is not a figure, or it is more than 1,000,000 ft either way"));
     }
     Ok(())
 }
@@ -140,7 +140,7 @@ pub fn footprint(path: &str, kind: Kind, f: &Footprint) -> Result<(), String> {
     coords_ok(&format!("{path} footprint points"), &f.points)?;
     f.eave_height.check_length(&format!("{path} eave height"))?;
     if f.eave_height.feet().is_some_and(|h| h.abs() > MAX_COORDINATE_FT) {
-        return Err(format!("{path} eave height: is not a usable number (limit {MAX_COORDINATE_FT:e} ft either way)"));
+        return Err(format!("{path} eave height: is not a place a job can have: it is not a figure, or it is more than 1,000,000 ft either way"));
     }
     if let Some(pts) = f.points_ft() {
         for p in &pts {
@@ -255,7 +255,7 @@ pub fn height(path: &str, kind: Kind, h: &Height) -> Result<(), String> {
         return Err(format!("{path} height: must be zero or more"));
     }
     if h.0.feet().is_some_and(|x| x > MAX_COORDINATE_FT) {
-        return Err(format!("{path} height: is not a usable number (limit {MAX_COORDINATE_FT:e} ft)"));
+        return Err(format!("{path} height: is not a length a job can have: it is not a figure, or it is more than 1,000,000 ft"));
     }
     Ok(())
 }
@@ -284,7 +284,7 @@ pub fn allowance(path: &str, kind: Kind, a: &Allowance) -> Result<(), String> {
         return Err(format!("{what}: must be zero or more"));
     }
     if a.rate.value.is_some_and(|x| x > MAX_UNIT_COST) {
-        return Err(format!("{what}: is beyond {MAX_UNIT_COST:e} per unit, which is not a usable price"));
+        return Err(format!("{what}: is more than $1,000,000,000 a unit, which is not a price"));
     }
     Ok(())
 }
@@ -323,7 +323,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
                 return Err(format!("{what} stretch-out: must be more than zero; it is the width of the flat sheet. Mark it Unknown if nobody has it"));
             }
             if so.feet().is_some_and(|x| x > MAX_COORDINATE_FT) {
-                return Err(format!("{what} stretch-out: is not a usable number (limit {MAX_COORDINATE_FT:e} ft)"));
+                return Err(format!("{what} stretch-out: is not a length a job can have: it is not a figure, or it is more than 1,000,000 ft"));
             }
         }
         for (name, v) in &line.inputs {
@@ -343,7 +343,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
             } else {
                 v.check_length(&named)?;
                 if v.feet().is_some_and(|x| x.abs() > MAX_COORDINATE_FT) {
-                    return Err(format!("{named}: is not a usable number (limit {MAX_COORDINATE_FT:e} ft)"));
+                    return Err(format!("{named}: is not a length a job can have: it is not a figure, or it is more than 1,000,000 ft"));
                 }
             }
         }
@@ -400,7 +400,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
                 return Err(format!("{what} unit cost: must be zero or more"));
             }
             if line.unit_cost.value.is_some_and(|x| x > MAX_UNIT_COST) {
-                return Err(format!("{what} unit cost: is beyond {MAX_UNIT_COST:e} per unit, which is not a usable price"));
+                return Err(format!("{what} unit cost: is more than $1,000,000,000 a unit, which is not a price"));
             }
         }
         // A class says what the line is, and the line has to be that. In-house work is in
@@ -469,7 +469,7 @@ pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
             return Err(format!("{what}: must be zero or more"));
         }
         if v.value.is_some_and(|x| x > MAX_UNIT_COST) {
-            return Err(format!("{what}: is beyond {MAX_UNIT_COST:e} per unit, which is not a usable price"));
+            return Err(format!("{what}: is more than $1,000,000,000 a unit, which is not a price"));
         }
         Ok(())
     };

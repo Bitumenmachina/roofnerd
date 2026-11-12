@@ -74,7 +74,9 @@ fn operand(on: &On, line: &CostLine, name: &str) -> Result<Operand, String> {
     if on.kind == Kind::Parapet {
         have.push(HEIGHT);
     }
-    Err(format!("uses {name:?}, which a {:?} does not have (it has: {}) and which is not a value entered on the line", on.kind, have.join(", ")))
+    // (A thing with no figure of its own, the job, is not said to have "(it has: )".)
+    let has = if have.is_empty() { format!("a {} has no figure of its own to take a quantity from", on.kind.said()) } else { format!("a {} has {}", on.kind.said(), have.join(", ")) };
+    Err(format!("uses {name:?}, which is not a figure of this thing ({has}) and is not a value entered on the line. A count is typed as a plain number"))
 }
 
 /// A line read against an element: its formula, the unit it comes out in, and the

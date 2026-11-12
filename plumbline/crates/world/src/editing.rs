@@ -450,7 +450,7 @@ pub fn move_by(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -
         let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = job.kind(path).ok_or_else(|| format!("{path} has no kind"))?;
         if !(east.is_finite() && north.is_finite()) {
-            return Err("the distance to move by is not a usable number".into());
+            return Err("the distance to move by is not a figure".into());
         }
         let shift = |unit: &str, p: P2| -> Result<P2, String> {
             let d = units::coord_divisor(unit)?;

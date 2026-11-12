@@ -606,7 +606,7 @@ fn an_outline_entered_in_inches_measures_the_same_as_in_feet() {
     // The limits are in feet whatever the unit: a coordinate of 13,000,000 in is past the
     // 1,000,000 ft limit.
     let err = load(&edit(&text, |v| attrs(v, "rake-0019")["pl::run"]["ends"] = serde_json::json!({"value": [[13.0e6, 0.0], [528.0, 96.0]], "unit": "in", "status": "Known", "source": "x"}))).err().unwrap();
-    assert!(err.contains("not a usable number"), "{err}");
+    assert!(err.contains("a job can have"), "{err}");
 }
 
 #[test]
@@ -708,7 +708,7 @@ fn numbers_too_large_to_mean_anything_are_refused() {
     assert!(job.set("plane-0017", "pitch", Some("-0"), Status::Known, "flat").is_ok());
     let text = save(&mut sample());
     let err = load(&edit(&text, |v| attrs(v, "plane-0017")["pl::outline"]["points"]["value"] = serde_json::json!([[0.0, 0.0], [1e200, 0.0], [1e200, 1e200]]))).err().unwrap();
-    assert!(err.contains("not a usable number"), "{err}");
+    assert!(err.contains("a job can have"), "{err}");
 }
 
 #[test]
@@ -736,7 +736,7 @@ fn cost_lines_have_to_make_sense() {
     let text = save(&mut sample());
     let err = |t: String| load(&t).err().expect("should be refused");
     let line = |v: &mut Value, key: &str, val: Value| attrs(v, "plane-0003")["pl::cost"]["lines"][0][key] = val;
-    assert!(err(edit(&text, |v| line(v, "quantity", "volume".into()))).contains("does not have"));
+    assert!(err(edit(&text, |v| line(v, "quantity", "volume".into()))).contains("is not a figure of this thing"));
     assert!(err(edit(&text, |v| line(v, "quantity", "slope_factor".into()))).contains("a factor"));
     assert!(err(edit(&text, |v| line(v, "description", "".into()))).contains("no description"));
     assert!(err(edit(&text, |v| line(v, "unit_cost", serde_json::json!({"value": -1e9, "unit": "$/SF", "status": "Known", "source": "x"})))).contains("zero or more"));
@@ -1294,12 +1294,12 @@ fn a_formula_that_does_not_make_sense_is_refused_with_the_reason() {
         let with: Vec<(String, String)> = with.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect();
         job.set_formula("parapet-0024", Some("Copper wall flashing"), formula, &with, Status::Known, "x").unwrap_err()
     };
-    assert!(refuse("plan_length * hieght", &[]).contains("does not have"));
-    assert!(refuse("true_length * height", &[]).contains("does not have"));
+    assert!(refuse("plan_length * hieght", &[]).contains("is not a figure of this thing"));
+    assert!(refuse("true_length * height", &[]).contains("is not a figure of this thing"));
     assert!(refuse("plan_length + face_area", &[]).contains("adds what cannot be added"));
     assert!(refuse("plan_length * height * height", &[]).contains("volume"));
     assert!(refuse("height / face_area", &[]).contains("one over a length"));
-    assert!(refuse("slope_factor", &[]).contains("does not have"));
+    assert!(refuse("slope_factor", &[]).contains("is not a figure of this thing"));
     assert!(refuse("plan_length * height", &[("extra", "2")]).contains("does not use"));
     assert!(refuse("plan_length * height * Sides", &[("Sides", "2")]).contains("lower-case"));
     assert!(refuse("plan_length * waste", &[("waste", "2")]).contains("already means something"));
@@ -1330,7 +1330,7 @@ fn a_condition_in_the_file_has_to_be_a_recipe_that_makes_sense() {
     // (Call 57: an assembly goes on anything built and on the job; not on a level.)
     assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!(["Storey"]))).contains("not on a level"));
     // A recipe line has to make sense on every kind it applies to: a hip has no height.
-    assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!(["Parapet", "Hip"]))).contains("does not have"));
+    assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!(["Parapet", "Hip"]))).contains("is not a figure of this thing"));
     assert!(err(edit(&text, |v| attrs(v, "plane-0003")["pl::recipe"] = attrs(&mut serde_json::from_str(&text).unwrap(), "condition-0025")["pl::recipe"].clone())).contains("only an assembly can"));
     // The order conversion has to be between the line's unit and the order unit, and waste
     // is a percentage.
@@ -4453,7 +4453,7 @@ fn a_wall_moved_takes_its_openings_and_a_wall_removed_takes_them_too() {
     ed::walls(&mut job, &s, &wt, &[[0.0, 20.0], [20.0, 20.0]], false, ed::Top::Height("9 ft"), how).unwrap();
     // What is not moved this way says so.
     assert!(ed::move_by(&mut job, &wt, 1.0, 0.0, how).unwrap_err().contains("is not moved this way"));
-    assert!(ed::move_by(&mut job, &made[0], f64::NAN, 0.0, how).unwrap_err().contains("not a usable number"));
+    assert!(ed::move_by(&mut job, &made[0], f64::NAN, 0.0, how).unwrap_err().contains("is not a figure"));
     // Removed: the wall and its door, and nothing else.
     let before = job.index().len();
     let gone = ed::remove(&mut job, &made[0]).unwrap();

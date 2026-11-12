@@ -222,7 +222,7 @@ pub(crate) fn positive(what: &str, v: &Val<Len>, zero_ok: bool) -> Result<(), St
             return Err(format!("{what}: must be {} zero", if zero_ok { "at least" } else { "more than" }));
         }
         if x > MAX_COORDINATE_FT {
-            return Err(format!("{what}: is not a usable number (limit {MAX_COORDINATE_FT:e} ft)"));
+            return Err(format!("{what}: is not a length a job can have: it is not a figure, or it is more than 1,000,000 ft"));
         }
     }
     Ok(())
@@ -235,7 +235,7 @@ pub(crate) fn coords<T>(what: &str, v: &Val<T>) -> Result<f64, String> {
 
 pub(crate) fn usable(what: &str, xs: &[f64], divisor: f64) -> Result<(), String> {
     if xs.iter().any(|x| !x.is_finite() || (x / divisor).abs() > MAX_COORDINATE_FT) {
-        return Err(format!("{what}: a coordinate is not a usable number (limit {MAX_COORDINATE_FT:e} ft either way)"));
+        return Err(format!("{what}: a coordinate is not a place a job can have: it is not a figure, or it is more than 1,000,000 ft either way"));
     }
     Ok(())
 }

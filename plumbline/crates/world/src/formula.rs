@@ -299,7 +299,7 @@ pub fn work(expr: &Expr, lookup: &dyn Fn(&str) -> Result<Operand, String>) -> Re
                     }
                     _ => {
                         if b.value == Some(0.0) {
-                            return Err(format!("divides by {}, which is zero", b.text));
+                            return Err(format!("divides by {}, which is nothing: a quantity cannot be divided by zero", b.text));
                         }
                         let left = if a.tight { a.text.clone() } else { format!("({})", a.text) };
                         let right = if b.atom { b.text.clone() } else { format!("({})", b.text) };

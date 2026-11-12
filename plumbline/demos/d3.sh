@@ -128,7 +128,7 @@ expect "$T/turn.json" $PARAPET "quantity: Copper wall flashing" "63.3333 SF"
 line_changes "$T/job.json" "$T/turn.json" $PARAPET "Copper wall flashing"
 echo "  a formula that does not make sense is refused, and says why:"
 refused "adds what cannot be added" "$P" set "$T/turn.json" $PARAPET quantity "plan_length + face_area" --line "Copper wall flashing" "${K[@]}"
-refused "does not have" "$P" set "$T/turn.json" $PARAPET quantity "plan_length * hieght" --line "Copper wall flashing" "${K[@]}"
+refused "is not a figure of this thing" "$P" set "$T/turn.json" $PARAPET quantity "plan_length * hieght" --line "Copper wall flashing" "${K[@]}"
 refused "has no unit" "$P" set "$T/turn.json" $PARAPET spacing "12" --line "Cleat fasteners" "${K[@]}"
 for f in so one turn; do "$P" check "$T/$f.json" >/dev/null; done
 echo "  PASS"
