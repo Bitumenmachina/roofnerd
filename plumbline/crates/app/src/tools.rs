@@ -408,10 +408,15 @@ pub fn typed_length(doc: &mut Doc, text: &str) {
 /// was taken to. Who measured can follow a comma. The value becomes Known.
 pub fn measured(doc: &mut Doc, text: &str) {
     let Some((path, what, _)) = doc.measuring.take() else { return };
-    // A comma inside a figure (8,5 ft) is not the comma before who measured.
-    let (reading, who) = match text.split_once(',') {
-        Some((reading, who)) if !who.trim_start().starts_with(|c: char| c.is_ascii_digit()) => (reading.trim(), who.trim()),
-        _ => (text.trim(), ""),
+    // Who measured comes after a comma and a space, or after a comma before anything
+    // that is not a figure. A comma hard against a figure (8,5 ft) is part of the
+    // reading, and is refused there for what it is.
+    let (reading, who) = match text.split_once(", ") {
+        Some((reading, who)) => (reading.trim(), who.trim()),
+        None => match text.split_once(',') {
+            Some((reading, who)) if !who.starts_with(|c: char| c.is_ascii_digit()) => (reading.trim(), who.trim()),
+            _ => (text.trim(), ""),
+        },
     };
     let line = |word: &&str| match word.to_ascii_lowercase().as_str() {
         "bottom" => Some(plumbline_world::Justify::Bottom),

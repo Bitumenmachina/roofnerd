@@ -295,3 +295,137 @@ fn a_run_with_no_size_cannot_be_shot_to_its_underside() {
     let done = ed::measure(&mut m.job, &t, "diameter", Reading::Length("2\"1/8"), None, "JM with the calipers").unwrap();
     assert_eq!(done.said, "2 in: diameter is 2 1/8 in, measured (it was not known: not read off the plan)");
 }
+
+// ---- The sixteenth judgment: what the judge broke, held here.
+
+fn level(job: &mut Job, path: &str) -> Level {
+    got::<Level>(job, path)
+}
+
+#[test]
+fn j16_1_a_floor_its_height_and_the_floor_above_agree_whichever_is_measured() {
+    // The judge's three: the ground floor checked, the upper floor measured 1 1/2 in
+    // low, then the ground's storey height checked as 9 ft. The upper floor measured
+    // makes the ground's storey height the way up to it, so the third has nothing left
+    // to contradict; and it says so.
+    let mut m = made();
+    ed::measure(&mut m.job, &m.ground, "elevation", Reading::Same, None, "JM").unwrap();
+    let done = ed::measure(&mut m.job, &m.upper, "elevation", Reading::Length("8'10\"1/2"), None, "JM").unwrap();
+    assert_eq!(done.also[0], "ground's storey height is now 8' 10 1/2\", Known: the way up from its floor to this one; it was 9' 0\"");
+    let g = level(&mut m.job, &m.ground);
+    assert_eq!((g.height.feet(), g.height.status), (Some(8.875), Status::Known));
+    assert_eq!(g.height.source, "ground's floor and upper's floor (JM)");
+    // 24 ft by 8.875 ft, Known.
+    let f = face(&mut m.job, &m.wall);
+    assert_eq!((f.value, f.status), (Some(213.0), Status::Known));
+    // The storey height checked now is 8.875 ft (written in feet, as it was): the three agree.
+    let done = ed::measure(&mut m.job, &m.ground, "storey height", Reading::Same, None, "JM").unwrap();
+    assert_eq!(done.said, "ground: storey height is 8.875 ft, found as drawn");
+    assert!(done.also.is_empty(), "{:?}", done.also);
+
+    // The other order: both floors Known first, 9 ft apart; then a storey height that
+    // says otherwise is refused whether it comes as a length or as "same" on a height
+    // that was set by hand to something else.
+    let mut m = made();
+    ed::measure(&mut m.job, &m.ground, "elevation", Reading::Same, None, "JM").unwrap();
+    ed::measure(&mut m.job, &m.upper, "elevation", Reading::Same, None, "the surveyor").unwrap();
+    let mut g = level(&mut m.job, &m.ground);
+    assert_eq!((g.height.feet(), g.height.status), (Some(9.0), Status::Assumed), "two Known floors 9 ft apart leave a 9 ft height as it was");
+    g.height = Val { value: Some(Len::One(8.5)), unit: "ft".into(), status: Status::Assumed, source: "a guess".into() };
+    m.job.put(&m.ground, g).unwrap();
+    let before = save(&mut m.job);
+    let why = ed::measure(&mut m.job, &m.ground, "storey height", Reading::Same, None, "JM").unwrap_err();
+    assert!(why.contains("upper's floor is Known at 9' 0\"") && why.contains("this measurement says 8' 6\""), "{why}");
+    assert_eq!(save(&mut m.job), before);
+
+    // A floor measured an inch up: the storey below is an inch taller and this one's
+    // own height an inch less... but there is no floor above the upper storey here, so
+    // only the first is said.
+    let mut m = made();
+    let done = ed::measure(&mut m.job, &m.upper, "elevation", Reading::Length("9' 1\""), None, "JM").unwrap();
+    assert_eq!(done.also, ["ground's storey height is now 9' 1\", Assumed: the way up from its floor to this one; it was 9' 0\""]);
+
+    // "same" on a storey height brings the floor above along as a length does.
+    let mut m = made();
+    ed::measure(&mut m.job, &m.ground, "elevation", Reading::Same, None, "JM").unwrap();
+    let done = ed::measure(&mut m.job, &m.ground, "storey height", Reading::Same, None, "JM").unwrap();
+    assert_eq!(done.also, ["upper's floor is now at 9' 0\", Known; it was at 9' 0\""]);
+    assert_eq!(level(&mut m.job, &m.upper).elevation.status, Status::Known);
+}
+
+#[test]
+fn j16_5_a_second_shot_corrects_the_first_and_an_eighth_of_an_inch_is_agreement() {
+    let mut m = made();
+    ed::measure(&mut m.job, &m.ground, "elevation", Reading::Same, None, "JM").unwrap();
+    // A slip of the thumb: 8' 1 1/2" for 8' 10 1/2". The floor above follows it, Known.
+    ed::measure(&mut m.job, &m.ground, "storey height", Reading::Length("8'1\"1/2"), None, "JM").unwrap();
+    assert_eq!(level(&mut m.job, &m.upper).elevation.feet(), Some(8.125));
+    // Shot again: the floor above is Known only by the first shot, and follows the second.
+    let done = ed::measure(&mut m.job, &m.ground, "storey height", Reading::Length("8'10\"1/2"), None, "JM").unwrap();
+    assert_eq!(done.also, ["upper's floor is now at 8' 10 1/2\", Known; it was at 8' 1 1/2\""]);
+    assert_eq!(level(&mut m.job, &m.upper).elevation.feet(), Some(8.875));
+    // The floor above then checked on site is Known in its own right: a third shot that
+    // would move it is refused.
+    ed::measure(&mut m.job, &m.upper, "elevation", Reading::Same, None, "JM on the upper floor").unwrap();
+    assert!(ed::measure(&mut m.job, &m.ground, "storey height", Reading::Length("9 ft"), None, "JM").unwrap_err().contains("One of the three is wrong"));
+    // A floor Known in its own right: a reading a thirty-second of an inch off it
+    // agrees, and it is left where it is; one a quarter of an inch off does not.
+    let mut m = made();
+    ed::measure(&mut m.job, &m.ground, "elevation", Reading::Same, None, "JM").unwrap();
+    ed::measure(&mut m.job, &m.upper, "elevation", Reading::Same, None, "the surveyor").unwrap();
+    let done = ed::measure(&mut m.job, &m.ground, "storey height", Reading::Length("8'11\"31/32"), None, "JM").unwrap();
+    assert_eq!(done.also, ["upper's floor is Known at 9' 0\"; this puts it at 8' 11 31/32\", within an eighth of an inch, and it was left where it is"]);
+    assert_eq!(level(&mut m.job, &m.upper).elevation.feet(), Some(9.0));
+    assert!(ed::measure(&mut m.job, &m.ground, "storey height", Reading::Length("8'11\"3/4"), None, "JM").unwrap_err().contains("One of the three is wrong"));
+}
+
+#[test]
+fn j16_4_9_10_walls_through_a_floor_a_roof_that_stays_and_the_unit_a_floor_is_written_in() {
+    let mut m = made();
+    // A partition with its own height, 9 ft, on the ground storey.
+    let wall_type = got::<Wall>(&mut m.job, &m.wall).type_name.value.unwrap();
+    let own = ed::walls(&mut m.job, &m.ground, &wall_type, &[[8.0, 0.25], [8.0, 15.75]], false, Top::Height("9 ft"), KNOWN).unwrap().remove(0);
+    // An upper storey written in inches, and a third in feet and inches.
+    let mut up = level(&mut m.job, &m.upper);
+    up.elevation = Val { value: Some(Len::One(108.0)), unit: "in".into(), status: Status::Assumed, source: "scaled off a made-up plan".into() };
+    m.job.put(&m.upper, up).unwrap();
+    let attic = ed::storey(&mut m.job, "attic", "17' 0\"", "7 ft", TRACED).unwrap();
+    m.job.derive();
+    let done = ed::measure(&mut m.job, &m.ground, "storey height", Reading::Length("8' 6\""), None, "JM").unwrap();
+    // The wall that stands to its own height is said: 9 ft against 8 ft 6 in.
+    let name = got::<Node>(&mut m.job, &own).name;
+    assert!(done.also.contains(&format!("{name} stands 9' 0\" by its own height: that is 0' 6\" above upper's floor now. Measure its height, or hold its top to upper")), "{:?}", done.also);
+    // The floors are written as they were: 102 in, and 16' 6".
+    let (u, a) = (level(&mut m.job, &m.upper).elevation, level(&mut m.job, &attic).elevation);
+    assert_eq!((u.value.clone(), u.unit.as_str()), (Some(Len::One(102.0)), "in"));
+    assert_eq!((a.value.clone(), a.unit.as_str()), (Some(Len::FtIn([16.0, 6.0])), "ft-in"));
+    // "same" with the line the run is already held to is taken.
+    ed::measure(&mut m.job, &m.duct, "height above its storey", Reading::Same, Some(Justify::Centre), "JM").unwrap();
+}
+
+#[test]
+fn j16_2_3_a_solved_planes_eave_is_the_roofs_and_a_run_pulled_off_its_joints_is_said() {
+    // The made-up house: a roof solved from its footprint, and ducts joined by elbows.
+    let mut job = sample::house();
+    let (plane, name) = {
+        let mut q = job.world.query::<(&Node, &Kind, &Solved)>();
+        q.iter(&job.world).find(|(_, k, _)| **k == Kind::RoofPlane).map(|(n, _, _)| (n.path.clone(), n.name.clone())).expect("the house has a solved roof plane")
+    };
+    assert!(!ed::takes(&mut job, &plane).iter().any(|t| t.0 == "eave height"), "a solved plane does not offer its eave height");
+    let before = save(&mut job);
+    let why = ed::measure(&mut job, &plane, "eave height", Reading::Length("19' 6\""), None, "JM").unwrap_err();
+    assert!(why.starts_with(&format!("{name} is solved from its roof's footprint")), "{why}");
+    assert_eq!(save(&mut job), before);
+    // A duct between two elbows, measured 1 1/4 in higher than drawn: it comes off them.
+    let duct = {
+        let mut q = job.world.query::<(&Node, &Kind)>();
+        q.iter(&job.world).find(|(n, k)| **k == Kind::Duct && n.name == "first-floor trunk, west, piece 2 of 3").map(|(n, _)| n.path.clone()).expect("the house's trunk")
+    };
+    let done = ed::measure(&mut job, &duct, "height above its storey", Reading::Length("8' 6\""), None, "JM").unwrap();
+    let parted = done.also.iter().find(|a| a.contains("no longer meets")).expect("the joints it came off are said");
+    assert!(parted.contains("elbow") && parted.contains("did not move with it"), "{parted}");
+    // Measured as it was, nothing is said of joints.
+    let mut job = sample::house();
+    let done = ed::measure(&mut job, &duct, "height above its storey", Reading::Same, None, "JM").unwrap();
+    assert!(done.also.is_empty(), "{:?}", done.also);
+}

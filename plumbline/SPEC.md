@@ -822,21 +822,29 @@ value, and the value is Known. DECISIONS.md call 49 has why each rule is as it i
 * **A length replaces the value.** Status Known, the source as given. Any entered value
   that is one length takes one: a storey's floor and height; a type's thickness, width,
   height, diameter or depth; a wall's height and offsets; an opening's place along its
-  wall and its sill; a run's heights; a placed thing's height; a parapet's height and a
-  roof outline's eave height.
+  wall and its sill; a run's heights; a placed thing's height; a parapet's height; the
+  eave height of a roof plane drawn by its own outline (not of one solved from a
+  footprint, which is the roof's: refused, and set with `set`).
 * **`same` keeps the value and marks it Known.** The source keeps what it said and adds
   "found as drawn" and who looked. It works on any entered value, a line on the plan, a
   position or a choice of type included. A value that is not known is refused: there is
   nothing for it to be the same as.
 * **A line or a position is not one length** and a length for it is refused. It is moved
   with the move verb and then marked `same`.
-* **A storey's height is floor to floor.** The next storey up is put at this storey's
-  floor plus the measurement: Known if this floor is Known, otherwise as sure as this
-  floor is. Storeys above that move by the same amount, keep their status, and say in
-  their source that they moved. A Known floor is never moved: if it is the next one up
-  and the measurement puts it elsewhere, the measurement is refused and names the three
-  values that disagree; if it is further up, it and every floor above it are left, and
-  that is said.
+* **A floor, its storey's height and the floor above are kept agreeing** (call 51),
+  whichever is measured, by a length or by `same`. A storey height puts the next floor
+  at this floor plus the height. A floor makes the storey height below it the way up to
+  it, and its own height the way up to the next floor; where its own height is Known,
+  the next floor goes where that says. Each value so worked is as sure as the less sure
+  of the two it is worked from, is written in the unit it was written in, and says in
+  its source which two. Floors further up move by the same amount, keep their status
+  and say they moved. A value Known in its own right is never overwritten: within an
+  eighth of an inch (`AGREE_FT`) it is left and that is said; further out, the
+  measurement is refused and names the three values. A floor Known only because the
+  storey height below was measured follows that height when it is measured again.
+* **What does not follow is said:** walls on the storey that stand to their own height
+  and now pass through the floor above; that a roof's eave height is its own value; and
+  what a run or a placed thing met before the measurement and no longer meets.
 * **A run's height can be taken to its underside or its top.** `--to bottom|centre|top`
   (in the window, the word before the reading) says which line of its section was shot.
   The run then holds its heights to that line (`justify`), and its centre is worked from
@@ -847,9 +855,14 @@ value, and the value is Known. DECISIONS.md call 49 has why each rule is as it i
   after a comma.
 * **All or nothing,** as every verb: a refused measurement leaves the job byte for byte
   as it was.
-* **In the window** an entry is ended by Enter or by Tab, since a laser sends either.
-  Where an entry takes more than one thing (a storey's name, floor and height; what a
-  tool draws with), Tab goes on to the next and ends the entry after the last.
+* **In the window** an entry is ended by Enter or by Tab, since a laser sends either,
+  and what comes after that key in the same burst is not part of it. Where an entry
+  takes more than one thing (a storey's name, floor and height; what a tool draws
+  with), Tab goes on to the next and ends the entry after the last. Who measured
+  follows a comma and a space. A height's entry says which line it is to.
+* **A reading typed with nothing picked does nothing.** Character keys closer together
+  than an eighth of a second are a burst; with no entry open a burst is not used, and
+  that is said once. A single key acts an eighth of a second after it is pressed.
 
 ## 6. Cost code scheme
 

@@ -2505,3 +2505,47 @@ new storey by three Tab-parted parts, the sheet following at once.
 **What the judge did not reach:** things brought in from a model; things traced with
 `--on`; F2 and reopen of a measured roof plane in the window; Tab in a wall tool's
 settings; rooms after a storey moves; a real DISTO; Leica's guides (no network).
+
+## Where the fixes to the sixteenth judgment stand
+
+Fixed in the commit that adds this section; **none of these fixes has been judged.**
+DECISIONS.md call 51 says what each decided; SPEC.md 5.14 is brought up to them.
+
+| # | What was done | Held by |
+|---|---|---|
+| J16-1 | A floor, its storey's height and the floor above are kept agreeing whichever is measured, by a length or by `same`; a value Known in its own right is never overwritten, and a disagreement names the three. | `j16_1_...` (field): the judge's three in both orders, a floor an inch up, `same` on a storey height |
+| J16-2 | A plane solved from a footprint refuses a measured eave height and does not offer it. | `j16_2_3_...`, on the made-up house |
+| J16-3 | What a run or a placed thing no longer meets after a measurement is named, with what that does to the takeoff and the clash list. Nothing joined to it is moved. In the window a height's entry says which line it is to (a run's centre, bottom or top; a placed thing's underside). | `j16_2_3_...`: the house's trunk, 1 1/4 in up, comes off its elbows and says so; measured as it was, says nothing. The window's title **by reading only**. |
+| J16-4 | Walls standing to their own height through a floor that moved are each said, with by how much. A refusal as "one wall drawn over another" now says what is wrong and what to do first. | `j16_4_9_10_...` for the note. The refusal's new words **by reading only**. |
+| J16-5 | A floor Known only because the storey height below was measured follows a second shot; one since measured or checked itself does not. Agreement is to an eighth of an inch. | `j16_5_...`: a slip corrected; 1/32 in agrees and is left, 1/4 in is refused; a floor checked on site is its own |
+| J16-6 | A burst of characters with no entry open does nothing to the job and says so once. A single key acts an eighth of a second after it is pressed. | **A scratch window run, pictures read, not committed**: the judge's burst on the made-up house leaves the job byte for byte what it was ("Saved", 6:12, every layer on) with the refusal on screen; `t` alone then switches to the plan. No test. |
+| J16-7 | An entry ends at the key that ends it; what follows in the same breath is said as a second reading not used. | **A scratch window run**: `8'10"1/2` Tab `9'0"` Tab into the storey height leaves it at 8' 10 1/2". The note about the second reading was not shown in that run (both readings fell in one frame); fixed, and seen in a second scratch run: under what the first reading did, "a second reading came straight after that one and was not used". |
+| J16-8 | Who measured follows a comma and a space, whatever it starts with. A backslash before a quote mark is taken off wherever words are drawn. | **A scratch window run**: `0'0"1/2, 2nd shot by JM` is taken, source "measured on site: 2nd shot by JM"; `"1'0"x" has something after the inches` shows no backslash. No test. |
+| J16-9 | When floors move, a note says a roof's eave height is its own and did not move. | **By reading only.** |
+| J16-10 | A moved floor keeps the unit it was written in; `same` with the line a run is held to is taken; call 49's two misstatements corrected. **Not done:** a storey height of half an inch is still taken; a clash on a storey whose floor is Assumed does not say that is why it is still to verify. | `j16_4_9_10_...` |
+
+**What these changed that was so before:**
+
+* `measure <storey> elevation ...` now changes storey heights (the one below, and this
+  one's own) or the floor above, and says so; it changed only the elevation.
+* `measure <storey> "storey height" same` now brings the floor above along, as a length
+  does; it changed nothing else.
+* A storey height that puts a Known floor above within an eighth of an inch of where it
+  is is taken and the floor left; anything over a millionth of a foot was refused.
+* A second storey height where the first made the floor above Known is taken; it was
+  refused.
+* A moved floor entered in inches or in feet and inches stays so; it became decimal feet.
+* In the window, a character key acts an eighth of a second after it is pressed, and a
+  run of them with no entry open does nothing. Keys typed into an entry after the key
+  that ends it are not added to it.
+* On screen, `\"` is `"`.
+
+`cargo test --workspace`: 212 passing (4 added on the model, for these). The twelve
+command-line demonstrations pass. `demos/fieldw.sh` was run again on this code and
+passes, the saved job byte for byte the command line's; its ten pictures were retaken
+and read again (as two contact sheets), and show what the table under "Field entry.
+What was run" says.
+
+**What is not right:** the window fixes rest on scratch runs, not on a committed
+demonstration; `demos/fieldw.sh` does not try a stray burst or a second reading. The
+other window demonstrations have still not been run since `719ff91`.

@@ -146,6 +146,7 @@ pub fn measure(job: &mut Job, path: &str, what: &str, reading: Reading, to: Opti
         return Err("a measurement says who measured it, or with what; give its source".into());
     }
     let what = what.trim();
+    let a_floor = job.kind(path) == Some(Kind::Storey);
     all_or_nothing(job, |job| {
         let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = job.kind(path).ok_or_else(|| format!("{path} has no kind"))?;
@@ -157,13 +158,76 @@ pub fn measure(job: &mut Job, path: &str, what: &str, reading: Reading, to: Opti
             Reading::Length(typed) => Do::Length(typed),
             Reading::Same => Do::Same,
         };
-        if let Some(done) = put(job, e, path, kind, &name, what, reading, to, source)? {
+        // What a run or a placed thing is joined to before it is measured: a height
+        // that changes can pull it off its joints, and that has to be said.
+        let joined_before = if kind.is_segment() || kind.is_placed() { joined_to(job, path) } else { Vec::new() };
+        if let Some(mut done) = put(job, e, path, kind, &name, what, reading, to, source)? {
+            if !joined_before.is_empty() {
+                let still = joined_to(job, path);
+                let parted: Vec<String> = joined_before.iter().filter(|(p, _)| !still.iter().any(|(q, _)| q == p)).map(|(_, n)| n.clone()).collect();
+                if !parted.is_empty() {
+                    done.also.push(format!(
+                        "{name} no longer meets {}: {} where {} and did not move with it. Measure or move {} too, or the takeoff will count open ends there and the clash list will show them in each other",
+                        parted.join(", "),
+                        if parted.len() == 1 { "it is" } else { "they are" },
+                        if parted.len() == 1 { "it was" } else { "they were" },
+                        if parted.len() == 1 { "it" } else { "them" }
+                    ));
+                }
+            }
             return Ok(done);
         }
         // Nothing of that name. Say what it does have.
         let has: Vec<String> = takes(job, path).into_iter().map(|t| t.0).collect();
         Err(if has.is_empty() { format!("{name} has no entered value to measure") } else { format!("{name} has no entered value called {what:?}; it has: {}", has.join(", ")) })
     })
+    // A floor brought down onto walls that stand to their own height runs them into the
+    // walls above, and the job's own check refuses that as one wall over another. What is
+    // wrong is the walls' height, and that is what is said.
+    .map_err(|why| {
+        if a_floor && why.contains("one wall drawn over another") {
+            format!("this measurement puts the floor above lower than walls on this storey that stand to their own height, so they would run up into the walls above ({why}). Measure those walls' heights first, or hold their tops to the storey above, and then measure this")
+        } else {
+            why
+        }
+    })
+}
+
+/// What a run or a placed thing meets at its ends or its connectors, by path and name.
+fn joined_to(job: &mut Job, path: &str) -> Vec<(String, String)> {
+    let Ok(net) = building::network::network(job, None, None, building::network::TOLERANCE_FT) else { return Vec::new() };
+    let mut met: Vec<String> = net.nodes.iter().filter(|n| n.joints.iter().any(|j| j.element() == path)).flat_map(|n| n.joints.iter().map(|j| j.element().to_string())).filter(|p| p != path).collect();
+    met.sort();
+    met.dedup();
+    met.into_iter().map(|p| {
+        let name = job.find(&p).and_then(|e| job.world.get::<Node>(e).map(|n| n.name.clone())).unwrap_or_else(|| p.clone());
+        (p, name)
+    }).collect()
+}
+
+/// How nearly two Known values that say the same thing have to agree: an eighth of an
+/// inch. A tape and a laser on the same floor differ by that.
+pub const AGREE_FT: f64 = 1.0 / 96.0;
+
+/// The source of a floor's height worked from the floor below and its storey height.
+/// A floor that carries it follows that storey height when it is measured again.
+fn follows(below: &str) -> String {
+    format!("{below}'s floor and its storey height")
+}
+
+/// So many feet as a length written the way `was` is written: in inches, in feet and
+/// inches, or in feet.
+fn written_like(was: &Val<Len>, feet: f64) -> (Len, String) {
+    let tidy = |x: f64| (x * 1.0e6).round() / 1.0e6 + 0.0;
+    match was.unit.as_str() {
+        units::IN => (Len::One(tidy(feet * 12.0)), units::IN.to_string()),
+        units::FT_IN if feet >= 0.0 => {
+            let whole = (feet + 1.0e-9).floor();
+            let inches = tidy((feet - whole) * 12.0);
+            if inches >= 12.0 { (Len::FtIn([whole + 1.0, 0.0]), units::FT_IN.to_string()) } else { (Len::FtIn([whole, inches]), units::FT_IN.to_string()) }
+        }
+        _ => (Len::One((feet * 1.0e9).round() / 1.0e9), units::FT.to_string()),
+    }
 }
 
 /// The entered values of an element that `measure` takes, each by the name the screen
@@ -218,8 +282,15 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
                 let said = apply(slot, &name, what, reading, source)?;
                 building::check_level(path, kind, &c)?;
                 job.put(path, c.clone())?;
-                if what == "storey height" && matches!(reading, Do::Length(_)) {
-                    floors_above(job, e, path, &name, &c, source, &mut also)?;
+                // A storey's floor, its height and the floor above say one thing three
+                // ways. Whichever is measured or checked, the three are made to agree,
+                // or the measurement is refused: by a length or by "same" alike.
+                if !matches!(reading, Do::Probe) {
+                    match what {
+                        "storey height" => floors_above(job, e, path, &name, &c, source, &mut also)?,
+                        "elevation" => floor_set(job, e, path, &name, &c, source, &mut also)?,
+                        _ => {}
+                    }
                 }
                 return Ok(Some(Measured { said, also }));
             }
@@ -283,7 +354,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
                         also.push(format!("{name}'s height is now held to its {} (it was held to its {})", line_said(to), line_said(c.justify)));
                         c.justify = to;
                     }
-                } else if to.is_some() {
+                } else if to.is_some_and(|to| to != c.justify) {
                     return Err(format!("\"same\" is said of {name}'s height as it is held, to its {}; leave the line out", line_said(c.justify)));
                 }
                 let slot = if second { c.end_offset.as_mut().map(Slot::Length) } else { Some(Slot::Length(&mut c.offset)) };
@@ -328,6 +399,14 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
         on!(InSystem, |c: &InSystem| building::check_in_system(path, kind, c), |c| if what == "system" { Some(Slot::Other(&mut c.0)) } else { None });
         // The roof's own lengths.
         on!(Height, |c: &Height| check::height(path, kind, c), |c| if what == "height" { Some(Slot::Length(&mut c.0)) } else { None });
+        // A plane solved from its roof's footprint has the roof's eave height: what is put
+        // on the plane is lost the next time the roof is solved. It is the roof's to set.
+        if what == "eave height" && job.world.get::<Solved>(e).is_some() {
+            if matches!(reading, Do::Probe) {
+                return Ok(None);
+            }
+            return Err(format!("{name} is solved from its roof's footprint, and its eave height is the roof's: set the roof's with \"set\", which solves the roof again"));
+        }
         on!(Outline, |c: &Outline| check::outline(path, kind, c), |c| if what == "eave height" { Some(Slot::Length(&mut c.eave_height)) } else { None });
         if job.world.get::<Footprint>(e).is_some() && what == "eave height" {
             return Err(format!("{name} is a roof solved from its footprint: its eave height is set with \"set\", which solves the roof again"));
@@ -350,36 +429,71 @@ fn sized(job: &mut Job, run: &Segment) -> bool {
     job.world.get::<SegmentType>(t).is_some_and(|t| t.round_ft().is_some() || t.rect_ft().is_some())
 }
 
-/// A storey's height was measured floor to floor: the floors above are where that puts
-/// them. The next storey up sits at this floor plus the measurement, as sure as the less
-/// sure of the two. Storeys above that move by the same amount and stay as sure as they
-/// were. A floor that is Known is not moved: if it is the next one up and the
-/// measurement puts it elsewhere, the three values disagree and the measurement is
-/// refused.
+/// The storeys beside this one (under the same parent), each with its floor's height in
+/// feet where it has one, lowest first.
+fn storeys_beside(job: &mut Job, me: Entity) -> Vec<(String, String, Level, Option<f64>)> {
+    let parent = job.world.get::<Node>(me).and_then(|n| n.parent.clone());
+    let mut q = job.world.query::<(&Node, &Level)>();
+    let mut all: Vec<(String, String, Level, Option<f64>)> = q.iter(&job.world).filter(|(n, _)| n.parent == parent).map(|(n, l)| (n.path.clone(), n.name.clone(), l.clone(), l.elevation.feet())).collect();
+    all.sort_by(|a, b| a.3.unwrap_or(f64::INFINITY).total_cmp(&b.3.unwrap_or(f64::INFINITY)));
+    all
+}
+
+/// Walls on a storey that stand to their own height, taller than the storey now is:
+/// each said, since nothing moves them.
+fn walls_through(job: &mut Job, storey: &str, tall: f64, above: &str, also: &mut Vec<String>) {
+    let mut q = job.world.query::<(&Node, &Wall)>();
+    for (n, w) in q.iter(&job.world) {
+        if n.parent.as_deref() != Some(storey) || w.top_level.is_some() {
+            continue;
+        }
+        let Some(height) = w.height.as_ref().and_then(|h| h.feet()) else { continue };
+        let top = w.base_offset.as_ref().and_then(|o| o.feet()).unwrap_or(0.0) + height;
+        if top > tall + AGREE_FT {
+            also.push(format!("{} stands {} by its own height: that is {} above {above}'s floor now. Measure its height, or hold its top to {above}", n.name, feet_said(top), feet_said(top - tall)));
+        }
+    }
+}
+
+/// A roof's eave height is its own value and does not follow a floor: said when a
+/// floor has moved.
+fn roofs_stay(job: &mut Job, also: &mut Vec<String>) {
+    let mut q = job.world.query::<(&Node, &Kind)>();
+    let roofs: Vec<String> = q.iter(&job.world).filter(|(_, k)| **k == Kind::Roof).map(|(n, _)| n.name.clone()).collect();
+    if !roofs.is_empty() {
+        also.push(format!("the eave height of {} is its own value and did not move with the floor: check it against the walls under it", roofs.join(", ")));
+    }
+}
+
+/// A storey's height was measured floor to floor, or checked: the floors above are where
+/// that puts them. The next storey up sits at this floor plus the height, as sure as the
+/// less sure of the two. Storeys above that move by the same amount and stay as sure as
+/// they were. A floor that is Known in its own right is not moved: if it is the next one
+/// up and this puts it more than an eighth of an inch elsewhere, the three values
+/// disagree and the measurement is refused. A floor that is Known only because this
+/// storey's height was measured before follows it when it is measured again.
 fn floors_above(job: &mut Job, me: Entity, path: &str, name: &str, level: &Level, source: &str, also: &mut Vec<String>) -> Result<(), String> {
     let measured = level.height.feet().ok_or("the storey height is not a length this program can use")?;
     let Some(floor) = level.elevation.feet() else {
         also.push(format!("no floor above was moved: {name}'s own floor is not known"));
         return Ok(());
     };
-    let parent = job.world.get::<Node>(me).and_then(|n| n.parent.clone());
-    let mut q = job.world.query::<(&Node, &Level)>();
-    let mut above: Vec<(String, String, Level, f64)> = Vec::new();
-    for (n, l) in q.iter(&job.world) {
-        if n.path == path || n.parent != parent {
-            continue;
-        }
-        match l.elevation.feet() {
-            Some(z) if z > floor + 1.0e-9 => above.push((n.path.clone(), n.name.clone(), l.clone(), z)),
-            Some(_) => {}
-            None => also.push(format!("{}'s floor is not known and was left so", n.name)),
+    let beside = storeys_beside(job, me);
+    for (_, n, _, z) in &beside {
+        if z.is_none() {
+            also.push(format!("{n}'s floor is not known and was left so"));
         }
     }
-    above.sort_by(|a, b| a.3.total_cmp(&b.3));
+    let above: Vec<(String, String, Level, f64)> = beside.into_iter().filter(|(p, ..)| p != path).filter_map(|(p, n, l, z)| z.filter(|z| *z > floor + 1.0e-9).map(|z| (p, n, l, z))).collect();
     let Some((next_path, next_name, next, was)) = above.first().cloned() else { return Ok(()) };
     let target = ((floor + measured) * 1.0e9).round() / 1.0e9;
-    if next.elevation.status == Status::Known {
-        if (target - was).abs() > 1.0e-6 {
+    // Known in its own right: not a floor that is Known only because this storey's
+    // height was measured before. One that followed and was then checked on site has
+    // had that said of it ("...; found as drawn"), and is its own.
+    let followed = next.elevation.source.starts_with(&follows(name)) && !next.elevation.source.contains("; ");
+    let its_own = next.elevation.status == Status::Known && !followed;
+    if its_own {
+        if (target - was).abs() > AGREE_FT {
             return Err(format!(
                 "{name}'s floor is at {} ({}) and {next_name}'s floor is Known at {} ({}): that is {} floor to floor, and this measurement says {}. One of the three is wrong, and the program does not pick",
                 feet_said(floor),
@@ -390,15 +504,23 @@ fn floors_above(job: &mut Job, me: Entity, path: &str, name: &str, level: &Level
                 feet_said(measured)
             ));
         }
+        if (target - was).abs() > 1.0e-6 {
+            also.push(format!("{next_name}'s floor is Known at {}; this puts it at {}, within an eighth of an inch, and it was left where it is", feet_said(was), feet_said(target)));
+        }
+        walls_through(job, path, was - floor, &next_name, also);
         return Ok(());
     }
-    let status = level.elevation.status.max(Status::Known);
+    let status = level.elevation.status.max(level.height.status);
     let mut moved = next.clone();
-    moved.elevation = Val { value: Some(Len::One(target)), unit: units::FT.into(), status, source: format!("{name}'s floor and its storey height ({source})") };
+    let (value, unit) = written_like(&next.elevation, target);
+    moved.elevation = Val { value: Some(value), unit, status, source: format!("{} ({source})", follows(name)) };
     building::check_level(&next_path, Kind::Storey, &moved)?;
     job.put(&next_path, moved)?;
-    also.push(format!("{next_name}'s floor is now at {}, {}; it was at {}", feet_said(target), status_said(status), feet_said(was)));
     let by = target - was;
+    if by.abs() > 1.0e-9 || status != next.elevation.status {
+        also.push(format!("{next_name}'s floor is now at {}, {}; it was at {}", feet_said(target), status_said(status), feet_said(was)));
+    }
+    walls_through(job, path, measured, &next_name, also);
     if by.abs() < 1.0e-9 {
         return Ok(());
     }
@@ -414,10 +536,72 @@ fn floors_above(job: &mut Job, me: Entity, path: &str, name: &str, level: &Level
         }
         let mut shifted = l.clone();
         top = ((z + by) * 1.0e9).round() / 1.0e9;
-        shifted.elevation = Val { value: Some(Len::One(top)), unit: units::FT.into(), status: l.elevation.status, source: after(&l.elevation.source, &format!("{how} with the floor below"), source) };
+        let (value, unit) = written_like(&l.elevation, top);
+        shifted.elevation = Val { value: Some(value), unit, status: l.elevation.status, source: after(&l.elevation.source, &format!("{how} with the floor below"), source) };
         building::check_level(&p, Kind::Storey, &shifted)?;
         job.put(&p, shifted)?;
         also.push(format!("{n}'s floor is now at {}; it was at {}", feet_said(top), feet_said(z)));
+    }
+    roofs_stay(job, also);
+    Ok(())
+}
+
+/// A storey's floor was measured, or checked. The storey below's height is the way up
+/// to this floor, and this storey's own height is the way up to the next: each is made
+/// to agree with the floor, as sure as what it is worked from, or, where it is Known in
+/// its own right and more than an eighth of an inch out, the measurement is refused.
+fn floor_set(job: &mut Job, me: Entity, path: &str, name: &str, level: &Level, source: &str, also: &mut Vec<String>) -> Result<(), String> {
+    let Some(floor) = level.elevation.feet() else { return Ok(()) };
+    let beside = storeys_beside(job, me);
+    // The storey below: the highest whose floor is under this one.
+    let below = beside.iter().filter(|(p, ..)| p != path).filter(|(.., z)| z.is_some_and(|z| z < floor - 1.0e-9)).next_back().cloned();
+    if let Some((below_path, below_name, below_level, Some(under))) = below {
+        let way_up = ((floor - under) * 1.0e9).round() / 1.0e9;
+        match below_level.height.feet() {
+            Some(h) if (h - way_up).abs() <= AGREE_FT => {}
+            Some(h) if below_level.height.status == Status::Known && below_level.elevation.status == Status::Known => {
+                return Err(format!(
+                    "{below_name}'s floor is Known at {} ({}) and its storey height is Known at {} ({}): that puts {name}'s floor at {}, and this says {}. One of the three is wrong, and the program does not pick",
+                    feet_said(under),
+                    below_level.elevation.source,
+                    feet_said(h),
+                    below_level.height.source,
+                    feet_said(under + h),
+                    feet_said(floor)
+                ));
+            }
+            was => {
+                let mut fitted = below_level.clone();
+                let status = below_level.elevation.status.max(level.elevation.status);
+                let (value, unit) = written_like(&below_level.height, way_up);
+                fitted.height = Val { value: Some(value), unit, status, source: format!("{below_name}'s floor and {name}'s floor ({source})") };
+                building::check_level(&below_path, Kind::Storey, &fitted)?;
+                job.put(&below_path, fitted)?;
+                also.push(format!("{below_name}'s storey height is now {}, {}: the way up from its floor to this one; it was {}", feet_said(way_up), status_said(status), was.map(feet_said).unwrap_or_else(|| "not known".to_string())));
+                walls_through(job, &below_path, way_up, name, also);
+            }
+        }
+    }
+    // The storey above: this storey's own height is the way up to it.
+    let above = beside.iter().filter(|(p, ..)| p != path).find(|(.., z)| z.is_some_and(|z| z > floor + 1.0e-9)).cloned();
+    if let Some((_, above_name, above_level, Some(over))) = above {
+        let way_up = ((over - floor) * 1.0e9).round() / 1.0e9;
+        match level.height.feet() {
+            Some(h) if (h - way_up).abs() <= AGREE_FT => {}
+            // This storey's height is Known: the floor above follows it, or, Known in
+            // its own right and elsewhere, refuses the measurement.
+            Some(_) if level.height.status == Status::Known => floors_above(job, me, path, name, level, source, also)?,
+            was => {
+                let mut fitted = level.clone();
+                let status = level.elevation.status.max(above_level.elevation.status);
+                let (value, unit) = written_like(&level.height, way_up);
+                fitted.height = Val { value: Some(value), unit, status, source: format!("{name}'s floor ({source}) and {above_name}'s floor") };
+                building::check_level(path, Kind::Storey, &fitted)?;
+                job.put(path, fitted)?;
+                also.push(format!("{name}'s storey height is now {}, {}: the way up from this floor to {above_name}'s; it was {}", feet_said(way_up), status_said(status), was.map(feet_said).unwrap_or_else(|| "not known".to_string())));
+                walls_through(job, path, way_up, &above_name, also);
+            }
+        }
     }
     Ok(())
 }

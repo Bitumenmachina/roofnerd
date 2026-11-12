@@ -238,8 +238,34 @@ fn pitch_val(p: f64) -> Val<Rise> {
     Val { value: Some(Rise::Pitch(p)), unit: units::PITCH.into(), status: Status::Assumed, source: SOURCE.into() }
 }
 
+/// What is known of the keys coming in fast, as a laser in keyboard mode sends a reading:
+/// a whole run of characters in less time than a hand types two.
+#[derive(Default)]
+struct Burst {
+    /// When a character key last came in, in seconds.
+    last: f64,
+    /// Characters are coming in as a burst until then.
+    until: f64,
+    /// A character key that came in alone and has not acted yet: it waits to see
+    /// whether it is the first of a burst.
+    waiting: Vec<(KeyCode, f64)>,
+    /// An entry has just been ended by the key a laser sends; what comes straight
+    /// after it is a second reading.
+    after_entry: bool,
+    /// The burst going on has been said to be unused.
+    said: bool,
+    /// More keys came after the key that ended an entry, in the same frame: a second
+    /// reading, not used, and not yet said.
+    trailing: bool,
+}
+
+/// Two character keys closer together than this are a burst, not a hand: seconds.
+const BURST_GAP: f64 = 0.12;
+/// A burst is over this long after its last character: seconds.
+const BURST_TAIL: f64 = 0.35;
+
 #[allow(clippy::too_many_arguments)]
-fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, snap: Res<Snapshot>, mut typed: MessageReader<KeyboardInput>, keys: Res<ButtonInput<KeyCode>>, primary: Query<Entity, With<PrimaryWindow>>, sheet: Query<Entity, With<sheet::SheetWindow>>) {
+fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, snap: Res<Snapshot>, mut typed: MessageReader<KeyboardInput>, mut struck: MessageReader<KeyboardInput>, time: Res<Time<Real>>, mut burst: Local<Burst>, keys: Res<ButtonInput<KeyCode>>, primary: Query<Entity, With<PrimaryWindow>>, sheet: Query<Entity, With<sheet::SheetWindow>>) {
     let doc = &mut *doc;
     // A picture of each window, numbered, into the folder named by PLUMBLINE_SHOTS. It
     // works while a value is being typed, so the typing can be shown.
@@ -254,12 +280,46 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
             commands.spawn(Screenshot::window(window)).observe(save_to_disk(format!("{dir}/{n:02}-sheet.png")));
         }
     }
+    // Every key that came in since the last frame, to tell a hand from a laser: a
+    // reading is a run of characters closer together than a hand types them.
+    let now = time.elapsed_secs_f64();
+    let mut alone: Vec<KeyCode> = Vec::new();
+    let mut at_once: Vec<KeyCode> = Vec::new();
+    for event in struck.read() {
+        if !event.state.is_pressed() {
+            continue;
+        }
+        if matches!(event.logical_key, Key::Character(_) | Key::Space) {
+            alone.push(event.key_code);
+        } else {
+            at_once.push(event.key_code);
+        }
+    }
+    if !alone.is_empty() {
+        if alone.len() > 1 || now - burst.last < BURST_GAP || !burst.waiting.is_empty() {
+            burst.until = now + BURST_TAIL;
+        }
+        burst.last = now;
+    }
+    let in_burst = now < burst.until;
+    if !in_burst {
+        burst.said = false;
+        burst.after_entry = false;
+    }
     // A value being typed takes the keyboard until Enter or Escape.
     if let Some((field, mut text)) = doc.entry.take() {
+        burst.waiting.clear();
         let before = text.clone();
         let mut done = None;
         for event in typed.read() {
             if !event.state.is_pressed() {
+                continue;
+            }
+            // The key that ends an entry ends it: what a laser sends after it, in the
+            // same breath, is a second reading and no part of this one.
+            if done.is_some() {
+                burst.until = now + BURST_TAIL;
+                burst.trailing = true;
                 continue;
             }
             match &event.logical_key {
@@ -287,6 +347,9 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                 Key::Character(c) => text.push_str(c),
                 _ => {}
             }
+        }
+        if done.is_some() {
+            burst.after_entry = true;
         }
         match done {
             None => {
@@ -398,6 +461,48 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
         }
     }
     typed.clear();
+
+    // A reading typed with nothing picked to take it does nothing to the job: its
+    // characters are not keys, and the Tab or Enter after it is not either. It is said
+    // once. (Escape, and the keys that save, still act.)
+    // A second reading that came in the very frame the first ended: said now, however
+    // long that frame took.
+    if burst.trailing {
+        burst.trailing = false;
+        burst.said = true;
+        let first = doc.message.clone();
+        doc.say(Tone::Refused, format!("{first}\nrefused: a second reading came straight after that one and was not used. One reading to a value: pick the next value, then shoot"));
+        doc.touch();
+    }
+    if in_burst {
+        burst.waiting.clear();
+        if !burst.said {
+            burst.said = true;
+            if burst.after_entry {
+                let first = doc.message.clone();
+                doc.say(Tone::Refused, format!("{first}\nrefused: a second reading came straight after that one and was not used. One reading to a value: pick the next value, then shoot"));
+            } else {
+                doc.say(Tone::Refused, "refused: a reading was typed with nothing picked to take it, and was not used. Pick the value first (click it in the panel on the right), then shoot or type");
+            }
+            doc.touch();
+        }
+        at_once.retain(|k| matches!(k, KeyCode::Escape | KeyCode::F2));
+    }
+    // A character key that came in alone acts once it is plain that nothing follows it.
+    burst.waiting.extend(alone.iter().filter(|_| !in_burst).map(|k| (*k, now)));
+    let mut acting = ButtonInput::<KeyCode>::default();
+    for key in at_once {
+        acting.press(key);
+    }
+    burst.waiting.retain(|(key, since)| {
+        if now - since >= BURST_GAP {
+            acting.press(*key);
+            false
+        } else {
+            true
+        }
+    });
+    let keys = &acting;
 
     if keys.just_pressed(KeyCode::Equal) || keys.just_pressed(KeyCode::Minus) {
         let step = if keys.just_pressed(KeyCode::Equal) { 1.0 } else { -1.0 };

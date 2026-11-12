@@ -1703,7 +1703,8 @@ D810 touch and S910 (read 2026-11-11), not from memory:
 What follows from that:
 
 * **A fraction after the inch mark is read:** `2'2"13/32`, `26"13/32`, with or without
-  spaces. It was refused as "something after the inches". The inches before the mark are
+  a space between its parts (`2' 2" 13/32`; not inside a figure or a fraction: `1 / 2`
+  is not read). It was refused as "something after the inches". The inches before the mark are
   then a whole number: `2' 6 1/2" 1/4` is refused.
 * **Tab ends an entry as Enter does.** Where an entry takes more than one thing (a
   storey's name, floor and height), Tab goes on to the next, and ends the entry after
@@ -1747,8 +1748,10 @@ command line (`plumbline measure`) and by the window:
   whose two ends differ, the measurement has to be to the line it already holds, or the
   other end would be moved by a guess; it is refused otherwise.
 * **The source.** At the command line, `--source`, as everywhere. In the window:
-  "measured on site", or "checked on site, as drawn" for `same`, and whatever the person
-  types after a comma (`8' 10 1/2", JM with the laser`). The program does not write the
+  "measured on site" for a reading; for `same`, the source keeps what it said and adds
+  "; found as drawn (checked on site)"; and whatever the person types after a comma
+  goes with it (`8' 10 1/2", JM with the laser`). (Corrected after the sixteenth
+  judgment: this said the source for `same` was "checked on site, as drawn".) The program does not write the
   day: it would be the machine's clock stated as a fact (Q19).
 * **Nothing new is worked out in the window.** The clash list and the sheet are read
   from the job after the verb, as after any edit.
@@ -1851,3 +1854,64 @@ part A"). What each fix decided:
   is said by `drawings`, by `show` (a flagged row on the drawing), by `takeoff` and in
   the window. A drawing put back at the scale and in the place it had stops saying it
   (J15-15): what was traced then is where the sheet shows it again.
+
+### Call 51. The sixteenth judgment: what was decided in fixing it (2026-11-12)
+
+Ten findings on field entry (STATUS.md, "Sixteenth judgment"). What each fix decided:
+
+* **A floor, its storey's height and the floor above say one thing three ways, and are
+  kept agreeing whichever is measured** (J16-1). Call 49 made the floors above follow a
+  storey height given as a length, and checked nothing on any other path. Now:
+  a storey height, measured or checked (`same`), puts the next floor at this floor
+  plus the height; a floor, measured or checked, makes the storey height below it the
+  way up to it, and its own storey height the way up to the next floor (or, where its
+  own height is Known, puts the next floor where that says). Each value so worked is
+  as sure as the less sure of the two it is worked from, and its source says which two.
+  A value Known in its own right is never overwritten: where it disagrees, the
+  measurement is refused and names the three.
+* **Agreement is to an eighth of an inch** (J16-5). A millionth of a foot refused a
+  laser that read a thirty-second off a tape. Two Known values within an eighth are
+  both left as they are, and that is said.
+* **A second shot corrects the first** (J16-5). A floor that is Known only because the
+  storey height below it was measured (its source says exactly that, and nothing has
+  been said of it since) follows that height when it is measured again. Once the floor
+  itself has been measured or checked, it is Known in its own right and is not moved.
+* **A plane solved from its roof's footprint does not take a measured eave height**
+  (J16-2): the roof is solved again from the footprint and the measurement would be
+  thrown away. It is refused, and not offered in the window. The roof's own eave height
+  is set with `set`, which solves it again, as before.
+* **A run or a placed thing pulled off its joints by a measurement is said** (J16-3):
+  what it met before and no longer meets is named, with what that will do to the
+  takeoff and the clash list. Nothing joined to it is moved: the program does not
+  know that the elbow moved with the duct, and a person on site does.
+* **In the window a height says which line it is to**: a run's to its centre (or the
+  bottom or top it is held to), a placed thing's to its underside. One label had meant
+  both.
+* **Walls that stand to their own height through a floor that has moved are said**
+  (J16-4), each with by how much. Where the job's own check then refuses the
+  measurement as one wall over another, the refusal says what is wrong (the walls'
+  height) and what to do first.
+* **A roof's eave height does not follow a floor** (J16-9); when a floor moves, that is
+  said, so the roof is checked against the walls under it.
+* **A floor that is moved is written in the unit it was written in** (J16-10).
+* **`same` with the line a run is already held to is taken** (J16-10).
+* **A reading typed with nothing picked to take it does nothing** (J16-6). Call 49 let
+  it fall on the keys, where a `-` lowered a roof's pitch. A character key now acts
+  only when nothing follows it within an eighth of a second: a hand does not type two
+  keys that fast and a laser types nothing slower. A burst with no entry open is not
+  used, and says so once; Escape and the key that saves still act. The cost is that a
+  single key acts an eighth of a second after it is pressed.
+* **The key that ends an entry ends it** (J16-7). What comes after it in the same
+  breath is a second reading: it is not added to the first, and the message says a
+  second reading came and was not used, under what the first did.
+* **Who measured comes after a comma and a space** (J16-8): `8'10"1/2, 2nd shot by JM`
+  is a reading and a note. A comma hard against a figure is still part of the figure,
+  and refused there.
+* **The program's own quoting does not reach the screen** (J16-8, J15-B3): a backslash
+  before a quote mark is taken out where every word on screen is said.
+
+**Not done:** a storey height of half an inch is still taken (a step between two
+levels can be small, and no figure is plainly too small); a run measured Known on a
+storey whose floor is Assumed keeps its clash "to verify" with no word of why on the
+clash itself (the storey's row says it is Assumed).
+

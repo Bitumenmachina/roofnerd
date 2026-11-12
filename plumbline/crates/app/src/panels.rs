@@ -529,6 +529,15 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                         Entry::Drawing => "Drawing to lay under this storey".to_string(),
                         Entry::Distance => "Dimension between the two points".to_string(),
                         Entry::Measure => match &doc.measuring {
+                            // A height is to a line: a run's to its centre unless it is
+                            // held to its bottom or its top, a placed thing's to its underside.
+                            Some((_, what, true)) if what.starts_with("height above its storey") => {
+                                let to = match snap.selected.as_ref() {
+                                    Some(el) if el.kind.is_segment() => el.rows.iter().find(|r| r.label == "its heights are those of its").map(|r| r.text.clone()).unwrap_or_else(|| "centre".to_string()),
+                                    _ => "underside".to_string(),
+                                };
+                                format!("Measured on site: {what} of {name}, to its {to}")
+                            }
                             Some((_, what, true)) => format!("Measured on site: {what} of {name}"),
                             Some((_, what, false)) => format!("Checked on site: {what} of {name}"),
                             None => "Measured on site".to_string(),

@@ -182,6 +182,11 @@ pub fn spoken(text: &str) -> String {
             out = out.replace(&twice, &name);
         }
     }
+    // A backslash before a quote mark is how the program writes a quote inside a quote
+    // for itself: 8' 10 1/2" is not written 8' 10 1/2\" on a drawing.
+    if out.contains('\\') {
+        out = out.replace("\\\"", "\"").replace("\\'", "'");
+    }
     // "(os error 2)": the machine's number for why a file could not be read.
     while let Some(at) = out.find(" (os error ") {
         match out[at..].find(')') {
