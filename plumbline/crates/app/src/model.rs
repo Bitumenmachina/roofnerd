@@ -228,6 +228,9 @@ pub struct Doc {
     pub give: Option<String>,
     /// An item in hand, by path: the next click on the model sets one down there.
     pub placing: Option<String>,
+    /// The folder whose files are listed to pick from while a file is being asked for.
+    /// None: the job's own folder.
+    pub browse: Option<PathBuf>,
     /// When a unit cost is being typed: the cost line it is for, by its description.
     pub entry_line: Option<String>,
     /// When a measurement is being typed: the element, the value's name as the panel

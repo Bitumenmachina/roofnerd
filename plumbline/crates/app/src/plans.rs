@@ -154,7 +154,7 @@ fn smaller_copies(rgba: &[u8], width: u32, height: u32) -> (Vec<u8>, u32) {
 }
 
 /// The folder a job's plan files are found from.
-fn folder_of(job: &Path) -> PathBuf {
+pub fn folder_of(job: &Path) -> PathBuf {
     job.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new(".")).to_path_buf()
 }
 

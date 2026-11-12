@@ -4334,3 +4334,11 @@ it worked on. The window ones are built and **not yet seen**.
 
 **Changed behaviour:** `show` writes a placed thing's size as feet and inches; a moved
 thing's source ends "moved (by hand in the model)" (`demos/carryw.sh` expects it).
+
+* **J18-3, built and not yet seen: a file is picked from a list.** Wherever the window
+  asks for a file (Add drawing; each kind under Bring in), the files that can be
+  picked are listed under the field: those in the job's folder to begin with, with a
+  row to go up one folder and a row for each folder to go into. A file's row puts its
+  name in the field as it lies from the job's folder (a drawing's with ", 1" for its
+  page, to be changed for another page); Enter then does what it did. The name can
+  still be typed and the file can still be dropped on the window.

@@ -325,6 +325,79 @@ fn switch_of(p: &mut ChildSpawnerCommands, on: bool, name: String, act: impl Fn(
     });
 }
 
+/// A file's place as it lies from a folder: "plans/a-1.pdf", or "../sheets/vanity.pdf".
+fn as_it_lies(from: &std::path::Path, to: &std::path::Path) -> String {
+    let (from, to): (Vec<_>, Vec<_>) = (from.components().collect(), to.components().collect());
+    let same = from.iter().zip(&to).take_while(|(a, b)| a == b).count();
+    let mut parts: Vec<String> = vec!["..".to_string(); from.len() - same];
+    parts.extend(to[same..].iter().map(|c| c.as_os_str().to_string_lossy().to_string()));
+    parts.join("/")
+}
+
+/// The files that can be picked, listed under the field that asks for one (J18-3: nobody
+/// should have to type where a file lies). The folder the job is kept in to begin with;
+/// a folder's row goes into it and the first row goes up one. A file's row puts its
+/// name in the field, as it lies from the job's folder; Enter then does what Enter does.
+/// `kinds` are the endings that can be picked; `then` is what follows the name (a
+/// drawing's page).
+fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entry, kinds: &'static [&'static str], then: &'static str) {
+    let home = crate::plans::folder_of(&doc.path);
+    let home = std::fs::canonicalize(&home).unwrap_or(home);
+    let here = doc.browse.clone().unwrap_or_else(|| home.clone());
+    let mut folders: Vec<String> = Vec::new();
+    let mut files: Vec<String> = Vec::new();
+    if let Ok(read) = std::fs::read_dir(&here) {
+        for e in read.flatten() {
+            let name = e.file_name().to_string_lossy().to_string();
+            if name.starts_with('.') {
+                continue;
+            }
+            match e.file_type() {
+                Ok(t) if t.is_dir() => folders.push(name),
+                Ok(_) if kinds.iter().any(|k| name.to_lowercase().ends_with(k)) => files.push(name),
+                _ => {}
+            }
+        }
+    }
+    folders.sort_by_key(|n| n.to_lowercase());
+    files.sort_by_key(|n| n.to_lowercase());
+    let said = here.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "this computer".to_string());
+    f.spawn((text(fonts, format!("IN {}", if here == home { "THE JOB'S FOLDER".to_string() } else { said.to_uppercase() }), 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+    let line = |f: &mut ChildSpawnerCommands, name: String, shown: String, ink: Color, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
+        row(f, false, name, move |doc| act(doc), |r| {
+            r.spawn((text(fonts, shown, 12.0, Weight::Medium, ink), TextLayout::no_wrap(), Pickable::IGNORE));
+        });
+    };
+    if let Some(up) = here.parent().map(|p| p.to_path_buf()) {
+        let to = up.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "the top".to_string());
+        line(f, "Up one folder".to_string(), format!("\u{2191} Up, to {to}"), theme::ink_soft(), Box::new(move |doc| {
+            doc.browse = Some(up.clone());
+            doc.touch();
+        }));
+    }
+    for name in folders.iter().take(30) {
+        let into = here.join(name);
+        line(f, format!("Folder {name}"), format!("\u{25B8} {name}"), theme::ink_soft(), Box::new(move |doc| {
+            doc.browse = Some(into.clone());
+            doc.touch();
+        }));
+    }
+    for name in files.iter().take(40) {
+        let (path, home) = (here.join(name), home.clone());
+        line(f, format!("File {name}"), name.clone(), theme::ink(), Box::new(move |doc| {
+            let lies = as_it_lies(&home, &path);
+            doc.open(entry, format!("{lies}{then}"));
+            doc.say(Tone::Done, format!("{}: Enter brings it in.", path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()));
+        }));
+    }
+    if files.is_empty() {
+        f.spawn(text(fonts, format!("No file here that can be picked ({}). Go into a folder, or up.", kinds.join(", ")), 10.5, Weight::Regular, theme::ink_faint()));
+    }
+    if files.len() > 40 || folders.len() > 30 {
+        f.spawn(text(fonts, "More than fit in this list: type the start of the name, or go into a folder.", 10.5, Weight::Regular, theme::ink_faint()));
+    }
+}
+
 /// A round spot of a layer's colour: what the layer is drawn in.
 fn spot(p: &mut ChildSpawnerCommands, colour: Color) {
     p.spawn((Node { width: px(9.0), height: px(9.0), border_radius: BorderRadius::all(px(5.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(colour), Pickable::IGNORE));
@@ -536,13 +609,15 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
             c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
                 let typed = doc.entry.as_ref().map(|e| e.1.clone()).unwrap_or_default();
                 theme::field(f, fonts, "File, page", &typed, "", 1, LEFT_W - 30.0);
-                f.spawn(text(fonts, "A PDF, PNG or JPEG, like plans/a-1.pdf, 2. Enter adds it. Or drop the file on this window.", 10.5, Weight::Regular, theme::ink_faint()));
+                f.spawn(text(fonts, "Pick the plan below (a PDF, PNG or JPEG). Its page follows a comma: change the 1 for another page. Enter adds it. Or drop the file on this window.", 10.5, Weight::Regular, theme::ink_faint()));
+                pick_list(f, fonts, doc, Entry::Drawing, &[".pdf", ".png", ".jpg", ".jpeg"], ", 1");
             });
         } else {
             c.spawn(Node { padding: UiRect::axes(px(6.0), px(3.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|b| {
                 on_click(&mut button(b, fonts, "Add drawing", "", false), |doc| {
+                    doc.browse = None;
                     doc.open(Entry::Drawing, "");
-                    doc.say(Tone::Done, "Add drawing: type the file's name, or drop the file on this window.");
+                    doc.say(Tone::Done, "Add drawing: pick the plan from the list, or drop the file on this window.");
                 });
                 if !on_show.is_empty() {
                     on_click(&mut button(b, fonts, "Set scale", "", doc.draw.tool == Some(Tool::Scale)), |doc| tools::start(doc, Tool::Scale));
@@ -564,6 +639,12 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                         _ => "A CSV or XLSX. Enter brings it in. Or drop the file on this window.",
                     };
                     f.spawn(text(fonts, hint, 10.5, Weight::Regular, theme::ink_faint()));
+                    let kinds: &'static [&'static str] = match what {
+                        crate::model::Bring::Model => &[".ifc"],
+                        crate::model::Bring::Sheet => &[".pdf"],
+                        _ => &[".csv", ".xlsx"],
+                    };
+                    pick_list(f, fonts, doc, Entry::BringIn(what), kinds, "");
                 });
             }
             _ => {
@@ -576,8 +657,9 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                             match doc.dropped.take() {
                                 Some(file) if !matches!(what, crate::model::Bring::Model | crate::model::Bring::Sheet) => crate::bring::bring(doc, what, &file),
                                 _ => {
+                                    doc.browse = None;
                                     doc.open(Entry::BringIn(what), "");
-                                    doc.say(Tone::Done, format!("{}: type the file's name, or drop the file on this window.", what.name()));
+                                    doc.say(Tone::Done, format!("{}: pick the file from the list, or drop it on this window.", what.name()));
                                 }
                             }
                         });
