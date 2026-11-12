@@ -481,6 +481,16 @@ pub fn rebuild(
                 let along = (vb - va) / length.max(1e-6);
                 let turn = Quat::from_rotation_y((b[1] - a[1]).atan2(b[0] - a[0]) as f32);
                 let (h, t) = (*height as f32, *thickness as f32);
+                // A strip footing: concrete, as wide and as deep as it is, and nothing
+                // else. Where another footing ends at one of its ends it is carried on
+                // half its width, so the corner closes instead of leaving a notch.
+                if p.kind == Kind::Footing {
+                    let meets = |at: &[f64; 2]| snap.drawn.iter().any(|q| q.kind == Kind::Footing && q.path != p.path && matches!(&q.shape, Shape::Wall { a: qa, b: qb, .. } if [qa, qb].iter().any(|e| (e[0] - at[0]).abs() < 0.01 && (e[1] - at[1]).abs() < 0.01)));
+                    let (back, on) = (if meets(a) { t / 2.0 } else { 0.0 }, if meets(b) { t / 2.0 } else { 0.0 });
+                    let middle = va + along * ((length + on - back) / 2.0) + Vec3::Y * (h / 2.0);
+                    build.piece(&p.path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(length + back + on, h, t) }, theme::concrete(), 0.92, 0.0, true);
+                    continue;
+                }
                 let half_t = t / 2.0;
                 // What it is dressed in, read from what is priced on it (call 58): which
                 // face is outside, the cladding on that face, a wainscot under it, and
@@ -912,7 +922,20 @@ pub fn tint(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut mater
 
 /// The ground is paper on plan and a yard in 3D, whichever the view is now: it is not
 /// left the colour it was drawn in when the view changes without anything being redrawn.
-pub fn ground_tone(doc: Res<Doc>, ground: Query<&MeshMaterial3d<StandardMaterial>, With<Ground>>, mut materials: ResMut<Assets<StandardMaterial>>) {
+pub fn ground_tone(doc: Res<Doc>, ground: Query<&MeshMaterial3d<StandardMaterial>, With<Ground>>, mut seen: Query<(&mut Visibility, &mut Transform), With<Ground>>, snap: Res<Snapshot>, mut materials: ResMut<Assets<StandardMaterial>>) {
+    // The ground has a switch: off, what is under it is seen. On plan it is the paper
+    // the drawing is on, and lies under the lowest thing drawn, so the plan of a
+    // foundation is not hidden by the ground over it.
+    let lowest = snap.drawn.iter().filter_map(|p| match &p.shape { Shape::Wall { base, .. } => Some(*base as f32), _ => None }).fold(0.0_f32, f32::min);
+    let (want_seen, want_y) = (if doc.show.ground { Visibility::Inherited } else { Visibility::Hidden }, if doc.plan { lowest - 0.5 } else { 0.0 } - 0.04);
+    for (mut v, mut t) in &mut seen {
+        if *v != want_seen {
+            *v = want_seen;
+        }
+        if (t.translation.y - want_y).abs() > 1.0e-4 {
+            t.translation.y = want_y;
+        }
+    }
     let want = if doc.plan { theme::ground() } else { theme::yard() };
     for handle in &ground {
         if materials.get(&handle.0).is_some_and(|m| m.base_color != want) {

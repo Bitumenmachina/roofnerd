@@ -413,6 +413,18 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 cell(r, 100.0, true, |_| {});
                 cell(r, 110.0, true, |c| words(c, fonts, total(&storey.wall_net), 12.5, Weight::Semibold, theme::status_ink(storey.wall_net.status)));
             });
+            // The level's strip footings, where it has any: their length and, in the
+            // last column, the concrete in them. They are never in the walls above.
+            if storey.footings.members > 0 {
+                t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(0.0)), min_height: px(34.0), ..default() }, BackgroundColor(theme::panel_alt()))).with_children(|r| {
+                    cell(r, 7.0, false, |c| dot(c, storey.footing_volume.status.max(storey.footings.status)));
+                    cell(r, 0.0, false, |c| words(c, fonts, format!("Footings, {}", storey.footings.members), 12.5, Weight::Semibold, theme::ink()));
+                    cell(r, 100.0, true, |c| words(c, fonts, total(&storey.footings), 12.5, Weight::Semibold, theme::status_ink(storey.footings.status)));
+                    cell(r, 110.0, true, |_| {});
+                    cell(r, 100.0, true, |_| {});
+                    cell(r, 110.0, true, |c| words(c, fonts, total(&storey.footing_volume), 12.5, Weight::Semibold, theme::status_ink(storey.footing_volume.status)));
+                });
+            }
             // The same walls by their type, where the level has more than one: the
             // model's own sums, not the window's.
             if storey.walls_by_type.len() > 1 {

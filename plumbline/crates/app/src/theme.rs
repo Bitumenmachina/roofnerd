@@ -565,6 +565,8 @@ pub fn discipline_colour(d: plumbline_world::Discipline) -> Color {
 pub fn wall_outside() -> Color { hex(0xEDE8DF) }
 pub fn wall_inside() -> Color { hex(0xF4F2EE) }
 pub fn floor_colour() -> Color { hex(0xC9B79C) }
+/// Concrete as placed: a footing, a foundation wall.
+pub fn concrete() -> Color { hex(0xA9A9A4) }
 /// A floor on the plan: paper.
 pub fn plan_paper() -> Color { hex(0xFBFBF8) }
 pub fn glass() -> Color { Color::srgba(0.40, 0.52, 0.62, 0.55) }

@@ -545,8 +545,11 @@ pub fn dress(job: &mut Job) -> Dress {
         t: f64,
         h: f64,
     }
+    // Walls only: a footing is placed as a wall is and is not one (a wall is not
+    // carried past its end to meet the footing under it).
     let walls: Vec<W> = placed
         .iter()
+        .filter(|p| p.kind == Kind::Wall)
         .filter_map(|p| match &p.shape {
             Shape::Wall { a, b, thickness, height, .. } => Some(W { path: p.path.clone(), storey: p.storey.clone(), a: *a, b: *b, t: *thickness, h: *height }),
             _ => None,

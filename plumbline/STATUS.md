@@ -4766,3 +4766,24 @@ CY (there is no volume figure on a wall yet; call 70 says so), and everything in
 window (the concrete, the ground's switch, the picture). The made-up whole house has
 no foundation yet.
 
+**The foundation in the window: built and seen** (`demos/captured/trades/1-foundation-drawn.png`,
+both windows, the job of `demos/found.sh`; sent to Patrick). With the ground switched
+off (a new switch under Show, offered where something is drawn below the ground): four
+footings in concrete, closed at their corners and projecting evenly past the walls;
+four foundation walls standing on them, meeting cleanly at the corners; the level's
+panel reads Walls 4, 136.00 LF; Wall face 544.00 SF; **Footings 4, 136.00 LF; Footing
+concrete 10.07 CY**; the Building tab has the same footings row under the walls'
+total; "8 not priced" beside the price.
+
+**Seen in the first picture and fixed before the second:** each wall was carried a
+foot past its corner (the rule that closes wall corners took the footing under a wall
+for a wall meeting it; it now takes walls only), and the level's panel did not list
+its footings.
+
+**Seen and not fixed:** the footings' concrete sits under a column headed "Net, one
+side" on the Building tab; the foundation walls are bare, the off-white of any wall
+with nothing priced on it, not concrete; on plan (not looked at closely yet) the
+foundation is drawn like any level. There is no tool in the window to draw a footing
+yet: it is drawn at the command line. No window demonstration script yet; this
+picture was taken by hand with the kit.
+

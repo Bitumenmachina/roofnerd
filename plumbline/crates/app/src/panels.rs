@@ -648,6 +648,14 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 switch(r, on);
             });
         };
+        // The ground has a switch where something is drawn under it: with it off the
+        // footings and the foundation walls are seen.
+        if snap.drawn.iter().any(|p| p.kind == Kind::Footing) || snap.storeys.iter().any(|s| s.elevation.is_some_and(|e| e < -0.5)) {
+            layer(c, "Ground", "", theme::yard(), doc.show.ground, None, Box::new(|doc| {
+                doc.show.ground = !doc.show.ground;
+                doc.redraw();
+            }));
+        }
         for (i, d) in [Discipline::Architecture, Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing].into_iter().enumerate() {
             let count = snap.counts.iter().find(|c| c.0 == d).map(|c| c.1).unwrap_or(0);
             if i == 1 && !snap.planes.is_empty() {
@@ -1448,6 +1456,11 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         heading(p, fonts, &format!("Level: {}", storey.name));
         listed(p, fonts, None, "Walls", storey.walls.members.to_string(), total(&storey.walls), if storey.walls.members == 0 { Status::Known } else { storey.walls.status });
         listed(p, fonts, None, "Wall face, less openings", String::new(), total(&storey.wall_net), if storey.wall_net.members == 0 { Status::Known } else { storey.wall_net.status });
+        // A level's footings, where it has any: their length, and the concrete in them.
+        if storey.footings.members > 0 {
+            listed(p, fonts, None, "Footings", storey.footings.members.to_string(), total(&storey.footings), storey.footings.status);
+            listed(p, fonts, None, "Footing concrete", String::new(), total(&storey.footing_volume), storey.footing_volume.status);
+        }
         listed(p, fonts, None, "Floor", storey.floors.members.to_string(), total(&storey.floors), if storey.floors.members == 0 { Status::Known } else { storey.floors.status });
         if storey.rooms.members > 0 {
             listed(p, fonts, None, "Rooms, inside their walls", storey.rooms.members.to_string(), total(&storey.rooms), storey.rooms.status);

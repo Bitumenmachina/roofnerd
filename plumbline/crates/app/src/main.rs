@@ -147,7 +147,7 @@ fn main() {
         edited: fresh,
         plan: false,
         walk: false,
-        show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, off_levels: Default::default(), off_systems: Default::default() },
+        show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, ground: true, off_levels: Default::default(), off_systems: Default::default() },
         // The sheet opens on the estimate once anything is priced; before that, on what
         // has been taken off.
         tab: if has_lines { Tab::Estimate } else if has_roof { Tab::Roof } else { Tab::Building },

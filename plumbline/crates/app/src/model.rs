@@ -180,6 +180,9 @@ pub struct Show {
     pub certainty: bool,
     /// Each clash marked on the model, whatever tab the sheet is on.
     pub clashes: bool,
+    /// The ground the building stands on. Off, what is under it (the footings, the
+    /// foundation walls) is seen.
+    pub ground: bool,
     /// The levels switched off, by path: what stands on one is not drawn. (A level
     /// "on show" alone is `storey`; this is each level's own switch.)
     pub off_levels: std::collections::BTreeSet<String>,
