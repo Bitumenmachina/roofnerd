@@ -858,6 +858,19 @@ pub fn tint(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut mater
     }
 }
 
+/// The ground is paper on plan and a yard in 3D, whichever the view is now: it is not
+/// left the colour it was drawn in when the view changes without anything being redrawn.
+pub fn ground_tone(doc: Res<Doc>, ground: Query<&MeshMaterial3d<StandardMaterial>, With<Ground>>, mut materials: ResMut<Assets<StandardMaterial>>) {
+    let want = if doc.plan { theme::ground() } else { theme::yard() };
+    for handle in &ground {
+        if materials.get(&handle.0).is_some_and(|m| m.base_color != want) {
+            if let Some(mut material) = materials.get_mut(&handle.0) {
+                material.base_color = want;
+            }
+        }
+    }
+}
+
 /// Ease the camera toward where it is going, and set the lens for the view it is in.
 pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>), (With<MainCamera>, Without<Sky>)>, mut sun: Query<&mut DirectionalLight, With<KeyLight>>, mut sky: Query<(&mut Transform, &mut Visibility), (With<Sky>, Without<MainCamera>)>) {
     // A plan is a drawing, not a view: it has no shadows to hide what is on the floor.

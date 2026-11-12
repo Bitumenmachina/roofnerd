@@ -133,6 +133,7 @@ fn main() {
         choosing: false,
         give: None,
         placing: None,
+        fresh: false,
         entry_line: None,
         measuring: None,
         origin: [0.0; 3],
@@ -175,7 +176,7 @@ fn main() {
         .add_systems(Startup, (scene::setup, setup).chain())
         .add_systems(
             Update,
-            (keys, plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, scene::place_camera, tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
+            (keys, plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::place_camera, scene::ground_tone).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
         )
         .run();
 }
@@ -417,6 +418,13 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                         Some(i) => {
                             doc.form_at = i;
                             text = doc.form[i].clone();
+                            doc.fresh = !text.is_empty();
+                            // Enter that cannot finish says why (J18-2).
+                            if event.logical_key == Key::Enter && text.is_empty() {
+                                if let Entry::Settings(tool) = field {
+                                    doc.say(Tone::Refused, format!("{}: {} is still to be typed. Then Enter takes it in hand.", tool.name(), tool.fields()[i].0));
+                                }
+                            }
                         }
                         None => done = Some(true),
                     }
@@ -427,11 +435,17 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                         doc.form[at] = text.trim().to_string();
                         doc.form_at = at + 1;
                         text = doc.form[at + 1].clone();
+                        doc.fresh = !text.is_empty();
                     }
                 }
                 // A laser set to send Tab after its reading: Tab ends an entry as Enter does.
                 Key::Enter | Key::Tab => done = Some(true),
                 Key::Escape => done = Some(false),
+                // A filled field typed over: the first key replaces what was there.
+                Key::Backspace if doc.fresh => {
+                    text.clear();
+                    doc.fresh = false;
+                }
                 Key::Backspace => {
                     if text.is_empty() && together && doc.form_at > 0 {
                         doc.form_at -= 1;
@@ -441,9 +455,15 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                     }
                 }
                 // The space after a comma is not the start of the next field.
-                Key::Space if together && text.is_empty() => {}
+                Key::Space if together && (text.is_empty() || doc.fresh) => {}
                 Key::Space => text.push(' '),
-                Key::Character(c) => text.push_str(c),
+                Key::Character(c) => {
+                    if doc.fresh {
+                        text.clear();
+                        doc.fresh = false;
+                    }
+                    text.push_str(c)
+                }
                 _ => {}
             }
         }

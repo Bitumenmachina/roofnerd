@@ -203,6 +203,9 @@ pub struct Doc {
     /// `entry` holds that one's text as it is typed.
     pub form: Vec<String>,
     pub form_at: usize,
+    /// The field being typed in still holds what it opened with: the first key typed
+    /// replaces it, as typing over a filled field does in any program.
+    pub fresh: bool,
     /// Keys pressed by a button on screen: each does exactly what the key does.
     pub pressed: Vec<KeyCode>,
     /// A change of view asked for by a tool or a button: plan, on foot.
@@ -284,6 +287,7 @@ impl Doc {
     pub fn open_form(&mut self, field: Entry, values: Vec<String>, at: usize) {
         self.entry_line = None;
         self.form_at = at.min(values.len().saturating_sub(1));
+        self.fresh = values.get(self.form_at).is_some_and(|v| !v.is_empty());
         self.entry = Some((field, values.get(self.form_at).cloned().unwrap_or_default()));
         self.form = values;
         self.touch();

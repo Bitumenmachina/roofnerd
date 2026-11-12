@@ -100,6 +100,7 @@ demos/spec.sh              # items made from manufacturers' sheets (PDF), placed
 demos/glassw.sh            # moving round the model, measured: the wheel closes on the pointer, a turn is about it, a flick carries on; pictures in demos/captured/glass
 demos/carryw.sh            # a vanity picked up in the model and carried clear of a clash, red while it is in it; pictures in demos/captured/carry
 demos/itemsw.sh            # in the window: a maker's sheet made into an item, one set down with a click, and the BIM model, workbook, CSV and lenses written out; pictures in demos/captured/items
+demos/toolsw.sh            # a tool shows the sizes it will place and typing is never thrown away; pictures in demos/captured/tools
 demos/pricew.sh            # the same in the window: Starter assemblies, an assembly picked from the list and changed, a price typed on the sheet
 demos/dress.sh             # what the house is dressed in, read from what is priced on it: each wall, the roof, a window and a door, with the line that says so
 demos/dressw.sh            # the same in the window: one cladding to a wall, the priced sample house, and the same house bare; pictures in demos/captured/dress

@@ -67,7 +67,14 @@ esc() { xdotool key Escape; sleep 2; }
 typed() { xdotool type --delay 250 -- "$1"; sleep 1; if [ -n "${2:-}" ]; then shot; fi; xdotool key Return; sleep 3; }
 # A tool taken in hand; with a second word, what it draws with, typed into its fields
 # (a comma goes on to the next field, as Tab does).
-tool() { on "$1"; sleep 2; if [ -n "${2:-}" ]; then typed "$2" "${3:-}"; fi; }
+# A tool picked again shows the sizes it will place (DECISIONS.md call 64): with nothing
+# new to type, Enter takes it in hand as it was.
+tool() {
+  on "$1"; sleep 2
+  if [ -n "${2:-}" ]; then typed "$2" "${3:-}"
+  elif awk -F'\t' '$1=="model" && $2 ~ / field$/' "$PLUMBLINE_MAP" 2>/dev/null | grep -q .; then xdotool key Return; sleep 3
+  fi
+}
 # A length: the pointer shows the way, the first digit opens the field, and the rest is
 # typed once the field is up (on a software renderer the frame that draws a new field is
 # slow, and keys typed during it are lost).

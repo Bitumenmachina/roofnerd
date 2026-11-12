@@ -4154,3 +4154,49 @@ made-up vanity sheet of `demos/spec.sh` (36 in wide, 21 in deep, 34 1/2 in high,
   a sheet is read from its first page only; an item cannot be turned or renamed in the
   window; the Write out names say "job" because the job file is job.json, which is a
   file's name on screen (J18-4 stands).
+
+## A tool shows the sizes it will place (J18-1, J18-2). How it will be shown (written before the script)
+
+`demos/toolsw.sh` walks what the estimator walked. A made-up wall 24 ft long. In the
+window, on plan:
+
+1. Door: its fields open with a height of 6' 8" and a sill of 0 ft already in them;
+   the width `3' 6"` is typed, then Enter (the keys that lost three doors in the
+   eighteenth judgment). A click on the wall at 6 ft: a door 3.5 ft wide and
+   6.6667 ft high.
+2. Door again: its fields open showing 3' 6", 6' 8", 0 ft. Before anything is typed,
+   a click on the wall at 12 ft: nothing is placed and the line says the door's sizes
+   are still open.
+3. `2' 8"` typed over the width, Enter, a click at 18 ft: a second door, 2.6667 ft
+   wide (the one that went in at the size before, J18-1).
+4. Window, `10 ft, 5 ft, 2 ft 6 in`, a click at 3 ft on the north wall... is not in
+   this script: one wall keeps it short. Windows go through the same fields.
+5. Saved and read back: two doors, 3.5 ft and 2.6667 ft wide, each 6.6667 ft high;
+   the wall's openings are 3.5 x 6.6667 + 2.6667 x 6.6667 = 23.33 + 17.78 = 41.11 SF.
+
+## A tool shows the sizes it will place (J18-1, J18-2). What was run and what it showed (2026-11-12)
+
+`demos/toolsw.sh` passes; its five pictures are in `demos/captured/tools` and were read.
+Call 64 has the decision.
+
+* Door: its fields open with 6' 8" and 0 ft in them. `3' 6"` and Enter: in hand; a
+  click at 6 ft places a door 3.5 ft by 6.6667 ft. (In the eighteenth judgment these
+  keys lost three doors.)
+* Door again: its fields show 3' 6", 6' 8", 0 ft. A click on the wall then places
+  nothing, and the line across the top and along the bottom reads "Nothing was
+  placed: the door's sizes are still open. Enter takes it in hand; then click."
+* `2' 8"` typed over the width, Enter, a click at 18 ft: a door 2.6667 ft wide. (In
+  the judgment this one went in at the size before.)
+* Read back from the saved job: two doors, at 6 ft and 18 ft, each the size that was
+  on screen; the wall's openings 41.11 SF, as worked by hand.
+* **Changed behaviour:** picking a tool that has sizes opens them every time; a door's
+  height starts at 6' 8" (it was a hint of 7 ft); typing in a filled field replaces
+  what is there. The kit's `tool` presses Enter for a tool picked with nothing new to
+  type.
+* **Also fixed, seen in these pictures:** on plan the ground stayed the yard's grey
+  when the view changed without anything being redrawn. It is paper on plan again.
+* **Still open from the eighteenth judgment:** J18-3 (a file is named by typing),
+  J18-4 (folder and file names on screen), J18-5 ("0" refused as an elevation), J18-6
+  (a half-filled level form dropped in silence), J18-7 in part (a door still has no
+  kind), J18-8 (the Building tab's walls have no type, thickness or place), J18-9,
+  J18-10.

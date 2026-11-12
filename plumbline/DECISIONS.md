@@ -2603,3 +2603,30 @@ shadow, which needs no new pass; real blur behind it as a second step from a sma
 second picture of the scene. Switches and smooth scrolling written here, no new
 crate. Dragging by picking's drag events and a ray to the floor, written back
 through `ed::move_by`.
+
+### Call 64. A tool picked shows the sizes it will place, every time (2026-11-12)
+
+The eighteenth judgment's worst findings (J18-1, J18-2) were one fault seen twice: a
+person typed a size and the program placed a different one without a word. A tool
+picked a second time came back in hand with its old sizes, no field open, and every
+keystroke was thrown away; and Enter on a form with one field still empty moved to
+that field in silence, so the next click on the wall did nothing.
+
+Decided:
+
+* **Picking a tool that has sizes always opens them**, filled with what it will place
+  (the last sizes typed for it), the first field ready. Typing in a filled field
+  replaces what is there, as it does in any program. Enter with nothing changed takes
+  the tool in hand as it was: one more key for the person who wants the same again,
+  and no way left to place a size that is not on screen.
+* **Enter that cannot finish says why**: which field is still empty.
+* **A click on the model while the sizes are open says so**: nothing was placed, and
+  what to do. It is never a click that does nothing.
+* **A door starts at 6' 8" high with its sill at the floor** (J18-7: a residential
+  door is 6'-8", not 7 ft), shown in its fields to be typed over. Its width is typed.
+  Nothing else is filled in for anyone: a window's sizes and sill, a wall's thickness,
+  what a fixture is, are the person's to say.
+
+What this changes for the scripts: a demonstration that picked a tool a second time
+and expected it in hand now gets its sizes open and presses Enter (the kit's `tool`
+does it).

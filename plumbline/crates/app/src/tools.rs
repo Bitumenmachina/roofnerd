@@ -239,6 +239,12 @@ pub fn cant(doc: &mut Doc, what: &str, why: impl std::fmt::Display) {
 /// building on show, the lowest storey is the one drawn on. With its settings not yet
 /// said, it asks for them first.
 pub fn start(doc: &mut Doc, tool: Tool) {
+    begin(doc, tool, true)
+}
+
+/// `ask`: show the tool's sizes to be typed over before it is taken in hand (call 64).
+/// Not asked again when they have just been typed.
+fn begin(doc: &mut Doc, tool: Tool, ask: bool) {
     doc.draw.picked.clear();
     doc.draw.tool = None;
     if doc.entry.take().is_some() {
@@ -266,9 +272,16 @@ pub fn start(doc: &mut Doc, tool: Tool) {
         cant(doc, "move", "nothing is selected. Click what is to be moved first.");
     } else if matches!(tool, Tool::Scale | Tool::LineUp) && !has_drawing {
         cant(doc, if tool == Tool::Scale { "set a scale" } else { "line up" }, "this level has no drawing. Add one first.");
-    } else if tool.takes() > 0 && !doc.draw.settings.contains_key(tool.name()) {
-        doc.open_form(Entry::Settings(tool), vec![String::new(); tool.takes()], 0);
-        doc.say(Tone::Done, format!("{}: type each value, Tab to the next, Enter to draw.", tool.name()));
+    } else if tool.takes() > 0 && (ask || !doc.draw.settings.contains_key(tool.name())) {
+        // What it will place, to be read and typed over: the last sizes typed for it,
+        // or, for a door, the height and sill a residential door has.
+        let shown = doc.draw.settings.get(tool.name()).cloned().unwrap_or_else(|| match tool {
+            Tool::Door => vec![String::new(), "6' 8\"".to_string(), "0 ft".to_string()],
+            _ => vec![String::new(); tool.takes()],
+        });
+        let again = doc.draw.settings.contains_key(tool.name());
+        doc.open_form(Entry::Settings(tool), shown, 0);
+        doc.say(Tone::Done, if again { format!("{}: this is what it will place. Type over anything to change it; Enter takes it in hand.", tool.name()) } else { format!("{}: type each value, Tab to the next, Enter to draw.", tool.name()) });
     } else {
         doc.draw.tool = Some(tool);
         doc.say(Tone::Done, format!("{} in hand.", tool.name()));
@@ -282,7 +295,7 @@ pub fn settings_entered(doc: &mut Doc, tool: Tool, values: &[String]) {
     match checked(tool, values) {
         Ok(parts) => {
             doc.draw.settings.insert(tool.name(), parts);
-            start(doc, tool);
+            begin(doc, tool, false);
         }
         Err((at, why)) => {
             doc.open_form(Entry::Settings(tool), values.to_vec(), at);
@@ -795,6 +808,17 @@ pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, plans: Res<crate:
 pub fn clicks(mut doc: ResMut<Doc>, mouse: Res<ButtonInput<MouseButton>>, windows: Query<&Window, With<PrimaryWindow>>) {
     if mouse.just_pressed(MouseButton::Left) && doc.draw.swallow {
         doc.bypass_change_detection().draw.swallow = false;
+    }
+    // A click on the model while a tool's sizes are still open places nothing, and
+    // says so (J18-2): it is never a click that does nothing.
+    if mouse.just_pressed(MouseButton::Left) {
+        if let Some((Entry::Settings(tool), _)) = doc.entry.clone() {
+            if windows.single().ok().and_then(|w| w.cursor_position().map(|c| over_model(w, c))).unwrap_or(false) {
+                let empty = doc.form.iter().enumerate().filter(|(i, v)| v.is_empty() && *i != doc.form_at).map(|(i, _)| tool.fields()[i].0).collect::<Vec<_>>();
+                doc.say(Tone::Refused, format!("Nothing was placed: the {}'s sizes are still open. {}Enter takes it in hand; then click.", tool.name().to_lowercase(), if empty.is_empty() { String::new() } else { format!("Still to be typed: {}. ", empty.join(", ")) }));
+                doc.touch();
+            }
+        }
     }
     if !mouse.just_pressed(MouseButton::Left) || doc.draw.tool.is_none() || doc.entry.is_some() || !doc.plan {
         return;
