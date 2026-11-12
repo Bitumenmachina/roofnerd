@@ -6,7 +6,8 @@ Product scope and the fixed rules belong to Patrick.
 Read this first, every session. A session does not remember the last one; the repository
 does. Each rule is here once. Patrick's rulings of 2026-11-11 are folded in and override
 anything older that conflicts (`plumbline/DECISIONS.md` call 42 has them as he gave them);
-so are his of 2026-11-12 (call 57).
+so are his of 2026-11-12 (call 57) and of later that day (call 62, which replaced the
+look and asked for this file's last section).
 
 ## What this is
 
@@ -24,7 +25,14 @@ list and its source.)
 
 **The mission.** Trace the drawings we are given, build the 3D house from the tracing,
 price it division by division, and show the clashes the drawings hid. A veteran with
-simple field tools then confirms or clears each one.
+simple field tools then confirms or clears each one. Things are put in the house from
+their makers' sheets (mechanicals, fixtures, furniture), picked up and moved, and the
+clashes light and clear as they move: "the whole point of clash is also moving a
+bathroom vanity around". The building goes out as a BIM file (IFC).
+
+**How it should feel** (Patrick, call 62): "editing software for construction that
+feels like playing a hyper realistic video game"; "more like an Apple product with
+windows depth"; "think Google Earth feel".
 
 **The loop.** Traced values start as Assumed. A clash between Assumed elements is a
 field question; a clash between Known elements is a finding. The program produces a
@@ -53,7 +61,10 @@ the lineage this came from. It is not being built on. Its own notes are at the e
 - **Imports matter as much as exports.** People bring in what they already have: PDF
   plans, vector and scanned; PNG and JPEG plans and aerial images; CSV and XLSX supplier
   price lists, prior estimates and assembly libraries; IFC models from other trades and
-  designers; the program's own job file. The job file and CSV round-trip without loss.
+  designers; manufacturers' sheets, each made into an item to place (its sizes Assumed
+  and sourced to the line of the sheet, what the sheet does not say Unknown); the
+  program's own job file. A file is picked from a list; nobody types where a file lies.
+  Everything that can be written out can be written out from the window. The job file and CSV round-trip without loss.
   For any other format, loss is reported, never silent.
 - **Speak construction.** Every word on screen is a builder's or estimator's word. Units
   are written the way trades write them: SF, LF, EA, SQ, LS, LB, sheets, rolls, boxes, M.
@@ -63,9 +74,19 @@ the lineage this came from. It is not being built on. Its own notes are at the e
 - **Teach by doing.** A new user completes a first takeoff from a PDF without a manual.
   Every number can show what it is made of and where it came from. Depth is on demand:
   macro to micro means zooming into the same job, never changing screens.
-- **The look is an instrument.** Edges are drawn by line type, surfaces are matte,
-  layouts are dense, and the plan and the sheet read like drawings. 3D stays shaded, with
-  studio light and a neutral ground. No sky, sun or grass.
+- **The window is glass over the model, with depth.** The model fills the window. What
+  is on screen with it is a layer of frosted, translucent, rounded panels floating over
+  it, each with a soft shadow, each able to be put away; nearer things read nearer. It
+  moves like Google Earth: the wheel dives at what is under the pointer, a drag slides
+  the ground with the hand, everything eases and carries momentum, a double-click flies
+  to a thing, and no view ever jumps. A panel scrolls smoothly under the wheel and
+  shows where it is. Every layer of the job, and every panel, has a switch that reads
+  on or off at a glance. (This replaces "the look is an instrument": flat, dense and
+  matte was shown to Patrick and read to him as no better. On a plan, edges are still
+  drawn by line type and the plan still reads like a drawing.)
+- **It looks real.** Physically based materials, soft shadows, light that reads as a
+  place. Whether there is a sky is `plumbline/QUESTIONS.md` Q22; the working answer is
+  a soft sky and horizon, and no grass, trees or scenery.
 - **The 3D house looks like the house.** It is dressed as it will be built, to the
   standard of high-end residential work: siding, masonry and stone, roofing, windows
   with their frames, sashes and glass, doors, trim. What it is dressed in is what the
@@ -107,6 +128,12 @@ The order is Patrick's; how each step is done is yours.
 6. The VIF list and the teach-by-doing first job.
 7. The visual standard and a visual judge.
 8. IFC export, xlsx export and publishing.
+9. The window rebuilt to call 62: glass with depth, Google Earth navigation, switches,
+   smooth scrolling, a thing picked up and moved with its clashes live, items from
+   makers' sheets, everything exported from the window. `plumbline/STATUS.md` ("The
+   rebuild after call 62") has the plan, part by part, and where it stands. This comes
+   before the release candidate: items 9 to 12 of the deliverable are judged on the
+   rebuilt window.
 
 ## The deliverable: a release candidate
 
@@ -132,7 +159,8 @@ and ask Patrick for the production ruling.
 9. A judge lists every word on every screen, and none is a software term.
 10. A fresh judge, briefed as a veteran estimator with no software background, completes
     a whole-house takeoff from a PDF using only the in-app help.
-11. The visual judge passes every screen against the instrument standard.
+11. The visual judge passes every screen against `plumbline/VISUAL.md` (to be rewritten
+    to call 62's standard before it is judged; the file as it stands is the old one).
 12. A fresh judge walks the whole path cold and cannot break the money path.
 13. A hand estimate in `refs/` is reproduced, with every difference explained line by
     line. If `refs/` has none, this item is marked pending.
@@ -213,3 +241,92 @@ the list in its `README.md`.
     pnpm install && pnpm test && pnpm gates
     cargo test --workspace --manifest-path src-tauri/Cargo.toml
     pnpm build:app && node tools/probe/front-door.mjs && node tools/probe/runtime-check.mjs
+
+## For whoever builds next
+
+Patrick asked for this section and named Opus 5.5 as the model that builds next. It is
+how to use the program and how to change it without breaking what it promises.
+
+**Read, in this order, before touching anything.** This file. Then the end of
+`plumbline/STATUS.md`: "Self-review, written cold", "Eighteenth judgment: what it
+found" and "The rebuild after call 62" say what is wrong, what an estimator hit, and
+what is half built. Then `plumbline/DECISIONS.md` call 62 (Patrick's words and how
+each clause was read) and `plumbline/QUESTIONS.md` Q22. The two surveys the rebuild
+rests on (what Google Earth, Cesium and building tools do, with numbers; what the
+engine gives, with file and line) are summarised in call 63 of DECISIONS.md when it
+exists; until then STATUS.md says where they are.
+
+**Use it.**
+
+    cd plumbline
+    cargo run -p plumbline -- sixteen /tmp/h.json    # a made-up whole house, priced in all sixteen divisions
+    cargo run -p plumbline -- estimate /tmp/h.json   # the estimate, by division; `plumbline` alone lists every verb
+    cargo run -p plumbline -- vif /tmp/h.json        # what to verify in the field, by dollars
+    cargo run -p plumbline -- clashes /tmp/h.json
+    cargo run -p plumbline-app -- /tmp/h.json        # the two windows
+    demos/spec.sh                                    # a demonstration: a script that drives the real program and checks it
+
+There is no screen on a cloud machine. The window is driven on a virtual display
+with a real pointer and keyboard, and seen by taking pictures and **reading them**:
+
+    xvfb-run -a -s "-screen 0 2500x980x24" demos/pricew.sh    # pictures land in demos/captured/price
+
+`demos/window.sh` is the kit every window demonstration uses: `open_window`, `on
+"Wall"` (click the control with that name), `sheet "Estimate"`, `typed`, `click X Y`,
+`shot` (F12 saves a picture of both windows), `park`, `at`/`plan_px` (a place on the
+plan to a place on screen). Controls are found by name through a map the program
+writes when `PLUMBLINE_MAP` is set (`crates/app/src/map.rs`): **keep every control's
+name when restyling it, or every script that clicks it breaks.** The renderer is
+software and slow (about a frame a second at worst): a click that begins and ends
+inside one frame is lost, so the kit holds each one. F2 saves. Do not run cargo in
+the tree while a timed window demonstration is running; build in a scratch worktree.
+
+**Where each thing is changed.**
+
+| To change | Go to |
+|---|---|
+| a colour, a size of type, a corner, a shadow, a word on a button | `crates/app/src/theme.rs` |
+| what panels there are and what is in them | `crates/app/src/panels.rs` (model window), `crates/app/src/sheet.rs` (estimate window) |
+| the camera, the light, how the house is drawn, what a click on the model does | `crates/app/src/scene.rs` |
+| a drawing tool (wall, door, run, move), its fields, what typing does | `crates/app/src/tools.rs`, and the entry state in `crates/app/src/main.rs` |
+| the patterns the house is dressed in (brick, lap siding, shingles) | `crates/app/src/dress.rs`; what finish a priced line names: `crates/world/src/finish.rs` |
+| bringing a file in from the window | `crates/app/src/bring.rs`, `crates/app/src/plans.rs` |
+| what the model holds and its rules | `crates/world/src/building/model.rs`, `components.rs`, `check.rs`; the saved job: `file.rs`, and `SPEC.md` |
+| a quantity, a formula on a line, a price | `crates/world/src/lines.rs`, `formula.rs`, `derive.rs`, `view.rs` |
+| clashes; the verify-in-field list | `crates/world/src/building/clash.rs`; `vif.rs` |
+| a maker's sheet read into an item | `crates/plans/src/lib.rs` (`words`), `crates/world/src/spec.rs` |
+| the workbook, CSV, the three lenses; IFC in and out | `crates/world/src/export.rs`, `crates/sheets`; `crates/ifc` |
+| a command-line verb and what it prints | `crates/cli/src/main.rs` |
+
+**Change it the way that has held.** In this order, every time:
+
+1. Write the demonstration first, in STATUS.md, with the figures worked by hand.
+2. If the change alters something a person sees or a number, write the decision in
+   DECISIONS.md before changing any expectation. A wording question is yours; decide
+   it and write it down.
+3. Build it. One arithmetic for one number: the model works a figure out, a window
+   only shows it. Every value is Known, Assumed or Unknown and says where it came from.
+4. Run `cargo test --workspace`, the demonstrations, and the gates listed under
+   "Running plumbline" (`tools/portmap.sh` after any new public item in
+   `crates/world/src/building*` or `editing*`: say where in BIMCraft you looked).
+5. Look at every picture yourself, as a person opening it for the first time.
+6. Have an agent that did not build it try to break it, and record what it finds in
+   STATUS.md the turn it arrives. Tell a judge to write its notes as it goes: a usage
+   limit can cut one off mid-run, and the eighteenth was cut off once.
+7. Say in STATUS.md what changed and what is not right. `tools/committed.sh`, then
+   commit and push to the branch.
+
+**What the last builder got wrong, so you do not.** Seventeen judgments went to the
+command line and the arithmetic and one, cut short, to the window a person uses. The
+window demonstrations typed sizes the one way that worked, so they never met what the
+first estimator met in his first hour: a tool that throws typing away and places a
+different size without a word (J18-1, J18-2). Walk the path a stranger walks, not the
+path you know. And the look was built to a written rule and judged against that rule
+rather than against whether anyone would want to open it. Patrick's test is his own
+eyes: when he says he does not see it, it is not there.
+
+**Small things that cost time.** Disk is a fixed allowance: `target/` grows past 12
+GB; delete `target/debug/incremental` and scratch targets when a link fails. The
+harness refuses `rm -rf` on a shell variable: use the literal path. IfcOpenShell is
+LGPL and is only ever run as an outside checker (`tools/ifc-check.py`), never linked.
+The default branch has none of this; the README's clone line names this branch.
