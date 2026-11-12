@@ -4680,3 +4680,30 @@ new light breaks. Each broken check is re-derived from the new picture and prove
 red before it is trusted; none is loosened. The light is not committed until they
 have been through.
 
+## Patrick's request for a snapshot of each trade (call 69)
+
+Seven snapshots, `demos/captured/trades/`, the made-up whole house, both windows side
+by side, on the program as committed at 58ab151 (the new light). Sent to him.
+
+| Trade | In the model (3D) | On the estimate | What the snapshot is |
+|---|---|---|---|
+| Foundation | **not drawn** | Division 3: footings and foundation walls (one subcontract figure), slab on grade by the SF | the estimate at Division 3 beside the finished house |
+| Framing | **not drawn** | Division 6: wall framing 2x6 at 16 in and partition framing 2x4, by the SF of each wall | the estimate at Division 6 beside the finished house |
+| Electrical | drawn: conduit, cable, panel, meter, receptacles, lights | its tab: power and lighting, by run | the house seen through, electrical only |
+| Plumbing | drawn: pipe, fittings, fixtures, water heater | its tab | the house seen through, plumbing only |
+| HVAC | drawn: supply and return duct, air handler, registers | its tab | the house seen through, mechanical only |
+| Interior woodwork | **not drawn** | Division 6: casing at each door, base by the LF of each room, cabinets as one figure | the estimate at those lines beside the finished house |
+| Waterproofing | **not drawn** | Division 7: sheathing and weather barrier by the SF of each wall, flashing and sealant at each opening | the estimate at Division 7 beside the finished house |
+
+**Seen in them and not right:** with the house seen through, electrical and plumbing
+runs are thin and pale against the ground under the new light and are hard to read
+(HVAC's ducts read well); the Electrical tab's "To verify" lists plumbing questions.
+
+**What it means.** Four of the seven trades he asked to see cannot be seen. That is
+now Q23 with the working assumption that they are to be drawn, and proposal 20.
+
+**Stopped to do this, and to be run again:** the six colour-measuring demonstrations
+on the new light (`glassw` was part way; none had finished). The light commit
+(58ab151) has still only had the window crate's tests, and `tools/committed.sh` has
+not been run on it.
+

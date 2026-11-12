@@ -75,3 +75,12 @@ Work outside a deliverable. Nothing here is built until the owner accepts it.
     619. Walls traced square by their typed lengths are right; the sheet under them
     drifts by about 2 1/2 in from one end of the house to the other. Two points picked on
     a line known to be level would give the turn.
+
+20. **Foundation, framing, waterproofing and interior woodwork drawn in the model**,
+    each with a switch of its own (from Patrick's request of 2026-11-12 for a snapshot
+    of each trade: DECISIONS.md call 69, QUESTIONS.md Q23). Today they are estimate
+    lines with nothing in the model behind them. A footing and foundation wall under
+    each exterior wall; plates, studs and headers in each framed wall; the weather
+    barrier under the finish and flashing at openings; base along each room and casing
+    at each opening. Each estimate line would take its quantity from what is drawn.
+

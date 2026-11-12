@@ -2783,3 +2783,34 @@ under the new light, and bloom.
 **What changes that a person sees:** every colour in 3D. Nothing on plan, nothing in
 the estimate window, no figure.
 
+### Call 69. Patrick, 2026-11-12 (night): one snapshot of each of seven trades
+
+**His words:** "I want to see one snapshot of each of the following trades -
+foundation , framing , electrical , plumbing , HVAC , interior wood work and
+waterproofing". Then: "Please confirm you got my last message".
+
+**What was done.** Confirmed. The six demonstrations then running were stopped (they
+are his program's checks, not his request). One snapshot per trade was taken on the
+made-up whole house, both windows side by side, on the program as it is
+(`demos/captured/trades/`, seven pictures), and sent with what they do and do not
+show said plainly.
+
+**What they show, which is the finding.** Three of the seven trades are in the
+model: electrical, plumbing and HVAC are drawn in 3D, each with a switch, and
+taken off on a tab of their own. **Four are not drawn at all:** foundation, framing,
+interior woodwork and waterproofing are lines on the estimate (footings and
+foundation walls as one subcontract figure; wall framing 2x6 at 16 in by the SF of
+wall; casing, base and cabinets; sheathing and weather barrier, flashing and
+sealant) with nothing in the model behind them. For those four the snapshot is the
+estimate's lines beside a picture of the finished house, and that was said.
+
+**How this is read** (QUESTIONS.md Q23 has it as a question with the working
+assumption): he asked to *see* each trade, in a program whose mission is the whole
+house, every trade, in 3D. A trade that is only a line of text is not seen. The
+working assumption is that each of the four is to be drawn in the model with a
+switch of its own, from what the model already holds (footings and stem walls under
+the exterior walls; studs, plates and headers in each wall from its framing line;
+base along each room and casing at each opening; the weather barrier as the layer
+under the siding), and that the quantities on those estimate lines come from what is
+drawn. It is logged in PROPOSALS.md because product scope is his.
+

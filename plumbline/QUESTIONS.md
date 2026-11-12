@@ -268,3 +268,29 @@ place is lit, because light with no source does not read as real. No grass, tree
 neighbours or scenery: nothing is drawn that the estimate does not price. If the
 answer is "studio only", it is one setting (`theme::sky`) and the pictures are
 retaken.
+
+## Q23. Are foundation, framing, interior woodwork and waterproofing to be drawn in the model? (2026-11-12, from call 69)
+
+Patrick asked for one snapshot of each of seven trades. Electrical, plumbing and
+HVAC are drawn in 3D. Foundation, framing, interior woodwork and waterproofing are
+priced on the estimate and not drawn: there was nothing of them to take a picture of
+but their lines.
+
+**Working assumption: yes, each is drawn, with a switch of its own, and its
+estimate lines take their quantities from what is drawn.** In this order, because
+each rests on the one before and on what the model already holds:
+
+1. Foundation: a footing and a foundation wall under each exterior wall, and the
+   slab the floor already is.
+2. Framing: plates, studs at their spacing, and a header over each opening, in each
+   wall that has a framing line; joists and rafters after.
+3. Waterproofing: the weather barrier as the layer between the framing and the
+   finish, and flashing at each opening and each roof line that takes it.
+4. Interior woodwork: base along each room's walls, casing at each opening, and
+   cabinets as the items they already can be.
+
+**What would change it:** if he wants these only as estimate lines, none of it is
+built and the snapshots stand as they are. If he wants a different order, the order
+changes. Nothing else waits on the answer; the build keeps going on what is already
+owed (the light, judge 19's open notes, the release candidate's table).
+
