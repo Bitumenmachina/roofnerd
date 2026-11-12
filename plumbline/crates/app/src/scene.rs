@@ -660,6 +660,8 @@ pub fn rebuild(
                 } else {
                     let (paint, rough, metal) = match (p.kind, p.discipline) {
                         (Kind::Equipment, _) => (mix(theme::equipment(), colour, 0.18), 0.4, 0.6),
+                        // Casework and furniture: wood, until a thing is drawn as what it is.
+                        (Kind::Furnishing, _) => (theme::casework(), 0.6, 0.0),
                         (_, Discipline::Plumbing) => (theme::porcelain(), 0.2, 0.0),
                         _ => (mix(theme::porcelain(), colour, 0.35), 0.5, 0.1),
                     };
@@ -817,11 +819,13 @@ pub fn facing(positions: &[Vec3]) -> Vec3 {
 
 /// Light up what is pointed at and what is selected. A selected system keeps its colour
 /// and glows, and everything on other systems goes grey, so the one system stands out.
-pub fn tint(doc: Res<Doc>, drawing: Res<Drawing>, mut materials: ResMut<Assets<StandardMaterial>>, mut shown: Local<(Option<String>, Option<String>, u64)>) {
-    if shown.0 == doc.hover && shown.1 == doc.selected && shown.2 == doc.geometry {
+pub fn tint(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut materials: ResMut<Assets<StandardMaterial>>, mut shown: Local<(Option<String>, Option<String>, u64, u64)>) {
+    if shown.0 == doc.hover && shown.1 == doc.selected && shown.2 == doc.geometry && shown.3 == snap.revision {
         return;
     }
-    *shown = (doc.hover.clone(), doc.selected.clone(), doc.geometry);
+    *shown = (doc.hover.clone(), doc.selected.clone(), doc.geometry, snap.revision);
+    // A placed thing that is selected and in the same space as another is drawn red.
+    let clashing = doc.selected.as_ref().filter(|p| snap.selected.as_ref().is_some_and(|s| stands(s.kind) && s.path == **p) && in_what(&snap, p).is_some());
     let a_system = doc.selected.as_ref().is_some_and(|s| drawing.surfaces.iter().any(|x| x.system.as_ref() == Some(s)));
     for surface in &drawing.surfaces {
         let chosen = doc.selected.as_deref() == Some(surface.path.as_str());
@@ -832,7 +836,9 @@ pub fn tint(doc: Res<Doc>, drawing: Res<Drawing>, mut materials: ResMut<Assets<S
         // (A surface with a pattern on it takes no glow: on brick the blue of it read
         // as a violet wall, which is not what the wall is made of.)
         let dressed = surface.colour == theme::dressed();
-        let (colour, glow) = if chosen {
+        let (colour, glow) = if chosen && clashing.is_some() {
+            (mix(surface.colour, theme::clash(), 0.72), LinearRgba::from(theme::clash()) * 0.10)
+        } else if chosen {
             (mix(surface.colour, Color::WHITE, 0.16).with_alpha(surface.colour.alpha().max(0.55)), if dressed { LinearRgba::BLACK } else { LinearRgba::from(theme::accent()) * 0.08 })
         } else if on_system {
             (surface.colour, LinearRgba::from(surface.colour) * 0.3)
@@ -1005,6 +1011,125 @@ fn turn_about(orbit: &mut Orbit, pivot: Vec3, yaw: f32, pitch: f32) {
     orbit.pitch = to;
 }
 
+/// Whether a placed thing is in the hand: then the left button's drag moves it, not the view.
+static CARRYING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// A placed thing picked up: which, where on it the hand took hold, and how far it has
+/// been carried from where it stood (feet east and north).
+#[derive(Resource, Default)]
+pub struct Carry {
+    path: Option<String>,
+    grabbed: Vec3,
+    gone: [f64; 2],
+    said: String,
+}
+
+/// Is this a thing that stands where it is put and can be picked up?
+fn stands(kind: Kind) -> bool {
+    matches!(kind, Kind::Equipment | Kind::Fixture | Kind::Furnishing)
+}
+
+/// A short distance as a tape reads it: inches to the sixteenth under a foot ("1 11/16
+/// in"), feet and inches from there up.
+fn near(feet: f64) -> String {
+    if feet.abs() < 1.0 {
+        plumbline_world::units::show_length(&plumbline_world::units::Len::One((feet * 12.0 * 16.0).round() / 16.0), "in")
+    } else {
+        plumbline_world::units::feet_as_ft_in(feet, 16)
+    }
+}
+
+/// What a thing is in the same space as, as the line along the bottom says it.
+fn in_what(snap: &Snapshot, path: &str) -> Option<String> {
+    let Some(Ok(found)) = &snap.clashes else { return None };
+    let with: Vec<String> = found
+        .found
+        .iter()
+        .filter(|c| c.how == plumbline_world::building::clash::ClashKind::Hard && !c.through && (c.a == path || c.b == path))
+        .map(|c| format!("{}{}", if c.a == path { &c.b_name } else { &c.a_name }, c.by.map(|by| format!(" by {}", near(by))).unwrap_or_default()))
+        .collect();
+    (!with.is_empty()).then(|| with.join(", and "))
+}
+
+/// Picking a placed thing up and carrying it. Press the left button on the thing that
+/// is selected (a fixture, a piece of equipment, a furnishing) and it goes with the
+/// hand over the floor: the place on it that was grabbed stays under the pointer. What
+/// it is in the same space as is said and marked as it goes, and clears as it clears.
+/// Let go and it stands there; the whole carry is one step to undo. Where it stands is
+/// then Assumed: a hand in a picture is not a tape.
+#[allow(clippy::too_many_arguments)]
+pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>, orbit: Res<Orbit>, buttons: Res<ButtonInput<MouseButton>>, window: Query<&Window, With<PrimaryWindow>>, hover: Res<bevy::picking::hover::HoverMap>, panels: Query<(), With<Node>>) {
+    use std::sync::atomic::Ordering::Relaxed;
+    let Ok(window) = window.single() else { return };
+    let cursor = window.cursor_position();
+    let hits = hover.get(&bevy::picking::pointer::PointerId::Mouse);
+    let on_panel = hits.is_some_and(|h| h.keys().any(|e| panels.contains(*e)));
+    let free = doc.entry.is_none() && doc.draw.tool.is_none() && !doc.choosing && !doc.plan && !doc.walk;
+    if buttons.just_pressed(MouseButton::Left) && carry.path.is_none() && free && !on_panel {
+        let selected = snap.selected.as_ref().filter(|s| stands(s.kind) && doc.selected.as_deref() == Some(s.path.as_str()) && doc.hover.as_deref() == Some(s.path.as_str()));
+        let hold = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p);
+        if let (Some(s), Some(at)) = (selected, hold) {
+            *carry = Carry { path: Some(s.path.clone()), grabbed: at, gone: [0.0, 0.0], said: String::new() };
+            CARRYING.store(true, Relaxed);
+            // What it is in is marked on the model while it is carried, and after.
+            if !doc.show.clashes {
+                doc.show.clashes = true;
+                doc.touch();
+            }
+        }
+    }
+    let Some(path) = carry.path.clone() else { return };
+    let name = snap.selected.as_ref().map(|s| s.name.clone()).unwrap_or_else(|| path.clone());
+    if buttons.pressed(MouseButton::Left) {
+        // Where the place grabbed should be now: under the pointer, at the height it was.
+        if let Some(to) = cursor.and_then(|c| { let (eye, way) = ray_at(&orbit, window, c); on_level(eye, way, carry.grabbed.y) }) {
+            // East is the view's x; north is against its z.
+            // (To the thousandth of a foot: a hand in a picture is no finer than that.)
+            let tidy = |x: f32| (f64::from(x) * 1000.0).round() / 1000.0;
+            let want = [tidy(to.x - carry.grabbed.x), -tidy(to.z - carry.grabbed.z)];
+            let step = [want[0] - carry.gone[0], want[1] - carry.gone[1]];
+            if step[0].hypot(step[1]) > 0.01 && want[0].hypot(want[1]) < 500.0 {
+                match plumbline_world::editing::move_by(&mut doc.job, &path, step[0], step[1], plumbline_world::editing::Entered { status: plumbline_world::value::Status::Assumed, source: "moved by hand in the model" }) {
+                    Ok(()) => {
+                        carry.gone = want;
+                        DRAGGED.store(true, Relaxed);
+                        doc.redraw();
+                    }
+                    Err(why) => {
+                        doc.say(Tone::Refused, format!("Can't move {name} there: {why}"));
+                        doc.touch();
+                    }
+                }
+            }
+        }
+        // What it is in now, said as it changes.
+        let said = match in_what(&snap, &path) {
+            Some(what) => format!("{name}: in the same space as {what}. Keep going, or let go and it stands here."),
+            None => format!("{name}: clear of everything. Let go and it stands here."),
+        };
+        if said != carry.said && carry.gone != [0.0, 0.0] {
+            doc.say(if said.contains("in the same space") { Tone::Refused } else { Tone::Done }, said.clone());
+            doc.touch();
+            carry.said = said;
+        }
+    } else {
+        // Let go: one step, however far it was carried.
+        if carry.gone != [0.0, 0.0] {
+            doc.edit("Move");
+            let (east, north) = (carry.gone[0], carry.gone[1]);
+            let went = format!("{} {}, {} {}", plumbline_world::units::feet_as_ft_in(east.abs(), 16), if east >= 0.0 { "east" } else { "west" }, plumbline_world::units::feet_as_ft_in(north.abs(), 16), if north >= 0.0 { "north" } else { "south" });
+            let said = match in_what(&snap, &path) {
+                Some(what) => format!("Moved {name} {went}. It is in the same space as {what}."),
+                None => format!("Moved {name} {went}. It is clear of everything."),
+            };
+            doc.say(if said.contains("in the same space") { Tone::Refused } else { Tone::Done }, said);
+            doc.redraw();
+        }
+        *carry = Carry::default();
+        CARRYING.store(false, Relaxed);
+    }
+}
+
 /// Moving round the model. The wheel dives at what is under the pointer. A drag with
 /// the left button (when no tool is in hand) or the middle one slides the ground with
 /// the hand: the place grabbed stays under the pointer. A drag with the right button
@@ -1056,11 +1181,11 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
             let grab = under(&orbit);
             if buttons.just_pressed(MouseButton::Right) && !doc.plan {
                 feel.hold = grab.map(|g| (Hold::Turn, g));
-            } else if buttons.just_pressed(MouseButton::Middle) || (buttons.just_pressed(MouseButton::Right) && doc.plan) || (buttons.just_pressed(left) && free) {
+            } else if buttons.just_pressed(MouseButton::Middle) || (buttons.just_pressed(MouseButton::Right) && doc.plan) || (buttons.just_pressed(left) && free && !CARRYING.load(Relaxed)) {
                 feel.hold = grab.map(|g| (Hold::Ground, g));
             }
             // A second press of the left button in the same place flies to it.
-            if buttons.just_pressed(left) && free {
+            if buttons.just_pressed(left) && free && !CARRYING.load(Relaxed) {
                 let now = time.elapsed_secs();
                 // Within half a second (the usual double-click), or within a frame and a
                 // half where frames are slower than that.

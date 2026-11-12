@@ -170,10 +170,11 @@ fn main() {
         .init_resource::<panels::Scrolls>()
         .insert_resource(Orbit::new())
         .init_resource::<scene::Feel>()
+        .init_resource::<scene::Carry>()
         .add_systems(Startup, (scene::setup, setup).chain())
         .add_systems(
             Update,
-            (keys, plans::dropped, plans::read, tools::clicks, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, scene::place_camera, tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
+            (keys, plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, scene::place_camera, tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
         )
         .run();
 }

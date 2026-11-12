@@ -1323,7 +1323,7 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         rows.push(view::length(path, "depth", &c.depth));
         rows.push(view::length(path, "height", &c.height));
         if let Some(weight) = &c.weight {
-            rows.push(view::entered(path, "weight", weight, |x| format!("{} lb", view::num(*x))));
+            rows.push(view::entered(path, "weight", weight, |x| view::num(*x)));
         }
     }
     if let Some(c) = w.get::<OpeningType>(e) {

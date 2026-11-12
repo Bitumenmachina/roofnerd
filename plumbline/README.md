@@ -97,6 +97,8 @@ demos/fieldw.sh            # the same in the window, each reading typed as a las
 demos/div.sh               # sixteen divisions: a whole house's lines in all sixteen, the recap by division, and the workbook's Divisions sheet
 demos/library.sh           # the starter assemblies: no price in them, a house's takeoff in fourteen divisions, three prices by division
 demos/spec.sh              # items made from manufacturers' sheets (PDF), placed, moved clear of a clash, and out to an IFC4 model
+demos/glassw.sh            # moving round the model, measured: the wheel closes on the pointer, a turn is about it, a flick carries on; pictures in demos/captured/glass
+demos/carryw.sh            # a vanity picked up in the model and carried clear of a clash, red while it is in it; pictures in demos/captured/carry
 demos/pricew.sh            # the same in the window: Starter assemblies, an assembly picked from the list and changed, a price typed on the sheet
 demos/dress.sh             # what the house is dressed in, read from what is priced on it: each wall, the roof, a window and a door, with the line that says so
 demos/dressw.sh            # the same in the window: one cladding to a wall, the priced sample house, and the same house bare; pictures in demos/captured/dress

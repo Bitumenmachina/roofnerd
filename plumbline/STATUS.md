@@ -4055,3 +4055,57 @@ expected; the virtual display sends two). `PLUMBLINE_TRACE=1` prints what the wh
 sent, for whoever has a mouse. Easing between plan and 3D has a step in scale at the
 moment the perspective is taken out (the plan shows 0.62 of the distance, the lens
 0.73). **Not rerun:** the other window demonstrations.
+
+## A thing picked up and moved, with its clash live. How it will be shown (written before building)
+
+`demos/carryw.sh`. The job of `demos/spec.sh` step 7, made at the command line: a
+water closet 1.5 ft wide with its middle at 5 ft east, and the vanity made from its
+sheet (3 ft wide) set with its middle at 7 ft: in each other by 5.75 - 5.5 = 0.25 ft,
+**3.00 in**. In the window:
+
+1. Opened: the clash is marked on the model without asking for it (the Clashes
+   switch is on when there is one to see), and selecting the vanity says what it is in.
+2. The vanity is selected with a click, then picked up (the button goes down on it)
+   and dragged to the right. While it is in the water closet it is drawn red and the
+   line along the bottom says by how much; a picture is taken with the button still
+   down.
+3. Dragged on until it is clear and let go. It is drawn in its own colour, the line
+   says it is clear, and the price has not changed (nothing is priced on where a
+   vanity stands).
+4. Saved, and read back at the command line: the vanity's middle is east of 7.25 ft
+   (it has gone more than the 3 in it was in by), `plumbline clashes` finds nothing
+   in the same space, where it stands is Assumed and its source says it was moved by
+   hand in the model.
+5. Undo, once: it is back at 7 ft and the clash is back at 3.00 in. The whole drag is
+   one step.
+
+## A thing picked up and moved, with its clash live. What was run and what it showed (2026-11-12)
+
+`demos/carryw.sh` passes; its five pictures are in `demos/captured/carry` and each was
+read.
+
+* **In the window.** The vanity (wood) stands into the water closet (white). Clicked,
+  it is selected and drawn red, because it is in something. The left button down on
+  it picks it up: it goes with the hand over the floor, the place grabbed staying
+  under the pointer, and the Clashes switch comes on. A tenth of a foot on, with the
+  button still down (picture 03), it is still red, the clash is marked, and the line
+  across the top and along the bottom says "Harbor Vanity 36: in the same space as
+  Water closet by 1 11/16 in. Keep going, or let go and it stands here." (3.00 in
+  less the 0.108 ft it had gone, 1.30 in, is 1.70 in: 1 11/16.) Carried on and let
+  go, it is its own colour and the line says it is clear.
+* **Saved and read back.** `plumbline clashes`: nothing in the same space. The
+  vanity's middle is at 9.05 ft east and 1.03 ft north; where it stands is Assumed
+  and its source reads "set by eye; moved (moved by hand in the model)"; its size is
+  still its sheet's.
+* **Undo, once:** it is at (7, 0.875) again, set by eye, and the clash is back at
+  3.00 in. The whole carry is one step.
+* **Changed from the plan above:** the clash is marked from the moment a thing is
+  picked up, not from opening (the Clashes switch stays off until then, so the
+  scripts that turn it on still turn it on).
+* **Also changed:** a furnishing with nothing priced on it is drawn in a light oak, so
+  it reads apart from a white fixture; a weight is shown once with its unit (it read
+  "96 LB LB").
+* **Not right.** A carried thing does not snap to the wall it backs onto, does not
+  turn, and is carried in 3D only (on plan the Move tool still takes two clicks). It
+  is a box. It can be carried through a wall without a word beyond the hole it would
+  cut. Nothing here has been judged by anyone but me.

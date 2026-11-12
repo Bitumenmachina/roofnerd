@@ -562,6 +562,8 @@ pub fn hardware() -> Color { hex(0x3A3632) }
 pub fn dressed() -> Color { Color::srgb(0.90, 0.90, 0.90) }
 pub fn equipment() -> Color { hex(0xC5CBD3) }
 pub fn porcelain() -> Color { hex(0xF8F8F6) }
+/// A furnishing with nothing priced on it that says what it is made of: a light oak.
+pub fn casework() -> Color { hex(0xC49A6C) }
 
 /// A door as a plan draws it: its span through the wall.
 pub fn plan_door() -> Color {
