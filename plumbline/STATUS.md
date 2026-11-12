@@ -1934,6 +1934,52 @@ run; a run with no size.
 * Only `demos/fieldw.sh` has been run on this code. The other window pictures are still
   those of `719ff91` or before.
 
+## Floors, rooms and roofs drawn in the window. How its demonstration will be run (written before it is built)
+
+Order step 5; release item 3 wants walls, openings, floors, rooms and the roof traced
+from a plan, and the 3D house built from the tracing. DECISIONS.md call 53 has what is
+ported and what each tool does. One demonstration at the command line and one in the
+window, on the made-up vector plan (`demos/plans/made-up-plan.pdf`: a house 30 ft by
+20 ft drawn at 18 points to the foot, a partition 12 ft from its west side), every
+figure worked here first.
+
+**The house, traced:** four outside walls on the outline and the partition, 6 in thick,
+8 ft tall, on their centre lines, as `demos/planw.sh` already traces them.
+
+* **The floor**, by the outline its walls enclose: the walls' centre lines, 30 ft by
+  20 ft: **600.00 SF**. Assumed, since the walls are traced; its source says it is the
+  outline of the walls.
+* **Two rooms**, each a point picked inside it and a name. Inside the walls' faces: the
+  west room is from 3 in to 11 ft 9 in east and 3 in to 19 ft 9 in north, 11.5 ft by
+  19.5 ft, **224.25 SF**; the east room is from 12 ft 3 in to 29 ft 9 in, 17.5 ft by
+  19.5 ft, **341.25 SF**. Together 565.50 SF: the floor less what the walls stand on.
+* **The roof**, by its footprint (the outline's four corners), a pitch of 6:12 on every
+  side and its eaves 8 ft up: a hip roof. Its ridge is 30 less 20, **10 LF**, and
+  stands 20 / 2 x 6/12 = 5 ft above the eaves, at 13 ft. Each hip runs 10 ft east, 10 ft
+  north and 5 ft up: 15 ft; four of them, **60 LF**. Eaves **100 LF**. On plan the two
+  long sides are (30 + 10) / 2 x 10 = 200 SF each and the two ends 20 x 10 / 2 = 100 SF
+  each; on the slope each is that times the square root of 1.25 (1.118034): 223.61 SF
+  and 111.80 SF. **670.82 SF** in all, 6.71 SQ.
+
+**`demos/build.sh`, at the command line:** the plan laid under a storey and given its
+scale; the walls traced with `--on`; `floor --walls`; two `room`s; `roof` by the
+outline's corners turned from the page; the figures above; what is refused (a floor
+where no walls enclose anything; a second floor on the same outline; a room's point
+outside every wall; a roof whose footprint crosses itself) and the file byte for byte
+the same after each.
+
+**`demos/buildw.sh`, in the window:** from an empty job, the plan laid, its scale set
+from its 30 ft dimension, the five walls traced with the pointer snapping to the plan's
+own lines; then the Floor tool and one click inside the walls; the Room tool, a click
+in each room and its name typed; the Roof tool, the four corners picked and "6:12, 8 ft"
+typed. Pictures of the plan after each, and of the house in 3D with its roof on. The
+saved job read at the command line has to give the figures above.
+
+The judge tries a floor on walls that do not close, on two separate houses on one
+storey, and on a house with a courtyard; a room on a wall, outside, and two in one
+space; a roof with three corners, with a corner picked twice, drawn clockwise and
+anticlockwise; and to get any of them Known or unflagged off a traced plan.
+
 ## Tenth judgment (2026-11-11): D4, and the fixes to the ninth
 
 An independent judge (Opus; it did not build any of this) was given commit `1886693`, a
@@ -2579,3 +2625,41 @@ the window reads "set in the window; ..." where it read "set in the 3D view; ...
 fitting's and a made-up thing's source reads "not specified" for "not selected"; the
 made-up jobs' cost code source reads "which cost code scheme this job is to follow is
 not settled"; a plan named in the window is found beside the job.
+
+## Stopped for the owner's review (2026-11-12)
+
+Patrick asked for a full account with screenshots before anything more is built, and
+said the screen does not read as a construction tool, that "storey" is English spelling,
+and that the wording does not fit good interface practice (his words are in
+QUESTIONS.md under Q20). He is right on each. Nothing further is built until he rules.
+
+**Where it stands at this commit:**
+
+* **All eight window demonstrations were run on `f520014` and pass** (`fieldw`,
+  `clashw`, `draww`, `planw`, `d4w`, `d5w`, `d2`, `house`), and their pictures under
+  `demos/captured` are retaken from it. **Not every picture has been read**: the field
+  set was read whole; of the rest, one picture pair each of the house, the drawn plan,
+  the traced scan, the estimate sheet and the clashes was read, and sent to Patrick.
+  The statement above that the window pictures are stale since `719ff91` no longer
+  holds; that they have all been looked at does not hold yet either.
+* **`demos/build.sh` and `demos/buildw.sh` are written ahead of what they demonstrate**
+  (order step 5) and do not run: the floor verb and the Floor, Room and Roof tools are
+  not on the branch. The floor verb and its outline are written and pass three tests in
+  a scratch copy outside the repository.
+* **Call 54 (the verify-in-field list) and Q21 are thought through and not built.**
+* **Not judged:** the fixes to the fifteenth judgment (A and B) and to the sixteenth.
+  The brief for that judge is written and the judge is not started.
+
+**What is wrong with the screen, as its builder now sees it:** it is a web dashboard's
+look (floating cards, pastel pills, soft shadows), not a drawing's or a sheet's; the
+left panel is one flat list of some twenty rows with tools and actions at one weight;
+actions sit behind letter keys listed under "Keys" where they should be on the thing
+they change; the estimate cannot be edited on the line; "To settle" says "55 values,
+the first: ..."; the messages are long sentences in a manner of my own ("found as
+drawn", "refused: ...") where a short label and a plain message belong; and the
+spelling is British. Order step 7 (the visual standard) is not started.
+
+**Proposed, and waiting on him:** a sheet of every word on screen beside the US trade
+term to replace it; a short rule for messages; and a layout for him to mark up before
+any of it is coded.
+

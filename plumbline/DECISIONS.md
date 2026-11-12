@@ -1997,3 +1997,68 @@ was decided in closing them:
 * Jobs saved before keep the names they have. Every demonstration and test that named
   such a thing has its expected name changed with this.
 
+### Call 53. Floors, rooms and roofs drawn in the window: what is ported and what each tool does (2026-11-12)
+
+Order step 5. Written before it is built.
+
+* **The floor verb is BIMCraft's** (`floor`, `crates/core/src/commands.rs:7556`): a
+  floor of a type on a storey, by a boundary that is given or, with none, by **the
+  outline its walls enclose** (`floor_outline`, `commands.rs:2467`: along the centre
+  lines of the walls, the outer outline of the largest piece they make). Ported with
+  the two changes every ported verb has: lengths with their units and feet on the
+  plan, and every value with a status and a source. What is not taken: BIMCraft cuts
+  the courtyards its walls enclose out of the floor; this program's floor has no hole
+  yet, so where the walls enclose a courtyard the verb refuses and says so, and the
+  floor is given by its boundary. Slope, the span arrow, "structural" and the sketch
+  are not taken.
+* **A floor by its walls is as sure as the least sure of those walls' lines**, and its
+  source says it is the outline of the walls. A floor by a boundary is as sure as
+  whoever gives it says.
+* **A second floor on an outline a floor of that storey already has is refused**: it
+  would be counted twice (the model reader already holds this for a model brought in).
+* **In the window: Floor is one click.** With the tool in hand and the thickness said,
+  a click on the storey puts the floor its walls enclose. A floor by picked corners
+  stays at the command line: the walls are what is traced, and the floor follows them.
+* **Room is a click and a name.** The verb is there (`room`); the tool picks the point
+  and asks for the name.
+* **Roof is its footprint's corners and "pitch, eave height".** The verb is there
+  (`solve::new_roof`, a roof solved from its footprint); the tool picks the corners,
+  closes on the first, and asks for one pitch for every side and the height of the
+  eaves above the job's zero. Every side at one pitch is a hip roof; a gable is made
+  on a plane afterwards with the key that already does it.
+* **What is drawn over a drawing is traced**, as walls are: Assumed, its source the
+  drawing.
+
+
+### Call 54. The verify-in-field list: what a question is and what rides on it (2026-11-12, before it is built)
+
+Order step 6 (the loop's last sentence: "the program produces a verify-in-field list:
+each question, where it is, and the dollars riding on it, sorted by dollars"). Thought
+through while step 5 was building, and written down so it is not lost; the
+demonstration with its hand figures goes into STATUS.md before the list is built.
+
+* **A question is one of two things.** A clash that rests on anything not Known (the
+  ruling's own words: a clash between Assumed elements is a field question). And a
+  thing with a value that is Assumed or Unknown on which a priced line rests: the
+  storey whose height was scaled off a plan and whose walls are priced by their face.
+* **Where it is**: a clash's place, east, north and height, and its storey; a thing's
+  storey and what it is called.
+* **What to do about it is said with it**: which of its values are not Known, each as
+  the panel names it, so the person on site knows what to measure or check.
+* **The dollars riding on a thing** are what the estimate's lines that rest on it come
+  to: every live line whose quantity is worked from a figure that is worked from that
+  thing's values. The core already records what each worked-out figure rests on (each
+  `Derived` names its inputs), so this is read from the job, not kept beside it. The
+  record is by a thing's group of values (a storey's level: its floor and its height
+  together), not by each value; the list says which values of the group are not Known.
+* **The dollars riding on a clash** are what the lines on the two things in it come to:
+  what is priced on what may have to move. The cost of the fix is not known to the
+  program and is not guessed.
+* **No dollars is said, not zero**: a question nothing priced rests on is listed after
+  those with dollars and says nothing priced rests on it yet.
+* **Sorted by dollars, largest first**; a figure that is itself flagged shows its flag.
+* **One list, three places**: the command `vif`, a tab of the sheet window, and each
+  row picks its thing in the model window, where its values say Measure or Check. A
+  measurement that makes its values Known takes the question off the list.
+
+What "riding on it" means is the owner's to say; this is the working assumption (Q21).

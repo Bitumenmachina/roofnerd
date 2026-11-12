@@ -207,3 +207,19 @@ From the fifteenth judgment's list of words on screen.
    general conditions. A judge says estimating programs call this "cost type" or
    "category". **Working assumption: "class" stays** until you say which word your
    estimators use.
+
+## Q21. What are "the dollars riding on" a field question?
+
+The verify-in-field list is sorted by them. **Working assumption (DECISIONS.md call
+54):** for a value that is not Known, the sum of the estimate's lines whose quantity
+is worked from it (a storey height scaled off a plan carries every wall face priced
+up to it); for a clash, the sum of the lines priced on the two things in it. The cost
+of fixing a clash is not something the program knows, and it does not guess one. If
+"riding" should mean something else (an allowance per clash, a percentage, the cost of
+the rework), say what.
+
+**Patrick, 2026-11-12, on Q20 and on the screens as a whole (his words):** "I do not see
+how the interface is showing a more manageable and Construcion oriented screen and using
+English storey and the way things are worded does not seem to fit with good UI and
+software design protocols". Work stopped for his review at this point; nothing further
+is built until he rules on the screen and its words.
