@@ -816,8 +816,18 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
             out.entry(me.clone()).or_default().extend(m);
         }
     }
-    room_measures(world, &tree, &mut out);
+    room_measures(world, &tree, &mut out, &mut HashMap::new());
     out
+}
+
+/// Each room's outline at the faces of the walls round its point, in feet on the plan,
+/// counter-clockwise: the same outline its floor area is the area of. A room no walls
+/// close round has none and is not in the map.
+pub fn room_outlines(job: &mut Job) -> HashMap<String, Vec<P2>> {
+    let tree = Tree::of(&mut job.world);
+    let mut outlines = HashMap::new();
+    room_measures(&mut job.world, &tree, &mut HashMap::new(), &mut outlines);
+    outlines
 }
 
 /// The number at the end of a path: paths are numbered in the order elements were added,
@@ -923,6 +933,9 @@ struct RoomFigures {
     in_wall: bool,
     /// The corners of the room at its walls' faces, when it has any: where it is.
     corners: Vec<crate::skeleton::P2>,
+    /// The room's outline at the faces of its walls, counter-clockwise, without what
+    /// stands free inside it; empty when no walls close round its point.
+    outline: Vec<crate::skeleton::P2>,
 }
 
 /// Every room of one storey measured against `walls`, of which those at `bounding` bound
@@ -955,6 +968,7 @@ fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], points: &[crate::s
     (0..points.len())
         .map(|i| RoomFigures {
             corners: finish.bound(points, i, tol).map(|g| std::iter::once(&g.outer).chain(g.holes.iter()).flatten().copied().collect()).unwrap_or_default(),
+            outline: finish.bound(points, i, tol).map(|g| g.outer).unwrap_or_default(),
             finish: finish.bound(points, i, tol).map(|g| (g.area(), g.perimeter(), touching(&g, &outline_edges))),
             centre: centre.bound(points, i, tol).map(|g| (g.area(), touching(&g, &centre_lines))),
             in_wall: !points[i].0.is_nan() && outlines.iter().any(|ring| rooms::contains(ring, points[i])),
@@ -973,7 +987,7 @@ fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], points: &[crate::s
 /// something Assumed, each room is measured again with that wall taken away and with it
 /// standing full height: a room that comes out differently either way is no surer than
 /// that wall's heights, and says so.
-fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTreeMap<String, Derived>>) {
+fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTreeMap<String, Derived>>, outlines: &mut HashMap<String, Vec<P2>>) {
     use crate::skeleton::P2 as V;
     use rooms::Unbound;
     let tol = crate::check::FIT_TOLERANCE_FT;
@@ -1047,6 +1061,11 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
         let spans = |w: &walls::PlanWall| w.base <= cut && cut < w.top;
         let bounding: Vec<usize> = (0..placed.len()).filter(|&i| placed[i].bounds && spans(&placed[i].wall)).collect();
         let as_entered = rooms_among(&plan_walls, &bounding, &points, tol);
+        for (i, (path, _)) in list.iter().enumerate() {
+            if as_entered[i].outline.len() >= 3 {
+                outlines.insert(path.clone(), as_entered[i].outline.iter().map(|p| [p.0, p.1]).collect());
+            }
+        }
         // Each wall whose base or top rests on something less than Known, tried both other
         // ways: not there at all, and standing through every height. A room that comes out
         // differently is no surer than that wall's heights.

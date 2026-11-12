@@ -11,3 +11,5 @@ rust-version.workspace = true
 csv = "1.4.0"
 # An XLSX workbook's cells read, pure Rust.
 calamine = "0.38.0"
+# An XLSX workbook written, with formulas, pure Rust.
+rust_xlsxwriter = { version = "0.102.0", default-features = false }

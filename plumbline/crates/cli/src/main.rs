@@ -58,7 +58,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline drawings <file>\n  plumbline clashes <file> [--clearance \"2 in\"]\n  plumbline vif <file>   (what is still to be verified in the field, and the dollars riding on each)\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--class <class>] [--of-material]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n  plumbline export <prices|assemblies> <file> <out.csv>\n  plumbline import prices <file> <a price list: CSV or XLSX> [--sheet \"<name>\"] [--supplier \"<whose prices>\"] [--add] [--status <Known|Assumed> --source \"<where from>\"]\n  plumbline import assemblies <file> <an assembly library this program wrote: CSV or XLSX> [--sheet \"<name>\"]\n  plumbline import prior <file> <an estimate made before: CSV or XLSX> [--sheet \"<name>\"] [--name \"<what to call it>\"] --status <Known|Assumed> --source \"<where from>\"\n  plumbline import ifc <file> <a model: IFC2x3 or IFC4> --status <Known|Assumed> --source \"<where from>\"\n  plumbline compare <file>\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline storey <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> floor \"<name>\" --thickness \"4 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <storey> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <storey>)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline floor <file> <storey> <type> (--walls | --points \"0,0 30,0 30,20 0,20\")   (--walls: the outline the storey's walls enclose)\n  plumbline room <file> <storey> \"<name>\" --at \"6,8\"\n  plumbline run <file> <storey> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline place <file> <storey> <fixture|equipment> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline drawing <file> <storey> \"<name>\" --file <a PDF, PNG or JPEG of the plan> [--page 1]\n  plumbline calibrate <file> <drawing> --from \"126,90\" --to \"666,90\" --distance \"30 ft\"   (two places on the page and the dimension between them)\n  plumbline lineup <file> <drawing> --page-point \"126,126\" --plan-point \"0,0\"\n  tracing: wall, floor, door, window, room, run and place take --on <drawing> in place of --status and --source; their points are then places on the drawing's page\n  plumbline move <file> <path> --by \"3,2\"\n  plumbline measure <file> <path> \"<the value, as it is listed: storey height, sill, ...>\" <what was read: 8' 10 1/2\", or same> [--to <bottom|centre|top>] --source \"<who measured, or with what>\"\n  plumbline remove <file> <path>\n  plumbline fitting <file> <storey> --at \"10,2\" [--height \"8 ft\"] [--kind <bend|tee|cross|transition|coupling>]\n  plumbline fitting <file> --all [--system <system>]\n  plumbline connect <file> <fixture or equipment> <run>\n  plumbline split <file> <run> --at \"6,2\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline drawings <file>\n  plumbline clashes <file> [--clearance \"2 in\"]\n  plumbline vif <file>   (what is still to be verified in the field, and the dollars riding on each)\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--class <class>] [--of-material]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n  plumbline export <prices|assemblies> <file> <out.csv>\n  plumbline export estimate <file> <out.xlsx|out.csv>   (.xlsx: a workbook whose amounts, recap and price are formulas; .csv: the lines as values)\n  plumbline export ifc <file> <out.ifc>   (the building as an IFC4 model, for another trade or a designer)\n  plumbline export <supplier|subcontractor|pm> <file> <out.xlsx|out.csv>   (one lens on the estimate: what to quote; the subcontract scope; the lines, budget and what is to verify)\n  plumbline import prices <file> <a price list: CSV or XLSX> [--sheet \"<name>\"] [--supplier \"<whose prices>\"] [--add] [--status <Known|Assumed> --source \"<where from>\"]\n  plumbline import assemblies <file> <an assembly library this program wrote: CSV or XLSX> [--sheet \"<name>\"]\n  plumbline import prior <file> <an estimate made before: CSV or XLSX> [--sheet \"<name>\"] [--name \"<what to call it>\"] --status <Known|Assumed> --source \"<where from>\"\n  plumbline import ifc <file> <a model: IFC2x3 or IFC4> --status <Known|Assumed> --source \"<where from>\"\n  plumbline compare <file>\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline storey <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> floor \"<name>\" --thickness \"4 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <storey> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <storey>)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline floor <file> <storey> <type> (--walls | --points \"0,0 30,0 30,20 0,20\")   (--walls: the outline the storey's walls enclose)\n  plumbline room <file> <storey> \"<name>\" --at \"6,8\"\n  plumbline run <file> <storey> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline place <file> <storey> <fixture|equipment> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline drawing <file> <storey> \"<name>\" --file <a PDF, PNG or JPEG of the plan> [--page 1]\n  plumbline calibrate <file> <drawing> --from \"126,90\" --to \"666,90\" --distance \"30 ft\"   (two places on the page and the dimension between them)\n  plumbline lineup <file> <drawing> --page-point \"126,126\" --plan-point \"0,0\"\n  tracing: wall, floor, door, window, room, run and place take --on <drawing> in place of --status and --source; their points are then places on the drawing's page\n  plumbline move <file> <path> --by \"3,2\"\n  plumbline measure <file> <path> \"<the value, as it is listed: storey height, sill, ...>\" <what was read: 8' 10 1/2\", or same> [--to <bottom|centre|top>] --source \"<who measured, or with what>\"\n  plumbline remove <file> <path>\n  plumbline fitting <file> <storey> --at \"10,2\" [--height \"8 ft\"] [--kind <bend|tee|cross|transition|coupling>]\n  plumbline fitting <file> --all [--system <system>]\n  plumbline connect <file> <fixture or equipment> <run>\n  plumbline split <file> <run> --at \"6,2\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
 }
 
 /// What a page is measured in until its drawing has a scale.
@@ -715,7 +715,86 @@ fn tables(args: &[String]) -> Result<(), String> {
             let _ = std::io::stdout().write_all(brought_said(other, &sheet, &brought).as_bytes());
             Ok(())
         }
-        ("export", _) => Err(format!("export {what}: what is written out is prices or assemblies\n{}", usage())),
+        // The building as a model another trade's or a designer's program reads.
+        ("export", "ifc") => {
+            only(&[])?;
+            if !other.to_ascii_lowercase().ends_with(".ifc") {
+                return Err(format!("{other}: a model is written as an .ifc file; name the file with that"));
+            }
+            let file = std::path::Path::new(other).file_name().and_then(|f| f.to_str()).unwrap_or("model.ifc");
+            let written = plumbline_ifc::write::export(&mut job, file, &plumbline_world::job::now())?;
+            std::fs::write(other, &written.text).map_err(|e| format!("cannot write {other}: {e}"))?;
+            say!("wrote {other}: the building of {path} as an IFC4 model, lengths in feet");
+            // One of a thing is said as one: "1 roof", "1 piece of equipment".
+            let one = |what: &str| what.strip_prefix("pieces ").map(|rest| format!("piece {rest}")).unwrap_or_else(|| what.strip_suffix('s').unwrap_or(what).to_string());
+            say!("  written: {}", written.made.iter().map(|(what, n)| format!("{n} {}", if *n == 1 { one(what) } else { what.clone() })).collect::<Vec<_>>().join(", "));
+            say!("  every value entered on each goes with it, with how sure it is and where it came from");
+            if !written.not_written.is_empty() {
+                say!("  not written (a building model has no place for it, or it has no shape):");
+                for (what, n, why) in &written.not_written {
+                    say!("    {n} x {what}: {why}");
+                }
+            }
+            Ok(())
+        }
+        // The estimate, or one lens on it, as a workbook (its figures formulas) or as
+        // rows of values: by the name of the file asked for.
+        ("export", "estimate" | "supplier" | "subcontractor" | "sub" | "pm") => {
+            use plumbline_world::export::{self, Lens, Out};
+            only(&[])?;
+            let workbook = match std::path::Path::new(other).extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref() {
+                Some("xlsx") => true,
+                Some("csv") => false,
+                _ => return Err(format!("{other}: what is written is a workbook (.xlsx) or rows of values (.csv); name the file with one of those")),
+            };
+            let (sheets, said) = match Lens::parse(what) {
+                None => (export::estimate_out(&mut job, workbook), "the estimate"),
+                Some(Lens::Supplier) => (export::lens_out(&mut job, Lens::Supplier), "the materials to quote, with none of our prices"),
+                Some(Lens::Subcontractor) => (export::lens_out(&mut job, Lens::Subcontractor), "the subcontract scope, with none of our prices"),
+                Some(Lens::Pm) => (export::lens_out(&mut job, Lens::Pm), "the lines, the budget by class and what is to verify, with no overhead, profit or price"),
+            };
+            let lines: usize = sheets.first().map(|s| s.rows.len().saturating_sub(s.head + 1)).unwrap_or(0);
+            if workbook {
+                let tabs: Vec<plumbline_sheets::Tab> = sheets
+                    .iter()
+                    .map(|s| plumbline_sheets::Tab {
+                        name: s.name.clone(),
+                        head: s.head,
+                        widths: s.widths.clone(),
+                        rows: s
+                            .rows
+                            .iter()
+                            .map(|r| {
+                                r.iter()
+                                    .map(|c| match c {
+                                        Out::None => plumbline_sheets::Cell::Empty,
+                                        Out::Text(t) => plumbline_sheets::Cell::Text(t.clone()),
+                                        Out::Number(x) => plumbline_sheets::Cell::Number(*x),
+                                        Out::Dollars(x) => plumbline_sheets::Cell::Dollars(*x),
+                                        Out::Formula { text, value } => plumbline_sheets::Cell::Formula { text: text.clone(), value: *value },
+                                    })
+                                    .collect()
+                            })
+                            .collect(),
+                    })
+                    .collect();
+                let formulas = sheets.iter().flat_map(|s| s.rows.iter().flatten()).filter(|c| matches!(c, Out::Formula { .. })).count();
+                let bytes = plumbline_sheets::xlsx(&tabs)?;
+                std::fs::write(other, bytes).map_err(|e| format!("cannot write {other}: {e}"))?;
+                say!("wrote {other}: {said} of {path}; {}: {}; {}", count(sheets.len(), "sheet", "sheets"), sheets.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", "), if formulas == 0 { "figures, no formulas".to_string() } else { count(formulas, "figure that is a formula", "figures that are formulas") });
+            } else {
+                // The estimate as values is its lines under their headings and nothing
+                // else, so it reads back as an estimate made before.
+                let rows = match Lens::parse(what) {
+                    None => sheets[0].rows[sheets[0].head..].iter().map(|r| r.iter().map(Out::said).collect()).collect(),
+                    Some(_) => export::values(&sheets),
+                };
+                std::fs::write(other, plumbline_sheets::csv(&rows)).map_err(|e| format!("cannot write {other}: {e}"))?;
+                say!("wrote {other}: {said} of {path}, {} under its headings", count(lines, "row", "rows"));
+            }
+            Ok(())
+        }
+        ("export", _) => Err(format!("export {what}: what is written out is prices, assemblies, estimate, supplier, subcontractor, pm or ifc\n{}", usage())),
         _ => Err(format!("import {what}: what is brought in is prices, assemblies, prior (an estimate made before) or ifc (a model)\n{}", usage())),
     }
 }
@@ -1298,16 +1377,8 @@ fn draw(args: &[String]) -> Result<(), String> {
         if std::path::Path::new(path).exists() {
             return Err(format!("{path} is already there; a new job is not written over a file"));
         }
-        // The day it was started, from the machine's clock (days since 1970, as a date).
-        let days = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() / 86_400).unwrap_or(0) as i64;
-        let (z, era) = (days + 719_468, (days + 719_468).div_euclid(146_097));
-        let doe = z.rem_euclid(146_097);
-        let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
-        let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-        let mp = (5 * doy + 2) / 153;
-        let (d, m) = (doy - (153 * mp + 2) / 5 + 1, if mp < 10 { mp + 3 } else { mp - 9 });
-        let y = yoe + era * 400 + i64::from(m <= 2);
-        let mut job = plumbline_world::Job::new(title, "plumbline", &format!("{y:04}-{m:02}-{d:02}"));
+        // The day it was started, from the machine's clock.
+        let mut job = plumbline_world::Job::new(title, "plumbline", &plumbline_world::job::now()[..10]);
         std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
         say!("wrote {path}: a new job, {title:?}, with nothing in it");
         return Ok(());

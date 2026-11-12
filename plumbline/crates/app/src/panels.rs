@@ -198,7 +198,8 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     p.spawn(docked(Node { top: px(0.0), left: px(0.0), right: px(0.0), height: px(TOP_H), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), ..default() }, UiRect::bottom(px(1.0)))).with_children(|bar| {
         wordmark(bar, fonts);
         divider(bar);
-        bar.spawn(Node { flex_shrink: 1.0, min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_child((theme::name(fonts, snap.title.clone(), 13.0, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
+        // A long title is cut at a word's worth and says it is cut; it is whole on the right.
+        bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((theme::name(fonts, one_line(&snap.title, 26), 13.0, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
         divider(bar);
         on_click(&mut button(bar, fonts, "Save", "Ctrl+S", false), |doc| doc.press(KeyCode::F2));
         on_click(&mut button(bar, fonts, "Undo", "Ctrl+Z", false), |doc| doc.press(KeyCode::KeyZ));
@@ -483,6 +484,38 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
             });
         }
 
+        // What people already have, brought in: each button asks for its file.
+        heading(c, fonts, "Bring in");
+        match doc.entry {
+            Some((Entry::BringIn(what), ref typed)) => {
+                c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
+                    theme::field(f, fonts, &format!("{}: its file", what.name()), typed, "", 1, LEFT_W - 30.0);
+                    let hint = match what {
+                        crate::model::Bring::Prices => "A CSV or XLSX, like lists/ridge.xlsx. A supplier's name can follow a comma. Enter brings it in. Or drop the file on this window.",
+                        crate::model::Bring::Model => "An IFC file, like models/mechanical.ifc. Enter brings it in. Or drop the file on this window.",
+                        _ => "A CSV or XLSX. Enter brings it in. Or drop the file on this window.",
+                    };
+                    f.spawn(text(fonts, hint, 10.5, Weight::Regular, theme::ink_faint()));
+                });
+            }
+            _ => {
+                c.spawn(Node { padding: UiRect::axes(px(6.0), px(3.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|b| {
+                    for what in crate::model::Bring::ALL {
+                        on_click(&mut button(b, fonts, what.name(), "", false), move |doc| {
+                            // A table dropped on the window and waiting to be told what it is.
+                            match doc.dropped.take() {
+                                Some(file) if what != crate::model::Bring::Model => crate::bring::bring(doc, what, &file),
+                                _ => {
+                                    doc.open(Entry::BringIn(what), "");
+                                    doc.say(Tone::Done, format!("{}: type the file's name, or drop the file on this window.", what.name()));
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
         heading(c, fonts, "Show");
         let layer = |c: &mut ChildSpawnerCommands, name: &str, key: &str, colour: Color, on: bool, count: Option<usize>, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
             row(c, false, format!("Show {name}"), move |doc| act(doc), |r| {
@@ -754,6 +787,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
         Entry::Move => format!("Move the eave of {name}"),
         Entry::Allowance => format!("Allowance for {name}"),
         Entry::UnitCost => format!("Unit cost of {:?}", doc.entry_line.clone().unwrap_or_default()),
+        Entry::StretchOut => format!("Stretch-out of {:?}", doc.entry_line.clone().unwrap_or_default()),
         Entry::Material => format!("Material of {name}"),
         Entry::Overhead => "Overhead on the job".to_string(),
         Entry::Profit => "Profit on the job".to_string(),
@@ -778,6 +812,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
         Entry::Move => "Out is +, like 1' 6\" or -6 in",
         Entry::Allowance => "Dollars per SF or LF, like 28 or $28.00",
         Entry::UnitCost => "Dollars for what the line is priced in, like 31.50",
+        Entry::StretchOut => "The girth of the piece, like 24 in or 2 ft",
         Entry::Material => "A material of the job, by name",
         Entry::Overhead => "A percentage of the job cost, like 12",
         Entry::Profit => "A percentage of cost and overhead, like 8",
@@ -961,8 +996,10 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     }
     // A drawing is a sheet under the tracing: it has no condition, no price and no
     // material, and is offered none.
-    let built = el.kind != Kind::Drawing && el.kind != Kind::Prior;
-    let made = built && !matches!(el.kind, Kind::Job | Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey);
+    // Nor does a level, a system, a type, a material or a condition: lines are priced
+    // on what is built, and on the job itself (its general conditions).
+    let made = !matches!(el.kind, Kind::Drawing | Kind::Prior | Kind::Job | Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey);
+    let built = made || el.kind == Kind::Job;
     line(p, &|r| {
         if built {
             press(r, "Condition", "C", KeyCode::KeyC);
@@ -980,7 +1017,7 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             press(r, "Labor on or off", "L", KeyCode::KeyL);
         }
     });
-    if matches!(doc.entry, Some((Entry::Pitch | Entry::Move | Entry::Allowance | Entry::UnitCost | Entry::Material, _))) {
+    if matches!(doc.entry, Some((Entry::Pitch | Entry::Move | Entry::Allowance | Entry::UnitCost | Entry::StretchOut | Entry::Material, _))) {
         entry_box(p, fonts, doc, snap);
     }
 }

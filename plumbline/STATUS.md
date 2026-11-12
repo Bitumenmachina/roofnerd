@@ -2896,3 +2896,118 @@ to find a line the workbook's sums count that the program leaves out (or the oth
 way), to find a price of ours in the supplier's or the subcontractor's lens, to get a
 quantity in a lens that is not the estimate's, and to find something IfcOpenShell
 rejects or this program reads back differently.
+
+## The verify-in-field list. What was run and what it showed
+
+Built as planned above (`crates/world/src/vif.rs`, `plumbline vif`, the sheet's Verify
+in field tab, the top bar).
+
+* **`crates/world/tests/vif.rs`, three tests, pass.** As traced: the five rows in
+  order, $518.40 on each level, one line counted once in the total. After the ground
+  level is measured it is off the list and the upper level, whose own height is still
+  as scaled, has no dollars riding (the wall has come out Known). A line on two things
+  in question is counted once in the total ($518.40 + $240.00 = $758.40) and on each
+  of the three rows it rides on. **Proven red first**: with the rule "only a line that
+  is not Known has anything riding" taken out, the second test fails with $511.20
+  where none is expected.
+* **`demos/vif.sh` passes**: the five rows and their order as traced; four after the
+  ground level is measured, none with dollars; one after the duct is measured (and the
+  clash list then holds one finding, which this list does not); none after the upper
+  level's height is looked at.
+* **In the window** (`demos/fieldw.sh`, pictures 01 and 07, run on `1fe4d1c`): the tab
+  shows the five rows with "$518.40 riding · 1 line of the estimate, each counted
+  once"; the top bar says "5 to verify, $518.40 riding"; the click on the ground
+  level's row selects it in the model window, puts it on show, and its two values say
+  Measure. Picture 01, model and sheet, was read. Picture 07 has not been read yet.
+* **Not right, and known:** the list works out the estimate, the elements and the
+  clashes again each time the window redraws, beside the window's own reading of the
+  same three; on the made-up whole house the window is no slower to the eye on this
+  machine, and nobody has timed it. A wall's dollars ride on every level its height
+  is worked from, whichever of that level's two values is still in question (call 54
+  says so; the one rule added keeps a Known line from riding on anything).
+* **Not judged.**
+
+## Exports and lenses. What was run and what it showed
+
+Built as planned above: `crates/world/src/export.rs` (the estimate as sheets of cells,
+the three lenses), `plumbline_sheets::xlsx` (on `rust_xlsxwriter`, MIT OR Apache-2.0,
+passed by `tools/licenses.sh`), `crates/ifc/src/write.rs` (the IFC4 writer), and the
+verbs `export estimate|supplier|subcontractor|pm|ifc`.
+
+* **`crates/world/tests/export.rs`, two tests, and `crates/ifc/tests/write.rs`, three,
+  pass.** Each amount is the formula on its own row and comes to the job's figure;
+  the recap's figures are the hand figures ($8,628.10, $2,147.97, $402.50, $3,800.00,
+  $10,313.86; job cost $25,292.43; overhead $2,529.24; profit $2,225.73; price
+  $30,047.40); a class with nothing in it says "none"; what is left out is named
+  once. The supplier's lens is 737.9024 lb, 670.8203 SF and 153.6931 lb (Assumed), the
+  subcontractor's one line of 251.5576 SF, neither with a dollar in any cell; the PM's
+  has the job cost and no markup. The house is written as 2 levels, 16 walls, 9 doors,
+  17 windows, 2 floors, 10 rooms, 1 roof of 4 planes; written twice it is the same
+  file to the byte; every identifier is 22 characters and no two are the same; read
+  back, each level's walls (210.00 LF), wall faces, floor (1,120.00 SF), rooms, doors
+  and windows are what was written, and come back Assumed.
+* **`demos/export.sh` passes**, with the formulas worked out by a second hand
+  (`tools/workbook.py`, which knows ROUND, SUM, SUMIF and the four operations and
+  nothing of this program): 26 formulas, each to the figure written with it. A price
+  changed **in the workbook** ($0.90 to $0.95/SF on the south plane's underlayment)
+  gives $398.30, $8,649.06, $25,313.39, $2,531.34, $2,227.58 and **$30,072.31**, and
+  the same price changed in the job gives the same from the program. The estimate as
+  CSV, brought back as an estimate made before and compared, agrees on every line
+  (eight amounts at +$0.00; the ninth has no price in either), and says the three
+  columns a prior estimate has no place for.
+* **IfcOpenShell 0.9.0** (`tools/ifc-check.py`; a checker, not linked) reports **no
+  fault** in the written house against the IFC4 schema and its rules, and counts 2
+  IfcBuildingStorey, 16 IfcWall, 9 IfcDoor, 17 IfcWindow, 2 IfcSlab that are floors,
+  10 IfcSpace, 1 IfcRoof.
+* **A fault the first test seemed to find and did not:** "two things have one
+  identifier" was the test's own parser taking a 22-letter value name for an
+  identifier. The test was tightened; the identifiers were unique throughout.
+* **What the export does not do, said so it is not taken for done:** a door's and a
+  window's body in the model is the space it takes up in its wall, as thick as the
+  wall (the job holds no thickness for a leaf or a sash). A piece of equipment is
+  written as a distribution element of no stated kind, and a fixture as a flow
+  terminal: the job does not say which kind of either it is. A system IFC has no word
+  for (return air) is written by its name as a user-defined sort, and this program's
+  own reader then brings what is on it back on no system and says so. A wall shorter
+  than it is thick would be read back turned. Fittings, fixtures, equipment and the
+  roof are written and are **not read back** by this program's reader, which has no
+  element to put them in from a model; it says so, by kind and count.
+* All fifteen command-line demonstrations pass on the tree that holds these (225
+  tests). **Not judged.**
+
+## The first job, on a real plan. How its demonstration will be run (written before it is run)
+
+Release item 3: "Starting from an empty job, it opens a real residential plan PDF,
+calibrates it, and traces walls, openings, floors, rooms and the roof. The 3D house
+builds from the tracing." `demos/planw.sh` already traces the outside walls of USDA
+Plan No. 7213 (a public plan, fetched by `tools/fetch-plan.sh`, not in the repository).
+`demos/firstw.sh` goes the whole way on it, by the buttons a first user is pointed to
+by Next steps, from a job whose file is not there yet.
+
+**The session:** Add level (Ground, 0 ft, 8 ft). Add drawing (the PDF's page 4). Set
+scale from the sheet's 41'-3" dimension. Wall (6 in, 8 ft): the southwest outside
+corner by eye, then 41' 3" east, 23' 11" north, 41' 3" west, and closed. Door (3 ft,
+7 ft, sill 0) 10 ft along the south wall. Window (4 ft, 3 ft, sill 3 ft) 30 ft along
+the south wall and 20 ft along the north. Floor (4 in): one click. Room: one click
+inside, named "House". Roof (6:12, eaves 8 ft): the four corners and the first again.
+Then 3D, and Save.
+
+**By hand.** 23'-11" is kept as 23.9167 ft (a place on the plan is kept to a
+ten-thousandth of a foot).
+
+* Walls: 2 x (41.25 + 23.9167) = **130.3334 LF**; at 8 ft, 1,042.6672 SF of face; less
+  the door (21 SF) and two windows (12 SF each), **997.67 SF** net.
+* Floor, the outline the walls enclose along their lines: 41.25 x 23.9167 = 986.5639,
+  **986.56 SF**.
+* The room inside the walls' faces (each wall 6 in, 3 in either side of its line):
+  40.75 x 23.4167 = 954.2305, **954.23 SF**.
+* The roof, 6:12 on every side of 41.25 by 23.9167: 986.5639 x the square root of 1.25
+  = 1,103.0119, **1,103.01 SF**; a ridge of 41.25 - 23.9167 = **17.33 LF**; four hips,
+  each half the width (11.9584) x 1.5 = 17.9375, **71.75 LF**; eaves **130.33 LF**.
+* Everything traced is Assumed and says it was traced from the drawing; the scale is
+  Assumed, read off the drawing.
+
+The saved job has to give these, and the pictures have to show the house on its sheet.
+Where a place on the plan is clicked after the first corner, the script asks the
+program where that many feet from the first corner is on screen (the `plan` line of
+`PLUMBLINE_MAP`), in place of a pixel copied in by hand.

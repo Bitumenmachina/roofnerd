@@ -5,7 +5,10 @@
 //! and draw again. The sheet is a second operating-system window on the same world, so
 //! it can sit on another monitor and it follows every edit as it is made.
 //!
-//!   plumbline-app <job file> [roof path]
+//!   plumbline-app [job file] [roof path]
+//!
+//! A job file that is not there yet is a new job, written when it is first saved; with
+//! no file named, the job is `job.json` in the folder the program was started in.
 //!
 //! The whole building is drawn: walls, floors, doors and windows, the roof, and the ducts,
 //! pipes, conduit, cable, equipment and fixtures in it. Click anything to select it; click
@@ -40,6 +43,7 @@
 //! * `sheet`: the sheet window.
 //! * `map`: where each button is, written out for a script.
 
+mod bring;
 mod map;
 mod model;
 mod panels;
@@ -65,23 +69,28 @@ use scene::Orbit;
 
 fn main() {
     let mut args = std::env::args().skip(1);
-    let Some(path) = args.next() else {
-        eprintln!("usage: plumbline-app <job file> [roof path]");
-        std::process::exit(2);
-    };
+    // With no job named, the job is `job.json` in the folder the program was started in.
+    let path = args.next().unwrap_or_else(|| "job.json".to_string());
     let roof_arg = args.next();
-    let text = match std::fs::read_to_string(&path) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("plumbline-app: cannot read {path}: {e}");
-            std::process::exit(1);
-        }
-    };
-    let (mut job, report) = match file::load(&text) {
-        Ok(x) => x,
-        Err(e) => {
-            eprintln!("plumbline-app: {path}: {e}");
-            std::process::exit(1);
+    // A job file that is not there yet is a new job: it is written when it is first saved.
+    let fresh = !std::path::Path::new(&path).exists();
+    let (mut job, report) = if fresh {
+        let title = std::path::Path::new(&path).file_stem().and_then(|s| s.to_str()).unwrap_or("job").replace(['-', '_'], " ");
+        (plumbline_world::Job::new(&title, "plumbline", &plumbline_world::job::now()[..10]), file::LoadReport::default())
+    } else {
+        let text = match std::fs::read_to_string(&path) {
+            Ok(t) => t,
+            Err(e) => {
+                eprintln!("plumbline-app: cannot read {path}: {e}");
+                std::process::exit(1);
+            }
+        };
+        match file::load(&text) {
+            Ok(x) => x,
+            Err(e) => {
+                eprintln!("plumbline-app: {path}: {e}");
+                std::process::exit(1);
+            }
         }
     };
     // A roof named on the command line has to be a roof in the job.
@@ -93,7 +102,11 @@ fn main() {
     }
     // The roof on show: the one named, else the first solved from a footprint, else the first.
     let roof = roof_arg.or_else(|| solve::roofs(&mut job).into_iter().next()).or_else(|| job.order.iter().find_map(|e| (job.world.get::<Kind>(*e) == Some(&Kind::Roof)).then(|| job.world.get::<plumbline_world::Node>(*e).map(|n| n.path.clone())).flatten()));
-    let (tone, message) = if report.stale.is_empty() { (Tone::Done, "Opened.".to_string()) } else { (Tone::Warned, format!("Opened. Figures in the file did not match its geometry for {} and were worked out again.", report.stale.join(", "))) };
+    let (tone, message) = if fresh {
+        (Tone::Done, format!("A new job. Next steps, on the left, says where to start. Save writes it to {path}."))
+    } else if report.stale.is_empty() {
+        (Tone::Done, "Opened.".to_string())
+    } else { (Tone::Warned, format!("Opened. Figures in the file did not match its geometry for {} and were worked out again.", report.stale.join(", "))) };
     let has_roof = roof.is_some();
     // The job as it was opened: what the first step undone goes back to.
     let draw = tools::Draw { last_text: file::save(&mut job), ..default() };
@@ -114,13 +127,14 @@ fn main() {
         go: None,
         steps_open: true,
         look_at: None,
+        dropped: None,
         entry_line: None,
         measuring: None,
         origin: [0.0; 3],
         framed: false,
         pointer: None,
         shots: 0,
-        edited: false,
+        edited: fresh,
         plan: false,
         walk: false,
         show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false },
@@ -446,19 +460,27 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
             Some(true) => match field {
                 // A price typed here is entered as Assumed, like everything set in this
                 // window: there is nowhere in it yet to say where a figure came from.
-                Entry::Allowance | Entry::UnitCost => {
-                    let what = if field == Entry::Allowance { "allowance" } else { "unit_cost" };
-                    let line = if field == Entry::UnitCost { doc.entry_line.take() } else { None };
+                Entry::Allowance | Entry::UnitCost | Entry::StretchOut => {
+                    let what = match field {
+                        Entry::Allowance => "allowance",
+                        Entry::UnitCost => "unit_cost",
+                        _ => "stretch_out",
+                    };
+                    let line = if field != Entry::Allowance { doc.entry_line.take() } else { None };
                     match doc.selected.clone() {
                         None => tools::cant(doc, "set a price", "nothing is selected"),
                         Some(sel) => match doc.job.set_on_line(&sel, what, line.as_deref(), Some(text.trim()), Status::Assumed, SOURCE) {
                             Ok(()) => {
                                 doc.job.derive();
-                                doc.edit(if field == Entry::Allowance { "Allowance" } else { "Unit cost" });
+                                doc.edit(match field {
+                                    Entry::Allowance => "Allowance",
+                                    Entry::UnitCost => "Unit cost",
+                                    _ => "Stretch-out",
+                                });
                                 let of = line.map(|l| format!(" of {l:?}")).unwrap_or_default();
                                 doc.say(Tone::Done, format!("{sel}: {}{of} set to {}.", what.replace('_', " "), text.trim()));
                             }
-                            Err(why) => tools::cant(doc, "set that price", why),
+                            Err(why) => tools::cant(doc, if field == Entry::StretchOut { "set that stretch-out" } else { "set that price" }, why),
                         },
                     }
                     doc.redraw();
@@ -470,6 +492,7 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                 Entry::Distance => tools::scale_entered(doc, &text),
                 Entry::Measure => tools::measured(doc, &text),
                 Entry::Room => tools::room_named(doc, &text),
+                Entry::BringIn(what) => bring::bring(doc, what, &text),
                 // What it is made of, and the job's overhead and profit: Assumed, like the rest.
                 Entry::Material | Entry::Overhead | Entry::Profit => {
                     let root = doc.job.world.get::<plumbline_world::Node>(doc.job.root()).map(|n| n.path.clone()).unwrap_or_default();

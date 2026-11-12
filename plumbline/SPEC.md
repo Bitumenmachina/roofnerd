@@ -864,6 +864,107 @@ value, and the value is Known. DECISIONS.md call 49 has why each rule is as it i
   than an eighth of a second are a burst; with no entry open a burst is not used, and
   that is said once. A single key acts an eighth of a second after it is pressed.
 
+### 5.15 A floor, a room and a roof drawn
+
+`editing::floor` puts a floor of a type on a storey, by a boundary that is given or by
+**the outline its walls enclose** (`building::floor_outline`: along the centre lines of
+the walls, the outer outline of the largest piece they make). Ported from BIMCraft
+(PORTMAP.md), with every value flagged.
+
+* A floor by its walls is as sure as the least sure of those walls' lines, and its
+  source says it is the outline of the walls. A floor by a boundary is as sure as
+  whoever gives it says.
+* Where the walls do not close, or close round a courtyard, the verb refuses and says
+  which: this program's floor has no hole yet. Where they make a second piece, the
+  floor is the largest and the result says what was left.
+* A second floor on an outline a floor of that storey already has is refused: it would
+  be counted twice.
+* A room is a point and a name (`editing::room`). Its floor area is the area inside the
+  faces of the walls round its point; with no walls round it, it has no figure and says
+  why (it is not refused: its walls may be drawn next).
+* A roof drawn in the window is a footprint (its corners in turn, closed on the first)
+  with one pitch on every side and the height of its eaves, solved as 5.5 has it. A
+  plane is made a gable afterwards.
+
+In the window: Floor is one click on the level; Room a click and a name; Roof its
+corners. On the plan of one level the roof over it is drawn in broken lines, as a plan
+draws what is overhead.
+
+### 5.16 The verify-in-field list
+
+`vif::vif` reads from the job, and keeps nothing beside it, each question the job still
+asks of the building (DECISIONS.md call 54):
+
+* **A thing with a value that can be measured or checked on site and is not Known**
+  (`editing::takes` says which values those are), with each such value named as the
+  screen names it.
+* **A clash that rests on anything not Known.** One that rests only on what is Known is
+  a finding, and is on the clash list, not on this one.
+
+**The dollars riding on a thing** are the amounts of the estimate's live lines whose
+quantity is worked from a figure that rests on that thing (each worked-out figure names
+what it rests on), **and whose amount is itself not Known**: a line that has come out
+Known rests on nothing still in question. **The dollars riding on a clash** are the
+amounts of the lines on the two things in it. A question nothing priced rests on has no
+dollars, which is not $0.00. The list is largest first, ties in the job's order, those
+with no dollars last, clashes before things. The total counts each line once.
+
+One list, three places: `plumbline vif`; the sheet's Verify in field tab, where a click
+on a row selects the thing in the model window and takes the view to it; and the top
+bar, which says how many there are and what rides on them.
+
+### 5.17 The estimate and the building written out
+
+`export::estimate_out` lays the estimate out as sheets of cells; `export::lens_out`
+lays out one lens on it; `plumbline_sheets::xlsx` writes sheets as a workbook and
+`plumbline_sheets::csv` as rows of values.
+
+* **In the workbook an amount is a formula** (`=ROUND(D5*F5,2)`: what is priced times
+  the price it is extended at, to the cent); each class of the recap is a `SUMIF` over
+  the amounts; the job cost their `SUM`; overhead and profit each a percentage in a
+  cell of its own and a formula on it; the price their sum. Each formula is written
+  with the figure the job has for it, and only where the formula comes to that figure;
+  where it would not, the job's figure is written as a figure and the row says so. A
+  class with nothing in it says "none", not a formula that comes to 0. What the price
+  leaves out is named under it.
+* **As values** the estimate is its lines under their headings, so it reads back as an
+  estimate made before (`import prior`); set against the job it came from, every line
+  agrees.
+* **A lens** leaves out what its reader is not shown and says so at its head.
+  Supplier: the Material lines by what is bought (a material's name, or the line's own
+  description) and its unit, quantities added to four places; no price, no amount. A
+  group with a line that has no quantity has no quantity, and says which line.
+  Subcontractor: the lines classed Subcontract, with quantities; no price. PM: every
+  line with its hours, class and code; the budget by class; the verify-in-field list;
+  no overhead, profit or price. A line with no class is in no lens but the PM's, and
+  each of the other two says so.
+* **`plumbline_ifc::write::export` writes the building as IFC4**, lengths in feet:
+  levels; walls as a rectangle on plan pushed up, each door and window in a hole cut
+  for it; floors as their outline pushed up; rooms as the outline their floor area is
+  the area of, as high as their level is to the next; the roof's planes as they lie;
+  runs as their section pushed along their run; fittings, fixtures and equipment as
+  their boxes; systems with what is on them. Every value entered on a thing goes with
+  it in a property set (`Plumbline_Values`), with its status and its source. A thing's
+  identifier is worked from the job and the thing, so a model written twice is the
+  same file. What a model has no place for (cost lines, materials, conditions,
+  drawings, estimates made before, types) and what has no shape is counted and said.
+  The shapes are those this crate's own reader reads back, and the demonstration reads
+  them back; IfcOpenShell, which is no part of the program, validates the file.
+
+### 5.18 The window
+
+DECISIONS.md call 55 has the layout and why. What the model has to do with it:
+
+* Every word on screen passes through one place (`theme::spoken`), which says a path
+  as the thing's name, a figure's name as its words, money and units the way a trade
+  writes them, and the model's own spelling in US English (a storey is a level).
+  What is inside quotation marks, and a name shown by itself, is as it was typed.
+* A button does what its key does, through the same code.
+* What is brought in in the window (call 56) is the command line's verb, Assumed, its
+  source the file's name.
+* With `PLUMBLINE_MAP` set, the program writes where each named thing on screen is, for
+  the demonstrations (`map.rs`). Nothing else about the program changes.
+
 ## 6. Cost code scheme
 
 Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores its
@@ -926,10 +1027,10 @@ Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores
 |---|---|---|
 | `crates/world` (`plumbline-world`) | `bevy_ecs`, `serde`, `serde_json`, `parry3d-f64` (solid geometry, for clashes) | The model: values, units, components, checks, plan geometry, derivation, line formulas and the steps a line is worked in, the lines planes imply, the saved file, the sample job, the flat view |
 | `crates/plans` (`plumbline-plans`) | `hayro` (PDF), `image` (PNG, JPEG) | Reading a plan file's page: its picture, its straight lines, and what it could not give |
-| `crates/sheets` (`plumbline-sheets`) | `csv`, `calamine` (XLSX) | Reading a table out of a CSV file or a workbook's sheet as rows of text, with what was not read; writing CSV |
-| `crates/ifc` (`plumbline-ifc`) | `plumbline-world` | A STEP reader ported from BIMCraft, and a model (IFC) brought into a job over it |
+| `crates/sheets` (`plumbline-sheets`) | `csv`, `calamine` (XLSX read), `rust_xlsxwriter` (XLSX written) | Writing a workbook with its formulas, and CSV; and reading a table out of a CSV file or a workbook's sheet as rows of text, with what was not read; writing CSV |
+| `crates/ifc` (`plumbline-ifc`) | `plumbline-world` | A STEP reader ported from BIMCraft, a model (IFC) brought into a job over it, and the job's building written as an IFC4 model |
 | `crates/cli` (`plumbline`) | `plumbline-world`, `plumbline-plans`, `plumbline-sheets`, `plumbline-ifc` | The command line: the samples, `show`, `check`, `lines`, `takeoff`, `price`, `estimate`, the entry commands (`set`, `apply`, `line`, `class`, `labor`, `material`, `roof`) and the drawing verbs of sections 5.8 and 5.9, `clashes`, the plans of section 5.11 and the tables of 5.12 |
-| `crates/app` (`plumbline-app`) | `plumbline-world`, `plumbline-plans`, `bevy` | The 3D window and the sheet window |
+| `crates/app` (`plumbline-app`) | `plumbline-world`, `plumbline-plans`, `plumbline-sheets`, `plumbline-ifc`, `bevy` | The model window and the sheet window |
 
 The world crate does not depend on any renderer or window, and must not. The engine is
 linked by the application crate alone.

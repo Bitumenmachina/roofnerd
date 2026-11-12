@@ -4,7 +4,10 @@ Each question states the assumption in use until it is answered. No assumption h
 enters the money path.
 
 ## Q1. Primary cost code: CSI MasterFormat or UniFormat?
-**Open.** MasterFormat codes work results (07 61 00 Sheet Metal Roofing); UniFormat codes
+**Answered by Patrick, 2026-11-12 (DECISIONS.md call 57):** "the focus is a full 16
+division building platform". The primary cost code is the division, one of the sixteen
+of MasterFormat 1995. What follows is as it stood before.
+**Was open.** MasterFormat codes work results (07 61 00 Sheet Metal Roofing); UniFormat codes
 elements (B3010 Roof Coverings). Design-phase pricing by $/SF reads naturally in
 UniFormat; a detailed sheet-metal estimate reads naturally in MasterFormat. D4 (macro to
 micro) is where the choice bites.
@@ -234,3 +237,9 @@ is built until he rules on the screen and its words.
    model's word (storey), which is IFC's (`IfcBuildingStorey`). **Still his to
    overrule**: if the command line should say level too, say so.
 2. "Class" stays until he says which word his estimators use (unchanged).
+
+**Closed, 2026-11-12 (DECISIONS.md call 57).** Patrick: "Why are you asking me on
+language when I said US construction it's a known language and you are the driver of
+this act like it." Both parts of Q20 are decided by the builder: a level everywhere a
+person reads, the command line included; and a line's "class" is its cost type. No
+wording question is put to him again.

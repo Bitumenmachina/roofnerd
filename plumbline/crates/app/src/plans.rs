@@ -234,7 +234,7 @@ pub fn read(mut doc: ResMut<Doc>, mut plans: ResMut<Plans>, mut images: ResMut<A
 }
 
 /// Why a file could not be opened, in words: the machine's own are not shown.
-fn why_not_opened(e: &std::io::Error) -> &'static str {
+pub fn why_not_opened(e: &std::io::Error) -> &'static str {
     match e.kind() {
         std::io::ErrorKind::NotFound => "is not there",
         std::io::ErrorKind::PermissionDenied => "is there, and this program is not allowed to open it",
@@ -319,7 +319,7 @@ pub fn dropped(mut doc: ResMut<Doc>, mut drops: MessageReader<FileDragAndDrop>) 
     for drop in drops.read() {
         if let FileDragAndDrop::DroppedFile { path_buf, .. } = drop {
             if let Some(file) = path_buf.to_str() {
-                add(&mut doc, file);
+                crate::bring::dropped(&mut doc, file);
             }
         }
     }

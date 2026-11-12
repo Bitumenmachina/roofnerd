@@ -13,6 +13,8 @@ path = "src/main.rs"
 [dependencies]
 plumbline-world = { path = "../world" }
 plumbline-plans = { path = "../plans" }
+plumbline-sheets = { path = "../sheets" }
+plumbline-ifc = { path = "../ifc" }
 # The engine, with audio and gamepads left off: they need system development packages
 # and an estimating program has no use for them. Wayland is left off too: it needs
 # libwayland's development files to build. The window is X11, which a Wayland desktop

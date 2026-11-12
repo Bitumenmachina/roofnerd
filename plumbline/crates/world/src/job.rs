@@ -42,6 +42,23 @@ pub struct Job {
     pub extra: BTreeMap<String, serde_json::Value>,
 }
 
+/// The moment now by the machine's clock, as a file's heading writes it:
+/// `2026-01-31T09:30:00`, by the clock at Greenwich. Its first ten letters are the day.
+/// (Days since 1970 to a date by the civil-calendar arithmetic everyone uses.)
+pub fn now() -> String {
+    let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0) as i64;
+    let (days, rest) = (secs.div_euclid(86_400), secs.rem_euclid(86_400));
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let (day, month) = (doy - (153 * mp + 2) / 5 + 1, if mp < 10 { mp + 3 } else { mp - 9 });
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!("{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}", rest / 3_600, rest % 3_600 / 60, rest % 60)
+}
+
 impl Job {
     pub fn new(title: &str, author: &str, started: &str) -> Job {
         let mut job = Job {

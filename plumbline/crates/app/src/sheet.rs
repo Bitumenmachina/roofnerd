@@ -9,11 +9,16 @@
 use bevy::picking::pointer::PointerButton;
 use bevy::prelude::*;
 
-use crate::model::{Doc, Snapshot, Tab};
+use crate::model::{Doc, Entry, Snapshot, Tab, Tone};
 use crate::panels::{amount, one_line, pretty, shown, tally_chips, tone_ink, total, wordmark, Cameras, Scrolls};
 use crate::theme::{self, rounded, status_chip, swatch, text, Fonts, Weight};
 use plumbline_world::value::Status;
 use plumbline_world::{units, view, Discipline, Kind};
+
+/// How much of the sheet window its heading and its tabs take at the top, and its line
+/// of status at the foot: what scrolls shows between them.
+pub const HEAD_H: f32 = 100.0;
+pub const FOOT_H: f32 = 34.0;
 
 #[derive(Component)]
 pub struct SheetWindow;
@@ -60,6 +65,33 @@ fn cell(p: &mut ChildSpawnerCommands, width: f32, right: bool, build: impl FnOnc
     p.spawn(node).with_children(build);
 }
 
+/// A figure on the sheet that is changed where it stands: it is drawn as a field, a
+/// click on it opens it, and while it is being typed it shows what is typed.
+fn editable(c: &mut ChildSpawnerCommands, fonts: &Fonts, name: String, said: String, ink: Color, typed: Option<&str>, open: impl Fn(&mut Doc) + Send + Sync + 'static) {
+    let mut e = c.spawn((
+        Node { padding: UiRect::axes(px(5.0), px(1.0)), border: UiRect::all(px(1.0)), align_items: AlignItems::Center, min_height: px(20.0), flex_shrink: 0.0, ..default() },
+        BorderColor::all(if typed.is_some() { theme::accent() } else { theme::hairline() }),
+        BackgroundColor(if typed.is_some() { theme::panel() } else { theme::field_paper() }),
+        theme::Named { name, scrolls: true },
+    ));
+    e.with_children(|f| match typed {
+        Some(typed) => {
+            f.spawn((theme::typed(fonts, typed, 12.5, Weight::Medium, theme::ink()), TextLayout::no_wrap(), Pickable::IGNORE));
+            f.spawn((Node { width: px(1.5), height: px(14.0), margin: UiRect::left(px(1.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::accent()), Pickable::IGNORE));
+        }
+        None => {
+            f.spawn((text(fonts, said, 12.5, Weight::Regular, ink), TextLayout::no_wrap(), Pickable::IGNORE));
+        }
+    });
+    e.observe(move |mut press: On<PointerClick>, mut doc: ResMut<Doc>| {
+        if press.button == PointerButton::Primary {
+            // The click is this figure's: the row under it does not also take it.
+            press.propagate(false);
+            open(&mut doc);
+        }
+    });
+}
+
 fn words(p: &mut ChildSpawnerCommands, fonts: &Fonts, s: impl Into<String>, size: f32, weight: Weight, colour: Color) {
     p.spawn((text(fonts, s, size, weight, colour), TextLayout::no_wrap()));
 }
@@ -89,7 +121,7 @@ fn row(p: &mut ChildSpawnerCommands, selected: bool, select: Option<String>, bui
     e.with_children(build);
     if let Some(path) = select {
         // A script calls the row by what the thing is called.
-        e.insert(theme::Named { name: theme::spoken(&path), scrolls: false });
+        e.insert(theme::Named { name: theme::spoken(&path), scrolls: true });
         e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
             if press.button == PointerButton::Primary && doc.entry.is_none() {
                 doc.select(&path);
@@ -238,7 +270,7 @@ fn notes(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
     if snap.notes.is_empty() {
         return;
     }
-    table(p, fonts, "To settle", format!("{}", snap.notes.len()), |t| {
+    table(p, fonts, "To verify", format!("{}", snap.notes.len()), |t| {
         for (status, what, why) in &snap.notes {
             t.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::axes(px(16.0), px(7.0)), row_gap: px(2.0), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::rule()))).with_children(|r| {
                 r.spawn(Node { align_items: AlignItems::Center, column_gap: px(9.0), ..default() }).with_children(|top| {
@@ -499,7 +531,7 @@ fn verify(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsho
                 Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(3.0)), min_height: px(38.0), border: UiRect::bottom(px(1.0)), ..default() },
                 BackgroundColor(if selected { theme::accent_wash() } else { Color::NONE }),
                 BorderColor::all(theme::rule()),
-                theme::Named { name: format!("Verify {}", theme::spoken(&go)), scrolls: false },
+                theme::Named { name: format!("Verify {}", theme::spoken(&go)), scrolls: true },
             ));
             e.with_children(|r| {
                 let worst = q.values.iter().map(|v| v.1).max().unwrap_or(Status::Assumed);
@@ -588,14 +620,67 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     (None, None) => "no class".to_string(),
                     _ => String::new(),
                 };
-                named(r, fonts, l.description.clone(), if l.off { theme::ink_faint() } else { theme::ink() }, tag, if l.class.is_none() { theme::status_ink(Status::Unknown) } else { theme::ink_faint() });
+                // What is being typed on this line, if anything is.
+                let typing = |field: Entry| match &doc.entry {
+                    Some((f, typed)) if *f == field && selected && doc.entry_line.as_deref() == Some(l.description.as_str()) => Some(typed.as_str()),
+                    _ => None,
+                };
+                let (path, line) = (l.path.clone(), l.description.clone());
+                r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(4.0)), row_gap: px(2.0), overflow: Overflow::clip(), ..default() }).with_children(|c| {
+                    c.spawn(text(fonts, l.description.clone(), 12.5, Weight::Regular, if l.off { theme::ink_faint() } else { theme::ink() }));
+                    c.spawn(Node { align_items: AlignItems::Center, column_gap: px(8.0), flex_wrap: FlexWrap::Wrap, row_gap: px(2.0), ..default() }).with_children(|under| {
+                        if !tag.is_empty() {
+                            under.spawn((text(fonts, tag.clone(), 11.0, Weight::Regular, if l.class.is_none() { theme::status_ink(Status::Unknown) } else { theme::ink_faint() }), TextLayout::no_wrap()));
+                        }
+                        // Its stretch-out, changed here: it belongs to the line.
+                        if let Some(so) = &l.stretch_out {
+                            under.spawn((text(fonts, "stretch-out", 11.0, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap()));
+                            let said = so.value.as_ref().map(|v| units::show_length(v, &so.unit)).unwrap_or_else(|| "not set".to_string());
+                            let (path, line) = (path.clone(), line.clone());
+                            editable(under, fonts, format!("Stretch-out of {} on {}", l.description, l.element), said, theme::status_ink(so.status), typing(Entry::StretchOut), move |doc| {
+                                doc.select(&path);
+                                doc.open(Entry::StretchOut, "");
+                                doc.entry_line = Some(line.clone());
+                            });
+                        }
+                        // In-house labor is switched off or on, line by line.
+                        if l.class == Some(Class::Labor) {
+                            let (path, line, off) = (path.clone(), line.clone(), l.off);
+                            editable(under, fonts, format!("Labor of {} on {}", l.description, l.element), if off { "Off: switch on".to_string() } else { "On: switch off".to_string() }, if off { theme::ink_faint() } else { theme::ink_soft() }, None, move |doc| {
+                                match doc.job.set_off(&path, Some(&line), !off) {
+                                    Ok(()) => {
+                                        doc.job.derive();
+                                        doc.edit("Labor on or off");
+                                        doc.say(Tone::Done, format!("{path}: {line:?} switched {}.", if off { "on" } else { "off" }));
+                                    }
+                                    Err(why) => crate::tools::cant(doc, "switch labor", why),
+                                }
+                                doc.redraw();
+                            });
+                        }
+                    });
+                });
                 // Hours are held and added to four places and shown to two, as a time
                 // sheet has them.
                 let places = 2;
                 cell(r, 96.0, true, |c| words(c, fonts, amount(l.priced.value, places, &l.priced.unit), 12.5, Weight::Regular, theme::status_ink(l.priced.status)));
-                cell(r, 92.0, true, |c| match l.unit_cost.as_ref().and_then(|v| v.value.map(|x| (x, v))) {
-                    Some((x, v)) => words(c, fonts, format!("${}/{}", view::rate(x), v.unit.trim_start_matches("$/")), 12.5, Weight::Regular, theme::status_ink(v.status)),
-                    None => words(c, fonts, "no price", 12.5, Weight::Regular, theme::status_ink(Status::Unknown)),
+                cell(r, 92.0, true, |c| {
+                    let (said, ink) = match l.unit_cost.as_ref().and_then(|v| v.value.map(|x| (x, v))) {
+                        Some((x, v)) => (format!("${}/{}", view::rate(x), v.unit.trim_start_matches("$/")), theme::status_ink(v.status)),
+                        None => ("no price".to_string(), theme::status_ink(Status::Unknown)),
+                    };
+                    // A line with a price of its own is priced here. One made of a
+                    // material takes its material's price, which is the price list's.
+                    if l.material.is_none() {
+                        let (path, line) = (l.path.clone(), l.description.clone());
+                        editable(c, fonts, format!("Unit cost of {} on {}", l.description, l.element), said, ink, typing(Entry::UnitCost), move |doc| {
+                            doc.select(&path);
+                            doc.open(Entry::UnitCost, "");
+                            doc.entry_line = Some(line.clone());
+                        });
+                    } else {
+                        words(c, fonts, said, 12.5, Weight::Regular, ink);
+                    }
                 });
                 let (said, ink) = match (l.off, l.amount.value) {
                     (true, _) => (format!("off ({})", money(&l.amount).0), theme::ink_faint()),
@@ -670,7 +755,27 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!("at {} %", view::rate(x)))).unwrap_or_default();
         for (name, d, at, strong) in [("Overhead", &est.overhead, rate(est.markup.as_ref().map(|m| &m.overhead)), false), ("Profit", &est.profit, rate(est.markup.as_ref().map(|m| &m.profit)), false), ("Price", &est.price, String::new(), true)] {
             let (said, status) = money(d);
-            line(t, name.to_string(), at, String::new(), said, status, strong);
+            let field = match name {
+                "Overhead" => Some((Entry::Overhead, KeyCode::KeyO)),
+                "Profit" => Some((Entry::Profit, KeyCode::KeyR)),
+                _ => None,
+            };
+            match field {
+                None => line(t, name.to_string(), at, String::new(), said, status, strong),
+                // Overhead and profit are each a percentage, changed here.
+                Some((field, key)) => row(t, false, None, |r| {
+                    cell(r, 7.0, false, |c| dot(c, status));
+                    cell(r, 0.0, false, |c| {
+                        words(c, fonts, name, 12.5, Weight::Medium, theme::ink());
+                        let typed = match &doc.entry {
+                            Some((f, typed)) if *f == field => Some(typed.as_str()),
+                            _ => None,
+                        };
+                        editable(c, fonts, format!("{name} percent"), if at.is_empty() { "not set".to_string() } else { at.clone() }, if at.is_empty() { theme::status_ink(Status::Unknown) } else { theme::ink_soft() }, typed, move |doc| doc.press(key));
+                    });
+                    cell(r, 130.0, true, |c| words(c, fonts, said.clone(), 12.5, Weight::Semibold, theme::status_ink(status)));
+                }),
+            }
             // Why there is no figure; or, on a price over a job cost that leaves lines
             // out, that it is the price of what is in it and not of the job.
             if d.value.is_none() || !d.note.is_empty() {

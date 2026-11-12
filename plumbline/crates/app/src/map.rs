@@ -37,7 +37,7 @@ pub fn write(
     let file = file.get_or_insert_with(|| std::env::var("PLUMBLINE_MAP").ok());
     let (Some(file), Some(cameras)) = (file.as_ref(), cameras) else { return };
     let mut model = (IVec2::ZERO, Vec2::ZERO);
-    let mut sheet = IVec2::ZERO;
+    let mut sheet = (IVec2::ZERO, Vec2::ZERO);
     for (window, primary) in &windows {
         let at = match window.position {
             WindowPosition::At(at) => at,
@@ -46,7 +46,7 @@ pub fn write(
         if primary {
             model = (at, Vec2::new(window.width(), window.height()));
         } else {
-            sheet = at;
+            sheet = (at, Vec2::new(window.width(), window.height()));
         }
     }
     let mut found: Vec<(&str, String, f32, f32)> = Vec::new();
@@ -60,7 +60,11 @@ pub fn write(
         if name.scrolls && on_model && (at.y < TOP_H || at.y > model.1.y - STATUS_H) {
             continue;
         }
-        let (window, corner) = if on_model { ("model", model.0) } else { ("sheet", sheet) };
+        // The sheet's tables scroll under its heading and its tabs, over its foot.
+        if name.scrolls && !on_model && (at.y < crate::sheet::HEAD_H || at.y > sheet.1.y - crate::sheet::FOOT_H) {
+            continue;
+        }
+        let (window, corner) = if on_model { ("model", model.0) } else { ("sheet", sheet.0) };
         found.push((window, name.name.clone(), at.x + corner.x as f32, at.y + corner.y as f32));
     }
     found.sort_by(|a, b| a.0.cmp(b.0).then(a.1.cmp(&b.1)).then(a.3.total_cmp(&b.3)).then(a.2.total_cmp(&b.2)));

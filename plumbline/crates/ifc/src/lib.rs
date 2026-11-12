@@ -27,6 +27,7 @@
 //! lines; this reads the plain shapes straight, and says what it did not read.
 
 pub mod step;
+pub mod write;
 
 use std::collections::{BTreeMap, HashMap};
 

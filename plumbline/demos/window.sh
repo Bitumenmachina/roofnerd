@@ -41,6 +41,21 @@ found() {
 on() { local at; at="$(found model "$1")" || exit 1; click $at; }
 # The same, in the sheet window. The keyboard goes back to the model window after.
 sheet() { local at; at="$(found sheet "$1")" || exit 1; click $at; focus; }
+# A row or a figure of the sheet brought on screen with the wheel, a step at a time
+# (5 is down, 4 is up), then clicked.
+sheet_at() {
+  local n=0
+  while [ -z "$(where sheet "$1")" ] && [ "$n" -lt 40 ]; do xdotool mousemove 2000 600; sleep 0.5; xdotool click "${2:-5}"; sleep 1.5; n=$((n + 1)); done
+  sheet "$1"
+}
+# The plan as it lies on screen, from the program: where its zero is and how many pixels
+# a foot is. There only on the plan view, once the view has come to rest.
+plan_line() { awk -F'\t' '$1=="plan" {print $2, $3, $4}' "$PLUMBLINE_MAP" 2>/dev/null; }
+# A place on the plan, in feet east and north, as a pixel on screen; and a pixel as feet.
+plan_px() { local x0 y0 k; read -r x0 y0 k <<<"$(plan_line)"; awk -v x0="$x0" -v y0="$y0" -v k="$k" -v e="$1" -v n="$2" 'BEGIN { printf "%d %d", x0 + e * k + 0.5, y0 - n * k + 0.5 }'; }
+plan_ft() { local x0 y0 k; read -r x0 y0 k <<<"$(plan_line)"; awk -v x0="$x0" -v y0="$y0" -v k="$k" -v x="$1" -v y="$2" 'BEGIN { printf "%.4f %.4f", (x - x0) / k, (y0 - y) / k }'; }
+# A click at a place on the plan given in feet east and north.
+at() { if [ -z "$(plan_line)" ]; then echo "the plan is not on screen, or the view has not come to rest: no place for $1, $2" >> "$T/missing.txt"; close_window; exit 1; fi; click $(plan_px "$1" "$2"); }
 esc() { xdotool key Escape; sleep 2; }
 # Typed, then Enter. With a second word, a picture is taken before the Enter.
 typed() { xdotool type --delay 250 -- "$1"; sleep 1; if [ -n "${2:-}" ]; then shot; fi; xdotool key Return; sleep 3; }

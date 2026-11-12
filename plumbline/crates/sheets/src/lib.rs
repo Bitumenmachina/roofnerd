@@ -315,3 +315,73 @@ pub fn csv(rows: &[Vec<String>]) -> String {
     }
     String::from_utf8(writer.into_inner().unwrap_or_default()).unwrap_or_default()
 }
+
+/// One cell of a workbook to be written.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Cell {
+    Empty,
+    Text(String),
+    /// A quantity, a rate or a count, shown to as many places as it has, up to four.
+    Number(f64),
+    Dollars(f64),
+    /// A formula, with what it comes to as it is written, so a reader that does not
+    /// work formulas out still shows the figure. Shown as dollars.
+    Formula { text: String, value: Option<f64> },
+}
+
+/// One sheet of a workbook to be written. `head` is its row of headings, from 0.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Tab {
+    pub name: String,
+    pub rows: Vec<Vec<Cell>>,
+    pub head: usize,
+    pub widths: Vec<f64>,
+}
+
+/// A workbook written as XLSX: each tab a sheet, its headings and its first row in
+/// bold, dollars as dollars, and every formula live.
+pub fn xlsx(tabs: &[Tab]) -> Result<Vec<u8>, String> {
+    use rust_xlsxwriter::{Format, Formula, Workbook};
+    let fault = |e: rust_xlsxwriter::XlsxError| format!("the workbook could not be written: {e}");
+    let mut book = Workbook::new();
+    let bold = Format::new().set_bold();
+    let dollars = Format::new().set_num_format("$#,##0.00");
+    let figure = Format::new().set_num_format("#,##0.####");
+    for tab in tabs {
+        let sheet = book.add_worksheet();
+        sheet.set_name(&tab.name).map_err(fault)?;
+        for (c, width) in tab.widths.iter().enumerate() {
+            sheet.set_column_width(c as u16, *width).map_err(fault)?;
+        }
+        for (r, row) in tab.rows.iter().enumerate() {
+            let strong = r == 0 || r == tab.head;
+            for (c, cell) in row.iter().enumerate() {
+                let (r, c) = (r as u32, c as u16);
+                match cell {
+                    Cell::Empty => {}
+                    Cell::Text(s) if s.is_empty() => {}
+                    Cell::Text(s) if strong => {
+                        sheet.write_string_with_format(r, c, s, &bold).map_err(fault)?;
+                    }
+                    Cell::Text(s) => {
+                        sheet.write_string(r, c, s).map_err(fault)?;
+                    }
+                    Cell::Number(x) => {
+                        sheet.write_number_with_format(r, c, *x, &figure).map_err(fault)?;
+                    }
+                    Cell::Dollars(x) => {
+                        sheet.write_number_with_format(r, c, *x, &dollars).map_err(fault)?;
+                    }
+                    Cell::Formula { text, value } => {
+                        let formula = match value {
+                            Some(v) => Formula::new(text).set_result(format!("{v}")),
+                            None => Formula::new(text),
+                        };
+                        sheet.write_formula_with_format(r, c, formula, &dollars).map_err(fault)?;
+                    }
+                }
+            }
+        }
+    }
+    book.save_to_buffer().map_err(fault)
+}

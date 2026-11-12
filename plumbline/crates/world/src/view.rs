@@ -596,6 +596,9 @@ pub struct SheetLine {
     pub amount: Derived,
     /// What it comes to at each supplier's price, when it is made of a material.
     pub quotes: BTreeMap<String, Derived>,
+    /// Its stretch-out, when its detail has one: the girth of the piece the line is
+    /// cut from. It belongs to the line, and is changed on the line.
+    pub stretch_out: Option<Val<crate::Len>>,
 }
 
 /// One row of the recap.
@@ -690,6 +693,7 @@ pub fn estimate(job: &mut Job) -> Estimate {
                 unit_cost: if line.of_material { supply.as_ref().map(|s| s.price.clone()) } else { Some(line.unit_cost.clone()) },
                 amount,
                 quotes: f.quotes.clone(),
+                stretch_out: line.stretch_out.clone(),
             });
         }
     }

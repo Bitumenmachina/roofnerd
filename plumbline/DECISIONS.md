@@ -2176,3 +2176,115 @@ next steps all go into it; then the order of work as it stood.
 * **The price on the top bar is the estimate's price** with its flag; beside it, how
   many clashes are still questions. The dollars riding on what is not yet sure come
   with the verify-in-field list (call 54), which this bar is the place for.
+
+### Call 56. Bringing in from the window, and a new job from the window (2026-11-12)
+
+The fixed rule: "Imports matter as much as exports. People bring in what they already
+have." Until now a plan could be added in the window and everything else (a price
+list, an assembly library, an estimate made before, a model) only at the command line,
+where an estimator is not.
+
+* **Under "Bring in", on the left, a button for each**: Price list, Assemblies, Prior
+  estimate, Model (IFC). Each asks for its file where the button stood; the file can be
+  typed (found from the job's own folder first) or dropped on the window. Each is the
+  verb the command line calls, all of it or none of it.
+* **A file dropped with nothing asked for**: a plan is added as a drawing; an `.ifc`
+  is brought in as a model; a CSV or a workbook could be three things, so it is kept
+  and the screen asks which, by the same three buttons. The program does not guess
+  what a table is from its headings and file it as that.
+* **What is brought in in the window is Assumed, and its source is the file's name**
+  ("ridge.xlsx, brought in in the window"). A price list that says for itself how sure
+  each row is (the program's own, written out) keeps what it says. A window has no
+  place yet to say "Known, from their list of 3 March"; the command line does.
+* **A price list brought in in the window adds the materials it names** that the job
+  does not have: on a new job that is how its materials get there. At the command
+  line that is still `--add`, off unless asked for.
+* **What was not used and what was not read is said in full over the model**, as the
+  command line prints it: a row with no price, a column with no use, a beam this
+  program has no element for.
+* **A job file that is not there yet is a new job.** `plumbline-app house.json` on a
+  file that does not exist opens an empty job called "house", written when it is first
+  saved; with no file named it is `job.json` where the program was started. It used to
+  stop with "cannot read". The top bar says "Not saved" until it is.
+
+### Call 57. Patrick, 2026-11-12: the words are mine to choose; the focus is all sixteen divisions; the house is dressed
+
+His words, after seeing the redrawn screen and the work on clashes and the verify list:
+
+> "Why are you asking me on language when I said US construction it's a known language
+> and you are the driver of this act like it. Showcase all your capabilities and really
+> try to see how a human would experience it"
+>
+> "I do want to ensure wile clash detection is important here the focus is a full 16
+> division building platform seems like that focus has been lost. Also I still see the
+> 3d modeling but where is the texturing of an actual house or windows think high end
+> residential construction"
+
+Folded into `CLAUDE.md`. What each changes:
+
+**1. Language.** No wording question goes to him again. The two that were open are
+decided here:
+
+* **A floor of the building is a level, everywhere a person reads**: the screen, the
+  command line's output and its verbs, the documents. The job file keeps its key
+  (`Storey`, IFC's `IfcBuildingStorey`): a file's keys are not language, and jobs
+  already saved still load.
+* **A cost line's "class" is its cost type** (material, labor, subcontract, equipment,
+  other): the word US estimating uses. "Class" goes from every screen and from the
+  command line.
+* Q20 is closed. So is the habit: a word is chosen from the trade's own usage, checked
+  against a published source where there is doubt, and written down.
+
+**2. The focus: a full 16-division building platform.** The sixteen divisions are those
+of CSI MasterFormat as published through its 1995 edition, checked against two
+published lists on 2026-11-12 (en.wikipedia.org/wiki/16_Divisions;
+archtoolbox.com/masterformat-1995-divisions), not written from memory:
+
+| | | | |
+|---|---|---|---|
+| 1 General Requirements | 2 Site Construction | 3 Concrete | 4 Masonry |
+| 5 Metals | 6 Wood and Plastics | 7 Thermal and Moisture Protection | 8 Doors and Windows |
+| 9 Finishes | 10 Specialties | 11 Equipment | 12 Furnishings |
+| 13 Special Construction | 14 Conveying Systems | 15 Mechanical | 16 Electrical |
+
+(CSI replaced these with fifty divisions in 2004. He asked for sixteen, residential
+builders still estimate by them, and sixteen it is. A line can carry a later code as
+well.) This answers Q1: **the primary cost code is the division.**
+
+* **Every cost line carries its division.** A line with none is said to have none, in
+  the way a line with no cost type is: it is in no division's total, and the estimate
+  says what it left out.
+* **The estimate reads division by division**: the sheet groups its lines under the
+  sixteen, the recap totals each, and the workbook, the CSV and the PM's lens carry the
+  division. Material, labor and subcontract stay as the columns across.
+* **Each division has assemblies behind it**, so a traced house prices across all of
+  them: an exterior wall is framing (6), insulation, wrap and siding (7), gypsum board
+  and paint (9); a floor is a slab (3) or framing (6) and its finish (9); a door and a
+  window are 8; the site, the footings, the masonry, the cabinets, the appliances, the
+  plumbing, the heating and the wiring each have theirs. The library ships with
+  quantities and formulas and **no prices**: prices come from the price lists people
+  bring in. The made-up house carries made-up prices so the whole sheet can be shown.
+* **What the model does not yet have an element for is said, division by division**
+  (earthwork, footings, stairs, cabinets, appliances): a division with nothing in it
+  shows as having nothing, not as $0.00.
+* Clash detection and the verify-in-field list stay as built. They are tools of the
+  platform. The order of work goes back to the building: divisions first.
+
+**3. The house is dressed.** The 3D view shows the house as it will be built, to the
+standard of high-end residential work, inside the look rule (matte, studio light, a
+neutral ground, no sky, sun or grass):
+
+* Walls in their finish: lap siding, shingles, board and batten, brick, stone, stucco.
+  Roofs in theirs: standing seam, shingles, slate. Floors in theirs.
+* A window is a frame, sashes, muntins and glass, with casing and a sill; a door is a
+  frame, a paneled leaf and casing. Fascia, soffit, gutters, corner boards.
+* The finishes are drawn by the program (patterns made in code): no picture file of
+  unknown licence is linked.
+* **What a thing is dressed in is what its condition or material says.** A wall with
+  no finish said is drawn bare and says so; the picture does not promise a finish the
+  estimate does not price.
+
+**4. Seen as a person sees it.** Every screen is walked cold and every picture read,
+by its builder and then by judges briefed as a veteran estimator who has never seen
+it. A demonstration that passes on a screen a builder would stumble over is a defect
+in the demonstration.

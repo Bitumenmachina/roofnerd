@@ -617,6 +617,15 @@ pub fn rebuild(
             }
         }
     }
+    // On the plan of one level the roof over it is drawn as a plan draws what is
+    // overhead: its lines, broken. (With every level on show the roof itself is drawn.)
+    if show.roof && show.storey.is_some() && on_plan_view && !show.ghost {
+        for line in &snap.lines {
+            let Some([a, b]) = line.ends else { continue };
+            let (a, b) = (to_view(origin, a), to_view(origin, b));
+            build.drawing.lines.push((a, b, theme::ink_soft(), true));
+        }
+    }
 }
 
 /// The way a flat outline in space faces, turned to the upper side.

@@ -5,7 +5,8 @@ Product scope and the fixed rules belong to Patrick.
 
 Read this first, every session. A session does not remember the last one; the repository
 does. Each rule is here once. Patrick's rulings of 2026-11-11 are folded in and override
-anything older that conflicts (`plumbline/DECISIONS.md` call 42 has them as he gave them).
+anything older that conflicts (`plumbline/DECISIONS.md` call 42 has them as he gave them);
+so are his of 2026-11-12 (call 57).
 
 ## What this is
 
@@ -14,9 +15,16 @@ The job is one world; the 3D view, the estimate sheet, the reports and the lists
 views of it. `plumbline/STATUS.md` says where the build is, `plumbline/SPEC.md` what the
 model is, `plumbline/DECISIONS.md` what was decided and why.
 
+**The focus is a full 16-division building platform.** The whole building is estimated,
+every division from General Requirements to Electrical: each cost line carries its
+division, the estimate and its recap read division by division, and each division has
+assemblies behind it. Clash detection matters and is one of its tools; it is not the
+centre. (The sixteen are MasterFormat 1995's; `plumbline/DECISIONS.md` call 57 has the
+list and its source.)
+
 **The mission.** Trace the drawings we are given, build the 3D house from the tracing,
-and show the clashes the drawings hid. A veteran with simple field tools then confirms or
-clears each one.
+price it division by division, and show the clashes the drawings hid. A veteran with
+simple field tools then confirms or clears each one.
 
 **The loop.** Traced values start as Assumed. A clash between Assumed elements is a
 field question; a clash between Known elements is a finding. The program produces a
@@ -49,13 +57,22 @@ the lineage this came from. It is not being built on. Its own notes are at the e
   For any other format, loss is reported, never silent.
 - **Speak construction.** Every word on screen is a builder's or estimator's word. Units
   are written the way trades write them: SF, LF, EA, SQ, LS, LB, sheets, rolls, boxes, M.
-  No software term appears anywhere a user sees.
+  No software term appears anywhere a user sees. **US construction language is a known
+  language and the builder of this program chooses the words.** A wording question is
+  never put to Patrick: decide it, write the call down, and go on.
 - **Teach by doing.** A new user completes a first takeoff from a PDF without a manual.
   Every number can show what it is made of and where it came from. Depth is on demand:
   macro to micro means zooming into the same job, never changing screens.
 - **The look is an instrument.** Edges are drawn by line type, surfaces are matte,
   layouts are dense, and the plan and the sheet read like drawings. 3D stays shaded, with
   studio light and a neutral ground. No sky, sun or grass.
+- **The 3D house looks like the house.** It is dressed as it will be built, to the
+  standard of high-end residential work: siding, masonry and stone, roofing, windows
+  with their frames, sashes and glass, doors, trim. What it is dressed in is what the
+  estimate prices.
+- **See it as a person would.** Walk the program cold, as someone opening it for the
+  first time, and read every screen as they would. A figure proven by a script is not
+  a screen a builder can use.
 - **New features go to `plumbline/PROPOSALS.md`.** Product scope is Patrick's.
 - **Judges and every other subagent run on Opus or Sonnet**, never on the model that
   builds.

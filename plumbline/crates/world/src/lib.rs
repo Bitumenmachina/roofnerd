@@ -22,6 +22,7 @@ pub mod check;
 pub mod components;
 pub mod derive;
 pub mod editing;
+pub mod export;
 pub mod file;
 pub mod formula;
 pub mod geom;

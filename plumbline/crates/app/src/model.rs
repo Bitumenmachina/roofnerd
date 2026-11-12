@@ -14,6 +14,31 @@ use plumbline_world::{roof, view, Condition, Discipline, Job, JobInfo, Kind, Mea
 /// The source written on a value set in the window, on the plan or in 3D.
 pub const SOURCE: &str = "set in the window; not yet checked against a drawing";
 
+/// What a file brought into the job is.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Bring {
+    /// A price list: a supplier's, or the job's own.
+    Prices,
+    /// An assembly library this program wrote.
+    Assemblies,
+    /// An estimate made before, kept beside the job to be set against it.
+    Prior,
+    /// A model from another trade or a designer (IFC).
+    Model,
+}
+
+impl Bring {
+    pub const ALL: [Bring; 4] = [Bring::Prices, Bring::Assemblies, Bring::Prior, Bring::Model];
+    pub fn name(self) -> &'static str {
+        match self {
+            Bring::Prices => "Price list",
+            Bring::Assemblies => "Assemblies",
+            Bring::Prior => "Prior estimate",
+            Bring::Model => "Model (IFC)",
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq)]
 pub enum Entry {
     Pitch,
@@ -22,6 +47,10 @@ pub enum Entry {
     Allowance,
     /// The price of the selected element's cost line.
     UnitCost,
+    /// The stretch-out of the selected element's cost line.
+    StretchOut,
+    /// A file to bring in, of the kind said: its name, as typed.
+    BringIn(Bring),
     /// What the selected element is made of: a material's name.
     Material,
     /// The job's overhead, a percentage.
@@ -138,6 +167,9 @@ pub struct Doc {
     pub steps_open: bool,
     /// A thing the view is to go to: asked for by a row of the verify-in-field list.
     pub look_at: Option<String>,
+    /// A file dropped on the window that could be more than one thing (a CSV or a
+    /// workbook): kept until what it is has been said.
+    pub dropped: Option<String>,
     /// When a unit cost is being typed: the cost line it is for, by its description.
     pub entry_line: Option<String>,
     /// When a measurement is being typed: the element, the value's name as the panel
@@ -455,7 +487,13 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
                 // for a reason of its own (less than a cent) is still said.
                 let follows = r.label.starts_with("comes to,") || (r.label.starts_with("extension:") && (r.note.starts_with("the line has no price") || r.note.starts_with("the line has no quantity")));
                 if !r.note.is_empty() && !follows {
-                    s.notes.push((r.status, format!("{} of {} has no figure", crate::panels::pretty(&r.label), el.name), r.note.clone()));
+                    // A figure that is there and flagged is said with its figure; only
+                    // one that is not there "has no figure".
+                    let said = match r.number {
+                        Some(_) => format!("{} of {}: {}", crate::panels::pretty(&r.label), el.name, crate::panels::shown(r)),
+                        None => format!("{} of {} has no figure", crate::panels::pretty(&r.label), el.name),
+                    };
+                    s.notes.push((r.status, said, r.note.clone()));
                 }
                 continue;
             }
