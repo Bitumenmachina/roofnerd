@@ -3186,3 +3186,86 @@ DECISIONS.md call 58. `demos/dress.sh` (command line) and `demos/dressw.sh` (win
 3. **Tests** (`crates/world/tests/finish.rs`): every word of the vocabulary to its
    finish; a color word; outside faces of a rectangle of walls and of an L; a
    partition; a line off; the reading unchanged by a save and a load.
+
+## The house dressed as built. What was run and what it showed (2026-11-12)
+
+* **Built** (DECISIONS.md call 58): `plumbline_world::finish` reads what each wall,
+  roof plane, window, door and eave is finished with from its own live cost lines,
+  its material and its assembly, and which face of a wall is outside (the one outside
+  the outline its level's walls enclose). `plumbline finishes <file>` prints the
+  reading with the line that says each thing. The model window draws it
+  (`crates/app/src/dress.rs`): six claddings (lap siding, board and batten, shingles,
+  brick, stone, stucco) and six roofings (asphalt shingles, standing seam, slate,
+  tile, shakes, membrane) as patterns made in the program at trade sizes, with
+  relief; a wainscot under a cladding; corner boards on siding; a window built of
+  frame, sash, glass, muntins, casing and sill (double-hung, casement, slider or
+  fixed; divided lites as "6 over 6" or left to the size); a door of frame, leaf
+  (panel, glazed, overhead or plain), casing and knobs; a gutter on an eave that has
+  one priced. The right panel has a Finish block on whatever is selected: what it is
+  dressed in and the line that says so, or that it is bare and why.
+* **Flagged, not silent:** a thing nothing names a finish for is drawn bare and says
+  so. A second, different finish priced on the same thing is said ("also priced on
+  it and not drawn"), not dropped. A cladding priced on a partition is said to be
+  priced and not drawn. A wainscot with no height written is drawn 3 ft and says the
+  height is not written. Walls that enclose nothing say which face is outside is not
+  known and are dressed on both.
+* **Changed, and named:**
+  * An outside wall was told from a partition by its thickness (6 in or more). It is
+    now told by the outline. Wall ends at a corner now run past to close the corner
+    (they left a notch half a wall square).
+  * A window was one pane of glass and a door one slab. Glass is darker and less
+    clear (it was a pale wash).
+  * A roof plane's color came from its assembly's name holding "copper". It now comes
+    from the same reading as everything else; a plane with an assembly but no line,
+    material or assembly naming a roofing is bare gray where it was blue-gray.
+  * The priced sample (`plumbline sixteen`): every door but "bath door" was priced as
+    an entry door at $2,400; only the front door is one now and the rest are interior
+    doors at $640. Its windows and doors say what they are ("double-hung, divided
+    lites, bronze"; "mahogany, six panel"). **Job cost $401,094.08 to $390,534.08;
+    price $476,499.77 to $463,954.49.** Division 8 moved by the same $10,560.00.
+* **Tests:** `crates/world/tests/finish.rs`, six: the vocabulary; a color is a whole
+  word ("standing" holds no "tan"); outside faces of a rectangle drawn
+  counter-clockwise (south, east, north, west) and a partition; walls that enclose
+  nothing; what lines name and which line, a second cladding said, a labor line
+  switched off undressing its wall; the reading the same after a save and a load,
+  and the counts on the priced sample (8 walls sided, 4 with a wainscot, 8
+  partitions, 4 planes, 4 gutters, 17 windows double-hung) against the unpriced one,
+  bare. `crates/app/src/dress.rs`, three: every pattern made with its nine smaller
+  sizes; brick laid 4 to 32 in across and 12 courses to 32 in; a double-hung window
+  has two lights and the bars of 3 across and 2 up. **239 tests pass.**
+* **`demos/dress.sh` passes:** the house bare, then each wall, the roof, a window and
+  the door as the plan above lists them, word for word, and the second roofing said.
+* **`demos/dressw.sh` passes** (pictures in `demos/captured/dress/`, taken on this
+  tree): the measured colors are brick (124, 77, 67) and stucco (212, 204, 189) on
+  the made-up house; cedar (144, 123, 103) against bare (183, 183, 179) at the same
+  place of the sample house priced and unpriced; its roof (100, 103, 107) against
+  (143, 154, 167). The same thresholds fail on the other job of each pair, which is
+  the check proven red.
+* **Pictures read, all eight of the model:**
+  * `one-each/01`, `02`: brick in running bond, joints struck; a six-panel door with
+    its knob in a brickmould; a black 6-over-6 double-hung; stucco round the corner;
+    the corner closes clean (it flickered where two wall ends lay in each other's
+    faces, found in the first run and fixed); standing seam with its seams, a white
+    gutter on each eave.
+  * `one-each/03`: cedar shingles in uneven widths over coursed ashlar to 3 ft, a
+    corner board against white lap siding, an unpriced window as a frame and one
+    light.
+  * `one-each/04`: the south wall picked: "Brick veneer, red. On its south face.
+    From the line "Brick veneer, red"".
+  * `priced/01` to `03`: the sample house in cedar lap siding over a stone wainscot,
+    corner boards, bronze double-hung windows with divided lites in white casings
+    with drip caps and sills, a mahogany door, seams running up each plane.
+  * `bare/01`: the same house with nothing priced: plain walls, a plain gray roof.
+* **Not right, seen in the pictures:**
+  * Where a roof overhangs its walls there is no soffit: under the eave the gap
+    between the wall's top and the roof is open and reads dark.
+  * A selected dressed wall takes a violet cast from the selection's glow.
+  * First-floor casings overlap the top of the stone wainscot on the sample (its
+    sills are at 2 ft 6 in and its wainscot is 3 ft): the sample's data, and what a
+    drawing would show too.
+  * No band between levels, no foundation, no shutters, chimney or porch: there is
+    no element for them yet. The roof has no thickness.
+  * The window demonstrations written before this (draww, fieldw, clashw, house, d2,
+    d4w, d5w, planw, buildw, bringw) have not been rerun since; a click placed beside
+    an opening may now land on its casing. They are rerun next.
+* **Not judged.**

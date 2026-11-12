@@ -58,15 +58,16 @@ line "$DOOR" "Entry door, six panel, prehung" 8 '$2,400'
 "$P" house "$T/bare.json" >/dev/null
 cp "$J" "$T/before.json"
 
-session() { # $1 job, $2 the steps
+session() { # $1 job, $2 the folder of $OUT its pictures go in, $3 the steps
+  mkdir -p "$OUT/$2"
   cat > "$T/session.sh" <<SESSION
 #!/bin/bash
-export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD" N=${N:-0}
+export APP="$APP" T="$T" OUT="$OUT/$2" ICD="$ICD"
 . "$PWD/demos/window.sh"
 turn() { xdotool mousemove 750 450; sleep 0.6; xdotool mousedown 3; sleep 0.6; for i in \$(seq 1 \$3); do xdotool mousemove_relative -- \$1 \$2; sleep 0.3; done; xdotool mouseup 3; sleep 5; }
 nearer() { xdotool mousemove 750 450; sleep 0.6; for i in \$(seq 1 \$1); do xdotool click 4; sleep 0.5; done; sleep 5; }
 open_window "$1"
-$2
+$3
 close_window
 SESSION
   chmod +x "$T/session.sh"
@@ -77,16 +78,71 @@ SESSION
 
 echo
 echo "== One cladding to a wall: brick south, lap siding east; turned round, shingles over stone north, stucco west =="
-N=0 session "$J" '
-shot                        # 01 as opened: the south wall in brick, the east in white lap siding
+session "$J" one-each '
+shot                        # 01 as opened: the south wall in brick, the west in stucco
 turn 0 -10 5
 nearer 2
-shot                        # 02 lower and nearer: the courses, the corner board, the door and the windows
+shot                        # 02 lower and nearer: the courses, the corner, the panel door, the windows
 turn 26 0 20                # half way round
-shot                        # 03 the north wall in shingles over a stone wainscot, the west in stucco
+shot                        # 03 the north wall in shingles over a stone wainscot, the east in white lap siding
 turn -26 0 20
 click 560 560               # the south wall, picked
 park
 shot                        # 04 its Finish, in the panel: what it is dressed in and the line that says so
-cp "$PLUMBLINE_MAP" "$OUT/names.txt"
 '
+
+echo
+echo "== The sample whole house, priced in all sixteen divisions: dressed in what is priced on it =="
+session "$T/priced.json" priced '
+shot                        # 01 as opened
+turn 0 -10 5
+nearer 2
+shot                        # 02 lower and nearer: lap siding over a stone wainscot, double-hung windows, the entry door
+turn 0 30 8
+xdotool key f; sleep 5
+shot                        # 03 from above: the seams run up each plane
+'
+
+echo
+echo "== The same house with nothing priced: bare =="
+session "$T/bare.json" bare '
+shot                        # 01 as opened: no line names a finish, so none is drawn
+'
+
+for f in one-each/01 one-each/02 one-each/03 one-each/04 priced/01 priced/02 priced/03 bare/01; do
+  [ "$OUT/$f-model.png" -nt "$T/before.json" ] || { echo "FAIL: no picture $f from this run"; exit 1; }
+done
+echo "  8 pictures of the model saved under $OUT (and the sheet beside each)"
+
+echo
+echo "== What the pictures hold, measured: the walls are the colors of what is priced on them =="
+python3 - "$OUT" <<'PY'
+import sys
+from PIL import Image
+out = sys.argv[1]
+def mean(name, box):
+    im = Image.open(f"{out}/{name}-model.png").convert("RGB").crop(box)
+    px = list(im.getdata())
+    return tuple(round(sum(p[i] for p in px) / len(px)) for i in range(3))
+ok = True
+def check(what, got, test, want):
+    global ok
+    good = test(got)
+    ok = ok and good
+    print("    %-62s %s  %s" % (what, got, "as wanted" if good else "FAIL: wanted " + want))
+# The made-up house as opened: its south wall, right of the door, is red brick; its
+# west wall is stucco, a pale warm gray.
+check("one-each: the south wall, right of its door", mean("one-each/01", (880, 560, 980, 640)), lambda c: c[0] - c[1] > 40 and c[0] - c[2] > 40, "red well over green and blue (brick)")
+check("one-each: the west wall", mean("one-each/01", (480, 520, 600, 640)), lambda c: abs(c[0] - c[1]) < 25 and c[0] > 150, "pale and nearly gray (stucco)")
+# The sample house: priced, its walls are cedar siding; unpriced, the same place is bare.
+p, b = mean("priced/01", (700, 460, 760, 520)), mean("bare/01", (700, 460, 760, 520))
+check("priced: a wall of the sample house", p, lambda c: c[0] - c[2] > 40, "red well over blue (cedar)")
+check("bare: the same place with nothing priced", b, lambda c: c[0] - c[2] < 30 and c[0] > 170, "pale, no cladding")
+# Its roof: priced, dark standing seam; unpriced, the light gray of a bare plane.
+p, b = mean("priced/01", (760, 290, 860, 330)), mean("bare/01", (760, 290, 860, 330))
+check("priced: its roof", p, lambda c: c[0] < 120, "dark (standing seam)")
+check("bare: its roof", b, lambda c: c[0] > 130, "the light gray of a bare plane")
+sys.exit(0 if ok else 1)
+PY
+echo "  PASS: three jobs opened and pictured; the walls and roofs in the pictures are the colors of what is priced on them, and bare where nothing is"
+echo "  The pictures are the evidence: read them."

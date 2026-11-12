@@ -41,6 +41,8 @@ demos/plan.sh              # a plan laid under a storey, given its scale from on
 demos/field.sh             # what is measured on site put on a traced job: the floor above moves and the price with it, one clash clears, one becomes a finding
 demos/fieldw.sh            # the same in the window, each reading typed as a laser in keyboard mode types it; pictures in demos/captured/field
 demos/div.sh               # sixteen divisions: a whole house's lines in all sixteen, the recap by division, and the workbook's Divisions sheet
+demos/dress.sh             # what the house is dressed in, read from what is priced on it: each wall, the roof, a window and a door, with the line that says so
+demos/dressw.sh            # the same in the window: one cladding to a wall, the priced sample house, and the same house bare; pictures in demos/captured/dress
 demos/vif.sh               # the verify-in-field list: each question, what to measure, and the dollars riding on it, before and after measuring
 demos/export.sh            # the estimate as a workbook of formulas (worked again by a second hand), as CSV, three lenses, and the building as IFC4 checked by IfcOpenShell
 demos/imports.sh           # a price list and an assembly library out as CSV and back; a supplier's list from CSV and from a workbook; a prior estimate set against the job
@@ -183,6 +185,19 @@ estimate with what its reader is not shown left out, and says at its head what t
 The IFC model carries every value's status and source with it (what is Assumed here is
 still said to be Assumed there), and the command lists what a building model has no
 place for. An estimate written as CSV reads back in with `import prior`.
+
+## The house, dressed
+
+In 3D the house is drawn in what the estimate prices on it. Price "Brick veneer, red"
+on a wall and its outside face is red brick; "Cedar lap siding" and it is lap siding;
+"Stone veneer wainscot, 3 ft" and the bottom 3 ft is stone. A roof plane takes its
+roofing the same way (asphalt shingles, standing seam, slate, tile, shakes), a
+window how it operates and whether its lites are divided ("double-hung, 6 over 6,
+black"), a door how it is built ("six panel"). A wall with nothing priced on it that
+names a cladding is drawn bare: that is a wall nobody has priced the siding for.
+Click anything and its Finish says what it is dressed in and which line says so.
+
+    cargo run -p plumbline -- finishes job.json   # the same reading, written out
 
 ## What is left to verify
 

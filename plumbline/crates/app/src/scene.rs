@@ -490,8 +490,14 @@ pub fn rebuild(
                     let p4 = |x: f32, y: f32, z: f32| part.at(x, y, z);
                     plain.quad([p4(x0, y1, -half_t), p4(x1, y1, -half_t), p4(x1, y1, half_t), p4(x0, y1, half_t)], Vec3::Y, None);
                     plain.quad([p4(x0, y0, -half_t), p4(x1, y0, -half_t), p4(x1, y0, half_t), p4(x0, y0, half_t)], Vec3::NEG_Y, None);
-                    plain.quad([p4(x0, y0, -half_t), p4(x0, y0, half_t), p4(x0, y1, half_t), p4(x0, y1, -half_t)], -along, None);
-                    plain.quad([p4(x1, y0, -half_t), p4(x1, y0, half_t), p4(x1, y1, half_t), p4(x1, y1, -half_t)], along, None);
+                    // An end that runs past its corner is closed by the wall it corners
+                    // with: its own end would lie in that wall's face and fight it.
+                    if !(x0 < -1e-4 && past[0] > 1e-4) {
+                        plain.quad([p4(x0, y0, -half_t), p4(x0, y0, half_t), p4(x0, y1, half_t), p4(x0, y1, -half_t)], -along, None);
+                    }
+                    if !(x1 > length + 1e-4 && past[1] > 1e-4) {
+                        plain.quad([p4(x1, y0, -half_t), p4(x1, y0, half_t), p4(x1, y1, half_t), p4(x1, y1, -half_t)], along, None);
+                    }
                     build.piece(&p.path, None, meshes.add(plain.mesh()), Transform::IDENTITY, theme::wall_inside(), 0.92, 0.0, true);
                     if !bare.is_empty() {
                         build.piece(&p.path, None, meshes.add(bare.mesh()), Transform::IDENTITY, theme::wall_outside(), 0.92, 0.0, true);

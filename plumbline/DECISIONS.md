@@ -2325,3 +2325,19 @@ their real sizes, so a brick is 8 in by 2 2/3 in on the wall and a lap is its
 exposure. Studio light, neutral ground, no sky. Edges and roof lines keep their line
 types. With "Known, Assumed, Unknown" showing, everything goes back to flat color:
 that view is about certainty, not finish. The plan is still a drawing.
+
+**Addendum, the same day: BIMCraft's textures, read after this was built, which is
+the wrong order.** `crates/core/src/texture.rs` in BIMCraft (at the pinned commit)
+draws a material's 3D texture in code: ten kinds (brick, block, boards, concrete,
+plaster, tile, roof, fabric, metal, insulation), 256 px, with repeating noise and a
+chain of smaller sizes, laid at a size in millimetres the user sets on the material.
+The method here is the same one (a pattern worked out in code, repeating, with every
+smaller size, laid at real size), arrived at separately; no code was taken, so
+`crates/app/src/dress.rs` is ours and is outside the port map (which covers the
+building model and its editing). What BIMCraft has that this does not: a picture of
+the user's own as a texture, and a texture turned and moved by hand. What this has
+that it does not: the US claddings and roofings by name at their trade sizes (lap
+exposure, modular brick, coursed ashlar, 16 in seams), relief, and the finish read
+from the estimate instead of set on a material by hand, which is the point of this
+call. The rule broken: search what is already surveyed before building. Nothing had
+to be redone because of it; it is written here so the next survey is made first.

@@ -965,6 +965,31 @@ DECISIONS.md call 55 has the layout and why. What the model has to do with it:
 * With `PLUMBLINE_MAP` set, the program writes where each named thing on screen is, for
   the demonstrations (`map.rs`). Nothing else about the program changes.
 
+### 5.19 What a thing is finished with
+
+`finish::dress(job)` is a reading of the estimate, not a value in the job: nothing is
+saved for it. For each wall, roof plane, door, window and eave it looks, in order, at
+the element's live cost lines (a line switched off is not looked at), then its
+material, then its assembly, and takes the first that names a finish in the trade's
+words. A color word in the same text is its color. A later text that names a
+different finish of the same kind is kept as "also priced, not drawn".
+
+| on | read | from words such as |
+|---|---|---|
+| a wall | cladding | brick; stone, ashlar, limestone; stucco; board and batten; shingle, shake; siding, clapboard, lap |
+| a wall | wainscot, and its height | any cladding in a text that also says "wainscot"; the height is the first length after a comma, or 3 ft and said to be unwritten |
+| a roof plane | roofing | standing seam, metal roofing, copper, zinc; slate; tile; shakes; asphalt, shingles; membrane, EPDM, TPO |
+| a window | how it operates | double-hung; casement; slider; fixed, picture |
+| a window, a door | divided lites | "6 over 6" (3 across, 2 up in each sash); divided, muntins, grilles |
+| a door | its leaf | panel; glazed, French; overhead, garage; flush |
+| an eave | a gutter | gutter |
+
+A wall's outside face is the one that lies outside the outline its level's walls
+enclose (5.15's outline). Both inside: a partition, and no cladding is drawn on it.
+No outline: not known, and a cladding priced on it is drawn on both faces. Where a
+wall's end corners with another wall's end, it is drawn past its centre line's end to
+where the two centre lines cross and half the other wall's thickness on.
+
 ## 6. Cost code scheme
 
 Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores its
