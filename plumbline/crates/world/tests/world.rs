@@ -1141,7 +1141,7 @@ fn one_parapet_and_one_condition_make_four_lines_and_nothing_is_assumed_for_them
     // A condition goes on the kind of element it is for, once.
     let mut job = sample();
     assert!(job.apply("plane-0003", "Parapet with copper coping", "x").unwrap_err().contains("applies to a Parapet"));
-    assert!(job.apply("parapet-0024", "No such condition", "x").unwrap_err().contains("no condition"));
+    assert!(job.apply("parapet-0024", "No such condition", "x").unwrap_err().contains("no assembly"));
     job.apply("parapet-0024", "condition-0025", "x").unwrap();
     assert!(job.apply("parapet-0024", "condition-0025", "x").unwrap_err().contains("two cost lines"));
 }
@@ -1325,13 +1325,13 @@ fn a_condition_in_the_file_has_to_be_a_recipe_that_makes_sense() {
     assert!(err(edit(&text, |v| {
         attrs(v, "condition-0025").as_object_mut().unwrap().remove("pl::recipe");
     }))
-    .contains("a condition is its recipe"));
-    assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!([]))).contains("does not say what kind"));
+    .contains("an assembly is its lines"));
+    assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!([]))).contains("does not say what it goes on"));
     // (Call 57: an assembly goes on anything built and on the job; not on a level.)
     assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!(["Storey"]))).contains("not on a level"));
     // A recipe line has to make sense on every kind it applies to: a hip has no height.
     assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!(["Parapet", "Hip"]))).contains("does not have"));
-    assert!(err(edit(&text, |v| attrs(v, "plane-0003")["pl::recipe"] = attrs(&mut serde_json::from_str(&text).unwrap(), "condition-0025")["pl::recipe"].clone())).contains("only a Condition element can"));
+    assert!(err(edit(&text, |v| attrs(v, "plane-0003")["pl::recipe"] = attrs(&mut serde_json::from_str(&text).unwrap(), "condition-0025")["pl::recipe"].clone())).contains("only an assembly can"));
     // The order conversion has to be between the line's unit and the order unit, and waste
     // is a percentage.
     let coping = |v: &mut Value, key: &str, val: Value| attrs(v, "condition-0025")["pl::recipe"]["cost"]["lines"][1][key] = val;
@@ -4101,7 +4101,7 @@ fn j10_1_an_assumed_or_unknown_condition_shows_in_what_its_lines_come_to() {
     job.derive();
     let d = priced_of(&mut job, "plane-0003", "detail");
     assert_eq!(d.value, None);
-    assert!(d.note.contains("the element's condition is not known (nobody knows)"), "{}", d.note);
+    assert!(d.note.contains("the element's assembly is not known (nobody knows)"), "{}", d.note);
 }
 
 #[test]
@@ -4659,7 +4659,7 @@ fn j11_7_a_supplier_column_gives_the_true_reason_a_line_is_not_in_it() {
     let est = view::estimate(&mut job);
     let harbor = est.at_supplier.iter().find(|x| x.0 == "Harbor Metals").unwrap().1.clone();
     let why = harbor.left_out.iter().find(|(who, _)| who.starts_with("plane-0003")).map(|x| x.1.clone()).unwrap();
-    assert!(why.contains("the element's condition is not known") && !why.contains("has not quoted"), "{why}");
+    assert!(why.contains("the element's assembly is not known") && !why.contains("has not quoted"), "{why}");
     // The line is still measured and ordered: 461.189 lb. It is what it comes to that has no figure.
     let f = figures(&mut job, "plane-0003", "Standing seam panels");
     assert_eq!((f.order.as_ref().unwrap().value, f.order.as_ref().unwrap().unit.as_str()), (Some(461.189), "lb"));
@@ -5177,7 +5177,7 @@ fn j12_2_3_14_what_something_still_rests_on_is_not_removed() {
     job.apply(&plane, "Standing seam copper roof", "test").unwrap();
     job.derive();
     let before = save(&mut job);
-    assert_eq!(ed::remove(&mut job, &condition).unwrap_err(), format!("{condition} is the condition of {plane}: give it another first"));
+    assert_eq!(ed::remove(&mut job, &condition).unwrap_err(), format!("{condition} is the assembly of {plane}: give it another first"));
     assert_eq!(save(&mut job), before);
 }
 

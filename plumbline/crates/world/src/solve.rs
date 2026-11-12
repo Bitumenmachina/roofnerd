@@ -192,7 +192,7 @@ pub fn solve(job: &mut Job, roof_path: &str) -> Result<Report, String> {
             Some(path) => {
                 let was = job.find(path).and_then(|c| job.world.get::<Solved>(c)).and_then(|s| s.edge);
                 if was != Some(edge) {
-                    report.renumbered.push(format!("{path} is on edge {edge} now (it was on edge {}); it kept its place, its condition and its cost lines", was.unwrap_or(0)));
+                    report.renumbered.push(format!("{path} is on edge {edge} now (it was on edge {}); it kept its place, its assembly and its cost lines", was.unwrap_or(0)));
                 }
                 rename(job, path, &name);
                 path.clone()

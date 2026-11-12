@@ -293,7 +293,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
     // Cost lines are on what is built and on the job. A condition's lines are its recipe;
     // a material's cost is its price; a type is not a thing that is bought.
     if matches!(kind, Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey | Kind::Drawing | Kind::Prior) && !c.lines.is_empty() {
-        return Err(format!("{path}: a {kind:?} cannot carry cost lines; they go on what is built, or on the job for general conditions{}", if kind == Kind::Condition { " (a condition's own lines are its recipe)" } else { "" }));
+        return Err(format!("{path}: a {kind:?} cannot carry cost lines; they go on what is built, or on the job for general conditions{}", if kind == Kind::Condition { " (an assembly's own lines are what it is)" } else { "" }));
     }
     c.code.check(&format!("{path} cost code"), "")?;
     if let Some(code) = &c.code.value {
@@ -555,10 +555,10 @@ pub fn markup(path: &str, kind: Kind, m: &Markup) -> Result<(), String> {
 /// to make sense on each of them.
 pub fn recipe(path: &str, kind: Kind, t: &Recipe) -> Result<(), String> {
     if kind != Kind::Condition {
-        return Err(format!("{path}: a {kind:?} cannot carry a condition's recipe; only a Condition element can"));
+        return Err(format!("{path}: a {kind:?} cannot carry an assembly's lines as an assembly; only an assembly can"));
     }
     if t.applies_to.is_empty() {
-        return Err(format!("{path}: the condition does not say what kind of element it applies to"));
+        return Err(format!("{path}: the assembly does not say what it goes on"));
     }
     for (i, k) in t.applies_to.iter().enumerate() {
         // An assembly goes on anything that is built, in any division, and on the job
@@ -579,7 +579,7 @@ pub fn recipe(path: &str, kind: Kind, t: &Recipe) -> Result<(), String> {
         return Err(format!("{path} recipe line {:?}: carries a stretch-out. A stretch-out belongs to the detail it is bent for, not to a recipe; leave it Unknown here and enter it on the element", line.description));
     }
     if t.cost.lines.is_empty() {
-        return Err(format!("{path}: the condition has no lines; applying it would do nothing"));
+        return Err(format!("{path}: the assembly has no lines; applying it would do nothing"));
     }
     Ok(())
 }

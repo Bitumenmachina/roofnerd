@@ -541,7 +541,7 @@ pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
             let mut by: Vec<String> = q.iter(&job.world).filter(|(n, c)| n.path != path && c.0.value.as_ref().is_some_and(|v| v == path || crate::check::same_name(v, &name))).map(|(n, _)| n.path.clone()).collect();
             by.sort();
             if !by.is_empty() {
-                return Err(format!("{path} is the condition of {}: give {} another first", listed(&by), if by.len() == 1 { "it" } else { "them" }));
+                return Err(format!("{path} is the assembly of {}: give {} another first", listed(&by), if by.len() == 1 { "it" } else { "them" }));
             }
         }
         let mut gone = Vec::new();

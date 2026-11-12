@@ -2412,3 +2412,41 @@ then the suppliers: what the job comes to is what the sheet is opened for. (Seen
 when `demos/d5w.sh` could no longer find the recap under sixteen divisions and
 every line.) **In 3D the roof is drawn when the top level alone is on show**: a job
 with one level had no "All levels" to choose, and its roof was never drawn.
+
+### Call 60. Assemblies: a starter library, picked from a list, and one word for it (2026-11-12)
+
+**A starter library ships with the program** (`library/sixteen-divisions.csv`, and the
+same file inside the program). Patrick's focus is sixteen divisions with assemblies
+behind them; a new job had none, and a person had nothing to price with until they
+found a library of their own. It is 30 whole assemblies (an outside wall in lap
+siding, in brick, in stucco, over a stone wainscot; a partition; a slab; a framed
+floor; four kinds of room; two roofs; ridge, hip and eave; a window; two doors;
+runs, fixtures and equipment), 93 lines, a line in every division. **It has no
+price in it, and never will**: prices are the estimator's, and the rule that no real
+price enters the repository is kept by there being none at all. The figures in it
+are arithmetic about how a thing is bought (32 SF to a sheet, 100 SF to the square,
+81 SF to the yard at 4 in). Rejected: putting the library into every new job. It
+would number thirty things ahead of the first level in every job file, and a person
+who has a library of their own does not want ours under it; one click brings it in.
+
+**An assembly is everything priced on one thing, whatever divisions its lines fall
+in**, and a thing carries one. That was already how the model worked; the first
+draft of the library was by division (a "Lap siding" assembly, a "Gypsum board"
+assembly) and a wall could take only one of them. An estimator's wall assembly is
+the whole wall.
+
+**In the window an assembly is picked from a list** of those that go on what is
+selected. The Condition button put on the first one that fitted, with no choice;
+with five wall assemblies in the job that is no use. **And it can be changed**:
+picking another takes off the lines the old one brought that the new one does not
+have (and says which, since their prices go with them), keeps the lines the two
+share exactly as they are, and adds the rest. Lines put on by hand are not touched.
+The command line has the same as `apply ... --change`; without it a second assembly
+is still refused, because at the command line nothing is undone with a key.
+
+**One word: assembly.** Call 59 kept "condition" for what is applied to a thing, as
+the takeoff programs say it, beside "assembly" for the library. On screen that was
+two words for one thing a click apart (Bring in: Assemblies; the button: Condition;
+the row: Condition). It is "assembly" everywhere a person reads, on screen and at the
+command line; `set <path> assembly` is taken as well as `condition`. The job file's
+key is still `pl::condition`: it is the file, not the screen.

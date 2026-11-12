@@ -130,6 +130,8 @@ fn main() {
         steps_open: true,
         look_at: None,
         dropped: None,
+        choosing: false,
+        give: None,
         entry_line: None,
         measuring: None,
         origin: [0.0; 3],
@@ -236,7 +238,7 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
             let lost: Vec<String> = report.removed.iter().filter(|r| r.1).map(|r| r.0.clone()).collect();
             let mut more = if report.removed.is_empty() { String::new() } else { format!("; gone: {}", report.removed.iter().map(|r| r.0.clone()).collect::<Vec<_>>().join(", ")) };
             if !lost.is_empty() {
-                more.push_str(&format!("\nLost with them: the condition or cost lines on {}", lost.join(", ")));
+                more.push_str(&format!("\nLost with them: the assembly or cost lines on {}", lost.join(", ")));
             }
             for moved in &report.renumbered {
                 more.push_str(&format!("\n{moved}"));
@@ -683,7 +685,7 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                     match (field, kind.and_then(|k| k.priced_by())) {
                         (Entry::Allowance, None) => Err(format!("a {} has no area or length an allowance could be a rate on", kind.map(|k| theme::kind_name(k).to_lowercase()).unwrap_or_default())),
                         (Entry::Allowance, Some(_)) => Ok(None),
-                        _ if lines.is_empty() => Err(format!("{sel} has no cost line to price. Give it a condition first.")),
+                        _ if lines.is_empty() => Err(format!("{sel} has no cost line to price. Give it an assembly first.")),
                         _ => match lines.iter().find(|l| !l.1) {
                             Some((line, _)) => Ok(Some(line.clone())),
                             None => Err(format!("every cost line of {sel} has a price already. This prices the next line that has none; a price that is there is changed on the estimate sheet.")),
@@ -780,29 +782,47 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
         }
     }
     if keys.just_pressed(KeyCode::KeyC) {
-        // Give the selected element the next condition whose recipe fits its kind.
+        // Open the list of assemblies that go on what is selected, to pick one from
+        // (it used to put on the first that fitted, with no choice).
         match doc.selected.clone() {
-            None => tools::cant(doc, "give a condition", "nothing is selected"),
+            None => tools::cant(doc, "give an assembly", "nothing is selected. Click a wall, a floor, a room, a roof plane, a door or a window first"),
             Some(sel) => {
                 let kind = doc.job.kind(&sel);
-                let mut recipes: Vec<String> = Vec::new();
-                let mut q = doc.job.world.query::<(&plumbline_world::Node, &Recipe)>();
-                for (node, recipe) in q.iter(&doc.job.world) {
-                    if kind.is_some_and(|k| recipe.applies_to.contains(&k)) {
-                        recipes.push(node.name.clone());
-                    }
+                let fits = {
+                    let mut q = doc.job.world.query::<&Recipe>();
+                    q.iter(&doc.job.world).any(|r| kind.is_some_and(|k| r.applies_to.contains(&k)))
+                };
+                let a = kind.map(|k| theme::kind_name(k).to_lowercase()).unwrap_or_default();
+                if doc.choosing {
+                    doc.choosing = false;
+                    doc.say(Tone::Done, "The list of assemblies is put away.");
+                } else if fits {
+                    doc.choosing = true;
+                    doc.say(Tone::Done, format!("Pick an assembly for this {a} from the list on the right."));
+                } else {
+                    tools::cant(doc, "give an assembly", format!("this job has no assembly that goes on a {a}. Under Bring in, on the left, Starter assemblies brings in a set for a whole house"));
                 }
-                match recipes.first() {
-                    None => tools::cant(doc, "give a condition", format!("the job has no condition that goes on a {}", kind.map(|k| theme::kind_name(k).to_lowercase()).unwrap_or_default())),
-                    Some(name) => match doc.job.apply_as(&sel, name, Status::Assumed, SOURCE) {
-                        Ok(lines) => {
-                            doc.job.derive();
-                            doc.edit("Condition");
-                            doc.say(Tone::Done, format!("{sel} is now {name:?}: {} cost lines.", lines.len()));
-                        }
-                        Err(why) => tools::cant(doc, "give that condition", why),
-                    },
+            }
+        }
+        doc.redraw();
+    }
+    // An assembly picked from the list: put on what is selected, in place of the one it
+    // has if it has one.
+    if let Some(name) = doc.give.take() {
+        doc.choosing = false;
+        if let Some(sel) = doc.selected.clone() {
+            let called = doc.job.find(&sel).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or_else(|| sel.clone());
+            match doc.job.change_assembly(&sel, &name, Status::Assumed, SOURCE) {
+                Ok((added, taken)) => {
+                    doc.job.derive();
+                    doc.edit("Assembly");
+                    // Its lines are on the estimate: the sheet turns to it.
+                    doc.tab = model::Tab::Estimate;
+                    let lines = |n: usize| if n == 1 { "1 cost line".to_string() } else { format!("{n} cost lines") };
+                    let off = if taken.is_empty() { String::new() } else { format!(" {} of the assembly it had came off: {}.", lines(taken.len()), taken.join(", ")) };
+                    doc.say(Tone::Done, format!("{called} is now {name:?}: {} added.{off}", lines(added.len())));
                 }
+                Err(why) => tools::cant(doc, "give that assembly", why),
             }
         }
         doc.redraw();

@@ -173,6 +173,8 @@ impl Job {
     }
 
     pub fn set_on_line(&mut self, path: &str, field: &str, line: Option<&str>, value: Option<&str>, status: Status, source: &str) -> Result<(), String> {
+        // What a thing's assembly is was once called its condition, and is taken by either word.
+        let field = if field == "assembly" { "condition" } else { field };
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
         let on_element = matches!(field, "pitch" | "height" | "eave_height" | "condition" | "wbs" | "allowance" | "material" | "overhead" | "profit" | "price") || (field == "order" && kind == Kind::Material);
@@ -406,7 +408,7 @@ impl Job {
             return Err(if matches!(field, "stretch_out" | "quantity" | "waste" | "order" | "unit_cost") {
                 format!("{path} has no cost line to set a {field} on")
             } else {
-                format!("{field:?} is not a field that can be set on {path}; an element takes pitch, height, eave_height, condition, wbs or allowance, and a cost line takes stretch_out, quantity, waste, order, unit_cost or a value its formula names")
+                format!("{field:?} is not a field that can be set on {path}; an element takes pitch, height, eave_height, assembly, wbs or allowance, and a cost line takes stretch_out, quantity, waste, order, unit_cost or a value its formula names")
             });
         };
         let mut new = cost.clone();
@@ -542,7 +544,7 @@ impl Job {
     /// As `apply`, saying how sure the assignment is.
     pub fn apply_as(&mut self, path: &str, condition: &str, status: Status, source: &str) -> Result<Vec<String>, String> {
         if status == Status::Unknown {
-            return Err("a condition is applied as Known or Assumed; to say nobody knows it, mark the element's condition unknown".into());
+            return Err("an assembly is applied as Known or Assumed; to say nobody knows it, mark the element's assembly unknown".into());
         }
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
@@ -555,11 +557,18 @@ impl Job {
         }
         let (_, name, recipe) = match found.len() {
             1 => found.remove(0),
-            0 => return Err(format!("no condition {condition:?} in this job")),
-            _ => return Err(format!("{condition:?} names {} conditions ({}); use the path", found.len(), found.iter().map(|f| f.0.clone()).collect::<Vec<_>>().join(", "))),
+            0 => return Err(format!("no assembly {condition:?} in this job")),
+            _ => return Err(format!("{condition:?} names {} assemblies ({}); use the path", found.len(), found.iter().map(|f| f.0.clone()).collect::<Vec<_>>().join(", "))),
         };
         if !recipe.applies_to.contains(&kind) {
             return Err(format!("{name:?} applies to {}, and {path} is a {kind:?}", recipe.applies_to.iter().map(|k| format!("a {k:?}")).collect::<Vec<_>>().join(" or ")));
+        }
+        // An element is one condition. A second recipe's lines would sit under the first
+        // one's name, or the first one's name would be written over.
+        if let Some(have) = self.world.get::<Condition>(e).and_then(|c| c.0.value.clone()) {
+            if have != name {
+                return Err(format!("{path} is already {have:?}; applying {name:?} would put its lines under another assembly's name. To change it to this one, say so (at the command line, --change; in the window, pick it from the list)"));
+            }
         }
         let new = match self.world.get::<Cost>(e) {
             None => recipe.cost.clone(),
@@ -573,18 +582,60 @@ impl Job {
             }
         };
         check::cost(path, kind, &new)?;
-        // An element is one condition. A second recipe's lines would sit under the first
-        // one's name, or the first one's name would be written over.
-        if let Some(have) = self.world.get::<Condition>(e).and_then(|c| c.0.value.clone()) {
-            if have != name {
-                return Err(format!("{path} is already {have:?}; applying {name:?} would put its lines under another condition's name. Mark its condition unknown first if this replaces it"));
-            }
-        }
         let assigned = Condition(Val { value: Some(name.clone()), unit: String::new(), status, source: source.into() });
         check::condition(path, &assigned)?;
         let added = recipe.cost.lines.iter().map(|l| l.description.clone()).collect();
         self.world.entity_mut(e).insert((new, assigned));
         Ok(added)
+    }
+
+    /// Give a thing an assembly in place of the one it has, if it has one. The lines the
+    /// old assembly brought and the new one does not have are taken off (with whatever
+    /// was priced on them: the reply names each); a line both have stays as it is, price
+    /// and all; the rest of the new one's lines are added. Lines put on the thing by hand
+    /// are not touched. Gives the lines added and the lines taken off.
+    pub fn change_assembly(&mut self, path: &str, assembly: &str, status: Status, source: &str) -> Result<(Vec<String>, Vec<String>), String> {
+        let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
+        let mut all: Vec<(String, String, Recipe)> = Vec::new();
+        let mut q = self.world.query::<(&Node, &Recipe)>();
+        for (node, t) in q.iter(&self.world) {
+            all.push((node.path.clone(), node.name.clone(), t.clone()));
+        }
+        let have = self.world.get::<Condition>(e).and_then(|c| c.0.value.clone());
+        let new: Vec<&(String, String, Recipe)> = all.iter().filter(|r| r.0 == assembly || r.1 == assembly).collect();
+        let (Some(have), [new]) = (have, new.as_slice()) else {
+            // Nothing to take the place of, or no one assembly of that name: as a first one is given.
+            return self.apply_as(path, assembly, status, source).map(|added| (added, Vec::new()));
+        };
+        if have == new.1 {
+            return Err(format!("{path} is already {have:?}"));
+        }
+        if !new.2.applies_to.contains(&kind) {
+            return Err(format!("{:?} goes on {}, and {path} is a {}", new.1, new.2.applies_to.iter().map(|k| format!("a {}", k.said())).collect::<Vec<_>>().join(" or "), kind.said()));
+        }
+        let old = all.iter().find(|r| r.1 == have || r.0 == have);
+        let was: Vec<String> = old.map(|r| r.2.cost.lines.iter().map(|l| l.description.clone()).collect()).unwrap_or_default();
+        let will: Vec<String> = new.2.cost.lines.iter().map(|l| l.description.clone()).collect();
+        let mut cost = self.world.get::<Cost>(e).cloned().unwrap_or_else(|| Cost { code: new.2.cost.code.clone(), lines: Vec::new() });
+        let taken: Vec<String> = cost.lines.iter().filter(|l| was.contains(&l.description) && !will.contains(&l.description)).map(|l| l.description.clone()).collect();
+        cost.lines.retain(|l| !taken.contains(&l.description));
+        // The code the old assembly brought gives way to the new one's.
+        if old.is_some_and(|r| r.2.cost.code.value == cost.code.value) {
+            cost.code = new.2.cost.code.clone();
+        }
+        let mut added = Vec::new();
+        for l in &new.2.cost.lines {
+            if !cost.lines.iter().any(|h| h.description == l.description) {
+                cost.lines.push(l.clone());
+                added.push(l.description.clone());
+            }
+        }
+        check::cost(path, kind, &cost)?;
+        let assigned = Condition(Val { value: Some(new.1.clone()), unit: String::new(), status, source: source.into() });
+        check::condition(path, &assigned)?;
+        self.world.entity_mut(e).insert((cost, assigned));
+        Ok((added, taken))
     }
 
     /// The unit a cost line comes out in, and the unit it is priced in.

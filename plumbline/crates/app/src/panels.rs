@@ -101,7 +101,8 @@ pub fn total(sum: &view::Sum) -> String {
 }
 
 pub fn pretty(label: &str) -> String {
-    let s = label.replace('_', " ");
+    // What a thing's assembly is is kept in the job under its older name.
+    let s = if label == "condition" { "assembly".to_string() } else { label.replace('_', " ") };
     let mut c = s.chars();
     match c.next() {
         Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
@@ -321,7 +322,7 @@ fn steps_of(doc: &Doc, snap: &Snapshot) -> Vec<Step> {
         Step { done: floors && rooms, what: "Add the floor and name the rooms", how: if floors { "Click Room, click inside a room, and type its name.".into() } else { "Click Floor, then anywhere on the level. Then Room, for each room.".into() } },
         Step { done: !snap.planes.is_empty(), what: "Add the roof", how: "Click Roof. Type its pitch and eave height, then click each corner of its outline and the first again.".into() },
         Step { done: services, what: "Run the ducts, pipes and wiring", how: "Click Duct, Pipe, Conduit or Cable, then click along its run. Equipment and Fixture stand where you click.".into() },
-        Step { done: priced, what: "Price it", how: "Click a wall, then Condition for its cost lines, or Allowance for a price per SF. The sheet window shows the estimate.".into() },
+        Step { done: priced, what: "Price it", how: "Under Bring in, Starter assemblies gives the job a set to price with. Then click a wall, Assembly, and pick one; or Allowance for a price per SF. The sheet window shows the estimate.".into() },
         Step { done: priced && unsure == 0, what: "Verify in field", how: format!("{unsure} to verify. The sheet's Verify in field tab lists them by the dollars riding on each. Click one, click a value marked Measure, and type what the tape or laser reads.") },
         Step { done: !doc.edited && walls, what: "Save", how: "Click Save, or press Ctrl+S.".into() },
     ]
@@ -500,6 +501,8 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
             }
             _ => {
                 c.spawn(Node { padding: UiRect::axes(px(6.0), px(3.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|b| {
+                    // The set of assemblies the program ships with: no file to find.
+                    on_click(&mut button(b, fonts, "Starter assemblies", "", false), crate::bring::starter);
                     for what in crate::model::Bring::ALL {
                         on_click(&mut button(b, fonts, what.name(), "", false), move |doc| {
                             // A table dropped on the window and waiting to be told what it is.
@@ -1004,7 +1007,7 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     let built = made || el.kind == Kind::Job;
     line(p, &|r| {
         if built {
-            press(r, "Condition", "C", KeyCode::KeyC);
+            press(r, "Assembly", "C", KeyCode::KeyC);
         }
         // Only what can carry an allowance is offered one, in the unit it is priced by.
         if let Some((_, unit)) = el.kind.priced_by() {
@@ -1021,6 +1024,31 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     });
     if matches!(doc.entry, Some((Entry::Pitch | Entry::Move | Entry::Allowance | Entry::UnitCost | Entry::StretchOut | Entry::Division | Entry::Material, _))) {
         entry_box(p, fonts, doc, snap);
+    }
+    // The assemblies that go on this kind of thing, to pick one from: each by its name
+    // and how many lines it brings. The one the thing has is marked.
+    if doc.choosing && built {
+        let has = el.rows.iter().find(|r| r.label == "condition").map(|r| r.text.clone());
+        let fit: Vec<&(String, Vec<Kind>, usize)> = snap.assemblies.iter().filter(|a| a.1.contains(&el.kind)).collect();
+        heading(p, fonts, &format!("Assemblies for a {}", theme::kind_name(el.kind).to_lowercase()));
+        p.spawn(Node { padding: UiRect::bottom(px(4.0)), ..default() }).with_child(text(
+            fonts,
+            if has.is_some() { "Click one to change to it. Lines the two share keep their prices; the rest of the old one's come off." } else { "Click one. Its cost lines go on, each to be priced on the sheet." },
+            11.0,
+            Weight::Regular,
+            theme::ink_faint(),
+        ));
+        for (name, _, lines) in fit {
+            let mine = has.as_deref() == Some(name.as_str());
+            let pick = name.clone();
+            row(p, mine, format!("Assembly {name}"), move |doc| {
+                doc.give = Some(pick.clone());
+                doc.touch();
+            }, |r| {
+                r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, name.clone(), 12.0, if mine { Weight::Semibold } else { Weight::Regular }, theme::ink()));
+                r.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, if mine { "on it now".to_string() } else if *lines == 1 { "1 line".to_string() } else { format!("{lines} lines") }, 11.0, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap()));
+            });
+        }
     }
 }
 

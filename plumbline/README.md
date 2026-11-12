@@ -41,6 +41,8 @@ demos/plan.sh              # a plan laid under a level, given its scale from one
 demos/field.sh             # what is measured on site put on a traced job: the floor above moves and the price with it, one clash clears, one becomes a finding
 demos/fieldw.sh            # the same in the window, each reading typed as a laser in keyboard mode types it; pictures in demos/captured/field
 demos/div.sh               # sixteen divisions: a whole house's lines in all sixteen, the recap by division, and the workbook's Divisions sheet
+demos/library.sh           # the starter assemblies: no price in them, a house's takeoff in fourteen divisions, three prices by division
+demos/pricew.sh            # the same in the window: Starter assemblies, an assembly picked from the list and changed, a price typed on the sheet
 demos/dress.sh             # what the house is dressed in, read from what is priced on it: each wall, the roof, a window and a door, with the line that says so
 demos/dressw.sh            # the same in the window: one cladding to a wall, the priced sample house, and the same house bare; pictures in demos/captured/dress
 demos/vif.sh               # the verify-in-field list: each question, what to measure, and the dollars riding on it, before and after measuring
@@ -185,6 +187,26 @@ estimate with what its reader is not shown left out, and says at its head what t
 The IFC model carries every value's status and source with it (what is Assumed here is
 still said to be Assumed there), and the command lists what a building model has no
 place for. An estimate written as CSV reads back in with `import prior`.
+
+## Assemblies, and pricing
+
+An assembly is everything priced on one thing: a wall's framing, sheathing, siding,
+gypsum board and paint, each line in its own division. The program ships with a
+starter set, 30 assemblies for a house's walls, floors, rooms, roofs, doors, windows
+and runs, with a line in every one of the sixteen divisions and **no prices**: those
+are yours.
+
+In the window: under **Bring in**, click **Starter assemblies**. Click a wall, then
+**Assembly**, and pick one from the list. Its lines are on the sheet's Estimate tab,
+each with a field for its price; the recap, the sixteen divisions and the price on
+the top bar follow as you type. Pick another assembly for the same wall and it
+changes: lines the two share keep their prices, and the status line says what came
+off.
+
+    cargo run -p plumbline -- import assemblies job.json starter     # the starter set
+    cargo run -p plumbline -- apply job.json wall-0004 "Exterior wall, 2x6, lap siding" --source "the plans"
+    cargo run -p plumbline -- apply job.json wall-0004 "Exterior wall, 2x6, brick veneer" --source "the plans" --change
+    cargo run -p plumbline -- estimate job.json                      # the sheet, the recap, and the cost by division
 
 ## The house, dressed
 

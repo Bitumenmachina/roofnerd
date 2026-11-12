@@ -786,8 +786,11 @@ pub fn tint(doc: Res<Doc>, drawing: Res<Drawing>, mut materials: ResMut<Assets<S
         let pointed = doc.hover.as_deref() == Some(surface.path.as_str());
         // What is selected keeps the colour of what it is made of, a little lighter: the
         // outline drawn round it says it is selected, and copper stays copper.
+        // (A surface with a pattern on it takes no glow: on brick the blue of it read
+        // as a violet wall, which is not what the wall is made of.)
+        let dressed = surface.colour == theme::dressed();
         let (colour, glow) = if chosen {
-            (mix(surface.colour, Color::WHITE, 0.16).with_alpha(surface.colour.alpha().max(0.55)), LinearRgba::from(theme::accent()) * 0.08)
+            (mix(surface.colour, Color::WHITE, 0.16).with_alpha(surface.colour.alpha().max(0.55)), if dressed { LinearRgba::BLACK } else { LinearRgba::from(theme::accent()) * 0.08 })
         } else if on_system {
             (surface.colour, LinearRgba::from(surface.colour) * 0.3)
         } else if pointed {

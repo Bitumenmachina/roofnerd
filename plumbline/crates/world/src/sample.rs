@@ -132,7 +132,7 @@ pub fn sample() -> Job {
     // supplier's to give. The recipe leaves them blank; it does not guess them.
     let blank = "not entered; the detail gives it";
     let recipe = job.add(&root, Kind::Condition, "Parapet with copper coping").expect(OK);
-    let sides = || [("sides".to_string(), Val::known(Len::One(2.0), "", "the condition: one each side of the coping"))].into_iter().collect::<std::collections::BTreeMap<_, _>>();
+    let sides = || [("sides".to_string(), Val::known(Len::One(2.0), "", "the assembly: one each side of the coping"))].into_iter().collect::<std::collections::BTreeMap<_, _>>();
     job.put(
         &recipe,
         Recipe {

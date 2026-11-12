@@ -263,7 +263,7 @@ pub fn figures(me: &str, on: &On, line: &CostLine, stock: &Stock, condition: Opt
     if let Some(c) = condition {
         inputs.push(format!("{me}#{K_CONDITION}"));
         if c.value.is_none() {
-            refusal = Some(format!("the element's condition is not known ({}), so what its lines come to is not", c.source));
+            refusal = Some(format!("the element's assembly is not known ({}), so what its lines come to is not", c.source));
         } else {
             held.push(c.status);
         }

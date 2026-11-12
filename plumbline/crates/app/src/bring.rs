@@ -149,3 +149,20 @@ pub fn dropped(doc: &mut Doc, file: &str) {
         crate::plans::add(doc, file);
     }
 }
+
+/// The starter assemblies the program ships with, brought into the job: whole assemblies
+/// for a house's walls, floors, rooms, roof, openings and runs, with a line in every one
+/// of the sixteen divisions and no price on any of them.
+pub fn starter(doc: &mut Doc) {
+    let done = plumbline_sheets::read(tables::STARTER_LIBRARY.as_bytes(), None).and_then(|sheet| tables::assemblies_in(&mut doc.job, &sheet.rows, Some(&sheet.numbers)));
+    match done {
+        Ok(b) if b.done.is_empty() => doc.say(Tone::Done, "The starter assemblies are already in this job. Click a wall, a floor, a room or a roof plane, then Assembly."),
+        Ok(b) => {
+            doc.job.derive();
+            doc.edit("Starter assemblies");
+            doc.say(Tone::Done, format!("Brought in {} starter assemblies: walls, floors, rooms, roofs, doors, windows and runs, with no prices. Click one of those on the model, then Assembly.", b.done.len()));
+        }
+        Err(why) => crate::tools::cant(doc, "bring in the starter assemblies", why),
+    }
+    doc.touch();
+}

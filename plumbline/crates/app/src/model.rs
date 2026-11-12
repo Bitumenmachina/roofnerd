@@ -172,6 +172,10 @@ pub struct Doc {
     /// A file dropped on the window that could be more than one thing (a CSV or a
     /// workbook): kept until what it is has been said.
     pub dropped: Option<String>,
+    /// The list of assemblies that go on what is selected is open, to pick one from.
+    pub choosing: bool,
+    /// The assembly picked from that list, until it has been put on.
+    pub give: Option<String>,
     /// When a unit cost is being typed: the cost line it is for, by its description.
     pub entry_line: Option<String>,
     /// When a measurement is being typed: the element, the value's name as the panel
@@ -218,6 +222,8 @@ impl Doc {
         self.message = message.into();
     }
     pub fn select(&mut self, path: &str) {
+        // The list of assemblies was for what was selected before.
+        self.choosing = false;
         self.selected = Some(path.to_string());
         self.say(Tone::Done, format!("Selected {path}."));
         self.touch();
@@ -312,6 +318,8 @@ pub struct Snapshot {
     /// What each wall, roof plane, window and door is finished with, read from what is
     /// priced on it.
     pub dress: plumbline_world::finish::Dress,
+    /// The job's assemblies: each one's name, what it goes on, and how many lines it has.
+    pub assemblies: Vec<(String, Vec<Kind>, usize)>,
     pub totals: Option<view::RoofTotals>,
     pub planes: Vec<PlaneInfo>,
     pub lines: Vec<LineInfo>,
@@ -369,6 +377,12 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     s.clashes = Some(plumbline_world::building::clash::clashes(&mut doc.job, None));
     s.verify = plumbline_world::vif::vif(&mut doc.job);
     s.dress = plumbline_world::finish::dress(&mut doc.job);
+    s.assemblies = {
+        let mut q = doc.job.world.query::<(&plumbline_world::Node, &plumbline_world::Recipe)>();
+        let by_path: std::collections::HashMap<String, (String, Vec<Kind>, usize)> = q.iter(&doc.job.world).map(|(n, r)| (n.path.clone(), (n.name.clone(), r.applies_to.clone(), r.cost.lines.len()))).collect();
+        // In the job's own order, which is the library's.
+        doc.job.order.iter().filter_map(|e| doc.job.world.get::<plumbline_world::Node>(*e)).filter_map(|n| by_path.get(&n.path).cloned()).collect()
+    };
     if doc.selected.as_ref().is_some_and(|sel| doc.job.find(sel).is_none()) {
         doc.selected = None;
     }

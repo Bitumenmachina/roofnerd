@@ -429,7 +429,7 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
             job.world.entity_mut(id).insert(Foreign(foreign));
         }
         if kind == Kind::Condition && job.world.get::<Recipe>(id).is_none() {
-            return Err(format!("{path} is a Condition with no {K_RECIPE}; a condition is its recipe"));
+            return Err(format!("{path} is an assembly with no {K_RECIPE}; an assembly is its lines"));
         }
     }
 

@@ -3609,3 +3609,74 @@ demonstrations have not been rerun on it: their pictures are stale.
   in the repository, and has no dollar figure in it.
 * The verify list gains every hole to cut that is still in question; `show` and the
   estimate say kinds in words; the estimate calls the job "the job".
+
+## Pricing from the window with the starter assemblies. How its demonstration will be run (written before the script)
+
+`demos/pricew.sh`. The made-up house of `demos/dressw.sh` (24 ft by 16 ft, 9 ft walls,
+a door and a window in the south wall, a hip roof), with nothing priced and no
+assembly in the job, opened in the window:
+
+1. Under Bring in, **Starter assemblies** is clicked: the job has 30 assemblies.
+2. The south wall is clicked on the model and **Assembly** pressed: the panel lists
+   the five that go on a wall, by name, with their lines counted.
+3. "Exterior wall, 2x6, lap siding" is clicked: the wall has 7 cost lines and is drawn
+   in lap siding.
+4. Assembly again, and "Exterior wall, 2x6, brick veneer" clicked: the lap siding line
+   comes off (1 line), the two brick lines go on, the six lines the two assemblies
+   share stay; the wall has 8 lines and is drawn in brick. The status line says what
+   came off.
+5. On the sheet, the brick veneer's unit cost is typed, 24: the south wall is 24 by 9
+   less a 21 SF door and a 15 SF window, 180 SF; 180 × $24.00 = **$4,320.00**, in
+   Division 4, Assumed (typed in the window).
+6. Saved, and the saved job read back: the wall's assembly is the brick one; it has
+   eight lines and none of them is "Lap siding"; "Brick veneer 180.00 SF $24.00/SF
+   $4,320.00"; Division 4 Masonry $4,320.00; `plumbline finishes` says brick veneer on
+   its south face.
+7. Measured in the pictures: the south wall is the pale color of lap siding after
+   step 3 and red after step 4.
+
+## Pricing from the window with the starter assemblies. What was run and what it showed (2026-11-12)
+
+* **Built** (DECISIONS.md call 60): `Job::change_assembly`; `plumbline apply ...
+  --change`; in the window a **Starter assemblies** button under Bring in, and the
+  **Assembly** button (it was "Condition") opens a list of the assemblies that go on
+  what is selected, each with its line count, the one it has marked; a click puts it
+  on or changes to it, the status line says what was added and what came off, and the
+  sheet turns to its Estimate tab. The sheet's By division table says "no figure" and
+  "2 lines to price" where a division has work with no price, and counts such a
+  division as having work.
+* **Changed, and named:** the Condition button applied the first assembly that fitted
+  and is now a list; "condition" is "assembly" in every sentence (call 60); a selected
+  wall with a pattern on it no longer takes the selection's blue glow (it turned brick
+  violet); `apply` says a thing already has an assembly before it says anything else.
+* **`demos/pricew.sh` passes** (pictures in `demos/captured/price/`, taken on this
+  tree): 30 assemblies brought in with one click; the south wall given "Exterior wall,
+  2x6, lap siding" (7 lines) and changed to "... brick veneer" (the status line: "2
+  cost lines added. 1 cost line of the assembly it had came off: Lap siding."); 24
+  typed on the brick's line of the sheet; the saved job has the eight lines in the
+  order worked out (the six shared ones, then the two brick ones), "Brick veneer
+  [Subcontract] 180.00 SF ~$24.00/SF ~$4,320.00", "4 Masonry ~$4,320.00 1 line" and
+  the wall read as brick veneer on its south face. Measured in the pictures, the south
+  wall is (198, 194, 186) bare, (190, 186, 177) in lap siding and (128, 85, 73) in
+  brick.
+* **Found by running it, and fixed:** the sheet stayed on its Building tab when the
+  first lines arrived (it now turns to the Estimate); Ctrl+S sent by the test
+  harness did not save (the demonstrations use F2, as the others do; the judges'
+  harness was changed to F2 too, and whether Ctrl+S is lost only on this renderer is
+  not known: **to check by hand**); the brick wall measured violet while selected
+  (the glow, above).
+* **Pictures read:** 03 (the list: five wall assemblies by name with 7, 8, 8, 7 and
+  3 lines, under the buttons; the status line says where to pick); 05 (brick in
+  running bond round the door and window, "Assembly: Exterior wall, 2×6, brick
+  veneer" in the panel, what came off in the status line); 07 of the sheet (the recap,
+  then the sixteen divisions with Masonry $4,320.00, then the lines under DIVISION 4
+  MASONRY with the price in its field). **Seen and fixed after 07:** Divisions 6, 7
+  and 9 read "none" beside Masonry though each had lines waiting for a price; they
+  now read "no figure" and say how many lines are to price. Picture 07 is from
+  before that fix and is stale.
+* A test (`crates/cli/tests/cli.rs`): an assembly changed for another keeps the
+  shared line's $720.00, loses the siding and its $1,710.00 and says so; refused
+  without `--change` with the file unchanged; refused when it is already that, and
+  when the assembly goes on something else. **251 tests and eighteen command-line
+  demonstrations pass.**
+* **Not judged.** The other window demonstrations are still to be rerun on this tree.

@@ -671,15 +671,27 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         }
     });
     // The job cost, division by division: all sixteen, and what is in none.
-    table(p, fonts, "By division", format!("{} of 16 with work in them", est.divisions.iter().filter(|d| d.total.members > 0).count()), |t| {
+    table(p, fonts, "By division", format!("{} of 16 with work in them", est.divisions.iter().filter(|d| d.total.members > 0 || !d.total.left_out.is_empty()).count()), |t| {
         for d in &est.divisions {
             row(t, false, None, |r| {
-                cell(r, 7.0, false, |c| dot(c, if d.total.members == 0 { Status::Known } else { d.total.status }));
+                // "none" is no work in it; "no figure" is work in it and none of it priced
+                // yet, with how many lines wait for a price (the same two words as the
+                // command line, the workbook and the PM's lens).
+                let (waits, has_work) = (d.total.left_out.len(), d.total.members > 0 || !d.total.left_out.is_empty());
+                cell(r, 7.0, false, |c| dot(c, if d.total.members > 0 { d.total.status } else if waits > 0 { Status::Unknown } else { Status::Known }));
                 cell(r, 24.0, true, |c| words(c, fonts, d.division.number().to_string(), 12.5, Weight::Medium, theme::ink_soft()));
-                cell(r, 0.0, false, |c| words(c, fonts, d.division.title(), 12.5, if d.total.members > 0 { Weight::Medium } else { Weight::Regular }, if d.total.members > 0 { theme::ink() } else { theme::ink_faint() }));
-                cell(r, 80.0, true, |c| words(c, fonts, if d.total.members == 0 { String::new() } else if d.total.members == 1 { "1 line".to_string() } else { format!("{} lines", d.total.members) }, 11.5, Weight::Regular, theme::ink_faint()));
+                cell(r, 0.0, false, |c| words(c, fonts, d.division.title(), 12.5, if has_work { Weight::Medium } else { Weight::Regular }, if has_work { theme::ink() } else { theme::ink_faint() }));
+                let lines = |n: usize| if n == 1 { "1 line".to_string() } else { format!("{n} lines") };
+                let counted = match (d.total.members, waits) {
+                    (0, 0) => String::new(),
+                    (n, 0) => lines(n),
+                    (0, w) => format!("{} to price", lines(w)),
+                    (n, w) => format!("{}, {w} to price", lines(n)),
+                };
+                cell(r, 118.0, true, |c| words(c, fonts, counted, 11.5, Weight::Regular, theme::ink_faint()));
                 cell(r, 130.0, true, |c| match d.total.value {
                     Some(x) => words(c, fonts, format!("${}", view::figure(x, 2)), 12.5, Weight::Semibold, theme::status_ink(d.total.status)),
+                    None if waits > 0 => words(c, fonts, "no figure", 12.5, Weight::Medium, theme::status_ink(Status::Unknown)),
                     None => words(c, fonts, "none", 12.5, Weight::Regular, theme::ink_faint()),
                 });
             });
