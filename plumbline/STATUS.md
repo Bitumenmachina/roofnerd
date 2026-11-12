@@ -3121,3 +3121,31 @@ tab reads division by division, each with its total.
   appliances), whose lines sit on the job, a floor or a room for now; "condition" is
   still the word on screen for an assembly, and "class" for a cost type in places.
   **Not judged.**
+
+## Sixteen divisions on the sheet (2026-11-12)
+
+* **Built:** the sheet window's Estimate tab reads division by division. A "By
+  division" table lists all sixteen with their line counts and totals (and "In no
+  division" when anything is in none); under it "The sheet" has every line under its
+  division's heading (`DIVISION 7  THERMAL AND MOISTURE PROTECTION` and its total),
+  and each line's division is a field on the line (`Div 7`): click it, type a number
+  or a title, Enter. `plumbline sixteen <file>` writes the sample whole house with a
+  made-up price on everything in it, 347 lines in all sixteen divisions (job cost
+  $401,094.08, price $476,499.77, every price made up and saying so).
+* **Changed, and named:** the sheet's tabs are in a new order, Estimate, Budget,
+  Verify in field, Clashes, Building, Roof, Mechanical, Electrical, Plumbing; the
+  estimate is what the job is for and is first. The tab "Money" is "Budget" (it is
+  the allowances set against the detail). The sheet opens on Estimate when the job
+  has any cost line; before that on what was taken off, as it did. The "At" column
+  is wider (a price of $1,800.00/EA was cut). `demos/d4w.sh` clicks "Budget".
+* **Seen, by opening `plumbline sixteen` in the window and reading both pictures:**
+  the nine tabs sit on one line (they wrapped and cut "Verify in field"); the sixteen
+  rows and their totals read as a recap does; prices are whole. In the model window
+  the house is a plain box with flat-coloured walls and bare openings. That is task
+  23, next. The top bar's right end is cut at 1600 wide ("hous…").
+* **Tests:** a fifth in `crates/world/tests/divisions.rs`: the priced sample has work
+  in every one of the sixteen, nothing in none, the sixteen add to the job cost to the
+  cent, and every price says it is made up. 230 tests pass.
+* **Not judged. Not yet demonstrated by a script through the window** (a division
+  typed on a line of the sheet); `demos/d5w.sh` and `demos/d4w.sh` are to be rerun on
+  the new tab order with the rest.

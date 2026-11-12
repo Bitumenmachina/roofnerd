@@ -168,30 +168,29 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             tally_chips(bar, fonts, snap.tally);
         });
         // The tabs.
-        root.spawn((Node { flex_shrink: 0.0, padding: UiRect::axes(px(18.0), px(8.0)), column_gap: px(4.0), border: UiRect::bottom(px(1.0)), ..default() }, BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()))).with_children(|tabs| {
-            let mut all = vec![(Tab::Roof, "Roof".to_string(), snap.planes.len())];
+        root.spawn((Node { flex_shrink: 0.0, padding: UiRect::axes(px(10.0), px(8.0)), column_gap: px(1.0), border: UiRect::bottom(px(1.0)), overflow: Overflow::clip(), ..default() }, BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()))).with_children(|tabs| {
+            // The estimate first: it is what the job is for. Then what is to verify and
+            // what clashes; then the takeoff, by what was taken off.
+            let mut all = vec![(Tab::Estimate, "Estimate".to_string(), snap.estimate.as_ref().map(|e| e.lines.len()).unwrap_or(0))];
+            // The budget: the job priced from its allowances and from its lines, compared.
+            all.push((Tab::Money, "Budget".to_string(), snap.pricing.as_ref().map(|p| p.elements.len()).unwrap_or(0)));
+            all.push((Tab::Verify, "Verify in field".to_string(), snap.verify.questions.len()));
+            all.push((Tab::Clashes, "Clashes".to_string(), snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.len()).unwrap_or(0)));
             all.push((Tab::Building, "Building".to_string(), snap.fabric.len()));
+            all.push((Tab::Roof, "Roof".to_string(), snap.planes.len()));
             for d in [Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing] {
                 all.push((Tab::Of(d), theme::discipline_name(d).to_string(), snap.counts.iter().find(|c| c.0 == d).map(|c| c.1).unwrap_or(0)));
             }
-            // Money is offered once anything has an allowance or a cost line.
-            all.push((Tab::Money, "Money".to_string(), snap.pricing.as_ref().map(|p| p.elements.len()).unwrap_or(0)));
-            // The estimate, once anything has a cost line.
-            all.push((Tab::Estimate, "Estimate".to_string(), snap.estimate.as_ref().map(|e| e.lines.len()).unwrap_or(0)));
-            // Clashes, once anything is in the same space as anything else.
-            all.push((Tab::Clashes, "Clashes".to_string(), snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.len()).unwrap_or(0)));
-            // What is still to be verified in the field, once there is anything.
-            all.push((Tab::Verify, "Verify in field".to_string(), snap.verify.questions.len()));
             for (tab, name, count) in all {
                 let on = doc.tab == tab;
                 // A job with nothing under a tab does not offer it.
                 if count == 0 && !on {
                     continue;
                 }
-                tabs.spawn((rounded(Node { padding: UiRect::axes(px(12.0), px(6.0)), column_gap: px(6.0), align_items: AlignItems::Center, ..default() }, 8.0), BackgroundColor(if on { theme::accent_wash() } else { Color::NONE }), theme::named(name.clone())))
+                tabs.spawn((rounded(Node { padding: UiRect::axes(px(8.0), px(6.0)), column_gap: px(5.0), align_items: AlignItems::Center, flex_shrink: 0.0, ..default() }, 8.0), BackgroundColor(if on { theme::accent_wash() } else { Color::NONE }), theme::named(name.clone())))
                     .with_children(|t| {
-                        t.spawn(text(fonts, name, 12.5, Weight::Medium, if on { theme::accent() } else { theme::ink_soft() }));
-                        t.spawn(text(fonts, count.to_string(), 11.5, Weight::Regular, theme::ink_faint()));
+                        t.spawn((text(fonts, name, 12.0, Weight::Medium, if on { theme::accent() } else { theme::ink_soft() }), TextLayout::no_wrap()));
+                        t.spawn((text(fonts, count.to_string(), 11.0, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap()));
                     })
                     .observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
                         if press.button == PointerButton::Primary && doc.tab != tab {
@@ -596,10 +595,55 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         return;
     }
     let money = |d: &plumbline_world::Derived| dollars(Some(d));
+    // The job cost, division by division: all sixteen, and what is in none.
+    table(p, fonts, "By division", format!("{} of 16 with work in them", est.divisions.iter().filter(|d| d.total.members > 0).count()), |t| {
+        for d in &est.divisions {
+            row(t, false, None, |r| {
+                cell(r, 7.0, false, |c| dot(c, if d.total.members == 0 { Status::Known } else { d.total.status }));
+                cell(r, 24.0, true, |c| words(c, fonts, d.division.number().to_string(), 12.5, Weight::Medium, theme::ink_soft()));
+                cell(r, 0.0, false, |c| words(c, fonts, d.division.title(), 12.5, if d.total.members > 0 { Weight::Medium } else { Weight::Regular }, if d.total.members > 0 { theme::ink() } else { theme::ink_faint() }));
+                cell(r, 80.0, true, |c| words(c, fonts, if d.total.members == 0 { String::new() } else if d.total.members == 1 { "1 line".to_string() } else { format!("{} lines", d.total.members) }, 11.5, Weight::Regular, theme::ink_faint()));
+                cell(r, 130.0, true, |c| match d.total.value {
+                    Some(x) => words(c, fonts, format!("${}", view::figure(x, 2)), 12.5, Weight::Semibold, theme::status_ink(d.total.status)),
+                    None => words(c, fonts, "none", 12.5, Weight::Regular, theme::ink_faint()),
+                });
+            });
+        }
+        if est.no_division.members > 0 {
+            row(t, false, None, |r| {
+                cell(r, 7.0, false, |c| dot(c, Status::Unknown));
+                cell(r, 24.0, true, |_| {});
+                cell(r, 0.0, false, |c| words(c, fonts, "In no division: in the job cost, and in none of the sixteen", 12.5, Weight::Medium, theme::status_ink(Status::Unknown)));
+                cell(r, 80.0, true, |c| words(c, fonts, if est.no_division.members == 1 { "1 line".to_string() } else { format!("{} lines", est.no_division.members) }, 11.5, Weight::Regular, theme::ink_faint()));
+                cell(r, 130.0, true, |c| words(c, fonts, est.no_division.value.map(|x| format!("${}", view::figure(x, 2))).unwrap_or_else(|| "no figure".to_string()), 12.5, Weight::Semibold, theme::status_ink(Status::Unknown)));
+            });
+        }
+    });
     table(p, fonts, "The sheet", format!("{} lines", est.lines.len()), |t| {
-        header_row(t, fonts, &[("", 7.0, false), ("Line", 0.0, false), ("Priced", 96.0, true), ("At", 92.0, true), ("Material", 96.0, true), ("Labor", 96.0, true), ("General", 96.0, true)]);
+        header_row(t, fonts, &[("", 7.0, false), ("Line", 0.0, false), ("Priced", 96.0, true), ("At", 108.0, true), ("Material", 96.0, true), ("Labor", 96.0, true), ("General", 96.0, true)]);
+        // The lines, division by division; then those in no division.
+        let mut ordered: Vec<(String, String, Status, Vec<&view::SheetLine>)> = Vec::new();
+        for d in &est.divisions {
+            let its: Vec<&view::SheetLine> = est.lines.iter().filter(|l| l.division == Some(d.division)).collect();
+            if !its.is_empty() {
+                let (said, status) = match d.total.value {
+                    Some(x) => (format!("${}", view::figure(x, 2)), d.total.status),
+                    None => ("none".to_string(), Status::Known),
+                };
+                ordered.push((format!("Division {}  {}", d.division.number(), d.division.title()), said, status, its));
+            }
+        }
+        let undivided: Vec<&view::SheetLine> = est.lines.iter().filter(|l| l.division.is_none()).collect();
+        if !undivided.is_empty() {
+            ordered.push(("No division".to_string(), est.no_division.value.map(|x| format!("${}", view::figure(x, 2))).unwrap_or_default(), Status::Unknown, undivided));
+        }
+        for (heading, said, status, its) in &ordered {
+        t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(5.0)), border: UiRect::bottom(px(1.0)), ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::hairline()))).with_children(|r| {
+            cell(r, 0.0, false, |c| words(c, fonts, heading.to_uppercase(), 11.0, Weight::Semibold, if heading == "No division" { theme::status_ink(Status::Unknown) } else { theme::ink() }));
+            cell(r, 130.0, true, |c| words(c, fonts, said.clone(), 12.5, Weight::Semibold, theme::status_ink(*status)));
+        });
         let mut last = String::new();
-        for l in &est.lines {
+        for l in its.iter().copied() {
             let selected = doc.selected.as_deref() == Some(l.path.as_str());
             if l.path != last {
                 last = l.path.clone();
@@ -617,7 +661,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     (_, Some(m)) if !m.is_empty() => format!("made of {m}"),
                     (_, Some(_)) => "material not said".to_string(),
                     (Some(c), None) if !matches!(c, Class::Material | Class::Labor) => c.title().to_string(),
-                    (None, None) => "no class".to_string(),
+                    (None, None) => "no cost type".to_string(),
                     _ => String::new(),
                 };
                 // What is being typed on this line, if anything is.
@@ -631,6 +675,16 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     c.spawn(Node { align_items: AlignItems::Center, column_gap: px(8.0), flex_wrap: FlexWrap::Wrap, row_gap: px(2.0), ..default() }).with_children(|under| {
                         if !tag.is_empty() {
                             under.spawn((text(fonts, tag.clone(), 11.0, Weight::Regular, if l.class.is_none() { theme::status_ink(Status::Unknown) } else { theme::ink_faint() }), TextLayout::no_wrap()));
+                        }
+                        // Its division, said and changed here. A line with none says so.
+                        {
+                            let (path, line) = (path.clone(), line.clone());
+                            let said = l.division.map(|d| format!("Div {}", d.number())).unwrap_or_else(|| "no division".to_string());
+                            editable(under, fonts, format!("Division of {} on {}", l.description, l.element), said, if l.division.is_some() { theme::ink_soft() } else { theme::status_ink(Status::Unknown) }, typing(Entry::Division), move |doc| {
+                                doc.select(&path);
+                                doc.open(Entry::Division, "");
+                                doc.entry_line = Some(line.clone());
+                            });
                         }
                         // Its stretch-out, changed here: it belongs to the line.
                         if let Some(so) = &l.stretch_out {
@@ -664,7 +718,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 // sheet has them.
                 let places = 2;
                 cell(r, 96.0, true, |c| words(c, fonts, amount(l.priced.value, places, &l.priced.unit), 12.5, Weight::Regular, theme::status_ink(l.priced.status)));
-                cell(r, 92.0, true, |c| {
+                cell(r, 108.0, true, |c| {
                     let (said, ink) = match l.unit_cost.as_ref().and_then(|v| v.value.map(|x| (x, v))) {
                         Some((x, v)) => (format!("${}/{}", view::rate(x), v.unit.trim_start_matches("$/")), theme::status_ink(v.status)),
                         None => ("no price".to_string(), theme::status_ink(Status::Unknown)),
@@ -698,7 +752,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 under.push((l.amount.note.clone(), if l.amount.value.is_none() { Status::Unknown } else { Status::Assumed }));
             }
             if l.class.is_none() && !l.off {
-                under.push((format!("no class: it is in no column and no row of the recap{}", l.amount.value.map(|_| format!(" (it comes to {})", money(&l.amount).0)).unwrap_or_default()), Status::Unknown));
+                under.push((format!("no cost type: it is in no column and no row of the recap{}", l.amount.value.map(|_| format!(" (it comes to {})", money(&l.amount).0)).unwrap_or_default()), Status::Unknown));
             }
             if !l.quantity.note.is_empty() && l.quantity.value.is_some() {
                 under.push((format!("its quantity: {}", l.quantity.note), Status::Assumed));
@@ -707,11 +761,12 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(7.0) }, ..default() }).with_child(text(fonts, said, 11.5, Weight::Regular, theme::status_ink(status)));
             }
         }
+        }
         row(t, false, None, |r| {
             cell(r, 7.0, false, |_| {});
             cell(r, 0.0, false, |c| words(c, fonts, "Column totals", 12.5, Weight::Semibold, theme::ink()));
             cell(r, 96.0, true, |_| {});
-            cell(r, 92.0, true, |_| {});
+            cell(r, 108.0, true, |_| {});
             for col in [Column::Material, Column::Labor, Column::General] {
                 let total = est.columns.iter().find(|x| x.0 == col).map(|x| &x.1);
                 cell(r, 96.0, true, |c| match total.and_then(|t| t.value.map(|x| (x, t.status))) {

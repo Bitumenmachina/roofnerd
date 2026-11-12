@@ -40,6 +40,7 @@ demos/clashw.sh            # fittings, a connection and the clashes in the windo
 demos/plan.sh              # a plan laid under a storey, given its scale from one dimension and traced over, at the command line
 demos/field.sh             # what is measured on site put on a traced job: the floor above moves and the price with it, one clash clears, one becomes a finding
 demos/fieldw.sh            # the same in the window, each reading typed as a laser in keyboard mode types it; pictures in demos/captured/field
+demos/div.sh               # sixteen divisions: a whole house's lines in all sixteen, the recap by division, and the workbook's Divisions sheet
 demos/vif.sh               # the verify-in-field list: each question, what to measure, and the dollars riding on it, before and after measuring
 demos/export.sh            # the estimate as a workbook of formulas (worked again by a second hand), as CSV, three lenses, and the building as IFC4 checked by IfcOpenShell
 demos/imports.sh           # a price list and an assembly library out as CSV and back; a supplier's list from CSV and from a workbook; a prior estimate set against the job
@@ -48,7 +49,7 @@ demos/planw.sh             # the same in the window, on a real scanned sheet and
 demos/build.sh             # a floor from the outline its walls enclose, rooms and a hip roof, at the command line, with the figures worked by hand
 demos/buildw.sh            # the same in the window, traced over the made-up plan with the Floor, Room and Roof tools; pictures in demos/captured/build
 tools/fetch-plans.sh       # fetches the public-domain plan set the demonstrations trace (USDA Plan No. 7213) into plans/
-demos/d4w.sh               # the same in the window: the sheet's Money tab, and prices typed on what is selected
+demos/d4w.sh               # the same in the window: the sheet's Budget tab, and prices typed on what is selected
 demos/d2.sh                # the 3D prototype, driven on a virtual display; pictures in demos/captured/d2
 demos/house.sh             # a whole house with its heating, plumbing and wiring, walked round; pictures in demos/captured/house
 cargo run -p plumbline-app -- job.json    # the model window and the sheet window (every button says its key)
@@ -56,6 +57,7 @@ tools/licenses.sh          # every linked crate and its license; fails on a non-
 tools/portmap.sh           # the building model accounted for against BIMCraft's source, item by item
 cargo run -p plumbline -- sample job.json
 cargo run -p plumbline -- house house.json     # the sample whole house
+cargo run -p plumbline -- sixteen house.json  # the same house with a made-up price on everything, in all sixteen divisions
 cargo run -p plumbline -- takeoff house.json   # its walls, floors and rooms, and each system's runs by size, its fittings and what is joined
 cargo run -p plumbline -- clashes house.json   # what is in the same space as what; add --clearance "2 in" for what is closer than that
 cargo run -p plumbline -- price job.json       # what the job comes to from its allowances and from its cost lines, and the two compared

@@ -121,3 +121,26 @@ fn the_division_is_kept_in_the_file_and_a_file_written_before_still_loads() {
     assert!(load(&text.replace("\"division\": 7", "\"division\": 17")).is_err());
     assert!(load(&text.replace("\"division\": 7", "\"division\": 0")).is_err());
 }
+
+#[test]
+fn the_priced_sample_house_has_work_in_every_one_of_the_sixteen_and_they_add_to_the_job_cost() {
+    let mut job = plumbline_world::sample::house_priced();
+    job.derive();
+    let est = view::estimate(&mut job);
+    assert_eq!(est.divisions.len(), 16);
+    for d in &est.divisions {
+        assert!(d.total.members > 0, "division {} has no line in the priced sample", d.division.number());
+        assert!(d.total.value.is_some(), "division {} has no total", d.division.number());
+    }
+    // Nothing in it is in no division, and the sixteen add to the job cost to the cent.
+    assert_eq!(est.no_division.members, 0);
+    let cents = |v: f64| (v * 100.0).round() as i64;
+    let sum: i64 = est.divisions.iter().map(|d| cents(d.total.value.unwrap())).sum();
+    assert_eq!(sum, cents(est.job_cost.value.unwrap()));
+    // Every price in it says it is made up.
+    for l in &est.lines {
+        if let Some(c) = &l.unit_cost {
+            assert!(c.source.contains("made-up"), "a price in the sample does not say it is made up: {}", c.source);
+        }
+    }
+}

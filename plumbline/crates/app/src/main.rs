@@ -108,6 +108,7 @@ fn main() {
         (Tone::Done, "Opened.".to_string())
     } else { (Tone::Warned, format!("Opened. Figures in the file did not match its geometry for {} and were worked out again.", report.stale.join(", "))) };
     let has_roof = roof.is_some();
+    let has_lines = job.order.iter().any(|e| job.world.get::<plumbline_world::Cost>(*e).is_some_and(|c| !c.lines.is_empty()));
     // The job as it was opened: what the first step undone goes back to.
     let draw = tools::Draw { last_text: file::save(&mut job), ..default() };
     let doc = Doc {
@@ -138,7 +139,9 @@ fn main() {
         plan: false,
         walk: false,
         show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false },
-        tab: if has_roof { Tab::Roof } else { Tab::Building },
+        // The sheet opens on the estimate once anything is priced; before that, on what
+        // has been taken off.
+        tab: if has_lines { Tab::Estimate } else if has_roof { Tab::Roof } else { Tab::Building },
         draw,
     };
     let graphics = scene::Graphics { full: std::env::var("PLUMBLINE_GRAPHICS").map(|v| v != "plain").unwrap_or(true) };
@@ -492,6 +495,22 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                 Entry::Distance => tools::scale_entered(doc, &text),
                 Entry::Measure => tools::measured(doc, &text),
                 Entry::Room => tools::room_named(doc, &text),
+                Entry::Division => {
+                    let line = doc.entry_line.take();
+                    match (doc.selected.clone(), plumbline_world::Division::parse(&text)) {
+                        (None, _) => tools::cant(doc, "set the division", "nothing is selected"),
+                        (_, Err(why)) => tools::cant(doc, "set the division", why),
+                        (Some(sel), Ok(division)) => match doc.job.set_division(&sel, line.as_deref(), division) {
+                            Ok(()) => {
+                                doc.job.derive();
+                                doc.edit("Division");
+                                doc.say(Tone::Done, format!("{sel}: {} is in {}.", line.map(|l| format!("{l:?}")).unwrap_or_else(|| "its line".to_string()), division.said()));
+                            }
+                            Err(why) => tools::cant(doc, "set the division", why),
+                        },
+                    }
+                    doc.redraw();
+                }
                 Entry::BringIn(what) => bring::bring(doc, what, &text),
                 // What it is made of, and the job's overhead and profit: Assumed, like the rest.
                 Entry::Material | Entry::Overhead | Entry::Profit => {

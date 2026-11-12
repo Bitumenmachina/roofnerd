@@ -49,6 +49,8 @@ pub enum Entry {
     UnitCost,
     /// The stretch-out of the selected element's cost line.
     StretchOut,
+    /// Which of the sixteen divisions the selected element's cost line is in.
+    Division,
     /// A file to bring in, of the kind said: its name, as typed.
     BringIn(Bring),
     /// What the selected element is made of: a material's name.

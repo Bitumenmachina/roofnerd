@@ -641,3 +641,147 @@ pub fn priced() -> Job {
     debug_assert!(!stale.is_empty());
     job
 }
+
+/// The sample whole house with a made-up price on everything in it, in all sixteen
+/// divisions: what a whole-house estimate looks like when it is read division by
+/// division. Every price is made up and says so. The lines are put on by the same verbs
+/// a person uses; nothing here is priced that the house does not hold.
+pub fn house_priced() -> Job {
+    const MADE_UP: &str = "made-up price";
+    let mut job = house();
+    let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).expect(OK);
+    let put = |job: &mut Job, path: &str, line: &str, quantity: &str, class: Class, division: u8, price: &str| {
+        job.add_line(path, line, quantity, Some(class), false).expect(OK);
+        job.set_on_line(path, "unit_cost", Some(line), Some(price), Status::Known, MADE_UP).expect(OK);
+        job.set_division(path, Some(line), Division::of_number(division).expect(OK)).expect(OK);
+    };
+    use Class::{General, Material, Subcontract};
+
+    // Everything in the house, by what it is and what it is called.
+    let things: Vec<(String, String, Kind, Option<String>)> = {
+        let mut q = job.world.query::<(&Node, &Kind)>();
+        let all: Vec<(String, String, Kind, Option<String>)> = q.iter(&job.world).map(|(n, k)| (n.path.clone(), n.name.clone(), *k, n.parent.clone())).collect();
+        job.order.clone().iter().filter_map(|e| job.world.get::<Node>(*e).map(|n| n.path.clone())).filter_map(|p| all.iter().find(|t| t.0 == p).cloned()).collect()
+    };
+    let lowest = crate::building::storey_totals(&mut job).into_iter().min_by(|a, b| a.elevation.unwrap_or(0.0).total_cmp(&b.elevation.unwrap_or(0.0))).map(|s| s.path);
+    let mechanical = ["register", "return grille", "water closet", "tub", "lavatory", "kitchen sink", "water heater", "heat pump", "air handler"];
+
+    for (path, name, kind, parent) in &things {
+        let on_ground = parent.is_some() && *parent == lowest;
+        match kind {
+            // An outside wall is framed, wrapped, insulated, sided, boarded and painted;
+            // on the ground level it has a stone wainscot. A partition is framed and
+            // boarded and painted both sides.
+            Kind::Wall if name.ends_with(" wall") && name != "wet wall" => {
+                put(&mut job, path, "Wall framing, 2x6 at 16 in", "face_area", Material, 6, "$4.20/SF");
+                put(&mut job, path, "Sheathing and weather barrier", "net_area", Material, 7, "$2.10/SF");
+                put(&mut job, path, "Batt insulation", "net_area", Material, 7, "$1.60/SF");
+                put(&mut job, path, "Cedar lap siding, installed", "net_area", Material, 7, "$9.50/SF");
+                put(&mut job, path, "Gypsum board, hung and finished", "net_area", Material, 9, "$2.40/SF");
+                put(&mut job, path, "Paint, two coats", "net_area", Material, 9, "$1.10/SF");
+                if on_ground {
+                    put(&mut job, path, "Stone veneer wainscot, 3 ft", "plan_length", Subcontract, 4, "$95/LF");
+                }
+            }
+            Kind::Wall => {
+                put(&mut job, path, "Partition framing, 2x4 at 16 in", "face_area", Material, 6, "$3.10/SF");
+                put(&mut job, path, "Gypsum board, both sides", "net_area", Material, 9, "$4.80/SF");
+                put(&mut job, path, "Paint, both sides", "net_area", Material, 9, "$2.20/SF");
+            }
+            Kind::Door => {
+                if name == "bath door" {
+                    put(&mut job, path, "Interior door, prehung", "1", Material, 8, "$640");
+                } else {
+                    put(&mut job, path, "Entry door, prehung", "1", Material, 8, "$2,400");
+                }
+                put(&mut job, path, "Door hardware", "1", Material, 8, "$185");
+                put(&mut job, path, "Casing and trim", "1", Material, 6, "$120");
+            }
+            Kind::Window => {
+                put(&mut job, path, "Window unit, clad wood", "1", Material, 8, "$1,150");
+                put(&mut job, path, "Flashing and sealant", "1", Material, 7, "$65");
+                put(&mut job, path, "Window treatment", "1", Material, 12, "$380");
+            }
+            Kind::Floor if on_ground => {
+                put(&mut job, path, "Excavation and gravel base", "plan_area", Subcontract, 2, "$1.85/SF");
+                put(&mut job, path, "Concrete slab on grade, 4 in", "plan_area", Subcontract, 3, "$6.50/SF");
+            }
+            Kind::Floor => put(&mut job, path, "Floor framing and subfloor", "plan_area", Material, 6, "$8.75/SF"),
+            Kind::Room => {
+                if name == "bath" {
+                    put(&mut job, path, "Tile flooring", "floor_area", Material, 9, "$18/SF");
+                    put(&mut job, path, "Toilet and bath accessories", "1", Material, 10, "$450");
+                } else {
+                    put(&mut job, path, "Hardwood flooring", "floor_area", Material, 9, "$12/SF");
+                }
+                put(&mut job, path, "Base and trim", "perimeter", Material, 6, "$7.50/LF");
+                put(&mut job, path, "Ceiling, gypsum board and paint", "floor_area", Material, 9, "$3.40/SF");
+                match name.as_str() {
+                    "kitchen" => {
+                        put(&mut job, path, "Cabinets and countertops", "1", Material, 6, "$18,500");
+                        put(&mut job, path, "Kitchen appliances", "1", Material, 11, "$8,500");
+                    }
+                    "utility" => put(&mut job, path, "Laundry appliances", "1", Material, 11, "$2,400"),
+                    "hall closet" => put(&mut job, path, "Closet shelving", "1", Material, 10, "$650"),
+                    _ => {}
+                }
+            }
+            Kind::RoofPlane => {
+                put(&mut job, path, "Roof sheathing", "surface_area", Material, 6, "$2.30/SF");
+                put(&mut job, path, "Standing seam roofing", "surface_area", Material, 7, "$14/SF");
+            }
+            Kind::Eave => put(&mut job, path, "Gutter", "true_length", Material, 7, "$16.50/LF"),
+            Kind::Ridge => {
+                put(&mut job, path, "Steel ridge beam", "true_length", Material, 5, "$42/LF");
+                put(&mut job, path, "Ridge cap and vent", "true_length", Material, 7, "$22/LF");
+            }
+            Kind::Duct => put(&mut job, path, "Ductwork, installed", "true_length", Subcontract, 15, "$18/LF"),
+            Kind::Pipe => put(&mut job, path, "Piping, installed", "true_length", Subcontract, 15, "$9.50/LF"),
+            Kind::Conduit => put(&mut job, path, "Conduit, installed", "true_length", Subcontract, 16, "$7.25/LF"),
+            Kind::Cable => put(&mut job, path, "Cable, pulled", "true_length", Subcontract, 16, "$2.25/LF"),
+            Kind::Fixture | Kind::Equipment => {
+                let division = if mechanical.iter().any(|m| name.starts_with(m)) { 15 } else { 16 };
+                let price = match name.as_str() {
+                    n if n.starts_with("register") || n.starts_with("return grille") => "$85",
+                    n if n.starts_with("receptacle") => "$145",
+                    n if n.starts_with("light") => "$185",
+                    "water heater" => "$2,100",
+                    "heat pump" => "$7,800",
+                    "air handler" => "$4,300",
+                    "panel" => "$2,900",
+                    "meter" => "$650",
+                    _ => "$640",
+                };
+                put(&mut job, path, "Set and connected", "1", Subcontract, division, price);
+            }
+            _ => {}
+        }
+    }
+    // On the job itself: what it takes to run it, the site, the foundation, and the
+    // two things a house this size might have that no element here draws yet.
+    put(&mut job, &root, "Building permit", "1", General, 1, "$4,200");
+    put(&mut job, &root, "Temporary power and toilets", "1", General, 1, "$1,800");
+    put(&mut job, &root, "Final cleaning", "1", General, 1, "$1,250");
+    put(&mut job, &root, "Site clearing and grading", "1", Subcontract, 2, "$6,500");
+    put(&mut job, &root, "Driveway and walks", "1", Subcontract, 2, "$9,800");
+    put(&mut job, &root, "Footings and foundation walls", "1", Subcontract, 3, "$24,600");
+    put(&mut job, &root, "Sauna, prefabricated", "1", Subcontract, 13, "$9,200");
+    put(&mut job, &root, "Residential elevator, two stops", "1", Subcontract, 14, "$38,000");
+    // The superintendent is in-house and in hours: sixty days of eight.
+    let e = job.find(&root).expect(OK);
+    let mut cost = job.world.get::<Cost>(e).cloned().expect(OK);
+    cost.lines.insert(
+        0,
+        CostLine {
+            class: Some(Class::Supervision),
+            division: Some(Division::GeneralRequirements),
+            order: Some(Order { unit: HOURS.into(), factor: Val::known(8.0, "hr/EA", "made-up rate"), round_up: false }),
+            ..CostLine::of("Superintendent, days on site", "60", Val::known(85.0, "$/hr", "made-up rate"))
+        },
+    );
+    job.put(&root, cost).expect(OK);
+    job.set(&root, "overhead", Some("10"), Status::Known, MADE_UP).expect(OK);
+    job.set(&root, "profit", Some("8"), Status::Known, MADE_UP).expect(OK);
+    job.derive();
+    job
+}

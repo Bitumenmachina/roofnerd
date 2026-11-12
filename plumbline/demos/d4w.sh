@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# D4 demonstration in the application: the job priced both ways on the sheet's Money tab,
+# D4 demonstration in the application: the job priced both ways on the sheet's Budget tab,
 # and prices typed in the window on what is selected, with the sheet following.
 # Run from the repository root:  demos/d4w.sh [folder for the pictures]
 #
@@ -35,14 +35,14 @@ done
 cp "$J" "$T/before.json"
 
 echo
-echo "== The session: the Money tab; the east plane picked on it and its line priced; the north plane given an allowance; save =="
+echo "== The session: the Budget tab; the east plane picked on it and its line priced; the north plane given an allowance; save =="
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$J"
 shot                                                    # 01 as opened
-sheet "Money"                                           # the sheet's Money tab
+sheet "Budget"                                          # the sheet's Budget tab
 park
 shot                                                    # 02 the job priced both ways, and reconciled
 sheet "east"                                            # the east plane's row
