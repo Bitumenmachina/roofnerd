@@ -96,16 +96,43 @@ pub fn all_or_nothing<T>(job: &mut Job, f: impl FnOnce(&mut Job) -> Result<T, St
     }
 }
 
-/// A new element named for its kind and its number: "wall 31".
-fn add_numbered(job: &mut Job, parent: &str, kind: Kind) -> Result<String, String> {
-    // The name has to be free under the parent; the path number makes it so.
-    let path = job.add(parent, kind, &format!("\u{0}new {}", kind.stem()))?;
-    let number: u32 = path.rsplit('-').next().and_then(|n| n.parse().ok()).unwrap_or(0);
-    let e = job.find(&path).ok_or("the new element is not there")?;
-    if let Some(mut node) = job.world.get_mut::<Node>(e) {
-        node.name = format!("{} {number}", kind.stem());
+/// A new element named for its kind, numbered from 1 among its kind on its storey:
+/// "wall 1", "duct 3". (It was named by its number in the job's file, "wall 31", which
+/// is how the file tells things apart and not how a builder does.)
+pub(crate) fn add_numbered(job: &mut Job, parent: &str, kind: Kind) -> Result<String, String> {
+    add_called(job, parent, kind, kind.stem(), 1, false)
+}
+
+/// A new element called `base`, told apart from every other thing on its storey by a
+/// number counted from `first`. With `bare`, the first of a name has it with no number
+/// ("Lavatory", then "Lavatory 2"); without, every one is numbered ("wall 1", "wall 2";
+/// "trunk, piece 2").
+pub(crate) fn add_called(job: &mut Job, parent: &str, kind: Kind, base: &str, first: u32, bare: bool) -> Result<String, String> {
+    let base = base.trim();
+    if base.is_empty() {
+        return Err("a thing needs a name".into());
     }
-    Ok(path)
+    // Every element's parent, to find the storey a thing is on: the parent itself, or
+    // the nearest storey above it, or failing that the parent.
+    let (parents, names): (std::collections::HashMap<String, Option<String>>, Vec<(String, String)>) = {
+        let mut q = job.world.query::<&Node>();
+        let all: Vec<(String, Option<String>, String)> = q.iter(&job.world).map(|n| (n.path.clone(), n.parent.clone(), n.name.clone())).collect();
+        (all.iter().map(|(p, up, _)| (p.clone(), up.clone())).collect(), all.into_iter().map(|(p, _, n)| (p, n)).collect())
+    };
+    let up = |from: &str| -> Vec<String> {
+        let mut chain = vec![from.to_string()];
+        while let Some(Some(next)) = parents.get(chain.last().map(String::as_str).unwrap_or("")) {
+            if chain.len() > 64 {
+                break;
+            }
+            chain.push(next.clone());
+        }
+        chain
+    };
+    let scope = up(parent).into_iter().find(|p| job.kind(p) == Some(Kind::Storey)).unwrap_or_else(|| parent.to_string());
+    let taken: std::collections::HashSet<String> = names.iter().filter(|(p, _)| up(p).contains(&scope)).map(|(_, n)| n.clone()).collect();
+    let name = if bare && !taken.contains(base) { base.to_string() } else { (first..).map(|n| format!("{base} {n}")).find(|n| !taken.contains(n)).unwrap_or_else(|| base.to_string()) };
+    job.add(parent, kind, &name)
 }
 
 fn storey_of(job: &mut Job, storey: &str) -> Result<(), String> {
@@ -307,7 +334,9 @@ pub fn place(job: &mut Job, storey: &str, kind: Kind, what: &str, at: P2, offset
             None => Val::unknown("ft", "size not entered"),
         };
         let placed = Placed { what: how.val(what.to_string(), ""), at: how.val(at, "ft"), offset: how.length(offset)?, angle: None, size };
-        let path = add_numbered(job, storey, kind)?;
+        // A fixture or a piece of equipment is called what it is: "Lavatory", and the
+        // next one "Lavatory 2".
+        let path = add_called(job, storey, kind, what, 2, true)?;
         building::check_placed(&path, kind, &placed)?;
         job.put(&path, placed)?;
         if let Some(system) = system {

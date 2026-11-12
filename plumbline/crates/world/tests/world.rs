@@ -4329,9 +4329,9 @@ fn a_house_is_drawn_from_nothing_and_its_figures_are_the_ones_worked_by_hand() {
     // Four walls round 20 ft by 10 ft, 9 ft tall, closed back to the start.
     let made = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [20.0, 0.0], [20.0, 10.0], [0.0, 10.0]], true, ed::Top::Height("9 ft"), how).unwrap();
     assert_eq!(made.len(), 4);
-    // Each wall is named for its kind and its number, and is on the storey.
+    // Each wall is named for its kind, numbered from 1 on its storey (call 52).
     let names: Vec<String> = made.iter().map(|p| job.find(p).and_then(|e| job.world.get::<Node>(e).map(|n| n.name.clone())).unwrap()).collect();
-    assert!(names.iter().zip(&made).all(|(n, p)| *n == format!("wall {}", p.rsplit('-').next().unwrap().parse::<u32>().unwrap())), "{names:?}");
+    assert_eq!(names, ["wall 1", "wall 2", "wall 3", "wall 4"]);
     // South wall: 20 LF, 9 ft, face 180 SF.
     assert_eq!(measure_of(&mut job, &made[0], "plan_length").value, Some(20.0));
     assert_eq!(measure_of(&mut job, &made[0], "face_area").value, Some(180.0));
@@ -4961,7 +4961,7 @@ fn two_things_in_one_space_clash_and_two_things_close_clash_only_when_a_clearanc
     // 2 − 1.5 = 0.5 ft, and that is how far one has to move to clear the other.
     let a = ed::place(&mut job, &s, Kind::Equipment, "Boiler", [0.0, 0.0], "0 ft", Some([2.0, 2.0, 2.0]), None, how).unwrap();
     let b = ed::place(&mut job, &s, Kind::Equipment, "Tank", [1.5, 0.0], "0 ft", Some([2.0, 2.0, 2.0]), None, how).unwrap();
-    assert_eq!(clashes_of(&mut job, None), [("Boiler (equipment 6)".to_string(), "Tank (equipment 7)".to_string(), true, false, Some(0.5), Status::Known)]);
+    assert_eq!(clashes_of(&mut job, None), [("Boiler".to_string(), "Tank".to_string(), true, false, Some(0.5), Status::Known)]);
     let found = clashes(&mut job, None).unwrap();
     assert_eq!((found.tested, found.left_out.len()), (2, 0));
     assert_eq!((found.found[0].a.as_str(), found.found[0].b.as_str()), (a.as_str(), b.as_str()));
@@ -4973,12 +4973,12 @@ fn two_things_in_one_space_clash_and_two_things_close_clash_only_when_a_clearanc
     let seen = ed::Entered { status: Status::Assumed, source: "set in the 3D view" };
     ed::move_by(&mut job, &b, 0.5, 0.0, seen).unwrap();
     assert!(clashes_of(&mut job, None).is_empty());
-    assert_eq!(clashes_of(&mut job, Some(0.5)), [("Boiler (equipment 6)".to_string(), "Tank (equipment 7)".to_string(), false, false, Some(0.0), Status::Assumed)]);
+    assert_eq!(clashes_of(&mut job, Some(0.5)), [("Boiler".to_string(), "Tank".to_string(), false, false, Some(0.0), Status::Assumed)]);
     // A quarter foot apart: nothing, unless a clearance of more than that is asked for.
     ed::move_by(&mut job, &b, 0.25, 0.0, seen).unwrap();
     assert!(clashes_of(&mut job, None).is_empty());
     assert!(clashes_of(&mut job, Some(2.0 / 12.0)).is_empty());
-    assert_eq!(clashes_of(&mut job, Some(0.5)), [("Boiler (equipment 6)".to_string(), "Tank (equipment 7)".to_string(), false, false, Some(0.25), Status::Assumed)]);
+    assert_eq!(clashes_of(&mut job, Some(0.5)), [("Boiler".to_string(), "Tank".to_string(), false, false, Some(0.25), Status::Assumed)]);
     // A clearance of nothing, or of a room's width, is refused.
     assert!(clashes(&mut job, Some(0.0)).is_err() && clashes(&mut job, Some(11.0)).is_err() && clashes(&mut job, Some(f64::NAN)).is_err());
     // A thing with no size has no shape: it is not tested, and that is said.
@@ -5084,7 +5084,7 @@ fn a_run_through_a_wall_is_a_hole_to_cut_and_what_is_joined_is_not_a_clash() {
     let got = clashes_of(&mut job, None);
     // The handler is from 1 ft to 3 ft east and the duct, going east, starts on its middle at
     // 2 ft: 1 ft of the duct is in it, and it clears by moving that 1 ft.
-    assert!(got.len() == 1 && got[0].2 && !got[0].3 && about(got[0].4, 1.0) && got[0].1.starts_with("Air handler (equipment "), "{got:?}");
+    assert!(got.len() == 1 && got[0].2 && !got[0].3 && about(got[0].4, 1.0) && got[0].1 == "Air handler", "{got:?}");
     ed::connect(&mut job, &ahu, &pieces[0], how).unwrap();
     assert!(clashes_of(&mut job, None).is_empty());
 }
@@ -5679,12 +5679,12 @@ fn j13_10_11_12_13_18_hours_names_sources_systems_and_a_cut_runs_name() {
     // a number of its own.
     let name = |job: &mut Job, path: &str| job.find(path).and_then(|e| job.world.get::<Node>(e).map(|n| n.name.clone())).unwrap();
     let numbered = ed::split(&mut job, &pieces[0], [6.0, 2.0], how).unwrap();
-    assert_eq!(name(&mut job, &numbered), format!("duct {}", numbered.rsplit('-').next().unwrap().parse::<u32>().unwrap()));
+    assert_eq!(name(&mut job, &numbered), "duct 3", "the two pieces drawn are duct 1 and duct 2");
     if let Some(mut node) = job.find(&pieces[1]).and_then(|e| job.world.get_mut::<Node>(e)) {
         node.name = "trunk to the bedrooms".into();
     }
     let named = ed::split(&mut job, &pieces[1], [10.0, 8.0], how).unwrap();
-    assert_eq!(name(&mut job, &named), format!("trunk to the bedrooms, cut at {}", named.rsplit('-').next().unwrap().parse::<u32>().unwrap()));
+    assert_eq!(name(&mut job, &named), "trunk to the bedrooms, piece 2");
 }
 
 // ---------------------------------------------------------------- the fourteenth judgment
@@ -5841,7 +5841,7 @@ fn j15_4_15_a_sheet_lined_up_again_says_what_it_left_behind_and_stops_saying_it_
     // It is said among the drawing's own values, flagged, by the wall's name.
     let rows = view::elements(&mut job).into_iter().find(|e| e.path == d).unwrap().rows;
     let row = rows.iter().find(|r| r.label == "traced before it was rescaled or moved").expect("the drawing says what was left behind");
-    assert_eq!((row.text.as_str(), row.status), ("1 thing: wall 5", Status::Assumed));
+    assert_eq!((row.text.as_str(), row.status), ("1 thing: wall 1", Status::Assumed));
     // After a save and a load too.
     let (mut back, _) = load(&save(&mut job)).unwrap();
     assert_eq!(plans::stale(&mut back, &d).unwrap(), stale);

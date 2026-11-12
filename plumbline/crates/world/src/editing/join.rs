@@ -21,7 +21,7 @@
 
 use std::collections::BTreeSet;
 
-use super::{add_numbered, all_or_nothing, storey_of, Entered};
+use super::{add_called, add_numbered, all_or_nothing, storey_of, Entered};
 use crate::building::{self, network, InSystem, SystemInfo};
 use crate::check::FIT_TOLERANCE_FT;
 use crate::components::*;
@@ -150,17 +150,11 @@ fn split_at(job: &mut Job, run: &str, at: P2, how: Entered) -> Result<String, St
         second.offset = at_cut;
     }
     let parent = job.world.get::<Node>(e).and_then(|n| n.parent.clone()).ok_or_else(|| format!("{run} is under nothing"))?;
-    let new = add_numbered(job, &parent, info.kind)?;
-    // A run somebody named keeps its name on both pieces: the second says it was cut off
-    // the first. One with only its number for a name gets its own number.
+    // A run somebody named keeps its name on both pieces: the second is that name's next
+    // piece. One with only its kind and a number for a name gets the next number.
     let was = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_default();
-    let own_number = run.rsplit('-').next().and_then(|n| n.parse::<u32>().ok()).map(|n| format!("{} {n}", info.kind.stem()));
-    if !was.is_empty() && Some(&was) != own_number.as_ref() {
-        let number = new.rsplit('-').next().and_then(|n| n.parse::<u32>().ok()).unwrap_or(0);
-        if let Some(mut node) = job.find(&new).and_then(|n| job.world.get_mut::<Node>(n)) {
-            node.name = format!("{was}, cut at {number}");
-        }
-    }
+    let only_numbered = was.strip_prefix(info.kind.stem()).is_some_and(|rest| rest.strip_prefix(' ').is_some_and(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit())));
+    let new = if was.is_empty() || only_numbered { add_numbered(job, &parent, info.kind)? } else { add_called(job, &parent, info.kind, &format!("{was}, piece"), 2, false)? };
     building::check_segment(run, info.kind, &first)?;
     building::check_segment(&new, info.kind, &second)?;
     job.put(run, first)?;
@@ -401,7 +395,9 @@ fn fit_at(job: &mut Job, storey: &str, at: P2, z: Option<f64>, kind: Option<Fitt
         angle: away.iter().find(|d| d[0].hypot(d[1]) > 1.0e-6).map(|d| tidy(d[1].atan2(d[0]).to_degrees())).filter(|a| a.abs() > 1.0e-9).map(|a| Val { value: Some(a), unit: "deg".into(), status, source: "turned to lie along the first run it joins".to_string() }),
         size,
     };
-    let path = add_numbered(job, storey, Kind::Fitting)?;
+    // A fitting is called what it is: "6 in round elbow", and the next "6 in round elbow 2".
+    let called = placed.what.value.clone().filter(|w| !w.trim().is_empty()).unwrap_or_else(|| Kind::Fitting.stem().to_string());
+    let path = add_called(job, storey, Kind::Fitting, &called, 2, true)?;
     building::check_placed(&path, Kind::Fitting, &placed)?;
     let fitting = Fitting { kind: worked };
     building::check_fitting(&path, Kind::Fitting, &fitting)?;

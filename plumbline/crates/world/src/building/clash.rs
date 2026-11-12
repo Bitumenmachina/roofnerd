@@ -439,6 +439,8 @@ fn away_from_joints(p: &Placement, other: &Placement, places: &[P3], owner: usiz
 /// What an element is called in a report: a placed thing by what it is, with its name.
 fn said(p: &Placement, what: &BTreeMap<String, String>) -> String {
     match what.get(&p.path) {
+        // A thing called what it is ("Boiler", "Lavatory 2") is said once.
+        Some(what) if p.name == *what || p.name.strip_prefix(what.as_str()).is_some_and(|rest| rest.strip_prefix(' ').is_some_and(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit()))) => p.name.clone(),
         Some(what) => format!("{what} ({})", p.name),
         None => p.name.clone(),
     }

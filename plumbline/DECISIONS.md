@@ -1969,10 +1969,7 @@ was decided in closing them:
 
 **Not settled here, and why:**
 
-* **A thing drawn with no name is still called by its kind and its number in the file**
-  ("duct 13", walls numbered from 9). Numbering each kind from 1 on its storey changes
-  the name of everything every demonstration and test draws; it is its own piece of
-  work, and is next.
+* (Settled since, below: a thing drawn with no name.)
 * **"class"** for what a line's cost is (material, labor, subcontract). Estimating
   programs say "cost type" or "category"; which the trade's word is was not checked
   against a source, and the word is the model's and the command line's too (Q20).
@@ -1981,3 +1978,22 @@ was decided in closing them:
   connect): each is a change to the model's own words and to what demonstrations
   expect; listed in STATUS.md as open.
 * **Places as bare decimal pairs, clash depths in decimal inches**: open.
+
+**Added the same day: what a thing drawn with no name is called** (J15-B1's last part).
+
+* **A wall, an opening and a run are their kind and a number, counted from 1 on their
+  storey**: "wall 1" to "wall 4", "duct 1". They were numbered by their place in the
+  job's file ("wall 9" to "wall 12" on a job whose first eight things are types), which
+  is how the file tells things apart and not how anyone on a job does.
+* **A fixture, a piece of equipment and a fitting are called what they are**:
+  "Lavatory", and the next one on the storey "Lavatory 2"; "6 in round elbow". They
+  were "fixture 18" and "fitting 99" with what they are on a second line.
+* **A named run that is cut**: the second piece is "<name>, piece 2" (then 3). It was
+  "<name>, cut at <its number in the file>". A run with only its kind and number gets
+  the next number.
+* **Where a thing is said by what it is and by its name** (a clash), a name that is
+  what it is, or that with a number after, is said once: "Boiler", not "Boiler
+  (Boiler)".
+* Jobs saved before keep the names they have. Every demonstration and test that named
+  such a thing has its expected name changed with this.
+

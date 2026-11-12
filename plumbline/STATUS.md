@@ -2557,7 +2557,7 @@ judged**. DECISIONS.md call 52 says what was decided and what was left, and why.
 
 | # | What was done | Held by |
 |---|---|---|
-| J15-B1 | A thing removed keeps its name in what is said of it; a path that owns something ("roof-0072's") and a path given a capital take the thing's name; the job is "the job". **Not done:** a thing drawn with no name is still its kind and its number in the file ("duct 13"). | `j15b_...` in `theme.rs` |
+| J15-B1 | A thing removed keeps its name in what is said of it; a path that owns something ("roof-0072's") and a path given a capital take the thing's name; the job is "the job". A wall, an opening and a run drawn with no name are their kind and a number counted from 1 on their storey; a fixture, equipment and a fitting are called what they are ("Lavatory", then "Lavatory 2"); a named run cut in two has a "piece 2"; a clash says a thing once where its name is what it is. | `j15b_...` in `theme.rs`; the model's tests and the command-line demonstrations, whose expected names changed with it |
 | J15-B2 | The three messages in the window that named a command to type say what the key does and that the rest is not in this window yet. The core's "join them by name (plumbline connect)" says "they are joined by naming the thing and the run". | By reading. |
 | J15-B3 | A backslash before a quote mark is taken out where every word on screen is said. | `j15b_...`; seen in a scratch run (`"1'0"x" has something after the inches`) |
 | J15-B4 | A plan or a picture that cannot be read says so in plain words and what to do next; a file that cannot be opened is called by its name, and why is one of three plain reasons. | By reading; **not seen on screen.** |
@@ -2571,7 +2571,10 @@ judged**. DECISIONS.md call 52 says what was decided and what was left, and why.
 | J15-B12 | Keys offers "Next roof plane" only on a job with a roof, and no condition, price or material for a drawing. **Not done:** spelling (Q20); "Architecture". | Seen in the field pictures once retaken. |
 | J15-B13 | The pointer's position passes through `spoken`. The test no longer rests on the claims the judge found false, and holds the holes found. **Not done:** the two windows' titles are still set directly. | `j15b_...` |
 
-**What these changed that was so before** (besides the words): a source written by
+**What these changed that was so before** (besides the words): a wall drawn on a new
+job is "wall 1", not "wall 7", and so for every thing drawn with no name; a fixture is
+called what it is; a cut run's second piece is "<name>, piece 2", not "<name>, cut at
+<number>" (jobs saved before keep their names); a source written by
 the window reads "set in the window; ..." where it read "set in the 3D view; ..."; a
 fitting's and a made-up thing's source reads "not specified" for "not selected"; the
 made-up jobs' cost code source reads "which cost code scheme this job is to follow is

@@ -23,7 +23,7 @@ refused() { local want="$1"; shift; local out
   cmp -s "$J" "$T/kept.json" || { echo "FAIL: a refusal changed the file"; exit 1; }
 }
 clashes() { "$P" clashes "$J" > "$T/clashes.txt"; }
-name() { sed -E 's/^([a-z]+)-0*([0-9]+)$/\1 \2/' <<<"$1"; }   # what a thing drawn with no name is called
+name() { "$P" show "$J" | sed -n "s/^ *$1  \(.*\)  \[.*/\1/p" | head -1; }   # what the job calls a thing
 sheet() { "$P" estimate "$J" | tr -s ' ' > "$T/sheet.txt"; }
 
 echo "== The job, as a tracing leaves it =="

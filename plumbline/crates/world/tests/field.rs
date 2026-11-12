@@ -206,8 +206,8 @@ fn a_duct_shot_to_its_underside_clears_one_clash_and_makes_the_other_a_finding()
     // Still two questions: the duct's height is the traced one.
     assert_eq!(hard(&mut m.job).iter().map(|c| c.3).collect::<Vec<_>>(), [Status::Assumed, Status::Assumed]);
     let done = ed::measure(&mut m.job, &m.duct, "height above its storey", Reading::Length("7'10\"3/4"), Some(Justify::Bottom), "JM with the laser").unwrap();
-    assert_eq!(done.said, "duct 11: height above its storey is 7' 10 3/4\", measured (it was 8 ft, Assumed: scaled off a made-up plan)");
-    assert_eq!(done.also, ["duct 11's height is now held to its bottom (it was held to its centre)"]);
+    assert_eq!(done.said, "duct 1: height above its storey is 7' 10 3/4\", measured (it was 8 ft, Assumed: scaled off a made-up plan)");
+    assert_eq!(done.also, ["duct 1's height is now held to its bottom (it was held to its centre)"]);
     // The duct is now 7 ft 10 3/4 in to 8 ft 6 3/4 in. Pipe A's top is at 7 ft 10 in:
     // 3/4 in clear. Pipe B, 7 ft 11 in to 8 ft 1 in, is still inside: 2 1/4 in down to
     // the duct's underside, 7 3/4 in up. Everything it rests on is Known.
@@ -240,7 +240,7 @@ fn what_a_measurement_will_not_do() {
     refused(&mut m.job, "wall-9999", "height", Reading::Length("9 ft"), None, "JM", "no element");
     // Only a run's height is taken to its bottom or its top.
     refused(&mut m.job, &wall, "wall line", Reading::Same, Some(Justify::Top), "JM", "not a run");
-    refused(&mut m.job, &duct, "line on the plan", Reading::Same, Some(Justify::Bottom), "JM", "only duct 11's height");
+    refused(&mut m.job, &duct, "line on the plan", Reading::Same, Some(Justify::Bottom), "JM", "only duct 1's height");
     refused(&mut m.job, &duct, "height above its storey", Reading::Same, Some(Justify::Bottom), "JM", "leave the line out");
 }
 
