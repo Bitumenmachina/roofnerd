@@ -172,7 +172,10 @@ says "$T/in.txt" "16 walls"
 says "$T/in.txt" "10 rooms"
 # What this program has no element for it says, by kind and count; nothing goes missing.
 says "$T/in.txt" "22 fixture or outlet: this program has no element for it"
-level() { "$P" takeoff "$1" | sed -n "/^$2 /,/doors/p" | sed -E 's/^ +[~?]? ?//; s/ +/ /g; /^(first|second) floor/d'; }
+# (Its walls by type are left out of the comparison: a building model is written with
+# each wall's own thickness and not its type, which the export says, so the types a
+# reader makes for them are the reader's and are named by it.)
+level() { "$P" takeoff "$1" | sed -n "/^$2 /,/doors/p" | sed -E 's/^ +[~?]? ?//; s/ +/ /g; /^(first|second) floor/d; /^ ?of them /d'; }
 for floor in "first floor" "second floor"; do
   level "$T/house.json" "$floor" > "$T/was.txt"; level "$T/readback.json" "$floor" > "$T/is.txt"
   [ -s "$T/was.txt" ] && cmp -s "$T/was.txt" "$T/is.txt" || { echo "FAIL: the $floor read back is not the $floor written"; diff "$T/was.txt" "$T/is.txt"; exit 1; }

@@ -400,6 +400,20 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 cell(r, 100.0, true, |_| {});
                 cell(r, 110.0, true, |c| words(c, fonts, total(&storey.wall_net), 12.5, Weight::Semibold, theme::status_ink(storey.wall_net.status)));
             });
+            // The same walls by their type, where the level has more than one: the
+            // model's own sums, not the window's.
+            if storey.walls_by_type.len() > 1 {
+                for of in &storey.walls_by_type {
+                    t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(0.0)), min_height: px(28.0), ..default() }, BackgroundColor(theme::panel_alt()))).with_children(|r| {
+                        cell(r, 7.0, false, |c| dot(c, of.net.status.max(of.length.status)));
+                        cell(r, 0.0, false, |c| words(c, fonts, format!("of them, {}", of.name), 12.0, Weight::Medium, theme::ink_soft()));
+                        cell(r, 100.0, true, |c| words(c, fonts, total(&of.length), 12.0, Weight::Medium, theme::status_ink(of.length.status)));
+                        cell(r, 110.0, true, |c| words(c, fonts, total(&of.face), 12.0, Weight::Medium, theme::status_ink(of.face.status)));
+                        cell(r, 100.0, true, |_| {});
+                        cell(r, 110.0, true, |c| words(c, fonts, total(&of.net), 12.0, Weight::Medium, theme::status_ink(of.net.status)));
+                    });
+                }
+            }
             // The storey's rooms: how far round each is, its area to the centre lines of
             // its walls, and the floor inside them.
             if !rooms.is_empty() {

@@ -4295,3 +4295,22 @@ display. They are looked at, and `demos/glassw.sh` rerun, when it is free.
   which comes before the click that ends it even when press, drag and release land
   in one slow frame. From the judge's notes so far (J19-11): a quick flick that began
   on a wall slid the view and also selected the wall.
+* **More built and not yet seen** (same reason): a switch on each level's row and on
+  each system's row (what stands on a level, or runs on a system, is drawn or not;
+  the row itself still selects); the Building tab says each wall's type under its
+  name and heads its columns "Face, one side" and "Net, one side" (J18-8, in part);
+  hours on the recap to two places (J19-4, from the judge's notes); dollars written
+  with their sign first in the panels, "$4,732.40" not "4,732.40 $" (J19-16).
+* **J18-8, the rest: a level's walls are added up by their type**, in the model
+  (`StoreyTotals.walls_by_type`), so the command line and the estimate window say the
+  same sums. A test with hand figures: outside walls 24 ft by 16 ft round at 9 ft are
+  80 LF and 720 SF; one 16 ft partition is 16 LF and 144 SF; the level's 96 LF and
+  864 SF are the two added. On the sample house `plumbline takeoff` now reads, under
+  the first floor's 210.00 LF: "of them Outside wall, 6 in: 4 walls, 136.00 LF ...
+  Partition, 4 1/2 in: 3 walls, 64.00 LF ... Wet wall, 6 in: 1 wall, 10.00 LF"
+  (136 + 64 + 10 = 210). The estimate window's Building tab has the same rows under
+  "Walls, total" (built, not yet seen). **Changed behaviour:** `takeoff` prints those
+  lines where a level has more than one type of wall; `demos/export.sh` leaves them
+  out of its read-back comparison, because a building model is written with each
+  wall's thickness and not its type (which the export already says).
+* 263 tests pass; all nineteen command-line demonstrations pass.

@@ -295,6 +295,12 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
         let _ = writeln!(out, "  {} walls {:<12} {}", s.walls.status.flag(), s.walls.members, said(&s.walls));
         let _ = writeln!(out, "  {} wall face, gross   {}", s.wall_face.status.flag(), said(&s.wall_face));
         let _ = writeln!(out, "  {} wall face, net     {}", s.wall_net.status.flag(), said(&s.wall_net));
+        // By the type of wall, where a level has more than one.
+        if s.walls_by_type.len() > 1 {
+            for t in &s.walls_by_type {
+                let _ = writeln!(out, "  {}   of them {}: {}, {}; face {}; net {}", t.length.status.max(t.net.status).flag(), t.name, if t.length.members == 1 { "1 wall".to_string() } else { format!("{} walls", t.length.members) }, said(&t.length), said(&t.face), said(&t.net));
+            }
+        }
         let _ = writeln!(out, "  {} floors {:<11} {}", s.floors.status.flag(), s.floors.members, said(&s.floors));
         if s.rooms.members > 0 {
             let _ = writeln!(out, "  {} rooms {:<12} {}  (the floor inside the walls)", s.rooms.status.flag(), s.rooms.members, said(&s.rooms));

@@ -1846,6 +1846,20 @@ pub struct StoreyTotals {
     pub rooms: Sum,
     pub doors: usize,
     pub windows: usize,
+    /// Its walls again, by the type of wall, in the order each type first appears: a
+    /// 6 in outside wall and a 4 in partition are not one number to an estimator.
+    pub walls_by_type: Vec<WallsOfType>,
+}
+
+/// The walls of one type on one level, added up.
+#[derive(Clone, Debug, PartialEq)]
+pub struct WallsOfType {
+    /// The type, by path and by name; a wall whose type is not known is under "no type".
+    pub path: String,
+    pub name: String,
+    pub length: Sum,
+    pub face: Sum,
+    pub net: Sum,
 }
 
 pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
@@ -1874,6 +1888,9 @@ pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
         let (Some(sn), Some(Kind::Storey)) = (w.get::<Node>(s), w.get::<Kind>(s)) else { continue };
         let mut figures: [Vec<(String, Option<f64>, Status)>; 5] = Default::default();
         let (mut doors, mut windows) = (0, 0);
+        // Each wall type met, in order: its path, and its walls' three figures.
+        #[allow(clippy::type_complexity)]
+        let mut of_type: Vec<(String, [Vec<(String, Option<f64>, Status)>; 3])> = Vec::new();
         for &e in &order {
             let (Some(n), Some(kind)) = (w.get::<Node>(e), w.get::<Kind>(e)) else { continue };
             if !under(&n.path, &sn.path) {
@@ -1885,6 +1902,17 @@ pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
                     figures[0].push(figure("plan_length"));
                     figures[1].push(figure("face_area"));
                     figures[2].push(figure("net_area"));
+                    let its_type = w.get::<Wall>(e).and_then(|wall| wall.type_name.value.clone()).unwrap_or_default();
+                    let at = match of_type.iter().position(|(t, _)| *t == its_type) {
+                        Some(at) => at,
+                        None => {
+                            of_type.push((its_type, Default::default()));
+                            of_type.len() - 1
+                        }
+                    };
+                    for (i, name) in ["plan_length", "face_area", "net_area"].into_iter().enumerate() {
+                        of_type[at].1[i].push(figure(name));
+                    }
                 }
                 Kind::Floor => figures[3].push(figure("plan_area")),
                 Kind::Room => figures[4].push(figure("floor_area")),
@@ -1904,6 +1932,13 @@ pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
             rooms: view::sum_of("SF", &figures[4]),
             doors,
             windows,
+            walls_by_type: of_type
+                .into_iter()
+                .map(|(path, f)| {
+                    let name = order.iter().filter_map(|e| w.get::<Node>(*e)).find(|n| n.path == path).map(|n| n.name.clone()).unwrap_or_else(|| "no type".to_string());
+                    WallsOfType { path, name, length: view::sum_of("LF", &f[0]), face: view::sum_of("SF", &f[1]), net: view::sum_of("SF", &f[2]) }
+                })
+                .collect(),
         });
     }
     out

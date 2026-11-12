@@ -110,3 +110,29 @@ fn walls_that_do_not_close_a_courtyard_and_a_second_house() {
     assert_eq!(made.notes.len(), 1);
     assert!(made.notes[0].contains("enclose another outline apart from this one"), "{:?}", made.notes);
 }
+
+/// J18-8. A level's walls are also added up by the type of wall: a 6 in outside wall and
+/// a 4 in partition are not one number to an estimator. Outside walls 24 ft by 16 ft
+/// round, 9 ft high: 2 x (24 + 16) = 80 LF and 80 x 9 = 720 SF. One partition 16 ft
+/// long: 16 LF and 144 SF. Together 96 LF and 864 SF, which is what the level says.
+#[test]
+fn a_levels_walls_are_added_up_by_their_type() {
+    use plumbline_world::building::storey_totals;
+    use plumbline_world::editing::{self as ed, Entered, Top};
+    use plumbline_world::value::Status;
+    let known = Entered { status: Status::Known, source: "made-up plan" };
+    let mut job = plumbline_world::Job::new("Walls by type (not a real job)", "test", "test");
+    let level = ed::storey(&mut job, "Ground", "0 ft", "9 ft", known).unwrap();
+    let outside = ed::wall_type(&mut job, "wall 6 in", "6 in", known).unwrap();
+    let partition = ed::wall_type(&mut job, "partition 4 in", "4 in", known).unwrap();
+    ed::walls(&mut job, &level, &outside, &[[0.0, 0.0], [24.0, 0.0], [24.0, 16.0], [0.0, 16.0]], true, Top::Height("9 ft"), known).unwrap();
+    ed::walls(&mut job, &level, &partition, &[[12.0, 0.0], [12.0, 16.0]], false, Top::Height("9 ft"), known).unwrap();
+    job.derive();
+    let totals = storey_totals(&mut job);
+    let ground = &totals[0];
+    assert_eq!((ground.walls.value, ground.wall_face.value), (Some(96.0), Some(864.0)));
+    let by: Vec<(&str, usize, Option<f64>, Option<f64>)> = ground.walls_by_type.iter().map(|t| (t.name.as_str(), t.length.members, t.length.value, t.face.value)).collect();
+    assert_eq!(by, [("wall 6 in", 4, Some(80.0), Some(720.0)), ("partition 4 in", 1, Some(16.0), Some(144.0))]);
+    // The parts are the whole: nothing is in two types, and nothing in none.
+    assert_eq!(by.iter().map(|t| t.2.unwrap()).sum::<f64>(), 96.0);
+}
