@@ -225,8 +225,12 @@ fn unit_as_written(unit: &str) -> String {
     }
 }
 
+/// A price as it is held: to the cent, or to the three or four places a supplier's list
+/// gives it to when it has them ($12.345/sheet is not said as $12.35, which would not
+/// multiply to the amount: J17A-11).
 fn dollars(x: f64, by: &str) -> String {
-    format!("${}/{by}", crate::view::figure(x, 2))
+    let places = (2..=4).find(|p| ((x * 10f64.powi(*p)).round() / 10f64.powi(*p) - x).abs() < 1e-9).unwrap_or(4);
+    format!("${}/{by}", crate::view::figure(x, places as usize))
 }
 
 /// Bring a price list in. `supplier` says whose prices these are when the table has no
@@ -730,21 +734,22 @@ pub fn assemblies_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usiz
         for (name, its) in gathered {
             let first = its[0].1;
             let cell = |i: usize| first.get(i).map(|s| s.trim()).unwrap_or("");
-            let made = (|| -> Result<Recipe, String> {
+            // (A fault says which row it is in, when it is in one: J17A-18.)
+            let made = (|| -> Result<Recipe, (Option<usize>, String)> {
                 // Every row of an assembly says the same of the assembly itself: what it
                 // goes on and its cost code. Two that differ are two assemblies under one
                 // name, and neither is taken for the other.
                 if let Some((n, _)) = its.iter().find(|(_, row)| (1..7).any(|c| row.get(c).map(|s| s.trim()).unwrap_or("") != cell(c))) {
-                    return Err(format!("its rows do not agree on what it goes on or on its cost code (row {} and row {n}): two assemblies cannot have one name", its[0].0));
+                    return Err((None, format!("its rows do not agree on what it goes on or on its cost code (row {} and row {n}): two assemblies cannot have one name", its[0].0)));
                 }
-                let applies_to: Vec<Kind> = cell(1).split(',').filter(|s| !s.trim().is_empty()).map(|s| kind_read(s).ok_or_else(|| format!("it goes on {:?}, which is not a kind of element", s.trim()))).collect::<Result<_, _>>()?;
-                let status = status_read(cell(5)).ok_or("its cost code does not say how sure it is")?;
+                let applies_to: Vec<Kind> = cell(1).split(',').filter(|s| !s.trim().is_empty()).map(|s| kind_read(s).ok_or_else(|| format!("it goes on {:?}, which is not a kind of element", s.trim()))).collect::<Result<_, String>>().map_err(|why| (None, why))?;
+                let status = status_read(cell(5)).ok_or((None, "its cost code does not say how sure it is".to_string()))?;
                 let value = if cell(2).is_empty() && cell(3).is_empty() && cell(4).is_empty() { None } else { Some(CostCode { scheme: cell(4).to_string(), code: cell(2).to_string(), title: cell(3).to_string() }) };
                 let code = Val { value, unit: String::new(), status, source: cell(6).to_string() };
                 let mut lines = Vec::new();
-                for (_, row) in &its {
+                for (n, row) in &its {
                     if row.len() > 7 && row[7..].iter().any(|c| !c.trim().is_empty()) {
-                        lines.push(line_in(&row[7..], with_division).map_err(|why| format!("its line {:?}: {why}", row.get(7).map(|s| s.as_str()).unwrap_or("")))?);
+                        lines.push(line_in(&row[7..], with_division).map_err(|why| (Some(*n), format!("its line {:?}: {why}", row.get(7).map(|s| s.as_str()).unwrap_or(""))))?);
                     }
                 }
                 Ok(Recipe { applies_to, cost: Cost { code, lines } })
@@ -752,8 +757,13 @@ pub fn assemblies_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usiz
             let numbers: Vec<usize> = its.iter().map(|(n, _)| *n).collect();
             let recipe = match made {
                 Ok(r) => r,
-                Err(why) => {
-                    out.not_used.extend(numbers.iter().map(|n| (*n, format!("{name}: {why}"))));
+                // The row at fault is named for what is wrong with it; the rest of the
+                // assembly's rows are said to be left out with it, not blamed for it.
+                Err((at, why)) => {
+                    out.not_used.extend(numbers.iter().map(|n| match at {
+                        Some(bad) if bad != *n => (*n, format!("{name}: nothing wrong with this row; it is left out with the rest of its assembly, which is refused whole because of row {bad}")),
+                        _ => (*n, format!("{name}: {why}")),
+                    }));
                     continue;
                 }
             };

@@ -3692,3 +3692,19 @@ takeoff from the USDA plan PDF, priced, using only what the screen says; the loo
 against the instrument standard and the dressed house; and breaking the money path.
 Findings are recorded here the turn they arrive. No timed window demonstration is run
 while it works.
+
+## While the eighteenth judgment runs (2026-11-12)
+
+* **J17A-18 fixed:** one bad row in an assembly is named for what is wrong with it;
+  the other rows of that assembly say they are left out with it and which row is why
+  (replayed with the judge's three rows: rows 2 and 3 "nothing wrong with this row",
+  row 4 the comma in its price).
+* **J17A-11 fixed:** a price is reported to the places it is held to, on a price list
+  brought in and on a prior estimate compared: "$15.00/sheet becomes $12.345/sheet".
+* **Built, not yet seen:** where an eave hangs past an outside wall a soffit closes it
+  underneath, level from the foot of the fascia back to the wall's face (the gap stood
+  open and dark in the dressed pictures). No picture of it has been taken or read: the
+  window is not run while the judge is using the display. It is looked at in the next
+  rerun of `demos/dressw.sh`, whose house has a 1 ft overhang.
+* 220 tests of the model and the command line pass on this tree; the window's crate
+  builds.

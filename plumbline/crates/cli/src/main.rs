@@ -930,7 +930,12 @@ fn compared_said(job: &mut plumbline_world::Job) -> String {
         for l in &c.lines {
             let p = &l.prior;
             let prior_qty = p.quantity.map(|q| format!("{} {}", view::figure(q, 2), p.unit).trim().to_string()).unwrap_or_else(|| "no quantity".into());
-            let prior_rate = p.unit_cost.map(|x| format!(" at {}", money(x))).unwrap_or_default();
+            // A rate to the places it is held to: $12.345 is not said as $12.35.
+            let rate = |x: f64| {
+                let places = (2..=4).find(|p| ((x * 10f64.powi(*p)).round() / 10f64.powi(*p) - x).abs() < 1e-9).unwrap_or(4);
+                format!("${}", view::figure(x, places as usize))
+            };
+            let prior_rate = p.unit_cost.map(|x| format!(" at {}", rate(x))).unwrap_or_default();
             let prior_amount = l.prior_amount.map(|a| format!("{}{}", money(a), if l.worked { " (its quantity times its unit cost)" } else { "" })).unwrap_or_else(|| "no amount".into());
             let _ = writeln!(out, "  {}{}", p.description, if l.of > 1 { format!("  ({} lines of the prior estimate go by this name; they are added together)", l.of) } else { String::new() });
             let _ = writeln!(out, "      prior:     {prior_qty}{prior_rate}: {prior_amount}");

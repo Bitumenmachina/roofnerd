@@ -422,6 +422,9 @@ pub fn rebuild(
     let drawing = &mut *drawing;
     let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None };
     let has_walls = snap.drawn.iter().any(|p| p.kind == Kind::Wall);
+    // Each outside wall as the roof's edge sees it: its line, the way its outside face
+    // looks, half its thickness and its top. An eave that hangs past one gets a soffit.
+    let mut outside_walls: Vec<(Vec3, Vec3, Vec3, f32, f32)> = Vec::new();
 
     // ---- The rest of the building ----
     for p in &snap.drawn {
@@ -455,6 +458,9 @@ pub fn rebuild(
                 let lower = low.map(|(c, to, _)| (patterns.get(&mut images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb)), *to as f32));
                 let masonry = clad.is_some_and(|c| c.what.masonry());
                 let part = dress::Part { o: va, x: along, y: Vec3::Y, z: out };
+                if has_out {
+                    outside_walls.push((va, vb, out, half_t, va.y + h));
+                }
                 // The wall round its doors and windows: the same pieces the clash test
                 // uses, so what is drawn solid is what is tested as solid. On plan a piece
                 // over or under an opening is the opening, and a click on it selects it.
@@ -728,6 +734,28 @@ pub fn rebuild(
                 let blend = if show.ghost { AlphaMode::Blend } else { AlphaMode::Opaque };
                 let fascia = build.materials.add(StandardMaterial { base_color: theme::fascia().with_alpha(alpha), perceptual_roughness: 0.8, double_sided: true, cull_mode: None, alpha_mode: blend, ..default() });
                 build.commands.spawn((Mesh3d(meshes.add(trim.mesh())), MeshMaterial3d(fascia), SceneMesh, NotShadowCaster));
+                // Where the eave hangs past an outside wall, a soffit closes it underneath:
+                // level, from the foot of the fascia back to the wall's face. (Without
+                // it the gap between the wall's top and the roof stood open and dark.)
+                if line.kind == Kind::Eave && !show.ghost {
+                    let mid = (a + b) / 2.0;
+                    let hang = outside_walls
+                        .iter()
+                        .filter(|(_, _, out, _, top)| out.dot(normal) > 0.9 && (top - mid.y).abs() < 3.0)
+                        .filter_map(|(wa, wb, out, half, _)| {
+                            let run = (*wb - *wa).with_y(0.0);
+                            let along = (mid - *wa).with_y(0.0).dot(run.normalize_or_zero());
+                            let past = (mid - *wa).with_y(0.0).dot(*out) - half;
+                            (along > -4.0 && along < run.length() + 4.0 && past > 0.05 && past < 4.0).then_some(past)
+                        })
+                        .min_by(|x, y| x.total_cmp(y));
+                    if let Some(past) = hang {
+                        let mut under = Faces::new();
+                        under.quad([fa, fb, fb - normal * past, fa - normal * past], Vec3::NEG_Y);
+                        let soffit = build.materials.add(StandardMaterial { base_color: theme::trim(), perceptual_roughness: 0.85, double_sided: true, cull_mode: None, ..default() });
+                        build.commands.spawn((Mesh3d(meshes.add(under.mesh())), MeshMaterial3d(soffit), SceneMesh, NotShadowCaster, Pickable::IGNORE));
+                    }
+                }
                 // A gutter where one is priced on the eave: hung on the fascia, 5 in out.
                 if let Some(g) = snap.dress.gutters.get(&line.path).filter(|_| line.kind == Kind::Eave) {
                     let run = (b - a).normalize_or(Vec3::X);
