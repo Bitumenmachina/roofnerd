@@ -44,6 +44,7 @@
 //! * `map`: where each button is, written out for a script.
 
 mod bring;
+mod dress;
 mod map;
 mod model;
 mod panels;
@@ -162,6 +163,7 @@ fn main() {
         .insert_resource(graphics)
         .init_resource::<Snapshot>()
         .init_resource::<scene::Drawing>()
+        .init_resource::<dress::Patterns>()
         .init_resource::<plans::Plans>()
         .init_resource::<panels::Scrolls>()
         .insert_resource(Orbit::new())

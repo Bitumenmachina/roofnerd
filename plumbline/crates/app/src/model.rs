@@ -309,6 +309,9 @@ pub struct Snapshot {
     pub clashes: Option<Result<plumbline_world::building::clash::Clashes, String>>,
     /// What is still to be verified in the field (`vif::vif`).
     pub verify: plumbline_world::vif::Vif,
+    /// What each wall, roof plane, window and door is finished with, read from what is
+    /// priced on it.
+    pub dress: plumbline_world::finish::Dress,
     pub totals: Option<view::RoofTotals>,
     pub planes: Vec<PlaneInfo>,
     pub lines: Vec<LineInfo>,
@@ -365,6 +368,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     s.estimate = Some(view::estimate(&mut doc.job));
     s.clashes = Some(plumbline_world::building::clash::clashes(&mut doc.job, None));
     s.verify = plumbline_world::vif::vif(&mut doc.job);
+    s.dress = plumbline_world::finish::dress(&mut doc.job);
     if doc.selected.as_ref().is_some_and(|sel| doc.job.find(sel).is_none()) {
         doc.selected = None;
     }

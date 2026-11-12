@@ -512,8 +512,15 @@ pub fn wall_inside() -> Color { hex(0xF4F2EE) }
 pub fn floor_colour() -> Color { hex(0xC9B79C) }
 /// A floor on the plan: paper.
 pub fn plan_paper() -> Color { hex(0xFBFBF8) }
-pub fn glass() -> Color { Color::srgba(0.62, 0.80, 0.90, 0.38) }
+pub fn glass() -> Color { Color::srgba(0.40, 0.52, 0.62, 0.55) }
 pub fn door_leaf() -> Color { hex(0x7A5A3C) }
+/// Casing, sills, corner boards and a window nobody has named a color for: trim white.
+pub fn trim() -> Color { hex(0xF0EEE8) }
+/// A knob.
+pub fn hardware() -> Color { hex(0x3A3632) }
+/// What a surface with a pattern on it is multiplied by: a little under white, so that
+/// one picked or pointed at can lighten. The patterns are made that much lighter.
+pub fn dressed() -> Color { Color::srgb(0.90, 0.90, 0.90) }
 pub fn equipment() -> Color { hex(0xC5CBD3) }
 pub fn porcelain() -> Color { hex(0xF8F8F6) }
 

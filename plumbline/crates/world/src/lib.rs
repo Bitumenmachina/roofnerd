@@ -24,6 +24,7 @@ pub mod derive;
 pub mod editing;
 pub mod export;
 pub mod file;
+pub mod finish;
 pub mod formula;
 pub mod geom;
 pub mod job;

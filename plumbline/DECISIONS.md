@@ -2288,3 +2288,40 @@ neutral ground, no sky, sun or grass):
 by its builder and then by judges briefed as a veteran estimator who has never seen
 it. A demonstration that passes on a screen a builder would stumble over is a defect
 in the demonstration.
+
+### Call 58. The house is dressed in what the estimate prices (2026-11-12)
+
+Patrick: "where is the texturing of an actual house or windows think high end
+residential construction". Call 57 made it a rule; this is how.
+
+**Where a finish comes from.** A wall, a roof plane, a window or a door is drawn in
+what its own cost lines, its material or its assembly say it is finished with. The
+words are the trade's: brick, stone, stucco, lap siding (clapboard, bevel, fiber
+cement), board and batten, shingles; asphalt shingles, standing seam, slate, tile,
+shakes, membrane; double-hung, casement, fixed, divided lites; panel, glazed. A color
+word in the same text (white, charcoal, cedar, copper, ...) colors it. The reading is
+done once, in the model (`plumbline_world::finish`), and the window draws what it
+says; `plumbline finishes <file>` prints the same reading, with the line that said
+it. **A thing with nothing priced on it that names a finish is drawn bare**, and its
+panel says so. The picture then shows what the estimate has left out, the way a total
+does: a bare wall on a dressed house is a wall nobody has priced the siding for.
+Rejected: a finish field of its own on each element, set by hand. It would let the
+picture and the estimate disagree, which is the one thing this rule exists to stop.
+
+**Which face is outside.** The side of a wall that lies outside the outline its
+level's walls enclose. A wall with both sides inside is a partition and takes no
+cladding. Where the walls enclose nothing, which side is out is not known and a
+cladding priced on the wall is drawn on both faces. (The thickness test this
+replaces, "6 in or more is an outside wall", was a guess.)
+
+**A window and a door are built, not painted on.** Frame, sash, glass and muntins;
+stiles, rails and panels; casing outside and in; a sill; a knob. What nothing says
+(how a window operates, whether its lites are divided) is not drawn: an unpriced
+window is a frame, one sash and one light.
+
+**Within the look rule.** Finishes are matte, drawn from patterns made in the program
+(no photographs, no files brought in, nothing licensed): courses, joints and seams at
+their real sizes, so a brick is 8 in by 2 2/3 in on the wall and a lap is its
+exposure. Studio light, neutral ground, no sky. Edges and roof lines keep their line
+types. With "Known, Assumed, Unknown" showing, everything goes back to flat color:
+that view is about certainty, not finish. The plan is still a drawing.

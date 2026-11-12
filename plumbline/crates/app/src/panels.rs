@@ -1299,6 +1299,17 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
             }
         });
     }
+    // What it is dressed in, and what priced on it says so (call 58).
+    let finish = plumbline_world::finish::said_of(&snap.dress, &el.path, el.kind);
+    if !finish.is_empty() {
+        heading(p, fonts, "Finish");
+        for (what, why) in finish {
+            p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(4.0)), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::rule()))).with_children(|r| {
+                r.spawn(text(fonts, what, 12.5, Weight::Medium, theme::ink()));
+                r.spawn(text(fonts, why, 11.0, Weight::Regular, theme::ink_faint()));
+            });
+        }
+    }
     actions(p, fonts, doc, snap, el);
     // The plane's corners, from the model, to the sixteenth of an inch.
     if !snap.corners.is_empty() {

@@ -23,8 +23,10 @@ use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
 use bevy::window::PrimaryWindow;
 
+use crate::dress;
 use crate::model::{to_view, Doc, Snapshot, Tone};
 use crate::theme;
+use plumbline_world::finish::Outside;
 use plumbline_world::building::Shape;
 use plumbline_world::{Discipline, Kind};
 
@@ -259,6 +261,8 @@ struct Builder<'a, 'w, 's> {
     /// Set while the wall over and under an opening is built: on plan those pieces are
     /// the opening, as a plan draws it, and a click on them selects it rather than the wall.
     on_plan: Option<String>,
+    /// The pattern the next piece is dressed in. Taken by that piece.
+    pattern: Option<dress::Pattern>,
 }
 
 impl Builder<'_, '_, '_> {
@@ -266,6 +270,8 @@ impl Builder<'_, '_, '_> {
     #[allow(clippy::too_many_arguments)]
     fn piece(&mut self, path: &str, system: Option<&String>, mesh: Handle<Mesh>, at: Transform, colour: Color, roughness: f32, metallic: f32, ghosted: bool) {
         let see_through = ghosted && self.ghost;
+        // Shown by how sure it is, a thing is one flat color whatever it is dressed in.
+        let pattern = self.pattern.take().filter(|_| self.wash.is_none());
         let colour = self.wash.map(|w| w.with_alpha(colour.alpha())).unwrap_or(colour);
         let (roughness, metallic) = if self.wash.is_some() { (0.95, 0.0) } else { (roughness, metallic) };
         let colour = if see_through { colour.with_alpha(colour.alpha().min(0.06)) } else { colour };
@@ -278,6 +284,8 @@ impl Builder<'_, '_, '_> {
             double_sided: true,
             cull_mode: None,
             alpha_mode: if blend { AlphaMode::Blend } else { AlphaMode::Opaque },
+            base_color_texture: pattern.as_ref().map(|p| p.colour.clone()),
+            normal_map_texture: pattern.as_ref().map(|p| p.relief.clone()),
             ..default()
         });
         self.drawing.surfaces.push(Surface { path: path.to_string(), system: system.cloned(), handle: handle.clone(), colour });
@@ -334,6 +342,8 @@ pub fn rebuild(
     ground: Query<Entity, With<Ground>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
+    mut patterns: ResMut<dress::Patterns>,
 ) {
     if *drawn == doc.geometry || snap.revision != doc.revision {
         return;
@@ -410,7 +420,7 @@ pub fn rebuild(
     drawing.frames.clear();
     drawing.surfaces.clear();
     let drawing = &mut *drawing;
-    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None };
+    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None };
     let has_walls = snap.drawn.iter().any(|p| p.kind == Kind::Wall);
 
     // ---- The rest of the building ----
@@ -427,30 +437,113 @@ pub fn rebuild(
                 let along = (vb - va) / length.max(1e-6);
                 let turn = Quat::from_rotation_y((b[1] - a[1]).atan2(b[0] - a[0]) as f32);
                 let (h, t) = (*height as f32, *thickness as f32);
-                let paint = if t >= 0.45 { theme::wall_outside() } else { theme::wall_inside() };
-                // A solid piece of wall from `x0` to `x1` along it and `y0` to `y1` up it.
-                let slab = |build: &mut Builder, x0: f32, x1: f32, y0: f32, y1: f32| {
-                    if x1 - x0 < 0.005 || y1 - y0 < 0.005 {
-                        return;
-                    }
-                    let centre = va + along * ((x0 + x1) / 2.0) + Vec3::Y * ((y0 + y1) / 2.0);
-                    build.piece(&p.path, None, solids.cube.clone(), Transform { translation: centre, rotation: turn, scale: Vec3::new(x1 - x0, y1 - y0, t) }, paint, 0.92, 0.0, true);
-                };
+                let half_t = t / 2.0;
+                // What it is dressed in, read from what is priced on it (call 58): which
+                // face is outside, the cladding on that face, a wainscot under it, and
+                // how far past its ends it runs to close its corners.
+                let wd = snap.dress.walls.get(&p.path);
+                let outside = wd.map(|d| d.outside).unwrap_or(Outside::NotKnown);
+                let has_out = matches!(outside, Outside::Left | Outside::Right);
+                let out = wd.and_then(|d| d.out).map(|o| Vec3::new(o[0] as f32, 0.0, -(o[1] as f32))).unwrap_or(turn * Vec3::Z);
+                let past = wd.map(|d| [d.past[0] as f32, d.past[1] as f32]).unwrap_or([0.0; 2]);
+                let clad = wd.and_then(|d| d.cladding.as_ref()).filter(|_| outside != Outside::Neither);
+                let low = wd.and_then(|d| d.wainscot.as_ref()).filter(|_| outside != Outside::Neither);
+                // With no outline to say which face is out, what is priced is drawn on both.
+                let both = outside == Outside::NotKnown && (clad.is_some() || low.is_some());
+                let upper = clad.map(|c| patterns.get(&mut images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb)));
+                let lower = low.map(|(c, to, _)| (patterns.get(&mut images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb)), *to as f32));
+                let masonry = clad.is_some_and(|c| c.what.masonry());
+                let part = dress::Part { o: va, x: along, y: Vec3::Y, z: out };
                 // The wall round its doors and windows: the same pieces the clash test
                 // uses, so what is drawn solid is what is tested as solid. On plan a piece
                 // over or under an opening is the opening, and a click on it selects it.
                 let spans: Vec<[f64; 4]> = holes.iter().map(|hole| hole.2).collect();
                 for [x0, x1, y0, y1] in plumbline_world::geom::face_less_holes(f64::from(length), *height, &spans) {
                     build.on_plan = holes.iter().find(|hole| hole.2[0] <= x0 + 1e-6 && hole.2[1] >= x1 - 1e-6).map(|hole| hole.0.clone());
-                    slab(&mut build, x0 as f32, x1 as f32, y0 as f32, y1 as f32);
+                    let (x0, x1, y0, y1) = (x0 as f32, x1 as f32, y0 as f32, y1 as f32);
+                    if x1 - x0 < 0.005 || y1 - y0 < 0.005 {
+                        continue;
+                    }
+                    let (x0, x1) = (if x0 <= 1e-4 { -past[0] } else { x0 }, if x1 >= length - 1e-4 { length + past[1] } else { x1 });
+                    // Four skins: the plain inside and edges, a bare outside face, the
+                    // cladding, and the wainscot under it.
+                    let (mut plain, mut bare, mut over, mut under) = (dress::Skin::default(), dress::Skin::default(), dress::Skin::default(), dress::Skin::default());
+                    let mut face = |z: f32, normal: Vec3, dressed: bool| {
+                        let quad = |ya: f32, yb: f32| [part.at(x0, ya, z), part.at(x1, ya, z), part.at(x1, yb, z), part.at(x0, yb, z)];
+                        if !dressed {
+                            plain.quad(quad(y0, y1), normal, None);
+                            return;
+                        }
+                        let split = lower.as_ref().map(|l| l.1.clamp(y0, y1)).unwrap_or(y0);
+                        if let Some((pattern, _)) = lower.as_ref().filter(|_| split > y0 + 1e-4) {
+                            under.quad(quad(y0, split), normal, Some(dress::Lay { across: along, up: Vec3::Y, tile: pattern.tile }));
+                        }
+                        if y1 > split + 1e-4 {
+                            match &upper {
+                                Some(pattern) => over.quad(quad(split, y1), normal, Some(dress::Lay { across: along, up: Vec3::Y, tile: pattern.tile })),
+                                None => bare.quad(quad(split, y1), normal, None),
+                            }
+                        }
+                    };
+                    face(half_t, out, has_out || both);
+                    face(-half_t, -out, both);
+                    let p4 = |x: f32, y: f32, z: f32| part.at(x, y, z);
+                    plain.quad([p4(x0, y1, -half_t), p4(x1, y1, -half_t), p4(x1, y1, half_t), p4(x0, y1, half_t)], Vec3::Y, None);
+                    plain.quad([p4(x0, y0, -half_t), p4(x1, y0, -half_t), p4(x1, y0, half_t), p4(x0, y0, half_t)], Vec3::NEG_Y, None);
+                    plain.quad([p4(x0, y0, -half_t), p4(x0, y0, half_t), p4(x0, y1, half_t), p4(x0, y1, -half_t)], -along, None);
+                    plain.quad([p4(x1, y0, -half_t), p4(x1, y0, half_t), p4(x1, y1, half_t), p4(x1, y1, -half_t)], along, None);
+                    build.piece(&p.path, None, meshes.add(plain.mesh()), Transform::IDENTITY, theme::wall_inside(), 0.92, 0.0, true);
+                    if !bare.is_empty() {
+                        build.piece(&p.path, None, meshes.add(bare.mesh()), Transform::IDENTITY, theme::wall_outside(), 0.92, 0.0, true);
+                    }
+                    if let (false, Some(pattern)) = (over.is_empty(), &upper) {
+                        build.pattern = Some(pattern.clone());
+                        build.piece(&p.path, None, meshes.add(over.mesh()), Transform::IDENTITY, theme::dressed(), pattern.rough, pattern.metal, true);
+                    }
+                    if let (false, Some((pattern, _))) = (under.is_empty(), &lower) {
+                        build.pattern = Some(pattern.clone());
+                        build.piece(&p.path, None, meshes.add(under.mesh()), Transform::IDENTITY, theme::dressed(), pattern.rough, pattern.metal, true);
+                    }
                 }
                 build.on_plan = None;
+                // Siding stops against a corner board at each corner; masonry turns the corner itself.
+                if has_out && clad.is_some() && !masonry {
+                    let mut boards = dress::Skin::default();
+                    let from = lower.as_ref().map(|l| l.1.min(h)).unwrap_or(0.0);
+                    let (wide, proud) = (4.5 / 12.0, 1.0 / 12.0);
+                    if past[0] > 1e-4 {
+                        boards.block(&part, [-past[0] - proud, -past[0] + wide], [from, h], [half_t, half_t + proud]);
+                    }
+                    if past[1] > 1e-4 {
+                        boards.block(&part, [length + past[1] - wide, length + past[1] + proud], [from, h], [half_t, half_t + proud]);
+                    }
+                    if !boards.is_empty() {
+                        build.piece(&p.path, None, meshes.add(boards.mesh()), Transform::IDENTITY, theme::trim(), 0.8, 0.0, true);
+                    }
+                }
                 for (hole_path, kind, [from, to, sill, head]) in holes {
                     let (from, to, sill, head) = (*from as f32, *to as f32, *sill as f32, *head as f32);
-                    // What fills the opening: glass in a window, a leaf in a door.
-                    let centre = va + along * ((from + to) / 2.0) + Vec3::Y * ((sill + head) / 2.0);
-                    let (fill, thick, rough) = if *kind == Kind::Window { (theme::glass(), 0.08, 0.08) } else { (theme::door_leaf(), 0.14, 0.6) };
-                    build.piece(hole_path, None, solids.cube.clone(), Transform { translation: centre, rotation: turn, scale: Vec3::new(to - from, head - sill, thick) }, fill, rough, 0.0, true);
+                    // What fills the opening: a window or a door, built of its parts.
+                    let od = snap.dress.openings.get(hole_path);
+                    let stood = dress::Part { o: va + along * from + Vec3::Y * sill, x: along, y: Vec3::Y, z: out };
+                    let sides = [has_out || both, both];
+                    let unit = if *kind == Kind::Window { dress::window(&stood, to - from, head - sill, t, od, sides, masonry) } else { dress::door(&stood, to - from, head - sill, t, od, sides, masonry) };
+                    let named = od.and_then(|d| d.tone).map(|t| Color::srgb_u8(t.rgb[0], t.rgb[1], t.rgb[2]));
+                    // A window is the color named for it, or trim white; an entry door
+                    // nobody has named a color for is wood, and an inside door is painted.
+                    let made = named.unwrap_or(if *kind == Kind::Door && has_out { theme::door_leaf() } else { theme::trim() });
+                    if !unit.unit.is_empty() {
+                        build.piece(hole_path, None, meshes.add(unit.unit.mesh()), Transform::IDENTITY, made, 0.6, 0.0, true);
+                    }
+                    if !unit.trim.is_empty() {
+                        build.piece(hole_path, None, meshes.add(unit.trim.mesh()), Transform::IDENTITY, theme::trim(), 0.8, 0.0, true);
+                    }
+                    if !unit.glass.is_empty() {
+                        build.piece(hole_path, None, meshes.add(unit.glass.mesh()), Transform::IDENTITY, theme::glass(), 0.08, 0.0, true);
+                    }
+                    for knob in &unit.knobs {
+                        build.piece(hole_path, None, solids.ball.clone(), Transform { translation: *knob, scale: Vec3::splat(2.25 / 12.0), ..default() }, theme::hardware(), 0.4, 0.7, true);
+                    }
                     let half = turn * Vec3::Z * (t / 2.0);
                     let (c0, c1) = (va + along * from + Vec3::Y * sill, va + along * to + Vec3::Y * sill);
                     let up = Vec3::Y * (head - sill);
@@ -566,16 +659,30 @@ pub fn rebuild(
                 continue;
             }
             let normal = facing(&positions);
-            // What it is covered with, when anything says. A plane with no area is a fault.
-            let (paint, metal) = match (&info.condition, info.area.is_some()) {
-                (_, false) => (theme::hex(0xE2A9A2), 0.0),
-                (None, _) => (theme::roof_bare(), 0.0),
-                (Some(c), _) if c.to_lowercase().contains("copper") => (theme::roof_copper(), 0.75),
-                (Some(_), _) => (theme::roof_other(), 0.2),
-            };
-            let mut faces = Faces::new();
-            faces.add(&positions, &tris, normal);
-            build.piece(&info.path, None, meshes.add(faces.mesh()), Transform::IDENTITY, paint, if metal > 0.5 { 0.38 } else { 0.8 }, metal, true);
+            // What it is covered with, when anything priced on it says (call 58). A
+            // plane with no area is a fault; one nothing names a roofing for is bare.
+            let said = snap.dress.roofs.get(&info.path).filter(|_| info.area.is_some());
+            match said {
+                Some(r) => {
+                    let pattern = patterns.get(&mut images, dress::Look::of_roofing(r.what), r.tone.map(|t| t.rgb));
+                    // The pattern runs level across the plane, its top up the slope.
+                    let across = Vec3::Y.cross(normal).normalize_or(Vec3::X);
+                    let mut up = normal.cross(across);
+                    if up.y < 0.0 {
+                        up = -up;
+                    }
+                    let mut skin = dress::Skin::default();
+                    skin.add(&positions, &tris, normal, Some(dress::Lay { across, up, tile: pattern.tile }));
+                    build.pattern = Some(pattern.clone());
+                    build.piece(&info.path, None, meshes.add(skin.mesh()), Transform::IDENTITY, theme::dressed(), pattern.rough, pattern.metal, true);
+                }
+                None => {
+                    let paint = if info.area.is_some() { theme::roof_bare() } else { theme::hex(0xE2A9A2) };
+                    let mut faces = Faces::new();
+                    faces.add(&positions, &tris, normal);
+                    build.piece(&info.path, None, meshes.add(faces.mesh()), Transform::IDENTITY, paint, 0.8, 0.0, true);
+                }
+            }
             build.wash = None;
             let lifted: Vec<Vec3> = positions.iter().map(|p| *p + normal * 0.06).collect();
             build.drawing.frames.push((info.path.clone(), (0..lifted.len()).map(|i| (lifted[i], lifted[(i + 1) % lifted.len()])).collect()));
@@ -608,6 +715,15 @@ pub fn rebuild(
                 let blend = if show.ghost { AlphaMode::Blend } else { AlphaMode::Opaque };
                 let fascia = build.materials.add(StandardMaterial { base_color: theme::fascia().with_alpha(alpha), perceptual_roughness: 0.8, double_sided: true, cull_mode: None, alpha_mode: blend, ..default() });
                 build.commands.spawn((Mesh3d(meshes.add(trim.mesh())), MeshMaterial3d(fascia), SceneMesh, NotShadowCaster));
+                // A gutter where one is priced on the eave: hung on the fascia, 5 in out.
+                if let Some(g) = snap.dress.gutters.get(&line.path).filter(|_| line.kind == Kind::Eave) {
+                    let run = (b - a).normalize_or(Vec3::X);
+                    let hung = dress::Part { o: a, x: run, y: Vec3::Y, z: normal };
+                    let mut gutter = dress::Skin::default();
+                    gutter.block(&hung, [0.0, a.distance(b)], [-4.5 / 12.0, -0.6 / 12.0], [0.02, 5.0 / 12.0]);
+                    let paint = g.tone.map(|t| Color::srgb_u8(t.rgb[0], t.rgb[1], t.rgb[2])).unwrap_or(theme::trim());
+                    build.piece(&line.path, None, meshes.add(gutter.mesh()), Transform::IDENTITY, paint, 0.6, if g.tone.is_some_and(|t| t.word == "copper") { 0.7 } else { 0.0 }, true);
+                }
                 if !has_walls {
                     let mut face = Faces::new();
                     face.quad([fa, fb, fb.with_y(0.0), fa.with_y(0.0)], normal);

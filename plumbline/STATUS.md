@@ -3149,3 +3149,40 @@ tab reads division by division, each with its total.
 * **Not judged. Not yet demonstrated by a script through the window** (a division
   typed on a line of the sheet); `demos/d5w.sh` and `demos/d4w.sh` are to be rerun on
   the new tab order with the rest.
+
+## The house dressed as built. How its demonstration will be run (written before it is built)
+
+DECISIONS.md call 58. `demos/dress.sh` (command line) and `demos/dressw.sh` (window).
+
+1. **The reading, at the command line.** On a made-up job: a level; four 6 in walls
+   round 24 ft by 16 ft, 9 ft tall; a partition; a door and two windows; a hip roof.
+   `plumbline finishes` first says every wall, the roof and each opening is bare,
+   and why ("nothing priced on it names a finish"). Then lines are added the way an
+   estimator adds them and the reading follows, each with the line that said it:
+   * south wall, "Brick veneer, red" (Division 4): brick, red, outside face south;
+   * east wall, "Fiber cement lap siding, white" (Division 7): lap siding, white;
+   * north wall, "Stone veneer wainscot, 3 ft" and "Cedar shingle siding": shingles
+     above a stone wainscot 3 ft high;
+   * west wall, "Stucco, three coat": stucco;
+   * the partition, "Brick veneer": said to be a partition, both sides inside, so
+     the line is priced and no cladding is drawn, and the reading says that;
+   * the roof planes, "Standing seam roofing, charcoal"; one changed to "Slate
+     roofing" reads slate alone;
+   * a window, "Window unit, clad wood, double-hung, divided lites, black": double-
+     hung, divided, black; the other window, no line: a frame, one sash, one light;
+   * the door, "Entry door, six panel, prehung": a panel door.
+   A line switched off stops dressing the wall (it is out of the estimate, so it is
+   off the house). (Written before the build; in the build only a labor line can be
+   switched off, an existing rule, so this is shown with a labor line that names the
+   siding, and a material line is taken off the house by renaming or removing it.) A wall's outside face is the one outside the outline: checked for
+   all four against the plan by hand (south wall drawn west to east: outside is its
+   right; east wall drawn south to north: its right; and so on round).
+2. **The same in the window** (`dressw.sh`): `plumbline sixteen` opened and walked
+   round, front, corner, a window close up, the entry door close up, the roof from
+   above, inside looking at a partition; the unpriced `plumbline house` beside it,
+   bare. Every picture read by eye against the standard: do the courses run level
+   and at size, do corners close, do the window parts sit in the wall, is anything
+   glossy, is anything swimming or flickering.
+3. **Tests** (`crates/world/tests/finish.rs`): every word of the vocabulary to its
+   finish; a color word; outside faces of a rectangle of walls and of an L; a
+   partition; a line off; the reading unchanged by a save and a load.

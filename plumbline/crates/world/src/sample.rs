@@ -689,16 +689,17 @@ pub fn house_priced() -> Job {
                 put(&mut job, path, "Paint, both sides", "net_area", Material, 9, "$2.20/SF");
             }
             Kind::Door => {
-                if name == "bath door" {
-                    put(&mut job, path, "Interior door, prehung", "1", Material, 8, "$640");
+                // The front door is the one door in an outside wall; the rest are inside.
+                if name == "front door" {
+                    put(&mut job, path, "Entry door, mahogany, six panel, prehung", "1", Material, 8, "$2,400");
                 } else {
-                    put(&mut job, path, "Entry door, prehung", "1", Material, 8, "$2,400");
+                    put(&mut job, path, "Interior door, six panel, prehung", "1", Material, 8, "$640");
                 }
                 put(&mut job, path, "Door hardware", "1", Material, 8, "$185");
                 put(&mut job, path, "Casing and trim", "1", Material, 6, "$120");
             }
             Kind::Window => {
-                put(&mut job, path, "Window unit, clad wood", "1", Material, 8, "$1,150");
+                put(&mut job, path, "Window unit, clad wood, double-hung, divided lites, bronze", "1", Material, 8, "$1,150");
                 put(&mut job, path, "Flashing and sealant", "1", Material, 7, "$65");
                 put(&mut job, path, "Window treatment", "1", Material, 12, "$380");
             }
