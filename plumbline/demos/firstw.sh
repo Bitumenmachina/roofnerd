@@ -156,4 +156,16 @@ for e in of("Wall") + of("Floor") + of("Room") + of("RoofPlane"):
             print("FAIL: traced, and Known:", e["path"], name); sys.exit(1)
 print("    every wall is Assumed, traced from the drawing; no traced figure is Known")
 PY
+# The roof is in the 3D picture: a job with one level once showed none (its roof was
+# drawn only with "All levels" showing). Nothing is priced, so it is the bare roof's
+# blue-gray, a color nothing else in the picture has; counted over the model's part of it.
+python3 - "$OUT/06-model.png" <<'PY'
+import sys
+from PIL import Image
+im = Image.open(sys.argv[1]).convert("RGB").crop((252, 44, 1256, 830))
+roof = sum(1 for r, g, b in im.getdata() if 115 <= r <= 190 and 14 <= b - r <= 40 and 4 <= g - r <= 22)
+print("    picture 06: %d dots of bare roof" % roof)
+if roof < 15000:
+    print("FAIL: the roof is not in the 3D picture"); sys.exit(1)
+PY
 echo "  PASS: from a new job, a real plan was added, scaled and traced into walls, a door, windows, a floor, a room and a roof in the window, and the saved job gives the figures worked by hand"
