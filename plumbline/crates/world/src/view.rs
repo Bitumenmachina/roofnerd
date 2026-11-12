@@ -66,7 +66,7 @@ fn derived(path: &str, label: &str, d: &Derived) -> Row {
         Some(x) => format!("{} {}", num(x), d.unit).trim().to_string(),
         None => "unknown".to_string(),
     };
-    Row { path: path.into(), label: label.into(), text, status: d.status, basis: d.formula.clone(), note: d.note.clone(), derived: true, number: d.value, unit: d.unit.clone() }
+    Row { path: path.into(), label: label.into(), text, status: d.status, basis: words(&d.formula), note: d.note.clone(), derived: true, number: d.value, unit: d.unit.clone() }
 }
 
 /// Every element in tree order (each one, then what is under it), each with all of its
@@ -248,7 +248,7 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         // A condition's recipe is read, not counted: its blanks are not this job's unknowns.
         let mut notes = Vec::new();
         if let Some(t) = w.get::<Recipe>(e) {
-            notes.push(format!("applies to: {}", t.applies_to.iter().map(|k| format!("{k:?}")).collect::<Vec<_>>().join(", ")));
+            notes.push(format!("applies to: {}", t.applies_to.iter().map(|k| k.said().to_string()).collect::<Vec<_>>().join(", ")));
             for line in &t.cost.lines {
                 // What the line takes, and what the recipe already states for it. A value a
                 // recipe states goes onto an element with that status, so it is shown here.
@@ -258,7 +258,7 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
                     extra.push("stretch-out: blank".to_string());
                 }
                 for (name, v) in &line.inputs {
-                    extra.push(format!("{name}: {}", stated(v.status, v.value.as_ref().map(|len| units::show_length(len, &v.unit)).unwrap_or_default())));
+                    extra.push(format!("{}: {}", words(name), stated(v.status, v.value.as_ref().map(|len| units::show_length(len, &v.unit)).unwrap_or_default())));
                 }
                 if let Some(w) = &line.waste {
                     extra.push(format!("waste: {}", stated(w.status, w.value.map(|x| format!("{} %", num(x))).unwrap_or_default())));
@@ -267,7 +267,7 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
                     extra.push(format!("ordered by the {}: {}", o.unit, stated(o.factor.status, o.factor.value.map(|x| format!("{} {}", num(x), o.factor.unit)).unwrap_or_default())));
                 }
                 extra.push(format!("price: {}", stated(line.unit_cost.status, line.unit_cost.value.map(|x| format!("{} {}", num(x), line.unit_cost.unit)).unwrap_or_default())));
-                notes.push(format!("line: {} = {}   ({})", line.description, line.quantity, extra.join("; ")));
+                notes.push(format!("line: {} = {}   ({})", line.description, words(&line.quantity), extra.join("; ")));
             }
         }
         out.push(ElementRows { path: p.clone(), name: node.name.clone(), kind, depth: depth_of(node.parent.clone()), rows, notes });
@@ -343,6 +343,12 @@ pub fn in_squares(surface: &Sum) -> Sum {
         return Sum { value: None, unit: "SQ", status: Status::Unknown, members: surface.members, missing: surface.missing.clone() };
     }
     Sum { value: squares, unit: "SQ", status: surface.status, members: surface.members, missing: surface.missing.clone() }
+}
+
+/// A figure's name as a person reads it: its words. The job file and a formula's own
+/// text join them with an underscore; nobody reads that, and either can be typed.
+pub fn words(name: &str) -> String {
+    name.replace('_', " ")
 }
 
 /// A figure as a person reads it on a sheet: thousands separated, to `decimals` places,

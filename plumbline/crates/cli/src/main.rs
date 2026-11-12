@@ -307,13 +307,13 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
         let pieces = |n: usize| format!("{n} straight piece{}", if n == 1 { "" } else { "s" });
         let _ = writeln!(out, "\n{}{}  ({what}; {}, {}{})", if t.flag == Status::Known { String::new() } else { format!("{} ", t.flag.flag()) }, t.name, pieces(t.runs.members), t.runs.status.flag().trim_end(), said(&t.runs));
         for line in &t.lines {
-            let _ = writeln!(out, "  {} {:<8} {:<16} {:>2} {:<6}  {:>10}", line.size_status.max(line.length.status).flag(), format!("{:?}", line.kind), line.size, line.length.members, if line.length.members == 1 { "piece" } else { "pieces" }, said(&line.length));
+            let _ = writeln!(out, "  {} {:<8} {:<16} {:>2} {:<6}  {:>10}", line.size_status.max(line.length.status).flag(), capital(line.kind.said()), line.size, line.length.members, if line.length.members == 1 { "piece" } else { "pieces" }, said(&line.length));
         }
         for (kind, what, count, status) in &t.fittings {
             let _ = writeln!(out, "  {} {:<9} {what}: {count} EA", status.flag(), kind.map(|k| k.title()).unwrap_or("Fitting"));
         }
         for (kind, what, count, status) in &t.placed {
-            let _ = writeln!(out, "  {} {:<9} {what}: {count} EA", status.flag(), format!("{kind:?}"));
+            let _ = writeln!(out, "  {} {:<9} {what}: {count} EA", status.flag(), capital(kind.said()));
         }
         // How it hangs together: said only where there are runs to join.
         let j = &t.joined;
@@ -359,7 +359,7 @@ fn price(job: &mut plumbline_world::Job) -> String {
     for e in &p.elements {
         let _ = writeln!(out, "\n{}  [{}]  ({})", e.name, e.kind.said(), e.path);
         if let Some((name, unit, d)) = &e.figure {
-            let _ = writeln!(out, "    priced by its {name}: {}", d.value.map(|x| format!("{}{} {unit}", d.status.flag().trim_end(), view::figure(x, 2))).unwrap_or_else(|| format!("no figure ({})", if d.note.is_empty() { "a value it is worked out from is not known" } else { d.note.as_str() })));
+            let _ = writeln!(out, "    priced by its {}: {}", view::words(name), d.value.map(|x| format!("{}{} {unit}", d.status.flag().trim_end(), view::figure(x, 2))).unwrap_or_else(|| format!("no figure ({})", if d.note.is_empty() { "a value it is worked out from is not known" } else { d.note.as_str() })));
         }
         let rate = e.rate.as_ref().map(|r| match r.value {
             Some(x) => format!(" at {}${} per {}", r.status.flag().trim_end(), view::rate(x), r.unit.trim_start_matches("$/")),
@@ -447,6 +447,12 @@ fn price(job: &mut plumbline_world::Job) -> String {
         let _ = writeln!(out, "  not priced at all: {n} thing{} that could be ({})", if n == 1 { "" } else { "s" }, kinds.join(", "));
     }
     out
+}
+
+/// A word with its first letter a capital, for the head of a column or a row.
+fn capital(word: &str) -> String {
+    let mut c = word.chars();
+    c.next().map(|f| f.to_uppercase().collect::<String>() + c.as_str()).unwrap_or_default()
 }
 
 /// The estimate sheet: every cost line under its element, in three money columns; the
@@ -1097,12 +1103,17 @@ fn run(args: &[String]) -> Result<(), String> {
             let text = std::fs::read_to_string(path).map_err(|e| format!("cannot read {path}: {e}"))?;
             let (mut job, report) = file::load(&text).map_err(|e| format!("{path}: {e}"))?;
             if !report.stale.is_empty() {
-                return Err(format!("measures in the file do not match the geometry for: {}", report.stale.join(", ")));
+                return Err(format!("figures in the file do not agree with what is drawn for: {}", report.stale.join(", ")));
             }
-            if file::save(&mut job) != text {
-                return Err("the file is not byte-for-byte what saving this job writes".into());
+            let saved = file::save(&mut job);
+            if saved != text {
+                // Where: the first line the two part at, and what each has there.
+                let (have, writes): (Vec<&str>, Vec<&str>) = (text.lines().collect(), saved.lines().collect());
+                let n = have.iter().zip(&writes).position(|(a, b)| a != b).unwrap_or(have.len().min(writes.len()));
+                let at = |lines: &[&str]| lines.get(n).map(|l| if l.trim().is_empty() { "an empty line".to_string() } else { format!("\u{201c}{}\u{201d}", l.trim()) }).unwrap_or_else(|| "nothing more".to_string());
+                return Err(format!("{path} reads, but it is not what saving this job writes. They part at line {}: the file has {}; saving writes {}. Opened and saved, it is written the program's way", n + 1, at(&have), at(&writes)));
             }
-            say!("{path}: loads, measures match the geometry, and saving it back writes the same bytes");
+            say!("{path}: reads, its figures agree with what is drawn, and saving it back writes the same file");
             Ok(())
         }
         "lines" => {
@@ -1273,7 +1284,7 @@ fn run(args: &[String]) -> Result<(), String> {
             };
             let (mut job, report) = read(path)?;
             if !report.stale.is_empty() {
-                say!("WARNING: before this edit, the file's measures did not match its geometry for: {}. They have been recomputed.", report.stale.join(", "));
+                say!("WARNING: before this change, the file's figures did not agree with what is drawn for: {}. They have been worked out again.", report.stale.join(", "));
             }
             let (added, taken) = if change { job.change_assembly(element, condition, Status::Known, source)? } else { (job.apply(element, condition, source)?, Vec::new()) };
             job.derive();
@@ -1292,6 +1303,9 @@ fn run(args: &[String]) -> Result<(), String> {
         }
         "set" => {
             let [_, path, element, field, value, rest @ ..] = args else { return Err(usage()) };
+            // A field is named by its words, joined or not: "unit cost" is unit_cost.
+            let field = &field.trim().replace(' ', "_");
+            let said = view::words(field);
             let mut status = None;
             let mut source = None;
             let mut line = None;
@@ -1306,10 +1320,12 @@ fn run(args: &[String]) -> Result<(), String> {
                     "--with" => {
                         let pair = it.next().ok_or("--with needs name=value, like --with \"turn_up=8 in\"")?;
                         let (name, typed) = pair.split_once('=').ok_or_else(|| format!("--with {pair:?} is not name=value"))?;
-                        if with.iter().any(|(have, _)| have == name.trim()) {
-                            return Err(format!("--with gives {:?} twice", name.trim()));
+                        // A name is given by its words, joined or not: "turn up" is turn_up.
+                        let name = name.trim().replace(' ', "_");
+                        if with.iter().any(|(have, _)| *have == name) {
+                            return Err(format!("--with gives {:?} twice", view::words(&name)));
                         }
-                        with.push((name.trim().to_string(), typed.trim().to_string()));
+                        with.push((name, typed.trim().to_string()));
                     }
                     "--status" => status = Some(it.next().cloned().ok_or("--status needs a value")?),
                     "--source" => source = Some(it.next().cloned().ok_or("--source needs a value")?),
@@ -1327,7 +1343,7 @@ fn run(args: &[String]) -> Result<(), String> {
             let value = if value == "unknown" { None } else { Some(value.as_str()) };
             let (mut job, report) = read(path)?;
             if !report.stale.is_empty() {
-                say!("WARNING: before this edit, the file's measures did not match its geometry for: {}. They have been recomputed.", report.stale.join(", "));
+                say!("WARNING: before this change, the file's figures did not agree with what is drawn for: {}. They have been worked out again.", report.stale.join(", "));
             }
             // A roof solved from a footprint: change the footprint and solve again.
             let on_footprint = field.starts_with("edge:") || field.starts_with("move:") || (field == "eave_height" && job.find(element).is_some_and(|e| job.world.get::<Footprint>(e).is_some()));
@@ -1348,7 +1364,7 @@ fn run(args: &[String]) -> Result<(), String> {
                 let solved = solve::edit(&mut job, element, change)?;
                 let after = file::save(&mut job);
                 std::fs::write(path, &after).map_err(|e| format!("cannot write {path}: {e}"))?;
-                say!("set {element} {field} = {typed} ({status:?}) and solved the roof again");
+                say!("set {element} {said} = {typed} ({status:?}) and solved the roof again");
                 say_solve(&solved);
                 if before == after {
                     say!("nothing changed");
@@ -1397,7 +1413,7 @@ fn run(args: &[String]) -> Result<(), String> {
             // Reported back as the job now holds it, in the unit it was entered in.
             let shown = job.shown(element, field, line.as_deref()).unwrap_or_else(|| value.unwrap_or("unknown").to_string());
             if field == "quantity" {
-                say!("set {element} {field} = {shown}");
+                say!("set {element} {said} = {shown}");
                 for (name, _) in &with {
                     say!("  with {name} = {} ({status:?})", job.shown(element, name, line.as_deref()).unwrap_or_default());
                 }
@@ -1405,7 +1421,7 @@ fn run(args: &[String]) -> Result<(), String> {
                     say!("  {name} is no longer used by the formula and has been taken off the line");
                 }
             } else {
-                say!("set {element} {field} = {shown} ({status:?})");
+                say!("set {element} {said} = {shown} ({status:?})");
             }
             // A line that now comes out in another unit, or is priced by another, says so.
             if let (Some((was, was_priced)), Some((now, now_priced))) = (units_before, job.line_units(element, line.as_deref())) {
@@ -1421,7 +1437,7 @@ fn run(args: &[String]) -> Result<(), String> {
             } else if changed.is_empty() {
                 say!("no measure changed");
             } else {
-                say!("measures re-derived on: {}", changed.join(", "));
+                say!("figures worked out again on: {}", changed.join(", "));
             }
             Ok(())
         }
@@ -1443,7 +1459,7 @@ fn show(job: &mut plumbline_world::Job, report: &file::LoadReport) -> String {
         }
         for r in &el.rows {
             let eq = if r.derived { "=" } else { " " };
-            let _ = writeln!(out, "{pad}    {eq} {} {:<16} {}", r.status.flag(), r.label, r.text);
+            let _ = writeln!(out, "{pad}    {eq} {} {:<16} {}", r.status.flag(), view::words(&r.label), r.text);
         }
     }
     let (known, assumed, unknown) = view::tally(&elements);
@@ -1459,12 +1475,12 @@ fn show(job: &mut plumbline_world::Job, report: &file::LoadReport) -> String {
             } else {
                 r.basis.clone()
             };
-            let _ = writeln!(out, "  {} {} {} {}: {} ({})", r.status.flag(), el.path, el.name, r.label, r.text, why);
+            let _ = writeln!(out, "  {} {} {} {}: {} ({})", r.status.flag(), el.path, el.name, view::words(&r.label), r.text, why);
         }
     }
     if !report.stale.is_empty() {
         let _ = writeln!(out);
-        let _ = writeln!(out, "WARNING: the file's measures did not match its geometry for: {}. The figures above are the recomputed ones.", report.stale.join(", "));
+        let _ = writeln!(out, "WARNING: the file's figures did not agree with what is drawn for: {}. The figures above are worked out again from what is drawn.", report.stale.join(", "));
     }
     out
 }

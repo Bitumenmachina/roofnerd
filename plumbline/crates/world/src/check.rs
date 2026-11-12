@@ -279,7 +279,7 @@ pub fn allowance(path: &str, kind: Kind, a: &Allowance) -> Result<(), String> {
         return Err(format!("{path}: a {kind:?} cannot carry an allowance; it has no area or length a rate could be on"));
     };
     let what = format!("{path} allowance");
-    a.rate.check(&what, &format!("$/{unit}")).map_err(|why| format!("{why} (a {kind:?} is priced by its {figure}, in {unit})"))?;
+    a.rate.check(&what, &format!("$/{unit}")).map_err(|why| format!("{why} (a {} is priced by its {}, in {unit})", kind.said(), crate::view::words(figure)))?;
     if a.rate.value.is_some_and(|x| !x.is_finite() || x < 0.0) {
         return Err(format!("{what}: must be zero or more"));
     }

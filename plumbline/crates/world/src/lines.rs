@@ -28,7 +28,7 @@ pub struct On<'a> {
 pub fn input_name_fault(kind: Kind, name: &str) -> Option<String> {
     let ok = name.chars().next().is_some_and(|c| c.is_ascii_lowercase()) && name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_');
     if !ok {
-        return Some(format!("{name:?} cannot be used in a formula; an input's name is lower-case letters, digits and underscores, starting with a letter"));
+        return Some(format!("{name:?} cannot be used in a formula; a name entered on a line is plain words: small letters and digits, starting with a letter"));
     }
     if name == HEIGHT || name == STRETCH_OUT || name == "waste" || name == "quantity" || name == "unit_cost" || name == "order" || kind.measures().iter().any(|(m, _)| *m == name) {
         return Some(format!("{name:?} already means something on a line; give the input another name"));
@@ -65,7 +65,7 @@ fn operand(on: &On, line: &CostLine, name: &str) -> Result<Operand, String> {
             "LF" => 1,
             "SF" => 2,
             "" => 0,
-            other => return Err(format!("uses {name}, which is in {other}; inside a formula use the measure it comes from, or price the line by {name} alone")),
+            other => return Err(format!("uses {name}, which is in {other}; inside a formula use the figure it comes from, or price the line by {name} alone", name = crate::view::words(name))),
         };
         let d = on.measure.and_then(|m| m.0.get(name));
         return Ok(Operand { value: d.and_then(|d| d.value), dim, status: d.map(|d| d.status).unwrap_or(Status::Unknown), shown: name.to_string() });
@@ -75,8 +75,8 @@ fn operand(on: &On, line: &CostLine, name: &str) -> Result<Operand, String> {
         have.push(HEIGHT);
     }
     // (A thing with no figure of its own, the job, is not said to have "(it has: )".)
-    let has = if have.is_empty() { format!("a {} has no figure of its own to take a quantity from", on.kind.said()) } else { format!("a {} has {}", on.kind.said(), have.join(", ")) };
-    Err(format!("uses {name:?}, which is not a figure of this thing ({has}) and is not a value entered on the line. A count is typed as a plain number"))
+    let has = if have.is_empty() { format!("a {} has no figure of its own to take a quantity from", on.kind.said()) } else { format!("a {} has {}", on.kind.said(), have.iter().map(|n| crate::view::words(n)).collect::<Vec<_>>().join(", ")) };
+    Err(format!("uses {:?}, which is not a figure of this thing ({has}) and is not a value entered on the line. A count is typed as a plain number", crate::view::words(name)))
 }
 
 /// A line read against an element: its formula, the unit it comes out in, and the

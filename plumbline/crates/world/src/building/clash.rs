@@ -46,6 +46,12 @@
 //! the other, or crossing well inside both lengths, they are in each other by the sum
 //! of their radii less the distance between their centre lines.
 //!
+//! A run cut in two is still one length of duct or pipe: where a run carries on, in one
+//! line and at one size, into a run joined to its end, the depth of what crosses it is
+//! measured against the whole length. A pipe through a duct at a cut is in each piece
+//! by as much as it was in the duct before the cut, not by the inch it reaches into the
+//! end of a piece.
+//!
 //! A wall or a floor is several solids. The way out of one of them can be into the
 //! next, which is no way out: so against a wall or a floor a thing's depth is the least
 //! of the ways out that clear every piece, among them straight out through the wall's
@@ -134,6 +140,9 @@ struct Piece {
     /// A piece of a wall or a floor: the way it is thin, and how far the whole wall or
     /// floor reaches that way, from and to.
     thin: Option<(Vector, f64, f64)>,
+    /// A run that carries on, in one line and at one size, into a run joined to its
+    /// end: the whole length of it, which is what a thing across it is deep in.
+    whole: Option<Box<Piece>>,
 }
 
 /// How far each solid is drawn in before two are tested for being in the same space.
@@ -142,7 +151,7 @@ const DRAWN_IN: f64 = FIT_TOLERANCE_FT / 2.0;
 impl Piece {
     fn new(owner: usize, pose: Pose, solid: Box<dyn Solid>, core: Option<Box<dyn Solid>>) -> Piece {
         let aabb = solid.compute_aabb(&pose);
-        Piece { owner, pose, solid, core, aabb, round: None, thin: None }
+        Piece { owner, pose, solid, core, aabb, round: None, thin: None, whole: None }
     }
     fn cuboid(owner: usize, pose: Pose, half: Vector) -> Piece {
         let core: Option<Box<dyn Solid>> = (half.min_element() > DRAWN_IN).then(|| Box::new(Cuboid::new(half - Vector::splat(DRAWN_IN))) as Box<dyn Solid>);
@@ -339,6 +348,8 @@ fn round_in_round((a0, a1, r1): (Vector, Vector, f64), (b0, b1, r2): (Vector, Ve
 /// solid a billionth of a foot off its place, three ways, because dead centre it answers
 /// zero.
 fn depth(first: &Piece, second: &Piece) -> Option<Deep> {
+    // A run cut in two is one length of duct to what crosses it at the cut (J17A-20).
+    let (first, second) = (first.whole.as_deref().unwrap_or(first), second.whole.as_deref().unwrap_or(second));
     if let (Some(a), Some(b)) = (first.round, second.round) {
         if let Some(deep) = round_in_round(a, b) {
             return (deep.by > FIT_TOLERANCE_FT).then_some(deep);
@@ -436,6 +447,68 @@ fn away_from_joints(p: &Placement, other: &Placement, places: &[P3], owner: usiz
     pieces
 }
 
+/// Each run's centre line carried on through the runs joined to its ends in one line and
+/// at one size, for the runs that have such a neighbour: by where it stands in `drawn`.
+/// A cut is bookkeeping. It moves nothing, and what crosses a run at a cut is in the
+/// whole run, not in the last inch of one piece.
+fn carried_on(drawn: &[Placement], net: &network::Network) -> BTreeMap<usize, (P3, P3)> {
+    let index: BTreeMap<&str, usize> = drawn.iter().enumerate().filter(|(_, p)| matches!(p.shape, Shape::Run { .. })).map(|(i, p)| (p.path.as_str(), i)).collect();
+    // Which run ends meet at each joint: (run, whether it is its far end).
+    let mut at_end: BTreeMap<(usize, bool), Vec<(usize, bool)>> = BTreeMap::new();
+    for node in &net.nodes {
+        let ends: Vec<(usize, bool)> = node.joints.iter().filter_map(|j| match j {
+            network::Joint::RunEnd { run, end } => index.get(run.as_str()).map(|&i| (i, *end)),
+            _ => None,
+        }).collect();
+        for &e in &ends {
+            at_end.insert(e, ends.iter().copied().filter(|&o| o.0 != e.0).collect());
+        }
+    }
+    let line = |i: usize| match &drawn[i].shape {
+        Shape::Run { a, b, round, rect } => (*a, *b, *round, *rect),
+        _ => unreachable!("only runs are indexed"),
+    };
+    let unit = |from: P3, to: P3| {
+        let d = [to[0] - from[0], to[1] - from[1], to[2] - from[2]];
+        let l = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
+        (l > 1.0e-9).then(|| [d[0] / l, d[1] / l, d[2] / l])
+    };
+    let same = |x: Option<f64>, y: Option<f64>| match (x, y) {
+        (Some(x), Some(y)) => (x - y).abs() < 1.0e-9,
+        (None, None) => true,
+        _ => false,
+    };
+    // From one end of a run, on through each run that carries on from it: where the
+    // length ends.
+    let reach = |start: usize, far: bool| -> Option<P3> {
+        let (a, b, round, rect) = line(start);
+        let way = unit(if far { a } else { b }, if far { b } else { a })?;
+        let (mut at, mut end, mut reached) = (start, far, None);
+        for _ in 0..drawn.len() {
+            let next = at_end.get(&(at, end)).into_iter().flatten().find(|&&(o, o_end)| {
+                let (oa, ob, o_round, o_rect) = line(o);
+                let on = unit(if o_end { ob } else { oa }, if o_end { oa } else { ob });
+                // Within about half a degree of one line, and going on, not back.
+                o != start && same(round, o_round) && same(rect.map(|r| r.0), o_rect.map(|r| r.0)) && same(rect.map(|r| r.1), o_rect.map(|r| r.1)) && on.is_some_and(|on| on[0] * way[0] + on[1] * way[1] + on[2] * way[2] > 0.99996)
+            });
+            let Some(&(o, o_end)) = next else { break };
+            let (oa, ob, ..) = line(o);
+            reached = Some(if o_end { oa } else { ob });
+            (at, end) = (o, !o_end);
+        }
+        reached
+    };
+    let mut out = BTreeMap::new();
+    for &i in index.values() {
+        let (a, b, ..) = line(i);
+        let (back, on) = (reach(i, false), reach(i, true));
+        if back.is_some() || on.is_some() {
+            out.insert(i, (back.unwrap_or(a), on.unwrap_or(b)));
+        }
+    }
+    out
+}
+
 /// What an element is called in a report: a placed thing by what it is, with its name.
 fn said(p: &Placement, what: &BTreeMap<String, String>) -> String {
     match what.get(&p.path) {
@@ -479,9 +552,16 @@ pub fn clashes(job: &mut Job, clearance: Option<f64>) -> Result<Clashes, String>
     let mut pieces: Vec<Piece> = Vec::new();
     let mut solid: BTreeMap<&str, usize> = BTreeMap::new();
     let mut tested = 0;
+    let carried = carried_on(&drawn, &net);
     for (i, p) in drawn.iter().enumerate() {
         match pieces_of(p, i) {
             Ok(mut its) => {
+                if let (Some(&(a, b)), Shape::Run { round, rect, .. }) = (carried.get(&i), &p.shape) {
+                    let whole = Placement { shape: Shape::Run { a, b, round: *round, rect: *rect }, ..p.clone() };
+                    if let (Some(piece), Ok(mut all)) = (its.first_mut(), pieces_of(&whole, i)) {
+                        piece.whole = all.pop().map(Box::new);
+                    }
+                }
                 tested += 1;
                 solid.insert(p.path.as_str(), i);
                 pieces.append(&mut its);
@@ -503,7 +583,9 @@ pub fn clashes(job: &mut Job, clearance: Option<f64>) -> Result<Clashes, String>
                 // both; else a place the measure of depth found in both.
                 let inside = |p: &Piece, at: P3| p.solid.contains_point(&p.pose, Vector::new(at[0], at[1], at[2]));
                 let at = match &deep {
-                    Some(d) if !(inside(first, middle) && inside(second, middle)) => [d.at.x, d.at.y, d.at.z],
+                    // (A run that carries on past this piece: where it is deepest in the
+                    // whole length, not the middle of what is in this piece.)
+                    Some(d) if first.whole.is_some() || second.whole.is_some() || !(inside(first, middle) && inside(second, middle)) => [d.at.x, d.at.y, d.at.z],
                     _ => middle,
                 };
                 let met = pairs.entry(key).or_insert(Met { hard: false, depth: None, gap: f64::INFINITY, at });

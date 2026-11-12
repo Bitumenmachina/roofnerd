@@ -144,3 +144,40 @@ fn the_priced_sample_house_has_work_in_every_one_of_the_sixteen_and_they_add_to_
         }
     }
 }
+
+/// J17A-1, J17B-20. A job file changed by hand and refused is refused in a person's
+/// words: nothing of the reader underneath (its variants, fields and number types) and
+/// none of the file's own keys.
+#[test]
+fn a_job_file_changed_by_hand_is_refused_in_plain_words() {
+    let (mut job, root, a, _) = made();
+    priced(&mut job, &a, "Siding", "net_area", "$9.00/SF", Some(7));
+    let _ = root;
+    let text = save(&mut job);
+    let changed = |edit: &dyn Fn(&mut serde_json::Value)| -> String {
+        let mut doc: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let wall = doc["data"].as_array_mut().unwrap().iter_mut().find(|e| e["path"] == a.as_str()).unwrap();
+        edit(&mut wall["attributes"]["pl::cost"]["lines"][0]);
+        load(&doc.to_string()).err().expect("the change is refused")
+    };
+    let cases: [(&dyn Fn(&mut serde_json::Value), &str); 6] = [
+        (&|l| l["division"] = 7.5.into(), "its cost lines: it holds 7.5 where a whole number belongs"),
+        (&|l| l["division"] = "7".into(), "it holds \"7\" where a whole number belongs"),
+        (&|l| l["division"] = 300.into(), "it holds 300, which is not a figure that can stand there"),
+        (&|l| l["class"] = "Roofer".into(), "it says \"Roofer\", which is not one of: Material, Labor, Fabrication, Supervision, Subcontract, General"),
+        (&|l| l["unit_cost"]["status"] = "Maybe".into(), "it says \"Maybe\", which is not one of: Known, Assumed, Unknown"),
+        (&|l| { l.as_object_mut().unwrap().remove("description"); }, "it has no \"description\", and needs one"),
+    ];
+    for (edit, want) in cases {
+        let why = changed(edit);
+        assert!(why.contains(want), "{why}");
+        for word in ["u8", "f64", "variant", "field", "invalid", "struct", "pl::", "`"] {
+            assert!(!why.contains(word), "{word:?} in {why:?}");
+        }
+    }
+    // A file cut short, and one that is not a job at all.
+    let cut = load(&text[..text.len() / 2]).err().unwrap();
+    assert!(cut.contains("the file stops short") && cut.contains("(line ") && !cut.contains("EOF") && !cut.contains("column"), "{cut}");
+    let other = load("hello").err().unwrap();
+    assert_eq!(other, "not a job file: it is not written the way this program writes a job (line 1 of the file)");
+}

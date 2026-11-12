@@ -1301,7 +1301,7 @@ fn a_formula_that_does_not_make_sense_is_refused_with_the_reason() {
     assert!(refuse("height / face_area", &[]).contains("one over a length"));
     assert!(refuse("slope_factor", &[]).contains("is not a figure of this thing"));
     assert!(refuse("plan_length * height", &[("extra", "2")]).contains("does not use"));
-    assert!(refuse("plan_length * height * Sides", &[("Sides", "2")]).contains("lower-case"));
+    assert!(refuse("plan_length * height * Sides", &[("Sides", "2")]).contains("small letters"));
     assert!(refuse("plan_length * waste", &[("waste", "2")]).contains("already means something"));
     // Nothing above changed the line.
     assert_eq!(figures(&mut job, "parapet-0024", "Copper wall flashing").quantity.formula, "plan_length × height");
@@ -3527,7 +3527,7 @@ fn a_price_is_entered_for_the_unit_the_thing_is_priced_in_and_nothing_else() {
     assert_eq!(plane["attributes"]["pl::allowance"]["rate"]["unit"], "$/SF");
     plane["attributes"]["pl::allowance"]["rate"]["unit"] = "$/LF".into();
     let err = file::load(&doc.to_string()).err().expect("an allowance by the LF on a plane");
-    assert!(err.contains("priced by its surface_area, in SF"), "{err}");
+    assert!(err.contains("a roof plane is priced by its surface area, in SF"), "{err}");
     // A price somebody typed into the saved figures is not trusted: it is worked out again.
     let mut doc: serde_json::Value = serde_json::from_str(&text).unwrap();
     let plane = doc["data"].as_array_mut().unwrap().iter_mut().find(|e| e["path"] == "plane-0003").unwrap();
@@ -5042,6 +5042,54 @@ fn runs_clash_by_how_far_their_surfaces_are_in_each_other() {
     ed::runs(&mut job, &s, Kind::Pipe, &pipe, &[[0.0, 5.55], [10.0, 5.55]], "8 ft", None, how).unwrap();
     assert!(clashes_of(&mut job, None).is_empty());
     let _ = d;
+}
+
+/// J17A-20. Cutting a run in two moves nothing: what crosses it at the cut is as deep in
+/// it as before, in each of the two pieces, at the same place.
+#[test]
+fn a_run_cut_where_another_crosses_it_still_clashes_by_as_much() {
+    use plumbline_world::building::clash::clashes;
+    use plumbline_world::editing as ed;
+    let how = ed::Entered { status: Status::Known, source: "made-up plan" };
+    let (mut job, s, ..) = drawn();
+    let duct = ed::segment_type(&mut job, "8 in round", Kind::Duct, "8 in", None, how).unwrap();
+    let wide = ed::segment_type(&mut job, "12 by 8", Kind::Duct, "12 in", Some("8 in"), how).unwrap();
+    let pipe = ed::segment_type(&mut job, "2 in", Kind::Pipe, "2 in", None, how).unwrap();
+    // An 8 in duct east along y = 5 and a 2 in pipe north along x = 10, both 8 ft up: the
+    // pipe is through the middle of the duct. To clear, one moves by both radii:
+    // 4 in + 1 in = 5 in = 0.4167 ft.
+    let d = ed::runs(&mut job, &s, Kind::Duct, &duct, &[[0.0, 5.0], [20.0, 5.0]], "8 ft", None, how).unwrap();
+    ed::runs(&mut job, &s, Kind::Pipe, &pipe, &[[10.0, 0.0], [10.0, 10.0]], "8 ft", None, how).unwrap();
+    let got = clashes_of(&mut job, None);
+    assert!(got.len() == 1 && got[0].2 && about(got[0].4, 0.4167), "{got:?}");
+    // Cut 6 ft from the crossing: still one clash, with the piece the pipe is in.
+    let far = ed::split(&mut job, &d[0], [16.0, 5.0], how).unwrap();
+    let got = clashes_of(&mut job, None);
+    assert!(got.len() == 1 && got[0].2 && about(got[0].4, 0.4167), "{got:?}");
+    let _ = far;
+    // Cut at the crossing: the pipe is in the end of each piece, and each piece carries
+    // on into the other. Two clashes, each by the same 5 in, both where the pipe is.
+    ed::split(&mut job, &d[0], [10.0, 5.0], how).unwrap();
+    let got = clashes_of(&mut job, None);
+    assert!(got.len() == 2 && got.iter().all(|c| c.2 && !c.3 && about(c.4, 0.4167)), "{got:?}");
+    for c in clashes(&mut job, None).unwrap().found {
+        assert!((c.at[0] - 10.0).abs() < 0.01 && (c.at[1] - 5.0).abs() < 0.01 && (c.at[2] - 8.0).abs() < 0.01, "{:?}", c.at);
+    }
+    // The same of a rectangular duct, 12 in wide and 8 in deep along y = 15 with a 2 in
+    // pipe over it at 8.35 ft: in it by 0.3333 + 0.0833 - 0.35 = 0.0667 ft, cut or not.
+    let w = ed::runs(&mut job, &s, Kind::Duct, &wide, &[[0.0, 15.0], [20.0, 15.0]], "8 ft", None, how).unwrap();
+    ed::runs(&mut job, &s, Kind::Pipe, &pipe, &[[10.0, 12.0], [10.0, 18.0]], "8.35 ft", None, how).unwrap();
+    let over: Vec<_> = clashes_of(&mut job, None).into_iter().skip(2).collect();
+    assert!(over.len() == 1 && about(over[0].4, 0.0667), "{over:?}");
+    ed::split(&mut job, &w[0], [10.0, 15.0], how).unwrap();
+    let got = clashes_of(&mut job, None);
+    assert_eq!(got.len(), 4, "{got:?}");
+    assert_eq!(got.iter().filter(|c| about(c.4, 0.4167)).count(), 2, "{got:?}");
+    assert_eq!(got.iter().filter(|c| about(c.4, 0.0667)).count(), 2, "{got:?}");
+    // Two runs joined at a corner are not one length: a duct that turns north at
+    // (20, 5) is not carried on round the corner.
+    ed::runs(&mut job, &s, Kind::Duct, &duct, &[[20.0, 5.0], [20.0, 9.0]], "8 ft", None, how).unwrap();
+    assert_eq!(clashes_of(&mut job, None).len(), 4);
 }
 
 #[test]

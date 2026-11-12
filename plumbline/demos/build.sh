@@ -109,7 +109,7 @@ echo "== A room placed where no walls close round it is taken, with no area, and
 # guess. It is taken out again here.
 NOWHERE="$(made "$("$P" room "$J" "$S" "Nowhere" --at "40,40" "${K[@]}")")"
 is "its floor area" "$(figure "$NOWHERE" floor_area)" "none"
-says "why" "? $NOWHERE Nowhere floor_area: unknown (no loop of walls closes round its point)" "$("$P" show "$J")"
+says "why" "? $NOWHERE Nowhere floor area: unknown (no loop of walls closes round its point)" "$("$P" show "$J")"
 "$P" remove "$J" "$NOWHERE" > /dev/null
 
 echo

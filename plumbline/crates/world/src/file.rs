@@ -147,13 +147,100 @@ pub fn save(job: &mut Job) -> String {
     out
 }
 
+/// What a part of an element is called, for a refusal: the file's key in words.
+fn key_said(key: &str) -> String {
+    match key.strip_prefix("pl::").unwrap_or(key) {
+        "cost" => "cost lines".to_string(),
+        "measure" => "worked figures".to_string(),
+        "condition" => "assembly".to_string(),
+        other => other.replace('_', " "),
+    }
+}
+
+/// Why a file could not be read, in a person's words. The reader underneath speaks of
+/// variants, fields and number types; none of that is said to someone whose job file
+/// will not open (J17A-1, J17B-20).
+pub fn plainly(why: &str) -> String {
+    // "... at line 240 column 21": the line is worth saying, the column is not.
+    let (what, line) = match why.rfind(" at line ") {
+        Some(i) => (&why[..i], why[i + 9..].split(' ').next().and_then(|n| n.parse::<usize>().ok())),
+        None => (why, None),
+    };
+    let bare = |s: &str| s.trim().trim_matches('`').to_string();
+    // What the file holds there: "floating point `7.5`", "string \"7\"", "map".
+    let got = |s: &str| -> String {
+        let s = s.trim();
+        if let Some(rest) = s.strip_prefix("string ") {
+            return rest.to_string();
+        }
+        for kind in ["floating point ", "integer ", "boolean ", "character "] {
+            if let Some(rest) = s.strip_prefix(kind) {
+                return bare(rest);
+            }
+        }
+        match s {
+            "map" => "a set of named values".into(),
+            "sequence" => "a list".into(),
+            "null" | "unit value" => "nothing".into(),
+            other => other.to_string(),
+        }
+    };
+    let wanted = |s: &str| -> String {
+        let s = s.trim();
+        match s {
+            "u8" | "u16" | "u32" | "u64" | "usize" | "i8" | "i16" | "i32" | "i64" | "isize" => "a whole number".into(),
+            "f32" | "f64" => "a number".into(),
+            "a string" | "string" | "a borrowed string" => "words".into(),
+            "a boolean" => "true or false".into(),
+            "a sequence" | "an array" => "a list".into(),
+            "a map" | "unit" => "a set of named values".into(),
+            other if other.starts_with("struct ") || other.starts_with("enum ") => "a set of named values".into(),
+            other if other.starts_with("a tuple") || other.starts_with("an array of") || other.starts_with("tuple ") => "a list".into(),
+            other => other.to_string(),
+        }
+    };
+    let list = |s: &str| s.replace("one of ", "").replace('`', "").replace(" or ", ", ");
+    let said = if let Some(rest) = what.strip_prefix("invalid type: ") {
+        match rest.split_once(", expected ") {
+            Some((have, want)) => format!("it holds {} where {} belongs", got(have), wanted(want)),
+            None => format!("it holds {}, which does not belong there", got(rest)),
+        }
+    } else if let Some(rest) = what.strip_prefix("invalid value: ") {
+        match rest.split_once(", expected ") {
+            Some((have, _)) => format!("it holds {}, which is not a figure that can stand there", got(have)),
+            None => format!("it holds {}, which cannot stand there", got(rest)),
+        }
+    } else if let Some(rest) = what.strip_prefix("unknown variant ") {
+        match rest.split_once(", expected ") {
+            Some((have, want)) => format!("it says \"{}\", which is not one of: {}", bare(have), list(want)),
+            None => format!("it says \"{}\", which is not something it can say there", bare(rest)),
+        }
+    } else if let Some(rest) = what.strip_prefix("missing field ") {
+        format!("it has no \"{}\", and needs one", bare(rest).replace('_', " "))
+    } else if let Some(rest) = what.strip_prefix("unknown field ") {
+        format!("it has \"{}\", which is nothing it holds", bare(rest.split(", expected").next().unwrap_or(rest)))
+    } else if let Some(rest) = what.strip_prefix("duplicate field ") {
+        format!("it has \"{}\" twice", bare(rest).replace('_', " "))
+    } else if what.starts_with("EOF while parsing") {
+        "the file stops short, as if part of it was cut off".to_string()
+    } else if what.starts_with("expected") || what.starts_with("trailing") || what.starts_with("key must be") || what.starts_with("invalid") || what.starts_with("control character") || what.starts_with("lone ") || what.starts_with("unexpected") {
+        "it is not written the way this program writes a job".to_string()
+    } else {
+        what.to_string()
+    };
+    match line {
+        Some(n) => format!("{said} (line {n} of the file)"),
+        None => said,
+    }
+}
+
 fn parse<T: DeserializeOwned>(path: &str, key: &str, v: Value) -> Result<T, String> {
-    serde_json::from_value(v).map_err(|e| format!("{path} {key}: {e}"))
+    serde_json::from_value(v).map_err(|e| format!("{path}, its {}: {}", key_said(key), plainly(&e.to_string())))
 }
 
 pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
-    let strict: Strict = serde_json::from_str(text).map_err(|e| format!("not a job file: {e}"))?;
-    let root: FileRoot = serde_json::from_value(strict.0).map_err(|e| format!("not a job file: {e}"))?;
+    let strict: Strict = serde_json::from_str(text).map_err(|e| format!("not a job file: {}", plainly(&e.to_string())))?;
+    let root: FileRoot = serde_json::from_value(strict.0).map_err(|e| format!("not a job file: {}", plainly(&e.to_string())))?;
     if root.data.is_empty() {
         return Err("the file has no elements".into());
     }

@@ -78,7 +78,7 @@ echo "== 1. A parapet height of 30 in gives the same face area as 2.5 ft =="
 cp "$T/job.json" "$T/in.json"; cp "$T/job.json" "$T/ft.json"
 "$P" set "$T/in.json" parapet-0024 height "30 in" "${SRC[@]}" | head -1
 "$P" set "$T/ft.json" parapet-0024 height "2.5 ft" "${SRC[@]}" | head -1
-A="$(figure "$T/in.json" parapet-0024 face_area)"; B="$(figure "$T/ft.json" parapet-0024 face_area)"
+A="$(figure "$T/in.json" parapet-0024 "face area")"; B="$(figure "$T/ft.json" parapet-0024 "face area")"
 echo "  entered as 30 in:  face_area $A     entered as 2.5 ft:  face_area $B     (20 LF of parapet)"
 [ "$A" = "50 SF" ] && [ "$B" = "50 SF" ] || { echo "FAIL: expected 50 SF both ways"; exit 1; }
 echo "  PASS"
@@ -88,13 +88,13 @@ echo "== 2. 25' 6\", 25.5 ft, 306 in and 25' 6 1/2\" are each accepted and each 
 for typed in "25' 6\"" "25.5 ft" "306 in" "25' 6 1/2\"" "25' 6 1/16\""; do
   cp "$T/job.json" "$T/h.json"
   SET="$("$P" set "$T/h.json" parapet-0024 height "$typed" "${SRC[@]}" | head -1)"
-  printf '  typed %-13s %-46s face_area %s\n' "$typed" "$SET" "$(figure "$T/h.json" parapet-0024 face_area)"
+  printf '  typed %-13s %-46s face area %s\n' "$typed" "$SET" "$(figure "$T/h.json" parapet-0024 "face area")"
   case "$typed" in
     "25' 6 1/2\"")  want="510.8333 SF";;   # 20 LF x 306.5 in / 12
     "25' 6 1/16\"") want="510.1042 SF";;   # 20 LF x 306.0625 in / 12: one sixteenth is 0.1042 SF on 20 LF
     *)              want="510 SF";;        # 20 LF x 25.5 ft
   esac
-  [ "$(figure "$T/h.json" parapet-0024 face_area)" = "$want" ] || { echo "FAIL: expected $want"; exit 1; }
+  [ "$(figure "$T/h.json" parapet-0024 "face area")" = "$want" ] || { echo "FAIL: expected $want"; exit 1; }
   "$P" check "$T/h.json" >/dev/null
 done
 echo "  PASS: three ways of writing 25.5 ft agree; a half inch and a sixteenth each show"
@@ -103,7 +103,7 @@ echo
 echo "== 3. A value is shown and saved in the unit it was entered in; a unit change touches that value and what derives from it =="
 echo "  as saved after entering 30 in:"
 saved "$T/in.json" parapet-0024 pl::height
-"$P" show "$T/in.json" | grep -E "^ +(=)? +. ?(height|face_area) " | sed 's/^ */    shown:  /'
+"$P" show "$T/in.json" | grep -E "^ +(=)? +. ?(height|face area) " | sed 's/^ */    shown:  /'
 cp "$T/in.json" "$T/in2ft.json"
 "$P" set "$T/in2ft.json" parapet-0024 height "2.5 ft" "${SRC[@]}" | sed 's/^/  /'
 echo "  the file diff for 30 in -> 2.5 ft (same height, written the other way):"
@@ -112,7 +112,7 @@ cp "$T/in.json" "$T/in2ftin.json"
 "$P" set "$T/in2ftin.json" parapet-0024 height "2' 7 1/2\"" --status Assumed --source "scaled off the elevation" | sed 's/^/  /'
 echo "  the file diff for 30 in -> 2' 7 1/2\" Assumed (a different height, a different unit, a different status):"
 changes "$T/in.json" "$T/in2ftin.json" "parapet-0024"
-"$P" show "$T/in2ftin.json" | grep -E "^ +(=)? +. ?(height|face_area) " | sed 's/^ */    shown:  /'
+"$P" show "$T/in2ftin.json" | grep -E "^ +(=)? +. ?(height|face area) " | sed 's/^ */    shown:  /'
 "$P" check "$T/in2ft.json" >/dev/null; "$P" check "$T/in2ftin.json" >/dev/null
 echo "  PASS: only the parapet changed, and on it only the height and the figure derived from it"
 
@@ -137,7 +137,7 @@ echo "  PASS: every one refused by name, and the job file is untouched"
 
 echo
 echo "== 5. A stretch-out in inches against a length in feet, with nobody converting anything =="
-"$P" show "$T/job.json" | grep -A12 "^ *headwall-0021 " | grep -E "true_length|stretch-out|quantity:" | sed 's/^ */    /'
+"$P" show "$T/job.json" | grep -A12 "^ *headwall-0021 " | grep -E "true length|stretch-out|quantity:" | sed 's/^ */    /'
 echo "  the line's quantity as saved, formula and all:"
 saved "$T/job.json" headwall-0021 pl::line_quantities
 [ "$(figure "$T/job.json" headwall-0021 "quantity: Copper headwall flashing")" = "24 SF" ] || { echo "FAIL: 12 LF x 24 in / 12 should be 24 SF"; exit 1; }

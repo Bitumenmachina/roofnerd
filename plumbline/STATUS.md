@@ -3721,3 +3721,33 @@ while it works.
 * `compare` reads SQFT and SF, LIN FT and LF, EACH and EA as one unit, so a prior line
   in another estimator's hand is compared and not reported as a different unit.
 * 251 tests pass on this tree; `demos/export.sh` and `demos/imports.sh` pass.
+* **J17A-20 fixed (call 61): a run cut where another crosses it clashes by as much as
+  before the cut.** Worked by hand: an 8 in duct and a 2 in pipe through its middle
+  are in each other by 4 in + 1 in = 5 in. Replayed with the judge's own commands on
+  the judged program and on this one: before the cut both say 5.00 in at (10, 5, 8);
+  after it the judged program says 1.00 in twice, at (9.9583, 5, 8) and (10.0417, 5,
+  8), and this one says 5.00 in twice, both at (10, 5, 8). It is still two clashes,
+  one with each piece of duct (the job holds two things); the head total counts each
+  line once. A new test (`a_run_cut_where_another_crosses_it_still_clashes_by_as_much`)
+  holds a round duct, a rectangular duct, a cut away from the crossing, and a corner,
+  which is not carried on round. **Changed behaviour:** the depth and the place of a
+  clash at a joint between two runs in one line.
+* **J17B-21 fixed (call 61): a figure is named by its words.** `show`, `price`, the
+  refusals that list what a thing has, a line's worked formula and the confirmation
+  of `set` say "net area", "plan length", "unit cost"; kinds are said as words in the
+  takeoff and in an assembly's "applies to". Either spelling is typed: `set <path>
+  "unit cost"` and `--with "turn up=8 in"` are taken. Counted over `show`, `price` and
+  `takeoff` of the two sample jobs: 503 joined names before, none after. **Changed
+  behaviour:** every one of those lines of output; `check` now says "reads, its
+  figures agree with what is drawn, and saving it back writes the same file".
+  `demos/units.sh`, `demos/build.sh` and `demos/d2.sh` read the new words.
+* **J17A-1 and J17B-20 fixed: a job file changed by hand is refused in a person's
+  words.** "job-0001, its cost lines: it holds 7.5 where a whole number belongs"; "it
+  says "Roofer", which is not one of: Material, Labor, ..."; "it has no
+  "description", and needs one"; "the file stops short, as if part of it was cut off
+  (line 240 of the file)". `check` on a file that reads but is not written the
+  program's way says where: "They part at line 2: the file has ...; saving writes
+  ...". A new test holds six hand changes and that none of the reader's own words
+  comes through.
+* 253 tests pass; all eighteen command-line demonstrations pass on this tree. The
+  window's crate builds; its pictures are not retaken (the judge has the display).

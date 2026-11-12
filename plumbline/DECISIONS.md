@@ -2450,3 +2450,30 @@ two words for one thing a click apart (Bring in: Assemblies; the button: Conditi
 the row: Condition). It is "assembly" everywhere a person reads, on screen and at the
 command line; `set <path> assembly` is taken as well as `condition`. The job file's
 key is still `pl::condition`: it is the file, not the screen.
+
+### Call 61. A figure is named by its words; a run cut in two is one length (2026-11-12)
+
+**A figure's name is its words.** The job file and a formula's stored text join the
+words of a name with an underscore (`net_area`, `plan_length`, `stretch_out`,
+`unit_cost`). That spelling is the file's. Nobody on a job writes it, and the
+seventeenth judgment (J17B-21) found it in `show`, in `price` ("priced by its
+net_area"), in the refusals that list what a thing has, and in a line's worked
+formula. Everywhere a person reads, on the command line as in the window, a name is
+its words: "net area", "plan length × stretch out ÷ 12". Either spelling can be
+typed: a formula already took `plan length * stretch out`; `set <path> "unit cost"`
+and `--with "turn up=8 in"` now do too. The job file is unchanged, so every job
+written before reads as it did. A kind of thing is said by its words in the same
+places ("roof plane", "Duct", not the program's own spelling). "The file's measures
+did not match its geometry … recomputed" is "the file's figures did not agree with
+what is drawn … worked out again".
+
+**A run cut in two is one length of duct.** `split` is bookkeeping: it moves nothing.
+The clash check measured how deep a pipe was in each piece on its own, so a pipe
+through the middle of a duct read 5 in before the cut and 1 in after it (the inch it
+reaches into the end of each piece), and a field hand was told it was nearly clear
+(J17A-20). Where a run carries on, within half a degree of one line and at one size,
+into a run joined to its end, depth is measured against the whole length, and the
+place reported is where it is deepest in that length. The pipe is still in two
+things the job holds, so it is still two clashes, one with each piece; both now say
+5 in at the crossing, and the verify-in-field head total already counts each line
+once. Runs joined at a corner are not carried on round it.

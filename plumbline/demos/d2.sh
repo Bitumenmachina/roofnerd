@@ -28,7 +28,7 @@ echo "== The job: the sample, plus an L-shaped house solved from its footprint =
 cp "$T/job.json" "$T/before.json"
 ROOF="$("$P" show "$T/job.json" | awk '$2=="house"{print $1}')"
 PLANE1="$("$P" show "$T/job.json" | awk -v r="$ROOF" '$1==r{on=1} on&&$2=="plane"&&$3=="1"{print $1; exit}')"
-surface() { "$P" show "$1" | awk -v p="$PLANE1" '$1==p{on=1} on&&/surface_area/{print $(NF-1); exit}'; }
+surface() { "$P" show "$1" | awk -v p="$PLANE1" '$1==p{on=1} on&&/surface area/{print $(NF-1); exit}'; }
 echo "the roof is $ROOF; the plane on its south edge is $PLANE1, $(surface "$T/job.json") SF"
 
 echo
