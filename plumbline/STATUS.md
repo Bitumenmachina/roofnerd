@@ -4909,3 +4909,12 @@ worked by hand in call 74 and agrees with the program to the cent. 280 tests pas
 Patrick is of the small job), and the pictures in `demos/captured/light/` and
 `trades/` taken before this show the old price in the bar.
 
+**Seen: the whole house on its foundation** (`demos/captured/trades/1-foundation-whole-house.png`,
+ground off, on the build of call 74; sent to Patrick): the concrete walls under the
+stone wainscot, the level "foundation -4' 0"" in the list with its switch, the panel's
+"Level: foundation" with Walls 4, 136.00 LF; 544.00 SF; Footings 4, 136.00 LF;
+Footing concrete 10.07 CY; the price $468,876.85. **Not right in it:** the footings
+themselves are behind the tool bar at the bottom of the window (the view is framed
+on the house as it was before it had anything under the ground), and the foundation
+walls are the bare off-white of an unfinished wall, not concrete.
+
