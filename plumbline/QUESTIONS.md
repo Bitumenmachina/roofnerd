@@ -294,3 +294,11 @@ built and the snapshots stand as they are. If he wants a different order, the or
 changes. Nothing else waits on the answer; the build keeps going on what is already
 owed (the light, judge 19's open notes, the release candidate's table).
 
+**Where Q23 stands (2026-11-12, night).** Built on the working assumption, in the
+order given, a first layer of each: footings and foundation walls (call 70), wall
+frames (call 71), weather barrier and opening flashing (call 72), room base (call
+73). A picture of each was sent to Patrick. The question is still his: if he wants
+any of them as estimate lines only, its switch and its drawing come out and nothing
+else depends on it. What each still lacks is in STATUS.md ("All seven of Patrick's
+trades").
+

@@ -4900,3 +4900,12 @@ script proves each test fails on the other's picture, every run. `planw` fails f
 reason that is not the light (above). Reruns of `dressw` and `planw` on the current
 build are going now.
 
+**The made-up whole house has a foundation (call 74).** `plumbline sixteen` now draws
+it and prices it by what is drawn: Division 3 is $32,485.40 in 9 lines (was
+$31,880.00 in 2: the slab and one lump), the job cost $394,677.48 in 399 lines (was
+$394,072.08 in 392), the price **$468,876.85 (was $468,157.63)**. Each figure is
+worked by hand in call 74 and agrees with the program to the cent. 280 tests pass.
+**Not yet seen in the window on that house** (the picture of a foundation sent to
+Patrick is of the small job), and the pictures in `demos/captured/light/` and
+`trades/` taken before this show the old price in the bar.
+

@@ -2947,3 +2947,31 @@ to disagree by accident.
 cabinets, which are one priced figure on the room with no layout to draw (a cabinet
 is drawn where one is placed as a thing: call 62's forms); stairs, shelving, crown.
 
+### Call 74. The made-up whole house has its foundation drawn, and priced by what is drawn (2026-11-12)
+
+**What was there.** In the priced whole house (`plumbline sixteen`) the foundation was
+one line on the job, "Footings and foundation walls, 1 at $24,600", with nothing in
+the model behind it. It was the snapshot Patrick was sent for "foundation".
+
+**The call.** That line is gone. The house has a level "foundation" 4 ft under the
+first floor (source "sample plan S-101"), and under each of its four outside walls a
+strip footing 24 in wide and 12 in deep and an 8 in concrete wall 4 ft high. Each
+footing carries "Concrete footing, in place" by its volume at a made-up $450 the CY;
+each wall "Foundation wall, 8 in concrete, formed and placed" by its face at a
+made-up $38 the SF. All in Division 3.
+
+**Every figure this changes, by hand.**
+
+* Footings: the two of 40 ft are 2.9630 CY each, $1,333.35; the two of 28 ft are
+  2.0741 CY each, $933.35 (2.0741 x 450 = 933.345). Four: **$4,533.40**.
+* Foundation walls: 544 SF at $38: **$20,672.00**.
+* Division 3, Concrete: the slab's $7,280.00 with those: **$32,485.40** in 9 lines,
+  where it was $31,880.00 in 2 lines.
+* Job cost: up by $605.40 to **$394,677.48** in 399 lines (was $394,072.08 in 392).
+* Price: at 10 % and 8 %, up by 605.40 x 1.188 = $719.22 to **$468,876.85** (was
+  $468,157.63).
+
+The plain house (`plumbline house`, no prices) is not changed: it still has two
+levels, and every demonstration that counts its walls, levels and model classes
+stands as it was. No test and no demonstration held any of the old figures.
+

@@ -781,7 +781,24 @@ pub fn house_priced() -> Job {
     put(&mut job, &root, "Final cleaning", "1", General, 1, "$1,250");
     put(&mut job, &root, "Site clearing and grading", "1", Subcontract, 2, "$6,500");
     put(&mut job, &root, "Driveway and walks", "1", Subcontract, 2, "$9,800");
-    put(&mut job, &root, "Footings and foundation walls", "1", Subcontract, 3, "$24,600");
+    // The foundation is drawn, and priced by what is drawn (it was one subcontract
+    // figure on the job with nothing in the model behind it): a level 4 ft under the
+    // first floor, and under each outside wall a strip footing 24 in wide and 12 in
+    // deep with an 8 in concrete wall standing on it.
+    {
+        use crate::editing::{self as ed, Entered, Top};
+        let how = || Entered { status: Status::Known, source: "sample plan S-101" };
+        let level = ed::storey(&mut job, "foundation", "-4 ft", "4 ft", how()).expect(OK);
+        let strip = ed::wall_type(&mut job, "footing 24 x 12", "24 in", how()).expect(OK);
+        let wall = ed::wall_type(&mut job, "foundation wall, 8 in concrete", "8 in", how()).expect(OK);
+        let round = [[0.0, 0.0], [40.0, 0.0], [40.0, 28.0], [0.0, 28.0]];
+        for path in ed::footings(&mut job, &level, &strip, &round, true, "12 in", how()).expect(OK) {
+            put(&mut job, &path, "Concrete footing, in place", "volume", Subcontract, 3, "$450/CY");
+        }
+        for path in ed::walls(&mut job, &level, &wall, &round, true, Top::Height("4 ft"), how()).expect(OK) {
+            put(&mut job, &path, "Foundation wall, 8 in concrete, formed and placed", "face_area", Subcontract, 3, "$38/SF");
+        }
+    }
     put(&mut job, &root, "Sauna, prefabricated", "1", Subcontract, 13, "$9,200");
     put(&mut job, &root, "Residential elevator, two stops", "1", Subcontract, 14, "$38,000");
     // The superintendent is in-house and in hours: sixty days of eight.
