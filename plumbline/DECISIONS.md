@@ -2814,3 +2814,44 @@ base along each room and casing at each opening; the weather barrier as the laye
 under the siding), and that the quantities on those estimate lines come from what is
 drawn. It is logged in PROPOSALS.md because product scope is his.
 
+### Call 70. A strip footing is a kind of its own, held as a wall is (2026-11-12)
+
+**Why now.** Q23's working assumption, step 1: the foundation is to be drawn.
+
+**The call.** A new kind, **Footing**: a strip footing along a line on plan. It is
+ported from BIMCraft's `strip_footing` (PORTMAP.md has the row), which makes one for
+each segment of its points. It is held the way a wall is held (the same line, a type,
+and one length) as a door and a window are both held as an opening, because that is
+what it is on the foundation plan: a line with a width and a depth. What that gives
+without new machinery: it reads and saves, it is drawn, it can be moved, measured and
+removed, and its type is a type like any other.
+
+**What is a footing's and never a wall's.**
+
+* Its words: "footing line", "depth", "width". Never "wall line", "height",
+  "thickness", "bounds rooms".
+* Its quantities: length (LF), width, depth, and **volume in CY** (length x width x
+  depth / 27), which is what it is priced by. At a corner two footings that end at the
+  corner point overlap in a square and leave the same square open outside it, so the
+  sum is the volume of the ring exactly.
+* Where it lies: its top is at its level's floor and it goes down by its depth. A
+  wall on the same line on the same level stands on it. Its place is worked from its
+  depth each time, so a depth measured later moves its underside.
+* It is never counted as a wall: a level's wall count, length and face do not change
+  when footings are drawn on it. The takeoff lists a level's footings and their
+  concrete on two lines of their own, only where the level has any.
+* In the BIM file it is `IfcFooting`, `STRIP_FOOTING`.
+
+**A foundation wall is a wall**, on a level of its own under the first floor, of a
+type named for what it is. No new kind.
+
+**Changed behaviour, named.** The list of what clashes never test now ends "; a
+footing is tested against neither, nor against another footing" (walls, floors and
+footings meet by design). One footing drawn over another is refused as one wall over
+another is, in a footing's words. Nothing else changes for a job with no footing.
+
+**Not yet:** a footing's type says "thickness" where it should say "width" when the
+type itself is listed (a type does not know what it is used for); isolated (pad)
+footings; a footing stepped down a slope; the concrete of a foundation wall as a
+quantity of its own (today it is a line on the wall worked from its face).
+

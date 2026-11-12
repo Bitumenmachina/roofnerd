@@ -258,6 +258,39 @@ pub fn walls(job: &mut Job, storey: &str, type_path: &str, points: &[P2], closed
     })
 }
 
+/// Strip footings along `points` (in feet, on the plan): each pair of points that follow
+/// one another is one footing, and `closed` adds one from the last back to the first
+/// (BIMCraft's `strip_footing`, `commands.rs:8707`, which makes one run for each
+/// segment of its points as `runs_of` does, `commands.rs:8776`). Its type gives its
+/// width; `depth` is how deep it is, and is always said. Its top is at its level's
+/// floor, so it lies below it by its depth: a foundation wall on the same level stands
+/// on it.
+pub fn footings(job: &mut Job, storey: &str, type_path: &str, points: &[P2], closed: bool, depth: &str, how: Entered) -> Result<Vec<String>, String> {
+    all_or_nothing(job, |job| {
+        storey_of(job, storey)?;
+        let mut pts = points.to_vec();
+        if pts.len() < 2 {
+            return Err("a footing needs at least 2 points".into());
+        }
+        if closed {
+            pts.push(pts[0]);
+        }
+        let deep = how.length(depth)?;
+        deep.feet().filter(|d| *d > 0.0).ok_or("a footing's depth has to be more than nothing")?;
+        let mut made = Vec::new();
+        for pair in pts.windows(2) {
+            // Its top is at its level's floor; where it lies is worked out from its depth
+            // (`building::placements`), so a depth measured later moves its underside.
+            let footing = Wall::tall(how.path(type_path), how.val([pair[0], pair[1]], "ft"), deep.clone());
+            let path = add_numbered(job, storey, Kind::Footing)?;
+            building::check_wall(&path, Kind::Footing, &footing)?;
+            job.put(&path, footing)?;
+            made.push(path);
+        }
+        Ok(made)
+    })
+}
+
 /// A door or a window in a wall (BIMCraft's `opening_of`, `commands.rs:7473`). Given a
 /// point, it goes where the point falls along the wall's line (`along`, `commands.rs:2426`);
 /// a point that falls off either end is refused, not moved to the end. Unlike there, an

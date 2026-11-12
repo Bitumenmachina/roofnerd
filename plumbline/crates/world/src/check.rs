@@ -563,7 +563,7 @@ pub fn recipe(path: &str, kind: Kind, t: &Recipe) -> Result<(), String> {
     for (i, k) in t.applies_to.iter().enumerate() {
         // An assembly goes on anything that is built, in any division, and on the job
         // itself (its general requirements). It was once the roof's alone.
-        let built = k.is_area() || k.is_run() || matches!(k, Kind::Job | Kind::Roof | Kind::Wall | Kind::Door | Kind::Window | Kind::Floor | Kind::Room | Kind::Duct | Kind::Pipe | Kind::Conduit | Kind::Cable | Kind::Fitting | Kind::Fixture | Kind::Furnishing | Kind::Equipment);
+        let built = k.is_area() || k.is_run() || matches!(k, Kind::Job | Kind::Roof | Kind::Wall | Kind::Footing | Kind::Door | Kind::Window | Kind::Floor | Kind::Room | Kind::Duct | Kind::Pipe | Kind::Conduit | Kind::Cable | Kind::Fitting | Kind::Fixture | Kind::Furnishing | Kind::Equipment);
         if !built {
             return Err(format!("{path}: an assembly goes on what is built (a wall, a floor, a room, a door, a window, a roof plane or line, a duct, a pipe, a fixture, a furnishing) or on the job, not on a {}", k.said()));
         }

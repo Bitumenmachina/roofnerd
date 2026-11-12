@@ -288,8 +288,14 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                 };
                 let at = o.placed(Some(within), [a[0], a[1], base - floor], up, way);
                 let body = o.pushed_rect([length / 2.0, 0.0], length, *thickness, *height);
-                let wall = o.add(format!("IFCWALL({},$,{name},$,$,#{at},#{body},$,.STANDARD.)", o.id(&p.path)));
-                count("walls");
+                // A strip footing is IFC's footing of that sort; anything else here is a wall.
+                let wall = if p.kind == plumbline_world::Kind::Footing {
+                    count("footings");
+                    o.add(format!("IFCFOOTING({},$,{name},$,$,#{at},#{body},$,.STRIP_FOOTING.)", o.id(&p.path)))
+                } else {
+                    count("walls");
+                    o.add(format!("IFCWALL({},$,{name},$,$,#{at},#{body},$,.STANDARD.)", o.id(&p.path)))
+                };
                 // Each door and window: a hole through the wall, and the door or the
                 // window as the space it takes up in it.
                 for (path, kind, [from, to, sill, head]) in holes {

@@ -4707,3 +4707,62 @@ on the new light (`glassw` was part way; none had finished). The light commit
 (58ab151) has still only had the window crate's tests, and `tools/committed.sh` has
 not been run on it.
 
+## The foundation drawn: the demonstration, written before it is built (Q23, step 1)
+
+**What is ported.** BIMCraft has a strip footing: a run under a wall with a
+rectangular section, drawn between points like a beam (`crates/core/src/commands.rs`,
+`strip_footing` and `runs_of`, at f202abd85d1c). Here it is a kind of its own,
+**Footing**, held the way a wall is held (a line on plan, a type that gives its width,
+and its depth), as a door and a window are both held as an opening. A foundation wall
+is a wall, on a level of its own under the first floor, of a type that says what it
+is.
+
+**The demonstration** (`demos/found.sh`, from an empty job, at the command line; the
+window after). A house 40 ft by 28 ft on the centre lines of its walls.
+
+1. A level "foundation" at -4 ft, 4 ft high.
+2. A footing type "footing 24 x 12": 24 in wide, 12 in deep. Four footings on the
+   four centre lines, their tops at the level's floor (-4 ft).
+3. A wall type "foundation wall, 8 in concrete": 8 in. Four walls on the same lines,
+   4 ft high.
+
+**The figures, by hand.**
+
+* Footings: 40 + 28 + 40 + 28 = **136 LF**. Section 2 ft x 1 ft = 2 SF. Volume 136 x
+  2 = 272 CF = **10.07 CY** (272 / 27 = 10.074). The corners: two strips that end at
+  a corner point overlap in a 1 ft square and leave a 1 ft square notch outside it,
+  so length times section is the volume of the mitred ring exactly.
+* Foundation walls: 136 LF, face one side 136 x 4 = **544 SF**, volume 544 x 8/12 =
+  362.67 CF = **13.43 CY**.
+* Each footing says its own: the 40 ft ones 40 x 2 / 27 = **2.96 CY**, the 28 ft ones
+  28 x 2 / 27 = **2.07 CY**; 2.963 + 2.074 + 2.963 + 2.074 = 10.074.
+
+**What must be true, each checked:** `show` of a footing says Footing, its width and
+depth (never "thickness" and "height"), its length and its volume in CY with what it
+is made of; the level's takeoff counts walls and footings apart (a footing is not a
+wall: no wall count, wall length or wall face on any level changes); a footing whose
+type has no width has no volume and says why, not zero; the saved job reads back the
+same; the BIM file has four `IfcFooting` (`STRIP_FOOTING`) and IfcOpenShell finds no
+fault; a footing with nothing priced on it is counted as not priced.
+
+**In the window:** a footing is drawn as concrete under its wall; the ground has a
+switch under Show, and with the ground off and the upper levels off the foundation is
+seen whole. That picture is the snapshot Patrick asked for and did not get.
+
+**Not in this step:** the made-up whole house gets its foundation in a step of its
+own, because it changes that house's Division 3 from one subcontract figure to lines
+by the CY, and every changed figure is named when it is.
+
+**The foundation, step 1: built and run at the command line (call 70).**
+`demos/found.sh` passes: 4 footings, 136.00 LF, 10.07 CY; one of them 40 LF, 2 ft
+wide, 1 ft deep, 2.963 CY, listed in a footing's words; 4 foundation walls, 136.00
+LF, 544.00 SF, counted apart from the footings; no clash among them; one footing
+over another refused; a footing with no depth refused; a footing priced at $185.00
+the CY comes to $548.16 (2.9630 x 185) and the estimate says the other 3 footings
+and 4 walls are not priced; the job reads back the same; the BIM file has four
+`IfcFooting` and IfcOpenShell finds no fault. 273 tests pass; the port map has the
+row. **Not done of the demonstration as written:** the foundation walls' own 13.43
+CY (there is no volume figure on a wall yet; call 70 says so), and everything in the
+window (the concrete, the ground's switch, the picture). The made-up whole house has
+no foundation yet.
+

@@ -80,6 +80,11 @@ pub enum Kind {
     Window,
     /// The floor itself: IFC's slab.
     Floor,
+    /// A strip footing: concrete in a trench under a wall, so wide and so deep, along a
+    /// line on plan. It is held as a wall is (a line, a type that gives its width, and
+    /// how deep it is), as a door and a window are both held as an opening; it is never
+    /// counted as a wall. (BIMCraft's `strip_footing`.)
+    Footing,
     /// A set of ducts, pipes, cables, equipment and fixtures that work as one.
     System,
     Duct,
@@ -161,6 +166,7 @@ impl Kind {
             Kind::Door => "door",
             Kind::Window => "window",
             Kind::Floor => "floor",
+            Kind::Footing => "footing",
             Kind::System => "system",
             Kind::Duct => "duct",
             Kind::Pipe => "pipe",
@@ -204,6 +210,8 @@ impl Kind {
             k if k.is_run() => Some(("true_length", "LF")),
             Kind::Wall => Some(("net_area", "SF")),
             Kind::Floor => Some(("plan_area", "SF")),
+            // Concrete is bought by the cubic yard.
+            Kind::Footing => Some(("volume", "CY")),
             Kind::Room => Some(("floor_area", "SF")),
             Kind::Duct | Kind::Pipe | Kind::Conduit | Kind::Cable => Some(("true_length", "LF")),
             _ => None,
@@ -221,6 +229,8 @@ impl Kind {
             &[("plan_length", "LF"), ("height", "ft"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF")]
         } else if matches!(self, Kind::Door | Kind::Window) {
             &[("width", "ft"), ("height", "ft"), ("opening_area", "SF")]
+        } else if self == Kind::Footing {
+            &[("plan_length", "LF"), ("width", "ft"), ("depth", "ft"), ("volume", "CY")]
         } else if self == Kind::Floor {
             &[("plan_area", "SF")]
         } else if self == Kind::Room {

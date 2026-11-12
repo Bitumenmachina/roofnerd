@@ -81,7 +81,7 @@ pub const MAX_CLEARANCE_FT: f64 = 10.0;
 
 /// What is never tested against what, for a report to say.
 pub const NEVER_TESTED: [&str; 4] = [
-    "walls and floors are not tested against each other, nor wall against wall, nor floor against floor",
+    "walls and floors are not tested against each other, nor wall against wall, nor floor against floor; a footing is tested against neither, nor against another footing",
     "a joint is not a clash: each run is left out a little way either side of where it is joined",
     "a door or a window is a hole in its wall: nothing is tested against what fills it",
     "the roof's planes are not tested",
@@ -245,8 +245,11 @@ fn pieces_of(p: &Placement, owner: usize) -> Result<Vec<Piece>, String> {
     Ok(out)
 }
 
+/// What the building is made of: walls, floors and footings meet each other by design
+/// (a wall stands on its footing, two footings meet at a corner) and are not tested
+/// against each other.
 fn built_in(kind: Kind) -> bool {
-    matches!(kind, Kind::Wall | Kind::Floor)
+    matches!(kind, Kind::Wall | Kind::Floor | Kind::Footing)
 }
 
 fn pair(a: &str, b: &str) -> (String, String) {

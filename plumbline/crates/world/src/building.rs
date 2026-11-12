@@ -368,7 +368,7 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         if *kind == Kind::Room && parent != Some(Kind::Storey) {
             return Err(format!("{me}: a room is a space on a level and has to be directly under one"));
         }
-        if matches!(kind, Kind::Wall | Kind::Floor) && parent != Some(Kind::Storey) {
+        if matches!(kind, Kind::Wall | Kind::Floor | Kind::Footing) && parent != Some(Kind::Storey) {
             return Err(format!("{me}: {kind:#} stands on a level and has to be under one"));
         }
         if *kind == Kind::Drawing && parent != Some(Kind::Storey) {
@@ -414,7 +414,9 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
                 };
                 // Where it stands, however its top is said: by a height or by a level.
                 let heights = wall_heights(&tree, me, w);
-                let stands = heights.base.ok().zip(heights.height.ok()).map(|(b, h)| (b, b + h));
+                // A footing lies below its base by its depth; a wall stands up from it. So a
+                // wall on its footing, on the same line, is two things one over the other.
+                let stands = heights.base.ok().zip(heights.height.ok()).map(|(b, h)| if *kind == Kind::Footing { (b - h, b) } else { (b, b + h) });
                 standing.push((me.clone(), storey.clone(), centre, thick, stands));
             }
             if let Some(p) = &w.type_name.value {
@@ -472,7 +474,9 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
                 _ => {}
             }
             if let Some(shared) = bodies_overlap(*line, *thick, *its, *as_thick) {
-                return Err(format!("{b}: lies along {a} for {} ft: one wall drawn over another would be counted twice", view::figure_shown(shared, 2)));
+                // Said in the words of what the two are (a footing is held as a wall is).
+                let what = if b.starts_with("footing") { "footing" } else { "wall" };
+                return Err(format!("{b}: lies along {a} for {} ft: one {what} drawn over another would be counted twice", view::figure_shown(shared, 2)));
             }
         }
     }
@@ -760,6 +764,52 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 m.insert("face_area".into(), face);
                 m.insert("opening_area".into(), open);
                 m.insert("net_area".into(), net);
+            }
+            // A strip footing: its length on plan, its width from its type, how deep it
+            // is, and the concrete in it. Length times width times depth is the volume of
+            // a ring of footings exactly: where two meet at a corner point they overlap
+            // in a square and leave the same square open outside it.
+            Kind::Footing => {
+                let input = [format!("{me}#{K_WALL}")];
+                let Some(w) = wall else {
+                    for (name, unit) in kind.measures() {
+                        m.insert(name.to_string(), Derived::refused(unit, "", &input, "no footing line entered"));
+                    }
+                    out.entry(me.clone()).or_default().extend(m);
+                    continue;
+                };
+                let line = w.line_ft();
+                let length = line.map(|[a, b]| geom::dist(a, b));
+                let f_len = "length of the footing's line on the plan";
+                let plan = if w.line.value.is_some() && line.is_none() { Derived::refused("LF", f_len, &input, &format!("the footing's line {NOT_CONVERTED}")) } else { Derived::new(length, "LF", &[w.line.status], f_len, &input) };
+                let deep = match w.height.as_ref().map(|h| (h.feet(), h.status)) {
+                    Some((Some(d), status)) => Derived::new(Some(d), "ft", &[status], "its depth, as entered", &input),
+                    Some((None, _)) => Derived::refused("ft", "its depth, as entered", &input, "its depth is not known"),
+                    None => Derived::refused("ft", "its depth, as entered", &input, "no depth entered"),
+                };
+                let mut inputs = input.to_vec();
+                let wide = match typed(&tree.wall_types, &w.type_name, "a footing") {
+                    Ok((type_path, t)) => {
+                        inputs.push(format!("{type_path}#{K_WALL_TYPE}"));
+                        match t.thickness.feet() {
+                            Some(x) => Derived::new(Some(x), "ft", &[w.type_name.status, t.thickness.status], "the width its type gives", &inputs),
+                            None => Derived::refused("ft", "the width its type gives", &inputs, "its type's width is not known"),
+                        }
+                    }
+                    Err(why) => Derived::refused("ft", "the width its type gives", &inputs, &why),
+                };
+                let f_vol = "plan_length × width × depth ÷ 27";
+                let volume = match (plan.value, wide.value, deep.value) {
+                    (Some(l), Some(x), Some(d)) => Derived::new(Some(l * x * d / 27.0), "CY", &[plan.status, wide.status, deep.status], f_vol, &inputs),
+                    _ => {
+                        let why = [&plan, &wide, &deep].iter().find(|d| d.value.is_none()).map(|d| d.note.clone()).unwrap_or_default();
+                        Derived::refused("CY", f_vol, &inputs, &why)
+                    }
+                };
+                m.insert("plan_length".into(), plan);
+                m.insert("width".into(), wide);
+                m.insert("depth".into(), deep);
+                m.insert("volume".into(), volume);
             }
             Kind::Floor => {
                 let input = [format!("{me}#{K_FLOOR}")];
@@ -1332,7 +1382,18 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         rows.push(view::length(path, "width", &c.width));
         rows.push(view::length(path, "height", &c.height));
     }
-    if let Some(c) = w.get::<Wall>(e) {
+    // A footing is held as a wall is, and is listed in a footing's words: its line, how
+    // deep it is, and where its top is.
+    if let Some(c) = w.get::<Wall>(e).filter(|_| w.get::<Kind>(e) == Some(&Kind::Footing)) {
+        rows.push(view::entered(path, "type", &c.type_name, named));
+        rows.push(view::entered(path, "footing line", &c.line, pair));
+        if let Some(h) = &c.height {
+            rows.push(view::length(path, "depth", h));
+        }
+        if let Some(o) = &c.base_offset {
+            rows.push(view::length(path, "top, above its level's floor", o));
+        }
+    } else if let Some(c) = w.get::<Wall>(e) {
         rows.push(view::entered(path, "type", &c.type_name, named));
         rows.push(view::entered(path, "wall line", &c.line, pair));
         if let Some(t) = &c.top_level {
@@ -1467,7 +1528,7 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
     let mut not_drawn = Vec::new();
     for &e in &order {
         let (Some(n), Some(kind)) = (node(e), w.get::<Kind>(e).copied()) else { continue };
-        if !(matches!(kind, Kind::Wall | Kind::Floor) || kind.is_segment() || kind.is_placed()) {
+        if !(matches!(kind, Kind::Wall | Kind::Floor | Kind::Footing) || kind.is_segment() || kind.is_placed()) {
             continue;
         }
         let storey = tree.storey_of(&n.path).map(str::to_string);
@@ -1481,12 +1542,16 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
         // Openings under this wall that cannot be cut in it, each with why.
         let mut uncut: Vec<(String, String)> = Vec::new();
         let shape: Result<(Shape, Status), String> = match kind {
-            Kind::Wall => (|| {
-                let c = w.get::<Wall>(e).ok_or("it has no wall line")?;
+            // A footing is placed as a wall is: its line, its type's width, and from its
+            // base up as far as it is deep.
+            Kind::Wall | Kind::Footing => (|| {
+                let c = w.get::<Wall>(e).ok_or(if kind == Kind::Footing { "it has no line" } else { "it has no wall line" })?;
                 let [a, b] = c.line_ft().ok_or("its line is not known")?;
                 let heights = wall_heights(&tree, &n.path, c);
-                let base = heights.base.clone()?;
                 let height = heights.height.clone()?;
+                // A footing's top is at its level's floor (or as far over it as it says),
+                // and it lies below that by its depth; a wall stands up from its base.
+                let base = heights.base.clone()? - if kind == Kind::Footing { height } else { 0.0 };
                 let (thickness, layers, section_status) = wall_section(&tree, c)?;
                 // Where it stands as well as how tall it is: its storey's floor and its
                 // base offset are part of its shape (`span`, not the height's own status).
@@ -1855,6 +1920,9 @@ pub struct StoreyTotals {
     /// Its walls again, by the type of wall, in the order each type first appears: a
     /// 6 in outside wall and a 4 in partition are not one number to an estimator.
     pub walls_by_type: Vec<WallsOfType>,
+    /// Its strip footings: their length, and the concrete in them. Never in the walls.
+    pub footings: Sum,
+    pub footing_volume: Sum,
 }
 
 /// The walls of one type on one level, added up.
@@ -1892,7 +1960,7 @@ pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
     let mut out = Vec::new();
     for &s in &order {
         let (Some(sn), Some(Kind::Storey)) = (w.get::<Node>(s), w.get::<Kind>(s)) else { continue };
-        let mut figures: [Vec<(String, Option<f64>, Status)>; 5] = Default::default();
+        let mut figures: [Vec<(String, Option<f64>, Status)>; 7] = Default::default();
         let (mut doors, mut windows) = (0, 0);
         // Each wall type met, in order: its path, and its walls' three figures.
         #[allow(clippy::type_complexity)]
@@ -1920,6 +1988,10 @@ pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
                         of_type[at].1[i].push(figure(name));
                     }
                 }
+                Kind::Footing => {
+                    figures[5].push(figure("plan_length"));
+                    figures[6].push(figure("volume"));
+                }
                 Kind::Floor => figures[3].push(figure("plan_area")),
                 Kind::Room => figures[4].push(figure("floor_area")),
                 Kind::Door => doors += 1,
@@ -1938,6 +2010,8 @@ pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
             rooms: view::sum_of("SF", &figures[4]),
             doors,
             windows,
+            footings: view::sum_of("LF", &figures[5]),
+            footing_volume: view::sum_of("CY", &figures[6]),
             walls_by_type: of_type
                 .into_iter()
                 .map(|(path, f)| {

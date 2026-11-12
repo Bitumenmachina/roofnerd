@@ -729,8 +729,9 @@ pub fn check_opening_type(path: &str, kind: Kind, t: &OpeningType) -> Result<(),
 }
 
 pub fn check_wall(path: &str, kind: Kind, w: &Wall) -> Result<(), String> {
-    if kind != Kind::Wall {
-        return Err(format!("{path}: {kind:#} cannot carry a wall's line; only a wall can"));
+    // A footing is held as a wall is: a line, a type, and how deep it is.
+    if !matches!(kind, Kind::Wall | Kind::Footing) {
+        return Err(format!("{path}: {kind:#} cannot carry a wall's line; only a wall or a footing can"));
     }
     type_ref(&format!("{path} wall type"), &w.type_name)?;
     let d = coords(&format!("{path} wall line"), &w.line)?;
