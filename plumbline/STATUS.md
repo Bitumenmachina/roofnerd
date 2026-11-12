@@ -3269,3 +3269,152 @@ DECISIONS.md call 58. `demos/dress.sh` (command line) and `demos/dressw.sh` (win
     d4w, d5w, planw, buildw, bringw) have not been rerun since; a click placed beside
     an opening may now land on its casing. They are rerun next.
 * **Not judged.**
+
+## Seventeenth judgment: launched (2026-11-12)
+
+Two judges on Opus, on commit 8c6978f as pushed, each in a folder of its own with the
+built command line and the source, briefed to break it and not to fix it:
+**17A, the money path** (the sixteen divisions, the estimate and recap, the workbook,
+CSV and lenses, the verify-in-field dollars, hostile input) and **17B, what the house
+is dressed in, the job file, imports, the words at the command line, and the
+documents**. Neither starts the window: the window demonstrations are being rerun at
+the same time and are timed. A third judge, a veteran estimator with no software
+background working only in the window, follows when they finish. Their findings are
+recorded here the turn they arrive.
+
+## The first job, on a real plan. What was run and what it showed (2026-11-12)
+
+* **`demos/firstw.sh` passes, on its first run, on commit 8c6978f** (438 s; pictures
+  in `demos/captured/first/`). From a new job, in the window, with the pointer and
+  the keyboard only: a level added; the public-domain USDA Plan No. 7213 (page 4, a
+  scanned sheet) added and given its scale from one dimension read off it, 41 ft 3
+  in; the outside walls traced, a door and two windows set in them, the floor from
+  the outline the walls enclose, a room named, a hip roof at 6:12; then 3D and save.
+  The saved job gives the figures worked by hand before it was run: walls 130.3334
+  LF, wall face less openings 997.67 SF, floor 986.56 SF, room 954.23 SF, roof
+  1,103.01 SF in four planes, ridge 17.33 LF, hips 71.75 LF, eaves 130.33 LF; every
+  one of them Assumed, traced off a drawing, and none Known. **This is release
+  candidate item 3.**
+* **Pictures read (01 to 06 of the model):** the empty job says where to start; the
+  sheet comes in to scale; the walls trace over the plan's own walls in ink and read
+  against the scan; the door and windows sit where the plan has them; the roof shows
+  on the level's plan as broken lines.
+* **Not right, seen in picture 06 and a real stumble for a person:** in 3D the house
+  has no roof. The roof was added (the status line says so and the panel has its
+  1,103.01 SF) and it is not drawn, because a roof is drawn in 3D only with "All
+  levels" showing, and a job with one level has no "All levels" row to pick. Fix
+  queued behind the demonstration rerun (the program is not rebuilt while timed
+  demonstrations run): in 3D the roof is drawn whenever the level on show is the top
+  one. `firstw.sh` is then rerun and gets a check that the roof is in the picture.
+* **Also seen:** the house is bare, as it should be with nothing priced. The "To
+  verify" notes under a room repeat one clause per wall ("whether wall 1 bounds this
+  room rests on its heights, which are assumed; whether wall 2 ...") and should say
+  it once: taken into the cold walk.
+
+## Seventeenth judgment, part B (2026-11-12): what the house is dressed in, the job file, imports, the words, the documents
+
+Judge on Opus, commit 8c6978f, command line and source only. 25 findings: 18 silent,
+5 words, 2 doc, no wrong money, nothing that breaks. (The judge could not write its
+file; its report came back as text and is set down here.) Every one reproduces from
+the judge's commands on a 24 ft by 16 ft house.
+
+| | kind | finding |
+|---|---|---|
+| J17B-1 | silent | Courtyard walls are read as partitions (the outside test knows only the outer outline), so cladding priced on them is not drawn. |
+| J17B-2 | silent | A second building on a level, or a garden wall off a corner, is said to have "walls that enclose nothing" (only the largest piece is the outline) and is clad on both faces. |
+| J17B-3 | silent | Trade words missed: Hardie plank, CMU, split face block, fiber cement panel all read "bare". |
+| J17B-4 | silent | Lines that are not cladding dress the outside face: "Stone sill at windows", "Brick ledge flashing", "Siding nails", "Siding removal and haul off", "Shingle molding", "Paint, siding, white", "Granite countertop", "Kitchen backsplash, brick", "Fireplace surround, stacked stone, interior", "Interior wainscot, stone tile, 42 in". "Brick ties" ahead of "Lap siding, white" makes the wall brick. |
+| J17B-5 | silent | A fixed order of words beats what the line says: "Lap siding with brick mold casing" is brick; "Lap siding, Cobble Stone" is stone; "Lap siding over 1x3 rainscreen battens" is board and batten; "Shingle siding, white, on a brick base" is brick; T1-11, vertical board and corrugated metal siding are drawn as horizontal laps. |
+| J17B-6 | silent | Colors: "Western red cedar bevel siding" is red; "Red cedar shakes" red; a window takes "black" from "Window flashing tape, black" while quoting the line that says white; "Window trim, white", "Window screen, black", "Door casing, white", "Door threshold, bronze" color the unit; "Casement, black, 30x48" loses its color. |
+| J17B-7 | silent | Underlayment and accessories are read as the roofing and the first wins: "#30 asphalt felt underlayment" then "Standing seam roofing, bronze" is drawn as asphalt shingles; "Ice and water membrane" then "Architectural shingles" is membrane; a copper gutter, copper flashing, drip edge, zinc strip, tile underlayment, felt, "Architectural shingles, Slate", "Metal shingles, stone coated", "Shingle tear-off" all misread. |
+| J17B-8 | silent | Roofings missed: torch-down, 5V crimp, corrugated metal panels, rubber roof, a shingle by its brand name. |
+| J17B-9 | silent | "Awning window" reads fixed; "Hopper" and "Bay" read "nothing says how it operates"; "6 over 1", "6/6" and "9 lite" read as not divided. |
+| J17B-10 | silent | "Door from garage to house, 20 min fire rated" and "Garage door opener" read as an overhead door; "Door hardware, glass knob" as a glazed door; half lite, full view, Dutch, bifold read as a plain leaf. "a overhead door". |
+| J17B-11 | silent | A wainscot height written in the line but not after a comma ("wainscot 36 in", "to 3'-0\"", "42 in high", "1 1/2 in thick, 42 in high") is read as "a height no line gives"; "0 in" and "1.5 m" the same. |
+| J17B-12 | silent | A wainscot taller than its wall is accepted and the reading still claims the siding above it, which the picture cannot show. |
+| J17B-13 | silent | A second wainscot, the same cladding in a second color, and a second window or door unit are dropped without "also priced, not drawn". |
+| J17B-14 | silent | A wainscot priced on a partition vanishes from `finishes`; the panel lists it; the picture does not draw it. Three ways apart. |
+| J17B-15 | silent | An eave with no gutter is not listed though SPEC 5.19 says each eave is read; "Gutter apron flashing, black" and "Remove existing gutters" read as a gutter; "eavestrough" does not. |
+| J17B-16 | silent | An IFC written by this program with Assumed values comes back Known under `import ifc --status Known`: the per-value "(Assumed; ...)" it wrote is not read, and "not brought in: 0 things". The level's height comes back unknown and the report does not list it. |
+| J17B-17 | silent | An IFC material and a property set are dropped with no word in the import's report. |
+| J17B-18 | words | A roof slab, and this program's own roof planes written to IFC and read back, are reported as "floor slab". |
+| J17B-19 | words | IFC report: "1 doors", "1 floors", "4 floor slab", "the model is in foot", "wall 44 in the file" (reads as 44 inches), "wallstandardcase". |
+| J17B-20 | words | A hand-edited job file is refused in the program's internals ("unknown variant", "expected u8", "missing field", "pl::cost", "os error 2", "U+000A"); `check` says the bytes differ and not where. |
+| J17B-21 | words | `plumbline wall w.json ground w6` says "no element ground" and not that a level is given by its number; `price` prints "priced by its net_area" and "4 RoofPlane, 4 Eave"; `show` prints plan_area, slope_factor; "measures re-derived on". |
+| J17B-22 | words | Price lists: a row with a stray comma is blamed on its price; a date cell says "day 46031"; a formula with no saved figure says both "it has no price" and "what it last worked out to was read"; "#" is refused as pounds; "Hrs: the new material price". |
+| J17B-23 | silent | A prior estimate whose own Total row ($17,000.00) disagrees with its lines ($17,404.00) is not said to disagree; "SQFT" is not taken as SF. |
+| J17B-24 | doc | `plumbline roof` works and is in neither the usage nor the README; the usage says `export prices` writes `.csv` and `.xlsx` works too. |
+| J17B-25 | doc | The estimate CSV does not come back into a job (the loss is reported when it is read as a prior estimate, but nothing reads it back as lines), against "the job file and CSV round-trip without loss". |
+
+**What held** (the judge's list): outside faces on clockwise, L, U, a wall in two
+pieces, an upper level; a switched-off labor line; "6 over 6"; EIFS, cultured stone,
+dimensional shingles, EPDM; wainscot heights after a comma; every job made checks
+byte for byte; every hostile hand edit of the job file is refused on load (division
+0 and 99, a status outside the three, Unknown with a value, Known with no source,
+duplicate path, low next id, a measure that does not match); price lists with a BOM,
+CRLF, a header in row 3, duplicates, Latin-1, an unknown column (each said); an
+assembly library out and back byte for byte with cost type and division; IFC2x3 and
+millimetre models; what is not brought in is listed.
+
+**The lesson in J17B-4, 5 and 7:** a finish was taken from any line that held a
+finish's word. A line names a finish only when the finish is what the line is: its
+first words, not something it mentions on the way to a sill, a flashing, nails or a
+removal. That is the fix, with the outside test made to know every enclosed piece
+and every courtyard. Fixes follow below as they are made.
+
+## Seventeenth judgment, part A (2026-11-12): the money path
+
+Judge on Opus, commit 8c6978f, command line and source only. 20 findings: 5 wrong
+money, 8 silent, 5 words, 1 breaks, 1 doc. Each has commands that reproduce it from
+an empty folder (the judge's file is kept beside the build, not in the repository;
+its titles are set down here as written).
+
+| | kind | finding |
+|---|---|---|
+| J17A-1 | words | a hand-edited division that is not a whole number is refused in software words |
+| J17A-2 | silent | "the sixteen divisions" and "in no division" are shown Known, and say nothing of what they leave out, when the divisions under them are Assumed or leave lines out |
+| J17A-3 | silent | a line with a division and no cost type vanishes from its division without a word |
+| J17A-4 | wrong money | in the workbook, "In no division" is a typed figure, not a formula, so it stops agreeing with the lines the moment a price is changed |
+| J17A-5 | words | the workbook's Recap says "Unknown: $0.00 of it rests on something assumed" and "-0" hours for every cost type with no lines |
+| J17A-6 | wrong money | a line with no price yet gets no Amount formula in the workbook, and an empty cost type or division is the word "none", not a SUMIF; a price typed in later goes nowhere |
+| J17A-7 | silent | the verify-in-field list drops a line that rides on the question but has no price yet, and its total does not say it left one out |
+| J17A-8 | words | `set ... height` on a wall says "a Wall cannot carry a height" while the wall shows a height and `measure` takes one |
+| J17A-9 | wrong money | on the estimate sheet, the quantity shown times the price shown is not the amount shown on 37 of the 347 lines of the sixteen-division sample |
+| J17A-10 | silent | the project manager's lens gives each division a figure and says nothing of the lines it leaves out; a division with only unpriced work reads "none" |
+| J17A-11 | wrong money | a price to a tenth of a cent is reported to the cent by `import prices` and `compare`, so the figures shown do not multiply |
+| J17A-12 | words | software spellings on screen: escaped quotes, "1e9", "u8", an empty list, a garbled division by zero |
+| J17A-13 | silent | an order factor that does not fit how a material is bought is taken without a word, and wipes out every line made of it |
+| J17A-14 | silent | a line priced on a thing whose identity is Assumed or Unknown is Known, and the verify-in-field list says no dollars ride on the question |
+| J17A-15 | doc | the usage's way to put a stretch-out on a cost line cannot be followed: each of the two steps refuses until the other is done |
+| J17A-16 | breaks | `sixteen`, `sample`, `house` and `priced` write over an existing job without a word; `new` refuses the same |
+| J17A-17 | wrong money | `import assemblies` reads a unit cost of "$1,23/LF" as $123/LF and "$1,2,3/SF" as $123/SF; every other way in refuses both |
+| J17A-18 | words | when one row of an assembly is bad, every row of that assembly is refused with that one row's reason, under the wrong row numbers |
+| J17A-19 | silent | the estimate reads Known and whole while parts of the building have nothing priced on them; only `price` says so. The sixteen-division sample prices the ridge cap and not the four hips |
+| J17A-20 | silent | cutting a run where it crosses another makes the clash read 1.00 in instead of 5.00 in, and splits its dollars |
+
+**What held** (the judge's list):
+
+- Sixteen-division sample: the 16 division totals add to the job cost to the cent ($390,534.08); line counts add to 347; overhead 10% / profit 8% / price worked by hand agree.
+- 45 randomised versions of the sample (divisions removed or moved, cost types removed, prices made Unknown, Assumed or changed to three decimals): every time, the sixteen + in no division = job cost on the command line, the CSV's classed amounts add to the job cost, and the workbook's formulas all worked out (tools/workbook.py) to the command line's job cost and sixteen.
+- No line counted twice or dropped between estimate, CSV, workbook, supplier lens (201 material lines, quantities grouped by name and unit agree), subcontractor lens (142 lines, element/line/quantity/unit agree) and PM lens (347 lines, every field agrees).
+- Every CSV row of the sample: quantity x unit cost, rounded half up, equals the amount.
+- A switched-off labor line is out of the recap, its division and the workbook's SUMIFs, and shown "off ($4,000.00)".
+- A line with no cost type is out of the job cost and named in the recap; the workbook marks its division "(in no total)".
+- Hand edits of a division to 0, 17, -1, 7.5, "7", "Roofing", 1e3, 2^32+6 are refused at load; a class "Roofer", duplicate line names, a switched-off non-labor line, a negative price are refused at load; a stale unit cost in the file is re-derived on load.
+- Division by the command line: 0, 17, "7.0", "09 Finishes", "seven and a half", no value: refused, file byte-for-byte unchanged. " 7", "07", "+7", "finishes", "Div 9", "Division 9" accepted as the division meant.
+- Duplicate line names (exact, by capitals, by a trailing space), empty and blank names, a newline in a name, "1/0", "nan", "inf", unknown names in a formula, a missing element, a missing file: refused, file unchanged.
+- Hand-worked small jobs: waste 10% + 32 SF/sheet whole sheets (6 sheets, $90.00); 81 SF/CY whole yards (3 CY, $495.00); 1.25 lb/SF; spacing count "plan_length / spacing + 1" (16 EA); stretch-out 19 3/4" (32.92 SF, $102.04); overhead 12.5% / profit 7.25% on the sum; half-cent lines (1.005 -> 1.01, 8.015 -> 8.02); a sub-half-cent line refused, not $0.00.
+- Overhead and profit: -5 and "1e2" and "10.5.1" refused; 0, 100, 1000, 12.3456789, "10%" taken and worked; Unknown overhead gives no price and says why.
+- Prices import: "$1,2,3", negative, 1e20, empty name, wrong unit, no status, no source, "€12", "twelve", "12%", "(12.00)" refused with the file unchanged; padded and differently capitalised names matched.
+- Price list CSV round trip (export prices -> import prices --add -> export prices) is byte-identical, quotes and commas in names included; the estimate CSV quotes commas and quotes, guards leading = + - @ with an apostrophe, and `import prior` reads them back as written.
+- Suppliers side by side: generic $1,050.00, two suppliers' quotes extended with waste ($991.20, ~$1,075.20) as worked by hand.
+- VIF: a measured height turns the line Known, re-prices it (80 -> 85 SF, $200 -> $212.50) and drops "measure: height"; a measured duct height clears the clash and the list; "same" on all three of a duct's values turns the clash into a finding off the list; the head total counts each line once across a clash and a thing (180 + 180 + 95 = $455.00).
+- Measure: negative, no unit, metric, "8 ft 13 in", "8.5.1 ft", no source, wrong value name, a wall line given one length: refused, file unchanged.
+- Allowance $28.00/SF reconciles with a $4.20/SF detail ($4,480 vs $672, -85%); a $/LF allowance on a wall refused.
+- `new` will not write over a file; export to a missing folder, to a .txt, or to the job itself is refused.
+
+**Where the weight is.** J17A-17 (an assembly library's unit cost read past its stray
+commas, where every other way in refuses it) and J17A-16 (a sample written over a
+person's own job) are the two that can cost a builder a number or a file; J17A-2, 3,
+7, 10, 14 and 19 are one family: a figure that is right and reads surer or more whole
+than it is. Fixes follow below as they are made.
