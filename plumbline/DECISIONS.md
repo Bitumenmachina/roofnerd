@@ -1915,3 +1915,69 @@ levels can be small, and no figure is plainly too small); a run measured Known o
 storey whose floor is Assumed keeps its clash "to verify" with no word of why on the
 clash itself (the storey's row says it is Assumed).
 
+
+### Call 52. The fifteenth judgment, part B: the words on screen (2026-11-12)
+
+Thirteen findings (STATUS.md, "Fifteenth judgment, part B"). The language pass of call
+48 put one function between every word and the screen and then left holes in it. What
+was decided in closing them:
+
+* **A thing is called what it was called after it is gone.** The names `spoken` knows
+  are added to, never replaced: the message that says a duct was removed is drawn after
+  the duct has left the job. A path is never given out twice, so an old name cannot be
+  said of a new thing.
+* **A path that owns something, and a path given a capital, are still paths**
+  ("roof-0072's footprint", "Plane-0073: ..."), and take the thing's name.
+* **The job is "the job".** Its element is named by its own path in the file; on screen
+  that path is said as "the job".
+* **The program's own quoting, its names for kinds of thing, and its way of writing
+  money are put right in that one place**: `\"` is `"`; `RoofPlane` is "roof plane"
+  and "a Wall" is "a wall"; `28.00 $/SF` is `$28.00/SF`; `lb` standing alone is `LB`,
+  as the owner's list of units has it. The job's file and the command line keep what
+  they had: these are how the screen writes, not what is stored.
+* **The window does not send a person to the command line.** Three messages named a
+  command to type. Each now says what the key does and that the rest "is not in this
+  window yet", which is true and is a builder's sentence. (Call 48 held that the
+  command line is not a screen; the judge's point stands that a window that points at
+  it has made it one.)
+* **Why a file could not be opened is said in words**: it is not there; it is there
+  and may not be opened; it could not be opened. The machine's own sentence, and the
+  whole path of a folder on this machine, are not shown: a file is called by its name.
+  A plan that cannot be read says what to do next (put it back beside the job, or lay
+  it again; print it to a new PDF; save the picture again).
+* **A plan is named as it lies from the job's folder** (J15-B10), which is what the
+  hint under the entry shows. It was looked for from wherever the program was started.
+* **What is typed in the window is sourced "set in the window; not yet checked against
+  a drawing"** (J15-B11). It said "set in the 3D view" of things typed on the plan.
+  Jobs saved before keep the words they were saved with.
+* **One name, once** (J15-B8). The sheet drew a thing's name and under it its path,
+  which `spoken` then said as the name again. The path line is gone. STATUS.md's claim
+  that it already was is corrected there.
+* **Words changed:** "element(s)" on the Money tab is "item(s)", or the sentence is
+  recast ("nothing has an allowance..."); "networks" is "joined lengths"; "under this
+  wall" is "in this wall"; "pan" and "zoom" are "slide" and "come closer or back off";
+  a part or a product "not selected" is "not specified", the word a specification
+  uses, and no longer the window's word for what is picked; "select" in the hint is
+  "pick"; a made-up job's cost code source no longer names one of this project's own
+  files; "mask" is "cover".
+* **Hours are shown to two places**, as a time sheet has them. They are held and added
+  to four.
+* **Only the keys that apply are offered**: no "Next roof plane" on a job with no roof,
+  no condition, price or material for a drawing.
+* **A size is read as it is said** ("2 by 2 by 3"), and one that is not a size says so,
+  not that it "is not a plain number".
+
+**Not settled here, and why:**
+
+* **A thing drawn with no name is still called by its kind and its number in the file**
+  ("duct 13", walls numbered from 9). Numbering each kind from 1 on its storey changes
+  the name of everything every demonstration and test draws; it is its own piece of
+  work, and is next.
+* **"class"** for what a line's cost is (material, labor, subcontract). Estimating
+  programs say "cost type" or "category"; which the trade's word is was not checked
+  against a source, and the word is the model's and the command line's too (Q20).
+* **"storey", "centre"**: British spelling in a program in US units (Q20).
+* **Two words for one thing** (elbow and bend; storey, level and floor; join and
+  connect): each is a change to the model's own words and to what demonstrations
+  expect; listed in STATUS.md as open.
+* **Places as bare decimal pairs, clash depths in decimal inches**: open.

@@ -193,3 +193,17 @@ Two things field entry (order step 4) had to assume.
    types after it. **Working assumption: the program does not add the day**, because the
    only day it has is the machine's clock. If the record should carry the day (or who
    measured), say what it must hold.
+
+## Q20. Which English, and what is a line's "class" called?
+
+From the fifteenth judgment's list of words on screen.
+
+1. The program writes "storey" and "centre". Its units are US, and US drawings say
+   "story" and "center". **Working assumption: left as written**, because a name a
+   person typed would be respelled with it if the screen changed these wholesale. If
+   the screen should be in US spelling, say so and each word is changed where it is
+   written.
+2. A cost line's "class" is material, labor, fabrication, supervision, subcontract or
+   general conditions. A judge says estimating programs call this "cost type" or
+   "category". **Working assumption: "class" stays** until you say which word your
+   estimators use.

@@ -125,7 +125,7 @@ kind = lambda e: e["attributes"].get("pl::class")
 fittings = [e for e in data if kind(e) == "Fitting"]
 for f in fittings:
     what = f["attributes"]["pl::placed"]["what"]
-    if what["status"] != "Assumed" or "3D view" not in what["source"] or "is bought is not selected" not in what["source"]:
+    if what["status"] != "Assumed" or "set in the window" not in what["source"] or "is bought is not specified" not in what["source"]:
         print("FAIL: a fitting put in the window is not flagged as put there:", what); sys.exit(1)
 ahu = next(e for e in data if kind(e) == "Equipment")
 c = ahu["attributes"]["pl::connectors"]

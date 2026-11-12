@@ -115,7 +115,7 @@ made = south["pl::material"]
 markup = job["pl::markup"]
 install = next(l for l in south["pl::cost"]["lines"] if l["description"] == "Install panels")
 ok = changed == ["job-0001", "plane-0003"]
-ok = ok and made["value"] == "Copper, 20 oz" and made["status"] == "Assumed" and "3D view" in made["source"]
+ok = ok and made["value"] == "Copper, 20 oz" and made["status"] == "Assumed" and "set in the window" in made["source"]
 ok = ok and markup["overhead"]["value"] == 12 and markup["overhead"]["status"] == "Assumed" and markup["profit"]["value"] == 8
 ok = ok and install.get("off") is True
 print("    in the file: the south plane is made of", made["value"], made["status"], "(" + made["source"] + ")")

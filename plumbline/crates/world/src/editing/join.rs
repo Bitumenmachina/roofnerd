@@ -349,7 +349,7 @@ fn fit_at(job: &mut Job, storey: &str, at: P2, z: Option<f64>, kind: Option<Fitt
 
     let status = written(runs.iter().map(|r| r.status).max().unwrap_or(Status::Known).max(how.status));
     let joined: Vec<&str> = ends.iter().map(|(run, _)| run.as_str()).collect();
-    let source = format!("{}; put where {} meet; which {} is bought is not selected", how.source, joined.join(", "), part(worked));
+    let source = format!("{}; put where {} meet; which {} is bought is not specified", how.source, joined.join(", "), part(worked));
     let val = |value| Val { value: Some(value), unit: String::new(), status, source: source.clone() };
 
     // Its size is its largest run's; what it is called names every size it joins.
@@ -375,7 +375,7 @@ fn fit_at(job: &mut Job, storey: &str, at: P2, z: Option<f64>, kind: Option<Fitt
                 }
             }
             let what = val(format!("{} {}", said.join(if worked == FittingKind::Transition { " to " } else { " x " }), part(worked)));
-            let size = Val { value: Some([tidy(across * 12.0), tidy(across * 12.0), tidy(deep * 12.0)]), unit: units::IN.into(), status: Status::Assumed, source: "drawn at its run's size; the fitting is not selected".to_string() };
+            let size = Val { value: Some([tidy(across * 12.0), tidy(across * 12.0), tidy(deep * 12.0)]), unit: units::IN.into(), status: Status::Assumed, source: "drawn at its run's size; the fitting is not specified".to_string() };
             (what, size, deep)
         }
         _ => (Val::unknown("", "a run it joins is drawn on the plan with no size"), Val::unknown(units::IN, "a run it joins is drawn on the plan with no size"), 0.0),
@@ -592,6 +592,6 @@ pub fn connect_at(job: &mut Job, storey: &str, at: P2, how: Entered) -> Result<(
         ([run], [thing]) => connect(job, thing, run, how).map(|which| (thing.clone(), run.clone(), which)),
         ([], _) => Err(format!("no run ends at {place}")),
         (_, []) => Err(format!("no fixture or equipment of a known size stands at {place}")),
-        _ => Err(format!("{} runs end and {} things stand at {place}: which is meant cannot be told from a point; join them by name (plumbline connect)", runs.len(), things.len())),
+        _ => Err(format!("{} runs end and {} things stand at {place}: which is meant cannot be told from a point; they are joined by naming the thing and the run", runs.len(), things.len())),
     }
 }

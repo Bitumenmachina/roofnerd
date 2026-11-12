@@ -11,8 +11,8 @@ use plumbline_world::building::{self, Placement, StoreyTotals, SystemTakeoff};
 use plumbline_world::value::Status;
 use plumbline_world::{roof, view, Condition, Discipline, Job, JobInfo, Kind, Measure, Pitch, Run, Solved};
 
-/// The source written on a value set in the 3D view.
-pub const SOURCE: &str = "set in the 3D view; not yet confirmed against a drawing";
+/// The source written on a value set in the window, on the plan or in 3D.
+pub const SOURCE: &str = "set in the window; not yet checked against a drawing";
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Entry {
@@ -275,7 +275,8 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     s.file = doc.path.file_name().and_then(|f| f.to_str()).unwrap_or("").to_string();
     let elements = view::elements(&mut doc.job);
     // What each thing is called, for everything written on screen (`theme::spoken`).
-    crate::theme::name_these(elements.iter().map(|e| (e.path.clone(), e.name.clone())).collect());
+    // The job itself has no name but its path in the file: it is "the job".
+    crate::theme::name_these(elements.iter().map(|e| (e.path.clone(), if e.name == e.path && e.kind == Kind::Job { "the job".to_string() } else { e.name.clone() })).collect());
     s.tally = view::tally(&elements);
     s.pricing = Some(view::pricing(&mut doc.job));
     s.estimate = Some(view::estimate(&mut doc.job));

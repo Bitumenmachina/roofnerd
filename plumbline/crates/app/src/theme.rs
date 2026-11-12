@@ -135,8 +135,11 @@ static NAMES: std::sync::OnceLock<std::sync::RwLock<std::collections::HashMap<St
 /// Tell `spoken` what the job's elements are called now.
 pub fn name_these(names: std::collections::HashMap<String, String>) {
     let held = NAMES.get_or_init(Default::default);
+    // What a thing was called is kept after it is gone from the job: the message that
+    // says it was removed still has to call it by its name. A path is never given out
+    // twice, so an old name is never said of a new thing.
     if let Ok(mut held) = held.write() {
-        *held = names;
+        held.extend(names);
     }
 }
 
@@ -157,17 +160,28 @@ pub fn spoken(text: &str) -> String {
             out.push(' ');
         }
         let inner = |c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-';
+        // "roof-0072's": the 's is not part of what the thing is called in the file.
+        let (word, owns) = match word.find("'s").filter(|k| word[k + 2..].chars().all(|c| !c.is_ascii_alphanumeric())) {
+            Some(k) => (&word[..k], &word[k..]),
+            None => (word, ""),
+        };
         let start = word.find(inner).unwrap_or(word.len());
         let end = word.rfind(inner).map(|k| k + 1).unwrap_or(start);
         let (before, core, after) = (&word[..start], &word[start..end.max(start)], &word[end.max(start)..]);
+        // A path with a capital put on it because it began a sentence ("Plane-0073:").
+        let capital = core.chars().next().is_some_and(|c| c.is_ascii_uppercase()) && core[1..].chars().all(|c| !c.is_ascii_uppercase());
+        let lowered = if capital { format!("{}{}", core[..1].to_ascii_lowercase(), &core[1..]) } else { core.to_string() };
+        let core = if capital && lowered.rsplit_once('-').is_some_and(|(stem, number)| !stem.is_empty() && stem.chars().all(|c| c.is_ascii_lowercase()) && number.len() >= 4 && number.chars().all(|c| c.is_ascii_digit())) { lowered.as_str() } else { core };
         let is_path = core.rsplit_once('-').is_some_and(|(stem, number)| !stem.is_empty() && stem.chars().all(|c| c.is_ascii_lowercase()) && number.len() >= 4 && number.chars().all(|c| c.is_ascii_digit()));
         let is_name = core.contains('_') && !core.starts_with('_') && !core.ends_with('_') && core.chars().all(|c| c.is_ascii_lowercase() || c == '_');
         out.push_str(before);
         match (is_path, is_name) {
             (true, _) => match names.as_ref().and_then(|n| n.get(core)) {
                 Some(name) => {
-                    out.push_str(name);
-                    said.push(name.clone());
+                    // At the head of a sentence the name takes the capital the path had.
+                    let name = if capital { let mut c = name.chars(); c.next().map(|f| f.to_uppercase().collect::<String>() + c.as_str()).unwrap_or_default() } else { name.clone() };
+                    out.push_str(&name);
+                    said.push(name);
                 }
                 None => out.push_str(core),
             },
@@ -175,12 +189,76 @@ pub fn spoken(text: &str) -> String {
             _ => out.push_str(core),
         }
         out.push_str(after);
+        out.push_str(owns);
     }
     for name in said {
         let twice = format!("{name} ({name})");
         if out.contains(&twice) {
             out = out.replace(&twice, &name);
         }
+    }
+    // A kind of thing as the program's own text names it (RoofPlane, LowSlopeArea) is
+    // said in its words; and one written with a capital after "a" or "an" loses it.
+    for (as_named, words) in [("RoofPlane", "roof plane"), ("LowSlopeArea", "low-slope area"), ("PitchBreak", "change of pitch")] {
+        if out.contains(as_named) {
+            out = out.replace(as_named, words);
+        }
+    }
+    for kind in ["Job", "Roof", "Eave", "Rake", "Ridge", "Hip", "Valley", "Headwall", "Parapet", "Condition", "Storey", "Wall", "Door", "Window", "Floor", "System", "Duct", "Pipe", "Conduit", "Cable", "Equipment", "Fixture", "Fitting", "Type", "Room", "Material", "Drawing", "Prior"] {
+        for article in ["a ", "an ", "A ", "An "] {
+            let said_so = format!("{article}{kind}");
+            if out.contains(&said_so) {
+                let plain = format!("{article}{}", kind.to_lowercase());
+                // Only where the kind's name ends there: "a Wall," and not "a Wallace".
+                let mut next = String::with_capacity(out.len());
+                let mut rest = out.as_str();
+                while let Some(at) = rest.find(&said_so) {
+                    let after = &rest[at + said_so.len()..];
+                    let whole = !after.chars().next().is_some_and(|c| c.is_ascii_alphanumeric()) && (at == 0 || !rest[..at].chars().next_back().is_some_and(|c| c.is_ascii_alphanumeric()));
+                    next.push_str(&rest[..at]);
+                    next.push_str(if whole { &plain } else { &said_so });
+                    rest = after;
+                }
+                next.push_str(rest);
+                out = next;
+            }
+        }
+    }
+    // Money is written with its sign first and its unit hard after: $28.00/SF, not
+    // "28.00 $/SF". The pound is LB.
+    if out.contains(" $/") {
+        let words: Vec<&str> = out.split(' ').collect();
+        let mut joined: Vec<String> = Vec::with_capacity(words.len());
+        let mut i = 0;
+        while i < words.len() {
+            let figure = words[i].trim_start_matches(['~', '?', '(']);
+            if i + 1 < words.len() && words[i + 1].starts_with("$/") && !figure.is_empty() && figure.chars().all(|c| c.is_ascii_digit() || c == '.' || c == ',') {
+                let lead = &words[i][..words[i].len() - figure.len()];
+                joined.push(format!("{lead}${figure}{}", &words[i + 1][1..]));
+                i += 2;
+            } else {
+                joined.push(words[i].to_string());
+                i += 1;
+            }
+        }
+        out = joined.join(" ");
+    }
+    if out.contains("lb") {
+        let bytes = out.as_bytes();
+        let mut next = String::with_capacity(out.len());
+        let mut i = 0;
+        while i < out.len() {
+            let here = out[i..].starts_with("lb") && !(i > 0 && bytes[i - 1].is_ascii_alphabetic()) && !bytes.get(i + 2).is_some_and(|b| b.is_ascii_alphabetic());
+            if here {
+                next.push_str("LB");
+                i += 2;
+            } else {
+                let c = out[i..].chars().next().unwrap_or(' ');
+                next.push(c);
+                i += c.len_utf8();
+            }
+        }
+        out = next;
     }
     // A backslash before a quote mark is how the program writes a quote inside a quote
     // for itself: 8' 10 1/2" is not written 8' 10 1/2\" on a drawing.
@@ -372,5 +450,33 @@ mod tests {
         assert_eq!(spoken("made_up_plan.pdf, page 2"), "made_up_plan.pdf, page 2");
         assert_eq!(spoken("3/4 in x 1-1/2 in"), "3/4 in x 1-1/2 in");
         assert_eq!(spoken("pipe-0099 is not in the job"), "pipe-0099 is not in the job");
+    }
+
+    /// The fifteenth judgment, part B: the holes the judge found, each held here.
+    #[test]
+    fn j15b_the_holes_the_judge_found_in_what_is_written_on_screen() {
+        name_these([("duct-0015", "trunk"), ("roof-0072", "roof"), ("plane-0073", "plane 1"), ("eave-0077", "eave 1"), ("job-0001", "the job")].into_iter().map(|(p, n)| (p.to_string(), n.to_string())).collect());
+        // A thing taken out of the job is still called by its name in the message that
+        // says so: the names known later no longer hold it.
+        name_these([("wall-0008", "wall 8")].into_iter().map(|(p, n)| (p.to_string(), n.to_string())).collect());
+        assert_eq!(spoken("removed duct-0015"), "removed trunk");
+        assert_eq!(spoken("gone: plane-0073, eave-0077"), "gone: plane 1, eave 1");
+        // A path that owns something.
+        assert_eq!(spoken("plane 1 is solved from roof-0072's footprint"), "plane 1 is solved from roof's footprint");
+        // A path given a capital because it began a sentence takes its name, capital kept.
+        assert_eq!(spoken("Plane-0073: material set to copper"), "Plane 1: material set to copper");
+        // The job itself.
+        assert_eq!(spoken("job-0001: overhead set to 12"), "the job: overhead set to 12");
+        // The program's own quoting.
+        assert_eq!(spoken("Unit cost of \"Gutter 6\\\" half round\" on west"), "Unit cost of \"Gutter 6\" half round\" on west");
+        // A kind of thing as the program names it.
+        assert_eq!(spoken("a RoofPlane is not moved this way; a wall is"), "a roof plane is not moved this way; a wall is");
+        assert_eq!(spoken("storey-0002 is a Wall, not a storey"), "storey-0002 is a wall, not a storey");
+        assert_eq!(spoken("a Wallace Road job"), "a Wallace Road job");
+        // Money with its sign first; the pound in capitals; a word with "lb" in it left.
+        assert_eq!(spoken("allowance: 28.00 $/SF"), "allowance: $28.00/SF");
+        assert_eq!(spoken("~28.00 $/LF over 2"), "~$28.00/LF over 2");
+        assert_eq!(spoken("861.60 lb at $9.00/lb"), "861.60 LB at $9.00/LB");
+        assert_eq!(spoken("a bulb and an elbow"), "a bulb and an elbow");
     }
 }

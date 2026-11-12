@@ -216,7 +216,7 @@ pub fn read(mut doc: ResMut<Doc>, mut plans: ResMut<Plans>, mut images: ResMut<A
         let (file, page, bytes, checksum, size) = (folder.join(&key.0), key.1, l.drawing.bytes, l.drawing.checksum.clone(), l.drawing.size);
         let (send, receive) = channel::<Arrived>();
         std::thread::spawn(move || {
-            let result = std::fs::read(&file).map_err(|e| format!("{} cannot be read ({e})", file.display())).and_then(|data| {
+            let result = std::fs::read(&file).map_err(|e| format!("{} {}. Put it back beside the job, or take this drawing out and lay the file again from where it is now", file.file_name().and_then(|n| n.to_str()).unwrap_or("the file"), why_not_opened(&e))).and_then(|data| {
                 let changed = data.len() as u64 != bytes || plumbline_plans::checksum(&data) != checksum;
                 plumbline_plans::read(&data, page).and_then(|p| {
                     // A drawing made at one size and a page of another do not fit: the
@@ -230,6 +230,15 @@ pub fn read(mut doc: ResMut<Doc>, mut plans: ResMut<Plans>, mut images: ResMut<A
             let _ = send.send(result);
         });
         plans.reading.insert(l.path, (key, Mutex::new(receive)));
+    }
+}
+
+/// Why a file could not be opened, in words: the machine's own are not shown.
+fn why_not_opened(e: &std::io::Error) -> &'static str {
+    match e.kind() {
+        std::io::ErrorKind::NotFound => "is not there",
+        std::io::ErrorKind::PermissionDenied => "is there, and this program is not allowed to open it",
+        _ => "could not be opened",
     }
 }
 
@@ -250,7 +259,12 @@ pub fn add(doc: &mut Doc, text: &str) {
         if file.is_empty() {
             return Err("name the plan's file: a PDF, a PNG or a JPEG".into());
         }
-        let bytes = std::fs::read(file).map_err(|e| format!("cannot read {file}: {e}"))?;
+        // A name that is not a whole path is looked for from the job's own folder, where
+        // a plan is kept beside its job; then from where the program was started.
+        let beside = folder_of(&doc.path).join(file);
+        let found = if Path::new(file).is_absolute() || !beside.exists() { Path::new(file).to_path_buf() } else { beside };
+        let bytes = std::fs::read(&found).map_err(|e| format!("{file} {}. Name it as it lies from the job's folder, like plans/a-1.pdf", why_not_opened(&e)))?;
+        let file = found.to_str().ok_or("the file's name has letters this cannot use")?;
         // Only what the drawing needs to be made: the page's size. Its picture is read
         // on a thread of its own, so the window keeps drawing.
         let (_, pages, size) = plumbline_plans::size_of(&bytes, page).map_err(|why| format!("{file}: {why}"))?;

@@ -169,7 +169,7 @@ if got != want:
 # Everything drawn carries the window as its source, Assumed.
 for w in walls:
     line = w["attributes"]["pl::wall"]["line"]
-    if line["status"] != "Assumed" or "3D view" not in line["source"]:
+    if line["status"] != "Assumed" or "set in the window" not in line["source"]:
         print("FAIL: a wall's line is not flagged as drawn in the window:", w["path"], line); sys.exit(1)
 moved = [w["path"] for w in walls if "moved" in w["attributes"]["pl::wall"]["line"]["source"]]
 print("    every wall's line is Assumed, drawn in the window; moved:", ", ".join(moved))

@@ -179,10 +179,13 @@ fn parts(tool: Tool, text: &str) -> Result<Vec<String>, String> {
 
 /// "2 x 1.5 x 3": along, across and up, in feet.
 fn size(text: &str) -> Result<[f64; 3], String> {
-    let numbers: Vec<f64> = text.split(['x', 'X', '\u{00D7}']).map(|s| units::parse_number(s.trim())).collect::<Result<_, _>>()?;
+    // "2 x 1.5 x 3", and "2 by 1.5 by 3" as it is said.
+    let not_a_size = || format!("\"{}\" is not a size; write it along x across x up in feet, like 2 x 1.5 x 3", text.trim());
+    let spelled = text.to_lowercase().replace(" by ", " x ");
+    let numbers: Vec<f64> = spelled.split(['x', '\u{00D7}']).map(|s| units::parse_number(s.trim())).collect::<Result<_, _>>().map_err(|_| not_a_size())?;
     match numbers.as_slice() {
         [a, b, c] if *a > 0.0 && *b > 0.0 && *c > 0.0 => Ok([*a, *b, *c]),
-        _ => Err(format!("{text:?} is not a size; write it along x across x up in feet, like 2 x 1.5 x 3")),
+        _ => Err(not_a_size()),
     }
 }
 

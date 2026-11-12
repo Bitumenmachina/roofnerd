@@ -2549,3 +2549,30 @@ What was run" says.
 **What is not right:** the window fixes rest on scratch runs, not on a committed
 demonstration; `demos/fieldw.sh` does not try a stray burst or a second reading. The
 other window demonstrations have still not been run since `719ff91`.
+
+## Where the fixes to the fifteenth judgment, part B, stand
+
+Part of it is fixed in the commit that adds this section, and **none of it has been
+judged**. DECISIONS.md call 52 says what was decided and what was left, and why.
+
+| # | What was done | Held by |
+|---|---|---|
+| J15-B1 | A thing removed keeps its name in what is said of it; a path that owns something ("roof-0072's") and a path given a capital take the thing's name; the job is "the job". **Not done:** a thing drawn with no name is still its kind and its number in the file ("duct 13"). | `j15b_...` in `theme.rs` |
+| J15-B2 | The three messages in the window that named a command to type say what the key does and that the rest is not in this window yet. The core's "join them by name (plumbline connect)" says "they are joined by naming the thing and the run". | By reading. |
+| J15-B3 | A backslash before a quote mark is taken out where every word on screen is said. | `j15b_...`; seen in a scratch run (`"1'0"x" has something after the inches`) |
+| J15-B4 | A plan or a picture that cannot be read says so in plain words and what to do next; a file that cannot be opened is called by its name, and why is one of three plain reasons. | By reading; **not seen on screen.** |
+| J15-B5 | "element(s)" on the Money tab, "networks", "under this wall", "pan" and "zoom", "not selected" of a part, a kind written as the code writes it ("RoofPlane", "a Wall"), "mask", and the made-up job's source that named `QUESTIONS.md`: each changed. **Not done:** "solved" and "solver"; "class"; "values"; "schedule code"; "connector". | `j15b_...` for the kinds; the rest by reading |
+| J15-B6 | `28.00 $/SF` is drawn `$28.00/SF`; `lb` is drawn `LB`; hours are shown to two places. **Not done:** "$15.68 / SF" on the Money tab; places as bare decimal pairs; open ends and a page's size with no unit; clash depths in decimal inches; one height three ways on one panel. | `j15b_...` |
+| J15-B7 | **Not done.** Elbow and bend; storey, level and floor; facets and planes; "drawing" two ways; join, connect and connector. | |
+| J15-B8 | The sheet no longer draws a thing's path under its name, so no name is drawn twice. ("Supply air Supply Air" and "ROOF: ROOF" were not looked at.) | By reading; **not seen on screen.** |
+| J15-B9 | A size written "2 by 2 by 3" is read; one that is not a size says so. **Not done:** "the job has no condition that goes on a roof plane" still offers no way to make one; "undone: remove" still does not say what came back. | By reading. |
+| J15-B10 | A plan's name is looked for from the job's folder first. | By reading; **not seen on screen.** |
+| J15-B11 | What is typed in the window is sourced "set in the window; not yet checked against a drawing". | The four window demonstrations that check that source, once they are run. |
+| J15-B12 | Keys offers "Next roof plane" only on a job with a roof, and no condition, price or material for a drawing. **Not done:** spelling (Q20); "Architecture". | Seen in the field pictures once retaken. |
+| J15-B13 | The pointer's position passes through `spoken`. The test no longer rests on the claims the judge found false, and holds the holes found. **Not done:** the two windows' titles are still set directly. | `j15b_...` |
+
+**What these changed that was so before** (besides the words): a source written by
+the window reads "set in the window; ..." where it read "set in the 3D view; ..."; a
+fitting's and a made-up thing's source reads "not specified" for "not selected"; the
+made-up jobs' cost code source reads "which cost code scheme this job is to follow is
+not settled"; a plan named in the window is found beside the job.

@@ -325,8 +325,8 @@ pub const MOST_DOTS: u64 = 250_000_000;
 /// camera's or a scanner's), with its size as it is then.
 fn opened(bytes: &[u8]) -> Result<(image::DynamicImage, bool), String> {
     use image::ImageDecoder;
-    let bad = |e: image::ImageError| format!("the picture could not be read ({e})");
-    let mut decoder = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format().map_err(|e| format!("the picture could not be read ({e})"))?.into_decoder().map_err(bad)?;
+    let bad = |_: image::ImageError| "the picture could not be read: it is damaged, cut short, or not the kind of picture its name says. Save it again as a PNG or a JPEG".to_string();
+    let mut decoder = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format().map_err(|_| "the picture could not be read: it is damaged, cut short, or not the kind of picture its name says. Save it again as a PNG or a JPEG".to_string())?.into_decoder().map_err(bad)?;
     let (width, height) = decoder.dimensions();
     if u64::from(width) * u64::from(height) > MOST_DOTS {
         return Err(format!("the picture is {width} by {height} dots, more than this program opens ({} million): save it smaller", MOST_DOTS / 1_000_000));
@@ -376,7 +376,7 @@ pub fn size_of(bytes: &[u8], page: usize) -> Result<(Sort, usize, [f64; 2]), Str
     match sort_of(bytes) {
         None => Err("it is not a PDF, a PNG or a JPEG".into()),
         Some(Sort::Pdf) => {
-            let pdf = Pdf::new(bytes.to_vec()).map_err(|e| format!("the PDF could not be read ({e:?})"))?;
+            let pdf = Pdf::new(bytes.to_vec()).map_err(|_| "the PDF could not be read: it is damaged, cut short, locked with a password, or not a PDF at all. Print it to a new PDF, or send it again".to_string())?;
             let pages = pdf.pages();
             let count = pages.len();
             let (width, height) = page_size(&pages, page)?;
@@ -389,8 +389,8 @@ pub fn size_of(bytes: &[u8], page: usize) -> Result<(Sort, usize, [f64; 2]), Str
             // Its size as it is seen: a picture whose own note turns it on its side is as
             // wide as it was tall.
             use image::ImageDecoder;
-            let bad = |e: image::ImageError| format!("the picture could not be read ({e})");
-            let mut decoder = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format().map_err(|e| format!("the picture could not be read ({e})"))?.into_decoder().map_err(bad)?;
+            let bad = |_: image::ImageError| "the picture could not be read: it is damaged, cut short, or not the kind of picture its name says. Save it again as a PNG or a JPEG".to_string();
+            let mut decoder = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format().map_err(|_| "the picture could not be read: it is damaged, cut short, or not the kind of picture its name says. Save it again as a PNG or a JPEG".to_string())?.into_decoder().map_err(bad)?;
             let (mut width, mut height) = decoder.dimensions();
             if width == 0 || height == 0 {
                 return Err("the picture has no size".into());
@@ -431,7 +431,7 @@ fn page_size(pages: &[hayro::hayro_syntax::page::Page<'_>], page: usize) -> Resu
 }
 
 fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
-    let pdf = Pdf::new(bytes.to_vec()).map_err(|e| format!("the PDF could not be read ({e:?})"))?;
+    let pdf = Pdf::new(bytes.to_vec()).map_err(|_| "the PDF could not be read: it is damaged, cut short, locked with a password, or not a PDF at all. Print it to a new PDF, or send it again".to_string())?;
     let pages = pdf.pages();
     let count = pages.len();
     let (width, height) = page_size(&pages, page)?;
@@ -476,10 +476,10 @@ fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
         lost.push(format!("{} kept whole: the gaps in it are places to snap to as well", some(lines.dashed, "dashed line is", "dashed lines are")));
     }
     if lines.cut > 0 || lines.hidden > 0 {
-        lost.push(format!("part of the page is masked off: {} cut to what shows, {} left out", some(lines.cut, "line is", "lines are"), some(lines.hidden, "hidden line is", "hidden lines are")));
+        lost.push(format!("part of the page is covered over: {} cut to what shows, {} left out", some(lines.cut, "line is", "lines are"), some(lines.hidden, "hidden line is", "hidden lines are")));
     }
     if lines.odd_clips > 0 {
-        lost.push(format!("{} not a square: lines under {} are kept whole, hidden parts and all", some(lines.odd_clips, "mask on the page is", "masks on the page are"), if lines.odd_clips == 1 { "it" } else { "them" }));
+        lost.push(format!("{} not a square: lines under {} are kept whole, hidden parts and all", some(lines.odd_clips, "cover on the page is", "covers on the page are"), if lines.odd_clips == 1 { "it" } else { "them" }));
     }
     if lines.covered > 0 {
         lost.push(format!("{} under a white box drawn over {} (part of the sheet blanked out) and {} not kept to snap to", some(lines.covered, "line is", "lines are"), if lines.covered == 1 { "it" } else { "them" }, if lines.covered == 1 { "is" } else { "are" }));

@@ -32,7 +32,7 @@ pub fn sample() -> Job {
         code: Val::assumed(
             CostCode { scheme: "MasterFormat".into(), code: "07 61 00".into(), title: "Sheet Metal Roofing".into() },
             "",
-            "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)",
+            "which cost code scheme this job is to follow is not settled",
         ),
         lines: vec![CostLine::of("Copper standing seam, installed", "surface_area", Val::unknown("$/SF", "no price entered"))],
     };
@@ -99,7 +99,7 @@ pub fn sample() -> Job {
             code: Val::assumed(
                 CostCode { scheme: "MasterFormat".into(), code: "07 62 00".into(), title: "Sheet Metal Flashing and Trim".into() },
                 "",
-                "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)",
+                "which cost code scheme this job is to follow is not settled",
             ),
             lines: vec![CostLine {
                 stretch_out: Some(Val::known(Len::One(24.0), "in", "sample detail 4/A-501")),
@@ -141,7 +141,7 @@ pub fn sample() -> Job {
                 code: Val::assumed(
                     CostCode { scheme: "MasterFormat".into(), code: "07 62 00".into(), title: "Sheet Metal Flashing and Trim".into() },
                     "",
-                    "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)",
+                    "which cost code scheme this job is to follow is not settled",
                 ),
                 lines: vec![
                     CostLine::of("Copper wall flashing", "plan_length * height", Val::unknown("$/SF", "no price entered")),
@@ -176,7 +176,7 @@ pub fn sample() -> Job {
                 code: Val::assumed(
                     CostCode { scheme: "MasterFormat".into(), code: "07 62 00".into(), title: "Sheet Metal Flashing and Trim".into() },
                     "",
-                    "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)",
+                    "which cost code scheme this job is to follow is not settled",
                 ),
                 lines: vec![CostLine { stretch_out: Some(Val::unknown("in", blank)), ..CostLine::of("Copper flashing", "true_length * stretch_out", Val::unknown("$/SF", "no price entered")) }],
             },
@@ -191,7 +191,7 @@ pub fn sample() -> Job {
         Recipe {
             applies_to: vec![Kind::RoofPlane],
             cost: Cost {
-                code: Val::assumed(CostCode { scheme: "MasterFormat".into(), code: "07 61 00".into(), title: "Sheet Metal Roofing".into() }, "", "primary cost code scheme not ruled on yet (QUESTIONS.md Q1)"),
+                code: Val::assumed(CostCode { scheme: "MasterFormat".into(), code: "07 61 00".into(), title: "Sheet Metal Roofing".into() }, "", "which cost code scheme this job is to follow is not settled"),
                 lines: vec![
                     CostLine { waste: Some(Val::unknown("%", "not entered")), ..CostLine::of("Copper standing seam panels", "surface_area", Val::unknown("$/SF", "no price entered")) },
                     CostLine::of("Underlayment", "surface_area", Val::unknown("$/SF", "no price entered")),
@@ -398,7 +398,7 @@ pub fn house() -> Job {
             job.put(&r, InSystem(Val::known(sys.to_string(), "", src))).expect(OK);
             if i + 1 < pieces && kind != Kind::Cable {
                 // The elbow at the corner this piece ends at. It is the run's size; which
-                // elbow is bought is not selected.
+                // elbow is bought is not specified.
                 let f = job.add(storey, Kind::Fitting, &format!("{name}, elbow {}", i + 1)).expect(OK);
                 // (deep: how tall the elbow is drawn, in inches, so its middle is on the joint.)
                 let (what, size, deep) = match &section {
@@ -409,7 +409,7 @@ pub fn house() -> Job {
                         // A pipe's or a conduit's size is its diameter and is said without "round".
                         let what = format!("{} elbow", if kind == Kind::Duct { t.said() } else { t.said().replace(" round", "") });
                         let what = if t.status() == Status::Assumed { Val::assumed(what, "", RULE) } else { Val::known(what, "", src) };
-                        (what, Val::assumed([tidy(across), tidy(across), tidy(deep)], "in", "drawn at its run's size; the fitting is not selected"), deep)
+                        (what, Val::assumed([tidy(across), tidy(across), tidy(deep)], "in", "drawn at its run's size; the fitting is not specified"), deep)
                     }
                 };
                 // An elbow joins the piece that ends here to the one that starts here: a
@@ -434,11 +434,11 @@ pub fn house() -> Job {
     let round_assumed = |d: f64| Section::Is(SegmentType::round(Kind::Duct, Val::assumed(Len::One(d), "in", RULE)));
     let round = |d: f64, src: &str| Section::Is(SegmentType::round(Kind::Pipe, Val::known(Len::One(d), "in", src)));
     let boxed = |x: f64, y: f64, z: f64, src: &str| Val::known([x, y, z], "ft", src);
-    let typical = |x: f64, y: f64, z: f64| Val::assumed([x, y, z], "ft", "a typical size; the product is not selected");
+    let typical = |x: f64, y: f64, z: f64| Val::assumed([x, y, z], "ft", "a typical size; the product is not specified");
 
     // ---- Mechanical ----
-    thing(&mut job, &first, Kind::Equipment, "air handler", &supply, M, Val::assumed("Air handler, vertical".into(), "", "the unit is not selected"), [19.0, 25.0, 0.0], typical(2.0, 2.5, 5.0));
-    thing(&mut job, &first, Kind::Equipment, "heat pump", &refrigerant, M, Val::assumed("Heat pump, outdoor unit".into(), "", "the unit is not selected"), [43.0, 25.0, 0.0], typical(3.0, 3.0, 3.0));
+    thing(&mut job, &first, Kind::Equipment, "air handler", &supply, M, Val::assumed("Air handler, vertical".into(), "", "the unit is not specified"), [19.0, 25.0, 0.0], typical(2.0, 2.5, 5.0));
+    thing(&mut job, &first, Kind::Equipment, "heat pump", &refrigerant, M, Val::assumed("Heat pump, outdoor unit".into(), "", "the unit is not specified"), [43.0, 25.0, 0.0], typical(3.0, 3.0, 3.0));
     run(&mut job, &first, Kind::Duct, "first-floor trunk, west", &supply, M, rect(16.0, 8.0), &[[19.0, 25.0, 5.0], [19.0, 25.0, 8.4], [19.0, 17.0, 8.4], [2.0, 17.0, 8.4]]);
     run(&mut job, &first, Kind::Duct, "first-floor trunk, east", &supply, M, rect(14.0, 8.0), &[[19.0, 17.0, 8.4], [38.0, 17.0, 8.4]]);
     for (name, from, to) in [("living west", [6.0, 17.0], [6.0, 6.0]), ("living middle", [22.0, 17.0], [22.0, 6.0]), ("living east", [34.0, 17.0], [34.0, 6.0]), ("kitchen", [8.0, 17.0], [8.0, 24.0]), ("office", [32.0, 17.0], [32.0, 24.0])] {
@@ -498,7 +498,7 @@ pub fn house() -> Job {
     thing(&mut job, &first, Kind::Equipment, "meter", &power, E, said("Meter socket, 200 A", E), [40.45, 20.0, 4.0], boxed(0.4, 1.0, 1.3, E));
     thing(&mut job, &first, Kind::Equipment, "panel", &power, E, said("Panelboard, 200 A", E), [39.55, 20.0, 3.5], boxed(0.35, 1.2, 2.6, E));
     run(&mut job, &first, Kind::Conduit, "service entrance", &power, E, round(2.0, E), &[[40.45, 20.0, 4.0], [40.45, 20.0, -2.0], [44.0, 20.0, -2.0]]);
-    let cable = || Section::Is(SegmentType::round(Kind::Cable, Val::assumed(Len::One(0.4), "in", "the jacket of a 12-2 cable, roughly; the cable is not selected")));
+    let cable = || Section::Is(SegmentType::round(Kind::Cable, Val::assumed(Len::One(0.4), "in", "the jacket of a 12-2 cable, roughly; the cable is not specified")));
     run(&mut job, &first, Kind::Cable, "kitchen circuit", &power, E, cable(), &[[39.55, 20.0, 6.1], [39.55, 20.0, 9.6], [8.0, 20.0, 9.6], [8.0, 27.6, 9.6], [8.0, 27.6, 3.6]]);
     thing(&mut job, &first, Kind::Fixture, "receptacle, kitchen", &power, E, said("Duplex receptacle", E), [8.0, 27.65, 3.4], boxed(0.25, 0.1, 0.4, E));
     run(&mut job, &first, Kind::Cable, "living circuit", &power, E, cable(), &[[39.55, 19.5, 6.1], [39.55, 19.5, 9.7], [30.0, 19.5, 9.7], [30.0, 0.35, 9.7], [30.0, 0.35, 1.4]]);

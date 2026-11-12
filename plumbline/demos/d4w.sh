@@ -101,7 +101,7 @@ import sys, json
 d = {e["path"]: e for e in json.load(open(sys.argv[1]))["data"]}
 east = d["plane-0004"]["attributes"]["pl::cost"]["lines"][0]["unit_cost"]
 north = d["plane-0005"]["attributes"]
-ok = east["value"] == 31.5 and east["status"] == "Assumed" and "3D view" in east["source"]
+ok = east["value"] == 31.5 and east["status"] == "Assumed" and "set in the window" in east["source"]
 ok = ok and north["pl::allowance"]["rate"]["status"] == "Assumed" and north["pl::cost"]["lines"][0]["unit_cost"]["value"] is None
 print("    in the file: the east plane's unit cost is", east["value"], east["status"], "(" + east["source"] + ")")
 print("    in the file: the north plane's line still has no price:", north["pl::cost"]["lines"][0]["unit_cost"]["value"])

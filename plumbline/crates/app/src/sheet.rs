@@ -258,7 +258,6 @@ fn planes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsho
                 cell(r, 7.0, false, |c| dot(c, plane.worst()));
                 cell(r, 0.0, false, |c| {
                     words(c, fonts, plane.name.clone(), 12.5, Weight::Medium, theme::ink());
-                    words(c, fonts, plane.path.clone(), 11.0, Weight::Regular, theme::ink_faint());
                 });
                 cell(r, 80.0, true, |c| match plane.pitch {
                     Some(x) => words(c, fonts, theme::pitch_text(x), 12.5, Weight::Regular, theme::status_ink(plane.pitch_status)),
@@ -305,7 +304,6 @@ fn lines(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
                 cell(r, 7.0, false, |c| dot(c, line.status));
                 cell(r, 0.0, false, |c| {
                     words(c, fonts, line.name.clone(), 12.5, if touched { Weight::Semibold } else { Weight::Medium }, if touched { theme::accent() } else { theme::ink() });
-                    words(c, fonts, line.path.clone(), 11.0, Weight::Regular, theme::ink_faint());
                 });
                 cell(r, 130.0, false, |c| {
                     swatch(c, theme::line_colour(line.kind));
@@ -444,7 +442,7 @@ fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     let hard: Vec<&Clash> = found.found.iter().filter(|c| c.how == ClashKind::Hard && !c.through).collect();
     let through: Vec<&Clash> = found.found.iter().filter(|c| c.how == ClashKind::Hard && c.through).collect();
     if hard.is_empty() && through.is_empty() {
-        nothing(p, fonts, &format!("Nothing is in the same space as anything else: {} elements tested.", found.tested));
+        nothing(p, fonts, &format!("Nothing is in the same space as anything else: {} things tested.", found.tested));
     }
     if !hard.is_empty() {
         list(p, "In the same space", hard, true);
@@ -506,7 +504,6 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     cell(r, 7.0, false, |_| {});
                     cell(r, 0.0, false, |c| {
                         words(c, fonts, l.element.clone(), 12.5, Weight::Semibold, theme::ink());
-                        words(c, fonts, l.path.clone(), 11.0, Weight::Regular, theme::ink_faint());
                     });
                 });
             }
@@ -521,8 +518,9 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     _ => String::new(),
                 };
                 named(r, fonts, l.description.clone(), if l.off { theme::ink_faint() } else { theme::ink() }, tag, if l.class.is_none() { theme::status_ink(Status::Unknown) } else { theme::ink_faint() });
-                // Hours to the four places they are held and added to.
-                let places = if l.priced.unit == plumbline_world::HOURS { 4 } else { 2 };
+                // Hours are held and added to four places and shown to two, as a time
+                // sheet has them.
+                let places = 2;
                 cell(r, 96.0, true, |c| words(c, fonts, amount(l.priced.value, places, &l.priced.unit), 12.5, Weight::Regular, theme::status_ink(l.priced.status)));
                 cell(r, 92.0, true, |c| match l.unit_cost.as_ref().and_then(|v| v.value.map(|x| (x, v))) {
                     Some((x, v)) => words(c, fonts, format!("${}/{}", view::rate(x), v.unit.trim_start_matches("$/")), 12.5, Weight::Regular, theme::status_ink(v.status)),
@@ -676,7 +674,7 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
         nothing(p, fonts, "Nothing in this job has an allowance or a cost line. Select something in the model and press B to give it an allowance.");
         return;
     }
-    table(p, fonts, "Allowance against detail", format!("{} elements", pricing.elements.len()), |t| {
+    table(p, fonts, "Allowance against detail", format!("{} items", pricing.elements.len()), |t| {
         header_row(t, fonts, &[("", 7.0, false), ("Element", 0.0, false), ("Priced by", 110.0, true), ("Allowance", 110.0, true), ("Detail", 110.0, true), ("Comes to", 90.0, true), ("Difference", 170.0, true)]);
         for e in &pricing.elements {
             let selected = doc.selected.as_deref() == Some(e.path.as_str());
@@ -719,7 +717,7 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
                 cell(r, 7.0, false, |c| dot(c, if total.value.is_some() { total.status } else { Status::Unknown }));
                 cell(r, 0.0, false, |c| {
                     words(c, fonts, name, 12.5, Weight::Semibold, theme::ink());
-                    words(c, fonts, match total.value { Some(_) => format!("over {} element{}", total.members, if total.members == 1 { "" } else { "s" }), None => none.to_string() }, 11.5, Weight::Regular, theme::ink_faint());
+                    words(c, fonts, match total.value { Some(_) => format!("over {} item{}", total.members, if total.members == 1 { "" } else { "s" }), None => none.to_string() }, 11.5, Weight::Regular, theme::ink_faint());
                 });
                 cell(r, 260.0, true, |c| {
                     if total.assumed != 0.0 {
@@ -735,12 +733,12 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
                 t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(6.0) }, ..default() }).with_child(text(fonts, format!("left out: {path}: {why}"), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
             }
         };
-        line(t, "Allowances", &pricing.allowance, "no element has an allowance that comes to a figure");
-        line(t, "Detail", &pricing.detail, "no element has a detail that is whole");
+        line(t, "Allowances", &pricing.allowance, "nothing has an allowance that comes to a figure");
+        line(t, "Detail", &pricing.detail, "nothing has a detail that is whole");
         row(t, false, None, |r| {
             cell(r, 7.0, false, |c| dot(c, pricing.both.map(|b| b.2).unwrap_or(Status::Unknown)));
             cell(r, 0.0, false, |c| match pricing.both {
-                None => words(c, fonts, "Like for like: no element has both an allowance and a whole detail", 12.5, Weight::Regular, theme::ink_soft()),
+                None => words(c, fonts, "Like for like: nothing has both an allowance and a whole detail", 12.5, Weight::Regular, theme::ink_soft()),
                 Some(((a, _), (d, _), status, n)) => {
                     let diff = plumbline_world::lines::cents(d - a);
                     let said = if diff == 0.0 {

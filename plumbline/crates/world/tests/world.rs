@@ -4805,7 +4805,8 @@ fn a_fitting_is_worked_out_from_the_runs_that_meet_and_a_run_is_joined_to_a_thin
     // It is as sure as the runs, which are Known. The size it is drawn at is Assumed, and
     // its source says the part is not selected.
     assert_eq!((placed.what.status, placed.size.status), (Status::Known, Status::Assumed));
-    assert!(placed.what.source.contains("which elbow is bought is not selected"), "{}", placed.what.source);
+    // (Call 52: "not specified", the word a specification uses.)
+    assert!(placed.what.source.contains("which elbow is bought is not specified"), "{}", placed.what.source);
     assert_eq!(job.world.get::<Connectors>(e).unwrap().0.len(), 2);
     assert_eq!(job.world.get::<Fitting>(e).unwrap().kind, FittingKind::Bend);
     // The joint has its fitting: a second is refused. An open end takes none.

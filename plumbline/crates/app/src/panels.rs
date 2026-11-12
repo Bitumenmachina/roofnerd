@@ -672,14 +672,21 @@ fn inspector(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
             shortcut(c, fonts, &["G"], "Make its edge a gable");
         }
         if let Some(el) = &snap.selected {
-            shortcut(c, fonts, &["C"], "Give it a condition");
+            // A drawing is a sheet under the tracing: it has no condition, no price and
+            // no material, and is offered none.
+            let built = el.kind != Kind::Drawing && el.kind != Kind::Prior;
+            if built {
+                shortcut(c, fonts, &["C"], "Give it a condition");
+            }
             // Only what can carry an allowance is offered one, in the unit it is priced by.
             if let Some((_, unit)) = el.kind.priced_by() {
                 shortcut(c, fonts, &["B"], &format!("Type an allowance, $ per {unit}"));
             }
-            shortcut(c, fonts, &["U"], "Type the unit cost of its next unpriced line");
+            if built {
+                shortcut(c, fonts, &["U"], "Type the unit cost of its next unpriced line");
+            }
             // Only what is built is made of a material, and carries labor of its own.
-            if !matches!(el.kind, Kind::Job | Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey) {
+            if built && !matches!(el.kind, Kind::Job | Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey) {
                 shortcut(c, fonts, &["N"], "Name the material it is made of");
                 shortcut(c, fonts, &["L"], "Switch its labor line off or on");
             }
@@ -691,9 +698,12 @@ fn inspector(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         shortcut(c, fonts, &["T"], if doc.plan { "Back to 3D" } else { "Plan: straight down" });
         shortcut(c, fonts, &["V"], if doc.walk { "Back to 3D" } else { "Go in on foot" });
         shortcut(c, fonts, &["F"], "Frame the building");
-        shortcut(c, fonts, &["Tab"], "Next roof plane");
+        // Only a job with a roof has a next roof plane.
+        if !snap.planes.is_empty() {
+            shortcut(c, fonts, &["Tab"], "Next roof plane");
+        }
         shortcut(c, fonts, &["F2"], "Save the job");
-        c.spawn(Node { margin: UiRect::top(px(8.0)), ..default() }).with_child(text(fonts, "Right-drag to turn, middle-drag to pan, wheel to zoom. Click anything to select it.", 11.5, Weight::Regular, theme::ink_faint()));
+        c.spawn(Node { margin: UiRect::top(px(8.0)), ..default() }).with_child(text(fonts, "Right-drag to turn, middle-drag to slide, wheel to come closer or back off. Click anything to pick it.", 11.5, Weight::Regular, theme::ink_faint()));
     });
 }
 
@@ -864,7 +874,7 @@ pub fn takeoff(p: &mut ChildSpawnerCommands, fonts: &Fonts, t: &SystemTakeoff) {
         let j = &t.joined;
         heading(p, fonts, "Joined");
         let plural = |n: usize, one: &str, many: &str| format!("{n} {}", if n == 1 { one } else { many });
-        listed(p, fonts, None, &plural(j.networks, "network", "networks"), "runs joined end to end, through fittings".into(), String::new(), plumbline_world::Status::Known);
+        listed(p, fonts, None, &plural(j.networks, "joined length", "joined lengths"), "each is runs joined end to end, through fittings".into(), String::new(), plumbline_world::Status::Known);
         if !j.no_fitting.is_empty() {
             listed(p, fonts, None, &plural(j.no_fitting.len(), "join with no fitting", "joins with no fitting"), "a run meets another along its length".into(), String::new(), plumbline_world::Status::Known);
         }
@@ -1066,6 +1076,8 @@ pub fn write_pointer(doc: Res<Doc>, mut out: Query<&mut Text, With<PointerText>>
         Some(p) => format!("E {}     N {}     H {}{snapped}", units::feet_as_ft_in(p[0], 16), units::feet_as_ft_in(p[1], 16), units::feet_as_ft_in(p[2], 16)),
         None => "Point at the model to read a position".to_string(),
     };
+    // Through the one place every word on screen is said, as all other text is.
+    let s = theme::spoken(&s);
     if text.0 != s {
         text.0 = s;
     }

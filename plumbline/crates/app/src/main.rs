@@ -188,7 +188,7 @@ fn selected_edge(doc: &mut Doc) -> Result<(String, usize), String> {
     if !kind.is_some_and(|k| k.is_area() || k.is_run()) {
         return Err(format!("{sel} is a {}; pitch and eave are changed on a roof plane", kind.map(|k| theme::kind_name(k).to_lowercase()).unwrap_or_default()));
     }
-    let solved = doc.job.world.get::<Solved>(e).ok_or_else(|| format!("{sel} was entered by hand, not solved from a footprint; edit it in the file"))?;
+    let solved = doc.job.world.get::<Solved>(e).ok_or_else(|| format!("{sel} was drawn by its own outline, not worked out from a roof's footprint: its pitch and its eave are not changed in this window yet"))?;
     let edge = solved.edge.ok_or_else(|| format!("{sel} is a line; select the plane whose pitch or eave is to change"))?;
     Ok((solved.from.clone(), edge))
 }
@@ -553,7 +553,7 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                         _ if lines.is_empty() => Err(format!("{sel} has no cost line to price; give it a condition first (C)")),
                         _ => match lines.iter().find(|l| !l.1) {
                             Some((line, _)) => Ok(Some(line.clone())),
-                            None => Err(format!("every cost line of {sel} has a price; to change one, `plumbline set <job> {sel} unit_cost <price> --line \"<line>\"`")),
+                            None => Err(format!("every cost line of {sel} has a price already: this key prices the next line that has none. Changing a price that is there is not in this window yet")),
                         },
                     }
                 }
@@ -597,7 +597,7 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                         }
                         Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
                     },
-                    many => doc.say(Tone::Refused, format!("refused: {sel} has {} Labor lines; say which with `plumbline labor <job> {sel} off --line \"<line>\"`", many.len())),
+                    many => doc.say(Tone::Refused, format!("refused: {sel} has {} labor lines, and this key switches a thing's only labor line: switching one of several is not in this window yet", many.len())),
                 }
             }
         }
