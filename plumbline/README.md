@@ -1,10 +1,56 @@
 # plumbline (working name)
 
-A 3D estimating platform for high-end residential work. The job is one
-entity-component world: every building element is an entity carrying geometry,
-condition, cost, schedule, status and provenance. The 3D view, the estimate
-sheet, the reports and the schedule are views over that one world. It is being
-proven on the building envelope first.
+A 3D estimating program for the whole house, every trade. Trace the drawings you are
+given, build the 3D house from the tracing, price it division by division (the sixteen
+divisions), and get the list of what has to be verified in the field with the dollars
+riding on each question. The job is one model; the 3D view, the estimate sheet, the
+workbook and the lists are views of it. Every value is Known, Assumed or Unknown and
+says where it came from. The program sends no job data and no costs anywhere.
+
+## Install on Linux
+
+Tested on Ubuntu 24.04. Three steps, in order.
+
+**1. What the build needs** (a C toolchain, the X11 development files the window is
+built against, and a Vulkan driver; Mesa's runs on any machine, with or without a
+graphics card):
+
+```
+sudo apt-get update
+sudo apt-get install -y build-essential pkg-config curl git libx11-dev libxkbcommon-x11-0 mesa-vulkan-drivers
+```
+
+**2. Rust**, through rustup. The repository names the version it builds with
+(`rust-toolchain.toml`, 1.97.1) and rustup fetches it on the first build:
+
+```
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+. "$HOME/.cargo/env"
+```
+
+**3. The program:**
+
+```
+git clone https://github.com/Bitumenmachina/roofnerd
+cd roofnerd/plumbline
+cargo build                         # the first build takes a while: it builds the 3D engine
+cargo test --workspace              # the model, the command line, the window's crate
+cargo run -p plumbline-app          # a new job, job.json, in the model window and the sheet window
+```
+
+The window opens on an empty job with **Next steps** down its left side: add a level,
+add a drawing and set its scale, draw the walls, and so on to a price. To try it on a
+real plan, `tools/fetch-plans.sh` fetches a public-domain USDA farmhouse plan into
+`plans/` (it needs the network once); in the window, Add drawing takes its name.
+
+To run the demonstrations as well (each is a script that drives the real program and
+checks what it did; the ones ending in `w` drive the window on a virtual display):
+
+```
+sudo apt-get install -y xvfb xdotool python3 python3-pil python3-openpyxl
+demos/d1.sh                         # one of the command-line ones
+demos/pricew.sh                     # one of the window ones; its pictures land in demos/captured/price
+```
 
 Where things stand is in [STATUS.md](STATUS.md). The model is in [SPEC.md](SPEC.md).
 
