@@ -406,7 +406,7 @@ fn each_way_of_writing_a_length_means_what_it_says() {
         // Call 49: a comma is refused as before, and now says why.
         ("1,200 ft", "has a comma"),
         ("12 m", "metric"),
-        ("12 metres", "metric"),
+        ("12 meters", "metric"),
         ("12 mm", "metric"),
         ("12 yd", "\"yd\""),
         ("twelve ft", "is not a number"),
@@ -1328,7 +1328,7 @@ fn a_condition_in_the_file_has_to_be_a_recipe_that_makes_sense() {
     .contains("a condition is its recipe"));
     assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!([]))).contains("does not say what kind"));
     // (Call 57: an assembly goes on anything built and on the job; not on a level.)
-    assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!(["Storey"]))).contains("not on a Storey"));
+    assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!(["Storey"]))).contains("not on a level"));
     // A recipe line has to make sense on every kind it applies to: a hip has no height.
     assert!(err(edit(&text, |v| attrs(v, "condition-0025")["pl::recipe"]["applies_to"] = serde_json::json!(["Parapet", "Hip"]))).contains("does not have"));
     assert!(err(edit(&text, |v| attrs(v, "plane-0003")["pl::recipe"] = attrs(&mut serde_json::from_str(&text).unwrap(), "condition-0025")["pl::recipe"].clone())).contains("only a Condition element can"));
@@ -2429,7 +2429,7 @@ fn a_storey_totals_its_walls_and_floors_and_every_element_is_placed_or_accounted
     let (still, not_drawn) = placements(&mut job);
     // (The two elbows with no size are on the first floor too. A thing is listed once,
     // with the first thing that stops it being drawn.)
-    assert_eq!(not_drawn.iter().filter(|(_, why)| why == "its storey's elevation is not known").count(), on_first + 2);
+    assert_eq!(not_drawn.iter().filter(|(_, why)| why == "its level's elevation is not known").count(), on_first + 2);
     assert_eq!(not_drawn.len(), on_first + 2);
     assert!(still.iter().all(|p| p.storey.as_deref() != Some(first.as_str())));
     // The first floor's outside walls stood up to the second floor, whose elevation is
@@ -2497,7 +2497,7 @@ fn a_storey_stands_under_the_job_and_counts_only_what_is_nearest_it() {
             entry["children"].as_object_mut().unwrap().insert("second floor".into(), second.clone().into());
         }
     }
-    let err = file::load(&doc.to_string()).err().expect("a storey under a storey is refused");
+    let err = file::load(&doc.to_string()).err().expect("a level under a level is refused");
     assert!(err.contains("has to be directly under the job"), "{err}");
     // Built in code, where nothing stops it, each wall still counts once, on its own storey.
     let e = job.find(&second).unwrap();
@@ -2809,7 +2809,7 @@ fn a_type_named_has_to_be_a_type_of_the_right_sort() {
     wall["attributes"]["pl::wall"]["top_level"]["value"] = outside.clone().into();
     let broken = doc.to_string();
     let err = file::load(&broken).err().expect("a top level that is a type");
-    assert!(err.contains("which is not a storey in this job"), "{err}");
+    assert!(err.contains("which is not a level in this job"), "{err}");
     // A type under a storey instead of under the job.
     let mut doc: serde_json::Value = serde_json::from_str(&text).unwrap();
     for entry in doc["data"].as_array_mut().unwrap() {
@@ -2820,7 +2820,7 @@ fn a_type_named_has_to_be_a_type_of_the_right_sort() {
             entry["children"].as_object_mut().unwrap().insert("Slab on grade, 4 in".into(), slab.clone().into());
         }
     }
-    let err = file::load(&doc.to_string()).err().expect("a type under a storey");
+    let err = file::load(&doc.to_string()).err().expect("a type under a level");
     assert!(err.contains("a type belongs to the whole job"), "{err}");
     // Taken out of a job that is open, a type leaves its walls with no thickness to draw
     // and its openings with no size, each said: nothing falls back to a number.
@@ -3036,7 +3036,7 @@ fn how_close_is_one_node_and_what_cannot_be_placed_is_said() {
     job.put(&upper, plumbline_world::Level { elevation: Val::unknown("ft", "not surveyed"), height: ft(9.0), computation_height: None }).unwrap();
     let lost = piece(&mut job, &upper, Kind::Pipe, "upstairs", &two, [0.0, 0.0, 1.0], [10.0, 0.0, 1.0]);
     let n = network(&mut job, None, None, 0.05).unwrap();
-    assert_eq!(n.left_out, vec![(lost.clone(), "its storey's elevation is not known".to_string())]);
+    assert_eq!(n.left_out, vec![(lost.clone(), "its level's elevation is not known".to_string())]);
     assert_eq!(n.groups.len(), 3);
     // Asked for one storey, only what is under it.
     assert_eq!(network(&mut job, None, Some(&upper), 0.05).unwrap().groups.len(), 0);
@@ -3233,7 +3233,7 @@ fn a_room_that_is_not_closed_or_is_in_a_wall_has_no_area_and_says_why() {
     job.derive();
     let d = measure_of(&mut job, &r, "floor_area");
     assert_eq!(d.value, None);
-    assert_eq!(d.note, "west cannot be placed (its height is not known), so what bounds the rooms of this storey is not known");
+    assert_eq!(d.note, "west cannot be placed (its height is not known), so what bounds the rooms of this level is not known");
     // A room on another storey is still measured, but is Assumed, and says what it assumes.
     let upper = job.add("job-0001", Kind::Storey, "upper").unwrap();
     job.put(&upper, plumbline_world::Level { elevation: ft(10.0), height: ft(9.0), computation_height: None }).unwrap();
@@ -3323,7 +3323,7 @@ fn a_room_in_the_file_has_to_be_under_a_storey_and_have_a_point_that_makes_sense
         }
     }
     let err = file::load(&doc.to_string()).err().expect("a room under the job");
-    assert!(err.contains("a room is a space on a storey"), "{err}");
+    assert!(err.contains("a room is a space on a level"), "{err}");
 }
 
 // ---------------------------------------------------------------- D4: macro to micro
@@ -3622,7 +3622,7 @@ fn a_wall_with_nothing_entered_and_a_point_in_a_wall_leave_no_figure_standing() 
     for name in ["floor_area", "gross_area", "perimeter"] {
         let d = measure_of(&mut job, &r, name);
         assert_eq!((d.value, d.status), (None, Status::Unknown), "{name}");
-        assert_eq!(d.note, "wall with nothing entered cannot be placed (it has no wall line entered), so what bounds the rooms of this storey is not known", "{name}");
+        assert_eq!(d.note, "wall with nothing entered cannot be placed (it has no wall line entered), so what bounds the rooms of this level is not known", "{name}");
     }
     // And such a file loads the same way: the wall is not dropped.
     let text = file::save(&mut job);
@@ -3819,7 +3819,7 @@ fn the_estimate_puts_every_line_in_one_class_and_adds_up_what_is_shown() {
     // The job cost is the classes added up, and it names the line that is in none.
     assert_eq!((est.job_cost.value, est.job_cost.status, est.job_cost.members), (Some(25292.43), Status::Assumed, 13));
     assert_eq!(est.job_cost.left_out.len(), 1);
-    assert!(est.job_cost.left_out[0].0.starts_with("plane-0005") && est.job_cost.left_out[0].1.contains("no class"), "{:?}", est.job_cost.left_out);
+    assert!(est.job_cost.left_out[0].0.starts_with("plane-0005") && est.job_cost.left_out[0].1.contains("no cost type"), "{:?}", est.job_cost.left_out);
     assert_eq!(est.not_classed, [("plane-0005".to_string(), "Copper standing seam, installed".to_string())]);
     // Every line that is on, classed and has a figure is in exactly one class.
     let in_classes: usize = est.classes.iter().map(|c| c.total.members).sum();
@@ -4069,7 +4069,7 @@ fn a_line_typed_by_hand_onto_the_job_lands_in_general_conditions() {
     assert!(job.add_line("job-0001", "dumpster", "1", Some(Class::General), false).is_err());
     // A line made of the element's material is Material, and on an element that does not
     // say what it is made of it has no figure and says so.
-    assert!(job.add_line("plane-0006", "Trim", "surface_area", Some(Class::General), true).unwrap_err().contains("its class is Material"));
+    assert!(job.add_line("plane-0006", "Trim", "surface_area", Some(Class::General), true).unwrap_err().contains("its cost type is Material"));
     job.add_line("plane-0006", "Trim", "surface_area", None, true).unwrap();
     job.derive();
     assert!(extension_of(&mut job, "plane-0006", "Trim").note.contains("does not say what it is made of"));
@@ -4402,7 +4402,7 @@ fn what_cannot_be_drawn_is_refused_and_leaves_the_job_as_it_was() {
     let got = none(ed::walls(&mut job, &s, &dt, &[[0.0, 20.0], [5.0, 20.0]], false, ed::Top::Height("9 ft"), how));
     refused(&mut job, got, "type");
     let got = none(ed::walls(&mut job, &wt, &wt, &[[0.0, 20.0], [5.0, 20.0]], false, ed::Top::Height("9 ft"), how));
-    refused(&mut job, got, "not a storey");
+    refused(&mut job, got, "not a level");
     let got = none(ed::walls(&mut job, &s, &wt, &[[0.0, 20.0], [5.0, 20.0]], false, ed::Top::Level("storey-9999"), how));
     refused(&mut job, got, "storey-9999");
     // A point that is not along the wall; a door of a window's type; on what is not a wall.
@@ -5341,7 +5341,7 @@ fn a_drawing_gets_its_scale_from_one_dimension_and_what_is_traced_over_it_says_s
     assert!(plans::calibrate(&mut job, &d, [126.0, 90.0], [666.0, 90.0], "0 ft", read).unwrap_err().contains("more than nothing"));
     assert!(plans::calibrate(&mut job, &d, [126.0, 90.0], [666.0, 90.0], "30", read).unwrap_err().contains("no unit"));
     assert!(plans::calibrate(&mut job, &d, [126.0, f64::NAN], [666.0, 90.0], "30 ft", read).is_err());
-    assert!(plans::add(&mut job, &wt, "on a type", page(), how).unwrap_err().contains("not a storey"));
+    assert!(plans::add(&mut job, &wt, "on a type", page(), how).unwrap_err().contains("not a level"));
     assert!(plans::line_up(&mut job, &s, [0.0, 0.0], [0.0, 0.0], read).unwrap_err().contains("is not a drawing"));
     assert_eq!(save(&mut job), before);
     // It saves and loads to the same bytes, with its scale.
@@ -5355,7 +5355,7 @@ fn a_drawing_gets_its_scale_from_one_dimension_and_what_is_traced_over_it_says_s
     let under_job = job.add("job-0001", Kind::Drawing, "loose").unwrap();
     let moved = drawing(&mut job);
     job.put(&under_job, moved).unwrap();
-    assert!(load(&save(&mut job)).err().unwrap().contains("a drawing is a plan of a storey"));
+    assert!(load(&save(&mut job)).err().unwrap().contains("a drawing is a plan of a level"));
 }
 
 // ---------------------------------------------------------------- the thirteenth judgment

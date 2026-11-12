@@ -3,7 +3,7 @@
 #
 # The first is a real sheet: USDA Plan No. 7213, Two-Bedroom Farmhouse (1976; public
 # domain; a scan, so there is nothing on it to snap to). Its floor-plan sheet is laid under
-# a storey; a wall is refused while the sheet has no scale; the scale is set from the
+# a level; a wall is refused while the sheet has no scale; the scale is set from the
 # sheet's 41'-3" overall dimension, picked at its two ends by eye; and the outside walls
 # are traced, the first corner picked on the sheet and each side typed as the sheet
 # dimensions it: 41'-3" by 23'-11". The 3D house stands on the sheet.
@@ -213,4 +213,4 @@ if any(l["status"] != "Assumed" or l["source"] != "traced from made-up-plan (mad
     print("FAIL: a traced wall is not flagged as traced from the drawing"); sys.exit(1)
 print("    30, 20, 30 and 20 ft, each Assumed, traced from made-up-plan (made-up-plan.pdf, page 1)")
 PY
-echo "  PASS: a real scanned sheet and a vector plan were each laid under a storey, given a scale from one dimension and traced in the window, and the saved jobs have the figures worked by hand"
+echo "  PASS: a real scanned sheet and a vector plan were each laid under a level, given a scale from one dimension and traced in the window, and the saved jobs have the figures worked by hand"

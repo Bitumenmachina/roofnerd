@@ -341,7 +341,7 @@ impl Job {
             let unit = lines::read(&on, &line).map_err(|why| format!("{path} cost line {description:?}: its quantity {quantity:?} {why}"))?.unit;
             line.unit_cost.unit = format!("$/{unit}");
         } else if class.is_some_and(|c| c != Class::Material) {
-            return Err(format!("{path} cost line {description:?}: is made of the element's material, so its class is Material"));
+            return Err(format!("{path} cost line {description:?}: is made of the element's material, so its cost type is Material"));
         }
         let mut new = self.world.get::<Cost>(e).cloned().unwrap_or_else(|| Cost { code: Val::unknown("", "not coded"), lines: Vec::new() });
         new.lines.push(line);

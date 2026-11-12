@@ -12,7 +12,7 @@ use bevy::image::{ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerD
 use bevy::mesh::Indices;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, PrimitiveTopology, TextureDimension, TextureFormat};
-use plumbline_world::finish::{Cladding, Leaf, OpeningDress, Roofing, Sash};
+use plumbline_world::finish::{Cladding, Leaf, Lites, OpeningDress, Roofing, Sash};
 use std::collections::HashMap;
 
 const IN: f32 = 1.0 / 12.0;
@@ -32,15 +32,23 @@ pub enum Look {
     Tile,
     Shake,
     Membrane,
+    Vertical,
+    Sheet,
+    Block,
 }
 
 impl Look {
     pub fn of_cladding(c: Cladding) -> Look {
         match c {
             Cladding::LapSiding => Look::Lap,
+            Cladding::VerticalSiding => Look::Vertical,
             Cladding::BoardAndBatten => Look::Batten,
             Cladding::Shingles => Look::Shingle,
+            Cladding::Panel => Look::Sheet,
+            // Ribbed metal on a wall is the roof's panel stood up: its ribs run up the wall.
+            Cladding::MetalPanel => Look::Seam,
             Cladding::Brick => Look::Brick,
+            Cladding::Block => Look::Block,
             Cladding::Stone => Look::Stone,
             Cladding::Stucco => Look::Stucco,
         }
@@ -48,8 +56,9 @@ impl Look {
     pub fn of_roofing(r: Roofing) -> Look {
         match r {
             Roofing::AsphaltShingles => Look::Asphalt,
-            Roofing::StandingSeam => Look::Seam,
-            Roofing::Slate => Look::Slate,
+            Roofing::StandingSeam | Roofing::MetalPanel => Look::Seam,
+            // Metal shingles lie in courses of small pieces, as slate does.
+            Roofing::MetalShingles | Roofing::Slate => Look::Slate,
             Roofing::Tile => Look::Tile,
             Roofing::Shakes => Look::Shake,
             Roofing::Membrane => Look::Membrane,
@@ -70,12 +79,16 @@ impl Look {
             Look::Tile => [32.0 * IN, 26.0 * IN],
             Look::Shake => [4.0, 40.0 * IN],
             Look::Membrane => [4.0, 4.0],
+            Look::Vertical => [16.0 * IN, 16.0 * IN],
+            Look::Sheet => [4.0, 8.0],
+            Look::Block => [32.0 * IN, 16.0 * IN],
         }
     }
     /// The color it is when no line names one.
     fn tone(self) -> [u8; 3] {
         match self {
-            Look::Lap | Look::Batten => [0xE6, 0xE1, 0xD6],
+            Look::Lap | Look::Batten | Look::Vertical | Look::Sheet => [0xE6, 0xE1, 0xD6],
+            Look::Block => [0xB4, 0xB2, 0xAC],
             Look::Shingle => [0xA8, 0x93, 0x7A],
             Look::Brick => [0x98, 0x50, 0x3C],
             Look::Stone => [0x9E, 0x98, 0x8C],
@@ -113,6 +126,9 @@ impl Look {
             Look::Slate => 1.8,
             Look::Tile => 3.4,
             Look::Membrane => 0.3,
+            Look::Vertical => 2.0,
+            Look::Sheet => 1.4,
+            Look::Block => 2.0,
         }
     }
 }
@@ -353,6 +369,34 @@ fn at(look: Look, u: f32, v: f32, courses: &[Vec<f32>]) -> ([f32; 3], f32) {
             let tint = if hue < 0.12 { [0.96, 1.04, 0.98] } else if hue > 0.90 { [1.05, 0.96, 1.02] } else { [1.0, 1.0, 1.0] };
             ([s * tint[0], s * tint[1], s * tint[2]], f * 0.7 + 0.3 * k)
         }
+        Look::Vertical => {
+            // Plywood or board siding with a groove every 8 in, running up the wall.
+            let d = ((u * 2.0).fract() - 0.5).abs() * 8.0;
+            let groove = d < 0.25;
+            let grain = 0.985 + 0.03 * noise(u * 90.0, v * 5.0, 90, 5, 12);
+            (flat(grain * if groove { 0.62 } else if d < 0.5 { 0.9 } else { 1.0 }), if groove { 0.0 } else { 1.0 })
+        }
+        Look::Sheet => {
+            // Panels 4 ft by 8 ft with an open joint between them.
+            let edge = (u.min(1.0 - u) * 48.0).min(v.min(1.0 - v) * 96.0);
+            let face = 0.985 + 0.03 * cloud(u, v, 16, 32, 2, 13);
+            (flat(face * if edge < 0.2 { 0.55 } else { 1.0 }), if edge < 0.2 { 0.0 } else { 1.0 })
+        }
+        Look::Block => {
+            // Concrete block in running bond: 16 in by 8 in with its 3/8 in joint.
+            let c = (y / 8.0).floor();
+            let fy = y - c * 8.0;
+            let bx = (x + if (c as i32) % 2 == 1 { 8.0 } else { 0.0 }).rem_euclid(32.0);
+            let b = (bx / 16.0).floor();
+            let fx = bx - b * 16.0;
+            let joint = fx.min(fy);
+            if joint < 0.375 {
+                ([-(0.74 + 0.06 * cloud(u, v, 48, 24, 2, 14)), 0.0, 0.0], 0.0)
+            } else {
+                let s = (0.93 + 0.12 * hash(b as i32, c as i32, 15)) * (0.92 + 0.16 * cloud(u, v, 64, 32, 4, 16));
+                (flat(s), smooth(0.375, 0.6, joint))
+            }
+        }
         Look::Tile => {
             // Barrel tile: 8 in across each, 13 in to the weather.
             let c = (v * 2.0).floor();
@@ -568,7 +612,7 @@ pub struct Unit {
 
 /// One sash: stiles, rails, its glass, and the bars across it when its lites are divided.
 #[allow(clippy::too_many_arguments)]
-fn sash(u: &mut Unit, f: &Part, x: [f32; 2], y: [f32; 2], zc: f32, stile: f32, bottom: f32, divided: Option<Option<(u32, u32)>>) {
+fn sash(u: &mut Unit, f: &Part, x: [f32; 2], y: [f32; 2], zc: f32, stile: f32, bottom: f32, divided: Option<(u32, u32)>) {
     let deep = [zc - 0.75 * IN, zc + 0.75 * IN];
     u.unit.block(f, [x[0], x[0] + stile], y, deep);
     u.unit.block(f, [x[1] - stile, x[1]], y, deep);
@@ -576,10 +620,8 @@ fn sash(u: &mut Unit, f: &Part, x: [f32; 2], y: [f32; 2], zc: f32, stile: f32, b
     u.unit.block(f, [x[0] + stile, x[1] - stile], [y[1] - stile, y[1]], deep);
     let (gx, gy) = ([x[0] + stile, x[1] - stile], [y[0] + bottom, y[1] - stile]);
     u.glass.block(f, gx, gy, [zc - 0.2 * IN, zc + 0.2 * IN]);
-    if let Some(lites) = divided {
+    if let Some((across, up)) = divided {
         let (gw, gh) = (gx[1] - gx[0], gy[1] - gy[0]);
-        // Left to the size, a light is about 11 in wide and 15 in tall.
-        let (across, up) = lites.unwrap_or((((gw / (11.0 * IN)).round() as u32).clamp(2, 8), ((gh / (15.0 * IN)).round() as u32).clamp(1, 8)));
         let bar = 0.44 * IN;
         let bars = [zc - 0.5 * IN, zc + 0.5 * IN];
         for i in 1..across {
@@ -648,20 +690,37 @@ pub fn window(f: &Part, w: f32, h: f32, t: f32, d: Option<&OpeningDress>, outsid
     let (x, y) = ([frame, w - frame], [frame, h - frame]);
     let stile = 2.0 * IN;
     let hung = matches!(d.and_then(|d| d.sash.as_ref()).map(|s| s.what), Some(Sash::DoubleHung));
-    // Divided lites with no count given are left to the size, a light about 11 in wide
-    // and 15 in tall, and worked out once so that every sash of the window matches.
-    let divided = d.and_then(|d| d.divided).map(|lites| {
-        let sash_h = if hung { (y[1] - y[0]) / 2.0 } else { y[1] - y[0] } - 2.0 * stile;
-        let sash_w = if matches!(d.and_then(|d| d.sash.as_ref()).map(|s| s.what), Some(Sash::Casement | Sash::Slider)) && w > 3.5 { (x[1] - x[0]) / 2.0 } else { x[1] - x[0] } - 2.0 * stile;
-        Some(lites.unwrap_or((((sash_w / (11.0 * IN)).round() as u32).clamp(2, 8), ((sash_h / (15.0 * IN)).round() as u32).clamp(1, 8))))
-    });
+    // The lites of a sash: so many across and up. A count a line gives ("6 over 1") is
+    // laid out as near square as it goes; with none given a light is about 11 in wide
+    // and 15 in tall, worked out once so that every sash of the window matches.
+    let pair = matches!(d.and_then(|d| d.sash.as_ref()).map(|s| s.what), Some(Sash::Casement | Sash::Slider)) && w > 3.5;
+    let sash_h = if hung { (y[1] - y[0]) / 2.0 } else { y[1] - y[0] } - 2.0 * stile;
+    let sash_w = if pair { (x[1] - x[0]) / 2.0 } else { x[1] - x[0] } - 2.0 * stile;
+    let by_size = (((sash_w / (11.0 * IN)).round() as u32).clamp(2, 8), ((sash_h / (15.0 * IN)).round() as u32).clamp(1, 8));
+    let grid = |count: Option<u32>| -> Option<(u32, u32)> {
+        match count {
+            None => Some(by_size),
+            Some(1) => None,
+            Some(n) => {
+                let across = match n {
+                    2 | 4 => 2,
+                    3 | 6 | 9 => 3,
+                    8 | 12 | 16 => 4,
+                    n => n,
+                };
+                Some((across, (n / across).max(1)))
+            }
+        }
+    };
+    let lites: Option<Lites> = d.and_then(|d| d.divided);
+    let (divided, lower) = (lites.and_then(|l| grid(l.upper)), lites.and_then(|l| grid(l.lower)));
     match d.and_then(|d| d.sash.as_ref()).map(|s| s.what) {
         Some(Sash::DoubleHung) => {
             // Two sashes, the upper one outside the lower, meeting at the middle.
             let mid = (y[0] + y[1]) / 2.0;
             let step = if zc >= 0.0 { 0.8 * IN } else { -0.8 * IN };
             sash(&mut u, f, x, [mid - 0.6 * IN, y[1]], zc + step, stile, 1.6 * IN, divided);
-            sash(&mut u, f, x, [y[0], mid + 0.6 * IN], zc - step, stile, 3.0 * IN, divided);
+            sash(&mut u, f, x, [y[0], mid + 0.6 * IN], zc - step, stile, 3.0 * IN, lower);
         }
         Some(Sash::Casement) if w > 3.5 => {
             // A pair, with a post between them.
@@ -735,8 +794,8 @@ pub fn door(f: &Part, w: f32, h: f32, t: f32, d: Option<&OpeningDress>, outside:
             u.unit.block(f, [x[0] + stile, x[1] - stile], [y[1] - rail, y[1]], full);
             let (gx, gy) = ([x[0] + stile, x[1] - stile], [y[0] + bottom, y[1] - rail]);
             u.glass.block(f, gx, gy, [zc - 0.2 * IN, zc + 0.2 * IN]);
-            if let Some(lites) = d.and_then(|d| d.divided) {
-                let (across, up) = lites.unwrap_or((if lw > 2.6 { 3 } else { 2 }, 5));
+            if d.and_then(|d| d.divided).is_some() {
+                let (across, up) = (if lw > 2.6 { 3 } else { 2 }, 5);
                 let bar = 0.44 * IN;
                 for i in 1..across {
                     let at = gx[0] + (gx[1] - gx[0]) * i as f32 / across as f32;
@@ -782,7 +841,7 @@ mod tests {
     /// its top from its bottom, to within what one step across the picture changes it.
     #[test]
     fn every_pattern_is_made_and_has_every_smaller_size_of_itself() {
-        for look in [Look::Lap, Look::Batten, Look::Shingle, Look::Brick, Look::Stone, Look::Stucco, Look::Asphalt, Look::Seam, Look::Slate, Look::Tile, Look::Shake, Look::Membrane] {
+        for look in [Look::Lap, Look::Batten, Look::Shingle, Look::Brick, Look::Stone, Look::Stucco, Look::Asphalt, Look::Seam, Look::Slate, Look::Tile, Look::Shake, Look::Membrane, Look::Vertical, Look::Sheet, Look::Block] {
             let (colour, relief) = paint(look, look.tone());
             // 512 squared and each half of it down to one: (4^10 - 1) / 3 * 4 bytes... in all.
             let want: usize = (0..10).map(|k| (N >> k) * (N >> k) * 4).sum();
@@ -819,7 +878,7 @@ mod tests {
     #[test]
     fn a_double_hung_window_has_two_sashes_and_its_bars() {
         let f = Part { o: Vec3::ZERO, x: Vec3::X, y: Vec3::Y, z: Vec3::Z };
-        let d = OpeningDress { sash: Some(plumbline_world::finish::Said { what: Sash::DoubleHung, tone: None, by: String::new(), also: Vec::new() }), leaf: None, divided: Some(Some((3, 2))), tone: None };
+        let d = OpeningDress { sash: Some(plumbline_world::finish::Said { what: Sash::DoubleHung, tone: None, by: String::new(), also: Vec::new() }), leaf: None, divided: Some(Lites { upper: Some(6), lower: Some(6) }), tone: None };
         let plain = window(&f, 3.0, 5.0, 0.5, None, [true, false], false);
         let hung = window(&f, 3.0, 5.0, 0.5, Some(&d), [true, false], false);
         // One light against two.

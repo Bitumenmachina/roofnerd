@@ -69,7 +69,7 @@ impl SnapKind {
             SnapKind::Endpoint => "On an end",
             SnapKind::Midpoint => "On a middle",
             SnapKind::Intersection => "Where two cross",
-            SnapKind::Centre => "On a centre",
+            SnapKind::Centre => "On a center",
             SnapKind::Perpendicular => "Square to it",
             SnapKind::Nearest => "On a line",
             SnapKind::Angle => "On the angle",

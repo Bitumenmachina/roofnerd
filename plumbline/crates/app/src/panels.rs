@@ -795,7 +795,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
         Entry::Measure => match &doc.measuring {
             // A height is to a line: a run's to its centre unless it is held to its
             // bottom or its top, a placed thing's to its underside.
-            Some((_, what, true)) if what.starts_with("height above its storey") => {
+            Some((_, what, true)) if what.starts_with("height above its level") => {
                 let to = match snap.selected.as_ref() {
                     Some(el) if el.kind.is_segment() => el.rows.iter().find(|r| r.label == "its heights are those of its").map(|r| r.text.clone()).unwrap_or_else(|| "centre".to_string()),
                     _ => "underside".to_string(),
@@ -819,7 +819,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
         Entry::Overhead => "A percentage of the job cost, like 12",
         Entry::Profit => "A percentage of cost and overhead, like 8",
         Entry::Measure => match &doc.measuring {
-            Some((_, what, true)) if what.starts_with("height above its storey") && snap.selected.as_ref().is_some_and(|s| s.kind.is_segment()) => "Like bottom 7' 10 3/4\", or same",
+            Some((_, what, true)) if what.starts_with("height above its level") && snap.selected.as_ref().is_some_and(|s| s.kind.is_segment()) => "Like bottom 7' 10 3/4\", or same",
             Some((_, _, true)) => "As the tape or laser reads, or same",
             _ => "Type same if it is as drawn",
         },

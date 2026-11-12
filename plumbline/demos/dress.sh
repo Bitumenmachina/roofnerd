@@ -20,7 +20,7 @@ line() { "$P" line "$J" "$1" "$2" 1 --cost-type material --division "$3" >/dev/n
 
 echo "== The house: four walls round 24 ft by 16 ft, a partition, a door, two windows, a hip roof =="
 "$P" new "$J" "Dressed (not a real job)"
-S="$(made "$("$P" storey "$J" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+S="$(made "$("$P" level "$J" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
 WT="$(made "$("$P" type "$J" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
 DT="$(made "$("$P" type "$J" door "door 3 ft" --width "3 ft" --height "7 ft" "${K[@]}")")"
 NT="$(made "$("$P" type "$J" window "window 3 ft" --width "3 ft" --height "5 ft" "${K[@]}")")"
@@ -68,10 +68,10 @@ says "lap siding" "($EAST): lap siding, white, on its east face (the line \"Fibe
 says "shingles over a stone wainscot" "($NORTH): shingles, cedar, on its north face (the line \"Cedar shingle siding\"); stone veneer wainscot to 3' 0\" (the line \"Stone veneer wainscot, 3 ft\")"
 says "stucco" "($WEST): stucco, on its west face (the line \"Stucco, three coat\")"
 # Brick priced on a partition is in the estimate and is not drawn: it has no outside face.
-says "the partition" "($PART): a partition: both its faces are inside, so no cladding is drawn on it; brick veneer is priced on it"
+says "the partition" "($PART): a partition: both its faces are inside, so no cladding is drawn on it; priced on it and not drawn: brick veneer"
 says "a roof plane" "($P1): standing seam, charcoal (the line \"Standing seam roofing, charcoal\")"
 # 6 over 6: six lites in each sash, three across and two up.
-says "the priced window" "($WIN1): double-hung, divided lites 3 across and 2 up in each sash, black"
+says "the priced window" "($WIN1): double-hung, divided lites, 6 over 6, black"
 says "the window nothing is priced on" "($WIN2): a frame, one sash and one light"
 says "the door" "($DOOR): a panel door (the line \"Entry door, six panel, prehung\")"
 

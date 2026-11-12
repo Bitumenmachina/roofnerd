@@ -54,7 +54,7 @@ fn as_traced_two_levels_carry_the_wall_and_the_duct_and_its_clashes_carry_nothin
     // 24 ft by 9 ft is 216 SF, at $2.40: $518.40, one line, counted once in the total.
     assert_eq!((list.riding, list.riding_status, list.riding_lines), (Some(518.40), Status::Assumed, 1));
     let found = rows(&mut m.job);
-    let levels = vec!["elevation".to_string(), "storey height".to_string()];
+    let levels = vec!["elevation".to_string(), "level height".to_string()];
     assert_eq!(found.len(), 5, "{found:#?}");
     assert_eq!(found[0], (m.ground.clone(), None, Some(518.40), 1, levels.clone()));
     assert_eq!(found[1], (m.upper.clone(), None, Some(518.40), 1, levels));
@@ -62,7 +62,7 @@ fn as_traced_two_levels_carry_the_wall_and_the_duct_and_its_clashes_carry_nothin
     assert_eq!((found[2].0.as_str(), found[2].1.as_deref(), found[2].2, found[2].3), (m.duct.as_str(), Some(m.pipe_a.as_str()), None, 0));
     assert_eq!((found[3].0.as_str(), found[3].1.as_deref(), found[3].2, found[3].3), (m.duct.as_str(), Some(m.pipe_b.as_str()), None, 0));
     assert_eq!((found[4].0.as_str(), found[4].1.as_deref(), found[4].2), (m.duct.as_str(), None, None));
-    for value in ["type", "line on the plan", "height above its storey"] {
+    for value in ["type", "line on the plan", "height above its level"] {
         assert!(found[4].4.iter().any(|v| v == value), "the duct's {value} is to be verified: {:?}", found[4].4);
     }
     // What is Known asks nothing: no wall, no pipe, no type is on the list.
@@ -75,24 +75,24 @@ fn as_traced_two_levels_carry_the_wall_and_the_duct_and_its_clashes_carry_nothin
 fn a_measurement_takes_its_question_off_and_a_line_that_is_known_has_nothing_riding() {
     let mut m = made();
     ed::measure(&mut m.job, &m.ground, "elevation", Reading::Same, None, "JM on site").unwrap();
-    ed::measure(&mut m.job, &m.ground, "storey height", Reading::Length("8'10\"1/2"), None, "JM with the laser").unwrap();
+    ed::measure(&mut m.job, &m.ground, "level height", Reading::Length("8'10\"1/2"), None, "JM with the laser").unwrap();
     // The wall is 24 by 8.875 now, 213 SF, $511.20, and Known: the upper level still has
     // its own height to verify, and no dollars ride on that.
     let found = rows(&mut m.job);
     assert!(!found.iter().any(|r| r.0 == m.ground), "the ground level is measured and is still on the list");
     let upper = found.iter().find(|r| r.0 == m.upper).expect("the upper level's height is still as scaled");
-    assert_eq!((upper.2, upper.3, upper.4.clone()), (None, 0, vec!["storey height".to_string()]));
+    assert_eq!((upper.2, upper.3, upper.4.clone()), (None, 0, vec!["level height".to_string()]));
     assert_eq!(vif(&mut m.job).riding, None);
 
     ed::measure(&mut m.job, &m.duct, "line on the plan", Reading::Same, None, "JM on site").unwrap();
     ed::measure(&mut m.job, &m.duct, "type", Reading::Same, None, "JM on site").unwrap();
-    ed::measure(&mut m.job, &m.duct, "height above its storey", Reading::Length("7'10\"3/4"), Some(Justify::Bottom), "JM with the laser").unwrap();
+    ed::measure(&mut m.job, &m.duct, "height above its level", Reading::Length("7'10\"3/4"), Some(Justify::Bottom), "JM with the laser").unwrap();
     // Pipe A is clear; pipe B in the duct is a finding now, and a finding is not a question.
     let found = rows(&mut m.job);
     assert_eq!(found.len(), 1, "{found:#?}");
     assert_eq!(found[0].0, m.upper);
 
-    ed::measure(&mut m.job, &m.upper, "storey height", Reading::Same, None, "JM on site").unwrap();
+    ed::measure(&mut m.job, &m.upper, "level height", Reading::Same, None, "JM on site").unwrap();
     let list = vif(&mut m.job);
     assert!(list.questions.is_empty(), "{:#?}", list.questions);
     assert_eq!(list.riding, None);

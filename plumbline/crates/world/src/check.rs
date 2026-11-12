@@ -388,7 +388,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
                 return Err(format!("{what}: is made of the element's material and also carries a unit cost; its price is the material's"));
             }
             if line.class != Some(Class::Material) {
-                return Err(format!("{what}: is made of the element's material, so its class is Material"));
+                return Err(format!("{what}: is made of the element's material, so its cost type is Material"));
             }
         } else {
             if CostLine::is_no_price_of_its_own(&line.unit_cost) {
@@ -565,7 +565,7 @@ pub fn recipe(path: &str, kind: Kind, t: &Recipe) -> Result<(), String> {
         // itself (its general requirements). It was once the roof's alone.
         let built = k.is_area() || k.is_run() || matches!(k, Kind::Job | Kind::Roof | Kind::Wall | Kind::Door | Kind::Window | Kind::Floor | Kind::Room | Kind::Duct | Kind::Pipe | Kind::Conduit | Kind::Cable | Kind::Fitting | Kind::Fixture | Kind::Equipment);
         if !built {
-            return Err(format!("{path}: an assembly goes on what is built (a wall, a floor, a room, a door, a window, a roof plane or line, a duct, a pipe, a fixture) or on the job, not on a {k:?}"));
+            return Err(format!("{path}: an assembly goes on what is built (a wall, a floor, a room, a door, a window, a roof plane or line, a duct, a pipe, a fixture) or on the job, not on a {}", k.stem()));
         }
         if t.applies_to[..i].contains(k) {
             return Err(format!("{path}: names {k:?} twice in what it applies to"));

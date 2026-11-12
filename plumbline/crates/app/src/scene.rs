@@ -448,8 +448,9 @@ pub fn rebuild(
                 let past = wd.map(|d| [d.past[0] as f32, d.past[1] as f32]).unwrap_or([0.0; 2]);
                 let clad = wd.and_then(|d| d.cladding.as_ref()).filter(|_| outside != Outside::Neither);
                 let low = wd.and_then(|d| d.wainscot.as_ref()).filter(|_| outside != Outside::Neither);
-                // With no outline to say which face is out, what is priced is drawn on both.
-                let both = outside == Outside::NotKnown && (clad.is_some() || low.is_some());
+                // A wall with both faces outdoors, or with no outline to say which face is
+                // out, is dressed on both.
+                let both = wd.is_some_and(|d| d.both()) && (clad.is_some() || low.is_some());
                 let upper = clad.map(|c| patterns.get(&mut images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb)));
                 let lower = low.map(|(c, to, _)| (patterns.get(&mut images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb)), *to as f32));
                 let masonry = clad.is_some_and(|c| c.what.masonry());
@@ -655,7 +656,13 @@ pub fn rebuild(
 
     // ---- The roof ----
     build.wash = None;
-    if show.roof && show.storey.is_none() {
+    // In 3D the roof is drawn with every level on show, and with the top level alone on
+    // show: it sits on that one. (It was drawn only with every level showing, and a job
+    // with one level has no such choice: its roof was never drawn.) On the plan of one
+    // level it is its lines, broken, further down.
+    let top_level = snap.storeys.iter().filter(|s| s.elevation.is_some()).max_by(|a, b| a.elevation.unwrap_or(0.0).total_cmp(&b.elevation.unwrap_or(0.0))).map(|s| s.path.clone());
+    let roof_in_3d = show.storey.is_none() || (!on_plan_view && show.storey == top_level);
+    if show.roof && roof_in_3d {
         for info in &snap.planes {
             build.wash = show.certainty.then(|| theme::certainty(info.worst()));
             let Some(plane) = &info.solid else { continue };

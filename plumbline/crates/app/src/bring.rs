@@ -85,7 +85,7 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
         match what {
             Bring::Model => {
                 let b = plumbline_ifc::import(&mut doc.job, &bytes, &file, how)?;
-                let mut out = format!("Brought in {file} ({}): {}.", b.schema, b.made.iter().map(|(what, n)| format!("{n} {what}")).collect::<Vec<_>>().join(", "));
+                let mut out = format!("Brought in {file} ({}): {}.", b.schema, b.made.iter().map(|(what, n)| format!("{n} {}", if *n == 1 { what.strip_suffix('s').unwrap_or(what) } else { what })).collect::<Vec<_>>().join(", "));
                 let left: usize = b.left_out.iter().map(|l| l.1).sum();
                 if left > 0 {
                     out.push_str(&format!("\nNot brought in: {}", count(left, "thing", "things")));

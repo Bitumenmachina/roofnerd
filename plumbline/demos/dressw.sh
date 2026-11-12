@@ -32,7 +32,7 @@ line() { "$P" line "$J" "$1" "$2" 1 --cost-type material --division "$3" >/dev/n
 
 echo "== Three jobs: one cladding to a wall; the priced sample house; the same house unpriced =="
 "$P" new "$J" "Dressed (not a real job)"
-S="$(made "$("$P" storey "$J" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+S="$(made "$("$P" level "$J" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
 WT="$(made "$("$P" type "$J" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
 DT="$(made "$("$P" type "$J" door "door 3 ft" --width "3 ft" --height "7 ft" "${K[@]}")")"
 NT="$(made "$("$P" type "$J" window "window 3 ft" --width "3 ft" --height "5 ft" "${K[@]}")")"

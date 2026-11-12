@@ -74,11 +74,11 @@ fn run_info(job: &mut Job, path: &str) -> Result<RunInfo, String> {
     let system = job.world.get::<InSystem>(e).and_then(|s| s.0.value.clone());
     let tree = building::Tree::of(&mut job.world);
     let level = tree.storey_of(path).and_then(|s| tree.levels.get(s));
-    let base = level.and_then(|l| l.elevation.feet()).ok_or_else(|| format!("{path} is under no storey whose floor height is known"))?;
+    let base = level.and_then(|l| l.elevation.feet()).ok_or_else(|| format!("{path} is under no level whose floor height is known"))?;
     // Where a run is in space is no surer than its storey's floor height.
     let floor_status = level.map(|l| l.elevation.status).unwrap_or(Status::Unknown);
     let [p, q] = segment.line_ft().ok_or_else(|| format!("{path}'s line is not known"))?;
-    let (z0, z1) = segment.offsets_ft().ok_or_else(|| format!("{path}'s height above its storey is not known"))?;
+    let (z0, z1) = segment.offsets_ft().ok_or_else(|| format!("{path}'s height above its level is not known"))?;
     let mut status = segment.type_name.status.max(segment.line.status).max(segment.offset.status).max(floor_status);
     if let Some(end) = &segment.end_offset {
         status = status.max(end.status);
@@ -142,7 +142,7 @@ fn split_at(job: &mut Job, run: &str, at: P2, how: Entered) -> Result<String, St
     first.line = line([raw[0], cut]);
     second.line = line([cut, raw[1]]);
     // A run that climbs is as high at the cut as its line is there.
-    let (z0, z1) = info.segment.offsets_ft().ok_or_else(|| format!("{run}'s height above its storey is not known, so it cannot be cut"))?;
+    let (z0, z1) = info.segment.offsets_ft().ok_or_else(|| format!("{run}'s height above its level is not known, so it cannot be cut"))?;
     if let (Some(end), true) = (&info.segment.end_offset, (z1 - z0).abs() > 1.0e-9) {
         let status = written(info.segment.offset.status.max(end.status).max(info.segment.line.status).max(how.status));
         let at_cut = Val { value: Some(Len::One(tidy(z0 + (z1 - z0) * t))), unit: units::FT.into(), status, source: format!("worked out where {run} was cut ({})", how.source) };
@@ -499,9 +499,9 @@ pub fn connect(job: &mut Job, thing: &str, run: &str, how: Entered) -> Result<us
         }
         let placed = job.world.get::<Placed>(e).cloned().ok_or_else(|| format!("{thing} has no position"))?;
         let tree = building::Tree::of(&mut job.world);
-        let base = tree.storey_of(thing).and_then(|s| tree.levels.get(s)).and_then(|l| l.elevation.feet()).ok_or_else(|| format!("{thing} is under no storey whose floor height is known"))?;
+        let base = tree.storey_of(thing).and_then(|s| tree.levels.get(s)).and_then(|l| l.elevation.feet()).ok_or_else(|| format!("{thing} is under no level whose floor height is known"))?;
         let at = placed.at_ft().ok_or_else(|| format!("where {thing} stands is not known"))?;
-        let offset = placed.offset.feet().ok_or_else(|| format!("{thing}'s height above its storey is not known"))?;
+        let offset = placed.offset.feet().ok_or_else(|| format!("{thing}'s height above its level is not known"))?;
         let angle = placed.angle_deg().ok_or_else(|| format!("how far {thing} is turned is not known"))?;
         let size = placed.size_ft().ok_or_else(|| format!("{thing}'s size is not known, so whether {run} reaches it cannot be told"))?;
         let (sin, cos) = angle.to_radians().sin_cos();

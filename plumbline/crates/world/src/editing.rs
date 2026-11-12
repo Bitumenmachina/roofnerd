@@ -139,7 +139,7 @@ pub(crate) fn add_called(job: &mut Job, parent: &str, kind: Kind, base: &str, fi
 fn storey_of(job: &mut Job, storey: &str) -> Result<(), String> {
     match job.kind(storey) {
         Some(Kind::Storey) => Ok(()),
-        Some(other) => Err(format!("{storey} is a {other:?}, not a storey")),
+        Some(other) => Err(format!("{storey} is a {other:?}, not a level")),
         None => Err(format!("no element {storey}")),
     }
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Floors, rooms and a roof drawn in the application, on a house traced from a plan. From
 # an empty job: the made-up vector plan (demos/plans/made-up-plan.pdf: 30 ft by 20 ft, a
-# partition 12 ft from its west side) is laid under a storey and given its scale from its
+# partition 12 ft from its west side) is laid under a level and given its scale from its
 # 30 ft dimension; its outline and its partition are traced, the pointer snapping to the
 # plan's own lines; then the Floor tool and one click (the floor is the outline the walls
 # enclose); the Room tool, a click inside each room and its name typed; the Roof tool, the

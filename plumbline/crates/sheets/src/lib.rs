@@ -297,7 +297,7 @@ fn read_xlsx(bytes: &[u8], sheet: Option<&str>) -> Result<Sheet, String> {
             lost.push(format!("{}: what is in each is in its first cell only", plural(merged.len(), "run of cells is merged into one", "runs of cells are merged into one")));
         }
     }
-    lost.push("how its cells are shown (dollar signs, decimals, colour, bold) was not read: a cell is the figure in it".to_string());
+    lost.push("how its cells are shown (dollar signs, decimals, color, bold) was not read: a cell is the figure in it".to_string());
     let (rows, numbers) = tidy(rows);
     Ok(Sheet { sort: Sort::Xlsx, name, rows, numbers, lost })
 }
@@ -327,6 +327,10 @@ pub enum Cell {
     /// A formula, with what it comes to as it is written, so a reader that does not
     /// work formulas out still shows the figure. Shown as dollars.
     Formula { text: String, value: Option<f64> },
+    /// A formula that, as written, comes to a word or to nothing ("none" for a cost type
+    /// with no priced line yet; nothing for an amount with no price yet): it turns to a
+    /// figure when what it rests on is filled in.
+    FormulaText { text: String, shown: String },
 }
 
 /// One sheet of a workbook to be written. `head` is its row of headings, from 0.
@@ -378,6 +382,9 @@ pub fn xlsx(tabs: &[Tab]) -> Result<Vec<u8>, String> {
                             None => Formula::new(text),
                         };
                         sheet.write_formula_with_format(r, c, formula, &dollars).map_err(fault)?;
+                    }
+                    Cell::FormulaText { text, shown } => {
+                        sheet.write_formula_with_format(r, c, Formula::new(text).set_result(shown.clone()), &dollars).map_err(fault)?;
                     }
                 }
             }

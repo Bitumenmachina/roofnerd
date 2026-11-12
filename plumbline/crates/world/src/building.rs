@@ -359,19 +359,19 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
             return Err(format!("{me}: a {kind:?} is an opening in a wall and has to be under one"));
         }
         if *kind == Kind::Room && parent != Some(Kind::Storey) {
-            return Err(format!("{me}: a room is a space on a storey and has to be directly under one"));
+            return Err(format!("{me}: a room is a space on a level and has to be directly under one"));
         }
         if matches!(kind, Kind::Wall | Kind::Floor) && parent != Some(Kind::Storey) {
-            return Err(format!("{me}: a {kind:?} stands on a storey and has to be under one"));
+            return Err(format!("{me}: a {kind:?} stands on a level and has to be under one"));
         }
         if *kind == Kind::Drawing && parent != Some(Kind::Storey) {
-            return Err(format!("{me}: a drawing is a plan of a storey and has to be directly under one"));
+            return Err(format!("{me}: a drawing is a plan of a level and has to be directly under one"));
         }
         if *kind == Kind::Prior && parent != Some(Kind::Job) {
             return Err(format!("{me}: a prior estimate is set against the whole job and has to be directly under it"));
         }
         if *kind == Kind::Storey && parent != Some(Kind::Job) {
-            return Err(format!("{me}: a storey is a floor of the building and has to be directly under the job, not under {}", node.parent.as_deref().unwrap_or("nothing")));
+            return Err(format!("{me}: a level is a floor of the building and has to be directly under the job, not under {}", node.parent.as_deref().unwrap_or("nothing")));
         }
         if *kind == Kind::Type {
             if parent != Some(Kind::Job) {
@@ -417,7 +417,7 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
             }
             if let Some(p) = w.top_level.as_ref().and_then(|t| t.value.as_ref()) {
                 if kinds.get(p) != Some(&Kind::Storey) {
-                    return Err(format!("{me}: its top level is {p:?}, which is not a storey in this job"));
+                    return Err(format!("{me}: its top level is {p:?}, which is not a level in this job"));
                 }
             }
         }
@@ -442,7 +442,7 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         }
         // A run's heights and a placed thing's are above the storey it is under.
         if (kind.is_segment() || kind.is_placed()) && tree.storey_of(me).is_none() {
-            return Err(format!("{me}: a {kind:?} is set at a height above a storey and has to be under one"));
+            return Err(format!("{me}: a {kind:?} is set at a height above a level and has to be under one"));
         }
     }
     // One wall drawn over another on a storey is the same wall counted twice. Two that
@@ -540,9 +540,9 @@ pub(crate) fn wall_heights(tree: &Tree, me: &str, w: &Wall) -> WallHeights {
     let storey = tree.storey_of(me);
     let own = storey.and_then(|s| tree.levels.get(s));
     let own_elevation: Result<f64, String> = match (storey, own) {
-        (None, _) => Err("it is under no storey".into()),
-        (Some(_), None) => Err("its storey has no level entered".into()),
-        (Some(_), Some(l)) => l.elevation.feet().ok_or_else(|| "its storey's elevation is not known".to_string()),
+        (None, _) => Err("it is under no level".into()),
+        (Some(_), None) => Err("its level has no level entered".into()),
+        (Some(_), Some(l)) => l.elevation.feet().ok_or_else(|| "its level's elevation is not known".to_string()),
     };
     let (base_offset, base_status): (Result<f64, String>, Status) = match &w.base_offset {
         None => (Ok(0.0), Status::Known),
@@ -554,7 +554,7 @@ pub(crate) fn wall_heights(tree: &Tree, me: &str, w: &Wall) -> WallHeights {
         (Some(t), _) => {
             let top = t.value.as_ref().ok_or_else(|| "its top level is not known".to_string()).and_then(|p| {
                 inputs.push(format!("{p}#{K_LEVEL}"));
-                let l = tree.levels.get(p).ok_or_else(|| format!("its top level, {p}, is not a storey with a level in this job"))?;
+                let l = tree.levels.get(p).ok_or_else(|| format!("its top level, {p}, is not a level with a level in this job"))?;
                 let e = l.elevation.feet().ok_or_else(|| format!("the elevation of {}, its top level, is not known", tree.called(p)))?;
                 Ok((e, l.elevation.status))
             });
@@ -572,7 +572,7 @@ pub(crate) fn wall_heights(tree: &Tree, me: &str, w: &Wall) -> WallHeights {
             if w.top_offset.is_some() {
                 f.push_str(" + top_offset");
             }
-            f.push_str(" − elevation of its storey");
+            f.push_str(" − elevation of its level");
             if w.base_offset.is_some() {
                 f.push_str(" − base_offset");
             }
@@ -879,8 +879,8 @@ pub fn floor_outline(job: &mut Job, storey: &str) -> Result<Option<FloorOutline>
     all.sort_by_key(|(n, _)| path_number(&n.path));
     let (mut placed, mut bounding, mut status) = (Vec::new(), Vec::new(), Status::Known);
     for (n, w) in all {
-        let w = w.ok_or_else(|| format!("{} has no wall line entered, so what the walls of this storey enclose is not known", tree.called(&n.path)))?;
-        let (wall, shape, _, _) = plan_wall(&tree, &n.path, w).map_err(|why| format!("{} cannot be placed ({why}), so what the walls of this storey enclose is not known", tree.called(&n.path)))?;
+        let w = w.ok_or_else(|| format!("{} has no wall line entered, so what the walls of this level enclose is not known", tree.called(&n.path)))?;
+        let (wall, shape, _, _) = plan_wall(&tree, &n.path, w).map_err(|why| format!("{} cannot be placed ({why}), so what the walls of this level enclose is not known", tree.called(&n.path)))?;
         if w.room_bounding {
             bounding.push(placed.len());
             status = status.max(shape);
@@ -907,6 +907,72 @@ pub fn floor_outline(job: &mut Job, storey: &str) -> Result<Option<FloorOutline>
         ring.rotate_left(first);
     }
     Ok(Some(FloorOutline { boundary: ring, courtyards, others: inner.len() - loops.len(), status }))
+}
+
+/// What a level's walls enclose, for telling an outside face from an inside one: the
+/// outline of every separate piece the walls make (a house, and a garage that stands
+/// apart from it), and the courtyards inside them (a loop of walls standing free inside
+/// a piece, with no room in it). Each ring is in feet. A place is indoors when it is
+/// inside a piece and in none of its courtyards. Walls that cannot be placed are why not.
+pub struct Enclosed {
+    pub pieces: Vec<Vec<P2>>,
+    pub courtyards: Vec<Vec<P2>>,
+}
+
+impl Enclosed {
+    pub fn indoors(&self, p: P2) -> bool {
+        let within = |ring: &Vec<P2>| {
+            let mut odd = false;
+            for i in 0..ring.len() {
+                let (a, b) = (ring[i], ring[(i + 1) % ring.len()]);
+                if (a[1] > p[1]) != (b[1] > p[1]) && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0] {
+                    odd = !odd;
+                }
+            }
+            odd
+        };
+        self.pieces.iter().any(within) && !self.courtyards.iter().any(within)
+    }
+}
+
+/// See [`Enclosed`]. The pieces and loops are found as `floor_outline` finds them, and
+/// a loop is a courtyard by the same test: it stands free inside a piece, inside no
+/// other loop, and no room of the level is in it.
+pub fn enclosed(job: &mut Job, storey: &str) -> Result<Enclosed, String> {
+    use crate::skeleton::P2 as V;
+    let tol = crate::check::FIT_TOLERANCE_FT;
+    let tree = Tree::of(&mut job.world);
+    let mut q = job.world.query::<(&Node, &Kind, Option<&Wall>)>();
+    let mut all: Vec<(&Node, Option<&Wall>)> = q.iter(&job.world).filter(|(n, k, _)| **k == Kind::Wall && n.parent.as_deref() == Some(storey)).map(|(n, _, w)| (n, w)).collect();
+    all.sort_by_key(|(n, _)| path_number(&n.path));
+    let (mut placed, mut bounding) = (Vec::new(), Vec::new());
+    for (n, w) in all {
+        let w = w.ok_or_else(|| format!("{} has no wall line entered", tree.called(&n.path)))?;
+        let (wall, _, _, _) = plan_wall(&tree, &n.path, w).map_err(|why| format!("{} cannot be placed ({why})", tree.called(&n.path)))?;
+        if w.room_bounding {
+            bounding.push(placed.len());
+        }
+        placed.push(wall);
+    }
+    let lines: Vec<(V, V)> = bounding.iter().map(|&i| walls::centre_line(&placed, i, tol)).map(|[a, b]| (a, b)).collect();
+    let outlines: Vec<Vec<V>> = rooms::faces(&lines, tol).into_iter().filter(|f| rooms::area(f) < -tol * tol).collect();
+    // How many other outlines each lies wholly inside: none, it is a piece; one, it is a
+    // loop standing free inside a piece.
+    let inside_of = |a: usize| (0..outlines.len()).filter(|&b| b != a && outlines[a].iter().all(|q| rooms::contains(&outlines[b], *q))).count();
+    let depth: Vec<usize> = (0..outlines.len()).map(inside_of).collect();
+    let mut rq = job.world.query::<(&Node, &Room)>();
+    let rooms_at: Vec<V> = rq.iter(&job.world).filter(|(n, _)| n.parent.as_deref() == Some(storey)).filter_map(|(_, r)| r.point_ft()).map(|p| V(p[0], p[1])).collect();
+    let ring = |f: &Vec<V>| -> Vec<P2> { f.iter().map(|p| [p.0, p.1]).collect() };
+    let mut out = Enclosed { pieces: Vec::new(), courtyards: Vec::new() };
+    for (i, f) in outlines.iter().enumerate() {
+        match depth[i] {
+            0 => out.pieces.push(ring(f)),
+            // A room in it and in no loop inside it: it is indoors, part of its piece.
+            1 if !rooms_at.iter().any(|p| rooms::contains(f, *p)) => out.courtyards.push(ring(f)),
+            _ => {}
+        }
+    }
+    Ok(out)
 }
 
 /// A wall of the job as the rooms see it.
@@ -1015,7 +1081,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
         }
     }
     const F_FLOOR: &str = "the floor inside the faces of the walls round its point";
-    const F_GROSS: &str = "the area to the centre lines of the walls round its point";
+    const F_GROSS: &str = "the area to the center lines of the walls round its point";
     const F_ROUND: &str = "the distance round the room at the faces of its walls";
     for (storey, mut list) in by_storey {
         list.sort_by_key(|(path, _)| path_number(path));
@@ -1028,11 +1094,11 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
         // Where the storey's rooms find their walls.
         let level = tree.levels.get(&storey);
         let cut: Result<(f64, Status), String> = match level {
-            None => Err("it is under no storey with a level".into()),
+            None => Err("it is under no level with a level".into()),
             Some(l) => match (l.elevation.feet(), &l.computation_height) {
-                (None, _) => Err("its storey's elevation is not known".into()),
+                (None, _) => Err("its level's elevation is not known".into()),
                 (Some(e), None) => Ok((e + COMPUTATION_HEIGHT_FT, l.elevation.status)),
-                (Some(e), Some(c)) => c.feet().map(|up| (e + up, l.elevation.status.max(c.status))).ok_or_else(|| "the height its storey's rooms find their walls at is not known".to_string()),
+                (Some(e), Some(c)) => c.feet().map(|up| (e + up, l.elevation.status.max(c.status))).ok_or_else(|| "the height its level's rooms find their walls at is not known".to_string()),
             },
         };
         let stuck = unplaced.iter().find(|(path, _)| tree.storey_of(path) == Some(storey.as_str()));
@@ -1045,7 +1111,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
             }
             (Ok(_), Some((wall, why))) => {
                 for (path, _) in &list {
-                    refuse_all(out, path, &[format!("{path}#{K_ROOM}"), format!("{wall}#{K_WALL}")], &format!("{} cannot be placed ({why}), so what bounds the rooms of this storey is not known", tree.called(wall)));
+                    refuse_all(out, path, &[format!("{path}#{K_ROOM}"), format!("{wall}#{K_WALL}")], &format!("{} cannot be placed ({why}), so what bounds the rooms of this level is not known", tree.called(wall)));
                 }
                 continue;
             }
@@ -1217,7 +1283,7 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
     };
     if let Some(c) = w.get::<Level>(e) {
         rows.push(view::length(path, "elevation", &c.elevation));
-        rows.push(view::length(path, "storey height", &c.height));
+        rows.push(view::length(path, "level height", &c.height));
         if let Some(h) = &c.computation_height {
             rows.push(view::length(path, "rooms find their walls at", h));
         }
@@ -1268,7 +1334,7 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
     }
     if let Some(c) = w.get::<Opening>(e) {
         rows.push(view::entered(path, "type", &c.type_name, named));
-        rows.push(view::length(path, "centre, along the wall", &c.offset));
+        rows.push(view::length(path, "center, along the wall", &c.offset));
         rows.push(view::length(path, "sill", &c.sill));
     }
     if let Some(c) = w.get::<Floor>(e) {
@@ -1288,9 +1354,9 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
     if let Some(c) = w.get::<Segment>(e) {
         rows.push(view::entered(path, "type", &c.type_name, named));
         rows.push(view::entered(path, "line on the plan", &c.line, pair));
-        rows.push(view::length(path, if c.end_offset.is_some() { "height above its storey, first end" } else { "height above its storey" }, &c.offset));
+        rows.push(view::length(path, if c.end_offset.is_some() { "height above its level, first end" } else { "height above its level" }, &c.offset));
         if let Some(o) = &c.end_offset {
-            rows.push(view::length(path, "height above its storey, second end", o));
+            rows.push(view::length(path, "height above its level, second end", o));
         }
         if c.justify != Justify::Centre {
             rows.push(plain("its heights are those of its", format!("{:?}", c.justify).to_lowercase(), "which line of its section the heights were given to"));
@@ -1302,7 +1368,7 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
     if let Some(c) = w.get::<Placed>(e) {
         rows.push(view::entered(path, "what it is", &c.what, |s| s.clone()));
         rows.push(view::entered(path, "position", &c.at, |p| format!("({}, {})", view::num(p[0]), view::num(p[1]))));
-        rows.push(view::length(path, "height above its storey", &c.offset));
+        rows.push(view::length(path, "height above its level", &c.offset));
         if let Some(a) = &c.angle {
             // `entered` writes the unit after the figure: "180 deg".
             rows.push(view::entered(path, "turned", a, |x| view::num(*x)));
@@ -1435,7 +1501,7 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
             Kind::Floor => (|| {
                 let c = w.get::<Floor>(e).ok_or("it has no boundary")?;
                 let boundary = c.boundary_ft().ok_or("its boundary is not known")?;
-                let level = base.ok_or("it is under no storey")?.ok_or("its storey's elevation is not known")?;
+                let level = base.ok_or("it is under no level")?.ok_or("its level's elevation is not known")?;
                 let (offset, offset_status) = match &c.offset {
                     None => (0.0, Status::Known),
                     Some(o) => (o.feet().ok_or("its offset is not known")?, o.status),
@@ -1447,13 +1513,13 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
             k if k.is_segment() => (|| {
                 let c = w.get::<Segment>(e).ok_or("it has no line")?;
                 let [p, q] = c.line_ft().ok_or("its line is not known")?;
-                let level = base.ok_or("it is under no storey")?.ok_or("its storey's elevation is not known")?;
-                let (z0, z1) = c.offsets_ft().ok_or("its height above its storey is not known")?;
+                let level = base.ok_or("it is under no level")?.ok_or("its level's elevation is not known")?;
+                let (z0, z1) = c.offsets_ft().ok_or("its height above its level is not known")?;
                 let t = typed(&tree.segment_types, &c.type_name, "a run").ok().map(|x| x.1);
                 let (round, rect) = (t.and_then(|t| t.round_ft()), t.and_then(|t| t.rect_ft()));
                 let section = round.map(|d| (d, d)).or(rect);
                 if c.justify != Justify::Centre && section.is_none() {
-                    return Err("its size is not known and its heights are those of its top or its bottom, so its centre line cannot be placed".into());
+                    return Err("its size is not known and its heights are those of its top or its bottom, so its center line cannot be placed".into());
                 }
                 let (width, depth) = section.unwrap_or((0.0, 0.0));
                 let g = runs::Geom::of(level, p, q, z0, z1, c.justify, width, depth, round.is_some());
@@ -1464,8 +1530,8 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
             _ => (|| {
                 let c = w.get::<Placed>(e).ok_or("it has no position")?;
                 let at = c.at_ft().ok_or("its position is not known")?;
-                let level = base.ok_or("it is under no storey")?.ok_or("its storey's elevation is not known")?;
-                let offset = c.offset.feet().ok_or("its height above its storey is not known")?;
+                let level = base.ok_or("it is under no level")?.ok_or("its level's elevation is not known")?;
+                let offset = c.offset.feet().ok_or("its height above its level is not known")?;
                 let size = c.size_ft().ok_or("its size is not known")?;
                 let angle = c.angle_deg().ok_or("how far it is turned is not known")?;
                 let status = c.at.status.max(c.offset.status).max(c.size.status).max(c.angle.as_ref().map(|a| a.status).unwrap_or(Status::Known)).max(floor_status);

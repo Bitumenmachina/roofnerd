@@ -550,7 +550,9 @@ fn rate_out(v: &Val<f64>) -> String {
 fn rate_in(cell: &str, status: Status, source: &str) -> Result<Val<f64>, String> {
     let t = cell.trim().trim_start_matches('$');
     let (figure, unit) = t.split_once('/').ok_or_else(|| format!("{cell:?} is not dollars for a unit, like $4.25/SF"))?;
-    let value = if figure.trim() == "?" { None } else { Some(figure.trim().replace(',', "").parse::<f64>().map_err(|_| format!("{cell:?} is not dollars for a unit, like $4.25/SF"))?) };
+    // Read as every other price is read (J17A-17): a comma is a thousands mark or the
+    // figure is refused, never dropped ("$1,23" is not $123), and a price is not below zero.
+    let value = if figure.trim() == "?" { None } else { Some(crate::units::parse_price(figure.trim(), unit.trim()).map_err(|why| format!("{why} (dollars for a unit, like $4.25/SF)"))?) };
     Ok(Val { value, unit: format!("$/{}", unit.trim()), status, source: source.to_string() })
 }
 

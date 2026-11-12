@@ -250,7 +250,7 @@ pub fn add(job: &mut Job, storey: &str, name: &str, read: Read, how: Entered) ->
     all_or_nothing(job, |job| {
         match job.kind(storey) {
             Some(Kind::Storey) => {}
-            Some(other) => return Err(format!("{storey} is a {other:?}, not a storey: a drawing is laid under the storey it is a plan of")),
+            Some(other) => return Err(format!("{storey} is a {other:?}, not a level: a drawing is laid under the level it is a plan of")),
             None => return Err(format!("no element {storey}")),
         }
         let drawing = Drawing {
@@ -389,7 +389,7 @@ pub fn at_earlier_scales(job: &mut Job, drawing: &str) -> Result<Vec<(f64, Vec<S
 /// The storey a drawing is a plan of.
 pub fn storey_of(job: &mut Job, drawing: &str) -> Result<String, String> {
     drawing_of(job, drawing)?;
-    job.find(drawing).and_then(|e| job.world.get::<Node>(e).and_then(|n| n.parent.clone())).ok_or_else(|| format!("{drawing} is under no storey"))
+    job.find(drawing).and_then(|e| job.world.get::<Node>(e).and_then(|n| n.parent.clone())).ok_or_else(|| format!("{drawing} is under no level"))
 }
 
 /// How a thing traced over a drawing is entered: Assumed, and saying which drawing. Refused

@@ -25,16 +25,16 @@ fn a_model_comes_in_as_storeys_walls_openings_a_floor_a_room_and_runs_and_the_re
     let how = Entered { status: Status::Assumed, source: "the designer's model (made up)" };
     let mut job = Job::new("brought in (not a real job)", "test", "test");
     let b = import(&mut job, &model(), "made-up-house.ifc", how).unwrap();
-    assert_eq!((b.schema.as_str(), b.unit.as_str()), ("IFC4", "metres"));
+    assert_eq!((b.schema.as_str(), b.unit.as_str()), ("IFC4", "meters"));
     assert!((b.feet_per_unit - 1.0 / 0.3048).abs() < 1.0e-12);
     let made: Vec<(&str, usize)> = b.made.iter().map(|(k, n)| (k.as_str(), *n)).collect();
-    assert_eq!(made, [("doors", 1), ("ducts", 1), ("floors", 1), ("pipes", 1), ("rooms", 1), ("storeys", 2), ("walls", 4), ("windows", 1)]);
+    assert_eq!(made, [("doors", 1), ("ducts", 1), ("floors", 1), ("levels", 2), ("pipes", 1), ("rooms", 1), ("walls", 4), ("windows", 1)]);
     // The beam, the stair and the chair: each listed, none dropped.
     let left: Vec<(&str, usize)> = b.left_out.iter().map(|(c, n, _)| (c.as_str(), *n)).collect();
     // Call 50: what the model calls a kind of thing is said in words.
     assert_eq!(left, [("beam", 1), ("furniture", 1), ("stair", 1)]);
     assert!(b.left_out.iter().all(|(_, _, why)| why == "this program has no element for it"));
-    assert!(b.notes.iter().any(|n| n.contains("the model is in metres")));
+    assert!(b.notes.iter().any(|n| n.contains("the model is in meters")));
     job.derive();
 
     // Everything in the job, by kind, in the job's order.
@@ -92,7 +92,7 @@ fn what_is_not_a_model_or_holds_nothing_to_bring_in_is_refused_and_the_job_left_
     let other = b"ISO-10303-21;\nHEADER;\nFILE_SCHEMA(('AUTOMOTIVE_DESIGN'));\nENDSEC;\nDATA;\n#1=PRODUCT('a');\nENDSEC;\nEND-ISO-10303-21;\n";
     assert!(import(&mut job, other, "x.stp", how).unwrap_err().contains("not an IFC model"));
     let empty = b"ISO-10303-21;\nHEADER;\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n#1=IFCCARTESIANPOINT((0.,0.,0.));\nENDSEC;\nEND-ISO-10303-21;\n";
-    assert!(import(&mut job, empty, "x.ifc", how).unwrap_err().contains("no building storey"));
+    assert!(import(&mut job, empty, "x.ifc", how).unwrap_err().contains("no building level"));
     assert!(import(&mut job, &model(), "m.ifc", Entered { status: Status::Assumed, source: " " }).unwrap_err().contains("where the model came from"));
     // The same model with its walls' bodies taken away: nothing but storeys would come
     // in... but the slab, the room and the runs still do, and the walls are listed.
@@ -167,7 +167,7 @@ fn j15_3_a_building_placed_at_a_height_does_not_lift_its_walls_off_their_floor()
     let mut job = fresh();
     let b = import(&mut job, lifted.as_bytes(), "lifted.ifc", HOW).unwrap();
     // 50 m is 164.042 ft. The storeys still say their floors are at 0 and at 8 ft.
-    assert!(b.notes.iter().any(|n| n.contains("2 of the model's storeys are placed 164.042 ft from where each says its floor is")), "{:?}", b.notes);
+    assert!(b.notes.iter().any(|n| n.contains("2 of the model's levels are placed 164.042 ft from where each says its floor is")), "{:?}", b.notes);
     job.derive();
     let mut q = job.world.query::<(&Node, &building::Level)>();
     let mut floors: Vec<f64> = q.iter(&job.world).map(|(_, l)| l.elevation.feet().unwrap()).collect();
@@ -231,8 +231,8 @@ fn j15_21_another_model_stands_on_the_jobs_own_storeys() {
     // twice; it is refused, each thing with why, and the job is as it was.
     let before = save(&mut job);
     let why = import(&mut job, &model(), "made-up-house.ifc", HOW).unwrap_err();
-    assert!(why.starts_with("nothing in the model but its storeys could be brought in"), "{why}");
-    for said in ["a duct in this very place is already on this storey", "a pipe in this very place is already on this storey", "a floor with this very outline is already on this storey", "one wall drawn over another would be counted twice"] {
+    assert!(why.starts_with("nothing in the model but its levels could be brought in"), "{why}");
+    for said in ["a duct in this very place is already on this level", "a pipe in this very place is already on this level", "a floor with this very outline is already on this level", "one wall drawn over another would be counted twice"] {
         assert!(why.contains(said), "{said}: {why}");
     }
     assert_eq!(save(&mut job), before);
@@ -246,7 +246,7 @@ fn j15_21_another_model_stands_on_the_jobs_own_storeys() {
     plumbline_world::editing::remove(&mut job, &duct).unwrap();
     let b = import(&mut job, &model(), "made-up-house.ifc", HOW).unwrap();
     assert_eq!(storeys(&mut job), 2);
-    assert_eq!((b.made.get("storeys"), b.made.get("ducts"), b.made.len()), (None, Some(&1), 1));
+    assert_eq!((b.made.get("levels"), b.made.get("ducts"), b.made.len()), (None, Some(&1), 1));
     assert!(b.notes.iter().any(|n| n.contains("the job already has \"Ground\", \"Roof\"")), "{:?}", b.notes);
     for kind in [Kind::Wall, Kind::Floor, Kind::Duct, Kind::Pipe] {
         let mut q = job.world.query::<&Kind>();
@@ -260,7 +260,7 @@ fn j15_21_another_model_stands_on_the_jobs_own_storeys() {
     plumbline_world::editing::storey(&mut other, "Ground", "1 ft", "9 ft", Entered { status: Status::Known, source: "made-up survey" }).unwrap();
     let before = save(&mut other);
     let why = import(&mut other, &model(), "made-up-house.ifc", HOW).unwrap_err();
-    assert!(why.contains("already has a storey called \"Ground\" with its floor at 1 ft") && why.contains("has its floor at 0 ft"), "{why}");
+    assert!(why.contains("already has a level called \"Ground\" with its floor at 1 ft") && why.contains("has its floor at 0 ft"), "{why}");
     assert_eq!(save(&mut other), before);
     // Two storeys of one name in one model: the later is named with its height.
     let t = text();
@@ -268,7 +268,7 @@ fn j15_21_another_model_stands_on_the_jobs_own_storeys() {
     let twins = t.replace(&roof, &roof.replace("'Roof'", "'Ground'"));
     let mut job = fresh();
     let b = import(&mut job, twins.as_bytes(), "twins.ifc", HOW).unwrap();
-    assert!(b.notes.iter().any(|n| n.contains("more than one storey called \"Ground\"") && n.contains("\"Ground, at 8 ft\"")), "{:?}", b.notes);
+    assert!(b.notes.iter().any(|n| n.contains("more than one level called \"Ground\"") && n.contains("\"Ground, at 8 ft\"")), "{:?}", b.notes);
     assert_eq!(storeys(&mut job), 2);
 }
 

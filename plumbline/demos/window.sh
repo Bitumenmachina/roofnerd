@@ -48,6 +48,12 @@ sheet_at() {
   while [ -z "$(where sheet "$1")" ] && [ "$n" -lt 40 ]; do xdotool mousemove 2000 600; sleep 0.5; xdotool click "${2:-5}"; sleep 1.5; n=$((n + 1)); done
   sheet "$1"
 }
+# A row of the model window's left panel brought on screen with the wheel, then clicked.
+on_at() {
+  local n=0
+  while [ -z "$(where model "$1")" ] && [ "$n" -lt 30 ]; do xdotool mousemove 120 600; sleep 0.5; xdotool click "${2:-5}"; sleep 1.5; n=$((n + 1)); done
+  on "$1"
+}
 # The plan as it lies on screen, from the program: where its zero is and how many pixels
 # a foot is. There only on the plan view, once the view has come to rest.
 plan_line() { awk -F'\t' '$1=="plan" {print $2, $3, $4}' "$PLUMBLINE_MAP" 2>/dev/null; }

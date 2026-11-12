@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Drawing demonstration in the application: from an empty job, a small house drawn in
-# the plan view with the pointer and typed lengths. A storey, five walls, two doors, three
+# the plan view with the pointer and typed lengths. A level, five walls, two doors, three
 # windows, a duct, a pipe, a fixture and a piece of equipment; a step undone and done
 # again; a wall moved; a wall and a window removed. Then the saved job is read back and its figures
 # set against the ones worked by hand for the same house in demos/draw.sh.
@@ -32,7 +32,7 @@ echo "== The job: empty =="
 cp "$J" "$T/before.json"
 
 echo
-echo "== The session: a storey, walls, doors, windows, a duct, a pipe, a fixture, equipment; undo; move; remove; save =="
+echo "== The session: a level, walls, doors, windows, a duct, a pipe, a fixture, equipment; undo; move; remove; save =="
 # Where things are on the 1600 by 960 model window: the left panel's rows, and the plan,
 # on which ten feet are about 133 pixels and the middle of the window is the origin.
 cat > "$T/session.sh" <<SESSION
@@ -173,8 +173,8 @@ data = json.load(open(sys.argv[1]))["data"]
 walls = [e for e in data if e["attributes"].get("pl::class") == "Wall"]
 xs = sorted({p[0] for w in walls for p in w["attributes"]["pl::wall"]["line"]["value"]})
 ys = sorted({p[1] for w in walls for p in w["attributes"]["pl::wall"]["line"]["value"]})
-storey = next(e["path"] for e in data if e["attributes"].get("pl::class") == "Storey")
-print(storey, (xs[0] + xs[1]) / 2, (ys[0] + ys[-1]) / 2, (xs[1] + xs[2]) / 2, (ys[0] + ys[-1]) / 2)
+level = next(e["path"] for e in data if e["attributes"].get("pl::class") == "Storey")
+print(level, (xs[0] + xs[1]) / 2, (ys[0] + ys[-1]) / 2, (xs[1] + xs[2]) / 2, (ys[0] + ys[-1]) / 2)
 PY
 )"
 "$P" room "$J" "$STOREY" "west room" --at "$WX,$WY" --status Assumed --source "made-up plan" >/dev/null

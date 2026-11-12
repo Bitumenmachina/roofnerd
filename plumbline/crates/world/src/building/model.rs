@@ -130,8 +130,8 @@ impl Location {
     /// As a drawing's notes would say it.
     pub fn label(self) -> &'static str {
         match self {
-            Location::Centre => "wall centre line",
-            Location::CoreCentre => "core centre line",
+            Location::Centre => "wall center line",
+            Location::CoreCentre => "core center line",
             Location::ExteriorFinish => "finish face, exterior",
             Location::InteriorFinish => "finish face, interior",
             Location::ExteriorCore => "core face, exterior",
@@ -588,13 +588,13 @@ pub(crate) fn offset_ok(what: &str, v: &Val<Len>) -> Result<(), String> {
 
 pub fn check_level(path: &str, kind: Kind, l: &Level) -> Result<(), String> {
     if kind != Kind::Storey {
-        return Err(format!("{path}: a {kind:?} cannot carry a level; only a storey can"));
+        return Err(format!("{path}: a {kind:?} cannot carry a level; only a level can"));
     }
     offset_ok(&format!("{path} elevation"), &l.elevation)?;
     if let Some(c) = &l.computation_height {
         positive(&format!("{path} computation height"), c, true)?;
     }
-    positive(&format!("{path} storey height"), &l.height, false)
+    positive(&format!("{path} level height"), &l.height, false)
 }
 
 pub fn check_room(path: &str, kind: Kind, r: &Room) -> Result<(), String> {
@@ -684,7 +684,7 @@ pub fn check_wall(path: &str, kind: Kind, w: &Wall) -> Result<(), String> {
     }
     // Its top is held to a level or it is a height tall (BIMCraft `model.rs:6586`).
     match (&w.top_level, &w.height) {
-        (Some(_), Some(_)) => return Err(format!("{path}: has a top level and a height; its top is held to a storey or it is a height tall, one or the other")),
+        (Some(_), Some(_)) => return Err(format!("{path}: has a top level and a height; its top is held to a level or it is a height tall, one or the other")),
         (None, None) => return Err(format!("{path}: has no top level and no height; enter one, or a height marked Unknown")),
         (Some(t), None) => type_ref(&format!("{path} top level"), t)?,
         (None, Some(h)) => positive(&format!("{path} wall height"), h, false)?,

@@ -43,34 +43,34 @@ says "$T/sheet.txt" "PRICE ~\$615.86"
 echo
 echo "== What a laser types is a length =="
 # A fraction after the inch mark, as the display shows it. Each is tried on a copy, on
-# the upper storey's height, which nothing else here rests on.
+# the upper level's height, which nothing else here rests on.
 cp "$J" "$T/try.json"
 for pair in "2'2\"13/32=2' 2 13/32\"" "26\"13/32=26 13/32 in" "23.46ft=23.46 ft" "0'10\"1/2=0' 10 1/2\""; do
   typed="${pair%%=*}"; want="${pair#*=}"
-  OUT="$("$P" measure "$T/try.json" "$UPPER" "storey height" "$typed" --source "tried")"
-  grep -qF -- "storey height is $want, measured" <<<"$OUT" || { echo "FAIL: $typed was not read as $want: $OUT"; exit 1; }
+  OUT="$("$P" measure "$T/try.json" "$UPPER" "level height" "$typed" --source "tried")"
+  grep -qF -- "level height is $want, measured" <<<"$OUT" || { echo "FAIL: $typed was not read as $want: $OUT"; exit 1; }
   printf '    %-12s is read as %s\n' "$typed" "$want"
 done
 
 echo
 echo "== What is refused, and the file is byte for byte what it was after each =="
 cp "$J" "$T/kept.json"
-refused "has no unit" "$P" measure "$J" "$GROUND" "storey height" "8.875" --source "the laser, set to send no unit"
-refused "has a comma" "$P" measure "$J" "$GROUND" "storey height" "8,875 ft" --source "the laser, set to a comma"
-refused "metric" "$P" measure "$J" "$GROUND" "storey height" "2.705m" --source "the laser, set to metres"
-refused "one or the other" "$P" measure "$J" "$GROUND" "storey height" "8' 10 1/2\" 1/4" --source x
+refused "has no unit" "$P" measure "$J" "$GROUND" "level height" "8.875" --source "the laser, set to send no unit"
+refused "has a comma" "$P" measure "$J" "$GROUND" "level height" "8,875 ft" --source "the laser, set to a comma"
+refused "metric" "$P" measure "$J" "$GROUND" "level height" "2.705m" --source "the laser, set to meters"
+refused "one or the other" "$P" measure "$J" "$GROUND" "level height" "8' 10 1/2\" 1/4" --source x
 refused "not one length" "$P" measure "$J" "$WALL" "wall line" "24 ft" --source x
 refused "it has: type, wall line, top level" "$P" measure "$J" "$WALL" "length" "24 ft" --source x
-refused "a measurement is Known" "$P" measure "$J" "$GROUND" "storey height" "9 ft" --status Assumed --source x
-refused "who measured" "$P" measure "$J" "$GROUND" "storey height" "9 ft"
+refused "a measurement is Known" "$P" measure "$J" "$GROUND" "level height" "9 ft" --status Assumed --source x
+refused "who measured" "$P" measure "$J" "$GROUND" "level height" "9 ft"
 refused "not a run" "$P" measure "$J" "$WALL" "wall line" same --to top --source x
-refused "leave the line out" "$P" measure "$J" "$DUCT" "height above its storey" same --to bottom --source x
+refused "leave the line out" "$P" measure "$J" "$DUCT" "height above its level" same --to bottom --source x
 
 echo
 echo "== The floor everything is measured from, and floor to floor =="
 "$P" measure "$J" "$GROUND" elevation same --source "JM on site" | sed 's/^/    /'
 # 8 ft 10 1/2 in is 8.875 ft. The upper floor is a Known floor plus a Known measurement.
-"$P" measure "$J" "$GROUND" "storey height" "8'10\"1/2" --source "JM with the laser" | tee "$T/out.txt" | sed 's/^/    /'
+"$P" measure "$J" "$GROUND" "level height" "8'10\"1/2" --source "JM with the laser" | tee "$T/out.txt" | sed 's/^/    /'
 says "$T/out.txt" "upper's floor is now at 8' 10 1/2\", Known; it was at 9' 0\""
 sheet
 # 24 ft by 8.875 ft, 213 SF, $511.20, not flagged. Overhead $51.12; profit 8% of
@@ -81,7 +81,7 @@ says "$T/sheet.txt" "PRICE \$607.31"
 cp "$J" "$T/kept.json"
 "$P" measure "$J" "$UPPER" elevation same --source "JM on site" >/dev/null
 cp "$J" "$T/kept.json"
-refused "One of the three is wrong" "$P" measure "$J" "$GROUND" "storey height" "9 ft" --source "a second shot"
+refused "One of the three is wrong" "$P" measure "$J" "$GROUND" "level height" "9 ft" --source "a second shot"
 
 echo
 echo "== The duct: where it is, what it is, and its underside shot from the floor =="
@@ -89,7 +89,7 @@ echo "== The duct: where it is, what it is, and its underside shot from the floo
 "$P" measure "$J" "$DUCT" type same --source "JM on site" | sed 's/^/    /'
 clashes
 says "$T/clashes.txt" "In the same space: 2 (2 to verify in the field)"
-"$P" measure "$J" "$DUCT" "height above its storey" "7'10\"3/4" --to bottom --source "JM with the laser" | sed 's/^/    /'
+"$P" measure "$J" "$DUCT" "height above its level" "7'10\"3/4" --to bottom --source "JM with the laser" | sed 's/^/    /'
 clashes
 # The duct is now 7 ft 10 3/4 in to 8 ft 6 3/4 in. Pipe A's top is at 7 ft 10 in: 3/4 in
 # clear, and off the list. Pipe B, 7 ft 11 in to 8 ft 1 in, is still inside: 2 1/4 in
@@ -105,8 +105,8 @@ echo
 echo "== Read back =="
 "$P" check "$J" | tail -1 | sed 's/^/    /'
 "$P" show "$J" > "$T/show.txt"
-says "$T/show.txt" "storey height    8' 10 1/2\""
-says "$T/show.txt" "height above its storey 7' 10 3/4\""
+says "$T/show.txt" "level height     8' 10 1/2\""
+says "$T/show.txt" "height above its level 7' 10 3/4\""
 says "$T/show.txt" "its heights are those of its bottom"
 [ -n "${KEEP:-}" ] && cp "$J" "$KEEP"
 echo

@@ -25,16 +25,16 @@ refused() { local want="$1"; shift; local out
   grep -qF -- "$want" <<<"$out" || { echo "FAIL: the refusal does not say \"$want\""; exit 1; }
 }
 
-echo "== A storey and the types =="
+echo "== A level and the types =="
 "$P" new "$J" "Clashes (not a real job)"
-S="$(made "$("$P" storey "$J" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+S="$(made "$("$P" level "$J" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
 WT="$(made "$("$P" type "$J" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
 NT="$(made "$("$P" type "$J" window "window 4 by 3" --width "4 ft" --height "3 ft" "${K[@]}")")"
 DUCT="$(made "$("$P" type "$J" duct "6 in round" --round "6 in" "${K[@]}")")"
 PIPE="$(made "$("$P" type "$J" pipe "1 in" --round "1 in" "${K[@]}")")"
 AIR="$(made "$("$P" system "$J" "Supply air" "Supply Air")")"
 clashes
-says "an empty storey" "In the same space: 0"
+says "an empty level" "In the same space: 0"
 
 echo
 echo "== Two tanks, 2 ft each way, their middles 1 ft 6 in apart =="
@@ -55,7 +55,7 @@ says "how far apart" "0.00 in apart"
 
 echo
 echo "== A 6 in duct and a 1 in pipe crossing at one height =="
-# The duct east along y = 5 and the pipe north along x = 5, both 8 ft up: their centre
+# The duct east along y = 5 and the pipe north along x = 5, both 8 ft up: their center
 # lines cross. To clear, one moves by both radii: 3 in + 1/2 in.
 D="$(last "$("$P" run "$J" "$S" duct "$DUCT" --points "0,5 10,5" --height "8 ft" "${K[@]}")")"
 X="$(last "$("$P" run "$J" "$S" pipe "$PIPE" --points "5,0 5,10" --height "8 ft" --status Assumed --source "set by eye")")"
@@ -64,7 +64,7 @@ says "the crossing, flagged" "~ duct"
 says "the crossing" "in each other by 3.50 in, at (5, 5, 8)"
 says "one of one assumed" "In the same space: 1 (1 to verify in the field)"
 "$P" remove "$J" "$X" >/dev/null
-# The pipe 5 in higher: the centre lines are 5 in apart and the surfaces 5 − 3.5 = 1.5 in.
+# The pipe 5 in higher: the center lines are 5 in apart and the surfaces 5 − 3.5 = 1.5 in.
 X="$(last "$("$P" run "$J" "$S" pipe "$PIPE" --points "5,0 5,10" --height "8 ft 5 in" "${K[@]}")")"
 clashes
 says "clear of it" "In the same space: 0"

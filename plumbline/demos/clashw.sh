@@ -29,7 +29,7 @@ made() { sed -E 's/^([a-z]+-[0-9]+).*/\1/' <<<"$1"; }
 
 echo "== The job, made at the command line =="
 "$P" new "$J" "Fitted and checked in the window (not a real job)"
-S="$(made "$("$P" storey "$J" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+S="$(made "$("$P" level "$J" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
 WT="$(made "$("$P" type "$J" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
 DT="$(made "$("$P" type "$J" duct "6 in round" --round "6 in" "${K[@]}")")"
 PT="$(made "$("$P" type "$J" pipe "1 in" --round "1 in" "${K[@]}")")"

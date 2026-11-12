@@ -122,7 +122,7 @@ impl Kind {
             Kind::PitchBreak => "break",
             Kind::Parapet => "parapet",
             Kind::Condition => "condition",
-            Kind::Storey => "storey",
+            Kind::Storey => "level",
             Kind::Wall => "wall",
             Kind::Door => "door",
             Kind::Window => "window",
@@ -515,7 +515,7 @@ impl Class {
             "supervision" => Ok(Class::Supervision),
             "subcontract" | "sub" => Ok(Class::Subcontract),
             "general" | "general conditions" => Ok(Class::General),
-            _ => Err(format!("{text:?} is not a class; a line is material, labor, fabrication, supervision, subcontract or general")),
+            _ => Err(format!("{text:?} is not a cost type; a line is material, labor, fabrication, supervision, subcontract or general")),
         }
     }
 }

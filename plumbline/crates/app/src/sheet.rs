@@ -355,7 +355,7 @@ fn lines(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
 /// The walls and floors, storey by storey.
 fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
     if snap.storeys.is_empty() {
-        nothing(p, fonts, "This job has no storeys: no walls or floors are entered.");
+        nothing(p, fonts, "This job has no levels: no walls or floors are entered.");
     }
     for storey in &snap.storeys {
         let figure = |el: &view::ElementRows, name: &str| el.rows.iter().find(|r| r.label == name).map(|r| (r.number, r.status)).unwrap_or((None, Status::Unknown));
@@ -397,7 +397,7 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             // The storey's rooms: how far round each is, its area to the centre lines of
             // its walls, and the floor inside them.
             if !rooms.is_empty() {
-                header_row(t, fonts, &[("", 7.0, false), ("Room", 0.0, false), ("Round", 100.0, true), ("To wall centres", 110.0, true), ("", 100.0, true), ("Inside the walls", 110.0, true)]);
+                header_row(t, fonts, &[("", 7.0, false), ("Room", 0.0, false), ("Round", 100.0, true), ("To wall centers", 110.0, true), ("", 100.0, true), ("Inside the walls", 110.0, true)]);
                 for el in rooms {
                     let selected = doc.selected.as_deref() == Some(el.path.as_str());
                     let worst = el.rows.iter().filter(|r| r.derived).map(|r| r.status).max().unwrap_or(Status::Unknown);
@@ -520,6 +520,8 @@ fn verify(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsho
         Some(x) => format!("{} riding  ·  {} of the estimate, each counted once", money(x), lines(list.riding_lines)),
         None => "nothing priced rides on these yet".to_string(),
     };
+    // What rides on a question and has no price yet is in no figure here, and is said.
+    let riding = if list.riding_unpriced == 0 { riding } else { format!("{riding}  ·  {} more with no price yet", lines(list.riding_unpriced)) };
     table(p, fonts, "Verify in field", format!("{}  ·  {riding}", list.questions.len()), |t| {
         header_row(t, fonts, &[("", 7.0, false), ("Riding on it", 118.0, true), ("What", 0.0, false), ("Level", 96.0, false)]);
         for q in &list.questions {
@@ -595,6 +597,76 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         return;
     }
     let money = |d: &plumbline_world::Derived| dollars(Some(d));
+    // The recap first: what the job comes to and how the price is built is what the
+    // sheet is opened for. Then the same cost by division, then every line.
+    table(p, fonts, "The recap", String::new(), |t| {
+        let line = |t: &mut ChildSpawnerCommands, name: String, about: String, note: String, said: String, status: Status, strong: bool| {
+            row(t, false, None, |r| {
+                cell(r, 7.0, false, |c| dot(c, status));
+                cell(r, 0.0, false, |c| {
+                    words(c, fonts, name, 12.5, if strong { Weight::Semibold } else { Weight::Medium }, theme::ink());
+                    words(c, fonts, about, 11.5, Weight::Regular, theme::ink_faint());
+                });
+                cell(r, 250.0, true, |c| words(c, fonts, note, 11.5, Weight::Regular, theme::status_ink(Status::Assumed)));
+                cell(r, 130.0, true, |c| words(c, fonts, said, if strong { 13.5 } else { 12.5 }, Weight::Semibold, theme::status_ink(status)));
+            });
+        };
+        let lines_of = |n: usize| format!("{n} line{}", if n == 1 { "" } else { "s" });
+        let rests = |assumed: f64| if assumed != 0.0 { format!("${} of it rests on something assumed", view::figure(assumed, 2)) } else { String::new() };
+        for c in &est.classes {
+            match c.total.value {
+                Some(x) => {
+                    let hours = c.hours.map(|(h, _)| format!("  {} hr", view::figure(h, 4))).unwrap_or_default();
+                    line(t, c.class.title().to_string(), format!("{}{hours}", lines_of(c.total.members)), rests(c.total.assumed), format!("${}", view::figure(x, 2)), c.total.status, false);
+                }
+                None => row(t, false, None, |r| {
+                    cell(r, 7.0, false, |_| {});
+                    cell(r, 0.0, false, |c2| words(c2, fonts, c.class.title(), 12.5, Weight::Medium, theme::ink_soft()));
+                    cell(r, 130.0, true, |c2| words(c2, fonts, "none", 12.5, Weight::Regular, theme::ink_faint()));
+                }),
+            }
+        }
+        match est.job_cost.value {
+            Some(x) => line(t, "Job cost".to_string(), lines_of(est.job_cost.members), rests(est.job_cost.assumed), format!("${}", view::figure(x, 2)), est.job_cost.status, true),
+            None => line(t, "Job cost".to_string(), "no line with a cost type comes to a figure".to_string(), String::new(), "none".to_string(), Status::Unknown, true),
+        }
+        let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!("at {} %", view::rate(x)))).unwrap_or_default();
+        for (name, d, at, strong) in [("Overhead", &est.overhead, rate(est.markup.as_ref().map(|m| &m.overhead)), false), ("Profit", &est.profit, rate(est.markup.as_ref().map(|m| &m.profit)), false), ("Price", &est.price, String::new(), true)] {
+            let (said, status) = money(d);
+            let field = match name {
+                "Overhead" => Some((Entry::Overhead, KeyCode::KeyO)),
+                "Profit" => Some((Entry::Profit, KeyCode::KeyR)),
+                _ => None,
+            };
+            match field {
+                None => line(t, name.to_string(), at, String::new(), said, status, strong),
+                // Overhead and profit are each a percentage, changed here.
+                Some((field, key)) => row(t, false, None, |r| {
+                    cell(r, 7.0, false, |c| dot(c, status));
+                    cell(r, 0.0, false, |c| {
+                        words(c, fonts, name, 12.5, Weight::Medium, theme::ink());
+                        let typed = match &doc.entry {
+                            Some((f, typed)) if *f == field => Some(typed.as_str()),
+                            _ => None,
+                        };
+                        editable(c, fonts, format!("{name} percent"), if at.is_empty() { "not set".to_string() } else { at.clone() }, if at.is_empty() { theme::status_ink(Status::Unknown) } else { theme::ink_soft() }, typed, move |doc| doc.press(key));
+                    });
+                    cell(r, 130.0, true, |c| words(c, fonts, said.clone(), 12.5, Weight::Semibold, theme::status_ink(status)));
+                }),
+            }
+            // Why there is no figure; or, on a price over a job cost that leaves lines
+            // out, that it is the price of what is in it and not of the job.
+            if d.value.is_none() || !d.note.is_empty() {
+                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(6.0) }, ..default() }).with_child(text(fonts, d.note.clone(), 11.5, Weight::Regular, theme::status_ink(if d.value.is_none() { Status::Unknown } else { Status::Assumed })));
+            }
+        }
+        for (who, why) in &est.job_cost.left_out {
+            t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, ..default() }).with_child(text(fonts, format!("left out of the job cost: {who}: {why}"), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
+        }
+        for l in est.lines.iter().filter(|l| l.off) {
+            t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, ..default() }).with_child(text(fonts, format!("switched off, out of every total: {}: {:?} ({})", l.path, l.description, money(&l.amount).0), 11.5, Weight::Regular, theme::ink_soft()));
+        }
+    });
     // The job cost, division by division: all sixteen, and what is in none.
     table(p, fonts, "By division", format!("{} of 16 with work in them", est.divisions.iter().filter(|d| d.total.members > 0).count()), |t| {
         for d in &est.divisions {
@@ -775,74 +847,6 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 });
             }
         });
-    });
-    table(p, fonts, "The recap", String::new(), |t| {
-        let line = |t: &mut ChildSpawnerCommands, name: String, about: String, note: String, said: String, status: Status, strong: bool| {
-            row(t, false, None, |r| {
-                cell(r, 7.0, false, |c| dot(c, status));
-                cell(r, 0.0, false, |c| {
-                    words(c, fonts, name, 12.5, if strong { Weight::Semibold } else { Weight::Medium }, theme::ink());
-                    words(c, fonts, about, 11.5, Weight::Regular, theme::ink_faint());
-                });
-                cell(r, 250.0, true, |c| words(c, fonts, note, 11.5, Weight::Regular, theme::status_ink(Status::Assumed)));
-                cell(r, 130.0, true, |c| words(c, fonts, said, if strong { 13.5 } else { 12.5 }, Weight::Semibold, theme::status_ink(status)));
-            });
-        };
-        let lines_of = |n: usize| format!("{n} line{}", if n == 1 { "" } else { "s" });
-        let rests = |assumed: f64| if assumed != 0.0 { format!("${} of it rests on something assumed", view::figure(assumed, 2)) } else { String::new() };
-        for c in &est.classes {
-            match c.total.value {
-                Some(x) => {
-                    let hours = c.hours.map(|(h, _)| format!("  {} hr", view::figure(h, 4))).unwrap_or_default();
-                    line(t, c.class.title().to_string(), format!("{}{hours}", lines_of(c.total.members)), rests(c.total.assumed), format!("${}", view::figure(x, 2)), c.total.status, false);
-                }
-                None => row(t, false, None, |r| {
-                    cell(r, 7.0, false, |_| {});
-                    cell(r, 0.0, false, |c2| words(c2, fonts, c.class.title(), 12.5, Weight::Medium, theme::ink_soft()));
-                    cell(r, 130.0, true, |c2| words(c2, fonts, "none", 12.5, Weight::Regular, theme::ink_faint()));
-                }),
-            }
-        }
-        match est.job_cost.value {
-            Some(x) => line(t, "Job cost".to_string(), lines_of(est.job_cost.members), rests(est.job_cost.assumed), format!("${}", view::figure(x, 2)), est.job_cost.status, true),
-            None => line(t, "Job cost".to_string(), "no classed line comes to a figure".to_string(), String::new(), "none".to_string(), Status::Unknown, true),
-        }
-        let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!("at {} %", view::rate(x)))).unwrap_or_default();
-        for (name, d, at, strong) in [("Overhead", &est.overhead, rate(est.markup.as_ref().map(|m| &m.overhead)), false), ("Profit", &est.profit, rate(est.markup.as_ref().map(|m| &m.profit)), false), ("Price", &est.price, String::new(), true)] {
-            let (said, status) = money(d);
-            let field = match name {
-                "Overhead" => Some((Entry::Overhead, KeyCode::KeyO)),
-                "Profit" => Some((Entry::Profit, KeyCode::KeyR)),
-                _ => None,
-            };
-            match field {
-                None => line(t, name.to_string(), at, String::new(), said, status, strong),
-                // Overhead and profit are each a percentage, changed here.
-                Some((field, key)) => row(t, false, None, |r| {
-                    cell(r, 7.0, false, |c| dot(c, status));
-                    cell(r, 0.0, false, |c| {
-                        words(c, fonts, name, 12.5, Weight::Medium, theme::ink());
-                        let typed = match &doc.entry {
-                            Some((f, typed)) if *f == field => Some(typed.as_str()),
-                            _ => None,
-                        };
-                        editable(c, fonts, format!("{name} percent"), if at.is_empty() { "not set".to_string() } else { at.clone() }, if at.is_empty() { theme::status_ink(Status::Unknown) } else { theme::ink_soft() }, typed, move |doc| doc.press(key));
-                    });
-                    cell(r, 130.0, true, |c| words(c, fonts, said.clone(), 12.5, Weight::Semibold, theme::status_ink(status)));
-                }),
-            }
-            // Why there is no figure; or, on a price over a job cost that leaves lines
-            // out, that it is the price of what is in it and not of the job.
-            if d.value.is_none() || !d.note.is_empty() {
-                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(6.0) }, ..default() }).with_child(text(fonts, d.note.clone(), 11.5, Weight::Regular, theme::status_ink(if d.value.is_none() { Status::Unknown } else { Status::Assumed })));
-            }
-        }
-        for (who, why) in &est.job_cost.left_out {
-            t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, ..default() }).with_child(text(fonts, format!("left out of the job cost: {who}: {why}"), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
-        }
-        for l in est.lines.iter().filter(|l| l.off) {
-            t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, ..default() }).with_child(text(fonts, format!("switched off, out of every total: {}: {:?} ({})", l.path, l.description, money(&l.amount).0), 11.5, Weight::Regular, theme::ink_soft()));
-        }
     });
     let made: Vec<&view::SheetLine> = est.lines.iter().filter(|l| l.material.is_some() && !l.off).collect();
     if !made.is_empty() {

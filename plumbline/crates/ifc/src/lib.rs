@@ -352,10 +352,10 @@ fn length_unit(r: &Reader) -> (String, f64) {
             return None;
         }
         Some(match r.arg(e, 2) {
-            V::Enum(p) if p == "MILLI" => ("millimetres".to_string(), 0.001 * FT_PER_M),
-            V::Enum(p) if p == "CENTI" => ("centimetres".to_string(), 0.01 * FT_PER_M),
-            V::Enum(p) if p == "DECI" => ("decimetres".to_string(), 0.1 * FT_PER_M),
-            _ => ("metres".to_string(), FT_PER_M),
+            V::Enum(p) if p == "MILLI" => ("millimeters".to_string(), 0.001 * FT_PER_M),
+            V::Enum(p) if p == "CENTI" => ("centimeters".to_string(), 0.01 * FT_PER_M),
+            V::Enum(p) if p == "DECI" => ("decimeters".to_string(), 0.1 * FT_PER_M),
+            _ => ("meters".to_string(), FT_PER_M),
         })
     };
     for e in r.file.entities.values().filter(|e| e.name == "IFCUNITASSIGNMENT") {
@@ -381,7 +381,7 @@ fn length_unit(r: &Reader) -> (String, f64) {
             }
         }
     }
-    ("metres (the file does not say; an IFC file with no length unit is in metres)".to_string(), FT_PER_M)
+    ("meters (the file does not say; an IFC file with no length unit is in meters)".to_string(), FT_PER_M)
 }
 
 /// A name for a thing brought in: what the model calls it where nothing else in that
@@ -461,12 +461,12 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         .collect();
     storeys.sort_by(|a, b| a.2.total_cmp(&b.2));
     if storeys.is_empty() {
-        return Err("the model has no building storey: there is nothing to stand its walls and floors on".into());
+        return Err("the model has no building level: there is nothing to stand its walls and floors on".into());
     }
     let lifted: Vec<f64> = storeys.iter().map(|s| s.3 - s.2).filter(|d| d.abs() > 0.001).collect();
     if !lifted.is_empty() {
         out.notes.push(format!(
-            "{} of the model's storeys {} placed {} from where {} its floor is (the building, or the site, is placed at a height): each floor's height is what the storey says, and what stands on a storey is measured from where the storey is placed",
+            "{} of the model's levels {} placed {} from where {} its floor is (the building, or the site, is placed at a height): each floor's height is what the level says, and what stands on a level is measured from where the level is placed",
             lifted.len(),
             if lifted.len() == 1 { "is" } else { "are" },
             feet(lifted[0]),
@@ -484,7 +484,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     for (i, (id, called, elevation, placed)) in storeys.iter().enumerate() {
         let source = from(&r.file.entities[id], *id);
         let entered = Entered { status: how.status, source: &source };
-        let mut called = if called.is_empty() { format!("storey at {}", feet(*elevation)) } else { called.clone() };
+        let mut called = if called.is_empty() { format!("level at {}", feet(*elevation)) } else { called.clone() };
         // A storey of this name already in the job, at this height: it is that storey.
         // At another height the two cannot both be right, and the model is refused.
         if let Some((_, path, at)) = have.iter().find(|(n, _, _)| *n == called).filter(|_| !storey_path.values().any(|(p, _)| have.iter().any(|(n, hp, _)| *n == called && hp == p))) {
@@ -496,7 +496,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 }
                 _ => {
                     return Err(format!(
-                        "the job already has a storey called \"{called}\" with its floor at {}, and the model's storey of that name has its floor at {}: they cannot both be right. Give one of them another name, or set the job's storey to the model's height, and bring the model in again",
+                        "the job already has a level called \"{called}\" with its floor at {}, and the model's level of that name has its floor at {}: they cannot both be right. Give one of them another name, or set the job's level to the model's height, and bring the model in again",
                         at.map(feet).unwrap_or_else(|| "a height nobody has entered".to_string()),
                         feet(*elevation)
                     ));
@@ -507,7 +507,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         // the later says which it is by its height.
         if have.iter().any(|(n, _, _)| *n == called) {
             let renamed = format!("{called}, at {}", feet(*elevation));
-            out.notes.push(format!("the model has more than one storey called \"{called}\": the one with its floor at {} was brought in as \"{renamed}\"", feet(*elevation)));
+            out.notes.push(format!("the model has more than one level called \"{called}\": the one with its floor at {} was brought in as \"{renamed}\"", feet(*elevation)));
             called = renamed;
         }
         let path = match storeys.get(i + 1) {
@@ -515,19 +515,19 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             _ => {
                 // The top storey: how tall it is is in nothing the file says.
                 let path = ed::storey(job, &called, &feet(*elevation), "1 ft", entered)?;
-                let e = job.find(&path).ok_or("the new storey is not there")?;
-                let mut level = job.world.get::<building::Level>(e).cloned().ok_or("the new storey has no level")?;
-                level.height = Val::unknown("ft", "the model has no storey above this one to say how tall it is");
+                let e = job.find(&path).ok_or("the new level is not there")?;
+                let mut level = job.world.get::<building::Level>(e).cloned().ok_or("the new level has no level")?;
+                level.height = Val::unknown("ft", "the model has no level above this one to say how tall it is");
                 job.put(&path, level)?;
                 path
             }
         };
         have.push((called, path.clone(), Some(*elevation)));
         storey_path.insert(*id, (path, *placed));
-        made("storeys");
+        made("levels");
     }
     if !shared.is_empty() {
-        out.notes.push(format!("the job already has {}: what the model has on {} was put on the job's own, and no second storey was made", shared.iter().map(|n| format!("\"{n}\"")).collect::<Vec<_>>().join(", "), if shared.len() == 1 { "it" } else { "them" }));
+        out.notes.push(format!("the job already has {}: what the model has on {} was put on the job's own, and no second level was made", shared.iter().map(|n| format!("\"{n}\"")).collect::<Vec<_>>().join(", "), if shared.len() == 1 { "it" } else { "them" }));
     }
     // ---- What stands on which storey.
     let mut on: HashMap<u64, u64> = HashMap::new();
@@ -737,7 +737,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 q.iter(&job.world).any(|(n, f)| n.parent.as_deref() == Some(storey.as_str()) && f.boundary_ft().is_some_and(|b| b.len() == boundary.len() && b.iter().zip(&boundary).all(|(p, q)| (p[0] - q[0]).abs() < 0.001 && (p[1] - q[1]).abs() < 0.001)))
             };
             if there {
-                return Err("a floor with this very outline is already on this storey: a second would be counted twice".into());
+                return Err("a floor with this very outline is already on this level: a second would be counted twice".into());
             }
             let called = free_name(job, &storey, &r.name(e), "floor", id);
             let path = job.add(&storey, Kind::Floor, &called)?;
@@ -919,7 +919,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 })
             };
             if there {
-                return Err(format!("a {} in this very place is already on this storey: a second would be counted twice", kind.stem()));
+                return Err(format!("a {} in this very place is already on this level: a second would be counted twice", kind.stem()));
             }
             let called = free_name(job, &storey, &r.name(e), kind.stem(), id);
             let path = job.add(&storey, kind, &called)?;
@@ -971,15 +971,15 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         }
     }
     if guessed > 0 {
-        out.notes.push(format!("{guessed} thing{} the model puts on no storey: each was put on the highest storey whose floor is not above it", if guessed == 1 { " is one" } else { "s are ones" }));
+        out.notes.push(format!("{guessed} thing{} the model puts on no level: each was put on the highest level whose floor is not above it", if guessed == 1 { " is one" } else { "s are ones" }));
     }
     if systems_not_known > 0 {
         out.notes.push(format!("{systems_not_known} system{} in the model {} of a sort this program has no name for: what is on {} was brought in on no system", if systems_not_known == 1 { "" } else { "s" }, if systems_not_known == 1 { "is" } else { "are" }, if systems_not_known == 1 { "it" } else { "them" }));
     }
     out.notes.push(format!("the model is in {}: every length was turned into feet and kept to a ten-thousandth of a foot", out.unit));
     out.left_out = left.into_iter().map(|((class, why), n)| (class, n, why)).collect();
-    if out.made.iter().all(|(what, _)| what == "storeys") {
-        return Err(format!("nothing in the model but its storeys could be brought in: {}", out.left_out.iter().map(|(c, n, why)| format!("{n} {c} ({why})")).collect::<Vec<_>>().join("; ")));
+    if out.made.iter().all(|(what, _)| what == "levels") {
+        return Err(format!("nothing in the model but its levels could be brought in: {}", out.left_out.iter().map(|(c, n, why)| format!("{n} {c} ({why})")).collect::<Vec<_>>().join("; ")));
     }
     Ok(out)
 }

@@ -152,7 +152,7 @@ pub fn measure(job: &mut Job, path: &str, what: &str, reading: Reading, to: Opti
         let kind = job.kind(path).ok_or_else(|| format!("{path} has no kind"))?;
         let name = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_else(|| path.to_string());
         if to.is_some() && !kind.is_segment() {
-            return Err(format!("{name} is not a run: only a run's height is measured to its bottom, its centre or its top"));
+            return Err(format!("{name} is not a run: only a run's height is measured to its bottom, its center or its top"));
         }
         let reading = match reading {
             Reading::Length(typed) => Do::Length(typed),
@@ -186,7 +186,7 @@ pub fn measure(job: &mut Job, path: &str, what: &str, reading: Reading, to: Opti
     // wrong is the walls' height, and that is what is said.
     .map_err(|why| {
         if a_floor && why.contains("one wall drawn over another") {
-            format!("this measurement puts the floor above lower than walls on this storey that stand to their own height, so they would run up into the walls above ({why}). Measure those walls' heights first, or hold their tops to the storey above, and then measure this")
+            format!("this measurement puts the floor above lower than walls on this level that stand to their own height, so they would run up into the walls above ({why}). Measure those walls' heights first, or hold their tops to the level above, and then measure this")
         } else {
             why
         }
@@ -212,7 +212,7 @@ pub const AGREE_FT: f64 = 1.0 / 96.0;
 /// The source of a floor's height worked from the floor below and its storey height.
 /// A floor that carries it follows that storey height when it is measured again.
 fn follows(below: &str) -> String {
-    format!("{below}'s floor and its storey height")
+    format!("{below}'s floor and its level height")
 }
 
 /// So many feet as a length written the way `was` is written: in inches, in feet and
@@ -288,7 +288,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
         if let Some(mut c) = job.world.get::<Level>(e).cloned() {
             let slot = match what {
                 "elevation" => Some(Slot::Length(&mut c.elevation)),
-                "storey height" => Some(Slot::Length(&mut c.height)),
+                "level height" => Some(Slot::Length(&mut c.height)),
                 "rooms find their walls at" => c.computation_height.as_mut().map(Slot::Length),
                 _ => None,
             };
@@ -301,7 +301,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
                 // or the measurement is refused: by a length or by "same" alike.
                 if !matches!(reading, Do::Probe) {
                     match what {
-                        "storey height" => floors_above(job, e, path, &name, &c, source, &mut also)?,
+                        "level height" => floors_above(job, e, path, &name, &c, source, &mut also)?,
                         "elevation" => floor_set(job, e, path, &name, &c, source, &mut also)?,
                         _ => {}
                     }
@@ -327,7 +327,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
         });
         on!(Opening, |c: &Opening| building::check_opening(path, kind, c), |c| match what {
             "type" => Some(Slot::Other(&mut c.type_name)),
-            "centre, along the wall" => Some(Slot::Length(&mut c.offset)),
+            "center, along the wall" => Some(Slot::Length(&mut c.offset)),
             "sill" => Some(Slot::Length(&mut c.sill)),
             _ => None,
         });
@@ -346,9 +346,9 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
         if let Some(mut c) = job.world.get::<Segment>(e).cloned() {
             let level = c.end_offset.is_none();
             let end = match what {
-                "height above its storey" if level => Some(false),
-                "height above its storey, first end" if !level => Some(false),
-                "height above its storey, second end" if !level => Some(true),
+                "height above its level" if level => Some(false),
+                "height above its level, first end" if !level => Some(false),
+                "height above its level, second end" if !level => Some(true),
                 _ => None,
             };
             if let Some(second) = end {
@@ -363,7 +363,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
                             ));
                         }
                         if to != Justify::Centre && !sized(job, &c) {
-                            return Err(format!("{name}'s size is not known, so its centre cannot be worked from its {}; give its type a size first, or measure to its centre", line_said(to)));
+                            return Err(format!("{name}'s size is not known, so its center cannot be worked from its {}; give its type a size first, or measure to its center", line_said(to)));
                         }
                         also.push(format!("{name}'s height is now held to its {} (it was held to its {})", line_said(to), line_said(c.justify)));
                         c.justify = to;
@@ -379,7 +379,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
                 return Ok(Some(Measured { said, also }));
             }
             if to.is_some() {
-                return Err(format!("only {name}'s height is measured to its bottom, its centre or its top"));
+                return Err(format!("only {name}'s height is measured to its bottom, its center or its top"));
             }
         }
         on!(Segment, |c: &Segment| building::check_segment(path, kind, c), |c| match what {
@@ -390,7 +390,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
         on!(Placed, |c: &Placed| building::check_placed(path, kind, c), |c| match what {
             "what it is" => Some(Slot::Other(&mut c.what)),
             "position" => Some(Slot::Other(&mut c.at)),
-            "height above its storey" => Some(Slot::Length(&mut c.offset)),
+            "height above its level" => Some(Slot::Length(&mut c.offset)),
             "turned" => c.angle.as_mut().map(|v| Slot::Other(v)),
             "size" => Some(Slot::Other(&mut c.size)),
             _ => None,
@@ -432,7 +432,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
 fn line_said(j: Justify) -> &'static str {
     match j {
         Justify::Top => "top",
-        Justify::Centre => "centre",
+        Justify::Centre => "center",
         Justify::Bottom => "bottom",
     }
 }
@@ -487,7 +487,7 @@ fn roofs_stay(job: &mut Job, also: &mut Vec<String>) {
 /// disagree and the measurement is refused. A floor that is Known only because this
 /// storey's height was measured before follows it when it is measured again.
 fn floors_above(job: &mut Job, me: Entity, path: &str, name: &str, level: &Level, source: &str, also: &mut Vec<String>) -> Result<(), String> {
-    let measured = level.height.feet().ok_or("the storey height is not a length this program can use")?;
+    let measured = level.height.feet().ok_or("the level height is not a length this program can use")?;
     let Some(floor) = level.elevation.feet() else {
         also.push(format!("no floor above was moved: {name}'s own floor is not known"));
         return Ok(());
@@ -575,7 +575,7 @@ fn floor_set(job: &mut Job, me: Entity, path: &str, name: &str, level: &Level, s
             Some(h) if (h - way_up).abs() <= AGREE_FT => {}
             Some(h) if below_level.height.status == Status::Known && below_level.elevation.status == Status::Known => {
                 return Err(format!(
-                    "{below_name}'s floor is Known at {} ({}) and its storey height is Known at {} ({}): that puts {name}'s floor at {}, and this says {}. One of the three is wrong, and the program does not pick",
+                    "{below_name}'s floor is Known at {} ({}) and its level height is Known at {} ({}): that puts {name}'s floor at {}, and this says {}. One of the three is wrong, and the program does not pick",
                     feet_said(under),
                     below_level.elevation.source,
                     feet_said(h),
@@ -591,7 +591,7 @@ fn floor_set(job: &mut Job, me: Entity, path: &str, name: &str, level: &Level, s
                 fitted.height = Val { value: Some(value), unit, status, source: format!("{below_name}'s floor and {name}'s floor ({source})") };
                 building::check_level(&below_path, Kind::Storey, &fitted)?;
                 job.put(&below_path, fitted)?;
-                also.push(format!("{below_name}'s storey height is now {}, {}: the way up from its floor to this one; it was {}", feet_said(way_up), status_said(status), was.map(feet_said).unwrap_or_else(|| "not known".to_string())));
+                also.push(format!("{below_name}'s level height is now {}, {}: the way up from its floor to this one; it was {}", feet_said(way_up), status_said(status), was.map(feet_said).unwrap_or_else(|| "not known".to_string())));
                 walls_through(job, &below_path, way_up, name, also);
             }
         }
@@ -612,7 +612,7 @@ fn floor_set(job: &mut Job, me: Entity, path: &str, name: &str, level: &Level, s
                 fitted.height = Val { value: Some(value), unit, status, source: format!("{name}'s floor ({source}) and {above_name}'s floor") };
                 building::check_level(path, Kind::Storey, &fitted)?;
                 job.put(path, fitted)?;
-                also.push(format!("{name}'s storey height is now {}, {}: the way up from this floor to {above_name}'s; it was {}", feet_said(way_up), status_said(status), was.map(feet_said).unwrap_or_else(|| "not known".to_string())));
+                also.push(format!("{name}'s level height is now {}, {}: the way up from this floor to {above_name}'s; it was {}", feet_said(way_up), status_said(status), was.map(feet_said).unwrap_or_else(|| "not known".to_string())));
                 walls_through(job, path, way_up, &above_name, also);
             }
         }

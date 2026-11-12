@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# D5 demonstration in the application: the sheet's Estimate tab (every cost line in its
-# column, the recap, three suppliers side by side); on the sheet itself the job's overhead
+# D5 demonstration in the application: the sheet's Estimate tab (the recap, the cost by
+# division, every cost line in its column, three suppliers side by side); on the sheet itself the job's overhead
 # and profit typed on their rows, a unit cost and a stretch-out typed on their lines and a
 # labor line switched off; and in the model window an element's material changed, with
 # the sheet following.
@@ -46,18 +46,18 @@ wheel() { xdotool mousemove 2000 600; sleep 1; for i in \$(seq 1 \$1); do xdotoo
 shot                                                    # 01 as opened
 sheet "Estimate"                                        # the sheet's Estimate tab
 park
-shot                                                    # 02 the sheet: every line in its column
+shot                                                    # 02 the recap first: no price, and why; the cost by division under it
 wheel DOWN1 5
-shot                                                    # 03 the recap: no price, and why
+shot                                                    # 03 the sheet: every line in its column, under its division
 wheel DOWN2 5
-shot                                                    # 04 the suppliers, side by side
-sheet_at "Overhead percent" 4; sleep 2                  # back up to the recap: overhead, typed where it stands
+shot                                                    # 04 at the foot, the suppliers, side by side
+sheet_at "Overhead percent" 4; sleep 2                  # back up to the recap at the top: overhead, typed where it stands
 xdotool type --delay 300 "12"; sleep 2
 shot                                                    # 05 the overhead being typed, on its row of the recap
 xdotool key Return; sleep 4
 sheet_at "Profit percent"; sleep 2; xdotool type --delay 300 "8"; sleep 2; xdotool key Return; sleep 4
 shot                                                    # 06 overhead and profit entered: the price
-sheet_at "Unit cost of Underlayment on south" 4; sleep 2 # up to the lines: a price, typed on its line
+sheet_at "Unit cost of Underlayment on south"; sleep 2  # down to the lines: a price, typed on its line
 xdotool type --delay 300 "0.95"; sleep 2
 shot                                                    # 07 a unit cost being typed on its line
 xdotool key Return; sleep 4
@@ -74,12 +74,12 @@ shot                                                    # 10 the material change
 sheet_at "Labor of Install panels on south" 4           # its labor line, switched off on the sheet
 park
 shot                                                    # 11 its labor line switched off
-sheet_at "Overhead percent"; sleep 2; xdotool type --delay 300 "ten"; sleep 2; xdotool key Return; sleep 4
+sheet_at "Overhead percent" 4; sleep 2; xdotool type --delay 300 "ten"; sleep 2; xdotool key Return; sleep 4
 shot                                                    # 12 an overhead that is not a number is refused, and says why
 xdotool key F2; sleep 3                                 # save
 close_window
 SESSION
-sed -i -e "s/DOWN1/${DOWN1:-8}/" -e "s/DOWN2/${DOWN2:-6}/g" "$T/session.sh"
+sed -i -e "s/DOWN1/${DOWN1:-9}/" -e "s/DOWN2/${DOWN2:-40}/g" "$T/session.sh"
 chmod +x "$T/session.sh"
 timeout 1200 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
 if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
@@ -97,7 +97,7 @@ echo "== What the session left in the saved job =="
 says() { grep -qF -- "$2" "$T/sheet.txt" || { echo "FAIL: $1: the saved job's estimate does not say: $2"; cat "$T/sheet.txt"; exit 1; }; printf '    %s\n' "$2"; }
 # The south plane made 20 oz copper in the window: 461.1890 SF x 1.25 = 576.4863 lb x 9.00 =
 # 5,188.38 (it was 4,150.70). Assumed: what is typed in the window has no source but the window.
-says "the south plane's panels, repriced" "Standing seam panels ~576.49 lb \$9.00/lb ~\$5,188.38"
+says "the south plane's panels, repriced" "Standing seam panels ~576.4863 lb \$9.00/lb ~\$5,188.38"
 # The south plane's underlayment priced on its line of the sheet, $0.90 to $0.95/SF:
 # 419.2627 SF is 398.30, up 20.96.
 says "a price typed on its line" "Underlayment 419.26 SF ~\$0.95/SF ~\$398.30"

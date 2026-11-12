@@ -33,7 +33,7 @@ line() { "$P" line "$J" "$1" "$2" "$3" --cost-type "$4" --division "$5" >/dev/nu
 echo "== The house: one level, four walls, a door, two windows, a floor, a room, a roof, a duct, a pipe, a cable, a lavatory, a furnace =="
 "$P" new "$J" "A house in sixteen divisions (not a real job)" >/dev/null
 JOB="$("$P" show "$J" | sed -n 's/^ *\(job-[0-9]*\) .*/\1/p' | head -1)"
-S="$(made "$("$P" storey "$J" Ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+S="$(made "$("$P" level "$J" Ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
 WT="$(made "$("$P" type "$J" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
 read -r SOUTH EAST NORTH WEST <<<"$("$P" wall "$J" "$S" "$WT" --points "0,0 30,0 30,20 0,20" --closed --height "9 ft" "${K[@]}" | sed -E 's/^[^:]*: //; s/,//g')"
 DT="$(made "$("$P" type "$J" door "door 3 x 7" --width "3 ft" --height "7 ft" "${K[@]}")")"
@@ -173,7 +173,7 @@ echo
 echo "== The workbook: each division a formula over the lines; the CSV carries each line's division =="
 "$P" export estimate "$J" "$T/estimate.xlsx" | sed "s|$T/||g; s/^/    /"
 python3 tools/workbook.py "$T/estimate.xlsx" > "$T/worked.txt"
-grep -F "formulas worked out; each comes to the figure written with it" "$T/worked.txt" | sed 's/^/    /'
+grep -F "formulas worked out; each comes to what is written with it" "$T/worked.txt" | sed 's/^/    /'
 for row in "Divisions!1 General Requirements = 6600.00" "Divisions!7 Thermal and Moisture Protection = 18793.20" "Divisions!9 Finishes = 9867.50" "Divisions!16 Electrical = 1200.00" "Divisions!The sixteen divisions = 89526.90"; do
   grep -qF -- "$row" "$T/worked.txt" || { echo "FAIL: the workbook does not come to: $row"; cat "$T/worked.txt"; exit 1; }; echo "    $row"
 done

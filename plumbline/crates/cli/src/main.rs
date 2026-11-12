@@ -58,7 +58,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline sixteen <file>   (the sample whole house with a made-up price on everything, in all sixteen divisions)\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline drawings <file>\n  plumbline clashes <file> [--clearance \"2 in\"]\n  plumbline vif <file>   (what is still to be verified in the field, and the dollars riding on each)\n  plumbline finishes <file>   (what each wall, roof plane, window and door is finished with, read from what is priced on it)\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--cost-type <material|labor|...>] [--division <1 to 16>] [--of-material]\n  plumbline division <file> <path> <1 to 16, or its title> [--line \"<cost line>\"]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n  plumbline export <prices|assemblies> <file> <out.csv>\n  plumbline export estimate <file> <out.xlsx|out.csv>   (.xlsx: a workbook whose amounts, recap and price are formulas; .csv: the lines as values)\n  plumbline export ifc <file> <out.ifc>   (the building as an IFC4 model, for another trade or a designer)\n  plumbline export <supplier|subcontractor|pm> <file> <out.xlsx|out.csv>   (one lens on the estimate: what to quote; the subcontract scope; the lines, budget and what is to verify)\n  plumbline import prices <file> <a price list: CSV or XLSX> [--sheet \"<name>\"] [--supplier \"<whose prices>\"] [--add] [--status <Known|Assumed> --source \"<where from>\"]\n  plumbline import assemblies <file> <an assembly library this program wrote: CSV or XLSX> [--sheet \"<name>\"]\n  plumbline import prior <file> <an estimate made before: CSV or XLSX> [--sheet \"<name>\"] [--name \"<what to call it>\"] --status <Known|Assumed> --source \"<where from>\"\n  plumbline import ifc <file> <a model: IFC2x3 or IFC4> --status <Known|Assumed> --source \"<where from>\"\n  plumbline compare <file>\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline storey <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> floor \"<name>\" --thickness \"4 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <storey> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <storey>)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline floor <file> <storey> <type> (--walls | --points \"0,0 30,0 30,20 0,20\")   (--walls: the outline the storey's walls enclose)\n  plumbline room <file> <storey> \"<name>\" --at \"6,8\"\n  plumbline run <file> <storey> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline place <file> <storey> <fixture|equipment> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline drawing <file> <storey> \"<name>\" --file <a PDF, PNG or JPEG of the plan> [--page 1]\n  plumbline calibrate <file> <drawing> --from \"126,90\" --to \"666,90\" --distance \"30 ft\"   (two places on the page and the dimension between them)\n  plumbline lineup <file> <drawing> --page-point \"126,126\" --plan-point \"0,0\"\n  tracing: wall, floor, door, window, room, run and place take --on <drawing> in place of --status and --source; their points are then places on the drawing's page\n  plumbline move <file> <path> --by \"3,2\"\n  plumbline measure <file> <path> \"<the value, as it is listed: storey height, sill, ...>\" <what was read: 8' 10 1/2\", or same> [--to <bottom|centre|top>] --source \"<who measured, or with what>\"\n  plumbline remove <file> <path>\n  plumbline fitting <file> <storey> --at \"10,2\" [--height \"8 ft\"] [--kind <bend|tee|cross|transition|coupling>]\n  plumbline fitting <file> --all [--system <system>]\n  plumbline connect <file> <fixture or equipment> <run>\n  plumbline split <file> <run> --at \"6,2\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline sixteen <file>   (the sample whole house with a made-up price on everything, in all sixteen divisions)\n  plumbline show <file>\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline drawings <file>\n  plumbline clashes <file> [--clearance \"2 in\"]\n  plumbline vif <file>   (what is still to be verified in the field, and the dollars riding on each)\n  plumbline finishes <file>   (what each wall, roof plane, window and door is finished with, read from what is priced on it)\n  plumbline price <file>\n  plumbline estimate <file>\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity> [--cost-type <material|labor|...>] [--division <1 to 16>] [--of-material]\n  plumbline division <file> <path> <1 to 16, or its title> [--line \"<cost line>\"]\n  plumbline class <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <condition> --source \"<who says>\"\n  plumbline export <prices|assemblies> <file> <out.csv>\n  plumbline export estimate <file> <out.xlsx|out.csv>   (.xlsx: a workbook whose amounts, recap and price are formulas; .csv: the lines as values)\n  plumbline export ifc <file> <out.ifc>   (the building as an IFC4 model, for another trade or a designer)\n  plumbline export <supplier|subcontractor|pm> <file> <out.xlsx|out.csv>   (one lens on the estimate: what to quote; the subcontract scope; the lines, budget and what is to verify)\n  plumbline import prices <file> <a price list: CSV or XLSX> [--sheet \"<name>\"] [--supplier \"<whose prices>\"] [--add] [--status <Known|Assumed> --source \"<where from>\"]\n  plumbline import assemblies <file> <an assembly library this program wrote: CSV or XLSX> [--sheet \"<name>\"]\n  plumbline import prior <file> <an estimate made before: CSV or XLSX> [--sheet \"<name>\"] [--name \"<what to call it>\"] --status <Known|Assumed> --source \"<where from>\"\n  plumbline import ifc <file> <a model: IFC2x3 or IFC4> --status <Known|Assumed> --source \"<where from>\"\n  plumbline compare <file>\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline level <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> floor \"<name>\" --thickness \"4 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <level> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <level>)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline floor <file> <level> <type> (--walls | --points \"0,0 30,0 30,20 0,20\")   (--walls: the outline the level's walls enclose)\n  plumbline room <file> <level> \"<name>\" --at \"6,8\"\n  plumbline run <file> <level> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline place <file> <level> <fixture|equipment> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline drawing <file> <level> \"<name>\" --file <a PDF, PNG or JPEG of the plan> [--page 1]\n  plumbline calibrate <file> <drawing> --from \"126,90\" --to \"666,90\" --distance \"30 ft\"   (two places on the page and the dimension between them)\n  plumbline lineup <file> <drawing> --page-point \"126,126\" --plan-point \"0,0\"\n  tracing: wall, floor, door, window, room, run and place take --on <drawing> in place of --status and --source; their points are then places on the drawing's page\n  plumbline move <file> <path> --by \"3,2\"\n  plumbline measure <file> <path> \"<the value, as it is listed: level height, sill, ...>\" <what was read: 8' 10 1/2\", or same> [--to <bottom|center|top>] --source \"<who measured, or with what>\"\n  plumbline remove <file> <path>\n  plumbline fitting <file> <level> --at \"10,2\" [--height \"8 ft\"] [--kind <bend|tee|cross|transition|coupling>]\n  plumbline fitting <file> --all [--system <system>]\n  plumbline connect <file> <fixture or equipment> <run>\n  plumbline split <file> <run> --at \"6,2\"\n\nfields: pitch (6, 6:12, 1/4:12), height, eave_height, stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), condition, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): stretch_out, quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
 }
 
 /// What a page is measured in until its drawing has a scale.
@@ -173,14 +173,21 @@ fn vif(job: &mut plumbline_world::Job) -> String {
         (_, Some(x)) => writeln!(out, "Verify in field: {n} {}. {} rides on them ({} of the estimate, each counted once).", if n == 1 { "question" } else { "questions" }, money(Some(x), list.riding_status), lines(list.riding_lines)),
         (_, None) => writeln!(out, "Verify in field: {n} {}. Nothing priced rides on {}.", if n == 1 { "question" } else { "questions" }, if n == 1 { "it" } else { "them" }),
     };
+    // What rides on a question and has no price yet is in no figure above, and is said.
+    if list.riding_unpriced > 0 {
+        let _ = writeln!(out, "  Not in that: {} that {} on them and {} no price yet.", lines(list.riding_unpriced), if list.riding_unpriced == 1 { "rides" } else { "ride" }, if list.riding_unpriced == 1 { "has" } else { "have" });
+    }
     if let Some(why) = &list.clashes_not_tested {
         let _ = writeln!(out, "  The clashes are not on this list: they could not be worked out ({why}).");
     }
     for q in &list.questions {
         let on = if q.storey.is_empty() || q.kind == plumbline_world::Kind::Storey { String::new() } else { format!(", on {}", q.storey) };
-        let riding = match q.dollars {
-            Some(_) => format!("{}, {}", money(q.dollars, q.dollars_status), lines(q.lines)),
-            None => "no dollars riding on it".to_string(),
+        let more = |n: usize| if n == 1 { "1 line has no price yet".to_string() } else { format!("{n} lines have no price yet") };
+        let riding = match (q.dollars, q.unpriced) {
+            (Some(_), 0) => format!("{}, {}", money(q.dollars, q.dollars_status), lines(q.lines)),
+            (Some(_), u) => format!("{}, {}; of what else rides on it, {}", money(q.dollars, q.dollars_status), lines(q.lines), more(u)),
+            (None, 0) => "no dollars riding on it".to_string(),
+            (None, u) => format!("no dollars yet: of what rides on it, {}", more(u)),
         };
         match &q.clash {
             Some(c) => {
@@ -202,7 +209,7 @@ fn vif(job: &mut plumbline_world::Job) -> String {
                 if !measure.is_empty() {
                     to_do.push(format!("measure: {measure}"));
                 }
-                let _ = writeln!(out, "  {} [{}] ({}){on}: {riding}", q.name, q.path, format!("{:?}", q.kind).to_lowercase());
+                let _ = writeln!(out, "  {} [{}] ({}){on}: {riding}", q.name, q.path, q.kind.stem());
                 let _ = writeln!(out, "      {}", to_do.join("; "));
             }
         }
@@ -464,9 +471,16 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
         }
         // Hours are shown to the four places they are held and added to: at two, a line's
         // hours would not multiply to its amount, or add to its class.
-        let places = |unit: &str| if unit == plumbline_world::HOURS { 4 } else { 2 };
+        // Anything else is shown to two places unless, at two, it would not multiply by
+        // its price to its amount on a calculator (J17A-9): then to the four it is held to.
+        let price_now = l.unit_cost.as_ref().and_then(|v| v.value);
+        let places = |unit: &str, x: f64| match (unit == plumbline_world::HOURS, price_now, l.amount.value) {
+            (true, _, _) => 4,
+            (_, Some(p), Some(a)) if (plumbline_world::lines::cents((x * 100.0).round() / 100.0 * p) - a).abs() > 0.004 => 4,
+            _ => 2,
+        };
         let priced = match l.priced.value {
-            Some(x) => format!("{}{} {}", l.priced.status.flag().trim_end(), view::figure(x, places(&l.priced.unit)), l.priced.unit),
+            Some(x) => format!("{}{} {}", l.priced.status.flag().trim_end(), view::figure(x, places(&l.priced.unit, x)), l.priced.unit),
             None => "no figure".to_string(),
         };
         let at = match l.unit_cost.as_ref() {
@@ -499,7 +513,7 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
             let _ = writeln!(out, "      ! {}", l.amount.note);
         }
         if l.class.is_none() && !l.off {
-            let _ = writeln!(out, "      ? no class: it is in no column and no row of the recap{}", l.amount.value.map(|_| format!(" (it comes to {})", flagged(&l.amount))).unwrap_or_default());
+            let _ = writeln!(out, "      ? no cost type: it is in no column and no row of the recap{}", l.amount.value.map(|_| format!(" (it comes to {})", flagged(&l.amount))).unwrap_or_default());
         }
         if !l.quantity.note.is_empty() && l.quantity.value.is_some() {
             let _ = writeln!(out, "      ! its quantity: {}", l.quantity.note);
@@ -534,7 +548,7 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
             let _ = writeln!(out, "  {:<20}{:>14}   {} line{}", "Job cost", format!("{}{}", est.job_cost.status.flag().trim_end(), money(x)), est.job_cost.members, if est.job_cost.members == 1 { "" } else { "s" });
         }
         None => {
-            let _ = writeln!(out, "  {:<20}{:>14}   no classed line comes to a figure", "Job cost", "none");
+            let _ = writeln!(out, "  {:<20}{:>14}   no line with a cost type comes to a figure", "Job cost", "none");
         }
     }
     let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!(" at {}{} %", v.status.flag().trim_end(), view::rate(x)))).unwrap_or_default();
@@ -556,7 +570,7 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
     }
 
     // The job cost again, division by division: all sixteen, and what is in none.
-    if est.divisions.iter().any(|d| d.total.members > 0) || est.no_division.members > 0 {
+    if est.divisions.iter().any(|d| d.total.members > 0) || est.no_division.members > 0 || !est.no_division.left_out.is_empty() || est.divisions.iter().any(|d| !d.total.left_out.is_empty()) {
         let _ = writeln!(out, "\nBY DIVISION");
         let lines = |n: usize| format!("{n} line{}", if n == 1 { "" } else { "s" });
         for d in &est.divisions {
@@ -570,13 +584,27 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
                 let _ = writeln!(out, "      ? left out: {who}: {why}");
             }
         }
-        let in_all: f64 = est.divisions.iter().filter_map(|d| d.total.value).sum();
-        let _ = writeln!(out, "  {:<36}{:>14}", "the sixteen divisions", money(plumbline_world::lines::cents(in_all)));
-        if est.no_division.members > 0 {
-            let said = est.no_division.value.map(money).unwrap_or_else(|| "no figure".to_string());
-            let _ = writeln!(out, "  in no division: {}, {said}: in the job cost, and in none of the sixteen", lines(est.no_division.members));
+        // The sixteen together: no surer than the least sure division, and saying how
+        // many lines the divisions above leave out (J17A-2).
+        let with: Vec<&view::DivisionTotal> = est.divisions.iter().filter(|d| d.total.value.is_some()).collect();
+        let in_all: f64 = with.iter().filter_map(|d| d.total.value).sum();
+        let status = with.iter().map(|d| d.total.status).max().unwrap_or(plumbline_world::Status::Known);
+        let out_of_them: usize = est.divisions.iter().map(|d| d.total.left_out.len()).sum();
+        let said = if with.is_empty() { "none".to_string() } else { format!("{}{}", status.flag().trim_end(), money(plumbline_world::lines::cents(in_all))) };
+        let _ = writeln!(out, "  {:<36}{said:>14}{}", "the sixteen divisions", if out_of_them == 0 { String::new() } else { format!("   leaves out {}, named above", lines(out_of_them)) });
+        let none = &est.no_division;
+        if none.members > 0 || !none.left_out.is_empty() {
+            let said = none.value.map(|x| format!("{}{}", none.status.flag().trim_end(), money(x))).unwrap_or_else(|| "no figure".to_string());
+            let _ = writeln!(out, "  in no division: {}, {said}: in the job cost, and in none of the sixteen", lines(none.members));
             for l in est.lines.iter().filter(|l| !l.off && l.class.is_some() && l.division.is_none()) {
-                let _ = writeln!(out, "    ? {}: {:?}", l.path, l.description);
+                match l.amount.value {
+                    Some(x) => {
+                        let _ = writeln!(out, "    {}{}  {}: {:?}", l.amount.status.flag().trim_end(), money(x), l.path, l.description);
+                    }
+                    None => {
+                        let _ = writeln!(out, "    ? left out: {}: {:?}: {}", l.path, l.description, l.amount.note);
+                    }
+                }
             }
         }
     }
@@ -698,8 +726,9 @@ fn tables(args: &[String]) -> Result<(), String> {
             let b = plumbline_ifc::import(&mut job, &bytes, called, plumbline_world::editing::Entered { status, source: &source }).map_err(|why| format!("{other}: {why}"))?;
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
             let mut out = format!("{other} ({}): brought in\n", b.schema);
+            // One of a thing is said as one: "1 door", not "1 doors" (J17B-19).
             for (what, n) in &b.made {
-                let _ = writeln!(out, "    {n} {what}");
+                let _ = writeln!(out, "    {n} {}", if *n == 1 { what.strip_suffix('s').unwrap_or(what) } else { what });
             }
             let _ = writeln!(out, "  not brought in: {}", count(b.left_out.iter().map(|l| l.1).sum(), "thing", "things"));
             for (class, n, why) in &b.left_out {
@@ -777,7 +806,7 @@ fn tables(args: &[String]) -> Result<(), String> {
                 None => (export::estimate_out(&mut job, workbook), "the estimate"),
                 Some(Lens::Supplier) => (export::lens_out(&mut job, Lens::Supplier), "the materials to quote, with none of our prices"),
                 Some(Lens::Subcontractor) => (export::lens_out(&mut job, Lens::Subcontractor), "the subcontract scope, with none of our prices"),
-                Some(Lens::Pm) => (export::lens_out(&mut job, Lens::Pm), "the lines, the budget by class and what is to verify, with no overhead, profit or price"),
+                Some(Lens::Pm) => (export::lens_out(&mut job, Lens::Pm), "the lines, the budget by cost type and by division, and what is to verify, with no overhead, profit or price"),
             };
             let lines: usize = sheets.first().map(|s| s.rows.len().saturating_sub(s.head + 1)).unwrap_or(0);
             if workbook {
@@ -798,13 +827,14 @@ fn tables(args: &[String]) -> Result<(), String> {
                                         Out::Number(x) => plumbline_sheets::Cell::Number(*x),
                                         Out::Dollars(x) => plumbline_sheets::Cell::Dollars(*x),
                                         Out::Formula { text, value } => plumbline_sheets::Cell::Formula { text: text.clone(), value: *value },
+                                        Out::FormulaText { text, shown } => plumbline_sheets::Cell::FormulaText { text: text.clone(), shown: shown.clone() },
                                     })
                                     .collect()
                             })
                             .collect(),
                     })
                     .collect();
-                let formulas = sheets.iter().flat_map(|s| s.rows.iter().flatten()).filter(|c| matches!(c, Out::Formula { .. })).count();
+                let formulas = sheets.iter().flat_map(|s| s.rows.iter().flatten()).filter(|c| matches!(c, Out::Formula { .. } | Out::FormulaText { .. })).count();
                 let bytes = plumbline_sheets::xlsx(&tabs)?;
                 std::fs::write(other, bytes).map_err(|e| format!("cannot write {other}: {e}"))?;
                 say!("wrote {other}: {said} of {path}; {}: {}; {}", count(sheets.len(), "sheet", "sheets"), sheets.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", "), if formulas == 0 { "figures, no formulas".to_string() } else { count(formulas, "figure that is a formula", "figures that are formulas") });
@@ -955,7 +985,7 @@ fn run(args: &[String]) -> Result<(), String> {
         let _ = std::io::stdout().write_all(compared_said(&mut job).as_bytes());
         return Ok(());
     }
-    if matches!(cmd, "new" | "storey" | "type" | "system" | "wall" | "floor" | "door" | "window" | "room" | "run" | "place" | "move" | "measure" | "remove" | "split" | "fitting" | "connect" | "drawing" | "calibrate" | "lineup") {
+    if matches!(cmd, "new" | "level" | "storey" | "type" | "system" | "wall" | "floor" | "door" | "window" | "room" | "run" | "place" | "move" | "measure" | "remove" | "split" | "fitting" | "connect" | "drawing" | "calibrate" | "lineup") {
         return draw(args);
     }
     if matches!(cmd, "sample" | "house" | "sixteen" | "priced" | "show" | "check" | "lines" | "takeoff" | "price" | "estimate") && args.len() > 2 {
@@ -964,6 +994,11 @@ fn run(args: &[String]) -> Result<(), String> {
     match cmd {
         "sample" | "house" | "sixteen" | "priced" => {
             let out = args.get(1).ok_or_else(usage)?;
+            // A made-up job is not written over a file, any more than a new job is
+            // (J17A-16): the name typed may be the name of somebody's own job.
+            if std::path::Path::new(out).exists() {
+                return Err(format!("{out} is already there; a made-up job is not written over a file. Give it a name that is not in use"));
+            }
             let mut job = match cmd {
                 "house" => sample::house(),
                 "sixteen" => sample::house_priced(),
@@ -1137,7 +1172,7 @@ fn run(args: &[String]) -> Result<(), String> {
             if cmd == "class" {
                 let class = plumbline_world::Class::parse(value)?;
                 job.set_class(element, line, class)?;
-                say!("{element}{}: class is {}", line.map(|l| format!(" {l:?}")).unwrap_or_default(), class.title());
+                say!("{element}{}: cost type is {}", line.map(|l| format!(" {l:?}")).unwrap_or_default(), class.title());
             } else {
                 let off = match value.as_str() {
                     "off" => true,
@@ -1485,7 +1520,7 @@ fn draw(args: &[String]) -> Result<(), String> {
                 _ => None,
             };
             if let Some(onto) = onto.filter(|s| *s != its) {
-                return Err(format!("{d} is a plan of {its}, not of {onto}: what is traced over a drawing is on the storey it is a plan of"));
+                return Err(format!("{d} is a plan of {its}, not of {onto}: what is traced over a drawing is on the level it is a plan of"));
             }
             Some((drawing, source))
         }
@@ -1560,10 +1595,11 @@ fn draw(args: &[String]) -> Result<(), String> {
             }
             said
         }
-        ("storey", [name]) => {
+        // A level; "storey" is the word this verb had before and is still taken.
+        ("level" | "storey", [name]) => {
             let (status, source) = how(&status, &source)?;
             let made = ed::storey(&mut job, name, &need(flag("--elevation"), "--elevation", "\"0 ft\"")?, &need(flag("--height"), "--height", "\"9 ft\"")?, ed::Entered { status, source: &source })?;
-            format!("{made}: storey {name:?}")
+            format!("{made}: level {name:?}")
         }
         ("type", [what, name]) => {
             let (status, source) = how(&status, &source)?;
@@ -1595,7 +1631,7 @@ fn draw(args: &[String]) -> Result<(), String> {
             let top = match (&height, &top) {
                 (Some(h), None) => ed::Top::Height(h),
                 (None, Some(level)) => ed::Top::Level(level),
-                _ => return Err("say how tall the walls are: --height \"9 ft\", or --top <the storey their top is held to>; one of them".into()),
+                _ => return Err("say how tall the walls are: --height \"9 ft\", or --top <the level their top is held to>; one of them".into()),
             };
             let made = ed::walls(&mut job, storey, type_path, &pts, closed, top, ed::Entered { status, source: &source })?;
             format!("{} wall{}: {}", made.len(), if made.len() == 1 { "" } else { "s" }, made.join(", "))
@@ -1607,7 +1643,7 @@ fn draw(args: &[String]) -> Result<(), String> {
             let place = match (&offset, &point) {
                 (Some(o), None) => ed::OnWall::Offset(o),
                 (None, Some(p)) if p.len() == 1 => ed::OnWall::Point(p[0]),
-                _ => return Err("say where along the wall its centre is: --offset \"5 ft\" from the wall's first end, or --at \"5,0\" a point on the plan; one of them".into()),
+                _ => return Err("say where along the wall its center is: --offset \"5 ft\" from the wall's first end, or --at \"5,0\" a point on the plan; one of them".into()),
             };
             let made = ed::opening(&mut job, wall, kind_of(cmd)?, type_path, place, &need(flag("--sill"), "--sill", "\"0 ft\" for a door, \"3 ft\" for a window")?, ed::Entered { status, source: &source })?;
             format!("{made}: a {cmd} in {wall}")
@@ -1622,7 +1658,7 @@ fn draw(args: &[String]) -> Result<(), String> {
                     ed::floor(&mut job, storey, type_path, ed::FloorBy::Walls, entered)?
                 }
                 (false, Some(text)) => ed::floor(&mut job, storey, type_path, ed::FloorBy::Points(&points(&text)?), entered)?,
-                _ => return Err("a floor is given by --walls (the outline its storey's walls enclose) or by --points \"0,0 30,0 30,20 0,20\" (its corners, in feet): one of the two".into()),
+                _ => return Err("a floor is given by --walls (the outline its level's walls enclose) or by --points \"0,0 30,0 30,20 0,20\" (its corners, in feet): one of the two".into()),
             };
             let mut out = format!("{}: a floor on {storey}", made.path);
             for note in made.notes {
@@ -1640,7 +1676,7 @@ fn draw(args: &[String]) -> Result<(), String> {
         ("run", [storey, what, type_path]) => {
             let (status, source) = how(&status, &source)?;
             let pts = points(&need(flag("--points"), "--points", "\"2,2 14,2 14,7\" (feet)")?)?;
-            let made = ed::runs(&mut job, storey, kind_of(what)?, type_path, &pts, &need(flag("--height"), "--height", "\"8 ft\" above the storey's floor")?, flag("--system").as_deref(), ed::Entered { status, source: &source })?;
+            let made = ed::runs(&mut job, storey, kind_of(what)?, type_path, &pts, &need(flag("--height"), "--height", "\"8 ft\" above the level's floor")?, flag("--system").as_deref(), ed::Entered { status, source: &source })?;
             format!("{} straight piece{}: {}", made.len(), if made.len() == 1 { "" } else { "s" }, made.join(", "))
         }
         ("place", [storey, what, name]) => {
@@ -1654,7 +1690,7 @@ fn draw(args: &[String]) -> Result<(), String> {
                     _ => return Err("--size is along,across,up in feet, like \"2,2,6\"".into()),
                 },
             };
-            let made = ed::place(&mut job, storey, kind_of(what)?, name, *at, &need(flag("--offset"), "--offset", "\"0 ft\" above the storey's floor")?, size, flag("--system").as_deref(), ed::Entered { status, source: &source })?;
+            let made = ed::place(&mut job, storey, kind_of(what)?, name, *at, &need(flag("--offset"), "--offset", "\"0 ft\" above the level's floor")?, size, flag("--system").as_deref(), ed::Entered { status, source: &source })?;
             format!("{made}: {name:?}")
         }
         ("move", [element]) => {
@@ -1676,7 +1712,7 @@ fn draw(args: &[String]) -> Result<(), String> {
                 Some("bottom") => Some(plumbline_world::Justify::Bottom),
                 Some("centre" | "center") => Some(plumbline_world::Justify::Centre),
                 Some("top") => Some(plumbline_world::Justify::Top),
-                Some(other) => return Err(format!("--to {other:?}: a run's height is measured to its bottom, its centre or its top")),
+                Some(other) => return Err(format!("--to {other:?}: a run's height is measured to its bottom, its center or its top")),
             };
             let reading = if reading.trim().eq_ignore_ascii_case("same") { ed::Reading::Same } else { ed::Reading::Length(reading) };
             let done = ed::measure(&mut job, element, what, reading, to, &source)?;
@@ -1700,7 +1736,7 @@ fn draw(args: &[String]) -> Result<(), String> {
         ("fitting", []) => {
             let (status, source) = how(&status, &source)?;
             if flag("--all").is_none() {
-                return Err("say where: plumbline fitting <file> <storey> --at \"10,2\", or --all for every joint that has none".into());
+                return Err("say where: plumbline fitting <file> <level> --at \"10,2\", or --all for every joint that has none".into());
             }
             let (made, passed) = ed::fit_all(&mut job, flag("--system").as_deref(), ed::Entered { status, source: &source })?;
             let mut out = format!("{} fitting{}", made.len(), if made.len() == 1 { "" } else { "s" });

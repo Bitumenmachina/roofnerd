@@ -42,7 +42,7 @@ python3 tools/workbook.py "$T/estimate.xlsx" > "$T/worked.txt"
 # beside it; tools/workbook.py fails if any does not.
 # Thirteen amounts, five cost types, the job cost, overhead, profit, the price, the sum of
 # the divisions (this job's lines carry none: the sheet says so), and five supplier totals.
-says "$T/worked.txt" "27 formulas worked out; each comes to the figure written with it"
+says "$T/worked.txt" "45 formulas worked out; each comes to what is written with it"
 says "$T/worked.txt" "Divisions!In no division"
 says "$T/worked.txt" "Recap!Material = 8628.10"
 says "$T/worked.txt" "Recap!Labor = 2147.97"
@@ -106,7 +106,7 @@ says "$T/supplier.csv" "None of our prices are in this list."
 says "$T/supplier.csv" '"Copper, 16 oz",737.9024,lb,2,Known,'
 says "$T/supplier.csv" "Underlayment,670.8203,SF,2,Known,"
 says "$T/supplier.csv" '"Copper, 20 oz",153.6931,lb,2,Assumed,'
-says "$T/supplier.csv" "Not in this list: 1 line with no class"
+says "$T/supplier.csv" "Not in this list: 1 line with no cost type"
 for ours in '$' "9.00" "0.90" "4150" "8628" "Install panels" "Fabricate" "Foreman" "Amount" "Unit cost"; do not_said "$T/supplier.csv" "$ours"; done
 echo "    no price, no amount, no labor line in it"
 

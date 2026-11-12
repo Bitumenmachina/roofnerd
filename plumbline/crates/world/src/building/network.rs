@@ -190,19 +190,19 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
         }
         // Where its storey's floor is, or why that is not to be had.
         let base: Result<f64, String> = match on {
-            None => Err("it is under no storey".into()),
-            Some(s) => tree.levels.get(s).and_then(|l| l.elevation.feet()).ok_or_else(|| "its storey's elevation is not known".to_string()),
+            None => Err("it is under no level".into()),
+            Some(s) => tree.levels.get(s).and_then(|l| l.elevation.feet()).ok_or_else(|| "its level's elevation is not known".to_string()),
         };
         let its_system = w.get::<InSystem>(e).and_then(|s| s.0.value.clone());
         if kind.is_segment() {
             let placed: Result<(P3, P3, Option<f64>), String> = (|| {
                 let r = w.get::<Segment>(e).ok_or("it has no line")?;
                 let [p, q] = r.line_ft().ok_or("its line is not known")?;
-                let (z0, z1) = r.offsets_ft().ok_or("its height above its storey is not known")?;
+                let (z0, z1) = r.offsets_ft().ok_or("its height above its level is not known")?;
                 let t = typed(&tree.segment_types, &r.type_name, "a run").ok().map(|x| x.1);
                 let section = t.and_then(|t| t.round_ft().map(|d| (d, d, true)).or_else(|| t.rect_ft().map(|(w, d)| (w, d, false))));
                 if r.justify != super::Justify::Centre && section.is_none() {
-                    return Err("its size is not known and its heights are those of its top or its bottom, so its centre line cannot be placed".into());
+                    return Err("its size is not known and its heights are those of its top or its bottom, so its center line cannot be placed".into());
                 }
                 let (width, depth, round) = section.unwrap_or((0.0, 0.0, false));
                 let g = runs::Geom::of(base.clone()?, p, q, z0, z1, r.justify, width, depth, round);
@@ -221,7 +221,7 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
             let stands: Result<(P3, f64), String> = (|| {
                 let c = w.get::<Placed>(e).ok_or("it has connectors and no position")?;
                 let at = c.at_ft().ok_or("its position is not known")?;
-                let offset = c.offset.feet().ok_or("its height above its storey is not known")?;
+                let offset = c.offset.feet().ok_or("its height above its level is not known")?;
                 let angle = c.angle_deg().ok_or("how far it is turned is not known")?;
                 Ok(([at[0], at[1], base.clone()? + offset], angle))
             })();
@@ -248,7 +248,7 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
             }
         }
         if points.len() > MAX_POINTS {
-            return Err(format!("the job has more than {MAX_POINTS} run ends and connectors to join: ask for one storey or one system"));
+            return Err(format!("the job has more than {MAX_POINTS} run ends and connectors to join: ask for one level or one system"));
         }
     }
     // Points within the tolerance are one node: each is compared with those in its cell and the cells round it.

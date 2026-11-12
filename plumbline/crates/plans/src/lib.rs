@@ -470,7 +470,7 @@ fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
         lost.push(format!("{} not kept to snap to (hatching, arrowheads, ticks)", some(lines.short, "line under a point long is", "lines under a point long are")));
     }
     if lines.white > 0 {
-        lost.push(format!("{} not ink, and not kept to snap to", some(lines.white, "line drawn in white or in no colour is", "lines drawn in white or in no colour are")));
+        lost.push(format!("{} not ink, and not kept to snap to", some(lines.white, "line drawn in white or in no color is", "lines drawn in white or in no color are")));
     }
     if lines.dashed > 0 {
         lost.push(format!("{} kept whole: the gaps in it are places to snap to as well", some(lines.dashed, "dashed line is", "dashed lines are")));

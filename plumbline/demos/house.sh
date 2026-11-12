@@ -20,7 +20,7 @@ P="$PWD/target/debug/plumbline"; APP="$PWD/target/debug/plumbline-app"
 OUT="${1:-$PWD/demos/captured/house}"; mkdir -p "$OUT"
 T="$(mktemp -d)"
 
-echo "== The job: a made-up two-storey house with its heating, plumbing and wiring =="
+echo "== The job: a made-up two-level house with its heating, plumbing and wiring =="
 "$P" house "$T/job.json"
 "$P" check "$T/job.json"
 "$P" takeoff "$T/job.json" | tee "$OUT/takeoff.txt"
@@ -50,7 +50,7 @@ check "supply air: 2 networks, 4 open ends, 10 joins with no fitting" "joined: 2
 check "cold water is open only where the service comes in" "open: water service, piece 1 of 4: its first end at (-2, 25, -2)"
 
 echo
-echo "== The session: the house, see through it, a system at a time, a storey at a time, a plan, and on foot =="
+echo "== The session: the house, see through it, a system at a time, a level at a time, a plan, and on foot =="
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
@@ -63,7 +63,7 @@ on "System Supply air"                                  # the Supply air system,
 sheet "Mechanical"                                      # the sheet's Mechanical tab
 park
 shot                                                    # 03 one system picked out: supply air
-on "System Hot water"                                   # Hot water
+on_at "System Hot water"                                  # Hot water
 sheet "Plumbing"                                        # the sheet's Plumbing tab
 park
 shot                                                    # 04 hot water, with its run of no size

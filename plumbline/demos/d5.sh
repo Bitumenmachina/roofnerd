@@ -50,9 +50,9 @@ echo "== 1. The sheet: every line under its element, its amount in one of three 
 "$P" priced "$J"
 "$P" check "$J"
 sheet
-says "a material line, in pounds from the material" "Standing seam panels 461.19 lb \$9.00/lb \$4,150.70"
+says "a material line, in pounds from the material" "Standing seam panels 461.1890 lb \$9.00/lb \$4,150.70"
 says "what it is made of" 'made of "Copper, 16 oz"'
-says "a material line with its own price" "Underlayment 419.26 SF \$0.90/SF \$377.34"
+says "a material line with its own price" "Underlayment 419.2627 SF \$0.90/SF \$377.34"
 # Material: 4,150.70 + 377.34 + 2,490.42 + 226.40 + 1,113.24 + 270.00 = 8,628.10
 # Labor column: labor 2,147.97 + fabrication 402.50 + supervision 3,800.00 = 6,350.47
 # General column: the subcontract, 10,313.86
@@ -86,7 +86,7 @@ says "" "Job cost ~\$25,292.43 13 lines"
 
 echo
 echo "== 4. Subcontract is a priced line =="
-says "a quantity and a price, in the general column" "Standing seam roofing, by subcontractor [Subcontract] 251.56 SF \$41.00/SF \$10,313.86"
+says "a quantity and a price, in the general column" "Standing seam roofing, by subcontractor [Subcontract] 251.5576 SF \$41.00/SF \$10,313.86"
 says "its own row of the recap" "Subcontract \$10,313.86 1 line"
 refused "is Subcontract and carries a production rate" "$P" class "$J" plane-0003 subcontract --line "Install panels"
 
@@ -120,7 +120,7 @@ echo
 echo "== 7. The recap =="
 # 8,628.10 + 2,147.97 + 402.50 + 3,800.00 + 10,313.86 + 3,150.00 = 28,442.43
 says "the job cost is the six rows added up" "Job cost ~\$28,442.43 15 lines"
-says "a line in no class is named and left out" '? plane-0005: "Copper standing seam, installed": the line has no class, so it is in no row of the recap'
+says "a line in no class is named and left out" '? plane-0005: "Copper standing seam, installed": the line has no cost type, so it is in no row of the recap'
 says "with no overhead entered there is no price, and it says why" "PRICE no figure ? overhead has not been entered; enter a percentage, 0 if there is none"
 
 echo
@@ -166,9 +166,9 @@ cp "$J" "$T/before.json"
 sheet
 # South panels: 461.1890 SF x 1.25 lb/SF = 576.48625 -> 576.4863 lb x 9.00 = 5,188.3767 -> 5,188.38.
 # It was 4,150.70: 1,037.68 more.
-says "the panels, in more pounds" "Standing seam panels 576.49 lb \$9.00/lb \$5,188.38"
+says "the panels, in more pounds" "Standing seam panels 576.4863 lb \$9.00/lb \$5,188.38"
 says "now made of" 'made of "Copper, 20 oz"'
-says "the lines not made of it have not moved" "Underlayment 419.26 SF \$0.90/SF \$377.34"
+says "the lines not made of it have not moved" "Underlayment 419.2627 SF \$0.90/SF \$377.34"
 says "" "Install panels 16.7705 hr \$72.00/hr \$1,207.48"
 # Material 8,628.10 + 1,037.68 = 9,665.78. Job cost 28,442.43 + 1,037.68 = 29,480.11.
 says "the material row" "Material ~\$9,665.78 6 lines"

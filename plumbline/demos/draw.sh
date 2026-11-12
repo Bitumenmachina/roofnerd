@@ -34,13 +34,13 @@ refused() { local want="$1"; shift; local out
   grep -qF -- "$want" <<<"$out" || { echo "FAIL: the refusal does not say \"$want\""; exit 1; }
 }
 
-echo "== An empty job, a storey and the types =="
+echo "== An empty job, a level and the types =="
 "$P" new "$J" "Drawn house (not a real job)"
-S="$(made "$("$P" storey "$J" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+S="$(made "$("$P" level "$J" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
 WT="$(made "$("$P" type "$J" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
 DT="$(made "$("$P" type "$J" door "door 3 by 7" --width "3 ft" --height "7 ft" "${K[@]}")")"
 NT="$(made "$("$P" type "$J" window "window 4 by 3" --width "4 ft" --height "3 ft" "${K[@]}")")"
-echo "    storey $S, wall type $WT, door type $DT, window type $NT"
+echo "    level $S, wall type $WT, door type $DT, window type $NT"
 "$P" check "$J"
 
 echo

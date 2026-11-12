@@ -51,6 +51,9 @@ pub struct Question {
     pub dollars_status: Status,
     /// How many of the estimate's lines that is.
     pub lines: usize,
+    /// Lines that ride on it and have no figure yet (no price entered): they are in
+    /// no dollar figure here, and are counted so that is said (J17A-7).
+    pub unpriced: usize,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -62,6 +65,8 @@ pub struct Vif {
     pub riding: Option<f64>,
     pub riding_status: Status,
     pub riding_lines: usize,
+    /// Lines that ride on some question and have no figure yet, each counted once.
+    pub riding_unpriced: usize,
     /// Why the clashes could not be worked out, when they could not: the list is then
     /// of things only, and says so.
     pub clashes_not_tested: Option<String>,
@@ -69,7 +74,7 @@ pub struct Vif {
 
 impl Default for Vif {
     fn default() -> Vif {
-        Vif { questions: Vec::new(), riding: None, riding_status: Status::Known, riding_lines: 0, clashes_not_tested: None }
+        Vif { questions: Vec::new(), riding: None, riding_status: Status::Known, riding_lines: 0, riding_unpriced: 0, clashes_not_tested: None }
     }
 }
 
@@ -78,7 +83,8 @@ impl Default for Vif {
 struct Line {
     key: (String, String),
     on: String,
-    amount: f64,
+    /// None: the line has no figure yet.
+    amount: Option<f64>,
     status: Status,
     rests: BTreeSet<String>,
 }
@@ -99,7 +105,7 @@ pub fn vif(job: &mut Job) -> Vif {
     // the things the measures its formula names say they rest on.
     let mut lines: Vec<Line> = Vec::new();
     for sheet in estimate.lines.iter().filter(|l| !l.off) {
-        let Some(amount) = sheet.amount.value else { continue };
+        let amount = sheet.amount.value;
         let Some(e) = job.find(&sheet.path) else { continue };
         let mut rests = BTreeSet::new();
         let formula = job.world.get::<Cost>(e).and_then(|c| c.lines.iter().find(|l| l.description == sheet.description)).map(|l| l.quantity.clone());
@@ -113,14 +119,16 @@ pub fn vif(job: &mut Job) -> Vif {
                 }
             }
         }
-        lines.push(Line { key: (sheet.path.clone(), sheet.description.clone()), on: sheet.path.clone(), amount, status: sheet.amount.status, rests });
+        lines.push(Line { key: (sheet.path.clone(), sheet.description.clone()), on: sheet.path.clone(), amount, status: if amount.is_some() { sheet.amount.status } else { sheet.priced.status }, rests });
     }
     let cents = crate::lines::cents;
-    let sum = |picked: &[&Line]| -> (Option<f64>, Status, usize) {
-        if picked.is_empty() {
-            return (None, Status::Known, 0);
+    let sum = |picked: &[&Line]| -> (Option<f64>, Status, usize, usize) {
+        let unpriced = picked.iter().filter(|l| l.amount.is_none()).count();
+        let priced: Vec<&&Line> = picked.iter().filter(|l| l.amount.is_some()).collect();
+        if priced.is_empty() {
+            return (None, Status::Known, 0, unpriced);
         }
-        (Some(cents(picked.iter().map(|l| l.amount).sum())), picked.iter().map(|l| l.status).max().unwrap_or(Status::Known), picked.len())
+        (Some(cents(priced.iter().filter_map(|l| l.amount).sum())), priced.iter().map(|l| l.status).max().unwrap_or(Status::Known), priced.len(), unpriced)
     };
 
     let mut with: Vec<Question> = Vec::new();
@@ -143,7 +151,7 @@ pub fn vif(job: &mut Job) -> Vif {
             for c in found.found.iter().filter(|c| !c.through && c.status != Status::Known) {
                 let picked: Vec<&Line> = lines.iter().filter(|l| l.on == c.a || l.on == c.b).collect();
                 counted.extend(picked.iter().map(|l| l.key.clone()));
-                let (dollars, dollars_status, n) = sum(&picked);
+                let (dollars, dollars_status, n, unpriced) = sum(&picked);
                 place(
                     Question {
                         path: c.a.clone(),
@@ -155,6 +163,7 @@ pub fn vif(job: &mut Job) -> Vif {
                         dollars,
                         dollars_status,
                         lines: n,
+                        unpriced,
                     },
                     &mut with,
                     &mut without,
@@ -179,17 +188,22 @@ pub fn vif(job: &mut Job) -> Vif {
         if values.is_empty() {
             continue;
         }
-        // Only a line that is itself still in question has anything riding on it.
-        let picked: Vec<&Line> = lines.iter().filter(|l| l.status != Status::Known && l.rests.contains(&el.path)).collect();
+        // Only a line that is itself still in question has anything riding on a
+        // measurement. But where what the thing is (its type, what it is, its size) is
+        // itself to be checked, everything priced on it rides on that check, however
+        // sure its quantity (call 59, J17A-14): a price for a 50 gal heater is a price
+        // for nothing if the heater is not that.
+        let identity = values.iter().any(|v| !v.2);
+        let picked: Vec<&Line> = lines.iter().filter(|l| (l.status != Status::Known && l.rests.contains(&el.path)) || (identity && l.on == el.path)).collect();
         counted.extend(picked.iter().map(|l| l.key.clone()));
-        let (dollars, dollars_status, n) = sum(&picked);
-        place(Question { path: el.path.clone(), name: el.name.clone(), kind: el.kind, storey: storey_name(&el.path, el.kind), clash: None, values, dollars, dollars_status, lines: n }, &mut with, &mut without);
+        let (dollars, dollars_status, n, unpriced) = sum(&picked);
+        place(Question { path: el.path.clone(), name: el.name.clone(), kind: el.kind, storey: storey_name(&el.path, el.kind), clash: None, values, dollars, dollars_status, lines: n, unpriced }, &mut with, &mut without);
     }
 
     // Largest first; a tie keeps the order found, which is clashes and then the job's.
     with.sort_by(|a, b| b.dollars.unwrap_or(0.0).total_cmp(&a.dollars.unwrap_or(0.0)));
     let all: Vec<&Line> = lines.iter().filter(|l| counted.contains(&l.key)).collect();
-    let (riding, riding_status, riding_lines) = sum(&all);
+    let (riding, riding_status, riding_lines, riding_unpriced) = sum(&all);
     with.extend(without);
-    Vif { questions: with, riding, riding_status, riding_lines, clashes_not_tested }
+    Vif { questions: with, riding, riding_status, riding_lines, riding_unpriced, clashes_not_tested }
 }

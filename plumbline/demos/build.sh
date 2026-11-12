@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # A floor, two rooms and a roof on a house traced from a plan, at the command line: the
-# made-up vector plan is laid under a storey and given its scale; its outline and its
+# made-up vector plan is laid under a level and given its scale; its outline and its
 # partition are traced; the floor is the outline those walls enclose; each room is a
 # point inside it and a name; the roof is its footprint's four corners, a pitch and the
 # height of its eaves.
@@ -36,10 +36,10 @@ refused() { local want="$1"; shift; local out
   cmp -s "$J" "$T/kept.json" || { echo "FAIL: a refusal changed the file"; exit 1; }
 }
 
-echo "== The plan laid under a storey, its scale set, and its walls traced =="
+echo "== The plan laid under a level, its scale set, and its walls traced =="
 cp demos/plans/made-up-plan.pdf "$T/"
 "$P" new "$J" "Built from a plan (not a real job)"
-S="$(made "$("$P" storey "$J" ground --elevation "0 ft" --height "8 ft" "${K[@]}")")"
+S="$(made "$("$P" level "$J" ground --elevation "0 ft" --height "8 ft" "${K[@]}")")"
 WT="$(made "$("$P" type "$J" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
 FT="$(made "$("$P" type "$J" floor "slab 4 in" --thickness "4 in" "${K[@]}")")"
 D="$(made "$("$P" drawing "$J" "$S" "A-1 floor plan" --file "$T/made-up-plan.pdf" "${K[@]}")")"
@@ -59,7 +59,7 @@ echo
 echo "== The floor: the outline its walls enclose =="
 OUT="$("$P" floor "$J" "$S" "$FT" --walls --status Assumed --source "the walls as traced")"; echo "    $OUT"
 F="$(made "$OUT")"
-# The walls' centre lines: 30 ft by 20 ft. Traced walls, so Assumed.
+# The walls' center lines: 30 ft by 20 ft. Traced walls, so Assumed.
 is "the floor, 30 ft by 20 ft" "$(figure "$F" plan_area)" "600.0 Assumed"
 refused "already" "$P" floor "$J" "$S" "$FT" --walls --status Assumed --source "again"
 

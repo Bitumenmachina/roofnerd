@@ -6,7 +6,8 @@
 
 Reads the workbook this program writes (`plumbline export estimate job out.xlsx`) and
 works every formula in it out again from the cells the formula names, knowing only
-ROUND, SUM, SUMIF, the four operations, brackets and cell references. It knows nothing
+ROUND, SUM, SUMIF, COUNTIFS, IF, OR, comparisons, the four operations, brackets and
+cell references. It knows nothing
 of this program. Each formula has to come to the figure written beside it (the figure a
 reader that does not work formulas out would show); the script fails on the first that
 does not, and otherwise prints what each row of the recap comes to.
@@ -67,9 +68,35 @@ class Formula:
         return token
 
     def work(self):
-        value = self.sum()
+        value = self.compare()
         if self.at != len(self.tokens):
             raise SystemExit(f"FAIL: cannot read the formula ={self.text}")
+        return value
+
+    @staticmethod
+    def number(v):
+        # An empty cell, or one whose formula came to nothing, is nothing in arithmetic.
+        return 0.0 if v is None or v == "" else v
+
+    @staticmethod
+    def same(a, b):
+        blank = lambda v: v is None or v == ""
+        return (blank(a) and blank(b)) or a == b
+
+    def compare(self):
+        value = self.sum()
+        sign = self.peek()[4]
+        if sign in ("=", "<", ">"):
+            self.take()
+            if self.peek()[4] in ("=", ">") and sign in ("<", ">"):
+                sign += self.take()[4]
+            other = self.sum()
+            if sign == "=":
+                return self.same(value, other)
+            if sign == "<>":
+                return not self.same(value, other)
+            a, b = self.number(value), self.number(other)
+            return {"<": a < b, ">": a > b, "<=": a <= b, ">=": a >= b}[sign]
         return value
 
     def sum(self):
@@ -77,7 +104,7 @@ class Formula:
         while self.peek()[4] in ("+", "-"):
             sign = self.take()[4]
             other = self.product()
-            value = value + other if sign == "+" else value - other
+            value = self.number(value) + self.number(other) if sign == "+" else self.number(value) - self.number(other)
         return value
 
     def product(self):
@@ -85,7 +112,7 @@ class Formula:
         while self.peek()[4] in ("*", "/"):
             sign = self.take()[4]
             other = self.atom()
-            value = value * other if sign == "*" else value / other
+            value = self.number(value) * self.number(other) if sign == "*" else self.number(value) / self.number(other)
         return value
 
     def reference(self, text):
@@ -102,18 +129,17 @@ class Formula:
             sheet, ref = self.reference(ref)
             if ":" in ref:
                 return ("range", sheet, *ref.split(":"))
-            value = self.book.cell(sheet, ref)
-            return 0.0 if value is None else value
+            return self.book.cell(sheet, ref)
         if function is not None:
             self.take()  # (
-            args = [self.sum()]
+            args = [self.compare()]
             while self.peek()[4] == ",":
                 self.take()
-                args.append(self.sum())
+                args.append(self.compare())
             self.take()  # )
             return self.call(function, args)
         if other == "(":
-            value = self.sum()
+            value = self.compare()
             self.take()
             return value
         if other == "-":
@@ -123,7 +149,20 @@ class Formula:
     def call(self, name, args):
         spread = lambda a: self.book.cells(*a[1:]) if isinstance(a, tuple) else [a]
         if name == "ROUND":
-            return rounded(args[0], int(args[1]))
+            return rounded(self.number(args[0]), int(args[1]))
+        if name == "IF":
+            return args[1] if args[0] else args[2]
+        if name == "OR":
+            return any(args)
+        if name == "COUNTIFS":
+            # Each pair is a range and what a cell of it has to be: a text it equals, or
+            # ">=0" for a figure that is zero or more.
+            def meets(v, wanted):
+                if isinstance(wanted, str) and wanted.startswith(">="):
+                    return isinstance(v, (int, float)) and not isinstance(v, bool) and v >= float(wanted[2:])
+                return v == wanted
+            columns = [(spread(args[i]), args[i + 1]) for i in range(0, len(args), 2)]
+            return float(sum(1 for row in zip(*[c for c, _ in columns]) if all(meets(v, w) for v, (_, w) in zip(row, columns))))
         if name == "SUM":
             return sum(v for a in args for v in spread(a) if isinstance(v, (int, float)))
         if name == "SUMIF":
@@ -143,7 +182,8 @@ def main():
                 amount_was = book.written[sheet][row[6].coordinate].value
                 row[5].value = float(new)
                 book.memo.clear()
-                print(f"{sheet}: {element}, {line}: the price {was:g} changed to {float(new):g}; its amount {amount_was:.2f} is now {book.cell(sheet, row[6].coordinate):.2f}")
+                show = lambda v, f: "none" if v is None or v == "" else format(v, f)
+                print(f"{sheet}: {element}, {line}: the price {show(was, 'g')} changed to {float(new):g}; its amount {show(amount_was, '.2f')} is now {book.cell(sheet, row[6].coordinate):.2f}")
                 break
         else:
             raise SystemExit(f"FAIL: no line {line!r} on {element!r} in the sheet {sheet}")
@@ -155,11 +195,16 @@ def main():
                     if isinstance(c.value, str) and c.value.startswith("="):
                         value = book.cell(sheet, c.coordinate)
                         written = book.written[sheet][c.coordinate].value
-                        if written is None or abs(value - float(written)) > 0.004:
-                            raise SystemExit(f"FAIL: {sheet}!{c.coordinate} {c.value} comes to {value}, and the figure written with it is {written}")
+                        # A formula that comes to a word ("none") or to nothing has that written with it.
+                        if isinstance(value, str) or value is None:
+                            same = (value or "") == (written or "")
+                        else:
+                            same = isinstance(written, (int, float)) and abs(value - float(written)) <= 0.004
+                        if not same:
+                            raise SystemExit(f"FAIL: {sheet}!{c.coordinate} {c.value} comes to {value!r}, and what is written with it is {written!r}")
                         worked += 1
         print(f"{len(book.formulas.sheetnames)} sheets: {', '.join(book.formulas.sheetnames)}")
-        print(f"{worked} formulas worked out; each comes to the figure written with it")
+        print(f"{worked} formulas worked out; each comes to what is written with it")
     for sheet in ("Recap", "Divisions"):
         if sheet not in book.formulas.sheetnames:
             continue
@@ -173,7 +218,10 @@ def main():
                 print(f"{sheet}!{label}: {cell.value}")
             else:
                 value = book.cell(sheet, cell.coordinate)
-                print(f"{sheet}!{label} = {value:.2f}" if "percent" not in label else f"{sheet}!{label} = {value:g}")
+                if isinstance(value, str) or value is None:
+                    print(f"{sheet}!{label}: {value or 'nothing'}")
+                else:
+                    print(f"{sheet}!{label} = {value:.2f}" if "percent" not in label else f"{sheet}!{label} = {value:g}")
 
 
 if __name__ == "__main__":

@@ -243,3 +243,16 @@ language when I said US construction it's a known language and you are the drive
 this act like it." Both parts of Q20 are decided by the builder: a level everywhere a
 person reads, the command line included; and a line's "class" is its cost type. No
 wording question is put to him again.
+
+## Q21. Does a line read Assumed when what it is priced on is only assumed to be that thing? (2026-11-12, from J17A-14)
+
+A water heater placed as "50 gal", Assumed, with "Set and connected, $2,100" Known on
+it: the estimate shows the line Known, because its quantity (1) and its price are.
+The judge's reading of "nothing is shown as Known when it rests on something that is
+not" would make it Assumed, and with it most lines of any traced job.
+**Working assumption (call 59):** the line stays as its quantity and price make it,
+and the verify-in-field list carries the doubt: everything priced on a thing whose
+identity is to be checked rides on that check, in dollars. The build goes on with
+that. If Patrick rules the other way, the change is one place (the status of a
+line's amount takes in its element's identity) and the expectations that move with
+it.

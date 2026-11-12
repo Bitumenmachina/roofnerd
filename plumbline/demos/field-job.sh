@@ -3,10 +3,10 @@
 # would leave it. Used by demos/field.sh and demos/fieldw.sh:  demos/field-job.sh <job file>
 # It prints the paths the demonstrations use, as shell assignments.
 #
-# A ground storey at 0 ft, 9 ft to the next, and an upper storey at 9 ft: Assumed, scaled
-# off a plan. Four 6 in walls round 24 ft by 16 ft, Known, standing to the upper storey.
-# A 12 in by 8 in duct along the middle, its centre 8 ft above the floor, traced. Two 2 in
-# pipes across it, Known: pipe A's centre at 7 ft 9 in, pipe B's at 8 ft. The south wall
+# A ground level at 0 ft, 9 ft to the next, and an upper level at 9 ft: Assumed, scaled
+# off a plan. Four 6 in walls round 24 ft by 16 ft, Known, standing to the upper level.
+# A 12 in by 8 in duct along the middle, its center 8 ft above the floor, traced. Two 2 in
+# pipes across it, Known: pipe A's center at 7 ft 9 in, pipe B's at 8 ft. The south wall
 # carries gypsum board on its net face at $2.40/SF. Overhead 10, profit 8.
 set -euo pipefail
 J="$1"
@@ -15,8 +15,8 @@ K=(--status Known --source "made-up plan")
 A=(--status Assumed --source "scaled off a made-up plan")
 made() { sed -E 's/^([a-z]+-[0-9]+).*/\1/' <<<"$1"; }
 "$P" new "$J" "Measured in the field (not a real job)" >/dev/null
-GROUND="$(made "$("$P" storey "$J" ground --elevation "0 ft" --height "9 ft" "${A[@]}")")"
-UPPER="$(made "$("$P" storey "$J" upper --elevation "9 ft" --height "8 ft" "${A[@]}")")"
+GROUND="$(made "$("$P" level "$J" ground --elevation "0 ft" --height "9 ft" "${A[@]}")")"
+UPPER="$(made "$("$P" level "$J" upper --elevation "9 ft" --height "8 ft" "${A[@]}")")"
 WT="$(made "$("$P" type "$J" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
 DT="$(made "$("$P" type "$J" duct "12 x 8" --width "12 in" --depth "8 in" "${K[@]}")")"
 PT="$(made "$("$P" type "$J" pipe "2 in" --round "2 in" "${K[@]}")")"

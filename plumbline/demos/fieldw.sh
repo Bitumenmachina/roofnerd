@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Field entry in the application. The job is the one demos/field.sh starts from, as a
 # tracing leaves it: two clashes that are questions, and a wall whose price is flagged.
-# Then, in the window, what a veteran measures on site is put on the job: the storey is
+# Then, in the window, what a veteran measures on site is put on the job: the level is
 # picked from the verify-in-field list and its floor and its height on the right; the duct is picked on the
 # plan and its place, its type and its height on the right. Each reading is typed in one
 # burst, the way a laser in keyboard mode types it, and ended by the Tab or the Enter the
-# laser sends. The sheet's price changes when the storey height is measured; the Clashes
+# laser sends. The sheet's price changes when the level height is measured; the Clashes
 # tab goes from two questions to one finding when the duct's underside is shot.
 # Then the saved job is set against the same measurements made at the command line.
 # Run from the repository root:  demos/fieldw.sh [folder for the pictures]
@@ -37,7 +37,7 @@ says "the price, flagged" "PRICE ~\$615.86" "$T/sheet-before.txt"
 cp "$J" "$T/before.json"
 
 echo
-echo "== The session: the floor, the storey height, the duct's place, its type and its underside =="
+echo "== The session: the floor, the level height, the duct's place, its type and its underside =="
 # The model window is 1600 by 960 with the sheet to its right. On the right-hand panel a
 # value's row is clicked anywhere; the rows below one that has been marked sit a line
 # lower, because its source has grown a note.
@@ -96,8 +96,8 @@ says "the price" "PRICE \$607.31" "$T/sheet-after.txt"
 says "one finding" "In the same space: 1 (1 finding)" "$T/after.txt"
 says "which" "in each other by 2.25 in" "$T/after.txt"
 says "the other, clear" "0.75 in apart" "$T/after.txt"
-says "the storey height" "storey height    8' 10 1/2\"" "$T/show.txt"
-says "the duct's underside" "height above its storey 7' 10 3/4\"" "$T/show.txt"
+says "the level height" "level height    8' 10 1/2\"" "$T/show.txt"
+says "the duct's underside" "height above its level 7' 10 3/4\"" "$T/show.txt"
 says "held to its bottom" "its heights are those of its bottom" "$T/show.txt"
 python3 - "$J" "$GROUND" "$UPPER" "$DUCT" <<'PY'
 import sys, json
@@ -105,8 +105,8 @@ data = json.load(open(sys.argv[1]))["data"]
 ground, upper, duct = (next(e for e in data if e["path"] == p)["attributes"] for p in sys.argv[2:5])
 want = [
     ("the floor", ground["pl::level"]["elevation"], "Known", "scaled off a made-up plan; found as drawn (checked on site)"),
-    ("the storey height", ground["pl::level"]["height"], "Known", "measured on site"),
-    ("the floor above", upper["pl::level"]["elevation"], "Known", "ground's floor and its storey height (measured on site)"),
+    ("the level height", ground["pl::level"]["height"], "Known", "measured on site"),
+    ("the floor above", upper["pl::level"]["elevation"], "Known", "ground's floor and its level height (measured on site)"),
     ("the duct's type", duct["pl::segment"]["type"], "Known", "scaled off a made-up plan; found as drawn (checked on site)"),
     ("the duct's line", duct["pl::segment"]["line"], "Known", "scaled off a made-up plan; found as drawn (checked on site: JM)"),
     ("the duct's height", duct["pl::segment"]["offset"], "Known", "measured on site"),
@@ -115,17 +115,17 @@ for what, value, status, source in want:
     if (value["status"], value["source"]) != (status, source):
         print(f"FAIL: {what} is {value['status']}, {value['source']!r}; wanted {status}, {source!r}"); sys.exit(1)
 if upper["pl::level"]["height"]["status"] != "Assumed":
-    print("FAIL: the upper storey's own height was not measured and is no longer Assumed"); sys.exit(1)
-print("    six values Known, each saying it was measured or checked on site; the upper storey's own height still Assumed")
+    print("FAIL: the upper level's own height was not measured and is no longer Assumed"); sys.exit(1)
+print("    six values Known, each saying it was measured or checked on site; the upper level's own height still Assumed")
 PY
 
 echo
 echo "== The same measurements at the command line give the same figures =="
 C="$T/twin.json"; cp "$T/before.json" "$C"
 "$P" measure "$C" "$GROUND" elevation same --source "checked on site" >/dev/null
-"$P" measure "$C" "$GROUND" "storey height" "8'10\"1/2" --source "measured on site" >/dev/null
+"$P" measure "$C" "$GROUND" "level height" "8'10\"1/2" --source "measured on site" >/dev/null
 "$P" measure "$C" "$DUCT" type same --source "checked on site" >/dev/null
 "$P" measure "$C" "$DUCT" "line on the plan" same --source "checked on site: JM" >/dev/null
-"$P" measure "$C" "$DUCT" "height above its storey" "7'10\"3/4" --to bottom --source "measured on site" >/dev/null
+"$P" measure "$C" "$DUCT" "height above its level" "7'10\"3/4" --to bottom --source "measured on site" >/dev/null
 cmp "$C" "$J" && echo "    the job saved by the window is byte for byte the job the command line makes"
 echo "  PASS: values were measured and checked in the window as a laser types them, the price and the clashes followed, and the saved job says the same"

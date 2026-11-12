@@ -2341,3 +2341,74 @@ exposure, modular brick, coursed ashlar, 16 in seams), relief, and the finish re
 from the estimate instead of set on a material by hand, which is the point of this
 call. The rule broken: search what is already surveyed before building. Nothing had
 to be redone because of it; it is written here so the next survey is made first.
+
+### Call 59. What the seventeenth judgment changed, and why (2026-11-12)
+
+Each of these changes a behaviour or an expectation; each follows a finding in
+STATUS.md ("Seventeenth judgment", parts A and B).
+
+**A line names a finish only when the finish is what the line is** (J17B-4, 5, 7).
+Call 58 took a finish from any priced line that held a finish's word, so "Stone sill
+at windows" made a wall stone and felt underlayment made a roof asphalt shingles.
+The reading now goes by a line's head: the words before its first comma and before
+"with", "over", "on", "at". A head that holds a word for something else (sill,
+flashing, nails, removal, paint, trim, underlayment, gutter, tear-off, hardware,
+opener, screen) is not a finish. A head that names a finish is that finish, the one
+named first. A head that names only the kind of thing ("Siding", "Roofing", "Window
+unit") is refined by what follows its commas, the way estimators write: "Roofing,
+standing seam, charcoal". Rejected: reading by division (a cladding only from
+Division 4, 7 or 9). It would be cleaner and it would leave every line with no
+division undressed, which on a first takeoff is every line.
+
+**Outside is outside every enclosed piece, and inside a courtyard** (J17B-1, 2).
+`building::enclosed` keeps every piece a level's walls make and every courtyard in
+them, where the floor's outline keeps only the largest. A wall with both faces
+outdoors (a garden wall) is dressed on both and says why.
+
+**The words are level, cost type, center** (call 57, carried to the command line and
+into every sentence the model writes). The verb is `plumbline level`; `storey` is
+still taken. A new level's path is `level-0002`; a job saved before keeps the paths
+it has. The job file's own keys and kind names (`pl::class`, `"Storey"`) do not
+change: they are the file, not the screen. "Condition" stays: it is the estimator's
+word for what is applied to an area, and Patrick's own in the deliverable.
+
+**What is priced on a thing whose identity is in question rides on that question**
+(J17A-14). The verify-in-field list counted only lines whose quantity is worked
+from the thing. Where what the thing is, its type or its size is itself to be
+checked, everything priced on it now rides on it: a price for a 50 gal heater is a
+price for nothing if the heater is not that. The line's own status in the estimate
+is still what its quantity and price rest on. Not done, and open: whether the
+estimate's line should itself read Assumed when its thing's identity is. It would
+turn most of a traced job's Known lines to Assumed, which may be the honest answer;
+it is in QUESTIONS.md with this as the working assumption.
+
+**Lines with no price yet are counted where they ride** (J17A-7): each question
+says how many lines ride on it with no price, and the list's head says how many in
+all, so "no dollars riding" no longer covers "what rides has no price".
+
+**The workbook is formulas all the way down** (J17A-4, 6). A line with no price has
+its amount formula and it comes to nothing until a price is typed. Every cost type
+and every division is a formula whether or not it has a line yet, and comes to
+"none" until one does, since nothing is not $0.00. "In no division" is the job cost
+less the sixteen, so the two always come to the job cost. This replaces "a formula
+only where it comes to the job's figure as written": the rule now is that every
+formula comes to what is written with it, a figure, the word "none", or nothing.
+`tools/workbook.py` works IF, OR and COUNTIFS to check exactly that.
+
+**A division names what it leaves out, and the sixteen carry their status** (J17A-2,
+3, 10): on the command line, in the workbook and in the PM's lens. A line given a
+division and no cost type is named under its division as left out.
+
+**A quantity is shown to four places when two would not multiply to its amount**
+(J17A-9). 461.19 lb at $9.00 is not $4,150.70 on a calculator; 461.1890 lb is.
+
+**A price is read one way** (J17A-17): an assembly library's unit cost goes through
+the same reader as every other price, so "$1,23/LF" is refused, not read as $123.
+
+**A made-up job is not written over a file** (J17A-16), as a new job is not.
+
+**The estimate tab opens on the recap**, then the cost by division, then every line,
+then the suppliers: what the job comes to is what the sheet is opened for. (Seen
+when `demos/d5w.sh` could no longer find the recap under sixteen divisions and
+every line.) **In 3D the roof is drawn when the top level alone is on show**: a job
+with one level had no "All levels" to choose, and its roof was never drawn.

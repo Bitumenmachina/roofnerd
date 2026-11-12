@@ -3418,3 +3418,54 @@ commas, where every other way in refuses it) and J17A-16 (a sample written over 
 person's own job) are the two that can cost a builder a number or a file; J17A-2, 3,
 7, 10, 14 and 19 are one family: a figure that is right and reads surer or more whole
 than it is. Fixes follow below as they are made.
+
+## Where the fixes to the seventeenth judgment stand (2026-11-12)
+
+DECISIONS.md call 59 has the reason for each change of behaviour. 243 tests and all
+seventeen command-line demonstrations pass on this tree. **None of these fixes has
+been judged.**
+
+| finding | state | what was done, or why not yet |
+|---|---|---|
+| J17A-2, 3 | fixed | a division names every line it leaves out, a line with a division and no cost type among them; "the sixteen divisions" carries its status and says how many it leaves out; "in no division" lists each line with its figure or why it has none |
+| J17A-4, 6 | fixed | the workbook: unpriced lines keep their amount formula; every cost type and division is a formula that comes to "none" until it has a line; "In no division" is the job cost less the sixteen. Checked by `tools/workbook.py` (IF, OR, COUNTIFS added) and by typing a price into an unpriced line with it: Material, Division 9, the sixteen and the job cost all move |
+| J17A-5 | fixed | an empty cost type has no note and no hours |
+| J17A-7 | fixed | lines that ride on a question and have no price are counted on the question and at the head of the list |
+| J17A-9 | fixed | a quantity is shown to four places when two would not multiply to its amount. `demos/d5.sh` and `d5w.sh` expectations moved: 461.19 lb to 461.1890, 576.49 to 576.4863, 419.26 SF to 419.2627, 251.56 SF to 251.5576; no amount moved |
+| J17A-10 | fixed | the PM's lens: each division says what it leaves out and how sure it is; one with only unpriced work reads "no figure", not "none" |
+| J17A-14 | fixed in part | what is priced on a thing whose identity is to be checked rides on that check. Whether the line itself should read Assumed is QUESTIONS.md Q21, with the working assumption |
+| J17A-16 | fixed | `sample`, `house`, `sixteen`, `priced` refuse to write over a file. Not done: "(os error 2)" after a file that cannot be read |
+| J17A-17 | fixed | an assembly's unit cost is read by the one price reader: "$1,23/LF" and "$1,2,3/SF" are refused |
+| J17A-1, 8, 11, 12, 13, 15, 18, 19, 20 | open | software words in a hand-edited file's refusal; "a Wall cannot carry a height"; a price to a tenth of a cent shown to the cent on import; "1e9", escaped quotes; an order factor that does not fit how a material is bought; the usage's two steps for a stretch-out that each refuse; one bad row blamed on every row of its assembly; the estimate not saying which parts of the building have nothing priced; a run cut where it crosses another changing its clash |
+| J17B-1, 2 | fixed | `building::enclosed`: every piece and every courtyard; a garden wall has both faces out and says so. Tested on a house with a courtyard, a shed and a garden wall on one level |
+| J17B-3 to 10 | fixed | the reading goes by a line's head (call 59). Every line the judge wrote is a test case in `crates/world/src/finish.rs`. Added: vertical siding, panel siding, metal siding, concrete block; metal panels, metal shingles; awning, hopper; "6 over 1", "6/6", "9 lite"; "an overhead door". Not done: a shingle known only by its brand name still reads bare |
+| J17B-11, 12, 13, 14 | fixed | a wainscot's height is read wherever it is written and not from a thickness; one as tall as its wall is the whole face and the siding above is said to be priced and not drawn; a second wainscot, a second color and a second unit are said; a wainscot on a partition is said to be priced and not drawn, by the report and the panel alike |
+| J17B-15 | fixed in part | a gutter is read by its head ("Gutter apron flashing" and "Remove existing gutters" are not gutters; "eavestrough" is). An eave with no gutter is not listed: an eave needs none. SPEC 5.19 to be corrected |
+| J17B-19 | fixed in part | "1 door", "2 levels". Not done: "the model is in foot", "wall 44 in the file", "wallstandardcase" |
+| J17B-16, 17, 18, 20, 21, 22, 23, 24, 25 | open | an IFC's own per-value "Assumed" not read back; a material and a property set dropped without a word; roof slabs called floor slabs; internals in a hand-edited file's refusal; a level not taken by its name at the command line and measure names shown raw; price-list messages; a prior estimate's own total not checked against its lines; `plumbline roof` missing from the usage; the estimate CSV not read back as lines |
+
+**Also changed in this stretch, and named:**
+
+* **The words** (call 57, carried through): every sentence the model and the command
+  line write says level, center, color, meters, cost type. The verb is `plumbline
+  level` (`storey` still taken). A new level's path starts `level-`. The command-line
+  demonstrations say the same; their figures did not move.
+* **In 3D the roof is drawn when the top level alone is on show.** It was drawn only
+  with every level showing, so the roof of a one-level job never appeared (seen in
+  `demos/firstw.sh` picture 06).
+* **The sheet's Estimate tab opens on the recap**, then By division, then the lines,
+  then the suppliers. `demos/d5w.sh` was changed to match and passes (pictures in
+  `demos/captured/d5/`, taken on this tree; 06 read: overhead and profit typed on
+  their rows of the recap, the price under them, the sixteen divisions below).
+* **Seen in that picture:** the roofing sample (`plumbline priced`) has every line in
+  no division. It is the old roofing job and nobody gave its lines one; it should be
+  Division 7 with its general conditions in Division 1.
+* **The window demonstrations, rerun on 8c6978f before these fixes:** firstw, draww,
+  buildw, fieldw, clashw, d4w, planw, bringw, d2 passed; d5w failed (the recap had
+  moved under the divisions; fixed as above); house failed (the "Hot water" row of
+  the left panel is off the bottom of the panel now that Bring in sits above it;
+  the demo now wheels the panel to it, as a person would). **All of their pictures
+  are from before these fixes and are stale until rerun.**
+* **Disk:** the session's disk filled during a scratch build. Old judges' built
+  programs, the scratch build and the build's incremental cache were deleted; no
+  source and no evidence was.

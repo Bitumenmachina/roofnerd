@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Plans under the tracing, at the command line: a made-up vector plan is added to an
-# empty job as a drawing of its storey, given its scale from one dimension, and traced
+# empty job as a drawing of its level, given its scale from one dimension, and traced
 # over; the same plan as a PNG and as a JPEG; what is refused; a plan file that changes
 # under its drawing; and, when it has been fetched, a real scanned sheet.
 # Run from the repository root:  demos/plan.sh
@@ -35,10 +35,10 @@ refused() { local want="$1"; shift; local out
   grep -qF -- "$want" <<<"$out" || { echo "FAIL: the refusal does not say \"$want\""; exit 1; }
 }
 
-echo "== An empty job, a storey, a wall type; and the plan laid under the storey =="
+echo "== An empty job, a level, a wall type; and the plan laid under the level =="
 cp demos/plans/made-up-plan.pdf demos/plans/made-up-plan.png demos/plans/made-up-plan.jpg "$T/"
 "$P" new "$J" "Traced from a plan (not a real job)"
-S="$(made "$("$P" storey "$J" ground --elevation "0 ft" --height "8 ft" "${K[@]}")")"
+S="$(made "$("$P" level "$J" ground --elevation "0 ft" --height "8 ft" "${K[@]}")")"
 WT="$(made "$("$P" type "$J" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
 OUT="$("$P" drawing "$J" "$S" "A-1 floor plan" --file "$T/made-up-plan.pdf" "${K[@]}")"
 D="$(made "$OUT")"
@@ -127,4 +127,4 @@ else
 fi
 
 echo
-echo "PASS: a plan was laid under a storey, given its scale from one dimension and traced over, and what it could not give was said"
+echo "PASS: a plan was laid under a level, given its scale from one dimension and traced over, and what it could not give was said"

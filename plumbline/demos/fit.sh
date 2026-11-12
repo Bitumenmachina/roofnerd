@@ -25,9 +25,9 @@ refused() { local want="$1"; shift; local out
   grep -qF -- "$want" <<<"$out" || { echo "FAIL: the refusal does not say \"$want\""; exit 1; }
 }
 
-echo "== A storey, the types and two systems =="
+echo "== A level, the types and two systems =="
 "$P" new "$J" "Fitted runs (not a real job)"
-S="$(made "$("$P" storey "$J" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+S="$(made "$("$P" level "$J" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
 DUCT="$(made "$("$P" type "$J" duct "6 in round" --round "6 in" "${K[@]}")")"
 BIG="$(made "$("$P" type "$J" pipe "3/4 in" --round "3/4 in" "${K[@]}")")"
 SMALL="$(made "$("$P" type "$J" pipe "1/2 in" --round "1/2 in" "${K[@]}")")"

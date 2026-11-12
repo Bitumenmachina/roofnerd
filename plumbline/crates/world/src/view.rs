@@ -739,13 +739,18 @@ pub fn estimate(job: &mut Job) -> Estimate {
     let not_classed: Vec<(String, String)> = on.iter().filter(|l| l.class.is_none()).map(|l| (l.path.clone(), l.description.clone())).collect();
     // The job cost: every classed line that is on. A line with no class is left out and
     // named with the rest.
-    let no_class = Derived::refused("$", "", &[], "the line has no class, so it is in no row of the recap");
+    let no_class = Derived::refused("$", "", &[], "the line has no cost type, so it is in no row of the recap");
     let all: Vec<(String, &Derived)> = on.iter().map(|l| (label(l), if l.class.is_some() { &l.amount } else { &no_class })).collect();
     let job_cost = total_of(&all);
     // The same lines, division by division. A line with no cost type is out of the job
     // cost and so out of every division; one with a cost type and no division is in
     // the job cost and in no division, and is counted apart so the two can be squared.
-    let in_division = |d: Option<crate::components::Division>| -> Vec<(String, &Derived)> { on.iter().filter(|l| l.class.is_some() && l.division == d).map(|l| (label(l), &l.amount)).collect() };
+    // A line given a division and no cost type is out of its division's total as it is
+    // out of the job cost, and the division says so by name (J17A-3): a total that
+    // leaves something out says what it left out.
+    let in_division = |d: Option<crate::components::Division>| -> Vec<(String, &Derived)> {
+        on.iter().filter(|l| l.division == d && (l.class.is_some() || d.is_some())).map(|l| (label(l), if l.class.is_some() { &l.amount } else { &no_class })).collect()
+    };
     let divisions: Vec<DivisionTotal> = crate::components::Division::ALL.iter().map(|&division| DivisionTotal { division, total: total_of(&in_division(Some(division))) }).collect();
     let no_division = total_of(&in_division(None));
 
@@ -761,7 +766,7 @@ pub fn estimate(job: &mut Job) -> Estimate {
             (Some(r), Some((b, status))) => crate::lines::dollars(Some(b * r.value.unwrap_or(0.0) / 100.0), &[status, r.status], formula, &inputs),
         }
     };
-    let no_cost = "there is no job cost: no classed line comes to a figure";
+    let no_cost = "there is no job cost: no line with a cost type comes to a figure";
     let cost = job_cost.value.map(|v| (v, job_cost.status));
     let overhead = percent_of(cost, no_cost, markup.as_ref().map(|m| &m.overhead), "overhead", "job cost × overhead ÷ 100");
     let with_overhead = cost.zip(overhead.value).map(|((c, s), o)| (crate::lines::cents(c + o), s.max(overhead.status)));

@@ -45,7 +45,15 @@ fn each_amount_is_a_formula_that_comes_to_the_jobs_figure_and_the_recap_is_formu
                 assert!((worked - v).abs() < 0.005, "row {n}: {} x {} is {worked}, the job has {v}", number(&row[3]), number(&row[5]));
                 sum += v;
             }
-            Out::None => assert_eq!(row[1], Out::Text("Copper standing seam, installed".into())),
+            // A line with no price yet has its formula all the same, and it comes to
+            // nothing until a price is typed on the sheet (the seventeenth judgment, J17A-6).
+            Out::FormulaText { text, shown } => {
+                assert_eq!(row[1], Out::Text("Copper standing seam, installed".into()));
+                assert_eq!(*text, format!("=IF(OR(D{n}=\"\",F{n}=\"\"),\"\",ROUND(D{n}*F{n},2))"));
+                assert_eq!(shown, "");
+            }
+            // A line with no cost type is in no total, so it has no formula either.
+            Out::None => assert_eq!(row[2], Out::Text(String::new()), "row {n}"),
             other => panic!("row {n}: {other:?}"),
         }
     }
@@ -62,9 +70,18 @@ fn each_amount_is_a_formula_that_comes_to_the_jobs_figure_and_the_recap_is_formu
     assert_eq!(figure("Overhead"), 2529.24);
     assert_eq!(figure("Profit"), 2225.73);
     assert_eq!(figure("Price"), 30047.40);
-    // A class with nothing in it has no total, which is not a formula that comes to 0.
+    // A cost type with nothing in it has no total, which is not $0.00: its formula comes
+    // to "none" until a line of that type has an amount (J17A-6).
     let general = recap.rows.iter().find(|r| r.first() == Some(&Out::Text("General conditions".into()))).unwrap();
-    assert_eq!(general[1], Out::Text("none".into()));
+    match &general[1] {
+        Out::FormulaText { text, shown } => {
+            assert_eq!(shown, "none");
+            assert!(text.starts_with("=IF(COUNTIFS(Estimate!$C$") && text.contains("\"General conditions\"") && text.contains(",\"none\",SUMIF("), "{text}");
+        }
+        other => panic!("{other:?}"),
+    }
+    // It has no note and no hours: there is nothing in it to be unsure of.
+    assert_eq!((general[3].clone(), general[4].clone()), (Out::None, Out::Text(String::new())));
     // What the price leaves out is named under it, once.
     let said: Vec<String> = values(&sheets[1..2]).into_iter().flatten().collect();
     assert!(said.iter().any(|c| c == "Left out of the job cost, and of everything taken on it: 1 line"), "{said:#?}");
