@@ -281,6 +281,23 @@ fn row(p: &mut ChildSpawnerCommands, on: bool, name: String, act: impl Fn(&mut D
     on_click(&mut e, act);
 }
 
+/// A switch: a pill with a knob at its right when it is on (in the accent) and at its
+/// left when it is off (grey). It reads on or off at a glance, which a small square
+/// did not. (About the proportions of the switch everyone knows, at this text's size.)
+fn switch(p: &mut ChildSpawnerCommands, on: bool) {
+    p.spawn((
+        Node { width: px(30.0), height: px(17.0), padding: UiRect::all(px(2.0)), border_radius: BorderRadius::all(px(9.0)), justify_content: if on { JustifyContent::FlexEnd } else { JustifyContent::FlexStart }, align_items: AlignItems::Center, flex_shrink: 0.0, ..default() },
+        BackgroundColor(if on { theme::accent() } else { Color::srgba(0.07, 0.09, 0.12, 0.18) }),
+        Pickable::IGNORE,
+    ))
+    .with_child((Node { width: px(13.0), height: px(13.0), border_radius: BorderRadius::all(px(7.0)), ..default() }, BackgroundColor(Color::WHITE), BoxShadow(vec![ShadowStyle { color: Color::srgba(0.0, 0.0, 0.0, 0.25), x_offset: px(0.0), y_offset: px(1.0), spread_radius: px(0.0), blur_radius: px(2.0) }]), Pickable::IGNORE));
+}
+
+/// A round spot of a layer's colour: what the layer is drawn in.
+fn spot(p: &mut ChildSpawnerCommands, colour: Color) {
+    p.spawn((Node { width: px(9.0), height: px(9.0), border_radius: BorderRadius::all(px(5.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(colour), Pickable::IGNORE));
+}
+
 /// A box that is ticked or not.
 fn tick(p: &mut ChildSpawnerCommands, on: bool, colour: Color) {
     p.spawn((Node { width: px(10.0), height: px(10.0), border: UiRect::all(px(1.5)), flex_shrink: 0.0, ..default() }, BackgroundColor(if on { colour } else { Color::NONE }), BorderColor::all(colour), Pickable::IGNORE));
@@ -378,7 +395,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
     use crate::tools::{self, Tool};
     // It scrolls when it holds more than fits: a row is never squeezed.
     p.spawn((
-        docked(Node { top: px(TOP_H), left: px(0.0), bottom: px(STATUS_H), width: px(LEFT_W), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(8.0), px(4.0)), overflow: Overflow::scroll_y(), ..default() }, UiRect::right(px(1.0))),
+        docked(Node { top: px(TOP_H), left: px(0.0), max_height: Val::Vh(83.0), width: px(LEFT_W), flex_direction: FlexDirection::Column, padding: UiRect { left: px(8.0), right: px(8.0), top: px(4.0), bottom: px(10.0) }, overflow: Overflow::scroll_y(), ..default() }, UiRect::right(px(1.0))),
         ScrollPosition(Vec2::new(0.0, scrolled)),
         BrowserScroll,
     ))
@@ -529,7 +546,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         heading(c, fonts, "Show");
         let layer = |c: &mut ChildSpawnerCommands, name: &str, key: &str, colour: Color, on: bool, count: Option<usize>, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
             row(c, false, format!("Show {name}"), move |doc| act(doc), |r| {
-                tick(r, on, colour);
+                spot(r, colour);
                 r.spawn((text(fonts, name, 12.0, Weight::Medium, if on { theme::ink() } else { theme::ink_faint() }), Pickable::IGNORE));
                 if let Some(count) = count {
                     r.spawn((text(fonts, count.to_string(), 11.0, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
@@ -538,6 +555,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 if !key.is_empty() {
                     keycap(r, fonts, key);
                 }
+                switch(r, on);
             });
         };
         for (i, d) in [Discipline::Architecture, Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing].into_iter().enumerate() {
@@ -678,7 +696,7 @@ fn mark(p: &mut ChildSpawnerCommands, what: &str, ink: Color) {
 fn tool_button<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, key: &str, on: bool) -> EntityCommands<'a> {
     let ink = if on { theme::accent() } else { theme::ink() };
     let mut e = p.spawn((
-        Node { width: px(56.0), height: px(44.0), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, justify_content: JustifyContent::Center, row_gap: px(2.0), border: UiRect::all(px(1.0)), flex_shrink: 0.0, ..default() },
+        Node { width: px(52.0), height: px(44.0), border_radius: BorderRadius::all(px(theme::BUTTON_RADIUS)), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, justify_content: JustifyContent::Center, row_gap: px(2.0), border: UiRect::all(px(1.0)), flex_shrink: 0.0, ..default() },
         BackgroundColor(if on { theme::accent_wash() } else { theme::panel() }),
         BorderColor::all(if on { theme::accent() } else { theme::rule() }),
         named(label),

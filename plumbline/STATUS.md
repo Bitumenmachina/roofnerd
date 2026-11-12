@@ -3997,3 +3997,24 @@ Part B, first step. **Not finished and not judged.**
 * **Not rerun:** every other window demonstration. Five of them click at fixed dots
   on the screen (`buildw`, `clashw`, `draww`, `d2`, `d5w`) and the left button's drag
   now slides the view where it used to do nothing: they are expected to need work.
+
+## The window rebuilt, step 2: a place to stand, and switches (2026-11-12)
+
+* **A place.** In 3D the building stands on a warm grey yard under a sky that is pale
+  at the horizon and soft blue overhead (a dome round the eye that nothing lights;
+  QUESTIONS.md Q22 has the question, `theme::sky_horizon` and `sky_overhead` are the
+  two figures). On plan the ground is still paper and there is no sky. The light is
+  unchanged, so the colours the demonstrations measure on the walls are unchanged
+  (`demos/pricew.sh` measures the bare wall, the lap siding and the brick and finds
+  each as before).
+* **Switches.** Each row under Show ends in a switch, blue with its knob to the right
+  when on, grey with its knob to the left when off, and starts with a round spot of
+  the colour that layer is drawn in. The rows keep their names ("Show Roof"), so the
+  scripts that click them still find them.
+* **The panels.** The left panel is as tall as what is in it. The tool bar's tiles are
+  narrower and round-cornered and all sixteen fit between the side panels.
+* **Run:** `demos/pricew.sh` passes. Picture: `demos/captured/glass/step2-sky-switches.png`.
+* **Read as a person, what is still not right:** there is no blur behind the glass;
+  the selected wall is a heavy blue wire; the right panel is a column of red
+  sentences and small square Check and Measure buttons; levels and systems have no
+  switch of their own yet; no panel can be put away; the sheet window is untouched.

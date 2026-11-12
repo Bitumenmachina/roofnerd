@@ -23,6 +23,13 @@ pub fn grid_minor() -> Color { hex(0xB9BDBF).with_alpha(0.6) }
 pub fn grid_major() -> Color { hex(0x979DA3).with_alpha(0.85) }
 pub fn panel() -> Color { hex(0xFFFFFF) }
 pub fn panel_alt() -> Color { hex(0xF3F4F2) }
+/// The ground a building stands on in 3D: a warm grey, darker than paper, so the
+/// building and the glass both read against it. (On plan the ground is paper.)
+pub fn yard() -> Color { hex(0xCFCBC2) }
+/// The sky (QUESTIONS.md Q22): pale at the horizon, a soft blue overhead. One place to
+/// change it, or to take it away: make both `canvas()`.
+pub fn sky_horizon() -> Color { hex(0xE6ECF1) }
+pub fn sky_overhead() -> Color { hex(0x86AEDB) }
 
 // ---- Glass (call 62; DECISIONS.md call 63 has where the figures come from) ----
 // A panel is a sheet of frosted glass over the model: a thick white tint (the text on

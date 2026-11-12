@@ -137,6 +137,10 @@ pub struct Solids {
     ball: Handle<Mesh>,
 }
 
+/// The sky's dome.
+#[derive(Component)]
+pub struct Sky;
+
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct RoofLines;
 #[derive(Default, Reflect, GizmoConfigGroup)]
@@ -148,7 +152,7 @@ pub struct GridLines;
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct Highlight;
 
-pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut meshes: ResMut<Assets<Mesh>>, graphics: Res<Graphics>) {
+pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>, graphics: Res<Graphics>) {
     commands.insert_resource(Solids { cube: meshes.add(Cuboid::new(1.0, 1.0, 1.0)), cylinder: meshes.add(Cylinder::new(0.5, 1.0)), ball: meshes.add(Sphere::new(0.5).mesh().ico(3).expect("a sphere")) });
     commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
     let cascades = CascadeShadowConfigBuilder { first_cascade_far_bound: 180.0, maximum_distance: 1600.0, ..default() }.build();
@@ -157,7 +161,18 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
     let key_at = Transform::from_xyz(-76.0, 64.0, -8.0).looking_at(Vec3::ZERO, Vec3::Y);
     let fill_at = Transform::from_xyz(60.0, 38.0, 70.0).looking_at(Vec3::ZERO, Vec3::Y);
     let camera_at = Transform::from_xyz(0.0, 40.0, 80.0).looking_at(Vec3::ZERO, Vec3::Y);
-    let fog = DistanceFog { color: theme::canvas(), falloff: FogFalloff::Linear { start: 4000.0, end: 9000.0 }, ..default() };
+    // The sky: a dome round the eye, pale at the horizon and blue overhead, that nothing
+    // lights and nothing shades. It goes where the eye goes, so it is never reached.
+    let mut dome = Sphere::new(1.0).mesh().uv(48, 24);
+    if let Some(bevy::mesh::VertexAttributeValues::Float32x3(at)) = dome.attribute(Mesh::ATTRIBUTE_POSITION) {
+        let (low, high) = (theme::sky_horizon().to_linear(), theme::sky_overhead().to_linear());
+        let colours: Vec<[f32; 4]> = at.iter().map(|p| { let t = p[1].clamp(0.0, 1.0).powf(0.55); [low.red + (high.red - low.red) * t, low.green + (high.green - low.green) * t, low.blue + (high.blue - low.blue) * t, 1.0] }).collect();
+        dome.insert_attribute(Mesh::ATTRIBUTE_COLOR, colours);
+    }
+    let mut over = materials.add(StandardMaterial { base_color: Color::WHITE, unlit: true, cull_mode: None, fog_enabled: false, ..default() });
+    let _ = &mut over;
+    commands.spawn((Mesh3d(meshes.add(dome)), MeshMaterial3d(over), Transform::from_scale(Vec3::splat(15_000.0)), bevy::light::NotShadowCaster, Pickable::IGNORE, Sky));
+    let fog = DistanceFog { color: theme::sky_horizon(), falloff: FogFalloff::Linear { start: 4000.0, end: 9000.0 }, ..default() };
     if graphics.full {
         // Ambient occlusion darkens where surfaces meet, and the picture is steadied over
         // several frames instead of being left jagged.
@@ -373,7 +388,7 @@ pub fn rebuild(
             for e in &ground {
                 commands.entity(e).despawn();
             }
-            let material = StandardMaterial { base_color: theme::ground(), perceptual_roughness: 1.0, reflectance: 0.0, ..default() };
+            let material = StandardMaterial { base_color: if doc.plan { theme::ground() } else { theme::yard() }, perceptual_roughness: 1.0, reflectance: 0.0, ..default() };
             commands
                 .spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(24000.0, 24000.0))), MeshMaterial3d(materials.add(material)), Transform::from_xyz(0.0, -0.04, 0.0), Ground))
                 .observe(|press: On<PointerClick>, mut doc: ResMut<Doc>| {
@@ -838,7 +853,7 @@ pub fn tint(doc: Res<Doc>, drawing: Res<Drawing>, mut materials: ResMut<Assets<S
 }
 
 /// Ease the camera toward where it is going, and set the lens for the view it is in.
-pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>), With<MainCamera>>, mut sun: Query<&mut DirectionalLight, With<KeyLight>>) {
+pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>), (With<MainCamera>, Without<Sky>)>, mut sun: Query<&mut DirectionalLight, With<KeyLight>>, mut sky: Query<(&mut Transform, &mut Visibility), (With<Sky>, Without<MainCamera>)>) {
     // A plan is a drawing, not a view: it has no shadows to hide what is on the floor.
     for mut light in &mut sun {
         if light.shadow_maps_enabled == doc.plan {
@@ -889,6 +904,14 @@ pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mu
         *t = Transform::from_translation(eye).looking_at(at, up);
         if !matches!(&*projection, Projection::Perspective(p) if (p.fov - lens).abs() < 1e-4) {
             *projection = Projection::from(PerspectiveProjection { fov: lens, near: 0.5, far: 40_000.0, ..default() });
+        }
+    }
+    // The sky stays round the eye; a plan has none.
+    for (mut dome, mut seen) in &mut sky {
+        dome.translation = Vec3::new(t.translation.x, 0.0, t.translation.z);
+        let want = if overhead { Visibility::Hidden } else { Visibility::Visible };
+        if *seen != want {
+            *seen = want;
         }
     }
 }
