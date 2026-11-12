@@ -2746,3 +2746,40 @@ person sees; none changes a figure.
    scrolled-away control of the left panel lies, and the demonstrations' kit turns
    the wheel that way before clicking, as a person does.
 
+### Call 68. The house is lit by a sun and by its sky (2026-11-12)
+
+**What was there.** No tone mapping, two lamps, a flat light from everywhere and a
+painted sky that lit nothing. Judge 19: "a tidy massing model, not a game-grade one."
+
+**The call.** The plan in STATUS.md ("The light and the materials"), step by step.
+What is built so far, and the figures chosen by eye on the made-up whole house:
+
+1. **The camera takes in a range of light and folds it to the screen** (`Hdr`, the
+   engine's default fold, "TonyMcMapface", chosen over AgX because it leaves a
+   mid-tone colour closer to the colour it was given; dither on). **On plan nothing
+   is folded**: a plan is a drawing, and its paper and inks are the colours they are
+   given, so the fold is switched with the view.
+2. **The sky lights the house** (`crates/app/src/skylight.rs`): the two pictures the
+   engine lights a scene from are worked out at start from the sky's own three
+   colours (horizon, overhead, ground). They are worked out in plain arithmetic, not
+   on the graphics card: the engine's own filter needs a compute pass every frame;
+   this is the same on every machine, costs nothing per frame, and can be tested
+   (five tests, the figures by hand). **What falls on a surface has most of the
+   sky's blue taken out** (it keeps 0.35 of its colour): with all of it the ground
+   and every white wall were lit blue, which was seen in the first picture and is
+   not how a house under a real sky looks, where haze and cloud fill as much as blue
+   does. **What is reflected is the sky as drawn.**
+3. **One sun**, a little warm (`SUN_COLOUR`), 3,600 lux against the sky's 800 cd/m2
+   in the engine's measures at its standing exposure. The second lamp and the flat
+   light are gone.
+4. **The small picture behind the frosted panels** is lit and folded the same way,
+   so a panel's blur matches what is round it.
+
+**Not built yet of the plan:** the sun's shadow softened with distance (the engine's
+feature for it is marked experimental and is costly; the shadow's edge as it is
+reads clean at the window's size, so it waits), a look at each material's roughness
+under the new light, and bloom.
+
+**What changes that a person sees:** every colour in 3D. Nothing on plan, nothing in
+the estimate window, no figure.
+

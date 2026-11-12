@@ -34,6 +34,8 @@ const SIDE: u32 = 64;
 const COPIES: u32 = 7;
 /// The side of the picture of light that falls on a surface.
 const FALLS_SIDE: u32 = 16;
+/// How much of the sky's colour its fill light keeps (1 all of it, 0 none: grey).
+const FILL_BLUE: f32 = 0.35;
 
 /// What the sky sends from a direction, by how far up the direction points (-1 straight
 /// down, 0 the horizon, 1 straight up): pale at the horizon, deeper overhead, and below
@@ -160,7 +162,16 @@ fn cube(side: u32, copies: u32, of: impl Fn(u32, f32) -> [f32; 3]) -> Image {
 /// The two pictures of the sky's light: what falls on a surface, and what one reflects.
 pub fn light(horizon: [f32; 3], overhead: [f32; 3], ground: [f32; 3]) -> (Image, Image) {
     let of = move |up: f32| sky(up, horizon, overhead, ground);
-    let falls = table(1.0, &of);
+    // What falls on a surface is the sky with most of its blue taken out: a real sky's
+    // fill is haze and cloud as much as blue, and a clear blue one lit the ground and
+    // every white wall blue (seen in the first picture taken with it). What is
+    // reflected is the sky as it is drawn.
+    let hazy = move |up: f32| {
+        let c = of(up);
+        let grey = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+        c.map(|x| grey + (x - grey) * FILL_BLUE)
+    };
+    let falls = table(1.0, &hazy);
     // The sharpest copy is the sky itself; each smaller one is for a rougher surface.
     let blurred: Vec<Vec<[f32; 3]>> = (1..COPIES).map(|copy| table(tightness(copy as f32 / (COPIES - 1) as f32), &of)).collect();
     let falls = cube(FALLS_SIDE, 1, |_, up| read(&falls, up));
@@ -198,10 +209,15 @@ mod tests {
         // Facing down: the ground and nothing else, but for the eased join at the horizon,
         // which a surface facing straight down sees edge on.
         assert!((down[0] - 0.4).abs() < 0.02, "a soffit is lit by the ground: {down:?}");
-        // Facing up: all sky, between the horizon's 0.9 and the overhead's 0.3 in red.
-        assert!(up[0] > 0.45 && up[0] < 0.75, "a flat roof is lit by the sky: {up:?}");
-        // Facing level: between the two, and bluer than the ground.
-        assert!(level[0] > down[0] && level[0] < up[0], "{down:?} {level:?} {up:?}");
+        // Facing up: all sky. By hand: the sky's red at height y is 0.9 - 0.6 y^0.55, and
+        // light falling on a flat roof weighs each height by 2y, so the mean of y^0.55 is
+        // 2 / 2.55 = 0.784 and the red is 0.9 - 0.6 x 0.784 = 0.429. Blue is 0.9 at
+        // every height and stays 0.9.
+        assert!((up[0] - 0.429).abs() < 0.006 && (up[2] - 0.9).abs() < 0.006, "a flat roof is lit by the sky: {up:?}");
+        // Facing level: half ground and half sky. In blue that is between the two (the
+        // ground's 0.4 and the sky's 0.9). In red it is not: a wall faces the pale
+        // horizon, which is redder than the sky overhead that a flat roof faces.
+        assert!(level[2] > down[2] + 0.1 && level[2] < up[2] - 0.1, "{down:?} {level:?} {up:?}");
         assert!(level[2] > level[0], "a wall takes blue from the sky: {level:?}");
     }
 

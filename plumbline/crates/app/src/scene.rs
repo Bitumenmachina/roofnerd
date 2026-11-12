@@ -141,6 +141,11 @@ pub struct Solids {
 #[derive(Component)]
 pub struct Sky;
 
+/// The sky's light, kept so that the small picture behind the frosted panels is lit as
+/// the window is.
+#[derive(Resource, Clone)]
+pub struct SkyLight(pub EnvironmentMapLight);
+
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct RoofLines;
 #[derive(Default, Reflect, GizmoConfigGroup)]
@@ -152,14 +157,33 @@ pub struct GridLines;
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct Highlight;
 
-pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>, graphics: Res<Graphics>) {
+/// How bright the sky's light is and how bright the sun, in the engine's measures (the
+/// sky in candela to the square metre, the sun in lux), for the camera's standing
+/// exposure. Set by eye on the made-up whole house: the sun about three times what the
+/// sky gives a wall, so that a wall in the sun and a wall out of it are plainly two
+/// walls and neither is white.
+pub const SKY_LIGHT: f32 = 800.0;
+pub const SUN_LIGHT: f32 = 3600.0;
+/// The sun is a little warm, as sunlight is beside the sky's fill.
+pub const SUN_COLOUR: Color = Color::srgb(1.0, 0.955, 0.89);
+
+/// How the range of light is folded to the screen in 3D. On plan nothing is folded: a
+/// plan is a drawing, and its paper and its inks are the colours they are given.
+pub const FOLD: Tonemapping = Tonemapping::TonyMcMapface;
+
+pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>, mut images: ResMut<Assets<Image>>, graphics: Res<Graphics>) {
     commands.insert_resource(Solids { cube: meshes.add(Cuboid::new(1.0, 1.0, 1.0)), cylinder: meshes.add(Cylinder::new(0.5, 1.0)), ball: meshes.add(Sphere::new(0.5).mesh().ico(3).expect("a sphere")) });
     commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
     let cascades = CascadeShadowConfigBuilder { first_cascade_far_bound: 180.0, maximum_distance: 1600.0, ..default() }.build();
-    // Studio light: the key stands to the viewer's left, forty degrees up, and casts the
-    // shadows; a weaker fill from the right front opens them; the rest comes from all round.
+    // The light of a place: one sun, to the viewer's left and forty degrees up, which
+    // casts the shadows; and the sky, which lights every surface by how much of the sky
+    // and how much of the ground it faces, and which glass and metal reflect
+    // (`skylight`). There is no second lamp and no flat light from everywhere.
     let key_at = Transform::from_xyz(-76.0, 64.0, -8.0).looking_at(Vec3::ZERO, Vec3::Y);
-    let fill_at = Transform::from_xyz(60.0, 38.0, 70.0).looking_at(Vec3::ZERO, Vec3::Y);
+    let linear = |c: Color| { let l = c.to_linear(); [l.red, l.green, l.blue] };
+    let (falls, reflects) = crate::skylight::light(linear(theme::sky_horizon()), linear(theme::sky_overhead()), linear(theme::yard()));
+    let sky_light = EnvironmentMapLight { diffuse_map: images.add(falls), specular_map: images.add(reflects), intensity: SKY_LIGHT, ..default() };
+    commands.insert_resource(SkyLight(sky_light.clone()));
     let camera_at = Transform::from_xyz(0.0, 40.0, 80.0).looking_at(Vec3::ZERO, Vec3::Y);
     // The sky: a dome round the eye, pale at the horizon and blue overhead, that nothing
     // lights and nothing shades. It goes where the eye goes, so it is never reached.
@@ -176,13 +200,13 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
     if graphics.full {
         // Ambient occlusion darkens where surfaces meet, and the picture is steadied over
         // several frames instead of being left jagged.
-        commands.spawn((Camera3d::default(), Camera { order: 0, ..default() }, Msaa::Off, Tonemapping::None, DebandDither::Disabled, TemporalAntiAliasing::default(), ScreenSpaceAmbientOcclusion::default(), fog, IsDefaultUiCamera, MainCamera, camera_at));
+        // The camera takes in a range of light and folds it to the screen, as a camera does.
+        commands.spawn((Camera3d::default(), Camera { order: 0, ..default() }, bevy::camera::Hdr, Msaa::Off, FOLD, DebandDither::Enabled, TemporalAntiAliasing::default(), ScreenSpaceAmbientOcclusion::default(), fog, sky_light, IsDefaultUiCamera, MainCamera, camera_at));
     } else {
-        commands.spawn((Camera3d::default(), Camera { order: 0, ..default() }, Msaa::Sample4, Tonemapping::None, DebandDither::Disabled, fog, IsDefaultUiCamera, MainCamera, camera_at));
+        commands.spawn((Camera3d::default(), Camera { order: 0, ..default() }, bevy::camera::Hdr, Msaa::Sample4, FOLD, DebandDither::Enabled, fog, sky_light, IsDefaultUiCamera, MainCamera, camera_at));
     }
-    commands.spawn((DirectionalLight { illuminance: 1080.0, shadow_maps_enabled: true, ..default() }, cascades, key_at, KeyLight));
-    commands.spawn((DirectionalLight { illuminance: 260.0, shadow_maps_enabled: false, ..default() }, fill_at));
-    commands.insert_resource(GlobalAmbientLight { brightness: 1350.0, ..default() });
+    commands.spawn((DirectionalLight { illuminance: SUN_LIGHT, color: SUN_COLOUR, shadow_maps_enabled: true, ..default() }, cascades, key_at, KeyLight));
+    commands.insert_resource(GlobalAmbientLight { brightness: 0.0, ..default() });
 
     let (lines, _) = store.config_mut::<RoofLines>();
     lines.line.width = 3.0;
@@ -900,14 +924,19 @@ pub fn ground_tone(doc: Res<Doc>, ground: Query<&MeshMaterial3d<StandardMaterial
 }
 
 /// Ease the camera toward where it is going, and set the lens for the view it is in.
-pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>), (With<MainCamera>, Without<Sky>)>, mut sun: Query<&mut DirectionalLight, With<KeyLight>>, mut sky: Query<(&mut Transform, &mut Visibility), (With<Sky>, Without<MainCamera>)>) {
+pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>, &mut Tonemapping), (With<MainCamera>, Without<Sky>)>, mut sun: Query<&mut DirectionalLight, With<KeyLight>>, mut sky: Query<(&mut Transform, &mut Visibility), (With<Sky>, Without<MainCamera>)>) {
     // A plan is a drawing, not a view: it has no shadows to hide what is on the floor.
     for mut light in &mut sun {
         if light.shadow_maps_enabled == doc.plan {
             light.shadow_maps_enabled = !doc.plan;
         }
     }
-    let Ok((mut t, mut projection, fog)) = camera.single_mut() else { return };
+    let Ok((mut t, mut projection, fog, mut fold)) = camera.single_mut() else { return };
+    // A plan is a drawing: its paper and inks go to the screen as they are.
+    let wanted = if doc.plan { Tonemapping::None } else { FOLD };
+    if *fold != wanted {
+        *fold = wanted;
+    }
     // On plan the eye goes straight overhead before the perspective is taken out.
     let (yaw, pitch) = if doc.plan { (0.0, 1.5607) } else { (orbit.yaw, orbit.pitch) };
     let ease = 1.0 - (-time.delta_secs() * 9.0).exp();

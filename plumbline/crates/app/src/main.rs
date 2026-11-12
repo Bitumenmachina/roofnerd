@@ -52,6 +52,7 @@ mod plans;
 mod glass;
 mod scene;
 mod sheet;
+mod skylight;
 mod theme;
 mod tools;
 

@@ -61,7 +61,7 @@ impl Plugin for GlassPlugin {
 }
 
 /// Make the small picture, the camera that draws it, and the glass that looks at it.
-pub fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, mut glass: ResMut<Assets<Frost>>, window: Query<&Window, With<bevy::window::PrimaryWindow>>, graphics: Res<crate::scene::Graphics>) {
+pub fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, mut glass: ResMut<Assets<Frost>>, window: Query<&Window, With<bevy::window::PrimaryWindow>>, graphics: Res<crate::scene::Graphics>, sky: Res<crate::scene::SkyLight>) {
     if !graphics.full {
         return;
     }
@@ -70,15 +70,19 @@ pub fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, mut glas
     let picture = images.add(Image::new_target_texture(w, h, TextureFormat::Bgra8UnormSrgb, None));
     // It draws before the window's own camera, and plainly: no steadying over frames,
     // no shade where surfaces meet. What it draws is only ever seen blurred.
-    commands.spawn((Camera3d::default(), Camera { order: -1, ..default() }, RenderTarget::Image(ImageRenderTarget { handle: picture.clone(), scale_factor: 1.0 }), Msaa::Off, Tonemapping::None, DebandDither::Disabled, Behind));
+    commands.spawn((Camera3d::default(), Camera { order: -1, ..default() }, RenderTarget::Image(ImageRenderTarget { handle: picture.clone(), scale_factor: 1.0 }), bevy::camera::Hdr, Msaa::Off, crate::scene::FOLD, DebandDither::Disabled, sky.0.clone(), Behind));
     let tint = theme::frost().to_linear();
     let made = glass.add(Frost { tint: LinearRgba::new(tint.red, tint.green, tint.blue, theme::FROST_THICK), reach: 0.028, scene: picture });
     let _ = PANEL.set(made);
 }
 
 /// The small picture is of what the window shows: its camera goes where the window's goes.
-pub fn follow(main: Query<(&Transform, &Projection), (With<MainCamera>, Without<Behind>)>, mut behind: Query<(&mut Transform, &mut Projection), (With<Behind>, Without<MainCamera>)>) {
-    let (Ok((at, lens)), Ok((mut t, mut p))) = (main.single(), behind.single_mut()) else { return };
+pub fn follow(main: Query<(&Transform, &Projection, &Tonemapping), (With<MainCamera>, Without<Behind>)>, mut behind: Query<(&mut Transform, &mut Projection, &mut Tonemapping), (With<Behind>, Without<MainCamera>)>) {
+    let (Ok((at, lens, fold)), Ok((mut t, mut p, mut f))) = (main.single(), behind.single_mut()) else { return };
     *t = *at;
     *p = lens.clone();
+    // Lit and folded to the screen as the window is, so the blur matches what is round it.
+    if *f != *fold {
+        *f = *fold;
+    }
 }

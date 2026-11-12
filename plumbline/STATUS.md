@@ -4620,3 +4620,63 @@ above, and close on a window, before and after, side by side. Then a visual judg
 against VISUAL.md C and D with those pictures. Patrick's own test is the one that
 counts, and the pictures are what he will be shown.
 
+## After judge 19: what was run and seen (2026-11-12, evening)
+
+**On the program as committed at 99021d2** (call 67's changes), all five window
+demonstrations pass and every picture was taken on that program:
+
+| Demonstration | Result | What was read in its pictures |
+|---|---|---|
+| `toolsw` | PASS. **Proved red first** on the judged program (14fc994): the job read back had no door at all. Green: both doors saved by the session's only Save, pressed with the Door tool's sizes open | 06: "Saved job.json. What is being typed is not in it yet: Enter sets it." and a green Saved mark at the bar's end; 04: the refusal as a round frosted card under the view buttons, whole; the right panel as tall as what is in it; Show straight after Levels; "2 not priced" in red beside the price |
+| `carryw` | PASS | 02: the vanity red while in the water closet, an amber clash mark, and under the Clashes switch "1 to verify in the field" beside an amber spot; its place reads "E 7' 0", N 0' 10 1/2"" and its size 3' 0" x 1' 9" x 2' 10 1/2" |
+| `itemsw` | PASS (IfcOpenShell validates the model written from the window) | not read one by one yet |
+| `pricew` | PASS | 03: "Wall line E 0' 0", N 0' 0" to E 24' 0", N 0' 0""; "19 not priced" beside the price |
+| `glassw` | PASS, with the new rules for a double-click and for the wheel with nothing near under the pointer | 01 read |
+
+`tools/committed.sh` passes on dd42088 (the code of 99021d2 and the pictures).
+
+**A mistake in the record, set right.** The tools pictures were first committed
+while that run was still going (commit aa17b92: five new pictures and one old, and a
+message saying the run had passed before it had). The run did pass; e596a17 holds
+its whole set and says so.
+
+**Seen in those pictures and not right:**
+
+* The job's name in the top bar is cut ("Sample whole house (not a...") with room
+  beside it (VISUAL.md A5).
+* On a job of one wall the plan runs under the right panel: the view is framed on
+  the window, not on the part of it the panels leave free.
+* Next steps marks "Add a drawing and set its scale" done on a job with no drawing.
+
+**Not yet seen in any picture** (built, tests pass): carrying on plan, the first
+press picking a thing up, a thing pointed at a wall landing by the wall, the camera
+guards (a double-click on the sky; the wheel at the horizon), the close warning,
+the whole house's switches now above the fold (seen: they are, in the light
+pictures below), the Building tab's rows by wall type. Judge 19's notes on these
+stand until a picture or a second judge says otherwise.
+
+## The light: step one built and seen (call 68)
+
+`demos/captured/light/`: the made-up whole house, **before** (`before-whole.png`, the
+program as committed) and **after** (`after-whole.png`, `after-window.png` close on a
+window, `after-street.png` low from the street), taken the same way on the same job.
+
+What the after pictures show that the before does not: a cast shadow of the house on
+the ground; the wall in the sun and the wall out of it plainly two walls; window
+glass that reflects the sky, paler toward the horizon, with the muntins dark against
+it; the sky pale at the horizon behind the house from the street; the frosted panels
+blurring the siding behind them in the close picture. What they do not show: nothing
+in them would be taken for a photograph. The siding, stone and roofing are the same
+patterns as before under better light; the ground is a plain grey plane; there is no
+soft edge to the shadow. It is a better-lit model of a house, not yet a "hyper
+realistic" one, and the pictures were sent to Patrick as they are.
+
+The first picture under the new light was wrong and is not kept: with the sky's full
+blue as fill, the ground and the trim were lit blue. Call 68 has what was changed.
+
+**Being run now:** the six demonstrations that read colours out of pictures
+(`glassw`, `carryw`, `dressw`, `pricew`, `planw`, `firstw`), to find which checks the
+new light breaks. Each broken check is re-derived from the new picture and proved
+red before it is trusted; none is loosened. The light is not committed until they
+have been through.
+
