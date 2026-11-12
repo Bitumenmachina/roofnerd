@@ -1099,7 +1099,7 @@ fn right(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
             Some(el) => selection(c, fonts, doc, snap, el),
             None => summary(c, fonts, doc, snap),
         }
-        c.spawn(Node { margin: UiRect::top(px(12.0)), flex_shrink: 0.0, ..default() }).with_child(text(fonts, "Right-drag turns the model. Middle-drag slides it. The wheel zooms. W A S D move over the ground.", 10.5, Weight::Regular, theme::ink_faint()));
+        c.spawn(Node { margin: UiRect::top(px(12.0)), flex_shrink: 0.0, ..default() }).with_child(text(fonts, "Drag slides the ground with your hand. Right-drag turns the view about what is under the pointer. The wheel closes on what is under the pointer. Double-click flies to a thing.", 10.5, Weight::Regular, theme::ink_faint()));
     });
 }
 

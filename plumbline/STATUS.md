@@ -4018,3 +4018,40 @@ Part B, first step. **Not finished and not judged.**
   the selected wall is a heavy blue wire; the right panel is a column of red
   sentences and small square Check and Measure buttons; levels and systems have no
   switch of their own yet; no panel can be put away; the sheet window is untouched.
+
+## The window rebuilt, step 3: how it moves, shown by measurement (2026-11-12)
+
+`demos/glassw.sh` passes. It opens a made-up house, drives the real program with a
+real pointer, and follows the door (the one brown thing in the picture) from picture
+to picture. What it measured on the last run, against the hand figures:
+
+| What | By hand | Measured |
+|---|---|---|
+| the roof's switch | off, then on | the roof's blue grey at (900, 330): there, gone, back |
+| three notches of the wheel at the door | on this display a notch arrives as two lines (traced), so six lines: 1 / 0.9^6 = 1.88 times as wide | 55 dots, then 103: 1.87 times |
+| the place under the pointer stays under it | as far along the door as before | 0.49 of the way along, then 0.50 |
+| the wheel over the right panel | the model does not move | the door's ends at (753, 855), then (753, 856) |
+| a turn with the right button, 150 dots | about the door: it stays at (805, 640) and is seen from round the side | still at (805, 640); 104 dots wide, then 136 |
+| a drag with the left button | the place grabbed goes with the hand to (1005, 560) | the door is at (1005, 560) and no longer at (805, 640); nothing was selected |
+| a double-click on the door | flown to: in the middle of the window, nearer | at (800, 480); 96 dots wide, then 242 |
+| a flick of 100 dots, let go moving | carries on past where the hand let go | the place grabbed is 85 dots past it |
+| looking round changes nothing | the job file is the same bytes | it is |
+
+**What writing the demonstration found, each fixed:**
+
+* A pointer that is *put* somewhere (the test rig here; a tablet or a remote desktop
+  in life) sends no "moved by" at all. The first version read "moved by": the turn
+  turned nothing and a slide was taken for a click and selected the door. Movement is
+  now read from where the pointer is.
+* On a slow frame the last movement before the button came up was dropped, so a
+  flick never carried. The frame in which the button is let go still counts.
+* A double-click was timed against the frame clock and missed when frames were slow.
+  It is now half a second, or two presses seen in one frame.
+* My own hand figure for the wheel was wrong (three notches, not six lines): the
+  program was right and the trace said why.
+
+**Not known:** what one notch of a real mouse sends on a real display (one line is
+expected; the virtual display sends two). `PLUMBLINE_TRACE=1` prints what the wheel
+sent, for whoever has a mouse. Easing between plan and 3D has a step in scale at the
+moment the perspective is taken out (the plan shows 0.62 of the distance, the lens
+0.73). **Not rerun:** the other window demonstrations.

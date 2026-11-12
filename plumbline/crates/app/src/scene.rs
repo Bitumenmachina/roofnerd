@@ -14,7 +14,7 @@ use bevy::asset::RenderAssetUsages;
 use bevy::camera::visibility::RenderLayers;
 use bevy::camera::ScalingMode;
 use bevy::core_pipeline::tonemapping::{DebandDither, Tonemapping};
-use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll, MouseScrollUnit};
+use bevy::input::mouse::{AccumulatedMouseScroll, MouseScrollUnit};
 use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap, NotShadowCaster};
 use bevy::mesh::Indices;
 use bevy::pbr::ScreenSpaceAmbientOcclusion;
@@ -957,6 +957,8 @@ pub struct Feel {
     spin: (Vec2, Vec3),
     /// When the left button last went down and where, for a double-click.
     last_press: Option<(f32, Vec2)>,
+    /// Where the pointer was a frame ago.
+    was: Option<Vec2>,
 }
 
 /// The ray under a place in the window, from where the view is going (not where it has
@@ -1010,20 +1012,33 @@ fn turn_about(orbit: &mut Orbit, pivot: Vec3, yaw: f32, pitch: f32) {
 /// carries on and eases to a stop. A double-click flies to the place clicked. On foot
 /// the same keys walk and the right button looks round.
 #[allow(clippy::too_many_arguments)]
-pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Res<ButtonInput<MouseButton>>, motion: Res<AccumulatedMouseMotion>, scroll: Res<AccumulatedMouseScroll>, keys: Res<ButtonInput<KeyCode>>, time: Res<Time>, doc: Res<Doc>, window: Query<&Window, With<PrimaryWindow>>, hover: Res<bevy::picking::hover::HoverMap>, panels: Query<(), With<Node>>) {
+pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Res<ButtonInput<MouseButton>>, scroll: Res<AccumulatedMouseScroll>, keys: Res<ButtonInput<KeyCode>>, time: Res<Time>, doc: Res<Doc>, window: Query<&Window, With<PrimaryWindow>>, hover: Res<bevy::picking::hover::HoverMap>, panels: Query<(), With<Node>>, mut presses: MessageReader<bevy::input::mouse::MouseButtonInput>) {
     use std::sync::atomic::Ordering::Relaxed;
+    // How many times the left button went down since the last frame: on a slow machine
+    // both presses of a double-click can land in one frame.
+    let downs = presses.read().filter(|p| p.button == MouseButton::Left && p.state == bevy::input::ButtonState::Pressed).count();
     let Ok(window) = window.single() else { return };
     // What the pointer is over: a panel, or a place on the model.
     let hits = hover.get(&bevy::picking::pointer::PointerId::Mouse);
     let on_panel = hits.is_some_and(|h| h.keys().any(|e| panels.contains(*e)));
     OVER_PANEL.store(on_panel, Relaxed);
     let cursor = window.cursor_position();
+    // How far the pointer went since the last frame, from where it is: a pointer that
+    // is put somewhere (a tablet, a remote desktop, a test rig) sends no "moved by", and
+    // a drag made of such moves is still a drag.
+    let moved = match (cursor, feel.was) {
+        (Some(now), Some(then)) => now - then,
+        _ => Vec2::ZERO,
+    };
+    feel.was = cursor;
     let inside = cursor.is_some() && !on_panel;
     let under = |orbit: &Orbit| -> Option<Vec3> {
         let nearest = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p);
         nearest.or_else(|| cursor.and_then(|c| { let (eye, way) = ray_at(orbit, window, c); on_level(eye, way, 0.0) }))
     };
     let dt = time.delta_secs().min(0.1);
+    // A speed is what moved over how long the frame really took, however slow the frame.
+    let took = time.delta_secs().max(1.0e-3);
     let free = doc.entry.is_none() && doc.draw.tool.is_none() && !doc.choosing;
     let left = MouseButton::Left;
 
@@ -1047,7 +1062,10 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
             // A second press of the left button in the same place flies to it.
             if buttons.just_pressed(left) && free {
                 let now = time.elapsed_secs();
-                let again = feel.last_press.is_some_and(|(then, at)| now - then < 0.4 && cursor.is_some_and(|c| c.distance(at) < 6.0));
+                // Within half a second (the usual double-click), or within a frame and a
+                // half where frames are slower than that.
+                let window = (time.delta_secs() * 1.5).max(0.5);
+                let again = downs >= 2 || feel.last_press.is_some_and(|(then, at)| now - then < window && cursor.is_some_and(|c| c.distance(at) < 8.0));
                 feel.last_press = cursor.map(|c| (now, c));
                 if let (true, Some(to)) = (again, grab) {
                     orbit.target = to;
@@ -1059,7 +1077,12 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         }
     }
     let held = buttons.pressed(left) || buttons.pressed(MouseButton::Middle) || buttons.pressed(MouseButton::Right);
-    feel.gone += motion.delta.length();
+    // Let go this frame: what the pointer did before the button came up still counts,
+    // or on a slow frame the end of a flick is lost with the flick.
+    let let_go = !held && buttons.any_just_released([left, MouseButton::Middle, MouseButton::Right]);
+    // What a dot on the screen covers of the ground where the view is looking.
+    let dot = orbit.distance * 2.0 * (LENS / 2.0).tan() / window.height().max(1.0);
+    feel.gone += moved.length();
     // The left button's drag is told from a click by how far it went.
     if buttons.pressed(left) && feel.gone > 5.0 && feel.hold.is_some() {
         DRAGGED.store(true, Relaxed);
@@ -1070,39 +1093,37 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
     if doc.walk {
         // On foot the right button looks round.
         if buttons.pressed(MouseButton::Right) {
-            orbit.yaw += motion.delta.x * 0.006;
-            orbit.pitch = (orbit.pitch + motion.delta.y * 0.006).clamp(-1.3, 1.3);
+            orbit.yaw += moved.x * 0.006;
+            orbit.pitch = (orbit.pitch + moved.y * 0.006).clamp(-1.3, 1.3);
         }
-    } else if let (true, Some((hold, grabbed))) = (held, feel.hold) {
+    } else if let (true, Some((hold, grabbed))) = (held || let_go, feel.hold) {
         match hold {
             Hold::Turn => {
                 // A full window height of drag is a full turn (three.js's rule).
                 let per_px = std::f32::consts::TAU / window.height().max(1.0);
-                let (yaw, pitch) = (-motion.delta.x * per_px, motion.delta.y * per_px);
+                let (yaw, pitch) = (-moved.x * per_px, moved.y * per_px);
                 turn_about(&mut orbit, grabbed, yaw, pitch);
-                if dt > 0.0 {
-                    feel.spin = (feel.spin.0.lerp(Vec2::new(yaw, pitch) / dt, 0.5), grabbed);
-                }
+                feel.spin = (feel.spin.0.lerp(Vec2::new(yaw, pitch) / took, 0.5), grabbed);
             }
             Hold::Ground => {
                 let shift = if doc.plan {
                     // On plan a dot covers the same ground everywhere: exact.
                     let per_px = orbit.distance * PLAN_HEIGHT / window.height().max(1.0);
-                    right * (-motion.delta.x * per_px) + toward * (-motion.delta.y * per_px)
+                    right * (-moved.x * per_px) + toward * (-moved.y * per_px)
                 } else {
                     // The place grabbed is put back under the pointer.
                     cursor.and_then(|c| { let (eye, way) = ray_at(&orbit, window, c); on_level(eye, way, grabbed.y) }).map(|now| grabbed - now).filter(|s| s.length() < orbit.distance * 4.0).unwrap_or(Vec3::ZERO)
                 };
                 orbit.target += shift;
-                if dt > 0.0 {
-                    feel.slide = feel.slide.lerp(shift / dt, 0.5);
-                }
+                feel.slide = feel.slide.lerp(shift / took, 0.5);
             }
         }
-    } else if !held {
+    }
+    if !held && !doc.walk {
         if feel.hold.take().is_some() {
-            // Let go: what it was doing carries on only if it was still moving.
-            if motion.delta.length() < 0.5 && feel.slide.length() < orbit.distance * 0.05 {
+            // Let go: what it was doing carries on only if it was still going, faster
+            // than twenty dots a second.
+            if feel.slide.length() < dot * 20.0 {
                 feel.slide = Vec3::ZERO;
             }
             if feel.spin.0.length() < 0.15 {
@@ -1115,7 +1136,7 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
             let step = feel.slide * dt;
             orbit.target += step;
             feel.slide *= fade;
-            if feel.slide.length() < orbit.distance * 0.01 {
+            if feel.slide.length() < dot * 8.0 {
                 feel.slide = Vec3::ZERO;
             }
         }
@@ -1127,6 +1148,10 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
                 feel.spin.0 = Vec2::ZERO;
             }
         }
+    }
+    // PLUMBLINE_TRACE=1 says what the wheel sent, for telling a mouse from a test rig.
+    if scroll.delta.y != 0.0 && std::env::var_os("PLUMBLINE_TRACE").is_some() {
+        eprintln!("wheel: {:?} {} ({} presses of the left button this frame)", scroll.unit, scroll.delta.y, downs);
     }
     if inside && scroll.delta.y != 0.0 && !doc.walk {
         // A notch of the wheel is a tenth nearer or further; a touchpad's dots are a
