@@ -503,6 +503,17 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
             let said = format!("{} ({:?}; {})", row.text, row.status, row.basis);
             props.push(format!("#{}", o.add(format!("IFCPROPERTYSINGLEVALUE({},$,IFCTEXT({}),$)", text(&row.label), text(&said)))));
         }
+        // One of an item (a thing made from a maker's sheet) carries what the sheet said
+        // of it: who makes it, its model, what it weighs, each as sure as the item has
+        // it and from where. The item itself is a type and is not written; without
+        // this a designer opening the model gets a box with a name (J19-39).
+        let item = job.find(path).and_then(|e| job.world.get::<plumbline_world::Placed>(e)).and_then(|p| p.item.clone());
+        if let Some(of) = item.and_then(|item| elements.iter().find(|e| e.path == item)) {
+            for row in of.rows.iter().filter(|r| !r.derived && matches!(r.label.as_str(), "maker" | "model" | "weight" | "made from")) {
+                let said = format!("{} ({:?}; {})", row.text, row.status, row.basis);
+                props.push(format!("#{}", o.add(format!("IFCPROPERTYSINGLEVALUE({},$,IFCTEXT({}),$)", text(&row.label), text(&said)))));
+            }
+        }
         if props.is_empty() {
             continue;
         }

@@ -4441,3 +4441,12 @@ candidate's table.
   its edge, by the engine's own account of what is clipped (buttons below the left
   panel's bottom edge were listed; a script clicked them, nothing happened, and
   nothing said so: five of six Write out presses wrote nothing).
+
+* **From the judge's notes J19-38 and J19-39:** the BIM file now carries, on each thing
+  that is one of an item, what its sheet said of it: maker, model, weight and the
+  sheet, each with how sure it is and the line it came from (`demos/spec.sh` checks
+  for "'maker',$,IFCTEXT('Northfield Millwork (Assumed; vanity.pdf, page 1 ..." and
+  passes; the judge's own search of the judged program's file found none). A file
+  written out a second time says it took the place of the one that was there (built,
+  not yet seen). **Not done from J19-39:** the finer IFC classes (a lavatory as
+  IfcSanitaryTerminal, an air handler as IfcUnitaryEquipment).

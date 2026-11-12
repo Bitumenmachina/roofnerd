@@ -211,6 +211,8 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
     let stem = doc.path.file_stem().and_then(|s| s.to_str()).unwrap_or("job").to_string();
     let name = format!("{stem}{}", what.ending());
     let to = doc.path.with_file_name(&name);
+    // Written again, it takes the place of the one written before, and says so (J19-38).
+    let again = to.exists();
     let done: Result<String, String> = (|| {
         if std::fs::read_to_string(&to).ok().is_some_and(|text| plumbline_world::file::load(&text).is_ok()) {
             return Err(format!("{name} is a job: what is written out is not written over a job"));
@@ -247,6 +249,7 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
         }
     })();
     match done {
+        Ok(out) if again => doc.say(Tone::Done, format!("{out} It takes the place of the {name} that was there.")),
         Ok(out) => doc.say(Tone::Done, out),
         Err(why) => crate::tools::cant(doc, &format!("write out the {}", what.name().to_lowercase()), why),
     }

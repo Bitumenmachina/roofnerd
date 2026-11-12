@@ -163,6 +163,12 @@ says "the furnishings" "2 furnishings"
 [ "$(grep -c '^#[0-9]*=IFCFURNITURE(' "$T/out.ifc")" = 2 ] || { echo "FAIL: the model does not hold two IfcFurniture"; exit 1; }
 grep -q "IFCFURNITURE(.*'Harbor Vanity 36'" "$T/out.ifc" || { echo "FAIL: the vanity is not in the model by name"; exit 1; }
 echo "    2 IfcFurniture in the model, the vanity by its name"
+# What the sheet said of it goes with it: its maker, its model and its weight, each
+# with how sure it is and the line of the sheet it came from.
+grep -q "'maker',\$,IFCTEXT('Northfield Millwork (Assumed; vanity.pdf, page 1" "$T/out.ifc" || { echo "FAIL: the vanity's maker is not in the model with its source"; grep -m3 "maker" "$T/out.ifc"; exit 1; }
+grep -q "'model',\$,IFCTEXT('NV-3621 (Assumed" "$T/out.ifc" || { echo "FAIL: the vanity's model is not in the model"; exit 1; }
+grep -q "'weight',\$,IFCTEXT('96 lb (Assumed" "$T/out.ifc" || { echo "FAIL: the vanity's weight is not in the model"; grep -m3 "weight" "$T/out.ifc"; exit 1; }
+echo "    and with it what its sheet said: maker Northfield Millwork, model NV-3621, weight 96 lb, each Assumed and sourced"
 if python3 -c "import ifcopenshell" 2>/dev/null; then
   OUT="$(python3 tools/ifc-check.py "$T/out.ifc")" || { echo "FAIL: IfcOpenShell finds a fault in the model"; echo "$OUT"; exit 1; }
   says "validated" "IFC4: no fault"
