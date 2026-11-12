@@ -3765,3 +3765,198 @@ while it works.
   a level", "is a door, but its type, type-0009, is a window's", "an eave", "a piece
   of equipment". **Changed behaviour:** those sentences; three tests expect the words.
 * 253 tests pass; all eighteen command-line demonstrations pass.
+
+## Eighteenth judgment: what it found (2026-11-12)
+
+The judge (Opus, as a thirty-year estimator with no manual) ran sixteen sessions in the
+window on 43acb60 and was stopped there: it was cut off once by a usage limit, and the
+window it was judging is about to be rebuilt (call 62). It got as far as a level, the
+USDA plan scaled from one dimension, ten walls, three doors and nine windows. Nothing
+was priced. Its own figures: walls 130.33 LF against 130.34 by hand; scale read as
+1/8" = 1'-0", matching the title block.
+
+**Verdicts.** Item 9 (words): **fail**. Item 10 (whole-house takeoff from the screen
+alone): **fail so far**. Item 11 (the look) and item 12 (break the money): **not
+judged**; it did not get far enough.
+
+| # | Kind | What it found |
+|---|---|---|
+| J18-1 | wrong money, silent | A tool picked a second time comes back already in hand with its old sizes and takes no typing: a 10 ft window, an 8 ft window and a 2'-8" door each went in at the size before. Openings on the front wall read 42.33 SF where 113.33 SF were drawn for; net wall face is about 69 SF over. Nothing said the typing was thrown away. 4 of 4 times. |
+| J18-2 | stuck, silent | Door: width, Tab, height, Enter places nothing (Enter moves to Sill height and blanks it; the click on the wall does nothing). Three doors lost with no word why. All three values with commas, then Enter, works. |
+| J18-3 | stuck, words | Add drawing wants a typed file name "as it lies from the job's folder" and there is no way to browse for the file. `usda-7213.pdf, 4` was refused; only `../plans/usda-7213.pdf, 4` worked. |
+| J18-4 | words | Folder paths and a file name on screen: "Save writes it to /tmp/...", "house.json" in the top bar, "(../plans/usda-7213.pdf, page 4)" on every traced value in both windows. |
+| J18-5 | words, stuck | "0" is refused as an elevation ("has no unit ... A laser has to be set to send its unit"). Zero is zero in any unit. |
+| J18-6 | silent | A half-filled Add level form is dropped without a word when another button is clicked. |
+| J18-7 | silent | A door has no kind (hollow core, solid core, bifold); its default height is 7 ft where residential doors are 6'-8"; "Sill height" on a door is a threshold. |
+| J18-8 | silent, wrong money risk | The Building tab lists "wall 1" to "wall 10" with no type, thickness or place; 6 in exterior walls and 4 in partitions are in one total; Face is one side and does not say which. |
+| J18-9 | look, stuck | Set scale throws away the zoom just made to pick the dimension's ends; a job saved in plan reopens in 3D, tilted over the scanned sheet. |
+| J18-10 | words | "(0, 0) ft"; "Line up" does not say what it does; "nothing on it to snap to"; "Usda"; "Architecture 10"; "1 known" with no word of what; "30 values, the first: ..."; "Tool put down."; "Let go."; "WALL OR FLOOR". |
+
+**What it was like to use, in the judge's words, shortened.** The Next steps list is
+the only guide and only says which button to press; when something silently did
+nothing there was no sign, and the only way to learn a 10 ft window was a 3 ft one was
+to work the sheet's numbers by hand. The wheel zooms in fixed big steps; there is no
+zoom box and Frame does not say what it frames. Right-drag, middle-drag and W A S D
+"are video-game controls, not a plan-table habit". The size fields behave differently
+depending on how they are reached; "a good program would always open the size fields
+when a tool is picked, show the size it will place right on the pointer, and refuse to
+place when the typing was thrown away". The right panel's To verify grows into piles.
+Roughly 3 of 16 sessions went to looking only, one to finding the file, two to opening
+sizes that did not take, one to a lost level.
+
+**What held:** the scale from one dimension; the wall loop's length and face against
+hand figures; openings subtracted correctly where the size took; the panel and the
+sheet agreeing on every total seen; bad input got a red banner, never a crash.
+
+None of these is fixed yet. They are folded into the rebuild planned below.
+
+## Self-review, written cold (2026-11-12, call 62)
+
+Patrick: "I still do not see how the UI functions are better." Looking at
+`demos/captured/price/05-model.png` as a person who has never seen the program, he is
+right, and the eighteenth judgment says the same from inside it.
+
+**What is solid, and worth keeping exactly as it is.** The model and the money. One
+job file; every value Known, Assumed or Unknown with where it came from; quantities
+worked in one place; sixteen divisions on every line; a verify-in-field list sorted by
+dollars; clash depth by real solid geometry; IFC4 out, validated by IfcOpenShell; a
+workbook whose every amount is a live formula; 253 tests, 18 command-line
+demonstrations, three independent judgments of the arithmetic that found no dollar
+wrong after their fixes. The dressed house reads its finishes from what is priced.
+
+**What is not good, plainly.**
+
+1. **The window is a web form from fifteen years ago with a model in the middle.**
+   Three docked white panels and two bars take 40% of the screen; the model gets a box
+   about 1000 by 780. Twelve-pixel grey text, red sentences stacked down the right
+   side, hard 3 px blue selection wire. Nothing has depth. I built it to a rule that
+   said flat and dense, and judged it against that rule instead of against whether a
+   person would want to use it.
+2. **Moving round the model is crude.** The wheel steps the distance by a fixed
+   factor toward the middle of the screen, with no momentum; orbit is right-drag about
+   a fixed point; nothing eases; plan to 3D is a cut. The judge called them
+   video-game controls and meant it unkindly: they are a bad game's.
+3. **The tools throw typing away.** J18-1 and J18-2 are the worst things found in
+   this program to date: a person typed a size, the program placed a different one,
+   and said nothing. That is "silently wrong", the one thing the fixed rules exist to
+   prevent, and it was in the path every takeoff goes through. My window
+   demonstrations never caught it because each script types sizes the one way that
+   works. A check that only walks the path its author knows is not a check.
+4. **Adding a plan needs a typed path.** There is no file picker anywhere. For a
+   program whose first step is "open the drawings", that is disqualifying.
+5. **Layers barely exist.** "Show" has Architecture, Roof, See through and one status
+   toggle, drawn as small squares. No level switch, no per-system switch for the
+   ducts, pipes and wiring, no way to turn the finishes or the drawing off.
+6. **A placed thing cannot be picked up and moved with the hand.** Move is a tool
+   that takes typed distances or two clicks. Clash feedback is a tab on the other
+   window. Patrick's vanity cannot be dragged along a wall while the clash lights and
+   clears, which he says is the whole point.
+7. **Nothing is exported from the window.** IFC, the workbook, CSV and the three
+   lenses are command-line verbs. To someone in the window they do not exist.
+8. **There are only fixtures and equipment, sized by typing three numbers.** No
+   furniture or casework; nothing made from a manufacturer's sheet.
+9. **The light is flat.** Matte everything, one soft shadow, grey void. It reads as a
+   diagram of a house. The patterns on the walls are good; the place they stand in is
+   not a place.
+10. **The second window is a long grey page.** Its scrolling is the engine's raw wheel
+    steps with no bar.
+11. **Process.** Seventeen judgments went to the command line and the arithmetic, and
+    one, cut short, to the window a person actually uses. The order of attention was
+    wrong for a product a person has to want to open.
+
+**What follows.** The plan below is the rebuild of the window: its feel, its look,
+and the functions Patrick named. The model underneath does not change.
+
+## The rebuild after call 62: what will be built and how each part will be shown (written before building)
+
+In the order it is built. Each part has a demonstration that drives the real program;
+the hand figures are here first.
+
+**A. Items from a manufacturer's sheet, and furnishings** (the model; no window yet).
+A cut sheet (PDF with words in it) is read into an *item*: a thing that can be placed
+any number of times. What is read: its name, its maker, its model number, its width,
+depth and height, its weight. Each value read is Assumed and its source is the sheet,
+the page and the line as written; each value not found is Unknown and is asked for. A
+third kind of placed thing joins fixtures and equipment: a *furnishing* (Division 12,
+Furnishings: casework, furniture). `demos/spec.sh`, all sheets made up in the script:
+
+1. *A vanity.* The sheet says: Harbor Vanity 36; Northfield Millwork; Model: NV-3621;
+   Overall dimensions: 36" W x 21" D x 34-1/2" H; Shipping weight: 96 lb. The item is
+   3 ft wide, 1.75 ft deep, 2.875 ft high (36/12, 21/12, 34.5/12), all Assumed.
+2. *An air handler*, sizes on three lines (Width 21 in; Depth 24 in; Height 49 in):
+   1.75 by 2 by 4.0833 ft, a piece of equipment.
+3. *A sheet with no height* (30 in wide, 12 in deep): the item is made; its height is
+   Unknown; placed, it has no shape, is not tested for clashes, and that is said. A
+   height of 72 in typed from a tape makes it Known and it has a shape.
+4. *Sizes with no letters* (24 x 18 x 30 in): read as width by depth by height in the
+   order written, and the source says the order was assumed.
+5. *Metric only* (600 x 450 x 850 mm): 23.622 by 17.7165 by 33.4646 in (each over
+   25.4), and the source gives the millimetres as written.
+6. *The vanity moved along a wall.* A water closet 1.5 ft wide stands with its middle
+   at 5 ft east: it reaches from 4.25 to 5.75. The vanity, 3 ft wide, set with its
+   middle at 7 ft, reaches from 5.5 to 8.5: the two are in each other by 5.75 - 5.5 =
+   0.25 ft, **3.00 in**. Moved 6 in east it reaches from 6 to 9: clear by 3 in, no
+   clash; asked for a 4 in clearance, they are 3.00 in apart.
+7. *Out to BIM.* The IFC4 file carries the vanity as IfcFurniture and the air handler
+   as it carries equipment now, and IfcOpenShell validates it.
+
+**B. The window, rebuilt** (after the two surveys now running report: what Google
+Earth, Cesium and the building tools do, with their numbers; and what the engine
+gives). The demonstration is `demos/glassw.sh` and its pictures, read one by one:
+
+1. The model fills the window. Panels are glass over it and can each be put away.
+2. The wheel dives at what is under the pointer and eases out; a drag slides the
+   ground with the hand; a double-click flies to a thing; Plan and 3D ease into each
+   other. Checked by pictures taken mid-flight and by where the thing under the
+   pointer is before and after a zoom (it does not move on screen).
+3. Every level, system, the roof, the finishes, the drawing and the clashes has a
+   switch; each is shown on and off.
+4. A panel scrolls smoothly under the wheel, shows a bar, and the model does not move
+   while it does.
+5. The vanity of A.6 is picked up and dragged along its wall: red while it is in the
+   water closet, clear when it is clear, and the estimate does not change (a vanity
+   is priced each).
+6. A drawing and a cut sheet are opened by picking the file from a list, not by
+   typing where it lies (J18-3).
+7. Export, in the window: BIM (IFC4), the workbook, CSV, the three lenses.
+8. The tools: the size being placed is shown at the pointer; a tool picked again
+   opens its fields again; typing is never thrown away (J18-1, J18-2).
+
+**C. CLAUDE.md** folded to call 62, with a guide for whoever builds next.
+
+## Items from a maker's sheet, and furnishings. What was run and what it showed (2026-11-12)
+
+Part A of the rebuild. `demos/spec.sh` passes; every sheet in it is made up.
+
+* **Read.** `plumbline_plans::words` reads the words of a PDF page line by line with
+  the height of each line's letters (the PDF library already linked hands over each
+  letter and where it is drawn; no new library). `plumbline_world::spec` reads those
+  lines into what a sheet says and makes nothing up: a size is taken when the sheet
+  writes it with a unit and says which way it runs, or writes three in a row.
+* **The demonstration against the hand figures.** The vanity: 36 in, 21 in, 34 1/2 in,
+  96 lb, maker and model, each with the line it was read from. The air handler from
+  three lines: 21, 24, 49 in; no maker on the sheet, so maker is Unknown and asked
+  for. The sheet with no height: the item is made, one is placed with no shape and
+  says "its height is not known"; a tape reading of 72 in on the item gives the placed
+  one its shape too. Three sizes with no letters say they were read in the order
+  written. 600 x 450 x 850 mm is 23.622 by 17.7165 by 33.4646 in and the millimetres
+  are kept in the source. A sheet whose name does not say what it is, a file that is
+  not a PDF and a page that is not there are refused with the job unchanged. The
+  vanity set at 7 ft is in the water closet by **3.00 in**; moved 6 in east it clears,
+  and asked for a 4 in clearance they are **3.00 in apart**. The IFC4 file holds two
+  IfcFurniture and IfcOpenShell finds no fault.
+* **New in the model.** A kind of thing, *furnishing* (Division 12); an *item* (`pl::item`
+  on a type): maker, model, width, depth, height, weight, each with its status and
+  source; a placed thing remembers its item and follows it when the item is measured.
+  Verbs: `import spec`, `place <level> <item>`, `place <level> furnishing`, `measure
+  <item> width|depth|height`.
+* **Changed behaviour:** a job file may now hold `pl::item` and a placed thing an
+  `item`; files written before read as they did. The IFC export writes a furnishing as
+  IfcFurniture.
+* 262 tests pass; all nineteen command-line demonstrations pass; the port map accounts
+  for the five new public items.
+* **Not right.** A placed item is drawn as a box of its sizes. BIMCraft has
+  parametric families (`family.rs`, with a library) that draw a thing as what it is;
+  they are not ported. A scanned sheet has no words to read and is refused with that
+  reason; nothing reads it by eye. Connections (a drain size, a voltage) are on many
+  sheets and are not read. There is no window for any of this yet.

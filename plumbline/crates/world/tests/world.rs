@@ -2459,7 +2459,7 @@ fn the_building_checks_refuse_what_cannot_be() {
     assert!(check_segment("r", Kind::Pipe, &piece([[0.0, 0.0], [1.0, 0.0]], "m", None)).is_err());
     assert!(check_segment("r", Kind::Wall, &piece([[0.0, 0.0], [1.0, 0.0]], "ft", None)).is_err());
     // A placed thing is turned by an angle in degrees, and has a size in all three.
-    let thing = |angle: Option<Val<f64>>, size: [f64; 3]| Placed { what: named("a thing"), at: Val::known([1.0, 1.0], "ft", "test"), offset: ft(0.0), angle, size: Val::known(size, "ft", "test") };
+    let thing = |angle: Option<Val<f64>>, size: [f64; 3]| Placed { what: named("a thing"), at: Val::known([1.0, 1.0], "ft", "test"), offset: ft(0.0), angle, size: Val::known(size, "ft", "test"), item: None };
     assert!(check_placed("p", Kind::Fixture, &thing(None, [1.0, 1.0, 1.0])).is_ok());
     assert!(check_placed("p", Kind::Fitting, &thing(Some(Val::known(90.0, "deg", "test")), [1.0, 1.0, 1.0])).is_ok());
     assert!(check_placed("p", Kind::Fixture, &thing(Some(Val::known(90.0, "", "test")), [1.0, 1.0, 1.0])).is_err(), "an angle with no unit");
@@ -2866,7 +2866,7 @@ fn piece(job: &mut Job, storey: &str, kind: Kind, name: &str, type_path: &str, a
 fn thing(job: &mut Job, storey: &str, kind: Kind, name: &str, at: [f64; 3], angle: Option<f64>, connectors: &[(plumbline_world::ConnectorKind, Option<plumbline_world::Domain>, [f64; 3])]) -> String {
     use plumbline_world::{Connector, Connectors, Flow, Placed};
     let p = job.add(storey, kind, name).unwrap();
-    job.put(&p, Placed { what: named(name), at: Val::known([at[0], at[1]], "ft", "test"), offset: ft(at[2]), angle: angle.map(|a| Val::known(a, "deg", "test")), size: Val::known([1.0, 1.0, 1.0], "ft", "test") }).unwrap();
+    job.put(&p, Placed { what: named(name), at: Val::known([at[0], at[1]], "ft", "test"), offset: ft(at[2]), angle: angle.map(|a| Val::known(a, "deg", "test")), size: Val::known([1.0, 1.0, 1.0], "ft", "test"), item: None }).unwrap();
     job.put(&p, Connectors(connectors.iter().map(|(kind, domain, at)| Connector { name: String::new(), kind: *kind, domain: *domain, flow: Flow::Both, at: Val::known(*at, "ft", "test"), size: None }).collect())).unwrap();
     p
 }

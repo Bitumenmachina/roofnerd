@@ -89,6 +89,9 @@ pub enum Kind {
     Equipment,
     /// What a system ends at in a room: a register, a lavatory, a receptacle, a light.
     Fixture,
+    /// What is set in a room and is not part of a system: casework, a vanity, a
+    /// bookcase, a table (Division 12, Furnishings). It stands where it is put.
+    Furnishing,
     /// A type: what walls, floors, doors, windows or runs of one sort have in common (a
     /// thickness, a size), entered once. An element points at its type by the type's path.
     Type,
@@ -165,6 +168,7 @@ impl Kind {
             Kind::Cable => "cable",
             Kind::Equipment => "equipment",
             Kind::Fixture => "fixture",
+            Kind::Furnishing => "furnishing",
             Kind::Type => "type",
             Kind::Fitting => "fitting",
             Kind::Room => "room",

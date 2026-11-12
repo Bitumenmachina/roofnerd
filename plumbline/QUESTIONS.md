@@ -256,3 +256,15 @@ identity is to be checked rides on that check, in dollars. The build goes on wit
 that. If Patrick rules the other way, the change is one place (the status of a
 line's amount takes in its element's identity) and the expectations that move with
 it.
+
+## Q22. Is there a sky now? (2026-11-12, from call 62)
+
+The fixed rule said the model stands under studio light on a neutral ground: "no sky,
+sun or grass". Call 62 asks for "a hyper realistic video game" and "Google Earth
+feel"; both have a sky, and neither named the older rule.
+
+**Working assumption, in use now:** a soft horizon and a sky gradient, lit as a real
+place is lit, because light with no source does not read as real. No grass, trees,
+neighbours or scenery: nothing is drawn that the estimate does not price. If the
+answer is "studio only", it is one setting (`theme::sky`) and the pictures are
+retaken.

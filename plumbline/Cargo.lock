@@ -4138,6 +4138,7 @@ name = "plumbline-plans"
 version = "0.1.0"
 dependencies = [
  "hayro",
+ "hayro-cmap",
  "image",
 ]
 

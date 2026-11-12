@@ -78,6 +78,7 @@ pub const K_WALL: &str = "pl::wall";
 pub const K_WALL_TYPE: &str = "pl::wall_type";
 pub const K_OPENING: &str = "pl::opening";
 pub const K_OPENING_TYPE: &str = "pl::opening_type";
+pub const K_ITEM: &str = "pl::item";
 pub const K_FLOOR: &str = "pl::floor";
 pub const K_FLOOR_TYPE: &str = "pl::floor_type";
 pub const K_SEGMENT: &str = "pl::segment";
@@ -200,7 +201,7 @@ impl Kind {
     }
     /// A thing set at a place: equipment, a fixture, or a fitting.
     pub fn is_placed(self) -> bool {
-        matches!(self, Kind::Equipment | Kind::Fixture | Kind::Fitting)
+        matches!(self, Kind::Equipment | Kind::Fixture | Kind::Furnishing | Kind::Fitting)
     }
     /// Whose work an element of this kind is when it belongs to no system.
     pub fn discipline(self) -> Discipline {
@@ -273,13 +274,15 @@ pub(crate) struct Tree {
     pub(crate) floor_types: HashMap<String, FloorType>,
     pub(crate) opening_types: HashMap<String, OpeningType>,
     pub(crate) segment_types: HashMap<String, SegmentType>,
+    /// The items: things to place, by path.
+    pub(crate) items: std::collections::HashSet<String>,
 }
 
 impl Tree {
     pub(crate) fn of(world: &mut World) -> Tree {
-        let mut t = Tree { parents: HashMap::new(), kinds: HashMap::new(), names: HashMap::new(), levels: HashMap::new(), wall_types: HashMap::new(), floor_types: HashMap::new(), opening_types: HashMap::new(), segment_types: HashMap::new() };
-        let mut q = world.query::<(&Node, &Kind, Option<&Level>, Option<&WallType>, Option<&FloorType>, Option<&OpeningType>, Option<&SegmentType>)>();
-        for (node, kind, level, wall, floor, opening, segment) in q.iter(world) {
+        let mut t = Tree { parents: HashMap::new(), kinds: HashMap::new(), names: HashMap::new(), levels: HashMap::new(), wall_types: HashMap::new(), floor_types: HashMap::new(), opening_types: HashMap::new(), segment_types: HashMap::new(), items: std::collections::HashSet::new() };
+        let mut q = world.query::<(&Node, &Kind, Option<&Level>, Option<&WallType>, Option<&FloorType>, Option<&OpeningType>, Option<&SegmentType>, Has<Item>)>();
+        for (node, kind, level, wall, floor, opening, segment, item) in q.iter(world) {
             let p = node.path.clone();
             t.parents.insert(p.clone(), node.parent.clone());
             t.kinds.insert(p.clone(), *kind);
@@ -288,6 +291,9 @@ impl Tree {
                 t.levels.insert(p.clone(), l.clone());
             }
             if *kind == Kind::Type {
+                if item {
+                    t.items.insert(p.clone());
+                }
                 if let Some(c) = wall {
                     t.wall_types.insert(p.clone(), c.clone());
                 }
@@ -377,9 +383,9 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
             if parent != Some(Kind::Job) {
                 return Err(format!("{me}: a type belongs to the whole job and has to be directly under it, not under {}", node.parent.as_deref().unwrap_or("nothing")));
             }
-            let sorts = [tree.wall_types.contains_key(me), tree.floor_types.contains_key(me), tree.opening_types.contains_key(me), tree.segment_types.contains_key(me)].into_iter().filter(|x| *x).count();
+            let sorts = [tree.wall_types.contains_key(me), tree.floor_types.contains_key(me), tree.opening_types.contains_key(me), tree.segment_types.contains_key(me), tree.items.contains(me)].into_iter().filter(|x| *x).count();
             if sorts != 1 {
-                return Err(format!("{me}: a type is one sort of type (of a wall, a floor, a door or a window, or a run); this one carries {sorts}"));
+                return Err(format!("{me}: a type is one sort of type (of a wall, a floor, a door or a window, or a run) or an item to place; this one carries {sorts}"));
             }
         }
         if let Some(named) = in_system.and_then(|s| s.0.value.as_ref()) {
@@ -1305,6 +1311,20 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
     if let Some(c) = w.get::<FloorType>(e) {
         rows.push(view::length(path, "floor thickness", &c.thickness));
         layers(&mut rows, &c.layers);
+    }
+    if let Some(c) = w.get::<Item>(e) {
+        rows.push(plain("an item, placed as", c.category.a(), "what kind of thing it is"));
+        if !c.sheet.is_empty() {
+            rows.push(plain("made from", c.sheet.clone(), "the maker's sheet it was read from"));
+        }
+        rows.push(view::entered(path, "maker", &c.maker, |s| s.clone()));
+        rows.push(view::entered(path, "model", &c.model, |s| s.clone()));
+        rows.push(view::length(path, "width", &c.width));
+        rows.push(view::length(path, "depth", &c.depth));
+        rows.push(view::length(path, "height", &c.height));
+        if let Some(weight) = &c.weight {
+            rows.push(view::entered(path, "weight", weight, |x| format!("{} lb", view::num(*x))));
+        }
     }
     if let Some(c) = w.get::<OpeningType>(e) {
         rows.push(plain("a type of", format!("{:?}", c.category).to_lowercase(), "what the type is for"));

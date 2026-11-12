@@ -81,7 +81,7 @@ use super::{coords, positive, usable};
 use super::P3;
 use crate::components::{Kind, P2};
 use crate::units::{self, Len};
-use crate::value::Val;
+use crate::value::{Status, Val};
 
 fn yes() -> bool {
     true
@@ -405,6 +405,10 @@ pub struct Placed {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub angle: Option<Val<f64>>,
     pub size: Val<P3>,
+    /// The item it is one of, by path, when it was placed from one: its size is its
+    /// item's, and follows it when the item is measured.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub item: Option<String>,
 }
 
 impl Placed {
@@ -651,6 +655,66 @@ pub fn check_floor_type(path: &str, kind: Kind, t: &FloorType) -> Result<(), Str
         return Err(format!("{path}: {kind:#} cannot carry a floor type; only a type can"));
     }
     check_layers(&format!("{path} floor type"), &t.thickness, &t.layers)
+}
+
+/// `pl::item`: on a Type. A thing that can be placed any number of times, as its maker's
+/// sheet describes it: what kind of thing it is, who makes it, its model number, how
+/// wide (along the wall), deep (out from it) and high it is, and what it weighs. Each
+/// value says where it came from: read off a sheet it is Assumed and its source is the
+/// sheet, the page and the line as written; not on the sheet, it is Unknown.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Item {
+    pub category: Kind,
+    pub maker: Val<String>,
+    pub model: Val<String>,
+    pub width: Val<Len>,
+    pub depth: Val<Len>,
+    pub height: Val<Len>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<Val<f64>>,
+    /// The sheet it was made from, as it was named when it was brought in.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub sheet: String,
+}
+
+impl Item {
+    /// Its size in feet (wide, deep, high), how sure that is and where it is from; or
+    /// which of the three is not known.
+    pub fn size_ft(&self) -> Result<(P3, Status, String), String> {
+        let parts = [("width", &self.width), ("depth", &self.depth), ("height", &self.height)];
+        let missing: Vec<&str> = parts.iter().filter(|(_, v)| v.feet().is_none()).map(|(n, _)| *n).collect();
+        if !missing.is_empty() {
+            return Err(format!("its {} {} not known", missing.join(" and "), if missing.len() == 1 { "is" } else { "are" }));
+        }
+        let feet = [self.width.feet().unwrap_or(0.0), self.depth.feet().unwrap_or(0.0), self.height.feet().unwrap_or(0.0)];
+        let status = parts.iter().map(|(_, v)| v.status).max().unwrap_or(Status::Known);
+        // One source when the three share it; else each with its own.
+        let source = if parts.iter().all(|(_, v)| v.source == self.width.source) { self.width.source.clone() } else { parts.iter().map(|(n, v)| format!("{n}: {}", v.source)).collect::<Vec<_>>().join("; ") };
+        Ok((feet, status, source))
+    }
+}
+
+pub fn check_item(path: &str, kind: Kind, t: &Item) -> Result<(), String> {
+    if kind != Kind::Type {
+        return Err(format!("{path}: {kind:#} cannot carry an item; only a type can"));
+    }
+    if !matches!(t.category, Kind::Equipment | Kind::Fixture | Kind::Furnishing) {
+        return Err(format!("{path} item: is {:#}; an item is a piece of equipment, a fixture or a furnishing", t.category));
+    }
+    let what = format!("{path} item");
+    t.maker.check_basics(&format!("{what} maker"))?;
+    t.model.check_basics(&format!("{what} model"))?;
+    for (name, v) in [("width", &t.width), ("depth", &t.depth), ("height", &t.height)] {
+        positive(&format!("{what} {name}"), v, false)?;
+    }
+    if let Some(w) = &t.weight {
+        w.check(&format!("{what} weight"), "lb")?;
+        if w.value.is_some_and(|x| !(x.is_finite() && x >= 0.0)) {
+            return Err(format!("{what} weight: has to be nothing or more"));
+        }
+    }
+    Ok(())
 }
 
 pub fn check_opening_type(path: &str, kind: Kind, t: &OpeningType) -> Result<(), String> {

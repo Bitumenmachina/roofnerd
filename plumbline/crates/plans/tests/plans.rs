@@ -175,3 +175,52 @@ fn j15_18_24_a_line_blanked_out_and_a_line_off_the_page_are_not_there_to_snap_to
     assert_eq!(rounded(&page.lines), [[[120, 150], [280, 150]]]);
     assert!(page.lost.iter().any(|l| l.contains("1 white shape is drawn over lines and is not a square")), "{:?}", page.lost);
 }
+
+/// A one-page sheet of words written by hand: each line as its text and the height of
+/// its letters in points, set down the page from the top, in Helvetica.
+fn sheet(lines: &[(&str, u32)]) -> Vec<u8> {
+    let mut content = String::from("BT\n");
+    let mut y = 740;
+    for (text, size) in lines {
+        let escaped = text.replace('\\', "\\\\").replace('(', "\\(").replace(')', "\\)");
+        content.push_str(&format!("/F1 {size} Tf\n1 0 0 1 72 {y} Tm\n({escaped}) Tj\n"));
+        y -= size + 8;
+    }
+    content.push_str("ET");
+    let objects = [
+        "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>".to_string(),
+        format!("<< /Length {} >>\nstream\n{content}\nendstream", content.len()),
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>".to_string(),
+    ];
+    let mut out = b"%PDF-1.4\n".to_vec();
+    let mut at = Vec::new();
+    for (i, body) in objects.iter().enumerate() {
+        at.push(out.len());
+        out.extend_from_slice(format!("{} 0 obj\n{body}\nendobj\n", i + 1).as_bytes());
+    }
+    let xref = out.len();
+    out.extend_from_slice(format!("xref\n0 {}\n0000000000 65535 f \n", objects.len() + 1).as_bytes());
+    for offset in at {
+        out.extend_from_slice(format!("{offset:010} 00000 n \n").as_bytes());
+    }
+    out.extend_from_slice(format!("trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n", objects.len() + 1).as_bytes());
+    out
+}
+
+/// The words of a manufacturer's sheet are read line by line, top to bottom, with how
+/// tall each line's letters are. (A made-up sheet for a made-up vanity.)
+#[test]
+fn the_words_of_a_sheet_are_read_line_by_line() {
+    let made = sheet(&[("Harbor Vanity 36", 24), ("Northfield Millwork", 12), ("Model: NV-3621", 11), ("Overall dimensions: 36\" W x 21\" D x 34-1/2\" H", 11), ("Shipping weight: 96 lb", 11)]);
+    let read = plumbline_plans::words(&made, 1).unwrap();
+    let text: Vec<&str> = read.iter().map(|w| w.text.as_str()).collect();
+    assert_eq!(text, ["Harbor Vanity 36", "Northfield Millwork", "Model: NV-3621", "Overall dimensions: 36\" W x 21\" D x 34-1/2\" H", "Shipping weight: 96 lb"]);
+    // The name is the tallest line: 24 points against 12 and 11.
+    assert!((read[0].size - 24.0).abs() < 0.5 && (read[1].size - 12.0).abs() < 0.5, "{:?}", read.iter().map(|w| w.size).collect::<Vec<_>>());
+    // A page with nothing written on it has no words, and a picture is not read at all.
+    assert!(plumbline_plans::words(&pdf(612, 792, "100 300 400 12 re f"), 1).unwrap().is_empty());
+    assert!(plumbline_plans::words(&made, 2).is_err());
+    assert!(plumbline_plans::words(b"not a pdf", 1).unwrap_err().contains("only a PDF has words"));
+}

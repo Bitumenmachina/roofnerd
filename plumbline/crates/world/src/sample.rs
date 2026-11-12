@@ -417,7 +417,7 @@ pub fn house() -> Job {
                 let end = Connector { name: String::new(), kind: ConnectorKind::for_run(kind).expect(OK), domain: None, flow: Flow::Both, at: Val::known([0.0, 0.0, tidy(deep / 2.0)], "in", "on the joint"), size: section.as_ref().map(|t| t.width.clone()) };
                 job.put(&f, Connectors(vec![end.clone(), end])).expect(OK);
                 job.put(&f, Fitting { kind: FittingKind::Bend }).expect(OK);
-                job.put(&f, Placed { what, at: Val::known([b[0], b[1]], "ft", src), offset: ft(tidy(b[2] - base - deep / 24.0), src), angle: None, size }).expect(OK);
+                job.put(&f, Placed { what, at: Val::known([b[0], b[1]], "ft", src), offset: ft(tidy(b[2] - base - deep / 24.0), src), angle: None, size, item: None }).expect(OK);
                 job.put(&f, InSystem(Val::known(sys.to_string(), "", src))).expect(OK);
             }
         }
@@ -426,7 +426,7 @@ pub fn house() -> Job {
     let mut thing = |job: &mut Job, storey: &str, kind: Kind, name: &str, sys: &str, src: &str, what: Val<String>, at: P3, size: Val<P3>| {
         let t = job.add(storey, kind, name).expect(OK);
         set.push((name.to_string(), t.clone(), at));
-        job.put(&t, Placed { what, at: Val::known([at[0], at[1]], "ft", src), offset: ft(tidy(at[2] - base_of(storey)), src), angle: None, size }).expect(OK);
+        job.put(&t, Placed { what, at: Val::known([at[0], at[1]], "ft", src), offset: ft(tidy(at[2] - base_of(storey)), src), angle: None, size, item: None }).expect(OK);
         job.put(&t, InSystem(Val::known(sys.to_string(), "", src))).expect(OK);
     };
     let said = |s: &str, src: &str| Val::known(s.to_string(), "", src);

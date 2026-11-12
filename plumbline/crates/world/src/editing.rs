@@ -41,7 +41,7 @@ use crate::file;
 use crate::job::Job;
 use crate::units::{self, Len};
 use crate::value::{Status, Val};
-use crate::{Level, Opening, OpeningType, Placed, Segment, SegmentType, Wall, WallType, P3};
+use crate::{Item, Level, Opening, OpeningType, Placed, Segment, SegmentType, Wall, WallType, P3};
 
 /// How sure a thing being drawn is, and who says so. Everything a verb writes carries it.
 #[derive(Clone, Copy)]
@@ -339,14 +339,14 @@ pub fn runs(job: &mut Job, storey: &str, kind: Kind, type_path: &str, points: &[
 pub fn place(job: &mut Job, storey: &str, kind: Kind, what: &str, at: P2, offset: &str, size: Option<P3>, system: Option<&str>, how: Entered) -> Result<String, String> {
     all_or_nothing(job, |job| {
         storey_of(job, storey)?;
-        if !matches!(kind, Kind::Fixture | Kind::Equipment) {
-            return Err(format!("{kind:#} is not a fixture or a piece of equipment"));
+        if !matches!(kind, Kind::Fixture | Kind::Equipment | Kind::Furnishing) {
+            return Err(format!("{kind:#} is not a fixture, a piece of equipment or a furnishing"));
         }
         let size = match size {
             Some(s) => how.val(s, "ft"),
             None => Val::unknown("ft", "size not entered"),
         };
-        let placed = Placed { what: how.val(what.to_string(), ""), at: how.val(at, "ft"), offset: how.length(offset)?, angle: None, size };
+        let placed = Placed { what: how.val(what.to_string(), ""), at: how.val(at, "ft"), offset: how.length(offset)?, angle: None, size, item: None };
         // A fixture or a piece of equipment is called what it is: "Lavatory", and the
         // next one "Lavatory 2".
         let path = add_called(job, storey, kind, what, 2, true)?;
@@ -357,6 +357,45 @@ pub fn place(job: &mut Job, storey: &str, kind: Kind, what: &str, at: P2, offset
             building::check_in_system(&path, kind, &on)?;
             job.put(&path, on)?;
         }
+        Ok(path)
+    })
+}
+
+/// An item: a thing that can be placed any number of times, as its maker's sheet
+/// describes it. It is kept with the job's types, under the name it goes by.
+pub fn item(job: &mut Job, name: &str, item: Item) -> Result<String, String> {
+    all_or_nothing(job, |job| {
+        let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
+        if name.trim().is_empty() {
+            return Err("an item needs a name: what the thing is called".into());
+        }
+        let path = job.add(&root, Kind::Type, name.trim())?;
+        building::check_item(&path, Kind::Type, &item)?;
+        job.put(&path, item)?;
+        Ok(path)
+    })
+}
+
+/// One of an item, set down on a level: its middle at `at` on the plan, its underside
+/// `offset` above the floor. It is as big as its item says and as sure as that; where
+/// the item's size is not all known it is placed with no size, has no shape, and says
+/// which of its sizes is missing. Where it stands is as sure as `how`.
+pub fn place_item(job: &mut Job, storey: &str, item: &str, at: P2, offset: &str, how: Entered) -> Result<String, String> {
+    all_or_nothing(job, |job| {
+        storey_of(job, storey)?;
+        let e = job.find(item).ok_or_else(|| format!("{item} is not in the job"))?;
+        let (name, it) = match (job.world.get::<Node>(e), job.world.get::<Item>(e)) {
+            (Some(n), Some(it)) => (n.name.clone(), it.clone()),
+            _ => return Err(format!("{item} is not an item: an item is made from a maker's sheet, or entered by its sizes")),
+        };
+        let size = match it.size_ft() {
+            Ok((feet, status, source)) => Val { value: Some(feet), unit: "ft".into(), status, source: format!("{name}: {source}") },
+            Err(why) => Val::unknown("ft", &format!("{name}: {why}")),
+        };
+        let placed = Placed { what: Val { value: Some(name.clone()), unit: String::new(), status: Status::Known, source: format!("the item {item}") }, at: how.val(at, "ft"), offset: how.length(offset)?, angle: None, size, item: Some(item.to_string()) };
+        let path = add_called(job, storey, it.category, &name, 2, true)?;
+        building::check_placed(&path, it.category, &placed)?;
+        job.put(&path, placed)?;
         Ok(path)
     })
 }

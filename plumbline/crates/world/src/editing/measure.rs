@@ -18,7 +18,7 @@ use crate::components::*;
 use crate::job::Job;
 use crate::units::{self, Len};
 use crate::value::{Status, Val};
-use crate::{check, Connectors, Floor, FloorType, InSystem, Justify, Level, Opening, OpeningType, Placed, Room, Segment, SegmentType, Wall, WallType};
+use crate::{check, Item, Connectors, Floor, FloorType, InSystem, Justify, Level, Opening, OpeningType, Placed, Room, Segment, SegmentType, Wall, WallType};
 
 /// What the person on site has to say about a value.
 #[derive(Clone, Copy)]
@@ -311,6 +311,36 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
         }
         on!(WallType, |c: &WallType| building::check_wall_type(path, kind, c), |c| if what == "wall thickness" { Some(Slot::Length(&mut c.thickness)) } else { layer_slot(&mut c.layers, what) });
         on!(FloorType, |c: &FloorType| building::check_floor_type(path, kind, c), |c| if what == "floor thickness" { Some(Slot::Length(&mut c.thickness)) } else { layer_slot(&mut c.layers, what) });
+        // An item: what is placed from it is as big as it says, so each follows.
+        if let Some(mut c) = job.world.get::<Item>(e).cloned() {
+            let slot = match what {
+                "width" => Some(Slot::Length(&mut c.width)),
+                "depth" => Some(Slot::Length(&mut c.depth)),
+                "height" => Some(Slot::Length(&mut c.height)),
+                _ => None,
+            };
+            if let Some(slot) = slot {
+                let said = apply(slot, &name, what, reading, source)?;
+                building::check_item(path, kind, &c)?;
+                job.put(path, c.clone())?;
+                if !matches!(reading, Do::Probe) {
+                    let placed: Vec<(String, Kind, Placed)> = {
+                        let mut q = job.world.query::<(&crate::Node, &Kind, &Placed)>();
+                        q.iter(&job.world).filter(|(_, _, p)| p.item.as_deref() == Some(path)).map(|(n, k, p)| (n.path.clone(), *k, p.clone())).collect()
+                    };
+                    for (at, k, mut p) in placed {
+                        p.size = match c.size_ft() {
+                            Ok((feet, status, from)) => Val { value: Some(feet), unit: "ft".into(), status, source: format!("{name}: {from}") },
+                            Err(why) => Val::unknown("ft", &format!("{name}: {why}")),
+                        };
+                        building::check_placed(&at, k, &p)?;
+                        job.put(&at, p)?;
+                        also.push(format!("{at} is one of it and is now that size"));
+                    }
+                }
+                return Ok(Some(Measured { said, also }));
+            }
+        }
         on!(OpeningType, |c: &OpeningType| building::check_opening_type(path, kind, c), |c| match what {
             "width" => Some(Slot::Length(&mut c.width)),
             "height" => Some(Slot::Length(&mut c.height)),

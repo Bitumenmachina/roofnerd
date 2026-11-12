@@ -555,7 +555,7 @@ pub fn pricing(job: &mut Job) -> Pricing {
         let rate = w.get::<Allowance>(e).map(|a| a.rate.clone());
         if rate.is_none() && !has_lines {
             // It could be priced and is not: by its area or length, or by the each.
-            if kind.priced_by().is_some() || matches!(kind, Kind::Door | Kind::Window | Kind::Fitting | Kind::Fixture | Kind::Equipment) {
+            if kind.priced_by().is_some() || matches!(kind, Kind::Door | Kind::Window | Kind::Fitting | Kind::Fixture | Kind::Furnishing | Kind::Equipment) {
                 match bare.iter_mut().find(|b| b.0 == kind) {
                     Some(b) => b.1 += 1,
                     None => bare.push((kind, 1)),

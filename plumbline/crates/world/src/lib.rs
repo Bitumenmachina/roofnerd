@@ -35,12 +35,13 @@ pub mod roof;
 pub mod sample;
 pub mod skeleton;
 pub mod solve;
+pub mod spec;
 pub mod units;
 pub mod value;
 pub mod view;
 pub mod vif;
 
-pub use building::{Connector, ConnectorKind, Connectors, Discipline, Domain, Flow, Fitting, FittingKind, Floor, FloorType, Function, InSystem, Justify, Layer, Level, Location, Opening, OpeningType, Placed, Room, Segment, SegmentType, SystemInfo, Wall, WallType, P3};
+pub use building::{Item, Connector, ConnectorKind, Connectors, Discipline, Domain, Flow, Fitting, FittingKind, Floor, FloorType, Function, InSystem, Justify, Layer, Level, Location, Opening, OpeningType, Placed, Room, Segment, SegmentType, SystemInfo, Wall, WallType, P3};
 pub use components::*;
 pub use job::{Header, Job};
 pub use units::Len;

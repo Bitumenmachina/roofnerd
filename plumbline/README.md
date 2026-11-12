@@ -96,6 +96,7 @@ demos/field.sh             # what is measured on site put on a traced job: the f
 demos/fieldw.sh            # the same in the window, each reading typed as a laser in keyboard mode types it; pictures in demos/captured/field
 demos/div.sh               # sixteen divisions: a whole house's lines in all sixteen, the recap by division, and the workbook's Divisions sheet
 demos/library.sh           # the starter assemblies: no price in them, a house's takeoff in fourteen divisions, three prices by division
+demos/spec.sh              # items made from manufacturers' sheets (PDF), placed, moved clear of a clash, and out to an IFC4 model
 demos/pricew.sh            # the same in the window: Starter assemblies, an assembly picked from the list and changed, a price typed on the sheet
 demos/dress.sh             # what the house is dressed in, read from what is priced on it: each wall, the roof, a window and a door, with the line that says so
 demos/dressw.sh            # the same in the window: one cladding to a wall, the priced sample house, and the same house bare; pictures in demos/captured/dress

@@ -394,6 +394,7 @@ fn fit_at(job: &mut Job, storey: &str, at: P2, z: Option<f64>, kind: Option<Fitt
         // box is square to that run and not to the page. None when every run is upright.
         angle: away.iter().find(|d| d[0].hypot(d[1]) > 1.0e-6).map(|d| tidy(d[1].atan2(d[0]).to_degrees())).filter(|a| a.abs() > 1.0e-9).map(|a| Val { value: Some(a), unit: "deg".into(), status, source: "turned to lie along the first run it joins".to_string() }),
         size,
+        item: None,
     };
     // A fitting is called what it is: "6 in round elbow", and the next "6 in round elbow 2".
     let called = placed.what.value.clone().filter(|w| !w.trim().is_empty()).unwrap_or_else(|| Kind::Fitting.stem().to_string());

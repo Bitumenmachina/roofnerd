@@ -379,6 +379,11 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                         count("fittings");
                         o.add(format!("{class}({},$,{name},$,$,#{placed_at},#{body},$,.{sort}.)", o.id(&p.path)))
                     }
+                    // Furniture and casework: IFC4's IfcFurniture.
+                    Kind::Furnishing => {
+                        count("furnishings");
+                        o.add(format!("IFCFURNITURE({},$,{name},$,'furnishing',#{placed_at},#{body},$,.NOTDEFINED.)", o.id(&p.path)))
+                    }
                     Kind::Fixture => {
                         count("fixtures");
                         o.add(format!("IFCFLOWTERMINAL({},$,{name},$,'fixture',#{placed_at},#{body},$)", o.id(&p.path)))

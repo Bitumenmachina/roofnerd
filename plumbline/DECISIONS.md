@@ -2477,3 +2477,71 @@ place reported is where it is deepest in that length. The pipe is still in two
 things the job holds, so it is still two clashes, one with each piece; both now say
 5 in at the crossing, and the verify-in-field head total already counts each line
 once. Runs joined at a corner are not carried on round it.
+
+### Call 62. Patrick, 2026-11-12 (later): the window is to feel like Google Earth and look like glass with depth
+
+His words, as given:
+
+> When you are back online I still do not see how the UI functions are better please
+> ensure you are deep diving into scroll mechanics , toggle on and off , glassy
+> overlays. Think google earth feel , need to be able to export to BIM files and create
+> items by spec sheet uploads IE mechanicals , furniture etc whole point of clash is
+> also moving a bathroom vanity around please dive back into any open repos you feel
+> may give you a better insight to polished clean look feel and function. Think of it
+> more like an Apple product with windows depth. Editing software for construction that
+> feels like playing a hyper realistic video game-- i want you to self review what you
+> have created so far and also make sure the main md file has instructiosn to opus 5.5
+> on how to use and adjust it- look at othjer gits, online interfaces etc as needed -
+> infer intent
+
+**What it overrides.** The fixed rule "the look is an instrument" (flat panels, dense
+layouts, no shadow, no gradient: call 55 and VISUAL.md section A) is his rule and he
+has replaced it. The screen he was shown under that rule read to him as no better. The
+new standard is his: translucent panels floating over the model with real depth, the
+model filling the window, navigation that feels like Google Earth, a house that looks
+real. What does not change, because he did not change it and it is what makes the
+program an estimating program: flag, never fabricate; speak construction; one
+arithmetic for one number; no real job data; permissive licences only; every number
+shows what it is made of.
+
+**How I read each clause** (infer intent; the readings are mine and are open to him):
+
+1. *"I still do not see how the UI functions are better."* The work since call 55 went
+   into the model, the money and the words. A person opening the window sees docked
+   white panels and a small model. The feel of the window is now the work.
+2. *"Scroll mechanics."* The wheel over the model zooms toward what is under the
+   pointer, with momentum that eases out; the wheel over a panel scrolls that panel
+   and nothing else, smoothly, with a bar that shows where you are and can be dragged.
+3. *"Toggle on and off."* Every layer of the job (each level, each system, the roof,
+   the finishes, the drawing underneath, the clashes, each panel of the screen itself)
+   has a switch that reads on or off at a glance.
+4. *"Glassy overlays ... an Apple product with windows depth."* The model is the whole
+   window. Panels are sheets of frosted glass over it: translucent, rounded, with a
+   soft shadow and a light edge, layered so that what is nearer reads nearer.
+5. *"Google Earth feel."* Drag to pan the ground under the pointer, wheel to dive at
+   the pointer, tilt and turn about what you are looking at, everything with inertia;
+   double-click flies to a thing; the view eases between plan and 3D and never jumps.
+6. *"Export to BIM files."* The IFC4 export exists at the command line and is
+   validated; it is not reachable from the window. It goes on the screen, with the
+   workbook and the lenses.
+7. *"Create items by spec sheet uploads, i.e. mechanicals, furniture."* A
+   manufacturer's cut sheet (PDF) is brought in and becomes a thing that can be
+   placed: its name, model number, width, depth and height read from the sheet, each
+   value Assumed and sourced to the sheet and its page, anything not found Unknown and
+   asked for. Furniture and casework join equipment and fixtures as things placed.
+8. *"The whole point of clash is also moving a bathroom vanity around."* A placed
+   thing is picked up and dragged in the model; what it clashes with lights as it
+   moves and clears as it clears; it snaps to the wall it backs onto.
+9. *"A hyper realistic video game."* Physically based materials, soft contact shadows,
+   ambient occlusion, reflections in glass, anti-aliased edges, light that reads as a
+   real place.
+10. *"Self review."* Written cold in STATUS.md before anything is built.
+11. *"The main md file has instructions to Opus 5.5 on how to use and adjust it."*
+    CLAUDE.md gains a section for whoever builds next: how to run it, drive it, see
+    it, and where each thing is changed.
+
+**Open, with a working assumption** (QUESTIONS.md Q22): the older rule "no sky, sun or
+grass" was not named. A hyper-real game and Google Earth both have a sky. Working
+assumption: the model sits in a soft-lit place with a horizon and a sky gradient that
+reads as real light, and still no grass, trees or scenery, which would be decoration
+the estimate does not price.

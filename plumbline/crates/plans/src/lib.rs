@@ -495,3 +495,100 @@ fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
     }
     Ok(Page { sort: Sort::Pdf, pages: count, size: [f64::from(width), f64::from(height)], picture, lines: lines.kept, lost })
 }
+
+// ---- The words on a page ----
+
+/// One line of words on a PDF page, as it reads from left to right.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Words {
+    pub text: String,
+    /// How tall its letters are, in points: the biggest line near the top of a
+    /// manufacturer's sheet is the product's name.
+    pub size: f64,
+}
+
+/// The letters a page draws, each where it is drawn.
+#[derive(Default)]
+struct Letters {
+    /// The letter, where it starts (x to the right, y down), and how tall it is.
+    all: Vec<(String, f64, f64, f64)>,
+}
+
+impl<'a> Device<'a> for Letters {
+    fn draw_path(&mut self, _: &BezPath, _: DrawProps<'a>, _: &DrawMode) {}
+    fn push_clip_path(&mut self, _: &ClipPath) {}
+    fn push_transparency_group(&mut self, _: f32, _: Option<SoftMask<'a>>, _: BlendMode) {}
+    fn draw_glyph_run(&mut self, run: &GlyphRun<'_, 'a>, props: DrawProps<'a>, _: &DrawMode) {
+        for glyph in run.glyphs() {
+            let to_page = props.transform * glyph.transform();
+            let at = to_page * Point::new(0.0, 0.0);
+            // A letter's own space is a thousandth of its height to the unit.
+            let c = to_page.as_coeffs();
+            let tall = c[2].hypot(c[3]) * 1000.0;
+            let said = match glyph.as_unicode() {
+                Some(hayro_cmap::BfString::Char(c)) => c.to_string(),
+                Some(hayro_cmap::BfString::String(s)) => s,
+                None => continue,
+            };
+            self.all.push((said, at.x, at.y, tall));
+        }
+    }
+    fn draw_image(&mut self, _: hayro::hayro_interpret::Image<'a, '_>, _: ImageDrawProps<'a>) {}
+    fn pop_clip(&mut self) {}
+    fn pop_transparency_group(&mut self) {}
+}
+
+/// The words on one page (counted from 1) of a PDF, line by line from the top, each line
+/// from the left. A page that is a scan has letters in a picture and none to read: it
+/// gives no lines, and that is for the caller to say. Only a PDF has words.
+pub fn words(bytes: &[u8], page: usize) -> Result<Vec<Words>, String> {
+    if sort_of(bytes) != Some(Sort::Pdf) {
+        return Err("only a PDF has words that can be read; a picture of a sheet is read by eye".into());
+    }
+    let pdf = Pdf::new(bytes.to_vec()).map_err(|_| "the PDF could not be read: it is damaged, cut short, locked with a password, or not a PDF at all. Print it to a new PDF, or send it again".to_string())?;
+    let pages = pdf.pages();
+    let (width, height) = page_size(&pages, page)?;
+    let p = &pages[page - 1];
+    let mut letters = Letters::default();
+    let mut context = Context::new(p.initial_transform(true).to_kurbo(), Rect::new(0.0, 0.0, f64::from(width), f64::from(height)), &hayro::hayro_interpret::InterpreterCache::new(), p.xref(), InterpreterSettings::default());
+    interpret_page(p, &mut context, &mut letters);
+    // Letters on one line stand within a third of their height of each other.
+    let mut all = letters.all;
+    all.sort_by(|a, b| a.2.total_cmp(&b.2).then(a.1.total_cmp(&b.1)));
+    let mut rows: Vec<Vec<(String, f64, f64, f64)>> = Vec::new();
+    for letter in all {
+        match rows.last_mut() {
+            Some(row) if (letter.2 - row[0].2).abs() <= (row[0].3.max(letter.3) * 0.35).max(1.0) => row.push(letter),
+            _ => rows.push(vec![letter]),
+        }
+    }
+    let mut out = Vec::new();
+    for mut row in rows {
+        row.sort_by(|a, b| a.1.total_cmp(&b.1));
+        let size = row.iter().map(|l| l.3).fold(0.0, f64::max);
+        let mut text = String::new();
+        let mut last: Option<f64> = None;
+        for (said, x, _, tall) in &row {
+            // How wide a letter is, is not given; no letter is wider than it is tall. So
+            // a letter that starts more than its height and a fifth past the start of
+            // the one before has a gap before it: a space the sheet did not draw. One
+            // that starts several heights on is a column apart. Spaces the sheet does
+            // draw come through as letters and need nothing from here.
+            if let Some(before) = last {
+                let step = x - before;
+                if step > tall * 3.5 {
+                    text.push_str("   ");
+                } else if step > tall * 1.2 && !text.ends_with(' ') && said != " " {
+                    text.push(' ');
+                }
+            }
+            text.push_str(said);
+            last = Some(*x);
+        }
+        let text = text.split(' ').filter(|w| !w.is_empty()).collect::<Vec<_>>().join(" ");
+        if !text.is_empty() {
+            out.push(Words { text, size });
+        }
+    }
+    Ok(out)
+}
