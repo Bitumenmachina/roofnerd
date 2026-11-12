@@ -57,7 +57,7 @@ pub fn write(
         let at = place.translation * node.inverse_scale_factor;
         let on_model = target.get() == Some(cameras.ui);
         // What has scrolled off its panel is not on screen.
-        if name.scrolls && on_model && (at.y < TOP_H || at.y > model.1.y - STATUS_H) {
+        if name.scrolls && on_model && (at.y < TOP_H + 2.0 * crate::theme::GAP || at.y > model.1.y - STATUS_H - 2.0 * crate::theme::GAP) {
             continue;
         }
         // The sheet's tables scroll under its heading and its tabs, over its foot.

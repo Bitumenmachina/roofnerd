@@ -155,12 +155,19 @@ fn centroid(points: &[[f64; 2]]) -> [f64; 2] {
     [cx / (3.0 * a), cy / (3.0 * a)]
 }
 
-/// A panel set against an edge of the window: opaque, flat, with a hairline on the
-/// side that faces the model.
-fn docked(mut node: Node, edge: UiRect) -> impl Bundle {
+/// A panel floating over the model: a sheet of frosted glass with round corners, a
+/// light edge and a shadow, a gap clear of the window's edge and of the next panel.
+/// The node says where it would sit hard against the edges; the gaps are put in here.
+fn docked(mut node: Node, _edge: UiRect) -> impl Bundle {
     node.position_type = PositionType::Absolute;
-    node.border = edge;
-    (node, BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()))
+    let float = |v: Val| match v {
+        Val::Px(x) => px(if x == 0.0 { theme::GAP } else { x + 2.0 * theme::GAP }),
+        other => other,
+    };
+    (node.top, node.left, node.right, node.bottom) = (float(node.top), float(node.left), float(node.right), float(node.bottom));
+    node.border = UiRect::all(px(1.0));
+    node.border_radius = BorderRadius::all(px(theme::PANEL_RADIUS));
+    (node, BackgroundColor(theme::frost()), BorderColor::all(theme::frost_edge()), theme::panel_shadow())
 }
 
 /// What a click with the left button on this does.

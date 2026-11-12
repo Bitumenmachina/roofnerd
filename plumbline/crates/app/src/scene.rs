@@ -306,7 +306,7 @@ impl Builder<'_, '_, '_> {
         let on_plan = self.on_plan.clone();
         e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
             // With a drawing tool in hand a click is a pick, not a selection.
-            if press.button == PointerButton::Primary && doc.entry.is_none() && doc.draw.tool.is_none() && !doc.draw.swallow {
+            if press.button == PointerButton::Primary && doc.entry.is_none() && doc.draw.tool.is_none() && !doc.draw.swallow && !dragged() {
                 let path = on_plan.as_ref().filter(|_| doc.plan).unwrap_or(&click).clone();
                 doc.select(&path);
             }
@@ -378,7 +378,7 @@ pub fn rebuild(
                 .spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(24000.0, 24000.0))), MeshMaterial3d(materials.add(material)), Transform::from_xyz(0.0, -0.04, 0.0), Ground))
                 .observe(|press: On<PointerClick>, mut doc: ResMut<Doc>| {
                     // A click on the ground lets go of the selection.
-                    if press.button == PointerButton::Primary && doc.selected.is_some() && doc.entry.is_none() && doc.draw.tool.is_none() && !doc.draw.swallow {
+                    if press.button == PointerButton::Primary && doc.selected.is_some() && doc.entry.is_none() && doc.draw.tool.is_none() && !doc.draw.swallow && !dragged() {
                         doc.selected = None;
                         doc.say(Tone::Done, "Nothing selected.");
                         doc.touch();
@@ -893,51 +893,240 @@ pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mu
     }
 }
 
-/// Is the pointer over the model, not over a panel?
-pub fn over_model(window: &Window) -> bool {
-    window.cursor_position().is_some_and(|p| over_model_at(window, p))
+/// Whether the pointer is over a panel, as picking sees it; and whether the left button's
+/// last press became a drag (a drag is not a click). Kept where any system can ask.
+static OVER_PANEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static DRAGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Did the left button's last press slide or turn the view? Then its release selects
+/// nothing and lets go of nothing.
+pub fn dragged() -> bool {
+    DRAGGED.load(std::sync::atomic::Ordering::Relaxed)
 }
 
-/// Is this place in the window over the model, not over a panel?
+/// Is this place in the window over the model, not over a panel? Panels float and can
+/// be put away, so this is asked of what the pointer is over, not of fixed rectangles.
 pub fn over_model_at(window: &Window, p: Vec2) -> bool {
     let (w, h) = (window.width(), window.height());
-    p.y > TOP_H && p.y < h - STATUS_H - BUILD_H && p.x > LEFT_W && p.x < w - RIGHT_W
+    p.x >= 0.0 && p.y >= 0.0 && p.x <= w && p.y <= h && !OVER_PANEL.load(std::sync::atomic::Ordering::Relaxed)
 }
 
-/// Orbit with the right button, pan with the middle one or W A S D, zoom with the wheel.
-/// On foot the same keys walk and the right button looks round.
+/// What the hand has hold of while a button is down.
+#[derive(Clone, Copy, PartialEq)]
+enum Hold {
+    /// The ground: the place grabbed stays under the pointer.
+    Ground,
+    /// A turn about the place that was under the pointer at the press.
+    Turn,
+}
+
+/// How the view feels under the hand: what a drag has hold of, and what carries on
+/// after it is let go. (DECISIONS.md call 63 has where each figure comes from.)
+#[derive(Resource, Default)]
+pub struct Feel {
+    hold: Option<(Hold, Vec3)>,
+    /// Where the pointer was at the press, and how far it has gone since, in dots.
+    pressed_at: Vec2,
+    gone: f32,
+    /// Carrying on after a release: the ground sliding (feet a second), and a turn
+    /// (yaw and pitch, radians a second) about a place.
+    slide: Vec3,
+    spin: (Vec2, Vec3),
+    /// When the left button last went down and where, for a double-click.
+    last_press: Option<(f32, Vec2)>,
+}
+
+/// The ray under a place in the window, from where the view is going (not where it has
+/// got to): its eye and its way.
+fn ray_at(orbit: &Orbit, window: &Window, cursor: Vec2) -> (Vec3, Vec3) {
+    let (sy, cy) = orbit.yaw.sin_cos();
+    let (sp, cp) = orbit.pitch.sin_cos();
+    let back = Vec3::new(sy * cp, sp, cy * cp);
+    let eye = orbit.target + back * orbit.distance;
+    let right = Vec3::new(cy, 0.0, -sy);
+    let up = right.cross(-back);
+    let (w, h) = (window.width().max(1.0), window.height().max(1.0));
+    let half = (LENS / 2.0).tan();
+    let (nx, ny) = (cursor.x / w * 2.0 - 1.0, 1.0 - cursor.y / h * 2.0);
+    (eye, (-back + right * (nx * half * w / h) + up * (ny * half)).normalize())
+}
+
+/// Where a ray meets the level plane at a height; none when it runs away from it or
+/// nearly along it.
+fn on_level(eye: Vec3, way: Vec3, height: f32) -> Option<Vec3> {
+    if way.y.abs() < 0.035 {
+        return None;
+    }
+    let t = (height - eye.y) / way.y;
+    (t > 0.0 && t < 50_000.0).then(|| eye + way * t)
+}
+
+/// Turn the view about a place: the place stays where it is on the screen.
+fn turn_about(orbit: &mut Orbit, pivot: Vec3, yaw: f32, pitch: f32) {
+    let frame = |yaw: f32, pitch: f32| {
+        let (sy, cy) = yaw.sin_cos();
+        let (sp, cp) = pitch.sin_cos();
+        let back = Vec3::new(sy * cp, sp, cy * cp);
+        let right = Vec3::new(cy, 0.0, -sy);
+        (right, right.cross(-back), back)
+    };
+    let to = (orbit.pitch + pitch).clamp(0.06, 1.52);
+    let (r0, u0, b0) = frame(orbit.yaw, orbit.pitch);
+    let (r1, u1, b1) = frame(orbit.yaw + yaw, to);
+    // The target, as the view sees it from the pivot, is carried round with the view.
+    let v = orbit.target - pivot;
+    orbit.target = pivot + r1 * v.dot(r0) + u1 * v.dot(u0) + b1 * v.dot(b0);
+    orbit.yaw += yaw;
+    orbit.pitch = to;
+}
+
+/// Moving round the model. The wheel dives at what is under the pointer. A drag with
+/// the left button (when no tool is in hand) or the middle one slides the ground with
+/// the hand: the place grabbed stays under the pointer. A drag with the right button
+/// turns the view about the place under the pointer. Let go while moving and it
+/// carries on and eases to a stop. A double-click flies to the place clicked. On foot
+/// the same keys walk and the right button looks round.
 #[allow(clippy::too_many_arguments)]
-pub fn orbit_input(mut orbit: ResMut<Orbit>, buttons: Res<ButtonInput<MouseButton>>, motion: Res<AccumulatedMouseMotion>, scroll: Res<AccumulatedMouseScroll>, keys: Res<ButtonInput<KeyCode>>, time: Res<Time>, doc: Res<Doc>, window: Query<&Window, With<PrimaryWindow>>) {
+pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Res<ButtonInput<MouseButton>>, motion: Res<AccumulatedMouseMotion>, scroll: Res<AccumulatedMouseScroll>, keys: Res<ButtonInput<KeyCode>>, time: Res<Time>, doc: Res<Doc>, window: Query<&Window, With<PrimaryWindow>>, hover: Res<bevy::picking::hover::HoverMap>, panels: Query<(), With<Node>>) {
+    use std::sync::atomic::Ordering::Relaxed;
     let Ok(window) = window.single() else { return };
-    let inside = over_model(window);
+    // What the pointer is over: a panel, or a place on the model.
+    let hits = hover.get(&bevy::picking::pointer::PointerId::Mouse);
+    let on_panel = hits.is_some_and(|h| h.keys().any(|e| panels.contains(*e)));
+    OVER_PANEL.store(on_panel, Relaxed);
+    let cursor = window.cursor_position();
+    let inside = cursor.is_some() && !on_panel;
+    let under = |orbit: &Orbit| -> Option<Vec3> {
+        let nearest = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p);
+        nearest.or_else(|| cursor.and_then(|c| { let (eye, way) = ray_at(orbit, window, c); on_level(eye, way, 0.0) }))
+    };
     let dt = time.delta_secs().min(0.1);
-    if buttons.pressed(MouseButton::Right) && !doc.plan {
-        let turn = if doc.walk { -1.0 } else { 1.0 };
-        orbit.yaw -= motion.delta.x * 0.006 * turn;
-        orbit.pitch = (orbit.pitch + motion.delta.y * 0.006).clamp(if doc.walk { -1.3 } else { 0.06 }, if doc.walk { 1.3 } else { 1.52 });
+    let free = doc.entry.is_none() && doc.draw.tool.is_none() && !doc.choosing;
+    let left = MouseButton::Left;
+
+    // A press takes hold; any press stops what was carrying on.
+    if buttons.any_just_pressed([left, MouseButton::Middle, MouseButton::Right]) {
+        feel.slide = Vec3::ZERO;
+        feel.spin = (Vec2::ZERO, Vec3::ZERO);
+        feel.pressed_at = cursor.unwrap_or_default();
+        feel.gone = 0.0;
+        feel.hold = None;
+        if buttons.just_pressed(left) {
+            DRAGGED.store(false, Relaxed);
+        }
+        if inside && !doc.walk {
+            let grab = under(&orbit);
+            if buttons.just_pressed(MouseButton::Right) && !doc.plan {
+                feel.hold = grab.map(|g| (Hold::Turn, g));
+            } else if buttons.just_pressed(MouseButton::Middle) || (buttons.just_pressed(MouseButton::Right) && doc.plan) || (buttons.just_pressed(left) && free) {
+                feel.hold = grab.map(|g| (Hold::Ground, g));
+            }
+            // A second press of the left button in the same place flies to it.
+            if buttons.just_pressed(left) && free {
+                let now = time.elapsed_secs();
+                let again = feel.last_press.is_some_and(|(then, at)| now - then < 0.4 && cursor.is_some_and(|c| c.distance(at) < 6.0));
+                feel.last_press = cursor.map(|c| (now, c));
+                if let (true, Some(to)) = (again, grab) {
+                    orbit.target = to;
+                    orbit.distance = (orbit.distance * 0.45).clamp(10.0, 6000.0);
+                    feel.hold = None;
+                    feel.last_press = None;
+                }
+            }
+        }
+    }
+    let held = buttons.pressed(left) || buttons.pressed(MouseButton::Middle) || buttons.pressed(MouseButton::Right);
+    feel.gone += motion.delta.length();
+    // The left button's drag is told from a click by how far it went.
+    if buttons.pressed(left) && feel.gone > 5.0 && feel.hold.is_some() {
+        DRAGGED.store(true, Relaxed);
     }
     let (sy, cy) = if doc.plan { (0.0, 1.0) } else { orbit.yaw.sin_cos() };
     let right = Vec3::new(cy, 0.0, -sy);
     let toward = Vec3::new(sy, 0.0, cy);
-    if !doc.walk && (buttons.pressed(MouseButton::Middle) || (buttons.pressed(MouseButton::Right) && doc.plan)) {
-        // Drag the ground under the pointer: a pixel moves the target by what a pixel covers.
-        // (On plan that is exact: the view is PLAN_HEIGHT of the distance tall.)
-        let per_px = orbit.distance * if doc.plan { PLAN_HEIGHT } else { 0.56 } / window.height().max(1.0);
-        let shift = right * (-motion.delta.x * per_px) + toward * (-motion.delta.y * per_px);
-        orbit.target += shift;
+    if doc.walk {
+        // On foot the right button looks round.
+        if buttons.pressed(MouseButton::Right) {
+            orbit.yaw += motion.delta.x * 0.006;
+            orbit.pitch = (orbit.pitch + motion.delta.y * 0.006).clamp(-1.3, 1.3);
+        }
+    } else if let (true, Some((hold, grabbed))) = (held, feel.hold) {
+        match hold {
+            Hold::Turn => {
+                // A full window height of drag is a full turn (three.js's rule).
+                let per_px = std::f32::consts::TAU / window.height().max(1.0);
+                let (yaw, pitch) = (-motion.delta.x * per_px, motion.delta.y * per_px);
+                turn_about(&mut orbit, grabbed, yaw, pitch);
+                if dt > 0.0 {
+                    feel.spin = (feel.spin.0.lerp(Vec2::new(yaw, pitch) / dt, 0.5), grabbed);
+                }
+            }
+            Hold::Ground => {
+                let shift = if doc.plan {
+                    // On plan a dot covers the same ground everywhere: exact.
+                    let per_px = orbit.distance * PLAN_HEIGHT / window.height().max(1.0);
+                    right * (-motion.delta.x * per_px) + toward * (-motion.delta.y * per_px)
+                } else {
+                    // The place grabbed is put back under the pointer.
+                    cursor.and_then(|c| { let (eye, way) = ray_at(&orbit, window, c); on_level(eye, way, grabbed.y) }).map(|now| grabbed - now).filter(|s| s.length() < orbit.distance * 4.0).unwrap_or(Vec3::ZERO)
+                };
+                orbit.target += shift;
+                if dt > 0.0 {
+                    feel.slide = feel.slide.lerp(shift / dt, 0.5);
+                }
+            }
+        }
+    } else if !held {
+        if feel.hold.take().is_some() {
+            // Let go: what it was doing carries on only if it was still moving.
+            if motion.delta.length() < 0.5 && feel.slide.length() < orbit.distance * 0.05 {
+                feel.slide = Vec3::ZERO;
+            }
+            if feel.spin.0.length() < 0.15 {
+                feel.spin.0 = Vec2::ZERO;
+            }
+        }
+        // It dies away as Cesium's does: e to the minus t over 0.4 seconds.
+        let fade = (-dt * 2.5).exp();
+        if feel.slide != Vec3::ZERO {
+            let step = feel.slide * dt;
+            orbit.target += step;
+            feel.slide *= fade;
+            if feel.slide.length() < orbit.distance * 0.01 {
+                feel.slide = Vec3::ZERO;
+            }
+        }
+        if feel.spin.0 != Vec2::ZERO && !doc.plan {
+            let (rate, about) = feel.spin;
+            turn_about(&mut orbit, about, rate.x * dt, rate.y * dt);
+            feel.spin.0 *= fade;
+            if feel.spin.0.length() < 0.02 {
+                feel.spin.0 = Vec2::ZERO;
+            }
+        }
     }
     if inside && scroll.delta.y != 0.0 && !doc.walk {
-        let steps = if scroll.unit == MouseScrollUnit::Pixel { scroll.delta.y / 40.0 } else { scroll.delta.y };
+        // A notch of the wheel is a tenth nearer or further; a touchpad's dots are a
+        // hundredth of a notch each (three.js's measure of a wheel).
+        let notches = if scroll.unit == MouseScrollUnit::Pixel { scroll.delta.y / 100.0 } else { scroll.delta.y }.clamp(-3.0, 3.0);
         let was = orbit.distance;
-        orbit.distance = (orbit.distance * (1.0 - steps * 0.12)).clamp(4.0, 6000.0);
-        // On plan the wheel zooms about the pointer: the place under it stays under it,
-        // which is how a dimension's end on a drawing is closed in on.
-        if let (true, Some(cursor)) = (doc.plan, window.cursor_position()) {
-            let per_px = was * PLAN_HEIGHT / window.height().max(1.0);
-            let off = cursor - Vec2::new(window.width(), window.height()) / 2.0;
-            let under = orbit.target + right * (off.x * per_px) + toward * (off.y * per_px);
-            orbit.target = under + (orbit.target - under) * (orbit.distance / was);
+        orbit.distance = (was * 0.9_f32.powf(notches)).clamp(3.0, 6000.0);
+        let by = orbit.distance / was;
+        if doc.plan {
+            // On plan the place under the pointer stays under it, which is how a
+            // dimension's end on a drawing is closed in on.
+            if let Some(cursor) = cursor {
+                let per_px = was * PLAN_HEIGHT / window.height().max(1.0);
+                let off = cursor - Vec2::new(window.width(), window.height()) / 2.0;
+                let place = orbit.target + right * (off.x * per_px) + toward * (off.y * per_px);
+                orbit.target = place + (orbit.target - place) * by;
+            }
+        } else if let Some(place) = under(&orbit).filter(|p| p.distance(orbit.target) < was * 6.0) {
+            // In 3D the same: the eye and what it looks at both close on the place
+            // under the pointer, so the place stays under the pointer.
+            orbit.target = place + (orbit.target - place) * by;
         }
+        feel.slide = Vec3::ZERO;
     }
     // While a value is typed the keys are its letters; with Ctrl held they are Save and Undo.
     if doc.entry.is_some() || keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight) {

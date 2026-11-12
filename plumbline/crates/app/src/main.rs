@@ -169,6 +169,7 @@ fn main() {
         .init_resource::<plans::Plans>()
         .init_resource::<panels::Scrolls>()
         .insert_resource(Orbit::new())
+        .init_resource::<scene::Feel>()
         .add_systems(Startup, (scene::setup, setup).chain())
         .add_systems(
             Update,

@@ -3960,3 +3960,40 @@ Part A of the rebuild. `demos/spec.sh` passes; every sheet in it is made up.
   they are not ported. A scanned sheet has no words to read and is refused with that
   reason; nothing reads it by eye. Connections (a drain size, a voltage) are on many
   sheets and are not read. There is no window for any of this yet.
+
+## The window rebuilt, step 1: panels float, and the view moves under the hand (2026-11-12)
+
+Part B, first step. **Not finished and not judged.**
+
+* **Moving round the model** (`scene.rs`, `orbit_input`; figures from call 63). The
+  wheel closes on what is under the pointer, in 3D as it already did on plan: the eye
+  and what it looks at both move toward that place by the same factor, so the place
+  stays under the pointer (a notch is a tenth). A drag with the left button, when no
+  tool is in hand, or with the middle button slides the ground: the place grabbed is
+  put back under the pointer every frame by a ray to its level. A drag with the right
+  button turns the view about the place under the pointer at the press, not about
+  the middle of the screen. Let go while moving and the slide or the turn carries on
+  and dies away as e to the minus t over 0.4 s. A double-click flies to the place
+  clicked. A drag is told from a click by how far it went, so sliding the view does
+  not select or let go of anything. "Is the pointer over the model" is now asked of
+  what the pointer is over, not of fixed rectangles, so a panel can move or be put
+  away.
+* **The panels** (`theme.rs`, a block of named figures at the top; `panels.rs`
+  `docked`). Every panel floats 10 px clear of the window's edge and of the next
+  panel, with 16 px corners, a light edge, a thick white tint and two shadows, near
+  and far. Buttons, fields, keys and cards are round-cornered and sit on the glass a
+  little whiter than it.
+* **Run:** `demos/pricew.sh` passes on this tree (controls are still found by name).
+  One picture is kept, `demos/captured/glass/step1-floating-panels.png`.
+* **What that picture shows that is not right.** Over a scene that is nearly white
+  the panels read as white cards: there is nothing behind the glass for it to be
+  glass over, and nothing is blurred. The tool bar's right end (Move, Delete) is cut
+  off under the right panel. The left panel is a tall sheet with half of it empty.
+  The Show list is still small squares, not switches. The selected wall is still a
+  heavy blue wire. The right panel is still a column of red sentences. The momentum
+  and the zoom about the pointer have been built and compiled, and **not yet seen**:
+  no picture has been taken mid-flight and no before-and-after of the place under
+  the pointer has been measured.
+* **Not rerun:** every other window demonstration. Five of them click at fixed dots
+  on the screen (`buildw`, `clashw`, `draww`, `d2`, `d5w`) and the left button's drag
+  now slides the view where it used to do nothing: they are expected to need work.

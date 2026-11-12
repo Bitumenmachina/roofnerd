@@ -23,6 +23,37 @@ pub fn grid_minor() -> Color { hex(0xB9BDBF).with_alpha(0.6) }
 pub fn grid_major() -> Color { hex(0x979DA3).with_alpha(0.85) }
 pub fn panel() -> Color { hex(0xFFFFFF) }
 pub fn panel_alt() -> Color { hex(0xF3F4F2) }
+
+// ---- Glass (call 62; DECISIONS.md call 63 has where the figures come from) ----
+// A panel is a sheet of frosted glass over the model: a thick white tint (the text on
+// it is dense, and both Apple and Microsoft say dense text wants thick glass), a light
+// edge, round corners and two shadows, one near and one far. To retune the look of
+// every panel, change these.
+
+/// How far a panel floats from the window's edge and from the next panel.
+pub const GAP: f32 = 10.0;
+/// A floating panel's corners; a button's; a field's or a key's.
+pub const PANEL_RADIUS: f32 = 16.0;
+pub const BUTTON_RADIUS: f32 = 8.0;
+pub const SMALL_RADIUS: f32 = 6.0;
+/// The glass itself, and its light edge.
+pub fn frost() -> Color { Color::srgba(0.985, 0.988, 0.992, 0.80) }
+pub fn frost_edge() -> Color { Color::srgba(1.0, 1.0, 1.0, 0.72) }
+/// What sits on the glass and can be pressed: a little whiter than the glass.
+pub fn control() -> Color { Color::srgba(1.0, 1.0, 1.0, 0.62) }
+pub fn control_edge() -> Color { Color::srgba(0.07, 0.09, 0.12, 0.10) }
+/// A hairline on glass.
+pub fn glass_rule() -> Color { Color::srgba(0.07, 0.09, 0.12, 0.09) }
+/// What is selected or in hand, on glass: a wash of the accent, never accent-coloured
+/// text alone.
+pub fn accent_glass() -> Color { Color::srgba(0.114, 0.306, 0.847, 0.14) }
+/// The two shadows under a floating panel: near and sharp, far and soft.
+pub fn panel_shadow() -> BoxShadow {
+    BoxShadow(vec![
+        ShadowStyle { color: Color::srgba(0.05, 0.07, 0.10, 0.10), x_offset: px(0.0), y_offset: px(2.0), spread_radius: px(0.0), blur_radius: px(6.0) },
+        ShadowStyle { color: Color::srgba(0.05, 0.07, 0.10, 0.16), x_offset: px(0.0), y_offset: px(10.0), spread_radius: px(-4.0), blur_radius: px(28.0) },
+    ])
+}
 /// A field that can be typed in, at rest.
 pub fn field_paper() -> Color { hex(0xFAFAF8) }
 /// A hairline inside a panel, between rows.
@@ -348,16 +379,16 @@ pub fn text(fonts: &Fonts, s: impl Into<String>, size: f32, weight: Weight, colo
     (Text::new(spoken(&s.into())), TextFont { font: FontSource::Handle(font), font_size: FontSize::Px(size), font_features: features, ..default() }, TextColor(colour))
 }
 
-/// A flat card with a hairline border. The node says how it is laid out; the card gives
-/// it its edge. Nothing on this screen casts a shadow.
+/// A card on the glass: a whiter sheet with round corners and a faint edge.
 pub fn card(mut node: Node) -> impl Bundle {
     node.border = UiRect::all(px(1.0));
-    (node, BackgroundColor(panel()), BorderColor::all(hairline()))
+    node.border_radius = BorderRadius::all(px(BUTTON_RADIUS + 2.0));
+    (node, BackgroundColor(control()), BorderColor::all(control_edge()))
 }
 
-/// A node with its corners eased by a pixel or two: a key, a field. Never a pill.
+/// A node with round corners: a button, a key, a field.
 pub fn rounded(mut node: Node, radius: f32) -> Node {
-    node.border_radius = BorderRadius::all(px(radius.min(2.0)));
+    node.border_radius = BorderRadius::all(px(radius));
     node
 }
 
@@ -379,13 +410,13 @@ pub fn status_chip(p: &mut ChildSpawnerCommands, fonts: &Fonts, status: Status) 
 
 /// A keyboard key, drawn as a key.
 pub fn keycap(p: &mut ChildSpawnerCommands, fonts: &Fonts, key: &str) {
-    p.spawn((rounded(Node { padding: UiRect::axes(px(4.0), px(0.0)), border: UiRect::all(px(1.0)), min_width: px(16.0), justify_content: JustifyContent::Center, flex_shrink: 0.0, ..default() }, 2.0), BackgroundColor(panel_alt()), BorderColor::all(hairline()), Pickable::IGNORE))
+    p.spawn((rounded(Node { padding: UiRect::axes(px(4.0), px(0.0)), border: UiRect::all(px(1.0)), min_width: px(16.0), justify_content: JustifyContent::Center, flex_shrink: 0.0, ..default() }, 4.0), BackgroundColor(Color::srgba(0.07, 0.09, 0.12, 0.05)), BorderColor::all(control_edge()), Pickable::IGNORE))
         .with_child((text(fonts, key, 10.0, Weight::Medium, ink_soft()), Pickable::IGNORE));
 }
 
 /// A section heading inside a panel: small capitals over a hairline.
 pub fn heading(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str) {
-    p.spawn((Node { margin: UiRect { top: px(12.0), bottom: px(4.0), ..default() }, padding: UiRect::bottom(px(3.0)), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() }, BorderColor::all(hairline()))).with_child(text(fonts, label.to_uppercase(), 10.0, Weight::Semibold, ink_soft()));
+    p.spawn((Node { margin: UiRect { top: px(12.0), bottom: px(4.0), ..default() }, padding: UiRect::bottom(px(3.0)), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() }, BorderColor::all(glass_rule()))).with_child(text(fonts, label.to_uppercase(), 10.0, Weight::Semibold, ink_soft()));
 }
 
 /// What a script that drives the window calls something that can be clicked: the word
@@ -406,9 +437,9 @@ pub fn named(name: impl Into<String>) -> Named {
 /// thing in hand. It does nothing by itself; whoever spawns it says what a click does.
 pub fn button<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, key: &str, on: bool) -> EntityCommands<'a> {
     let mut e = p.spawn((
-        rounded(Node { align_items: AlignItems::Center, column_gap: px(6.0), padding: UiRect::axes(px(8.0), px(4.0)), border: UiRect::all(px(1.0)), min_height: px(24.0), flex_shrink: 0.0, ..default() }, 2.0),
-        BackgroundColor(if on { accent_wash() } else { panel() }),
-        BorderColor::all(if on { accent() } else { hairline() }),
+        rounded(Node { align_items: AlignItems::Center, column_gap: px(6.0), padding: UiRect::axes(px(10.0), px(4.0)), border: UiRect::all(px(1.0)), min_height: px(26.0), flex_shrink: 0.0, ..default() }, BUTTON_RADIUS),
+        BackgroundColor(if on { accent_glass() } else { control() }),
+        BorderColor::all(if on { accent() } else { control_edge() }),
         named(label),
     ));
     e.with_children(|b| {
@@ -430,9 +461,9 @@ pub fn field<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, va
         let edge = match state {
             1 => accent(),
             2 => red(),
-            _ => hairline(),
+            _ => control_edge(),
         };
-        f.spawn((rounded(Node { width: px(width), height: px(24.0), padding: UiRect::horizontal(px(6.0)), border: UiRect::all(px(if state == 1 { 1.5 } else { 1.0 })), align_items: AlignItems::Center, overflow: Overflow::clip(), ..default() }, 2.0), BackgroundColor(if state == 1 { panel() } else { field_paper() }), BorderColor::all(edge), Pickable::IGNORE)).with_children(|b| {
+        f.spawn((rounded(Node { width: px(width), height: px(24.0), padding: UiRect::horizontal(px(6.0)), border: UiRect::all(px(if state == 1 { 1.5 } else { 1.0 })), align_items: AlignItems::Center, overflow: Overflow::clip(), ..default() }, SMALL_RADIUS), BackgroundColor(if state == 1 { panel() } else { control() }), BorderColor::all(edge), Pickable::IGNORE)).with_children(|b| {
             if value.is_empty() && state != 1 {
                 b.spawn((text(fonts, like, 12.0, Weight::Regular, ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
             } else {
