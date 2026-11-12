@@ -4853,3 +4853,50 @@ program itself built; its tests did not. I read the count after pushing, not bef
 The fix is one field in that test; 279 tests pass. `tools/committed.sh` exists to
 catch exactly this and had not been run since dd42088: it is run on this commit.
 
+## Interior woodwork drawn (Q23 step 4, call 73)
+
+**Built and seen.** `demos/captured/trades/6-interior-woodwork-drawn.png`: the made-up
+whole house's first floor alone, mechanical trades off, seen from above: its rooms,
+partitions and interior doors, sun through the windows on the floors, and a wood line
+at the foot of the walls of each of the five rooms with base priced on it.
+`6-interior-woodwork-close.png`: close on a partition: the base along it, stopping at
+the six-panel door's opening and going on the other side. Sent to Patrick. A test
+reads the words (base, and not a base cabinet or a gravel base). 280 tests pass.
+
+**How the pictures were got, which is a finding about the window.** Two tries before
+these were useless: a wheel into the house ended inside the ductwork, and a turn
+about a point on the ground swung the house off the screen. A person wanting to look
+into a floor from above has no one step for it. Picking the level alone and tilting
+with the arrow key worked. That is a navigation gap, not a woodwork one, and it is
+open.
+
+**Not right, or not done:** the base is hard to see until the view is close (it is
+5 1/4 in tall); no casing inside; no cabinets; no demonstration script; not judged.
+
+## All seven of Patrick's trades now have something in the model
+
+| Trade | In the model | Snapshot in `demos/captured/trades/` | Still missing |
+|---|---|---|---|
+| Foundation | strip footings (a kind of their own) and foundation walls, with a switch for the ground | `1-foundation-drawn.png` | on a small job of its own: the made-up whole house has none; pad footings; a tool in the window |
+| Framing | each wall with a framing line, as its frame (Framing switch) | `2-framing-drawn.png` | joists, rafters, corners; quantities from the frame |
+| Electrical | conduit, cable, panel, meter, devices | `3-electrical.png` | hard to read seen through |
+| Plumbing | pipe, fittings, fixtures | `4-plumbing.png` | hard to read seen through |
+| HVAC | duct, air handler, registers | `5-hvac.png` | |
+| Interior woodwork | base in each room with base priced | `6-interior-woodwork-drawn.png`, `-close.png` | casing, cabinets, stairs |
+| Waterproofing | weather barrier and opening flashing with the finish off (Finishes switch) | `7-waterproofing-drawn.png`, `-window.png` | roof underlayment, dampproofing, roof flashing |
+
+The first seven pictures (`1-foundation.png` to `7-waterproofing.png`) are the program
+as it was when he asked: four of them show estimate lines beside a finished house.
+None of the four new layers has a window demonstration script or has been judged.
+
+## The light under the six colour demonstrations (call 68, sky at 1,150)
+
+On the build of that commit: `glassw` PASS, `carryw` PASS, `pricew` PASS, `firstw`
+PASS (its plan's paper and inks unchanged, as they must be: nothing is folded on
+plan). `dressw`: four of six colour checks pass as they were written; two needed
+re-deriving for a wall that is now out of the sun (cedar there (132, 114, 98), the
+bare wall (156, 158, 159)). Each is now set between the two measurements and the
+script proves each test fails on the other's picture, every run. `planw` fails for a
+reason that is not the light (above). Reruns of `dressw` and `planw` on the current
+build are going now.
+

@@ -242,9 +242,21 @@ pub struct Dress {
     pub openings: HashMap<String, OpeningDress>,
     /// Eaves with a gutter priced on them, and the color named.
     pub gutters: HashMap<String, Said<()>>,
+    /// Rooms with base priced on them ("Base and trim", "baseboard"): the level each
+    /// is on, and its outline at the faces of its walls, counter-clockwise, in feet.
+    /// The base runs along that outline.
+    pub base: HashMap<String, (Option<String>, Vec<[f64; 2]>)>,
 }
 
 // ---- Reading a line ----
+
+/// Whether a line priced on a room names the base at the foot of its walls: "Base and
+/// trim", "baseboard", "wood base". Not a base cabinet, a gravel base or a base coat.
+pub fn base_in(text: &str) -> bool {
+    let w = words(text);
+    let other = ["cabinet", "cabinets", "gravel", "coat", "course", "plate", "sheet"];
+    w.iter().any(|x| x == "baseboard" || x == "baseboards") || (w.iter().any(|x| x == "base") && !w.iter().any(|x| other.contains(&x.as_str())))
+}
 
 /// Whether a line names a weather barrier: the sheet that keeps water out of the wall
 /// behind its finish. By the words the trade uses for it.
@@ -666,7 +678,8 @@ pub fn dress(job: &mut Job) -> Dress {
         let barrier = on.iter().any(|(text, _)| barrier_in(text));
         out.walls.insert(w.path.clone(), WallDress { outside, out: out_way, height: w.h, cladding, wainscot, past, framing, barrier });
     }
-    // Roof planes, openings and gutters.
+    // Roof planes, openings, gutters, and the base in rooms.
+    let outlines = building::room_outlines(job);
     for &e in &job.order.clone() {
         let (Some(node), Some(kind)) = (job.world.get::<Node>(e), job.world.get::<Kind>(e).copied()) else { continue };
         let path = node.path.clone();
@@ -686,6 +699,14 @@ pub fn dress(job: &mut Job) -> Dress {
                 let divided = unit.iter().find_map(|(text, _)| divided_in(text));
                 let flashed = on.iter().any(|(text, _)| words(text).iter().any(|w| w == "flashing" || w == "flashed"));
                 out.openings.insert(path, OpeningDress { sash, leaf: None, divided, tone, flashed });
+            }
+            Kind::Room => {
+                if on.iter().any(|(text, _)| base_in(text)) {
+                    if let Some(outline) = outlines.get(&path) {
+                        let storey = job.world.get::<Node>(e).and_then(|n| n.parent.clone());
+                        out.base.insert(path, (storey, outline.clone()));
+                    }
+                }
             }
             Kind::Door => {
                 let unit: Vec<&(String, String)> = on.iter().filter(|(text, _)| about(text, LEAVES, DOOR_KIND, NOT_DOOR)).collect();
@@ -871,6 +892,16 @@ pub fn said_of(d: &Dress, path: &str, kind: Kind) -> Vec<(String, String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn base_is_read_by_its_own_words() {
+        for said in ["Base and trim", "Baseboard, 5 1/4 in MDF", "Wood base, stained"] {
+            assert!(base_in(said), "{said}");
+        }
+        for said in ["Base cabinets", "Excavation and gravel base", "Stucco base coat", "Casing and trim", "Cabinets and countertops"] {
+            assert!(!base_in(said), "{said}");
+        }
+    }
 
     /// A weather barrier is read by the words the trade uses for it, and from nothing
     /// else: a line about sheathing alone, or about flashing, names no barrier.

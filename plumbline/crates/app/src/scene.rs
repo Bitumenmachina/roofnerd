@@ -466,6 +466,64 @@ pub fn rebuild(
     // looks, half its thickness and its top. An eave that hangs past one gets a soffit.
     let mut outside_walls: Vec<(Vec3, Vec3, Vec3, f32, f32)> = Vec::new();
 
+    // ---- Interior woodwork: the base in each room that has base priced on it ----
+    // A board 5 1/4 in high and 5/8 in thick at the foot of the room's walls, along
+    // the room's own outline (the faces of its walls), left out across each door.
+    // It is finish: off with Finishes, and with its level.
+    if show.finishes && show.architecture && !on_plan_view {
+        let (tall, thick) = (5.25_f32 / 12.0, 0.625_f32 / 12.0);
+        for (room, (storey, outline)) in &snap.dress.base {
+            if show.storey.as_ref().is_some_and(|s| storey.as_ref() != Some(s)) || storey.as_ref().is_some_and(|s| show.off_levels.contains(s)) {
+                continue;
+            }
+            let floor = storey.as_ref().and_then(|s| snap.storeys.iter().find(|x| x.path == *s)).and_then(|s| s.elevation).unwrap_or(0.0);
+            // The doors of this level, each as its two ends on the plan and how far
+            // either side of its wall's centre line the wall reaches.
+            let doors: Vec<([f64; 2], [f64; 2], f64)> = snap.drawn.iter().filter(|p| p.kind == Kind::Wall && p.storey == *storey).flat_map(|p| match &p.shape {
+                Shape::Wall { a, b, thickness, holes, .. } => {
+                    let l = ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2)).sqrt().max(1e-9);
+                    let u = [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
+                    holes.iter().filter(|h| h.1 == Kind::Door).map(|h| ([a[0] + u[0] * h.2[0], a[1] + u[1] * h.2[0]], [a[0] + u[0] * h.2[1], a[1] + u[1] * h.2[1]], thickness / 2.0 + 0.1)).collect::<Vec<_>>()
+                }
+                _ => Vec::new(),
+            }).collect();
+            for (i, e0) in outline.iter().enumerate() {
+                let e1 = outline[(i + 1) % outline.len()];
+                let len = ((e1[0] - e0[0]).powi(2) + (e1[1] - e0[1]).powi(2)).sqrt();
+                if len < 0.05 {
+                    continue;
+                }
+                let d = [(e1[0] - e0[0]) / len, (e1[1] - e0[1]) / len];
+                // What of this edge a door takes: a door in a wall that runs along it.
+                let mut cuts: Vec<(f64, f64)> = doors.iter().filter_map(|(p0, p1, reach)| {
+                    let off = |p: &[f64; 2]| ((p[0] - e0[0]) * d[1] - (p[1] - e0[1]) * d[0]).abs();
+                    let at = |p: &[f64; 2]| (p[0] - e0[0]) * d[0] + (p[1] - e0[1]) * d[1];
+                    (off(p0) <= *reach && off(p1) <= *reach).then(|| (at(p0).min(at(p1)), at(p0).max(at(p1))))
+                }).filter(|(t0, t1)| *t1 > 0.0 && *t0 < len).collect();
+                cuts.sort_by(|a, b| a.0.total_cmp(&b.0));
+                let mut from = 0.0;
+                let mut runs: Vec<(f64, f64)> = Vec::new();
+                for (t0, t1) in cuts {
+                    if t0 > from + 0.05 {
+                        runs.push((from, t0));
+                    }
+                    from = from.max(t1);
+                }
+                if len > from + 0.05 {
+                    runs.push((from, len));
+                }
+                // Inside the room is to the left of an outline that runs counter-clockwise.
+                let turn = Quat::from_rotation_y(d[1].atan2(d[0]) as f32);
+                for (t0, t1) in runs {
+                    let mid = (t0 + t1) / 2.0;
+                    let on_plan = [e0[0] + d[0] * mid - d[1] * f64::from(thick) / 2.0, e0[1] + d[1] * mid + d[0] * f64::from(thick) / 2.0];
+                    let middle = to_view(origin, [on_plan[0], on_plan[1], floor]) + Vec3::Y * (tall / 2.0);
+                    build.piece(room, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new((t1 - t0) as f32, tall, thick) }, theme::casework(), 0.6, 0.0, false);
+                }
+            }
+        }
+    }
+
     // ---- The rest of the building ----
     for p in &snap.drawn {
         // Its trade's switch, the level on show, its level's own switch, its system's.

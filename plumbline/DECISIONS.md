@@ -2923,3 +2923,27 @@ estimate prices flashing by the opening, as its line says.
 foundation wall; flashing at roof lines (step, counter, valley), which the roof's
 lines could carry; the barrier's laps and tape.
 
+### Call 73. The base in a room is drawn where it is priced (2026-11-12)
+
+**Why now.** Q23's working assumption, step 4: interior woodwork is to be drawn. It
+was the last of Patrick's seven trades with nothing in the model.
+
+**The call.** A room with base priced on it ("Base and trim", "baseboard", "wood
+base"; never a base cabinet, a gravel base or a base coat) is drawn with its base: a
+board 5 1/4 in high and 5/8 in thick at the foot of its walls, along the room's own
+outline (the faces of its walls, the outline its floor area is the area of), left out
+across each door in a wall that runs along it. It is finish: it goes off with
+Finishes and with its level. It is drawn as wood so that it reads against a wall;
+what it is made of is not read from the line yet.
+
+**The board's size is a drawing size.** The estimate prices base by the LF of the
+room's perimeter, as its line says, and nothing is counted from what is drawn. A
+door's width is not yet taken out of that LF either: the drawing leaves the base out
+at a door and the line still prices the whole perimeter, which is how base is
+usually bought (the offcut is waste) and is said here so that nobody takes the two
+to disagree by accident.
+
+**Not yet:** casing round interior doors and the inside of windows; the kitchen's
+cabinets, which are one priced figure on the room with no layout to draw (a cabinet
+is drawn where one is placed as a thing: call 62's forms); stairs, shelving, crown.
+

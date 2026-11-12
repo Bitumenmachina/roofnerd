@@ -138,8 +138,21 @@ check("one-each: the south wall, right of its door", mean("one-each/01", (880, 5
 check("one-each: the west wall", mean("one-each/01", (480, 520, 600, 640)), lambda c: abs(c[0] - c[1]) < 25 and c[0] > 150, "pale and nearly gray (stucco)")
 # The sample house: priced, its walls are cedar siding; unpriced, the same place is bare.
 p, b = mean("priced/01", (700, 460, 760, 520)), mean("bare/01", (700, 460, 760, 520))
-check("priced: a wall of the sample house", p, lambda c: c[0] - c[2] > 40, "red well over blue (cedar)")
-check("bare: the same place with nothing priced", b, lambda c: c[0] - c[2] < 30 and c[0] > 170, "pale, no cladding")
+# This wall is out of the sun, lit by the sky alone since the house has had a sun and
+# a sky (DECISIONS.md call 68): cedar there measures (132, 114, 98), red 34 over blue,
+# and the bare wall (156, 158, 159), with no colour to it at all. Each test is set
+# between the two and fails on the other's picture: the bare wall is not warm (red 3
+# under blue, wanted more than 24 over) and the cedar is not colourless (34, wanted
+# under 12). Under the lamps these were "more than 40" and "under 30, and brighter
+# than 170"; a wall in shade is no longer that bright.
+cedar = lambda c: c[0] - c[2] > 24
+plain = lambda c: abs(c[0] - c[2]) < 12 and c[0] > 140
+check("priced: a wall of the sample house", p, cedar, "red well over blue (cedar)")
+check("bare: the same place with nothing priced", b, plain, "pale, no cladding")
+# Proved against each other every run: a test that passed on the wrong picture would
+# tell nothing.
+check("the cedar test on the bare wall fails", b, lambda c: not cedar(c), "the bare wall not to pass for cedar")
+check("the bare test on the cedar wall fails", p, lambda c: not plain(c), "the cedar wall not to pass for bare")
 # Its roof: priced, dark standing seam; unpriced, the light gray of a bare plane.
 p, b = mean("priced/01", (760, 290, 860, 330)), mean("bare/01", (760, 290, 860, 330))
 check("priced: its roof", p, lambda c: c[0] < 120, "dark (standing seam)")
