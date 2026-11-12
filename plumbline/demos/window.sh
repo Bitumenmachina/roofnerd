@@ -68,7 +68,7 @@ typed() { xdotool type --delay 250 -- "$1"; sleep 1; if [ -n "${2:-}" ]; then sh
 # A tool taken in hand; with a second word, what it draws with, typed into its fields
 # (a comma goes on to the next field, as Tab does).
 # A tool picked again shows the sizes it will place (DECISIONS.md call 64): with nothing
-# new to type, Enter takes it in hand as it was.
+# new to type, Enter keeps them as they were.
 tool() {
   on "$1"; sleep 2
   if [ -n "${2:-}" ]; then typed "$2" "${3:-}"

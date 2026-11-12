@@ -2664,3 +2664,45 @@ both say so.
 handler as `IfcUnitaryEquipment`, a water heater as `IfcBoiler`/`IfcTank` needs a
 reading of equipment names that does not exist yet (there are no equipment forms).
 
+### Call 66. From judge 19's notes: how sure a clash is shows on its mark; one count; places and prompts reworded (2026-11-12)
+
+Each of these changes something a person sees. None changes a number.
+
+1. **A clash mark's colour says how sure it is** (J19-20: all 21 marks on the made-up
+   house were one red, though 13 are findings and 8 are questions for the field; the
+   release candidate's item 4 is "clashes show their certainty"). Between things that
+   are Known the mark is red; where either rests on something not yet measured it is
+   amber, the colour an Assumed figure already has. Under the Clashes switch, while
+   the marks are on, a line says the two counts beside a spot of each colour.
+   `VISUAL.md` A6 says so.
+2. **One count of clashes.** The estimate window's Clashes tab counted everything it
+   lists (87 on the made-up house: 21 in the same space and 66 holes to cut through
+   walls and floors) while the model window's switch counted 21. Both now count what
+   is in the same space. The tab still lists the holes, under their own heading with
+   their own count.
+3. **A place is written as the read-out under the pointer writes it**: "E 0' 0", N 28'
+   0"", not "(0, 28) ft" (J19-16, J19-27). In the window only: the command line takes
+   a place as `--at 13,8` and says it back the way it was typed. One function
+   (`panels::places`) does it for every row the window shows.
+4. **What is to verify is said thing first**: "Hot to the kitchen sink, elbow 1, what
+   it is: unknown", and a group as "227 for the same reason. The first: ..." (J19-19:
+   "What it is of hot to the kitchen sink, elbow 1: unknown").
+5. **Enter is described one way**: "Enter, then click on the plan." (J19-44: one
+   line said "Enter takes the tool in hand", another "Enter to draw".)
+6. **What is written out is named in a sentence as it is said**: "Can't write out the
+   BIM model (IFC): ...", "the workbook for suppliers" (J19-40: the button's name
+   was put in lower case). A file written from a job with no lines says it has its
+   headings and nothing under them.
+7. **The wheel stops going out** where the building is about a sixth of the size it
+   is framed at (J19-15: it shrank to nothing).
+
+**Not changed, and why.** J19-14 (on plan with every level on show the roof is drawn
+solid over the house): that view is the roof plan, the drawing the roof is taken off
+from, and its lines are coloured by type there (VISUAL.md E2); the roof is its subject,
+not something overhead. Pick a level and the roof over it is broken lines; switch Roof
+off and the walls of every level show. J19-9 (a drag slid the house less than the
+hand moved): the place grabbed is on the ground, and the house stands further off than
+the ground under the pointer, so it moves less across the screen, as it does in Google
+Earth; `demos/glassw.sh` measures the grabbed place itself and it stays under the
+pointer.
+

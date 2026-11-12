@@ -1417,7 +1417,11 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         // hundredth of a notch each (three.js's measure of a wheel).
         let notches = if scroll.unit == MouseScrollUnit::Pixel { scroll.delta.y / 100.0 } else { scroll.delta.y }.clamp(-3.0, 3.0);
         let was = orbit.distance;
-        orbit.distance = (was * 0.9_f32.powf(notches)).clamp(3.0, 6000.0);
+        // Out stops where the building is still a building on the screen, about a
+        // sixth of the size F frames it at (J19-15: forty notches out it shrank to
+        // nothing and only a name tag was left in an empty view).
+        let furthest = (orbit.home.1 * 6.0).clamp(60.0, 6000.0).max(was);
+        orbit.distance = (was * 0.9_f32.powf(notches)).clamp(3.0, furthest);
         let by = orbit.distance / was;
         if doc.plan {
             // On plan the place under the pointer stays under it, which is how a
@@ -1542,8 +1546,12 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
         if let Some(Ok(found)) = &snap.clashes {
             for c in found.found.iter().filter(|c| !c.through) {
                 let at = to_view(doc.origin, c.at);
+                // How sure it is shows on the mark (J19-20: every mark was one red). Between
+                // things that are Known it is a finding and is red; where either rests on
+                // something not yet measured it is a question for the field, and amber.
+                let colour = if c.status == plumbline_world::value::Status::Known { theme::clash() } else { theme::clash_to_verify() };
                 for axis in [Vec3::X, Vec3::Y, Vec3::Z] {
-                    highlight.line(at - axis * 0.75, at + axis * 0.75, theme::clash());
+                    highlight.line(at - axis * 0.75, at + axis * 0.75, colour);
                 }
             }
         }

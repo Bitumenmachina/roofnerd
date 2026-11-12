@@ -55,6 +55,18 @@ impl WriteOut {
             WriteOut::Pm => "For the PM",
         }
     }
+    /// What it is called in the middle of a sentence (J19-40: the button's name put
+    /// in lower case read "the bim model (ifc)").
+    pub fn said(self) -> &'static str {
+        match self {
+            WriteOut::Model => "BIM model (IFC)",
+            WriteOut::Workbook => "estimate workbook",
+            WriteOut::Rows => "estimate as CSV",
+            WriteOut::Supplier => "workbook for suppliers",
+            WriteOut::Subcontractor => "workbook for subcontractors",
+            WriteOut::Pm => "workbook for the PM",
+        }
+    }
     /// What is added to the job's name to name the file.
     pub fn ending(self) -> &'static str {
         match self {
@@ -77,6 +89,16 @@ impl Bring {
             Bring::Prior => "Prior estimate",
             Bring::Model => "Model (IFC)",
             Bring::Sheet => "Maker's sheet",
+        }
+    }
+    /// What it is called in the middle of a sentence.
+    pub fn said(self) -> &'static str {
+        match self {
+            Bring::Prices => "price list",
+            Bring::Assemblies => "assemblies",
+            Bring::Prior => "prior estimate",
+            Bring::Model => "model (IFC)",
+            Bring::Sheet => "maker's sheet",
         }
     }
 }
@@ -633,11 +655,14 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
                 }
                 continue;
             }
-            let mut what = r.label.clone();
-            if let Some(first) = what.get_mut(0..1) {
+            // The thing first, then what about it, then what is known of it: "Hot to
+            // the kitchen sink, elbow 1, what it is: unknown". (J19-19: it read "What it
+            // is of hot to the kitchen sink, elbow 1: unknown", which nobody says.)
+            let mut thing = el.name.clone();
+            if let Some(first) = thing.get_mut(0..1) {
                 first.make_ascii_uppercase();
             }
-            let said = format!("{what} of {}: {}", el.name, crate::theme::trade(&r.text));
+            let said = format!("{thing}, {}: {}", r.label, crate::theme::trade(&r.text));
             match groups.iter_mut().find(|g| g.0 == r.status && g.1 == r.basis) {
                 Some(g) => g.2.push(said),
                 None => groups.push((r.status, r.basis.clone(), vec![said])),
@@ -651,7 +676,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
         s.notes.push((Status::Unknown, format!("{called} is not drawn"), why.clone()));
     }
     for (status, why, said) in groups {
-        let what = if said.len() == 1 { said[0].clone() } else { format!("{} values, the first: {}", said.len(), said[0]) };
+        let what = if said.len() == 1 { said[0].clone() } else { format!("{} for the same reason. The first: {}", said.len(), said[0]) };
         s.notes.push((status, what, why));
     }
     s.notes.sort_by(|a, b| b.0.cmp(&a.0));

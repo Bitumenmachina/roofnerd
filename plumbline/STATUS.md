@@ -4455,3 +4455,29 @@ candidate's table.
   reading that file back now says "16 fixture or outlet" and "6 plumbing fixtures"
   where it said "22 fixture or outlet"; `demos/export.sh` expects the two lines.
   **Still not done:** equipment by sort (an air handler as IfcUnitaryEquipment).
+
+* **From the judge's notes J19-40 to J19-44 and the ones left open before them (call
+  66). Built; the window pieces not yet seen in a picture (the judge still has the
+  display):**
+
+  | Note | What it said | What was done |
+  |---|---|---|
+  | J19-20 | every clash mark one red; the two windows count clashes differently (87 and 21) | a finding is red, a question for the field amber, and the Show panel says how many of each; both windows count what is in the same space |
+  | J19-19 | "What it is of hot to the kitchen sink, elbow 1: unknown" | thing first: "Hot to the kitchen sink, elbow 1, what it is: unknown"; a group is "N for the same reason. The first: ..." |
+  | J19-16, J19-27 | places as bracketed decimal feet | "E 0' 0", N 28' 0"", as the pointer's read-out writes it (`panels::places`, two tests) |
+  | J19-44 | "Enter takes the tool in hand" / "Enter to draw" | "Enter, then click on the plan." everywhere |
+  | J19-40 | "the bim model (ifc)"; an empty job writes files without a word | named as said; "The job has no lines yet: the file has its headings and nothing under them." |
+  | J19-15 | forty notches out the house is gone | the wheel stops where the building is about a sixth of its framed size |
+  | J19-41 | the saved mark is off the window on a real job; a file name in the bar | answered before this note arrived: the bar has no file name and the view buttons moved out of it (not yet seen) |
+  | J19-42 | held: typed door sizes are placed | nothing to do |
+  | J19-43 | "Still to be typed: Sill height" named the wrong field | the judged program is 14fc994; the message was rebuilt after it (which field is empty is now named from the fields themselves). To be seen on the current tree |
+  | J19-14 | plan of all levels is the roof, solid | not changed: it is the roof plan (call 66 says why) |
+  | J19-9 | a drag slid the house less than the hand | not changed: the ground grabbed stays under the hand; the house is further off (call 66) |
+  | J19-2 | the Show switches open below the fold | open |
+  | J19-22, J19-23 | an item's kind has no source; the model number in a title is not read; electrical data on a sheet is not mentioned | open (minor) |
+  | J19-24 | the status line cuts a message that has room | open |
+
+  **Changed behaviour, named:** the Clashes tab's count on the made-up house is 21
+  where it was 87; the to-verify rows, the tool prompts and every place shown in the
+  window read differently (the words above). No figure changed. 268 tests pass.
+

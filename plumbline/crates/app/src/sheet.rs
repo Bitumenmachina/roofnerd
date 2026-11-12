@@ -185,7 +185,10 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             // The budget: the job priced from its allowances and from its lines, compared.
             all.push((Tab::Money, "Budget".to_string(), snap.pricing.as_ref().map(|p| p.elements.len()).unwrap_or(0)));
             all.push((Tab::Verify, "Verify in field".to_string(), snap.verify.questions.len()));
-            all.push((Tab::Clashes, "Clashes".to_string(), snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.len()).unwrap_or(0)));
+            // The count is of what is in the same space, the same count the model window's
+            // Clashes switch gives (J19-20: one said 87 and the other 21, with nothing to
+            // say that 66 of the 87 were holes to cut, which the tab lists apart).
+            all.push((Tab::Clashes, "Clashes".to_string(), snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.iter().filter(|x| !x.through).count()).unwrap_or(0)));
             all.push((Tab::Building, "Building".to_string(), snap.fabric.len()));
             all.push((Tab::Roof, "Roof".to_string(), snap.planes.len()));
             for d in [Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing] {

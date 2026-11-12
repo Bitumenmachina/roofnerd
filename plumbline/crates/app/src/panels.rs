@@ -117,7 +117,53 @@ pub fn pretty(label: &str) -> String {
 pub fn shown(row: &view::Row) -> String {
     match row.number {
         Some(x) => amount(Some(x), if row.unit == "EA" { 0 } else { 2 }, &row.unit),
-        None => theme::trade(&row.text),
+        None => places(&theme::trade(&row.text)),
+    }
+}
+
+/// A place in a row's words, written the way the read-out under the pointer writes one:
+/// "(0, 28) to (0, 0) ft" is "E 0' 0", N 28' 0" to E 0' 0", N 0' 0""; a third figure is the
+/// height, H. (J19-16, J19-27: a bracketed pair of decimal feet is not how a builder
+/// says where something is, and the window wrote one place two ways.) Words with no
+/// such pair in them come back as they were.
+pub fn places(words: &str) -> String {
+    let mut out = String::new();
+    let mut rest = words;
+    let mut any = false;
+    while let Some(open) = rest.find('(') {
+        let Some(close) = rest[open..].find(')').map(|c| open + c) else { break };
+        let figures: Vec<Option<f64>> = rest[open + 1..close].split(", ").map(|f| f.parse().ok()).collect();
+        out.push_str(&rest[..open]);
+        if (2..=3).contains(&figures.len()) && figures.iter().all(Option::is_some) {
+            let said: Vec<String> = figures.iter().flatten().zip(["E", "N", "H"]).map(|(f, way)| format!("{way} {}", units::feet_as_ft_in(*f, 16))).collect();
+            out.push_str(&said.join(", "));
+            any = true;
+        } else {
+            out.push_str(&rest[open..=close]);
+        }
+        rest = &rest[close + 1..];
+    }
+    // The unit that followed the figures is in the figures now.
+    out.push_str(if any { rest.strip_prefix(" ft").unwrap_or(rest) } else { rest });
+    out
+}
+
+#[cfg(test)]
+mod place_words {
+    use super::places;
+
+    #[test]
+    fn a_pair_of_feet_is_said_as_east_and_north() {
+        assert_eq!(places("(0, 28) to (0, 0) ft"), "E 0' 0\", N 28' 0\" to E 0' 0\", N 0' 0\"");
+        assert_eq!(places("(-13.3475, 8.3125) ft"), "E -13' 4 3/16\", N 8' 3 3/4\"");
+        assert_eq!(places("(1, 2, 8.5) ft"), "E 1' 0\", N 2' 0\", H 8' 6\"");
+    }
+
+    #[test]
+    fn other_words_are_left_alone() {
+        for said in ["unknown", "24 ft", "brick (modular)", "(Assumed) 3 ft", "a (b, c) d"] {
+            assert_eq!(places(said), said);
+        }
     }
 }
 
@@ -750,6 +796,18 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 doc.show.clashes = !doc.show.clashes;
                 doc.redraw();
             }));
+            // What the two colours of mark mean, where the marks are switched on (J19-20).
+            if doc.show.clashes || doc.tab == crate::model::Tab::Clashes {
+                let sure = snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.iter().filter(|x| !x.through && x.status == plumbline_world::value::Status::Known).count()).unwrap_or(0);
+                c.spawn((Node { column_gap: px(6.0), align_items: AlignItems::Center, padding: UiRect::new(px(22.0), px(8.0), px(0.0), px(4.0)), flex_wrap: FlexWrap::Wrap, ..default() }, Pickable::IGNORE)).with_children(|r| {
+                    for (colour, n, what) in [(theme::clash(), sure, if sure == 1 { "finding" } else { "findings" }), (theme::clash_to_verify(), found - sure, "to verify in the field")] {
+                        if n > 0 {
+                            spot(r, colour);
+                            r.spawn((text(fonts, format!("{n} {what}"), 11.0, Weight::Regular, theme::ink_soft()), Pickable::IGNORE));
+                        }
+                    }
+                });
+            }
         }
 
         if !snap.systems.is_empty() {
@@ -926,7 +984,7 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
                 theme::field(strip, fonts, label, typed, "", 1, width);
             }
             let hint = match &doc.entry {
-                Some((Entry::Settings(_), _)) => "Tab to the next. Enter takes the tool in hand. Esc cancels.".to_string(),
+                Some((Entry::Settings(_), _)) => "Tab to the next. Enter, then click on the plan. Esc cancels.".to_string(),
                 Some((Entry::Length, _)) => "Toward the pointer, like 24 ft or 12' 6\". Enter sets it.".to_string(),
                 Some((Entry::Distance, _)) => "As the drawing says it, like 41' 3\" or 30 ft. Enter sets it.".to_string(),
                 Some((Entry::Room, _)) => "Like Kitchen. Enter adds the room.".to_string(),

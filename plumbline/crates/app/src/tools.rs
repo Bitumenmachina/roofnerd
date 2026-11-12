@@ -282,7 +282,7 @@ fn begin(doc: &mut Doc, tool: Tool, ask: bool) {
         });
         let again = doc.draw.settings.contains_key(tool.name());
         doc.open_form(Entry::Settings(tool), shown, 0);
-        doc.say(Tone::Done, if again { format!("{}: this is what it will place. Type over anything to change it; Enter takes it in hand.", tool.name()) } else { format!("{}: type each value, Tab to the next, Enter to draw.", tool.name()) });
+        doc.say(Tone::Done, if again { format!("{}: this is what it will place. Type over anything to change it. Enter, then click on the plan.", tool.name()) } else { format!("{}: type each value, Tab to the next. Enter, then click on the plan.", tool.name()) });
     } else {
         doc.draw.tool = Some(tool);
         doc.say(Tone::Done, format!("{} in hand.", tool.name()));
@@ -816,7 +816,7 @@ pub fn clicks(mut doc: ResMut<Doc>, mouse: Res<ButtonInput<MouseButton>>, window
         if let Some((Entry::Settings(tool), _)) = doc.entry.clone() {
             if windows.single().ok().and_then(|w| w.cursor_position().map(|c| over_model(w, c))).unwrap_or(false) {
                 let empty = doc.form.iter().enumerate().filter(|(i, v)| v.is_empty() && *i != doc.form_at).map(|(i, _)| tool.fields()[i].0).collect::<Vec<_>>();
-                doc.say(Tone::Refused, format!("Nothing was placed: the {}'s sizes are still open. {}Enter takes it in hand; then click.", tool.name().to_lowercase(), if empty.is_empty() { String::new() } else { format!("Still to be typed: {}. ", empty.join(", ")) }));
+                doc.say(Tone::Refused, format!("Nothing was placed: the {}'s sizes are still open. {}Press Enter first, then click.", tool.name().to_lowercase(), if empty.is_empty() { String::new() } else { format!("Still to be typed: {}. ", empty.join(", ")) }));
                 doc.touch();
             }
         }

@@ -428,7 +428,7 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
                             // Enter that cannot finish says why (J18-2).
                             if event.logical_key == Key::Enter && text.is_empty() {
                                 if let Entry::Settings(tool) = field {
-                                    doc.say(Tone::Refused, format!("{}: {} is still to be typed. Then Enter takes it in hand.", tool.name(), tool.fields()[i].0));
+                                    doc.say(Tone::Refused, format!("{}: {} is still to be typed. Then Enter, and click on the plan.", tool.name(), tool.fields()[i].0));
                                 }
                             }
                         }

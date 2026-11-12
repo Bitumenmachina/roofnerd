@@ -161,7 +161,7 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
             // What was not used or not read has to be seen: it is said over the model.
             doc.say(if to_see { Tone::Warned } else { Tone::Done }, out);
         }
-        Err(why) => crate::tools::cant(doc, &format!("bring in the {}", what.name().to_lowercase()), why),
+        Err(why) => crate::tools::cant(doc, &format!("bring in the {}", what.said()), why),
     }
     doc.redraw();
 }
@@ -213,6 +213,9 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
     let to = doc.path.with_file_name(&name);
     // Written again, it takes the place of the one written before, and says so (J19-38).
     let again = to.exists();
+    // A job with nothing priced writes headings and nothing under them, and says so
+    // (J19-40: it wrote the file without a word that nothing was in it).
+    let bare = !matches!(what, WriteOut::Model) && plumbline_world::view::estimate(&mut doc.job).lines.is_empty();
     let done: Result<String, String> = (|| {
         if std::fs::read_to_string(&to).ok().is_some_and(|text| plumbline_world::file::load(&text).is_ok()) {
             return Err(format!("{name} is a job: what is written out is not written over a job"));
@@ -249,9 +252,16 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
         }
     })();
     match done {
-        Ok(out) if again => doc.say(Tone::Done, format!("{out} It takes the place of the {name} that was there.")),
-        Ok(out) => doc.say(Tone::Done, out),
-        Err(why) => crate::tools::cant(doc, &format!("write out the {}", what.name().to_lowercase()), why),
+        Ok(mut out) => {
+            if bare {
+                out.push_str(" The job has no lines yet: the file has its headings and nothing under them.");
+            }
+            if again {
+                out.push_str(&format!(" It takes the place of the {name} that was there."));
+            }
+            doc.say(Tone::Done, out)
+        }
+        Err(why) => crate::tools::cant(doc, &format!("write out the {}", what.said()), why),
     }
     doc.touch();
 }

@@ -36,7 +36,8 @@ themselves are named at the top of `crates/app/src/theme.rs`.
    panel is as tall as what is in it, not a tall sheet half empty.
 6. **One way to say how sure.** Known is plain ink; Assumed is amber; Unknown is red;
    a figure's colour and its mark agree. Red is also what is in the same space as
-   something else. A panel is not a column of red sentences: what is not yet priced
+   something else, where both are Known; where either is not yet measured the mark
+   is amber, and the Show panel says how many of each. A panel is not a column of red sentences: what is not yet priced
    or not yet known is said once, in a place, not on every row.
 7. **One accent**, a blue, marks what is selected, in hand or switched on.
    Accent-coloured text is never the only thing that says so.

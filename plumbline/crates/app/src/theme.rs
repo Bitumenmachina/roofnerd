@@ -603,6 +603,12 @@ pub fn clash() -> Color {
     Color::srgb(0.86, 0.12, 0.16)
 }
 
+/// The mark of a clash that rests on something not yet measured: a question for the
+/// field. Amber, as an Assumed figure is, and bright enough to read on the model.
+pub fn clash_to_verify() -> Color {
+    Color::srgb(0.95, 0.60, 0.05)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
