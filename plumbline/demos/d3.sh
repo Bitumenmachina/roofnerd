@@ -44,7 +44,7 @@ K=(--status Known --source "sample detail 3/A-501")
 
 "$P" sample "$T/job.json" >/dev/null
 echo "== 0. The condition, as it sits in the job =="
-"$P" show "$T/job.json" | grep -A5 "Parapet with copper coping  \[Condition\]" | sed 's/^/  /'
+"$P" show "$T/job.json" | grep -A5 "Parapet with copper coping  \[assembly\]" | sed 's/^/  /'
 
 echo
 echo "== 1. One parapet, one condition, four lines; nothing assumed for them =="

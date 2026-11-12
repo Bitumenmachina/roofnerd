@@ -48,12 +48,11 @@ fn each_amount_is_a_formula_that_comes_to_the_jobs_figure_and_the_recap_is_formu
             // A line with no price yet has its formula all the same, and it comes to
             // nothing until a price is typed on the sheet (the seventeenth judgment, J17A-6).
             Out::FormulaText { text, shown } => {
+                // The one line of this job with no cost type and no price.
                 assert_eq!(row[1], Out::Text("Copper standing seam, installed".into()));
-                assert_eq!(*text, format!("=IF(OR(D{n}=\"\",F{n}=\"\"),\"\",ROUND(D{n}*F{n},2))"));
+                assert_eq!(*text, format!("=IF(OR(C{n}=\"\",D{n}=\"\",F{n}=\"\"),\"\",ROUND(D{n}*F{n},2))"));
                 assert_eq!(shown, "");
             }
-            // A line with no cost type is in no total, so it has no formula either.
-            Out::None => assert_eq!(row[2], Out::Text(String::new()), "row {n}"),
             other => panic!("row {n}: {other:?}"),
         }
     }
@@ -76,7 +75,7 @@ fn each_amount_is_a_formula_that_comes_to_the_jobs_figure_and_the_recap_is_formu
     match &general[1] {
         Out::FormulaText { text, shown } => {
             assert_eq!(shown, "none");
-            assert!(text.starts_with("=IF(COUNTIFS(Estimate!$C$") && text.contains("\"General conditions\"") && text.contains(",\"none\",SUMIF("), "{text}");
+            assert!(text.starts_with("=IF(COUNTIFS(Estimate!$C$") && text.contains("\"General conditions\"") && text.contains("=0,\"none\",\"no figure\"),SUMIF("), "{text}");
         }
         other => panic!("{other:?}"),
     }

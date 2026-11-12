@@ -107,6 +107,16 @@ pub enum Kind {
 
 impl Kind {
     /// The start of the path given to a new element of this kind.
+    /// The kind as a builder says it: what a list or a refusal calls a thing of this kind.
+    pub fn said(self) -> &'static str {
+        match self {
+            Kind::RoofPlane => "roof plane",
+            Kind::LowSlopeArea => "low-slope area",
+            Kind::PitchBreak => "pitch break",
+            Kind::Condition => "assembly",
+            other => other.stem(),
+        }
+    }
     pub fn stem(self) -> &'static str {
         match self {
             Kind::Job => "job",

@@ -463,6 +463,12 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
 /// an assembly puts on what it goes on. After them come three columns for each further
 /// figure a line's quantity names (`Figure 1`, `Figure 1: how sure`, `Figure 1: where
 /// from`), as many as the line with the most has.
+/// The starter library of assemblies the program ships with (`library/sixteen-divisions.csv`):
+/// whole assemblies for a house's walls, floors, rooms, roof, openings and runs, with a
+/// line in every one of the sixteen divisions and no price in it. It is the file as it
+/// stands in the repository, read by the same reader as any other library.
+pub const STARTER_LIBRARY: &str = include_str!("../../../library/sixteen-divisions.csv");
+
 pub const ASSEMBLY_HEADINGS: [&str; 27] = [
     "Assembly",
     "Goes on",

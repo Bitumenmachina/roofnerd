@@ -182,6 +182,10 @@ pub enum Outside {
     Both,
     /// Its level's walls enclose nothing, so which face is out is not known.
     NotKnown,
+    /// Part of its length bounds what its level's walls enclose and part runs on
+    /// outside it: it is one wall where two are built, and is dressed on both faces
+    /// until it is split where it leaves the house.
+    Mixed,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -208,7 +212,7 @@ impl WallDress {
     }
     /// Whether what is priced is drawn on both faces.
     pub fn both(&self) -> bool {
-        matches!(self.outside, Outside::Both | Outside::NotKnown)
+        matches!(self.outside, Outside::Both | Outside::NotKnown | Outside::Mixed)
     }
 }
 
@@ -248,35 +252,57 @@ fn any(words: &[String], phrases: &[&str]) -> bool {
 }
 
 /// A line's parts between its commas, each cut where it turns to something else ("with
-/// brick mold casing", "over felt", "at windows"): the first is its head.
-fn parts(text: &str) -> Vec<Vec<String>> {
-    const TURNS: [&str; 14] = ["with", "over", "on", "at", "for", "from", "behind", "under", "below", "above", "against", "to", "w", "into"];
-    text.split([',', ';', '(']).map(|part| words(part).into_iter().take_while(|w| !TURNS.contains(&w.as_str())).collect::<Vec<String>>()).filter(|w: &Vec<String>| !w.is_empty()).collect()
+/// brick mold casing", "over felt", "at windows", "and flashing"): the first is its
+/// head. What the work is done with comes first in a line as often as not ("Labor to
+/// install lap siding", "Furnish and install ..."), and is not part of what it is.
+fn parts(text: &str, not: &[&str]) -> Vec<Vec<String>> {
+    const TURNS: [&str; 15] = ["with", "over", "on", "at", "for", "from", "behind", "under", "below", "above", "against", "to", "w", "into", "per"];
+    const LEAD_INS: [&str; 9] = ["labor to install", "furnish and install", "supply and install", "installation of", "labor to", "labor for", "install", "installed", "labor"];
+    let mut out = Vec::new();
+    for (k, part) in text.split([',', ';', '(']).enumerate() {
+        let mut w = words(part);
+        if k == 0 {
+            if let Some(lead) = LEAD_INS.iter().find(|l| at(&w, l) == Some(0)) {
+                // The lead-in alone is a head of its own kind ("Labor, lap siding"): kept empty.
+                w.drain(..lead.split(' ').count());
+            }
+        }
+        // Cut at a turn, and at "and" when what follows it is something else ("and flashing").
+        let cut = w.iter().enumerate().position(|(i, x)| TURNS.contains(&x.as_str()) || (x == "and" && w.get(i + 1).is_some_and(|next| not.contains(&next.as_str()))));
+        w.truncate(cut.unwrap_or(w.len()));
+        if !w.is_empty() || k == 0 {
+            out.push(w);
+        }
+    }
+    out
 }
 
-/// The one of `table` a line names (see the top of this file): by its head, or, when its
-/// head only names the kind of thing, by what follows. Among several in the same part
-/// the one named first wins, and of two at the same word the one earlier in the table.
-fn named<T: Copy>(text: &str, table: &[(T, &[&str])], kind: &[&str], not: &[&str]) -> Option<T> {
-    let parts = parts(text);
-    let head = parts.first()?;
-    if any(head, not) {
+/// The one of `table` a line names (see the top of this file). A word for something
+/// else anywhere in what the line is (not in what it is laid over or set with) and it
+/// is not a finish. Its head names it; a head that names none is refined by what
+/// follows its commas ("Roofing, standing seam", "North wall, lap siding"). Among
+/// several in one part the one named first wins, and of two at the same word the one
+/// earlier in the table.
+fn named<T: Copy>(text: &str, table: &[(T, &[&str])], not: &[&str]) -> Option<T> {
+    let parts = parts(text, not);
+    if parts.iter().any(|part| any(part, not)) {
         return None;
     }
     let first_in = |part: &Vec<String>| table.iter().filter_map(|(what, phrases)| phrases.iter().filter_map(|p| at(part, p)).min().map(|i| (i, *what))).min_by_key(|(i, _)| *i).map(|(_, what)| what);
-    if let Some(what) = first_in(head) {
-        return Some(what);
-    }
-    if any(head, kind) {
-        return parts[1..].iter().find_map(first_in);
-    }
-    None
+    parts.iter().find_map(first_in)
 }
 
-/// Whether a line is about the thing itself: its head names it or its kind, and holds no
-/// word for something else.
+/// Whether a line is about the thing itself: its head names it or its kind, and nothing
+/// in the line is a word for something else.
 fn about<T: Copy>(text: &str, table: &[(T, &[&str])], kind: &[&str], not: &[&str]) -> bool {
-    parts(text).first().is_some_and(|head| !any(head, not) && (any(head, kind) || table.iter().any(|(_, p)| any(head, p))))
+    let parts = parts(text, not);
+    !parts.iter().any(|part| any(part, not)) && parts.iter().any(|part| any(part, kind) || table.iter().any(|(_, p)| any(part, p)))
+}
+
+/// The words of a line that say what it is, less what it is laid over or set with: a
+/// color is read from these ("Brick veneer with gray mortar" is not gray brick).
+fn its_own(text: &str, not: &[&str]) -> String {
+    parts(text, not).iter().map(|p| p.join(" ")).collect::<Vec<_>>().join(", ")
 }
 
 const CLADDINGS: &[(Cladding, &[&str])] = &[
@@ -285,33 +311,31 @@ const CLADDINGS: &[(Cladding, &[&str])] = &[
     (Cladding::MetalPanel, &["corrugated metal", "metal siding", "metal panel", "metal panels", "corrugated"]),
     (Cladding::Panel, &["panel siding", "fiber cement panel", "fiber cement panels", "cement panel", "cement panels", "hardie panel", "composite panel", "composite panels"]),
     (Cladding::Brick, &["brick", "bricks"]),
-    (Cladding::Block, &["cmu", "concrete block", "split face", "block"]),
-    (Cladding::Stone, &["stone", "ledgestone", "fieldstone", "limestone", "ashlar", "granite"]),
+    (Cladding::Block, &["cmu", "concrete block", "split face", "masonry block", "block veneer"]),
+    (Cladding::Stone, &["stone", "stones", "ledgestone", "fieldstone", "limestone", "ashlar", "granite"]),
     (Cladding::Stucco, &["stucco", "eifs"]),
     (Cladding::Shingles, &["shingle", "shingles", "shake", "shakes"]),
-    (Cladding::LapSiding, &["lap siding", "lap", "clapboard", "clapboards", "bevel", "hardie plank", "hardieplank", "plank siding"]),
+    (Cladding::LapSiding, &["lap siding", "dutch lap", "clapboard", "clapboards", "bevel", "hardie plank", "hardieplank", "plank siding"]),
 ];
-const CLADDING_KIND: &[&str] = &["siding", "cladding", "veneer", "exterior finish"];
 const NOT_CLADDING: &[&str] = &[
     "sill", "sills", "flashing", "nails", "nail", "fasteners", "screws", "removal", "remove", "demolition", "demo", "tear", "haul", "molding", "moulding", "mold", "mould", "casing", "trim", "paint",
     "painting", "primer", "caulk", "caulking", "sealant", "sealer", "countertop", "countertops", "backsplash", "surround", "interior", "ties", "tie", "tape", "apron", "ledge", "lintel", "hearth",
-    "mantel", "backer", "flooring", "floor", "paver", "pavers", "baseboard", "furring", "wrap", "repair", "patch", "cleaning", "wash", "coping", "accessories", "allowance",
+    "mantel", "backer", "flooring", "floor", "paver", "pavers", "baseboard", "furring", "wrap", "repair", "patch", "cleaning", "wash", "coping", "accessories", "allowance", "vanity", "counter", "top", "splices", "splice", "rebar", "mounting", "fire", "glass", "fireplace",
 ];
 
 const ROOFINGS: &[(Roofing, &[&str])] = &[
     (Roofing::StandingSeam, &["standing seam", "seam panels", "copper", "zinc", "metal roofing", "metal roof"]),
-    (Roofing::MetalPanel, &["5v", "crimp", "corrugated", "metal panels", "metal panel", "r panel", "ribbed"]),
+    (Roofing::MetalPanel, &["5v", "crimp", "corrugated", "metal panels", "metal panel", "r panel", "ribbed", "galvalume"]),
     (Roofing::MetalShingles, &["metal shingles", "metal shingle", "stone coated"]),
-    (Roofing::Slate, &["slate"]),
+    (Roofing::Slate, &["slate", "slates"]),
     (Roofing::Tile, &["tile", "tiles", "barrel"]),
     (Roofing::Shakes, &["shake", "shakes", "cedar shingle", "cedar shingles", "wood shingle", "wood shingles"]),
     (Roofing::Membrane, &["membrane", "epdm", "tpo", "built up", "bitumen", "torch down", "torchdown", "rubber roof", "rubber roofing", "rolled roofing", "roll roofing"]),
     (Roofing::AsphaltShingles, &["asphalt", "shingle", "shingles", "composition", "architectural", "dimensional", "three tab", "3 tab"]),
 ];
-const ROOFING_KIND: &[&str] = &["roofing", "roof", "roof covering"];
 const NOT_ROOFING: &[&str] = &[
     "underlayment", "felt", "flashing", "gutter", "gutters", "drip", "strip", "tear", "tearoff", "removal", "remove", "vent", "vents", "nails", "sheathing", "decking", "deck", "insulation", "ice",
-    "edge", "repair", "patch", "coating", "sealant", "snow", "guard", "guards", "cricket", "skylight", "boot", "boots", "framing", "trusses", "rafters", "allowance",
+    "edge", "repair", "patch", "coating", "sealant", "snow", "guard", "guards", "cricket", "skylight", "boot", "boots", "framing", "trusses", "rafters", "allowance", "starter", "hip", "ridge", "cap", "caps", "batten", "battens",
 ];
 
 const SASHES: &[(Sash, &[&str])] = &[
@@ -320,12 +344,12 @@ const SASHES: &[(Sash, &[&str])] = &[
     (Sash::Slider, &["slider", "sliding", "gliding", "glider"]),
     (Sash::Awning, &["awning"]),
     (Sash::Hopper, &["hopper"]),
-    (Sash::Fixed, &["fixed", "picture", "direct set"]),
+    (Sash::Fixed, &["fixed", "picture window", "picture unit", "direct set"]),
 ];
 const WINDOW_KIND: &[&str] = &["window", "windows", "unit", "sash"];
 const NOT_WINDOW: &[&str] = &[
     "flashing", "tape", "trim", "casing", "screen", "screens", "treatment", "treatments", "blind", "blinds", "shade", "shades", "sealant", "hardware", "sill", "stool", "apron", "film", "well",
-    "removal", "remove", "shutter", "shutters", "curtain", "curtains", "drapes", "paint", "caulk", "allowance",
+    "removal", "remove", "shutter", "shutters", "curtain", "curtains", "drapes", "paint", "caulk", "allowance", "molding", "moulding",
 ];
 
 const LEAVES: &[(Leaf, &[&str])] = &[
@@ -341,7 +365,7 @@ const NOT_DOOR: &[&str] = &[
 ];
 
 const GUTTERS: &[((), &[&str])] = &[((), &["gutter", "gutters", "eavestrough", "eavestroughs"])];
-const NOT_GUTTER: &[&str] = &["apron", "flashing", "remove", "removal", "guard", "guards", "cleaning", "screen", "screens", "repair"];
+const NOT_GUTTER: &[&str] = &["apron", "flashing", "remove", "removal", "guard", "guards", "cleaning", "screen", "screens", "repair", "hanger", "hangers", "cap", "caps", "bracket", "brackets", "outlet", "outlets", "miter", "miters", "screws", "sealant"];
 
 const TONES: &[(&str, [u8; 3])] = &[
     // A species named with a color in it is the species: red cedar is cedar.
@@ -388,31 +412,33 @@ const TONES: &[(&str, [u8; 3])] = &[
 /// The color a text names, if it names one: the one named first, a longer name before a
 /// shorter one that starts at the same word.
 pub fn tone_in(text: &str) -> Option<Tone> {
-    let w = words(text);
+    // What a line is laid over or set with has a color too, and it is not the line's.
+    let w = words(&its_own(text, &[]));
     TONES.iter().enumerate().filter_map(|(k, (word, rgb))| at(&w, word).map(|i| (i, k, Tone { word, rgb: *rgb }))).min_by_key(|(i, k, _)| (*i, *k)).map(|(_, _, t)| t)
 }
 
 /// The cladding a line names, if it is a line for one.
 pub fn cladding_in(text: &str) -> Option<Cladding> {
-    named(text, CLADDINGS, CLADDING_KIND, NOT_CLADDING).or_else(|| {
+    named(text, CLADDINGS, NOT_CLADDING).or_else(|| {
         // "Siding" and nothing more particular is lap siding, which is what the word means alone.
-        parts(text).first().filter(|head| !any(head, NOT_CLADDING) && any(head, &["siding"])).map(|_| Cladding::LapSiding)
+        let parts = parts(text, NOT_CLADDING);
+        (!parts.iter().any(|p| any(p, NOT_CLADDING)) && parts.iter().any(|p| any(p, &["siding", "lap"]))).then_some(Cladding::LapSiding)
     })
 }
 
 /// The roofing a line names, if it is a line for one.
 pub fn roofing_in(text: &str) -> Option<Roofing> {
-    named(text, ROOFINGS, ROOFING_KIND, NOT_ROOFING)
+    named(text, ROOFINGS, NOT_ROOFING)
 }
 
 /// How a window operates, if a line for the window says.
 pub fn sash_in(text: &str) -> Option<Sash> {
-    named(text, SASHES, WINDOW_KIND, NOT_WINDOW)
+    named(text, SASHES, NOT_WINDOW)
 }
 
 /// How a door's leaf is built, if a line for the door says.
 pub fn leaf_in(text: &str) -> Option<Leaf> {
-    named(text, LEAVES, DOOR_KIND, NOT_DOOR)
+    named(text, LEAVES, NOT_DOOR)
 }
 
 /// Whether a text says the lites are divided, and how many when it gives a count: "6
@@ -544,19 +570,28 @@ pub fn dress(job: &mut Job) -> Dress {
             continue;
         }
         let (u, left) = ([dx / length, dy / length], [-dy / length, dx / length]);
-        let mid = [(w.a[0] + w.b[0]) / 2.0, (w.a[1] + w.b[1]) / 2.0];
         let reach = w.t / 2.0 + 0.25;
         let outside = match w.storey.as_ref().and_then(|s| enclosed.get(s)).and_then(|r| r.as_ref()) {
             None => Outside::NotKnown,
             Some(e) => {
-                let l = e.indoors([mid[0] + left[0] * reach, mid[1] + left[1] * reach]);
-                let r = e.indoors([mid[0] - left[0] * reach, mid[1] - left[1] * reach]);
-                match (l, r) {
-                    (false, true) => Outside::Left,
-                    (true, false) => Outside::Right,
-                    (true, true) => Outside::Neither,
-                    (false, false) => Outside::Both,
-                }
+                // Looked at in five places along it, not at its middle alone: a wall
+                // that is the house's side for part of its length and a garden wall for
+                // the rest is not either one (J17C-12).
+                let at_each: Vec<Outside> = [0.1, 0.3, 0.5, 0.7, 0.9]
+                    .iter()
+                    .map(|f| {
+                        let p = [w.a[0] + dx * f, w.a[1] + dy * f];
+                        let l = e.indoors([p[0] + left[0] * reach, p[1] + left[1] * reach]);
+                        let r = e.indoors([p[0] - left[0] * reach, p[1] - left[1] * reach]);
+                        match (l, r) {
+                            (false, true) => Outside::Left,
+                            (true, false) => Outside::Right,
+                            (true, true) => Outside::Neither,
+                            (false, false) => Outside::Both,
+                        }
+                    })
+                    .collect();
+                if at_each.iter().all(|o| *o == at_each[0]) { at_each[0] } else { Outside::Mixed }
             }
         };
         let out_way = match outside {
@@ -599,7 +634,7 @@ pub fn dress(job: &mut Job) -> Dress {
         }
         let on = index.get(&w.path).map(|e| texts(job, *e)).unwrap_or_default();
         let named: Vec<(Cladding, Option<Tone>, String, bool, Option<f64>)> =
-            on.iter().filter_map(|(text, by)| cladding_in(text).map(|what| (what, tone_in(text), by.clone(), at(&words(text), "wainscot").is_some(), height_in(text)))).collect();
+            on.iter().filter_map(|(text, by)| cladding_in(text).map(|what| (what, tone_in(text), by.clone(), at(&words(&its_own(text, NOT_CLADDING)), "wainscot").is_some(), height_in(text)))).collect();
         let cladding = first_and_also(named.iter().filter(|n| !n.3).map(|n| (n.0, n.1, n.2.clone())), Cladding::said);
         let low = first_and_also(named.iter().filter(|n| n.3).map(|n| (n.0, n.1, n.2.clone())), Cladding::said);
         let wainscot = low.map(|said| {
@@ -636,7 +671,7 @@ pub fn dress(job: &mut Job) -> Dress {
                 out.openings.insert(path, OpeningDress { sash: None, leaf, divided, tone });
             }
             Kind::Eave => {
-                if let Some((text, by)) = on.iter().find(|(text, _)| named(text, GUTTERS, &[], NOT_GUTTER).is_some()) {
+                if let Some((text, by)) = on.iter().find(|(text, _)| named(text, GUTTERS, NOT_GUTTER).is_some()) {
                     out.gutters.insert(path, Said { what: (), tone: tone_in(text), by: by.clone(), also: Vec::new() });
                 }
             }
@@ -669,6 +704,7 @@ fn wall_said(w: &WallDress) -> (String, Vec<String>) {
         (_, Some(way)) => format!("on its {} face", compass(way)),
         (Outside::Neither, _) => "a partition: both its faces are inside".to_string(),
         (Outside::Both, _) => "on both faces: it stands outside what its level's walls enclose".to_string(),
+        (Outside::Mixed, _) => "on both faces: part of it bounds what its level's walls enclose and part runs on outside; split it where it leaves the house and each part is dressed as it is".to_string(),
         _ => "on both faces: which is outside is not known (its level's walls enclose nothing)".to_string(),
     };
     let mut more = Vec::new();
@@ -687,22 +723,29 @@ fn wall_said(w: &WallDress) -> (String, Vec<String>) {
     }
     // A wainscot as tall as the wall, or taller, is the whole face.
     let whole = w.wainscot.as_ref().is_some_and(|(_, to, _)| *to >= w.height - 1e-6);
+    if let (true, Some((s, to, _))) = (whole, &w.wainscot) {
+        let taller = if *to > w.height + 1e-6 { format!("written to {}, taller than this {} wall, so it covers the wall", ft(*to), ft(w.height)) } else { format!("to {}, the whole of this wall", ft(*to)) };
+        let first = format!("{}{} wainscot {taller}, {face} ({}){}", s.what.said(), toned(&s.tone), s.by, also_wainscot(&s.also));
+        if let Some(c) = &w.cladding {
+            more.push(format!("{}{} is priced on it ({}) and not drawn: the wainscot covers the wall{}", c.what.said(), toned(&c.tone), c.by, also(&c.also)));
+        }
+        return (first, more);
+    }
     let first = match &w.cladding {
-        Some(c) if whole => format!("{}{} is priced on it ({}) and not drawn: the wainscot covers the wall{}", c.what.said(), toned(&c.tone), c.by, also(&c.also)),
         Some(c) => format!("{}{}, {face} ({}){}", c.what.said(), toned(&c.tone), c.by, also(&c.also)),
-        None if w.wainscot.is_some() && whole => face.clone(),
         None if w.wainscot.is_some() => format!("bare above its wainscot, {face}: nothing priced on it names a cladding"),
         None => format!("bare, {face}: nothing priced on it names a cladding"),
     };
     if let Some((s, to, written)) = &w.wainscot {
-        let how_high = match (whole, written) {
-            (true, _) => format!("to {}, which is the whole of this {} wall, {face}", ft(*to), ft(w.height)),
-            (false, true) => format!("to {}", ft(*to)),
-            (false, false) => format!("to {}, a height no line gives in feet and inches", ft(*to)),
-        };
-        more.push(format!("{}{} wainscot {how_high} ({}){}", s.what.said(), toned(&s.tone), s.by, also(&s.also)));
+        let how_high = if *written { format!("to {}", ft(*to)) } else { format!("to {}, a height no line gives in feet and inches", ft(*to)) };
+        more.push(format!("{}{} wainscot {how_high} ({}){}", s.what.said(), toned(&s.tone), s.by, also_wainscot(&s.also)));
     }
     (first, more)
+}
+
+/// A second wainscot priced on a wall is said to be a wainscot.
+fn also_wainscot(others: &[(String, String)]) -> String {
+    others.iter().map(|(what, by)| format!("; also priced on it and not drawn: {what} wainscot ({by})")).collect()
 }
 
 fn window_said(o: Option<&OpeningDress>) -> String {
@@ -892,6 +935,60 @@ mod tests {
         assert_eq!(leaf_in("Storm door, full view"), Some(Leaf::Glazed));
         assert_eq!(leaf_in("Interior door, six panel, prehung"), Some(Leaf::Panel));
         assert_eq!(Leaf::Overhead.said(), "an overhead door");
+    }
+
+    /// The judge of the fixes (J17C-9, 10, 13, 15, 16): the honest lines the head rule
+    /// dropped, and the ones that are not a finish and still dressed.
+    #[test]
+    fn the_nearest_lines_to_the_first_fix_read_as_what_they_are() {
+        for (text, want) in [
+            ("North wall, lap siding", Some(Cladding::LapSiding)),
+            ("Brick veneer and flashing", Some(Cladding::Brick)),
+            ("LABOR, LAP SIDING", Some(Cladding::LapSiding)),
+            ("Labor to install lap siding", Some(Cladding::LapSiding)),
+            ("Furnish and install brick veneer", Some(Cladding::Brick)),
+            ("Stones veneer", Some(Cladding::Stone)),
+            ("Wainscot, stone, 36 in", Some(Cladding::Stone)),
+            ("Lap siding above stone wainscot", Some(Cladding::LapSiding)),
+            ("Fire block, 2x4", None),
+            ("Siding mounting block", None),
+            ("Glass block", None),
+            ("Rebar lap splices", None),
+            ("Granite vanity top", None),
+            ("Stacked stone veneer, interior fireplace wall", None),
+            ("Board and batten siding", Some(Cladding::BoardAndBatten)),
+        ] {
+            assert_eq!(cladding_in(text), want, "{text}");
+        }
+        for (text, want) in [
+            ("Galvalume roofing", Some(Roofing::MetalPanel)),
+            ("Slates, Vermont gray", Some(Roofing::Slate)),
+            ("Labor, architectural shingles", Some(Roofing::AsphaltShingles)),
+            ("Reroof, asphalt shingles", Some(Roofing::AsphaltShingles)),
+            ("Asphalt shingles and felt", Some(Roofing::AsphaltShingles)),
+            ("Starter shingles", None),
+            ("Hip and ridge shingles", None),
+            ("Tile battens", None),
+            ("Copper ridge cap", None),
+        ] {
+            assert_eq!(roofing_in(text), want, "{text}");
+        }
+        assert_eq!(sash_in("Labor, casement window"), Some(Sash::Casement));
+        assert_eq!(sash_in("Window and flashing, casement"), Some(Sash::Casement));
+        assert_eq!(sash_in("Picture frame molding"), None);
+        assert_eq!(sash_in("Picture window, 6 ft"), Some(Sash::Fixed));
+        // A color is the line's own, not that of what it is laid over or set with.
+        assert_eq!(tone_in("Brick veneer with gray mortar"), None);
+        assert_eq!(tone_in("Lap siding over black building paper"), None);
+        assert_eq!(tone_in("Standing seam roofing over black underlayment"), None);
+        assert_eq!(tone_in("Casement windows w/ white interior, black exterior").map(|t| t.word), Some("black"));
+        assert_eq!(tone_in("Brick veneer, red").map(|t| t.word), Some("red"));
+        // A wainscot is a line that is one, not a line laid above one.
+        assert!(at(&words(&its_own("Stone veneer wainscot, 3 ft", NOT_CLADDING)), "wainscot").is_some());
+        assert!(at(&words(&its_own("Lap siding above stone wainscot", NOT_CLADDING)), "wainscot").is_none());
+        for (text, gutter) in [("Gutter hangers", false), ("Gutter end caps", false), ("Seamless aluminum eavestrough", true), ("Copper gutter, 6 in half round", true)] {
+            assert_eq!(named(text, GUTTERS, NOT_GUTTER).is_some(), gutter, "{text}");
+        }
     }
 
     #[test]

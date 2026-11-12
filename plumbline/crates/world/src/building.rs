@@ -931,7 +931,8 @@ impl Enclosed {
             }
             odd
         };
-        self.pieces.iter().any(within) && !self.courtyards.iter().any(within)
+        // In more pieces than courtyards: a shed standing in a courtyard is indoors again.
+        self.pieces.iter().filter(|r| within(r)).count() > self.courtyards.iter().filter(|r| within(r)).count()
     }
 }
 
@@ -965,10 +966,13 @@ pub fn enclosed(job: &mut Job, storey: &str) -> Result<Enclosed, String> {
     let ring = |f: &Vec<V>| -> Vec<P2> { f.iter().map(|p| [p.0, p.1]).collect() };
     let mut out = Enclosed { pieces: Vec::new(), courtyards: Vec::new() };
     for (i, f) in outlines.iter().enumerate() {
+        // A loop standing free inside a piece with no room in it is a courtyard, as the
+        // floor's outline takes it; what stands free inside a courtyard is a piece again.
+        let roomless = !rooms_at.iter().any(|p| rooms::contains(f, *p));
         match depth[i] {
             0 => out.pieces.push(ring(f)),
-            // A room in it and in no loop inside it: it is indoors, part of its piece.
-            1 if !rooms_at.iter().any(|p| rooms::contains(f, *p)) => out.courtyards.push(ring(f)),
+            1 if roomless => out.courtyards.push(ring(f)),
+            2 if outlines.iter().enumerate().any(|(j, o)| j != i && depth[j] == 1 && f.iter().all(|q| rooms::contains(o, *q)) && !rooms_at.iter().any(|p| rooms::contains(o, *p))) => out.pieces.push(ring(f)),
             _ => {}
         }
     }

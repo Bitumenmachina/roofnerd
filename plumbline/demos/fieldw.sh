@@ -96,7 +96,7 @@ says "the price" "PRICE \$607.31" "$T/sheet-after.txt"
 says "one finding" "In the same space: 1 (1 finding)" "$T/after.txt"
 says "which" "in each other by 2.25 in" "$T/after.txt"
 says "the other, clear" "0.75 in apart" "$T/after.txt"
-says "the level height" "level height    8' 10 1/2\"" "$T/show.txt"
+says "the level height" "level height     8' 10 1/2\"" "$T/show.txt"
 says "the duct's underside" "height above its level 7' 10 3/4\"" "$T/show.txt"
 says "held to its bottom" "its heights are those of its bottom" "$T/show.txt"
 python3 - "$J" "$GROUND" "$UPPER" "$DUCT" <<'PY'

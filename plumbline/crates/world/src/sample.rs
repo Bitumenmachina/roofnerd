@@ -637,6 +637,17 @@ pub fn priced() -> Job {
     let lines = vec![CostLine { class: Some(Class::Supervision), order: hours("hr/EA", 8.0), ..CostLine::of("Foreman, days on site", "5", Val::known(95.0, "$/hr", RATE)) }];
     job.put(&root, Cost { code: Val::unknown("", "not coded"), lines }).expect(OK);
 
+    // A roofing job read by division: the roof is Division 7, and running the job is
+    // Division 1. (It had none: every line of it stood in no division.)
+    for e in job.order.clone() {
+        let on_job = e == job.root();
+        if let Some(mut cost) = job.world.get_mut::<Cost>(e) {
+            for l in cost.lines.iter_mut() {
+                l.division = Some(if on_job { Division::GeneralRequirements } else { Division::ThermalAndMoistureProtection });
+            }
+        }
+    }
+
     let stale = job.derive();
     debug_assert!(!stale.is_empty());
     job
@@ -735,6 +746,11 @@ pub fn house_priced() -> Job {
             Kind::Ridge => {
                 put(&mut job, path, "Steel ridge beam", "true_length", Material, 5, "$42/LF");
                 put(&mut job, path, "Ridge cap and vent", "true_length", Material, 7, "$22/LF");
+            }
+            Kind::Hip => put(&mut job, path, "Hip cap", "true_length", Material, 7, "$22/LF"),
+            Kind::Fitting => {
+                let division = if job.kind(path).is_some() && name.to_lowercase().contains("conduit") { 16 } else { 15 };
+                put(&mut job, path, "Fitting, installed", "1", Subcontract, division, "$38");
             }
             Kind::Duct => put(&mut job, path, "Ductwork, installed", "true_length", Subcontract, 15, "$18/LF"),
             Kind::Pipe => put(&mut job, path, "Piping, installed", "true_length", Subcontract, 15, "$9.50/LF"),

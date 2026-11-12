@@ -6,7 +6,7 @@
 
 Reads the workbook this program writes (`plumbline export estimate job out.xlsx`) and
 works every formula in it out again from the cells the formula names, knowing only
-ROUND, SUM, SUMIF, COUNTIFS, IF, OR, comparisons, the four operations, brackets and
+ROUND, SUM, SUMIF, COUNT, COUNTIF, COUNTIFS, IF, OR, comparisons, the four operations, brackets and
 cell references. It knows nothing
 of this program. Each formula has to come to the figure written beside it (the figure a
 reader that does not work formulas out would show); the script fails on the first that
@@ -28,6 +28,18 @@ def rounded(x, places):
     # 1.0149999 is the half it was meant to be.
     scale = 10 ** places
     return math.copysign(math.floor(abs(x) * scale + 0.5 + 1e-9), x) / scale
+
+
+class Wrong:
+    """What arithmetic on a word comes to (a workbook shows #VALUE!). An IF works out
+    only the side it takes, so the side it does not take may be this and no harm done;
+    a formula that comes to it is a fault."""
+
+    def __repr__(self):
+        return "#VALUE!"
+
+
+WRONG = Wrong()
 
 
 class Book:
@@ -75,8 +87,16 @@ class Formula:
 
     @staticmethod
     def number(v):
-        # An empty cell, or one whose formula came to nothing, is nothing in arithmetic.
-        return 0.0 if v is None or v == "" else v
+        # An empty cell, or one whose formula came to nothing, is nothing in arithmetic;
+        # a word is not a number at all.
+        if v is None or v == "":
+            return 0.0
+        return WRONG if isinstance(v, (str, Wrong)) else v
+
+    @classmethod
+    def worked(cls, a, b, how):
+        a, b = cls.number(a), cls.number(b)
+        return WRONG if a is WRONG or b is WRONG else how(a, b)
 
     @staticmethod
     def same(a, b):
@@ -96,6 +116,8 @@ class Formula:
             if sign == "<>":
                 return not self.same(value, other)
             a, b = self.number(value), self.number(other)
+            if a is WRONG or b is WRONG:
+                return WRONG
             return {"<": a < b, ">": a > b, "<=": a <= b, ">=": a >= b}[sign]
         return value
 
@@ -104,7 +126,7 @@ class Formula:
         while self.peek()[4] in ("+", "-"):
             sign = self.take()[4]
             other = self.product()
-            value = self.number(value) + self.number(other) if sign == "+" else self.number(value) - self.number(other)
+            value = self.worked(value, other, (lambda a, b: a + b) if sign == "+" else (lambda a, b: a - b))
         return value
 
     def product(self):
@@ -112,7 +134,7 @@ class Formula:
         while self.peek()[4] in ("*", "/"):
             sign = self.take()[4]
             other = self.atom()
-            value = self.number(value) * self.number(other) if sign == "*" else self.number(value) / self.number(other)
+            value = self.worked(value, other, (lambda a, b: a * b) if sign == "*" else (lambda a, b: a / b))
         return value
 
     def reference(self, text):
@@ -149,12 +171,16 @@ class Formula:
     def call(self, name, args):
         spread = lambda a: self.book.cells(*a[1:]) if isinstance(a, tuple) else [a]
         if name == "ROUND":
-            return rounded(self.number(args[0]), int(args[1]))
+            x = self.number(args[0])
+            return WRONG if x is WRONG else rounded(x, int(args[1]))
         if name == "IF":
             return args[1] if args[0] else args[2]
         if name == "OR":
             return any(args)
-        if name == "COUNTIFS":
+        if name == "COUNT":
+            # How many of the cells hold a figure: a word ("none") and an empty cell do not count.
+            return float(sum(1 for a in args for v in spread(a) if isinstance(v, (int, float)) and not isinstance(v, bool)))
+        if name in ("COUNTIFS", "COUNTIF"):
             # Each pair is a range and what a cell of it has to be: a text it equals, or
             # ">=0" for a figure that is zero or more.
             def meets(v, wanted):
@@ -194,10 +220,14 @@ def main():
                 for c in row:
                     if isinstance(c.value, str) and c.value.startswith("="):
                         value = book.cell(sheet, c.coordinate)
+                        if value is WRONG:
+                            raise SystemExit(f"FAIL: {sheet}!{c.coordinate} {c.value} does arithmetic on a word: a workbook would show #VALUE!")
                         written = book.written[sheet][c.coordinate].value
                         # A formula that comes to a word ("none") or to nothing has that written with it.
+                        # What is written with a formula that comes to a word or to nothing is that
+                        # word or nothing, never a 0 (which would show as $0.00).
                         if isinstance(value, str) or value is None:
-                            same = (value or "") == (written or "")
+                            same = (written is None or isinstance(written, str)) and (value or "") == (written or "")
                         else:
                             same = isinstance(written, (int, float)) and abs(value - float(written)) <= 0.004
                         if not same:

@@ -39,7 +39,7 @@ pub fn input_name_fault(kind: Kind, name: &str) -> Option<String> {
 fn operand(on: &On, line: &CostLine, name: &str) -> Result<Operand, String> {
     if name == STRETCH_OUT {
         let Some(so) = &line.stretch_out else {
-            return Err("uses stretch_out, but the line has no stretch-out; enter it on the line".into());
+            return Err("uses stretch_out, but the line has no stretch-out. Give the two together: the quantity, and with it the stretch-out it uses (at the command line, --with \"stretch_out=19 1/2 in\")".into());
         };
         return Ok(Operand { value: so.feet(), dim: 1, status: so.status, shown: units::to_feet_text(STRETCH_OUT, &so.unit) });
     }

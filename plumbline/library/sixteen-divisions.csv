@@ -1,0 +1,94 @@
+Assembly,Goes on,Cost code,Code title,Code scheme,Code: how sure,Code: where from,Line,Cost type,Quantity,Stretch-out,Stretch-out: how sure,Stretch-out: where from,Waste %,Waste: how sure,Waste: where from,Ordered by,Ordered at,Whole ones only,Ordered at: how sure,Ordered at: where from,Unit cost,Unit cost: how sure,Unit cost: where from,Made of the element's material,Off,Division
+General conditions,Job,,,,Unknown,not coded,Building permit,General conditions,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,1
+General conditions,Job,,,,Unknown,not coded,Temporary power and toilets,General conditions,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,1
+General conditions,Job,,,,Unknown,not coded,Dumpsters,General conditions,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,1
+General conditions,Job,,,,Unknown,not coded,Final cleaning,General conditions,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,1
+"Slab on grade, 4 in",Floor,,,,Unknown,not coded,Excavation and grading,Subcontract,plan_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,2
+"Slab on grade, 4 in",Floor,,,,Unknown,not coded,"Gravel base, 4 in",Material,plan_area,,,,,,,CY,81 SF/CY,yes,Known,"27 CF to the CY, 4 in thick",$?/CY,Unknown,no price entered,,,2
+"Slab on grade, 4 in",Floor,,,,Unknown,not coded,Vapor barrier under the slab,Material,plan_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,3
+"Slab on grade, 4 in",Floor,,,,Unknown,not coded,Welded wire reinforcing,Material,plan_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,3
+"Slab on grade, 4 in",Floor,,,,Unknown,not coded,"Concrete, 4 in slab",Material,plan_area,,,,,,,CY,81 SF/CY,yes,Known,"27 CF to the CY, 4 in thick",$?/CY,Unknown,no price entered,,,3
+"Slab on grade, 4 in",Floor,,,,Unknown,not coded,Place and finish concrete,Subcontract,plan_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,3
+Framed floor,Floor,,,,Unknown,not coded,Floor framing,Material,plan_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,6
+Framed floor,Floor,,,,Unknown,not coded,Subfloor,Material,plan_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Wall framing, 2x6 at 16 in",Material,face_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,6
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Wall sheathing,Material,face_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Lap siding,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Wall framing, 2x6 at 16 in",Material,face_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,6
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Wall sheathing,Material,face_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Lap siding,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Stone veneer wainscot, 3 ft",Subcontract,plan_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,4
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,"Wall framing, 2x6 at 16 in",Material,face_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,6
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Wall sheathing,Material,face_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Brick veneer,Subcontract,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,4
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Brick ties and flashing,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,4
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Wall framing, 2x6 at 16 in",Material,face_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,6
+"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,Wall sheathing,Material,face_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
+"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Stucco, three coat",Subcontract,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
+"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Interior partition, 2x4",Wall,,,,Unknown,not coded,"Partition framing, 2x4 at 16 in",Material,face_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,6
+"Interior partition, 2x4",Wall,,,,Unknown,not coded,"Gypsum board, both sides",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Interior partition, 2x4",Wall,,,,Unknown,not coded,"Paint, both sides",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Room, hardwood floor",Room,,,,Unknown,not coded,Hardwood flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Room, hardwood floor",Room,,,,Unknown,not coded,Base and trim,Material,perimeter,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+"Room, hardwood floor",Room,,,,Unknown,not coded,"Ceiling, gypsum board and paint",Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Bath, tile floor",Room,,,,Unknown,not coded,Tile flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Bath, tile floor",Room,,,,Unknown,not coded,Base and trim,Material,perimeter,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+"Bath, tile floor",Room,,,,Unknown,not coded,"Ceiling, gypsum board and paint",Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Bath, tile floor",Room,,,,Unknown,not coded,Toilet and bath accessories,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,10
+Kitchen,Room,,,,Unknown,not coded,Hardwood flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+Kitchen,Room,,,,Unknown,not coded,Base and trim,Material,perimeter,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+Kitchen,Room,,,,Unknown,not coded,"Ceiling, gypsum board and paint",Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+Kitchen,Room,,,,Unknown,not coded,Kitchen appliances,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,11
+Kitchen,Room,,,,Unknown,not coded,Cabinets,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,12
+Kitchen,Room,,,,Unknown,not coded,Countertops,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,12
+Laundry or utility room,Room,,,,Unknown,not coded,Tile flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+Laundry or utility room,Room,,,,Unknown,not coded,Base and trim,Material,perimeter,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+Laundry or utility room,Room,,,,Unknown,not coded,"Ceiling, gypsum board and paint",Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+Laundry or utility room,Room,,,,Unknown,not coded,Closet shelving,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,10
+Laundry or utility room,Room,,,,Unknown,not coded,Laundry appliances,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,11
+Sauna or other built room,Room,,,,Unknown,not coded,"Prefabricated room, set in place",Subcontract,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,13
+Asphalt shingle roof,RoofPlane,,,,Unknown,not coded,Roof sheathing,Material,surface_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
+Asphalt shingle roof,RoofPlane,,,,Unknown,not coded,Underlayment,Material,surface_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+Asphalt shingle roof,RoofPlane,,,,Unknown,not coded,Asphalt shingles,Material,surface_area,,,,,,,SQ,100 SF/SQ,no,Known,a square is 100 SF,$?/SQ,Unknown,no price entered,,,7
+Standing seam roof,RoofPlane,,,,Unknown,not coded,Roof sheathing,Material,surface_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
+Standing seam roof,RoofPlane,,,,Unknown,not coded,Underlayment,Material,surface_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+Standing seam roof,RoofPlane,,,,Unknown,not coded,Standing seam roofing,Subcontract,surface_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Ridge, steel beam and cap",Ridge,,,,Unknown,not coded,Steel ridge beam,Material,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,5
+"Ridge, steel beam and cap",Ridge,,,,Unknown,not coded,Ridge cap and vent,Material,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,7
+Hip cap,Hip,,,,Unknown,not coded,Hip cap,Material,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,7
+Gutter,Eave,,,,Unknown,not coded,Gutter,Material,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,7
+Window,Window,,,,Unknown,not coded,Window unit,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,8
+Window,Window,,,,Unknown,not coded,Flashing and sealant at the window,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,7
+Window,Window,,,,Unknown,not coded,Casing and trim at the window,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,6
+Window,Window,,,,Unknown,not coded,Window treatment,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,12
+Entry door,Door,,,,Unknown,not coded,"Entry door, prehung",Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,8
+Entry door,Door,,,,Unknown,not coded,Door hardware,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,8
+Entry door,Door,,,,Unknown,not coded,Casing and trim at the door,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,6
+Interior door,Door,,,,Unknown,not coded,"Interior door, prehung",Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,8
+Interior door,Door,,,,Unknown,not coded,Door hardware,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,8
+Interior door,Door,,,,Unknown,not coded,Casing and trim at the door,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,6
+Residential elevator,Equipment,,,,Unknown,not coded,"Residential elevator, installed",Subcontract,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,14
+Duct run,Duct,,,,Unknown,not coded,"Ductwork, installed",Subcontract,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,15
+Pipe run,Pipe,,,,Unknown,not coded,"Piping, installed",Subcontract,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,15
+Plumbing fixture,Fixture,,,,Unknown,not coded,"Fixture, set and connected",Subcontract,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,15
+Mechanical equipment,Equipment,,,,Unknown,not coded,"Equipment, set and connected",Subcontract,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,15
+Conduit run,Conduit,,,,Unknown,not coded,"Conduit, installed",Subcontract,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,16
+Cable run,Cable,,,,Unknown,not coded,"Cable, pulled",Subcontract,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,16
+Electrical device,Fixture,,,,Unknown,not coded,"Device, set and connected",Subcontract,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,16
+Electrical equipment,Equipment,,,,Unknown,not coded,"Electrical equipment, set and connected",Subcontract,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,16

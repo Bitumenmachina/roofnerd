@@ -26,6 +26,9 @@ pub struct Between {
     pub other: String,
     pub other_name: String,
     pub how: ClashKind,
+    /// A run through a wall or a floor: a hole to cut, not two things in each other's
+    /// way. Where it is is still to verify; nothing priced rides on the hole itself.
+    pub through: bool,
     /// How far one is into the other, or apart, in feet, when that is worked out.
     pub by: Option<f64>,
     /// Where, in feet: east, north, height above the datum.
@@ -148,8 +151,11 @@ pub fn vif(job: &mut Job) -> Vif {
     match clash::clashes(job, None) {
         Err(why) => clashes_not_tested = Some(why),
         Ok(found) => {
-            for c in found.found.iter().filter(|c| !c.through && c.status != Status::Known) {
-                let picked: Vec<&Line> = lines.iter().filter(|l| l.on == c.a || l.on == c.b).collect();
+            // A hole to cut that is still in question is a question too (J17C-2): it is
+            // on the clash list as one to verify, and so it is here. Nothing rides on
+            // it in dollars: neither thing has to move, a hole has to be cut.
+            for c in found.found.iter().filter(|c| c.status != Status::Known) {
+                let picked: Vec<&Line> = if c.through { Vec::new() } else { lines.iter().filter(|l| l.on == c.a || l.on == c.b).collect() };
                 counted.extend(picked.iter().map(|l| l.key.clone()));
                 let (dollars, dollars_status, n, unpriced) = sum(&picked);
                 place(
@@ -158,7 +164,7 @@ pub fn vif(job: &mut Job) -> Vif {
                         name: c.a_name.clone(),
                         kind: c.a_kind,
                         storey: storey_name(&c.a, c.a_kind),
-                        clash: Some(Between { other: c.b.clone(), other_name: c.b_name.clone(), how: c.how, by: c.by, at: c.at }),
+                        clash: Some(Between { other: c.b.clone(), other_name: c.b_name.clone(), how: c.how, through: c.through, by: c.by, at: c.at }),
                         values: Vec::new(),
                         dollars,
                         dollars_status,

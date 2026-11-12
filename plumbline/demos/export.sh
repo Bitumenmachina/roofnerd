@@ -42,7 +42,7 @@ python3 tools/workbook.py "$T/estimate.xlsx" > "$T/worked.txt"
 # beside it; tools/workbook.py fails if any does not.
 # Thirteen amounts, five cost types, the job cost, overhead, profit, the price, the sum of
 # the divisions (this job's lines carry none: the sheet says so), and five supplier totals.
-says "$T/worked.txt" "45 formulas worked out; each comes to what is written with it"
+says "$T/worked.txt" "69 formulas worked out; each comes to what is written with it"
 says "$T/worked.txt" "Divisions!In no division"
 says "$T/worked.txt" "Recap!Material = 8628.10"
 says "$T/worked.txt" "Recap!Labor = 2147.97"

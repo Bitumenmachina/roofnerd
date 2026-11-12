@@ -353,6 +353,8 @@ pub fn xlsx(tabs: &[Tab]) -> Result<Vec<u8>, String> {
     let figure = Format::new().set_num_format("#,##0.####");
     for tab in tabs {
         let sheet = book.add_worksheet();
+        // A formula that comes to nothing is written with nothing, not with 0 (J17C-5).
+        sheet.set_formula_result_default("");
         sheet.set_name(&tab.name).map_err(fault)?;
         for (c, width) in tab.widths.iter().enumerate() {
             sheet.set_column_width(c as u16, *width).map_err(fault)?;

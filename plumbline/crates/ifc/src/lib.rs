@@ -34,7 +34,7 @@ use std::collections::{BTreeMap, HashMap};
 use plumbline_world::building::{self, Floor, FloorType, InSystem, Room, Segment, Wall};
 use plumbline_world::editing::{self as ed, Entered};
 use plumbline_world::units::Len;
-use plumbline_world::value::Val;
+use plumbline_world::value::{Status, Val};
 use plumbline_world::{Job, Kind};
 use step::{Entity, File, V};
 
@@ -262,14 +262,14 @@ impl<'a> Reader<'a> {
 /// every such name as one run of capitals, so the words of the commoner ones are given
 /// here; any other is its name less the "IFC", as the model has it.
 fn said(class: &str) -> String {
-    const WORDS: [(&str, &str); 44] = [
+    const WORDS: [(&str, &str); 45] = [
         ("IFCBEAM", "beam"), ("IFCCOLUMN", "column"), ("IFCSTAIR", "stair"), ("IFCSTAIRFLIGHT", "stair flight"), ("IFCROOF", "roof"), ("IFCCOVERING", "covering"), ("IFCFURNITURE", "furniture"),
         ("IFCFURNISHINGELEMENT", "furnishing"), ("IFCBUILDINGELEMENTPROXY", "thing of no stated kind"), ("IFCMEMBER", "framing member"), ("IFCPLATE", "plate"), ("IFCRAILING", "railing"), ("IFCRAMP", "ramp"),
         ("IFCRAMPFLIGHT", "ramp flight"), ("IFCCURTAINWALL", "curtain wall"), ("IFCFOOTING", "footing"), ("IFCPILE", "pile"), ("IFCFLOWTERMINAL", "fixture or outlet"), ("IFCFLOWFITTING", "fitting"),
         ("IFCDUCTFITTING", "duct fitting"), ("IFCPIPEFITTING", "pipe fitting"), ("IFCCABLECARRIERFITTING", "tray fitting"), ("IFCCABLEFITTING", "cable fitting"), ("IFCFLOWSEGMENT", "run"),
         ("IFCDUCTSEGMENT", "duct"), ("IFCPIPESEGMENT", "pipe"), ("IFCCABLECARRIERSEGMENT", "cable tray"), ("IFCCABLESEGMENT", "cable"), ("IFCFLOWCONTROLLER", "valve or damper"),
         ("IFCVALVE", "valve"), ("IFCDAMPER", "damper"), ("IFCAIRTERMINAL", "grille or diffuser"), ("IFCSANITARYTERMINAL", "plumbing fixture"), ("IFCLIGHTFIXTURE", "light fixture"),
-        ("IFCOUTLET", "outlet"), ("IFCWALL", "wall"), ("IFCSLAB", "floor slab"), ("IFCDOOR", "door"), ("IFCWINDOW", "window"), ("IFCSPACE", "space"), ("IFCOPENINGELEMENT", "opening"),
+        ("IFCOUTLET", "outlet"), ("IFCWALL", "wall"), ("IFCSLAB", "floor slab"), ("IFCROOFSLAB", "roof slab"), ("IFCDOOR", "door"), ("IFCWINDOW", "window"), ("IFCSPACE", "space"), ("IFCOPENINGELEMENT", "opening"),
         ("IFCDISTRIBUTIONPORT", "connection point"), ("IFCGRID", "grid"), ("IFCANNOTATION", "note or dimension"),
     ];
     let base = class.trim_end_matches("STANDARDCASE").trim_end_matches("ELEMENTEDCASE");
@@ -373,6 +373,12 @@ fn length_unit(r: &Reader) -> (String, f64) {
                     if let Some((_, measure)) = r.get(r.arg(u, 3)) {
                         let (factor, base) = (Reader::number(r.arg(measure, 0)), r.get(r.arg(measure, 1)).and_then(|(_, b)| si(b)));
                         if let (Some(factor), Some((_, base))) = (factor, base) {
+                            // "the model is in feet", not "in foot".
+                            let name = match name.as_str() {
+                                "foot" => "feet".to_string(),
+                                "inch" => "inches".to_string(),
+                                _ => name,
+                            };
                             return (name, factor * base);
                         }
                     }
@@ -418,8 +424,32 @@ pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<B
     let r = Reader { file: &file };
     let (unit_name, k) = length_unit(&r);
     let twice = numbers_used_twice(bytes, file.entities.len());
+    // A model this program wrote says, value by value, how sure each is (in property
+    // sets called Plumbline_Values). Which mark belonged to which value is not read
+    // back, so where any is Assumed or Unknown nothing from the model comes in as
+    // Known, whatever is said of it as a whole, and the report says so (J17B-16).
+    let text = String::from_utf8_lossy(bytes);
+    let (assumed, unknown) = if text.contains("'Plumbline_Values'") { (text.matches("(Assumed;").count(), text.matches("(Unknown;").count()) } else { (0, 0) };
+    let said_known = how.status == Status::Known;
+    let how = if assumed + unknown > 0 && said_known { Entered { status: Status::Assumed, source: how.source } } else { how };
+    // What the model holds that is not a thing with a shape, and is not read at all.
+    let count = |names: &[&str]| file.entities.values().filter(|e| names.contains(&e.name.as_str())).count();
+    let (property_sets, materials) = (count(&["IFCPROPERTYSET", "IFCELEMENTQUANTITY"]), count(&["IFCMATERIAL", "IFCMATERIALLAYERSET", "IFCMATERIALCONSTITUENTSET", "IFCMATERIALPROFILESET"]));
     ed::all_or_nothing(job, |job| {
         let mut out = bring(job, &r, name, how, unit_name, k)?;
+        if assumed + unknown > 0 {
+            out.notes.push(format!(
+                "this model was written by plumbline and marks {assumed} of its values Assumed and {unknown} Unknown: which value each mark was on is not read back, so {}",
+                if said_known { "everything from it was brought in Assumed, not Known as was said of it" } else { "nothing from it is surer than was said of it as a whole" }
+            ));
+        }
+        if property_sets + materials > 0 {
+            out.notes.push(format!(
+                "not read: {property_sets} property set{} and {materials} material{} in the model. A thing brought in has its shape, its place and its name; what the model says it is made of, and anything else it says about it, is not brought in",
+                if property_sets == 1 { "" } else { "s" },
+                if materials == 1 { "" } else { "s" }
+            ));
+        }
         if twice > 0 {
             out.notes.push(format!("{twice} number{} in the file {} used by more than one thing: the later of each was read and the earlier was not, so something may be missing or changed", if twice == 1 { "" } else { "s" }, if twice == 1 { "is" } else { "are" }));
         }
@@ -437,8 +467,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         let called = r.name(e);
         // The model's own word for the thing, less the "IFC" every one of them starts
         // with, and its number in the file, so it can be found there again.
-        let its = e.name.strip_prefix("IFC").unwrap_or(&e.name).to_lowercase();
-        format!("{}: {name}, {}{its} {id} in the file", how.source, if called.is_empty() { String::new() } else { format!("\"{called}\", ") })
+        // (In the trade's word for it, and "#113", as the file itself writes its
+        // numbers: "wall 44 in the file" read as forty-four inches, J17B-19.)
+        let its = said(&e.name);
+        format!("{}: {name}, {}{its} #{id} in the file", how.source, if called.is_empty() { String::new() } else { format!("\"{called}\", ") })
     };
     let val = |source: &str, len: f64| Val { value: Some(Len::One(tidy(len))), unit: "ft".to_string(), status: how.status, source: source.to_string() };
     let path_val = |source: &str, path: &str| Val { value: Some(path.to_string()), unit: String::new(), status: how.status, source: source.to_string() };
@@ -669,6 +701,11 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     let cut_floors: Vec<u64> = hole_in.values().copied().filter(|host| slab_ids.contains(host)).collect();
     let mut floors_cut = 0usize;
     for (id, e) in of(&["IFCSLAB", "IFCSLABSTANDARDCASE", "IFCSLABELEMENTEDCASE"]) {
+        // A slab the model says is a roof is a roof, not a floor (J17B-18).
+        if matches!(r.arg(e, 8), V::Enum(k) if k == "ROOF") {
+            leave("IFCROOFSLAB", "a roof is not brought in from a model yet: draw it from its footprint and its pitch");
+            continue;
+        }
         if r.pieces(e) > 1 {
             leave(&e.name, "its body is made of more than one piece: only a body of one piece is read");
             continue;

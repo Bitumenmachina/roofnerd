@@ -3469,3 +3469,143 @@ been judged.**
 * **Disk:** the session's disk filled during a scratch build. Old judges' built
   programs, the scratch build and the build's incremental cache were deleted; no
   source and no evidence was.
+
+## Seventeenth judgment, part C (2026-11-12): the fixes, judged
+
+Judge on Opus, commit bbc72b0, command line and source only: every row marked fixed
+was rerun from the first judges' commands and then attacked from the side. 19
+findings: 1 breaks, 2 wrong money, 12 silent, 3 words, 1 doc. (Report returned as
+text; set down here.)
+
+**The claimed fixes:**
+
+| finding | verdict | shown by |
+|---|---|---|
+| J17A-2, 3; J17A-5; J17A-7; J17A-9 (347 of 347 sample lines multiply) | holds | |
+| J17A-4, 6 (the workbook) | holds in part | J17C-3, 4, 5, 6 |
+| J17A-10 (the PM's lens) | holds in part | J17C-7, 8 |
+| J17A-14 | holds as far as it claims; SPEC not brought up to date | J17C-17 |
+| J17A-16 | holds for the four verbs; the export verbs beside them still destroy a job | J17C-1 |
+| J17A-17 | holds; small differences in how a price is read remain | J17C-19 |
+| J17B-1, 2 (outside faces) | holds in part | J17C-11, 12 |
+| J17B-3 to 10 (the reading) | holds in part: every original line reads right; near variants do not | J17C-9, 10, 13, 14, 15, 16 |
+| J17B-11 to 14 (wainscot, also priced) | holds in part | J17C-13, 14 |
+| J17B-15; J17B-19 | holds in part | J17C-16; J17C-18 |
+| the words | holds in part: an old job with storey paths loads, edits and exports; both verbs work | J17C-18 |
+
+| | kind | finding |
+|---|---|---|
+| J17C-1 | breaks | `export prices` and `export assemblies` write over the job file itself when it is named as the output; `export estimate` writes over another job's file |
+| J17C-2 | silent | a hole to cut that is still in question is on `clashes` as "to verify in the field" and is not on the verify-in-field list |
+| J17C-3 | wrong money | in the workbook, typing in the cost type a line lacks leaves its money out of its division and in "In no division": the division cell reads "9 Finishes (in no total)" and the SUMIF looks for "9 Finishes" |
+| J17C-4 | silent | a job with nothing priced yet shows Job cost $0.00 in the workbook; with overhead and profit entered and no price yet, their rows are the words "no figure" and the percentages are gone, so prices typed in never give a price |
+| J17C-5 | silent | an unpriced line's amount formula is written with the figure 0, not nothing, and `tools/workbook.py` passes it because it takes 0 for nothing |
+| J17C-6 | silent | after a price is typed into the workbook its line counts and "leaves out" notes, which are typed text, stay as they were; a line with a figure and no cost type is said to have "no figure" |
+| J17C-7 | silent | a division with only unpriced work reads "none" on the estimate and in the workbook and "no figure" in the PM's lens: one word was fixed in one place |
+| J17C-8 | wrong money | the PM lens's lines put a line that is in no total under its division with no mark, so the lens's own lines do not add to its own budget row |
+| J17C-9 | silent | honest lines read bare under the head rule: "North wall, lap siding"; "Brick veneer and flashing"; "LABOR, LAP SIDING"; "Labor to install lap siding"; "Stones veneer"; "Trim-less lap siding"; "Galvalume roofing"; "Slates, Vermont gray"; "Reroof, asphalt shingles"; "Asphalt shingles and felt"; "Labor, casement window" |
+| J17C-10 | silent | lines that are not a finish still dress: "Fire block, 2x4", "Siding mounting block", "Glass block" (concrete block); "Rebar lap splices" (lap siding); "Granite vanity top"; "Stacked stone veneer, interior fireplace wall"; "Picture frame molding" (a fixed window); "Starter shingles", "Hip and ridge shingles", "Tile battens", "Copper ridge cap" on a plane, the last ahead of "Slate roofing, gray" drawing a slate roof as copper |
+| J17C-11 | silent | a closet or chase walled on four sides with no room placed in it is read as a courtyard and its walls face into it; a shed inside a courtyard reads as standing outside everything; a room placed in a courtyard to take off its paving makes the courtyard's walls partitions |
+| J17C-12 | silent | outside is judged at a wall's midpoint: a wall that is the house's side for part of its length and a garden wall for the rest reads as one or the other over all of it |
+| J17C-13 | silent | "Wainscot, stone, 36 in" reads bare (wainscot is not taken as a kind); "Lap siding above stone wainscot" becomes a lap siding wainscot under a bare wall |
+| J17C-14 | words | "Stone wainscot 0 in" says no line gives a height; a wainscot taller than its wall leaves a fragment of a sentence and is not said to be taller; a second wainscot is not said to be a wainscot |
+| J17C-15 | silent | a color is taken from what a line is laid over or set in: "Brick veneer with gray mortar" is gray brick; "Lap siding over black building paper" is black |
+| J17C-16 | silent | "Gutter hangers", "Gutter end caps", "Gutter labor" read as a gutter |
+| J17C-17 | doc | SPEC 5.16 still describes the dollars riding as before call 59 (5.19 was rewritten after this judge's commit) |
+| J17C-18 | words | `show` prints "[Storey]"; the usage still offers the verb `class`; "4 floor slab" |
+| J17C-19 | words | `import assemblies` refuses a bare "5" where `set ... unit_cost 5` takes it; "$/SF" says `"" is not a price`; "1.234,56" does not get the decimal-comma explanation |
+
+**What held, beyond the table** (the judge's list): overhead and profit worked by hand
+agree on the command line and in the workbook; the workbook's formulas use only IF, OR,
+COUNTIFS, SUMIF, SUM and ROUND and Excel would work each; a price typed into an
+unpriced line moves its cost type, its division, the sixteen, the job cost, overhead,
+profit and price to the hand figures; an unpriced line riding on two clashes and its
+own question is counted once; checking a thing's identity takes its dollars off the
+list; the divisions agree on the command line, the CSV and the PM's lens for all
+sixteen of the sample; outside faces are right on an L, a smaller upper level, two
+courtyards, a party wall to an attached garage, a second building and a garden wall;
+ten hostile assembly prices are each refused on their own row.
+
+## A starter library of assemblies in all sixteen divisions. How its demonstration will be run (written before the script)
+
+Task: the sixteen-division platform needs assemblies behind its divisions. An assembly
+is everything priced on one thing, whatever divisions its lines fall in (a wall's
+framing is Division 6, its siding 7, its gypsum board 9), and a thing carries one.
+`library/sixteen-divisions.csv` is a library the program ships, in the form
+`plumbline import assemblies` reads: 30 assemblies, 93 lines, some line in every one of
+the sixteen divisions, a cost type and a division on every line, **and no price in
+it**: every unit cost is "$?" and Unknown, "no price entered". The only figures in it
+are how a thing is bought where that is arithmetic and not a price: 32 SF to a 4 ft by
+8 ft sheet, 100 SF to the square, 81 SF to the cubic yard at 4 in thick (27 CF over
+1/3 ft).
+
+`demos/library.sh`, on a made-up house 24 ft by 16 ft with 9 ft walls, a partition at
+12 ft, a 3 ft by 7 ft door and a 3 ft by 5 ft window in the south wall, a floor from
+the walls' outline, a kitchen and a bath, a hip roof, a duct and a cable:
+
+1. The library has no price in it (no "$" before a digit; every unit cost "$?/unit").
+2. It comes into an empty job: 30 assemblies set, none refused.
+3. Applied the way the window's Condition button applies them: the four outside walls
+   "Exterior wall, 2x6, lap siding" (the north one "... over a stone wainscot"), the
+   partition "Interior partition, 2x4", the floor "Slab on grade, 4 in", the rooms
+   "Kitchen" and "Bath, tile floor", the planes "Asphalt shingle roof", the ridge, the
+   hips, the eaves, the window, the door, the duct, the cable, and the job "General
+   conditions".
+4. The takeoff is there with no price on anything: south wall, 24 by 9 less a 21 SF
+   door and a 15 SF window, lap siding 180.00 SF; its sheathing 216 SF at 32 to the
+   sheet, 6.75, bought as 7 sheets; the slab's concrete 384 SF at 81 to the yard,
+   4.74, bought as 5 CY. The job cost is "none", fourteen divisions say "no figure"
+   (they have lines and no price) and Divisions 13 and 14 say "none" (no sauna, no
+   elevator).
+5. Three prices typed: siding $9.50/SF on the south wall, 180 × 9.50 = $1,710.00
+   (Division 7); concrete $165/CY, 5 × 165 = $825.00 (Division 3); the permit $1,200.00
+   (Division 1). Job cost $3,735.00, and each of the three divisions its figure, each
+   still naming the lines it leaves out.
+6. The house is dressed from the same lines: lap siding on the four outside walls,
+   a stone wainscot on the north one, asphalt shingles on the planes, a gutter on
+   each eave; the partition bare.
+
+## Where the fixes to part C, and the rest of parts A and B, stand (2026-11-12)
+
+250 tests and all eighteen command-line demonstrations pass on this tree
+(`demos/library.sh` is new). **None of this has been judged.** The window
+demonstrations have not been rerun on it: their pictures are stale.
+
+| finding | state | what was done |
+|---|---|---|
+| J17C-1 | fixed | no export verb writes over a job: not the job it writes from, and not any file that loads as a job, whatever its name ends in |
+| J17C-2 | fixed | a hole to cut that is still in question is on the verify-in-field list, with no dollars of its own (neither thing has to move), on the command line, the sheet and the PM's lens |
+| J17C-3 | fixed | in the workbook a line with no cost type has an amount formula that comes to nothing until the cost type is typed in, and its division is written plainly: typing "Material" on such a line moves its $200.00 into Material, Division 9 and the sixteen together, and "In no division" stays what it was (replayed with the judge's job) |
+| J17C-4 | fixed | Job cost and the sixteen read "none" until something has a figure; with both percentages entered, overhead, profit and price are formulas that read "no figure" until the job cost has one. The judge's job, Tile priced at $4.00 in the workbook: job cost $12.00, overhead $1.20, profit $0.66, price $13.86, as worked by hand |
+| J17C-5 | fixed | a formula that comes to nothing is written with nothing (it was written with 0); `tools/workbook.py` no longer takes 0 for nothing, and works IF as a workbook does (only the side it takes) |
+| J17C-6 | fixed in part | line counts are formulas; notes that were typed text now say "as written:" and a line with a figure and no cost type is said to have no cost type |
+| J17C-7 | fixed | "none" is no work and "no figure" is work with no price yet, on the estimate, in the workbook and in the PM's lens alike |
+| J17C-8 | fixed | the PM lens marks a line that is in no total beside its division, as the estimate CSV does |
+| J17C-9, 10, 13, 15, 16 | fixed | the reading: a word for something else anywhere in what a line is and it is not a finish; a head that names none is refined by what follows its commas; "Labor to install", "Furnish and install" and the like are dropped from the front; "and flashing" is cut off; "block", "lap" and "picture" alone no longer name a finish; a color is read from the line's own words, not from what it is laid over. Every line in the judge's tables is a test case. Not done: "Trim-less lap siding" still reads bare |
+| J17C-11 | fixed in part | a shed standing in a courtyard has outside faces of its own. Not changed, by decision: a loop of walls with no room in it is a courtyard, as the floor's outline takes it (one rule for the floor and the faces); a closet reads right once its room is named |
+| J17C-12 | fixed | outside is judged in five places along a wall; one that bounds the house for part of its length and runs on outside says so, is dressed on both faces, and says to split it |
+| J17C-14 | fixed in part | a wainscot taller than its wall is one whole sentence and says it is taller; a second wainscot is said to be a wainscot. Not done: "0 in" |
+| J17C-17 | fixed | SPEC 5.16 and 5.19 describe what the program now does |
+| J17C-18 | fixed | kinds are said in words everywhere at the command line ("[level]", "[roof plane]", "[assembly]"); the verb is `cost-type` (`class` still taken); "4 floor slabs" |
+| J17C-19 | open | an assembly library's unit cost still wants its unit where `set` takes a bare figure |
+| J17A-8, 13, 15, 16 (the rest), 19 | fixed | a wall's height refusal says how a height is given and measured; an order factor that would take the figure off a priced line is refused with the file unchanged; the stretch-out refusals and the usage say to give the quantity and its stretch-out together; a file that cannot be read is said without "(os error 2)"; the estimate says what is built and has nothing priced on it ("! nothing is priced on 1 thing that could be (1 wall)") |
+| J17B-16, 17, 18, 19, 21 (part), 24 | fixed | a model this program wrote and marks Assumed comes in Assumed when it is said to be Known, and says so; property sets and materials not read are counted in the report; a roof's slab is a roof slab; "the model is in feet"; "wall #44 in the file"; a thing named by its name where its path is wanted is told its path ("ground" is the name of level-0002: give level-0002); `plumbline roof` is in the usage |
+| J17A-1, 11, 12, 18, 20; J17B-20, 21 (raw measure names), 22, 23, 25 | open | as listed above |
+
+**Changed in this stretch, and named:**
+
+* **The priced sample house** (`plumbline sixteen`) prices its four hips ("Hip cap") and
+  its 41 fittings ("Fitting, installed"), so nothing in it is left with no line: **392
+  lines; job cost $390,534.08 to $394,072.08; price $463,954.49 to $468,157.63.**
+* **The roofing sample** (`plumbline priced`) has its lines in Division 7 and its
+  foreman in Division 1. It had none. No figure of it moved.
+* **A starter library of assemblies** ships with the program
+  (`library/sixteen-divisions.csv`, and inside the program: `plumbline import
+  assemblies <job> starter`): 30 whole assemblies, 93 lines, a line in every one of the
+  sixteen divisions, no price in it. `demos/library.sh` passes to the figures in the
+  plan above, with one correction to the plan: a division's total that still leaves
+  lines out is flagged ("~$1,200.00") and names them, as every such total is. A test
+  holds that it comes into an empty job whole, goes back out byte for byte as the file
+  in the repository, and has no dollar figure in it.
+* The verify list gains every hole to cut that is still in question; `show` and the
+  estimate say kinds in words; the estimate calls the job "the job".

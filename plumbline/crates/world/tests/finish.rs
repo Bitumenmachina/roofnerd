@@ -226,8 +226,34 @@ fn what_is_priced_and_cannot_be_drawn_is_said() {
     line(&mut job, &partition, "Stone veneer wainscot, 3 ft");
     let said = finish::report(&mut job).join("\n");
     assert!(said.contains("lap siding is priced on it (the line \"Lap siding\") and not drawn: the wainscot covers the wall"), "{said}");
-    assert!(said.contains("stone veneer wainscot to 20' 0\", which is the whole of this 9' 0\" wall"), "{said}");
+    assert!(said.contains("stone veneer wainscot written to 20' 0\", taller than this 9' 0\" wall, so it covers the wall, on its east face"), "{said}");
     assert!(said.contains("also priced on it and not drawn: lap siding, gray (the line \"Lap siding, gray\")"), "{said}");
-    assert!(said.contains("also priced on it and not drawn: brick veneer (the line \"Brick wainscot, 2 ft\")"), "{said}");
+    assert!(said.contains("also priced on it and not drawn: brick veneer wainscot (the line \"Brick wainscot, 2 ft\")"), "{said}");
     assert!(said.contains("a partition: both its faces are inside, so no cladding is drawn on it; priced on it and not drawn: stone veneer wainscot (the line \"Stone veneer wainscot, 3 ft\")"), "{said}");
+}
+
+/// The judge of the fixes (J17C-11, 12): a shed standing in a courtyard has outside
+/// faces of its own, and a wall that is the house's side for part of its length and a
+/// garden wall for the rest says it is both.
+#[test]
+fn a_shed_in_a_courtyard_and_a_wall_that_runs_on_past_the_house() {
+    let mut job = Job::new("More shapes (not a real job)", "test", "test");
+    let level = ed::storey(&mut job, "Ground", "0 ft", "9 ft", KNOWN).unwrap();
+    let wall_type = ed::wall_type(&mut job, "wall 6 in", "6 in", KNOWN).unwrap();
+    ed::walls(&mut job, &level, &wall_type, &[[0.0, 0.0], [40.0, 0.0], [40.0, 40.0], [0.0, 40.0]], true, Top::Height("9 ft"), KNOWN).unwrap();
+    ed::walls(&mut job, &level, &wall_type, &[[10.0, 10.0], [30.0, 10.0], [30.0, 30.0], [10.0, 30.0]], true, Top::Height("9 ft"), KNOWN).unwrap();
+    let shed = ed::walls(&mut job, &level, &wall_type, &[[17.0, 17.0], [23.0, 17.0], [23.0, 23.0], [17.0, 23.0]], true, Top::Height("9 ft"), KNOWN).unwrap();
+    let d = finish::dress(&mut job);
+    assert_eq!(shed.iter().map(|w| finish::compass(d.walls[w].out.unwrap())).collect::<Vec<_>>(), ["south", "east", "north", "west"]);
+
+    let mut job = Job::new("A long wall (not a real job)", "test", "test");
+    let level = ed::storey(&mut job, "Ground", "0 ft", "9 ft", KNOWN).unwrap();
+    let wall_type = ed::wall_type(&mut job, "wall 6 in", "6 in", KNOWN).unwrap();
+    let long = ed::walls(&mut job, &level, &wall_type, &[[0.0, 0.0], [60.0, 0.0]], false, Top::Height("9 ft"), KNOWN).unwrap();
+    ed::walls(&mut job, &level, &wall_type, &[[24.0, 0.0], [24.0, 16.0], [0.0, 16.0], [0.0, 0.0]], false, Top::Height("9 ft"), KNOWN).unwrap();
+    line(&mut job, &long[0], "Lap siding, white");
+    let d = finish::dress(&mut job);
+    assert_eq!(d.walls[&long[0]].outside, Outside::Mixed);
+    let said = finish::report(&mut job).join("\n");
+    assert!(said.contains("part of it bounds what its level's walls enclose and part runs on outside; split it where it leaves the house"), "{said}");
 }

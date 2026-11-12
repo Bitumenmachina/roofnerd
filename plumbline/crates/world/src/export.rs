@@ -151,12 +151,17 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
         let n = first + i;
         let price = l.unit_cost.as_ref().and_then(|v| v.value);
         // The formula only where it is the job's own arithmetic to the cent.
+        // The formula only where it is the job's own arithmetic to the cent. A line
+        // that lacks a cost type, a quantity or a price has its formula all the same,
+        // and it comes to nothing until all three are on the sheet (J17A-6, J17C-3):
+        // a line with no cost type is in no total, so its amount stays out of every sum
+        // until the cost type is typed in, and then it is in its cost type's and its
+        // division's together.
+        let waits = format!("=IF(OR(C{n}=\"\",D{n}=\"\",F{n}=\"\"),\"\",ROUND(D{n}*F{n},2))");
+        let lacks = l.class.is_none() || l.priced.value.is_none() || price.is_none();
         let amount = match (l.off, l.amount.value, l.priced.value, price) {
             (true, _, _, _) => Out::None,
-            // No amount yet, for want of a quantity or a price: the formula is there all
-            // the same and comes to nothing until both are filled in (J17A-6). A line
-            // with no cost type is in no total, so it gets none.
-            (_, None, _, _) if formulas && l.class.is_some() => Out::FormulaText { text: format!("=IF(OR(D{n}=\"\",F{n}=\"\"),\"\",ROUND(D{n}*F{n},2))"), shown: String::new() },
+            (_, _, _, _) if formulas && lacks => Out::FormulaText { text: waits, shown: String::new() },
             (_, None, _, _) => Out::None,
             (_, Some(a), Some(q), Some(p)) if formulas && (cents(q * p) - a).abs() < 0.005 => Out::Formula { text: format!("=ROUND(D{n}*F{n},2)"), value: Some(a) },
             (_, Some(a), _, _) => Out::Dollars(a),
@@ -177,7 +182,9 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
             text(note),
             // Its division. A line that is in no total (switched off, or with no cost
             // type) says so beside it, so no sum by division takes it up.
-            text(match (l.division, l.off || l.class.is_none()) {
+            // (In the workbook a line with no cost type has no amount until it has one,
+            // so its division is written plainly and takes it up when it does.)
+            text(match (l.division, l.off || (l.class.is_none() && !formulas)) {
                 (None, _) => String::new(),
                 (Some(d), false) => named(d),
                 (Some(d), true) => format!("{} (in no total)", named(d)),
@@ -194,36 +201,50 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
     let class_first = recap.len() + 1;
     for c in &est.classes {
         // Each cost type is a formula over the sheet's lines of that type, whether or not
-        // it has any yet (J17A-6): "none" while no line of it has an amount, since
-        // nothing is not $0.00, and a figure as soon as one does.
-        let rule = format!(
-            "=IF(COUNTIFS(Estimate!$C${first}:$C${last},\"{0}\",Estimate!$G${first}:$G${last},\">=0\")=0,\"none\",SUMIF(Estimate!$C${first}:$C${last},\"{0}\",Estimate!$G${first}:$G${last}))",
-            c.class.title()
-        );
-        let amount = match c.total.value {
-            None => Out::FormulaText { text: rule, shown: "none".into() },
-            Some(v) => Out::Formula { text: rule, value: Some(v) },
+        // it has any yet (J17A-6): "none" while it has no line, "no figure" while it has
+        // lines and none of them an amount (J17C-7), and a figure as soon as one does.
+        let (types, amounts) = (format!("Estimate!$C${first}:$C${last}"), format!("Estimate!$G${first}:$G${last}"));
+        let name = c.class.title();
+        let rule = format!("=IF(COUNTIFS({types},\"{name}\",{amounts},\">=0\")=0,IF(COUNTIF({types},\"{name}\")=0,\"none\",\"no figure\"),SUMIF({types},\"{name}\",{amounts}))");
+        let amount = match (c.total.value, c.total.left_out.is_empty()) {
+            (Some(v), _) => Out::Formula { text: rule, value: Some(v) },
+            (None, true) => Out::FormulaText { text: rule, shown: "none".into() },
+            (None, false) => Out::FormulaText { text: rule, shown: "no figure".into() },
         };
+        // What was so when this was written, and says it is that: a count beside it is live.
         let note = match (c.total.value, c.total.status, c.total.left_out.len()) {
-            (_, _, n) if n > 0 => format!("leaves out {n} with no figure"),
+            (_, _, n) if n > 0 => format!("as written: leaves out {n} with no figure"),
             (None, _, _) | (_, Status::Known, _) => String::new(),
-            (_, s, _) => format!("{}: {} of it rests on something assumed", sure(s), format_args!("${:.2}", c.total.assumed)),
+            (_, s, _) => format!("as written: {}, {} of it rests on something assumed", sure(s), format_args!("${:.2}", c.total.assumed)),
         };
-        recap.push(vec![text(c.class.title()), amount, Out::Number(c.total.members as f64), c.hours.filter(|_| c.total.members > 0).map(|h| Out::Number(h.0 + 0.0)).unwrap_or(Out::None), text(note)]);
+        let lines = Out::Formula { text: format!("=COUNTIFS({types},\"{name}\",{amounts},\">=0\")"), value: Some(c.total.members as f64) };
+        recap.push(vec![text(name), amount, lines, c.hours.filter(|_| c.total.members > 0).map(|h| Out::Number(h.0 + 0.0)).unwrap_or(Out::None), text(note)]);
     }
     let class_last = recap.len();
     let cost_row = recap.len() + 1;
-    recap.push(vec![text("Job cost"), Out::Formula { text: format!("=SUM(B{class_first}:B{class_last})"), value: est.job_cost.value }, Out::Number(est.job_cost.members as f64), Out::None, text(if est.job_cost.status == Status::Known { "" } else { sure(est.job_cost.status) })]);
+    // The job cost: "none" until some cost type has a figure; nothing is not $0.00 (J17C-4).
+    let cost_rule = format!("=IF(COUNT(B{class_first}:B{class_last})=0,\"none\",SUM(B{class_first}:B{class_last}))");
+    let cost = match est.job_cost.value {
+        Some(v) => Out::Formula { text: cost_rule, value: Some(v) },
+        None => Out::FormulaText { text: cost_rule, shown: "none".into() },
+    };
+    recap.push(vec![text("Job cost"), cost, Out::Formula { text: format!("=SUM(C{class_first}:C{class_last})"), value: Some(est.job_cost.members as f64) }, Out::None, text(if est.job_cost.status == Status::Known || est.job_cost.value.is_none() { String::new() } else { format!("as written: {}", sure(est.job_cost.status)) })]);
     let pct = |v: Option<&crate::Val<f64>>| v.and_then(|v| v.value);
     let (overhead_pct, profit_pct) = (pct(est.markup.as_ref().map(|m| &m.overhead)), pct(est.markup.as_ref().map(|m| &m.profit)));
-    match (overhead_pct, profit_pct, est.price.value) {
-        (Some(o), Some(p), Some(_)) => {
+    match (overhead_pct, profit_pct) {
+        // Both percentages entered: overhead, profit and price are formulas on the job
+        // cost whether or not it has a figure yet, and follow it when it does.
+        (Some(o), Some(p)) => {
             let (o_pct, o_row, p_pct, p_row) = (cost_row + 1, cost_row + 2, cost_row + 3, cost_row + 4);
+            let waits = |rule: String, value: Option<f64>| match value {
+                Some(v) => Out::Formula { text: rule, value: Some(v) },
+                None => Out::FormulaText { text: rule, shown: "no figure".into() },
+            };
             recap.push(vec![text("Overhead, percent of the job cost"), Out::Number(o)]);
-            recap.push(vec![text("Overhead"), Out::Formula { text: format!("=ROUND(B{cost_row}*B{o_pct}/100,2)"), value: est.overhead.value }]);
+            recap.push(vec![text("Overhead"), waits(format!("=IF(COUNT(B{cost_row})=0,\"no figure\",ROUND(B{cost_row}*B{o_pct}/100,2))"), est.overhead.value)]);
             recap.push(vec![text("Profit, percent of cost and overhead"), Out::Number(p)]);
-            recap.push(vec![text("Profit"), Out::Formula { text: format!("=ROUND((B{cost_row}+B{o_row})*B{p_pct}/100,2)"), value: est.profit.value }]);
-            recap.push(vec![text("Price"), Out::Formula { text: format!("=B{cost_row}+B{o_row}+B{p_row}"), value: est.price.value }, Out::None, Out::None, text(if est.price.status == Status::Known { "" } else { sure(est.price.status) })]);
+            recap.push(vec![text("Profit"), waits(format!("=IF(COUNT(B{cost_row})=0,\"no figure\",ROUND((B{cost_row}+B{o_row})*B{p_pct}/100,2))"), est.profit.value)]);
+            recap.push(vec![text("Price"), waits(format!("=IF(COUNT(B{cost_row})=0,\"no figure\",B{cost_row}+B{o_row}+B{p_row})"), est.price.value), Out::None, Out::None, text(if est.price.status == Status::Known || est.price.value.is_none() { String::new() } else { format!("as written: {}", sure(est.price.status)) })]);
         }
         _ => {
             // No figure is made up for what was not entered or could not be worked out.
@@ -247,43 +268,49 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
     let mut by_division: Vec<Vec<Out>> = vec![vec![text(format!("{title}: the job cost by division"))], vec![], ["Division", "Amount", "Lines", "Note"].iter().map(|h| text(*h)).collect()];
     let division_first = by_division.len() + 1;
     for d in &est.divisions {
-        let rule = format!(
-            "=IF(COUNTIFS(Estimate!$J${first}:$J${last},\"{0}\",Estimate!$G${first}:$G${last},\">=0\")=0,\"none\",SUMIF(Estimate!$J${first}:$J${last},\"{0}\",Estimate!$G${first}:$G${last}))",
-            named(d.division)
-        );
-        let amount = match d.total.value {
-            None => Out::FormulaText { text: rule, shown: "none".into() },
-            Some(v) => Out::Formula { text: rule, value: Some(v) },
+        let (divisions, amounts) = (format!("Estimate!$J${first}:$J${last}"), format!("Estimate!$G${first}:$G${last}"));
+        let name = named(d.division);
+        let rule = format!("=IF(COUNTIFS({divisions},\"{name}\",{amounts},\">=0\")=0,IF(COUNTIF({divisions},\"{name}\")=0,\"none\",\"no figure\"),SUMIF({divisions},\"{name}\",{amounts}))");
+        // A line switched off is written "(in no total)" beside its division and is not
+        // counted; one with no cost type has no amount, and the division waits for it.
+        let waiting = d.total.left_out.iter().any(|_| true);
+        let amount = match (d.total.value, waiting) {
+            (Some(v), _) => Out::Formula { text: rule, value: Some(v) },
+            (None, false) => Out::FormulaText { text: rule, shown: "none".into() },
+            (None, true) => Out::FormulaText { text: rule, shown: "no figure".into() },
         };
         let note = match (d.total.left_out.len(), d.total.status) {
-            (n, _) if n > 0 => format!("leaves out {n} with no figure: {}", d.total.left_out.iter().map(|(who, _)| who.as_str()).collect::<Vec<_>>().join("; ")),
+            (n, _) if n > 0 => format!("as written: leaves out {n} ({})", d.total.left_out.iter().map(|(who, why)| format!("{who}: {}", if why.contains("no cost type") { "no cost type" } else { "no figure" })).collect::<Vec<_>>().join("; ")),
             (_, Status::Known) => String::new(),
-            (_, s) => sure(s).to_string(),
+            (_, s) => format!("as written: {}", sure(s)),
         };
-        by_division.push(vec![text(named(d.division)), amount, Out::Number(d.total.members as f64), text(if d.total.members == 0 && d.total.left_out.is_empty() { String::new() } else { note })]);
+        let lines = Out::Formula { text: format!("=COUNTIFS({divisions},\"{name}\",{amounts},\">=0\")"), value: Some(d.total.members as f64) };
+        by_division.push(vec![text(name), amount, lines, text(if d.total.members == 0 && d.total.left_out.is_empty() { String::new() } else { note })]);
     }
     let division_last = by_division.len();
     let in_all: f64 = est.divisions.iter().filter_map(|d| d.total.value).sum();
-    let sum_row = by_division.len() + 1;
+    let any = est.divisions.iter().any(|d| d.total.value.is_some());
     let worst = est.divisions.iter().filter(|d| d.total.value.is_some()).map(|d| d.total.status).max().unwrap_or(Status::Known);
     let out_of_them: usize = est.divisions.iter().map(|d| d.total.left_out.len()).sum();
-    let sum_note = [if worst == Status::Known { String::new() } else { sure(worst).to_string() }, if out_of_them == 0 { String::new() } else { format!("leaves out {out_of_them} with no figure, named above") }].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("; ");
-    by_division.push(vec![text("The sixteen divisions"), Out::Formula { text: format!("=SUM(B{division_first}:B{division_last})"), value: Some(cents(in_all)) }, Out::None, text(sum_note)]);
+    let sum_note = [if worst == Status::Known { String::new() } else { format!("as written: {}", sure(worst)) }, if out_of_them == 0 { String::new() } else { format!("as written: leaves out {out_of_them}, named above") }].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("; ");
+    let sum_rule = format!("=IF(COUNT(B{division_first}:B{division_last})=0,\"none\",SUM(B{division_first}:B{division_last}))");
+    by_division.push(vec![text("The sixteen divisions"), if any { Out::Formula { text: sum_rule, value: Some(cents(in_all)) } } else { Out::FormulaText { text: sum_rule, shown: "none".into() } }, Out::None, text(sum_note)]);
     // What is in the job cost and in none of the sixteen: the job cost less the sixteen,
     // so the two still come to the job cost after any change on the sheet (J17A-4).
     {
         let none = &est.no_division;
-        let rule = format!("=IF(ROUND(Recap!B{cost_row}-B{sum_row},2)=0,\"none\",ROUND(Recap!B{cost_row}-B{sum_row},2))");
+        let less = format!("ROUND(Recap!B{cost_row}-SUM(B{division_first}:B{division_last}),2)");
+        let rule = format!("=IF(COUNT(Recap!B{cost_row})=0,\"none\",IF({less}=0,\"none\",{less}))");
         let amount = match none.value {
             Some(v) if v.abs() >= 0.005 => Out::Formula { text: rule, value: Some(v) },
             _ => Out::FormulaText { text: rule, shown: "none".into() },
         };
         let mut note = if none.members > 0 || !none.left_out.is_empty() { "in the job cost, and in none of the sixteen: each such line has no division on the Estimate sheet".to_string() } else { String::new() };
         if none.value.is_some() && none.status != Status::Known {
-            note = format!("{}; {note}", sure(none.status));
+            note = format!("as written: {}; {note}", sure(none.status));
         }
         if !none.left_out.is_empty() {
-            note = format!("{note}; leaves out {} with no figure: {}", none.left_out.len(), none.left_out.iter().map(|(who, _)| who.as_str()).collect::<Vec<_>>().join("; "));
+            note = format!("{note}; as written: leaves out {} with no figure ({})", none.left_out.len(), none.left_out.iter().map(|(who, _)| who.as_str()).collect::<Vec<_>>().join("; "));
         }
         by_division.push(vec![text("In no division"), amount, Out::Number(none.members as f64), text(note)]);
     }
@@ -401,7 +428,9 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
                     if l.off { Out::None } else { l.amount.value.map(Out::Dollars).unwrap_or(Out::None) },
                     text(if l.off { "" } else { sure(l.amount.status.max(l.priced.status)) }),
                     text(note_of(l)),
-                    text(l.division.map(|d| format!("{} {}", d.number(), d.title())).unwrap_or_default()),
+                    // A line that is in no total says so beside its division, as on the
+                    // estimate, so the lines here add to the budget below them (J17C-8).
+                    text(l.division.map(|d| format!("{} {}{}", d.number(), d.title(), if l.off || l.class.is_none() { " (in no total)" } else { "" })).unwrap_or_default()),
                 ]);
             }
             let mut budget: Vec<Vec<Out>> = vec![vec![text(format!("{title}: the budget by cost type"))], vec![], ["Cost type", "Amount", "Hours", "Lines", "How sure"].iter().map(|h| text(*h)).collect()];
@@ -436,6 +465,7 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
             let mut verify: Vec<Vec<Out>> = vec![vec![text(format!("{title}: to verify in the field"))], vec![], ["Riding on it", "What", "Level", "To do", "Lines"].iter().map(|h| text(*h)).collect()];
             for q in &list.questions {
                 let (what, to_do) = match &q.clash {
+                    Some(c) if c.through => (format!("{} and {}", q.name, c.other_name), "one passes through the other: a hole to cut, and where is still to verify".to_string()),
                     Some(c) => (format!("{} and {}", q.name, c.other_name), format!("in the same space{}: measure either one", c.by.map(|by| format!(" by {:.2} in", by * 12.0 + 0.0)).unwrap_or_default())),
                     None => {
                         let named = |length: bool| q.values.iter().filter(|v| v.2 == length).map(|v| v.0.clone()).collect::<Vec<_>>().join(", ");

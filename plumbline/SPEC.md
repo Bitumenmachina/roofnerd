@@ -899,15 +899,24 @@ asks of the building (DECISIONS.md call 54):
   (`editing::takes` says which values those are), with each such value named as the
   screen names it.
 * **A clash that rests on anything not Known.** One that rests only on what is Known is
-  a finding, and is on the clash list, not on this one.
+  a finding, and is on the clash list, not on this one. A run that passes through a
+  wall or a floor (a hole to cut) and rests on anything not Known is a question too:
+  where the hole goes is still to verify.
 
 **The dollars riding on a thing** are the amounts of the estimate's live lines whose
 quantity is worked from a figure that rests on that thing (each worked-out figure names
 what it rests on), **and whose amount is itself not Known**: a line that has come out
-Known rests on nothing still in question. **The dollars riding on a clash** are the
-amounts of the lines on the two things in it. A question nothing priced rests on has no
-dollars, which is not $0.00. The list is largest first, ties in the job's order, those
-with no dollars last, clashes before things. The total counts each line once.
+Known rests on nothing still in question. **And where what the thing is, its type or
+its size is itself to be checked, everything priced on the thing rides on that check**,
+however sure its quantity (call 59): a price for a 50 gal heater is a price for
+nothing if the heater is not that. **The dollars riding on a clash** are the amounts
+of the lines on the two things in it; **on a hole to cut, none**: neither thing has to
+move. A line that rides on a question and has no figure yet is counted beside the
+dollars ("1 line has no price yet"), on the question and at the head of the list, so
+"no dollars riding" never covers "what rides has no price". A question nothing rests
+on has no dollars, which is not $0.00. The list is largest first, ties in the job's
+order, those with no dollars last, clashes before things. The total counts each line
+once.
 
 One list, three places: `plumbline vif`; the sheet's Verify in field tab, where a click
 on a row selects the thing in the model window and takes the view to it; and the top

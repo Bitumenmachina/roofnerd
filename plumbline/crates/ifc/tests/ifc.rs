@@ -60,7 +60,7 @@ fn a_model_comes_in_as_storeys_walls_openings_a_floor_a_room_and_runs_and_the_re
     let (door, window) = (opening(&mut job, &of(Kind::Door)[0]), opening(&mut job, &of(Kind::Window)[0]));
     assert_eq!((door.offset.feet(), door.sill.feet()), (Some(10.0), Some(0.0)));
     assert_eq!((window.offset.feet(), window.sill.feet()), (Some(10.0), Some(3.0)));
-    assert_eq!(door.offset.source, "the designer's model (made up): made-up-house.ifc, \"Front door\", door 113 in the file");
+    assert_eq!(door.offset.source, "the designer's model (made up): made-up-house.ifc, \"Front door\", door #113 in the file");
     // The slab: 30 ft by 20 ft is 600 SF. The room inside 6 in walls drawn on their
     // centre lines: 29.5 by 19.5 is 575.25 SF.
     assert_eq!(measure(&mut job, &of(Kind::Floor)[0], "plan_area").0, Some(600.0));

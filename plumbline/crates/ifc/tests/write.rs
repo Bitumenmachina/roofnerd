@@ -70,3 +70,29 @@ fn a_job_with_no_level_has_no_building_to_write() {
     let mut job = Job::new("empty (not a real job)", "test", "test");
     assert!(export(&mut job, "empty.ifc", WHEN).unwrap_err().contains("no level"));
 }
+
+/// The seventeenth judgment, J17B-16 and 17: a model this program wrote says value by
+/// value how sure each is. Read back as "Known", nothing in it comes in surer than
+/// Assumed where any value was marked so, and the report says so; and the property sets
+/// it does not read are counted, not passed over.
+#[test]
+fn a_model_this_program_wrote_keeps_its_doubt_when_it_is_read_back_as_known() {
+    use plumbline_world::editing::{self as ed, Top};
+    let unsure = Entered { status: Status::Assumed, source: "guessed from a photograph" };
+    let mut job = Job::new("unsure (not a real job)", "test", "test");
+    let level = ed::storey(&mut job, "Ground", "0 ft", "9 ft", unsure).unwrap();
+    let wall_type = ed::wall_type(&mut job, "wall 6 in", "6 in", unsure).unwrap();
+    ed::walls(&mut job, &level, &wall_type, &[[0.0, 0.0], [20.0, 0.0], [20.0, 10.0], [0.0, 10.0]], true, Top::Height("9 ft"), unsure).unwrap();
+    job.derive();
+    let written = export(&mut job, "unsure.ifc", WHEN).unwrap();
+    assert!(written.text.contains("(Assumed; "), "the model does not carry its marks");
+    let mut back = Job::new("read back (not a real job)", "test", "test");
+    let brought = plumbline_ifc::import(&mut back, written.text.as_bytes(), "unsure.ifc", Entered { status: Status::Known, source: "their model" }).unwrap();
+    assert!(brought.notes.iter().any(|n| n.contains("was written by plumbline and marks") && n.contains("everything from it was brought in Assumed, not Known as was said of it")), "{:#?}", brought.notes);
+    assert!(brought.notes.iter().any(|n| n.starts_with("not read: ") && n.contains("property set")), "{:#?}", brought.notes);
+    back.derive();
+    let levels = storey_totals(&mut back);
+    assert_eq!(levels.len(), 1);
+    // 60 LF of wall, and no surer than the model that held it.
+    assert_eq!((levels[0].walls.value.map(|v| (v * 100.0).round() / 100.0), levels[0].walls.status), (Some(60.0), Status::Assumed));
+}

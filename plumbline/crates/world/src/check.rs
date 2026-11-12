@@ -248,7 +248,7 @@ pub fn run(path: &str, kind: Kind, r: &Run) -> Result<(), String> {
 
 pub fn height(path: &str, kind: Kind, h: &Height) -> Result<(), String> {
     if kind != Kind::Parapet {
-        return Err(format!("{path}: a {kind:?} cannot carry a height; only a parapet can"));
+        return Err(format!("{path}: the height of a {} is not set this way. It is given when the thing is drawn, or comes from its level; what was measured on site is put on with `plumbline measure`. Only a parapet carries a height of its own that is set here", kind.said()));
     }
     h.0.check_length(&format!("{path} height"))?;
     if h.0.feet().is_some_and(|x| x < 0.0) {
@@ -353,7 +353,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
         let read = lines::read(&on, line).map_err(|why| format!("{what}: its quantity {:?} {why}", line.quantity))?;
         let used = formula::names(&read.expr);
         if line.stretch_out.is_some() && !used.iter().any(|n| n == lines::STRETCH_OUT) {
-            return Err(format!("{what}: carries a stretch-out that its quantity, {:?}, does not use. A stretch-out turns a length (LF) into an area: write the quantity as a length times stretch_out", line.quantity));
+            return Err(format!("{what}: carries a stretch-out that its quantity, {:?}, does not use. A stretch-out turns a length (LF) into an area: give the quantity as a length times stretch_out, and the stretch-out with it, in one step (at the command line: set ... quantity \"plan_length * stretch_out\" --with \"stretch_out=19 1/2 in\")", line.quantity));
         }
         if let Some(unused) = line.inputs.keys().find(|k| !used.contains(k)) {
             return Err(format!("{what}: carries {unused:?}, which its quantity, {:?}, does not use; a value the formula does not read would sit on the line unused", line.quantity));
@@ -565,7 +565,7 @@ pub fn recipe(path: &str, kind: Kind, t: &Recipe) -> Result<(), String> {
         // itself (its general requirements). It was once the roof's alone.
         let built = k.is_area() || k.is_run() || matches!(k, Kind::Job | Kind::Roof | Kind::Wall | Kind::Door | Kind::Window | Kind::Floor | Kind::Room | Kind::Duct | Kind::Pipe | Kind::Conduit | Kind::Cable | Kind::Fitting | Kind::Fixture | Kind::Equipment);
         if !built {
-            return Err(format!("{path}: an assembly goes on what is built (a wall, a floor, a room, a door, a window, a roof plane or line, a duct, a pipe, a fixture) or on the job, not on a {}", k.stem()));
+            return Err(format!("{path}: an assembly goes on what is built (a wall, a floor, a room, a door, a window, a roof plane or line, a duct, a pipe, a fixture) or on the job, not on a {}", k.said()));
         }
         if t.applies_to[..i].contains(k) {
             return Err(format!("{path}: names {k:?} twice in what it applies to"));

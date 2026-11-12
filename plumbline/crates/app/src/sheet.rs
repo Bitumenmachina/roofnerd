@@ -542,6 +542,9 @@ fn verify(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsho
                     None => words(x, fonts, "no dollars", 12.0, Weight::Regular, theme::ink_faint()),
                 });
                 cell(r, 0.0, false, |x| match &q.clash {
+                    Some(c) if c.through => {
+                        named(x, fonts, format!("{} and {}", q.name, c.other_name), theme::ink(), "One passes through the other: a hole to cut. Where is still to verify.".to_string(), theme::ink_soft());
+                    }
                     Some(c) => {
                         let by = c.by.map(|by| format!(", by {:.2} in", by * 12.0 + 0.0)).unwrap_or_default();
                         named(x, fonts, format!("{} and {}", q.name, c.other_name), theme::ink(), format!("In the same space{by}. Measure either one."), theme::ink_soft());
