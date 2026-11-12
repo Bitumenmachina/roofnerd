@@ -4432,3 +4432,12 @@ the rebuilt window; a thing turned and snapped to the wall it backs onto; the me
 over the model frosted; the estimate window's heading and tabs; the second picture
 of the scene drawn without shadows and following a resized window; then the release
 candidate's table.
+
+* **From the judge's notes J19-34 and J19-37, built and not yet seen:** a press on any
+  thing that stands where it is put picks it up, selected or not (a press on one that
+  was not selected slid the whole view: "a person reaching for the vanity will move
+  the world"); and the program's own list of what is on screen
+  (`PLUMBLINE_MAP`) leaves out what a panel has scrolled out of sight or cut off at
+  its edge, by the engine's own account of what is clipped (buttons below the left
+  panel's bottom edge were listed; a script clicked them, nothing happened, and
+  nothing said so: five of six Write out presses wrote nothing).

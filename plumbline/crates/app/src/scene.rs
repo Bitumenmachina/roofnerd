@@ -1173,10 +1173,19 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
         return;
     }
     if buttons.just_pressed(MouseButton::Left) && carry.path.is_none() && free && !on_panel {
-        let selected = snap.selected.as_ref().filter(|s| stands(s.kind) && doc.selected.as_deref() == Some(s.path.as_str()) && doc.hover.as_deref() == Some(s.path.as_str()));
+        // The thing under the pointer, if it is one that stands where it is put. It need
+        // not have been selected first: a person reaching for the vanity takes hold of
+        // the vanity, and does not slide the world (J19-34). The press selects it.
+        let under = doc.hover.clone().filter(|path| {
+            let kind = doc.job.find(path).and_then(|e| doc.job.world.get::<Kind>(e).copied());
+            kind.is_some_and(stands)
+        });
         let hold = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p);
-        if let (Some(s), Some(at)) = (selected, hold) {
-            *carry = Carry { path: Some(s.path.clone()), grabbed: at, gone: [0.0, 0.0], said: String::new(), marked: doc.show.clashes };
+        if let (Some(path), Some(at)) = (under, hold) {
+            if doc.selected.as_deref() != Some(path.as_str()) {
+                doc.select(&path);
+            }
+            *carry = Carry { path: Some(path), grabbed: at, gone: [0.0, 0.0], said: String::new(), marked: doc.show.clashes };
             CARRYING.store(true, Relaxed);
             // What it is in is marked on the model while it is carried, and after.
             if !doc.show.clashes {
@@ -1186,7 +1195,8 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
         }
     }
     let Some(path) = carry.path.clone() else { return };
-    let name = snap.selected.as_ref().map(|s| s.name.clone()).unwrap_or_else(|| path.clone());
+    // (What it is called: the panel's own account of it, once the panel has caught up.)
+    let name = snap.selected.as_ref().filter(|s| s.path == path).map(|s| s.name.clone()).or_else(|| doc.job.find(&path).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e).map(|n| n.name.clone()))).unwrap_or_else(|| path.clone());
     if buttons.pressed(MouseButton::Left) {
         // Where the place grabbed should be now: under the pointer, at the height it was.
         // On plan a dot covers the same ground everywhere. In 3D it is where the ray

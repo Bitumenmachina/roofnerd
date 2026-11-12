@@ -28,7 +28,7 @@ pub fn write(
     doc: Res<Doc>,
     snap: Res<Snapshot>,
     cameras: Option<Res<Cameras>>,
-    named: Query<(&Named, &ComputedNode, &UiGlobalTransform, &ComputedUiTargetCamera, &InheritedVisibility)>,
+    named: Query<(&Named, &ComputedNode, &UiGlobalTransform, &ComputedUiTargetCamera, &InheritedVisibility, Option<&CalculatedClip>)>,
     windows: Query<(&Window, Has<PrimaryWindow>)>,
     camera: Query<(&Camera, &GlobalTransform, &Projection), With<MainCamera>>,
     mut last: Local<String>,
@@ -50,8 +50,14 @@ pub fn write(
         }
     }
     let mut found: Vec<(&str, String, f32, f32)> = Vec::new();
-    for (name, node, place, target, visible) in &named {
+    for (name, node, place, target, visible, clip) in &named {
         if !visible.get() || node.size.x <= 0.0 {
+            continue;
+        }
+        // What a panel has scrolled out of sight, or cut off at its edge, is not on
+        // screen: a click there reaches nothing, and a script must not be told it would
+        // (J19-37: buttons below the left panel's bottom edge were listed).
+        if clip.is_some_and(|c| !c.contains_point(place.translation)) {
             continue;
         }
         let at = place.translation * node.inverse_scale_factor;
