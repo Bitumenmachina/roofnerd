@@ -31,12 +31,15 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 **3. The program:**
 
 ```
-git clone https://github.com/Bitumenmachina/roofnerd
+git clone -b claude/nifty-tesla-qmn44n https://github.com/Bitumenmachina/roofnerd
 cd roofnerd/plumbline
 cargo build                         # the first build takes a while: it builds the 3D engine
 cargo test --workspace              # the model, the command line, the window's crate
 cargo run -p plumbline-app          # a new job, job.json, in the model window and the sheet window
 ```
+
+(plumbline is on the branch named there until it is merged; the repository's default
+branch holds the earlier program only.)
 
 The window opens on an empty job with **Next steps** down its left side: add a level,
 add a drawing and set its scale, draw the walls, and so on to a price. To try it on a
