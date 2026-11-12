@@ -69,9 +69,11 @@ fn cell(p: &mut ChildSpawnerCommands, width: f32, right: bool, build: impl FnOnc
 /// click on it opens it, and while it is being typed it shows what is typed.
 fn editable(c: &mut ChildSpawnerCommands, fonts: &Fonts, name: String, said: String, ink: Color, typed: Option<&str>, open: impl Fn(&mut Doc) + Send + Sync + 'static) {
     let mut e = c.spawn((
-        Node { padding: UiRect::axes(px(5.0), px(1.0)), border: UiRect::all(px(1.0)), align_items: AlignItems::Center, min_height: px(20.0), flex_shrink: 0.0, ..default() },
-        BorderColor::all(if typed.is_some() { theme::accent() } else { theme::hairline() }),
-        BackgroundColor(if typed.is_some() { theme::panel() } else { theme::field_paper() }),
+        // A field on the sheet looks like a field in the model window: round-cornered,
+        // a little whiter than what it sits on, edged in the accent while it is typed in.
+        Node { padding: UiRect::axes(px(7.0), px(2.0)), border: UiRect::all(px(1.0)), border_radius: BorderRadius::all(px(theme::SMALL_RADIUS)), align_items: AlignItems::Center, min_height: px(22.0), flex_shrink: 0.0, ..default() },
+        BorderColor::all(if typed.is_some() { theme::accent() } else { theme::control_edge() }),
+        BackgroundColor(if typed.is_some() { theme::panel() } else { Color::WHITE }),
         theme::Named { name, scrolls: true },
     ));
     e.with_children(|f| match typed {
@@ -131,7 +133,15 @@ fn row(p: &mut ChildSpawnerCommands, selected: bool, select: Option<String>, bui
 }
 
 fn table(p: &mut ChildSpawnerCommands, fonts: &Fonts, title: &str, count: String, build: impl FnOnce(&mut ChildSpawnerCommands)) {
-    p.spawn(theme::card(Node { flex_direction: FlexDirection::Column, overflow: Overflow::clip(), flex_shrink: 0.0, ..default() })).with_children(|c| {
+    // A table is a sheet of its own, lifted a little off the page: the estimate is dense
+    // text and is not glass, but it belongs to the same program (VISUAL.md F4).
+    p.spawn((
+        Node { flex_direction: FlexDirection::Column, overflow: Overflow::clip(), flex_shrink: 0.0, border: UiRect::all(px(1.0)), border_radius: BorderRadius::all(px(theme::BUTTON_RADIUS + 4.0)), ..default() },
+        BackgroundColor(Color::WHITE),
+        BorderColor::all(theme::control_edge()),
+        theme::card_shadow(),
+    ))
+    .with_children(|c| {
         c.spawn(Node { align_items: AlignItems::Baseline, column_gap: px(8.0), padding: UiRect { left: px(16.0), right: px(16.0), top: px(13.0), bottom: px(11.0) }, ..default() }).with_children(|h| {
             h.spawn(text(fonts, title, 14.0, Weight::Semibold, theme::ink()));
             h.spawn(text(fonts, count, 12.0, Weight::Regular, theme::ink_faint()));

@@ -52,6 +52,13 @@ pub fn frost_edge() -> Color { Color::srgba(1.0, 1.0, 1.0, 0.72) }
 /// What sits on the glass and can be pressed: a little whiter than the glass.
 pub fn control() -> Color { Color::srgba(1.0, 1.0, 1.0, 0.62) }
 pub fn control_edge() -> Color { Color::srgba(0.07, 0.09, 0.12, 0.10) }
+/// The shadow under a card that lies on a page: slight, so a page of cards stays calm.
+pub fn card_shadow() -> BoxShadow {
+    BoxShadow(vec![
+        ShadowStyle { color: Color::srgba(0.05, 0.07, 0.10, 0.06), x_offset: px(0.0), y_offset: px(1.0), spread_radius: px(0.0), blur_radius: px(3.0) },
+        ShadowStyle { color: Color::srgba(0.05, 0.07, 0.10, 0.07), x_offset: px(0.0), y_offset: px(6.0), spread_radius: px(-3.0), blur_radius: px(16.0) },
+    ])
+}
 /// A hairline on glass.
 pub fn glass_rule() -> Color { Color::srgba(0.07, 0.09, 0.12, 0.09) }
 /// What is selected or in hand, on glass: a wash of the accent, never accent-coloured
@@ -65,7 +72,6 @@ pub fn panel_shadow() -> BoxShadow {
     ])
 }
 /// A field that can be typed in, at rest.
-pub fn field_paper() -> Color { hex(0xFAFAF8) }
 /// A hairline inside a panel, between rows.
 pub fn rule() -> Color { hex(0xE7E9E6) }
 pub fn hairline() -> Color { hex(0xC9CDD0) }

@@ -4398,3 +4398,8 @@ and NOTICE names the file.
   type; a flick that begins on a wall; a shapeless item set down; the file list; a
   half-filled form let go; carrying on plan and against a wall. These wait for the
   display.
+
+* **The estimate window, seen** (`demos/captured/glass/step6-estimate-window.png`): its
+  tables are white round-cornered sheets with a slight shadow, its fields are round,
+  hours read "480.00 hr", and it has its thumb at the right edge. Its heading, its
+  tabs and its foot are still flat strips (VISUAL.md F4 says so).

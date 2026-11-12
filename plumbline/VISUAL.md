@@ -122,8 +122,9 @@ themselves are named at the top of `crates/app/src/theme.rs`.
 3. **What can be typed is a field on its own line**, and looks like one.
 4. **It belongs to the same program.** Round corners, the same type, the same accent,
    the same depth. Dense text sits on a surface thick enough to read on; the estimate
-   is not glass, and it is not a grey web page either. (As of this writing this
-   window has not been touched by the rebuild; it fails this line.)
+   is not glass, and it is not a grey web page either. (As of this writing its
+   tables are round-cornered sheets lifted off the page and its fields are round;
+   its heading, its tabs and its foot are still flat strips, and fail this line.)
 
 ## How a screen is judged
 
