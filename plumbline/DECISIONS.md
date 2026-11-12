@@ -2706,3 +2706,43 @@ the ground under the pointer, so it moves less across the screen, as it does in 
 Earth; `demos/glassw.sh` measures the grabbed place itself and it stays under the
 pointer.
 
+### Call 67. After judge 19's report: nothing is lost or left out without a word, and what the first pictures showed (2026-11-12)
+
+The judge's two "no"s were the look and silence. These are the calls made on silence,
+and on what the first pictures taken after the report showed. Each changes something a
+person sees; none changes a figure.
+
+1. **Save is never put off.** While a field had the keyboard, F2, Ctrl+S and the Save
+   button were dropped without a word (J19-46, 47); since call 64 a tool picked always
+   has its sizes open, so that was the ordinary state to press Save in. Save now saves
+   the job as it stands and the line says "What is being typed is not in it yet: Enter
+   sets it." Ctrl with a letter is a command, never a letter of the value. The line
+   names the file, not the folders it lies in.
+2. **A window with changes not saved does not close at the first asking.** It says
+   "Not closed: the job has changes that are not saved. Save (Ctrl+S), or close again
+   to leave without saving them." The second asking closes it. (Not asked for by the
+   judge; found reading the same code. A question in a box was the other way; the
+   program has no boxes that stop the work, and the line is where everything else is
+   said.)
+3. **What is built and not priced is said where the price is read** (J19-48): under
+   Price on the recap, in the sentence the command line already used, and as a red
+   "3 not priced" beside the price in the model window's bar. `view::not_priced_said`
+   is the one wording. The price itself is unchanged: it is still the price of what is
+   priced, which is what it says it is.
+4. **A double-click flies only to a place where the job is** (within four times the
+   framed distance of the job's middle); on the sky or out at the horizon it does
+   nothing (J19-50: it flew to an empty view). **The wheel with nothing near under
+   the pointer** goes the way the pointer points, over the ground (J19-49).
+5. **The message over the model is a card of the same frosted glass as the panels**,
+   round, with a deeper shadow, a bar of the tone's colour down its left edge, under
+   the view buttons. (The first picture after the report showed the old flat red bar
+   cut off where it ran under those buttons; VISUAL.md A2 named it as a known fail.)
+6. **The right panel is as tall as what is in it** (VISUAL.md A5), up to the height of
+   the window, as the left one already was. The wheel scrolls a panel only when the
+   pointer is on the panel itself.
+7. **The Show switches come straight after the levels** in the left panel (J19-2: on
+   the whole house they opened below the fold); what is brought in and written out is
+   below them. The program's list of what is on screen now says which way a
+   scrolled-away control of the left panel lies, and the demonstrations' kit turns
+   the wheel that way before clicking, as a person does.
+

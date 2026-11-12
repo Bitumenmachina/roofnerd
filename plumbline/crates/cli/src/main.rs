@@ -601,11 +601,8 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
     }
     // What is built and has nothing priced on it is in no line above and no total:
     // the price is not the price of the building until it is, and says so (J17A-19).
-    let unpriced = view::pricing(job).not_priced;
-    if !unpriced.is_empty() {
-        let n: usize = unpriced.iter().map(|x| x.1).sum();
-        let kinds: Vec<String> = unpriced.iter().map(|(k, n)| format!("{n} {}{}", k.said(), if *n == 1 { "" } else { "s" })).collect();
-        let _ = writeln!(out, "  ! nothing is priced on {n} thing{} that could be ({}): {} in no line and no total above", if n == 1 { "" } else { "s" }, kinds.join(", "), if n == 1 { "it is" } else { "they are" });
+    if let Some(said) = view::not_priced_said(&view::pricing(job).not_priced) {
+        let _ = writeln!(out, "  ! {said}");
     }
     if !est.job_cost.left_out.is_empty() {
         let _ = writeln!(out, "  left out of the job cost, and of everything taken on it: {} line{}", est.job_cost.left_out.len(), if est.job_cost.left_out.len() == 1 { "" } else { "s" });

@@ -512,6 +512,18 @@ pub struct Pricing {
     pub not_priced: Vec<(Kind, usize)>,
 }
 
+/// What is built and has nothing priced on it, in the one sentence every view says it
+/// with: "nothing is priced on 3 things that could be (2 doors, 1 window): they are in
+/// no line and no total above". None when everything that could be priced is.
+pub fn not_priced_said(not_priced: &[(Kind, usize)]) -> Option<String> {
+    if not_priced.is_empty() {
+        return None;
+    }
+    let n: usize = not_priced.iter().map(|x| x.1).sum();
+    let kinds: Vec<String> = not_priced.iter().map(|(k, n)| format!("{n} {}{}", k.said(), if *n == 1 { "" } else { "s" })).collect();
+    Some(format!("nothing is priced on {n} thing{} that could be ({}): {} in no line and no total above", if n == 1 { "" } else { "s" }, kinds.join(", "), if n == 1 { "it is" } else { "they are" }))
+}
+
 fn money_total(parts: &[(&PricedElement, &Derived)]) -> MoneyTotal {
     let included: Vec<&(&PricedElement, &Derived)> = parts.iter().filter(|(_, d)| d.value.is_some()).collect();
     let left_out = parts.iter().filter(|(_, d)| d.value.is_none()).map(|(e, d)| (e.path.clone(), d.note.clone())).collect();

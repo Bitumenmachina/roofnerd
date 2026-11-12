@@ -299,7 +299,8 @@ fn save(doc: &mut Doc) {
     match std::fs::write(&doc.path, file::save(&mut doc.job)) {
         Ok(()) => {
             doc.edited = false;
-            doc.say(Tone::Done, format!("Saved {}.", doc.path.display()));
+            // By its name: where it lies on the computer is not a builder's word (J19-47).
+            doc.say(Tone::Done, format!("Saved {}.", doc.path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "the job".into())));
         }
         Err(e) => tools::cant(doc, "save", format!("{}: {e}", doc.path.display())),
     }

@@ -4508,3 +4508,115 @@ candidate's table.
 
   J19-45 held: typed window sizes are placed as typed when the order is plain.
 
+## Nineteenth judgment: the report (arrived 2026-11-12, recorded the turn it arrived)
+
+An Opus judge, on the program as committed at 14fc994, 25 sessions on the virtual
+display with a real pointer and keyboard, every picture read, 51 notes (J19-1 to
+J19-51; its running notes and pictures are in the scratch folder `j19/`). No session
+panicked. It was asked one question: **would Patrick see it now?**
+
+**Its verdicts, in its words, against Patrick's words:**
+
+| What Patrick asked for | Verdict | Why |
+|---|---|---|
+| moving round the model ("Google Earth feel") | partly | wheel on the pointer, drag and coast, turn without flipping, fly to a thing and plan easing in all held; it runs off at the horizon (J19-49), a double-click on the sky blanks the view (J19-50), a drag begun on the house also selects it (J19-11) |
+| the look ("glassy", "Apple", "hyper realistic") | **no** | panels read as grey cards with lines showing through and no frost (J19-3, 8, 31); plan labels and roof lines painted over panels and bars (J19-13); the top bar cut off (J19-1); the house "a tidy massing model, not a game-grade one" (J19-5); placed things plain boxes (J19-27) |
+| switches and scrolling | partly | eight clear switches and panel scrolling held; systems, levels and panels had none (J19-18); the switches open below the fold (J19-2) |
+| a maker's sheet made into an item | yes, with gaps | read right, said what it did not know, refused the sheet that says nothing; a thing with no height is set down unseen and untested with no word (J19-25, 26) |
+| picking a thing up and moving it | partly | in 3D on open ground "the real thing": red while inside, the overlap in feet and inches, one-step undo, saved job agrees; needs a click first (J19-34), fails on plan (J19-30, 33), lands far from the hand when pointed at a wall (J19-32) |
+| writing out ("export to BIM files") | partly | six files written, an empty building refused clearly; no furniture class, the bookcase dropped, no maker or model in the file (J19-39) |
+| typed sizes | partly | doors and windows place what is on screen; the wrong field named (J19-43); **Save with a field open saves nothing and says nothing: three windows lost** (J19-46, 47) |
+| anything silently wrong | **no** | new openings lower the price and the recap does not say why (J19-48); work lost through F2; buttons listed as on screen that are cut off (J19-37); the bookcase unseen and untested |
+
+**Where each note stands.** "Built" means in the tree and passing its tests; "seen"
+means looked at in a picture of the current program. Until the pictures are retaken
+(next, now the display is free) nothing below that is a window change is claimed as
+shown.
+
+| Notes | State |
+|---|---|
+| J19-6, 7, 12, 17, 42, 45, 51 | held; nothing to do |
+| J19-46, 47 (Save with a field open; the folder path in "Saved ...") | built: Save works whatever has the keyboard and says the typed value is not in it; the line names the file only; closing with work not saved warns first. `demos/toolsw.sh` extended to press its only Save with a field open. Not yet run |
+| J19-48 (price drops, recap silent) | built: under the Price on the recap, in the words the command line uses ("Nothing is priced on 3 things that could be (2 doors, 1 window): they are in no line and no total above."), and a red "3 not priced" beside the price in the model window's bar. One sentence for every view (`view::not_priced_said`). Not yet seen |
+| J19-20 (clash certainty; 21 against 87) | built (call 66): red finding, amber question for the field, counts of each under the switch; both windows count what is in the same space. Not yet seen |
+| J19-29, 30, 32, 33, 34 (carrying: plan, first press, at a wall) | built before the report from the running notes. Not yet seen |
+| J19-3, 8, 31 (no frost) | built before the report: the panels are frosted (a blurred picture of the model behind each); seen once in `demos/captured/glass`; to be seen again on plan |
+| J19-13 (plan labels over the panels) | built before the report. Not yet seen |
+| J19-1, 41 (bar cut off; file name in it) | built before the report: no file name in the bar, view buttons out of it. Not yet seen on the whole house |
+| J19-4, 16, 19, 27, 36, 40, 44 (words) | built (call 66 and before): hours to two places, the dollar sign first, places as E and N in feet and inches, sizes in feet and inches, to-verify thing first, Enter said one way, names as said |
+| J19-11 (a flick also selects) | built before the report. Not yet seen |
+| J19-15 (the house zoomed away to nothing) | built (call 66) |
+| J19-18 (systems and levels without switches) | built before the report: each level and each system has a switch. Panels still cannot be put away one by one: **open** |
+| J19-23, 25, 26 (a thing with a size missing) | built before the report: weight not on the sheet is kept as Unknown; setting one down says it cannot be drawn or tested yet and what to measure. Not yet seen. Drawing its footprint where two sizes are known: **open** |
+| J19-28 (clash marks left on after a carry) | built before the report: they go back to how they were |
+| J19-37 (the map lists cut-off buttons) | built before the report: the map leaves out what the engine reports as clipped |
+| J19-38, 39 (overwrite without a word; IFC classes, maker and model) | built (call 65 and before): the second writing says it replaced the first; sanitary terminals and furniture by sort; maker, model, weight in the file |
+| J19-43 (wrong field named) | built after 14fc994. To be seen |
+| J19-49, 50 (the wheel at the horizon; double-click on the sky) | **being fixed now** |
+| J19-14 (plan of all levels is a solid roof) | not changed (call 66 says why); the judge ranks it eighth of ten, so it is looked at again with the pictures |
+| J19-9 (the house moves less than the hand) | not changed (call 66) |
+| J19-10 (a sky at the horizon) | as intended since call 62: QUESTIONS.md Q22, VISUAL.md C2 |
+| J19-2 (switches below the fold) | **open** |
+| J19-5 (a massing model, not hyper realistic) | **open**: the light-and-materials pass, the largest thing left of call 62 |
+| J19-21 (shipping weight kept as weight; Items pushes Write out down), J19-22 (kind without a source; electrical data unread), J19-24 and J19-39 (a message cut in the one-line bar), J19-35 (the carried thing's tag hides what it hits; a second one is named "... 2") | **open**, minor |
+
+**What the judgment says about the work.** Its two "no"s are the look and silence.
+The look was already known and is the pass not yet started. Silence was not known:
+Save dropped without a word and a price that fell without a reason were both found
+by a stranger in an afternoon, in the window, on the path a person takes, after
+seventeen judgments that never went there. Both are fixed in the tree and neither
+is yet proven in a picture.
+
+## The light and the materials: the plan, written before it is built
+
+Judge 19's first "no" (J19-5: "a tidy massing model, not a game-grade one") and the
+largest thing left of call 62 ("hyper realistic"). VISUAL.md C1 and C3 are the lines
+it is built to. What the engine gives is in the engine survey (call 63); nothing here
+is taken from memory.
+
+**What the window does now** (`scene.rs`, `setup`): no tone mapping at all (a colour
+goes to the screen as the surface's own colour times the light, cut off at white),
+two lamps and one flat light from everywhere, a painted dome for a sky that lights
+nothing, shadows with hard edges, glass that is see-through and reflects nothing.
+That is why it reads as a diagram: nothing in it is lit by the place it stands in.
+
+**What is to be built, in the order it will be tried, each seen in a picture before
+the next:**
+
+1. **The camera sees a range of light and folds it to the screen** as a camera does:
+   `Hdr` with `Tonemapping::AgX` (its tables are already built in), dither on, and a
+   little bloom so that sun on glass and metal glints rather than clips.
+2. **The sky lights the house.** A small picture of the sky all round (the same pale
+   horizon and blue overhead the dome is painted with, and the ground's grey below)
+   is made at start and given to the engine as the light from everywhere
+   (`GeneratedEnvironmentMapLight`): walls facing the sky are cooler and lighter than
+   soffits facing the ground, and glass and metal reflect the sky. The flat light
+   from everywhere goes. If the software renderer the demonstrations run on cannot
+   make that picture (it needs a compute pass), the flat light stays on that
+   renderer only and STATUS says so; the window on a real card still gets it.
+3. **One sun.** The second lamp goes; the sun's shadow edge is softened with distance
+   from what casts it (the engine's soft shadows, a build feature) and steadied over
+   frames with the anti-aliasing already on.
+4. **Materials say what they are.** Glass: smooth, reflecting the sky, a little
+   see-through. Metal roofing and gutters: a satin. Brick, stone, shingles and wood:
+   rough, with the relief they already have. Nothing with a white-hot highlight.
+5. **The ground meets the house**: the shade where a wall meets the ground is kept
+   (it is there now) and looked at again under the new light.
+
+**What it will break, known before starting.** Every colour on screen changes, and
+five demonstrations read colours out of pictures: `glassw` (the door's and the
+roof's colour, to find them), `carryw` (the vanity's wood and the red of a clash),
+`dressw` and `pricew` (a finish's colour where it is priced), and the plan's paper in
+`planw` and `firstw` (the plan is unlit and should not change; that is a check on
+the pass, not a cost of it). For each: the colour is measured again on the new
+picture, the test for it is rewritten from the measurement, and the check is proved
+red against the picture it must fail on (each already has one: the roof switched
+off, the vanity not selected, the wall before its finish). No check is loosened: a
+test that found "the roof" by its colour must still tell the roof from the sky and
+the wall beside it.
+
+**How it is judged.** By eye first: the made-up whole house from the street, from
+above, and close on a window, before and after, side by side. Then a visual judge
+against VISUAL.md C and D with those pictures. Patrick's own test is the one that
+counts, and the pictures are what he will be shown.
+

@@ -697,6 +697,19 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             if d.value.is_none() || !d.note.is_empty() {
                 t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(6.0) }, ..default() }).with_child(text(fonts, d.note.clone(), 11.5, Weight::Regular, theme::status_ink(if d.value.is_none() { Status::Unknown } else { Status::Assumed })));
             }
+            // Under the price: what is built and is in no line of it. The price is not
+            // the price of the building until this is gone, and it is said here, where
+            // the price is read (J19-48: two doors and a window were drawn, the price
+            // went DOWN by the wall they cut out, and only the command line said why).
+            if name == "Price" {
+                if let Some(said) = snap.pricing.as_ref().and_then(|p| view::not_priced_said(&p.not_priced)) {
+                    let mut said = said;
+                    if let Some(first) = said.get_mut(0..1) {
+                        first.make_ascii_uppercase();
+                    }
+                    t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(8.0) }, ..default() }).with_child(text(fonts, format!("{said}."), 11.5, Weight::Medium, theme::status_ink(Status::Unknown)));
+                }
+            }
         }
         for (who, why) in &est.job_cost.left_out {
             t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, ..default() }).with_child(text(fonts, format!("left out of the job cost: {who}: {why}"), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
