@@ -65,6 +65,7 @@ Where things stand is in [STATUS.md](STATUS.md). The model is in [SPEC.md](SPEC.
 | HANDOFF_REBASE.md | The task that re-based the building model on BIMCraft, and the rules it was done under (done; STATUS.md has the account) |
 | HANDOFF_DRAW.md | The task of drawing and editing in the window, its fence, and where it stands |
 | HANDOFF_CLASH.md | The task of fittings, connections and clash detection, and where it stands |
+| VISUAL.md | The visual standard: what every screen and every picture of the house is held to, line by line |
 | PORTMAP.md | Each public item of the building model: ported from where, or ours and how that was checked |
 
 ## Run it
