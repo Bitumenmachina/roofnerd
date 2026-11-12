@@ -2769,8 +2769,12 @@ What is built so far, and the figures chosen by eye on the made-up whole house:
    and every white wall were lit blue, which was seen in the first picture and is
    not how a house under a real sky looks, where haze and cloud fill as much as blue
    does. **What is reflected is the sky as drawn.**
-3. **One sun**, a little warm (`SUN_COLOUR`), 3,600 lux against the sky's 800 cd/m2
-   in the engine's measures at its standing exposure. The second lamp and the flat
+3. **One sun**, a little warm (`SUN_COLOUR`), 3,600 lux against the sky's 1,150 cd/m2
+   in the engine's measures at its standing exposure. (The sky was first set at 800:
+   a white wall out of the sun then read as a mid grey, (139, 141, 142) where the
+   colour checks wanted "pale", and cedar siding in shade (121, 93, 68). At 1,150 the
+   shaded siding is (135, 102, 73) against (172, 131, 93) in the sun: plainly two
+   walls, and neither dim.) The second lamp and the flat
    light are gone.
 4. **The small picture behind the frosted panels** is lit and folded the same way,
    so a panel's blur matches what is round it.

@@ -162,7 +162,7 @@ pub struct Highlight;
 /// exposure. Set by eye on the made-up whole house: the sun about three times what the
 /// sky gives a wall, so that a wall in the sun and a wall out of it are plainly two
 /// walls and neither is white.
-pub const SKY_LIGHT: f32 = 800.0;
+pub const SKY_LIGHT: f32 = 1150.0;
 pub const SUN_LIGHT: f32 = 3600.0;
 /// The sun is a little warm, as sunlight is beside the sky's fill.
 pub const SUN_COLOUR: Color = Color::srgb(1.0, 0.955, 0.89);
