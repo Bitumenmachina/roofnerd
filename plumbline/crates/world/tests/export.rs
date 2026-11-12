@@ -28,7 +28,8 @@ fn each_amount_is_a_formula_that_comes_to_the_jobs_figure_and_the_recap_is_formu
     let mut job = job();
     let sheets = estimate_out(&mut job, true);
     let names: Vec<&str> = sheets.iter().map(|s| s.name.as_str()).collect();
-    assert_eq!(names, ["Estimate", "Recap", "Suppliers"]);
+    // (Call 57: the job cost is also written division by division.)
+    assert_eq!(names, ["Estimate", "Recap", "Divisions", "Suppliers"]);
     let est = &sheets[0];
     // Fourteen lines under the headings. Thirteen come to something, each as a formula
     // on its own row's quantity and price; the north plane's has no price and no amount.

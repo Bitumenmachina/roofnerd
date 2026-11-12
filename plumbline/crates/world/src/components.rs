@@ -315,6 +315,11 @@ pub struct CostLine {
     /// the recap and left out of it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub class: Option<Class>,
+    /// Which of the sixteen divisions the line's work is: where its amount lands when
+    /// the estimate is read division by division. A line with none is named by the
+    /// recap and is in no division's total.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub division: Option<Division>,
     /// Switched off: the line stays on the sheet with what it would come to, and is out
     /// of every total. Only a Labor line can be.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -328,7 +333,7 @@ pub struct CostLine {
 impl CostLine {
     /// A line priced by one measure and nothing else.
     pub fn of(description: &str, quantity: &str, unit_cost: Val<f64>) -> CostLine {
-        CostLine { description: description.into(), quantity: quantity.into(), stretch_out: None, inputs: BTreeMap::new(), waste: None, order: None, unit_cost, class: None, off: false, of_material: false }
+        CostLine { description: description.into(), quantity: quantity.into(), stretch_out: None, inputs: BTreeMap::new(), waste: None, order: None, unit_cost, class: None, division: None, off: false, of_material: false }
     }
     /// A line made of the element's material: ordered and priced as the material is.
     pub fn of_material(description: &str, quantity: &str) -> CostLine {
@@ -345,6 +350,113 @@ impl CostLine {
     /// The line is in-house work: it is priced in hours.
     pub fn in_hours(&self) -> bool {
         self.order.as_ref().is_some_and(|o| o.unit == HOURS)
+    }
+}
+
+/// The sixteen divisions a building's work is estimated under: those of CSI MasterFormat
+/// as published through its 1995 edition (DECISIONS.md call 57 has the list's source).
+/// In the job file a division is its number, 1 to 16.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Division {
+    GeneralRequirements = 1,
+    SiteConstruction,
+    Concrete,
+    Masonry,
+    Metals,
+    WoodAndPlastics,
+    ThermalAndMoistureProtection,
+    DoorsAndWindows,
+    Finishes,
+    Specialties,
+    Equipment,
+    Furnishings,
+    SpecialConstruction,
+    ConveyingSystems,
+    Mechanical,
+    Electrical,
+}
+
+impl Division {
+    pub const ALL: [Division; 16] = [
+        Division::GeneralRequirements,
+        Division::SiteConstruction,
+        Division::Concrete,
+        Division::Masonry,
+        Division::Metals,
+        Division::WoodAndPlastics,
+        Division::ThermalAndMoistureProtection,
+        Division::DoorsAndWindows,
+        Division::Finishes,
+        Division::Specialties,
+        Division::Equipment,
+        Division::Furnishings,
+        Division::SpecialConstruction,
+        Division::ConveyingSystems,
+        Division::Mechanical,
+        Division::Electrical,
+    ];
+
+    pub fn number(self) -> u8 {
+        self as u8
+    }
+
+    pub fn title(self) -> &'static str {
+        match self {
+            Division::GeneralRequirements => "General Requirements",
+            Division::SiteConstruction => "Site Construction",
+            Division::Concrete => "Concrete",
+            Division::Masonry => "Masonry",
+            Division::Metals => "Metals",
+            Division::WoodAndPlastics => "Wood and Plastics",
+            Division::ThermalAndMoistureProtection => "Thermal and Moisture Protection",
+            Division::DoorsAndWindows => "Doors and Windows",
+            Division::Finishes => "Finishes",
+            Division::Specialties => "Specialties",
+            Division::Equipment => "Equipment",
+            Division::Furnishings => "Furnishings",
+            Division::SpecialConstruction => "Special Construction",
+            Division::ConveyingSystems => "Conveying Systems",
+            Division::Mechanical => "Mechanical",
+            Division::Electrical => "Electrical",
+        }
+    }
+
+    /// "Division 7, Thermal and Moisture Protection".
+    pub fn said(self) -> String {
+        format!("Division {}, {}", self.number(), self.title())
+    }
+
+    pub fn of_number(n: u8) -> Option<Division> {
+        Division::ALL.get(usize::from(n).wrapping_sub(1)).copied()
+    }
+
+    /// A division as a person writes it: its number (`7`, `07`, `Division 7`, `Div. 7`)
+    /// or its title, capitals aside.
+    pub fn parse(text: &str) -> Result<Division, String> {
+        let t = text.trim();
+        let lower = t.to_ascii_lowercase();
+        let number = lower.strip_prefix("division").or_else(|| lower.strip_prefix("div.")).or_else(|| lower.strip_prefix("div")).unwrap_or(&lower).trim();
+        if let Ok(n) = number.parse::<u8>() {
+            return Division::of_number(n).ok_or_else(|| format!("{t:?} is not a division: there are sixteen, 1 to 16"));
+        }
+        Division::ALL
+            .iter()
+            .copied()
+            .find(|d| d.title().eq_ignore_ascii_case(t))
+            .ok_or_else(|| format!("{t:?} is not a division: give its number, 1 to 16, or its title ({})", Division::ALL.iter().map(|d| format!("{} {}", d.number(), d.title())).collect::<Vec<_>>().join(", ")))
+    }
+}
+
+impl Serialize for Division {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_u8(self.number())
+    }
+}
+
+impl<'de> Deserialize<'de> for Division {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Division, D::Error> {
+        let n = u8::deserialize(d)?;
+        Division::of_number(n).ok_or_else(|| serde::de::Error::custom(format!("{n} is not a division: there are sixteen, 1 to 16")))
     }
 }
 

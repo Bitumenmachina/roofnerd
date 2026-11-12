@@ -582,6 +582,8 @@ pub struct SheetLine {
     pub kind: Kind,
     pub description: String,
     pub class: Option<Class>,
+    /// Which of the sixteen divisions its work is.
+    pub division: Option<crate::components::Division>,
     /// Switched off: on the sheet, out of every total.
     pub off: bool,
     /// The material it is made of, when it is made of its element's.
@@ -599,6 +601,13 @@ pub struct SheetLine {
     /// Its stretch-out, when its detail has one: the girth of the piece the line is
     /// cut from. It belongs to the line, and is changed on the line.
     pub stretch_out: Option<Val<crate::Len>>,
+}
+
+/// One division of the estimate: what the lines of the job cost in it come to.
+#[derive(Clone, Debug)]
+pub struct DivisionTotal {
+    pub division: crate::components::Division,
+    pub total: MoneyTotal,
 }
 
 /// One row of the recap.
@@ -625,6 +634,12 @@ pub struct Estimate {
     /// The sum of the classes. Left out: every classed line with no figure, and every
     /// line with no class.
     pub job_cost: MoneyTotal,
+    /// The job cost read division by division: all sixteen, in order, whether or not
+    /// anything is in them. Each is over the lines of the job cost in that division.
+    pub divisions: Vec<DivisionTotal>,
+    /// The lines of the job cost that are in no division: what the sixteen leave out.
+    /// The sixteen and this come to the job cost.
+    pub no_division: MoneyTotal,
     pub markup: Option<Markup>,
     pub overhead: Derived,
     pub profit: Derived,
@@ -686,6 +701,7 @@ pub fn estimate(job: &mut Job) -> Estimate {
                 kind,
                 description: line.description.clone(),
                 class: line.class,
+                division: line.division,
                 off: line.off,
                 material: if line.of_material { Some(made_of.clone().unwrap_or_default()) } else { None },
                 quantity: f.quantity.clone(),
@@ -726,6 +742,12 @@ pub fn estimate(job: &mut Job) -> Estimate {
     let no_class = Derived::refused("$", "", &[], "the line has no class, so it is in no row of the recap");
     let all: Vec<(String, &Derived)> = on.iter().map(|l| (label(l), if l.class.is_some() { &l.amount } else { &no_class })).collect();
     let job_cost = total_of(&all);
+    // The same lines, division by division. A line with no cost type is out of the job
+    // cost and so out of every division; one with a cost type and no division is in
+    // the job cost and in no division, and is counted apart so the two can be squared.
+    let in_division = |d: Option<crate::components::Division>| -> Vec<(String, &Derived)> { on.iter().filter(|l| l.class.is_some() && l.division == d).map(|l| (label(l), &l.amount)).collect() };
+    let divisions: Vec<DivisionTotal> = crate::components::Division::ALL.iter().map(|&division| DivisionTotal { division, total: total_of(&in_division(Some(division))) }).collect();
+    let no_division = total_of(&in_division(None));
 
     let markup = w.get::<Markup>(root).cloned();
     let root_path = w.get::<Node>(root).map(|n| n.path.clone()).unwrap_or_default();
@@ -777,5 +799,5 @@ pub fn estimate(job: &mut Job) -> Estimate {
             (s.clone(), total_of(&parts))
         })
         .collect();
-    Estimate { lines, columns, classes, not_classed, job_cost, markup, overhead, profit, price, suppliers, at_generic, at_supplier }
+    Estimate { lines, columns, classes, not_classed, job_cost, divisions, no_division, markup, overhead, profit, price, suppliers, at_generic, at_supplier }
 }

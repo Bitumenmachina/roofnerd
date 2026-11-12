@@ -355,6 +355,11 @@ impl Job {
         self.edit_line(path, line, "class", |l| l.class = Some(class))
     }
 
+    /// Say which of the sixteen divisions a cost line's work is.
+    pub fn set_division(&mut self, path: &str, line: Option<&str>, division: crate::components::Division) -> Result<(), String> {
+        self.edit_line(path, line, "division", |l| l.division = Some(division))
+    }
+
     /// Switch a Labor line off or on. Off, it stays on the sheet and is out of every total.
     pub fn set_off(&mut self, path: &str, line: Option<&str>, off: bool) -> Result<(), String> {
         self.edit_line(path, line, "switch", |l| l.off = off)

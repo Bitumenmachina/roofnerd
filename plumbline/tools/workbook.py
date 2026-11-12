@@ -160,18 +160,20 @@ def main():
                         worked += 1
         print(f"{len(book.formulas.sheetnames)} sheets: {', '.join(book.formulas.sheetnames)}")
         print(f"{worked} formulas worked out; each comes to the figure written with it")
-    if "Recap" in book.formulas.sheetnames:
-        for row in book.formulas["Recap"].iter_rows(min_row=4):
+    for sheet in ("Recap", "Divisions"):
+        if sheet not in book.formulas.sheetnames:
+            continue
+        for row in book.formulas[sheet].iter_rows(min_row=4):
             label, cell = row[0].value, row[1]
             if label is None:
                 continue
             if cell.value is None:
                 print(label)
             elif isinstance(cell.value, str) and not cell.value.startswith("="):
-                print(f"Recap!{label}: {cell.value}")
+                print(f"{sheet}!{label}: {cell.value}")
             else:
-                value = book.cell("Recap", cell.coordinate)
-                print(f"Recap!{label} = {value:.2f}" if "percent" not in label else f"Recap!{label} = {value:g}")
+                value = book.cell(sheet, cell.coordinate)
+                print(f"{sheet}!{label} = {value:.2f}" if "percent" not in label else f"{sheet}!{label} = {value:g}")
 
 
 if __name__ == "__main__":

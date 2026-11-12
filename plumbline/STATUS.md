@@ -3011,3 +3011,113 @@ The saved job has to give these, and the pictures have to show the house on its 
 Where a place on the plan is clicked after the first corner, the script asks the
 program where that many feet from the first corner is on screen (the `plan` line of
 `PLUMBLINE_MAP`), in place of a pixel copied in by hand.
+
+## Sixteen divisions. How its demonstration will be run (written before it is built)
+
+DECISIONS.md call 57: the focus is a full 16-division building platform. Every cost line
+carries its division; the estimate and its recap read division by division; a line with
+no division is said to have none.
+
+**The job** (`demos/div.sh`, made at the command line; every price is made up): one
+level, 9 ft floor to floor. Four 6 in walls round 30 ft by 20 ft, 9 ft high: 100 LF,
+900 SF of face. In the south wall a 3 ft by 7 ft door and two 4 ft by 4 ft windows
+(21 + 16 + 16 = 53 SF): the south wall's net face is 270 - 53 = 217 SF, the north's
+270, the east's and west's 180 each; 847 SF in all. A 4 in floor, the outline of the
+walls: 600 SF. One room inside the walls' faces, 29.5 by 19.5: 575.25 SF. A roof at
+6:12 on every side, eaves at 9 ft: two planes of 111.8034 SF and two of 223.6068 SF,
+a 10 LF ridge. A 20 LF duct, a 14 LF pipe, a 40 LF cable, a lavatory, a furnace.
+
+**One assembly, "Exterior wall, 2x6, sided", is applied to each of the four walls** and
+puts lines in three divisions on each: framing by the gross face (Division 6);
+insulation and siding by the net face (7); gypsum board and paint by the net face (9).
+
+**The lines, by division, each worked by hand:**
+
+| Division | Line (on what) | Quantity and price | Amount |
+|---|---|---|---|
+| 1 General Requirements | Superintendent (the job): 5 days at 8 hr | 40 hr at $85.00 | 3,400.00 |
+| | Building permit (the job) | 1 at $1,200.00 | 1,200.00 |
+| 2 Site Construction | Excavate and gravel base, 6 in (the floor) | 600 SF at 54 SF to the CY: 11.11, bought as 12 CY at $48.60 | 583.20 |
+| 3 Concrete | Concrete slab, 4 in (the floor) | 600 SF at 81 SF to the CY: 7.41, bought as 8 CY at $165.00 | 1,320.00 |
+| 4 Masonry | Stone veneer, a 3 ft band (the south wall) | 30 LF by 3 ft: 90 SF at $38.00 | 3,420.00 |
+| 5 Metals | Steel ridge beam (the ridge) | 10 LF at $42.00 | 420.00 |
+| 6 Wood and Plastics | Wall framing (four walls) | 900 SF at $4.20 | 3,780.00 |
+| 7 Thermal and Moisture Protection | Insulation (four walls) | 347.20 + 432.00 + 288.00 + 288.00 | 1,355.20 |
+| | Siding (four walls) | 2,061.50 + 2,565.00 + 1,710.00 + 1,710.00 | 8,046.50 |
+| | Standing seam roofing (four planes) at $14.00 | 1,565.25 + 1,565.25 + 3,130.50 + 3,130.50 | 9,391.50 |
+| 8 Doors and Windows | Entry door, prehung | 1 at $2,400.00 | 2,400.00 |
+| | Window unit (two windows) | 2 at $1,150.00 | 2,300.00 |
+| 9 Finishes | Gypsum board (four walls) at $2.40 | 520.80 + 648.00 + 432.00 + 432.00 | 2,032.80 |
+| | Paint (four walls) at $1.10 | 238.70 + 297.00 + 198.00 + 198.00 | 931.70 |
+| | Hardwood flooring (the room) | 575.25 SF at $12.00 | 6,903.00 |
+| 10 Specialties | Toilet and bath accessories (the room) | 1 at $450.00 | 450.00 |
+| 11 Equipment | Kitchen appliances (the room) | 1 at $8,500.00 | 8,500.00 |
+| 12 Furnishings | Window blinds (the room) | 2 at $380.00 | 760.00 |
+| 13 Special Construction | Sauna, prefabricated (the job) | 1 at $9,200.00 | 9,200.00 |
+| 14 Conveying Systems | Platform lift (the job) | 1 at $14,500.00 | 14,500.00 |
+| 15 Mechanical | Duct 20 LF at $18.00; pipe 14 LF at $9.50; lavatory $640.00; furnace $4,300.00 | 360.00 + 133.00 + 640.00 + 4,300.00 | 5,433.00 |
+| 16 Electrical | Cable 40 LF at $2.25; light fixtures 6 at $185.00 (the room) | 90.00 + 1,110.00 | 1,200.00 |
+
+(**Corrected before the demonstration was first passed, 2026-11-12:** this table first
+had gravel and concrete at 11.1111 and 7.4074 CY, $540.00 and $1,222.22. The program
+buys what is ordered by a unit in whole ones, as it always has (a sheet, a roll, and
+so a cubic yard), and the first run showed 12 and 8. That is the program's standing
+rule and the right one for a truck of gravel or concrete, so the hand figures were
+wrong and are corrected here; nothing in the program was changed to meet them.)
+
+**By division:** 1: $4,600.00. 2: $583.20. 3: $1,320.00. 4: $3,420.00. 5: $420.00.
+6: $3,780.00. 7: $18,793.20. 8: $4,700.00. 9: $9,867.50. 10: $450.00. 11: $8,500.00.
+12: $760.00. 13: $9,200.00. 14: $14,500.00. 15: $5,433.00. 16: $1,200.00.
+**Job cost $87,526.90**, the sum of the sixteen. Overhead 10%: $8,752.69. Profit 8% of
+$96,279.59: $7,702.37. **Price $103,981.96.**
+
+**Then a line with no division** is added to the job (a contingency of $2,000.00, cost
+type general conditions). The job cost is $89,526.90. The divisions still come to
+$87,526.90, and the recap says under them: 1 line, $2,000.00, is in no division. Given
+Division 1, Division 1 is $6,600.00 and nothing is left out.
+
+**What the demonstration holds:** each division's total and the job cost from
+`plumbline estimate`; the same sixteen as formulas in the workbook
+(`export estimate`), worked again by the second hand; the division on each line of the
+CSV; the assembly written out and read back with its divisions (`export assemblies`,
+`import assemblies`); a division that is not one of the sixteen refused (`0`, `17`,
+`seven and a half`), the file byte for byte what it was. In the window, the Estimate
+tab reads division by division, each with its total.
+
+## Sixteen divisions. What was run and what it showed (the model and the command line)
+
+* **Built:** `Division` (the sixteen, in the job file as its number); a division on
+  every cost line; `Estimate.divisions` (all sixteen, each over the lines of the job
+  cost in it) and `Estimate.no_division` (what is in the job cost and in none);
+  `plumbline line ... --division`, `plumbline division`, and a BY DIVISION recap in
+  `plumbline estimate`; a Divisions sheet of formulas in the workbook, a Division
+  column in the CSV and in the PM's lens with the budget by division; each line's
+  division kept in an assembly library, written and read.
+* **Changed, and named:** an assembly could be put only on a roof plane or a roof
+  line. It now goes on anything that is built (a wall, a door, a window, a floor, a
+  room, a run, a fitting, a fixture, a piece of equipment, a roof) and on the job.
+  That limit was the roofing program this came from, and it is what kept the rest of
+  the building out of the estimate. The assembly library's heading "Class" is "Cost
+  type" and it has a "Division" column; a library written before still reads. The
+  workbook has a Divisions sheet and its Estimate sheet a Division column.
+* **`crates/world/tests/divisions.rs`, four tests, pass**: the sixteen titles in order
+  and every way a person writes one; totals by division, a division with nothing in
+  it having no total, what is in none counted apart, and the sixteen and that coming
+  to the job cost; a line with no cost type out of its division as it is out of the
+  job cost; the division kept in the file as its number, and 0 and 17 refused on load.
+* **`demos/div.sh` passes**: the house's 46 lines land in all sixteen divisions at the
+  hand figures above ($4,600.00, $583.20, $1,320.00, $3,420.00, $420.00, $3,780.00,
+  $18,793.20, $4,700.00, $9,867.50, $450.00, $8,500.00, $760.00, $9,200.00,
+  $14,500.00, $5,433.00, $1,200.00; job cost $87,526.90; price $103,981.96); the line
+  with no division is said to be in none and then is in Division 1; the workbook's 72
+  formulas come to the figures written with them, the Divisions sheet among them; 0,
+  17, "seven and a half" and "Roofing" are refused and the file is what it was.
+* **Two of the hand figures were wrong and were corrected, not the program**: see the
+  note in the plan above (gravel and concrete are bought by the whole cubic yard).
+* 229 tests and all sixteen command-line demonstrations pass on this tree.
+* **Not done yet:** the window does not show the divisions (next); there is no
+  library of assemblies for each division shipped with the program; the model has no
+  element for much of Divisions 2, 3, 5, 10 to 14 (footings, steel, stairs, cabinets,
+  appliances), whose lines sit on the job, a floor or a room for now; "condition" is
+  still the word on screen for an assembly, and "class" for a cost type in places.
+  **Not judged.**

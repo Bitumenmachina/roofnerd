@@ -40,7 +40,10 @@ echo "== The workbook: every amount, the recap and the price are formulas =="
 python3 tools/workbook.py "$T/estimate.xlsx" > "$T/worked.txt"
 # Each formula, worked out from the cells it names, comes to the figure the program wrote
 # beside it; tools/workbook.py fails if any does not.
-says "$T/worked.txt" "26 formulas worked out; each comes to the figure written with it"
+# Thirteen amounts, five cost types, the job cost, overhead, profit, the price, the sum of
+# the divisions (this job's lines carry none: the sheet says so), and five supplier totals.
+says "$T/worked.txt" "27 formulas worked out; each comes to the figure written with it"
+says "$T/worked.txt" "Divisions!In no division"
 says "$T/worked.txt" "Recap!Material = 8628.10"
 says "$T/worked.txt" "Recap!Labor = 2147.97"
 says "$T/worked.txt" "Recap!Fabrication = 402.50"
@@ -79,7 +82,7 @@ says "$T/sheet2.txt" "PRICE ~\$30,072.31"
 echo
 echo "== The same as rows of values, and back in as an estimate made before =="
 "$P" export estimate "$J" "$T/estimate.csv" | sed "s|$T/||g; s/^/    /"
-says "$T/estimate.csv" "Element,Line,Class,Quantity,Unit,Unit cost,Amount,How sure,Note"
+says "$T/estimate.csv" "Element,Line,Cost type,Quantity,Unit,Unit cost,Amount,How sure,Note,Division"
 says "$T/estimate.csv" "south,Underlayment,Material,419.2627,SF,0.9,377.34,Known,"
 says "$T/estimate.csv" "the job,\"Foreman, days on site\",Supervision,40,hr,95,3800.00,Known,"
 cp "$J" "$T/back.json"

@@ -561,8 +561,11 @@ pub fn recipe(path: &str, kind: Kind, t: &Recipe) -> Result<(), String> {
         return Err(format!("{path}: the condition does not say what kind of element it applies to"));
     }
     for (i, k) in t.applies_to.iter().enumerate() {
-        if !(k.is_area() || k.is_run()) {
-            return Err(format!("{path}: a condition applies to roof planes, low-slope areas and lines, not to a {k:?}"));
+        // An assembly goes on anything that is built, in any division, and on the job
+        // itself (its general requirements). It was once the roof's alone.
+        let built = k.is_area() || k.is_run() || matches!(k, Kind::Job | Kind::Roof | Kind::Wall | Kind::Door | Kind::Window | Kind::Floor | Kind::Room | Kind::Duct | Kind::Pipe | Kind::Conduit | Kind::Cable | Kind::Fitting | Kind::Fixture | Kind::Equipment);
+        if !built {
+            return Err(format!("{path}: an assembly goes on what is built (a wall, a floor, a room, a door, a window, a roof plane or line, a duct, a pipe, a fixture) or on the job, not on a {k:?}"));
         }
         if t.applies_to[..i].contains(k) {
             return Err(format!("{path}: names {k:?} twice in what it applies to"));

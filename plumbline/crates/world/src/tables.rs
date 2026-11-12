@@ -463,7 +463,7 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
 /// an assembly puts on what it goes on. After them come three columns for each further
 /// figure a line's quantity names (`Figure 1`, `Figure 1: how sure`, `Figure 1: where
 /// from`), as many as the line with the most has.
-pub const ASSEMBLY_HEADINGS: [&str; 26] = [
+pub const ASSEMBLY_HEADINGS: [&str; 27] = [
     "Assembly",
     "Goes on",
     "Cost code",
@@ -472,7 +472,7 @@ pub const ASSEMBLY_HEADINGS: [&str; 26] = [
     "Code: how sure",
     "Code: where from",
     "Line",
-    "Class",
+    "Cost type",
     "Quantity",
     "Stretch-out",
     "Stretch-out: how sure",
@@ -490,7 +490,14 @@ pub const ASSEMBLY_HEADINGS: [&str; 26] = [
     "Unit cost: where from",
     "Made of the element's material",
     "Off",
+    "Division",
 ];
+
+/// The headings as this program wrote them before a line carried its division, and
+/// when it called a line's cost type its class: a library written then still reads.
+fn assembly_headings_before() -> Vec<&'static str> {
+    ASSEMBLY_HEADINGS[..26].iter().map(|h| if *h == "Cost type" { "Class" } else { *h }).collect()
+}
 
 /// A length, or a plain number, as a cell: `30 in`, `25' 6 1/2"`, `2`. What is not known
 /// is `unknown` and its unit. Written so that reading it gives the same value: the way a
@@ -578,15 +585,17 @@ fn line_out(l: &crate::components::CostLine) -> Vec<String> {
     }
     row.push(yes(l.of_material));
     row.push(yes(l.off));
+    row.push(l.division.map(|d| d.number().to_string()).unwrap_or_default());
     for (name, v) in &l.inputs {
         row.extend([format!("{name} = {}", length_out(v)), said(v.status), v.source.clone()]);
     }
     row
 }
 
-/// The cells of `line_out`, read back. `cells` starts at `Line`.
-fn line_in(cells: &[String]) -> Result<crate::components::CostLine, String> {
-    use crate::components::{Class, CostLine};
+/// The cells of `line_out`, read back. `cells` starts at `Line`. `with_division` is
+/// false for a library written before a line carried its division.
+fn line_in(cells: &[String], with_division: bool) -> Result<crate::components::CostLine, String> {
+    use crate::components::{Class, CostLine, Division};
     let cell = |i: usize| cells.get(i).map(|s| s.trim()).unwrap_or("");
     let how = |i: usize, what: &str| -> Result<(Status, String), String> {
         let status = status_read(cell(i)).ok_or_else(|| format!("its {what} does not say how sure it is (Known, Assumed or Unknown)"))?;
@@ -625,8 +634,13 @@ fn line_in(cells: &[String]) -> Result<crate::components::CostLine, String> {
         let (status, source) = how(15, "unit cost")?;
         rate_in(cell(14), status, &source)?
     };
+    let division = match cell(19) {
+        _ if !with_division => None,
+        "" => None,
+        text => Some(Division::parse(text)?),
+    };
     let mut inputs = BTreeMap::new();
-    let mut i = 19;
+    let mut i = if with_division { 20 } else { 19 };
     while i < cells.len() {
         if !cell(i).is_empty() {
             let (name, value) = cell(i).split_once('=').ok_or_else(|| format!("{:?} is not a figure by name, like spacing = 12 in", cell(i)))?;
@@ -635,7 +649,7 @@ fn line_in(cells: &[String]) -> Result<crate::components::CostLine, String> {
         }
         i += 3;
     }
-    Ok(CostLine { description, quantity: cell(2).to_string(), stretch_out, inputs, waste, order, unit_cost, class, off: is_yes(cell(18)), of_material: is_yes(cell(17)) })
+    Ok(CostLine { description, quantity: cell(2).to_string(), stretch_out, inputs, waste, order, unit_cost, class, division, off: is_yes(cell(18)), of_material: is_yes(cell(17)) })
 }
 
 fn kind_said(k: Kind) -> String {
@@ -681,8 +695,11 @@ pub fn assemblies_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usiz
     use crate::components::{Cost, CostCode, Recipe};
     let head = rows.first().ok_or("the table is empty")?;
     let wanted: Vec<String> = ASSEMBLY_HEADINGS.iter().map(|h| heading(h)).collect();
-    let got: Vec<String> = head.iter().take(wanted.len()).map(|h| heading(h)).collect();
-    if got != wanted {
+    let before: Vec<String> = assembly_headings_before().iter().map(|h| heading(h)).collect();
+    let got: Vec<String> = head.iter().map(|h| heading(h)).collect();
+    // A library written before a line carried its division has one heading fewer.
+    let with_division = got.len() >= wanted.len() && got[..wanted.len()] == wanted[..];
+    if !with_division && !(got.len() >= before.len() && got[..before.len()] == before[..]) {
         return Err(format!("this is not an assembly library this program wrote: its headings have to be, in order: {}", ASSEMBLY_HEADINGS.join(", ")));
     }
     all_or_nothing(job, |job| {
@@ -719,7 +736,7 @@ pub fn assemblies_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usiz
                 let mut lines = Vec::new();
                 for (_, row) in &its {
                     if row.len() > 7 && row[7..].iter().any(|c| !c.trim().is_empty()) {
-                        lines.push(line_in(&row[7..]).map_err(|why| format!("its line {:?}: {why}", row.get(7).map(|s| s.as_str()).unwrap_or("")))?);
+                        lines.push(line_in(&row[7..], with_division).map_err(|why| format!("its line {:?}: {why}", row.get(7).map(|s| s.as_str()).unwrap_or("")))?);
                     }
                 }
                 Ok(Recipe { applies_to, cost: Cost { code, lines } })
