@@ -4382,3 +4382,19 @@ and NOTICE names the file.
   face the room. Parameters, types and connectors of BIMCraft's families are not
   ported. Equipment has no forms (BIMCraft's library has none for it either).
 * 266 tests pass.
+
+## Seen, in one picture of the vanity job (2026-11-12)
+
+`demos/captured/glass/step5-things-as-what-they-are.png`, opened and read. Of what was
+"built, not yet seen":
+
+* **Seen and right:** the water closet is a cistern and a bowl with a round front; the
+  vanity is a cabinet under a worktop (red in this picture: it is selected and stands
+  3 in into the water closet); the selection's outline is fine; the level's row has
+  its switch; the left panel has its thumb at its right edge; the size reads 3' 0" ×
+  1' 9" × 2' 10 1/2"; the panels are frosted; the views are in their cluster.
+* **Still not seen:** the panel easing under the wheel (a still picture cannot show
+  it); plan meeting 3D with no step; a system's switch; the Building tab's walls by
+  type; a flick that begins on a wall; a shapeless item set down; the file list; a
+  half-filled form let go; carrying on plan and against a wall. These wait for the
+  display.

@@ -94,8 +94,10 @@ themselves are named at the top of `crates/app/src/theme.rs`.
 5. **The roof sits on the house.** A fascia at its edge, a closed soffit where it
    overhangs, a gutter only where one is priced.
 6. **A thing placed is drawn as what it is.** A vanity is a vanity and a water closet
-   a water closet, not a box of its sizes. (As of this writing every placed thing is
-   a box; that fails this line.)
+   a water closet, not a box of its sizes. (As of this writing a thing whose name
+   names one of ten forms is drawn as it: cabinet, wardrobe, WC, washbasin, bathtub,
+   table, chair, bed, sofa, desk. Equipment, and anything else, is still a box, and
+   fails this line.)
 7. **It looks like a house a builder would build**, at the standard of good
    residential work. A picture that reads as a toy or a diagram of boxes fails.
 
