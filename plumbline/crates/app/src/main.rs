@@ -49,6 +49,7 @@ mod map;
 mod model;
 mod panels;
 mod plans;
+mod glass;
 mod scene;
 mod sheet;
 mod theme;
@@ -173,10 +174,11 @@ fn main() {
         .insert_resource(Orbit::new())
         .init_resource::<scene::Feel>()
         .init_resource::<scene::Carry>()
-        .add_systems(Startup, (scene::setup, setup).chain())
+        .add_plugins(glass::GlassPlugin)
+        .add_systems(Startup, (scene::setup, glass::setup, setup).chain())
         .add_systems(
             Update,
-            (keys, plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::place_camera, scene::ground_tone).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
+            (keys, plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::place_camera, scene::ground_tone, glass::follow).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
         )
         .run();
 }

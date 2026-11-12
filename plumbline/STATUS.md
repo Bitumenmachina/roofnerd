@@ -4248,3 +4248,28 @@ demonstration of mine is run while it works.
 **Not rerun on this tree:** `firstw`, `dressw`, `pricew` (last passed at step 2),
 `draww`, `buildw`, `fieldw`, `clashw`, `d4w`, `d5w`, `planw`, `bringw`, `house`, `d2`.
 Their pictures in `demos/captured` are of the old window and are stale.
+
+## The window rebuilt, step 4: the glass is frosted (2026-11-12)
+
+* **Frosted glass** (`crates/app/src/glass.rs`, `frost.wesl`). The engine has no way to
+  blur what is behind a panel, so the scene is drawn a second time, a sixth of the
+  window's size each way, into a picture; a panel's fill is a material that looks at
+  that picture where the panel is, at thirteen places round each dot, and lays the
+  glass's tint over it (60% thick; `theme::FROST_THICK`). Every panel made by
+  `docked` is frosted. With `PLUMBLINE_GRAPHICS=plain` there is no second picture and
+  a panel is its tint, as before.
+* **The views have a cluster of their own.** 3D, Plan, Walk and Frame float over the
+  model's top right. They were in the top bar, which they crowded until its tally was
+  cut off ("247 unkno"); the bar now holds the job, Save, Undo, Redo, the price, what
+  is to verify, the tally and Saved, whole. The job file's name is no longer in the
+  bar (J18-4). The four buttons keep their names for the scripts.
+* **Seen:** one picture of the priced whole house, `demos/captured/glass/step4-frosted.png`,
+  opened and read: the left panel carries the blurred ground, the top bar and the
+  views cluster the blurred sky, the house reads through nothing. No error from the
+  shader in the program's log.
+* **Not measured:** what the second picture costs a frame. It is drawn with shadows,
+  which it does not need. **Not done:** the picture is made once at the window's
+  first size and does not follow a window that is resized. **Not rerun:** any
+  demonstration; the judge has the display. VISUAL.md's note against line A2 ("tinted
+  and not blurred") is now out of date for a panel and still true of the message
+  shown over the model and of the estimate window.

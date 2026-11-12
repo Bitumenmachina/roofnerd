@@ -167,7 +167,13 @@ fn docked(mut node: Node, _edge: UiRect) -> impl Bundle {
     (node.top, node.left, node.right, node.bottom) = (float(node.top), float(node.left), float(node.right), float(node.bottom));
     node.border = UiRect::all(px(1.0));
     node.border_radius = BorderRadius::all(px(theme::PANEL_RADIUS));
-    (node, BackgroundColor(theme::frost()), BorderColor::all(theme::frost_edge()), theme::panel_shadow())
+    // Frosted where the scene behind can be had as a picture; else tinted.
+    // (With no glass made, the material is one that is not there and draws nothing.)
+    let (frosted, tinted) = match crate::glass::panel() {
+        Some(glass) => (MaterialNode(glass), BackgroundColor(Color::NONE)),
+        None => (MaterialNode(Handle::default()), BackgroundColor(theme::frost())),
+    };
+    (node, tinted, frosted, BorderColor::all(theme::frost_edge()), theme::panel_shadow())
 }
 
 /// What a click with the left button on this does.
@@ -196,12 +202,32 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, plans
         right(root, fonts, &doc, &snap, &plans, scrolls.inspector);
         build_bar(root, fonts, &doc);
         top_bar(root, fonts, &doc, &snap);
+        views(root, fonts, &doc);
         status_line(root, fonts, &doc);
     });
 }
 
-/// Along the top: the job, Save, Undo and Redo, the view, and at all times the price
-/// and how much of the job is not yet sure.
+/// How the model is looked at, in a small cluster of its own over the model's top right:
+/// 3D, Plan, Walk, and Frame to bring the whole job back into view. (They were in the
+/// top bar, which they crowded until the tally ran off its end.)
+fn views(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
+    let mut node = Node { top: px(TOP_H), right: px(RIGHT_W), padding: UiRect::all(px(6.0)), align_items: AlignItems::Center, column_gap: px(6.0), ..default() };
+    node.border_radius = BorderRadius::all(px(theme::BUTTON_RADIUS + 6.0));
+    p.spawn(docked(node, UiRect::ZERO)).with_children(|bar| {
+        for (label, key, plan, walk) in [("3D", "", false, false), ("Plan", "T", true, false), ("Walk", "V", false, true)] {
+            let on = doc.plan == plan && doc.walk == walk;
+            button(bar, fonts, label, key, on).observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>, mut orbit: ResMut<crate::scene::Orbit>, snap: Res<Snapshot>| {
+                if press.button == PointerButton::Primary {
+                    crate::set_view(&mut doc, &mut orbit, &snap, plan, walk);
+                }
+            });
+        }
+        on_click(&mut button(bar, fonts, "Frame", "F", false), |doc| doc.press(KeyCode::KeyF));
+    });
+}
+
+/// Along the top: the job, Save, Undo and Redo, and at all times the price and how
+/// much of the job is not yet sure.
 fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
     p.spawn(docked(Node { top: px(0.0), left: px(0.0), right: px(0.0), height: px(TOP_H), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), ..default() }, UiRect::bottom(px(1.0)))).with_children(|bar| {
         wordmark(bar, fonts);
@@ -212,16 +238,6 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         on_click(&mut button(bar, fonts, "Save", "Ctrl+S", false), |doc| doc.press(KeyCode::F2));
         on_click(&mut button(bar, fonts, "Undo", "Ctrl+Z", false), |doc| doc.press(KeyCode::KeyZ));
         on_click(&mut button(bar, fonts, "Redo", "Ctrl+Y", false), |doc| doc.press(KeyCode::KeyY));
-        divider(bar);
-        for (label, key, plan, walk) in [("3D", "", false, false), ("Plan", "T", true, false), ("Walk", "V", false, true)] {
-            let on = doc.plan == plan && doc.walk == walk;
-            button(bar, fonts, label, key, on).observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>, mut orbit: ResMut<crate::scene::Orbit>, snap: Res<Snapshot>| {
-                if press.button == PointerButton::Primary {
-                    crate::set_view(&mut doc, &mut orbit, &snap, plan, walk);
-                }
-            });
-        }
-        on_click(&mut button(bar, fonts, "Frame", "F", false), |doc| doc.press(KeyCode::KeyF));
         bar.spawn(Node { flex_grow: 1.0, ..default() });
         // The price, in the colour of how sure it is.
         // A job with nothing priced has no price yet, which is not a price in doubt.
@@ -252,7 +268,9 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         divider(bar);
         tally_chips(bar, fonts, snap.tally);
         divider(bar);
-        bar.spawn((theme::name(fonts, snap.file.clone(), 12.0, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap()));
+        // (The job's title is at the left of this bar. The name of the file it is kept
+        // in is not said here: it is not a builder's word, and it crowded the tally off
+        // the end of the bar, J18-4.)
         if doc.edited {
             chip(bar, fonts, "Not saved", theme::amber(), theme::amber_wash());
         } else {

@@ -24,7 +24,7 @@ themselves are named at the top of `crates/app/src/theme.rs`.
    change behind it shows through it. It has round corners, a light edge and a soft
    shadow under it. **The best glass is frosted:** what is behind is blurred, so text
    on the panel is never fought by detail behind it. (As of this writing the panels
-   are tinted and not blurred; that fails this line's second half.)
+   are frosted; the message shown over the model is not, and fails this line.)
 3. **Depth.** What floats nearer reads nearer: a message over the model casts a
    deeper shadow than a panel; a control on a panel is a little whiter than the panel;
    a control in hand or selected is washed in the accent and edged with it.

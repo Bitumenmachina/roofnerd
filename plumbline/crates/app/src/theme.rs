@@ -45,6 +45,9 @@ pub const BUTTON_RADIUS: f32 = 8.0;
 pub const SMALL_RADIUS: f32 = 6.0;
 /// The glass itself, and its light edge.
 pub fn frost() -> Color { Color::srgba(0.985, 0.988, 0.992, 0.80) }
+/// Frosted, the glass can be thinner than tinted glass and still be read on: what is
+/// behind it is blurred, so only its colour comes through.
+pub const FROST_THICK: f32 = 0.60;
 pub fn frost_edge() -> Color { Color::srgba(1.0, 1.0, 1.0, 0.72) }
 /// What sits on the glass and can be pressed: a little whiter than the glass.
 pub fn control() -> Color { Color::srgba(1.0, 1.0, 1.0, 0.62) }
