@@ -1112,7 +1112,7 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
     let cursor = window.cursor_position();
     let hits = hover.get(&bevy::picking::pointer::PointerId::Mouse);
     let on_panel = hits.is_some_and(|h| h.keys().any(|e| panels.contains(*e)));
-    let free = doc.entry.is_none() && doc.draw.tool.is_none() && !doc.choosing && !doc.plan && !doc.walk;
+    let free = doc.entry.is_none() && doc.draw.tool.is_none() && !doc.choosing && !doc.walk;
     // An item in hand: a click on the model sets one down there, on the level on show.
     if let (true, Some(item), false) = (buttons.just_pressed(MouseButton::Left) && free && !on_panel, doc.placing.clone(), carry.path.is_some()) {
         let at = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p);
@@ -1163,7 +1163,22 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
     let name = snap.selected.as_ref().map(|s| s.name.clone()).unwrap_or_else(|| path.clone());
     if buttons.pressed(MouseButton::Left) {
         // Where the place grabbed should be now: under the pointer, at the height it was.
-        if let Some(to) = cursor.and_then(|c| { let (eye, way) = ray_at(&orbit, window, c); on_level(eye, way, carry.grabbed.y) }) {
+        // On plan a dot covers the same ground everywhere. In 3D it is where the ray
+        // under the pointer meets that height; unless something stands in the way
+        // first (the pointer is on a wall's face, above that height): then it is where
+        // the hand is, at the foot of what it is on, and not on the floor far behind
+        // it (J19-32).
+        let under = if doc.plan {
+            cursor.map(|c| {
+                let per_px = orbit.distance * PLAN_HEIGHT / window.height().max(1.0);
+                let off = c - Vec2::new(window.width(), window.height()) / 2.0;
+                Vec3::new(orbit.target.x + off.x * per_px, carry.grabbed.y, orbit.target.z + off.y * per_px)
+            })
+        } else {
+            let in_the_way = doc.hover.as_deref().filter(|h| *h != path.as_str()).and(doc.pointer).map(|p| to_view(doc.origin, p)).filter(|p| p.y > carry.grabbed.y + 0.25);
+            in_the_way.map(|p| Vec3::new(p.x, carry.grabbed.y, p.z)).or_else(|| cursor.and_then(|c| { let (eye, way) = ray_at(&orbit, window, c); on_level(eye, way, carry.grabbed.y) }))
+        };
+        if let Some(to) = under {
             // East is the view's x; north is against its z.
             // (To the thousandth of a foot: a hand in a picture is no finer than that.)
             let tidy = |x: f32| (f64::from(x) * 1000.0).round() / 1000.0;

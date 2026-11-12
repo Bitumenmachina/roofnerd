@@ -4346,3 +4346,10 @@ thing's source ends "moved (by hand in the model)" (`demos/carryw.sh` expects it
   said with whatever is said next: "The level was not added: its fields were let go."
   (and the same for a drawing's file, a file being brought in, or any value half
   typed). A tool's sizes are not said to be lost: they are kept as last taken in hand.
+* **From the judge's notes J19-29, 30, 32, built and not yet seen:** a thing can be
+  picked up and carried on plan as well as in 3D (on plan a press on it slid the
+  whole plan and said nothing); and in 3D, when the pointer is on something that
+  stands between the eye and the floor (a wall's face), the thing goes to where the
+  hand is, at the foot of what it is on, not to the floor far behind it (carried with
+  the pointer on the west wall, the vanity had gone 21 ft east and 14 ft north of the
+  hand, inside the house).
