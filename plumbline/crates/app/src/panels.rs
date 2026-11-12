@@ -85,6 +85,9 @@ pub fn tally_chips(p: &mut ChildSpawnerCommands, fonts: &Fonts, tally: (usize, u
 /// A figure with its unit, or what stands in for one that is not there.
 pub fn amount(value: Option<f64>, decimals: usize, unit: &str) -> String {
     match value {
+        // Dollars are written with their sign first: $4,732.40, and $4.20/SF (J19-16).
+        Some(x) if unit == "$" => format!("${}", view::figure_shown(x, 2)),
+        Some(x) if unit.starts_with("$/") => format!("${}{}", view::figure_shown(x, decimals), &unit[1..]),
         Some(x) => format!("{} {unit}", view::figure_shown(x, decimals)).trim().to_string(),
         None => "unknown".into(),
     }
@@ -311,6 +314,17 @@ fn switch(p: &mut ChildSpawnerCommands, on: bool) {
     .with_child((Node { width: px(13.0), height: px(13.0), border_radius: BorderRadius::all(px(7.0)), ..default() }, BackgroundColor(Color::WHITE), BoxShadow(vec![ShadowStyle { color: Color::srgba(0.0, 0.0, 0.0, 0.25), x_offset: px(0.0), y_offset: px(1.0), spread_radius: px(0.0), blur_radius: px(2.0) }]), Pickable::IGNORE));
 }
 
+/// A switch that is pressed on its own, inside a row that does something else when the
+/// row is clicked: the press stops at the switch.
+fn switch_of(p: &mut ChildSpawnerCommands, on: bool, name: String, act: impl Fn(&mut Doc) + Send + Sync + 'static) {
+    p.spawn((Node { padding: UiRect::axes(px(2.0), px(2.0)), flex_shrink: 0.0, ..default() }, Named { name, scrolls: true })).with_children(|s| switch(s, on)).observe(move |mut press: On<PointerClick>, mut doc: ResMut<Doc>| {
+        press.propagate(false);
+        if press.button == PointerButton::Primary {
+            act(&mut doc);
+        }
+    });
+}
+
 /// A round spot of a layer's colour: what the layer is drawn in.
 fn spot(p: &mut ChildSpawnerCommands, colour: Color) {
     p.spawn((Node { width: px(9.0), height: px(9.0), border_radius: BorderRadius::all(px(5.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(colour), Pickable::IGNORE));
@@ -455,7 +469,16 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 |r| {
                     r.spawn((theme::name(fonts, storey.name.clone(), 12.0, Weight::Medium, theme::ink()), Pickable::IGNORE));
                     r.spawn(Node { flex_grow: 1.0, ..default() });
+                    // Its own switch: what stands on it is drawn, or not.
+                    let level = storey.path.clone();
+                    let shown = !doc.show.off_levels.contains(&storey.path);
                     r.spawn((text(fonts, storey.elevation.map(|e| units::feet_as_ft_in(e, 16)).unwrap_or("no elevation".into()), 11.5, Weight::Regular, if storey.elevation.is_some() { theme::ink_soft() } else { theme::red() }), Pickable::IGNORE));
+                    switch_of(r, shown, format!("Show level {}", storey.name), move |doc| {
+                        if !doc.show.off_levels.remove(&level) {
+                            doc.show.off_levels.insert(level.clone());
+                        }
+                        doc.redraw();
+                    });
                 },
             );
         }
@@ -664,6 +687,16 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                     r.spawn((text(fonts, t.name.clone(), 12.0, Weight::Medium, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::ink() }), TextLayout::no_wrap(), Pickable::IGNORE));
                     r.spawn(Node { flex_grow: 1.0, ..default() });
                     r.spawn((text(fonts, total(&t.runs), 11.0, Weight::Regular, if t.runs.members == 0 { theme::ink_faint() } else { theme::status_ink(t.runs.status) }), TextLayout::no_wrap(), Pickable::IGNORE));
+                    // A system has a switch of its own: its runs and what is on it, drawn or not.
+                    if !t.path.is_empty() {
+                        let system = t.path.clone();
+                        switch_of(r, !doc.show.off_systems.contains(&t.path), format!("Show system {}", t.name), move |doc| {
+                            if !doc.show.off_systems.remove(&system) {
+                                doc.show.off_systems.insert(system.clone());
+                            }
+                            doc.redraw();
+                        });
+                    }
                 });
             }
         }

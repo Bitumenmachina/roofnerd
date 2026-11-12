@@ -363,7 +363,7 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         let here: Vec<&view::ElementRows> = snap.fabric.iter().filter(|(s, _)| *s == storey.path).map(|(_, el)| el).collect();
         let at = storey.elevation.map(|e| format!("floor at {}", units::feet_as_ft_in(e, 16))).unwrap_or("height unknown".into());
         table(p, fonts, &pretty(&storey.name), format!("{at}  ·  {} doors, {} windows", storey.doors, storey.windows), |t| {
-            header_row(t, fonts, &[("", 7.0, false), ("Wall or floor", 0.0, false), ("Length", 100.0, true), ("Face", 110.0, true), ("Openings", 100.0, true), ("Net", 110.0, true)]);
+            header_row(t, fonts, &[("", 7.0, false), ("Wall or floor, and its type", 0.0, false), ("Length", 100.0, true), ("Face, one side", 110.0, true), ("Openings", 100.0, true), ("Net, one side", 110.0, true)]);
             let rooms: Vec<&view::ElementRows> = here.iter().copied().filter(|el| el.kind == Kind::Room).collect();
             for el in here.iter().copied().filter(|el| el.kind != Kind::Room) {
                 let selected = doc.selected.as_deref() == Some(el.path.as_str());
@@ -372,6 +372,11 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     cell(r, 7.0, false, |c| dot(c, worst));
                     cell(r, 0.0, false, |c| {
                         words(c, fonts, el.name.clone(), 12.5, Weight::Medium, theme::ink());
+                        // What kind of wall or floor it is: its type, by name (J18-8: ten
+                        // walls in a list could not be told a 6 in wall from a 4 in one).
+                        if let Some(kind) = el.rows.iter().find(|r| r.label == "type").map(|r| r.text.split(" (").next().unwrap_or("").to_string()).filter(|k| !k.is_empty()) {
+                            words(c, fonts, kind, 11.0, Weight::Regular, theme::ink_faint());
+                        }
                     });
                     if el.kind == Kind::Wall {
                         for (name, unit, width) in [("plan_length", "LF", 100.0), ("face_area", "SF", 110.0), ("opening_area", "SF", 100.0), ("net_area", "SF", 110.0)] {
@@ -620,7 +625,9 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         for c in &est.classes {
             match c.total.value {
                 Some(x) => {
-                    let hours = c.hours.map(|(h, _)| format!("  {} hr", view::figure(h, 4))).unwrap_or_default();
+                    // Hours are held and added to four places and shown to two, as a time sheet has
+                    // them (J19-4: "480.0000 hr").
+                    let hours = c.hours.map(|(h, _)| format!("  {} hr", view::figure(h, 2))).unwrap_or_default();
                     line(t, c.class.title().to_string(), format!("{}{hours}", lines_of(c.total.members)), rests(c.total.assumed), format!("${}", view::figure(x, 2)), c.total.status, false);
                 }
                 None => row(t, false, None, |r| {

@@ -407,7 +407,7 @@ pub fn rebuild(
     // On the plan the sheet is over the floor, to be traced; in 3D it is under it. It is
     // shown as it is, unlit, and takes no click: what is picked is the place on the floor.
     for l in &snap.drawings {
-        if show.storey.as_ref().is_some_and(|s| *s != l.storey) {
+        if show.storey.as_ref().is_some_and(|s| *s != l.storey) || show.off_levels.contains(&l.storey) {
             continue;
         }
         let Some(read) = plans.read.get(&l.path) else { continue };
@@ -444,7 +444,8 @@ pub fn rebuild(
 
     // ---- The rest of the building ----
     for p in &snap.drawn {
-        if !show.discipline(p.discipline) || show.storey.as_ref().is_some_and(|s| p.storey.as_ref() != Some(s)) {
+        // Its trade's switch, the level on show, its level's own switch, its system's.
+        if !show.discipline(p.discipline) || show.storey.as_ref().is_some_and(|s| p.storey.as_ref() != Some(s)) || p.storey.as_ref().is_some_and(|s| show.off_levels.contains(s)) || p.system.as_ref().is_some_and(|s| show.off_systems.contains(s)) {
             continue;
         }
         let colour = theme::system_colour(snap.classification(p.system.as_ref()));

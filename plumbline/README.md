@@ -139,25 +139,47 @@ cargo run -p plumbline -- new job.json "A job"
 cargo run -p plumbline-app -- job.json
 ```
 
-The model window is laid out the way a building game's is:
+The model fills the window. What is on screen with it is a layer of frosted glass
+panels floating over it (the scene behind each one, blurred, under a tint), each with
+round corners and a shadow:
 
-* **Along the top**: Save, Undo, Redo, the view (3D, Plan, Walk), and at all times the
-  job's price in the color of how sure it is.
-* **Down the left**: Next steps (what this job needs next, read from the job; each step
-  is ticked when it is done, and the first that is not says how), the levels, the
-  drawings under the level on show, what of the building is on show, and its systems.
-* **Along the bottom**: the build bar. Every tool is a button with its mark, in three
-  groups: Building (Wall, Door, Window, Floor, Room, Roof), Mechanical, electrical,
-  plumbing (Duct, Pipe, Conduit, Cable, Fitting, Equipment, Fixture, Connect) and Edit
-  (Move, Delete). The number keys 1 to 9 and 0 take the first ten in hand.
-* **Over the build bar**: the fields of the tool in hand (a wall's thickness and
-  height), each typed into where it stands, and what to do with the tool.
+* **Along the top**: the job, Save, Undo, Redo, and at all times the job's price in the
+  color of how sure it is, what is to verify and the dollars riding on it.
+* **Over the model's top right**: the view (3D, Plan, Walk) and Frame, which brings the
+  whole job back into view.
+* **Down the left**: Next steps (what this job needs next, read from the job), the
+  levels, the drawings, Bring in (price lists, assemblies, a prior estimate, an IFC
+  model, a maker's sheet), Items (things to place, made from makers' sheets), Write out
+  (the BIM model, the estimate, the lenses), Show (a switch for each trade, the roof,
+  see-through, how sure, the clashes), and the systems. A level and a system each have
+  a switch of their own.
+* **Along the bottom**: the build bar. Every tool is a button with its mark: Building
+  (Wall, Door, Window, Floor, Room, Roof), Mechanical, electrical, plumbing (Duct, Pipe,
+  Conduit, Cable, Fitting, Equipment, Fixture, Connect) and Edit (Move, Delete). The
+  number keys 1 to 9 and 0 take the first ten in hand.
+* **Over the build bar**: the sizes of the tool picked. They are shown every time a
+  tool is picked, filled with what it will place; type over any of them, and Enter
+  takes the tool in hand.
 * **Down the right**: what is selected, as fields and buttons. A value that can be
-  measured says Measure or Check; what can be done to the thing is a button on it.
+  measured says Measure or Check.
+
+**Moving round the model** is by the pointer, the way a map is moved:
+
+* The **wheel** closes on what is under the pointer (and backs off from it).
+* A **drag** (left button, with no tool in hand; or the middle button) slides the
+  ground with the hand: the place grabbed stays under the pointer.
+* A **right-drag** turns the view about what is under the pointer.
+* Let go while moving and it **carries on** and eases to a stop.
+* A **double-click** flies to the thing clicked.
+* Over a panel the wheel scrolls that panel, and the model stays still.
+
+**Picking a thing up.** Click a fixture, a piece of equipment or a furnishing to select
+it; press on it and carry it over the floor. While it is in the same space as another
+thing it is drawn red and the line across the screen says what it is in and by how
+much; let go and it stands there. The whole carry is one Undo.
 
 Every button says the key that does the same. The words on screen are US English and a
-drawing set's: a floor of the building is a level. (The job file and the command line
-keep the model's own word, level.)
+drawing set's: a floor of the building is a level.
 
 ## Draw in the window
 
@@ -220,6 +242,8 @@ plumbline import assemblies job.json assemblies.csv
 plumbline import prior job.json last-estimate.csv --status Assumed --source "our estimate of last year"
 plumbline compare job.json
 plumbline import ifc job.json their-model.ifc --status Assumed --source "the mechanical contractor's model of 3 March"
+plumbline import spec job.json sheets/vanity.pdf        # a maker's sheet made into an item to place
+plumbline place job.json <level> <item> --at "7,0.875" --status Assumed --source "set by eye"
 ```
 
 A price list is a CSV file or a workbook with a row of headings: what is priced, what
@@ -229,6 +253,18 @@ beside the job and set against it line by line with `compare`; it adds nothing t
 job's price. A model from another trade or a designer (IFC) comes in as levels, walls
 with their doors and windows, floors, rooms, ducts, pipes, trays and cables; what the
 program has no element for, or cannot read the shape of, is listed with why.
+
+A **maker's sheet** (a cut sheet, as a PDF with words on it) is read into an *item*: a
+thing that can be placed any number of times. What is read off it is its name, its
+maker, its model number, its width, depth and height, and its weight. Each is Assumed
+and its source is the sheet, the page and the line as written (`vanity.pdf, page 1:
+"Overall dimensions: 36" W x 21" D x 34-1/2" H"`); what the sheet does not say is
+Unknown and is listed to be entered. A size is taken only where the sheet writes it
+with a unit and says which way it runs, or writes three in a row. Equipment, fixtures
+and furnishings (casework, furniture: Division 12) are the three kinds of thing an
+item can be; the name says which, or `--as` does. A scanned sheet is a picture of
+words and is refused with that reason. In the window it is Bring in, Maker's sheet,
+and the item appears under Items: click it, then click where one stands.
 
 ## Send it out
 
@@ -240,6 +276,9 @@ plumbline export subcontractor job.json scope.csv       # the scope classed Subc
 plumbline export pm job.json for-the-pm.xlsx            # every line with its hours, the budget by class, what is to verify; no markup
 plumbline export ifc job.json building.ifc              # the building as an IFC4 model, lengths in feet
 ```
+
+In the window the same six are under **Write out**, one click each: the file is
+written beside the job under the job's own name (`job.ifc`, `job estimate.xlsx`, ...).
 
 In the workbook, change a quantity or a price and the amounts, the recap and the price
 follow: the formulas are the program's own arithmetic, to the cent. Each lens is the one
