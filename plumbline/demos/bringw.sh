@@ -19,8 +19,10 @@ for tool in xvfb-run xdotool; do
 done
 ICD="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
 [ -e "$ICD" ] || { echo "demos/bringw.sh needs a Vulkan driver; none at $ICD (set VK_ICD_FILENAMES)"; exit 2; }
-cargo build --quiet
-P="$PWD/target/debug/plumbline"; APP="$PWD/target/debug/plumbline-app"
+# PLUMBLINE_BIN names a folder holding a program already built: it is used as it is and
+# nothing is built (so that a long run is not changed under it by work in the tree).
+if [ -n "${PLUMBLINE_BIN:-}" ]; then echo "using the program in $PLUMBLINE_BIN, not building"; else cargo build --quiet; fi
+P="${PLUMBLINE_BIN:-$PWD/target/debug}/plumbline"; APP="${PLUMBLINE_BIN:-$PWD/target/debug}/plumbline-app"
 OUT="${1:-$PWD/demos/captured/bring}"; mkdir -p "$OUT"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 J="$T/bring.json"

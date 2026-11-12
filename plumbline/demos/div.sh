@@ -9,8 +9,10 @@
 # the comments here.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-cargo build --quiet
-P="$PWD/target/debug/plumbline"
+# PLUMBLINE_BIN names a folder holding a program already built: it is used as it is and
+# nothing is built (so that a long run is not changed under it by work in the tree).
+if [ -n "${PLUMBLINE_BIN:-}" ]; then echo "using the program in $PLUMBLINE_BIN, not building"; else cargo build --quiet; fi
+P="${PLUMBLINE_BIN:-$PWD/target/debug}/plumbline"
 T="$(mktemp -d)"
 trap 'rm -rf "$T"' EXIT
 J="$T/job.json"

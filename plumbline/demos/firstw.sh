@@ -21,8 +21,10 @@ ICD="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
 [ -e "$ICD" ] || { echo "demos/firstw.sh needs a Vulkan driver; none at $ICD (set VK_ICD_FILENAMES)"; exit 2; }
 REAL="$PWD/plans/usda-7213-two-bedroom-farmhouse.pdf"
 [ -f "$REAL" ] || { echo "demos/firstw.sh traces USDA Plan No. 7213, which is not here: run tools/fetch-plans.sh first"; exit 2; }
-cargo build --quiet
-P="$PWD/target/debug/plumbline"; APP="$PWD/target/debug/plumbline-app"
+# PLUMBLINE_BIN names a folder holding a program already built: it is used as it is and
+# nothing is built (so that a long run is not changed under it by work in the tree).
+if [ -n "${PLUMBLINE_BIN:-}" ]; then echo "using the program in $PLUMBLINE_BIN, not building"; else cargo build --quiet; fi
+P="${PLUMBLINE_BIN:-$PWD/target/debug}/plumbline"; APP="${PLUMBLINE_BIN:-$PWD/target/debug}/plumbline-app"
 OUT="${1:-$PWD/demos/captured/first}"; mkdir -p "$OUT"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 J="$T/farmhouse.json"
