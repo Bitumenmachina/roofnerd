@@ -4845,3 +4845,11 @@ roof is still in its roofing with nothing under it to take off; no window
 demonstration script drives the switch; nothing has judged it. **Interior woodwork
 is the one trade of Patrick's seven still not drawn at all.**
 
+**A commit pushed with a test that did not compile, set right in the next.** b55f51b
+(the weather barrier) was committed and pushed after a test run whose count came back
+"0 passed, 0 failed": nothing had run, because a test in `crates/app/src/dress.rs`
+builds an opening's dressing by hand and did not have the new `flashed` field. The
+program itself built; its tests did not. I read the count after pushing, not before.
+The fix is one field in that test; 279 tests pass. `tools/committed.sh` exists to
+catch exactly this and had not been run since dd42088: it is run on this commit.
+

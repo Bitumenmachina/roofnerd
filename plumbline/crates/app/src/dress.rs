@@ -878,7 +878,7 @@ mod tests {
     #[test]
     fn a_double_hung_window_has_two_sashes_and_its_bars() {
         let f = Part { o: Vec3::ZERO, x: Vec3::X, y: Vec3::Y, z: Vec3::Z };
-        let d = OpeningDress { sash: Some(plumbline_world::finish::Said { what: Sash::DoubleHung, tone: None, by: String::new(), also: Vec::new() }), leaf: None, divided: Some(Lites { upper: Some(6), lower: Some(6) }), tone: None };
+        let d = OpeningDress { sash: Some(plumbline_world::finish::Said { what: Sash::DoubleHung, tone: None, by: String::new(), also: Vec::new() }), leaf: None, divided: Some(Lites { upper: Some(6), lower: Some(6) }), tone: None, flashed: false };
         let plain = window(&f, 3.0, 5.0, 0.5, None, [true, false], false);
         let hung = window(&f, 3.0, 5.0, 0.5, Some(&d), [true, false], false);
         // One light against two.
