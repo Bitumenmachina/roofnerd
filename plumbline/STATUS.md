@@ -4448,5 +4448,10 @@ candidate's table.
   for "'maker',$,IFCTEXT('Northfield Millwork (Assumed; vanity.pdf, page 1 ..." and
   passes; the judge's own search of the judged program's file found none). A file
   written out a second time says it took the place of the one that was there (built,
-  not yet seen). **Not done from J19-39:** the finer IFC classes (a lavatory as
-  IfcSanitaryTerminal, an air handler as IfcUnitaryEquipment).
+  not yet seen). **Done since from J19-39 (call 65):** a water closet, a lavatory and a
+  tub go out as `IfcSanitaryTerminal` with their sort, and a table, chair, bed, sofa or
+  desk as `IfcFurniture` with its sort; on the made-up house 6 of the 22 fixtures are
+  now sanitary terminals, and IfcOpenShell finds no fault. **Changed behaviour:**
+  reading that file back now says "16 fixture or outlet" and "6 plumbing fixtures"
+  where it said "22 fixture or outlet"; `demos/export.sh` expects the two lines.
+  **Still not done:** equipment by sort (an air handler as IfcUnitaryEquipment).

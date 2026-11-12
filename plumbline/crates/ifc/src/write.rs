@@ -18,6 +18,7 @@
 //! Ours. The shapes are the plain ones this crate's own reader reads back (`lib.rs`),
 //! which is how the two are checked against each other.
 
+use plumbline_world::building::forms::Form;
 use std::collections::{BTreeMap, HashMap};
 
 use plumbline_world::building::{self, FittingKind, Shape, SystemInfo};
@@ -382,11 +383,27 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                     // Furniture and casework: IFC4's IfcFurniture.
                     Kind::Furnishing => {
                         count("furnishings");
-                        o.add(format!("IFCFURNITURE({},$,{name},$,'furnishing',#{placed_at},#{body},$,.NOTDEFINED.)", o.id(&p.path)))
+                        // The sort of furniture, where its name says and IFC has a word for it.
+                        let sort = match plumbline_world::building::forms::form_of(&p.name) {
+                            Some(Form::Table) => "TABLE",
+                            Some(Form::Chair) => "CHAIR",
+                            Some(Form::Bed) => "BED",
+                            Some(Form::Sofa) => "SOFA",
+                            Some(Form::Desk) => "DESK",
+                            _ => "NOTDEFINED",
+                        };
+                        o.add(format!("IFCFURNITURE({},$,{name},$,'furnishing',#{placed_at},#{body},$,.{sort}.)", o.id(&p.path)))
                     }
                     Kind::Fixture => {
                         count("fixtures");
-                        o.add(format!("IFCFLOWTERMINAL({},$,{name},$,'fixture',#{placed_at},#{body},$)", o.id(&p.path)))
+                        // A plumbing fixture that IFC has a word for is written as one (J19-39):
+                        // a designer's program then knows a water closet from a register.
+                        match plumbline_world::building::forms::form_of(&p.name) {
+                            Some(Form::Wc) => o.add(format!("IFCSANITARYTERMINAL({},$,{name},$,'fixture',#{placed_at},#{body},$,.TOILETPAN.)", o.id(&p.path))),
+                            Some(Form::Washbasin) => o.add(format!("IFCSANITARYTERMINAL({},$,{name},$,'fixture',#{placed_at},#{body},$,.WASHHANDBASIN.)", o.id(&p.path))),
+                            Some(Form::Bathtub) => o.add(format!("IFCSANITARYTERMINAL({},$,{name},$,'fixture',#{placed_at},#{body},$,.BATH.)", o.id(&p.path))),
+                            _ => o.add(format!("IFCFLOWTERMINAL({},$,{name},$,'fixture',#{placed_at},#{body},$)", o.id(&p.path))),
+                        }
                     }
                     _ => {
                         count("pieces of equipment");

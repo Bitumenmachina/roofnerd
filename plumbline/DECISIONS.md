@@ -2630,3 +2630,37 @@ Decided:
 What this changes for the scripts: a demonstration that picked a tool a second time
 and expected it in hand now gets its sizes open and presses Enter (the kit's `tool`
 does it).
+
+### Call 65. A fixture or a piece of furniture is written to the BIM file as the sort IFC names (2026-11-12)
+
+**What was there.** Every fixture went out as `IfcFlowTerminal` and every furnishing as
+`IfcFurniture` with no sort given. Judge 19 (J19-39) opened the file as a designer's
+program would and found a water closet indistinguishable from a floor register.
+
+**The call.** IFC4 already has the words (checked against the schema IfcOpenShell
+0.9 validates with, not from memory: the file validates with no fault):
+
+| what the thing is drawn as | written as |
+|---|---|
+| water closet | `IfcSanitaryTerminal`, `TOILETPAN` |
+| lavatory, washbasin | `IfcSanitaryTerminal`, `WASHHANDBASIN` |
+| bathtub | `IfcSanitaryTerminal`, `BATH` |
+| table, chair, bed, sofa, desk | `IfcFurniture` with that sort |
+| any other fixture | `IfcFlowTerminal`, as before |
+| any other furnishing | `IfcFurniture`, `NOTDEFINED`, as before |
+
+**One rule for what a thing is.** The sort is taken from the same reading of the
+thing's name that decides how it is drawn (`building::forms::form_of`), so the picture
+and the file cannot disagree about what a thing is.
+
+**What changes that a person sees.** Reading the program's own BIM file back, the
+count of what it has no element for is now said in two lines where it was one: "16
+fixture or outlet" and "6 plumbing fixtures" on the made-up house, where it said "22
+fixture or outlet". `demos/export.sh` expected the old line and now expects these two.
+Nothing is lost that was kept before: neither class is read back into the job, and
+both say so.
+
+**Not done.** Equipment is still `IfcBuildingElementProxy`/its present class: an air
+handler as `IfcUnitaryEquipment`, a water heater as `IfcBoiler`/`IfcTank` needs a
+reading of equipment names that does not exist yet (there are no equipment forms).
+
