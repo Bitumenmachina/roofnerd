@@ -38,37 +38,32 @@ echo
 echo "== The session: the Money tab; the east plane picked on it and its line priced; the north plane given an allowance; save =="
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
-export VK_ICD_FILENAMES="$ICD" WGPU_BACKEND=vulkan PLUMBLINE_SHOTS="$OUT"
-"$APP" "$J" > "$T/app.log" 2>&1 &
-APP_PID=\$!
-for i in \$(seq 1 60); do xdotool search --name "plumbline: model" >/dev/null 2>&1 && break; sleep 1; done
-sleep 40   # the first frames are slow on a software renderer
-focus() { xdotool windowfocus "\$(xdotool search --name 'plumbline: model' | head -1)"; sleep 1; }
-focus
-shot() { xdotool key F12; sleep 12; }
+export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
+. "$PWD/demos/window.sh"
+open_window "$J"
 shot                                                    # 01 as opened
-xdotool mousemove 1722 78; sleep 1; xdotool click 1; sleep 4          # the sheet's Money tab
-xdotool mousemove 800 860; sleep 1
+sheet "Money"                                           # the sheet's Money tab
+park
 shot                                                    # 02 the job priced both ways, and reconciled
-xdotool mousemove 1800 EASTROW; sleep 1; xdotool click 1; sleep 4     # the east plane's row
-xdotool mousemove 800 860; sleep 1; focus
+sheet "east"                                            # the east plane's row
+park
 shot                                                    # 03 the east plane picked from the sheet
-xdotool key u; sleep 2; xdotool type --delay 300 "31.50"; sleep 2
+on "Unit cost"; sleep 2; xdotool type --delay 300 "31.50"; sleep 2
 shot                                                    # 04 its line's unit cost being typed
 xdotool key Return; sleep 4
 shot                                                    # 05 the price set: its detail is whole, and the totals moved
-xdotool mousemove 1800 NORTHROW; sleep 1; xdotool click 1; sleep 4    # the north plane's row
-xdotool mousemove 800 860; sleep 1; focus
-xdotool key b; sleep 2; xdotool type --delay 300 "28"; sleep 2; xdotool key Return; sleep 4
+sheet "north"                                           # the north plane's row
+park
+on "Allowance, \$/SF"; sleep 2; xdotool type --delay 300 "28"; sleep 2; xdotool key Return; sleep 4
 shot                                                    # 06 the north plane given an allowance
-xdotool key u; sleep 2; xdotool type --delay 300 "nonsense"; sleep 2; xdotool key Return; sleep 4
+on "Unit cost"; sleep 2; xdotool type --delay 300 "nonsense"; sleep 2; xdotool key Return; sleep 4
 shot                                                    # 07 a price that is not a price is refused, and says why
 xdotool key F2; sleep 3                                 # save
-kill \$APP_PID; wait \$APP_PID 2>/dev/null
+close_window
 SESSION
-sed -i -e "s/EASTROW/${EASTROW:-236}/" -e "s/NORTHROW/${NORTHROW:-267}/" "$T/session.sh"
 chmod +x "$T/session.sh"
 timeout 900 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
+if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
 ls "$OUT" | tr '\n' ' '; echo
 for n in 01 02 03 04 05 06 07; do

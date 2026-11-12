@@ -35,35 +35,32 @@ echo
 echo "== The session: pick a plane, raise its pitch twice, move its eave, type a pitch, give it a condition, look at the plan, save =="
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
-export VK_ICD_FILENAMES="$ICD" WGPU_BACKEND=vulkan PLUMBLINE_SHOTS="$OUT"
-"$APP" "$T/job.json" > "$T/app.log" 2>&1 &
-APP_PID=\$!
-for i in \$(seq 1 60); do xdotool search --name "plumbline: model" >/dev/null 2>&1 && break; sleep 1; done
-sleep 40   # the first frames are slow on a software renderer
-xdotool windowfocus "\$(xdotool search --name 'plumbline: model' | head -1)"; sleep 1
-shot() { xdotool key F12; sleep 12; }
+export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
+. "$PWD/demos/window.sh"
+open_window "$T/job.json"
 shot                                                    # 01 as opened
 xdotool mousemove 940 470; sleep 1; xdotool click 1; sleep 3; xdotool mousemove 946 474; sleep 2
 shot                                                    # 02 a plane picked with the mouse
-xdotool key equal; sleep 3; xdotool key equal; sleep 3
+on "Steeper"; on "Steeper"
 shot                                                    # 03 its pitch raised twice: 6 to 8 in 12
-xdotool key bracketright; sleep 3
+on "Eave out 6 in"
 shot                                                    # 04 its eave moved out 6 in
-xdotool key p; sleep 2; xdotool type --delay 300 "9:12"; sleep 2
+on "Pitch"; sleep 2; xdotool type --delay 300 "9:12"; sleep 2
 shot                                                    # 05 a pitch being typed
 xdotool key Return; sleep 3
 shot                                                    # 06 the typed pitch set
-xdotool key c; sleep 3
+on "Condition"
 shot                                                    # 07 a condition given to the surface
 xdotool mousemove 2050 500; sleep 1; for i in \$(seq 1 16); do xdotool click 5; sleep 0.4; done; sleep 1
 xdotool mousemove 1400 500; sleep 1; for i in \$(seq 1 9); do xdotool click 5; sleep 0.4; done; sleep 1
 xdotool mousemove 946 474; sleep 1; xdotool key t; sleep 9
 shot                                                    # 08 the same roof on plan; the sheet scrolled to its cost lines
 xdotool key F2; sleep 3                                 # save
-kill \$APP_PID; wait \$APP_PID 2>/dev/null
+close_window
 SESSION
 chmod +x "$T/session.sh"
 timeout 900 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
+if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
 ls "$OUT" | tr '\n' ' '; echo
 for n in 01 02 03 04 05 06 07 08; do

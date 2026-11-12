@@ -53,26 +53,22 @@ echo
 echo "== The session: the house, see through it, a system at a time, a storey at a time, a plan, and on foot =="
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
-export VK_ICD_FILENAMES="$ICD" WGPU_BACKEND=vulkan PLUMBLINE_SHOTS="$OUT"
-"$APP" "$T/job.json" > "$T/app.log" 2>&1 &
-APP_PID=\$!
-for i in \$(seq 1 60); do xdotool search --name "plumbline: model" >/dev/null 2>&1 && break; sleep 1; done
-sleep 40   # the first frames are slow on a software renderer
-xdotool windowfocus "\$(xdotool search --name 'plumbline: model' | head -1)"; sleep 1
-shot() { xdotool key F12; sleep 12; }
+export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
+. "$PWD/demos/window.sh"
+open_window "$T/job.json"
 shot                                                    # 01 the house as opened
-xdotool key x; sleep 5
+on "Show See through"; sleep 3
 shot                                                    # 02 seen through: what runs inside it
-xdotool mousemove 80 493; sleep 1; xdotool click 1; sleep 4          # the browser's Supply air row
-xdotool mousemove 1830 78; sleep 1; xdotool click 1; sleep 4         # the sheet's Mechanical tab
-xdotool mousemove 800 860; sleep 1
+on "System Supply air"                                  # the Supply air system, on the left
+sheet "Mechanical"                                      # the sheet's Mechanical tab
+park
 shot                                                    # 03 one system picked out: supply air
-xdotool mousemove 80 601; sleep 1; xdotool click 1; sleep 4          # Hot water
-xdotool mousemove 2060 78; sleep 1; xdotool click 1; sleep 4         # the sheet's Plumbing tab
-xdotool mousemove 800 860; sleep 1
+on "System Hot water"                                   # Hot water
+sheet "Plumbing"                                        # the sheet's Plumbing tab
+park
 shot                                                    # 04 hot water, with its run of no size
 xdotool key Escape; sleep 1; xdotool key x; sleep 2; xdotool key Prior; sleep 8
-xdotool mousemove 1730 78; sleep 1; xdotool click 1; sleep 3; xdotool mousemove 800 860; sleep 1   # the sheet's Building tab
+sheet "Building"                                        # the sheet's Building tab
 shot                                                    # 05 the first floor alone
 xdotool key t; sleep 9
 shot                                                    # 06 the first floor on plan
@@ -81,10 +77,11 @@ shot                                                    # 07 something on the pl
 xdotool key Escape; sleep 1; xdotool key t; sleep 3; xdotool key Next; sleep 3; xdotool key v; sleep 10
 shot                                                    # 08 on foot in the living room
 xdotool key F2; sleep 3                                 # save
-kill \$APP_PID; wait \$APP_PID 2>/dev/null
+close_window
 SESSION
 chmod +x "$T/session.sh"
 timeout 900 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
+if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
 ls "$OUT" | tr '\n' ' '; echo
 for n in 01 02 03 04 05 06 07 08; do

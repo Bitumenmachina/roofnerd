@@ -103,6 +103,26 @@ fn split(segs: &[(V, V)], tol: f64) -> Vec<(V, V)> {
     out
 }
 
+/// A ring's corners: its points less those on a straight run between their neighbours
+/// (BIMCraft `geom.rs:136`).
+pub fn corners(ring: &[V]) -> Vec<V> {
+    let n = ring.len();
+    let pt = |i: usize| ring[i % n.max(1)];
+    let unit = |a: V, b: V| {
+        let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+        let l = dx.hypot(dy);
+        if l > 0.0 { (dx / l, dy / l) } else { (0.0, 0.0) }
+    };
+    (0..n)
+        .map(|i| (pt(i + n - 1), pt(i), pt(i + 1)))
+        .filter(|(a, b, c)| {
+            let (u, v) = (unit(*a, *b), unit(*b, *c));
+            (u.0 * v.1 - u.1 * v.0).abs() > 1e-6
+        })
+        .map(|(_, b, _)| b)
+        .collect()
+}
+
 /// Every face of the planar graph the segments make, with ends closer than `tol` joined:
 /// each bounded face counter-clockwise (positive area), and the outline of each connected
 /// piece clockwise (negative area).

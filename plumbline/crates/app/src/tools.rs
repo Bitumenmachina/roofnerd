@@ -15,7 +15,7 @@ use plumbline_world::value::Status;
 use plumbline_world::{file, units, Kind};
 
 use crate::model::{Doc, Entry, Snapshot, Tone, SOURCE};
-use crate::scene::{Highlight, MainCamera, BAR_H, BROWSER_W, GAP, INSPECTOR_W, STATUS_H};
+use crate::scene::{over_model_at, Highlight, MainCamera};
 use crate::theme;
 
 /// What the next picks make.
@@ -28,6 +28,12 @@ pub enum Tool {
     Run(Kind),
     /// A fixture or a piece of equipment.
     Thing(Kind),
+    /// A floor: one pick on the storey, and the floor is the outline its walls enclose.
+    Floor,
+    /// A room: a point inside it, then its name typed.
+    Room,
+    /// A roof: the corners of its footprint in turn, and the first again to close it.
+    Roof,
     /// Move what is selected: from one pick to the next.
     Move,
     /// A fitting where runs meet: one pick on the joint.
@@ -41,8 +47,12 @@ pub enum Tool {
 }
 
 impl Tool {
-    /// The tools that draw, in the order the panel lists them.
-    pub const DRAWING: [Tool; 9] = [Tool::Wall, Tool::Door, Tool::Window, Tool::Run(Kind::Duct), Tool::Run(Kind::Pipe), Tool::Run(Kind::Conduit), Tool::Run(Kind::Cable), Tool::Thing(Kind::Fixture), Tool::Thing(Kind::Equipment)];
+    /// The build bar, in the order it shows them: the building itself; what runs through
+    /// it and stands in it (mechanical, electrical, plumbing); and moving what is there.
+    pub const BUILDING: [Tool; 6] = [Tool::Wall, Tool::Door, Tool::Window, Tool::Floor, Tool::Room, Tool::Roof];
+    pub const MEP: [Tool; 8] = [Tool::Run(Kind::Duct), Tool::Run(Kind::Pipe), Tool::Run(Kind::Conduit), Tool::Run(Kind::Cable), Tool::Fitting, Tool::Thing(Kind::Equipment), Tool::Thing(Kind::Fixture), Tool::Join];
+    /// The tools a number key takes in hand, 1 to 9 and then 0.
+    pub const KEYED: [Tool; 10] = [Tool::Wall, Tool::Door, Tool::Window, Tool::Floor, Tool::Room, Tool::Roof, Tool::Run(Kind::Duct), Tool::Run(Kind::Pipe), Tool::Run(Kind::Conduit), Tool::Run(Kind::Cable)];
 
     pub fn name(self) -> &'static str {
         match self {
@@ -55,47 +65,65 @@ impl Tool {
             Tool::Run(_) => "Cable",
             Tool::Thing(Kind::Equipment) => "Equipment",
             Tool::Thing(_) => "Fixture",
+            Tool::Floor => "Floor",
+            Tool::Room => "Room",
+            Tool::Roof => "Roof",
             Tool::Move => "Move",
             Tool::Fitting => "Fitting",
-            Tool::Join => "Join",
-            Tool::Scale => "Scale",
+            Tool::Join => "Connect",
+            Tool::Scale => "Set scale",
             Tool::LineUp => "Line up",
         }
     }
 
-    /// What has to be said before the tool can draw: nothing it draws is given a value
-    /// nobody typed.
-    pub fn asks(self) -> &'static str {
-        match self {
-            Tool::Wall => "Thickness, height",
-            Tool::Door | Tool::Window => "Width, height, sill",
-            Tool::Run(_) => "Size across, height above the floor, system",
-            Tool::Thing(_) => "What it is, size (along x across x up, in feet), height above the floor",
-            Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => "",
+    /// The number key that takes it in hand, as it is written on its button.
+    pub fn key(self) -> &'static str {
+        match Tool::KEYED.iter().position(|t| *t == self) {
+            Some(9) => "0",
+            Some(i) => ["1", "2", "3", "4", "5", "6", "7", "8", "9"][i],
+            None => "",
         }
     }
 
-    /// The same, as it might be typed.
-    pub fn like(self) -> &'static str {
+    /// What has to be said before the tool can draw, each with what might be typed:
+    /// nothing it draws is given a value nobody typed. AFF is above finished floor, as
+    /// a drawing writes it.
+    pub fn fields(self) -> &'static [(&'static str, &'static str)] {
         match self {
-            Tool::Wall => "like 6 in, 9 ft",
-            Tool::Door => "like 3 ft, 7 ft, 0 ft",
-            Tool::Window => "like 4 ft, 3 ft, 3 ft",
-            Tool::Run(Kind::Duct) => "like 6 in, 8 ft, Supply Air",
-            Tool::Run(Kind::Pipe) => "like 3/4 in, 1 ft, Domestic Cold Water",
-            Tool::Run(_) => "like 3/4 in, 8 ft, Power",
-            Tool::Thing(_) => "like Lavatory, 2 x 1.5 x 3, 0 ft",
-            Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => "",
+            Tool::Wall => &[("Thickness", "6 in"), ("Height", "9 ft")],
+            Tool::Door => &[("Width", "3 ft"), ("Height", "7 ft"), ("Sill height", "0 ft")],
+            Tool::Window => &[("Width", "4 ft"), ("Height", "3 ft"), ("Sill height", "3 ft")],
+            Tool::Run(Kind::Duct) => &[("Size", "6 in"), ("Height AFF", "8 ft"), ("System", "Supply Air")],
+            Tool::Run(Kind::Pipe) => &[("Size", "3/4 in"), ("Height AFF", "1 ft"), ("System", "Domestic Cold Water")],
+            Tool::Run(_) => &[("Size", "3/4 in"), ("Height AFF", "8 ft"), ("System", "Power")],
+            Tool::Thing(Kind::Equipment) => &[("What it is", "Boiler"), ("Size L x W x H, ft", "2 x 2 x 3"), ("Height AFF", "0 ft")],
+            Tool::Thing(_) => &[("What it is", "Lavatory"), ("Size L x W x H, ft", "2 x 1.5 x 3"), ("Height AFF", "0 ft")],
+            Tool::Floor => &[("Thickness", "4 in")],
+            Tool::Roof => &[("Pitch", "6:12"), ("Eave height", "8 ft")],
+            Tool::Room | Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => &[],
         }
     }
 
     /// How many values its settings are. A fitting and a join take none: what they make is
     /// worked out from what is already drawn.
     pub fn takes(self) -> usize {
+        self.fields().len()
+    }
+
+    /// What to do with it in hand.
+    pub fn how(self) -> &'static str {
         match self {
-            Tool::Wall => 2,
-            Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => 0,
-            _ => 3,
+            Tool::Wall | Tool::Run(_) => "Click the start, then each corner. Type a length to go that far. Shift keeps it square. Esc ends.",
+            Tool::Door | Tool::Window => "Click the place on a wall.",
+            Tool::Thing(_) => "Click where it stands.",
+            Tool::Floor => "Click anywhere on the level. The floor fills the outline its walls enclose.",
+            Tool::Room => "Click inside the room, then type its name.",
+            Tool::Roof => "Click each corner of the roof's outline, then the first again to close it.",
+            Tool::Move => "Click a point on it, then where that point goes.",
+            Tool::Fitting => "Click where runs meet.",
+            Tool::Join => "Click where a run ends at a fixture or a piece of equipment.",
+            Tool::Scale => "Click the two ends of a dimension on the drawing, then type the dimension.",
+            Tool::LineUp => "Click a place on the drawing, then where that place is on the plan.",
         }
     }
 }
@@ -110,8 +138,8 @@ pub struct Draw {
     pub found: Option<snap::Found>,
     /// Feet to the pixel under the pointer, for drawing the snap mark at one size.
     pub scale: f64,
-    /// Each tool's settings as they were typed, by the tool's name.
-    pub settings: BTreeMap<&'static str, String>,
+    /// Each tool's settings as they were typed, by the tool's name: one value to a field.
+    pub settings: BTreeMap<&'static str, Vec<String>>,
     pub history: History,
     /// The job's text after the last step recorded: what the next step is set against.
     pub last_text: String,
@@ -124,6 +152,9 @@ pub struct Draw {
     /// Set by the pick that puts a tool down, so the same click's release does not also
     /// select what is under the pointer. A new press clears it.
     pub swallow: bool,
+    /// When a room's point has been picked and its name is being typed: the source a
+    /// thing picked there carries (the drawing it lies over, or the window).
+    pub traced: Option<String>,
     /// The plan's snap scene, with the drawing and the storey it was made for and the
     /// element left out of it (what is being moved does not snap to itself).
     pub scene: Option<(u64, String, Option<String>, usize, snap::Scene)>,
@@ -135,44 +166,54 @@ fn how(source: &str) -> ed::Entered<'_> {
     ed::Entered { status: Status::Assumed, source }
 }
 
-/// A tool's settings, split and checked as far as they can be without the job: each
-/// length is a length, a size is three numbers.
-fn parts(tool: Tool, text: &str) -> Result<Vec<String>, String> {
-    let mut parts: Vec<String> = text.split(',').map(|s| s.trim().to_string()).collect();
-    if parts.len() != tool.takes() || parts.iter().any(String::is_empty) {
-        return Err(format!("a {} takes: {} ({})", tool.name().to_lowercase(), tool.asks().to_lowercase(), tool.like()));
+/// A tool's settings, checked as far as they can be without the job: each length is a
+/// length, a size is three numbers. Where one will not do, which one and why.
+fn checked(tool: Tool, values: &[String]) -> Result<Vec<String>, (usize, String)> {
+    let mut parts: Vec<String> = values.iter().map(|s| s.trim().to_string()).collect();
+    parts.resize(tool.takes(), String::new());
+    if let Some(i) = parts.iter().position(String::is_empty) {
+        return Err((i, format!("{} is needed, like {}", tool.fields()[i].0, tool.fields()[i].1)));
     }
     // A size is more than nothing; a height above the floor or a sill can be nothing.
-    let length = |s: &str, zero_ok: bool| {
-        let feet = units::parse_length(s).and_then(|(len, unit)| len.feet(unit))?;
+    let length = |i: usize, zero_ok: bool| -> Result<(), (usize, String)> {
+        let s = &parts[i];
+        let feet = units::parse_length(s).and_then(|(len, unit)| len.feet(unit)).map_err(|why| (i, why))?;
         match feet {
-            f if f < 0.0 => Err(format!("{s:?} is less than nothing")),
-            f if f == 0.0 && !zero_ok => Err(format!("{s:?} is nothing: a size is more than that")),
+            f if f < 0.0 => Err((i, format!("{s:?} is less than nothing"))),
+            f if f == 0.0 && !zero_ok => Err((i, format!("{s:?} is nothing: a size is more than that"))),
             _ => Ok(()),
         }
     };
     match tool {
-        Tool::Wall => parts.iter().try_for_each(|p| length(p, false))?,
+        Tool::Wall => {
+            length(0, false)?;
+            length(1, false)?;
+        }
         Tool::Door | Tool::Window => {
-            length(&parts[0], false)?;
-            length(&parts[1], false)?;
-            length(&parts[2], true)?;
+            length(0, false)?;
+            length(1, false)?;
+            length(2, true)?;
         }
         Tool::Run(kind) => {
-            length(&parts[0], false)?;
-            length(&parts[1], true)?;
+            length(0, false)?;
+            length(1, true)?;
             // The system is one a run of this kind goes on.
             let goes_on = plumbline_world::building::run_goes_on(kind);
             match goes_on.iter().find(|c| c.eq_ignore_ascii_case(&parts[2])) {
                 Some(class) => parts[2] = class.to_string(),
-                None => return Err(format!("{:?} is not a system a {} goes on; there are: {}", parts[2], tool.name().to_lowercase(), goes_on.join(", "))),
+                None => return Err((2, format!("{:?} is not a system a {} goes on. There are: {}", parts[2], tool.name().to_lowercase(), goes_on.join(", ")))),
             }
         }
         Tool::Thing(_) => {
-            size(&parts[1])?;
-            length(&parts[2], true)?;
+            size(&parts[1]).map_err(|why| (1, why))?;
+            length(2, true)?;
         }
-        Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => {}
+        Tool::Floor => length(0, false)?,
+        Tool::Roof => {
+            units::parse_pitch(&parts[0]).map_err(|why| (0, why))?;
+            length(1, true)?;
+        }
+        Tool::Room | Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => {}
     }
     Ok(parts)
 }
@@ -189,63 +230,86 @@ fn size(text: &str) -> Result<[f64; 3], String> {
     }
 }
 
-/// Take a tool in hand. With no storey to draw on it says so; with its settings not yet
+/// Why something could not be done, as the screen says it: what, and why.
+pub fn cant(doc: &mut Doc, what: &str, why: impl std::fmt::Display) {
+    doc.say(Tone::Refused, format!("Can't {what}: {why}"));
+}
+
+/// Take a tool in hand. It goes to the plan and to a storey by itself: with the whole
+/// building on show, the lowest storey is the one drawn on. With its settings not yet
 /// said, it asks for them first.
 pub fn start(doc: &mut Doc, tool: Tool) {
     doc.draw.picked.clear();
+    doc.draw.tool = None;
+    if doc.entry.take().is_some() {
+        doc.form.clear();
+        doc.measuring = None;
+    }
     if doc.show.storey.is_none() {
-        doc.say(Tone::Refused, "refused: choose the storey to draw on first (the list above)");
-    } else if !doc.plan {
-        doc.say(Tone::Refused, "refused: drawing is done on the plan (T)");
-    } else if tool == Tool::Move && doc.selected.is_none() {
-        doc.say(Tone::Refused, "refused: select what is to be moved first");
-    } else if matches!(tool, Tool::Scale | Tool::LineUp) && !doc.show.storey.clone().is_some_and(|s| crate::plans::laid(&mut doc.job).iter().any(|l| l.storey == s)) {
-        doc.say(Tone::Refused, "refused: no drawing is laid under this storey");
+        let lowest = plumbline_world::building::storey_totals(&mut doc.job).into_iter().min_by(|a, b| a.elevation.unwrap_or(f64::MAX).total_cmp(&b.elevation.unwrap_or(f64::MAX))).map(|s| s.path);
+        match lowest {
+            Some(path) => doc.show.storey = Some(path),
+            None => {
+                // Nothing to draw on yet: the first thing a job needs is asked for.
+                doc.open_form(Entry::Storey, vec![String::new(); 3], 0);
+                doc.say(Tone::Done, "Add a level to draw on first: its name, the elevation of its floor, and floor-to-floor.");
+                doc.redraw();
+                return;
+            }
+        }
+    }
+    if !doc.plan || doc.walk {
+        doc.go = Some((true, false));
+    }
+    let has_drawing = doc.show.storey.clone().is_some_and(|s| crate::plans::laid(&mut doc.job).iter().any(|l| l.storey == s));
+    if tool == Tool::Move && doc.selected.is_none() {
+        cant(doc, "move", "nothing is selected. Click what is to be moved first.");
+    } else if matches!(tool, Tool::Scale | Tool::LineUp) && !has_drawing {
+        cant(doc, if tool == Tool::Scale { "set a scale" } else { "line up" }, "this level has no drawing. Add one first.");
     } else if tool.takes() > 0 && !doc.draw.settings.contains_key(tool.name()) {
-        doc.entry_line = None;
-        doc.entry = Some((Entry::Settings(tool), String::new()));
+        doc.open_form(Entry::Settings(tool), vec![String::new(); tool.takes()], 0);
+        doc.say(Tone::Done, format!("{}: type each value, Tab to the next, Enter to draw.", tool.name()));
     } else {
         doc.draw.tool = Some(tool);
-        doc.say(Tone::Done, match tool {
-            Tool::Wall | Tool::Run(_) => format!("{}: pick its start, then each corner; type a length to go that far toward the pointer; Esc ends it", tool.name()),
-            Tool::Door | Tool::Window => format!("{}: pick the place on a wall", tool.name()),
-            Tool::Thing(_) => format!("{}: pick where it stands", tool.name()),
-            Tool::Move => "Move: pick a point on it, then where that point goes".to_string(),
-            Tool::Fitting => "Fitting: pick where runs meet".to_string(),
-            Tool::Join => "Join: pick where a run ends at a fixture or a piece of equipment".to_string(),
-            Tool::Scale => "Scale: pick the two ends of a dimension on the drawing, then type the dimension".to_string(),
-            Tool::LineUp => "Line up: pick a place on the drawing, then the place on the plan it is".to_string(),
-        });
+        doc.say(Tone::Done, format!("{} in hand.", tool.name()));
     }
-    doc.touch();
+    doc.redraw();
 }
 
-/// The settings typed for a tool: kept, shown, and the tool taken in hand.
-pub fn settings_entered(doc: &mut Doc, tool: Tool, text: &str) {
-    match parts(tool, text) {
+/// The settings typed for a tool: kept, shown, and the tool taken in hand. Where one of
+/// them will not do, its field stays open to be put right.
+pub fn settings_entered(doc: &mut Doc, tool: Tool, values: &[String]) {
+    match checked(tool, values) {
         Ok(parts) => {
-            doc.draw.settings.insert(tool.name(), parts.join(", "));
+            doc.draw.settings.insert(tool.name(), parts);
             start(doc, tool);
         }
-        Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+        Err((at, why)) => {
+            doc.open_form(Entry::Settings(tool), values.to_vec(), at);
+            cant(doc, &format!("use that {}", tool.fields()[at].0.to_lowercase()), why);
+        }
     }
     doc.touch();
 }
 
 /// A new storey typed as "name, elevation, height". It becomes the storey drawn on.
-pub fn new_storey(doc: &mut Doc, text: &str) {
-    let parts: Vec<&str> = text.split(',').map(str::trim).collect();
+pub fn new_storey(doc: &mut Doc, values: &[String]) {
+    let parts: Vec<&str> = values.iter().map(|s| s.trim()).collect();
     let made = match parts.as_slice() {
         [name, elevation, height] if !name.is_empty() => ed::storey(&mut doc.job, name, elevation, height, how(SOURCE)),
-        _ => Err("a storey takes: name, the height of its floor, how far up to the next (like Ground, 0 ft, 9 ft)".to_string()),
+        _ => Err("a level takes a name, the elevation of its floor, and floor-to-floor, like Ground, 0 ft, 9 ft".to_string()),
     };
     match made {
         Ok(path) => {
             doc.show.storey = Some(path.clone());
-            doc.edit("new storey");
-            doc.say(Tone::Done, format!("{path}: storey {:?}; it is the storey drawn on", parts[0]));
+            doc.edit("Add level");
+            doc.say(Tone::Done, format!("Added level {:?}. It is the level drawn on.", parts[0]));
         }
-        Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+        Err(why) => {
+            // The form stays open, to be put right.
+            doc.open_form(Entry::Storey, values.to_vec(), 0);
+            cant(doc, "add the level", why);
+        }
     }
     doc.redraw();
 }
@@ -271,14 +335,15 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
         Ok(traced) => traced,
         Err(_) if setting_up => SOURCE.to_string(),
         Err(why) => {
-            doc.say(Tone::Refused, format!("refused: {why}"));
+            cant(doc, "draw here", why);
             doc.touch();
             return;
         }
     };
     let traced = traced.as_str();
     let said = doc.draw.settings.get(tool.name()).cloned().unwrap_or_default();
-    let s: Vec<&str> = said.split(',').map(str::trim).collect();
+    let mut s: Vec<&str> = said.iter().map(|v| v.trim()).collect();
+    s.resize(tool.takes().max(3), "");
     // What the pick made, or why not; and the points still in hand afterwards.
     // Done, with something that has to be seen: said the way a refusal is.
     let mut warned = false;
@@ -286,7 +351,7 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
         Tool::Wall | Tool::Run(_) => {
             doc.draw.picked.push(at);
             let [.., a, b] = doc.draw.picked.as_slice() else {
-                doc.say(Tone::Done, format!("{}: from here; pick the next point, or type a length", tool.name()));
+                doc.say(Tone::Done, format!("{}: from here. Click the next point, or type a length.", tool.name()));
                 doc.touch();
                 return;
             };
@@ -305,34 +370,77 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             });
             // The next piece starts where this one ended; a refused one leaves its start.
             doc.draw.picked = vec![if result.is_ok() { pts[1] } else { pts[0] }];
-            Some(result.map(|made| format!("{} {} long", made.join(", "), units::feet_as_ft_in(((pts[1][0] - pts[0][0]).powi(2) + (pts[1][1] - pts[0][1]).powi(2)).sqrt(), 16))))
+            Some(result.map(|made| format!("Added {}, {} long.", made.join(", "), units::feet_as_ft_in(((pts[1][0] - pts[0][0]).powi(2) + (pts[1][1] - pts[0][1]).powi(2)).sqrt(), 16))))
         }
         Tool::Door | Tool::Window => {
             let kind = if tool == Tool::Door { Kind::Door } else { Kind::Window };
             Some(match source.filter(|p| doc.job.kind(p) == Some(Kind::Wall)) {
-                None => Err(format!("a {} goes in a wall: point at one", tool.name().to_lowercase())),
+                None => Err(format!("a {} goes in a wall. Click on one.", tool.name().to_lowercase())),
                 Some(wall) => ed::all_or_nothing(&mut doc.job, |job| {
                     let t = ed::opening_type_for(job, kind, s[0], s[1], how(SOURCE))?;
                     ed::opening(job, &wall, kind, &t, ed::OnWall::Point(at), s[2], how(traced))
                 })
-                .map(|made| format!("{made} in {wall}")),
+                .map(|made| format!("Added {made} in {wall}.")),
             })
         }
-        Tool::Thing(kind) => Some(size(s[1]).and_then(|size| ed::place(&mut doc.job, &storey, kind, s[0], at, s[2], Some(size), None, how(traced))).map(|made| format!("{made}: {}", s[0]))),
+        Tool::Thing(kind) => Some(size(s[1]).and_then(|size| ed::place(&mut doc.job, &storey, kind, s[0], at, s[2], Some(size), None, how(traced))).map(|made| format!("Added {made}."))),
         Tool::Fitting => Some(ed::fitting(&mut doc.job, &storey, at, None, None, how(traced)).map(|f| {
             let cut: Vec<&str> = f.cut.iter().map(|c| c.0.as_str()).collect();
-            format!("{}: a {}{}", f.path, f.kind.title().to_lowercase(), if cut.is_empty() { String::new() } else { format!("; {} cut there", cut.join(", ")) })
+            format!("Added {}, a {}{}.", f.path, f.kind.title().to_lowercase(), if cut.is_empty() { String::new() } else { format!("; {} cut there", cut.join(", ")) })
         })),
-        Tool::Join => Some(ed::connect_at(&mut doc.job, &storey, at, how(traced)).map(|(thing, run, which)| format!("{thing} is joined to {run} by its connector {which}"))),
+        Tool::Join => Some(ed::connect_at(&mut doc.job, &storey, at, how(traced)).map(|(thing, run, which)| format!("Connected {thing} to {run}, at its connection {which}."))),
+        // A floor is the outline the storey's walls enclose: where on the storey the
+        // click lands does not matter.
+        Tool::Floor => Some(
+            ed::all_or_nothing(&mut doc.job, |job| {
+                let t = ed::floor_type_for(job, s[0], how(SOURCE))?;
+                ed::floor(job, &storey, &t, ed::FloorBy::Walls, how(traced))
+            })
+            .map(|made| {
+                let mut said = format!("Added {}, the floor inside this level's walls.", made.path);
+                for note in &made.notes {
+                    warned = true;
+                    said.push_str(&format!("\n{note}"));
+                }
+                said
+            }),
+        ),
+        // A room is a point inside it; its name is typed next.
+        Tool::Room => {
+            doc.draw.picked = vec![at];
+            doc.draw.traced = Some(traced.to_string());
+            doc.open(Entry::Room, "");
+            doc.say(Tone::Done, "Room: type its name, like Kitchen.");
+            return;
+        }
+        // A roof's footprint: each corner in turn; a pick on the first corner again, with
+        // three or more picked, closes it, and the roof is worked out from it.
+        Tool::Roof => {
+            let closes = doc.draw.picked.len() >= 3 && doc.draw.picked.first().is_some_and(|first| (first[0] - at[0]).hypot(first[1] - at[1]) < 0.05);
+            if !closes {
+                if doc.draw.picked.last().is_some_and(|last| (last[0] - at[0]).hypot(last[1] - at[1]) < 0.05) {
+                    cant(doc, "add that corner", "it is the one just clicked. Click the next, or the first again to close the outline.");
+                } else {
+                    doc.draw.picked.push(at);
+                    let n = doc.draw.picked.len();
+                    doc.say(Tone::Done, format!("Roof: {n} corner{}. Click the next{}.", if n == 1 { "" } else { "s" }, if n >= 3 { ", or the first again to close it" } else { "" }));
+                }
+                doc.touch();
+                return;
+            }
+            let corners = std::mem::take(&mut doc.draw.picked);
+            doc.draw.tool = None;
+            doc.draw.swallow = true;
+            Some(roof_over(doc, &corners, s[0], s[1], traced))
+        }
         Tool::Scale => {
             doc.draw.picked.push(at);
             if doc.draw.picked.len() < 2 {
-                doc.say(Tone::Done, "Scale: from here; pick the other end of the dimension");
+                doc.say(Tone::Done, "Scale: from here. Click the other end of the dimension.");
             } else {
                 // Both ends are picked: the dimension between them is typed next.
-                doc.entry_line = None;
-                doc.entry = Some((Entry::Distance, String::new()));
-                doc.say(Tone::Done, "Scale: type the dimension between the two points");
+                doc.open(Entry::Distance, "");
+                doc.say(Tone::Done, "Scale: type the dimension between the two points.");
             }
             doc.touch();
             return;
@@ -340,7 +448,7 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
         Tool::LineUp => {
             doc.draw.picked.push(at);
             let [a, b] = doc.draw.picked.as_slice() else {
-                doc.say(Tone::Done, "Line up: from here; pick the place on the plan it is");
+                doc.say(Tone::Done, "Line up: from here. Click where that place is on the plan.");
                 doc.touch();
                 return;
             };
@@ -367,7 +475,7 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
         Tool::Move => {
             doc.draw.picked.push(at);
             let [a, b] = doc.draw.picked.as_slice() else {
-                doc.say(Tone::Done, "Move: from here; pick where it goes");
+                doc.say(Tone::Done, "Move: from here. Click where it goes.");
                 doc.touch();
                 return;
             };
@@ -376,8 +484,8 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             doc.draw.tool = None;
             doc.draw.swallow = true;
             Some(match doc.selected.clone() {
-                None => Err("nothing is selected to move".to_string()),
-                Some(sel) => ed::move_by(&mut doc.job, &sel, east, north, how(traced)).map(|()| format!("{sel} moved {} east, {} north", units::feet_as_ft_in(east, 16), units::feet_as_ft_in(north, 16))),
+                None => Err("nothing is selected".to_string()),
+                Some(sel) => ed::move_by(&mut doc.job, &sel, east, north, how(traced)).map(|()| format!("Moved {sel} {} east, {} north.", units::feet_as_ft_in(east, 16), units::feet_as_ft_in(north, 16))),
             })
         }
     };
@@ -386,10 +494,22 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             doc.edit(tool.name());
             doc.say(if warned { Tone::Refused } else { Tone::Done }, what);
         }
-        Some(Err(why)) => doc.say(Tone::Refused, format!("refused: {why}")),
+        Some(Err(why)) => cant(doc, &doing(tool), why),
         None => {}
     }
     doc.redraw();
+}
+
+/// What a tool does, as a refusal says it: "Can't draw the wall".
+fn doing(tool: Tool) -> String {
+    match tool {
+        Tool::Wall | Tool::Run(_) => format!("draw the {}", tool.name().to_lowercase()),
+        Tool::Door | Tool::Window | Tool::Thing(_) | Tool::Floor | Tool::Room | Tool::Roof | Tool::Fitting => format!("add the {}", tool.name().to_lowercase()),
+        Tool::Move => "move it".to_string(),
+        Tool::Join => "connect it".to_string(),
+        Tool::Scale => "set the scale".to_string(),
+        Tool::LineUp => "line the drawing up".to_string(),
+    }
 }
 
 /// A length typed while a wall or a run is being drawn: the next point is that far from
@@ -399,8 +519,8 @@ pub fn typed_length(doc: &mut Doc, text: &str) {
     let toward = doc.draw.found.as_ref().map(|f| f.at).unwrap_or([last[0] + 1.0, last[1]]);
     match units::parse_length(text).and_then(|(len, unit)| len.feet(unit)) {
         Ok(feet) if feet > 0.0 => pick(doc, ed::toward(last, toward, feet), None),
-        Ok(_) => doc.say(Tone::Refused, "refused: a length is more than nothing"),
-        Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+        Ok(_) => cant(doc, "use that length", "a length is more than nothing"),
+        Err(why) => cant(doc, "use that length", why),
     }
     doc.touch();
 }
@@ -438,7 +558,7 @@ pub fn measured(doc: &mut Doc, text: &str) {
     }
     let reading = words.join(" ");
     if reading.is_empty() {
-        doc.say(Tone::Refused, "refused: nothing was typed. Type what the tape or the laser reads, or same if it is as drawn");
+        cant(doc, "mark it", "nothing was typed. Type what the tape or the laser reads, or same if it is as drawn.");
         doc.touch();
         return;
     }
@@ -457,7 +577,57 @@ pub fn measured(doc: &mut Doc, text: &str) {
             }
             doc.say(tone, said);
         }
-        Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+        Err(why) => cant(doc, "use that reading", why),
+    }
+    doc.redraw();
+}
+
+/// A roof worked out from the footprint picked: its corners (turned counter-clockwise
+/// if they were picked the other way), one pitch on every side, and the height of its
+/// eaves. It is called "roof", and the next "roof 2".
+fn roof_over(doc: &mut Doc, corners: &[[f64; 2]], pitch: &str, eaves: &str, source: &str) -> Result<String, String> {
+    use plumbline_world::{solve, Footprint, Rise, Val};
+    let rise = units::parse_pitch(pitch)?;
+    let (len, unit) = units::parse_length(eaves)?;
+    let mut points = corners.to_vec();
+    let twice_area: f64 = (0..points.len()).map(|i| points[i][0] * points[(i + 1) % points.len()][1] - points[(i + 1) % points.len()][0] * points[i][1]).sum();
+    if twice_area < 0.0 {
+        points.reverse();
+    }
+    let entered = |x| Val { value: Some(x), unit: units::PITCH.into(), status: Status::Assumed, source: source.to_string() };
+    let footprint = Footprint {
+        edges: points.iter().map(|_| entered(Rise::Pitch(rise))).collect(),
+        points: Val { value: Some(points), unit: units::FT.into(), status: Status::Assumed, source: source.to_string() },
+        eave_height: Val { value: Some(len), unit: unit.into(), status: Status::Assumed, source: source.to_string() },
+    };
+    let taken: Vec<String> = {
+        let mut q = doc.job.world.query::<(&plumbline_world::Node, &Kind)>();
+        q.iter(&doc.job.world).filter(|(_, k)| **k == Kind::Roof).map(|(n, _)| n.name.clone()).collect()
+    };
+    let name = if taken.iter().any(|n| n == "roof") { (2..).map(|n| format!("roof {n}")).find(|n| !taken.contains(n)).unwrap_or_else(|| "roof".to_string()) } else { "roof".to_string() };
+    let (path, report) = solve::new_roof(&mut doc.job, &name, footprint)?;
+    doc.roof = Some(path.clone());
+    Ok(format!("Added {path}: {} plane{}, {pitch} on every side, eaves at {eaves}.", report.planes, if report.planes == 1 { "" } else { "s" }))
+}
+
+/// The name typed for a room, after a point inside it was picked.
+pub fn room_named(doc: &mut Doc, text: &str) {
+    let (at, storey) = (doc.draw.picked.last().copied(), doc.show.storey.clone());
+    let traced = doc.draw.traced.take().unwrap_or_else(|| SOURCE.to_string());
+    doc.draw.picked.clear();
+    let made = match (at, storey) {
+        (Some(at), Some(storey)) if !text.trim().is_empty() => ed::room(&mut doc.job, &storey, text.trim(), at, how(&traced)),
+        (Some(_), Some(_)) => Err("a room has a name. Type it, like Kitchen.".to_string()),
+        _ => Err("click inside the room first".to_string()),
+    };
+    match made {
+        Ok(path) => {
+            doc.job.derive();
+            doc.edit("Room");
+            let _ = path;
+            doc.say(Tone::Done, format!("Added room {:?}. Click inside the next one, or Esc.", text.trim()));
+        }
+        Err(why) => cant(doc, "add the room", why),
     }
     doc.redraw();
 }
@@ -482,7 +652,7 @@ pub fn scale_entered(doc: &mut Doc, text: &str) {
                 })
             }
         },
-        _ => Err("pick the two ends of a dimension first".to_string()),
+        _ => Err("click the two ends of a dimension first".to_string()),
     };
     match made {
         Ok((said, warned)) => {
@@ -491,7 +661,7 @@ pub fn scale_entered(doc: &mut Doc, text: &str) {
             // What was left at the old scale is said the way a refusal is: it has to be seen.
             doc.say(if warned { Tone::Refused } else { Tone::Done }, said);
         }
-        Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+        Err(why) => cant(doc, "set the scale", why),
     }
     doc.redraw();
 }
@@ -515,9 +685,9 @@ pub fn step(doc: &mut Doc, redo: bool) {
             if doc.roof.as_ref().is_some_and(|p| doc.job.find(p).is_none()) {
                 doc.roof = None;
             }
-            doc.say(Tone::Done, format!("{}: {label}", if redo { "done again" } else { "undone" }));
+            doc.say(Tone::Done, format!("{}: {label}.", if redo { "Redone" } else { "Undone" }));
         }
-        Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+        Err(why) => cant(doc, if redo { "redo" } else { "undo" }, why),
     }
     doc.pointer = None;
     doc.hover = None;
@@ -527,7 +697,7 @@ pub fn step(doc: &mut Doc, redo: bool) {
 /// Take what is selected out of the job.
 pub fn delete(doc: &mut Doc) {
     match doc.selected.clone() {
-        None => doc.say(Tone::Refused, "refused: select what is to be removed first"),
+        None => cant(doc, "delete", "nothing is selected. Click what is to be deleted first."),
         Some(sel) => {
             // A drawing taken away leaves what was traced over it: how much is said.
             let traced = plumbline_world::plans::traced_over(&mut doc.job, &sel).ok().map(|t| (doc.job.find(&sel).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e).map(|n| n.name.clone())).unwrap_or_default(), t.len()));
@@ -535,14 +705,14 @@ pub fn delete(doc: &mut Doc) {
             Ok(gone) => {
                 doc.selected = None;
                 doc.hover = None;
-                doc.edit("remove");
+                doc.edit("Delete");
                 let said = match &traced {
-                    Some((name, n)) if *n > 0 => format!("removed {name}. {} traced over it {} where {} and still {} so", if *n == 1 { "1 thing".to_string() } else { format!("{n} things") }, if *n == 1 { "stays" } else { "stay" }, if *n == 1 { "it was" } else { "they were" }, if *n == 1 { "says" } else { "say" }),
-                    _ => format!("removed {}", gone.join(", ")),
+                    Some((name, n)) if *n > 0 => format!("Deleted {name}. {} traced over it {} where {} and still {} so.", if *n == 1 { "1 thing".to_string() } else { format!("{n} things") }, if *n == 1 { "stays" } else { "stay" }, if *n == 1 { "it was" } else { "they were" }, if *n == 1 { "says" } else { "say" }),
+                    _ => format!("Deleted {}.", gone.join(", ")),
                 };
                 doc.say(Tone::Done, said);
             }
-            Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+            Err(why) => cant(doc, "delete it", why),
             }
         }
     }
@@ -551,7 +721,7 @@ pub fn delete(doc: &mut Doc) {
 
 /// Whether the pointer is over the model and not over a panel.
 fn over_model(window: &Window, at: Vec2) -> bool {
-    at.x > BROWSER_W + GAP * 2.0 && at.x < window.width() - INSPECTOR_W - GAP * 2.0 && at.y > BAR_H + GAP * 2.0 && at.y < window.height() - STATUS_H - GAP * 2.0
+    over_model_at(window, at)
 }
 
 /// Where the pointer is on the storey's floor, snapped, while a tool is in hand.
@@ -610,6 +780,10 @@ pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, plans: Res<crate:
         // A door or a window goes on a wall's line and nowhere else.
         Tool::Door | Tool::Window => snap::snap(scene, p, reach, &[], false, &snap::Snaps { nearest: true, ..snap::Snaps::none() }),
         Tool::Wall | Tool::Run(_) | Tool::Move => snap::snap(scene, p, reach, picked, square, &snap::Snaps::default()),
+        // A roof's outline is drawn corner to corner, as a wall is.
+        Tool::Roof => snap::snap(scene, p, reach, picked, square, &snap::Snaps::default()),
+        // A floor and a room are a click anywhere inside: nothing to snap to.
+        Tool::Floor | Tool::Room => snap::snap(scene, p, reach, &[], false, &snap::Snaps::none()),
         Tool::Thing(_) | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => snap::snap(scene, p, reach, &[], false, &snap::Snaps::default()),
     };
     doc.pointer = Some([found.at[0], found.at[1], elevation]);

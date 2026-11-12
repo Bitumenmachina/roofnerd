@@ -38,45 +38,41 @@ echo
 echo "== The session: the Estimate tab; overhead and profit typed; the south plane's material changed; its labor switched off; save =="
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
-export VK_ICD_FILENAMES="$ICD" WGPU_BACKEND=vulkan PLUMBLINE_SHOTS="$OUT"
-"$APP" "$J" > "$T/app.log" 2>&1 &
-APP_PID=\$!
-for i in \$(seq 1 60); do xdotool search --name "plumbline: model" >/dev/null 2>&1 && break; sleep 1; done
-sleep 40   # the first frames are slow on a software renderer
-focus() { xdotool windowfocus "\$(xdotool search --name 'plumbline: model' | head -1)"; sleep 1; }
+export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
+. "$PWD/demos/window.sh"
+open_window "$J"
 wheel() { xdotool mousemove 2000 600; sleep 1; for i in \$(seq 1 \$1); do xdotool click \$2; sleep 0.3; done; sleep 3; xdotool mousemove 800 860; sleep 1; focus; }
-focus
-shot() { xdotool key F12; sleep 12; }
 shot                                                    # 01 as opened
-xdotool mousemove TABX 78; sleep 1; xdotool click 1; sleep 4          # the sheet's Estimate tab
-xdotool mousemove 800 860; sleep 1; focus
+sheet "Estimate"                                        # the sheet's Estimate tab
+park
 shot                                                    # 02 the sheet: every line in its column
 wheel DOWN1 5
 shot                                                    # 03 the recap: no price, and why
 wheel DOWN2 5
 shot                                                    # 04 the suppliers, side by side
 wheel DOWN2 4
-xdotool key o; sleep 2; xdotool type --delay 300 "12"; sleep 2
+on "Overhead"; sleep 2; xdotool type --delay 300 "12"; sleep 2
 shot                                                    # 05 the overhead being typed
 xdotool key Return; sleep 4
-xdotool key r; sleep 2; xdotool type --delay 300 "8"; sleep 2; xdotool key Return; sleep 4
+on "Profit"; sleep 2; xdotool type --delay 300 "8"; sleep 2; xdotool key Return; sleep 4
 shot                                                    # 06 overhead and profit entered: the price
 xdotool mousemove 900 470; sleep 1; xdotool click 1; sleep 4          # the south plane, in the model
-xdotool mousemove 800 860; sleep 1
-xdotool key n; sleep 2; xdotool type --delay 300 "Copper, 20 oz"; sleep 2
+park
+on "Material"; sleep 2; xdotool type --delay 300 "Copper, 20 oz"; sleep 2
 shot                                                    # 07 its material being typed
 xdotool key Return; sleep 4
 shot                                                    # 08 the material changed: its panels and the recap repriced
-xdotool key l; sleep 4
+on "Labor on or off"
 shot                                                    # 09 its labor line switched off
 xdotool key o; sleep 2; xdotool type --delay 300 "ten"; sleep 2; xdotool key Return; sleep 4
 shot                                                    # 10 an overhead that is not a number is refused, and says why
 xdotool key F2; sleep 3                                 # save
-kill \$APP_PID; wait \$APP_PID 2>/dev/null
+close_window
 SESSION
-sed -i -e "s/TABX/${TABX:-1810}/" -e "s/DOWN1/${DOWN1:-8}/" -e "s/DOWN2/${DOWN2:-6}/g" "$T/session.sh"
+sed -i -e "s/DOWN1/${DOWN1:-8}/" -e "s/DOWN2/${DOWN2:-6}/g" "$T/session.sh"
 chmod +x "$T/session.sh"
 timeout 1200 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
+if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
 ls "$OUT" | tr '\n' ' '; echo
 for n in 01 02 03 04 05 06 07 08 09 10; do

@@ -52,47 +52,40 @@ echo "== The session: the Clashes tab, a fitting on the corner and on the branch
 # the outside corner of the walls' lines, is at (416, 736). The sheet is to its right.
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
-export VK_ICD_FILENAMES="$ICD" WGPU_BACKEND=vulkan PLUMBLINE_SHOTS="$OUT"
-"$APP" "$J" > "$T/app.log" 2>&1 &
-APP_PID=\$!
-for i in \$(seq 1 60); do xdotool search --name "plumbline: model" >/dev/null 2>&1 && break; sleep 1; done
-sleep 40   # the first frames are slow on a software renderer
-xdotool windowfocus "\$(xdotool search --name 'plumbline: model' | head -1)"; sleep 1
-shot() { xdotool key F12; sleep 12; }
-# A click held for longer than a frame takes to draw, so the press and the release are
-# seen in different frames however slow the renderer is.
-click() { xdotool mousemove \$1 \$2; sleep 1.5; xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 3; }
-esc() { xdotool key Escape; sleep 2; }
-click 53 189                            # the storey, Ground
+export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
+. "$PWD/demos/window.sh"
+open_window "$J"
+on "Level ground"                       # the level, ground
 xdotool key t; sleep 6                  # the plan
-click 1970 73                           # the sheet's Clashes tab
-xdotool mousemove 1000 850; sleep 1
+sheet "Clashes"                         # the sheet's Clashes tab
+park
 shot                                    # 01 two clashes listed, and marked on the plan
-click 101 727                           # Fitting where runs meet
+on "Fitting"                            # Fitting, where runs meet
 xdotool mousemove 736 672; sleep 2      # the duct's corner, (10, 2)
 shot                                    # 02 about to put a fitting on the corner
 xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 4
-xdotool mousemove 1000 850; sleep 1
+park
 shot                                    # 03 an elbow
 click 608 672                           # where the branch meets the duct's side, (6, 2)
-xdotool mousemove 1000 850; sleep 1
+park
 shot                                    # 04 a tee, and the duct cut there
 esc
-click 113 754                           # Join a run to what it ends at
+on "Connect"                            # Connect a run to what it ends at
 click 480 672                           # the duct's end in the air handler, (2, 2)
 esc
-xdotool mousemove 1000 850; sleep 1
+park
 shot                                    # 05 joined: one clash left
 click 2000 205                          # that clash, on the sheet
-xdotool mousemove 1000 850; sleep 1
+park
 shot                                    # 06 the pipe selected on the model
 xdotool key t; sleep 6
 shot                                    # 07 the same in 3D
 xdotool key F2; sleep 3                 # save
-kill \$APP_PID; wait \$APP_PID 2>/dev/null
+close_window
 SESSION
 chmod +x "$T/session.sh"
 timeout 1200 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
+if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
 ls "$OUT" | tr '\n' ' '; echo
 for n in 01 02 03 04 05 06 07; do

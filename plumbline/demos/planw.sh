@@ -42,22 +42,13 @@ cp demos/plans/made-up-plan.pdf "$T/"
 # picture are made. A click is held longer than a frame takes to draw.
 preamble() { cat <<SESSION
 #!/bin/bash
-export VK_ICD_FILENAMES="$ICD" WGPU_BACKEND=vulkan PLUMBLINE_SHOTS="$3"
-"$APP" "$1" > "$2" 2>&1 &
-APP_PID=\$!
-for i in \$(seq 1 60); do xdotool search --name "plumbline: model" >/dev/null 2>&1 && break; sleep 1; done
-sleep 40   # the first frames are slow on a software renderer
-xdotool windowfocus "\$(xdotool search --name 'plumbline: model' | head -1)"; sleep 1
-shot() { xdotool key F12; sleep 12; }
-click() { xdotool mousemove \$1 \$2; sleep 1.5; xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 3; }
-esc() { xdotool key Escape; sleep 2; }
-typed() { xdotool type --delay 250 "\$1"; sleep 1; if [ -n "\$2" ]; then shot; fi; xdotool key Return; sleep 3; }
-# A length: the pointer shows the way, the first digit opens the field, the rest follows.
-len() { xdotool mousemove \$1 \$2; sleep 2; xdotool type "\${3:0:1}"; sleep 3; xdotool type --delay 250 "\${3:1}"; sleep 1; if [ -n "\$4" ]; then shot; fi; xdotool key Return; sleep 4; }
+export APP="$APP" T="$T" OUT="$3" ICD="$ICD" LOG="$2"
+. "$PWD/demos/window.sh"
+open_window "$1"
 # Two steps of the wheel over the floor plan: the wheel closes in on what the pointer is on.
 closer() { xdotool mousemove 760 420; sleep 2; xdotool click 4; sleep 2; xdotool click 4; sleep 6; }
 xdotool key t; sleep 4
-click 64 184; sleep 2; typed "Ground, 0 ft, 8 ft"      # New storey
+on "Add level"; sleep 2; typed "Ground, 0 ft, 8 ft"    # Add level
 SESSION
 }
 
@@ -68,25 +59,25 @@ cp "$J" "$T/before.json"
 # of the wheel in on the floor plan, the ends of the 41'-3" dimension under the house and
 # the house's southwest outside corner.
 { preamble "$J" "$T/app1.log" "$OUT"; cat <<SESSION
-click 100 251; sleep 2; typed "$T/usda-7213.pdf, 4"    # Lay a drawing under this storey: the file, and its page
+on "Add drawing"; sleep 2; typed "$T/usda-7213.pdf, 4" # Add drawing: the file, and its page
 sleep 30                                # a scanned sheet takes a while to read
-click 100 257                           # the drawing, selected: what was not read from it
-xdotool mousemove 1000 850; sleep 1
+on "Drawing usda-7213, page 4"          # the drawing, selected: what was not read from it
+park
 shot                                    # 01 the sheet under the plan: no scale yet
 esc
 closer
-click 100 413; sleep 2; typed "6 in, 8 ft"             # Wall
+tool "Wall" "6 in, 8 ft"                # Wall
 click 600 450
 shot                                    # 02 refused: nothing is traced over a sheet with no scale
 esc
-click 100 318                           # Set the scale from one dimension
+on "Set scale"                          # Set scale, from one dimension
 click 480 696                           # the west end of the 41'-3" dimension
 click 1099 699                          # its east end
 typed "41' 3\"" yes                     # 03 the dimension, typed as the sheet gives it
 closer                                  # the sheet is to scale now, and was framed again
-xdotool mousemove 1000 880; sleep 1
+park
 shot                                    # 04 to scale
-click 100 413                           # Wall
+on "Wall"                               # Wall
 click 478 614                           # the southwest outside corner, by eye
 len 1000 616 "41' 3\"" yes              # 05 east, the overall dimension, being typed
 len 1102 400 "23' 11\""                 # north
@@ -95,16 +86,17 @@ xdotool mousemove 480 612; sleep 3
 shot                                    # 06 about to close on the first corner
 xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 4
 esc; esc
-xdotool mousemove 1000 880; sleep 1
+park
 shot                                    # 07 the outside walls, traced over the sheet
 xdotool key t; sleep 8
 shot                                    # 08 the house in 3D, standing on its sheet
 xdotool key F2; sleep 3                 # save
-kill \$APP_PID; wait \$APP_PID 2>/dev/null
+close_window
 SESSION
 } > "$T/session1.sh"
 chmod +x "$T/session1.sh"
 timeout 1500 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session1.sh" || true
+if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app1.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app1.log" | head; exit 1; fi
 
 echo
@@ -114,16 +106,16 @@ echo "== A vector plan: the made-up plan, its own lines snapped to =="
 # (1061, 653), (1061, 305) and (539, 305), and its dimension line runs from (539, 688) to
 # (1061, 688). Every click below is a few pixels off the place it is for.
 { preamble "$V" "$T/app2.log" "$OUT/made-up"; cat <<SESSION
-click 100 251; sleep 2; typed "$T/made-up-plan.pdf"    # Lay a drawing under this storey
+on "Add drawing"; sleep 2; typed "$T/made-up-plan.pdf" # Add drawing
 sleep 8
-click 100 318                           # Set the scale from one dimension
+on "Set scale"                          # Set scale, from one dimension
 xdotool mousemove 543 691; sleep 3
 shot                                    # made-up/01 the pointer on the end of the PDF's own dimension line
 click 543 691
 click 1057 691
 typed "30 ft"
-xdotool mousemove 1000 880; sleep 1
-click 100 413; sleep 2; typed "6 in, 8 ft"             # Wall
+park
+tool "Wall" "6 in, 8 ft"                # Wall
 click 542 650                           # near each corner of the outline, in turn
 click 1058 656
 click 1064 308
@@ -132,15 +124,16 @@ xdotool mousemove 542 650; sleep 3
 shot                                    # made-up/02 about to close on the first corner
 xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 4
 esc; esc
-click 100 257                           # the drawing, selected
-xdotool mousemove 1000 880; sleep 1
+on "Drawing made-up-plan"               # the drawing, selected
+park
 shot                                    # made-up/03 traced; the drawing's scale as its title block writes it
 xdotool key F2; sleep 3                 # save
-kill \$APP_PID; wait \$APP_PID 2>/dev/null
+close_window
 SESSION
 } > "$T/session2.sh"
 chmod +x "$T/session2.sh"
 timeout 900 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session2.sh" || true
+if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app2.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app2.log" | head; exit 1; fi
 ls "$OUT" "$OUT/made-up" | tr '\n' ' '; echo
 for n in 01 02 03 04 05 06 07 08 made-up/01 made-up/02 made-up/03; do

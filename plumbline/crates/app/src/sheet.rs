@@ -84,10 +84,12 @@ fn row(p: &mut ChildSpawnerCommands, selected: bool, select: Option<String>, bui
     let mut e = p.spawn((
         Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(0.0)), min_height: px(31.0), border: UiRect::bottom(px(1.0)), ..default() },
         BackgroundColor(if selected { theme::accent_wash() } else { Color::NONE }),
-        BorderColor::all(theme::hex(0xEEF1F5)),
+        BorderColor::all(theme::rule()),
     ));
     e.with_children(build);
     if let Some(path) = select {
+        // A script calls the row by what the thing is called.
+        e.insert(theme::Named { name: theme::spoken(&path), scrolls: false });
         e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
             if press.button == PointerButton::Primary && doc.entry.is_none() {
                 doc.select(&path);
@@ -146,13 +148,15 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             all.push((Tab::Estimate, "Estimate".to_string(), snap.estimate.as_ref().map(|e| e.lines.len()).unwrap_or(0)));
             // Clashes, once anything is in the same space as anything else.
             all.push((Tab::Clashes, "Clashes".to_string(), snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.len()).unwrap_or(0)));
+            // What is still to be verified in the field, once there is anything.
+            all.push((Tab::Verify, "Verify in field".to_string(), snap.verify.questions.len()));
             for (tab, name, count) in all {
                 let on = doc.tab == tab;
                 // A job with nothing under a tab does not offer it.
                 if count == 0 && !on {
                     continue;
                 }
-                tabs.spawn((rounded(Node { padding: UiRect::axes(px(12.0), px(6.0)), column_gap: px(6.0), align_items: AlignItems::Center, ..default() }, 8.0), BackgroundColor(if on { theme::accent_wash() } else { Color::NONE })))
+                tabs.spawn((rounded(Node { padding: UiRect::axes(px(12.0), px(6.0)), column_gap: px(6.0), align_items: AlignItems::Center, ..default() }, 8.0), BackgroundColor(if on { theme::accent_wash() } else { Color::NONE }), theme::named(name.clone())))
                     .with_children(|t| {
                         t.spawn(text(fonts, name, 12.5, Weight::Medium, if on { theme::accent() } else { theme::ink_soft() }));
                         t.spawn(text(fonts, count.to_string(), 11.5, Weight::Regular, theme::ink_faint()));
@@ -180,6 +184,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
                 Tab::Money => money(body, fonts, &doc, &snap),
                 Tab::Estimate => estimate(body, fonts, &doc, &snap),
                 Tab::Clashes => clashes(body, fonts, &doc, &snap),
+                Tab::Verify => verify(body, fonts, &doc, &snap),
             }
             notes(body, fonts, &snap);
             cost_lines(body, fonts, &snap);
@@ -235,7 +240,7 @@ fn notes(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
     }
     table(p, fonts, "To settle", format!("{}", snap.notes.len()), |t| {
         for (status, what, why) in &snap.notes {
-            t.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::axes(px(16.0), px(7.0)), row_gap: px(2.0), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::hex(0xEEF1F5)))).with_children(|r| {
+            t.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::axes(px(16.0), px(7.0)), row_gap: px(2.0), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::rule()))).with_children(|r| {
                 r.spawn(Node { align_items: AlignItems::Center, column_gap: px(9.0), ..default() }).with_children(|top| {
                     dot(top, *status);
                     top.spawn(text(fonts, what.clone(), 12.5, Weight::Medium, theme::status_ink(*status)));
@@ -470,7 +475,73 @@ fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     });
 }
 
-fn dollars(d: Option<&plumbline_world::Derived>) -> (String, Status) {
+/// The verify-in-field list: each question, what to measure or check to settle it, and
+/// the dollars riding on it, largest first (`vif::vif`; nothing is added up here). A
+/// click on a row selects the thing in the model window and takes the view to it.
+fn verify(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
+    let list = &snap.verify;
+    let money = |x: f64| format!("${}", view::figure(x, 2));
+    let lines = |n: usize| if n == 1 { "1 line".to_string() } else { format!("{n} lines") };
+    if list.questions.is_empty() {
+        return nothing(p, fonts, "Nothing to verify: every value that can be measured is Known, and no clash is a question.");
+    }
+    let riding = match list.riding {
+        Some(x) => format!("{} riding  ·  {} of the estimate, each counted once", money(x), lines(list.riding_lines)),
+        None => "nothing priced rides on these yet".to_string(),
+    };
+    table(p, fonts, "Verify in field", format!("{}  ·  {riding}", list.questions.len()), |t| {
+        header_row(t, fonts, &[("", 7.0, false), ("Riding on it", 118.0, true), ("What", 0.0, false), ("Level", 96.0, false)]);
+        for q in &list.questions {
+            // A clash's row goes to the run or the thing in it, not to the wall.
+            let go = q.clash.as_ref().map(|c| c.other.clone()).unwrap_or_else(|| q.path.clone());
+            let selected = doc.selected.as_deref() == Some(go.as_str());
+            let mut e = t.spawn((
+                Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(3.0)), min_height: px(38.0), border: UiRect::bottom(px(1.0)), ..default() },
+                BackgroundColor(if selected { theme::accent_wash() } else { Color::NONE }),
+                BorderColor::all(theme::rule()),
+                theme::Named { name: format!("Verify {}", theme::spoken(&go)), scrolls: false },
+            ));
+            e.with_children(|r| {
+                let worst = q.values.iter().map(|v| v.1).max().unwrap_or(Status::Assumed);
+                cell(r, 7.0, false, |x| dot(x, worst));
+                cell(r, 118.0, true, |x| match q.dollars {
+                    Some(d) => named(x, fonts, money(d), theme::status_ink(q.dollars_status), lines(q.lines), theme::ink_faint()),
+                    None => words(x, fonts, "no dollars", 12.0, Weight::Regular, theme::ink_faint()),
+                });
+                cell(r, 0.0, false, |x| match &q.clash {
+                    Some(c) => {
+                        let by = c.by.map(|by| format!(", by {:.2} in", by * 12.0 + 0.0)).unwrap_or_default();
+                        named(x, fonts, format!("{} and {}", q.name, c.other_name), theme::ink(), format!("In the same space{by}. Measure either one."), theme::ink_soft());
+                    }
+                    None => {
+                        let what = |length: bool| q.values.iter().filter(|v| v.2 == length).map(|v| crate::panels::pretty(&v.0).to_lowercase()).collect::<Vec<_>>().join(", ");
+                        let (measure, check) = (what(true), what(false));
+                        let mut to_do = Vec::new();
+                        if !measure.is_empty() {
+                            to_do.push(format!("Measure {measure}"));
+                        }
+                        if !check.is_empty() {
+                            to_do.push(format!("{} {check}", if to_do.is_empty() { "Check" } else { "check" }));
+                        }
+                        named(x, fonts, format!("{} ({})", q.name, theme::kind_name(q.kind).to_lowercase()), theme::ink(), format!("{}.", to_do.join("; ")), theme::ink_soft());
+                    }
+                });
+                cell(r, 96.0, false, |x| words(x, fonts, q.storey.clone(), 12.0, Weight::Regular, theme::ink_soft()));
+            });
+            e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
+                if press.button == PointerButton::Primary && doc.entry.is_none() {
+                    doc.select(&go);
+                    doc.look_at = Some(go.clone());
+                }
+            });
+        }
+    });
+    if let Some(why) = &list.clashes_not_tested {
+        nothing(p, fonts, &format!("The clashes are not on this list: they could not be worked out ({why})."));
+    }
+}
+
+pub fn dollars(d: Option<&plumbline_world::Derived>) -> (String, Status) {
     match d {
         None => ("none entered".into(), Status::Known),
         Some(d) => match d.value {

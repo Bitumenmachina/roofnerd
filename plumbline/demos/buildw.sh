@@ -39,46 +39,39 @@ echo "== The session: the plan, its scale, the walls, the floor, two rooms and t
 # at 318; Wall 413, Floor 533, Room 573, Roof 613.
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
-export VK_ICD_FILENAMES="$ICD" WGPU_BACKEND=vulkan PLUMBLINE_SHOTS="$OUT"
-"$APP" "$J" > "$T/app.log" 2>&1 &
-APP_PID=\$!
-for i in \$(seq 1 60); do xdotool search --name "plumbline: model" >/dev/null 2>&1 && break; sleep 1; done
-sleep 40   # the first frames are slow on a software renderer
-xdotool windowfocus "\$(xdotool search --name 'plumbline: model' | head -1)"; sleep 1
-shot() { xdotool mousemove 1000 880; sleep 1; xdotool key F12; sleep 12; }
-click() { xdotool mousemove \$1 \$2; sleep 1.5; xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 3; }
-esc() { xdotool key Escape; sleep 2; }
-typed() { xdotool type --delay 250 "\$1"; sleep 1; xdotool key Return; sleep 3; }
+export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
+. "$PWD/demos/window.sh"
+open_window "$J"
 xdotool key t; sleep 4
-click 64 184; sleep 2; typed "Ground, 0 ft, 8 ft"      # New storey
-click 100 251; sleep 2; typed "$T/made-up-plan.pdf"    # Lay a drawing under this storey
+on "Add level"; sleep 2; typed "Ground, 0 ft, 8 ft"    # Add level
+on "Add drawing"; sleep 2; typed "$T/made-up-plan.pdf" # Add drawing
 sleep 8
-click 100 318                           # Set the scale from one dimension
+on "Set scale"                          # Set scale, from one dimension
 click 543 691                           # the ends of the PDF's own dimension line
 click 1057 691
 typed "30 ft"
-click 100 413; sleep 2; typed "6 in, 8 ft"             # Wall
+tool "Wall" "6 in, 8 ft"                # Wall
 click 542 650                           # near each corner of the outline, in turn
 click 1058 656
 click 1064 308
 click 536 302
 click 542 650                           # and the first again
 esc; esc
-click 100 413                           # Wall again: the partition, end to end
+on "Wall"                               # Wall again: the partition, end to end
 click 751 656
 click 745 302
 esc; esc
 shot                                    # 01 the walls traced over the plan
-click 100 533; sleep 2; typed "4 in"                   # Floor
-click 900 420                           # anywhere on the storey
+tool "Floor" "4 in"                     # Floor
+click 900 420                           # anywhere on the level
 esc
 shot                                    # 02 the floor: the outline the walls enclose
-click 100 573                           # Room
+on "Room"                               # Room
 click 643 479; sleep 2; typed "West room"
 click 904 479; sleep 2; typed "East room"
 esc
 shot                                    # 03 two rooms, each with its floor inside the walls
-click 100 613; sleep 2; typed "6:12, 8 ft"             # Roof
+tool "Roof" "6:12, 8 ft"                # Roof
 click 542 650                           # the footprint's corners, in turn
 click 1058 656
 click 1064 308
@@ -90,10 +83,11 @@ shot                                    # 05 the roof on the plan
 xdotool key t; sleep 8
 shot                                    # 06 the house in 3D with its roof on
 xdotool key F2; sleep 3                 # save
-kill \$APP_PID; wait \$APP_PID 2>/dev/null
+close_window
 SESSION
 chmod +x "$T/session.sh"
 timeout 1500 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
+if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
 ls "$OUT" | tr '\n' ' '; echo
 for n in 01 02 03 04 05 06; do

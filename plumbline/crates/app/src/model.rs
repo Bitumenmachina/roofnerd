@@ -40,6 +40,8 @@ pub enum Entry {
     Distance,
     /// What was measured on site for the value picked in the panel on the right.
     Measure,
+    /// The name of the room whose point was just picked.
+    Room,
 }
 
 /// How the last action went. Said by what happened, not read back out of the words.
@@ -63,6 +65,8 @@ pub enum Tab {
     Estimate,
     /// What is in the same space as what, and what passes through a wall or a floor.
     Clashes,
+    /// What is still to be verified in the field, and the dollars riding on each.
+    Verify,
 }
 
 /// What of the building is on show.
@@ -77,6 +81,10 @@ pub struct Show {
     pub ghost: bool,
     /// One storey alone, by path, with everything above it lifted off.
     pub storey: Option<String>,
+    /// Everything drawn in the colour of how sure it is, in place of what it is made of.
+    pub certainty: bool,
+    /// Each clash marked on the model, whatever tab the sheet is on.
+    pub clashes: bool,
 }
 
 impl Show {
@@ -117,6 +125,19 @@ pub struct Doc {
     pub geometry: u64,
     /// A value being typed: which field, and the text so far.
     pub entry: Option<(Entry, String)>,
+    /// When what is being typed is one of several fields that go together (a wall's
+    /// thickness and its height): every field's value, and which one is being typed in.
+    /// `entry` holds that one's text as it is typed.
+    pub form: Vec<String>,
+    pub form_at: usize,
+    /// Keys pressed by a button on screen: each does exactly what the key does.
+    pub pressed: Vec<KeyCode>,
+    /// A change of view asked for by a tool or a button: plan, on foot.
+    pub go: Option<(bool, bool)>,
+    /// The list of next steps is open.
+    pub steps_open: bool,
+    /// A thing the view is to go to: asked for by a row of the verify-in-field list.
+    pub look_at: Option<String>,
     /// When a unit cost is being typed: the cost line it is for, by its description.
     pub entry_line: Option<String>,
     /// When a measurement is being typed: the element, the value's name as the panel
@@ -164,7 +185,33 @@ impl Doc {
     }
     pub fn select(&mut self, path: &str) {
         self.selected = Some(path.to_string());
-        self.say(Tone::Done, format!("selected {path}"));
+        self.say(Tone::Done, format!("Selected {path}."));
+        self.touch();
+    }
+    /// Start typing one value. Whatever was being typed before is let go.
+    pub fn open(&mut self, field: Entry, text: impl Into<String>) {
+        self.form.clear();
+        self.form_at = 0;
+        self.entry_line = None;
+        self.entry = Some((field, text.into()));
+        self.touch();
+    }
+    /// Start typing fields that go together, in the one numbered `at`.
+    pub fn open_form(&mut self, field: Entry, values: Vec<String>, at: usize) {
+        self.entry_line = None;
+        self.form_at = at.min(values.len().saturating_sub(1));
+        self.entry = Some((field, values.get(self.form_at).cloned().unwrap_or_default()));
+        self.form = values;
+        self.touch();
+    }
+    /// What a button does: the key it stands for. A value half typed is let go first, as
+    /// a click elsewhere lets go of a field in any program.
+    pub fn press(&mut self, key: KeyCode) {
+        if self.entry.take().is_some() {
+            self.form.clear();
+            self.measuring = None;
+        }
+        self.pressed.push(key);
         self.touch();
     }
 }
@@ -226,6 +273,8 @@ pub struct Snapshot {
     pub drawings: Vec<crate::plans::Laid>,
     /// What clashes (`building::clash::clashes`), or why that could not be worked out.
     pub clashes: Option<Result<plumbline_world::building::clash::Clashes, String>>,
+    /// What is still to be verified in the field (`vif::vif`).
+    pub verify: plumbline_world::vif::Vif,
     pub totals: Option<view::RoofTotals>,
     pub planes: Vec<PlaneInfo>,
     pub lines: Vec<LineInfo>,
@@ -281,6 +330,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     s.pricing = Some(view::pricing(&mut doc.job));
     s.estimate = Some(view::estimate(&mut doc.job));
     s.clashes = Some(plumbline_world::building::clash::clashes(&mut doc.job, None));
+    s.verify = plumbline_world::vif::vif(&mut doc.job);
     if doc.selected.as_ref().is_some_and(|sel| doc.job.find(sel).is_none()) {
         doc.selected = None;
     }

@@ -246,11 +246,18 @@ fn why_not_opened(e: &std::io::Error) -> &'static str {
 /// on it: laid under the storey on show as a drawing with no scale yet. The file is read
 /// here once, for its page's size; its picture arrives a moment later.
 pub fn add(doc: &mut Doc, text: &str) {
+    // With the whole building on show, the drawing goes under its lowest level.
+    if doc.show.storey.is_none() {
+        doc.show.storey = plumbline_world::building::storey_totals(&mut doc.job).into_iter().min_by(|a, b| a.elevation.unwrap_or(f64::MAX).total_cmp(&b.elevation.unwrap_or(f64::MAX))).map(|s| s.path);
+    }
     let Some(storey) = doc.show.storey.clone() else {
-        doc.say(Tone::Refused, "refused: choose the storey the drawing is a plan of first");
+        crate::tools::cant(doc, "add the drawing", "this job has no level for it to be a plan of. Add a level first.");
         doc.touch();
         return;
     };
+    if !doc.plan {
+        doc.go = Some((true, false));
+    }
     let (file, page) = match text.rsplit_once(',') {
         Some((file, page)) if page.trim().parse::<usize>().is_ok() => (file.trim(), page.trim().parse::<usize>().unwrap_or(1)),
         _ => (text.trim(), 1),
@@ -276,15 +283,16 @@ pub fn add(doc: &mut Doc, text: &str) {
         let how = ed::Entered { status: Status::Known, source: "the file laid under the plan in the window" };
         let path = world_plans::add(&mut doc.job, &storey, &name, world_plans::Read { file: &kept, page, bytes: bytes.len() as u64, checksum: &plumbline_plans::checksum(&bytes), size }, how)?;
         let twice = laid(&mut doc.job).iter().filter(|l| l.storey == storey && l.drawing.file.value.as_deref() == Some(kept.as_str()) && l.drawing.page == page).count() > 1;
-        Ok(format!("{path}: {name} is laid under the plan; it has no scale yet: set it from one dimension{}", if twice { ". This page of this file was already laid under this storey: there are two of it now" } else { "" }))
+        let _ = path;
+        Ok(format!("Added drawing {name:?}. It has no scale yet: click Set scale, then the two ends of one dimension on it.{}", if twice { " This page of this file was already under this level: there are two of it now." } else { "" }))
     })();
     match made {
         Ok(said) => {
-            doc.edit("drawing");
+            doc.edit("Add drawing");
             doc.framed = false;
             doc.say(Tone::Done, said);
         }
-        Err(why) => doc.say(Tone::Refused, format!("refused: {why}")),
+        Err(why) => crate::tools::cant(doc, "add the drawing", why),
     }
     doc.redraw();
 }

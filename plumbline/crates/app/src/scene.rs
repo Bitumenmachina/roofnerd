@@ -1,25 +1,24 @@
-//! The building in space, drawn the way a game draws a world: a sky, a sun that casts
-//! shadows, surfaces that take light, and a camera that eases instead of jumping.
+//! The building in space, as a model on a table under studio light: one light that casts
+//! shadows, one that fills them, matte surfaces, a neutral ground with a grid and no
+//! horizon, and a camera that eases instead of jumping. No sky, no sun, no grass.
 //!
 //! Everything drawn is an element of the job, placed by `plumbline-world`: walls with their
 //! openings cut, floors, the roof's planes and lines, ducts, pipes, conduit and cable at
 //! their own size along their own centre lines, equipment and fixtures. A click on any of
-//! it selects that element. The ground and the sky are the only things here that are not
+//! it selects that element. The ground is the only thing here that is not
 //! in the job; on a job with no walls a fascia and a wall are still drawn under the roof's
 //! edge, for the eye only.
 
 use bevy::anti_alias::taa::TemporalAntiAliasing;
 use bevy::asset::RenderAssetUsages;
 use bevy::camera::visibility::RenderLayers;
-use bevy::camera::{Exposure, ScalingMode};
+use bevy::camera::ScalingMode;
 use bevy::core_pipeline::tonemapping::{DebandDither, Tonemapping};
 use bevy::input::mouse::{AccumulatedMouseMotion, AccumulatedMouseScroll, MouseScrollUnit};
-use bevy::light::atmosphere::ScatteringMedium;
-use bevy::light::{light_consts::lux, Atmosphere, AtmosphereEnvironmentMapLight, CascadeShadowConfigBuilder, DirectionalLightShadowMap, NotShadowCaster, SunDisk};
+use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap, NotShadowCaster};
 use bevy::mesh::Indices;
-use bevy::pbr::{AtmosphereSettings, ScreenSpaceAmbientOcclusion};
+use bevy::pbr::ScreenSpaceAmbientOcclusion;
 use bevy::picking::pointer::PointerButton;
-use bevy::post_process::bloom::Bloom;
 use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
 use bevy::window::PrimaryWindow;
@@ -29,11 +28,13 @@ use crate::theme;
 use plumbline_world::building::Shape;
 use plumbline_world::{Discipline, Kind};
 
-pub const BAR_H: f32 = 48.0;
-pub const STATUS_H: f32 = 32.0;
-pub const GAP: f32 = 12.0;
-pub const BROWSER_W: f32 = 252.0;
-pub const INSPECTOR_W: f32 = 348.0;
+/// The main window's layout: a bar along the top, a panel down each side, the build bar
+/// over a line of status along the bottom. The model shows in what is left.
+pub const TOP_H: f32 = 44.0;
+pub const STATUS_H: f32 = 26.0;
+pub const LEFT_W: f32 = 252.0;
+pub const RIGHT_W: f32 = 344.0;
+pub const BUILD_H: f32 = 104.0;
 /// How far the fascia hangs below the roof's edge, in feet. For the eye only.
 const FASCIA_FT: f32 = 0.7;
 /// The 3D view's angle of view, top to bottom, in radians: 40 degrees.
@@ -51,9 +52,13 @@ pub struct SceneMesh;
 pub struct MainCamera;
 #[derive(Component)]
 pub struct Ground;
+/// The light that casts the shadows. On plan it casts none.
+#[derive(Component)]
+pub struct KeyLight;
 
-/// Whether the full picture is drawn (sky, ambient occlusion, bloom) or the plain one. The
-/// plain one is for a machine with no graphics card; ask for it with PLUMBLINE_GRAPHICS=plain.
+/// Whether the full picture is drawn (ambient occlusion, edges steadied over several
+/// frames) or the plain one. The plain one is for a machine with no graphics card; ask
+/// for it with PLUMBLINE_GRAPHICS=plain. The light and the ground are the same in both.
 #[derive(Resource, Clone, Copy)]
 pub struct Graphics {
     pub full: bool,
@@ -141,53 +146,26 @@ pub struct GridLines;
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct Highlight;
 
-pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut meshes: ResMut<Assets<Mesh>>, mut mediums: ResMut<Assets<ScatteringMedium>>, graphics: Res<Graphics>) {
+pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut meshes: ResMut<Assets<Mesh>>, graphics: Res<Graphics>) {
     commands.insert_resource(Solids { cube: meshes.add(Cuboid::new(1.0, 1.0, 1.0)), cylinder: meshes.add(Cylinder::new(0.5, 1.0)), ball: meshes.add(Sphere::new(0.5).mesh().ico(3).expect("a sphere")) });
     commands.insert_resource(DirectionalLightShadowMap { size: 4096 });
     let cascades = CascadeShadowConfigBuilder { first_cascade_far_bound: 180.0, maximum_distance: 1600.0, ..default() }.build();
-    // The sun stands to the viewer's left, forty degrees up.
-    let sun_at = Transform::from_xyz(-76.0, 64.0, -8.0).looking_at(Vec3::ZERO, Vec3::Y);
+    // Studio light: the key stands to the viewer's left, forty degrees up, and casts the
+    // shadows; a weaker fill from the right front opens them; the rest comes from all round.
+    let key_at = Transform::from_xyz(-76.0, 64.0, -8.0).looking_at(Vec3::ZERO, Vec3::Y);
+    let fill_at = Transform::from_xyz(60.0, 38.0, 70.0).looking_at(Vec3::ZERO, Vec3::Y);
     let camera_at = Transform::from_xyz(0.0, 40.0, 80.0).looking_at(Vec3::ZERO, Vec3::Y);
+    let fog = DistanceFog { color: theme::canvas(), falloff: FogFalloff::Linear { start: 4000.0, end: 9000.0 }, ..default() };
     if graphics.full {
-        // A real sky: the sun's light is scattered by an atmosphere, which also lights
-        // whatever the sun does not reach. Ambient occlusion darkens where surfaces meet,
-        // and the picture is steadied over several frames instead of being left jagged.
-        let medium = mediums.add(ScatteringMedium::earth(256, 256));
-        commands.spawn(Atmosphere::earth(medium));
-        commands.spawn((
-            Camera3d::default(),
-            Camera { order: 0, ..default() },
-            AtmosphereSettings::default(),
-            AtmosphereEnvironmentMapLight::default(),
-            Exposure { ev100: 13.9 },
-            Tonemapping::AcesFitted,
-            Bloom::NATURAL,
-            Msaa::Off,
-            TemporalAntiAliasing::default(),
-            ScreenSpaceAmbientOcclusion::default(),
-            IsDefaultUiCamera,
-            MainCamera,
-            camera_at,
-        ));
-        commands.spawn((DirectionalLight { illuminance: lux::RAW_SUNLIGHT, shadow_maps_enabled: true, ..default() }, SunDisk::EARTH, cascades, sun_at));
-        // A little light from everywhere as well, so a room indoors and the ground in
-        // shadow are not left to the blue of the sky alone.
-        commands.insert_resource(GlobalAmbientLight { brightness: 12000.0, ..default() });
+        // Ambient occlusion darkens where surfaces meet, and the picture is steadied over
+        // several frames instead of being left jagged.
+        commands.spawn((Camera3d::default(), Camera { order: 0, ..default() }, Msaa::Off, Tonemapping::None, DebandDither::Disabled, TemporalAntiAliasing::default(), ScreenSpaceAmbientOcclusion::default(), fog, IsDefaultUiCamera, MainCamera, camera_at));
     } else {
-        commands.spawn((
-            Camera3d::default(),
-            Camera { order: 0, ..default() },
-            Msaa::Sample4,
-            Tonemapping::None,
-            DebandDither::Disabled,
-            DistanceFog { color: theme::canvas(), falloff: FogFalloff::Linear { start: 4000.0, end: 9000.0 }, ..default() },
-            IsDefaultUiCamera,
-            MainCamera,
-            camera_at,
-        ));
-        commands.spawn((DirectionalLight { illuminance: 1260.0, shadow_maps_enabled: true, ..default() }, cascades, sun_at));
-        commands.insert_resource(GlobalAmbientLight { brightness: 1450.0, ..default() });
+        commands.spawn((Camera3d::default(), Camera { order: 0, ..default() }, Msaa::Sample4, Tonemapping::None, DebandDither::Disabled, fog, IsDefaultUiCamera, MainCamera, camera_at));
     }
+    commands.spawn((DirectionalLight { illuminance: 1080.0, shadow_maps_enabled: true, ..default() }, cascades, key_at, KeyLight));
+    commands.spawn((DirectionalLight { illuminance: 260.0, shadow_maps_enabled: false, ..default() }, fill_at));
+    commands.insert_resource(GlobalAmbientLight { brightness: 1350.0, ..default() });
 
     let (lines, _) = store.config_mut::<RoofLines>();
     lines.line.width = 3.0;
@@ -275,6 +253,9 @@ struct Builder<'a, 'w, 's> {
     materials: &'a mut Assets<StandardMaterial>,
     drawing: &'a mut Drawing,
     ghost: bool,
+    /// With the building shown by how sure it is: the colour everything of the thing
+    /// being built is drawn in, whatever it is made of.
+    wash: Option<Color>,
     /// Set while the wall over and under an opening is built: on plan those pieces are
     /// the opening, as a plan draws it, and a click on them selects it rather than the wall.
     on_plan: Option<String>,
@@ -285,6 +266,8 @@ impl Builder<'_, '_, '_> {
     #[allow(clippy::too_many_arguments)]
     fn piece(&mut self, path: &str, system: Option<&String>, mesh: Handle<Mesh>, at: Transform, colour: Color, roughness: f32, metallic: f32, ghosted: bool) {
         let see_through = ghosted && self.ghost;
+        let colour = self.wash.map(|w| w.with_alpha(colour.alpha())).unwrap_or(colour);
+        let (roughness, metallic) = if self.wash.is_some() { (0.95, 0.0) } else { (roughness, metallic) };
         let colour = if see_through { colour.with_alpha(colour.alpha().min(0.06)) } else { colour };
         let blend = colour.alpha() < 0.999;
         let handle = self.materials.add(StandardMaterial {
@@ -346,7 +329,6 @@ pub fn rebuild(
     mut orbit: ResMut<Orbit>,
     mut drawing: ResMut<Drawing>,
     solids: Res<Solids>,
-    graphics: Res<Graphics>,
     plans: Res<crate::plans::Plans>,
     old: Query<Entity, With<SceneMesh>>,
     ground: Query<Entity, With<Ground>>,
@@ -362,6 +344,8 @@ pub fn rebuild(
     }
     let origin = doc.origin;
     let show = doc.show.clone();
+    // On the plan a floor is paper, as a drawing leaves it: what is drawn on it reads.
+    let on_plan_view = doc.plan;
 
     // Frame the building once, and lay the ground under it.
     if !doc.framed {
@@ -379,15 +363,14 @@ pub fn rebuild(
             for e in &ground {
                 commands.entity(e).despawn();
             }
-            let colour = if graphics.full { theme::grass() } else { theme::ground() };
-            let material = StandardMaterial { base_color: colour, perceptual_roughness: 1.0, reflectance: 0.0, ..default() };
+            let material = StandardMaterial { base_color: theme::ground(), perceptual_roughness: 1.0, reflectance: 0.0, ..default() };
             commands
                 .spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(24000.0, 24000.0))), MeshMaterial3d(materials.add(material)), Transform::from_xyz(0.0, -0.04, 0.0), Ground))
                 .observe(|press: On<PointerClick>, mut doc: ResMut<Doc>| {
                     // A click on the ground lets go of the selection.
                     if press.button == PointerButton::Primary && doc.selected.is_some() && doc.entry.is_none() && doc.draw.tool.is_none() && !doc.draw.swallow {
                         doc.selected = None;
-                        doc.say(Tone::Done, "nothing selected");
+                        doc.say(Tone::Done, "Nothing selected.");
                         doc.touch();
                     }
                 });
@@ -427,7 +410,7 @@ pub fn rebuild(
     drawing.frames.clear();
     drawing.surfaces.clear();
     let drawing = &mut *drawing;
-    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, on_plan: None };
+    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None };
     let has_walls = snap.drawn.iter().any(|p| p.kind == Kind::Wall);
 
     // ---- The rest of the building ----
@@ -436,6 +419,7 @@ pub fn rebuild(
             continue;
         }
         let colour = theme::system_colour(snap.classification(p.system.as_ref()));
+        build.wash = show.certainty.then(|| theme::certainty(p.status));
         match &p.shape {
             Shape::Wall { a, b, base, height, thickness, holes } => {
                 let (va, vb) = (to_view(origin, [a[0], a[1], *base]), to_view(origin, [b[0], b[1], *base]));
@@ -501,7 +485,7 @@ pub fn rebuild(
                     faces.quad([high[i], high[j], low[j], low[i]], normal);
                     frame.push((high[i], high[j]));
                 }
-                build.piece(&p.path, None, meshes.add(faces.mesh()), Transform::IDENTITY, theme::floor_colour(), 0.75, 0.0, true);
+                build.piece(&p.path, None, meshes.add(faces.mesh()), Transform::IDENTITY, if on_plan_view { theme::plan_paper() } else { theme::floor_colour() }, 0.75, 0.0, true);
                 build.drawing.frames.push((p.path.clone(), frame));
             }
             Shape::Run { a, b, round, rect } => {
@@ -571,8 +555,10 @@ pub fn rebuild(
     }
 
     // ---- The roof ----
+    build.wash = None;
     if show.roof && show.storey.is_none() {
         for info in &snap.planes {
+            build.wash = show.certainty.then(|| theme::certainty(info.worst()));
             let Some(plane) = &info.solid else { continue };
             let positions: Vec<Vec3> = plane.points.iter().map(|p| to_view(origin, [p[0], p[1], plane.height_at(*p)])).collect();
             let tris = triangles(&plane.points);
@@ -590,6 +576,7 @@ pub fn rebuild(
             let mut faces = Faces::new();
             faces.add(&positions, &tris, normal);
             build.piece(&info.path, None, meshes.add(faces.mesh()), Transform::IDENTITY, paint, if metal > 0.5 { 0.38 } else { 0.8 }, metal, true);
+            build.wash = None;
             let lifted: Vec<Vec3> = positions.iter().map(|p| *p + normal * 0.06).collect();
             build.drawing.frames.push((info.path.clone(), (0..lifted.len()).map(|i| (lifted[i], lifted[(i + 1) % lifted.len()])).collect()));
         }
@@ -682,7 +669,7 @@ pub fn tint(doc: Res<Doc>, drawing: Res<Drawing>, mut materials: ResMut<Assets<S
 }
 
 /// Ease the camera toward where it is going, and set the lens for the view it is in.
-pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>), With<MainCamera>>, mut sun: Query<&mut DirectionalLight>) {
+pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>), With<MainCamera>>, mut sun: Query<&mut DirectionalLight, With<KeyLight>>) {
     // A plan is a drawing, not a view: it has no shadows to hide what is on the floor.
     for mut light in &mut sun {
         if light.shadow_maps_enabled == doc.plan {
@@ -739,10 +726,13 @@ pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mu
 
 /// Is the pointer over the model, not over a panel?
 pub fn over_model(window: &Window) -> bool {
-    window.cursor_position().is_some_and(|p| {
-        let (w, h) = (window.width(), window.height());
-        p.y > BAR_H + GAP * 2.0 && p.y < h - STATUS_H - GAP * 2.0 && p.x > BROWSER_W + GAP * 2.0 && p.x < w - INSPECTOR_W - GAP * 2.0
-    })
+    window.cursor_position().is_some_and(|p| over_model_at(window, p))
+}
+
+/// Is this place in the window over the model, not over a panel?
+pub fn over_model_at(window: &Window, p: Vec2) -> bool {
+    let (w, h) = (window.width(), window.height());
+    p.y > TOP_H && p.y < h - STATUS_H - BUILD_H && p.x > LEFT_W && p.x < w - RIGHT_W
 }
 
 /// Orbit with the right button, pan with the middle one or W A S D, zoom with the wheel.
@@ -780,7 +770,8 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, buttons: Res<ButtonInput<MouseButto
             orbit.target = under + (orbit.target - under) * (orbit.distance / was);
         }
     }
-    if doc.entry.is_some() {
+    // While a value is typed the keys are its letters; with Ctrl held they are Save and Undo.
+    if doc.entry.is_some() || keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight) {
         return;
     }
     // W A S D move over the ground; Q and E go down and up. Shift goes faster.
@@ -811,12 +802,12 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, buttons: Res<ButtonInput<MouseButto
 }
 
 /// The ground's grid, the roof's lines, thin runs, and the outline of what is selected.
-pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, graphics: Res<Graphics>, mut lines: Gizmos<RoofLines>, mut runs: Gizmos<RunLines>, mut broken: Gizmos<BrokenLines>, mut grid: Gizmos<GridLines>, mut highlight: Gizmos<Highlight>) {
+pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut lines: Gizmos<RoofLines>, mut runs: Gizmos<RunLines>, mut broken: Gizmos<BrokenLines>, mut grid: Gizmos<GridLines>, mut highlight: Gizmos<Highlight>) {
     // The grid: a line every ten feet, a stronger one every fifty, fading out with
     // distance from the building so the ground has no edge.
     let reach = drawing.reach;
     if reach > 0.0 && !doc.walk {
-        let (minor, major) = if graphics.full { (Color::srgba(0.16, 0.2, 0.14, 0.16), Color::srgba(0.16, 0.2, 0.14, 0.3)) } else { (theme::grid_minor(), theme::grid_major()) };
+        let (minor, major) = (theme::grid_minor(), theme::grid_major());
         let fade = |x: f32, z: f32| (1.0 - (x * x + z * z).sqrt() / reach).clamp(0.0, 1.0).powf(1.4);
         let steps = (reach / 10.0) as i32;
         for i in -steps..=steps {
@@ -882,7 +873,7 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, gra
     }
     // With the sheet on its Clashes tab, each place two things are in the same space is
     // marked on the model: three short strokes, seen through whatever is in front.
-    if doc.tab == crate::model::Tab::Clashes {
+    if matches!(doc.tab, crate::model::Tab::Clashes | crate::model::Tab::Verify) || doc.show.clashes {
         if let Some(Ok(found)) = &snap.clashes {
             for c in found.found.iter().filter(|c| !c.through) {
                 let at = to_view(doc.origin, c.at);

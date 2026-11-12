@@ -840,6 +840,65 @@ fn plan_wall(tree: &Tree, me: &str, w: &Wall) -> Result<(walls::PlanWall, Status
     Ok((walls::PlanWall { start: V(a[0], a[1]), end: V(b[0], b[1]), ext, int, base, top: base + height, join: w.join }, w.line.status.max(section_status), heights.span, heights.base_status))
 }
 
+/// The outline a floor on a storey has when none is given, and what else the walls
+/// enclose there.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FloorOutline {
+    /// The outer outline of the largest piece the storey's walls make, along their
+    /// centre lines, counter-clockwise from its south-west corner, in feet.
+    pub boundary: Vec<P2>,
+    /// Loops of walls standing free inside it, joined to none of the outer walls and
+    /// with no room in them: courtyards, which a floor would be cut round.
+    pub courtyards: usize,
+    /// Other pieces the storey's walls enclose, apart from this one.
+    pub others: usize,
+    /// The worst status among what the walls' lines and thicknesses rest on.
+    pub status: Status,
+}
+
+/// The outline `floor` gives a floor on `storey` by default (BIMCraft `floor_outline`,
+/// `commands.rs:2467`): along the centre lines of the walls that bound its rooms, the
+/// outer outline of the largest piece they make. None when no walls enclose an area.
+/// A wall of the storey that cannot be placed is why not.
+pub fn floor_outline(job: &mut Job, storey: &str) -> Result<Option<FloorOutline>, String> {
+    use crate::skeleton::P2 as V;
+    let tol = crate::check::FIT_TOLERANCE_FT;
+    let tree = Tree::of(&mut job.world);
+    let mut q = job.world.query::<(&Node, &Kind, Option<&Wall>)>();
+    let mut all: Vec<(&Node, Option<&Wall>)> = q.iter(&job.world).filter(|(n, k, _)| **k == Kind::Wall && n.parent.as_deref() == Some(storey)).map(|(n, _, w)| (n, w)).collect();
+    all.sort_by_key(|(n, _)| path_number(&n.path));
+    let (mut placed, mut bounding, mut status) = (Vec::new(), Vec::new(), Status::Known);
+    for (n, w) in all {
+        let w = w.ok_or_else(|| format!("{} has no wall line entered, so what the walls of this storey enclose is not known", tree.called(&n.path)))?;
+        let (wall, shape, _, _) = plan_wall(&tree, &n.path, w).map_err(|why| format!("{} cannot be placed ({why}), so what the walls of this storey enclose is not known", tree.called(&n.path)))?;
+        if w.room_bounding {
+            bounding.push(placed.len());
+            status = status.max(shape);
+        }
+        placed.push(wall);
+    }
+    let lines: Vec<(V, V)> = bounding.iter().map(|&i| walls::centre_line(&placed, i, tol)).map(|[a, b]| (a, b)).collect();
+    // Each piece's outline, clockwise, the largest first.
+    let mut pieces: Vec<Vec<V>> = rooms::faces(&lines, tol).into_iter().filter(|f| rooms::area(f) < -tol * tol).collect();
+    pieces.sort_by(|a, b| rooms::area(a).total_cmp(&rooms::area(b)));
+    let Some((outer, inner)) = pieces.split_first() else { return Ok(None) };
+    // The loops standing free inside the outline: the other pieces, inside it.
+    let loops: Vec<&Vec<V>> = inner.iter().filter(|f| f.iter().all(|q| rooms::contains(outer, *q))).collect();
+    let nested = |a: usize| (0..loops.len()).any(|b| b != a && loops[a].iter().all(|q| rooms::contains(loops[b], *q)));
+    let around = |p: V| (0..loops.len()).filter(|&a| rooms::contains(loops[a], p)).max_by(|&a, &b| rooms::area(loops[a]).total_cmp(&rooms::area(loops[b])));
+    let mut rq = job.world.query::<(&Node, &Room)>();
+    let indoors: Vec<usize> = rq.iter(&job.world).filter(|(n, _)| n.parent.as_deref() == Some(storey)).filter_map(|(_, r)| r.point_ft()).filter_map(|p| around(V(p[0], p[1]))).collect();
+    let courtyards = (0..loops.len()).filter(|&a| !nested(a) && !indoors.contains(&a)).count();
+    // Counter-clockwise, its corners only, kept to a ten-thousandth of a foot, from its
+    // south-west corner.
+    let ccw: Vec<V> = outer.iter().rev().copied().collect();
+    let mut ring: Vec<P2> = rooms::corners(&ccw).into_iter().map(|p| [(p.0 * 1.0e4).round() / 1.0e4 + 0.0, (p.1 * 1.0e4).round() / 1.0e4 + 0.0]).collect();
+    if let Some(first) = ring.iter().enumerate().min_by(|(_, a), (_, b)| (a[1], a[0]).partial_cmp(&(b[1], b[0])).unwrap_or(std::cmp::Ordering::Equal)).map(|(i, _)| i) {
+        ring.rotate_left(first);
+    }
+    Ok(Some(FloorOutline { boundary: ring, courtyards, others: inner.len() - loops.len(), status }))
+}
+
 /// A wall of the job as the rooms see it.
 struct RoomWall {
     path: String,

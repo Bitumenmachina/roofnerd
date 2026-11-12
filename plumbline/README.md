@@ -43,11 +43,13 @@ demos/fieldw.sh            # the same in the window, each reading typed as a las
 demos/imports.sh           # a price list and an assembly library out as CSV and back; a supplier's list from CSV and from a workbook; a prior estimate set against the job
 demos/model.sh             # another trade's model (IFC) brought in: what comes in, what is listed instead, and the clash it hid
 demos/planw.sh             # the same in the window, on a real scanned sheet and on a vector plan; pictures in demos/captured/plan
+demos/build.sh             # a floor from the outline its walls enclose, rooms and a hip roof, at the command line, with the figures worked by hand
+demos/buildw.sh            # the same in the window, traced over the made-up plan with the Floor, Room and Roof tools; pictures in demos/captured/build
 tools/fetch-plans.sh       # fetches the public-domain plan set the demonstrations trace (USDA Plan No. 7213) into plans/
 demos/d4w.sh               # the same in the window: the sheet's Money tab, and prices typed on what is selected
 demos/d2.sh                # the 3D prototype, driven on a virtual display; pictures in demos/captured/d2
 demos/house.sh             # a whole house with its heating, plumbing and wiring, walked round; pictures in demos/captured/house
-cargo run -p plumbline-app -- job.json    # the 3D window and the sheet window (keys are listed in the window)
+cargo run -p plumbline-app -- job.json    # the model window and the sheet window (every button says its key)
 tools/licenses.sh          # every linked crate and its license; fails on a non-permissive one
 tools/portmap.sh           # the building model accounted for against BIMCraft's source, item by item
 cargo run -p plumbline -- sample job.json
@@ -62,48 +64,73 @@ cargo run -p plumbline -- set job.json parapet-0024 height "30 in" --status Know
 A length is typed the way the drawing or the tape gives it (`2.5 ft`, `30 in`, `19 1/2"`,
 `25' 6 1/2"`) and is kept in that unit. A length with no unit is refused, never read as feet.
 
-## Draw in the window
+## The window
 
 ```
 cargo run -p plumbline -- new job.json "A job"
 cargo run -p plumbline-app -- job.json
 ```
 
-Press T for the plan. The left panel's Draw section has the tools. With no storey in the
-job it offers "New storey" (type its name, its floor's height and the height to the next,
-like `Ground, 0 ft, 9 ft`). Then:
+The model window is laid out the way a building game's is:
 
-* Click a tool (Wall, Door, Window, Duct, Pipe, Conduit, Cable, Fixture, Equipment). The
-  first time, it asks what it draws with, on one line (a wall: `6 in, 9 ft`). It draws
-  with nothing until that is typed, and shows it under the tool from then on.
-* Click to pick points. The pointer snaps to ends, middles, crossings, the square and the
-  angle guides, and otherwise to the inch; the bar at the bottom says which. With one
-  point picked, type a length (`24 ft`) and Enter: it goes that far toward the pointer.
-  Esc ends the chain; Esc again puts the tool down.
+* **Along the top**: Save, Undo, Redo, the view (3D, Plan, Walk), and at all times the
+  job's price in the color of how sure it is.
+* **Down the left**: Next steps (what this job needs next, read from the job; each step
+  is ticked when it is done, and the first that is not says how), the levels, the
+  drawings under the level on show, what of the building is on show, and its systems.
+* **Along the bottom**: the build bar. Every tool is a button with its mark, in three
+  groups: Building (Wall, Door, Window, Floor, Room, Roof), Mechanical, electrical,
+  plumbing (Duct, Pipe, Conduit, Cable, Fitting, Equipment, Fixture, Connect) and Edit
+  (Move, Delete). The number keys 1 to 9 and 0 take the first ten in hand.
+* **Over the build bar**: the fields of the tool in hand (a wall's thickness and
+  height), each typed into where it stands, and what to do with the tool.
+* **Down the right**: what is selected, as fields and buttons. A value that can be
+  measured says Measure or Check; what can be done to the thing is a button on it.
+
+Every button says the key that does the same. The words on screen are US English and a
+drawing set's: a floor of the building is a level. (The job file and the command line
+keep the model's own word, storey.)
+
+## Draw in the window
+
+With nothing in the job, click any tool: it asks for the first level (its name, the
+elevation of its floor, and floor-to-floor, like `Ground`, `0 ft`, `9 ft`). Then:
+
+* Click a tool. The first time, its fields open over the build bar (a wall: thickness
+  and height). Type each, Tab or a comma to the next, Enter to take the tool in hand. It
+  draws with nothing until they are typed. Click a field later to change it.
+* Click to place points. The pointer snaps to ends, middles, crossings, the square and
+  the angle guides, and otherwise to the inch; the line at the bottom says which. With
+  one point placed, type a length (`24 ft`) and Enter: it goes that far toward the
+  pointer. Esc ends the chain; Esc again puts the tool down.
 * A door or a window is one click on a wall. A fixture or equipment is one click.
-* Select something and use "Move what is selected" (two points, or one and a typed
-  length) or "Remove what is selected" (or the Delete key).
+* **Floor** is one click on the level: the floor fills the outline its walls enclose.
+  **Room** is a click inside the room, then its name. **Roof** is each corner of its
+  outline, then the first again; every side has the pitch typed, and a plane is made a
+  gable afterwards with its Gable button.
+* Select something and use Move (two points, or one and a typed length) or Delete.
   On plan, a click on a door or window in its wall selects the opening.
-* "Fitting where runs meet": one click on a joint. What meets says what it is (two ends
-  at an angle, an elbow; three, a tee; a branch on a run's side cuts the run and makes a
-  tee). "Join a run to what it ends at": one click where a run ends at a fixture or a
-  piece of equipment.
-* Z undoes and Y does again. F2 saves.
-* The sheet's Clashes tab lists what is in the same space as what and what passes
-  through a wall or a floor; with it open, each clash is marked on the model in red.
+* Fitting: one click on a joint. What meets says what it is (two ends at an angle, an
+  elbow; three, a tee; a branch on a run's side cuts the run and makes a tee). Connect:
+  one click where a run ends at a fixture or a piece of equipment.
+* Ctrl+Z undoes and Ctrl+Y redoes (Z and Y alone do too). Ctrl+S or F2 saves.
+* Under Show: each trade, See through, Known, Assumed, Unknown (everything drawn in the
+  color of how sure it is), and Clashes (each clash marked on the model in red). The
+  sheet's Clashes tab lists what is in the same space as what and what passes through a
+  wall or a floor.
 
 ## Trace a plan
 
-The plan you were given goes under the storey it is a plan of: a PDF (drawn or scanned),
-a PNG or a JPEG. On the plan (T), with the storey chosen:
+The plan you were given goes under the level it is a plan of: a PDF (drawn or scanned),
+a PNG or a JPEG. Under Drawings, on the left:
 
-* "Lay a drawing under this storey": type the file's name, and its page if it is not the
-  first (`plans/a-1.pdf, 2`). Or drop the file on the window. The sheet appears under the
-  plan and says it has no scale yet. Nothing can be traced over it until it has one.
-* "Set the scale from one dimension": click the two ends of a dimension on the sheet,
-  then type what the dimension says (`41' 3"`). The sheet is now to scale. On a PDF that
-  was drawn, not scanned, the pointer snaps to the sheet's own lines.
-* "Line the drawing up": click a place on the sheet, then the place on the plan it is.
+* **Add drawing**: type the file's name, and its page if it is not the first
+  (`plans/a-1.pdf, 2`). Or drop the file on the window. The sheet appears under the plan
+  and says it has no scale yet. Nothing can be traced over it until it has one.
+* **Set scale**: click the two ends of a dimension on the sheet, then type what the
+  dimension says (`41' 3"`). The sheet is now to scale. On a PDF that was drawn, not
+  scanned, the pointer snaps to the sheet's own lines.
+* **Line up**: click a place on the sheet, then the place on the plan it is.
 * Then draw over it with the tools above. What is traced is flagged Assumed and says
   which drawing it was traced from. A length typed off a dimension goes that far, to a
   ten-thousandth of a foot.
@@ -143,8 +170,8 @@ plumbline measure job.json duct-0011 "height above its storey" "7' 10 3/4\"" --t
 plumbline measure job.json duct-0011 "line on the plan" same --source "JM on site"
 ```
 
-What is traced is Assumed until someone measures it. In the window, pick a thing (a
-storey by its row on the left, anything else on the model); each of its values on the
+What is traced is Assumed until someone measures it. In the window, select a thing (a
+level by its row on the left, anything else on the model); each of its values on the
 right says **Measure** or **Check**. Click the value and type what the tape reads, or
 shoot it with a laser in keyboard mode: the reading lands where it is asked for, and
 the Tab or Enter the laser sends ends it. `same` says the value was looked at and is as
@@ -156,9 +183,10 @@ A laser has to send its unit with the reading (Leica calls this its text setting
 feet and inches, with a point for the decimal mark. A figure with no unit, a comma, or
 metres is refused, and the refusal says so.
 
-Everything drawn in the window is flagged Assumed and says it was drawn there. Rooms are
-placed at the command line: `plumbline room job.json <storey> "name" --at "6,8" --status
-Assumed --source "..."`.
+Everything drawn in the window is flagged Assumed and says it was drawn there. At the
+command line the same verbs take a status and a source: `plumbline floor job.json
+<storey> <floor type> --walls --status Assumed --source "..."`, `plumbline room job.json
+<storey> "name" --at "6,8" --status Assumed --source "..."`.
 
 `refs/` is for the owner's reference estimates. Git ignores it. Nothing in it is ever committed.
 

@@ -2663,3 +2663,136 @@ spelling is British. Order step 7 (the visual standard) is not started.
 term to replace it; a short rule for messages; and a layout for him to mark up before
 any of it is coded.
 
+
+## The screen redrawn (2026-11-12, DECISIONS.md call 55)
+
+Patrick's word after the review: "Use online search for best UI for video game world
+building interfaces and you make the call proceed with previous plan to deliverable."
+The searches, what was taken from them and the rule for words are call 55. This is
+what was built, what it changed, and what was run.
+
+**What was built** (`crates/app`):
+
+* **A new layout.** Along the top: the job, Save, Undo, Redo, the view (3D, Plan,
+  Walk), Frame, the price in the colour of how sure it is, how many clashes are still
+  questions, the tally of Known, Assumed and Unknown, the file and whether it is saved.
+  Down the left: Next steps, Levels, Drawings, Show, Systems. Along the bottom: the
+  build bar, sixteen tools in three groups, each a button with a mark drawn the way a
+  plan draws the thing; over it the fields of the tool in hand and what to do with it.
+  Down the right: what is selected, with its actions as buttons and its values as rows
+  that say Measure or Check. One line of status at the foot.
+* **Fields in place of a typed line of commas.** A tool's values (a wall's thickness
+  and height) are each a field with its name over it and an example in it; Tab, a comma
+  or a click goes to the next; Enter takes the tool in hand. A new level is three
+  fields under Levels. What is read on site is typed under the value it is read for.
+* **Next steps**: ten steps read from the job itself (a level; a drawing with its
+  scale; walls; doors and windows; the floor and the rooms; the roof; ducts, pipes and
+  wiring; prices; verify in field; save). Each is ticked when the job shows it; the
+  first that is not says how it is done, in the words on the buttons. It folds away.
+* **Three views laid over the building**, under Show: by trade (as before), by how
+  sure (everything drawn in a pale neutral, amber or red for Known, Assumed, Unknown),
+  and clashes marked on the model whatever tab the sheet is on.
+* **The look**: flat panels set edge to edge and parted by hairlines; no shadows, no
+  rounded cards, no pills; a tag is a square mark and a word. The 3D view has a key
+  light, a fill, a pale ground with its grid and no horizon: no sky, sun or grass in
+  either graphics mode. On the plan a floor is paper.
+* **The words**: US English, and a floor of the building is a level, said in the one
+  place every word on screen passes (`theme::spoken`), with a test. A name a person
+  typed is not respelled. Save, Undo, Redo, Delete and Cancel are said as every program
+  says them. A refusal reads "Can't <do it>: <why>." Headings on what is selected are
+  As drawn, Takeoff and Cost lines; "To settle" is "To verify".
+* **Floors, rooms and roofs drawn in the window** (order step 5, call 53): the floor
+  verb, its outline and its tests are in the model and at the command line (`floor`,
+  `type ... floor`); Floor, Room and Roof are tools on the build bar.
+* **`PLUMBLINE_MAP`**: the program writes where each button is on screen, by the word
+  on it, for the demonstrations (`crates/app/src/map.rs`, `demos/window.sh`). A
+  demonstration still moves the real pointer and presses the real button; it now asks
+  the program where "Wall" is, and stops, failing, when a button it was to click is
+  not on screen.
+
+**Changed behaviour, each named:**
+
+* The number keys 1 to 5 no longer put a trade on show or off; 1 to 9 and 0 take a
+  build tool in hand. The trades are rows under Show.
+* A tool clicked in 3D turns to the plan; with the whole building on show it draws on
+  the lowest level; with no level it opens the form for one. Each used to be refused.
+* A tool's settings that will not do leave its form open at the field at fault. They
+  used to be thrown away with the refusal.
+* A click on a button while a value is being typed lets go of the value and does the
+  button. It used to be ignored.
+* Tab with no roof in the job does nothing. It used to say there was no roof plane.
+* Ctrl+S, Ctrl+Z and Ctrl+Y save, undo and redo (F2, Z and Y still do). W A S D do not
+  move the view while Ctrl is held.
+* Adding a drawing with the whole building on show puts it under the lowest level and
+  turns to the plan. It used to be refused until a level was chosen.
+* Every message the window writes was reworded (shorter, a capital and a full stop,
+  "Can't ...:" for a refusal). The model's own reasons are unchanged, and so is
+  everything the command line writes.
+* A level's row is named as typed; "Storey" as a kind of thing is "Level" on screen.
+* The left panel lists levels from the top down, as a section reads. It listed them in
+  the job's order.
+* The picture's ground is a neutral grey-white in both graphics modes. In the full mode
+  it was grass under a sky.
+
+**Run so far:** `cargo test -p plumbline-app` (3 pass, one new: the words), the three
+`build.rs` tests of the floor verb (pass), `tools/portmap.sh` (206 items: 124 ported,
+82 ours), the language gate (pass). The window was opened on the made-up house and four
+pictures were taken and read: the layout is as described. **The nine window
+demonstrations are being run again on it now**, each converted to click buttons by
+name; what each showed is written below as it finishes.
+
+## The verify-in-field list. How its demonstration will be run (written before it is built)
+
+Order step 6; DECISIONS.md call 54 has what a question is and what rides on it. One
+rule is added to call 54 here, found working the figures below: **only a line whose
+amount is itself not Known has dollars riding on anything.** A line that has come out
+Known rests on nothing that is still in question, whatever group of values it names.
+
+**The job** is the field job (`demos/field-job.sh`, described under "Field entry"): two
+levels scaled off a plan, four Known walls standing from the ground level's floor to
+the upper level's, one of them carrying gypsum board on its net face at $2.40/SF; a
+traced duct; two Known pipes across it.
+
+**Before any measurement, by hand.** What has a value that can be measured or checked
+and is not Known: the ground level (its elevation and its floor-to-floor), the upper
+level (the same two), and the duct (its type, its line on the plan, its height above
+its level). The walls, the pipes and the types are Known. Two clashes rest on the
+traced duct and are questions.
+
+* The south wall's line is 24 ft by 9 ft, 216 SF at $2.40: **$518.40**, Assumed. Its
+  height is worked from the ground level's floor and the upper level's floor, so that
+  $518.40 rides on the ground level, and the same $518.40 rides on the upper level.
+* Nothing is priced on the duct or on the pipes: the duct and the two clashes are
+  questions with no dollars, and say so. No dollars is not $0.00.
+* **The list, largest first, ties in the job's order, questions with no dollars after
+  those with, clashes before things:**
+  1. ground (level): **$518.40**, 1 line. Measure: elevation, floor-to-floor.
+  2. upper (level): **$518.40**, 1 line. Measure: elevation, floor-to-floor.
+  3. The duct and pipe A in the same space, by 2 in: no dollars.
+  4. The duct and pipe B in the same space, by 5 in: no dollars.
+  5. The duct: no dollars. Check: type, line on the plan. Measure: height above its level.
+* **Riding in all**, each line counted once: **$518.40**, 1 line, of a job cost of
+  $518.40 (price $615.86).
+
+**After the four measurements of the field demonstration** (the ground floor `same`,
+floor-to-floor 8 ft 10 1/2 in, the duct's line and type `same`, its underside at
+7 ft 10 3/4 in):
+
+* The ground level has nothing left to verify and is off the list. The duct is off the
+  list. Pipe A is clear of the duct. Pipe B in the duct is a finding, not a question,
+  and is not on this list (it is on the Clashes tab).
+* The upper level's floor is Known now (it follows from the ground's), and its own
+  floor-to-floor, 8 ft, is still as scaled. The south wall is 213 SF, $511.20, Known:
+  nothing in question rides on it. **The list is one row: upper (level), no dollars,
+  measure floor-to-floor.** Riding in all: nothing.
+
+**`demos/vif.sh`** runs `plumbline vif` on the job before and after and holds each row
+and each figure above. **In the window** (`demos/fieldw.sh`, two pictures added): the
+sheet's Verify in field tab before, with its five rows and the top bar saying what
+rides; a click on the ground level's row selects it in the model window, where its two
+values say Measure; and the tab after, with its one row.
+
+The judge tries to get a question off the list without a measurement, to get dollars
+counted twice in the total, to find a thing that is not Known and priced and missing
+from the list, and to make the list and the Clashes tab disagree about what is a
+question.

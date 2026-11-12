@@ -37,25 +37,13 @@ echo "== The session: a storey, walls, doors, windows, a duct, a pipe, a fixture
 # on which ten feet are about 133 pixels and the middle of the window is the origin.
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
-export VK_ICD_FILENAMES="$ICD" WGPU_BACKEND=vulkan PLUMBLINE_SHOTS="$OUT"
-"$APP" "$J" > "$T/app.log" 2>&1 &
-APP_PID=\$!
-for i in \$(seq 1 60); do xdotool search --name "plumbline: model" >/dev/null 2>&1 && break; sleep 1; done
-sleep 40   # the first frames are slow on a software renderer
-xdotool windowfocus "\$(xdotool search --name 'plumbline: model' | head -1)"; sleep 1
-shot() { xdotool key F12; sleep 12; }
-click() { xdotool mousemove \$1 \$2; sleep 1; xdotool click 1; sleep 3; }
-esc() { xdotool key Escape; sleep 2; }
-# A tool's row, then what it draws with, typed once the field is up.
-tool() { click \$1 \$2; sleep 2; xdotool type --delay 250 "\$3"; sleep 1; if [ -n "\$4" ]; then shot; fi; xdotool key Return; sleep 3; }
-# A length: the pointer shows the way, the first digit opens the field, and the rest is
-# typed once the field is up (on a software renderer the frame that draws a new field is
-# slow, and keys typed during it are lost).
-len() { xdotool mousemove \$1 \$2; sleep 2; xdotool type "\${3:0:1}"; sleep 3; xdotool type --delay 250 "\${3:1}"; sleep 1; if [ -n "\$4" ]; then shot; fi; xdotool key Return; sleep 4; }
+export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
+. "$PWD/demos/window.sh"
+open_window "$J"
 xdotool key t; sleep 4
 shot                                    # 01 the empty job on plan: nothing to draw on yet
-tool 64 184 "Ground, 0 ft, 9 ft"        # New storey
-tool 44 319 "6 in, 9 ft" yes            # 02 Wall: what it draws with, being typed
+on "Add level"; sleep 2; typed "Ground, 0 ft, 9 ft"   # Add level
+tool "Wall" "6 in, 9 ft" yes            # 02 Wall: what it draws with, being typed
 click 600 600                           # the first corner
 len 900 605 "24 ft" yes                 # 03 east: a length being typed
 len 922 400 "16 ft"                     # north
@@ -67,69 +55,71 @@ esc
 click 760 602                           # the middle of the south wall
 len 760 400 "16 ft"                     # a partition north from it
 esc; esc
-tool 45 359 "3 ft, 7 ft, 0 ft"          # Door
+tool "Door" "3 ft, 7 ft, 0 ft"          # Door
 click 680 600                           # in the south wall
 click 760 500                           # in the partition
 esc
-tool 55 399 "4 ft, 3 ft, 3 ft"          # Window
+tool "Window" "4 ft, 3 ft, 3 ft"        # Window
 click 919 500                           # in the east wall
 click 680 387                           # two in the north wall
 click 860 387
 esc
-xdotool mousemove 1000 800; sleep 1
+park
 shot                                    # 05 walls, doors and windows
-tool 45 439 "6 in, 8 ft, Supply Air"    # Duct
+tool "Duct" "6 in, 8 ft, Supply Air"    # Duct
 click 630 570
 len 760 572 "8 ft"
 len 737 400 "12 ft"
 esc; esc
-tool 44 479 "3/4 in, 1 ft, Domestic Cold Water"   # Pipe
+tool "Pipe" "3/4 in, 1 ft, Domestic Cold Water"   # Pipe
 click 780 585
 len 780 400 "14 ft"
 esc; esc
-tool 51 599 "Lavatory, 2 x 1.5 x 3, 0 ft"         # Fixture
+tool "Fixture" "Lavatory, 2 x 1.5 x 3, 0 ft"      # Fixture
 xdotool mousemove 781 398; sleep 2
 shot                                    # 06 about to stand it on the pipe's end
 xdotool click 1; sleep 3
 esc
-tool 62 639 "Air handler, 2 x 2 x 4, 0 ft"        # Equipment
+tool "Equipment" "Air handler, 2 x 2 x 4, 0 ft"   # Equipment
 click 631 571                           # on the duct's start
 esc
-xdotool mousemove 1000 800; sleep 1
+park
 shot                                    # 07 everything drawn
 xdotool key z; sleep 4
 shot                                    # 08 the last step undone: the equipment is gone
 xdotool key y; sleep 4                  # and done again
 click 760 450                           # the partition, selected
-click 97 673                            # Move what is selected
+on "Move"                               # Move what is selected
 click 760 493                           # from its middle
 len 900 494 "1 ft"                      # a foot east
-xdotool mousemove 1000 800; sleep 1
+park
 shot                                    # 09 the partition a foot east, its door with it
-click 44 319                            # Wall again: a stray one, to be removed
+on "Wall"                               # Wall again: a stray one, to be removed
 click 1000 700
 len 1100 702 "5 ft"
 esc; esc
 click 1030 700                          # the stray wall, selected
 shot                                    # 10 the stray wall selected
 xdotool key Delete; sleep 4
-xdotool mousemove 1000 800; sleep 1
+park
 shot                                    # 11 removed
 click 860 387                           # the second window in the north wall: on plan, a click on it selects it
 shot                                    # 12 the window selected, not its wall
 xdotool key Delete; sleep 4
-xdotool mousemove 1000 800; sleep 1
+park
 shot                                    # 13 the window taken out
-tool 54 519 "3/4 in, 8 ft, Steam"       # Conduit, on a system no conduit goes on
-xdotool mousemove 1000 800; sleep 1
+tool "Conduit" "3/4 in, 8 ft, Steam"    # Conduit, on a system no conduit goes on
+park
 shot                                    # 14 refused where it was typed, not at the second pick
+esc                                     # the field is left open to be put right; let go of it
 xdotool key t; sleep 6
 shot                                    # 15 the house in 3D
 xdotool key F2; sleep 3                 # save
-kill \$APP_PID; wait \$APP_PID 2>/dev/null
+close_window
 SESSION
 chmod +x "$T/session.sh"
 timeout 1500 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
+if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
 ls "$OUT" | tr '\n' ' '; echo
 for n in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do

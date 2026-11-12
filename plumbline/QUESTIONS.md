@@ -223,3 +223,14 @@ how the interface is showing a more manageable and Construcion oriented screen a
 English storey and the way things are worded does not seem to fit with good UI and
 software design protocols". Work stopped for his review at this point; nothing further
 is built until he rules on the screen and its words.
+
+**Answered, 2026-11-12, on his word to "make the call" (DECISIONS.md call 55):**
+
+1. **US English on screen, and a floor of the building is a "level".** Not "story":
+   a US drawing set's own sheets and sections say Level 1, Level 2 and "T.O. level",
+   and "story" is a count ("two-story"). The screen says level, center, color, meter.
+   A name a person typed is not respelled: what is inside quotation marks, and a name
+   shown by itself, is shown as typed. The job file and the command line keep the
+   model's word (storey), which is IFC's (`IfcBuildingStorey`). **Still his to
+   overrule**: if the command line should say level too, say so.
+2. "Class" stays until he says which word his estimators use (unchanged).

@@ -1,10 +1,10 @@
 //! How the application looks: one palette, one typeface, and the few building blocks every
 //! panel is made of. Nothing here knows about roofs.
 //!
-//! The look is a drafting table: a pale canvas, ink-dark text, white panels with a
-//! hairline border, and colour kept for meaning. Amber is always "assumed", red is always
-//! "unknown", blue is always "selected", and each kind of roof line has one colour that
-//! the legend, the drawing and the sheet all share.
+//! The look is an instrument: paper, ink, flat panels set edge to edge and parted by
+//! hairlines, no shadows and nothing rounded off, and colour kept for meaning. Amber is
+//! always "assumed", red is always "unknown", blue is always "selected", and each kind of
+//! roof line has one colour that the legend, the drawing and the sheet all share.
 
 use bevy::prelude::*;
 use bevy::text::{FontFeatureTag, FontFeatures};
@@ -15,19 +15,23 @@ pub fn hex(rgb: u32) -> Color {
     Color::srgb_u8((rgb >> 16) as u8, (rgb >> 8) as u8, rgb as u8)
 }
 
-pub fn canvas() -> Color { hex(0xE9EDF2) }
-/// The ground's own colour. Lit by the sun it comes out as the canvas, so the ground has
-/// no edge and no horizon: only its grid and the building's shadow show it is there.
-pub fn ground() -> Color { hex(0xF2F7FC) }
-pub fn grid_minor() -> Color { hex(0xB4BFCB).with_alpha(0.6) }
-pub fn grid_major() -> Color { hex(0x93A0AF).with_alpha(0.85) }
+pub fn canvas() -> Color { hex(0xECEDEB) }
+/// The ground's own colour. Lit, it comes out as the canvas, so the ground has no edge
+/// and no horizon: only its grid and the building's shadow show it is there.
+pub fn ground() -> Color { hex(0xF4F5F3) }
+pub fn grid_minor() -> Color { hex(0xB9BDBF).with_alpha(0.6) }
+pub fn grid_major() -> Color { hex(0x979DA3).with_alpha(0.85) }
 pub fn panel() -> Color { hex(0xFFFFFF) }
-pub fn panel_alt() -> Color { hex(0xF6F8FA) }
-pub fn hairline() -> Color { hex(0xD9DFE7) }
-pub fn ink() -> Color { hex(0x1B2430) }
-pub fn ink_soft() -> Color { hex(0x5A6676) }
-pub fn ink_faint() -> Color { hex(0x8B96A5) }
-pub fn accent() -> Color { hex(0x2563EB) }
+pub fn panel_alt() -> Color { hex(0xF3F4F2) }
+/// A field that can be typed in, at rest.
+pub fn field_paper() -> Color { hex(0xFAFAF8) }
+/// A hairline inside a panel, between rows.
+pub fn rule() -> Color { hex(0xE7E9E6) }
+pub fn hairline() -> Color { hex(0xC9CDD0) }
+pub fn ink() -> Color { hex(0x16191D) }
+pub fn ink_soft() -> Color { hex(0x4E5661) }
+pub fn ink_faint() -> Color { hex(0x7E8791) }
+pub fn accent() -> Color { hex(0x1D4ED8) }
 pub fn accent_wash() -> Color { hex(0xE8F0FE) }
 pub fn amber() -> Color { hex(0xA9690A) }
 pub fn amber_wash() -> Color { hex(0xFFF3D1) }
@@ -75,7 +79,7 @@ pub fn kind_name(kind: Kind) -> &'static str {
         Kind::Roof => "Roof",
         Kind::Job => "Job",
         Kind::Condition => "Condition",
-        Kind::Storey => "Storey",
+        Kind::Storey => "Level",
         Kind::Wall => "Wall",
         Kind::Door => "Door",
         Kind::Window => "Window",
@@ -155,9 +159,19 @@ pub fn spoken(text: &str) -> String {
     let names = NAMES.get().and_then(|n| n.read().ok());
     let mut said: Vec<String> = Vec::new();
     let mut out = String::with_capacity(text.len());
+    // Inside quotation marks is what a person typed or a file says: left as it is.
+    let mut quoted = false;
     for (i, word) in text.split(' ').enumerate() {
         if i > 0 {
             out.push(' ');
+        }
+        let opens = !quoted && word.starts_with(['"', '(']) && word.trim_start_matches('(').starts_with('"');
+        let in_quotes = quoted || opens;
+        if opens {
+            quoted = true;
+        }
+        if quoted && word.len() > usize::from(opens) && word.trim_end_matches([',', '.', ';', ':', ')']).ends_with('"') {
+            quoted = false;
         }
         let inner = |c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-';
         // "roof-0072's": the 's is not part of what the thing is called in the file.
@@ -185,11 +199,18 @@ pub fn spoken(text: &str) -> String {
                 }
                 None => out.push_str(core),
             },
-            (_, true) => out.push_str(&core.replace('_', " ")),
-            _ => out.push_str(core),
+            (_, true) => out.push_str(&american(&core.replace('_', " "))),
+            _ if in_quotes => out.push_str(core),
+            _ => out.push_str(&american(core)),
         }
         out.push_str(after);
         out.push_str(owns);
+    }
+    // The model's "centre line" is one word on a drawing.
+    for (as_written, word) in [("centre line", "centerline"), ("center line", "centerline"), ("Centre line", "Centerline"), ("Center line", "Centerline")] {
+        if out.contains(as_written) {
+            out = out.replace(as_written, word);
+        }
     }
     for name in said {
         let twice = format!("{name} ({name})");
@@ -204,7 +225,7 @@ pub fn spoken(text: &str) -> String {
             out = out.replace(as_named, words);
         }
     }
-    for kind in ["Job", "Roof", "Eave", "Rake", "Ridge", "Hip", "Valley", "Headwall", "Parapet", "Condition", "Storey", "Wall", "Door", "Window", "Floor", "System", "Duct", "Pipe", "Conduit", "Cable", "Equipment", "Fixture", "Fitting", "Type", "Room", "Material", "Drawing", "Prior"] {
+    for kind in ["Job", "Roof", "Eave", "Rake", "Ridge", "Hip", "Valley", "Headwall", "Parapet", "Condition", "Storey", "Level", "Wall", "Door", "Window", "Floor", "System", "Duct", "Pipe", "Conduit", "Cable", "Equipment", "Fixture", "Fitting", "Type", "Room", "Material", "Drawing", "Prior"] {
         for article in ["a ", "an ", "A ", "An "] {
             let said_so = format!("{article}{kind}");
             if out.contains(&said_so) {
@@ -275,6 +296,37 @@ pub fn spoken(text: &str) -> String {
     out
 }
 
+/// The screen is written in US English, in the words a US drawing set uses: a floor of
+/// the building is a level. The model and the job file keep their own spelling; this is
+/// where a word of theirs is said. One word, or a few with spaces between.
+fn american(words: &str) -> String {
+    const SAID: [(&str, &str); 14] = [
+        ("storey", "level"),
+        ("storeys", "levels"),
+        ("Storey", "Level"),
+        ("Storeys", "Levels"),
+        ("centre", "center"),
+        ("centres", "centers"),
+        ("Centre", "Center"),
+        ("centred", "centered"),
+        ("colour", "color"),
+        ("colours", "colors"),
+        ("metre", "meter"),
+        ("metres", "meters"),
+        ("millimetres", "millimeters"),
+        ("grey", "gray"),
+    ];
+    if !words.contains(' ') {
+        return SAID.iter().find(|(from, _)| *from == words).map(|(_, to)| to.to_string()).unwrap_or_else(|| words.to_string());
+    }
+    words.split(' ').map(american).collect::<Vec<_>>().join(" ")
+}
+
+/// A name a person gave, exactly as they gave it: a level, a room, a job.
+pub fn name(fonts: &Fonts, s: impl Into<String>, size: f32, weight: Weight, colour: Color) -> impl Bundle {
+    typed(fonts, s, size, weight, colour)
+}
+
 /// Text exactly as it was typed, for the field a person is typing in.
 pub fn typed(fonts: &Fonts, s: impl Into<String>, size: f32, weight: Weight, colour: Color) -> impl Bundle {
     let font = match weight {
@@ -295,30 +347,24 @@ pub fn text(fonts: &Fonts, s: impl Into<String>, size: f32, weight: Weight, colo
     (Text::new(spoken(&s.into())), TextFont { font: FontSource::Handle(font), font_size: FontSize::Px(size), font_features: features, ..default() }, TextColor(colour))
 }
 
-/// A white card with a hairline border and a soft shadow. The node says how it is laid
-/// out; the card gives it its edge.
+/// A flat card with a hairline border. The node says how it is laid out; the card gives
+/// it its edge. Nothing on this screen casts a shadow.
 pub fn card(mut node: Node) -> impl Bundle {
     node.border = UiRect::all(px(1.0));
-    node.border_radius = BorderRadius::all(px(10.0));
-    (
-        node,
-        BackgroundColor(panel()),
-        BorderColor::all(hairline()),
-        BoxShadow(vec![ShadowStyle { color: Color::srgba(0.1, 0.14, 0.2, 0.10), x_offset: px(0.0), y_offset: px(2.0), spread_radius: px(0.0), blur_radius: px(10.0) }]),
-    )
+    (node, BackgroundColor(panel()), BorderColor::all(hairline()))
 }
 
-/// A node with rounded corners.
+/// A node with its corners eased by a pixel or two: a key, a field. Never a pill.
 pub fn rounded(mut node: Node, radius: f32) -> Node {
-    node.border_radius = BorderRadius::all(px(radius));
+    node.border_radius = BorderRadius::all(px(radius.min(2.0)));
     node
 }
 
-/// A small rounded tag: "Assumed", "Unknown", a count.
-pub fn chip(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, fg: Color, bg: Color) {
-    p.spawn((rounded(Node { padding: UiRect::axes(px(8.0), px(3.0)), align_items: AlignItems::Center, column_gap: px(6.0), ..default() }, 999.0), BackgroundColor(bg))).with_children(|c| {
-        c.spawn((rounded(Node { width: px(6.0), height: px(6.0), ..default() }, 3.0), BackgroundColor(fg)));
-        c.spawn(text(fonts, label, 11.5, Weight::Medium, fg));
+/// A small tag: a square mark in the colour of what it says, and the word.
+pub fn chip(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, fg: Color, _bg: Color) {
+    p.spawn(Node { align_items: AlignItems::Center, column_gap: px(5.0), flex_shrink: 0.0, ..default() }).with_children(|c| {
+        c.spawn((Node { width: px(6.0), height: px(6.0), ..default() }, BackgroundColor(fg)));
+        c.spawn((text(fonts, label, 11.0, Weight::Medium, fg), TextLayout::no_wrap()));
     });
 }
 
@@ -332,18 +378,76 @@ pub fn status_chip(p: &mut ChildSpawnerCommands, fonts: &Fonts, status: Status) 
 
 /// A keyboard key, drawn as a key.
 pub fn keycap(p: &mut ChildSpawnerCommands, fonts: &Fonts, key: &str) {
-    p.spawn((rounded(Node { padding: UiRect::axes(px(6.0), px(2.0)), border: UiRect::all(px(1.0)), min_width: px(22.0), justify_content: JustifyContent::Center, ..default() }, 5.0), BackgroundColor(panel_alt()), BorderColor::all(hairline())))
-        .with_child(text(fonts, key, 11.0, Weight::Medium, ink_soft()));
+    p.spawn((rounded(Node { padding: UiRect::axes(px(4.0), px(0.0)), border: UiRect::all(px(1.0)), min_width: px(16.0), justify_content: JustifyContent::Center, flex_shrink: 0.0, ..default() }, 2.0), BackgroundColor(panel_alt()), BorderColor::all(hairline()), Pickable::IGNORE))
+        .with_child((text(fonts, key, 10.0, Weight::Medium, ink_soft()), Pickable::IGNORE));
 }
 
-/// A section heading inside a panel: small, quiet, set apart by space.
+/// A section heading inside a panel: small capitals over a hairline.
 pub fn heading(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str) {
-    p.spawn(Node { margin: UiRect { top: px(16.0), bottom: px(6.0), ..default() }, flex_shrink: 0.0, ..default() }).with_child(text(fonts, label.to_uppercase(), 10.5, Weight::Semibold, ink_faint()));
+    p.spawn((Node { margin: UiRect { top: px(12.0), bottom: px(4.0), ..default() }, padding: UiRect::bottom(px(3.0)), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() }, BorderColor::all(hairline()))).with_child(text(fonts, label.to_uppercase(), 10.0, Weight::Semibold, ink_soft()));
+}
+
+/// What a script that drives the window calls something that can be clicked: the word
+/// on it. With `PLUMBLINE_MAP` set, the program writes where each of these is on screen.
+/// `scrolls` is set on what lies in a panel that scrolls: off the panel's edge it is not
+/// on screen, and is not listed.
+#[derive(Component, Clone)]
+pub struct Named {
+    pub name: String,
+    pub scrolls: bool,
+}
+
+pub fn named(name: impl Into<String>) -> Named {
+    Named { name: name.into(), scrolls: false }
+}
+
+/// A button: a word, the key that does the same if there is one, and whether it is the
+/// thing in hand. It does nothing by itself; whoever spawns it says what a click does.
+pub fn button<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, key: &str, on: bool) -> EntityCommands<'a> {
+    let mut e = p.spawn((
+        rounded(Node { align_items: AlignItems::Center, column_gap: px(6.0), padding: UiRect::axes(px(8.0), px(4.0)), border: UiRect::all(px(1.0)), min_height: px(24.0), flex_shrink: 0.0, ..default() }, 2.0),
+        BackgroundColor(if on { accent_wash() } else { panel() }),
+        BorderColor::all(if on { accent() } else { hairline() }),
+        named(label),
+    ));
+    e.with_children(|b| {
+        b.spawn((text(fonts, label, 12.0, Weight::Medium, if on { accent() } else { ink() }), TextLayout::no_wrap(), Pickable::IGNORE));
+        if !key.is_empty() {
+            keycap(b, fonts, key);
+        }
+    });
+    e
+}
+
+/// A field: its name over it, and in it its value, or what is being typed with the caret
+/// after it, or faintly what could be typed. `state` is 0 at rest, 1 being typed in,
+/// 2 wanted and still empty.
+pub fn field<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: &str, like: &str, state: u8, width: f32) -> EntityCommands<'a> {
+    let mut e = p.spawn((Node { flex_direction: FlexDirection::Column, row_gap: px(2.0), flex_shrink: 0.0, ..default() }, named(label)));
+    e.with_children(|f| {
+        f.spawn((text(fonts, label.to_uppercase(), 9.5, Weight::Semibold, ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+        let edge = match state {
+            1 => accent(),
+            2 => red(),
+            _ => hairline(),
+        };
+        f.spawn((rounded(Node { width: px(width), height: px(24.0), padding: UiRect::horizontal(px(6.0)), border: UiRect::all(px(if state == 1 { 1.5 } else { 1.0 })), align_items: AlignItems::Center, overflow: Overflow::clip(), ..default() }, 2.0), BackgroundColor(if state == 1 { panel() } else { field_paper() }), BorderColor::all(edge), Pickable::IGNORE)).with_children(|b| {
+            if value.is_empty() && state != 1 {
+                b.spawn((text(fonts, like, 12.0, Weight::Regular, ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+            } else {
+                b.spawn((typed(fonts, value, 12.5, Weight::Medium, ink()), TextLayout::no_wrap(), Pickable::IGNORE));
+            }
+            if state == 1 {
+                b.spawn((Node { width: px(1.5), height: px(15.0), margin: UiRect::left(px(1.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(accent()), Pickable::IGNORE));
+            }
+        });
+    });
+    e
 }
 
 /// A swatch of a line's colour.
 pub fn swatch(p: &mut ChildSpawnerCommands, colour: Color) {
-    p.spawn((rounded(Node { width: px(14.0), height: px(4.0), ..default() }, 2.0), BackgroundColor(colour)));
+    p.spawn((Node { width: px(14.0), height: px(4.0), flex_shrink: 0.0, ..default() }, BackgroundColor(colour)));
 }
 
 /// A pitch the way the trade says it: 6:12. Said by the model, to the places it keeps.
@@ -406,11 +510,12 @@ pub fn discipline_colour(d: plumbline_world::Discipline) -> Color {
 pub fn wall_outside() -> Color { hex(0xEDE8DF) }
 pub fn wall_inside() -> Color { hex(0xF4F2EE) }
 pub fn floor_colour() -> Color { hex(0xC9B79C) }
+/// A floor on the plan: paper.
+pub fn plan_paper() -> Color { hex(0xFBFBF8) }
 pub fn glass() -> Color { Color::srgba(0.62, 0.80, 0.90, 0.38) }
 pub fn door_leaf() -> Color { hex(0x7A5A3C) }
 pub fn equipment() -> Color { hex(0xC5CBD3) }
 pub fn porcelain() -> Color { hex(0xF8F8F6) }
-pub fn grass() -> Color { hex(0xA9B79A) }
 
 /// A door as a plan draws it: its span through the wall.
 pub fn plan_door() -> Color {
@@ -420,6 +525,16 @@ pub fn plan_door() -> Color {
 /// A window as a plan draws it: its span through the wall, with the glass down the middle.
 pub fn plan_window() -> Color {
     Color::srgb(0.09, 0.15, 0.3)
+}
+
+/// The building shown by how sure it is: what is Known in a pale neutral, what is
+/// Assumed in amber, what is Unknown in red.
+pub fn certainty(status: Status) -> Color {
+    match status {
+        Status::Known => hex(0xDFE2E3),
+        Status::Assumed => hex(0xE3B04B),
+        Status::Unknown => hex(0xD6584C),
+    }
 }
 
 /// Where two things are in the same space.
@@ -471,12 +586,33 @@ mod tests {
         assert_eq!(spoken("Unit cost of \"Gutter 6\\\" half round\" on west"), "Unit cost of \"Gutter 6\" half round\" on west");
         // A kind of thing as the program names it.
         assert_eq!(spoken("a RoofPlane is not moved this way; a wall is"), "a roof plane is not moved this way; a wall is");
-        assert_eq!(spoken("storey-0002 is a Wall, not a storey"), "storey-0002 is a wall, not a storey");
+        assert_eq!(spoken("storey-0002 is a Wall, not a storey"), "storey-0002 is a wall, not a level");
+        assert_eq!(spoken("that is a Storey"), "that is a level");
         assert_eq!(spoken("a Wallace Road job"), "a Wallace Road job");
         // Money with its sign first; the pound in capitals; a word with "lb" in it left.
         assert_eq!(spoken("allowance: 28.00 $/SF"), "allowance: $28.00/SF");
         assert_eq!(spoken("~28.00 $/LF over 2"), "~$28.00/LF over 2");
         assert_eq!(spoken("861.60 lb at $9.00/lb"), "861.60 LB at $9.00/LB");
         assert_eq!(spoken("a bulb and an elbow"), "a bulb and an elbow");
+    }
+
+    /// Call 55: the screen is in US English and says "level"; what a person typed, and
+    /// what the file calls a thing, is left alone.
+    #[test]
+    fn the_screen_says_level_and_center_and_leaves_what_was_typed() {
+        name_these([("storey-0005", "Ground")].into_iter().map(|(p, n)| (p.to_string(), n.to_string())).collect());
+        assert_eq!(spoken("choose the storey to draw on"), "choose the level to draw on");
+        assert_eq!(spoken("Storey height of storey-0005: 9 ft"), "Level height of Ground: 9 ft");
+        assert_eq!(spoken("height above its storey, to its centre"), "height above its level, to its center");
+        assert_eq!(spoken("its centre line is 6 in off"), "its centerline is 6 in off");
+        assert_eq!(spoken("two storeys' walls"), "two levels' walls");
+        // A name in quotation marks is the person's own.
+        assert_eq!(spoken("there is already something called \"Storey 2\" under the job"), "there is already something called \"Storey 2\" under the job");
+        assert_eq!(spoken("(\"Centre Street\") on this storey"), "(\"Centre Street\") on this level");
+        // An inch mark is not a quotation mark.
+        assert_eq!(spoken("8' 10 1/2\" above its storey"), "8' 10 1/2\" above its level");
+        // A path is still a path, and a name with the word in it is not a word.
+        assert_eq!(spoken("storey-0099 is not in the job"), "storey-0099 is not in the job");
+        assert_eq!(spoken("multistorey"), "multistorey");
     }
 }

@@ -2146,3 +2146,33 @@ click is asked of the program in place of being copied into the script by hand.
 
 **Order.** The screen first, since floors, rooms, the roof, the verify list and the
 next steps all go into it; then the order of work as it stood.
+
+**Call 55 as built (2026-11-12).** What differs from the list above, and why:
+
+* **The build bar's groups are Building; Mechanical, electrical, plumbing; and Edit**,
+  not one group a trade. A fixture is a plumber's lavatory and an electrician's
+  luminaire, and a piece of equipment is anybody's: a group a trade would have put
+  each of them under one trade or under all three. Every tool shows at once, in one
+  row; nothing is behind a tab.
+* **The number keys 1 to 9 and 0 take the first ten tools in hand.** They used to put
+  each trade on show or off; that is now a row to click under Show, and has no key.
+  (Named in STATUS.md as a changed behaviour.)
+* **A tool goes to the plan and to a level by itself.** Clicked in 3D it turns the view
+  to the plan; with the whole building on show it draws on the lowest level and says
+  so by showing it; with no level in the job it opens the form for the first one. It
+  used to refuse each of these and say what to do first.
+* **A form that will not do stays open**, with the caret in the field at fault, in
+  place of being thrown away with a refusal.
+* **Move and Delete are on the build bar, once.** They are not repeated on what is
+  selected.
+* **Each mark is drawn the way a plan draws the thing** (a wall a heavy line, a window
+  a line with its glass, a duct two lines, a roof a gable end), out of the same flat
+  strokes the rest of the screen is made of. No picture font is linked, so nothing is
+  added to the licences.
+* **The 3D view has a key light and a fill, a pale ground with its grid and no
+  horizon.** The sky, the sun's disc, the bloom and the grass are gone in both
+  graphics modes, which is the fixed rule ("No sky, sun or grass") as much as this call.
+* **On the plan a floor is paper**, so what is drawn on it reads as on a drawing.
+* **The price on the top bar is the estimate's price** with its flag; beside it, how
+  many clashes are still questions. The dollars riding on what is not yet sure come
+  with the verify-in-field list (call 54), which this bar is the place for.

@@ -32,6 +32,7 @@ pub mod snap;
 
 pub use history::{History, UNDO_LIMIT};
 pub use join::{connect, connect_at, fit_all, fitting, split, Fitted, PassedOver};
+pub(crate) use measure::takes_among;
 pub use measure::{measure, takes, Measured, Reading};
 
 use crate::building::{self, InSystem, SystemInfo};
@@ -162,6 +163,18 @@ pub fn wall_type(job: &mut Job, name: &str, thickness: &str, how: Entered) -> Re
         let t = WallType { thickness: how.length(thickness)?, layers: Vec::new() };
         let path = job.add(&root, Kind::Type, name)?;
         building::check_wall_type(&path, Kind::Type, &t)?;
+        job.put(&path, t)?;
+        Ok(path)
+    })
+}
+
+/// A floor type: how thick floors of it are.
+pub fn floor_type(job: &mut Job, name: &str, thickness: &str, how: Entered) -> Result<String, String> {
+    all_or_nothing(job, |job| {
+        let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
+        let t = crate::FloorType { thickness: how.length(thickness)?, layers: Vec::new() };
+        let path = job.add(&root, Kind::Type, name)?;
+        building::check_floor_type(&path, Kind::Type, &t)?;
         job.put(&path, t)?;
         Ok(path)
     })
@@ -348,6 +361,73 @@ pub fn place(job: &mut Job, storey: &str, kind: Kind, what: &str, at: P2, offset
     })
 }
 
+/// How a floor's outline is given.
+pub enum FloorBy<'a> {
+    /// The outline the storey's walls enclose.
+    Walls,
+    /// Its corners, in feet on the plan.
+    Points(&'a [P2]),
+}
+
+/// What `floor` made, and what whoever asked for it should know.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Floored {
+    pub path: String,
+    pub notes: Vec<String>,
+}
+
+/// A floor of a type on a storey (BIMCraft `floor`, `commands.rs:7556`): by its corners,
+/// or by the outline the storey's walls enclose. By its walls it is no surer than the
+/// least sure of them, and its source says it is their outline. A floor on an outline a
+/// floor of the storey already has is refused: it would be counted twice.
+pub fn floor(job: &mut Job, storey: &str, type_path: &str, by: FloorBy, how: Entered) -> Result<Floored, String> {
+    all_or_nothing(job, |job| {
+        storey_of(job, storey)?;
+        let called = job.find(storey).and_then(|e| job.world.get::<Node>(e).map(|n| n.name.clone())).unwrap_or_else(|| storey.to_string());
+        if job.find(type_path).and_then(|e| job.world.get::<crate::FloorType>(e)).is_none() {
+            return Err(format!("{type_path} is not a floor type"));
+        }
+        let mut notes = Vec::new();
+        let boundary = match by {
+            FloorBy::Points(points) => {
+                if points.len() < 3 {
+                    return Err("a floor's outline has at least three corners".into());
+                }
+                how.val(points.to_vec(), "ft")
+            }
+            FloorBy::Walls => {
+                let found = building::floor_outline(job, storey)?.ok_or_else(|| format!("no walls enclose an area on {called}: draw the walls round the floor first, or give the floor by its corners"))?;
+                if found.courtyards > 0 {
+                    return Err(format!(
+                        "the walls on {called} enclose {} inside the floor's outline, and a floor here has no hole yet: give the floor by its corners, round {}",
+                        if found.courtyards == 1 { "a courtyard".to_string() } else { format!("{} courtyards", found.courtyards) },
+                        if found.courtyards == 1 { "it" } else { "them" }
+                    ));
+                }
+                if found.others > 0 {
+                    notes.push(format!("the walls on {called} enclose {} apart from this one, and this floor is the largest only: each of the others is a floor of its own, given by its corners", if found.others == 1 { "another outline".to_string() } else { format!("{} other outlines", found.others) }));
+                }
+                Val { value: Some(found.boundary), unit: "ft".into(), status: how.status.max(found.status), source: format!("the outline of the walls on {called} ({})", how.source) }
+            }
+        };
+        // A floor already on this very outline.
+        let same = |a: &[P2], b: &[P2]| a.len() == b.len() && (0..a.len()).any(|shift| (0..a.len()).all(|i| (a[i][0] - b[(i + shift) % b.len()][0]).abs() < 1.0e-3 && (a[i][1] - b[(i + shift) % b.len()][1]).abs() < 1.0e-3));
+        let mine = boundary.value.clone().unwrap_or_default();
+        let there = {
+            let mut q = job.world.query::<(&Node, &crate::Floor)>();
+            q.iter(&job.world).find(|(n, f)| n.parent.as_deref() == Some(storey) && f.boundary_ft().is_some_and(|b| same(&b, &mine))).map(|(n, _)| n.name.clone())
+        };
+        if let Some(there) = there {
+            return Err(format!("{there} is already on this outline on {called}: a second floor there would be counted twice"));
+        }
+        let floor = crate::Floor { type_name: how.path(type_path), boundary, offset: None };
+        let path = add_numbered(job, storey, Kind::Floor)?;
+        building::check_floor(&path, Kind::Floor, &floor)?;
+        job.put(&path, floor)?;
+        Ok(Floored { path, notes })
+    })
+}
+
 /// A room: a point inside it (in feet). Its boundary is found from the walls round the
 /// point (BIMCraft's `room` command, `commands.rs:7909`: a room is placed by a point).
 pub fn room(job: &mut Job, storey: &str, name: &str, at: P2, how: Entered) -> Result<String, String> {
@@ -488,6 +568,18 @@ pub fn wall_type_for(job: &mut Job, thickness: &str, how: Entered) -> Result<Str
     match found.into_iter().next() {
         Some(path) => Ok(path),
         None => wall_type(job, &format!("wall {}", thickness.trim()), thickness, how),
+    }
+}
+
+/// The floor type of this thickness with no layers, or a new one named for it ("floor 4 in").
+pub fn floor_type_for(job: &mut Job, thickness: &str, how: Entered) -> Result<String, String> {
+    let wanted = how.length(thickness)?.feet().ok_or("the thickness is not a length this program converts")?;
+    let mut q = job.world.query::<(&Node, &crate::FloorType)>();
+    let mut found: Vec<String> = q.iter(&job.world).filter(|(_, t)| t.layers.is_empty() && t.thickness.feet().is_some_and(|x| (x - wanted).abs() < 1e-9)).map(|(n, _)| n.path.clone()).collect();
+    found.sort();
+    match found.into_iter().next() {
+        Some(path) => Ok(path),
+        None => floor_type(job, &format!("floor {}", thickness.trim()), thickness, how),
     }
 }
 

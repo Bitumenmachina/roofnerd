@@ -223,3 +223,11 @@ from BIMCraft at the same commit is listed here by hand, and is checked by its o
   `decode` are written with `and_then`, because this workspace is on the 2021 edition.
 - `crates/ifc/src/lib.rs`, the importer over it, is ours (DECISIONS.md call 47):
   BIMCraft's `import.rs` builds BIMCraft's model and was read, not ported.
+| `floor_type` | ported | `FloorType` | `crates/core/src/commands.rs:11195` | a floor type by its thickness; layers are not taken by this verb |
+| `floor_type_for` | ported | `type_for_size` | `crates/core/src/text.rs:282` | the same rule as `wall_type_for`: the floor type of this thickness and nothing else, or a new one named for it |
+| `floor` | ported | `floor` | `crates/core/src/commands.rs:7556` | a floor of a type on a level, by a boundary that is given or, with none, by the outline its walls enclose. Not taken: slope, the span arrow, "structural", the sketch; and a courtyard is refused, not cut out (DECISIONS.md call 53) |
+| `FloorBy` | ours |  |  | how `floor` is told its boundary: by the walls or by points; BIMCraft reads an optional `points` out of its command's JSON (`commands.rs` 7556 to 7600); `grep -rn 'enum FloorBy' crates/core/src`: nothing |
+| `Floored` | ours |  |  | what `floor` did, with what has to be said about it; `grep -rn 'struct Floored' crates/core/src`: nothing |
+| `floor_outline` | ported | `floor_outline` | `crates/core/src/commands.rs:2467` | along the centre lines of the walls, the outer outline of the largest piece they make, and the loops standing free inside it. Added: the other pieces the walls make, and how sure the outline is |
+| `FloorOutline` | ours |  |  | what `floor_outline` found, with its status; BIMCraft returns a pair (`commands.rs:2467`); `grep -rn 'struct FloorOutline' crates/core/src`: nothing |
+| `corners` | ported | `corners` | `crates/core/src/geom.rs:136` | a ring's corners: its points less those on a straight run between their neighbours |

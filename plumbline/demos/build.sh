@@ -101,8 +101,16 @@ PY
 
 echo
 echo "== What is refused, and the file is byte for byte what it was after each =="
-refused "outside" "$P" room "$J" "$S" "Nowhere" --at "40,40" "${K[@]}"
 refused "cross or touch" "$P" roof "$J" "Bow tie" --points "0,0 30,20 30,0 0,20" --pitch 6:12 --eave-height "8 ft" "${K[@]}"
+
+echo
+echo "== A room placed where no walls close round it is taken, with no area, and says why =="
+# Its walls may be drawn next. Until they are it has no figure: not a zero, and not a
+# guess. It is taken out again here.
+NOWHERE="$(made "$("$P" room "$J" "$S" "Nowhere" --at "40,40" "${K[@]}")")"
+is "its floor area" "$(figure "$NOWHERE" floor_area)" "none"
+says "why" "? $NOWHERE Nowhere floor_area: unknown (no loop of walls closes round its point)" "$("$P" show "$J")"
+"$P" remove "$J" "$NOWHERE" > /dev/null
 
 echo
 "$P" check "$J" | tail -1 | sed 's/^/    /'

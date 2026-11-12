@@ -246,6 +246,20 @@ pub fn takes(job: &mut Job, path: &str) -> Vec<(String, bool)> {
     has
 }
 
+/// The same, of the values named: for a caller that has the element's rows to hand
+/// and asks about many elements, so the job is not read through again for each.
+pub(crate) fn takes_among(job: &mut Job, path: &str, labels: &[String]) -> Vec<(String, bool)> {
+    let Some(e) = job.find(path) else { return Vec::new() };
+    let Some(kind) = job.kind(path) else { return Vec::new() };
+    let mut has = Vec::new();
+    for label in labels {
+        if let Ok(Some(found)) = put(job, e, path, kind, "", label, Do::Probe, None, "") {
+            has.push((label.clone(), found.said == "length"));
+        }
+    }
+    has
+}
+
 /// Do `reading` to the element's value of that name. None when it has no such value.
 #[allow(clippy::too_many_arguments)]
 fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str, reading: Do, to: Option<Justify>, source: &str) -> Result<Option<Measured>, String> {
