@@ -496,6 +496,19 @@ pub fn rebuild(
                 // face is outside, the cladding on that face, a wainscot under it, and
                 // how far past its ends it runs to close its corners.
                 let wd = snap.dress.walls.get(&p.path);
+                // With Framing switched on, a wall whose framing is priced is drawn as
+                // its frame and nothing else: the plates, the studs on their centres,
+                // and round each opening its kings, jacks, header, sill and cripples
+                // (`building::framing`). On plan a wall stays a wall.
+                if let (true, false, Some((deep, spacing))) = (show.framing, on_plan_view, wd.and_then(|d| d.framing)) {
+                    let spans: Vec<[f64; 4]> = holes.iter().map(|hole| hole.2).collect();
+                    for m in plumbline_world::building::framing::frame(f64::from(length), *height, &spans, spacing) {
+                        let (x0, x1, y0, y1) = (m.along[0] as f32, m.along[1] as f32, m.up[0] as f32, m.up[1] as f32);
+                        let middle = va + along * ((x0 + x1) / 2.0) + Vec3::Y * ((y0 + y1) / 2.0);
+                        build.piece(&p.path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(x1 - x0, y1 - y0, deep as f32) }, theme::lumber(), 0.85, 0.0, false);
+                    }
+                    continue;
+                }
                 let outside = wd.map(|d| d.outside).unwrap_or(Outside::NotKnown);
                 let has_out = matches!(outside, Outside::Left | Outside::Right);
                 let out = wd.and_then(|d| d.out).map(|o| Vec3::new(o[0] as f32, 0.0, -(o[1] as f32))).unwrap_or(turn * Vec3::Z);

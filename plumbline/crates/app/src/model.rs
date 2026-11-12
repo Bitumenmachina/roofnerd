@@ -183,6 +183,8 @@ pub struct Show {
     /// The ground the building stands on. Off, what is under it (the footings, the
     /// foundation walls) is seen.
     pub ground: bool,
+    /// Each wall whose framing is priced drawn as its frame: plates, studs, headers.
+    pub framing: bool,
     /// The levels switched off, by path: what stands on one is not drawn. (A level
     /// "on show" alone is `storey`; this is each level's own switch.)
     pub off_levels: std::collections::BTreeSet<String>,

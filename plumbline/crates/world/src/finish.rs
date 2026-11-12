@@ -203,6 +203,11 @@ pub struct WallDress {
     /// How far past each end of its centre line the wall is drawn so that it closes
     /// with the wall it corners with.
     pub past: [f64; 2],
+    /// Its framing, where a line priced on it names one ("Wall framing, 2x6 at 16 in"):
+    /// how deep its lumber is through the wall and how far apart its studs are, in
+    /// feet. None where nothing priced on it says how it is framed: it is not framed
+    /// on a guess.
+    pub framing: Option<(f64, f64)>,
 }
 
 impl WallDress {
@@ -644,7 +649,8 @@ pub fn dress(job: &mut Job) -> Dress {
             let h = named.iter().find(|n| n.3 && n.2 == said.by).and_then(|n| n.4);
             (said, h.unwrap_or(3.0), h.is_some())
         });
-        out.walls.insert(w.path.clone(), WallDress { outside, out: out_way, height: w.h, cladding, wainscot, past });
+        let framing = on.iter().find_map(|(text, _)| crate::building::framing::named(text));
+        out.walls.insert(w.path.clone(), WallDress { outside, out: out_way, height: w.h, cladding, wainscot, past, framing });
     }
     // Roof planes, openings and gutters.
     for &e in &job.order.clone() {

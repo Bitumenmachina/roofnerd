@@ -565,6 +565,8 @@ pub fn discipline_colour(d: plumbline_world::Discipline) -> Color {
 pub fn wall_outside() -> Color { hex(0xEDE8DF) }
 pub fn wall_inside() -> Color { hex(0xF4F2EE) }
 pub fn floor_colour() -> Color { hex(0xC9B79C) }
+/// Framing lumber as it comes: pale spruce.
+pub fn lumber() -> Color { hex(0xDCC08E) }
 /// Concrete as placed: a footing, a foundation wall.
 pub fn concrete() -> Color { hex(0xA9A9A4) }
 /// A floor on the plan: paper.

@@ -656,6 +656,15 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 doc.redraw();
             }));
         }
+        // The frame of each wall whose framing is priced: on, those walls are drawn as
+        // their plates, studs and headers in place of their finished faces.
+        let framed = snap.dress.walls.values().filter(|d| d.framing.is_some()).count();
+        if framed > 0 {
+            layer(c, "Framing", "", theme::lumber(), doc.show.framing, Some(framed), Box::new(|doc| {
+                doc.show.framing = !doc.show.framing;
+                doc.redraw();
+            }));
+        }
         for (i, d) in [Discipline::Architecture, Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing].into_iter().enumerate() {
             let count = snap.counts.iter().find(|c| c.0 == d).map(|c| c.1).unwrap_or(0);
             if i == 1 && !snap.planes.is_empty() {

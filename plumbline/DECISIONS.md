@@ -2859,3 +2859,40 @@ type itself is listed (a type does not know what it is used for); isolated (pad)
 footings; a footing stepped down a slope; the concrete of a foundation wall as a
 quantity of its own (today it is a line on the wall worked from its face).
 
+### Call 71. A wall whose framing is priced can be drawn as its frame (2026-11-12)
+
+**Why now.** Q23's working assumption, step 2: framing is to be drawn.
+
+**The call.** A wall that has a framing line priced on it ("Wall framing, 2x6 at 16
+in") can be drawn as its frame, with a switch of its own under Show (**Framing**,
+offered where any wall has such a line, with how many do). Dressed in what is priced,
+bare where nothing is, as the finishes are (call 58): a wall with no framing line is
+not framed on a guess, and is drawn as it was.
+
+**The layout is a port.** `building::framing::frame` is BIMCraft's timber layout
+(`crates/core/src/timber.rs`): a bottom plate and two top plates, a stud at each end,
+kings and jacks beside each opening, a header and a sill, studs on stations at
+multiples of the spacing from the wall's first end, and cripples on the same stations
+above a header and below a sill. **I first wrote in the module that BIMCraft had no
+stud framing.** That was a claim of "missing" made on a list of file names cut short,
+which is the defect this repository's own rules name; the port map's gate then caught
+a second wrong search claim on the same change. Both were corrected before anything
+was committed, and the module is headed and credited as the port it is. What is
+changed from BIMCraft's: any number of openings, and doors; a station stud that a king
+or a jack would cut into is left out, not clipped; the header's depth is taken from
+its span.
+
+**What the lumber is.** Its depth through the wall is the dressed size of what the
+line names (a 2x6 is 5 1/2 in: the American Softwood Lumber Standard's sizes), and
+its spacing is what the line says. Words that name no lumber frame nothing.
+
+**Two rules of thumb, said where they are used:** a header's depth by its span (2x6
+to 4 ft, 2x8 to 6 ft, 2x10 to 8 ft, 2x12 beyond), where the code sizes it from the
+load; and the bottom plate laid whole under a door.
+
+**What it is not yet.** A picture of the frame, and a count of it that nothing uses:
+the estimate still prices framing by the SF of wall, as its line says. Stud counts
+and plate lengths are not offered to a cost line; when they are they will be Assumed,
+sourced to this layout and its two rules of thumb. No joists, no rafters, no corner
+or partition backing, no blocking. On plan a wall is still a wall.
+

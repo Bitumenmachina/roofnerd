@@ -4787,3 +4787,32 @@ foundation is drawn like any level. There is no tool in the window to draw a foo
 yet: it is drawn at the command line. No window demonstration script yet; this
 picture was taken by hand with the kit.
 
+## Framing drawn (Q23 step 2, call 71)
+
+**The demonstration, worked by hand before the code** (it is the module's own test,
+`a_window_takes_studs_out_and_puts_its_own_round_it`): a wall 12 ft by 9 ft, studs at
+16 in, a window from 54 in to 90 in along it, sill at 36 in, head at 84 in.
+
+* With no window: a stud at each end and one on each of the centres 16, 32 ... 128
+  in: 10 studs, each 108 - 4.5 = 103.5 in. One bottom plate and two top plates: 36 LF.
+* With the window: the studs on centres 64 and 80 fall in the opening: 8 studs. Kings
+  at 51 and 91.5 in, jacks at 52.5 and 90 in (82.5 in long, plate to head). Header: a
+  2x6 for a 3 ft span, 52.5 to 91.5 in (39 in), from 84 to 89.5 in up. Rough sill 54
+  to 90 in, 34.5 to 36 in up. Four cripples on the two centres taken out: two of 33
+  in under the sill, two of 15.5 in over the header.
+
+**Built and run.** `crates/world/src/building/framing.rs`, five tests, all of the
+figures above; they passed the first time they ran. 278 tests pass in all. The port
+map has its seven rows (two ported from BIMCraft's `timber.rs`, five ours).
+
+**Seen.** `demos/captured/trades/2-framing-drawn.png`: the made-up whole house with
+Framing on and the roof off: both storeys as stud walls, 2x6 outside and 2x4
+partitions, plates, the openings with their headers, the ducts seen through the
+frame. Sent to Patrick. (Its right half, the estimate at the framing lines, is the
+picture taken an hour before on the same job.)
+
+**Not right, or not done:** the floors are still drawn as solid decks between the
+framed walls; where two walls corner their frames run through each other (there is no
+corner framing); no window demonstration script drives the switch yet; nothing has
+judged it.
+

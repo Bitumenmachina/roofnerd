@@ -63,6 +63,7 @@ use crate::view::{self, Row, Sum};
 
 pub mod clash;
 pub mod forms;
+pub mod framing;
 pub mod model;
 pub mod network;
 pub mod rooms;
