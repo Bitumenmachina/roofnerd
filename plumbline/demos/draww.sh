@@ -96,7 +96,7 @@ click 760 493                           # from its middle
 len 900 494 "1 ft"                      # a foot east
 park
 shot                                    # 09 the partition a foot east, its door with it
-on "Wall"                               # Wall again: a stray one, to be removed
+tool "Wall"                              # Wall again: a stray one, to be removed
 click 1000 700
 len 1100 702 "5 ft"
 esc; esc

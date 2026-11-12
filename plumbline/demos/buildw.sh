@@ -59,7 +59,7 @@ click 1064 308
 click 536 302
 click 542 650                           # and the first again
 esc; esc
-on "Wall"                               # Wall again: the partition, end to end
+tool "Wall"                              # Wall again: the partition, end to end
 click 751 656
 click 745 302
 esc; esc

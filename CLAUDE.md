@@ -290,6 +290,9 @@ the tree while a timed window demonstration is running; build in a scratch workt
 | the camera, the light, how the house is drawn, what a click on the model does | `crates/app/src/scene.rs` |
 | a drawing tool (wall, door, run, move), its fields, what typing does | `crates/app/src/tools.rs`, and the entry state in `crates/app/src/main.rs` |
 | the patterns the house is dressed in (brick, lap siding, shingles) | `crates/app/src/dress.rs`; what finish a priced line names: `crates/world/src/finish.rs` |
+| the sun, the sky's light, how the range of light is folded to the screen | `crates/app/src/scene.rs` (`SKY_LIGHT`, `SUN_LIGHT`, `SUN_COLOUR`, `FOLD`), `crates/app/src/skylight.rs` (the two pictures the sky lights the house from) |
+| a footing (a strip footing is held as a wall is, and is never counted as one) | `crates/world/src/building.rs` (search `Kind::Footing`), `editing.rs` (`footings`); DECISIONS.md call 70 |
+| how a wall's frame is laid out; what a framing line names | `crates/world/src/building/framing.rs`; drawn in `scene.rs` behind the Framing switch; call 71 |
 | bringing a file in from the window | `crates/app/src/bring.rs`, `crates/app/src/plans.rs` |
 | what the model holds and its rules | `crates/world/src/building/model.rs`, `components.rs`, `check.rs`; the saved job: `file.rs`, and `SPEC.md` |
 | a quantity, a formula on a line, a price | `crates/world/src/lines.rs`, `formula.rs`, `derive.rs`, `view.rs` |
@@ -324,6 +327,27 @@ different size without a word (J18-1, J18-2). Walk the path a stranger walks, no
 path you know. And the look was built to a written rule and judged against that rule
 rather than against whether anyone would want to open it. Patrick's test is his own
 eyes: when he says he does not see it, it is not there.
+
+**Running several window demonstrations in a row.** Each one builds the program
+before it starts, so work in the tree changes the program under a long run (it broke
+three of four in one afternoon). Copy `target/debug/plumbline` and `plumbline-app` to
+a scratch folder and run with `PLUMBLINE_BIN=<that folder>`: the demonstration uses
+that program as it is, builds nothing, and says so. Even then, do not commit a
+demonstration's pictures until its run has ended: a set taken half way was committed
+once and had to be set right. A build beside a timed demonstration can still cost it
+a click.
+
+**Before saying BIMCraft lacks something, search all of it.** `grep -rln <word>
+crates` and read the whole list. The framing layout was first written up as "ours"
+on a list of file names cut short by `head`; BIMCraft's `crates/core/src/timber.rs`
+has it. `tools/portmap.sh` checks every "finds nothing" claim and caught a second.
+
+**What Patrick asked to see, and what is still not there** (QUESTIONS.md Q23,
+DECISIONS.md calls 69 to 71): one snapshot of each of seven trades. Electrical,
+plumbing and HVAC are drawn. Foundation (footings, foundation walls) and wall framing
+are now drawn. **Waterproofing and interior woodwork are still lines on the estimate
+with nothing in the model**, and the made-up whole house has no foundation; floor
+joists and rafters are not framed. `demos/captured/trades/` has the snapshots.
 
 **Small things that cost time.** Disk is a fixed allowance: `target/` grows past 12
 GB; delete `target/debug/incremental` and scratch targets when a link fails. The

@@ -79,7 +79,7 @@ typed "41' 3\"" yes                     # 03 the dimension, typed as the sheet g
 closer                                  # the sheet is to scale now, and was framed again
 park
 shot                                    # 04 to scale
-on "Wall"                               # Wall
+tool "Wall"                              # Wall
 click 478 614                           # the southwest outside corner, by eye
 len 1000 616 "41' 3\"" yes              # 05 east, the overall dimension, being typed
 len 1102 400 "23' 11\""                 # north

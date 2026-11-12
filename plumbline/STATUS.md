@@ -4816,3 +4816,13 @@ framed walls; where two walls corner their frames run through each other (there 
 corner framing); no window demonstration script drives the switch yet; nothing has
 judged it.
 
+**`planw` under the new light: fails, and not because of the light.** It traced no
+wall at all. Read in its script: it picks the Wall tool a second time with a plain
+click and then clicks the plan, and since call 64 a tool picked always shows its
+sizes and wants Enter before it places. That is one of the thirteen older window
+demonstrations not yet repaired on the rebuilt window (listed above as stale); the
+same plain pick is in `buildw` and `draww`. All three now pick the tool the way the
+kit does since call 64 (`tool "Wall"`, which presses Enter when there is nothing new
+to type). **Not rerun yet.** Their clicks are still at fixed places on the screen
+that were right for the window before it was rebuilt, and may not be now.
+
