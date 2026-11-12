@@ -4353,3 +4353,32 @@ thing's source ends "moved (by hand in the model)" (`demos/carryw.sh` expects it
   hand is, at the foot of what it is on, not to the floor far behind it (carried with
   the pointer on the west wall, the vanity had gone 21 ft east and 14 ft north of the
   hand, inside the house).
+
+## A placed thing drawn as what it is: ported from BIMCraft (2026-11-12)
+
+VISUAL.md line D6 ("a vanity is a vanity ... not a box of its sizes") failed, and the
+nineteenth judge's notes say the same (J19-27: "a plain blue-outlined pale box - not a
+vanity"). BIMCraft's library of families has the shapes: each is a short list of
+blocks. Ten are ported, block for block and in the same order, in
+`crates/world/src/building/forms.rs`: base cabinet (a plinth set back for toes, a
+carcass, a worktop over the front), wardrobe, WC (cistern and bowl), washbasin on its
+pedestal, bathtub, table, chair, bed, sofa, desk. PORTMAP.md has the five new rows
+and NOTICE names the file.
+
+* **Which thing gets which form** is read from its name, the earliest word that names
+  one: "Harbor Vanity 36" is a base cabinet, "Water closet" a WC, "Bookcase BK-30" a
+  wardrobe. A name that names none ("AH-24 Air Handler") is still the box it is.
+* **What is drawn is inside what is tested.** A test holds, for every form at five
+  sizes from a few inches to several feet, that every block is inside the thing's box
+  and that together they reach all six of its sides. The box is still what is tested
+  for clashes and what is outlined when the thing is selected.
+* **Checked against the source:** the base cabinet at BIMCraft's own 1800 by 600 by
+  900 mm gives BIMCraft's three blocks to the millimetre (plinth 100 high, 60 back;
+  carcass 100 to 860, 20 back; worktop 40 thick over all).
+* **Built, not yet seen** in a picture: the scene draws these (`scene.rs`), timber in
+  oak, the worktop in pale stone, porcelain white, fabric grey-blue.
+* **Not right, known before looking:** a form's back is the thing's north side unless
+  it has been turned, and nothing turns a thing in the window yet, so a cistern can
+  face the room. Parameters, types and connectors of BIMCraft's families are not
+  ported. Equipment has no forms (BIMCraft's library has none for it either).
+* 266 tests pass.

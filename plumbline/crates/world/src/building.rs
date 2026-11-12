@@ -62,6 +62,7 @@ use crate::value::{Derived, Status, Val};
 use crate::view::{self, Row, Sum};
 
 pub mod clash;
+pub mod forms;
 pub mod model;
 pub mod network;
 pub mod rooms;

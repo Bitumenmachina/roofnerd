@@ -27,6 +27,8 @@ the same license:
   crates/world/src/building/rooms.rs    from crates/core/src/geom.rs,
                                         crates/core/src/rooms.rs and
                                         crates/core/src/model.rs
+  crates/world/src/building/forms.rs    from crates/core/src/family.rs (the
+                                        forms of ten families of its library)
   crates/world/src/building.rs          five small items from
                                         crates/core/src/model.rs and
                                         crates/core/src/view3d.rs; the rest of

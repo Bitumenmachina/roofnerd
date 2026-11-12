@@ -567,6 +567,10 @@ pub fn equipment() -> Color { hex(0xC5CBD3) }
 pub fn porcelain() -> Color { hex(0xF8F8F6) }
 /// A furnishing with nothing priced on it that says what it is made of: a light oak.
 pub fn casework() -> Color { hex(0xC49A6C) }
+/// A worktop with nothing priced on it that says what it is: a pale stone.
+pub fn worktop() -> Color { hex(0xE2DFD8) }
+/// Upholstery and bedding with nothing priced on it that says what it is.
+pub fn fabric() -> Color { hex(0x8D99A6) }
 
 /// A door as a plan draws it: its span through the wall.
 pub fn plan_door() -> Color {

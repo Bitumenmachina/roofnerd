@@ -667,7 +667,33 @@ pub fn rebuild(
                         (_, Discipline::Plumbing) => (theme::porcelain(), 0.2, 0.0),
                         _ => (mix(theme::porcelain(), colour, 0.35), 0.5, 0.1),
                     };
-                    build.piece(&p.path, p.system.as_ref(), solids.cube.clone(), Transform { translation: centre, rotation: turn, scale }, paint, rough, metal, false);
+                    // Drawn as what it is, where its name says what that is: a vanity as a
+                    // cabinet on its plinth under a worktop, a water closet as a cistern
+                    // and a bowl (the forms are BIMCraft's; `building::forms`). Every block
+                    // is inside the box, which is still what is tested for clashes and
+                    // what is outlined when the thing is selected. A thing whose name
+                    // names no form is the box it is.
+                    match plumbline_world::building::forms::form_of(&p.name) {
+                        Some(form) => {
+                            use plumbline_world::building::forms::Made;
+                            for b in plumbline_world::building::forms::blocks(form, *size) {
+                                // The thing's own frame: x along its width, y from front to
+                                // back, z up. The view's: x east, y up, z south.
+                                let mid = [(b.lo[0] + b.hi[0]) / 2.0, (b.lo[1] + b.hi[1]) / 2.0, (b.lo[2] + b.hi[2]) / 2.0];
+                                let at = centre + turn * Vec3::new(mid[0] as f32, (mid[2] - size[2] / 2.0) as f32, -mid[1] as f32);
+                                let big = Vec3::new((b.hi[0] - b.lo[0]) as f32, (b.hi[2] - b.lo[2]) as f32, (b.hi[1] - b.lo[1]) as f32);
+                                let (ink, rough) = match b.made {
+                                    Made::Timber => (theme::casework(), 0.6),
+                                    Made::Worktop => (theme::worktop(), 0.35),
+                                    Made::Porcelain => (theme::porcelain(), 0.2),
+                                    Made::Fabric => (theme::fabric(), 0.95),
+                                };
+                                let solid = if b.round { solids.cylinder.clone() } else { solids.cube.clone() };
+                                build.piece(&p.path, p.system.as_ref(), solid, Transform { translation: at, rotation: turn, scale: big }, ink, rough, 0.0, false);
+                            }
+                        }
+                        None => build.piece(&p.path, p.system.as_ref(), solids.cube.clone(), Transform { translation: centre, rotation: turn, scale }, paint, rough, metal, false),
+                    }
                 }
                 let h = scale / 2.0;
                 let corner = |x: f32, y: f32, z: f32| centre + turn * Vec3::new(x * h.x, y * h.y, z * h.z);
