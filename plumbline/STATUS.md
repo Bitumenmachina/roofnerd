@@ -4109,3 +4109,48 @@ read.
   turn, and is carried in 3D only (on plan the Move tool still takes two clicks). It
   is a box. It can be carried through a wall without a word beyond the hole it would
   cut. Nothing here has been judged by anyone but me.
+
+## A maker's sheet, an item set down, and everything written out, all in the window. How it will be shown (written before the script)
+
+`demos/itemsw.sh`. An empty job with a level and a slab 12 ft by 8 ft; beside it, the
+made-up vanity sheet of `demos/spec.sh` (36 in wide, 21 in deep, 34 1/2 in high, 96 lb).
+
+1. Bring in, Maker's sheet, the sheet's name: the item is made and listed under
+   Items with its kind and its size: furnishing, 3' 0" x 1' 9" x 2' 10 1/2".
+2. Its row under Items, then a click on the slab: one is set down there and selected.
+3. Write out: BIM model (IFC), Estimate workbook, Estimate (CSV), For suppliers, For
+   subcontractors, For the PM. Six files, beside the job, each named for the job.
+4. Saved. Read back: the job holds the item with its three sizes in inches, each
+   Assumed and sourced to its line of the sheet; one furnishing stands on the slab,
+   3 by 1.75 by 2.875 ft, where it stands Assumed and "set down by hand in the
+   model"; the IFC file holds one IfcFurniture named Harbor Vanity 36 and IfcOpenShell
+   finds no fault in it; the workbook opens and its sheets are the estimate's; the
+   CSV has its headings; the three lenses are there.
+
+## A maker's sheet, an item set down, and everything written out, in the window. What was run and what it showed (2026-11-12)
+
+`demos/itemsw.sh` passes; its pictures are in `demos/captured/items` and were read.
+
+* **Maker's sheet** (Bring in). The sheet's name is typed (or the file dropped); the
+  item is made by the same reader the command line uses and the line across the
+  screen says what was read and what was not on the sheet. It is listed under
+  **Items** with its kind and size: "Harbor Vanity 36: furnishing, 3' 0" x 1' 9" x
+  2' 10 1/2"". If a sheet's name does not say what it is, the kind is typed after a
+  comma.
+* **Set down.** A click on the item's row takes it in hand; a click on the slab sets
+  one down there, selected. Read back from the saved job: at (5.237, 3.017) ft, 3 by
+  1.75 by 2.875 ft, where it stands Assumed and "set down by hand in the model".
+* **Write out** (a new section of the left panel): BIM model (IFC), Estimate
+  workbook, Estimate (CSV), For suppliers, For subcontractors, For the PM. Each
+  writes beside the job under the job's own name ("job.ifc", "job estimate.xlsx",
+  ...) and says what it wrote: "Wrote job.ifc, beside the job: the building as a BIM
+  model (IFC4, lengths in feet). In it: 1 floor, 1 furnishing, 1 level." The BIM
+  file holds one IfcFurniture named for the vanity and IfcOpenShell finds no fault;
+  the workbook opens with its Estimate, Recap and Divisions sheets; the CSV has its
+  headings; the three lenses open. Nothing is written over a job.
+* **One writer.** The workbook is made by `plumbline_sheets::workbook`, which the
+  command line now calls too (it had its own copy); `demos/export.sh` passes as before.
+* **Not right.** The file's name is still typed, not picked from a list (J18-3 stands);
+  a sheet is read from its first page only; an item cannot be turned or renamed in the
+  window; the Write out names say "job" because the job file is job.json, which is a
+  file's name on screen (J18-4 stands).

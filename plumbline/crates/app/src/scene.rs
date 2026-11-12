@@ -1065,6 +1065,33 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
     let hits = hover.get(&bevy::picking::pointer::PointerId::Mouse);
     let on_panel = hits.is_some_and(|h| h.keys().any(|e| panels.contains(*e)));
     let free = doc.entry.is_none() && doc.draw.tool.is_none() && !doc.choosing && !doc.plan && !doc.walk;
+    // An item in hand: a click on the model sets one down there, on the level on show.
+    if let (true, Some(item), false) = (buttons.just_pressed(MouseButton::Left) && free && !on_panel, doc.placing.clone(), carry.path.is_some()) {
+        let at = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p);
+        let level = doc.show.storey.clone().or_else(|| plumbline_world::building::storey_totals(&mut doc.job).into_iter().min_by(|a, b| a.elevation.unwrap_or(f64::MAX).total_cmp(&b.elevation.unwrap_or(f64::MAX))).map(|s| s.path));
+        let tidy = |x: f64| (x * 1000.0).round() / 1000.0;
+        let made = match (at, level) {
+            (None, _) => Err("click on the floor or the ground, where it is to stand".to_string()),
+            (_, None) => Err("there is no level to stand it on: add a level first".to_string()),
+            (Some(p), Some(level)) => {
+                let o = doc.origin;
+                plumbline_world::editing::place_item(&mut doc.job, &level, &item, [tidy(o[0] + f64::from(p.x)), tidy(o[1] - f64::from(p.z))], "0 ft", plumbline_world::editing::Entered { status: plumbline_world::value::Status::Assumed, source: "set down by hand in the model" })
+            }
+        };
+        match made {
+            Ok(path) => {
+                doc.edit("Place");
+                doc.placing = None;
+                doc.selected = Some(path.clone());
+                doc.say(Tone::Done, format!("Set one down: {path}. Pick it up to move it: press on it and carry it."));
+            }
+            Err(why) => crate::tools::cant(&mut doc, "set it down", why),
+        }
+        // This press was the setting down: it selects nothing else and lets go of nothing.
+        DRAGGED.store(true, Relaxed);
+        doc.redraw();
+        return;
+    }
     if buttons.just_pressed(MouseButton::Left) && carry.path.is_none() && free && !on_panel {
         let selected = snap.selected.as_ref().filter(|s| stands(s.kind) && doc.selected.as_deref() == Some(s.path.as_str()) && doc.hover.as_deref() == Some(s.path.as_str()));
         let hold = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p);
@@ -1164,7 +1191,7 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
     let dt = time.delta_secs().min(0.1);
     // A speed is what moved over how long the frame really took, however slow the frame.
     let took = time.delta_secs().max(1.0e-3);
-    let free = doc.entry.is_none() && doc.draw.tool.is_none() && !doc.choosing;
+    let free = doc.entry.is_none() && doc.draw.tool.is_none() && !doc.choosing && doc.placing.is_none();
     let left = MouseButton::Left;
 
     // A press takes hold; any press stops what was carrying on.

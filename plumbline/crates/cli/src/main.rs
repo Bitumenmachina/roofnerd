@@ -920,32 +920,7 @@ fn tables(args: &[String]) -> Result<(), String> {
             };
             let lines: usize = sheets.first().map(|s| s.rows.len().saturating_sub(s.head + 1)).unwrap_or(0);
             if workbook {
-                let tabs: Vec<plumbline_sheets::Tab> = sheets
-                    .iter()
-                    .map(|s| plumbline_sheets::Tab {
-                        name: s.name.clone(),
-                        head: s.head,
-                        widths: s.widths.clone(),
-                        rows: s
-                            .rows
-                            .iter()
-                            .map(|r| {
-                                r.iter()
-                                    .map(|c| match c {
-                                        Out::None => plumbline_sheets::Cell::Empty,
-                                        Out::Text(t) => plumbline_sheets::Cell::Text(t.clone()),
-                                        Out::Number(x) => plumbline_sheets::Cell::Number(*x),
-                                        Out::Dollars(x) => plumbline_sheets::Cell::Dollars(*x),
-                                        Out::Formula { text, value } => plumbline_sheets::Cell::Formula { text: text.clone(), value: *value },
-                                        Out::FormulaText { text, shown } => plumbline_sheets::Cell::FormulaText { text: text.clone(), shown: shown.clone() },
-                                    })
-                                    .collect()
-                            })
-                            .collect(),
-                    })
-                    .collect();
-                let formulas = sheets.iter().flat_map(|s| s.rows.iter().flatten()).filter(|c| matches!(c, Out::Formula { .. } | Out::FormulaText { .. })).count();
-                let bytes = plumbline_sheets::xlsx(&tabs)?;
+                let (bytes, formulas) = plumbline_sheets::workbook(&sheets)?;
                 std::fs::write(other, bytes).map_err(|e| format!("cannot write {other}: {e}"))?;
                 say!("wrote {other}: {said} of {path}; {}: {}; {}", count(sheets.len(), "sheet", "sheets"), sheets.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", "), if formulas == 0 { "figures, no formulas".to_string() } else { count(formulas, "figure that is a formula", "figures that are formulas") });
             } else {

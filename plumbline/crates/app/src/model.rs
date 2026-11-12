@@ -25,16 +25,58 @@ pub enum Bring {
     Prior,
     /// A model from another trade or a designer (IFC).
     Model,
+    /// A maker's sheet (a cut sheet): made into an item that can be placed.
+    Sheet,
+}
+
+/// What is written out of the job, from the window.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum WriteOut {
+    /// The building as a BIM file: an IFC4 model.
+    Model,
+    /// The estimate as a workbook whose figures are formulas.
+    Workbook,
+    /// The estimate's lines as rows of values.
+    Rows,
+    Supplier,
+    Subcontractor,
+    Pm,
+}
+
+impl WriteOut {
+    pub const ALL: [WriteOut; 6] = [WriteOut::Model, WriteOut::Workbook, WriteOut::Rows, WriteOut::Supplier, WriteOut::Subcontractor, WriteOut::Pm];
+    pub fn name(self) -> &'static str {
+        match self {
+            WriteOut::Model => "BIM model (IFC)",
+            WriteOut::Workbook => "Estimate workbook",
+            WriteOut::Rows => "Estimate (CSV)",
+            WriteOut::Supplier => "For suppliers",
+            WriteOut::Subcontractor => "For subcontractors",
+            WriteOut::Pm => "For the PM",
+        }
+    }
+    /// What is added to the job's name to name the file.
+    pub fn ending(self) -> &'static str {
+        match self {
+            WriteOut::Model => ".ifc",
+            WriteOut::Workbook => " estimate.xlsx",
+            WriteOut::Rows => " estimate.csv",
+            WriteOut::Supplier => " for suppliers.xlsx",
+            WriteOut::Subcontractor => " for subcontractors.xlsx",
+            WriteOut::Pm => " for the PM.xlsx",
+        }
+    }
 }
 
 impl Bring {
-    pub const ALL: [Bring; 4] = [Bring::Prices, Bring::Assemblies, Bring::Prior, Bring::Model];
+    pub const ALL: [Bring; 5] = [Bring::Prices, Bring::Assemblies, Bring::Prior, Bring::Model, Bring::Sheet];
     pub fn name(self) -> &'static str {
         match self {
             Bring::Prices => "Price list",
             Bring::Assemblies => "Assemblies",
             Bring::Prior => "Prior estimate",
             Bring::Model => "Model (IFC)",
+            Bring::Sheet => "Maker's sheet",
         }
     }
 }
@@ -176,6 +218,8 @@ pub struct Doc {
     pub choosing: bool,
     /// The assembly picked from that list, until it has been put on.
     pub give: Option<String>,
+    /// An item in hand, by path: the next click on the model sets one down there.
+    pub placing: Option<String>,
     /// When a unit cost is being typed: the cost line it is for, by its description.
     pub entry_line: Option<String>,
     /// When a measurement is being typed: the element, the value's name as the panel
@@ -320,6 +364,9 @@ pub struct Snapshot {
     pub dress: plumbline_world::finish::Dress,
     /// The job's assemblies: each one's name, what it goes on, and how many lines it has.
     pub assemblies: Vec<(String, Vec<Kind>, usize)>,
+    /// The job's items (things to place, made from makers' sheets): each one's path,
+    /// its name, what kind of thing it is, and its size as said, or what is missing.
+    pub items: Vec<(String, String, Kind, String)>,
     pub totals: Option<view::RoofTotals>,
     pub planes: Vec<PlaneInfo>,
     pub lines: Vec<LineInfo>,
@@ -383,8 +430,26 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
         // In the job's own order, which is the library's.
         doc.job.order.iter().filter_map(|e| doc.job.world.get::<plumbline_world::Node>(*e)).filter_map(|n| by_path.get(&n.path).cloned()).collect()
     };
+    s.items = {
+        let mut q = doc.job.world.query::<(&plumbline_world::Node, &plumbline_world::Item)>();
+        let mut all: Vec<(String, String, Kind, String)> = q
+            .iter(&doc.job.world)
+            .map(|(n, it)| {
+                let size = match it.size_ft() {
+                    Ok(([w, d, h], ..)) => format!("{} x {} x {}", plumbline_world::units::feet_as_ft_in(w, 16), plumbline_world::units::feet_as_ft_in(d, 16), plumbline_world::units::feet_as_ft_in(h, 16)),
+                    Err(why) => why,
+                };
+                (n.path.clone(), n.name.clone(), it.category, size)
+            })
+            .collect();
+        all.sort_by(|a, b| a.1.cmp(&b.1).then(a.0.cmp(&b.0)));
+        all
+    };
     if doc.selected.as_ref().is_some_and(|sel| doc.job.find(sel).is_none()) {
         doc.selected = None;
+    }
+    if doc.placing.as_ref().is_some_and(|item| doc.job.find(item).is_none()) {
+        doc.placing = None;
     }
     let mut lo = [f64::MAX; 2];
     let mut hi = [f64::MIN; 2];

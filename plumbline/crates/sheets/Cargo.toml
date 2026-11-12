@@ -7,6 +7,9 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+# What is written out of a job (the estimate, a lens on it) arrives as the model lays it
+# out; the workbook is made from that here, for the command line and the window alike.
+plumbline-world = { path = "../world" }
 # CSV read and written as RFC 4180 has it: quotes, commas and line breaks inside a cell.
 csv = "1.4.0"
 # An XLSX workbook's cells read, pure Rust.

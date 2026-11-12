@@ -518,6 +518,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                     let hint = match what {
                         crate::model::Bring::Prices => "A CSV or XLSX, like lists/ridge.xlsx. A supplier's name can follow a comma. Enter brings it in. Or drop the file on this window.",
                         crate::model::Bring::Model => "An IFC file, like models/mechanical.ifc. Enter brings it in. Or drop the file on this window.",
+                        crate::model::Bring::Sheet => "A maker's sheet as a PDF, like sheets/vanity.pdf. If its name does not say what it is, say after a comma: fixture, equipment or furnishing. Enter makes it an item to place.",
                         _ => "A CSV or XLSX. Enter brings it in. Or drop the file on this window.",
                     };
                     f.spawn(text(fonts, hint, 10.5, Weight::Regular, theme::ink_faint()));
@@ -531,7 +532,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                         on_click(&mut button(b, fonts, what.name(), "", false), move |doc| {
                             // A table dropped on the window and waiting to be told what it is.
                             match doc.dropped.take() {
-                                Some(file) if what != crate::model::Bring::Model => crate::bring::bring(doc, what, &file),
+                                Some(file) if !matches!(what, crate::model::Bring::Model | crate::model::Bring::Sheet) => crate::bring::bring(doc, what, &file),
                                 _ => {
                                     doc.open(Entry::BringIn(what), "");
                                     doc.say(Tone::Done, format!("{}: type the file's name, or drop the file on this window.", what.name()));
@@ -542,6 +543,42 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 });
             }
         }
+
+        // The things to place that were made from makers' sheets: click one, then click
+        // where it stands.
+        if !snap.items.is_empty() {
+            heading(c, fonts, "Items");
+            for (path, name, kind, size) in &snap.items {
+                let (item, called) = (path.clone(), name.clone());
+                let in_hand = doc.placing.as_deref() == Some(path.as_str());
+                row(c, in_hand, format!("Item {name}"), move |doc| {
+                    if doc.placing.as_deref() == Some(item.as_str()) {
+                        doc.placing = None;
+                        doc.say(Tone::Done, format!("{called} put down."));
+                    } else {
+                        doc.placing = Some(item.clone());
+                        doc.plan = false;
+                        doc.walk = false;
+                        doc.say(Tone::Done, format!("{called} in hand: click where one stands. Click it here again to put it down."));
+                    }
+                    doc.redraw();
+                }, |r| {
+                    spot(r, if *kind == Kind::Furnishing { theme::casework() } else if *kind == Kind::Equipment { theme::equipment() } else { theme::porcelain() });
+                    r.spawn(Node { flex_direction: FlexDirection::Column, flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_children(|t| {
+                        t.spawn((text(fonts, name.clone(), 12.0, Weight::Medium, theme::ink()), Pickable::IGNORE));
+                        t.spawn((text(fonts, format!("{}, {size}", kind.said()), 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
+                    });
+                });
+            }
+        }
+
+        // What goes out of the job: the building as a BIM file, the estimate, the lenses.
+        heading(c, fonts, "Write out");
+        c.spawn(Node { padding: UiRect::axes(px(6.0), px(3.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|b| {
+            for what in crate::model::WriteOut::ALL {
+                on_click(&mut button(b, fonts, what.name(), "", false), move |doc| crate::bring::write_out(doc, what));
+            }
+        });
 
         heading(c, fonts, "Show");
         let layer = |c: &mut ChildSpawnerCommands, name: &str, key: &str, colour: Color, on: bool, count: Option<usize>, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {

@@ -394,3 +394,36 @@ pub fn xlsx(tabs: &[Tab]) -> Result<Vec<u8>, String> {
     }
     book.save_to_buffer().map_err(fault)
 }
+
+/// The estimate, or a lens on it, as a workbook: each sheet the model laid out, its
+/// figures written as the formulas they are. Returns the file and how many of its
+/// cells are formulas. One way of writing it, for the command line and the window.
+pub fn workbook(sheets: &[plumbline_world::export::OutSheet]) -> Result<(Vec<u8>, usize), String> {
+    use plumbline_world::export::Out;
+    let tabs: Vec<Tab> = sheets
+        .iter()
+        .map(|s| Tab {
+            name: s.name.clone(),
+            head: s.head,
+            widths: s.widths.clone(),
+            rows: s
+                .rows
+                .iter()
+                .map(|r| {
+                    r.iter()
+                        .map(|c| match c {
+                            Out::None => Cell::Empty,
+                            Out::Text(t) => Cell::Text(t.clone()),
+                            Out::Number(x) => Cell::Number(*x),
+                            Out::Dollars(x) => Cell::Dollars(*x),
+                            Out::Formula { text, value } => Cell::Formula { text: text.clone(), value: *value },
+                            Out::FormulaText { text, shown } => Cell::FormulaText { text: text.clone(), shown: shown.clone() },
+                        })
+                        .collect()
+                })
+                .collect(),
+        })
+        .collect();
+    let formulas = sheets.iter().flat_map(|s| s.rows.iter().flatten()).filter(|c| matches!(c, Out::Formula { .. } | Out::FormulaText { .. })).count();
+    Ok((xlsx(&tabs)?, formulas))
+}

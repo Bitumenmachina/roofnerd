@@ -13,6 +13,7 @@ use std::path::Path;
 use plumbline_world::editing::Entered;
 use plumbline_world::tables::{self, Brought};
 use plumbline_world::value::Status;
+use plumbline_world::Kind;
 
 use crate::model::{Bring, Doc, Tone};
 
@@ -71,6 +72,16 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
         (Bring::Prices, Some((file, who))) if !who.trim().is_empty() && !who.contains('.') => (file.trim(), Some(who.trim().to_string())),
         _ => (typed.trim(), None),
     };
+    // A maker's sheet can say what kind of thing it is for, after a comma.
+    let (name, kind) = match (what, name.rsplit_once(',')) {
+        (Bring::Sheet, Some((file, word))) => match word.trim().to_lowercase().as_str() {
+            "equipment" => (file.trim(), Some(Kind::Equipment)),
+            "fixture" => (file.trim(), Some(Kind::Fixture)),
+            "furnishing" => (file.trim(), Some(Kind::Furnishing)),
+            _ => (name, None),
+        },
+        _ => (name, None),
+    };
     if name.is_empty() {
         crate::tools::cant(doc, "bring it in", "no file was named. Type the file's name, or drop the file on this window.");
         doc.touch();
@@ -83,6 +94,30 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
     let done: Result<(String, bool), String> = (|| {
         let bytes = std::fs::read(&path).map_err(|e| format!("{file} {}", crate::plans::why_not_opened(&e)))?;
         match what {
+            Bring::Sheet => {
+                let words = plumbline_plans::words(&bytes, 1).map_err(|why| format!("{file}: {why}"))?;
+                if words.is_empty() {
+                    return Err(format!("{file}: there are no words on its first page to read. A scanned sheet is a picture of words: place the thing with Fixture or Equipment and type its sizes"));
+                }
+                let lines: Vec<(String, f64)> = words.into_iter().map(|w| (w.text, w.size)).collect();
+                let sheet = plumbline_world::spec::read(&lines);
+                let called = sheet.name.as_ref().map(|f| f.value.clone()).unwrap_or_else(|| file.clone());
+                let kind = match kind {
+                    Some(kind) => kind,
+                    None => plumbline_world::spec::kind_said(&called).map(|k| k.0).ok_or_else(|| format!("{file}: \u{201c}{called}\u{201d} does not say what kind of thing it is. Type its kind after the file's name: {file}, fixture (or equipment, or furnishing)"))?,
+                };
+                let made = plumbline_world::spec::item_of(&sheet, &file, 1, kind);
+                plumbline_world::editing::item(&mut doc.job, &called, made.item.clone()).map_err(|why| format!("{file}: {why}"))?;
+                let mut out = format!("Made an item from {file}: {called}, {}.", kind.a());
+                if !made.read.is_empty() {
+                    out.push_str(&format!("\nRead off the sheet, each Assumed until it is checked: {}.", made.read.iter().map(|(what, value, ..)| format!("{what} {value}")).collect::<Vec<_>>().join("; ")));
+                }
+                if !made.missing.is_empty() {
+                    out.push_str(&format!("\nNot on the sheet, and Unknown until entered: {}.", made.missing.join(", ")));
+                }
+                out.push_str("\nIt is under Items, on the left: click it there, then click where one stands.");
+                Ok((out, !made.missing.is_empty()))
+            }
             Bring::Model => {
                 let b = plumbline_ifc::import(&mut doc.job, &bytes, &file, how)?;
                 let mut out = format!("Brought in {file} ({}): {}.", b.schema, b.made.iter().map(|(what, n)| format!("{n} {}", if *n == 1 { what.strip_suffix('s').unwrap_or(what) } else { what })).collect::<Vec<_>>().join(", "));
@@ -163,6 +198,57 @@ pub fn starter(doc: &mut Doc) {
             doc.say(Tone::Done, format!("Brought in {} starter assemblies: walls, floors, rooms, roofs, doors, windows and runs, with no prices. Click one of those on the model, then Assembly.", b.done.len()));
         }
         Err(why) => crate::tools::cant(doc, "bring in the starter assemblies", why),
+    }
+    doc.touch();
+}
+
+/// Write something out of the job, from the window: beside the job, under the job's
+/// own name with an ending that says what it is. The same writers the command line
+/// uses. Nothing is written over a job.
+pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
+    use crate::model::WriteOut;
+    use plumbline_world::export::{self, Lens};
+    let stem = doc.path.file_stem().and_then(|s| s.to_str()).unwrap_or("job").to_string();
+    let name = format!("{stem}{}", what.ending());
+    let to = doc.path.with_file_name(&name);
+    let done: Result<String, String> = (|| {
+        if std::fs::read_to_string(&to).ok().is_some_and(|text| plumbline_world::file::load(&text).is_ok()) {
+            return Err(format!("{name} is a job: what is written out is not written over a job"));
+        }
+        let wrote = |bytes: &[u8]| std::fs::write(&to, bytes).map_err(|e| format!("{name} {}", crate::plans::why_not_opened(&e)));
+        match what {
+            WriteOut::Model => {
+                let written = plumbline_ifc::write::export(&mut doc.job, &name, &plumbline_world::job::now())?;
+                wrote(written.text.as_bytes())?;
+                let one = |what: &str| what.strip_prefix("pieces ").map(|rest| format!("piece {rest}")).unwrap_or_else(|| what.strip_suffix('s').unwrap_or(what).to_string());
+                let mut out = format!("Wrote {name}, beside the job: the building as a BIM model (IFC4, lengths in feet). In it: {}.", written.made.iter().map(|(what, n)| format!("{n} {}", if *n == 1 { one(what) } else { what.clone() })).collect::<Vec<_>>().join(", "));
+                if !written.not_written.is_empty() {
+                    out.push_str(&format!("\nNot in it: {}.", written.not_written.iter().map(|(what, n, why)| format!("{n} x {what} ({why})")).collect::<Vec<_>>().join("; ")));
+                }
+                Ok(out)
+            }
+            WriteOut::Rows => {
+                let sheets = export::estimate_out(&mut doc.job, false);
+                let rows: Vec<Vec<String>> = sheets[0].rows[sheets[0].head..].iter().map(|r| r.iter().map(export::Out::said).collect()).collect();
+                wrote(plumbline_sheets::csv(&rows).as_bytes())?;
+                Ok(format!("Wrote {name}, beside the job: the estimate's lines as rows of values, {} under their headings.", count(rows.len().saturating_sub(1), "row", "rows")))
+            }
+            _ => {
+                let (sheets, said) = match what {
+                    WriteOut::Supplier => (export::lens_out(&mut doc.job, Lens::Supplier), "the materials to quote, with none of our prices"),
+                    WriteOut::Subcontractor => (export::lens_out(&mut doc.job, Lens::Subcontractor), "the subcontract scope, with none of our prices"),
+                    WriteOut::Pm => (export::lens_out(&mut doc.job, Lens::Pm), "the lines, the budget and what is to verify, with no overhead, profit or price"),
+                    _ => (export::estimate_out(&mut doc.job, true), "the estimate, its amounts, recap and price as formulas"),
+                };
+                let (bytes, formulas) = plumbline_sheets::workbook(&sheets)?;
+                wrote(&bytes)?;
+                Ok(format!("Wrote {name}, beside the job: {said}. {}: {}{}.", count(sheets.len(), "sheet", "sheets"), sheets.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", "), if formulas > 0 { format!("; {formulas} of its figures are formulas") } else { String::new() }))
+            }
+        }
+    })();
+    match done {
+        Ok(out) => doc.say(Tone::Done, out),
+        Err(why) => crate::tools::cant(doc, &format!("write out the {}", what.name().to_lowercase()), why),
     }
     doc.touch();
 }

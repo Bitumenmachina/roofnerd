@@ -132,6 +132,7 @@ fn main() {
         dropped: None,
         choosing: false,
         give: None,
+        placing: None,
         entry_line: None,
         measuring: None,
         origin: [0.0; 3],
