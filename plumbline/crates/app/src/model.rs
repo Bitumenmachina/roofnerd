@@ -196,6 +196,9 @@ pub struct Doc {
     pub hover: Option<String>,
     /// What the last action did, or why it was refused.
     pub message: String,
+    /// What did not happen because a half-filled entry was let go: said with the next
+    /// thing said.
+    pub lost: Option<String>,
     pub tone: Tone,
     /// Goes up on every change, so the panels know to draw again.
     pub revision: u64,
@@ -273,8 +276,42 @@ impl Doc {
         self.geometry += 1;
     }
     pub fn say(&mut self, tone: Tone, message: impl Into<String>) {
-        self.tone = tone;
-        self.message = message.into();
+        // Something half typed that was let go is said first, once (J18-6).
+        match self.lost.take() {
+            Some(lost) => {
+                self.tone = if tone == Tone::Refused { Tone::Refused } else { Tone::Warned };
+                self.message = format!("{lost} {}", message.into());
+            }
+            None => {
+                self.tone = tone;
+                self.message = message.into();
+            }
+        }
+    }
+    /// What is being typed is about to be let go for something else: if anything had
+    /// been typed, what did not happen is kept to be said with whatever is said next.
+    /// A half-filled form never just vanishes.
+    pub fn letting_go(&mut self, for_what: Option<Entry>) {
+        let Some((field, text)) = &self.entry else { return };
+        if for_what == Some(*field) {
+            return;
+        }
+        let typed = !text.trim().is_empty() || self.form.iter().enumerate().any(|(i, v)| i != self.form_at && !v.trim().is_empty());
+        if !typed {
+            return;
+        }
+        self.lost = Some(
+            match field {
+                Entry::Storey => "The level was not added: its fields were let go.",
+                Entry::Drawing => "The drawing was not added: its file was let go.",
+                Entry::BringIn(_) => "Nothing was brought in: the file's name was let go.",
+                // A tool's sizes are kept as they were last taken in hand; a value half
+                // typed elsewhere is said to be let go.
+                Entry::Settings(_) => return,
+                _ => "What was being typed was let go, and nothing was changed.",
+            }
+            .to_string(),
+        );
     }
     pub fn select(&mut self, path: &str) {
         // The list of assemblies was for what was selected before.
@@ -285,6 +322,7 @@ impl Doc {
     }
     /// Start typing one value. Whatever was being typed before is let go.
     pub fn open(&mut self, field: Entry, text: impl Into<String>) {
+        self.letting_go(Some(field));
         self.form.clear();
         self.form_at = 0;
         self.entry_line = None;
@@ -303,6 +341,7 @@ impl Doc {
     /// What a button does: the key it stands for. A value half typed is let go first, as
     /// a click elsewhere lets go of a field in any program.
     pub fn press(&mut self, key: KeyCode) {
+        self.letting_go(None);
         if self.entry.take().is_some() {
             self.form.clear();
             self.measuring = None;

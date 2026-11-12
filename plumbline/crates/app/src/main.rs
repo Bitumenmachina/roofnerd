@@ -134,6 +134,7 @@ fn main() {
         choosing: false,
         give: None,
         placing: None,
+        lost: None,
         browse: None,
         fresh: false,
         entry_line: None,

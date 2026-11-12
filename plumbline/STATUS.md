@@ -4342,3 +4342,7 @@ thing's source ends "moved (by hand in the model)" (`demos/carryw.sh` expects it
   name in the field as it lies from the job's folder (a drawing's with ", 1" for its
   page, to be changed for another page); Enter then does what it did. The name can
   still be typed and the file can still be dropped on the window.
+* **J18-6, built and not yet seen:** a half-filled entry let go for something else is
+  said with whatever is said next: "The level was not added: its fields were let go."
+  (and the same for a drawing's file, a file being brought in, or any value half
+  typed). A tool's sizes are not said to be lost: they are kept as last taken in hand.

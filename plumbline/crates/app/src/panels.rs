@@ -444,7 +444,7 @@ fn steps_of(doc: &Doc, snap: &Snapshot) -> Vec<Step> {
             // Tracing is the usual way in, not the only one: walls drawn without a drawing count.
             done: scaled || (walls && snap.drawings.is_empty()),
             what: "Add a drawing and set its scale",
-            how: if snap.drawings.is_empty() { "Click Add drawing and type the file's name (PDF, PNG or JPEG), or drop the file on this window.".into() } else { "Click Set scale, then the two ends of one dimension on the drawing, and type the dimension.".into() },
+            how: if snap.drawings.is_empty() { "Click Add drawing and pick the plan from the list (PDF, PNG or JPEG), or drop the file on this window.".into() } else { "Click Set scale, then the two ends of one dimension on the drawing, and type the dimension.".into() },
         },
         Step { done: walls, what: "Draw the walls", how: "Click Wall in the bar at the bottom, or press 1. Type its thickness and height, then click each corner.".into() },
         Step { done: openings, what: "Add doors and windows", how: "Click Door or Window, then click the place on a wall.".into() },

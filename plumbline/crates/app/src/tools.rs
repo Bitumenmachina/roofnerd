@@ -247,6 +247,7 @@ pub fn start(doc: &mut Doc, tool: Tool) {
 fn begin(doc: &mut Doc, tool: Tool, ask: bool) {
     doc.draw.picked.clear();
     doc.draw.tool = None;
+    doc.letting_go(Some(Entry::Settings(tool)));
     if doc.entry.take().is_some() {
         doc.form.clear();
         doc.measuring = None;
