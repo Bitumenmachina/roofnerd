@@ -956,7 +956,20 @@ fn compared_said(job: &mut plumbline_world::Job) -> String {
                     let flag = match j.status.max(c.status) { Status::Known => "", Status::Assumed => "~", Status::Unknown => "?" };
                     let mut differs = Vec::new();
                     if let (Some(pq), Some(jq)) = (p.quantity, j.quantity) {
-                        if p.unit.eq_ignore_ascii_case(&j.unit) {
+                        // One unit written two ways is one unit: SQFT is SF, LIN FT is LF.
+                        let plain = |u: &str| {
+                            let u: String = u.to_uppercase().chars().filter(|c| c.is_ascii_alphanumeric()).collect();
+                            match u.as_str() {
+                                "SQFT" | "SQUAREFEET" | "SQUAREFOOT" | "SFT" => "SF".to_string(),
+                                "LNFT" | "LINFT" | "LINEARFEET" | "LINEALFEET" | "LFT" => "LF".to_string(),
+                                "EACH" => "EA".to_string(),
+                                "SQUARE" | "SQUARES" => "SQ".to_string(),
+                                "CUYD" | "CUBICYARD" | "CUBICYARDS" | "YD3" => "CY".to_string(),
+                                "HRS" | "HOUR" | "HOURS" => "HR".to_string(),
+                                _ => u,
+                            }
+                        };
+                        if plain(&p.unit) == plain(&j.unit) {
                             differs.push(format!("quantity {flag}{}{} {}", if jq - pq < 0.0 { "-" } else { "+" }, view::figure((jq - pq).abs(), 2), j.unit));
                         } else {
                             differs.push(format!("the prior line is in {} and this job's in {}: the quantities are not compared", if p.unit.is_empty() { "no unit" } else { &p.unit }, j.unit));

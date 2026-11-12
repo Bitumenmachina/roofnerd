@@ -148,7 +148,8 @@ fn a_prior_estimate_is_set_against_the_job_and_is_no_part_of_its_price() {
     ]);
     let how = Entered { status: Status::Assumed, source: "a made-up earlier estimate" };
     let (path, b) = tables::prior_in(&mut job, "Earlier estimate", &prior, None, how).unwrap();
-    assert_eq!((b.rows, b.columns_not_used.clone(), b.not_used.clone()), (5, vec!["Notes".to_string()], vec![(6, "ROOFING: it has no figure at all (a heading or a note)".to_string())]));
+    assert_eq!((b.rows, b.columns_not_used.clone(), b.not_used.clone()), (5, Vec::<String>::new(), vec![(6, "ROOFING: it has no figure at all (a heading or a note)".to_string())]));
+    // (Its Notes column is kept with each line since the seventeenth judgment, J17B-25.)
     // It is in the job, under the job, flagged as it was brought; the job's cost is what
     // it was, and the file loads and saves to the same bytes.
     assert_eq!(job.kind(&path), Some(Kind::Prior));

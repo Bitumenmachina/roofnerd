@@ -3708,3 +3708,16 @@ while it works.
   rerun of `demos/dressw.sh`, whose house has a 1 ft overhang.
 * 220 tests of the model and the command line pass on this tree; the window's crate
   builds.
+* **J17B-25 fixed:** an estimate written out as CSV and read back as a prior estimate
+  loses nothing. What each line is on, its cost type, its division, how sure it is and
+  its note each have a place in a prior line; no column of the program's own estimate
+  is said to be "not read". **Changed behaviour:** a prior estimate's Notes column is
+  now kept with each line, where it was named as a column not read
+  (`crates/world/tests/tables.rs` and `demos/export.sh` expect the new behaviour).
+* **J17B-23 fixed:** when a prior estimate ends in a total row and that total is not
+  the sum of the lines read, it is said, with both figures and how far apart they are
+  (replayed with made-up lines of $380.00 and $200.00 under a total of $600.00: "Total
+  says $600.00, and the 2 lines read add to $580.00: $20.00 apart").
+* `compare` reads SQFT and SF, LIN FT and LF, EACH and EA as one unit, so a prior line
+  in another estimator's hand is compared and not reported as a different unit.
+* 251 tests pass on this tree; `demos/export.sh` and `demos/imports.sh` pass.

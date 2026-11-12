@@ -88,8 +88,11 @@ says "$T/estimate.csv" "the job,\"Foreman, days on site\",Supervision,40,hr,95,3
 cp "$J" "$T/back.json"
 "$P" import prior "$T/back.json" "$T/estimate.csv" --name "written out" --status Known --source "this job's own estimate, written out" > "$T/in.txt"
 says "$T/in.txt" "a prior estimate of 14 lines"
-# What a prior estimate has no place for is said, not dropped in silence.
-says "$T/in.txt" 'not read: the column "Element"'
+# Every column of the estimate has a place in a prior estimate: what each line is on, its
+# cost type, how sure it is, its note and its division come back with it, and no column
+# is said to be not read.
+if grep -q "not read" "$T/in.txt"; then echo "FAIL: a column of this program's own estimate was not read back"; cat "$T/in.txt"; exit 1; fi
+echo "    no column of it is said to be not read"
 "$P" compare "$T/back.json" > "$T/compare.txt"
 # Every line that comes to something agrees to the cent, and no quantity differs.
 [ "$(grep -c 'amount +\$0.00\|amount ~+\$0.00' "$T/compare.txt")" = 8 ] || { echo "FAIL: not every line agrees"; cat "$T/compare.txt"; exit 1; }

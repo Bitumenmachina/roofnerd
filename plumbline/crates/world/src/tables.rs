@@ -812,6 +812,18 @@ pub struct PriorLine {
     pub class: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub code: String,
+    /// What the line is on, its division, how sure the estimate says it is, and its
+    /// note: the columns this program's own estimate writes beside each line, kept so
+    /// that an estimate written out and read back as a prior estimate loses nothing
+    /// (J17B-25).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub element: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub division: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub sure: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub note: String,
 }
 
 /// `pl::prior`: on a Prior element under the job, an estimate made before, brought in to
@@ -848,14 +860,18 @@ pub fn check_prior(path: &str, kind: Kind, p: &Prior) -> Result<(), String> {
     Ok(())
 }
 
-const PRIOR_COLUMNS: [(&str, &[&str]); 7] = [
+const PRIOR_COLUMNS: [(&str, &[&str]); 11] = [
     ("description", &["description", "line item", "scope", "work", "line", "item"]),
     ("quantity", &["quantity", "qty"]),
     ("unit", &["unit", "uom", "u/m", "um"]),
     ("unit cost", &["unit cost", "unit price", "rate", "price"]),
     ("amount", &["amount", "total", "extension", "ext", "line total", "extended"]),
-    ("class", &["class", "category"]),
+    ("class", &["class", "category", "cost type"]),
     ("code", &["cost code", "code"]),
+    ("element", &["element", "location", "area"]),
+    ("division", &["division", "div"]),
+    ("sure", &["how sure"]),
+    ("note", &["note", "notes", "remarks"]),
 ];
 
 /// A figure of money or of quantity as an estimate writes it: `1,204.50`, `$450`.
@@ -888,6 +904,8 @@ pub fn prior_in(job: &mut Job, name: &str, rows: &[Vec<String>], numbers: Option
     all_or_nothing(job, |job| {
         let mut out = Brought { rows: rows.len().saturating_sub(cols.row + 1), columns_not_used: cols.not_used.clone(), above: cols.row, ..Brought::default() };
         let mut lines = Vec::new();
+        // What the estimate's own total rows say, to set against the lines read.
+        let mut said_totals: Vec<(usize, String, f64)> = Vec::new();
         for (i, row) in rows.iter().enumerate().skip(cols.row + 1) {
             let description = cols.cell(row, "description");
             let number = row_number(numbers, i);
@@ -900,6 +918,9 @@ pub fn prior_in(job: &mut Job, name: &str, rows: &[Vec<String>], numbers: Option
                 Err(why) => out.not_used.push((number, format!("{description}: {why}"))),
                 Ok((None, None, None)) => out.not_used.push((number, format!("{description}: it has no figure at all (a heading or a note)"))),
                 Ok((quantity, unit_cost, amount)) if is_total_row(description, quantity, unit_cost) => {
+                    if let Some(a) = amount {
+                        said_totals.push((number, description.to_string(), a));
+                    }
                     out.not_used.push((number, format!("{description}: it is a total of rows above it, not a line{}", amount.map(|a| format!(" (it says ${})", crate::view::figure(a, 2))).unwrap_or_default())));
                 }
                 Ok((quantity, unit_cost, amount)) => {
@@ -917,12 +938,21 @@ pub fn prior_in(job: &mut Job, name: &str, rows: &[Vec<String>], numbers: Option
                             ));
                         }
                     }
-                    lines.push(PriorLine { description: description.to_string(), quantity, unit: cols.cell(row, "unit").to_string(), unit_cost, amount, class: cols.cell(row, "class").to_string(), code: cols.cell(row, "code").to_string() });
+                    lines.push(PriorLine { description: description.to_string(), quantity, unit: cols.cell(row, "unit").to_string(), unit_cost, amount, class: cols.cell(row, "class").to_string(), code: cols.cell(row, "code").to_string(), element: cols.cell(row, "element").to_string(), division: cols.cell(row, "division").to_string(), sure: cols.cell(row, "sure").to_string(), note: cols.cell(row, "note").to_string() });
                 }
             }
         }
         if lines.is_empty() {
             return Err("no row of the estimate could be read as a line".into());
+        }
+        // The estimate's last total against what its lines add to: an estimate that
+        // does not add up to its own total is said to (J17B-23). Only when every line
+        // read has an amount, and only the last total row, which is the whole estimate's.
+        if let (Some((number, what, said)), true) = (said_totals.last(), lines.iter().all(|l: &PriorLine| l.amount.is_some())) {
+            let add: f64 = crate::lines::cents(lines.iter().filter_map(|l| l.amount).sum());
+            if (add - said).abs() > 0.011 {
+                out.notes.push(format!("row {number}: {what} says ${}, and the {} lines read add to ${}: ${} apart. Neither was changed; the lines are what is set against this job", crate::view::figure(*said, 2), lines.len(), crate::view::figure(add, 2), crate::view::figure((add - said).abs(), 2)));
+            }
         }
         let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
         let count = lines.len();
