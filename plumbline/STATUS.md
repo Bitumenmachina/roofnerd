@@ -3680,3 +3680,15 @@ assembly in the job, opened in the window:
   when the assembly goes on something else. **251 tests and eighteen command-line
   demonstrations pass.**
 * **Not judged.** The other window demonstrations are still to be rerun on this tree.
+
+## Eighteenth judgment: launched (2026-11-12)
+
+A judge on Opus, on commit 43acb60 as pushed, playing a residential estimator of
+thirty years with no software background on a first day with the program: no manual,
+no source, no demonstration scripts in its folder; only the two windows, driven
+through the harness with a real pointer and keyboard, every picture read. Its task is
+the release candidate's items 9 to 12: every word on every screen; a whole-house
+takeoff from the USDA plan PDF, priced, using only what the screen says; the look
+against the instrument standard and the dressed house; and breaking the money path.
+Findings are recorded here the turn they arrive. No timed window demonstration is run
+while it works.
