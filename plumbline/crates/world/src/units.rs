@@ -392,6 +392,8 @@ pub fn parse_length(text: &str) -> Result<(Len, &'static str), String> {
     let sign = if negative { -1.0 } else { 1.0 };
     let (first, first_decimal) = scan.quantity().map_err(&fail)?;
     match mark(&mut scan, typed)? {
+        // Nothing is nothing in any unit: "0" needs none (J18-5).
+        Mark::None if scan.done() && first == 0.0 => Ok((Len::One(0.0), FT)),
         Mark::None => {
             if scan.done() {
                 Err(fail("has no unit; say which it is: 25.5 ft, 306 in, or 25' 6\". A number with no unit is never read as feet. A laser has to be set to send its unit with the reading".into()))

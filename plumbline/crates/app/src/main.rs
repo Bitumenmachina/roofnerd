@@ -104,7 +104,7 @@ fn main() {
     // The roof on show: the one named, else the first solved from a footprint, else the first.
     let roof = roof_arg.or_else(|| solve::roofs(&mut job).into_iter().next()).or_else(|| job.order.iter().find_map(|e| (job.world.get::<Kind>(*e) == Some(&Kind::Roof)).then(|| job.world.get::<plumbline_world::Node>(*e).map(|n| n.path.clone())).flatten()));
     let (tone, message) = if fresh {
-        (Tone::Done, format!("A new job. Next steps, on the left, says where to start. Save writes it to {path}."))
+        (Tone::Done, format!("A new job. Next steps, on the left, says where to start. Save keeps it as {}.", std::path::Path::new(&path).file_stem().and_then(|s| s.to_str()).unwrap_or("this job")))
     } else if report.stale.is_empty() {
         (Tone::Done, "Opened.".to_string())
     } else { (Tone::Warned, format!("Opened. Figures in the file did not match its geometry for {} and were worked out again.", report.stale.join(", "))) };

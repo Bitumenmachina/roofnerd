@@ -159,8 +159,8 @@ and ask Patrick for the production ruling.
 9. A judge lists every word on every screen, and none is a software term.
 10. A fresh judge, briefed as a veteran estimator with no software background, completes
     a whole-house takeoff from a PDF using only the in-app help.
-11. The visual judge passes every screen against `plumbline/VISUAL.md` (to be rewritten
-    to call 62's standard before it is judged; the file as it stands is the old one).
+11. The visual judge passes every screen against `plumbline/VISUAL.md` (rewritten to
+    call 62's standard; it names the lines the window is known to fail today).
 12. A fresh judge walks the whole path cold and cannot break the money path.
 13. A hand estimate in `refs/` is reproduced, with every difference explained line by
     line. If `refs/` has none, this item is marked pending.

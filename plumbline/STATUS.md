@@ -4200,3 +4200,51 @@ Call 64 has the decision.
   (a half-filled level form dropped in silence), J18-7 in part (a door still has no
   kind), J18-8 (the Building tab's walls have no type, thickness or place), J18-9,
   J18-10.
+
+## Nineteenth judgment: launched (2026-11-12)
+
+A judge on Opus, on commit 14fc994 as pushed, briefed with Patrick's own words from
+call 62 and asked one question above the rest: would he now see it? It drives the
+window with a real pointer on the heads the rebuild claims: moving round the model,
+the look, switches and scrolling, a maker's sheet made into an item, a thing picked up
+and carried, writing out, typed sizes, and anything that goes silently wrong. It keeps
+notes as it goes. Findings are recorded here the turn they arrive. No window
+demonstration of mine is run while it works.
+
+## While the nineteenth judgment runs (2026-11-12)
+
+* **VISUAL.md rewritten** to call 62's standard: glass over the model, how it moves,
+  the place the building stands in, the house dressed, the plan, the estimate window.
+  It names four lines the window is known to fail today: the panels are tinted and
+  not blurred (A2); a placed thing is a box, not what it is (D6); the estimate window
+  has not been touched (F4); and, under B, plan and 3D still step in size where one
+  becomes the other, panels do not scroll smoothly or show where they are, and levels,
+  systems and panels have no switch.
+* **J18-5 fixed:** "0" is taken as a length with no unit (nothing is nothing in any
+  unit). Any other number with no unit is still refused.
+* **J18-4 in part:** a new job's first line no longer shows a folder path ("Save
+  keeps it as house."). The job file's name in the top bar, and the path in each
+  traced value's source, stand.
+* 262 tests and all nineteen command-line demonstrations pass on this tree.
+
+## Where the rebuild stands against Patrick's words (2026-11-12)
+
+| He asked for | State | Shown by |
+|---|---|---|
+| "scroll mechanics" (the model) | built: the wheel closes on the pointer, measured | `demos/glassw.sh` |
+| "scroll mechanics" (the panels) | **not built**: the wheel over a panel scrolls it alone (measured), but in the engine's raw steps, with no bar | |
+| "toggle on and off" | part: a switch on every row under Show; none for a level, a system or a panel | `demos/glassw.sh` (the roof) |
+| "glassy overlays" | part: panels float, round, translucent, shadowed; **nothing is blurred behind them** | `demos/captured/glass` |
+| "Google Earth feel" | built and measured: grab the ground, turn about the pointer, momentum, double-click to fly; plan to 3D eases but steps in size | `demos/glassw.sh` |
+| "export to BIM files" | built, in the window: IFC4, validated; with the workbook, CSV and three lenses | `demos/itemsw.sh` |
+| "create items by spec sheet uploads" | built, command line and window: read from a PDF's words; a scan is refused; the file is named by typing, not picked | `demos/spec.sh`, `demos/itemsw.sh` |
+| "mechanicals, furniture" | built: equipment, fixtures and a new kind, furnishing; each drawn as a box | |
+| "moving a bathroom vanity around" | built: picked up and carried, red while it is in another, one step to undo; no snap to a wall, no turning | `demos/carryw.sh` |
+| "an Apple product with windows depth" | part: see glass; the estimate window is untouched | |
+| "a hyper realistic video game" | **mostly not built**: a yard and a sky; the light, the materials and the placed things are as they were | |
+| "self review" | written | "Self-review, written cold", above |
+| "instructions to Opus 5.5" | written | CLAUDE.md, "For whoever builds next" |
+
+**Not rerun on this tree:** `firstw`, `dressw`, `pricew` (last passed at step 2),
+`draww`, `buildw`, `fieldw`, `clashw`, `d4w`, `d5w`, `planw`, `bringw`, `house`, `d2`.
+Their pictures in `demos/captured` are of the old window and are stale.
