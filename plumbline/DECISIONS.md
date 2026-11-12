@@ -2062,3 +2062,87 @@ demonstration with its hand figures goes into STATUS.md before the list is built
   measurement that makes its values Known takes the question off the list.
 
 What "riding on it" means is the owner's to say; this is the working assumption (Q21).
+
+### Call 55. The screen, redrawn: what building games get right, and what is taken from them (2026-11-12)
+
+Patrick, 2026-11-12, after seeing the screens: "I do not see how the interface is
+showing a more manageable and Construcion oriented screen and using English storey and
+the way things are worded does not seem to fit with good UI and software design
+protocols." Then: "Use online search for best UI for video game world building
+interfaces and you make the call proceed with previous plan to deliverable."
+
+**What was read** (searches of 2026-11-12; player guides, developer notes and player
+complaints, not formal studies, and taken as such):
+
+* The Sims 4's build mode: tools in one bar with hotkeys; the catalog steps back when
+  a thing is being placed so more of the build shows; its makers' own rule was
+  "Flexible. Fast. Fun. Forgiving." (primagames.com build-mode guide; simscommunity.info).
+  What players dislike: clutter, and filters that reset.
+* Cities: Skylines II: a tool bar by category; an info view (an overlay on the world)
+  opens by itself when the tool it bears on is taken; an advisor holds the teaching by
+  subject; the 2026 rework by its new studio made icons "more expressive" and
+  streamlined the first run (paradoxinteractive.com developer diary; colossalorder.fi).
+* Satisfactory and Factorio: a build menu in tabs, and a hotbar of number keys for the
+  few things used most, as a shortcut and never a step in the way; a search key
+  (satisfactory.wiki.gg, Hotbar and Construction Tool).
+* City builders at large: categories by use, kept shallow; side panels that fold away;
+  a list of problems where a click takes the view there, whose rows do not jump about;
+  "data, not a recommendation" (Civilization VII's developers).
+* Planet Coaster and Paralives: snapping that can be let go of; things resized in the
+  world; and the standing complaint that freedom without a grid makes plain work slow.
+* Teaching: small steps that can each be seen to be done, shown one at a time as they
+  are needed, never a wall of text, and skippable (uxdesign.cc on onboarding).
+
+**The call.** The way a building game is worked, on the look this program's rules ask
+for (an instrument: line types, matte, dense, drawn like a drawing; no sky, sun, grass).
+
+1. **A build bar along the bottom**, in the middle: the tools as buttons with a drawn
+   mark and a word, grouped by trade (Structure, HVAC, Plumbing, Electrical, Edit),
+   each with a number key. It replaces the list of some twenty rows down the left.
+2. **What the tool in hand draws with is a strip over the bar**, each value a field
+   that is typed into where it stands. It replaces "not set yet" under each row and
+   the typed line of commas.
+3. **What is picked shows on the right as fields and buttons.** A value is changed by
+   clicking it; what can be done to the thing is a button on it (Measure, Check,
+   Delete, Move). The "Keys" list of letters goes; a key is shown on its button.
+4. **The price is on the top bar at all times**, with how much of it is not yet sure.
+5. **Next steps**: a short list, top left, of what this job needs next, read from the
+   job itself (a level; a drawing and its scale; walls; floor, rooms, roof; prices;
+   what to verify), each ticked when it is so, the first not done said in one line.
+   It can be folded away. This is the in-app help the release asks for.
+6. **Views laid over the building**: by trade (as now), by how sure (Known, Assumed,
+   Unknown), and clashes. The clash view comes up with the Clashes list.
+7. **The verify-in-field list is the list of problems**: sorted by dollars, a click
+   picks the thing and takes the view to it (call 54).
+8. **The look**: flat panels with hairlines, no shadows, no pills; ink on paper for
+   the plan; figures in columns; the 3D view on a neutral ground with no horizon.
+9. **Forgiving**: Undo and Redo are buttons on the top bar; Esc backs out one step;
+   snapping can be let go of with a key.
+
+**The words.**
+
+* **US English.** Level (not storey), center, color, meters.
+* **The trade's terms**: Level; Elevation; Floor-to-floor; Centerline; Rough opening
+  where that is what is meant; Verify in field (VIF); Takeoff; Markup, Overhead and
+  Profit.
+* **The plain verbs every program uses are used**: Save, Undo, Redo, Delete, Cancel,
+  Open. Avoiding them was a misreading of "no software term": that rule is against
+  the program's own insides showing (paths, type names, error codes), not against the
+  words on every toolbar a builder already uses.
+* **A message is short**: what happened, in a few words; when it could not be done,
+  "Can't <do it>: <why>. <What to do>." No "refused:".
+* **A label is one to three words.** Where a thing came from stays a sentence, since
+  it is the person's own.
+* The model, the job file and the command line keep their words (storey, centre): the
+  screen says them in US English through its glossary, in the one place every word on
+  screen passes. The documents a user reads (README) follow.
+
+**How the demonstrations find their buttons.** Every window demonstration clicks by
+pixel, so every change to the layout broke them. With `PLUMBLINE_MAP=<file>` the
+program writes where each named button is on the screen, and where the plan's zero is
+and how many pixels are a foot; a script then moves the real pointer there and
+presses the real button. The path is still the one a person uses; only the place to
+click is asked of the program in place of being copied into the script by hand.
+
+**Order.** The screen first, since floors, rooms, the roof, the verify list and the
+next steps all go into it; then the order of work as it stood.
