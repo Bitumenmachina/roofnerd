@@ -202,7 +202,8 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
     grid.line.width = 1.0;
     grid.render_layers = RenderLayers::layer(0);
     let (highlight, _) = store.config_mut::<Highlight>();
-    highlight.line.width = 4.5;
+    // What is selected is outlined finely: a heavy wire hid what it was round.
+    highlight.line.width = 2.5;
     highlight.depth_bias = -0.2;
     highlight.render_layers = RenderLayers::layer(0);
 }
@@ -896,7 +897,10 @@ pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mu
             fog.falloff = FogFalloff::Linear { start, end };
         }
     }
-    let overhead = doc.plan && (pitch - 1.5607).abs() < 0.02 && yaw.abs() < 0.02;
+    // The perspective is taken out only when the eye is all but overhead, and by then
+    // the eye has come in to where the lens frames the ground exactly as the plan
+    // will (`stand_off`): no step in size at the moment one becomes the other.
+    let overhead = doc.plan && (pitch - 1.5607).abs() < 0.004 && yaw.abs() < 0.02;
     if doc.walk {
         // On foot: the eye is at the target, looking where the yaw and pitch point.
         let (sy, cy) = yaw.sin_cos();
@@ -917,7 +921,7 @@ pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mu
     } else {
         let (sy, cy) = yaw.sin_cos();
         let (sp, cp) = pitch.sin_cos();
-        let (lens, back) = (LENS, distance);
+        let (lens, back) = (LENS, stand_off(pitch, distance));
         let eye = at + Vec3::new(sy * cp, sp, cy * cp) * back;
         let up = if pitch > 1.5 { Vec3::NEG_Z } else { Vec3::Y };
         *t = Transform::from_translation(eye).looking_at(at, up);
@@ -944,6 +948,23 @@ static DRAGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::n
 /// nothing and lets go of nothing.
 pub fn dragged() -> bool {
     DRAGGED.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// The left button went down: whatever it does next, it has not dragged yet.
+pub fn pressed(press: On<PointerPress>) {
+    if press.button == PointerButton::Primary {
+        DRAGGED.store(false, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+/// The left button is down and the pointer has gone more than a few dots: a drag. The
+/// pointer's own account of it comes before the click that ends it, even when the
+/// press, the drag and the release all land in one slow frame, so a quick flick that
+/// starts on a wall slides the view and selects nothing (J19-11).
+pub fn dragging(drag: On<PointerDrag>) {
+    if drag.button == PointerButton::Primary && drag.distance.length() > 5.0 {
+        DRAGGED.store(true, std::sync::atomic::Ordering::Relaxed);
+    }
 }
 
 /// Is this place in the window over the model, not over a panel? Panels float and can
@@ -980,13 +1001,23 @@ pub struct Feel {
     was: Option<Vec2>,
 }
 
+/// How far the eye stands from what it looks at. As far as the view says, until the eye
+/// is nearly overhead; from there it comes in, to where the lens shows as much of the
+/// ground as the plan does at that distance, so that a plan and a view from straight
+/// above are the same size. (A turn in 3D stops short of where this begins.)
+fn stand_off(pitch: f32, distance: f32) -> f32 {
+    let t = ((pitch - 1.525) / (1.5567 - 1.525)).clamp(0.0, 1.0);
+    let k = t * t * (3.0 - 2.0 * t);
+    distance * (1.0 - k * (1.0 - PLAN_HEIGHT / (2.0 * (LENS / 2.0).tan())))
+}
+
 /// The ray under a place in the window, from where the view is going (not where it has
 /// got to): its eye and its way.
 fn ray_at(orbit: &Orbit, window: &Window, cursor: Vec2) -> (Vec3, Vec3) {
     let (sy, cy) = orbit.yaw.sin_cos();
     let (sp, cp) = orbit.pitch.sin_cos();
     let back = Vec3::new(sy * cp, sp, cy * cp);
-    let eye = orbit.target + back * orbit.distance;
+    let eye = orbit.target + back * stand_off(orbit.pitch, orbit.distance);
     let right = Vec3::new(cy, 0.0, -sy);
     let up = right.cross(-back);
     let (w, h) = (window.width().max(1.0), window.height().max(1.0));
@@ -1214,9 +1245,6 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         feel.pressed_at = cursor.unwrap_or_default();
         feel.gone = 0.0;
         feel.hold = None;
-        if buttons.just_pressed(left) {
-            DRAGGED.store(false, Relaxed);
-        }
         if inside && !doc.walk {
             let grab = under(&orbit);
             if buttons.just_pressed(MouseButton::Right) && !doc.plan {

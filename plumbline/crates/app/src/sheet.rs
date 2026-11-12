@@ -201,6 +201,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             }
         });
         root.spawn((Node { flex_grow: 1.0, flex_basis: px(0.0), min_height: px(0.0), flex_direction: FlexDirection::Column, padding: UiRect::all(px(18.0)), row_gap: px(14.0), overflow: Overflow::scroll_y(), ..default() }, ScrollPosition(Vec2::new(0.0, scrolls.sheet)), SheetScroll)).with_children(|body| {
+            body.spawn(crate::panels::thumb(1));
             match doc.tab {
                 Tab::Roof => {
                     if snap.totals.is_none() {

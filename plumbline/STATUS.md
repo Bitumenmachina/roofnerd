@@ -4273,3 +4273,25 @@ Their pictures in `demos/captured` are of the old window and are stale.
   demonstration; the judge has the display. VISUAL.md's note against line A2 ("tinted
   and not blurred") is now out of date for a panel and still true of the message
   shown over the model and of the estimate window.
+
+## Built while the nineteenth judgment runs, and not yet seen (2026-11-12)
+
+Each of these compiles and has not been looked at in a picture: the judge has the
+display. They are looked at, and `demos/glassw.sh` rerun, when it is free.
+
+* **Panels scroll smoothly and show where they are.** The wheel sets where a panel is
+  going and the panel eases there (all the way in one frame where frames are slow,
+  so a script that wheels and then clicks is not chasing a moving row). Each
+  scrolling panel, and the estimate window, has a thumb at its right edge, as long
+  against the panel as what is seen is against the whole, and absent when the whole
+  is seen.
+* **Plan and 3D meet with no step in size.** As the eye comes up to overhead it also
+  comes in, to where the lens frames the ground exactly as the plan will; the
+  perspective is taken out only when the eye is all but there. A turn in 3D stops
+  short of where this begins. The ray under the pointer uses the same stand-off, so
+  the wheel and the drag stay true.
+* **What is selected is outlined finely** (2.5 dots; it was a 4.5 dot wire).
+* **A drag is told from a click by the pointer's own account** (its drag events),
+  which comes before the click that ends it even when press, drag and release land
+  in one slow frame. From the judge's notes so far (J19-11): a quick flick that began
+  on a wall slid the view and also selected the wall.

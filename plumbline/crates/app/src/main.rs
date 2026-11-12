@@ -175,6 +175,8 @@ fn main() {
         .init_resource::<scene::Feel>()
         .init_resource::<scene::Carry>()
         .add_plugins(glass::GlassPlugin)
+        .add_observer(scene::pressed)
+        .add_observer(scene::dragging)
         .add_systems(Startup, (scene::setup, glass::setup, setup).chain())
         .add_systems(
             Update,

@@ -418,6 +418,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         BrowserScroll,
     ))
     .with_children(|c| {
+        c.spawn(thumb(2));
         steps(c, fonts, doc, snap);
 
         heading(c, fonts, "Levels");
@@ -1140,6 +1141,7 @@ fn right(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
         InspectorScroll,
     ))
     .with_children(|c| {
+        c.spawn(thumb(0));
         // The job's overhead or profit, typed while something is selected: its field is
         // here, since the job's own values are not on show.
         if snap.selected.is_some() && matches!(doc.entry, Some((Entry::Overhead | Entry::Profit, _))) {
@@ -1562,38 +1564,105 @@ pub fn write_pointer(doc: Res<Doc>, mut out: Query<&mut Text, With<PointerText>>
     }
 }
 
-/// The wheel scrolls the panel the pointer is over.
+/// The mark at a scrolling panel's right edge that shows where in its length it is: as
+/// long, against the panel, as what is seen is against the whole.
+#[derive(Component, Clone, Copy)]
+pub struct Thumb(pub usize);
+
+/// A panel's thumb, to be the first child of the panel that scrolls. It stays where it
+/// is while what is in the panel goes by.
+pub fn thumb(which: usize) -> impl Bundle {
+    (
+        Node { position_type: PositionType::Absolute, right: px(3.0), top: px(6.0), width: px(4.0), height: px(0.0), border_radius: BorderRadius::all(px(2.0)), ..default() },
+        BackgroundColor(Color::NONE),
+        IgnoreScroll(BVec2::new(false, true)),
+        GlobalZIndex(5),
+        Pickable::IGNORE,
+        Thumb(which),
+    )
+}
+
+/// The wheel scrolls the panel the pointer is over, and only that: smoothly (it eases to
+/// where the wheel sent it), with a thumb at its edge that shows where it is.
 #[allow(clippy::type_complexity)]
 pub fn scroll_panels(
     scroll: Res<AccumulatedMouseScroll>,
+    time: Res<Time>,
     windows: Query<(&Window, Has<PrimaryWindow>)>,
     mut scrolls: ResMut<Scrolls>,
     mut inspector: Query<(&mut ScrollPosition, &ComputedNode), (With<InspectorScroll>, Without<SheetScroll>, Without<BrowserScroll>)>,
     mut sheet: Query<(&mut ScrollPosition, &ComputedNode), (With<SheetScroll>, Without<InspectorScroll>, Without<BrowserScroll>)>,
     mut browser: Query<(&mut ScrollPosition, &ComputedNode), (With<BrowserScroll>, Without<InspectorScroll>, Without<SheetScroll>)>,
+    mut thumbs: Query<(&mut Node, &mut BackgroundColor, &Thumb)>,
 ) {
-    if scroll.delta.y == 0.0 {
-        return;
-    }
-    let by = if scroll.unit == MouseScrollUnit::Pixel { scroll.delta.y } else { scroll.delta.y * 36.0 };
+    // Which panel the wheel is over: 0 the right panel, 1 the sheet, 2 the left panel.
+    let mut over = None;
     for (window, primary) in &windows {
         let Some(at) = window.cursor_position() else { continue };
-        let limit = |node: &ComputedNode| ((node.content_size.y - node.size.y) * node.inverse_scale_factor).max(0.0);
-        if primary {
-            if at.x > window.width() - RIGHT_W && at.y > TOP_H {
-                if let Ok((mut position, node)) = inspector.single_mut() {
-                    scrolls.inspector = (scrolls.inspector - by).clamp(0.0, limit(node));
-                    position.0.y = scrolls.inspector;
-                }
-            } else if at.x < LEFT_W && at.y > TOP_H {
-                if let Ok((mut position, node)) = browser.single_mut() {
-                    scrolls.browser = (scrolls.browser - by).clamp(0.0, limit(node));
-                    position.0.y = scrolls.browser;
-                }
-            }
-        } else if let Ok((mut position, node)) = sheet.single_mut() {
-            scrolls.sheet = (scrolls.sheet - by).clamp(0.0, limit(node));
-            position.0.y = scrolls.sheet;
+        over = match primary {
+            true if at.x > window.width() - RIGHT_W - theme::GAP && at.y > TOP_H => Some(0),
+            true if at.x < LEFT_W + theme::GAP && at.y > TOP_H => Some(2),
+            true => None,
+            false => Some(1),
+        };
+    }
+    // A line of the wheel is 48 dots of a panel; a touchpad's dots are dots.
+    let by = if scroll.unit == MouseScrollUnit::Pixel { scroll.delta.y } else { scroll.delta.y * 48.0 };
+    // It closes most of the way each frame at sixty frames a second, and all of the way
+    // in one frame where frames are slow: a panel never lags a slow machine's wheel.
+    let ease = 1.0 - (-time.delta_secs().min(1.0) * 18.0).exp();
+    let mut each = |which: usize, now: &mut f32, panel: Option<(Mut<ScrollPosition>, &ComputedNode)>| {
+        let Some((mut position, node)) = panel else { return };
+        let k = node.inverse_scale_factor;
+        let (seen, whole) = (node.size.y * k, node.content_size.y * k);
+        let limit = (whole - seen).max(0.0);
+        if over == Some(which) && by != 0.0 {
+            scrolls_to(which, by, limit);
         }
+        let to = goal(which).clamp(0.0, limit);
+        set_goal(which, to);
+        let next = if (to - *now).abs() < 0.5 { to } else { *now + (to - *now) * ease };
+        if next != *now || position.0.y != next {
+            *now = next;
+            position.0.y = next;
+        }
+        // The thumb: as long against the panel as what is seen is against the whole,
+        // and nothing at all when the whole is seen.
+        for (mut thumb, mut ink, Thumb(of)) in &mut thumbs {
+            if *of != which {
+                continue;
+            }
+            let (top, tall, shown) = if limit < 1.0 { (0.0, 0.0, Color::NONE) } else {
+                let tall = (seen * seen / whole).max(28.0).min(seen - 12.0);
+                (6.0 + (seen - 12.0 - tall) * (*now / limit), tall, Color::srgba(0.07, 0.09, 0.12, 0.28))
+            };
+            if thumb.height != px(tall) || thumb.top != px(top) {
+                thumb.height = px(tall);
+                thumb.top = px(top);
+            }
+            if ink.0 != shown {
+                ink.0 = shown;
+            }
+        }
+    };
+    let s = &mut *scrolls;
+    each(0, &mut s.inspector, inspector.single_mut().ok());
+    each(1, &mut s.sheet, sheet.single_mut().ok());
+    each(2, &mut s.browser, browser.single_mut().ok());
+}
+
+/// Where each panel's scrolling is going (the wheel sets it; the panel eases to it).
+static GOALS: std::sync::Mutex<[f32; 3]> = std::sync::Mutex::new([0.0; 3]);
+fn goal(which: usize) -> f32 {
+    GOALS.lock().map(|g| g[which]).unwrap_or(0.0)
+}
+fn set_goal(which: usize, to: f32) {
+    if let Ok(mut g) = GOALS.lock() {
+        g[which] = to;
+    }
+}
+fn scrolls_to(which: usize, by: f32, limit: f32) {
+    if let Ok(mut g) = GOALS.lock() {
+        g[which] = (g[which] - by).clamp(0.0, limit);
     }
 }
