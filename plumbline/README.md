@@ -17,8 +17,12 @@ graphics card):
 
 ```
 sudo apt-get update
-sudo apt-get install -y build-essential pkg-config curl git libx11-dev libxkbcommon-x11-0 mesa-vulkan-drivers
+sudo apt-get install -y build-essential pkg-config curl git libx11-dev libxcursor1 libxi6 libxkbcommon-x11-0 mesa-vulkan-drivers
 ```
+
+(The window opens these libraries by name when it starts, so a missing one shows as a
+window that will not open, not as a build that fails. `tools/installs.sh` checks this
+list against what the running window has open.)
 
 **2. Rust**, through rustup. The repository names the version it builds with
 (`rust-toolchain.toml`, 1.97.1) and rustup fetches it on the first build:
@@ -108,6 +112,7 @@ demos/d2.sh                # the 3D prototype, driven on a virtual display; pict
 demos/house.sh             # a whole house with its heating, plumbing and wiring, walked round; pictures in demos/captured/house
 cargo run -p plumbline-app -- job.json    # the model window and the sheet window (every button says its key)
 tools/licenses.sh          # every linked crate and its license; fails on a non-permissive one
+tools/installs.sh          # the README's install list brings every system library the running window opens
 tools/portmap.sh           # the building model accounted for against BIMCraft's source, item by item
 cargo run -p plumbline -- sample job.json
 cargo run -p plumbline -- house house.json     # the sample whole house
