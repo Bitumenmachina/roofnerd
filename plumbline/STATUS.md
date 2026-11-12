@@ -4403,3 +4403,32 @@ and NOTICE names the file.
   tables are white round-cornered sheets with a slight shadow, its fields are round,
   hours read "480.00 hr", and it has its thumb at the right edge. Its heading, its
   tabs and its foot are still flat strips (VISUAL.md F4 says so).
+
+## What is next, and why it has not been started (2026-11-12)
+
+**The light and the materials** ("a hyper realistic video game"; VISUAL.md C1, C3). The
+window is still lit as it was before call 62: one sun, a fill, flat light from all
+round, no reflections, colours written out as they are worked. That is the largest
+thing Patrick asked for that is still not there. The plan, from the engine survey
+(call 63):
+
+1. Light from the sky: a generated environment light, so glass reflects the sky and
+   shade is blue, not grey. It needs compute shaders; the ambient occlusion already
+   in use needs them too and runs on the software renderer, so it should.
+2. A wide-range picture and a film-like curve (HDR, then AgX or Tony McMapface), so
+   a sunlit wall is bright and its shade is still a colour.
+3. Soft shadows and contact shadows; the sun a little warm, the sky's light a little
+   cool.
+4. Glass that reflects; metal as a satin; a ground with some grain to it.
+
+**Why not blind:** every one of these changes the colour of every surface, and six
+demonstrations measure colours (`dressw`, `pricew`, `glassw`, `carryw`, and two that
+read the plan's paper). Each measured colour would be re-derived and its check
+re-proved red, one at a time, with the display. It is the next thing to do when the
+display is free and the judge's findings are in.
+
+**After that, in order:** rerun and repair the thirteen older window demonstrations on
+the rebuilt window; a thing turned and snapped to the wall it backs onto; the message
+over the model frosted; the estimate window's heading and tabs; the second picture
+of the scene drawn without shadows and following a resized window; then the release
+candidate's table.
