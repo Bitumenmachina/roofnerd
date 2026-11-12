@@ -32,7 +32,9 @@ pub const PRICE_HEADINGS: [&str; 10] = ["Material", "Bought by", "Price", "Suppl
 /// What each column of a price list may be headed, by what it means. The first of each
 /// is what this program writes.
 const PRICE_COLUMNS: [(&str, &[&str]); 10] = [
-    ("material", &["material", "item", "description", "product", "name", "item description", "material description"]),
+    // A list with a part number and a description heads the number "Item": the words
+    // that say what the thing is come first, and "item" last.
+    ("material", &["material", "material description", "item description", "description", "product", "name", "item"]),
     ("unit", &["bought by", "unit", "uom", "u/m", "um", "per", "unit of measure", "sold by"]),
     ("price", &["price", "unit price", "cost", "unit cost", "each", "price each", "net price", "your price"]),
     ("supplier", &["supplier", "vendor", "quoted by"]),
@@ -104,10 +106,21 @@ fn columns(rows: &[Vec<String>], known: &[(&'static str, &[&str])], needed: &[&s
             if h.is_empty() {
                 continue;
             }
-            match known.iter().find(|(what, words)| words.contains(&h.as_str()) && !at.contains_key(what)) {
-                Some((what, _)) => {
-                    at.insert(what, i);
-                }
+            // Where two columns could both be the same thing ("Item" and "Description"),
+            // the one whose heading stands earlier among the words for it is taken, and
+            // the other is said not to be used.
+            let rank = |what: &str, heading: &str| known.iter().find(|(w, _)| *w == what).and_then(|(_, words)| words.iter().position(|w| *w == heading)).unwrap_or(usize::MAX);
+            match known.iter().find(|(_, words)| words.contains(&h.as_str())) {
+                Some((what, _)) => match at.get(what).copied() {
+                    None => {
+                        at.insert(what, i);
+                    }
+                    Some(held) if rank(what, &h) < rank(what, &heading(&row[held])) => {
+                        not_used.push(row[held].trim().to_string());
+                        at.insert(what, i);
+                    }
+                    Some(_) => not_used.push(cell.trim().to_string()),
+                },
                 None => not_used.push(cell.trim().to_string()),
             }
         }
@@ -134,6 +147,33 @@ pub struct Brought {
     pub columns_not_used: Vec<String>,
     /// Rows above the headings, which were not read.
     pub above: usize,
+    /// What whoever brought it in has to know that is not one row's fate: a column of
+    /// the list that was overruled, a row read whose figures do not agree with each
+    /// other, part of a row that was not read.
+    pub notes: Vec<String>,
+}
+
+/// The number a row has in its file: what the reader of the file gave, or its place in
+/// the rows counted from 1.
+fn row_number(numbers: Option<&[usize]>, i: usize) -> usize {
+    numbers.and_then(|n| n.get(i).copied()).unwrap_or(i + 1)
+}
+
+/// A figure as a list writes it: `4.25`, `1,204.50`, `$450`. A comma is read only where
+/// it parts thousands, by the rule a typed price is read by. Anywhere else it may be the
+/// decimal mark of a list written in another country, where `9,05` is nine and a bit and
+/// `1.204,50` is twelve hundred: the figure is refused, not guessed at.
+fn list_figure(text: &str) -> Result<f64, String> {
+    let t = text.trim().trim_start_matches('$').trim();
+    // The same rule a price typed at the keyboard is read by (`units::parse_price`).
+    if t.contains(',') && !units::commas_part_thousands(t) {
+        return Err(format!("\"{}\" has a comma that does not part thousands; if it is the decimal mark, write a point (9.05)", text.trim()));
+    }
+    let x: f64 = t.replace(',', "").parse().map_err(|_| format!("\"{}\" is not a figure", text.trim()))?;
+    if !x.is_finite() {
+        return Err(format!("\"{}\" is not a figure", text.trim()));
+    }
+    Ok(x)
 }
 
 /// The job's price list as rows: its headings, then for each material its own price and
@@ -167,12 +207,22 @@ fn price_cell(text: &str) -> Result<(f64, Option<String>), String> {
         Some((f, u)) => (f.trim(), Some(u.trim().to_string()).filter(|u| !u.is_empty())),
         None => (t, None),
     };
-    let figure = figure.trim_start_matches('$').trim().replace(',', "");
-    let x: f64 = figure.parse().map_err(|_| format!("its price, {text:?}, is not a figure"))?;
-    if !x.is_finite() || x < 0.0 {
-        return Err(format!("its price, {text:?}, is not a price"));
+    let x = list_figure(figure).map_err(|why| if why.contains("comma") { format!("its price: {why}") } else { format!("its price, \"{}\", is not a figure", text.trim()) })?;
+    if x < 0.0 {
+        return Err(format!("its price, \"{}\", is less than nothing", text.trim()));
     }
     Ok((x, unit))
+}
+
+/// A unit as a list writes it, less what is only the list's way of writing: a full stop
+/// after it (`lb.`), and the plural of the pound (`lbs`). Nothing else is changed.
+fn unit_as_written(unit: &str) -> String {
+    let u = unit.trim().trim_end_matches('.');
+    if u.eq_ignore_ascii_case("lbs") {
+        u[..2].to_string()
+    } else {
+        u.to_string()
+    }
 }
 
 fn dollars(x: f64, by: &str) -> String {
@@ -180,17 +230,22 @@ fn dollars(x: f64, by: &str) -> String {
 }
 
 /// Bring a price list in. `supplier` says whose prices these are when the table has no
-/// column for it (none: the job's own). `how` says how sure they are and where they came
-/// from when the table has no columns for that; a table that has neither is refused.
-/// With `add`, a row for a material the job does not have adds the material.
-pub fn prices_in(job: &mut Job, rows: &[Vec<String>], supplier: Option<&str>, add: bool, how: Option<Entered>) -> Result<Brought, String> {
+/// column for it (none: the job's own). `how` is whoever brings the list in saying how
+/// sure its prices are and where they came from: it stands over the list's own columns
+/// for that, and the result says so. With no `how`, the list's own columns are read; a
+/// list that has neither is refused. With `add`, a row for a material the job does not
+/// have adds the material. `numbers` gives each row's number in its file.
+pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>, supplier: Option<&str>, add: bool, how: Option<Entered>) -> Result<Brought, String> {
     let cols = columns(rows, &PRICE_COLUMNS, &["material", "price"]).ok_or_else(|| {
         "this is not a price list this program can read: within its first rows it has no row of headings with a column for what is priced (Material, Item or Description) and one for the price (Price, Unit price or Cost)".to_string()
     })?;
     if !cols.has("unit") {
         return Err("the price list has no column for what each thing is bought by (Unit, UOM or Bought by): a price is for a unit, and this cannot tell a pound from a sheet".into());
     }
-    let own_words = cols.has("status") && cols.has("source");
+    // What the person bringing the list in says of it stands over what the list says of
+    // itself: a supplier's flyer that calls its own prices Known does not make them so.
+    let overruled = how.is_some() && cols.has("status") && cols.has("source");
+    let own_words = how.is_none() && cols.has("status") && cols.has("source");
     if !own_words && how.is_none() {
         return Err("say how sure these prices are and where they came from (--status, --source): the list has no columns for it".into());
     }
@@ -213,8 +268,15 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], supplier: Option<&str>, ad
             all.dedup();
             all
         };
+        if overruled {
+            let how = how.as_ref().expect("overruled only with a how");
+            out.notes.push(format!("the list's own columns for how sure each price is and where it came from were not read: every price is {}, {}, as you said", status_said(how.status), how.source));
+        }
+        // What each row of this list has priced so far: a thing priced twice at two
+        // prices is not taken a second time.
+        let mut priced: Vec<(String, Option<String>, usize, Option<f64>)> = Vec::new();
         for (i, row) in rows.iter().enumerate().skip(cols.row + 1) {
-            let number = i + 1;
+            let number = row_number(numbers, i);
             let mut skip = |why: String| out.not_used.push((number, why));
             let name = cols.cell(row, "material");
             if name.is_empty() {
@@ -258,7 +320,9 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], supplier: Option<&str>, ad
                 skip(format!("{name}: it has a price and says the price is Unknown"));
                 continue;
             }
-            let unit = match (cols.cell(row, "unit"), unit_in_price) {
+            let unit_in_price = unit_in_price.map(|u| unit_as_written(&u));
+            let unit_cell = unit_as_written(cols.cell(row, "unit"));
+            let unit = match (unit_cell.as_str(), unit_in_price) {
                 ("", Some(u)) => u,
                 ("", None) => {
                     skip(format!("{name}: it does not say what it is bought by"));
@@ -303,6 +367,15 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], supplier: Option<&str>, ad
                 skip(format!("{name}: priced by the {unit}; the job buys {known} by the {by}"));
                 continue;
             }
+            match priced.iter().find(|(p, w, _, _)| *p == path && *w == whose) {
+                Some((_, _, first, at)) if *at != price => {
+                    let said = |x: &Option<f64>| x.map(|x| dollars(x, &by)).unwrap_or_else(|| "no price".to_string());
+                    skip(format!("{name}: row {first} of this list already prices it, at {}; this row says {}, and was not used", said(at), said(&price)));
+                    continue;
+                }
+                Some(_) => {}
+                None => priced.push((path.clone(), whose.clone(), number, price)),
+            }
             let new = Val { value: price, unit: supply.price.unit.clone(), status, source: source.clone() };
             let was = match &whose {
                 None => Some(supply.price.clone()),
@@ -331,6 +404,9 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], supplier: Option<&str>, ad
             }
             // How it is ordered, where the row says: on the job's own row only.
             let order = cols.cell(row, "order");
+            if !order.is_empty() && whose.is_some() {
+                out.notes.push(format!("row {number}: {name}: how it is ordered ({order}) was not read: that is the job's to say of the material, not one supplier's row's"));
+            }
             if !order.is_empty() && whose.is_none() {
                 let (figure, per) = match order.split_once(' ') {
                     Some(parts) => parts,
@@ -601,7 +677,7 @@ pub fn assemblies_out(job: &mut Job) -> Vec<Vec<String>> {
 
 /// Bring an assembly library in: a table this program wrote. An assembly the job already
 /// has by that name is left as it is: counted as the same if it is, listed if it differs.
-pub fn assemblies_in(job: &mut Job, rows: &[Vec<String>]) -> Result<Brought, String> {
+pub fn assemblies_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>) -> Result<Brought, String> {
     use crate::components::{Cost, CostCode, Recipe};
     let head = rows.first().ok_or("the table is empty")?;
     let wanted: Vec<String> = ASSEMBLY_HEADINGS.iter().map(|h| heading(h)).collect();
@@ -615,13 +691,14 @@ pub fn assemblies_in(job: &mut Job, rows: &[Vec<String>]) -> Result<Brought, Str
         let mut gathered: Vec<(String, Vec<(usize, &Vec<String>)>)> = Vec::new();
         for (i, row) in rows.iter().enumerate().skip(1) {
             let name = row.first().map(|s| s.trim()).unwrap_or("");
+            let number = row_number(numbers, i);
             if name.is_empty() {
-                out.not_used.push((i + 1, "it names no assembly".into()));
+                out.not_used.push((number, "it names no assembly".into()));
                 continue;
             }
             match gathered.iter_mut().find(|(known, _)| known == name) {
-                Some((_, its)) => its.push((i + 1, row)),
-                None => gathered.push((name.to_string(), vec![(i + 1, row)])),
+                Some((_, its)) => its.push((number, row)),
+                None => gathered.push((name.to_string(), vec![(number, row)])),
             }
         }
         let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
@@ -629,6 +706,12 @@ pub fn assemblies_in(job: &mut Job, rows: &[Vec<String>]) -> Result<Brought, Str
             let first = its[0].1;
             let cell = |i: usize| first.get(i).map(|s| s.trim()).unwrap_or("");
             let made = (|| -> Result<Recipe, String> {
+                // Every row of an assembly says the same of the assembly itself: what it
+                // goes on and its cost code. Two that differ are two assemblies under one
+                // name, and neither is taken for the other.
+                if let Some((n, _)) = its.iter().find(|(_, row)| (1..7).any(|c| row.get(c).map(|s| s.trim()).unwrap_or("") != cell(c))) {
+                    return Err(format!("its rows do not agree on what it goes on or on its cost code (row {} and row {n}): two assemblies cannot have one name", its[0].0));
+                }
                 let applies_to: Vec<Kind> = cell(1).split(',').filter(|s| !s.trim().is_empty()).map(|s| kind_read(s).ok_or_else(|| format!("it goes on {:?}, which is not a kind of element", s.trim()))).collect::<Result<_, _>>()?;
                 let status = status_read(cell(5)).ok_or("its cost code does not say how sure it is")?;
                 let value = if cell(2).is_empty() && cell(3).is_empty() && cell(4).is_empty() { None } else { Some(CostCode { scheme: cell(4).to_string(), code: cell(2).to_string(), title: cell(3).to_string() }) };
@@ -731,7 +814,7 @@ pub fn check_prior(path: &str, kind: Kind, p: &Prior) -> Result<(), String> {
 }
 
 const PRIOR_COLUMNS: [(&str, &[&str]); 7] = [
-    ("description", &["description", "item", "line", "scope", "work", "line item"]),
+    ("description", &["description", "line item", "scope", "work", "line", "item"]),
     ("quantity", &["quantity", "qty"]),
     ("unit", &["unit", "uom", "u/m", "um"]),
     ("unit cost", &["unit cost", "unit price", "rate", "price"]),
@@ -742,20 +825,24 @@ const PRIOR_COLUMNS: [(&str, &[&str]); 7] = [
 
 /// A figure of money or of quantity as an estimate writes it: `1,204.50`, `$450`.
 fn money_cell(text: &str) -> Result<Option<f64>, String> {
-    let t = text.trim().trim_start_matches('$').replace(',', "");
-    if t.is_empty() {
+    if text.trim().trim_start_matches('$').trim().is_empty() {
         return Ok(None);
     }
-    let x: f64 = t.trim().parse().map_err(|_| format!("{text:?} is not a figure"))?;
-    if !x.is_finite() {
-        return Err(format!("{text:?} is not a figure"));
-    }
-    Ok(Some(x))
+    list_figure(text).map(Some)
+}
+
+/// Whether a row of an estimate is a total of the rows above it and not a line: it is
+/// called a total, or begins with the word and gives no quantity and no unit cost.
+fn is_total_row(description: &str, quantity: Option<f64>, unit_cost: Option<f64>) -> bool {
+    let d = heading(description).replace('-', " ");
+    let d = d.trim_end_matches(['$', ' ']);
+    matches!(d, "total" | "totals" | "subtotal" | "sub total" | "grand total" | "sum" | "total cost" | "total price" | "job total" | "estimate total" | "total estimate" | "total bid" | "bid total")
+        || (quantity.is_none() && unit_cost.is_none() && ["total ", "subtotal ", "sub total ", "grand total "].iter().any(|w| d.starts_with(w)))
 }
 
 /// Bring an estimate made before into the job, as an element called `name`, to be set
 /// against the job's own lines by `compare`. Returns its path and what was read.
-pub fn prior_in(job: &mut Job, name: &str, rows: &[Vec<String>], how: Entered) -> Result<(String, Brought), String> {
+pub fn prior_in(job: &mut Job, name: &str, rows: &[Vec<String>], numbers: Option<&[usize]>, how: Entered) -> Result<(String, Brought), String> {
     let cols = columns(rows, &PRIOR_COLUMNS, &["description"]).ok_or_else(|| "this is not an estimate this program can read: within its first rows it has no row of headings with a column for what each line is (Description or Item)".to_string())?;
     if !(cols.has("amount") || (cols.has("quantity") && cols.has("unit cost"))) {
         return Err("the estimate has no column for what each line comes to (Amount or Total), nor both a quantity and a unit cost".into());
@@ -768,15 +855,35 @@ pub fn prior_in(job: &mut Job, name: &str, rows: &[Vec<String>], how: Entered) -
         let mut lines = Vec::new();
         for (i, row) in rows.iter().enumerate().skip(cols.row + 1) {
             let description = cols.cell(row, "description");
+            let number = row_number(numbers, i);
             if description.is_empty() {
-                out.not_used.push((i + 1, "it says nothing of what the line is".into()));
+                out.not_used.push((number, "it says nothing of what the line is".into()));
                 continue;
             }
             let figures = (|| -> Result<(Option<f64>, Option<f64>, Option<f64>), String> { Ok((money_cell(cols.cell(row, "quantity"))?, money_cell(cols.cell(row, "unit cost"))?, money_cell(cols.cell(row, "amount"))?)) })();
             match figures {
-                Err(why) => out.not_used.push((i + 1, format!("{description}: {why}"))),
-                Ok((None, None, None)) => out.not_used.push((i + 1, format!("{description}: it has no figure at all (a heading or a note)"))),
-                Ok((quantity, unit_cost, amount)) => lines.push(PriorLine { description: description.to_string(), quantity, unit: cols.cell(row, "unit").to_string(), unit_cost, amount, class: cols.cell(row, "class").to_string(), code: cols.cell(row, "code").to_string() }),
+                Err(why) => out.not_used.push((number, format!("{description}: {why}"))),
+                Ok((None, None, None)) => out.not_used.push((number, format!("{description}: it has no figure at all (a heading or a note)"))),
+                Ok((quantity, unit_cost, amount)) if is_total_row(description, quantity, unit_cost) => {
+                    out.not_used.push((number, format!("{description}: it is a total of rows above it, not a line{}", amount.map(|a| format!(" (it says ${})", crate::view::figure(a, 2))).unwrap_or_default())));
+                }
+                Ok((quantity, unit_cost, amount)) => {
+                    // An amount that is not its quantity times its unit cost is kept as
+                    // written, and said: one of the three was written wrong.
+                    if let (Some(q), Some(c), Some(a)) = (quantity, unit_cost, amount) {
+                        let worked = crate::lines::cents(q * c);
+                        if (worked - a).abs() > 0.011 {
+                            out.notes.push(format!(
+                                "row {number}: {description}: its amount, ${}, is not its quantity times its unit cost ({} × ${} = ${}); the amount was kept as written",
+                                crate::view::figure(a, 2),
+                                crate::view::figure(q, 2),
+                                crate::view::figure(c, 2),
+                                crate::view::figure(worked, 2)
+                            ));
+                        }
+                    }
+                    lines.push(PriorLine { description: description.to_string(), quantity, unit: cols.cell(row, "unit").to_string(), unit_cost, amount, class: cols.cell(row, "class").to_string(), code: cols.cell(row, "code").to_string() });
+                }
             }
         }
         if lines.is_empty() {
@@ -823,6 +930,9 @@ pub struct ComparedLine {
     /// where it gives no amount (`worked` is then true).
     pub prior_amount: Option<f64>,
     pub worked: bool,
+    /// How many lines of the prior estimate go by this name and are added together
+    /// here: one, unless the prior estimate names a line more than once.
+    pub of: usize,
     pub job: Option<JobSide>,
 }
 
@@ -870,17 +980,35 @@ pub fn compare(job: &mut Job) -> Vec<Compared> {
                 status: its.iter().map(|l| l.amount.status.max(l.priced.status)).max().unwrap_or(Status::Unknown),
             })
         };
-        let compared: Vec<ComparedLine> = lines
-            .iter()
-            .map(|l| {
-                let (prior_amount, worked) = match (l.amount, l.quantity, l.unit_cost) {
-                    (Some(a), _, _) => (Some(a), false),
-                    (None, Some(q), Some(c)) => (Some(crate::lines::cents(q * c)), true),
-                    _ => (None, false),
-                };
-                ComparedLine { prior: l.clone(), prior_amount, worked, job: side(&l.description) }
-            })
-            .collect();
+        // What each prior line comes to: its amount, or its quantity times its unit cost.
+        let comes_to = |l: &PriorLine| match (l.amount, l.quantity, l.unit_cost) {
+            (Some(a), _, _) => (Some(a), false),
+            (None, Some(q), Some(c)) => (Some(crate::lines::cents(q * c)), true),
+            _ => (None, false),
+        };
+        // Lines of the prior estimate that go by one name are one line here, added
+        // together: the job's lines of that name are set against all of them at once,
+        // not against each in turn.
+        let mut compared: Vec<ComparedLine> = Vec::new();
+        for l in &lines {
+            let (amount, worked) = comes_to(l);
+            match compared.iter_mut().find(|c| check::same_name(&c.prior.description, &l.description)) {
+                None => compared.push(ComparedLine { prior: l.clone(), prior_amount: amount, worked, of: 1, job: side(&l.description) }),
+                Some(c) => {
+                    c.prior.quantity = match (c.prior.quantity, l.quantity) {
+                        (Some(a), Some(b)) if c.prior.unit.eq_ignore_ascii_case(&l.unit) => Some(a + b),
+                        _ => None,
+                    };
+                    if c.prior.unit_cost != l.unit_cost {
+                        c.prior.unit_cost = None;
+                    }
+                    c.prior.amount = c.prior.amount.zip(l.amount).map(|(a, b)| crate::lines::cents(a + b));
+                    c.prior_amount = c.prior_amount.zip(amount).map(|(a, b)| crate::lines::cents(a + b));
+                    c.worked |= worked;
+                    c.of += 1;
+                }
+            }
+        }
         let mut only: Vec<(String, Vec<String>, Option<f64>, Status)> = Vec::new();
         for l in &live {
             if lines.iter().any(|p| check::same_name(&p.description, &l.description)) || only.iter().any(|(d, ..)| check::same_name(d, &l.description)) {
@@ -895,8 +1023,8 @@ pub fn compare(job: &mut Job) -> Vec<Compared> {
             name: node.name.clone(),
             status: prior.lines.status,
             source: prior.lines.source.clone(),
-            prior_total: crate::lines::cents(compared.iter().filter_map(|c| c.prior_amount).sum()),
-            prior_left_out: compared.iter().filter(|c| c.prior_amount.is_none()).count(),
+            prior_total: crate::lines::cents(lines.iter().filter_map(|l| comes_to(l).0).sum()),
+            prior_left_out: lines.iter().filter(|l| comes_to(l).0.is_none()).count(),
             lines: compared,
             only_in_job: only,
         });

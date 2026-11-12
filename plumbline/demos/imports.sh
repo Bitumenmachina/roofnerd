@@ -123,9 +123,11 @@ echo "$OUT" | sed 's/^/    /'
 # The prior estimate adds to 5,950 + 585 + 1,680 + 450 = $8,665.00.
 says "the panels, prior" "prior:     700.00 lb at \$8.50: \$5,950.00" "$OUT"
 says "the panels, this job" "this job:  ~861.60 lb: ~\$7,754.36  (3 lines on south, east, shed)" "$OUT"
-says "the panels, the difference" "this job less the prior: quantity +161.60 lb; amount +\$1,804.36" "$OUT"
+# Each difference is flagged: the prior estimate is Assumed, and a difference is as sure
+# as the less sure of the two it is between (call 50).
+says "the panels, the difference" "this job less the prior: quantity ~+161.60 lb; amount ~+\$1,804.36" "$OUT"
 says "the underlayment, this job" "this job:  670.82 SF: \$603.74  (2 lines on south, east)" "$OUT"
-says "the underlayment, the difference" "this job less the prior: quantity +20.82 SF; amount +\$18.74" "$OUT"
+says "the underlayment, the difference" "this job less the prior: quantity ~+20.82 SF; amount ~+\$18.74" "$OUT"
 says "the gutters, worked" "prior:     120.00 LF at \$14.00: \$1,680.00 (its quantity times its unit cost)" "$OUT"
 says "what the job has not" "IN THE PRIOR ESTIMATE AND NOT IN THIS JOB: 2" "$OUT"
 says "what the prior has not" "IN THIS JOB AND NOT IN THE PRIOR ESTIMATE: 7" "$OUT"

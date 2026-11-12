@@ -11,6 +11,7 @@ fn csv_comes_back_as_it_went_whatever_is_in_its_cells() {
         vec!["Copper, 16 oz".into(), "he said \"about nine\"".into()],
         vec!["Two\nlines".into(), String::new(), "a cell after an empty one".into()],
         vec!["  kept spaces  ".into(), "é ü ¼ in".into()],
+        vec!["=1+1".into(), "+thing".into(), "-5".into(), "@x".into(), "- a dash".into()],
     ];
     let text = csv(&rows);
     // A comma, a quote and a line break are each inside quotes; a quote is doubled.
@@ -71,4 +72,53 @@ fn a_workbook_gives_its_first_sheets_cells_and_says_what_it_did_not_give() {
     let as_csv = read(&file("tinners-yard.csv"), None).unwrap();
     assert_eq!(as_csv.rows.len(), sheet.rows.len());
     assert_eq!((as_csv.rows[3][2].as_str(), as_csv.rows[4][2].as_str()), ("$9.05", "9.40"));
+}
+
+// ---- The fifteenth judgment, part A.
+
+#[test]
+fn j15_10_each_row_keeps_the_number_it_has_in_its_file() {
+    // Blank lines, and a cell with a line break in it, do not throw the count.
+    let csv_file = read(b"Supplier list\n\n\nItem,UOM,Price\n\"two\nlines\",lb,1\n\nCopper,lb,2\n", None).unwrap();
+    assert_eq!(csv_file.rows.len(), 4);
+    assert_eq!(csv_file.numbers, [1, 4, 5, 8]);
+    // A workbook whose table starts below its first row.
+    let sheet = read(&file("tinners-yard.xlsx"), None).unwrap();
+    assert_eq!(sheet.numbers.len(), sheet.rows.len());
+    assert!(sheet.numbers.windows(2).all(|w| w[0] < w[1]));
+}
+
+#[test]
+fn j15_25_what_is_not_a_table_is_refused_for_what_it_is() {
+    assert_eq!(read(b"", None).unwrap_err(), "the file is empty");
+    assert_eq!(read(b"  \n \n", None).unwrap_err(), "the file is empty");
+    let utf16: Vec<u8> = [0xFF, 0xFE].into_iter().chain("Item,Price\n".encode_utf16().flat_map(u16::to_le_bytes)).collect();
+    assert!(read(&utf16, None).unwrap_err().contains("UTF-16"));
+    // A cell a spreadsheet would run goes out with an apostrophe before it, and comes
+    // back without; a figure below zero is a figure and is left alone.
+    let rows: Vec<Vec<String>> = vec![vec!["=SUM(A1:A9)".into(), "-12.5".into(), "@here".into(), "+1 (555) 0100".into()]];
+    let text = csv(&rows);
+    assert_eq!(text, "'=SUM(A1:A9),-12.5,'@here,'+1 (555) 0100\n");
+    assert_eq!(read(text.as_bytes(), None).unwrap().rows, rows);
+}
+
+#[test]
+fn j15_8_9_a_hidden_sheet_a_percentage_and_a_date() {
+    let bytes = file("hidden-and-shown.xlsx");
+    // With no sheet named, the one on show is read, not the hidden one before it.
+    let sheet = read(&bytes, None).unwrap();
+    assert_eq!(sheet.name, "Prices");
+    let lost = sheet.lost.join(" | ");
+    assert!(lost.contains("1 other sheet was not: \"Last year\" (hidden)"), "{lost}");
+    // The table starts at the workbook's fifth row.
+    assert_eq!(sheet.numbers, [5, 6, 7, 8]);
+    assert_eq!(sheet.rows[1], ["Copper, 16 oz", "lb", "9.05"]);
+    // A cell shown as 9.05% is read as that, not as 0.0905; a date is read as words.
+    assert_eq!(sheet.rows[2][2], "9.05%");
+    assert!(sheet.rows[3][2].starts_with("a date or a time"), "{:?}", sheet.rows[3]);
+    assert!(lost.contains("1 cell is shown as a percentage") && lost.contains("1 cell holds a date or a time"), "{lost}");
+    // The hidden sheet can be asked for, and is said to be hidden.
+    let old = read(&bytes, Some("Last year")).unwrap();
+    assert_eq!(old.rows[1], ["Copper, 16 oz", "lb", "1.11"]);
+    assert!(old.lost.iter().any(|l| l.contains("is hidden in the workbook")), "{:?}", old.lost);
 }

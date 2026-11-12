@@ -17,10 +17,23 @@ git -C "$ROOT" archive "${COMMIT:-HEAD}" plumbline | tar -x -C "$T"
 cd "$T/plumbline"
 cargo metadata --offline --no-deps --format-version 1 >/dev/null || { echo "committed: FAIL. The last commit is not a workspace cargo can read: a crate is missing from it."; exit 1; }
 missing=0
-# Every file a demonstration or a test names under demos/ has to be in the commit.
-for f in $(grep -rhoE 'demos/(plans|tables)/[A-Za-z0-9._-]+\.[a-z]+' demos/*.sh crates/*/tests/*.rs 2>/dev/null | sort -u); do
+# Every file a demonstration or a test names under demos/ or tools/ has to be in the
+# commit: any folder of demos/ but captured/ (which the demonstrations write), and every
+# script one of them runs.
+for f in $(grep -rhoE '(demos|tools)/([a-z]+/)?[A-Za-z0-9._-]+\.[a-z0-9]+' demos/*.sh crates/*/tests/*.rs 2>/dev/null | grep -v '^demos/captured/' | sort -u); do
   [ -e "$f" ] || { echo "committed: $f is read by a demonstration or a test and is not in the commit"; missing=1; }
 done
+# Nothing in the source folders may be a file git is told to ignore: an ignore line that
+# catches a folder of the program (as "plans/" once caught crates/plans) hides it from
+# every commit after. Looked for in the working folder, when it is the last commit that
+# is being checked.
+if [ -z "${COMMIT:-}" ]; then
+  hidden="$(git -C "$ROOT" status --ignored --porcelain -- plumbline/crates plumbline/demos plumbline/tools 2>/dev/null | sed -n 's/^!! //p' || true)"
+  if [ -n "$hidden" ]; then
+    echo "committed: git ignores these, and they are inside the program's own folders:"; echo "$hidden" | sed 's/^/  /'
+    echo "committed: an ignore line is catching part of the program; anchor the line (/name/) or move the files"; missing=1
+  fi
+fi
 [ "$missing" = 0 ] || { echo "committed: FAIL."; exit 1; }
 if [ "${1:-}" = "--quick" ]; then echo "committed: PASS (quick). Every crate and every file the demonstrations read is in the last commit."; exit 0; fi
 # A build folder of its own, so nothing built from the archive is ever taken for a build of

@@ -118,8 +118,12 @@ fn drawings(job: &mut plumbline_world::Job, path: &str) -> String {
                 let _ = writeln!(out, "    scale: none. Nothing can be traced over it until it is calibrated from one dimension.");
             }
         }
-        for (was, traced) in plans::at_earlier_scales(job, &path).unwrap_or_default() {
-            let _ = writeln!(out, "    TRACED AT AN EARLIER SCALE ({} to the foot) and not moved: {}", view::num((1.0e4 / was).round() / 1.0e4), traced.join(", "));
+        for then in plans::stale(job, &path).unwrap_or_default() {
+            if then.rescaled {
+                let _ = writeln!(out, "    TRACED AT AN EARLIER SCALE ({} to the foot) and not moved: {}", view::num((1.0e4 / then.feet_per_unit).round() / 1.0e4), then.traced.join(", "));
+            } else {
+                let _ = writeln!(out, "    TRACED BEFORE THE SHEET WAS MOVED and not moved with it: {}", then.traced.join(", "));
+            }
         }
         match std::fs::read(folder.join(&file)) {
             Err(e) => {
@@ -602,7 +606,7 @@ fn tables(args: &[String]) -> Result<(), String> {
         ("import", "assemblies") => {
             only(&["--sheet"])?;
             let sheet = table(flag("--sheet"))?;
-            let brought = tables::assemblies_in(&mut job, &sheet.rows).map_err(|why| format!("{other}: {why}"))?;
+            let brought = tables::assemblies_in(&mut job, &sheet.rows, Some(&sheet.numbers)).map_err(|why| format!("{other}: {why}"))?;
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
             let _ = std::io::stdout().write_all(brought_said(other, &sheet, &brought).as_bytes());
             Ok(())
@@ -636,7 +640,7 @@ fn tables(args: &[String]) -> Result<(), String> {
                 Some(n) => n.to_string(),
                 None => std::path::Path::new(other).file_stem().and_then(|s| s.to_str()).unwrap_or("prior estimate").to_string(),
             };
-            let (made, brought) = tables::prior_in(&mut job, &name, &sheet.rows, plumbline_world::editing::Entered { status, source: &source }).map_err(|why| format!("{other}: {why}"))?;
+            let (made, brought) = tables::prior_in(&mut job, &name, &sheet.rows, Some(&sheet.numbers), plumbline_world::editing::Entered { status, source: &source }).map_err(|why| format!("{other}: {why}"))?;
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
             say!("{made}: {name}");
             let _ = std::io::stdout().write_all(brought_said(other, &sheet, &brought).as_bytes());
@@ -653,7 +657,7 @@ fn tables(args: &[String]) -> Result<(), String> {
             only(&["--sheet", "--supplier", "--add", "--status", "--source"])?;
             let sheet = table(flag("--sheet"))?;
             let entered = how.as_ref().map(|(status, source)| plumbline_world::editing::Entered { status: *status, source });
-            let brought = tables::prices_in(&mut job, &sheet.rows, flag("--supplier"), flags.iter().any(|(f, _)| *f == "--add"), entered).map_err(|why| format!("{other}: {why}"))?;
+            let brought = tables::prices_in(&mut job, &sheet.rows, Some(&sheet.numbers), flag("--supplier"), flags.iter().any(|(f, _)| *f == "--add"), entered).map_err(|why| format!("{other}: {why}"))?;
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
             let _ = std::io::stdout().write_all(brought_said(other, &sheet, &brought).as_bytes());
             Ok(())
@@ -682,7 +686,7 @@ fn compared_said(job: &mut plumbline_world::Job) -> String {
             let prior_qty = p.quantity.map(|q| format!("{} {}", view::figure(q, 2), p.unit).trim().to_string()).unwrap_or_else(|| "no quantity".into());
             let prior_rate = p.unit_cost.map(|x| format!(" at {}", money(x))).unwrap_or_default();
             let prior_amount = l.prior_amount.map(|a| format!("{}{}", money(a), if l.worked { " (its quantity times its unit cost)" } else { "" })).unwrap_or_else(|| "no amount".into());
-            let _ = writeln!(out, "  {}", p.description);
+            let _ = writeln!(out, "  {}{}", p.description, if l.of > 1 { format!("  ({} lines of the prior estimate go by this name; they are added together)", l.of) } else { String::new() });
             let _ = writeln!(out, "      prior:     {prior_qty}{prior_rate}: {prior_amount}");
             match &l.job {
                 None => {
@@ -697,16 +701,18 @@ fn compared_said(job: &mut plumbline_world::Job) -> String {
                     };
                     let amount = j.amount.map(|a| format!("{flag}{}", money(a))).unwrap_or_else(|| format!("no figure: {}", j.why));
                     let _ = writeln!(out, "      this job:  {qty}: {amount}  ({} on {})", count(j.on.len(), "line", "lines"), j.on.join(", "));
+                    // A difference is as sure as the less sure of the two it is between.
+                    let flag = match j.status.max(c.status) { Status::Known => "", Status::Assumed => "~", Status::Unknown => "?" };
                     let mut differs = Vec::new();
                     if let (Some(pq), Some(jq)) = (p.quantity, j.quantity) {
                         if p.unit.eq_ignore_ascii_case(&j.unit) {
-                            differs.push(format!("quantity {}{} {}", if jq - pq < 0.0 { "-" } else { "+" }, view::figure((jq - pq).abs(), 2), j.unit));
+                            differs.push(format!("quantity {flag}{}{} {}", if jq - pq < 0.0 { "-" } else { "+" }, view::figure((jq - pq).abs(), 2), j.unit));
                         } else {
                             differs.push(format!("the prior line is in {} and this job's in {}: the quantities are not compared", if p.unit.is_empty() { "no unit" } else { &p.unit }, j.unit));
                         }
                     }
                     if let (Some(pa), Some(ja)) = (l.prior_amount, j.amount) {
-                        differs.push(format!("amount {}", signed(ja - pa)));
+                        differs.push(format!("amount {flag}{}", signed(ja - pa)));
                     }
                     if !differs.is_empty() {
                         let _ = writeln!(out, "      this job less the prior: {}", differs.join("; "));
@@ -752,6 +758,9 @@ fn brought_said(file: &str, sheet: &plumbline_sheets::Sheet, b: &plumbline_world
     let _ = writeln!(out, "  not used: {}", b.not_used.len());
     for (row, why) in &b.not_used {
         let _ = writeln!(out, "    row {row}: {why}");
+    }
+    for note in &b.notes {
+        let _ = writeln!(out, "  NOTE: {note}");
     }
     if b.above > 0 {
         let _ = writeln!(out, "  not read: {} above the headings", count(b.above, "row", "rows"));
@@ -835,7 +844,20 @@ fn run(args: &[String]) -> Result<(), String> {
         "takeoff" => {
             let path = args.get(1).ok_or_else(usage)?;
             let (mut job, _) = read(path)?;
-            let _ = std::io::stdout().write_all(takeoff(&mut job).as_bytes());
+            let mut out = takeoff(&mut job);
+            // What was traced before its sheet was rescaled or moved is counted above
+            // as it lies. It is said here too, not only where the drawings are listed.
+            let drawings: Vec<(String, String)> = {
+                let mut q = job.world.query::<(&plumbline_world::Node, &plumbline_world::Kind)>();
+                q.iter(&job.world).filter(|(_, k)| **k == plumbline_world::Kind::Drawing).map(|(n, _)| (n.path.clone(), n.name.clone())).collect()
+            };
+            for (path, name) in drawings {
+                let left: Vec<String> = plumbline_world::plans::stale(&mut job, &path).unwrap_or_default().into_iter().flat_map(|s| s.traced).collect();
+                if !left.is_empty() {
+                    let _ = writeln!(out, "NOTE: {} traced over {name} before its scale or its place was changed, and not moved: {}. The figures above count {} as {} lie{}; check {} against the sheet (plumbline drawings).", count(left.len(), "thing was", "things were"), left.join(", "), if left.len() == 1 { "it" } else { "them" }, if left.len() == 1 { "it" } else { "they" }, if left.len() == 1 { "s" } else { "" }, if left.len() == 1 { "it" } else { "each" });
+                }
+            }
+            let _ = std::io::stdout().write_all(out.as_bytes());
             Ok(())
         }
         "drawings" => {
@@ -1335,8 +1357,12 @@ fn draw(args: &[String]) -> Result<(), String> {
             };
             let on_page = one("--page-point", flag("--page-point"), "\"126,126\" (a place on the page)")?;
             let on_plan = one("--plan-point", flag("--plan-point"), "\"0,0\" (the place on the plan it is, in feet)")?;
-            plans::line_up(&mut job, drawing, on_page, on_plan, ed::Entered { status, source: &source })?;
-            format!("{drawing}: ({}, {}) on its page is ({}, {}) on the plan", view::num(on_page[0]), view::num(on_page[1]), view::num(on_plan[0]), view::num(on_plan[1]))
+            let left = plans::line_up(&mut job, drawing, on_page, on_plan, ed::Entered { status, source: &source })?;
+            let mut said = format!("{drawing}: ({}, {}) on its page is ({}, {}) on the plan", view::num(on_page[0]), view::num(on_page[1]), view::num(on_plan[0]), view::num(on_plan[1]));
+            if !left.is_empty() {
+                said.push_str(&format!("\n  NOT MOVED: {} traced over it where it lay before: {}. The sheet has moved and {} not; check {} against it", count(left.len(), "thing was", "things were"), left.join(", "), if left.len() == 1 { "it has" } else { "they have" }, if left.len() == 1 { "it" } else { "each" }));
+            }
+            said
         }
         ("storey", [name]) => {
             let (status, source) = how(&status, &source)?;

@@ -1756,3 +1756,98 @@ command line (`plumbline measure`) and by the window:
 **Not done here:** a wall's or a run's length measured as one length (it moves an end,
 and what is joined to it); a laser shot with no entry open (the characters go to
 whatever the keys do); Bosch GLM over Bluetooth (proposal 17).
+
+### Call 50. The fifteenth judgment, part A: what was decided in fixing it (2026-11-11)
+
+Twenty-five findings on tables and a model brought in (STATUS.md, "Fifteenth judgment,
+part A"). What each fix decided:
+
+* **A comma in a figure is a thousands mark or the figure is not read** (J15-1).
+  `9,05` and `1.204,50` are how half the world writes nine and a bit and twelve hundred;
+  dropping the comma made the first 905. A comma is read only where it can part
+  thousands (one to three figures, then threes); any other is refused by row, and the
+  refusal says to write a point. A list parted by semicolons says, where it says what
+  was read, that such a list often has decimal commas, because `9,050` in one is nine
+  and a bit and still reads as nine thousand: that one cannot be told apart, and is
+  said, not guessed.
+* **What the person bringing a list in says of it stands over what the list says of
+  itself** (J15-2). `--status` and `--source` with a list that has its own "How sure"
+  and "Where from" columns: the person's word is used for every row and the result
+  says the columns were not read. With no word from the person the list's own columns
+  are read, as before: that is how the program's own price list comes back unchanged.
+* **A row is called by its number in the file** (J15-10), blank lines and a table that
+  starts below a sheet's first row included. The reader of a table gives each row's
+  number with it.
+* **In a workbook, the first sheet on show is read**, not a hidden one before it; a
+  hidden sheet is read only when asked for by name, and is said to be hidden (J15-9).
+  **A cell shown as a percentage is read as shown** (`9.05%`), and **a date is read as
+  the words "a date or a time"**: neither can then be taken for a price, and the row is
+  refused for it by number (J15-8).
+* **"Item" is a part number when there is a "Description" beside it** (J15-20). Of two
+  columns that could both name the thing, the one headed with the plainer word for
+  what it is wins and the other is listed as not read.
+* **One thing priced twice in one list at two prices: the first is taken, the second is
+  not used and says which row it disagrees with** (J15-25). The program does not pick
+  the later because it is later.
+* **A supplier's row cannot say how a material is ordered** (J15-13): that is the
+  job's to say. The row's price is read and a note says the rest was not.
+* **`lbs` and `lb.` are the pound.** A full stop after a unit, and the plural of the
+  pound, are the list's way of writing and not another unit. Nothing wider: a general
+  table of unit spellings is its own piece of work.
+* **Names have no space before or after them**, wherever a thing is added: two names
+  that differ only there read as one, and did not survive a table out and back.
+* **A cell a spreadsheet would run as a formula goes out with an apostrophe before it**
+  (`'=SUM(...)`), the usual guard, and the apostrophe comes off when the program reads
+  the table back. The one loss this makes: a cell that really began with an apostrophe
+  followed by `=`, `+`, `-` or `@` comes back without it.
+* **A prior estimate's total rows are not lines** (J15-5): a row called total,
+  subtotal or grand total, or beginning with one of those words and giving no quantity
+  and no unit cost. "Total station hire, 2 days" is a line. **An amount that is not
+  its quantity times its unit cost is kept as written and said**: the program does not
+  know which of the three was written wrong.
+* **Lines of a prior estimate that go by one name are added together before they are
+  set against the job** (J15-6), since the job's lines of that name are added together
+  too. **A difference is as sure as the less sure of the two it is between** (J15-7).
+* **Two assemblies cannot have one name** (J15-14): rows of one name that disagree on
+  what the assembly goes on, or on its cost code, are refused, all of them.
+* **No spelling of time is what a material is ordered by** (J15-23, J14-11 again). The
+  list of spellings is given up for a rule: a word that is a measure of time, or ends
+  in one after a word of three letters or more (workhour, manweek, crew-day), or is one
+  of the short forms estimates use (MH, LH).
+* **A storey says how high its floor is, and is also placed; the two can differ**
+  (J15-3). The floor's height in the job is what the storey says. What stands on the
+  storey is measured from where the storey is placed. A note says when they differ.
+* **Another trade's model stands on the job's own storeys** (J15-21). A storey in the
+  model with the name and the floor height of one the job has is that storey, and
+  nothing is made twice; with the name and another height, the model is refused, and
+  the refusal gives both heights. Two storeys of one name inside one model: the later
+  is named with its height.
+* **A body of more than one piece is not read** (J15-11), and is listed with that as
+  why; reading the first piece and dropping the rest was a silent loss.
+* **What the model names and gives no place is listed too** (J15-12).
+* **What a model calls a kind of thing is said in words** (`IFCBEAM` is "beam"), from a
+  short table of the commoner ones; any other is its name less the "IFC", marked "as
+  the model calls it". One test's expected words change with this.
+* **A room's point is inside the room** (J15-16): the middle of the outline's corners
+  where that is inside, else the middle of the widest stretch of the room across.
+* **A floor with an opening cut in it comes in whole, flagged Assumed, and says in its
+  source that it is more than the floor**; a floor whose own outline has a hole is not
+  brought in. This program has no floor with a hole in it yet.
+* **Upright and level are within an eighth of an inch in eight feet.** The model reader
+  took a wall leaning two and a half degrees as upright.
+* **The model's name for a wall, a floor or a run is its name here**, with its number
+  in the file only where two would otherwise go by one name.
+* **A number used twice in a model's file is said** (J15-22): the reader keeps the
+  later of each.
+* **A name already taken is refused in plain words**: "there is already something
+  called "ridge" under roof: two things in one place cannot go by one name", where it
+  said "roof-0002 already has a child named "ridge"". One test's expected words change.
+* **One rule for a comma in a figure.** The rule was already in `units::parse_price`
+  (the tenth judgment); the table reader had its own, looser reading beside it, and
+  that was the fault. Both now ask `units::commas_part_thousands`.
+* **A sheet lined up again after things were traced over it** (J15-4) is treated as a
+  sheet whose scale was changed: nothing traced is moved, what was traced is what the
+  verb gives back, the drawing keeps it as traced where the sheet lay before, and it
+  is said by `drawings`, by `show` (a flagged row on the drawing), by `takeoff` and in
+  the window. A drawing put back at the scale and in the place it had stops saying it
+  (J15-15): what was traced then is where the sheet shows it again.

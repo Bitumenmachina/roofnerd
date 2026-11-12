@@ -277,6 +277,8 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
     let said = doc.draw.settings.get(tool.name()).cloned().unwrap_or_default();
     let s: Vec<&str> = said.split(',').map(str::trim).collect();
     // What the pick made, or why not; and the points still in hand afterwards.
+    // Done, with something that has to be seen: said the way a refusal is.
+    let mut warned = false;
     let made: Option<Result<String, String>> = match tool {
         Tool::Wall | Tool::Run(_) => {
             doc.draw.picked.push(at);
@@ -347,7 +349,15 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
                 None => Err("the first point is not on a drawing".to_string()),
                 Some(l) => {
                     let on_page = l.on_page(a);
-                    plumbline_world::plans::line_up(&mut doc.job, &l.path, on_page, b, ed::Entered { status: Status::Assumed, source: "lined up in the window" }).map(|()| format!("{} is lined up: that place on it is ({}, {}) on the plan", l.name, units::feet_as_ft_in(b[0], 16), units::feet_as_ft_in(b[1], 16)))
+                    plumbline_world::plans::line_up(&mut doc.job, &l.path, on_page, b, ed::Entered { status: Status::Assumed, source: "lined up in the window" }).map(|left| {
+                        let mut said = format!("{} is lined up: that place on it is ({}, {}) on the plan", l.name, units::feet_as_ft_in(b[0], 16), units::feet_as_ft_in(b[1], 16));
+                        // What was traced over it before is where it was: that has to be seen.
+                        if !left.is_empty() {
+                            warned = true;
+                            said.push_str(&format!(". NOT MOVED: {} traced over it where it lay before; check {} against the sheet", if left.len() == 1 { "1 thing".to_string() } else { format!("{} things", left.len()) }, left.join(", ")));
+                        }
+                        said
+                    })
                 }
             })
         }
@@ -371,7 +381,7 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
     match made {
         Some(Ok(what)) => {
             doc.edit(tool.name());
-            doc.say(Tone::Done, what);
+            doc.say(if warned { Tone::Refused } else { Tone::Done }, what);
         }
         Some(Err(why)) => doc.say(Tone::Refused, format!("refused: {why}")),
         None => {}

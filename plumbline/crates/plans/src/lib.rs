@@ -101,6 +101,14 @@ pub fn checksum(bytes: &[u8]) -> String {
 #[derive(Default)]
 struct Lines {
     height: f64,
+    width: f64,
+    /// Lines drawn wholly off the page, which are not kept, and lines cut at its edge.
+    off_page: usize,
+    off_page_cut: usize,
+    /// Lines under a white box drawn over them afterwards, which are not kept; and
+    /// white shapes that are not a square, under which lines are kept.
+    covered: usize,
+    odd_white: usize,
     kept: Vec<[[f64; 2]; 2]>,
     over: usize,
     curves: usize,
@@ -164,6 +172,21 @@ impl Lines {
                 }
             }
         }
+        // What of it is on the page: a line drawn off the sheet is not on the drawing.
+        if self.width > 0.0 && self.height > 0.0 {
+            match inside(a, b, [0.0, 0.0, self.width, self.height]) {
+                None => {
+                    self.off_page += 1;
+                    return;
+                }
+                Some((c, d)) => {
+                    if (c - a).hypot() > 1.0e-6 || (d - b).hypot() > 1.0e-6 {
+                        self.off_page_cut += 1;
+                    }
+                    (a, b) = (c, d);
+                }
+            }
+        }
         if (b - a).hypot() < SHORTEST_LINE_PT {
             self.short += 1;
             return;
@@ -211,6 +234,23 @@ impl Lines {
     }
 }
 
+/// A path that is a square with its sides level and upright: its left, top, right and
+/// bottom as the page is drawn. None for any other shape.
+fn square(path: &BezPath) -> Option<[f64; 4]> {
+    let corners: Vec<Point> = path
+        .elements()
+        .iter()
+        .filter_map(|el| match el {
+            PathEl::MoveTo(p) | PathEl::LineTo(p) => Some(*p),
+            _ => None,
+        })
+        .collect();
+    let straight = path.elements().iter().all(|el| matches!(el, PathEl::MoveTo(_) | PathEl::LineTo(_) | PathEl::ClosePath));
+    let bounds = path.bounding_box();
+    let on_corner = |p: &Point| ((p.x - bounds.x0).abs() < 1.0e-6 || (p.x - bounds.x1).abs() < 1.0e-6) && ((p.y - bounds.y0).abs() < 1.0e-6 || (p.y - bounds.y1).abs() < 1.0e-6);
+    (straight && (4..=5).contains(&corners.len()) && corners.iter().all(on_corner) && bounds.width() > 0.0 && bounds.height() > 0.0).then_some([bounds.x0, bounds.y0, bounds.x1, bounds.y1])
+}
+
 /// How many straight pieces a path has.
 fn straight_pieces(path: &BezPath) -> usize {
     path.elements().iter().filter(|el| matches!(el, PathEl::LineTo(_) | PathEl::ClosePath)).count()
@@ -224,6 +264,24 @@ impl<'a> Device<'a> for Lines {
             let [r, g, b, alpha] = c.to_rgba().to_rgba8();
             if alpha == 0 || (r >= 250 && g >= 250 && b >= 250) {
                 self.white += straight_pieces(path);
+                // A white shape filled over what was drawn before it blanks it out, as a
+                // draughtsman blanks part of a sheet: lines wholly under it are not on
+                // the drawing any more. Worked out for a square; said for any other shape.
+                if alpha == 255 && matches!(mode, DrawMode::Fill(_) | DrawMode::FillAndStroke(_, _)) {
+                    let placed = props.transform * path.clone();
+                    match square(&placed) {
+                        Some([x0, y0, x1, y1]) => {
+                            // Kept lines are held from the page's lower-left corner up.
+                            let (low, high) = (self.height - y1, self.height - y0);
+                            let under = |p: &[f64; 2]| p[0] >= x0 - 1.0e-6 && p[0] <= x1 + 1.0e-6 && p[1] >= low - 1.0e-6 && p[1] <= high + 1.0e-6;
+                            let before = self.kept.len();
+                            self.kept.retain(|l| !(under(&l[0]) && under(&l[1])));
+                            self.covered += before - self.kept.len();
+                        }
+                        None if !self.kept.is_empty() => self.odd_white += 1,
+                        None => {}
+                    }
+                }
                 return;
             }
         }
@@ -238,18 +296,12 @@ impl<'a> Device<'a> for Lines {
     fn push_clip_path(&mut self, clip: &ClipPath) {
         // A clip that is a square with its sides level and upright is kept as one; any
         // other shape is not worked out, and lines under it are kept whole.
-        let corners: Vec<Point> = clip.path.elements().iter().filter_map(|el| match el {
-            PathEl::MoveTo(p) | PathEl::LineTo(p) => Some(*p),
-            _ => None,
-        }).collect();
-        let straight = clip.path.elements().iter().all(|el| matches!(el, PathEl::MoveTo(_) | PathEl::LineTo(_) | PathEl::ClosePath));
-        let bounds = clip.path.bounding_box();
-        let on_corner = |p: &Point| ((p.x - bounds.x0).abs() < 1.0e-6 || (p.x - bounds.x1).abs() < 1.0e-6) && ((p.y - bounds.y0).abs() < 1.0e-6 || (p.y - bounds.y1).abs() < 1.0e-6);
-        if straight && (4..=5).contains(&corners.len()) && corners.iter().all(on_corner) {
-            self.clips.push(Some([bounds.x0, bounds.y0, bounds.x1, bounds.y1]));
-        } else {
-            self.odd_clips += 1;
-            self.clips.push(None);
+        match square(&clip.path) {
+            Some(sides) => self.clips.push(Some(sides)),
+            None => {
+                self.odd_clips += 1;
+                self.clips.push(None);
+            }
         }
     }
     fn push_transparency_group(&mut self, _: f32, _: Option<SoftMask<'a>>, _: BlendMode) {}
@@ -391,7 +443,7 @@ fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
     let pixmap = render(p, &cache, &settings, &RenderSettings::default(), &PixmapSettings { x_scale: scale, y_scale: scale, bg_color: WHITE });
     let picture = Picture { width: u32::from(pixmap.width()), height: u32::from(pixmap.height()), rgba: pixmap.data_as_u8_slice().to_vec() };
     // The lines: the page drawn again into a device that keeps its straight strokes.
-    let mut lines = Lines { height: f64::from(height), ..Lines::default() };
+    let mut lines = Lines { height: f64::from(height), width: f64::from(width), ..Lines::default() };
     let to_page = p.initial_transform(true).to_kurbo();
     let mut context = Context::new(to_page, Rect::new(0.0, 0.0, f64::from(width), f64::from(height)), &hayro::hayro_interpret::InterpreterCache::new(), p.xref(), settings);
     interpret_page(p, &mut context, &mut lines);
@@ -428,6 +480,15 @@ fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
     }
     if lines.odd_clips > 0 {
         lost.push(format!("{} not a square: lines under {} are kept whole, hidden parts and all", some(lines.odd_clips, "mask on the page is", "masks on the page are"), if lines.odd_clips == 1 { "it" } else { "them" }));
+    }
+    if lines.covered > 0 {
+        lost.push(format!("{} under a white box drawn over {} (part of the sheet blanked out) and {} not kept to snap to", some(lines.covered, "line is", "lines are"), if lines.covered == 1 { "it" } else { "them" }, if lines.covered == 1 { "is" } else { "are" }));
+    }
+    if lines.odd_white > 0 {
+        lost.push(format!("{} drawn over lines and {} not a square: what {} is kept to snap to all the same", some(lines.odd_white, "white shape is", "white shapes are"), if lines.odd_white == 1 { "is" } else { "are" }, if lines.odd_white == 1 { "it covers" } else { "they cover" }));
+    }
+    if lines.off_page > 0 || lines.off_page_cut > 0 {
+        lost.push(format!("{} drawn off the page and not kept; {} cut at its edge", some(lines.off_page, "line is", "lines are"), some(lines.off_page_cut, "line that runs off it is", "lines that run off it are")));
     }
     if lines.over > 0 {
         lost.push(format!("{} lines beyond the first {MOST_LINES} are not kept", lines.over));

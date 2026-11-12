@@ -65,6 +65,11 @@ struct Frame {
     o: P3,
 }
 
+/// How nearly straight up a wall's body has to be pushed, and how nearly level a floor
+/// has to lie, to be read as upright or level: within about an eighth of an inch in
+/// eight feet (the cosine of that lean).
+const UPRIGHT: f64 = 0.999_999;
+
 const WORLD: Frame = Frame { x: [1.0, 0.0, 0.0], y: [0.0, 1.0, 0.0], z: [0.0, 0.0, 1.0], o: [0.0, 0.0, 0.0] };
 
 fn dot(a: P3, b: P3) -> f64 {
@@ -232,6 +237,110 @@ impl<'a> Reader<'a> {
     fn name(&self, e: &'a Entity) -> String {
         Reader::text(self.arg(e, 2)).unwrap_or("").trim().to_string()
     }
+    /// How many pieces a product's body is made of: the items of the shapes it calls its
+    /// body, or of every shape it has where it calls none that.
+    fn pieces(&self, product: &'a Entity) -> usize {
+        let Some((_, shape)) = self.get(self.arg(product, 6)) else { return 0 };
+        let reps: Vec<&Entity> = Reader::list(self.arg(shape, 2)).iter().filter_map(|rep| self.get(rep).map(|(_, e)| e)).collect();
+        let body: Vec<&&Entity> = reps.iter().filter(|rep| Reader::text(self.arg(rep, 1)).is_some_and(|id| id.eq_ignore_ascii_case("body"))).collect();
+        let count = |rep: &Entity| Reader::list(self.arg(rep, 3)).len();
+        if body.is_empty() {
+            reps.iter().map(|rep| Reader::list(self.arg(rep, 3)).iter().filter(|i| self.get(i).is_some_and(|(_, e)| e.name == "IFCEXTRUDEDAREASOLID")).count()).sum()
+        } else {
+            body.iter().map(|rep| count(rep)).sum()
+        }
+    }
+    /// Whether a product's body is an outline with a hole in it, pushed.
+    fn holed(&self, product: &'a Entity) -> bool {
+        let Some((_, shape)) = self.get(self.arg(product, 6)) else { return false };
+        Reader::list(self.arg(shape, 2)).iter().filter_map(|rep| self.get(rep)).flat_map(|(_, rep)| Reader::list(self.arg(rep, 3)).iter()).filter_map(|i| self.get(i)).any(|(_, solid)| self.get(self.arg(solid, 0)).is_some_and(|(_, area)| area.name == "IFCARBITRARYPROFILEDEFWITHVOIDS"))
+    }
+}
+
+/// What the model calls a kind of thing, as words: `IFCBEAM` is a beam. The model writes
+/// every such name as one run of capitals, so the words of the commoner ones are given
+/// here; any other is its name less the "IFC", as the model has it.
+fn said(class: &str) -> String {
+    const WORDS: [(&str, &str); 44] = [
+        ("IFCBEAM", "beam"), ("IFCCOLUMN", "column"), ("IFCSTAIR", "stair"), ("IFCSTAIRFLIGHT", "stair flight"), ("IFCROOF", "roof"), ("IFCCOVERING", "covering"), ("IFCFURNITURE", "furniture"),
+        ("IFCFURNISHINGELEMENT", "furnishing"), ("IFCBUILDINGELEMENTPROXY", "thing of no stated kind"), ("IFCMEMBER", "framing member"), ("IFCPLATE", "plate"), ("IFCRAILING", "railing"), ("IFCRAMP", "ramp"),
+        ("IFCRAMPFLIGHT", "ramp flight"), ("IFCCURTAINWALL", "curtain wall"), ("IFCFOOTING", "footing"), ("IFCPILE", "pile"), ("IFCFLOWTERMINAL", "fixture or outlet"), ("IFCFLOWFITTING", "fitting"),
+        ("IFCDUCTFITTING", "duct fitting"), ("IFCPIPEFITTING", "pipe fitting"), ("IFCCABLECARRIERFITTING", "tray fitting"), ("IFCCABLEFITTING", "cable fitting"), ("IFCFLOWSEGMENT", "run"),
+        ("IFCDUCTSEGMENT", "duct"), ("IFCPIPESEGMENT", "pipe"), ("IFCCABLECARRIERSEGMENT", "cable tray"), ("IFCCABLESEGMENT", "cable"), ("IFCFLOWCONTROLLER", "valve or damper"),
+        ("IFCVALVE", "valve"), ("IFCDAMPER", "damper"), ("IFCAIRTERMINAL", "grille or diffuser"), ("IFCSANITARYTERMINAL", "plumbing fixture"), ("IFCLIGHTFIXTURE", "light fixture"),
+        ("IFCOUTLET", "outlet"), ("IFCWALL", "wall"), ("IFCSLAB", "floor slab"), ("IFCDOOR", "door"), ("IFCWINDOW", "window"), ("IFCSPACE", "space"), ("IFCOPENINGELEMENT", "opening"),
+        ("IFCDISTRIBUTIONPORT", "connection point"), ("IFCGRID", "grid"), ("IFCANNOTATION", "note or dimension"),
+    ];
+    let base = class.trim_end_matches("STANDARDCASE").trim_end_matches("ELEMENTEDCASE");
+    match WORDS.iter().find(|(c, _)| *c == base) {
+        Some((_, words)) => words.to_string(),
+        None => format!("\"{}\" (as the model calls it)", class.strip_prefix("IFC").unwrap_or(class).to_lowercase()),
+    }
+}
+
+/// A point inside an outline: the middle of its corners where that is inside it, else
+/// the middle of the widest stretch of the outline on a line across it at that height.
+/// (The middle of an L-shaped room's corners can lie outside the room.)
+fn point_inside(points: &[[f64; 2]]) -> [f64; 2] {
+    let n = points.len() as f64;
+    let mid = [points.iter().map(|p| p[0]).sum::<f64>() / n, points.iter().map(|p| p[1]).sum::<f64>() / n];
+    // Where the outline crosses the line across it at `y`, in order.
+    let crossings = |y: f64| -> Vec<f64> {
+        let mut xs: Vec<f64> = (0..points.len())
+            .filter_map(|i| {
+                let (a, b) = (points[i], points[(i + 1) % points.len()]);
+                ((a[1] > y) != (b[1] > y)).then(|| a[0] + (y - a[1]) / (b[1] - a[1]) * (b[0] - a[0]))
+            })
+            .collect();
+        xs.sort_by(f64::total_cmp);
+        xs
+    };
+    let xs = crossings(mid[1]);
+    let inside: Vec<(f64, f64)> = xs.chunks_exact(2).map(|c| (c[0], c[1])).collect();
+    if inside.iter().any(|(a, b)| *a < mid[0] && mid[0] < *b) {
+        return mid;
+    }
+    match inside.iter().max_by(|p, q| (p.1 - p.0).total_cmp(&(q.1 - q.0))) {
+        Some((a, b)) => [(a + b) / 2.0, mid[1]],
+        None => mid,
+    }
+}
+
+/// How many things in the file are written under a number another thing already has.
+/// The reader keeps the later of each; this is how many earlier ones it lost.
+fn numbers_used_twice(bytes: &[u8], kept: usize) -> usize {
+    // Each thing is written `#12= NAME(...);`. Text in quotes can hold anything, so it
+    // is stepped over.
+    let (mut written, mut i, mut fresh) = (0usize, 0usize, true);
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\'' => {
+                i += 1;
+                while i < bytes.len() && bytes[i] != b'\'' {
+                    i += 1;
+                }
+            }
+            b';' => fresh = true,
+            b'#' if fresh => {
+                let mut j = i + 1;
+                while j < bytes.len() && bytes[j].is_ascii_digit() {
+                    j += 1;
+                }
+                let digits = j > i + 1;
+                while j < bytes.len() && bytes[j].is_ascii_whitespace() {
+                    j += 1;
+                }
+                if digits && bytes.get(j) == Some(&b'=') {
+                    written += 1;
+                }
+                fresh = false;
+            }
+            c if !c.is_ascii_whitespace() => fresh = false,
+            _ => {}
+        }
+        i += 1;
+    }
+    written.saturating_sub(kept)
 }
 
 /// What the file's lengths are in: the name as the file has it, and feet to one of it.
@@ -274,6 +383,19 @@ fn length_unit(r: &Reader) -> (String, f64) {
     ("metres (the file does not say; an IFC file with no length unit is in metres)".to_string(), FT_PER_M)
 }
 
+/// A name for a thing brought in: what the model calls it where nothing else in that
+/// place goes by that, else that with its number in the file; a thing the model does not
+/// name is its kind and its number.
+fn free_name(job: &mut Job, parent: &str, called: &str, kind: &str, id: u64) -> String {
+    if called.is_empty() {
+        format!("{kind} {id}")
+    } else if job.children().get(parent).is_some_and(|c| c.contains_key(called)) {
+        format!("{called} {id}")
+    } else {
+        called.to_string()
+    }
+}
+
 fn tidy(x: f64) -> f64 {
     (x * 1.0e4).round() / 1.0e4 + 0.0
 }
@@ -287,20 +409,27 @@ fn feet(x: f64) -> String {
 pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<Brought, String> {
     let file = step::parse(bytes).map_err(|why| format!("it is not an IFC file this can read ({why})"))?;
     if !file.schema.starts_with("IFC") {
-        return Err(format!("it is a STEP file of the schema {:?}, not an IFC model", file.schema));
+        return Err(format!("it is a file written the way a model is, but of another kind (\"{}\"): not an IFC model", file.schema));
     }
     if how.source.trim().is_empty() {
         return Err("say where the model came from".into());
     }
     let r = Reader { file: &file };
     let (unit_name, k) = length_unit(&r);
-    ed::all_or_nothing(job, |job| bring(job, &r, name, how, unit_name, k))
+    let twice = numbers_used_twice(bytes, file.entities.len());
+    ed::all_or_nothing(job, |job| {
+        let mut out = bring(job, &r, name, how, unit_name, k)?;
+        if twice > 0 {
+            out.notes.push(format!("{twice} number{} in the file {} used by more than one thing: the later of each was read and the earlier was not, so something may be missing or changed", if twice == 1 { "" } else { "s" }, if twice == 1 { "is" } else { "are" }));
+        }
+        Ok(out)
+    })
 }
 
 fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String, k: f64) -> Result<Brought, String> {
     let mut out = Brought { schema: r.file.schema.clone(), unit: unit_name, feet_per_unit: k, ..Brought::default() };
     let mut left: BTreeMap<(String, String), usize> = BTreeMap::new();
-    let mut leave = |class: &str, why: &str| *left.entry((class.to_string(), why.to_string())).or_insert(0) += 1;
+    let mut leave = |class: &str, why: &str| *left.entry((said(class), why.to_string())).or_insert(0) += 1;
     let mut made = |what: &str| *out.made.entry(what.to_string()).or_insert(0) += 1;
     // Every value says the thing in the file it was read off.
     let from = |e: &Entity, id: u64| -> String {
@@ -317,16 +446,69 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     let of = |class: &[&str]| -> Vec<(u64, &Entity)> { ids.iter().filter_map(|id| r.file.entities.get(id).map(|e| (*id, e))).filter(|(_, e)| class.contains(&e.name.as_str())).collect() };
 
     // ---- Storeys, lowest first. Each is as tall as it is to the next one up.
-    let mut storeys: Vec<(u64, String, f64)> = of(&["IFCBUILDINGSTOREY"]).into_iter().map(|(id, e)| (id, r.name(e), Reader::number(r.arg(e, 9)).unwrap_or_else(|| r.placed(r.arg(e, 5)).o[2]) * k)).collect();
+    // A storey says how high its floor is (its elevation), and it is also placed. The
+    // two differ when the building itself is placed at a height: the floor's height is
+    // what the storey says, and everything on the storey is measured from where the
+    // storey is placed, so a building 50 m up does not lift its walls 50 m off their floor.
+    let mut storeys: Vec<(u64, String, f64, f64)> = of(&["IFCBUILDINGSTOREY"])
+        .into_iter()
+        .map(|(id, e)| {
+            let placed = r.get(r.arg(e, 5)).map(|_| r.placed(r.arg(e, 5)).o[2] * k);
+            let stated = Reader::number(r.arg(e, 9)).map(|z| z * k);
+            (id, r.name(e), stated.or(placed).unwrap_or(0.0), placed.or(stated).unwrap_or(0.0))
+        })
+        .collect();
     storeys.sort_by(|a, b| a.2.total_cmp(&b.2));
     if storeys.is_empty() {
         return Err("the model has no building storey: there is nothing to stand its walls and floors on".into());
     }
+    let lifted: Vec<f64> = storeys.iter().map(|s| s.3 - s.2).filter(|d| d.abs() > 0.001).collect();
+    if !lifted.is_empty() {
+        out.notes.push(format!(
+            "{} of the model's storeys {} placed {} from where {} its floor is (the building, or the site, is placed at a height): each floor's height is what the storey says, and what stands on a storey is measured from where the storey is placed",
+            lifted.len(),
+            if lifted.len() == 1 { "is" } else { "are" },
+            feet(lifted[0]),
+            if lifted.len() == 1 { "it says" } else { "each says" }
+        ));
+    }
+    // The storeys the job already has, by name: another trade's model of the same
+    // building stands on the same floors.
+    let mut have: Vec<(String, String, Option<f64>)> = {
+        let mut q = job.world.query::<(&plumbline_world::Node, &building::Level)>();
+        q.iter(&job.world).map(|(n, l)| (n.name.clone(), n.path.clone(), l.elevation.feet())).collect()
+    };
     let mut storey_path: HashMap<u64, (String, f64)> = HashMap::new();
-    for (i, (id, called, elevation)) in storeys.iter().enumerate() {
+    let mut shared = Vec::new();
+    for (i, (id, called, elevation, placed)) in storeys.iter().enumerate() {
         let source = from(&r.file.entities[id], *id);
         let entered = Entered { status: how.status, source: &source };
-        let called = if called.is_empty() { format!("storey at {}", feet(*elevation)) } else { called.clone() };
+        let mut called = if called.is_empty() { format!("storey at {}", feet(*elevation)) } else { called.clone() };
+        // A storey of this name already in the job, at this height: it is that storey.
+        // At another height the two cannot both be right, and the model is refused.
+        if let Some((_, path, at)) = have.iter().find(|(n, _, _)| *n == called).filter(|_| !storey_path.values().any(|(p, _)| have.iter().any(|(n, hp, _)| *n == called && hp == p))) {
+            match at {
+                Some(at) if (at - elevation).abs() < 0.01 => {
+                    shared.push(called.clone());
+                    storey_path.insert(*id, (path.clone(), *placed));
+                    continue;
+                }
+                _ => {
+                    return Err(format!(
+                        "the job already has a storey called \"{called}\" with its floor at {}, and the model's storey of that name has its floor at {}: they cannot both be right. Give one of them another name, or set the job's storey to the model's height, and bring the model in again",
+                        at.map(feet).unwrap_or_else(|| "a height nobody has entered".to_string()),
+                        feet(*elevation)
+                    ));
+                }
+            }
+        }
+        // Two storeys of one name in the model (two buildings, each with a first floor):
+        // the later says which it is by its height.
+        if have.iter().any(|(n, _, _)| *n == called) {
+            let renamed = format!("{called}, at {}", feet(*elevation));
+            out.notes.push(format!("the model has more than one storey called \"{called}\": the one with its floor at {} was brought in as \"{renamed}\"", feet(*elevation)));
+            called = renamed;
+        }
         let path = match storeys.get(i + 1) {
             Some(next) if next.2 - elevation > 0.01 => ed::storey(job, &called, &feet(*elevation), &feet(next.2 - elevation), entered)?,
             _ => {
@@ -339,8 +521,12 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 path
             }
         };
-        storey_path.insert(*id, (path, *elevation));
+        have.push((called, path.clone(), Some(*elevation)));
+        storey_path.insert(*id, (path, *placed));
         made("storeys");
+    }
+    if !shared.is_empty() {
+        out.notes.push(format!("the job already has {}: what the model has on {} was put on the job's own, and no second storey was made", shared.iter().map(|n| format!("\"{n}\"")).collect::<Vec<_>>().join(", "), if shared.len() == 1 { "it" } else { "them" }));
     }
     // ---- What stands on which storey.
     let mut on: HashMap<u64, u64> = HashMap::new();
@@ -370,15 +556,19 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             return found.clone();
         }
         guessed += 1;
-        let below = storeys.iter().rev().find(|s| s.2 <= z + 0.01).unwrap_or(&storeys[0]);
+        let below = storeys.iter().rev().find(|s| s.3 <= z + 0.01).unwrap_or(&storeys[0]);
         storey_path[&below.0].clone()
     };
 
     // ---- Walls.
     let mut wall_of: HashMap<u64, (String, P3, P3, f64)> = HashMap::new();
     for (id, e) in of(&["IFCWALL", "IFCWALLSTANDARDCASE", "IFCWALLELEMENTEDCASE"]) {
+        if r.pieces(e) > 1 {
+            leave(&e.name, "its body is made of more than one piece: only a body of one piece is read");
+            continue;
+        }
         let Some(body) = r.pushed(e) else {
-            leave(&e.name, "its body is not a plain shape pushed straight (it may be curved, cut to a roof, or a mesh)");
+            leave(&e.name, "its body is not a plain shape pushed straight, as far as this can read it: it may be curved, cut to a roof, a mesh, or name a part that is not in the file");
             continue;
         };
         let Profile::Rect { x, y, at, along } = body.profile else {
@@ -387,7 +577,8 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         };
         let frame = r.placed(r.arg(e, 5)).then(&body.frame);
         let up = frame.turn(body.way);
-        if up[2].abs() < 0.999 {
+        // Upright to within an eighth of an inch in eight feet.
+        if up[2].abs() < UPRIGHT {
             leave(&e.name, "it does not stand upright");
             continue;
         }
@@ -404,6 +595,15 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             let wall_type = ed::wall_type_for(job, &format!("{} in", tidy(thickness * k * 12.0)), entered)?;
             let made = ed::walls(job, &storey, &wall_type, &[[tidy(a[0] * k), tidy(a[1] * k)], [tidy(b[0] * k), tidy(b[1] * k)]], false, ed::Top::Height(&feet(body.depth * k)), entered)?;
             let path = made.into_iter().next().ok_or("no wall was made")?;
+            // The model's own name for the wall, where it has one nothing else on the
+            // storey goes by.
+            let called = r.name(e);
+            if !called.is_empty() && !job.children().get(&storey).is_some_and(|c| c.contains_key(&called)) {
+                let w = job.find(&path).ok_or("the new wall is not there")?;
+                if let Some(mut node) = job.world.get_mut::<plumbline_world::Node>(w) {
+                    node.name = called;
+                }
+            }
             if (base * k - floor).abs() > 0.001 {
                 let w = job.find(&path).ok_or("the new wall is not there")?;
                 let mut wall = job.world.get::<Wall>(w).cloned().ok_or("the new wall has no line")?;
@@ -458,20 +658,31 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     }
     for (id, e) in of(&["IFCOPENINGELEMENT", "IFCOPENINGSTANDARDCASE"]) {
         if !fills.values().any(|hole| *hole == id) {
-            leave(&e.name, "a hole with no door or window in it: this program cuts a wall only for one of those");
+            leave(&e.name, "a hole with no door or window in it: this program cuts a wall only for one of those, and a floor for nothing yet");
         }
     }
     // ---- Floor slabs.
     let root = job.world.get::<plumbline_world::Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
     let mut floor_types: HashMap<i64, String> = HashMap::new();
+    let slab_ids: Vec<u64> = of(&["IFCSLAB", "IFCSLABSTANDARDCASE", "IFCSLABELEMENTEDCASE"]).into_iter().map(|(id, _)| id).collect();
+    let cut_floors: Vec<u64> = hole_in.values().copied().filter(|host| slab_ids.contains(host)).collect();
+    let mut floors_cut = 0usize;
     for (id, e) in of(&["IFCSLAB", "IFCSLABSTANDARDCASE", "IFCSLABELEMENTEDCASE"]) {
+        if r.pieces(e) > 1 {
+            leave(&e.name, "its body is made of more than one piece: only a body of one piece is read");
+            continue;
+        }
+        if r.holed(e) {
+            leave(&e.name, "its outline has a hole in it: this program has no floor with a hole yet, and would count the hole as floor");
+            continue;
+        }
         let Some(body) = r.pushed(e) else {
-            leave(&e.name, "its body is not an outline pushed straight (it may slope, or be a mesh)");
+            leave(&e.name, "its body could not be read as an outline pushed straight: it may slope, be a mesh, or name a part that is not in the file");
             continue;
         };
         let frame = r.placed(r.arg(e, 5)).then(&body.frame);
         let way = frame.turn(body.way);
-        if way[2].abs() < 0.999 || frame.z[2].abs() < 0.999 {
+        if way[2].abs() < UPRIGHT || frame.z[2].abs() < UPRIGHT {
             leave(&e.name, "it is not level");
             continue;
         }
@@ -496,25 +707,61 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             let floor_type = match floor_types.get(&key) {
                 Some(path) => path.clone(),
                 None => {
-                    let path = job.add(&root, Kind::Type, &format!("floor {thickness} in"))?;
-                    let t = FloorType { thickness: Val { value: Some(Len::One(thickness)), unit: "in".into(), status: how.status, source: source.clone() }, layers: Vec::new() };
-                    building::check_floor_type(&path, Kind::Type, &t)?;
-                    job.put(&path, t)?;
+                    // A floor type of this name and thickness the job already has (from
+                    // a model brought in before) is this one.
+                    let named = format!("floor {thickness} in");
+                    let has = {
+                        let mut q = job.world.query::<(&plumbline_world::Node, &FloorType)>();
+                        q.iter(&job.world).find(|(n, t)| n.name == named && t.thickness.feet().is_some_and(|f| (f * 12.0 - thickness).abs() < 1.0e-6)).map(|(n, _)| n.path.clone())
+                    };
+                    let path = match has {
+                        Some(path) => path,
+                        None => {
+                            let path = job.add(&root, Kind::Type, &named)?;
+                            let t = FloorType { thickness: Val { value: Some(Len::One(thickness)), unit: "in".into(), status: how.status, source: source.clone() }, layers: Vec::new() };
+                            building::check_floor_type(&path, Kind::Type, &t)?;
+                            job.put(&path, t)?;
+                            path
+                        }
+                    };
                     floor_types.insert(key, path.clone());
                     path
                 }
             };
-            let called = r.name(e);
-            let path = job.add(&storey, Kind::Floor, &if called.is_empty() { format!("floor {id}") } else { format!("{called} {id}") })?;
+            // A floor with this very outline already on the storey (the model brought in
+            // a second time, or two trades' models that both carry the slab) would be
+            // counted twice: it is not made again.
+            let there = {
+                let mut q = job.world.query::<(&plumbline_world::Node, &Floor)>();
+                q.iter(&job.world).any(|(n, f)| n.parent.as_deref() == Some(storey.as_str()) && f.boundary_ft().is_some_and(|b| b.len() == boundary.len() && b.iter().zip(&boundary).all(|(p, q)| (p[0] - q[0]).abs() < 0.001 && (p[1] - q[1]).abs() < 0.001)))
+            };
+            if there {
+                return Err("a floor with this very outline is already on this storey: a second would be counted twice".into());
+            }
+            let called = free_name(job, &storey, &r.name(e), "floor", id);
+            let path = job.add(&storey, Kind::Floor, &called)?;
             let offset = top * k - floor;
-            let f = Floor { type_name: path_val(&source, &floor_type), boundary: Val { value: Some(boundary.clone()), unit: "ft".into(), status: how.status, source: source.clone() }, offset: (offset.abs() > 0.001).then(|| val(&source, offset)) };
+            // A floor the model cuts an opening in (a stair, a shaft): the opening is
+            // not cut here, so its outline is more than the floor. That is said in the
+            // outline's source, and the outline is no surer than Assumed.
+            let cut = cut_floors.contains(&id);
+            let outline = if cut { Val { value: Some(boundary.clone()), unit: "ft".into(), status: how.status.max(plumbline_world::Status::Assumed), source: format!("{source}; the model cuts an opening in this floor that is not cut here, so this outline is more than the floor") } } else { Val { value: Some(boundary.clone()), unit: "ft".into(), status: how.status, source: source.clone() } };
+            let f = Floor { type_name: path_val(&source, &floor_type), boundary: outline, offset: (offset.abs() > 0.001).then(|| val(&source, offset)) };
             building::check_floor(&path, Kind::Floor, &f)?;
             job.put(&path, f)
         })();
         match done {
-            Ok(()) => made("floors"),
+            Ok(()) => {
+                made("floors");
+                if cut_floors.contains(&id) {
+                    floors_cut += 1;
+                }
+            }
             Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
         }
+    }
+    if floors_cut > 0 {
+        out.notes.push(format!("{floors_cut} floor{} an opening cut in {} in the model (a stair, a shaft): the opening is not cut here, so {} area is more than the floor. Each is flagged Assumed and says so", if floors_cut == 1 { " has" } else { "s have" }, if floors_cut == 1 { "it" } else { "them" }, if floors_cut == 1 { "its" } else { "each one's" }));
     }
     // ---- Spaces, as rooms: a point inside each.
     for (id, e) in of(&["IFCSPACE"]) {
@@ -524,10 +771,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         };
         let frame = r.placed(r.arg(e, 5)).then(&body.frame);
         let middle = match &body.profile {
-            Profile::Outline(points) => {
-                let n = points.len() as f64;
-                [points.iter().map(|p| p[0]).sum::<f64>() / n, points.iter().map(|p| p[1]).sum::<f64>() / n]
-            }
+            Profile::Outline(points) => point_inside(points),
             Profile::Rect { at, .. } | Profile::Circle { at, .. } => *at,
         };
         let at = frame.place([middle[0], middle[1], 0.0]);
@@ -621,6 +865,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             leave(&e.name, "the model does not say whether it is a duct, a pipe, a tray or a cable");
             continue;
         };
+        if r.pieces(e) > 1 {
+            leave(&e.name, "its body is made of more than one piece: only a body of one piece is read");
+            continue;
+        }
         let Some(body) = r.pushed(e) else {
             leave(&e.name, "its body is not a circle or a rectangle pushed along its run");
             continue;
@@ -659,12 +907,24 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                     }
                 }
             };
-            let called = r.name(e);
-            let path = job.add(&storey, kind, &if called.is_empty() { format!("{} {id}", kind.stem()) } else { format!("{called} {id}") })?;
             let (z0, z1) = (start[2] * k - floor, end[2] * k - floor);
+            let line = [[tidy(start[0] * k), tidy(start[1] * k)], [tidy(end[0] * k), tidy(end[1] * k)]];
+            // A run of this kind in this very place already on the storey would be
+            // counted twice: it is not made again.
+            let there = {
+                let mut q = job.world.query::<(&plumbline_world::Node, &Kind, &Segment)>();
+                q.iter(&job.world).any(|(n, other, seg)| {
+                    n.parent.as_deref() == Some(storey.as_str()) && *other == kind && seg.line_ft().is_some_and(|l| (0..2).all(|i| (0..2).all(|j| (l[i][j] - line[i][j]).abs() < 0.001))) && seg.offsets_ft().is_some_and(|(a, b)| (a - z0).abs() < 0.001 && (b - z1).abs() < 0.001)
+                })
+            };
+            if there {
+                return Err(format!("a {} in this very place is already on this storey: a second would be counted twice", kind.stem()));
+            }
+            let called = free_name(job, &storey, &r.name(e), kind.stem(), id);
+            let path = job.add(&storey, kind, &called)?;
             let segment = Segment {
                 type_name: path_val(&source, &run_type),
-                line: Val { value: Some([[tidy(start[0] * k), tidy(start[1] * k)], [tidy(end[0] * k), tidy(end[1] * k)]]), unit: "ft".into(), status: how.status, source: source.clone() },
+                line: Val { value: Some(line), unit: "ft".into(), status: how.status, source: source.clone() },
                 offset: val(&source, z0),
                 end_offset: ((z1 - z0).abs() > 0.001).then(|| val(&source, z1)),
                 justify: Default::default(),
@@ -693,11 +953,20 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         "IFCBUILDINGSTOREY", "IFCWALL", "IFCWALLSTANDARDCASE", "IFCWALLELEMENTEDCASE", "IFCDOOR", "IFCDOORSTANDARDCASE", "IFCWINDOW", "IFCWINDOWSTANDARDCASE", "IFCOPENINGELEMENT", "IFCOPENINGSTANDARDCASE", "IFCSLAB",
         "IFCSLABSTANDARDCASE", "IFCSLABELEMENTEDCASE", "IFCSPACE", "IFCDUCTSEGMENT", "IFCPIPESEGMENT", "IFCCABLECARRIERSEGMENT", "IFCCABLESEGMENT", "IFCFLOWSEGMENT", "IFCSITE", "IFCBUILDING", "IFCPROJECT",
     ];
+    // A thing of the building with no place: the model names it (it has the model's
+    // own 22-letter mark, and is not a tie between things, a type or a list of values)
+    // and says nowhere it is.
+    const NOT_THINGS: [&str; 14] = ["IFCPROPERTYSET", "IFCELEMENTQUANTITY", "IFCGROUP", "IFCSYSTEM", "IFCDISTRIBUTIONSYSTEM", "IFCDISTRIBUTIONCIRCUIT", "IFCZONE", "IFCACTOR", "IFCTASK", "IFCWORKPLAN", "IFCWORKSCHEDULE", "IFCCOSTITEM", "IFCCOSTSCHEDULE", "IFCPROJECTLIBRARY"];
     for id in &ids {
         let e = &r.file.entities[id];
         let is_placed = r.get(r.arg(e, 5)).is_some_and(|(_, p)| p.name == "IFCLOCALPLACEMENT" || p.name == "IFCGRIDPLACEMENT");
-        if is_placed && !READ.contains(&e.name.as_str()) {
+        if READ.contains(&e.name.as_str()) {
+            continue;
+        }
+        if is_placed {
             leave(&e.name, "this program has no element for it");
+        } else if Reader::text(r.arg(e, 0)).is_some_and(|mark| mark.len() == 22) && e.args.len() >= 7 && !e.name.starts_with("IFCREL") && !e.name.ends_with("TYPE") && !e.name.ends_with("STYLE") && !e.name.ends_with("TEMPLATE") && !NOT_THINGS.contains(&e.name.as_str()) {
+            leave(&e.name, "the model gives it no place, and this program has no element for it");
         }
     }
     if guessed > 0 {
@@ -712,4 +981,40 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         return Err(format!("nothing in the model but its storeys could be brought in: {}", out.left_out.iter().map(|(c, n, why)| format!("{n} {c} ({why})")).collect::<Vec<_>>().join("; ")));
     }
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::point_inside;
+
+    /// Whether a point is inside an outline: a line east from it crosses the outline an
+    /// odd number of times.
+    fn inside(points: &[[f64; 2]], p: [f64; 2]) -> bool {
+        (0..points.len()).filter(|i| {
+            let (a, b) = (points[*i], points[(*i + 1) % points.len()]);
+            (a[1] > p[1]) != (b[1] > p[1]) && p[0] < a[0] + (p[1] - a[1]) / (b[1] - a[1]) * (b[0] - a[0])
+        }).count() % 2 == 1
+    }
+
+    #[test]
+    fn j15_16_a_rooms_point_is_inside_the_room() {
+        // A square: the middle of its corners.
+        let square = [[0.0, 0.0], [4.0, 0.0], [4.0, 4.0], [0.0, 4.0]];
+        assert_eq!(point_inside(&square), [2.0, 2.0]);
+        // An L, 10 by 10 with its upper right 8 by 8 cut out, drawn with a corner for
+        // every foot of its long arms, as a model traced from a drawing has them: the
+        // middle of its corners falls in the part cut out.
+        let mut l: Vec<[f64; 2]> = (0..=10).map(|x| [x as f64, 0.0]).collect();
+        l.extend([[10.0, 2.0], [2.0, 2.0]]);
+        l.extend((2..=10).map(|y| [2.0, y as f64]));
+        l.extend((0..=10).rev().map(|y| [0.0, y as f64]).skip(0).take(10));
+        let n = l.len() as f64;
+        let mid = [l.iter().map(|p| p[0]).sum::<f64>() / n, l.iter().map(|p| p[1]).sum::<f64>() / n];
+        assert!(!inside(&l, mid), "the test's L has to have its middle outside it: {mid:?}");
+        let p = point_inside(&l);
+        assert!(inside(&l, p), "{p:?} is not inside the L");
+        // A U: either leg will do, and the point is in one of them.
+        let u = [[0.0, 0.0], [9.0, 0.0], [9.0, 9.0], [6.0, 9.0], [6.0, 2.0], [3.0, 2.0], [3.0, 9.0], [0.0, 9.0]];
+        assert!(inside(&u, point_inside(&u)));
+    }
 }

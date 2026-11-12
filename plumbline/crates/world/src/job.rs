@@ -85,7 +85,10 @@ impl Job {
     /// Add an element under `parent`. Its path is its kind and the job's next number,
     /// and it keeps that path for good. Two children of one parent cannot share a name.
     pub fn add(&mut self, parent: &str, kind: Kind, name: &str) -> Result<String, String> {
-        if name.trim().is_empty() {
+        // A name has no space before it or after it: two names that differ only there
+        // would read as one, and a table written out and brought back would lose them.
+        let name = name.trim();
+        if name.is_empty() {
             return Err("an element needs a name".into());
         }
         if kind == Kind::Job {
@@ -95,7 +98,9 @@ impl Job {
             return Err(format!("no element {parent} to add under"));
         }
         if self.children().get(parent).is_some_and(|c| c.contains_key(name)) {
-            return Err(format!("{parent} already has a child named {name:?}"));
+            let root = self.root();
+            let at = self.find(parent).filter(|e| *e != root).and_then(|e| self.world.get::<Node>(e)).map(|n| format!("under {}", n.name)).unwrap_or_else(|| "in the job".to_string());
+            return Err(format!("there is already something called \"{name}\" {at}: two things in one place cannot go by one name"));
         }
         let root = self.root();
         // A path number is never given out twice, whatever the counter says: the next

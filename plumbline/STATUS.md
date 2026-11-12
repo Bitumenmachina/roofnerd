@@ -2413,3 +2413,95 @@ between plan and 3D.
 done": that a path is never shown beside a row of the sheet. It is shown, as the name
 a second time. That section stands as written, with this correction.
 
+
+## Where the fixes to the fifteenth judgment, part A, stand
+
+Fixed in the commit that adds this section, each held by a test; **none of these fixes
+has been judged.** DECISIONS.md call 50 says what each decided.
+
+| # | What was done | Held by |
+|---|---|---|
+| J15-1 | A comma in a figure is read only where it parts thousands; `9,05` and `1.204,50` are refused by row. One rule, `units::commas_part_thousands`, for a typed price and a list. A semicolon list says it may hold decimal commas. | `j15_1_...` (tables) |
+| J15-2 | The person's `--status` and `--source` stand over the list's own columns, and a note says the columns were not read. | `j15_2_13_20_...` |
+| J15-3 | What stands on a storey is measured from where the storey is placed; the floor's height is what the storey says; a note when they differ. | `j15_3_...` (ifc): 50 m up, walls on their floor, same figures |
+| J15-4 | A second line-up after tracing records what was traced, gives it back, and it is said by `lineup`, `drawings`, `show`, `takeoff` and the window. | `j15_4_15_...` (world) |
+| J15-5 | Total rows of a prior estimate are not lines; a wrong extension is kept as written and noted. | `j15_5_6_7_...` |
+| J15-6 | Prior lines of one name are added together before being set against the job. | the same |
+| J15-7 | A difference carries the flag of the less sure of its two sides (command line). | **By reading only**: no test drives the printed comparison. |
+| J15-8 | A percent cell is read as shown (`9.05%`), a date as words; neither is a figure, so the row is refused. | `j15_8_9_...` (sheets), on `demos/tables/hidden-and-shown.xlsx` |
+| J15-9 | The first sheet on show is read; a hidden one only when asked for, and said to be hidden. | the same |
+| J15-10 | Each row carries its number in its file: blank lines, cells with line breaks, a table below a sheet's first row. The CSV library's own line number was wrong past a blank line and is not used. | `j15_10_...` (sheets and tables) |
+| J15-11 | A body of more than one piece is not read, and is listed. | `j15_11_12_22_...` (ifc) |
+| J15-12 | A thing the model names and gives no place is listed. | the same |
+| J15-13 | A supplier's row's "ordered at" is noted as not read. | `j15_2_13_20_...` |
+| J15-14 | Rows of one assembly name that disagree are refused, all of them. | `j15_14_...` |
+| J15-15 | The stale list is on the drawing's own values (flagged) and in `takeoff`; a drawing back at the scale and place it had stops listing. | `j15_4_15_...` |
+| J15-16 | A room's point is inside its outline. | `j15_16_...` (ifc unit test): a square, an L, a U |
+| J15-17 | `committed.sh` checks every file named under `demos/` and `tools/`, and fails on anything git ignores inside the program's folders. Proven red both ways (a `fixtures/` folder under a crate; a scratch copy committed without the made-up model). The repository root's `.gitignore` is the earlier program's and is left as it is. | run by hand; its output is in this session |
+| J15-18 | A line wholly under a white square filled over it is not kept; a white shape that is not a square is said. | `j15_18_24_...` (plans), against the picture's own pixels |
+| J15-19 | **Not fixed.** Two drawings overlapping on one storey in the window. | |
+| J15-20 | Of "Item" and "Description", the description names the thing; "Item" is listed as not read. | `j15_2_13_20_...` |
+| J15-21 | A model's storey with the name and height of one the job has is that storey; another height is refused with both heights; two of one name in a model are told apart by height. The same model brought in twice makes nothing twice and is refused, each thing with why. | `j15_21_...` (ifc) |
+| J15-22 | Numbers used twice in a model's file are counted and said. | `j15_11_12_22_...` |
+| J15-23 | A rule for what is a measure of time, in place of a list of spellings. | `j15_23_...`, with the judge's spellings and twenty-two units that are not time |
+| J15-24 | A line wholly off the page is not kept; one that runs off is cut at the edge; both said. | `j15_18_24_...` |
+| J15-25 | Done: the apostrophe guard on a cell a spreadsheet would run; names trimmed where a thing is added; a duplicate price at another figure not used; UTF-16 and empty files refused for what they are; `lbs` and `lb.`; a floor with a hole in its outline listed, one with an opening cut in it flagged Assumed and said; the reason for an unreadable body; the model's own names; upright to an eighth in eight feet; a model's class names in words. **Not done:** blank rows are still passed over without a word (they are not rows); the paths in "this program would not take it: wall-0022 lies along wall-0005" (part B). | `j15_25_...` (sheets, ifc); the rest by reading |
+
+**What these changed that was so before:**
+
+* `plumbline import prices` with `--status` on a list that has its own columns now uses
+  the person's word; it used the list's.
+* A figure such as `9,05` in a list is refused; it was read as 905.
+* A prior estimate's "Total" row is not a line, and its total is the lines' own.
+* `compare` shows two prior lines of one name as one, with how many were added.
+* A workbook's hidden first sheet is no longer what is read by default.
+* A model's class names are words ("beam", not "IFCBEAM") in what is listed as left out.
+* A wall leaning more than about a twelfth of a degree is not brought in from a model;
+  up to two and a half degrees was.
+* Walls, floors and runs from a model are called what the model calls them, with the
+  number in the file only where two would share a name; floors and runs always had the
+  number, and walls were "wall N".
+* A name given to anything loses the spaces before and after it.
+* "there is already something called ... under ...: two things in one place cannot go
+  by one name" replaces "... already has a child named ...".
+* `plans::line_up` gives back what it left behind; the drawing's `earlier` entries
+  carry the corner the sheet had (jobs saved before load as they were).
+* A PDF's lines off the page, and under a white square, are no longer kept to snap to.
+* `cargo test --workspace`: 208 passing, 16 of them added here (6 on tables, 3 on the
+  table reader, 5 on the model reader, 1 on plan files, 1 on the model). The twelve
+  command-line demonstrations pass; `demos/imports.sh` and `demos/model.sh` each had
+  their expected words changed as call 50 says (a flagged difference; "beam" for
+  "IFCBEAM"). The window demonstrations have not been run on this.
+
+## Sixteenth judgment (2026-11-12): field entry
+
+An independent judge (Opus), on a frozen copy of commit `b9bd935`, told to break it.
+Command-line probes and four window runs. Ten findings, worst first, as the judge gave
+them. **None is fixed at the time of writing.**
+
+| # | What the judge did | What is wrong |
+|---|---|---|
+| J16-1 | `same` on the ground's floor; the upper floor measured at 8' 10 1/2"; `same` on the ground's storey height (9 ft) | **Three Known values that disagree by 1 1/2 in, all accepted.** The check against the floor above runs only when a storey height is given as a length. `same` on a storey height, and a length on an elevation, check nothing. A floor measured an inch off leaves its storey height as it was, unsaid. |
+| J16-2 | `measure` the eave height of a roof plane solved from a footprint | **Accepted, reported, and thrown away the next time the job is opened** (the roof is solved again from its footprint); `check` then fails. The window offers Measure on that row. SPEC 5.14 says an outline's eave height takes a length. |
+| J16-3 | A duct between two elbows measured to another height | **Its joints are broken and nobody is told.** The clash list gains five clashes between the duct and its own fittings and neighbours; the takeoff's networks go from 2 to 4. A fitting measured stays "joined" 5 in off its runs. "Height above its storey" is the centre for a run and the underside for a fitting, under one label. |
+| J16-4 | A storey height measured below a wall that has its own height | **The wall stands through the floor above, Known, unsaid.** With a wall above on the same line the measurement is refused as "one wall drawn over another", which is not what is wrong and gives no way to record what was measured. |
+| J16-5 | A mistyped storey height, then the right one | **The second shot is refused**: the floor above is Known from the first, and the refusal does not say so. The command line has no way back. A reading 1/32 in off a Known floor above is refused: the tolerance is a millionth of a foot. |
+| J16-6 | A reading typed with no entry open (`12'4"1/2` Tab `-0.52ft` Tab) | **The job is changed**: layers hidden, the view switched, a roof plane selected and its pitch lowered from 6:12 to 5:12. STATUS said only that "the characters go to whatever the keys do". |
+| J16-7 | Two readings sent into one entry | **Both lost, and the message is about a roof plane**: what follows the Tab that ended the entry, in the same frame, went on to the keys. |
+| J16-8 | `8'10"1/2, 2nd shot by JM` | **Refused as "something after the inches"**: a note that starts with a figure is taken for part of the reading. The refusal shows a backslash before the inch mark. |
+| J16-9 | A storey height that raises the floor under a roof | **The walls now top out above the eave, and nobody is told.** The roof's eave height is its own value. (The clash list does say roofs are not tested.) |
+| J16-10 | Minor | Moved floors are rewritten in decimal feet whatever they were entered in; a storey height of 1/2 in is accepted; `same` with `--to` equal to the line held is refused; a run measured Known on an Assumed storey keeps its clash "to verify" with no word why; call 49 misquotes the window's source for `same` and says spaces are free where `8 ' 10 " 1 / 2` is refused. |
+
+**What held, in the judge's words:** every hand figure ($615.86 before, $607.31 after;
+2.00 in and 5.00 in, then 2.25 in a finding and 0.75 in clear); status carried through
+(a floor no surer than the floor below; floors further up keep theirs; a Known third
+floor stops the chain; a crossing refused; the file byte for byte the same after each
+refusal); a window head above a new wall top makes the net area Unknown and the sheet
+says the line is left out; bottom and top on a run, kept through a split and a move;
+every form of length read or refused as documented; in the window, Esc, rows locked
+while an entry is open, `bottom` after the reading, undo and redo of a measurement, a
+new storey by three Tab-parted parts, the sheet following at once.
+
+**What the judge did not reach:** things brought in from a model; things traced with
+`--on`; F2 and reopen of a measured roof plane in the window; Tab in a wall tool's
+settings; rooms after a storey moves; a real DISTO; Leica's guides (no network).

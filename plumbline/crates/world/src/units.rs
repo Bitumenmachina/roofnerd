@@ -494,6 +494,19 @@ pub fn parse_pitch(text: &str) -> Result<f64, String> {
     Ok(rise + 0.0)
 }
 
+/// Whether every comma in a figure is a thousands mark: one to three figures, then
+/// threes, and none after the point. `1,250` and `12,500.75` are; `1,25`, `9,05` and
+/// `1.204,50` are not (each is how a decimal is written somewhere, and would be read a
+/// hundred or a thousand times out). The one rule for a comma in a figure, wherever a
+/// figure is read: a price typed, and a figure in a list brought in.
+pub fn commas_part_thousands(number: &str) -> bool {
+    let number = number.trim().trim_start_matches(['-', '+']);
+    let whole = number.split('.').next().unwrap_or("");
+    let groups: Vec<&str> = whole.split(',').collect();
+    let digits = |g: &str| !g.is_empty() && g.chars().all(|c| c.is_ascii_digit());
+    number.matches('.').count() <= 1 && !number.split('.').nth(1).is_some_and(|f| f.contains(',')) && groups.len() > 1 && digits(groups[0]) && groups[0].len() <= 3 && groups[1..].iter().all(|g| g.len() == 3 && digits(g))
+}
+
 /// Read a plain number as typed: `2`, `10`, `1.25`, `1/2`. No unit, no exponent, no comma.
 /// A price as it is typed: `4.25`, `$4.25`, `$4.25/SF`, `4.25 $/SF`. `per` is the unit the
 /// price is for (`$/SF`); a unit that is typed has to be that one. Thousands may be
@@ -513,14 +526,8 @@ pub fn parse_price(text: &str, per: &str) -> Result<f64, String> {
     }
     // A comma is a thousands mark and nothing else: 1,250 and 12,500.75, never 1,25
     // (which somewhere means one and a quarter, and would be read a hundred times out).
-    if number.contains(',') {
-        let whole = number.split('.').next().unwrap_or("");
-        let groups: Vec<&str> = whole.split(',').collect();
-        let digits = |g: &str| !g.is_empty() && g.chars().all(|c| c.is_ascii_digit());
-        let ok = number.matches('.').count() <= 1 && !number.split('.').nth(1).is_some_and(|f| f.contains(',')) && groups.len() > 1 && digits(groups[0]) && groups[0].len() <= 3 && groups[1..].iter().all(|g| g.len() == 3 && digits(g));
-        if !ok {
-            return Err(format!("{text:?} has a comma that is not a thousands mark; write thousands as 1,250 or 1250, and a decimal with a point, like 1.25"));
-        }
+    if number.contains(',') && !commas_part_thousands(number) {
+        return Err(format!("{text:?} has a comma that is not a thousands mark; write thousands as 1,250 or 1250, and a decimal with a point, like 1.25"));
     }
     let plain: String = number.chars().filter(|c| *c != ',').collect();
     let value = parse_number(&plain).map_err(|_| format!("{text:?} is not a price; write it as a number of dollars, like 4.25 or $4.25/{wanted}"))?;

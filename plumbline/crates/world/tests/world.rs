@@ -746,7 +746,9 @@ fn cost_lines_have_to_make_sense() {
 #[test]
 fn two_children_of_one_parent_cannot_share_a_name() {
     let mut job = sample();
-    assert!(job.add("roof-0002", Kind::Hip, "ridge").unwrap_err().contains("already has a child"));
+    // Call 50: said in plain words, by the name of what it is under.
+    let why = job.add("roof-0002", Kind::Hip, "ridge").unwrap_err();
+    assert!(why.contains("there is already something called \"ridge\" under") && why.contains("cannot go by one name"), "{why}");
     assert!(job.add("nowhere", Kind::Hip, "x").is_err());
     assert!(job.add("roof-0002", Kind::Job, "x").is_err());
     // And what add does build still loads.
@@ -5803,4 +5805,63 @@ fn a_formula_can_be_typed_as_its_words() {
     // A number and a name side by side are still two things with nothing between them.
     assert!(parse("2 height").is_err());
     assert!(parse("height 2").is_err());
+}
+
+// ---- The fifteenth judgment, part A: a sheet moved or rescaled after things were traced.
+
+#[test]
+fn j15_4_15_a_sheet_lined_up_again_says_what_it_left_behind_and_stops_saying_it_when_it_is_back() {
+    use plumbline_world::editing as ed;
+    use plumbline_world::plans;
+    let how = ed::Entered { status: Status::Assumed, source: "made-up sheet" };
+    let read = ed::Entered { status: Status::Assumed, source: "read off the drawing" };
+    let mut job = Job::new("Traced (not a real job)", "test", "test");
+    let s = ed::storey(&mut job, "ground", "0 ft", "9 ft", how).unwrap();
+    let wt = ed::wall_type(&mut job, "wall 6 in", "6 in", how).unwrap();
+    let d = plans::add(&mut job, &s, "A-1", plans::Read { file: "a-1.pdf", page: 1, bytes: 10, checksum: "0123456789abcdef", size: [792.0, 612.0] }, how).unwrap();
+    // 540 points are 30 ft: 18 to the foot. The house's corner, (126, 126), at (0, 0).
+    plans::calibrate(&mut job, &d, [126.0, 90.0], [666.0, 90.0], "30 ft", read).unwrap();
+    assert!(plans::line_up(&mut job, &d, [126.0, 126.0], [0.0, 0.0], how).unwrap().is_empty());
+    let drawing = |job: &mut Job| job.find(&d).and_then(|e| job.world.get::<plans::Drawing>(e).cloned()).unwrap();
+    let trace = |job: &mut Job| {
+        let source = plans::traced_from(job, &d).unwrap();
+        let (a, b) = (drawing(job).to_plan([126.0, 126.0]).unwrap(), drawing(job).to_plan([666.0, 126.0]).unwrap());
+        ed::walls(job, &s, &wt, &[a, b], false, ed::Top::Height("8 ft"), ed::Entered { status: Status::Assumed, source: &source })
+    };
+    let wall = trace(&mut job).unwrap();
+    assert!(plans::stale(&mut job, &d).unwrap().is_empty());
+    // Lined up again, 10 ft east and 5 ft north: the sheet moves, the wall does not, and
+    // that is what comes back.
+    let left = plans::line_up(&mut job, &d, [126.0, 126.0], [10.0, 5.0], how).unwrap();
+    assert_eq!(left, wall);
+    let stale = plans::stale(&mut job, &d).unwrap();
+    assert_eq!(stale.len(), 1);
+    assert_eq!((stale[0].rescaled, stale[0].moved, stale[0].traced.clone()), (false, true, wall.clone()));
+    // It is said among the drawing's own values, flagged, by the wall's name.
+    let rows = view::elements(&mut job).into_iter().find(|e| e.path == d).unwrap().rows;
+    let row = rows.iter().find(|r| r.label == "traced before it was rescaled or moved").expect("the drawing says what was left behind");
+    assert_eq!((row.text.as_str(), row.status), ("1 thing: wall 5", Status::Assumed));
+    // After a save and a load too.
+    let (mut back, _) = load(&save(&mut job)).unwrap();
+    assert_eq!(plans::stale(&mut back, &d).unwrap(), stale);
+    // The same printed line traced again is a second wall, 10 ft east and 5 ft north of
+    // the first: not refused (it does not lie on the first), and the first is still listed.
+    let second = trace(&mut job).unwrap();
+    assert_ne!(second, wall);
+    assert_eq!(plans::stale(&mut job, &d).unwrap()[0].traced, wall);
+    // The sheet put back where it was: the first wall is where the sheet shows it again
+    // and is no longer listed; the second, traced while the sheet lay elsewhere, now is.
+    let left = plans::line_up(&mut job, &d, [126.0, 126.0], [0.0, 0.0], how).unwrap();
+    assert_eq!(left, second);
+    let stale = plans::stale(&mut job, &d).unwrap();
+    assert_eq!(stale.iter().flat_map(|s| s.traced.clone()).collect::<Vec<_>>(), second);
+    // A scale changed and set back (J15-15): nothing stays listed for it.
+    ed::remove(&mut job, &second[0]).unwrap();
+    assert!(plans::stale(&mut job, &d).unwrap().is_empty());
+    let changed = plans::calibrate(&mut job, &d, [126.0, 90.0], [666.0, 90.0], "15 ft", read).unwrap();
+    assert_eq!(changed.left_at_earlier_scale, wall);
+    assert_eq!(plans::stale(&mut job, &d).unwrap().len(), 1);
+    plans::calibrate(&mut job, &d, [126.0, 90.0], [666.0, 90.0], "30 ft", read).unwrap();
+    assert!(plans::stale(&mut job, &d).unwrap().is_empty(), "{:?}", plans::stale(&mut job, &d));
+    assert!(drawing(&mut job).earlier.is_empty());
 }

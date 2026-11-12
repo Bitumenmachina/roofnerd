@@ -31,7 +31,8 @@ fn a_model_comes_in_as_storeys_walls_openings_a_floor_a_room_and_runs_and_the_re
     assert_eq!(made, [("doors", 1), ("ducts", 1), ("floors", 1), ("pipes", 1), ("rooms", 1), ("storeys", 2), ("walls", 4), ("windows", 1)]);
     // The beam, the stair and the chair: each listed, none dropped.
     let left: Vec<(&str, usize)> = b.left_out.iter().map(|(c, n, _)| (c.as_str(), *n)).collect();
-    assert_eq!(left, [("IFCBEAM", 1), ("IFCFURNITURE", 1), ("IFCSTAIR", 1)]);
+    // Call 50: what the model calls a kind of thing is said in words.
+    assert_eq!(left, [("beam", 1), ("furniture", 1), ("stair", 1)]);
     assert!(b.left_out.iter().all(|(_, _, why)| why == "this program has no element for it"));
     assert!(b.notes.iter().any(|n| n.contains("the model is in metres")));
     job.derive();
@@ -97,9 +98,196 @@ fn what_is_not_a_model_or_holds_nothing_to_bring_in_is_refused_and_the_job_left_
     // in... but the slab, the room and the runs still do, and the walls are listed.
     let text = String::from_utf8(model()).unwrap().replace("IFCRECTANGLEPROFILEDEF", "IFCTSHAPEPROFILEDEF");
     let b = import(&mut job, text.as_bytes(), "m.ifc", how).unwrap();
-    assert!(b.left_out.iter().any(|(c, n, why)| c == "IFCWALL" && *n == 4 && why.contains("not a plain shape")), "{:?}", b.left_out);
-    assert!(b.left_out.iter().any(|(c, _, why)| c == "IFCDOOR" && why.contains("fills no hole in a wall that was brought in")), "{:?}", b.left_out);
+    assert!(b.left_out.iter().any(|(c, n, why)| c == "wall" && *n == 4 && why.contains("not a plain shape")), "{:?}", b.left_out);
+    assert!(b.left_out.iter().any(|(c, _, why)| c == "door" && why.contains("fills no hole in a wall that was brought in")), "{:?}", b.left_out);
     assert_eq!(b.made.get("walls"), None);
     assert_eq!(b.made.get("floors"), Some(&1));
     let _ = before;
+}
+
+// ---- The fifteenth judgment, part A. Each is the made-up model with one thing changed.
+
+/// The text of the thing numbered `id` in a model's file, after its `#id=`.
+fn thing(text: &str, id: &str) -> String {
+    let start = format!("{id}=");
+    text.lines().find(|l| l.starts_with(&start)).unwrap_or_else(|| panic!("no {id}"))[start.len()..].trim_end_matches(';').to_string()
+}
+
+/// What a thing is given, in order: the parts between its outer brackets, cut at the
+/// commas that are not inside inner brackets or quotes.
+fn given(thing: &str) -> Vec<String> {
+    let inner = &thing[thing.find('(').unwrap() + 1..thing.rfind(')').unwrap()];
+    let (mut parts, mut depth, mut quoted, mut part) = (Vec::new(), 0, false, String::new());
+    for c in inner.chars() {
+        match c {
+            '\'' => quoted = !quoted,
+            '(' if !quoted => depth += 1,
+            ')' if !quoted => depth -= 1,
+            ',' if !quoted && depth == 0 => {
+                parts.push(std::mem::take(&mut part));
+                continue;
+            }
+            _ => {}
+        }
+        part.push(c);
+    }
+    parts.push(part);
+    parts
+}
+
+/// The number of the first thing of a class in the file, and the file with one of its
+/// lines swapped for another.
+fn first(text: &str, class: &str) -> String {
+    let l = text.lines().find(|l| l.contains(&format!("={class}("))).unwrap_or_else(|| panic!("no {class}"));
+    l[..l.find('=').unwrap()].to_string()
+}
+
+fn swapped(text: &str, id: &str, new: &str) -> String {
+    let start = format!("{id}=");
+    text.lines().map(|l| if l.starts_with(&start) { format!("{id}={new};") } else { l.to_string() }).collect::<Vec<_>>().join("\n") + "\n"
+}
+
+fn text() -> String {
+    String::from_utf8(model()).unwrap()
+}
+
+const HOW: Entered = Entered { status: Status::Assumed, source: "the designer's model (made up)" };
+
+fn fresh() -> Job {
+    Job::new("brought in (not a real job)", "test", "test")
+}
+
+#[test]
+fn j15_3_a_building_placed_at_a_height_does_not_lift_its_walls_off_their_floor() {
+    // The site is placed 50 m up. Everything in the model is placed from it.
+    let t = text();
+    let site_at = given(&thing(&t, &given(&thing(&t, &first(&t, "IFCSITE")))[5]))[1].clone();
+    let point = given(&thing(&t, &site_at))[0].clone();
+    let lifted = swapped(&t, &point, "IFCCARTESIANPOINT((0.0,0.0,50.0))");
+    let mut job = fresh();
+    let b = import(&mut job, lifted.as_bytes(), "lifted.ifc", HOW).unwrap();
+    // 50 m is 164.042 ft. The storeys still say their floors are at 0 and at 8 ft.
+    assert!(b.notes.iter().any(|n| n.contains("2 of the model's storeys are placed 164.042 ft from where each says its floor is")), "{:?}", b.notes);
+    job.derive();
+    let mut q = job.world.query::<(&Node, &building::Level)>();
+    let mut floors: Vec<f64> = q.iter(&job.world).map(|(_, l)| l.elevation.feet().unwrap()).collect();
+    floors.sort_by(f64::total_cmp);
+    assert_eq!(floors, [0.0, 8.0]);
+    // No wall is lifted off its floor, and the figures are those of the model on the ground.
+    let mut q = job.world.query::<(&Node, &building::Wall, &Measure)>();
+    let walls: Vec<(Option<f64>, f64)> = q.iter(&job.world).map(|(_, w, m)| (w.base_offset.as_ref().and_then(|o| o.feet()), m.0["net_area"].value.unwrap())).collect();
+    assert_eq!(walls.len(), 4);
+    assert!(walls.iter().all(|(offset, _)| offset.is_none()), "{walls:?}");
+    let mut nets: Vec<f64> = walls.iter().map(|w| w.1).collect();
+    nets.sort_by(f64::total_cmp);
+    assert_eq!(nets, [148.0, 160.0, 219.0, 240.0]);
+    // The duct is 7 ft above the ground floor, as it was.
+    let mut q = job.world.query::<(&Kind, &building::Segment)>();
+    let duct = q.iter(&job.world).find(|(k, _)| **k == Kind::Duct).unwrap().1.offset.feet();
+    assert_eq!(duct, Some(7.0));
+}
+
+#[test]
+fn j15_11_12_22_what_is_not_read_is_listed_and_counted() {
+    let t = text();
+    // The south wall's body given twice over: a body of two pieces.
+    let wall = first(&t, "IFCWALL");
+    let shape = given(&thing(&t, &wall))[6].clone();
+    let rep_list = given(&thing(&t, &shape))[2].clone();
+    let rep = rep_list.trim_matches(|c| c == '(' || c == ')').to_string();
+    let parts = given(&thing(&t, &rep));
+    let solid = parts[3].trim_matches(|c| c == '(' || c == ')').to_string();
+    let two = swapped(&t, &rep, &format!("IFCSHAPEREPRESENTATION({},{},{},({solid},{solid}))", parts[0], parts[1], parts[2]));
+    // The beam given no place.
+    let beam = first(&two, "IFCBEAM");
+    let mut b_parts = given(&thing(&two, &beam));
+    b_parts[5] = "$".to_string();
+    let two = swapped(&two, &beam, &format!("IFCBEAM({})", b_parts.join(",")));
+    // And the chair's number used a second time, for another chair.
+    let chair = first(&two, "IFCFURNITURE");
+    let again = two.replace("ENDSEC;\nEND-ISO", &format!("{chair}={};\nENDSEC;\nEND-ISO", thing(&two, &chair).replace("'Chair'", "'Another chair'")));
+    assert_ne!(again, two);
+    let mut job = fresh();
+    let b = import(&mut job, again.as_bytes(), "odd.ifc", HOW).unwrap();
+    assert_eq!(b.made.get("walls"), Some(&3));
+    let left: Vec<(&str, usize, &str)> = b.left_out.iter().map(|(c, n, why)| (c.as_str(), *n, why.as_str())).collect();
+    assert!(left.contains(&("wall", 1, "its body is made of more than one piece: only a body of one piece is read")), "{left:?}");
+    assert!(left.contains(&("beam", 1, "the model gives it no place, and this program has no element for it")), "{left:?}");
+    // The door that was in that wall is listed too: nothing is dropped unsaid.
+    assert!(left.iter().any(|(c, n, why)| *c == "door" && *n == 1 && why.contains("fills no hole in a wall that was brought in")), "{left:?}");
+    assert!(b.notes.iter().any(|n| n.starts_with("1 number in the file is used by more than one thing")), "{:?}", b.notes);
+}
+
+#[test]
+fn j15_21_another_model_stands_on_the_jobs_own_storeys() {
+    let mut job = fresh();
+    import(&mut job, &model(), "made-up-house.ifc", HOW).unwrap();
+    let storeys = |job: &mut Job| {
+        let mut q = job.world.query::<(&Node, &Kind)>();
+        q.iter(&job.world).filter(|(_, k)| **k == Kind::Storey).count()
+    };
+    assert_eq!(storeys(&mut job), 2);
+    // The same model again: everything in it is in the job already. Nothing is made
+    // twice; it is refused, each thing with why, and the job is as it was.
+    let before = save(&mut job);
+    let why = import(&mut job, &model(), "made-up-house.ifc", HOW).unwrap_err();
+    assert!(why.starts_with("nothing in the model but its storeys could be brought in"), "{why}");
+    for said in ["a duct in this very place is already on this storey", "a pipe in this very place is already on this storey", "a floor with this very outline is already on this storey", "one wall drawn over another would be counted twice"] {
+        assert!(why.contains(said), "{said}: {why}");
+    }
+    assert_eq!(save(&mut job), before);
+    // With the duct taken out of the job, the model brought in again, as another
+    // trade's model of the same house would come: the duct stands on the job's own
+    // ground storey, and no storey is made.
+    let duct = {
+        let mut q = job.world.query::<(&Node, &Kind)>();
+        q.iter(&job.world).find(|(_, k)| **k == Kind::Duct).map(|(n, _)| n.path.clone()).unwrap()
+    };
+    plumbline_world::editing::remove(&mut job, &duct).unwrap();
+    let b = import(&mut job, &model(), "made-up-house.ifc", HOW).unwrap();
+    assert_eq!(storeys(&mut job), 2);
+    assert_eq!((b.made.get("storeys"), b.made.get("ducts"), b.made.len()), (None, Some(&1), 1));
+    assert!(b.notes.iter().any(|n| n.contains("the job already has \"Ground\", \"Roof\"")), "{:?}", b.notes);
+    for kind in [Kind::Wall, Kind::Floor, Kind::Duct, Kind::Pipe] {
+        let mut q = job.world.query::<&Kind>();
+        assert_eq!(q.iter(&job.world).filter(|k| **k == kind).count(), if kind == Kind::Wall { 4 } else { 1 }, "{kind:?}");
+    }
+    let mut q = job.world.query::<(&Node, &Kind)>();
+    let (ground, on) = (q.iter(&job.world).find(|(n, k)| **k == Kind::Storey && n.name == "Ground").map(|(n, _)| n.path.clone()), q.iter(&job.world).find(|(_, k)| **k == Kind::Duct).and_then(|(n, _)| n.parent.clone()));
+    assert_eq!(ground, on);
+    // A job whose storey of that name is at another height: refused, with both heights.
+    let mut other = fresh();
+    plumbline_world::editing::storey(&mut other, "Ground", "1 ft", "9 ft", Entered { status: Status::Known, source: "made-up survey" }).unwrap();
+    let before = save(&mut other);
+    let why = import(&mut other, &model(), "made-up-house.ifc", HOW).unwrap_err();
+    assert!(why.contains("already has a storey called \"Ground\" with its floor at 1 ft") && why.contains("has its floor at 0 ft"), "{why}");
+    assert_eq!(save(&mut other), before);
+    // Two storeys of one name in one model: the later is named with its height.
+    let t = text();
+    let roof = t.lines().find(|l| l.contains("=IFCBUILDINGSTOREY(") && l.contains("'Roof'")).unwrap().to_string();
+    let twins = t.replace(&roof, &roof.replace("'Roof'", "'Ground'"));
+    let mut job = fresh();
+    let b = import(&mut job, twins.as_bytes(), "twins.ifc", HOW).unwrap();
+    assert!(b.notes.iter().any(|n| n.contains("more than one storey called \"Ground\"") && n.contains("\"Ground, at 8 ft\"")), "{:?}", b.notes);
+    assert_eq!(storeys(&mut job), 2);
+}
+
+#[test]
+fn j15_25_a_wall_that_leans_is_not_upright_and_things_keep_the_models_names() {
+    let t = text();
+    let wall = first(&t, "IFCWALL");
+    let shape = given(&thing(&t, &wall))[6].clone();
+    let rep = given(&thing(&t, &shape))[2].trim_matches(|c| c == '(' || c == ')').to_string();
+    let solid = given(&thing(&t, &rep))[3].trim_matches(|c| c == '(' || c == ')').to_string();
+    let way = given(&thing(&t, &solid))[2].clone();
+    // Two degrees off upright: 3 3/8 in out in 8 ft.
+    let leaning = swapped(&t, &way, "IFCDIRECTION((0.0349,0.0,0.99939))");
+    let mut job = fresh();
+    let b = import(&mut job, leaning.as_bytes(), "leaning.ifc", HOW).unwrap();
+    assert!(b.left_out.iter().any(|(c, n, why)| c == "wall" && *n == 1 && why == "it does not stand upright"), "{:?}", b.left_out);
+    // The three that stand are called what the model calls them.
+    let mut q = job.world.query::<(&Node, &Kind)>();
+    let mut names: Vec<String> = q.iter(&job.world).filter(|(_, k)| matches!(**k, Kind::Wall | Kind::Floor | Kind::Duct | Kind::Pipe)).map(|(n, _)| n.name.clone()).collect();
+    names.sort();
+    assert_eq!(names, ["Cold water pipe", "East wall", "Floor slab", "North wall", "Supply duct", "West wall"]);
 }

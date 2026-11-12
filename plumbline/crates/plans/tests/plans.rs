@@ -138,3 +138,40 @@ fn a_picture_too_big_to_show_whole_is_shown_smaller_and_keeps_its_own_size() {
     assert!(page.lost.iter().any(|l| l.contains("6000 by 3000 dots and is shown at 4096 by 2048")), "{:?}", page.lost);
     assert_eq!(plumbline_plans::size_of(&bytes, 1).unwrap().2, [6000.0, 3000.0]);
 }
+
+// ---- The fifteenth judgment, part A.
+
+#[test]
+fn j15_18_24_a_line_blanked_out_and_a_line_off_the_page_are_not_there_to_snap_to() {
+    // A sheet 400 by 300. Three lines drawn, then a white box filled over the second:
+    // the first stays, the second is under the box, the third is drawn after the box and
+    // stays. A fourth line is wholly off the sheet; a fifth runs off its right edge.
+    let content = "0 0 0 RG 1 w\n\
+        50 250 m 350 250 l S\n\
+        120 150 m 280 150 l S\n\
+        1 1 1 rg 100 100 200 100 re f\n\
+        0 0 0 RG 110 120 m 290 120 l S\n\
+        500 50 m 600 50 l S\n\
+        300 40 m 450 40 l S";
+    let page = read(&pdf(400, 300, content), 1).unwrap();
+    let mut lines = rounded(&page.lines);
+    lines.sort();
+    assert_eq!(lines, [[[50, 250], [350, 250]], [[110, 120], [290, 120]], [[300, 40], [400, 40]]]);
+    let lost = page.lost.join(" | ");
+    assert!(lost.contains("1 line is under a white box drawn over it"), "{lost}");
+    assert!(lost.contains("1 line is drawn off the page and not kept; 1 line that runs off it is cut at its edge"), "{lost}");
+    // The picture agrees: no ink where the blanked line was (150 up from the bottom, at
+    // the sheet's middle), ink on the line above it.
+    let k = f64::from(page.picture.width) / 400.0;
+    let dark = |x: f64, up: f64| {
+        let (px, py) = ((x * k) as u32, ((300.0 - up) * k) as u32);
+        (py.saturating_sub(3)..=py + 3).any(|y| page.picture.rgba[((y * page.picture.width + px) * 4) as usize] < 100)
+    };
+    assert!(!dark(200.0, 150.0), "the blanked line shows in the picture");
+    assert!(dark(200.0, 250.0) && dark(200.0, 120.0));
+    // A white shape that is not a square over a line: the line is kept, and that is said.
+    let content = "0 0 0 RG 1 w\n120 150 m 280 150 l S\n1 1 1 rg 100 100 m 300 100 l 200 220 l h f";
+    let page = read(&pdf(400, 300, content), 1).unwrap();
+    assert_eq!(rounded(&page.lines), [[[120, 150], [280, 150]]]);
+    assert!(page.lost.iter().any(|l| l.contains("1 white shape is drawn over lines and is not a square")), "{:?}", page.lost);
+}

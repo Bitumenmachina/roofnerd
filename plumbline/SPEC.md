@@ -689,17 +689,22 @@ window, the left panel's Drawings to trace.
   filled shapes. What the page could not give is listed: curves (known by their ends
   only), words (drawn, not read), pictures inside the page, a scan or a picture (nothing
   to snap to), lines under a point long, lines in white, dashed lines (kept whole),
-  lines cut or hidden by a mask, a mask that is not a square, a file that does not end
-  as a PDF does. A page with no size of its own and a file with no pages are refused.
+  lines cut or hidden by a mask, a mask that is not a square, lines wholly under a
+  white square filled over them (not kept), a white shape over lines that is not a
+  square (the lines kept), lines drawn off the page (not kept) or running off it (cut
+  at its edge), a file that does not end as a PDF does. A page with no size of its own and a file with no pages are refused.
 * **Its scale is one dimension**: two places on the page, both on it and at least one
   unit of it apart, and the distance between them. A place on the page is then a place
   on the plan: `at` plus the page place times the feet to a unit. Lining up moves `at`
   so a place on the page is a place on the plan, and the drawing keeps the two places
   (`lined_up`).
-* **A scale set again moves nothing that was traced** (call 46). What was traced at the
-  earlier scale is listed, kept on the drawing (`earlier`: the scale and the paths) and
-  listed by `drawings` until each is gone. A drawing that was lined up stays lined up:
-  its corner moves so the place it was lined up by does not.
+* **A scale set again, or a second line-up, moves nothing that was traced** (calls 46
+  and 50). What was traced before is what the verb gives back, is kept on the drawing
+  (`earlier`: the scale and the corner the sheet had, and the paths), and is said by
+  `drawings`, by a flagged row among the drawing's own values, by `takeoff` and in the
+  window, until each thing is gone or the drawing is back at that scale and in that
+  place. A drawing that was lined up stays lined up when its scale changes: its corner
+  moves so the place it was lined up by does not.
 * **Nothing is traced over a drawing with no scale.** In the window, a storey with such
   a drawing under it draws nothing until the scale is set.
 * **A drawing is traced over on its own storey.** In the window what is drawn takes its
@@ -717,35 +722,54 @@ window, the left panel's Drawings to trace.
 
 * **A table is rows of cells as text.** `plumbline-sheets` reads them out of a CSV file
   or one sheet of an XLSX workbook, and lists what the file held that is not in the
-  rows: a workbook's other sheets, how many cells held a formula (each read as what it
-  last worked out to), an error or a date, merged cells, and how cells were shown; a CSV
-  file that was not UTF-8, or whose cells were parted by semicolons or tabs. CSV written
-  by this program and read back is the same rows.
+  rows: a workbook's other sheets, and which of them are hidden; how many cells held a
+  formula (each read as what it last worked out to), an error, a date (read as the
+  words "a date or a time", never as a figure) or a percentage (read as shown, `9.05%`,
+  never as the fraction kept); merged cells, and how cells were shown; a CSV file that
+  was not UTF-8, or whose cells were parted by semicolons or tabs. With no sheet named,
+  a workbook's first sheet on show is read. Each row comes with its number in the file.
+  An empty file and one saved as UTF-16 are refused for what they are. CSV written by
+  this program and read back is the same rows, but that a cell a spreadsheet would run
+  as a formula is written with an apostrophe before it and read back without.
+* **A comma in a figure parts thousands or the figure is not read** (`9,05` and
+  `1.204,50` are refused by row): `units::commas_part_thousands`, the rule a typed
+  price is read by.
 * **A price list** is, for each material, its own price and how it is ordered, then
   each supplier's price: `Material, Bought by, Price, Supplier, How sure, Where from,
   Ordered at, Whole ones only, Ordered at: how sure, Ordered at: where from`. Written
   out and brought into a job with none of it (`--add`), it gives the same price list,
   value for value, and the same CSV.
 * **Somebody else's price list is read by its headings**, found within its first 25
-  rows: what is priced (Material, Item, Description, Product, Name), by what (Bought by,
+  rows: what is priced (Material, Description, Product, Name; Item where none of those
+  is there, since beside a description "Item" is a part number), by what (Bought by,
   Unit, UOM, U/M, Per, Sold by), the price (Price, Unit price, Cost, Unit cost, Each,
   Net price), whose (Supplier, Vendor). A list with no column for one of the first three
-  is refused whole. With no columns for how sure and where from, those are asked for
-  (`--status`, `--source`) and the list is refused without them. A material is matched
-  by its name (section 4's one name); its unit has to be the one the job buys it by.
+  is refused whole. How sure its prices are and where they came from is what whoever
+  brings it in says (`--status`, `--source`), and that stands over the list's own
+  columns for it, with a note; with nobody saying, the list's own columns are read, and
+  a list with neither is refused. A material is matched by its name (section 4's one
+  name); its unit has to be the one the job buys it by (`lbs` and `lb.` are `lb`). A
+  thing priced twice in one list at two prices: the first is taken, the second is not
+  used. A supplier's row cannot say how the material is ordered; that part is noted as
+  not read.
 * **Every row is accounted for**: set, the same as the job already has, or not used
-  with why (no such material, the wrong unit, a price that is not a figure, no price).
-  Every column not used and every row above the headings is named.
+  with why (no such material, the wrong unit, a price that is not a figure, no price),
+  by its number in the file. Every column not used and every row above the headings is
+  named, and anything else the reader has to know is a note.
 * **An assembly library** is the job's conditions, one row for each line a condition
   puts on what it goes on, every value with how sure and where from. Only a table this
   program wrote is read. An assembly the job already has by that name is left as it is:
-  counted as the same if it is, listed if it differs.
+  counted as the same if it is, listed if it differs. Rows of one name that disagree on
+  what the assembly goes on or on its cost code are refused, all of them.
 * **A prior estimate** is read by its headings (Description or Item; Quantity; Unit;
   Unit cost, Unit price or Rate; Amount, Total or Extension; Class; Cost code) into a
   Prior element under the job, as sure as whoever brought it says. A row with no figure
-  at all is listed as not used. It is no part of the job's price.
+  at all, and a row that is a total of rows above it, are listed as not used. An amount
+  that is not its quantity times its unit cost is kept as written and noted. It is no
+  part of the job's price.
 * **`compare`** sets each prior line beside every line of the job called the same (not
-  those switched off): the job's quantity where its lines are in one unit, what they
+  those switched off); prior lines that go by one name are added together first, and
+  a difference is flagged as the less sure of its two sides is: the job's quantity where its lines are in one unit, what they
   come to, how sure, and the job less the prior in quantity (where the units agree) and
   in amount. A prior line with no amount is its quantity times its unit cost, and says
   so. Then the job's lines the prior estimate does not name, and the prior's the job
@@ -757,16 +781,28 @@ window, the left panel's Drawings to trace.
 ... --source ...`.
 
 * **Read:** an IFC2x3 or IFC4 file, with BIMCraft's STEP reader. Each building storey
-  (its floor height; its height is the way up to the next, and the top one's is
-  Unknown). Each wall whose body is a rectangle pushed straight up: its centre line, its
+  (its floor height as the storey says it; its height is the way up to the next, and
+  the top one's is Unknown). What stands on a storey is measured from where the storey
+  is placed, which is not its stated height when the building is placed at a height. A
+  storey with the name and floor height of one the job has is that storey (another
+  trade's model stands on the job's own floors); the same name at another height is
+  refused. Each wall whose body is a rectangle pushed straight up: its centre line, its
   thickness, its height, its base where that is not its storey's floor. Each door and
   window that fills a hole in such a wall: its width and height, its middle along the
   wall, its sill. Each slab whose body is an outline pushed straight up or down. Each
   space, as a room at a point inside it. Each duct, pipe, cable tray and cable whose
   body is a circle or a rectangle pushed along its run, level, sloping or upright, on
   the system the file puts it on where that is one of section 4's.
-* **Listed and not brought in:** everything else that has a place in the model, by what
-  the file calls it, how many, and why.
+* **Listed and not brought in:** everything else the model names, placed or not, by
+  what it is in words (a beam, a stair), how many, and why: no element for it; a body of
+  more than one piece; a body that is not a plain pushed shape; a wall not upright or a
+  floor not level to an eighth of an inch in eight feet; a floor whose outline has a
+  hole; a floor or a run already in that very place.
+* **Noted:** a floor the model cuts an opening in comes in whole, flagged Assumed, its
+  source saying it is more than the floor; numbers used twice in the file; storeys
+  placed away from their stated heights; storeys shared with the job.
+* **Names:** a wall, a floor and a run are called what the model calls them, with the
+  number in the file only where two would share a name. A room's point is inside it.
 * **Lengths** are turned into feet from the file's unit and kept to a ten-thousandth of
   a foot. The report says the unit.
 * **Certainty:** as whoever brings the model in says. Each value's source is that, the

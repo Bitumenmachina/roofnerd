@@ -523,11 +523,17 @@ pub fn same_name(a: &str, b: &str) -> bool {
 /// Whether a unit is the hour, or any other measure of time, however it is written: a
 /// material is bought by weight, by size or by the piece, never by time.
 pub fn is_hours(unit: &str) -> bool {
-    let plain: String = unit.to_ascii_lowercase().chars().filter(|c| c.is_ascii_alphabetic()).collect();
-    matches!(
-        plain.as_str(),
-        "hr" | "hrs" | "h" | "hour" | "hours" | "mh" | "mhr" | "mhrs" | "manhour" | "manhours" | "manhr" | "manhrs" | "min" | "mins" | "minute" | "minutes" | "day" | "days" | "manday" | "mandays" | "shift" | "shifts" | "week" | "weeks" | "wk" | "wks" | "month" | "months" | "mo" | "year" | "years" | "yr" | "yrs" | "sec" | "secs" | "second" | "seconds"
-    )
+    // Each word of the unit, in small letters: "crew-day" is crew and day, "lb/workhour"
+    // is asked about "workhour" alone by whoever calls this with the part after the stroke.
+    let lower = unit.to_ascii_lowercase();
+    let words: Vec<&str> = lower.split(|c: char| !c.is_ascii_alphabetic()).filter(|w| !w.is_empty()).collect();
+    // A word that is a measure of time, or ends in one (workhour, manweek, crewday), or is
+    // one of the short forms an estimate writes labor in (MH, LH, WH: man, labor, work hour).
+    const TIMES: [&str; 22] = ["hr", "hrs", "hour", "hours", "min", "mins", "minute", "minutes", "sec", "secs", "second", "seconds", "day", "days", "shift", "shifts", "week", "weeks", "wk", "wks", "month", "months"];
+    const SHORT: [&str; 12] = ["h", "mh", "mhr", "mhrs", "lh", "lhr", "wh", "whr", "md", "cd", "yr", "yrs"];
+    let all: String = words.concat();
+    words.iter().any(|w| TIMES.iter().any(|t| w.ends_with(t) && (w.len() == t.len() || w.len() >= t.len() + 3)) || SHORT.contains(w) || matches!(*w, "year" | "years"))
+        || TIMES.iter().any(|t| all.ends_with(t) && all.len() >= t.len() + 3 && ["man", "men", "crew", "work", "labor", "labour", "person", "worker"].iter().any(|who| all.starts_with(who)))
 }
 
 /// Overhead and profit are percentages, on the job.
