@@ -2737,9 +2737,31 @@ what was built, what it changed, and what was run.
 **Run so far:** `cargo test -p plumbline-app` (3 pass, one new: the words), the three
 `build.rs` tests of the floor verb (pass), `tools/portmap.sh` (206 items: 124 ported,
 82 ours), the language gate (pass). The window was opened on the made-up house and four
-pictures were taken and read: the layout is as described. **The nine window
-demonstrations are being run again on it now**, each converted to click buttons by
-name; what each showed is written below as it finishes.
+pictures were taken and read: the layout is as described.
+
+**The nine window demonstrations, run on `1fe4d1c`** (each converted to click buttons
+by the word on them; their pictures under `demos/captured` are from that commit):
+
+| Demonstration | Result |
+|---|---|
+| `draww` (a house drawn from an empty job) | PASS, the same hand figures as before: 5 walls, 96 LF, net faces 123, 132, 144, 195, 204 SF; rooms 162.75 and 193.75 SF |
+| `fieldw` (field entry, and the verify-in-field tab) | PASS; byte for byte the command line's twin; the Verify in field tab shows the five rows and "$518.40 riding" worked by hand, then one row |
+| `clashw` (fittings, a connection, clashes) | PASS |
+| `house` (the made-up whole house walked round) | PASS |
+| `d2` (the roof: pitch, eave, gable, condition, by their buttons) | PASS |
+| `d4w` (allowance and unit cost typed on what is selected) | PASS |
+| `d5w` (the estimate sheet; overhead, profit, material, labor) | PASS |
+| `planw` (a real scanned sheet and a vector plan traced) | PASS |
+| `buildw` (floor, rooms and roof with their tools over a traced plan) | **The session ran and the window shows the hand figures** (walls 120.00 LF, floor 600.00 SF, rooms 565.50 SF, roof 670.82 SF, eaves 100, hips 60, ridge 10 LF: picture 05). **The script then failed in its own closing check**, which read a room's name from the wrong place in the job file. That check is corrected; the demonstration has not been run again since. |
+
+**Pictures read so far, as a person:** draw 02 and 07; field 01 (model and sheet);
+house 01; d2 05; d4 04; clash 04; build 05. Not yet read: the rest.
+
+**Seen in those pictures and not right yet:** the sheet still has a table headed "To
+settle"; a level offers Condition and Unit cost, which price nothing on a level; a
+flagged figure that has a value is listed under To verify as having "no figure"; the
+roof is not drawn on the plan of a level after the Roof tool makes it; a long job title
+is cut mid-word on the top bar. Each is being fixed with the next change.
 
 ## The verify-in-field list. How its demonstration will be run (written before it is built)
 
@@ -2796,3 +2818,81 @@ The judge tries to get a question off the list without a measurement, to get dol
 counted twice in the total, to find a thing that is not Known and priced and missing
 from the list, and to make the list and the Clashes tab disagree about what is a
 question.
+
+## Exports and lenses. How their demonstration will be run (written before they are built)
+
+Order step 8, release item 8: "xlsx with live formulas, CSV, and IFC4 validated by
+IfcOpenShell. Supplier, subcontractor and PM lenses come out of one estimate." Q17 has
+what is in each lens (the working assumption there stands).
+
+**The job** is the made-up priced job (`plumbline priced`, the job of D5, every figure
+in it worked by hand in `demos/d5.sh`), with overhead 10 and profit 8 set on it.
+
+**The estimate, by hand** (from D5's lines): Material $8,628.10 (six lines: 4,150.70 +
+377.34 + 2,490.42 + 226.40 + 1,113.24 + 270.00); Labor $2,147.97 (1,207.48 + 724.49 +
+216.00); Fabrication $402.50; Supervision $3,800.00; Subcontract $10,313.86. **Job cost
+$25,292.43**, thirteen lines. Overhead 10%: $2,529.24. Profit 8% of $27,821.67:
+$2,225.73. **Price $30,047.40**, flagged, and leaving out one line (the north plane's,
+which has no price and no class), which it names.
+
+**`export estimate <job> <out.xlsx>`: a workbook whose figures are formulas.**
+
+* Sheet "Estimate": a row a line, with its element, its description, its class, what
+  is priced and its unit to every place the program holds, the price it is extended at,
+  and its amount as a formula, the quantity times the price rounded to the cent. A line
+  with no figure has no amount and says why; a line switched off says so and is in no
+  sum. How sure each is, is a column.
+* Sheet "Recap": each class a formula over the Estimate sheet's amounts; the job cost
+  their sum; overhead and profit each a percentage in a cell of its own and a formula
+  on it; the price their sum; and under it, in words, what the price leaves out.
+* **What the demonstration holds.** The workbook's formulas, worked by a second hand
+  (a short evaluator in the script that knows only ROUND, SUM, SUMIF, the four
+  operations and cell references), come to the figures above to the cent. Then one
+  price is changed **in the workbook** (the south plane's underlayment, $0.90 to
+  $0.95/SF) and the formulas worked again: 419.2627 SF at $0.95 is $398.30, up $20.96;
+  Material $8,649.06; job cost $25,313.39; overhead $2,531.34; profit 8% of $27,844.73,
+  $2,227.58; **price $30,072.31**. The same price changed in the job gives the same
+  figures from the program. The formulas are live, and they are the program's
+  arithmetic.
+
+**`export estimate <job> <out.csv>`**: the same rows as values. Brought back in as an
+estimate made before (`import prior`) and set against the job it came from
+(`compare`), every line agrees and nothing is left over: the CSV round-trips.
+
+**The lenses**, each `export <lens> <job> <out.csv|out.xlsx>`, each from the one estimate:
+
+* **Supplier** (what to quote; none of our prices): Copper, 16 oz: 461.1890 + 276.7134
+  = **737.90 lb**, two lines. Copper, 20 oz: 123.6931 + 30 = **153.69 lb**, two lines,
+  Assumed. Underlayment: 419.2627 + 251.5576 = **670.82 SF**, two lines. No price, no
+  amount, no labor. It says the north plane's line is left out and why.
+* **Subcontractor** (the scope of the lines classed Subcontract; none of our prices):
+  the west plane, standing seam roofing, **251.56 SF**. One line.
+* **PM** (every line, its hours, what is ordered, its class and its code; the budget by
+  class; what is to verify in the field; no overhead, no profit, no price): the
+  thirteen lines; hours 29.8328 labor, 6.7082 fabrication, 40.0000 supervision; the
+  budget by class as above, **$25,292.43**; and the verify-in-field list.
+* A lens that leaves a column out says at its head what it leaves out.
+
+**`export ifc <job> <out.ifc>`: an IFC4 model of the building.** On the made-up whole
+house (`plumbline house`): two levels; sixteen walls (eight a level, 210.00 LF a level)
+with their doors (5 and 4) and windows (8 and 9) in openings; two floors of 1,120.00 SF;
+ten rooms; the roof's four planes; the ducts, pipes, conduit and cable, their fittings,
+the equipment and the fixtures, each on its system. Lengths in feet. Every value's
+status and source go with it in a property set, so what is Assumed is still said to be
+in the model another program reads.
+
+* **Validated by IfcOpenShell**: `ifcopenshell.validate` on the file reports no error,
+  and IfcOpenShell counts the same sixteen walls, nine doors, seventeen windows, two
+  slabs that are floors, ten spaces.
+* **Read back by this program** (`import ifc` into an empty job): the same two levels
+  at their elevations, the same 210.00 LF of walls a level and 1,120.00 SF of floor, as
+  the takeoff of the job it came from.
+* **What an IFC file does not carry is listed, not dropped in silence**: the estimate's
+  lines and prices, the drawings, what was measured on site beyond the status and source
+  of each value. The export says so, by count.
+
+The judge tries to make a formula in the workbook disagree with the program by a cent,
+to find a line the workbook's sums count that the program leaves out (or the other
+way), to find a price of ours in the supplier's or the subcontractor's lens, to get a
+quantity in a lens that is not the estimate's, and to find something IfcOpenShell
+rejects or this program reads back differently.

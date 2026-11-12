@@ -40,6 +40,8 @@ demos/clashw.sh            # fittings, a connection and the clashes in the windo
 demos/plan.sh              # a plan laid under a storey, given its scale from one dimension and traced over, at the command line
 demos/field.sh             # what is measured on site put on a traced job: the floor above moves and the price with it, one clash clears, one becomes a finding
 demos/fieldw.sh            # the same in the window, each reading typed as a laser in keyboard mode types it; pictures in demos/captured/field
+demos/vif.sh               # the verify-in-field list: each question, what to measure, and the dollars riding on it, before and after measuring
+demos/export.sh            # the estimate as a workbook of formulas (worked again by a second hand), as CSV, three lenses, and the building as IFC4 checked by IfcOpenShell
 demos/imports.sh           # a price list and an assembly library out as CSV and back; a supplier's list from CSV and from a workbook; a prior estimate set against the job
 demos/model.sh             # another trade's model (IFC) brought in: what comes in, what is listed instead, and the clash it hid
 demos/planw.sh             # the same in the window, on a real scanned sheet and on a vector plan; pictures in demos/captured/plan
@@ -161,6 +163,36 @@ beside the job and set against it line by line with `compare`; it adds nothing t
 job's price. A model from another trade or a designer (IFC) comes in as storeys, walls
 with their doors and windows, floors, rooms, ducts, pipes, trays and cables; what the
 program has no element for, or cannot read the shape of, is listed with why.
+
+## Send it out
+
+```
+plumbline export estimate job.json estimate.xlsx        # a workbook: each amount, the recap and the price are formulas
+plumbline export estimate job.json estimate.csv         # the same lines as values
+plumbline export supplier job.json to-quote.xlsx        # what to quote, by what is bought; none of our prices
+plumbline export subcontractor job.json scope.csv       # the scope classed Subcontract; none of our prices
+plumbline export pm job.json for-the-pm.xlsx            # every line with its hours, the budget by class, what is to verify; no markup
+plumbline export ifc job.json building.ifc              # the building as an IFC4 model, lengths in feet
+```
+
+In the workbook, change a quantity or a price and the amounts, the recap and the price
+follow: the formulas are the program's own arithmetic, to the cent. Each lens is the one
+estimate with what its reader is not shown left out, and says at its head what that is.
+The IFC model carries every value's status and source with it (what is Assumed here is
+still said to be Assumed there), and the command lists what a building model has no
+place for. An estimate written as CSV reads back in with `import prior`.
+
+## What is left to verify
+
+```
+plumbline vif job.json
+```
+
+The verify-in-field list: every thing with a value that can be measured or checked on
+site and is not Known, and every clash that rests on one, with the dollars of the
+estimate riding on each, largest first. In the window it is the sheet's **Verify in
+field** tab, and the top bar says how many there are and what rides on them; a click on
+a row selects the thing in the model window, where its values say Measure or Check.
 
 ## Measure on site
 

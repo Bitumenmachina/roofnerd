@@ -110,7 +110,9 @@ kind = lambda e: e["attributes"].get("pl::class")
 m = lambda e, name: e["attributes"]["pl::measure"][name]
 of = lambda k: [e for e in data if kind(e) == k]
 total = lambda k, name: round(sum(m(e, name)["value"] for e in of(k)), 2)
-rooms = {e["name"]: round(m(e, "floor_area")["value"], 2) for e in of("Room")}
+# What a thing is called is held by what it is under: its name there, to its path.
+called = {path: name for e in data for name, path in e.get("children", {}).items()}
+rooms = {called[e["path"]]: round(m(e, "floor_area")["value"], 2) for e in of("Room")}
 got = {
     "walls": (len(of("Wall")), total("Wall", "plan_length")),
     "floor": (len(of("Floor")), total("Floor", "plan_area")),
