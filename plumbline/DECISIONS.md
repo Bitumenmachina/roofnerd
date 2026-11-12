@@ -2896,3 +2896,30 @@ and plate lengths are not offered to a cost line; when they are they will be Ass
 sourced to this layout and its two rules of thumb. No joists, no rafters, no corner
 or partition backing, no blocking. On plan a wall is still a wall.
 
+### Call 72. The finish can be taken off the walls, and what keeps the water out is seen (2026-11-12)
+
+**Why now.** Q23's working assumption, step 3: waterproofing is to be drawn.
+
+**The call.** A switch under Show, **Finishes** (offered where any wall has a finish
+or a weather barrier priced on it). On, the house is as it was: dressed in what is
+priced. Off, the cladding, the wainscot and the casing round each opening are taken
+off, and what is under them is drawn where it is priced and nowhere else:
+
+* a wall with a weather barrier priced on it ("Sheathing and weather barrier",
+  "house wrap", "building paper", "WRB") is drawn in its barrier, a cool white
+  sheet; a wall with none is bare, as any wall with nothing priced is;
+* an opening with flashing priced on it ("Flashing and sealant") is drawn with its
+  flashing: a strip 4 in wide at its head, down each side and under its sill, on
+  the outside face, as it goes on before the siding.
+
+It is the same rule as the finishes (call 58) and the framing (call 71): the model is
+dressed in what the estimate prices, layer by layer, and each layer has its switch.
+Finishes off and Framing on are two different layers of the same wall.
+
+**The 4 in strip is a drawing size, not a quantity.** Nothing is counted from it; the
+estimate prices flashing by the opening, as its line says.
+
+**Not yet:** roof underlayment and ice barrier under the roofing; dampproofing on the
+foundation wall; flashing at roof lines (step, counter, valley), which the roof's
+lines could carry; the barrier's laps and tape.
+

@@ -208,6 +208,9 @@ pub struct WallDress {
     /// feet. None where nothing priced on it says how it is framed: it is not framed
     /// on a guess.
     pub framing: Option<(f64, f64)>,
+    /// Whether a line priced on it names a weather barrier under its finish ("Sheathing
+    /// and weather barrier", "house wrap", "building paper").
+    pub barrier: bool,
 }
 
 impl WallDress {
@@ -227,6 +230,8 @@ pub struct OpeningDress {
     pub leaf: Option<Said<Leaf>>,
     pub divided: Option<Lites>,
     pub tone: Option<Tone>,
+    /// Whether a line priced on it names its flashing ("Flashing and sealant").
+    pub flashed: bool,
 }
 
 /// Every finish read from the job.
@@ -240,6 +245,14 @@ pub struct Dress {
 }
 
 // ---- Reading a line ----
+
+/// Whether a line names a weather barrier: the sheet that keeps water out of the wall
+/// behind its finish. By the words the trade uses for it.
+pub fn barrier_in(text: &str) -> bool {
+    let w = words(text);
+    let pair = |a: &str, b: &str| w.windows(2).any(|p| p[0] == a && p[1] == b);
+    pair("weather", "barrier") || pair("house", "wrap") || pair("building", "paper") || pair("air", "barrier") || pair("water", "resistive") || w.iter().any(|x| x == "housewrap" || x == "wrb")
+}
 
 /// The words of a text, lower case, split wherever a letter or a digit stops.
 fn words(text: &str) -> Vec<String> {
@@ -650,7 +663,8 @@ pub fn dress(job: &mut Job) -> Dress {
             (said, h.unwrap_or(3.0), h.is_some())
         });
         let framing = on.iter().find_map(|(text, _)| crate::building::framing::named(text));
-        out.walls.insert(w.path.clone(), WallDress { outside, out: out_way, height: w.h, cladding, wainscot, past, framing });
+        let barrier = on.iter().any(|(text, _)| barrier_in(text));
+        out.walls.insert(w.path.clone(), WallDress { outside, out: out_way, height: w.h, cladding, wainscot, past, framing, barrier });
     }
     // Roof planes, openings and gutters.
     for &e in &job.order.clone() {
@@ -670,14 +684,16 @@ pub fn dress(job: &mut Job) -> Dress {
                 // Its color is the one its own line gives, or failing that the first line about the unit.
                 let tone = sash.as_ref().map(|s| s.tone).unwrap_or_else(|| unit.iter().find_map(|(text, _)| tone_in(text)));
                 let divided = unit.iter().find_map(|(text, _)| divided_in(text));
-                out.openings.insert(path, OpeningDress { sash, leaf: None, divided, tone });
+                let flashed = on.iter().any(|(text, _)| words(text).iter().any(|w| w == "flashing" || w == "flashed"));
+                out.openings.insert(path, OpeningDress { sash, leaf: None, divided, tone, flashed });
             }
             Kind::Door => {
                 let unit: Vec<&(String, String)> = on.iter().filter(|(text, _)| about(text, LEAVES, DOOR_KIND, NOT_DOOR)).collect();
                 let leaf = first_and_also(unit.iter().filter_map(|(text, by)| leaf_in(text).map(|l| (l, tone_in(text), by.clone()))), Leaf::said);
                 let tone = leaf.as_ref().map(|l| l.tone).unwrap_or_else(|| unit.iter().find_map(|(text, _)| tone_in(text)));
                 let divided = unit.iter().find_map(|(text, _)| divided_in(text));
-                out.openings.insert(path, OpeningDress { sash: None, leaf, divided, tone });
+                let flashed = on.iter().any(|(text, _)| words(text).iter().any(|w| w == "flashing" || w == "flashed"));
+                out.openings.insert(path, OpeningDress { sash: None, leaf, divided, tone, flashed });
             }
             Kind::Eave => {
                 if let Some((text, by)) = on.iter().find(|(text, _)| named(text, GUTTERS, NOT_GUTTER).is_some()) {
@@ -855,6 +871,18 @@ pub fn said_of(d: &Dress, path: &str, kind: Kind) -> Vec<(String, String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A weather barrier is read by the words the trade uses for it, and from nothing
+    /// else: a line about sheathing alone, or about flashing, names no barrier.
+    #[test]
+    fn a_weather_barrier_is_read_by_its_own_words() {
+        for said in ["Sheathing and weather barrier", "House wrap, taped", "15 lb building paper", "Housewrap", "Air barrier membrane", "WRB, fluid applied", "Water-resistive barrier"] {
+            assert!(barrier_in(said), "{said}");
+        }
+        for said in ["Roof sheathing", "Flashing and sealant", "Batt insulation", "Cedar lap siding, installed", "Wrap the columns in cedar", "Vapor retarder"] {
+            assert!(!barrier_in(said), "{said}");
+        }
+    }
 
     /// The seventeenth judgment's lines, each as a veteran wrote it (J17B-3 to 10).
     #[test]

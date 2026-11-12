@@ -565,6 +565,10 @@ pub fn discipline_colour(d: plumbline_world::Discipline) -> Color {
 pub fn wall_outside() -> Color { hex(0xEDE8DF) }
 pub fn wall_inside() -> Color { hex(0xF4F2EE) }
 pub fn floor_colour() -> Color { hex(0xC9B79C) }
+/// A weather barrier as it hangs on a wall before the siding: a cool white sheet.
+pub fn barrier() -> Color { hex(0xDDE7EE) }
+/// Flashing at an opening, before the trim covers it.
+pub fn flashing() -> Color { hex(0x3E4650) }
 /// Framing lumber as it comes: pale spruce.
 pub fn lumber() -> Color { hex(0xDCC08E) }
 /// Concrete as placed: a footing, a foundation wall.

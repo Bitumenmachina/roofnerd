@@ -656,6 +656,15 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 doc.redraw();
             }));
         }
+        // The finish on the outside walls: off, it is taken off and the weather barrier
+        // and the flashing under it are seen, where they are priced.
+        let finished = snap.dress.walls.values().filter(|d| d.cladding.is_some() || d.wainscot.is_some() || d.barrier).count();
+        if finished > 0 {
+            layer(c, "Finishes", "", theme::dressed(), doc.show.finishes, Some(finished), Box::new(|doc| {
+                doc.show.finishes = !doc.show.finishes;
+                doc.redraw();
+            }));
+        }
         // The frame of each wall whose framing is priced: on, those walls are drawn as
         // their plates, studs and headers in place of their finished faces.
         let framed = snap.dress.walls.values().filter(|d| d.framing.is_some()).count();

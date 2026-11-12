@@ -513,8 +513,11 @@ pub fn rebuild(
                 let has_out = matches!(outside, Outside::Left | Outside::Right);
                 let out = wd.and_then(|d| d.out).map(|o| Vec3::new(o[0] as f32, 0.0, -(o[1] as f32))).unwrap_or(turn * Vec3::Z);
                 let past = wd.map(|d| [d.past[0] as f32, d.past[1] as f32]).unwrap_or([0.0; 2]);
-                let clad = wd.and_then(|d| d.cladding.as_ref()).filter(|_| outside != Outside::Neither);
-                let low = wd.and_then(|d| d.wainscot.as_ref()).filter(|_| outside != Outside::Neither);
+                // With Finishes switched off the cladding and the wainscot are taken off,
+                // and the wall's outside face is its weather barrier where one is priced.
+                let clad = wd.and_then(|d| d.cladding.as_ref()).filter(|_| outside != Outside::Neither && show.finishes);
+                let low = wd.and_then(|d| d.wainscot.as_ref()).filter(|_| outside != Outside::Neither && show.finishes);
+                let wrapped = !show.finishes && wd.is_some_and(|d| d.barrier);
                 // A wall with both faces outdoors, or with no outline to say which face is
                 // out, is dressed on both.
                 let both = wd.is_some_and(|d| d.both()) && (clad.is_some() || low.is_some());
@@ -571,7 +574,7 @@ pub fn rebuild(
                     }
                     build.piece(&p.path, None, meshes.add(plain.mesh()), Transform::IDENTITY, theme::wall_inside(), 0.92, 0.0, true);
                     if !bare.is_empty() {
-                        build.piece(&p.path, None, meshes.add(bare.mesh()), Transform::IDENTITY, theme::wall_outside(), 0.92, 0.0, true);
+                        build.piece(&p.path, None, meshes.add(bare.mesh()), Transform::IDENTITY, if wrapped { theme::barrier() } else { theme::wall_outside() }, if wrapped { 0.55 } else { 0.92 }, 0.0, true);
                     }
                     if let (false, Some(pattern)) = (over.is_empty(), &upper) {
                         build.pattern = Some(pattern.clone());
@@ -602,6 +605,20 @@ pub fn rebuild(
                     let (from, to, sill, head) = (*from as f32, *to as f32, *sill as f32, *head as f32);
                     // What fills the opening: a window or a door, built of its parts.
                     let od = snap.dress.openings.get(hole_path);
+                    // With the finish off, the flashing round an opening that has it
+                    // priced: a strip at the head, down each side and under the sill, on
+                    // the wall's outside face, as it goes on before the siding.
+                    if !show.finishes && has_out && od.is_some_and(|d| d.flashed) {
+                        let w = 4.0 / 12.0;
+                        let mut strips = vec![(from - w, to + w, head, head + w), (from - w, from, sill, head), (to, to + w, sill, head)];
+                        if sill > 0.1 {
+                            strips.push((from - w, to + w, sill - w, sill));
+                        }
+                        for (x0, x1, y0, y1) in strips {
+                            let middle = va + along * ((x0 + x1) / 2.0) + Vec3::Y * ((y0 + y1) / 2.0) + out * (half_t + 0.02);
+                            build.piece(hole_path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(x1 - x0, y1 - y0, 0.03) }, theme::flashing(), 0.4, 0.3, false);
+                        }
+                    }
                     let stood = dress::Part { o: va + along * from + Vec3::Y * sill, x: along, y: Vec3::Y, z: out };
                     let sides = [has_out || both, both];
                     let unit = if *kind == Kind::Window { dress::window(&stood, to - from, head - sill, t, od, sides, masonry) } else { dress::door(&stood, to - from, head - sill, t, od, sides, masonry) };
@@ -612,7 +629,9 @@ pub fn rebuild(
                     if !unit.unit.is_empty() {
                         build.piece(hole_path, None, meshes.add(unit.unit.mesh()), Transform::IDENTITY, made, 0.6, 0.0, true);
                     }
-                    if !unit.trim.is_empty() {
+                    // The casing and sill are finish: with Finishes off they are off too,
+                    // and the flashing they cover is seen.
+                    if !unit.trim.is_empty() && show.finishes {
                         build.piece(hole_path, None, meshes.add(unit.trim.mesh()), Transform::IDENTITY, theme::trim(), 0.8, 0.0, true);
                     }
                     if !unit.glass.is_empty() {

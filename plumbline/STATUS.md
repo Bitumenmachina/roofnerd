@@ -4826,3 +4826,22 @@ kit does since call 64 (`tool "Wall"`, which presses Enter when there is nothing
 to type). **Not rerun yet.** Their clicks are still at fixed places on the screen
 that were right for the window before it was rebuilt, and may not be now.
 
+## Waterproofing drawn (Q23 step 3, call 72)
+
+**Built and seen.** With Finishes off, the made-up whole house stands in its weather
+barrier (all eight outside walls have "Sheathing and weather barrier" priced on
+them), the stone and the cedar gone, and each of its seventeen flashed openings has
+its flashing round it: `demos/captured/trades/7-waterproofing-drawn.png` (the whole
+house, with Division 7's lines beside it) and `7-waterproofing-window.png` (close on
+one window: a dark band at the head, down each side and under the sill, on the pale
+barrier). Sent to Patrick. A test reads the barrier's words and refuses near-misses.
+
+**Seen in the first picture and fixed before the second:** the flashing was drawn and
+could not be seen, because the white casing was still on over it. Casing is finish
+and now comes off with the rest.
+
+**Not right, or not done:** the barrier is a flat colour with no laps or tape; the
+roof is still in its roofing with nothing under it to take off; no window
+demonstration script drives the switch; nothing has judged it. **Interior woodwork
+is the one trade of Patrick's seven still not drawn at all.**
+
