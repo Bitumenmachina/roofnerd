@@ -125,7 +125,7 @@ print(f"    the vanity's middle is at {x:.2f} ft east, {y:.2f} ft north ({at['st
 # It was in by 0.25 ft, so it has gone more than that; the hand went east, hardly north.
 assert x > 7.25 and x < 9.5, x
 assert abs(y - 0.875) < 0.45, y
-assert at["status"] == "Assumed" and "moved by hand in the model" in at["source"], at
+assert at["status"] == "Assumed" and at["source"] == "set by eye; moved (by hand in the model)", at
 assert after["size"]["value"] == [3.0, 1.75, 2.875], after["size"]
 print("    its size is still its sheet's: 3 by 1.75 by 2.875 ft")
 # Undone in one step: exactly where it was set.

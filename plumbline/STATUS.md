@@ -4314,3 +4314,23 @@ display. They are looked at, and `demos/glassw.sh` rerun, when it is free.
   out of its read-back comparison, because a building model is written with each
   wall's thickness and not its type (which the export already says).
 * 263 tests pass; all nineteen command-line demonstrations pass.
+
+## Fixed from the nineteenth judge's notes, ahead of its report (2026-11-12)
+
+The judge writes each finding down as it has it; these were fixed from the notes while
+it worked on. The window ones are built and **not yet seen**.
+
+| Note | What it found | What was done |
+|---|---|---|
+| J19-11 | a quick flick that began on a wall slid the view and also selected the wall | a drag is told from a click by the pointer's own drag events, which come before the click even inside one slow frame |
+| J19-25, 26 | an item with no height, set down: nothing appeared, the line said "Nothing selected", and nothing said it was not tested for clashes | setting one down says so at that moment ("it cannot be drawn or tested for clashes yet: its height is not known ... measure what is missing; this one will follow"); the click that sets it down no longer lets go of the selection |
+| J19-27 | a placed thing's size in decimal feet ("3 x 1.75 x 2.875 ft") where the Items list said 3' 0" x 1' 9" x 2' 10 1/2" | one way: as a tape reads it, in the panel and in `show` |
+| J19-28 | the source of a carried thing read "set down by hand in the model; moved (moved by hand in the model)"; the clash marks stayed on over the whole house after a carry | the source reads "...; moved (by hand in the model)"; the marks go back to how they were when the thing is let go clear |
+| J19-23 | a weight not on the sheet was absent from the saved item, where a size not on the sheet was Unknown | Unknown, with "weight is not on <sheet>, page 1" |
+| J19-4 | hours to four places on the recap | two |
+| J19-16 | "4,732.40 $" | "$4,732.40" |
+| J19-1 | the top bar cut off at "247 unkno" | fixed in step 4 (seen) |
+| J19-3, 8, 13 | panels read as flat grey cards, and the model's labels showed through them | frosted in step 4 (seen): a panel shows what is behind it only as blurred colour |
+
+**Changed behaviour:** `show` writes a placed thing's size as feet and inches; a moved
+thing's source ends "moved (by hand in the model)" (`demos/carryw.sh` expects it).

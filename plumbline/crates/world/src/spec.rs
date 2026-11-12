@@ -490,7 +490,7 @@ pub fn item_of(sheet: &Sheet, called: &str, page: usize, category: crate::Kind) 
         }
         None => {
             missing.push("weight");
-            None
+            Some(Val::unknown("lb", &not_found("weight")))
         }
     };
     let name = sheet.name.as_ref().map(|f| f.value.clone()).unwrap_or_else(|| called.to_string());

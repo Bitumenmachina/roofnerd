@@ -1067,6 +1067,9 @@ pub struct Carry {
     grabbed: Vec3,
     gone: [f64; 2],
     said: String,
+    /// Whether the clashes were marked on the model before it was picked up: they are
+    /// marked while it is carried, and put back as they were when it is let go (J19-28).
+    marked: bool,
 }
 
 /// Is this a thing that stands where it is put and can be picked up?
@@ -1128,7 +1131,13 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
                 doc.edit("Place");
                 doc.placing = None;
                 doc.selected = Some(path.clone());
-                doc.say(Tone::Done, format!("Set one down: {path}. Pick it up to move it: press on it and carry it."));
+                // One with a size that is not all known has no shape: that is said at
+                // the moment it is set down, not left to be found (J19-25, J19-26).
+                let shapeless = doc.job.find(&path).and_then(|e| doc.job.world.get::<plumbline_world::Placed>(e)).filter(|p| p.size_ft().is_none()).map(|p| p.size.source.clone());
+                match shapeless {
+                    Some(why) => doc.say(Tone::Warned, format!("Set one down, but it cannot be drawn or tested for clashes yet: {why}. Select it under Items and measure what is missing; this one will follow.")),
+                    None => doc.say(Tone::Done, "Set one down. Pick it up to move it: press on it and carry it."),
+                }
             }
             Err(why) => crate::tools::cant(&mut doc, "set it down", why),
         }
@@ -1141,7 +1150,7 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
         let selected = snap.selected.as_ref().filter(|s| stands(s.kind) && doc.selected.as_deref() == Some(s.path.as_str()) && doc.hover.as_deref() == Some(s.path.as_str()));
         let hold = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p);
         if let (Some(s), Some(at)) = (selected, hold) {
-            *carry = Carry { path: Some(s.path.clone()), grabbed: at, gone: [0.0, 0.0], said: String::new() };
+            *carry = Carry { path: Some(s.path.clone()), grabbed: at, gone: [0.0, 0.0], said: String::new(), marked: doc.show.clashes };
             CARRYING.store(true, Relaxed);
             // What it is in is marked on the model while it is carried, and after.
             if !doc.show.clashes {
@@ -1161,7 +1170,7 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
             let want = [tidy(to.x - carry.grabbed.x), -tidy(to.z - carry.grabbed.z)];
             let step = [want[0] - carry.gone[0], want[1] - carry.gone[1]];
             if step[0].hypot(step[1]) > 0.01 && want[0].hypot(want[1]) < 500.0 {
-                match plumbline_world::editing::move_by(&mut doc.job, &path, step[0], step[1], plumbline_world::editing::Entered { status: plumbline_world::value::Status::Assumed, source: "moved by hand in the model" }) {
+                match plumbline_world::editing::move_by(&mut doc.job, &path, step[0], step[1], plumbline_world::editing::Entered { status: plumbline_world::value::Status::Assumed, source: "by hand in the model" }) {
                     Ok(()) => {
                         carry.gone = want;
                         DRAGGED.store(true, Relaxed);
@@ -1195,6 +1204,11 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
                 None => format!("Moved {name} {went}. It is clear of everything."),
             };
             doc.say(if said.contains("in the same space") { Tone::Refused } else { Tone::Done }, said);
+            doc.redraw();
+        }
+        // The clash marks go back to how they were, unless it was left in something.
+        if !carry.marked && doc.show.clashes && in_what(&snap, &path).is_none() {
+            doc.show.clashes = false;
             doc.redraw();
         }
         *carry = Carry::default();
