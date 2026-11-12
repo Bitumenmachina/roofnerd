@@ -37,7 +37,7 @@ demos/draww.sh             # the same house drawn in the window's plan view with
 demos/fit.sh               # fittings worked out from the runs that meet, runs joined to what they serve, and what the takeoff says is still open
 demos/clash.sh             # what is in the same space as what, what passes through a wall, and what is only close
 demos/clashw.sh            # fittings, a connection and the clashes in the window; pictures in demos/captured/clash
-demos/plan.sh              # a plan laid under a storey, given its scale from one dimension and traced over, at the command line
+demos/plan.sh              # a plan laid under a level, given its scale from one dimension and traced over, at the command line
 demos/field.sh             # what is measured on site put on a traced job: the floor above moves and the price with it, one clash clears, one becomes a finding
 demos/fieldw.sh            # the same in the window, each reading typed as a laser in keyboard mode types it; pictures in demos/captured/field
 demos/div.sh               # sixteen divisions: a whole house's lines in all sixteen, the recap by division, and the workbook's Divisions sheet
@@ -95,7 +95,7 @@ The model window is laid out the way a building game's is:
 
 Every button says the key that does the same. The words on screen are US English and a
 drawing set's: a floor of the building is a level. (The job file and the command line
-keep the model's own word, storey.)
+keep the model's own word, level.)
 
 ## Draw in the window
 
@@ -144,7 +144,7 @@ a PNG or a JPEG. Under Drawings, on the left:
 The job keeps where the plan file is, never the plan itself. If the file changes or
 moves, the drawing says so.
 
-At the command line: `plumbline drawing job.json <storey> "A-1" --file plans/a-1.pdf`,
+At the command line: `plumbline drawing job.json <level> "A-1" --file plans/a-1.pdf`,
 `plumbline calibrate job.json <drawing> --from "126,90" --to "666,90" --distance "30 ft"`,
 `plumbline drawings job.json`, and `--on <drawing>` on `wall`, `door`, `window`, `room`,
 `run` and `place` to give points as places on the page.
@@ -164,7 +164,7 @@ A price list is a CSV file or a workbook with a row of headings: what is priced,
 it is bought by, and the price. The program finds the headings, sets the prices it can,
 and lists every row and column it did not use and why. An estimate made before is kept
 beside the job and set against it line by line with `compare`; it adds nothing to the
-job's price. A model from another trade or a designer (IFC) comes in as storeys, walls
+job's price. A model from another trade or a designer (IFC) comes in as levels, walls
 with their doors and windows, floors, rooms, ducts, pipes, trays and cables; what the
 program has no element for, or cannot read the shape of, is listed with why.
 
@@ -199,6 +199,11 @@ Click anything and its Finish says what it is dressed in and which line says so.
 
     cargo run -p plumbline -- finishes job.json   # the same reading, written out
 
+A line is read by what it is, not by a word in it: "Stone sill at windows" is a sill
+and dresses nothing, "Lap siding with brick mold casing" is lap siding, and
+"Roofing, standing seam, charcoal" is standing seam. Two finishes priced on one
+thing: the first is drawn and the second is said, not dropped.
+
 ## What is left to verify
 
 ```
@@ -214,8 +219,8 @@ a row selects the thing in the model window, where its values say Measure or Che
 ## Measure on site
 
 ```
-plumbline measure job.json storey-0002 "storey height" "8' 10 1/2\"" --source "JM with the laser"
-plumbline measure job.json duct-0011 "height above its storey" "7' 10 3/4\"" --to bottom --source "JM with the laser"
+plumbline measure job.json level-0002 "level height" "8' 10 1/2\"" --source "JM with the laser"
+plumbline measure job.json duct-0011 "height above its level" "7' 10 3/4\"" --to bottom --source "JM with the laser"
 plumbline measure job.json duct-0011 "line on the plan" same --source "JM on site"
 ```
 
@@ -230,12 +235,12 @@ that rested on it are findings or are gone, and the price in the sheet window fo
 
 A laser has to send its unit with the reading (Leica calls this its text setting), in
 feet and inches, with a point for the decimal mark. A figure with no unit, a comma, or
-metres is refused, and the refusal says so.
+meters is refused, and the refusal says so.
 
 Everything drawn in the window is flagged Assumed and says it was drawn there. At the
 command line the same verbs take a status and a source: `plumbline floor job.json
-<storey> <floor type> --walls --status Assumed --source "..."`, `plumbline room job.json
-<storey> "name" --at "6,8" --status Assumed --source "..."`.
+<level> <floor type> --walls --status Assumed --source "..."`, `plumbline room job.json
+<level> "name" --at "6,8" --status Assumed --source "..."`.
 
 `refs/` is for the owner's reference estimates. Git ignores it. Nothing in it is ever committed.
 

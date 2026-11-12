@@ -76,7 +76,7 @@ nothing; the program converts only inside arithmetic, and says where it did.
   the fraction after the inch mark and no spaces (`2'2"13/32`, `26"13/32`, `23.46ft`).
   That is read; the inches before the mark are then a whole number. What a laser can
   also be set to send is refused, and the refusal says how to set it: a figure with no
-  unit, a comma for the decimal mark, metres (section 5.14; DECISIONS.md call 49).
+  unit, a comma for the decimal mark, meters (section 5.14; DECISIONS.md call 49).
 * **Feet and inches.** The feet are a whole number, the inches are less than 12, and a
   length below zero carries the minus on both. `25' 14"` and `25.5' 6"` are refused.
   In `25'-6"` the dash is a separator, not a minus.
@@ -229,12 +229,12 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 | `pl::floor_type` | a Type | `thickness`, and `layers` from the top down, as a wall type's. | each `ft`, `in` or `ft-in` |
 | `pl::opening_type` | a Type | `category`: Door or Window. `width`, `height`. | each `ft`, `in` or `ft-in` |
 | `pl::segment_type` | a Type | `category`: Duct, Pipe, Conduit or Cable. `round` and `width` (the diameter), or `width` and `depth`. | each `ft`, `in` or `ft-in` |
-| `pl::wall` | a Wall, under a Storey | `type`: the path of a Type with a `pl::wall_type`. `line`: its location line on the plan, first end to second; its exterior side is to the left of that. `location`, when the line is not its centre line: `core-centre`, `exterior-finish`, `interior-finish`, `exterior-core`, `interior-core`. `top_level` (the path of the Storey its top is held to) with `top_offset` if any, or `height`: one or the other. `base_offset`, when it does not stand on its storey's floor. `room_bounding: false` and `join: false` when it does not bound rooms or join its neighbours. | `line`: `ft` or `in`. The others: `ft`, `in` or `ft-in` |
-| `pl::opening` | a Door or Window, under its Wall | `type`: the path of a Type with a `pl::opening_type` of its kind. `offset`: how far its **centre** is along the wall's line from the line's first end. `sill`: how high its bottom is above the wall's base. | each `ft`, `in` or `ft-in` |
-| `pl::floor` | a Floor, under a Storey | `type`: the path of a Type with a `pl::floor_type`. `boundary` on the plan. `offset`, when its top is not at its storey's floor level. | `boundary`: `ft` or `in` |
+| `pl::wall` | a Wall, under a Storey | `type`: the path of a Type with a `pl::wall_type`. `line`: its location line on the plan, first end to second; its exterior side is to the left of that. `location`, when the line is not its center line: `core-center`, `exterior-finish`, `interior-finish`, `exterior-core`, `interior-core`. `top_level` (the path of the Storey its top is held to) with `top_offset` if any, or `height`: one or the other. `base_offset`, when it does not stand on its level's floor. `room_bounding: false` and `join: false` when it does not bound rooms or join its neighbours. | `line`: `ft` or `in`. The others: `ft`, `in` or `ft-in` |
+| `pl::opening` | a Door or Window, under its Wall | `type`: the path of a Type with a `pl::opening_type` of its kind. `offset`: how far its **center** is along the wall's line from the line's first end. `sill`: how high its bottom is above the wall's base. | each `ft`, `in` or `ft-in` |
+| `pl::floor` | a Floor, under a Storey | `type`: the path of a Type with a `pl::floor_type`. `boundary` on the plan. `offset`, when its top is not at its level's floor level. | `boundary`: `ft` or `in` |
 | `pl::room` | a Room, under a Storey | `point`: a point inside it. `number`: what the plan calls it. Its boundary is not stored: it is found from the walls. | `point`: `ft` or `in` |
-| `pl::segment` | a Duct, Pipe, Conduit or Cable, under a Storey | One straight piece. `type`: the path of a Type with a `pl::segment_type` of its kind. `line`: its two ends on the plan. `offset`: how high it is above its storey's floor at the first end; `end_offset` at the second, when it is not level. `justify`, when its heights are those of its `top` or `bottom` and not its centre. | `line`: `ft` or `in`. The others: `ft`, `in` or `ft-in` |
-| `pl::placed` | Equipment, a Fixture or a Fitting, under a Storey | `what` it is. `at`: the middle of its base on the plan. `offset`: how high that is above its storey's floor. `angle`, when it is turned: degrees counter-clockwise from east. `size`: along its own x, along its own y, tall. | `at`, `size`: `ft` or `in`. `offset`: `ft`, `in` or `ft-in`. `angle`: `deg` |
+| `pl::segment` | a Duct, Pipe, Conduit or Cable, under a Storey | One straight piece. `type`: the path of a Type with a `pl::segment_type` of its kind. `line`: its two ends on the plan. `offset`: how high it is above its level's floor at the first end; `end_offset` at the second, when it is not level. `justify`, when its heights are those of its `top` or `bottom` and not its center. | `line`: `ft` or `in`. The others: `ft`, `in` or `ft-in` |
+| `pl::placed` | Equipment, a Fixture or a Fitting, under a Storey | `what` it is. `at`: the middle of its base on the plan. `offset`: how high that is above its level's floor. `angle`, when it is turned: degrees counter-clockwise from east. `size`: along its own x, along its own y, tall. | `at`, `size`: `ft` or `in`. `offset`: `ft`, `in` or `ft-in`. `angle`: `deg` |
 | `pl::fitting` | a Fitting | `kind`: bend, tee, cross, transition or coupling. | |
 | `pl::connectors` | Equipment, a Fixture or a Fitting | A list. Each: `name`; `kind` (pipe, duct, conduit, power); for a pipe, `domain` (cold, hot, waste, vent, storm, gas); `flow` (in, out) when it is not both; `at`, in the thing's own axes (x along its angle, y to its left, z up from its base); `size`. | `at`: `ft` or `in` |
 | `pl::system` | a System | `discipline` (Mechanical, Electrical, Plumbing) and `classification`: Supply Air, Return Air, Exhaust Air, Refrigerant, Domestic Cold Water, Domestic Hot Water, Sanitary, Vent, Power, Lighting. | |
@@ -440,9 +440,9 @@ components, and a wall, floor, door, window or run names its type by path. A siz
 entered once. A type that is not known, or is not in the job, leaves what depends on it
 with no figure and the reason; nothing falls back to a number.
 
-**Heights.** A wall's base is its storey's elevation plus its `base_offset`. Its top is its
+**Heights.** A wall's base is its level's elevation plus its `base_offset`. Its top is its
 `top_level`'s elevation plus its `top_offset`, or its base plus its `height`. A run's and
-a placed thing's heights are above the storey they are under.
+a placed thing's heights are above the level they are under.
 
 | Kind | Quantity | How |
 |---|---|---|
@@ -455,32 +455,32 @@ a placed thing's heights are above the storey they are under.
 | Door, Window | `opening_area` SF | `width × height` |
 | Floor | `plan_area` SF | area of its boundary on the plan |
 | Room | `floor_area` SF | the floor inside the faces of the walls round its point, less any island of walls standing in it |
-| Room | `gross_area` SF | the same to those walls' centre lines |
+| Room | `gross_area` SF | the same to those walls' center lines |
 | Room | `perimeter` LF | the distance round the room at the faces of its walls, an island's faces included |
 | Duct, Pipe, Conduit, Cable | `true_length` LF | the length of its line on the plan when it is level; through its rise, `√(plan² + rise²)`, when its two ends are at different heights. A riser is its rise. |
 | Duct | `surface_area` SF | `true_length ×` the distance round it: `π × diameter`, or `2 × (width + depth)`, its type's. Refused when its type or its size is not known. |
 
-**Rooms.** A storey's rooms are found among the walls that bound rooms and stand at the
-storey's computation height (4 ft above its floor unless the storey says otherwise),
-whatever storey those walls are under. A room is the smallest loop round its point. Where
+**Rooms.** A level's rooms are found among the walls that bound rooms and stand at the
+level's computation height (4 ft above its floor unless the level says otherwise),
+whatever level those walls are under. A room is the smallest loop round its point. Where
 walls meet they are joined as BIMCraft joins them: end to end at any angle, or one ending
-on another; their centre lines run on to meet, so a room closes whatever line of a wall
+on another; their center lines run on to meet, so a room closes whatever line of a wall
 was drawn. A room has no figure, and says why, when no loop closes round its point, when
 its point is inside a wall, or when a room added before it has the space. A wall under
-the room's own storey that cannot be placed (no height, no type, no thickness) leaves
-every room of that storey with no figure: whether it closes a room off is not known. One
-under another storey makes the figure Assumed, and the figure's note says what is assumed.
+the room's own level that cannot be placed (no height, no type, no thickness) leaves
+every room of that level with no figure: whether it closes a room off is not known. One
+under another level makes the figure Assumed, and the figure's note says what is assumed.
 A figure is no surer than the walls it is measured to, and names them. A bounding wall is
 joined to every wall it meets, bounding or not: a partition that ends on a low wall stops
 at that wall's face. A Wall element with nothing entered on it counts as a wall that
 cannot be placed. Where a wall's base or top rests on anything less than Known, each room
-of the storey is worked out again with that wall gone and with it standing full height,
+of the level is worked out again with that wall gone and with it standing full height,
 and a room that comes out differently either way is no surer than that wall's heights and
 says which wall. A room whose point is inside a wall has no figure at all.
 
 **Runs and fittings.** A run of duct or pipe that turns corners is one element for each
-straight piece and a Fitting at each corner. Length is measured through fittings, centre
-to centre. A run with no size keeps its length. It has no surface, and on a takeoff it is
+straight piece and a Fitting at each corner. Length is measured through fittings, center
+to center. A run with no size keeps its length. It has no surface, and on a takeoff it is
 on a line of its own, "size unknown". It is never left out and never given a size.
 
 **The network** (`building::network::network`, ported from BIMCraft's `network.rs`) is
@@ -506,9 +506,9 @@ last. A line is no surer than that its runs are on the system: an Assumed member
 makes the line Assumed. After the systems come two groups, each only when it has
 something in it: "On no system" (no `pl::in_system` at all, which is Known) and "System
 not known" (a `pl::in_system` that is Unknown), flagged Unknown. Nothing is off the
-takeoff for want of a system. A storey has to be directly under the job, and each wall,
-floor and room counts on its nearest storey only. `building::storey_totals` gives each
-storey's walls, floors and rooms.
+takeoff for want of a system. A level has to be directly under the job, and each wall,
+floor and room counts on its nearest level only. `building::storey_totals` gives each
+level's walls, floors and rooms.
 `building::placements` gives every element's shape in feet, in space, for a window to
 draw, and beside it the list of elements that have no shape and why. A window has to say
 the second list: an element that cannot be drawn does not just go missing. A door or
@@ -568,9 +568,9 @@ and names the rest.
 ### 5.8 Drawing and editing
 
 `editing.rs` holds the verbs a window or a command line uses to build a job without
-editing its file: `storey`, `wall_type`, `opening_type`, `segment_type`, `system`,
+editing its file: `level`, `wall_type`, `opening_type`, `segment_type`, `system`,
 `walls`, `opening`, `room`, `runs`, `place`, `move_by` and `remove`. The command line has
-one command for each (`plumbline new`, `storey`, `type`, `system`, `wall`, `door`,
+one command for each (`plumbline new`, `level`, `type`, `system`, `wall`, `door`,
 `window`, `room`, `run`, `place`, `move`, `remove`), and the window's tools call the same
 verbs (`crates/app/src/tools.rs`). The rules, each ported from BIMCraft's `commands.rs`
 (PORTMAP.md has the lines):
@@ -583,7 +583,7 @@ verbs (`crates/app/src/tools.rs`). The rules, each ported from BIMCraft's `comma
 * **A verb is all of its change or none of it.** Three walls of which the second cannot
   be drawn leave the job as it was.
 * **A wall is one element for each pair of points**; `--closed` joins the last to the
-  first. **An opening is placed by its centre along its wall**, from a distance or from
+  first. **An opening is placed by its center along its wall**, from a distance or from
   a point on the plan; a point past either end of the wall is refused.
 * **A wall moved takes its doors and windows; a wall removed takes them too.** What is
   moved is no surer than the move. An element with elements under it is not removed.
@@ -606,12 +606,12 @@ one end of a wall; moving or removing several things at once.
 
 `editing/join.rs` (DECISIONS.md call 39). Three verbs, each all of its change or none:
 
-* **`fitting`** (`plumbline fitting <file> <storey> --at "x,y"`): a fitting where runs'
+* **`fitting`** (`plumbline fitting <file> <level> --at "x,y"`): a fitting where runs'
   ends meet. Its kind is worked out from what meets: two ends at an angle, a bend; two
   in line of one size, a coupling; two in line of two sizes, a transition; three, a tee;
   four, a cross. A run that passes through the point is cut there first. The fitting has
   a connector for each run, takes the runs' system, and is as sure as the least sure of
-  them, and no surer than its storey's floor height. Its box is the size of its largest
+  them, and no surer than its level's floor height. Its box is the size of its largest
   run and is turned to lie along the first run it joins. Refused: one end, five or more,
   two ends that leave the joint the same way (they lie one over the other), runs of two
   systems, a fixture's connector at the joint, cable, a joint that already has its
@@ -659,10 +659,10 @@ the sheet's Clashes tab. Worked out from the job each time and never stored.
   two is tested like anything else. A stub shorter than that is not seen.
 * **Not tested, and listed with why:** anything with no shape.
 * **A clash takes the worse status of its two shapes.** A shape is no surer than the
-  floor height of its storey; a wall is also no surer than its base offset, and is
+  floor height of its level; a wall is also no surer than its base offset, and is
   Assumed at best while it has an opening that could not be cut in it.
 * **How deep.** Two round runs side by side, one in the other, or crossing well inside
-  both lengths: the sum of their radii less the distance between their centre lines.
+  both lengths: the sum of their radii less the distance between their center lines.
   Against a wall or a floor, which is several solids: the least way out that clears
   every piece, straight out through the face among them. Otherwise the library's
   measure between the two solids.
@@ -670,7 +670,7 @@ the sheet's Clashes tab. Worked out from the job each time and never stored.
   is inside both; otherwise a place the measure of depth found in both.
 
 The solid geometry is `parry3d-f64`'s. Its measure of how deep two solids are in each
-other answers zero when one is dead centre in the other, so the yes or no is its
+other answers zero when one is dead center in the other, so the yes or no is its
 overlap test and the depth is asked for separately (call 40).
 
 ### 5.11 Plans under the tracing
@@ -679,7 +679,7 @@ overlap test and the depth is asked for separately (call 40).
 `calibrate`, `lineup`, `drawings`, and `--on <drawing>` on the drawing verbs; in the
 window, the left panel's Drawings to trace.
 
-* **A Drawing is one page of a plan file**, an element under the storey it is a plan of.
+* **A Drawing is one page of a plan file**, an element under the level it is a plan of.
   The file stays where it is, beside the job; the job keeps its path, its length and a
   fingerprint, and says so when the file is no longer the one the drawing was made from.
   The picture is never in the job.
@@ -705,9 +705,9 @@ window, the left panel's Drawings to trace.
   window, until each thing is gone or the drawing is back at that scale and in that
   place. A drawing that was lined up stays lined up when its scale changes: its corner
   moves so the place it was lined up by does not.
-* **Nothing is traced over a drawing with no scale.** In the window, a storey with such
+* **Nothing is traced over a drawing with no scale.** In the window, a level with such
   a drawing under it draws nothing until the scale is set.
-* **A drawing is traced over on its own storey.** In the window what is drawn takes its
+* **A drawing is traced over on its own level.** In the window what is drawn takes its
   source from the drawing the pick is on; off every sheet it is drawn in the window.
 * **What is traced is Assumed** and its source is `traced from <name> (<file>, page
   <n>)`. A status or a source cannot be given with `--on`. The scale's distance is as
@@ -780,14 +780,14 @@ window, the left panel's Drawings to trace.
 `crates/ifc` (DECISIONS.md call 47); `plumbline import ifc <file> <model.ifc> --status
 ... --source ...`.
 
-* **Read:** an IFC2x3 or IFC4 file, with BIMCraft's STEP reader. Each building storey
-  (its floor height as the storey says it; its height is the way up to the next, and
-  the top one's is Unknown). What stands on a storey is measured from where the storey
+* **Read:** an IFC2x3 or IFC4 file, with BIMCraft's STEP reader. Each building level
+  (its floor height as the level says it; its height is the way up to the next, and
+  the top one's is Unknown). What stands on a level is measured from where the level
   is placed, which is not its stated height when the building is placed at a height. A
-  storey with the name and floor height of one the job has is that storey (another
+  level with the name and floor height of one the job has is that level (another
   trade's model stands on the job's own floors); the same name at another height is
-  refused. Each wall whose body is a rectangle pushed straight up: its centre line, its
-  thickness, its height, its base where that is not its storey's floor. Each door and
+  refused. Each wall whose body is a rectangle pushed straight up: its center line, its
+  thickness, its height, its base where that is not its level's floor. Each door and
   window that fills a hole in such a wall: its width and height, its middle along the
   wall, its sill. Each slab whose body is an outline pushed straight up or down. Each
   space, as a room at a point inside it. Each duct, pipe, cable tray and cable whose
@@ -799,8 +799,8 @@ window, the left panel's Drawings to trace.
   floor not level to an eighth of an inch in eight feet; a floor whose outline has a
   hole; a floor or a run already in that very place.
 * **Noted:** a floor the model cuts an opening in comes in whole, flagged Assumed, its
-  source saying it is more than the floor; numbers used twice in the file; storeys
-  placed away from their stated heights; storeys shared with the job.
+  source saying it is more than the floor; numbers used twice in the file; levels
+  placed away from their stated heights; levels shared with the job.
 * **Names:** a wall, a floor and a run are called what the model calls them, with the
   number in the file only where two would share a name. A room's point is inside it.
 * **Lengths** are turned into feet from the file's unit and kept to a ten-thousandth of
@@ -808,7 +808,7 @@ window, the left panel's Drawings to trace.
 * **Certainty:** as whoever brings the model in says. Each value's source is that, the
   file's name, and the thing in the file it was read off.
 * **All or nothing:** the job is checked whole afterwards; if that fails, or nothing
-  but storeys could be brought in, the job is as it was.
+  but levels could be brought in, the job is as it was.
 
 ### 5.14 A measurement taken on site
 
@@ -816,11 +816,11 @@ What is traced starts Assumed. `editing::measure` (the command `measure`, and a 
 a value in the window's right-hand panel) puts what was measured on site on one entered
 value, and the value is Known. DECISIONS.md call 49 has why each rule is as it is.
 
-* **The value is named as the screen names it:** `storey height`, `sill`, `height above
-  its storey`, `wall thickness`. `editing::takes` lists the values of an element a
+* **The value is named as the screen names it:** `level height`, `sill`, `height above
+  its level`, `wall thickness`. `editing::takes` lists the values of an element a
   measurement can be put on, and whether each is one length.
 * **A length replaces the value.** Status Known, the source as given. Any entered value
-  that is one length takes one: a storey's floor and height; a type's thickness, width,
+  that is one length takes one: a level's floor and height; a type's thickness, width,
   height, diameter or depth; a wall's height and offsets; an opening's place along its
   wall and its sill; a run's heights; a placed thing's height; a parapet's height; the
   eave height of a roof plane drawn by its own outline (not of one solved from a
@@ -831,9 +831,9 @@ value, and the value is Known. DECISIONS.md call 49 has why each rule is as it i
   nothing for it to be the same as.
 * **A line or a position is not one length** and a length for it is refused. It is moved
   with the move verb and then marked `same`.
-* **A floor, its storey's height and the floor above are kept agreeing** (call 51),
-  whichever is measured, by a length or by `same`. A storey height puts the next floor
-  at this floor plus the height. A floor makes the storey height below it the way up to
+* **A floor, its level's height and the floor above are kept agreeing** (call 51),
+  whichever is measured, by a length or by `same`. A level height puts the next floor
+  at this floor plus the height. A floor makes the level height below it the way up to
   it, and its own height the way up to the next floor; where its own height is Known,
   the next floor goes where that says. Each value so worked is as sure as the less sure
   of the two it is worked from, is written in the unit it was written in, and says in
@@ -841,13 +841,13 @@ value, and the value is Known. DECISIONS.md call 49 has why each rule is as it i
   and say they moved. A value Known in its own right is never overwritten: within an
   eighth of an inch (`AGREE_FT`) it is left and that is said; further out, the
   measurement is refused and names the three values. A floor Known only because the
-  storey height below was measured follows that height when it is measured again.
-* **What does not follow is said:** walls on the storey that stand to their own height
+  level height below was measured follows that height when it is measured again.
+* **What does not follow is said:** walls on the level that stand to their own height
   and now pass through the floor above; that a roof's eave height is its own value; and
   what a run or a placed thing met before the measurement and no longer meets.
-* **A run's height can be taken to its underside or its top.** `--to bottom|centre|top`
+* **A run's height can be taken to its underside or its top.** `--to bottom|center|top`
   (in the window, the word before the reading) says which line of its section was shot.
-  The run then holds its heights to that line (`justify`), and its centre is worked from
+  The run then holds its heights to that line (`justify`), and its center is worked from
   its size, as sure as the size is. Refused on a run whose two ends differ and that
   holds its heights to another line, and on a run whose size is not known.
 * **A measurement says who measured.** No source, no measurement. In the window the
@@ -857,7 +857,7 @@ value, and the value is Known. DECISIONS.md call 49 has why each rule is as it i
   as it was.
 * **In the window** an entry is ended by Enter or by Tab, since a laser sends either,
   and what comes after that key in the same burst is not part of it. Where an entry
-  takes more than one thing (a storey's name, floor and height; what a tool draws
+  takes more than one thing (a level's name, floor and height; what a tool draws
   with), Tab goes on to the next and ends the entry after the last. Who measured
   follows a comma and a space. A height's entry says which line it is to.
 * **A reading typed with nothing picked does nothing.** Character keys closer together
@@ -866,8 +866,8 @@ value, and the value is Known. DECISIONS.md call 49 has why each rule is as it i
 
 ### 5.15 A floor, a room and a roof drawn
 
-`editing::floor` puts a floor of a type on a storey, by a boundary that is given or by
-**the outline its walls enclose** (`building::floor_outline`: along the centre lines of
+`editing::floor` puts a floor of a type on a level, by a boundary that is given or by
+**the outline its walls enclose** (`building::floor_outline`: along the center lines of
 the walls, the outer outline of the largest piece they make). Ported from BIMCraft
 (PORTMAP.md), with every value flagged.
 
@@ -877,7 +877,7 @@ the walls, the outer outline of the largest piece they make). Ported from BIMCra
 * Where the walls do not close, or close round a courtyard, the verb refuses and says
   which: this program's floor has no hole yet. Where they make a second piece, the
   floor is the largest and the result says what was left.
-* A second floor on an outline a floor of that storey already has is refused: it would
+* A second floor on an outline a floor of that level already has is refused: it would
   be counted twice.
 * A room is a point and a name (`editing::room`). Its floor area is the area inside the
   faces of the walls round its point; with no walls round it, it has no figure and says
@@ -957,7 +957,7 @@ DECISIONS.md call 55 has the layout and why. What the model has to do with it:
 
 * Every word on screen passes through one place (`theme::spoken`), which says a path
   as the thing's name, a figure's name as its words, money and units the way a trade
-  writes them, and the model's own spelling in US English (a storey is a level).
+  writes them, and the model's own spelling in US English (a level is a level).
   What is inside quotation marks, and a name shown by itself, is as it was typed.
 * A button does what its key does, through the same code.
 * What is brought in in the window (call 56) is the command line's verb, Assumed, its
@@ -968,27 +968,44 @@ DECISIONS.md call 55 has the layout and why. What the model has to do with it:
 ### 5.19 What a thing is finished with
 
 `finish::dress(job)` is a reading of the estimate, not a value in the job: nothing is
-saved for it. For each wall, roof plane, door, window and eave it looks, in order, at
-the element's live cost lines (a line switched off is not looked at), then its
-material, then its assembly, and takes the first that names a finish in the trade's
-words. A color word in the same text is its color. A later text that names a
-different finish of the same kind is kept as "also priced, not drawn".
+saved for it. For each wall, roof plane, door and window, and for each eave that has
+a gutter priced on it, it looks, in order, at the element's live cost lines (a line
+switched off is not looked at), then its material, then its assembly, and takes the
+first that is a line for a finish. A color word in the same text is its color. A
+later one that names a different finish of the same kind, or the same in another
+color, is kept as "also priced, not drawn".
 
-| on | read | from words such as |
+**A line names a finish only when the finish is what the line is.** A line is read by
+its head: the words before its first comma and before "with", "over", "on", "at",
+"for", "from", "to". A head that holds a word for something else is not a finish
+(for a cladding: sill, flashing, nails, removal, molding, casing, trim, paint,
+countertop, backsplash, interior, ties; for a roofing: underlayment, felt, flashing,
+gutter, drip, strip, tear, sheathing, vent, ice; for a window: flashing, tape, trim,
+screen, treatment, hardware; for a door: hardware, knob, casing, threshold, opener).
+A head that names a finish is that finish, the one named first. A head that names
+only the kind of thing (siding, cladding, veneer; roofing, roof; window, unit; door)
+is refined by the parts after its commas: "Roofing, standing seam, charcoal".
+
+| on | read | from a head such as |
 |---|---|---|
-| a wall | cladding | brick; stone, ashlar, limestone; stucco; board and batten; shingle, shake; siding, clapboard, lap |
-| a wall | wainscot, and its height | any cladding in a text that also says "wainscot"; the height is the first length after a comma, or 3 ft and said to be unwritten |
-| a roof plane | roofing | standing seam, metal roofing, copper, zinc; slate; tile; shakes; asphalt, shingles; membrane, EPDM, TPO |
-| a window | how it operates | double-hung; casement; slider; fixed, picture |
-| a window, a door | divided lites | "6 over 6" (3 across, 2 up in each sash); divided, muntins, grilles |
-| a door | its leaf | panel; glazed, French; overhead, garage; flush |
-| an eave | a gutter | gutter |
+| a wall | cladding | brick; CMU, block, split face; stone, ashlar, limestone; stucco, EIFS; board and batten; T1-11, vertical board; corrugated metal, metal siding; fiber cement panel; shingle, shake; lap siding, clapboard, bevel, Hardie plank; "siding" alone is lap siding |
+| a wall | wainscot, and its height | any cladding in a line that also says "wainscot"; the height is the first length in the line that is not a thickness ("36 in", "to 3'-0\"", "42 in high"), or 3 ft and said to be unwritten |
+| a roof plane | roofing | standing seam, copper, zinc, metal roofing; 5V crimp, corrugated, metal panels; metal shingles; slate; tile; shakes, cedar shingles; membrane, EPDM, TPO, torch-down, rubber roof; asphalt, shingles, architectural, dimensional |
+| a window | how it operates | double-hung, single-hung; casement; slider; awning; hopper; fixed, picture |
+| a window, a door | divided lites | "6 over 6", "6 over 1", "6/6" on a hung window, "9 lite"; or divided, muntins, grilles |
+| a door | its leaf | panel; glazed, French, half lite, full view; overhead door, garage door; flush |
+| an eave | a gutter | gutter, eavestrough |
 
-A wall's outside face is the one that lies outside the outline its level's walls
-enclose (5.15's outline). Both inside: a partition, and no cladding is drawn on it.
-No outline: not known, and a cladding priced on it is drawn on both faces. Where a
-wall's end corners with another wall's end, it is drawn past its centre line's end to
-where the two centre lines cross and half the other wall's thickness on.
+A wall's outside face is the one that is outdoors: `building::enclosed` gives every
+piece the level's walls enclose and every courtyard in them (a loop of walls standing
+free inside a piece, with no room in it), and a place is indoors when it is in a
+piece and in none of its courtyards. Both faces indoors: a partition, and nothing is
+drawn on it; what is priced on it is said to be priced and not drawn. Both faces
+outdoors (a garden wall): dressed on both. No piece at all on the level: not known,
+and dressed on both. A wainscot as tall as its wall is the whole face, and a cladding
+priced with it is said to be priced and not drawn. Where a wall's end corners with
+another wall's end, it is drawn past its center line's end to where the two center
+lines cross and half the other wall's thickness on.
 
 ## 6. Cost code scheme
 
