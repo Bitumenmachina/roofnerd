@@ -71,7 +71,13 @@ pub fn panel_shadow() -> BoxShadow {
         ShadowStyle { color: Color::srgba(0.05, 0.07, 0.10, 0.16), x_offset: px(0.0), y_offset: px(10.0), spread_radius: px(-4.0), blur_radius: px(28.0) },
     ])
 }
-/// A field that can be typed in, at rest.
+/// Under a message over the model: nearer than a panel, so its shadow is deeper.
+pub fn message_shadow() -> BoxShadow {
+    BoxShadow(vec![
+        ShadowStyle { color: Color::srgba(0.05, 0.07, 0.10, 0.14), x_offset: px(0.0), y_offset: px(3.0), spread_radius: px(0.0), blur_radius: px(8.0) },
+        ShadowStyle { color: Color::srgba(0.05, 0.07, 0.10, 0.24), x_offset: px(0.0), y_offset: px(18.0), spread_radius: px(-6.0), blur_radius: px(44.0) },
+    ])
+}
 /// A hairline inside a panel, between rows.
 pub fn rule() -> Color { hex(0xE7E9E6) }
 pub fn hairline() -> Color { hex(0xC9CDD0) }

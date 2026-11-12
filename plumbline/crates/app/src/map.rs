@@ -50,6 +50,7 @@ pub fn write(
         }
     }
     let mut found: Vec<(&str, String, f32, f32)> = Vec::new();
+    let mut away: Vec<(String, &str)> = Vec::new();
     for (name, node, place, target, visible, clip) in &named {
         if !visible.get() || node.size.x <= 0.0 {
             continue;
@@ -57,7 +58,17 @@ pub fn write(
         // What a panel has scrolled out of sight, or cut off at its edge, is not on
         // screen: a click there reaches nothing, and a script must not be told it would
         // (J19-37: buttons below the left panel's bottom edge were listed).
-        if clip.is_some_and(|c| !c.contains_point(place.translation)) {
+        if let Some(c) = clip.filter(|c| !c.contains_point(place.translation)) {
+            // Where it has gone is said apart, so that a script can do what a person
+            // does: turn the wheel over the panel, the way it lies, until it shows.
+            if target.get() == Some(cameras.ui) && place.translation.x * node.inverse_scale_factor < crate::scene::LEFT_W + 2.0 * crate::theme::GAP {
+                // Below the bottom of what cuts it off, it is further down; else further up.
+                let below = match c {
+                    CalculatedClip::Rects(rects) => rects.iter().any(|r| r.world_to_clip_local.transform_point2(place.translation).y > r.rect.max.y),
+                    _ => true,
+                };
+                away.push((name.name.clone(), if below { "down" } else { "up" }));
+            }
             continue;
         }
         let at = place.translation * node.inverse_scale_factor;
@@ -86,6 +97,11 @@ pub fn write(
         before = Some((window, name.clone()));
         let called = if count == 1 { name.clone() } else { format!("{name} #{count}") };
         out.push_str(&format!("{window}\t{called}\t{}\t{}\n", x.round(), y.round()));
+    }
+    away.sort();
+    away.dedup_by(|a, b| a.0 == b.0);
+    for (name, way) in &away {
+        out.push_str(&format!("away\t{name}\t{way}\n"));
     }
     // The plan, once the view is straight down: its zero, and pixels to the foot.
     if let (true, Ok((camera, eye, Projection::Orthographic(_)))) = (doc.plan, camera.single()) {

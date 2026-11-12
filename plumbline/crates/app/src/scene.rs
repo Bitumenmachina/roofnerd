@@ -968,7 +968,7 @@ pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mu
 
 /// Whether the pointer is over a panel, as picking sees it; and whether the left button's
 /// last press became a drag (a drag is not a click). Kept where any system can ask.
-static OVER_PANEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub static OVER_PANEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 static DRAGGED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// Did the left button's last press slide or turn the view? Then its release selects
@@ -1326,7 +1326,10 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
                 let window = (time.delta_secs() * 1.5).max(0.5);
                 let again = downs >= 2 || feel.last_press.is_some_and(|(then, at)| now - then < window && cursor.is_some_and(|c| c.distance(at) < 8.0));
                 feel.last_press = cursor.map(|c| (now, c));
-                if let (true, Some(to)) = (again, grab) {
+                // Only to a place where the job is: a double-click on the sky, or on
+                // ground out at the horizon, flew the eye to nothing (J19-50).
+                let near_the_job = |to: &Vec3| to.distance(orbit.home.0) < (orbit.home.1 * 4.0).max(120.0);
+                if let (true, Some(to)) = (again, grab.filter(near_the_job)) {
                     orbit.target = to;
                     orbit.distance = (orbit.distance * 0.45).clamp(10.0, 6000.0);
                     feel.hold = None;
@@ -1435,6 +1438,15 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         } else if let Some(place) = under(&orbit).filter(|p| p.distance(orbit.target) < was * 6.0) {
             // In 3D the same: the eye and what it looks at both close on the place
             // under the pointer, so the place stays under the pointer.
+            orbit.target = place + (orbit.target - place) * by;
+        } else if let Some(cursor) = cursor {
+            // Nothing near is under the pointer (sky, or ground out at the horizon):
+            // the view still goes the way the pointer points, over the ground, and
+            // not at whatever happens to be in the middle (J19-49: it ran onto the
+            // roof of the house beside the pointer).
+            let (eye, way) = ray_at(&orbit, window, cursor);
+            let flat = Vec3::new(way.x, 0.0, way.z).normalize_or_zero();
+            let place = Vec3::new(eye.x, orbit.target.y, eye.z) + flat * was;
             orbit.target = place + (orbit.target - place) * by;
         }
         feel.slide = Vec3::ZERO;

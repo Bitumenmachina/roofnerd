@@ -300,6 +300,10 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             b.spawn((text(fonts, price, if priced { 16.0 } else { 12.0 }, if priced { Weight::Semibold } else { Weight::Regular }, if priced { theme::status_ink(status) } else { theme::ink_faint() }), TextLayout::no_wrap()));
         });
         status_chip(bar, fonts, status);
+        // Beside the price: how many things are built and in no line of it (J19-48).
+        if let Some(n) = snap.pricing.as_ref().map(|p| p.not_priced.iter().map(|x| x.1).sum::<usize>()).filter(|n| *n > 0) {
+            chip(bar, fonts, &format!("{n} not priced"), theme::red(), theme::red_wash());
+        }
         // What there is to verify in the field, and the dollars riding on it.
         let questions = snap.verify.questions.len();
         if questions > 0 {
@@ -625,6 +629,101 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
             });
         }
 
+        // What is on show comes straight after the levels, where it is seen on opening:
+        // the switches are what the model is looked at with. What is brought in and
+        // written out is used a few times a job and is below. (J19-2: on the whole house
+        // the switches opened below the bottom of the panel.)
+        heading(c, fonts, "Show");
+        let layer = |c: &mut ChildSpawnerCommands, name: &str, key: &str, colour: Color, on: bool, count: Option<usize>, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
+            row(c, false, format!("Show {name}"), move |doc| act(doc), |r| {
+                spot(r, colour);
+                r.spawn((text(fonts, name, 12.0, Weight::Medium, if on { theme::ink() } else { theme::ink_faint() }), Pickable::IGNORE));
+                if let Some(count) = count {
+                    r.spawn((text(fonts, count.to_string(), 11.0, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
+                }
+                r.spawn(Node { flex_grow: 1.0, ..default() });
+                if !key.is_empty() {
+                    keycap(r, fonts, key);
+                }
+                switch(r, on);
+            });
+        };
+        for (i, d) in [Discipline::Architecture, Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing].into_iter().enumerate() {
+            let count = snap.counts.iter().find(|c| c.0 == d).map(|c| c.1).unwrap_or(0);
+            if i == 1 && !snap.planes.is_empty() {
+                layer(c, "Roof", "", theme::roof_bare(), doc.show.roof, Some(snap.planes.len()), Box::new(|doc| {
+                    doc.show.roof = !doc.show.roof;
+                    doc.redraw();
+                }));
+            }
+            // A job with nothing of a trade does not offer to show it.
+            if count == 0 {
+                continue;
+            }
+            layer(c, theme::discipline_name(d), "", theme::discipline_colour(d), doc.show.discipline(d), Some(count), Box::new(move |doc| {
+                doc.show.toggle(d);
+                doc.redraw();
+            }));
+        }
+        layer(c, "See through", "X", theme::accent(), doc.show.ghost, None, Box::new(|doc| {
+            doc.show.ghost = !doc.show.ghost;
+            doc.redraw();
+        }));
+        layer(c, "Known, Assumed, Unknown", "", theme::amber(), doc.show.certainty, None, Box::new(|doc| {
+            doc.show.certainty = !doc.show.certainty;
+            doc.redraw();
+        }));
+        let found = snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.iter().filter(|x| !x.through).count()).unwrap_or(0);
+        if found > 0 {
+            layer(c, "Clashes", "", theme::clash(), doc.show.clashes || doc.tab == crate::model::Tab::Clashes, Some(found), Box::new(|doc| {
+                doc.show.clashes = !doc.show.clashes;
+                doc.redraw();
+            }));
+            // What the two colours of mark mean, where the marks are switched on (J19-20).
+            if doc.show.clashes || doc.tab == crate::model::Tab::Clashes {
+                let sure = snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.iter().filter(|x| !x.through && x.status == plumbline_world::value::Status::Known).count()).unwrap_or(0);
+                c.spawn((Node { column_gap: px(6.0), align_items: AlignItems::Center, padding: UiRect::new(px(22.0), px(8.0), px(0.0), px(4.0)), flex_wrap: FlexWrap::Wrap, ..default() }, Pickable::IGNORE)).with_children(|r| {
+                    for (colour, n, what) in [(theme::clash(), sure, if sure == 1 { "finding" } else { "findings" }), (theme::clash_to_verify(), found - sure, "to verify in the field")] {
+                        if n > 0 {
+                            spot(r, colour);
+                            r.spawn((text(fonts, format!("{n} {what}"), 11.0, Weight::Regular, theme::ink_soft()), Pickable::IGNORE));
+                        }
+                    }
+                });
+            }
+        }
+
+        if !snap.systems.is_empty() {
+            heading(c, fonts, "Systems");
+            for system in &snap.systems {
+                let t = &system.takeoff;
+                let path = t.path.clone();
+                // What is on no system, or on one nobody has named, is listed too. It is
+                // not a system and cannot be selected as one.
+                let act = move |doc: &mut Doc| {
+                    if !path.is_empty() {
+                        doc.select(&path);
+                    }
+                };
+                row(c, !t.path.is_empty() && doc.selected.as_deref() == Some(t.path.as_str()), format!("System {}", t.name), act, |r| {
+                    swatch(r, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::system_colour(&t.classification) });
+                    r.spawn((text(fonts, t.name.clone(), 12.0, Weight::Medium, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::ink() }), TextLayout::no_wrap(), Pickable::IGNORE));
+                    r.spawn(Node { flex_grow: 1.0, ..default() });
+                    r.spawn((text(fonts, total(&t.runs), 11.0, Weight::Regular, if t.runs.members == 0 { theme::ink_faint() } else { theme::status_ink(t.runs.status) }), TextLayout::no_wrap(), Pickable::IGNORE));
+                    // A system has a switch of its own: its runs and what is on it, drawn or not.
+                    if !t.path.is_empty() {
+                        let system = t.path.clone();
+                        switch_of(r, !doc.show.off_systems.contains(&t.path), format!("Show system {}", t.name), move |doc| {
+                            if !doc.show.off_systems.remove(&system) {
+                                doc.show.off_systems.insert(system.clone());
+                            }
+                            doc.redraw();
+                        });
+                    }
+                });
+            }
+        }
+
         // The drawings laid under the level on show: what is traced over. Each says its
         // scale, or that it has none yet.
         heading(c, fonts, "Drawings");
@@ -749,97 +848,6 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 on_click(&mut button(b, fonts, what.name(), "", false), move |doc| crate::bring::write_out(doc, what));
             }
         });
-
-        heading(c, fonts, "Show");
-        let layer = |c: &mut ChildSpawnerCommands, name: &str, key: &str, colour: Color, on: bool, count: Option<usize>, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
-            row(c, false, format!("Show {name}"), move |doc| act(doc), |r| {
-                spot(r, colour);
-                r.spawn((text(fonts, name, 12.0, Weight::Medium, if on { theme::ink() } else { theme::ink_faint() }), Pickable::IGNORE));
-                if let Some(count) = count {
-                    r.spawn((text(fonts, count.to_string(), 11.0, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
-                }
-                r.spawn(Node { flex_grow: 1.0, ..default() });
-                if !key.is_empty() {
-                    keycap(r, fonts, key);
-                }
-                switch(r, on);
-            });
-        };
-        for (i, d) in [Discipline::Architecture, Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing].into_iter().enumerate() {
-            let count = snap.counts.iter().find(|c| c.0 == d).map(|c| c.1).unwrap_or(0);
-            if i == 1 && !snap.planes.is_empty() {
-                layer(c, "Roof", "", theme::roof_bare(), doc.show.roof, Some(snap.planes.len()), Box::new(|doc| {
-                    doc.show.roof = !doc.show.roof;
-                    doc.redraw();
-                }));
-            }
-            // A job with nothing of a trade does not offer to show it.
-            if count == 0 {
-                continue;
-            }
-            layer(c, theme::discipline_name(d), "", theme::discipline_colour(d), doc.show.discipline(d), Some(count), Box::new(move |doc| {
-                doc.show.toggle(d);
-                doc.redraw();
-            }));
-        }
-        layer(c, "See through", "X", theme::accent(), doc.show.ghost, None, Box::new(|doc| {
-            doc.show.ghost = !doc.show.ghost;
-            doc.redraw();
-        }));
-        layer(c, "Known, Assumed, Unknown", "", theme::amber(), doc.show.certainty, None, Box::new(|doc| {
-            doc.show.certainty = !doc.show.certainty;
-            doc.redraw();
-        }));
-        let found = snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.iter().filter(|x| !x.through).count()).unwrap_or(0);
-        if found > 0 {
-            layer(c, "Clashes", "", theme::clash(), doc.show.clashes || doc.tab == crate::model::Tab::Clashes, Some(found), Box::new(|doc| {
-                doc.show.clashes = !doc.show.clashes;
-                doc.redraw();
-            }));
-            // What the two colours of mark mean, where the marks are switched on (J19-20).
-            if doc.show.clashes || doc.tab == crate::model::Tab::Clashes {
-                let sure = snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.iter().filter(|x| !x.through && x.status == plumbline_world::value::Status::Known).count()).unwrap_or(0);
-                c.spawn((Node { column_gap: px(6.0), align_items: AlignItems::Center, padding: UiRect::new(px(22.0), px(8.0), px(0.0), px(4.0)), flex_wrap: FlexWrap::Wrap, ..default() }, Pickable::IGNORE)).with_children(|r| {
-                    for (colour, n, what) in [(theme::clash(), sure, if sure == 1 { "finding" } else { "findings" }), (theme::clash_to_verify(), found - sure, "to verify in the field")] {
-                        if n > 0 {
-                            spot(r, colour);
-                            r.spawn((text(fonts, format!("{n} {what}"), 11.0, Weight::Regular, theme::ink_soft()), Pickable::IGNORE));
-                        }
-                    }
-                });
-            }
-        }
-
-        if !snap.systems.is_empty() {
-            heading(c, fonts, "Systems");
-            for system in &snap.systems {
-                let t = &system.takeoff;
-                let path = t.path.clone();
-                // What is on no system, or on one nobody has named, is listed too. It is
-                // not a system and cannot be selected as one.
-                let act = move |doc: &mut Doc| {
-                    if !path.is_empty() {
-                        doc.select(&path);
-                    }
-                };
-                row(c, !t.path.is_empty() && doc.selected.as_deref() == Some(t.path.as_str()), format!("System {}", t.name), act, |r| {
-                    swatch(r, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::system_colour(&t.classification) });
-                    r.spawn((text(fonts, t.name.clone(), 12.0, Weight::Medium, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::ink() }), TextLayout::no_wrap(), Pickable::IGNORE));
-                    r.spawn(Node { flex_grow: 1.0, ..default() });
-                    r.spawn((text(fonts, total(&t.runs), 11.0, Weight::Regular, if t.runs.members == 0 { theme::ink_faint() } else { theme::status_ink(t.runs.status) }), TextLayout::no_wrap(), Pickable::IGNORE));
-                    // A system has a switch of its own: its runs and what is on it, drawn or not.
-                    if !t.path.is_empty() {
-                        let system = t.path.clone();
-                        switch_of(r, !doc.show.off_systems.contains(&t.path), format!("Show system {}", t.name), move |doc| {
-                            if !doc.show.off_systems.remove(&system) {
-                                doc.show.off_systems.insert(system.clone());
-                            }
-                            doc.redraw();
-                        });
-                    }
-                });
-            }
-        }
     });
 }
 
@@ -1171,13 +1179,32 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         }
 
         // Anything the last action needs said in full: over the model, where it is seen.
+        // A card of the same frosted glass as the panels, nearer than they are (a deeper
+        // shadow), under the view buttons and never behind them. How it went is a bar
+        // of the tone's colour down its left edge and the colour of its first line.
+        // (It was a flat square bar of red, cut off where it ran under the buttons.)
         if doc.tone != Tone::Done {
-            o.spawn((Node { position_type: PositionType::Absolute, top: px(TOP_H + 10.0), left: px(LEFT_W + 10.0), right: px(RIGHT_W + 10.0), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, ..default() }, Pickable::IGNORE)).with_children(|mid| {
-                let (ink, wash) = if doc.tone == Tone::Refused { (theme::red(), theme::red_wash()) } else { (theme::amber(), theme::amber_wash()) };
-                mid.spawn((Node { max_width: px(620.0), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(12.0), px(8.0)), row_gap: px(3.0), border: UiRect { left: px(4.0), right: px(1.0), top: px(1.0), bottom: px(1.0) }, ..default() }, BackgroundColor(wash), BorderColor::all(ink), Pickable::IGNORE)).with_children(|c| {
-                    for (i, line) in doc.message.lines().enumerate() {
-                        c.spawn((text(fonts, if i == 0 { pretty(line) } else { line.to_string() }, 12.5, if i == 0 { Weight::Medium } else { Weight::Regular }, ink), Pickable::IGNORE));
-                    }
+            o.spawn((Node { position_type: PositionType::Absolute, top: px(TOP_H + 2.0 * theme::GAP + 54.0), left: px(LEFT_W + 3.0 * theme::GAP), right: px(RIGHT_W + 3.0 * theme::GAP), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, ..default() }, Pickable::IGNORE)).with_children(|mid| {
+                let ink = if doc.tone == Tone::Refused { theme::red() } else { theme::amber() };
+                let (frosted, tinted) = match crate::glass::panel() {
+                    Some(glass) => (MaterialNode(glass), BackgroundColor(Color::NONE)),
+                    None => (MaterialNode(Handle::default()), BackgroundColor(theme::frost())),
+                };
+                mid.spawn((
+                    Node { max_width: px(640.0), column_gap: px(10.0), padding: UiRect::axes(px(12.0), px(10.0)), border: UiRect::all(px(1.0)), border_radius: BorderRadius::all(px(theme::PANEL_RADIUS - 4.0)), ..default() },
+                    tinted,
+                    frosted,
+                    BorderColor::all(theme::frost_edge()),
+                    theme::message_shadow(),
+                    Pickable::IGNORE,
+                ))
+                .with_children(|card| {
+                    card.spawn((Node { width: px(4.0), flex_shrink: 0.0, border_radius: BorderRadius::all(px(2.0)), ..default() }, BackgroundColor(ink), Pickable::IGNORE));
+                    card.spawn((Node { flex_direction: FlexDirection::Column, row_gap: px(3.0), flex_shrink: 1.0, ..default() }, Pickable::IGNORE)).with_children(|c| {
+                        for (i, line) in doc.message.lines().enumerate() {
+                            c.spawn((text(fonts, if i == 0 { pretty(line) } else { line.to_string() }, 12.5, if i == 0 { Weight::Semibold } else { Weight::Regular }, if i == 0 { ink } else { theme::ink() }), Pickable::IGNORE));
+                        }
+                    });
                 });
             });
         }
@@ -1309,7 +1336,7 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
 /// Down the right: what is selected, as fields and buttons; with nothing selected, the job.
 fn right(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, plans: &crate::plans::Plans, scrolled: f32) {
     p.spawn((
-        docked(Node { top: px(TOP_H), right: px(0.0), bottom: px(STATUS_H), width: px(RIGHT_W), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(14.0), px(10.0)), overflow: Overflow::scroll_y(), ..default() }, UiRect::left(px(1.0))),
+        docked(Node { top: px(TOP_H), right: px(0.0), max_height: Val::Vh(88.0), width: px(RIGHT_W), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(14.0), px(10.0)), overflow: Overflow::scroll_y(), ..default() }, UiRect::left(px(1.0))),
         ScrollPosition(Vec2::new(0.0, scrolled)),
         InspectorScroll,
     ))
@@ -1772,9 +1799,13 @@ pub fn scroll_panels(
     let mut over = None;
     for (window, primary) in &windows {
         let Some(at) = window.cursor_position() else { continue };
+        // Over the panel itself, not the model under where a taller panel would
+        // reach: a panel is as tall as what is in it, and below it the wheel is the
+        // model's.
+        let on_panel = crate::scene::OVER_PANEL.load(std::sync::atomic::Ordering::Relaxed);
         over = match primary {
-            true if at.x > window.width() - RIGHT_W - theme::GAP && at.y > TOP_H => Some(0),
-            true if at.x < LEFT_W + theme::GAP && at.y > TOP_H => Some(2),
+            true if on_panel && at.x > window.width() - RIGHT_W - theme::GAP && at.y > TOP_H => Some(0),
+            true if on_panel && at.x < LEFT_W + theme::GAP && at.y > TOP_H => Some(2),
             true => None,
             false => Some(1),
         };

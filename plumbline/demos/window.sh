@@ -38,7 +38,19 @@ found() {
   echo "$at"
 }
 # A button, a row or a field of the model window, by the word on it.
-on() { local at; at="$(found model "$1")" || exit 1; click $at; }
+# One that a panel has scrolled out of sight is brought on screen with the wheel first,
+# as a person would: the program's list says which way it lies ("away", down or up) and
+# leaves it out of what can be clicked until it shows.
+away() { awk -F'\t' -v n="$1" '$1=="away" && $2==n {print $3}' "$PLUMBLINE_MAP" 2>/dev/null | head -1; }
+on() {
+  local at n=0 way
+  [ -n "$(where model "$1")" ] || sleep 3
+  while [ -z "$(where model "$1")" ] && [ "$n" -lt 40 ]; do
+    way="$(away "$1")"; [ -n "$way" ] || break
+    xdotool mousemove 120 400; sleep 0.5; xdotool click "$([ "$way" = down ] && echo 5 || echo 4)"; sleep 2; n=$((n + 1))
+  done
+  at="$(found model "$1")" || exit 1; click $at
+}
 # The same, in the sheet window. The keyboard goes back to the model window after.
 sheet() { local at; at="$(found sheet "$1")" || exit 1; click $at; focus; }
 # A row or a figure of the sheet brought on screen with the wheel, a step at a time
