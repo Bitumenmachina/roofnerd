@@ -1495,7 +1495,7 @@ fn lines(job: &mut plumbline_world::Job) -> String {
     let point = |p: [f64; 2]| format!("({}, {})", p[0], p[1]);
     let _ = writeln!(out, "{} planes placed; they imply {} lines (coordinates in feet):", planes.len(), found.lines.len());
     for l in &found.lines {
-        let _ = writeln!(out, "  {} {:<7} {} to {}  on {}", l.status.flag(), format!("{:?}", l.kind), point(l.ends[0]), point(l.ends[1]), l.planes.join(" and "));
+        let _ = writeln!(out, "  {} {:<7} {} to {}  on {}", l.status.flag(), capital(l.kind.said()), point(l.ends[0]), point(l.ends[1]), l.planes.join(" and "));
     }
     let _ = writeln!(out);
     let _ = writeln!(out, "{} entered lines agree with the planes.", cmp.agree.len());
@@ -1508,7 +1508,7 @@ fn lines(job: &mut plumbline_world::Job) -> String {
     if !cmp.implied_only.is_empty() {
         let _ = writeln!(out, "Implied by the planes, but not entered:");
         for l in &cmp.implied_only {
-            let _ = writeln!(out, "  {:?} {} to {} on {}", l.kind, point(l.ends[0]), point(l.ends[1]), l.planes.join(" and "));
+            let _ = writeln!(out, "  {} {} to {} on {}", capital(l.kind.said()), point(l.ends[0]), point(l.ends[1]), l.planes.join(" and "));
         }
     }
     if !found.problems.is_empty() {

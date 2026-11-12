@@ -240,7 +240,7 @@ impl Job {
                 self.world.entity_mut(e).insert(new);
             }
             "price" => {
-                let mut new = self.world.get::<Supply>(e).cloned().ok_or_else(|| format!("{path} is a {kind:?}, not a material; a price is set on a material, and a cost line's is its unit_cost"))?;
+                let mut new = self.world.get::<Supply>(e).cloned().ok_or_else(|| format!("{path} is {kind:#}, not a material; a price is set on a material, and a cost line's is its unit_cost"))?;
                 let per = new.price.unit.clone();
                 new.price = Val { value: value.map(|t| units::parse_price(t, &per)).transpose()?, unit: per, status, source: source.into() };
                 check::supply(path, kind, &new)?;
@@ -279,7 +279,7 @@ impl Job {
             "allowance" => {
                 // A rate on the one figure a thing of this kind is bought by.
                 let Some((_, unit)) = kind.priced_by() else {
-                    return Err(format!("{path}: a {kind:?} cannot carry an allowance; it has no area or length a rate could be on"));
+                    return Err(format!("{path}: {kind:#} cannot carry an allowance; it has no area or length a rate could be on"));
                 };
                 let per = format!("$/{unit}");
                 let rate = value.map(|text| units::parse_price(text, &per)).transpose()?;
@@ -301,7 +301,7 @@ impl Job {
     pub fn set_quote(&mut self, path: &str, supplier: &str, value: Option<&str>, status: Status, source: &str) -> Result<(), String> {
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
-        let mut new = self.world.get::<Supply>(e).cloned().ok_or_else(|| format!("{path} is a {kind:?}, not a material; a supplier quotes a material"))?;
+        let mut new = self.world.get::<Supply>(e).cloned().ok_or_else(|| format!("{path} is {kind:#}, not a material; a supplier quotes a material"))?;
         // A supplier already in the job is named the way it is named there.
         let mut q = self.world.query::<&Supply>();
         if let Some(known) = q.iter(&self.world).flat_map(|s| s.quotes.keys()).find(|k| *k != supplier && check::same_name(k, supplier)) {
@@ -561,7 +561,7 @@ impl Job {
             _ => return Err(format!("{condition:?} names {} assemblies ({}); use the path", found.len(), found.iter().map(|f| f.0.clone()).collect::<Vec<_>>().join(", "))),
         };
         if !recipe.applies_to.contains(&kind) {
-            return Err(format!("{name:?} applies to {}, and {path} is a {kind:?}", recipe.applies_to.iter().map(|k| format!("a {k:?}")).collect::<Vec<_>>().join(" or ")));
+            return Err(format!("{name:?} applies to {}, and {path} is {kind:#}", recipe.applies_to.iter().map(|k| format!("{k:#}")).collect::<Vec<_>>().join(" or ")));
         }
         // An element is one condition. A second recipe's lines would sit under the first
         // one's name, or the first one's name would be written over.

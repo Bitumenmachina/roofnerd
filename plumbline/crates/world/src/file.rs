@@ -314,7 +314,7 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
             None => return Err(format!("{path} has no {K_CLASS}; every element says what it is")),
         };
         if (kind == Kind::Job) != (i == 0) {
-            return Err(if i == 0 { format!("the first element, {path}, has to be the job; it is a {kind:?}") } else { format!("{path} is a second job element; a file holds one job") });
+            return Err(if i == 0 { format!("the first element, {path}, has to be the job; it is {kind:#}") } else { format!("{path} is a second job element; a file holds one job") });
         }
         if (i == 0) != attributes.contains_key(K_JOB) {
             return Err(if i == 0 { format!("the job element {path} must carry {K_JOB}") } else { format!("{path} carries {K_JOB}; only the job element does") });

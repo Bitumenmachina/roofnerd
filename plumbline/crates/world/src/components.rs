@@ -105,6 +105,17 @@ pub enum Kind {
     Prior,
 }
 
+/// A kind as a person says it: `{kind}` is "roof plane", `{kind:#}` is "a roof plane".
+impl std::fmt::Display for Kind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if f.alternate() {
+            f.write_str(&self.a())
+        } else {
+            f.write_str(self.said())
+        }
+    }
+}
+
 impl Kind {
     /// The start of the path given to a new element of this kind.
     /// The kind as a builder says it: what a list or a refusal calls a thing of this kind.
@@ -115,6 +126,16 @@ impl Kind {
             Kind::PitchBreak => "pitch break",
             Kind::Condition => "assembly",
             other => other.stem(),
+        }
+    }
+    /// With its article, for the middle of a sentence: "a wall", "an eave".
+    pub fn a(self) -> String {
+        match self {
+            Kind::Equipment => "a piece of equipment".to_string(),
+            other => {
+                let said = other.said();
+                format!("{} {said}", if said.starts_with(['a', 'e', 'i', 'o', 'u']) { "an" } else { "a" })
+            }
         }
     }
     pub fn stem(self) -> &'static str {

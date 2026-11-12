@@ -1140,7 +1140,7 @@ fn one_parapet_and_one_condition_make_four_lines_and_nothing_is_assumed_for_them
 
     // A condition goes on the kind of element it is for, once.
     let mut job = sample();
-    assert!(job.apply("plane-0003", "Parapet with copper coping", "x").unwrap_err().contains("applies to a Parapet"));
+    assert!(job.apply("plane-0003", "Parapet with copper coping", "x").unwrap_err().contains("applies to a parapet"));
     assert!(job.apply("parapet-0024", "No such condition", "x").unwrap_err().contains("no assembly"));
     job.apply("parapet-0024", "condition-0025", "x").unwrap();
     assert!(job.apply("parapet-0024", "condition-0025", "x").unwrap_err().contains("two cost lines"));
@@ -2800,7 +2800,7 @@ fn a_type_named_has_to_be_a_type_of_the_right_sort() {
     assert!(err.contains("which is not a door or window type in this job"), "{err}");
     // A door of a window's type.
     let err = file::load(&swap(&door, &window, 1)).err().expect("a door of a window type");
-    assert!(err.contains("is a Door, but its type") && err.contains("is a Window's"), "{err}");
+    assert!(err.contains("is a door, but its type") && err.contains("is a window's"), "{err}");
     // A top level that is not a storey.
     let second = path_named(&mut job, "second floor");
     let _ = second;
@@ -4848,7 +4848,7 @@ fn a_fitting_is_worked_out_from_the_runs_that_meet_and_a_run_is_joined_to_a_thin
     assert_eq!(joined_of(&mut job, "Supply air"), (1, 2, 0));
     assert!(ed::connect(&mut job, &ahu, &pieces[0], how).unwrap_err().contains("already has a connector where"));
     assert!(ed::connect(&mut job, &ahu, &branch[0], how).unwrap_err().starts_with(&format!("neither end of {} is at {ahu}", branch[0])));
-    assert!(ed::connect(&mut job, &bend.path, &pieces[1], how).unwrap_err().contains("is a Fitting"));
+    assert!(ed::connect(&mut job, &bend.path, &pieces[1], how).unwrap_err().contains("is a fitting"));
     // It saves and loads to the same bytes.
     let text = save(&mut job);
     let (mut again, report) = load(&text).unwrap();

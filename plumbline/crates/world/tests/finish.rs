@@ -138,7 +138,7 @@ fn a_wall_is_dressed_in_what_its_live_lines_name_and_says_which_line() {
     let (_, to, written) = d.walls[&walls[3]].wainscot.as_ref().unwrap();
     assert_eq!((*to, *written), (3.0, false));
     let said = finish::report(&mut job).join("\n");
-    assert!(said.contains("a height no line gives"), "{said}");
+    assert!(said.contains("since its line gives no height to draw it to"), "{said}");
     // The partition has brick priced on it and no outside face: priced, not drawn, and said.
     assert!(said.contains("so no cladding is drawn on it; priced on it and not drawn: brick veneer (the line \"Brick veneer\")"), "{said}");
     assert!(said.contains("bare, on its east face: nothing priced on it names a cladding"), "{said}");

@@ -242,7 +242,7 @@ pub(crate) fn usable(what: &str, xs: &[f64], divisor: f64) -> Result<(), String>
 
 pub fn check_system(path: &str, kind: Kind, s: &SystemInfo) -> Result<(), String> {
     if kind != Kind::System {
-        return Err(format!("{path}: a {kind:?} cannot carry a system's description; only a system can"));
+        return Err(format!("{path}: {kind:#} cannot carry a system's description; only a system can"));
     }
     match CLASSIFICATIONS.iter().find(|(name, _)| *name == s.classification) {
         None => Err(format!("{path} system: {:?} is not a classification this program knows; it takes {}", s.classification, CLASSIFICATIONS.map(|c| c.0).join(", "))),
@@ -253,7 +253,7 @@ pub fn check_system(path: &str, kind: Kind, s: &SystemInfo) -> Result<(), String
 
 pub fn check_in_system(path: &str, kind: Kind, s: &InSystem) -> Result<(), String> {
     if !(kind.is_segment() || kind.is_placed()) {
-        return Err(format!("{path}: a {kind:?} cannot belong to a system; a duct, a pipe, a conduit, a cable, equipment, a fixture or a fitting can"));
+        return Err(format!("{path}: {kind:#} cannot belong to a system; a duct, a pipe, a conduit, a cable, equipment, a fixture or a fitting can"));
     }
     s.0.check(&format!("{path} system"), "")?;
     if s.0.value.as_ref().is_some_and(|p| p.trim().is_empty()) {
@@ -356,13 +356,13 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         let me = &node.path;
         let parent = node.parent.as_ref().and_then(|p| kinds.get(p)).copied();
         if kind.is_opening() && parent != Some(Kind::Wall) {
-            return Err(format!("{me}: a {kind:?} is an opening in a wall and has to be under one"));
+            return Err(format!("{me}: {kind:#} is an opening in a wall and has to be under one"));
         }
         if *kind == Kind::Room && parent != Some(Kind::Storey) {
             return Err(format!("{me}: a room is a space on a level and has to be directly under one"));
         }
         if matches!(kind, Kind::Wall | Kind::Floor) && parent != Some(Kind::Storey) {
-            return Err(format!("{me}: a {kind:?} stands on a level and has to be under one"));
+            return Err(format!("{me}: {kind:#} stands on a level and has to be under one"));
         }
         if *kind == Kind::Drawing && parent != Some(Kind::Storey) {
             return Err(format!("{me}: a drawing is a plan of a level and has to be directly under one"));
@@ -424,7 +424,7 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         if let Some(p) = opening.and_then(|o| o.type_name.value.as_ref()) {
             match tree.opening_types.get(p) {
                 None => return Err(format!("{me}: its type is {p:?}, which is not a door or window type in this job")),
-                Some(t) if t.category != *kind => return Err(format!("{me}: is a {kind:?}, but its type, {p}, is a {:?}'s", t.category)),
+                Some(t) if t.category != *kind => return Err(format!("{me}: is {kind:#}, but its type, {p}, is {:#}'s", t.category)),
                 Some(_) => {}
             }
         }
@@ -436,13 +436,13 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         if let Some(p) = segment.and_then(|r| r.type_name.value.as_ref()) {
             match tree.segment_types.get(p) {
                 None => return Err(format!("{me}: its type is {p:?}, which is not a run type in this job")),
-                Some(t) if t.category != *kind => return Err(format!("{me}: is a {kind:?}, but its type, {p}, is a {:?}'s", t.category)),
+                Some(t) if t.category != *kind => return Err(format!("{me}: is {kind:#}, but its type, {p}, is {:#}'s", t.category)),
                 Some(_) => {}
             }
         }
         // A run's heights and a placed thing's are above the storey it is under.
         if (kind.is_segment() || kind.is_placed()) && tree.storey_of(me).is_none() {
-            return Err(format!("{me}: a {kind:?} is set at a height above a level and has to be under one"));
+            return Err(format!("{me}: {kind:#} is set at a height above a level and has to be under one"));
         }
     }
     // One wall drawn over another on a storey is the same wall counted twice. Two that

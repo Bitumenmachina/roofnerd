@@ -51,7 +51,7 @@ fn text_ok(what: &str, v: &Val<String>) -> Result<(), String> {
 
 pub fn outline(path: &str, kind: Kind, o: &Outline) -> Result<(), String> {
     if !kind.is_area() {
-        return Err(format!("{path}: a {kind:?} cannot carry an outline; only a roof plane or a low-slope area can"));
+        return Err(format!("{path}: {kind:#} cannot carry an outline; only a roof plane or a low-slope area can"));
     }
     coords_ok(&format!("{path} outline points"), &o.points)?;
     coords_ok(&format!("{path} eave line"), &o.eave)?;
@@ -135,7 +135,7 @@ pub fn eave_edge(pts: &[P2], eave: [P2; 2]) -> Result<[P2; 2], String> {
 /// every edge.
 pub fn footprint(path: &str, kind: Kind, f: &Footprint) -> Result<(), String> {
     if kind != Kind::Roof {
-        return Err(format!("{path}: a {kind:?} cannot carry a footprint; only a Roof can"));
+        return Err(format!("{path}: {kind:#} cannot carry a footprint; only a Roof can"));
     }
     coords_ok(&format!("{path} footprint points"), &f.points)?;
     f.eave_height.check_length(&format!("{path} eave height"))?;
@@ -200,7 +200,7 @@ pub fn footprint(path: &str, kind: Kind, f: &Footprint) -> Result<(), String> {
 
 pub fn solved(path: &str, kind: Kind, s: &Solved) -> Result<(), String> {
     if !(kind.is_area() || kind.is_run()) {
-        return Err(format!("{path}: a {kind:?} is not something the solver makes"));
+        return Err(format!("{path}: {kind:#} is not something the solver makes"));
     }
     if s.from.trim().is_empty() {
         return Err(format!("{path}: is marked as solved but does not say from which roof"));
@@ -210,7 +210,7 @@ pub fn solved(path: &str, kind: Kind, s: &Solved) -> Result<(), String> {
 
 pub fn pitch(path: &str, kind: Kind, p: &Pitch) -> Result<(), String> {
     if !kind.is_area() {
-        return Err(format!("{path}: a {kind:?} cannot carry a pitch; only a roof plane or a low-slope area can"));
+        return Err(format!("{path}: {kind:#} cannot carry a pitch; only a roof plane or a low-slope area can"));
     }
     p.0.check(&format!("{path} pitch"), U_PITCH)?;
     if let Some(x) = p.0.value {
@@ -227,7 +227,7 @@ pub fn pitch(path: &str, kind: Kind, p: &Pitch) -> Result<(), String> {
 
 pub fn run(path: &str, kind: Kind, r: &Run) -> Result<(), String> {
     if !kind.is_run() {
-        return Err(format!("{path}: a {kind:?} cannot carry a line"));
+        return Err(format!("{path}: {kind:#} cannot carry a line"));
     }
     coords_ok(&format!("{path} line ends"), &r.ends)?;
     if let Some([a, b]) = r.ends_ft() {
@@ -276,7 +276,7 @@ pub fn work_code(path: &str, w: &WorkCode) -> Result<(), String> {
 /// kind is bought by.
 pub fn allowance(path: &str, kind: Kind, a: &Allowance) -> Result<(), String> {
     let Some((figure, unit)) = kind.priced_by() else {
-        return Err(format!("{path}: a {kind:?} cannot carry an allowance; it has no area or length a rate could be on"));
+        return Err(format!("{path}: {kind:#} cannot carry an allowance; it has no area or length a rate could be on"));
     };
     let what = format!("{path} allowance");
     a.rate.check(&what, &format!("$/{unit}")).map_err(|why| format!("{why} (a {} is priced by its {}, in {unit})", kind.said(), crate::view::words(figure)))?;
@@ -293,7 +293,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
     // Cost lines are on what is built and on the job. A condition's lines are its recipe;
     // a material's cost is its price; a type is not a thing that is bought.
     if matches!(kind, Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey | Kind::Drawing | Kind::Prior) && !c.lines.is_empty() {
-        return Err(format!("{path}: a {kind:?} cannot carry cost lines; they go on what is built, or on the job for general conditions{}", if kind == Kind::Condition { " (an assembly's own lines are what it is)" } else { "" }));
+        return Err(format!("{path}: {kind:#} cannot carry cost lines; they go on what is built, or on the job for general conditions{}", if kind == Kind::Condition { " (an assembly's own lines are what it is)" } else { "" }));
     }
     c.code.check(&format!("{path} cost code"), "")?;
     if let Some(code) = &c.code.value {
@@ -423,7 +423,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
 /// What an element is made of is a material's name.
 pub fn made_of(path: &str, kind: Kind, m: &MadeOf) -> Result<(), String> {
     if matches!(kind, Kind::Job | Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey | Kind::Drawing | Kind::Prior) {
-        return Err(format!("{path}: a {kind:?} is not made of a material"));
+        return Err(format!("{path}: {kind:#} is not made of a material"));
     }
     text_ok(&format!("{path} material"), &m.0)
 }
@@ -432,7 +432,7 @@ pub fn made_of(path: &str, kind: Kind, m: &MadeOf) -> Result<(), String> {
 /// in a unit like `lb/SF`, and prices, each in dollars for the unit it is bought in.
 pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
     if kind != Kind::Material {
-        return Err(format!("{path}: a {kind:?} cannot carry a material's supply; only a Material element can"));
+        return Err(format!("{path}: {kind:#} cannot carry a material's supply; only a Material element can"));
     }
     let mut per = None;
     if let Some(o) = &s.order {
@@ -539,7 +539,7 @@ pub fn is_hours(unit: &str) -> bool {
 /// Overhead and profit are percentages, on the job.
 pub fn markup(path: &str, kind: Kind, m: &Markup) -> Result<(), String> {
     if kind != Kind::Job {
-        return Err(format!("{path}: overhead and profit are the job's; a {kind:?} cannot carry them"));
+        return Err(format!("{path}: overhead and profit are the job's; {kind:#} cannot carry them"));
     }
     for (what, v) in [("overhead", &m.overhead), ("profit", &m.profit)] {
         let what = format!("{path} {what}");
@@ -555,7 +555,7 @@ pub fn markup(path: &str, kind: Kind, m: &Markup) -> Result<(), String> {
 /// to make sense on each of them.
 pub fn recipe(path: &str, kind: Kind, t: &Recipe) -> Result<(), String> {
     if kind != Kind::Condition {
-        return Err(format!("{path}: a {kind:?} cannot carry an assembly's lines as an assembly; only an assembly can"));
+        return Err(format!("{path}: {kind:#} cannot carry an assembly's lines as an assembly; only an assembly can"));
     }
     if t.applies_to.is_empty() {
         return Err(format!("{path}: the assembly does not say what it goes on"));
@@ -568,9 +568,9 @@ pub fn recipe(path: &str, kind: Kind, t: &Recipe) -> Result<(), String> {
             return Err(format!("{path}: an assembly goes on what is built (a wall, a floor, a room, a door, a window, a roof plane or line, a duct, a pipe, a fixture) or on the job, not on a {}", k.said()));
         }
         if t.applies_to[..i].contains(k) {
-            return Err(format!("{path}: names {k:?} twice in what it applies to"));
+            return Err(format!("{path}: names {k} twice in what it applies to"));
         }
-        cost(&format!("{path} (applied to a {k:?})"), *k, &t.cost)?;
+        cost(&format!("{path} (applied to a {})", k.said()), *k, &t.cost)?;
     }
     // The stretch-out belongs to the detail, so a recipe never carries one. Anything else
     // a recipe states (a number of sides, a waste, a price) goes onto the element with the

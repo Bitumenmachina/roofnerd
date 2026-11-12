@@ -588,7 +588,7 @@ pub(crate) fn offset_ok(what: &str, v: &Val<Len>) -> Result<(), String> {
 
 pub fn check_level(path: &str, kind: Kind, l: &Level) -> Result<(), String> {
     if kind != Kind::Storey {
-        return Err(format!("{path}: a {kind:?} cannot carry a level; only a level can"));
+        return Err(format!("{path}: {kind:#} cannot carry a level; only a level can"));
     }
     offset_ok(&format!("{path} elevation"), &l.elevation)?;
     if let Some(c) = &l.computation_height {
@@ -599,7 +599,7 @@ pub fn check_level(path: &str, kind: Kind, l: &Level) -> Result<(), String> {
 
 pub fn check_room(path: &str, kind: Kind, r: &Room) -> Result<(), String> {
     if kind != Kind::Room {
-        return Err(format!("{path}: a {kind:?} cannot carry a room's point; only a room can"));
+        return Err(format!("{path}: {kind:#} cannot carry a room's point; only a room can"));
     }
     let d = coords(&format!("{path} room point"), &r.point)?;
     if let Some(p) = &r.point.value {
@@ -641,21 +641,21 @@ fn check_layers(path: &str, thickness: &Val<Len>, layers: &[Layer]) -> Result<()
 
 pub fn check_wall_type(path: &str, kind: Kind, t: &WallType) -> Result<(), String> {
     if kind != Kind::Type {
-        return Err(format!("{path}: a {kind:?} cannot carry a wall type; only a type can"));
+        return Err(format!("{path}: {kind:#} cannot carry a wall type; only a type can"));
     }
     check_layers(&format!("{path} wall type"), &t.thickness, &t.layers)
 }
 
 pub fn check_floor_type(path: &str, kind: Kind, t: &FloorType) -> Result<(), String> {
     if kind != Kind::Type {
-        return Err(format!("{path}: a {kind:?} cannot carry a floor type; only a type can"));
+        return Err(format!("{path}: {kind:#} cannot carry a floor type; only a type can"));
     }
     check_layers(&format!("{path} floor type"), &t.thickness, &t.layers)
 }
 
 pub fn check_opening_type(path: &str, kind: Kind, t: &OpeningType) -> Result<(), String> {
     if kind != Kind::Type {
-        return Err(format!("{path}: a {kind:?} cannot carry an opening type; only a type can"));
+        return Err(format!("{path}: {kind:#} cannot carry an opening type; only a type can"));
     }
     if !t.category.is_opening() {
         return Err(format!("{path} opening type: is for a {:?}; an opening type is for a Door or a Window", t.category));
@@ -666,7 +666,7 @@ pub fn check_opening_type(path: &str, kind: Kind, t: &OpeningType) -> Result<(),
 
 pub fn check_wall(path: &str, kind: Kind, w: &Wall) -> Result<(), String> {
     if kind != Kind::Wall {
-        return Err(format!("{path}: a {kind:?} cannot carry a wall's line; only a wall can"));
+        return Err(format!("{path}: {kind:#} cannot carry a wall's line; only a wall can"));
     }
     type_ref(&format!("{path} wall type"), &w.type_name)?;
     let d = coords(&format!("{path} wall line"), &w.line)?;
@@ -703,7 +703,7 @@ pub fn check_wall(path: &str, kind: Kind, w: &Wall) -> Result<(), String> {
 
 pub fn check_opening(path: &str, kind: Kind, o: &Opening) -> Result<(), String> {
     if !kind.is_opening() {
-        return Err(format!("{path}: a {kind:?} cannot carry an opening; only a door or a window can"));
+        return Err(format!("{path}: {kind:#} cannot carry an opening; only a door or a window can"));
     }
     type_ref(&format!("{path} opening type"), &o.type_name)?;
     positive(&format!("{path} offset along the wall"), &o.offset, true)?;
@@ -713,7 +713,7 @@ pub fn check_opening(path: &str, kind: Kind, o: &Opening) -> Result<(), String> 
 
 pub fn check_floor(path: &str, kind: Kind, f: &Floor) -> Result<(), String> {
     if kind != Kind::Floor {
-        return Err(format!("{path}: a {kind:?} cannot carry a floor's boundary; only a floor can"));
+        return Err(format!("{path}: {kind:#} cannot carry a floor's boundary; only a floor can"));
     }
     type_ref(&format!("{path} floor type"), &f.type_name)?;
     let d = coords(&format!("{path} floor boundary"), &f.boundary)?;
@@ -735,7 +735,7 @@ pub fn check_floor(path: &str, kind: Kind, f: &Floor) -> Result<(), String> {
 
 pub fn check_segment_type(path: &str, kind: Kind, t: &SegmentType) -> Result<(), String> {
     if kind != Kind::Type {
-        return Err(format!("{path}: a {kind:?} cannot carry a run's type; only a type can"));
+        return Err(format!("{path}: {kind:#} cannot carry a run's type; only a type can"));
     }
     if !t.category.is_segment() {
         return Err(format!("{path} run type: is for a {:?}; a run type is for a Duct, a Pipe, a Conduit or a Cable", t.category));
@@ -758,7 +758,7 @@ pub fn check_segment_type(path: &str, kind: Kind, t: &SegmentType) -> Result<(),
 
 pub fn check_segment(path: &str, kind: Kind, r: &Segment) -> Result<(), String> {
     if !kind.is_segment() {
-        return Err(format!("{path}: a {kind:?} cannot carry a run's line; only a duct, a pipe, a conduit or a cable can"));
+        return Err(format!("{path}: {kind:#} cannot carry a run's line; only a duct, a pipe, a conduit or a cable can"));
     }
     type_ref(&format!("{path} run type"), &r.type_name)?;
     let d = coords(&format!("{path} line"), &r.line)?;
@@ -781,7 +781,7 @@ pub fn check_segment(path: &str, kind: Kind, r: &Segment) -> Result<(), String> 
 
 pub fn check_placed(path: &str, kind: Kind, p: &Placed) -> Result<(), String> {
     if !kind.is_placed() {
-        return Err(format!("{path}: a {kind:?} cannot carry a placement; only equipment, a fixture or a fitting can"));
+        return Err(format!("{path}: {kind:#} cannot carry a placement; only equipment, a fixture or a fitting can"));
     }
     p.what.check(&format!("{path} what it is"), "")?;
     if p.what.value.as_ref().is_some_and(|s| s.trim().is_empty()) {
@@ -810,14 +810,14 @@ pub fn check_placed(path: &str, kind: Kind, p: &Placed) -> Result<(), String> {
 
 pub fn check_fitting(path: &str, kind: Kind, _f: &Fitting) -> Result<(), String> {
     if kind != Kind::Fitting {
-        return Err(format!("{path}: a {kind:?} cannot carry a fitting's kind; only a fitting can"));
+        return Err(format!("{path}: {kind:#} cannot carry a fitting's kind; only a fitting can"));
     }
     Ok(())
 }
 
 pub fn check_connectors(path: &str, kind: Kind, c: &Connectors) -> Result<(), String> {
     if !kind.is_placed() {
-        return Err(format!("{path}: a {kind:?} cannot carry connectors; only equipment, a fixture or a fitting can"));
+        return Err(format!("{path}: {kind:#} cannot carry connectors; only equipment, a fixture or a fitting can"));
     }
     if c.0.len() > MAX_CONNECTORS {
         return Err(format!("{path}: has {} connectors; a thing takes up to {MAX_CONNECTORS}", c.0.len()));

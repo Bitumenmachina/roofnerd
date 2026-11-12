@@ -265,7 +265,7 @@ pub fn walls(job: &mut Job, storey: &str, type_path: &str, points: &[P2], closed
 pub fn opening(job: &mut Job, wall: &str, kind: Kind, type_path: &str, at: OnWall, sill: &str, how: Entered) -> Result<String, String> {
     all_or_nothing(job, |job| {
         if !kind.is_opening() {
-            return Err(format!("a {kind:?} is not a door or a window"));
+            return Err(format!("{kind:#} is not a door or a window"));
         }
         let host = job.find(wall).and_then(|e| job.world.get::<Wall>(e).cloned()).ok_or_else(|| format!("{wall} is not a wall with a line"))?;
         let offset = match at {
@@ -311,7 +311,7 @@ pub fn runs(job: &mut Job, storey: &str, kind: Kind, type_path: &str, points: &[
     all_or_nothing(job, |job| {
         storey_of(job, storey)?;
         if !kind.is_segment() {
-            return Err(format!("a {kind:?} is not a duct, a pipe, a conduit or a cable"));
+            return Err(format!("{kind:#} is not a duct, a pipe, a conduit or a cable"));
         }
         if points.len() < 2 {
             return Err("a run needs at least 2 points".into());
@@ -340,7 +340,7 @@ pub fn place(job: &mut Job, storey: &str, kind: Kind, what: &str, at: P2, offset
     all_or_nothing(job, |job| {
         storey_of(job, storey)?;
         if !matches!(kind, Kind::Fixture | Kind::Equipment) {
-            return Err(format!("a {kind:?} is not a fixture or a piece of equipment"));
+            return Err(format!("{kind:#} is not a fixture or a piece of equipment"));
         }
         let size = match size {
             Some(s) => how.val(s, "ft"),
@@ -485,7 +485,7 @@ pub fn move_by(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -
             building::check_room(path, kind, &r)?;
             job.put(path, r)?;
         } else {
-            return Err(format!("a {kind:?} is not moved this way; a wall, a run, a fixture, equipment, a fitting or a room is"));
+            return Err(format!("{kind:#} is not moved this way; a wall, a run, a fixture, equipment, a fitting or a room is"));
         }
         Ok(())
     })

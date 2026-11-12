@@ -3751,3 +3751,17 @@ while it works.
   comes through.
 * 253 tests pass; all eighteen command-line demonstrations pass on this tree. The
   window's crate builds; its pictures are not retaken (the judge has the display).
+* **J17C-14 closed:** a wainscot whose line gives no height to draw it to (none
+  written, or "0 in") says so: "drawn to 3 ft, since its line gives no height to draw
+  it to (one is written like 36 in or 3 ft)".
+* **J17C-19 closed, by decision:** a price in an assembly library still says what it
+  is for, because a library's line goes on things of more than one kind and its unit
+  is not known until it does. What changed is what a refusal says: a bare "5" "does
+  not say what it is for: a price in a library is dollars for a unit, like $4.25/SF";
+  "$/SF" "has no figure: write the dollars, like $4.25/SF, or $?/SF where the price
+  is not known yet"; "$4.25 per SF" is read as $4.25/SF.
+* **Every kind of thing is said in words in the model's refusals** (47 of them said
+  "a RoofPlane", "a Door", "a LowSlopeArea"): "plane-0003: a roof plane cannot carry
+  a level", "is a door, but its type, type-0009, is a window's", "an eave", "a piece
+  of equipment". **Changed behaviour:** those sentences; three tests expect the words.
+* 253 tests pass; all eighteen command-line demonstrations pass.

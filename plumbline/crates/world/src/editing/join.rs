@@ -67,7 +67,7 @@ fn run_info(job: &mut Job, path: &str) -> Result<RunInfo, String> {
     let e = *index.get(path).ok_or_else(|| format!("no element {path}"))?;
     let kind = job.world.get::<Kind>(e).copied().ok_or_else(|| format!("{path} has no kind"))?;
     if !kind.is_segment() {
-        return Err(format!("{path} is a {kind:?}, not a duct, a pipe, a conduit or a cable"));
+        return Err(format!("{path} is {kind:#}, not a duct, a pipe, a conduit or a cable"));
     }
     let segment = job.world.get::<Segment>(e).cloned().ok_or_else(|| format!("{path} has no line"))?;
     let section = segment.type_name.value.as_ref().and_then(|t| index.get(t)).and_then(|t| job.world.get::<SegmentType>(*t)).cloned();
@@ -484,7 +484,7 @@ pub fn connect(job: &mut Job, thing: &str, run: &str, how: Entered) -> Result<us
     all_or_nothing(job, |job| {
         let kind = job.kind(thing).ok_or_else(|| format!("no element {thing}"))?;
         if !matches!(kind, Kind::Fixture | Kind::Equipment) {
-            return Err(format!("{thing} is a {kind:?}: a run is joined to a fixture or a piece of equipment, and runs to each other by a fitting"));
+            return Err(format!("{thing} is {kind:#}: a run is joined to a fixture or a piece of equipment, and runs to each other by a fitting"));
         }
         let r = run_info(job, run)?;
         let e = job.find(thing).ok_or_else(|| format!("no element {thing}"))?;

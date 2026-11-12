@@ -558,8 +558,18 @@ fn rate_out(v: &Val<f64>) -> String {
 }
 
 fn rate_in(cell: &str, status: Status, source: &str) -> Result<Val<f64>, String> {
-    let t = cell.trim().trim_start_matches('$');
-    let (figure, unit) = t.split_once('/').ok_or_else(|| format!("{cell:?} is not dollars for a unit, like $4.25/SF"))?;
+    // "$4.25 per SF" is "$4.25/SF".
+    let written = cell.trim().replace(" per ", "/");
+    let t = written.trim_start_matches('$');
+    // A library's line goes on things of more than one kind and its unit is not known
+    // until it does, so its price says what it is for (J17C-19).
+    let (figure, unit) = t.split_once('/').ok_or_else(|| format!("{cell:?} does not say what it is for: a price in a library is dollars for a unit, like $4.25/SF or $4.25/EA ($?/SF where the price is not known yet)"))?;
+    if figure.trim().is_empty() {
+        return Err(format!("{cell:?} has no figure: write the dollars, like $4.25/{u}, or $?/{u} where the price is not known yet", u = unit.trim()));
+    }
+    if unit.trim().is_empty() {
+        return Err(format!("{cell:?} does not say what it is for: write the unit after the slash, like $4.25/SF"));
+    }
     // Read as every other price is read (J17A-17): a comma is a thousands mark or the
     // figure is refused, never dropped ("$1,23" is not $123), and a price is not below zero.
     let value = if figure.trim() == "?" { None } else { Some(crate::units::parse_price(figure.trim(), unit.trim()).map_err(|why| format!("{why} (dollars for a unit, like $4.25/SF)"))?) };

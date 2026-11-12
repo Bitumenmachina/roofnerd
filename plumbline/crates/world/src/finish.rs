@@ -737,7 +737,7 @@ fn wall_said(w: &WallDress) -> (String, Vec<String>) {
         None => format!("bare, {face}: nothing priced on it names a cladding"),
     };
     if let Some((s, to, written)) = &w.wainscot {
-        let how_high = if *written { format!("to {}", ft(*to)) } else { format!("to {}, a height no line gives in feet and inches", ft(*to)) };
+        let how_high = if *written { format!("to {}", ft(*to)) } else { format!("drawn to {}, since its line gives no height to draw it to (one is written like 36 in or 3 ft)", ft(*to)) };
         more.push(format!("{}{} wainscot {how_high} ({}){}", s.what.said(), toned(&s.tone), s.by, also_wainscot(&s.also)));
     }
     (first, more)
