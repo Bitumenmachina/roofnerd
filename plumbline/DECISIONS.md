@@ -2545,3 +2545,61 @@ grass" was not named. A hyper-real game and Google Earth both have a sky. Workin
 assumption: the model sits in a soft-lit place with a horizon and a sky gradient that
 reads as real light, and still no grass, trees or scenery, which would be decoration
 the estimate does not price.
+
+### Call 63. What the window is rebuilt from: two surveys, and the numbers taken (2026-11-12)
+
+Two agents surveyed, one the web and one the source on this machine. What is taken
+from each, with where it comes from. A figure marked *mine* has no source and is a
+starting value to tune by eye.
+
+**How other tools move** (source read: CesiumJS `ScreenSpaceCameraController.js` and
+`CameraFlightPath.js`, Apache-2.0; three.js `OrbitControls.js`, MIT;
+yomotsu/camera-controls, MIT; `bevy_panorbit_camera`, MIT or Apache-2.0).
+
+| What | Taken | From |
+|---|---|---|
+| wheel units | a line of wheel is 16 px, a page 100; one notch is 100 px | three.js |
+| zoom per notch | distance times 0.90 (three.js uses 0.95; 0.90 *mine*) | three.js |
+| zoom about the pointer | find P under the pointer (the model, else the ground); camera and target both move toward P by the same factor, so P stays under the pointer | derived; three.js `zoomToCursor` and camera-controls `dollyToCursor` do the same by other arithmetic |
+| pan | the ground point under the pointer at the press stays under the pointer: ray to the ground plane at press and at each move, target moves by the difference | derived; Cesium pans the globe this way |
+| turn | about the point under the pointer at the press; a full window height of drag is a full turn | three.js rotate rule; Cesium keeps the tilt centre picked at the press |
+| momentum | on release, carry on and die away as exp(-t / 0.4 s) for a pan or a turn, exp(-t / 0.2 s) for a zoom; only if the press lasted under 0.4 s; stop under half a pixel | Cesium `inertiaSpin` 0.9, `inertiaTranslate` 0.9, `inertiaZoom` 0.8 with its decay(t) = exp(-(1-c) 25 t) |
+| flying to a thing | 0.4 to 1.2 s by how far (*mine*; Cesium's 2 to 3 s is for a globe), eased quintic in and out | Cesium's easing for most flights |
+| plan to 3D | 0.8 s, quintic in and out (*mine*) | |
+| limits | never under the ground; 2 ft to 400 ft from what is looked at (*mine*) | |
+
+Google Earth's own figures are not published; its help page documents wheel to zoom
+and drag to move. Blender (GPL) was not read.
+
+**What glass is** (source read: Microsoft's acrylic and timing pages; MDN
+`backdrop-filter`; Apple's Materials page through a mirror, which gives rules and no
+numbers). Both makers keep glass for what floats over content and keep dense text
+opaque or thick: so the panels over the model are glass and the estimate sheet is
+not. Microsoft: do not put accent-coloured text on glass. Motion: 83, 167 and 250 ms;
+entering eases cubic-bezier(0, 0, 0, 1), leaving cubic-bezier(1, 0, 1, 1) (Fluent,
+sourced). The rest is *mine*: blur about 20 px, tint 60 to 80% (thicker where text is
+dense), a 1 px light edge, corners 18 px on a panel, 10 on a button, 6 on a small
+control; shadow near (0 2 6, 8%) and far (0 8 24, 14%).
+
+**What the engine gives** (Bevy 0.20.1, read in the cargo registry with file and line).
+The 3D camera already fills the window; the panels are absolute nodes that happen to
+be opaque. `BorderRadius`, `BoxShadow` (several at once), `BackgroundGradient` and
+alpha all exist. There is **no backdrop blur**: a frosted panel is a custom
+`UiMaterial` that samples a picture of the scene, which means rendering the scene to
+a picture as well. The whole panel tree is thrown away and rebuilt on every change,
+so anything that animates keeps its state outside the tree. `Interaction` is
+deprecated for `Hovered`/`Pressed`. There is a transform gizmo (`bevy_gizmos::
+transform_gizmo`) and mesh picking with drag events; no outline for a selected mesh.
+`bevy_ui_widgets` (scroll area, slider, checkbox) is not in the lock file and would be
+a new download; a switch is a few lines without it. HDR, bloom, AgX tonemapping,
+ambient occlusion, contact shadows and a procedural atmosphere exist; the atmosphere
+and the generated environment light need compute shaders. BIMCraft is not a Bevy
+program: its camera arithmetic (`view3d.rs` `zoom_about`, `orbit_about`) and its
+floating-card theme port as ideas, not code.
+
+**Decided.** Keep this program's own camera (it has plan and walk, which the engine's
+controller has not) and give it the mechanics above. Glass first as tint, edge and
+shadow, which needs no new pass; real blur behind it as a second step from a small
+second picture of the scene. Switches and smooth scrolling written here, no new
+crate. Dragging by picking's drag events and a ray to the floor, written back
+through `ed::move_by`.
