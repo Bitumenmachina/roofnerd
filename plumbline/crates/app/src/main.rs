@@ -157,6 +157,8 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window { title: "plumbline: model".into(), resolution: (1600u32, 960u32).into(), position: WindowPosition::At(IVec2::new(0, 0)), ..default() }),
+            // Closing is ours to answer: work not saved is never dropped without a word.
+            close_when_requested: false,
             ..default()
         }))
         .add_plugins(MeshPickingPlugin)
@@ -180,6 +182,7 @@ fn main() {
         .add_observer(scene::pressed)
         .add_observer(scene::dragging)
         .add_systems(Startup, (scene::setup, glass::setup, setup).chain())
+        .add_systems(Last, closing)
         .add_systems(
             Update,
             (keys, plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::place_camera, scene::ground_tone, glass::follow).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
@@ -266,6 +269,32 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
 }
 
 /// Save the job to its file.
+/// A window on its way shut: it goes the frame after it is marked, as the engine's own
+/// closing does.
+#[derive(Component)]
+struct Shutting;
+
+/// A window asked to close. With work not saved, the first asking is answered with a
+/// warning and the window stays; a second asking, or a job that is saved, closes it.
+/// (Found beside J19-46: closing with work not saved lost it without a word.)
+fn closing(mut commands: Commands, mut asked: MessageReader<bevy::window::WindowCloseRequested>, shutting: Query<Entity, With<Shutting>>, mut doc: ResMut<Doc>, mut warned: Local<bool>) {
+    for window in &shutting {
+        commands.entity(window).despawn();
+    }
+    if !doc.edited {
+        *warned = false;
+    }
+    for ask in asked.read() {
+        if doc.edited && !*warned {
+            *warned = true;
+            doc.say(Tone::Refused, "Not closed: the job has changes that are not saved. Save (Ctrl+S), or close again to leave without saving them.");
+            doc.touch();
+        } else {
+            commands.entity(ask.window).try_insert(Shutting);
+        }
+    }
+}
+
 fn save(doc: &mut Doc) {
     match std::fs::write(&doc.path, file::save(&mut doc.job)) {
         Ok(()) => {
@@ -395,6 +424,16 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
     }
     // A value being typed takes the keyboard until Enter or Escape.
     if let Some((field, mut text)) = doc.entry.take() {
+        // Saving is never put off by a field that has the keyboard (J19-46: with a
+        // size being typed F2 did nothing and said nothing, the program was closed,
+        // and three windows were lost). The job is saved as it stands, and the line
+        // says the value being typed is not in it yet.
+        if at_once.contains(&KeyCode::F2) || doc.pressed.contains(&KeyCode::F2) || (ctrl && alone.contains(&KeyCode::KeyS)) {
+            save(doc);
+            if doc.tone == Tone::Done {
+                doc.message.push_str(" What is being typed is not in it yet: Enter sets it.");
+            }
+        }
         doc.pressed.clear();
         burst.waiting.clear();
         let before = (text.clone(), doc.form_at);
@@ -411,6 +450,10 @@ fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, 
             if done.is_some() {
                 burst.until = now + BURST_TAIL;
                 burst.trailing = true;
+                continue;
+            }
+            // Ctrl with a letter is a command (Ctrl+S saves), never a letter of the value.
+            if ctrl && matches!(event.logical_key, Key::Character(_)) {
                 continue;
             }
             let comma = matches!(&event.logical_key, Key::Character(c) if c.as_str() == ",");

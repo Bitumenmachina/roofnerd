@@ -4481,3 +4481,30 @@ candidate's table.
   where it was 87; the to-verify rows, the tool prompts and every place shown in the
   window read differently (the words above). No figure changed. 268 tests pass.
 
+* **J19-46, the worst of the judge's notes so far: work lost without a word.** Three
+  windows were drawn, the Wall tool was picked (its sizes open, the cursor in
+  Thickness), F2 was pressed, the program was closed. The saved job had none of the
+  three and nothing on screen said it was not saved. **The cause, read in the code:**
+  while any field has the keyboard the key handler returns before it reaches Save;
+  F2, Ctrl+S and the Save button were all dropped, silently. Since call 64 a tool
+  picked always has its sizes open, so this is the ordinary state to press Save in.
+  **Fixed:** Save works whatever has the keyboard; with a value half typed the line
+  says "Saved ... What is being typed is not in it yet: Enter sets it." Ctrl with a
+  letter is never a letter of the value. **Found beside it and fixed:** closing a
+  window with changes not saved closed it and dropped them; the first close is now
+  answered "Not closed: the job has changes that are not saved. Save (Ctrl+S), or
+  close again to leave without saving them."
+
+  **The demonstration, written before it is run** (`demos/toolsw.sh`, extended): the
+  session's only Save is now pressed with the Door tool picked and its sizes open.
+  The job read back must still have its two doors, 3' 6" by 6' 8" at 6 ft and 2' 8"
+  by 6' 8" at 18 ft, openings 41.11 SF (3.5 x 6.6667 + 2.6667 x 6.6667 = 23.33 +
+  17.78). On the program as it was the saved job would have no door at all: that is
+  the red this check must be proved against (the judged binary from 14fc994 is in
+  the scratch folder for exactly that). Picture 06 must show the saved line. **Not
+  run yet**: the judge has the display. The close warning has no demonstration yet
+  (the virtual display has no window frame to press the close button of; `xdotool
+  windowquit` is to be tried).
+
+  J19-45 held: typed window sizes are placed as typed when the order is plain.
+

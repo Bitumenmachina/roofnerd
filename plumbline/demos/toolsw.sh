@@ -4,6 +4,7 @@
 # walked them. A door is placed by typing only its width and Enter; the Door tool is
 # picked again and shows what it will place; a click while its sizes are open places
 # nothing and says so; a new width typed over the old one places a door of that width.
+# The one Save of the session is pressed while a tool's sizes are open (J19-46).
 # Run from the repository root:  demos/toolsw.sh [folder for the pictures]
 #
 # It drives the real program with a real pointer and keyboard on a virtual display
@@ -57,13 +58,18 @@ xdotool key Return; sleep 4
 at 18 0; park
 shot                                    # 05 a second door, 2' 8" wide, at 18 ft
 esc; esc
-xdotool key F2; sleep 5
+# The nineteenth judgment's path (J19-46): a tool is picked, its sizes are open and
+# have the keyboard, and Save is pressed. This is the only Save of the session: the
+# job read back below has its two doors only if a save with a field open saves.
+on "Door"; sleep 3
+xdotool key F2; sleep 5; park
+shot                                    # 06 saved with the sizes open: the line says so, and that what is being typed is not in it
 close_window
 SESSION
 chmod +x "$T/session.sh"
 timeout 1200 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
 [ ! -e "$T/missing.txt" ] || { echo "FAIL: a control was not on screen, or the plan was not"; cat "$T/missing.txt"; exit 1; }
-for n in 01 02 03 04 05; do [ -s "$OUT/$n-model.png" ] || { echo "FAIL: no picture $n"; exit 1; }; done
+for n in 01 02 03 04 05 06; do [ -s "$OUT/$n-model.png" ] || { echo "FAIL: no picture $n"; exit 1; }; done
 
 echo
 echo "== The job, read back =="
@@ -91,4 +97,4 @@ OUTS="$("$P" show "$J")"
 grep -qE "opening area +41\.1" <<<"$OUTS" || { echo "FAIL: the wall's openings are not 41.11 SF"; grep -i "opening" <<<"$OUTS" | head -5; exit 1; }
 echo "    the wall's openings: 41.11 SF (3.5 x 6.6667 + 2.6667 x 6.6667)"
 echo
-echo "PASS: a door went in from its width and Enter; picked again the tool showed what it would place; a click with its sizes open placed nothing; and a width typed over the old one placed that width"
+echo "PASS: a door went in from its width and Enter; picked again the tool showed what it would place; a click with its sizes open placed nothing; a width typed over the old one placed that width; and Save with the sizes open saved both doors"
