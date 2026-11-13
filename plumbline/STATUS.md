@@ -5129,9 +5129,9 @@ layer drawn. None of that last night's work has been through a judge to the end.
 3. **The new layers have one window demonstration** (`demos/tradesw.sh`: the Finishes,
    Framing and Ground switches and a level looked into, each measured). It does not
    measure the flashing, the base or the footings themselves. Extend it.
-4. **Repair the older window demonstrations** on the rebuilt window: `planw` is
-   repaired and passes (the note at the end of this file says how its clicks were
-   taken again); `buildw`, `draww`, and the rest listed stale above are not. Their fixed click places predate the
+4. **The window demonstrations all pass on the rebuilt window** (sixteen of them, on
+   the last build; the end of this file lists them). What they are owed is to be
+   read, picture by picture, and judged. Their fixed click places predate the
    rebuild.
 5. **The seam for a harness per division** (PROPOSALS.md 21): a division out, a
    division in, and `divisions/` grown from an index into what each trade knows.
@@ -5255,4 +5255,15 @@ on the last build or a frozen copy of it: `tradesw`, `pricew`, `planw`, `buildw`
 `itemsw`, `dressw`. Not window demonstrations, or not rerun: `house`, `d2`. None of
 the picture sets of this last round has been read picture by picture: that reading,
 and a judge, are what the next run owes them.
+
+**Every window demonstration passes on the last build (2026-11-13).** `glassw`,
+`carryw`, `toolsw`, `itemsw` and `dressw` were rerun on the same frozen copy and
+pass, so with the eleven above all sixteen stand on it: `tradesw`, `pricew`, `planw`,
+`buildw`, `draww`, `fieldw`, `clashw`, `d4w`, `d5w`, `bringw`, `firstw`, `glassw`,
+`carryw`, `toolsw`, `itemsw`, `dressw`. Their pictures in `demos/captured/` are of
+that build (the last commit that changed the program; what came after it changed
+only scripts and this file). **Read picture by picture, by the builder:** only those
+named as read earlier in this file. The rest passed their measurements and have not
+been looked at as a person would: a check that passes while the window is wrong is
+a defect in the check, and that looking is owed.
 
