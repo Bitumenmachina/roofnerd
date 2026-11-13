@@ -339,3 +339,21 @@ the program and the program sends nothing; nothing a harness writes is Known; a
 harness prices and tunes and does not draw. Q23 is still his: the four trades were
 drawn on its working assumption and he has been sent a picture of each.
 
+## Q25. Is a quantity rounded before it is priced? (2026-11-13, from the twentieth judgment, J20-3)
+
+Today every cost line's quantity is rounded to four places and the rounded figure is
+what is priced and shown: a 40 ft footing, 24 by 12, is 2.962963 CY, shown as "2.9630
+CY", and at $450 comes to $1,333.35 where the unrounded figure gives $1,333.33. On
+the made-up whole house the four footings come to $4,533.40 against $4,533.33 for the
+concrete as drawn: seven cents on Division 3.
+
+Both ways are defensible and estimators do both: price what is shown, so that anyone
+can multiply the two figures on the line and get the amount; or price what is there
+and round only the money. What is not defensible is not knowing which: call 74's
+"by hand" figures used the rounded quantities without saying so.
+
+**Working assumption: as it is.** The amount on a line is the quantity shown times
+the price shown, to the cent, so the line can be checked by eye; the quantity shown
+is to four places. A change would move every total in every job by cents and every
+demonstration's figures with it, and is not made without his word.
+

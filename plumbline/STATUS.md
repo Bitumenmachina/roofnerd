@@ -5118,7 +5118,7 @@ layer drawn. None of that last night's work has been through a judge to the end.
 
 1. **What judgment 20 found is mostly fixed** ("The clean-up pass after judgment 20",
    just above, has each with its proof). Left: a quantity rounded to four places
-   before it is priced (wants a decision: it moves every total by cents); a footing
+   before it is priced (QUESTIONS.md Q25: it stays as it is until Patrick says); a footing
    or a wall in the BIM file as a plain box notched at its outside corners; two
    framing lines on one wall. **None of the fixes has been seen by a judge.**
 2. **Run judgment 20 again to the end** on the result, with the same brief
