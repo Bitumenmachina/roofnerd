@@ -5067,6 +5067,30 @@ and wiring are seen over its walls. Seen: `demos/captured/trades/first-floor-alo
 levels' read off). Not right in it: the near corner of the house sits behind the tool
 bar. It was the navigation gap named under "Interior woodwork drawn".
 
+## The layers, switched in the window (`demos/tradesw.sh`, 2026-11-13)
+
+The first demonstration script for last night's layers. The made-up whole house; one
+click for each layer; five pictures in `demos/captured/layers/`; and for each a
+measurement that **fails on the picture before the switch**, run every time:
+
+| Picture | The switch | What is measured | Before the switch |
+|---|---|---|---|
+| 02 | Finishes off | the south wall is pale and cool, (160, 168, 174): the weather barrier | (138, 106, 77), the cedar: the barrier test fails on it, and the cedar test fails on 02 |
+| 03 | Framing on | 0.48 of the wall is lumber, with the house seen between the studs (wanted 0.30 to 0.90) | 0.00 |
+| 04 | Ground off | where the house's shadow fell there is none, (183, 186, 189) | (143, 147, 149), the shadow |
+| 05 | the first floor picked | where the roof was there is none, (193, 189, 191) | (90, 98, 107), the roofing |
+
+And the price read before and after is the same, $468,876.85: a switch changes what
+is drawn and no figure. **It passed on its first run. Read:** picture 04, the house
+with the ground away: the foundation walls are concrete grey under the stone now (the
+concrete change, seen for the first time); the footings are still behind the tool
+bar. Pictures 02, 03 and 05 are the same views as the ones read last night and were
+not read again.
+
+**What it does not check:** flashing at the openings (seen by eye last night, not
+measured); the base in the rooms (seen by eye); anything of the foundation but that
+the ground went. And it is the builder's own script: no judge has run it.
+
 ## Start here (written 2026-11-13 for the next run, on a copy of this repository)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`. The tree is clean and
@@ -5102,9 +5126,9 @@ layer drawn. None of that last night's work has been through a judge to the end.
    (`PLUMBLINE_BIN`, in CLAUDE.md) and the IFC checker's Python package, which was in
    the old scratch folder and is not in the repository (`pip install ifcopenshell
    --target <a folder>`, then `PYTHONPATH`).
-3. **Write a window demonstration for each new layer** (the Ground, Framing and
-   Finishes switches, the base): none has one. The pictures in
-   `demos/captured/trades/` were taken by hand with the kit.
+3. **The new layers have one window demonstration** (`demos/tradesw.sh`: the Finishes,
+   Framing and Ground switches and a level looked into, each measured). It does not
+   measure the flashing, the base or the footings themselves. Extend it.
 4. **Repair the older window demonstrations** on the rebuilt window: `planw` (its
    walls now come out right; its scale clicks land off the dimension), `buildw`,
    `draww`, and the rest listed stale above. Their fixed click places predate the
