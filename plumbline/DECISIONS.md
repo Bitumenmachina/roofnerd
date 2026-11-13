@@ -2975,3 +2975,37 @@ The plain house (`plumbline house`, no prices) is not changed: it still has two
 levels, and every demonstration that counts its walls, levels and model classes
 stands as it was. No test and no demonstration held any of the old figures.
 
+### Call 75. Patrick, 2026-11-13: each of the sixteen divisions will have its own AI harness
+
+**His words:** "I will be running this locally eventually and each of the 16 trade
+divisions will have its own AI harness the intent here is all trades are able to have
+their own knowledge base, pricing and tweaking."
+
+**How it is read.** Three statements, each with a consequence for this program.
+
+1. **"Running this locally eventually."** The program already sends nothing anywhere
+   (`tools/gate-egress.sh`), and stays that way. What a harness beside it may send is
+   not the program's to decide and is asked in QUESTIONS.md Q24.
+2. **"Each of the 16 trade divisions will have its own AI harness."** A division has to
+   be something that can be handed to one worker whole and taken back from it,
+   without that worker reading or writing the other fifteen. Today it is not: a
+   division is a number on a cost line. The assemblies and the prices are two tables
+   for the whole job, and nothing is kept by division but that number.
+3. **"Their own knowledge base, pricing and tweaking."** Per division: what it knows
+   (its assemblies, its rules of thumb and where each comes from, its units), what
+   things cost (its prices, its labor), and what its owner has adjusted (waste,
+   productivity, a formula on a line). Each of the three has to be readable and
+   writable from outside the program, by division.
+
+**What this does not change.** The fixed rules. Above all two of them: *real job,
+client or supplier data never enters the repository* (a division's real prices and its
+real knowledge live on the estimator's machine, never here; what is in the repository
+is made up), and *flag, never fabricate* (what a harness writes arrives with who wrote
+it as its source and is never Known on a harness's say-so: a person or a field
+measurement makes a value Known).
+
+**What is not decided here.** How a harness is built, what model it runs on, and
+where. Those are his. What is proposed is the seam on this program's side
+(PROPOSALS.md 21), so that when the harnesses come there is one way in and one way
+out for each division and nothing has to be torn up.
+

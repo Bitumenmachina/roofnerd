@@ -4982,3 +4982,19 @@ arrive.** Until then none of those four layers has been tried by anyone who did 
 build it. `tools/committed.sh` passes on the commit it judges' successor (the last
 code commit).
 
+## Patrick, 2026-11-13: a harness for each of the sixteen divisions (call 75)
+
+Recorded as he gave it. **What the program has for it today, exactly:** every cost
+line carries its division; the estimate and its recap read by division; the workbook
+has a Divisions sheet; the starter assemblies put a line in every division. **What it
+does not have:** any way to take one division out of a job and put it back; prices or
+assemblies kept by division (both are one table for the whole job); anything written
+down, by division, of what the program knows about that trade. So a harness for
+Division 9 could today only be given the whole job and the whole price list.
+
+The seam is proposed (PROPOSALS.md 21: a division out, a division in, and what a
+division knows), and the two things only Patrick can rule on are Q24 (where a
+harness's model may run; whether anything a harness writes may be Known). **Nothing of
+it is built.** It does not displace what is owed: the twentieth judgment's findings
+when they arrive, and the older demonstrations to repair.
+

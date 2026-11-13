@@ -84,3 +84,26 @@ Work outside a deliverable. Nothing here is built until the owner accepts it.
     barrier under the finish and flashing at openings; base along each room and casing
     at each opening. Each estimate line would take its quantity from what is drawn.
 
+21. **A division handed out whole and taken back: the seam for a harness per trade**
+    (from Patrick, 2026-11-13: DECISIONS.md call 75, QUESTIONS.md Q24). Three parts,
+    in the order they would be built, each a command-line verb first and a button
+    after, each round-tripping without loss as the job file and CSV already must:
+    * **Out:** `plumbline division <job> <n> --out <folder>` writes that division and
+      nothing else: its cost lines with the element each is on, its quantity and
+      formula, its price, how sure each is and where from (CSV); the assemblies that
+      put lines in it; the materials those lines are made of with their prices and
+      quotes; and what is still to verify in the field that its dollars ride on.
+    * **In:** `plumbline division <job> <n> --in <folder> --source "<who>"` takes the
+      same files back: a changed price, waste, stretch-out or formula is set on the
+      line it belongs to, as Assumed, sourced to who brought it; a line of another
+      division in the folder is refused, not taken; what changed is listed, and the
+      price before and after.
+    * **What a division knows:** a folder per division in the repository
+      (`plumbline/divisions/06-wood-and-plastics/`) holding, in plain text, what the
+      program itself knows of that trade and where each thing comes from: its
+      assemblies, its units, each rule of thumb it uses (a header's depth by its span;
+      a 4 in flashing strip is a drawing size) with its source. Made-up figures only.
+      A harness reads it; an estimator's own knowledge and real prices sit beside the
+      program on his machine, in a folder git never sees.
+    Not proposed: the harnesses themselves, their models, or where they run.
+

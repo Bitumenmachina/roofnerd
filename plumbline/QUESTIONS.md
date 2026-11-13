@@ -302,3 +302,34 @@ any of them as estimate lines only, its switch and its drawing come out and noth
 else depends on it. What each still lacks is in STATUS.md ("All seven of Patrick's
 trades").
 
+## Q24. What may a division's harness send off the machine, and what may it mark Known? (2026-11-13, from call 75)
+
+Patrick: each of the sixteen divisions will have its own AI harness, with its own
+knowledge base, pricing and tweaking, and he will run the program locally.
+
+Two things are his to rule on, and the seam is built to the working assumption until
+he does.
+
+**a. Where a harness's model runs.** The program sends no job data and no costs
+anywhere; that is a fixed rule and is checked. A harness is a separate thing beside
+the program. If its model runs on his machine, nothing leaves. If it calls a model in
+the cloud, the quantities, prices and names of whatever job it is given leave the
+machine with every question. **Working assumption: a harness may run anywhere, and
+the program never knows or cares; but the seam gives a harness only its own
+division's lines and tables, so that the least possible is ever at stake, and the
+program itself never opens a connection.** If he wants it enforced that nothing
+leaves, that is a rule for the harnesses, and a line in their brief.
+
+**b. What a harness may write as Known.** **Working assumption: nothing.** Whatever a
+harness writes comes in as Assumed with the harness named as its source ("Division 9
+harness, on such a date"), exactly as a traced value does, and turns Known only when a
+person says so or a field measurement does. A price from a supplier's own list that
+the harness merely carries in keeps the supplier as its source. If he wants a
+harness's prices to stand as Known, that is a change to "flag, never fabricate" and
+only he can make it.
+
+**What would change the design:** if a division's harness is also to draw (the
+framing harness placing studs, the plumbing harness routing pipe), the seam needs a
+way in for the model as well as for the lines, and two harnesses could then want the
+same wall. Working assumption: a harness prices and tunes; it does not draw.
+
