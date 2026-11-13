@@ -171,7 +171,24 @@ pub fn frame(length: f64, height: f64, holes: &[[f64; 4]], spacing: f64) -> Vec<
     let (low, high) = (t, height - 2.0 * t);
     // Each opening, kept to the wall, and what is built round it: a jack under each
     // end of the header and a king outside each jack.
-    let holes: Vec<[f64; 4]> = holes.iter().map(|h| [h[0].max(2.0 * t), h[1].min(length - 2.0 * t), h[2].max(0.0), h[3].min(high)]).filter(|h| h[1] - h[0] > t && h[3] - h[2] > t).collect();
+    let mut each: Vec<[f64; 4]> = holes.iter().map(|h| [h[0].max(2.0 * t), h[1].min(length - 2.0 * t), h[2].max(0.0), h[3].min(high)]).filter(|h| h[1] - h[0] > t && h[3] - h[2] > t).collect();
+    each.sort_by(|a, b| a[0].total_cmp(&b[0]));
+    // Openings too close for each to have its own jacks and kings (less than four
+    // studs between them) are framed as one: one header over them all, a king and a
+    // jack at each outer end, and the space between two of them packed with studs up
+    // to the header. Each keeps its own sill. (Not in BIMCraft's layout, which takes
+    // one window; without it two windows 3 in apart had their kings drawn through
+    // each other's headers.)
+    let mut groups: Vec<Vec<[f64; 4]>> = Vec::new();
+    for h in each {
+        match groups.last_mut() {
+            Some(g) if h[0] - g.iter().map(|x| x[1]).fold(f64::MIN, f64::max) < 4.0 * t => g.push(h),
+            _ => groups.push(vec![h]),
+        }
+    }
+    // A group as one opening for the layout: its outer ends, its lowest sill, its
+    // highest head.
+    let holes: Vec<[f64; 4]> = groups.iter().map(|g| [g[0][0], g.iter().map(|x| x[1]).fold(f64::MIN, f64::max), g.iter().map(|x| x[2]).fold(f64::MAX, f64::min), g.iter().map(|x| x[3]).fold(f64::MIN, f64::max)]).collect();
     // The layout: a stud at the first end, one on each centre, one at the last end.
     let mut edges: Vec<f64> = vec![0.0];
     let mut centre = spacing;
@@ -186,12 +203,18 @@ pub fn frame(length: f64, height: f64, holes: &[[f64; 4]], spacing: f64) -> Vec<
         match holes.iter().find(|h| left < h[1] + 2.0 * t && left + t > h[0] - 2.0 * t) {
             None => out.push(Member { piece: Piece::Stud, along: [left, left + t], up: [low, high] }),
             Some(h) if left >= h[0] && left + t <= h[1] => {
-                let top = h[3] + header_depth(h[1] - h[0]);
+                let top = h[3] + header_depth(h[1] - h[0]).min((high - h[3]).max(0.0));
                 if high - top > t {
                     out.push(Member { piece: Piece::Cripple, along: [left, left + t], up: [top, high] });
                 }
-                if h[2] - t - low > t {
-                    out.push(Member { piece: Piece::Cripple, along: [left, left + t], up: [low, h[2] - t] });
+                // Below a sill: under the one opening of its group that this centre
+                // falls in, to that opening's own sill; none under a door, and none
+                // where the studs packed between two openings stand.
+                let group = groups.iter().find(|g| g[0][0] <= left && left + t <= g.iter().map(|x| x[1]).fold(f64::MIN, f64::max));
+                if let Some(own) = group.and_then(|g| g.iter().find(|x| left >= x[0] && left + t <= x[1])) {
+                    if own[2] - t - low > t {
+                        out.push(Member { piece: Piece::Cripple, along: [left, left + t], up: [low, own[2] - t] });
+                    }
                 }
             }
             // Where the jacks and kings stand, the layout stud is theirs.
@@ -207,9 +230,24 @@ pub fn frame(length: f64, height: f64, holes: &[[f64; 4]], spacing: f64) -> Vec<
         if deep > 0.0 {
             out.push(Member { piece: Piece::Header, along: [h[0] - t, h[1] + t], up: [h[3], h[3] + deep] });
         }
-        // A window has a rough sill; a door's opening goes to the floor.
-        if h[2] - t > low {
-            out.push(Member { piece: Piece::Sill, along: [h[0], h[1]], up: [h[2] - t, h[2]] });
+    }
+    for g in &groups {
+        let head = g.iter().map(|x| x[3]).fold(f64::MIN, f64::max);
+        for (i, h) in g.iter().enumerate() {
+            // A window has a rough sill; a door's opening goes to the floor.
+            if h[2] - t > low {
+                out.push(Member { piece: Piece::Sill, along: [h[0], h[1]], up: [h[2] - t, h[2]] });
+            }
+            // Between this opening and the next of its group: whole studs side by
+            // side, as many as fit, from the plate to the header.
+            if let Some(next) = g.get(i + 1) {
+                let room = next[0] - h[1];
+                let n = (room / t + 1.0e-6).floor() as usize;
+                let start = h[1] + (room - n as f64 * t) / 2.0;
+                for k in 0..n {
+                    out.push(Member { piece: Piece::Jack, along: [start + k as f64 * t, start + (k + 1) as f64 * t], up: [low, head] });
+                }
+            }
         }
     }
     out
@@ -287,6 +325,46 @@ mod tests {
         assert_eq!(lengths.iter().filter(|l| **l == 15.5).count(), 2);
         // Nothing stands in the opening.
         assert!(f.iter().all(|m| !(m.along[0] < 90.0 / 12.0 && m.along[1] > 54.0 / 12.0 && m.up[0] < 7.0 && m.up[1] > 3.0)));
+    }
+
+    /// No piece of a frame passes through another: the one thing a drawing of lumber
+    /// must never show.
+    fn none_through_another(f: &[Member]) {
+        for (i, a) in f.iter().enumerate() {
+            for b in &f[i + 1..] {
+                let over = |x: [f64; 2], y: [f64; 2]| x[0] < y[1] - 1.0e-6 && y[0] < x[1] - 1.0e-6;
+                assert!(!(over(a.along, b.along) && over(a.up, b.up)), "{} at {:?} {:?} runs through {} at {:?} {:?}", a.piece.said(), a.along, a.up, b.piece.said(), b.along, b.up);
+            }
+        }
+    }
+
+    #[test]
+    fn no_piece_runs_through_another_whatever_the_openings() {
+        let s = 16.0 / 12.0;
+        none_through_another(&frame(12.0, 9.0, &[], s));
+        none_through_another(&frame(12.0, 9.0, &[[54.0 / 12.0, 90.0 / 12.0, 3.0, 7.0]], s));
+        none_through_another(&frame(12.0, 9.0, &[[4.0, 7.0, 0.0, 6.0 + 8.0 / 12.0]], s));
+        // The twentieth judgment's: two windows 3 in apart; a door as tall as its wall;
+        // an opening at the very end of a wall; a wall 2 ft long; studs at 24 in.
+        none_through_another(&frame(24.0, 9.0, &[[0.25, 3.25, 3.0, 7.0], [3.5, 6.5, 3.0, 7.0], [7.5, 10.5, 0.0, 9.0]], s));
+        none_through_another(&frame(10.0, 8.0, &[[0.0, 3.0, 3.0, 7.0], [7.5, 10.0, 0.0, 6.6667]], 2.0));
+        none_through_another(&frame(2.0, 9.0, &[], s));
+        none_through_another(&frame(16.0, 9.0, &[[2.0, 5.0, 3.0, 7.0], [5.2, 8.2, 2.0, 6.0], [8.3, 11.0, 0.0, 6.6667]], s));
+    }
+
+    #[test]
+    fn two_windows_close_together_share_one_header_and_a_post_between() {
+        // 0.25 to 3.25 ft and 3.5 to 6.5 ft: 3 in between, room for two studs.
+        let f = frame(24.0, 9.0, &[[0.25, 3.25, 3.0, 7.0], [3.5, 6.5, 3.0, 7.0]], 16.0 / 12.0);
+        // One header, from the jack at the first's left to the jack at the second's
+        // right: 0.25 - 0.125 to 6.5 + 0.125, a 6 ft 3 in span: a 2x10 by the rule.
+        let headers: Vec<&Member> = f.iter().filter(|m| m.piece == Piece::Header).collect();
+        assert_eq!(headers.len(), 1);
+        assert_eq!((inches(headers[0].along[0]), inches(headers[0].along[1]), inches(headers[0].up[1] - headers[0].up[0])), (1.5, 79.5, 9.25));
+        // A king at each outer end only; a jack at each outer end and two between.
+        assert_eq!((count(&f, Piece::King), count(&f, Piece::Jack), count(&f, Piece::Sill)), (2, 4, 2));
+        let between: Vec<f64> = f.iter().filter(|m| m.piece == Piece::Jack && m.along[0] > 3.2 && m.along[1] < 3.6).map(|m| inches(m.along[0])).collect();
+        assert_eq!(between, vec![39.0, 40.5]);
     }
 
     #[test]
