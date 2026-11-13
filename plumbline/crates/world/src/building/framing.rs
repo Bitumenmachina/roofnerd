@@ -101,7 +101,9 @@ pub fn dressed(nominal: u32) -> Option<f64> {
 /// in. o.c." is 3 1/2 in at 24 in. None for words that name no framing: nothing is
 /// framed on a guess.
 pub fn named(words: &str) -> Option<(f64, f64)> {
-    let lower = words.to_lowercase().replace('×', "x");
+    // As estimators write it: "2x6 at 16 in", "2 x 6 @ 24", "2X4 studs 16 OC",
+    // "2x6 16 in o.c.".
+    let lower = words.to_lowercase().replace('×', "x").replace(" x ", "x");
     if !lower.contains("framing") && !lower.contains("stud") {
         return None;
     }
@@ -109,12 +111,31 @@ pub fn named(words: &str) -> Option<(f64, f64)> {
     let at = lower.find("2x")?;
     let digits: String = lower[at + 2..].chars().take_while(char::is_ascii_digit).collect();
     let deep = dressed(digits.parse().ok()?).filter(|_| digits != "2")?;
-    // The spacing: the number after "at" or "@", in inches.
-    let rest = &lower[at + 2 + digits.len()..];
-    let after = rest.find(" at ").map(|i| i + 4).or_else(|| rest.find('@').map(|i| i + 1))?;
-    let spacing: String = rest[after..].trim_start().chars().take_while(|c| c.is_ascii_digit() || *c == '.').collect();
-    let spacing: f64 = spacing.parse().ok()?;
-    (spacing >= 8.0 && spacing <= 48.0).then_some((deep, spacing / 12.0))
+    // The spacing: a number said to be one, by "at" or "@" before it or by inches or
+    // "on centre" after it. A number that is neither (a length the lumber comes in, a
+    // count) is not taken for a spacing.
+    let rest: Vec<char> = lower[at + 2 + digits.len()..].chars().filter(|c| !c.is_whitespace()).collect();
+    let mut i = 0;
+    while i < rest.len() {
+        if !rest[i].is_ascii_digit() {
+            i += 1;
+            continue;
+        }
+        let start = i;
+        while i < rest.len() && (rest[i].is_ascii_digit() || rest[i] == '.') {
+            i += 1;
+        }
+        let before: String = rest[start.saturating_sub(2)..start].iter().collect();
+        let after: String = rest[i..rest.len().min(i + 4)].iter().collect();
+        let said = before.ends_with("at") || before.ends_with('@') || ["in", "\"", "oc", "o.c", "onc"].iter().any(|m| after.starts_with(m));
+        let number: String = rest[start..i].iter().collect();
+        if let (true, Ok(spacing)) = (said, number.trim_end_matches('.').parse::<f64>()) {
+            if (8.0..=48.0).contains(&spacing) {
+                return Some((deep, spacing / 12.0));
+            }
+        }
+    }
+    None
 }
 
 /// A header's depth for its span, in feet: a rule of thumb for a one-storey bearing
@@ -282,8 +303,12 @@ mod tests {
         assert!(close(named("Wall framing, 2×6 at 16 in"), (5.5 / 12.0, 16.0 / 12.0)));
         assert!(close(named("Partition framing, 2x4 at 16 in"), (3.5 / 12.0, 16.0 / 12.0)));
         assert!(close(named("2x4 studs @ 24 in. o.c."), (3.5 / 12.0, 2.0)));
+        // The ways the twentieth judgment wrote it and it was not read.
+        assert!(close(named("Wall framing 2 x 6 @ 24"), (5.5 / 12.0, 2.0)));
+        assert!(close(named("2X4 studs 16 OC"), (3.5 / 12.0, 16.0 / 12.0)));
+        assert!(close(named("wall framing 2x6 16 in o.c."), (5.5 / 12.0, 16.0 / 12.0)));
         // Words that name no framing frame nothing.
-        for said in ["Cedar lap siding, installed", "Floor framing and subfloor", "Wall framing", "Framing, 2x5 at 16 in", "Roof sheathing 2x6 at 16"] {
+        for said in ["Cedar lap siding, installed", "Floor framing and subfloor", "Wall framing", "Framing, 2x5 at 16 in", "Roof sheathing 2x6 at 16", "Wall framing, 2x6, 20 ft lengths", "Studs 2x4, 92 5/8"] {
             assert_eq!(named(said), None, "{said}");
         }
     }

@@ -257,8 +257,25 @@ pub struct Dress {
 /// trim", "baseboard", "wood base". Not a base cabinet, a gravel base or a base coat.
 pub fn base_in(text: &str) -> bool {
     let w = words(text);
-    let other = ["cabinet", "cabinets", "gravel", "coat", "course", "plate", "sheet"];
-    w.iter().any(|x| x == "baseboard" || x == "baseboards") || (w.iter().any(|x| x == "base") && !w.iter().any(|x| other.contains(&x.as_str())))
+    let has = |list: &[&str]| w.iter().any(|x| list.contains(&x.as_str()));
+    if has(&["baseboard", "baseboards"]) {
+        return true;
+    }
+    // "Base" alone is too many things (a vanity base, a shower base, a gravel base, a
+    // base coat): it is the base at the foot of a wall only when the line says so by
+    // what goes with it, and never when it names one of the others.
+    let with = ["trim", "molding", "moulding", "shoe", "wood", "mdf", "pine", "oak", "poplar", "rubber", "vinyl", "cove", "wall"];
+    let other = ["cabinet", "cabinets", "vanity", "shower", "tub", "gravel", "coat", "course", "plate", "sheet", "column", "post"];
+    has(&["base"]) && has(&with) && !has(&other)
+}
+
+/// Whether a line says the wall itself is concrete ("Foundation wall, 8 in concrete,
+/// formed and placed", "Poured concrete wall"), and not something fixed to concrete
+/// ("Anchor bolts into concrete").
+pub fn concrete_wall_in(text: &str) -> bool {
+    let w = words(text);
+    let has = |list: &[&str]| w.iter().any(|x| list.contains(&x.as_str()));
+    has(&["concrete"]) && has(&["wall", "walls", "foundation", "stem", "formed", "poured", "cast"]) && !has(&["anchor", "anchors", "bolt", "bolts", "into", "fastener", "fasteners", "nails", "screws"])
 }
 
 /// Whether a line names a weather barrier: the sheet that keeps water out of the wall
@@ -266,7 +283,8 @@ pub fn base_in(text: &str) -> bool {
 pub fn barrier_in(text: &str) -> bool {
     let w = words(text);
     let pair = |a: &str, b: &str| w.windows(2).any(|p| p[0] == a && p[1] == b);
-    pair("weather", "barrier") || pair("house", "wrap") || pair("building", "paper") || pair("air", "barrier") || pair("water", "resistive") || w.iter().any(|x| x == "housewrap" || x == "wrb")
+    // Its names, and the two makes a line is most often written by.
+    pair("weather", "barrier") || pair("house", "wrap") || pair("building", "paper") || pair("felt", "paper") || pair("tar", "paper") || pair("air", "barrier") || pair("water", "resistive") || w.iter().any(|x| ["housewrap", "wrb", "tyvek", "typar"].contains(&x.as_str()))
 }
 
 /// The words of a text, lower case, split wherever a letter or a digit stops.
@@ -679,7 +697,7 @@ pub fn dress(job: &mut Job) -> Dress {
         });
         let framing = on.iter().find_map(|(text, _)| crate::building::framing::named(text));
         let barrier = on.iter().any(|(text, _)| barrier_in(text));
-        let concrete = cladding.is_none() && wainscot.is_none() && on.iter().any(|(text, _)| words(text).iter().any(|w| w == "concrete"));
+        let concrete = cladding.is_none() && wainscot.is_none() && on.iter().any(|(text, _)| concrete_wall_in(text));
         out.walls.insert(w.path.clone(), WallDress { outside, out: out_way, height: w.h, cladding, wainscot, past, framing, barrier, concrete });
     }
     // Roof planes, openings, gutters, and the base in rooms.
@@ -899,11 +917,22 @@ mod tests {
 
     #[test]
     fn base_is_read_by_its_own_words() {
-        for said in ["Base and trim", "Baseboard, 5 1/4 in MDF", "Wood base, stained"] {
+        for said in ["Base and trim", "Baseboard, 5 1/4 in MDF", "Wood base, stained", "Rubber cove base", "Base shoe molding"] {
             assert!(base_in(said), "{said}");
         }
-        for said in ["Base cabinets", "Excavation and gravel base", "Stucco base coat", "Casing and trim", "Cabinets and countertops"] {
+        // The twentieth judgment's: a bathroom with these priced must not get baseboard.
+        for said in ["Base cabinets", "Excavation and gravel base", "Stucco base coat", "Casing and trim", "Cabinets and countertops", "Vanity base, 36 in", "Shower base, 32 x 48", "Base"] {
             assert!(!base_in(said), "{said}");
+        }
+    }
+
+    #[test]
+    fn a_concrete_wall_is_one_the_line_says_is_concrete() {
+        for said in ["Foundation wall, 8 in concrete, formed and placed", "Poured concrete wall", "Cast-in-place concrete stem wall"] {
+            assert!(concrete_wall_in(said), "{said}");
+        }
+        for said in ["Anchor bolts into concrete", "Concrete nails", "Partition framing, 2x4 at 16 in", "Concrete slab on grade, 4 in"] {
+            assert!(!concrete_wall_in(said), "{said}");
         }
     }
 
@@ -911,10 +940,10 @@ mod tests {
     /// else: a line about sheathing alone, or about flashing, names no barrier.
     #[test]
     fn a_weather_barrier_is_read_by_its_own_words() {
-        for said in ["Sheathing and weather barrier", "House wrap, taped", "15 lb building paper", "Housewrap", "Air barrier membrane", "WRB, fluid applied", "Water-resistive barrier"] {
+        for said in ["Sheathing and weather barrier", "House wrap, taped", "15 lb building paper", "Housewrap", "Air barrier membrane", "WRB, fluid applied", "Water-resistive barrier", "Tyvek HomeWrap", "Felt paper, 15 lb", "Typar"] {
             assert!(barrier_in(said), "{said}");
         }
-        for said in ["Roof sheathing", "Flashing and sealant", "Batt insulation", "Cedar lap siding, installed", "Wrap the columns in cedar", "Vapor retarder"] {
+        for said in ["Roof sheathing", "Flashing and sealant", "Batt insulation", "Cedar lap siding, installed", "Wrap the columns in cedar", "Vapor retarder", "Vapor barrier, 6 mil poly", "Roofing felt"] {
             assert!(!barrier_in(said), "{said}");
         }
     }
