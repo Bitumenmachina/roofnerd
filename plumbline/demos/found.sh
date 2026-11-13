@@ -68,6 +68,16 @@ echo "== Nothing built is tested against itself: no clash between a wall and its
 says "$T/clashes.txt" "In the same space: 0"
 says "$T/clashes.txt" "a footing is tested against neither, nor against another footing"
 
+echo "== A pipe through a footing is a clash, not a hole to cut =="
+# A 2 in pipe run level through the south footing, 6 in below its top (-4 ft 6 in).
+PT="$(made "$("$P" type "$J" pipe "2 in pipe" --round "2 in" "${K[@]}")")"
+"$P" run "$J" "$L" pipe "$PT" --points "10,-3 10,3" --height "-6 in" "${K[@]}" >/dev/null
+"$P" clashes "$J" > "$T/pipe.txt"
+says "$T/pipe.txt" "In the same space: 1"
+says "$T/pipe.txt" "Through a wall or a floor (a hole to cut): 0"
+PIPE="$("$P" show "$J" | sed -n 's/^ *\(pipe-[0-9]*\) .*/\1/p' | head -1)"
+"$P" remove "$J" "$PIPE" >/dev/null
+
 echo "== One footing drawn over another is refused, in a footing's words =="
 if "$P" footing "$J" "$L" "$FT" --points "5,0 20,0" --depth "12 in" "${K[@]}" > "$T/over.txt" 2>&1; then echo "FAIL: a footing over a footing was taken"; exit 1; fi
 says "$T/over.txt" "lies along $F1 for 15.00 ft: one footing drawn over another would be counted twice"

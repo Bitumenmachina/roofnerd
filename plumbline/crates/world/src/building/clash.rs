@@ -677,7 +677,12 @@ pub fn clashes(job: &mut Job, clearance: Option<f64>) -> Result<Clashes, String>
     let through = |x: &Placement, y: &Placement| {
         // A fitting is part of its run: an elbow in a wall is the run through the wall.
         let of_a_run = |k: Kind| k.is_segment() || k == Kind::Fitting;
-        (of_a_run(x.kind) && built_in(y.kind)) || (of_a_run(y.kind) && built_in(x.kind))
+        // A wall or a floor is cut for a run to pass. A footing is not: a pipe in a
+        // footing is a clash to be settled (a sleeve, or the footing stepped), and is
+        // listed as one, not as a hole to cut (the twentieth judgment found it under
+        // "Through a wall or a floor").
+        let cut_for_a_run = |k: Kind| matches!(k, Kind::Wall | Kind::Floor);
+        (of_a_run(x.kind) && cut_for_a_run(y.kind)) || (of_a_run(y.kind) && cut_for_a_run(x.kind))
     };
     for (&(i, j), met) in pairs.iter_mut() {
         let (x, y) = (&drawn[i], &drawn[j]);
