@@ -421,7 +421,7 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             if storey.footings.members > 0 {
                 t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(0.0)), min_height: px(34.0), ..default() }, BackgroundColor(theme::panel_alt()))).with_children(|r| {
                     cell(r, 7.0, false, |c| dot(c, storey.footing_volume.status.max(storey.footings.status)));
-                    cell(r, 0.0, false, |c| words(c, fonts, format!("Footings, {}", storey.footings.members), 12.5, Weight::Semibold, theme::ink()));
+                    cell(r, 0.0, false, |c| words(c, fonts, format!("Footings, {}: their length, and their concrete", storey.footings.members), 12.5, Weight::Semibold, theme::ink()));
                     cell(r, 100.0, true, |c| words(c, fonts, total(&storey.footings), 12.5, Weight::Semibold, theme::status_ink(storey.footings.status)));
                     cell(r, 110.0, true, |_| {});
                     cell(r, 100.0, true, |_| {});
