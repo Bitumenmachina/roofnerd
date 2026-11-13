@@ -5129,10 +5129,10 @@ layer drawn. None of that last night's work has been through a judge to the end.
 3. **The new layers have one window demonstration** (`demos/tradesw.sh`: the Finishes,
    Framing and Ground switches and a level looked into, each measured). It does not
    measure the flashing, the base or the footings themselves. Extend it.
-4. **The window demonstrations all pass on the rebuilt window** (sixteen of them, on
-   the last build; the end of this file lists them). What they are owed is to be
-   read, picture by picture, and judged. Their fixed click places predate the
-   rebuild.
+4. **The window demonstrations all pass on the last build** (sixteen; the paragraph
+   on pictures below). About a third of their pictures have been read by the builder,
+   one or two a set, and what was met in them fixed (the notes at the end of this
+   file). The rest are owed that reading, and all of them a judge.
 5. **The seam for a harness per division** (PROPOSALS.md 21): a division out, a
    division in, and `divisions/` grown from an index into what each trade knows.
    Nothing of it is built.
@@ -5140,8 +5140,10 @@ layer drawn. None of that last night's work has been through a judge to the end.
    judge 19's open notes, the release candidate's table of thirteen items.
 
 **What is known to be not right and is nobody's finding yet.** Electrical and
-plumbing are hard to read with the house seen through under the new light. (Looking down into one floor is now one click; the job's name is whole.) On a
-one-wall job the plan runs under the right panel. The four new layers have no
+plumbing are hard to read with the house seen through under the new light. (Looking down into one floor is now one click; the job's name is whole.) On plan
+a room carries no name and a door no swing, which a drawing would (read in
+`build/04-model` and `draw/08-model`; not built, because a label on the plan would
+move what the demonstrations measure and wants a run of its own). The four new layers have no
 quantities of their own: framing is still priced by the SF of wall and base by the
 room's whole perimeter.
 
@@ -5152,18 +5154,19 @@ framing" written from a list of file names cut short. And one defect of my own m
 found late: since call 64 a length typed after a tool's sizes were accepted lost its
 first digit. `planw` found it the moment it walked the path a person walks.
 
-**Which pictures in `demos/captured/` are of the program as it is, and which are
-not.** Of the current program: `layers/` (the last run of the session), `trades/`
-(taken by hand through the night; each says in this file which build), `light/`
-(the before and after of call 68; the price in their top bar is the old one).
-Taken on builds of 2026-11-12 after the new light and before the trade layers and the
-clean-up: `glass/`, `carry/`, `price/`, `tools/`, `items/`, `dress/`. Their checks
-passed then and nothing since should have changed what they show, but they have not
-been rerun on the last commit. (`plan/` is of the last build since `planw` was repaired, below.)
-**Stale, from before the window was rebuilt:**
-`first/`, and every other folder there (`build`, `draw`, `field`, `clash`, `d4`, `d5`,
-`bring`, `house`, `d2` and the rest): their demonstrations click at places that have
-moved and have not passed on the rebuilt window.
+**Which pictures in `demos/captured/` are of the program as it is** (rewritten
+2026-11-13, at the end of the clean-up loop). All sixteen window demonstrations were
+run in a row on one frozen build of commit 7e060ce and all sixteen pass: `tradesw`,
+`pricew`, `planw`, `buildw`, `draww`, `fieldw`, `clashw`, `d4w`, `d5w`, `bringw`,
+`firstw`, `glassw`, `carryw`, `toolsw`, `itemsw`, `dressw`. Their folders (`layers`,
+`price`, `plan`, `build`, `draw`, `field`, `clash`, `d4`, `d5`, `bring`, `first`,
+`glass`, `carry`, `tools`, `items`, `dress`) are of that build. One thing a person
+sees changed after it: a drawing whose scale is not one of the architect's is said
+as a scale (call 80), so `first/` still reads "sheet 77' 8" x 60' 4"" under its
+drawing where the program now reads `1" = ...`. **Not of it:** `trades/` and
+`light/` (taken by hand earlier; each says in this file which build), `house/` and
+`d2/` (older demonstrations, not window demonstrations of the rebuilt window, not
+rerun), and the `step*.png` in `glass/`.
 
 **How to check all is well after copying:** in `plumbline/`, `cargo test --workspace`
 (283 pass), `tools/portmap.sh`, `tools/licenses.sh`, and from the repository root the
@@ -5353,3 +5356,18 @@ behaviour changes; 283 tests pass. Left as they are, on purpose: `!(f > 0.0)` in
 the functions with eight or nine arguments (Bevy systems), and the long tuple types.
 No `todo!`, `dbg!` or unfinished marker is in the code; the one trace print is
 behind `PLUMBLINE_TRACE`.
+
+**The first job's drawing, read on the last build** (`first/06-model`): under the
+drawing's name the panel read "sheet 77' 8" x 60' 4"", which nobody reads as a
+scale. Fixed (call 80): a PDF sheet whose scale is not one of the architect's says
+it as an inch of paper to so many feet; a picture says "sheet covers ...". 283 tests
+pass. **Not seen in the window**: `firstw` has not been rerun since.
+
+**Where the clean-up loop stopped** (2026-11-13). Calls 78 to 80; a dozen things a
+person met in the pictures set right; the linter's pass; every window demonstration
+passing on one build with its pictures retaken. Read and found right on that build:
+a wall traced over the public plan with the panels as sheets over the paper
+(`plan/05-model`), the framed whole house (`layers/03-model`), the clash marked
+amber on plan (`clash/05-model`), the Budget tab (`d4/04-sheet`), the roof tool over
+two named rooms (`build/04-model`), the first job (`first/06-model`). Nothing of
+this loop has been judged by an agent that did not build it.

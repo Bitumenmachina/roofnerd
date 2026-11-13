@@ -70,10 +70,14 @@ impl Laid {
             if let Some((_, name)) = NAMED.iter().find(|(inches, _)| (paper / inches - 1.0).abs() < 0.005) {
                 return Some(format!("{name}\" = 1'-0\""));
             }
+            // Not one of the architect's (a dimension clicked a hair off, a sheet
+            // printed to fit): still said as a scale, an inch of paper to so many
+            // feet, the way an engineer's scale is written (call 80).
+            return Some(format!("1\" = {}", plumbline_world::units::feet_as_ft_in(1.0 / paper, 4)));
         }
         let [w, h] = self.drawing.size;
-        // To the inch: it is a sheet's size on the ground, not a figure anything is built to.
-        Some(format!("sheet {} x {}", plumbline_world::units::feet_as_ft_in(w * k, 1), plumbline_world::units::feet_as_ft_in(h * k, 1)))
+        // A picture has no paper size: what its sheet covers on the ground, to the inch.
+        Some(format!("sheet covers {} x {}", plumbline_world::units::feet_as_ft_in(w * k, 1), plumbline_world::units::feet_as_ft_in(h * k, 1)))
     }
     /// Whether a place on the plan lies on the page as shown.
     pub fn holds(&self, plan: [f64; 2]) -> bool {

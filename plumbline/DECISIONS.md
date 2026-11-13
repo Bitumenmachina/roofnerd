@@ -3071,3 +3071,15 @@ one line it reads as before ("2 of its 8 lines cannot be extended"). `demos/d4.s
 expects the new words. On the same tab, what is not priced at all is counted as the
 Estimate tab counts it ("5 eaves, 4 hips", where it read "5 eave, 4 hip"). No figure
 changes.
+
+### Call 80. A drawing's scale is always said as a scale (2026-11-13)
+
+A wording call, made on reading the first job's last picture. Under the drawing's
+name the panel read "sheet 77' 8" x 60' 4"": the scale had been set from a dimension
+clicked a hair off 1/8" = 1'-0", so it was not one of the architect's scales, and
+the program fell back to the size of the sheet on the ground, which nobody reads as
+a scale. A PDF sheet whose scale is not one of the architect's is now said the way
+an engineer's scale is written, an inch of paper to so many feet: `1" = 8' 0 1/4"`.
+A picture (PNG, JPEG) has no paper size, so it still says what its sheet covers, in
+those words: "sheet covers 77' 8" x 60' 4"". The architect's scales read as before.
+Nothing saved changes.

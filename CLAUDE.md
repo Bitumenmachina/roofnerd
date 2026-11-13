@@ -365,8 +365,12 @@ opening flashing with the Finishes switch off); **interior woodwork** (base in e
 room with base priced). `demos/captured/trades/` has a picture of each and STATUS.md
 has a table of what each still lacks: joists and rafters, roof underlayment and roof
 flashing, interior casing and cabinets, pad footings, a tool to draw a footing in the
-window. **None of the four new layers has a window demonstration script, and none
-has been judged by an agent that did not build it.** That is the next thing owed.
+window. **The four new layers have one window demonstration** (`demos/tradesw.sh`: the
+Ground, Finishes and Framing switches and a level looked into, each measured; it
+does not yet measure the flashing, the base or the footings themselves), **and
+none has been judged to the end by an agent that did not build it**: the twentieth
+judgment was stopped part way and its brief is `plumbline/research/judgment-20-brief.md`.
+That judgment, run to the end, is the next thing owed.
 
 **A tool's sizes accepted, then a length typed** is the path every first wall takes,
 and no demonstration walked it until `planw` was repaired: it found the first digit
