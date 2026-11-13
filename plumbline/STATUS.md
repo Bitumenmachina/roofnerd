@@ -5220,3 +5220,14 @@ current way (its places are worked from where the program says the plan is, not
 fixed on the screen). Its pictures in `demos/captured/build/` are of this build; they
 have not been read one by one.
 
+**`demos/draww.sh` passes on the rebuilt window** (run alone on the last build): a
+house drawn in the window from an empty job (a level, walls, doors, windows, a duct, a
+pipe, a fixture, equipment; undo; move; remove; save), and the saved job has the
+figures worked by hand, each flagged as drawn. Like `buildw` it needed only the tool
+picked the current way. Its pictures in `demos/captured/draw/` are of this build and
+have not been read one by one.
+
+**So of the older window demonstrations, on the rebuilt window:** `planw`, `buildw`,
+`draww` and `firstw` (on an earlier build of the new light) pass. Not rerun:
+`fieldw`, `clashw`, `d4w`, `d5w`, `bringw`, `house`, `d2`.
+
