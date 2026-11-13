@@ -5060,6 +5060,13 @@ seen at. `demos/captured/trades/3-electrical-now.png` and `4-plumbing-now.png` a
 the electrical and the plumbing alone on the current program (the first read: the
 conduit and cable plain in orange through the glass house; the second not yet read).
 
+**One step to look into a floor (2026-11-13).** Picking a level under Levels puts it
+on show alone and, in 3D, tilts the view down into it: its rooms, doors, ducts, pipes
+and wiring are seen over its walls. Seen: `demos/captured/trades/first-floor-alone.png`
+(one click on "first floor" from the opening view; the roof's switch and the other
+levels' read off). Not right in it: the near corner of the house sits behind the tool
+bar. It was the navigation gap named under "Interior woodwork drawn".
+
 ## Start here (written 2026-11-13 for the next run, on a copy of this repository)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`. The tree is clean and
@@ -5109,9 +5116,7 @@ layer drawn. None of that last night's work has been through a judge to the end.
    judge 19's open notes, the release candidate's table of thirteen items.
 
 **What is known to be not right and is nobody's finding yet.** Electrical and
-plumbing are hard to read with the house seen through under the new light. Looking
-down into one floor takes a level picked alone and an arrow key; there is no one step
-for it. The job's name in the top bar is cut short with room beside it. On a
+plumbing are hard to read with the house seen through under the new light. (Looking down into one floor is now one click; the job's name is whole.) On a
 one-wall job the plan runs under the right panel. The four new layers have no
 quantities of their own: framing is still priced by the SF of wall and base by the
 room's whole perimeter.

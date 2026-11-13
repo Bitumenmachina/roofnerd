@@ -348,7 +348,16 @@ const BURST_GAP: f64 = 0.12;
 const BURST_TAIL: f64 = 0.35;
 
 #[allow(clippy::too_many_arguments)]
-fn keys(mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, snap: Res<Snapshot>, mut typed: MessageReader<KeyboardInput>, mut struck: MessageReader<KeyboardInput>, time: Res<Time<Real>>, mut burst: Local<Burst>, keys: Res<ButtonInput<KeyCode>>, primary: Query<Entity, With<PrimaryWindow>>, sheet: Query<Entity, With<sheet::SheetWindow>>) {
+fn keys(mut seen_alone: Local<Option<String>>, mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, snap: Res<Snapshot>, mut typed: MessageReader<KeyboardInput>, mut struck: MessageReader<KeyboardInput>, time: Res<Time<Real>>, mut burst: Local<Burst>, keys: Res<ButtonInput<KeyCode>>, primary: Query<Entity, With<PrimaryWindow>>, sheet: Query<Entity, With<sheet::SheetWindow>>) {
+    // A level put on show alone is looked down into: in 3D the view tilts to where
+    // its rooms can be seen over its walls, and eases there like every other move.
+    // (It took a level picked and then an arrow key, which nothing on screen says.)
+    if doc.show.storey != *seen_alone {
+        if doc.show.storey.is_some() && !doc.plan && !doc.walk && orbit.pitch < 0.85 {
+            orbit.pitch = 0.85;
+        }
+        *seen_alone = doc.show.storey.clone();
+    }
     let doc = &mut *doc;
     // A picture of each window, numbered, into the folder named by PLUMBLINE_SHOTS. It
     // works while a value is being typed, so the typing can be shown.
