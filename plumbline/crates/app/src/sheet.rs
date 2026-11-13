@@ -238,7 +238,8 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             cost_lines(body, fonts, &snap);
         });
         // The last thing that happened. It cannot push the sheet wider than its window.
-        let first = one_line(&doc.message, 110);
+        // Written as the model window writes it, with its first letter a capital.
+        let first = pretty(&one_line(&doc.message, 110));
         let (tone_dot, ink) = tone_ink(doc.tone);
         root.spawn((rounded(Node { height: px(28.0), flex_shrink: 0.0, margin: UiRect { left: px(theme::GAP), right: px(theme::GAP), top: px(4.0), bottom: px(theme::GAP) }, padding: UiRect::horizontal(px(14.0)), align_items: AlignItems::Center, column_gap: px(9.0), border: UiRect::all(px(1.0)), overflow: Overflow::clip(), ..default() }, theme::BUTTON_RADIUS + 6.0), BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()), theme::card_shadow())).with_children(|bar| {
             bar.spawn((rounded(Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, 4.0), BackgroundColor(tone_dot)));

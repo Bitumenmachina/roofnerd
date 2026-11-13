@@ -5330,3 +5330,17 @@ on the Estimate tab; a roof nobody named is headed "Roof", where the panel read
 detail, item by item, with what is over and under; the hip roof over the traced plan
 with its eaves, hips and ridge by colour and length. **Not retaken:** `d4/`, `build/`
 and `draw/` are of the build before these words.
+
+**Two of the "seen and not fixed", looked into.** The 24 ft wall under the right panel
+(`tools/04-model`) was the demonstration's own closing-in before it drew: a job opens
+framed on a plot of 60 ft by 40 ft, which lies between the panels, so nothing was
+changed. A price typed as a bare figure is now said back as money: "unit cost of
+"Brick veneer" set to $24.00.", where it read "set to 24." (a stretch-out is said
+back as typed). 283 tests pass. Read and found right meanwhile: the walls risen from
+the traced public plan (`plan/08-model`), the whole house dressed and its estimate by
+all sixteen divisions (`dress/priced/02-model`, `03-sheet`).
+`pricew` and `dressw` were rerun on that build and pass; `price/` and `dress/` are of
+it and show the price said back as "$24.00", "5 doors, 8 windows", the roof's figures
+headed "Roof" and the Finishes spot. Changed after those pictures: the estimate
+window's last-message line begins with a capital, as the model window's does (it
+read "wall 1: unit cost ..." beside "Wall 1: unit cost ...").

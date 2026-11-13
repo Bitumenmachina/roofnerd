@@ -581,7 +581,14 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                     _ => "Stretch-out",
                                 });
                                 let of = line.map(|l| format!(" of {l:?}")).unwrap_or_default();
-                                doc.say(Tone::Done, format!("{sel}: {}{of} set to {}.", what.replace('_', " "), text.trim()));
+                                // A price typed as a bare figure is said back as money: "24"
+                                // is answered "$24.00", as the line then shows it.
+                                let typed = text.trim();
+                                let said = match typed.parse::<f64>() {
+                                    Ok(x) if field != Entry::StretchOut => format!("${}", plumbline_world::view::figure(x, 2)),
+                                    _ => typed.to_string(),
+                                };
+                                doc.say(Tone::Done, format!("{sel}: {}{of} set to {said}.", what.replace('_', " ")));
                             }
                             Err(why) => tools::cant(doc, if field == Entry::StretchOut { "set that stretch-out" } else { "set that price" }, why),
                         },
