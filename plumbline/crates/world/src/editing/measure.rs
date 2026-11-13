@@ -309,7 +309,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
                 return Ok(Some(Measured { said, also }));
             }
         }
-        on!(WallType, |c: &WallType| building::check_wall_type(path, kind, c), |c| if what == "wall thickness" { Some(Slot::Length(&mut c.thickness)) } else { layer_slot(&mut c.layers, what) });
+        on!(WallType, |c: &WallType| building::check_wall_type(path, kind, c), |c| if what == "wall thickness" || what == "footing width" { Some(Slot::Length(&mut c.thickness)) } else { layer_slot(&mut c.layers, what) });
         on!(FloorType, |c: &FloorType| building::check_floor_type(path, kind, c), |c| if what == "floor thickness" { Some(Slot::Length(&mut c.thickness)) } else { layer_slot(&mut c.layers, what) });
         // An item: what is placed from it is as big as it says, so each follows.
         if let Some(mut c) = job.world.get::<Item>(e).cloned() {
@@ -348,10 +348,11 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
         });
         on!(Wall, |c: &Wall| building::check_wall(path, kind, c), |c| match what {
             "type" => Some(Slot::Other(&mut c.type_name)),
-            "wall line" => Some(Slot::Other(&mut c.line)),
+            // A footing's values are listed, and measured, in a footing's words.
+            "wall line" | "footing line" => Some(Slot::Other(&mut c.line)),
             "top level" => c.top_level.as_mut().map(|v| Slot::Other(v)),
-            "height" => c.height.as_mut().map(Slot::Length),
-            "base offset" => c.base_offset.as_mut().map(Slot::Length),
+            "height" | "depth" => c.height.as_mut().map(Slot::Length),
+            "base offset" | "top, above its level's floor" => c.base_offset.as_mut().map(Slot::Length),
             "top offset" => c.top_offset.as_mut().map(Slot::Length),
             _ => None,
         });

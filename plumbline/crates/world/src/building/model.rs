@@ -733,18 +733,20 @@ pub fn check_wall(path: &str, kind: Kind, w: &Wall) -> Result<(), String> {
     if !matches!(kind, Kind::Wall | Kind::Footing) {
         return Err(format!("{path}: {kind:#} cannot carry a wall's line; only a wall or a footing can"));
     }
-    type_ref(&format!("{path} wall type"), &w.type_name)?;
-    let d = coords(&format!("{path} wall line"), &w.line)?;
+    // Said in the words of what it is: a footing has a footing line and a depth.
+    let (it, tall) = if kind == Kind::Footing { ("footing", "depth") } else { ("wall", "height") };
+    type_ref(&format!("{path} {it} type"), &w.type_name)?;
+    let d = coords(&format!("{path} {it} line"), &w.line)?;
     if let Some([a, b]) = w.line.value {
-        usable(&format!("{path} wall line"), &[a[0], a[1], b[0], b[1]], d)?;
+        usable(&format!("{path} {it} line"), &[a[0], a[1], b[0], b[1]], d)?;
         if a == b {
-            return Err(format!("{path} wall line: the two ends are the same point"));
+            return Err(format!("{path} {it} line: the two ends are the same point"));
         }
         // Too short to be a wall (BIMCraft `line`, `model.rs:7838`: no longer than its
         // tolerance).
         let length = crate::geom::dist([a[0] / d, a[1] / d], [b[0] / d, b[1] / d]);
         if length <= crate::check::FIT_TOLERANCE_FT {
-            return Err(format!("{path} wall line: is {} ft long; a wall is longer than the {} ft two points are told apart by", crate::view::num(length), crate::check::FIT_TOLERANCE_FT));
+            return Err(format!("{path} {it} line: is {} ft long; {kind:#} is longer than the {} ft two points are told apart by", crate::view::num(length), crate::check::FIT_TOLERANCE_FT));
         }
     }
     // Its top is held to a level or it is a height tall (BIMCraft `model.rs:6586`).
@@ -752,7 +754,7 @@ pub fn check_wall(path: &str, kind: Kind, w: &Wall) -> Result<(), String> {
         (Some(_), Some(_)) => return Err(format!("{path}: has a top level and a height; its top is held to a level or it is a height tall, one or the other")),
         (None, None) => return Err(format!("{path}: has no top level and no height; enter one, or a height marked Unknown")),
         (Some(t), None) => type_ref(&format!("{path} top level"), t)?,
-        (None, Some(h)) => positive(&format!("{path} wall height"), h, false)?,
+        (None, Some(h)) => positive(&format!("{path} {it} {tall}"), h, false)?,
     }
     if let Some(o) = &w.base_offset {
         offset_ok(&format!("{path} base offset"), o)?;

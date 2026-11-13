@@ -1754,7 +1754,8 @@ fn draw(args: &[String]) -> Result<(), String> {
             let made = match what.as_str() {
                 "wall" => ed::wall_type(&mut job, name, &need(flag("--thickness"), "--thickness", "\"6 in\"")?, how)?,
                 // A footing's type says how wide footings of it are.
-                "footing" => ed::wall_type(&mut job, name, &need(flag("--width"), "--width", "\"24 in\"")?, how)?,
+                // (Held as a wall type is; what is wrong with it is said as a footing's.)
+                "footing" => ed::wall_type(&mut job, name, &need(flag("--width"), "--width", "\"24 in\"")?, how).map_err(|why| why.replace("wall type thickness", "footing type width"))?,
                 "floor" => ed::floor_type(&mut job, name, &need(flag("--thickness"), "--thickness", "\"4 in\"")?, how)?,
                 "door" | "window" => ed::opening_type(&mut job, name, kind_of(what)?, &need(flag("--width"), "--width", "\"3 ft\"")?, &need(flag("--height"), "--height", "\"7 ft\"")?, how)?,
                 "duct" | "pipe" | "conduit" | "cable" => {

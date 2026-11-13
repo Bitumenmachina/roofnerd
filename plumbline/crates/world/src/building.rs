@@ -422,7 +422,7 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
             }
             if let Some(p) = &w.type_name.value {
                 if !tree.wall_types.contains_key(p) {
-                    return Err(format!("{me}: its type is {p:?}, which is not a wall type in this job"));
+                    return Err(format!("{me}: its type is {p:?}, which is not a {} type in this job", if *kind == Kind::Footing { "footing" } else { "wall" }));
                 }
             }
             if let Some(p) = w.top_level.as_ref().and_then(|t| t.value.as_ref()) {
@@ -1403,7 +1403,10 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         }
     }
     if let Some(c) = w.get::<WallType>(e) {
-        rows.push(view::length(path, "wall thickness", &c.thickness));
+        // A type that footings are of gives their width; one that walls are of, their
+        // thickness. (A type does not say which it is for; what uses it does.)
+        let footings = w.iter_entities().any(|x| x.get::<Kind>() == Some(&Kind::Footing) && x.get::<Wall>().is_some_and(|c| c.type_name.value.as_deref() == Some(path)));
+        rows.push(view::length(path, if footings { "footing width" } else { "wall thickness" }, &c.thickness));
         layers(&mut rows, &c.layers);
     }
     if let Some(c) = w.get::<FloorType>(e) {

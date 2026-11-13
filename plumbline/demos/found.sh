@@ -94,6 +94,21 @@ says "$T/tee.txt" "footing concrete   4.37 CY"
 says "$T/teeshow.txt" "=   volume           1.4074 CY"
 says "$T/teeshow.txt" "=   plan length      20 LF"
 
+echo "== A footing is spoken of as a footing: its type, its depth measured in the field, what is refused =="
+"$P" show "$TJ" > "$T/words.txt"
+says "$T/words.txt" "footing width    24 in"
+not_said "$T/words.txt" "wall thickness"
+TF="$(sed -n 's/^ *\(footing-[0-9]*\) .*/\1/p' "$T/words.txt" | head -1)"
+# The run, dug 18 in deep where the plan said 12: 40 x 2 x 1.5 / 27 = 4.4444 CY.
+"$P" measure "$TJ" "$TF" depth "18 in" --source "made-up dig" > "$T/dug.txt"
+says "$T/dug.txt" "depth is 18 in, measured"
+"$P" show "$TJ" > "$T/words.txt"
+says "$T/words.txt" "=   volume           4.4444 CY"
+if "$P" footing "$TJ" "$TL" "$TT" --points "5,5 5,5" --depth "12 in" "${K[@]}" > "$T/point.txt" 2>&1; then echo "FAIL: a footing with no length was taken"; exit 1; fi
+says "$T/point.txt" "footing line: the two ends are the same point"
+if "$P" type "$TJ" footing "no width" --width "0 in" "${K[@]}" > "$T/nowidth.txt" 2>&1; then echo "FAIL: a footing type with no width was taken"; exit 1; fi
+says "$T/nowidth.txt" "footing type width: must be more than zero"
+
 echo "== Priced by the cubic yard =="
 "$P" estimate "$J" > "$T/before.txt" || true
 says "$T/before.txt" "Nothing in this job has a cost line."
