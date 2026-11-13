@@ -378,7 +378,15 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         let figure = |el: &view::ElementRows, name: &str| el.rows.iter().find(|r| r.label == name).map(|r| (r.number, r.status)).unwrap_or((None, Status::Unknown));
         let here: Vec<&view::ElementRows> = snap.fabric.iter().filter(|(s, _)| *s == storey.path).map(|(_, el)| el).collect();
         let at = storey.elevation.map(|e| format!("floor at {}", units::feet_as_ft_in(e, 16))).unwrap_or("height unknown".into());
-        table(p, fonts, &pretty(&storey.name), format!("{at}  ·  {} doors, {} windows", storey.doors, storey.windows), |t| {
+        let some = |n: usize, one: &str| if n == 1 { format!("1 {one}") } else { format!("{n} {one}s") };
+        table(p, fonts, &pretty(&storey.name), format!("{at}  ·  {}, {}", some(storey.doors, "door"), some(storey.windows, "window")), |t| {
+            // A level with nothing on it yet (the level a roof sits on, a level just
+            // added) says so in one line: a table of "none" in the colour of something
+            // not known read as a fault.
+            if here.is_empty() && storey.footings.members == 0 {
+                t.spawn(Node { padding: UiRect::axes(px(16.0), px(10.0)), ..default() }).with_child(text(fonts, "No walls, floors or rooms are drawn on this level.", 12.5, Weight::Regular, theme::ink_soft()));
+                return;
+            }
             header_row(t, fonts, &[("", 7.0, false), ("Wall or floor, and its type", 0.0, false), ("Length", 100.0, true), ("Face, one side", 110.0, true), ("Openings", 100.0, true), ("Net, one side", 110.0, true)]);
             let rooms: Vec<&view::ElementRows> = here.iter().copied().filter(|el| el.kind == Kind::Room).collect();
             for el in here.iter().copied().filter(|el| el.kind != Kind::Room) {
@@ -408,7 +416,11 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     }
                 });
             }
-            t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(0.0)), min_height: px(34.0), ..default() }, BackgroundColor(theme::panel_alt()))).with_children(|r| {
+            // The walls' total, where the level has a wall: a level with a floor and no
+            // wall has nothing to total, and three "none" in the colour of something
+            // not known read as a fault.
+            let walled = here.iter().any(|el| el.kind == Kind::Wall);
+            t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(0.0)), min_height: px(34.0), display: if walled { Display::Flex } else { Display::None }, ..default() }, BackgroundColor(theme::panel_alt()))).with_children(|r| {
                 cell(r, 7.0, false, |c| dot(c, storey.wall_net.status.max(storey.walls.status)));
                 cell(r, 0.0, false, |c| words(c, fonts, "Walls, total", 12.5, Weight::Semibold, theme::ink()));
                 cell(r, 100.0, true, |c| words(c, fonts, total(&storey.walls), 12.5, Weight::Semibold, theme::status_ink(storey.walls.status)));
@@ -734,7 +746,15 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         }
     });
     // The job cost, division by division: all sixteen, and what is in none.
-    table(p, fonts, "By division", format!("{} of 16 with work in them", est.divisions.iter().filter(|d| d.total.members > 0 || !d.total.left_out.is_empty()).count()), |t| {
+    // What is in none of the sixteen is said at the head, where the count is read: the
+    // row that carries it is the seventeenth and can be below the bottom of the window.
+    let with_work = est.divisions.iter().filter(|d| d.total.members > 0 || !d.total.left_out.is_empty()).count();
+    let aside = match est.no_division.members {
+        0 => String::new(),
+        1 => "; 1 line of the job cost is in no division".to_string(),
+        n => format!("; {n} lines of the job cost are in no division"),
+    };
+    table(p, fonts, "By division", format!("{with_work} of 16 with work in them{aside}"), |t| {
         for d in &est.divisions {
             row(t, false, None, |r| {
                 // "none" is no work in it; "no figure" is work in it and none of it priced

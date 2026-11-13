@@ -3043,3 +3043,21 @@ wall 1 (wall-0005), wall 2 (wall-0006), wall 3 (wall-0007) and wall 4 (wall-0008
 bound this room rests on their heights, which are assumed". One wall alone is said
 exactly as before. Nothing is left out: every wall is still named, with how sure.
 
+### Call 78. Where a run's height is taken to, and what the sixteen leave out, said plainly (2026-11-13)
+
+Two wording calls, made on reading the field-measurement pictures as a person would.
+
+1. A duct's or a pipe's row read "Its heights are those of its: bottom", with the note
+   "which line of its section the heights were given to". Nobody on a site says that.
+   A height on a mechanical drawing is to the bottom of the duct, its centerline or its
+   top, and it is asked as "is that to the bottom?". The row now reads "Height is to
+   its: bottom", with the note "the bottom, the center or the top of its section:
+   where its heights are taken to". The refusal that named it reads the same way ("its
+   size is not known and its height is to its top or its bottom, so its center line
+   cannot be placed"). The value, what it does and what is saved are unchanged; the
+   two field demonstrations expect the new words.
+2. The estimate's "By division" head read "0 of 16 with work in them" over sixteen
+   rows of "none", under a recap with a job cost in it. The row that squares the two
+   ("In no division") is the seventeenth and was below the bottom of the window. The
+   head now says it: "0 of 16 with work in them; 1 line of the job cost is in no
+   division". With nothing in no division the head reads as before.

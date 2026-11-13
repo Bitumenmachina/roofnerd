@@ -586,6 +586,9 @@ pub fn hardware() -> Color { hex(0x3A3632) }
 /// What a surface with a pattern on it is multiplied by: a little under white, so that
 /// one picked or pointed at can lighten. The patterns are made that much lighter.
 pub fn dressed() -> Color { Color::srgb(0.90, 0.90, 0.90) }
+/// The spot beside the Finishes switch: a brick's colour. (The tone the patterns are
+/// laid over is near white and was not there to the eye on a panel.)
+pub fn finish_spot() -> Color { hex(0xA9684B) }
 pub fn equipment() -> Color { hex(0xC5CBD3) }
 pub fn porcelain() -> Color { hex(0xF8F8F6) }
 /// A furnishing with nothing priced on it that says what it is made of: a light oak.

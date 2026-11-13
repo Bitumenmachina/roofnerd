@@ -676,7 +676,9 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
             if let Some(first) = thing.get_mut(0..1) {
                 first.make_ascii_uppercase();
             }
-            let said = format!("{thing}, {}: {}", r.label, crate::theme::trade(&r.text));
+            // A place is written as the panel writes it, E and N in feet and inches,
+            // never as a bracketed pair of decimal feet.
+            let said = format!("{thing}, {}: {}", r.label, crate::panels::places(&crate::theme::trade(&r.text)));
             match groups.iter_mut().find(|g| g.0 == r.status && g.1 == r.basis) {
                 Some(g) => g.2.push(said),
                 None => groups.push((r.status, r.basis.clone(), vec![said])),

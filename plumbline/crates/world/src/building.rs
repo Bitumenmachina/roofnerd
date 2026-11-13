@@ -1508,7 +1508,7 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
             rows.push(view::length(path, "height above its level, second end", o));
         }
         if c.justify != Justify::Centre {
-            rows.push(plain("its heights are those of its", format!("{:?}", c.justify).to_lowercase(), "which line of its section the heights were given to"));
+            rows.push(plain("height is to its", format!("{:?}", c.justify).to_lowercase(), "the bottom, the center or the top of its section: where its heights are taken to"));
         }
     }
     if let Some(c) = w.get::<Fitting>(e) {
@@ -1677,7 +1677,7 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
                 let (round, rect) = (t.and_then(|t| t.round_ft()), t.and_then(|t| t.rect_ft()));
                 let section = round.map(|d| (d, d)).or(rect);
                 if c.justify != Justify::Centre && section.is_none() {
-                    return Err("its size is not known and its heights are those of its top or its bottom, so its center line cannot be placed".into());
+                    return Err("its size is not known and its height is to its top or its bottom, so its center line cannot be placed".into());
                 }
                 let (width, depth) = section.unwrap_or((0.0, 0.0));
                 let g = runs::Geom::of(level, p, q, z0, z1, c.justify, width, depth, round.is_some());

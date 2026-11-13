@@ -109,7 +109,7 @@ echo "== Read back =="
 "$P" show "$J" > "$T/show.txt"
 says "$T/show.txt" "level height     8' 10 1/2\""
 says "$T/show.txt" "height above its level 7' 10 3/4\""
-says "$T/show.txt" "its heights are those of its bottom"
+says "$T/show.txt" "height is to its bottom"
 [ -n "${KEEP:-}" ] && cp "$J" "$KEEP"
 echo
 echo "field entry: PASS"

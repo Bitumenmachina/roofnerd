@@ -669,7 +669,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         // and the flashing under it are seen, where they are priced.
         let finished = snap.dress.walls.values().filter(|d| d.cladding.is_some() || d.wainscot.is_some() || d.barrier).count();
         if finished > 0 {
-            layer(c, "Finishes", "", theme::dressed(), doc.show.finishes, Some(finished), Box::new(|doc| {
+            layer(c, "Finishes", "", theme::finish_spot(), doc.show.finishes, Some(finished), Box::new(|doc| {
                 doc.show.finishes = !doc.show.finishes;
                 doc.redraw();
             }));
@@ -752,8 +752,9 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 };
                 row(c, !t.path.is_empty() && doc.selected.as_deref() == Some(t.path.as_str()), format!("System {}", t.name), act, |r| {
                     swatch(r, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::system_colour(&t.classification) });
-                    r.spawn((text(fonts, t.name.clone(), 12.0, Weight::Medium, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::ink() }), TextLayout::no_wrap(), Pickable::IGNORE));
-                    r.spawn(Node { flex_grow: 1.0, ..default() });
+                    // The name takes what room the row has and goes to a second line when
+                    // it is long ("Domestic Cold Water" pushed its switch out of the panel).
+                    r.spawn((Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }, Pickable::IGNORE)).with_child((text(fonts, t.name.clone(), 12.0, Weight::Medium, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::ink() }), Pickable::IGNORE));
                     r.spawn((text(fonts, total(&t.runs), 11.0, Weight::Regular, if t.runs.members == 0 { theme::ink_faint() } else { theme::status_ink(t.runs.status) }), TextLayout::no_wrap(), Pickable::IGNORE));
                     // A system has a switch of its own: its runs and what is on it, drawn or not.
                     if !t.path.is_empty() {
@@ -1107,7 +1108,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
             // bottom or its top, a placed thing's to its underside.
             Some((_, what, true)) if what.starts_with("height above its level") => {
                 let to = match snap.selected.as_ref() {
-                    Some(el) if el.kind.is_segment() => el.rows.iter().find(|r| r.label == "its heights are those of its").map(|r| r.text.clone()).unwrap_or_else(|| "centre".to_string()),
+                    Some(el) if el.kind.is_segment() => el.rows.iter().find(|r| r.label == "height is to its").map(|r| r.text.clone()).unwrap_or_else(|| "centre".to_string()),
                     _ => "underside".to_string(),
                 };
                 format!("Measured on site, to its {to}")
@@ -1502,7 +1503,9 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         if storey.rooms.members > 0 {
             listed(p, fonts, None, "Rooms, inside their walls", storey.rooms.members.to_string(), total(&storey.rooms), storey.rooms.status);
         }
-        listed(p, fonts, None, "Doors and windows", String::new(), format!("{} and {}", storey.doors, storey.windows), Status::Known);
+        // Each counted with its own word: "1 and 0" left the reader to work out which.
+        let some = |n: usize, one: &str| if n == 1 { format!("1 {one}") } else { format!("{n} {one}s") };
+        listed(p, fonts, None, "Doors and windows", String::new(), format!("{}, {}", some(storey.doors, "door"), some(storey.windows, "window")), Status::Known);
     }
     if let Some(totals) = &snap.totals {
         heading(p, fonts, &format!("Roof: {}", snap.roof_name));

@@ -5290,3 +5290,33 @@ predates this and shows the panels without it** (`plan/`, `first/`, `clash/`, `b
 `draw/` and the plan pictures of the rest): their measurements are of the drawing,
 not the panels, and are not expected to change, but they have not been rerun.
 
+
+**Read as a person: the field, bring-in, items, price, carry and glass pictures**
+(2026-11-13, the same clean-up loop). What was not right in them, each fixed, with
+283 tests passing after:
+
+| Seen in | What a person met | Now |
+|---|---|---|
+| `field/04-sheet` | "By division: 0 of 16 with work in them" over sixteen rows of "none", under a job cost of $511.20; the row that squares them was below the window | the head says it: "0 of 16 with work in them; 1 line of the job cost is in no division" (call 78) |
+| `field/06-model` | a duct's row: "Its heights are those of its: bottom" | "Height is to its: bottom" (call 78); `demos/field.sh` and `fieldw.sh` expect the new words and pass |
+| `bring/06-model` | "Domestic Cold Water" pushed its switch out of the side of the panel | a long system name goes to a second line; the switch stays in the panel |
+| `bring/06-sheet` | "1 doors, 1 windows" | "1 door, 1 window" (and on the job's panel "1 door, 0 windows" where it read "1 and 0") |
+| `bring/06-sheet` | the level a roof sits on: a table of three "none" in red | one line: "No walls, floors or rooms are drawn on this level." |
+| `items/04-sheet` | a level with a floor and no wall: "Walls, total: none, none, none" in red | the walls' total is there only where the level has a wall |
+| `items/04-sheet` | To verify: "position: (5.237, 3.017) ft" beside a panel that says E 5' 2 7/8", N 3' 0 3/16" | the list writes a place as the panel does |
+| `price/07-model` | the Finishes switch had no spot to the eye (near white on the panel) | a brick's colour (`theme::finish_spot`) |
+
+Read and found right: the field message card and its caution about a second reading;
+the carried vanity red against the fixture with "1 to verify in the field"; the flight
+to a door (`glass/09-model`); the brick wall under a hip roof with its lines by type
+(`price/07-model`); the d5 recap and what it leaves out.
+
+**Seen and not fixed:** on plan a 24 ft wall drawn alone runs under the right panel
+(`tools/04-model`): the plan is centred in the window, not in the room between the
+panels. A unit cost typed as "24" is answered "set to 24.", not "$24.00/SF". The
+takeoff's "Height" row has the note "height". Items are still drawn as plain boxes.
+
+**Which pictures are of this build.** `bring/` and `field/` were retaken after the
+first five rows of the table and pass (`bringw`, `fieldw`); their job panels still
+read "1 and 1" for doors and windows, which was changed after. `items/` and `price/`
+were retaken after all of it. Every other set is as the last note left it.

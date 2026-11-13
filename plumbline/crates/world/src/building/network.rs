@@ -202,7 +202,7 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
                 let t = typed(&tree.segment_types, &r.type_name, "a run").ok().map(|x| x.1);
                 let section = t.and_then(|t| t.round_ft().map(|d| (d, d, true)).or_else(|| t.rect_ft().map(|(w, d)| (w, d, false))));
                 if r.justify != super::Justify::Centre && section.is_none() {
-                    return Err("its size is not known and its heights are those of its top or its bottom, so its center line cannot be placed".into());
+                    return Err("its size is not known and its height is to its top or its bottom, so its center line cannot be placed".into());
                 }
                 let (width, depth, round) = section.unwrap_or((0.0, 0.0, false));
                 let g = runs::Geom::of(base.clone()?, p, q, z0, z1, r.justify, width, depth, round);
