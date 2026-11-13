@@ -5183,3 +5183,11 @@ of it clear of the tool bar (it was the one thing named as not right in that pic
 `demos/tradesw.sh` rerun on this build: all ten measurements as wanted, the price
 unchanged; its pictures in `demos/captured/layers/` are of this build. 283 tests pass.
 
+**The estimate window's heading and foot (2026-11-13).** They were flat strips, the
+one line of VISUAL.md section F named as failing. They are round cards lifted off the
+page like its tables; the tabs lie on the page; the heading carries the job's name
+where it said "Sheet". Seen: `demos/captured/layers/estimate-window.png` (the made-up
+whole house: the recap, then the sixteen divisions with Concrete at 9 lines and
+$32,485.40). `demos/pricew.sh`, which finds and types in that window, passes on this
+build; its pictures in `demos/captured/price/` are of this build. 283 tests pass.
+

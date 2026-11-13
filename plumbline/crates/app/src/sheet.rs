@@ -17,8 +17,8 @@ use plumbline_world::{units, view, Discipline, Kind};
 
 /// How much of the sheet window its heading and its tabs take at the top, and its line
 /// of status at the foot: what scrolls shows between them.
-pub const HEAD_H: f32 = 100.0;
-pub const FOOT_H: f32 = 34.0;
+pub const HEAD_H: f32 = 102.0;
+pub const FOOT_H: f32 = 42.0;
 
 #[derive(Component)]
 pub struct SheetWindow;
@@ -170,15 +170,18 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
     // longest line, and the right-hand columns fall off the edge.
     commands.spawn((Node { width: percent(100.0), max_width: percent(100.0), min_width: px(0.0), height: percent(100.0), flex_direction: FlexDirection::Column, overflow: Overflow::clip(), ..default() }, BackgroundColor(theme::canvas()), UiTargetCamera(cameras.sheet), SheetUi)).with_children(|root| {
         // The sheet's own title bar.
-        root.spawn((Node { height: px(52.0), flex_shrink: 0.0, padding: UiRect::horizontal(px(18.0)), align_items: AlignItems::Center, column_gap: px(12.0), border: UiRect::bottom(px(1.0)), overflow: Overflow::clip(), ..default() }, BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()))).with_children(|bar| {
+        // A round card lifted off the page, as the model window's bar is, with the job's
+        // name in it (it said "Sheet", which is this program's word and nobody's job).
+        root.spawn((rounded(Node { height: px(44.0), flex_shrink: 0.0, margin: UiRect { left: px(theme::GAP), right: px(theme::GAP), top: px(theme::GAP), bottom: px(0.0) }, padding: UiRect::horizontal(px(14.0)), align_items: AlignItems::Center, column_gap: px(12.0), border: UiRect::all(px(1.0)), overflow: Overflow::clip(), ..default() }, theme::PANEL_RADIUS), BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()), theme::card_shadow())).with_children(|bar| {
             wordmark(bar, fonts);
             bar.spawn((Node { width: px(1.0), height: px(22.0), margin: UiRect::horizontal(px(4.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::hairline())));
-            bar.spawn(text(fonts, "Sheet", 13.5, Weight::Semibold, theme::ink()));
+            bar.spawn((theme::name(fonts, one_line(&snap.title, 44), 13.5, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
             bar.spawn(Node { flex_grow: 1.0, ..default() });
             tally_chips(bar, fonts, snap.tally);
         });
         // The tabs.
-        root.spawn((Node { flex_shrink: 0.0, padding: UiRect::axes(px(10.0), px(8.0)), column_gap: px(1.0), border: UiRect::bottom(px(1.0)), overflow: Overflow::clip(), ..default() }, BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()))).with_children(|tabs| {
+        // The tabs lie on the page itself, under the card: no strip behind them.
+        root.spawn((Node { flex_shrink: 0.0, padding: UiRect::axes(px(12.0), px(8.0)), column_gap: px(1.0), overflow: Overflow::clip(), ..default() }, BackgroundColor(Color::NONE))).with_children(|tabs| {
             // The estimate first: it is what the job is for. Then what is to verify and
             // what clashes; then the takeoff, by what was taken off.
             let mut all = vec![(Tab::Estimate, "Estimate".to_string(), snap.estimate.as_ref().map(|e| e.lines.len()).unwrap_or(0))];
@@ -237,7 +240,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
         // The last thing that happened. It cannot push the sheet wider than its window.
         let first = one_line(&doc.message, 110);
         let (tone_dot, ink) = tone_ink(doc.tone);
-        root.spawn((Node { height: px(32.0), flex_shrink: 0.0, padding: UiRect::horizontal(px(16.0)), align_items: AlignItems::Center, column_gap: px(9.0), border: UiRect::top(px(1.0)), overflow: Overflow::clip(), ..default() }, BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()))).with_children(|bar| {
+        root.spawn((rounded(Node { height: px(28.0), flex_shrink: 0.0, margin: UiRect { left: px(theme::GAP), right: px(theme::GAP), top: px(4.0), bottom: px(theme::GAP) }, padding: UiRect::horizontal(px(14.0)), align_items: AlignItems::Center, column_gap: px(9.0), border: UiRect::all(px(1.0)), overflow: Overflow::clip(), ..default() }, theme::BUTTON_RADIUS + 6.0), BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()), theme::card_shadow())).with_children(|bar| {
             bar.spawn((rounded(Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, 4.0), BackgroundColor(tone_dot)));
             bar.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_children(|m| words(m, fonts, first, 12.0, Weight::Regular, ink));
         });
