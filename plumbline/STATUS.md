@@ -4924,3 +4924,32 @@ concrete, formed and placed") is drawn in concrete on every face, where it was t
 off-white of a bare framed wall. Built; 280 tests pass. **Not yet seen in a
 picture.**
 
+## A typed length lost its first digit after a tool's sizes were accepted (found by `planw`, 2026-11-13)
+
+**What a person would have met.** Pick Wall. Its sizes are shown, already filled
+(call 64). Press Enter to accept them, click the first corner, type the first wall's
+length, 41' 3". The wall placed is **1' 3"** long, and nothing says so.
+
+**How it was found.** `demos/planw.sh`, repaired to pick the tool the current way,
+traced four walls and two of their lengths were wrong: 1.25 ft where 41.25 was typed,
+and a closing wall of 43.81 ft. It failed the same way run alone on a quiet machine,
+so it was not a lost keystroke. 1.25 ft is 1' 3": the typed length with its first
+digit gone.
+
+**The cause, read in the code.** "Typing replaces what the field holds" is a flag set
+when a field of a tool's sizes opens already filled (call 64). Accepting the sizes
+with Enter left it set. The first digit typed for a length opens the length field
+with that digit in it, and the next key, finding the flag still set, cleared the
+field before going in. The flag came from call 64, written this week: the defect is
+mine and is two days old. None of the demonstrations met it because each one typed a
+tool's sizes (which clears the flag) rather than accepting them, which is the same
+blind spot the eighteenth judgment named: the scripts walk the path that works.
+
+**The fix.** A single field that is opened with something in it (a length's first
+digit) never replaces: `Doc::open` clears the flag. 280 tests pass.
+
+**Not yet proven.** `planw` has not been rerun on the fix: the session's machine was
+restarted during that run. It is the red (1.25 and 43.81 where 41.25 and 23.92 were
+typed, twice) and must be the green before this is called fixed. `buildw` and `draww`
+pick a tool the same way and have not been rerun either.
+

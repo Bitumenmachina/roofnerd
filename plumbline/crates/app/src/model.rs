@@ -357,6 +357,11 @@ impl Doc {
         self.form.clear();
         self.form_at = 0;
         self.entry_line = None;
+        // What is typed next goes after what the field opens with. ("Typing replaces"
+        // is for a field of a set that opens already filled; left on from a tool's
+        // sizes accepted with Enter, it threw away the first digit of the first
+        // length typed after: 41' 3" was placed as 1' 3", without a word.)
+        self.fresh = false;
         self.entry = Some((field, text.into()));
         self.touch();
     }
