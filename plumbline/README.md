@@ -150,11 +150,12 @@ round corners and a shadow:
 * **Over the model's top right**: the view (3D, Plan, Walk) and Frame, which brings the
   whole job back into view.
 * **Down the left**: Next steps (what this job needs next, read from the job), the
-  levels, the drawings, Bring in (price lists, assemblies, a prior estimate, an IFC
-  model, a maker's sheet), Items (things to place, made from makers' sheets), Write out
-  (the BIM model, the estimate, the lenses), Show (a switch for each trade, the roof,
-  see-through, how sure, the clashes), and the systems. A level and a system each have
-  a switch of their own.
+  levels, Show (a switch for the ground, the finishes, the framing, each trade, the
+  roof, see-through, how sure, the clashes), the systems, the drawings, Bring in
+  (price lists, assemblies, a prior estimate, an IFC model, a maker's sheet), Items
+  (things to place, made from makers' sheets), and Write out (the BIM model, the
+  estimate, the lenses). A level and a system each have a switch of their own. Click
+  a level and it is shown alone, looked down into.
 * **Along the bottom**: the build bar. Every tool is a button with its mark: Building
   (Wall, Door, Window, Floor, Room, Roof), Mechanical, electrical, plumbing (Duct, Pipe,
   Conduit, Cable, Fitting, Equipment, Fixture, Connect) and Edit (Move, Delete). The
@@ -321,6 +322,18 @@ names a cladding is drawn bare: that is a wall nobody has priced the siding for.
 Click anything and its Finish says what it is dressed in and which line says so.
 
     cargo run -p plumbline -- finishes job.json   # the same reading, written out
+
+**A trade at a time.** The same rule goes under the finish. Switch Finishes off and
+the siding, the stone and the casing come off: a wall with a weather barrier priced
+on it ("Sheathing and weather barrier", "house wrap", "Tyvek") is drawn in its
+barrier, and an opening with "Flashing and sealant" priced on it has its flashing
+round it. Switch Framing on and each wall with a framing line ("Wall framing, 2x6 at
+16 in") is drawn as its frame: plates, studs on their centres, and a header, jacks,
+kings, sill and cripples at each opening. A room with base priced on it has its base
+drawn at the foot of its walls. Switch Ground off and what is under it is seen:
+strip footings and the foundation walls on them, drawn with `plumbline footing` and
+`plumbline wall` on a level under the first floor. Nothing is drawn that no line
+prices, and no switch changes a figure.
 
 A line is read by what it is, not by a word in it: "Stone sill at windows" is a sill
 and dresses nothing, "Lap siding with brick mold casing" is lap siding, and

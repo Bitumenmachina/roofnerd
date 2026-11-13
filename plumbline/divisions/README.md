@@ -6,6 +6,10 @@ For whoever builds next, and for a harness given one division (DECISIONS.md call
 it and where that comes from. Every figure and name here is made up; an estimator's own
 prices and knowledge live on his machine and never in this repository.
 
+The lists below were read off the program on 2026-11-13 (`plumbline sixteen`, then
+`export estimate`; and `import assemblies <job> starter`, then `export assemblies`):
+they are a picture of that day and are taken again the same way when either changes.
+
 The divisions are MasterFormat 1995's sixteen (DECISIONS.md call 57). Nothing can yet
 take one division out of a job and put it back: that is PROPOSALS.md 21, not built.
 
