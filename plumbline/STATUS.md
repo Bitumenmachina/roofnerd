@@ -5170,3 +5170,8 @@ three `tools/gate-*.sh`; then `demos/found.sh`, `demos/spec.sh`, `demos/export.s
 (command line, a minute each; the last two want IfcOpenShell on `PYTHONPATH`), and
 `demos/tradesw.sh` for the window (about four minutes on a software renderer).
 
+**J20-9, a tapped arrow key.** Held, an arrow turns the view steadily; tapped, it now
+turns it a step (0.08 of a radian). A tap that began and ended inside one slow frame
+was no turn at all, which is what the judge met. Built, 283 tests pass, **not tried
+in the window**.
+

@@ -1612,19 +1612,15 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         }
     }
     orbit.target += step * pace;
-    let spin = dt * 1.3;
-    if keys.pressed(KeyCode::ArrowLeft) {
-        orbit.yaw -= spin;
-    }
-    if keys.pressed(KeyCode::ArrowRight) {
-        orbit.yaw += spin;
-    }
+    // Held, an arrow turns the view steadily. Tapped, it turns it a step: a tap that
+    // begins and ends inside one slow frame was otherwise no turn at all (the
+    // twentieth judgment pressed Up three times and nothing moved).
+    let turn = |key: KeyCode| if keys.pressed(key) { dt * 1.3 } else if keys.just_pressed(key) { 0.08 } else { 0.0 };
+    orbit.yaw += turn(KeyCode::ArrowRight) - turn(KeyCode::ArrowLeft);
     if !doc.walk {
-        if keys.pressed(KeyCode::ArrowUp) {
-            orbit.pitch = (orbit.pitch + spin).min(1.52);
-        }
-        if keys.pressed(KeyCode::ArrowDown) {
-            orbit.pitch = (orbit.pitch - spin).max(0.06);
+        let tilt = turn(KeyCode::ArrowUp) - turn(KeyCode::ArrowDown);
+        if tilt != 0.0 {
+            orbit.pitch = (orbit.pitch + tilt).clamp(0.06, 1.52);
         }
     }
 }
