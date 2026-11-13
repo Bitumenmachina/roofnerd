@@ -3009,3 +3009,25 @@ where. Those are his. What is proposed is the seam on this program's side
 (PROPOSALS.md 21), so that when the harnesses come there is one way in and one way
 out for each division and nothing has to be torn up.
 
+### Call 76. Patrick, 2026-11-13: the two rulings on harnesses stand, and the repository is to be left clean for the next run
+
+**His words:** "I agree with your rulings we are running low on limits please ensure
+everything is cleaned up as when limits reset will make a copy of repo to local
+machine for next fable run to have previous research we've done for each division".
+
+**What is now ruled** (QUESTIONS.md Q24, answered as its working assumptions):
+
+1. A harness is a thing beside the program. The program itself sends nothing anywhere
+   and never opens a connection; where a harness's model runs is a rule for the
+   harnesses. The seam gives a harness its own division and nothing else.
+2. Nothing a harness writes is Known. It arrives Assumed, with the harness named as
+   its source, and becomes Known only when a person or a field measurement says so.
+3. A harness prices and tunes. It does not draw.
+
+**What was done for the copy.** What sat outside the repository and would not have
+travelled with it is now in it: the two surveys and both judges' briefs and notes
+(`research/`), and an index of what the program has for each of the sixteen divisions
+(`divisions/README.md`). The twentieth judgment was stopped part way to save limits;
+its nine findings are recorded and none is fixed. STATUS.md ends with one section,
+"Start here", for whoever opens the copy.
+

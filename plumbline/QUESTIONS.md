@@ -333,3 +333,9 @@ framing harness placing studs, the plumbing harness routing pipe), the seam need
 way in for the model as well as for the lines, and two harnesses could then want the
 same wall. Working assumption: a harness prices and tunes; it does not draw.
 
+**Q24 is answered (Patrick, 2026-11-13, DECISIONS.md call 76): "I agree with your
+rulings".** The working assumptions above stand as rulings: a harness runs beside
+the program and the program sends nothing; nothing a harness writes is Known; a
+harness prices and tunes and does not draw. Q23 is still his: the four trades were
+drawn on its working assumption and he has been sent a picture of each.
+

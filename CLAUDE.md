@@ -7,7 +7,8 @@ Read this first, every session. A session does not remember the last one; the re
 does. Each rule is here once. Patrick's rulings of 2026-11-11 are folded in and override
 anything older that conflicts (`plumbline/DECISIONS.md` call 42 has them as he gave them);
 so are his of 2026-11-12 (call 57) and of later that day (call 62, which replaced the
-look and asked for this file's last section).
+look and asked for this file's last section). His of 2026-11-13 (calls 75 and 76: a
+harness for each division) are folded in below.
 
 ## What this is
 
@@ -39,6 +40,12 @@ field question; a clash between Known elements is a finding. The program produce
 verify-in-field (VIF) list: each question, where it is, and the dollars riding on it,
 sorted by dollars. A field measurement turns Assumed into Known.
 
+**Each division will have its own AI harness** (Patrick, calls 75 and 76): its own
+knowledge base, pricing and tweaking, run locally beside the program. The program is
+built so that a division can be handed to one and taken back whole
+(`plumbline/PROPOSALS.md` 21; not built yet). `plumbline/divisions/README.md` is what
+the program has for each of the sixteen today.
+
 **The earlier program** (roofnerd: `src-tauri/`, `packages/`, the files at the root) is
 the lineage this came from. It is not being built on. Its own notes are at the end.
 
@@ -53,9 +60,12 @@ the lineage this came from. It is not being built on. Its own notes are at the e
   Anything placed in `refs/` is sanitized first: the model this is built with keeps data
   for 30 days.
 - **Local-only is about job data and costs when people use the program.** The program
-  sends no job data and no costs anywhere. The code lives in the cloud, on this branch.
+  sends no job data and no costs anywhere. A harness is a thing beside the program;
+  the program itself never opens a connection, and gives a harness its own division
+  and nothing else. The code lives in the cloud, on this branch.
 - **Flag, never fabricate.** Every value is Known, Assumed or Unknown and says where it
-  came from. Nothing is silently zero, silently dropped, or shown as Known when it rests
+  came from. What a division's harness writes arrives Assumed, with the harness
+  named as its source, and is never Known on a harness's say-so (call 76). Nothing is silently zero, silently dropped, or shown as Known when it rests
   on something that is not. A total that leaves something out says what it left out.
   Prove it at every layer a number can collapse.
 - **Imports matter as much as exports.** People bring in what they already have: PDF
@@ -247,8 +257,10 @@ the list in its `README.md`.
 Patrick asked for this section and named Opus 5.5 as the model that builds next. It is
 how to use the program and how to change it without breaking what it promises.
 
-**Read, in this order, before touching anything.** This file. Then the end of
-`plumbline/STATUS.md`: "Self-review, written cold", "Eighteenth judgment: what it
+**Read, in this order, before touching anything.** This file. Then the LAST section
+of `plumbline/STATUS.md`, "Start here": it says where the work stands and what is
+owed, in order. Then `plumbline/divisions/README.md` and `plumbline/research/README.md`.
+Further back in `plumbline/STATUS.md`: "Self-review, written cold", "Eighteenth judgment: what it
 found" and "The rebuild after call 62" say what is wrong, what an estimator hit, and
 what is half built. Then `plumbline/DECISIONS.md` call 62 (Patrick's words and how
 each clause was read) and `plumbline/QUESTIONS.md` Q22. The two surveys the rebuild

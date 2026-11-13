@@ -4998,3 +4998,95 @@ harness's model may run; whether anything a harness writes may be Known). **Noth
 it is built.** It does not displace what is owed: the twentieth judgment's findings
 when they arrive, and the older demonstrations to repair.
 
+## Twentieth judgment: stopped part way, and what it had found (2026-11-13)
+
+Stopped at Patrick's word that the session's limits were low. It had finished the
+foundation at the command line and the whole house's price, and begun the window. Its
+notes as written are in `research/judgment-20-notes.md`. **None of these is fixed.**
+
+| Note | What it found | Kind |
+|---|---|---|
+| J20-1 | Where one footing ends on the middle of another (a T), the concrete is counted twice over a half-width: two footings of 40 ft and 20 ft, 24 x 12, are 118 CF by hand and 120 CF in the takeoff (4.44 CY against 4.37), and nothing says so. Call 70's "length times section is exact" holds only where two footings both end at a shared corner | **wrong figure, silent** |
+| J20-3 | A quantity is rounded to four places before it is priced: a 40 ft footing is 2.962963 CY, shown and priced as 2.9630; the whole house's four footings come to $4,533.40 where the concrete drawn at $450 is $4,533.33. Seven cents on Division 3. Call 74's "by hand" figures were worked from the rounded quantity | wrong by cents; older than this work (every line does it) |
+| J20-2, 4, 5 | A footing is called a wall in five places: its type lists "wall thickness"; refusals say "wall type thickness", "wall line", "not a wall type"; and its depth can be measured only under the word "height" (`measure ... depth` is refused and the refusal lists only "type") | words; one blocks the field path |
+| J20-5 | A footing can be drawn on a wall type and a wall on a footing type: types are not told apart | missing check |
+| J20-6 | In the BIM file each footing and wall is a plain box between its end points: the ring has a square notch at each outside corner and a square counted in two at each inside one. The volume is right; the shape another trade receives is not | export |
+| J20-7 | `plumbline finishes` says nothing of framing, weather barrier, flashing, base or concrete, and calls the foundation walls "bare" | the command line does not say what the window draws from |
+| J20-8 | With one level picked alone, the other levels' switches still read on though nothing of them is drawn | a switch that reads wrong |
+| J20-9 | The Up arrow did not tilt the view with the pointer parked above the tool bar | to be tried again; it was how the woodwork pictures were got |
+| held | Division 3 and the whole house's price to the cent; every refusal of a bad footing; move, remove, measure, the pipe through a footing, the saved job, the BIM file's schema | |
+
+**Laid out by the judge and not yet looked at** (its test job `k.json`, read from the
+code's word rules): walls with framing priced as "2 x 6 @ 24", "2X4 studs 16 OC" and
+"wall framing 2x6 16 in o.c." are **not framed, with no word**; of two framing lines
+on one wall the first wins and the second is not mentioned; "Tyvek HomeWrap" and
+"Felt paper" are **not read as weather barriers**; a bathroom with "Vanity base" and
+"Shower base" priced **gets baseboard drawn**; a framed partition with "Anchor bolts
+into concrete" priced **is drawn in concrete**; two windows 3 in apart have their
+kings and jacks drawn through each other; a door as tall as its wall has no header.
+Each is a prediction from reading the code, by a judge who was right about the rest.
+Each needs trying, and most will be true.
+
+## Start here (written 2026-11-13 for the next run, on a copy of this repository)
+
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`. The tree is clean and
+pushed. 280 tests pass; `tools/committed.sh` passed on the last commit that changed
+code (ee3baec); the gates pass. Read `CLAUDE.md` first, then this section, then
+`divisions/README.md` (what the program has for each of the sixteen trades) and
+`research/README.md` (the surveys and the two latest judgments).
+
+**What Patrick has ruled most recently.** Each of the sixteen divisions will have its
+own AI harness with its own knowledge, pricing and tweaking; he will run locally;
+nothing a harness writes is Known; a harness prices and tunes and does not draw
+(calls 75 and 76). He asked to see each of seven trades and has been sent a picture
+of each (call 69). His question Q23 (should the four trades that were only estimate
+lines be drawn at all) is still open on its working assumption.
+
+**What is true of the program today, in one paragraph.** It traces a plan, builds the
+house in 3D, prices it in sixteen divisions, finds clashes, lists what to verify in
+the field by dollars, brings in and writes out price lists, assemblies, estimates and
+BIM files, and makes items from makers' sheets. Since call 62 its window is glass
+panels over the model with Google Earth navigation. Since call 68 the house is lit by
+a sun and its sky. Since calls 70 to 74 all seven trades Patrick named have a first
+layer drawn. None of that last night's work has been through a judge to the end.
+
+**What is owed, in this order.**
+
+1. **Fix what judgment 20 found** (the table above): the T-junction footing volume
+   first, because it is a wrong figure said with confidence; then a footing's words;
+   then try each of the judge's unlooked-at predictions and fix those that are true
+   (the framing and weather-barrier word rules are too narrow; the base and concrete
+   rules too wide).
+2. **Run judgment 20 again to the end** on the result, with the same brief
+   (`research/judgment-20-brief.md`). It needs a fresh frozen copy of the program
+   (`PLUMBLINE_BIN`, in CLAUDE.md) and the IFC checker's Python package, which was in
+   the old scratch folder and is not in the repository (`pip install ifcopenshell
+   --target <a folder>`, then `PYTHONPATH`).
+3. **Write a window demonstration for each new layer** (the Ground, Framing and
+   Finishes switches, the base): none has one. The pictures in
+   `demos/captured/trades/` were taken by hand with the kit.
+4. **Repair the older window demonstrations** on the rebuilt window: `planw` (its
+   walls now come out right; its scale clicks land off the dimension), `buildw`,
+   `draww`, and the rest listed stale above. Their fixed click places predate the
+   rebuild.
+5. **The seam for a harness per division** (PROPOSALS.md 21): a division out, a
+   division in, and `divisions/` grown from an index into what each trade knows.
+   Nothing of it is built.
+6. Then what was owed before: the rest of the light (soft shadow edges, materials),
+   judge 19's open notes, the release candidate's table of thirteen items.
+
+**What is known to be not right and is nobody's finding yet.** Electrical and
+plumbing are hard to read with the house seen through under the new light. Looking
+down into one floor takes a level picked alone and an arrow key; there is no one step
+for it. The job's name in the top bar is cut short with room beside it. On a
+one-wall job the plan runs under the right panel. The four new layers have no
+quantities of their own: framing is still priced by the SF of wall and base by the
+room's whole perimeter.
+
+**Three mistakes of the last night, so they are not made again** (each is recorded
+where it happened): pictures committed while their run was still going; a commit
+pushed on a test count of nothing, whose tests did not compile; and "BIMCraft has no
+framing" written from a list of file names cut short. And one defect of my own making
+found late: since call 64 a length typed after a tool's sizes were accepted lost its
+first digit. `planw` found it the moment it walked the path a person walks.
+
