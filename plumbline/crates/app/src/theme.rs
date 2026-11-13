@@ -45,6 +45,8 @@ pub const BUTTON_RADIUS: f32 = 8.0;
 pub const SMALL_RADIUS: f32 = 6.0;
 /// The glass itself, and its light edge.
 pub fn frost() -> Color { Color::srgba(0.985, 0.988, 0.992, 0.80) }
+/// The glass over a plan: a pale cool grey, so a panel reads as a sheet over the paper.
+pub fn frost_on_paper() -> Color { Color::srgba(0.925, 0.937, 0.953, 0.90) }
 /// Frosted, the glass can be thinner than tinted glass and still be read on: what is
 /// behind it is blurred, so only its colour comes through.
 pub const FROST_THICK: f32 = 0.60;

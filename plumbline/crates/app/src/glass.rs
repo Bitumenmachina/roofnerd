@@ -77,8 +77,21 @@ pub fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>, mut glas
 }
 
 /// The small picture is of what the window shows: its camera goes where the window's goes.
-pub fn follow(main: Query<(&Transform, &Projection, &Tonemapping), (With<MainCamera>, Without<Behind>)>, mut behind: Query<(&mut Transform, &mut Projection, &mut Tonemapping), (With<Behind>, Without<MainCamera>)>) {
+pub fn follow(main: Query<(&Transform, &Projection, &Tonemapping), (With<MainCamera>, Without<Behind>)>, mut behind: Query<(&mut Transform, &mut Projection, &mut Tonemapping), (With<Behind>, Without<MainCamera>)>, mut glass: ResMut<Assets<Frost>>) {
     let (Ok((at, lens, fold)), Ok((mut t, mut p, mut f))) = (main.single(), behind.single_mut()) else { return };
+    // Over a plan the glass is a shade cooler and denser than over the model: white
+    // frost over white paper was no panel at all, only words lying on the drawing
+    // (seen in the clash demonstration's plan). Over the model it is as it was.
+    let on_plan = *fold == Tonemapping::None;
+    let tint = if on_plan { theme::frost_on_paper() } else { theme::frost() }.to_linear();
+    let want = LinearRgba::new(tint.red, tint.green, tint.blue, if on_plan { 0.86 } else { theme::FROST_THICK });
+    if let Some(handle) = PANEL.get() {
+        if glass.get(handle).is_some_and(|m| m.tint != want) {
+            if let Some(mut m) = glass.get_mut(handle) {
+                m.tint = want;
+            }
+        }
+    }
     *t = *at;
     *p = lens.clone();
     // Lit and folded to the screen as the window is, so the blur matches what is round it.

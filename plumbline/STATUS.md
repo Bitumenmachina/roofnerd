@@ -5277,3 +5277,16 @@ walls under each of three figures. Walls equally sure are now named in one sente
 283 tests pass (one wall alone reads exactly as before, which two tests hold).
 **The picture itself predates the fix**: `firstw` has not been rerun since.
 
+**Read as a person: the clash demonstration's plan** (`demos/captured/clash/05-model.png`).
+The clash is marked amber with "1 to verify in the field" under its switch: right.
+**Not right, and fixed:** on plan the panels were not there to the eye: white frost
+over white paper, so the words of every panel lay on the drawing with no sheet under
+them (VISUAL.md A2). Over a plan the glass is now a shade cooler and denser
+(`theme::frost_on_paper`); over the model it is as it was. Seen:
+`demos/captured/layers/plan-panels.png`, the made-up whole house on plan: each panel
+a pale sheet over the paper, and the roof plan under them with its lines by type and
+their lengths. 283 tests pass. **Every other plan-view picture in `demos/captured/`
+predates this and shows the panels without it** (`plan/`, `first/`, `clash/`, `build/`,
+`draw/` and the plan pictures of the rest): their measurements are of the drawing,
+not the panels, and are not expected to change, but they have not been rerun.
+
