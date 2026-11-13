@@ -1854,7 +1854,7 @@ fn draw(args: &[String]) -> Result<(), String> {
             let [at] = at.as_slice() else { return Err("--at is one point, x,y in feet".into()) };
             let size = match flag("--size") {
                 None => None,
-                Some(text) => match text.split(',').map(|x| units::parse_number(x)).collect::<Result<Vec<f64>, String>>()?.as_slice() {
+                Some(text) => match text.split(',').map(units::parse_number).collect::<Result<Vec<f64>, String>>()?.as_slice() {
                     [a, b, c] => Some([*a, *b, *c]),
                     _ => return Err("--size is along,across,up in feet, like \"2,2,6\"".into()),
                 },

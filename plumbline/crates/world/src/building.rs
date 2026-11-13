@@ -1371,8 +1371,8 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                 }
                 (other, _) => {
                     let reason = why(other.as_ref().err().copied().unwrap_or(Unbound::NotEnclosed));
-                    m.insert("floor_area".into(), Derived::refused("SF", F_FLOOR, &[input.clone()], &reason));
-                    m.insert("perimeter".into(), Derived::refused("LF", F_ROUND, &[input.clone()], &reason));
+                    m.insert("floor_area".into(), Derived::refused("SF", F_FLOOR, std::slice::from_ref(&input), &reason));
+                    m.insert("perimeter".into(), Derived::refused("LF", F_ROUND, std::slice::from_ref(&input), &reason));
                 }
             }
             match (&found.centre, found.in_wall) {
@@ -1381,7 +1381,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                 }
                 (other, _) => {
                     let reason = why(other.as_ref().err().copied().unwrap_or(Unbound::NotEnclosed));
-                    m.insert("gross_area".into(), Derived::refused("SF", F_GROSS, &[input.clone()], &reason));
+                    m.insert("gross_area".into(), Derived::refused("SF", F_GROSS, std::slice::from_ref(&input), &reason));
                 }
             }
         }

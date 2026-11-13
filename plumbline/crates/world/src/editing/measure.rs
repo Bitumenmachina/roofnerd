@@ -599,7 +599,7 @@ fn floor_set(job: &mut Job, me: Entity, path: &str, name: &str, level: &Level, s
     let Some(floor) = level.elevation.feet() else { return Ok(()) };
     let beside = storeys_beside(job, me);
     // The storey below: the highest whose floor is under this one.
-    let below = beside.iter().filter(|(p, ..)| p != path).filter(|(.., z)| z.is_some_and(|z| z < floor - 1.0e-9)).next_back().cloned();
+    let below = beside.iter().filter(|(p, ..)| p != path).rfind(|(.., z)| z.is_some_and(|z| z < floor - 1.0e-9)).cloned();
     if let Some((below_path, below_name, below_level, Some(under))) = below {
         let way_up = ((floor - under) * 1.0e9).round() / 1.0e9;
         match below_level.height.feet() {

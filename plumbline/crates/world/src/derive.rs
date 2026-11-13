@@ -202,16 +202,16 @@ pub fn derive(world: &mut World) -> Vec<String> {
             m.insert(
                 "plan_area".into(),
                 match outline {
-                    Some(_) if unit_fault => Derived::refused("SF", &f_area, &[in_outline.clone()], &format!("the outline {NOT_CONVERTED}")),
-                    Some(o) => Derived::new(area, "SF", &[o.points.status], &f_area, &[in_outline.clone()]),
-                    None => Derived::refused("SF", &f_area, &[in_outline.clone()], "no outline entered"),
+                    Some(_) if unit_fault => Derived::refused("SF", &f_area, std::slice::from_ref(&in_outline), &format!("the outline {NOT_CONVERTED}")),
+                    Some(o) => Derived::new(area, "SF", &[o.points.status], &f_area, std::slice::from_ref(&in_outline)),
+                    None => Derived::refused("SF", &f_area, std::slice::from_ref(&in_outline), "no outline entered"),
                 },
             );
             m.insert(
                 "slope_factor".into(),
                 match pitch {
-                    Some(p) => Derived::new(factor, "", &[p.0.status], f_factor, &[in_pitch.clone()]),
-                    None => Derived::refused("", f_factor, &[in_pitch.clone()], "no pitch entered"),
+                    Some(p) => Derived::new(factor, "", &[p.0.status], f_factor, std::slice::from_ref(&in_pitch)),
+                    None => Derived::refused("", f_factor, std::slice::from_ref(&in_pitch), "no pitch entered"),
                 },
             );
             let (surface_d, squares_d) = match (outline, pitch) {
@@ -241,9 +241,9 @@ pub fn derive(world: &mut World) -> Vec<String> {
             m.insert(
                 "plan_length".into(),
                 match run {
-                    Some(_) if unit_fault => Derived::refused("LF", &f_plan, &[in_run.clone()], &format!("the line {NOT_CONVERTED}")),
-                    Some(r) => Derived::new(plan, "LF", &[r.ends.status], &f_plan, &[in_run.clone()]),
-                    None => Derived::refused("LF", &f_plan, &[in_run.clone()], "no line entered"),
+                    Some(_) if unit_fault => Derived::refused("LF", &f_plan, std::slice::from_ref(&in_run), &format!("the line {NOT_CONVERTED}")),
+                    Some(r) => Derived::new(plan, "LF", &[r.ends.status], &f_plan, std::slice::from_ref(&in_run)),
+                    None => Derived::refused("LF", &f_plan, std::slice::from_ref(&in_run), "no line entered"),
                 },
             );
             if *kind == Kind::Parapet {

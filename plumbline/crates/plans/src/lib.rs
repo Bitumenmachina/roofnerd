@@ -379,7 +379,7 @@ pub fn size_of(bytes: &[u8], page: usize) -> Result<(Sort, usize, [f64; 2]), Str
             let pdf = Pdf::new(bytes.to_vec()).map_err(|_| "the PDF could not be read: it is damaged, cut short, locked with a password, or not a PDF at all. Print it to a new PDF, or send it again".to_string())?;
             let pages = pdf.pages();
             let count = pages.len();
-            let (width, height) = page_size(&pages, page)?;
+            let (width, height) = page_size(pages, page)?;
             Ok((Sort::Pdf, count, [f64::from(width), f64::from(height)]))
         }
         Some(sort) => {
@@ -434,7 +434,7 @@ fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
     let pdf = Pdf::new(bytes.to_vec()).map_err(|_| "the PDF could not be read: it is damaged, cut short, locked with a password, or not a PDF at all. Print it to a new PDF, or send it again".to_string())?;
     let pages = pdf.pages();
     let count = pages.len();
-    let (width, height) = page_size(&pages, page)?;
+    let (width, height) = page_size(pages, page)?;
     let p = &pages[page - 1];
     let settings = InterpreterSettings::default();
     // The picture, at no more than LONG_SIDE dots on its longer side.
@@ -547,7 +547,7 @@ pub fn words(bytes: &[u8], page: usize) -> Result<Vec<Words>, String> {
     }
     let pdf = Pdf::new(bytes.to_vec()).map_err(|_| "the PDF could not be read: it is damaged, cut short, locked with a password, or not a PDF at all. Print it to a new PDF, or send it again".to_string())?;
     let pages = pdf.pages();
-    let (width, height) = page_size(&pages, page)?;
+    let (width, height) = page_size(pages, page)?;
     let p = &pages[page - 1];
     let mut letters = Letters::default();
     let mut context = Context::new(p.initial_transform(true).to_kurbo(), Rect::new(0.0, 0.0, f64::from(width), f64::from(height)), &hayro::hayro_interpret::InterpreterCache::new(), p.xref(), InterpreterSettings::default());
