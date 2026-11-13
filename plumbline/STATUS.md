@@ -5267,3 +5267,13 @@ named as read earlier in this file. The rest passed their measurements and have 
 been looked at as a person would: a check that passes while the window is wrong is
 a defect in the check, and that looking is owed.
 
+**Read as a person: the first job's last picture** (`demos/captured/first/06-model.png`,
+of the last build): the farmhouse built from the real plan stands on its own sheet,
+its hip roof's lines by type, a door and two windows, the walls bare because nothing
+is priced, "22 not priced" and "14 to verify" in the bar. It reads as what it is.
+**Not right in it, and fixed (call 77):** the To verify panel said "whether wall N
+bounds this room rests on its heights, which are assumed" once for each of four
+walls under each of three figures. Walls equally sure are now named in one sentence.
+283 tests pass (one wall alone reads exactly as before, which two tests hold).
+**The picture itself predates the fix**: `firstw` has not been rerun since.
+

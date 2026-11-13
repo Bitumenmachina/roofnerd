@@ -1307,12 +1307,26 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                 let mut statuses: Vec<Status> = mine.iter().map(|&k| placed[k].shape.max(placed[k].span)).collect();
                 statuses.extend([room.point.status, cut_status]);
                 let mut notes: Vec<String> = Vec::new();
+                // Walls whose heights are equally sure are said in one sentence, not one
+                // each: a room of four traced walls read as the same clause four times.
+                let mut by_how_sure: Vec<(String, Vec<String>)> = Vec::new();
                 for &k in &rests_on[i] {
                     statuses.push(placed[k].span);
                     if !inputs.contains(&format!("{}#{K_WALL}", placed[k].path)) {
                         inputs.push(format!("{}#{K_WALL}", placed[k].path));
                     }
-                    notes.push(format!("whether {} ({}) bounds this room rests on its heights, which are {}", tree.called(&placed[k].path), placed[k].path, format!("{:?}", placed[k].span).to_lowercase()));
+                    let (how, wall) = (format!("{:?}", placed[k].span).to_lowercase(), format!("{} ({})", tree.called(&placed[k].path), placed[k].path));
+                    match by_how_sure.iter_mut().find(|g| g.0 == how) {
+                        Some(group) => group.1.push(wall),
+                        None => by_how_sure.push((how, vec![wall])),
+                    }
+                }
+                for (how, walls) in by_how_sure {
+                    notes.push(match walls.as_slice() {
+                        [one] => format!("whether {one} bounds this room rests on its heights, which are {how}"),
+                        [most @ .., last] => format!("whether {} and {last} bound this room rests on their heights, which are {how}", most.join(", ")),
+                        [] => continue,
+                    });
                 }
                 // A wall's end is cut to the walls it meets there, bounding or not. Where
                 // that end is at this room (a corner of the room lies within the walls'

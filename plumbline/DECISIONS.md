@@ -3031,3 +3031,15 @@ travelled with it is now in it: the two surveys and both judges' briefs and note
 its nine findings are recorded and none is fixed. STATUS.md ends with one section,
 "Start here", for whoever opens the copy.
 
+### Call 77. Walls whose heights are equally sure are said in one sentence (2026-11-13)
+
+A wording call, made on reading the first job's last picture as a person would. A
+room's figures rest on whether each wall round it bounds it, which rests on that
+wall's heights; the reason was written once for each wall, so a room of four traced
+walls read "whether wall 1 bounds this room rests on its heights, which are assumed;
+whether wall 2 ..." four times over, three figures deep: a block of grey text nobody
+reads. Walls whose heights are equally sure are now named in one sentence: "whether
+wall 1 (wall-0005), wall 2 (wall-0006), wall 3 (wall-0007) and wall 4 (wall-0008)
+bound this room rests on their heights, which are assumed". One wall alone is said
+exactly as before. Nothing is left out: every wall is still named, with how sure.
+
