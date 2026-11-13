@@ -5151,3 +5151,22 @@ pushed on a test count of nothing, whose tests did not compile; and "BIMCraft ha
 framing" written from a list of file names cut short. And one defect of my own making
 found late: since call 64 a length typed after a tool's sizes were accepted lost its
 first digit. `planw` found it the moment it walked the path a person walks.
+
+**Which pictures in `demos/captured/` are of the program as it is, and which are
+not.** Of the current program: `layers/` (the last run of the session), `trades/`
+(taken by hand through the night; each says in this file which build), `light/`
+(the before and after of call 68; the price in their top bar is the old one).
+Taken on builds of 2026-11-12 after the new light and before the trade layers and the
+clean-up: `glass/`, `carry/`, `price/`, `tools/`, `items/`, `dress/`. Their checks
+passed then and nothing since should have changed what they show, but they have not
+been rerun on the last commit. **Stale, from before the window was rebuilt:** `plan/`,
+`first/`, and every other folder there (`build`, `draw`, `field`, `clash`, `d4`, `d5`,
+`bring`, `house`, `d2` and the rest): their demonstrations click at places that have
+moved and have not passed on the rebuilt window.
+
+**How to check all is well after copying:** in `plumbline/`, `cargo test --workspace`
+(283 pass), `tools/portmap.sh`, `tools/licenses.sh`, and from the repository root the
+three `tools/gate-*.sh`; then `demos/found.sh`, `demos/spec.sh`, `demos/export.sh`
+(command line, a minute each; the last two want IfcOpenShell on `PYTHONPATH`), and
+`demos/tradesw.sh` for the window (about four minutes on a software renderer).
+
