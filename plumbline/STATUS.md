@@ -5383,3 +5383,7 @@ names give way to the roof plan. 283 tests pass; `buildw` and `firstw` pass on t
 build and `build/` and `first/` are of it. Every other plan picture with a named
 room predates this. **A door's swing on plan is not drawn, and rightly:** a door holds no hand and no
 swing, so an arc would be made up. PROPOSALS.md 22 proposes holding them. Not judged.
+
+**Overhead and profit said back as the recap shows them.** "The job: profit set to
+8." now reads "The job: profit set to 8.00 %." (read in `d5/06-sheet`, retaken:
+`d5w` passes on the build and `d5/` is of it). 283 tests pass.

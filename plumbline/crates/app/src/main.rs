@@ -640,7 +640,14 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                     q.iter(&doc.job.world).any(|(n, k)| *k == plumbline_world::Kind::Material && (n.name == text.trim() || n.path == text.trim()))
                                 };
                                 if known {
-                                    doc.say(Tone::Done, format!("{path}: {what} set to {}.", text.trim()));
+                                    // Overhead and profit are said back as the recap
+                                    // shows them: "8" is answered "8.00 %".
+                                    let typed = text.trim();
+                                    let said = match typed.parse::<f64>() {
+                                        Ok(x) if matches!(what, "overhead" | "profit") => format!("{} %", plumbline_world::view::figure(x, 2)),
+                                        _ => typed.to_string(),
+                                    };
+                                    doc.say(Tone::Done, format!("{path}: {what} set to {said}."));
                                 } else {
                                     doc.say(Tone::Warned, format!("{path}: material set to {:?}, which is not a material of this job. The lines made of it have no figure.", text.trim()));
                                 }
