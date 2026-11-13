@@ -5243,3 +5243,16 @@ not been read one by one. `d5w` stopped: a row of the estimate it scrolls up to 
 no longer above where it was looking. The kit's `sheet_at` now looks the other way
 when a row is not the way it was told; `d5w` is being rerun.
 
+**`d5w` passes too** (rerun alone with the kit looking both ways for a row): the
+estimate read on the sheet; overhead, profit, a unit cost and a stretch-out typed on
+their own lines; a labor line switched off; a material changed in the model. Its
+pictures in `demos/captured/d5/` are of this build.
+
+**Where the window demonstrations stand on the rebuilt window, all of them:** passing
+on the last build or a frozen copy of it: `tradesw`, `pricew`, `planw`, `buildw`,
+`draww`, `fieldw`, `clashw`, `d4w`, `d5w`, `bringw`, `firstw`. Passing on builds of
+2026-11-12 after the new light and not rerun since: `glassw`, `carryw`, `toolsw`,
+`itemsw`, `dressw`. Not window demonstrations, or not rerun: `house`, `d2`. None of
+the picture sets of this last round has been read picture by picture: that reading,
+and a judge, are what the next run owes them.
+
