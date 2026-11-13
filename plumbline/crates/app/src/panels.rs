@@ -686,8 +686,18 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         for (i, d) in [Discipline::Architecture, Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing].into_iter().enumerate() {
             let count = snap.counts.iter().find(|c| c.0 == d).map(|c| c.1).unwrap_or(0);
             if i == 1 && !snap.planes.is_empty() {
-                layer(c, "Roof", "", theme::roof_bare(), doc.show.roof, Some(snap.planes.len()), Box::new(|doc| {
-                    doc.show.roof = !doc.show.roof;
+                // It reads on only when the roof is drawn: with a level on show alone
+                // it is, only over the top level. Pressed then, it brings every level
+                // back with the roof on.
+                let top = snap.storeys.iter().max_by(|a, b| a.elevation.unwrap_or(f64::MIN).total_cmp(&b.elevation.unwrap_or(f64::MIN))).map(|s| s.path.clone());
+                let over = doc.show.storey.is_none() || doc.show.storey == top;
+                layer(c, "Roof", "", theme::roof_bare(), doc.show.roof && over, Some(snap.planes.len()), Box::new(move |doc| {
+                    if over {
+                        doc.show.roof = !doc.show.roof;
+                    } else {
+                        doc.show.storey = None;
+                        doc.show.roof = true;
+                    }
                     doc.redraw();
                 }));
             }

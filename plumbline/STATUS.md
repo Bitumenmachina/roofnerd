@@ -5090,3 +5090,26 @@ framing" written from a list of file names cut short. And one defect of my own m
 found late: since call 64 a length typed after a tool's sizes were accepted lost its
 first digit. `planw` found it the moment it walked the path a person walks.
 
+## The clean-up pass after judgment 20 (2026-11-13)
+
+Patrick asked for one last code and window clean-up. What was done, each committed
+on its own with the tests passing:
+
+| From | What | Proof |
+|---|---|---|
+| J20-1 | A footing that stops on the run of another (a T) no longer counts that concrete twice: the part of the stem inside the run is taken off the stem, and the formula on the figure says so | `demos/found.sh`: a 20 ft stem on a 40 ft run, 24 by 12, is 4.37 CY (118 CF by hand; it was 120); the ring is still 10.07 CY |
+| J20-2, 4, 5 | A footing is spoken of as a footing: its type lists "footing width"; its depth is measured under "depth"; a footing with no length, a type with no width, a type that is not a footing's are refused in a footing's words | `demos/found.sh`: measured 18 in deep, the 40 ft run is 4.4444 CY (40 x 2 x 1.5 / 27) |
+| the judge's test job | Framing is read from "2 x 6 @ 24", "2X4 studs 16 OC", "2x6 16 in o.c."; a number not said to be a spacing is not taken for one. A weather barrier is read from Tyvek, Typar, felt or tar paper; not from a vapor barrier. Base is read only where the line means the base at the foot of a wall (not a vanity base or a shower base). A wall is concrete only where the line says the wall is (not "anchor bolts into concrete") | unit tests with the judge's own lines; 281 pass |
+| J20-7 | `plumbline finishes` says of a wall that it is framed and in what, has a weather barrier, is concrete; of an opening that it is flashed; of a room that it has base | read on the made-up house |
+| J20-8 | With one level on show alone, the other levels' switches, and the roof's, read off; pressing one brings every level back with it | seen for the levels in a picture of the first floor alone; **the roof's switch is built and not yet seen** |
+| seen in pictures | The job's name in the top bar is whole ("Sample whole house (not a real job)"), cut at 44 letters, not 26 | seen |
+
+**Still open from judgment 20:** J20-3 (a quantity is rounded to four places before
+it is priced: every line does it, and changing it changes every total by cents, so it
+wants a decision first); J20-6 (in the BIM file a footing or a wall is a plain box
+between its ends, notched at outside corners); a footing can be drawn on a wall's
+type and a wall on a footing's; J20-9 (the Up arrow with the pointer parked low);
+two framing lines on one wall, where the first wins without a word; two windows 3 in
+apart, whose kings and jacks are drawn through each other; and **the judgment itself,
+which was stopped part way and has to be run again to the end**.
+
