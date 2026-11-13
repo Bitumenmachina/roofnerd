@@ -281,8 +281,9 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     p.spawn(docked(Node { top: px(0.0), left: px(0.0), right: px(0.0), height: px(TOP_H), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), ..default() }, UiRect::bottom(px(1.0)))).with_children(|bar| {
         wordmark(bar, fonts);
         divider(bar);
-        // A long title is cut at a word's worth and says it is cut; it is whole on the right.
-        bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((theme::name(fonts, one_line(&snap.title, 26), 13.0, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
+        // A long title is cut and says it is cut; it is whole on the right. Cut at 44
+        // letters: at 26 a job's name was cut with half the bar empty beside it.
+        bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((theme::name(fonts, one_line(&snap.title, 44), 13.0, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
         divider(bar);
         on_click(&mut button(bar, fonts, "Save", "Ctrl+S", false), |doc| doc.press(KeyCode::F2));
         on_click(&mut button(bar, fonts, "Undo", "Ctrl+Z", false), |doc| doc.press(KeyCode::KeyZ));
@@ -594,10 +595,18 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                     r.spawn(Node { flex_grow: 1.0, ..default() });
                     // Its own switch: what stands on it is drawn, or not.
                     let level = storey.path.clone();
-                    let shown = !doc.show.off_levels.contains(&storey.path);
+                    // It reads on only if what stands on it is drawn: with another level
+                    // on show alone, this one is not, whatever its own switch was left at
+                    // (J20-8: the others still read on with nothing of them drawn).
+                    let shown = !doc.show.off_levels.contains(&storey.path) && doc.show.storey.as_ref().is_none_or(|alone| *alone == storey.path);
                     r.spawn((text(fonts, storey.elevation.map(|e| units::feet_as_ft_in(e, 16)).unwrap_or("no elevation".into()), 11.5, Weight::Regular, if storey.elevation.is_some() { theme::ink_soft() } else { theme::red() }), Pickable::IGNORE));
                     switch_of(r, shown, format!("Show level {}", storey.name), move |doc| {
-                        if !doc.show.off_levels.remove(&level) {
+                        if doc.show.storey.as_ref().is_some_and(|alone| *alone != level) {
+                            // Another level is on show alone: this one is switched on
+                            // by bringing every level back, with this one among them.
+                            doc.show.storey = None;
+                            doc.show.off_levels.remove(&level);
+                        } else if !doc.show.off_levels.remove(&level) {
                             doc.show.off_levels.insert(level.clone());
                         }
                         doc.redraw();

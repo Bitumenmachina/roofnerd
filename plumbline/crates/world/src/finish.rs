@@ -847,15 +847,34 @@ pub fn report(job: &mut Job) -> Vec<String> {
                 None => out.push(format!("{name}: not drawn: it cannot be placed")),
                 Some(w) => {
                     let (first, more) = wall_said(w);
-                    out.push(std::iter::once(format!("{name}: {first}")).chain(more).collect::<Vec<_>>().join("; "));
+                    // What else is drawn from what is priced on it: its frame, the
+                    // weather barrier under its finish, that it is concrete (J20-7: the
+                    // window drew these and this report said nothing of them).
+                    let mut under: Vec<String> = Vec::new();
+                    if w.concrete {
+                        under.push("concrete, as a line priced on it says".into());
+                    }
+                    if let Some((deep, spacing)) = w.framing {
+                        let lumber = [(3.5, "2x4"), (5.5, "2x6"), (7.25, "2x8"), (9.25, "2x10"), (11.25, "2x12")].iter().find(|(d, _)| (d / 12.0 - deep).abs() < 1.0e-6).map(|(_, n)| *n).unwrap_or("lumber");
+                        under.push(format!("framed in {lumber} at {} in on centre", crate::view::num(spacing * 12.0)));
+                    }
+                    if w.barrier {
+                        under.push("a weather barrier under its finish".into());
+                    }
+                    out.push(std::iter::once(format!("{name}: {first}")).chain(more).chain(under).collect::<Vec<_>>().join("; "));
                 }
             },
+            Kind::Room => {
+                if d.base.contains_key(&node.path) {
+                    out.push(format!("{name}: base at the foot of its walls"));
+                }
+            }
             k if k.is_area() => match d.roofs.get(&node.path) {
                 Some(r) => out.push(format!("{name}: {}{} ({}){}", r.what.said(), toned(&r.tone), r.by, also(&r.also))),
                 None => out.push(format!("{name}: bare: nothing priced on it names a roofing")),
             },
-            Kind::Window => out.push(format!("{name}: {}", window_said(d.openings.get(&node.path)))),
-            Kind::Door => out.push(format!("{name}: {}", door_said(d.openings.get(&node.path)))),
+            Kind::Window => out.push(format!("{name}: {}{}", window_said(d.openings.get(&node.path)), if d.openings.get(&node.path).is_some_and(|o| o.flashed) { "; flashed" } else { "" })),
+            Kind::Door => out.push(format!("{name}: {}{}", door_said(d.openings.get(&node.path)), if d.openings.get(&node.path).is_some_and(|o| o.flashed) { "; flashed" } else { "" })),
             Kind::Eave => {
                 if let Some(g) = d.gutters.get(&node.path) {
                     out.push(format!("{name}: a gutter{} ({})", toned(&g.tone), g.by));
