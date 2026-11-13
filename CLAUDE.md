@@ -343,14 +343,28 @@ on a list of file names cut short by `head`; BIMCraft's `crates/core/src/timber.
 has it. `tools/portmap.sh` checks every "finds nothing" claim and caught a second.
 
 **What Patrick asked to see, and what is still not there** (QUESTIONS.md Q23,
-DECISIONS.md calls 69 to 71): one snapshot of each of seven trades. Electrical,
-plumbing and HVAC are drawn. Foundation (footings, foundation walls) and wall framing
-are now drawn. **Waterproofing and interior woodwork are still lines on the estimate
-with nothing in the model**, and the made-up whole house has no foundation; floor
-joists and rafters are not framed. `demos/captured/trades/` has the snapshots.
+DECISIONS.md calls 69 to 74): one snapshot of each of seven trades. All seven now
+have something in the model, each drawn only where the estimate prices it, each with
+a switch under Show: electrical, plumbing and HVAC as before; **foundation** (strip
+footings, a kind of their own, and foundation walls; the Ground switch; the made-up
+whole house has one, priced by what is drawn); **framing** (a wall with a framing
+line as its frame; the Framing switch); **waterproofing** (the weather barrier and
+opening flashing with the Finishes switch off); **interior woodwork** (base in each
+room with base priced). `demos/captured/trades/` has a picture of each and STATUS.md
+has a table of what each still lacks: joists and rafters, roof underlayment and roof
+flashing, interior casing and cabinets, pad footings, a tool to draw a footing in the
+window. **None of the four new layers has a window demonstration script, and none
+has been judged by an agent that did not build it.** That is the next thing owed.
+
+**A tool's sizes accepted, then a length typed** is the path every first wall takes,
+and no demonstration walked it until `planw` was repaired: it found the first digit
+of the length thrown away (STATUS.md, 2026-11-13). When a demonstration is written,
+make it accept what is offered at least once, not only type over it.
 
 **Small things that cost time.** Disk is a fixed allowance: `target/` grows past 12
-GB; delete `target/debug/incremental` and scratch targets when a link fails. The
+GB; delete `target/debug/incremental` and scratch targets when a link fails. Each
+frozen copy of the program kept for `PLUMBLINE_BIN` is half a gigabyte: delete the
+old ones (the machine was restarted once at 92 % full). The
 harness refuses `rm -rf` on a shell variable: use the literal path. IfcOpenShell is
 LGPL and is only ever run as an outside checker (`tools/ifc-check.py`), never linked.
 The default branch has none of this; the README's clone line names this branch.
