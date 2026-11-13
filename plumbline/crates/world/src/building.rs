@@ -666,6 +666,19 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
         }
     }
 
+    // Every strip footing's level, line and width: where one stops on the run of
+    // another (a T), the part of it inside the other is that other's concrete.
+    let strips: Vec<(String, Option<String>, [P2; 2], f64)> = {
+        let mut fq = world.query::<(&Node, &Kind, &Wall)>();
+        fq.iter(world)
+            .filter(|(_, k, _)| **k == Kind::Footing)
+            .filter_map(|(n, _, w)| {
+                let line = w.line_ft()?;
+                let width = typed(&tree.wall_types, &w.type_name, "a footing").ok().and_then(|(_, t)| t.thickness.feet())?;
+                Some((n.path.clone(), n.parent.clone(), line, width))
+            })
+            .collect()
+    };
     let mut q = world.query::<(&Node, &Kind, Option<&Wall>, Option<&Floor>, Option<&Segment>)>();
     for (node, kind, wall, floor, segment) in q.iter(world) {
         let me = &node.path;
@@ -799,9 +812,42 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                     }
                     Err(why) => Derived::refused("ft", "the width its type gives", &inputs, &why),
                 };
-                let f_vol = "plan_length × width × depth ÷ 27";
+                // Where an end of it stops on the run of another footing of its level (a
+                // T, not a corner), that end lies inside the other for half the other's
+                // width (more where they meet off square), and that concrete is the
+                // other's: it is taken off this one's length, and the formula says so.
+                // (The twentieth judgment, J20-1: a 20 ft stem on a 40 ft run, 24 by 12,
+                // is 118 CF by hand and was 120.) Two that end at one corner take
+                // nothing off: there the square they share is the square left open.
+                let mut inside = 0.0;
+                let mut within: Vec<String> = Vec::new();
+                if let (Some([a, b]), Some(own)) = (line, wide.value) {
+                    let (ux, uy) = (b[0] - a[0], b[1] - a[1]);
+                    let ul = (ux * ux + uy * uy).sqrt().max(1.0e-9);
+                    for (other, level, [oa, ob], ow) in strips.iter().filter(|s| s.0 != *me && s.1 == node.parent) {
+                        let (ox, oy) = (ob[0] - oa[0], ob[1] - oa[1]);
+                        let ol = (ox * ox + oy * oy).sqrt();
+                        let sin = ((ux * oy - uy * ox) / (ul * ol.max(1.0e-9))).abs();
+                        if ol < 1.0e-9 || sin < 0.2 {
+                            continue;
+                        }
+                        let _ = level;
+                        for end in [a, b] {
+                            let t = ((end[0] - oa[0]) * ox + (end[1] - oa[1]) * oy) / (ol * ol);
+                            let off = ((end[0] - oa[0]) * oy - (end[1] - oa[1]) * ox).abs() / ol;
+                            let from_its_end = (t * ol).min((1.0 - t) * ol);
+                            if off < ow / 2.0 - 1.0e-6 && from_its_end > own.max(*ow) / 2.0 {
+                                inside += (ow / 2.0 - off) / sin;
+                                within.push(other.clone());
+                                inputs.push(format!("{other}#{K_WALL}"));
+                            }
+                        }
+                    }
+                }
+                let f_vol = if within.is_empty() { "plan_length × width × depth ÷ 27".to_string() } else { format!("(plan_length − {} ft that lies in {}) × width × depth ÷ 27", view::figure_shown(inside, 4), within.join(" and ")) };
+                let f_vol = f_vol.as_str();
                 let volume = match (plan.value, wide.value, deep.value) {
-                    (Some(l), Some(x), Some(d)) => Derived::new(Some(l * x * d / 27.0), "CY", &[plan.status, wide.status, deep.status], f_vol, &inputs),
+                    (Some(l), Some(x), Some(d)) => Derived::new(Some((l - inside).max(0.0) * x * d / 27.0), "CY", &[plan.status, wide.status, deep.status], f_vol, &inputs),
                     _ => {
                         let why = [&plan, &wide, &deep].iter().find(|d| d.value.is_none()).map(|d| d.note.clone()).unwrap_or_default();
                         Derived::refused("CY", f_vol, &inputs, &why)

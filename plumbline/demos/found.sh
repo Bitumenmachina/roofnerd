@@ -76,6 +76,24 @@ echo "== A footing with no depth is refused; nothing is given a depth nobody ent
 if "$P" footing "$J" "$L" "$FT" --points "50,0 60,0" "${K[@]}" > "$T/nodepth.txt" 2>&1; then echo "FAIL: a footing with no depth was taken"; exit 1; fi
 says "$T/nodepth.txt" "--depth"
 
+echo "== A footing that stops on the run of another (a T) does not count that concrete twice =="
+# A second job: a run of 40 ft and a stem of 20 ft standing on its middle, both 24 x 12.
+# By hand: the run 40 x 2 x 1 = 80 CF. The stem's first foot lies inside the run (half
+# the run's width), so the stem is 19 x 2 x 1 = 38 CF. 118 CF = 4.37 CY, not 120.
+TJ="$T/tee.json"
+"$P" new "$TJ" "A T of footings (not a real job)" >/dev/null
+TL="$(made "$("$P" level "$TJ" foundation --elevation "-4 ft" --height "4 ft" "${K[@]}")")"
+TT="$(made "$("$P" type "$TJ" footing "footing 24 x 12" --width "24 in" "${K[@]}")")"
+"$P" footing "$TJ" "$TL" "$TT" --points "0,0 40,0" --depth "12 in" "${K[@]}" >/dev/null
+"$P" footing "$TJ" "$TL" "$TT" --points "20,0 20,20" --depth "12 in" "${K[@]}" >/dev/null
+"$P" takeoff "$TJ" > "$T/tee.txt"
+says "$T/tee.txt" "footings 2         60.00 LF"
+says "$T/tee.txt" "footing concrete   4.37 CY"
+"$P" show "$TJ" > "$T/teeshow.txt"
+# The stem: 19 x 2 / 27 = 1.4074 CY; its length is still the 20 ft that was drawn.
+says "$T/teeshow.txt" "=   volume           1.4074 CY"
+says "$T/teeshow.txt" "=   plan length      20 LF"
+
 echo "== Priced by the cubic yard =="
 "$P" estimate "$J" > "$T/before.txt" || true
 says "$T/before.txt" "Nothing in this job has a cost line."
