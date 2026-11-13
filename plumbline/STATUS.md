@@ -4970,3 +4970,15 @@ taken again from pictures of the rebuilt window. **Not done.** Its pictures in t
 repository are the old ones and are stale. `buildw` and `draww` are in the same
 state and have not been rerun.
 
+## Twentieth judgment: launched (2026-11-13)
+
+An Opus judge, on the program as committed at ee3baec (a frozen copy), asked to break
+the four new trades (footings and foundation walls, wall frames, the weather barrier
+and flashing, room base) and the typed-length path, at the command line and in the
+window, with every figure worked by hand, and to answer for each trade: would Patrick
+see it? Its brief is in the scratch folder (`judge20-brief.md`); it writes its notes
+as it goes to `j20/NOTES.md`. **Its findings are recorded here the turn they
+arrive.** Until then none of those four layers has been tried by anyone who did not
+build it. `tools/committed.sh` passes on the commit it judges' successor (the last
+code commit).
+
