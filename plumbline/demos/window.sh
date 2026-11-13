@@ -56,8 +56,12 @@ sheet() { local at; at="$(found sheet "$1")" || exit 1; click $at; focus; }
 # A row or a figure of the sheet brought on screen with the wheel, a step at a time
 # (5 is down, 4 is up), then clicked.
 sheet_at() {
-  local n=0
-  while [ -z "$(where sheet "$1")" ] && [ "$n" -lt 40 ]; do xdotool mousemove 2000 600; sleep 0.5; xdotool click "${2:-5}"; sleep 1.5; n=$((n + 1)); done
+  local n=0 way="${2:-5}" back
+  while [ -z "$(where sheet "$1")" ] && [ "$n" -lt 40 ]; do xdotool mousemove 2000 600; sleep 0.5; xdotool click "$way"; sleep 1.5; n=$((n + 1)); done
+  # Not that way: it lies the other way (the sheet's lines are in the order of their
+  # divisions, and a line is not always where a script written before that put it).
+  back=$([ "$way" = 5 ] && echo 4 || echo 5); n=0
+  while [ -z "$(where sheet "$1")" ] && [ "$n" -lt 80 ]; do xdotool mousemove 2000 600; sleep 0.5; xdotool click "$back"; sleep 1.5; n=$((n + 1)); done
   sheet "$1"
 }
 # A row of the model window's left panel brought on screen with the wheel, then clicked.

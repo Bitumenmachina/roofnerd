@@ -5231,3 +5231,15 @@ have not been read one by one.
 `draww` and `firstw` (on an earlier build of the new light) pass. Not rerun:
 `fieldw`, `clashw`, `d4w`, `d5w`, `bringw`, `house`, `d2`.
 
+**Five more of the older window demonstrations pass on the rebuilt window** (a frozen
+copy of the last build, one after another): `fieldw` (values measured in the window
+as a laser types them; the price and the clashes follow), `clashw` (fittings and a
+connection with a click each; the clashes listed and marked), `d4w` (the job priced
+both ways; two prices typed in the window), `bringw` (a model, a price list and a
+prior estimate brought into a new job; the saved job is the command line's, byte for
+byte), and `firstw` (the first job from a real plan: walls, a door, windows, a floor,
+a room and a roof). Their pictures in `demos/captured/` are of this build and have
+not been read one by one. `d5w` stopped: a row of the estimate it scrolls up to is
+no longer above where it was looking. The kit's `sheet_at` now looks the other way
+when a row is not the way it was told; `d5w` is being rerun.
+
