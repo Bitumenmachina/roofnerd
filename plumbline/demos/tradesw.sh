@@ -93,6 +93,18 @@ check("   on 01 none of the wall is lumber", round(f1, 2), f1 < 0.10, "under 0.1
 s4 = mean(4, SHADOW)
 check("04 the ground away: no shadow where the shadow fell", s4, s4[0] > 170, "the backdrop, lighter than 170")
 check("   on 01 the shadow is there", s1, s1[0] < 160, "the shadow, darker than 160")
+# 04 again: under the house there is a foundation to see. Below the stone the south
+# foundation wall is cast concrete: one flat gray, where on 01 the same place is the
+# stone above the ground, all joints.
+FOUND = (720, 670, 800, 730)
+def spread(n, box):
+    g = [sum(p) / 3 for p in pixels(n, box)]
+    m = sum(g) / len(g)
+    return round((sum((x - m) ** 2 for x in g) / len(g)) ** 0.5, 1)
+c4, d4, d1 = mean(4, FOUND), spread(4, FOUND), spread(1, FOUND)
+check("04 the ground away: the foundation wall is concrete, gray", c4, max(c4) - min(c4) < 10 and 100 < c4[0] < 170, "a gray between 100 and 170")
+check("   and flat, as cast (how far its shade spreads)", d4, d4 < 8, "under 8")
+check("   on 01 the same place is stone, all joints", d1, d1 > 15, "over 15")
 # 05, the first floor alone: where the roof was there is none.
 r5 = mean(5, ROOF)
 check("05 the first floor alone: no roof where the roof was", r5, r5[0] > 150, "lighter than 150")

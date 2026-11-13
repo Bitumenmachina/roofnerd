@@ -5127,8 +5127,11 @@ layer drawn. None of that last night's work has been through a judge to the end.
    the old scratch folder and is not in the repository (`pip install ifcopenshell
    --target <a folder>`, then `PYTHONPATH`).
 3. **The new layers have one window demonstration** (`demos/tradesw.sh`: the Finishes,
-   Framing and Ground switches and a level looked into, each measured). It does not
-   measure the flashing, the base or the footings themselves. Extend it.
+   Framing and Ground switches and a level looked into, each measured). Since
+   2026-11-13 it also measures the foundation: with the ground away the south
+   foundation wall is cast concrete, one flat gray (131, 133, 132; its shade spreads
+   3.9), where on the opening picture the same place is stone above the ground
+   (24.1). It does not measure the flashing, the base or the footing itself. Extend it.
 4. **The window demonstrations all pass on the last build** (sixteen; the paragraph
    on pictures below). About a third of their pictures have been read by the builder,
    one or two a set, and what was met in them fixed (the notes at the end of this

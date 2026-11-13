@@ -366,8 +366,9 @@ room with base priced). `demos/captured/trades/` has a picture of each and STATU
 has a table of what each still lacks: joists and rafters, roof underlayment and roof
 flashing, interior casing and cabinets, pad footings, a tool to draw a footing in the
 window. **The four new layers have one window demonstration** (`demos/tradesw.sh`: the
-Ground, Finishes and Framing switches and a level looked into, each measured; it
-does not yet measure the flashing, the base or the footings themselves), **and
+Ground, Finishes and Framing switches and a level looked into, each measured, and
+the concrete of the foundation wall with the ground away; it does not yet measure
+the flashing, the base or the footing itself), **and
 none has been judged to the end by an agent that did not build it**: the twentieth
 judgment was stopped part way and its brief is `plumbline/research/judgment-20-brief.md`.
 That judgment, run to the end, is the next thing owed.
