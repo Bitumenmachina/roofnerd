@@ -5162,8 +5162,8 @@ run in a row on one frozen build of commit 7e060ce and all sixteen pass: `trades
 `price`, `plan`, `build`, `draw`, `field`, `clash`, `d4`, `d5`, `bring`, `first`,
 `glass`, `carry`, `tools`, `items`, `dress`) are of that build. One thing a person
 sees changed after it: a drawing whose scale is not one of the architect's is said
-as a scale (call 80), so `first/` still reads "sheet 77' 8" x 60' 4"" under its
-drawing where the program now reads `1" = ...`. **Not of it:** `trades/` and
+as a scale (call 80), and `first/` was retaken after it on the build of
+7f07904. **Not of it:** `trades/` and
 `light/` (taken by hand earlier; each says in this file which build), `house/` and
 `d2/` (older demonstrations, not window demonstrations of the rebuilt window, not
 rerun), and the `step*.png` in `glass/`.
@@ -5361,7 +5361,10 @@ behind `PLUMBLINE_TRACE`.
 drawing's name the panel read "sheet 77' 8" x 60' 4"", which nobody reads as a
 scale. Fixed (call 80): a PDF sheet whose scale is not one of the architect's says
 it as an inch of paper to so many feet; a picture says "sheet covers ...". 283 tests
-pass. **Not seen in the window**: `firstw` has not been rerun since.
+pass. **Seen in the window:** `firstw` rerun on the build of 7f07904 passes, and
+`first/06-model` reads `1" = 7' 1"` under the drawing's name (the scan is a
+reduction, so its scale is not the 1/8" its title block prints). `first/` is of
+that build.
 
 **Where the clean-up loop stopped** (2026-11-13). Calls 78 to 80; a dozen things a
 person met in the pictures set right; the linter's pass; every window demonstration
