@@ -348,10 +348,23 @@ const BURST_GAP: f64 = 0.12;
 const BURST_TAIL: f64 = 0.35;
 
 #[allow(clippy::too_many_arguments)]
-fn keys(mut seen_alone: Local<Option<String>>, mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, snap: Res<Snapshot>, mut typed: MessageReader<KeyboardInput>, mut struck: MessageReader<KeyboardInput>, time: Res<Time<Real>>, mut burst: Local<Burst>, keys: Res<ButtonInput<KeyCode>>, primary: Query<Entity, With<PrimaryWindow>>, sheet: Query<Entity, With<sheet::SheetWindow>>) {
+fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut commands: Commands, mut doc: ResMut<Doc>, mut orbit: ResMut<Orbit>, snap: Res<Snapshot>, mut typed: MessageReader<KeyboardInput>, mut struck: MessageReader<KeyboardInput>, time: Res<Time<Real>>, mut burst: Local<Burst>, keys: Res<ButtonInput<KeyCode>>, primary: Query<Entity, With<PrimaryWindow>>, sheet: Query<Entity, With<sheet::SheetWindow>>) {
     // A level put on show alone is looked down into: in 3D the view tilts to where
     // its rooms can be seen over its walls, and eases there like every other move.
     // (It took a level picked and then an arrow key, which nothing on screen says.)
+    // The ground switched off: the view eases down by a little more than what lies
+    // under it is deep, so that the footings come up from behind the tool bar; and
+    // back when the ground is switched on again.
+    let wanted = if doc.show.ground {
+        0.0
+    } else {
+        let lowest = snap.drawn.iter().filter_map(|p| match &p.shape { plumbline_world::building::Shape::Wall { base, .. } => Some(*base as f32), _ => None }).fold(0.0_f32, f32::min);
+        -lowest * 1.2
+    };
+    if (wanted - *under_ground).abs() > 1.0e-3 {
+        orbit.target.y -= wanted - *under_ground;
+        *under_ground = wanted;
+    }
     if doc.show.storey != *seen_alone {
         if doc.show.storey.is_some() && !doc.plan && !doc.walk && orbit.pitch < 0.85 {
             orbit.pitch = 0.85;

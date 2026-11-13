@@ -5175,3 +5175,11 @@ turns it a step (0.08 of a radian). A tap that began and ended inside one slow f
 was no turn at all, which is what the judge met. Built, 283 tests pass, **not tried
 in the window**.
 
+**The ground away now brings the foundation into view.** Switching Ground off eases
+the view down by a little more than what lies under the ground is deep, and back when
+it is switched on. Seen: `demos/captured/trades/1-foundation-whole-house.png`, retaken:
+the whole house on its concrete foundation walls with the footing at the bottom, all
+of it clear of the tool bar (it was the one thing named as not right in that picture).
+`demos/tradesw.sh` rerun on this build: all ten measurements as wanted, the price
+unchanged; its pictures in `demos/captured/layers/` are of this build. 283 tests pass.
+
