@@ -213,7 +213,10 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
     lines.depth_bias = -0.004;
     // The centre lines of thin runs sit exactly where the run is: behind a wall they are hidden.
     let (runs, _) = store.config_mut::<RunLines>();
-    runs.line.width = 2.0;
+    // Three dots wide: a cable or a 1/2 in pipe is thinner than a dot at the size a
+    // house is seen at, and at two its line was lost against the ground with the
+    // house seen through (seen in the electrical and plumbing snapshots).
+    runs.line.width = 3.0;
     runs.render_layers = RenderLayers::layer(0);
     let (lines, _) = store.config_mut::<RoofLines>();
     lines.render_layers = RenderLayers::layer(0);
@@ -469,7 +472,8 @@ pub fn rebuild(
     // ---- Interior woodwork: the base in each room that has base priced on it ----
     // A board 5 1/4 in high and 5/8 in thick at the foot of the room's walls, along
     // the room's own outline (the faces of its walls), left out across each door.
-    // It is finish: off with Finishes, and with its level.
+    // It is finish: off with Finishes, and with its level. With the house seen through
+    // it is glass like the walls it is on (drawn solid, it swamped the runs inside).
     if show.finishes && show.architecture && !on_plan_view {
         let (tall, thick) = (5.25_f32 / 12.0, 0.625_f32 / 12.0);
         for (room, (storey, outline)) in &snap.dress.base {
@@ -518,7 +522,7 @@ pub fn rebuild(
                     let mid = (t0 + t1) / 2.0;
                     let on_plan = [e0[0] + d[0] * mid - d[1] * f64::from(thick) / 2.0, e0[1] + d[1] * mid + d[0] * f64::from(thick) / 2.0];
                     let middle = to_view(origin, [on_plan[0], on_plan[1], floor]) + Vec3::Y * (tall / 2.0);
-                    build.piece(room, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new((t1 - t0) as f32, tall, thick) }, theme::casework(), 0.6, 0.0, false);
+                    build.piece(room, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new((t1 - t0) as f32, tall, thick) }, theme::casework(), 0.6, 0.0, true);
                 }
             }
         }
@@ -563,7 +567,7 @@ pub fn rebuild(
                     for m in plumbline_world::building::framing::frame(f64::from(length), *height, &spans, spacing) {
                         let (x0, x1, y0, y1) = (m.along[0] as f32, m.along[1] as f32, m.up[0] as f32, m.up[1] as f32);
                         let middle = va + along * ((x0 + x1) / 2.0) + Vec3::Y * ((y0 + y1) / 2.0);
-                        build.piece(&p.path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(x1 - x0, y1 - y0, deep as f32) }, theme::lumber(), 0.85, 0.0, false);
+                        build.piece(&p.path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(x1 - x0, y1 - y0, deep as f32) }, theme::lumber(), 0.85, 0.0, true);
                     }
                     continue;
                 }
@@ -676,7 +680,7 @@ pub fn rebuild(
                         }
                         for (x0, x1, y0, y1) in strips {
                             let middle = va + along * ((x0 + x1) / 2.0) + Vec3::Y * ((y0 + y1) / 2.0) + out * (half_t + 0.02);
-                            build.piece(hole_path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(x1 - x0, y1 - y0, 0.03) }, theme::flashing(), 0.4, 0.3, false);
+                            build.piece(hole_path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(x1 - x0, y1 - y0, 0.03) }, theme::flashing(), 0.4, 0.3, true);
                         }
                     }
                     let stood = dress::Part { o: va + along * from + Vec3::Y * sill, x: along, y: Vec3::Y, z: out };

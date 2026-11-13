@@ -5051,6 +5051,15 @@ between its ends, notched at outside corners); J20-9 (the Up arrow with the poin
 two framing lines on one wall, where the first wins without a word; and **the judgment itself,
 which was stopped part way and has to be run again to the end**.
 
+**Seen while cleaning up, and fixed (2026-11-13).** With the house seen through, the
+new room base was drawn solid: thick wood bars along every wall that swamped the runs
+inside (seen in a picture of the electrical alone). The base, the frame and the
+flashing now go glass with the walls they are on. The centre lines of runs are three
+dots wide where they were two: a cable is thinner than a dot at the size a house is
+seen at. `demos/captured/trades/3-electrical-now.png` and `4-plumbing-now.png` are
+the electrical and the plumbing alone on the current program (the first read: the
+conduit and cable plain in orange through the glass house; the second not yet read).
+
 ## Start here (written 2026-11-13 for the next run, on a copy of this repository)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`. The tree is clean and
