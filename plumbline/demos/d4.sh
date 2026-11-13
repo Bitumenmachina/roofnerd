@@ -95,7 +95,7 @@ says "headwall" "the detail is ~\$42.00 under the allowance (~-8.75 %)"
 says "the allowance total names the elements with lines and no allowance" "? no allowance entered on 2 elements with cost lines: plane-0005, plane-0006"
 # The east plane has an allowance and a line with no price: its detail is not whole. It
 # has no detail figure and is not rolled up as if it were whole.
-says "an element whose detail is not whole says so" "the detail is not whole: 1 of its 1 lines cannot be extended. \"Copper standing seam, installed\": the line has no price (no price entered)"
+says "an element whose detail is not whole says so" "the detail is not whole: its one line cannot be extended. \"Copper standing seam, installed\": the line has no price (no price entered)"
 # Detail total: 13,206.78 + 3,117.07 + 438.00 = 16,761.85 over three elements, of which
 # 3,117.07 + 438.00 = 3,555.07 is assumed. Three planes are left out, each named.
 says "the detail total" "detail       ~\$16,761.85 over 3 elements"

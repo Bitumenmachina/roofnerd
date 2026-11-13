@@ -3061,3 +3061,13 @@ Two wording calls, made on reading the field-measurement pictures as a person wo
    ("In no division") is the seventeenth and was below the bottom of the window. The
    head now says it: "0 of 16 with work in them; 1 line of the job cost is in no
    division". With nothing in no division the head reads as before.
+
+### Call 79. A detail of one line that cannot be extended says "its one line" (2026-11-13)
+
+A wording call, made on reading the Budget tab as a person would. An item whose
+detail is a single line with no price read "the detail is not whole: 1 of its 1 lines
+cannot be extended". It now reads "its one line cannot be extended"; with more than
+one line it reads as before ("2 of its 8 lines cannot be extended"). `demos/d4.sh`
+expects the new words. On the same tab, what is not priced at all is counted as the
+Estimate tab counts it ("5 eaves, 4 hips", where it read "5 eave, 4 hip"). No figure
+changes.

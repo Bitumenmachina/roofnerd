@@ -437,7 +437,9 @@ pub fn priced(me: &str, kind: Kind, measure: &Measure, allowance: Option<&Allowa
             Some((description, d)) => {
                 let why = d.map(|d| d.note.clone()).filter(|n| !n.is_empty()).unwrap_or_else(|| "it has no extension".into());
                 let more = if missing.len() > 1 { format!(", and {} more", missing.len() - 1) } else { String::new() };
-                Derived::refused("$", &f, &inputs, &format!("the detail is not whole: {} of its {} lines cannot be extended. {description:?}: {why}{more}", missing.len(), lines.len()))
+                // "1 of its 1 lines" is nobody's sentence (call 79).
+                let how_many = if lines.len() == 1 { "its one line".to_string() } else { format!("{} of its {} lines", missing.len(), lines.len()) };
+                Derived::refused("$", &f, &inputs, &format!("the detail is not whole: {how_many} cannot be extended. {description:?}: {why}{more}"))
             }
             None => {
                 let statuses: Vec<Status> = each.iter().filter_map(|(_, d)| d.map(|d| d.status)).collect();

@@ -5320,3 +5320,13 @@ takeoff's "Height" row has the note "height". Items are still drawn as plain box
 first five rows of the table and pass (`bringw`, `fieldw`); their job panels still
 read "1 and 1" for doors and windows, which was changed after. `items/` and `price/`
 were retaken after all of it. Every other set is as the last note left it.
+
+**Read as a person: the Budget tab and the built and drawn houses** (`d4/04-sheet`,
+`build/06-model`, `draw/15-model`). Fixed (call 79): "1 of its 1 lines cannot be
+extended" reads "its one line cannot be extended" (`demos/d4.sh` expects it and
+passes); what is not priced at all is counted "5 eaves, 4 hips" on the Budget tab as
+on the Estimate tab; a roof nobody named is headed "Roof", where the panel read
+"Roof: roof". 283 tests pass. Read and found right: the allowance against the
+detail, item by item, with what is over and under; the hip roof over the traced plan
+with its eaves, hips and ridge by colour and length. **Not retaken:** `d4/`, `build/`
+and `draw/` are of the build before these words.

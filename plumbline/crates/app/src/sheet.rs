@@ -1086,7 +1086,8 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
         });
         if !pricing.not_priced.is_empty() {
             let n: usize = pricing.not_priced.iter().map(|x| x.1).sum();
-            let kinds: Vec<String> = pricing.not_priced.iter().map(|(k, n)| format!("{n} {}", theme::kind_name(*k).to_lowercase())).collect();
+            // Counted as the Estimate tab counts them: "5 eaves", not "5 eave".
+            let kinds: Vec<String> = pricing.not_priced.iter().map(|(k, n)| format!("{n} {}{}", k.said(), if *n == 1 { "" } else { "s" })).collect();
             t.spawn(Node { padding: UiRect::axes(px(16.0), px(9.0)), ..default() }).with_child(text(fonts, format!("Not priced at all: {n} that could be ({})", kinds.join(", ")), 11.5, Weight::Regular, theme::ink_faint()));
         }
     });

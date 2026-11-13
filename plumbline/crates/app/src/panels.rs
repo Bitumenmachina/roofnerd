@@ -1508,7 +1508,8 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         listed(p, fonts, None, "Doors and windows", String::new(), format!("{}, {}", some(storey.doors, "door"), some(storey.windows, "window")), Status::Known);
     }
     if let Some(totals) = &snap.totals {
-        heading(p, fonts, &format!("Roof: {}", snap.roof_name));
+        // A roof nobody has named is "Roof", not "Roof: roof".
+        heading(p, fonts, &if snap.roof_name.trim().eq_ignore_ascii_case("roof") || snap.roof_name.trim().is_empty() { "Roof".to_string() } else { format!("Roof: {}", snap.roof_name) });
         let squares = view::in_squares(&totals.surface);
         let big = |sum: &view::Sum| match (sum.value, sum.members) {
             (_, 0) => ("none".to_string(), ""),
