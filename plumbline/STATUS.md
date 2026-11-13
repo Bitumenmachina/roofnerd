@@ -5129,9 +5129,9 @@ layer drawn. None of that last night's work has been through a judge to the end.
 3. **The new layers have one window demonstration** (`demos/tradesw.sh`: the Finishes,
    Framing and Ground switches and a level looked into, each measured). It does not
    measure the flashing, the base or the footings themselves. Extend it.
-4. **Repair the older window demonstrations** on the rebuilt window: `planw` (its
-   walls now come out right; its scale clicks land off the dimension), `buildw`,
-   `draww`, and the rest listed stale above. Their fixed click places predate the
+4. **Repair the older window demonstrations** on the rebuilt window: `planw` is
+   repaired and passes (the note at the end of this file says how its clicks were
+   taken again); `buildw`, `draww`, and the rest listed stale above are not. Their fixed click places predate the
    rebuild.
 5. **The seam for a harness per division** (PROPOSALS.md 21): a division out, a
    division in, and `divisions/` grown from an index into what each trade knows.
@@ -5190,4 +5190,25 @@ where it said "Sheet". Seen: `demos/captured/layers/estimate-window.png` (the ma
 whole house: the recap, then the sixteen divisions with Concrete at 9 lines and
 $32,485.40). `demos/pricew.sh`, which finds and types in that window, passes on this
 build; its pictures in `demos/captured/price/` are of this build. 283 tests pass.
+
+**`demos/planw.sh` passes on the rebuilt window (2026-11-13).** It is the
+demonstration of the release candidate's item 3: from an empty job a real scanned
+sheet (USDA Plan No. 7213, a public plan) is laid under a level, given its scale from
+its own 41'-3" dimension, and its outside walls traced; then a vector plan, snapped
+to its own lines. Run alone on the last build: the scale is 41' 3" over 371.7 points
+of the page, the sheet 87.6 ft wide (worked figure 87.8, give or take a foot); the
+four walls [23.9167, 23.9167, 41.25, 41.25] ft, 130.3334 ft round the house; the
+second session passes too. Its 22 pictures in `demos/captured/plan/` are of this
+build. Read: 07, the four walls lying exactly on the house's outline on the sheet,
+in the glass window, the panel reading Walls 4, 130.33 LF, 1,042.67 SF, Assumed.
+
+**How its clicks were taken again, so the next ones can be:** the wheel now closes in
+by 0.81 a step about the pointer where it was more, so every place the script clicks
+after its two steps of the wheel moved toward the pointer's place (760, 420) by one
+factor. The factor is the dimension's length on screen now over then: it is 370.7
+points long on the page; a failing run printed how many points my first guess had
+picked (359.2, for a guess of 360), which gave the scale of the screen exactly
+(1.4767 dots to the point), so 547 dots now where it was 619: 0.8843. The first try
+used 0.8588, from a wrong guess at the dimension's length, and failed by 3 ft of
+sheet width. `buildw` and `draww` want the same treatment and have not had it.
 

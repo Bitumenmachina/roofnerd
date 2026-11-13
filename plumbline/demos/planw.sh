@@ -59,7 +59,12 @@ echo "== A real sheet: USDA Plan No. 7213, its floor plan, from an empty job =="
 cp "$J" "$T/before.json"
 # Where things are on the 1600 by 960 model window: the left panel's rows; and, two steps
 # of the wheel in on the floor plan, the ends of the 41'-3" dimension under the house and
-# the house's southwest outside corner.
+# the house's southwest outside corner. (Taken again on 2026-11-13 for the window as
+# rebuilt: the wheel now closes in by 0.81 a step about the pointer, where it was
+# more, so each place moved toward (760, 420), where the wheel is turned, by 0.8843
+# (the dimension is 370.7 points long on the page and now 547 dots on screen, where
+# it was 619): its ends were at (480, 696) and (1099, 699) and are at (512, 664) and
+# (1060, 667).)
 { preamble "$J" "$T/app1.log" "$OUT"; cat <<SESSION
 on "Add drawing"; sleep 2; typed "$T/usda-7213.pdf, 4" # Add drawing: the file, and its page
 sleep 30                                # a scanned sheet takes a while to read
@@ -73,18 +78,18 @@ click 600 450
 shot                                    # 02 refused: nothing is traced over a sheet with no scale
 esc
 on "Set scale"                          # Set scale, from one dimension
-click 480 696                           # the west end of the 41'-3" dimension
-click 1099 699                          # its east end
+click 512 664                           # the west end of the 41'-3" dimension
+click 1060 667                          # its east end
 typed "41' 3\"" yes                     # 03 the dimension, typed as the sheet gives it
 closer                                  # the sheet is to scale now, and was framed again
 park
 shot                                    # 04 to scale
 tool "Wall"                              # Wall
-click 478 614                           # the southwest outside corner, by eye
-len 1000 616 "41' 3\"" yes              # 05 east, the overall dimension, being typed
-len 1102 400 "23' 11\""                 # north
-len 700 252 "41' 3\""                   # west
-xdotool mousemove 480 612; sleep 3
+click 511 592                           # the southwest outside corner, by eye
+len 972 592 "41' 3\"" yes               # 05 east, the overall dimension, being typed
+len 1060 402 "23' 11\""                 # north
+len 707 274 "41' 3\""                   # west
+xdotool mousemove 512 591; sleep 3
 shot                                    # 06 about to close on the first corner
 xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 4
 esc; esc
