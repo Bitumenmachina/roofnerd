@@ -5141,9 +5141,8 @@ layer drawn. None of that last night's work has been through a judge to the end.
 
 **What is known to be not right and is nobody's finding yet.** Electrical and
 plumbing are hard to read with the house seen through under the new light. (Looking down into one floor is now one click; the job's name is whole.) On plan
-a room carries no name and a door no swing, which a drawing would (read in
-`build/04-model` and `draw/08-model`; not built, because a label on the plan would
-move what the demonstrations measure and wants a run of its own). The four new layers have no
+a door carries no swing, which a drawing would (a room's name is now written: call
+81). The four new layers have no
 quantities of their own: framing is still priced by the SF of wall and base by the
 room's whole perimeter.
 
@@ -5374,3 +5373,12 @@ a wall traced over the public plan with the panels as sheets over the paper
 amber on plan (`clash/05-model`), the Budget tab (`d4/04-sheet`), the roof tool over
 two named rooms (`build/04-model`), the first job (`first/06-model`). Nothing of
 this loop has been judged by an agent that did not build it.
+
+**On plan a room now carries its name and its floor area** (call 81). Read in
+`build/04-model`, retaken: "West room 224 SF" and "East room 341 SF" stand in the
+two rooms where each was named, in the colour of how sure the area is; the roof tool
+and its outline over them are as before. The figure is the model's (224.25 and
+341.25 SF on the Building tab), shown to the SF. With the roof on show on plan the
+names give way to the roof plan. 283 tests pass; `buildw` and `firstw` pass on the
+build and `build/` and `first/` are of it. Every other plan picture with a named
+room predates this. **A door's swing on plan is still not drawn.** Not judged.

@@ -1176,6 +1176,25 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             ))
             .with_children(|l| quiet(l, fonts, units::feet_as_ft_in(length, 16), 11.0, Weight::Medium, if line.status == Status::Known { theme::line_colour(line.kind) } else { theme::status_ink(line.status) }));
         }
+        // On plan each room carries its name and its floor area, as a drawing does
+        // (call 81): written where the room was named, which is always inside it.
+        // With the roof on show the roof plan is what is read, and the rooms wait.
+        if doc.plan && !doc.walk && doc.show.architecture && !roof_on_show {
+            for (storey, el) in snap.fabric.iter().filter(|(_, el)| el.kind == Kind::Room) {
+                if doc.show.off_levels.contains(storey) || doc.show.storey.as_deref().is_some_and(|s| s != storey) {
+                    continue;
+                }
+                let Some(point) = snap.room_points.get(&el.path) else { continue };
+                let floor = snap.storeys.iter().find(|s| &s.path == storey).and_then(|s| s.elevation).unwrap_or(0.0);
+                let area = el.rows.iter().find(|r| r.label == "floor_area");
+                pill(o, Label { at: to_view(doc.origin, [point[0], point[1], floor + 0.1]), facing: None, rank: 3 }, false, |l| {
+                    quiet(l, fonts, pretty(&el.name), 12.0, Weight::Semibold, theme::ink());
+                    if let Some(area) = area.filter(|a| a.number.is_some()) {
+                        quiet(l, fonts, amount(area.number, 0, "SF"), 11.5, Weight::Regular, theme::status_ink(area.status));
+                    }
+                });
+            }
+        }
         // Each facet: its number, its area, its pitch, and its flag.
         for plane in snap.planes.iter().filter(|_| roof_on_show) {
             let Some(solid) = &plane.solid else { continue };

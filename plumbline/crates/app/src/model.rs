@@ -480,6 +480,9 @@ pub struct Snapshot {
     pub counts: Vec<(Discipline, usize)>,
     /// Every wall, floor and room as the sheet lists it: storey path, then the element's rows.
     pub fabric: Vec<(String, view::ElementRows)>,
+    /// Where each room was named, by its path, in feet on the plan: where its name is
+    /// written on the plan.
+    pub room_points: std::collections::HashMap<String, [f64; 2]>,
 }
 
 impl Snapshot {
@@ -617,6 +620,11 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     let on = building::storeys_of(&mut doc.job);
     for el in elements.iter().filter(|e| matches!(e.kind, Kind::Wall | Kind::Floor | Kind::Room)) {
         s.fabric.push((on.get(&el.path).cloned().unwrap_or_default(), el.clone()));
+        if el.kind == Kind::Room {
+            if let Some(point) = doc.job.find(&el.path).and_then(|e| doc.job.world.get::<plumbline_world::Room>(e)).and_then(|r| r.point_ft()) {
+                s.room_points.insert(el.path.clone(), point);
+            }
+        }
     }
     s.drawn = drawn;
     s.not_drawn = not_drawn;

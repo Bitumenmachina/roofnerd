@@ -3083,3 +3083,16 @@ an engineer's scale is written, an inch of paper to so many feet: `1" = 8' 0 1/4
 A picture (PNG, JPEG) has no paper size, so it still says what its sheet covers, in
 those words: "sheet covers 77' 8" x 60' 4"". The architect's scales read as before.
 Nothing saved changes.
+
+### Call 81. On plan a room carries its name and its floor area (2026-11-13)
+
+Read in the plan pictures as a person would: two rooms had been named and the plan
+showed two empty rectangles. A drawing writes each room's name in it. On plan, each
+room on a level that is on show now carries its name and, under how sure it is, its
+floor area to the SF, written where the room was named (a point that is always
+inside it, which the middle of an L-shaped room is not). It is the model's own
+figure, the one the Building tab shows; nothing is worked out in the window. The
+names give way to the roof plan: with the roof on show on plan it is the roof's
+lines and planes that are read. This is within the fixed rule that a plan reads
+like a drawing, so it is built and not put to PROPOSALS.md. A door's swing on plan
+is not built.
