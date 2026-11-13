@@ -4953,3 +4953,20 @@ restarted during that run. It is the red (1.25 and 43.81 where 41.25 and 23.92 w
 typed, twice) and must be the green before this is called fixed. `buildw` and `draww`
 pick a tool the same way and have not been rerun either.
 
+**The typed-length fix, proven on the path it broke.** `demos/planw.sh`, run alone on
+the build of ee3baec: the four outside walls of the farmhouse come out at exactly the
+lengths typed, **[23.9167, 23.9167, 41.25, 41.25] ft, 130.3334 ft round the house**.
+On the program before the fix the same check gave [1.25, 23.9167, 41.25, 43.8062],
+twice. That is the red and the green.
+
+**`planw` still does not pass, for a second reason that is the script's.** Its next
+check fails: "the sheet came out 77.6 ft wide". Read in its picture 03: the two
+clicks that set the scale land under the plan, on the foundation plan's title, not on
+the ends of the 41'-3" dimension. They are at fixed places on the screen that were
+right before the window was rebuilt; the wheel now closes in by a different amount
+and on the pointer, so the sheet sits elsewhere. The walls came out right all the
+same because each side's length is typed. Every fixed place in that script has to be
+taken again from pictures of the rebuilt window. **Not done.** Its pictures in the
+repository are the old ones and are stale. `buildw` and `draww` are in the same
+state and have not been rerun.
+
