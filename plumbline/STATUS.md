@@ -5159,7 +5159,8 @@ not.** Of the current program: `layers/` (the last run of the session), `trades/
 Taken on builds of 2026-11-12 after the new light and before the trade layers and the
 clean-up: `glass/`, `carry/`, `price/`, `tools/`, `items/`, `dress/`. Their checks
 passed then and nothing since should have changed what they show, but they have not
-been rerun on the last commit. **Stale, from before the window was rebuilt:** `plan/`,
+been rerun on the last commit. (`plan/` is of the last build since `planw` was repaired, below.)
+**Stale, from before the window was rebuilt:**
 `first/`, and every other folder there (`build`, `draw`, `field`, `clash`, `d4`, `d5`,
 `bring`, `house`, `d2` and the rest): their demonstrations click at places that have
 moved and have not passed on the rebuilt window.
@@ -5211,4 +5212,11 @@ picked (359.2, for a guess of 360), which gave the scale of the screen exactly
 (1.4767 dots to the point), so 547 dots now where it was 619: 0.8843. The first try
 used 0.8588, from a wrong guess at the dimension's length, and failed by 3 ft of
 sheet width. `buildw` and `draww` want the same treatment and have not had it.
+
+**`demos/buildw.sh` passes on the rebuilt window too** (run alone on the last build):
+a floor, two rooms and a roof drawn in the window on walls traced from a plan, and the
+saved job gives the figures worked by hand. It needed only the tool picked the
+current way (its places are worked from where the program says the plan is, not
+fixed on the screen). Its pictures in `demos/captured/build/` are of this build; they
+have not been read one by one.
 
