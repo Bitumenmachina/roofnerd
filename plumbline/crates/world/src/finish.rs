@@ -208,6 +208,9 @@ pub struct WallDress {
     /// feet. None where nothing priced on it says how it is framed: it is not framed
     /// on a guess.
     pub framing: Option<(f64, f64)>,
+    /// How many lines priced on it name a framing. More than one: the first is the one
+    /// drawn, and the report says the others are there.
+    pub framing_lines: usize,
     /// Whether a line priced on it names a weather barrier under its finish ("Sheathing
     /// and weather barrier", "house wrap", "building paper").
     pub barrier: bool,
@@ -696,9 +699,10 @@ pub fn dress(job: &mut Job) -> Dress {
             (said, h.unwrap_or(3.0), h.is_some())
         });
         let framing = on.iter().find_map(|(text, _)| crate::building::framing::named(text));
+        let framing_lines = on.iter().filter(|(text, _)| crate::building::framing::named(text).is_some()).count();
         let barrier = on.iter().any(|(text, _)| barrier_in(text));
         let concrete = cladding.is_none() && wainscot.is_none() && on.iter().any(|(text, _)| concrete_wall_in(text));
-        out.walls.insert(w.path.clone(), WallDress { outside, out: out_way, height: w.h, cladding, wainscot, past, framing, barrier, concrete });
+        out.walls.insert(w.path.clone(), WallDress { outside, out: out_way, height: w.h, cladding, wainscot, past, framing, framing_lines, barrier, concrete });
     }
     // Roof planes, openings, gutters, and the base in rooms.
     let outlines = building::room_outlines(job);
@@ -857,6 +861,11 @@ pub fn report(job: &mut Job) -> Vec<String> {
                     if let Some((deep, spacing)) = w.framing {
                         let lumber = [(3.5, "2x4"), (5.5, "2x6"), (7.25, "2x8"), (9.25, "2x10"), (11.25, "2x12")].iter().find(|(d, _)| (d / 12.0 - deep).abs() < 1.0e-6).map(|(_, n)| *n).unwrap_or("lumber");
                         under.push(format!("framed in {lumber} at {} in on centre", crate::view::num(spacing * 12.0)));
+                        // Two framings priced on one wall: one is drawn, and it is said
+                        // which (it was the first, without a word).
+                        if w.framing_lines > 1 {
+                            under.push(format!("{} lines on it name a framing: the first is the one drawn", w.framing_lines));
+                        }
                     }
                     if w.barrier {
                         under.push("a weather barrier under its finish".into());

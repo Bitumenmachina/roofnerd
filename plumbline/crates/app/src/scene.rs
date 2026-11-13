@@ -193,8 +193,7 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
         let colours: Vec<[f32; 4]> = at.iter().map(|p| { let t = p[1].clamp(0.0, 1.0).powf(0.55); [low.red + (high.red - low.red) * t, low.green + (high.green - low.green) * t, low.blue + (high.blue - low.blue) * t, 1.0] }).collect();
         dome.insert_attribute(Mesh::ATTRIBUTE_COLOR, colours);
     }
-    let mut over = materials.add(StandardMaterial { base_color: Color::WHITE, unlit: true, cull_mode: None, fog_enabled: false, ..default() });
-    let _ = &mut over;
+    let over = materials.add(StandardMaterial { base_color: Color::WHITE, unlit: true, cull_mode: None, fog_enabled: false, ..default() });
     commands.spawn((Mesh3d(meshes.add(dome)), MeshMaterial3d(over), Transform::from_scale(Vec3::splat(15_000.0)), bevy::light::NotShadowCaster, Pickable::IGNORE, Sky));
     let fog = DistanceFog { color: theme::sky_horizon(), falloff: FogFalloff::Linear { start: 4000.0, end: 9000.0 }, ..default() };
     if graphics.full {
