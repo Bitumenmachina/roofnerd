@@ -107,3 +107,12 @@ Work outside a deliverable. Nothing here is built until the owner accepts it.
       program on his machine, in a folder git never sees.
     Not proposed: the harnesses themselves, their models, or where they run.
 
+22. **A door's hand and swing** (2026-11-13, from reading the plans as a person).
+    A door is held by its type, its place along the wall and its sill; nothing says
+    which side it is hung on or which way it opens, so the plan draws a door as a
+    leaf in the wall with no swing, and the BIM file says nothing of it. Proposed: a
+    hand (left, right) and a swing (in, out) on each door, each Known, Assumed or
+    Unknown like any value (traced off a plan: Assumed; never guessed, so a door
+    brought in without one draws no arc); the arc on the plan; the door's operation
+    in the BIM file; a swing that crosses a fixture or another door's swing listed
+    with the clashes. Not built: to draw an arc today would be to make up the hand.

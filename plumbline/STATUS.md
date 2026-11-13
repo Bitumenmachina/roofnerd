@@ -5381,4 +5381,5 @@ and its outline over them are as before. The figure is the model's (224.25 and
 341.25 SF on the Building tab), shown to the SF. With the roof on show on plan the
 names give way to the roof plan. 283 tests pass; `buildw` and `firstw` pass on the
 build and `build/` and `first/` are of it. Every other plan picture with a named
-room predates this. **A door's swing on plan is still not drawn.** Not judged.
+room predates this. **A door's swing on plan is not drawn, and rightly:** a door holds no hand and no
+swing, so an arc would be made up. PROPOSALS.md 22 proposes holding them. Not judged.
