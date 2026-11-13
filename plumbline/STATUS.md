@@ -5027,11 +5027,35 @@ kings and jacks drawn through each other; a door as tall as its wall has no head
 Each is a prediction from reading the code, by a judge who was right about the rest.
 Each needs trying, and most will be true.
 
+## The clean-up pass after judgment 20 (2026-11-13)
+
+Patrick asked for one last code and window clean-up. What was done, each committed
+on its own with the tests passing:
+
+| From | What | Proof |
+|---|---|---|
+| J20-1 | A footing that stops on the run of another (a T) no longer counts that concrete twice: the part of the stem inside the run is taken off the stem, and the formula on the figure says so | `demos/found.sh`: a 20 ft stem on a 40 ft run, 24 by 12, is 4.37 CY (118 CF by hand; it was 120); the ring is still 10.07 CY |
+| J20-2, 4, 5 | A footing is spoken of as a footing: its type lists "footing width"; its depth is measured under "depth"; a footing with no length, a type with no width, a type that is not a footing's are refused in a footing's words | `demos/found.sh`: measured 18 in deep, the 40 ft run is 4.4444 CY (40 x 2 x 1.5 / 27) |
+| the judge's test job | Framing is read from "2 x 6 @ 24", "2X4 studs 16 OC", "2x6 16 in o.c."; a number not said to be a spacing is not taken for one. A weather barrier is read from Tyvek, Typar, felt or tar paper; not from a vapor barrier. Base is read only where the line means the base at the foot of a wall (not a vanity base or a shower base). A wall is concrete only where the line says the wall is (not "anchor bolts into concrete") | unit tests with the judge's own lines; 281 pass |
+| J20-7 | `plumbline finishes` says of a wall that it is framed and in what, has a weather barrier, is concrete; of an opening that it is flashed; of a room that it has base | read on the made-up house |
+| J20-8 | With one level on show alone, the other levels' switches, and the roof's, read off; pressing one brings every level back with it | seen for the levels in a picture of the first floor alone; **the roof's switch is built and not yet seen** |
+| the judge's test job | A pipe through a footing is a clash to settle, not "a hole to cut" | `demos/found.sh`: in the same space 1, holes 0 |
+| J20-5 | A type is a wall's or a footing's, never both: a wall on a footing's type, or a footing on a wall's, is refused | `demos/found.sh` |
+| the judge's test job | Openings with less than four studs between them are framed as one, under one header with studs packed between; a test holds that no piece of any frame runs through another, over the judge's cases | unit tests; 283 pass |
+| seen in pictures | The job's name in the top bar is whole ("Sample whole house (not a real job)"), cut at 44 letters, not 26 | seen |
+
+**Still open from judgment 20:** J20-3 (a quantity is rounded to four places before
+it is priced: every line does it, and changing it changes every total by cents, so it
+wants a decision first); J20-6 (in the BIM file a footing or a wall is a plain box
+between its ends, notched at outside corners); J20-9 (the Up arrow with the pointer parked low);
+two framing lines on one wall, where the first wins without a word; and **the judgment itself,
+which was stopped part way and has to be run again to the end**.
+
 ## Start here (written 2026-11-13 for the next run, on a copy of this repository)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`. The tree is clean and
-pushed. 280 tests pass; `tools/committed.sh` passed on the last commit that changed
-code (ee3baec); the gates pass. Read `CLAUDE.md` first, then this section, then
+pushed. 283 tests pass; the gates pass; `tools/committed.sh` is run on the last
+commit of the session. Read `CLAUDE.md` first, then this section, then
 `divisions/README.md` (what the program has for each of the sixteen trades) and
 `research/README.md` (the surveys and the two latest judgments).
 
@@ -5052,11 +5076,11 @@ layer drawn. None of that last night's work has been through a judge to the end.
 
 **What is owed, in this order.**
 
-1. **Fix what judgment 20 found** (the table above): the T-junction footing volume
-   first, because it is a wrong figure said with confidence; then a footing's words;
-   then try each of the judge's unlooked-at predictions and fix those that are true
-   (the framing and weather-barrier word rules are too narrow; the base and concrete
-   rules too wide).
+1. **What judgment 20 found is mostly fixed** ("The clean-up pass after judgment 20",
+   just above, has each with its proof). Left: a quantity rounded to four places
+   before it is priced (wants a decision: it moves every total by cents); a footing
+   or a wall in the BIM file as a plain box notched at its outside corners; two
+   framing lines on one wall. **None of the fixes has been seen by a judge.**
 2. **Run judgment 20 again to the end** on the result, with the same brief
    (`research/judgment-20-brief.md`). It needs a fresh frozen copy of the program
    (`PLUMBLINE_BIN`, in CLAUDE.md) and the IFC checker's Python package, which was in
@@ -5089,27 +5113,3 @@ pushed on a test count of nothing, whose tests did not compile; and "BIMCraft ha
 framing" written from a list of file names cut short. And one defect of my own making
 found late: since call 64 a length typed after a tool's sizes were accepted lost its
 first digit. `planw` found it the moment it walked the path a person walks.
-
-## The clean-up pass after judgment 20 (2026-11-13)
-
-Patrick asked for one last code and window clean-up. What was done, each committed
-on its own with the tests passing:
-
-| From | What | Proof |
-|---|---|---|
-| J20-1 | A footing that stops on the run of another (a T) no longer counts that concrete twice: the part of the stem inside the run is taken off the stem, and the formula on the figure says so | `demos/found.sh`: a 20 ft stem on a 40 ft run, 24 by 12, is 4.37 CY (118 CF by hand; it was 120); the ring is still 10.07 CY |
-| J20-2, 4, 5 | A footing is spoken of as a footing: its type lists "footing width"; its depth is measured under "depth"; a footing with no length, a type with no width, a type that is not a footing's are refused in a footing's words | `demos/found.sh`: measured 18 in deep, the 40 ft run is 4.4444 CY (40 x 2 x 1.5 / 27) |
-| the judge's test job | Framing is read from "2 x 6 @ 24", "2X4 studs 16 OC", "2x6 16 in o.c."; a number not said to be a spacing is not taken for one. A weather barrier is read from Tyvek, Typar, felt or tar paper; not from a vapor barrier. Base is read only where the line means the base at the foot of a wall (not a vanity base or a shower base). A wall is concrete only where the line says the wall is (not "anchor bolts into concrete") | unit tests with the judge's own lines; 281 pass |
-| J20-7 | `plumbline finishes` says of a wall that it is framed and in what, has a weather barrier, is concrete; of an opening that it is flashed; of a room that it has base | read on the made-up house |
-| J20-8 | With one level on show alone, the other levels' switches, and the roof's, read off; pressing one brings every level back with it | seen for the levels in a picture of the first floor alone; **the roof's switch is built and not yet seen** |
-| seen in pictures | The job's name in the top bar is whole ("Sample whole house (not a real job)"), cut at 44 letters, not 26 | seen |
-
-**Still open from judgment 20:** J20-3 (a quantity is rounded to four places before
-it is priced: every line does it, and changing it changes every total by cents, so it
-wants a decision first); J20-6 (in the BIM file a footing or a wall is a plain box
-between its ends, notched at outside corners); a footing can be drawn on a wall's
-type and a wall on a footing's; J20-9 (the Up arrow with the pointer parked low);
-two framing lines on one wall, where the first wins without a word; two windows 3 in
-apart, whose kings and jacks are drawn through each other; and **the judgment itself,
-which was stopped part way and has to be run again to the end**.
-
