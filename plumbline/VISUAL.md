@@ -23,8 +23,8 @@ themselves are named at the top of `crates/app/src/theme.rs`.
 2. **Panels are glass.** Each panel is translucent: what is behind it tints it, and a
    change behind it shows through it. It has round corners, a light edge and a soft
    shadow under it. **The best glass is frosted:** what is behind is blurred, so text
-   on the panel is never fought by detail behind it. (As of this writing the panels
-   are frosted; the message shown over the model is not, and fails this line.)
+   on the panel is never fought by detail behind it. (The panels and the message
+   shown over the model are both frosted since 2026-11-12.)
 3. **Depth.** What floats nearer reads nearer: a message over the model casts a
    deeper shadow than a panel; a control on a panel is a little whiter than the panel;
    a control in hand or selected is washed in the accent and edged with it.
@@ -69,7 +69,9 @@ themselves are named at the top of `crates/app/src/theme.rs`.
 ## C. The place the building stands in
 
 1. **Real light.** One sun that casts soft shadows, light from the sky, and shade
-   where surfaces meet. Shadows are never black and edges are never jagged.
+   where surfaces meet. Shadows are never black and edges are never jagged. (Since
+   call 68 there is one sun and the sky lights the house; the shadow's edge is not
+   yet softened with distance, and fails "soft" close up.)
 2. **A place.** A ground the building stands on and a sky that is pale at the horizon
    and deeper overhead (QUESTIONS.md Q22). No grass, trees, neighbours or scenery:
    nothing is drawn that the estimate does not price.
@@ -99,7 +101,15 @@ themselves are named at the top of `crates/app/src/theme.rs`.
    names one of ten forms is drawn as it: cabinet, wardrobe, WC, washbasin, bathtub,
    table, chair, bed, sofa, desk. Equipment, and anything else, is still a box, and
    fails this line.)
-7. **It looks like a house a builder would build**, at the standard of good
+7. **A trade at a time.** With Finishes off the walls show their weather barrier
+   and the openings their flashing, where each is priced; with Framing on a framed
+   wall is its frame, and no piece of lumber runs through another; with Ground off
+   the footings and foundation walls are seen; a room with base priced has its base.
+   Nothing is drawn that no line prices. With the house seen through, all of it goes
+   glass with the walls. (As of this writing: no joists or rafters, no roof
+   underlayment, no casing inside, and the footings sit behind the tool bar in the
+   opening view.)
+8. **It looks like a house a builder would build**, at the standard of good
    residential work. A picture that reads as a toy or a diagram of boxes fails.
 
 ## E. On plan
