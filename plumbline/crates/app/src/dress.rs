@@ -666,8 +666,8 @@ fn casing(u: &mut Unit, f: &Part, w: f32, h: f32, face: f32, out: f32, outside: 
         u.trim.block(f, [w, w + c], [0.0, h], z(-0.25 * IN, 0.75 * IN));
         u.trim.block(f, [-c, w + c], [h, h + c], z(-0.25 * IN, 0.75 * IN));
         if sill {
-            u.trim.block(f, [-c - 0.75 * IN, w + c + 0.75 * IN], [-1.0 * IN, 0.0], z(-0.25 * IN, 1.75 * IN));
-            u.trim.block(f, [-c, w + c], [-1.0 * IN - c, -1.0 * IN], z(-0.25 * IN, 0.75 * IN));
+            u.trim.block(f, [-c - 0.75 * IN, w + c + 0.75 * IN], [-IN, 0.0], z(-0.25 * IN, 1.75 * IN));
+            u.trim.block(f, [-c, w + c], [-IN - c, -IN], z(-0.25 * IN, 0.75 * IN));
         }
     }
 }

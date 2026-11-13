@@ -5344,3 +5344,12 @@ it and show the price said back as "$24.00", "5 doors, 8 windows", the roof's fi
 headed "Roof" and the Finishes spot. Changed after those pictures: the estimate
 window's last-message line begins with a capital, as the model window's does (it
 read "wall 1: unit cost ..." beside "Wall 1: unit cost ...").
+
+**A pass with the linter** (clippy, 2026-11-13): its mechanical suggestions applied in
+every crate (nineteen lines: a slice from a reference where a clone made one, a
+function named where a closure only called it, `rfind`, `-IN` for `-1.0 * IN`). No
+behaviour changes; 283 tests pass. Left as they are, on purpose: `!(f > 0.0)` in
+`world/src/plans.rs` (it is what refuses a scale distance that is not a number),
+the functions with eight or nine arguments (Bevy systems), and the long tuple types.
+No `todo!`, `dbg!` or unfinished marker is in the code; the one trace print is
+behind `PLUMBLINE_TRACE`.

@@ -328,7 +328,7 @@ pub fn dropped(mut doc: ResMut<Doc>, mut drops: MessageReader<FileDragAndDrop>) 
 /// The drawing a pick on the plan is on: the last one laid under the storey whose page,
 /// as shown, holds the point.
 pub fn under(doc: &mut Doc, storey: &str, at: [f64; 2]) -> Option<Laid> {
-    laid(&mut doc.job).into_iter().filter(|l| l.storey == storey && l.holds(at)).next_back()
+    laid(&mut doc.job).into_iter().rfind(|l| l.storey == storey && l.holds(at))
 }
 
 /// How something drawn at a place on a storey is entered. On a drawing it is traced:
