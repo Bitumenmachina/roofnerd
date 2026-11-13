@@ -242,6 +242,7 @@ pub fn walls(job: &mut Job, storey: &str, type_path: &str, points: &[P2], closed
                 }
             }
         }
+        type_is_free_for(job, type_path, Kind::Wall)?;
         let mut made = Vec::new();
         for pair in pts.windows(2) {
             let line = how.val([pair[0], pair[1]], "ft");
@@ -256,6 +257,18 @@ pub fn walls(job: &mut Job, storey: &str, type_path: &str, points: &[P2], closed
         }
         Ok(made)
     })
+}
+
+/// A type gives a wall its thickness or a footing its width, never both: a type that
+/// footings are of is not drawn as a wall, nor the other way (the twentieth judgment
+/// drew a 24 in "wall" on a footing's type, and a footing 8 in wide on a wall's).
+fn type_is_free_for(job: &mut Job, type_path: &str, wanted: Kind) -> Result<(), String> {
+    let mut q = job.world.query::<(&Node, &Kind, &Wall)>();
+    let other = q.iter(&job.world).find(|(_, k, w)| **k != wanted && matches!(**k, Kind::Wall | Kind::Footing) && w.type_name.value.as_deref() == Some(type_path)).map(|(n, k, _)| (n.path.clone(), *k));
+    match other {
+        Some((path, kind)) => Err(format!("{type_path} is the type of {path}, {kind:#}: {wanted:#} needs a type of its own (make one with `type {}`)", wanted.said())),
+        None => Ok(()),
+    }
 }
 
 /// Strip footings along `points` (in feet, on the plan): each pair of points that follow
@@ -277,6 +290,7 @@ pub fn footings(job: &mut Job, storey: &str, type_path: &str, points: &[P2], clo
         }
         let deep = how.length(depth)?;
         deep.feet().filter(|d| *d > 0.0).ok_or("a footing's depth has to be more than nothing")?;
+        type_is_free_for(job, type_path, Kind::Footing)?;
         let mut made = Vec::new();
         for pair in pts.windows(2) {
             // Its top is at its level's floor; where it lies is worked out from its depth

@@ -78,6 +78,12 @@ says "$T/pipe.txt" "Through a wall or a floor (a hole to cut): 0"
 PIPE="$("$P" show "$J" | sed -n 's/^ *\(pipe-[0-9]*\) .*/\1/p' | head -1)"
 "$P" remove "$J" "$PIPE" >/dev/null
 
+echo "== A type is a wall's or a footing's, never both =="
+if "$P" wall "$J" "$L" "$FT" --points "50,0 60,0" --height "4 ft" "${K[@]}" > "$T/mixed.txt" 2>&1; then echo "FAIL: a wall was drawn on a footing's type"; exit 1; fi
+says "$T/mixed.txt" "a wall needs a type of its own"
+if "$P" footing "$J" "$L" "$WT" --points "50,0 60,0" --depth "12 in" "${K[@]}" > "$T/mixed.txt" 2>&1; then echo "FAIL: a footing was drawn on a wall's type"; exit 1; fi
+says "$T/mixed.txt" "a footing needs a type of its own"
+
 echo "== One footing drawn over another is refused, in a footing's words =="
 if "$P" footing "$J" "$L" "$FT" --points "5,0 20,0" --depth "12 in" "${K[@]}" > "$T/over.txt" 2>&1; then echo "FAIL: a footing over a footing was taken"; exit 1; fi
 says "$T/over.txt" "lies along $F1 for 15.00 ft: one footing drawn over another would be counted twice"

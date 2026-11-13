@@ -824,14 +824,13 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 if let (Some([a, b]), Some(own)) = (line, wide.value) {
                     let (ux, uy) = (b[0] - a[0], b[1] - a[1]);
                     let ul = (ux * ux + uy * uy).sqrt().max(1.0e-9);
-                    for (other, level, [oa, ob], ow) in strips.iter().filter(|s| s.0 != *me && s.1 == node.parent) {
+                    for (other, _, [oa, ob], ow) in strips.iter().filter(|s| s.0 != *me && s.1 == node.parent) {
                         let (ox, oy) = (ob[0] - oa[0], ob[1] - oa[1]);
                         let ol = (ox * ox + oy * oy).sqrt();
                         let sin = ((ux * oy - uy * ox) / (ul * ol.max(1.0e-9))).abs();
                         if ol < 1.0e-9 || sin < 0.2 {
                             continue;
                         }
-                        let _ = level;
                         for end in [a, b] {
                             let t = ((end[0] - oa[0]) * ox + (end[1] - oa[1]) * oy) / (ol * ol);
                             let off = ((end[0] - oa[0]) * oy - (end[1] - oa[1]) * ox).abs() / ol;
