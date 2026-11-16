@@ -607,6 +607,16 @@ pub fn came_off_said(before: &Estimate, job: &mut Job) -> Option<String> {
     gone_said(before, job, true)
 }
 
+/// After a roof change that dropped a priced plane: what the job cost was and is. The
+/// planes that stay change size when one goes, and what is priced on them changes
+/// with it: a hip made a gable drops a plane's dollars and the two planes beside it
+/// take nearly all of them back. "$71.55 is out of the job cost" is true of what went
+/// and is not the whole of it. None when either job cost has no figure.
+pub fn job_cost_was_and_is_said(before: &Estimate, job: &mut Job) -> Option<String> {
+    let (was, is) = (before.job_cost.value?, estimate(job).job_cost.value?);
+    Some(format!("The planes that stay changed with it: the job cost was ${} and is ${}.", figure(was, 2), figure(is, 2)))
+}
+
 fn gone_said(before: &Estimate, job: &mut Job, came_off: bool) -> Option<String> {
     let now: std::collections::BTreeSet<(String, String)> = estimate(job).lines.into_iter().map(|l| (l.path, l.description)).collect();
     let gone: Vec<&SheetLine> = before.lines.iter().filter(|l| !now.contains(&(l.path.clone(), l.description.clone()))).collect();

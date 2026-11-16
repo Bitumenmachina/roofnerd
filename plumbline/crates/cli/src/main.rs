@@ -1429,6 +1429,10 @@ fn run(args: &[String]) -> Result<(), String> {
                 // A plane that is gone took what was priced on it: said to the cent (J23-3).
                 if let Some(went) = view::went_with_said(&priced_before, &mut job) {
                     say!("  {went}");
+                    // And what the planes that stay did to it (call 103).
+                    if let Some(whole) = view::job_cost_was_and_is_said(&priced_before, &mut job) {
+                        say!("  {whole}");
+                    }
                 }
                 if before == after {
                     say!("nothing changed");

@@ -3633,3 +3633,20 @@ because a box is close to what they are and nothing better is claimed: an air
 handler, a furnace, a panelboard, a meter socket, a register. Not built: a base
 cabinet and a counter under a kitchen sink (cabinets are not in the made-up house or
 in any assembly; STATUS.md, the seven trades).
+
+### Call 103. A roof change that drops a priced plane says the job cost before and after (2026-11-16)
+
+Found by working a demonstration by hand before running it (`demos/gablew.sh`). A hip
+end made a gable drops a plane, and calls 91 and 95 have the window and the command
+line say what went with it: "5 cost lines went with it: $71.55 is out of the job
+cost". That is true of the lines that went and misleading as a whole: the two planes
+beside the gable grow to cover what the hip plane covered, a gable and a hip of one
+pitch cover the same roof, and the job cost moves by a cent of rounding. A person
+reading "$71.55 is out of the job cost" would take the roof to be $71.55 cheaper.
+
+- After that sentence the window and the command line both say, from one function
+  in the model's crate: **"The planes that stay changed with it: the job cost was
+  $429.32 and is $429.33."** It is said only when a plane that carried lines went,
+  and only when the job cost has a figure before and after.
+- The first sentence is kept as it is: it is what went, to the cent, and a person
+  has to be told that lines they priced are gone.

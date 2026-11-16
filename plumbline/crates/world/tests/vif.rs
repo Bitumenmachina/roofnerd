@@ -367,3 +367,26 @@ fn lines_that_come_off_or_go_with_a_dropped_plane_are_said_to_the_cent() {
     assert_eq!(view::markup_large_said("250").as_deref(), Some("That is more than what it is a percentage of. If 25.00 % was meant, enter it again."));
     assert_eq!(view::markup_large_said("12"), None);
 }
+
+#[test]
+fn a_dropped_plane_is_not_the_whole_of_what_a_roof_change_does_to_the_job_cost() {
+    // The plane on edge 1 (a 24 ft eave) carries underlayment at $0.50/SF: 143.1084 SF,
+    // $71.55. The plane on edge 2 (a 16 ft eave) is given the same: 71.5542 SF, $35.78.
+    // Job cost $107.33. Edge 2 made a gable: its plane goes, $35.78 with it; the plane
+    // on edge 1 now runs to the gable, (24 + 16) / 2 x 8 = 160 SF on plan, 178.8854 SF
+    // on the slope, $89.44. The job cost was $107.33 and is $89.44, not $71.55.
+    let (mut job, roof, _) = roofed();
+    let east = {
+        let mut q = job.world.query::<(&Node, &Solved)>();
+        q.iter(&job.world).find(|(_, s)| s.edge == Some(2)).map(|(n, _)| n.path.clone()).unwrap()
+    };
+    job.add_line(&east, "Underlayment", "surface_area", Some(Class::Material), false).unwrap();
+    job.set_on_line(&east, "unit_cost", Some("Underlayment"), Some("$0.50/SF"), Status::Known, "made-up plan").unwrap();
+    job.derive();
+    let before = view::estimate(&mut job);
+    assert_eq!(before.job_cost.value, Some(107.33));
+    solve::edit(&mut job, &roof, solve::Change::Rise { edge: 2, rise: value::Val { value: Some(Rise::Gable), unit: String::new(), status: Status::Assumed, source: "the plans".into() } }).unwrap();
+    job.derive();
+    assert_eq!(view::went_with_said(&before, &mut job).as_deref(), Some("1 cost line went with it: $35.78 is out of the job cost."));
+    assert_eq!(view::job_cost_was_and_is_said(&before, &mut job).as_deref(), Some("The planes that stay changed with it: the job cost was $107.33 and is $89.44."));
+}

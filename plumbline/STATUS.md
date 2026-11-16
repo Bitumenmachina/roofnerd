@@ -6073,6 +6073,33 @@ ending or where it lies, that the saved job has one drawing, page 4 of
 `usda-7213.pdf`, named as it lies beside the job, and it takes three pictures: the
 list, the pages, the page laid under.
 
+## Priced work taken off, in the window: a demonstration, written before it is run (`demos/gablew.sh`, call 103)
+
+"Start here" has owed this since call 95. **The window part has not been run.** Its
+setup and the gable were run at the command line and gave every figure below.
+
+1. A made-up job: 24 ft by 16 ft, 9 ft walls (Known), a hip roof at 6:12 scaled off a
+   plan (Assumed). The south wall has the starter library's lap siding assembly with
+   its siding at $4.00/SF: 216 SF, $864.00. Each roof plane has the shingle assembly
+   with shingles at $100.00/SQ: 143.1084 SF is 1.4311 SQ, $143.11, on the two long
+   planes; 71.5542 SF is 0.7155 SQ, $71.55, on the two hips. Job cost 864.00 + 429.32
+   = $1,293.32.
+2. In the window the wall's assembly is changed to brick veneer. The siding and the
+   labor of hanging it come off; the window is to say "$864.00 is out of the job cost
+   (1 of them had no price yet)."
+3. The east hip plane is selected by its priced line and Gable pressed. Its five
+   lines go, $71.55 of them priced. The two long planes now run to the gable: on plan
+   (24 + 16) / 2 x 8 = 160 SF, 178.8854 SF on the slope, 1.7889 SQ, $178.89 each.
+   178.89 + 178.89 + 71.55 = $429.33. The window is to say "5 cost lines went with
+   it: $71.55 is out of the job cost (4 of them had no price yet)." and then "The
+   planes that stay changed with it: the job cost was $429.32 and is $429.33."
+4. Saved, and the saved job read at the command line: no siding line, shingles
+   $178.89 on two planes and $71.55 on one, job cost $429.33.
+
+**What working it by hand found**: the second sentence of step 3 did not exist. The
+window said only that $71.55 was out of the job cost, of a roof that costs a cent
+more than it did (call 103; a test in `tests/vif.rs` with its own figures).
+
 ## The twenty-fourth judgment, part A: what its notes say so far, and what was done (2026-11-16, late)
 
 Part A (the veteran's first day and the money path in the window) is still at work.
@@ -6106,7 +6133,7 @@ because a plan that draws wrong once is worth watching for.
 
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 310 tests pass,
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 311 tests pass,
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
 commit of code that was pushed, and the twenty command-line demonstrations pass on a
 frozen copy of b3e39a1. **The nineteen window demonstrations were last all passed on
@@ -6123,7 +6150,7 @@ window crate (42 findings); a twenty-first judge walked the four new trades (21)
 twenty-second pair judged the look and the words, and a veteran's first day and the
 money path; a twenty-third tried the money path at the command line; and a
 twenty-fourth pair did what the twenty-second did again, on the build after the
-fixes. Each finding is a row in this file with where it stands. Calls 77 to 102 in
+fixes. Each finding is a row in this file with where it stands. Calls 77 to 103 in
 DECISIONS.md are the decisions made on the way; Q26 in QUESTIONS.md is new, and
 PROPOSALS.md 23 to 26.
 
@@ -6162,8 +6189,9 @@ its own arithmetic, and it had not yet reported.
    Clashes tab. `research/judgment-24b-words.md` has all 76.
 6. **Have items 9 to 12 judged again**, by agents that did not build them, on Opus or
    Sonnet, told to write their notes as they go.
-7. **A window demonstration still to write**: a roof edge made a gable with a priced
-   plane on it; an assembly changed for another with priced lines coming off.
+7. **`demos/gablew.sh` is written and has never been run in the window** (a wall's
+   assembly changed with a priced line coming off; a hip made a gable with priced
+   planes): run it with `roofw` and `pagew`.
 8. **The open rows** of the reviews and the twenty-first judgment (their tables
    above): a keystroke re-reads the whole job (R21-2); one money formatter (R21-12);
    a footing dug wider cannot be recorded on it alone (J21-6); base is priced by a

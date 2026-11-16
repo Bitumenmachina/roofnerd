@@ -259,6 +259,14 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
                 if let Some(went) = plumbline_world::view::went_with_said(&priced_before, &mut doc.job) {
                     more.push_str(&format!("\n{}{}", went[..1].to_uppercase(), &went[1..]));
                 }
+                // The planes that stay change size when one goes, and what is priced on
+                // them changes with it: a hip made a gable drops a plane's dollars and
+                // the two beside it take nearly all of them back. What went is said
+                // above; here is what the job cost was and is, so the first is not
+                // read as the whole of it.
+                if let Some(said) = plumbline_world::view::job_cost_was_and_is_said(&priced_before, &mut doc.job) {
+                    more.push_str(&format!("\n{said}"));
+                }
             }
             for moved in &report.renumbered {
                 more.push_str(&format!("\n{moved}"));
