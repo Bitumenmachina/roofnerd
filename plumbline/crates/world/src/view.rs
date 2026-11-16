@@ -512,6 +512,12 @@ pub struct Pricing {
     pub not_priced: Vec<(Kind, usize)>,
 }
 
+/// A count with its thing, said as a person says it: "1 line", "3 lines", "0 doors".
+/// For a thing whose plural only adds an s.
+pub fn so_many(n: usize, one: &str) -> String {
+    if n == 1 { format!("1 {one}") } else { format!("{n} {one}s") }
+}
+
 /// What is built and has nothing priced on it, in the one sentence every view says it
 /// with: "nothing is priced on 3 things that could be (2 doors, 1 window): they are in
 /// no line and no total above". None when everything that could be priced is.

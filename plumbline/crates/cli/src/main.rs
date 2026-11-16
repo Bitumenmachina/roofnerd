@@ -165,7 +165,7 @@ fn vif(job: &mut plumbline_world::Job) -> String {
         Some(x) => format!("{}${}", status.flag().trim(), view::figure(x, 2)),
         None => "no dollars".to_string(),
     };
-    let lines = |n: usize| if n == 1 { "1 line".to_string() } else { format!("{n} lines") };
+    let lines = |n: usize| plumbline_world::view::so_many(n, "line");
     let mut out = String::new();
     let n = list.questions.len();
     let _ = match (n, list.riding) {
@@ -623,7 +623,7 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
     // The job cost again, division by division: all sixteen, and what is in none.
     if est.divisions.iter().any(|d| d.total.members > 0) || est.no_division.members > 0 || !est.no_division.left_out.is_empty() || est.divisions.iter().any(|d| !d.total.left_out.is_empty()) {
         let _ = writeln!(out, "\nBY DIVISION");
-        let lines = |n: usize| format!("{n} line{}", if n == 1 { "" } else { "s" });
+        let lines = |n: usize| plumbline_world::view::so_many(n, "line");
         for d in &est.divisions {
             // "none": no work in it. "no figure": work in it, and none of it priced
             // yet (the same two words the workbook and the PM's lens use, J17C-7).

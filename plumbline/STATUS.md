@@ -5398,3 +5398,38 @@ started on Opus, on a frozen build of 6327b50 (283 tests pass): two code reviewe
 one on the window crate) and the twenty-first judgment (`research/judgment-21-brief.md`:
 the twentieth's brief to the end, plus whether each J20 finding is truly fixed and
 calls 77 to 81). Their findings are recorded here the turn they arrive.
+
+## The code review of the window crate (2026-11-16): what it found
+
+A reviewer that did not build it (Opus) read the window crate whole, and
+`crates/plans`, and part of `crates/ifc`, on the build of 6327b50. Its notes, with
+each reproduction, are `research/review-21-window-notes.md` (R21-n). Most serious
+first; "reproduced" is the reviewer's word, the rest are by reading.
+
+| | What | Where | State |
+|---|---|---|---|
+| R21-19 | **reproduced**: a maker's sheet runs the next column into a value ("MV-3621 Finish: White Oak" as the model number): the column gap is marked with three spaces and then every run of spaces is made one | `plans/src/lib.rs` `words`; `world/src/spec.rs` | open |
+| R21-1 | closing can lose work: one warning for both windows, cleared only by a save; "close again to leave" closes only that window; the sheet cannot be opened again | `app/src/main.rs` `closing` | open |
+| R21-22 | deleting the level on show makes the house vanish: the level on show, the roof and the tool in hand are not let go as undo lets them go | `tools.rs` delete; `scene.rs` | open |
+| R21-10 | like-for-like difference and percent are worked out twice, in the window and in the command line; the model does not give them | `sheet.rs` money; `cli/src/main.rs` | open |
+| R21-11 | a division with lines and no price reads "none" in its own block where By division and the command line say "no figure"; "No division" heading blank with no figure | `sheet.rs` | open |
+| R21-21 | the view cuts instead of easing when a file is brought in, a drawing added or a scale set (the job is framed afresh and the eye is set outright) | `bring.rs`, `plans.rs`, `tools.rs`, `scene.rs` | open |
+| R21-4 | a roof outline that is refused loses every corner clicked | `tools.rs` | open |
+| R21-20 | if the page reader fails the drawing says "reading its page" for ever | `plans.rs` | open |
+| R21-31 | an assembly clicked while a field is open is taken a frame late and its message replaces the field's | `main.rs` | open |
+| R21-25 | an item is set down on the lowest level whatever was clicked, and the message does not say which level | `scene.rs` | open |
+| R21-26 | the base board and its cuts at doors are worked out by the window; nothing holds the drawn base to the priced LF | `scene.rs` | open |
+| R21-3 | "Added wall, X long" is the window's distance between the picks, not the model's length | `tools.rs` | open |
+| R21-23 | the ground grid can draw hundreds of thousands of lines a frame over an unscaled scan | `scene.rs`, `plans.rs` | open |
+| R21-2 | every character typed rereads the whole job, clashes included | `main.rs`, `model.rs` | open |
+| R21-8/14 | a click on the plan, the model or a sheet row while a field is open is dropped without a word | `tools.rs`, `scene.rs`, `sheet.rs` | open |
+| R21-18 | "A Roof", "a Door" lowered inside a person's own names; "grey" made "gray" in them | `theme.rs` | open |
+| R21-9 | in a form a comma always means the next field, so "Sink, double bowl" splits | `main.rs` | open |
+| R21-27 | a supplier name with a full stop makes its file "not there"; a dropped table forgotten if Model or Maker's sheet is clicked next | `bring.rs`, `panels.rs` | open |
+| R21-15 | two controls can share a name in the map | `map.rs` | open |
+| R21-30 | IFC in: of two levels at one height the lower gets an untrue note | `ifc/src/lib.rs` | open |
+| R21-24, 16, 6, 7 | the Clashes switch left on after a press on a thing; taking an item in hand does not go through the view change; a key and a click in one frame; `pressed` cleared every frame with a field open | `scene.rs`, `panels.rs`, `main.rs` | open |
+| R21-12, 13, 28, 17/29 | money written in about fifteen places; the not-priced sentence built twice ("2 equipments"); the lowest wall base worked twice; stale comments | several | open |
+
+Also, for the model: a line whose quantity is typed as a bare "1" is priced "1.00 EA",
+a unit nobody entered. Each row is marked fixed here as it is fixed.

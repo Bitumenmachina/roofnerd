@@ -718,6 +718,19 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
             doc.show.certainty = !doc.show.certainty;
             doc.redraw();
         }));
+        // What the three colours are, and how much of what is drawn is in each, where
+        // they are switched on: a house drawn all pale says "all of it Known" in words.
+        if doc.show.certainty {
+            let of = |status: Status| snap.drawn.iter().filter(|p| p.status == status).count() + snap.planes.iter().filter(|p| p.worst() == status).count();
+            c.spawn((Node { flex_direction: FlexDirection::Column, row_gap: px(2.0), padding: UiRect::new(px(22.0), px(8.0), px(0.0), px(4.0)), ..default() }, Pickable::IGNORE)).with_children(|l| {
+                for (status, what) in [(Status::Known, "known"), (Status::Assumed, "assumed"), (Status::Unknown, "unknown")] {
+                    l.spawn((Node { column_gap: px(6.0), align_items: AlignItems::Center, ..default() }, Pickable::IGNORE)).with_children(|r| {
+                        spot(r, theme::certainty(status));
+                        r.spawn((text(fonts, format!("{} drawn from what is {what}", of(status)), 11.0, Weight::Regular, theme::ink_soft()), Pickable::IGNORE));
+                    });
+                }
+            });
+        }
         let found = snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.iter().filter(|x| !x.through).count()).unwrap_or(0);
         if found > 0 {
             layer(c, "Clashes", "", theme::clash(), doc.show.clashes || doc.tab == crate::model::Tab::Clashes, Some(found), Box::new(|doc| {
@@ -727,11 +740,15 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
             // What the two colours of mark mean, where the marks are switched on (J19-20).
             if doc.show.clashes || doc.tab == crate::model::Tab::Clashes {
                 let sure = snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.iter().filter(|x| !x.through && x.status == plumbline_world::value::Status::Known).count()).unwrap_or(0);
-                c.spawn((Node { column_gap: px(6.0), align_items: AlignItems::Center, padding: UiRect::new(px(22.0), px(8.0), px(0.0), px(4.0)), flex_wrap: FlexWrap::Wrap, ..default() }, Pickable::IGNORE)).with_children(|r| {
+                // Each on a line of its own: side by side, the second mark was left at
+                // the end of the first line with its words below it.
+                c.spawn((Node { flex_direction: FlexDirection::Column, row_gap: px(2.0), padding: UiRect::new(px(22.0), px(8.0), px(0.0), px(4.0)), ..default() }, Pickable::IGNORE)).with_children(|l| {
                     for (colour, n, what) in [(theme::clash(), sure, if sure == 1 { "finding" } else { "findings" }), (theme::clash_to_verify(), found - sure, "to verify in the field")] {
                         if n > 0 {
-                            spot(r, colour);
-                            r.spawn((text(fonts, format!("{n} {what}"), 11.0, Weight::Regular, theme::ink_soft()), Pickable::IGNORE));
+                            l.spawn((Node { column_gap: px(6.0), align_items: AlignItems::Center, ..default() }, Pickable::IGNORE)).with_children(|r| {
+                                spot(r, colour);
+                                r.spawn((text(fonts, format!("{n} {what}"), 11.0, Weight::Regular, theme::ink_soft()), Pickable::IGNORE));
+                            });
                         }
                     }
                 });
@@ -1523,7 +1540,7 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             listed(p, fonts, None, "Rooms, inside their walls", storey.rooms.members.to_string(), total(&storey.rooms), storey.rooms.status);
         }
         // Each counted with its own word: "1 and 0" left the reader to work out which.
-        let some = |n: usize, one: &str| if n == 1 { format!("1 {one}") } else { format!("{n} {one}s") };
+        let some = view::so_many;
         listed(p, fonts, None, "Doors and windows", String::new(), format!("{}, {}", some(storey.doors, "door"), some(storey.windows, "window")), Status::Known);
     }
     if let Some(totals) = &snap.totals {

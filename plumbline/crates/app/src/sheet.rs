@@ -379,7 +379,7 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         let figure = |el: &view::ElementRows, name: &str| el.rows.iter().find(|r| r.label == name).map(|r| (r.number, r.status)).unwrap_or((None, Status::Unknown));
         let here: Vec<&view::ElementRows> = snap.fabric.iter().filter(|(s, _)| *s == storey.path).map(|(_, el)| el).collect();
         let at = storey.elevation.map(|e| format!("floor at {}", units::feet_as_ft_in(e, 16))).unwrap_or("height unknown".into());
-        let some = |n: usize, one: &str| if n == 1 { format!("1 {one}") } else { format!("{n} {one}s") };
+        let some = view::so_many;
         table(p, fonts, &pretty(&storey.name), format!("{at}  ·  {}, {}", some(storey.doors, "door"), some(storey.windows, "window")), |t| {
             // A level with nothing on it yet (the level a roof sits on, a level just
             // added) says so in one line: a table of "none" in the colour of something
@@ -573,7 +573,7 @@ fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
 fn verify(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
     let list = &snap.verify;
     let money = |x: f64| format!("${}", view::figure(x, 2));
-    let lines = |n: usize| if n == 1 { "1 line".to_string() } else { format!("{n} lines") };
+    let lines = |n: usize| view::so_many(n, "line");
     if list.questions.is_empty() {
         return nothing(p, fonts, "Nothing to verify: every value that can be measured is Known, and no clash is a question.");
     }
@@ -765,7 +765,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 cell(r, 7.0, false, |c| dot(c, if d.total.members > 0 { d.total.status } else if waits > 0 { Status::Unknown } else { Status::Known }));
                 cell(r, 24.0, true, |c| words(c, fonts, d.division.number().to_string(), 12.5, Weight::Medium, theme::ink_soft()));
                 cell(r, 0.0, false, |c| words(c, fonts, d.division.title(), 12.5, if has_work { Weight::Medium } else { Weight::Regular }, if has_work { theme::ink() } else { theme::ink_faint() }));
-                let lines = |n: usize| if n == 1 { "1 line".to_string() } else { format!("{n} lines") };
+                let lines = |n: usize| view::so_many(n, "line");
                 let counted = match (d.total.members, waits) {
                     (0, 0) => String::new(),
                     (n, 0) => lines(n),

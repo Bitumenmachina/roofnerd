@@ -928,7 +928,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                     doc.edit("Assembly");
                     // Its lines are on the estimate: the sheet turns to it.
                     doc.tab = model::Tab::Estimate;
-                    let lines = |n: usize| if n == 1 { "1 cost line".to_string() } else { format!("{n} cost lines") };
+                    let lines = |n: usize| plumbline_world::view::so_many(n, "cost line");
                     let off = if taken.is_empty() { String::new() } else { format!(" {} of the assembly it had came off: {}.", lines(taken.len()), taken.join(", ")) };
                     doc.say(Tone::Done, format!("{called} is now {name:?}: {} added.{off}", lines(added.len())));
                 }
