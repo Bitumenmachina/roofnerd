@@ -158,6 +158,14 @@ C2, A4, most of A5 and part of A6 have been changed since. So have A1 (the top b
 and the status line are each two floating cards with the model between them; the
 side panels still stand nearly the height of the window) and A2 (on plan the paper
 is unlit white and a panel's shadow shows on it): DECISIONS.md call 93. The
-twenty-fourth judgment, part B, was started on the build of d20ac60 to go through
-every line again; STATUS.md has what it found once it reports.
+twenty-fourth judgment, part B, went through every line again on the build of
+d20ac60 (`research/judgment-24b-notes.md`): **14 lines passed, 18 failed, and B3 to
+B6 could not be judged from still pictures.** It passed A1, A4, B1, B2, C1, C2, D2,
+D3, D4, D7, E2, E3, F4 and, with a defect, A3 and B7. It failed A2 (the panels are
+grey sheets), A5 ("more below" written over words), A6, A7, A8, A9, B8, C3, C4, C5,
+D1, D5, D6, D8, E1, E4, F1, F2 and F3. Calls 96 to 100 in DECISIONS.md answer A2,
+A5, A6, A7, part of A8 and A9, B8, C4, C5, part of E1 and F2; none of that has been
+judged. D6 (equipment and fixtures are boxes), D8's empty kitchen and bath, D5's
+fascia and soffit, E4 and F1 are as they were. STATUS.md ("The twenty-fourth
+judgment, part B") has a row for each finding.
 
