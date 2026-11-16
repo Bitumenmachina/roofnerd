@@ -199,6 +199,10 @@ pub struct Show {
     pub off_levels: std::collections::BTreeSet<String>,
     /// The systems switched off, by path: their runs, fittings and fixtures are not drawn.
     pub off_systems: std::collections::BTreeSet<String>,
+    /// The panels put away: the job's lists down the left, what is selected down the
+    /// right, the tools along the foot. Each has a switch at the lower right (the fixed
+    /// rule: every panel has a switch that reads on or off at a glance).
+    pub away: [bool; 3],
 }
 
 impl Show {

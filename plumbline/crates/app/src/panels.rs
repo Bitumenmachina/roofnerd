@@ -168,7 +168,7 @@ mod place_words {
 }
 
 /// How many letters the bar along the bottom holds beside where the pointer is.
-const BAR_HOLDS: usize = 170;
+const BAR_HOLDS: usize = 150;
 
 /// A message cut to what a one-line bar can hold. The whole of it is in the card over
 /// the model whenever it is more than a plain "done".
@@ -256,13 +256,32 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, plans
     let fonts = &*fonts;
     commands.spawn((Node { width: percent(100.0), height: percent(100.0), ..default() }, UiTargetCamera(cameras.ui), Pickable::IGNORE, MainUi)).with_children(|root| {
         overlay(root, fonts, &doc, &snap);
-        left(root, fonts, &doc, &snap, &plans, scrolls.browser);
-        right(root, fonts, &doc, &snap, &plans, scrolls.inspector);
-        build_bar(root, fonts, &doc);
+        let on = panels_on(&doc);
+        if on[0] {
+            left(root, fonts, &doc, &snap, &plans, scrolls.browser);
+        }
+        if on[1] {
+            right(root, fonts, &doc, &snap, &plans, scrolls.inspector);
+        }
+        if on[2] {
+            build_bar(root, fonts, &doc);
+        }
         top_bar(root, fonts, &doc, &snap);
         views(root, fonts, &doc);
         status_line(root, fonts, &doc);
     });
+}
+
+/// Which of the three panels are on screen: the job's lists, what is selected, the
+/// tools. A panel put away is not drawn; it comes back by itself while something in it
+/// is being typed or a tool is in hand, so that nothing is ever typed out of sight,
+/// and its switch reads on while it is there.
+fn panels_on(doc: &Doc) -> [bool; 3] {
+    let typing = doc.entry.as_ref().map(|(field, _)| *field);
+    let in_left = matches!(typing, Some(Entry::Storey | Entry::BringIn(_) | Entry::Drawing));
+    let in_tools = matches!(typing, Some(Entry::Settings(_) | Entry::Length | Entry::Distance | Entry::Room));
+    let in_right = typing.is_some() && !in_left && !in_tools;
+    [!doc.show.away[0] || in_left, !doc.show.away[1] || in_right, !doc.show.away[2] || in_tools || doc.draw.tool.is_some()]
 }
 
 /// How the model is looked at, in a small cluster of its own over the model's top right:
@@ -384,12 +403,40 @@ fn status_line(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             bar.spawn((Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, BackgroundColor(dot)));
             bar.spawn(Node { flex_shrink: 1.0, min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_child((text(fonts, first, 12.0, Weight::Regular, ink), TextLayout::no_wrap()));
         });
+        row.spawn(Node { column_gap: px(theme::GAP), flex_shrink: 0.0, ..default() }).with_children(|row| {
+        // Every panel has a switch (the fixed rule; J24B-40: only Next steps could be
+        // put away). Off, the panel is gone and the model has its room.
+        row.spawn(card(false)).with_children(|bar| {
+            let on = panels_on(doc);
+            for (i, name) in ["Job", "Details", "Tools"].into_iter().enumerate() {
+                bar.spawn((text(fonts, name, 12.0, Weight::Medium, theme::ink_soft()), Pickable::IGNORE));
+                switch_at(bar, on[i], format!("Show panel {name}"), false, move |doc| {
+                    // Switched off while something in it is in hand, that is let go
+                    // of first: the panel goes, as the switch says.
+                    if !doc.show.away[i] || panels_on(doc)[i] {
+                        if i == 2 {
+                            doc.draw.tool = None;
+                            doc.draw.picked.clear();
+                        }
+                        if doc.entry.take().is_some() {
+                            doc.form.clear();
+                            doc.measuring = None;
+                        }
+                        doc.show.away[i] = true;
+                    } else {
+                        doc.show.away[i] = false;
+                    }
+                    doc.touch();
+                });
+            }
+        });
         row.spawn(card(false)).with_children(|bar| {
             // The view first, then where the pointer is while it is on the model: with
             // the pointer off the model the card is the one word, and not a rule with
             // nothing to its left (J24B-3).
             bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child(text(fonts, if doc.walk { "On foot" } else if doc.plan { "Plan" } else { "3D" }, 12.0, Weight::Medium, theme::ink_soft()));
             bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "", 12.0, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap(), PointerText));
+        });
         });
     });
 }
@@ -416,7 +463,12 @@ fn switch(p: &mut ChildSpawnerCommands, on: bool) {
 /// A switch that is pressed on its own, inside a row that does something else when the
 /// row is clicked: the press stops at the switch.
 fn switch_of(p: &mut ChildSpawnerCommands, on: bool, name: String, act: impl Fn(&mut Doc) + Send + Sync + 'static) {
-    p.spawn((Node { padding: UiRect::axes(px(2.0), px(2.0)), flex_shrink: 0.0, ..default() }, Named { name, scrolls: true })).with_children(|s| switch(s, on)).observe(move |mut press: On<PointerClick>, mut doc: ResMut<Doc>| {
+    switch_at(p, on, name, true, act)
+}
+
+/// A switch, in a panel that scrolls or (`scrolls` false) on a bar that does not.
+fn switch_at(p: &mut ChildSpawnerCommands, on: bool, name: String, scrolls: bool, act: impl Fn(&mut Doc) + Send + Sync + 'static) {
+    p.spawn((Node { padding: UiRect::axes(px(2.0), px(2.0)), flex_shrink: 0.0, ..default() }, Named { name, scrolls })).with_children(|s| switch(s, on)).observe(move |mut press: On<PointerClick>, mut doc: ResMut<Doc>| {
         press.propagate(false);
         if press.button == PointerButton::Primary {
             act(&mut doc);
@@ -454,7 +506,7 @@ fn pages_of(path: &std::path::Path) -> Option<usize> {
 /// name in the field, as it lies from the job's folder; Enter then does what Enter does.
 /// `kinds` are the endings that can be picked; `then` is what follows the name (a
 /// drawing's page).
-fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entry, kinds: &'static [&'static str], then: &'static str) {
+fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entry, kinds: &'static [&'static str], then: &'static str, what: &str) {
     let home = crate::plans::folder_of(&doc.path);
     let home = std::fs::canonicalize(&home).unwrap_or(home);
     let here = doc.browse.clone().unwrap_or_else(|| home.clone());
@@ -475,52 +527,88 @@ fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entr
     }
     folders.sort_by_key(|n| n.to_lowercase());
     files.sort_by_key(|n| n.to_lowercase());
-    let said = here.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "this computer".to_string());
-    f.spawn((text(fonts, if here == home { "WHERE THIS JOB IS KEPT".to_string() } else { format!("IN THE FOLDER {}", said.to_uppercase()) }, 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
-    let line = |f: &mut ChildSpawnerCommands, name: String, shown: String, ink: Color, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
+    let called = |p: &std::path::Path| p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "this computer".to_string());
+    let said = called(&here);
+    f.spawn((text(fonts, if here == home { "WHERE THIS JOB IS KEPT".to_string() } else { format!("IN {}", said.to_uppercase()) }, 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+    // A row of the list: a mark for what it is (a folder's tab, or nothing), its name as
+    // a person reads it, and at the right what kind of thing it is, in a word. A
+    // file's name is shown without its ending, and nothing is a path (VISUAL.md A8;
+    // J24B-38, -56: "(a folder)", "Up one folder" and file names with their endings
+    // were the words that failed the first job's path).
+    let line = |f: &mut ChildSpawnerCommands, name: String, folder: bool, shown: String, kind: &str, ink: Color, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
+        let kind = kind.to_string();
         row(f, false, name, move |doc| act(doc), |r| {
-            r.spawn((text(fonts, shown, 12.0, Weight::Medium, ink), TextLayout::no_wrap(), Pickable::IGNORE));
+            if folder {
+                // A folder, drawn: its tab and its body.
+                r.spawn((Node { flex_direction: FlexDirection::Column, flex_shrink: 0.0, ..default() }, Pickable::IGNORE)).with_children(|m| {
+                    m.spawn((Node { width: px(6.0), height: px(2.0), border_radius: BorderRadius::top(px(1.0)), ..default() }, BackgroundColor(theme::ink_faint()), Pickable::IGNORE));
+                    m.spawn((Node { width: px(13.0), height: px(9.0), border_radius: BorderRadius::all(px(1.5)), ..default() }, BackgroundColor(theme::ink_faint()), Pickable::IGNORE));
+                });
+            }
+            r.spawn((Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), overflow: Overflow::clip(), ..default() }, Pickable::IGNORE)).with_child((text(fonts, shown, 12.0, Weight::Medium, ink), TextLayout::no_wrap(), Pickable::IGNORE));
+            if !kind.is_empty() {
+                r.spawn((text(fonts, kind, 10.5, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+            }
         });
     };
     if let Some(up) = here.parent().map(|p| p.to_path_buf()) {
-        line(f, "Up one folder".to_string(), "\u{2191} Up one folder".to_string(), theme::ink_soft(), Box::new(move |doc| {
+        let back = format!("\u{2039}  Back to {}", called(&up));
+        line(f, "Up one folder".to_string(), false, back, "", theme::ink_soft(), Box::new(move |doc| {
             doc.browse = Some(up.clone());
             doc.touch();
         }));
     }
     for name in folders.iter().take(30) {
         let into = here.join(name);
-        line(f, format!("Folder {name}"), format!("{name}  (a folder)"), theme::ink_soft(), Box::new(move |doc| {
+        line(f, format!("Folder {name}"), true, name.clone(), "", theme::ink_soft(), Box::new(move |doc| {
             doc.browse = Some(into.clone());
             doc.touch();
         }));
     }
     for name in files.iter().take(40) {
         let (path, home) = (here.join(name), home.clone());
-        line(f, format!("File {name}"), name.clone(), theme::ink(), Box::new(move |doc| {
+        let (stem, kind) = plain_name(name);
+        line(f, format!("File {name}"), false, stem.clone(), kind, theme::ink(), Box::new(move |doc| {
             let lies = as_it_lies(&home, &path);
-            let named = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            // The list goes back to its head: a plan's pages are listed there, and
+            // they were left scrolled out of sight above (J24B-57).
+            set_goal(2, 0.0);
             // A plan of more than one page has its pages listed to pick from (call 94:
             // the page was typed after a comma, which nobody is told at a counter).
             // One page, or a picture, is picked and that is all there is to say.
             match (entry, pages_of(&path)) {
                 (Entry::Drawing, Some(n)) if n > 1 => {
                     doc.open(entry, format!("{lies}{then}"));
-                    doc.say(Tone::Done, format!("Picked {named}: it has {n} pages. Pick the page to trace over from the list."));
+                    doc.say(Tone::Done, format!("Picked {stem}: it has {n} pages. Pick the page to trace over from the list."));
                 }
                 _ => {
                     doc.open(entry, format!("{lies}{then}"));
-                    doc.say(Tone::Done, format!("Picked {named}. Enter brings it in."));
+                    doc.say(Tone::Done, format!("Picked {stem}. Enter brings it in."));
                 }
             }
         }));
     }
     if files.is_empty() {
-        f.spawn(text(fonts, format!("Nothing here that can be brought in ({}). Look in a folder, or go up.", kinds.iter().map(|k| k.trim_start_matches('.').to_uppercase()).collect::<Vec<_>>().join(", ")), 10.5, Weight::Regular, theme::ink_faint()));
+        f.spawn(text(fonts, format!("No {what} here. Look in a folder{}.", if here.parent().is_some() { ", or go back" } else { "" }), 10.5, Weight::Regular, theme::ink_faint()));
     }
     if files.len() > 40 || folders.len() > 30 {
         f.spawn(text(fonts, "More than fit in this list: type the start of the name, or go into a folder.", 10.5, Weight::Regular, theme::ink_faint()));
     }
+}
+
+/// A file's name as a person reads it, and what kind of thing it is in a word: the
+/// ending is a computer's way of saying the second, and is not shown.
+fn plain_name(name: &str) -> (String, &'static str) {
+    let (stem, ending) = name.rsplit_once('.').unwrap_or((name, ""));
+    let kind = match ending.to_lowercase().as_str() {
+        "pdf" => "PDF",
+        "png" | "jpg" | "jpeg" => "picture",
+        "csv" => "table",
+        "xlsx" => "workbook",
+        "ifc" => "BIM model",
+        _ => "",
+    };
+    (stem.to_string(), kind)
 }
 
 /// The list a file is picked from, at the head of the left panel while a drawing or a
@@ -528,19 +616,27 @@ fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entr
 /// size to it is below the foot of the panel: the status line said "pick the file from
 /// the list" and no list was on screen (J22B-29, J22A-14).
 fn picker(c: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
+    // The list comes first: a file is picked. Its name can still be typed, in a field
+    // under the list, for whoever would sooner (the field stood first, with a path
+    // for its example: J24B-38).
+    let type_it = |f: &mut ChildSpawnerCommands, typed: &str, more: &str| {
+        f.spawn(Node { height: px(4.0), ..default() });
+        theme::field(f, fonts, "Or type its name", typed, "", 1, LEFT_W - 30.0);
+        f.spawn(text(fonts, format!("{more}Enter brings it in. Esc cancels."), 10.5, Weight::Regular, theme::ink_faint()));
+    };
     match doc.entry {
         Some((Entry::Drawing, _)) => {
             heading(c, fonts, "Add drawing");
             c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
                 let typed = doc.entry.as_ref().map(|e| e.1.clone()).unwrap_or_default();
-                theme::field(f, fonts, "Plan", &typed, "", 1, LEFT_W - 30.0);
                 // The plan picked, when it has more than one page: its pages, each a
                 // row to click, which adds that page as the drawing.
                 let picked = typed.rsplit_once(',').map(|(file, _)| file.trim().to_string()).filter(|file| !file.is_empty());
                 let pages = picked.as_ref().and_then(|file| pages_of(&crate::plans::folder_of(&doc.path).join(file)).map(|n| (file.clone(), n))).filter(|(_, n)| *n > 1);
                 match pages {
                     Some((file, n)) => {
-                        f.spawn(text(fonts, format!("This plan has {n} pages. Pick the one to trace over."), 10.5, Weight::Regular, theme::ink_faint()));
+                        let stem = plain_name(file.rsplit('/').next().unwrap_or(&file)).0;
+                        f.spawn(text(fonts, format!("{stem} has {n} pages. Pick the one to trace over."), 10.5, Weight::Regular, theme::ink_faint()));
                         for page in 1..=n.min(80) {
                             let file = file.clone();
                             row(f, false, format!("Page {page}"), move |doc| {
@@ -552,35 +648,40 @@ fn picker(c: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
                             });
                         }
                         if n > 80 {
-                            f.spawn(text(fonts, "More pages than fit in this list: type the page's number after the comma above, then Enter.", 10.5, Weight::Regular, theme::ink_faint()));
+                            f.spawn(text(fonts, "More pages than fit in this list: type the page's number after the comma in the field below, then Enter.", 10.5, Weight::Regular, theme::ink_faint()));
                         }
                         f.spawn((text(fonts, "OR ANOTHER PLAN", 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
                     }
                     None => {
-                        f.spawn(text(fonts, "Pick the plan below (a PDF, PNG or JPEG), or drop it on this window.", 10.5, Weight::Regular, theme::ink_faint()));
+                        f.spawn(text(fonts, "Pick the plan (a PDF or a picture of it), or drop it on this window.", 10.5, Weight::Regular, theme::ink_faint()));
                     }
                 }
-                pick_list(f, fonts, doc, Entry::Drawing, &[".pdf", ".png", ".jpg", ".jpeg"], ", 1");
+                pick_list(f, fonts, doc, Entry::Drawing, &[".pdf", ".png", ".jpg", ".jpeg"], ", 1", "plan");
+                type_it(f, &typed, "");
             });
         }
         Some((Entry::BringIn(what), ref typed)) => {
             heading(c, fonts, &format!("Bring in: {}", what.name().to_lowercase()));
-                c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
-                    theme::field(f, fonts, &format!("{}: its file", what.name()), typed, "", 1, LEFT_W - 30.0);
-                    let hint = match what {
-                        crate::model::Bring::Prices => "A CSV or XLSX, like lists/ridge.xlsx. A supplier's name can follow a comma. Enter brings it in. Or drop the file on this window.",
-                        crate::model::Bring::Model => "An IFC file, like models/mechanical.ifc. Enter brings it in. Or drop the file on this window.",
-                        crate::model::Bring::Sheet => "A maker's sheet as a PDF, like sheets/vanity.pdf. If its name does not say what it is, say after a comma: fixture, equipment or furnishing. Enter makes it an item to place.",
-                        _ => "A CSV or XLSX. Enter brings it in. Or drop the file on this window.",
-                    };
-                    f.spawn(text(fonts, hint, 10.5, Weight::Regular, theme::ink_faint()));
-                    let kinds: &'static [&'static str] = match what {
-                        crate::model::Bring::Model => &[".ifc"],
-                        crate::model::Bring::Sheet => &[".pdf"],
-                        _ => &[".csv", ".xlsx"],
-                    };
-                    pick_list(f, fonts, doc, Entry::BringIn(what), kinds, "");
+            c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
+                let hint = match what {
+                    crate::model::Bring::Prices => "Pick the price list (a table or a workbook), or drop it on this window.",
+                    crate::model::Bring::Model => "Pick the model (IFC), or drop it on this window.",
+                    crate::model::Bring::Sheet => "Pick the maker's sheet (a PDF), or drop it on this window. It is made an item to place.",
+                    _ => "Pick it (a table or a workbook), or drop it on this window.",
+                };
+                f.spawn(text(fonts, hint, 10.5, Weight::Regular, theme::ink_faint()));
+                let kinds: &'static [&'static str] = match what {
+                    crate::model::Bring::Model => &[".ifc"],
+                    crate::model::Bring::Sheet => &[".pdf"],
+                    _ => &[".csv", ".xlsx"],
+                };
+                pick_list(f, fonts, doc, Entry::BringIn(what), kinds, "", what.said());
+                type_it(f, typed, match what {
+                    crate::model::Bring::Prices => "A supplier's name can follow a comma. ",
+                    crate::model::Bring::Sheet => "If its name does not say what it is, say after a comma: fixture, equipment or furnishing. ",
+                    _ => "",
                 });
+            });
         }
         _ => {}
     }

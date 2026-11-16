@@ -3519,3 +3519,29 @@ laser has to be set to send its unit (the fixed rules name the laser, and that
 sentence is for the person holding one); a system's class is written as its standard
 writes it ("Supply Air", "Domestic Cold Water") where the job's own name for the
 system is in a builder's hand ("Supply air").
+
+### Call 98. Every panel has a switch; the lists a file is picked from, in a builder's words (2026-11-16)
+
+Two more answers to the twenty-fourth judgment, part B.
+
+- **Each of the three panels has a switch**, on a card at the lower right: Job (the
+  lists down the left), Details (what is selected, down the right), Tools (the bar
+  along the foot). The fixed rule is that every panel has a switch that reads on or
+  off at a glance; only Next steps could be put away (J24B-40). A panel put away
+  comes back by itself while something in it is being typed or a tool is in hand, so
+  that nothing is typed out of sight, and its switch reads on while it is there.
+  Switched off then, what was in hand is let go first.
+- **The list comes first and nothing in it is a path.** A file is shown by its name
+  without its ending, with what it is in a word at the right: PDF, picture, table,
+  workbook, BIM model. A folder is shown by a drawn folder and its name; the way out
+  is "Back to" and the name of the folder outside. The field to type a name in is
+  under the list, headed "Or type its name" (it stood first, with "lists/ridge.xlsx"
+  as its example). Call 94 kept "file" and "folder" as words; VISUAL.md A8 says "no
+  folder path; no file name", the judge failed the list on it twice, and A8 is the
+  standard: this replaces that part of call 94. "Folder" is still said in one
+  sentence ("Look in a folder"): it is the office's word before it was a
+  computer's.
+- **Kept as they are:** PDF, IFC and CSV on a button or in a hint. They are what the
+  people who send those files call them ("send me the PDF", "the IFC"), and the fixed
+  rules name them. A file written out is still said by its whole name ("Wrote house
+  estimate.xlsx, beside the job"): it has to be found afterwards, by that name.
