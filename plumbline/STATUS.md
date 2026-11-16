@@ -30,10 +30,9 @@ run again and each gave what this file said they gave.
 
 ## The release candidate: the thirteen, as they stand on 2026-11-16
 
-**It is not a release candidate and it is not tagged.** Items 9 and 11 were judged on
-2026-11-16 and failed; items 10 and 12 are with a judge that has not reported, whose
-notes already show the money path broken twice; item 13 has nothing to be run
-against. What follows is each item, its evidence, and what it lacks. (The table this
+**It is not a release candidate and it is not tagged.** Items 9, 10, 11 and 12 were
+each judged on 2026-11-16 by an agent that did not build the program, and each
+failed; item 13 has nothing to be run against. What follows is each item, its evidence, and what it lacks. (The table this
 replaces was written on 2026-11-11 and described a program with no VIF list, no
 exports and plans only in the window. The D rows above it are the record of what was
 built before Patrick's ruling 12 and are left as they were.)
@@ -58,9 +57,9 @@ are being run again on the build of b03129e; until that run ends, no picture in
 | 7 | The sheet: stretch-out on the line, labor switched per line, overhead and profit, three suppliers | `demos/d5.sh`, `demos/d5w.sh`: all four in the window. Judged: 11, 17A | **`d5w` failed on the last run** (a price typed on its line did not land). The cause may be the one found by 22A (a click redrew the sheet and sent it to its top), fixed in b03129e; the rerun will say |
 | 8 | Exports: xlsx with live formulas, CSV, IFC4 validated by IfcOpenShell; three lenses | `demos/export.sh`: the workbook's amounts and recap are formulas that come to the job's figures; the IFC is checked by IfcOpenShell run as an outside program (`tools/ifc-check.py`); the supplier, subcontractor and PM lenses come from one estimate. `demos/itemsw.sh` writes each from the window. Judged: 17A, 17B, 21 | The fixes to 21 (walls written through at corners, a level's height) are not judged |
 | 9 | A judge lists every word on every screen; none is a software term | Judged 2026-11-16 (22B): about 620 entries by screen, `research/judgment-22b-words.md` | **FAIL: 69 marked** (18 software terms, 43 a builder would trip on, 7 units not the trade's way, 1 British spelling). The deciding one is the Add drawing list: file, folder, page after a comma, file names. Some are fixed since ("ELEMENT", "solid", "FACETS", four-place rates, sizes in feet-inches); the list is not |
-| 10 | A veteran estimator with no software background completes a whole-house takeoff from a PDF using only the in-app help | With judge 22A, **not reported**. From its notes: level, drawing, scale, walls, openings, floor, rooms, roof and a pipe all done from the on-screen help alone; stuck twice (a room that took the whole floor; a wall under the roof that could not be clicked); pricing reached | Its verdict. Both places he was stuck are changed and not judged |
+| 10 | A veteran estimator with no software background completes a whole-house takeoff from a PDF using only the in-app help | Judged 2026-11-16 (22A), `research/judgment-22a-notes.md`. Level, drawing, scale, walls, openings, floor, rooms, roof and a pipe were all done from the on-screen help alone, and two assemblies priced | **FAIL**: an allowance entered as the screen said never reached the price (J22A-10); no way to put labor on anything (J22A-13); most of the house left unpriced. Changed since and not judged: the allowance is said wherever the price is read (Q26 is whether it belongs in it); a cost line, labor included, can be added in the window. The starter assemblies still carry no labor |
 | 11 | The visual judge passes every screen against `VISUAL.md` | Judged 2026-11-16 (22B), line by line: `research/judgment-22b-notes.md` | **FAIL** on A1 (full-width bars; panels over about 45% of the window), A2 (no shadow under a panel on plan), C2 (no sky), and on A4, A5, A6, D8. Fixed since and not judged: C2, A4, most of A5, part of A6. Open: A1, A2, D8 and the rest in the table at the end of this file |
-| 12 | A fresh judge walks the whole path cold and cannot break the money path | With judge 22A, **not reported** | **Its notes show it broken twice**: an area six times the room shown as a figure (J22A-3), and $8,580 of allowance in no line of the price with nothing said (J22A-10). Both are changed, with tests, and not judged |
+| 12 | A fresh judge walks the whole path cold and cannot break the money path | Judged 2026-11-16 (22A). Every typed-nonsense, undo and redo, reopen and changed-quantity check agreed to the cent between the top bar, the sheet and the saved job | **FAIL**: $8,580 of allowance in no line of the price with nothing said (J22A-10); the verify-in-field list leaves the roof's dollars out (J22A-18, **open**); an area six times the room shown as a figure (J22A-3). J22A-10 and J22A-3 are changed, with tests, and not judged |
 | 13 | A hand estimate in `refs/` reproduced, every difference explained | None | **Pending**: `refs/` holds the brief and the first handoff and no estimate (Q5) |
 
 **What Patrick is asked.** Nothing blocks the work. Three questions are his and each
@@ -5666,8 +5665,17 @@ strips and the panels cover about 45% of the window; no shadow under a panel on
 plan; no sky) and independently on A4, A5, A6 and D8. The words fail on the Add
 drawing list (file, folder, page-after-a-comma, file names) and on "solid",
 "ELEMENT", "snap", a cable named by its diameter, and units not written the trade's
-way. **Part A had not reported when this was written**; the rows below are from its
-notes as far as they went (J22A-1 to J22A-12).
+way. **Part A reported later the same day. Its verdicts: item 10 (a veteran completes
+a whole-house takeoff from the in-app help) FAIL; item 12 (the money path cannot be
+broken) FAIL.** Item 10 fails on J22A-10 (he did the allowance step as the screen
+said and its $8,580.05 never reached the price) and J22A-13 (no way to put labor on
+anything). Item 12 fails on J22A-10 and J22A-18 (the verify-in-field list leaves the
+roof's dollars out). What held, in its words: every typed-nonsense, undo and redo,
+reopen and changed-quantity check agreed to the cent between the top bar, the sheet
+and the saved job. He got, from the screen alone: a level, the plan scaled, eight
+walls, a door and two windows, a floor, three rooms, a hip roof that matched his
+hand figure, a pipe, two assemblies priced, overhead and profit, and the
+verify-in-field list read.
 
 What is fixed is fixed on the build of this commit and has **not been judged
 again**. "Seen" means I read it in a picture of that build.
@@ -5739,6 +5747,16 @@ gates pass.
 | J22A-15 | A supplier's list priced none of the cost lines of the same name, and "16 set" did not say on what | Said, not changed: the message says the prices were set on the job, and a note names each cost line that is named as a material on the list and is not made of it, and what would price it. The Material field now lists the job's materials to pick from (it asked for a name and showed none). **A list pricing the lines of its names is not built**: PROPOSALS.md 23 |
 
 
+**The last of part A's findings (J22A-16 to J22A-19), from its report.**
+
+| # | What was found | Where it stands |
+|---|---|---|
+| J22A-16 | "The roof is now 4 planes, 9 lines": on an estimate a line is a cost line; these are the roof's edges | **Open** (words) |
+| J22A-17 | Deleting a priced wall says "Deleted door 1, window 2, wall 1." and the price falls by $1,712.86 with nothing said of the seven lines that went. Undo restores it | **Open.** The delete should say the lines and the dollars that go with it |
+| J22A-18 | **The verify-in-field list leaves the roof out.** A plane carrying $773.47 of priced lines, all resting on an Assumed pitch, eave height and footprint, is not among the questions; nor is the drawing's scale, which every traced figure rests on; and a room with an allowance shows "no dollars riding on it" | **Open, and it is one of the two deciding fails of item 12.** Not looked into yet: `crates/world/src/vif.rs` asks its questions of what `building` measures, and a roof solved from its footprint keeps its pitch and eave on the roof, not on the plane the lines are on. It is the first thing to do when the demonstrations have finished running |
+| J22A-19 | Overhead of -5 answers "the job overhead: is a percentage from 0 to 1000" (a broken sentence); a profit of 250 % is taken without a word | **Open** |
+
+
 ## Start here (written 2026-11-16; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 298 tests pass,
@@ -5759,16 +5777,15 @@ path (part A). Each finding is a row in this file with where it stands. Calls 77
 dressed as it is priced, prices it in sixteen divisions, finds clashes, lists what
 to verify in the field by dollars, brings in and writes out price lists, assemblies,
 estimates and BIM files, and makes items from makers' sheets. **It is not a release
-candidate**: the look and the words were judged and failed (items 11 and 9), and the
-money path was broken twice by a judge in one day (item 12).
+candidate**: on 2026-11-16 the look, the words, the veteran's first day and the
+money path were each judged and each failed (items 11, 9, 10 and 12).
 
 **What is owed, in this order.**
 
-1. **Part A of the twenty-second judgment** (`research/judgment-22a-brief.md`): if its
-   report is not recorded under "The twenty-second judgment", it was cut off. Its
-   notes to J22A-12 are in `research/judgment-22a-notes.md`. Run it again to the end
-   on a frozen copy of the program; its two money findings are changed and need a
-   judge.
+1. **J22A-18: the verify-in-field list leaves the roof out.** It is a deciding fail
+   of item 12 and nothing has been done about it. Then the rest of part A's open
+   rows: labor lines in the starter assemblies (J22A-13), what a delete takes with
+   it (J22A-17), a sane limit on a markup (J22A-19).
 2. **The sixteen window demonstrations, run in a row on a frozen copy of the last
    commit, with nothing else running** (CLAUDE.md, "Running several window
    demonstrations in a row"). Their pictures are committed only when the run ends.
