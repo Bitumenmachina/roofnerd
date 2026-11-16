@@ -149,6 +149,13 @@ fn a_prior_estimate_is_set_against_the_job_and_is_no_part_of_its_price() {
     let how = Entered { status: Status::Assumed, source: "a made-up earlier estimate" };
     let (path, b) = tables::prior_in(&mut job, "Earlier estimate", &prior, None, how).unwrap();
     assert_eq!((b.rows, b.columns_not_used.clone(), b.not_used.clone()), (5, Vec::<String>::new(), vec![(6, "ROOFING: it has no figure at all (a heading or a note)".to_string())]));
+    // What it adds to is said the same wherever it is said (M21-7): Gutters has no
+    // amount written and comes to 120 x $14.00 = $1,680.00 in both. 5,950.00 + 585.00
+    // + 1,680.00 + 450.00 = $8,665.00.
+    let listed = view::elements(&mut job).into_iter().find(|e| e.path == path).unwrap();
+    let said = listed.rows.iter().find(|r| r.label == "lines of a prior estimate").unwrap().text.clone();
+    assert_eq!(said, "4, adding to $8,665.00");
+    assert_eq!(tables::compare(&mut job).iter().find(|c| c.path == path).unwrap().prior_total, 8665.00);
     // (Its Notes column is kept with each line since the seventeenth judgment, J17B-25.)
     // It is in the job, under the job, flagged as it was brought; the job's cost is what
     // it was, and the file loads and saves to the same bytes.

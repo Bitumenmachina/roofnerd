@@ -61,11 +61,14 @@ fn operand(on: &On, line: &CostLine, name: &str) -> Result<Operand, String> {
         });
     }
     if let Some((_, unit)) = on.kind.measures().iter().find(|(m, _)| *m == name) {
+        // A height or a width is a length like any other: two legs and a head of casing
+        // is 2 × height + width, in LF (M21-8: it was refused, and the refusal said to
+        // use a figure nobody could name).
         let dim = match *unit {
-            "LF" => 1,
+            "LF" | "ft" => 1,
             "SF" => 2,
             "" => 0,
-            other => return Err(format!("uses {name}, which is in {other}; inside a formula use the figure it comes from, or price the line by {name} alone", name = crate::view::words(name))),
+            other => return Err(format!("uses {name}, which is in {other}; a formula works in lengths, areas and counts. Price the line by {name} alone", name = crate::view::words(name))),
         };
         let d = on.measure.and_then(|m| m.0.get(name));
         return Ok(Operand { value: d.and_then(|d| d.value), dim, status: d.map(|d| d.status).unwrap_or(Status::Unknown), shown: name.to_string() });
@@ -346,9 +349,16 @@ fn worked(me: &str, on: &On, line: &CostLine, order_by: Option<&Order>, price: &
     let mut text = read.worked.text.clone();
     // A count is whole: 26.67 fasteners is 27. What is below zero is refused before it is
     // rounded, so it is never rounded up to nothing.
-    // A number typed as the whole quantity (2.5 months of a dumpster) is what was typed.
-    let typed = matches!(read.expr, Expr::Num(_));
-    let is_count = read.unit == "EA" && !read.plain_measure && !typed;
+    // A number typed as the whole quantity (2.5 months of a dumpster) is what was
+    // typed, and so is one value entered on the line standing alone ("months", with
+    // months = 2.5): neither is worked out (call 85). Anything worked out in EA is a
+    // count of pieces and is whole (5 anchors at one to every 2 is 3).
+    let entered = match &read.expr {
+        Expr::Num(_) => true,
+        Expr::Name(name) => line.inputs.contains_key(name),
+        _ => false,
+    };
+    let is_count = read.unit == "EA" && !read.plain_measure && !entered;
     let value = if is_count {
         text.push_str(", rounded up to a whole number");
         count(read.worked.value)

@@ -3136,3 +3136,17 @@ unit the material is bought by (SF to the sheet) buys whole ones, and one that i
 much of it to something else (lb to the SF) does not. What was taken is said in what
 the import reports: ", whole ones only" or ", to the exact amount". The program's own
 price list writes yes or no in every row, so it reads back as it was written.
+
+### Call 85. One value entered on a line, standing alone, is what was entered (2026-11-16)
+
+From the code review of the model (M21-4). A line in EA is rounded up to a whole
+number where its quantity is worked out: 26.67 fasteners is 27, and 5 anchors at one
+to every 2 is 3 (the eleventh judgment, J11-3). A number typed as the whole quantity
+is what was typed: 2.5 months of a dumpster. But the same 2.5 entered as a value on
+the line and named as the quantity ("months", with months = 2.5) was rounded up to 3
+with the note "a count is whole": $1,950.00 against $1,625.00 by how it was entered.
+One value entered on the line, standing alone as the quantity, is now what was
+entered, as a typed number is. Anything worked out in EA is still whole (so "2.5 * 1"
+is 3: it is arithmetic, and says what it was rounded from). (A first form of this
+call made whole only what was worked from the takeoff; it made 2.5 anchors of
+"n / 2", which J11-3's test caught, and was withdrawn before it was committed.)

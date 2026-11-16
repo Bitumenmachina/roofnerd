@@ -982,12 +982,29 @@ pub fn prior_in(job: &mut Job, name: &str, rows: &[Vec<String>], numbers: Option
     })
 }
 
+/// What a line of a prior estimate comes to: its amount as written, or, where none is
+/// written, its quantity times its unit cost (and that it was worked here). The one
+/// place this is worked: what a prior adds to is this, wherever it is said.
+fn comes_to(l: &PriorLine) -> (Option<f64>, bool) {
+    match (l.amount, l.quantity, l.unit_cost) {
+        (Some(a), _, _) => (Some(a), false),
+        (None, Some(q), Some(c)) => (Some(crate::lines::cents(q * c)), true),
+        _ => (None, false),
+    }
+}
+
 /// The rows a flat reading of the job shows for a prior estimate.
 pub fn rows(w: &bevy_ecs::world::World, e: bevy_ecs::entity::Entity, path: &str) -> Vec<crate::view::Row> {
     let Some(p) = w.get::<Prior>(e) else { return Vec::new() };
     vec![crate::view::entered(path, "lines of a prior estimate", &p.lines, |l| {
-        let total: f64 = l.iter().filter_map(|x| x.amount).sum();
-        format!("{}, adding to ${}", l.len(), crate::view::figure(total, 2))
+        // What each line comes to is worked in one place (`comes_to`): a line with a
+        // quantity and a unit cost and no amount written comes to their product here
+        // as it does where the prior is set against the job (M21-7: the two added to
+        // different totals). A line that comes to nothing is said, not dropped.
+        let total = crate::lines::cents(l.iter().filter_map(|x| comes_to(x).0).sum());
+        let none = l.iter().filter(|x| comes_to(x).0.is_none()).count();
+        let left = if none == 0 { String::new() } else { format!(" ({} with no figure, not in it)", crate::view::so_many(none, "line")) };
+        format!("{}, adding to ${}{left}", l.len(), crate::view::figure(total, 2))
     })]
 }
 
@@ -1061,12 +1078,6 @@ pub fn compare(job: &mut Job) -> Vec<Compared> {
                 why: missing.join("; "),
                 status: its.iter().map(|l| l.amount.status.max(l.priced.status)).max().unwrap_or(Status::Unknown),
             })
-        };
-        // What each prior line comes to: its amount, or its quantity times its unit cost.
-        let comes_to = |l: &PriorLine| match (l.amount, l.quantity, l.unit_cost) {
-            (Some(a), _, _) => (Some(a), false),
-            (None, Some(q), Some(c)) => (Some(crate::lines::cents(q * c)), true),
-            _ => (None, false),
         };
         // Lines of the prior estimate that go by one name are one line here, added
         // together: the job's lines of that name are set against all of them at once,

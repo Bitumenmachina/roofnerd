@@ -4345,6 +4345,37 @@ fn drawn() -> (Job, String, String, String, String) {
     (job, s, wt, dt, nt)
 }
 
+/// Casing is taken off by the opening's own size: two legs and a head. A height and a
+/// width are lengths and work in a formula as any length does (M21-8: they were in
+/// "ft" and a formula refused them). A door 3 ft by 7 ft: 2 x 7 + 3 = 17 LF. Corner
+/// bead up both ends of a 9 ft wall: 18 LF. A volume still has no place in a formula,
+/// and the refusal says what does.
+#[test]
+fn casing_is_taken_off_by_the_openings_own_size() {
+    use plumbline_world::editing as ed;
+    let how = ed::Entered { status: Status::Known, source: "made-up plan" };
+    let (mut job, s, wt, dt, _) = drawn();
+    let wall = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [20.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap().remove(0);
+    let door = ed::opening(&mut job, &wall, Kind::Door, &dt, ed::OnWall::Offset("5 ft"), "0 ft", how).unwrap();
+    job.add_line(&door, "Casing, one side", "2 * height + width", Some(Class::Material), false).unwrap();
+    job.add_line(&wall, "Corner bead", "2 * height", Some(Class::Material), false).unwrap();
+    job.derive();
+    let quantity = |job: &mut Job, path: &str, line: &str| {
+        let e = job.find(path).unwrap();
+        job.world.get::<plumbline_world::LineQuantities>(e).unwrap().0[line].quantity.clone()
+    };
+    let casing = quantity(&mut job, &door, "Casing, one side");
+    assert_eq!((casing.value, casing.unit.as_str(), casing.status), (Some(17.0), "LF", Status::Known), "{casing:?}");
+    let bead = quantity(&mut job, &wall, "Corner bead");
+    assert_eq!((bead.value, bead.unit.as_str()), (Some(18.0), "LF"), "{bead:?}");
+    // A footing's concrete is a volume: not in a formula, and the refusal says what is.
+    // A footing's type is made as a wall's is: its thickness is the footing's width.
+    let ft = ed::wall_type(&mut job, "footing 24 x 12", "24 in", how).unwrap();
+    let footing = ed::footings(&mut job, &s, &ft, &[[30.0, 0.0], [40.0, 0.0]], false, "12 in", how).unwrap().remove(0);
+    let refused = job.add_line(&footing, "Forms", "volume * 2", Some(Class::Material), false).unwrap_err();
+    assert!(refused.contains("a formula works in lengths, areas and counts") && !refused.contains("the figure it comes from"), "{refused}");
+}
+
 #[test]
 fn a_house_is_drawn_from_nothing_and_its_figures_are_the_ones_worked_by_hand() {
     use plumbline_world::editing as ed;

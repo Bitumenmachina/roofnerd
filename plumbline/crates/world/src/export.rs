@@ -33,6 +33,9 @@ pub enum Out {
     Dollars(f64),
     /// A formula as a workbook writes it, and what it comes to in the job (dollars).
     Formula { text: String, value: Option<f64> },
+    /// A formula that counts (so many lines), and the count in the job: shown as a
+    /// whole number, never as dollars (M21-5: "$1.00" lines).
+    FormulaCount { text: String, value: usize },
     /// A formula that, in the job as it stands, comes to a word or to nothing: "none"
     /// for a cost type with no priced line yet, nothing for an amount with no price
     /// yet. It turns to a figure when what it rests on is filled in on the sheet.
@@ -48,6 +51,7 @@ impl Out {
             Out::Number(x) => format!("{}", x + 0.0),
             Out::Dollars(x) | Out::Formula { value: Some(x), .. } => format!("{:.2}", x + 0.0),
             Out::Formula { value: None, .. } => String::new(),
+            Out::FormulaCount { value, .. } => value.to_string(),
             Out::FormulaText { shown, .. } => shown.clone(),
         }
     }
@@ -217,7 +221,7 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
             (None, _, _) | (_, Status::Known, _) => String::new(),
             (_, s, _) => format!("as written: {}, {} of it rests on something assumed", sure(s), format_args!("${:.2}", c.total.assumed)),
         };
-        let lines = Out::Formula { text: format!("=COUNTIFS({types},\"{name}\",{amounts},\">=0\")"), value: Some(c.total.members as f64) };
+        let lines = Out::FormulaCount { text: format!("=COUNTIFS({types},\"{name}\",{amounts},\">=0\")"), value: c.total.members };
         let note = match (c.hours_unpriced_said(), note.is_empty()) {
             (Some(more), true) => more,
             (Some(more), false) => format!("{note}; {more}"),
@@ -233,7 +237,7 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
         Some(v) => Out::Formula { text: cost_rule, value: Some(v) },
         None => Out::FormulaText { text: cost_rule, shown: "none".into() },
     };
-    recap.push(vec![text("Job cost"), cost, Out::Formula { text: format!("=SUM(C{class_first}:C{class_last})"), value: Some(est.job_cost.members as f64) }, Out::None, text(if est.job_cost.status == Status::Known || est.job_cost.value.is_none() { String::new() } else { format!("as written: {}", sure(est.job_cost.status)) })]);
+    recap.push(vec![text("Job cost"), cost, Out::FormulaCount { text: format!("=SUM(C{class_first}:C{class_last})"), value: est.job_cost.members }, Out::None, text(if est.job_cost.status == Status::Known || est.job_cost.value.is_none() { String::new() } else { format!("as written: {}", sure(est.job_cost.status)) })]);
     let pct = |v: Option<&crate::Val<f64>>| v.and_then(|v| v.value);
     let (overhead_pct, profit_pct) = (pct(est.markup.as_ref().map(|m| &m.overhead)), pct(est.markup.as_ref().map(|m| &m.profit)));
     match (overhead_pct, profit_pct) {
@@ -289,7 +293,7 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
             (_, Status::Known) => String::new(),
             (_, s) => format!("as written: {}", sure(s)),
         };
-        let lines = Out::Formula { text: format!("=COUNTIFS({divisions},\"{name}\",{amounts},\">=0\")"), value: Some(d.total.members as f64) };
+        let lines = Out::FormulaCount { text: format!("=COUNTIFS({divisions},\"{name}\",{amounts},\">=0\")"), value: d.total.members };
         by_division.push(vec![text(name), amount, lines, text(if d.total.members == 0 && d.total.left_out.is_empty() { String::new() } else { note })]);
     }
     let division_last = by_division.len();

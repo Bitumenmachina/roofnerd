@@ -327,6 +327,8 @@ pub enum Cell {
     /// A formula, with what it comes to as it is written, so a reader that does not
     /// work formulas out still shows the figure. Shown as dollars.
     Formula { text: String, value: Option<f64> },
+    /// A formula that counts, with the count as it is written. Shown as a whole number.
+    FormulaCount { text: String, value: usize },
     /// A formula that, as written, comes to a word or to nothing ("none" for a cost type
     /// with no priced line yet; nothing for an amount with no price yet): it turns to a
     /// figure when what it rests on is filled in.
@@ -350,7 +352,10 @@ pub fn xlsx(tabs: &[Tab]) -> Result<Vec<u8>, String> {
     let mut book = Workbook::new();
     let bold = Format::new().set_bold();
     let dollars = Format::new().set_num_format("$#,##0.00");
-    let figure = Format::new().set_num_format("#,##0.####");
+    // Two places always and up to four: "40.00", "419.2627". ("#,##0.####" writes a
+    // whole 40 as "40." with a point and nothing after it.)
+    let figure = Format::new().set_num_format("#,##0.00##");
+    let count = Format::new().set_num_format("0");
     for tab in tabs {
         let sheet = book.add_worksheet();
         // A formula that comes to nothing is written with nothing, not with 0 (J17C-5).
@@ -385,6 +390,9 @@ pub fn xlsx(tabs: &[Tab]) -> Result<Vec<u8>, String> {
                         };
                         sheet.write_formula_with_format(r, c, formula, &dollars).map_err(fault)?;
                     }
+                    Cell::FormulaCount { text, value } => {
+                        sheet.write_formula_with_format(r, c, Formula::new(text).set_result(value.to_string()), &count).map_err(fault)?;
+                    }
                     Cell::FormulaText { text, shown } => {
                         sheet.write_formula_with_format(r, c, Formula::new(text).set_result(shown.clone()), &dollars).map_err(fault)?;
                     }
@@ -417,6 +425,7 @@ pub fn workbook(sheets: &[plumbline_world::export::OutSheet]) -> Result<(Vec<u8>
                             Out::Number(x) => Cell::Number(*x),
                             Out::Dollars(x) => Cell::Dollars(*x),
                             Out::Formula { text, value } => Cell::Formula { text: text.clone(), value: *value },
+                            Out::FormulaCount { text, value } => Cell::FormulaCount { text: text.clone(), value: *value },
                             Out::FormulaText { text, shown } => Cell::FormulaText { text: text.clone(), shown: shown.clone() },
                         })
                         .collect()
@@ -424,6 +433,6 @@ pub fn workbook(sheets: &[plumbline_world::export::OutSheet]) -> Result<(Vec<u8>
                 .collect(),
         })
         .collect();
-    let formulas = sheets.iter().flat_map(|s| s.rows.iter().flatten()).filter(|c| matches!(c, Out::Formula { .. } | Out::FormulaText { .. })).count();
+    let formulas = sheets.iter().flat_map(|s| s.rows.iter().flatten()).filter(|c| matches!(c, Out::Formula { .. } | Out::FormulaCount { .. } | Out::FormulaText { .. })).count();
     Ok((xlsx(&tabs)?, formulas))
 }

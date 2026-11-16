@@ -261,3 +261,24 @@ fn a_coverage_on_a_price_list_buys_whole_sheets_as_a_typed_one_does() {
     }
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+/// A quantity made of a value entered on the line is what was entered, as one typed
+/// is (call 85; M21-4: 2.5 months of a dumpster at $650 came to $1,950.00 as "months"
+/// and $1,625.00 as 2.5).
+#[test]
+fn a_value_entered_on_a_line_is_not_made_whole_as_a_count_of_pieces_is() {
+    let dir = folder("months");
+    assert!(run(&dir, &["new", "j.json", "General conditions (not a real job)"]).0);
+    let added = run(&dir, &["line", "j.json", "job-0001", "Dumpster", "2.5", "--cost-type", "general", "--division", "1"]);
+    assert!(added.0, "{}", added.1);
+    assert!(run(&dir, &[&["set", "j.json", "job-0001", "unit_cost", "650", "--line", "Dumpster"][..], &KNOWN[..]].concat()).0);
+    // 2.5 x $650.00 = $1,625.00, typed.
+    let typed = run(&dir, &["estimate", "j.json"]).1;
+    assert!(typed.contains("$1,625.00"), "{typed}");
+    // The same 2.5 as a value on the line.
+    let named = run(&dir, &[&["set", "j.json", "job-0001", "quantity", "months", "--line", "Dumpster", "--with", "months=2.5"][..], &KNOWN[..]].concat());
+    assert!(named.0, "{}", named.1);
+    let entered = run(&dir, &["estimate", "j.json"]).1;
+    assert!(entered.contains("$1,625.00") && !entered.contains("$1,950.00") && !entered.contains("a count is whole"), "{entered}");
+    std::fs::remove_dir_all(&dir).unwrap();
+}
