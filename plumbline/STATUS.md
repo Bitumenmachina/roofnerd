@@ -78,7 +78,15 @@ sheets and each set was committed after its own run had ended; the pictures in
 passed**, and `demos/itemlibw.sh` (the item library in the window), never run before,
 passed on its first run: twenty-three window demonstrations pass on 9868569. The
 twenty-one command-line demonstrations pass on that copy too (`demos/field-job.sh`
-is not one: it writes the job two of them start from).
+is not one: it writes the job two of them start from). **A third full run, on a
+frozen copy of c0d5922 (calls 106 to 109: what the twenty-fifth judgment found),
+ended on 2026-11-16, in the night, with nothing compiling beside it: all twenty-four
+window demonstrations passed, each on its first run**, `demos/turnw.sh` among them,
+never run before; and the twenty-one command-line demonstrations on the same copy.
+(A first start of that run failed every one of them at once on a quoting mistake in
+my own run script, before any program was started; it was put right and run again.)
+Every picture was read on contact sheets and each set committed after its own run
+had ended: **the pictures in `demos/captured/` are of c0d5922.**
 
 | # | Item | Evidence | What it lacks |
 |---|---|---|---|
@@ -6194,7 +6202,7 @@ maker's sheet and placed, and that was all. What is there now, and what is not:
 | **In the window** | Starter items and Item library under Bring in; Item library (CSV) under Write out; the Items list under each trade's name, a row taking the item in hand and its Change button opening it on the right; on an item's panel its sizes on their rows, and "Drawn as" and "Trade" as rows to click. **Seen**: the starter brought in, a sink, a water heater, an outdoor unit and a vanity set down (each drawn as what it is: this is also the first look at call 102's three forms), the vanity opened and made a sofa, and the one standing on the floor redrawn as one. **Seen since, in `demos/itemlibw.sh` (passed on its first run, on a frozen copy of 9868569)**: the starter items brought in and said, a vanity set down, opened from the list by its Change button, made a box with a click and said ("is drawn as a box, wherever one stands"), the library written out from the window beside the job (21 rows), and another job reading the same 21 items from that file. **What the pictures show and the script does not check**: a single item set down in an empty job is a small box far off; opening an item does not bring the view to it |
 | **Not built** | A bench where an item stands alone and its shape is made or changed by hand; an item's own shape as data in the library (it is one of thirteen built in, or its box); connections on an item from the library; a price on an item. PROPOSALS.md 28 |
 | **The three libraries he named** | Read from their own pages by an agent on Sonnet: `research/item-libraries-survey.md`. All three may be linked (Unlicense, MIT, 0BSD). None is: rgeometry is 2D only, plexus has one release from 2019, fornjot's README begins "This project has been shut down". QUESTIONS.md Q27 asks whether he wants their feel or their code; the working answer is the feel |
-| **Not judged** | Nobody who did not build it has tried to break any of this |
+| **Judged once, on 9868569** | The twenty-fifth judgment, part A (its section below): "Not yet a library I can keep", with seven reasons, five answered since (calls 107 and 109) and none of the answers judged |
 
 `tools/portmap.sh` caught one false
 claim on the way (that BIMCraft has no `const BOX`: it has two, in a point-cloud
@@ -6239,18 +6247,18 @@ saved, closed and opened again with everything where it stood.
 
 | # | Finding | Where it stands |
 |---|---|---|
-| J25A-6 | **A width changed in the library did not reach the range already set down**, and the screen said "changed: its width"; the clash test ran on the old size | **Fixed, tested, not seen (call 107)**: what is set down follows, and the row says how many did |
-| J25A-3 | A thing set down cannot be turned: a panelboard on a north wall stands through it | **Built, tested, not seen (call 107)**: Turn a quarter, or Q. No turn by a typed angle |
-| J25A-4 | Setting a thing down into a wall says nothing; only a move does | **Built, not seen (call 107)** |
-| J25A-1 | On plan a lavatory, a water closet and a tub are white on white with no edge and no name | **Built, not seen (call 107)**: each block outlined in ink. Still not named on plan |
-| J25A-2 | Taking an item in hand on plan throws the view to 3D without a word | **Built, not seen (call 107)**: the plan stays |
-| J25A-5 | "in the same space as Bathtub, 5 ft by 1' 4"" reads as a size | **Built, not seen (call 107)**: "Bathtub, 5 ft (1' 4" into each other)" |
+| J25A-6 | **A width changed in the library did not reach the range already set down**, and the screen said "changed: its width"; the clash test ran on the old size | **Fixed, tested, seen in `demos/turnw.sh`**: what is set down follows, and the row says how many did; its panel reads 20 × 4 × 30 in |
+| J25A-3 | A thing set down cannot be turned: a panelboard on a north wall stands through it | **Built, tested, seen in `demos/turnw.sh`**: Turn a quarter, or Q; "Turned 90 deg, Assumed, turned by hand in the model" on its panel. No turn by a typed angle |
+| J25A-4 | Setting a thing down into a wall says nothing; only a move does | **Built, seen in `demos/turnw.sh`**: "It is in the same space as wall 2 (4 3/8 in into each other)", held to where it stands |
+| J25A-1 | On plan a lavatory, a water closet and a tub are white on white with no edge and no name | **Built, seen by hand and in the plan pictures of the run of c0d5922**: each block outlined, in a lighter line than a wall's. Still not named on plan |
+| J25A-2 | Taking an item in hand on plan throws the view to 3D without a word | **Built, seen in `demos/turnw.sh`** (its next step clicks a place on the plan): the plan stays |
+| J25A-5 | "in the same space as Bathtub, 5 ft by 1' 4"" reads as a size | **Built, seen in `demos/turnw.sh`**: "wall 2 (4 3/8 in into each other)" |
 | J25A-7 | An item's weight is written as three blanks: a blank "how sure" is none of the three | **Fixed, tested (call 107)**: Unknown, "not said" |
 | J25A-18 | **Starter items pressed a second time threw away changes to three items** (a lavatory measured 24 in, Known, drawn as a sink, went back to 20 in, Assumed, a lavatory) and said only "Brought in 3 starter items"; the lavatory standing in the room kept 24 in and no longer matched its item | **Fixed, tested, not seen (call 109)**: the shipped library adds what is missing and writes over nothing the job has, and says how many were left |
 | J25A-16 | A refused price closes its field; the "0" typed next took the Cable tool in hand | **Built, not seen (call 109)**: the field stays open with what was typed |
 | J25A-17 | A pitch of 40:12 and an eave moved 40 ft are taken without a word | Open. The dollars are now said (J25A-13); nothing questions the figure |
 | J25A-19 | Words: "roof solved again", "the roof this plane is solved from", "the detail is not whole", "Comes to, detail rate", "Like for like", "What its name says", "(CSV)" on buttons, "table" beside a file, "22 set on the job", "no more than a billion" | "(CSV)" and "(IFC)" are off the buttons (call 109). The rest: open |
-| J25A-12 | **STOP: a supplier's list whose names match the lines word for word priced none of them** when brought in with the supplier's name, as the window invites; "22 set on the job" and "and 16 more" hid what it did | **Fixed, tested, not seen (call 108)**: a supplier's price is the job's where the job has none; the lines priced are said first. J24A-18's fix (call 104) held only for a list with no supplier named |
+| J25A-12 | **STOP: a supplier's list whose names match the lines word for word priced none of them** when brought in with the supplier's name, as the window invites; "22 set on the job" and "and 16 more" hid what it did | **Fixed, tested (call 108)**: a supplier's price is the job's where the job has none; the lines priced are said first. J24A-18's fix (call 104) held only for a list with no supplier named. **Seen in part**: in `demos/bringw.sh` a named supplier's list sets the job's price and says so, and names the three items that price nothing; that job has no cost line to price, so **a line taking its price from a named supplier's list has not been seen in the window** |
 | J25A-13 | Steeper took the price from $679.40 to $685.50 and the screen said nothing of the dollars | **Fixed, tested, not seen (call 108)**: a roof change that drops nothing says "What is priced on the roof changed with it: the job cost was $X and is $Y." The test's figure is worked by hand ($71.55 to $61.22). A pitch *measured* from the Verify list still moves the price without saying by how much |
 | J25A-14 | An allowance on a wall with no cost lines is kept out of the price: "$1,575 + markup short for that wall" | **Patrick's: QUESTIONS.md Q26.** The third veteran judge to read it so. The screen says it plainly (granted by all three); the working assumption stands until he rules |
 | J25A-15 | With the allowance note added, the top bar runs off the window's right edge | **Built, not seen**: with all four notes on the bar the count of known, assumed and unknown is left to the estimate window's bar |
@@ -6357,20 +6365,20 @@ panelboard in the library is 15 in wide, 4 in deep, 30 in high.
    one placed 1.6667 by 0.3333 by 2.5 ft, turned 90 degrees, Assumed, "turned (turned
    by hand in the model)".
 
-**Not run yet**: two judges were driving windows on the machine when it was written.
-Its set-up and the 4.50 in were tried at the command line.
+**Run on a frozen copy of c0d5922: it passed on its first run.** The click landed a
+dot short, at 23.490 ft east, so the thing was 4 3/8 in into the wall and that is what
+the window said; the script held what was said to where it stands. Its eight pictures
+were read: the red card as it is set down, "Turned ... 90 deg" and "20 × 4 × 30 in" on
+the panel.
 
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 315 tests pass,
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 320 tests pass,
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
-commit of code that was pushed, and the twenty command-line demonstrations pass on a
-frozen copy of 9868569. **All twenty-three window demonstrations pass on a frozen copy of 9868569** (calls 94
-to 105): the nineteen, and `roofw`, `pagew`, `gablew` and `itemlibw`, each run for the first time
-(`gablew` on its second run, after a mistake in its own script: the head of this file says what).
-Every picture was read and is committed. Read `CLAUDE.md`, then this section,
-then the table of thirteen, then "The twenty-fourth judgment, part B" and "part A"
-just above.
+commit of code that was pushed. **All twenty-four window demonstrations and the
+twenty-one command-line ones pass on a frozen copy of c0d5922**, the last commit of
+code; every picture was read and is committed. Read `CLAUDE.md`, then this section,
+then the table of thirteen, then the two sections of the twenty-fifth judgment above.
 
 **What happened on 2026-11-16.** Patrick asked for a fresh pass of code and review,
 the window and a clean-up, run alone. Two code reviewers read the model and the
@@ -6378,19 +6386,21 @@ window crate (42 findings); a twenty-first judge walked the four new trades (21)
 twenty-second pair judged the look and the words, and a veteran's first day and the
 money path; a twenty-third tried the money path at the command line; and a
 twenty-fourth pair did what the twenty-second did again, on the build after the
-fixes. Each finding is a row in this file with where it stands. Calls 77 to 105 in
-DECISIONS.md are the decisions made on the way; Q26 in QUESTIONS.md is new, and
-PROPOSALS.md 23 to 29. Q27 is new too.
+fixes. That afternoon Patrick asked for a workbench of items by trade kept like a
+database (call 105), and it was built as far as a library that is a table. In the
+night a twenty-fifth pair judged the item library and the money path, and the look
+and the words. Each finding is a row in this file with where it stands. Calls 77 to
+109 in DECISIONS.md are the decisions made on the way; Q26 and Q27 in QUESTIONS.md
+are new, and PROPOSALS.md 23 to 29.
 
 **What is true of the program today.** It traces a plan, builds the house in 3D
 dressed as it is priced, prices it in sixteen divisions, finds clashes, lists what
 to verify in the field by dollars, brings in and writes out price lists, assemblies,
 estimates and BIM files, and makes items from makers' sheets. **It is not a release
-candidate.** The look and the words (items 11 and 9) were judged twice on 2026-11-16
-and failed twice. The veteran's first day (item 10) failed in the morning; in the
-evening the twenty-fourth judge, part A, wrote in its notes that it had completed
-the whole path in the window from the screen alone, with every figure agreeing with
-its own arithmetic, and it had not yet reported.
+candidate.** The look and the words (items 11 and 9) were judged three times on
+2026-11-16 and failed three times; the money path (item 12) passed narrowly in the
+evening and failed in the night on a supplier's list; the veteran's first day (item
+10) passed in the evening on d20ac60 and has not been judged since.
 
 **The twenty-fifth judgment (2026-11-16, night, on 9868569) is in, both parts, and
 recorded above.** Part A: the money path FAILED on a supplier's list pricing nothing
@@ -6402,38 +6412,46 @@ third time (17 lines pass, 16 fail) and the words a third time (69 marked of abo
 
 **What is owed, in this order.**
 
-1. **Done on 2026-11-16, late**: `roofw`, `pagew`, `gablew` and `itemlibw` run for
-   the first time and the nineteen again, all on a frozen copy of 9868569.
-2. **Look at what is built and not seen.** Seen since, in the run of 9868569 or by
-   hand: a sink, a water heater and an outdoor unit drawn as what they are (call
-   102); a duct on plan as two edges over a wash; a production rate's field saying
-   "like 40 SF/hr". **Still not seen**: the Door tool offering the last door's
-   sizes; "Connection 1" on a fixture's panel; the warning when an allowance is
-   typed on a thing with no cost line.
-3. **See in the window what answers part A's two serious findings** and is so far only
-   built: a price list brought in pricing the lines named as its items (call 104; a
-   test holds it), and the warning when Steeper, Flatter, a gable or a moved eave
-   replaces a measured value. (`gablew` makes a gable of a roof scaled off a plan,
-   so nothing measured is replaced and the warning does not come up in it.)
-4. **The look**, which is Patrick's own test. Open after two judgments: whether the
-   panels read as glass (A2; thinner since call 97, not judged); equipment still
-   boxes (an air handler, a panelboard); no cabinets, so a bare kitchen and bath; no
-   fascia or soffit; clash marks seen through walls; the Known, Assumed, Unknown view
-   a grey house from outside; suppliers side by side on a job with none.
-5. **The words** still marked and not touched: a place in negative feet and inches
-   on a fixture's connection and a plane's corners; a cable by its diameter (it wants
-   "12-2 NM": PROPOSALS.md 25, since it is a new value in the model); a kind in the SIZE column of a system's tab; a name said twice on the
-   Clashes tab. `research/judgment-24b-words.md` has all 76.
-6. **Have items 9 to 12 judged again**, by agents that did not build them, on Opus or
-   Sonnet, told to write their notes as they go.
-7. **The item library is not judged.** Nobody who did not build it has tried to
-   break the table, the starter items or the panel an item is changed on.
-8. **The open rows** of the reviews and the twenty-first judgment (their tables
-   above): a keystroke re-reads the whole job (R21-2); the rest of one money writer (R21-12: `view::money` is there, and sentences still write their own);
+1. **Have items 9 to 12 judged again** on the last commit, by agents that did not
+   build it, on Opus or Sonnet, told to write their notes as they go. Nothing done
+   after 9868569 has been judged: calls 106 to 109.
+2. **See in the window what is built and has not been seen**: a cost line taking its
+   price from a named supplier's list (call 108; a test holds it); Steeper and a moved
+   eave saying what the job cost was and is (a test holds the figure); a roof plane
+   picked on plan by a click inside its outline; the top bar with all four notes on
+   it; a refused price keeping its field open; Starter items pressed twice leaving a
+   changed item as it is (a test holds it); Undo repeating what the step said, and
+   "doors and windows" ticking with one of each (call 106); a roof's lines coloured
+   by how sure in that view; the Door tool offering the last door's sizes on a job
+   opened again.
+3. **The item library, to be one a person keeps** (the twenty-fifth judge, part A):
+   an item added, renamed and deleted in the window; a price, a unit and labor on an
+   item (PROPOSALS.md 28, with an item's shape as data and the bench to make it on);
+   forms for a range, a refrigerator, a washer, a panelboard; a thing named on plan;
+   Starter assemblies pressed twice tried for the fault Starter items had.
+4. **The look**, which is Patrick's own test. Open after three judgments: the side
+   panels stand nearly the height of the window (A1, failed anew); rows cut by "more
+   below" (A5); red and amber used both for how sure and for messages (A6); no
+   soffit, gutter or step at the door (D5); equipment still boxes (D6); an empty
+   kitchen and bath and ducts across rooms (D8); the estimate's column heads scroll
+   away and a circuit is four lines by piece (F1); "none" where "no figure" is meant
+   (F2); a drawing has no switch (B8).
+5. **The words** still marked: lengths written four ways in one panel (decimal feet
+   beside feet and inches: the sample house keeps its doors at 6.67 ft); places as E,
+   N, H with negative feet and inches; "Comes to, detail", "rises from edge 1", "roof
+   solved again"; a cable by its diameter (PROPOSALS.md 25); "Architecture" for walls
+   and doors; a folder's and a file's name in the Add drawing list.
+   `research/judgment-25b-words.md` has all 69.
+6. **The money that is short or over and is said so here**: a gable end's triangle of
+   wall is not drawn and not priced (PROPOSALS.md 29); sheathing is rounded up to
+   whole sheets plane by plane (J25A-11); an allowance on a thing with no cost lines
+   is out of the price (Q26).
+7. **The open rows** of the reviews and the earlier judgments (their tables above): a
+   keystroke re-reads the whole job (R21-2); the rest of one money writer (R21-12);
    a footing dug wider cannot be recorded on it alone (J21-6); base is priced by a
    room's perimeter and drawn by its runs less its doors.
 
-**Patrick's, not the builder's.** Q27: whether he wants the feel of the three
+**Patrick's, not the builder's.** Q26 first: whether an allowance with no cost lines is in the price. Three veteran judges on three builds read "price" and expected it in; the builder's reading is the minority of four. Q27: whether he wants the feel of the three
 geometry libraries he named, or one of them linked (the working answer is the feel);
 and PROPOSALS.md 28, an item's shape as data and a bench to make it on. Q26: whether an allowance with no cost lines
 belongs in the price (the veteran judge read "PRICE" and expected it in; the working
