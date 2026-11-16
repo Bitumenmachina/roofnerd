@@ -61,10 +61,21 @@ wheel was over a panel": a door's edge three dots from where it had been, one mo
 than the check allows). A clean-checkout build was running beside it at that moment.
 **Run again alone on the same copy, with nothing beside it, `glassw` passed.** Every
 picture of the nineteen was read on contact sheets and each set was committed after
-its own run had ended. They are of b3e39a1: what was changed after it (calls 101 to
-104: "connection", the three new forms, ducts on plan, a price list pricing lines,
-the roof warnings) is in no picture yet. The twenty command-line demonstrations pass
-on the build with those changes.
+its own run had ended. **A second full run, on a frozen copy of 9868569 (calls 101
+to 105 and the item library), ended on 2026-11-16, later still, with nothing
+compiling beside it: twenty-two window demonstrations, twenty-one passed.** The
+nineteen all passed, `glassw` among them on its first run; `demos/roofw.sh` and
+`demos/pagew.sh`, never run before, passed on their first run; `demos/gablew.sh`,
+never run before, failed on a mistake in its own script (it looked for a wall type
+written with a multiplication sign where the window, rightly, quotes the name as it
+is kept, "2x6"). The script was put right, not loosened: what it looks for is what
+the program is meant to say. Every picture of the twenty-one was read on contact
+sheets and each set was committed after its own run had ended; the pictures in
+`demos/captured/` are of 9868569. **Run again alone on the same copy, `gablew`
+passed**, and `demos/itemlibw.sh` (the item library in the window), never run before,
+passed on its first run: twenty-three window demonstrations pass on 9868569. The
+twenty-one command-line demonstrations pass on that copy too (`demos/field-job.sh`
+is not one: it writes the job two of them start from).
 
 | # | Item | Evidence | What it lacks |
 |---|---|---|---|
@@ -6177,12 +6188,12 @@ maker's sheet and placed, and that was all. What is there now, and what is not:
 | **An item says its trade and what it is drawn as** | `pl::item` has `division` and `form` (SPEC.md). A placed thing is drawn as its item says, else as its name says, else as its box. Test: `a_placed_item_is_drawn_as_its_item_says_or_as_its_name_says_or_as_its_box` |
 | **An item library is a table** | `library/items.csv`: 21 items in four trades (11 Equipment, 12 Furnishings, 15 Mechanical, 16 Electrical), at typical sizes, every size Assumed and saying "a typical size; the product is not chosen", no maker and no model. Written out and brought back it is the same to the byte. A row changed in the file changes its item and says what changed; a row added adds one; a row that cannot be read is not used and says why. Tests: two in `tests/tables.rs` |
 | **At the command line** | `plumbline import items <file> <table or starter>`, `export items`, `items` (the job's items trade by trade, each with what it is drawn as, its sizes flagged, and how many are placed). `demos/items.sh` passes |
-| **In the window** | Starter items and Item library under Bring in; Item library (CSV) under Write out; the Items list under each trade's name, a row taking the item in hand and its Change button opening it on the right; on an item's panel its sizes on their rows, and "Drawn as" and "Trade" as rows to click. **Seen**: the starter brought in, a sink, a water heater, an outdoor unit and a vanity set down (each drawn as what it is: this is also the first look at call 102's three forms), the vanity opened and made a sofa, and the one standing on the floor redrawn as one. **Not seen**: the library written out from the window (the script looked for the button under its first name), and brought back |
+| **In the window** | Starter items and Item library under Bring in; Item library (CSV) under Write out; the Items list under each trade's name, a row taking the item in hand and its Change button opening it on the right; on an item's panel its sizes on their rows, and "Drawn as" and "Trade" as rows to click. **Seen**: the starter brought in, a sink, a water heater, an outdoor unit and a vanity set down (each drawn as what it is: this is also the first look at call 102's three forms), the vanity opened and made a sofa, and the one standing on the floor redrawn as one. **Seen since, in `demos/itemlibw.sh` (passed on its first run, on a frozen copy of 9868569)**: the starter items brought in and said, a vanity set down, opened from the list by its Change button, made a box with a click and said ("is drawn as a box, wherever one stands"), the library written out from the window beside the job (21 rows), and another job reading the same 21 items from that file. **What the pictures show and the script does not check**: a single item set down in an empty job is a small box far off; opening an item does not bring the view to it |
 | **Not built** | A bench where an item stands alone and its shape is made or changed by hand; an item's own shape as data in the library (it is one of thirteen built in, or its box); connections on an item from the library; a price on an item. PROPOSALS.md 28 |
 | **The three libraries he named** | Read from their own pages by an agent on Sonnet: `research/item-libraries-survey.md`. All three may be linked (Unlicense, MIT, 0BSD). None is: rgeometry is 2D only, plexus has one release from 2019, fornjot's README begins "This project has been shut down". QUESTIONS.md Q27 asks whether he wants their feel or their code; the working answer is the feel |
 | **Not judged** | Nobody who did not build it has tried to break any of this |
 
-The window demonstration of it, `demos/itemlibw.sh`, is written and has not been run (the nineteen were running). `tools/portmap.sh` caught one false
+`tools/portmap.sh` caught one false
 claim on the way (that BIMCraft has no `const BOX`: it has two, in a point-cloud
 test) and the row was put right.
 
@@ -6191,9 +6202,10 @@ test) and the row was put right.
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 315 tests pass,
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
 commit of code that was pushed, and the twenty command-line demonstrations pass on a
-frozen copy of b3e39a1. **The nineteen window demonstrations passed on a frozen copy of b3e39a1** (calls 94
-to 100; `glassw` on its second run, alone: the head of this file says why). Two more window demonstrations are written and have never
-been run: `demos/roofw.sh` and `demos/pagew.sh`. Read `CLAUDE.md`, then this section,
+frozen copy of 9868569. **All twenty-three window demonstrations pass on a frozen copy of 9868569** (calls 94
+to 105): the nineteen, and `roofw`, `pagew`, `gablew` and `itemlibw`, each run for the first time
+(`gablew` on its second run, after a mistake in its own script: the head of this file says what).
+Every picture was read and is committed. Read `CLAUDE.md`, then this section,
 then the table of thirteen, then "The twenty-fourth judgment, part B" and "part A"
 just above.
 
@@ -6219,18 +6231,19 @@ its own arithmetic, and it had not yet reported.
 
 **What is owed, in this order.**
 
-1. **Run `demos/roofw.sh`, `demos/pagew.sh` and `demos/gablew.sh` for the first
-   time**, and the nineteen again on a frozen copy of the last commit (the run that
-   was read is of b3e39a1; `bringw` was changed after it ran).
-2. **Look at what is built and not seen** (each says so in its row): a sink, a water
-   heater and an outdoor unit drawn as what they are (call 102); a duct on plan as
-   two edges over a wash; the Door tool offering the last door's sizes; a production
-   rate's field saying "like 40 SF/hr"; "Connection 1" on a fixture's panel; the
-   warning when an allowance is typed on a thing with no cost line.
+1. **Done on 2026-11-16, late**: `roofw`, `pagew`, `gablew` and `itemlibw` run for
+   the first time and the nineteen again, all on a frozen copy of 9868569.
+2. **Look at what is built and not seen.** Seen since, in the run of 9868569 or by
+   hand: a sink, a water heater and an outdoor unit drawn as what they are (call
+   102); a duct on plan as two edges over a wash; a production rate's field saying
+   "like 40 SF/hr". **Still not seen**: the Door tool offering the last door's
+   sizes; "Connection 1" on a fixture's panel; the warning when an allowance is
+   typed on a thing with no cost line.
 3. **See in the window what answers part A's two serious findings** and is so far only
    built: a price list brought in pricing the lines named as its items (call 104; a
    test holds it), and the warning when Steeper, Flatter, a gable or a moved eave
-   replaces a measured value.
+   replaces a measured value. (`gablew` makes a gable of a roof scaled off a plan,
+   so nothing measured is replaced and the warning does not come up in it.)
 4. **The look**, which is Patrick's own test. Open after two judgments: whether the
    panels read as glass (A2; thinner since call 97, not judged); equipment still
    boxes (an air handler, a panelboard); no cabinets, so a bare kitchen and bath; no
@@ -6242,9 +6255,8 @@ its own arithmetic, and it had not yet reported.
    Clashes tab. `research/judgment-24b-words.md` has all 76.
 6. **Have items 9 to 12 judged again**, by agents that did not build them, on Opus or
    Sonnet, told to write their notes as they go.
-7. **`demos/gablew.sh` is written and has never been run in the window** (a wall's
-   assembly changed with a priced line coming off; a hip made a gable with priced
-   planes): run it with `roofw` and `pagew`.
+7. **The item library is not judged.** Nobody who did not build it has tried to
+   break the table, the starter items or the panel an item is changed on.
 8. **The open rows** of the reviews and the twenty-first judgment (their tables
    above): a keystroke re-reads the whole job (R21-2); one money formatter (R21-12);
    a footing dug wider cannot be recorded on it alone (J21-6); base is priced by a
