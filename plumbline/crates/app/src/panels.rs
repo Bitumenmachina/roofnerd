@@ -1073,6 +1073,8 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 c.spawn(Node { padding: UiRect::axes(px(6.0), px(3.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|b| {
                     // The set of assemblies the program ships with: no file to find.
                     on_click(&mut button(b, fonts, "Starter assemblies", "", false), crate::bring::starter);
+                    // And the set of things to place: fixtures, equipment, furnishings.
+                    on_click(&mut button(b, fonts, "Starter items", "", false), crate::bring::starter_items);
                     for what in crate::model::Bring::ALL {
                         on_click(&mut button(b, fonts, what.name(), "", false), move |doc| {
                             // A table dropped on the window and waiting to be told what it is.
@@ -1140,7 +1142,14 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         // where it stands.
         if !snap.items.is_empty() {
             heading(c, fonts, "Items");
-            for (path, name, kind, size) in &snap.items {
+            let mut trade = None;
+            for (path, name, kind, size, division) in &snap.items {
+                // Trade by trade, each under its division's name.
+                if trade != Some(*division) {
+                    trade = Some(*division);
+                    let said = plumbline_world::Division::of_number(*division).map(|d| format!("{} {}", d.number(), d.title())).unwrap_or_else(|| "No trade said".to_string());
+                    c.spawn(Node { padding: UiRect { left: px(6.0), right: px(6.0), top: px(5.0), bottom: px(1.0) }, flex_shrink: 0.0, ..default() }).with_child((text(fonts, said.to_uppercase(), 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+                }
                 let (item, called) = (path.clone(), name.clone());
                 let in_hand = doc.placing.as_deref() == Some(path.as_str());
                 row(c, in_hand, format!("Item {name}"), move |doc| {
@@ -1164,6 +1173,19 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                         t.spawn((text(fonts, name.clone(), 12.0, Weight::Medium, theme::ink()), Pickable::IGNORE));
                         t.spawn((text(fonts, format!("{}, {size}", kind.said()), 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
                     });
+                    // The item itself, opened on the right to be changed: its sizes,
+                    // its trade, what it is drawn as. (The row takes it in hand.)
+                    let open = path.clone();
+                    r.spawn((theme::rounded(Node { padding: UiRect::axes(px(7.0), px(2.0)), border: UiRect::all(px(1.0)), flex_shrink: 0.0, ..default() }, theme::SMALL_RADIUS), BackgroundColor(theme::control()), BorderColor::all(theme::control_edge()), Named { name: format!("Change item {name}"), scrolls: true }))
+                        .with_child((text(fonts, "Change", 10.5, Weight::Medium, theme::ink_soft()), Pickable::IGNORE))
+                        .observe(move |mut press: On<PointerClick>, mut doc: ResMut<Doc>| {
+                            press.propagate(false);
+                            if press.button == PointerButton::Primary {
+                                doc.placing = None;
+                                doc.select(&open);
+                                doc.redraw();
+                            }
+                        });
                 });
             }
         }
@@ -1793,13 +1815,87 @@ fn right(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
                 selection(c, fonts, doc, snap, el);
                 drawing(c, fonts, snap, plans, el);
             }
-            Some(el) => selection(c, fonts, doc, snap, el),
+            Some(el) => {
+                selection(c, fonts, doc, snap, el);
+                // An item opened to be changed: what it is drawn as and whose trade
+                // it is, each picked with a click. (Its sizes are changed on their
+                // own rows above.)
+                if el.rows.iter().any(|r| r.label == "drawn as") {
+                    item_bench(c, fonts, el);
+                }
+            }
             None => summary(c, fonts, doc, snap),
         }
         c.spawn(Node { margin: UiRect::top(px(12.0)), flex_shrink: 0.0, ..default() }).with_child(text(fonts, "Drag slides the ground with your hand. Right-drag turns the view about what is under the pointer. The wheel closes on what is under the pointer. Double-click flies to a thing.", 10.5, Weight::Regular, theme::ink_faint()));
     });
     more_below(card, fonts, 0);
     });
+}
+
+/// The bench an item is changed on: what one of it is drawn as, and which trade's item
+/// it is. Each choice is a row; the one it has is marked. A change is the item's, so
+/// every one of it already placed follows.
+fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, el: &view::ElementRows) {
+    use plumbline_world::building::forms::{Form, BOX};
+    let said = |label: &str| el.rows.iter().find(|r| r.label == label).map(|r| r.text.clone()).unwrap_or_default();
+    let (drawn, trade) = (said("drawn as"), said("trade"));
+    let hint = |p: &mut ChildSpawnerCommands, words: &str| {
+        p.spawn(Node { padding: UiRect::bottom(px(4.0)), ..default() }).with_child(text(fonts, words, 11.0, Weight::Regular, theme::ink_faint()));
+    };
+    heading(p, fonts, "Drawn as");
+    hint(p, "Click one. Every one of this item already placed is drawn that way, inside the box of its sizes.");
+    let by_name = drawn.contains("by its name") || drawn.contains("its name saying");
+    let mut choices: Vec<(String, Option<String>)> = vec![("What its name says".to_string(), None), ("Box".to_string(), Some(BOX.to_string()))];
+    choices.extend(Form::ALL.iter().map(|f| {
+        let name = f.name();
+        (format!("{}{}", name[..1].to_uppercase(), &name[1..]), Some(name.to_string()))
+    }));
+    for (shown, form) in choices {
+        let mine = match &form {
+            None => by_name,
+            Some(name) => !by_name && drawn.eq_ignore_ascii_case(name),
+        };
+        let (path, called, pick) = (el.path.clone(), el.name.clone(), form.clone());
+        row(p, mine, format!("Drawn as {shown}"), move |doc| {
+            match plumbline_world::editing::item_drawn_as(&mut doc.job, &path, pick.as_deref()) {
+                Ok(()) => {
+                    doc.job.derive();
+                    doc.edit("Drawn as");
+                    doc.say(Tone::Done, match &pick {
+                        Some(name) => format!("{called} is drawn as a {name}, wherever one stands."),
+                        None => format!("{called} is drawn as its name says, wherever one stands."),
+                    });
+                }
+                Err(why) => crate::tools::cant(doc, "change what it is drawn as", why),
+            }
+            doc.redraw();
+        }, |r| {
+            r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, shown.clone(), 12.0, if mine { Weight::Semibold } else { Weight::Regular }, theme::ink()));
+            if mine {
+                r.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "as it is now", 11.0, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap()));
+            }
+        });
+    }
+    heading(p, fonts, "Trade");
+    hint(p, "Which trade's item it is: where it is listed, and in an item library written out.");
+    for d in plumbline_world::Division::ALL {
+        let shown = format!("{} {}", d.number(), d.title());
+        let mine = trade == format!("Division {shown}");
+        let (path, called, at) = (el.path.clone(), el.name.clone(), shown.clone());
+        row(p, mine, format!("Trade {}", d.number()), move |doc| {
+            match plumbline_world::editing::item_trade(&mut doc.job, &path, Some(d)) {
+                Ok(()) => {
+                    doc.job.derive();
+                    doc.edit("Trade");
+                    doc.say(Tone::Done, format!("{called} is an item of Division {at}."));
+                }
+                Err(why) => crate::tools::cant(doc, "change its trade", why),
+            }
+            doc.redraw();
+        }, |r| {
+            r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, shown.clone(), 12.0, if mine { Weight::Semibold } else { Weight::Regular }, theme::ink()));
+        });
+    }
 }
 
 /// A selected drawing: its scale, how big its sheet is on the ground, what there is on
@@ -2030,7 +2126,9 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         Some((_, edge)) => format!("rises from edge {edge} of {}", snap.roof_name),
         None => String::new(),
     };
-    title_block(p, fonts, theme::kind_name(el.kind), &el.name, under);
+    // An item is kept with the job's types; to a person it is an item.
+    let kind = if el.rows.iter().any(|r| r.label == "drawn as") { "Item" } else { theme::kind_name(el.kind) };
+    title_block(p, fonts, kind, &el.name, under);
     let find = |label: &str| el.rows.iter().find(|r| r.label == label);
     // The two figures that matter most for this kind of element, large.
     let lead: &[(&str, &str)] = match el.kind {

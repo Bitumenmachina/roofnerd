@@ -858,7 +858,7 @@ pub fn rebuild(
                     // is inside the box, which is still what is tested for clashes and
                     // what is outlined when the thing is selected. A thing whose name
                     // names no form is the box it is.
-                    match plumbline_world::building::forms::form_of(&p.name) {
+                    match p.form {
                         Some(form) => {
                             use plumbline_world::building::forms::Made;
                             for b in plumbline_world::building::forms::blocks(form, *size) {

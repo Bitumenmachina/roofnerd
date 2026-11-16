@@ -519,6 +519,236 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
     })
 }
 
+// ---------------------------------------------------------------- an item library
+
+/// An item library's headings, as this program writes them. A library is a table of
+/// the things that can be placed, each on one row: what it is called, which trade's it
+/// is, what kind of thing it is, what it is drawn as, its sizes, who makes it. It is
+/// kept in a file a person can open, change and bring back in (Patrick, 2026-11-16:
+/// "a workbench for items for trade that can be modified like a database of items").
+pub const ITEM_HEADINGS: [&str; 22] = [
+    "Item", "Trade", "Kind", "Drawn as", "Width", "Width: how sure", "Width: where from", "Depth", "Depth: how sure", "Depth: where from", "Height", "Height: how sure", "Height: where from", "Maker",
+    "Maker: how sure", "Maker: where from", "Model", "Model: how sure", "Model: where from", "Weight", "Weight: how sure", "Weight: where from",
+];
+
+/// The item library the program ships with: a few things of each trade that has any,
+/// at typical sizes, every size Assumed and saying so, no maker and no model.
+pub const STARTER_ITEMS: &str = include_str!("../../../library/items.csv");
+
+const ITEM_COLUMNS: [(&str, &[&str]); 24] = [
+    ("item", &["item", "name", "description"]),
+    ("trade", &["trade", "division", "div"]),
+    ("kind", &["kind", "category", "what it is"]),
+    ("form", &["drawn as", "form", "shape"]),
+    ("width", &["width", "w"]),
+    ("width status", &["width: how sure"]),
+    ("width source", &["width: where from"]),
+    ("depth", &["depth", "d"]),
+    ("depth status", &["depth: how sure"]),
+    ("depth source", &["depth: where from"]),
+    ("height", &["height", "h"]),
+    ("height status", &["height: how sure"]),
+    ("height source", &["height: where from"]),
+    ("maker", &["maker", "manufacturer", "make"]),
+    ("maker status", &["maker: how sure"]),
+    ("maker source", &["maker: where from"]),
+    ("model", &["model", "model number", "model no"]),
+    ("model status", &["model: how sure"]),
+    ("model source", &["model: where from"]),
+    ("weight", &["weight"]),
+    ("weight status", &["weight: how sure"]),
+    ("weight source", &["weight: where from"]),
+    ("status", &["how sure", "status"]),
+    ("source", &["where from", "source"]),
+];
+
+fn item_kind_said(kind: Kind) -> &'static str {
+    match kind {
+        Kind::Equipment => "equipment",
+        Kind::Fixture => "fixture",
+        _ => "furnishing",
+    }
+}
+
+/// The job's items as a table: the headings, then a row for each item in the order
+/// they were made. Brought back in, it gives the same items, value for value.
+pub fn items_out(job: &mut Job) -> Vec<Vec<String>> {
+    use crate::units::Len;
+    use crate::Item;
+    let mut rows: Vec<Vec<String>> = vec![ITEM_HEADINGS.iter().map(|h| h.to_string()).collect()];
+    for e in job.order.clone() {
+        let (Some(node), Some(it)) = (job.world.get::<Node>(e), job.world.get::<Item>(e)) else { continue };
+        let length = |v: &Val<Len>| [v.value.as_ref().map(|l| units::show_length(l, &v.unit)).unwrap_or_default(), status_said(v.status).to_string(), v.source.clone()];
+        let text = |v: &Val<String>| [v.value.clone().unwrap_or_default(), status_said(v.status).to_string(), v.source.clone()];
+        let mut row = vec![
+            node.name.clone(),
+            it.division.map(|d| format!("{} {}", d.number(), d.title())).unwrap_or_default(),
+            item_kind_said(it.category).to_string(),
+            it.form.clone().unwrap_or_default(),
+        ];
+        row.extend(length(&it.width));
+        row.extend(length(&it.depth));
+        row.extend(length(&it.height));
+        row.extend(text(&it.maker));
+        row.extend(text(&it.model));
+        match &it.weight {
+            Some(w) => row.extend([w.value.map(|x| format!("{} {}", crate::view::num(x), w.unit)).unwrap_or_default(), status_said(w.status).to_string(), w.source.clone()]),
+            None => row.extend([String::new(), String::new(), String::new()]),
+        }
+        rows.push(row);
+    }
+    rows
+}
+
+/// Bring an item library in. A row whose item the job does not have adds it; a row
+/// whose item it has, by name, changes it to what the row says, and says what changed;
+/// a row that says what the job already holds is counted as the same. A value says how
+/// sure it is and where it came from in its own two columns, or, where the table has
+/// only one pair for the whole row ("How sure", "Where from"), in those. All of it or
+/// none: a row that cannot be read is not used and says why, and the rest still is.
+pub fn items_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>) -> Result<Brought, String> {
+    use crate::units::Len;
+    use crate::Item;
+    let cols = columns(rows, &ITEM_COLUMNS, &["item", "kind", "width", "depth", "height"]).ok_or_else(|| {
+        "this is not an item library this program can read: within its first rows it has no row of headings with Item, Kind, Width, Depth and Height".to_string()
+    })?;
+    all_or_nothing(job, |job| {
+        let mut out = Brought { rows: rows.len().saturating_sub(cols.row + 1), columns_not_used: cols.not_used.clone(), above: cols.row, ..Brought::default() };
+        let mut have: std::collections::HashMap<String, String> = {
+            let mut q = job.world.query::<(&Node, &Item)>();
+            q.iter(&job.world).map(|(n, _)| (check::plain_name(&n.name), n.path.clone())).collect()
+        };
+        let mut seen: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        for (i, row) in rows.iter().enumerate().skip(cols.row + 1) {
+            let number = row_number(numbers, i);
+            if row.iter().all(|c| c.trim().is_empty()) {
+                out.rows -= 1;
+                continue;
+            }
+            let name = cols.cell(row, "item");
+            let read = || -> Result<Item, String> {
+                if name.is_empty() {
+                    return Err("it has no name: what the item is called".into());
+                }
+                // How sure a value is and where it came from: its own columns, else
+                // the row's one pair.
+                let how = |what: &str, empty: bool| -> Result<(Status, String), String> {
+                    let own = (cols.cell(row, &format!("{what} status")), cols.cell(row, &format!("{what} source")));
+                    // Nothing given and nothing said of it: it is not known. (The row's
+                    // one pair is for the values the row gives.)
+                    if empty && own.0.is_empty() && own.1.is_empty() {
+                        return Ok((Status::Unknown, "not said in the item library".to_string()));
+                    }
+                    let (status, source) = if own.0.is_empty() && own.1.is_empty() { (cols.cell(row, "status"), cols.cell(row, "source")) } else { own };
+                    let status = status_read(status).ok_or_else(|| format!("how sure its {what} is reads {status:?}, which is not Known, Assumed or Unknown"))?;
+                    if source.is_empty() {
+                        return Err(format!("it does not say where its {what} came from"));
+                    }
+                    if empty && status != Status::Unknown {
+                        return Err(format!("its {what} is empty and is said to be {}", status_said(status)));
+                    }
+                    if !empty && status == Status::Unknown {
+                        return Err(format!("its {what} is given and is said to be Unknown"));
+                    }
+                    Ok((status, source.to_string()))
+                };
+                let length = |what: &str| -> Result<Val<Len>, String> {
+                    let cell = cols.cell(row, what);
+                    let (status, source) = how(what, cell.is_empty())?;
+                    if cell.is_empty() {
+                        return Ok(Val { value: None, unit: "in".into(), status, source });
+                    }
+                    let (len, unit) = units::parse_length(cell).map_err(|why| format!("its {what}: {why}"))?;
+                    Ok(Val { value: Some(len), unit: unit.to_string(), status, source })
+                };
+                let text = |what: &str| -> Result<Val<String>, String> {
+                    let cell = cols.cell(row, what);
+                    let (status, source) = how(what, cell.is_empty())?;
+                    Ok(Val { value: if cell.is_empty() { None } else { Some(cell.to_string()) }, unit: String::new(), status, source })
+                };
+                let category = match heading(cols.cell(row, "kind")).as_str() {
+                    "equipment" => Kind::Equipment,
+                    "fixture" => Kind::Fixture,
+                    "furnishing" | "furniture" => Kind::Furnishing,
+                    other => return Err(format!("its kind reads {other:?}: an item is equipment, a fixture or a furnishing")),
+                };
+                let division = match cols.cell(row, "trade") {
+                    "" => None,
+                    said => Some(crate::components::Division::parse(said.split_once(' ').filter(|(n, _)| n.chars().all(|c| c.is_ascii_digit())).map(|(n, _)| n).unwrap_or(said)).map_err(|why| format!("its trade: {why}"))?),
+                };
+                let form = match cols.cell(row, "form") {
+                    "" => None,
+                    said => {
+                        crate::building::forms::drawn_as(said).map_err(|why| format!("drawn as: {why}"))?;
+                        Some(said.to_lowercase())
+                    }
+                };
+                let weight = match cols.cell(row, "weight") {
+                    "" if cols.cell(row, "weight status").is_empty() && cols.cell(row, "weight source").is_empty() => None,
+                    cell => {
+                        let (status, source) = how("weight", cell.is_empty())?;
+                        let value = if cell.is_empty() {
+                            None
+                        } else {
+                            let figure = cell.to_lowercase();
+                            let figure = figure.trim_end_matches("lbs").trim_end_matches("lb").trim();
+                            Some(units::parse_number(figure).map_err(|why| format!("its weight: {why}"))?)
+                        };
+                        Some(Val { value, unit: "lb".into(), status, source })
+                    }
+                };
+                Ok(Item { category, maker: text("maker")?, model: text("model")?, width: length("width")?, depth: length("depth")?, height: length("height")?, weight, sheet: String::new(), division, form })
+            };
+            let plain = check::plain_name(name);
+            let item = match read() {
+                Ok(item) => item,
+                Err(why) => {
+                    out.not_used.push((number, if name.is_empty() { why } else { format!("{name}: {why}") }));
+                    continue;
+                }
+            };
+            if let Some(first) = seen.get(&plain) {
+                out.not_used.push((number, format!("{name}: row {first} of this library is the same item, and was used")));
+                continue;
+            }
+            seen.insert(plain.clone(), number);
+            match have.get(&plain).cloned() {
+                Some(path) => {
+                    let e = job.find(&path).ok_or_else(|| format!("no element {path}"))?;
+                    let was = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{path} is not an item"))?;
+                    // The sheet an item was made from is the job's to remember: a
+                    // library has no column for it and does not take it away.
+                    let item = Item { sheet: was.sheet.clone(), ..item };
+                    if was == item {
+                        out.same += 1;
+                        continue;
+                    }
+                    if let Err(why) = crate::building::check_item(&path, Kind::Type, &item) {
+                        out.not_used.push((number, format!("{name}: {why}")));
+                        continue;
+                    }
+                    let mut changed: Vec<&str> = Vec::new();
+                    for (what, differs) in [("its trade", was.division != item.division), ("its kind", was.category != item.category), ("what it is drawn as", was.form != item.form), ("its width", was.width != item.width), ("its depth", was.depth != item.depth), ("its height", was.height != item.height), ("its maker", was.maker != item.maker), ("its model", was.model != item.model), ("its weight", was.weight != item.weight)] {
+                        if differs {
+                            changed.push(what);
+                        }
+                    }
+                    job.put(&path, item)?;
+                    out.done.push(format!("{name}: changed: {}", changed.join(", ")));
+                }
+                None => match crate::editing::item(job, name, item) {
+                    Ok(path) => {
+                        have.insert(plain, path);
+                        out.done.push(format!("{name}: added"));
+                    }
+                    Err(why) => out.not_used.push((number, format!("{name}: {why}"))),
+                },
+            }
+        }
+        Ok(out)
+    })
+}
+
 // ---------------------------------------------------------------- an assembly library
 
 /// The headings of an assembly library as this program writes it: one row for each line

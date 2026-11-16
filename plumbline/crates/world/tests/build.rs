@@ -168,3 +168,32 @@ fn a_room_closed_at_its_walls_faces_and_not_on_their_lines_has_no_area_to_wall_c
     let m = job.world.get::<Measure>(e).unwrap().0.clone();
     assert_eq!((m["floor_area"].value, m["gross_area"].value), (Some(90.25), Some(100.0)));
 }
+
+#[test]
+fn a_placed_item_is_drawn_as_its_item_says_or_as_its_name_says_or_as_its_box() {
+    use plumbline_world::building::forms::Form;
+    use plumbline_world::building::placements;
+    use plumbline_world::units::Len;
+    use plumbline_world::value::Val;
+    let mut job = Job::new("items placed (not a real job)", "test", "test");
+    let level = ed::storey(&mut job, "ground", "0 ft", "8 ft", KNOWN).unwrap();
+    let inches = |x: f64| Val { value: Some(Len::One(x)), unit: "in".to_string(), status: Status::Assumed, source: "a made-up catalog".to_string() };
+    let unknown = || Val::<String>::unknown("", "not chosen");
+    let mut make = |name: &str, form: Option<&str>| {
+        let item = Item { category: Kind::Fixture, maker: unknown(), model: unknown(), width: inches(24.0), depth: inches(24.0), height: inches(36.0), weight: None, sheet: String::new(), division: None, form: form.map(str::to_string) };
+        ed::item(&mut job, name, item).unwrap()
+    };
+    // What it is drawn as is the item's to say: a thing whose name says nothing, drawn
+    // as a tank; a sink told to be its box; a lavatory left to its name.
+    let (thing, sink, lavatory) = (make("Unit 7", Some("tank")), make("Kitchen sink", Some("box")), make("Lavatory", None));
+    let mut drawn_as = |item: &str, at: [f64; 2]| {
+        let placed = ed::place_item(&mut job, &level, item, at, "0 ft", KNOWN).unwrap();
+        placements(&mut job).0.into_iter().find(|p| p.path == placed).unwrap().form
+    };
+    assert_eq!(drawn_as(&thing, [4.0, 4.0]), Some(Form::Tank));
+    assert_eq!(drawn_as(&sink, [10.0, 4.0]), None);
+    assert_eq!(drawn_as(&lavatory, [16.0, 4.0]), Some(Form::Washbasin));
+    // An item drawn as nothing the program draws is refused where it is made.
+    let bad = Item { category: Kind::Fixture, maker: unknown(), model: unknown(), width: inches(24.0), depth: inches(24.0), height: inches(36.0), weight: None, sheet: String::new(), division: None, form: Some("gazebo".into()) };
+    assert!(ed::item(&mut job, "Gazebo", bad).unwrap_err().contains("drawn as: \"gazebo\" is not something a thing can be drawn as"));
+}

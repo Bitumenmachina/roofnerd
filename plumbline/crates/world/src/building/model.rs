@@ -680,6 +680,14 @@ pub struct Item {
     /// The sheet it was made from, as it was named when it was brought in.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub sheet: String,
+    /// Which of the sixteen divisions' item it is: the trade whose library it is kept
+    /// in. None: not said.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub division: Option<crate::components::Division>,
+    /// What it is drawn as: a form by its name (`forms::Form::name`), or "box". None:
+    /// what its name says, and a box if its name says nothing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub form: Option<String>,
 }
 
 impl Item {
@@ -707,6 +715,9 @@ pub fn check_item(path: &str, kind: Kind, t: &Item) -> Result<(), String> {
         return Err(format!("{path} item: is {:#}; an item is a piece of equipment, a fixture or a furnishing", t.category));
     }
     let what = format!("{path} item");
+    if let Some(form) = &t.form {
+        super::forms::drawn_as(form).map_err(|why| format!("{what}: drawn as: {why}"))?;
+    }
     t.maker.check_basics(&format!("{what} maker"))?;
     t.model.check_basics(&format!("{what} model"))?;
     for (name, v) in [("width", &t.width), ("depth", &t.depth), ("height", &t.height)] {

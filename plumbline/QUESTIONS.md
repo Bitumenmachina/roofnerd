@@ -384,3 +384,25 @@ estimate sheet, and on the command line, each from one figure the model works ou
 with no detail is carried in the price, it becomes a line of the job cost (a cost
 type and a division are then needed for it) until the first cost line is put on the
 thing, and every total moves.
+
+## Q27. Is one of the three geometry libraries to be used for the item bench? (2026-11-16, from call 105)
+
+Patrick named rgeometry, plexus and fornjot as what the item workbench should be
+"like or similar to". Read from their own pages
+(`research/item-libraries-survey.md`): all three may be linked (Unlicense, MIT,
+0BSD). rgeometry is 2D only. plexus has one release on crates.io, from 2019; its
+current code would be a dependency on a git branch. fornjot's README begins "This
+project has been shut down", and it is a mechanical-CAD kernel with no STEP export.
+Not verified: their last commit dates, and whether plexus builds beside Bevy 0.20.
+
+The question is what he wants from them: **the feel** (a library of things made of
+solid shapes that a person changes), or **the code** (one of these three linked in).
+
+**Working assumption: the feel, not the code.** An item is a few sizes and blocks
+inside the box of those sizes; the program draws that itself and tests clashes on
+the box. A shape that needs more (a swept trap, a boolean cut) is not needed to
+estimate or to find a clash. **What would change:** if he wants real solid modelling
+of items (cuts, sweeps, export to a CAD file), a kernel is needed and none of the
+three is a safe one to stand on today; the survey says why, and the choice would be
+looked at again then, with truck (MIT/Apache) and OpenCascade bindings (LGPL: may
+not be linked) beside them.

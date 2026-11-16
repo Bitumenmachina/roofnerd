@@ -373,3 +373,108 @@ fn a_price_list_prices_the_lines_named_as_its_items_that_have_no_price_and_leave
     // The job still checks.
     assert_eq!(load(&save(&mut job)).map(|_| ()).map_err(|e| e.to_string()), Ok(()));
 }
+
+/// A table as it was read from a file.
+struct Read {
+    rows: Vec<Vec<String>>,
+}
+
+/// One line of a CSV file as its cells: a cell with a comma in it is in quotes, and a
+/// quote inside one is written twice.
+fn cells(line: &str) -> Vec<String> {
+    let (mut out, mut cell, mut quoted) = (Vec::new(), String::new(), false);
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        match (c, quoted) {
+            ('"', true) if chars.peek() == Some(&'"') => {
+                cell.push('"');
+                chars.next();
+            }
+            ('"', _) => quoted = !quoted,
+            (',', false) => out.push(std::mem::take(&mut cell)),
+            (c, _) => cell.push(c),
+        }
+    }
+    out.push(cell);
+    out
+}
+
+fn items(job: &mut Job) -> Vec<(String, Item)> {
+    let mut q = job.world.query::<(&Node, &Item)>();
+    q.iter(&job.world).map(|(n, it)| (n.name.clone(), it.clone())).collect()
+}
+
+#[test]
+fn an_item_library_goes_out_and_comes_back_the_same_and_a_changed_row_changes_its_item() {
+    // The library the program ships with, into a job with nothing in it: 21 items, in
+    // four trades, every size Assumed and saying so.
+    let starter = Read { rows: tables::STARTER_ITEMS.lines().map(cells).collect() };
+    let mut job = Job::new("an item library (not a real job)", "test", "test");
+    let brought = tables::items_in(&mut job, &starter.rows, None).unwrap();
+    assert_eq!((brought.rows, brought.done.len(), brought.same, brought.not_used.len()), (21, 21, 0, 0));
+    let had = items(&mut job);
+    assert_eq!(had.len(), 21);
+    assert!(had.iter().all(|(_, it)| it.division.is_some() && it.width.status == Status::Assumed && it.width.source == "a typical size; the product is not chosen" && it.maker.status == Status::Unknown));
+    let trades: std::collections::BTreeSet<u8> = had.iter().filter_map(|(_, it)| it.division.map(|d| d.number())).collect();
+    assert_eq!(trades.into_iter().collect::<Vec<_>>(), [11, 12, 15, 16]);
+    // Written out it is the file as it is kept, cell for cell; brought back in, every
+    // row says what the job already has.
+    let out = tables::items_out(&mut job);
+    assert_eq!(out, starter.rows);
+    assert_eq!(out[0], tables::ITEM_HEADINGS);
+    let again = tables::items_in(&mut job, &out, None).unwrap();
+    assert_eq!((again.done.len(), again.same, again.not_used.len()), (0, 21, 0));
+    // A row changed in the file changes its item and says what changed; a row for an
+    // item the job has not got adds it; a row drawn as nothing the program draws is
+    // not used and says what there is; a second row for one item is not used.
+    let mut edited = out.clone();
+    let vanity = edited.iter().position(|r| r[0] == "Vanity, 36 in").unwrap();
+    edited[vanity][4] = "48 in".into();
+    edited[vanity][3] = "box".into();
+    let mut bench = edited[vanity].clone();
+    bench[0] = "Mudroom bench".into();
+    bench[3] = String::new();
+    edited.push(bench);
+    let mut gazebo = edited[vanity].clone();
+    gazebo[0] = "Gazebo".into();
+    gazebo[3] = "gazebo".into();
+    edited.push(gazebo);
+    edited.push(edited[vanity].clone());
+    let brought = tables::items_in(&mut job, &edited, None).unwrap();
+    assert_eq!(brought.done, ["Vanity, 36 in: changed: what it is drawn as, its width", "Mudroom bench: added"]);
+    assert_eq!(brought.same, 20);
+    assert_eq!(brought.not_used.len(), 2);
+    assert!(brought.not_used[0].1.starts_with("Gazebo: drawn as: \"gazebo\" is not something a thing can be drawn as. There are: box, base cabinet"), "{:?}", brought.not_used);
+    assert_eq!(brought.not_used[1].1, format!("Vanity, 36 in: row {} of this library is the same item, and was used", vanity + 1));
+    let now = items(&mut job);
+    let (_, v) = now.iter().find(|(n, _)| n == "Vanity, 36 in").unwrap();
+    assert_eq!((v.width.feet(), v.form.as_deref()), (Some(4.0), Some("box")));
+    assert_eq!(now.len(), 22);
+    // The job still reads back as it was saved.
+    let text = save(&mut job);
+    assert_eq!(save(&mut load(&text).unwrap().0), text);
+}
+
+#[test]
+fn a_value_in_an_item_library_says_how_sure_it_is_or_the_row_is_not_used() {
+    let mut job = Job::new("an item library (not a real job)", "test", "test");
+    // A short list written by hand: one pair of columns for the whole row.
+    let list = rows(&[
+        &["Item", "Trade", "Kind", "Drawn as", "Width", "Depth", "Height", "How sure", "Where from"],
+        &["Utility sink", "Division 15", "fixture", "sink", "24 in", "22 in", "13 in", "Assumed", "a made-up catalog"],
+        &["Bare row", "15", "fixture", "sink", "24 in", "22 in", "13 in", "", ""],
+        &["Wrong kind", "15", "roof", "sink", "24 in", "22 in", "13 in", "Assumed", "a made-up catalog"],
+        &["No such trade", "40", "fixture", "sink", "24 in", "22 in", "13 in", "Assumed", "a made-up catalog"],
+    ]);
+    let brought = tables::items_in(&mut job, &list, None).unwrap();
+    assert_eq!(brought.done, ["Utility sink: added"]);
+    let why: Vec<&str> = brought.not_used.iter().map(|(_, w)| w.as_str()).collect();
+    assert_eq!(why[0], "Bare row: how sure its width is reads \"\", which is not Known, Assumed or Unknown");
+    assert_eq!(why[1], "Wrong kind: its kind reads \"roof\": an item is equipment, a fixture or a furnishing");
+    assert!(why[2].starts_with("No such trade: its trade: \"40\" is not a division"), "{}", why[2]);
+    let had = items(&mut job);
+    let (_, sink) = &had[0];
+    // Its maker is not in the list: Unknown, and said so; its sizes are as sure as the row says.
+    assert_eq!((sink.division.map(|d| d.number()), sink.form.as_deref(), sink.width.status, sink.width.source.as_str()), (Some(15), Some("sink"), Status::Assumed, "a made-up catalog"));
+    assert_eq!(sink.maker.status, Status::Unknown);
+}

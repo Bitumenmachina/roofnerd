@@ -6166,9 +6166,29 @@ steps run again, and each half of them alone, drew the plan as it should be, twi
 A judge was driving another window on the machine at the time. It is written down
 because a plan that draws wrong once is worth watching for.
 
+## Patrick, 2026-11-16: a workbench of items by trade, kept like a database (call 105)
+
+His message, as he wrote it, is in DECISIONS.md call 105 with how each clause was
+read. **When he asked, there was none**: a thing could be made into an item from a
+maker's sheet and placed, and that was all. What is there now, and what is not:
+
+| | |
+|---|---|
+| **An item says its trade and what it is drawn as** | `pl::item` has `division` and `form` (SPEC.md). A placed thing is drawn as its item says, else as its name says, else as its box. Test: `a_placed_item_is_drawn_as_its_item_says_or_as_its_name_says_or_as_its_box` |
+| **An item library is a table** | `library/items.csv`: 21 items in four trades (11 Equipment, 12 Furnishings, 15 Mechanical, 16 Electrical), at typical sizes, every size Assumed and saying "a typical size; the product is not chosen", no maker and no model. Written out and brought back it is the same to the byte. A row changed in the file changes its item and says what changed; a row added adds one; a row that cannot be read is not used and says why. Tests: two in `tests/tables.rs` |
+| **At the command line** | `plumbline import items <file> <table or starter>`, `export items`, `items` (the job's items trade by trade, each with what it is drawn as, its sizes flagged, and how many are placed). `demos/items.sh` passes |
+| **In the window** | Starter items and Item library under Bring in; Item library (CSV) under Write out; the Items list under each trade's name, a row taking the item in hand and its Change button opening it on the right; on an item's panel its sizes on their rows, and "Drawn as" and "Trade" as rows to click. **Seen**: the starter brought in, a sink, a water heater, an outdoor unit and a vanity set down (each drawn as what it is: this is also the first look at call 102's three forms), the vanity opened and made a sofa, and the one standing on the floor redrawn as one. **Not seen**: the library written out from the window (the script looked for the button under its first name), and brought back |
+| **Not built** | A bench where an item stands alone and its shape is made or changed by hand; an item's own shape as data in the library (it is one of thirteen built in, or its box); connections on an item from the library; a price on an item. PROPOSALS.md 28 |
+| **The three libraries he named** | Read from their own pages by an agent on Sonnet: `research/item-libraries-survey.md`. All three may be linked (Unlicense, MIT, 0BSD). None is: rgeometry is 2D only, plexus has one release from 2019, fornjot's README begins "This project has been shut down". QUESTIONS.md Q27 asks whether he wants their feel or their code; the working answer is the feel |
+| **Not judged** | Nobody who did not build it has tried to break any of this |
+
+The window demonstration of it is not written. `tools/portmap.sh` caught one false
+claim on the way (that BIMCraft has no `const BOX`: it has two, in a point-cloud
+test) and the row was put right.
+
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 312 tests pass,
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 315 tests pass,
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
 commit of code that was pushed, and the twenty command-line demonstrations pass on a
 frozen copy of b3e39a1. **The nineteen window demonstrations passed on a frozen copy of b3e39a1** (calls 94
@@ -6183,9 +6203,9 @@ window crate (42 findings); a twenty-first judge walked the four new trades (21)
 twenty-second pair judged the look and the words, and a veteran's first day and the
 money path; a twenty-third tried the money path at the command line; and a
 twenty-fourth pair did what the twenty-second did again, on the build after the
-fixes. Each finding is a row in this file with where it stands. Calls 77 to 104 in
+fixes. Each finding is a row in this file with where it stands. Calls 77 to 105 in
 DECISIONS.md are the decisions made on the way; Q26 in QUESTIONS.md is new, and
-PROPOSALS.md 23 to 27.
+PROPOSALS.md 23 to 28. Q27 is new too.
 
 **What is true of the program today.** It traces a plan, builds the house in 3D
 dressed as it is priced, prices it in sixteen divisions, finds clashes, lists what
@@ -6230,7 +6250,9 @@ its own arithmetic, and it had not yet reported.
    a footing dug wider cannot be recorded on it alone (J21-6); base is priced by a
    room's perimeter and drawn by its runs less its doors.
 
-**Patrick's, not the builder's.** Q26: whether an allowance with no cost lines
+**Patrick's, not the builder's.** Q27: whether he wants the feel of the three
+geometry libraries he named, or one of them linked (the working answer is the feel);
+and PROPOSALS.md 28, an item's shape as data and a bench to make it on. Q26: whether an allowance with no cost lines
 belongs in the price (the veteran judge read "PRICE" and expected it in; the working
 answer is that it does not, and that it is said wherever the price is read). Q25.
 Q5: a hand estimate in `refs/` for item 13.

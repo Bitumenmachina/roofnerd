@@ -1434,6 +1434,13 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         if !c.sheet.is_empty() {
             rows.push(plain("made from", c.sheet.clone(), "the maker's sheet it was read from"));
         }
+        // Which trade's library it is kept in, and what one of it is drawn as.
+        rows.push(plain("trade", c.division.map(|d| format!("Division {} {}", d.number(), d.title())).unwrap_or_else(|| "not said".to_string()), "which trade's item it is"));
+        let drawn = match c.form.as_deref() {
+            Some(said) => said.to_string(),
+            None => forms::form_of(w.get::<Node>(e).map(|n| n.name.as_str()).unwrap_or("")).map(|f| format!("{}, by its name", f.name())).unwrap_or_else(|| format!("{}, its name saying nothing else", forms::BOX)),
+        };
+        rows.push(plain("drawn as", drawn, "what one of it is drawn as, inside the box of its sizes"));
         rows.push(view::entered(path, "maker", &c.maker, |s| s.clone()));
         rows.push(view::entered(path, "model", &c.model, |s| s.clone()));
         rows.push(view::length(path, "width", &c.width));
@@ -1579,6 +1586,9 @@ pub struct Placement {
     pub shape: Shape,
     /// The worst status among the values its shape is drawn from.
     pub status: Status,
+    /// What a placed thing is drawn as, inside its box: what its item says, else what
+    /// its name says. None: the box, and always for anything that is not placed.
+    pub form: Option<forms::Form>,
 }
 
 /// Every element of this module's kinds that has a shape, placed in space, and every one
@@ -1700,7 +1710,20 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
             })(),
         };
         match shape {
-            Ok((shape, status)) => drawn.push(Placement { path: n.path.clone(), name: n.name.clone(), kind, storey, system, discipline, shape, status }),
+            Ok((shape, status)) => {
+                // An item says what it is drawn as, or leaves it to its name.
+                let form = match &shape {
+                    Shape::Box { .. } => {
+                        let said = w.get::<Placed>(e).and_then(|c| c.item.as_ref()).and_then(|item| index.get(item)).and_then(|t| w.get::<Item>(*t)).and_then(|it| it.form.clone());
+                        match said {
+                            Some(said) => forms::drawn_as(&said).ok().flatten(),
+                            None => forms::form_of(&n.name),
+                        }
+                    }
+                    _ => None,
+                };
+                drawn.push(Placement { path: n.path.clone(), name: n.name.clone(), kind, storey, system, discipline, shape, status, form })
+            }
             Err(why) => not_drawn.push((n.path.clone(), why)),
         }
         not_drawn.extend(uncut);

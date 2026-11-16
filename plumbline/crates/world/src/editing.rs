@@ -475,6 +475,35 @@ pub fn item(job: &mut Job, name: &str, item: Item) -> Result<String, String> {
     })
 }
 
+/// What an item is drawn as, changed: a form by its name, "box" for the box of its
+/// sizes, or nothing, which leaves it to what its name says. Every one of it already
+/// placed is drawn the new way: what it is drawn as is the item's, not the thing's.
+pub fn item_drawn_as(job: &mut Job, item: &str, said: Option<&str>) -> Result<(), String> {
+    all_or_nothing(job, |job| {
+        let e = job.find(item).ok_or_else(|| format!("{item} is not in the job"))?;
+        let mut it = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{item} is not an item"))?;
+        it.form = match said.map(str::trim).filter(|s| !s.is_empty()) {
+            Some(said) => {
+                building::forms::drawn_as(said)?;
+                Some(said.to_lowercase())
+            }
+            None => None,
+        };
+        building::check_item(item, Kind::Type, &it)?;
+        job.put(item, it)
+    })
+}
+
+/// Which trade's item it is, changed: one of the sixteen divisions, or none.
+pub fn item_trade(job: &mut Job, item: &str, division: Option<crate::components::Division>) -> Result<(), String> {
+    all_or_nothing(job, |job| {
+        let e = job.find(item).ok_or_else(|| format!("{item} is not in the job"))?;
+        let mut it = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{item} is not an item"))?;
+        it.division = division;
+        job.put(item, it)
+    })
+}
+
 /// One of an item, set down on a level: its middle at `at` on the plan, its underside
 /// `offset` above the floor. It is as big as its item says and as sure as that; where
 /// the item's size is not all known it is placed with no size, has no shape, and says

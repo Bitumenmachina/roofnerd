@@ -74,6 +74,47 @@ pub enum Form {
     OutdoorUnit,
 }
 
+impl Form {
+    pub const ALL: [Form; 13] = [Form::BaseCabinet, Form::Wardrobe, Form::Wc, Form::Washbasin, Form::Bathtub, Form::Table, Form::Chair, Form::Bed, Form::Sofa, Form::Desk, Form::Sink, Form::Tank, Form::OutdoorUnit];
+
+    /// What it is called where a person picks what an item is drawn as, and in an item
+    /// library's "Drawn as" column.
+    pub fn name(self) -> &'static str {
+        match self {
+            Form::BaseCabinet => "base cabinet",
+            Form::Wardrobe => "wardrobe",
+            Form::Wc => "water closet",
+            Form::Washbasin => "lavatory",
+            Form::Bathtub => "bathtub",
+            Form::Table => "table",
+            Form::Chair => "chair",
+            Form::Bed => "bed",
+            Form::Sofa => "sofa",
+            Form::Desk => "desk",
+            Form::Sink => "sink",
+            Form::Tank => "tank",
+            Form::OutdoorUnit => "outdoor unit",
+        }
+    }
+
+    /// The form of that name, however it is capitalised. None for any other word.
+    pub fn named(name: &str) -> Option<Form> {
+        let name = name.trim();
+        Form::ALL.into_iter().find(|f| f.name().eq_ignore_ascii_case(name))
+    }
+}
+
+/// What an item says it is drawn as, read: a form by its name; "box", the box of its
+/// sizes and nothing else. Anything else is an error that names what there is.
+pub const BOX: &str = "box";
+pub fn drawn_as(said: &str) -> Result<Option<Form>, String> {
+    let said = said.trim();
+    if said.eq_ignore_ascii_case(BOX) {
+        return Ok(None);
+    }
+    Form::named(said).map(Some).ok_or_else(|| format!("{said:?} is not something a thing can be drawn as. There are: {BOX}, {}", Form::ALL.map(Form::name).join(", ")))
+}
+
 /// The form a thing's name says it has: the earliest word in the name that names one
 /// ("Harbor Vanity 36" is a base cabinet, "Water closet" a WC). None when the name
 /// names none; the thing is then drawn as the box it is.
@@ -274,7 +315,7 @@ pub fn blocks(form: Form, size: P3) -> Vec<Block> {
 mod tests {
     use super::*;
 
-    const ALL: [Form; 13] = [Form::BaseCabinet, Form::Wardrobe, Form::Wc, Form::Washbasin, Form::Bathtub, Form::Table, Form::Chair, Form::Bed, Form::Sofa, Form::Desk, Form::Sink, Form::Tank, Form::OutdoorUnit];
+    const ALL: [Form; 13] = Form::ALL;
 
     /// What is drawn is inside what is tested for clashes, and fills it: every block of
     /// every form is inside the thing's box, and together they reach each of its six
@@ -331,6 +372,14 @@ mod tests {
         // A double bowl has a wall between its bowls; a bar sink has one bowl.
         assert_eq!(blocks(Form::Sink, [33.0 / 12.0, 21.625 / 12.0, 8.375 / 12.0]).len(), 6);
         assert_eq!(blocks(Form::Sink, [15.0 / 12.0, 15.0 / 12.0, 6.0 / 12.0]).len(), 5);
+        // Each form has a name of its own, read back however it is capitalised; an
+        // item is drawn as one of them, or as its box.
+        for form in Form::ALL {
+            assert_eq!(Form::named(&form.name().to_uppercase()), Some(form));
+            assert_eq!(drawn_as(form.name()), Ok(Some(form)));
+        }
+        assert_eq!(drawn_as("Box"), Ok(None));
+        assert!(drawn_as("gazebo").unwrap_err().contains("\"gazebo\" is not something a thing can be drawn as. There are: box, base cabinet"));
         // A thing whose name names none of them is the box it is.
         assert_eq!(form_of("AH-24 Air Handler"), None);
         assert_eq!(form_of("Ceiling register, 4 x 10"), None);

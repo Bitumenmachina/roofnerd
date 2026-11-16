@@ -97,6 +97,7 @@ demos/fieldw.sh            # the same in the window, each reading typed as a las
 demos/div.sh               # sixteen divisions: a whole house's lines in all sixteen, the recap by division, and the workbook's Divisions sheet
 demos/library.sh           # the starter assemblies: no price in them, a house's takeoff in fourteen divisions, three prices by division
 demos/spec.sh              # items made from manufacturers' sheets (PDF), placed, moved clear of a clash, and out to an IFC4 model
+demos/items.sh             # the item library: the things that can be placed, by trade, in a table that is brought in, written out the same, changed and brought back
 demos/found.sh             # the foundation drawn: strip footings and foundation walls, footing concrete by the CY, and out to an IFC4 model
 demos/tradesw.sh           # the layers in the window, a click each: finish off to the weather barrier, walls as frames, the ground off the foundation, one floor looked into
 demos/moneyw.sh            # what the window says when money is at stake: a roof measured off the verify-in-field list, a labor line added, a priced wall deleted, a markup typed ten times too large

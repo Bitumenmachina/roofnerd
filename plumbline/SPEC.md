@@ -240,6 +240,7 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 | `pl::system` | a System | `discipline` (Mechanical, Electrical, Plumbing) and `classification`: Supply Air, Return Air, Exhaust Air, Refrigerant, Domestic Cold Water, Domestic Hot Water, Sanitary, Vent, Power, Lighting. | |
 | `pl::drawing` | a Drawing, under a Storey | One page of a plan file laid under the tracing (section 5.11). `file`: where the file is, from the folder the job is in. `page`, counted from 1. `bytes` and `checksum`: the file's length and fingerprint when the drawing was made from it. `size`: the page's width and height in its own units (a PDF's points, a picture's dots). `scale`, when it has one: `from` and `to`, two places on the page, and the `distance` between them. `at`: where the page's lower-left corner is on the plan. | `distance`: `ft`, `in` or `ft-in`; `at`: `ft` or `in` |
 | `pl::prior` | a Prior, under the job | An estimate made before, brought in to be set against this one (section 5.12). `lines`: each a `description` and, as far as the estimate gave them, a `quantity`, a `unit`, a `unit_cost`, an `amount`, a `class` and a `code`, as written. Nothing of it is in the job's price. | none |
+| `pl::item` | a Type, under the job | A thing that can be placed any number of times. `category`: Equipment, Fixture or Furnishing. `maker`, `model`, `width`, `depth`, `height` and, where it has one, `weight`: each a value with how sure it is and where it came from (read off a maker's sheet it is Assumed and names the sheet's line; from an item library it is as the library says). `sheet`: the maker's sheet it was made from, where it was. `division`, where it is said: which of the sixteen divisions' item it is. `form`, where it is said: what one of it is drawn as, a form by its name or `box`; not said, its name says. | A form that is not one the program draws; a size of nothing or less; a category that is none of the three |
 | `pl::in_system` | a run, Equipment, a Fixture or a Fitting | The system it belongs to, by the system's path. It has to be a System in the job. | none |
 
 A file saved before the building model was re-based on BIMCraft's shapes (DECISIONS.md
@@ -761,6 +762,16 @@ window, the left panel's Drawings to trace.
   program wrote is read. An assembly the job already has by that name is left as it is:
   counted as the same if it is, listed if it differs. Rows of one name that disagree on
   what the assembly goes on or on its cost code are refused, all of them.
+* **An item library** is the job's items, one row for each: its name, its trade (one
+  of the sixteen divisions), its kind, what it is drawn as, and its width, depth,
+  height, maker, model and weight, every value with how sure and where from in its
+  own two columns. Written out and brought back in it gives the same items, value for
+  value. A table written by hand is read too: it needs Item, Kind, Width, Depth and
+  Height, and may say how sure and where from once for the row. A row whose item the
+  job has, by name, changes that item to what the row says and says what changed; a
+  row it does not have adds one; a row that cannot be read is not used and says why.
+  A value that is empty with nothing said of it is Unknown. `library/items.csv` is
+  the one the program ships with.
 * **A prior estimate** is read by its headings (Description or Item; Quantity; Unit;
   Unit cost, Unit price or Rate; Amount, Total or Extension; Class; Cost code) into a
   Prior element under the job, as sure as whoever brought it says. A row with no figure

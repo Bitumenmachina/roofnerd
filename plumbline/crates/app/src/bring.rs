@@ -146,6 +146,7 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
                         other => other,
                     },
                     Bring::Assemblies => tables::assemblies_in(&mut doc.job, &sheet.rows, Some(&sheet.numbers)),
+                    Bring::Items => tables::items_in(&mut doc.job, &sheet.rows, Some(&sheet.numbers)),
                     _ => {
                         let called = path.file_stem().and_then(|s| s.to_str()).unwrap_or("prior estimate").to_string();
                         tables::prior_in(&mut doc.job, &called, &sheet.rows, Some(&sheet.numbers), how).map(|(_, b)| b)
@@ -185,7 +186,7 @@ pub fn dropped(doc: &mut Doc, file: &str) {
         bring(doc, Bring::Model, file);
     } else if lower.ends_with(".csv") || lower.ends_with(".xlsx") || lower.ends_with(".xlsm") || lower.ends_with(".xls") {
         doc.dropped = Some(file.to_string());
-        doc.say(Tone::Warned, format!("{} is a table. Say what it is: click Price list, Assemblies or Prior estimate, under Bring in on the left.", Path::new(file).file_name().and_then(|f| f.to_str()).unwrap_or(file)));
+        doc.say(Tone::Warned, format!("{} is a table. Say what it is: click Price list, Assemblies, Prior estimate or Item library, under Bring in on the left.", Path::new(file).file_name().and_then(|f| f.to_str()).unwrap_or(file)));
         doc.touch();
     } else {
         crate::plans::add(doc, file);
@@ -209,6 +210,22 @@ pub fn starter(doc: &mut Doc) {
     doc.touch();
 }
 
+/// The item library the program ships with, brought into the job: a few things of each
+/// trade that has any, at typical sizes, every size Assumed and saying so.
+pub fn starter_items(doc: &mut Doc) {
+    let done = plumbline_sheets::read(tables::STARTER_ITEMS.as_bytes(), None).and_then(|sheet| tables::items_in(&mut doc.job, &sheet.rows, Some(&sheet.numbers)));
+    match done {
+        Ok(b) if b.done.is_empty() => doc.say(Tone::Done, "The starter items are already in this job. They are under Items, on the left: click one, then click where one stands."),
+        Ok(b) => {
+            doc.job.derive();
+            doc.edit("Starter items");
+            doc.say(Tone::Done, format!("Brought in {} starter items, trade by trade, at typical sizes: each size is Assumed until the product is chosen. They are under Items, on the left: click one, then click where one stands; Change opens it to be changed.", b.done.len()));
+        }
+        Err(why) => crate::tools::cant(doc, "bring in the starter items", why),
+    }
+    doc.touch();
+}
+
 /// Write something out of the job, from the window: beside the job, under the job's
 /// own name with an ending that says what it is. The same writers the command line
 /// uses. Nothing is written over a job.
@@ -222,7 +239,7 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
     let again = to.exists();
     // A job with nothing priced writes headings and nothing under them, and says so
     // (J19-40: it wrote the file without a word that nothing was in it).
-    let bare = !matches!(what, WriteOut::Model) && plumbline_world::view::estimate(&mut doc.job).lines.is_empty();
+    let bare = !matches!(what, WriteOut::Model | WriteOut::Items) && plumbline_world::view::estimate(&mut doc.job).lines.is_empty();
     let done: Result<String, String> = (|| {
         if std::fs::read_to_string(&to).ok().is_some_and(|text| plumbline_world::file::load(&text).is_ok()) {
             return Err(format!("{name} is a job: what is written out is not written over a job"));
@@ -238,6 +255,11 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
                     out.push_str(&format!("\nNot in it: {}.", written.not_written.iter().map(|(what, n, why)| format!("{n} x {what} ({why})")).collect::<Vec<_>>().join("; ")));
                 }
                 Ok(out)
+            }
+            WriteOut::Items => {
+                let rows = tables::items_out(&mut doc.job);
+                wrote(plumbline_sheets::csv(&rows).as_bytes())?;
+                Ok(format!("Wrote {name}, beside the job: the job's items, {} under their headings. Open it, change a size or add a row, and bring it back in with Item library, under Bring in.", count(rows.len().saturating_sub(1), "row", "rows")))
             }
             WriteOut::Rows => {
                 let sheets = export::estimate_out(&mut doc.job, false);

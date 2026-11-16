@@ -183,3 +183,25 @@ compared across three suppliers, and a price list reaches them only by their nam
 Proposed: a line names the material it is made of, so every line can carry
 suppliers' quotes side by side and follow a price list when it changes. It changes
 the job file and SPEC.md, so it waits for Patrick's word.
+
+## 28. An item's shape as data, and a bench to make it on (2026-11-16, from Patrick's message of that day, call 105)
+
+An item is drawn as one of thirteen shapes built into the program, or as its box. A
+trade's library wants its own things: a floor-mounted water closet and a wall-hung
+one, a tankless heater, a range hood, a bank of mailboxes. Today a new shape is a
+change to the program.
+
+Proposed, in two steps.
+1. **The shape is in the library.** An item carries its blocks: boxes and rounds,
+   each between figures worked from the item's width, depth and height, of a named
+   material. That is BIMCraft's `Family` (`crates/core/src/family.rs`: parameters,
+   types, formulas, forms, connectors), which is open in front of us and MIT. The
+   item library gains a table of blocks beside its table of items; the thirteen
+   built-in shapes become rows of the starter library.
+2. **A bench.** An item opened alone in the window, on a floor of its own, with its
+   box dimensioned; a block added, pulled and sized by hand or by typing; its
+   connections (hot, cold, waste, supply, power) placed on it; kept back to the
+   library. Clashes still test the box.
+
+It is new scope and a change to the job file, so it waits for Patrick's word. Whether
+a geometry library does any of it is QUESTIONS.md Q27.

@@ -3676,3 +3676,56 @@ kept its price: the advice was wrong.
   across suppliers has to be made of one. A line of its own that names the material
   it is made of is PROPOSALS.md 27.
 - The wrong advice is gone from the note.
+
+### Call 105. Patrick, 2026-11-16: a workbench for items, by trade, that can be modified like a database (and how it was read)
+
+His words, in full: "just want to ensure there is a workbench for items for trade
+that can be modified like a database of items / library like or similar to -
+https://github.com/rgeometry/rgeometry https://github.com/olson-sean-k/plexus
+https://github.com/hannobraun/fornjot".
+
+**What there was when he asked.** A thing could be made into an item from a maker's
+sheet, listed under Items, placed, moved and written to IFC. Thirteen shapes were
+drawn by a word in a thing's name. There was no library of items, nothing kept them
+by trade, an item could not be written out or brought back, and what it was drawn as
+could not be chosen. So: not yet.
+
+**How each clause was read.**
+- *"items for trade"*: an item says which of the sixteen divisions' item it is, and
+  items are listed, written out and read trade by trade.
+- *"a database of items / library"*: an item library is a table, one row an item,
+  kept in a file a person opens in any spreadsheet, changes and brings back. It
+  round-trips to the byte, every value with how sure it is and where it came from.
+  The program ships one (`library/items.csv`: 21 items in four trades, at typical
+  sizes, each size Assumed and saying "a typical size; the product is not chosen").
+- *"that can be modified"*: a row changed in the file changes its item when it is
+  brought back, and says what changed. In the window an item is opened from the Items
+  list (Change) and changed there: its sizes on their rows, its trade and what it is
+  drawn as each with a click. A change is the item's, so every one of it already
+  placed follows.
+- *"a workbench"*: today that is the item's panel, with the building still in view.
+  **A bench where an item stands alone, turned and sized by hand, is not built**; it
+  is PROPOSALS.md 28.
+- *"like or similar to" the three libraries*: each was read from its own pages
+  (`research/item-libraries-survey.md`, by an agent on Sonnet, with what it could not
+  verify). All three are permissively licensed (rgeometry Unlicense, plexus MIT,
+  fornjot 0BSD). rgeometry is 2D computational geometry; plexus is polygon-mesh
+  processing whose only release on crates.io is from 2019; fornjot is a b-rep CAD
+  kernel whose README begins "This project has been shut down". **None is linked.**
+  What an item needs here is a few sizes, a shape inside the box of those sizes, and
+  a clash test on the box; `building::forms` does that, ported from BIMCraft's
+  family library, which is the nearer model of "a library of parametric things":
+  BIMCraft's `Family` (`crates/core/src/family.rs`) has parameters, types, formulas,
+  forms, symbols and connectors. Porting that, so that an item's own shape is data in
+  the library and not one of thirteen built in, is the real next step and is
+  PROPOSALS.md 28. Whether he wants one of the three used for it is QUESTIONS.md
+  Q27.
+
+**What was built** (tests in `tests/tables.rs` and `tests/build.rs`):
+`pl::item` gained `division` and `form`; `tables::items_out` and `items_in`;
+`plumbline import items <file> <table|starter>`, `export items`, and `items` (the
+job's items trade by trade); in the window, Starter items and Item library under
+Bring in, Item library (CSV) under Write out, the Items list under each trade's name
+with Change on every row, and on an item's panel "Drawn as" and "Trade" as rows to
+click. A placed thing is drawn as its item says, else as its name says, else as its
+box.

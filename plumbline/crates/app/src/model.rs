@@ -28,6 +28,8 @@ pub enum Bring {
     Model,
     /// A maker's sheet (a cut sheet): made into an item that can be placed.
     Sheet,
+    /// An item library: the things that can be placed, by trade, as a table.
+    Items,
 }
 
 /// What is written out of the job, from the window.
@@ -42,10 +44,12 @@ pub enum WriteOut {
     Supplier,
     Subcontractor,
     Pm,
+    /// The job's items as a table, to open, change and bring back in.
+    Items,
 }
 
 impl WriteOut {
-    pub const ALL: [WriteOut; 6] = [WriteOut::Model, WriteOut::Workbook, WriteOut::Rows, WriteOut::Supplier, WriteOut::Subcontractor, WriteOut::Pm];
+    pub const ALL: [WriteOut; 7] = [WriteOut::Model, WriteOut::Workbook, WriteOut::Rows, WriteOut::Supplier, WriteOut::Subcontractor, WriteOut::Pm, WriteOut::Items];
     pub fn name(self) -> &'static str {
         match self {
             WriteOut::Model => "BIM model (IFC)",
@@ -54,6 +58,7 @@ impl WriteOut {
             WriteOut::Supplier => "For suppliers",
             WriteOut::Subcontractor => "For subcontractors",
             WriteOut::Pm => "For the PM",
+            WriteOut::Items => "Item library (CSV)",
         }
     }
     /// What it is called in the middle of a sentence (J19-40: the button's name put
@@ -66,6 +71,7 @@ impl WriteOut {
             WriteOut::Supplier => "workbook for suppliers",
             WriteOut::Subcontractor => "workbook for subcontractors",
             WriteOut::Pm => "workbook for the PM",
+            WriteOut::Items => "item library",
         }
     }
     /// What is added to the job's name to name the file.
@@ -77,12 +83,13 @@ impl WriteOut {
             WriteOut::Supplier => " for suppliers.xlsx",
             WriteOut::Subcontractor => " for subcontractors.xlsx",
             WriteOut::Pm => " for the PM.xlsx",
+            WriteOut::Items => " items.csv",
         }
     }
 }
 
 impl Bring {
-    pub const ALL: [Bring; 5] = [Bring::Prices, Bring::Assemblies, Bring::Prior, Bring::Model, Bring::Sheet];
+    pub const ALL: [Bring; 6] = [Bring::Prices, Bring::Assemblies, Bring::Prior, Bring::Model, Bring::Sheet, Bring::Items];
     pub fn name(self) -> &'static str {
         match self {
             Bring::Prices => "Price list",
@@ -90,6 +97,7 @@ impl Bring {
             Bring::Prior => "Prior estimate",
             Bring::Model => "Model (IFC)",
             Bring::Sheet => "Maker's sheet",
+            Bring::Items => "Item library",
         }
     }
     /// What it is called in the middle of a sentence.
@@ -100,6 +108,7 @@ impl Bring {
             Bring::Prior => "prior estimate",
             Bring::Model => "model (IFC)",
             Bring::Sheet => "maker's sheet",
+            Bring::Items => "item library",
         }
     }
 }
@@ -523,7 +532,7 @@ pub struct Snapshot {
     pub materials: Vec<String>,
     /// The job's items (things to place, made from makers' sheets): each one's path,
     /// its name, what kind of thing it is, and its size as said, or what is missing.
-    pub items: Vec<(String, String, Kind, String)>,
+    pub items: Vec<(String, String, Kind, String, u8)>,
     pub totals: Option<view::RoofTotals>,
     pub planes: Vec<PlaneInfo>,
     pub lines: Vec<LineInfo>,
@@ -593,17 +602,18 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     s.materials = doc.job.order.iter().filter(|e| doc.job.world.get::<Kind>(**e) == Some(&Kind::Material)).filter_map(|e| doc.job.world.get::<plumbline_world::Node>(*e)).map(|n| n.name.clone()).collect();
     s.items = {
         let mut q = doc.job.world.query::<(&plumbline_world::Node, &plumbline_world::Item)>();
-        let mut all: Vec<(String, String, Kind, String)> = q
+        let mut all: Vec<(String, String, Kind, String, u8)> = q
             .iter(&doc.job.world)
             .map(|(n, it)| {
                 let size = match it.size_ft() {
                     Ok((sides, ..)) => plumbline_world::units::size_said(sides),
                     Err(why) => why,
                 };
-                (n.path.clone(), n.name.clone(), it.category, size)
+                (n.path.clone(), n.name.clone(), it.category, size, it.division.map(|d| d.number()).unwrap_or(0))
             })
             .collect();
-        all.sort_by(|a, b| a.1.cmp(&b.1).then(a.0.cmp(&b.0)));
+        // Trade by trade, and by name within a trade; what says no trade comes last.
+        all.sort_by(|a, b| (a.4 == 0).cmp(&(b.4 == 0)).then(a.4.cmp(&b.4)).then(a.1.cmp(&b.1)).then(a.0.cmp(&b.0)));
         all
     };
     if doc.selected.as_ref().is_some_and(|sel| doc.job.find(sel).is_none()) {
