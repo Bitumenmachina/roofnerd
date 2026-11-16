@@ -146,6 +146,9 @@ pub struct Draw {
     /// Goes up with every edit the window makes, with what the edit was.
     pub edits: u64,
     pub seen: u64,
+    /// What the window has said since the frame began: the sentence a step is
+    /// remembered by, so that taking it back can say which line and what (J24A-12).
+    pub said: Option<String>,
     pub label: String,
     /// The storey the points in `picked` were picked on. Picks on another start afresh.
     pub picked_on: Option<String>,
@@ -958,6 +961,14 @@ pub fn clicks(mut doc: ResMut<Doc>, mouse: Res<ButtonInput<MouseButton>>, window
     pick(&mut doc, found.at, found.source);
 }
 
+/// The frame begins: nothing has been said in it yet. (What a later part of the last
+/// frame said is not what the next step is remembered by.)
+pub fn frame_begins(mut doc: ResMut<Doc>) {
+    if doc.draw.said.is_some() {
+        doc.bypass_change_detection().draw.said = None;
+    }
+}
+
 /// Each edit the window has made since the last look becomes a step that can be undone.
 pub fn record(mut doc: ResMut<Doc>) {
     if doc.draw.edits == doc.draw.seen {
@@ -966,7 +977,13 @@ pub fn record(mut doc: ResMut<Doc>) {
     let doc = &mut *doc;
     doc.draw.seen = doc.draw.edits;
     let before = std::mem::take(&mut doc.draw.last_text);
-    let label = doc.draw.label.clone();
+    // The step is remembered by what the window said as it was made ("Plane 1: unit
+    // cost of "Asphalt shingles" set to $105.00"), its first line; where nothing was
+    // said, by the short name of what was done.
+    let label = match doc.draw.said.take().as_deref().and_then(|m| m.lines().next()).map(str::trim) {
+        Some(line) if !line.is_empty() => line.trim_end_matches('.').to_string(),
+        _ => doc.draw.label.clone(),
+    };
     doc.draw.history.record(&label, before, &mut doc.job);
     doc.draw.last_text = file::save(&mut doc.job);
 }

@@ -723,7 +723,11 @@ fn steps_of(doc: &Doc, snap: &Snapshot) -> Vec<Step> {
     let walls = snap.fabric.iter().any(|(_, el)| el.kind == Kind::Wall);
     let floors = snap.fabric.iter().any(|(_, el)| el.kind == Kind::Floor);
     let rooms = snap.fabric.iter().any(|(_, el)| el.kind == Kind::Room);
-    let openings = snap.storeys.iter().any(|s| s.doors + s.windows > 0);
+    // One door did not tick "doors and windows" for a house with no window in it
+    // (J24A-2): the step is done with at least one of each, and until then says which
+    // is still to come.
+    let doors = snap.storeys.iter().any(|s| s.doors > 0);
+    let windows = snap.storeys.iter().any(|s| s.windows > 0);
     let scaled = snap.drawings.iter().any(|l| l.scale_said().is_some());
     let services = snap.counts.iter().any(|(d, n)| *d != Discipline::Architecture && *n > 0);
     // Priced is a figure, not a line with no price on it: the step was ticked the
@@ -744,7 +748,15 @@ fn steps_of(doc: &Doc, snap: &Snapshot) -> Vec<Step> {
             how: if snap.drawings.is_empty() { "Click Add drawing and pick the plan from the list (PDF, PNG or JPEG), or drop the file on this window.".into() } else { "Click Set scale, then the two ends of one dimension on the drawing, and type the dimension.".into() },
         },
         Step { done: walls, what: "Draw the walls", how: "Click Wall in the bar at the bottom, or press 1. Type its thickness and height, then click each corner.".into() },
-        Step { done: openings, what: "Add doors and windows", how: "Click Door or Window, then click the place on a wall.".into() },
+        Step {
+            done: doors && windows,
+            what: "Add doors and windows",
+            how: match (doors, windows) {
+                (true, false) => "A door is in; no window yet. Click Window, then click the place on a wall.".into(),
+                (false, true) => "A window is in; no door yet. Click Door, then click the place on a wall.".into(),
+                _ => "Click Door or Window, then click the place on a wall.".into(),
+            },
+        },
         Step { done: floors && rooms, what: "Add the floor and name the rooms", how: if floors { "Click Room, click inside a room, and type its name.".into() } else { "Click Floor, then anywhere on the level. Then Room, for each room.".into() } },
         Step { done: !snap.planes.is_empty(), what: "Add the roof", how: "Click Roof. Type its pitch and eave height, then click each corner of its outline and the first again.".into() },
         Step { done: services, what: "Run the ducts, pipes and wiring", how: "Click Duct, Pipe, Conduit or Cable, then click along its run. Equipment and Fixture stand where you click.".into() },

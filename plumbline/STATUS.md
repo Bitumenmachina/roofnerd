@@ -6161,9 +6161,9 @@ not been judged.
 | J24A-14 | A labor rate is "Order factor" in the panel, "at 40 SF/hr" on the sheet, "production rate" in a refusal | **Fixed (call 101)**: "production rate" in the panel and in Open items |
 | J24A-17 | After a gable, the triangle of wall at the gable end is neither drawn nor priced | Open. A wall stops at its height; nothing fills a gable |
 | J24A-11 | 100 % overhead is taken without a word | Left: the warning is for a markup larger than what it is a percentage of (call 95); 100 % is not |
-| J24A-12 | Undo says "Undone: Unit cost." and not which line or to what | Open |
+| J24A-12 | Undo says "Undone: Unit cost." and not which line or to what | **Built, not seen (call 106)**: a step is remembered by what the window said when it was made, so undo reads "Undone: Plane 1: unit cost of "Asphalt shingles" set to $105.00" |
 | J24A-1 | Ctrl+A typed an "a" | **Fixed, seen (call 97)** |
-| J24A-2 | Next steps ticks "doors and windows" after one door | Open |
+| J24A-2 | Next steps ticks "doors and windows" after one door | **Built, not seen (call 106)**: ticked with one of each; with only one it says which is still to come |
 | J24A-3 | A reopened Door tool keeps the height and not the width | **Built, not seen**: it offers the last door's sizes |
 | J24A-4 | A production rate's field opens with no example | **Fixed (call 97)**, not seen open |
 | J24A-5 | $1.90 typed for a sheet of board was taken without a question | Open. The unit is on the line; nothing questions a price |
@@ -6228,6 +6228,17 @@ and failed twice. The veteran's first day (item 10) failed in the morning; in th
 evening the twenty-fourth judge, part A, wrote in its notes that it had completed
 the whole path in the window from the screen alone, with every figure agreeing with
 its own arithmetic, and it had not yet reported.
+
+**Running as this was written (2026-11-16, night): the twenty-fifth judgment**, two
+agents on Opus, on a frozen copy of 9868569. Part A is a veteran estimator on the item
+library (brought in, set down, changed, written out, the written list changed by hand
+and brought back with mistakes in it) and on the money path where it was changed after
+24A (a roof priced once, a price list pricing lines, a measured value replaced, an
+allowance on a bare thing). Part B is the look and the words again, items 11 and 9,
+with the Items list and an item's panel added. Their notes are written as they go in
+the scratch folders `j25a` and `j25b`; nothing they find is in this file yet. If this
+paragraph is still here, they were cut off or their reports were not recorded: the
+briefs are short and can be given again.
 
 **What is owed, in this order.**
 

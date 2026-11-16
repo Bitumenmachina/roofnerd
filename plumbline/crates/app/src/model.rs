@@ -366,6 +366,10 @@ impl Doc {
                 self.message = message.into();
             }
         }
+        // A refusal is not a step: only what was done is what a step is remembered by.
+        if tone != Tone::Refused || self.draw.edits != self.draw.seen {
+            self.draw.said = Some(self.message.clone());
+        }
     }
     /// What is being typed is about to be let go for something else: if anything had
     /// been typed, what did not happen is kept to be said with whatever is said next.

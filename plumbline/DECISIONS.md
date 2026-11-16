@@ -3729,3 +3729,24 @@ Bring in, Item library (CSV) under Write out, the Items list under each trade's 
 with Change on every row, and on an item's panel "Drawn as" and "Trade" as rows to
 click. A placed thing is drawn as its item says, else as its name says, else as its
 box.
+
+### Call 106. A step taken back says what the step was; "doors and windows" wants one of each (2026-11-16)
+
+Two of the twenty-fourth judge's open rows, each a change to what a person reads.
+
+- **J24A-12.** Undo said "Undone: Unit cost." and not which line or to what. A step
+  is now remembered by the first line of what the window said when it was made, so
+  taking it back reads "Undone: Plane 1: unit cost of "Asphalt shingles" set to
+  $105.00", and doing it again "Redone: ..." the same. Where a step said nothing, it
+  is still remembered by the short name of what was done ("Wall", "Delete"). A
+  refusal is not a step and is never what one is remembered by. It does not say what
+  the value went back to: the line shows it, and the history holds the job before the
+  step, not a list of what the step changed.
+- **J24A-2.** Next steps ticked "Add doors and windows" after one door. It is ticked
+  with at least one door and one window; with only one of the two it says which is in
+  and which is still to come. (A house with no window at all leaves the step
+  unticked: the list is a guide, and no later step waits on it.)
+
+Built, tests pass (no test holds either: both are words in the window). **Not seen
+in the window yet**: two judges were driving windows on the machine when it was
+built.
