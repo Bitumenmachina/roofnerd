@@ -5390,3 +5390,11 @@ swing, so an arc would be made up. PROPOSALS.md 22 proposes holding them. Not ju
 **Overhead and profit said back as the recap shows them.** "The job: profit set to
 8." now reads "The job: profit set to 8.00 %." (read in `d5/06-sheet`, retaken:
 `d5w` passes on the build and `d5/` is of it). 283 tests pass.
+
+**2026-11-16: a fresh pass, at Patrick's word** ("start with a fresh pass of code and
+review, ui and cleaning up codebase"). Three agents that did not build it were
+started on Opus, on a frozen build of 6327b50 (283 tests pass): two code reviewers
+(`research/review-21-brief.md`: one on the model, the money and the command line,
+one on the window crate) and the twenty-first judgment (`research/judgment-21-brief.md`:
+the twentieth's brief to the end, plus whether each J20 finding is truly fixed and
+calls 77 to 81). Their findings are recorded here the turn they arrive.
