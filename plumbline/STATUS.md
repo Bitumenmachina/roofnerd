@@ -6062,6 +6062,17 @@ written, and two windows at once cost clicks.
 5. Saved. The saved job is read at the command line and as a file: four planes, five
    lines each, each price and rate Assumed and sourced "entered on screen".
 
+## A plan and its page picked from a list: a demonstration, written before it is run (`demos/pagew.sh`, calls 94 and 98)
+
+"Start here" has owed this since call 94. **It has not been run.** In a new job kept
+in a folder with USDA Plan No. 7213 beside it and a folder of price lists: a level is
+typed; Add drawing; the plan's row is clicked (the window is to say "Picked
+usda-7213: it has 4 pages. Pick the page to trace over from the list."); the row
+"Page 4" is clicked; the job is saved. It checks that no message carries the file's
+ending or where it lies, that the saved job has one drawing, page 4 of
+`usda-7213.pdf`, named as it lies beside the job, and it takes three pictures: the
+list, the pages, the page laid under.
+
 ## The twenty-fourth judgment, part A: what its notes say so far, and what was done (2026-11-16, late)
 
 Part A (the veteran's first day and the money path in the window) is still at work.
