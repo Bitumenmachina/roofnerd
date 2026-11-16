@@ -464,9 +464,22 @@ pub fn rebuild(
             let material = StandardMaterial { base_color: if doc.plan { theme::ground() } else { theme::yard() }, perceptual_roughness: 1.0, reflectance: 0.0, ..default() };
             commands
                 .spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(24000.0, 24000.0))), MeshMaterial3d(materials.add(material)), Transform::from_xyz(0.0, -0.04, 0.0), Ground))
-                .observe(|press: On<PointerClick>, mut doc: ResMut<Doc>| {
+                .observe(|press: On<PointerClick>, mut doc: ResMut<Doc>, snap: Res<Snapshot>| {
+                    if press.button != PointerButton::Primary || doc.entry.is_some() || doc.draw.tool.is_some() || doc.draw.swallow || dragged() {
+                        return;
+                    }
+                    // On the plan of the level a roof sits on, the roof is its lines,
+                    // broken, and there is nothing of it to click: a click inside a
+                    // plane's outline that lands on nothing else picks the plane
+                    // (J25A-8: it said "Nothing selected." and a plane could only be
+                    // picked in 3D, with nothing to say so).
+                    let over = press.hit.position.and_then(|p| plane_over(&doc, &snap, [doc.origin[0] + f64::from(p.x), doc.origin[1] - f64::from(p.z)]));
+                    if let Some(plane) = over {
+                        doc.select(&plane);
+                        return;
+                    }
                     // A click on the ground lets go of the selection.
-                    if press.button == PointerButton::Primary && doc.selected.is_some() && doc.entry.is_none() && doc.draw.tool.is_none() && !doc.draw.swallow && !dragged() {
+                    if doc.selected.is_some() {
                         doc.selected = None;
                         doc.say(Tone::Done, "Nothing selected.");
                         doc.touch();
@@ -1383,6 +1396,29 @@ fn said_in(found: &plumbline_world::building::clash::Clashes, path: &str) -> Opt
         .map(|c| format!("{}{}", if c.a == path { &c.b_name } else { &c.a_name }, c.by.map(|by| format!(" ({} into each other)", near(by))).unwrap_or_default()))
         .collect();
     (!with.is_empty()).then(|| with.join(", and "))
+}
+
+/// The roof plane whose outline a point of the plan lies in, where the roof is drawn on
+/// plan as its broken lines: on the plan of the level it sits on, with the roof on show.
+fn plane_over(doc: &Doc, snap: &Snapshot, at: [f64; 2]) -> Option<String> {
+    let top = snap.storeys.iter().filter(|s| s.elevation.is_some()).max_by(|a, b| a.elevation.unwrap_or(0.0).total_cmp(&b.elevation.unwrap_or(0.0))).map(|s| &s.path);
+    if !doc.plan || !doc.show.roof || doc.show.ghost || doc.show.storey.is_none() || doc.show.storey.as_ref() != top {
+        return None;
+    }
+    snap.planes.iter().find(|p| p.solid.as_ref().is_some_and(|solid| inside(&solid.points, at))).map(|p| p.path.clone())
+}
+
+/// Whether a point lies inside an outline on plan (a ray cast east crosses it an odd
+/// number of times).
+fn inside(outline: &[[f64; 2]], at: [f64; 2]) -> bool {
+    let mut odd = false;
+    for i in 0..outline.len() {
+        let (a, b) = (outline[i], outline[(i + 1) % outline.len()]);
+        if (a[1] > at[1]) != (b[1] > at[1]) && at[0] < a[0] + (at[1] - a[1]) / (b[1] - a[1]) * (b[0] - a[0]) {
+            odd = !odd;
+        }
+    }
+    odd
 }
 
 /// The wall of a level on show whose thickness a point of the plan lies in, if any:

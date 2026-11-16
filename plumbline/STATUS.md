@@ -6202,7 +6202,7 @@ test) and the row was put right.
 A veteran estimator on the item library, then on the money path where it changed
 after 24A. **Its report has not arrived as this is written**; these rows are from its
 notes (`j25a/NOTES.md` in the scratch folder, to be kept in `research/` when it is
-done). What it tried that held: 21 starter items by trade, a lavatory, a range and a
+done). On the money path, held to the cent by its own arithmetic: an assembly given to one plane going on the other three and saying so; a unit cost and a rate per square typed once; a wage; overhead and profit; the top bar, the sheet and the saved job agreeing at $672.54. What it tried on the library that held: 21 starter items by trade, a lavatory, a range and a
 panelboard found; seven things set down from four trades, each where it was clicked
 and at its size on plan (measured off the picture); a sofa, a tub, a water heater, a
 lavatory and a water closet drawn as what they are; an item's trade, what it is drawn
@@ -6219,6 +6219,11 @@ saved, closed and opened again with everything where it stood.
 | J25A-2 | Taking an item in hand on plan throws the view to 3D without a word | **Built, not seen (call 107)**: the plan stays |
 | J25A-5 | "in the same space as Bathtub, 5 ft by 1' 4"" reads as a size | **Built, not seen (call 107)**: "Bathtub, 5 ft (1' 4" into each other)" |
 | J25A-7 | An item's weight is written as three blanks: a blank "how sure" is none of the three | **Fixed, tested (call 107)**: Unknown, "not said" |
+| J25A-12 | **STOP: a supplier's list whose names match the lines word for word priced none of them** when brought in with the supplier's name, as the window invites; "22 set on the job" and "and 16 more" hid what it did | **Fixed, tested, not seen (call 108)**: a supplier's price is the job's where the job has none; the lines priced are said first. J24A-18's fix (call 104) held only for a list with no supplier named |
+| J25A-8 | On plan a roof plane cannot be picked: a click inside it says "Nothing selected." | **Built, not seen**: on the plan of the level a roof sits on, a click inside a plane's outline that lands on nothing else picks the plane |
+| J25A-11 | Roof sheathing rounded up to whole sheets plane by plane: 12 sheets where 10 cover the roof | **Open, and it overstates an order** (call 108 says why it is not changed tonight) |
+| J25A-10 | "2 hr/SQ" typed is shown on the line as "at 0.02 hr/SF" | Open: exact, in the line's unit, not the unit typed |
+| J25A-9 | Unit cost on a plane's panel opens its first line only | Open: the others are priced on the sheet |
 | minor | The message log says "fixture-0030 is one of it" where the screen says "Lavatory is one of it" | **Built, not seen**: the log is written line by line as the screen is |
 | minor | The "Drawn as" list has no range, refrigerator, washer or panel: a range is a plain box | Open: PROPOSALS.md 28 |
 | minor | After Measure a width's row says "measured on site" with no tag, beside rows tagged Assumed | Left: Known is the plain one of the three everywhere; nothing marks it |

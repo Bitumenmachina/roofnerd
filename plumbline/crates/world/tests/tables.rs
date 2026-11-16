@@ -514,3 +514,42 @@ fn a_size_changed_in_the_library_reaches_what_is_already_set_down_and_says_so() 
     assert_eq!(out[row][19..22], ["".to_string(), "Unknown".to_string(), "not said".to_string()]);
     assert_eq!(tables::items_in(&mut job, &out, None).unwrap().same, 21);
 }
+
+#[test]
+fn a_named_suppliers_list_prices_what_the_job_has_no_price_for_and_writes_over_nothing() {
+    // J25A-12, call 108. The same wall, 329.99 SF net, with two lines made of no
+    // material: "Lap siding" with no price, "Weather barrier" at a made-up $0.30/SF.
+    let mut job = sample::house();
+    let wall = job.order.clone().into_iter().find_map(|e| job.world.get::<Node>(e).filter(|n| n.name == "south wall").map(|n| n.path.clone())).unwrap();
+    job.add_line(&wall, "Lap siding", "net_area", Some(Class::Material), false).unwrap();
+    job.add_line(&wall, "Weather barrier", "net_area", Some(Class::Material), false).unwrap();
+    job.set_on_line(&wall, "unit_cost", Some("Weather barrier"), Some("$0.30/SF"), Status::Assumed, "made up").unwrap();
+    job.derive();
+    // The list is brought in as a named supplier's, as a person in the window does.
+    let list = rows(&[&["item", "unit", "price"], &["Lap siding", "SF", "4.25"], &["Weather barrier", "SF", "0.25"]]);
+    let how = || Entered { status: Status::Assumed, source: "a made-up list" };
+    let brought = tables::prices_in(&mut job, &list, None, Some("Harbor Supply"), true, Some(how())).unwrap();
+    job.derive();
+    // The priced line is said first; then the material, with whose price the job took.
+    assert_eq!(brought.done[0], "\"Lap siding\" on south wall: priced at $4.25/SF, the list's");
+    assert!(brought.done.iter().any(|d| d == "Lap siding from Harbor Supply: $4.25/SF, which Harbor Supply had not quoted; the job had no price for it and takes Harbor Supply's"), "{:?}", brought.done);
+    // 329.99 x 4.25 = 1,402.4575 -> $1,402.46, Assumed, and it says whose list.
+    let est = view::estimate(&mut job);
+    let line = |name: &str| est.lines.iter().find(|l| l.path == wall && l.description == name).unwrap().clone();
+    let siding = line("Lap siding");
+    assert_eq!((siding.unit_cost.as_ref().and_then(|v| v.value), siding.amount.value), (Some(4.25), Some(1402.46)));
+    assert_eq!(siding.unit_cost.as_ref().map(|v| (v.status, v.source.as_str())), Some((Status::Assumed, "Harbor Supply's price list: a made-up list")));
+    // The barrier's line had a price and keeps it: 329.99 x 0.30 = $99.00.
+    assert_eq!(line("Weather barrier").amount.value, Some(99.0));
+    assert!(brought.notes.iter().any(|n| n.contains("\"Weather barrier\" on south wall keeps $0.30/SF (the list says $0.25/SF)")), "{:?}", brought.notes);
+    // A second supplier's list, dearer: the job's price and the line's stay; the quote
+    // stands beside the first.
+    let dearer = rows(&[&["item", "unit", "price"], &["Lap siding", "SF", "4.60"]]);
+    let second = tables::prices_in(&mut job, &dearer, None, Some("Ridge Lumber"), true, Some(how())).unwrap();
+    job.derive();
+    assert_eq!(second.done, ["Lap siding from Ridge Lumber: $4.60/SF, which Ridge Lumber had not quoted"]);
+    assert_eq!(second.notes, ["1 cost line named as an item on the list had a price and keeps it: \"Lap siding\" on south wall keeps $4.25/SF (the list says $4.60/SF). To take the list's, type it on the line"]);
+    let est = view::estimate(&mut job);
+    assert_eq!(est.lines.iter().find(|l| l.path == wall && l.description == "Lap siding").unwrap().amount.value, Some(1402.46));
+    assert_eq!(load(&save(&mut job)).map(|_| ()).map_err(|e| e.to_string()), Ok(()));
+}

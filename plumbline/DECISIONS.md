@@ -3803,3 +3803,51 @@ machine. Not taken up from the notes so far: the "Drawn as" list has no range,
 refrigerator, washer or panel (they are boxes: PROPOSALS.md 28); a panelboard stands
 on the floor, nothing hangs it on a wall at a height (its height above the level can
 be measured on its panel); the switches under Show are not kept with the job.
+
+### Call 108. A supplier's price list prices the job where the job has no price (2026-11-16, night)
+
+**J25A-12, and the judge stopped on it.** The twenty-fourth judge found that a price
+list priced no line (J24A-18) and call 104 answered it: a cost line named as one of
+the list's items takes the material's job price. The twenty-fifth judge brought a
+list in the way the window invites, with the supplier's name after the file's
+("supplier-copy.csv, Supplier A"), and nothing was priced: with a supplier named, a
+row sets that supplier's quote, the job's own price stayed unknown, and call 104
+prices a line from the job's price. The test that held call 104 brought its list in
+with no supplier named, which no one in the window does.
+
+Decided:
+
+- **A supplier's price is the job's too, where the job has none.** The material's own
+  price takes it, as sure as the list was said to be, and says whose it is ("Supplier
+  A's price list: ..."). The row says so: "Lap siding from Supplier A: $4.25/SF, which
+  Supplier A had not quoted; the job had no price for it and takes Supplier A's".
+- **A price the job has is not written over by a list.** A second supplier's list
+  sets that supplier's quote beside the first; the job's price and every line stay,
+  and suppliers side by side shows both.
+- **A line is set only against what the list brought in names.** (Any list brought in
+  noted again every line that differed from any material's price.) A line with a
+  price that differs from this list's keeps it and is named with both figures. A
+  line with no price takes the job's price; where the job already had one and this
+  list says another, both are said.
+- **The lines priced are said first**, ahead of the materials added: they are what
+  the list did to the estimate, and were behind "and 16 more".
+
+Test: `a_named_suppliers_list_prices_what_the_job_has_no_price_for_and_writes_over_nothing`.
+318 tests pass; the twenty-one command-line demonstrations pass and none of their
+figures moved (each brings its suppliers' lists onto a job that has its own
+prices). `demos/bringw.sh` brings a named supplier's list onto a job whose materials
+have no price: its figures are expected to move, and it is run and read before
+anything is said of it. **Not seen in the window.**
+
+Also from part A's notes, and left as they are with the reason:
+- J25A-10: a rate typed "2 hr/SQ" is shown on the line as "at 0.02 hr/SF". It is kept
+  and shown in the unit the line's quantity is in (call 100) and is exact (2.5 hr/SQ
+  is shown 0.025, not 0.03); it is not shown in the unit it was typed in. Open.
+- J25A-11: roof sheathing is rounded up to whole sheets plane by plane: 12 sheets on
+  four planes of a 313 SF roof where 10 cover it. A line rounds up what it orders,
+  and each plane has its own line. Rounding once for the roof is a rule of the model
+  (what a line orders against what the job orders) and is not changed tonight; it is
+  said here and in STATUS.md so that nobody takes the sheet count of a hip roof for
+  an order.
+- J25A-9: Unit cost on a plane's panel opens the price of its first line only; the
+  others are priced on the sheet. Open.

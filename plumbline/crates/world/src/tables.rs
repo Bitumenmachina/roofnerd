@@ -408,6 +408,17 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
             match &whose {
                 None => supply.price = new,
                 Some(s) => {
+                    // Call 108: a supplier's price is the job's too where the job has
+                    // none: an estimator who brings in one supplier's list is pricing
+                    // the job with it (J25A-12: a list named as Supplier A's priced
+                    // nothing, since only a list with no supplier's name set the price
+                    // a line is priced by). A price the job has is not written over;
+                    // the quote stands beside it.
+                    if supply.price.value.is_none() && new.value.is_some() {
+                        supply.price = Val { value: new.value, unit: new.unit.clone(), status: new.status, source: format!("{s}'s price list: {}", new.source) };
+                        what.push_str(&format!("; the job had no price for it and takes {s}'s"));
+                        changed = true;
+                    }
                     supply.quotes.insert(s.clone(), new);
                     if !suppliers.contains(s) {
                         suppliers.push(s.clone());
@@ -484,12 +495,22 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
         let mut took: Vec<String> = Vec::new();
         let mut kept: Vec<String> = Vec::new();
         let mut other_unit: Vec<String> = Vec::new();
-        let prices: std::collections::HashMap<String, Val<f64>> = by_plain.iter().filter_map(|(plain, path)| job.find(path).and_then(|e| job.world.get::<Supply>(e)).map(|s| (plain.clone(), s.price.clone()))).collect();
+        // Only what this list names: the job's price for it as it now stands (what a
+        // line with no price takes), and what this list says (what a line that has a
+        // price is set against). A list brought in said nothing of, and did nothing
+        // to, the lines named as some other list's items.
+        let prices: std::collections::HashMap<String, (Val<f64>, Option<f64>)> = by_plain
+            .iter()
+            .filter_map(|(plain, path)| {
+                let listed = priced.iter().find(|(p, _, _, _)| p == path)?.3;
+                job.find(path).and_then(|e| job.world.get::<Supply>(e)).map(|s| (plain.clone(), (s.price.clone(), listed)))
+            })
+            .collect();
         for e in job.order.clone() {
             let Some(on) = job.world.get::<Node>(e).map(|n| if n.name.is_empty() { n.path.clone() } else { n.name.clone() }) else { continue };
             let Some(mut cost) = job.world.get_mut::<crate::Cost>(e) else { continue };
             for l in cost.lines.iter_mut().filter(|l| !l.of_material) {
-                let Some(price) = prices.get(&check::plain_name(&l.description)) else { continue };
+                let Some((price, listed)) = prices.get(&check::plain_name(&l.description)) else { continue };
                 let Some(at) = price.value else { continue };
                 let by = price.unit.trim_start_matches("$/");
                 let said = format!("{:?} on {on}", l.description);
@@ -497,17 +518,22 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
                     other_unit.push(format!("{said} (priced by the {}, the list's by the {by})", l.unit_cost.unit.trim_start_matches("$/")));
                     continue;
                 }
+                let lists = listed.unwrap_or(at);
                 match l.unit_cost.value {
                     None => {
                         l.unit_cost = Val { value: Some(at), unit: price.unit.clone(), status: price.status, source: price.source.clone() };
-                        took.push(format!("{said}: priced at {}, the list's", dollars(at, by)));
+                        // The job's price for it is the list's, unless the job had one
+                        // already: then the line takes the job's, and both are said.
+                        took.push(if (lists - at).abs() > 1.0e-9 { format!("{said}: priced at {}, the job's price (this list says {})", dollars(at, by), dollars(lists, by)) } else { format!("{said}: priced at {}, the list's", dollars(at, by)) });
                     }
-                    Some(has) if (has - at).abs() > 1.0e-9 => kept.push(format!("{said} keeps {} (the list says {})", dollars(has, by), dollars(at, by))),
+                    Some(has) if (has - lists).abs() > 1.0e-9 => kept.push(format!("{said} keeps {} (the list says {})", dollars(has, by), dollars(lists, by))),
                     Some(_) => {}
                 }
             }
         }
-        out.done.extend(took);
+        // The lines priced are said first: they are what the list did to the estimate
+        // (J25A-12: they were last, behind "and 16 more").
+        out.done.splice(0..0, took);
         let shown = |all: &[String]| if all.len() > 4 { format!("{}, and {} more", all[..4].join("; "), all.len() - 4) } else { all.join("; ") };
         if !kept.is_empty() {
             out.notes.push(format!("{} named as an item on the list had a price and {}: {}. To take the list's, type it on the line", crate::view::so_many(kept.len(), "cost line"), if kept.len() == 1 { "keeps it" } else { "keep it" }, shown(&kept)));
