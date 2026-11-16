@@ -656,11 +656,11 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
         }
         // The sixteen together: no surer than the least sure division, and saying how
         // many lines the divisions above leave out (J17A-2).
-        let with: Vec<&view::DivisionTotal> = est.divisions.iter().filter(|d| d.total.value.is_some()).collect();
-        let in_all: f64 = with.iter().filter_map(|d| d.total.value).sum();
-        let status = with.iter().map(|d| d.total.status).max().unwrap_or(plumbline_world::Status::Known);
-        let out_of_them: usize = est.divisions.iter().map(|d| d.total.left_out.len()).sum();
-        let said = if with.is_empty() { "none".to_string() } else { format!("{}{}", status.flag().trim_end(), money(plumbline_world::lines::cents(in_all))) };
+        let (in_all, status, out_of_them) = est.sixteen();
+        let said = match in_all {
+            None => "none".to_string(),
+            Some(x) => format!("{}{}", status.flag().trim_end(), money(x)),
+        };
         let _ = writeln!(out, "  {:<36}{said:>14}{}", "the sixteen divisions", if out_of_them == 0 { String::new() } else { format!("   leaves out {}, named above", lines(out_of_them)) });
         let none = &est.no_division;
         if none.members > 0 || !none.left_out.is_empty() {

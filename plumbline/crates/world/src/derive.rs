@@ -282,7 +282,10 @@ pub fn derive(world: &mut World) -> Vec<String> {
                 Some(m) => match &m.value {
                     None => lines::Stock::Missing(format!("what the element is made of is not known ({})", m.source)),
                     Some(name) => {
-                        let found: Vec<&(String, String, Supply)> = materials.iter().filter(|(n, p, _)| n == name || p == name).collect();
+                        // By its path, or by its name as names are compared everywhere else (capitals,
+                        // spacing and a full stop aside): a job file that named it "copper, 16 OZ"
+                        // priced nothing while every other road took it (M21-12).
+                        let found: Vec<&(String, String, Supply)> = materials.iter().filter(|(n, p, _)| p == name || crate::check::same_name(n, name)).collect();
                         match found.as_slice() {
                             [(name, path, supply)] => lines::Stock::Found { path, name, status: m.status, supply },
                             [] => lines::Stock::Missing(format!("the element is made of {name:?}, and the job has no material of that name")),

@@ -524,6 +524,18 @@ pub struct Pricing {
     pub not_priced: Vec<(Kind, usize)>,
 }
 
+impl Estimate {
+    /// The sixteen divisions together, to the cent: what the divisions that come to a
+    /// figure add to (None where none does), no surer than the least sure of them, and
+    /// how many lines the divisions leave out. Worked here and nowhere else: the
+    /// command line and the workbook each added them up for themselves (M21-13).
+    pub fn sixteen(&self) -> (Option<f64>, Status, usize) {
+        let with: Vec<&DivisionTotal> = self.divisions.iter().filter(|d| d.total.value.is_some()).collect();
+        let total = (!with.is_empty()).then(|| crate::lines::cents(with.iter().filter_map(|d| d.total.value).sum()));
+        (total, with.iter().map(|d| d.total.status).max().unwrap_or(Status::Known), self.divisions.iter().map(|d| d.total.left_out.len()).sum())
+    }
+}
+
 impl Pricing {
     /// Like for like, worked here and nowhere else: over the elements that have both,
     /// the detail less the allowances to the cent (over is above nought), and that as
@@ -746,7 +758,7 @@ pub fn estimate(job: &mut Job) -> Estimate {
         // A condition's recipe is not on the job's sheet; it carries its lines in `pl::recipe`.
         let made_of = w.get::<MadeOf>(e).and_then(|m| m.0.value.clone());
         let found = made_of.as_ref().and_then(|name| {
-            let found: Vec<&(String, String, Supply)> = materials.iter().filter(|(n, p, _)| n == name || p == name).collect();
+            let found: Vec<&(String, String, Supply)> = materials.iter().filter(|(n, p, _)| p == name || crate::check::same_name(n, name)).collect();
             (found.len() == 1).then(|| found[0].clone())
         });
         // The material by its name, however the element names it (it may name its path).

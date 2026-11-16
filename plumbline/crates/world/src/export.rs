@@ -307,13 +307,14 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
         by_division.push(vec![text(name), amount, lines, text(if d.total.members == 0 && d.total.left_out.is_empty() { String::new() } else { note })]);
     }
     let division_last = by_division.len();
-    let in_all: f64 = est.divisions.iter().filter_map(|d| d.total.value).sum();
-    let any = est.divisions.iter().any(|d| d.total.value.is_some());
-    let worst = est.divisions.iter().filter(|d| d.total.value.is_some()).map(|d| d.total.status).max().unwrap_or(Status::Known);
-    let out_of_them: usize = est.divisions.iter().map(|d| d.total.left_out.len()).sum();
+    // The sixteen together are the model's figure (`Estimate::sixteen`).
+    let (in_all, worst, out_of_them) = est.sixteen();
     let sum_note = [if worst == Status::Known { String::new() } else { format!("as written: {}", sure(worst)) }, if out_of_them == 0 { String::new() } else { format!("as written: leaves out {out_of_them}, named above") }].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("; ");
     let sum_rule = format!("=IF(COUNT(B{division_first}:B{division_last})=0,\"none\",SUM(B{division_first}:B{division_last}))");
-    by_division.push(vec![text("The sixteen divisions"), if any { Out::Formula { text: sum_rule, value: Some(cents(in_all)) } } else { Out::FormulaText { text: sum_rule, shown: "none".into() } }, Out::None, text(sum_note)]);
+    by_division.push(vec![text("The sixteen divisions"), match in_all {
+        Some(x) => Out::Formula { text: sum_rule, value: Some(x) },
+        None => Out::FormulaText { text: sum_rule, shown: "none".into() },
+    }, Out::None, text(sum_note)]);
     // What is in the job cost and in none of the sixteen: the job cost less the sixteen,
     // so the two still come to the job cost after any change on the sheet (J17A-4).
     {

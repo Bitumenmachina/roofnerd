@@ -3895,6 +3895,21 @@ fn hours_on_a_labor_line_with_no_price_are_held_apart_and_said() {
     assert_eq!(class_total(&est, Class::Material).hours_unpriced, None);
 }
 
+/// A thing's material is found by its name as names are compared everywhere else:
+/// capitals, spacing and a full stop aside (M21-12: named "copper, 16 OZ" in a job file,
+/// it priced nothing, while a price list and the keyboard took it).
+#[test]
+fn a_material_is_found_by_its_name_however_it_is_capitalised() {
+    let mut job = sample::priced();
+    let before = priced_of(&mut job, "plane-0003", "detail").value;
+    assert_eq!(before, Some(5987.08));
+    job.set("plane-0003", "material", Some("copper,16 OZ."), Status::Known, "made-up").unwrap();
+    job.derive();
+    assert_eq!(priced_of(&mut job, "plane-0003", "detail").value, before);
+    let est = view::estimate(&mut job);
+    assert!(est.lines.iter().filter(|l| l.path == "plane-0003" && l.material.is_some()).all(|l| l.amount.value.is_some()), "a line made of the material has no figure");
+}
+
 #[test]
 fn a_labor_line_is_switched_off_and_leaves_every_total_by_its_amount() {
     let mut job = sample::priced();
