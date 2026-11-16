@@ -782,12 +782,30 @@ pub fn rebuild(
                 let pts: Vec<Vec3> = [a, b].iter().map(|q| to_view(origin, **q)).collect();
                 let frame: Vec<(Vec3, Vec3)> = pts.windows(2).map(|s| (s[0], s[1])).collect();
                 let metal = if matches!(p.kind, Kind::Duct | Kind::Conduit) { 0.55 } else { 0.15 };
+                // On plan a run with any width to it is its two edges in its system's
+                // colour over a light wash of the same: a duct was a solid bar of
+                // colour across the walls and the room names under it (J24B-14, E4).
+                // In 3D it is the solid thing it is.
+                let (fill, edges) = if on_plan_view { (colour.with_alpha(0.28), true) } else { (colour, false) };
+                let edge = |build: &mut Builder, from: Vec3, to: Vec3, half: f32, lift: f32| {
+                    let dir = (to - from).normalize_or(Vec3::X);
+                    if !edges || dir.y.abs() > 0.99 {
+                        return;
+                    }
+                    let side = dir.cross(Vec3::Y).normalize() * half;
+                    let up = Vec3::Y * (lift + 0.02);
+                    build.drawing.runs.push((from + side + up, to + side + up, colour, false));
+                    build.drawing.runs.push((from - side + up, to - side + up, colour, false));
+                };
                 match (round, rect) {
                     (Some(d), _) => {
                         let d = *d as f32;
                         for s in pts.windows(2) {
                             let turn = Quat::from_rotation_arc(Vec3::Y, (s[1] - s[0]).normalize_or(Vec3::Y));
-                            build.piece(&p.path, p.system.as_ref(), solids.cylinder.clone(), Transform { translation: (s[0] + s[1]) / 2.0, rotation: turn, scale: Vec3::new(d, s[0].distance(s[1]), d) }, colour, 0.45, metal, false);
+                            build.piece(&p.path, p.system.as_ref(), solids.cylinder.clone(), Transform { translation: (s[0] + s[1]) / 2.0, rotation: turn, scale: Vec3::new(d, s[0].distance(s[1]), d) }, if d < THIN_FT { colour } else { fill }, 0.45, metal, false);
+                            if d >= THIN_FT {
+                                edge(&mut build, s[0], s[1], d / 2.0, d / 2.0);
+                            }
                         }
                         if d < THIN_FT {
                             build.drawing.runs.extend(frame.iter().map(|(a, b)| (*a, *b, colour, false)));
@@ -805,7 +823,8 @@ pub fn rebuild(
                             let upward = dir.cross(side).normalize();
                             let turn = Quat::from_mat3(&Mat3::from_cols(side, upward, dir));
                             let (from, to) = (s[0], s[1]);
-                            build.piece(&p.path, p.system.as_ref(), solids.cube.clone(), Transform { translation: (from + to) / 2.0, rotation: turn, scale: Vec3::new(w, d, from.distance(to)) }, colour, 0.5, metal, false);
+                            build.piece(&p.path, p.system.as_ref(), solids.cube.clone(), Transform { translation: (from + to) / 2.0, rotation: turn, scale: Vec3::new(w, d, from.distance(to)) }, fill, 0.5, metal, false);
+                            edge(&mut build, from, to, w / 2.0, d / 2.0);
                         }
                     }
                     // No size: there is nothing to draw it as but its centre line, broken.
