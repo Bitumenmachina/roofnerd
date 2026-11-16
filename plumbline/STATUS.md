@@ -5516,3 +5516,49 @@ Worked by hand first, 24 in by 12 in unless said, and each is a test
 
 The made-up whole house is unchanged: Division 3 $32,485.40, price $468,876.85. 291
 tests pass. Not judged.
+
+
+## The twenty-first judgment (2026-11-16): what it found, and where each stands
+
+A judge that did not build it (Opus) ran `research/judgment-21-brief.md` to the end
+on the build of 6327b50: the command line first, every figure by hand, then the
+window. Its notes are `research/judgment-21-notes.md`. It could not check: windows
+placed with their offered sizes (its clicks missed walls it had drawn off square); a
+9 ft door in a 9 ft wall and a window 1 in from a wall's end (it expects the first to
+have no header and the second its king and jack inside the opening: untried); the
+foundation rows of the Building tab.
+
+**Would Patrick see each new trade?** Foundation: yes. Framing: yes at the size of a
+house, partly up close. Waterproofing: partly. Interior woodwork: partly (the base is
+right and is a thin line that is easy to miss; no casings or cabinets).
+
+**What held:** the whole house's price to the cent (399 lines, each quantity by unit
+cost; the sixteen divisions adding to the job cost); footings at the command line
+(refusals, move, remove, measure, a pipe through one, the BIM file); the switches
+change no figure and their counts are right; lengths typed once a wall's sizes are in
+hand; a door placed at the size on screen; the window's words (a scale said as a
+scale, a price said back as money, the By division head, an L-shaped room's figures).
+
+| | What a person met | State |
+|---|---|---|
+| J21-12, 13 | the first wall of a new job saved 2 ft thick and the next door offered 6 in wide | **fixed** (call 86; walked in the window: the section above) |
+| J21-1, 3, 4 | footing concrete counted twice at a cross, three at a point and a stem part way across; lost under a run where the stem is deeper | **fixed** (worked exactly; eight cases a test; the judge's jobs read 4.30, 4.37, 5.11 CY) |
+| J21-7 | "Remove house wrap", "Demo existing ...", "Remove existing concrete wall" drawn as if put in | **fixed**: `finish::not_in_the_work`, read by the barrier, concrete, base, framing and flashing rules; test `what_is_taken_out_or_not_in_the_work_is_not_drawn` |
+| J21-10 | with every level on show the plan wrote no room's name | **fixed**: the names give way only to a roof plan that is there |
+| J21-14, 2, 5 | a type told apart by what was first drawn on it; an unused footing type listed as "wall thickness"; removing a type in use refused with an untrue reason | **fixed** (call 87): a type holds what it was made as; test `a_type_is_a_walls_or_a_footings_from_the_moment_it_is_made` |
+| J21-18 | on a footing's panel 2.96 CY at $450.00 is not $1,333.35 | the panel now shows the quantity to the places it is priced at (2.9630); that it is rounded to four places before it is priced is Q25, Patrick's |
+| J21-19 | the roof's hips drawn on the foundation plan with the Roof switch reading off | **fixed**: the roof over is drawn dashed only on the plan of the level it sits on |
+| J21-8 | "Weather-resistive barrier", "Asphalt felt, 30 lb", a sheathing with its barrier not read; the wrap's tape drew the wrap; "2x4 framing" passed over silently; "NOT INCLUDED" framed | **fixed** but for one: "Air barrier" is still taken for a weather barrier, as call 72 decided (the judge would not) |
+| J21-15 | "To verify" on the panel listed a cost code and a missing price as field questions | **fixed**: the list of everything not yet Known is headed "Open items"; the field's list is the Verify in field tab |
+| J21-11 | the base had no switch on a job with no wall finish priced | **fixed**: the Finishes switch is there where base is priced |
+| J21-9 | `finishes` called a concrete wall "bare ... concrete" | **fixed**: "no cladding ...; concrete, as a line priced on it says" |
+| J21-17 | a level's zero walls flagged Unknown at the command line | **fixed**: having none is Known (a roof with no planes is still not) |
+| J21-20 | a framed wall's own panel says "Bare, on both faces" and nothing of its framing | open |
+| J21-21 | a frame is hard to look at closely: a double-click between studs flies into the lumber, the wheel overshoots, F did not bring the job back | open |
+| J21-6 | `measure <footing> height` still taken; refusals name paths never made; a footing 1,000 ft deep taken without a word; a footing dug wider cannot be recorded on it | open |
+| J21-16 | the command line says a scale as "18 to the foot" | open |
+| J20-6 | a footing or a wall in the BIM file notched at its outside corners | open |
+
+J20's nine, rechecked by the judge: 4, 7, 8, 9 and its test job fixed; 1, 2 and 5
+were fixed in part and are now fixed by the rows above; 3 is Q25; 6 is open.
+293 tests pass. **None of the fixes in this table has been judged.**

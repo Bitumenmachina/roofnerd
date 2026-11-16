@@ -287,7 +287,7 @@ fn notes(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
     if snap.notes.is_empty() {
         return;
     }
-    table(p, fonts, "To verify", format!("{}", snap.notes.len()), |t| {
+    table(p, fonts, "Open items", format!("{}", snap.notes.len()), |t| {
         for (status, what, why) in &snap.notes {
             t.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::axes(px(16.0), px(7.0)), row_gap: px(2.0), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::rule()))).with_children(|r| {
                 r.spawn(Node { align_items: AlignItems::Center, column_gap: px(9.0), ..default() }).with_children(|top| {

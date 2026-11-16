@@ -302,6 +302,18 @@ pub struct Sum {
     pub missing: Vec<String>,
 }
 
+/// The same over the things of one kind that a level holds, where having none is itself
+/// Known: a level with no wall has, for certain, no wall. (A roof with no planes is not
+/// that: its surface is not known. J21-17: a level's zero walls were flagged Unknown at
+/// the command line and written in red on the sheet.)
+pub(crate) fn sum_of_what_is_there(unit: &'static str, figures: &[(String, Option<f64>, Status)]) -> Sum {
+    let mut sum = sum_of(unit, figures);
+    if figures.is_empty() {
+        sum.status = Status::Known;
+    }
+    sum
+}
+
 pub(crate) fn sum_of(unit: &'static str, figures: &[(String, Option<f64>, Status)]) -> Sum {
     let missing: Vec<String> = figures.iter().filter(|f| f.1.is_none()).map(|f| f.0.clone()).collect();
     // A sum over nothing is not a Known zero: there is nothing there to total, and a view

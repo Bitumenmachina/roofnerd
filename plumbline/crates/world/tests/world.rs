@@ -2763,7 +2763,7 @@ fn a_walls_line_can_be_any_line_of_the_wall_and_its_layers_add_up() {
 
     // A type's layers add up to its thickness, or it is refused.
     let layer = |function, name: &str, inches: f64| Layer { function, material: Val::known(name.to_string(), "", "test"), thickness: Val::known(Len::One(inches), "in", "test") };
-    let built_up = |thickness: f64| WallType { thickness: Val::known(Len::One(thickness), "in", "test"), layers: vec![layer(Function::Finish, "siding", 0.75), layer(Function::Membrane, "housewrap", 0.0), layer(Function::Structure, "2x6 studs", 5.5), layer(Function::Finish, "gypsum board", 0.5)] };
+    let built_up = |thickness: f64| WallType { thickness: Val::known(Len::One(thickness), "in", "test"), layers: vec![layer(Function::Finish, "siding", 0.75), layer(Function::Membrane, "housewrap", 0.0), layer(Function::Structure, "2x6 studs", 5.5), layer(Function::Finish, "gypsum board", 0.5)], footing: false };
     assert!(check_wall_type("t", Kind::Type, &built_up(6.75)).is_ok());
     let err = check_wall_type("t", Kind::Type, &built_up(6.0)).unwrap_err();
     assert!(err.contains("its layers add up to 0.5625 ft, not its thickness, 0.5 ft"), "{err}");
@@ -3111,7 +3111,7 @@ fn walled() -> (Job, String, String) {
     let storey = job.add("job-0001", Kind::Storey, "ground").unwrap();
     job.put(&storey, Level { elevation: ft(0.0), height: ft(10.0), computation_height: None }).unwrap();
     let t = job.add("job-0001", Kind::Type, "wall 6 in").unwrap();
-    job.put(&t, WallType { thickness: Val::known(Len::One(6.0), "in", "test"), layers: Vec::new() }).unwrap();
+    job.put(&t, WallType { thickness: Val::known(Len::One(6.0), "in", "test"), layers: Vec::new(), footing: false }).unwrap();
     (job, storey, t)
 }
 
@@ -4221,7 +4221,7 @@ fn j10_2_a_room_is_no_surer_than_a_wall_its_walls_are_cut_to() {
     // and line though N bounds nothing.
     let (mut job, s, t, r) = boxed();
     let thick = job.add("job-0001", Kind::Type, "N's type").unwrap();
-    job.put(&thick, WallType { thickness: Val::known(Len::One(6.0), "in", "test"), layers: Vec::new() }).unwrap();
+    job.put(&thick, WallType { thickness: Val::known(Len::One(6.0), "in", "test"), layers: Vec::new(), footing: false }).unwrap();
     let n = wall(&mut job, &s, &thick, "N", [10.0, 0.0], [10.0, 10.0], 10.0);
     let e = job.find(&n).unwrap();
     job.world.get_mut::<Wall>(e).unwrap().room_bounding = false;
@@ -4370,7 +4370,7 @@ fn casing_is_taken_off_by_the_openings_own_size() {
     assert_eq!((bead.value, bead.unit.as_str()), (Some(18.0), "LF"), "{bead:?}");
     // A footing's concrete is a volume: not in a formula, and the refusal says what is.
     // A footing's type is made as a wall's is: its thickness is the footing's width.
-    let ft = ed::wall_type(&mut job, "footing 24 x 12", "24 in", how).unwrap();
+    let ft = ed::footing_type(&mut job, "footing 24 x 12", "24 in", how).unwrap();
     let footing = ed::footings(&mut job, &s, &ft, &[[30.0, 0.0], [40.0, 0.0]], false, "12 in", how).unwrap().remove(0);
     let refused = job.add_line(&footing, "Forms", "volume * 2", Some(Class::Material), false).unwrap_err();
     assert!(refused.contains("a formula works in lengths, areas and counts") && !refused.contains("the figure it comes from"), "{refused}");
@@ -4748,7 +4748,7 @@ fn j11_9_a_room_is_not_flagged_for_a_wall_met_at_the_far_end_of_one_of_its_walls
     // east wall at x = 20: ten feet from the room.
     let (mut job, s, t) = walled();
     let east_type = job.add("job-0001", Kind::Type, "east's type").unwrap();
-    job.put(&east_type, WallType { thickness: Val::assumed(Len::One(6.0), "in", "not on the wall schedule"), layers: Vec::new() }).unwrap();
+    job.put(&east_type, WallType { thickness: Val::assumed(Len::One(6.0), "in", "not on the wall schedule"), layers: Vec::new(), footing: false }).unwrap();
     wall(&mut job, &s, &t, "south", [0.0, 0.0], [20.0, 0.0], 10.0);
     wall(&mut job, &s, &east_type, "east", [20.0, 0.0], [20.0, 10.0], 10.0);
     wall(&mut job, &s, &t, "north", [20.0, 10.0], [0.0, 10.0], 10.0);
@@ -5864,7 +5864,7 @@ fn j14_5_6_7_walls_at_an_angle_are_walls_and_a_lateral_is_a_joint() {
     let (mut job, s, ..) = drawn();
     let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).unwrap();
     let unsized_type = job.add(&root, Kind::Type, "wall, thickness not known").unwrap();
-    job.put(&unsized_type, WallType { thickness: Val::unknown("in", "not on the drawings"), layers: Vec::new() }).unwrap();
+    job.put(&unsized_type, WallType { thickness: Val::unknown("in", "not on the drawings"), layers: Vec::new(), footing: false }).unwrap();
     ed::walls(&mut job, &s, &unsized_type, &[[0.0, 0.0], [20.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap();
     assert!(ed::walls(&mut job, &s, &unsized_type, &[[0.0, 1.0 / 12.0], [20.0, 1.0 / 12.0]], false, ed::Top::Height("9 ft"), how).unwrap_err().contains("lies along"));
 

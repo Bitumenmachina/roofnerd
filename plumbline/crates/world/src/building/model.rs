@@ -173,6 +173,10 @@ pub struct WallType {
     pub thickness: Val<Len>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub layers: Vec<Layer>,
+    /// Made as a strip footing's type: its thickness is the footing's width, and only
+    /// footings are drawn on it (call 87). Left out of the file for a wall's type.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub footing: bool,
 }
 
 /// `pl::floor_type`: on a Type. How thick its floors are and, when built up, its layers

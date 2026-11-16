@@ -1401,9 +1401,10 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         }
     }
     if let Some(c) = w.get::<WallType>(e) {
-        // A type that footings are of gives their width; one that walls are of, their
-        // thickness. (A type does not say which it is for; what uses it does.)
-        let footings = w.iter_entities().any(|x| x.get::<Kind>() == Some(&Kind::Footing) && x.get::<Wall>().is_some_and(|c| c.type_name.value.as_deref() == Some(path)));
+        // A footing's type gives a width; a wall's, a thickness. It is a footing's where
+        // it was made as one (call 87), or, from a file written before types said so,
+        // where footings are drawn on it.
+        let footings = c.footing || w.iter_entities().any(|x| x.get::<Kind>() == Some(&Kind::Footing) && x.get::<Wall>().is_some_and(|c| c.type_name.value.as_deref() == Some(path)));
         rows.push(view::length(path, if footings { "footing width" } else { "wall thickness" }, &c.thickness));
         layers(&mut rows, &c.layers);
     }
@@ -2051,15 +2052,15 @@ pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
             path: sn.path.clone(),
             name: sn.name.clone(),
             elevation: w.get::<Level>(s).and_then(|l| l.elevation.feet()),
-            walls: view::sum_of("LF", &figures[0]),
-            wall_face: view::sum_of("SF", &figures[1]),
-            wall_net: view::sum_of("SF", &figures[2]),
-            floors: view::sum_of("SF", &figures[3]),
-            rooms: view::sum_of("SF", &figures[4]),
+            walls: view::sum_of_what_is_there("LF", &figures[0]),
+            wall_face: view::sum_of_what_is_there("SF", &figures[1]),
+            wall_net: view::sum_of_what_is_there("SF", &figures[2]),
+            floors: view::sum_of_what_is_there("SF", &figures[3]),
+            rooms: view::sum_of_what_is_there("SF", &figures[4]),
             doors,
             windows,
-            footings: view::sum_of("LF", &figures[5]),
-            footing_volume: view::sum_of("CY", &figures[6]),
+            footings: view::sum_of_what_is_there("LF", &figures[5]),
+            footing_volume: view::sum_of_what_is_there("CY", &figures[6]),
             walls_by_type: of_type
                 .into_iter()
                 .map(|(path, f)| {

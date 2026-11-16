@@ -160,9 +160,22 @@ pub fn storey(job: &mut Job, name: &str, elevation: &str, height: &str, how: Ent
 pub fn wall_type(job: &mut Job, name: &str, thickness: &str, how: Entered) -> Result<String, String> {
     all_or_nothing(job, |job| {
         let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
-        let t = WallType { thickness: how.length(thickness)?, layers: Vec::new() };
+        let t = WallType { thickness: how.length(thickness)?, layers: Vec::new(), footing: false };
         let path = job.add(&root, Kind::Type, name)?;
         building::check_wall_type(&path, Kind::Type, &t)?;
+        job.put(&path, t)?;
+        Ok(path)
+    })
+}
+
+/// A strip footing's type: how wide footings of it are. Held as a wall's type is, and
+/// marked as a footing's: only footings are drawn on it (call 87).
+pub fn footing_type(job: &mut Job, name: &str, width: &str, how: Entered) -> Result<String, String> {
+    all_or_nothing(job, |job| {
+        let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
+        let t = WallType { thickness: how.length(width)?, layers: Vec::new(), footing: true };
+        let path = job.add(&root, Kind::Type, name)?;
+        building::check_wall_type(&path, Kind::Type, &t).map_err(|why| why.replace("wall type thickness", "footing type width"))?;
         job.put(&path, t)?;
         Ok(path)
     })
@@ -263,12 +276,31 @@ pub fn walls(job: &mut Job, storey: &str, type_path: &str, points: &[P2], closed
 /// footings are of is not drawn as a wall, nor the other way (the twentieth judgment
 /// drew a 24 in "wall" on a footing's type, and a footing 8 in wide on a wall's).
 fn type_is_free_for(job: &mut Job, type_path: &str, wanted: Kind) -> Result<(), String> {
+    // The job's types of the kind wanted, to offer where the one named will not do.
+    let offered = |job: &mut Job| {
+        let mut q = job.world.query::<(&Node, &WallType)>();
+        let mut used = job.world.query::<(&Kind, &Wall)>();
+        let under_footings: Vec<String> = used.iter(&job.world).filter(|(k, _)| **k == Kind::Footing).filter_map(|(_, w)| w.type_name.value.clone()).collect();
+        let mut names: Vec<String> = q.iter(&job.world).filter(|(n, t)| (t.footing || under_footings.contains(&n.path)) == (wanted == Kind::Footing)).map(|(n, _)| format!("{} {:?}", n.path, n.name)).collect();
+        names.sort();
+        let make = format!("make one with `type {}`", wanted.said());
+        if names.is_empty() { format!("this job has none yet: {make}") } else { format!("this job has {}; or {make}", names.join(", ")) }
+    };
+    let Some(made_for_footings) = job.find(type_path).and_then(|e| job.world.get::<WallType>(e)).map(|t| t.footing) else {
+        return Err(format!("{type_path} is not {} type: {}", if wanted == Kind::Footing { "a footing's" } else { "a wall's" }, offered(job)));
+    };
     let mut q = job.world.query::<(&Node, &Kind, &Wall)>();
-    let other = q.iter(&job.world).find(|(_, k, w)| **k != wanted && matches!(**k, Kind::Wall | Kind::Footing) && w.type_name.value.as_deref() == Some(type_path)).map(|(n, k, _)| (n.path.clone(), *k));
-    match other {
-        Some((path, kind)) => Err(format!("{type_path} is the type of {path}, {kind:#}: {wanted:#} needs a type of its own (make one with `type {}`)", wanted.said())),
-        None => Ok(()),
+    let users: Vec<(String, Kind)> = q.iter(&job.world).filter(|(_, k, w)| matches!(**k, Kind::Wall | Kind::Footing) && w.type_name.value.as_deref() == Some(type_path)).map(|(n, k, _)| (n.path.clone(), *k)).collect();
+    // What it was made as, or, for a type from a file written before types said so,
+    // what is already drawn on it.
+    if let Some((path, kind)) = users.iter().find(|(_, k)| *k != wanted) {
+        return Err(format!("{type_path} is the type of {path}, {kind:#}: {wanted:#} needs a type of its own ({})", offered(job)));
     }
+    let is_footings = made_for_footings || users.iter().any(|(_, k)| *k == Kind::Footing);
+    if is_footings != (wanted == Kind::Footing) {
+        return Err(format!("{type_path} was made as {} type: {wanted:#} needs a type of its own ({})", if is_footings { "a footing's" } else { "a wall's" }, offered(job)));
+    }
+    Ok(())
 }
 
 /// Strip footings along `points` (in feet, on the plan): each pair of points that follow
@@ -612,6 +644,24 @@ pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
             by.sort();
             if !by.is_empty() {
                 return Err(format!("{path} is the plane {} lie on: remove those first", listed(&by)));
+            }
+        }
+        // A type that things are of is not taken from under them, and the refusal says
+        // whose type it is (J21-5: it said the type "is not a footing type in this job",
+        // of a footing's type).
+        if kind == Kind::Type {
+            let mut by: Vec<String> = Vec::new();
+            let mut walls = job.world.query::<(&Node, &Wall)>();
+            by.extend(walls.iter(&job.world).filter(|(_, c)| c.type_name.value.as_deref() == Some(path)).map(|(n, _)| n.path.clone()));
+            let mut openings = job.world.query::<(&Node, &Opening)>();
+            by.extend(openings.iter(&job.world).filter(|(_, c)| c.type_name.value.as_deref() == Some(path)).map(|(n, _)| n.path.clone()));
+            let mut floors = job.world.query::<(&Node, &crate::Floor)>();
+            by.extend(floors.iter(&job.world).filter(|(_, c)| c.type_name.value.as_deref() == Some(path)).map(|(n, _)| n.path.clone()));
+            let mut runs = job.world.query::<(&Node, &Segment)>();
+            by.extend(runs.iter(&job.world).filter(|(_, c)| c.type_name.value.as_deref() == Some(path)).map(|(n, _)| n.path.clone()));
+            by.sort();
+            if !by.is_empty() {
+                return Err(format!("{path} is the type of {}: give {} another type, or remove {}, first", listed(&by), if by.len() == 1 { "it" } else { "them" }, if by.len() == 1 { "it" } else { "them" }));
             }
         }
         if kind == Kind::Material {

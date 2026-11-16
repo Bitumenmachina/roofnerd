@@ -3177,3 +3177,18 @@ each is changed:
 4. **A click or an Esc that did nothing was not said.** A click on the plan with a
    length typed and not yet entered now says the length is not set; Esc on a typed
    length says the start is kept.
+
+### Call 87. A wall type and a footing type are what they were made as (2026-11-16)
+
+From the twenty-first judgment (J21-2, J21-5, J21-14) and the model's review (M21-10).
+A strip footing is held as a wall is, on a type that gives its width. Which of the two
+a type was for was read from what was first drawn on it: a type made with `type
+footing` and not yet used was listed as a "wall thickness", a wall could be drawn on
+it (a 36 in wall), and a type made with `type wall` took a footing and from then on
+refused walls. A type now holds what it was made as (`footing` on its wall type in
+the job file, left out for a wall's type, so files written before read as they did):
+a footing is drawn only on a footing's type and a wall only on a wall's, from the
+first, and each refusal says how to make the other kind and lists the types of the
+right kind the job has. A type from a file written before this, already under
+footings, is still a footing's type. Removing a type that is in use is refused in
+words that are true: whose type it is.

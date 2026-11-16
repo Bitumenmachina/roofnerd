@@ -211,6 +211,9 @@ pub struct WallDress {
     /// How many lines priced on it name a framing. More than one: the first is the one
     /// drawn, and the report says the others are there.
     pub framing_lines: usize,
+    /// How many lines on it name framing and do not say a lumber size and a spacing: it
+    /// is not drawn as a frame for them, and the report says so.
+    pub framing_unread: usize,
     /// Whether a line priced on it names a weather barrier under its finish ("Sheathing
     /// and weather barrier", "house wrap", "building paper").
     pub barrier: bool,
@@ -259,6 +262,9 @@ pub struct Dress {
 /// Whether a line priced on a room names the base at the foot of its walls: "Base and
 /// trim", "baseboard", "wood base". Not a base cabinet, a gravel base or a base coat.
 pub fn base_in(text: &str) -> bool {
+    if not_in_the_work(text) {
+        return false;
+    }
     let w = words(text);
     let has = |list: &[&str]| w.iter().any(|x| list.contains(&x.as_str()));
     if has(&["baseboard", "baseboards"]) {
@@ -276,6 +282,9 @@ pub fn base_in(text: &str) -> bool {
 /// formed and placed", "Poured concrete wall"), and not something fixed to concrete
 /// ("Anchor bolts into concrete").
 pub fn concrete_wall_in(text: &str) -> bool {
+    if not_in_the_work(text) {
+        return false;
+    }
     let w = words(text);
     let has = |list: &[&str]| w.iter().any(|x| list.contains(&x.as_str()));
     has(&["concrete"]) && has(&["wall", "walls", "foundation", "stem", "formed", "poured", "cast"]) && !has(&["anchor", "anchors", "bolt", "bolts", "into", "fastener", "fasteners", "nails", "screws"])
@@ -284,10 +293,32 @@ pub fn concrete_wall_in(text: &str) -> bool {
 /// Whether a line names a weather barrier: the sheet that keeps water out of the wall
 /// behind its finish. By the words the trade uses for it.
 pub fn barrier_in(text: &str) -> bool {
+    if not_in_the_work(text) {
+        return false;
+    }
     let w = words(text);
-    let pair = |a: &str, b: &str| w.windows(2).any(|p| p[0] == a && p[1] == b);
-    // Its names, and the two makes a line is most often written by.
-    pair("weather", "barrier") || pair("house", "wrap") || pair("building", "paper") || pair("felt", "paper") || pair("tar", "paper") || pair("air", "barrier") || pair("water", "resistive") || w.iter().any(|x| ["housewrap", "wrb", "tyvek", "typar"].contains(&x.as_str()))
+    // Its names, the makes a line is most often written by, and a sheathing that
+    // carries its barrier on its face. (An air barrier is taken for one, as call 72
+    // decided: on an outside wall's line it is the membrane behind the finish. The
+    // twenty-first judgment would not: J21-8.) A vapor barrier and ice and water shield
+    // are not.
+    const NAMES: &[&str] = &["weather barrier", "weather resistive", "water resistive", "air barrier", "house wrap", "building paper", "felt paper", "tar paper", "asphalt felt", "housewrap", "wrb", "tyvek", "typar", "zip system", "zip sheathing"];
+    NAMES.iter().any(|name| {
+        let Some(found) = at(&w, name) else { return false };
+        // The tape, staples or caps that go with a wrap are not the wrap ("Housewrap
+        // tape at seams" drew the whole wall wrapped: J21-8).
+        !w.get(found + name.split(' ').count()).is_some_and(|next| ["tape", "tapes", "staples", "caps", "fasteners"].contains(&next.as_str()))
+    })
+}
+
+/// Whether a line says the thing is taken out, or is not in the work at all: "Remove
+/// house wrap", "Demo existing concrete wall", "Tear off felt paper", "Wall framing, 2x6
+/// at 16 in - NOT INCLUDED", "by others". A remodel's estimate is full of such lines,
+/// and what they name is not drawn as if it were being put in (J21-7).
+pub fn not_in_the_work(text: &str) -> bool {
+    let w = words(text);
+    const OUT: &[&str] = &["remove", "removal", "removing", "demo", "demolish", "demolition", "tear off", "tear out", "strip off", "strip out", "haul off", "haul away", "dispose", "disposal", "not included", "not in contract", "excluded", "exclude", "by others", "by owner", "nic", "omit", "omitted", "deduct", "credit for"];
+    any(&w, OUT)
 }
 
 /// The words of a text, lower case, split wherever a letter or a digit stops.
@@ -698,11 +729,16 @@ pub fn dress(job: &mut Job) -> Dress {
             let h = named.iter().find(|n| n.3 && n.2 == said.by).and_then(|n| n.4);
             (said, h.unwrap_or(3.0), h.is_some())
         });
-        let framing = on.iter().find_map(|(text, _)| crate::building::framing::named(text));
-        let framing_lines = on.iter().filter(|(text, _)| crate::building::framing::named(text).is_some()).count();
+        // A framing line that is taken out or not in the work frames nothing.
+        let framed_by = |text: &str| if not_in_the_work(text) { None } else { crate::building::framing::named(text) };
+        let framing = on.iter().find_map(|(text, _)| framed_by(text));
+        let framing_lines = on.iter().filter(|(text, _)| framed_by(text).is_some()).count();
+        // Lines that name framing and give no lumber size and spacing to draw it by:
+        // not drawn, and said (J21-8: "2x4 framing" was passed over without a word).
+        let framing_unread = on.iter().filter(|(text, _)| !not_in_the_work(text) && crate::building::framing::named(text).is_none() && words(text).iter().any(|x| x == "framing" || x == "studs")).count();
         let barrier = on.iter().any(|(text, _)| barrier_in(text));
         let concrete = cladding.is_none() && wainscot.is_none() && on.iter().any(|(text, _)| concrete_wall_in(text));
-        out.walls.insert(w.path.clone(), WallDress { outside, out: out_way, height: w.h, cladding, wainscot, past, framing, framing_lines, barrier, concrete });
+        out.walls.insert(w.path.clone(), WallDress { outside, out: out_way, height: w.h, cladding, wainscot, past, framing, framing_lines, framing_unread, barrier, concrete });
     }
     // Roof planes, openings, gutters, and the base in rooms.
     let outlines = building::room_outlines(job);
@@ -723,7 +759,7 @@ pub fn dress(job: &mut Job) -> Dress {
                 // Its color is the one its own line gives, or failing that the first line about the unit.
                 let tone = sash.as_ref().map(|s| s.tone).unwrap_or_else(|| unit.iter().find_map(|(text, _)| tone_in(text)));
                 let divided = unit.iter().find_map(|(text, _)| divided_in(text));
-                let flashed = on.iter().any(|(text, _)| words(text).iter().any(|w| w == "flashing" || w == "flashed"));
+                let flashed = on.iter().any(|(text, _)| !not_in_the_work(text) && words(text).iter().any(|w| w == "flashing" || w == "flashed"));
                 out.openings.insert(path, OpeningDress { sash, leaf: None, divided, tone, flashed });
             }
             Kind::Room => {
@@ -739,7 +775,7 @@ pub fn dress(job: &mut Job) -> Dress {
                 let leaf = first_and_also(unit.iter().filter_map(|(text, by)| leaf_in(text).map(|l| (l, tone_in(text), by.clone()))), Leaf::said);
                 let tone = leaf.as_ref().map(|l| l.tone).unwrap_or_else(|| unit.iter().find_map(|(text, _)| tone_in(text)));
                 let divided = unit.iter().find_map(|(text, _)| divided_in(text));
-                let flashed = on.iter().any(|(text, _)| words(text).iter().any(|w| w == "flashing" || w == "flashed"));
+                let flashed = on.iter().any(|(text, _)| !not_in_the_work(text) && words(text).iter().any(|w| w == "flashing" || w == "flashed"));
                 out.openings.insert(path, OpeningDress { sash: None, leaf, divided, tone, flashed });
             }
             Kind::Eave => {
@@ -806,6 +842,9 @@ fn wall_said(w: &WallDress) -> (String, Vec<String>) {
     let first = match &w.cladding {
         Some(c) => format!("{}{}, {face} ({}){}", c.what.said(), toned(&c.tone), c.by, also(&c.also)),
         None if w.wainscot.is_some() => format!("bare above its wainscot, {face}: nothing priced on it names a cladding"),
+        // A concrete wall is not bare: it is what it is made of (J21-9: "bare ...;
+        // concrete, as a line priced on it says" in one sentence).
+        None if w.concrete => format!("no cladding, {face}"),
         None => format!("bare, {face}: nothing priced on it names a cladding"),
     };
     if let Some((s, to, written)) = &w.wainscot {
@@ -866,6 +905,9 @@ pub fn report(job: &mut Job) -> Vec<String> {
                         if w.framing_lines > 1 {
                             under.push(format!("{} lines on it name a framing: the first is the one drawn", w.framing_lines));
                         }
+                    }
+                    if w.framing_unread > 0 {
+                        under.push(format!("{} on it {} framing and {} no lumber size and spacing (like 2x6 at 16 in): not drawn as a frame", crate::view::so_many(w.framing_unread, "line"), if w.framing_unread == 1 { "names" } else { "name" }, if w.framing_unread == 1 { "gives" } else { "give" }));
                     }
                     if w.barrier {
                         under.push("a weather barrier under its finish".into());
@@ -973,6 +1015,27 @@ mod tests {
         }
         for said in ["Roof sheathing", "Flashing and sealant", "Batt insulation", "Cedar lap siding, installed", "Wrap the columns in cedar", "Vapor retarder", "Vapor barrier, 6 mil poly", "Roofing felt"] {
             assert!(!barrier_in(said), "{said}");
+        }
+        // The twenty-first judgment's (J21-8): three it missed, and the tape that is not the wrap.
+        for said in ["Weather-resistive barrier", "Asphalt felt, 30 lb", "Zip System sheathing, taped", "Tyvek, taped seams"] {
+            assert!(barrier_in(said), "{said}");
+        }
+        for said in ["Housewrap tape at seams", "Tyvek tape", "Moisture barrier", "Ice and water shield"] {
+            assert!(!barrier_in(said), "{said}");
+        }
+    }
+
+    /// What a line takes out, or says is not in the work, is not drawn as if it were
+    /// being put in (J21-7): a remodel's estimate is full of such lines.
+    #[test]
+    fn what_is_taken_out_or_not_in_the_work_is_not_drawn() {
+        for said in ["Remove house wrap", "Demo existing house wrap", "Tear off felt paper", "Remove existing concrete wall", "Wall framing, 2x6 at 16 in - NOT INCLUDED", "Wood base, by others", "Demolition of concrete foundation wall", "Haul away baseboard"] {
+            assert!(not_in_the_work(said), "{said}");
+            assert!(!barrier_in(said) && !concrete_wall_in(said) && !base_in(said), "{said}");
+        }
+        // Words that only look like them are left alone.
+        for said in ["House wrap, taped", "Foundation wall, 8 in concrete, formed and poured", "Wood base, 3 1/4 in, primed", "Demountable partition", "Stripping and sealing"] {
+            assert!(!not_in_the_work(said), "{said}");
         }
     }
 

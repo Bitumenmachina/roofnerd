@@ -960,7 +960,9 @@ pub fn rebuild(
     }
     // On the plan of one level the roof over it is drawn as a plan draws what is
     // overhead: its lines, broken. (With every level on show the roof itself is drawn.)
-    if show.roof && show.storey.is_some() && on_plan_view && !show.ghost {
+    // Only over the level the roof sits on: the roof's hips on a foundation plan are
+    // not a drawing anyone reads, and the Roof switch reads off there (J21-19).
+    if show.roof && show.storey.is_some() && show.storey == top_level && on_plan_view && !show.ghost {
         for line in &snap.lines {
             let Some([a, b]) = line.ends else { continue };
             let (a, b) = (to_view(origin, a), to_view(origin, b));

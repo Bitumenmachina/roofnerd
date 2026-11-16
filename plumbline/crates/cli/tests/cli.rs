@@ -282,3 +282,36 @@ fn a_value_entered_on_a_line_is_not_made_whole_as_a_count_of_pieces_is() {
     assert!(entered.contains("$1,625.00") && !entered.contains("$1,950.00") && !entered.contains("a count is whole"), "{entered}");
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+/// A wall type and a footing type are what they were made as, from the first (call 87;
+/// J21-2, J21-5, J21-14): a footing is not drawn on a wall's type nor a wall on a
+/// footing's, a footing's type reads as a width before anything is drawn on it, and a
+/// type in use is not removed, in words that are true.
+#[test]
+fn a_type_is_a_walls_or_a_footings_from_the_moment_it_is_made() {
+    let dir = folder("typekinds");
+    assert!(run(&dir, &["new", "j.json", "Types (not a real job)"]).0);
+    let level = run(&dir, &[&["level", "j.json", "foundation", "--elevation", "-4 ft", "--height", "4 ft"][..], &KNOWN[..]].concat()).1;
+    let level = level.split_whitespace().next().unwrap().trim_end_matches(':').to_string();
+    let first = |said: String| said.split_whitespace().next().unwrap().trim_end_matches(':').to_string();
+    let wall_type = first(run(&dir, &[&["type", "j.json", "wall", "fdn wall 8", "--thickness", "8 in"][..], &KNOWN[..]].concat()).1);
+    let footing_type = first(run(&dir, &[&["type", "j.json", "footing", "ftg 24x12", "--width", "24 in"][..], &KNOWN[..]].concat()).1);
+    // Before anything is drawn on it, the footing's type is listed as a width.
+    let shown = run(&dir, &["show", "j.json"]).1;
+    assert!(shown.contains("footing width    24 in") && shown.contains("wall thickness   8 in"), "{shown}");
+    // A footing on the wall's type, and a wall on the footing's: each refused, saying what to use.
+    let wrong = run(&dir, &[&["footing", "j.json", &level, &wall_type, "--points", "0,0 10,0", "--depth", "12 in"][..], &KNOWN[..]].concat());
+    assert!(!wrong.0 && wrong.1.contains("was made as a wall's type") && wrong.1.contains(&footing_type), "{}", wrong.1);
+    let wrong = run(&dir, &[&["wall", "j.json", &level, &footing_type, "--points", "0,0 10,0", "--height", "4 ft"][..], &KNOWN[..]].concat());
+    assert!(!wrong.0 && wrong.1.contains("was made as a footing's type") && wrong.1.contains(&wall_type), "{}", wrong.1);
+    // A type that is not there: refused before anything is made, offering the job's own.
+    let missing = run(&dir, &[&["wall", "j.json", &level, "wall-type-0003", "--points", "0,0 10,0", "--height", "4 ft"][..], &KNOWN[..]].concat());
+    assert!(!missing.0 && missing.1.contains("wall-type-0003 is not a wall's type") && missing.1.contains(&wall_type) && !missing.1.contains("wall-00"), "{}", missing.1);
+    // Each on its own type is taken; then the footing's type cannot be removed from under it.
+    let made = run(&dir, &[&["footing", "j.json", &level, &footing_type, "--points", "0,0 10,0", "--depth", "12 in"][..], &KNOWN[..]].concat());
+    assert!(made.0, "{}", made.1);
+    assert!(run(&dir, &[&["wall", "j.json", &level, &wall_type, "--points", "0,0 10,0", "--height", "4 ft"][..], &KNOWN[..]].concat()).0);
+    let kept = run(&dir, &["remove", "j.json", &footing_type]);
+    assert!(!kept.0 && kept.1.contains(&format!("{footing_type} is the type of footing-")) && !kept.1.contains("is not a footing type"), "{}", kept.1);
+    std::fs::remove_dir_all(&dir).unwrap();
+}

@@ -667,7 +667,9 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         }
         // The finish on the outside walls: off, it is taken off and the weather barrier
         // and the flashing under it are seen, where they are priced.
-        let finished = snap.dress.walls.values().filter(|d| d.cladding.is_some() || d.wainscot.is_some() || d.barrier).count();
+        // The base in a room goes off with the finishes too, so a job with base priced
+        // and no wall finish still has the switch (J21-11).
+        let finished = snap.dress.walls.values().filter(|d| d.cladding.is_some() || d.wainscot.is_some() || d.barrier).count() + snap.dress.base.len();
         if finished > 0 {
             layer(c, "Finishes", "", theme::finish_spot(), doc.show.finishes, Some(finished), Box::new(|doc| {
                 doc.show.finishes = !doc.show.finishes;
@@ -1196,7 +1198,9 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         // On plan each room carries its name and its floor area, as a drawing does
         // (call 81): written where the room was named, which is always inside it.
         // With the roof on show the roof plan is what is read, and the rooms wait.
-        if doc.plan && !doc.walk && doc.show.architecture && !roof_on_show {
+        // (A job with no roof has no roof plan to give way to: J21-10, the names went
+        // with every level on show whether there was a roof or not.)
+        if doc.plan && !doc.walk && doc.show.architecture && !(roof_on_show && !snap.planes.is_empty()) {
             for (storey, el) in snap.fabric.iter().filter(|(_, el)| el.kind == Kind::Room) {
                 if doc.show.off_levels.contains(storey) || doc.show.storey.as_deref().is_some_and(|s| s != storey) {
                     continue;
@@ -1579,7 +1583,10 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         }
     }
     if !snap.notes.is_empty() {
-        heading(p, fonts, "To verify");
+        // Everything not yet Known: what is assumed, what has no figure. Not all of it
+        // is for the field (a price, a cost code): the field's list is the Verify in
+        // field tab, and this is headed as what it is (J21-15).
+        heading(p, fonts, "Open items");
         for (status, what, why) in &snap.notes {
             p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(5.0)), row_gap: px(2.0), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() }, BorderColor::all(theme::rule()))).with_children(|r| {
                 r.spawn(Node { ..default() }).with_children(|c| status_chip(c, fonts, *status));
@@ -1783,7 +1790,13 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
                         r.spawn(text(fonts, pretty(what), 12.0, if row.derived { Weight::Medium } else { Weight::Regular }, if row.derived { theme::ink() } else { theme::ink_soft() }));
                         status_chip(r, fonts, row.status);
                         r.spawn(Node { flex_grow: 1.0, ..default() });
-                        r.spawn(text(fonts, shown(row), 12.0, Weight::Medium, theme::status_ink(row.status)));
+                        // A quantity is shown to the places it is priced at: 2.9630 CY
+                        // at $450.00 is $1,333.35, and 2.96 is not (J21-18).
+                        let said = match row.number {
+                            Some(x) if row.unit != "$" && !row.unit.starts_with("$/") && row.unit != "EA" && (x * 100.0 - (x * 100.0).round()).abs() > 1.0e-6 => format!("{} {}", view::figure(x, 4), row.unit),
+                            _ => shown(row),
+                        };
+                        r.spawn(text(fonts, said, 12.0, Weight::Medium, theme::status_ink(row.status)));
                     });
                     let basis = if row.note.is_empty() { row.basis.clone() } else { format!("{}  ({})", row.basis, row.note) };
                     if !basis.is_empty() {
