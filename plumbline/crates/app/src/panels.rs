@@ -267,7 +267,14 @@ fn views(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             let on = doc.plan == plan && doc.walk == walk;
             button(bar, fonts, label, key, on).observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>, mut orbit: ResMut<crate::scene::Orbit>, snap: Res<Snapshot>| {
                 if press.button == PointerButton::Primary {
+                    let changed = (doc.plan, doc.walk) != (plan, walk);
+                    let was_on_foot = doc.walk;
                     crate::set_view(&mut doc, &mut orbit, &snap, plan, walk);
+                    // The view says where it went (VISUAL.md A9; on and off foot say
+                    // their own).
+                    if changed && !walk && !was_on_foot {
+                        doc.say(Tone::Done, if plan { "On plan: north is up." } else { "In 3D." });
+                    }
                 }
             });
         }
@@ -456,7 +463,8 @@ fn spot(p: &mut ChildSpawnerCommands, colour: Color) {
 
 /// A box that is ticked or not.
 fn tick(p: &mut ChildSpawnerCommands, on: bool, colour: Color) {
-    p.spawn((Node { width: px(10.0), height: px(10.0), border: UiRect::all(px(1.5)), flex_shrink: 0.0, ..default() }, BackgroundColor(if on { colour } else { Color::NONE }), BorderColor::all(colour), Pickable::IGNORE));
+    // Round, like everything on the glass (VISUAL.md A4; J22B-1: the marks were square).
+    p.spawn((theme::rounded(Node { width: px(11.0), height: px(11.0), border: UiRect::all(px(1.5)), flex_shrink: 0.0, ..default() }, 6.0), BackgroundColor(if on { colour } else { Color::NONE }), BorderColor::all(colour), Pickable::IGNORE));
 }
 
 /// One of several fields that go together, as the form being typed has it: the one
@@ -644,7 +652,13 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         // the switches opened below the bottom of the panel.)
         heading(c, fonts, "Show");
         let layer = |c: &mut ChildSpawnerCommands, name: &str, key: &str, colour: Color, on: bool, count: Option<usize>, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
-            row(c, false, format!("Show {name}"), move |doc| act(doc), |r| {
+            // A switch says what it did (VISUAL.md A9; J22B-7: twelve switches pressed and
+            // the line along the bottom read "Opened." through all of them).
+            let said = format!("{name}: switched {}.", if on { "off" } else { "on" });
+            row(c, false, format!("Show {name}"), move |doc| {
+                act(doc);
+                doc.say(Tone::Done, said.clone());
+            }, |r| {
                 spot(r, colour);
                 r.spawn((text(fonts, name, 12.0, Weight::Medium, if on { theme::ink() } else { theme::ink_faint() }), Pickable::IGNORE));
                 if let Some(count) = count {
@@ -730,6 +744,11 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                         spot(r, theme::certainty(status));
                         r.spawn((text(fonts, format!("{} drawn from what is {what}", of(status)), 11.0, Weight::Regular, theme::ink_soft()), Pickable::IGNORE));
                     });
+                }
+                // What is not Known is as often inside the house as on it: said, so a
+                // house that is all pale outside is not read as all Known (J22B-9).
+                if !doc.show.ghost && of(Status::Assumed) + of(Status::Unknown) > 0 {
+                    l.spawn((text(fonts, "Some of it is inside: See through (X) shows it.", 11.0, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
                 }
             });
         }
@@ -1338,7 +1357,9 @@ fn property<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, val
             r.spawn((Node { align_items: AlignItems::FlexStart, column_gap: px(8.0), ..default() }, Pickable::IGNORE)).with_children(|foot| {
                 foot.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child((text(fonts, basis, 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
                 if !act.is_empty() {
-                    foot.spawn((Node { flex_shrink: 0.0, padding: UiRect::axes(px(5.0), px(0.0)), border: UiRect::all(px(1.0)), ..default() }, BorderColor::all(theme::accent()), Pickable::IGNORE)).with_child((text(fonts, act, 10.5, Weight::Semibold, theme::accent()), TextLayout::no_wrap(), Pickable::IGNORE));
+                    // A small round button, washed in the accent: not a hard hairline box
+                    // (VISUAL.md A4; J22B-1).
+                    foot.spawn((theme::rounded(Node { flex_shrink: 0.0, padding: UiRect::axes(px(8.0), px(1.5)), ..default() }, 9.0), BackgroundColor(theme::accent_wash()), Pickable::IGNORE)).with_child((text(fonts, act, 10.5, Weight::Semibold, theme::accent()), TextLayout::no_wrap(), Pickable::IGNORE));
                 }
             });
         }

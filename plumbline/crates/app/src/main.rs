@@ -308,7 +308,9 @@ fn save(doc: &mut Doc) {
         Ok(()) => {
             doc.edited = false;
             // By its name: where it lies on the computer is not a builder's word (J19-47).
-            doc.say(Tone::Done, format!("Saved {}.", doc.path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "the job".into())));
+            // "Saved." and no more: the file's own name is not a builder's word and the
+            // job's name is at the top of the window (VISUAL.md A8; J22A-1).
+            doc.say(Tone::Done, "Saved.");
         }
         Err(e) => tools::cant(doc, "save", format!("{}: {e}", doc.path.display())),
     }
@@ -895,15 +897,26 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
         doc.redraw();
     }
     if keys.just_pressed(KeyCode::KeyT) {
-        let plan = !doc.plan;
+        let (plan, was_on_foot) = (!doc.plan, doc.walk);
         set_view(doc, &mut orbit, &snap, plan, false);
+        // The view says where it went (VISUAL.md A9), unless coming off foot already did.
+        if !was_on_foot {
+            doc.say(Tone::Done, if plan { "On plan: north is up. T again for 3D." } else { "In 3D. T for the plan." });
+        }
     }
     if keys.just_pressed(KeyCode::KeyV) {
         let walk = !doc.walk;
         set_view(doc, &mut orbit, &snap, false, walk);
     }
-    if keys.just_pressed(KeyCode::KeyF) && !doc.walk {
-        orbit.go_home();
+    if keys.just_pressed(KeyCode::KeyF) {
+        // Frame says what it did, and on foot says why it did nothing (J22B-5, J22B-7).
+        if doc.walk {
+            doc.say(Tone::Refused, "Frame brings the whole job into view from outside. On foot there is no outside: press V to come out first.");
+        } else {
+            orbit.go_home();
+            doc.say(Tone::Done, "The whole job, in view.");
+        }
+        doc.touch();
     }
     if keys.just_pressed(KeyCode::Escape) && doc.selected.is_some() {
         doc.selected = None;

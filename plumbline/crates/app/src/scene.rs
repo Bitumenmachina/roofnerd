@@ -158,6 +158,16 @@ pub struct GridLines;
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct Highlight;
 
+/// How much brighter than paper white the sky and the far haze are drawn, before the
+/// camera folds the range of light to the screen.
+pub const SKY_GLOW: f32 = 1.7;
+/// The sky at the horizon as it is drawn: the horizon's pale with a little of the blue
+/// overhead in it, lifted. (The pale alone folded to a neutral grey.)
+fn sky_low() -> LinearRgba {
+    let (pale, blue) = (theme::sky_horizon().to_linear(), theme::sky_overhead().to_linear());
+    let mixed = |a: f32, b: f32| a + (b - a) * 0.22;
+    LinearRgba::rgb(mixed(pale.red, blue.red), mixed(pale.green, blue.green), mixed(pale.blue, blue.blue)) * SKY_GLOW
+}
 /// How bright the sky's light is and how bright the sun, in the engine's measures (the
 /// sky in candela to the square metre, the sun in lux), for the camera's standing
 /// exposure. Set by eye on the made-up whole house: the sun about three times what the
@@ -190,13 +200,18 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
     // lights and nothing shades. It goes where the eye goes, so it is never reached.
     let mut dome = Sphere::new(1.0).mesh().uv(48, 24);
     if let Some(bevy::mesh::VertexAttributeValues::Float32x3(at)) = dome.attribute(Mesh::ATTRIBUTE_POSITION) {
-        let (low, high) = (theme::sky_horizon().to_linear(), theme::sky_overhead().to_linear());
+        // The sky is as bright as a sky is beside a sunlit house: its colours are
+        // lifted past white before the camera folds the light to the screen, or the
+        // pale horizon comes out a flat grey haze and the place reads as a studio
+        // (J22B-2).
+        let (low, high) = (sky_low(), theme::sky_overhead().to_linear() * SKY_GLOW);
         let colours: Vec<[f32; 4]> = at.iter().map(|p| { let t = p[1].clamp(0.0, 1.0).powf(0.55); [low.red + (high.red - low.red) * t, low.green + (high.green - low.green) * t, low.blue + (high.blue - low.blue) * t, 1.0] }).collect();
         dome.insert_attribute(Mesh::ATTRIBUTE_COLOR, colours);
     }
     let over = materials.add(StandardMaterial { base_color: Color::WHITE, unlit: true, cull_mode: None, fog_enabled: false, ..default() });
     commands.spawn((Mesh3d(meshes.add(dome)), MeshMaterial3d(over), Transform::from_scale(Vec3::splat(15_000.0)), bevy::light::NotShadowCaster, Pickable::IGNORE, Sky));
-    let fog = DistanceFog { color: theme::sky_horizon(), falloff: FogFalloff::Linear { start: 4000.0, end: 9000.0 }, ..default() };
+    // The ground far off fades into the sky at the horizon, in the horizon's own light.
+    let fog = DistanceFog { color: Color::from(sky_low()), falloff: FogFalloff::Linear { start: 4000.0, end: 9000.0 }, ..default() };
     if graphics.full {
         // Ambient occlusion darkens where surfaces meet, and the picture is steadied over
         // several frames instead of being left jagged.

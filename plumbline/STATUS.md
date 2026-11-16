@@ -5580,3 +5580,22 @@ assumed, 3 from what is unknown" on the made-up whole house); Finishes counts 18
 walls and 10 rooms with base). **Not seen:** a framed wall's own panel (my click
 went through the frame to the floor behind it, which is J21-21's complaint from the
 other side: a frame is hard to pick).
+
+**From the twenty-second judgment's notes while it runs** (the look, part B; the
+veteran, part A), fixed and seen in the window on my own look sessions:
+
+- J22B-1 (VISUAL.md A4): the small Set, Measure and Check buttons were square hairline
+  boxes and the Next steps marks square blocks. They are round: a small pill washed
+  in the accent, and round marks.
+- J22B-2: the sky was a flat grey haze. The sky and the far haze are drawn brighter
+  than paper white before the light is folded to the screen (`SKY_GLOW`), with a
+  little of the overhead blue in the horizon: the backdrop reads (198, 205, 212)
+  where it read (179, 183, 186).
+- J22B-7 (A9): a switch, a view button and Frame say what they did ("Framing:
+  switched on.", "On plan: north is up.", "The whole job, in view."); F on foot says
+  why it does nothing.
+- J22B-9: with the how-sure colours on, the legend says that some of what is not
+  Known is inside, and that See through shows it.
+- J22A-1 (A8): Save says "Saved.", not the file's name.
+
+Not judged again. The window demonstrations running now are on an earlier build.
