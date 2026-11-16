@@ -3872,6 +3872,29 @@ fn overhead_and_profit_are_entered_and_neither_has_a_default() {
     assert!(job.set("plane-0003", "profit", Some("5"), known, "x").unwrap_err().contains("the job's"));
 }
 
+/// A labor line with its hours taken off and no price yet is in neither the dollars
+/// nor the hours beside them, and its hours are held apart to be said (call 82; M21-3:
+/// they were in nothing, and nothing said so).
+#[test]
+fn hours_on_a_labor_line_with_no_price_are_held_apart_and_said() {
+    let mut job = sample::priced();
+    job.derive();
+    let before = view::estimate(&mut job);
+    assert_eq!(class_total(&before, Class::Labor).hours, Some((29.8328, Status::Assumed)));
+    assert_eq!(class_total(&before, Class::Labor).hours_unpriced, None);
+    // "Install panels" on the south plane is 16.7705 hr. Its price is marked unknown.
+    job.set_on_line("plane-0003", "unit_cost", Some("Install panels"), None, Status::Unknown, "made-up: not priced yet").unwrap();
+    job.derive();
+    let est = view::estimate(&mut job);
+    let labor = class_total(&est, Class::Labor);
+    // The hours beside the dollars: 29.8328 - 16.7705 = 13.0623. The rest wait, said.
+    assert_eq!(labor.hours, Some((13.0623, Status::Assumed)));
+    assert_eq!(labor.hours_unpriced, Some((16.7705, 1)));
+    assert_eq!(labor.hours_unpriced_said().as_deref(), Some("16.77 hr more on 1 line with no price"));
+    // A cost type with no hours in it says nothing of the kind.
+    assert_eq!(class_total(&est, Class::Material).hours_unpriced, None);
+}
+
 #[test]
 fn a_labor_line_is_switched_off_and_leaves_every_total_by_its_amount() {
     let mut job = sample::priced();

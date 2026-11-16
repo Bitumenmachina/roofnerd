@@ -218,6 +218,11 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
             (_, s, _) => format!("as written: {}, {} of it rests on something assumed", sure(s), format_args!("${:.2}", c.total.assumed)),
         };
         let lines = Out::Formula { text: format!("=COUNTIFS({types},\"{name}\",{amounts},\">=0\")"), value: Some(c.total.members as f64) };
+        let note = match (c.hours_unpriced_said(), note.is_empty()) {
+            (Some(more), true) => more,
+            (Some(more), false) => format!("{note}; {more}"),
+            (None, _) => note,
+        };
         recap.push(vec![text(name), amount, lines, c.hours.filter(|_| c.total.members > 0).map(|h| Out::Number(h.0 + 0.0)).unwrap_or(Out::None), text(note)]);
     }
     let class_last = recap.len();
@@ -435,7 +440,12 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
             }
             let mut budget: Vec<Vec<Out>> = vec![vec![text(format!("{title}: the budget by cost type"))], vec![], ["Cost type", "Amount", "Hours", "Lines", "How sure"].iter().map(|h| text(*h)).collect()];
             for c in &est.classes {
-                budget.push(vec![text(c.class.title()), c.total.value.map(Out::Dollars).unwrap_or_else(|| text("none")), c.hours.filter(|_| c.total.members > 0).map(|h| Out::Number(h.0)).unwrap_or(Out::None), Out::Number(c.total.members as f64), text(if c.total.members == 0 { "" } else { sure(c.total.status) })]);
+                budget.push(vec![text(c.class.title()), c.total.value.map(Out::Dollars).unwrap_or_else(|| text("none")), c.hours.filter(|_| c.total.members > 0).map(|h| Out::Number(h.0)).unwrap_or(Out::None), Out::Number(c.total.members as f64), text(match (c.total.members, c.hours_unpriced_said()) {
+                    (0, None) => String::new(),
+                    (0, Some(more)) => more,
+                    (_, None) => sure(c.total.status).to_string(),
+                    (_, Some(more)) => format!("{}; {more}", sure(c.total.status)),
+                })]);
             }
             budget.push(vec![text("Job cost"), est.job_cost.value.map(Out::Dollars).unwrap_or_else(|| text("none")), Out::None, Out::Number(est.job_cost.members as f64), text(sure(est.job_cost.status))]);
             let left = est.job_cost.left_out.len();

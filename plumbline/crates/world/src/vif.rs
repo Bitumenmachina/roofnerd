@@ -88,7 +88,10 @@ struct Line {
     on: String,
     /// None: the line has no figure yet.
     amount: Option<f64>,
+    /// How sure its dollars are (its price and its quantity together).
     status: Status,
+    /// How sure its quantity is: what a measurement can make surer.
+    quantity: Status,
     rests: BTreeSet<String>,
 }
 
@@ -122,7 +125,7 @@ pub fn vif(job: &mut Job) -> Vif {
                 }
             }
         }
-        lines.push(Line { key: (sheet.path.clone(), sheet.description.clone()), on: sheet.path.clone(), amount, status: if amount.is_some() { sheet.amount.status } else { sheet.priced.status }, rests });
+        lines.push(Line { key: (sheet.path.clone(), sheet.description.clone()), on: sheet.path.clone(), amount, status: if amount.is_some() { sheet.amount.status } else { sheet.priced.status }, quantity: sheet.quantity.status, rests });
     }
     let cents = crate::lines::cents;
     let sum = |picked: &[&Line]| -> (Option<f64>, Status, usize, usize) {
@@ -200,7 +203,10 @@ pub fn vif(job: &mut Job) -> Vif {
         // sure its quantity (call 59, J17A-14): a price for a 50 gal heater is a price
         // for nothing if the heater is not that.
         let identity = values.iter().any(|v| !v.2);
-        let picked: Vec<&Line> = lines.iter().filter(|l| (l.status != Status::Known && l.rests.contains(&el.path)) || (identity && l.on == el.path)).collect();
+        // What rides on a measurement is a line whose quantity is itself in question:
+        // a line of a Known length at an Assumed price is not made surer by a tape,
+        // and its dollars do not send anyone to measure (call 83, M21-2).
+        let picked: Vec<&Line> = lines.iter().filter(|l| (l.quantity != Status::Known && l.rests.contains(&el.path)) || (identity && l.on == el.path)).collect();
         counted.extend(picked.iter().map(|l| l.key.clone()));
         let (dollars, dollars_status, n, unpriced) = sum(&picked);
         place(Question { path: el.path.clone(), name: el.name.clone(), kind: el.kind, storey: storey_name(&el.path, el.kind), clash: None, values, dollars, dollars_status, lines: n, unpriced }, &mut with, &mut without);

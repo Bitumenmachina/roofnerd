@@ -683,11 +683,20 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     // Hours are held and added to four places and shown to two, as a time sheet has
                     // them (J19-4: "480.0000 hr").
                     let hours = c.hours.map(|(h, _)| format!("  {} hr", view::figure(h, 2))).unwrap_or_default();
+                    let hours = match c.hours_unpriced_said() {
+                        Some(more) => format!("{hours}, and {more}"),
+                        None => hours,
+                    };
                     line(t, c.class.title().to_string(), format!("{}{hours}", lines_of(c.total.members)), rests(c.total.assumed), format!("${}", view::figure(x, 2)), c.total.status, false);
                 }
                 None => row(t, false, None, |r| {
                     cell(r, 7.0, false, |_| {});
-                    cell(r, 0.0, false, |c2| words(c2, fonts, c.class.title(), 12.5, Weight::Medium, theme::ink_soft()));
+                    cell(r, 0.0, false, |c2| {
+                        words(c2, fonts, c.class.title(), 12.5, Weight::Medium, theme::ink_soft());
+                        if let Some(more) = c.hours_unpriced_said() {
+                            words(c2, fonts, more, 11.5, Weight::Regular, theme::status_ink(Status::Unknown));
+                        }
+                    });
                     cell(r, 130.0, true, |c2| words(c2, fonts, "none", 12.5, Weight::Regular, theme::ink_faint()));
                 }),
             }

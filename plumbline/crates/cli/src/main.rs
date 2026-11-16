@@ -583,6 +583,9 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
                 let _ = writeln!(out, "  {:<20}{:>14}", c.class.title(), "none");
             }
         }
+        if let Some(said) = c.hours_unpriced_said() {
+            let _ = writeln!(out, "  {:<20}{:>14}   ? {said}: in neither the dollars nor the hours above", "", "");
+        }
     }
     let line = |name: &str, d: &Derived| {
         let mut s = String::new();

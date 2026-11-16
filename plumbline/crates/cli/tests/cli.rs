@@ -220,3 +220,44 @@ fn an_assembly_is_changed_for_another_and_what_they_share_keeps_its_price() {
     assert!(!ok && said.contains("goes on a roof plane, and wall-0004 is a wall"), "{said}");
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+/// A coverage on a supplier's price list buys whole ones by the rule a typed one does
+/// (call 84; M21-6: 100 SF of board at 32 SF to the sheet came in as 3.125 sheets,
+/// $37.50, where the same words typed gave 4 sheets, $48.00).
+#[test]
+fn a_coverage_on_a_price_list_buys_whole_sheets_as_a_typed_one_does() {
+    let dir = folder("coverage");
+    let mut made = Vec::new();
+    for way in ["list", "typed"] {
+        let job = format!("{way}.json");
+        assert!(run(&dir, &["new", &job, "Board (not a real job)"]).0);
+        let level = run(&dir, &[&["level", &job, "ground", "--elevation", "0 ft", "--height", "10 ft"][..], &KNOWN[..]].concat()).1;
+        let level = level.split_whitespace().next().unwrap().trim_end_matches(':').to_string();
+        let kind = run(&dir, &[&["type", &job, "wall", "wall 6 in", "--thickness", "6 in"][..], &KNOWN[..]].concat()).1;
+        let kind = kind.split_whitespace().next().unwrap().trim_end_matches(':').to_string();
+        let wall = run(&dir, &[&["wall", &job, &level, &kind, "--points", "0,0 10,0", "--height", "10 ft"][..], &KNOWN[..]].concat()).1;
+        let wall = wall.split(|c: char| c.is_whitespace() || c == ',' || c == ':').find(|w| w.starts_with("wall-")).unwrap().to_string();
+        let material = run(&dir, &["material", &job, "Gyp board", "sheet"]);
+        assert!(material.0, "{}", material.1);
+        let line = run(&dir, &["line", &job, &wall, "Board", "face_area", "--cost-type", "material", "--of-material"]);
+        assert!(line.0, "{}", line.1);
+        let set = run(&dir, &[&["set", &job, &wall, "material", "Gyp board"][..], &KNOWN[..]].concat());
+        assert!(set.0, "{}", set.1);
+        made.push(job);
+    }
+    // By the list: no "Whole ones only" column, as a supplier's list has none.
+    std::fs::write(dir.join("list.csv"), "Material,Unit,Price,Coverage\nGyp board,sheet,12.00,32 SF/sheet\n").unwrap();
+    let brought = run(&dir, &[&["import", "prices", &made[0], "list.csv"][..], &KNOWN[..]].concat());
+    assert!(brought.0 && brought.1.contains("ordered at 32 SF/sheet, whole ones only"), "{}", brought.1);
+    // By the keyboard.
+    let shown = run(&dir, &["show", &made[1]]).1;
+    let material = shown.split_whitespace().find(|w| w.starts_with("material-")).unwrap().to_string();
+    assert!(run(&dir, &[&["set", &made[1], &material, "price", "12"][..], &KNOWN[..]].concat()).0);
+    assert!(run(&dir, &[&["set", &made[1], &material, "order", "32 SF/sheet"][..], &KNOWN[..]].concat()).0);
+    // 100 SF at 32 SF to the sheet is 3.125 sheets: 4 bought, at $12.00, $48.00. Both ways.
+    for job in &made {
+        let estimate = run(&dir, &["estimate", job]).1;
+        assert!(estimate.contains("$48.00") && !estimate.contains("$37.50"), "{job}: {estimate}");
+    }
+    std::fs::remove_dir_all(&dir).unwrap();
+}

@@ -640,7 +640,20 @@ pub struct ClassTotal {
     pub class: Class,
     pub total: MoneyTotal,
     /// For in-house work: the hours of the lines in the total, and how sure they are.
+    /// None where no line is in the total.
     pub hours: Option<(f64, Status)>,
+    /// For in-house work: the hours of the lines of this cost type that have hours and
+    /// no price, and how many such lines. They are in neither the dollars nor `hours`,
+    /// and whoever shows the hours says them beside (call 82).
+    pub hours_unpriced: Option<(f64, usize)>,
+}
+
+impl ClassTotal {
+    /// The hours that wait for a price, as they are said beside the hours: "18.00 hr
+    /// more on 1 line with no price". None where there are none.
+    pub fn hours_unpriced_said(&self) -> Option<String> {
+        self.hours_unpriced.map(|(h, n)| format!("{} hr more on {} with no price", figure(h, 2), so_many(n, "line")))
+    }
 }
 
 /// The estimate: every cost line, the three columns, the recap, and the suppliers side
@@ -745,12 +758,12 @@ pub fn estimate(job: &mut Job) -> Estimate {
         .iter()
         .map(|&class| {
             let total = total_of(&classed(class));
-            let hours = class.in_hours().then(|| {
-                let counted: Vec<&Derived> = on.iter().filter(|l| l.class == Some(class) && l.amount.value.is_some()).map(|l| &l.priced).collect();
-                let sum: f64 = counted.iter().filter_map(|d| d.value).sum();
-                ((sum * 10000.0).round() / 10000.0, counted.iter().map(|d| d.status).max().unwrap_or(Status::Known))
-            });
-            ClassTotal { class, total, hours }
+            let four = |x: f64| (x * 10000.0).round() / 10000.0;
+            let of_class = |priced: bool| -> Vec<&Derived> { on.iter().filter(|l| l.class == Some(class) && l.amount.value.is_some() == priced).map(|l| &l.priced).collect() };
+            let hours = class.in_hours().then(|| of_class(true)).filter(|counted| !counted.is_empty()).map(|counted| (four(counted.iter().filter_map(|d| d.value).sum()), counted.iter().map(|d| d.status).max().unwrap_or(Status::Unknown)));
+            let waiting: Vec<f64> = if class.in_hours() { of_class(false).iter().filter_map(|d| d.value).collect() } else { Vec::new() };
+            let hours_unpriced = (!waiting.is_empty()).then(|| (four(waiting.iter().sum()), waiting.len()));
+            ClassTotal { class, total, hours, hours_unpriced }
         })
         .collect();
     let columns = [Column::Material, Column::Labor, Column::General]

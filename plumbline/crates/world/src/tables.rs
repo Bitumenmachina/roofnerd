@@ -438,11 +438,18 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
                         }
                     }
                 };
-                let whole = matches!(cols.cell(row, "whole").to_lowercase().as_str(), "yes" | "y" | "true");
+                // Whole ones where the list says so; where it does not say, by the rule a
+                // typed factor goes by: a package is bought whole (so many SF to the
+                // sheet), a weight is not (so many lb to the SF). Call 84.
+                let whole = match cols.cell(row, "whole").trim().to_lowercase().as_str() {
+                    "yes" | "y" | "true" | "whole" => true,
+                    "no" | "n" | "false" | "exact" => false,
+                    _ => per.trim().split_once('/').is_some_and(|(_, bottom)| bottom.trim().eq_ignore_ascii_case(by.trim())),
+                };
                 let new = Order { unit: by.clone(), factor: Val { value, unit: per.trim().to_string(), status: order_status, source: order_source }, round_up: whole };
                 if supply.order.as_ref() != Some(&new) {
                     changed = true;
-                    what.push_str(&format!("; ordered at {order}{}", if whole { ", whole ones only" } else { "" }));
+                    what.push_str(&format!("; ordered at {order}{}", if whole { ", whole ones only" } else { ", to the exact amount" }));
                 }
                 supply.order = Some(new);
             }

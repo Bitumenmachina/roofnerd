@@ -3096,3 +3096,43 @@ names give way to the roof plan: with the roof on show on plan it is the roof's
 lines and planes that are read. This is within the fixed rule that a plan reads
 like a drawing, so it is built and not put to PROPOSALS.md. A door's swing on plan
 is not built.
+
+### Call 82. Hours on a labor line with no price are said beside the recap's hours (2026-11-16)
+
+From the code review of the model (M21-3). The recap's hours for a cost type are the
+hours of the lines in its dollars, so that the two can be read against each other;
+that stays. But a labor line with its hours taken off and no price yet was in neither,
+and nothing said so: two lines of 18 hr, one unpriced, read "18 hr" with no mark, and
+a PM would man the job at half its hours. The hours of such lines, and how many
+lines, are now held beside each cost type's total and said wherever the hours are
+shown: "18.00 hr more on 1 line with no price". They are never added into the hours
+beside the dollars. A cost type with no line in its dollars shows no hours of its own
+(they read "0 hr, Known" inside the model before, though nothing showed it).
+
+### Call 83. Dollars ride on a measurement only where the quantity is in question (2026-11-16)
+
+From the code review of the model (M21-2). The verify-in-field list counted a line
+against every unverified value of the thing it is priced on whenever the line's
+dollars were not Known. A line of a Known length at an Assumed price was so listed
+against the wall's Assumed height: "$200.00, measure: height", for a base trim line
+that does not use the height and that no tape makes surer. The list is sorted by
+those dollars, so it sent the crew to measure what moves no money. A line now rides
+on a measurement only if its own quantity is not Known. (The rule of call 59 stands:
+where what a thing is, its type or its size, is itself to be checked, everything
+priced on it rides on that check.) A line whose only doubt is its price is still
+Assumed on the estimate and still on the sheet's To verify; it is not a field
+question. Figures that change because of this are named in STATUS.md.
+
+### Call 84. A coverage on a price list buys whole ones by the same rule as one typed (2026-11-16)
+
+From the code review of the model (M21-6). Call 21 says a package is bought whole:
+"32 SF/sheet" typed on a material buys 4 sheets for 100 SF. The same words on a
+supplier's price list bought 3.125 sheets, because the list was read as "whole ones
+only" only where a column of that name said yes, and a supplier's list has no such
+column. $37.50 where the keyboard gave $48.00, with no word. A list is now read by
+the typed rule: where its "Whole ones only" column says yes or no, that is taken;
+where there is no such column, or the cell is blank, a factor that is so much to the
+unit the material is bought by (SF to the sheet) buys whole ones, and one that is so
+much of it to something else (lb to the SF) does not. What was taken is said in what
+the import reports: ", whole ones only" or ", to the exact amount". The program's own
+price list writes yes or no in every row, so it reads back as it was written.

@@ -115,3 +115,32 @@ fn a_line_on_two_things_in_question_is_counted_once_in_the_total() {
     let order: Vec<Option<f64>> = list.questions.iter().map(|q| q.dollars).collect();
     assert_eq!(order, vec![Some(518.40), Some(518.40), Some(240.00), Some(240.00), Some(240.00)]);
 }
+
+/// Dollars ride on a measurement only where the line's own quantity is in question
+/// (call 83; M21-2). A wall 40 ft long, traced; its line and its type then checked on
+/// site, its height still as traced. Base along it, 40 LF at an Assumed $5.00: $200.00.
+/// The base does not use the height, and no tape makes its 40 LF surer: nothing rides
+/// on measuring the height. Gypsum board on its face (40 x 9 = 360 SF at $1.00) does
+/// use it: $360.00 rides on it.
+#[test]
+fn a_line_of_a_known_length_at_an_assumed_price_does_not_ride_on_a_measurement() {
+    let mut job = Job::new("What rides on a measurement (not a real job)", "test", "test");
+    let ground = ed::storey(&mut job, "ground", "0 ft", "9 ft", KNOWN).unwrap();
+    let wall_type = ed::wall_type(&mut job, "wall 6 in", "6 in", KNOWN).unwrap();
+    let wall = ed::walls(&mut job, &ground, &wall_type, &[[0.0, 0.0], [40.0, 0.0]], false, Top::Height("9 ft"), TRACED).unwrap().remove(0);
+    ed::measure(&mut job, &wall, "wall line", Reading::Same, None, "JM on site").unwrap();
+    ed::measure(&mut job, &wall, "type", Reading::Same, None, "JM on site").unwrap();
+    job.add_line(&wall, "Base, along the wall", "plan_length", Some(Class::Material), false).unwrap();
+    job.set_on_line(&wall, "unit_cost", Some("Base, along the wall"), Some("$5.00/LF"), Status::Assumed, "made-up allowance").unwrap();
+    job.derive();
+    let found = rows(&mut job);
+    // One question: the wall's height. Nothing priced rides on it.
+    assert_eq!(found, vec![(wall.clone(), None, None, 0, vec!["height".to_string()])], "{found:#?}");
+    assert_eq!(vif(&mut job).riding, None);
+    // A line that does use the height rides on it, and only that line.
+    job.add_line(&wall, "Gypsum board, hung and finished", "face_area", Some(Class::Material), false).unwrap();
+    job.set_on_line(&wall, "unit_cost", Some("Gypsum board, hung and finished"), Some("$1.00/SF"), Status::Known, "made-up plan").unwrap();
+    job.derive();
+    let found = rows(&mut job);
+    assert_eq!(found, vec![(wall.clone(), None, Some(360.00), 1, vec!["height".to_string()])], "{found:#?}");
+}
