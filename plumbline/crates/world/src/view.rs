@@ -629,6 +629,14 @@ pub fn job_cost_was_and_is_said(before: &Estimate, job: &mut Job) -> Option<Stri
     Some(format!("The planes that stay changed with it: the job cost was ${} and is ${}.", figure(was, 2), figure(is, 2)))
 }
 
+/// After a roof change that dropped nothing (a pitch made steeper, an eave moved): what
+/// the job cost was and is, when what is priced on the roof moved it. None when it did
+/// not move, or when either has no figure.
+pub fn job_cost_moved_said(before: &Estimate, job: &mut Job) -> Option<String> {
+    let (was, is) = (before.job_cost.value?, estimate(job).job_cost.value?);
+    ((was - is).abs() >= 0.005).then(|| format!("What is priced on the roof changed with it: the job cost was {} and is {}.", money(was), money(is)))
+}
+
 fn gone_said(before: &Estimate, job: &mut Job, came_off: bool) -> Option<String> {
     let now: std::collections::BTreeSet<(String, String)> = estimate(job).lines.into_iter().map(|l| (l.path, l.description)).collect();
     let gone: Vec<&SheetLine> = before.lines.iter().filter(|l| !now.contains(&(l.path.clone(), l.description.clone()))).collect();

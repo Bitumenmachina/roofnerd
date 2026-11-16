@@ -3855,3 +3855,10 @@ Also from part A's notes, and left as they are with the reason:
   an order.
 - J25A-9: Unit cost on a plane's panel opens the price of its first line only; the
   others are priced on the sheet. Open.
+- J25A-13: Steeper took the price up $6.10 and the message spoke only of the pitch.
+  **A roof change that drops nothing says what the job cost was and is, when it
+  moved** ("What is priced on the roof changed with it: the job cost was $71.55 and is
+  $61.22."), as one that drops a plane has since call 103. Test:
+  `a_pitch_made_steeper_says_what_the_job_cost_was_and_is`, its figure worked by hand.
+  A value measured from the Verify in field list re-solves the roof and moves the
+  price too, and does not yet say by how much: open.

@@ -390,3 +390,24 @@ fn a_dropped_plane_is_not_the_whole_of_what_a_roof_change_does_to_the_job_cost()
     assert_eq!(view::went_with_said(&before, &mut job).as_deref(), Some("1 cost line went with it: $35.78 is out of the job cost."));
     assert_eq!(view::job_cost_was_and_is_said(&before, &mut job).as_deref(), Some("The planes that stay changed with it: the job cost was $107.33 and is $89.44."));
 }
+
+#[test]
+fn a_pitch_made_steeper_says_what_the_job_cost_was_and_is() {
+    // J25A-13. The plane on edge 1 (a 24 ft eave of a 24 ft by 16 ft hip at 6:12)
+    // carries underlayment at $0.50/SF: 143.1084 SF, $71.55. Edge 1 is made 8:12 and
+    // the rest stay 6:12. The ridge is where the two long planes meet: h x 12/8 +
+    // h x 12/6 = 16, h = 4.5714 ft, 6.8571 ft in from edge 1. The hips of plane 1 run
+    // in 9.1429 ft from each end (h x 12/6), so its top is 24 - 18.2857 = 5.7143 ft:
+    // on plan (24 + 5.7143) / 2 x 6.8571 = 101.8776 SF; on the slope, x 1.20185 (8:12)
+    // = 122.4416 SF, $61.22. Nothing went; the job cost was $71.55 and is $61.22.
+    let (mut job, roof, _) = roofed();
+    let before = view::estimate(&mut job);
+    assert_eq!(before.job_cost.value, Some(71.55));
+    solve::edit(&mut job, &roof, solve::Change::Rise { edge: 1, rise: value::Val { value: Some(Rise::Pitch(8.0)), unit: "in/12".into(), status: Status::Assumed, source: "the plans".into() } }).unwrap();
+    job.derive();
+    assert_eq!(view::went_with_said(&before, &mut job), None);
+    assert_eq!(view::job_cost_moved_said(&before, &mut job).as_deref(), Some("What is priced on the roof changed with it: the job cost was $71.55 and is $61.22."));
+    // A change that moves no dollars says nothing of them.
+    let now = view::estimate(&mut job);
+    assert_eq!(view::job_cost_moved_said(&now, &mut job), None);
+}

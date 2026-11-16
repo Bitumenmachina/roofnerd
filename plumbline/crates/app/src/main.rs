@@ -302,6 +302,10 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
                 if let Some(said) = plumbline_world::view::job_cost_was_and_is_said(&priced_before, &mut doc.job) {
                     more.push_str(&format!("\n{said}"));
                 }
+            } else if let Some(said) = plumbline_world::view::job_cost_moved_said(&priced_before, &mut doc.job) {
+                // Nothing went, and the dollars moved all the same: Steeper took the
+                // price up $6.10 with not a word about it (J25A-13).
+                more.push_str(&format!("\n{said}"));
             }
             for moved in &report.renumbered {
                 more.push_str(&format!("\n{moved}"));
