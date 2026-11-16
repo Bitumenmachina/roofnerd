@@ -307,6 +307,13 @@ the top bar follow as you type. Pick another assembly for the same wall and it
 changes: lines the two share keep their prices, and the status line says what came
 off.
 
+The starter assemblies carry material and subcontract lines and no labor. To put a
+line of your own on anything, labor included: click the thing, then **Add cost
+line**. Type what it is; click what it is priced by in the list under the field (the
+thing's own takeoff: net area, plan length...); and type its cost type. In-house
+work is by the hour, so its cost type carries how fast it goes: `labor at 40 SF/hr`.
+The line has no price until you type one on the sheet.
+
     cargo run -p plumbline -- import assemblies job.json starter     # the starter set
     cargo run -p plumbline -- apply job.json wall-0004 "Exterior wall, 2x6, lap siding" --source "the plans"
     cargo run -p plumbline -- apply job.json wall-0004 "Exterior wall, 2x6, brick veneer" --source "the plans" --change

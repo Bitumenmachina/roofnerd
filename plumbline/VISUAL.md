@@ -100,7 +100,9 @@ themselves are named at the top of `crates/app/src/theme.rs`.
    a water closet, not a box of its sizes. (As of this writing a thing whose name
    names one of ten forms is drawn as it: cabinet, wardrobe, WC, washbasin, bathtub,
    table, chair, bed, sofa, desk. Equipment, and anything else, is still a box, and
-   fails this line.)
+   fails this line. The twenty-second judgment read the bathtub's form as "a plain
+   box" too: its form is a tub's outside with nothing to show it is hollow, and it
+   fails this line until it reads as a tub.)
 7. **A trade at a time.** With Finishes off the walls show their weather barrier
    and the openings their flashing, where each is priced; with Framing on a framed
    wall is its frame, and no piece of lumber runs through another; with Ground off
@@ -145,3 +147,12 @@ it. The judge writes, per picture, each line as pass, fail (with the place in th
 picture and what is wrong), or not in this picture. A screen passes when no line fails
 on any picture of it. The lines marked "as of this writing" are known to fail: a judge
 who finds them passing has found the note out of date, which is also a finding.
+
+## How it was last judged
+
+The twenty-second judgment, part B (2026-11-16, on the build of 17ab7a6), went
+through every line above: `research/judgment-22b-notes.md` has its verdict on each,
+with the picture, and STATUS.md ("The twenty-second judgment") has where each
+finding stands. It failed the window on A1, A2 and C2, and on A4, A5, A6 and D8.
+C2, A4, most of A5 and part of A6 have been changed since and not judged again.
+
