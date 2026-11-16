@@ -78,14 +78,14 @@ says "a material added" "Copper, 16 oz" "$T/show.txt"
 says "whose price" "Tinners Yard" "$T/show.txt"
 says "the estimate made before" "prior-estimate" "$T/compare.txt"
 # Everything brought in in the window is Assumed, and says the file it came from.
-says "where it came from" "made-up-house.ifc, brought in in the window" "$T/show.txt"
+says "where it came from" "made-up-house.ifc, brought in on screen" "$T/show.txt"
 
 echo
 echo "== The same three brought in at the command line give the same job, byte for byte =="
 C="$T/twin.json"
 "$P" new "$C" "bring" >/dev/null
-"$P" import ifc "$C" "$T/made-up-house.ifc" --status Assumed --source "made-up-house.ifc, brought in in the window" >/dev/null
-"$P" import prices "$C" "$T/tinners-yard.xlsx" --supplier "Tinners Yard" --add --status Assumed --source "tinners-yard.xlsx, brought in in the window" >/dev/null
-"$P" import prior "$C" "$T/prior-estimate.csv" --name "prior-estimate" --status Assumed --source "prior-estimate.csv, brought in in the window" >/dev/null
+"$P" import ifc "$C" "$T/made-up-house.ifc" --status Assumed --source "made-up-house.ifc, brought in on screen" >/dev/null
+"$P" import prices "$C" "$T/tinners-yard.xlsx" --supplier "Tinners Yard" --add --status Assumed --source "tinners-yard.xlsx, brought in on screen" >/dev/null
+"$P" import prior "$C" "$T/prior-estimate.csv" --name "prior-estimate" --status Assumed --source "prior-estimate.csv, brought in on screen" >/dev/null
 cmp "$J" "$C" || { echo "FAIL: the job saved from the window is not the job made at the command line"; diff <(python3 -m json.tool "$J") <(python3 -m json.tool "$C") | head -40; exit 1; }
 echo "  PASS: a model, a price list and an estimate made before were brought into a new job in the window, and the saved job is the command line's, byte for byte"

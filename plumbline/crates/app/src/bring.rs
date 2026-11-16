@@ -92,7 +92,7 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
     }
     let path = found(doc, name);
     let file = path.file_name().and_then(|f| f.to_str()).unwrap_or(name).to_string();
-    let source = format!("{file}, brought in in the window");
+    let source = format!("{file}, brought in on screen");
     let how = Entered { status: Status::Assumed, source: &source };
     let done: Result<(String, bool), String> = (|| {
         let bytes = std::fs::read(&path).map_err(|e| format!("{file} {}", crate::plans::why_not_opened(&e)))?;

@@ -581,7 +581,7 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
                 None => Err("the first point is not on a drawing".to_string()),
                 Some(l) => {
                     let on_page = l.on_page(a);
-                    plumbline_world::plans::line_up(&mut doc.job, &l.path, on_page, b, ed::Entered { status: Status::Assumed, source: "lined up in the window" }).map(|left| {
+                    plumbline_world::plans::line_up(&mut doc.job, &l.path, on_page, b, ed::Entered { status: Status::Assumed, source: "lined up on screen" }).map(|left| {
                         let mut said = format!("{} is lined up: that place on it is ({}, {}) on the plan", l.name, units::feet_as_ft_in(b[0], 16), units::feet_as_ft_in(b[1], 16));
                         // What was traced over it before is where it was: that has to be seen.
                         if !left.is_empty() {

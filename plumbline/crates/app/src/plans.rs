@@ -275,7 +275,7 @@ pub fn add(doc: &mut Doc, text: &str) {
         let name = if pages > 1 { format!("{name}, page {page}") } else { name };
         // Which file it is is a fact, read off the disk here; where it lies and its
         // scale are not, and say so themselves.
-        let how = ed::Entered { status: Status::Known, source: "the file laid under the plan in the window" };
+        let how = ed::Entered { status: Status::Known, source: "the file laid under the plan on screen" };
         let path = world_plans::add(&mut doc.job, &storey, &name, world_plans::Read { file: &kept, page, bytes: bytes.len() as u64, checksum: &plumbline_plans::checksum(&bytes), size }, how)?;
         let twice = laid(&mut doc.job).iter().filter(|l| l.storey == storey && l.drawing.file.value.as_deref() == Some(kept.as_str()) && l.drawing.page == page).count() > 1;
         let _ = path;
