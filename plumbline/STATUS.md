@@ -6233,9 +6233,9 @@ stands tonight:
 - a changed item does not reach the ones already placed (J25A-6). **Fixed.**
 - Starter items pressed again overwrites a person's own changes (J25A-18). **Fixed.**
 - nothing turns a placed thing (J25A-3). **Built: Turn a quarter, Q.**
-- in the window an item can be changed, and not added, renamed or deleted. **Open**:
-  a row added to the written library and brought back adds one; nothing in the
-  window does.
+- in the window an item can be changed, and not added, renamed or deleted. **Built
+  since (call 111) and shown in `demos/itemneww.sh`**: New item, Rename item, Delete
+  item.
 - plan symbols cannot be read (J25A-1). **Built: outlined in ink.**
 - the "Drawn as" list has no range, refrigerator, panel, washer or dryer. **Open.** On the money path, held to the cent by its own arithmetic: an assembly given to one plane going on the other three and saying so; a unit cost and a rate per square typed once; a wage; overhead and profit; the top bar, the sheet and the saved job agreeing at $672.54; a pitch measured from the Verify list and the roof solved again; Steeper on a measured pitch saying the measurement is no longer what is drawn; a gable saying what went and what the job cost was and is, to the cent; a wall's assembly changed, the wall deleted, undone and redone; an allowance on a bare wall said to be out of the price. What it tried on the library that held: 21 starter items by trade, a lavatory, a range and a
 panelboard found; seven things set down from four trades, each where it was clicked
@@ -6371,6 +6371,28 @@ the window said; the script held what was said to where it stands. Its eight pic
 were read: the red card as it is set down, "Turned ... 90 deg" and "20 × 4 × 30 in" on
 the panel.
 
+## An item added, renamed and taken out by hand: a demonstration (`demos/itemneww.sh`, call 111)
+
+The job: a level and no item. In the window: New item, "Wall oven, 27 in" (a comma in
+its name), equipment, 27 in, 24 in, 29 in. **Said: "Added the item "Wall oven, 27 in":
+its sizes are Assumed, as typed, until they are checked against its maker's sheet.
+Its trade is not said yet ..."** Its trade picked: "Wall oven, 27 in is an item of
+Division 11 Equipment". One set down. Delete item: **"Can't delete the item: one is
+set down from Wall oven, 27 in: take it out of the job first"**. Rename item, "Wall
+oven, single": **"The item is now called "Wall oven, single". The one set down is
+called that too."** A second, "Range hood", added and deleted: **"Took the item
+"Range hood" out of the job. Undo brings it back."** The saved job: one item under 11
+Equipment, 27 by 24 by 29 in, each size Assumed and "typed in the window; not yet
+checked against its maker's sheet", maker and model Unknown, 1 placed and called what
+its item is; no range hood.
+
+**Run on a frozen copy of the build that has it: it passed on its second run.** The
+first stopped on my script (a control on the right panel reached for with the left
+panel's wheel; then an expectation of the command line's words that was mine and not
+the program's: it says "drawn as a box, its name saying nothing else"). Its ten
+pictures were read. **Not right**: the form opens at the foot of the left panel with
+its lower fields under "more below". Not judged.
+
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 320 tests pass,
@@ -6410,14 +6432,25 @@ third time (17 lines pass, 16 fail) and the words a third time (69 marked of abo
 860; 9 software terms, down from 31). Calls 106 to 109 are what was done about them.
 **Nothing done since 9868569 has been judged.**
 
-**Running as this was written (2026-11-16, late in the night): the twenty-sixth
-judgment, part A**, an agent on Opus on a frozen copy of c0d5922: a veteran's first
-day from a PDF and the money path (items 10 and 12), pressed in particular on a
-supplier's list brought in with the supplier's name, on a roof change saying its
-dollars, and on the item library (a thing turned, a library change reaching what
-stands, Starter items twice). Its brief is `research/judgment-26a-brief.md`; its notes
-are written as it goes in the scratch folder `j26a`. If this paragraph is still here,
-it was cut off or its report was not recorded: the brief can be given again.
+**The twenty-sixth judgment, part A (2026-11-16, late in the night, on c0d5922) was
+cut off**: the machine was restarted under it about an hour and a half in. Its notes
+as far as it got are `research/judgment-26a-notes.md`, its brief
+`research/judgment-26a-brief.md`. **It reached no verdict.** What it had done, all in
+the window from a new job and the public plan: a level, the plan added and scaled
+from its 41 ft 3 in dimension, six walls (190.42 LF), doors and windows, the floor
+(1,168.75 SF), three rooms, a hip roof (1,379.08 SF), assemblies on a wall and on
+the roof, unit costs, production rates and wages, overhead and profit: **every figure
+agreed with its own hand arithmetic to the cent and it had written no stop.** It had
+not yet reached the three things it was asked to press on (a supplier's list with the
+supplier's name, a roof change saying its dollars, the item library). Its five
+findings: J26A-1, overhead and profit said to be "not yet checked against a drawing"
+(**fixed, call 110, not seen**); J26A-2, roof sheathing rounded up plane by plane, 46
+sheets where 44 cover the roof (J25A-11 again: **open**); J26A-3, 1,168.75 SF at $6.00
+comes to $7,012.49 because a typed length was kept to four places (**fixed, tested,
+call 110, not seen**); J26A-4, an allowance is not in the price (Q26, a fourth
+judge); J26A-5, a comma cannot be typed in a cost line's name (**fixed, call 110, not
+seen**). **Items 10 and 12 are therefore still not judged on anything after
+9868569.** The brief can be given again as it stands.
 
 **What is owed, in this order.**
 
@@ -6441,8 +6474,8 @@ it was cut off or its report was not recorded: the brief can be given again.
    so one picked is marked as anything selected is); Starter items pressed a
    second time says "The starter items are already in this job, and each was left as
    it is here."
-3. **The item library, to be one a person keeps** (the twenty-fifth judge, part A):
-   an item added, renamed and deleted in the window; a price, a unit and labor on an
+3. **The item library, to be one a person keeps** (the twenty-fifth judge, part A).
+   Built since: an item added, renamed and deleted in the window (call 111). Owed: a price, a unit and labor on an
    item (PROPOSALS.md 28, with an item's shape as data and the bench to make it on);
    forms for a range, a refrigerator, a washer, a panelboard; a thing named on plan;
    Starter assemblies pressed twice tried for the fault Starter items had.

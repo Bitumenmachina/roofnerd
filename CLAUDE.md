@@ -314,7 +314,7 @@ the tree while a timed window demonstration is running; build in a scratch workt
 | a quantity, a formula on a line, a price | `crates/world/src/lines.rs`, `formula.rs`, `derive.rs`, `view.rs` |
 | clashes; the verify-in-field list | `crates/world/src/building/clash.rs`; `vif.rs` |
 | a maker's sheet read into an item | `crates/plans/src/lib.rs` (`words`), `crates/world/src/spec.rs` |
-| the item library: items by trade as a table, brought in and written out; the starter items; a placed thing following its item, and turned | `crates/world/src/tables.rs` (`items_in`, `items_in_missing`, `items_out`), `library/items.csv`, `crates/world/src/editing.rs` (`placed_follow`, `turn`); in the window `crates/app/src/bring.rs` and the Items list in `panels.rs`; DECISIONS.md calls 105, 107, 109 |
+| the item library: items by trade as a table, brought in and written out; the starter items; a placed thing following its item, and turned | `crates/world/src/tables.rs` (`items_in`, `items_in_missing`, `items_out`), `library/items.csv`, `crates/world/src/editing.rs` (`placed_follow`, `turn`); in the window `crates/app/src/bring.rs`, the Items list and an item's panel in `panels.rs` (New item, Rename item, Delete item: `tools.rs` `new_item`, `rename_item`); DECISIONS.md calls 105, 107, 109, 111 |
 | the workbook, CSV, the three lenses; IFC in and out | `crates/world/src/export.rs`, `crates/sheets`; `crates/ifc` |
 | a command-line verb and what it prints | `crates/cli/src/main.rs` |
 

@@ -192,6 +192,7 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `place` | ported | `stood_of` | `crates/core/src/commands.rs:8662` | a thing stood at a point on a level, so far above it; what it is as text is ours |
 | `move_by` | ported | `move_elements` | `crates/core/src/commands.rs:12419` | move by a distance east and north; a wall's openings go with it. Not taken: moving one end; several at once |
 | `turn` | ported | `rotate` | `crates/core/src/commands.rs:12444` | turn a placed thing by degrees counter-clockwise. Taken: the turn itself, about the thing's own point. Not taken: turning about another point; walls and runs; several at once; a copy |
+| `rename_item` | ported | `rename_type` | `crates/core/src/commands.rs:12943` | a library entry called something else: a name another has is refused, and what refers to it follows (there `rename_entry`; here each thing set down from the item is called what the item is). Not taken: a family's types named `family: type`; a rename to the name it has is refused here, where BIMCraft answers that it was done |
 | `remove` | ported | `delete` | `crates/core/src/commands.rs:13011` | take an element out, and a wall's doors and windows with it (`commands.rs:13040`) |
 | `room` | ported | `room` | `crates/core/src/commands.rs:7909` | a room placed by a point on a level, with a name. Not taken: a number given when none is said |
 | `STEP_FT` | ported | `STEP` | `crates/core/src/snap.rs:19` | what a point with nothing to snap to rounds to; an inch here, 10 mm there (header) |

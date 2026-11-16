@@ -15,6 +15,7 @@ on made-up jobs.
 | `judgment-24b-brief.md`, `judgment-24b-notes.md`, `judgment-24b-words.md` | The twenty-fourth judgment, part B (the look and the words), on d20ac60: 60 findings, about 640 words listed, 76 marked |
 | `judgment-25a-brief.md` | The twenty-fifth judgment, part A (the item library and the money path where it changed, in the window), on 9868569: what the judge was asked. Its notes are added when its report is in |
 | `judgment-25b-brief.md`, `judgment-25b-notes.md`, `judgment-25b-words.md` | The twenty-fifth judgment, part B (the look and the words), on 9868569: 42 findings and a line-by-line table; about 860 words listed, 69 marked |
+| `judgment-26a-brief.md`, `judgment-26a-notes.md` | The twenty-sixth judgment, part A (a veteran's first day and the money path), on c0d5922: **cut off by a restart of the machine** with five findings written and no verdict |
 | `item-libraries-survey.md` | rgeometry, plexus and fornjot, read from their own pages for Patrick's question about an item workbench (DECISIONS.md call 105, QUESTIONS.md Q27) |
 
 Paths in these files that begin `/tmp/claude-0/` are the scratch folder of the session

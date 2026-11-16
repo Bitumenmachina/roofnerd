@@ -350,6 +350,71 @@ pub fn settings_entered(doc: &mut Doc, tool: Tool, values: &[String]) {
     doc.touch();
 }
 
+/// A new item for the job's library, typed in the window: what it is called, what kind
+/// of thing it is, and its width, depth and height. Its sizes are Assumed, as typed
+/// here and not yet checked against its maker's sheet; its maker and model are not
+/// chosen; its trade is said on its panel.
+pub fn new_item(doc: &mut Doc, values: &[String]) {
+    use plumbline_world::units;
+    use plumbline_world::value::Val;
+    const TYPED: &str = "typed in the window; not yet checked against its maker's sheet";
+    let parts: Vec<&str> = values.iter().map(|s| s.trim()).collect();
+    let made = (|| -> Result<(String, String), String> {
+        let [name, kind, width, depth, height] = parts.as_slice() else { return Err("an item takes a name, a kind, and its width, depth and height".to_string()) };
+        let category = match kind.to_lowercase().as_str() {
+            "equipment" => Kind::Equipment,
+            "fixture" => Kind::Fixture,
+            "furnishing" | "furniture" => Kind::Furnishing,
+            other => return Err(format!("{other:?} is not a kind of item: an item is equipment, a fixture or a furnishing")),
+        };
+        let size = |what: &str, typed: &str| -> Result<Val<units::Len>, String> {
+            let (len, unit) = units::parse_length(typed).map_err(|why| format!("its {what}: {why}"))?;
+            Ok(Val { value: Some(len), unit: unit.to_string(), status: Status::Assumed, source: TYPED.to_string() })
+        };
+        let not_chosen = || Val::<String>::unknown("", "not chosen");
+        let item = plumbline_world::Item { category, maker: not_chosen(), model: not_chosen(), width: size("width", width)?, depth: size("depth", depth)?, height: size("height", height)?, weight: None, sheet: String::new(), division: None, form: None };
+        let path = ed::item(&mut doc.job, name, item)?;
+        Ok((path, name.to_string()))
+    })();
+    match made {
+        Ok((path, name)) => {
+            doc.job.derive();
+            doc.edit("New item");
+            doc.selected = Some(path);
+            doc.say(Tone::Done, format!("Added the item {name:?}: its sizes are Assumed, as typed, until they are checked against its maker's sheet. Its trade is not said yet: pick it under Trade, on the right. It is under Items, on the left: click it there, then click where one stands."));
+        }
+        Err(why) => {
+            let at = (0..values.len()).rev().find(|&i| !values[i].trim().is_empty() && why.contains(&format!("{:?}", values[i].trim()))).or_else(|| values.iter().position(|v| v.trim().is_empty())).unwrap_or(0);
+            doc.reopen_form(Entry::NewItem, values.to_vec(), at);
+            cant(doc, "add the item", why);
+        }
+    }
+    doc.redraw();
+}
+
+/// The item that is open, called something else.
+pub fn rename_item(doc: &mut Doc, typed: &str) {
+    let Some(path) = doc.selected.clone() else { return cant(doc, "rename it", "no item is open") };
+    match ed::rename_item(&mut doc.job, &path, typed) {
+        Ok(placed) => {
+            doc.job.derive();
+            doc.edit("Rename item");
+            let also = match placed {
+                0 => String::new(),
+                1 => " The one set down is called that too.".to_string(),
+                n => format!(" The {n} set down are called that too."),
+            };
+            doc.say(Tone::Done, format!("The item is now called {:?}.{also}", typed.trim()));
+        }
+        Err(why) => {
+            cant(doc, "rename it", why);
+            doc.open(Entry::RenameItem, typed.trim());
+            doc.fresh = true;
+        }
+    }
+    doc.redraw();
+}
+
 /// A new storey typed as "name, elevation, height". It becomes the storey drawn on.
 pub fn new_storey(doc: &mut Doc, values: &[String]) {
     let parts: Vec<&str> = values.iter().map(|s| s.trim()).collect();

@@ -699,6 +699,46 @@ pub fn turn(job: &mut Job, path: &str, degrees: f64, how: Entered) -> Result<f64
     })
 }
 
+/// Call an item something else. Two items cannot share a name, however it is typed;
+/// each thing set down from it is called what the item is. Returns how many were.
+pub fn rename_item(job: &mut Job, path: &str, name: &str) -> Result<usize, String> {
+    all_or_nothing(job, |job| {
+        let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
+        if job.world.get::<crate::Item>(e).is_none() {
+            return Err(format!("{path} is not an item"));
+        }
+        let name = name.trim();
+        if name.is_empty() {
+            return Err("an item needs a name: what the thing is called".into());
+        }
+        let was = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_default();
+        if was == name {
+            return Err(format!("it is called {name:?} already"));
+        }
+        let taken = {
+            let mut q = job.world.query::<(&Node, &crate::Item)>();
+            q.iter(&job.world).any(|(n, _)| n.path != path && crate::check::same_name(&n.name, name))
+        };
+        if taken {
+            return Err(format!("another item is called {name:?} already"));
+        }
+        if let Some(mut node) = job.world.get_mut::<Node>(e) {
+            node.name = name.to_string();
+        }
+        let placed: Vec<(String, Kind, Placed)> = {
+            let mut q = job.world.query::<(&Node, &Kind, &Placed)>();
+            q.iter(&job.world).filter(|(_, _, p)| p.item.as_deref() == Some(path)).map(|(n, k, p)| (n.path.clone(), *k, p.clone())).collect()
+        };
+        let count = placed.len();
+        for (at, k, mut p) in placed {
+            p.what.value = Some(name.to_string());
+            building::check_placed(&at, k, &p)?;
+            job.put(&at, p)?;
+        }
+        Ok(count)
+    })
+}
+
 /// Every thing set down from an item is as big as the item says: after the item's
 /// sizes change, each follows. Returns the path of each that changed size.
 pub(crate) fn placed_follow(job: &mut Job, item_path: &str, item_name: &str, item: &crate::Item) -> Result<Vec<String>, String> {
@@ -776,6 +816,16 @@ pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
             by.sort();
             if !by.is_empty() {
                 return Err(format!("{path} is the type of {}: give {} another type, or remove {}, first", listed(&by), if by.len() == 1 { "it" } else { "them" }, if by.len() == 1 { "it" } else { "them" }));
+            }
+        }
+        // Nor is an item that things are set down from: each would be left as big as
+        // an item that is no longer there.
+        if job.world.get::<crate::Item>(e).is_some() {
+            let mut q = job.world.query::<(&Node, &Placed)>();
+            let mut by: Vec<String> = q.iter(&job.world).filter(|(_, p)| p.item.as_deref() == Some(path)).map(|(n, _)| n.path.clone()).collect();
+            by.sort();
+            if !by.is_empty() {
+                return Err(format!("{} set down from {path}: take {} out of the job first", if by.len() == 1 { "one is".to_string() } else { format!("{} are", by.len()) }, if by.len() == 1 { "it" } else { "them" }));
             }
         }
         if kind == Kind::Material {

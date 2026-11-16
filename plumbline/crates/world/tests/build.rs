@@ -249,3 +249,36 @@ fn a_typed_length_is_kept_finely_enough_to_multiply_to_the_cent() {
     // A length that is a round number of feet is still exactly that.
     assert_eq!(ed::toward([0.1, 0.2], [5.0, 0.2], 24.0), [24.1, 0.2]);
 }
+
+#[test]
+fn an_item_is_renamed_with_what_stands_and_is_not_deleted_from_under_it() {
+    use plumbline_world::units::Len;
+    use plumbline_world::value::Val;
+    let mut job = Job::new("an item kept (not a real job)", "test", "test");
+    let level = ed::storey(&mut job, "ground", "0 ft", "8 ft", KNOWN).unwrap();
+    let inches = |x: f64| Val { value: Some(Len::One(x)), unit: "in".to_string(), status: Status::Assumed, source: "a made-up catalog".to_string() };
+    let unknown = || Val::<String>::unknown("", "not chosen");
+    let mut make = |job: &mut Job, name: &str| {
+        let item = Item { category: Kind::Equipment, maker: unknown(), model: unknown(), width: inches(27.0), depth: inches(24.0), height: inches(29.0), weight: None, sheet: String::new(), division: None, form: None };
+        ed::item(job, name, item).unwrap()
+    };
+    let (oven, hood) = (make(&mut job, "Wall oven, 27 in"), make(&mut job, "Range hood"));
+    let placed = ed::place_item(&mut job, &level, &oven, [4.0, 4.0], "0 ft", KNOWN).unwrap();
+    // Renamed: the one set down is called what its item is. Two items cannot share a name.
+    assert_eq!(ed::rename_item(&mut job, &oven, "Wall oven, single"), Ok(1));
+    let e = job.find(&placed).unwrap();
+    assert_eq!(job.world.get::<plumbline_world::Placed>(e).unwrap().what.value.as_deref(), Some("Wall oven, single"));
+    assert!(ed::rename_item(&mut job, &oven, "range hood").unwrap_err().contains("another item is called"));
+    assert!(ed::rename_item(&mut job, &oven, "  ").unwrap_err().contains("needs a name"));
+    // Not deleted from under what stands; with that gone, it goes. One nothing is set
+    // down from goes at once.
+    let why = ed::remove(&mut job, &oven).unwrap_err();
+    assert!(why.starts_with("one is set down from") && why.ends_with("take it out of the job first"), "{why}");
+    ed::remove(&mut job, &hood).unwrap();
+    ed::remove(&mut job, &placed).unwrap();
+    ed::remove(&mut job, &oven).unwrap();
+    let mut q = job.world.query::<&Item>();
+    assert_eq!(q.iter(&job.world).count(), 0);
+    let text = plumbline_world::file::save(&mut job);
+    assert_eq!(plumbline_world::file::save(&mut plumbline_world::file::load(&text).unwrap().0), text);
+}

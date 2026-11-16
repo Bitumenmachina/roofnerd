@@ -278,7 +278,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, plans
 /// and its switch reads on while it is there.
 fn panels_on(doc: &Doc) -> [bool; 3] {
     let typing = doc.entry.as_ref().map(|(field, _)| *field);
-    let in_left = matches!(typing, Some(Entry::Storey | Entry::BringIn(_) | Entry::Drawing));
+    let in_left = matches!(typing, Some(Entry::Storey | Entry::NewItem | Entry::BringIn(_) | Entry::Drawing));
     let in_tools = matches!(typing, Some(Entry::Settings(_) | Entry::Length | Entry::Distance | Entry::Room));
     let in_right = typing.is_some() && !in_left && !in_tools;
     [!doc.show.away[0] || in_left, !doc.show.away[1] || in_right, !doc.show.away[2] || in_tools || doc.draw.tool.is_some()]
@@ -1165,8 +1165,33 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
 
         // The things to place that were made from makers' sheets: click one, then click
         // where it stands.
+        // The job's library of things to place. A new one is added here by hand
+        // (it could only come from a written library or a maker's sheet, and a library
+        // kept like a database is one a row can be added to: J25A).
+        heading(c, fonts, "Items");
+        if matches!(doc.entry, Some((Entry::NewItem, _))) {
+            c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
+                for (i, (label, like)) in [("Name", "Wall oven, 27 in"), ("Kind", "equipment, fixture or furnishing"), ("Width", "27 in"), ("Depth", "24 in"), ("Height", "29 in")].into_iter().enumerate() {
+                    on_click(&mut form_field(f, fonts, doc, true, i, label, like, "", LEFT_W - 30.0), move |doc| {
+                        if let Some((Entry::NewItem, typed)) = doc.entry.clone() {
+                            let mut values = doc.form.clone();
+                            let at = doc.form_at;
+                            values[at] = typed;
+                            doc.open_form(Entry::NewItem, values, i);
+                        }
+                    });
+                }
+                f.spawn(text(fonts, "Tab or Enter to the next. Enter on the last adds it. Esc cancels.", 10.5, Weight::Regular, theme::ink_faint()));
+            });
+        } else {
+            c.spawn(Node { padding: UiRect::axes(px(6.0), px(3.0)), flex_shrink: 0.0, ..default() }).with_children(|b| {
+                on_click(&mut button(b, fonts, "New item", "", false), |doc| {
+                    doc.open_form(Entry::NewItem, vec![String::new(); 5], 0);
+                    doc.say(Tone::Done, "New item: type what it is called, its kind (equipment, fixture or furnishing), and its width, depth and height.");
+                });
+            });
+        }
         if !snap.items.is_empty() {
-            heading(c, fonts, "Items");
             let mut trade = None;
             for (path, name, kind, size, division) in &snap.items {
                 // Trade by trade, each under its division's name.
@@ -1452,6 +1477,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
             Some((_, _, false)) => "Checked on site".to_string(),
             None => "Measured on site".to_string(),
         },
+        Entry::RenameItem => format!("What {name} is called"),
         _ => String::new(),
     };
     let hint = match field {
@@ -1470,6 +1496,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
             Some((_, _, true)) => "As the tape or laser reads, or same",
             _ => "Type same if it is as drawn",
         },
+        Entry::RenameItem => "A name of its own, like Wall oven, 27 in",
         _ => "",
     };
     (title, hint)
@@ -1851,7 +1878,7 @@ fn right(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
                 // it is, each picked with a click. (Its sizes are changed on their
                 // own rows above.)
                 if el.rows.iter().any(|r| r.label == "drawn as") {
-                    item_bench(c, fonts, el);
+                    item_bench(c, fonts, doc, snap, el);
                 }
             }
             None => summary(c, fonts, doc, snap),
@@ -1865,13 +1892,38 @@ fn right(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
 /// The bench an item is changed on: what one of it is drawn as, and which trade's item
 /// it is. Each choice is a row; the one it has is marked. A change is the item's, so
 /// every one of it already placed follows.
-fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, el: &view::ElementRows) {
+fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, el: &view::ElementRows) {
     use plumbline_world::building::forms::{Form, BOX};
     let said = |label: &str| el.rows.iter().find(|r| r.label == label).map(|r| r.text.clone()).unwrap_or_default();
     let (drawn, trade) = (said("drawn as"), said("trade"));
     let hint = |p: &mut ChildSpawnerCommands, words: &str| {
         p.spawn(Node { padding: UiRect::bottom(px(4.0)), ..default() }).with_child(text(fonts, words, 11.0, Weight::Regular, theme::ink_faint()));
     };
+    // The item itself: called something else, or taken out of the job's library.
+    p.spawn(Node { margin: UiRect::top(px(8.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|r| {
+        let called = el.name.clone();
+        on_click(&mut button(r, fonts, "Rename item", "", false), move |doc| {
+            doc.open(Entry::RenameItem, called.clone());
+            doc.fresh = true;
+            doc.say(Tone::Done, "Rename: type what the item is called. Enter sets it.");
+        });
+        let (path, called) = (el.path.clone(), el.name.clone());
+        on_click(&mut button(r, fonts, "Delete item", "", false), move |doc| {
+            match plumbline_world::editing::remove(&mut doc.job, &path) {
+                Ok(_) => {
+                    doc.job.derive();
+                    doc.edit("Delete item");
+                    doc.selected = None;
+                    doc.say(Tone::Warned, format!("Took the item {called:?} out of the job. Undo brings it back."));
+                }
+                Err(why) => crate::tools::cant(doc, "delete the item", why),
+            }
+            doc.redraw();
+        });
+    });
+    if matches!(doc.entry, Some((Entry::RenameItem, _))) {
+        entry_box(p, fonts, doc, snap);
+    }
     heading(p, fonts, "Drawn as");
     hint(p, "Click one. Every one of this item already placed is drawn that way, inside the box of its sizes.");
     let by_name = drawn.contains("by its name") || drawn.contains("its name saying");

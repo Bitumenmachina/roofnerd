@@ -145,6 +145,11 @@ pub enum Entry {
     Length,
     /// A new storey: its name, its floor's height, and how far up to the next.
     Storey,
+    /// A new item for the job's library: its name, what kind of thing it is, and its
+    /// width, depth and height.
+    NewItem,
+    /// What the item that is open is called, typed over.
+    RenameItem,
     /// A cost line to add to the selected thing: what it is, what it is priced by, and
     /// its cost type (material, labor, subcontract...).
     Line,
@@ -409,6 +414,8 @@ impl Doc {
         self.lost = Some(
             match field {
                 Entry::Storey => "The level was not added: its fields were let go.",
+                Entry::NewItem => "The item was not added: its fields were let go.",
+                Entry::RenameItem => "The item keeps its name: the new one was let go.",
                 Entry::Line => "The cost line was not added: its fields were let go.",
                 Entry::Drawing => "The drawing was not added: its file was let go.",
                 Entry::BringIn(_) => "Nothing was brought in: the file's name was let go.",

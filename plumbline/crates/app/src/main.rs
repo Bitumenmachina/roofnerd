@@ -610,6 +610,10 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                     let name = ["What it is", "What it is priced by", "Its cost type"].get(i).copied().unwrap_or("A field");
                                     doc.say(Tone::Refused, format!("Cost line: {name} is still to be typed. Enter adds the line once all three are in."));
                                 }
+                                if field == Entry::NewItem {
+                                    let name = ["Its name", "Its kind", "Its width", "Its depth", "Its height"].get(i).copied().unwrap_or("A field");
+                                    doc.say(Tone::Refused, format!("New item: {name} is still to be typed. Enter adds the item once all five are in."));
+                                }
                                 // A level's form said nothing (J22B-34).
                                 if field == Entry::Storey {
                                     let name = ["Its name", "The elevation of its floor", "Floor-to-floor"].get(i).copied().unwrap_or("A field");
@@ -624,7 +628,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                 // prehung", as the program's own lines are): in that field a comma is a
                 // comma. It jumped to the next field and the line was refused with its
                 // name cut in two (J26A-5).
-                _ if together && comma && !(matches!(field, Entry::Line) && doc.form_at == 0) => {
+                _ if together && comma && !(matches!(field, Entry::Line | Entry::NewItem) && doc.form_at == 0) => {
                     let at = doc.form_at;
                     if at + 1 < doc.form.len() {
                         doc.form[at] = text.trim().to_string();
@@ -774,6 +778,8 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                 Entry::Length => tools::typed_length(doc, &text),
                 Entry::Storey => tools::new_storey(doc, &values),
                 Entry::Line => tools::new_line(doc, &values),
+                Entry::NewItem => tools::new_item(doc, &values),
+                Entry::RenameItem => tools::rename_item(doc, &text),
                 Entry::Drawing => plans::add(doc, &text),
                 Entry::Distance => tools::scale_entered(doc, &text),
                 Entry::Measure => tools::measured(doc, &text),

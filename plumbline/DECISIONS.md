@@ -3951,3 +3951,36 @@ STATUS.md when it arrives.
 
 **None of the three is seen in the window**, and the window demonstrations have not
 been run on a build with them: the judge was driving a window on the machine.
+
+### Call 111. The item library is kept by hand in the window: an item added, renamed, taken out (2026-11-16, late in the night)
+
+Patrick asked again, in the same words, whether there is "a workbench for items for
+trade that can be modified like a database of items / library". The twenty-fifth
+judge's answer had been "not yet a library I can keep", and one of its reasons was
+that in the window an item could be changed and not added, renamed or deleted: a new
+one came only from a written list or a maker's sheet. A table that is kept like a
+database has rows added, renamed and removed where it is used.
+
+- **New item**, at the head of the Items list: what it is called, its kind (equipment,
+  fixture or furnishing), and its width, depth and height. Its sizes are **Assumed,
+  "typed in the window; not yet checked against its maker's sheet"**; its maker and
+  model are Unknown, not chosen; its trade is not said until it is picked on its
+  panel, and the window says so. A comma in its name is a comma.
+- **Rename item**, on the item's panel: two items cannot share a name however it is
+  typed; each thing set down from it is called what the item is, and how many were
+  is said. Ported from BIMCraft's `rename_type` (PORTMAP.md), which
+  `tools/portmap.sh` made me find: I had written that BIMCraft has none.
+- **Delete item**, on the item's panel: **an item is not taken from under what is set
+  down from it** ("one is set down from Wall oven, 27 in: take it out of the job
+  first"); one nothing stands from goes, and the window says Undo brings it back.
+- `demos/window.sh` gained `on_right`, the wheel over the right panel until a control
+  is on screen, as `on_at` does on the left.
+
+Tests: `an_item_is_renamed_with_what_stands_and_is_not_deleted_from_under_it`; 322
+pass. `demos/itemneww.sh` walks it in the window and passed on its second run (the
+first found my own script reaching for a control on the right panel with the left
+panel's wheel, and then expecting words the command line does not use for an item
+drawn by its name). **Not right**: the New item form opens at the foot of the left
+panel and its lower fields are under "more below" until the wheel is turned. **Not
+built**: a price, a unit or labor on an item; an item's own shape; a bench where it
+stands alone (PROPOSALS.md 28). Not judged.
