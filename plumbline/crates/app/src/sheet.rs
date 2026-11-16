@@ -785,7 +785,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             // Why there is no figure; or, on a price over a job cost that leaves lines
             // out, that it is the price of what is in it and not of the job.
             if d.value.is_none() || !d.note.is_empty() {
-                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(6.0) }, ..default() }).with_child(text(fonts, d.note.clone(), 11.5, Weight::Regular, theme::status_ink(if d.value.is_none() { Status::Unknown } else { Status::Assumed })));
+                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(6.0) }, ..default() }).with_child(text(fonts, d.note.clone(), 11.5, Weight::Regular, theme::ink_soft()));
             }
             // Under the price: what is built and is in no line of it. The price is not
             // the price of the building until this is gone, and it is said here, where
@@ -797,12 +797,12 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     if let Some(first) = said.get_mut(0..1) {
                         first.make_ascii_uppercase();
                     }
-                    t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(8.0) }, ..default() }).with_child(text(fonts, format!("{said}."), 11.5, Weight::Medium, theme::status_ink(Status::Unknown)));
+                    t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(8.0) }, ..default() }).with_child(text(fonts, format!("{said}."), 11.5, Weight::Medium, theme::ink_soft()));
                 }
                 // And what is priced by an allowance alone: in the budget, in no line
                 // of this price (J22A-10).
                 if let Some(said) = snap.pricing.as_ref().and_then(|p| p.allowances_alone_said()) {
-                    t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(8.0) }, ..default() }).with_child(text(fonts, format!("{said}."), 11.5, Weight::Medium, theme::status_ink(Status::Assumed)));
+                    t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(8.0) }, ..default() }).with_child(text(fonts, format!("{said}."), 11.5, Weight::Medium, theme::ink_soft()));
                 }
             }
         }
@@ -1116,7 +1116,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             });
             for (s, total) in std::iter::once(("generic", &est.at_generic)).chain(est.at_supplier.iter().map(|(s, t)| (s.as_str(), t))) {
                 for (who, why) in &total.left_out {
-                    t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, ..default() }).with_child(text(fonts, format!("{s} leaves out {who}: {why}"), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
+                    t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, ..default() }).with_child(text(fonts, format!("{s} leaves out {who}: {why}"), 11.5, Weight::Regular, theme::ink_soft()));
                 }
             }
         });
@@ -1168,7 +1168,7 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
             });
             // Why a figure is missing is said under the element, not left for a tooltip.
             for d in [&e.allowance, &e.detail].iter().filter_map(|d| d.as_ref()).filter(|d| d.value.is_none()) {
-                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(7.0) }, ..default() }).with_child(text(fonts, d.note.clone(), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
+                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(7.0) }, ..default() }).with_child(text(fonts, d.note.clone(), 11.5, Weight::Regular, theme::ink_soft()));
             }
         }
     });
@@ -1191,7 +1191,7 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
                 });
             });
             for (path, why) in &total.left_out {
-                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(6.0) }, ..default() }).with_child(text(fonts, format!("left out: {path}: {why}"), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
+                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(6.0) }, ..default() }).with_child(text(fonts, format!("left out: {path}: {why}"), 11.5, Weight::Regular, theme::ink_soft()));
             }
         };
         line(t, "Allowances", &pricing.allowance, "nothing has an allowance that comes to a figure");
