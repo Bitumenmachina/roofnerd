@@ -181,3 +181,22 @@ fn a_job_file_changed_by_hand_is_refused_in_plain_words() {
     let other = load("hello").err().unwrap();
     assert_eq!(other, "not a job file: it is not written the way this program writes a job (line 1 of the file)");
 }
+
+#[test]
+fn an_allowance_on_a_thing_with_no_cost_line_is_said_to_be_out_of_the_price() {
+    use plumbline_world::view;
+    // The sample house's living room is 614.7188 SF inside its walls and has no cost
+    // line. At a made-up $10.00/SF its allowance is 6,147.19 (6,147.188 to the cent).
+    let mut job = plumbline_world::sample::house();
+    let path = job.order.clone().into_iter().find_map(|e| job.world.get::<plumbline_world::Node>(e).filter(|n| n.name == "living room").map(|n| n.path.clone())).unwrap();
+    assert_eq!(view::pricing(&mut job).allowances_alone(), None, "nothing is priced by an allowance alone to begin with");
+    let before = view::estimate(&mut job).price.value;
+    job.set(&path, "allowance", Some("10"), plumbline_world::Status::Assumed, "made-up budget").unwrap();
+    job.derive();
+    let pricing = view::pricing(&mut job);
+    assert_eq!(pricing.allowances_alone(), Some((1, Some(6147.19))));
+    let said = pricing.allowances_alone_said().unwrap();
+    assert!(said.starts_with("1 thing is priced by an allowance and no cost line ($6,147.19)") && said.contains("not in this price"), "{said}");
+    // And it is not: the price is what it was.
+    assert_eq!(view::estimate(&mut job).price.value, before);
+}

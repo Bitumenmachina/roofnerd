@@ -518,7 +518,14 @@ pub fn field<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, va
             _ => control_edge(),
         };
         f.spawn((rounded(Node { width: px(width), height: px(24.0), padding: UiRect::horizontal(px(6.0)), border: UiRect::all(px(if state == 1 { 1.5 } else { 1.0 })), align_items: AlignItems::Center, overflow: Overflow::clip(), ..default() }, SMALL_RADIUS), BackgroundColor(if state == 1 { panel() } else { control() }), BorderColor::all(edge), Pickable::IGNORE)).with_children(|b| {
-            if value.is_empty() && state != 1 {
+            let empty = value.is_empty();
+            if empty {
+                // The cursor first, where the typing will go; then the example. The
+                // field a person is in is the one that most needs its example: it was
+                // shown in every field but that one (J22B-28, J22B-41).
+                if state == 1 {
+                    b.spawn((Node { width: px(1.5), height: px(15.0), margin: UiRect::right(px(3.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(accent()), Pickable::IGNORE));
+                }
                 // An example says it is one: a grey "9 ft" alone read as a value that
                 // Enter would take (call 86).
                 let example = if like.is_empty() { String::new() } else { format!("like {like}") };
@@ -526,7 +533,7 @@ pub fn field<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, va
             } else {
                 b.spawn((typed(fonts, value, 12.5, Weight::Medium, ink()), TextLayout::no_wrap(), Pickable::IGNORE));
             }
-            if state == 1 {
+            if state == 1 && !empty {
                 b.spawn((Node { width: px(1.5), height: px(15.0), margin: UiRect::left(px(1.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(accent()), Pickable::IGNORE));
             }
         });

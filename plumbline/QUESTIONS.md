@@ -357,3 +357,30 @@ the price shown, to the cent, so the line can be checked by eye; the quantity sh
 is to four places. A change would move every total in every job by cents and every
 demonstration's figures with it, and is not made without his word.
 
+
+## Q26. Is an allowance on a thing with no cost lines in the price? (2026-11-16, from the twenty-second judgment, J22A-10)
+
+A veteran estimator put $12.50/SF on a room (686.40 SF, $8,580.05) and read the top
+bar: the price had not moved. The allowance was on the Budget tab, set against the
+detail, and in no line of the estimate. To him the bid was $8,580 short and nothing
+on the screen he was reading said so.
+
+As built, the two are two readings of one job: the **allowance** is the design-phase
+figure per SF or LF, the **detail** is the cost lines, and the price (job cost,
+overhead, profit) is over the cost lines only. That is what "a design-phase price per
+SF or LF grows into line items for the same condition, and the detail rolls back up"
+was read to ask for (deliverable item 6): the allowance is what the detail is held
+against, not a line of the bid.
+
+An estimator at design phase prices whole rooms and walls by allowance and expects
+them in his number. Both readings are real: a budget that is compared, and an
+allowance carried in a bid until it is detailed.
+
+**Working assumption: as built, and said.** An allowance is not in the price. Where a
+thing is priced by an allowance and by no cost line, the price says so wherever it is
+read: the top bar ("$8,580.05 in allowances, not in it"), under the price on the
+estimate sheet, and on the command line, each from one figure the model works out
+(`Pricing::allowances_alone`). **What would change:** if he rules that an allowance
+with no detail is carried in the price, it becomes a line of the job cost (a cost
+type and a division are then needed for it) until the first cost line is put on the
+thing, and every total moves.

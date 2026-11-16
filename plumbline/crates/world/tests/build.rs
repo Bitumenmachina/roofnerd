@@ -136,3 +136,35 @@ fn a_levels_walls_are_added_up_by_their_type() {
     // The parts are the whole: nothing is in two types, and nothing in none.
     assert_eq!(by.iter().map(|t| t.2.unwrap()).sum::<f64>(), 96.0);
 }
+
+#[test]
+fn a_room_closed_at_its_walls_faces_and_not_on_their_lines_has_no_area_to_wall_centers() {
+    // A house 30 ft by 20 ft in 6 in walls. A room in its north-east corner, 10 ft by
+    // 10 ft to wall lines, behind two partitions that were traced to stop 2 1/2 in
+    // short of each other: one down from the north wall at 20 ft east, ending at 10 ft
+    // north; one in from the east wall at 10 ft north, ending at 20 ft 2 1/2 in east.
+    // The second's end is inside the first's thickness, so the faces close the room.
+    let (mut job, s, wt, _) = start();
+    ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [30.0, 0.0], [30.0, 20.0], [0.0, 20.0]], true, Top::Height("8 ft"), KNOWN).unwrap();
+    ed::walls(&mut job, &s, &wt, &[[20.0, 20.0], [20.0, 10.0]], false, Top::Height("8 ft"), KNOWN).unwrap();
+    ed::walls(&mut job, &s, &wt, &[[30.0, 10.0], [20.0 + 2.5 / 12.0, 10.0]], false, Top::Height("8 ft"), KNOWN).unwrap();
+    let room = ed::room(&mut job, &s, "bedroom", [25.0, 15.0], KNOWN).unwrap();
+    job.derive();
+    let e = job.find(&room).unwrap();
+    let m = job.world.get::<Measure>(e).unwrap().0.clone();
+    // Inside the faces: 10 − 0.25 − 0.25 = 9.5 ft each way, 90.25 SF.
+    assert_eq!(m["floor_area"].value, Some(90.25), "{}", m["floor_area"].note);
+    // To the wall centers the room is not closed: the figure would be the whole house
+    // less nothing (600 SF), six times the room. It is refused, and says what to do.
+    assert_eq!(m["gross_area"].value, None);
+    assert!(m["gross_area"].note.contains("stop short of each other") && m["gross_area"].note.contains("Draw them to meet"), "{}", m["gross_area"].note);
+    // Drawn to meet, it has both: 100 SF to wall centers.
+    let (mut job, s, wt, _) = start();
+    ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [30.0, 0.0], [30.0, 20.0], [0.0, 20.0]], true, Top::Height("8 ft"), KNOWN).unwrap();
+    ed::walls(&mut job, &s, &wt, &[[20.0, 20.0], [20.0, 10.0], [30.0, 10.0]], false, Top::Height("8 ft"), KNOWN).unwrap();
+    let room = ed::room(&mut job, &s, "bedroom", [25.0, 15.0], KNOWN).unwrap();
+    job.derive();
+    let e = job.find(&room).unwrap();
+    let m = job.world.get::<Measure>(e).unwrap().0.clone();
+    assert_eq!((m["floor_area"].value, m["gross_area"].value), (Some(90.25), Some(100.0)));
+}

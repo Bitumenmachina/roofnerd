@@ -396,7 +396,10 @@ pub fn parse_length(text: &str) -> Result<(Len, &'static str), String> {
         Mark::None if scan.done() && first == 0.0 => Ok((Len::One(0.0), FT)),
         Mark::None => {
             if scan.done() {
-                Err(fail("has no unit; say which it is: 25.5 ft, 306 in, or 25' 6\". A number with no unit is never read as feet. A laser has to be set to send its unit with the reading".into()))
+                // Asked of the number that was typed: "9" was answered with "25.5 ft,
+                // 306 in, or 25' 6"", a thickness of twenty-five feet (J22B-36, -41).
+                let t = typed.trim();
+                Err(fail(format!("has no unit: is it {t} ft or {t} in? Type the unit with it. A number with no unit is never read as feet (a laser has to be set to send its unit with the reading)")))
             } else if scan.peek() == Some(b',') {
                 Err(fail("has a comma, and 1,234 is a thousand to one reader and one and a bit to another; write the decimal with a point, like 25.5 ft, and no comma in the thousands (a laser can be set to send a point)".into()))
             } else {

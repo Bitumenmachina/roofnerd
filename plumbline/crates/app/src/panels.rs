@@ -167,6 +167,9 @@ mod place_words {
     }
 }
 
+/// How many letters the bar along the bottom holds beside where the pointer is.
+const BAR_HOLDS: usize = 120;
+
 /// A message cut to what a one-line bar can hold. The whole of it is in the card over
 /// the model whenever it is more than a plain "done".
 pub fn one_line(message: &str, most: usize) -> String {
@@ -312,6 +315,17 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         if let Some(n) = snap.pricing.as_ref().map(|p| p.not_priced.iter().map(|x| x.1).sum::<usize>()).filter(|n| *n > 0) {
             chip(bar, fonts, &format!("{n} not priced"), theme::red(), theme::red_wash());
         }
+        // And how many lines the price leaves out for want of a figure: a wall given
+        // an assembly with no prices stopped counting as "not priced" and the bar
+        // said nothing of its seven lines (J22A-9).
+        if let Some(n) = snap.estimate.as_ref().map(|e| e.job_cost.left_out.len()).filter(|n| *n > 0) {
+            chip(bar, fonts, &format!("{} with no price", plumbline_world::view::so_many(n, "line")), theme::red(), theme::red_wash());
+        }
+        // What is priced by an allowance alone is the budget's and is in no line of
+        // the price (J22A-10).
+        if let Some((_, Some(sum))) = snap.pricing.as_ref().and_then(|p| p.allowances_alone()) {
+            chip(bar, fonts, &format!("${} in allowances, not in it", plumbline_world::view::figure(sum, 2)), theme::amber(), theme::amber_wash());
+        }
         // What there is to verify in the field, and the dollars riding on it.
         let questions = snap.verify.questions.len();
         if questions > 0 {
@@ -342,7 +356,7 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
 
 /// Along the bottom: what the last action did, where the pointer is, and the view.
 fn status_line(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
-    let first = pretty(&one_line(&doc.message, 150));
+    let first = pretty(&one_line(&doc.message, BAR_HOLDS));
     let (dot, ink) = tone_ink(doc.tone);
     p.spawn(docked(Node { bottom: px(0.0), left: px(0.0), right: px(0.0), height: px(STATUS_H), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(9.0), overflow: Overflow::clip(), ..default() })).with_children(|bar| {
         bar.spawn((Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, BackgroundColor(dot)));
@@ -495,14 +509,21 @@ fn steps_of(doc: &Doc, snap: &Snapshot) -> Vec<Step> {
     let openings = snap.storeys.iter().any(|s| s.doors + s.windows > 0);
     let scaled = snap.drawings.iter().any(|l| l.scale_said().is_some());
     let services = snap.counts.iter().any(|(d, n)| *d != Discipline::Architecture && *n > 0);
-    let priced = snap.pricing.as_ref().is_some_and(|p| !p.elements.is_empty());
+    // Priced is a figure, not a line with no price on it: the step was ticked the
+    // moment an assembly with no prices went on one roof plane, with the top bar
+    // still saying "no figure" (J22A-6).
+    let lined = snap.pricing.as_ref().is_some_and(|p| !p.elements.is_empty());
+    let figure = |d: &Option<plumbline_world::Derived>| d.as_ref().and_then(|d| d.value).is_some_and(|x| x > 0.0);
+    let priced = snap.pricing.as_ref().is_some_and(|p| p.elements.iter().any(|e| figure(&e.detail) || figure(&e.allowance)));
     let unsure = snap.verify.questions.len();
     vec![
         Step { done: !snap.storeys.is_empty(), what: "Add a level", how: "Click Add level below. Type its name, the elevation of its floor, and floor-to-floor.".into() },
         Step {
             // Tracing is the usual way in, not the only one: walls drawn without a drawing count.
             done: scaled || (walls && snap.drawings.is_empty()),
-            what: "Add a drawing and set its scale",
+            // Ticked with no drawing added, the step read as a thing done that was
+            // not (J22B-47): it says what happened instead.
+            what: if walls && snap.drawings.is_empty() { "Add a drawing (walls drawn without one)" } else { "Add a drawing and set its scale" },
             how: if snap.drawings.is_empty() { "Click Add drawing and pick the plan from the list (PDF, PNG or JPEG), or drop the file on this window.".into() } else { "Click Set scale, then the two ends of one dimension on the drawing, and type the dimension.".into() },
         },
         Step { done: walls, what: "Draw the walls", how: "Click Wall in the bar at the bottom, or press 1. Type its thickness and height, then click each corner.".into() },
@@ -510,7 +531,7 @@ fn steps_of(doc: &Doc, snap: &Snapshot) -> Vec<Step> {
         Step { done: floors && rooms, what: "Add the floor and name the rooms", how: if floors { "Click Room, click inside a room, and type its name.".into() } else { "Click Floor, then anywhere on the level. Then Room, for each room.".into() } },
         Step { done: !snap.planes.is_empty(), what: "Add the roof", how: "Click Roof. Type its pitch and eave height, then click each corner of its outline and the first again.".into() },
         Step { done: services, what: "Run the ducts, pipes and wiring", how: "Click Duct, Pipe, Conduit or Cable, then click along its run. Equipment and Fixture stand where you click.".into() },
-        Step { done: priced, what: "Price it", how: "Under Bring in, Starter assemblies gives the job a set to price with. Then click a wall, Assembly, and pick one; or Allowance for a price per SF. The sheet window shows the estimate.".into() },
+        Step { done: priced, what: "Price it", how: if lined { "Cost lines are on, with no price yet. On the sheet's Estimate tab click a line's unit cost and type it; or click the thing here and press U. Bring in, Price list brings a supplier's prices.".into() } else { "Under Bring in, Starter assemblies gives the job a set to price with. Then click a wall or a roof plane, Assembly, and pick one; or Allowance for a price per SF. The sheet window shows the estimate.".into() } },
         Step { done: priced && unsure == 0, what: "Verify in field", how: format!("{unsure} to verify. The sheet's Verify in field tab lists them by the dollars riding on each. Click one, click a value marked Measure, and type what the tape or laser reads.") },
         Step { done: !doc.edited && walls, what: "Save", how: "Click Save, or press Ctrl+S.".into() },
     ]
@@ -1296,9 +1317,16 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         // shadow), under the view buttons and never behind them. How it went is a bar
         // of the tone's colour down its left edge and the colour of its first line.
         // (It was a flat square bar of red, cut off where it ran under the buttons.)
-        if doc.tone != Tone::Done {
+        // What went well is said in full too when the bar cannot hold it: the bar cut
+        // "Brought in 30 starter assemblies ... then Assembl" at its edge, and the
+        // rest could be read nowhere (J22A-4, J22B-30).
+        if doc.tone != Tone::Done || doc.message.chars().count() > BAR_HOLDS || doc.message.lines().count() > 1 {
             o.spawn((Node { position_type: PositionType::Absolute, top: px(TOP_H + 2.0 * theme::GAP + 54.0), left: px(LEFT_W + 3.0 * theme::GAP), right: px(RIGHT_W + 3.0 * theme::GAP), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, ..default() }, Pickable::IGNORE)).with_children(|mid| {
-                let ink = if doc.tone == Tone::Refused { theme::red() } else { theme::amber() };
+                let ink = match doc.tone {
+                    Tone::Refused => theme::red(),
+                    Tone::Done => theme::green(),
+                    _ => theme::amber(),
+                };
                 let (frosted, tinted) = match crate::glass::panel() {
                     Some(glass) => (MaterialNode(glass), BackgroundColor(Color::NONE)),
                     None => (MaterialNode(Handle::default()), BackgroundColor(theme::frost())),
@@ -1826,7 +1854,7 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
                         // A quantity is shown to the places it is priced at: 2.9630 CY
                         // at $450.00 is $1,333.35, and 2.96 is not (J21-18).
                         let said = match row.number {
-                            Some(x) if row.unit != "$" && !row.unit.starts_with("$/") && row.unit != "EA" && (x * 100.0 - (x * 100.0).round()).abs() > 1.0e-6 => format!("{} {}", view::figure(x, 4), row.unit),
+                            Some(x) if view::priced_places(x, &row.unit) == 4 => format!("{} {}", view::figure(x, 4), row.unit),
                             _ => shown(row),
                         };
                         r.spawn(text(fonts, said, 12.0, Weight::Medium, theme::status_ink(row.status)));
@@ -1936,7 +1964,7 @@ pub fn more_below(c: &mut ChildSpawnerCommands, fonts: &Fonts, which: usize) {
     ))
     .with_children(|m| {
         m.spawn((theme::rounded(Node { padding: UiRect::axes(px(10.0), px(2.0)), ..default() }, 9.0), BackgroundColor(Color::srgba(0.07, 0.09, 0.12, 0.62)), Pickable::IGNORE))
-            .with_child((text(fonts, "\u{25BE} more below", 10.5, Weight::Semibold, Color::WHITE), Pickable::IGNORE));
+            .with_child((text(fonts, "more below", 10.5, Weight::Semibold, Color::WHITE), Pickable::IGNORE));
     });
 }
 
@@ -1978,6 +2006,13 @@ pub fn scroll_panels(
         let Some((mut position, node)) = panel else { return };
         let k = node.inverse_scale_factor;
         let (seen, whole) = (node.size.y * k, node.content_size.y * k);
+        // A panel just redrawn has not been laid out yet and has no size: it is left
+        // where it was put. Read as "nothing to scroll", that frame sent the panel
+        // back to its top for good: a click on a line of the estimate redrew the
+        // sheet, and the line just clicked went out of sight (J22A-7).
+        if seen <= 0.0 || whole <= 0.0 {
+            return;
+        }
         let limit = (whole - seen).max(0.0);
         if over == Some(which) && by != 0.0 {
             scrolls_to(which, by, limit);

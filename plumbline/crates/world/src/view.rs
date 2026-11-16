@@ -396,6 +396,16 @@ pub fn figure_shown(value: f64, decimals: usize) -> String {
 /// A rate (dollars for a unit, or a percentage) as it is written: to the cent, or to as
 /// many places as it was entered with. Every place is shown, so a rate of 0.00004 is not
 /// written as 0, and one price is written one way wherever it is printed.
+/// How many decimal places a quantity that is priced is shown to: two, and four where
+/// it has more than two, so that what is on the line times its unit cost is the
+/// amount on the line (4.1338 SQ at $95.00 is $392.71; 4.13 SQ is $392.35, and an
+/// estimator checking the line by hand finds it 36 cents out: J21-18, J22A-8). Hours
+/// are shown to two, as a time sheet has them; money and counts are not quantities.
+pub fn priced_places(quantity: f64, unit: &str) -> usize {
+    let more = (quantity * 100.0 - (quantity * 100.0).round()).abs() > 1.0e-6;
+    if more && unit != "$" && !unit.starts_with("$/") && unit != "EA" && unit != "hr" { 4 } else { 2 }
+}
+
 pub fn rate(value: f64) -> String {
     if !value.is_finite() {
         return "not a number".into();
@@ -564,6 +574,48 @@ pub fn not_priced_said(not_priced: &[(Kind, usize)]) -> Option<String> {
     let n: usize = not_priced.iter().map(|x| x.1).sum();
     let kinds: Vec<String> = not_priced.iter().map(|(k, n)| k.so_many(*n)).collect();
     Some(format!("nothing is priced on {n} thing{} that could be ({}): {} in no line and no total above", if n == 1 { "" } else { "s" }, kinds.join(", "), if n == 1 { "it is" } else { "they are" }))
+}
+
+impl SheetLine {
+    /// How many decimal places what is priced on this line is shown to: two, unless
+    /// at two it would not multiply by the line's price to its amount on a
+    /// calculator, and then the four it is held to (J17A-9, J22A-8). Hours are shown
+    /// to `hours` places: four where they are added up, two as a time sheet has them.
+    /// The command line worked this out for itself and the window showed two always.
+    pub fn priced_places(&self, hours: usize) -> usize {
+        let Some(x) = self.priced.value else { return 2 };
+        if self.priced.unit == crate::HOURS {
+            return hours;
+        }
+        match (self.unit_cost.as_ref().and_then(|v| v.value), self.amount.value) {
+            (Some(p), Some(a)) if (crate::lines::cents((x * 100.0).round() / 100.0 * p) - a).abs() > 0.004 => 4,
+            _ => 2,
+        }
+    }
+}
+
+impl Pricing {
+    /// What is priced by an allowance and by no cost line: how many things, and what
+    /// their allowances that have a figure come to, to the cent. An allowance is the
+    /// budget's figure; the price is over the cost lines. These are in no line of it.
+    pub fn allowances_alone(&self) -> Option<(usize, Option<f64>)> {
+        let alone: Vec<&PricedElement> = self.elements.iter().filter(|e| e.allowance.is_some() && e.detail.is_none()).collect();
+        if alone.is_empty() {
+            return None;
+        }
+        let figures: Vec<f64> = alone.iter().filter_map(|e| e.allowance.as_ref().and_then(|d| d.value)).collect();
+        Some((alone.len(), (!figures.is_empty()).then(|| crate::lines::cents(figures.iter().sum()))))
+    }
+
+    /// The same, in the one sentence every view says it with. None when nothing is
+    /// priced by an allowance alone. (J22A-10: $8,580 of allowance on a room was in
+    /// no line and no total of the price, the room was no longer counted as not
+    /// priced, and the screen the price is read on said nothing.)
+    pub fn allowances_alone_said(&self) -> Option<String> {
+        let (n, sum) = self.allowances_alone()?;
+        let money = sum.map(|x| format!("${}", figure(x, 2))).unwrap_or_else(|| "no figure".to_string());
+        Some(format!("{n} thing{} priced by an allowance and no cost line ({money}): an allowance is the budget's figure and is not in this price. Give {} cost lines to carry {} into it", if n == 1 { " is" } else { "s are" }, if n == 1 { "it" } else { "them" }, if n == 1 { "it" } else { "them" }))
+    }
 }
 
 fn money_total(parts: &[(&PricedElement, &Derived)]) -> MoneyTotal {

@@ -161,11 +161,13 @@ pub struct Highlight;
 /// How much brighter than paper white the sky and the far haze are drawn, before the
 /// camera folds the range of light to the screen.
 pub const SKY_GLOW: f32 = 1.7;
-/// The sky at the horizon as it is drawn: the horizon's pale with a little of the blue
-/// overhead in it, lifted. (The pale alone folded to a neutral grey.)
+/// The sky at the horizon as it is drawn: the horizon's pale with half of the blue
+/// overhead in it, lifted. (The pale alone folded to a neutral grey; with a fifth of
+/// the blue it was still read as "a grey fog, no sky colour and no horizon": J22B-2,
+/// J22B-33. The far ground fades into this, so distance reads blue, as it does.)
 fn sky_low() -> LinearRgba {
     let (pale, blue) = (theme::sky_horizon().to_linear(), theme::sky_overhead().to_linear());
-    let mixed = |a: f32, b: f32| a + (b - a) * 0.22;
+    let mixed = |a: f32, b: f32| a + (b - a) * 0.5;
     LinearRgba::rgb(mixed(pale.red, blue.red), mixed(pale.green, blue.green), mixed(pale.blue, blue.blue)) * SKY_GLOW
 }
 /// How bright the sky's light is and how bright the sun, in the engine's measures (the
@@ -205,7 +207,7 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
         // pale horizon comes out a flat grey haze and the place reads as a studio
         // (J22B-2).
         let (low, high) = (sky_low(), theme::sky_overhead().to_linear() * SKY_GLOW);
-        let colours: Vec<[f32; 4]> = at.iter().map(|p| { let t = p[1].clamp(0.0, 1.0).powf(0.55); [low.red + (high.red - low.red) * t, low.green + (high.green - low.green) * t, low.blue + (high.blue - low.blue) * t, 1.0] }).collect();
+        let colours: Vec<[f32; 4]> = at.iter().map(|p| { let t = p[1].clamp(0.0, 1.0).powf(0.4); [low.red + (high.red - low.red) * t, low.green + (high.green - low.green) * t, low.blue + (high.blue - low.blue) * t, 1.0] }).collect();
         dome.insert_attribute(Mesh::ATTRIBUTE_COLOR, colours);
     }
     let over = materials.add(StandardMaterial { base_color: Color::WHITE, unlit: true, cull_mode: None, fog_enabled: false, ..default() });
@@ -362,10 +364,18 @@ impl Builder<'_, '_, '_> {
         }
         let (click, over, out) = (path.to_string(), path.to_string(), path.to_string());
         let on_plan = self.on_plan.clone();
-        e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
+        e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>, snap: Res<Snapshot>| {
             // With a drawing tool in hand a click is a pick, not a selection.
             if press.button == PointerButton::Primary && doc.draw.tool.is_none() && !doc.draw.swallow && !dragged() && !doc.field_in_the_way() {
-                let path = on_plan.as_ref().filter(|_| doc.plan).unwrap_or(&click).clone();
+                let mut path = on_plan.as_ref().filter(|_| doc.plan).unwrap_or(&click).clone();
+                // On plan the roof lies over the walls. A click on a wall's own
+                // thickness is for the wall: the roof plane over it is picked anywhere
+                // else on it, and by its label (J22A-5: "click a wall" picked the roof).
+                if doc.plan && snap.planes.iter().any(|p| p.path == path) {
+                    if let Some(under) = press.hit.position.and_then(|p| wall_under(&doc, &snap, [doc.origin[0] + f64::from(p.x), doc.origin[1] - f64::from(p.z)])) {
+                        path = under;
+                    }
+                }
                 doc.select(&path);
             }
         })
@@ -1276,6 +1286,30 @@ fn in_what(snap: &Snapshot, path: &str) -> Option<String> {
         .map(|c| format!("{}{}", if c.a == path { &c.b_name } else { &c.a_name }, c.by.map(|by| format!(" by {}", near(by))).unwrap_or_default()))
         .collect();
     (!with.is_empty()).then(|| with.join(", and "))
+}
+
+/// The wall of a level on show whose thickness a point of the plan lies in, if any:
+/// the nearest to its line, and of those the highest.
+fn wall_under(doc: &Doc, snap: &Snapshot, at: [f64; 2]) -> Option<String> {
+    if !doc.show.architecture {
+        return None;
+    }
+    let mut best: Option<(f64, f64, &str)> = None;
+    for p in &snap.drawn {
+        let Shape::Wall { a, b, base, thickness, .. } = &p.shape else { continue };
+        let on_show = p.storey.as_ref().is_none_or(|s| !doc.show.off_levels.contains(s) && doc.show.storey.as_ref().is_none_or(|alone| alone == s));
+        if p.kind != Kind::Wall || !on_show {
+            continue;
+        }
+        let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+        let along = if dx == 0.0 && dy == 0.0 { 0.0 } else { (((at[0] - a[0]) * dx + (at[1] - a[1]) * dy) / (dx * dx + dy * dy)).clamp(0.0, 1.0) };
+        let off = (at[0] - a[0] - along * dx).hypot(at[1] - a[1] - along * dy);
+        // A little past its faces: a wall is a thin thing to hit on a whole plan.
+        if off <= thickness / 2.0 + 0.2 && best.is_none_or(|(d, h, _)| off < d - 0.05 || ((off - d).abs() <= 0.05 && *base > h)) {
+            best = Some((off, *base, p.path.as_str()));
+        }
+    }
+    best.map(|b| b.2.to_string())
 }
 
 /// Picking a placed thing up and carrying it. Press the left button on the thing that

@@ -1360,7 +1360,24 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                     m.insert("perimeter".into(), Derived::refused("LF", F_ROUND, std::slice::from_ref(&input), &reason));
                 }
             }
+            // The faces can close a room that the wall lines do not: two walls drawn
+            // to stop a couple of inches short of each other, inside each other's
+            // thickness. The area inside the faces is then right, and the area to the
+            // wall centers runs out through the gap and takes its neighbors (J22A-3: a
+            // bedroom of 144 SF inside its walls and 865 SF to their centers, shown
+            // as a figure). The centers cannot lie farther out than the widest wall
+            // all the way round, so a figure past that is not this room's and is
+            // refused.
+            let widest = plan_walls.iter().map(|w| (w.ext - w.int).abs()).fold(0.0, f64::max);
+            let runs_out = match (&found.centre, &found.finish) {
+                (Ok((gross, _)), Ok((inside, round, _))) => *gross > inside + round * widest + 4.0 * widest * widest + 1.0,
+                _ => false,
+            };
             match (&found.centre, found.in_wall) {
+                (Ok(_), false) if runs_out => {
+                    let reason = "the walls round this room close at their faces and not on their lines: two of them stop short of each other by less than a wall's thickness, and the area to their centers runs out through the gap. Draw them to meet";
+                    m.insert("gross_area".into(), Derived::refused("SF", F_GROSS, std::slice::from_ref(&input), reason));
+                }
                 (Ok((area, mine)), false) => {
                     m.insert("gross_area".into(), figure(*area, mine, "SF", F_GROSS));
                 }

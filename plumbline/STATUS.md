@@ -5633,3 +5633,81 @@ again alone, on the final build, before its pictures are trusted.
 
 296 tests pass. The command-line demonstrations pass on this tree (20 of them; `d2`
 needs a display and is run with the window ones).
+
+## The twenty-second judgment (2026-11-16): what it found, and where each stands
+
+Two judges that did not build it, on the build of 17ab7a6. Their notes are kept as
+they wrote them: `research/judgment-22b-notes.md` and `judgment-22b-words.md` (the
+look against VISUAL.md line by line, and every word on every screen: 620 entries,
+69 marked), and `research/judgment-22a-notes.md` (a veteran estimator's first day
+on a public plan, and the money path). The briefs are beside them.
+
+**Part B has reported. Its verdicts: deliverable item 11 (the look) FAIL; item 9 (the
+words) FAIL.** The look fails on A1, A2 and C2 (the top and bottom are full-width
+strips and the panels cover about 45% of the window; no shadow under a panel on
+plan; no sky) and independently on A4, A5, A6 and D8. The words fail on the Add
+drawing list (file, folder, page-after-a-comma, file names) and on "solid",
+"ELEMENT", "snap", a cable named by its diameter, and units not written the trade's
+way. **Part A had not reported when this was written**; the rows below are from its
+notes as far as they went (J22A-1 to J22A-12).
+
+What is fixed is fixed on the build of this commit and has **not been judged
+again**. "Seen" means I read it in a picture of that build.
+
+| # | What was found | Where it stands |
+|---|---|---|
+| J22B-1, -23 | Check, Measure and Set were square hairline boxes | Fixed (486600b), seen |
+| J22B-2, -33 | No sky: a grey haze, no blue, no horizon | Fixed in two steps: the sky drawn brighter than paper white (486600b), then half of the overhead blue in the horizon and a steeper rise to it. Seen on the whole house: blue above, pale at the horizon, the far ground fading blue. The empty job's ground is still a plain grey floor |
+| J22B-3 | The top bar and the status line are full-width strips; panels cover about 45% of the window | **Open.** The panels can be put away (Next steps has Hide); the bars are not floating cards |
+| J22B-4, -38 | Panels read as flat grey cards; on plan no shadow under them | **Open.** They are tinted and frosted in fact (the judge measured it); the shadow does not show on white paper |
+| J22B-5, -11 | Ducts as flat blue tubes; clash marks as small crosses | **Open** |
+| J22B-6 | Whole-house plan: the roof in solid colour over the plan | **Open.** One level alone on plan passes (E1) |
+| J22B-7 | A switch, a view button and Frame said nothing | Fixed (486600b), seen |
+| J22B-8 | The frame stands on grade; no joists or rafters | **Open** (known: the trades table) |
+| J22B-9 | The how-sure switch changed nothing a person could see | Legend added (486600b). The judge's second point stands: the top bar counts values (3,213 / 102 / 255) and the legend counts things drawn (116 / 81 / 3), and nothing says they are two counts. **Open** |
+| J22B-10 | A panel ended part way down a row with only a thin thumb to say so | Fixed: "more below" at the foot of the left and right panels. Seen |
+| J22B-13 | The Estimate tab's column names gone once scrolled | Fixed, seen |
+| J22B-14, -40 | Open items: machine wording; a duct fitting in feet and inches | Wording and size fixed, seen. That every tab ends in the same card of red and amber sentences (A6) is **open** |
+| J22B-15 | Budget: names twice and cut; four-place rates; "ELEMENT" | Fixed (call 89). Not seen since (the tab was not in my last pictures) |
+| J22B-16, -17 | Clashes: a note cut at the card's edge; "solid"; findings unmarked | Fixed, seen |
+| J22B-18 | Roof tab "none yet" beside a priced, drawn roof | Fixed. Not seen since |
+| J22B-19 | Roof-plane labels square; eave, hip and ridge lines over the dressed roof | **Open** |
+| J22B-20 | "ROUND", "of them", "Supply air  Supply Air", "FACETS" | Fixed |
+| J22B-21 | A cable named by its diameter; "Measure diameter." asked of a cable; a receptacle filed as Fixture | **Open.** A cable wants a name (12-2 NM) and the model holds a size |
+| J22B-22 | The sample whole house shows no suppliers side by side | **Open**: `demos/d5w.sh`'s job shows them; the sample has no supplier quotes |
+| J22B-24 | A bathtub is a box though VISUAL.md D6 says tubs are drawn | **Open.** VISUAL.md D6 claims more than is built |
+| J22B-25 | Grid lines across the foundation wall with the ground off; a selected footing has no outline | **Open** |
+| J22B-26 | "Unknown ... unknown / not coded"; decimal feet on a window's panel; "solved"; "Connector" | The first fixed, seen. The others left, with why (above) |
+| J22B-28, -41 | A new job's first wall: Thickness empty with no example while the cursor is in it; three refusals, the last offering "25.5 ft" for a thickness | Fixed: the example shows in the field the cursor is in; the refusal asks of the number typed ("is it 20 ft or 20 in?"); a job that has walls offers the last wall's thickness. Seen: the path walked from a new job to a 20 ft wall |
+| J22B-29 | Add drawing below the foot of the panel, its list out of sight | Fixed (Drawings before Systems), seen |
+| J22B-30, -45, J22A-4 | The status line cut with "..." and the rest readable nowhere | Fixed: a message longer than the bar holds is shown in full on the card over the model, whatever its tone. Seen for a refusal; **not seen for a long "done"** |
+| J22B-32 | "The view is saved with the job without a save" | Not so (above) |
+| J22B-34, -36 | The level form: Enter on an empty field silent; "9" refused with "25.5 ft, 306 in, or 25' 6\"" | Fixed, seen: it says which field is still to be typed; "is it 9 ft or 9 in?"; the cursor goes to the field the refusal is about (it went to the name) |
+| J22B-35, -39 | Add drawing is a list of file names and folders; a drawing is called by its file's name; "snap" | **Open, and the judge's deciding fail for item 9.** A plan is brought in as a file, and Patrick's rule is that it is picked from a list. What the list calls things is mine to decide and is not yet decided: see "What is owed" |
+| J22B-43 | On plan, runs are hairlines, not at their size | **Open** |
+| J22B-44 | A double-click selected and did not fly; a label ran under the top bar | **Open** |
+| J22B-47 | Next steps ticked "Add a drawing" when none was added | The step then reads "Add a drawing (walls drawn without one)". Seen |
+| J22B-48 | "Tool put down."; "On the angle" | **Open** |
+| J22A-1 | "Saved house.json." | Fixed (486600b) |
+| J22A-2 | A room clicked inside walls that do not close took the whole floor, and nothing said so | Naming a room now says what it came to and what to do if that is more than the room. **Not seen** |
+| J22A-3 | **A wrong figure shown as a figure**: a bedroom of 144 SF inside its walls and 865 SF to wall centers, where two walls stopped 2 in short of each other inside each other's thickness | Fixed in the model: an area to wall centers that lies farther out than the widest wall all round is refused, and says to draw the walls to meet. Test `a_room_closed_at_its_walls_faces_and_not_on_their_lines_has_no_area_to_wall_centers` (90.25 SF inside, no figure to centers; drawn to meet, 100 SF) |
+| J22A-5 | On plan a click on a wall picked the roof plane over it | Fixed: a click in a wall's thickness is the wall's. Seen (the south wall picked from under the roof) |
+| J22A-6 | "Price it" ticked the moment an unpriced assembly went on one plane | Fixed: ticked when something comes to a figure; until then it says where a price is typed. **Not seen** |
+| J22A-7 | A click on a line of the estimate sent the sheet back to its top | Found: a panel just redrawn has no size for a frame, was read as "nothing to scroll", and its place was reset for good. It is left where it was. **Not seen; this may also be why `d5w` failed** |
+| J22A-8, -11 | **Money wrong by eye**: 4.13 SQ at $95.00 shown as $392.71 (it is priced on 4.1338) | The sheet shows a priced quantity to two places unless at two it would not multiply to the amount, then to four: the command line's rule, moved into the model (`SheetLine::priced_places`) and used by both. The allowance's own row is still shown to two (686.40 SF x $12.50 reads $8,580.05): **open**, and Q25 is still Patrick's |
+| J22A-9 | The top bar said nothing of seven lines with no price | Fixed: "7 lines with no price" beside the price. **Not seen** |
+| J22A-10 | **$8,580 of allowance on a room was in no line of the price and the screen said nothing** | Said wherever the price is read: the top bar, under the price on the sheet, the command line, from one figure (`Pricing::allowances_alone`; test). Whether an allowance belongs in the price is Patrick's: QUESTIONS.md Q26. **Not seen** |
+| J22A-12 | "$2.0263 / SF"; "Like for like"; "the detail is not whole"; "snap to" | The rate fixed. The words **open** |
+| (22A, not numbered) | Profit is taken on cost and overhead, said nowhere | The recap says what each percentage is taken on. **Not seen** |
+
+**What is owed, in order.** (1) Part A's report, recorded the turn it arrives. (2)
+The sixteen window demonstrations run again on the build of this commit: the look of
+every screen has changed since their pictures were taken, and `d5w` and `itemsw`
+each lost a click on the last run. (3) The rows marked "not seen", seen. (4) The
+open rows, the look first: the bars as floating cards (A1), a shadow that shows on
+plan (A2), the coloured lines over the dressed roof (D8), and the Add drawing list's
+words (item 9). (5) The table of thirteen at the head of this file, rewritten: it
+is of 2026-11-11 and is not true of the program as it is.
+
+298 tests pass; the twenty command-line demonstrations pass on this tree; the three
+gates pass.

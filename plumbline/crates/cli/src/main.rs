@@ -532,12 +532,8 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
         // hours would not multiply to its amount, or add to its class.
         // Anything else is shown to two places unless, at two, it would not multiply by
         // its price to its amount on a calculator (J17A-9): then to the four it is held to.
-        let price_now = l.unit_cost.as_ref().and_then(|v| v.value);
-        let places = |unit: &str, x: f64| match (unit == plumbline_world::HOURS, price_now, l.amount.value) {
-            (true, _, _) => 4,
-            (_, Some(p), Some(a)) if (plumbline_world::lines::cents((x * 100.0).round() / 100.0 * p) - a).abs() > 0.004 => 4,
-            _ => 2,
-        };
+        // (The rule is the model's, `SheetLine::priced_places`: the window shows the same.)
+        let places = |_: &str, _: f64| l.priced_places(4);
         let priced = match l.priced.value {
             Some(x) => format!("{}{} {}", l.priced.status.flag().trim_end(), view::figure(x, places(&l.priced.unit, x)), l.priced.unit),
             None => "no figure".to_string(),
@@ -622,7 +618,11 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
     }
     // What is built and has nothing priced on it is in no line above and no total:
     // the price is not the price of the building until it is, and says so (J17A-19).
-    if let Some(said) = view::not_priced_said(&view::pricing(job).not_priced) {
+    let pricing = view::pricing(job);
+    if let Some(said) = view::not_priced_said(&pricing.not_priced) {
+        let _ = writeln!(out, "  ! {said}");
+    }
+    if let Some(said) = pricing.allowances_alone_said() {
         let _ = writeln!(out, "  ! {said}");
     }
     if !est.job_cost.left_out.is_empty() {

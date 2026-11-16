@@ -737,6 +737,11 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                             _ => None,
                         };
                         editable(c, fonts, format!("{name} percent"), if at.is_empty() { "not set".to_string() } else { at.clone() }, if at.is_empty() { theme::status_ink(Status::Unknown) } else { theme::ink_soft() }, typed, move |doc| doc.press(key));
+                        // What the percentage is taken on, said where it is read:
+                        // profit is on the job cost and the overhead together, and an
+                        // estimator who takes it on cost alone expects another figure
+                        // (seen by the twenty-second judgment).
+                        words(c, fonts, if name == "Overhead" { "of the job cost" } else { "of the job cost and overhead" }, 11.5, Weight::Regular, theme::ink_faint());
                     });
                     cell(r, 130.0, true, |c| words(c, fonts, said.clone(), 12.5, Weight::Semibold, theme::status_ink(status)));
                 }),
@@ -757,6 +762,11 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                         first.make_ascii_uppercase();
                     }
                     t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(8.0) }, ..default() }).with_child(text(fonts, format!("{said}."), 11.5, Weight::Medium, theme::status_ink(Status::Unknown)));
+                }
+                // And what is priced by an allowance alone: in the budget, in no line
+                // of this price (J22A-10).
+                if let Some(said) = snap.pricing.as_ref().and_then(|p| p.allowances_alone_said()) {
+                    t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(8.0) }, ..default() }).with_child(text(fonts, format!("{said}."), 11.5, Weight::Medium, theme::status_ink(Status::Assumed)));
                 }
             }
         }
@@ -918,9 +928,9 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                         }
                     });
                 });
-                // Hours are held and added to four places and shown to two, as a time
-                // sheet has them.
-                let places = 2;
+                // To the places it is priced at (`SheetLine::priced_places`): hours to two,
+                // as a time sheet has them.
+                let places = l.priced_places(2);
                 cell(r, 96.0, true, |c| words(c, fonts, amount(l.priced.value, places, &l.priced.unit), 12.5, Weight::Regular, theme::status_ink(l.priced.status)));
                 cell(r, 108.0, true, |c| {
                     let (said, ink) = match l.unit_cost.as_ref().and_then(|v| v.value.map(|x| (x, v))) {

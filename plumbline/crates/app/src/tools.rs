@@ -279,9 +279,16 @@ fn begin(doc: &mut Doc, tool: Tool, ask: bool) {
         // A wall's height is offered as the floor-to-floor of the level it is drawn
         // on: a figure the job holds, to accept or type over (call 86).
         let level_height = doc.show.storey.clone().and_then(|s| doc.job.find(&s)).and_then(|e| doc.job.world.get::<plumbline_world::Level>(e)).and_then(|l| l.height.value.as_ref().map(|v| units::show_length(v, &l.height.unit)));
+        // And its thickness as that of the wall drawn last, where the job has walls:
+        // a job opened again offered an empty field though every wall in it was 6 in.
+        let wall_thickness = {
+            let w = &doc.job.world;
+            let last = doc.job.order.iter().rev().find_map(|e| w.get::<plumbline_world::Wall>(*e).and_then(|wall| wall.type_name.value.clone()));
+            last.and_then(|t| doc.job.find(&t)).and_then(|e| doc.job.world.get::<plumbline_world::WallType>(e)).filter(|t| !t.footing).and_then(|t| t.thickness.value.as_ref().map(|v| units::show_length(v, &t.thickness.unit)))
+        };
         let shown = doc.draw.settings.get(tool.name()).cloned().unwrap_or_else(|| match tool {
             Tool::Door => vec![String::new(), "6' 8\"".to_string(), "0 ft".to_string()],
-            Tool::Wall => vec![String::new(), level_height.unwrap_or_default()],
+            Tool::Wall => vec![wall_thickness.unwrap_or_default(), level_height.unwrap_or_default()],
             _ => vec![String::new(); tool.takes()],
         });
         let again = doc.draw.settings.contains_key(tool.name());
@@ -324,8 +331,11 @@ pub fn new_storey(doc: &mut Doc, values: &[String]) {
             doc.say(Tone::Done, format!("Added level {:?}. It is the level drawn on.", parts[0]));
         }
         Err(why) => {
-            // The form stays open, to be put right.
-            doc.open_form(Entry::Storey, values.to_vec(), 0);
+            // The form stays open, to be put right, with the cursor in the field
+            // the refusal is about: it went back to the name, and what was typed to
+            // put a floor-to-floor right was typed into the name (seen 2026-11-16).
+            let at = (0..values.len()).rev().find(|&i| !values[i].trim().is_empty() && why.contains(&format!("{:?}", values[i].trim()))).or_else(|| values.iter().position(|v| v.trim().is_empty())).unwrap_or(0);
+            doc.open_form(Entry::Storey, values.to_vec(), at);
             cant(doc, "add the level", why);
         }
     }
@@ -661,8 +671,16 @@ pub fn room_named(doc: &mut Doc, text: &str) {
         Ok(path) => {
             doc.job.derive();
             doc.edit("Room");
-            let _ = path;
-            doc.say(Tone::Done, format!("Added room {:?}. Click inside the next one, or Esc.", text.trim()));
+            // What it came to is said with it: a room that took the whole floor
+            // because its walls do not close is seen here, at once, and not three
+            // rooms later (J22A-2). The figure is the model's.
+            let area = doc.job.find(&path).and_then(|e| doc.job.world.get::<plumbline_world::Measure>(e)).and_then(|m| m.0.get("floor_area").cloned());
+            let said = match area.as_ref().map(|d| (d.value, d.note.as_str())) {
+                Some((Some(x), _)) => format!("{} SF inside its walls. If that is more than the room, a wall round it does not close: draw it to meet. Click inside the next room, or Esc.", plumbline_world::view::figure(x, 2)),
+                Some((None, why)) if !why.is_empty() => format!("It has no area yet: {why}."),
+                _ => "Click inside the next one, or Esc.".to_string(),
+            };
+            doc.say(Tone::Done, format!("Added room {:?}: {said}", text.trim()));
         }
         Err(why) => cant(doc, "add the room", why),
     }
