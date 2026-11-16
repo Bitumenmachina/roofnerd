@@ -9,6 +9,9 @@ prices and knowledge live on his machine and never in this repository.
 The lists below were read off the program on 2026-11-13 (`plumbline sixteen`, then
 `export estimate`; and `import assemblies <job> starter`, then `export assemblies`):
 they are a picture of that day and are taken again the same way when either changes.
+The starter assemblies' lists were taken again on 2026-11-16, when eighteen labor
+lines were added to them (DECISIONS.md call 92): a labor line is in hours and has no
+production rate and no wage in it, as a material line has no price.
 
 The divisions are MasterFormat 1995's sixteen (DECISIONS.md call 57). Nothing can yet
 take one division out of a job and put it back: that is PROPOSALS.md 21, not built.
@@ -111,21 +114,33 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 
 - "Floor framing", in the assembly "Framed floor" (goes on a floor): material, by `plan_area`
 - "Subfloor", in the assembly "Framed floor" (goes on a floor): material, by `plan_area`
+- "Frame the floor and lay the subfloor", in the assembly "Framed floor" (goes on a floor): labor, by `plan_area`, in hours, with no production rate in it
 - "Wall framing, 2x6 at 16 in", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): material, by `face_area`
 - "Wall sheathing", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): material, by `face_area`
+- "Frame and sheathe the wall", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): labor, by `face_area`, in hours, with no production rate in it
 - "Wall framing, 2x6 at 16 in", in the assembly "Exterior wall, 2x6, lap siding over a stone wainscot" (goes on a wall): material, by `face_area`
 - "Wall sheathing", in the assembly "Exterior wall, 2x6, lap siding over a stone wainscot" (goes on a wall): material, by `face_area`
+- "Frame and sheathe the wall", in the assembly "Exterior wall, 2x6, lap siding over a stone wainscot" (goes on a wall): labor, by `face_area`, in hours, with no production rate in it
 - "Wall framing, 2x6 at 16 in", in the assembly "Exterior wall, 2x6, brick veneer" (goes on a wall): material, by `face_area`
 - "Wall sheathing", in the assembly "Exterior wall, 2x6, brick veneer" (goes on a wall): material, by `face_area`
+- "Frame and sheathe the wall", in the assembly "Exterior wall, 2x6, brick veneer" (goes on a wall): labor, by `face_area`, in hours, with no production rate in it
 - "Wall framing, 2x6 at 16 in", in the assembly "Exterior wall, 2x6, stucco" (goes on a wall): material, by `face_area`
 - "Wall sheathing", in the assembly "Exterior wall, 2x6, stucco" (goes on a wall): material, by `face_area`
+- "Frame and sheathe the wall", in the assembly "Exterior wall, 2x6, stucco" (goes on a wall): labor, by `face_area`, in hours, with no production rate in it
 - "Partition framing, 2x4 at 16 in", in the assembly "Interior partition, 2x4" (goes on a wall): material, by `face_area`
+- "Frame the partition", in the assembly "Interior partition, 2x4" (goes on a wall): labor, by `face_area`, in hours, with no production rate in it
 - "Base and trim", in the assembly "Room, hardwood floor" (goes on a room): material, by `perimeter`
+- "Install base and trim", in the assembly "Room, hardwood floor" (goes on a room): labor, by `perimeter`, in hours, with no production rate in it
 - "Base and trim", in the assembly "Bath, tile floor" (goes on a room): material, by `perimeter`
+- "Install base and trim", in the assembly "Bath, tile floor" (goes on a room): labor, by `perimeter`, in hours, with no production rate in it
 - "Base and trim", in the assembly "Kitchen" (goes on a room): material, by `perimeter`
+- "Install base and trim", in the assembly "Kitchen" (goes on a room): labor, by `perimeter`, in hours, with no production rate in it
 - "Base and trim", in the assembly "Laundry or utility room" (goes on a room): material, by `perimeter`
+- "Install base and trim", in the assembly "Laundry or utility room" (goes on a room): labor, by `perimeter`, in hours, with no production rate in it
 - "Roof sheathing", in the assembly "Asphalt shingle roof" (goes on a roofplane): material, by `surface_area`
+- "Sheathe the roof", in the assembly "Asphalt shingle roof" (goes on a roofplane): labor, by `surface_area`, in hours, with no production rate in it
 - "Roof sheathing", in the assembly "Standing seam roof" (goes on a roofplane): material, by `surface_area`
+- "Sheathe the roof", in the assembly "Standing seam roof" (goes on a roofplane): labor, by `surface_area`, in hours, with no production rate in it
 - "Casing and trim at the window", in the assembly "Window" (goes on a window): material, by `1`
 - "Casing and trim at the door", in the assembly "Entry door" (goes on a door): material, by `1`
 - "Casing and trim at the door", in the assembly "Interior door" (goes on a door): material, by `1`
@@ -152,15 +167,18 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 - "Weather barrier", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): material, by `net_area`
 - "Batt insulation", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): material, by `net_area`
 - "Lap siding", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): material, by `net_area`
+- "Hang the siding", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): labor, by `net_area`, in hours, with no production rate in it
 - "Weather barrier", in the assembly "Exterior wall, 2x6, lap siding over a stone wainscot" (goes on a wall): material, by `net_area`
 - "Batt insulation", in the assembly "Exterior wall, 2x6, lap siding over a stone wainscot" (goes on a wall): material, by `net_area`
 - "Lap siding", in the assembly "Exterior wall, 2x6, lap siding over a stone wainscot" (goes on a wall): material, by `net_area`
+- "Hang the siding", in the assembly "Exterior wall, 2x6, lap siding over a stone wainscot" (goes on a wall): labor, by `net_area`, in hours, with no production rate in it
 - "Weather barrier", in the assembly "Exterior wall, 2x6, brick veneer" (goes on a wall): material, by `net_area`
 - "Batt insulation", in the assembly "Exterior wall, 2x6, brick veneer" (goes on a wall): material, by `net_area`
 - "Weather barrier", in the assembly "Exterior wall, 2x6, stucco" (goes on a wall): material, by `net_area`
 - "Batt insulation", in the assembly "Exterior wall, 2x6, stucco" (goes on a wall): material, by `net_area`
 - "Underlayment", in the assembly "Asphalt shingle roof" (goes on a roofplane): material, by `surface_area`
 - "Asphalt shingles", in the assembly "Asphalt shingle roof" (goes on a roofplane): material, by `surface_area`
+- "Lay underlayment and shingles", in the assembly "Asphalt shingle roof" (goes on a roofplane): labor, by `surface_area`, in hours, with no production rate in it
 - "Underlayment", in the assembly "Standing seam roof" (goes on a roofplane): material, by `surface_area`
 - "Standing seam roofing", in the assembly "Standing seam roof" (goes on a roofplane): subcontract, by `surface_area`
 - "Ridge cap and vent", in the assembly "Ridge, steel beam and cap" (goes on a ridge): material, by `true_length`
@@ -182,10 +200,13 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 **In the starter assemblies the program ships with** (no prices in them; `plumbline import assemblies <job> starter`):
 
 - "Window unit", in the assembly "Window" (goes on a window): material, by `1`
+- "Set the window", in the assembly "Window" (goes on a window): labor, by `1`, in hours, with no production rate in it
 - "Entry door, prehung", in the assembly "Entry door" (goes on a door): material, by `1`
 - "Door hardware", in the assembly "Entry door" (goes on a door): material, by `1`
+- "Hang the door", in the assembly "Entry door" (goes on a door): labor, by `1`, in hours, with no production rate in it
 - "Interior door, prehung", in the assembly "Interior door" (goes on a door): material, by `1`
 - "Door hardware", in the assembly "Interior door" (goes on a door): material, by `1`
+- "Hang the door", in the assembly "Interior door" (goes on a door): labor, by `1`, in hours, with no production rate in it
 
 ## Division 9. Finishes
 

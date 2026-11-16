@@ -154,5 +154,10 @@ The twenty-second judgment, part B (2026-11-16, on the build of 17ab7a6), went
 through every line above: `research/judgment-22b-notes.md` has its verdict on each,
 with the picture, and STATUS.md ("The twenty-second judgment") has where each
 finding stands. It failed the window on A1, A2 and C2, and on A4, A5, A6 and D8.
-C2, A4, most of A5 and part of A6 have been changed since and not judged again.
+C2, A4, most of A5 and part of A6 have been changed since. So have A1 (the top bar
+and the status line are each two floating cards with the model between them; the
+side panels still stand nearly the height of the window) and A2 (on plan the paper
+is unlit white and a panel's shadow shows on it): DECISIONS.md call 93. The
+twenty-fourth judgment, part B, was started on the build of d20ac60 to go through
+every line again; STATUS.md has what it found once it reports.
 
