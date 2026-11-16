@@ -104,6 +104,7 @@ demos/moneyw.sh            # what the window says when money is at stake: a roof
 demos/roofw.sh             # a roof priced once in the window: an assembly given to one plane goes on all four, a price typed once prices every plane, a rate said in squares
 demos/pagew.sh             # a plan and its page picked from a list in the window, with two clicks and nothing typed
 demos/gablew.sh            # priced work taken off in the window: a wall's assembly changed, a hip made a gable; what went, and the job cost before and after
+demos/itemlibw.sh          # the item library in the window: starter items by trade, one set down, an item opened and changed, the library written out and read back
 demos/glassw.sh            # moving round the model, measured: the wheel closes on the pointer, a turn is about it, a flick carries on; pictures in demos/captured/glass
 demos/carryw.sh            # a vanity picked up in the model and carried clear of a clash, red while it is in it; pictures in demos/captured/carry
 demos/itemsw.sh            # in the window: a maker's sheet made into an item, one set down with a click, and the BIM model, workbook, CSV and lenses written out; pictures in demos/captured/items

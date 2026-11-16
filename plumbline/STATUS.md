@@ -6182,7 +6182,7 @@ maker's sheet and placed, and that was all. What is there now, and what is not:
 | **The three libraries he named** | Read from their own pages by an agent on Sonnet: `research/item-libraries-survey.md`. All three may be linked (Unlicense, MIT, 0BSD). None is: rgeometry is 2D only, plexus has one release from 2019, fornjot's README begins "This project has been shut down". QUESTIONS.md Q27 asks whether he wants their feel or their code; the working answer is the feel |
 | **Not judged** | Nobody who did not build it has tried to break any of this |
 
-The window demonstration of it is not written. `tools/portmap.sh` caught one false
+The window demonstration of it, `demos/itemlibw.sh`, is written and has not been run (the nineteen were running). `tools/portmap.sh` caught one false
 claim on the way (that BIMCraft has no `const BOX`: it has two, in a point-cloud
 test) and the row was put right.
 
