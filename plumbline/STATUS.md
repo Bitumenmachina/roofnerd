@@ -6104,77 +6104,78 @@ steps run again, and each half of them alone, drew the plan as it should be, twi
 A judge was driving another window on the machine at the time. It is written down
 because a plan that draws wrong once is worth watching for.
 
-## Start here (written 2026-11-16; this is the last section, and the one CLAUDE.md sends you to)
+## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 309 tests pass (on call 97's build too),
-the three gates and `tools/portmap.sh` pass, the twenty command-line demonstrations
-pass, and `tools/committed.sh` passed on the last commit of code. All eighteen window
-demonstrations passed on 5396828; `demos/moneyw.sh`, the nineteenth, passed on the
-build after it. The others have not been run on calls 94 and 95, which change what
-is said and not what is drawn. Read `CLAUDE.md`, then this
-section, then the table of thirteen at the head of this file, then the table under
-"The twenty-second judgment" just above.
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 310 tests pass,
+the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
+commit of code that was pushed, and the twenty command-line demonstrations pass on a
+frozen copy of b3e39a1. **The nineteen window demonstrations were last all passed on
+5396828.** A run of them on a frozen copy of b3e39a1 (calls 94 to 100) was under way
+when this was written: the table of thirteen at the head of this file says what it
+showed, once it is read. Two more window demonstrations are written and have never
+been run: `demos/roofw.sh` and `demos/pagew.sh`. Read `CLAUDE.md`, then this section,
+then the table of thirteen, then "The twenty-fourth judgment, part B" and "part A"
+just above.
 
 **What happened on 2026-11-16.** Patrick asked for a fresh pass of code and review,
 the window and a clean-up, run alone. Two code reviewers read the model and the
-window crate (42 findings), a twenty-first judge walked the four new trades and a
-typed length to the end (21 findings), a twenty-second pair judged the look and
-the words against VISUAL.md (part B) and walked a veteran's first day and the money
-path (part A), and a twenty-third tried the money path again at the command line
-after the fixes. Each finding is a row in this file with where it stands. Calls 77 to
-95 in DECISIONS.md are the decisions made on the way; Q26 in QUESTIONS.md is new, and
+window crate (42 findings); a twenty-first judge walked the four new trades (21); a
+twenty-second pair judged the look and the words, and a veteran's first day and the
+money path; a twenty-third tried the money path at the command line; and a
+twenty-fourth pair did what the twenty-second did again, on the build after the
+fixes. Each finding is a row in this file with where it stands. Calls 77 to 102 in
+DECISIONS.md are the decisions made on the way; Q26 in QUESTIONS.md is new, and
 PROPOSALS.md 23 and 24.
 
 **What is true of the program today.** It traces a plan, builds the house in 3D
 dressed as it is priced, prices it in sixteen divisions, finds clashes, lists what
 to verify in the field by dollars, brings in and writes out price lists, assemblies,
 estimates and BIM files, and makes items from makers' sheets. **It is not a release
-candidate**: on 2026-11-16 the look, the words, the veteran's first day and the
-money path were each judged and each failed (items 11, 9, 10 and 12).
+candidate.** The look and the words (items 11 and 9) were judged twice on 2026-11-16
+and failed twice. The veteran's first day (item 10) failed in the morning; in the
+evening the twenty-fourth judge, part A, wrote in its notes that it had completed
+the whole path in the window from the screen alone, with every figure agreeing with
+its own arithmetic, and it had not yet reported.
 
 **What is owed, in this order.**
 
-0. **Call 96 was looked at on 2026-11-16, late**, on the build that answers
-   judgment 24B (call 97): the dressed house opens with no coloured lines and no
-   tags on its roof, and a plane selected brings both back. **The nineteen window
-   demonstrations have not been run on calls 94 to 97**: run them on a frozen copy
-   of the last commit; `d2` and `glassw` take pictures of a roof. Call 97 moves the
-   panels' insides (a strip under what scrolls) and reorders the lower right card,
-   so a demonstration that clicks near a panel's foot may need its place found
-   again.
-1. **Have items 9 to 12 judged again in the window**, by agents that did not build
-   it, on Opus or Sonnet, told to write their notes as they go: a veteran's first
-   day with the starter assemblies' labor (call 92), the money path in the window
-   (calls 91 and 95), the look (call 93) and the words (calls 91 and 94). Everything
-   changed since judgment 22 is unjudged in the window; judgment 23 was the command
-   line only. Run the nineteen window demonstrations first, on a frozen copy of the
-   last commit with nothing beside them.
-2. **Window demonstrations still to write**: Add drawing with a page clicked; an
-   assembly changed for another with priced lines coming off; a roof edge made a
-   gable with a priced plane on it.
-3. **The look**, which is Patrick's own test and the judge's deciding fail. Done in
-   call 93 and not judged: the bars as floating cards (A1), a shadow under a panel
-   on plan (A2). Still open: the left and right panels nearly the height of the
-   window; the eave, hip and ridge
-   lines and square labels over the dressed roof in 3D (D8); a bathtub, a duct and
-   a cable drawn as what they are. `crates/app/src/theme.rs`, `panels.rs`,
-   `scene.rs`. Then VISUAL.md read again against what is built: D6 claims a tub is
-   drawn and it is a box.
-4. **The words**, item 9: `research/judgment-22b-words.md` marks 69. The Add drawing
-   list is the deciding one: it shows file names and folders and takes the page
-   after a comma. Decide what a builder calls each (a sheet, its number) and write
-   the call. A cable wants a name (12-2 NM), not a diameter.
-5. **Have both judged again**, by agents that did not build them, on Opus or
+1. **Read the run of the nineteen window demonstrations** (task and logs: scratch
+   `runs/*-33.log`; pictures in `demos/captured/`), fix what failed without
+   loosening anything, read every picture, commit them. Then run `demos/roofw.sh`
+   and `demos/pagew.sh` for the first time.
+2. **Look at what is built and not seen** (each says so in its row): a sink, a water
+   heater and an outdoor unit drawn as what they are (call 102); a duct on plan as
+   two edges over a wash; the Door tool offering the last door's sizes; a production
+   rate's field saying "like 40 SF/hr"; "Connection 1" on a fixture's panel; the
+   warning when an allowance is typed on a thing with no cost line.
+3. **Finish part A of the twenty-fourth judgment** when it reports: copy its notes to
+   `research/judgment-24a-notes.md`, finish its table, and bring rows 10 and 12 of
+   the table of thirteen up to date.
+4. **The look**, which is Patrick's own test. Open after two judgments: whether the
+   panels read as glass (A2; thinner since call 97, not judged); equipment still
+   boxes (an air handler, a panelboard); no cabinets, so a bare kitchen and bath; no
+   fascia or soffit; clash marks seen through walls; the Known, Assumed, Unknown view
+   a grey house from outside; suppliers side by side on a job with none.
+5. **The words** still marked and not touched: a place in negative feet and inches
+   on a fixture's connection and a plane's corners; a cable by its diameter (it wants
+   "12-2 NM"); a kind in the SIZE column of a system's tab; a name said twice on the
+   Clashes tab. `research/judgment-24b-words.md` has all 76.
+6. **Have items 9 to 12 judged again**, by agents that did not build them, on Opus or
    Sonnet, told to write their notes as they go.
-6. **The open rows** of the reviews and the twenty-first judgment (their tables
-   above): a keystroke re-reads the whole job (R21-2); one money formatter
-   (R21-12); a footing dug wider cannot be recorded on it alone (J21-6); base is
-   priced by a room's perimeter and drawn by its runs less its doors.
+7. **A window demonstration still to write**: a roof edge made a gable with a priced
+   plane on it; an assembly changed for another with priced lines coming off.
+8. **The open rows** of the reviews and the twenty-first judgment (their tables
+   above): a keystroke re-reads the whole job (R21-2); one money formatter (R21-12);
+   a footing dug wider cannot be recorded on it alone (J21-6); base is priced by a
+   room's perimeter and drawn by its runs less its doors.
 
-7. **Words still owed from call 91's look**: a roof's rows read "Edge 1 ... 5:12";
-   a builder would look for "Pitch" there.
+**Patrick's, not the builder's.** Q26: whether an allowance with no cost lines
+belongs in the price (the veteran judge read "PRICE" and expected it in; the working
+answer is that it does not, and that it is said wherever the price is read). Q25.
+Q5: a hand estimate in `refs/` for item 13.
 
-**What not to do.** Do not tag. Do not loosen a demonstration to get it green: two
-failed on a lost click and were left failed and said. Do not take a judge's "not
-so" from me without reading it: J22B-32 is the one finding I recorded as mistaken,
-and why is in its row.
+**What not to do.** Do not tag. Do not loosen a demonstration to get it green. Do
+not commit a demonstration's pictures while its run is still going. Do not take a
+judge's "not so" from me without reading it: J22B-32 is the one finding I recorded
+as mistaken, and why is in its row; J24B-59 (a wall with siding drawn plain) I
+recorded as "to be tried again" because the picture may show the other wall.
