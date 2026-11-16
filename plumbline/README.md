@@ -159,7 +159,9 @@ round corners and a shadow:
 * **Along the bottom**: the build bar. Every tool is a button with its mark: Building
   (Wall, Door, Window, Floor, Room, Roof), Mechanical, electrical, plumbing (Duct, Pipe,
   Conduit, Cable, Fitting, Equipment, Fixture, Connect) and Edit (Move, Delete). The
-  number keys 1 to 9 and 0 take the first ten in hand.
+  number keys 1 to 9 and 0 take the first ten in hand when no tool is in hand. With a
+  tool in hand a number is the start of a length (once a line has its start) and never
+  another tool: click the tool you want, or press Esc first.
 * **Over the build bar**: the sizes of the tool picked. They are shown every time a
   tool is picked, filled with what it will place; type over any of them, and Enter
   takes the tool in hand.

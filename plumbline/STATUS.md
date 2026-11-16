@@ -5416,19 +5416,19 @@ first; "reproduced" is the reviewer's word, the rest are by reading.
 | R21-21 | the view cuts instead of easing when a file is brought in, a drawing added or a scale set (the job is framed afresh and the eye is set outright) | `bring.rs`, `plans.rs`, `tools.rs`, `scene.rs` | **fixed**: after the job opens the eye is never set outright: it keeps its place across the move of the view's origin and eases to the new framing; only a model brought in frames the job afresh. The window demonstrations that add a drawing and set a scale are to be rerun on it |
 | R21-4 | a roof outline that is refused loses every corner clicked | `tools.rs` | **fixed**: the corners and the tool are kept when the outline is refused, and the refusal says so |
 | R21-20 | if the page reader fails the drawing says "reading its page" for ever | `plans.rs` | **fixed**: a reader that stops without sending its page is a fault that is said |
-| R21-31 | an assembly clicked while a field is open is taken a frame late and its message replaces the field's | `main.rs` | open |
+| R21-31 | an assembly clicked while a field is open is taken a frame late and its message replaces the field's | `main.rs` | **fixed**: a field that takes the keyboard puts the list of assemblies away |
 | R21-25 | an item is set down on the lowest level whatever was clicked, and the message does not say which level | `scene.rs` | **fixed**: an item stands on the level whose floor is under what was clicked (the level on show alone, if one is), and the message names the level |
 | R21-26 | the base board and its cuts at doors are worked out by the window; nothing holds the drawn base to the priced LF | `scene.rs` | open |
 | R21-3 | "Added wall, X long" is the window's distance between the picks, not the model's length | `tools.rs` | **fixed**: the length said is the model's `plan_length` of what was made |
 | R21-23 | the ground grid can draw hundreds of thousands of lines a frame over an unscaled scan | `scene.rs`, `plans.rs` | **fixed**: over a very large ground the grid's lines are further apart (10, 50, 100, 500 ft ...), never more than forty each way; a house's grid is as it was |
 | R21-2 | every character typed rereads the whole job, clashes included | `main.rs`, `model.rs` | measured, not fixed: on the made-up whole house each of the four readings (check, clashes, estimate, field list) takes about 0.03 s on an optimised build and 0.1 s unoptimised, so a keystroke costs about a tenth of a second optimised. Slow on a large job, never wrong: open |
-| R21-8/14 | a click on the plan, the model or a sheet row while a field is open is dropped without a word | `tools.rs`, `scene.rs`, `sheet.rs` | open |
+| R21-8/14 | a click on the plan, the model or a sheet row while a field is open is dropped without a word | `tools.rs`, `scene.rs`, `sheet.rs` | **fixed**: a click on the model or a sheet row while a value is being typed says "Nothing was picked: a value is still being typed..." (a tool's sizes and a typed length have their own words, call 86). Not driven in the window |
 | R21-18 | "A Roof", "a Door" lowered inside a person's own names; "grey" made "gray" in them | `theme.rs` | open |
 | R21-9 | in a form a comma always means the next field, so "Sink, double bowl" splits | `main.rs` | part: a comma in the last field is a comma (it was dropped); in an earlier field it still means the next field: open |
 | R21-27 | a supplier name with a full stop makes its file "not there"; a dropped table forgotten if Model or Maker's sheet is clicked next | `bring.rs`, `panels.rs` | first half **fixed**: a supplier's name may have a full stop; only the end of a table's file name is taken as part of the file. The dropped table forgotten: open |
 | R21-15 | two controls can share a name in the map | `map.rs` | open |
 | R21-30 | IFC in: of two levels at one height the lower gets an untrue note | `ifc/src/lib.rs` | **fixed**: a level takes its height from the next level whose floor is higher, so two at one height both have it |
-| R21-24, 16, 6, 7 | the Clashes switch left on after a press on a thing; taking an item in hand does not go through the view change; a key and a click in one frame; `pressed` cleared every frame with a field open | `scene.rs`, `panels.rs`, `main.rs` | open |
+| R21-24, 16, 6, 7 | the Clashes switch left on after a press on a thing; taking an item in hand does not go through the view change; a key and a click in one frame; `pressed` cleared every frame with a field open | `scene.rs`, `panels.rs`, `main.rs` | R21-24 **fixed** (a press that carried nothing puts the marks back) and R21-16 **fixed** (an item is taken in hand through the one road for a change of view). R21-6 (a key and a click in one frame) and R21-7: open |
 | R21-12, 13, 28, 17/29 | money written in about fifteen places; the not-priced sentence built twice ("2 equipments"); the lowest wall base worked twice; stale comments | several | R21-13 **fixed** (`Kind::so_many`: "2 pieces of equipment", "3 assemblies"; one sentence shared); R21-17/29 the stale comments set right and an unused argument dropped; R21-12 (money written in many places) and R21-28: open |
 
 Also, for the model: a line whose quantity is typed as a bare "1" is priced "1.00 EA",
@@ -5562,3 +5562,10 @@ scale, a price said back as money, the By division head, an L-shaped room's figu
 J20's nine, rechecked by the judge: 4, 7, 8, 9 and its test job fixed; 1, 2 and 5
 were fixed in part and are now fixed by the rows above; 3 is Q25; 6 is open.
 293 tests pass. **None of the fixes in this table has been judged.**
+
+
+**The twenty-second judgment was started** (2026-11-16) on a frozen build of 17ab7a6,
+two judges on Opus: part A, a veteran estimator's first day from an empty job and
+the money path (release candidate items 10 and 12; `research/judgment-22a-brief.md`);
+part B, the look against VISUAL.md and every word on every screen (items 9 and 11;
+`research/judgment-22b-brief.md`). Recorded here when they report.

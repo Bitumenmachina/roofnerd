@@ -351,6 +351,21 @@ impl Doc {
     /// What is being typed is about to be let go for something else: if anything had
     /// been typed, what did not happen is kept to be said with whatever is said next.
     /// A half-filled form never just vanishes.
+    /// A click meant to pick something while a value is still being typed: nothing is
+    /// picked, and that is said (R21-8, R21-14: such a click was dropped without a
+    /// word). True when a field is in the way. A tool's sizes and a typed length have
+    /// their own words for a click on the model, said where the click is taken.
+    pub fn field_in_the_way(&mut self) -> bool {
+        match &self.entry {
+            None => false,
+            Some((Entry::Settings(_) | Entry::Length, _)) => true,
+            Some(_) => {
+                self.say(Tone::Refused, "Nothing was picked: a value is still being typed. Press Enter to set it or Esc to let it go, then click.");
+                self.touch();
+                true
+            }
+        }
+    }
     pub fn letting_go(&mut self, for_what: Option<Entry>) {
         let Some((field, text)) = &self.entry else { return };
         if for_what == Some(*field) {
@@ -386,6 +401,11 @@ impl Doc {
         self.form.clear();
         self.form_at = 0;
         self.entry_line = None;
+        // A field that takes the keyboard puts the list of assemblies away: left open,
+        // a click on one of them did nothing until the field closed, and then put the
+        // assembly on a frame later, by surprise (R21-31).
+        self.choosing = false;
+        self.give = None;
         // What is typed next goes after what the field opens with. ("Typing replaces"
         // is for a field of a set that opens already filled; left on from a tool's
         // sizes accepted with Enter, it threw away the first digit of the first

@@ -125,7 +125,7 @@ fn row(p: &mut ChildSpawnerCommands, selected: bool, select: Option<String>, bui
         // A script calls the row by what the thing is called.
         e.insert(theme::Named { name: theme::spoken(&path), scrolls: true });
         e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
-            if press.button == PointerButton::Primary && doc.entry.is_none() {
+            if press.button == PointerButton::Primary && !doc.field_in_the_way() {
                 doc.select(&path);
             }
         });
@@ -625,7 +625,7 @@ fn verify(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsho
                 cell(r, 96.0, false, |x| words(x, fonts, q.storey.clone(), 12.0, Weight::Regular, theme::ink_soft()));
             });
             e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
-                if press.button == PointerButton::Primary && doc.entry.is_none() {
+                if press.button == PointerButton::Primary && !doc.field_in_the_way() {
                     doc.select(&go);
                     doc.look_at = Some(go.clone());
                 }
@@ -1130,7 +1130,7 @@ fn systems(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     h.spawn(text(fonts, total(&t.runs), 13.0, Weight::Semibold, if t.runs.members == 0 { theme::ink_faint() } else { theme::status_ink(t.runs.status) }));
                 })
                 .observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
-                    if press.button == PointerButton::Primary && doc.entry.is_none() && !path.is_empty() {
+                    if press.button == PointerButton::Primary && !path.is_empty() && !doc.field_in_the_way() {
                         doc.select(&path);
                     }
                 });

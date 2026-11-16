@@ -349,7 +349,7 @@ impl Builder<'_, '_, '_> {
         let on_plan = self.on_plan.clone();
         e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
             // With a drawing tool in hand a click is a pick, not a selection.
-            if press.button == PointerButton::Primary && doc.entry.is_none() && doc.draw.tool.is_none() && !doc.draw.swallow && !dragged() {
+            if press.button == PointerButton::Primary && doc.draw.tool.is_none() && !doc.draw.swallow && !dragged() && !doc.field_in_the_way() {
                 let path = on_plan.as_ref().filter(|_| doc.plan).unwrap_or(&click).clone();
                 doc.select(&path);
             }
@@ -1426,7 +1426,9 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
             doc.redraw();
         }
         // The clash marks go back to how they were, unless it was left in something.
-        if !carry.marked && doc.show.clashes && in_what(&snap, &path).is_none() {
+        // (A press that carried it nowhere changes nothing: the marks go back as they
+        // were even where it already stood in something. R21-24.)
+        if !carry.marked && doc.show.clashes && (carry.gone == [0.0, 0.0] || in_what(&snap, &path).is_none()) {
             doc.show.clashes = false;
             doc.redraw();
         }

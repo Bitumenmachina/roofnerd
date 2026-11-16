@@ -891,8 +891,12 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                         doc.say(Tone::Done, format!("{called} put down."));
                     } else {
                         doc.placing = Some(item.clone());
-                        doc.plan = false;
-                        doc.walk = false;
+                        // To 3D by the one road every change of view takes, so the eye
+                        // is brought back from a walk as it is by the view's own button
+                        // (R21-16: the view was changed here by hand).
+                        if doc.plan || doc.walk {
+                            doc.go = Some((false, false));
+                        }
                         doc.say(Tone::Done, format!("{called} in hand: click where one stands. Click it here again to put it down."));
                     }
                     doc.redraw();
