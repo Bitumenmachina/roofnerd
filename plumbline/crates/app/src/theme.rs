@@ -567,7 +567,8 @@ pub fn trade(text: &str) -> String {
         return format!("{rise}:12");
     }
     if let Some(count) = text.strip_suffix(" points ft") {
-        return format!("{count} points, in feet");
+        // A roofer's word for where an outline turns. ("4 points, in feet": J24B-20.)
+        return format!("{count} corners");
     }
     text.to_string()
 }
