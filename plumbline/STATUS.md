@@ -5423,7 +5423,7 @@ first; "reproduced" is the reviewer's word, the rest are by reading.
 | R21-23 | the ground grid can draw hundreds of thousands of lines a frame over an unscaled scan | `scene.rs`, `plans.rs` | **fixed**: over a very large ground the grid's lines are further apart (10, 50, 100, 500 ft ...), never more than forty each way; a house's grid is as it was |
 | R21-2 | every character typed rereads the whole job, clashes included | `main.rs`, `model.rs` | measured, not fixed: on the made-up whole house each of the four readings (check, clashes, estimate, field list) takes about 0.03 s on an optimised build and 0.1 s unoptimised, so a keystroke costs about a tenth of a second optimised. Slow on a large job, never wrong: open |
 | R21-8/14 | a click on the plan, the model or a sheet row while a field is open is dropped without a word | `tools.rs`, `scene.rs`, `sheet.rs` | **fixed**: a click on the model or a sheet row while a value is being typed says "Nothing was picked: a value is still being typed..." (a tool's sizes and a typed length have their own words, call 86). Not driven in the window |
-| R21-18 | "A Roof", "a Door" lowered inside a person's own names; "grey" made "gray" in them | `theme.rs` | open |
+| R21-18 | "A Roof", "a Door" lowered inside a person's own names; "grey" made "gray" in them | `theme.rs` | part **fixed**: a kind's name inside quotation marks is left as a person gave it (a room called "A Door Shop"); test in `theme.rs`. "grey" to "gray" inside a person's own name: open |
 | R21-9 | in a form a comma always means the next field, so "Sink, double bowl" splits | `main.rs` | part: a comma in the last field is a comma (it was dropped); in an earlier field it still means the next field: open |
 | R21-27 | a supplier name with a full stop makes its file "not there"; a dropped table forgotten if Model or Maker's sheet is clicked next | `bring.rs`, `panels.rs` | first half **fixed**: a supplier's name may have a full stop; only the end of a table's file name is taken as part of the file. The dropped table forgotten: open |
 | R21-15 | two controls can share a name in the map | `map.rs` | open |
@@ -5569,3 +5569,14 @@ two judges on Opus: part A, a veteran estimator's first day from an empty job an
 the money path (release candidate items 10 and 12; `research/judgment-22a-brief.md`);
 part B, the look against VISUAL.md and every word on every screen (items 9 and 11;
 `research/judgment-22b-brief.md`). Recorded here when they report.
+
+**Seen in the window on the build of 865baf2 and after** (a look session of my own,
+five pictures, kept in the scratch folder of the day): the foundation plan alone
+carries the footings and the foundation walls and no roof lines (J21-19); with every
+level on show and the roof switched off the plan carries its rooms' names (J21-10;
+the two floors' names fall on one another and the upper floor's are the ones seen);
+the how-sure switch has its legend ("116 drawn from what is known, 81 from what is
+assumed, 3 from what is unknown" on the made-up whole house); Finishes counts 18 (8
+walls and 10 rooms with base). **Not seen:** a framed wall's own panel (my click
+went through the frame to the floor behind it, which is J21-21's complaint from the
+other side: a frame is hard to pick).

@@ -293,7 +293,11 @@ pub fn spoken(text: &str) -> String {
                 let mut rest = out.as_str();
                 while let Some(at) = rest.find(&said_so) {
                     let after = &rest[at + said_so.len()..];
-                    let whole = !after.chars().next().is_some_and(|c| c.is_ascii_alphanumeric()) && (at == 0 || !rest[..at].chars().next_back().is_some_and(|c| c.is_ascii_alphanumeric()));
+                    // Not inside quotation marks: that is a name a person gave or a
+                    // line a file holds, left as it is (R21-18: a room called "A Door
+                    // Shop" was shown as "A door Shop").
+                    let so_far = out.len() - rest.len() + at;
+                    let whole = !in_quotes(&out, so_far) && !after.chars().next().is_some_and(|c| c.is_ascii_alphanumeric()) && (at == 0 || !rest[..at].chars().next_back().is_some_and(|c| c.is_ascii_alphanumeric()));
                     next.push_str(&rest[..at]);
                     next.push_str(if whole { &plain } else { &said_so });
                     rest = after;
@@ -352,6 +356,30 @@ pub fn spoken(text: &str) -> String {
         }
     }
     out
+}
+
+/// Whether a place in a text lies between quotation marks: a mark that begins a word
+/// opens (an inch mark follows a figure and does not), and the next mark that ends a
+/// word closes.
+fn in_quotes(text: &str, at: usize) -> bool {
+    let mut inside = false;
+    let mut before: Option<char> = None;
+    let mut chars = text.char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
+        if i >= at {
+            break;
+        }
+        if c == '"' {
+            let next = chars.peek().map(|(_, n)| *n);
+            if !inside && before.is_none_or(|b| b == ' ' || b == '(') && next.is_some_and(|n| n != ' ') {
+                inside = true;
+            } else if inside && next.is_none_or(|n| matches!(n, ' ' | ',' | '.' | ';' | ':' | ')')) {
+                inside = false;
+            }
+        }
+        before = Some(c);
+    }
+    inside
 }
 
 /// The screen is written in US English, in the words a US drawing set uses: a floor of
@@ -705,5 +733,8 @@ mod tests {
         // A path is still a path, and a name with the word in it is not a word.
         assert_eq!(spoken("storey-0099 is not in the job"), "storey-0099 is not in the job");
         assert_eq!(spoken("multistorey"), "multistorey");
+        // A name a person gave, in quotation marks, is left as it is (R21-18).
+        assert_eq!(spoken("Added room \"A Door Shop\" to a Wall"), "Added room \"A Door Shop\" to a wall");
+        assert_eq!(spoken("the door is 6' 8\" high in a Wall"), "the door is 6' 8\" high in a wall");
     }
 }
