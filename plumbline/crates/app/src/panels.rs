@@ -376,9 +376,21 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 doc.redraw();
             });
         }
+        // How many values are known, assumed and unknown: here while there is room.
+        // With the not-priced, unpriced, allowance and verify notes all four on the bar it
+        // ran off the window's edge and took the save mark with it (J25A-15); the
+        // estimate window's bar carries the same count, and Show has it by the thing.
+        let notes = [
+            snap.pricing.as_ref().is_some_and(|p| p.not_priced.iter().map(|x| x.1).sum::<usize>() > 0),
+            snap.estimate.as_ref().is_some_and(|e| !e.job_cost.left_out.is_empty()),
+            snap.pricing.as_ref().is_some_and(|p| matches!(p.allowances_alone(), Some((_, Some(_))))),
+            questions > 0,
+        ];
         divider(bar);
-        tally_chips(bar, fonts, snap.tally);
-        divider(bar);
+        if notes.iter().filter(|n| **n).count() < 4 {
+            tally_chips(bar, fonts, snap.tally);
+            divider(bar);
+        }
         // (The job's title is at the left of this bar. The name of the file it is kept
         // in is not said here: it is not a builder's word, and it crowded the tally off
         // the end of the bar, J18-4.)

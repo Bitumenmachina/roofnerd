@@ -385,6 +385,14 @@ with no detail is carried in the price, it becomes a line of the job cost (a cos
 type and a division are then needed for it) until the first cost line is put on the
 thing, and every total moves.
 
+**Asked three times now.** Three veteran judges on three builds read it the same way
+without knowing of one another: 22A (the finding this question came from), 24A, and
+25A on 2026-11-16, night (J25A-14: "In a bid an allowance is carried in the price
+until the owner picks ... the price a builder would send out is $1,575 + markup short
+for that wall"). Each granted that the screen says so plainly. The builder's reading
+is unchanged and is the minority of four: this wants Patrick's word more than any
+other open question.
+
 ## Q27. Is one of the three geometry libraries to be used for the item bench? (2026-11-16, from call 105)
 
 Patrick named rgeometry, plexus and fornjot as what the item workbench should be
