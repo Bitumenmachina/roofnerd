@@ -293,7 +293,28 @@ fn begin(doc: &mut Doc, tool: Tool, ask: bool) {
             let last = doc.job.order.iter().rev().find_map(|e| w.get::<plumbline_world::Wall>(*e).and_then(|wall| wall.type_name.value.clone()));
             last.and_then(|t| doc.job.find(&t)).and_then(|e| doc.job.world.get::<plumbline_world::WallType>(e)).filter(|t| !t.footing).and_then(|t| t.thickness.value.as_ref().map(|v| units::show_length(v, &t.thickness.unit)))
         };
+        // And a door or a window as the one placed last in the job: a job opened
+        // again offered a door's height and sill and no width, though a 3 ft door
+        // had been placed the day before (J24A-3).
+        let last_opening: Option<Vec<String>> = match tool {
+            Tool::Door | Tool::Window => {
+                let category = if tool == Tool::Door { Kind::Door } else { Kind::Window };
+                let placed: Vec<(String, String)> = doc.job.order.iter().rev().filter_map(|e| {
+                    let o = doc.job.world.get::<plumbline_world::Opening>(*e)?;
+                    Some((o.type_name.value.clone()?, units::show_length(o.sill.value.as_ref()?, &o.sill.unit)))
+                }).collect();
+                placed.into_iter().find_map(|(of, sill)| {
+                    let t = doc.job.find(&of).and_then(|t| doc.job.world.get::<plumbline_world::OpeningType>(t))?;
+                    if t.category != category {
+                        return None;
+                    }
+                    Some(vec![units::show_length(t.width.value.as_ref()?, &t.width.unit), units::show_length(t.height.value.as_ref()?, &t.height.unit), sill])
+                })
+            }
+            _ => None,
+        };
         let shown = doc.draw.settings.get(tool.name()).cloned().unwrap_or_else(|| match tool {
+            Tool::Door | Tool::Window if last_opening.is_some() => last_opening.clone().unwrap_or_default(),
             Tool::Door => vec![String::new(), "6' 8\"".to_string(), "0 ft".to_string()],
             Tool::Wall => vec![wall_thickness.unwrap_or_default(), level_height.unwrap_or_default()],
             _ => vec![String::new(); tool.takes()],

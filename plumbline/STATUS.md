@@ -6054,7 +6054,7 @@ arithmetic** (walls 130.33 LF and 1,042.67 SF, floor 986.56 SF, roof 1,229.18 SF
 |---|---|---|
 | J24A-1 | Ctrl+A in a size field typed the letter a | **Fixed, seen (call 97)**: Ctrl is read from the keys in the order they came, and Ctrl+A takes the whole field |
 | J24A-2 | Next steps ticks "Add doors and windows" after one door of nine | Open |
-| J24A-3 | A job opened again: the Door tool offers a height and a sill but no width, though a door was placed last time | Open |
+| J24A-3 | A job opened again: the Door tool offers a height and a sill but no width, though a door was placed last time | **Built, not seen**: the Door and Window tools offer the sizes of the last one placed in the job, as the Wall tool offers the last wall's thickness |
 | J24A-4 | A production rate's field opens empty with no example | **Fixed (call 97)**: "like 40 SF/hr". Not yet seen open |
 | J24A-5 | Gypsum board is priced by the sheet where the wall's other lines are SF; $1.90 typed for a sheet was taken without a word | Open. The unit is on the line; nothing questions a price |
 | J24A-6 | A roof is priced plane by plane: an assembly went on one plane of four and nothing said the others were bare | **Fixed, seen (call 100)**: it goes on every plane of the roof that has nothing priced, and says so |
