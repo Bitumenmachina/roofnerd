@@ -2843,7 +2843,7 @@ fn piping() -> (Job, String, String, String, String) {
     let storey = job.add("job-0001", Kind::Storey, "ground").unwrap();
     job.put(&storey, Level { elevation: ft(0.0), height: ft(10.0), computation_height: None }).unwrap();
     let inch = |x: f64| Val::known(Len::One(x), "in", "test");
-    let mut kind = |job: &mut Job, name: &str, t: SegmentType| {
+    let kind = |job: &mut Job, name: &str, t: SegmentType| {
         let p = job.add("job-0001", Kind::Type, name).unwrap();
         job.put(&p, t).unwrap();
         p
@@ -2950,7 +2950,7 @@ fn what_looks_wrong_in_a_network_is_a_warning_and_never_a_refusal() {
     use plumbline_world::{ConnectorKind::Pipe, Domain, InSystem, SystemInfo};
     // Two systems in one network.
     let (mut job, s, two, one, _) = piping();
-    let mut system = |job: &mut Job, name: &str, classification: &str| {
+    let system = |job: &mut Job, name: &str, classification: &str| {
         let p = job.add("job-0001", Kind::System, name).unwrap();
         job.put(&p, SystemInfo { discipline: plumbline_world::Discipline::Plumbing, classification: classification.into() }).unwrap();
         p
@@ -3739,7 +3739,7 @@ fn an_open_connector_is_listed_where_its_run_would_be() {
     use plumbline_world::building::takeoff;
     use plumbline_world::{ConnectorKind::Pipe, Domain, InSystem, SystemInfo};
     let (mut job, s, two, ..) = piping();
-    let mut system = |job: &mut Job, name: &str, classification: &str| {
+    let system = |job: &mut Job, name: &str, classification: &str| {
         let p = job.add("job-0001", Kind::System, name).unwrap();
         job.put(&p, SystemInfo { discipline: plumbline_world::Discipline::Plumbing, classification: classification.into() }).unwrap();
         p

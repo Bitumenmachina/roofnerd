@@ -348,11 +348,16 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
         });
         on!(Wall, |c: &Wall| building::check_wall(path, kind, c), |c| match what {
             "type" => Some(Slot::Other(&mut c.type_name)),
-            // A footing's values are listed, and measured, in a footing's words.
-            "wall line" | "footing line" => Some(Slot::Other(&mut c.line)),
+            // A footing's values are listed, and measured, in a footing's words and no
+            // other: a wall has a line and a height, a footing a line and a depth (J21-6:
+            // "height" was still taken on a footing, as a second name for its depth).
+            "wall line" if kind != Kind::Footing => Some(Slot::Other(&mut c.line)),
+            "footing line" if kind == Kind::Footing => Some(Slot::Other(&mut c.line)),
             "top level" => c.top_level.as_mut().map(|v| Slot::Other(v)),
-            "height" | "depth" => c.height.as_mut().map(Slot::Length),
-            "base offset" | "top, above its level's floor" => c.base_offset.as_mut().map(Slot::Length),
+            "height" if kind != Kind::Footing => c.height.as_mut().map(Slot::Length),
+            "depth" if kind == Kind::Footing => c.height.as_mut().map(Slot::Length),
+            "base offset" if kind != Kind::Footing => c.base_offset.as_mut().map(Slot::Length),
+            "top, above its level's floor" if kind == Kind::Footing => c.base_offset.as_mut().map(Slot::Length),
             "top offset" => c.top_offset.as_mut().map(Slot::Length),
             _ => None,
         });

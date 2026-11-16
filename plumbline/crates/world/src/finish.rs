@@ -876,6 +876,33 @@ fn door_said(o: Option<&OpeningDress>) -> String {
     }
 }
 
+/// What else of a wall is drawn from what is priced on it, under or instead of its
+/// finish: that it is concrete, its frame, lines that name a framing and are not drawn,
+/// the weather barrier. Said in the report and on the wall's own panel (J21-20: a
+/// framed wall's panel said "Bare" and nothing of its frame).
+pub fn wall_under(w: &WallDress) -> Vec<String> {
+    let mut under: Vec<String> = Vec::new();
+    if w.concrete {
+        under.push("concrete, as a line priced on it says".into());
+    }
+    if let Some((deep, spacing)) = w.framing {
+        let lumber = [(3.5, "2x4"), (5.5, "2x6"), (7.25, "2x8"), (9.25, "2x10"), (11.25, "2x12")].iter().find(|(d, _)| (d / 12.0 - deep).abs() < 1.0e-6).map(|(_, n)| *n).unwrap_or("lumber");
+        under.push(format!("framed in {lumber} at {} in on center", crate::view::num(spacing * 12.0)));
+        // Two framings priced on one wall: one is drawn, and it is said
+        // which (it was the first, without a word).
+        if w.framing_lines > 1 {
+            under.push(format!("{} lines on it name a framing: the first is the one drawn", w.framing_lines));
+        }
+    }
+    if w.framing_unread > 0 {
+        under.push(format!("{} on it {} framing and {} no lumber size and spacing (like 2x6 at 16 in): not drawn as a frame", crate::view::so_many(w.framing_unread, "line"), if w.framing_unread == 1 { "names" } else { "name" }, if w.framing_unread == 1 { "gives" } else { "give" }));
+    }
+    if w.barrier {
+        under.push("a weather barrier under its finish".into());
+    }
+    under
+}
+
 /// The reading written out, one line for each wall, roof plane, window and door, and
 /// for each eave with a gutter priced on it, in the job's order: what it is finished
 /// with and what said so, or that it is bare.
@@ -893,25 +920,7 @@ pub fn report(job: &mut Job) -> Vec<String> {
                     // What else is drawn from what is priced on it: its frame, the
                     // weather barrier under its finish, that it is concrete (J20-7: the
                     // window drew these and this report said nothing of them).
-                    let mut under: Vec<String> = Vec::new();
-                    if w.concrete {
-                        under.push("concrete, as a line priced on it says".into());
-                    }
-                    if let Some((deep, spacing)) = w.framing {
-                        let lumber = [(3.5, "2x4"), (5.5, "2x6"), (7.25, "2x8"), (9.25, "2x10"), (11.25, "2x12")].iter().find(|(d, _)| (d / 12.0 - deep).abs() < 1.0e-6).map(|(_, n)| *n).unwrap_or("lumber");
-                        under.push(format!("framed in {lumber} at {} in on centre", crate::view::num(spacing * 12.0)));
-                        // Two framings priced on one wall: one is drawn, and it is said
-                        // which (it was the first, without a word).
-                        if w.framing_lines > 1 {
-                            under.push(format!("{} lines on it name a framing: the first is the one drawn", w.framing_lines));
-                        }
-                    }
-                    if w.framing_unread > 0 {
-                        under.push(format!("{} on it {} framing and {} no lumber size and spacing (like 2x6 at 16 in): not drawn as a frame", crate::view::so_many(w.framing_unread, "line"), if w.framing_unread == 1 { "names" } else { "name" }, if w.framing_unread == 1 { "gives" } else { "give" }));
-                    }
-                    if w.barrier {
-                        under.push("a weather barrier under its finish".into());
-                    }
+                    let under = wall_under(w);
                     out.push(std::iter::once(format!("{name}: {first}")).chain(more).chain(under).collect::<Vec<_>>().join("; "));
                 }
             },
@@ -955,12 +964,15 @@ pub fn said_of(d: &Dress, path: &str, kind: Kind) -> Vec<(String, String)> {
     match kind {
         Kind::Wall => {
             let Some(w) = d.walls.get(path) else { return out };
-            if !w.dressed() && w.cladding.is_none() && w.wainscot.is_none() {
+            let under = wall_under(w);
+            if !w.dressed() && w.cladding.is_none() && w.wainscot.is_none() && under.is_empty() {
                 return out;
             }
             let (first, more) = wall_said(w);
             out.push(cut(&first));
             out.extend(more.iter().map(|m| cut(m)));
+            // What is under its finish, each as a line of its own.
+            out.extend(under.iter().map(|u| (cap(u), String::new())));
         }
         k if k.is_area() => match d.roofs.get(path) {
             Some(r) => {

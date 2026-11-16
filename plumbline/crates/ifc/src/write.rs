@@ -273,6 +273,34 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
     let mut written: Vec<(String, u64)> = Vec::new();
     let up = [0.0, 0.0, 1.0];
 
+    // Where two walls, or two footings, end at one point square to each other (a plain
+    // corner), the one drawn first runs through to the outside corner and the other
+    // stops at its face: together they are the L that is built, with no square left
+    // out at the outside and none held twice at the inside. Each is drawn on its
+    // centre line to the corner point, so written as drawn each corner had a notch
+    // (J20-6: a 1 ft square missing at each outside corner of a ring of footings).
+    // How much longer (or, below nought, shorter) each end of each is written.
+    let carried: std::collections::HashMap<&str, [f64; 2]> = {
+        let lines: Vec<(usize, &plumbline_world::building::Placement, [f64; 2], [f64; 2], f64)> = placed.iter().enumerate().filter_map(|(i, p)| match &p.shape { Shape::Wall { a, b, thickness, .. } => Some((i, p, *a, *b, *thickness)), _ => None }).collect();
+        let same = |x: [f64; 2], y: [f64; 2]| (x[0] - y[0]).hypot(x[1] - y[1]) < 0.01;
+        let mut out = std::collections::HashMap::new();
+        for (i, p, a, b, _) in &lines {
+            let mut by = [0.0, 0.0];
+            for (which, end) in [a, b].into_iter().enumerate() {
+                let meeting: Vec<&(usize, &plumbline_world::building::Placement, [f64; 2], [f64; 2], f64)> = lines.iter().filter(|o| o.0 != *i && o.1.kind == p.kind && o.1.storey == p.storey && (same(o.2, *end) || same(o.3, *end))).collect();
+                let [other] = meeting.as_slice() else { continue };
+                let (ux, uy) = (b[0] - a[0], b[1] - a[1]);
+                let (vx, vy) = (other.3[0] - other.2[0], other.3[1] - other.2[1]);
+                let turn = ((ux * vy - uy * vx) / (ux.hypot(uy) * vx.hypot(vy)).max(1.0e-12)).abs();
+                if turn > 0.98 {
+                    by[which] = if *i < other.0 { other.4 / 2.0 } else { -other.4 / 2.0 };
+                }
+            }
+            out.insert(p.path.as_str(), by);
+        }
+        out
+    };
+
     for p in &placed {
         // Where it is placed from: its level's floor, or the building's zero.
         let (level, within, floor) = match p.storey.as_ref().and_then(|s| level_of.get(s)) {
@@ -287,7 +315,9 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                     continue;
                 };
                 let at = o.placed(Some(within), [a[0], a[1], base - floor], up, way);
-                let body = o.pushed_rect([length / 2.0, 0.0], length, *thickness, *height);
+                // From so far before its first end to so far past its last (a corner).
+                let [before, after] = carried.get(p.path.as_str()).copied().unwrap_or([0.0, 0.0]);
+                let body = o.pushed_rect([(length + after - before) / 2.0, 0.0], length + before + after, *thickness, *height);
                 // A strip footing is IFC's footing of that sort; anything else here is a wall.
                 let wall = if p.kind == plumbline_world::Kind::Footing {
                     count("footings");

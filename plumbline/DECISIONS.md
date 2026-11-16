@@ -3192,3 +3192,13 @@ first, and each refusal says how to make the other kind and lists the types of t
 right kind the job has. A type from a file written before this, already under
 footings, is still a footing's type. Removing a type that is in use is refused in
 words that are true: whose type it is.
+
+### Call 88. The command line says a drawing's scale as the window does (2026-11-16)
+
+From the twenty-first judgment (J21-16). Call 80 made the window say a scale as a
+scale; the command line still said "30 ft is 540 on its page: 18 to the foot" (18
+what? points). The scale's words are now worked once, in the model
+(`Drawing::scale_said`), and both say them: "30 ft is 540 on its page: 1/4" = 1'-0"",
+and for a scale that is not one of the architect's, `1" = 4' 1 5/8"` (to the eighth
+of an inch; the window showed it to the quarter). `demos/plan.sh` expects the new
+words.

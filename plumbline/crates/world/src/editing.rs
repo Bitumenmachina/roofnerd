@@ -88,9 +88,22 @@ pub fn all_or_nothing<T>(job: &mut Job, f: impl FnOnce(&mut Job) -> Result<T, St
             Ok(v)
         }
         Err(why) => {
+            // What was made on the way and is now taken back has no path to be known
+            // by: a refusal that began "wall-0004: its type is ..." named a wall that is
+            // not in the job (M21-10, J21-6). Such a path is said as "the new wall".
+            let made: Vec<(String, Kind)> = {
+                let mut q = job.world.query::<(&Node, &Kind)>();
+                q.iter(&job.world).map(|(n, k)| (n.path.clone(), *k)).collect()
+            };
             match file::load(&before) {
                 Ok((back, _)) => *job = back,
                 Err(worse) => return Err(format!("{why}; and the job could not be put back as it was ({worse})")),
+            }
+            let mut why = why;
+            for (path, kind) in made {
+                if why.contains(&path) && job.find(&path).is_none() {
+                    why = why.replace(&path, &format!("the new {}", kind.said()));
+                }
             }
             Err(why)
         }

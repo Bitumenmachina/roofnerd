@@ -109,6 +109,27 @@ pub struct Calibrated {
 }
 
 impl Drawing {
+    /// The scale as a drawing's title block writes it, where the page is paper of a
+    /// known size (a PDF's page, 72 units to the inch) and the scale is one of the
+    /// architect's: `1/4" = 1'-0"`. A PDF at any other scale says it as an engineer's
+    /// scale is written, an inch of paper to so many feet (call 80). A picture has no
+    /// paper size, and says what its sheet covers on the ground. None with no scale.
+    /// How sure it is is the drawing's status, which whoever shows this shows with it.
+    /// Worked here and nowhere else (call 88).
+    pub fn scale_said(&self) -> Option<String> {
+        let k = self.feet_per_unit()?;
+        if self.file.value.as_deref().is_some_and(|f| f.to_ascii_lowercase().ends_with(".pdf")) {
+            // Inches of paper to a foot of building.
+            let paper = 1.0 / (k * 72.0);
+            const NAMED: [(f64, &str); 11] = [(0.0625, "1/16"), (0.09375, "3/32"), (0.125, "1/8"), (0.1875, "3/16"), (0.25, "1/4"), (0.375, "3/8"), (0.5, "1/2"), (0.75, "3/4"), (1.0, "1"), (1.5, "1 1/2"), (3.0, "3")];
+            if let Some((_, name)) = NAMED.iter().find(|(inches, _)| (paper / inches - 1.0).abs() < 0.005) {
+                return Some(format!("{name}\" = 1'-0\""));
+            }
+            return Some(format!("1\" = {}", units::feet_as_ft_in(1.0 / paper, 8)));
+        }
+        let [w, h] = self.size;
+        Some(format!("sheet covers {} x {}", units::feet_as_ft_in(w * k, 1), units::feet_as_ft_in(h * k, 1)))
+    }
     /// Feet on the building to one unit of the page, when it has a scale that works out.
     pub fn feet_per_unit(&self) -> Option<f64> {
         let s = self.scale.as_ref()?;

@@ -59,7 +59,7 @@ cmp -s "$J" "$T/before.json" || { echo "FAIL: a refused tracing changed the file
 echo
 echo "== Its scale, from one dimension: 30 ft between two places 540 points apart =="
 OUT="$("$P" calibrate "$J" "$D" --from "126,90" --to "666,90" --distance "30 ft" "${READ[@]}")"
-says "the scale" "30 ft is 540 on its page: 18 to the foot" "$OUT"
+says "the scale" "30 ft is 540 on its page: 1/4\" = 1'-0\"" "$OUT"
 "$P" lineup "$J" "$D" --page-point "126,126" --plan-point "0,0" --status Assumed --source "the house's southwest corner"
 
 echo
@@ -81,7 +81,7 @@ print("    its line is (0, 0) to (30, 0) ft, Assumed, \"%s\"" % want)
 PY
 "$P" check "$J"
 OUT="$("$P" drawings "$J")"
-says "the drawing, listed" "scale: 30 ft between (126, 90) and (666, 90) on its page: 18 to the foot" "$OUT"
+says "the drawing, listed" "scale: 30 ft between (126, 90) and (666, 90) on its page: 1/4\" = 1'-0\"" "$OUT"
 says "its file" "file: as it was when the drawing was made" "$OUT"
 
 echo
@@ -94,7 +94,7 @@ done
 # The picture is two dots to the point: the dimension line is 1,080 dots for 30 ft.
 PIC="$(made "$OUT")"
 OUT="$("$P" calibrate "$J" "$PIC" --from "252,180" --to "1332,180" --distance "30 ft" "${READ[@]}")"
-says "the picture's scale" "30 ft is 1080 on its page: 36 to the foot" "$OUT"
+says "the picture's scale" "30 ft is 1080 on its page: 36 dots to the foot; the sheet covers" "$OUT"
 
 echo
 echo "== What is refused, and leaves the file as it was =="

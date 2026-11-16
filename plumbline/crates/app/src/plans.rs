@@ -57,27 +57,9 @@ impl Laid {
         let (k, corner) = self.shown();
         [corner[0] + page[0] * k, corner[1] + page[1] * k]
     }
-    /// The scale as a drawing's title block writes it, where the page is paper of a
-    /// known size (a PDF's page, 72 units to the inch) and the scale is one of the
-    /// architect's; otherwise how big the sheet is on the ground. None with no scale.
-    /// How sure it is is the drawing's status, which whoever shows this shows with it.
+    /// The drawing's scale as the model says it (`Drawing::scale_said`).
     pub fn scale_said(&self) -> Option<String> {
-        let k = self.drawing.feet_per_unit()?;
-        if self.drawing.file.value.as_deref().is_some_and(|f| f.to_ascii_lowercase().ends_with(".pdf")) {
-            // Inches of paper to a foot of building.
-            let paper = 1.0 / (k * 72.0);
-            const NAMED: [(f64, &str); 11] = [(0.0625, "1/16"), (0.09375, "3/32"), (0.125, "1/8"), (0.1875, "3/16"), (0.25, "1/4"), (0.375, "3/8"), (0.5, "1/2"), (0.75, "3/4"), (1.0, "1"), (1.5, "1 1/2"), (3.0, "3")];
-            if let Some((_, name)) = NAMED.iter().find(|(inches, _)| (paper / inches - 1.0).abs() < 0.005) {
-                return Some(format!("{name}\" = 1'-0\""));
-            }
-            // Not one of the architect's (a dimension clicked a hair off, a sheet
-            // printed to fit): still said as a scale, an inch of paper to so many
-            // feet, the way an engineer's scale is written (call 80).
-            return Some(format!("1\" = {}", plumbline_world::units::feet_as_ft_in(1.0 / paper, 4)));
-        }
-        let [w, h] = self.drawing.size;
-        // A picture has no paper size: what its sheet covers on the ground, to the inch.
-        Some(format!("sheet covers {} x {}", plumbline_world::units::feet_as_ft_in(w * k, 1), plumbline_world::units::feet_as_ft_in(h * k, 1)))
+        self.drawing.scale_said()
     }
     /// Whether a place on the plan lies on the page as shown.
     pub fn holds(&self, plan: [f64; 2]) -> bool {

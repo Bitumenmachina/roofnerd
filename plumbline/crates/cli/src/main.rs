@@ -62,6 +62,18 @@ fn usage() -> String {
 }
 
 /// What a page is measured in until its drawing has a scale.
+/// A drawing's scale in words (call 88). A sheet of paper says it as a drawing does:
+/// `1/4" = 1'-0"`. A picture has no paper size: it says how many of its dots make a
+/// foot, and what the sheet covers on the ground.
+fn scale_words(d: &plans::Drawing, feet_per_unit: f64) -> String {
+    let dots = view::num((1.0e4 / feet_per_unit).round() / 1.0e4);
+    match d.scale_said() {
+        Some(said) if said.starts_with("sheet covers") => format!("{dots} dots to the foot; the {said}"),
+        Some(said) => said,
+        None => format!("{dots} to the foot"),
+    }
+}
+
 fn page_unit(sort: plumbline_plans::Sort) -> &'static str {
     if sort == plumbline_plans::Sort::Pdf { "points" } else { "dots" }
 }
@@ -112,7 +124,7 @@ fn drawings(job: &mut plumbline_world::Job, path: &str) -> String {
         let _ = writeln!(out, "{} {name} [{path}]: page {} of {file}", d.status().flag(), d.page);
         match (&d.scale, d.feet_per_unit()) {
             (Some(s), Some(k)) => {
-                let _ = writeln!(out, "    scale: {} between ({}, {}) and ({}, {}) on its page: {} to the foot  ({})", s.distance.value.as_ref().map(|l| units::show_length(l, &s.distance.unit)).unwrap_or_default(), view::num(s.from[0]), view::num(s.from[1]), view::num(s.to[0]), view::num(s.to[1]), view::num((1.0e4 / k).round() / 1.0e4), s.distance.source);
+                let _ = writeln!(out, "    scale: {} between ({}, {}) and ({}, {}) on its page: {}  ({})", s.distance.value.as_ref().map(|l| units::show_length(l, &s.distance.unit)).unwrap_or_default(), view::num(s.from[0]), view::num(s.from[1]), view::num(s.to[0]), view::num(s.to[1]), scale_words(&d, k), s.distance.source);
             }
             _ => {
                 let _ = writeln!(out, "    scale: none. Nothing can be traced over it until it is calibrated from one dimension.");
@@ -1720,7 +1732,9 @@ fn draw(args: &[String]) -> Result<(), String> {
             let distance = need(flag("--distance"), "--distance", "\"30 ft\" (the dimension between the two points)")?;
             let done = plans::calibrate(&mut job, drawing, from, to, &distance, ed::Entered { status, source: &source })?;
             let k = done.feet_per_unit;
-            let mut said = format!("{drawing}: {} is {} on its page: {} to the foot", distance.trim(), view::num(((to[0] - from[0]).hypot(to[1] - from[1]) * 1.0e4).round() / 1.0e4), view::num((1.0e4_f64 / k).round() / 1.0e4));
+            // The scale as a drawing writes it (call 88), from the model.
+            let scale = job.find(drawing).and_then(|e| job.world.get::<plans::Drawing>(e)).map(|d| scale_words(d, k)).unwrap_or_default();
+            let mut said = format!("{drawing}: {} is {} on its page: {scale}", distance.trim(), view::num(((to[0] - from[0]).hypot(to[1] - from[1]) * 1.0e4).round() / 1.0e4));
             if done.lined_up_again {
                 said.push_str("\n  it was lined up, and the place it was lined up by is where it was");
             }
