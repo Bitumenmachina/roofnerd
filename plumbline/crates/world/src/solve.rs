@@ -132,7 +132,7 @@ pub fn solve(job: &mut Job, roof_path: &str) -> Result<Report, String> {
     // The solved geometry rests on every entered value of the footprint: one pitch
     // changed moves every plane's outline.
     let worst = fp.edges.iter().map(|e| e.status).chain([fp.points.status]).max().unwrap_or(Status::Unknown);
-    let source = format!("solved from the footprint of {roof_path}");
+    let source = format!("worked out from the footprint of {roof_path}");
     let n = points.len();
     let edge_line = |i: usize| [points[i], points[(i + 1) % n]];
 

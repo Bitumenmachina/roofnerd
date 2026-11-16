@@ -725,7 +725,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
         }
         for r in el.rows.iter().filter(|r| r.status != Status::Known) {
             if r.label == "solved roof" {
-                s.notes.push((r.status, if r.text == "not solved" { format!("{}: not solved", el.name) } else { format!("{}: solved, with a note", el.name) }, r.note.clone()));
+                s.notes.push((r.status, if r.text == "not solved" { format!("{}: its planes could not be worked out", el.name) } else { format!("{}: worked out, with a note", el.name) }, r.note.clone()));
                 continue;
             }
             if r.derived {

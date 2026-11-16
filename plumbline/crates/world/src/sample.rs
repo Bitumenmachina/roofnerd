@@ -789,7 +789,7 @@ pub fn house_priced() -> Job {
         use crate::editing::{self as ed, Entered, Top};
         let how = || Entered { status: Status::Known, source: "sample plan S-101" };
         let level = ed::storey(&mut job, "foundation", "-4 ft", "4 ft", how()).expect(OK);
-        let strip = ed::footing_type(&mut job, "footing 24 x 12", "24 in", how()).expect(OK);
+        let strip = ed::footing_type(&mut job, "footing 24 in x 12 in", "24 in", how()).expect(OK);
         let wall = ed::wall_type(&mut job, "foundation wall, 8 in concrete", "8 in", how()).expect(OK);
         let round = [[0.0, 0.0], [40.0, 0.0], [40.0, 28.0], [0.0, 28.0]];
         for path in ed::footings(&mut job, &level, &strip, &round, true, "12 in", how()).expect(OK) {
