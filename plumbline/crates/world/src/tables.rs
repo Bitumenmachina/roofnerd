@@ -570,6 +570,9 @@ fn item_kind_said(kind: Kind) -> &'static str {
     }
 }
 
+/// What an item with no weight says of it when the library is written out.
+const WEIGHT_NOT_SAID: &str = "not said";
+
 /// The job's items as a table: the headings, then a row for each item in the order
 /// they were made. Brought back in, it gives the same items, value for value.
 pub fn items_out(job: &mut Job) -> Vec<Vec<String>> {
@@ -593,7 +596,9 @@ pub fn items_out(job: &mut Job) -> Vec<Vec<String>> {
         row.extend(text(&it.model));
         match &it.weight {
             Some(w) => row.extend([w.value.map(|x| format!("{} {}", crate::view::num(x), w.unit)).unwrap_or_default(), status_said(w.status).to_string(), w.source.clone()]),
-            None => row.extend([String::new(), String::new(), String::new()]),
+            // No weight said: written as Unknown, as a maker not chosen is, and not as
+            // three blanks (a blank "how sure" is none of the three: J25A-7).
+            None => row.extend([String::new(), status_said(Status::Unknown).to_string(), WEIGHT_NOT_SAID.to_string()]),
         }
         rows.push(row);
     }
@@ -685,6 +690,8 @@ pub fn items_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>) 
                 };
                 let weight = match cols.cell(row, "weight") {
                     "" if cols.cell(row, "weight status").is_empty() && cols.cell(row, "weight source").is_empty() => None,
+                    // As this program writes an item with no weight.
+                    "" if status_read(cols.cell(row, "weight status")) == Some(Status::Unknown) && cols.cell(row, "weight source") == WEIGHT_NOT_SAID => None,
                     cell => {
                         let (status, source) = how("weight", cell.is_empty())?;
                         let value = if cell.is_empty() {
@@ -733,8 +740,18 @@ pub fn items_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>) 
                             changed.push(what);
                         }
                     }
-                    job.put(&path, item)?;
-                    out.done.push(format!("{name}: changed: {}", changed.join(", ")));
+                    job.put(&path, item.clone())?;
+                    // What is already set down from it is as big as it says: each
+                    // follows, and how many did is said (J25A-6: a width changed in the
+                    // library left the range standing in the room at its old size, with
+                    // the screen saying "changed: its width").
+                    let followed = crate::editing::placed_follow(job, &path, name, &item)?;
+                    let also = match followed.len() {
+                        0 => String::new(),
+                        1 => "; the one set down is now that size".to_string(),
+                        n => format!("; the {n} set down are now that size"),
+                    };
+                    out.done.push(format!("{name}: changed: {}{also}", changed.join(", ")));
                 }
                 None => match crate::editing::item(job, name, item) {
                     Ok(path) => {

@@ -197,3 +197,40 @@ fn a_placed_item_is_drawn_as_its_item_says_or_as_its_name_says_or_as_its_box() {
     let bad = Item { category: Kind::Fixture, maker: unknown(), model: unknown(), width: inches(24.0), depth: inches(24.0), height: inches(36.0), weight: None, sheet: String::new(), division: None, form: Some("gazebo".into()) };
     assert!(ed::item(&mut job, "Gazebo", bad).unwrap_err().contains("drawn as: \"gazebo\" is not something a thing can be drawn as"));
 }
+
+#[test]
+fn a_thing_set_down_is_turned_a_quarter_at_a_time_and_a_fitting_is_not() {
+    // J25A-3: a panelboard set against a wall that runs north could not face the room.
+    use plumbline_world::building::{placements, Shape};
+    use plumbline_world::units::Len;
+    use plumbline_world::value::Val;
+    let mut job = Job::new("a thing turned (not a real job)", "test", "test");
+    let level = ed::storey(&mut job, "ground", "0 ft", "8 ft", KNOWN).unwrap();
+    let inches = |x: f64| Val { value: Some(Len::One(x)), unit: "in".to_string(), status: Status::Assumed, source: "a made-up catalog".to_string() };
+    let unknown = || Val::<String>::unknown("", "not chosen");
+    let item = Item { category: Kind::Equipment, maker: unknown(), model: unknown(), width: inches(15.0), depth: inches(4.0), height: inches(30.0), weight: None, sheet: String::new(), division: None, form: None };
+    let panel = ed::item(&mut job, "Panelboard", item).unwrap();
+    let placed = ed::place_item(&mut job, &level, &panel, [10.0, 6.0], "0 ft", KNOWN).unwrap();
+    let mut turned = |job: &mut Job| placements(job).0.into_iter().find(|p| p.path == placed).map(|p| match p.shape { Shape::Box { at, size, angle } => (at, size, angle), _ => panic!("not a box") }).unwrap();
+    let (at, size, angle) = turned(&mut job);
+    assert_eq!((angle, size[0], size[1]), (0.0, 1.25, 4.0 / 12.0));
+    let by_hand = || ed::Entered { status: Status::Assumed, source: "turned by hand" };
+    // A quarter: 90 degrees counter-clockwise. Where it stands and its size are as they were.
+    assert_eq!(ed::turn(&mut job, &placed, 90.0, by_hand()).unwrap(), 90.0);
+    assert_eq!(turned(&mut job), (at, size, 90.0));
+    // Four quarters come round: 180, then -90 (270 kept between -180 and 180), then 0.
+    assert_eq!(ed::turn(&mut job, &placed, 90.0, by_hand()).unwrap(), 180.0);
+    assert_eq!(ed::turn(&mut job, &placed, 90.0, by_hand()).unwrap(), -90.0);
+    assert_eq!(ed::turn(&mut job, &placed, 90.0, by_hand()).unwrap(), 0.0);
+    // How it is turned is as sure as the hand that turned it, and says so.
+    let e = job.find(&placed).unwrap();
+    let a = job.world.get::<plumbline_world::Placed>(e).unwrap().angle.clone().unwrap();
+    assert_eq!((a.status, a.source.as_str()), (Status::Assumed, "turned (turned by hand)"));
+    // Nothing and nonsense are refused; so is a wall.
+    assert!(ed::turn(&mut job, &placed, 0.0, by_hand()).is_err());
+    assert!(ed::turn(&mut job, &placed, f64::NAN, by_hand()).is_err());
+    assert!(ed::turn(&mut job, &level, 90.0, by_hand()).unwrap_err().contains("is not turned this way"));
+    // The job still reads back as it was saved.
+    let text = plumbline_world::file::save(&mut job);
+    assert_eq!(plumbline_world::file::save(&mut plumbline_world::file::load(&text).unwrap().0), text);
+}

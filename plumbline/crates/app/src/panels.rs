@@ -1170,11 +1170,12 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                         doc.say(Tone::Done, format!("{called} put down."));
                     } else {
                         doc.placing = Some(item.clone());
-                        // To 3D by the one road every change of view takes, so the eye
-                        // is brought back from a walk as it is by the view's own button
-                        // (R21-16: the view was changed here by hand).
-                        if doc.plan || doc.walk {
-                            doc.go = Some((false, false));
+                        // A thing is set down on the plan or in 3D, whichever is on
+                        // show: taking one in hand on plan threw the view to 3D without a
+                        // word (J25A-2). Only a walk is left, by the one road every change
+                        // of view takes (R21-16), to the plan or 3D it was entered from.
+                        if doc.walk {
+                            doc.go = Some((doc.plan, false));
                         }
                         doc.say(Tone::Done, format!("{called} in hand: click where one stands. Click it here again to put it down."));
                     }
@@ -1689,6 +1690,10 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             press(r, "Eave in 6 in", "[", KeyCode::BracketLeft);
             press(r, "Gable", "G", KeyCode::KeyG);
         });
+    }
+    // A thing set down is turned a quarter at a time, to face the room.
+    if matches!(el.kind, Kind::Fixture | Kind::Equipment | Kind::Furnishing) {
+        line(p, &|r| press(r, "Turn a quarter", "Q", KeyCode::KeyQ));
     }
     // A drawing is a sheet under the tracing: it has no condition, no price and no
     // material, and is offered none.

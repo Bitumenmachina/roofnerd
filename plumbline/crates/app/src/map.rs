@@ -47,7 +47,11 @@ pub fn write(
         *said = doc.message.clone();
         use std::io::Write;
         if let Ok(mut log) = std::fs::OpenOptions::new().create(true).append(true).open(format!("{file}.said")) {
-            let _ = writeln!(log, "{}", crate::panels::pretty(&crate::theme::spoken(&doc.message)).replace('\n', " | "));
+            // Line by line, as the screen writes it: a name at the head of a second
+            // line was left as the job keeps it ("fixture-0030 is one of it") where
+            // the screen read "Lavatory is one of it" (J25A, minor).
+            let lines: Vec<String> = doc.message.lines().map(crate::theme::spoken).collect();
+            let _ = writeln!(log, "{}", crate::panels::pretty(&lines.join(" | ")));
         }
     }
     let mut model = (IVec2::ZERO, Vec2::ZERO);

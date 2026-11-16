@@ -6197,6 +6197,40 @@ maker's sheet and placed, and that was all. What is there now, and what is not:
 claim on the way (that BIMCraft has no `const BOX`: it has two, in a point-cloud
 test) and the row was put right.
 
+## The twenty-fifth judgment, part A, as its notes arrive (2026-11-16, night; on 9868569)
+
+A veteran estimator on the item library, then on the money path where it changed
+after 24A. **Its report has not arrived as this is written**; these rows are from its
+notes (`j25a/NOTES.md` in the scratch folder, to be kept in `research/` when it is
+done). What it tried that held: 21 starter items by trade, a lavatory, a range and a
+panelboard found; seven things set down from four trades, each where it was clicked
+and at its size on plan (measured off the picture); a sofa, a tub, a water heater, a
+lavatory and a water closet drawn as what they are; an item's trade, what it is drawn
+as and a measured width changed on its panel; the library written out, changed by
+hand with five mistakes in it and brought back, every mistake named by its row;
+saved, closed and opened again with everything where it stood.
+
+| # | Finding | Where it stands |
+|---|---|---|
+| J25A-6 | **A width changed in the library did not reach the range already set down**, and the screen said "changed: its width"; the clash test ran on the old size | **Fixed, tested, not seen (call 107)**: what is set down follows, and the row says how many did |
+| J25A-3 | A thing set down cannot be turned: a panelboard on a north wall stands through it | **Built, tested, not seen (call 107)**: Turn a quarter, or Q. No turn by a typed angle |
+| J25A-4 | Setting a thing down into a wall says nothing; only a move does | **Built, not seen (call 107)** |
+| J25A-1 | On plan a lavatory, a water closet and a tub are white on white with no edge and no name | **Built, not seen (call 107)**: each block outlined in ink. Still not named on plan |
+| J25A-2 | Taking an item in hand on plan throws the view to 3D without a word | **Built, not seen (call 107)**: the plan stays |
+| J25A-5 | "in the same space as Bathtub, 5 ft by 1' 4"" reads as a size | **Built, not seen (call 107)**: "Bathtub, 5 ft (1' 4" into each other)" |
+| J25A-7 | An item's weight is written as three blanks: a blank "how sure" is none of the three | **Fixed, tested (call 107)**: Unknown, "not said" |
+| minor | The message log says "fixture-0030 is one of it" where the screen says "Lavatory is one of it" | **Built, not seen**: the log is written line by line as the screen is |
+| minor | The "Drawn as" list has no range, refrigerator, washer or panel: a range is a plain box | Open: PROPOSALS.md 28 |
+| minor | After Measure a width's row says "measured on site" with no tag, beside rows tagged Assumed | Left: Known is the plain one of the three everywhere; nothing marks it |
+| minor | A panelboard stands on the floor; nothing hangs it on the wall | Open: its height above its level can be measured on its panel; nothing offers a usual height |
+| minor | The Clashes switch was on before closing and off after | Left: what is on show is the window's, not the job's |
+
+From part B's notes so far (the look; its report has not arrived either): in the view
+of how sure each thing is, a roof's hips stayed orange and read as Assumed
+(J25B-15): **built, not seen**, each line there is drawn in the colour of how sure it
+is. On plan with every level on show the roof is drawn solid over the floor plan
+(J25B-3): open, it is a decision and is taken when the report is in.
+
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 315 tests pass,

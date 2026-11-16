@@ -877,9 +877,17 @@ pub fn rebuild(
                                 };
                                 let solid = if b.round { solids.cylinder.clone() } else { solids.cube.clone() };
                                 build.piece(&p.path, p.system.as_ref(), solid, Transform { translation: at, rotation: turn, scale: big }, ink, rough, metal, false);
+                                if on_plan_view {
+                                    outline_on_plan(&mut build.drawing.lines, at, turn, big, b.round);
+                                }
                             }
                         }
-                        None => build.piece(&p.path, p.system.as_ref(), solids.cube.clone(), Transform { translation: centre, rotation: turn, scale }, paint, rough, metal, false),
+                        None => {
+                            build.piece(&p.path, p.system.as_ref(), solids.cube.clone(), Transform { translation: centre, rotation: turn, scale }, paint, rough, metal, false);
+                            if on_plan_view {
+                                outline_on_plan(&mut build.drawing.lines, centre, turn, scale, false);
+                            }
+                        }
                     }
                 }
                 let h = scale / 2.0;
@@ -945,7 +953,15 @@ pub fn rebuild(
             let lift = Vec3::new(0.0, 0.05, 0.0);
             // No length: drawn broken and red, which no kind of line is.
             // A line with no length is a fault, and is always drawn.
-            let (colour, broken) = if line.length.is_none() { (theme::red(), true) } else { (theme::line_colour(line.kind), false) };
+            // In the view of how sure each thing is, a line says how sure it is and not
+            // what it is: an orange hip read as Assumed there (J25B-15).
+            let (colour, broken) = if line.length.is_none() {
+                (theme::red(), true)
+            } else if show.certainty {
+                (theme::status_ink(line.status), false)
+            } else {
+                (theme::line_colour(line.kind), false)
+            };
             if !show.ghost && broken {
                 build.drawing.lines.push((a + lift, b + lift, colour, broken));
             } else if !show.ghost {
@@ -1020,6 +1036,21 @@ pub fn rebuild(
             let (a, b) = (to_view(origin, a), to_view(origin, b));
             build.drawing.lines.push((a, b, theme::ink_soft(), true));
         }
+    }
+}
+
+/// A placed thing on plan is drawn as a plan draws it: each of its blocks outlined in
+/// ink, seen from above. (A white lavatory on white paper with no edge could not be
+/// found: J25A-1.) `at` is the block's middle, `big` its size in the view's frame.
+fn outline_on_plan(lines: &mut Vec<(Vec3, Vec3, Color, bool)>, at: Vec3, turn: Quat, big: Vec3, round: bool) {
+    let top = Vec3::Y * (big.y / 2.0 + 0.03);
+    let corners: Vec<Vec3> = if round {
+        (0..24).map(|i| (i as f32 / 24.0 * std::f32::consts::TAU).sin_cos()).map(|(sin, cos)| at + top + turn * Vec3::new(cos * big.x / 2.0, 0.0, sin * big.z / 2.0)).collect()
+    } else {
+        [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)].iter().map(|(x, z)| at + top + turn * Vec3::new(x * big.x / 2.0, 0.0, z * big.z / 2.0)).collect()
+    };
+    for i in 0..corners.len() {
+        lines.push((corners[i], corners[(i + 1) % corners.len()], theme::ink(), false));
     }
 }
 
@@ -1332,11 +1363,24 @@ fn near(feet: f64) -> String {
 /// What a thing is in the same space as, as the line along the bottom says it.
 fn in_what(snap: &Snapshot, path: &str) -> Option<String> {
     let Some(Ok(found)) = &snap.clashes else { return None };
+    said_in(found, path)
+}
+
+/// The same, worked out from the job as it stands now: the picture the window holds is
+/// a frame behind a thing just set down or turned.
+pub fn in_what_now(doc: &mut Doc, path: &str) -> Option<String> {
+    let found = plumbline_world::building::clash::clashes(&mut doc.job, None).ok()?;
+    said_in(&found, path)
+}
+
+/// Each thing `path` is in, with how far in brackets after its name: "Bathtub, 5 ft by
+/// 1' 4"" read as a size (J25A-5).
+fn said_in(found: &plumbline_world::building::clash::Clashes, path: &str) -> Option<String> {
     let with: Vec<String> = found
         .found
         .iter()
         .filter(|c| c.how == plumbline_world::building::clash::ClashKind::Hard && !c.through && (c.a == path || c.b == path))
-        .map(|c| format!("{}{}", if c.a == path { &c.b_name } else { &c.a_name }, c.by.map(|by| format!(" by {}", near(by))).unwrap_or_default()))
+        .map(|c| format!("{}{}", if c.a == path { &c.b_name } else { &c.a_name }, c.by.map(|by| format!(" ({} into each other)", near(by))).unwrap_or_default()))
         .collect();
     (!with.is_empty()).then(|| with.join(", and "))
 }
@@ -1411,7 +1455,12 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
                 let shapeless = doc.job.find(&path).and_then(|e| doc.job.world.get::<plumbline_world::Placed>(e)).filter(|p| p.size_ft().is_none()).map(|p| p.size.source.clone());
                 match shapeless {
                     Some(why) => doc.say(Tone::Warned, format!("Set one down, but it cannot be drawn or tested for clashes yet: {why}. Select it under Items and measure what is missing; this one will follow.")),
-                    None => doc.say(Tone::Done, format!("Set one down on {level_name}. Pick it up to move it: press on it and carry it.")),
+                    // Set down into a wall or another thing, it says so, as a move does
+                    // (J25A-4: only a move did).
+                    None => match in_what_now(&mut doc, &path) {
+                        Some(what) => doc.say(Tone::Refused, format!("Set one down on {level_name}. It is in the same space as {what}. Pick it up to move it: press on it and carry it. Q turns it a quarter.")),
+                        None => doc.say(Tone::Done, format!("Set one down on {level_name}. Pick it up to move it: press on it and carry it. Q turns it a quarter.")),
+                    },
                 }
             }
             Err(why) => crate::tools::cant(&mut doc, "set it down", why),

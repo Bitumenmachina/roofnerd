@@ -658,6 +658,71 @@ pub fn move_by(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -
     })
 }
 
+/// Turn a placed thing about its own point, by `degrees` counter-clockwise seen from
+/// above: a fixture, a piece of equipment or a furnishing set against a wall that runs
+/// the other way. Its size is its own (width, depth, height) and does not change; what
+/// it is turned to is as sure as `how`. Returns how far it is now turned, between
+/// −180 and 180 degrees. A fitting is not turned by hand: it lies along the run it joins.
+pub fn turn(job: &mut Job, path: &str, degrees: f64, how: Entered) -> Result<f64, String> {
+    all_or_nothing(job, |job| {
+        let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let kind = job.kind(path).ok_or_else(|| format!("{path} has no kind"))?;
+        if !degrees.is_finite() || degrees == 0.0 {
+            return Err("how far to turn it is not a figure, or is nothing".into());
+        }
+        let Some(mut p) = job.world.get::<Placed>(e).cloned() else {
+            return Err(format!("{kind:#} is not turned this way; a fixture, a piece of equipment or a furnishing is"));
+        };
+        if kind == Kind::Fitting {
+            return Err("a fitting lies along the run it joins, and is not turned by hand".into());
+        }
+        let was = p.angle_deg().ok_or_else(|| format!("how far {path} is turned is not known, so it cannot be turned from there"))?;
+        // Kept between −180 and 180, and tidy: four quarter turns are no turn at all.
+        let mut now = (was + degrees) % 360.0;
+        if now > 180.0 {
+            now -= 360.0;
+        } else if now <= -180.0 {
+            now += 360.0;
+        }
+        let now = (now * 1.0e6).round() / 1.0e6;
+        // Turned four times on one person's word, it says so once.
+        let note = format!("turned ({})", how.source);
+        let (status, source) = match &p.angle {
+            Some(a) if a.source == note => (a.status.max(how.status), note),
+            Some(a) => (a.status.max(how.status), after(&a.source, "turned", how.source)),
+            None => (how.status, note),
+        };
+        p.angle = if now == 0.0 && status == Status::Known { None } else { Some(Val { value: Some(now), unit: "deg".into(), status, source }) };
+        building::check_placed(path, kind, &p)?;
+        job.put(path, p)?;
+        Ok(now)
+    })
+}
+
+/// Every thing set down from an item is as big as the item says: after the item's
+/// sizes change, each follows. Returns the path of each that changed size.
+pub(crate) fn placed_follow(job: &mut Job, item_path: &str, item_name: &str, item: &crate::Item) -> Result<Vec<String>, String> {
+    let placed: Vec<(String, Kind, Placed)> = {
+        let mut q = job.world.query::<(&crate::Node, &Kind, &Placed)>();
+        q.iter(&job.world).filter(|(_, _, p)| p.item.as_deref() == Some(item_path)).map(|(n, k, p)| (n.path.clone(), *k, p.clone())).collect()
+    };
+    let mut followed = Vec::new();
+    for (at, k, mut p) in placed {
+        let size = match item.size_ft() {
+            Ok((feet, status, from)) => Val { value: Some(feet), unit: "ft".into(), status, source: format!("{item_name}: {from}") },
+            Err(why) => Val::unknown("ft", &format!("{item_name}: {why}")),
+        };
+        if p.size == size {
+            continue;
+        }
+        p.size = size;
+        building::check_placed(&at, k, &p)?;
+        job.put(&at, p)?;
+        followed.push(at);
+    }
+    Ok(followed)
+}
+
 /// A source after something was done to the value it stands on: where the value came
 /// from, then each thing done to it since and on whose word. It loses nothing.
 pub(crate) fn after(source: &str, done: &str, by: &str) -> String {

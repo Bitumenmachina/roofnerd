@@ -478,3 +478,39 @@ fn a_value_in_an_item_library_says_how_sure_it_is_or_the_row_is_not_used() {
     assert_eq!((sink.division.map(|d| d.number()), sink.form.as_deref(), sink.width.status, sink.width.source.as_str()), (Some(15), Some("sink"), Status::Assumed, "a made-up catalog"));
     assert_eq!(sink.maker.status, Status::Unknown);
 }
+
+#[test]
+fn a_size_changed_in_the_library_reaches_what_is_already_set_down_and_says_so() {
+    // J25A-6: a range's width changed in the written library and brought back left the
+    // range standing in the room at its old size, with the screen saying "changed".
+    use plumbline_world::building::placements;
+    use plumbline_world::editing as ed;
+    let starter: Vec<Vec<String>> = tables::STARTER_ITEMS.lines().map(cells).collect();
+    let mut job = Job::new("a library change (not a real job)", "test", "test");
+    tables::items_in(&mut job, &starter, None).unwrap();
+    let how = ed::Entered { status: Status::Known, source: "test" };
+    let level = ed::storey(&mut job, "ground", "0 ft", "8 ft", how).unwrap();
+    let range = { let mut q = job.world.query::<(&Node, &Item)>(); q.iter(&job.world).find(|(n, _)| n.name == "Range, 30 in").map(|(n, _)| n.path.clone()).unwrap() };
+    let how = ed::Entered { status: Status::Known, source: "test" };
+    let one = ed::place_item(&mut job, &level, &range, [4.0, 4.0], "0 ft", how).unwrap();
+    let how = ed::Entered { status: Status::Known, source: "test" };
+    let two = ed::place_item(&mut job, &level, &range, [12.0, 4.0], "0 ft", how).unwrap();
+    let width = |job: &mut Job, path: &str| placements(job).0.into_iter().find(|p| p.path == path).and_then(|p| match p.shape { plumbline_world::building::Shape::Box { size, .. } => Some(size[0]), _ => None });
+    assert_eq!(width(&mut job, &one), Some(2.5));
+    // 30 in becomes 32 in: 2.6667 ft. Both ranges set down follow, and the row says so.
+    let mut edited = tables::items_out(&mut job);
+    let row = edited.iter().position(|r| r[0] == "Range, 30 in").unwrap();
+    edited[row][4] = "32 in".into();
+    let brought = tables::items_in(&mut job, &edited, None).unwrap();
+    assert_eq!(brought.done, ["Range, 30 in: changed: its width; the 2 set down are now that size"]);
+    assert!((width(&mut job, &one).unwrap() - 32.0 / 12.0).abs() < 1e-9 && (width(&mut job, &two).unwrap() - 32.0 / 12.0).abs() < 1e-9);
+    // A trade changed changes no size: nothing set down is said to follow.
+    let mut edited = tables::items_out(&mut job);
+    edited[row][1] = "10 Specialties".into();
+    assert_eq!(tables::items_in(&mut job, &edited, None).unwrap().done, ["Range, 30 in: changed: its trade"]);
+    // An item with no weight is written as Unknown, not as three blanks, and comes
+    // back as the same item (J25A-7).
+    let out = tables::items_out(&mut job);
+    assert_eq!(out[row][19..22], ["".to_string(), "Unknown".to_string(), "not said".to_string()]);
+    assert_eq!(tables::items_in(&mut job, &out, None).unwrap().same, 21);
+}

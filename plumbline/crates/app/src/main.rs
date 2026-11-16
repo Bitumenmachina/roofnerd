@@ -960,6 +960,35 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
             doc.touch();
         }
     }
+    // A quarter turn of a thing set down, counter-clockwise seen from above: Q, or Turn
+    // on its panel (J25A-3: a panelboard on a wall that runs north could not face the
+    // room). On foot Q is the way down.
+    if keys.just_pressed(KeyCode::KeyQ) && !doc.walk {
+        match doc.selected.clone() {
+            None => tools::cant(doc, "turn it", "nothing is selected"),
+            Some(sel) => {
+                let name = snap.selected.as_ref().map(|s| s.name.clone()).unwrap_or_else(|| sel.clone());
+                match plumbline_world::editing::turn(&mut doc.job, &sel, 90.0, plumbline_world::editing::Entered { status: Status::Assumed, source: "turned by hand in the model" }) {
+                    Ok(now) => {
+                        doc.job.derive();
+                        doc.edit("Turn");
+                        let faces = match now.rem_euclid(360.0).round() as i32 {
+                            0 => "its width runs east and west, as it was set down",
+                            90 | 270 => "its width runs north and south",
+                            _ => "its width runs east and west, turned about",
+                        };
+                        match scene::in_what_now(doc, &sel) {
+                            Some(what) => doc.say(Tone::Refused, format!("Turned {name} a quarter: {faces}. It is in the same space as {what}.")),
+                            None => doc.say(Tone::Done, format!("Turned {name} a quarter: {faces}. It is clear of everything.")),
+                        }
+                        doc.redraw();
+                    }
+                    Err(why) => tools::cant(doc, "turn it", why),
+                }
+            }
+        }
+        doc.touch();
+    }
     if keys.just_pressed(KeyCode::KeyL) {
         match doc.selected.clone() {
             None => tools::cant(doc, "switch labor", "nothing is selected"),

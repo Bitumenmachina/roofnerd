@@ -342,17 +342,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
                 building::check_item(path, kind, &c)?;
                 job.put(path, c.clone())?;
                 if !matches!(reading, Do::Probe) {
-                    let placed: Vec<(String, Kind, Placed)> = {
-                        let mut q = job.world.query::<(&crate::Node, &Kind, &Placed)>();
-                        q.iter(&job.world).filter(|(_, _, p)| p.item.as_deref() == Some(path)).map(|(n, k, p)| (n.path.clone(), *k, p.clone())).collect()
-                    };
-                    for (at, k, mut p) in placed {
-                        p.size = match c.size_ft() {
-                            Ok((feet, status, from)) => Val { value: Some(feet), unit: "ft".into(), status, source: format!("{name}: {from}") },
-                            Err(why) => Val::unknown("ft", &format!("{name}: {why}")),
-                        };
-                        building::check_placed(&at, k, &p)?;
-                        job.put(&at, p)?;
+                    for at in super::placed_follow(job, path, &name, &c)? {
                         also.push(format!("{at} is one of it and is now that size"));
                     }
                 }

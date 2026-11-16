@@ -3750,3 +3750,56 @@ Two of the twenty-fourth judge's open rows, each a change to what a person reads
 Built, tests pass (no test holds either: both are words in the window). **Not seen
 in the window yet**: two judges were driving windows on the machine when it was
 built.
+
+### Call 107. What the twenty-fifth judge found on the item library, as it wrote it (2026-11-16, night)
+
+Part A of the twenty-fifth judgment is a veteran on the item library Patrick asked
+for. These were fixed from its notes while it was still at work on the money path;
+its report is recorded in STATUS.md when it arrives.
+
+- **J25A-6 (silent, the serious one). A size changed in the library did not reach the
+  thing already set down**, while the screen said "changed: its width": the range in
+  the room kept its 30 in, and the clash test ran on the old size. Measure on the
+  item's panel did carry a new size to what stood. Decided: **one rule, whichever way
+  an item changes: what is set down from it is as big as it says.** Bringing a
+  library in now carries a changed size to every one set down and says how many
+  ("Range, 30 in: changed: its width; the one set down is now that size"). One
+  function does it for both roads (`editing::placed_follow`).
+- **J25A-3 (stuck). A thing set down could not be turned.** A panelboard on a wall
+  that runs north stood with its width through the wall. Now: Turn a quarter on its
+  panel, or Q (on foot Q is still the way down): 90 degrees counter-clockwise seen
+  from above, about its own point; its size is its own and does not change; how it is
+  turned is Assumed, "turned by hand in the model". It says which way its width now
+  runs and what it is in the same space as, or that it is clear. Ported from
+  BIMCraft's `rotate` (PORTMAP.md): the turn about the thing's own point is taken;
+  about another point, walls and runs, several at once and a copy are not. A turn by
+  a typed angle is not in the window.
+- **J25A-4 (silent). Setting a thing down into a wall said nothing**; only a move
+  did. A thing set down now says what it is in the same space as, in the tone a
+  refusal has, worked out from the job as it stands.
+- **J25A-5 (words).** "in the same space as Bathtub, 5 ft by 1' 4"" read as a size.
+  How far two things are into each other goes in brackets after the name: "Bathtub,
+  5 ft (1' 4" into each other)".
+- **J25A-1 (look). Plumbing fixtures on plan were white on white paper**, with no
+  edge. Every block of a placed thing is outlined in ink on plan, as a plan draws a
+  fixture. They are still not named on plan.
+- **J25A-2 (look). Taking an item in hand on plan threw the view to 3D.** A thing is
+  set down on the plan or in 3D, whichever is on show; only a walk is left.
+- **J25A-7 (silent, minor). An item with no weight was written as three blanks.** It
+  is written Unknown, "not said", as a maker not chosen is written, and read back as
+  the same item. `library/items.csv` says so on every row; it still goes out and
+  comes back the same to the byte.
+- **The message log** wrote a thing's kept name where the screen wrote its own
+  ("fixture-0030 is one of it"): the log is now written line by line as the screen
+  is.
+- From part B's notes, **J25B-15**: in the view of how sure each thing is, a roof's
+  hips stayed orange and read as Assumed. There each line of a roof is drawn in the
+  colour of how sure it is.
+
+Tests: `a_size_changed_in_the_library_reaches_what_is_already_set_down_and_says_so`,
+`a_thing_set_down_is_turned_a_quarter_at_a_time_and_a_fitting_is_not`. 317 pass.
+**None of it has been seen in the window**: both judges were driving windows on the
+machine. Not taken up from the notes so far: the "Drawn as" list has no range,
+refrigerator, washer or panel (they are boxes: PROPOSALS.md 28); a panelboard stands
+on the floor, nothing hangs it on a wall at a height (its height above the level can
+be measured on its panel); the switches under Show are not kept with the job.
