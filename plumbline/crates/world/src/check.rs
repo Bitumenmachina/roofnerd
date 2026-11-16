@@ -491,12 +491,20 @@ pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
 /// Whether two names are the same but for capitals, spacing and a full stop at the end:
 /// "Copper, 16 oz", "copper,16 OZ" and "Copper, 16 oz." are one name.
 pub fn same_name(a: &str, b: &str) -> bool {
+    plain_name(a) == plain_name(b)
+}
+
+/// A name as `same_name` compares it: two names are one where these are equal. For
+/// looking many names up at once (a price list of thousands of rows) without working
+/// each pair out again.
+pub fn plain_name(name: &str) -> String {
     // What parts words is not part of the name: a comma, a hyphen, a full stop, a run of
     // spaces. A stroke stays (1/2), and so does a point or a comma between two figures
     // (1.5, 1,200). A figure and the letters beside it are two words: "16oz" is "16 oz"
     // and "2x4" is "2 x 4". So "Copper, 16 oz", "copper 16oz." and "COPPER-16 OZ" are one
     // name; "Pipe 1 1/2 in" and "Pipe 11/2 in" are two, and so are "a.b" and "ab".
-    let plain = |s: &str| {
+    {
+        let s = name;
         let chars: Vec<char> = s.to_lowercase().chars().collect();
         let mut out = String::new();
         for (i, c) in chars.iter().enumerate() {
@@ -516,8 +524,7 @@ pub fn same_name(a: &str, b: &str) -> bool {
             }
         }
         out.split_whitespace().collect::<Vec<_>>().join(" ")
-    };
-    plain(a) == plain(b)
+    }
 }
 
 /// Whether a unit is the hour, or any other measure of time, however it is written: a

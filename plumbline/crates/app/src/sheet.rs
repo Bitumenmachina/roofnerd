@@ -808,14 +808,17 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             if !its.is_empty() {
                 let (said, status) = match d.total.value {
                     Some(x) => (format!("${}", view::figure(x, 2)), d.total.status),
-                    None => ("none".to_string(), Status::Known),
+                    // It has lines and none of them comes to a figure: "no figure", in
+                    // the colour of something not known, as By division above and the
+                    // command line say it (R21-11: it read "none", as if it had no work).
+                    None => ("no figure".to_string(), Status::Unknown),
                 };
                 ordered.push((format!("Division {}  {}", d.division.number(), d.division.title()), said, status, its));
             }
         }
         let undivided: Vec<&view::SheetLine> = est.lines.iter().filter(|l| l.division.is_none()).collect();
         if !undivided.is_empty() {
-            ordered.push(("No division".to_string(), est.no_division.value.map(|x| format!("${}", view::figure(x, 2))).unwrap_or_default(), Status::Unknown, undivided));
+            ordered.push(("No division".to_string(), est.no_division.value.map(|x| format!("${}", view::figure(x, 2))).unwrap_or_else(|| "no figure".to_string()), Status::Unknown, undivided));
         }
         for (heading, said, status, its) in &ordered {
         t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(5.0)), border: UiRect::bottom(px(1.0)), ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::hairline()))).with_children(|r| {
@@ -1083,11 +1086,12 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
             cell(r, 0.0, false, |c| match pricing.both {
                 None => words(c, fonts, "Like for like: nothing has both an allowance and a whole detail", 12.5, Weight::Regular, theme::ink_soft()),
                 Some(((a, _), (d, _), status, n)) => {
-                    let diff = plumbline_world::lines::cents(d - a);
+                    // The difference and the percentage are the model's (`like_for_like`).
+                    let (diff, percent) = pricing.like_for_like().unwrap_or((0.0, None));
                     let said = if diff == 0.0 {
                         "the detail is the same".to_string()
                     } else {
-                        let pct = if a != 0.0 { format!(" ({} %)", view::figure(diff / a * 100.0, 2)) } else { String::new() };
+                        let pct = percent.map(|p| format!(" ({} %)", view::figure(p, 2))).unwrap_or_default();
                         format!("the detail is ${} {}{pct}", view::figure(diff.abs(), 2), if diff > 0.0 { "over" } else { "under" })
                     };
                     words(c, fonts, format!("Like for like, over the {n} with both: allowances ${}, detail ${}: {said}", view::figure(a, 2), view::figure(d, 2)), 12.5, Weight::Medium, theme::status_ink(status))

@@ -261,9 +261,16 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
     all_or_nothing(job, |job| {
         let mut out = Brought { rows: rows.len().saturating_sub(cols.row + 1), columns_not_used: cols.not_used.clone(), above: cols.row, ..Brought::default() };
         // The materials the job has, and the suppliers, as the job names them.
-        let mut materials: Vec<(String, String)> = {
+        // Each by its name as two names are compared (`check::plain_name`), worked once:
+        // a row finds its material in one look, not by going through every material
+        // (M21-9: a list of 4,000 rows took a minute and a half).
+        let mut by_plain: std::collections::HashMap<String, String> = {
             let mut q = job.world.query::<(&Node, &Kind)>();
-            q.iter(&job.world).filter(|(_, k)| **k == Kind::Material).map(|(n, _)| (n.name.clone(), n.path.clone())).collect()
+            let mut found = std::collections::HashMap::new();
+            for (n, _) in q.iter(&job.world).filter(|(_, k)| **k == Kind::Material) {
+                found.entry(check::plain_name(&n.name)).or_insert_with(|| n.path.clone());
+            }
+            found
         };
         let mut suppliers: Vec<String> = {
             let mut q = job.world.query::<&Supply>();
@@ -345,12 +352,13 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
             };
             let whose = whose.map(|w| suppliers.iter().find(|known| check::same_name(known, &w)).cloned().unwrap_or(w));
             // The material, by its name however it is typed.
-            let path = match materials.iter().find(|(known, _)| check::same_name(known, name)) {
-                Some((_, path)) => path.clone(),
-                None if add => match job.add_material(name, &unit) {
+            let plain = check::plain_name(name);
+            let path = match by_plain.get(&plain) {
+                Some(path) => path.clone(),
+                None if add => match job.add_material_not_there(name, &unit) {
                     Ok(path) => {
                         out.done.push(format!("{name}: added, bought by the {unit}"));
-                        materials.push((name.to_string(), path.clone()));
+                        by_plain.insert(plain, path.clone());
                         path
                     }
                     Err(why) => {

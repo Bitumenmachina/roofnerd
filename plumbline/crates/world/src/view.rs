@@ -512,6 +512,18 @@ pub struct Pricing {
     pub not_priced: Vec<(Kind, usize)>,
 }
 
+impl Pricing {
+    /// Like for like, worked here and nowhere else: over the elements that have both,
+    /// the detail less the allowances to the cent (over is above nought), and that as
+    /// a percentage of the allowances (None where they add to nothing). Each window
+    /// worked these out for itself before (R21-10, M21-13).
+    pub fn like_for_like(&self) -> Option<(f64, Option<f64>)> {
+        let ((allowance, _), (detail, _), _, _) = self.both?;
+        let difference = crate::lines::cents(detail - allowance);
+        Some((difference, (allowance != 0.0).then(|| difference / allowance * 100.0)))
+    }
+}
+
 /// A count with its thing, said as a person says it: "1 line", "3 lines", "0 doors".
 /// For a thing whose plural only adds an s.
 pub fn so_many(n: usize, one: &str) -> String {

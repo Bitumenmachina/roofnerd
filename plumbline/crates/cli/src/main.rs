@@ -441,12 +441,13 @@ fn price(job: &mut plumbline_world::Job) -> String {
             // worse of the two.
             let (fa, fd) = (a.1.flag().trim_end().to_string(), d.1.flag().trim_end().to_string());
             let (a, d) = (a.0, d.0);
-            let diff = plumbline_world::lines::cents(d - a);
+            // The difference and the percentage are the model's (`like_for_like`).
+            let (diff, percent) = p.like_for_like().unwrap_or((0.0, None));
             let flag = status.flag().trim_end();
             let said = if diff == 0.0 {
                 format!("the detail is {flag}the same")
             } else {
-                let pct = if a != 0.0 { format!(" ({flag}{} %)", view::figure(diff / a * 100.0, 2)) } else { String::new() };
+                let pct = percent.map(|x| format!(" ({flag}{} %)", view::figure(x, 2))).unwrap_or_default();
                 format!("the detail is {flag}{} {}{pct}", money(diff.abs()), if diff > 0.0 { "over" } else { "under" })
             };
             let _ = writeln!(out, "  like for like, over the {n} element{} that have both: allowances {fa}{}, detail {fd}{}: {said}", if n == 1 { "" } else { "s" }, money(a), money(d));

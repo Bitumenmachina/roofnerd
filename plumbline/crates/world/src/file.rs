@@ -291,7 +291,7 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
         }
     }
 
-    let mut job = Job { header: root.header, world: bevy_ecs::world::World::new(), order: Vec::new(), imports: root.imports, schemas: root.schemas, extra: root.extra };
+    let mut job = Job { header: root.header, world: bevy_ecs::world::World::new(), order: Vec::new(), imports: root.imports, schemas: root.schemas, extra: root.extra, found: std::collections::HashMap::new() };
     for k in KNOWN_KEYS {
         // Ours are rewritten on save; do not keep a stale copy.
         if job.schemas.get(k) == Some(&json!({ "value": { "dataType": if k == K_CLASS { "String" } else { "Object" } } })) {

@@ -40,6 +40,10 @@ pub struct Job {
     pub imports: Vec<serde_json::Value>,
     pub schemas: BTreeMap<String, serde_json::Value>,
     pub extra: BTreeMap<String, serde_json::Value>,
+    /// Where each path was last found, so that finding a thing is not a reading of the
+    /// whole job (M21-9). Never trusted: `find` checks what it holds against the job
+    /// and looks again where it is wrong, so nothing has to keep it up to date.
+    pub(crate) found: HashMap<String, Entity>,
 }
 
 /// The moment now by the machine's clock, as a file's heading writes it:
@@ -75,6 +79,7 @@ impl Job {
             imports: Vec::new(),
             schemas: BTreeMap::new(),
             extra: BTreeMap::new(),
+            found: HashMap::new(),
         };
         let id = job.world.spawn((Node::new("job-0001", "job-0001", None), Kind::Job, JobInfo { title: title.into(), length_unit: U_LENGTH.into(), next_id: 2 })).id();
         job.order.push(id);
@@ -91,7 +96,17 @@ impl Job {
     }
 
     pub fn find(&mut self, path: &str) -> Option<Entity> {
-        self.index().get(path).copied()
+        // Where it was last found, if it is still there and still that.
+        if let Some(&e) = self.found.get(path) {
+            if self.world.get::<Node>(e).is_some_and(|n| n.path == path) {
+                return Some(e);
+            }
+            self.found.remove(path);
+        }
+        let mut q = self.world.query::<(Entity, &Node)>();
+        let e = q.iter(&self.world).find(|(_, n)| n.path == path).map(|(e, _)| e)?;
+        self.found.insert(path.to_string(), e);
+        Some(e)
     }
 
     pub fn kind(&mut self, path: &str) -> Option<Kind> {
@@ -114,7 +129,11 @@ impl Job {
         if self.find(parent).is_none() {
             return Err(format!("no element {parent} to add under"));
         }
-        if self.children().get(parent).is_some_and(|c| c.contains_key(name)) {
+        let taken = {
+            let mut q = self.world.query::<&Node>();
+            q.iter(&self.world).any(|n| n.parent.as_deref() == Some(parent) && n.name == name)
+        };
+        if taken {
             let root = self.root();
             let at = self.find(parent).filter(|e| *e != root).and_then(|e| self.world.get::<Node>(e)).map(|n| format!("under {}", n.name)).unwrap_or_else(|| "in the job".to_string());
             return Err(format!("there is already something called \"{name}\" {at}: two things in one place cannot go by one name"));
@@ -122,13 +141,17 @@ impl Job {
         let root = self.root();
         // A path number is never given out twice, whatever the counter says: the next
         // number is past every number already in use.
-        let highest = self.index().keys().filter_map(|p| p.rsplit('-').next()?.parse::<u32>().ok()).max().unwrap_or(0);
+        let highest = {
+            let mut q = self.world.query::<&Node>();
+            q.iter(&self.world).filter_map(|n| n.path.rsplit('-').next()?.parse::<u32>().ok()).max().unwrap_or(0)
+        };
         let mut info = self.world.get_mut::<JobInfo>(root).ok_or("the job element carries no job information")?;
         let number = info.next_id.max(highest.checked_add(1).ok_or("the job has run out of path numbers")?);
         info.next_id = number.checked_add(1).ok_or("the job has run out of path numbers")?;
         let path = format!("{}-{:04}", kind.stem(), number);
         let id = self.world.spawn((Node::new(&path, name, Some(parent)), kind)).id();
         self.order.push(id);
+        self.found.insert(path.clone(), id);
         Ok(path)
     }
 
@@ -317,11 +340,18 @@ impl Job {
     /// A new material, bought and priced by `unit` (lb, sheet, SF). Its price is Unknown
     /// until it is entered. Returns its path.
     pub fn add_material(&mut self, name: &str, unit: &str) -> Result<String, String> {
-        let root = self.world.get::<Node>(self.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
+        let plain = check::plain_name(name);
         let mut q = self.world.query::<(&Node, &Kind)>();
-        if let Some((known, _)) = q.iter(&self.world).find(|(n, k)| **k == Kind::Material && check::same_name(&n.name, name)) {
+        if let Some((known, _)) = q.iter(&self.world).find(|(n, k)| **k == Kind::Material && check::plain_name(&n.name) == plain) {
             return Err(format!("the job already has a material called {:?}", known.name));
         }
+        self.add_material_not_there(name, unit)
+    }
+
+    /// The same, for a caller that has already found that the job has no material of
+    /// this name (a price list keeps every name it has seen, and asks once a row).
+    pub(crate) fn add_material_not_there(&mut self, name: &str, unit: &str) -> Result<String, String> {
+        let root = self.world.get::<Node>(self.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
         let supply = Supply { order: None, price: Val::unknown(&format!("$/{unit}"), "no price entered"), quotes: BTreeMap::new() };
         check::supply("the new material", Kind::Material, &supply)?;
         let path = self.add(&root, Kind::Material, name)?;
