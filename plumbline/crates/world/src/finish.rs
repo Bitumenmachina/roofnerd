@@ -254,7 +254,7 @@ pub struct Dress {
     /// Rooms with base priced on them ("Base and trim", "baseboard"): the level each
     /// is on, and its outline at the faces of its walls, counter-clockwise, in feet.
     /// The base runs along that outline.
-    pub base: HashMap<String, (Option<String>, Vec<[f64; 2]>)>,
+    pub base: HashMap<String, Base>,
 }
 
 // ---- Reading a line ----
@@ -618,6 +618,63 @@ fn first_and_also<T: Copy + PartialEq>(named: impl Iterator<Item = (T, Option<To
 }
 
 /// Read every finish in the job.
+/// The base in one room: the level it is on, the room's outline at the faces of its
+/// walls (counter-clockwise, in feet), and the lengths of base along it, each from one
+/// point on the plan to another, with nothing across a door. Worked here, so that what
+/// is drawn and what is said of it are one figure (R21-26: the window worked the cuts
+/// at doors out for itself).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Base {
+    pub storey: Option<String>,
+    pub outline: Vec<[f64; 2]>,
+    pub runs: Vec<[[f64; 2]; 2]>,
+}
+
+impl Base {
+    /// How much base is drawn, in LF.
+    pub fn length(&self) -> f64 {
+        self.runs.iter().map(|[a, b]| (b[0] - a[0]).hypot(b[1] - a[1])).sum()
+    }
+}
+
+/// The base along a room's outline, left out across each door: `doors` are the doors of
+/// the room's level, each as its two ends on the plan (on its wall's centre line) and how
+/// far either side of that line its wall reaches. A door takes what lies between its
+/// ends out of an edge of the outline that runs along its wall.
+pub fn base_runs(outline: &[[f64; 2]], doors: &[([f64; 2], [f64; 2], f64)]) -> Vec<[[f64; 2]; 2]> {
+    let mut out = Vec::new();
+    for (i, e0) in outline.iter().enumerate() {
+        let e1 = outline[(i + 1) % outline.len()];
+        let len = (e1[0] - e0[0]).hypot(e1[1] - e0[1]);
+        if len < 0.05 {
+            continue;
+        }
+        let d = [(e1[0] - e0[0]) / len, (e1[1] - e0[1]) / len];
+        let mut cuts: Vec<(f64, f64)> = doors
+            .iter()
+            .filter_map(|(p0, p1, reach)| {
+                let off = |p: &[f64; 2]| ((p[0] - e0[0]) * d[1] - (p[1] - e0[1]) * d[0]).abs();
+                let at = |p: &[f64; 2]| (p[0] - e0[0]) * d[0] + (p[1] - e0[1]) * d[1];
+                (off(p0) <= *reach && off(p1) <= *reach).then(|| (at(p0).min(at(p1)), at(p0).max(at(p1))))
+            })
+            .filter(|(t0, t1)| *t1 > 0.0 && *t0 < len)
+            .collect();
+        cuts.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let mut from = 0.0;
+        let at = |t: f64| [e0[0] + d[0] * t, e0[1] + d[1] * t];
+        for (t0, t1) in cuts {
+            if t0 > from + 0.05 {
+                out.push([at(from), at(t0)]);
+            }
+            from = from.max(t1);
+        }
+        if len > from + 0.05 {
+            out.push([at(from), at(len)]);
+        }
+    }
+    out
+}
+
 pub fn dress(job: &mut Job) -> Dress {
     let mut out = Dress::default();
     let (placed, _) = building::placements(job);
@@ -766,7 +823,22 @@ pub fn dress(job: &mut Job) -> Dress {
                 if on.iter().any(|(text, _)| base_in(text)) {
                     if let Some(outline) = outlines.get(&path) {
                         let storey = job.world.get::<Node>(e).and_then(|n| n.parent.clone());
-                        out.base.insert(path, (storey, outline.clone()));
+                        // The doors of the room's level: each one's two ends on the plan,
+                        // and half its wall's thickness and a little, either side.
+                        let doors: Vec<([f64; 2], [f64; 2], f64)> = placed
+                            .iter()
+                            .filter(|p| p.kind == Kind::Wall && p.storey == storey)
+                            .flat_map(|p| match &p.shape {
+                                building::Shape::Wall { a, b, thickness, holes, .. } => {
+                                    let l = (b[0] - a[0]).hypot(b[1] - a[1]).max(1e-9);
+                                    let u = [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
+                                    holes.iter().filter(|h| h.1 == Kind::Door).map(|h| ([a[0] + u[0] * h.2[0], a[1] + u[1] * h.2[0]], [a[0] + u[0] * h.2[1], a[1] + u[1] * h.2[1]], thickness / 2.0 + 0.1)).collect::<Vec<_>>()
+                                }
+                                _ => Vec::new(),
+                            })
+                            .collect();
+                        let runs = base_runs(outline, &doors);
+                        out.base.insert(path, Base { storey, outline: outline.clone(), runs });
                     }
                 }
             }
@@ -925,8 +997,9 @@ pub fn report(job: &mut Job) -> Vec<String> {
                 }
             },
             Kind::Room => {
-                if d.base.contains_key(&node.path) {
-                    out.push(format!("{name}: base at the foot of its walls"));
+                if let Some(base) = d.base.get(&node.path) {
+                    // How much of it is drawn: the room's outline less its doors.
+                    out.push(format!("{name}: base at the foot of its walls, {} LF of it, with none across a door", crate::view::figure(base.length(), 2)));
                 }
             }
             k if k.is_area() => match d.roofs.get(&node.path) {
@@ -1219,5 +1292,24 @@ mod tests {
         ] {
             assert_eq!(height_in(text), want, "{text}");
         }
+    }
+    /// The base runs along a room's outline and is left out across a door (worked here
+    /// and drawn from this: R21-26). A room 10 ft by 10 ft inside, a 3 ft door in its
+    /// south wall from 4 ft to 7 ft: 4 + 3 on the south edge and three whole edges,
+    /// 37 LF, in five lengths. A door in a wall that is not the room's takes nothing.
+    #[test]
+    fn base_is_left_out_across_a_door() {
+        let room = [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]];
+        // The door's ends on its wall's centre line, 3 in outside the room's face.
+        let south_door = ([4.0, -0.25], [7.0, -0.25], 0.35);
+        let runs = base_runs(&room, &[south_door]);
+        assert_eq!(runs.len(), 5, "{runs:?}");
+        let base = Base { storey: None, outline: room.to_vec(), runs };
+        assert!((base.length() - 37.0).abs() < 1.0e-9, "{}", base.length());
+        // No door: the whole outline, 40 LF.
+        assert!((Base { storey: None, outline: room.to_vec(), runs: base_runs(&room, &[]) }.length() - 40.0).abs() < 1.0e-9);
+        // A door in another room's wall, 6 ft away: nothing is taken out.
+        let far = ([4.0, -6.0], [7.0, -6.0], 0.35);
+        assert_eq!(base_runs(&room, &[far]).len(), 4);
     }
 }
