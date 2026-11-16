@@ -6436,8 +6436,9 @@ it was cut off or its report was not recorded: the brief can be given again.
    1 of Main roof ..."; an allowance of "-12" is refused and its field is still open;
    in the Known, Assumed, Unknown view the roof and its lines are amber, with no
    orange hip; on the plan of the level the roof sits on, a click inside a plane's
-   outline says "Selected plane 1" and opens its panel (the plane picked is not
-   marked on the plan: its broken lines are all one colour); Starter items pressed a
+   outline says "Selected plane 1" and opens its panel (the plane picked was not
+   marked on the plan; **built since and not seen**: a plane has its outline there,
+   so one picked is marked as anything selected is); Starter items pressed a
    second time says "The starter items are already in this job, and each was left as
    it is here."
 3. **The item library, to be one a person keeps** (the twenty-fifth judge, part A):

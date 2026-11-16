@@ -1049,6 +1049,14 @@ pub fn rebuild(
             let (a, b) = (to_view(origin, a), to_view(origin, b));
             build.drawing.lines.push((a, b, theme::ink_soft(), true));
         }
+        // A plane has its outline here too, so that one picked on the plan (a click
+        // inside it) is marked as anything selected is: it was picked and its panel
+        // opened, with nothing on the plan to say which plane it was.
+        for info in &snap.planes {
+            let Some(plane) = &info.solid else { continue };
+            let at: Vec<Vec3> = plane.points.iter().map(|p| to_view(origin, [p[0], p[1], plane.height_at(*p)]) + Vec3::Y * 0.06).collect();
+            build.drawing.frames.push((info.path.clone(), (0..at.len()).map(|i| (at[i], at[(i + 1) % at.len()])).collect()));
+        }
     }
 }
 
