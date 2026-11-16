@@ -305,6 +305,8 @@ the tree while a timed window demonstration is running; build in a scratch workt
 | a drawing tool (wall, door, run, move), its fields, what typing does | `crates/app/src/tools.rs`, and the entry state in `crates/app/src/main.rs` |
 | the patterns the house is dressed in (brick, lap siding, shingles) | `crates/app/src/dress.rs`; what finish a priced line names: `crates/world/src/finish.rs` |
 | the sun, the sky's light, how the range of light is folded to the screen | `crates/app/src/scene.rs` (`SKY_LIGHT`, `SUN_LIGHT`, `SUN_COLOUR`, `FOLD`), `crates/app/src/skylight.rs` (the two pictures the sky lights the house from) |
+| what a placed thing is drawn as (a tub, a sink, a water heater: by a word in its name) | `crates/world/src/building/forms.rs` (ten forms are BIMCraft's, three ours); drawn in `scene.rs`; DECISIONS.md call 102 |
+| which panels are on screen, and their switches at the lower right | `crates/app/src/panels.rs` (`panels_on`, `status_line`); a panel's "more below" strip: `more_below` |
 | a footing (a strip footing is held as a wall is, and is never counted as one) | `crates/world/src/building.rs` (search `Kind::Footing`), `editing.rs` (`footings`); DECISIONS.md call 70 |
 | how a wall's frame is laid out; what a framing line names | `crates/world/src/building/framing.rs`; drawn in `scene.rs` behind the Framing switch; call 71 |
 | bringing a file in from the window | `crates/app/src/bring.rs`, `crates/app/src/plans.rs` |
@@ -341,6 +343,11 @@ different size without a word (J18-1, J18-2). Walk the path a stranger walks, no
 path you know. And the look was built to a written rule and judged against that rule
 rather than against whether anyone would want to open it. Patrick's test is his own
 eyes: when he says he does not see it, it is not there.
+
+**A control on a bar that does not scroll** (the top bar, the status line) is given
+`Named { scrolls: false }`. With `scrolls: true` the map leaves it out as "scrolled
+off its panel" and no script can click it (the three panel switches were built that
+way first and were on screen and not on the map).
 
 **Running several window demonstrations in a row.** Each one builds the program
 before it starts, so work in the tree changes the program under a long run (it broke
