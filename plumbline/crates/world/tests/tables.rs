@@ -526,7 +526,8 @@ fn a_named_suppliers_list_prices_what_the_job_has_no_price_for_and_writes_over_n
     job.set_on_line(&wall, "unit_cost", Some("Weather barrier"), Some("$0.30/SF"), Status::Assumed, "made up").unwrap();
     job.derive();
     // The list is brought in as a named supplier's, as a person in the window does.
-    let list = rows(&[&["item", "unit", "price"], &["Lap siding", "SF", "4.25"], &["Weather barrier", "SF", "0.25"]]);
+    // A third row is spelled as no line is: it is added as a material and prices nothing.
+    let list = rows(&[&["item", "unit", "price"], &["Lap siding", "SF", "4.25"], &["Weather barrier", "SF", "0.25"], &["Fiberglass batts R-21", "SF", "0.85"]]);
     let how = || Entered { status: Status::Assumed, source: "a made-up list" };
     let brought = tables::prices_in(&mut job, &list, None, Some("Harbor Supply"), true, Some(how())).unwrap();
     job.derive();
@@ -542,6 +543,7 @@ fn a_named_suppliers_list_prices_what_the_job_has_no_price_for_and_writes_over_n
     // The barrier's line had a price and keeps it: 329.99 x 0.30 = $99.00.
     assert_eq!(line("Weather barrier").amount.value, Some(99.0));
     assert!(brought.notes.iter().any(|n| n.contains("\"Weather barrier\" on south wall keeps $0.30/SF (the list says $0.25/SF)")), "{:?}", brought.notes);
+    assert!(brought.notes.iter().any(|n| n == "1 of this list's items prices nothing on the job yet (no cost line is named as it, and nothing is made of it): Fiberglass batts R-21"), "{:?}", brought.notes);
     // A second supplier's list, dearer: the job's price and the line's stay; the quote
     // stands beside the first.
     let dearer = rows(&[&["item", "unit", "price"], &["Lap siding", "SF", "4.60"]]);

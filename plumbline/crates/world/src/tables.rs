@@ -531,12 +531,45 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
                 }
             }
         }
+        // What the list names that prices nothing: an item no cost line is named as and
+        // nothing is made of. An estimator needs it said: a name spelled another way
+        // on the list looks like any other row "added" (J25A-12: a renamed batt
+        // insulation was added and not said to match nothing).
+        let idle: Vec<String> = {
+            let mut named: std::collections::HashSet<String> = std::collections::HashSet::new();
+            let mut q = job.world.query::<&crate::Cost>();
+            for cost in q.iter(&job.world) {
+                named.extend(cost.lines.iter().map(|l| check::plain_name(&l.description)));
+            }
+            let mut q = job.world.query::<&crate::MadeOf>();
+            let made: std::collections::HashSet<String> = q.iter(&job.world).filter_map(|m| m.0.value.as_deref().map(check::plain_name)).collect();
+            let mut idle: Vec<(usize, String)> = by_plain
+                .iter()
+                .filter(|(plain, _)| !named.contains(*plain) && !made.contains(*plain))
+                .filter_map(|(_, path)| {
+                    let row = priced.iter().find(|(p, _, _, _)| p == path)?.2;
+                    job.find(path).and_then(|e| job.world.get::<Node>(e)).map(|n| (row, n.name.clone()))
+                })
+                .collect();
+            idle.sort();
+            idle.into_iter().map(|(_, name)| name).collect()
+        };
         // The lines priced are said first: they are what the list did to the estimate
         // (J25A-12: they were last, behind "and 16 more").
         out.done.splice(0..0, took);
         let shown = |all: &[String]| if all.len() > 4 { format!("{}, and {} more", all[..4].join("; "), all.len() - 4) } else { all.join("; ") };
         if !kept.is_empty() {
             out.notes.push(format!("{} named as an item on the list had a price and {}: {}. To take the list's, type it on the line", crate::view::so_many(kept.len(), "cost line"), if kept.len() == 1 { "keeps it" } else { "keep it" }, shown(&kept)));
+        }
+        if !idle.is_empty() {
+            out.notes.push(format!(
+                "{} of this list's items {} nothing on the job yet (no cost line is named as {}, and nothing is made of {}): {}",
+                idle.len(),
+                if idle.len() == 1 { "prices" } else { "price" },
+                if idle.len() == 1 { "it" } else { "one" },
+                if idle.len() == 1 { "it" } else { "one" },
+                shown(&idle)
+            ));
         }
         if !other_unit.is_empty() {
             out.notes.push(format!("{} named as an item on the list {} priced by another unit and {} not touched: {}", crate::view::so_many(other_unit.len(), "cost line"), if other_unit.len() == 1 { "is" } else { "are" }, if other_unit.len() == 1 { "was" } else { "were" }, shown(&other_unit)));

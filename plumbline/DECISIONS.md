@@ -3831,6 +3831,10 @@ Decided:
   list says another, both are said.
 - **The lines priced are said first**, ahead of the materials added: they are what
   the list did to the estimate, and were behind "and 16 more".
+- **What the list names that prices nothing is said**: an item no cost line is named
+  as and nothing is made of ("1 of this list's items prices nothing on the job yet
+  ...: Fiberglass batts R-21"). A name spelled another way on the list was added as
+  a material like any other row, with nothing to say it matched no line.
 
 Test: `a_named_suppliers_list_prices_what_the_job_has_no_price_for_and_writes_over_nothing`.
 318 tests pass; the twenty-one command-line demonstrations pass and none of their
