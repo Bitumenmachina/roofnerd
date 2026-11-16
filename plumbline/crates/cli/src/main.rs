@@ -1572,7 +1572,7 @@ fn lines(job: &mut plumbline_world::Job) -> String {
 }
 
 fn say_solve(report: &solve::Report) {
-    say!("  {} planes, {} lines", report.planes, report.lines);
+    say!("  {}; {} eaves, rakes, hips, valleys and ridges round and between them", view::so_many(report.planes, "plane"), report.lines);
     if !report.added.is_empty() {
         say!("  new: {}", report.added.join(", "));
     }
@@ -1910,8 +1910,12 @@ fn draw(args: &[String]) -> Result<(), String> {
             out
         }
         ("remove", [element]) => {
+            let before = view::estimate(&mut job);
             let gone = ed::remove(&mut job, element)?;
-            format!("removed {}", gone.join(", "))
+            match view::went_with_said(&before, &mut job) {
+                Some(went) => format!("removed {}\n  {went}", gone.join(", ")),
+                None => format!("removed {}", gone.join(", ")),
+            }
         }
         ("split", [run]) => {
             let (status, source) = how(&status, &source)?;

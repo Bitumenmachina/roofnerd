@@ -449,18 +449,77 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
         on!(InSystem, |c: &InSystem| building::check_in_system(path, kind, c), |c| if what == "system" { Some(Slot::Other(&mut c.0)) } else { None });
         // The roof's own lengths.
         on!(Height, |c: &Height| check::height(path, kind, c), |c| if what == "height" { Some(Slot::Length(&mut c.0)) } else { None });
-        // A plane solved from its roof's footprint has the roof's eave height: what is put
-        // on the plane is lost the next time the roof is solved. It is the roof's to set.
-        if what == "eave height" && job.world.get::<Solved>(e).is_some() {
-            if matches!(reading, Do::Probe) {
-                return Ok(None);
+        // A drawing's scale was read off the sheet, and every figure traced over it rests
+        // on that. One dimension of the building taped on site and found to be what the
+        // sheet says settles it: the dimension the scale was set from is then Known.
+        // Where the sheet sits on the plan is not a thing to find on site, and is not
+        // asked (J22A-18).
+        if what == "scale dimension" {
+            if let Some(mut c) = job.world.get::<crate::plans::Drawing>(e).cloned() {
+                if let Some(scale) = c.scale.as_mut() {
+                    if matches!(reading, Do::Length(_)) {
+                        return Err(format!("{name}'s scale is set from two points on the sheet and the dimension between them: tape that dimension on site; if it is as the sheet says, say \"same\"; if it is not, set the scale again from what the tape read"));
+                    }
+                    let said = apply(Slot::Other(&mut scale.distance), &name, what, reading, source)?;
+                    job.put(path, c)?;
+                    return Ok(Some(Measured { said, also }));
+                }
             }
-            return Err(format!("{name} is solved from its roof's footprint, and its eave height is the roof's: set the roof's with \"set\", which solves the roof again"));
+        }
+        // A roof solved from its footprint. Its eave height is one length a person
+        // shoots; its footprint and how each edge rises are looked at and found as drawn.
+        // The roof is solved again, so every plane and line under it follows and says
+        // so: until this was here nothing a roof drawn in the window rested on could be
+        // made Known on site, and the verify-in-field list left the roof out (J22A-18).
+        if let Some(mut c) = job.world.get::<Footprint>(e).cloned() {
+            let slot = match what {
+                "footprint" => Some(Slot::Other(&mut c.points)),
+                "eave height" => Some(Slot::Length(&mut c.eave_height)),
+                _ => numbered(what, "edge ").filter(|(_, rest)| rest.is_empty()).and_then(|(n, _)| c.edges.get_mut(n - 1)).map(|v| Slot::Other(v)),
+            };
+            if let Some(slot) = slot {
+                let said = apply(slot, &name, what, reading, source)?;
+                if matches!(reading, Do::Probe) {
+                    return Ok(Some(Measured { said, also }));
+                }
+                check::footprint(path, kind, &c)?;
+                job.put(path, c)?;
+                let report = crate::solve::solve(job, path)?;
+                let count = |n: usize, word: &str| if n == 1 { format!("1 {word}") } else { format!("{n} {word}s") };
+                also.push(format!("{name} solved again: its {} and the eaves, hips, valleys and ridges between them follow", count(report.planes, "plane")));
+                for (gone, carried) in &report.removed {
+                    also.push(if *carried { format!("{gone} is gone, and what was priced on it with it") } else { format!("{gone} is gone") });
+                }
+                return Ok(Some(Measured { said, also }));
+            }
+        }
+        // A plane solved from its roof's footprint has the roof's eave height and rises
+        // as its edge of the footprint does: what is put on the plane is lost the next
+        // time the roof is solved. So a measurement taken at the plane is put on the
+        // roof, where it holds, and is said of the roof.
+        if let Some(solved) = job.world.get::<Solved>(e).cloned() {
+            let of_roof = match (what, solved.edge) {
+                ("eave height", _) => Some("eave height".to_string()),
+                ("pitch", Some(edge)) => Some(format!("edge {edge}")),
+                _ => None,
+            };
+            if let Some(of_roof) = of_roof {
+                let Some(roof) = job.find(&solved.from) else { return Ok(None) };
+                let Some(roof_kind) = job.kind(&solved.from) else { return Ok(None) };
+                if job.world.get::<Footprint>(roof).is_none() {
+                    return Ok(None);
+                }
+                let roof_name = job.world.get::<Node>(roof).map(|n| n.name.clone()).unwrap_or_else(|| solved.from.clone());
+                let Some(mut done) = put(job, roof, &solved.from, roof_kind, &roof_name, &of_roof, reading, None, source)? else { return Ok(None) };
+                if !matches!(reading, Do::Probe) {
+                    // Said of the plane, which is where it was taken, and then whose it is.
+                    done.said = done.said.replacen(&format!("{roof_name}: {of_roof}"), &format!("{name}: {what}"), 1);
+                    done.also.insert(0, if what == "pitch" { format!("it is held on the roof this plane is solved from ({roof_name}), as how its edge {} rises", solved.edge.unwrap_or(0)) } else { format!("it is held on the roof this plane is solved from ({roof_name}): every plane of that roof has the one eave height") });
+                }
+                return Ok(Some(done));
+            }
         }
         on!(Outline, |c: &Outline| check::outline(path, kind, c), |c| if what == "eave height" { Some(Slot::Length(&mut c.eave_height)) } else { None });
-        if job.world.get::<Footprint>(e).is_some() && what == "eave height" {
-            return Err(format!("{name} is a roof solved from its footprint: its eave height is set with \"set\", which solves the roof again"));
-        }
         Ok(None)
     }
 }

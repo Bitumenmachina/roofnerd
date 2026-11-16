@@ -4499,7 +4499,7 @@ fn what_cannot_be_drawn_is_refused_and_leaves_the_job_as_it_was() {
     let got = none(ed::remove(&mut job, &wt));
     refused(&mut job, got, "type");
     let got = none(ed::remove(&mut job, &s));
-    refused(&mut job, got, "has elements under it");
+    refused(&mut job, got, "under it: delete those first");
 }
 
 #[test]

@@ -161,8 +161,9 @@ impl Job {
         if e == self.root() {
             return Err("the job element cannot be removed".into());
         }
-        if self.children().get(path).is_some_and(|c| !c.is_empty()) {
-            return Err(format!("{path} has elements under it; remove those first"));
+        let under = self.children().get(path).map(|c| c.len()).unwrap_or(0);
+        if under > 0 {
+            return Err(format!("{path} has {} under it: delete {} first", crate::view::so_many(under, "thing"), if under == 1 { "that" } else { "those" }));
         }
         self.order.retain(|x| *x != e);
         self.world.despawn(e);

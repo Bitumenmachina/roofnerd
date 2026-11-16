@@ -411,11 +411,23 @@ fn j16_2_3_a_solved_planes_eave_is_the_roofs_and_a_run_pulled_off_its_joints_is_
         let mut q = job.world.query::<(&Node, &Kind, &Solved)>();
         q.iter(&job.world).find(|(_, k, _)| **k == Kind::RoofPlane).map(|(n, _, _)| (n.path.clone(), n.name.clone())).expect("the house has a solved roof plane")
     };
-    assert!(!ed::takes(&mut job, &plane).iter().any(|t| t.0 == "eave height"), "a solved plane does not offer its eave height");
-    let before = save(&mut job);
-    let why = ed::measure(&mut job, &plane, "eave height", Reading::Length("19' 6\""), None, "JM").unwrap_err();
-    assert!(why.starts_with(&format!("{name} is solved from its roof's footprint")), "{why}");
-    assert_eq!(save(&mut job), before);
+    // Call 91 replaces what J16-2 first decided (refused, and not offered): the eave
+    // height measured at a plane is put on its roof, where it holds, and the roof is
+    // solved again. It is read back from a copy saved and opened, which is where the
+    // first build of this lost it.
+    assert!(ed::takes(&mut job, &plane).iter().any(|t| t == &("eave height".to_string(), true)), "a solved plane offers its eave height, as a length");
+    assert!(ed::takes(&mut job, &plane).iter().any(|t| t == &("pitch".to_string(), false)), "and its pitch, to be checked");
+    let done = ed::measure(&mut job, &plane, "eave height", Reading::Length("19' 6\""), None, "JM").unwrap();
+    assert!(done.said.starts_with(&format!("{name}: eave height is 19' 6\", measured")), "{}", done.said);
+    assert!(done.also.iter().any(|a| a.contains("every plane of that roof has the one eave height")), "{:?}", done.also);
+    let (mut again, _) = plumbline_world::file::load(&save(&mut job)).ok().expect("it reads back");
+    let eaves: Vec<(Option<f64>, Status)> = {
+        let mut q = again.world.query::<(&Outline, &Solved)>();
+        q.iter(&again.world).map(|(o, _)| (o.eave_height.feet(), o.eave_height.status)).collect()
+    };
+    assert!(!eaves.is_empty() && eaves.iter().all(|e| *e == (Some(19.5), Status::Known)), "{eaves:?}");
+    assert_eq!(save(&mut again), save(&mut job), "opening it solves nothing differently");
+    let mut job = sample::house();
     // A duct between two elbows, measured 1 1/4 in higher than drawn: it comes off them.
     let duct = {
         let mut q = job.world.query::<(&Node, &Kind)>();

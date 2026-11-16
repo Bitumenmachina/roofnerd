@@ -40,26 +40,30 @@ built before Patrick's ruling 12 and are left as they were.)
 "Demonstrated" means a script in `demos/` drives the real program and checks it;
 the window ones do it with a real pointer and keyboard on a virtual display and
 leave pictures in `demos/captured/`. "Judged" means an agent that did not build it
-tried to break it. The last full run of the sixteen window demonstrations was on
-the build of 04266dd: fourteen passed, and `d5w` and `itemsw` each failed on one
-click that did not land while two judges and the compiler ran beside them. **They
-are being run again on the build of b03129e; until that run ends, no picture in
-`demos/captured/` is of the program as committed.**
+tried to break it. **The last full run of the sixteen window demonstrations was on
+a frozen copy of 2e6e56f, with nothing running beside it: all sixteen passed**
+(`tradesw`, `pricew`, `planw`, `buildw`, `draww`, `fieldw`, `clashw`, `d4w`, `d5w`,
+`bringw`, `firstw`, `glassw`, `carryw`, `toolsw`, `itemsw`, `dressw`). The 239
+pictures they left were read on contact sheets and are committed (e635bb1). `d5w`
+and `itemsw`, which had each lost a click on the run before, passed: that was the
+load, as was thought, and the kit now waits for a control to hold still before it
+clicks it. The code has changed since 2e6e56f (the section "After the run of
+2e6e56f" near the end of this file says how); the pictures are of 2e6e56f.
 
 | # | Item | Evidence | What it lacks |
 |---|---|---|---|
 | 1 | A clean clone installs on Linux from the README in one pass | `tools/committed.sh` builds the last commit from a clean checkout of it and passes its tests (run before every push; PASS on b03129e). `tools/installs.sh` starts the built window, reads every library it opens (52) and finds each in a package the README's install line brings. The README's clone address serves the pushed head | **Nobody has followed the README on a clean machine.** Both checks ran on the machine it was built on, where the toolchain was already installed |
-| 2 | Every import in the fixed rules | At the command line: `demos/plan.sh` (PDF drawn and scanned, PNG, JPEG), `demos/imports.sh` (a supplier's list as CSV and as a workbook, an assembly library out and back, a prior estimate set against the job), `demos/model.sh` and the IFC tests (a model from another trade), `demos/spec.sh` (a maker's sheet into an item, each size Assumed and sourced to its line). In the window: `demos/planw.sh`, `demos/bringw.sh`, `demos/itemsw.sh`. The job file and CSV round-trip to the same bytes (tests). Judged: 15A, 17B, 21 | An aerial image is brought in as any picture is and has no demonstration of its own. `itemsw` lost a click on the last run |
+| 2 | Every import in the fixed rules | At the command line: `demos/plan.sh` (PDF drawn and scanned, PNG, JPEG), `demos/imports.sh` (a supplier's list as CSV and as a workbook, an assembly library out and back, a prior estimate set against the job), `demos/model.sh` and the IFC tests (a model from another trade), `demos/spec.sh` (a maker's sheet into an item, each size Assumed and sourced to its line). In the window: `demos/planw.sh`, `demos/bringw.sh`, `demos/itemsw.sh`. The job file and CSV round-trip to the same bytes (tests). Judged: 15A, 17B, 21 | An aerial image is brought in as any picture is and has no demonstration of its own |
 | 3 | From an empty job: a real plan PDF, calibrated, traced; the 3D house builds | `demos/firstw.sh`: USDA Plan No. 7213 (public domain, a scan) under a level, its scale from its 41 ft 3 in dimension, outside walls, a door, two windows, the floor, a room and the roof traced, the saved job set against figures worked by hand. The twenty-second judge, part A, did the same by hand on page 4 of that plan and went further: inside walls, three rooms, a hip roof (1,183.04 SF, agreed by hand), a pipe | The demonstration traces one room. On a scan there are no vector lines to snap to; snapping to a drawn PDF's lines is shown in `planw` on a made-up sheet, not on a real one |
 | 4 | Clashes show their certainty; the VIF list sorted by dollars | `demos/clash.sh`, `demos/vif.sh`, `demos/clashw.sh`, `demos/fieldw.sh`. A clash is a finding (both Known) or a field question; the list is sorted by the dollars riding on each; dollars ride only where the quantity is in question (call 83). Judged: 13, 21 | The fixes to 21 are not judged. In the sheet's list a finding is now marked red as on the model (22B) |
 | 5 | A typed or lasered measurement makes a value Known; the clash confirms or clears; the price moves live | `demos/field.sh`, `demos/fieldw.sh`. Judged: 16 | A real laser has never been on it: a keyboard typed what a DISTO types |
 | 6 | A price per SF or LF grows into line items, and the detail rolls back up | `demos/d4.sh`, `demos/d4w.sh`, `demos/pricew.sh`. Judged: 10 | **Judge 22A: an allowance with no cost lines is in no line of the price.** It is now said wherever the price is read; whether it belongs in the price is QUESTIONS.md Q26, Patrick's |
-| 7 | The sheet: stretch-out on the line, labor switched per line, overhead and profit, three suppliers | `demos/d5.sh`, `demos/d5w.sh`: all four in the window. Judged: 11, 17A | **`d5w` failed on the last run** (a price typed on its line did not land). The cause may be the one found by 22A (a click redrew the sheet and sent it to its top), fixed in b03129e; the rerun will say |
+| 7 | The sheet: stretch-out on the line, labor switched per line, overhead and profit, three suppliers | `demos/d5.sh`, `demos/d5w.sh`: all four in the window. Judged: 11, 17A | `d5w` passed on the run of 2e6e56f. The fixes to 17A are not judged |
 | 8 | Exports: xlsx with live formulas, CSV, IFC4 validated by IfcOpenShell; three lenses | `demos/export.sh`: the workbook's amounts and recap are formulas that come to the job's figures; the IFC is checked by IfcOpenShell run as an outside program (`tools/ifc-check.py`); the supplier, subcontractor and PM lenses come from one estimate. `demos/itemsw.sh` writes each from the window. Judged: 17A, 17B, 21 | The fixes to 21 (walls written through at corners, a level's height) are not judged |
 | 9 | A judge lists every word on every screen; none is a software term | Judged 2026-11-16 (22B): about 620 entries by screen, `research/judgment-22b-words.md` | **FAIL: 69 marked** (18 software terms, 43 a builder would trip on, 7 units not the trade's way, 1 British spelling). The deciding one is the Add drawing list: file, folder, page after a comma, file names. Some are fixed since ("ELEMENT", "solid", "FACETS", four-place rates, sizes in feet-inches); the list is not |
 | 10 | A veteran estimator with no software background completes a whole-house takeoff from a PDF using only the in-app help | Judged 2026-11-16 (22A), `research/judgment-22a-notes.md`. Level, drawing, scale, walls, openings, floor, rooms, roof and a pipe were all done from the on-screen help alone, and two assemblies priced | **FAIL**: an allowance entered as the screen said never reached the price (J22A-10); no way to put labor on anything (J22A-13); most of the house left unpriced. Changed since and not judged: the allowance is said wherever the price is read (Q26 is whether it belongs in it); a cost line, labor included, can be added in the window. The starter assemblies still carry no labor |
 | 11 | The visual judge passes every screen against `VISUAL.md` | Judged 2026-11-16 (22B), line by line: `research/judgment-22b-notes.md` | **FAIL** on A1 (full-width bars; panels over about 45% of the window), A2 (no shadow under a panel on plan), C2 (no sky), and on A4, A5, A6, D8. Fixed since and not judged: C2, A4, most of A5, part of A6. Open: A1, A2, D8 and the rest in the table at the end of this file |
-| 12 | A fresh judge walks the whole path cold and cannot break the money path | Judged 2026-11-16 (22A). Every typed-nonsense, undo and redo, reopen and changed-quantity check agreed to the cent between the top bar, the sheet and the saved job | **FAIL**: $8,580 of allowance in no line of the price with nothing said (J22A-10); the verify-in-field list leaves the roof's dollars out (J22A-18, **open**); an area six times the room shown as a figure (J22A-3). J22A-10 and J22A-3 are changed, with tests, and not judged |
+| 12 | A fresh judge walks the whole path cold and cannot break the money path | Judged 2026-11-16 (22A). Every typed-nonsense, undo and redo, reopen and changed-quantity check agreed to the cent between the top bar, the sheet and the saved job | **FAIL**: $8,580 of allowance in no line of the price with nothing said (J22A-10); the verify-in-field list leaves the roof's dollars out (J22A-18); an area six times the room shown as a figure (J22A-3). All three are changed, with tests, and not judged: J22A-18 by call 91 (a roof and a drawing's scale are on the list with their dollars and can be made Known on site) |
 | 13 | A hand estimate in `refs/` reproduced, every difference explained | None | **Pending**: `refs/` holds the brief and the first handoff and no estimate (Q5) |
 
 **What Patrick is asked.** Nothing blocks the work. Three questions are his and each
@@ -5751,17 +5755,61 @@ gates pass.
 
 | # | What was found | Where it stands |
 |---|---|---|
-| J22A-16 | "The roof is now 4 planes, 9 lines": on an estimate a line is a cost line; these are the roof's edges | **Open** (words) |
-| J22A-17 | Deleting a priced wall says "Deleted door 1, window 2, wall 1." and the price falls by $1,712.86 with nothing said of the seven lines that went. Undo restores it | **Open.** The delete should say the lines and the dollars that go with it |
-| J22A-18 | **The verify-in-field list leaves the roof out.** A plane carrying $773.47 of priced lines, all resting on an Assumed pitch, eave height and footprint, is not among the questions; nor is the drawing's scale, which every traced figure rests on; and a room with an allowance shows "no dollars riding on it" | **Open, and it is one of the two deciding fails of item 12.** Not looked into yet: `crates/world/src/vif.rs` asks its questions of what `building` measures, and a roof solved from its footprint keeps its pitch and eave on the roof, not on the plane the lines are on. It is the first thing to do when the demonstrations have finished running |
-| J22A-19 | Overhead of -5 answers "the job overhead: is a percentage from 0 to 1000" (a broken sentence); a profit of 250 % is taken without a word | **Open** |
+| J22A-16 | "The roof is now 4 planes, 9 lines": on an estimate a line is a cost line; these are the roof's edges | Fixed (call 91). A change to a roof says "The roof is now 4 planes; its eaves, hips, valleys and ridges follow". The Roof tab's table is headed by what is in it ("Eaves, hips and ridges", read in the window on the judge's job), its first column "Name". The command line says "6 planes; 14 eaves, rakes, hips, valleys and ridges round and between them" |
+| J22A-17 | Deleting a priced wall says "Deleted door 1, window 2, wall 1." and the price falls by $1,712.86 with nothing said of the seven lines that went. Undo restores it | Fixed (call 91). One sentence in the model (`view::went_with_said`), said by the window and by the command line's `remove`: "Deleted wall 1. 1 cost line went with it: $518.40 is out of the job cost." (test: the wall of the field job; a line with no price says the price is as it was). **Not seen in the window**: the look at it selected a roof instead, which found the next row |
+| J22A-18 | **The verify-in-field list leaves the roof out.** A plane carrying $773.47 of priced lines, all resting on an Assumed pitch, eave height and footprint, is not among the questions; nor is the drawing's scale, which every traced figure rests on; and a room with an allowance shows "no dollars riding on it" | **Fixed in two of its three parts (call 91), with tests, not judged.** The cause: the list asks of a thing only what a measurement can be put on, and a roof solved from its footprint took none (J16-2 had refused it, because a measurement put on a solved plane was lost at the next solve). Now a measurement taken at the roof or at any plane of it is put on the roof, the roof is solved again, and every plane has it; what is priced on a plane rides on its roof. A drawing's scale is a question with everything traced over it riding, settled by taping the dimension it was set from. On the judge's own job: the list goes from 24 questions to 30, the drawing first at $2,039.97, the roof and plane 1 at $773.47; with the eave shot and the footprint and four pitches checked, the roof leaves the list and the plane's 359.56 SF is Known. Read in the window: the roof's row, a click on it, Measure on its eave height, "Roof: eave height is 9' 0 1/2\", measured". **Left as it was:** the room with an allowance and no cost lines has no dollars riding, because its allowance is in no line of the price (Q26, Patrick's) |
+| J22A-19 | Overhead of -5 answers "the job overhead: is a percentage from 0 to 1000" (a broken sentence); a profit of 250 % is taken without a word | Fixed (call 91): "... overhead has to be a percentage from 0 to 1000" (test). Over 100 % is taken and answered as a warning with the tenth of it offered ("If 25.00 % was meant, type it again"). **The warning is not seen in the window and has no test** |
 
+
+## After the run of 2e6e56f: what its pictures showed, and what was changed (2026-11-16, late)
+
+**What was run.** The sixteen window demonstrations in a row on a frozen copy of
+2e6e56f, nothing beside them: all sixteen exit 0. All 239 pictures were read on
+contact sheets (nine model pictures or twelve sheet pictures to a sheet, so the
+layout and the larger type are read and the small type is not), and the ones that
+looked wrong were opened whole.
+
+**What the pictures showed that was wrong.**
+
+| What | Where it stands |
+|---|---|
+| On the estimate sheet a division's heading was cut short: "DIVISION 7 THERMAL AND MOISTURE PROT", its total gone, "$3,8" for $3,800.00 (`d5/03-sheet`, `d5/07-sheet`). My change of the same day had put the name, the total and five column names on one row | Fixed (call 91): the name and its total have a row; the column names are on the row under it. **Not seen yet**: the pictures are of 2e6e56f |
+| `first/02` to `05`: the scanned plan shows through the left panel and its words are hard to read over it | Open. It is the look's A2 and A6, already in the table of the twenty-second judgment |
+
+**What else was found on the way, and fixed.**
+
+| What | Where it stands |
+|---|---|
+| **A roof drawn in the window could not be deleted.** "Can't delete it: roof has elements under it; remove those first", and its planes answer that they would come back. Seen in the window on the judge's job | Fixed (call 91): a roof drawn from its footprint goes with its planes and their eaves, hips and ridges, and what was priced on them is said. Test: 14 things go, "$71.55 is out of the job cost". A thing with other things under it is refused as "has 5 things under it: delete those first" (`demos/draw.sh` and one test read the new words) |
+| **`demos/d2.sh` had been broken since the Condition button became Assembly**, and was not among the sixteen | Repaired: it picks "Standing seam copper roof" from the list as `pricew` does. Run on a frozen copy: exit 0, the saved job as it says (edge 1 at 9:12, the eave out 6 in, the assembly's two lines on the plane). Its 16 pictures are retaken and read (the plane picked, 6:12 to 8:12, the eave out 6 in, 9:12 typed, the copper drawn on the plane once the assembly is on it, the roof on plan). They were taken one build before the drawing's scale and the roof's delete were added, neither of which that job has |
+| **`tools/portmap.sh` was red**: `footing_type`, made public by call 87 that morning, was not in PORTMAP.md, and the check was not run then | Fixed: it is "ours", with where BIMCraft was searched (its strip footing is a run with a run type; `grep -rn FootingType crates/core/src` finds nothing). PASS, 230 items |
+
+**What changed in a number or in what a person sees** (each is in call 91):
+a roof and a drawing are on the verify-in-field list, so "N to verify" and the
+dollars riding are larger on any job with a traced drawing or a roof drawn in the
+window; a solved plane offers Measure on its eave height and Check on its pitch,
+which it refused before (the test `j16_2_3_...` was changed after the decision was
+written); the Roof tab's second table has a new heading; a delete of something
+priced is answered as a warning with a second sentence; the command line's `roof`
+and `remove` say more.
+
+**What was run on the changed code.** `cargo test --workspace`: 305 pass (six new:
+the roof on the list, the roof measured off it, the drawing's scale, the delete
+sentence, the roof deleted, the markup refusal; one changed). The twenty
+command-line demonstrations: exit 0. `tools/portmap.sh`, `tools/licenses.sh` and the
+three gates: PASS. One look in the window at the judge's job (five pictures, not
+kept in the repository). `demos/house.sh` (it opens its own display): exit 0, its 16
+pictures retaken and read. **Not run on the changed code: the sixteen window
+demonstrations.** `fieldw` and `clashw` count questions and may read a different
+number now.
 
 ## Start here (written 2026-11-16; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 298 tests pass,
-the three gates pass, the twenty command-line demonstrations pass, and
-`tools/committed.sh` passed on the last commit of code. Read `CLAUDE.md`, then this
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 305 tests pass,
+the three gates and `tools/portmap.sh` pass, the twenty command-line demonstrations
+pass, and `tools/committed.sh` passed on the last commit of code. The sixteen window
+demonstrations all passed on 2e6e56f and have not been run on what came after (the
+section just above). Read `CLAUDE.md`, then this
 section, then the table of thirteen at the head of this file, then the table under
 "The twenty-second judgment" just above.
 
@@ -5782,15 +5830,16 @@ money path were each judged and each failed (items 11, 9, 10 and 12).
 
 **What is owed, in this order.**
 
-1. **J22A-18: the verify-in-field list leaves the roof out.** It is a deciding fail
-   of item 12 and nothing has been done about it. Then the rest of part A's open
-   rows: labor lines in the starter assemblies (J22A-13), what a delete takes with
-   it (J22A-17), a sane limit on a markup (J22A-19).
-2. **The sixteen window demonstrations, run in a row on a frozen copy of the last
-   commit, with nothing else running** (CLAUDE.md, "Running several window
-   demonstrations in a row"). Their pictures are committed only when the run ends.
-   If `d5w` or `itemsw` fails again with nothing beside it, it is the program and
-   not the load.
+1. **The sixteen window demonstrations and `demos/d2.sh`, run in a row on a frozen
+   copy of the last commit, with nothing else running** (CLAUDE.md, "Running several
+   window demonstrations in a row"). Call 91 changed how many questions a job with a
+   drawing or a drawn roof has: `fieldw` and `clashw` read that number. Their
+   pictures are committed only when the run ends, and read.
+2. **Labor lines in the starter assemblies** (J22A-13): the last open part of the
+   veteran's deciding fail. `library/sixteen-divisions.csv`; the figures of
+   `demos/library.sh`, `pricew.sh` and `firstw.sh` move with it, so write them by
+   hand first. Then a window demonstration of Add cost line, of a roof measured
+   from the Verify in field tab, and of a priced thing deleted.
 3. **The look**, which is Patrick's own test and the judge's deciding fail: the top
    bar and the status line as floating cards, not full-width strips (A1); a shadow
    under a panel that shows on plan's white paper (A2); the eave, hip and ridge
@@ -5808,6 +5857,9 @@ money path were each judged and each failed (items 11, 9, 10 and 12).
    above): a keystroke re-reads the whole job (R21-2); one money formatter
    (R21-12); a footing dug wider cannot be recorded on it alone (J21-6); base is
    priced by a room's perimeter and drawn by its runs less its doors.
+
+7. **Words still owed from call 91's look**: a roof's rows read "Edge 1 ... 5:12";
+   a builder would look for "Pitch" there.
 
 **What not to do.** Do not tag. Do not loosen a demonstration to get it green: two
 failed on a lost click and were left failed and said. Do not take a judge's "not

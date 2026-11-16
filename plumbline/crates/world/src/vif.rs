@@ -107,6 +107,25 @@ pub fn vif(job: &mut Job) -> Vif {
         storeys.get(path).and_then(|s| names.get(s.as_str()).copied()).unwrap_or("").to_string()
     };
 
+    // The planes a roof's footprint was solved into, each with its roof.
+    let solved_from: BTreeMap<String, String> = {
+        let mut q = job.world.query::<(&crate::components::Node, &crate::components::Solved)>();
+        q.iter(&job.world).map(|(n, s)| (n.path.clone(), s.from.clone())).collect()
+    };
+
+    // What was traced over each drawing, each thing with its drawing: a figure traced
+    // rests on the sheet's scale as well as on the thing it was traced as.
+    let traced_over: BTreeMap<String, String> = {
+        let drawings: Vec<String> = elements.iter().filter(|e| e.kind == Kind::Drawing).map(|e| e.path.clone()).collect();
+        let mut over = BTreeMap::new();
+        for drawing in drawings {
+            for thing in crate::plans::traced_over(job, &drawing).unwrap_or_default() {
+                over.insert(thing, drawing.clone());
+            }
+        }
+        over
+    };
+
     // Every live line that comes to something, with what its quantity is worked from:
     // the things the measures its formula names say they rest on.
     let mut lines: Vec<Line> = Vec::new();
@@ -124,6 +143,16 @@ pub fn vif(job: &mut Job) -> Vif {
                     }
                 }
             }
+        }
+        // What rests on a plane solved from a roof's footprint rests on that roof: the
+        // footprint and the pitches are the roof's, and it is at the roof that they
+        // are checked (J22A-18).
+        for roof in rests.iter().filter_map(|p| solved_from.get(p)).cloned().collect::<Vec<_>>() {
+            rests.insert(roof);
+        }
+        // And what rests on a thing traced over a drawing rests on that drawing's scale.
+        for drawing in rests.iter().filter_map(|p| traced_over.get(p)).cloned().collect::<Vec<_>>() {
+            rests.insert(drawing);
         }
         lines.push(Line { key: (sheet.path.clone(), sheet.description.clone()), on: sheet.path.clone(), amount, status: if amount.is_some() { sheet.amount.status } else { sheet.priced.status }, quantity: sheet.quantity.status, rests });
     }
@@ -194,15 +223,38 @@ pub fn vif(job: &mut Job) -> Vif {
                 (label, status, length)
             })
             .collect();
+        // What the thing is, where that is itself to be checked (see below). Worked out
+        // before the next step adds values that are not of that kind.
+        let identity = values.iter().any(|v| !v.2);
+        let mut values = values;
         if values.is_empty() {
-            continue;
+            // Nothing on it is a value `measure` takes, but priced lines whose quantity
+            // is in question rest on it. It is a question all the same, to be checked,
+            // and their dollars ride on it: left off, an estimator sorting his field
+            // questions by dollars is never sent to it (J22A-18 was a roof drawn in the
+            // window, which `measure` now reaches; this is for whatever it does not).
+            // A plane solved from a roof's footprint is not one of those: what is left
+            // in question on it is the roof's, and the roof is on the list with it. Nor
+            // is a drawing whose scale has been checked: where the sheet sits on the
+            // plan is not a thing to find on site.
+            if solved_from.contains_key(&el.path) || el.kind == Kind::Drawing || !lines.iter().any(|l| l.quantity != Status::Known && l.rests.contains(&el.path)) {
+                continue;
+            }
+            // What says what it is priced as, or where it is filed, is not checked on site.
+            let not_on_site = |label: &str| {
+                let l = label.to_lowercase().replace('_', " ");
+                ["cost code", "assembly", "condition", "wbs", "material", "allowance"].iter().any(|w| l.contains(w))
+            };
+            values = labels.iter().filter(|l| !not_on_site(l)).map(|label| (label.clone(), el.rows.iter().find(|r| r.label == *label).map(|r| r.status).unwrap_or(Status::Unknown), false)).collect();
+            if values.is_empty() {
+                continue;
+            }
         }
         // Only a line that is itself still in question has anything riding on a
         // measurement. But where what the thing is (its type, what it is, its size) is
         // itself to be checked, everything priced on it rides on that check, however
         // sure its quantity (call 59, J17A-14): a price for a 50 gal heater is a price
         // for nothing if the heater is not that.
-        let identity = values.iter().any(|v| !v.2);
         // What rides on a measurement is a line whose quantity is itself in question:
         // a line of a Known length at an Assumed price is not made surer by a tape,
         // and its dollars do not send anyone to measure (call 83, M21-2).

@@ -128,7 +128,7 @@ refused "--sill is required" "$P" window "$J" "$EAST" "$NT" --offset "3 ft" "${K
 refused "--height is required" "$P" run "$J" "$S" duct "$DUCT" --points "0,0 5,0" "${K[@]}"
 refused "is not a kind of system" "$P" system "$J" "Steam" "Steam"
 refused "--status is required" "$P" wall "$J" "$S" "$WT" --points "0,20 5,20" --height "9 ft"
-refused "has elements under it" "$P" remove "$J" "$S"
+refused "under it: delete those first" "$P" remove "$J" "$S"
 refused "would be ignored" "$P" move "$J" "$MID" --by "1,0" --height "9 ft" "${K[@]}"
 refused "they would be ignored" "$P" remove "$J" "$S" "${K[@]}"
 refused "counted twice" "$P" wall "$J" "$S" "$WT" --points "0,0 24,0" --height "9 ft" "${K[@]}"

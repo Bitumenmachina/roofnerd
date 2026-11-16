@@ -359,8 +359,23 @@ fn lines(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
     if snap.lines.is_empty() {
         return;
     }
-    table(p, fonts, "Lines", format!("{}", snap.lines.len()), |t| {
-        header_row(t, fonts, &[("", 7.0, false), ("Line", 0.0, false), ("Kind", 130.0, false), ("On the tape", 120.0, true), ("Length", 110.0, true)]);
+    // Named by what is in it: "Eaves, hips and ridges". It read "Lines", which on the
+    // estimate is a cost line (J22A-16, call 91).
+    let mut kinds: Vec<String> = Vec::new();
+    for line in &snap.lines {
+        let name = format!("{}s", theme::kind_name(line.kind).to_lowercase());
+        if !kinds.contains(&name) {
+            kinds.push(name);
+        }
+    }
+    let title = match kinds.split_last() {
+        Some((last, rest)) if !rest.is_empty() => format!("{} and {last}", rest.join(", ")),
+        Some((only, _)) => only.clone(),
+        None => String::new(),
+    };
+    let title = format!("{}{}", title[..1].to_uppercase(), &title[1..]);
+    table(p, fonts, &title, format!("{}", snap.lines.len()), |t| {
+        header_row(t, fonts, &[("", 7.0, false), ("Name", 0.0, false), ("Kind", 130.0, false), ("On the tape", 120.0, true), ("Length", 110.0, true)]);
         for line in &snap.lines {
             let selected = doc.selected.as_deref() == Some(line.path.as_str());
             // A plane's own lines are marked while the plane is selected.
@@ -822,8 +837,8 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         }
     });
     table(p, fonts, "The sheet", format!("{} lines", est.lines.len()), |t| {
-        header_row(t, fonts, &[("", 7.0, false), ("Line", 0.0, false), ("Priced", 96.0, true), ("At", 108.0, true), ("Material", 96.0, true), ("Labor", 96.0, true), ("General", 96.0, true)]);
-        // The lines, division by division; then those in no division.
+        // The lines, division by division; then those in no division. Each division
+        // names the columns under its own heading, so there is no row of them up here.
         let mut ordered: Vec<(String, String, Status, Vec<&view::SheetLine>)> = Vec::new();
         for d in &est.divisions {
             let its: Vec<&view::SheetLine> = est.lines.iter().filter(|l| l.division == Some(d.division)).collect();
@@ -843,19 +858,18 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             ordered.push(("No division".to_string(), est.no_division.value.map(|x| format!("${}", view::figure(x, 2))).unwrap_or_else(|| "no figure".to_string()), Status::Unknown, undivided));
         }
         for (heading, said, status, its) in &ordered {
-        t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(5.0)), border: UiRect::bottom(px(1.0)), ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::hairline()))).with_children(|r| {
-            // The division, what it comes to, and the name of each column again: the
-            // headings at the top are out of sight once the sheet is scrolled, and a
-            // figure with no column named over it could be any of the three (J22B-13).
+        // The division and what it comes to, on a row of their own: beside the column
+        // names the two were cut short ("THERMAL AND MOISTURE PROT", the total gone;
+        // seen in the pictures of 2e6e56f).
+        t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(6.0)), border: UiRect::bottom(px(1.0)), ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::hairline()))).with_children(|r| {
             cell(r, 7.0, false, |_| {});
-            cell(r, 0.0, false, |c| {
-                words(c, fonts, heading.to_uppercase(), 11.0, Weight::Semibold, if heading == "No division" { theme::status_ink(Status::Unknown) } else { theme::ink() });
-                words(c, fonts, said.clone(), 12.5, Weight::Semibold, theme::status_ink(*status));
-            });
-            for (label, width) in [("Priced", 96.0), ("At", 108.0), ("Material", 96.0), ("Labor", 96.0), ("General", 96.0)] {
-                cell(r, width, true, |c| words(c, fonts, label.to_uppercase(), 10.0, Weight::Semibold, theme::ink_faint()));
-            }
+            cell(r, 0.0, false, |c| words(c, fonts, heading.to_uppercase(), 11.0, Weight::Semibold, if heading == "No division" { theme::status_ink(Status::Unknown) } else { theme::ink() }));
+            cell(r, 130.0, true, |c| words(c, fonts, said.clone(), 12.5, Weight::Semibold, theme::status_ink(*status)));
         });
+        // The name of each column, under every division: the top of the sheet is out
+        // of sight once it is scrolled, and a figure with no column named over it
+        // could be any of the three (J22B-13).
+        header_row(t, fonts, &[("", 7.0, false), ("Line", 0.0, false), ("Priced", 96.0, true), ("At", 108.0, true), ("Material", 96.0, true), ("Labor", 96.0, true), ("General", 96.0, true)]);
         let mut last = String::new();
         for l in its.iter().copied() {
             let selected = doc.selected.as_deref() == Some(l.path.as_str());

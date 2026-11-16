@@ -144,3 +144,157 @@ fn a_line_of_a_known_length_at_an_assumed_price_does_not_ride_on_a_measurement()
     let found = rows(&mut job);
     assert_eq!(found, vec![(wall.clone(), None, Some(360.00), 1, vec!["height".to_string()])], "{found:#?}");
 }
+
+/// A hip roof on a 24 ft by 16 ft footprint, 6:12 on every edge, eaves at 9 ft, all of
+/// it traced. Underlayment at $0.50/SF on the plane that rises from edge 1. Returns the
+/// job, the roof and that plane.
+fn roofed() -> (Job, String, String) {
+    let mut job = Job::new("A roof to verify (not a real job)", "test", "test");
+    fn traced<T>(value: T, unit: &str) -> value::Val<T> {
+        value::Val { value: Some(value), unit: unit.to_string(), status: Status::Assumed, source: "scaled off a made-up plan".to_string() }
+    }
+    let footprint = Footprint {
+        points: traced(vec![[0.0, 0.0], [24.0, 0.0], [24.0, 16.0], [0.0, 16.0]], "ft"),
+        eave_height: traced(units::Len::One(9.0), "ft"),
+        edges: (0..4).map(|_| traced(Rise::Pitch(6.0), "in/12")).collect(),
+    };
+    let (roof, _) = solve::new_roof(&mut job, "main roof", footprint).unwrap();
+    let plane = {
+        let mut q = job.world.query::<(&Node, &Solved)>();
+        q.iter(&job.world).find(|(_, s)| s.edge == Some(1)).map(|(n, _)| n.path.clone()).unwrap()
+    };
+    job.add_line(&plane, "Underlayment", "surface_area", Some(Class::Material), false).unwrap();
+    job.set_on_line(&plane, "unit_cost", Some("Underlayment"), Some("$0.50/SF"), Status::Known, "made-up plan").unwrap();
+    job.derive();
+    (job, roof, plane)
+}
+
+#[test]
+fn a_roof_drawn_from_its_footprint_is_on_the_list_with_what_is_priced_on_its_planes() {
+    // J22A-18: the roof carried the most dollars on a traced house and was not on the
+    // list, because nothing `measure` takes was on a roof solved from its footprint.
+    // The plane on the 24 ft eave: on plan (24 + 8) / 2 x 8 = 128 SF; at 6:12 the slope
+    // factor is the root of 1.25, 1.118034; 143.1084 SF at $0.50 is $71.55.
+    let (mut job, roof, plane) = roofed();
+    let list = vif(&mut job);
+    assert_eq!((list.riding, list.riding_status, list.riding_lines), (Some(71.55), Status::Assumed, 1));
+    let found = rows(&mut job);
+    let names = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+    assert_eq!(found[0], (roof.clone(), None, Some(71.55), 1, names(&["footprint", "eave height", "edge 1", "edge 2", "edge 3", "edge 4"])), "{found:#?}");
+    assert_eq!(found[1], (plane.clone(), None, Some(71.55), 1, names(&["eave height", "pitch"])), "{found:#?}");
+    // The other three planes are questions with nothing riding: nothing is priced on them.
+    assert_eq!(found.iter().filter(|r| r.2.is_none()).count(), 3, "{found:#?}");
+}
+
+#[test]
+fn a_roof_measured_on_site_leaves_the_list_and_takes_its_dollars_with_it() {
+    let (mut job, roof, plane) = roofed();
+    // The eave is shot at the plane. It is the roof's, so every plane has it.
+    let done = ed::measure(&mut job, &plane, "eave height", Reading::Length("9 ft 2 in"), None, "laser").unwrap();
+    assert!(done.said.contains("eave height is 9' 2\", measured (it was 9 ft, Assumed"), "{}", done.said);
+    assert!(done.also.iter().any(|a| a.contains("every plane of that roof has the one eave height")), "{:?}", done.also);
+    let eaves: Vec<(Status, Option<f64>)> = {
+        let mut q = job.world.query::<(&Outline, &Solved)>();
+        q.iter(&job.world).map(|(o, _)| (o.eave_height.status, o.eave_height.feet())).collect()
+    };
+    assert_eq!(eaves.len(), 4);
+    assert!(eaves.iter().all(|(s, ft)| *s == Status::Known && (ft.unwrap() - (9.0 + 2.0 / 12.0)).abs() < 1e-9), "{eaves:?}");
+    // The pitch of that plane is checked at the plane; the rest at the roof. Until the
+    // last one is, the plane's outline rests on a pitch that is Assumed and it rides.
+    ed::measure(&mut job, &plane, "pitch", Reading::Same, None, "pitch gauge").unwrap();
+    ed::measure(&mut job, &roof, "footprint", Reading::Same, None, "tape").unwrap();
+    ed::measure(&mut job, &roof, "edge 2", Reading::Same, None, "pitch gauge").unwrap();
+    ed::measure(&mut job, &roof, "edge 3", Reading::Same, None, "pitch gauge").unwrap();
+    let found = rows(&mut job);
+    assert_eq!(found[0], (roof.clone(), None, Some(71.55), 1, vec!["edge 4".to_string()]), "{found:#?}");
+    // The plane has nothing left on it that is its own to check, so it is not asked of twice.
+    assert!(!found.iter().any(|r| r.0 == plane), "{found:#?}");
+    ed::measure(&mut job, &roof, "edge 4", Reading::Same, None, "pitch gauge").unwrap();
+    let list = vif(&mut job);
+    assert!(list.questions.is_empty(), "{:#?}", list.questions);
+    assert_eq!(list.riding, None);
+    // What a roof has no value called is refused with what it has.
+    let why = ed::measure(&mut job, &roof, "edge 9", Reading::Same, None, "pitch gauge").unwrap_err();
+    assert!(why.contains("has no entered value called \"edge 9\""), "{why}");
+    // And the job still reads back as it was saved.
+    assert!(file::load(&file::save(&mut job)).is_ok());
+}
+
+#[test]
+fn what_is_priced_on_a_thing_is_said_as_it_is_deleted() {
+    // J22A-17: a priced wall went with "Deleted wall 1." and the price fell without a
+    // word. The wall carries 216 SF of gypsum board at $2.40: $518.40.
+    let mut m = made();
+    let before = view::estimate(&mut m.job);
+    ed::remove(&mut m.job, &m.pipe_a).unwrap();
+    assert_eq!(view::went_with_said(&before, &mut m.job), None, "nothing is priced on the pipe");
+    let before = view::estimate(&mut m.job);
+    ed::remove(&mut m.job, &m.wall).unwrap();
+    assert_eq!(view::went_with_said(&before, &mut m.job).as_deref(), Some("1 cost line went with it: $518.40 is out of the job cost."));
+    // A line with no price yet says the price is as it was.
+    let mut m = made();
+    m.job.add_line(&m.duct, "Duct, hung", "true_length", Some(Class::Material), false).unwrap();
+    m.job.derive();
+    let before = view::estimate(&mut m.job);
+    ed::remove(&mut m.job, &m.duct).unwrap();
+    assert_eq!(view::went_with_said(&before, &mut m.job).as_deref(), Some("1 cost line went with it; none of them had come to a figure, so the price is as it was."));
+}
+
+#[test]
+fn a_markup_out_of_range_is_refused_in_a_whole_sentence() {
+    // J22A-19: it read "the job overhead: is a percentage from 0 to 1000".
+    let mut m = made();
+    let root = {
+        let mut q = m.job.world.query::<(&Node, &Kind)>();
+        q.iter(&m.job.world).find(|(_, k)| **k == Kind::Job).map(|(n, _)| n.path.clone()).unwrap()
+    };
+    let why = m.job.set(&root, "overhead", Some("-5"), Status::Assumed, "typed").unwrap_err();
+    assert!(why.ends_with("overhead has to be a percentage from 0 to 1000"), "{why}");
+}
+
+#[test]
+fn a_drawings_scale_is_a_question_with_everything_traced_over_it_riding() {
+    // J22A-18, its second part: every traced figure rests on the sheet's scale, which
+    // was read off the sheet, and the list did not ask after it. A made-up sheet 800
+    // by 600, scaled from a 30 ft dimension; one wall traced over it, 30 ft long and
+    // 9 ft tall, with gypsum board on its face at $2.00/SF: 270 SF, $540.00.
+    use plumbline_world::plans;
+    let mut job = Job::new("Traced (not a real job)", "test", "test");
+    let read = Entered { status: Status::Assumed, source: "read off the drawing" };
+    let ground = ed::storey(&mut job, "ground", "0 ft", "9 ft", KNOWN).unwrap();
+    let drawing = plans::add(&mut job, &ground, "made-up-plan", plans::Read { file: "made-up-plan.pdf", page: 1, bytes: 1000, checksum: "0123456789abcdef", size: [800.0, 600.0] }, KNOWN).unwrap();
+    plans::calibrate(&mut job, &drawing, [100.0, 100.0], [700.0, 100.0], "30 ft", read).unwrap();
+    let wall_type = ed::wall_type(&mut job, "wall 6 in", "6 in", KNOWN).unwrap();
+    let traced = plans::traced_from(&mut job, &drawing).unwrap();
+    let wall = ed::walls(&mut job, &ground, &wall_type, &[[0.0, 0.0], [30.0, 0.0]], false, Top::Height("9 ft"), Entered { status: Status::Assumed, source: &traced }).unwrap().remove(0);
+    job.add_line(&wall, "Gypsum board, hung and finished", "face_area", Some(Class::Material), false).unwrap();
+    job.set_on_line(&wall, "unit_cost", Some("Gypsum board, hung and finished"), Some("$2.00/SF"), Status::Known, "made-up plan").unwrap();
+    job.derive();
+    let found = rows(&mut job);
+    assert_eq!(found[0], (drawing.clone(), None, Some(540.0), 1, vec!["scale dimension".to_string()]), "{found:#?}");
+    // A length is not what settles it, and the refusal says what does.
+    let why = ed::measure(&mut job, &drawing, "scale dimension", Reading::Length("30 ft"), None, "tape").unwrap_err();
+    assert!(why.contains("tape that dimension on site") && why.contains("say \"same\""), "{why}");
+    ed::measure(&mut job, &drawing, "scale dimension", Reading::Same, None, "taped on site").unwrap();
+    let found = rows(&mut job);
+    assert!(!found.iter().any(|r| r.0 == drawing), "{found:#?}");
+    // The wall is still as traced: its own line and height are still to be found.
+    assert_eq!(found[0].0, wall);
+    assert_eq!(found[0].2, Some(540.0));
+}
+
+#[test]
+fn a_roof_drawn_from_its_footprint_is_deleted_with_its_planes_and_says_what_was_priced_on_them() {
+    // Seen in the window on 2026-11-16: the roof could not be deleted (it "has
+    // elements under it") and its planes could not either (they "would come back").
+    let (mut job, roof, plane) = roofed();
+    assert!(ed::remove(&mut job, &plane).unwrap_err().contains("is solved from"));
+    let before = view::estimate(&mut job);
+    let gone = ed::remove(&mut job, &roof).unwrap();
+    // 4 planes, 4 eaves, 4 hips and a ridge, and the roof last.
+    assert_eq!((gone.len(), gone.last()), (14, Some(&roof)), "{gone:?}");
+    assert!(job.find(&plane).is_none());
+    assert_eq!(view::went_with_said(&before, &mut job).as_deref(), Some("1 cost line went with it: $71.55 is out of the job cost."));
+    assert!(vif(&mut job).questions.is_empty());
+    assert!(file::load(&file::save(&mut job)).is_ok());
+}

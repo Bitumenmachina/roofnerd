@@ -793,8 +793,11 @@ pub fn delete(doc: &mut Doc) {
         Some(sel) => {
             // A drawing taken away leaves what was traced over it: how much is said.
             let traced = plumbline_world::plans::traced_over(&mut doc.job, &sel).ok().map(|t| (doc.job.find(&sel).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e).map(|n| n.name.clone())).unwrap_or_default(), t.len()));
+            // What is priced on it, and on what goes with it, is said as it goes.
+            let before = plumbline_world::view::estimate(&mut doc.job);
             match ed::remove(&mut doc.job, &sel) {
             Ok(gone) => {
+                let went = plumbline_world::view::went_with_said(&before, &mut doc.job);
                 doc.selected = None;
                 doc.hover = None;
                 // A level deleted while it was on show alone, a roof, a thing in hand.
@@ -802,9 +805,15 @@ pub fn delete(doc: &mut Doc) {
                 doc.edit("Delete");
                 let said = match &traced {
                     Some((name, n)) if *n > 0 => format!("Deleted {name}. {} traced over it {} where {} and still {} so.", if *n == 1 { "1 thing".to_string() } else { format!("{n} things") }, if *n == 1 { "stays" } else { "stay" }, if *n == 1 { "it was" } else { "they were" }, if *n == 1 { "says" } else { "say" }),
+                    // A roof takes its planes and their eaves, hips and ridges: named
+                    // one by one they filled the card.
+                    _ if gone.len() > 4 => format!("Deleted {}, and {} with it.", gone.last().cloned().unwrap_or_default(), plumbline_world::view::so_many(gone.len() - 1, "thing")),
                     _ => format!("Deleted {}.", gone.join(", ")),
                 };
-                doc.say(Tone::Done, said);
+                match went {
+                    Some(went) => doc.say(Tone::Warned, format!("{said} {}{}", went[..1].to_uppercase(), &went[1..])),
+                    None => doc.say(Tone::Done, said),
+                }
             }
             Err(why) => cant(doc, "delete it", why),
             }

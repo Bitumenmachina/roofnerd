@@ -1,17 +1,23 @@
 flags:  ~ Assumed    ? Unknown    (no mark) Known
 
-first floor  (storey-0007)
+first floor  (level-0007)
     walls 8            210.00 LF
     wall face, gross   2,026.00 SF
     wall face, net     1,793.02 SF
+      of them Outside wall, 6 in: 4 walls, 136.00 LF; face 1,360.00 SF; net 1,195.99 SF
+      of them Partition, 4 1/2 in: 3 walls, 64.00 LF; face 576.00 SF; net 507.03 SF
+      of them Wet wall, 6 in: 1 wall, 10.00 LF; face 90.00 SF; net 90.00 SF
     floors 1           1,120.00 SF
     rooms 5            1,057.95 SF  (the floor inside the walls)
     doors 5, windows 8
 
-second floor  (storey-0008)
+second floor  (level-0008)
     walls 8            210.00 LF
     wall face, gross   1,816.00 SF
     wall face, net     1,580.53 SF
+      of them Outside wall, 6 in: 4 walls, 136.00 LF; face 1,224.00 SF; net 1,057.50 SF
+      of them Partition, 4 1/2 in: 3 walls, 64.00 LF; face 512.00 SF; net 443.03 SF
+      of them Wet wall, 6 in: 1 wall, 10.00 LF; face 80.00 SF; net 80.00 SF
     floors 1           1,120.00 SF
     rooms 5            1,057.95 SF  (the floor inside the walls)
     doors 4, windows 9

@@ -701,6 +701,21 @@ pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
             }
         }
         let mut gone = Vec::new();
+        // A roof solved from its footprint goes with everything solved from it: its
+        // planes and the eaves, hips, valleys and ridges round and between them. None
+        // of those can be taken out alone (they would come back), so until this was
+        // here a roof drawn in the window could not be deleted at all (seen
+        // 2026-11-16: "roof has elements under it; remove those first").
+        if job.world.get::<Footprint>(e).is_some() {
+            let under: Vec<String> = job.children().get(path).map(|c| c.values().cloned().collect()).unwrap_or_default();
+            for child in under {
+                let solved_here = job.find(&child).and_then(|c| job.world.get::<Solved>(c)).is_some_and(|s| s.from == path);
+                if solved_here {
+                    job.remove(&child)?;
+                    gone.push(child);
+                }
+            }
+        }
         if kind == Kind::Wall {
             let under: Vec<String> = job.children().get(path).map(|c| c.values().cloned().collect()).unwrap_or_default();
             for child in under {

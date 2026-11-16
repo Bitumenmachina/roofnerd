@@ -262,7 +262,9 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
             doc.hover = None;
             doc.edit(what);
             let tone = if lost.is_empty() && report.renumbered.is_empty() { Tone::Done } else { Tone::Warned };
-            doc.say(tone, format!("{what} on edge {edge} of {roof_path}. The roof is now {} planes, {} lines{more}", report.planes, report.lines));
+            // "9 lines" called a roof's eaves and hips what the estimate calls a cost line
+            // (J22A-16, call 91).
+            doc.say(tone, format!("{what} on edge {edge} of {roof_path}. The roof is now {}; its eaves, hips, valleys and ridges follow{more}", plumbline_world::view::so_many(report.planes, "plane")));
         }
         Err(why) => tools::cant(doc, "change the roof", why),
     }
@@ -676,7 +678,13 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                         Ok(x) if matches!(what, "overhead" | "profit") => format!("{} %", plumbline_world::view::figure(x, 2)),
                                         _ => typed.to_string(),
                                     };
-                                    doc.say(Tone::Done, format!("{path}: {what} set to {said}."));
+                                    // More than the job costs again is taken, and said
+                                    // as what it is: 250 typed for 25 tripled a price
+                                    // without a word (J22A-19).
+                                    match typed.parse::<f64>() {
+                                        Ok(x) if matches!(what, "overhead" | "profit") && x > 100.0 => doc.say(Tone::Warned, format!("{path}: {what} set to {said}. That is more than what it is a percentage of. If {} % was meant, type it again.", plumbline_world::view::figure(x / 10.0, 2))),
+                                        _ => doc.say(Tone::Done, format!("{path}: {what} set to {said}.")),
+                                    }
                                 } else {
                                     doc.say(Tone::Warned, format!("{path}: material set to {:?}, which is not a material of this job. The lines made of it have no figure.", text.trim()));
                                 }

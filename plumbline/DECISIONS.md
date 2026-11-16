@@ -3253,3 +3253,50 @@ and could not make one.
 Not decided here: what labor lines the starter assemblies should carry. That is the
 library's content, moves three demonstrations' figures, and is the next thing owed
 on this finding.
+
+### Call 91. A roof drawn from its footprint is measured on site, at the roof or at any plane of it (2026-11-16)
+
+From the twenty-second judgment, part A (J22A-18, one of the two deciding fails of
+item 12): on a traced house the roof carried the most dollars and was not on the
+verify-in-field list, and nothing on it could be made Known on site. The list asks of
+a thing only what a measurement can be put on, and a roof solved from its footprint
+took none.
+
+- **This replaces the J16-2 ruling of call 49** ("a plane solved from its roof's
+  footprint does not take a measured eave height ... refused, and not offered"). The
+  reason for it stands: what is put on a solved plane is thrown away the next time the
+  roof is solved. So the measurement is not put on the plane. **It is put on the roof,
+  and the roof is solved again**, and every plane of it has it. That is true to the
+  building: a roof drawn this way has one eave height.
+- **What a roof takes.** Its eave height: one length, shot. Its footprint, and how
+  each edge rises (a pitch or a gable): looked at and found as drawn ("same"). A
+  footprint that is not as drawn is moved first, as a wall line is.
+- **What a plane of it takes.** Its eave height, which is the roof's, and its pitch,
+  which is how its edge of the footprint rises. Both are said of the plane, where the
+  person is standing, and then whose they are. Its outline and its eave line are the
+  roof's footprint solved, and are not asked of at the plane.
+- **On the list.** What is priced on a plane rests on its roof as well: the roof is a
+  question with those dollars riding, until its footprint, its eave height and every
+  edge's rise are Known. One pitch still Assumed leaves every plane's outline Assumed
+  (a hip moves when the pitch next to it does), and the list says which edge.
+- **Anything else priced on values in question that takes no measurement is listed
+  all the same**, with what on it is to be checked, and its dollars ride. Left off,
+  nobody is sent to it. (Nothing in the demonstrations is such a thing today.)
+- **Words** (J22A-16, J22A-17, J22A-19; wording is the builder's call). A roof's
+  eaves, rakes, hips, valleys and ridges are never called "lines": on the estimate a
+  line is a cost line. The Roof tab's table is headed by what is in it ("Eaves, hips
+  and ridges"), and a change to a roof says "its eaves, hips, valleys and ridges
+  follow". Deleting something says what was priced on it and what that takes out of
+  the job cost; the command line's `remove` says the same sentence. A percentage out
+  of range is refused in a whole sentence ("has to be a percentage from 0 to 1000").
+  Overhead or profit over 100 % is taken, and answered as a warning with the tenth of
+  it offered ("If 25.00 % was meant, type it again"): it is a slip far more often
+  than a markup, and the program does not know which.
+- **A roof drawn from its footprint is deleted with everything solved from it**: its
+  planes and their eaves, hips, valleys and ridges go with it, and what was priced on
+  them is said. None of those can be taken out alone (the roof would make them again),
+  so the roof could not be deleted at all. A thing that still has other things under
+  it is refused as "has 5 things under it: delete those first" (it said "elements").
+- **On the estimate sheet a division's name and its total have a row of their own**,
+  and the column names are on the row under it. Beside the column names the two were
+  cut short ("THERMAL AND MOISTURE PROT", the total gone).

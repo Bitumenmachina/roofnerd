@@ -34,7 +34,7 @@ surface() { "$P" show "$1" | awk -v p="$PLANE1" '$1==p{on=1} on&&/surface area/{
 echo "the roof is $ROOF; the plane on its south edge is $PLANE1, $(surface "$T/job.json") SF"
 
 echo
-echo "== The session: pick a plane, raise its pitch twice, move its eave, type a pitch, give it a condition, look at the plan, save =="
+echo "== The session: pick a plane, raise its pitch twice, move its eave, type a pitch, give it an assembly, look at the plan, save =="
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
@@ -51,8 +51,9 @@ on "Pitch"; sleep 2; xdotool type --delay 300 "9:12"; sleep 2
 shot                                                    # 05 a pitch being typed
 xdotool key Return; sleep 3
 shot                                                    # 06 the typed pitch set
-on "Condition"
-shot                                                    # 07 a condition given to the surface
+on "Assembly"; park
+on "Assembly Standing seam copper roof"; park
+shot                                                    # 07 an assembly given to the surface
 xdotool mousemove 2050 500; sleep 1; for i in \$(seq 1 16); do xdotool click 5; sleep 0.4; done; sleep 1
 xdotool mousemove 1400 500; sleep 1; for i in \$(seq 1 9); do xdotool click 5; sleep 0.4; done; sleep 1
 xdotool mousemove 946 474; sleep 1; xdotool key t; sleep 9

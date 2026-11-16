@@ -564,6 +564,35 @@ pub fn so_many(n: usize, one: &str) -> String {
     if n == 1 { format!("1 {one}") } else { format!("{n} {one}s") }
 }
 
+/// What was priced on the things a step took out of the job, in the one sentence that
+/// is said as they go: the cost lines that went with them, what those came to, and
+/// how many had no figure. `before` is the estimate as it stood before the step. None
+/// when nothing priced went. A priced wall was deleted with "Deleted wall 1." and the
+/// price fell by what was on it without a word (J22A-17).
+pub fn went_with_said(before: &Estimate, job: &mut Job) -> Option<String> {
+    let gone: Vec<&SheetLine> = before.lines.iter().filter(|l| job.find(&l.path).is_none()).collect();
+    if gone.is_empty() {
+        return None;
+    }
+    let live: Vec<&&SheetLine> = gone.iter().filter(|l| !l.off).collect();
+    let priced: Vec<f64> = live.iter().filter_map(|l| l.amount.value).collect();
+    let waiting = live.len() - priced.len();
+    let off = gone.len() - live.len();
+    let went = format!("{} went with {}", so_many(gone.len(), "cost line"), if gone.iter().any(|l| l.path != gone[0].path) { "them" } else { "it" });
+    let mut said = if priced.is_empty() {
+        format!("{went}; none of them had come to a figure, so the price is as it was")
+    } else {
+        format!("{went}: ${} is out of the job cost", figure(crate::lines::cents(priced.iter().sum()), 2))
+    };
+    if !priced.is_empty() && waiting > 0 {
+        said.push_str(&format!(" ({} had no price yet)", if waiting == 1 { "1 of them".to_string() } else { format!("{waiting} of them") }));
+    }
+    if off > 0 {
+        said.push_str(&format!(" ({} switched off, and in no total)", if off == 1 { "1 was".to_string() } else { format!("{off} were") }));
+    }
+    Some(format!("{said}."))
+}
+
 /// What is built and has nothing priced on it, in the one sentence every view says it
 /// with: "nothing is priced on 3 things that could be (2 doors, 1 window): they are in
 /// no line and no total above". None when everything that could be priced is.

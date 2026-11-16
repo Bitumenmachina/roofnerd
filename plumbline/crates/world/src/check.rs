@@ -362,7 +362,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
         if let Some(w) = &line.waste {
             w.check(&format!("{what} waste"), "%")?;
             if w.value.is_some_and(|x| !x.is_finite() || !(0.0..=1000.0).contains(&x)) {
-                return Err(format!("{what} waste: is a percentage from 0 to 1000"));
+                return Err(format!("{what}: its waste has to be a percentage from 0 to 1000"));
             }
         }
         if let Some(o) = &line.order {
@@ -552,7 +552,7 @@ pub fn markup(path: &str, kind: Kind, m: &Markup) -> Result<(), String> {
         let what = format!("{path} {what}");
         v.check(&what, "%")?;
         if v.value.is_some_and(|x| !x.is_finite() || !(0.0..=1000.0).contains(&x)) {
-            return Err(format!("{what}: is a percentage from 0 to 1000"));
+            return Err(format!("{what} has to be a percentage from 0 to 1000"));
         }
     }
     Ok(())
