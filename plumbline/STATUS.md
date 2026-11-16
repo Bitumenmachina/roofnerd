@@ -6231,6 +6231,34 @@ of how sure each thing is, a roof's hips stayed orange and read as Assumed
 is. On plan with every level on show the roof is drawn solid over the floor plan
 (J25B-3): open, it is a decision and is taken when the report is in.
 
+## A thing turned, and a library change reaching it: a demonstration, written before it is run (`demos/turnw.sh`, call 107)
+
+The job: four 6 in walls round 24 ft by 16 ft, Known, and the 21 starter items. The
+east wall's line is at 24 ft east, so its faces are at 23.75 ft and 24.25 ft. The
+panelboard in the library is 15 in wide, 4 in deep, 30 in high.
+
+1. On plan, the panelboard is taken in hand from the Items list. **The plan stays on
+   show** (the next step clicks a place on the plan and fails if the plan is gone).
+2. It is set down with its middle at 23.5 ft east, 8 ft north. Its 15 in runs east
+   and west, 7 1/2 in each way: to 24.125 ft east, 0.375 ft past the wall's near
+   face. **Said: "Set one down on Ground. It is in the same space as wall 2 (4 1/2 in
+   into each other)."** (`plumbline clashes` on a job with one placed there by the
+   command line says "in each other by 4.50 in".) A click lands on a dot of the
+   screen, so the script takes where it stands from the saved job and holds what was
+   said to that, to the sixteenth of an inch.
+3. Q. Its 4 in is now east and west, 2 in each way of 23.5 ft: to 23.667 ft, an inch
+   short of the wall. **Said: "Turned Panelboard, 200 A a quarter: its width runs
+   north and south. It is clear of everything."**
+4. The library is written out from the window; in the file the panelboard's width is
+   made 20 in; the file is brought back with Item library. **Said: "Panelboard, 200
+   A: changed: its width; the one set down is now that size".**
+5. The saved job: nothing in the same space; the item 20 in wide with 1 placed; the
+   one placed 1.6667 by 0.3333 by 2.5 ft, turned 90 degrees, Assumed, "turned (turned
+   by hand in the model)".
+
+**Not run yet**: two judges were driving windows on the machine when it was written.
+Its set-up and the 4.50 in were tried at the command line.
+
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 315 tests pass,
