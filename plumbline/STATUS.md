@@ -5964,6 +5964,73 @@ nothing to be left uncommitted): a click of theirs lost about then may be the lo
 and not the program, and a finding of that kind is to be tried again before it is
 believed.
 
+## The twenty-fourth judgment, part B (2026-11-16, late): the look and the words, and where each stands
+
+An agent that did not build it (Opus), on the frozen copy of d20ac60 (so before call
+96), cold, on its own display: the made-up whole house and an empty job with USDA
+7213 laid under it; 200 pictures, each read. Its notes as written are
+`research/judgment-24b-notes.md`; its list of about 640 words and phrases, 76 marked,
+is `research/judgment-24b-words.md`. **Both items fail.** Item 11, the look: of
+VISUAL.md's lines it passed 14, failed 18 and could not judge four (B3 to B6: momentum
+and easing cannot be read from still pictures on this renderer). What decides it: the
+panels are grey sheets and not glass (A2), "more below" is written over words on
+nearly every screen (A5), and the house from outside reads as a diagram over a model
+(D8). Item 9, the words: what decides it is the Bring in and Add drawing lists, built
+of folders, file names and extensions on the path every first job takes.
+
+Every finding is a row. "Open" means nothing has been done about it.
+
+| # | What it found | Where it stands |
+|---|---|---|
+| J24B-1 | The panels are near-opaque grey: nothing of the house shows through (A2) | Open |
+| J24B-2, -11, -12, -18, -19, -22, -26, -43, -58 | "more below" is drawn over the panel's words (A5) | Open |
+| J24B-3 | A pill at the lower right reads "\| 3D" with its left half empty | Open |
+| J24B-4 | Eave, hip and ridge lines and number tags over the dressed roof on the opening view (D8); no fascia, soffit or gutter to be read | The lines and tags: call 96, built after the copy the judge had, not yet seen. Fascia and soffit: open |
+| J24B-5, -9 | A short blue line floats in the air with the ground off; a pale box sits loose on the ground right of the house | Open: not yet looked for |
+| J24B-8, -10, -28 | Equipment and fixtures are pale boxes; the heat pump on plan is a lilac square (D6) | Open (the same as J22B's bathtub) |
+| J24B-11 | Known, Assumed, Unknown switched on turns the house flat grey with nothing amber or red in sight from outside | Open |
+| J24B-12 | Clashes are crosses seen through opaque walls, on nothing a person can see | Open (J22B-11) |
+| J24B-13 | Looking into one level switches the roof off, and its row goes off, without being asked | Open |
+| J24B-14 | On plan: no door swings; ducts overhead drawn as solid bars over walls and room names; a lilac square with no name (E1, E4) | Open |
+| J24B-15 | On plan with every level on, the roof covers the plan and is shaded light and dark by the sun (E1) | Open |
+| J24B-16 | On foot: the ceiling is a raw tan, the duct a plastic blue, a door washed out, the floor bare (C3) | Open |
+| J24B-17 | A refusal wraps one word alone to a second line | Open |
+| J24B-20, -21 | A roof plane's panel: "-1' 0\"", "Outline 4 points, in feet", "solved from the footprint of roof", the slope factor written as a formula, a quantity to four places beside the same to two | Open |
+| J24B-22, -30, -52, -53 | Open items, in the panel and at the foot of every tab, is a column of red and amber sentences; an unpriced line on the sheet is red twice (A6) | Open |
+| J24B-22, -23, -30 | A panel keeps the scroll of what it showed before: a new thing selected opens part way down with its name out of sight; a tab opens at the scroll of the last tab | Open |
+| J24B-24 | A foundation wall is "wall 4" and says "No cladding, on its west face"; house walls have names | Open: a made-up house's naming and a sentence |
+| J24B-25 | The ground's grid shows across the face of the foundation and the footing (C4) | Open |
+| J24B-26 | A selected footing shows no outline (C5); "footing 24 × 12" with no unit; depth in inches in one place and feet in another; 2.9630 CY | Open |
+| J24B-27 | The supply duct is the accent's blue: a selected duct cannot be told from one that is not (A7) | Open |
+| J24B-28, -29, -33 | "Connector 1" and its place in negative feet and inches; a height in decimal feet beside sizes in fractional inches | Open |
+| J24B-29 | The kitchen is an empty room with a sink box on the wall; the bath is empty (D6, D8) | Open: cabinets are not in the model (STATUS, the seven trades) |
+| J24B-31 | Budget: names cut mid-word while the column beside them is empty; "the job  the job"; "partition at 14" | Open |
+| J24B-32 | Estimate: the recap says "Labor none" where the column totals say LABOR $40,800.00 (the money is supervision); no suppliers side by side on a job with none, and nothing says where they would go; "AT", "GENERAL" for subcontract money; a division chip on every line under its division's heading; 399 lines, one a pipe piece | Open |
+| J24B-33, -34 | Words on the Verify in field, Clashes, Building, Roof and system tabs ("connector 1 size", "(type)", a name said twice, a kind in the SIZE column, sizes with no unit, a cable by its diameter, "not said") | Open |
+| J24B-35 | "like Supply Air" where it is "Supply air" everywhere else; the Equipment button's word fills it edge to edge; **"All levels" left only the foundation on** | Open |
+| J24B-36, -39, -44 | The status line ends in "..." with half the window free | Open |
+| J24B-37 | Under SYSTEMS each system reads on while Mechanical and Electrical above are off and nothing of them is drawn (B8); "CSV" and "IFC" on buttons | Open |
+| J24B-38, -56 | The Bring in and Add drawing lists: "ITS FILE", "A CSV or XLSX, like lists/ridge.xlsx", "Up one folder", "(a folder)", file names; a field to type in is offered first (A8) | Open |
+| J24B-39 | "Wrote house estimate.xlsx, beside the job" | Open |
+| J24B-40 | Only Next steps can be put away: no panel has a switch (B8) | Open |
+| J24B-44 | The refusal of a bare 9 carries a sentence about a laser's settings | Open |
+| J24B-45, -46 | **Doing what that refusal says throws the 9 away** (the field replaces what is in it on the next key and does not look selected); then the field drawn as in use is not the one taking the keys ("First floor9 ft") | Open |
+| J24B-48, -49 | **Enter on an empty Thickness says nothing; a length typed next is taken as the thickness, and a wall 20 ft thick is drawn without a word.** The tool picked again holds 20 ft with no field open, and typing goes to the keys | Open |
+| J24B-51, -52, -59 | "set in the window" on every source line; "Lap siding, on both faces" on a wall whose outside is not known, and that wall drawn plain white in 3D (D1) | Open |
+| J24B-54 | A production rate is entered through a red chip that does not look like a field, and its field opens with no hint (also J24A-4); the line stays red after | Open |
+| J24B-56 | Open items says "To order", "Extension", "order factor": words the sheet does not use | Open |
+| J24B-57 | A plan picked from the list leaves its pages scrolled out of sight; the field reads "usda-7213.pdf, 1"; pages have no picture or title | Open |
+| J24B-58 | "there are no drawn lines on it to snap to"; "select the drawing to see what" | Open |
+
+Passed, and worth knowing: the model fills the window (A1); round, never square (A4);
+the wheel closes on what is under the pointer and a drag slides the ground with the
+hand (B1, B2, measured from pictures); one sun and soft shade (C1); a sky and a
+ground (C2); the house at size, its corners closed, its openings built (D2 to D4); a
+trade at a time (D7); lines by type (E2); the plan laid under flat, unlit and
+readable (E3); the sheet reads as the same program (F4). A refusal says why and what
+to do (J24B-17, -36); a priced wall's delete says what happened to the money
+(J24B-55); the framing view is "the best picture of the session" (J24B-7).
+
 ## Start here (written 2026-11-16; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 309 tests pass,
