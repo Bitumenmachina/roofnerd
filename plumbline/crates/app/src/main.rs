@@ -666,7 +666,13 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                     1 => format!(" The same line on {} had none and takes it too.", plumbline_world::view::listed(&also)),
                     _ => format!(" The same line on {} had none: they take it too.", plumbline_world::view::listed(&also)),
                                 };
-                                doc.say(Tone::Done, format!("{sel}: {}{of} set to {said}.{also}", if field == Entry::Rate { "production rate".to_string() } else { what.replace('_', " ") }));
+                                // An allowance on a thing with no cost line is in the budget and
+                                // in no line of the price: said the moment it is typed, with
+                                // what to do, and not only as a figure on the top bar (J24A-9;
+                                // whether it belongs in the price is QUESTIONS.md Q26).
+                                let bare = field == Entry::Allowance && doc.job.find(&sel).is_some_and(|e| doc.job.world.get::<plumbline_world::Cost>(e).is_none_or(|c| c.lines.is_empty()));
+                                let also = if bare { format!("{also} It is the budget's figure and is not in the price: give this cost lines (Assembly, or Add cost line) to carry it in.") } else { also };
+                                doc.say(if bare { Tone::Warned } else { Tone::Done }, format!("{sel}: {}{of} set to {said}.{also}", if field == Entry::Rate { "production rate".to_string() } else { what.replace('_', " ") }));
                             }
                             Err(why) => tools::cant(doc, match field { Entry::StretchOut => "set that stretch-out", Entry::Rate => "set that production rate", _ => "set that price" }, why),
                         },

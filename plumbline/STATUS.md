@@ -6094,6 +6094,7 @@ arithmetic** (walls 130.33 LF and 1,042.67 SF, floor 986.56 SF, roof 1,229.18 SF
 | J24A-6 | A roof is priced plane by plane: an assembly went on one plane of four and nothing said the others were bare | **Fixed, seen (call 100)**: it goes on every plane of the roof that has nothing priced, and says so |
 | J24A-7 | "1 SQ/hr" is refused on a line that comes out in SF | **Fixed with a test (call 100)**: a square is 100 SF either way |
 | J24A-8 | Pricing four planes alike took twenty entries | **Fixed, seen (call 100)**: a price or a rate typed on one plane's line is taken by the same line on the others where it has none |
+| J24A-9 | An allowance per SF typed on a floor did not move the price; the top bar says "allowances $… not in price" and not why or what to do | **In part, built and not seen**: the moment an allowance is typed on a thing with no cost line the window says it is the budget's figure, not in the price, and to give the thing cost lines. **Whether an allowance belongs in the price is QUESTIONS.md Q26, Patrick's**; the working answer is that it does not, and that it is said wherever the price is read |
 
 **Seen once and not again (2026-11-16, late).** On call 99's build, after the ground
 was switched off and on, a footing selected, Mechanical switched off and brought back
