@@ -212,7 +212,7 @@ fn in_house_work_is_added_with_its_production_rate_or_not_at_all() {
     let lines_before = job.find(&wall).and_then(|e| job.world.get::<plumbline_world::Cost>(e)).map(|c| c.lines.len()).unwrap_or(0);
     // A rate that cannot be read leaves the wall as it was.
     let why = job.add_line_in_hours(&wall, "Siding labor", "net_area", Class::Labor, "fast", Status::Assumed, "made up").unwrap_err();
-    assert!(why.contains("not an order conversion"), "{why}");
+    assert!(why.contains("\"fast\" is not a production rate; write how fast the work goes"), "{why}");
     assert_eq!(job.find(&wall).and_then(|e| job.world.get::<plumbline_world::Cost>(e)).map(|c| c.lines.len()).unwrap_or(0), lines_before);
     // With one that can, the line is there, in hours, with no price yet.
     job.add_line_in_hours(&wall, "Siding labor", "net_area", Class::Labor, "40 SF/hr", Status::Assumed, "made up").unwrap();

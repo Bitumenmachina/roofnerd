@@ -3359,3 +3359,76 @@ the model read as a view docked under a bar; and on plan no panel had a shadow.
 Not done: the left and right panels still stand nearly the height of the window
 (the judge's "weaker" half of A1). The pointer over the gap between two cards is
 still taken as over a bar.
+
+### Call 94. Picking a plan: a file, a folder and a page are a builder's words; the page is picked, not typed (2026-11-16)
+
+From the twenty-second judgment, part B (J22B-35, the deciding fail of item 9): the
+Add drawing list "is a file picker in software words". Wording is the builder of
+this program's call (Patrick's rule), so it is decided here.
+
+- **"File" and "folder" stay.** They are Patrick's own words in his rule ("a file
+  is picked from a list; nobody types where a file lies"), and they are what a set
+  of plans is to anyone who has been sent one: a PDF file, in the job's folder. What
+  a builder does not say is "directory", "path", "browse" or "import", and none of
+  those is on the screen.
+- **A PDF's page is a page, not a sheet.** A sheet has its own number on its title
+  block (A-201); "sheet 4" for the fourth page of a file would be taken for that
+  number. A drawing is still named for its file and its page ("usda-7213, page 4")
+  until it is given its sheet number by hand.
+- **The page is picked from a list.** Picking a plan of more than one page lists its
+  pages under the field, each a row; a click adds that page. It was typed after a
+  comma in the field ("change the 1 for another page"), which is a thing a person
+  has to be told. Typing "plans/a-1.pdf, 4" and Enter still works: the
+  demonstrations and anyone quick with a keyboard use it.
+- **The words on the list**: the field is "Plan" (it was "File, page"); "WHERE THIS
+  JOB IS KEPT" over the list (it was "IN THE JOB'S FOLDER"); "Up one folder" (it
+  named the folder above); "Picked usda-7213.pdf: it has 12 pages. Pick the page to
+  trace over from the list." (it was "Usda-7213.pdf: Enter brings it in.", the
+  file's name wrongly given a capital); "Nothing here that can be brought in (PDF,
+  PNG, JPEG). Look in a folder, or go up."
+
+### Call 95. What the twenty-third judgment found on the money path, and what was decided (2026-11-16)
+
+A judge that did not build it tried the command line's money path after calls 91 and
+92 (`research/judgment-23-notes.md`). Every total it worked by hand held. Eight
+findings; these are the decisions in them.
+
+- **A pitch or an eave height set on a plane solved from a roof's footprint is put on
+  the roof** (J23-1). `set <plane> pitch 7:12` was taken, said to be Known, and thrown
+  away at the next solve, leaving a file that failed its own check: the one thing
+  call 91 fixed for `measure` and left open for `set`. It is now the roof's edge that
+  changes, and the roof is solved again; the file checks.
+- **How an edge of a roof rises can be read on site** (J23-2): `measure <roof> "edge
+  1" 7:12`, or the same at the plane as its pitch. It answered that a pitch "is not
+  one length ... move it to where it is". "same" still marks it found as drawn. The
+  command line's usage names `edge:<n>` and `move:<n>`.
+- **Whatever takes priced lines out of the job says the dollars** (J23-3): a roof
+  edge made a gable (its plane goes), and an assembly changed for another (the lines
+  the new one lacks come off). One sentence in the model says it for a delete, a
+  dropped plane and lines that came off (`view::went_with_said`, `came_off_said`),
+  at the command line and in the window.
+- **An eave height at or below the job's zero is taken, and remarked on** (J23-4). A
+  canopy over a basement door is there; far more often it is a reading typed wrong,
+  and the program does not know which. A value that was already measured and is
+  checked again is "found the same again", not "found as drawn".
+- **A row of the recap with lines that come to no figure says "no figure" and how
+  many are to price**, never "none" (J23-5): Labor read "none" over four labor lines
+  with no production rate.
+- **In the workbook the recap's hours are headed "Hours, as written"**, and a line of
+  in-house work says in its note what its hours are worked from ("its hours are
+  240.00 SF at 40 SF/hr") (J23-6). The hours are still not a formula: the sheet
+  has the hours as its quantity, not the area and the rate, and making them live
+  means two more columns on every line. Not done; said.
+- **Words** (J23-7): a rate that cannot be read "is not a production rate; write how
+  fast the work goes, like 40 SF/hr or 0.025 hr/SF" (it offered "30 SF/sheet"); "its
+  production rate has to be more than nothing (and no more than a billion)" (it said
+  "order factor ... 1e9"); `show` says "production rate" where it said "ordered by
+  the hr"; `lines` no longer calls eaves and hips lines. **Left as they are**: the
+  names in a library file's Quantity column ("face_area", "net_area"). They are what
+  the program reads the file back by, and the file round-trips to the byte; a
+  builder's words there need a second reading of the column. PROPOSALS.md 24.
+- **Overhead or profit over 100 % is answered at the command line as in the window**
+  (J23-8), by one sentence in the model.
+- **Not done**: a production rate that is absurdly slow (0.0001 SF/hr) is taken
+  without remark. There is no line a program can draw between slow and wrong that a
+  mason and a finish carpenter would both accept; the hours are on the line to read.

@@ -131,3 +131,15 @@ price as its own, Assumed, sourced to the list and the item; a line that already
 has a price keeps it, and the message says which did and which did not. It changes
 what an import does to the money, so it waits for Patrick's word. Until then the
 import says which lines it did not price and why (STATUS.md, J22A-15).
+
+## 24. A library file a builder can read: the takeoff a line is priced by, in words (2026-11-16, from judgment 23)
+
+An assembly library written out as CSV or XLSX has, in its Quantity column, the names
+the program works a line's quantity from: `face_area`, `net_area`, `true_length`,
+`plan_length * stretch_out`. On screen those are said as "face area", "net area";
+in the file they are as the program keeps them, because the file is read back by
+them and round-trips to the byte.
+
+Proposed: the file says them as the screen does ("net area"), and reads either
+spelling. It changes a file format people may already have saved, so it waits for
+Patrick's word.

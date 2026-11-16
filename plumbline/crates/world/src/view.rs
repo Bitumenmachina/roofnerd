@@ -264,7 +264,10 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
                     extra.push(format!("waste: {}", stated(w.status, w.value.map(|x| format!("{} %", num(x))).unwrap_or_default())));
                 }
                 if let Some(o) = &line.order {
-                    extra.push(format!("ordered by the {}: {}", o.unit, stated(o.factor.status, o.factor.value.map(|x| format!("{} {}", num(x), o.factor.unit)).unwrap_or_default())));
+                    // In-house work is by the hour, and what an hour does is its
+                    // production rate: "ordered by the hr" is how a sheet is bought.
+                    let what = if o.unit == HOURS { "production rate".to_string() } else { format!("ordered by the {}", o.unit) };
+                    extra.push(format!("{what}: {}", stated(o.factor.status, o.factor.value.map(|x| format!("{} {}", num(x), o.factor.unit)).unwrap_or_default())));
                 }
                 extra.push(format!("price: {}", stated(line.unit_cost.status, line.unit_cost.value.map(|x| format!("{} {}", num(x), line.unit_cost.unit)).unwrap_or_default())));
                 notes.push(format!("line: {} = {}   ({})", line.description, words(&line.quantity), extra.join("; ")));
@@ -564,13 +567,33 @@ pub fn so_many(n: usize, one: &str) -> String {
     if n == 1 { format!("1 {one}") } else { format!("{n} {one}s") }
 }
 
+/// Overhead or profit typed over 100 %: taken, and answered, since it is a slip (250
+/// for 25) far more often than a markup, and the program does not know which
+/// (J22A-19; J23-8: the command line took it without a word).
+pub fn markup_large_said(typed: &str) -> Option<String> {
+    let x = typed.trim().trim_end_matches('%').trim().parse::<f64>().ok()?;
+    (x > 100.0).then(|| format!("That is more than what it is a percentage of. If {} % was meant, enter it again.", figure(x / 10.0, 2)))
+}
+
 /// What was priced on the things a step took out of the job, in the one sentence that
 /// is said as they go: the cost lines that went with them, what those came to, and
 /// how many had no figure. `before` is the estimate as it stood before the step. None
 /// when nothing priced went. A priced wall was deleted with "Deleted wall 1." and the
 /// price fell by what was on it without a word (J22A-17).
 pub fn went_with_said(before: &Estimate, job: &mut Job) -> Option<String> {
-    let gone: Vec<&SheetLine> = before.lines.iter().filter(|l| job.find(&l.path).is_none()).collect();
+    gone_said(before, job, false)
+}
+
+/// The same for cost lines taken off a thing that stays: an assembly changed for
+/// another takes off the lines the new one does not have, and their dollars with
+/// them (J23-5).
+pub fn came_off_said(before: &Estimate, job: &mut Job) -> Option<String> {
+    gone_said(before, job, true)
+}
+
+fn gone_said(before: &Estimate, job: &mut Job, came_off: bool) -> Option<String> {
+    let now: std::collections::BTreeSet<(String, String)> = estimate(job).lines.into_iter().map(|l| (l.path, l.description)).collect();
+    let gone: Vec<&SheetLine> = before.lines.iter().filter(|l| !now.contains(&(l.path.clone(), l.description.clone()))).collect();
     if gone.is_empty() {
         return None;
     }
@@ -578,17 +601,26 @@ pub fn went_with_said(before: &Estimate, job: &mut Job) -> Option<String> {
     let priced: Vec<f64> = live.iter().filter_map(|l| l.amount.value).collect();
     let waiting = live.len() - priced.len();
     let off = gone.len() - live.len();
-    let went = format!("{} went with {}", so_many(gone.len(), "cost line"), if gone.iter().any(|l| l.path != gone[0].path) { "them" } else { "it" });
+    let went = if came_off {
+        format!("{} came off", so_many(gone.len(), "cost line"))
+    } else {
+        format!("{} went with {}", so_many(gone.len(), "cost line"), if gone.iter().any(|l| l.path != gone[0].path) { "them" } else { "it" })
+    };
     let mut said = if priced.is_empty() {
         format!("{went}; none of them had come to a figure, so the price is as it was")
     } else {
         format!("{went}: ${} is out of the job cost", figure(crate::lines::cents(priced.iter().sum()), 2))
     };
+    // What else is true of them, in one bracket.
+    let mut also = Vec::new();
     if !priced.is_empty() && waiting > 0 {
-        said.push_str(&format!(" ({} had no price yet)", if waiting == 1 { "1 of them".to_string() } else { format!("{waiting} of them") }));
+        also.push(format!("{} had no price yet", if waiting == 1 { "1 of them".to_string() } else { format!("{waiting} of them") }));
     }
     if off > 0 {
-        said.push_str(&format!(" ({} switched off, and in no total)", if off == 1 { "1 was".to_string() } else { format!("{off} were") }));
+        also.push(format!("{} switched off, and in no total", if off == 1 { "1 was".to_string() } else { format!("{off} were") }));
+    }
+    if !also.is_empty() {
+        said.push_str(&format!(" ({})", also.join("; ")));
     }
     Some(format!("{said}."))
 }

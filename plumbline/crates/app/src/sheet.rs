@@ -724,7 +724,13 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                             words(c2, fonts, more, 11.5, Weight::Regular, theme::status_ink(Status::Unknown));
                         }
                     });
-                    cell(r, 130.0, true, |c2| words(c2, fonts, "none", 12.5, Weight::Regular, theme::ink_faint()));
+                    // Lines of this cost type with no figure are not "none" (J23-4).
+                    if c.total.left_out.is_empty() {
+                        cell(r, 130.0, true, |c2| words(c2, fonts, "none", 12.5, Weight::Regular, theme::ink_faint()));
+                    } else {
+                        cell(r, 118.0, true, |c2| words(c2, fonts, format!("{} to price", view::so_many(c.total.left_out.len(), "line")), 11.5, Weight::Regular, theme::ink_faint()));
+                        cell(r, 130.0, true, |c2| words(c2, fonts, "no figure", 12.5, Weight::Medium, theme::status_ink(Status::Unknown)));
+                    }
                 }),
             }
         }

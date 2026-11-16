@@ -181,6 +181,11 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
             (_, Some(a), _, _) => Out::Dollars(a),
         };
         let mut note = note_of(l);
+        // In-house work: what its hours are worked from, so they can be traced (J23-6:
+        // neither the workbook nor the CSV said the rate or what it was a rate over).
+        if let (Some(rate), Some(q)) = (l.rate_said(), l.quantity.value) {
+            note = [format!("its hours are {} {} at {rate}", view::figure(q, 2), l.quantity.unit), note].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("; ");
+        }
         if formulas && matches!(amount, Out::Dollars(_)) {
             note = [note, "this amount is the job's figure, not a formula: it is not this quantity times this price".to_string()].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("; ");
         }
@@ -211,7 +216,7 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
     }
 
     // The recap: each class over the sheet's amounts, then the job cost and what is taken on it.
-    let mut recap: Vec<Vec<Out>> = vec![vec![text(format!("{title}: the recap"))], vec![], ["", "Amount", "Lines", "Hours", "Note"].iter().map(|h| text(*h)).collect()];
+    let mut recap: Vec<Vec<Out>> = vec![vec![text(format!("{title}: the recap"))], vec![], ["", "Amount", "Lines", "Hours, as written", "Note"].iter().map(|h| text(*h)).collect()];
     let class_first = recap.len() + 1;
     for c in &est.classes {
         // Each cost type is a formula over the sheet's lines of that type, whether or not

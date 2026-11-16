@@ -13,6 +13,10 @@
 //! the plan view once it has come to rest: where the plan's zero is on screen, and how
 //! many pixels a foot is. Two things with one name are told apart as "Height" and
 //! "Height #2", from the top of the screen down. Without the variable nothing is written.
+//!
+//! Beside it, in `<file>.said`, is every message the window gave, one to a line in the
+//! order given, in the words on the screen: a demonstration checks what a person was
+//! told, and not only what the saved job holds.
 
 use bevy::prelude::*;
 use bevy::ui::{ComputedUiTargetCamera, UiGlobalTransform};
@@ -33,9 +37,19 @@ pub fn write(
     camera: Query<(&Camera, &GlobalTransform, &Projection), With<MainCamera>>,
     mut last: Local<String>,
     mut file: Local<Option<Option<String>>>,
+    mut said: Local<String>,
 ) {
     let file = file.get_or_insert_with(|| std::env::var("PLUMBLINE_MAP").ok());
     let (Some(file), Some(cameras)) = (file.as_ref(), cameras) else { return };
+    // What the window said, each message once as it changes, as a person reads it: a
+    // script that checks the words a person was given reads them from `<file>.said`.
+    if *said != doc.message {
+        *said = doc.message.clone();
+        use std::io::Write;
+        if let Ok(mut log) = std::fs::OpenOptions::new().create(true).append(true).open(format!("{file}.said")) {
+            let _ = writeln!(log, "{}", crate::panels::pretty(&crate::theme::spoken(&doc.message)).replace('\n', " | "));
+        }
+    }
     let mut model = (IVec2::ZERO, Vec2::ZERO);
     let mut sheet = (IVec2::ZERO, Vec2::ZERO);
     for (window, primary) in &windows {

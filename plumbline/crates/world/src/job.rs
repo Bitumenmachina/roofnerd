@@ -213,6 +213,26 @@ impl Job {
         let length = |was: Option<&Val<Len>>| typed_length(value, was, status, source);
         let text = || Val { value: value.map(str::to_string), unit: String::new(), status, source: source.into() };
         let missing = |what: &str| format!("{path} has no {what} to set");
+        // A plane solved from its roof's footprint rises as its edge of the footprint
+        // does and has the roof's eave height. Set on the plane, either was taken, said
+        // to be Known, and thrown away the next time the roof was solved, leaving a
+        // file that failed its own check (J23-1). It is the roof's: it is put on the
+        // roof, and the roof is solved again (call 91 did this for a measurement).
+        if matches!(field, "pitch" | "eave_height") {
+            if let Some(solved) = self.world.get::<Solved>(e).cloned() {
+                let typed = value.ok_or_else(|| format!("{path} is solved from {}'s footprint, and a roof with no {} cannot be solved: give it the value it has", solved.from, field.replace('_', " ")))?;
+                let change = match (field, solved.edge) {
+                    ("pitch", Some(edge)) => crate::solve::Change::Rise { edge, rise: Val { value: Some(Rise::Pitch(units::parse_pitch(typed)?)), unit: U_PITCH.into(), status, source: source.into() } },
+                    ("pitch", None) => return Err(format!("{path} is an eave, a hip or a ridge of {}, and has no pitch of its own", solved.from)),
+                    _ => {
+                        let (len, unit) = units::parse_length(typed)?;
+                        crate::solve::Change::EaveHeight(Val { value: Some(len), unit: unit.into(), status, source: source.into() })
+                    }
+                };
+                crate::solve::edit(self, &solved.from, change)?;
+                return Ok(());
+            }
+        }
         match field {
             "pitch" => {
                 let rise = value.map(units::parse_pitch).transpose()?;
@@ -391,6 +411,11 @@ impl Job {
     /// one in the same breath.)
     pub fn add_line_in_hours(&mut self, path: &str, description: &str, quantity: &str, class: Class, rate: &str, status: Status, source: &str) -> Result<(), String> {
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
+        // A rate that names no hour is refused here, as what it is: further on it is
+        // read before the line is known to be in-house work.
+        if !(rate.contains("/hr") || rate.contains("hr/")) {
+            return Err(format!("{rate:?} is not a production rate; write how fast the work goes, like 40 SF/hr or 0.025 hr/SF"));
+        }
         let before = self.world.get::<Cost>(e).cloned();
         let done = self
             .add_line(path, description, quantity, None, false)
@@ -465,7 +490,7 @@ impl Job {
             return Err(if matches!(field, "stretch_out" | "quantity" | "waste" | "order" | "unit_cost") {
                 format!("{path} has no cost line to set a {field} on")
             } else {
-                format!("{field:?} is not a field that can be set on {path}; an element takes pitch, height, eave_height, assembly, wbs or allowance, and a cost line takes stretch_out, quantity, waste, order, unit_cost or a value its formula names")
+                format!("{field:?} is not a field that can be set on {path}; an element takes pitch, height, eave_height, assembly, wbs or allowance, a roof drawn from its footprint takes edge:<n> (a pitch, or gable) and move:<n>, and a cost line takes stretch_out, quantity, waste, order, unit_cost or a value its formula names")
             });
         };
         let mut new = cost.clone();
@@ -533,8 +558,12 @@ impl Job {
                     }
                     Some(text) => {
                         // "30 SF/sheet" or "1.25 lb/SF": a number, then what per what.
-                        let how = format!("write it as a number and what per what, like 30 {unit}/sheet or 1.25 lb/{unit}");
-                        let (number, per) = text.trim().split_once(' ').ok_or_else(|| format!("{text:?} is not an order conversion; {how}"))?;
+                        // In-house work says how fast it goes; anything else, how what
+                        // is measured becomes what is bought (J23-5: a labor line's
+                        // refusal offered "30 SF/sheet").
+                        let in_hours = l.class.is_some_and(|c| c.in_hours()) || l.order.as_ref().is_some_and(|o| o.unit == HOURS) || text.contains("/hr") || text.contains("hr/");
+                        let (is_not, how) = if in_hours { ("is not a production rate", format!("write how fast the work goes, like 40 {unit}/hr or 0.025 hr/{unit}")) } else { ("is not an order conversion", format!("write it as a number and what per what, like 30 {unit}/sheet or 1.25 lb/{unit}")) };
+                        let (number, per) = text.trim().split_once(' ').ok_or_else(|| format!("{text:?} {is_not}; {how}"))?;
                         let factor = units::parse_number(number)?;
                         // An optional last word says whether whole ones are bought.
                         let (per, said) = match per.trim().rsplit_once(' ') {
@@ -543,9 +572,9 @@ impl Job {
                             _ => (per.trim(), None),
                         };
                         if per.chars().any(char::is_whitespace) {
-                            return Err(format!("{text:?} is not an order conversion; {how}, with whole or exact after it if it needs saying"));
+                            return Err(format!("{text:?} {is_not}; {how}{}", if in_hours { "" } else { ", with whole or exact after it if it needs saying" }));
                         }
-                        let (top, bottom) = per.split_once('/').ok_or_else(|| format!("{text:?} is not an order conversion; {how}"))?;
+                        let (top, bottom) = per.split_once('/').ok_or_else(|| format!("{text:?} {is_not}; {how}"))?;
                         let (order_unit, round_up) = if top == unit && bottom != unit {
                             // Whole ones for a package; hours are not bought whole.
                             (bottom, bottom != HOURS)

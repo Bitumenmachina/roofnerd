@@ -286,7 +286,9 @@ with a real pointer and keyboard, and seen by taking pictures and **reading them
 `demos/window.sh` is the kit every window demonstration uses: `open_window`, `on
 "Wall"` (click the control with that name), `sheet "Estimate"`, `typed`, `click X Y`,
 `shot` (F12 saves a picture of both windows), `park`, `at`/`plan_px` (a place on the
-plan to a place on screen). Controls are found by name through a map the program
+plan to a place on screen). Every message the window gives is written, in the words
+on the screen, to `$T/map.txt.said`: check what a person was told there
+(`demos/moneyw.sh` does), not only what the saved job holds. Controls are found by name through a map the program
 writes when `PLUMBLINE_MAP` is set (`crates/app/src/map.rs`): **keep every control's
 name when restyling it, or every script that clicks it breaks.** The renderer is
 software and slow (about a frame a second at worst): a click that begins and ends

@@ -175,7 +175,9 @@ pub fn read(mut doc: ResMut<Doc>, mut plans: ResMut<Plans>, mut images: ResMut<A
                     image.texture_descriptor.mip_level_count = levels;
                 }
                 image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor { mag_filter: ImageFilterMode::Linear, min_filter: ImageFilterMode::Linear, mipmap_filter: ImageFilterMode::Linear, ..default() });
-                let mut said = format!("{path}: its page is read ({})", if page.lines.is_empty() { "nothing on it to snap to".to_string() } else { format!("{} lines to snap to", page.lines.len()) });
+                // "The drawing" first: a drawing is named for its file, and a sentence that
+                // began with the name gave it a capital it does not have ("Usda-7213").
+                let mut said = format!("The drawing {path}: its page is read ({})", if page.lines.is_empty() { "it is a scan: there are no drawn lines on it to snap to".to_string() } else { format!("{} drawn lines to snap to", page.lines.len()) });
                 if !page.lost.is_empty() {
                     said.push_str(&format!("; {} not read from it: select the drawing to see what", if page.lost.len() == 1 { "1 thing".to_string() } else { format!("{} things", page.lost.len()) }));
                 }

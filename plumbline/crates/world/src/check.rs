@@ -375,7 +375,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
             }
             o.factor.check_basics(&format!("{what} order factor"))?;
             if o.factor.value.is_some_and(|x| !x.is_finite() || x <= 0.0 || x > MAX_UNIT_COST) {
-                return Err(format!("{what} order factor: must be more than zero (and not beyond {MAX_UNIT_COST:e})"));
+                return Err(if o.unit == HOURS { format!("{what}: its production rate has to be more than nothing (and no more than a billion)") } else { format!("{what}: its order conversion has to be more than zero (and no more than a billion)") });
             }
         }
 
@@ -451,7 +451,7 @@ pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
         }
         o.factor.check_basics(&format!("{path} order factor"))?;
         if o.factor.value.is_some_and(|x| !x.is_finite() || x <= 0.0 || x > MAX_UNIT_COST) {
-            return Err(format!("{path} order factor: must be more than zero (and not beyond {MAX_UNIT_COST:e})"));
+            return Err(format!("{path}: its order conversion has to be more than zero (and no more than a billion)"));
         }
         per = Some(format!("$/{}", o.unit));
     }

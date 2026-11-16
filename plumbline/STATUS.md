@@ -40,15 +40,13 @@ built before Patrick's ruling 12 and are left as they were.)
 "Demonstrated" means a script in `demos/` drives the real program and checks it;
 the window ones do it with a real pointer and keyboard on a virtual display and
 leave pictures in `demos/captured/`. "Judged" means an agent that did not build it
-tried to break it. **The last full run of the sixteen window demonstrations was on
-a frozen copy of 2e6e56f, with nothing running beside it: all sixteen passed**
-(`tradesw`, `pricew`, `planw`, `buildw`, `draww`, `fieldw`, `clashw`, `d4w`, `d5w`,
-`bringw`, `firstw`, `glassw`, `carryw`, `toolsw`, `itemsw`, `dressw`). The 239
-pictures they left were read on contact sheets and are committed (e635bb1). `d5w`
-and `itemsw`, which had each lost a click on the run before, passed: that was the
-load, as was thought, and the kit now waits for a control to hold still before it
-clicks it. The code has changed since 2e6e56f (the section "After the run of
-2e6e56f" near the end of this file says how); the pictures are of 2e6e56f.
+tried to break it. **The last full run of the window demonstrations was on a
+frozen copy of 5396828, with nothing compiling beside it: all eighteen passed** (the
+sixteen, `demos/d2.sh` and `demos/house.sh`). Their 206 changed pictures were read on
+contact sheets and are committed (26da4fe); they are of 5396828. `demos/moneyw.sh`,
+written after that run, passed on the build of the commit that records this, and
+its 12 pictures were read. What changed after 5396828 is in the last three sections
+before "Start here": the money path's wording and the plan picker, not the layout.
 
 | # | Item | Evidence | What it lacks |
 |---|---|---|---|
@@ -60,10 +58,10 @@ clicks it. The code has changed since 2e6e56f (the section "After the run of
 | 6 | A price per SF or LF grows into line items, and the detail rolls back up | `demos/d4.sh`, `demos/d4w.sh`, `demos/pricew.sh`. Judged: 10 | **Judge 22A: an allowance with no cost lines is in no line of the price.** It is now said wherever the price is read; whether it belongs in the price is QUESTIONS.md Q26, Patrick's |
 | 7 | The sheet: stretch-out on the line, labor switched per line, overhead and profit, three suppliers | `demos/d5.sh`, `demos/d5w.sh`: all four in the window. Judged: 11, 17A | `d5w` passed on the run of 2e6e56f. The fixes to 17A are not judged |
 | 8 | Exports: xlsx with live formulas, CSV, IFC4 validated by IfcOpenShell; three lenses | `demos/export.sh`: the workbook's amounts and recap are formulas that come to the job's figures; the IFC is checked by IfcOpenShell run as an outside program (`tools/ifc-check.py`); the supplier, subcontractor and PM lenses come from one estimate. `demos/itemsw.sh` writes each from the window. Judged: 17A, 17B, 21 | The fixes to 21 (walls written through at corners, a level's height) are not judged |
-| 9 | A judge lists every word on every screen; none is a software term | Judged 2026-11-16 (22B): about 620 entries by screen, `research/judgment-22b-words.md` | **FAIL: 69 marked** (18 software terms, 43 a builder would trip on, 7 units not the trade's way, 1 British spelling). The deciding one is the Add drawing list: file, folder, page after a comma, file names. Some are fixed since ("ELEMENT", "solid", "FACETS", four-place rates, sizes in feet-inches); the list is not |
-| 10 | A veteran estimator with no software background completes a whole-house takeoff from a PDF using only the in-app help | Judged 2026-11-16 (22A), `research/judgment-22a-notes.md`. Level, drawing, scale, walls, openings, floor, rooms, roof and a pipe were all done from the on-screen help alone, and two assemblies priced | **FAIL**: an allowance entered as the screen said never reached the price (J22A-10); no way to put labor on anything (J22A-13); most of the house left unpriced. Changed since and not judged: the allowance is said wherever the price is read (Q26 is whether it belongs in it); a cost line, labor included, can be added in the window; the starter assemblies carry labor lines with no production rate in them, and a rate is typed on the sheet (call 92) |
+| 9 | A judge lists every word on every screen; none is a software term | Judged 2026-11-16 (22B): about 620 entries by screen, `research/judgment-22b-words.md` | **FAIL: 69 marked** (18 software terms, 43 a builder would trip on, 7 units not the trade's way, 1 British spelling). The deciding one is the Add drawing list: file, folder, page after a comma, file names. Some are fixed since ("ELEMENT", "solid", "FACETS", four-place rates, sizes in feet-inches). The Add drawing list is reworded and a plan's page is picked from a list, not typed after a comma (call 94); "file" and "folder" are kept, as Patrick's own words. **Not judged again** |
+| 10 | A veteran estimator with no software background completes a whole-house takeoff from a PDF using only the in-app help | Judged 2026-11-16 (22A), `research/judgment-22a-notes.md`. Level, drawing, scale, walls, openings, floor, rooms, roof and a pipe were all done from the on-screen help alone, and two assemblies priced | **FAIL**: an allowance entered as the screen said never reached the price (J22A-10); no way to put labor on anything (J22A-13); most of the house left unpriced. Changed since and not judged: the allowance is said wherever the price is read (Q26 is whether it belongs in it); a cost line, labor included, can be added in the window; the starter assemblies carry labor lines with no production rate in them, and a rate is typed on the sheet (call 92; `pricew` types one). **Not judged again by a veteran in the window** |
 | 11 | The visual judge passes every screen against `VISUAL.md` | Judged 2026-11-16 (22B), line by line: `research/judgment-22b-notes.md` | **FAIL** on A1 (full-width bars; panels over about 45% of the window), A2 (no shadow under a panel on plan), C2 (no sky), and on A4, A5, A6, D8. Fixed since and not judged: C2, A4, most of A5, part of A6, and A1 and A2 (call 93: the bars are cards with the model between them; a panel has a shadow on plan). Open: D8 and the rest in the table at the end of this file |
-| 12 | A fresh judge walks the whole path cold and cannot break the money path | Judged 2026-11-16 (22A). Every typed-nonsense, undo and redo, reopen and changed-quantity check agreed to the cent between the top bar, the sheet and the saved job | **FAIL**: $8,580 of allowance in no line of the price with nothing said (J22A-10); the verify-in-field list leaves the roof's dollars out (J22A-18); an area six times the room shown as a figure (J22A-3). All three are changed, with tests, and not judged: J22A-18 by call 91 (a roof and a drawing's scale are on the list with their dollars and can be made Known on site) |
+| 12 | A fresh judge walks the whole path cold and cannot break the money path | Judged 2026-11-16 (22A). Every typed-nonsense, undo and redo, reopen and changed-quantity check agreed to the cent between the top bar, the sheet and the saved job | **FAIL**: $8,580 of allowance in no line of the price with nothing said (J22A-10); the verify-in-field list leaves the roof's dollars out (J22A-18); an area six times the room shown as a figure (J22A-3). All three are changed, with tests: J22A-18 by call 91 (a roof and a drawing's scale are on the list with their dollars and can be made Known on site). **Judged again at the command line on 2026-11-16 (judgment 23)**: every total held by hand; it could not make a total lie; it found a Known pitch announced on a solved plane and then thrown away (J23-1) and $660 of priced work dropped behind a sentence with no figure in it (J23-3). Both are fixed with tests (call 95) and those fixes are not judged. `demos/moneyw.sh` walks the same path in the window. **The money path in the window has not been judged again** |
 | 13 | A hand estimate in `refs/` reproduced, every difference explained | None | **Pending**: `refs/` holds the brief and the first handoff and no estimate (Q5) |
 
 **What Patrick is asked.** Nothing blocks the work. Three questions are his and each
@@ -5852,23 +5850,122 @@ on plan (two pictures, read, not kept): the two cards at the top and the two at 
 bottom, the sky and the yard between them; on plan a soft shadow round every panel
 where there had been none. **Not judged.** Not measured by a demonstration.
 
+## The money path in the window: a demonstration, written before it is run (`demos/moneyw.sh`)
+
+**What it is to show**, in the window with a real pointer and keyboard: what calls 90
+and 91 built and no demonstration had walked. A roof scaled off a plan is on the
+Verify in field tab with its dollars, is measured and checked there, and leaves the
+list; a labor line is added to a wall; the wall is deleted and what was priced on it
+is said; overhead typed ten times too large is answered.
+
+**The job, and the figures by hand.** 24 ft by 16 ft, walls 9 ft, Known. A hip roof
+on the same outline at 6:12, eaves at 9 ft, Assumed ("scaled off a made-up plan").
+Gypsum board on the south wall's net face at $2.00/SF: 24 x 9 = 216 SF, $432.00.
+Underlayment on the south plane at $0.50/SF: on plan (24 + 8) / 2 x 8 = 128 SF; the
+slope factor at 6:12 is the root of 1.25, 1.118034; 143.1084 SF, $71.55. Job cost
+503.55; overhead 20 %, 100.71; profit 10 % of 604.26, 60.43; price $664.69, flagged.
+The list: the roof with $71.55 riding on 1 line. (The command line gives every one
+of these on the build of 5396828.)
+
+**The session, and what each step is to leave.**
+1. Verify in field, the roof's row: the roof is selected.
+2. Eave height, Measure, 9' 2": "eave height is 9' 2", measured (it was 9 ft,
+   Assumed ...". The plane's area does not change: 143.1084 SF.
+3. Footprint and the four edges, Check, "same": the roof is off the list and the
+   underlayment is Known, $71.55 with no flag.
+4. The wall by its line on the sheet; Add cost line, "Hang the board", priced by its
+   net area, "labor at 40 SF/hr": 216 / 40 = 5.40 hr, no price.
+5. Delete: "2 cost lines went with it: $432.00 is out of the job cost (1 of them had
+   no price yet)."
+6. Overhead 200: "overhead set to 200.00 %. That is more than what it is a
+   percentage of. If 20.00 % was meant, type it again." Then 20.
+7. Saved. In the file: the eave height 9 ft 2 in, Known; the footprint and every
+   edge Known; no wall line. Job cost 71.55; overhead at 20 % typed in the window,
+   so Assumed, 14.31; profit 10 % of 85.86, 8.59; price $94.45.
+
+**How the words are checked.** The window now writes each message it gives, in the
+words on the screen, beside the map of its controls (`<map>.said`; `map.rs`), and
+the demonstration reads them there. Until now a window demonstration could check
+what the saved job held and what a picture's pixels were, and not what a person was
+told.
+
+**What `demos/moneyw.sh` showed when it was run.** Exit 0 on its first run, on a
+frozen copy of the build this commit holds. It said each of the three sentences
+written above, word for word (read from the window's own record of what it said),
+and the saved job held every figure worked by hand: the underlayment 143.1084 SF,
+$71.55 and Known; overhead at 20 % typed in the window, $14.31; the price $94.45;
+the eave height 9 ft 2 in, the footprint and all four edges Known; the roof off the
+list. Its 12 pictures were read: the roof's row on the Verify in field tab with
+$71.55 riding and Measure and Check beside its values; the card "Deleted wall 1. 2
+cost lines went with it: $432.00 is out of the job cost (1 of them had no price
+yet)."; the card for 200 % with "If 20.00 % was meant, enter it again."
+
+## The twenty-third judgment (2026-11-16): the money path at the command line, after calls 91 and 92
+
+An agent that did not build it (Opus), told to break the command line's money path
+with the frozen build of 5396828 and to work every figure by hand. Its brief and its
+notes are `research/judgment-23-brief.md` and `research/judgment-23-notes.md`.
+
+**What held, by its hand arithmetic:** a hip roof, an L-shaped roof, a gable, a porch
+and a moved edge; the list counting each line once and a roof leaving it only when
+its footprint, eave height and every edge are Known; a drawing's scale as a question
+with $480 riding; `remove` to the cent for a wall with a door (13 lines, $1,438.00)
+and for a roof ($1,010.19); labor both ways round (40 SF/hr and 0.025 hr/SF: 6 hr,
+$270.00 at $45.00); a line switched off and on; overhead out of range refused; the
+price agreeing between the command line, the workbook's formulas and the PM lens.
+**"I could not make a total lie outright."**
+
+| # | What was found | Where it stands |
+|---|---|---|
+| J23-1 | **`set <plane> pitch 7:12 --status Known` on a plane solved from a roof was taken, said to be Known, and thrown away at the next solve; the file then failed `check`.** The same for its eave height | Fixed (call 95): it is put on the roof's edge and the roof is solved again. On the judge's own file: `check` passes, and the command says it is held on the roof. Test: 8:12 set at the plane is the footprint's edge 1, Known, and the saved job reads back the same |
+| J23-2 | A pitch found not as drawn could not be recorded with `measure` ("is not one length ... move it to where it is"); `edge:<n>` and `move:<n>` were in no usage text | Fixed: `measure <roof> "edge 2" 7:12`, or `measure <plane> pitch 9:12` (test). The usage and the refusal name `edge:<n>` and `move:<n>` |
+| J23-3 | **A roof edge made a gable dropped a plane with $660.13 priced on it and said "it carried an assembly or cost lines, which went with it": no dollars.** `apply --change` the same for the lines that come off | Fixed: on the judge's own file, "5 cost lines went with it: $660.13 is out of the job cost (2 of them had no price yet)." One sentence in the model for a delete, a dropped plane and lines that came off, at the command line and in the window (test). **The window's two are not seen** |
+| J23-4 | A roof's eave height took -3 ft and 0 ft as measured; "same" after that said "found as drawn" of a value that was measured | Taken, and remarked on ("at or below the job's zero ... if that is not where they are, measure again"); a value already measured is "found the same again" (test; one older expectation changed after call 95 was written) |
+| J23-5 | The recap's Labor row read "none" over four labor lines with no production rate | Fixed: "Labor  no figure  ? 4 lines to price" at the command line; the same in the window's recap (**not seen**). A row with a figure that leaves lines out says how many |
+| J23-6 | In the workbook the recap's hours are a typed figure, not a formula, under a sheet that says the recap follows; neither export says the production rate | **Half.** The column is headed "Hours, as written" and each in-house line's note says what its hours are worked from ("its hours are 240.00 SF at 40 SF/hr"). The hours are still not live: that needs the area and the rate as two more columns on every line. Not done |
+| J23-7 | Software words: "is not an order conversion ... like 30 SF/sheet" on a labor line; "order factor ... not beyond 1e9"; `show`'s "ordered by the hr"; `lines` calling eaves and hips lines; `face_area` and `net_area` in a library file | Fixed, all but the last: "is not a production rate; write how fast the work goes, like 40 SF/hr or 0.025 hr/SF"; "has to be more than nothing (and no more than a billion)"; "production rate"; "eaves, rakes, hips, valleys and ridges". A library file's names are how it is read back: PROPOSALS.md 24 |
+| J23-8 | Overhead or profit over 100 % was answered only in the window | Fixed: one sentence in the model, said by both ("If 25.00 % was meant, enter it again.") |
+| small | A production rate of 0.0001 SF/hr is taken without remark | Left, and why is in call 95 |
+| small | "(2 of them had no price yet) (1 was switched off ...)": two brackets in a row | Fixed: one bracket |
+
+**What was run on the fixes.** 309 tests pass (three new, one changed). The twenty
+command-line demonstrations, `tools/portmap.sh` and the three gates pass. The judge's
+own cases J23-1, -3, -5 and -8 were run again on its files and read. **The fixes are
+not judged.**
+
+## The plan picker's words, and a page picked from a list (call 94)
+
+From J22B-35, the deciding fail of item 9. The field is "Plan"; the list is headed
+"WHERE THIS JOB IS KEPT"; "Up one folder" no longer names a folder; a plan of more
+than one page lists its pages, and a click on one adds it. Seen in the window on the
+USDA plan (three pictures, read, not kept): "Picked usda-7213.pdf: it has 4 pages.
+Pick the page to trace over from the list.", Page 1 to Page 4 under the field, a
+click on Page 4, "Added drawing "usda-7213, page 4"". The sentence after it began
+"Usda-7213, page 4: its page is read", a capital the drawing's name does not have;
+it now begins "The drawing usda-7213, page 4" (**changed after the look; not seen**).
+"File" and "folder" are kept and why is in call 94. **Not judged. No demonstration
+clicks a page**: `planw` and `firstw` type the plan and its page.
+
 ## Start here (written 2026-11-16; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 306 tests pass,
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 309 tests pass,
 the three gates and `tools/portmap.sh` pass, the twenty command-line demonstrations
-pass, and `tools/committed.sh` passed on the last commit of code. The sixteen window
-demonstrations all passed on 2e6e56f and have not been run on what came after (the
-section just above). Read `CLAUDE.md`, then this
+pass, and `tools/committed.sh` passed on the last commit of code. All eighteen window
+demonstrations passed on 5396828; `demos/moneyw.sh`, the nineteenth, passed on the
+build after it. The others have not been run on calls 94 and 95, which change what
+is said and not what is drawn. Read `CLAUDE.md`, then this
 section, then the table of thirteen at the head of this file, then the table under
 "The twenty-second judgment" just above.
 
 **What happened on 2026-11-16.** Patrick asked for a fresh pass of code and review,
 the window and a clean-up, run alone. Two code reviewers read the model and the
 window crate (42 findings), a twenty-first judge walked the four new trades and a
-typed length to the end (21 findings), and a twenty-second pair judged the look and
+typed length to the end (21 findings), a twenty-second pair judged the look and
 the words against VISUAL.md (part B) and walked a veteran's first day and the money
-path (part A). Each finding is a row in this file with where it stands. Calls 77 to
-89 in DECISIONS.md are the decisions made on the way; Q26 in QUESTIONS.md is new.
+path (part A), and a twenty-third tried the money path again at the command line
+after the fixes. Each finding is a row in this file with where it stands. Calls 77 to
+95 in DECISIONS.md are the decisions made on the way; Q26 in QUESTIONS.md is new, and
+PROPOSALS.md 23 and 24.
 
 **What is true of the program today.** It traces a plan, builds the house in 3D
 dressed as it is priced, prices it in sixteen divisions, finds clashes, lists what
@@ -5879,14 +5976,16 @@ money path were each judged and each failed (items 11, 9, 10 and 12).
 
 **What is owed, in this order.**
 
-1. **The window demonstrations (the sixteen, `demos/d2.sh` and `demos/house.sh`),
-   run in a row on a frozen copy of the last commit, with nothing else running**
-   (CLAUDE.md, "Running several window demonstrations in a row"). `fieldw` and
-   `clashw` passed on 2fbfd99 (call 91). Calls 92 and 93 came after: `pricew` has a
-   new step and a new count, and every picture has the new bars. Their pictures are
-   committed only when the run ends, and read.
-2. **Window demonstrations still to write**: Add cost line; a roof measured from
-   the Verify in field tab; a priced thing deleted; a markup over 100 %.
+1. **Have items 9 to 12 judged again in the window**, by agents that did not build
+   it, on Opus or Sonnet, told to write their notes as they go: a veteran's first
+   day with the starter assemblies' labor (call 92), the money path in the window
+   (calls 91 and 95), the look (call 93) and the words (calls 91 and 94). Everything
+   changed since judgment 22 is unjudged in the window; judgment 23 was the command
+   line only. Run the nineteen window demonstrations first, on a frozen copy of the
+   last commit with nothing beside them.
+2. **Window demonstrations still to write**: Add drawing with a page clicked; an
+   assembly changed for another with priced lines coming off; a roof edge made a
+   gable with a priced plane on it.
 3. **The look**, which is Patrick's own test and the judge's deciding fail. Done in
    call 93 and not judged: the bars as floating cards (A1), a shadow under a panel
    on plan (A2). Still open: the left and right panels nearly the height of the

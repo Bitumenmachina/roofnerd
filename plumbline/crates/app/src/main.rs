@@ -238,6 +238,9 @@ fn selected_edge(doc: &mut Doc) -> Result<(String, usize), String> {
 }
 
 fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) -> Result<solve::Change, String>) {
+    // What is priced before the change, so that what a plane takes with it when it
+    // goes can be said to the cent (J23-3).
+    let priced_before = plumbline_world::view::estimate(&mut doc.job);
     let result = selected_edge(doc).and_then(|(roof_path, edge)| {
         let c = change(doc, &roof_path, edge)?;
         solve::edit(&mut doc.job, &roof_path, c).map(|report| (roof_path, edge, report))
@@ -253,6 +256,9 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
             let mut more = if report.removed.is_empty() { String::new() } else { format!("; gone: {}", report.removed.iter().map(|r| r.0.clone()).collect::<Vec<_>>().join(", ")) };
             if !lost.is_empty() {
                 more.push_str(&format!("\nLost with them: the assembly or cost lines on {}", lost.join(", ")));
+                if let Some(went) = plumbline_world::view::went_with_said(&priced_before, &mut doc.job) {
+                    more.push_str(&format!("\n{}{}", went[..1].to_uppercase(), &went[1..]));
+                }
             }
             for moved in &report.renumbered {
                 more.push_str(&format!("\n{moved}"));
@@ -683,9 +689,9 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                     // More than the job costs again is taken, and said
                                     // as what it is: 250 typed for 25 tripled a price
                                     // without a word (J22A-19).
-                                    match typed.parse::<f64>() {
-                                        Ok(x) if matches!(what, "overhead" | "profit") && x > 100.0 => doc.say(Tone::Warned, format!("{path}: {what} set to {said}. That is more than what it is a percentage of. If {} % was meant, type it again.", plumbline_world::view::figure(x / 10.0, 2))),
-                                        _ => doc.say(Tone::Done, format!("{path}: {what} set to {said}.")),
+                                    match plumbline_world::view::markup_large_said(typed).filter(|_| matches!(what, "overhead" | "profit")) {
+                                        Some(large) => doc.say(Tone::Warned, format!("{path}: {what} set to {said}. {large}")),
+                                        None => doc.say(Tone::Done, format!("{path}: {what} set to {said}.")),
                                     }
                                 } else {
                                     doc.say(Tone::Warned, format!("{path}: material set to {:?}, which is not a material of this job. The lines made of it have no figure.", text.trim()));
@@ -982,15 +988,18 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
         doc.choosing = false;
         if let Some(sel) = doc.selected.clone() {
             let called = doc.job.find(&sel).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or_else(|| sel.clone());
+            let priced_before = plumbline_world::view::estimate(&mut doc.job);
             match doc.job.change_assembly(&sel, &name, Status::Assumed, SOURCE) {
                 Ok((added, taken)) => {
                     doc.job.derive();
+                    // What the lines that came off took out of the job cost (J23-5).
+                    let money = plumbline_world::view::came_off_said(&priced_before, &mut doc.job).filter(|s| s.contains('$')).and_then(|s| s.split_once(": ").map(|(_, rest)| format!(" {}{}", rest[..1].to_uppercase(), &rest[1..]))).unwrap_or_default();
                     doc.edit("Assembly");
                     // Its lines are on the estimate: the sheet turns to it.
                     doc.tab = model::Tab::Estimate;
                     let lines = |n: usize| plumbline_world::view::so_many(n, "cost line");
                     let off = if taken.is_empty() { String::new() } else { format!(" {} of the assembly it had came off: {}.", lines(taken.len()), taken.join(", ")) };
-                    doc.say(Tone::Done, format!("{called} is now {name:?}: {} added.{off}", lines(added.len())));
+                    doc.say(if money.is_empty() { Tone::Done } else { Tone::Warned }, format!("{called} is now {name:?}: {} added.{off}{money}", lines(added.len())));
                 }
                 Err(why) => tools::cant(doc, "give that assembly", why),
             }

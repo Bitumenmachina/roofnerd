@@ -320,7 +320,9 @@ fn j16_1_a_floor_its_height_and_the_floor_above_agree_whichever_is_measured() {
     assert_eq!((f.value, f.status), (Some(213.0), Status::Known));
     // The storey height checked now is 8.875 ft (written in feet, as it was): the three agree.
     let done = ed::measure(&mut m.job, &m.ground, "level height", Reading::Same, None, "JM").unwrap();
-    assert_eq!(done.said, "ground: level height is 8.875 ft, found as drawn");
+    // It was Known already, worked from the two floors measured: it is found the same
+    // again, not "as drawn" (call 95, J23-4: nothing drew 8.875 ft).
+    assert_eq!(done.said, "ground: level height is 8.875 ft, found the same again");
     assert!(done.also.is_empty(), "{:?}", done.also);
 
     // The other order: both floors Known first, 9 ft apart; then a storey height that

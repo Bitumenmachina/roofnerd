@@ -298,3 +298,72 @@ fn a_roof_drawn_from_its_footprint_is_deleted_with_its_planes_and_says_what_was_
     assert!(vif(&mut job).questions.is_empty());
     assert!(file::load(&file::save(&mut job)).is_ok());
 }
+
+#[test]
+fn a_pitch_set_or_read_at_a_solved_plane_is_put_on_its_roof_and_the_file_still_checks() {
+    // J23-1: `set <plane> pitch` was taken, said to be Known, and thrown away at the
+    // next solve, leaving a file that failed its own check. J23-2: a pitch read on site
+    // was refused as "not one length".
+    let (mut job, roof, plane) = roofed();
+    job.set(&plane, "pitch", Some("8:12"), Status::Known, "pitch gauge").unwrap();
+    job.derive();
+    let edge = |job: &mut Job| {
+        let e = job.find(&roof).unwrap();
+        job.world.get::<Footprint>(e).unwrap().edges[0].clone()
+    };
+    assert_eq!((edge(&mut job).value, edge(&mut job).status), (Some(Rise::Pitch(8.0)), Status::Known));
+    // The plane on the 24 ft eave between 6:12 hips: its ridge is where 8:12 from the
+    // south meets 6:12 from the north, 16 x 6 / 14 = 6.8571 ft in. It reads back the same.
+    let text = file::save(&mut job);
+    let (mut again, report) = file::load(&text).ok().expect("it reads back");
+    assert!(report.stale.is_empty(), "{:?}", report.stale);
+    assert_eq!(file::save(&mut again), text);
+    let pitch_of = |job: &mut Job| {
+        let e = job.find(&plane).unwrap();
+        job.world.get::<Pitch>(e).unwrap().0.clone()
+    };
+    assert_eq!((pitch_of(&mut again).value, pitch_of(&mut again).status), (Some(8.0), Status::Known));
+    // Read on site at the roof's edge, and at the plane as its pitch.
+    let done = ed::measure(&mut job, &roof, "edge 2", Reading::Length("7:12"), None, "pitch gauge").unwrap();
+    assert!(done.said.contains("edge 2 is 7:12, measured (it was 6:12, Assumed"), "{}", done.said);
+    let done = ed::measure(&mut job, &plane, "pitch", Reading::Length("9:12"), None, "pitch gauge").unwrap();
+    assert!(done.said.contains("pitch is 9:12, measured (it was 8:12, Known"), "{}", done.said);
+    assert_eq!(edge(&mut job).value, Some(Rise::Pitch(9.0)));
+    // What is not a pitch is refused, and says how one is typed.
+    let why = ed::measure(&mut job, &roof, "edge 3", Reading::Length("steep"), None, "pitch gauge").unwrap_err();
+    assert!(why.contains("type it like 7:12"), "{why}");
+    assert!(file::load(&file::save(&mut job)).is_ok());
+}
+
+#[test]
+fn an_eave_at_the_jobs_zero_is_remarked_on_and_a_second_check_is_not_as_drawn() {
+    // J23-4.
+    let (mut job, roof, _) = roofed();
+    let done = ed::measure(&mut job, &roof, "eave height", Reading::Length("0 ft"), None, "laser").unwrap();
+    assert!(done.also.iter().any(|a| a.contains("at or below the job's zero")), "{:?}", done.also);
+    let done = ed::measure(&mut job, &roof, "eave height", Reading::Same, None, "laser").unwrap();
+    assert!(done.said.ends_with("found the same again"), "{}", done.said);
+    let done = ed::measure(&mut job, &roof, "eave height", Reading::Length("9 ft"), None, "laser").unwrap();
+    assert!(!done.also.iter().any(|a| a.contains("job's zero")), "{:?}", done.also);
+}
+
+#[test]
+fn lines_that_come_off_or_go_with_a_dropped_plane_are_said_to_the_cent() {
+    // J23-3. The plane on edge 1 carries underlayment, $71.55. Its edge made a gable,
+    // the plane is gone and so is the line.
+    let (mut job, roof, _) = roofed();
+    let before = view::estimate(&mut job);
+    solve::edit(&mut job, &roof, solve::Change::Rise { edge: 1, rise: value::Val { value: Some(Rise::Gable), unit: String::new(), status: Status::Assumed, source: "the plans".into() } }).unwrap();
+    job.derive();
+    assert_eq!(view::went_with_said(&before, &mut job).as_deref(), Some("1 cost line went with it: $71.55 is out of the job cost."));
+    // A line taken off a thing that stays.
+    let mut m = made();
+    let before = view::estimate(&mut m.job);
+    let e = m.job.find(&m.wall).unwrap();
+    m.job.world.entity_mut(e).remove::<Cost>();
+    m.job.derive();
+    assert_eq!(view::came_off_said(&before, &mut m.job).as_deref(), Some("1 cost line came off: $518.40 is out of the job cost."));
+    // Overhead typed ten times too large is answered; an ordinary one is not.
+    assert_eq!(view::markup_large_said("250").as_deref(), Some("That is more than what it is a percentage of. If 25.00 % was meant, enter it again."));
+    assert_eq!(view::markup_large_said("12"), None);
+}

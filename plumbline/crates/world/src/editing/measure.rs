@@ -69,6 +69,10 @@ enum Slot<'a> {
     Other(&'a mut dyn Looked),
 }
 
+fn said_len(v: &Val<Len>) -> String {
+    said(v)
+}
+
 fn said(v: &Val<Len>) -> String {
     match &v.value {
         Some(len) => units::show_length(len, &v.unit),
@@ -104,8 +108,10 @@ fn apply(slot: Slot, name: &str, what: &str, reading: Do, source: &str) -> Resul
             if !v.settled() {
                 return Err(format!("{name}'s {what} is not known, so there is nothing for it to be the same as; measure it"));
             }
+            // What was measured before is not "as drawn": it is found the same again.
+            let again = v.status == Status::Known;
             v.mark(source);
-            Ok(format!("{name}: {what} is {}, found as drawn", said(v)))
+            Ok(format!("{name}: {what} is {}, {}", said(v), if again { "found the same again" } else { "found as drawn" }))
         }
         (Slot::Other(v), Do::Same) => {
             if !v.settled() {
@@ -472,6 +478,33 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
         // so: until this was here nothing a roof drawn in the window rested on could be
         // made Known on site, and the verify-in-field list left the roof out (J22A-18).
         if let Some(mut c) = job.world.get::<Footprint>(e).cloned() {
+            // An edge found to rise otherwise than drawn is given the pitch read on site
+            // ("7:12"): it is not a length, and "move it to where it is" was no answer
+            // (J23-1).
+            let read_pitch = match (numbered(what, "edge "), reading) {
+                (Some((n, "")), Do::Length(typed)) if n <= c.edges.len() => Some((n, typed)),
+                _ => None,
+            };
+            if let Some((n, typed)) = read_pitch {
+                let pitch = units::parse_pitch(typed).map_err(|why| format!("{why}. How an edge of a roof rises is read with a pitch gauge: type it like 7:12, or say \"same\""))?;
+                let edge = &mut c.edges[n - 1];
+                let was = match edge.value {
+                    Some(Rise::Pitch(p)) => format!("it was {}:12, {}: {}", crate::view::num(p), status_said(edge.status), edge.source),
+                    Some(Rise::Gable) => format!("it was a gable, {}: {}", status_said(edge.status), edge.source),
+                    None => format!("it was not known: {}", edge.source),
+                };
+                *edge = Val { value: Some(Rise::Pitch(pitch)), unit: units::PITCH.into(), status: Status::Known, source: source.into() };
+                let said = format!("{name}: {what} is {}:12, measured ({was})", crate::view::num(pitch));
+                check::footprint(path, kind, &c)?;
+                job.put(path, c)?;
+                let report = crate::solve::solve(job, path)?;
+                let count = |n: usize, word: &str| if n == 1 { format!("1 {word}") } else { format!("{n} {word}s") };
+                also.push(format!("{name} solved again: its {} and the eaves, hips, valleys and ridges between them follow", count(report.planes, "plane")));
+                for (gone, carried) in &report.removed {
+                    also.push(if *carried { format!("{gone} is gone, and what was priced on it with it") } else { format!("{gone} is gone") });
+                }
+                return Ok(Some(Measured { said, also }));
+            }
             let slot = match what {
                 "footprint" => Some(Slot::Other(&mut c.points)),
                 "eave height" => Some(Slot::Length(&mut c.eave_height)),
@@ -483,6 +516,12 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
                     return Ok(Some(Measured { said, also }));
                 }
                 check::footprint(path, kind, &c)?;
+                // An eave at the job's zero or under it is taken (a canopy over a
+                // basement door is there) and remarked on: it is far more often a
+                // reading typed wrong (J23-4).
+                if what == "eave height" && matches!(reading, Do::Length(_)) && c.eave_height.feet().is_some_and(|ft| ft <= 0.0) {
+                    also.push(format!("{} puts the eaves at or below the job's zero, where the lowest floor usually is: if that is not where they are, measure again", said_len(&c.eave_height)));
+                }
                 job.put(path, c)?;
                 let report = crate::solve::solve(job, path)?;
                 let count = |n: usize, word: &str| if n == 1 { format!("1 {word}") } else { format!("{n} {word}s") };

@@ -431,6 +431,21 @@ fn as_it_lies(from: &std::path::Path, to: &std::path::Path) -> String {
     parts.join("/")
 }
 
+/// How many pages a plan's file has, when it is a PDF that reads. Kept for the file last
+/// asked about: the panel is drawn again at every keystroke and a set of plans is large.
+fn pages_of(path: &std::path::Path) -> Option<usize> {
+    static LAST: std::sync::Mutex<Option<(std::path::PathBuf, Option<usize>)>> = std::sync::Mutex::new(None);
+    let mut last = LAST.lock().ok()?;
+    if let Some((was, pages)) = last.as_ref() {
+        if was == path {
+            return *pages;
+        }
+    }
+    let pages = if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("pdf")) { std::fs::read(path).ok().and_then(|bytes| plumbline_plans::size_of(&bytes, 1).ok()).map(|(_, pages, _)| pages) } else { None };
+    *last = Some((path.to_path_buf(), pages));
+    pages
+}
+
 /// The files that can be picked, listed under the field that asks for one (J18-3: nobody
 /// should have to type where a file lies). The folder the job is kept in to begin with;
 /// a folder's row goes into it and the first row goes up one. A file's row puts its
@@ -459,15 +474,14 @@ fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entr
     folders.sort_by_key(|n| n.to_lowercase());
     files.sort_by_key(|n| n.to_lowercase());
     let said = here.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "this computer".to_string());
-    f.spawn((text(fonts, format!("IN {}", if here == home { "THE JOB'S FOLDER".to_string() } else { said.to_uppercase() }), 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+    f.spawn((text(fonts, if here == home { "WHERE THIS JOB IS KEPT".to_string() } else { format!("IN THE FOLDER {}", said.to_uppercase()) }, 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
     let line = |f: &mut ChildSpawnerCommands, name: String, shown: String, ink: Color, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
         row(f, false, name, move |doc| act(doc), |r| {
             r.spawn((text(fonts, shown, 12.0, Weight::Medium, ink), TextLayout::no_wrap(), Pickable::IGNORE));
         });
     };
     if let Some(up) = here.parent().map(|p| p.to_path_buf()) {
-        let to = up.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "the top".to_string());
-        line(f, "Up one folder".to_string(), format!("\u{2191} Up, to {to}"), theme::ink_soft(), Box::new(move |doc| {
+        line(f, "Up one folder".to_string(), "\u{2191} Up one folder".to_string(), theme::ink_soft(), Box::new(move |doc| {
             doc.browse = Some(up.clone());
             doc.touch();
         }));
@@ -483,12 +497,24 @@ fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entr
         let (path, home) = (here.join(name), home.clone());
         line(f, format!("File {name}"), name.clone(), theme::ink(), Box::new(move |doc| {
             let lies = as_it_lies(&home, &path);
-            doc.open(entry, format!("{lies}{then}"));
-            doc.say(Tone::Done, format!("{}: Enter brings it in.", path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()));
+            let named = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            // A plan of more than one page has its pages listed to pick from (call 94:
+            // the page was typed after a comma, which nobody is told at a counter).
+            // One page, or a picture, is picked and that is all there is to say.
+            match (entry, pages_of(&path)) {
+                (Entry::Drawing, Some(n)) if n > 1 => {
+                    doc.open(entry, format!("{lies}{then}"));
+                    doc.say(Tone::Done, format!("Picked {named}: it has {n} pages. Pick the page to trace over from the list."));
+                }
+                _ => {
+                    doc.open(entry, format!("{lies}{then}"));
+                    doc.say(Tone::Done, format!("Picked {named}. Enter brings it in."));
+                }
+            }
         }));
     }
     if files.is_empty() {
-        f.spawn(text(fonts, format!("No file here that can be picked ({}). Go into a folder, or up.", kinds.join(", ")), 10.5, Weight::Regular, theme::ink_faint()));
+        f.spawn(text(fonts, format!("Nothing here that can be brought in ({}). Look in a folder, or go up.", kinds.iter().map(|k| k.trim_start_matches('.').to_uppercase()).collect::<Vec<_>>().join(", ")), 10.5, Weight::Regular, theme::ink_faint()));
     }
     if files.len() > 40 || folders.len() > 30 {
         f.spawn(text(fonts, "More than fit in this list: type the start of the name, or go into a folder.", 10.5, Weight::Regular, theme::ink_faint()));
@@ -505,8 +531,33 @@ fn picker(c: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             heading(c, fonts, "Add drawing");
             c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
                 let typed = doc.entry.as_ref().map(|e| e.1.clone()).unwrap_or_default();
-                theme::field(f, fonts, "File, page", &typed, "", 1, LEFT_W - 30.0);
-                f.spawn(text(fonts, "Pick the plan below (a PDF, PNG or JPEG). Its page follows a comma: change the 1 for another page. Enter adds it. Or drop the file on this window.", 10.5, Weight::Regular, theme::ink_faint()));
+                theme::field(f, fonts, "Plan", &typed, "", 1, LEFT_W - 30.0);
+                // The plan picked, when it has more than one page: its pages, each a
+                // row to click, which adds that page as the drawing.
+                let picked = typed.rsplit_once(',').map(|(file, _)| file.trim().to_string()).filter(|file| !file.is_empty());
+                let pages = picked.as_ref().and_then(|file| pages_of(&crate::plans::folder_of(&doc.path).join(file)).map(|n| (file.clone(), n))).filter(|(_, n)| *n > 1);
+                match pages {
+                    Some((file, n)) => {
+                        f.spawn(text(fonts, format!("This plan has {n} pages. Pick the one to trace over."), 10.5, Weight::Regular, theme::ink_faint()));
+                        for page in 1..=n.min(80) {
+                            let file = file.clone();
+                            row(f, false, format!("Page {page}"), move |doc| {
+                                doc.entry = None;
+                                crate::plans::add(doc, &format!("{file}, {page}"));
+                                doc.redraw();
+                            }, |r| {
+                                r.spawn((text(fonts, format!("Page {page}"), 12.0, Weight::Medium, theme::ink()), TextLayout::no_wrap(), Pickable::IGNORE));
+                            });
+                        }
+                        if n > 80 {
+                            f.spawn(text(fonts, "More pages than fit in this list: type the page's number after the comma above, then Enter.", 10.5, Weight::Regular, theme::ink_faint()));
+                        }
+                        f.spawn((text(fonts, "OR ANOTHER PLAN", 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+                    }
+                    None => {
+                        f.spawn(text(fonts, "Pick the plan below (a PDF, PNG or JPEG), or drop it on this window.", 10.5, Weight::Regular, theme::ink_faint()));
+                    }
+                }
                 pick_list(f, fonts, doc, Entry::Drawing, &[".pdf", ".png", ".jpg", ".jpeg"], ", 1");
             });
         }
