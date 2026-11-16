@@ -171,7 +171,11 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
                     rows.push(entered(p, &format!("waste: {}", line.description), w, |x| num(*x)));
                 }
                 if let Some(o) = &line.order {
-                    rows.push(entered(p, &format!("order factor: {}", line.description), &o.factor, |x| num(*x)));
+                    // In-house work: how fast it goes. Anything else: how what is
+                    // measured becomes what is bought. (Open items said "order factor:
+                    // Hang the siding" of a labor line: J24B-56.)
+                    let called = if o.unit == crate::components::HOURS { "production rate" } else { "order factor" };
+                    rows.push(entered(p, &format!("{called}: {}", line.description), &o.factor, |x| num(*x)));
                 }
                 if !line.of_material {
                     rows.push(entered(p, &format!("unit cost: {}", line.description), &line.unit_cost, |x| rate(*x)));
@@ -218,7 +222,9 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
                     rows.push(derived(p, &format!("with waste: {description}"), d));
                 }
                 if let Some(d) = &f.order {
-                    rows.push(derived(p, &format!("to order: {description}"), d));
+                    // Hours are worked, not ordered.
+                    let called = if d.unit == crate::components::HOURS { "hours" } else { "to order" };
+                    rows.push(derived(p, &format!("{called}: {description}"), d));
                 }
             }
         }
