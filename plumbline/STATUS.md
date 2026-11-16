@@ -55,9 +55,16 @@ written after that run, passed on the build of the commit that records this, and
 its 12 pictures were read. What changed after 5396828 is in the sections before "Start here": the money
 path's wording and the plan picker, and then, answering judgment 24 (calls 96 to
 100), the layout of the panels, the look of the plan and how a roof is priced. **A
-full run of the nineteen on a frozen copy of b3e39a1 was started on 2026-11-16,
-late; until it is read here, no window demonstration has been run on those calls.**
-The twenty command-line demonstrations pass on that copy.
+full run of the nineteen on a frozen copy of b3e39a1 (calls 94 to 100) ended on
+2026-11-16, late: eighteen passed and `glassw` failed** ("the model moved when the
+wheel was over a panel": a door's edge three dots from where it had been, one more
+than the check allows). A clean-checkout build was running beside it at that moment.
+**Run again alone on the same copy, with nothing beside it, `glassw` passed.** Every
+picture of the nineteen was read on contact sheets and each set was committed after
+its own run had ended. They are of b3e39a1: what was changed after it (calls 101 to
+104: "connection", the three new forms, ducts on plan, a price list pricing lines,
+the roof warnings) is in no picture yet. The twenty command-line demonstrations pass
+on the build with those changes.
 
 | # | Item | Evidence | What it lacks |
 |---|---|---|---|
@@ -6161,13 +6168,11 @@ because a plan that draws wrong once is worth watching for.
 
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 311 tests pass,
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 312 tests pass,
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
 commit of code that was pushed, and the twenty command-line demonstrations pass on a
-frozen copy of b3e39a1. **The nineteen window demonstrations were last all passed on
-5396828.** A run of them on a frozen copy of b3e39a1 (calls 94 to 100) was under way
-when this was written: the table of thirteen at the head of this file says what it
-showed, once it is read. Two more window demonstrations are written and have never
+frozen copy of b3e39a1. **The nineteen window demonstrations passed on a frozen copy of b3e39a1** (calls 94
+to 100; `glassw` on its second run, alone: the head of this file says why). Two more window demonstrations are written and have never
 been run: `demos/roofw.sh` and `demos/pagew.sh`. Read `CLAUDE.md`, then this section,
 then the table of thirteen, then "The twenty-fourth judgment, part B" and "part A"
 just above.
@@ -6194,10 +6199,9 @@ its own arithmetic, and it had not yet reported.
 
 **What is owed, in this order.**
 
-1. **Read the run of the nineteen window demonstrations** (task and logs: scratch
-   `runs/*-33.log`; pictures in `demos/captured/`), fix what failed without
-   loosening anything, read every picture, commit them. Then run `demos/roofw.sh`
-   and `demos/pagew.sh` for the first time.
+1. **Run `demos/roofw.sh`, `demos/pagew.sh` and `demos/gablew.sh` for the first
+   time**, and the nineteen again on a frozen copy of the last commit (the run that
+   was read is of b3e39a1; `bringw` was changed after it ran).
 2. **Look at what is built and not seen** (each says so in its row): a sink, a water
    heater and an outdoor unit drawn as what they are (call 102); a duct on plan as
    two edges over a wash; the Door tool offering the last door's sizes; a production
