@@ -129,6 +129,9 @@ pub enum Entry {
     Length,
     /// A new storey: its name, its floor's height, and how far up to the next.
     Storey,
+    /// A cost line to add to the selected thing: what it is, what it is priced by, and
+    /// its cost type (material, labor, subcontract...).
+    Line,
     /// A plan to lay under the storey on show: its file, and its page.
     Drawing,
     /// The distance between the two points picked on a drawing: its scale.
@@ -378,6 +381,7 @@ impl Doc {
         self.lost = Some(
             match field {
                 Entry::Storey => "The level was not added: its fields were let go.",
+                Entry::Line => "The cost line was not added: its fields were let go.",
                 Entry::Drawing => "The drawing was not added: its file was let go.",
                 Entry::BringIn(_) => "Nothing was brought in: the file's name was let go.",
                 // A tool's sizes are kept as they were last taken in hand; a value half

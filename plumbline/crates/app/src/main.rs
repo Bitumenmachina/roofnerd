@@ -506,6 +506,10 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                 if let Entry::Settings(tool) = field {
                                     doc.say(Tone::Refused, format!("{}: {} is still to be typed. Then Enter, and click on the plan.", tool.name(), tool.fields()[i].0));
                                 }
+                                if field == Entry::Line {
+                                    let name = ["What it is", "What it is priced by", "Its cost type"].get(i).copied().unwrap_or("A field");
+                                    doc.say(Tone::Refused, format!("Cost line: {name} is still to be typed. Enter adds the line once all three are in."));
+                                }
                                 // A level's form said nothing (J22B-34).
                                 if field == Entry::Storey {
                                     let name = ["Its name", "The elevation of its floor", "Floor-to-floor"].get(i).copied().unwrap_or("A field");
@@ -622,6 +626,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                 Entry::Settings(tool) => tools::settings_entered(doc, tool, &values),
                 Entry::Length => tools::typed_length(doc, &text),
                 Entry::Storey => tools::new_storey(doc, &values),
+                Entry::Line => tools::new_line(doc, &values),
                 Entry::Drawing => plans::add(doc, &text),
                 Entry::Distance => tools::scale_entered(doc, &text),
                 Entry::Measure => tools::measured(doc, &text),

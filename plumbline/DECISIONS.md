@@ -3227,3 +3227,29 @@ From the twenty-second judgment, part B. Wording is the builder's to decide.
 - **A finding is marked red in the Clashes list**, as on the model. A value that is
   Known still carries no mark anywhere else: there a mark means "look at this", and a
   finding is the one Known thing a person must look at.
+
+### Call 90. A cost line is added in the window, and in-house work says how fast it goes (2026-11-16)
+
+From the twenty-second judgment, part A (J22A-13): a veteran estimator looked for a
+way to put labor on a wall and found none. The window could switch a labor line off
+and could not make one.
+
+- **"Add cost line"** is on the panel of anything that is built, beside Unit cost. It
+  asks three things in an estimator's order: what it is, what it is priced by, its
+  cost type. What it is priced by is one of the thing's own takeoff figures, typed
+  as it reads on the panel ("net area") or clicked from the list of them under the
+  field with what each comes to; a formula on them is taken as the sheet takes one.
+- **In-house work is by the hour, so its cost type carries how fast it goes**: "labor
+  at 40 SF/hr" (or "0.025 hr/SF"). A fourth field for the rate was tried in the
+  head and dropped: it would stand empty on every material and subcontract line,
+  and Enter goes to the first empty field. Material, subcontract and general take
+  no rate and say so if given one.
+- **All of it or none.** The model's verb for it (`Job::add_line_in_hours`) adds the
+  line, gives it its rate and then its cost type, and puts the thing back as it was
+  if any of the three is refused. The rate is Assumed, set in the window.
+- The line has no price and says where one is typed. It has no division until it is
+  given one, and the estimate says so, as for any line.
+
+Not decided here: what labor lines the starter assemblies should carry. That is the
+library's content, moves three demonstrations' figures, and is the next thing owed
+on this finding.

@@ -342,6 +342,52 @@ pub fn new_storey(doc: &mut Doc, values: &[String]) {
     doc.redraw();
 }
 
+/// A cost line added to what is selected, from the three fields of its form: what it
+/// is, what it is priced by (one of the thing's own takeoff figures, or a formula on
+/// them), and its cost type. It has no price yet, and says where one is typed. (Judge
+/// 22A was stopped here: the window could switch a labor line off and had no way to
+/// put one on.)
+pub fn new_line(doc: &mut Doc, values: &[String]) {
+    let parts: Vec<&str> = values.iter().map(|s| s.trim()).collect();
+    let made = match (doc.selected.clone(), parts.as_slice()) {
+        (None, _) => Err("nothing is selected. Click what the line is on first".to_string()),
+        (Some(on), [what, by, kind]) if !what.is_empty() && !by.is_empty() && !kind.is_empty() => {
+            // A takeoff figure is typed as it is read on the panel: "net area".
+            let by = if by.chars().all(|c| c.is_ascii_alphabetic() || c == ' ') { by.to_lowercase().replace(' ', "_") } else { by.to_string() };
+            // In-house work is by the hour: how fast it goes follows the cost type,
+            // "labor at 40 SF/hr".
+            let (kind, rate) = match kind.split_once(" at ").or_else(|| kind.split_once(',')) {
+                Some((k, r)) => (k.trim(), Some(r.trim()).filter(|r| !r.is_empty())),
+                None => (*kind, None),
+            };
+            plumbline_world::Class::parse(kind).and_then(|class| {
+                let in_hours = matches!(class, plumbline_world::Class::Labor | plumbline_world::Class::Fabrication | plumbline_world::Class::Supervision);
+                match (in_hours, rate) {
+                    (true, Some(rate)) => doc.job.add_line_in_hours(&on, what, &by, class, rate, Status::Assumed, SOURCE),
+                    (true, None) => Err(format!("{} is in-house work, priced by the hour: say how fast it goes after the cost type, like {} at 40 SF/hr (or 0.025 hr/SF)", class.title(), class.title().to_lowercase())),
+                    (false, Some(_)) => Err(format!("{} is not priced by the hour: leave the rate off, or make it labor", class.title())),
+                    (false, None) => doc.job.add_line(&on, what, &by, Some(class), false),
+                }
+                .map(|()| (on, class))
+            })
+        }
+        _ => Err("a cost line takes what it is, what it is priced by, and its cost type, like Siding labor, net area, labor at 40 SF/hr".to_string()),
+    };
+    match made {
+        Ok((on, class)) => {
+            doc.job.derive();
+            doc.edit("Cost line");
+            doc.say(Tone::Done, format!("Added to {on}: {:?}, {}, with no price yet. Click its price on the sheet's Estimate tab and type it.", parts[0], class.title().to_lowercase()));
+        }
+        Err(why) => {
+            // The form stays open, to be put right.
+            doc.open_form(Entry::Line, values.to_vec(), values.iter().position(|v| v.trim().is_empty()).unwrap_or(1));
+            cant(doc, "add the cost line", why);
+        }
+    }
+    doc.redraw();
+}
+
 /// One pick with the tool in hand: at a point of the plan, snapped, and the element the
 /// snap came from if it came from one.
 pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {

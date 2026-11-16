@@ -310,7 +310,13 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             b.spawn((text(fonts, "PRICE", 10.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
             b.spawn((text(fonts, price, if priced { 16.0 } else { 12.0 }, if priced { Weight::Semibold } else { Weight::Regular }, if priced { theme::status_ink(status) } else { theme::ink_faint() }), TextLayout::no_wrap()));
         });
-        status_chip(bar, fonts, status);
+        // How sure the price is, in a word, unless what follows says why in more: the
+        // bar holds only so much, and the price is already in that colour (the save
+        // mark was pushed off the end of the bar when a line with no price was added).
+        let says_why = snap.estimate.as_ref().is_some_and(|e| !e.job_cost.left_out.is_empty()) || snap.pricing.as_ref().is_some_and(|p| p.allowances_alone().is_some());
+        if !says_why {
+            status_chip(bar, fonts, status);
+        }
         // Beside the price: how many things are built and in no line of it (J19-48).
         if let Some(n) = snap.pricing.as_ref().map(|p| p.not_priced.iter().map(|x| x.1).sum::<usize>()).filter(|n| *n > 0) {
             chip(bar, fonts, &format!("{n} not priced"), theme::red(), theme::red_wash());
@@ -319,12 +325,12 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         // an assembly with no prices stopped counting as "not priced" and the bar
         // said nothing of its seven lines (J22A-9).
         if let Some(n) = snap.estimate.as_ref().map(|e| e.job_cost.left_out.len()).filter(|n| *n > 0) {
-            chip(bar, fonts, &format!("{} with no price", plumbline_world::view::so_many(n, "line")), theme::red(), theme::red_wash());
+            chip(bar, fonts, &format!("{} unpriced", plumbline_world::view::so_many(n, "line")), theme::red(), theme::red_wash());
         }
         // What is priced by an allowance alone is the budget's and is in no line of
         // the price (J22A-10).
         if let Some((_, Some(sum))) = snap.pricing.as_ref().and_then(|p| p.allowances_alone()) {
-            chip(bar, fonts, &format!("${} in allowances, not in it", plumbline_world::view::figure(sum, 2)), theme::amber(), theme::amber_wash());
+            chip(bar, fonts, &format!("allowances ${} not in price", plumbline_world::view::figure(sum, 2)), theme::amber(), theme::amber_wash());
         }
         // What there is to verify in the field, and the dollars riding on it.
         let questions = snap.verify.questions.len();
@@ -1462,6 +1468,10 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         }
         if built {
             press(r, "Unit cost", "U", KeyCode::KeyU);
+            on_click(&mut button(r, fonts, "Add cost line", "", matches!(doc.entry, Some((Entry::Line, _)))), |doc| {
+                doc.open_form(Entry::Line, vec![String::new(); 3], 0);
+                doc.say(Tone::Done, "Cost line: type what it is, what it is priced by, and its cost type. Enter on the last adds it.");
+            });
         }
         // Only what is built is made of a material, and carries labor of its own.
         if made {
@@ -1471,6 +1481,47 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     });
     if matches!(doc.entry, Some((Entry::Pitch | Entry::Move | Entry::Allowance | Entry::UnitCost | Entry::StretchOut | Entry::Division | Entry::Material, _))) {
         entry_box(p, fonts, doc, snap);
+    }
+    // A cost line being added to this thing: three fields, and under them the thing's
+    // own takeoff figures to price it by, each a click.
+    if matches!(doc.entry, Some((Entry::Line, _))) {
+        let figures: Vec<&view::Row> = el.rows.iter().filter(|r| r.derived && r.number.is_some() && !r.unit.starts_with('$') && r.unit != "$").collect();
+        let by = figures.first().map(|r| pretty(&r.label).to_lowercase()).unwrap_or_else(|| "1".to_string());
+        heading(p, fonts, &format!("A cost line on {}", el.name));
+        p.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::vertical(px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
+            for (i, (label, like)) in [("What it is", "Siding labor"), ("Priced by", by.as_str()), ("Cost type", "labor at 40 SF/hr")].into_iter().enumerate() {
+                on_click(&mut form_field(f, fonts, doc, true, i, label, like, "", RIGHT_W - 40.0), move |doc| {
+                    if let Some((Entry::Line, typed)) = doc.entry.clone() {
+                        let mut values = doc.form.clone();
+                        let at = doc.form_at;
+                        values[at] = typed;
+                        doc.open_form(Entry::Line, values, i);
+                    }
+                });
+            }
+            f.spawn(text(fonts, "A cost type is material, subcontract or general; or in-house work with how fast it goes: labor at 40 SF/hr, fabrication, supervision. Tab or Enter to the next; Enter on the last adds the line. Esc cancels.", 10.5, Weight::Regular, theme::ink_faint()));
+        });
+        if !figures.is_empty() {
+            heading(p, fonts, "Priced by: its own takeoff");
+            for r in figures {
+                let (label, said) = (pretty(&r.label).to_lowercase(), shown(r));
+                let pick = label.clone();
+                row(p, false, format!("Priced by {label}"), move |doc| {
+                    if let Some((Entry::Line, typed)) = doc.entry.clone() {
+                        let mut values = doc.form.clone();
+                        let at = doc.form_at;
+                        values[at] = typed;
+                        values[1] = pick.clone();
+                        // On to the cost type, or back to the name if that is still empty.
+                        let next = if values[0].trim().is_empty() { 0 } else { 2 };
+                        doc.open_form(Entry::Line, values, next);
+                    }
+                }, |x| {
+                    x.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, label.clone(), 12.0, Weight::Regular, theme::ink()));
+                    x.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, said, 11.5, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap()));
+                });
+            }
+        }
     }
     // The job's materials, to pick one from: the field asked for "a material of the
     // job, by name" and showed no names (judge 22A, s34). A click puts the name in the

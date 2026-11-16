@@ -200,3 +200,25 @@ fn an_allowance_on_a_thing_with_no_cost_line_is_said_to_be_out_of_the_price() {
     // And it is not: the price is what it was.
     assert_eq!(view::estimate(&mut job).price.value, before);
 }
+
+#[test]
+fn in_house_work_is_added_with_its_production_rate_or_not_at_all() {
+    use plumbline_world::{view, Class, Status};
+    // The sample house's south wall is 329.99 SF net. Siding labor at a made-up 40 SF
+    // an hour is 8.2498 hr (329.99 / 40 = 8.24975); at a made-up $60.00 an hour that
+    // is $494.99 (8.2498 x 60 = 494.988).
+    let mut job = plumbline_world::sample::house();
+    let wall = job.order.clone().into_iter().find_map(|e| job.world.get::<plumbline_world::Node>(e).filter(|n| n.name == "south wall").map(|n| n.path.clone())).unwrap();
+    let lines_before = job.find(&wall).and_then(|e| job.world.get::<plumbline_world::Cost>(e)).map(|c| c.lines.len()).unwrap_or(0);
+    // A rate that cannot be read leaves the wall as it was.
+    let why = job.add_line_in_hours(&wall, "Siding labor", "net_area", Class::Labor, "fast", Status::Assumed, "made up").unwrap_err();
+    assert!(why.contains("not an order conversion"), "{why}");
+    assert_eq!(job.find(&wall).and_then(|e| job.world.get::<plumbline_world::Cost>(e)).map(|c| c.lines.len()).unwrap_or(0), lines_before);
+    // With one that can, the line is there, in hours, with no price yet.
+    job.add_line_in_hours(&wall, "Siding labor", "net_area", Class::Labor, "40 SF/hr", Status::Assumed, "made up").unwrap();
+    job.set_on_line(&wall, "unit_cost", Some("Siding labor"), Some("60"), Status::Assumed, "made up").unwrap();
+    job.derive();
+    let est = view::estimate(&mut job);
+    let line = est.lines.iter().find(|l| l.path == wall && l.description == "Siding labor").unwrap();
+    assert_eq!((line.class, line.priced.value, line.priced.unit.as_str(), line.amount.value), (Some(Class::Labor), Some(8.2498), "hr", Some(494.99)));
+}

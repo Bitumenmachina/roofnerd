@@ -382,6 +382,32 @@ impl Job {
         Ok(())
     }
 
+    /// Add a line of in-house work (Labor, Fabrication, Supervision): its hours come from
+    /// a production rate over its quantity ("40 SF/hr" or "0.025 hr/SF"), and it is
+    /// priced by the hour. All of it or none: a rate that cannot be read leaves the
+    /// element as it was. (A line added with `add_line` and one of these cost types was
+    /// refused for having no rate, and nothing but the sample's own code could give it
+    /// one in the same breath.)
+    pub fn add_line_in_hours(&mut self, path: &str, description: &str, quantity: &str, class: Class, rate: &str, status: Status, source: &str) -> Result<(), String> {
+        let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let before = self.world.get::<Cost>(e).cloned();
+        let done = self
+            .add_line(path, description, quantity, None, false)
+            .and_then(|()| self.set_on_line(path, "order", Some(description), Some(rate), status, source))
+            .and_then(|()| self.set_class(path, Some(description), class));
+        if done.is_err() {
+            match before {
+                Some(cost) => {
+                    self.world.entity_mut(e).insert(cost);
+                }
+                None => {
+                    self.world.entity_mut(e).remove::<Cost>();
+                }
+            }
+        }
+        done
+    }
+
     /// Say which row of the recap a cost line lands in.
     pub fn set_class(&mut self, path: &str, line: Option<&str>, class: Class) -> Result<(), String> {
         self.edit_line(path, line, "class", |l| l.class = Some(class))

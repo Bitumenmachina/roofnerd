@@ -35,6 +35,16 @@ found() {
     { echo "not on screen in the $1 window: $2"; echo "what is:"; awk -F'\t' -v w="$1" '$1==w {print "  " $2}' "$PLUMBLINE_MAP"; } >> "$T/missing.txt"
     close_window; exit 1
   fi
+  # And it has to be holding still: a panel still moving under the wheel, on a machine
+  # whose frames are slower than this script's waits, is listed where it was a frame
+  # ago, and the click lands a row off (2026-11-16: a price typed on its line of the
+  # sheet selected the row instead, twice, with the compiler running beside it).
+  local again
+  for try in 1 2 3 4 5 6; do
+    sleep 1.2; again="$(where "$1" "$2")"
+    [ "$again" = "$at" ] && break
+    [ -n "$again" ] && at="$again"
+  done
   echo "$at"
 }
 # A button, a row or a field of the model window, by the word on it.
