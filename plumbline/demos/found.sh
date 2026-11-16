@@ -121,7 +121,7 @@ says "$T/dug.txt" "depth is 18 in, measured"
 "$P" show "$TJ" > "$T/words.txt"
 says "$T/words.txt" "=   volume           4.4444 CY"
 if "$P" footing "$TJ" "$TL" "$TT" --points "5,5 5,5" --depth "12 in" "${K[@]}" > "$T/point.txt" 2>&1; then echo "FAIL: a footing with no length was taken"; exit 1; fi
-says "$T/point.txt" "footing line: the two ends are the same point"
+says "$T/point.txt" "the new footing, its footing line: the two ends are the same point"
 if "$P" type "$TJ" footing "no width" --width "0 in" "${K[@]}" > "$T/nowidth.txt" 2>&1; then echo "FAIL: a footing type with no width was taken"; exit 1; fi
 says "$T/nowidth.txt" "footing type width: must be more than zero"
 

@@ -102,6 +102,13 @@ pub fn all_or_nothing<T>(job: &mut Job, f: impl FnOnce(&mut Job) -> Result<T, St
             let mut why = why;
             for (path, kind) in made {
                 if why.contains(&path) && job.find(&path).is_none() {
+                    // "footing-0006 footing depth: ..." is "the new footing, its footing
+                    // depth: ...": the value keeps the name the screen gives it.
+                    // "type-0006 footing type width: ..." is "the new footing type width: ...".
+                    why = why.replace(&format!("{path} {} ", kind.said()), &format!("the new {0}, its {0} ", kind.said()));
+                    if kind == Kind::Type {
+                        why = why.replace(&format!("{path} "), "the new ");
+                    }
                     why = why.replace(&path, &format!("the new {}", kind.said()));
                 }
             }

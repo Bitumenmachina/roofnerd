@@ -758,7 +758,15 @@ pub fn check_wall(path: &str, kind: Kind, w: &Wall) -> Result<(), String> {
         (Some(_), Some(_)) => return Err(format!("{path}: has a top level and a height; its top is held to a level or it is a height tall, one or the other")),
         (None, None) => return Err(format!("{path}: has no top level and no height; enter one, or a height marked Unknown")),
         (Some(t), None) => type_ref(&format!("{path} top level"), t)?,
-        (None, Some(h)) => positive(&format!("{path} {it} {tall}"), h, false)?,
+        (None, Some(h)) => {
+            positive(&format!("{path} {it} {tall}"), h, false)?;
+            // A strip footing is not dug as deep as a house is tall: a depth past 20 ft
+            // is a slip of the hand (1000 for 10.00, feet for inches), and it is said
+            // (J21-6: one 1,000 ft deep was taken without a word, 740 CY of it).
+            if kind == Kind::Footing && h.feet().is_some_and(|d| d > 20.0) {
+                return Err(format!("{path} footing depth: is more than 20 ft, which is not a strip footing's depth; check the figure and its unit"));
+            }
+        }
     }
     if let Some(o) = &w.base_offset {
         offset_ok(&format!("{path} base offset"), o)?;
