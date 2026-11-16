@@ -6254,17 +6254,17 @@ saved, closed and opened again with everything where it stood.
 | J25A-2 | Taking an item in hand on plan throws the view to 3D without a word | **Built, seen in `demos/turnw.sh`** (its next step clicks a place on the plan): the plan stays |
 | J25A-5 | "in the same space as Bathtub, 5 ft by 1' 4"" reads as a size | **Built, seen in `demos/turnw.sh`**: "wall 2 (4 3/8 in into each other)" |
 | J25A-7 | An item's weight is written as three blanks: a blank "how sure" is none of the three | **Fixed, tested (call 107)**: Unknown, "not said" |
-| J25A-18 | **Starter items pressed a second time threw away changes to three items** (a lavatory measured 24 in, Known, drawn as a sink, went back to 20 in, Assumed, a lavatory) and said only "Brought in 3 starter items"; the lavatory standing in the room kept 24 in and no longer matched its item | **Fixed, tested, not seen (call 109)**: the shipped library adds what is missing and writes over nothing the job has, and says how many were left |
-| J25A-16 | A refused price closes its field; the "0" typed next took the Cable tool in hand | **Built, not seen (call 109)**: the field stays open with what was typed |
+| J25A-18 | **Starter items pressed a second time threw away changes to three items** (a lavatory measured 24 in, Known, drawn as a sink, went back to 20 in, Assumed, a lavatory) and said only "Brought in 3 starter items"; the lavatory standing in the room kept 24 in and no longer matched its item | **Fixed, tested, seen by hand (call 109)**: the shipped library adds what is missing and writes over nothing the job has, and says so |
+| J25A-16 | A refused price closes its field; the "0" typed next took the Cable tool in hand | **Built, seen by hand (call 109)**: the field stays open |
 | J25A-17 | A pitch of 40:12 and an eave moved 40 ft are taken without a word | Open. The dollars are now said (J25A-13); nothing questions the figure |
 | J25A-19 | Words: "roof solved again", "the roof this plane is solved from", "the detail is not whole", "Comes to, detail rate", "Like for like", "What its name says", "(CSV)" on buttons, "table" beside a file, "22 set on the job", "no more than a billion" | "(CSV)" and "(IFC)" are off the buttons (call 109). The rest: open |
 | J25A-12 | **STOP: a supplier's list whose names match the lines word for word priced none of them** when brought in with the supplier's name, as the window invites; "22 set on the job" and "and 16 more" hid what it did | **Fixed, tested (call 108)**: a supplier's price is the job's where the job has none; the lines priced are said first. J24A-18's fix (call 104) held only for a list with no supplier named. **Seen in part**: in `demos/bringw.sh` a named supplier's list sets the job's price and says so, and names the three items that price nothing; that job has no cost line to price, so **a line taking its price from a named supplier's list has not been seen in the window** |
-| J25A-13 | Steeper took the price from $679.40 to $685.50 and the screen said nothing of the dollars | **Fixed, tested, not seen (call 108)**: a roof change that drops nothing says "What is priced on the roof changed with it: the job cost was $X and is $Y." The test's figure is worked by hand ($71.55 to $61.22). A pitch *measured* from the Verify list still moves the price without saying by how much |
+| J25A-13 | Steeper took the price from $679.40 to $685.50 and the screen said nothing of the dollars | **Fixed, tested, seen by hand** ($1,182.98 to $1,194.13 on a made-up roof): a roof change that drops nothing says "What is priced on the roof changed with it: the job cost was $X and is $Y." The test's figure is worked by hand ($71.55 to $61.22). A pitch *measured* from the Verify list still moves the price without saying by how much |
 | J25A-14 | An allowance on a wall with no cost lines is kept out of the price: "$1,575 + markup short for that wall" | **Patrick's: QUESTIONS.md Q26.** The third veteran judge to read it so. The screen says it plainly (granted by all three); the working assumption stands until he rules |
 | J25A-15 | With the allowance note added, the top bar runs off the window's right edge | **Built, not seen**: with all four notes on the bar the count of known, assumed and unknown is left to the estimate window's bar |
 | minor | A measured eave height stays Known after the eave it was measured at is moved 18 in out | Open: the pitch says "what was measured is no longer what is drawn"; the eave height does not |
 | minor | With the only wall deleted, Next steps asks for a drawing again | Left: with no walls and no drawing, a drawing is the next step |
-| J25A-8 | On plan a roof plane cannot be picked: a click inside it says "Nothing selected." | **Built, not seen**: on the plan of the level a roof sits on, a click inside a plane's outline that lands on nothing else picks the plane |
+| J25A-8 | On plan a roof plane cannot be picked: a click inside it says "Nothing selected." | **Built, seen by hand**: on the plan of the level a roof sits on, a click inside a plane's outline that lands on nothing else picks the plane. The plane picked is not marked on the plan |
 | J25A-11 | Roof sheathing rounded up to whole sheets plane by plane: 12 sheets where 10 cover the roof | **Open, and it overstates an order** (call 108 says why it is not changed tonight) |
 | J25A-10 | "2 hr/SQ" typed is shown on the line as "at 0.02 hr/SF" | Open: exact, in the line's unit, not the unit typed |
 | J25A-9 | Unit cost on a plane's panel opens its first line only | Open: the others are priced on the sheet |
@@ -6416,14 +6416,21 @@ third time (17 lines pass, 16 fail) and the words a third time (69 marked of abo
    build it, on Opus or Sonnet, told to write their notes as they go. Nothing done
    after 9868569 has been judged: calls 106 to 109.
 2. **See in the window what is built and has not been seen**: a cost line taking its
-   price from a named supplier's list (call 108; a test holds it); Steeper and a moved
-   eave saying what the job cost was and is (a test holds the figure); a roof plane
-   picked on plan by a click inside its outline; the top bar with all four notes on
-   it; a refused price keeping its field open; Starter items pressed twice leaving a
-   changed item as it is (a test holds it); Undo repeating what the step said, and
-   "doors and windows" ticking with one of each (call 106); a roof's lines coloured
-   by how sure in that view; the Door tool offering the last door's sizes on a job
-   opened again.
+   price from a named supplier's list (call 108; a test holds it, and `bringw` shows
+   the job's price set, on a job with no line to price); the top bar with all four
+   notes on it; "doors and windows" ticking with one of each (call 106); the Door
+   tool offering the last door's sizes on a job opened again. **Seen by hand on a
+   frozen copy of c0d5922, after the full run, on a made-up roof 40 ft by 26 ft with
+   shingles at $105.00 a square** (by the builder, not by a judge, and in no
+   demonstration yet): Steeper says "What is priced on the roof changed with it: the
+   job cost was $1,182.98 and is $1,194.13"; Undo says "Undone: pitch changed on edge
+   1 of Main roof ..."; an allowance of "-12" is refused and its field is still open;
+   in the Known, Assumed, Unknown view the roof and its lines are amber, with no
+   orange hip; on the plan of the level the roof sits on, a click inside a plane's
+   outline says "Selected plane 1" and opens its panel (the plane picked is not
+   marked on the plan: its broken lines are all one colour); Starter items pressed a
+   second time says "The starter items are already in this job, and each was left as
+   it is here."
 3. **The item library, to be one a person keeps** (the twenty-fifth judge, part A):
    an item added, renamed and deleted in the window; a price, a unit and labor on an
    item (PROPOSALS.md 28, with an item's shape as data and the bench to make it on);
