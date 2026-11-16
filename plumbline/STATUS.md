@@ -28,28 +28,46 @@ run again and each gave what this file said they gave.
 | D6 | Interchange and reports | Not started. |
 | D7 | Capture | Waiting on the owner's ruling. |
 
-## The release candidate (Patrick's ruling 12, 2026-11-11)
+## The release candidate: the thirteen, as they stand on 2026-11-16
 
-What is owed now is these thirteen items (CLAUDE.md, "The deliverable"; DECISIONS.md
-call 42). Each is done when this table points at its evidence. The D rows above are the
-record of what was built and judged before the ruling. The order the work is done in is
-CLAUDE.md, "Order of work"; step 1 of it is under way.
+**It is not a release candidate and it is not tagged.** Items 9 and 11 were judged on
+2026-11-16 and failed; items 10 and 12 are with a judge that has not reported, whose
+notes already show the money path broken twice; item 13 has nothing to be run
+against. What follows is each item, its evidence, and what it lacks. (The table this
+replaces was written on 2026-11-11 and described a program with no VIF list, no
+exports and plans only in the window. The D rows above it are the record of what was
+built before Patrick's ruling 12 and are left as they were.)
 
-| # | Item | Where it stands |
-|---|---|---|
-| 1 | A clean clone installs on Linux from the README in one pass | **Not shown.** The README lists the commands; nobody has followed it on a clean machine. |
-| 2 | Every import works as stated: PDF (vector and scanned), PNG, JPEG, aerial images, CSV and XLSX (price lists, prior estimates, assembly libraries), IFC, the job file | **Each import named by the rule is read at the command line; only plans are in the window.** The job file loads and saves to the same bytes. A PDF plan (drawn or scanned), a PNG and a JPEG are laid under a storey and traced over, with what each could not give listed (`demos/plan.sh`, `demos/planw.sh`; judged, fixes not judged). A CSV or XLSX price list, an assembly library and a prior estimate are brought in with every unused row and column said, and a price list and an assembly library go out as CSV and come back the same (`demos/imports.sh`; not judged). A plain IFC model comes in as storeys, walls, openings, floors, rooms and runs, with the rest listed (`demos/model.sh`; not judged; one made-up model only). Not built: tables and models in the window; an aerial picture shown as such; an estimate's own lines out and back. |
-| 3 | From an empty job: open a real residential plan PDF, calibrate, trace walls, openings, floors, rooms and the roof; the 3D house builds from the tracing | **Part.** From an empty job the window opens USDA Plan No. 7213 (public domain; a scan), sets its scale from its 41 ft 3 in dimension, and traces its outside walls; the 3D house stands on the sheet (`demos/planw.sh`, pictures 01 to 08; not judged). Not built: openings, floors, rooms and the roof traced over it. |
-| 4 | Clashes show their certainty; the VIF list is sorted by dollars | **Half.** A clash is Known or Assumed from its two shapes and says so (command line and the sheet's Clashes tab; not judged). There is no VIF list and no dollars on a clash. |
-| 5 | A typed or lasered measurement makes a value Known; the clash confirms or clears; the price changes live in the second window | **Demonstrated, not judged** (`demos/field.sh`, `demos/fieldw.sh`; "Field entry. What was run"). A reading typed as a Leica DISTO in keyboard mode types it, ended by its Tab or Enter, makes a value Known in the window; one clash clears and one becomes a finding; the sheet's price goes from $615.86 to $607.31. No laser was in the loop: the keys were typed by `xdotool` in a burst. A wall's length is not measured as one length yet. |
-| 6 | A design-phase price per SF or LF grows into line items for the same condition, and the detail rolls back up | **Demonstrated on the roof** (D4: `demos/d4.sh`, `demos/d4w.sh`), judged, fixes not judged. Not shown on a wall, a floor or a run. |
-| 7 | The sheet: stretch-out editable on the line, labor switchable per line, editable overhead and profit, three suppliers side by side | **Three of four in the window** (D5: `demos/d5w.sh`): the labor switch, overhead and profit, three suppliers. Stretch-out is editable at the command line and not on the line in the window. |
-| 8 | Exports: xlsx with live formulas, CSV, IFC4 validated by IfcOpenShell; supplier, subcontractor and PM lenses from one estimate | **Not started** (Q17 for what each lens holds). |
-| 9 | A judge lists every word on every screen; none is a software term | **Tried once and failed** (fifteenth judgment, part B): paths, command lines, a backslash before every inch mark, and the machine's own error words reach the screen. Thirteen findings, none fixed yet. |
-| 10 | A fresh judge, briefed as a veteran estimator with no software background, completes a whole-house takeoff from a PDF using only the in-app help | **Not possible yet**: no PDF, no in-app help. |
-| 11 | The visual judge passes every screen against the instrument standard | **Not started.** The 3D view still has the sky, sun and grass that ruling 7 removes. |
-| 12 | A fresh judge walks the whole path cold and cannot break the money path | **Not done.** Twelve judgments so far, each of one stretch; the last fixes of D1, D2, D3, D4, D5 and drawing are not themselves judged. |
-| 13 | A hand estimate in `refs/` is reproduced, every difference explained line by line | **Pending:** `refs/` has no estimate (Q5). |
+"Demonstrated" means a script in `demos/` drives the real program and checks it;
+the window ones do it with a real pointer and keyboard on a virtual display and
+leave pictures in `demos/captured/`. "Judged" means an agent that did not build it
+tried to break it. The last full run of the sixteen window demonstrations was on
+the build of 04266dd: fourteen passed, and `d5w` and `itemsw` each failed on one
+click that did not land while two judges and the compiler ran beside them. **They
+are being run again on the build of b03129e; until that run ends, no picture in
+`demos/captured/` is of the program as committed.**
+
+| # | Item | Evidence | What it lacks |
+|---|---|---|---|
+| 1 | A clean clone installs on Linux from the README in one pass | `tools/committed.sh` builds the last commit from a clean checkout of it and passes its tests (run before every push; PASS on b03129e). `tools/installs.sh` starts the built window, reads every library it opens (52) and finds each in a package the README's install line brings. The README's clone address serves the pushed head | **Nobody has followed the README on a clean machine.** Both checks ran on the machine it was built on, where the toolchain was already installed |
+| 2 | Every import in the fixed rules | At the command line: `demos/plan.sh` (PDF drawn and scanned, PNG, JPEG), `demos/imports.sh` (a supplier's list as CSV and as a workbook, an assembly library out and back, a prior estimate set against the job), `demos/model.sh` and the IFC tests (a model from another trade), `demos/spec.sh` (a maker's sheet into an item, each size Assumed and sourced to its line). In the window: `demos/planw.sh`, `demos/bringw.sh`, `demos/itemsw.sh`. The job file and CSV round-trip to the same bytes (tests). Judged: 15A, 17B, 21 | An aerial image is brought in as any picture is and has no demonstration of its own. `itemsw` lost a click on the last run |
+| 3 | From an empty job: a real plan PDF, calibrated, traced; the 3D house builds | `demos/firstw.sh`: USDA Plan No. 7213 (public domain, a scan) under a level, its scale from its 41 ft 3 in dimension, outside walls, a door, two windows, the floor, a room and the roof traced, the saved job set against figures worked by hand. The twenty-second judge, part A, did the same by hand on page 4 of that plan and went further: inside walls, three rooms, a hip roof (1,183.04 SF, agreed by hand), a pipe | The demonstration traces one room. On a scan there are no vector lines to snap to; snapping to a drawn PDF's lines is shown in `planw` on a made-up sheet, not on a real one |
+| 4 | Clashes show their certainty; the VIF list sorted by dollars | `demos/clash.sh`, `demos/vif.sh`, `demos/clashw.sh`, `demos/fieldw.sh`. A clash is a finding (both Known) or a field question; the list is sorted by the dollars riding on each; dollars ride only where the quantity is in question (call 83). Judged: 13, 21 | The fixes to 21 are not judged. In the sheet's list a finding is now marked red as on the model (22B) |
+| 5 | A typed or lasered measurement makes a value Known; the clash confirms or clears; the price moves live | `demos/field.sh`, `demos/fieldw.sh`. Judged: 16 | A real laser has never been on it: a keyboard typed what a DISTO types |
+| 6 | A price per SF or LF grows into line items, and the detail rolls back up | `demos/d4.sh`, `demos/d4w.sh`, `demos/pricew.sh`. Judged: 10 | **Judge 22A: an allowance with no cost lines is in no line of the price.** It is now said wherever the price is read; whether it belongs in the price is QUESTIONS.md Q26, Patrick's |
+| 7 | The sheet: stretch-out on the line, labor switched per line, overhead and profit, three suppliers | `demos/d5.sh`, `demos/d5w.sh`: all four in the window. Judged: 11, 17A | **`d5w` failed on the last run** (a price typed on its line did not land). The cause may be the one found by 22A (a click redrew the sheet and sent it to its top), fixed in b03129e; the rerun will say |
+| 8 | Exports: xlsx with live formulas, CSV, IFC4 validated by IfcOpenShell; three lenses | `demos/export.sh`: the workbook's amounts and recap are formulas that come to the job's figures; the IFC is checked by IfcOpenShell run as an outside program (`tools/ifc-check.py`); the supplier, subcontractor and PM lenses come from one estimate. `demos/itemsw.sh` writes each from the window. Judged: 17A, 17B, 21 | The fixes to 21 (walls written through at corners, a level's height) are not judged |
+| 9 | A judge lists every word on every screen; none is a software term | Judged 2026-11-16 (22B): about 620 entries by screen, `research/judgment-22b-words.md` | **FAIL: 69 marked** (18 software terms, 43 a builder would trip on, 7 units not the trade's way, 1 British spelling). The deciding one is the Add drawing list: file, folder, page after a comma, file names. Some are fixed since ("ELEMENT", "solid", "FACETS", four-place rates, sizes in feet-inches); the list is not |
+| 10 | A veteran estimator with no software background completes a whole-house takeoff from a PDF using only the in-app help | With judge 22A, **not reported**. From its notes: level, drawing, scale, walls, openings, floor, rooms, roof and a pipe all done from the on-screen help alone; stuck twice (a room that took the whole floor; a wall under the roof that could not be clicked); pricing reached | Its verdict. Both places he was stuck are changed and not judged |
+| 11 | The visual judge passes every screen against `VISUAL.md` | Judged 2026-11-16 (22B), line by line: `research/judgment-22b-notes.md` | **FAIL** on A1 (full-width bars; panels over about 45% of the window), A2 (no shadow under a panel on plan), C2 (no sky), and on A4, A5, A6, D8. Fixed since and not judged: C2, A4, most of A5, part of A6. Open: A1, A2, D8 and the rest in the table at the end of this file |
+| 12 | A fresh judge walks the whole path cold and cannot break the money path | With judge 22A, **not reported** | **Its notes show it broken twice**: an area six times the room shown as a figure (J22A-3), and $8,580 of allowance in no line of the price with nothing said (J22A-10). Both are changed, with tests, and not judged |
+| 13 | A hand estimate in `refs/` reproduced, every difference explained | None | **Pending**: `refs/` holds the brief and the first handoff and no estimate (Q5) |
+
+**What Patrick is asked.** Nothing blocks the work. Three questions are his and each
+has a working assumption the build goes on with: Q22 (a sky: there is one), Q25
+(whether a quantity is rounded before it is priced: as it is), Q26 (whether an
+allowance with no cost lines is in the price: it is not, and says so). A hand
+estimate in `refs/`, sanitized, would let item 13 be run.
 
 ---
 
@@ -5091,7 +5109,7 @@ not read again.
 measured); the base in the rooms (seen by eye); anything of the foundation but that
 the ground went. And it is the builder's own script: no judge has run it.
 
-## Start here (written 2026-11-13 for the next run, on a copy of this repository)
+## Where the work stood on 2026-11-13 (it was "Start here"; the one to read is the last section of this file)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`. The tree is clean and
 pushed. 283 tests pass; the gates pass; `tools/committed.sh` is run on the last
@@ -5711,3 +5729,61 @@ is of 2026-11-11 and is not true of the program as it is.
 
 298 tests pass; the twenty command-line demonstrations pass on this tree; the three
 gates pass.
+
+## Start here (written 2026-11-16; this is the last section, and the one CLAUDE.md sends you to)
+
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 298 tests pass,
+the three gates pass, the twenty command-line demonstrations pass, and
+`tools/committed.sh` passed on the last commit of code. Read `CLAUDE.md`, then this
+section, then the table of thirteen at the head of this file, then the table under
+"The twenty-second judgment" just above.
+
+**What happened on 2026-11-16.** Patrick asked for a fresh pass of code and review,
+the window and a clean-up, run alone. Two code reviewers read the model and the
+window crate (42 findings), a twenty-first judge walked the four new trades and a
+typed length to the end (21 findings), and a twenty-second pair judged the look and
+the words against VISUAL.md (part B) and walked a veteran's first day and the money
+path (part A). Each finding is a row in this file with where it stands. Calls 77 to
+89 in DECISIONS.md are the decisions made on the way; Q26 in QUESTIONS.md is new.
+
+**What is true of the program today.** It traces a plan, builds the house in 3D
+dressed as it is priced, prices it in sixteen divisions, finds clashes, lists what
+to verify in the field by dollars, brings in and writes out price lists, assemblies,
+estimates and BIM files, and makes items from makers' sheets. **It is not a release
+candidate**: the look and the words were judged and failed (items 11 and 9), and the
+money path was broken twice by a judge in one day (item 12).
+
+**What is owed, in this order.**
+
+1. **Part A of the twenty-second judgment** (`research/judgment-22a-brief.md`): if its
+   report is not recorded under "The twenty-second judgment", it was cut off. Its
+   notes to J22A-12 are in `research/judgment-22a-notes.md`. Run it again to the end
+   on a frozen copy of the program; its two money findings are changed and need a
+   judge.
+2. **The sixteen window demonstrations, run in a row on a frozen copy of the last
+   commit, with nothing else running** (CLAUDE.md, "Running several window
+   demonstrations in a row"). Their pictures are committed only when the run ends.
+   If `d5w` or `itemsw` fails again with nothing beside it, it is the program and
+   not the load.
+3. **The look**, which is Patrick's own test and the judge's deciding fail: the top
+   bar and the status line as floating cards, not full-width strips (A1); a shadow
+   under a panel that shows on plan's white paper (A2); the eave, hip and ridge
+   lines and square labels over the dressed roof in 3D (D8); a bathtub, a duct and
+   a cable drawn as what they are. `crates/app/src/theme.rs`, `panels.rs`,
+   `scene.rs`. Then VISUAL.md read again against what is built: D6 claims a tub is
+   drawn and it is a box.
+4. **The words**, item 9: `research/judgment-22b-words.md` marks 69. The Add drawing
+   list is the deciding one: it shows file names and folders and takes the page
+   after a comma. Decide what a builder calls each (a sheet, its number) and write
+   the call. A cable wants a name (12-2 NM), not a diameter.
+5. **Have both judged again**, by agents that did not build them, on Opus or
+   Sonnet, told to write their notes as they go.
+6. **The open rows** of the reviews and the twenty-first judgment (their tables
+   above): a keystroke re-reads the whole job (R21-2); one money formatter
+   (R21-12); a footing dug wider cannot be recorded on it alone (J21-6); base is
+   priced by a room's perimeter and drawn by its runs less its doors.
+
+**What not to do.** Do not tag. Do not loosen a demonstration to get it green: two
+failed on a lost click and were left failed and said. Do not take a judge's "not
+so" from me without reading it: J22B-32 is the one finding I recorded as mistaken,
+and why is in its row.

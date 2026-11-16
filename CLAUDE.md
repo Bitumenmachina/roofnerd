@@ -369,9 +369,10 @@ window. **The four new layers have one window demonstration** (`demos/tradesw.sh
 Ground, Finishes and Framing switches and a level looked into, each measured, and
 the concrete of the foundation wall with the ground away; it does not yet measure
 the flashing, the base or the footing itself), **and
-none has been judged to the end by an agent that did not build it**: the twentieth
-judgment was stopped part way and its brief is `plumbline/research/judgment-20-brief.md`.
-That judgment, run to the end, is the next thing owed.
+the twenty-first judgment (2026-11-16) walked them to the end**: its findings and
+where each stands are in STATUS.md. What is owed next is the last section of
+STATUS.md, "Start here": the look and the words were judged on 2026-11-16 and
+failed, and the table of thirteen at the head of STATUS.md says where each item is.
 
 **A tool's sizes accepted, then a length typed** is the path every first wall takes,
 and no demonstration walked it until `planw` was repaired: it found the first digit
