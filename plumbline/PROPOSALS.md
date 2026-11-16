@@ -116,3 +116,18 @@ Work outside a deliverable. Nothing here is built until the owner accepts it.
     brought in without one draws no arc); the arc on the plan; the door's operation
     in the BIM file; a swing that crosses a fixture or another door's swing listed
     with the clashes. Not built: to draw an arc today would be to make up the hand.
+
+## 23. A supplier's list prices the cost lines of the same name (2026-11-16, from judgment 22A)
+
+Today a price list brought in sets the prices of the job's materials, and a cost
+line takes a material's price only when the thing it is on is made of that material.
+A line that is only named as an item on the list ("Lap siding", on a wall given the
+starter assembly) keeps its own price or none. An estimator who brings in a
+supplier's list expects those lines priced.
+
+Proposed: on bringing a list in, each cost line with no price whose name is an item
+of the list, and which is priced by the unit the item is bought by, takes the list's
+price as its own, Assumed, sourced to the list and the item; a line that already
+has a price keeps it, and the message says which did and which did not. It changes
+what an import does to the money, so it waits for Patrick's word. Until then the
+import says which lines it did not price and why (STATUS.md, J22A-15).

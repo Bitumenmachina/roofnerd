@@ -5730,6 +5730,15 @@ is of 2026-11-11 and is not true of the program as it is.
 298 tests pass; the twenty command-line demonstrations pass on this tree; the three
 gates pass.
 
+**More from part A's notes, while it still runs (J22A-13 to J22A-15).**
+
+| # | What was found | Where it stands |
+|---|---|---|
+| J22A-13 | **No way on the screen to put labor on anything.** The starter assemblies' lines are material only; "Labor on or off" answers "has no labor line"; nothing in the window adds a cost line. The command line can (`plumbline line ... --cost-type labor`) | **Open, and it stops item 10**: a veteran cannot price labor from the window. Two things are owed: a cost line added from the window (its name, what it is priced by, its cost type), and labor lines in the starter assemblies (`library/sixteen-divisions.csv`; the figures of `demos/library.sh`, `pricew.sh` and `firstw.sh` move with it) |
+| J22A-14 | Bring in, Price list opened its list below the foot of the left panel | Fixed: while a drawing or a table is being brought in, its field and its list are at the head of the left panel, and the panel goes to its head. Seen (the whole house, Price list). A folder was marked with a sign the type does not have; it now says "(a folder)" |
+| J22A-15 | A supplier's list priced none of the cost lines of the same name, and "16 set" did not say on what | Said, not changed: the message says the prices were set on the job, and a note names each cost line that is named as a material on the list and is not made of it, and what would price it. The Material field now lists the job's materials to pick from (it asked for a name and showed none). **A list pricing the lines of its names is not built**: PROPOSALS.md 23 |
+
+
 ## Start here (written 2026-11-16; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 298 tests pass,

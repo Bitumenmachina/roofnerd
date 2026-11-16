@@ -449,7 +449,7 @@ fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entr
     }
     for name in folders.iter().take(30) {
         let into = here.join(name);
-        line(f, format!("Folder {name}"), format!("\u{25B8} {name}"), theme::ink_soft(), Box::new(move |doc| {
+        line(f, format!("Folder {name}"), format!("{name}  (a folder)"), theme::ink_soft(), Box::new(move |doc| {
             doc.browse = Some(into.clone());
             doc.touch();
         }));
@@ -467,6 +467,44 @@ fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entr
     }
     if files.len() > 40 || folders.len() > 30 {
         f.spawn(text(fonts, "More than fit in this list: type the start of the name, or go into a folder.", 10.5, Weight::Regular, theme::ink_faint()));
+    }
+}
+
+/// The list a file is picked from, at the head of the left panel while a drawing or a
+/// table is being brought in. It stood in its own section, which on a job with any
+/// size to it is below the foot of the panel: the status line said "pick the file from
+/// the list" and no list was on screen (J22B-29, J22A-14).
+fn picker(c: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
+    match doc.entry {
+        Some((Entry::Drawing, _)) => {
+            heading(c, fonts, "Add drawing");
+            c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
+                let typed = doc.entry.as_ref().map(|e| e.1.clone()).unwrap_or_default();
+                theme::field(f, fonts, "File, page", &typed, "", 1, LEFT_W - 30.0);
+                f.spawn(text(fonts, "Pick the plan below (a PDF, PNG or JPEG). Its page follows a comma: change the 1 for another page. Enter adds it. Or drop the file on this window.", 10.5, Weight::Regular, theme::ink_faint()));
+                pick_list(f, fonts, doc, Entry::Drawing, &[".pdf", ".png", ".jpg", ".jpeg"], ", 1");
+            });
+        }
+        Some((Entry::BringIn(what), ref typed)) => {
+            heading(c, fonts, &format!("Bring in: {}", what.name().to_lowercase()));
+                c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
+                    theme::field(f, fonts, &format!("{}: its file", what.name()), typed, "", 1, LEFT_W - 30.0);
+                    let hint = match what {
+                        crate::model::Bring::Prices => "A CSV or XLSX, like lists/ridge.xlsx. A supplier's name can follow a comma. Enter brings it in. Or drop the file on this window.",
+                        crate::model::Bring::Model => "An IFC file, like models/mechanical.ifc. Enter brings it in. Or drop the file on this window.",
+                        crate::model::Bring::Sheet => "A maker's sheet as a PDF, like sheets/vanity.pdf. If its name does not say what it is, say after a comma: fixture, equipment or furnishing. Enter makes it an item to place.",
+                        _ => "A CSV or XLSX. Enter brings it in. Or drop the file on this window.",
+                    };
+                    f.spawn(text(fonts, hint, 10.5, Weight::Regular, theme::ink_faint()));
+                    let kinds: &'static [&'static str] = match what {
+                        crate::model::Bring::Model => &[".ifc"],
+                        crate::model::Bring::Sheet => &[".pdf"],
+                        _ => &[".csv", ".xlsx"],
+                    };
+                    pick_list(f, fonts, doc, Entry::BringIn(what), kinds, "");
+                });
+        }
+        _ => {}
     }
 }
 
@@ -587,6 +625,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
     .with_children(|c| {
         c.spawn(thumb(2));
         more_below(c, fonts, 2);
+        picker(c, fonts, doc);
         steps(c, fonts, doc, snap);
 
         heading(c, fonts, "Levels");
@@ -825,18 +864,14 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
             });
         }
         if matches!(doc.entry, Some((Entry::Drawing, _))) {
-            c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
-                let typed = doc.entry.as_ref().map(|e| e.1.clone()).unwrap_or_default();
-                theme::field(f, fonts, "File, page", &typed, "", 1, LEFT_W - 30.0);
-                f.spawn(text(fonts, "Pick the plan below (a PDF, PNG or JPEG). Its page follows a comma: change the 1 for another page. Enter adds it. Or drop the file on this window.", 10.5, Weight::Regular, theme::ink_faint()));
-                pick_list(f, fonts, doc, Entry::Drawing, &[".pdf", ".png", ".jpg", ".jpeg"], ", 1");
-            });
+            // Its list is at the head of the panel (`picker`), where it is seen.
         } else {
             c.spawn(Node { padding: UiRect::axes(px(6.0), px(3.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|b| {
                 on_click(&mut button(b, fonts, "Add drawing", "", false), |doc| {
                     doc.browse = None;
                     doc.open(Entry::Drawing, "");
-                    doc.say(Tone::Done, "Add drawing: pick the plan from the list, or drop the file on this window.");
+                    doc.say(Tone::Done, "Add drawing: pick the plan from the list at the top left, or drop the file on this window.");
+                    set_goal(2, 0.0);
                 });
                 if !on_show.is_empty() {
                     on_click(&mut button(b, fonts, "Set scale", "", doc.draw.tool == Some(Tool::Scale)), |doc| tools::start(doc, Tool::Scale));
@@ -848,24 +883,8 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         // What people already have, brought in: each button asks for its file.
         heading(c, fonts, "Bring in");
         match doc.entry {
-            Some((Entry::BringIn(what), ref typed)) => {
-                c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
-                    theme::field(f, fonts, &format!("{}: its file", what.name()), typed, "", 1, LEFT_W - 30.0);
-                    let hint = match what {
-                        crate::model::Bring::Prices => "A CSV or XLSX, like lists/ridge.xlsx. A supplier's name can follow a comma. Enter brings it in. Or drop the file on this window.",
-                        crate::model::Bring::Model => "An IFC file, like models/mechanical.ifc. Enter brings it in. Or drop the file on this window.",
-                        crate::model::Bring::Sheet => "A maker's sheet as a PDF, like sheets/vanity.pdf. If its name does not say what it is, say after a comma: fixture, equipment or furnishing. Enter makes it an item to place.",
-                        _ => "A CSV or XLSX. Enter brings it in. Or drop the file on this window.",
-                    };
-                    f.spawn(text(fonts, hint, 10.5, Weight::Regular, theme::ink_faint()));
-                    let kinds: &'static [&'static str] = match what {
-                        crate::model::Bring::Model => &[".ifc"],
-                        crate::model::Bring::Sheet => &[".pdf"],
-                        _ => &[".csv", ".xlsx"],
-                    };
-                    pick_list(f, fonts, doc, Entry::BringIn(what), kinds, "");
-                });
-            }
+            // Its list is at the head of the panel (`picker`), where it is seen.
+            Some((Entry::BringIn(_), _)) => {}
             _ => {
                 c.spawn(Node { padding: UiRect::axes(px(6.0), px(3.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|b| {
                     // The set of assemblies the program ships with: no file to find.
@@ -878,7 +897,8 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                                 _ => {
                                     doc.browse = None;
                                     doc.open(Entry::BringIn(what), "");
-                                    doc.say(Tone::Done, format!("{}: pick the file from the list, or drop it on this window.", what.name()));
+                                    doc.say(Tone::Done, format!("{}: pick the file from the list at the top left, or drop it on this window.", what.name()));
+                                    set_goal(2, 0.0);
                                 }
                             }
                         });
@@ -1451,6 +1471,24 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     });
     if matches!(doc.entry, Some((Entry::Pitch | Entry::Move | Entry::Allowance | Entry::UnitCost | Entry::StretchOut | Entry::Division | Entry::Material, _))) {
         entry_box(p, fonts, doc, snap);
+    }
+    // The job's materials, to pick one from: the field asked for "a material of the
+    // job, by name" and showed no names (judge 22A, s34). A click puts the name in the
+    // field; Enter sets it.
+    if matches!(doc.entry, Some((Entry::Material, _))) {
+        heading(p, fonts, "Materials of the job");
+        if snap.materials.is_empty() {
+            p.spawn(Node { padding: UiRect::bottom(px(4.0)), ..default() }).with_child(text(fonts, "This job has no materials yet. Bring in, Price list brings a supplier's, each with its price.", 11.0, Weight::Regular, theme::ink_faint()));
+        }
+        for name in snap.materials.iter().take(60) {
+            let pick = name.clone();
+            row(p, false, format!("Material {name}"), move |doc| {
+                doc.open(Entry::Material, pick.clone());
+                doc.say(Tone::Done, format!("{pick}: Enter makes it of this."));
+            }, |r| {
+                r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, name.clone(), 12.0, Weight::Regular, theme::ink()));
+            });
+        }
     }
     // The assemblies that go on this kind of thing, to pick one from: each by its name
     // and how many lines it brings. The one the thing has is marked.

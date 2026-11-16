@@ -36,7 +36,7 @@ fn count(n: usize, one: &str, many: &str) -> String {
 
 /// What a table brought in did, said in full.
 fn said(file: &str, lost: &[String], b: &Brought) -> (String, bool) {
-    let mut out = format!("Brought in {file}: {} read, {} set.", count(b.rows, "row", "rows"), b.done.len());
+    let mut out = format!("Brought in {file}: {} read, {} set on the job.", count(b.rows, "row", "rows"), b.done.len());
     for d in b.done.iter().take(6) {
         out.push_str(&format!("\n{d}"));
     }

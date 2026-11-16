@@ -472,6 +472,23 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
             job.put(&path, supply)?;
             out.done.push(what);
         }
+        // A list prices the job's materials. A cost line that is only named as one of
+        // them, and is not made of it, does not take its price: an estimator who
+        // brings in a supplier's list expects the lines of the same name priced, and
+        // is told which are not and what makes them so (J22A-15: "16 set", on what was
+        // not said, and every line still read "no price").
+        let mut named: Vec<String> = Vec::new();
+        for &e in &job.order {
+            let (Some(n), Some(cost)) = (job.world.get::<Node>(e), job.world.get::<crate::Cost>(e)) else { continue };
+            for l in cost.lines.iter().filter(|l| !l.of_material && by_plain.contains_key(&check::plain_name(&l.description))) {
+                named.push(format!("{:?} on {}", l.description, if n.name.is_empty() { n.path.as_str() } else { n.name.as_str() }));
+            }
+        }
+        if !named.is_empty() {
+            let n = named.len();
+            let shown = if n > 4 { format!("{}, and {} more", named[..4].join(", "), n - 4) } else { named.join(", ") };
+            out.notes.push(format!("the list's prices are on the job's materials. {n} cost line{} named as one of them and {} not made of it, so {} its own price or none: {shown}. To price a line by the list, select what it is on and give it that material", if n == 1 { " is" } else { "s are" }, if n == 1 { "is" } else { "are" }, if n == 1 { "it keeps" } else { "they keep" }));
+        }
         Ok(out)
     })
 }

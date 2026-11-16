@@ -500,6 +500,8 @@ pub struct Snapshot {
     pub dress: plumbline_world::finish::Dress,
     /// The job's assemblies: each one's name, what it goes on, and how many lines it has.
     pub assemblies: Vec<(String, Vec<Kind>, usize)>,
+    /// The job's materials, by name, in the job's order: what Material picks from.
+    pub materials: Vec<String>,
     /// The job's items (things to place, made from makers' sheets): each one's path,
     /// its name, what kind of thing it is, and its size as said, or what is missing.
     pub items: Vec<(String, String, Kind, String)>,
@@ -569,6 +571,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
         // In the job's own order, which is the library's.
         doc.job.order.iter().filter_map(|e| doc.job.world.get::<plumbline_world::Node>(*e)).filter_map(|n| by_path.get(&n.path).cloned()).collect()
     };
+    s.materials = doc.job.order.iter().filter(|e| doc.job.world.get::<Kind>(**e) == Some(&Kind::Material)).filter_map(|e| doc.job.world.get::<plumbline_world::Node>(*e)).map(|n| n.name.clone()).collect();
     s.items = {
         let mut q = doc.job.world.query::<(&plumbline_world::Node, &plumbline_world::Item)>();
         let mut all: Vec<(String, String, Kind, String)> = q
