@@ -1535,10 +1535,10 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
     if let Some(c) = w.get::<Connectors>(e) {
         for (i, k) in c.0.iter().enumerate() {
             let what = [Some(format!("{:?}", k.kind).to_lowercase()), k.domain.map(|d| format!("{d:?}").to_lowercase()), (k.flow != Flow::Both).then(|| format!("{:?}", k.flow).to_lowercase())].into_iter().flatten().collect::<Vec<_>>().join(", ");
-            let label = if k.name.is_empty() { format!("connector {} ({what})", i + 1) } else { format!("connector {}: {} ({what})", i + 1, k.name) };
+            let label = if k.name.is_empty() { format!("connection {} ({what})", i + 1) } else { format!("connection {}: {} ({what})", i + 1, k.name) };
             rows.push(view::entered(path, &label, &k.at, |p| format!("({}, {}, {})", view::num(p[0]), view::num(p[1]), view::num(p[2]))));
             if let Some(size) = &k.size {
-                rows.push(view::length(path, &format!("connector {} size", i + 1), size));
+                rows.push(view::length(path, &format!("connection {} size", i + 1), size));
             }
         }
     }
@@ -1918,8 +1918,13 @@ pub fn takeoff(job: &mut Job) -> Vec<SystemTakeoff> {
                     network::Joint::RunSide { .. } => format!("{name}: along its length"),
                     network::Joint::Connector { element, index, .. } => {
                         let e = order.iter().find(|e| w.get::<Node>(**e).is_some_and(|n| n.path == *element));
-                        let label = e.and_then(|e| w.get::<Connectors>(*e)).and_then(|c| c.0.get(*index)).map(|k| k.name.clone()).filter(|s| !s.is_empty()).unwrap_or_else(|| format!("connector {}", index + 1));
-                        format!("{name}: its {label} connector")
+                        let label = e.and_then(|e| w.get::<Connectors>(*e)).and_then(|c| c.0.get(*index)).map(|k| k.name.clone()).filter(|s| !s.is_empty());
+                        // By its name where it has one ("its Waste connection"); else
+                        // by its number ("its connection 2").
+                        match label {
+                            Some(label) => format!("{name}: its {label} connection"),
+                            None => format!("{name}: its connection {}", index + 1),
+                        }
                     }
                 };
                 // An open end of a run is its system's. A connector that meets nothing has

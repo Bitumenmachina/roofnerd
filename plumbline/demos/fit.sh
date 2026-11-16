@@ -93,7 +93,7 @@ refused "is already the fitting" "$P" fitting "$J" "$S" --at "10,2" "${K[@]}"
 refused "nothing meets at (20, 20)" "$P" fitting "$J" "$S" --at "20,20" "${K[@]}"
 refused "is not a kind of fitting" "$P" fitting "$J" "$S" --at "10,2" --kind elbow "${K[@]}"
 refused "neither end of $BRANCH is at $AHU" "$P" connect "$J" "$AHU" "$BRANCH" "${K[@]}"
-refused "already has a connector where" "$P" connect "$J" "$AHU" "$D1" "${K[@]}"
+refused "already has a connection where" "$P" connect "$J" "$AHU" "$D1" "${K[@]}"
 refused "is not on $D2" "$P" split "$J" "$D2" --at "11,6" "${K[@]}"
 refused "--status is required" "$P" fitting "$J" "$S" --at "10,14"
 cmp -s "$J" "$T/before.json" || { echo "FAIL: a refused verb changed the file"; exit 1; }

@@ -2977,7 +2977,7 @@ fn what_looks_wrong_in_a_network_is_a_warning_and_never_a_refusal() {
     piece(&mut job, &s, Kind::Pipe, "between", &two, [0.0, 0.0, 0.0], [10.0, 0.0, 0.0]);
     let n = net(&mut job);
     assert_eq!(kinds(&n), ["domains_meet"]);
-    assert_eq!(n.warnings[0].message, "connectors of cold, waste are joined in one network");
+    assert_eq!(n.warnings[0].message, "connections of cold, waste are joined in one network");
 
     // A branch drawn to a main's centre line, 4 ft along it, with no fitting: the main is
     // two edges, 4 ft and 6 ft, of the one element, and the join is warned of.
@@ -3074,7 +3074,7 @@ fn the_sample_house_says_what_is_joined_what_is_open_and_where_a_tee_is_missing(
     }
     assert_eq!(of("Sanitary").open.iter().map(|o| o.said.as_str()).collect::<Vec<_>>(), ["building drain: its second end"]);
     // Every fixture's connector is met by a run: no connector is among the open ends.
-    assert!(systems.iter().flat_map(|s| &s.joined.open).all(|o| !o.said.contains("connector")));
+    assert!(systems.iter().flat_map(|s| &s.joined.open).all(|o| !o.said.contains("connection")));
     // Nothing was left out of the check.
     assert!(systems.iter().all(|s| s.joined.left_out.is_empty()));
     // The sample saves and loads with its connectors and fittings, to the same bytes.
@@ -3756,7 +3756,7 @@ fn an_open_connector_is_listed_where_its_run_would_be() {
     let of = |name: &str| t.iter().find(|x| x.name == name).unwrap().joined.open.iter().map(|o| o.said.clone()).collect::<Vec<_>>();
     // The drain is told its fixture is not connected; the cold water is told only of the
     // far end of its own pipe.
-    assert_eq!(of("Drain"), ["wc: its connector 2 connector"]);
+    assert_eq!(of("Drain"), ["wc: its connection 2"]);
     assert_eq!(of("Cold water"), ["supply: its second end"]);
 }
 
@@ -4915,7 +4915,7 @@ fn a_fitting_is_worked_out_from_the_runs_that_meet_and_a_run_is_joined_to_a_thin
     assert_eq!((c.0[0].at.value, c.0[0].at.unit.as_str(), c.0[0].kind, c.0[0].domain), (Some([0.0, 0.0, 24.0]), "in", ConnectorKind::Duct, None));
     // One open end fewer: the far end of the second piece and the end of the branch.
     assert_eq!(joined_of(&mut job, "Supply air"), (1, 2, 0));
-    assert!(ed::connect(&mut job, &ahu, &pieces[0], how).unwrap_err().contains("already has a connector where"));
+    assert!(ed::connect(&mut job, &ahu, &pieces[0], how).unwrap_err().contains("already has a connection where"));
     assert!(ed::connect(&mut job, &ahu, &branch[0], how).unwrap_err().starts_with(&format!("neither end of {} is at {ahu}", branch[0])));
     assert!(ed::connect(&mut job, &bend.path, &pieces[1], how).unwrap_err().contains("is a fitting"));
     // It saves and loads to the same bytes.

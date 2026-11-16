@@ -219,7 +219,7 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
         } else if let Some(connectors) = w.get::<Connectors>(e) {
             // Where it stands: turned and moved to its place (BIMCraft `model.rs:3313`).
             let stands: Result<(P3, f64), String> = (|| {
-                let c = w.get::<Placed>(e).ok_or("it has connectors and no position")?;
+                let c = w.get::<Placed>(e).ok_or("it has connections and no position")?;
                 let at = c.at_ft().ok_or("its position is not known")?;
                 let offset = c.offset.feet().ok_or("its height above its level is not known")?;
                 let angle = c.angle_deg().ok_or("how far it is turned is not known")?;
@@ -236,7 +236,7 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
             let mut mine: BTreeMap<ConnectorKind, Vec<usize>> = BTreeMap::new();
             for (index, k) in connectors.0.iter().enumerate() {
                 let Some(q) = k.at_ft() else {
-                    left_out.push((n.path.clone(), format!("where its connector {} is, is not known", index + 1)));
+                    left_out.push((n.path.clone(), format!("where its connection {} is, is not known", index + 1)));
                     continue;
                 };
                 let at = [origin[0] + q[0] * cos - q[1] * sin, origin[1] + q[0] * sin + q[1] * cos, origin[2] + q[2]];
@@ -248,7 +248,7 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
             }
         }
         if points.len() > MAX_POINTS {
-            return Err(format!("the job has more than {MAX_POINTS} run ends and connectors to join: ask for one level or one system"));
+            return Err(format!("the job has more than {MAX_POINTS} run ends and connections to join: ask for one level or one system"));
         }
     }
     // Points within the tolerance are one node: each is compared with those in its cell and the cells round it.
@@ -361,7 +361,7 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
         }
         if domains.len() > 1 {
             let names: Vec<String> = domains.iter().map(|d| format!("{d:?}").to_lowercase()).collect();
-            warnings.push(Warning { kind: "domains_meet", at, elements: elements.iter().cloned().collect(), message: format!("connectors of {} are joined in one network", names.join(", ")) });
+            warnings.push(Warning { kind: "domains_meet", at, elements: elements.iter().cloned().collect(), message: format!("connections of {} are joined in one network", names.join(", ")) });
         }
     }
     for (n, node) in nodes.iter().enumerate() {
@@ -371,7 +371,7 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
         if node.joints.iter().any(|j| matches!(j, Joint::RunSide { .. })) {
             let mut elements: Vec<String> = node.joints.iter().map(|j| j.element().to_string()).collect();
             elements.dedup();
-            warnings.push(Warning { kind: "joined_mid_run", at: Some(node.at), elements, message: "a run or a connector meets another run along its length, with no fitting there".into() });
+            warnings.push(Warning { kind: "joined_mid_run", at: Some(node.at), elements, message: "a run or a connection meets another run along its length, with no fitting there".into() });
         }
     }
     // A drain (a group with a waste connector) flows down: no pipe leaving a node downhill is narrower than one coming down to it.

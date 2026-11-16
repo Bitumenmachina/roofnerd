@@ -1984,7 +1984,7 @@ fn draw(args: &[String]) -> Result<(), String> {
         ("connect", [thing, run]) => {
             let (status, source) = how(&status, &source)?;
             let which = ed::connect(&mut job, thing, run, ed::Entered { status, source: &source })?;
-            format!("{thing} is joined to {run} by its connector {which}")
+            format!("{thing} is joined to {run} by its connection {which}")
         }
         _ => return Err(usage()),
     };

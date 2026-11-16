@@ -267,7 +267,7 @@ fn fit_at(job: &mut Job, storey: &str, at: P2, z: Option<f64>, kind: Option<Fitt
             network::Joint::Connector { element, .. } => {
                 return Err(match job.kind(element) {
                     Some(Kind::Fitting) => format!("{element} is already the fitting at {place}"),
-                    _ => format!("{element} is joined at {place} by its connector: a fitting joins runs' ends to each other"),
+                    _ => format!("{element} is joined at {place} by its connection: a fitting joins runs' ends to each other"),
                 });
             }
             network::Joint::RunSide { run } => return Err(format!("{run} still passes through {place}")),
@@ -374,7 +374,7 @@ fn fit_at(job: &mut Job, storey: &str, at: P2, z: Option<f64>, kind: Option<Fitt
         }
         _ => (Val::unknown("", "a run it joins is drawn on the plan with no size"), Val::unknown(units::IN, "a run it joins is drawn on the plan with no size"), 0.0),
     };
-    let of_run = ConnectorKind::for_run(node.kind).ok_or_else(|| format!("a {:?} has no connector that joins it", node.kind))?;
+    let of_run = ConnectorKind::for_run(node.kind).ok_or_else(|| format!("a {:?} has no connection that joins it", node.kind))?;
     let connectors: Vec<Connector> = runs
         .iter()
         .map(|r| Connector {
@@ -520,10 +520,10 @@ pub fn connect(job: &mut Job, thing: &str, run: &str, how: Entered) -> Result<us
             (true, true) => return Err(format!("both ends of {run} are inside {thing}")),
             (false, false) => return Err(format!("neither end of {run} is at {thing}: its ends are at ({}, {}) and ({}, {})", tidy(r.a[0]), tidy(r.a[1]), tidy(r.b[0]), tidy(r.b[1]))),
         };
-        let of_run = ConnectorKind::for_run(r.kind).ok_or_else(|| format!("a {:?} has no connector that joins it", r.kind))?;
+        let of_run = ConnectorKind::for_run(r.kind).ok_or_else(|| format!("a {:?} has no connection that joins it", r.kind))?;
         let mut connectors = job.world.get::<Connectors>(e).cloned().unwrap_or(Connectors(Vec::new()));
         if connectors.0.iter().any(|c| c.kind == of_run && c.at_ft().is_some_and(|c| (c[0] - q[0]).abs() + (c[1] - q[1]).abs() + (c[2] - q[2]).abs() <= tol)) {
-            return Err(format!("{thing} already has a connector where {run} ends"));
+            return Err(format!("{thing} already has a connection where {run} ends"));
         }
         // What a pipe connector carries is what the pipe's system carries, where that is one
         // of the things a connector can say.

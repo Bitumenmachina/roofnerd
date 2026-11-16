@@ -896,16 +896,16 @@ pub fn check_fitting(path: &str, kind: Kind, _f: &Fitting) -> Result<(), String>
 
 pub fn check_connectors(path: &str, kind: Kind, c: &Connectors) -> Result<(), String> {
     if !kind.is_placed() {
-        return Err(format!("{path}: {kind:#} cannot carry connectors; only equipment, a fixture or a fitting can"));
+        return Err(format!("{path}: {kind:#} cannot carry connections; only equipment, a fixture or a fitting can"));
     }
     if c.0.len() > MAX_CONNECTORS {
-        return Err(format!("{path}: has {} connectors; a thing takes up to {MAX_CONNECTORS}", c.0.len()));
+        return Err(format!("{path}: has {} connections; a thing takes up to {MAX_CONNECTORS}", c.0.len()));
     }
     for (i, k) in c.0.iter().enumerate() {
-        let who = format!("{path} connector {}", i + 1);
+        let who = format!("{path} connection {}", i + 1);
         // Only a pipe connector carries a domain (BIMCraft `family.rs`, `Family::check`).
         if k.domain.is_some() && k.kind != ConnectorKind::Pipe {
-            return Err(format!("{who}: is a {:?} connector and says what it carries; only a pipe connector does", k.kind).to_lowercase());
+            return Err(format!("{who}: is a {:?} connection and says what it carries; only a pipe connection does", k.kind).to_lowercase());
         }
         let d = coords(&format!("{who} position"), &k.at)?;
         if let Some(at) = &k.at.value {

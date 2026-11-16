@@ -449,7 +449,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
             "size" => Some(Slot::Other(&mut c.size)),
             _ => None,
         });
-        on!(Connectors, |c: &Connectors| building::check_connectors(path, kind, c), |c| numbered(what, "connector ").and_then(|(n, rest)| {
+        on!(Connectors, |c: &Connectors| building::check_connectors(path, kind, c), |c| numbered(what, "connection ").and_then(|(n, rest)| {
             let k = c.0.get_mut(n - 1)?;
             if rest == " size" {
                 k.size.as_mut().map(Slot::Length)

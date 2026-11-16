@@ -3586,3 +3586,28 @@ From the notes the twenty-fourth judge, part A, wrote while still at work (J24A-
   a drawing"** as its source. It said "set in the window", on a house full of
   windows (J24B-51). Four demonstrations read that source in the saved job and now
   read the new words.
+
+### Call 101. More of the twenty-fourth judge's marked words (2026-11-16)
+
+- **A fixture's or a piece of equipment's "connector" is its "connection"**, wherever
+  a person reads it: "Connection 1", "connection 1 size", "its Waste connection",
+  "already has a connection where the run ends". A maker's sheet lists a unit's
+  connections; nobody on a job says connector (J24B-28). What is measured is named
+  "connection 1 size" at the command line too. The job file's key is unchanged.
+- **A plane's values say "worked out from the footprint of" its roof**, and Open
+  items says a roof's planes "could not be worked out" (they said "solved": J24B-20).
+- **A labor line's rows are "production rate" and "hours"** (call 100's commit after
+  it; they read "order factor" and "to order", a material's words: J24B-56).
+- **The sample house's footing type is "footing 24 in x 12 in"** (it had no units).
+
+Left, with the reason:
+- **Quantities to four places** on a line ("2.9630 CY", "3.8025 SQ"). The extension
+  is that quantity times the unit cost, to the cent; shown to two places, a line
+  would not come to what a person multiplying it out gets. Totals and stats are to
+  two.
+- **A slope factor's formula** on a roof plane's panel. Every number can show what
+  it is made of, and that is what a slope factor is made of.
+- **"Extension"** and, for a material, **"to order"**: an estimator's own words.
+- **A height shown as "8.4 ft"**: a value is shown as it was entered, and the
+  made-up house was entered in decimal feet. What is typed in feet and inches shows
+  in feet and inches.
