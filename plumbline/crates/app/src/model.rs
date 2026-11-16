@@ -14,6 +14,10 @@ use plumbline_world::{roof, view, Condition, Discipline, Job, JobInfo, Kind, Mea
 /// The source written on a value set in the window, on the plan or in 3D.
 /// ("Set in the window" it read, on a house full of windows: J24B-51.)
 pub const SOURCE: &str = "entered on screen; not yet checked against a drawing";
+/// Where a price, a rate, a wage or a markup typed in the window came from. None of
+/// them is on a drawing, so none is "not yet checked against" one (J26A-1: overhead
+/// read "entered on screen; not yet checked against a drawing").
+pub const PRICED: &str = "entered on screen";
 
 /// What a file brought into the job is.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

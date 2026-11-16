@@ -3918,3 +3918,36 @@ Also from part A's report (its last findings):
 - J25A-17 (a pitch of 40:12 and an eave moved 40 ft taken without a word): open. A
   roof change now says what the job cost was and is (call 108), so the 40 ft eave
   says its $1,937.66; nothing questions the figure itself.
+
+### Call 110. From the twenty-sixth judge's notes: a typed length to the cent, a comma in a line's name, a markup's source (2026-11-16, late in the night)
+
+Fixed from the judge's notes while it was still at work; its report is recorded in
+STATUS.md when it arrives.
+
+- **J26A-3 (wrong money, by a cent). A typed length was kept to four places of a
+  foot.** 28 ft 4 in became 28.3333, a floor 41 ft 3 in by 28 ft 4 in was shown as
+  1,168.75 SF and held as 1,168.7486, and at $6.00/SF came to $7,012.49 on the top bar
+  and in the saved job where a calculator says $7,012.50. "An estimator checking a
+  line with a calculator gets a different cent from the screen." **The end of a typed
+  length is kept to a hundred-millionth of a foot** (`editing::toward`): fine enough
+  that what is typed multiplies to the cent, and still tidy enough that 0.1 + 0.2 is
+  0.3. A length that is a round figure in feet or a binary fraction of one (41 ft 3
+  in) is held exactly as before; a length in thirds of a foot (4 in, 8 in) is held to
+  eight places where it was held to four, so **a job traced tonight and one traced
+  yesterday can differ in the fifth place of such a corner**, and in the cent that
+  follows. A job already saved is not changed. Test:
+  `a_typed_length_is_kept_finely_enough_to_multiply_to_the_cent`.
+- **J26A-5 (breaks). A comma could not be typed in what a cost line is called**: in a
+  set of fields a comma goes on to the next, as Tab does, so "Exterior door, prehung"
+  was cut in two and the line refused. In that one field a comma is a comma; the
+  program's own lines are written with them.
+- **J26A-1 (words).** Overhead and profit read "entered on screen; not yet checked
+  against a drawing". A price, a rate, a wage and a markup typed in the window say
+  "entered on screen": none of them is on a drawing. What is drawn or sized on screen
+  still says it has not been checked against one.
+- J26A-2 (sheathing rounded up plane by plane) is J25A-11 again, from a second judge:
+  open, and said in STATUS.md. J26A-4 (an allowance is not in the price) is Q26, from
+  a fourth.
+
+**None of the three is seen in the window**, and the window demonstrations have not
+been run on a build with them: the judge was driving a window on the machine.

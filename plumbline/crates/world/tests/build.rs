@@ -234,3 +234,18 @@ fn a_thing_set_down_is_turned_a_quarter_at_a_time_and_a_fitting_is_not() {
     let text = plumbline_world::file::save(&mut job);
     assert_eq!(plumbline_world::file::save(&mut plumbline_world::file::load(&text).unwrap().0), text);
 }
+
+#[test]
+fn a_typed_length_is_kept_finely_enough_to_multiply_to_the_cent() {
+    // J26A-3. A wall 28 ft 4 in long, drawn north from a corner 41 ft 3 in east. Kept
+    // to four places the far corner was at 28.3333 and the floor inside, shown as
+    // 1,168.75 SF, was 1,168.7486: at $6.00 that is $7,012.49, and a calculator says
+    // 41.25 x 28.3333... x 6 = $7,012.50.
+    let far = ed::toward([41.25, 0.0], [41.25, 10.0], 28.0 + 4.0 / 12.0);
+    assert_eq!(far, [41.25, 28.33333333]);
+    let area = 41.25 * far[1];
+    assert_eq!((area * 100.0).round() / 100.0, 1168.75);
+    assert_eq!((area * 6.0 * 100.0).round() / 100.0, 7012.50);
+    // A length that is a round number of feet is still exactly that.
+    assert_eq!(ed::toward([0.1, 0.2], [5.0, 0.2], 24.0), [24.1, 0.2]);
+}

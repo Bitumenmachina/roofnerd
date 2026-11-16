@@ -893,6 +893,11 @@ pub fn toward(last: P2, pointer: P2, length_ft: f64) -> P2 {
     let (dx, dy) = (pointer[0] - last[0], pointer[1] - last[1]);
     let d = (dx * dx + dy * dy).sqrt();
     let (ux, uy) = if d > crate::check::FIT_TOLERANCE_FT { (dx / d, dy / d) } else { (1.0, 0.0) };
-    let round = |x: f64| (x * 1e4).round() / 1e4 + 0.0;
+    // Kept to a hundred-millionth of a foot. It was kept to four places, and 28 ft 4 in
+    // became 28.3333: a floor 41 ft 3 in by 28 ft 4 in was shown as 1,168.75 SF, held as
+    // 1,168.7486, and at $6.00 came to $7,012.49 where a calculator says $7,012.50
+    // (J26A-3). A place is tidied so that 0.1 + 0.2 is not 0.30000000000000004, and no
+    // further than that: what is typed has to multiply to the cent.
+    let round = |x: f64| (x * 1e8).round() / 1e8 + 0.0;
     [round(last[0] + ux * length_ft), round(last[1] + uy * length_ft)]
 }

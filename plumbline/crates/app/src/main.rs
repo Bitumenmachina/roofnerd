@@ -65,7 +65,7 @@ use bevy::prelude::*;
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use bevy::window::{PrimaryWindow, WindowPosition, WindowRef};
 
-use model::{Doc, Entry, Show, Snapshot, Tab, Tone, SOURCE};
+use model::{Doc, Entry, Show, Snapshot, Tab, Tone, PRICED, SOURCE};
 use plumbline_world::value::Status;
 use plumbline_world::{file, solve, units, Footprint, Kind, Recipe, Rise, Solved, Val};
 use scene::Orbit;
@@ -620,7 +620,11 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                         None => done = Some(true),
                     }
                 }
-                _ if together && comma => {
+                // What a cost line is called is written with commas ("Exterior door,
+                // prehung", as the program's own lines are): in that field a comma is a
+                // comma. It jumped to the next field and the line was refused with its
+                // name cut in two (J26A-5).
+                _ if together && comma && !(matches!(field, Entry::Line) && doc.form_at == 0) => {
                     let at = doc.form_at;
                     if at + 1 < doc.form.len() {
                         doc.form[at] = text.trim().to_string();
@@ -700,7 +704,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                     let line = if field != Entry::Allowance { doc.entry_line.take() } else { None };
                     match doc.selected.clone() {
                         None => tools::cant(doc, "set a price", "nothing is selected"),
-                        Some(sel) => match doc.job.set_on_line(&sel, what, line.as_deref(), Some(text.trim()), Status::Assumed, SOURCE) {
+                        Some(sel) => match doc.job.set_on_line(&sel, what, line.as_deref(), Some(text.trim()), Status::Assumed, PRICED) {
                             Ok(()) => {
                                 doc.job.derive();
                                 doc.edit(match field {
@@ -731,7 +735,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                             Entry::UnitCost => x.material.is_none() && x.unit_cost.as_ref().is_none_or(|v| v.value.is_none()),
                                             _ => x.rate.as_ref().is_some_and(|r| r.value.is_none()),
                                         });
-                                        if open && doc.job.set_on_line(&sister, what, Some(l), Some(text.trim()), Status::Assumed, SOURCE).is_ok() {
+                                        if open && doc.job.set_on_line(&sister, what, Some(l), Some(text.trim()), Status::Assumed, PRICED).is_ok() {
                                             also.push(doc.job.find(&sister).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or(sister));
                                         }
                                     }
@@ -801,7 +805,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                     };
                     match target {
                         None => tools::cant(doc, "set the material", "nothing is selected"),
-                        Some(path) => match doc.job.set(&path, what, Some(text.trim()), Status::Assumed, SOURCE) {
+                        Some(path) => match doc.job.set(&path, what, Some(text.trim()), Status::Assumed, if what == "material" { SOURCE } else { PRICED }) {
                             Ok(()) => {
                                 doc.job.derive();
                                 doc.edit(what);

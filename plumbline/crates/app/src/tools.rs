@@ -396,7 +396,7 @@ pub fn new_line(doc: &mut Doc, values: &[String]) {
             plumbline_world::Class::parse(kind).and_then(|class| {
                 let in_hours = matches!(class, plumbline_world::Class::Labor | plumbline_world::Class::Fabrication | plumbline_world::Class::Supervision);
                 match (in_hours, rate) {
-                    (true, Some(rate)) => doc.job.add_line_in_hours(&on, what, &by, class, rate, Status::Assumed, SOURCE),
+                    (true, Some(rate)) => doc.job.add_line_in_hours(&on, what, &by, class, rate, Status::Assumed, crate::model::PRICED),
                     (true, None) => Err(format!("{} is in-house work, priced by the hour: say how fast it goes after the cost type, like {} at 40 SF/hr (or 0.025 hr/SF)", class.title(), class.title().to_lowercase())),
                     (false, Some(_)) => Err(format!("{} is not priced by the hour: leave the rate off, or make it labor", class.title())),
                     (false, None) => doc.job.add_line(&on, what, &by, Some(class), false),
