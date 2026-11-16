@@ -5988,37 +5988,37 @@ Every finding is a row. "Open" means nothing has been done about it.
 | J24B-2, -11, -12, -18, -19, -22, -26, -43, -58 | "more below" is drawn over the panel's words (A5) | **Fixed, seen (call 97)**: a strip of its own under what scrolls; nothing is covered |
 | J24B-3 | A pill at the lower right reads "\| 3D" with its left half empty | **Fixed, seen (call 97)** |
 | J24B-4 | Eave, hip and ridge lines and number tags over the dressed roof on the opening view (D8); no fascia, soffit or gutter to be read | **The lines and the tags: fixed, seen (calls 96, 97)**: the opening view of the dressed house has neither; a plane selected brings both back. Fascia and soffit: open |
-| J24B-5, -9 | A short blue line floats in the air with the ground off; a pale box sits loose on the ground right of the house | Open: not yet looked for |
+| J24B-5, -9 | A short blue line floats in the air with the ground off; a pale box sits loose on the ground right of the house | Looked for, seen: the blue line is the cold water service running out to the street below grade, and the box is the heat pump's outdoor unit. Neither says what it is until it is clicked; the unit is a box (D6). Open as D6 |
 | J24B-8, -10, -28 | Equipment and fixtures are pale boxes; the heat pump on plan is a lilac square (D6) | Open (the same as J22B's bathtub) |
 | J24B-11 | Known, Assumed, Unknown switched on turns the house flat grey with nothing amber or red in sight from outside | Open |
 | J24B-12 | Clashes are crosses seen through opaque walls, on nothing a person can see | Open (J22B-11) |
 | J24B-13 | Looking into one level switches the roof off, and its row goes off, without being asked | Open |
-| J24B-14 | On plan: no door swings; ducts overhead drawn as solid bars over walls and room names; a lilac square with no name (E1, E4) | Open |
-| J24B-15 | On plan with every level on, the roof covers the plan and is shaded light and dark by the sun (E1) | Open |
-| J24B-16 | On foot: the ceiling is a raw tan, the duct a plastic blue, a door washed out, the floor bare (C3) | Open |
+| J24B-14 | On plan: no door swings; ducts overhead drawn as solid bars over walls and room names; a lilac square with no name (E1, E4) | **In part.** Door swings: left, the model does not hold which way a door swings and none is drawn rather than one made up. Ducts on plan are now a pale blue and drawn flat (call 99), still solid and still over the room names: open |
+| J24B-15 | On plan with every level on, the roof covers the plan and is shaded light and dark by the sun (E1) | **Fixed, seen (call 99)**: on plan nothing is lit; the roof is one tone on every plane. It still covers the plan with every level on: that is a roof plan |
+| J24B-16 | On foot: the ceiling is a raw tan, the duct a plastic blue, a door washed out, the floor bare (C3) | **In part, seen (call 99)**: a floor's underside is drawn as a ceiling in the colour of a wall's inside face, and the duct is a pale blue. Open: the floor is bare, a duct is still a coloured bar |
 | J24B-17 | A refusal wraps one word alone to a second line | Open |
 | J24B-20, -21 | A roof plane's panel: "-1' 0\"", "Outline 4 points, in feet", "solved from the footprint of roof", the slope factor written as a formula, a quantity to four places beside the same to two | Open |
 | J24B-22, -30, -52, -53 | Open items, in the panel and at the foot of every tab, is a column of red and amber sentences; an unpriced line on the sheet is red twice (A6) | **Fixed (call 97)**: the mark says how sure and the words are in ink; an estimate line does not repeat under it what its field says; the recap names three left out and counts the rest. Seen in the panel; the sheet of unpriced lines not yet seen |
 | J24B-22, -23, -30 | A panel keeps the scroll of what it showed before: a new thing selected opens part way down with its name out of sight; a tab opens at the scroll of the last tab | **Fixed, seen (call 97)**: a panel and a tab open at their head |
 | J24B-24 | A foundation wall is "wall 4" and says "No cladding, on its west face"; house walls have names | Open: a made-up house's naming and a sentence |
-| J24B-25 | The ground's grid shows across the face of the foundation and the footing (C4) | Open |
-| J24B-26 | A selected footing shows no outline (C5); "footing 24 × 12" with no unit; depth in inches in one place and feet in another; 2.9630 CY | Open |
-| J24B-27 | The supply duct is the accent's blue: a selected duct cannot be told from one that is not (A7) | **Changed (call 97)**: supply air is a pale sky blue. Not yet seen on plan |
+| J24B-25 | The ground's grid shows across the face of the foundation and the footing (C4) | **Fixed, seen (call 99)**: with the ground switched off there is no grid |
+| J24B-26 | A selected footing shows no outline (C5); "footing 24 × 12" with no unit; depth in inches in one place and feet in another; 2.9630 CY | **The outline: fixed, seen (call 99).** The words: open |
+| J24B-27 | The supply duct is the accent's blue: a selected duct cannot be told from one that is not (A7) | **Fixed, seen (call 97)**: supply air is a pale sky blue on plan and on foot |
 | J24B-28, -29, -33 | "Connector 1" and its place in negative feet and inches; a height in decimal feet beside sizes in fractional inches | Open |
 | J24B-29 | The kitchen is an empty room with a sink box on the wall; the bath is empty (D6, D8) | Open: cabinets are not in the model (STATUS, the seven trades) |
 | J24B-31 | Budget: names cut mid-word while the column beside them is empty; "the job  the job"; "partition at 14" | Open |
 | J24B-32 | Estimate: the recap says "Labor none" where the column totals say LABOR $40,800.00 (the money is supervision); no suppliers side by side on a job with none, and nothing says where they would go; "AT", "GENERAL" for subcontract money; a division chip on every line under its division's heading; 399 lines, one a pipe piece | **In part (call 97)**: the columns are Quantity, Unit cost, Material, Labor, Sub, general, and the totals say what each holds. Open: suppliers side by side on a job with none; one line a pipe piece |
 | J24B-33, -34 | Words on the Verify in field, Clashes, Building, Roof and system tabs ("connector 1 size", "(type)", a name said twice, a kind in the SIZE column, sizes with no unit, a cable by its diameter, "not said") | Open |
-| J24B-35 | "like Supply Air" where it is "Supply air" everywhere else; the Equipment button's word fills it edge to edge; **"All levels" left only the foundation on** | **"All levels": fixed (call 97), not seen.** "Supply Air" is the class as its standard writes it: left, said in call 97. The Equipment button: open |
+| J24B-35 | "like Supply Air" where it is "Supply air" everywhere else; the Equipment button's word fills it edge to edge; **"All levels" left only the foundation on** | **"All levels": fixed (call 97).** "Supply Air" is the class as its standard writes it: left, said in call 97. The Equipment button: open |
 | J24B-36, -39, -44 | The status line ends in "..." with half the window free | **Changed (call 97)**: the line holds 170 letters where it held 120. A longer message is still shortened there and is whole over the model |
-| J24B-37 | Under SYSTEMS each system reads on while Mechanical and Electrical above are off and nothing of them is drawn (B8); "CSV" and "IFC" on buttons | **The switches: fixed (call 97), not seen.** "CSV" and "IFC" on buttons: left, they are what the people who send those files call them (call 98) |
+| J24B-37 | Under SYSTEMS each system reads on while Mechanical and Electrical above are off and nothing of them is drawn (B8); "CSV" and "IFC" on buttons | **The switches: fixed, seen (call 97)**: with Mechanical off a system's switch reads off, and switched on it brings Mechanical back. "CSV" and "IFC" on buttons: left, they are what the people who send those files call them (call 98) |
 | J24B-38, -56 | The Bring in and Add drawing lists: "ITS FILE", "A CSV or XLSX, like lists/ridge.xlsx", "Up one folder", "(a folder)", file names; a field to type in is offered first (A8) | **Fixed, seen (call 98)**: the list first, names without endings, a drawn folder, "Back to", the typing field under the list |
 | J24B-39 | "Wrote house estimate.xlsx, beside the job" | Left: a file written out has to be found by its name (call 98) |
 | J24B-40 | Only Next steps can be put away: no panel has a switch (B8) | **Fixed, seen (call 98)**: Job, Details and Tools each have a switch at the lower right; a panel comes back while something in it is in hand |
 | J24B-44 | The refusal of a bare 9 carries a sentence about a laser's settings | Left: the fixed rules name the laser, and the sentence is for the person holding one (call 97) |
 | J24B-45, -46 | **Doing what that refusal says throws the 9 away** (the field replaces what is in it on the next key and does not look selected); then the field drawn as in use is not the one taking the keys ("First floor9 ft") | **Fixed, seen (call 97)**: the judge's path walked again in the window: a bare 9 refused, " ft" typed after it, the level added. Backspace no longer goes back a field; a field the next key will replace shows its words selected; Ctrl+A takes a field (J24A-1) |
 | J24B-48, -49 | **Enter on an empty Thickness says nothing; a length typed next is taken as the thickness, and a wall 20 ft thick is drawn without a word.** The tool picked again holds 20 ft with no field open, and typing goes to the keys | **Fixed, seen (call 97)**: "20 ft" in Thickness is refused and says a length is typed after the first corner; Enter on an empty Thickness says it is still to be typed (it did on this build). Open: with the tool in hand and no field open, typing a size goes to the keys |
-| J24B-51, -52, -59 | "set in the window" on every source line; "Lap siding, on both faces" on a wall whose outside is not known, and that wall drawn plain white in 3D (D1) | Open |
+| J24B-51, -52, -59 | "set in the window" on every source line; "Lap siding, on both faces" on a wall whose outside is not known, and that wall drawn plain white in 3D (D1) | Open. The wall drawn plain in the judge's picture may be the one with no assembly (two walls stood in an L and one was seen end on): to be tried again before it is believed |
 | J24B-54 | A production rate is entered through a red chip that does not look like a field, and its field opens with no hint (also J24A-4); the line stays red after | **In part (call 97)**: the field opened empty says "like 40 SF/hr". Not seen. The resting field still reads "no production rate" in red |
 | J24B-56 | Open items says "To order", "Extension", "order factor": words the sheet does not use | Open |
 | J24B-57 | A plan picked from the list leaves its pages scrolled out of sight; the field reads "usda-7213.pdf, 1"; pages have no picture or title | **In part, seen (call 98)**: the pages are at the head of the list when a plan is picked, and the plan is named without its ending. Open: a page has no picture or title; the typing field still shows the page after a comma |
@@ -6032,6 +6032,14 @@ trade at a time (D7); lines by type (E2); the plan laid under flat, unlit and
 readable (E3); the sheet reads as the same program (F4). A refusal says why and what
 to do (J24B-17, -36); a priced wall's delete says what happened to the money
 (J24B-55); the framing view is "the best picture of the session" (J24B-7).
+
+**Seen once and not again (2026-11-16, late).** On call 99's build, after the ground
+was switched off and on, a footing selected, Mechanical switched off and brought back
+by a system's switch, the first floor's plan was drawn with a pale grey sheet over its
+rooms and its ducts and equipment gone or grey (`look` run 5, picture 05). The same
+steps run again, and each half of them alone, drew the plan as it should be, twice.
+A judge was driving another window on the machine at the time. It is written down
+because a plan that draws wrong once is worth watching for.
 
 ## Start here (written 2026-11-16; this is the last section, and the one CLAUDE.md sends you to)
 

@@ -3545,3 +3545,18 @@ Two more answers to the twenty-fourth judgment, part B.
   people who send those files call them ("send me the PDF", "the IFC"), and the fixed
   rules name them. A file written out is still said by its whole name ("Wrote house
   estimate.xlsx, beside the job"): it has to be found afterwards, by that name.
+
+### Call 99. A plan is not lit; a floor's underside is a ceiling; no grid with the ground off (2026-11-16)
+
+- **On plan everything is drawn in its colour as given, with no light on it.** A plan
+  is a drawing. Lit, the roof on plan was pale on the planes that faced the sun and
+  dark on the rest (J24B-15, VISUAL.md E1 "no shadow").
+- **A floor's underside is drawn as a ceiling**, in the colour of a wall's inside
+  face, until something priced on it says otherwise. In the floor's own tan it read
+  from the room below as raw wood (J24B-16).
+- **With the ground switched off the grid is not drawn**: it is the ground's ruling,
+  and it lay across the face of the foundation (J24B-25).
+- **A selected footing is outlined** as a selected wall is (J24B-26).
+- **No door swing is drawn** (J24B-14): the model does not hold which way a door
+  swings, and one is not made up. When a door has a hand and a swing in the model,
+  the plan draws them.

@@ -607,7 +607,7 @@ pub fn discipline_colour(d: plumbline_world::Discipline) -> Color {
     use plumbline_world::Discipline::*;
     match d {
         Architecture => hex(0x94A3B8),
-        Mechanical => hex(0x3B82F6),
+        Mechanical => hex(0x6FA8DC),
         Electrical => hex(0xEAB308),
         Plumbing => hex(0x06B6D4),
     }

@@ -329,6 +329,10 @@ struct Builder<'a, 'w, 's> {
     on_plan: Option<String>,
     /// The pattern the next piece is dressed in. Taken by that piece.
     pattern: Option<dress::Pattern>,
+    /// The view is a plan: everything is drawn in its colour as given, with no light
+    /// on it. A plan is a drawing; lit, a roof on plan was pale on the planes that
+    /// faced the sun and dark on the others (J24B-15, E1).
+    flat: bool,
 }
 
 impl Builder<'_, '_, '_> {
@@ -352,6 +356,7 @@ impl Builder<'_, '_, '_> {
             alpha_mode: if blend { AlphaMode::Blend } else { AlphaMode::Opaque },
             base_color_texture: pattern.as_ref().map(|p| p.colour.clone()),
             normal_map_texture: pattern.as_ref().map(|p| p.relief.clone()),
+            unlit: self.flat,
             ..default()
         });
         self.drawing.surfaces.push(Surface { path: path.to_string(), system: system.cloned(), handle: handle.clone(), colour });
@@ -505,7 +510,7 @@ pub fn rebuild(
     drawing.frames.clear();
     drawing.surfaces.clear();
     let drawing = &mut *drawing;
-    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None };
+    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None, flat: on_plan_view };
     let has_walls = snap.drawn.iter().any(|p| p.kind == Kind::Wall);
     // Each outside wall as the roof's edge sees it: its line, the way its outside face
     // looks, half its thickness and its top. An eave that hangs past one gets a soffit.
@@ -565,6 +570,11 @@ pub fn rebuild(
                     let (back, on) = (if meets(a) { t / 2.0 } else { 0.0 }, if meets(b) { t / 2.0 } else { 0.0 });
                     let middle = va + along * ((length + on - back) / 2.0) + Vec3::Y * (h / 2.0);
                     build.piece(&p.path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(length + back + on, h, t) }, theme::concrete(), 0.92, 0.0, true);
+                    // Its edges, to be outlined when it is selected: a footing had
+                    // none, and a selected one showed only its tag (J24B-26, C5).
+                    let (half, up) = (turn * Vec3::Z * (t / 2.0), Vec3::Y * h);
+                    let (fa, fb) = (va - along * back, vb + along * on);
+                    build.drawing.frames.push((p.path.clone(), box_edges([fa - half, fb - half, fb + half, fa + half, fa - half + up, fb - half + up, fb + half + up, fa + half + up])));
                     continue;
                 }
                 let half_t = t / 2.0;
@@ -747,7 +757,12 @@ pub fn rebuild(
                 let low: Vec<Vec3> = high.iter().map(|q| *q - Vec3::Y * *thickness as f32).collect();
                 let mut faces = Faces::new();
                 faces.add(&high, &tris, Vec3::Y);
-                faces.add(&low, &tris, Vec3::NEG_Y);
+                // Its underside is the ceiling of what is under it, and is drawn as a
+                // wall's inside face is until something is priced on it: in the
+                // floor's own tan it read from below as raw wood (J24B-16).
+                let mut under = Faces::new();
+                under.add(&low, &tris, Vec3::NEG_Y);
+                build.piece(&p.path, None, meshes.add(under.mesh()), Transform::IDENTITY, if on_plan_view { theme::plan_paper() } else { theme::wall_inside() }, 0.9, 0.0, true);
                 let middle = high.iter().copied().sum::<Vec3>() / high.len().max(1) as f32;
                 let mut frame = Vec::new();
                 for i in 0..high.len() {
@@ -1698,7 +1713,9 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
     // The grid: a line every ten feet, a stronger one every fifty, fading out with
     // distance from the building so the ground has no edge.
     let reach = drawing.reach;
-    if reach > 0.0 && !doc.walk {
+    // With the ground switched off there is no ground to rule: the grid lay across the
+    // face of the foundation, between it and the eye (J24B-25).
+    if reach > 0.0 && !doc.walk && doc.show.ground {
         let (minor, major) = (theme::grid_minor(), theme::grid_major());
         let fade = |x: f32, z: f32| (1.0 - (x * x + z * z).sqrt() / reach).clamp(0.0, 1.0).powf(1.4);
         // Over a very large ground (an unscaled scan laid at a tenth of a foot to the
