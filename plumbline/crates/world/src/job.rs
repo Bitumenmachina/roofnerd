@@ -114,6 +114,18 @@ impl Job {
         self.world.get::<Kind>(e).copied()
     }
 
+    /// The other planes of the roof a plane was solved from, in the order they were
+    /// made: an estimator prices "the roof", and what is given to one plane of it is
+    /// offered to the rest (J24A-6, -8). None for anything that is not a solved plane.
+    pub fn sister_planes(&mut self, path: &str) -> Vec<String> {
+        let Some(e) = self.find(path) else { return Vec::new() };
+        let (Some(kind), Some(from)) = (self.world.get::<Kind>(e).copied(), self.world.get::<Solved>(e).map(|s| s.from.clone())) else { return Vec::new() };
+        if kind != Kind::RoofPlane {
+            return Vec::new();
+        }
+        self.order.iter().filter(|x| **x != e).filter(|x| self.world.get::<Kind>(**x) == Some(&kind) && self.world.get::<Solved>(**x).is_some_and(|s| s.from == from)).filter_map(|x| self.world.get::<Node>(*x).map(|n| n.path.clone())).collect()
+    }
+
     /// Add an element under `parent`. Its path is its kind and the job's next number,
     /// and it keeps that path for good. Two children of one parent cannot share a name.
     pub fn add(&mut self, parent: &str, kind: Kind, name: &str) -> Result<String, String> {
@@ -575,6 +587,18 @@ impl Job {
                             return Err(format!("{text:?} {is_not}; {how}{}", if in_hours { "" } else { ", with whole or exact after it if it needs saying" }));
                         }
                         let (top, bottom) = per.split_once('/').ok_or_else(|| format!("{text:?} {is_not}; {how}"))?;
+                        // A roofer's rate is in squares: a square is 100 SF, and a
+                        // rate said in one is taken for a line that comes out in the
+                        // other. ("1 SQ/hr" was refused on a line in SF, and the roofer
+                        // left to do the arithmetic: J24A-7.) It is kept in the line's
+                        // own unit, so the hours are one division.
+                        let other = match unit { "SF" => Some(("SQ", 100.0)), "SQ" => Some(("SF", 0.01)), _ => None };
+                        let (factor, top, bottom, per) = match other {
+                            Some((sq, k)) if in_hours && top == sq && bottom == HOURS => (factor * k, unit, bottom, format!("{unit}/{HOURS}")),
+                            Some((sq, k)) if in_hours && bottom == sq && top == HOURS => (factor / k, top, unit, format!("{HOURS}/{unit}")),
+                            _ => (factor, top, bottom, per.to_string()),
+                        };
+                        let per = per.as_str();
                         let (order_unit, round_up) = if top == unit && bottom != unit {
                             // Whole ones for a package; hours are not bought whole.
                             (bottom, bottom != HOURS)

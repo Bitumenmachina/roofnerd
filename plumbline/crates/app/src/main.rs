@@ -631,6 +631,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                     Entry::Rate => "Production rate",
                                     _ => "Stretch-out",
                                 });
+                                let carried = line.clone();
                                 let of = line.map(|l| format!(" of {l:?}")).unwrap_or_default();
                                 // A price typed as a bare figure is said back as money: "24"
                                 // is answered "$24.00", as the line then shows it.
@@ -639,7 +640,33 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                     Ok(x) if !matches!(field, Entry::StretchOut | Entry::Rate) => format!("${}", plumbline_world::view::figure(x, 2)),
                                     _ => typed.to_string(),
                                 };
-                                doc.say(Tone::Done, format!("{sel}: {}{of} set to {said}.", if field == Entry::Rate { "production rate".to_string() } else { what.replace('_', " ") }));
+                                // A roof is priced once: the same line on the roof's other
+                                // planes, where it has no price (or no rate) yet, takes what
+                                // was typed here, and it is said. One that has its own is
+                                // left as it is. (Four planes alike took twenty entries:
+                                // J24A-8.)
+                                let mut also: Vec<String> = Vec::new();
+                                if let (Some(l), true) = (carried.as_deref(), matches!(field, Entry::UnitCost | Entry::Rate)) {
+                                    let est = plumbline_world::view::estimate(&mut doc.job);
+                                    for sister in doc.job.sister_planes(&sel) {
+                                        let open = est.lines.iter().find(|x| x.path == sister && x.description == l).is_some_and(|x| match field {
+                                            Entry::UnitCost => x.material.is_none() && x.unit_cost.as_ref().is_none_or(|v| v.value.is_none()),
+                                            _ => x.rate.as_ref().is_some_and(|r| r.value.is_none()),
+                                        });
+                                        if open && doc.job.set_on_line(&sister, what, Some(l), Some(text.trim()), Status::Assumed, SOURCE).is_ok() {
+                                            also.push(doc.job.find(&sister).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or(sister));
+                                        }
+                                    }
+                                    if !also.is_empty() {
+                                        doc.job.derive();
+                                    }
+                                }
+                                let also = match also.len() {
+                                    0 => String::new(),
+                                    1 => format!(" The same line on {} had none and takes it too.", plumbline_world::view::listed(&also)),
+                    _ => format!(" The same line on {} had none: they take it too.", plumbline_world::view::listed(&also)),
+                                };
+                                doc.say(Tone::Done, format!("{sel}: {}{of} set to {said}.{also}", if field == Entry::Rate { "production rate".to_string() } else { what.replace('_', " ") }));
                             }
                             Err(why) => tools::cant(doc, match field { Entry::StretchOut => "set that stretch-out", Entry::Rate => "set that production rate", _ => "set that price" }, why),
                         },
@@ -1012,7 +1039,32 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                     doc.tab = model::Tab::Estimate;
                     let lines = |n: usize| plumbline_world::view::so_many(n, "cost line");
                     let off = if taken.is_empty() { String::new() } else { format!(" {} of the assembly it had came off: {}.", lines(taken.len()), taken.join(", ")) };
-                    doc.say(if money.is_empty() { Tone::Done } else { Tone::Warned }, format!("{called} is now {name:?}: {} added.{off}{money}", lines(added.len())));
+                    // A roof is one thing to an estimator: an assembly given to one of
+                    // its planes goes on each of its other planes that has nothing
+                    // priced on it yet, and it is said. A plane with lines of its own is
+                    // left, and named. (One plane of four was priced and nothing said
+                    // the other three were bare: J24A-6.)
+                    let (mut too, mut left): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
+                    for sister in doc.job.sister_planes(&sel) {
+                        let its = doc.job.find(&sister).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or_else(|| sister.clone());
+                        let bare = doc.job.find(&sister).is_some_and(|e| doc.job.world.get::<plumbline_world::Cost>(e).is_none_or(|c| c.lines.is_empty()));
+                        if bare && doc.job.change_assembly(&sister, &name, Status::Assumed, SOURCE).is_ok() {
+                            too.push(its);
+                        } else {
+                            left.push(its);
+                        }
+                    }
+                    if !too.is_empty() {
+                        doc.job.derive();
+                        doc.edit("Assembly");
+                    }
+                    let roof = match (too.is_empty(), left.is_empty()) {
+                        (true, true) => String::new(),
+                        (false, true) => format!(" So {} {}: the same lines on each.", if too.len() == 1 { "is" } else { "are" }, plumbline_world::view::listed(&too)),
+                        (false, false) => format!(" So {} {}: the same lines on each. {} of the same roof had lines of its own and is as it was.", if too.len() == 1 { "is" } else { "are" }, plumbline_world::view::listed(&too), plumbline_world::view::listed(&left)),
+                        (true, false) => format!(" {} of the same roof had lines of its own and is as it was.", plumbline_world::view::listed(&left)),
+                    };
+                    doc.say(if money.is_empty() { Tone::Done } else { Tone::Warned }, format!("{called} is now {name:?}: {} added.{off}{money}{roof}", lines(added.len())));
                 }
                 Err(why) => tools::cant(doc, "give that assembly", why),
             }

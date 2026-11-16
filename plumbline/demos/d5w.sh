@@ -134,7 +134,7 @@ underlay = next(l for l in south["pl::cost"]["lines"] if l["description"] == "Un
 ok = changed == ["headwall-0021", "job-0001", "plane-0003"]
 ok = ok and underlay["unit_cost"]["value"] == 0.95 and underlay["unit_cost"]["status"] == "Assumed"
 ok = ok and flashing["stretch_out"]["value"] == 30 and flashing["stretch_out"]["unit"] == "in" and flashing["stretch_out"]["status"] == "Assumed"
-ok = ok and made["value"] == "Copper, 20 oz" and made["status"] == "Assumed" and "set in the window" in made["source"]
+ok = ok and made["value"] == "Copper, 20 oz" and made["status"] == "Assumed" and "entered on screen" in made["source"]
 ok = ok and markup["overhead"]["value"] == 12 and markup["overhead"]["status"] == "Assumed" and markup["profit"]["value"] == 8
 ok = ok and install.get("off") is True
 print("    in the file: the south plane is made of", made["value"], made["status"], "(" + made["source"] + ")")

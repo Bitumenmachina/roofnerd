@@ -5998,7 +5998,7 @@ Every finding is a row. "Open" means nothing has been done about it.
 | J24B-16 | On foot: the ceiling is a raw tan, the duct a plastic blue, a door washed out, the floor bare (C3) | **In part, seen (call 99)**: a floor's underside is drawn as a ceiling in the colour of a wall's inside face, and the duct is a pale blue. Open: the floor is bare, a duct is still a coloured bar |
 | J24B-17 | A refusal wraps one word alone to a second line | Open |
 | J24B-20, -21 | A roof plane's panel: "-1' 0\"", "Outline 4 points, in feet", "solved from the footprint of roof", the slope factor written as a formula, a quantity to four places beside the same to two | Open |
-| J24B-22, -30, -52, -53 | Open items, in the panel and at the foot of every tab, is a column of red and amber sentences; an unpriced line on the sheet is red twice (A6) | **Fixed (call 97)**: the mark says how sure and the words are in ink; an estimate line does not repeat under it what its field says; the recap names three left out and counts the rest. Seen in the panel; the sheet of unpriced lines not yet seen |
+| J24B-22, -30, -52, -53 | Open items, in the panel and at the foot of every tab, is a column of red and amber sentences; an unpriced line on the sheet is red twice (A6) | **Fixed, seen (call 97)**: the mark says how sure and the words are in ink; an estimate line does not repeat under it what its field says; the recap names three left out and counts the rest |
 | J24B-22, -23, -30 | A panel keeps the scroll of what it showed before: a new thing selected opens part way down with its name out of sight; a tab opens at the scroll of the last tab | **Fixed, seen (call 97)**: a panel and a tab open at their head |
 | J24B-24 | A foundation wall is "wall 4" and says "No cladding, on its west face"; house walls have names | Open: a made-up house's naming and a sentence |
 | J24B-25 | The ground's grid shows across the face of the foundation and the footing (C4) | **Fixed, seen (call 99)**: with the ground switched off there is no grid |
@@ -6007,7 +6007,7 @@ Every finding is a row. "Open" means nothing has been done about it.
 | J24B-28, -29, -33 | "Connector 1" and its place in negative feet and inches; a height in decimal feet beside sizes in fractional inches | Open |
 | J24B-29 | The kitchen is an empty room with a sink box on the wall; the bath is empty (D6, D8) | Open: cabinets are not in the model (STATUS, the seven trades) |
 | J24B-31 | Budget: names cut mid-word while the column beside them is empty; "the job  the job"; "partition at 14" | Open |
-| J24B-32 | Estimate: the recap says "Labor none" where the column totals say LABOR $40,800.00 (the money is supervision); no suppliers side by side on a job with none, and nothing says where they would go; "AT", "GENERAL" for subcontract money; a division chip on every line under its division's heading; 399 lines, one a pipe piece | **In part (call 97)**: the columns are Quantity, Unit cost, Material, Labor, Sub, general, and the totals say what each holds. Open: suppliers side by side on a job with none; one line a pipe piece |
+| J24B-32 | Estimate: the recap says "Labor none" where the column totals say LABOR $40,800.00 (the money is supervision); no suppliers side by side on a job with none, and nothing says where they would go; "AT", "GENERAL" for subcontract money; a division chip on every line under its division's heading; 399 lines, one a pipe piece | **In part, seen (call 97)**: the columns are Quantity, Unit cost, Material, Labor, Sub, general, and the totals say what each holds. Open: suppliers side by side on a job with none; one line a pipe piece |
 | J24B-33, -34 | Words on the Verify in field, Clashes, Building, Roof and system tabs ("connector 1 size", "(type)", a name said twice, a kind in the SIZE column, sizes with no unit, a cable by its diameter, "not said") | Open |
 | J24B-35 | "like Supply Air" where it is "Supply air" everywhere else; the Equipment button's word fills it edge to edge; **"All levels" left only the foundation on** | **"All levels": fixed (call 97).** "Supply Air" is the class as its standard writes it: left, said in call 97. The Equipment button: open |
 | J24B-36, -39, -44 | The status line ends in "..." with half the window free | **Changed (call 97)**: the line holds 170 letters where it held 120. A longer message is still shortened there and is whole over the model |
@@ -6018,7 +6018,7 @@ Every finding is a row. "Open" means nothing has been done about it.
 | J24B-44 | The refusal of a bare 9 carries a sentence about a laser's settings | Left: the fixed rules name the laser, and the sentence is for the person holding one (call 97) |
 | J24B-45, -46 | **Doing what that refusal says throws the 9 away** (the field replaces what is in it on the next key and does not look selected); then the field drawn as in use is not the one taking the keys ("First floor9 ft") | **Fixed, seen (call 97)**: the judge's path walked again in the window: a bare 9 refused, " ft" typed after it, the level added. Backspace no longer goes back a field; a field the next key will replace shows its words selected; Ctrl+A takes a field (J24A-1) |
 | J24B-48, -49 | **Enter on an empty Thickness says nothing; a length typed next is taken as the thickness, and a wall 20 ft thick is drawn without a word.** The tool picked again holds 20 ft with no field open, and typing goes to the keys | **Fixed, seen (call 97)**: "20 ft" in Thickness is refused and says a length is typed after the first corner; Enter on an empty Thickness says it is still to be typed (it did on this build). Open: with the tool in hand and no field open, typing a size goes to the keys |
-| J24B-51, -52, -59 | "set in the window" on every source line; "Lap siding, on both faces" on a wall whose outside is not known, and that wall drawn plain white in 3D (D1) | Open. The wall drawn plain in the judge's picture may be the one with no assembly (two walls stood in an L and one was seen end on): to be tried again before it is believed |
+| J24B-51, -52, -59 | "set in the window" on every source line; "Lap siding, on both faces" on a wall whose outside is not known, and that wall drawn plain white in 3D (D1) | **"Set in the window": fixed (call 100)**, it reads "entered on screen". The rest open. The wall drawn plain in the judge's picture may be the one with no assembly (two walls stood in an L and one was seen end on): to be tried again before it is believed |
 | J24B-54 | A production rate is entered through a red chip that does not look like a field, and its field opens with no hint (also J24A-4); the line stays red after | **In part (call 97)**: the field opened empty says "like 40 SF/hr". Not seen. The resting field still reads "no production rate" in red |
 | J24B-56 | Open items says "To order", "Extension", "order factor": words the sheet does not use | Open |
 | J24B-57 | A plan picked from the list leaves its pages scrolled out of sight; the field reads "usda-7213.pdf, 1"; pages have no picture or title | **In part, seen (call 98)**: the pages are at the head of the list when a plan is picked, and the plan is named without its ending. Open: a page has no picture or title; the typing field still shows the page after a comma |
@@ -6032,6 +6032,28 @@ trade at a time (D7); lines by type (E2); the plan laid under flat, unlit and
 readable (E3); the sheet reads as the same program (F4). A refusal says why and what
 to do (J24B-17, -36); a priced wall's delete says what happened to the money
 (J24B-55); the framing view is "the best picture of the session" (J24B-7).
+
+## The twenty-fourth judgment, part A: what its notes say so far, and what was done (2026-11-16, late)
+
+Part A (the veteran's first day and the money path in the window) is still at work.
+It writes its notes as it goes, and eight findings are in them. **This is not its
+report**: when it ends, its notes are copied to `research/judgment-24a-notes.md` and
+this table is finished. So far it has traced USDA 7213's page 4 from an empty job to
+walls, windows, a floor, three rooms, a hip roof and a duct, priced a wall and the
+roof by hand on the sheet, and **every figure it checked agreed with its own
+arithmetic** (walls 130.33 LF and 1,042.67 SF, floor 986.56 SF, roof 1,229.18 SF and
+12.29 SQ, ridge and hips, material $5,813.02, labor 47.86 hr and $2,260.26).
+
+| # | What it found | Where it stands |
+|---|---|---|
+| J24A-1 | Ctrl+A in a size field typed the letter a | **Fixed, seen (call 97)**: Ctrl is read from the keys in the order they came, and Ctrl+A takes the whole field |
+| J24A-2 | Next steps ticks "Add doors and windows" after one door of nine | Open |
+| J24A-3 | A job opened again: the Door tool offers a height and a sill but no width, though a door was placed last time | Open |
+| J24A-4 | A production rate's field opens empty with no example | **Fixed (call 97)**: "like 40 SF/hr". Not yet seen open |
+| J24A-5 | Gypsum board is priced by the sheet where the wall's other lines are SF; $1.90 typed for a sheet was taken without a word | Open. The unit is on the line; nothing questions a price |
+| J24A-6 | A roof is priced plane by plane: an assembly went on one plane of four and nothing said the others were bare | **Fixed, seen (call 100)**: it goes on every plane of the roof that has nothing priced, and says so |
+| J24A-7 | "1 SQ/hr" is refused on a line that comes out in SF | **Fixed with a test (call 100)**: a square is 100 SF either way |
+| J24A-8 | Pricing four planes alike took twenty entries | **Fixed, seen (call 100)**: a price or a rate typed on one plane's line is taken by the same line on the others where it has none |
 
 **Seen once and not again (2026-11-16, late).** On call 99's build, after the ground
 was switched off and on, a footing selected, Mechanical switched off and brought back

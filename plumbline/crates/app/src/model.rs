@@ -12,7 +12,8 @@ use plumbline_world::value::Status;
 use plumbline_world::{roof, view, Condition, Discipline, Job, JobInfo, Kind, Measure, Pitch, Run, Solved};
 
 /// The source written on a value set in the window, on the plan or in 3D.
-pub const SOURCE: &str = "set in the window; not yet checked against a drawing";
+/// ("Set in the window" it read, on a house full of windows: J24B-51.)
+pub const SOURCE: &str = "entered on screen; not yet checked against a drawing";
 
 /// What a file brought into the job is.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

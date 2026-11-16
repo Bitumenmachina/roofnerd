@@ -3560,3 +3560,29 @@ Two more answers to the twenty-fourth judgment, part B.
 - **No door swing is drawn** (J24B-14): the model does not hold which way a door
   swings, and one is not made up. When a door has a hand and a swing in the model,
   the plan draws them.
+
+### Call 100. A roof is priced once; a rate can be said in squares; "entered on screen" (2026-11-16)
+
+From the notes the twenty-fourth judge, part A, wrote while still at work (J24A-6 to
+-8), and one word from part B.
+
+- **An assembly given to one plane of a roof goes on every other plane of that roof
+  that has nothing priced on it**, and the window says which: "Plane 1 is now
+  "Asphalt shingle roof": 5 cost lines added. So are plane 2, plane 3 and plane 4:
+  the same lines on each." A plane with lines of its own is left as it was and
+  named. An estimator prices "the roof"; one plane of four was priced and nothing
+  said the other three were bare (J24A-6). A plane that is to be different is
+  changed afterwards, as any assembly is changed.
+- **A unit cost or a production rate typed on a plane's line is taken by the same
+  line on the roof's other planes where that line has none yet**, and it is said. One
+  that has its own is left. What is carried is Assumed, as what was typed is. Four
+  planes alike took twenty entries (J24A-8). A stretch-out is not carried: it is a
+  measure of the piece on that line.
+- **A production rate said in squares is taken on a line that comes out in SF, and
+  the other way**: a square is 100 SF. "1 SQ/hr" is kept as 100 SF/hr, in the line's
+  own unit, so that hours stay one division (J24A-7). A rate in a unit that is
+  neither is refused as before.
+- **A value entered in the program says "entered on screen; not yet checked against
+  a drawing"** as its source. It said "set in the window", on a house full of
+  windows (J24B-51). Four demonstrations read that source in the saved job and now
+  read the new words.

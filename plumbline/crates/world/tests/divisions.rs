@@ -221,4 +221,37 @@ fn in_house_work_is_added_with_its_production_rate_or_not_at_all() {
     let est = view::estimate(&mut job);
     let line = est.lines.iter().find(|l| l.path == wall && l.description == "Siding labor").unwrap();
     assert_eq!((line.class, line.priced.value, line.priced.unit.as_str(), line.amount.value), (Some(Class::Labor), Some(8.2498), "hr", Some(494.99)));
+    // A rate said in squares is taken on a line that comes out in SF (J24A-7): a
+    // square is 100 SF, so a made-up 0.5 SQ an hour is 50 SF an hour, 329.99 / 50 =
+    // 6.5998 hr; and 2 hr a square is 0.02 hr/SF, 329.99 x 0.02 = 6.5998 hr again.
+    for said in ["0.5 SQ/hr", "2 hr/SQ"] {
+        job.set_on_line(&wall, "order", Some("Siding labor"), Some(said), Status::Assumed, "made up").unwrap();
+        job.derive();
+        let est = view::estimate(&mut job);
+        let line = est.lines.iter().find(|l| l.path == wall && l.description == "Siding labor").unwrap();
+        assert_eq!((line.priced.value, line.priced.unit.as_str()), (Some(6.5998), "hr"), "{said}");
+    }
+    assert_eq!(view::estimate(&mut job).lines.iter().find(|l| l.path == wall && l.description == "Siding labor").unwrap().rate_said().as_deref(), Some("0.02 hr/SF"));
+    // A rate in a unit that is neither is still refused.
+    assert!(job.set_on_line(&wall, "order", Some("Siding labor"), Some("3 LF/hr"), Status::Assumed, "made up").unwrap_err().contains("does not convert this line, which comes out in SF"));
+}
+
+#[test]
+fn a_plane_knows_the_other_planes_of_its_roof() {
+    use plumbline_world::{Kind, Node};
+    // The sample house's roof is solved from a footprint of four edges: four planes.
+    // Each has the other three as the rest of its roof; a wall has none.
+    let mut job = plumbline_world::sample::house();
+    let mut q = job.world.query::<(&Node, &Kind)>();
+    let planes: Vec<String> = q.iter(&job.world).filter(|(_, k)| **k == Kind::RoofPlane).map(|(n, _)| n.path.clone()).collect();
+    assert_eq!(planes.len(), 4);
+    for plane in &planes {
+        let mut rest = job.sister_planes(plane);
+        rest.sort();
+        let mut want: Vec<String> = planes.iter().filter(|p| *p != plane).cloned().collect();
+        want.sort();
+        assert_eq!(rest, want, "{plane}");
+    }
+    let wall = q.iter(&job.world).find(|(_, k)| **k == Kind::Wall).map(|(n, _)| n.path.clone()).unwrap();
+    assert!(job.sister_planes(&wall).is_empty());
 }

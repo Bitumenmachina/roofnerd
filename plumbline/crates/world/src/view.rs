@@ -563,6 +563,16 @@ impl Pricing {
 
 /// A count with its thing, said as a person says it: "1 line", "3 lines", "0 doors".
 /// For a thing whose plural only adds an s.
+/// Names as a sentence lists them: "plane 1", "plane 1 and plane 2", "plane 1, plane 2
+/// and plane 4".
+pub fn listed(names: &[String]) -> String {
+    match names {
+        [] => String::new(),
+        [one] => one.clone(),
+        [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
+    }
+}
+
 pub fn so_many(n: usize, one: &str) -> String {
     if n == 1 { format!("1 {one}") } else { format!("{n} {one}s") }
 }
