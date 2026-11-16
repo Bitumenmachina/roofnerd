@@ -61,8 +61,8 @@ clicks it. The code has changed since 2e6e56f (the section "After the run of
 | 7 | The sheet: stretch-out on the line, labor switched per line, overhead and profit, three suppliers | `demos/d5.sh`, `demos/d5w.sh`: all four in the window. Judged: 11, 17A | `d5w` passed on the run of 2e6e56f. The fixes to 17A are not judged |
 | 8 | Exports: xlsx with live formulas, CSV, IFC4 validated by IfcOpenShell; three lenses | `demos/export.sh`: the workbook's amounts and recap are formulas that come to the job's figures; the IFC is checked by IfcOpenShell run as an outside program (`tools/ifc-check.py`); the supplier, subcontractor and PM lenses come from one estimate. `demos/itemsw.sh` writes each from the window. Judged: 17A, 17B, 21 | The fixes to 21 (walls written through at corners, a level's height) are not judged |
 | 9 | A judge lists every word on every screen; none is a software term | Judged 2026-11-16 (22B): about 620 entries by screen, `research/judgment-22b-words.md` | **FAIL: 69 marked** (18 software terms, 43 a builder would trip on, 7 units not the trade's way, 1 British spelling). The deciding one is the Add drawing list: file, folder, page after a comma, file names. Some are fixed since ("ELEMENT", "solid", "FACETS", four-place rates, sizes in feet-inches); the list is not |
-| 10 | A veteran estimator with no software background completes a whole-house takeoff from a PDF using only the in-app help | Judged 2026-11-16 (22A), `research/judgment-22a-notes.md`. Level, drawing, scale, walls, openings, floor, rooms, roof and a pipe were all done from the on-screen help alone, and two assemblies priced | **FAIL**: an allowance entered as the screen said never reached the price (J22A-10); no way to put labor on anything (J22A-13); most of the house left unpriced. Changed since and not judged: the allowance is said wherever the price is read (Q26 is whether it belongs in it); a cost line, labor included, can be added in the window. The starter assemblies still carry no labor |
-| 11 | The visual judge passes every screen against `VISUAL.md` | Judged 2026-11-16 (22B), line by line: `research/judgment-22b-notes.md` | **FAIL** on A1 (full-width bars; panels over about 45% of the window), A2 (no shadow under a panel on plan), C2 (no sky), and on A4, A5, A6, D8. Fixed since and not judged: C2, A4, most of A5, part of A6. Open: A1, A2, D8 and the rest in the table at the end of this file |
+| 10 | A veteran estimator with no software background completes a whole-house takeoff from a PDF using only the in-app help | Judged 2026-11-16 (22A), `research/judgment-22a-notes.md`. Level, drawing, scale, walls, openings, floor, rooms, roof and a pipe were all done from the on-screen help alone, and two assemblies priced | **FAIL**: an allowance entered as the screen said never reached the price (J22A-10); no way to put labor on anything (J22A-13); most of the house left unpriced. Changed since and not judged: the allowance is said wherever the price is read (Q26 is whether it belongs in it); a cost line, labor included, can be added in the window; the starter assemblies carry labor lines with no production rate in them, and a rate is typed on the sheet (call 92) |
+| 11 | The visual judge passes every screen against `VISUAL.md` | Judged 2026-11-16 (22B), line by line: `research/judgment-22b-notes.md` | **FAIL** on A1 (full-width bars; panels over about 45% of the window), A2 (no shadow under a panel on plan), C2 (no sky), and on A4, A5, A6, D8. Fixed since and not judged: C2, A4, most of A5, part of A6, and A1 and A2 (call 93: the bars are cards with the model between them; a panel has a shadow on plan). Open: D8 and the rest in the table at the end of this file |
 | 12 | A fresh judge walks the whole path cold and cannot break the money path | Judged 2026-11-16 (22A). Every typed-nonsense, undo and redo, reopen and changed-quantity check agreed to the cent between the top bar, the sheet and the saved job | **FAIL**: $8,580 of allowance in no line of the price with nothing said (J22A-10); the verify-in-field list leaves the roof's dollars out (J22A-18); an area six times the room shown as a figure (J22A-3). All three are changed, with tests, and not judged: J22A-18 by call 91 (a roof and a drawing's scale are on the list with their dollars and can be made Known on site) |
 | 13 | A hand estimate in `refs/` reproduced, every difference explained | None | **Pending**: `refs/` holds the brief and the first handoff and no estimate (Q5) |
 
@@ -5803,9 +5803,58 @@ pictures retaken and read. **Not run on the changed code: the sixteen window
 demonstrations.** `fieldw` and `clashw` count questions and may read a different
 number now.
 
+## Labor in the starter assemblies: the demonstration, written before it is built (call 92)
+
+**What is to be shown.** The starter library carries labor lines with no production
+rate and no wage in them; a rate and a wage typed on a line give it hours and
+dollars; the rate can be typed on the estimate sheet.
+
+**At the command line (`demos/library.sh`, its house of 24 ft by 16 ft with 9 ft
+walls).** The library is 30 assemblies and 111 lines (it was 93), a line in every
+division, no dollar figure in it, and every labor line's rate is written "unknown".
+The partition runs from (12, 0) to (12, 16): 16 ft by 9 ft is 144 SF of face. As
+brought in, "Frame the partition" has no hours and no price, and the estimate says
+so. With 30 SF/hr typed it is 144 / 30 = 4.8 hr; at $60.00/hr, 4.8 x 60 = $288.00,
+Assumed, in the Labor column and in Division 6. The three prices typed before it
+came to $3,735.00; the job cost is then 3,735.00 + 288.00 = $4,023.00 on 4 lines.
+
+**In the window.** The south wall of `pricew`'s house given "Exterior wall, 2x6, lap
+siding" gains 9 cost lines (it was 7); "Frame and sheathe the wall" reads "no
+production rate" on the sheet in the colour of something not known. Clicked, "40
+SF/hr" typed: the line has hours. Its face is 24 ft by 9 ft, 216 SF: 216 / 40 =
+5.4 hr.
+
+**What moves in the other demonstrations.** Counts only, since a labor line with no
+rate comes to nothing: how many cost lines an assembly adds, how many lines are
+unpriced. No dollar figure in any demonstration changes.
+
+**What was run (call 92), after it was built.** `demos/library.sh`: exit 0, and it
+says what was written above: 18 labor lines in the file, none with a rate; "Frame the
+partition no figure no price"; with 30 SF/hr and $60.00/hr, "~4.8000 hr ~$60.00/hr
+~$288.00"; "Job cost ~$4,023.00 4 lines". A labor line with no rate now says so
+where it has no figure ("the line has no production rate (no production rate
+entered) and no price (no price entered)"; with a wage and no rate, "..., so no
+hours to price"): it said "a figure it is worked out from is not known". Tests: 306
+pass (one new at the command line: a 20 ft partition, 180 SF, 6 hr, $360.00; one
+changed: lap siding changed for brick now takes two lines off, the siding and its
+labor, and the framing labor the two share stays). `demos/pricew.sh` has the window
+part written into it (the ninth line, and "40 SF/hr" typed on the sheet: 5.4 hr)
+and **has not been run yet**.
+
+## The bars as cards, and a shadow on plan (call 93)
+
+**What was changed.** The top bar and the status line are each two floating cards
+with the model between them (A1). On plan the paper is unlit white, so a panel's
+shadow shows on it (A2); the shadow under a panel is a little deeper.
+
+**What was seen.** The made-up whole house opened in the changed window, in 3D and
+on plan (two pictures, read, not kept): the two cards at the top and the two at the
+bottom, the sky and the yard between them; on plan a soft shadow round every panel
+where there had been none. **Not judged.** Not measured by a demonstration.
+
 ## Start here (written 2026-11-16; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 305 tests pass,
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 306 tests pass,
 the three gates and `tools/portmap.sh` pass, the twenty command-line demonstrations
 pass, and `tools/committed.sh` passed on the last commit of code. The sixteen window
 demonstrations all passed on 2e6e56f and have not been run on what came after (the
@@ -5830,19 +5879,18 @@ money path were each judged and each failed (items 11, 9, 10 and 12).
 
 **What is owed, in this order.**
 
-1. **The sixteen window demonstrations and `demos/d2.sh`, run in a row on a frozen
-   copy of the last commit, with nothing else running** (CLAUDE.md, "Running several
-   window demonstrations in a row"). Call 91 changed how many questions a job with a
-   drawing or a drawn roof has: `fieldw` and `clashw` read that number. Their
-   pictures are committed only when the run ends, and read.
-2. **Labor lines in the starter assemblies** (J22A-13): the last open part of the
-   veteran's deciding fail. `library/sixteen-divisions.csv`; the figures of
-   `demos/library.sh`, `pricew.sh` and `firstw.sh` move with it, so write them by
-   hand first. Then a window demonstration of Add cost line, of a roof measured
-   from the Verify in field tab, and of a priced thing deleted.
-3. **The look**, which is Patrick's own test and the judge's deciding fail: the top
-   bar and the status line as floating cards, not full-width strips (A1); a shadow
-   under a panel that shows on plan's white paper (A2); the eave, hip and ridge
+1. **The window demonstrations (the sixteen, `demos/d2.sh` and `demos/house.sh`),
+   run in a row on a frozen copy of the last commit, with nothing else running**
+   (CLAUDE.md, "Running several window demonstrations in a row"). `fieldw` and
+   `clashw` passed on 2fbfd99 (call 91). Calls 92 and 93 came after: `pricew` has a
+   new step and a new count, and every picture has the new bars. Their pictures are
+   committed only when the run ends, and read.
+2. **Window demonstrations still to write**: Add cost line; a roof measured from
+   the Verify in field tab; a priced thing deleted; a markup over 100 %.
+3. **The look**, which is Patrick's own test and the judge's deciding fail. Done in
+   call 93 and not judged: the bars as floating cards (A1), a shadow under a panel
+   on plan (A2). Still open: the left and right panels nearly the height of the
+   window; the eave, hip and ridge
    lines and square labels over the dressed roof in 3D (D8); a bathtub, a duct and
    a cable drawn as what they are. `crates/app/src/theme.rs`, `panels.rs`,
    `scene.rs`. Then VISUAL.md read again against what is built: D6 claims a tub is

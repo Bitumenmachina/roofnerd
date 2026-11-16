@@ -742,6 +742,19 @@ pub struct SheetLine {
     /// Its stretch-out, when its detail has one: the girth of the piece the line is
     /// cut from. It belongs to the line, and is changed on the line.
     pub stretch_out: Option<Val<crate::Len>>,
+    /// For in-house work: how fast it goes, as its order factor says it ("40 SF/hr" or
+    /// "0.025 hr/SF"). None for a line that is not in hours. Its value is None where a
+    /// library brought the line with no rate: the estimator's crew is the estimator's.
+    pub rate: Option<Val<f64>>,
+}
+
+impl SheetLine {
+    /// The production rate as it is said and typed: "40 SF/hr". None when the line is
+    /// not in hours, or its rate has not been entered.
+    pub fn rate_said(&self) -> Option<String> {
+        let rate = self.rate.as_ref()?;
+        rate.value.map(|x| format!("{} {}", num(x), rate.unit))
+    }
 }
 
 /// One division of the estimate: what the lines of the job cost in it come to.
@@ -864,6 +877,7 @@ pub fn estimate(job: &mut Job) -> Estimate {
                 amount,
                 quotes: f.quotes.clone(),
                 stretch_out: line.stretch_out.clone(),
+                rate: line.order.as_ref().filter(|o| o.unit == crate::components::HOURS).map(|o| o.factor.clone()),
             });
         }
     }

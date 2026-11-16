@@ -113,6 +113,8 @@ pub enum Entry {
     UnitCost,
     /// The stretch-out of the selected element's cost line.
     StretchOut,
+    /// How fast the in-house work of the selected element's cost line goes: "40 SF/hr".
+    Rate,
     /// Which of the sixteen divisions the selected element's cost line is in.
     Division,
     /// A file to bring in, of the kind said: its name, as typed.

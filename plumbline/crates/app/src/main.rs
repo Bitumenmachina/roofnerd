@@ -593,10 +593,11 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
             Some(true) => match field {
                 // A price typed here is entered as Assumed, like everything set in this
                 // window: there is nowhere in it yet to say where a figure came from.
-                Entry::Allowance | Entry::UnitCost | Entry::StretchOut => {
+                Entry::Allowance | Entry::UnitCost | Entry::StretchOut | Entry::Rate => {
                     let what = match field {
                         Entry::Allowance => "allowance",
                         Entry::UnitCost => "unit_cost",
+                        Entry::Rate => "order",
                         _ => "stretch_out",
                     };
                     let line = if field != Entry::Allowance { doc.entry_line.take() } else { None };
@@ -608,6 +609,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                 doc.edit(match field {
                                     Entry::Allowance => "Allowance",
                                     Entry::UnitCost => "Unit cost",
+                                    Entry::Rate => "Production rate",
                                     _ => "Stretch-out",
                                 });
                                 let of = line.map(|l| format!(" of {l:?}")).unwrap_or_default();
@@ -615,12 +617,12 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                 // is answered "$24.00", as the line then shows it.
                                 let typed = text.trim();
                                 let said = match typed.parse::<f64>() {
-                                    Ok(x) if field != Entry::StretchOut => format!("${}", plumbline_world::view::figure(x, 2)),
+                                    Ok(x) if !matches!(field, Entry::StretchOut | Entry::Rate) => format!("${}", plumbline_world::view::figure(x, 2)),
                                     _ => typed.to_string(),
                                 };
-                                doc.say(Tone::Done, format!("{sel}: {}{of} set to {said}.", what.replace('_', " ")));
+                                doc.say(Tone::Done, format!("{sel}: {}{of} set to {said}.", if field == Entry::Rate { "production rate".to_string() } else { what.replace('_', " ") }));
                             }
-                            Err(why) => tools::cant(doc, if field == Entry::StretchOut { "set that stretch-out" } else { "set that price" }, why),
+                            Err(why) => tools::cant(doc, match field { Entry::StretchOut => "set that stretch-out", Entry::Rate => "set that production rate", _ => "set that price" }, why),
                         },
                     }
                     doc.redraw();

@@ -70,8 +70,8 @@ pub fn accent_glass() -> Color { Color::srgba(0.114, 0.306, 0.847, 0.14) }
 /// The two shadows under a floating panel: near and sharp, far and soft.
 pub fn panel_shadow() -> BoxShadow {
     BoxShadow(vec![
-        ShadowStyle { color: Color::srgba(0.05, 0.07, 0.10, 0.10), x_offset: px(0.0), y_offset: px(2.0), spread_radius: px(0.0), blur_radius: px(6.0) },
-        ShadowStyle { color: Color::srgba(0.05, 0.07, 0.10, 0.16), x_offset: px(0.0), y_offset: px(10.0), spread_radius: px(-4.0), blur_radius: px(28.0) },
+        ShadowStyle { color: Color::srgba(0.05, 0.07, 0.10, 0.16), x_offset: px(0.0), y_offset: px(2.0), spread_radius: px(0.0), blur_radius: px(6.0) },
+        ShadowStyle { color: Color::srgba(0.05, 0.07, 0.10, 0.24), x_offset: px(0.0), y_offset: px(12.0), spread_radius: px(-4.0), blur_radius: px(32.0) },
     ])
 }
 /// Under a message over the model: nearer than a panel, so its shadow is deeper.

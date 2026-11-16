@@ -925,6 +925,18 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                                 doc.entry_line = Some(line.clone());
                             });
                         }
+                        // How fast in-house work goes, said and changed here: hours are
+                        // the quantity over it, and a line a library brought has none
+                        // until the estimator gives his crew's (call 92).
+                        if let Some(rate) = &l.rate {
+                            let said = l.rate_said().map(|r| format!("at {r}")).unwrap_or_else(|| "no production rate".to_string());
+                            let (path, line) = (path.clone(), line.clone());
+                            editable(under, fonts, format!("Production rate of {} on {}", l.description, l.element), said, if rate.value.is_some() { theme::status_ink(rate.status) } else { theme::status_ink(Status::Unknown) }, typing(Entry::Rate), move |doc| {
+                                doc.select(&path);
+                                doc.open(Entry::Rate, "");
+                                doc.entry_line = Some(line.clone());
+                            });
+                        }
                         // In-house labor is switched off or on, line by line.
                         if l.class == Some(Class::Labor) {
                             let (path, line, off) = (path.clone(), line.clone(), l.off);

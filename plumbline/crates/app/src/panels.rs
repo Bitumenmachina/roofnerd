@@ -217,6 +217,12 @@ fn docked(mut node: Node) -> impl Bundle {
         other => other,
     };
     (node.top, node.left, node.right, node.bottom) = (float(node.top), float(node.left), float(node.right), float(node.bottom));
+    glass_card(node)
+}
+
+/// The glass of a floating panel on a node laid out wherever it is put: round corners,
+/// a light edge, a shadow, frosted where the scene behind can be had as a picture.
+fn glass_card(mut node: Node) -> impl Bundle {
     node.border = UiRect::all(px(1.0));
     node.border_radius = BorderRadius::all(px(theme::PANEL_RADIUS));
     // Frosted where the scene behind can be had as a picture; else tinted.
@@ -288,7 +294,11 @@ fn views(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
 /// Along the top: the job, Save, Undo and Redo, and at all times the price and how
 /// much of the job is not yet sure.
 fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
-    p.spawn(docked(Node { top: px(0.0), left: px(0.0), right: px(0.0), height: px(TOP_H), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), ..default() })).with_children(|bar| {
+    // Two cards, each as wide as what is on it, with the model between them: one strip
+    // across the whole window read as a bar the model was docked under (J22B-3, A1).
+    let card = |shrinks: bool| glass_card(Node { height: percent(100.0), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), flex_shrink: if shrinks { 1.0 } else { 0.0 }, min_width: px(0.0), ..default() });
+    p.spawn((Node { position_type: PositionType::Absolute, top: px(theme::GAP), left: px(theme::GAP), right: px(theme::GAP), height: px(TOP_H), justify_content: JustifyContent::SpaceBetween, column_gap: px(theme::GAP), ..default() }, Pickable::IGNORE)).with_children(|row| {
+    row.spawn(card(false)).with_children(|bar| {
         wordmark(bar, fonts);
         divider(bar);
         // A long title is cut and says it is cut; it is whole on the right. Cut at 44
@@ -298,7 +308,8 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         on_click(&mut button(bar, fonts, "Save", "Ctrl+S", false), |doc| doc.press(KeyCode::F2));
         on_click(&mut button(bar, fonts, "Undo", "Ctrl+Z", false), |doc| doc.press(KeyCode::KeyZ));
         on_click(&mut button(bar, fonts, "Redo", "Ctrl+Y", false), |doc| doc.press(KeyCode::KeyY));
-        bar.spawn(Node { flex_grow: 1.0, ..default() });
+    });
+    row.spawn(card(true)).with_children(|bar| {
         // The price, in the colour of how sure it is.
         // A job with nothing priced has no price yet, which is not a price in doubt.
         let priced = snap.estimate.as_ref().is_some_and(|e| !e.lines.is_empty());
@@ -358,18 +369,26 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             chip(bar, fonts, "Saved", theme::green(), theme::panel());
         }
     });
+    });
 }
 
 /// Along the bottom: what the last action did, where the pointer is, and the view.
 fn status_line(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     let first = pretty(&one_line(&doc.message, BAR_HOLDS));
     let (dot, ink) = tone_ink(doc.tone);
-    p.spawn(docked(Node { bottom: px(0.0), left: px(0.0), right: px(0.0), height: px(STATUS_H), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(9.0), overflow: Overflow::clip(), ..default() })).with_children(|bar| {
-        bar.spawn((Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, BackgroundColor(dot)));
-        bar.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_child((text(fonts, first, 12.0, Weight::Regular, ink), TextLayout::no_wrap()));
-        bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "", 12.0, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap(), PointerText));
-        divider(bar);
-        bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child(text(fonts, if doc.walk { "On foot" } else if doc.plan { "Plan" } else { "3D" }, 12.0, Weight::Medium, theme::ink_soft()));
+    // What was done, on a card as long as its words; where the pointer is and the view,
+    // on another at the right. The model is seen between them (J22B-3, A1).
+    let card = |shrinks: bool| glass_card(Node { height: percent(100.0), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(9.0), overflow: Overflow::clip(), flex_shrink: if shrinks { 1.0 } else { 0.0 }, min_width: px(0.0), ..default() });
+    p.spawn((Node { position_type: PositionType::Absolute, bottom: px(theme::GAP), left: px(theme::GAP), right: px(theme::GAP), height: px(STATUS_H), justify_content: JustifyContent::SpaceBetween, column_gap: px(theme::GAP), ..default() }, Pickable::IGNORE)).with_children(|row| {
+        row.spawn(card(true)).with_children(|bar| {
+            bar.spawn((Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, BackgroundColor(dot)));
+            bar.spawn(Node { flex_shrink: 1.0, min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_child((text(fonts, first, 12.0, Weight::Regular, ink), TextLayout::no_wrap()));
+        });
+        row.spawn(card(false)).with_children(|bar| {
+            bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "", 12.0, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap(), PointerText));
+            divider(bar);
+            bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child(text(fonts, if doc.walk { "On foot" } else if doc.plan { "Plan" } else { "3D" }, 12.0, Weight::Medium, theme::ink_soft()));
+        });
     });
 }
 
@@ -1192,6 +1211,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
         Entry::Allowance => format!("Allowance for {name}"),
         Entry::UnitCost => format!("Unit cost of {:?}", doc.entry_line.clone().unwrap_or_default()),
         Entry::StretchOut => format!("Stretch-out of {:?}", doc.entry_line.clone().unwrap_or_default()),
+        Entry::Rate => format!("Production rate of {:?}", doc.entry_line.clone().unwrap_or_default()),
         Entry::Division => format!("Division of {:?}", doc.entry_line.clone().unwrap_or_default()),
         Entry::Material => format!("Material of {name}"),
         Entry::Overhead => "Overhead on the job".to_string(),
@@ -1218,6 +1238,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
         Entry::Allowance => "Dollars per SF or LF, like 28 or $28.00",
         Entry::UnitCost => "Dollars for what the line is priced in, like 31.50",
         Entry::StretchOut => "The girth of the piece, like 24 in or 2 ft",
+        Entry::Rate => "How fast your crew does it, like 40 SF/hr or 0.5 hr/EA",
         Entry::Division => "Its number, 1 to 16, like 7 for Thermal and Moisture Protection",
         Entry::Material => "A material of the job, by name",
         Entry::Overhead => "A percentage of the job cost, like 12",
@@ -1479,7 +1500,7 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             press(r, "Labor on or off", "L", KeyCode::KeyL);
         }
     });
-    if matches!(doc.entry, Some((Entry::Pitch | Entry::Move | Entry::Allowance | Entry::UnitCost | Entry::StretchOut | Entry::Division | Entry::Material, _))) {
+    if matches!(doc.entry, Some((Entry::Pitch | Entry::Move | Entry::Allowance | Entry::UnitCost | Entry::StretchOut | Entry::Rate | Entry::Division | Entry::Material, _))) {
         entry_box(p, fonts, doc, snap);
     }
     // A cost line being added to this thing: three fields, and under them the thing's

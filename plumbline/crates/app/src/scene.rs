@@ -1047,11 +1047,16 @@ pub fn ground_tone(doc: Res<Doc>, ground: Query<&MeshMaterial3d<StandardMaterial
             t.translation.y = want_y;
         }
     }
-    let want = if doc.plan { theme::ground() } else { theme::yard() };
+    // On plan the paper is white as it is given, and not lit: lit, it was brighter than
+    // the screen can show, and a panel's shadow laid over it was folded back to the
+    // same white, so no panel had a shadow on plan (J22B-38, A2; measured 255 beside
+    // every panel's edge). In 3D the yard is lit as everything is.
+    let (want, as_given) = if doc.plan { (Color::WHITE, true) } else { (theme::yard(), false) };
     for handle in &ground {
-        if materials.get(&handle.0).is_some_and(|m| m.base_color != want) {
+        if materials.get(&handle.0).is_some_and(|m| m.base_color != want || m.unlit != as_given) {
             if let Some(mut material) = materials.get_mut(&handle.0) {
                 material.base_color = want;
+                material.unlit = as_given;
             }
         }
     }

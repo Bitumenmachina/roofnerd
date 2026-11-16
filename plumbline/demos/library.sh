@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # The starter library of assemblies (library/sixteen-divisions.csv): 30 assemblies with a
-# line in every one of the sixteen divisions and no price in it. It is brought into an
+# line in every one of the sixteen divisions, labor lines among them, and no price and
+# no production rate in it. It is brought into an
 # empty job, its assemblies are applied to a small made-up house, the takeoff comes out
 # by division with no price on anything, and three prices are typed.
 # Run from the repository root:  demos/library.sh
@@ -30,9 +31,12 @@ cost, division, ctype = head.index("Unit cost"), head.index("Division"), head.in
 assert all(re.fullmatch(r"\$\?/[A-Za-z]+", r[cost]) for r in lines), "a unit cost that is not $?/unit"
 assert not any(re.search(r"\$\s*\d", cell) for r in lines for cell in r), "a dollar figure in the library"
 assert all(r[ctype] for r in lines) and all(r[division] for r in lines), "a line with no cost type or no division"
+labor = [r for r in lines if r[ctype] == "Labor"]
+assert len(labor) == 18 and all(r[head.index("Ordered by")] == "hr" and r[head.index("Ordered at")].startswith("unknown ") for r in labor), "a labor line with a production rate in it"
+print("    %d labor lines, each in hours with no production rate and no wage: how fast a crew goes is the estimator's own" % len(labor))
 print("    %d assemblies, %d lines, a line in each of divisions %s; every unit cost is $?, and no dollar figure is in the file"
       % (len({r[0] for r in lines}), len(lines), ", ".join(str(d) for d in sorted({int(r[division]) for r in lines}))))
-assert sorted({int(r[division]) for r in lines}) == list(range(1, 17)) and len({r[0] for r in lines}) == 30 and len(lines) == 93
+assert sorted({int(r[division]) for r in lines}) == list(range(1, 17)) and len({r[0] for r in lines}) == 30 and len(lines) == 111
 PY
 
 echo
@@ -117,6 +121,17 @@ says "Division 3" " 3 Concrete ~\$825.00 1 line"
 says "Division 7" " 7 Thermal and Moisture Protection ~\$1,710.00 1 line"
 # 1,200.00 + 825.00 + 1,710.00 = 3,735.00.
 says "the job cost" "Job cost ~\$3,735.00 3 lines"
+
+echo
+echo "== Labor: the partition's framing has no hours until its production rate is typed =="
+says "no rate, no hours, no price" "Frame the partition no figure no price"
+"$P" set "$J" "$PART" order "30 SF/hr" --line "Frame the partition" --status Assumed --source "made-up crew" >/dev/null
+"$P" set "$J" "$PART" unit_cost '$60/hr' --line "Frame the partition" --status Assumed --source "made-up wage" >/dev/null
+OUT="$("$P" estimate "$J" | tr -s ' ')"
+# The partition is 16 ft by 9 ft: 144 SF of face. At 30 SF/hr, 4.8 hr; at $60.00, $288.00.
+says "its hours and what they come to" "Frame the partition ~4.8000 hr ~\$60.00/hr ~\$288.00"
+# 3,735.00 + 288.00 = 4,023.00.
+says "the job cost with it" "Job cost ~\$4,023.00 4 lines"
 
 echo
 echo "== The house is dressed from the same lines =="

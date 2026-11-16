@@ -54,7 +54,7 @@ click 920 600                           # the south wall, between its door and i
 on "Assembly"; park
 shot                                    # 03 the assemblies that go on a wall, listed
 on "Assembly Exterior wall, 2x6, lap siding"; park
-shot                                    # 04 lap siding: seven lines, and the wall drawn in it
+shot                                    # 04 lap siding: nine lines, two of them labor, and the wall drawn in it
 on "Assembly"
 on "Assembly Exterior wall, 2x6, brick veneer"; park
 shot                                    # 05 changed to brick: what came off is said, and the wall is brick
@@ -64,6 +64,11 @@ shot                                    # 06 the brick's price being typed on it
 xdotool key Return; sleep 4
 focus
 shot                                    # 07 priced: the sheet by division
+sheet_at "Production rate of Frame and sheathe the wall on wall 1"; sleep 2
+xdotool type --delay 300 "40 SF/hr"; sleep 2
+xdotool key Return; sleep 4
+focus
+shot                                    # 08 the framing labor given its production rate: it has hours
 xdotool key F2; sleep 3                 # save
 close_window
 SESSION
@@ -72,10 +77,10 @@ timeout 1200 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
 if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
 ls "$OUT" | tr '\n' ' '; echo
-for n in 01 02 03 04 05 06 07; do
+for n in 01 02 03 04 05 06 07 08; do
   [ "$OUT/$n-model.png" -nt "$T/before.json" ] && [ "$OUT/$n-sheet.png" -nt "$T/before.json" ] || { echo "FAIL: no picture $n of both windows from this run"; exit 1; }
 done
-echo "  14 pictures saved to $OUT (model and sheet, after each of 7 steps)"
+echo "  16 pictures saved to $OUT (model and sheet, after each of 8 steps)"
 
 echo
 echo "== What the session left in the saved job =="
@@ -86,6 +91,9 @@ says() { grep -qF -- "$2" <<<"$3" || { echo "FAIL: $1: not said: $2"; echo "$3" 
 # $4,320.00. Typed in the window, so Assumed.
 says "the brick, priced" "Brick veneer [Subcontract] 180.00 SF ~\$24.00/SF ~\$4,320.00" "$OUT_TEXT"
 says "in Division 4" " 4 Masonry ~\$4,320.00 1 line" "$OUT_TEXT"
+# The wall's face is 24 by 9, 216 SF: at 40 SF/hr, 5.4 hr. It has no wage yet, so no dollars.
+says "the framing labor has hours" "Frame and sheathe the wall ~5.4000 hr no price" "$OUT_TEXT"
+if grep -qF "Hang the siding" <<<"$OUT_TEXT"; then echo "FAIL: the siding's labor is still on the wall"; exit 1; fi
 if grep -qF "Lap siding" <<<"$OUT_TEXT"; then echo "FAIL: the lap siding line is still on the wall"; exit 1; fi
 echo "    no Lap siding line is left on it"
 python3 - "$J" "$SOUTH" <<'PY'
@@ -97,10 +105,11 @@ assemblies = sum(1 for e in d.values() if e["attributes"].get("pl::class") == "C
 is_now = wall["pl::condition"]
 print("    in the file: %d assemblies; the south wall is %r (%s) with %d lines" % (assemblies, is_now["value"], is_now["status"], len(lines)))
 ok = assemblies == 30 and is_now["value"] == "Exterior wall, 2x6, brick veneer" and is_now["status"] == "Assumed"
-# Framing, sheathing, barrier, insulation; brick and its ties; gypsum board and paint.
-ok = ok and lines == ["Wall framing, 2x6 at 16 in", "Wall sheathing", "Weather barrier", "Batt insulation", "Gypsum board, hung and finished", "Paint, two coats", "Brick veneer", "Brick ties and flashing"]
+# Framing, sheathing, barrier, insulation, gypsum board, paint and the framing labor,
+# which the two assemblies share; then brick and its ties. The siding and its labor are gone.
+ok = ok and lines == ["Wall framing, 2x6 at 16 in", "Wall sheathing", "Weather barrier", "Batt insulation", "Gypsum board, hung and finished", "Paint, two coats", "Frame and sheathe the wall", "Brick veneer", "Brick ties and flashing"]
 if not ok:
-    print("FAIL: wanted the brick assembly's eight lines, the shared ones first:", lines); sys.exit(1)
+    print("FAIL: wanted the brick assembly's nine lines, the shared ones first:", lines); sys.exit(1)
 PY
 says "the house is dressed in it" "($SOUTH): brick veneer, on its south face (the line \"Brick veneer\")" "$("$P" finishes "$J")"
 
@@ -124,4 +133,4 @@ for name, what, test, want in [
     print("    picture %s, the south wall (%s): %s  %s" % (name, what, c, "as wanted" if good else "FAIL: wanted " + want))
 sys.exit(0 if ok else 1)
 PY
-echo "  PASS: the starter assemblies were brought in with one click, a wall was given one from the list and changed to another, a price was typed on the sheet, and the saved job has the brick assembly's lines, the price and its division"
+echo "  PASS: the starter assemblies were brought in with one click, a wall was given one from the list and changed to another, a price and a production rate were typed on the sheet, and the saved job has the brick assembly's lines, the price and its division"

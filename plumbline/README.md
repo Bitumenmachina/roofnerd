@@ -298,7 +298,10 @@ An assembly is everything priced on one thing: a wall's framing, sheathing, sidi
 gypsum board and paint, each line in its own division. The program ships with a
 starter set, 30 assemblies for a house's walls, floors, rooms, roofs, doors, windows
 and runs, with a line in every one of the sixteen divisions and **no prices**: those
-are yours.
+are yours. Eighteen of its lines are labor (framing a wall, hanging siding, setting a
+window), each with **no production rate and no wage**: on the sheet such a line reads
+"no production rate"; click that and type how fast your crew does it (`40 SF/hr`, or
+`0.5 hr/EA`), then its price by the hour.
 
 In the window: under **Bring in**, click **Starter assemblies**. Click a wall, then
 **Assembly**, and pick one from the list. Its lines are on the sheet's Estimate tab,

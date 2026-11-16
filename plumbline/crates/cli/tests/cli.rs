@@ -181,7 +181,7 @@ fn the_starter_library_comes_in_whole_goes_out_as_it_was_and_has_no_price_in_it(
     assert_eq!(divisions.into_iter().collect::<Vec<_>>(), (1..=16).collect::<Vec<u8>>());
     // Brought in a second time, it is the same as the job already has.
     let (ok, said) = run(&dir, &["import", "assemblies", "j.json", "starter"]);
-    assert!(ok && said.contains("set: 0") && said.contains("the same as the job already has: 93"), "{said}");
+    assert!(ok && said.contains("set: 0") && said.contains("the same as the job already has: 111"), "{said}");
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -207,7 +207,9 @@ fn an_assembly_is_changed_for_another_and_what_they_share_keeps_its_price() {
     assert!(!ok && said.contains("--change"), "{said}");
     assert_eq!(std::fs::read(dir.join("j.json")).unwrap(), before);
     let (ok, said) = run(&dir, &["apply", "j.json", "wall-0004", "Exterior wall, 2x6, brick veneer", "--source", "the plans", "--change"]);
-    assert!(ok && said.contains("has gained 2 cost lines") && said.contains("Brick veneer") && said.contains("1 cost line of the assembly it had came off") && said.contains("Lap siding"), "{said}");
+    assert!(ok && said.contains("has gained 2 cost lines") && said.contains("Brick veneer") && said.contains("2 cost lines of the assembly it had came off") && said.contains("Lap siding") && said.contains("Hang the siding"), "{said}");
+    // The framing labor is in both assemblies (call 92), so it stayed: it is not gained and did not come off.
+    assert!(!said.contains("Frame and sheathe the wall"), "{said}");
     let said = run(&dir, &["estimate", "j.json"]).1;
     // The framing keeps its $720.00; the siding and its $1,710.00 are gone; the brick has no price yet.
     assert!(said.contains("$720.00") && !said.contains("Lap siding") && !said.contains("$1,710.00") && said.contains("Brick veneer"), "{said}");
@@ -218,6 +220,33 @@ fn an_assembly_is_changed_for_another_and_what_they_share_keeps_its_price() {
     // An assembly that goes on something else is refused, in words.
     let (ok, said) = run(&dir, &["apply", "j.json", "wall-0004", "Asphalt shingle roof", "--source", "the plans", "--change"]);
     assert!(!ok && said.contains("goes on a roof plane, and wall-0004 is a wall"), "{said}");
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+/// Call 92: a starter assembly's labor comes with no production rate and no wage, says
+/// so, and has hours and dollars once both are typed. A 20 ft wall 9 ft tall has 180 SF
+/// of face: at 30 SF/hr, 6 hr; at $60.00, $360.00.
+#[test]
+fn a_starter_assemblys_labor_has_no_hours_until_its_production_rate_is_typed() {
+    let dir = folder("labor");
+    assert!(run(&dir, &["new", "j.json", "Labor (not a real job)"]).0);
+    assert!(run(&dir, &[&["level", "j.json", "Ground", "--elevation", "0 ft", "--height", "9 ft"][..], &KNOWN[..]].concat()).0);
+    assert!(run(&dir, &[&["type", "j.json", "wall", "w6", "--thickness", "6 in"][..], &KNOWN[..]].concat()).0);
+    assert!(run(&dir, &[&["wall", "j.json", "level-0002", "type-0003", "--points", "0,0 20,0", "--height", "9 ft"][..], &KNOWN[..]].concat()).0);
+    assert!(run(&dir, &["import", "assemblies", "j.json", "starter"]).0);
+    let (ok, said) = run(&dir, &["apply", "j.json", "wall-0004", "Interior partition, 2x4", "--source", "the plans"]);
+    assert!(ok && said.contains("has gained 4 cost lines") && said.contains("Frame the partition"), "{said}");
+    let said = run(&dir, &["estimate", "j.json"]).1;
+    assert!(said.contains("\"Frame the partition\": the line has no production rate (no production rate entered) and no price (no price entered)"), "{said}");
+    let assumed = ["--status", "Assumed", "--source", "made-up crew"];
+    assert!(run(&dir, &[&["set", "j.json", "wall-0004", "unit_cost", "$60/hr", "--line", "Frame the partition"][..], &assumed[..]].concat()).0);
+    let said = run(&dir, &["estimate", "j.json"]).1;
+    assert!(said.contains("\"Frame the partition\": the line has no production rate (no production rate entered), so no hours to price"), "{said}");
+    assert!(run(&dir, &[&["set", "j.json", "wall-0004", "order", "30 SF/hr", "--line", "Frame the partition"][..], &assumed[..]].concat()).0);
+    let said = run(&dir, &["estimate", "j.json"]).1;
+    assert!(said.contains("~6.0000 hr") && said.contains("~$360.00"), "{said}");
+    assert!(!said.contains("\"Frame the partition\": the line has no"), "{said}");
+    assert!(run(&dir, &["check", "j.json"]).0);
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

@@ -233,8 +233,12 @@ fn extension(price: &Price, quantity: &Derived, with_waste: Option<&Derived>, or
         Err(why) => return Derived::refused("$", &formula, inputs, why),
         Ok(v) => *v,
     };
+    // Hours that wait for a production rate are said for what they are.
+    let no_hours = (base.unit == crate::components::HOURS && base.value.is_none() && base.note.starts_with("no production rate")).then(|| base.note.clone());
     match (at.value, base.value) {
+        (None, _) if no_hours.is_some() => Derived::refused("$", &formula, inputs, &format!("{} has {} and no price ({})", price.whose, no_hours.unwrap_or_default(), at.source)),
         (None, _) => Derived::refused("$", &formula, inputs, &format!("{} has no price ({})", price.whose, at.source)),
+        (Some(_), None) if no_hours.is_some() => Derived::refused("$", &formula, inputs, &format!("{} has {}, so no hours to price", price.whose, no_hours.unwrap_or_default())),
         (Some(_), None) if base.note.is_empty() => Derived::refused("$", &formula, inputs, "the line has no quantity to price: a figure it is worked out from is not known"),
         (Some(_), None) => Derived::refused("$", &formula, inputs, &format!("the line has no quantity to price: {}", base.note)),
         (Some(p), Some(q)) => {
@@ -400,7 +404,14 @@ fn worked(me: &str, on: &On, line: &CostLine, order_by: Option<&Order>, price: &
                 }
                 let mut statuses = vec![base.status, o.factor.status];
                 statuses.extend(&price.order_statuses);
-                Derived::new(v, &o.unit, &statuses, &formula, &price.inputs)
+                let mut worked = Derived::new(v, &o.unit, &statuses, &formula, &price.inputs);
+                // In-house work with no production rate has no hours, and says that
+                // and not "a figure it is worked out from is not known" (call 92: a
+                // library's labor lines come with none).
+                if o.factor.value.is_none() && o.unit == crate::components::HOURS {
+                    worked.note = format!("no production rate ({})", o.factor.source);
+                }
+                worked
             }
         }
     });

@@ -3300,3 +3300,62 @@ took none.
 - **On the estimate sheet a division's name and its total have a row of their own**,
   and the column names are on the row under it. Beside the column names the two were
   cut short ("THERMAL AND MOISTURE PROT", the total gone).
+
+### Call 92. The starter assemblies carry labor, with no production rate and no wage in them (2026-11-16)
+
+The last open part of J22A-13 (a deciding fail of item 10): a veteran estimator
+priced a wall from the starter library and found material lines only. Call 90 let a
+cost line be added by hand; an assembly is what an estimator reaches for first, and
+his assembly has the labor in it.
+
+- **Eighteen labor lines**, on the assemblies whose work a builder's own crew
+  usually does: framing and sheathing a wall (all four outside walls), hanging lap
+  siding (the two walls that have it), framing a partition, framing a floor and
+  laying its subfloor, base and trim in the four rooms that have it, sheathing a
+  roof (both roofs), laying underlayment and shingles, setting a window, hanging a
+  door (both). What is bought installed (brick, stucco, stone, standing seam, the
+  slab's placing, gypsum board hung and finished, paint, every run and fixture)
+  stays a material or a subcontract line as it was: which of those a builder does
+  in-house is his to change with Add cost line.
+- **A labor line in the library has no production rate and no wage**, as its
+  material lines have no price (call 60: "it has no price in it, and never will").
+  How fast a crew frames a wall is the estimator's own figure as much as what he
+  pays for a stud, and a round number shipped in a library would be priced by
+  somebody as if it were his. The line says "no production rate" in the colour of
+  something not known, comes to no hours and no dollars, and is counted among the
+  lines with no price.
+- **The rate is typed on the line, on the estimate sheet**, beside its division, as
+  a stretch-out is: "40 SF/hr" or "0.5 hr/EA". Until now a rate could be given only
+  when a line was added by hand, and never changed in the window.
+- The library is 30 assemblies and 111 lines. The file is what the program writes
+  out from a job the library was brought into, to the byte, as before.
+
+Rejected: a labor line under every material line. It doubles every assembly, and
+most of a wall's finish trades are subcontracted on a house. Rejected: typical
+production rates marked Assumed. An Assumed figure is priced; an Unknown one is not,
+and says so.
+
+### Call 93. The bars are cards with the model between them, and a panel has a shadow on plan (2026-11-16)
+
+From the twenty-second judgment, part B (J22B-3, J22B-38): the window failed A1 and A2
+of VISUAL.md. The top bar and the status line ran the whole width of the window, so
+the model read as a view docked under a bar; and on plan no panel had a shadow.
+
+- **Along the top there are two cards**, each as wide as what is on it: the job and
+  Save, Undo, Redo at the left; the price and what is not yet sure at the right. The
+  model is seen between them. **Along the bottom, two more**: what the last action
+  did, as long as its words; where the pointer is and the view, at the right. No
+  control was renamed or moved out of its card.
+- **On plan the paper is white as given, and not lit.** It was a lit surface, brighter
+  than the screen can show and folded back to white; a shadow laid over it was folded
+  back to the same white (measured: 255 beside every panel's edge, where 3D showed a
+  shadow). Unlit, it is the same white to look at and takes a shadow. Floors on plan
+  are still lit and still fold to white: a panel over a floor has less shadow than one
+  over the paper beside it.
+- **The shadow under a floating panel is a little deeper** (near 0.10 to 0.16, far
+  0.16 to 0.24): in 3D it darkened the ground under a panel's edge by about 4 %, and
+  the panels read as flat grey cards.
+
+Not done: the left and right panels still stand nearly the height of the window
+(the judge's "weaker" half of A1). The pointer over the gap between two cards is
+still taken as over a bar.
