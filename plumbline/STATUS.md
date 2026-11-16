@@ -6039,6 +6039,29 @@ readable (E3); the sheet reads as the same program (F4). A refusal says why and 
 to do (J24B-17, -36); a priced wall's delete says what happened to the money
 (J24B-55); the framing view is "the best picture of the session" (J24B-7).
 
+## A roof priced once, in the window: a demonstration, written before it is run (`demos/roofw.sh`, call 100)
+
+It was written after what it shows was built and before it was run; the figures are
+worked here by hand. **It has not been run**: the nineteen were running when it was
+written, and two windows at once cost clicks.
+
+1. A made-up job: a level, and a hip roof 40 ft by 26 ft at 5:12, eaves at 9 ft,
+   scaled off a plan (Assumed). Four planes. On plan the two on the 40 ft eaves are
+   (40 + 14) / 2 x 13 = 351 SF each and the two on the 26 ft eaves 26 x 13 / 2 = 169 SF
+   each: 1,040 SF, the footprint. The slope factor at 5:12 is 13/12, so 380.25 SF and
+   183.0833 SF.
+2. In the window: Starter assemblies; a plane clicked on the model; Assembly;
+   "Asphalt shingle roof". The window is to say that plane has 5 cost lines and that
+   the other three planes have the same lines.
+3. On the sheet, $105.00 typed once on plane 1's "Asphalt shingles". The window is to
+   say the same line on planes 2, 3 and 4 had none and takes it. 3.8025 SQ x 105 =
+   $399.26 (399.2625) on two planes; 1.8308 SQ x 105 = $192.23 (192.234) on two.
+4. "2 hr/SQ" typed once on plane 1's "Lay underlayment and shingles", a line that
+   comes out in SF: taken as 0.02 hr/SF, and by the other three. 380.25 x 0.02 =
+   7.6050 hr on two planes; 183.0833 x 0.02 = 3.6617 hr on two.
+5. Saved. The saved job is read at the command line and as a file: four planes, five
+   lines each, each price and rate Assumed and sourced "entered on screen".
+
 ## The twenty-fourth judgment, part A: what its notes say so far, and what was done (2026-11-16, late)
 
 Part A (the veteran's first day and the money path in the window) is still at work.
