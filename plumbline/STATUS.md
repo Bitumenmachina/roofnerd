@@ -5686,8 +5686,8 @@ again**. "Seen" means I read it in a picture of that build.
 |---|---|---|
 | J22B-1, -23 | Check, Measure and Set were square hairline boxes | Fixed (486600b), seen |
 | J22B-2, -33 | No sky: a grey haze, no blue, no horizon | Fixed in two steps: the sky drawn brighter than paper white (486600b), then half of the overhead blue in the horizon and a steeper rise to it. Seen on the whole house: blue above, pale at the horizon, the far ground fading blue. The empty job's ground is still a plain grey floor |
-| J22B-3 | The top bar and the status line are full-width strips; panels cover about 45% of the window | **Open.** The panels can be put away (Next steps has Hide); the bars are not floating cards |
-| J22B-4, -38 | Panels read as flat grey cards; on plan no shadow under them | **Open.** They are tinted and frosted in fact (the judge measured it); the shadow does not show on white paper |
+| J22B-3 | The top bar and the status line are full-width strips; panels cover about 45% of the window | **Half fixed (call 93), not judged.** The top bar and the status line are each two floating cards with the model between them (seen in every picture of the run on 5396828). The left and right panels still stand nearly the height of the window |
+| J22B-4, -38 | Panels read as flat grey cards; on plan no shadow under them | **Fixed for the shadow (call 93), not judged.** On plan the paper is unlit white and every panel has a shadow on it (seen); the shadow under a panel is deeper. Whether the panels still read as flat cards in 3D is the judge's to say |
 | J22B-5, -11 | Ducts as flat blue tubes; clash marks as small crosses | **Open** |
 | J22B-6 | Whole-house plan: the roof in solid colour over the plan | **Open.** One level alone on plan passes (E1) |
 | J22B-7 | A switch, a view button and Frame said nothing | Fixed (486600b), seen |
@@ -5699,7 +5699,7 @@ again**. "Seen" means I read it in a picture of that build.
 | J22B-15 | Budget: names twice and cut; four-place rates; "ELEMENT" | Fixed (call 89). Not seen since (the tab was not in my last pictures) |
 | J22B-16, -17 | Clashes: a note cut at the card's edge; "solid"; findings unmarked | Fixed, seen |
 | J22B-18 | Roof tab "none yet" beside a priced, drawn roof | Fixed. Not seen since |
-| J22B-19 | Roof-plane labels square; eave, hip and ridge lines over the dressed roof | **Open** |
+| J22B-19 | Roof-plane labels square; eave, hip and ridge lines over the dressed roof | **Built, not seen (call 96).** Over a dressed roof in 3D the coloured lines are drawn only while something of the roof is selected; a tag is round with a shadow; a roof's edge reads "5:12 pitch". 309 tests pass. **No picture of it has been taken or read**: the window was not started beside judgment 24. The judges are on the build before it |
 | J22B-20 | "ROUND", "of them", "Supply air  Supply Air", "FACETS" | Fixed |
 | J22B-21 | A cable named by its diameter; "Measure diameter." asked of a cable; a receptacle filed as Fixture | **Open.** A cable wants a name (12-2 NM) and the model holds a size |
 | J22B-22 | The sample whole house shows no suppliers side by side | **Open**: `demos/d5w.sh`'s job shows them; the sample has no supplier quotes |
@@ -5711,7 +5711,7 @@ again**. "Seen" means I read it in a picture of that build.
 | J22B-30, -45, J22A-4 | The status line cut with "..." and the rest readable nowhere | Fixed: a message longer than the bar holds is shown in full on the card over the model, whatever its tone. Seen for a refusal; **not seen for a long "done"** |
 | J22B-32 | "The view is saved with the job without a save" | Not so (above) |
 | J22B-34, -36 | The level form: Enter on an empty field silent; "9" refused with "25.5 ft, 306 in, or 25' 6\"" | Fixed, seen: it says which field is still to be typed; "is it 9 ft or 9 in?"; the cursor goes to the field the refusal is about (it went to the name) |
-| J22B-35, -39 | Add drawing is a list of file names and folders; a drawing is called by its file's name; "snap" | **Open, and the judge's deciding fail for item 9.** A plan is brought in as a file, and Patrick's rule is that it is picked from a list. What the list calls things is mine to decide and is not yet decided: see "What is owed" |
+| J22B-35, -39 | Add drawing is a list of file names and folders; a drawing is called by its file's name; "snap" | **Reworded, and the page is picked from a list (call 94); seen in the window; not judged.** "File" and "folder" are kept as Patrick's own words. A drawing is still called by its file's name and page until it is given a sheet number, and "snap" stands |
 | J22B-43 | On plan, runs are hairlines, not at their size | **Open** |
 | J22B-44 | A double-click selected and did not fly; a label ran under the top bar | **Open** |
 | J22B-47 | Next steps ticked "Add a drawing" when none was added | The step then reads "Add a drawing (walls drawn without one)". Seen |
@@ -5958,7 +5958,11 @@ every word on every screen (items 11 and 9), with the plan and its page picked f
 the list. Their briefs are `research/judgment-24a-brief.md` and
 `research/judgment-24b-brief.md`. **Nothing is known of what they find until they
 report**; their notes are written as they go, outside the repository, and are copied
-in when they end. Nothing is compiled beside them.
+in when they end. **One build, one run of the tests and one clean-checkout build were
+run beside them, at the lowest priority, to commit call 96** (the stop hook asks for
+nothing to be left uncommitted): a click of theirs lost about then may be the load
+and not the program, and a finding of that kind is to be tried again before it is
+believed.
 
 ## Start here (written 2026-11-16; this is the last section, and the one CLAUDE.md sends you to)
 
@@ -5990,6 +5994,10 @@ money path were each judged and each failed (items 11, 9, 10 and 12).
 
 **What is owed, in this order.**
 
+0. **Look at call 96 in the window** (the dressed house in 3D with nothing selected,
+   then a plane selected; a roof's panel): it is built and tested and nobody has seen
+   it. Then run the nineteen window demonstrations on a frozen copy of the last
+   commit; `d2` and `glassw` take pictures of a roof and will show it.
 1. **Have items 9 to 12 judged again in the window**, by agents that did not build
    it, on Opus or Sonnet, told to write their notes as they go: a veteran's first
    day with the starter assemblies' labor (call 92), the money path in the window

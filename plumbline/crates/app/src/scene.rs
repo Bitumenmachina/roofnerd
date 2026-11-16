@@ -111,6 +111,12 @@ const PLAN_HEIGHT: f32 = 0.62;
 pub struct Drawing {
     /// The roof's lines: ends, colour, and whether it is drawn broken (no length).
     pub lines: Vec<(Vec3, Vec3, Color, bool)>,
+    /// The roof's eaves, rakes, hips, valleys and ridges in their takeoff colours.
+    /// Drawn over a roof that is dressed in what is priced on it only on plan or
+    /// while something of the roof is selected (call 96).
+    pub roof_lines: Vec<(Vec3, Vec3, Color)>,
+    /// Every roof plane on show is dressed, and the finishes are on show as they are.
+    pub roof_dressed: bool,
     /// The centre lines of thin runs, and of runs with no size (drawn broken).
     pub runs: Vec<(Vec3, Vec3, Color, bool)>,
     /// Each element's outline, by path: drawn when it is selected.
@@ -489,6 +495,8 @@ pub fn rebuild(
     }
 
     drawing.lines.clear();
+    drawing.roof_lines.clear();
+    drawing.roof_dressed = false;
     drawing.runs.clear();
     drawing.ghosts.clear();
     drawing.fittings.clear();
@@ -857,6 +865,7 @@ pub fn rebuild(
     let top_level = snap.storeys.iter().filter(|s| s.elevation.is_some()).max_by(|a, b| a.elevation.unwrap_or(0.0).total_cmp(&b.elevation.unwrap_or(0.0))).map(|s| s.path.clone());
     let roof_in_3d = show.storey.is_none() || (!on_plan_view && show.storey == top_level);
     if show.roof && roof_in_3d {
+        build.drawing.roof_dressed = !show.certainty && !snap.planes.is_empty() && snap.planes.iter().all(|p| p.area.is_some() && snap.dress.roofs.contains_key(&p.path));
         for info in &snap.planes {
             build.wash = show.certainty.then(|| theme::certainty(info.worst()));
             let Some(plane) = &info.solid else { continue };
@@ -899,9 +908,12 @@ pub fn rebuild(
             let (a, b) = (to_view(origin, a), to_view(origin, b));
             let lift = Vec3::new(0.0, 0.05, 0.0);
             // No length: drawn broken and red, which no kind of line is.
+            // A line with no length is a fault, and is always drawn.
             let (colour, broken) = if line.length.is_none() { (theme::red(), true) } else { (theme::line_colour(line.kind), false) };
-            if !show.ghost {
+            if !show.ghost && broken {
                 build.drawing.lines.push((a + lift, b + lift, colour, broken));
+            } else if !show.ghost {
+                build.drawing.roof_lines.push((a + lift, b + lift, colour));
             }
             build.drawing.frames.push((line.path.clone(), vec![(a + lift, b + lift)]));
             // Under each outer edge of the roof, a fascia; and where the job has no walls
@@ -1708,6 +1720,15 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
                 grid.line_gradient(Vec3::new(at, 0.0, from), Vec3::new(at, 0.0, to), c0, c1);
                 grid.line_gradient(Vec3::new(from, 0.0, at), Vec3::new(to, 0.0, at), c0, c1);
             }
+        }
+    }
+    // Over a house dressed as it will be built, the takeoff's colours on every eave,
+    // hip and ridge made it read as a diagram (J22B-19, D8). They are drawn on plan, on
+    // a roof not yet dressed, and while something of the roof is selected.
+    let of_the_roof = doc.selected.as_ref().is_some_and(|s| snap.planes.iter().any(|p| p.path == *s) || snap.lines.iter().any(|l| l.path == *s) || snap.roof_path == *s);
+    if doc.plan || !drawing.roof_dressed || of_the_roof {
+        for (a, b, colour) in &drawing.roof_lines {
+            lines.line(*a, *b, *colour);
         }
     }
     for (a, b, colour, dashed) in &drawing.lines {

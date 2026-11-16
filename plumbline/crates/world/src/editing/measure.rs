@@ -69,7 +69,19 @@ enum Slot<'a> {
     Other(&'a mut dyn Looked),
 }
 
-fn said_len(v: &Val<Len>) -> String {
+/// A roof whose footprint was just measured or checked is solved again, and what
+/// follows is said: its planes, and anything that is gone with what was priced on it.
+fn solved_again(job: &mut Job, path: &str, name: &str, also: &mut Vec<String>) -> Result<(), String> {
+    let report = crate::solve::solve(job, path)?;
+    also.push(format!("{name} solved again: its {} and the eaves, hips, valleys and ridges between them follow", crate::view::so_many(report.planes, "plane")));
+    for (gone, carried) in &report.removed {
+        also.push(if *carried { format!("{gone} is gone, and what was priced on it with it") } else { format!("{gone} is gone") });
+    }
+    Ok(())
+}
+
+/// A length as it is said, under a name a local `said` does not hide.
+fn length_said(v: &Val<Len>) -> String {
     said(v)
 }
 
@@ -497,12 +509,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
                 let said = format!("{name}: {what} is {}:12, measured ({was})", crate::view::num(pitch));
                 check::footprint(path, kind, &c)?;
                 job.put(path, c)?;
-                let report = crate::solve::solve(job, path)?;
-                let count = |n: usize, word: &str| if n == 1 { format!("1 {word}") } else { format!("{n} {word}s") };
-                also.push(format!("{name} solved again: its {} and the eaves, hips, valleys and ridges between them follow", count(report.planes, "plane")));
-                for (gone, carried) in &report.removed {
-                    also.push(if *carried { format!("{gone} is gone, and what was priced on it with it") } else { format!("{gone} is gone") });
-                }
+                solved_again(job, path, &name, &mut also)?;
                 return Ok(Some(Measured { said, also }));
             }
             let slot = match what {
@@ -520,15 +527,10 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
                 // basement door is there) and remarked on: it is far more often a
                 // reading typed wrong (J23-4).
                 if what == "eave height" && matches!(reading, Do::Length(_)) && c.eave_height.feet().is_some_and(|ft| ft <= 0.0) {
-                    also.push(format!("{} puts the eaves at or below the job's zero, where the lowest floor usually is: if that is not where they are, measure again", said_len(&c.eave_height)));
+                    also.push(format!("{} puts the eaves at or below the job's zero, where the lowest floor usually is: if that is not where they are, measure again", length_said(&c.eave_height)));
                 }
                 job.put(path, c)?;
-                let report = crate::solve::solve(job, path)?;
-                let count = |n: usize, word: &str| if n == 1 { format!("1 {word}") } else { format!("{n} {word}s") };
-                also.push(format!("{name} solved again: its {} and the eaves, hips, valleys and ridges between them follow", count(report.planes, "plane")));
-                for (gone, carried) in &report.removed {
-                    also.push(if *carried { format!("{gone} is gone, and what was priced on it with it") } else { format!("{gone} is gone") });
-                }
+                solved_again(job, path, &name, &mut also)?;
                 return Ok(Some(Measured { said, also }));
             }
         }

@@ -3432,3 +3432,27 @@ findings; these are the decisions in them.
 - **Not done**: a production rate that is absurdly slow (0.0001 SF/hr) is taken
   without remark. There is no line a program can draw between slow and wrong that a
   mason and a finish carpenter would both accept; the hours are on the line to read.
+
+### Call 96. Over a dressed roof the takeoff's colours wait until they are asked for (2026-11-16)
+
+From the twenty-second judgment, part B (J22B-19; VISUAL.md D8): on the dressed house
+in 3D the eaves, hips and ridges were bright green, orange and magenta lines laid
+over the shingles, and each plane's tag was a square white box. "They make the house
+read as a takeoff diagram, not a house."
+
+- **In 3D, a roof that is dressed in what is priced on it is drawn as the roof.** Its
+  eaves, rakes, hips, valleys and ridges are drawn in their takeoff colours on plan
+  (where a drawing's edges are drawn by line type: Patrick's rule keeps that), on a
+  roof not yet dressed (it is a takeoff then, and the colours are what there is to
+  see), and while the roof, a plane or one of those edges is selected. A line with
+  no length is a fault and is always drawn, broken and red.
+- **A tag on the model is round and has a little shadow**, as everything that floats
+  over the model is. Each plane keeps its tag (its number, area and pitch) in 3D: it
+  is how a plane is told from the next, and it is one small thing where the lines
+  were nine.
+
+- **A roof's edge says what its figure is**: "Edge 1  5:12 pitch" on the roof's
+  panel (it read "Edge 1  5:12").
+
+Not done: the same for the coloured centre lines of ducts and pipes, which are what a
+run is drawn as and have no other look yet (D6).

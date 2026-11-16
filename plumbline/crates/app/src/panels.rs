@@ -1238,10 +1238,13 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
 /// on a label still lands on the model under it.
 fn pill(p: &mut ChildSpawnerCommands, label: Label, selected: bool, build: impl FnOnce(&mut ChildSpawnerCommands)) {
     p.spawn((
-        Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(6.0), px(2.0)), column_gap: px(6.0), align_items: AlignItems::Center, border: UiRect::all(px(1.0)), ..default() },
+        // A tag on the model: round, with a little shadow, as everything that floats
+        // over it is (it was a square white box with a grey line round it: J22B-19).
+        Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(8.0), px(2.0)), column_gap: px(6.0), align_items: AlignItems::Center, border: UiRect::all(px(1.0)), border_radius: BorderRadius::all(px(10.0)), ..default() },
         UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
-        BackgroundColor(if selected { theme::accent() } else { theme::panel().with_alpha(0.94) }),
-        BorderColor::all(if selected { theme::accent() } else { theme::hairline() }),
+        BackgroundColor(if selected { theme::accent() } else { theme::panel().with_alpha(0.90) }),
+        BorderColor::all(if selected { theme::accent() } else { theme::frost_edge() }),
+        theme::card_shadow(),
         Pickable::IGNORE,
         label,
     ))
@@ -1333,7 +1336,7 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             }
             let at = (to_view(doc.origin, a) + to_view(doc.origin, b)) / 2.0 + Vec3::Y * 0.1;
             o.spawn((
-                Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(4.0), px(1.0)), ..default() },
+                Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(6.0), px(1.0)), border_radius: BorderRadius::all(px(8.0)), ..default() },
                 UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
                 BackgroundColor(theme::panel().with_alpha(0.9)),
                 Pickable::IGNORE,
@@ -1469,6 +1472,9 @@ fn property<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, val
     // A value that is not known says why once: "Cost code  Unknown  not coded", not
     // "Unknown ... unknown" with the reason in small type under it (J22B-26).
     let (value, basis) = if status == Status::Unknown && value.eq_ignore_ascii_case("unknown") && !basis.is_empty() && basis.chars().count() <= 24 { (basis.to_string(), "") } else { (value, basis) };
+    // How an edge of a roof rises is its pitch, and says so: "Edge 1  5:12" left a
+    // builder to guess what 5:12 was of (call 96).
+    let value = if label.to_lowercase().starts_with("edge ") && value.ends_with(":12") { format!("{value} pitch") } else { value };
     let long = value.chars().count() > 24;
     let mut row = p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(4.0)), row_gap: px(2.0), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() }, BorderColor::all(theme::rule())));
     if !act.is_empty() {
