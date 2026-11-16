@@ -6410,6 +6410,15 @@ third time (17 lines pass, 16 fail) and the words a third time (69 marked of abo
 860; 9 software terms, down from 31). Calls 106 to 109 are what was done about them.
 **Nothing done since 9868569 has been judged.**
 
+**Running as this was written (2026-11-16, late in the night): the twenty-sixth
+judgment, part A**, an agent on Opus on a frozen copy of c0d5922: a veteran's first
+day from a PDF and the money path (items 10 and 12), pressed in particular on a
+supplier's list brought in with the supplier's name, on a roof change saying its
+dollars, and on the item library (a thing turned, a library change reaching what
+stands, Starter items twice). Its brief is `research/judgment-26a-brief.md`; its notes
+are written as it goes in the scratch folder `j26a`. If this paragraph is still here,
+it was cut off or its report was not recorded: the brief can be given again.
+
 **What is owed, in this order.**
 
 1. **Have items 9 to 12 judged again** on the last commit, by agents that did not
