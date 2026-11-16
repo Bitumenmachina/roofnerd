@@ -641,6 +641,9 @@ pub fn dressed() -> Color { Color::srgb(0.90, 0.90, 0.90) }
 pub fn finish_spot() -> Color { hex(0xA9684B) }
 pub fn equipment() -> Color { hex(0xC5CBD3) }
 pub fn porcelain() -> Color { hex(0xF8F8F6) }
+/// Bare stainless, and painted sheet metal (a water heater's jacket, an outdoor unit).
+pub fn steel() -> Color { hex(0xB9BFC5) }
+pub fn enamel() -> Color { hex(0xE4E6E3) }
 /// A furnishing with nothing priced on it that says what it is made of: a light oak.
 pub fn casework() -> Color { hex(0xC49A6C) }
 /// A worktop with nothing priced on it that says what it is: a pale stone.

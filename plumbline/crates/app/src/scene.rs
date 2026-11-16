@@ -835,7 +835,7 @@ pub fn rebuild(
                     };
                     // Drawn as what it is, where its name says what that is: a vanity as a
                     // cabinet on its plinth under a worktop, a water closet as a cistern
-                    // and a bowl (the forms are BIMCraft's; `building::forms`). Every block
+                    // and a bowl (`building::forms`: ten are BIMCraft's, three ours). Every block
                     // is inside the box, which is still what is tested for clashes and
                     // what is outlined when the thing is selected. A thing whose name
                     // names no form is the box it is.
@@ -848,14 +848,16 @@ pub fn rebuild(
                                 let mid = [(b.lo[0] + b.hi[0]) / 2.0, (b.lo[1] + b.hi[1]) / 2.0, (b.lo[2] + b.hi[2]) / 2.0];
                                 let at = centre + turn * Vec3::new(mid[0] as f32, (mid[2] - size[2] / 2.0) as f32, -mid[1] as f32);
                                 let big = Vec3::new((b.hi[0] - b.lo[0]) as f32, (b.hi[2] - b.lo[2]) as f32, (b.hi[1] - b.lo[1]) as f32);
-                                let (ink, rough) = match b.made {
-                                    Made::Timber => (theme::casework(), 0.6),
-                                    Made::Worktop => (theme::worktop(), 0.35),
-                                    Made::Porcelain => (theme::porcelain(), 0.2),
-                                    Made::Fabric => (theme::fabric(), 0.95),
+                                let (ink, rough, metal) = match b.made {
+                                    Made::Timber => (theme::casework(), 0.6, 0.0),
+                                    Made::Worktop => (theme::worktop(), 0.35, 0.0),
+                                    Made::Porcelain => (theme::porcelain(), 0.2, 0.0),
+                                    Made::Fabric => (theme::fabric(), 0.95, 0.0),
+                                    Made::Steel => (theme::steel(), 0.32, 0.85),
+                                    Made::Enamel => (theme::enamel(), 0.45, 0.1),
                                 };
                                 let solid = if b.round { solids.cylinder.clone() } else { solids.cube.clone() };
-                                build.piece(&p.path, p.system.as_ref(), solid, Transform { translation: at, rotation: turn, scale: big }, ink, rough, 0.0, false);
+                                build.piece(&p.path, p.system.as_ref(), solid, Transform { translation: at, rotation: turn, scale: big }, ink, rough, metal, false);
                             }
                         }
                         None => build.piece(&p.path, p.system.as_ref(), solids.cube.clone(), Transform { translation: centre, rotation: turn, scale }, paint, rough, metal, false),

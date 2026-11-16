@@ -16,6 +16,13 @@
 //! (`family.rs` is 2,841 lines; this is the forms of ten of its families). A thing
 //! here has no parameters: it has its sizes, each with where it came from.
 //!
+//! Three forms are ours and not BIMCraft's, whose library has no family for them
+//! (searched `crates/core/src/family.rs` for sink, tank, heater, boiler, heat pump,
+//! condenser and air handler: only a category for "sink", no blocks): a sink as a
+//! bowl, two where it is wide enough; a water heater as an upright round tank; an
+//! outdoor unit as a cabinet under its fan guard. They follow the same rule: inside
+//! the thing's box, and reaching each of its sides.
+//!
 //! A form stands in the thing's own frame, in feet: x along its width, from the middle;
 //! y from its front (less) to its back (more), from the middle; z up from its
 //! underside. BIMCraft's y runs from 0 at the wall to minus the depth at the front, so
@@ -30,6 +37,10 @@ pub enum Made {
     Worktop,
     Porcelain,
     Fabric,
+    /// Bare metal: a stainless sink, a fan guard.
+    Steel,
+    /// Painted sheet metal: a water heater's jacket, an outdoor unit's cabinet.
+    Enamel,
 }
 
 /// One block of a form: a box from `lo` to `hi`, or, `round`, an upright round that
@@ -55,13 +66,26 @@ pub enum Form {
     Bed,
     Sofa,
     Desk,
+    /// Ours: a sink's bowl, or two.
+    Sink,
+    /// Ours: an upright round tank (a water heater).
+    Tank,
+    /// Ours: a heat pump's or a condenser's outdoor unit.
+    OutdoorUnit,
 }
 
 /// The form a thing's name says it has: the earliest word in the name that names one
 /// ("Harbor Vanity 36" is a base cabinet, "Water closet" a WC). None when the name
 /// names none; the thing is then drawn as the box it is.
 pub fn form_of(name: &str) -> Option<Form> {
-    const WORDS: [(&str, Form); 27] = [
+    const WORDS: [(&str, Form); 34] = [
+        ("sink", Form::Sink),
+        ("water heater", Form::Tank),
+        ("tank", Form::Tank),
+        ("heat pump", Form::OutdoorUnit),
+        ("condenser", Form::OutdoorUnit),
+        ("condensing unit", Form::OutdoorUnit),
+        ("outdoor unit", Form::OutdoorUnit),
         ("vanity", Form::BaseCabinet),
         ("base cabinet", Form::BaseCabinet),
         ("cabinet", Form::BaseCabinet),
@@ -220,6 +244,28 @@ pub fn blocks(form: Form, size: P3) -> Vec<Block> {
             put([half - panel, half], [-d + inset, -inset], [0.0, h - top], false, Made::Timber);
             put([-half + panel, half - panel], [-c(60.0, d, 0.12), -c(40.0, d, 0.08)], [h * 0.4, h - top], false, Made::Timber);
         }
+        // Ours. A sink: its bottom and its four sides, in sheet metal as thin as a
+        // share of the thing allows; 30 in wide or more it is a double bowl, with a
+        // wall between the two.
+        Form::Sink => {
+            let (bottom, side) = (c(20.0, h, 0.12), c(25.0, w.min(d), 0.08));
+            put([-half, half], [-d, 0.0], [0.0, bottom], false, Made::Steel);
+            put([-half, half], [-side, 0.0], [bottom, h], false, Made::Steel);
+            put([-half, half], [-d, -d + side], [bottom, h], false, Made::Steel);
+            put([-half, -half + side], [-d + side, -side], [bottom, h], false, Made::Steel);
+            put([half - side, half], [-d + side, -side], [bottom, h], false, Made::Steel);
+            if w >= 762.0 {
+                put([-side / 2.0, side / 2.0], [-d + side, -side], [bottom, h - c(40.0, h, 0.2)], false, Made::Steel);
+            }
+        }
+        // Ours. A water heater: an upright round tank, the whole of the thing.
+        Form::Tank => put([-half, half], [-d, 0.0], [0.0, h], true, Made::Enamel),
+        // Ours. An outdoor unit: its cabinet, and on it the round guard over its fan.
+        Form::OutdoorUnit => {
+            let (guard, inset) = (c(60.0, h, 0.08), w.min(d) * 0.1);
+            put([-half, half], [-d, 0.0], [0.0, h - guard], false, Made::Enamel);
+            put([-half + inset, half - inset], [-d + inset, -inset], [h - guard, h], true, Made::Steel);
+        }
     }
     out
 }
@@ -228,7 +274,7 @@ pub fn blocks(form: Form, size: P3) -> Vec<Block> {
 mod tests {
     use super::*;
 
-    const ALL: [Form; 10] = [Form::BaseCabinet, Form::Wardrobe, Form::Wc, Form::Washbasin, Form::Bathtub, Form::Table, Form::Chair, Form::Bed, Form::Sofa, Form::Desk];
+    const ALL: [Form; 13] = [Form::BaseCabinet, Form::Wardrobe, Form::Wc, Form::Washbasin, Form::Bathtub, Form::Table, Form::Chair, Form::Bed, Form::Sofa, Form::Desk, Form::Sink, Form::Tank, Form::OutdoorUnit];
 
     /// What is drawn is inside what is tested for clashes, and fills it: every block of
     /// every form is inside the thing's box, and together they reach each of its six
@@ -278,6 +324,13 @@ mod tests {
         assert_eq!(form_of("Bookcase BK-30"), Some(Form::Wardrobe));
         assert_eq!(form_of("Lavatory"), Some(Form::Washbasin));
         assert_eq!(form_of("Bathtub, 5 ft"), Some(Form::Bathtub));
+        // The three that are ours.
+        assert_eq!(form_of("Kitchen sink, double bowl"), Some(Form::Sink));
+        assert_eq!(form_of("Water heater, 50 gal"), Some(Form::Tank));
+        assert_eq!(form_of("Heat pump, outdoor unit"), Some(Form::OutdoorUnit));
+        // A double bowl has a wall between its bowls; a bar sink has one bowl.
+        assert_eq!(blocks(Form::Sink, [33.0 / 12.0, 21.625 / 12.0, 8.375 / 12.0]).len(), 6);
+        assert_eq!(blocks(Form::Sink, [15.0 / 12.0, 15.0 / 12.0, 6.0 / 12.0]).len(), 5);
         // A thing whose name names none of them is the box it is.
         assert_eq!(form_of("AH-24 Air Handler"), None);
         assert_eq!(form_of("Ceiling register, 4 x 10"), None);

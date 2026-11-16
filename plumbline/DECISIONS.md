@@ -3611,3 +3611,25 @@ Left, with the reason:
 - **A height shown as "8.4 ft"**: a value is shown as it was entered, and the
   made-up house was entered in decimal feet. What is typed in feet and inches shows
   in feet and inches.
+
+### Call 102. A sink, a water heater and an outdoor unit are drawn as what they are (2026-11-16)
+
+VISUAL.md D6 ("a thing drawn as what it is") failed twice on boxes: the kitchen sink
+a box hung on a wall, the water heater and the heat pump pale boxes (J24B-8, -28,
+-29). Ten forms were ported from BIMCraft's library; it has no family for these
+three (searched; PORTMAP.md's `blocks` row has the search). They are ours, in the
+same function and under the same rule, tested: every block inside the thing's box,
+and together reaching each of its sides.
+
+- **A sink** is a bowl in stainless: a bottom and four sides. 30 in wide or more it
+  is a double bowl, with a wall between the two.
+- **A water heater or a tank** is an upright round, in painted sheet metal.
+- **A heat pump's or a condenser's outdoor unit** is a cabinet with the round guard
+  of its fan on top.
+
+A thing is drawn so when its name says so ("sink", "water heater", "tank", "heat
+pump", "condenser", "condensing unit", "outdoor unit"), as the ten are. Still boxes,
+because a box is close to what they are and nothing better is claimed: an air
+handler, a furnace, a panelboard, a meter socket, a register. Not built: a base
+cabinet and a counter under a kitchen sink (cabinets are not in the made-up house or
+in any assembly; STATUS.md, the seven trades).
