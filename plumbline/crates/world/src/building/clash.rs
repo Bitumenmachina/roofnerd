@@ -517,6 +517,10 @@ fn said(p: &Placement, what: &BTreeMap<String, String>) -> String {
     match what.get(&p.path) {
         // A thing called what it is ("Boiler", "Lavatory 2") is said once.
         Some(what) if p.name == *what || p.name.strip_prefix(what.as_str()).is_some_and(|rest| rest.strip_prefix(' ').is_some_and(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit()))) => p.name.clone(),
+        // What it is already begins with its name ("Kitchen sink, double bowl", named
+        // "kitchen sink"): said once, not "Kitchen sink, double bowl (kitchen sink)"
+        // (J24B-33).
+        Some(what) if what.to_lowercase().starts_with(&p.name.to_lowercase()) => what.clone(),
         Some(what) => format!("{what} ({})", p.name),
         None => p.name.clone(),
     }
