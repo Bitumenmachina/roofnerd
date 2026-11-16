@@ -5946,6 +5946,20 @@ it now begins "The drawing usda-7213, page 4" (**changed after the look; not see
 "File" and "folder" are kept and why is in call 94. **Not judged. No demonstration
 clicks a page**: `planw` and `firstw` type the plan and its page.
 
+## The twenty-fourth judgment: launched (2026-11-16, late)
+
+Two agents that did not build it (Opus), on a frozen copy of d20ac60, cold: neither
+may read this file, DECISIONS.md or the earlier judges' notes. Part A is a veteran
+estimator's first day in the window and the money path there (items 10 and 12), with
+labor from the starter assemblies, a thing measured from the Verify in field tab, a
+priced wall and a priced roof deleted, an assembly changed, an edge made a gable,
+and overhead typed ten times too large. Part B is the look against VISUAL.md and
+every word on every screen (items 11 and 9), with the plan and its page picked from
+the list. Their briefs are `research/judgment-24a-brief.md` and
+`research/judgment-24b-brief.md`. **Nothing is known of what they find until they
+report**; their notes are written as they go, outside the repository, and are copied
+in when they end. Nothing is compiled beside them.
+
 ## Start here (written 2026-11-16; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 309 tests pass,
