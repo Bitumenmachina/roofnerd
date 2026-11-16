@@ -538,7 +538,7 @@ pub fn not_priced_said(not_priced: &[(Kind, usize)]) -> Option<String> {
         return None;
     }
     let n: usize = not_priced.iter().map(|x| x.1).sum();
-    let kinds: Vec<String> = not_priced.iter().map(|(k, n)| format!("{n} {}{}", k.said(), if *n == 1 { "" } else { "s" })).collect();
+    let kinds: Vec<String> = not_priced.iter().map(|(k, n)| k.so_many(*n)).collect();
     Some(format!("nothing is priced on {n} thing{} that could be ({}): {} in no line and no total above", if n == 1 { "" } else { "s" }, kinds.join(", "), if n == 1 { "it is" } else { "they are" }))
 }
 

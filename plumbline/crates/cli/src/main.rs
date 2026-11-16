@@ -455,7 +455,7 @@ fn price(job: &mut plumbline_world::Job) -> String {
     }
     if !p.not_priced.is_empty() {
         let n: usize = p.not_priced.iter().map(|x| x.1).sum();
-        let kinds: Vec<String> = p.not_priced.iter().map(|(k, n)| format!("{n} {}{}", k.said(), if *n == 1 { "" } else { "s" })).collect();
+        let kinds: Vec<String> = p.not_priced.iter().map(|(k, n)| k.so_many(*n)).collect();
         let _ = writeln!(out, "  not priced at all: {n} thing{} that could be ({})", if n == 1 { "" } else { "s" }, kinds.join(", "));
     }
     out

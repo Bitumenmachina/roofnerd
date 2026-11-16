@@ -168,8 +168,15 @@ pub fn read(mut doc: ResMut<Doc>, mut plans: ResMut<Plans>, mut images: ResMut<A
     // Pages that have arrived.
     let mut arrived: Vec<(String, (String, usize), Arrived)> = Vec::new();
     for (path, (key, waiting)) in &plans.reading {
-        if let Ok(result) = waiting.lock().map_err(|_| ()).and_then(|r| r.try_recv().map_err(|_| ())) {
-            arrived.push((path.clone(), key.clone(), result));
+        // Not yet is not the same as never: a reader that stopped without sending its
+        // page (a file that broke it) is a fault to be said, or the drawing would read
+        // "reading its page" for the rest of the day (R21-20).
+        use std::sync::mpsc::TryRecvError;
+        let stopped = || Err("the page could not be read: reading it stopped part way. The file may be damaged; print it to a new PDF, or save the picture again, and add it again".to_string());
+        match waiting.lock().map(|r| r.try_recv()) {
+            Ok(Ok(result)) => arrived.push((path.clone(), key.clone(), result)),
+            Ok(Err(TryRecvError::Empty)) => {}
+            Ok(Err(TryRecvError::Disconnected)) | Err(_) => arrived.push((path.clone(), key.clone(), stopped())),
         }
     }
     for (path, key, result) in arrived {

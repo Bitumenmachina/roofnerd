@@ -269,33 +269,40 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
     doc.redraw();
 }
 
-/// Save the job to its file.
 /// A window on its way shut: it goes the frame after it is marked, as the engine's own
 /// closing does.
 #[derive(Component)]
 struct Shutting;
 
-/// A window asked to close. With work not saved, the first asking is answered with a
-/// warning and the window stays; a second asking, or a job that is saved, closes it.
-/// (Found beside J19-46: closing with work not saved lost it without a word.)
-fn closing(mut commands: Commands, mut asked: MessageReader<bevy::window::WindowCloseRequested>, shutting: Query<Entity, With<Shutting>>, mut doc: ResMut<Doc>, mut warned: Local<bool>) {
+/// A window asked to close. The two windows are one program and one job: closing
+/// either closes both. With work not saved, the asking is answered with a warning and
+/// both stay; asked again with nothing changed since, they close. A warning is for the
+/// work as it stood: an edit made after it is warned of afresh. (Found beside J19-46:
+/// closing with work not saved lost it without a word. R21-1: one warning then served
+/// for everything done after it, and "close again to leave" closed one window, left
+/// the other, and the estimate could not be opened again.)
+fn closing(mut commands: Commands, mut asked: MessageReader<bevy::window::WindowCloseRequested>, shutting: Query<Entity, With<Shutting>>, windows: Query<Entity, With<Window>>, mut doc: ResMut<Doc>, mut warned: Local<Option<u64>>) {
     for window in &shutting {
         commands.entity(window).despawn();
     }
     if !doc.edited {
-        *warned = false;
+        *warned = None;
     }
-    for ask in asked.read() {
-        if doc.edited && !*warned {
-            *warned = true;
-            doc.say(Tone::Refused, "Not closed: the job has changes that are not saved. Save (Ctrl+S), or close again to leave without saving them.");
-            doc.touch();
-        } else {
-            commands.entity(ask.window).try_insert(Shutting);
+    if asked.read().count() == 0 {
+        return;
+    }
+    if doc.edited && *warned != Some(doc.draw.edits) {
+        *warned = Some(doc.draw.edits);
+        doc.say(Tone::Refused, "Not closed: the job has changes that are not saved. Save (Ctrl+S), or close again to leave without saving them.");
+        doc.touch();
+    } else {
+        for window in &windows {
+            commands.entity(window).try_insert(Shutting);
         }
     }
 }
 
+/// Save the job to its file.
 fn save(doc: &mut Doc) {
     match std::fs::write(&doc.path, file::save(&mut doc.job)) {
         Ok(()) => {
@@ -509,6 +516,10 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                         doc.form_at = at + 1;
                         text = doc.form[at + 1].clone();
                         doc.fresh = !text.is_empty();
+                    } else {
+                        // In the last field there is no next: a comma is a comma (it
+                        // was dropped: R21-9).
+                        text.push(',');
                     }
                 }
                 // A laser set to send Tab after its reading: Tab ends an entry as Enter does.
@@ -557,7 +568,13 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                     doc.draw.picked.clear();
                 }
                 doc.measuring = None;
-                doc.say(Tone::Done, "Cancelled.");
+                // A length let go leaves the line's start where it was: said, so that
+                // "Cancelled" is not read as the wall cancelled (call 86).
+                if field == Entry::Length && !doc.draw.picked.is_empty() {
+                    doc.say(Tone::Done, "Length let go. The start is kept: click the next corner or type a length, or Esc again to let go of the start.");
+                } else {
+                    doc.say(Tone::Done, "Cancelled.");
+                }
                 doc.redraw();
             }
             Some(true) => match field {
@@ -851,7 +868,17 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
     // The number keys take a build tool in hand.
     for (key, tool) in [KeyCode::Digit1, KeyCode::Digit2, KeyCode::Digit3, KeyCode::Digit4, KeyCode::Digit5, KeyCode::Digit6, KeyCode::Digit7, KeyCode::Digit8, KeyCode::Digit9, KeyCode::Digit0].into_iter().zip(tools::Tool::KEYED) {
         if keys.just_pressed(key) {
-            tools::start(doc, tool);
+            // With a tool in hand a number is never another tool: a length typed with
+            // no start clicked took a second tool in hand by its first digit, and the
+            // rest of the length went into that tool's sizes (call 86, J21-13).
+            match doc.draw.tool {
+                Some(held) => {
+                    let first = if matches!(held, tools::Tool::Wall | tools::Tool::Run(_) | tools::Tool::Move) { "click where it starts first, then a number is a length" } else { "click where it goes" };
+                    doc.say(Tone::Refused, format!("{} is in hand: {first}. A number typed now is not another tool. To change tools, click the tool, or press Esc first.", held.name()));
+                    doc.touch();
+                }
+                None => tools::start(doc, tool),
+            }
         }
     }
     if keys.just_pressed(KeyCode::KeyX) {

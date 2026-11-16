@@ -1,10 +1,11 @@
 //! How the application looks: one palette, one typeface, and the few building blocks every
 //! panel is made of. Nothing here knows about roofs.
 //!
-//! The look is an instrument: paper, ink, flat panels set edge to edge and parted by
-//! hairlines, no shadows and nothing rounded off, and colour kept for meaning. Amber is
-//! always "assumed", red is always "unknown", blue is always "selected", and each kind of
-//! roof line has one colour that the legend, the drawing and the sheet all share.
+//! The look since call 62: the model fills the window, and what is on screen with it is
+//! frosted, rounded panels floating over it, each with a soft shadow. Colour is still
+//! kept for meaning: amber is always "assumed", red is always "unknown", blue is always
+//! "selected", and each kind of roof line has one colour that the legend, the drawing
+//! and the sheet all share.
 
 use bevy::prelude::*;
 use bevy::text::{FontFeatureTag, FontFeatures};
@@ -490,7 +491,10 @@ pub fn field<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, va
         };
         f.spawn((rounded(Node { width: px(width), height: px(24.0), padding: UiRect::horizontal(px(6.0)), border: UiRect::all(px(if state == 1 { 1.5 } else { 1.0 })), align_items: AlignItems::Center, overflow: Overflow::clip(), ..default() }, SMALL_RADIUS), BackgroundColor(if state == 1 { panel() } else { control() }), BorderColor::all(edge), Pickable::IGNORE)).with_children(|b| {
             if value.is_empty() && state != 1 {
-                b.spawn((text(fonts, like, 12.0, Weight::Regular, ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+                // An example says it is one: a grey "9 ft" alone read as a value that
+                // Enter would take (call 86).
+                let example = if like.is_empty() { String::new() } else { format!("like {like}") };
+                b.spawn((text(fonts, example, 12.0, Weight::Regular, ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
             } else {
                 b.spawn((typed(fonts, value, 12.5, Weight::Medium, ink()), TextLayout::no_wrap(), Pickable::IGNORE));
             }

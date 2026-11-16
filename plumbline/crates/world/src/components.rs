@@ -136,6 +136,18 @@ impl Kind {
             other => other.stem(),
         }
     }
+    /// So many of them, as a builder counts them: "1 eave", "4 hips", "2 valleys",
+    /// "3 assemblies", "2 pieces of equipment" (R21-13: "2 equipments").
+    pub fn so_many(self, n: usize) -> String {
+        let said = self.said();
+        match (self, n) {
+            (Kind::Equipment, 1) => "1 piece of equipment".to_string(),
+            (Kind::Equipment, n) => format!("{n} pieces of equipment"),
+            (_, 1) => format!("1 {said}"),
+            (_, n) if said.ends_with('y') && !said.ends_with("ey") => format!("{n} {}ies", &said[..said.len() - 1]),
+            (_, n) => format!("{n} {said}s"),
+        }
+    }
     /// With its article, for the middle of a sentence: "a wall", "an eave".
     pub fn a(self) -> String {
         match self {

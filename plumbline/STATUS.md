@@ -5409,27 +5409,27 @@ first; "reproduced" is the reviewer's word, the rest are by reading.
 | | What | Where | State |
 |---|---|---|---|
 | R21-19 | **reproduced**: a maker's sheet runs the next column into a value ("MV-3621 Finish: White Oak" as the model number): the column gap is marked with three spaces and then every run of spaces is made one | `plans/src/lib.rs` `words`; `world/src/spec.rs` |**fixed**: a run of three or more spaces is kept as a column gap (`gaps_kept`); test `two_columns_on_a_line_are_kept_apart` |
-| R21-1 | closing can lose work: one warning for both windows, cleared only by a save; "close again to leave" closes only that window; the sheet cannot be opened again | `app/src/main.rs` `closing` | open |
-| R21-22 | deleting the level on show makes the house vanish: the level on show, the roof and the tool in hand are not let go as undo lets them go | `tools.rs` delete; `scene.rs` | open |
+| R21-1 | closing can lose work: one warning for both windows, cleared only by a save; "close again to leave" closes only that window; the sheet cannot be opened again | `app/src/main.rs` `closing` | **fixed**: closing either window closes both; a warning is for the work as it stood, and an edit made after it is warned of afresh. By reading and a build; **not driven in the window** |
+| R21-22 | deleting the level on show makes the house vanish: the level on show, the roof and the tool in hand are not let go as undo lets them go | `tools.rs` delete; `scene.rs` | **fixed**: one place where the window lets go of what is no longer in the job (`Doc::let_go_of_what_is_gone`: what is selected, the level on show, the roof, each switch, a thing in hand), used after delete and after undo and redo. **Not driven in the window** |
 | R21-10 | like-for-like difference and percent are worked out twice, in the window and in the command line; the model does not give them | `sheet.rs` money; `cli/src/main.rs` | **fixed**, with M21-13: `Pricing::like_for_like` in the model gives the difference and the percentage; the window and the command line show it |
 | R21-11 | a division with lines and no price reads "none" in its own block where By division and the command line say "no figure"; "No division" heading blank with no figure | `sheet.rs` | **fixed**: a division with lines and no figure reads "no figure" in the colour of something not known; "No division" the same |
-| R21-21 | the view cuts instead of easing when a file is brought in, a drawing added or a scale set (the job is framed afresh and the eye is set outright) | `bring.rs`, `plans.rs`, `tools.rs`, `scene.rs` | open |
-| R21-4 | a roof outline that is refused loses every corner clicked | `tools.rs` | open |
-| R21-20 | if the page reader fails the drawing says "reading its page" for ever | `plans.rs` | open |
+| R21-21 | the view cuts instead of easing when a file is brought in, a drawing added or a scale set (the job is framed afresh and the eye is set outright) | `bring.rs`, `plans.rs`, `tools.rs`, `scene.rs` | **fixed**: after the job opens the eye is never set outright: it keeps its place across the move of the view's origin and eases to the new framing; only a model brought in frames the job afresh. The window demonstrations that add a drawing and set a scale are to be rerun on it |
+| R21-4 | a roof outline that is refused loses every corner clicked | `tools.rs` | **fixed**: the corners and the tool are kept when the outline is refused, and the refusal says so |
+| R21-20 | if the page reader fails the drawing says "reading its page" for ever | `plans.rs` | **fixed**: a reader that stops without sending its page is a fault that is said |
 | R21-31 | an assembly clicked while a field is open is taken a frame late and its message replaces the field's | `main.rs` | open |
-| R21-25 | an item is set down on the lowest level whatever was clicked, and the message does not say which level | `scene.rs` | open |
+| R21-25 | an item is set down on the lowest level whatever was clicked, and the message does not say which level | `scene.rs` | **fixed**: an item stands on the level whose floor is under what was clicked (the level on show alone, if one is), and the message names the level |
 | R21-26 | the base board and its cuts at doors are worked out by the window; nothing holds the drawn base to the priced LF | `scene.rs` | open |
-| R21-3 | "Added wall, X long" is the window's distance between the picks, not the model's length | `tools.rs` | open |
+| R21-3 | "Added wall, X long" is the window's distance between the picks, not the model's length | `tools.rs` | **fixed**: the length said is the model's `plan_length` of what was made |
 | R21-23 | the ground grid can draw hundreds of thousands of lines a frame over an unscaled scan | `scene.rs`, `plans.rs` | open |
 | R21-2 | every character typed rereads the whole job, clashes included | `main.rs`, `model.rs` | open |
 | R21-8/14 | a click on the plan, the model or a sheet row while a field is open is dropped without a word | `tools.rs`, `scene.rs`, `sheet.rs` | open |
 | R21-18 | "A Roof", "a Door" lowered inside a person's own names; "grey" made "gray" in them | `theme.rs` | open |
-| R21-9 | in a form a comma always means the next field, so "Sink, double bowl" splits | `main.rs` | open |
-| R21-27 | a supplier name with a full stop makes its file "not there"; a dropped table forgotten if Model or Maker's sheet is clicked next | `bring.rs`, `panels.rs` | open |
+| R21-9 | in a form a comma always means the next field, so "Sink, double bowl" splits | `main.rs` | part: a comma in the last field is a comma (it was dropped); in an earlier field it still means the next field: open |
+| R21-27 | a supplier name with a full stop makes its file "not there"; a dropped table forgotten if Model or Maker's sheet is clicked next | `bring.rs`, `panels.rs` | first half **fixed**: a supplier's name may have a full stop; only the end of a table's file name is taken as part of the file. The dropped table forgotten: open |
 | R21-15 | two controls can share a name in the map | `map.rs` | open |
 | R21-30 | IFC in: of two levels at one height the lower gets an untrue note | `ifc/src/lib.rs` | open |
 | R21-24, 16, 6, 7 | the Clashes switch left on after a press on a thing; taking an item in hand does not go through the view change; a key and a click in one frame; `pressed` cleared every frame with a field open | `scene.rs`, `panels.rs`, `main.rs` | open |
-| R21-12, 13, 28, 17/29 | money written in about fifteen places; the not-priced sentence built twice ("2 equipments"); the lowest wall base worked twice; stale comments | several | open |
+| R21-12, 13, 28, 17/29 | money written in about fifteen places; the not-priced sentence built twice ("2 equipments"); the lowest wall base worked twice; stale comments | several | R21-13 **fixed** (`Kind::so_many`: "2 pieces of equipment", "3 assemblies"; one sentence shared); R21-17/29 the stale comments set right and an unused argument dropped; R21-12 (money written in many places) and R21-28: open |
 
 Also, for the model: a line whose quantity is typed as a bare "1" is priced "1.00 EA",
 a unit nobody entered. Each row is marked fixed here as it is fixed.
@@ -5459,7 +5459,33 @@ checks, the job file's refusals.
 | M21-5 | **reproduced**: the workbook writes counts of lines as dollars ("$1.00" lines) | `sheets/src/lib.rs` | **fixed**: a count formula is a kind of its own, written as a whole number in the workbook and the CSV; quantities are written to two places and up to four ("40.00", not "40."); seen in the written file (format "0" on Recap C4 and Divisions C4) |
 | M21-10 | **reproduced**, minor: a refusal names a wall that was rolled back, and does not offer the wall types the job has | `building.rs` | open |
 | M21-12 | suspected: materials matched by two rules (exact in `derive` and `view`; capitals and spacing ignored in `job` and `tables`) | several | open |
-| M21-11 | suspected: more than 24 suppliers runs the workbook's columns past Z | `export.rs` | open |
+| M21-11 | suspected: more than 24 suppliers runs the workbook's columns past Z | `export.rs` | **fixed**: column letters go on past Z (AA, AB, ...); test `a_column_past_z_is_two_letters` |
 | M21-13 | by reading: the sixteen divisions added in both the command line and the export; like-for-like worked in the command line (the window's R21-10); a prior's total in `tables` | several | like-for-like **fixed** (one place in the model); a prior's total fixed (M21-7); the sixteen divisions added in two places: open |
 | M21-14 | small: a comment twice; `any(|_| true)`; statuses that default to Known when there is nothing; a clash depth that may be dropped; a CSV cell starting with an apostrophe loses it | several | open |
 | (from the window's reviewer) | a line whose quantity is typed as a bare "1" is priced "1.00 EA", a unit nobody entered | `lines.rs` | open |
+
+
+## The twenty-first judgment, while it runs: the first wall of a new job (J21-12, J21-13; call 86)
+
+Read from the judge's notes before its report (it is still running): from a new job,
+Add level, Wall, a stranger's first five seconds went wrong four ways, and the saved
+job held a wall type of "2 ft" and a door 0' 6" wide that nobody typed. The cause was
+not the fault `planw` found: the number keys take a tool in hand, and a length typed
+with a wall in hand and no start clicked took another tool by its first digit, the
+rest of the length going into that tool's sizes. Each of the four is changed (call
+86) and walked in the window on the new build, picture by picture
+(`research/` has none of these; they are in the scratch folder of the day):
+
+| Step | Before | Now, as seen |
+|---|---|---|
+| Wall picked on a new job | THICKNESS empty, HEIGHT a grey "9 ft" that Enter would not take | HEIGHT holds "9 ft", the level's floor-to-floor, as a value; an example now reads "like 6 in" |
+| a click with sizes open | "Still to be typed: Height" (the field that showed 9 ft) | "Still to be typed: Thickness." |
+| "6 in", Enter | went to Height and asked for it | "Wall in hand." |
+| a digit typed with no start clicked | took Door (or Wall) in hand, silently | "Wall is in hand: click where it starts first, then a number is a length. A number typed now is not another tool..." |
+| a click with a length typed | nothing, no word | "Nothing was placed: the length typed is not set yet..." |
+| Esc on a typed length | "Cancelled." (read as the wall cancelled) | "Length let go. The start is kept..." |
+
+The saved job after the walk: one wall, type "wall 6 in", (-15.0833, -9) to (5.4167,
+-9): 20' 6" as typed. 290 tests pass. **Not yet done:** the sixteen window
+demonstrations have not been rerun on this build (the judge has the display), and
+none of this has been judged.

@@ -1,6 +1,7 @@
-//! The building in space, as a model on a table under studio light: one light that casts
-//! shadows, one that fills them, matte surfaces, a neutral ground with a grid and no
-//! horizon, and a camera that eases instead of jumping. No sky, no sun, no grass.
+//! The building in space, lit as a place (call 68): a sun that casts shadows and a sky
+//! that lights what the sun does not reach, physically based surfaces, a ground with a
+//! grid under a soft sky and horizon, and a camera that eases instead of jumping. No
+//! grass, trees or scenery.
 //!
 //! Everything drawn is an element of the job, placed by `plumbline-world`: walls with their
 //! openings cut, floors, the roof's planes and lines, ducts, pipes, conduit and cable at
@@ -376,6 +377,7 @@ pub fn rebuild(
     mut doc: ResMut<Doc>,
     snap: Res<Snapshot>,
     mut drawn: Local<u64>,
+    mut framed_about: Local<Option<[f64; 3]>>,
     mut orbit: ResMut<Orbit>,
     mut drawing: ResMut<Drawing>,
     solids: Res<Solids>,
@@ -410,7 +412,15 @@ pub fn rebuild(
             orbit.distance = size * 1.6;
             orbit.target = Vec3::new(0.0, top as f32 * 0.42, 0.0);
             orbit.home = (orbit.target, orbit.distance);
-            orbit.now = (orbit.target, orbit.yaw, orbit.pitch, orbit.distance * 1.25);
+            // As the job opens the eye is set where it frames it. After that no view
+            // jumps (R21-21: a file brought in, a drawing added or a scale set cut to
+            // the new framing): the eye keeps its place in the building, carried
+            // across the move of the view's origin, and eases to the new framing.
+            match *framed_about {
+                None => orbit.now = (orbit.target, orbit.yaw, orbit.pitch, orbit.distance * 1.25),
+                Some(before) => orbit.now.0 += to_view(origin, before),
+            }
+            *framed_about = Some(origin);
             drawing.reach = (size * 2.4 / 10.0).ceil() * 10.0;
             for e in &ground {
                 commands.entity(e).despawn();
@@ -1289,7 +1299,16 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
     // An item in hand: a click on the model sets one down there, on the level on show.
     if let (true, Some(item), false) = (buttons.just_pressed(MouseButton::Left) && free && !on_panel, doc.placing.clone(), carry.path.is_some()) {
         let at = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p);
-        let level = doc.show.storey.clone().or_else(|| plumbline_world::building::storey_totals(&mut doc.job).into_iter().min_by(|a, b| a.elevation.unwrap_or(f64::MAX).total_cmp(&b.elevation.unwrap_or(f64::MAX))).map(|s| s.path));
+        // The level on show alone; with every level on show, the level whose floor is
+        // under what was clicked (a click on the upper floor stands it on the upper
+        // floor: it stood on the lowest level whatever was clicked, R21-25); under
+        // every floor, the lowest.
+        let levels = plumbline_world::building::storey_totals(&mut doc.job);
+        let height = at.map(|p| f64::from(p.y) + doc.origin[2]);
+        let under = height.and_then(|h| levels.iter().filter(|s| s.elevation.is_some_and(|e| e <= h + 0.5)).max_by(|a, b| a.elevation.unwrap_or(f64::MIN).total_cmp(&b.elevation.unwrap_or(f64::MIN))).map(|s| s.path.clone()));
+        let lowest = levels.iter().min_by(|a, b| a.elevation.unwrap_or(f64::MAX).total_cmp(&b.elevation.unwrap_or(f64::MAX))).map(|s| s.path.clone());
+        let level = doc.show.storey.clone().or(under).or(lowest);
+        let level_name = level.as_ref().and_then(|l| levels.iter().find(|s| &s.path == l)).map(|s| crate::panels::pretty(&s.name)).unwrap_or_default();
         let tidy = |x: f64| (x * 1000.0).round() / 1000.0;
         let made = match (at, level) {
             (None, _) => Err("click on the floor or the ground, where it is to stand".to_string()),
@@ -1309,7 +1328,7 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
                 let shapeless = doc.job.find(&path).and_then(|e| doc.job.world.get::<plumbline_world::Placed>(e)).filter(|p| p.size_ft().is_none()).map(|p| p.size.source.clone());
                 match shapeless {
                     Some(why) => doc.say(Tone::Warned, format!("Set one down, but it cannot be drawn or tested for clashes yet: {why}. Select it under Items and measure what is missing; this one will follow.")),
-                    None => doc.say(Tone::Done, "Set one down. Pick it up to move it: press on it and carry it."),
+                    None => doc.say(Tone::Done, format!("Set one down on {level_name}. Pick it up to move it: press on it and carry it.")),
                 }
             }
             Err(why) => crate::tools::cant(&mut doc, "set it down", why),

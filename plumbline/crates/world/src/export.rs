@@ -101,9 +101,19 @@ fn title(job: &Job) -> String {
     job.world.get::<crate::JobInfo>(job.root()).map(|j| j.title.clone()).unwrap_or_default()
 }
 
-/// A column's letter: A, B, ... Z. No sheet here has more.
-fn col(i: usize) -> char {
-    (b'A' + i as u8) as char
+/// A column's letters as a workbook writes them: A, B, ... Z, AA, AB, ... (M21-11: past
+/// Z it wrote "[", and a job with more than twenty-four suppliers a workbook that would
+/// not open.)
+fn col(mut i: usize) -> String {
+    let mut letters = Vec::new();
+    loop {
+        letters.push((b'A' + (i % 26) as u8) as char);
+        if i < 26 {
+            break;
+        }
+        i = i / 26 - 1;
+    }
+    letters.iter().rev().collect()
 }
 
 /// What a line is on, as a reader outside the job is told: the job itself has no name
@@ -519,4 +529,14 @@ pub fn values(sheets: &[OutSheet]) -> Vec<Vec<String>> {
         rows.extend(sheet.rows.iter().map(|r| r.iter().map(Out::said).collect()));
     }
     rows
+}
+
+#[cfg(test)]
+mod column_letters {
+    use super::col;
+
+    #[test]
+    fn a_column_past_z_is_two_letters() {
+        assert_eq!([col(0), col(1), col(25), col(26), col(27), col(51), col(52), col(701), col(702)], ["A", "B", "Z", "AA", "AB", "AZ", "BA", "ZZ", "AAA"]);
+    }
 }

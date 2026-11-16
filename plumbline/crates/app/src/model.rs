@@ -297,6 +297,35 @@ impl Doc {
         self.draw.edits += 1;
         self.draw.label = what.to_string();
     }
+    /// The job has changed under the window (a thing deleted, a step taken back): let
+    /// go of whatever the window was holding that is no longer in the job. What is
+    /// selected, the level on show alone, the roof on show, each level's and system's
+    /// own switch, and a thing in hand to be set down. One place for it (R21-22: a
+    /// level deleted while it was on show alone left the window showing a level that
+    /// was gone, and so nothing at all).
+    pub fn let_go_of_what_is_gone(&mut self) {
+        let gone = |job: &mut Job, held: &Option<String>| held.as_ref().is_some_and(|p| job.find(p).is_none());
+        if gone(&mut self.job, &self.selected) {
+            self.selected = None;
+        }
+        if gone(&mut self.job, &self.hover) {
+            self.hover = None;
+        }
+        if gone(&mut self.job, &self.show.storey) {
+            self.show.storey = None;
+            self.draw.tool = None;
+            self.draw.picked.clear();
+        }
+        if gone(&mut self.job, &self.roof) {
+            self.roof = None;
+        }
+        if gone(&mut self.job, &self.placing) {
+            self.placing = None;
+        }
+        let job = &mut self.job;
+        self.show.off_levels.retain(|p| job.find(p).is_some());
+        self.show.off_systems.retain(|p| job.find(p).is_some());
+    }
     /// The panels have something new to show.
     pub fn touch(&mut self) {
         self.revision += 1;

@@ -3150,3 +3150,30 @@ entered, as a typed number is. Anything worked out in EA is still whole (so "2.5
 is 3: it is arithmetic, and says what it was rounded from). (A first form of this
 call made whole only what was worked from the takeoff; it made 2.5 anchors of
 "n / 2", which J11-3's test caught, and was withdrawn before it was committed.)
+
+### Call 86. The first wall of a new job: what is offered is real, an example says it is one, and a number typed is never a tool (2026-11-16)
+
+From the twenty-first judgment (J21-12, J21-13), which walked the path a stranger
+walks: a new job, a level, Wall. Four things met him in his first five seconds, and
+each is changed:
+
+1. **An example looked like a value.** Each size field showed in grey what a value
+   looks like ("9 ft"), and Enter did not take it. An example now says it is one:
+   "like 9 ft". And where the program has a real figure to offer it offers it as a
+   value to accept: a wall's height is offered as the floor-to-floor of the level it
+   is drawn on, which the person typed a moment before. It is still theirs to type
+   over, and what is set is recorded as set in the window, as before.
+2. **The refusal named the wrong field.** A click with sizes still open said "Still to
+   be typed: Height" and left out the empty field the cursor stood in. It names every
+   field still empty.
+3. **A number typed was taken for a tool.** The number keys take a tool in hand
+   (1 Wall, 2 Door). With a wall in hand and no start clicked, a length typed began
+   with a digit, the digit took another tool in hand, and the rest of the length went
+   into that tool's sizes: a wall type of "2 ft" and a door 0' 6" wide that nobody
+   typed. With a tool in hand a number key is now never a tool: it is the start of a
+   length where a line has its start, and otherwise it is answered with what to do
+   ("Wall is in hand: click where it starts first..."). To change tools, click the
+   tool, or Esc and then its number.
+4. **A click or an Esc that did nothing was not said.** A click on the plan with a
+   length typed and not yet entered now says the length is not set; Esc on a typed
+   length says the start is kept.

@@ -69,7 +69,10 @@ fn said(file: &str, lost: &[String], b: &Brought) -> (String, bool) {
 /// list a supplier's name can follow a comma ("lists/ridge.xlsx, Ridge Supply").
 pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
     let (name, supplier) = match (what, typed.rsplit_once(',')) {
-        (Bring::Prices, Some((file, who))) if !who.trim().is_empty() && !who.contains('.') => (file.trim(), Some(who.trim().to_string())),
+        // What follows the last comma is the supplier, unless it is the end of the
+        // file's own name (a name with a comma in it). A supplier's name can have a full
+        // stop: "Ridge Supply Co." (R21-27: any full stop made it part of the file).
+        (Bring::Prices, Some((file, who))) if !who.trim().is_empty() && !who.trim().rsplit_once('.').is_some_and(|(_, end)| matches!(end.to_ascii_lowercase().as_str(), "csv" | "xlsx" | "xlsm" | "xls")) => (file.trim(), Some(who.trim().to_string())),
         _ => (typed.trim(), None),
     };
     // A maker's sheet can say what kind of thing it is for, after a comma.
@@ -156,7 +159,11 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
     match done {
         Ok((out, to_see)) => {
             doc.job.derive();
-            doc.framed = false;
+            // Only a model brings a building to be framed: a price list, an assembly
+            // list or an estimate leaves the view where it is (R21-21).
+            if what == Bring::Model {
+                doc.framed = false;
+            }
             doc.edit("Bring in");
             // What was not used or not read has to be seen: it is said over the model.
             doc.say(if to_see { Tone::Warned } else { Tone::Done }, out);

@@ -276,8 +276,12 @@ fn begin(doc: &mut Doc, tool: Tool, ask: bool) {
     } else if tool.takes() > 0 && (ask || !doc.draw.settings.contains_key(tool.name())) {
         // What it will place, to be read and typed over: the last sizes typed for it,
         // or, for a door, the height and sill a residential door has.
+        // A wall's height is offered as the floor-to-floor of the level it is drawn
+        // on: a figure the job holds, to accept or type over (call 86).
+        let level_height = doc.show.storey.clone().and_then(|s| doc.job.find(&s)).and_then(|e| doc.job.world.get::<plumbline_world::Level>(e)).and_then(|l| l.height.value.as_ref().map(|v| units::show_length(v, &l.height.unit)));
         let shown = doc.draw.settings.get(tool.name()).cloned().unwrap_or_else(|| match tool {
             Tool::Door => vec![String::new(), "6' 8\"".to_string(), "0 ft".to_string()],
+            Tool::Wall => vec![String::new(), level_height.unwrap_or_default()],
             _ => vec![String::new(); tool.takes()],
         });
         let again = doc.draw.settings.contains_key(tool.name());
@@ -384,7 +388,18 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             });
             // The next piece starts where this one ended; a refused one leaves its start.
             doc.draw.picked = vec![if result.is_ok() { pts[1] } else { pts[0] }];
-            Some(result.map(|made| format!("Added {}, {} long.", made.join(", "), units::feet_as_ft_in(((pts[1][0] - pts[0][0]).powi(2) + (pts[1][1] - pts[0][1]).powi(2)).sqrt(), 16))))
+            // How long it is, is the model's figure for what was just made, not the
+            // window's own distance between the two picks (R21-3).
+            if result.is_ok() {
+                doc.job.derive();
+            }
+            Some(result.map(|made| {
+                let long = made.last().and_then(|path| doc.job.find(path)).and_then(|e| doc.job.world.get::<plumbline_world::Measure>(e)).and_then(|m| m.0.get("plan_length").and_then(|d| d.value));
+                match long {
+                    Some(feet) => format!("Added {}, {} long.", made.join(", "), units::feet_as_ft_in(feet, 16)),
+                    None => format!("Added {}.", made.join(", ")),
+                }
+            }))
         }
         Tool::Door | Tool::Window => {
             let kind = if tool == Tool::Door { Kind::Door } else { Kind::Window };
@@ -442,10 +457,18 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
                 doc.touch();
                 return;
             }
-            let corners = std::mem::take(&mut doc.draw.picked);
-            doc.draw.tool = None;
-            doc.draw.swallow = true;
-            Some(roof_over(doc, &corners, s[0], s[1], traced))
+            // The corners are let go only when the roof is made: an outline that is
+            // refused (a pitch that will not do, an outline that crosses itself) keeps
+            // every corner clicked and the tool in hand, to set right and close again
+            // (R21-4: the refusal threw them all away).
+            let corners = doc.draw.picked.clone();
+            let made = roof_over(doc, &corners, s[0], s[1], traced).map_err(|why| format!("{why}. The corners clicked are kept: set it right and click the first corner again, or press Esc to let them go"));
+            if made.is_ok() {
+                doc.draw.picked.clear();
+                doc.draw.tool = None;
+                doc.draw.swallow = true;
+            }
+            Some(made)
         }
         Tool::Scale => {
             doc.draw.picked.push(at);
@@ -689,16 +712,7 @@ pub fn step(doc: &mut Doc, redo: bool) {
             doc.edited = true;
             doc.draw.picked.clear();
             // What the step took away is no longer there to be selected, shown or drawn on.
-            if doc.selected.as_ref().is_some_and(|p| doc.job.find(p).is_none()) {
-                doc.selected = None;
-            }
-            if doc.show.storey.as_ref().is_some_and(|p| doc.job.find(p).is_none()) {
-                doc.show.storey = None;
-                doc.draw.tool = None;
-            }
-            if doc.roof.as_ref().is_some_and(|p| doc.job.find(p).is_none()) {
-                doc.roof = None;
-            }
+            doc.let_go_of_what_is_gone();
             doc.say(Tone::Done, format!("{}: {label}.", if redo { "Redone" } else { "Undone" }));
         }
         Err(why) => cant(doc, if redo { "redo" } else { "undo" }, why),
@@ -719,6 +733,8 @@ pub fn delete(doc: &mut Doc) {
             Ok(gone) => {
                 doc.selected = None;
                 doc.hover = None;
+                // A level deleted while it was on show alone, a roof, a thing in hand.
+                doc.let_go_of_what_is_gone();
                 doc.edit("Delete");
                 let said = match &traced {
                     Some((name, n)) if *n > 0 => format!("Deleted {name}. {} traced over it {} where {} and still {} so.", if *n == 1 { "1 thing".to_string() } else { format!("{n} things") }, if *n == 1 { "stays" } else { "stay" }, if *n == 1 { "it was" } else { "they were" }, if *n == 1 { "says" } else { "say" }),
@@ -815,11 +831,20 @@ pub fn clicks(mut doc: ResMut<Doc>, mouse: Res<ButtonInput<MouseButton>>, window
     if mouse.just_pressed(MouseButton::Left) {
         if let Some((Entry::Settings(tool), _)) = doc.entry.clone() {
             if windows.single().ok().and_then(|w| w.cursor_position().map(|c| over_model(w, c))).unwrap_or(false) {
-                let empty = doc.form.iter().enumerate().filter(|(i, v)| v.is_empty() && *i != doc.form_at).map(|(i, _)| tool.fields()[i].0).collect::<Vec<_>>();
+                // Every field still empty, the one being typed in too if nothing is in
+                // it yet (call 86: it named the others and left that one out).
+                let typed_so_far = doc.entry.as_ref().map(|(_, t)| t.trim().is_empty()).unwrap_or(true);
+                let empty = doc.form.iter().enumerate().filter(|(i, v)| if *i == doc.form_at { typed_so_far } else { v.is_empty() }).map(|(i, _)| tool.fields()[i].0).collect::<Vec<_>>();
                 doc.say(Tone::Refused, format!("Nothing was placed: the {}'s sizes are still open. {}Press Enter first, then click.", tool.name().to_lowercase(), if empty.is_empty() { String::new() } else { format!("Still to be typed: {}. ", empty.join(", ")) }));
                 doc.touch();
             }
         }
+    }
+    // A click on the plan with a length typed and not yet entered places nothing either:
+    // that is said (call 86, R21-8).
+    if mouse.just_pressed(MouseButton::Left) && doc.draw.tool.is_some() && matches!(doc.entry, Some((Entry::Length, _))) && windows.single().ok().and_then(|w| w.cursor_position().map(|c| over_model(w, c))).unwrap_or(false) {
+        doc.say(Tone::Refused, "Nothing was placed: the length typed is not set yet. Press Enter to go that far toward the pointer, or Esc to let the length go.");
+        doc.touch();
     }
     if !mouse.just_pressed(MouseButton::Left) || doc.draw.tool.is_none() || doc.entry.is_some() || !doc.plan {
         return;

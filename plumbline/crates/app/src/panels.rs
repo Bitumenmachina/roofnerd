@@ -207,7 +207,7 @@ fn centroid(points: &[[f64; 2]]) -> [f64; 2] {
 /// A panel floating over the model: a sheet of frosted glass with round corners, a
 /// light edge and a shadow, a gap clear of the window's edge and of the next panel.
 /// The node says where it would sit hard against the edges; the gaps are put in here.
-fn docked(mut node: Node, _edge: UiRect) -> impl Bundle {
+fn docked(mut node: Node) -> impl Bundle {
     node.position_type = PositionType::Absolute;
     let float = |v: Val| match v {
         Val::Px(x) => px(if x == 0.0 { theme::GAP } else { x + 2.0 * theme::GAP }),
@@ -262,7 +262,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, plans
 fn views(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     let mut node = Node { top: px(TOP_H), right: px(RIGHT_W), padding: UiRect::all(px(6.0)), align_items: AlignItems::Center, column_gap: px(6.0), ..default() };
     node.border_radius = BorderRadius::all(px(theme::BUTTON_RADIUS + 6.0));
-    p.spawn(docked(node, UiRect::ZERO)).with_children(|bar| {
+    p.spawn(docked(node)).with_children(|bar| {
         for (label, key, plan, walk) in [("3D", "", false, false), ("Plan", "T", true, false), ("Walk", "V", false, true)] {
             let on = doc.plan == plan && doc.walk == walk;
             button(bar, fonts, label, key, on).observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>, mut orbit: ResMut<crate::scene::Orbit>, snap: Res<Snapshot>| {
@@ -278,7 +278,7 @@ fn views(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
 /// Along the top: the job, Save, Undo and Redo, and at all times the price and how
 /// much of the job is not yet sure.
 fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
-    p.spawn(docked(Node { top: px(0.0), left: px(0.0), right: px(0.0), height: px(TOP_H), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), ..default() }, UiRect::bottom(px(1.0)))).with_children(|bar| {
+    p.spawn(docked(Node { top: px(0.0), left: px(0.0), right: px(0.0), height: px(TOP_H), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), ..default() })).with_children(|bar| {
         wordmark(bar, fonts);
         divider(bar);
         // A long title is cut and says it is cut; it is whole on the right. Cut at 44
@@ -337,7 +337,7 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
 fn status_line(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     let first = pretty(&one_line(&doc.message, 150));
     let (dot, ink) = tone_ink(doc.tone);
-    p.spawn(docked(Node { bottom: px(0.0), left: px(0.0), right: px(0.0), height: px(STATUS_H), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(9.0), overflow: Overflow::clip(), ..default() }, UiRect::top(px(1.0)))).with_children(|bar| {
+    p.spawn(docked(Node { bottom: px(0.0), left: px(0.0), right: px(0.0), height: px(STATUS_H), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(9.0), overflow: Overflow::clip(), ..default() })).with_children(|bar| {
         bar.spawn((Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, BackgroundColor(dot)));
         bar.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_child((text(fonts, first, 12.0, Weight::Regular, ink), TextLayout::no_wrap()));
         bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "", 12.0, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap(), PointerText));
@@ -551,7 +551,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
     use crate::tools::{self, Tool};
     // It scrolls when it holds more than fits: a row is never squeezed.
     p.spawn((
-        docked(Node { top: px(TOP_H), left: px(0.0), max_height: Val::Vh(83.0), width: px(LEFT_W), flex_direction: FlexDirection::Column, padding: UiRect { left: px(8.0), right: px(8.0), top: px(4.0), bottom: px(10.0) }, overflow: Overflow::scroll_y(), ..default() }, UiRect::right(px(1.0))),
+        docked(Node { top: px(TOP_H), left: px(0.0), max_height: Val::Vh(83.0), width: px(LEFT_W), flex_direction: FlexDirection::Column, padding: UiRect { left: px(8.0), right: px(8.0), top: px(4.0), bottom: px(10.0) }, overflow: Overflow::scroll_y(), ..default() }),
         ScrollPosition(Vec2::new(0.0, scrolled)),
         BrowserScroll,
     ))
@@ -1015,7 +1015,7 @@ fn tool_button<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, 
 /// it, over every tool there is, grouped by what it builds.
 fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     use crate::tools::{self, Tool};
-    p.spawn(docked(Node { left: px(LEFT_W), right: px(RIGHT_W), bottom: px(STATUS_H), height: px(BUILD_H), flex_direction: FlexDirection::Column, ..default() }, UiRect::top(px(1.0)))).with_children(|bar| {
+    p.spawn(docked(Node { left: px(LEFT_W), right: px(RIGHT_W), bottom: px(STATUS_H), height: px(BUILD_H), flex_direction: FlexDirection::Column, ..default() })).with_children(|bar| {
         // The tool in hand: its fields, each typed into where it stands.
         let typing = match doc.entry {
             Some((Entry::Settings(tool), _)) => Some(tool),
@@ -1418,7 +1418,7 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
 /// Down the right: what is selected, as fields and buttons; with nothing selected, the job.
 fn right(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, plans: &crate::plans::Plans, scrolled: f32) {
     p.spawn((
-        docked(Node { top: px(TOP_H), right: px(0.0), max_height: Val::Vh(88.0), width: px(RIGHT_W), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(14.0), px(10.0)), overflow: Overflow::scroll_y(), ..default() }, UiRect::left(px(1.0))),
+        docked(Node { top: px(TOP_H), right: px(0.0), max_height: Val::Vh(88.0), width: px(RIGHT_W), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(14.0), px(10.0)), overflow: Overflow::scroll_y(), ..default() }),
         ScrollPosition(Vec2::new(0.0, scrolled)),
         InspectorScroll,
     ))
