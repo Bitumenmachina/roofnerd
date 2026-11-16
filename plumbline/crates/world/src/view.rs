@@ -712,7 +712,7 @@ impl Pricing {
     /// priced, and the screen the price is read on said nothing.)
     pub fn allowances_alone_said(&self) -> Option<String> {
         let (n, sum) = self.allowances_alone()?;
-        let money = sum.map(|x| money(x)).unwrap_or_else(|| "no figure".to_string());
+        let money = sum.map(money).unwrap_or_else(|| "no figure".to_string());
         Some(format!("{n} thing{} priced by an allowance and no cost line ({money}): an allowance is the budget's figure and is not in this price. Give {} cost lines to carry {} into it", if n == 1 { " is" } else { "s are" }, if n == 1 { "it" } else { "them" }, if n == 1 { "it" } else { "them" }))
     }
 }

@@ -865,7 +865,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 cell(r, 24.0, true, |_| {});
                 cell(r, 0.0, false, |c| words(c, fonts, "In no division: in the job cost, and in none of the sixteen", 12.5, Weight::Medium, theme::status_ink(Status::Unknown)));
                 cell(r, 80.0, true, |c| words(c, fonts, if est.no_division.members == 1 { "1 line".to_string() } else { format!("{} lines", est.no_division.members) }, 11.5, Weight::Regular, theme::ink_faint()));
-                cell(r, 130.0, true, |c| words(c, fonts, est.no_division.value.map(|x| view::money(x)).unwrap_or_else(|| "no figure".to_string()), 12.5, Weight::Semibold, theme::status_ink(Status::Unknown)));
+                cell(r, 130.0, true, |c| words(c, fonts, est.no_division.value.map(view::money).unwrap_or_else(|| "no figure".to_string()), 12.5, Weight::Semibold, theme::status_ink(Status::Unknown)));
             });
         }
     });
@@ -888,7 +888,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         }
         let undivided: Vec<&view::SheetLine> = est.lines.iter().filter(|l| l.division.is_none()).collect();
         if !undivided.is_empty() {
-            ordered.push(("No division".to_string(), est.no_division.value.map(|x| view::money(x)).unwrap_or_else(|| "no figure".to_string()), Status::Unknown, undivided));
+            ordered.push(("No division".to_string(), est.no_division.value.map(view::money).unwrap_or_else(|| "no figure".to_string()), Status::Unknown, undivided));
         }
         for (heading, said, status, its) in &ordered {
         // The division and what it comes to, on a row of their own: beside the column
