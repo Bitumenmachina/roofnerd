@@ -578,6 +578,13 @@ pub fn rebuild(
                         let middle = va + along * ((x0 + x1) / 2.0) + Vec3::Y * ((y0 + y1) / 2.0);
                         build.piece(&p.path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(x1 - x0, y1 - y0, deep as f32) }, theme::lumber(), 0.85, 0.0, true);
                     }
+                    // The wall is still one thing to pick: a clear body the size of the
+                    // wall takes the click, the pointer and a double-click, so that a
+                    // click between two studs picks the wall and does not go through to
+                    // whatever is behind it (J21-21: a double-click between studs flew
+                    // into the lumber of the far wall).
+                    let whole = va + along * (length / 2.0) + Vec3::Y * (*height as f32 / 2.0);
+                    build.piece(&p.path, None, solids.cube.clone(), Transform { translation: whole, rotation: turn, scale: Vec3::new(length, *height as f32, deep as f32) }, theme::lumber().with_alpha(0.0), 0.85, 0.0, false);
                     continue;
                 }
                 let outside = wd.map(|d| d.outside).unwrap_or(Outside::NotKnown);
