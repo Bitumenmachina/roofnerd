@@ -429,6 +429,14 @@ impl Doc {
         self.form = values;
         self.touch();
     }
+    /// A form opened again after what was typed in it was refused: the field the refusal
+    /// is about holds what was typed, and the next key adds to it. (Opened as a fresh
+    /// form is, the next key replaced it: told "type the unit with it", a person typed
+    /// " ft" after the 9 and lost the 9: J24B-45.)
+    pub fn reopen_form(&mut self, field: Entry, values: Vec<String>, at: usize) {
+        self.open_form(field, values, at);
+        self.fresh = false;
+    }
     /// What a button does: the key it stands for. A value half typed is let go first, as
     /// a click elsewhere lets go of a field in any program.
     pub fn press(&mut self, key: KeyCode) {

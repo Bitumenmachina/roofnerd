@@ -188,6 +188,13 @@ fn checked(tool: Tool, values: &[String]) -> Result<Vec<String>, (usize, String)
         Tool::Wall => {
             length(0, false)?;
             length(1, false)?;
+            // A length typed where the thickness goes was taken, and a wall 20 ft
+            // thick was drawn without a word (J24B-48). Nothing built in a house is
+            // 4 ft thick; a wall that is can be made at the command line.
+            let thick = units::parse_length(&parts[0]).and_then(|(len, unit)| len.feet(unit)).unwrap_or(0.0);
+            if thick > 4.0 {
+                return Err((0, format!("{:?} is not a wall's thickness: that is written like 6 in. A wall's length is typed after its first corner is clicked", parts[0])));
+            }
         }
         Tool::Door | Tool::Window => {
             length(0, false)?;
@@ -310,7 +317,7 @@ pub fn settings_entered(doc: &mut Doc, tool: Tool, values: &[String]) {
             begin(doc, tool, false);
         }
         Err((at, why)) => {
-            doc.open_form(Entry::Settings(tool), values.to_vec(), at);
+            doc.reopen_form(Entry::Settings(tool), values.to_vec(), at);
             cant(doc, &format!("use that {}", tool.fields()[at].0.to_lowercase()), why);
         }
     }
@@ -335,7 +342,7 @@ pub fn new_storey(doc: &mut Doc, values: &[String]) {
             // the refusal is about: it went back to the name, and what was typed to
             // put a floor-to-floor right was typed into the name (seen 2026-11-16).
             let at = (0..values.len()).rev().find(|&i| !values[i].trim().is_empty() && why.contains(&format!("{:?}", values[i].trim()))).or_else(|| values.iter().position(|v| v.trim().is_empty())).unwrap_or(0);
-            doc.open_form(Entry::Storey, values.to_vec(), at);
+            doc.reopen_form(Entry::Storey, values.to_vec(), at);
             cant(doc, "add the level", why);
         }
     }
@@ -381,7 +388,7 @@ pub fn new_line(doc: &mut Doc, values: &[String]) {
         }
         Err(why) => {
             // The form stays open, to be put right.
-            doc.open_form(Entry::Line, values.to_vec(), values.iter().position(|v| v.trim().is_empty()).unwrap_or(1));
+            doc.reopen_form(Entry::Line, values.to_vec(), values.iter().position(|v| v.trim().is_empty()).unwrap_or(1));
             cant(doc, "add the cost line", why);
         }
     }

@@ -3456,3 +3456,66 @@ read as a takeoff diagram, not a house."
 
 Not done: the same for the coloured centre lines of ducts and pipes, which are what a
 run is drawn as and have no other look yet (D6).
+
+### Call 97. What the twenty-fourth judge's look and words changed in the window (2026-11-16)
+
+The twenty-fourth judgment, part B, failed the look and the words
+(`research/judgment-24b-notes.md`; STATUS.md has a row for each finding). These are
+the decisions made in answering it. Each changes something a person sees.
+
+- **"More below" is a strip of its own under what scrolls**, inside the panel's card,
+  and a click on it goes a screenful down. It was a pill laid over the foot of the
+  panel and it lay on words on nearly every screen (J24B-2). It takes 22 dots of the
+  panel while there is more below, and none at the foot.
+- **A panel opens at its head.** A thing just selected, and a tab of the sheet just
+  picked, start at the top; the place a panel was scrolled to is kept only while what
+  it shows stays the same (J24B-23, -30).
+- **The glass is thinner** (0.44 of its tint where it was 0.60), and what is behind it
+  is made a little richer in colour before the tint goes over: it was judged a grey
+  sheet (J24B-1). Over a plan it is as it was: thin glass over white paper is no
+  panel at all.
+- **A form refused keeps what was typed, and the next key adds to it.** Told "type
+  the unit with it", a person typed " ft" after the 9 and lost the 9 (J24B-45). A
+  field that the next key will replace (one opened holding a value) is drawn with its
+  words selected, as any program draws them, and Ctrl+A takes the whole of a field.
+- **Backspace in an empty field does nothing.** It went back into the field before
+  and rubbed that out (J24B-46). A comma or Tab still goes on; a click goes back.
+- **The wall tool refuses a thickness over 4 ft**, saying a length is typed after the
+  first corner is clicked: a length typed where the thickness goes drew a wall 20 ft
+  thick without a word (J24B-48). Nothing in a house is 4 ft thick; a wall that is can
+  still be made at the command line, which takes what it is given.
+- **"All levels" brings back every level**, a level whose own switch was off among
+  them (J24B-35).
+- **A system's switch reads on only while its trade is on**, and switched on with its
+  trade off it brings the trade back (J24B-37).
+- **Supply air is a pale sky blue** (0x6FA8DC), well off the accent, so a selected
+  duct can be told on plan (J24B-27). The Mechanical swatch follows it.
+- **In Open items and under a line of the sheet, the mark says how sure and the words
+  are in ink** (VISUAL.md A6: "a panel is not a column of red sentences"). Under an
+  estimate line nothing repeats what a field on the line already says ("no price",
+  "no production rate"). The recap names the first three lines the job cost leaves
+  out and then says how many more, "each marked on its line below": every one is
+  still marked on its own line, so nothing is left out silently.
+- **The estimate's columns are Quantity, Unit cost, Material, Labor, and Sub,
+  general** (they read Priced, At, Material, Labor, General). The column totals say
+  what each holds: "Labor: labor, fabrication and supervision. Sub, general:
+  subcontract and general conditions." The recap's "Labor none" stood over a LABOR
+  total of supervision's money (J24B-32).
+- **A labor line's switch reads "Labor on" or "Labor off"** (it read "On: switch
+  off": a state and a command at once).
+- **A field on the sheet opened empty shows what could be typed**: "like 40 SF/hr"
+  for a production rate (J24A-4, J24B-54), "like 2.10" for a unit cost.
+- **A roof plane's tag waits with the roof's coloured lines** (call 96 kept the tags;
+  the judge of the copy before call 96 named "number labels on the roof" with the
+  lines, and with the lines gone the tags were the diagram that was left). On plan,
+  on a roof not dressed, and with the roof or anything of it selected, they are
+  there.
+- **The view's name comes first on the card at the lower right**, then where the
+  pointer is: with the pointer off the model the card is one word and not a rule with
+  nothing beside it (J24B-3). The line of what was done holds 170 letters (120).
+
+Left as they are, with the reason: the refusal of a number with no unit still says a
+laser has to be set to send its unit (the fixed rules name the laser, and that
+sentence is for the person holding one); a system's class is written as its standard
+writes it ("Supply Air", "Domestic Cold Water") where the job's own name for the
+system is in a builder's hand ("Supply air").

@@ -68,6 +68,7 @@ fn cell(p: &mut ChildSpawnerCommands, width: f32, right: bool, build: impl FnOnc
 /// A figure on the sheet that is changed where it stands: it is drawn as a field, a
 /// click on it opens it, and while it is being typed it shows what is typed.
 fn editable(c: &mut ChildSpawnerCommands, fonts: &Fonts, name: String, said: String, ink: Color, typed: Option<&str>, open: impl Fn(&mut Doc) + Send + Sync + 'static) {
+    let label = name.clone();
     let mut e = c.spawn((
         // A field on the sheet looks like a field in the model window: round-cornered,
         // a little whiter than what it sits on, edged in the accent while it is typed in.
@@ -76,10 +77,24 @@ fn editable(c: &mut ChildSpawnerCommands, fonts: &Fonts, name: String, said: Str
         BackgroundColor(if typed.is_some() { theme::panel() } else { Color::WHITE }),
         theme::Named { name, scrolls: true },
     ));
+    // What could be typed, shown faintly in a field opened empty, as every field of the
+    // model window shows it (a production rate's opened with nothing to say what form
+    // it wants: J24A-4, J24B-54).
+    let like = match () {
+        _ if label.starts_with("Production rate") => "like 40 SF/hr",
+        _ if label.starts_with("Unit cost") => "like 2.10",
+        _ if label.starts_with("Stretch-out") => "like 24 in",
+        _ if label.starts_with("Division") => "1 to 16",
+        _ if label.ends_with("percent") => "like 10",
+        _ => "",
+    };
     e.with_children(|f| match typed {
         Some(typed) => {
             f.spawn((theme::typed(fonts, typed, 12.5, Weight::Medium, theme::ink()), TextLayout::no_wrap(), Pickable::IGNORE));
             f.spawn((Node { width: px(1.5), height: px(14.0), margin: UiRect::left(px(1.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::accent()), Pickable::IGNORE));
+            if typed.is_empty() && !like.is_empty() {
+                f.spawn((Node { margin: UiRect::left(px(3.0)), ..default() }, Pickable::IGNORE)).with_child((text(fonts, like, 12.0, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+            }
         }
         None => {
             f.spawn((text(fonts, said, 12.5, Weight::Regular, ink), TextLayout::no_wrap(), Pickable::IGNORE));
@@ -295,7 +310,7 @@ fn notes(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
             t.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::axes(px(16.0), px(7.0)), row_gap: px(2.0), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::rule()))).with_children(|r| {
                 r.spawn(Node { align_items: AlignItems::Center, column_gap: px(9.0), ..default() }).with_children(|top| {
                     dot(top, *status);
-                    top.spawn(text(fonts, what.clone(), 12.5, Weight::Medium, theme::status_ink(*status)));
+                    top.spawn(text(fonts, what.clone(), 12.5, Weight::Medium, theme::ink()));
                 });
                 r.spawn(Node { padding: UiRect::left(px(16.0)), ..default() }).with_child(text(fonts, why.clone(), 11.5, Weight::Regular, theme::ink_faint()));
             });
@@ -791,8 +806,21 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 }
             }
         }
-        for (who, why) in &est.job_cost.left_out {
-            t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, ..default() }).with_child(text(fonts, format!("left out of the job cost: {who}: {why}"), 11.5, Weight::Regular, theme::status_ink(Status::Unknown)));
+        // What the job cost leaves out: the first three by name, then how many more.
+        // Each is marked on its own line below. (Every one was a red sentence here: a
+        // wall of them over the estimate, J24B-52.)
+        let left = &est.job_cost.left_out;
+        for (i, (who, why)) in left.iter().enumerate().take(if left.len() > 4 { 3 } else { 4 }) {
+            t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, column_gap: px(7.0), align_items: AlignItems::Center, ..default() }).with_children(|u| {
+                dot(u, Status::Unknown);
+                u.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, format!("{}{who}: {why}", if i == 0 { "Left out of the job cost: " } else { "" }), 11.5, Weight::Regular, theme::ink_soft()));
+            });
+        }
+        if left.len() > 4 {
+            t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, column_gap: px(7.0), align_items: AlignItems::Center, ..default() }).with_children(|u| {
+                dot(u, Status::Unknown);
+                u.spawn(text(fonts, format!("and {} more left out of the job cost, each marked on its line below", left.len() - 3), 11.5, Weight::Medium, theme::ink_soft()));
+            });
         }
         for l in est.lines.iter().filter(|l| l.off) {
             t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(2.0), bottom: px(4.0) }, ..default() }).with_child(text(fonts, format!("switched off, out of every total: {}: {:?} ({})", l.path, l.description, money(&l.amount).0), 11.5, Weight::Regular, theme::ink_soft()));
@@ -875,7 +903,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         // The name of each column, under every division: the top of the sheet is out
         // of sight once it is scrolled, and a figure with no column named over it
         // could be any of the three (J22B-13).
-        header_row(t, fonts, &[("", 7.0, false), ("Line", 0.0, false), ("Priced", 96.0, true), ("At", 108.0, true), ("Material", 96.0, true), ("Labor", 96.0, true), ("General", 96.0, true)]);
+        header_row(t, fonts, &[("", 7.0, false), ("Line", 0.0, false), ("Quantity", 96.0, true), ("Unit cost", 108.0, true), ("Material", 96.0, true), ("Labor", 96.0, true), ("Sub, general", 96.0, true)]);
         let mut last = String::new();
         for l in its.iter().copied() {
             let selected = doc.selected.as_deref() == Some(l.path.as_str());
@@ -946,7 +974,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                         // In-house labor is switched off or on, line by line.
                         if l.class == Some(Class::Labor) {
                             let (path, line, off) = (path.clone(), line.clone(), l.off);
-                            editable(under, fonts, format!("Labor of {} on {}", l.description, l.element), if off { "Off: switch on".to_string() } else { "On: switch off".to_string() }, if off { theme::ink_faint() } else { theme::ink_soft() }, None, move |doc| {
+                            editable(under, fonts, format!("Labor of {} on {}", l.description, l.element), if off { "Labor off".to_string() } else { "Labor on".to_string() }, if off { theme::ink_faint() } else { theme::ink_soft() }, None, move |doc| {
                                 match doc.job.set_off(&path, Some(&line), !off) {
                                     Ok(()) => {
                                         doc.job.derive();
@@ -994,7 +1022,11 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 }
             });
             let mut under: Vec<(String, Status)> = Vec::new();
-            if l.amount.value.is_none() || !l.amount.note.is_empty() {
+            // What the line itself already says in a field ("no price", "no production
+            // rate") is not said again under it: a sheet of nine lines to price was
+            // nine lines each red twice (J24B-53).
+            let said_on_it = l.amount.value.is_none() && (l.unit_cost.as_ref().is_none_or(|v| v.value.is_none()) || l.rate.as_ref().is_some_and(|r| r.value.is_none()));
+            if (l.amount.value.is_none() || !l.amount.note.is_empty()) && !said_on_it {
                 under.push((l.amount.note.clone(), if l.amount.value.is_none() { Status::Unknown } else { Status::Assumed }));
             }
             if l.class.is_none() && !l.off {
@@ -1004,20 +1036,31 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 under.push((format!("its quantity: {}", l.quantity.note), Status::Assumed));
             }
             for (said, status) in under {
-                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(7.0) }, ..default() }).with_child(text(fonts, said, 11.5, Weight::Regular, theme::status_ink(status)));
+                // A mark for how sure, and the words in ink (A6).
+                t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(7.0) }, column_gap: px(7.0), align_items: AlignItems::Center, ..default() }).with_children(|u| {
+                    dot(u, status);
+                    u.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, said, 11.5, Weight::Regular, theme::ink_soft()));
+                });
             }
         }
         }
         row(t, false, None, |r| {
             cell(r, 7.0, false, |_| {});
-            cell(r, 0.0, false, |c| words(c, fonts, "Column totals", 12.5, Weight::Semibold, theme::ink()));
+            // What each column holds is said: the recap has a row for each cost type,
+            // and "Labor none" stood over a LABOR column of supervision's money (J24B-32).
+            cell(r, 0.0, false, |c| {
+                c.spawn(Node { flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(5.0)), row_gap: px(1.0), ..default() }).with_children(|c| {
+                    words(c, fonts, "Column totals", 12.5, Weight::Semibold, theme::ink());
+                    c.spawn(text(fonts, "Labor: labor, fabrication and supervision. Sub, general: subcontract and general conditions.", 11.0, Weight::Regular, theme::ink_faint()));
+                });
+            });
             cell(r, 96.0, true, |_| {});
             cell(r, 108.0, true, |_| {});
             for col in [Column::Material, Column::Labor, Column::General] {
                 let total = est.columns.iter().find(|x| x.0 == col).map(|x| &x.1);
                 cell(r, 96.0, true, |c| {
                     c.spawn(Node { flex_direction: FlexDirection::Column, align_items: AlignItems::FlexEnd, padding: UiRect::axes(px(0.0), px(5.0)), ..default() }).with_children(|c| {
-                        words(c, fonts, match col { Column::Material => "MATERIAL", Column::Labor => "LABOR", Column::General => "GENERAL" }, 10.0, Weight::Semibold, theme::ink_faint());
+                        words(c, fonts, match col { Column::Material => "MATERIAL", Column::Labor => "LABOR", Column::General => "SUB, GENERAL" }, 10.0, Weight::Semibold, theme::ink_faint());
                         match total.and_then(|t| t.value.map(|x| (x, t.status))) {
                             Some((x, status)) => words(c, fonts, format!("${}", view::figure(x, 2)), 12.5, Weight::Semibold, theme::status_ink(status)),
                             None => words(c, fonts, "none", 12.5, Weight::Semibold, theme::ink_faint()),

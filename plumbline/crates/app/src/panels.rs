@@ -168,7 +168,7 @@ mod place_words {
 }
 
 /// How many letters the bar along the bottom holds beside where the pointer is.
-const BAR_HOLDS: usize = 120;
+const BAR_HOLDS: usize = 170;
 
 /// A message cut to what a one-line bar can hold. The whole of it is in the card over
 /// the model whenever it is more than a plain "done".
@@ -385,9 +385,11 @@ fn status_line(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             bar.spawn(Node { flex_shrink: 1.0, min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_child((text(fonts, first, 12.0, Weight::Regular, ink), TextLayout::no_wrap()));
         });
         row.spawn(card(false)).with_children(|bar| {
-            bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "", 12.0, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap(), PointerText));
-            divider(bar);
+            // The view first, then where the pointer is while it is on the model: with
+            // the pointer off the model the card is the one word, and not a rule with
+            // nothing to its left (J24B-3).
             bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child(text(fonts, if doc.walk { "On foot" } else if doc.plan { "Plan" } else { "3D" }, 12.0, Weight::Medium, theme::ink_soft()));
+            bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "", 12.0, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap(), PointerText));
         });
     });
 }
@@ -599,7 +601,7 @@ fn tick(p: &mut ChildSpawnerCommands, on: bool, colour: Color) {
 /// being typed in shows what is typed and the caret.
 fn form_field<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, open: bool, at: usize, label: &str, like: &str, rest: &str, width: f32) -> EntityCommands<'a> {
     let (value, state) = match (&doc.entry, open) {
-        (Some((_, typed)), true) if doc.form_at == at => (typed.clone(), 1),
+        (Some((_, typed)), true) if doc.form_at == at => (typed.clone(), if doc.fresh { 3 } else { 1 }),
         (_, true) => (doc.form.get(at).cloned().unwrap_or_default(), 0),
         _ => (rest.to_string(), 0),
     };
@@ -693,14 +695,16 @@ fn steps(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
 fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, plans: &crate::plans::Plans, scrolled: f32) {
     use crate::tools::{self, Tool};
     // It scrolls when it holds more than fits: a row is never squeezed.
-    p.spawn((
-        docked(Node { top: px(TOP_H), left: px(0.0), max_height: Val::Vh(83.0), width: px(LEFT_W), flex_direction: FlexDirection::Column, padding: UiRect { left: px(8.0), right: px(8.0), top: px(4.0), bottom: px(10.0) }, overflow: Overflow::scroll_y(), ..default() }),
+    // The card holds what scrolls and, under it, a strip that says more lies below:
+    // the strip has its own room, so it is never over a word (J24B-2).
+    p.spawn(docked(Node { top: px(TOP_H), left: px(0.0), max_height: Val::Vh(83.0), width: px(LEFT_W), flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(4.0)), ..default() })).with_children(|card| {
+    card.spawn((
+        Node { flex_direction: FlexDirection::Column, flex_grow: 1.0, flex_shrink: 1.0, min_height: px(0.0), padding: UiRect { left: px(8.0), right: px(8.0), top: px(0.0), bottom: px(6.0) }, overflow: Overflow::scroll_y(), ..default() },
         ScrollPosition(Vec2::new(0.0, scrolled)),
         BrowserScroll,
     ))
     .with_children(|c| {
         c.spawn(thumb(2));
-        more_below(c, fonts, 2);
         picker(c, fonts, doc);
         steps(c, fonts, doc, snap);
 
@@ -711,7 +715,10 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 doc.show.storey.is_none(),
                 "All levels".into(),
                 |doc| {
+                    // All of them: a level whose own switch had been put off comes
+                    // back too. (It left only the foundation on: J24B-35.)
                     doc.show.storey = None;
+                    doc.show.off_levels.clear();
                     doc.redraw();
                 },
                 |r| {
@@ -1007,8 +1014,18 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                     // A system has a switch of its own: its runs and what is on it, drawn or not.
                     if !t.path.is_empty() {
                         let system = t.path.clone();
-                        switch_of(r, !doc.show.off_systems.contains(&t.path), format!("Show system {}", t.name), move |doc| {
-                            if !doc.show.off_systems.remove(&system) {
+                        // It reads on only if its runs are drawn: with its trade
+                        // switched off above they are not, whatever its own switch was
+                        // left at (every system read on with Mechanical off and nothing
+                        // of them drawn: J24B-37). Switched on then, it brings its
+                        // trade back with it.
+                        let trade = t.discipline;
+                        let trade_on = doc.show.discipline(trade);
+                        switch_of(r, trade_on && !doc.show.off_systems.contains(&t.path), format!("Show system {}", t.name), move |doc| {
+                            if !doc.show.discipline(trade) {
+                                doc.show.toggle(trade);
+                                doc.show.off_systems.remove(&system);
+                            } else if !doc.show.off_systems.remove(&system) {
                                 doc.show.off_systems.insert(system.clone());
                             }
                             doc.redraw();
@@ -1057,6 +1074,8 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 on_click(&mut button(b, fonts, what.name(), "", false), move |doc| crate::bring::write_out(doc, what));
             }
         });
+    });
+    more_below(card, fonts, 2);
     });
 }
 
@@ -1313,7 +1332,7 @@ fn entry_box(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
     let Some((field, typed)) = &doc.entry else { return };
     let (title, hint) = entry_words(doc, snap, *field);
     p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::all(px(8.0)), margin: UiRect::vertical(px(6.0)), row_gap: px(5.0), border: UiRect::all(px(1.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::accent_wash()), BorderColor::all(theme::accent()))).with_children(|c| {
-        theme::field(c, fonts, &title, typed, "", 1, RIGHT_W - 48.0);
+        theme::field(c, fonts, &title, typed, "", if doc.fresh { 3 } else { 1 }, RIGHT_W - 48.0);
         c.spawn(Node { align_items: AlignItems::Center, column_gap: px(6.0), ..default() }).with_children(|h| {
             h.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, hint, 11.0, Weight::Regular, theme::ink_soft()));
             keycap(h, fonts, "Enter");
@@ -1365,8 +1384,14 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 });
             }
         }
-        // Each facet: its number, its area, its pitch, and its flag.
-        for plane in snap.planes.iter().filter(|_| roof_on_show) {
+        // Each facet: its number, its area, its pitch, and its flag. Over a roof dressed
+        // as it will be built they wait, as its coloured lines do (call 96), until the
+        // roof or something of it is selected, or the view is a plan: number tags on
+        // the shingles made the opening view a diagram (J24B-4, D8).
+        let roof_dressed = !doc.show.certainty && !snap.planes.is_empty() && snap.planes.iter().all(|p| p.area.is_some() && snap.dress.roofs.contains_key(&p.path));
+        let of_the_roof = doc.selected.as_ref().is_some_and(|s| snap.planes.iter().any(|p| p.path == *s) || snap.lines.iter().any(|l| l.path == *s) || snap.roof_path == *s);
+        let tags = doc.plan || !roof_dressed || of_the_roof;
+        for plane in snap.planes.iter().filter(|_| roof_on_show && tags) {
             let Some(solid) = &plane.solid else { continue };
             let c = centroid(&solid.points);
             let at = to_view(doc.origin, [c[0], c[1], solid.height_at(c)]);
@@ -1648,14 +1673,14 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
 
 /// Down the right: what is selected, as fields and buttons; with nothing selected, the job.
 fn right(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, plans: &crate::plans::Plans, scrolled: f32) {
-    p.spawn((
-        docked(Node { top: px(TOP_H), right: px(0.0), max_height: Val::Vh(88.0), width: px(RIGHT_W), flex_direction: FlexDirection::Column, padding: UiRect::axes(px(14.0), px(10.0)), overflow: Overflow::scroll_y(), ..default() }),
+    p.spawn(docked(Node { top: px(TOP_H), right: px(0.0), max_height: Val::Vh(88.0), width: px(RIGHT_W), flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(6.0)), ..default() })).with_children(|card| {
+    card.spawn((
+        Node { flex_direction: FlexDirection::Column, flex_grow: 1.0, flex_shrink: 1.0, min_height: px(0.0), padding: UiRect::axes(px(14.0), px(4.0)), overflow: Overflow::scroll_y(), ..default() },
         ScrollPosition(Vec2::new(0.0, scrolled)),
         InspectorScroll,
     ))
     .with_children(|c| {
         c.spawn(thumb(0));
-        more_below(c, fonts, 0);
         // The job's overhead or profit, typed while something is selected: its field is
         // here, since the job's own values are not on show.
         if snap.selected.is_some() && matches!(doc.entry, Some((Entry::Overhead | Entry::Profit, _))) {
@@ -1671,6 +1696,8 @@ fn right(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
             None => summary(c, fonts, doc, snap),
         }
         c.spawn(Node { margin: UiRect::top(px(12.0)), flex_shrink: 0.0, ..default() }).with_child(text(fonts, "Drag slides the ground with your hand. Right-drag turns the view about what is under the pointer. The wheel closes on what is under the pointer. Double-click flies to a thing.", 10.5, Weight::Regular, theme::ink_faint()));
+    });
+    more_below(card, fonts, 0);
     });
 }
 
@@ -1818,7 +1845,9 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         for (status, what, why) in &snap.notes {
             p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(5.0)), row_gap: px(2.0), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() }, BorderColor::all(theme::rule()))).with_children(|r| {
                 r.spawn(Node { ..default() }).with_children(|c| status_chip(c, fonts, *status));
-                r.spawn(text(fonts, what.clone(), 12.0, Weight::Medium, theme::status_ink(*status)));
+                // The mark says how sure; the words are in ink. (In the mark's colour
+                // the list was a column of red and amber sentences: J24B-22, A6.)
+                r.spawn(text(fonts, what.clone(), 12.0, Weight::Medium, theme::ink()));
                 r.spawn(text(fonts, why.clone(), 10.5, Weight::Regular, theme::ink_faint()));
             });
         }
@@ -2119,19 +2148,25 @@ pub fn thumb(which: usize) -> impl Bundle {
 #[derive(Component, Clone, Copy)]
 pub struct More(pub usize);
 
-/// A panel's "more below", to be a child of the panel that scrolls, after its thumb.
-pub fn more_below(c: &mut ChildSpawnerCommands, fonts: &Fonts, which: usize) {
-    c.spawn((
-        Node { position_type: PositionType::Absolute, left: px(0.0), right: px(0.0), bottom: px(5.0), justify_content: JustifyContent::Center, ..default() },
-        IgnoreScroll(BVec2::new(false, true)),
-        GlobalZIndex(5),
-        Visibility::Hidden,
-        Pickable::IGNORE,
+/// A panel's "more below": a strip of its own under what scrolls, in the card that holds
+/// both. It was a pill laid over the foot of the panel, and it lay on the words there
+/// on nearly every screen (J24B-2). A click on it goes a screenful down.
+pub fn more_below(card: &mut ChildSpawnerCommands, fonts: &Fonts, which: usize) {
+    let mut strip = card.spawn((
+        Node { display: Display::None, flex_shrink: 0.0, height: px(22.0), align_items: AlignItems::Center, justify_content: JustifyContent::Center, column_gap: px(5.0), border: UiRect::top(px(1.0)), margin: UiRect::horizontal(px(10.0)), ..default() },
+        BorderColor::all(theme::glass_rule()),
         More(which),
-    ))
-    .with_children(|m| {
-        m.spawn((theme::rounded(Node { padding: UiRect::axes(px(10.0), px(2.0)), ..default() }, 9.0), BackgroundColor(Color::srgba(0.07, 0.09, 0.12, 0.62)), Pickable::IGNORE))
-            .with_child((text(fonts, "more below", 10.5, Weight::Semibold, Color::WHITE), Pickable::IGNORE));
+        Named { name: "More below".to_string(), scrolls: false },
+    ));
+    strip.with_children(|m| {
+        m.spawn((text(fonts, "more below", 10.5, Weight::Semibold, theme::ink_soft()), Pickable::IGNORE));
+        // A small arrowhead, drawn: two strokes.
+        m.spawn((Node { width: px(6.0), height: px(6.0), border: UiRect { right: px(1.5), bottom: px(1.5), ..default() }, margin: UiRect::bottom(px(3.0)), ..default() }, BorderColor::all(theme::ink_soft()), UiTransform { rotation: Rot2::degrees(45.0), ..default() }, Pickable::IGNORE));
+    });
+    strip.observe(move |press: On<PointerClick>| {
+        if press.button == PointerButton::Primary {
+            scrolls_to(which, -320.0, f32::MAX);
+        }
     });
 }
 
@@ -2146,9 +2181,27 @@ pub fn scroll_panels(
     mut inspector: Query<(&mut ScrollPosition, &ComputedNode), (With<InspectorScroll>, Without<SheetScroll>, Without<BrowserScroll>)>,
     mut sheet: Query<(&mut ScrollPosition, &ComputedNode), (With<SheetScroll>, Without<InspectorScroll>, Without<BrowserScroll>)>,
     mut browser: Query<(&mut ScrollPosition, &ComputedNode), (With<BrowserScroll>, Without<InspectorScroll>, Without<SheetScroll>)>,
-    mut thumbs: Query<(&mut Node, &mut BackgroundColor, &Thumb)>,
-    mut mores: Query<(&mut Visibility, &More)>,
+    mut thumbs: Query<(&mut Node, &mut BackgroundColor, &Thumb), Without<More>>,
+    mut mores: Query<(&mut Node, &More), Without<Thumb>>,
+    doc: Res<Doc>,
+    mut shown: Local<(Option<String>, Option<crate::model::Tab>)>,
 ) {
+    // A panel opens at its head. The right panel kept the place of what it showed
+    // before, and a thing just selected opened part way down with its name out of
+    // sight; a tab of the sheet opened where the last one had been left (J24B-23, -30).
+    let (was_selected, was_tab) = &mut *shown;
+    if *was_selected != doc.selected {
+        *was_selected = doc.selected.clone();
+        set_goal(0, 0.0);
+        scrolls.inspector = 0.0;
+    }
+    if *was_tab != Some(doc.tab) {
+        if was_tab.is_some() {
+            set_goal(1, 0.0);
+            scrolls.sheet = 0.0;
+        }
+        *was_tab = Some(doc.tab);
+    }
     // Which panel the wheel is over: 0 the right panel, 1 the sheet, 2 the left panel.
     let mut over = None;
     for (window, primary) in &windows {
@@ -2209,10 +2262,12 @@ pub fn scroll_panels(
                 ink.0 = shown;
             }
         }
-        for (mut seen_now, More(of)) in &mut mores {
-            let want = if *of == which && limit - *now > 12.0 { Visibility::Inherited } else { Visibility::Hidden };
-            if *of == which && *seen_now != want {
-                *seen_now = want;
+        // The strip takes its own room when it is shown, so what is seen shrinks by
+        // its height and there is that much more below: it stays until the foot.
+        for (mut strip, More(of)) in &mut mores {
+            let want = if *of == which && limit - *now > 12.0 { Display::Flex } else { Display::None };
+            if *of == which && strip.display != want {
+                strip.display = want;
             }
         }
     };

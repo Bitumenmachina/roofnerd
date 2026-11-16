@@ -44,7 +44,11 @@ fn fragment(in: UiVertexOutput) -> @location(0) vec4<f32> {
         sum += textureSampleLevel(scene, scene_sampler, at + far, 0.0).rgb;
         weight += 2.5;
     }
-    let behind = sum / weight;
+    // What is behind, a little richer in colour than it is: under a white tint colour
+    // washes out, and glass that shows only grey reads as a grey sheet.
+    let mean = sum / weight;
+    let grey = dot(mean, vec3<f32>(0.2126, 0.7152, 0.0722));
+    let behind = max(mix(vec3<f32>(grey), mean, 1.45), vec3<f32>(0.0));
     let glass = mix(behind, frost.tint.rgb, frost.tint.a);
     // Round at the corners, as the panel's own edge and shadow are.
     let p = (in.uv - vec2<f32>(0.5)) * in.size;

@@ -50,7 +50,10 @@ pub fn frost() -> Color { Color::srgba(0.985, 0.988, 0.992, 0.80) }
 pub fn frost_on_paper() -> Color { Color::srgba(0.925, 0.937, 0.953, 0.90) }
 /// Frosted, the glass can be thinner than tinted glass and still be read on: what is
 /// behind it is blurred, so only its colour comes through.
-pub const FROST_THICK: f32 = 0.60;
+/// (At 0.60 the panels were judged grey sheets with nothing showing through: J24B-1.
+/// At 0.44, with what is behind made a little richer in colour before the tint goes
+/// over it, the ground, the sky's edge and the house's own colours come through.)
+pub const FROST_THICK: f32 = 0.44;
 pub fn frost_edge() -> Color { Color::srgba(1.0, 1.0, 1.0, 0.72) }
 /// What sits on the glass and can be pressed: a little whiter than the glass.
 pub fn control() -> Color { Color::srgba(1.0, 1.0, 1.0, 0.62) }
@@ -507,8 +510,12 @@ pub fn button<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, k
 
 /// A field: its name over it, and in it its value, or what is being typed with the caret
 /// after it, or faintly what could be typed. `state` is 0 at rest, 1 being typed in,
-/// 2 wanted and still empty.
+/// 2 wanted and still empty, 3 being typed in and holding what it opened with: the
+/// next key typed replaces that, so it is drawn as selected words are in any program
+/// (it replaced them and did not look as if it would: J24B-45).
 pub fn field<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: &str, like: &str, state: u8, width: f32) -> EntityCommands<'a> {
+    let held = state == 3 && !value.is_empty();
+    let state = if state == 3 { 1 } else { state };
     let mut e = p.spawn((Node { flex_direction: FlexDirection::Column, row_gap: px(2.0), flex_shrink: 0.0, ..default() }, named(label)));
     e.with_children(|f| {
         f.spawn((text(fonts, label.to_uppercase(), 9.5, Weight::Semibold, ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
@@ -530,10 +537,12 @@ pub fn field<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, va
                 // Enter would take (call 86).
                 let example = if like.is_empty() { String::new() } else { format!("like {like}") };
                 b.spawn((text(fonts, example, 12.0, Weight::Regular, ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+            } else if held {
+                b.spawn((rounded(Node { padding: UiRect::horizontal(px(2.0)), ..default() }, 3.0), BackgroundColor(accent().with_alpha(0.26)), Pickable::IGNORE)).with_child((typed(fonts, value, 12.5, Weight::Medium, ink()), TextLayout::no_wrap(), Pickable::IGNORE));
             } else {
                 b.spawn((typed(fonts, value, 12.5, Weight::Medium, ink()), TextLayout::no_wrap(), Pickable::IGNORE));
             }
-            if state == 1 && !empty {
+            if state == 1 && !empty && !held {
                 b.spawn((Node { width: px(1.5), height: px(15.0), margin: UiRect::left(px(1.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(accent()), Pickable::IGNORE));
             }
         });
@@ -568,7 +577,9 @@ pub fn trade(text: &str) -> String {
 /// waste brown, vent green, power yellow.
 pub fn system_colour(classification: &str) -> Color {
     match classification {
-        "Supply Air" => hex(0x3B82F6),
+        // A pale sky blue, well off the accent: at 0x3B82F6 a selected duct could not
+        // be told on plan from one that was not (J24B-27).
+        "Supply Air" => hex(0x6FA8DC),
         "Return Air" => hex(0xEC4899),
         "Exhaust Air" => hex(0xA3A635),
         "Refrigerant" => hex(0x8B5CF6),

@@ -482,7 +482,17 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
         // Fields that go together: Tab or a comma goes on to the next; Enter goes to
         // the first still empty, and with none empty it is done.
         let together = !doc.form.is_empty();
+        // Ctrl as the keys themselves tell it, in the order they came: on a slow frame
+        // Ctrl, a letter and both let go arrive together, and by the frame's end Ctrl
+        // is up (Ctrl+A typed an "a" into a thickness: J24A-1).
+        let either = [KeyCode::ControlLeft, KeyCode::ControlRight];
+        let mut ctrl = either.iter().any(|k| (keys.pressed(*k) && !keys.just_pressed(*k)) || (keys.just_released(*k) && !keys.just_pressed(*k)));
+        let was_fresh = doc.fresh;
         for event in typed.read() {
+            if event.logical_key == Key::Control {
+                ctrl = event.state.is_pressed();
+                continue;
+            }
             if !event.state.is_pressed() {
                 continue;
             }
@@ -494,7 +504,11 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                 continue;
             }
             // Ctrl with a letter is a command (Ctrl+S saves), never a letter of the value.
+            // Ctrl+A is the one a field answers: all of it is taken, to be typed over.
             if ctrl && matches!(event.logical_key, Key::Character(_)) {
+                if matches!(&event.logical_key, Key::Character(c) if c.eq_ignore_ascii_case("a")) {
+                    doc.fresh = !text.is_empty();
+                }
                 continue;
             }
             let comma = matches!(&event.logical_key, Key::Character(c) if c.as_str() == ",");
@@ -549,13 +563,12 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                     text.clear();
                     doc.fresh = false;
                 }
+                // In an empty field it does nothing. (It went back into the field
+                // before and began rubbing that out, while the empty one was still
+                // drawn as it had been: four of them, to clear a field, put the next
+                // typing in a level's name: J24B-46.)
                 Key::Backspace => {
-                    if text.is_empty() && together && doc.form_at > 0 {
-                        doc.form_at -= 1;
-                        text = doc.form[doc.form_at].clone();
-                    } else {
-                        text.pop();
-                    }
+                    text.pop();
                 }
                 // The space after a comma is not the start of the next field.
                 Key::Space if together && (text.is_empty() || doc.fresh) => {}
@@ -576,7 +589,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
         let values = if done.is_some() { std::mem::take(&mut doc.form) } else { Vec::new() };
         match done {
             None => {
-                if (text.as_str(), doc.form_at) != (before.0.as_str(), before.1) {
+                if (text.as_str(), doc.form_at) != (before.0.as_str(), before.1) || doc.fresh != was_fresh {
                     doc.touch();
                 }
                 doc.entry = Some((field, text));
