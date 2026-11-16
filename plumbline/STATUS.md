@@ -6125,7 +6125,7 @@ money path; a twenty-third tried the money path at the command line; and a
 twenty-fourth pair did what the twenty-second did again, on the build after the
 fixes. Each finding is a row in this file with where it stands. Calls 77 to 102 in
 DECISIONS.md are the decisions made on the way; Q26 in QUESTIONS.md is new, and
-PROPOSALS.md 23 and 24.
+PROPOSALS.md 23 to 26.
 
 **What is true of the program today.** It traces a plan, builds the house in 3D
 dressed as it is priced, prices it in sixteen divisions, finds clashes, lists what
@@ -6158,7 +6158,7 @@ its own arithmetic, and it had not yet reported.
    a grey house from outside; suppliers side by side on a job with none.
 5. **The words** still marked and not touched: a place in negative feet and inches
    on a fixture's connection and a plane's corners; a cable by its diameter (it wants
-   "12-2 NM"); a kind in the SIZE column of a system's tab; a name said twice on the
+   "12-2 NM": PROPOSALS.md 25, since it is a new value in the model); a kind in the SIZE column of a system's tab; a name said twice on the
    Clashes tab. `research/judgment-24b-words.md` has all 76.
 6. **Have items 9 to 12 judged again**, by agents that did not build them, on Opus or
    Sonnet, told to write their notes as they go.

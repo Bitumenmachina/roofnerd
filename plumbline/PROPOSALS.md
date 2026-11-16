@@ -143,3 +143,30 @@ them and round-trips to the byte.
 Proposed: the file says them as the screen does ("net area"), and reads either
 spelling. It changes a file format people may already have saved, so it waits for
 Patrick's word.
+
+## 25. A run's type has a trade name: "12-2 NM", "3/4 in type L copper" (2026-11-16, from judgments 22 and 24)
+
+A cable, a pipe or a conduit is listed by its size alone: "Cable 0.4 in round". An
+electrician calls a cable by its conductors and its jacket (12-2 NM), a plumber a
+pipe by its material and type as well as its size. Both judges of the words marked
+it (J22B-21, J24B-34). A run's type holds a size and nothing else.
+
+Proposed: a run's type carries what it is called in the trade, flagged like every
+value, shown wherever its size is shown, and written to IFC as the type's name. A
+cable is then listed by that name and not by its jacket's diameter. Not done as a
+wording fix because it is a new value in the model, and the made-up house says of
+its own cable "the cable is not specified": naming it would be making a
+specification up.
+
+## 26. Cabinets and countertops (2026-11-16, from judgment 24)
+
+The made-up house's kitchen is a bare room with a sink in the air at 2 ft 4 in, and
+its baths have a tub, a water closet and a lavatory and nothing else. The second
+judge of the look failed "it looks like the house" on it (J24B-29, D8). The program
+draws a base cabinet under a worktop for anything named a vanity, a cabinet or a
+counter (ported from BIMCraft), but no assembly prices casework and the house has
+none in it.
+
+Proposed: casework as Division 6 or 12 lines in the starter assemblies (base and
+wall cabinets by the LF, countertop by the SF), priced on a run drawn along a wall,
+and drawn as what is priced. It is scope: Patrick's.
