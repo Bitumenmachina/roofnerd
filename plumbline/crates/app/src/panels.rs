@@ -565,6 +565,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
     ))
     .with_children(|c| {
         c.spawn(thumb(2));
+        more_below(c, fonts, 2);
         steps(c, fonts, doc, snap);
 
         heading(c, fonts, "Levels");
@@ -635,7 +636,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                         }
                     });
                 }
-                f.spawn(text(fonts, "Tab to the next. Enter adds it. Esc cancels.", 10.5, Weight::Regular, theme::ink_faint()));
+                f.spawn(text(fonts, "Tab or Enter to the next. Enter on the last adds it. Esc cancels.", 10.5, Weight::Regular, theme::ink_faint()));
             });
         } else {
             c.spawn(Node { padding: UiRect::axes(px(6.0), px(3.0)), flex_shrink: 0.0, ..default() }).with_children(|b| {
@@ -776,38 +777,6 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
             }
         }
 
-        if !snap.systems.is_empty() {
-            heading(c, fonts, "Systems");
-            for system in &snap.systems {
-                let t = &system.takeoff;
-                let path = t.path.clone();
-                // What is on no system, or on one nobody has named, is listed too. It is
-                // not a system and cannot be selected as one.
-                let act = move |doc: &mut Doc| {
-                    if !path.is_empty() {
-                        doc.select(&path);
-                    }
-                };
-                row(c, !t.path.is_empty() && doc.selected.as_deref() == Some(t.path.as_str()), format!("System {}", t.name), act, |r| {
-                    swatch(r, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::system_colour(&t.classification) });
-                    // The name takes what room the row has and goes to a second line when
-                    // it is long ("Domestic Cold Water" pushed its switch out of the panel).
-                    r.spawn((Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }, Pickable::IGNORE)).with_child((text(fonts, t.name.clone(), 12.0, Weight::Medium, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::ink() }), Pickable::IGNORE));
-                    r.spawn((text(fonts, total(&t.runs), 11.0, Weight::Regular, if t.runs.members == 0 { theme::ink_faint() } else { theme::status_ink(t.runs.status) }), TextLayout::no_wrap(), Pickable::IGNORE));
-                    // A system has a switch of its own: its runs and what is on it, drawn or not.
-                    if !t.path.is_empty() {
-                        let system = t.path.clone();
-                        switch_of(r, !doc.show.off_systems.contains(&t.path), format!("Show system {}", t.name), move |doc| {
-                            if !doc.show.off_systems.remove(&system) {
-                                doc.show.off_systems.insert(system.clone());
-                            }
-                            doc.redraw();
-                        });
-                    }
-                });
-            }
-        }
-
         // The drawings laid under the level on show: what is traced over. Each says its
         // scale, or that it has none yet.
         heading(c, fonts, "Drawings");
@@ -891,6 +860,41 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                                     doc.say(Tone::Done, format!("{}: pick the file from the list, or drop it on this window.", what.name()));
                                 }
                             }
+                        });
+                    }
+                });
+            }
+        }
+
+        // Each system has its own switch. They come after the drawings: a job with
+        // eight systems pushed Add drawing, the second step of a first job, below the
+        // foot of the panel (J22B-29).
+        if !snap.systems.is_empty() {
+            heading(c, fonts, "Systems");
+            for system in &snap.systems {
+                let t = &system.takeoff;
+                let path = t.path.clone();
+                // What is on no system, or on one nobody has named, is listed too. It is
+                // not a system and cannot be selected as one.
+                let act = move |doc: &mut Doc| {
+                    if !path.is_empty() {
+                        doc.select(&path);
+                    }
+                };
+                row(c, !t.path.is_empty() && doc.selected.as_deref() == Some(t.path.as_str()), format!("System {}", t.name), act, |r| {
+                    swatch(r, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::system_colour(&t.classification) });
+                    // The name takes what room the row has and goes to a second line when
+                    // it is long ("Domestic Cold Water" pushed its switch out of the panel).
+                    r.spawn((Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }, Pickable::IGNORE)).with_child((text(fonts, t.name.clone(), 12.0, Weight::Medium, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::ink() }), Pickable::IGNORE));
+                    r.spawn((text(fonts, total(&t.runs), 11.0, Weight::Regular, if t.runs.members == 0 { theme::ink_faint() } else { theme::status_ink(t.runs.status) }), TextLayout::no_wrap(), Pickable::IGNORE));
+                    // A system has a switch of its own: its runs and what is on it, drawn or not.
+                    if !t.path.is_empty() {
+                        let system = t.path.clone();
+                        switch_of(r, !doc.show.off_systems.contains(&t.path), format!("Show system {}", t.name), move |doc| {
+                            if !doc.show.off_systems.remove(&system) {
+                                doc.show.off_systems.insert(system.clone());
+                            }
+                            doc.redraw();
                         });
                     }
                 });
@@ -1336,6 +1340,9 @@ pub fn stat(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: Str
 /// worked-out figure, how. A long value takes its own line. `act`, when there is one,
 /// is what a click on the row does ("Measure"), said at the row's foot.
 fn property<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: String, status: Status, basis: &str, note: &str, act: &str) -> EntityCommands<'a> {
+    // A value that is not known says why once: "Cost code  Unknown  not coded", not
+    // "Unknown ... unknown" with the reason in small type under it (J22B-26).
+    let (value, basis) = if status == Status::Unknown && value.eq_ignore_ascii_case("unknown") && !basis.is_empty() && basis.chars().count() <= 24 { (basis.to_string(), "") } else { (value, basis) };
     let long = value.chars().count() > 24;
     let mut row = p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(4.0)), row_gap: px(2.0), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() }, BorderColor::all(theme::rule())));
     if !act.is_empty() {
@@ -1453,6 +1460,7 @@ fn right(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
     ))
     .with_children(|c| {
         c.spawn(thumb(0));
+        more_below(c, fonts, 0);
         // The job's overhead or profit, typed while something is selected: its field is
         // here, since the job's own values are not on show.
         if snap.selected.is_some() && matches!(doc.entry, Some((Entry::Overhead | Entry::Profit, _))) {
@@ -1592,7 +1600,7 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 Some((pitch, status)) => stat(r, fonts, "Predominant pitch", theme::pitch_text(pitch), "", status),
                 None => stat(r, fonts, "Predominant pitch", "not said".into(), "", Status::Unknown),
             }
-            stat(r, fonts, "Facets", totals.facets.to_string(), "", Status::Known);
+            stat(r, fonts, "Roof planes", totals.facets.to_string(), "", Status::Known);
         });
         if totals.predominant_pitch.is_none() {
             p.spawn(Node { margin: UiRect::top(px(6.0)), ..default() }).with_child(text(fonts, format!("No predominant pitch: {}.", totals.pitch_note), 11.5, Weight::Regular, theme::red()));
@@ -1910,6 +1918,28 @@ pub fn thumb(which: usize) -> impl Bundle {
     )
 }
 
+/// The word at a scrolling panel's foot while more of it lies below: a panel that ends
+/// part way through a row, with only a thin thumb to say so, read as all there was
+/// (J22B-10). It goes when the foot is reached.
+#[derive(Component, Clone, Copy)]
+pub struct More(pub usize);
+
+/// A panel's "more below", to be a child of the panel that scrolls, after its thumb.
+pub fn more_below(c: &mut ChildSpawnerCommands, fonts: &Fonts, which: usize) {
+    c.spawn((
+        Node { position_type: PositionType::Absolute, left: px(0.0), right: px(0.0), bottom: px(5.0), justify_content: JustifyContent::Center, ..default() },
+        IgnoreScroll(BVec2::new(false, true)),
+        GlobalZIndex(5),
+        Visibility::Hidden,
+        Pickable::IGNORE,
+        More(which),
+    ))
+    .with_children(|m| {
+        m.spawn((theme::rounded(Node { padding: UiRect::axes(px(10.0), px(2.0)), ..default() }, 9.0), BackgroundColor(Color::srgba(0.07, 0.09, 0.12, 0.62)), Pickable::IGNORE))
+            .with_child((text(fonts, "\u{25BE} more below", 10.5, Weight::Semibold, Color::WHITE), Pickable::IGNORE));
+    });
+}
+
 /// The wheel scrolls the panel the pointer is over, and only that: smoothly (it eases to
 /// where the wheel sent it), with a thumb at its edge that shows where it is.
 #[allow(clippy::type_complexity)]
@@ -1922,6 +1952,7 @@ pub fn scroll_panels(
     mut sheet: Query<(&mut ScrollPosition, &ComputedNode), (With<SheetScroll>, Without<InspectorScroll>, Without<BrowserScroll>)>,
     mut browser: Query<(&mut ScrollPosition, &ComputedNode), (With<BrowserScroll>, Without<InspectorScroll>, Without<SheetScroll>)>,
     mut thumbs: Query<(&mut Node, &mut BackgroundColor, &Thumb)>,
+    mut mores: Query<(&mut Visibility, &More)>,
 ) {
     // Which panel the wheel is over: 0 the right panel, 1 the sheet, 2 the left panel.
     let mut over = None;
@@ -1974,6 +2005,12 @@ pub fn scroll_panels(
             }
             if ink.0 != shown {
                 ink.0 = shown;
+            }
+        }
+        for (mut seen_now, More(of)) in &mut mores {
+            let want = if *of == which && limit - *now > 12.0 { Visibility::Inherited } else { Visibility::Hidden };
+            if *of == which && *seen_now != want {
+                *seen_now = want;
             }
         }
     };

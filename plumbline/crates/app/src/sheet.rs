@@ -99,10 +99,13 @@ fn words(p: &mut ChildSpawnerCommands, fonts: &Fonts, s: impl Into<String>, size
 }
 
 fn dot(p: &mut ChildSpawnerCommands, status: Status) {
-    let colour = match status {
+    mark(p, match status {
         Status::Known => Color::NONE,
         other => theme::status_ink(other),
-    };
+    });
+}
+
+fn mark(p: &mut ChildSpawnerCommands, colour: Color) {
     p.spawn((rounded(Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, 4.0), BackgroundColor(colour)));
 }
 
@@ -264,7 +267,7 @@ fn roof_summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
             Some((pitch, status)) => stat_card(r, fonts, "Predominant pitch", theme::pitch_text(pitch), "", status, "most of the surface".into()),
             None => stat_card(r, fonts, "Predominant pitch", "not said".into(), "", Status::Unknown, totals.pitch_note.clone()),
         }
-        stat_card(r, fonts, "Facets", totals.facets.to_string(), "", Status::Known, "roof planes".into());
+        stat_card(r, fonts, "Roof planes", totals.facets.to_string(), "", Status::Known, String::new());
     });
     if totals.lines.is_empty() {
         return;
@@ -305,7 +308,7 @@ fn planes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsho
         return;
     }
     table(p, fonts, "Planes", format!("{}", snap.planes.len()), |t| {
-        header_row(t, fonts, &[("", 7.0, false), ("Plane", 0.0, false), ("Pitch", 80.0, true), ("Surface", 120.0, true), ("Condition", 250.0, false)]);
+        header_row(t, fonts, &[("", 7.0, false), ("Plane", 0.0, false), ("Pitch", 80.0, true), ("Surface", 120.0, true), ("Roofing", 250.0, false)]);
         for plane in &snap.planes {
             let selected = doc.selected.as_deref() == Some(plane.path.as_str());
             row(t, selected, Some(plane.path.clone()), |r| {
@@ -324,7 +327,15 @@ fn planes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsho
                         c.spawn((rounded(Node { width: px(10.0), height: px(10.0), flex_shrink: 0.0, ..default() }, 3.0), BackgroundColor(colour)));
                         words(c, fonts, name.clone(), 12.5, Weight::Regular, theme::ink());
                     }
-                    None => words(c, fonts, "none yet", 12.5, Weight::Regular, theme::ink_faint()),
+                    // No condition on the plane: what is priced on it still names its
+                    // roofing (the same reading the model is dressed from).
+                    None => match snap.dress.roofs.get(&plane.path) {
+                        Some(said) => {
+                            let name = said.what.said();
+                            words(c, fonts, format!("{}{}", name[..1].to_uppercase(), &name[1..]), 12.5, Weight::Regular, theme::ink());
+                        }
+                        None => words(c, fonts, "none priced yet", 12.5, Weight::Regular, theme::ink_faint()),
+                    },
                 });
             });
         }
@@ -447,7 +458,7 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 for of in &storey.walls_by_type {
                     t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(0.0)), min_height: px(28.0), ..default() }, BackgroundColor(theme::panel_alt()))).with_children(|r| {
                         cell(r, 7.0, false, |c| dot(c, of.net.status.max(of.length.status)));
-                        cell(r, 0.0, false, |c| words(c, fonts, format!("of them, {}", of.name), 12.0, Weight::Medium, theme::ink_soft()));
+                        cell(r, 0.0, false, |c| words(c, fonts, format!("{}, all of that type", of.name), 12.0, Weight::Medium, theme::ink_soft()));
                         cell(r, 100.0, true, |c| words(c, fonts, total(&of.length), 12.0, Weight::Medium, theme::status_ink(of.length.status)));
                         cell(r, 110.0, true, |c| words(c, fonts, total(&of.face), 12.0, Weight::Medium, theme::status_ink(of.face.status)));
                         cell(r, 100.0, true, |_| {});
@@ -458,7 +469,7 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             // The storey's rooms: how far round each is, its area to the centre lines of
             // its walls, and the floor inside them.
             if !rooms.is_empty() {
-                header_row(t, fonts, &[("", 7.0, false), ("Room", 0.0, false), ("Round", 100.0, true), ("To wall centers", 110.0, true), ("", 100.0, true), ("Inside the walls", 110.0, true)]);
+                header_row(t, fonts, &[("", 7.0, false), ("Room", 0.0, false), ("Perimeter", 100.0, true), ("To wall centers", 110.0, true), ("", 100.0, true), ("Inside the walls", 110.0, true)]);
                 for el in rooms {
                     let selected = doc.selected.as_deref() == Some(el.path.as_str());
                     let worst = el.rows.iter().filter(|r| r.derived).map(|r| r.status).max().unwrap_or(Status::Unknown);
@@ -523,7 +534,9 @@ fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             for c in rows {
                 let selected = doc.selected.as_deref() == Some(c.b.as_str()) || doc.selected.as_deref() == Some(c.a.as_str());
                 row(t, selected, Some(c.b.clone()), |r| {
-                    cell(r, 7.0, false, |x| dot(x, c.status));
+                    // A finding (both Known) is marked red here as it is on the model;
+                    // a question for the field keeps its own colour (J22B-17).
+                    cell(r, 7.0, false, |x| if c.status == Status::Known { mark(x, theme::red()) } else { dot(x, c.status) });
                     cell(r, 0.0, false, |x| named(x, fonts, format!("{} and {}", c.a_name, c.b_name), theme::ink(), format!("{} and {}", theme::kind_name(c.a_kind).to_lowercase(), theme::kind_name(c.b_kind).to_lowercase()), theme::ink_faint()));
                     if depth {
                         let by = c.by.map(|by| format!("{:.2} in", by * 12.0 + 0.0)).unwrap_or("not worked out".into());
@@ -558,10 +571,9 @@ fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             });
         }
         for note in NEVER_TESTED {
-            row(t, false, None, |r| {
-                cell(r, 7.0, false, |_| {});
-                cell(r, 0.0, false, |x| words(x, fonts, note, 12.0, Weight::Regular, theme::ink_soft()));
-            });
+            // A sentence, so it wraps: it ran off the card's edge on one line (J22B-16).
+            t.spawn((Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(7.0), bottom: px(7.0) }, border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::rule())))
+                .with_child(text(fonts, note, 12.0, Weight::Regular, theme::ink_soft()));
         }
     });
 }
@@ -822,8 +834,17 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         }
         for (heading, said, status, its) in &ordered {
         t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(5.0)), border: UiRect::bottom(px(1.0)), ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::hairline()))).with_children(|r| {
-            cell(r, 0.0, false, |c| words(c, fonts, heading.to_uppercase(), 11.0, Weight::Semibold, if heading == "No division" { theme::status_ink(Status::Unknown) } else { theme::ink() }));
-            cell(r, 130.0, true, |c| words(c, fonts, said.clone(), 12.5, Weight::Semibold, theme::status_ink(*status)));
+            // The division, what it comes to, and the name of each column again: the
+            // headings at the top are out of sight once the sheet is scrolled, and a
+            // figure with no column named over it could be any of the three (J22B-13).
+            cell(r, 7.0, false, |_| {});
+            cell(r, 0.0, false, |c| {
+                words(c, fonts, heading.to_uppercase(), 11.0, Weight::Semibold, if heading == "No division" { theme::status_ink(Status::Unknown) } else { theme::ink() });
+                words(c, fonts, said.clone(), 12.5, Weight::Semibold, theme::status_ink(*status));
+            });
+            for (label, width) in [("Priced", 96.0), ("At", 108.0), ("Material", 96.0), ("Labor", 96.0), ("General", 96.0)] {
+                cell(r, width, true, |c| words(c, fonts, label.to_uppercase(), 10.0, Weight::Semibold, theme::ink_faint()));
+            }
         });
         let mut last = String::new();
         for l in its.iter().copied() {
@@ -952,9 +973,14 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             cell(r, 108.0, true, |_| {});
             for col in [Column::Material, Column::Labor, Column::General] {
                 let total = est.columns.iter().find(|x| x.0 == col).map(|x| &x.1);
-                cell(r, 96.0, true, |c| match total.and_then(|t| t.value.map(|x| (x, t.status))) {
-                    Some((x, status)) => words(c, fonts, format!("${}", view::figure(x, 2)), 12.5, Weight::Semibold, theme::status_ink(status)),
-                    None => words(c, fonts, "none", 12.5, Weight::Semibold, theme::ink_faint()),
+                cell(r, 96.0, true, |c| {
+                    c.spawn(Node { flex_direction: FlexDirection::Column, align_items: AlignItems::FlexEnd, padding: UiRect::axes(px(0.0), px(5.0)), ..default() }).with_children(|c| {
+                        words(c, fonts, match col { Column::Material => "MATERIAL", Column::Labor => "LABOR", Column::General => "GENERAL" }, 10.0, Weight::Semibold, theme::ink_faint());
+                        match total.and_then(|t| t.value.map(|x| (x, t.status))) {
+                            Some((x, status)) => words(c, fonts, format!("${}", view::figure(x, 2)), 12.5, Weight::Semibold, theme::status_ink(status)),
+                            None => words(c, fonts, "none", 12.5, Weight::Semibold, theme::ink_faint()),
+                        }
+                    });
                 });
             }
         });
@@ -1021,7 +1047,7 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
         return;
     }
     table(p, fonts, "Allowance against detail", format!("{} items", pricing.elements.len()), |t| {
-        header_row(t, fonts, &[("", 7.0, false), ("Element", 0.0, false), ("Priced by", 110.0, true), ("Allowance", 110.0, true), ("Detail", 110.0, true), ("Comes to", 90.0, true), ("Difference", 170.0, true)]);
+        header_row(t, fonts, &[("", 7.0, false), ("What", 0.0, false), ("Priced by", 110.0, true), ("Allowance", 110.0, true), ("Detail", 110.0, true), ("Comes to", 90.0, true), ("Difference", 170.0, true)]);
         for e in &pricing.elements {
             let selected = doc.selected.as_deref() == Some(e.path.as_str());
             let worst = [&e.allowance, &e.detail].iter().filter_map(|d| d.as_ref()).map(|d| d.status).max().unwrap_or(Status::Unknown);
@@ -1029,7 +1055,11 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
                 cell(r, 7.0, false, |c| dot(c, worst));
                 cell(r, 0.0, false, |c| {
                     words(c, fonts, e.name.clone(), 12.5, Weight::Medium, theme::ink());
-                    words(c, fonts, e.path.clone(), 11.0, Weight::Regular, theme::ink_faint());
+                    // Its second name only where it has one that is not the first
+                    // again (J22B-15: every row read "south wall  south wall", cut short).
+                    if theme::spoken(&e.path) != e.name {
+                        words(c, fonts, e.path.clone(), 11.0, Weight::Regular, theme::ink_faint());
+                    }
                 });
                 cell(r, 110.0, true, |c| match &e.figure {
                     Some((_, unit, d)) => words(c, fonts, amount(d.value, 2, unit), 12.5, Weight::Regular, theme::status_ink(d.status)),
@@ -1040,7 +1070,7 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
                     cell(r, width, true, |c| words(c, fonts, said, 12.5, weight, if d.is_none() { theme::ink_faint() } else { theme::status_ink(status) }));
                 }
                 cell(r, 90.0, true, |c| match e.detail_rate.as_ref().and_then(|d| d.value.map(|x| (x, d))) {
-                    Some((x, d)) => words(c, fonts, format!("${} / {}", view::rate(x), d.unit.trim_start_matches("$/")), 12.5, Weight::Regular, theme::status_ink(d.status)),
+                    Some((x, d)) => words(c, fonts, format!("${} / {}", view::figure(x, 2), d.unit.trim_start_matches("$/")), 12.5, Weight::Regular, theme::status_ink(d.status)),
                     None => words(c, fonts, "", 12.5, Weight::Regular, theme::ink_faint()),
                 });
                 cell(r, 170.0, true, |c| match (e.difference.as_ref().and_then(|d| d.value.map(|x| (x, d.status))), e.difference_percent.as_ref().and_then(|d| d.value)) {
@@ -1123,7 +1153,10 @@ fn systems(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 .with_children(|h| {
                     swatch(h, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::system_colour(&t.classification) });
                     h.spawn(text(fonts, t.name.clone(), 14.0, Weight::Semibold, if t.path.is_empty() { theme::status_ink(t.flag) } else { theme::ink() }));
-                    h.spawn(text(fonts, t.classification.clone(), 12.0, Weight::Regular, theme::ink_faint()));
+                    // What kind of system it is, unless its name already says so.
+                    if !t.classification.eq_ignore_ascii_case(&t.name) {
+                        h.spawn(text(fonts, t.classification.clone(), 12.0, Weight::Regular, theme::ink_faint()));
+                    }
                     status_chip(h, fonts, t.flag);
                     h.spawn(Node { flex_grow: 1.0, ..default() });
                     h.spawn(text(fonts, format!("{} straight pieces", t.runs.members), 12.0, Weight::Regular, theme::ink_faint()));

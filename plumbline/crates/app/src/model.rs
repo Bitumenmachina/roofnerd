@@ -575,7 +575,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
             .iter(&doc.job.world)
             .map(|(n, it)| {
                 let size = match it.size_ft() {
-                    Ok(([w, d, h], ..)) => format!("{} x {} x {}", plumbline_world::units::feet_as_ft_in(w, 16), plumbline_world::units::feet_as_ft_in(d, 16), plumbline_world::units::feet_as_ft_in(h, 16)),
+                    Ok((sides, ..)) => plumbline_world::units::size_said(sides),
                     Err(why) => why,
                 };
                 (n.path.clone(), n.name.clone(), it.category, size)
@@ -749,7 +749,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
         s.notes.push((Status::Unknown, format!("{called} is not drawn"), why.clone()));
     }
     for (status, why, said) in groups {
-        let what = if said.len() == 1 { said[0].clone() } else { format!("{} for the same reason. The first: {}", said.len(), said[0]) };
+        let what = if said.len() == 1 { said[0].clone() } else { format!("{}, and {} more for the same reason", said[0], said.len() - 1) };
         s.notes.push((status, what, why));
     }
     s.notes.sort_by(|a, b| b.0.cmp(&a.0));

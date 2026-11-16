@@ -506,6 +506,11 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                 if let Entry::Settings(tool) = field {
                                     doc.say(Tone::Refused, format!("{}: {} is still to be typed. Then Enter, and click on the plan.", tool.name(), tool.fields()[i].0));
                                 }
+                                // A level's form said nothing (J22B-34).
+                                if field == Entry::Storey {
+                                    let name = ["Its name", "The elevation of its floor", "Floor-to-floor"].get(i).copied().unwrap_or("A field");
+                                    doc.say(Tone::Refused, format!("Add level: {name} is still to be typed. Enter adds the level once all three are in."));
+                                }
                             }
                         }
                         None => done = Some(true),

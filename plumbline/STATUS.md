@@ -5599,3 +5599,37 @@ veteran, part A), fixed and seen in the window on my own look sessions:
 - J22A-1 (A8): Save says "Saved.", not the file's name.
 
 Not judged again. The window demonstrations running now are on an earlier build.
+
+**More of the look judge's notes, fixed (2026-11-16, later).** Each was read in its
+picture first; the pictures after are my own (the whole house on the build of this
+commit: the Estimate tab scrolled, Budget, Clashes at its head and its foot).
+
+| # | What was wrong | What changed |
+|---|---|---|
+| J22B-13 | The Estimate tab's column headings were out of sight once scrolled; a figure sat under no name; the foot read "Column totals" over three bare figures | Each division's heading carries what it comes to beside its name, and the column names (Priced, At, Material, Labor, General) over the lines under it. Each figure of the foot has its column's name over it |
+| J22B-14 | "235 for the same reason. The first: ..."; a duct fitting sized `1' 4" x 1' 4" x 0' 8"` | "The job, cost code: unknown, and 234 more for the same reason". A three-way size is written as the trade writes it, in inches while every side is under 8 ft (`16 x 16 x 8 in`), worked once in the model (`units::size_said`) and said by the panel, the open items and the items list (call 89) |
+| J22B-15 | Budget: each row's name twice, the second cut mid-word; rates to four places; the heading "Element" | The second name is shown only where it is not the first again. A rate that is worked out is shown to the cent (the workbook and the command line keep its four places). The heading is "What", as on Verify in field |
+| J22B-16 | Clashes: the last note ran off the card on one line; "it is a line, not a solid" | The notes wrap. "its size is not known, so it has no shape to test" |
+| J22B-17 | A finding (both Known) carried no mark in the sheet's list, though it is a red cross on the model | A finding is marked red in the list; a field question keeps its amber |
+| J22B-18 | Roof tab: "CONDITION none yet" beside a roof that is priced and drawn in standing seam | The column is "Roofing" and says what the lines priced on the plane name (the reading the model is dressed from): "Standing seam". With nothing priced: "none priced yet" |
+| J22B-20 | "ROUND"; "of them, Outside wall, 6 in"; "Supply air  Supply Air"; "FACETS" | "Perimeter"; "Outside wall, 6 in, all of that type"; a system's kind is not said after a name that already says it; "Roof planes", in the sheet and the panel |
+| J22B-10 | A panel that ends part way down a row, with only a thin thumb to say there is more | A small "more below" at the foot of the left and the right panel while there is more, gone at the end. **Built, not yet seen in a picture** |
+| J22B-26 (part) | "Cost code  Unknown  unknown / not coded": unknown three times | A value that is not known says why once, where the value would be: "Cost code  Unknown  not coded" |
+| J22B-29 | Add drawing: on a job with eight systems the button and its list were below the foot of the left panel; the status line said "pick the plan from the list" and no list was in sight | Drawings come before Systems in the left panel. (J19-2 put Show straight after Levels; that holds) |
+| J22B-34 | Enter in the level form with a field empty did nothing and said nothing; the form said "Enter adds it" though Enter goes to the next field | It says which field is still to be typed. The form says "Tab or Enter to the next. Enter on the last adds it." |
+| J22B-32 | "The view is saved with the job without a person saving it" | **Not so.** The judge's job file was never written after it was made (its time is before the first session; the window writes a job only on Save). What was seen: on plan one level is on show, and it is the first one. Nothing changed |
+
+Left as they are, and why: "connector" (J22B-26) is the word the model, SPEC.md,
+two demonstrations and the command line's fields use for where a run meets a fixture,
+and the trade has it (a supply connector); "7.5 ft" on a window's panel is the value
+as it was entered, which is shown as entered (call 85's rule for a value), while a
+worked-out length is in decimal feet as a takeoff is.
+
+**One window demonstration failed on the build of 04266dd while two judges and the
+compiler ran beside it**: `d5w`, a price typed on its line of the sheet (the click
+selected the row and the typing went nowhere; the overhead typed before it did not
+land either, the profit after it did). It passed on the run before. It is to be run
+again alone, on the final build, before its pictures are trusted.
+
+296 tests pass. The command-line demonstrations pass on this tree (20 of them; `d2`
+needs a display and is run with the window ones).

@@ -5984,3 +5984,13 @@ fn j15_4_15_a_sheet_lined_up_again_says_what_it_left_behind_and_stops_saying_it_
     assert!(plans::stale(&mut job, &d).unwrap().is_empty(), "{:?}", plans::stale(&mut job, &d));
     assert!(drawing(&mut job).earlier.is_empty());
 }
+
+#[test]
+fn a_size_is_written_in_inches_as_the_trade_writes_it() {
+    use plumbline_world::units::size_said;
+    assert_eq!(size_said([16.0 / 12.0, 16.0 / 12.0, 8.0 / 12.0]), "16 × 16 × 8 in");
+    assert_eq!(size_said([2.0, 2.5, 5.0]), "24 × 30 × 60 in");
+    assert_eq!(size_said([1.75 / 12.0, 0.5 / 12.0, 30.5 / 12.0]), "1 3/4 × 1/2 × 30 1/2 in");
+    // A side of 8 ft or more: feet and inches, as a tape reads.
+    assert_eq!(size_said([10.0, 2.0, 7.0]), "10' 0\" × 2' 0\" × 7' 0\"");
+}

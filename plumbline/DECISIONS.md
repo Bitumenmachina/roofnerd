@@ -3202,3 +3202,28 @@ what? points). The scale's words are now worked once, in the model
 and for a scale that is not one of the architect's, `1" = 4' 1 5/8"` (to the eighth
 of an inch; the window showed it to the quarter). `demos/plan.sh` expects the new
 words.
+
+### Call 89. Words and figures on the estimate window, from the look judge (2026-11-16)
+
+From the twenty-second judgment, part B. Wording is the builder's to decide.
+
+- **A three-way size is in inches while every side is under 8 ft**: `16 × 16 × 8 in`,
+  `24 × 30 × 60 in`, to the sixteenth; feet and inches when a side is 8 ft or more.
+  A sheet-metal man, a plumber and a maker's sheet write a fitting, a unit and a
+  fixture in inches; `1' 4" × 1' 4" × 0' 8"` is how nobody writes a duct elbow. One
+  place works it (`units::size_said`). A position, and a length along the building,
+  stay in feet and inches as a tape reads.
+- **A worked-out rate is shown to the cent in the window** ("$33.31 / SF"). The
+  figure is not changed: the command line and the workbook keep four places, which
+  is what the detail divided by the area comes to and what reproduces it.
+- **The Budget tab's first column is "What"**, as Verify in field's is. ("Element"
+  stays the workbook's column heading: it is the word of ASTM E1557, "Standard
+  Classification for Building Elements and Related Sitework-UNIFORMAT II" (the title
+  as ASTM's store lists it, read 2026-11-16), and a workbook is read beside one.)
+- **The Roof tab's last column is "Roofing"** and says what is priced on the plane
+  where the plane carries no condition of its own.
+- **Several open items for one reason** read "the first of them, and N more for the
+  same reason".
+- **A finding is marked red in the Clashes list**, as on the model. A value that is
+  Known still carries no mark anywhere else: there a mark means "look at this", and a
+  finding is the one Known thing a person must look at.

@@ -558,6 +558,32 @@ pub fn parse_number(text: &str) -> Result<f64, String> {
     Ok(x + 0.0)
 }
 
+/// A thing's size, wide by deep by high, given in feet and written the way its maker's
+/// sheet and the trade write it: in inches while every side is under 8 ft (`16 × 16 ×
+/// 8 in`, `24 × 30 × 60 in`), to the sixteenth; in feet and inches when a side is longer.
+pub fn size_said(sides: [f64; 3]) -> String {
+    if sides.iter().any(|x| !x.is_finite()) {
+        return "unknown".into();
+    }
+    if sides.iter().any(|x| x.abs() >= 8.0) {
+        return sides.map(|x| feet_as_ft_in(x, 16)).join(" × ");
+    }
+    let inches = |feet: f64| {
+        let parts = (feet.abs() * 12.0 * 16.0).round() as u64;
+        let (whole, mut top, mut bottom) = (parts / 16, parts % 16, 16);
+        while top > 0 && top % 2 == 0 {
+            top /= 2;
+            bottom /= 2;
+        }
+        match (whole, top) {
+            (w, 0) => format!("{w}"),
+            (0, t) => format!("{t}/{bottom}"),
+            (w, t) => format!("{w} {t}/{bottom}"),
+        }
+    };
+    format!("{} in", sides.map(inches).join(" × "))
+}
+
 /// A number of feet written as feet and inches to the nearest `denominator`th of an inch
 /// (16 for a sixteenth), the way a tape reads: `25' 6 3/16"`. For showing a position; an
 /// entered value is shown as it was entered.

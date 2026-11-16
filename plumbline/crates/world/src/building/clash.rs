@@ -231,7 +231,7 @@ fn pieces_of(p: &Placement, owner: usize) -> Result<Vec<Piece>, String> {
                     let turn = Rotation::from_rotation_z(yaw) * Rotation::from_rotation_y(-pitch);
                     out.push(Piece::cuboid(owner, Pose::from_parts(middle, turn), Vector::new(length / 2.0, width / 2.0, depth / 2.0)));
                 }
-                (None, None) => return Err("its size is not known: it is a line, not a solid".into()),
+                (None, None) => return Err("its size is not known, so it has no shape to test".into()),
             }
         }
         Shape::Box { at, size, angle } => {

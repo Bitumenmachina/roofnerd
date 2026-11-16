@@ -1511,7 +1511,7 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         // Its size as a tape reads it, wide by deep by high: the same way an item's is said.
         let mut size = view::entered(path, "size", &c.size, |s| format!("{} × {} × {}", view::num(s[0]), view::num(s[1]), view::num(s[2])));
         if let Some([wide, deep, high]) = c.size_ft() {
-            size.text = format!("{} × {} × {}", units::feet_as_ft_in(wide, 16), units::feet_as_ft_in(deep, 16), units::feet_as_ft_in(high, 16));
+            size.text = units::size_said([wide, deep, high]);
         }
         rows.push(size);
     }
