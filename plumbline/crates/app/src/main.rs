@@ -241,6 +241,22 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
     // What is priced before the change, so that what a plane takes with it when it
     // goes can be said to the cent (J23-3).
     let priced_before = plumbline_world::view::estimate(&mut doc.job);
+    // What everything is called before the change: what goes with it is said by its
+    // name ("plane 2", "hip 1-2"), not by the name it was kept under (J24A-16: the
+    // message read "gone: plane-0028, hip-0037").
+    let called: std::collections::HashMap<String, String> = {
+        let mut q = doc.job.world.query::<&plumbline_world::Node>();
+        q.iter(&doc.job.world).map(|n| (n.path.clone(), if n.name.is_empty() { n.path.clone() } else { n.name.clone() })).collect()
+    };
+    let name = |path: &String| called.get(path).cloned().unwrap_or_else(|| path.clone());
+    // And how sure the roof's own values were: a change made here is Assumed, and one
+    // that takes the place of a measurement has to say so (J24A-15: Steeper replaced a
+    // pitch measured on site and the window said only "Pitch changed").
+    let sure_before = selected_edge(doc).ok().and_then(|(roof_path, edge)| {
+        let e = doc.job.find(&roof_path)?;
+        let f = doc.job.world.get::<Footprint>(e)?;
+        Some((f.edges.get(edge.wrapping_sub(1)).cloned(), f.points.status, f.points.source.clone()))
+    });
     let result = selected_edge(doc).and_then(|(roof_path, edge)| {
         let c = change(doc, &roof_path, edge)?;
         solve::edit(&mut doc.job, &roof_path, c).map(|report| (roof_path, edge, report))
@@ -252,8 +268,27 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
             if doc.selected.as_ref().is_some_and(|s| doc.job.find(s).is_none()) {
                 doc.selected = None;
             }
-            let lost: Vec<String> = report.removed.iter().filter(|r| r.1).map(|r| r.0.clone()).collect();
-            let mut more = if report.removed.is_empty() { String::new() } else { format!("; gone: {}", report.removed.iter().map(|r| r.0.clone()).collect::<Vec<_>>().join(", ")) };
+            let lost: Vec<String> = report.removed.iter().filter(|r| r.1).map(|r| name(&r.0)).collect();
+            let mut more = if report.removed.is_empty() { String::new() } else { format!("; gone: {}", report.removed.iter().map(|r| name(&r.0)).collect::<Vec<_>>().join(", ")) };
+            // A measurement this change took the place of.
+            let mut unmeasured = false;
+            if let (Some((edge_was, points_was, points_from)), Some(f)) = (sure_before, doc.job.find(&roof_path).and_then(|e| doc.job.world.get::<Footprint>(e)).cloned()) {
+                let rise_said = |v: &Val<Rise>| match v.value {
+                    Some(Rise::Pitch(p)) => plumbline_world::view::pitch_said(p),
+                    Some(Rise::Gable) => "a gable".to_string(),
+                    None => "not known".to_string(),
+                };
+                if let (Some(was), Some(is)) = (edge_was, f.edges.get(edge.wrapping_sub(1))) {
+                    if was.status == Status::Known && is.status != Status::Known {
+                        more.push_str(&format!("\nEdge {edge} was {}, Known ({}). It is now {}, Assumed: what was measured is no longer what is drawn. Measure it again, or undo.", rise_said(&was), was.source, rise_said(is)));
+                        unmeasured = true;
+                    }
+                }
+                if points_was == Status::Known && f.points.status != Status::Known {
+                    more.push_str(&format!("\nThe roof's footprint was Known ({points_from}). With an edge moved here it is Assumed: what was measured is no longer what is drawn. Measure it again, or undo."));
+                    unmeasured = true;
+                }
+            }
             if !lost.is_empty() {
                 more.push_str(&format!("\nLost with them: the assembly or cost lines on {}", lost.join(", ")));
                 if let Some(went) = plumbline_world::view::went_with_said(&priced_before, &mut doc.job) {
@@ -275,7 +310,7 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
             doc.pointer = None;
             doc.hover = None;
             doc.edit(what);
-            let tone = if lost.is_empty() && report.renumbered.is_empty() { Tone::Done } else { Tone::Warned };
+            let tone = if lost.is_empty() && report.renumbered.is_empty() && !unmeasured { Tone::Done } else { Tone::Warned };
             // "9 lines" called a roof's eaves and hips what the estimate calls a cost line
             // (J22A-16, call 91).
             doc.say(tone, format!("{what} on edge {edge} of {roof_path}. The roof is now {}; its eaves, hips, valleys and ridges follow{more}", plumbline_world::view::so_many(report.planes, "plane")));

@@ -170,3 +170,16 @@ none in it.
 Proposed: casework as Division 6 or 12 lines in the starter assemblies (base and
 wall cabinets by the LF, countertop by the SF), priced on a run drawn along a wall,
 and drawn as what is priced. It is scope: Patrick's.
+
+## 27. Any cost line can be made of a material of its own (2026-11-16, from judgment 24)
+
+A cost line is priced by its own unit cost, or it is "made of" the one material its
+element is made of and takes that material's price and its suppliers' quotes. That
+came from roofing, where a plane is made of one metal. A wall's assembly has nine
+lines and each is a different thing (framing, sheathing, siding, board): none can be
+compared across three suppliers, and a price list reaches them only by their names
+(call 104).
+
+Proposed: a line names the material it is made of, so every line can carry
+suppliers' quotes side by side and follow a price list when it changes. It changes
+the job file and SPEC.md, so it waits for Patrick's word.

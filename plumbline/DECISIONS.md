@@ -3650,3 +3650,29 @@ reading "$71.55 is out of the job cost" would take the roof to be $71.55 cheaper
   and only when the job cost has a figure before and after.
 - The first sentence is kept as it is: it is what went, to the cent, and a person
   has to be told that lines they priced are gone.
+
+### Call 104. A price list prices the cost lines named as its items, where they have no price (2026-11-16)
+
+The twenty-fourth judge, part A (J24A-18, serious; J22A-15 before it): a supplier's
+list was brought in, the window said "8 rows read, 16 set on the job", and no line of
+the estimate moved. The list's prices went on the job's materials, and a cost line
+takes a material's price only if it is "made of" its element's one material. The
+lines the starter assemblies give are named as the list's items ("Lap siding",
+"Asphalt shingles") and are made of nothing. The note written for J22A-15 said to
+"select what it is on and give it that material"; the judge did, and the line still
+kept its price: the advice was wrong.
+
+- **A cost line that is named as a material on the job, is not made of one, and has
+  no price, takes that material's price when a list is brought in**, where the two
+  are priced by the same unit. It carries the list's status and its source, as the
+  material does. Each is said: "Lap siding on wall 1: priced at $4.25/SF, the
+  list's".
+- **A line that already has a price keeps it**, and is named with both figures:
+  "keeps $4.50/SF (the list says $4.25/SF)". A price a person typed is not written
+  over by a file. To take the list's, it is typed on the line.
+- A line priced by another unit than the list's item is named and left.
+- Only the job's own price for a material does this, not one supplier's quote: three
+  suppliers side by side are still a material's, and a line that is to be compared
+  across suppliers has to be made of one. A line of its own that names the material
+  it is made of is PROPOSALS.md 27.
+- The wrong advice is gone from the note.

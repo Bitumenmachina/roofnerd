@@ -477,17 +477,43 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
         // brings in a supplier's list expects the lines of the same name priced, and
         // is told which are not and what makes them so (J22A-15: "16 set", on what was
         // not said, and every line still read "no price").
-        let mut named: Vec<String> = Vec::new();
-        for &e in &job.order {
-            let (Some(n), Some(cost)) = (job.world.get::<Node>(e), job.world.get::<crate::Cost>(e)) else { continue };
-            for l in cost.lines.iter().filter(|l| !l.of_material && by_plain.contains_key(&check::plain_name(&l.description))) {
-                named.push(format!("{:?} on {}", l.description, if n.name.is_empty() { n.path.as_str() } else { n.name.as_str() }));
+        // Call 104: such a line, where it has no price and is priced by the unit the
+        // material is, takes the material's own price (not one supplier's quote), with
+        // the list's status and source. One that has a price keeps it, and is named
+        // with both figures: a price a person typed is not written over by a file.
+        let mut took: Vec<String> = Vec::new();
+        let mut kept: Vec<String> = Vec::new();
+        let mut other_unit: Vec<String> = Vec::new();
+        let prices: std::collections::HashMap<String, Val<f64>> = by_plain.iter().filter_map(|(plain, path)| job.find(path).and_then(|e| job.world.get::<Supply>(e)).map(|s| (plain.clone(), s.price.clone()))).collect();
+        for e in job.order.clone() {
+            let Some(on) = job.world.get::<Node>(e).map(|n| if n.name.is_empty() { n.path.clone() } else { n.name.clone() }) else { continue };
+            let Some(mut cost) = job.world.get_mut::<crate::Cost>(e) else { continue };
+            for l in cost.lines.iter_mut().filter(|l| !l.of_material) {
+                let Some(price) = prices.get(&check::plain_name(&l.description)) else { continue };
+                let Some(at) = price.value else { continue };
+                let by = price.unit.trim_start_matches("$/");
+                let said = format!("{:?} on {on}", l.description);
+                if !l.unit_cost.unit.is_empty() && !l.unit_cost.unit.eq_ignore_ascii_case(&price.unit) {
+                    other_unit.push(format!("{said} (priced by the {}, the list's by the {by})", l.unit_cost.unit.trim_start_matches("$/")));
+                    continue;
+                }
+                match l.unit_cost.value {
+                    None => {
+                        l.unit_cost = Val { value: Some(at), unit: price.unit.clone(), status: price.status, source: price.source.clone() };
+                        took.push(format!("{said}: priced at {}, the list's", dollars(at, by)));
+                    }
+                    Some(has) if (has - at).abs() > 1.0e-9 => kept.push(format!("{said} keeps {} (the list says {})", dollars(has, by), dollars(at, by))),
+                    Some(_) => {}
+                }
             }
         }
-        if !named.is_empty() {
-            let n = named.len();
-            let shown = if n > 4 { format!("{}, and {} more", named[..4].join(", "), n - 4) } else { named.join(", ") };
-            out.notes.push(format!("the list's prices are on the job's materials. {n} cost line{} named as one of them and {} not made of it, so {} its own price or none: {shown}. To price a line by the list, select what it is on and give it that material", if n == 1 { " is" } else { "s are" }, if n == 1 { "is" } else { "are" }, if n == 1 { "it keeps" } else { "they keep" }));
+        out.done.extend(took);
+        let shown = |all: &[String]| if all.len() > 4 { format!("{}, and {} more", all[..4].join("; "), all.len() - 4) } else { all.join("; ") };
+        if !kept.is_empty() {
+            out.notes.push(format!("{} named as an item on the list had a price and {}: {}. To take the list's, type it on the line", crate::view::so_many(kept.len(), "cost line"), if kept.len() == 1 { "keeps it" } else { "keep it" }, shown(&kept)));
+        }
+        if !other_unit.is_empty() {
+            out.notes.push(format!("{} named as an item on the list {} priced by another unit and {} not touched: {}", crate::view::so_many(other_unit.len(), "cost line"), if other_unit.len() == 1 { "is" } else { "are" }, if other_unit.len() == 1 { "was" } else { "were" }, shown(&other_unit)));
         }
         Ok(out)
     })

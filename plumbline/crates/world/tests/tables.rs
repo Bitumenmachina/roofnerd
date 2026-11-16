@@ -336,3 +336,40 @@ fn j15_23_no_spelling_of_time_is_what_a_material_is_ordered_by() {
         assert!(!check::is_hours(unit), "{unit} is not a measure of time");
     }
 }
+
+#[test]
+fn a_price_list_prices_the_lines_named_as_its_items_that_have_no_price_and_leaves_the_rest() {
+    // J24A-18, call 104. The sample house's south wall is 329.99 SF net. Three lines of
+    // its own, made of no material: "Lap siding" with no price, "Weather barrier" at a
+    // made-up $0.30/SF, and "Wall sheathing" priced by the sheet.
+    let mut job = sample::house();
+    let wall = job.order.clone().into_iter().find_map(|e| job.world.get::<Node>(e).filter(|n| n.name == "south wall").map(|n| n.path.clone())).unwrap();
+    job.add_line(&wall, "Lap siding", "net_area", Some(Class::Material), false).unwrap();
+    job.add_line(&wall, "Weather barrier", "net_area", Some(Class::Material), false).unwrap();
+    job.set_on_line(&wall, "unit_cost", Some("Weather barrier"), Some("$0.30/SF"), Status::Assumed, "made up").unwrap();
+    job.add_line(&wall, "Wall sheathing", "net_area", Some(Class::Material), false).unwrap();
+    job.set_on_line(&wall, "order", Some("Wall sheathing"), Some("32 SF/sheet"), Status::Known, "a 4 ft by 8 ft sheet").unwrap();
+    job.set_on_line(&wall, "unit_cost", Some("Wall sheathing"), Some("$28.00/sheet"), Status::Assumed, "made up").unwrap();
+    job.derive();
+    // A made-up supplier's list, as the job's own prices: siding $4.25/SF, barrier
+    // $0.25/SF, sheathing $0.90/SF.
+    let list = rows(&[&["item", "unit", "price"], &["Lap siding", "SF", "4.25"], &["Weather barrier", "SF", "0.25"], &["Wall sheathing", "SF", "0.90"]]);
+    let how = Entered { status: Status::Assumed, source: "a made-up list" };
+    let brought = tables::prices_in(&mut job, &list, None, None, true, Some(how)).unwrap();
+    job.derive();
+    // The siding had no price and takes the list's: 329.99 x 4.25 = 1,402.4575 -> $1,402.46.
+    assert!(brought.done.iter().any(|d| d == "\"Lap siding\" on south wall: priced at $4.25/SF, the list's"), "{:?}", brought.done);
+    let est = view::estimate(&mut job);
+    let line = |name: &str| est.lines.iter().find(|l| l.path == wall && l.description == name).unwrap().clone();
+    let siding = line("Lap siding");
+    assert_eq!((siding.unit_cost.as_ref().and_then(|v| v.value), siding.amount.value), (Some(4.25), Some(1402.46)));
+    assert_eq!(siding.unit_cost.as_ref().map(|v| (v.status, v.source.as_str())), Some((Status::Assumed, "a made-up list")));
+    // The barrier had a price and keeps it, and is named with both: 329.99 x 0.30 = $99.00 (98.997).
+    assert_eq!(line("Weather barrier").amount.value, Some(99.0));
+    assert!(brought.notes.iter().any(|n| n.contains("1 cost line named as an item on the list had a price and keeps it: \"Weather barrier\" on south wall keeps $0.30/SF (the list says $0.25/SF). To take the list's, type it on the line")), "{:?}", brought.notes);
+    // The sheathing is priced by the sheet and the list's by the SF: named, and left.
+    assert_eq!(line("Wall sheathing").unit_cost.as_ref().and_then(|v| v.value), Some(28.0));
+    assert!(brought.notes.iter().any(|n| n.contains("\"Wall sheathing\" on south wall (priced by the sheet, the list's by the SF)")), "{:?}", brought.notes);
+    // The job still checks.
+    assert_eq!(load(&save(&mut job)).map(|_| ()).map_err(|e| e.to_string()), Ok(()));
+}
