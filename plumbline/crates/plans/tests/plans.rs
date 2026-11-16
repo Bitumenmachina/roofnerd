@@ -179,12 +179,23 @@ fn j15_18_24_a_line_blanked_out_and_a_line_off_the_page_are_not_there_to_snap_to
 /// A one-page sheet of words written by hand: each line as its text and the height of
 /// its letters in points, set down the page from the top, in Helvetica.
 fn sheet(lines: &[(&str, u32)]) -> Vec<u8> {
-    let mut content = String::from("BT\n");
     let mut y = 740;
+    let mut placed = Vec::new();
     for (text, size) in lines {
-        let escaped = text.replace('\\', "\\\\").replace('(', "\\(").replace(')', "\\)");
-        content.push_str(&format!("/F1 {size} Tf\n1 0 0 1 72 {y} Tm\n({escaped}) Tj\n"));
+        placed.push((*text, *size, 72, y));
         y -= size + 8;
+    }
+    sheet_at(&placed)
+}
+
+/// The same, with each piece of text set where it is said to be: its left end and its
+/// baseline, in points from the page's lower left. Two pieces on one baseline are two
+/// columns of one line.
+fn sheet_at(pieces: &[(&str, u32, u32, u32)]) -> Vec<u8> {
+    let mut content = String::from("BT\n");
+    for (text, size, x, y) in pieces {
+        let escaped = text.replace('\\', "\\\\").replace('(', "\\(").replace(')', "\\)");
+        content.push_str(&format!("/F1 {size} Tf\n1 0 0 1 {x} {y} Tm\n({escaped}) Tj\n"));
     }
     content.push_str("ET");
     let objects = [
@@ -223,4 +234,15 @@ fn the_words_of_a_sheet_are_read_line_by_line() {
     assert!(plumbline_plans::words(&pdf(612, 792, "100 300 400 12 re f"), 1).unwrap().is_empty());
     assert!(plumbline_plans::words(&made, 2).is_err());
     assert!(plumbline_plans::words(b"not a pdf", 1).unwrap_err().contains("only a PDF has words"));
+}
+
+/// Two columns on one line of a sheet stay two columns: the gap between them is kept
+/// as three spaces, which is where whoever reads a value ends it. (R21-19: every run of
+/// spaces was made one, so "Model: MV-3621" ran on into "Finish: White Oak".)
+#[test]
+fn two_columns_on_a_line_are_kept_apart() {
+    let made = sheet_at(&[("Lakeside Vanity 30", 20, 72, 740), ("Model: MV-3621", 11, 72, 700), ("Finish: White Oak", 11, 320, 700), ("Weight: 88 lb", 11, 72, 680)]);
+    let read = plumbline_plans::words(&made, 1).unwrap();
+    let text: Vec<&str> = read.iter().map(|w| w.text.as_str()).collect();
+    assert_eq!(text, ["Lakeside Vanity 30", "Model: MV-3621   Finish: White Oak", "Weight: 88 lb"]);
 }

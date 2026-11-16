@@ -538,6 +538,27 @@ impl<'a> Device<'a> for Letters {
     fn pop_transparency_group(&mut self) {}
 }
 
+/// A line with its spaces set right: a run of one or two is one space, a run of three
+/// or more is a column gap and is kept as exactly three, which is how whoever reads a
+/// value knows where its column ends. None at either end. (Every run was once made one
+/// space, so a value ran on into the column beside it: R21-19.)
+fn gaps_kept(line: &str) -> String {
+    let mut out = String::new();
+    let mut run = 0;
+    for c in line.trim().chars() {
+        if c == ' ' {
+            run += 1;
+            continue;
+        }
+        if run > 0 {
+            out.push_str(if run >= 3 { "   " } else { " " });
+            run = 0;
+        }
+        out.push(c);
+    }
+    out
+}
+
 /// The words on one page (counted from 1) of a PDF, line by line from the top, each line
 /// from the left. A page that is a scan has letters in a picture and none to read: it
 /// gives no lines, and that is for the caller to say. Only a PDF has words.
@@ -585,7 +606,7 @@ pub fn words(bytes: &[u8], page: usize) -> Result<Vec<Words>, String> {
             text.push_str(said);
             last = Some(*x);
         }
-        let text = text.split(' ').filter(|w| !w.is_empty()).collect::<Vec<_>>().join(" ");
+        let text = gaps_kept(&text);
         if !text.is_empty() {
             out.push(Words { text, size });
         }

@@ -5408,7 +5408,7 @@ first; "reproduced" is the reviewer's word, the rest are by reading.
 
 | | What | Where | State |
 |---|---|---|---|
-| R21-19 | **reproduced**: a maker's sheet runs the next column into a value ("MV-3621 Finish: White Oak" as the model number): the column gap is marked with three spaces and then every run of spaces is made one | `plans/src/lib.rs` `words`; `world/src/spec.rs` | open |
+| R21-19 | **reproduced**: a maker's sheet runs the next column into a value ("MV-3621 Finish: White Oak" as the model number): the column gap is marked with three spaces and then every run of spaces is made one | `plans/src/lib.rs` `words`; `world/src/spec.rs` |**fixed**: a run of three or more spaces is kept as a column gap (`gaps_kept`); test `two_columns_on_a_line_are_kept_apart` |
 | R21-1 | closing can lose work: one warning for both windows, cleared only by a save; "close again to leave" closes only that window; the sheet cannot be opened again | `app/src/main.rs` `closing` | open |
 | R21-22 | deleting the level on show makes the house vanish: the level on show, the roof and the tool in hand are not let go as undo lets them go | `tools.rs` delete; `scene.rs` | open |
 | R21-10 | like-for-like difference and percent are worked out twice, in the window and in the command line; the model does not give them | `sheet.rs` money; `cli/src/main.rs` | open |
@@ -5433,3 +5433,33 @@ first; "reproduced" is the reviewer's word, the rest are by reading.
 
 Also, for the model: a line whose quantity is typed as a bare "1" is priced "1.00 EA",
 a unit nobody entered. Each row is marked fixed here as it is fixed.
+
+## The code review of the model and the money (2026-11-16): what it found
+
+A second reviewer (Opus) read the model's money files whole (`lines`, `formula`,
+`derive`, `view`, `vif`, `job`, `export`, `tables`, `units`, `value`, `file`, `check`,
+`clash`, the sheets crate) and reproduced what it could with the command line on
+made-up jobs, each figure worked by hand. Its notes and report are
+`research/review-21-model-notes.md`. It numbered its findings R21-n as the window's
+reviewer did; here they are M21-n. Found right by it: the made-up whole house's
+recap, overhead, profit and price to the cent, the sixteen divisions adding to the
+job cost, d5's labor and switch arithmetic, the formula reader's limits, the range
+checks, the job file's refusals.
+
+| | What | Where | State |
+|---|---|---|---|
+| M21-1 | **reproduced**: a line's amount is a cent off its own formula: each step is rounded to four places before the next uses it ("plan_length / 3" of 100 LF at $300: $9,999.99, by hand $10,000.00) | `lines.rs`, `value.rs` | this is QUESTIONS.md Q25 and DECISIONS call 21: Patrick's to rule; the reviewer would reverse it, and says a note in DECISIONS says the opposite of call 21 |
+| M21-6 | **reproduced**: the same coverage buys whole sheets when typed and exact sheets when brought in on a price list (100 SF of board: $48.00 typed, $37.50 brought in), and nothing says so | `tables.rs`, `job.rs` | open |
+| M21-3 | **reproduced**: the recap's hours leave out a labor line with no price and still read Known (36 hr of labor shown as 18) | `view.rs` | open |
+| M21-2 | **reproduced**: the field list puts dollars on a measurement they do not ride on (a line Assumed only by its price sends the crew to measure a height that moves no money) | `vif.rs` | open |
+| M21-9 | **reproduced**: bringing in a price list takes time that grows with the square of its rows (1,000 rows 5.7 s; 4,000 rows 93 s) | `tables.rs`, `job.rs` | open |
+| M21-4 | **reproduced**: 2.5 typed as a quantity stays 2.5 EA; entered as a value on the line ("months = 2.5") it is rounded up to 3 with the note "a count is whole" | `lines.rs` | open |
+| M21-7 | **reproduced**: a prior estimate adds to two totals (`show` $50.00, `compare` $70.00): `show` leaves out a line with a quantity and a unit cost and no amount, and does not say so | `tables.rs` | open |
+| M21-8 | **reproduced**: casing cannot be taken off by the opening's size: an opening's width and height and a wall's height are in "ft", which a formula refuses, and the refusal's advice cannot be followed | `components.rs`, `lines.rs` | open |
+| M21-5 | **reproduced**: the workbook writes counts of lines as dollars ("$1.00" lines) | `sheets/src/lib.rs` | open |
+| M21-10 | **reproduced**, minor: a refusal names a wall that was rolled back, and does not offer the wall types the job has | `building.rs` | open |
+| M21-12 | suspected: materials matched by two rules (exact in `derive` and `view`; capitals and spacing ignored in `job` and `tables`) | several | open |
+| M21-11 | suspected: more than 24 suppliers runs the workbook's columns past Z | `export.rs` | open |
+| M21-13 | by reading: the sixteen divisions added in both the command line and the export; like-for-like worked in the command line (the window's R21-10); a prior's total in `tables` | several | open |
+| M21-14 | small: a comment twice; `any(|_| true)`; statuses that default to Known when there is nothing; a clash depth that may be dropped; a CSV cell starting with an apostrophe loses it | several | open |
+| (from the window's reviewer) | a line whose quantity is typed as a bare "1" is priced "1.00 EA", a unit nobody entered | `lines.rs` | open |
