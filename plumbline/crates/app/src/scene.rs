@@ -1652,12 +1652,17 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
     if reach > 0.0 && !doc.walk {
         let (minor, major) = (theme::grid_minor(), theme::grid_major());
         let fade = |x: f32, z: f32| (1.0 - (x * x + z * z).sqrt() / reach).clamp(0.0, 1.0).powf(1.4);
-        let steps = (reach / 10.0) as i32;
+        // Over a very large ground (an unscaled scan laid at a tenth of a foot to the
+        // dot reaches thousands of feet) the lines are further apart, so there are never
+        // more than forty each way from the middle: it drew hundreds of thousands of
+        // pieces a frame (R21-23).
+        let spacing = [10.0_f32, 50.0, 100.0, 500.0, 1000.0, 5000.0].into_iter().find(|s| reach / s <= 40.0).unwrap_or(10000.0);
+        let steps = (reach / spacing) as i32;
         for i in -steps..=steps {
-            let at = i as f32 * 10.0;
+            let at = i as f32 * spacing;
             let base = if i % 5 == 0 { major } else { minor };
             for j in -steps..steps {
-                let (from, to) = (j as f32 * 10.0, (j + 1) as f32 * 10.0);
+                let (from, to) = (j as f32 * spacing, (j + 1) as f32 * spacing);
                 let (a0, a1) = (fade(at, from), fade(at, to));
                 if a0 <= 0.0 && a1 <= 0.0 {
                     continue;

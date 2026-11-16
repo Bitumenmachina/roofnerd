@@ -5420,14 +5420,14 @@ first; "reproduced" is the reviewer's word, the rest are by reading.
 | R21-25 | an item is set down on the lowest level whatever was clicked, and the message does not say which level | `scene.rs` | **fixed**: an item stands on the level whose floor is under what was clicked (the level on show alone, if one is), and the message names the level |
 | R21-26 | the base board and its cuts at doors are worked out by the window; nothing holds the drawn base to the priced LF | `scene.rs` | open |
 | R21-3 | "Added wall, X long" is the window's distance between the picks, not the model's length | `tools.rs` | **fixed**: the length said is the model's `plan_length` of what was made |
-| R21-23 | the ground grid can draw hundreds of thousands of lines a frame over an unscaled scan | `scene.rs`, `plans.rs` | open |
-| R21-2 | every character typed rereads the whole job, clashes included | `main.rs`, `model.rs` | open |
+| R21-23 | the ground grid can draw hundreds of thousands of lines a frame over an unscaled scan | `scene.rs`, `plans.rs` | **fixed**: over a very large ground the grid's lines are further apart (10, 50, 100, 500 ft ...), never more than forty each way; a house's grid is as it was |
+| R21-2 | every character typed rereads the whole job, clashes included | `main.rs`, `model.rs` | measured, not fixed: on the made-up whole house each of the four readings (check, clashes, estimate, field list) takes about 0.03 s on an optimised build and 0.1 s unoptimised, so a keystroke costs about a tenth of a second optimised. Slow on a large job, never wrong: open |
 | R21-8/14 | a click on the plan, the model or a sheet row while a field is open is dropped without a word | `tools.rs`, `scene.rs`, `sheet.rs` | open |
 | R21-18 | "A Roof", "a Door" lowered inside a person's own names; "grey" made "gray" in them | `theme.rs` | open |
 | R21-9 | in a form a comma always means the next field, so "Sink, double bowl" splits | `main.rs` | part: a comma in the last field is a comma (it was dropped); in an earlier field it still means the next field: open |
 | R21-27 | a supplier name with a full stop makes its file "not there"; a dropped table forgotten if Model or Maker's sheet is clicked next | `bring.rs`, `panels.rs` | first half **fixed**: a supplier's name may have a full stop; only the end of a table's file name is taken as part of the file. The dropped table forgotten: open |
 | R21-15 | two controls can share a name in the map | `map.rs` | open |
-| R21-30 | IFC in: of two levels at one height the lower gets an untrue note | `ifc/src/lib.rs` | open |
+| R21-30 | IFC in: of two levels at one height the lower gets an untrue note | `ifc/src/lib.rs` | **fixed**: a level takes its height from the next level whose floor is higher, so two at one height both have it |
 | R21-24, 16, 6, 7 | the Clashes switch left on after a press on a thing; taking an item in hand does not go through the view change; a key and a click in one frame; `pressed` cleared every frame with a field open | `scene.rs`, `panels.rs`, `main.rs` | open |
 | R21-12, 13, 28, 17/29 | money written in about fifteen places; the not-priced sentence built twice ("2 equipments"); the lowest wall base worked twice; stale comments | several | R21-13 **fixed** (`Kind::so_many`: "2 pieces of equipment", "3 assemblies"; one sentence shared); R21-17/29 the stale comments set right and an unused argument dropped; R21-12 (money written in many places) and R21-28: open |
 
@@ -5489,3 +5489,30 @@ The saved job after the walk: one wall, type "wall 6 in", (-15.0833, -9) to (5.4
 -9): 20' 6" as typed. 290 tests pass. **Not yet done:** the sixteen window
 demonstrations have not been rerun on this build (the judge has the display), and
 none of this has been judged.
+
+
+**Footing concrete where footings meet, worked exactly (J21-1, J21-3, J21-4; read
+from the judge's notes while it runs).** The rule that fixed J20-1 knew the plain T
+and nothing else: a cross was still counted twice (4.44 CY for 116 CF), so were three
+footings meeting at a point, a stem stopping part way across a run, and a stem deeper
+than its run lost the concrete under the run. The special case is gone. A footing's
+concrete is now its length by its width by its depth less what of it lies in a
+footing drawn before it, worked from the two rectangles on plan
+(`crates/world/src/building/footings.rs`), and the formula on the line says how many
+CF were taken off and for which footing. A plain corner still takes nothing off.
+Worked by hand first, 24 in by 12 in unless said, and each is a test
+(`concrete_where_footings_meet_is_counted_once`):
+
+| | By hand | Program |
+|---|---|---|
+| a T, 20 ft stem on a 40 ft run | 80 + 38 = 118 CF | 118 |
+| a cross | 80 + 40 - 4 = 116 CF, 4.30 CY | 116; the judge's job reads 4.30 CY |
+| three at a point | 40 + 40 + 38 = 118 CF, 4.37 CY | 118; the judge's job reads 4.37 CY |
+| a stem part way across the run | 80 + 37 = 117 CF | 117 |
+| a stem 18 in deep on a 12 in run | 80 + 57 + 1 = 138 CF, 5.11 CY | 138; the judge's job reads 5.11 CY |
+| a run 18 in deep, a 12 in stem | 120 + 38 = 158 CF | 158 |
+| a ring 40 by 28 | 136 x 2 = 272 CF, 10.07 CY | 272; `demos/found.sh` passes |
+| the stem drawn before the run | 118 CF | 118 |
+
+The made-up whole house is unchanged: Division 3 $32,485.40, price $468,876.85. 291
+tests pass. Not judged.

@@ -542,9 +542,14 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             out.notes.push(format!("the model has more than one level called \"{called}\": the one with its floor at {} was brought in as \"{renamed}\"", feet(*elevation)));
             called = renamed;
         }
-        let path = match storeys.get(i + 1) {
-            Some(next) if next.2 - elevation > 0.01 => ed::storey(job, &called, &feet(*elevation), &feet(next.2 - elevation), entered)?,
-            _ => {
+        // The next level whose floor is higher than this one's: two levels at one height
+        // (a mezzanine named apart, a model with a level drawn twice) both take their
+        // height from the level above them, where there is one (R21-30: the lower of
+        // the two was told "the model has no level above this one", which was untrue).
+        let above = storeys[i + 1..].iter().find(|next| next.2 - elevation > 0.01);
+        let path = match above {
+            Some(next) => ed::storey(job, &called, &feet(*elevation), &feet(next.2 - elevation), entered)?,
+            None => {
                 // The top storey: how tall it is is in nothing the file says.
                 let path = ed::storey(job, &called, &feet(*elevation), "1 ft", entered)?;
                 let e = job.find(&path).ok_or("the new level is not there")?;
