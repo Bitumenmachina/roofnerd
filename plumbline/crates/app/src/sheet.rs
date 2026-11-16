@@ -613,7 +613,7 @@ fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
 /// click on a row selects the thing in the model window and takes the view to it.
 fn verify(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
     let list = &snap.verify;
-    let money = |x: f64| format!("${}", view::figure(x, 2));
+    let money = view::money;
     let lines = |n: usize| view::so_many(n, "line");
     if list.questions.is_empty() {
         return nothing(p, fonts, "Nothing to verify: every value that can be measured is Known, and no clash is a question.");
@@ -685,8 +685,7 @@ pub fn dollars(d: Option<&plumbline_world::Derived>) -> (String, Status) {
         None => ("none entered".into(), Status::Known),
         Some(d) => match d.value {
             Some(x) if d.unit == "%" => (format!("{} %", view::figure(x, 2)), d.status),
-            Some(x) if x < 0.0 => (format!("-${}", view::figure(-x, 2)), d.status),
-            Some(x) => (format!("${}", view::figure(x, 2)), d.status),
+            Some(x) => (view::money(x), d.status),
             None => ("no figure".into(), Status::Unknown),
         },
     }
@@ -729,7 +728,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                         Some(more) => format!("{hours}, and {more}"),
                         None => hours,
                     };
-                    line(t, c.class.title().to_string(), format!("{}{hours}", lines_of(c.total.members)), rests(c.total.assumed), format!("${}", view::figure(x, 2)), c.total.status, false);
+                    line(t, c.class.title().to_string(), format!("{}{hours}", lines_of(c.total.members)), rests(c.total.assumed), view::money(x), c.total.status, false);
                 }
                 None => row(t, false, None, |r| {
                     cell(r, 7.0, false, |_| {});
@@ -750,7 +749,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             }
         }
         match est.job_cost.value {
-            Some(x) => line(t, "Job cost".to_string(), lines_of(est.job_cost.members), rests(est.job_cost.assumed), format!("${}", view::figure(x, 2)), est.job_cost.status, true),
+            Some(x) => line(t, "Job cost".to_string(), lines_of(est.job_cost.members), rests(est.job_cost.assumed), view::money(x), est.job_cost.status, true),
             None => line(t, "Job cost".to_string(), "no line with a cost type comes to a figure".to_string(), String::new(), "none".to_string(), Status::Unknown, true),
         }
         let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!("at {} %", view::rate(x)))).unwrap_or_default();
@@ -854,7 +853,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 };
                 cell(r, 118.0, true, |c| words(c, fonts, counted, 11.5, Weight::Regular, theme::ink_faint()));
                 cell(r, 130.0, true, |c| match d.total.value {
-                    Some(x) => words(c, fonts, format!("${}", view::figure(x, 2)), 12.5, Weight::Semibold, theme::status_ink(d.total.status)),
+                    Some(x) => words(c, fonts, view::money(x), 12.5, Weight::Semibold, theme::status_ink(d.total.status)),
                     None if waits > 0 => words(c, fonts, "no figure", 12.5, Weight::Medium, theme::status_ink(Status::Unknown)),
                     None => words(c, fonts, "none", 12.5, Weight::Regular, theme::ink_faint()),
                 });
@@ -866,7 +865,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 cell(r, 24.0, true, |_| {});
                 cell(r, 0.0, false, |c| words(c, fonts, "In no division: in the job cost, and in none of the sixteen", 12.5, Weight::Medium, theme::status_ink(Status::Unknown)));
                 cell(r, 80.0, true, |c| words(c, fonts, if est.no_division.members == 1 { "1 line".to_string() } else { format!("{} lines", est.no_division.members) }, 11.5, Weight::Regular, theme::ink_faint()));
-                cell(r, 130.0, true, |c| words(c, fonts, est.no_division.value.map(|x| format!("${}", view::figure(x, 2))).unwrap_or_else(|| "no figure".to_string()), 12.5, Weight::Semibold, theme::status_ink(Status::Unknown)));
+                cell(r, 130.0, true, |c| words(c, fonts, est.no_division.value.map(|x| view::money(x)).unwrap_or_else(|| "no figure".to_string()), 12.5, Weight::Semibold, theme::status_ink(Status::Unknown)));
             });
         }
     });
@@ -878,7 +877,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             let its: Vec<&view::SheetLine> = est.lines.iter().filter(|l| l.division == Some(d.division)).collect();
             if !its.is_empty() {
                 let (said, status) = match d.total.value {
-                    Some(x) => (format!("${}", view::figure(x, 2)), d.total.status),
+                    Some(x) => (view::money(x), d.total.status),
                     // It has lines and none of them comes to a figure: "no figure", in
                     // the colour of something not known, as By division above and the
                     // command line say it (R21-11: it read "none", as if it had no work).
@@ -889,7 +888,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
         }
         let undivided: Vec<&view::SheetLine> = est.lines.iter().filter(|l| l.division.is_none()).collect();
         if !undivided.is_empty() {
-            ordered.push(("No division".to_string(), est.no_division.value.map(|x| format!("${}", view::figure(x, 2))).unwrap_or_else(|| "no figure".to_string()), Status::Unknown, undivided));
+            ordered.push(("No division".to_string(), est.no_division.value.map(|x| view::money(x)).unwrap_or_else(|| "no figure".to_string()), Status::Unknown, undivided));
         }
         for (heading, said, status, its) in &ordered {
         // The division and what it comes to, on a row of their own: beside the column
@@ -1062,7 +1061,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     c.spawn(Node { flex_direction: FlexDirection::Column, align_items: AlignItems::FlexEnd, padding: UiRect::axes(px(0.0), px(5.0)), ..default() }).with_children(|c| {
                         words(c, fonts, match col { Column::Material => "MATERIAL", Column::Labor => "LABOR", Column::General => "SUB, GENERAL" }, 10.0, Weight::Semibold, theme::ink_faint());
                         match total.and_then(|t| t.value.map(|x| (x, t.status))) {
-                            Some((x, status)) => words(c, fonts, format!("${}", view::figure(x, 2)), 12.5, Weight::Semibold, theme::status_ink(status)),
+                            Some((x, status)) => words(c, fonts, view::money(x), 12.5, Weight::Semibold, theme::status_ink(status)),
                             None => words(c, fonts, "none", 12.5, Weight::Semibold, theme::ink_faint()),
                         }
                     });
@@ -1100,7 +1099,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 cell(r, 0.0, false, |c| words(c, fonts, "Total", 12.5, Weight::Semibold, theme::ink()));
                 for total in &totals {
                     cell(r, width, true, |c| match total.value {
-                        Some(x) => words(c, fonts, format!("${}", view::figure(x, 2)), 12.5, Weight::Semibold, theme::status_ink(total.status)),
+                        Some(x) => words(c, fonts, view::money(x), 12.5, Weight::Semibold, theme::status_ink(total.status)),
                         None => words(c, fonts, "none", 12.5, Weight::Semibold, theme::ink_faint()),
                     });
                 }
@@ -1186,7 +1185,7 @@ fn money(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
                     }
                 });
                 cell(r, 130.0, true, |c| match total.value {
-                    Some(x) => words(c, fonts, format!("${}", view::figure(x, 2)), 13.5, Weight::Semibold, theme::status_ink(total.status)),
+                    Some(x) => words(c, fonts, view::money(x), 13.5, Weight::Semibold, theme::status_ink(total.status)),
                     None => words(c, fonts, "none", 13.5, Weight::Semibold, theme::ink_faint()),
                 });
             });

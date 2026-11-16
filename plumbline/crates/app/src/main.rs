@@ -680,7 +680,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                 // is answered "$24.00", as the line then shows it.
                                 let typed = text.trim();
                                 let said = match typed.parse::<f64>() {
-                                    Ok(x) if !matches!(field, Entry::StretchOut | Entry::Rate) => format!("${}", plumbline_world::view::figure(x, 2)),
+                                    Ok(x) if !matches!(field, Entry::StretchOut | Entry::Rate) => plumbline_world::view::money(x),
                                     _ => typed.to_string(),
                                 };
                                 // A roof is priced once: the same line on the roof's other

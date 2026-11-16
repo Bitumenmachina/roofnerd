@@ -5477,7 +5477,7 @@ first; "reproduced" is the reviewer's word, the rest are by reading.
 | R21-15 | two controls can share a name in the map | `map.rs` | open |
 | R21-30 | IFC in: of two levels at one height the lower gets an untrue note | `ifc/src/lib.rs` | **fixed**: a level takes its height from the next level whose floor is higher, so two at one height both have it |
 | R21-24, 16, 6, 7 | the Clashes switch left on after a press on a thing; taking an item in hand does not go through the view change; a key and a click in one frame; `pressed` cleared every frame with a field open | `scene.rs`, `panels.rs`, `main.rs` | R21-24 **fixed** (a press that carried nothing puts the marks back) and R21-16 **fixed** (an item is taken in hand through the one road for a change of view). R21-6 (a key and a click in one frame) and R21-7: open |
-| R21-12, 13, 28, 17/29 | money written in about fifteen places; the not-priced sentence built twice ("2 equipments"); the lowest wall base worked twice; stale comments | several | R21-13 **fixed** (`Kind::so_many`: "2 pieces of equipment", "3 assemblies"; one sentence shared); R21-17/29 the stale comments set right and an unused argument dropped; R21-12 (money written in many places) and R21-28: open |
+| R21-12, 13, 28, 17/29 | money written in about fifteen places; the not-priced sentence built twice ("2 equipments"); the lowest wall base worked twice; stale comments | several | R21-13 **fixed** (`Kind::so_many`: "2 pieces of equipment", "3 assemblies"; one sentence shared); R21-17/29 the stale comments set right and an unused argument dropped; R21-12 **fixed in part (2026-11-16, night)**: `view::money` is the one writer of a dollar figure (to the cent, thousands separated, the minus before the sign) and fifteen places that wrote one by hand now call it. **A changed behaviour**: a negative figure was written "$-12.50" in some places of the estimate window and "-$12.50" in others; it is "-$12.50" everywhere. About twenty-five places still put the sign on a figure inside a longer sentence, or on a rate (which has its own places): left. 315 tests and the twenty-one command-line demonstrations pass on the build with it. R21-28: open |
 
 Also, for the model: a line whose quantity is typed as a bare "1" is priced "1.00 EA",
 a unit nobody entered. Each row is marked fixed here as it is fixed.
@@ -6269,7 +6269,7 @@ briefs are short and can be given again.
 7. **The item library is not judged.** Nobody who did not build it has tried to
    break the table, the starter items or the panel an item is changed on.
 8. **The open rows** of the reviews and the twenty-first judgment (their tables
-   above): a keystroke re-reads the whole job (R21-2); one money formatter (R21-12);
+   above): a keystroke re-reads the whole job (R21-2); the rest of one money writer (R21-12: `view::money` is there, and sentences still write their own);
    a footing dug wider cannot be recorded on it alone (J21-6); base is priced by a
    room's perimeter and drawn by its runs less its doors.
 

@@ -365,7 +365,7 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
 /// leaves out. Every figure is worked out in the world; this only prints them.
 fn price(job: &mut plumbline_world::Job) -> String {
     let p = view::pricing(job);
-    let money = |x: f64| format!("{}${}", if x < 0.0 { "-" } else { "" }, view::figure(x.abs(), 2));
+    let money = view::money;
     let amount = |d: &Option<plumbline_world::Derived>| match d {
         None => "none entered".to_string(),
         Some(d) => match d.value {
@@ -510,7 +510,7 @@ fn plainly(why: &str, args: &[String]) -> String {
 fn estimate(job: &mut plumbline_world::Job) -> String {
     use plumbline_world::{Class, Column, Derived};
     let est = view::estimate(job);
-    let money = |x: f64| format!("{}${}", if x < 0.0 { "-" } else { "" }, view::figure(x.abs(), 2));
+    let money = view::money;
     let flagged = |d: &Derived| match d.value {
         Some(x) => format!("{}{}", d.status.flag().trim_end(), money(x)),
         None => "no figure".to_string(),
@@ -993,7 +993,7 @@ fn tables(args: &[String]) -> Result<(), String> {
 /// Each prior estimate in the job set against the job's own lines.
 fn compared_said(job: &mut plumbline_world::Job) -> String {
     use plumbline_world::tables;
-    let money = |x: f64| format!("${}", view::figure(x, 2));
+    let money = view::money;
     let signed = |x: f64| format!("{}${}", if x < 0.0 { "-" } else { "+" }, view::figure(x.abs(), 2));
     let est = view::estimate(job);
     let all = tables::compare(job);

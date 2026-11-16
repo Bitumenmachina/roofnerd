@@ -391,6 +391,18 @@ pub fn figure(value: f64, decimals: usize) -> String {
     if part.is_empty() { format!("{minus}{grouped}") } else { format!("{minus}{grouped}.{part}") }
 }
 
+/// Dollars as they are written everywhere: to the cent, thousands separated, the minus
+/// before the sign ("-$12.50", never "$-12.50"). One writer (R21-12: it was written
+/// out in about forty places, and a negative came out two ways).
+pub fn money(value: f64) -> String {
+    if !value.is_finite() {
+        return "not a number".into();
+    }
+    let text = figure(value.abs(), 2);
+    let minus = if value < 0.0 && text.chars().any(|c| ('1'..='9').contains(&c)) { "-" } else { "" };
+    format!("{minus}${text}")
+}
+
 /// A figure to `decimals` places, unless that would print a figure that is not zero as
 /// zero: then it is shown to the four places the model keeps, exactly as the model has it.
 /// A view may round; it may not round something away, or up into something else.
@@ -700,7 +712,7 @@ impl Pricing {
     /// priced, and the screen the price is read on said nothing.)
     pub fn allowances_alone_said(&self) -> Option<String> {
         let (n, sum) = self.allowances_alone()?;
-        let money = sum.map(|x| format!("${}", figure(x, 2))).unwrap_or_else(|| "no figure".to_string());
+        let money = sum.map(|x| money(x)).unwrap_or_else(|| "no figure".to_string());
         Some(format!("{n} thing{} priced by an allowance and no cost line ({money}): an allowance is the budget's figure and is not in this price. Give {} cost lines to carry {} into it", if n == 1 { " is" } else { "s are" }, if n == 1 { "it" } else { "them" }, if n == 1 { "it" } else { "them" }))
     }
 }
