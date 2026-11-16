@@ -555,3 +555,29 @@ fn a_named_suppliers_list_prices_what_the_job_has_no_price_for_and_writes_over_n
     assert_eq!(est.lines.iter().find(|l| l.path == wall && l.description == "Lap siding").unwrap().amount.value, Some(1402.46));
     assert_eq!(load(&save(&mut job)).map(|_| ()).map_err(|e| e.to_string()), Ok(()));
 }
+
+#[test]
+fn the_starter_items_brought_in_again_write_over_nothing_the_job_has() {
+    // J25A-18: a lavatory measured at 24 in and drawn as a sink went back to 20 in,
+    // Assumed, a lavatory, when Starter items was pressed a second time.
+    let starter: Vec<Vec<String>> = tables::STARTER_ITEMS.lines().map(cells).collect();
+    let mut job = Job::new("starter twice (not a real job)", "test", "test");
+    let (first, kept) = tables::items_in_missing(&mut job, &starter, None).unwrap();
+    assert_eq!((first.done.len(), kept.len()), (21, 0));
+    // The lavatory is changed here, through the library a person keeps; a range is
+    // taken out of the job's list.
+    let mut mine = tables::items_out(&mut job);
+    let lav = mine.iter().position(|r| r[0] == "Lavatory").unwrap();
+    mine[lav][3] = "sink".into();
+    mine[lav][4] = "24 in".into();
+    mine[lav][5] = "Known".into();
+    mine[lav][6] = "measured on site".into();
+    assert_eq!(tables::items_in(&mut job, &mine, None).unwrap().done, ["Lavatory: changed: what it is drawn as, its width"]);
+    let before = items(&mut job);
+    // The starter again: nothing is added, nothing is changed, and all 21 are named as kept.
+    let (again, kept) = tables::items_in_missing(&mut job, &starter, None).unwrap();
+    assert_eq!((again.done.len(), again.same, again.not_used.len(), kept.len()), (0, 0, 0, 21));
+    assert_eq!(items(&mut job), before);
+    let (_, lavatory) = before.iter().find(|(n, _)| n == "Lavatory").unwrap();
+    assert_eq!((lavatory.width.feet(), lavatory.width.status, lavatory.form.as_deref()), (Some(2.0), Status::Known, Some("sink")));
+}

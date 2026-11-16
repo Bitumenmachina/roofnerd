@@ -38,7 +38,7 @@ export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$J"
 shot                                    # 01 a new job: nothing in it, and Next steps says where to start
-on "Model (IFC)"; sleep 2               # Bring in: a model
+on "Designer's model"; sleep 2               # Bring in: a model
 typed "made-up-house.ifc" yes           # 02 its file's name, typed where it is asked for
 sleep 6
 park

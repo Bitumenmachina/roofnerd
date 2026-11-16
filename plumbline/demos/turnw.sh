@@ -57,7 +57,7 @@ shot                                     # 02 set down, and in the wall: said, a
 xdotool key q; sleep 7                   # a quarter turn
 park
 shot                                     # 03 its 4 in now toward the wall: clear
-on_at "Item library (CSV)"; sleep 6      # the library written out beside the job
+on_at "Item library, to keep"; sleep 6      # the library written out beside the job
 python3 - "$T/job/turned items.csv" <<'PY'
 import csv, sys
 rows = list(csv.reader(open(sys.argv[1], newline="")))

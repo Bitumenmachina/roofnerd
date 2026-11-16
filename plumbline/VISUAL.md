@@ -169,3 +169,12 @@ judged. D6 (equipment and fixtures are boxes), D8's empty kitchen and bath, D5's
 fascia and soffit, E4 and F1 are as they were. STATUS.md ("The twenty-fourth
 judgment, part B") has a row for each finding.
 
+The twenty-fifth judgment, part B, went through every line a third time on the build
+of 9868569 (`research/judgment-25b-notes.md`): **17 lines passed, 16 failed, B3 to B5
+could not be judged from stills, B6 and C4 are in doubt.** It passed A2 (with a
+reservation), A3, A4, B1, B2, B7, C1, C2, D1, D2, D3, D4, D7, E2, E3, E4, F3 and F4;
+C5 in 3D and not on plan. It failed A1 (the side panels stand nearly the height of
+the window; passed before), A5, A6, A7, A8, A9, B8, C3, D5, D6, D8, E1, F1 and F2.
+What decided it was E1: with every level on show, a finished house on plan was a
+solid roof. Call 109 answers that and has not been judged.
+

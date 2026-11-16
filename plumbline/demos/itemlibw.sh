@@ -50,7 +50,7 @@ shot                                     # 03 its sizes, its trade, what it is d
 on "Drawn as Box"; sleep 5
 park
 shot                                     # 04 drawn as its box, and so is the one on the floor
-on "Item library (CSV)"; sleep 6         # written out beside the job
+on "Item library, to keep"; sleep 6         # written out beside the job
 park
 shot                                     # 05 said, with where it is and what to do with it
 xdotool key F2; sleep 3                  # save

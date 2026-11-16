@@ -1481,3 +1481,29 @@ pub fn compare(job: &mut Job) -> Vec<Compared> {
     }
     out
 }
+
+/// The library the program ships with, brought in again: it adds the items the job has
+/// not got and leaves every item the job has as it is, whatever the shipped library
+/// says of it. A person's own changes to an item (a width measured, a trade, what it is
+/// drawn as) are not written over by pressing Starter items a second time (J25A-18:
+/// they were, and the screen called it "Brought in 3 starter items"). Returns what was
+/// done, and the names of the items left as the job has them. A library a person
+/// brings in themselves is `items_in`: there a changed row is meant.
+pub fn items_in_missing(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>) -> Result<(Brought, Vec<String>), String> {
+    let cols = columns(rows, &ITEM_COLUMNS, &["item", "kind", "width", "depth", "height"]).ok_or_else(|| "this is not an item library this program can read".to_string())?;
+    let have: std::collections::HashSet<String> = {
+        let mut q = job.world.query::<(&Node, &crate::Item)>();
+        q.iter(&job.world).map(|(n, _)| check::plain_name(&n.name)).collect()
+    };
+    let (mut wanted, mut their_numbers, mut kept) = (Vec::new(), Vec::new(), Vec::new());
+    for (i, row) in rows.iter().enumerate() {
+        let name = cols.cell(row, "item");
+        if i > cols.row && !name.is_empty() && have.contains(&check::plain_name(name)) {
+            kept.push(name.to_string());
+            continue;
+        }
+        wanted.push(row.clone());
+        their_numbers.push(row_number(numbers, i));
+    }
+    items_in(job, &wanted, Some(&their_numbers)).map(|brought| (brought, kept))
+}

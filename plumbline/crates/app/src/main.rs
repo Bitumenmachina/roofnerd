@@ -146,6 +146,7 @@ fn main() {
         shots: 0,
         edited: fresh,
         plan: false,
+        plan_level: None,
         walk: false,
         show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, ground: true, framing: false, finishes: true, off_levels: Default::default(), off_systems: Default::default(), away: [false; 3] },
         // The sheet opens on the estimate once anything is priced; before that, on what
@@ -218,10 +219,40 @@ pub fn set_view(doc: &mut Doc, orbit: &mut Orbit, snap: &Snapshot, plan: bool, w
         orbit.go_home();
         doc.say(Tone::Done, "Back outside.");
     }
+    // A plan is of one level. Asked for with every level on show, on a job with a
+    // roof or more than one level, it put the roof, solid, over everything: a finished
+    // house on plan was a dark slab with no floor plan under it (J25B-3, the finding
+    // that failed the look a third time). The plan puts one level on show: the lowest
+    // with a door or a window in it, else the lowest. Leaving the plan puts every
+    // level back, unless another was chosen meanwhile.
+    if plan && !doc.plan && doc.show.storey.is_none() && (snap.storeys.len() > 1 || (!snap.storeys.is_empty() && !snap.planes.is_empty())) {
+        let by_height = |a: &&plumbline_world::building::StoreyTotals, b: &&plumbline_world::building::StoreyTotals| a.elevation.unwrap_or(f64::MAX).total_cmp(&b.elevation.unwrap_or(f64::MAX));
+        let level = snap.storeys.iter().filter(|s| s.doors + s.windows > 0).min_by(by_height).or_else(|| snap.storeys.iter().min_by(by_height));
+        if let Some(level) = level {
+            doc.show.storey = Some(level.path.clone());
+            doc.plan_level = Some(level.path.clone());
+        }
+    } else if !plan && doc.plan {
+        if doc.plan_level.is_some() && doc.show.storey == doc.plan_level {
+            doc.show.storey = None;
+        }
+        doc.plan_level = None;
+    }
     doc.plan = plan;
     doc.walk = walk;
     // A drawing under the plan lies over the floor on plan and under it in 3D.
     doc.redraw();
+}
+
+/// What the window says on going to the plan or back to 3D (VISUAL.md A9). Where the
+/// plan put one level on show by itself, it says which and how to see the others.
+pub fn view_said(doc: &Doc, snap: &Snapshot, plan: bool, key: bool) -> String {
+    let level = doc.plan_level.as_ref().filter(|_| plan).and_then(|l| snap.storeys.iter().find(|s| s.path == *l));
+    match (plan, level) {
+        (true, Some(level)) => format!("On plan: {}, north is up. A plan is of one level: Page Up and Page Down go to the others, and All levels shows the roof from above.{}", panels::pretty(&level.name), if key { " T again for 3D." } else { "" }),
+        (true, None) => format!("On plan: north is up.{}", if key { " T again for 3D." } else { "" }),
+        (false, _) => format!("In 3D.{}", if key { " T for the plan." } else { "" }),
+    }
 }
 
 /// The selected plane's roof and the edge of the footprint it rises from.
@@ -721,7 +752,16 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                 let also = if bare { format!("{also} It is the budget's figure and is not in the price: give this cost lines (Assembly, or Add cost line) to carry it in.") } else { also };
                                 doc.say(if bare { Tone::Warned } else { Tone::Done }, format!("{sel}: {}{of} set to {said}.{also}", if field == Entry::Rate { "production rate".to_string() } else { what.replace('_', " ") }));
                             }
-                            Err(why) => tools::cant(doc, match field { Entry::StretchOut => "set that stretch-out", Entry::Rate => "set that production rate", _ => "set that price" }, why),
+                            Err(why) => {
+                                tools::cant(doc, match field { Entry::StretchOut => "set that stretch-out", Entry::Rate => "set that production rate", _ => "set that price" }, why);
+                                // The field stays open on the same line with what was
+                                // typed, to be put right: typing replaces it. (It
+                                // closed, and the "0" typed next to correct "-12" took
+                                // the Cable tool in hand: J25A-16.)
+                                doc.open(field, text.trim());
+                                doc.entry_line = line;
+                                doc.fresh = true;
+                            }
                         },
                     }
                     doc.redraw();
@@ -1049,7 +1089,8 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
         set_view(doc, &mut orbit, &snap, plan, false);
         // The view says where it went (VISUAL.md A9), unless coming off foot already did.
         if !was_on_foot {
-            doc.say(Tone::Done, if plan { "On plan: north is up. T again for 3D." } else { "In 3D. T for the plan." });
+            let said = view_said(doc, &snap, plan, true);
+            doc.say(Tone::Done, said);
         }
     }
     if keys.just_pressed(KeyCode::KeyV) {

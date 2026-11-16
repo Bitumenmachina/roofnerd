@@ -1063,7 +1063,8 @@ fn outline_on_plan(lines: &mut Vec<(Vec3, Vec3, Color, bool)>, at: Vec3, turn: Q
         [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)].iter().map(|(x, z)| at + top + turn * Vec3::new(x * big.x / 2.0, 0.0, z * big.z / 2.0)).collect()
     };
     for i in 0..corners.len() {
-        lines.push((corners[i], corners[(i + 1) % corners.len()], theme::ink(), false));
+        // A lighter line than a wall's: on a drawing a fixture is not the heaviest thing.
+        lines.push((corners[i], corners[(i + 1) % corners.len()], theme::ink_soft(), false));
     }
 }
 

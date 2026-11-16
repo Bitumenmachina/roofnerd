@@ -3862,3 +3862,59 @@ Also from part A's notes, and left as they are with the reason:
   `a_pitch_made_steeper_says_what_the_job_cost_was_and_is`, its figure worked by hand.
   A value measured from the Verify in field list re-solves the roof and moves the
   price too, and does not yet say by how much: open.
+
+### Call 109. What failed the look and the words a third time: a plan is of one level; a door in feet and inches; no "(IFC)" on a button (2026-11-16, night)
+
+The twenty-fifth judgment, part B, failed item 11 on one thing above the rest and item
+9 on two (STATUS.md has its report). Each is a decision about what a person sees.
+
+- **A plan is of one level (J25B-3, VISUAL.md E1).** Plan pressed on a finished house
+  with every level on show drew the roof, solid, over everything: "a builder pressing
+  Plan on a finished house sees nothing." It was so by an earlier decision (with every
+  level on show the roof itself is drawn; on the plan of one level it is its lines,
+  broken), and a person who opens a job and presses Plan has every level on show.
+  Now: **asked for with every level on show, on a job with a roof or more than one
+  level, the plan puts one level on show**: the lowest with a door or a window in it
+  (on the sample house the first floor, not the foundation), else the lowest. It says
+  so: "On plan: First floor, north is up. A plan is of one level: Page Up and Page
+  Down go to the others, and All levels shows the roof from above." Leaving the plan
+  puts every level back, unless another level was chosen meanwhile. All levels on plan
+  is still the roof seen from above, which is a roof plan and is asked for by name.
+  A job with one level and no roof, or with no level, is as it was.
+- **A door's and a window's sizes are offered in feet and inches (J25B-28).** The Door
+  tool offered the last door's sizes as they are kept: "2.5 ft", "6.67 ft". They are
+  offered as a tape reads them, to the eighth: 2' 6", 6' 8". (The sample house keeps
+  its doors at 6.67 ft, which is 6 ft 8 1/32 in: a door placed from the offer is a new
+  type at 6 ft 8 in, and its panel says so. The sample is not changed tonight: every
+  figure of its south wall is worked from it.) "Sill height" on a door is still
+  there: open.
+- **No "(IFC)" or "(CSV)" on a button (J25B-29, -39; part A's J25A-19 says the same).**
+  Bring in: "Designer's model" for "Model (IFC)". Write out: "BIM model", "Estimate
+  list" for "Estimate (CSV)", and "Item library, to keep" for "Item library (CSV)"
+  (Bring in has "Item library", and two buttons do not share a name). In a sentence:
+  "the estimate as a list". The demonstrations that click them were given the new
+  names. "BIM" stays: it is the word Patrick used and the word on a designer's
+  transmittal.
+- Placed things on plan are outlined in a lighter line than a wall's.
+
+**Seen in the window by hand** (not by a judge): Plan on the sample house shows the
+first floor with its rooms, walls in ink and fixtures outlined; the sentence above;
+an item taken in hand on plan stays on plan, is set down, turned a quarter ("Turned
+... 90 deg, Assumed, turned by hand in the model" on its panel); T again and the whole
+house is back in 3D.
+
+Also from part A's report (its last findings):
+- **J25A-18 (silent, serious). Starter items pressed a second time wrote over a
+  person's own changes** to three items (a lavatory measured at 24 in went back to 20
+  in, Assumed) and called it "Brought in 3 starter items". The library the program
+  ships with now adds what the job has not got and leaves every item the job has as
+  it is, and says how many were left. A library a person brings in themselves still
+  changes the items it names: there a changed row is meant. Test:
+  `the_starter_items_brought_in_again_write_over_nothing_the_job_has`. (Starter
+  assemblies pressed twice has not been tried for the same fault: open.)
+- **J25A-16. A refused price closed its field**, and the "0" typed next to put "-12"
+  right took the Cable tool in hand. The field stays open on the same line with what
+  was typed; typing replaces it.
+- J25A-17 (a pitch of 40:12 and an eave moved 40 ft taken without a word): open. A
+  roof change now says what the job cost was and is (call 108), so the 40 ft eave
+  says its $1,937.66; nothing questions the figure itself.

@@ -52,22 +52,22 @@ impl WriteOut {
     pub const ALL: [WriteOut; 7] = [WriteOut::Model, WriteOut::Workbook, WriteOut::Rows, WriteOut::Supplier, WriteOut::Subcontractor, WriteOut::Pm, WriteOut::Items];
     pub fn name(self) -> &'static str {
         match self {
-            WriteOut::Model => "BIM model (IFC)",
+            WriteOut::Model => "BIM model",
             WriteOut::Workbook => "Estimate workbook",
-            WriteOut::Rows => "Estimate (CSV)",
+            WriteOut::Rows => "Estimate list",
             WriteOut::Supplier => "For suppliers",
             WriteOut::Subcontractor => "For subcontractors",
             WriteOut::Pm => "For the PM",
-            WriteOut::Items => "Item library (CSV)",
+            WriteOut::Items => "Item library, to keep",
         }
     }
     /// What it is called in the middle of a sentence (J19-40: the button's name put
     /// in lower case read "the bim model (ifc)").
     pub fn said(self) -> &'static str {
         match self {
-            WriteOut::Model => "BIM model (IFC)",
+            WriteOut::Model => "BIM model",
             WriteOut::Workbook => "estimate workbook",
-            WriteOut::Rows => "estimate as CSV",
+            WriteOut::Rows => "estimate as a list",
             WriteOut::Supplier => "workbook for suppliers",
             WriteOut::Subcontractor => "workbook for subcontractors",
             WriteOut::Pm => "workbook for the PM",
@@ -95,7 +95,7 @@ impl Bring {
             Bring::Prices => "Price list",
             Bring::Assemblies => "Assemblies",
             Bring::Prior => "Prior estimate",
-            Bring::Model => "Model (IFC)",
+            Bring::Model => "Designer's model",
             Bring::Sheet => "Maker's sheet",
             Bring::Items => "Item library",
         }
@@ -106,7 +106,7 @@ impl Bring {
             Bring::Prices => "price list",
             Bring::Assemblies => "assemblies",
             Bring::Prior => "prior estimate",
-            Bring::Model => "model (IFC)",
+            Bring::Model => "designer's model",
             Bring::Sheet => "maker's sheet",
             Bring::Items => "item library",
         }
@@ -300,6 +300,10 @@ pub struct Doc {
     pub edited: bool,
     /// Looking straight down, as a plan is drawn.
     pub plan: bool,
+    /// The level the plan put on show by itself when it was asked for with every level
+    /// on show (a plan is of one level). Leaving the plan with that level still the
+    /// one on show puts every level back.
+    pub plan_level: Option<String>,
     /// On foot inside the model, at eye height.
     pub walk: bool,
     pub show: Show,

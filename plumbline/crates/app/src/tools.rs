@@ -304,14 +304,16 @@ fn begin(doc: &mut Doc, tool: Tool, ask: bool) {
                 let category = if tool == Tool::Door { Kind::Door } else { Kind::Window };
                 let placed: Vec<(String, String)> = doc.job.order.iter().rev().filter_map(|e| {
                     let o = doc.job.world.get::<plumbline_world::Opening>(*e)?;
-                    Some((o.type_name.value.clone()?, units::show_length(o.sill.value.as_ref()?, &o.sill.unit)))
+                    Some((o.type_name.value.clone()?, units::feet_as_ft_in(o.sill.feet()?, 8)))
                 }).collect();
                 placed.into_iter().find_map(|(of, sill)| {
                     let t = doc.job.find(&of).and_then(|t| doc.job.world.get::<plumbline_world::OpeningType>(t))?;
                     if t.category != category {
                         return None;
                     }
-                    Some(vec![units::show_length(t.width.value.as_ref()?, &t.width.unit), units::show_length(t.height.value.as_ref()?, &t.height.unit), sill])
+                    // In feet and inches to the eighth, as a tape reads: a 6 ft 8 in
+                    // door kept in decimal feet was offered as "6.67 ft" (J25B-28).
+                    Some(vec![units::feet_as_ft_in(t.width.feet()?, 8), units::feet_as_ft_in(t.height.feet()?, 8), sill])
                 })
             }
             _ => None,

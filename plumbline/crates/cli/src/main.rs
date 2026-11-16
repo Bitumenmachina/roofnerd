@@ -825,9 +825,20 @@ fn tables(args: &[String]) -> Result<(), String> {
         ("import", "items") => {
             only(&["--sheet"])?;
             let sheet = table(flag("--sheet"))?;
-            let brought = tables::items_in(&mut job, &sheet.rows, Some(&sheet.numbers)).map_err(|why| format!("{other}: {why}"))?;
+            // The library the program ships with adds what the job has not got and
+            // writes over nothing the job has (J25A-18); a person's own file changes
+            // the items it names.
+            let shipped = *other == "starter" && !std::path::Path::new(other).exists();
+            let (brought, kept) = if shipped {
+                tables::items_in_missing(&mut job, &sheet.rows, Some(&sheet.numbers)).map_err(|why| format!("{other}: {why}"))?
+            } else {
+                (tables::items_in(&mut job, &sheet.rows, Some(&sheet.numbers)).map_err(|why| format!("{other}: {why}"))?, Vec::new())
+            };
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
             let _ = std::io::stdout().write_all(brought_said(other, &sheet, &brought).as_bytes());
+            if !kept.is_empty() {
+                say!("  in the job already, and left as the job has them: {}", kept.len());
+            }
             Ok(())
         }
         ("import", "ifc") => {

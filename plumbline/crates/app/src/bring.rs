@@ -213,13 +213,19 @@ pub fn starter(doc: &mut Doc) {
 /// The item library the program ships with, brought into the job: a few things of each
 /// trade that has any, at typical sizes, every size Assumed and saying so.
 pub fn starter_items(doc: &mut Doc) {
-    let done = plumbline_sheets::read(tables::STARTER_ITEMS.as_bytes(), None).and_then(|sheet| tables::items_in(&mut doc.job, &sheet.rows, Some(&sheet.numbers)));
+    let done = plumbline_sheets::read(tables::STARTER_ITEMS.as_bytes(), None).and_then(|sheet| tables::items_in_missing(&mut doc.job, &sheet.rows, Some(&sheet.numbers)));
+    // An item the job already has is left as it is: what was changed here is kept.
+    let left = |kept: &[String]| match kept.len() {
+        0 => String::new(),
+        1 => format!(" {} is in the job already and was left as it is here.", kept[0]),
+        n => format!(" {n} are in the job already and were left as they are here: what was changed on them is kept."),
+    };
     match done {
-        Ok(b) if b.done.is_empty() => doc.say(Tone::Done, "The starter items are already in this job. They are under Items, on the left: click one, then click where one stands."),
-        Ok(b) => {
+        Ok((b, _)) if b.done.is_empty() => doc.say(Tone::Done, "The starter items are already in this job, and each was left as it is here. They are under Items, on the left: click one, then click where one stands."),
+        Ok((b, kept)) => {
             doc.job.derive();
             doc.edit("Starter items");
-            doc.say(Tone::Done, format!("Brought in {} starter items, trade by trade, at typical sizes: each size is Assumed until the product is chosen. They are under Items, on the left: click one, then click where one stands; Change opens it to be changed.", b.done.len()));
+            doc.say(Tone::Done, format!("Brought in {} starter items, trade by trade, at typical sizes: each size is Assumed until the product is chosen.{} They are under Items, on the left: click one, then click where one stands; Change opens it to be changed.", b.done.len(), left(&kept)));
         }
         Err(why) => crate::tools::cant(doc, "bring in the starter items", why),
     }

@@ -37,9 +37,12 @@ run again and each gave what this file said they gave.
 **It is not a release candidate and it is not tagged.** Items 9, 10, 11 and 12 were
 each judged on 2026-11-16 by an agent that did not build the program, and each
 failed; items 9 and 11 were judged a second time that day (judgment 24B) and failed
-again; **items 10 and 12 were judged a second time (24A) and passed, on the build of
-d20ac60**, with two serious findings since changed and not judged; item 13 has
-nothing to be run against. What follows is each item, its evidence, and what it lacks. (The table this
+again; items 10 and 12 were judged a second time (24A) and passed, on the build of
+d20ac60. **That night items 9, 11 and 12 were judged again on 9868569 (the
+twenty-fifth judgment) and all three failed**: the look and the words a third time,
+and the money path on a supplier's list that priced nothing. Item 10 was not judged
+again and stands on 24A's pass of d20ac60. Calls 106 to 109 answer what was found and
+are not judged; item 13 has nothing to be run against. What follows is each item, its evidence, and what it lacks. (The table this
 replaces was written on 2026-11-11 and described a program with no VIF list, no
 exports and plans only in the window. The D rows above it are the record of what was
 built before Patrick's ruling 12 and are left as they were.)
@@ -87,10 +90,10 @@ is not one: it writes the job two of them start from).
 | 6 | A price per SF or LF grows into line items, and the detail rolls back up | `demos/d4.sh`, `demos/d4w.sh`, `demos/pricew.sh`. Judged: 10 | **Judge 22A: an allowance with no cost lines is in no line of the price.** It is now said wherever the price is read; whether it belongs in the price is QUESTIONS.md Q26, Patrick's |
 | 7 | The sheet: stretch-out on the line, labor switched per line, overhead and profit, three suppliers | `demos/d5.sh`, `demos/d5w.sh`: all four in the window. Judged: 11, 17A | `d5w` passed on the run of 2e6e56f. The fixes to 17A are not judged |
 | 8 | Exports: xlsx with live formulas, CSV, IFC4 validated by IfcOpenShell; three lenses | `demos/export.sh`: the workbook's amounts and recap are formulas that come to the job's figures; the IFC is checked by IfcOpenShell run as an outside program (`tools/ifc-check.py`); the supplier, subcontractor and PM lenses come from one estimate. `demos/itemsw.sh` writes each from the window. Judged: 17A, 17B, 21 | The fixes to 21 (walls written through at corners, a level's height) are not judged |
-| 9 | A judge lists every word on every screen; none is a software term | Judged twice on 2026-11-16: 22B (about 620 entries, 69 marked) and **24B, on the build of d20ac60: about 640 entries, `research/judgment-24b-words.md`** | **FAIL again: 76 marked** (31 software terms, 37 a builder would trip on, 7 units not the trade's way, 1 British spelling). What decided it: the Bring in and Add drawing lists (folders, file names, endings, a typed path). **Changed since and not judged** (calls 97 to 100): the lists show a name without its ending and what it is in a word, a drawn folder, "Back to", and the typing field under the list; the estimate's columns are Quantity, Unit cost, Sub, general; "entered on screen" for "set in the window"; a labor line's rows are its production rate and its hours. **Open, marked and not touched**: "Connector 1" and places in negative feet and inches; a roof plane's panel ("solved from the footprint", the slope factor as a formula); decimal feet beside fractional inches; sizes with no unit; a cable by its diameter; quantities to four places; a name said twice on the Clashes tab. The table under "The twenty-fourth judgment, part B" has each |
+| 9 | A judge lists every word on every screen; none is a software term | Judged three times on 2026-11-16: 22B (about 620 entries, 69 marked), 24B on d20ac60 (about 640, 76 marked, 31 of them software terms) and **25B on 9868569: about 860 entries, 69 marked, 9 of them software terms; `research/judgment-25b-words.md`** | **FAIL a third time.** What decided it: a 6 ft 8 in door offered as "6.67 ft"; "Back to scratchpad", file names, "(IFC)" and "(CSV)" in the lists. The software terms are down from 31 to 9; what is left is mostly lengths written four ways in one panel (decimal feet beside feet and inches), survey coordinates (E, N, H) and phrases of the program's own ("Comes to, detail", "rises from edge 1"). **Changed since and not judged** (call 109): the Door and Window tools' sizes in feet and inches; the list buttons without "(IFC)" and "(CSV)". The table under "The twenty-fifth judgment, part B" has the groups |
 | 10 | A veteran estimator with no software background completes a whole-house takeoff from a PDF using only the in-app help | Judged twice on 2026-11-16. 22A failed it. **24A, on the build of d20ac60, passed it: `research/judgment-24a-notes.md`.** From an empty job to a saved, priced takeoff of USDA 7213 from the screen alone, without the README; every figure it checked agreed with its own arithmetic | **PASS on d20ac60, with 19 findings.** The two it called serious are changed since and not judged: a price list brought in priced nothing (J24A-18, call 104), and a roof was priced one plane at a time with nothing said of the rest (J24A-6, call 100). Open: what a quantity is made of cannot be changed in the window (J24A-13); nothing fills a gable end (J24A-17). **What is changed since d20ac60 is not judged** |
-| 11 | The visual judge passes every screen against `VISUAL.md` | Judged twice on 2026-11-16, line by line: 22B, and **24B on the build of d20ac60 (`research/judgment-24b-notes.md`): 14 lines passed, 18 failed, 4 could not be judged from still pictures (B3 to B6)** | **FAIL again.** What decided it: the panels are grey sheets and not glass (A2), "more below" was written over words on nearly every screen (A5), the house from outside reads as a diagram (D8). **Changed since and not judged** (calls 96 to 99): "more below" is a strip of its own; thinner glass; no lines or tags on a dressed roof until it is selected; every panel has a switch; a panel opens at its head; marks say how sure and words are in ink; a plan is not lit; a selected footing is outlined; supply air is off the accent. **Open**: equipment and fixtures are boxes (D6); no cabinets, an empty kitchen and bath; clash marks seen through walls; the Known, Assumed, Unknown view is a grey house; ducts solid over room names on plan (E4); no fascia or soffit (D5); suppliers side by side on a job with none (F1) |
-| 12 | A fresh judge walks the whole path cold and cannot break the money path | Judged three times on 2026-11-16: 22A in the window (failed), 23 at the command line (every total held), and **24A in the window on the build of d20ac60: PASS, narrowly.** The top bar, the recap and `plumbline estimate` agreed to the cent with its hand figures in every test, and every dollar removed was named on screen. `demos/moneyw.sh` walks part of the path | **PASS on d20ac60, "narrowly"**: a field measurement was replaced by an Assumed value without a word (J24A-15), and a supplier's list priced nothing a veteran could use (J24A-18). Both are changed since, with a test for the second; **neither change is judged or yet seen in the window.** An allowance alone is still in no line of the price: Q26, Patrick's |
+| 11 | The visual judge passes every screen against `VISUAL.md` | Judged three times on 2026-11-16, line by line: 22B, 24B on d20ac60 (14 passed, 18 failed) and **25B on 9868569 (`research/judgment-25b-notes.md`): 17 lines passed, 16 failed, B3 to B5 not judged from stills, B6 and C4 in doubt** | **FAIL a third time.** What decided it: on plan with every level on show a finished house is a solid roof with no floor plan (E1), and the house and its rooms read as a clean diagram with ducts in the air (D8). Newly passed: A2 (the panels read as frosted glass, with a reservation), D1, E4, F3. Newly failed: A1 (the side panels stand nearly the height of the window). **Changed since and not judged** (calls 107, 109): Plan puts one level on show; placed things outlined on plan; a roof's lines coloured by how sure in that view; the top bar kept inside the window. **Open**: no soffit, gutter or step (D5); equipment a box (D6); empty kitchen and bath (D8); rows cut by "more below" (A5); red for refusals and for every unpriced row (A6); the estimate's column heads scroll away (F1); "none" where "no figure" is meant (F2); a drawing has no switch (B8) |
+| 12 | A fresh judge walks the whole path cold and cannot break the money path | Judged four times on 2026-11-16: 22A in the window (failed), 23 at the command line (every total held), 24A in the window on d20ac60 (passed, narrowly), and **25A in the window on 9868569 (`research/judgment-25a-notes.md`): FAIL.** `demos/moneyw.sh`, `demos/roofw.sh` and `demos/gablew.sh` walk parts of the path | **FAIL on 9868569, on one thing: a supplier's list brought in with the supplier's name priced no line** (J25A-12), and the screen read as though it had. 24A found the same (J24A-18) and its fix held only for a list with no supplier named. Everything else held to the cent by the judge's own arithmetic: a roof priced once, overhead and profit, a measured pitch, Steeper saying a measurement was replaced (24A's other serious finding, now seen by a judge), a gable, an assembly changed, a wall deleted, undo and redo, every nonsense entry refused. **Changed since and not judged** (call 108): a supplier's price is the job's where the job has none; a roof change says what the job cost was and is. **Open**: an allowance on a thing with no cost lines is out of the price (Q26, read the same way by three judges); sheathing rounded up plane by plane |
 | 13 | A hand estimate in `refs/` reproduced, every difference explained | None | **Pending**: `refs/` holds the brief and the first handoff and no estimate (Q5) |
 
 **What Patrick is asked.** Nothing blocks the work. Three questions are his and each
@@ -6197,12 +6200,36 @@ maker's sheet and placed, and that was all. What is there now, and what is not:
 claim on the way (that BIMCraft has no `const BOX`: it has two, in a point-cloud
 test) and the row was put right.
 
-## The twenty-fifth judgment, part A, as its notes arrive (2026-11-16, night; on 9868569)
+## The twenty-fifth judgment, part A: the item library and the money path (2026-11-16, night; on 9868569)
 
-A veteran estimator on the item library, then on the money path where it changed
-after 24A. **Its report has not arrived as this is written**; these rows are from its
-notes (`j25a/NOTES.md` in the scratch folder, to be kept in `research/` when it is
-done). On the money path, held to the cent by its own arithmetic: an assembly given to one plane going on the other three and saying so; a unit cost and a rate per square typed once; a wage; overhead and profit; the top bar, the sheet and the saved job agreeing at $672.54; a pitch measured from the Verify list and the roof solved again; Steeper on a measured pitch saying the measurement is no longer what is drawn; a gable saying what went and what the job cost was and is, to the cent; a wall's assembly changed, the wall deleted, undone and redone; an allowance on a bare wall said to be out of the price. What it tried on the library that held: 21 starter items by trade, a lavatory, a range and a
+A veteran estimator, an agent on Opus that did not build it, on the item library and
+then on the money path where it changed after 24A. Its notes are
+`research/judgment-25a-notes.md` (19 findings), its brief
+`research/judgment-25a-brief.md`. Most rows below were fixed from its notes while it
+was still at work; **none of the fixes has been judged**.
+
+**The money path: FAIL**, on J25A-12: a supplier's list whose names match the lines
+prices nothing when it is brought in with the supplier's name, while the screen reads
+as though it did. Everything else on the money path held to the cent by its own
+arithmetic (listed below).
+
+**The item library, Patrick's question, in the judge's words: "Not yet a library I
+can keep."** What it does: 21 starter items by division, easy to find; drawn as what
+they are, at their size, where clicked; Change sets what an item is drawn as, its
+trade and a size; Write out gives a table, and bringing it back names every bad row
+by its number, with nothing bad coming in silently; save, close and open keeps
+everything. **What it said is missing before it would use it**, and where each
+stands tonight:
+- items carry no price, unit, labor or supplier: each placed one is priced on its
+  own. **Open: PROPOSALS.md 28.**
+- a changed item does not reach the ones already placed (J25A-6). **Fixed.**
+- Starter items pressed again overwrites a person's own changes (J25A-18). **Fixed.**
+- nothing turns a placed thing (J25A-3). **Built: Turn a quarter, Q.**
+- in the window an item can be changed, and not added, renamed or deleted. **Open**:
+  a row added to the written library and brought back adds one; nothing in the
+  window does.
+- plan symbols cannot be read (J25A-1). **Built: outlined in ink.**
+- the "Drawn as" list has no range, refrigerator, panel, washer or dryer. **Open.** On the money path, held to the cent by its own arithmetic: an assembly given to one plane going on the other three and saying so; a unit cost and a rate per square typed once; a wage; overhead and profit; the top bar, the sheet and the saved job agreeing at $672.54; a pitch measured from the Verify list and the roof solved again; Steeper on a measured pitch saying the measurement is no longer what is drawn; a gable saying what went and what the job cost was and is, to the cent; a wall's assembly changed, the wall deleted, undone and redone; an allowance on a bare wall said to be out of the price. What it tried on the library that held: 21 starter items by trade, a lavatory, a range and a
 panelboard found; seven things set down from four trades, each where it was clicked
 and at its size on plan (measured off the picture); a sofa, a tub, a water heater, a
 lavatory and a water closet drawn as what they are; an item's trade, what it is drawn
@@ -6219,6 +6246,10 @@ saved, closed and opened again with everything where it stood.
 | J25A-2 | Taking an item in hand on plan throws the view to 3D without a word | **Built, not seen (call 107)**: the plan stays |
 | J25A-5 | "in the same space as Bathtub, 5 ft by 1' 4"" reads as a size | **Built, not seen (call 107)**: "Bathtub, 5 ft (1' 4" into each other)" |
 | J25A-7 | An item's weight is written as three blanks: a blank "how sure" is none of the three | **Fixed, tested (call 107)**: Unknown, "not said" |
+| J25A-18 | **Starter items pressed a second time threw away changes to three items** (a lavatory measured 24 in, Known, drawn as a sink, went back to 20 in, Assumed, a lavatory) and said only "Brought in 3 starter items"; the lavatory standing in the room kept 24 in and no longer matched its item | **Fixed, tested, not seen (call 109)**: the shipped library adds what is missing and writes over nothing the job has, and says how many were left |
+| J25A-16 | A refused price closes its field; the "0" typed next took the Cable tool in hand | **Built, not seen (call 109)**: the field stays open with what was typed |
+| J25A-17 | A pitch of 40:12 and an eave moved 40 ft are taken without a word | Open. The dollars are now said (J25A-13); nothing questions the figure |
+| J25A-19 | Words: "roof solved again", "the roof this plane is solved from", "the detail is not whole", "Comes to, detail rate", "Like for like", "What its name says", "(CSV)" on buttons, "table" beside a file, "22 set on the job", "no more than a billion" | "(CSV)" and "(IFC)" are off the buttons (call 109). The rest: open |
 | J25A-12 | **STOP: a supplier's list whose names match the lines word for word priced none of them** when brought in with the supplier's name, as the window invites; "22 set on the job" and "and 16 more" hid what it did | **Fixed, tested, not seen (call 108)**: a supplier's price is the job's where the job has none; the lines priced are said first. J24A-18's fix (call 104) held only for a list with no supplier named |
 | J25A-13 | Steeper took the price from $679.40 to $685.50 and the screen said nothing of the dollars | **Fixed, tested, not seen (call 108)**: a roof change that drops nothing says "What is priced on the roof changed with it: the job cost was $X and is $Y." The test's figure is worked by hand ($71.55 to $61.22). A pitch *measured* from the Verify list still moves the price without saying by how much |
 | J25A-14 | An allowance on a wall with no cost lines is kept out of the price: "$1,575 + markup short for that wall" | **Patrick's: QUESTIONS.md Q26.** The third veteran judge to read it so. The screen says it plainly (granted by all three); the working assumption stands until he rules |
@@ -6240,6 +6271,66 @@ of how sure each thing is, a roof's hips stayed orange and read as Assumed
 (J25B-15): **built, not seen**, each line there is drawn in the colour of how sure it
 is. On plan with every level on show the roof is drawn solid over the floor plan
 (J25B-3): open, it is a decision and is taken when the report is in.
+
+## The twenty-fifth judgment, part B: the look and the words (2026-11-16, night; on 9868569)
+
+An agent on Opus that did not build it, cold, against `VISUAL.md` line by line and
+every word on both windows. Its notes are `research/judgment-25b-notes.md` (42
+findings and a line-by-line table), its word list `research/judgment-25b-words.md`,
+its brief `research/judgment-25b-brief.md`. Its first window died once with nothing in
+its log while the other judge shared the machine; it did not count that against the
+program, and it is written here because a window that dies once is worth watching for.
+
+**Item 11, the look: FAIL.** 17 lines passed, 16 failed, B3 to B5 could not be judged
+from stills, B6 and C4 are in doubt. (24B on d20ac60: 14 passed, 18 failed.)
+Passed: A2 (with a reservation: frosted, round, shadowed, and grey glass over a grey
+ground has nothing to tint it), A3, A4, B1, B2, B7, C1, C2, D1, D2, D3, D4, D7 (no
+joists, rafters or visible flashing), E2, E3, E4, F3, F4. Failed: A1, A5, A6, A7, A8,
+A9, B8, C3, D5, D6, D8, E1, F1, F2; C5 passes in 3D and fails on plan. **Newly passed
+since 24B**: A2, D1, E4, F3, and C5 in 3D. **Newly failed**: A1 (the side panels
+stand 65 to 908 of 960 dots; it passed in 24B). **What decided it**: on plan with
+every level on show a finished house is a solid roof with no floor plan under it
+(J25B-3, E1), and the house and its rooms read as a clean diagram with ducts in the
+air (J25B-2, J25B-17, D8).
+
+**Item 9, the words: FAIL.** About 860 listed, 69 marked: 9 software terms, 13 units
+not written the trade's way, 38 a builder would trip on, 1 British spelling. (24B:
+about 640 listed, 76 marked, 31 of them software terms.) **What decided it**: a
+6 ft 8 in door offered as "6.67 ft" in the Door tool (J25B-28), and "Back to
+scratchpad", file names and "(IFC)", "(CSV)" in the lists (J25B-39).
+
+The ten things it says would most change the owner's mind, in its order: (1) the
+whole-house plan is a solid dark roof; (2) the house is a clean model, not
+hyper-realistic: a flat grey roof, no soffit, gutter, porch or step, a door 1.5 ft
+above grade with nothing under it; (3) rooms are empty white boxes with blue ducts
+hung a foot below the ceiling; (4) the panels take nearly the full height, so the
+model is a strip in the middle; (5) things set down from Items landed outside the
+house while the window said "Set one down on First floor", and equipment is a box
+and a cylinder; (6) "more below" strips cut rows in four panels and status lines end
+in "..."; (7) red is everywhere: refusals, "no allowance", every unpriced row, Maker
+and Model "not chosen"; (8) with Architecture off the roof floats over pipes, and
+switching a trade off changes nothing seen from outside; (9) the estimate scrolls
+without its column heads and groups lines under the model's names ("living circuit,
+piece 3 of 4"); (10) the foundation level alone shows an empty field, and a drawing
+goes grey in 3D and has no switch.
+
+| # | Finding | Where it stands |
+|---|---|---|
+| J25B-3, E1 | Plan with every level on show is the roof drawn solid; no floor plan | See the next section: decided and built after this report (call 109) |
+| J25B-32, -33 | Items taken in hand on plan: the view went to 3D with no word and they were set down outside the house, "Set one down on First floor" | **Built, not seen (call 107, from part A's J25A-2)**: the plan stays. A thing set down outside every wall is still said to be on that level: it is, by its height |
+| J25B-23, -33 | Fixtures and furniture on plan are pale blocks with no outline | **Built, not seen (call 107)**: each block outlined in ink. Not named on plan; a selected item is not marked on plan (C5): open |
+| J25B-15 | Known, Assumed, Unknown view: hips stay orange | **Built, not seen (call 107)** |
+| J25B-28 | Door tool offers "2.5 ft" and "6.67 ft"; "sill height" on a door | See the next section (call 109) |
+| J25B-39 | "Back to scratchpad", folder and file names, pages with no picture, a file's name as the drawing's title | Open. The folder is the person's own and is named as they named it; "(IFC)" and "(CSV)" on the buttons are the next section's |
+| J25B-1, -20, -22, -30, -31, -36, -40 | A row cut by "more below"; a heading cut at a panel's top; status lines ending "..." with room to spare; a figure wrapped onto its own line | Open (A5). Each panel scrolls and the strip says so; the cut row is the strip's cost |
+| J25B-5, -26, -37, -38 | Red for a refusal, for "no allowance", for every unpriced row; amber for a deletion | Open (A6): the colours of how sure are also the colours of the messages |
+| J25B-37 | "Job cost ... none" while nine lines wait for a price: it should read "no figure" | Open (F2): a wrong word on the money |
+| J25B-24, -25 | The estimate's column heads scroll away; a circuit is four lines by piece; totals carry no mark of how sure | Open (F1, F2) |
+| J25B-40, -41 | A drawing has no switch (B8); "select the drawing to see what" and a click on it selects nothing | Open |
+| J25B-22 | The foundation level alone, in 3D, is an empty field: Ground is not switched off for you | Open |
+| J25B-2, -17, -21 | No soffit or gutter (D5); equipment a box (D6); empty kitchen and bath, ducts across rooms (D8); the roof a flat sheet (C3) | Open: D6 and cabinets are PROPOSALS.md 26 and 28 |
+| J25B-12, -29 | "Architecture" for walls and doors; one long left panel | Open (words: see the next section for what was taken up) |
+| J25B-19, -21, -23, -36 | Lengths written four ways in one panel; survey coordinates E, N, H; "Comes to, detail"; "rises from edge 1" | Open: the largest group of the 69 |
 
 ## A thing turned, and a library change reaching it: a demonstration, written before it is run (`demos/turnw.sh`, call 107)
 
@@ -6301,16 +6392,13 @@ evening the twenty-fourth judge, part A, wrote in its notes that it had complete
 the whole path in the window from the screen alone, with every figure agreeing with
 its own arithmetic, and it had not yet reported.
 
-**Running as this was written (2026-11-16, night): the twenty-fifth judgment**, two
-agents on Opus, on a frozen copy of 9868569. Part A is a veteran estimator on the item
-library (brought in, set down, changed, written out, the written list changed by hand
-and brought back with mistakes in it) and on the money path where it was changed after
-24A (a roof priced once, a price list pricing lines, a measured value replaced, an
-allowance on a bare thing). Part B is the look and the words again, items 11 and 9,
-with the Items list and an item's panel added. Their notes are written as they go in
-the scratch folders `j25a` and `j25b`; nothing they find is in this file yet. If this
-paragraph is still here, they were cut off or their reports were not recorded: the
-briefs are short and can be given again.
+**The twenty-fifth judgment (2026-11-16, night, on 9868569) is in, both parts, and
+recorded above.** Part A: the money path FAILED on a supplier's list pricing nothing
+(fixed since, call 108) and the item library is "not yet a library I can keep" (five
+of its seven reasons answered since, calls 107 and 109). Part B: the look FAILED a
+third time (17 lines pass, 16 fail) and the words a third time (69 marked of about
+860; 9 software terms, down from 31). Calls 106 to 109 are what was done about them.
+**Nothing done since 9868569 has been judged.**
 
 **What is owed, in this order.**
 

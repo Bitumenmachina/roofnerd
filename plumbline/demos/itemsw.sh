@@ -66,9 +66,9 @@ shot                                    # 01 the item made from the sheet, and l
 on "Item Harbor Vanity 36"; sleep 2
 click 800 500; park
 shot                                    # 02 one set down on the slab, and selected
-on "BIM model (IFC)"; park
+on "BIM model"; park
 shot                                    # 03 the BIM model written, and what is in it said
-on "Estimate workbook"; on "Estimate (CSV)"; on "For suppliers"; on "For subcontractors"; on "For the PM"; park
+on "Estimate workbook"; on "Estimate list"; on "For suppliers"; on "For subcontractors"; on "For the PM"; park
 shot                                    # 04 the last of the six written
 xdotool key F2; sleep 5
 close_window

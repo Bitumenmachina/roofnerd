@@ -301,7 +301,8 @@ fn views(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
                     // The view says where it went (VISUAL.md A9; on and off foot say
                     // their own).
                     if changed && !walk && !was_on_foot {
-                        doc.say(Tone::Done, if plan { "On plan: north is up." } else { "In 3D." });
+                        let said = crate::view_said(&doc, &snap, plan, false);
+                        doc.say(Tone::Done, said);
                     }
                 }
             });
@@ -677,7 +678,7 @@ fn picker(c: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
                 let hint = match what {
                     crate::model::Bring::Prices => "Pick the price list (a table or a workbook), or drop it on this window.",
-                    crate::model::Bring::Model => "Pick the model (IFC), or drop it on this window.",
+                    crate::model::Bring::Model => "Pick the model, or drop it on this window.",
                     crate::model::Bring::Sheet => "Pick the maker's sheet (a PDF), or drop it on this window. It is made an item to place.",
                     _ => "Pick it (a table or a workbook), or drop it on this window.",
                 };
