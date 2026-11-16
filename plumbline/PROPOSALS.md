@@ -205,3 +205,28 @@ Proposed, in two steps.
 
 It is new scope and a change to the job file, so it waits for Patrick's word. Whether
 a geometry library does any of it is QUESTIONS.md Q27.
+
+## 29. A wall runs up to the roof over it: the gable end (2026-11-16, from judgment 24A, J24A-17)
+
+A hip made a gable takes a plane off the roof and leaves a triangle of air over the
+end wall: the wall stops at its height, nothing is drawn in the gable, and nothing is
+priced there. On a 24 ft gable end at 6:12 that is 72 SF of framing, sheathing,
+barrier and siding in no line of the estimate, and a house with a hole in it on the
+screen.
+
+Proposed. A wall has a top that may follow the roof: where a wall's line lies under a
+gable edge of a roof, the wall's face is its rectangle and the triangle (or the
+trapezoid, where the wall is inset under an overhang) up to the roof's underside
+over its line. The core works the added area out from the roof's planes over the
+wall's line, as its own row on the wall ("gable end, 72.00 SF, worked out from Main
+roof at 6:12"), Assumed while the roof's pitch or the wall's place is; face and net
+area include it, so every line priced by the wall's area prices it; the window draws
+the wall to the roof and dresses it as the wall is dressed. A gable taken back to a
+hip takes the triangle with it and says what came out of the job cost.
+
+Why it is here and not built: it changes a wall's face area, which every wall line is
+priced by, on any job with a gable; it wants a rule for which wall is "under" an
+edge when the roof overhangs; and it is a relation between a wall and a roof that the
+model does not hold today. That is a change to the model's rules, so it is Patrick's.
+Until then STATUS.md says a gable end is not drawn and not priced, and the estimate
+of a gable roof is short by its gable ends.

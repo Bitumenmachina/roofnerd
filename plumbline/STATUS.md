@@ -6159,7 +6159,7 @@ not been judged.
 | J24A-16 | A roof change's message shows "hip-0037", "plane-0028" | **Fixed, built and not seen**: what goes is said by its name. (The "\|" it saw is how the log file writes a new line, not what is on screen) |
 | J24A-19 | "set in the window", "roof solved again", "4 points, in feet", "Usda-7213", "2 things not read from it: select the drawing to see what" | **In part**: "entered on screen" (call 100), "worked out" and "corners" (call 101). "Solved the roof again" at the command line, the capital, and the vague sentence: open |
 | J24A-14 | A labor rate is "Order factor" in the panel, "at 40 SF/hr" on the sheet, "production rate" in a refusal | **Fixed (call 101)**: "production rate" in the panel and in Open items |
-| J24A-17 | After a gable, the triangle of wall at the gable end is neither drawn nor priced | Open. A wall stops at its height; nothing fills a gable |
+| J24A-17 | After a gable, the triangle of wall at the gable end is neither drawn nor priced | **Open, and the estimate of a gable roof is short by its gable ends.** A wall stops at its height; nothing fills a gable. What it would take is PROPOSALS.md 29: it changes what every wall line is priced by, so it is Patrick's |
 | J24A-11 | 100 % overhead is taken without a word | Left: the warning is for a markup larger than what it is a percentage of (call 95); 100 % is not |
 | J24A-12 | Undo says "Undone: Unit cost." and not which line or to what | **Built, not seen (call 106)**: a step is remembered by what the window said when it was made, so undo reads "Undone: Plane 1: unit cost of "Asphalt shingles" set to $105.00" |
 | J24A-1 | Ctrl+A typed an "a" | **Fixed, seen (call 97)** |
@@ -6217,7 +6217,7 @@ money path; a twenty-third tried the money path at the command line; and a
 twenty-fourth pair did what the twenty-second did again, on the build after the
 fixes. Each finding is a row in this file with where it stands. Calls 77 to 105 in
 DECISIONS.md are the decisions made on the way; Q26 in QUESTIONS.md is new, and
-PROPOSALS.md 23 to 28. Q27 is new too.
+PROPOSALS.md 23 to 29. Q27 is new too.
 
 **What is true of the program today.** It traces a plan, builds the house in 3D
 dressed as it is priced, prices it in sixteen divisions, finds clashes, lists what
