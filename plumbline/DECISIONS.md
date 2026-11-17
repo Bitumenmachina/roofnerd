@@ -4433,3 +4433,22 @@ Owed after this first piece, in order: the scan seen in 3D as a ghost under the
 model; two taped lengths checking the scan; a length picked off the scan; bringing
 it in from the window's Bring in list (today: the command line makes the sheet, and
 the window traces it).
+
+The same night, after Patrick asked whether the piping could be tried without a scan
+of his ("I'm in the field anyway"): a **rough made-up scan** (`tools/made-up-scan.py
+--rough`: two rooms, scattered points each about 1.5 cm out, furniture, one point in
+fifty a stray outside, the whole scan leaning half a degree) was put through the
+same pipe, and broke it in two places a phone's scan would. Three things changed:
+
+- **The scan is levelled by its own floor**, and how far it leaned is said. A cut
+  through a leaning scan is not a plan, and a leaning floor and ceiling read the
+  room 3 in too tall.
+- **The floor and the ceiling are the fullest inch of their heights**, not the
+  lowest and highest inch that is full.
+- **Strays are left off the sheet and counted**: a point alone in its square foot of
+  plan at the cut is not the building. The sheet is fitted to what is left, and the
+  size said is of that, "about", to the inch. (With strays in, a house 30 ft by 20
+  ft was said to be 69 ft by 59 ft.)
+
+It is a made-up scan built to be awkward; it is not a phone's scan, and stands in
+for one only until one is tried.

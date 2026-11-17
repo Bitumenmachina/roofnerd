@@ -155,39 +155,110 @@ impl Scan {
         Some(self.points.iter().fold((first, first), |(lo, hi), p| ([lo[0].min(p[0]), lo[1].min(p[1]), lo[2].min(p[2])], [hi[0].max(p[0]), hi[1].max(p[1]), hi[2].max(p[2])])))
     }
 
-    /// The floor and the ceiling: the two heights, at least 5 ft apart, where most
-    /// points lie (a floor and a ceiling are each a great many points at one height;
-    /// a wall is few at each). Either is None where the scan does not show it.
-    pub fn floor_and_ceiling(&self) -> (Option<f64>, Option<f64>) {
-        let Some((lo, hi)) = self.bounds() else { return (None, None) };
+    /// How many points lie at each inch of height, from the lowest point up.
+    fn by_height(&self) -> Option<(f64, Vec<usize>)> {
+        let (lo, hi) = self.bounds()?;
         let inch = 1.0 / 12.0;
         let bins = (((hi[2] - lo[2]) / inch).ceil() as usize + 1).min(100_000);
         let mut count = vec![0usize; bins];
         for p in &self.points {
             count[(((p[2] - lo[2]) / inch).round() as usize).min(bins - 1)] += 1;
         }
+        Some((lo[2], count))
+    }
+
+    /// The floor and the ceiling: the two heights, at least 5 ft apart, where most
+    /// points lie (a floor and a ceiling are each a great many points at one height;
+    /// a wall is few at each). Each is the fullest inch of its group of full inches,
+    /// not the group's edge: a scan that leans spreads a floor over several inches,
+    /// and the edges read the room 3 in too tall. Either is None where the scan does
+    /// not show it.
+    pub fn floor_and_ceiling(&self) -> (Option<f64>, Option<f64>) {
+        let Some((low, count)) = self.by_height() else { return (None, None) };
         let most = count.iter().copied().max().unwrap_or(0);
-        // A level surface: a height holding more than a third of what the fullest holds.
-        let level: Vec<usize> = (0..bins).filter(|i| count[*i] * 3 > most && count[*i] > 0).collect();
-        let height = |i: usize| lo[2] + i as f64 * inch;
-        let floor = level.first().map(|i| height(*i));
-        let ceiling = level.last().map(|i| height(*i)).filter(|c| floor.is_some_and(|f| c - f >= 5.0));
-        (floor, ceiling)
+        // A level surface: an inch holding more than a third of what the fullest holds.
+        let full: Vec<usize> = (0..count.len()).filter(|i| count[*i] * 3 > most && count[*i] > 0).collect();
+        let height = |i: usize| low + i as f64 / 12.0;
+        // The fullest inch among those within 6 in of an end of the list.
+        let fullest = |from: usize, near: &dyn Fn(usize) -> bool| full.iter().copied().filter(|i| near(*i)).max_by_key(|i| count[*i]).unwrap_or(from);
+        let (Some(first), Some(last)) = (full.first().copied(), full.last().copied()) else { return (None, None) };
+        let floor = fullest(first, &|i| i <= first + 6);
+        let ceiling = fullest(last, &|i| i + 6 >= last);
+        (Some(height(floor)), Some(height(ceiling)).filter(|c| c - height(floor) >= 5.0))
+    }
+
+    /// Level the scan by its own floor: fit a flat plane to the points within 6 in of
+    /// the floor and take its slope out of every point. A scan made by hand is seldom
+    /// level, and a cut through a leaning scan is not a plan. Returns how far it leaned,
+    /// in feet for each foot; None where no floor shows.
+    pub fn level_by_floor(&mut self) -> Option<f64> {
+        // Three times over: the walls' feet, caught with the floor, pull a first fit
+        // toward half the lean, and each pass takes out most of what the last left.
+        let mut leaned: Option<[f64; 2]> = None;
+        for _ in 0..3 {
+            let [a, b] = self.level_once()?;
+            leaned = Some(leaned.map_or([a, b], |[x, y]| [x + a, y + b]));
+        }
+        leaned.map(|[a, b]| a.hypot(b))
+    }
+
+    fn level_once(&mut self) -> Option<[f64; 2]> {
+        let floor = self.floor_and_ceiling().0?;
+        let near: Vec<[f64; 3]> = self.points.iter().copied().filter(|p| (p[2] - floor).abs() <= 0.5).collect();
+        if near.len() < 100 {
+            return None;
+        }
+        let n = near.len() as f64;
+        let (mx, my, mz) = (near.iter().map(|p| p[0]).sum::<f64>() / n, near.iter().map(|p| p[1]).sum::<f64>() / n, near.iter().map(|p| p[2]).sum::<f64>() / n);
+        let (mut sxx, mut sxy, mut syy, mut sxz, mut syz) = (0.0, 0.0, 0.0, 0.0, 0.0);
+        for p in &near {
+            let (x, y, z) = (p[0] - mx, p[1] - my, p[2] - mz);
+            sxx += x * x;
+            sxy += x * y;
+            syy += y * y;
+            sxz += x * z;
+            syz += y * z;
+        }
+        let det = sxx * syy - sxy * sxy;
+        if det.abs() < 1.0e-9 {
+            return None;
+        }
+        let (a, b) = ((sxz * syy - syz * sxy) / det, (syz * sxx - sxz * sxy) / det);
+        for p in self.points.iter_mut() {
+            p[2] -= a * (p[0] - mx) + b * (p[1] - my);
+        }
+        Some([a, b])
     }
 
     /// The points within `band` feet of a height, seen from overhead with north up, as
     /// a picture: `dots` to the foot, with `margin` feet of paper all round.
     pub fn cut(&self, height: f64, band: f64, dots: f64, margin: f64) -> Result<Cut, String> {
-        let (lo, hi) = self.bounds().ok_or("it has no points")?;
+        let at: Vec<[f64; 3]> = self.points.iter().copied().filter(|p| (p[2] - height).abs() <= band).collect();
+        if at.is_empty() {
+            return Err("no point of it is at that height: nothing to draw".into());
+        }
+        // A stray is a point with no company: a wall puts many points in each square
+        // foot of plan it crosses, a stray through a window or off a mirror one. Only
+        // points in a square foot that holds 3 or more are the building; the sheet is
+        // fitted to those, and the rest are left off and counted. (Fitted to every
+        // point, a house 30 ft by 20 ft with strays round it read as 69 ft by 59 ft.)
+        let cell = |p: &[f64; 3]| ((p[0]).floor() as i64, (p[1]).floor() as i64);
+        let mut held: std::collections::HashMap<(i64, i64), usize> = std::collections::HashMap::new();
+        for p in &at {
+            *held.entry(cell(p)).or_default() += 1;
+        }
+        let kept: Vec<[f64; 3]> = at.iter().copied().filter(|p| held[&cell(p)] >= 3).collect();
+        // A thin scan (few points to the foot) has no square foot with 3: keep them all.
+        let (kept, strays) = if kept.len() * 2 >= at.len() { let n = at.len() - kept.len(); (kept, n) } else { (at, 0) };
+        let first = kept[0];
+        let (lo, hi) = kept.iter().fold(([first[0], first[1]], [first[0], first[1]]), |(lo, hi), p| ([lo[0].min(p[0]), lo[1].min(p[1])], [hi[0].max(p[0]), hi[1].max(p[1])]));
         let (wide, high) = ((hi[0] - lo[0] + 2.0 * margin) * dots, (hi[1] - lo[1] + 2.0 * margin) * dots);
         let (w, h) = (wide.round().max(1.0) as u32, high.round().max(1.0) as u32);
         if w > 12_000 || h > 12_000 {
             return Err(format!("it is {} ft by {} ft on plan, too large to draw as one sheet: cut it to the building in the program it was cleaned in", (hi[0] - lo[0]).round(), (hi[1] - lo[1]).round()));
         }
         let mut picture = image::GrayImage::from_pixel(w, h, image::Luma([255u8]));
-        let mut held = 0usize;
-        for p in self.points.iter().filter(|p| (p[2] - height).abs() <= band) {
-            held += 1;
+        for p in &kept {
             // To the nearest dot: a point on a dot's edge (a wall at a whole foot) is
             // the same dot whether its file kept it as text or as bytes.
             let (x, y) = (((p[0] - lo[0] + margin) * dots).round() as i64, ((p[1] - lo[1] + margin) * dots).round() as i64);
@@ -199,12 +270,18 @@ impl Scan {
                 }
             }
         }
-        if held == 0 {
-            return Err("no point of it is at that height: nothing to draw".into());
-        }
         let mut png = Vec::new();
         picture.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).map_err(|e| format!("the picture of it could not be made: {e}"))?;
-        Ok(Cut { png, size: [w, h], dots, corner: [lo[0] - margin, lo[1] - margin], points: held })
+        // How far the building runs: between the hundredth and the ninety-ninth of every
+        // hundred of its points each way, so that a last stray beside a wall, or the
+        // few points furthest out of a wall's fuzz, do not stretch it.
+        let span = |axis: usize| {
+            let mut all: Vec<f64> = kept.iter().map(|p| p[axis]).collect();
+            all.sort_by(f64::total_cmp);
+            // (A handful of points has no hundredths to speak of: end to end.)
+            if all.len() < 200 { all[all.len() - 1] - all[0] } else { all[(all.len() - 1) * 99 / 100] - all[(all.len() - 1) / 100] }
+        };
+        Ok(Cut { png, size: [w, h], dots, corner: [lo[0] - margin, lo[1] - margin], points: kept.len(), strays, extent: [span(0), span(1)] })
     }
 }
 
@@ -220,6 +297,10 @@ pub struct Cut {
     pub corner: [f64; 2],
     /// How many points are drawn on it.
     pub points: usize,
+    /// How many points at that height were left off as strays (alone in their square foot).
+    pub strays: usize,
+    /// How far the building runs on the sheet, east to west and north to south, in feet.
+    pub extent: [f64; 2],
 }
 
 #[cfg(test)]
@@ -272,9 +353,11 @@ mod tests {
         let scan = read_ply(&text(&pts), Units::Feet, Up::Z).unwrap();
         let (floor, ceiling) = scan.floor_and_ceiling();
         assert_eq!((floor.map(|f| (f * 12.0).round()), ceiling.map(|c| (c * 12.0).round())), (Some(0.0), Some(96.0)));
-        // Cut 4 ft up: only the wall's row of 21 points; 24 dots to the foot and 2 ft
-        // of margin make (10 + 4) x 24 = 336 by (6 + 4) x 24 = 240 dots.
+        // Cut 4 ft up: only the wall's row of 21 points, 24 dots to the foot, 2 ft of margin.
         let cut = scan.cut(4.0, 2.0 / 12.0, 24.0, 2.0).unwrap();
-        assert_eq!((cut.size, cut.points, cut.corner), ([336, 240], 21, [-2.0, -2.0]));
+        assert_eq!((cut.size, cut.points, cut.corner), ([336, 96], 21, [-2.0, -2.0]));
+        // (The sheet is fitted to what is cut, the one wall, 10 ft long: (10 + 4) x 24
+        // by (0 + 4) x 24 dots. It was fitted to every point of the scan.)
+        assert_eq!((cut.strays, cut.extent), (0, [10.0, 0.0]));
     }
 }

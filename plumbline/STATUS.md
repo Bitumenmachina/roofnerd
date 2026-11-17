@@ -6867,8 +6867,25 @@ in one dot from a text file and the next from bytes (now drawn at its nearest do
 a text file broken off mid-line was called "not three numbers" where it is cut
 short (now said so).
 
-**Not done, and not to be taken as done.** It has been run on a made-up room of
-evenly placed points and on **no real scan**: a phone's scan is millions of
+**Tried on a rough made-up scan, without waiting for a real one (Patrick: "I'm in
+the field anyway to test that piping without it ?").** `tools/made-up-scan.py
+--rough` makes a two-room house the way a phone would scan it: 264,543 scattered
+points each about 1.5 cm out, a doorway, a window, a table, a sofa, cabinets 7 ft
+tall, one point in fifty a stray up to 6 m outside, and the whole scan leaning half
+a degree (1.05 in in 10 ft, by hand). **It broke the first build in two places**: the
+house, 30 ft by 20 ft, was said to be 69' 5" by 59' 4" (the strays), and its 8 ft
+ceiling read 8' 3" (the lean). Fixed (call 128, added to): the scan is levelled by
+its own floor and the lean said; floor and ceiling are the fullest inch of their
+heights; strays are left off the sheet and counted. **Now, and held by
+`demos/scan.sh`**: "about 30' 2" by 20' 2"" (within 3 in), "8' 0"", "leaned 15/16 in
+in 10 ft", 102 strays left off; and on the sheet, measured at places worked from
+the house as made: wall where there is wall (1,062 dark dots on the west wall),
+none in the window (0), none in the doorway (0), the cabinets' front showing (they
+stand above the cut), the room clear where the table and sofa are below it. The
+sheet was looked at and reads as a plan.
+
+**Not done, and not to be taken as done.** It has been run on two made-up scans and
+on **no real scan**: a phone's scan is millions of
 uneven points with furniture, noise and holes, and how the floor and ceiling are
 found and how the cut reads on one are untried. Nothing brings a scan in from the
 window's Bring in list yet (the command line makes the sheet; the window then

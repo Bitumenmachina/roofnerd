@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """A made-up scan of one room, as a PLY point cloud, for demos/scan.sh.
 
-    tools/made-up-scan.py <out.ply> [--binary] [--feet-y-up]
+    tools/made-up-scan.py <out.ply> [--binary] [--feet-y-up] [--rough]
 
 A room 20 ft by 12 ft inside and 8 ft high: points 0.05 m apart on its four walls, its
 floor and its ceiling, its southwest inside corner at zero. In metres with z up, as a
 phone's scan is; with --feet-y-up the same room in feet with y up. Nothing in it is
-from a real scan.
+from a real scan. With --rough, a two-room house as a phone would scan it: scattered
+points, each a little out, furniture, strays outside, and the whole scan leaning.
 """
 import struct, sys
 
@@ -36,10 +37,58 @@ def room():
     return pts
 
 
+def rough():
+    """A house as a phone would scan it, made up: two rooms, 30 ft by 20 ft in all and 8 ft
+    high, a partition 18 ft from the west wall with a 3 ft doorway, a window (no points:
+    glass does not scan) in the south wall, a table, a sofa, and cabinets 7 ft tall along
+    the north wall of the east room. The points are scattered, not on a grid; each is out
+    by about 1.5 cm; the floor is missed under the furniture; one in fifty is a stray
+    outside the house; and the whole scan leans half a degree, as one not levelled does.
+    The same every time (a fixed seed)."""
+    import math, random
+    r = random.Random(7213)
+    W, D, H, PX = 30 * FT, 20 * FT, 8 * FT, 18 * FT
+    pts = []
+    boxes = [  # furniture: west, south, east, north, top (m)
+        (4 * FT, 6 * FT, 10 * FT, 9 * FT, 2.5 * FT),      # a table
+        (1 * FT, 14 * FT, 8 * FT, 17 * FT, 3 * FT),       # a sofa
+        (20 * FT, 18 * FT, 29 * FT, 20 * FT, 7 * FT),     # tall cabinets on the north wall
+    ]
+    under = lambda x, y: any(b[0] <= x <= b[2] and b[1] <= y <= b[3] for b in boxes)
+    def scatter(n, make):
+        for _ in range(n):
+            p = make()
+            if p is not None:
+                pts.append(p)
+    scatter(60000, lambda: (lambda x, y: None if under(x, y) else (x, y, 0.0))(r.uniform(0, W), r.uniform(0, D)))
+    scatter(60000, lambda: (r.uniform(0, W), r.uniform(0, D), H))
+    def wall(x0, y0, x1, y1, n, gaps=()):
+        def one():
+            t, z = r.random(), r.uniform(0, H)
+            along = t * math.hypot(x1 - x0, y1 - y0)
+            if any(g[0] <= along <= g[1] and g[2] <= z <= g[3] for g in gaps):
+                return None
+            return (x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, z)
+        scatter(n, one)
+    wall(0, 0, W, 0, 30000, gaps=[(8 * FT, 13 * FT, 3 * FT, 7 * FT)])   # south, with a window 5 ft wide
+    wall(W, 0, W, D, 20000)
+    wall(0, D, W, D, 30000)
+    wall(0, 0, 0, D, 20000)
+    wall(PX, 0, PX, D, 20000, gaps=[(9 * FT, 12 * FT, 0, 6.67 * FT)])    # the partition, with its doorway
+    for (x0, y0, x1, y1, top) in boxes:                                  # furniture: its top and its sides
+        scatter(4000, lambda: (r.uniform(x0, x1), r.uniform(y0, y1), top))
+        for (a, b, c, d) in ((x0, y0, x1, y0), (x1, y0, x1, y1), (x0, y1, x1, y1), (x0, y0, x0, y1)):
+            scatter(1500, lambda: (lambda t: (a + (c - a) * t, b + (d - b) * t, r.uniform(0, top)))(r.random()))
+    noisy = [(x + r.gauss(0, 0.015), y + r.gauss(0, 0.015), z + r.gauss(0, 0.015)) for x, y, z in pts]
+    strays = [(r.uniform(-6, W + 6), r.uniform(-6, D + 6), r.uniform(-1, H + 2)) for _ in range(len(noisy) // 50)]
+    lean = math.radians(0.5)                                             # about the north-south line through the west wall
+    return [(x * math.cos(lean) - z * math.sin(lean), y, x * math.sin(lean) + z * math.cos(lean)) for x, y, z in noisy + strays]
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     binary, feet = "--binary" in sys.argv, "--feet-y-up" in sys.argv
-    pts = room()
+    pts = rough() if "--rough" in sys.argv else room()
     if feet:  # the same room in feet, y up: (east, up, south) keeps it right-handed
         pts = [(x / FT, z / FT, -y / FT) for x, y, z in pts]
     head = "ply\nformat %s 1.0\ncomment a made-up room, not a real scan\nelement vertex %d\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nend_header\n" % ("binary_little_endian" if binary else "ascii", len(pts))

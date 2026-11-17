@@ -29,8 +29,8 @@ echo "== Brought in: what it read, what it took for granted, and the sheet it ma
 IN="$("$P" import scan "$J" "$T/room.ply" --level "$L")"
 D="$(made "$IN")"
 says "the points, and what was taken for granted" "36,924 points, taken as metres with z up (--units ft or --up y says otherwise)" "$IN"
-says "6.096 m by 3.6576 m" "on plan it is 20' 0\" by 12' 0\"" "$IN"
-says "2.4384 m" "floor to ceiling reads 8' 0\" on the scan" "$IN"
+says "6.096 m by 3.6576 m" "on plan, where it is cut, it is about 20' 0\" by 12' 0\"" "$IN"
+says "2.4384 m" "floor to ceiling reads about 8' 0\" on the scan" "$IN"
 says "the sheet: (20 + 4) x 24 by (12 + 4) x 24 dots" "576 by 384 dots at 24 to the foot" "$IN"
 says "what is not kept" "not kept: each point's red" "$IN"
 [ -s "$T/room cut at 4 ft 0 in.png" ] || { echo "FAIL: no picture of the cut beside the job"; exit 1; }
@@ -74,8 +74,69 @@ print(f"    the same sheet from text and from bytes, 576 by 384, {dark} dark dot
 PY
 FT="$("$P" import scan "$T/b.json" "$T/feet.ply" --level "$LB" --units ft --up y)"
 says "the same room, told it is in feet with y up" "taken as feet with y up" "$FT"
-says "the same size" "on plan it is 20' 0\" by 12' 0\"" "$FT"
-says "the same height" "floor to ceiling reads 8' 0\" on the scan" "$FT"
+says "the same size" "it is about 20' 0\" by 12' 0\"" "$FT"
+says "the same height" "floor to ceiling reads about 8' 0\" on the scan" "$FT"
+
+echo
+echo "== A rough scan, as a phone makes one: scattered points each a little out, furniture, strays outside, the scan leaning =="
+# tools/made-up-scan.py --rough: two rooms, 30 ft by 20 ft and 8 ft high; a partition 18 ft
+# from the west wall with a doorway from 9 ft to 12 ft north; a window in the south wall
+# from 8 ft to 13 ft east; cabinets 7 ft tall against the north wall from 20 ft to 29 ft
+# east, 2 ft deep; a table and a sofa under 4 ft; each point out by about 1.5 cm; one
+# point in fifty a stray up to 6 m outside; the whole scan leaning half a degree, which is
+# tan(0.5 deg) x 120 = 1.05 in in 10 ft. What a person must be told, and how near:
+python3 tools/made-up-scan.py "$T/house.ply" --rough --binary
+"$P" new "$T/h.json" "A rough scan (not a real job)" >/dev/null
+LH="$(made "$("$P" level "$T/h.json" ground --elevation "0 ft" --height "8 ft" --status Assumed --source "to be checked on site")")"
+RO="$("$P" import scan "$T/h.json" "$T/house.ply" --level "$LH")"
+echo "$RO" | sed 's/^/    /' | head -7
+python3 - "$T/h.json" "$T/house cut at 4 ft 0 in.png" <<PY2
+import json, re, sys
+from PIL import Image
+said = """$RO"""
+def inches(text):
+    m = re.fullmatch(r"(\d+)' (\d+)(?: (\d+)/(\d+))?\"", text)
+    return int(m[1]) * 12 + int(m[2]) + (int(m[3]) / int(m[4]) if m[3] else 0)
+wide, deep = re.search(r"it is about (\d+' [\d /]+\") by (\d+' [\d /]+\")", said).groups()
+# The size: 30 ft by 20 ft, and no more than 3 in over (the fuzz of two walls). With
+# the strays counted in, it read 69 ft by 59 ft.
+assert 0 <= inches(wide) - 360 <= 3 and 0 <= inches(deep) - 240 <= 3, (wide, deep)
+# The height: 8 ft to the inch, though the scan leans (read from the floor's and the
+# ceiling's edges it was 8 ft 3 in).
+assert "floor to ceiling reads about 8' 0\"" in said, said
+lean = re.search(r"it leaned ([\d /]+) in in 10 ft and was levelled by its own floor", said)[1]
+lean = sum(eval(p) for p in lean.split())
+assert 0.85 <= lean <= 1.25, lean
+strays = int(re.search(r"left off the sheet: ([\d,]+) stray points", said)[1].replace(",", ""))
+assert strays >= 50, strays
+print(f"    said: about {wide} by {deep}; 8' 0\" high; leaned {lean:.2f} in in 10 ft (1.05 by hand); {strays} strays left off")
+# The sheet: about (30 + 4) x 24 = 816 by (20 + 4) x 24 = 576 dots, and on it, at the
+# places worked from the house as made: wall where there is wall, none where there is not.
+d = json.load(open(sys.argv[1]))["data"]
+dr = next(e["attributes"]["pl::drawing"] for e in d if "pl::drawing" in e["attributes"])
+cx, cy = dr["at"]["value"]
+im = Image.open(sys.argv[2]).convert("L")
+w, h = im.size
+assert abs(w - 816) <= 30 and abs(h - 576) <= 45, (w, h)
+def dark(e0, n0, e1, n1):  # how many dark dots in a box given in feet on the plan
+    x0, x1 = sorted((round((e0 - cx) * 24), round((e1 - cx) * 24)))
+    y0, y1 = sorted((h - 1 - round((n1 - cy) * 24), h - 1 - round((n0 - cy) * 24)))
+    return sum(1 for v in im.crop((x0, y0, x1 + 1, y1 + 1)).tobytes() if v < 128)
+checks = [
+    ("the west wall", dark(-0.25, 4, 0.25, 16), 150, None),
+    ("the south wall, east of the window", dark(14, -0.25, 17, 0.25), 40, None),
+    ("the window in the south wall, 8 ft to 13 ft east: no points", dark(8.5, -0.25, 12.5, 0.25), None, 8),
+    ("the partition, south of its doorway", dark(17.75, 2, 18.25, 8), 80, None),
+    ("the doorway in the partition, 9 ft to 12 ft north: clear", dark(17.75, 9.4, 18.25, 11.6), None, 4),
+    ("the front of the tall cabinets (they stand above the cut)", dark(21, 17.75, 28, 18.25), 20, None),
+    ("the middle of the west room (a table and a sofa below the cut): clear", dark(3, 3, 15, 13), None, 12),
+]
+for what, n, least, most in checks:
+    ok = (least is None or n >= least) and (most is None or n <= most)
+    print("    %-72s %4d dark dots  %s" % (what, n, "as wanted" if ok else "FAIL"))
+    assert ok, (what, n)
+PY2
+"$P" check "$T/h.json"
 
 echo
 echo "== Refused, each in a sentence, and the job left as it was =="

@@ -998,10 +998,13 @@ fn tables(args: &[String]) -> Result<(), String> {
                 }
             };
             let bytes = std::fs::read(other).map_err(|e| format!("cannot read {other}: {e}"))?;
-            let scan = read_ply(&bytes, units, up).map_err(|why| format!("{other}: {why}"))?;
+            let mut scan = read_ply(&bytes, units, up).map_err(|why| format!("{other}: {why}"))?;
+            // A scan made by hand is seldom level: it is levelled by its own floor, and
+            // how far it leaned is said.
+            let leaned = scan.level_by_floor();
             let called = std::path::Path::new(other).file_stem().and_then(|s| s.to_str()).unwrap_or("scan").to_string();
             let taken = format!("taken as {} with {} up", if units == Units::Metres { "metres" } else { "feet" }, if up == Up::Z { "z" } else { "y" });
-            let (lo, hi) = scan.bounds().ok_or_else(|| format!("{other}: it has no points"))?;
+            let (lo, _) = scan.bounds().ok_or_else(|| format!("{other}: it has no points"))?;
             let (floor, ceiling) = scan.floor_and_ceiling();
             let ft_in = |x: f64| plumbline_world::units::feet_as_ft_in(x, 16);
             // Cut above the floor; where no floor shows, above the lowest point, and said.
@@ -1025,10 +1028,15 @@ fn tables(args: &[String]) -> Result<(), String> {
             job.derive();
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
             let mut out = format!("{made}: scan {called:?}: {} points, {taken} (--units ft or --up y says otherwise)\n", view::figure(scan.points.len() as f64, 0));
-            let _ = writeln!(out, "  on plan it is {} by {}", ft_in(hi[0] - lo[0]), ft_in(hi[1] - lo[1]));
+            // To the inch: a scan's points are each a little out, and its edge with them.
+            let about = |x: f64| plumbline_world::units::feet_as_ft_in((x * 12.0).round() / 12.0, 16);
+            let _ = writeln!(out, "  on plan, where it is cut, it is about {} by {}", about(cut.extent[0]), about(cut.extent[1]));
+            if let Some(lean) = leaned.filter(|l| *l * 120.0 >= 0.125) {
+                let _ = writeln!(out, "  it leaned {} in 10 ft and was levelled by its own floor (level it where it was cleaned for a truer sheet)", plumbline_world::units::show_length(&plumbline_world::units::Len::One((lean * 120.0 * 16.0).round() / 16.0), "in"));
+            }
             match (floor, ceiling) {
                 (Some(f), Some(c)) => {
-                    let _ = writeln!(out, "  floor to ceiling reads {} on the scan (it is not given to the level: measure the level's height with it if you take it)", ft_in(c - f));
+                    let _ = writeln!(out, "  floor to ceiling reads about {} on the scan (it is not given to the level: measure the level's height with it if you take it)", about(c - f));
                 }
                 (Some(_), None) => {
                     let _ = writeln!(out, "  its floor shows and no ceiling does: no height read");
@@ -1038,6 +1046,9 @@ fn tables(args: &[String]) -> Result<(), String> {
                 }
             }
             let _ = writeln!(out, "  cut {} above the floor: {} points drawn on {kept}, {} by {} dots at {} to the foot", ft_in(cut_at), view::figure(cut.points as f64, 0), cut.size[0], cut.size[1], view::num(cut.dots));
+            if cut.strays > 0 {
+                let _ = writeln!(out, "  left off the sheet: {} stray points at that height, each alone in its square foot of plan", view::figure(cut.strays as f64, 0));
+            }
             let _ = writeln!(out, "  it is a drawing under {level}, to scale and in the scan's own place, Assumed: trace over it as over any sheet");
             for lost in &scan.lost {
                 let _ = writeln!(out, "  not kept: {lost}");
