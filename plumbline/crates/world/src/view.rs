@@ -922,6 +922,26 @@ pub struct ItemTotal {
     pub amount: MoneyTotal,
 }
 
+impl ItemTotal {
+    /// The quantity as it is written, for the window and the command line alike: a
+    /// count of whole things whole; anything else to two places unless, at two, it
+    /// would not multiply by its price to its amount on a calculator, and then to the
+    /// four it is held to (the rule a line of the sheet follows, J17A-9; call 120).
+    /// None where some line of the item has no quantity.
+    pub fn quantity_said(&self) -> Option<String> {
+        let q = self.quantity?;
+        let places = if self.unit == "EA" && q.fract() == 0.0 {
+            0
+        } else {
+            match (self.unit_cost, self.amount.value) {
+                (Some(p), Some(a)) if (crate::lines::cents((q * 100.0).round() / 100.0 * p) - a).abs() > 0.005 => 4,
+                _ => 2,
+            }
+        };
+        Some(figure(q, places))
+    }
+}
+
 impl Estimate {
     /// The lines that are on, read item by item: in the order of the divisions (what is
     /// in none comes last), and within one in the order each item first appears. It is

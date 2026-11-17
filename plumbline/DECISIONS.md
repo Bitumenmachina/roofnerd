@@ -4235,3 +4235,19 @@ to**, **Detail, all in** (its rate for each SF or LF), **Allowance comes to**,
 **Detail over allowance** and **Detail over allowance, %**. "Detail" is the owner's
 word for a thing priced line by line. The job and the command line keep the older
 names; only the window's wording changed.
+
+### Call 120. The estimate by item at the command line; an item's quantity written to the places it needs (2026-11-17)
+
+`plumbline estimate <file> by-item` prints what the estimate window's "The estimate,
+by item" shows: each item once, with its cost type, its places, its quantity, its
+unit cost and its amount, under its division and the division's total, and the job
+cost at the foot. It is `Estimate::by_item`, the same as the window reads; nothing is
+worked out at the command line.
+
+An item's quantity follows the rule a line of the sheet already follows (J17A-9): two
+places, unless at two it would not multiply by its price to its amount on a
+calculator, and then the four it is held to. The sample's footings read 10.07 CY at
+$450.00 beside $4,533.40, and 10.07 × 450 is $4,531.50; they now read 10.0742 CY
+(which gives $4,533.39: the cent is four lines each rounded to the cent and added,
+and the amount is that sum, as the sheet under it shows). One writer,
+`ItemTotal::quantity_said`, for the window and the command line.

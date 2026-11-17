@@ -895,9 +895,10 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     cell(r, 7.0, false, |c| dot(c, if it.amount.value.is_some() { it.amount.status } else { Status::Unknown }));
                     cell(r, 0.0, false, |c| words(c, fonts, it.description.clone(), 12.5, Weight::Medium, theme::ink()));
                     cell(r, 62.0, true, |c| words(c, fonts, if it.places == 1 { String::new() } else { format!("{} places", it.places) }, 11.0, Weight::Regular, theme::ink_faint()));
-                    cell(r, 104.0, true, |c| match it.quantity {
-                        // A count of whole things is written whole: 9 EA, not 9.00 EA.
-                        Some(q) => words(c, fonts, format!("{} {}", view::figure(q, if it.unit == "EA" && q.fract() == 0.0 { 0 } else { 2 }), it.unit), 12.5, Weight::Regular, theme::status_ink(it.quantity_status)),
+                    cell(r, 104.0, true, |c| match it.quantity_said() {
+                        // A count of whole things is written whole: 9 EA, not 9.00 EA;
+                        // the rest to the places it needs (`ItemTotal::quantity_said`).
+                        Some(q) => words(c, fonts, format!("{q} {}", it.unit), 12.5, Weight::Regular, theme::status_ink(it.quantity_status)),
                         None => words(c, fonts, "no quantity", 11.5, Weight::Regular, theme::status_ink(Status::Unknown)),
                     });
                     cell(r, 92.0, true, |c| match it.unit_cost {

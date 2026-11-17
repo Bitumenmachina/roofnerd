@@ -6476,8 +6476,12 @@ no dimensions: **each wall now carries its length on the plan of its level** (se
 hand), doors still have no swing; (6) noise: **a priced job opens with its checklist
 folded**, the red "not coded" is as it was.
 
-The by-item table is not in the command line's estimate, the workbook or any
-demonstration yet, and has not been judged.
+The by-item table is at the command line since call 120 (`plumbline estimate <job>
+by-item`; a test of the command holds the sample's footings, Division 3's total and
+the job cost at its foot), and an item's quantity is written to the places it needs
+to multiply out (the footings read 10.0742 CY, not 10.07, in the window and at the
+command line: **changed for a person**, the window's seen only before the change).
+It is not in the workbook or any demonstration yet, and has not been judged.
 
 **The full run, on a frozen copy of 5be55e3 (2026-11-17).** All twenty-five window
 demonstrations passed, each on its first run, and the twenty-one at the command line
@@ -6510,7 +6514,7 @@ on ebcc649, the commit before these two changes: what they say of "10.00 ft" and
 
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 324 tests pass,
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 325 tests pass,
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
 commit of code. **All twenty-five window demonstrations and the twenty-one at the
 command line passed on a frozen copy of 5be55e3 (2026-11-17), each window one on its

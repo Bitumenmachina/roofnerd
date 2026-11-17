@@ -293,6 +293,11 @@ fn the_estimate_reads_item_by_item_and_comes_to_the_same_money() {
     assert_eq!((footings.places, footings.quantity, footings.unit.as_str(), footings.unit_cost), (4, Some(10.0742), "CY", Some(450.0)));
     assert_eq!(footings.amount.value, Some(4533.40));
     assert_eq!(footings.division.map(|d| d.number()), Some(3));
+    // Written to the places it needs: 10.07 x 450 is 4,531.50, not the amount, so the
+    // four it is held to are shown (call 120). The slab, 1,120 SF at $6.50, needs two.
+    assert_eq!(footings.quantity_said().as_deref(), Some("10.0742"));
+    let slab = items.iter().find(|i| i.description == "Concrete slab on grade, 4 in").unwrap();
+    assert_eq!((slab.quantity_said().as_deref(), slab.amount.value), (Some("1,120.00"), Some(7280.0)));
     // Every line that is on is in one item and no other, and the items come to what
     // the lines come to: nothing is worked out again and nothing is left behind.
     let on = est.lines.iter().filter(|l| !l.off).count();

@@ -344,3 +344,33 @@ fn a_type_is_a_walls_or_a_footings_from_the_moment_it_is_made() {
     assert!(!kept.0 && kept.1.contains(&format!("{footing_type} is the type of footing-")) && !kept.1.contains("is not a footing type"), "{}", kept.1);
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+#[test]
+fn the_estimate_is_read_by_item_and_comes_to_the_same_job_cost() {
+    // The made-up whole house: 399 lines of the sheet are 52 items. Its four strip
+    // footings, 2.9630 + 2.0741 + 2.9630 + 2.0741 = 10.0742 CY at a made-up $450.00,
+    // are one row of 4 places at $4,533.40, under Division 3 at $32,485.40, and the
+    // foot is the job cost `estimate` gives.
+    let dir = std::env::temp_dir().join(format!("plumbline-by-item-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let job = dir.join("job.json");
+    let bin = env!("CARGO_BIN_EXE_plumbline");
+    assert!(Command::new(bin).arg("sixteen").arg(&job).output().unwrap().status.success());
+    let out = Command::new(bin).arg("estimate").arg(&job).arg("by-item").output().unwrap();
+    let said = String::from_utf8_lossy(&out.stdout).to_string();
+    assert!(out.status.success(), "{said}");
+    assert!(said.contains("THE ESTIMATE, BY ITEM: 52 items from 399 lines"), "{said}");
+    let squeezed = |line: &str| line.split_whitespace().collect::<Vec<_>>().join(" ");
+    let rows: Vec<String> = said.lines().map(squeezed).collect();
+    assert!(rows.iter().any(|r| r == "Division 3 Concrete $32,485.40"), "{said}");
+    assert!(rows.iter().any(|r| r == "Concrete footing, in place Subcontract 4 10.0742 CY $450.00/CY $4,533.40"), "{said}");
+    let every = String::from_utf8_lossy(&Command::new(bin).arg("estimate").arg(&job).output().unwrap().stdout).to_string();
+    let job_cost = every.lines().map(squeezed).find(|l| l.starts_with("Job cost ")).unwrap();
+    assert!(job_cost.starts_with("Job cost $394,677.48"), "{job_cost}");
+    assert!(rows.last().unwrap().ends_with("$394,677.48"), "{said}");
+    // A word that is not a way to read it is refused, and says the two that are.
+    let no = Command::new(bin).arg("estimate").arg(&job).arg("by-thing").output().unwrap();
+    assert_eq!(no.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&no.stderr).contains("`plumbline estimate <file> by-item` is each item once"));
+    std::fs::remove_dir_all(&dir).unwrap();
+}
