@@ -43,6 +43,9 @@ pub struct Question {
     pub kind: Kind,
     /// The storey it is on, by name; a storey's own name for a storey.
     pub storey: String,
+    /// The room it is in, by name, where a room's outline on that storey holds the
+    /// place it is at. None for a thing in no room (a wall, a thing outside, a roof).
+    pub room: Option<String>,
     /// For a clash: what it is with.
     pub clash: Option<Between>,
     /// What to measure (true) or check (false) to settle it: each value as the screen
@@ -196,6 +199,7 @@ pub fn vif(job: &mut Job) -> Vif {
                         name: c.a_name.clone(),
                         kind: c.a_kind,
                         storey: storey_name(&c.a, c.a_kind),
+                        room: None,
                         clash: Some(Between { other: c.b.clone(), other_name: c.b_name.clone(), how: c.how, through: c.through, by: c.by, at: c.at }),
                         values: Vec::new(),
                         dollars,
@@ -261,7 +265,7 @@ pub fn vif(job: &mut Job) -> Vif {
         let picked: Vec<&Line> = lines.iter().filter(|l| (l.quantity != Status::Known && l.rests.contains(&el.path)) || (identity && l.on == el.path)).collect();
         counted.extend(picked.iter().map(|l| l.key.clone()));
         let (dollars, dollars_status, n, unpriced) = sum(&picked);
-        place(Question { path: el.path.clone(), name: el.name.clone(), kind: el.kind, storey: storey_name(&el.path, el.kind), clash: None, values, dollars, dollars_status, lines: n, unpriced }, &mut with, &mut without);
+        place(Question { path: el.path.clone(), name: el.name.clone(), kind: el.kind, storey: storey_name(&el.path, el.kind), room: None, clash: None, values, dollars, dollars_status, lines: n, unpriced }, &mut with, &mut without);
     }
 
     // Largest first; a tie keeps the order found, which is clashes and then the job's.
@@ -269,5 +273,124 @@ pub fn vif(job: &mut Job) -> Vif {
     let all: Vec<&Line> = lines.iter().filter(|l| counted.contains(&l.key)).collect();
     let (riding, riding_status, riding_lines, riding_unpriced) = sum(&all);
     with.extend(without);
+    // Where each is, to the room: a list a person walks with says "first floor, Bath",
+    // not "first floor" (call 117). A clash is where the two meet; a thing is where it
+    // stands, or the middle of its run.
+    let rooms: Vec<(String, String, Vec<[f64; 2]>)> = crate::building::room_outlines(job)
+        .into_iter()
+        .filter_map(|(path, outline)| {
+            let e = job.find(&path)?;
+            let n = job.world.get::<crate::Node>(e)?;
+            Some((n.parent.clone()?, n.name.clone(), outline))
+        })
+        .collect();
+    let placed = crate::building::placements(job).0;
+    for q in with.iter_mut() {
+        let Some(p) = placed.iter().find(|p| p.path == q.path) else { continue };
+        let Some(storey) = &p.storey else { continue };
+        let at = match (&q.clash, &p.shape) {
+            (Some(c), _) => [c.at[0], c.at[1]],
+            (None, crate::building::Shape::Box { at, .. }) => [at[0], at[1]],
+            (None, crate::building::Shape::Run { a, b, .. }) => [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0],
+            _ => continue,
+        };
+        q.room = rooms.iter().find(|(of, _, outline)| of == storey && inside(outline, at)).map(|r| r.1.clone());
+    }
     Vif { questions: with, riding, riding_status, riding_lines, riding_unpriced, clashes_not_tested }
+}
+
+/// Whether a place lies inside an outline on plan.
+fn inside(outline: &[[f64; 2]], at: [f64; 2]) -> bool {
+    let mut odd = false;
+    for i in 0..outline.len() {
+        let (a, b) = (outline[i], outline[(i + 1) % outline.len()]);
+        if (a[1] > at[1]) != (b[1] > at[1]) && at[0] < a[0] + (at[1] - a[1]) / (b[1] - a[1]) * (b[0] - a[0]) {
+            odd = !odd;
+        }
+    }
+    odd
+}
+
+impl Question {
+    /// What it is, as the list names it: the thing, or the two things of a clash.
+    pub fn what(&self) -> String {
+        // A run is drawn piece by piece and each piece is named "..., piece 2 of 3":
+        // on the job it is the run a person goes to, so the piece is not said.
+        let run = |name: &str| -> String {
+            match name.rfind(", piece ") {
+                Some(i) if name[i + 8..].split(" of ").count() == 2 && name[i + 8..].split(" of ").all(|n| !n.is_empty() && n.chars().all(|c| c.is_ascii_digit())) => name[..i].to_string(),
+                _ => name.to_string(),
+            }
+        };
+        match &self.clash {
+            Some(c) => format!("{} and {}", run(&self.name), run(&c.other_name)),
+            None => run(&self.name),
+        }
+    }
+
+    /// Where it is, as a person finds it: the level, and the room where it is in one.
+    pub fn where_said(&self) -> String {
+        match (&self.room, self.storey.is_empty()) {
+            (Some(room), false) => format!("{}, {room}", self.storey),
+            (Some(room), true) => room.clone(),
+            (None, _) => self.storey.clone(),
+        }
+    }
+
+    /// What to do about it on site, in one sentence. Inches are written as a tape
+    /// reads them (1/2 in, not 0.50 in). One wording for the window, the command line
+    /// and the list that is written out.
+    pub fn to_do(&self) -> String {
+        match &self.clash {
+            Some(c) if c.through => "One passes through the other: a hole to cut. Where is still to verify.".to_string(),
+            Some(c) => {
+                let by = c.by.map(|by| format!(", by {}", crate::units::show_length(&crate::units::Len::One((by * 12.0 * 16.0).round() / 16.0 + 0.0), "in"))).unwrap_or_default();
+                format!("In the same space{by}. Measure either one.")
+            }
+            None => {
+                // "Measure its width and its height; check what it is and its size."
+                let said = |name: &str| match name {
+                    "condition" => "its assembly".to_string(),
+                    n if n.starts_with("what ") => n.to_string(),
+                    n => format!("its {}", n.replace('_', " ")),
+                };
+                let listed = |length: bool| -> String {
+                    let all: Vec<String> = self.values.iter().filter(|v| v.2 == length).map(|v| said(&v.0)).collect();
+                    match all.as_slice() {
+                        [] => String::new(),
+                        [one] => one.clone(),
+                        [most @ .., last] => format!("{} and {last}", most.join(", ")),
+                    }
+                };
+                let (measure, check) = (listed(true), listed(false));
+                let mut to_do = Vec::new();
+                if !measure.is_empty() {
+                    to_do.push(format!("Measure {measure}"));
+                }
+                if !check.is_empty() {
+                    to_do.push(format!("{} {check}", if to_do.is_empty() { "Check" } else { "check" }));
+                }
+                format!("{}.", to_do.join("; "))
+            }
+        }
+    }
+}
+
+/// The list as a sheet a person takes to the job: one row a question, largest dollars
+/// first, with a box to tick and a blank for what was found. Text only: it is printed,
+/// written on, and typed back in at the window.
+pub fn field_list(job: &mut Job) -> Vec<Vec<String>> {
+    let list = vif(job);
+    let mut rows = vec![vec!["Done".to_string(), "Riding on it".to_string(), "Where".to_string(), "What".to_string(), "What to do".to_string(), "As found".to_string()]];
+    for q in &list.questions {
+        rows.push(vec![
+            "[  ]".to_string(),
+            q.dollars.map(view::money).unwrap_or_else(|| "no dollars".to_string()),
+            q.where_said(),
+            q.what(),
+            q.to_do(),
+            String::new(),
+        ]);
+    }
+    rows
 }

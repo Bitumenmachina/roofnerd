@@ -50,10 +50,12 @@ pub enum WriteOut {
     Pm,
     /// The job's items as a table, to open, change and bring back in.
     Items,
+    /// What is to verify in the field, as a sheet to print and take to the job.
+    Field,
 }
 
 impl WriteOut {
-    pub const ALL: [WriteOut; 7] = [WriteOut::Model, WriteOut::Workbook, WriteOut::Rows, WriteOut::Supplier, WriteOut::Subcontractor, WriteOut::Pm, WriteOut::Items];
+    pub const ALL: [WriteOut; 8] = [WriteOut::Model, WriteOut::Workbook, WriteOut::Rows, WriteOut::Supplier, WriteOut::Subcontractor, WriteOut::Pm, WriteOut::Items, WriteOut::Field];
     pub fn name(self) -> &'static str {
         match self {
             WriteOut::Model => "BIM model",
@@ -63,6 +65,7 @@ impl WriteOut {
             WriteOut::Subcontractor => "For subcontractors",
             WriteOut::Pm => "For the PM",
             WriteOut::Items => "Item library, to keep",
+            WriteOut::Field => "Field list",
         }
     }
     /// What it is called in the middle of a sentence (J19-40: the button's name put
@@ -76,6 +79,7 @@ impl WriteOut {
             WriteOut::Subcontractor => "workbook for subcontractors",
             WriteOut::Pm => "workbook for the PM",
             WriteOut::Items => "item library",
+            WriteOut::Field => "field list",
         }
     }
     /// What is added to the job's name to name the file.
@@ -88,6 +92,7 @@ impl WriteOut {
             WriteOut::Subcontractor => " for subcontractors.xlsx",
             WriteOut::Pm => " for the PM.xlsx",
             WriteOut::Items => " items.csv",
+            WriteOut::Field => " field list.xlsx",
         }
     }
 }

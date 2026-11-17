@@ -6465,8 +6465,11 @@ money is not where the eye goes: **a thing selected now shows its cost and its c
 for each SF or LF at the head of its panel** (seen by hand: the south wall, $10,990.84
 and $33.31/SF); the job's price is still small and the Job panel has no dollars by
 division; (3) the verify-in-field
-list cannot go to the field: no room, the program's words, decimal inches, trifles
-beside large items, nothing to tick, no way to print it or write it out; (4) figures
+list could not go to the field: **answered in part today**: each row says its room,
+inches as a tape reads them, the run and not its piece, what to do as a sentence, and
+**Field list under Write out** writes a workbook to print, with a box to tick and a
+blank for what was found (a test holds it; seen by hand, 93 rows); still open: trifles
+beside large items, and the command line's `vif` verb wording its own rows; (4) figures
 to more places than the trade writes; (5) a plan with no dimensions and doors with no
 swing; (6) a ticked checklist and a red "not coded" on every screen.
 

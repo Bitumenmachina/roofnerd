@@ -627,7 +627,7 @@ fn verify(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsho
     // What rides on a question and has no price yet is in no figure here, and is said.
     let riding = if list.riding_unpriced == 0 { riding } else { format!("{riding}  ·  {} more with no price yet", lines(list.riding_unpriced)) };
     table(p, fonts, "Verify in field", format!("{}  ·  {riding}", list.questions.len()), |t| {
-        header_row(t, fonts, &[("", 7.0, false), ("Riding on it", 118.0, true), ("What", 0.0, false), ("Level", 96.0, false)]);
+        header_row(t, fonts, &[("", 7.0, false), ("Riding on it", 118.0, true), ("What", 0.0, false), ("Where", 150.0, false)]);
         for q in &list.questions {
             // A clash's row goes to the run or the thing in it, not to the wall.
             let go = q.clash.as_ref().map(|c| c.other.clone()).unwrap_or_else(|| q.path.clone());
@@ -645,28 +645,14 @@ fn verify(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsho
                     Some(d) => named(x, fonts, money(d), theme::status_ink(q.dollars_status), lines(q.lines), theme::ink_faint()),
                     None => words(x, fonts, "no dollars", 12.0, Weight::Regular, theme::ink_faint()),
                 });
-                cell(r, 0.0, false, |x| match &q.clash {
-                    Some(c) if c.through => {
-                        named(x, fonts, format!("{} and {}", q.name, c.other_name), theme::ink(), "One passes through the other: a hole to cut. Where is still to verify.".to_string(), theme::ink_soft());
-                    }
-                    Some(c) => {
-                        let by = c.by.map(|by| format!(", by {:.2} in", by * 12.0 + 0.0)).unwrap_or_default();
-                        named(x, fonts, format!("{} and {}", q.name, c.other_name), theme::ink(), format!("In the same space{by}. Measure either one."), theme::ink_soft());
-                    }
-                    None => {
-                        let what = |length: bool| q.values.iter().filter(|v| v.2 == length).map(|v| crate::panels::pretty(&v.0).to_lowercase()).collect::<Vec<_>>().join(", ");
-                        let (measure, check) = (what(true), what(false));
-                        let mut to_do = Vec::new();
-                        if !measure.is_empty() {
-                            to_do.push(format!("Measure {measure}"));
-                        }
-                        if !check.is_empty() {
-                            to_do.push(format!("{} {check}", if to_do.is_empty() { "Check" } else { "check" }));
-                        }
-                        named(x, fonts, format!("{} ({})", q.name, theme::kind_name(q.kind).to_lowercase()), theme::ink(), format!("{}.", to_do.join("; ")), theme::ink_soft());
-                    }
+                // What it is and what to do about it: the model's one wording, the same
+                // on the sheet that is written out for the field.
+                cell(r, 0.0, false, |x| {
+                    let what = if q.clash.is_some() { q.what() } else { format!("{} ({})", q.what(), theme::kind_name(q.kind).to_lowercase()) };
+                    named(x, fonts, what, theme::ink(), crate::panels::places(&theme::trade(&q.to_do())), theme::ink_soft());
                 });
-                cell(r, 96.0, false, |x| words(x, fonts, q.storey.clone(), 12.0, Weight::Regular, theme::ink_soft()));
+                // Where: the level, and the room where it is in one.
+                cell(r, 150.0, false, |x| words(x, fonts, q.where_said(), 12.0, Weight::Regular, theme::ink_soft()));
             });
             e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
                 if press.button == PointerButton::Primary && !doc.field_in_the_way() {

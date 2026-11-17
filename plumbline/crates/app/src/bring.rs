@@ -245,7 +245,7 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
     let again = to.exists();
     // A job with nothing priced writes headings and nothing under them, and says so
     // (J19-40: it wrote the file without a word that nothing was in it).
-    let bare = !matches!(what, WriteOut::Model | WriteOut::Items) && plumbline_world::view::estimate(&mut doc.job).lines.is_empty();
+    let bare = !matches!(what, WriteOut::Model | WriteOut::Items | WriteOut::Field) && plumbline_world::view::estimate(&mut doc.job).lines.is_empty();
     let done: Result<String, String> = (|| {
         if std::fs::read_to_string(&to).ok().is_some_and(|text| plumbline_world::file::load(&text).is_ok()) {
             return Err(format!("{name} is a job: what is written out is not written over a job"));
@@ -261,6 +261,16 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
                     out.push_str(&format!("\nNot in it: {}.", written.not_written.iter().map(|(what, n, why)| format!("{n} x {what} ({why})")).collect::<Vec<_>>().join("; ")));
                 }
                 Ok(out)
+            }
+            // What is to verify in the field, as a sheet to print: a box to tick, the
+            // dollars riding, where (level and room), what, what to do, and a blank
+            // for what was found (call 117: the list could not leave the window).
+            WriteOut::Field => {
+                let rows = plumbline_world::vif::field_list(&mut doc.job);
+                let n = rows.len() - 1;
+                let tab = plumbline_sheets::Tab { name: "Field list".into(), rows: rows.iter().map(|r| r.iter().map(|c| if c.is_empty() { plumbline_sheets::Cell::Empty } else { plumbline_sheets::Cell::Text(c.clone()) }).collect()).collect(), head: 1, widths: vec![6.0, 14.0, 24.0, 44.0, 52.0, 30.0] };
+                wrote(&plumbline_sheets::xlsx(&[tab])?)?;
+                Ok(if n == 0 { format!("Wrote {name}, beside the job: nothing is to verify in the field, so it has its headings and no rows.") } else { format!("Wrote {name}, beside the job: {n} to verify in the field, the most dollars first, each with where it is, what to do, a box to tick and a blank for what was found. Print it, take it to the job, and type what was measured back in here.") })
             }
             WriteOut::Items => {
                 let rows = tables::items_out(&mut doc.job);

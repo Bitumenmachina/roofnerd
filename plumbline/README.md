@@ -300,7 +300,7 @@ follow: the formulas are the program's own arithmetic, to the cent. Each lens is
 estimate with what its reader is not shown left out, and says at its head what that is.
 The IFC model carries every value's status and source with it (what is Assumed here is
 still said to be Assumed there), and the command lists what a building model has no
-place for. An estimate written as CSV reads back in with `import prior`.
+place for. An estimate written as CSV reads back in with `import prior`. What is to verify in the field goes out as a sheet to print with `export vif <job> <out.xlsx or out.csv>`, or Field list under Write out in the window.
 
 ## Assemblies, and pricing
 

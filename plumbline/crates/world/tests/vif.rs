@@ -411,3 +411,28 @@ fn a_pitch_made_steeper_says_what_the_job_cost_was_and_is() {
     let now = view::estimate(&mut job);
     assert_eq!(view::job_cost_moved_said(&now, &mut job), None);
 }
+
+#[test]
+fn the_list_goes_to_the_field_with_its_room_its_fractions_and_a_box_to_tick() {
+    // Call 117. The sample whole house, priced: its air handler and water heater stand
+    // in the utility room on the first floor, and the heat pump stands outside.
+    let mut job = plumbline_world::sample::house_priced();
+    let list = vif::vif(&mut job);
+    let of = |name: &str| list.questions.iter().find(|q| q.clash.is_none() && q.name == name).unwrap();
+    assert_eq!(of("air handler").where_said(), "first floor, utility");
+    assert_eq!(of("air handler").to_do(), "Check what it is and its size.");
+    assert_eq!((of("heat pump").room.clone(), of("heat pump").where_said()), (None, "first floor".to_string()));
+    // A clash says how far in as a tape reads it, and names the run, not its piece.
+    let clash = list.questions.iter().find(|q| q.clash.as_ref().is_some_and(|c| !c.through && c.by.is_some())).unwrap();
+    let said = clash.to_do();
+    assert!(said.starts_with("In the same space, by ") && said.ends_with(" in. Measure either one.") && !said.contains("0."), "{said}");
+    assert!(list.questions.iter().all(|q| !q.what().contains(", piece ")));
+    // The sheet: its headings, then one row a question in the list's order, each with a
+    // box to tick, where it is, and a blank for what was found.
+    let rows = vif::field_list(&mut job);
+    assert_eq!(rows[0], ["Done", "Riding on it", "Where", "What", "What to do", "As found"]);
+    assert_eq!(rows.len(), list.questions.len() + 1);
+    assert!(rows[1..].iter().all(|r| r.len() == 6 && r[0] == "[  ]" && r[5].is_empty() && !r[3].is_empty() && !r[4].is_empty()));
+    assert_eq!(rows[1][1], list.questions[0].dollars.map(view::money).unwrap());
+    assert!(rows.iter().filter(|r| r[2].contains(", ")).count() > rows.len() / 2, "most of them are in a room");
+}

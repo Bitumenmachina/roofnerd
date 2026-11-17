@@ -4151,8 +4151,19 @@ not on contact sheets. What stuck out, most first:
    which room; "Check what it is, size" and "piece 4 of 4" are the program's words;
    inches are decimals (0.50 in); thirty-eight-dollar elbows sit in the same list as
    a $7,800 heat pump; nothing can be ticked off; and it cannot be printed or written
-   out from the window at all. Open, and the largest thing between this and a
-   superintendent using it.
+   out from the window at all. **Built today**: each question knows the room it is in
+   (the room whose outline holds where the thing stands, or where two things meet):
+   "first floor, utility"; inches are written as a tape reads them ("by 6 3/8 in");
+   a run is named and not its piece; what to do is a sentence ("Check what it is and
+   its size."); one wording, the model's, for the window and the sheet; and **Field
+   list under Write out** writes `<job> field list.xlsx` (the command line: `export
+   vif`), one row a question, the most dollars first, with a box to tick, where,
+   what, what to do and a blank for what was found. Test:
+   `the_list_goes_to_the_field_with_its_room_its_fractions_and_a_box_to_tick`. Seen
+   by hand on the sample house: 93 rows. **Still open**: the trifles are in the same
+   list as the large items (thirty elbows at $38); the command line's own `vif` verb
+   still words its rows itself; what is ticked on paper is typed back in one value at
+   a time; nothing here is a phone.
 4. **Figures are written to more places than the trade writes.** 210.00 LF, 1,120.00
    SF, 2.9630 CY, a height as 10.00 ft beside 10' 0". (In the new table a count of
    whole things is written whole.) Open elsewhere.
