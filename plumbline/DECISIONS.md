@@ -4251,3 +4251,26 @@ $450.00 beside $4,533.40, and 10.07 × 450 is $4,531.50; they now read 10.0742 C
 (which gives $4,533.39: the cent is four lines each rounded to the cent and added,
 and the amount is that sum, as the sheet under it shows). One writer,
 `ItemTotal::quantity_said`, for the window and the command line.
+
+### Call 121. What the pictures of the full run showed, read by a worker; a drag begins where the button goes down (2026-11-17)
+
+All twenty-five window demonstrations passed on 5be55e3 and a worker (not the mind
+that built it) then read every picture against what its step says it shows. Its
+notes are `research/pictures-read-5be55e3.md`; where each of its thirty findings
+stands is in STATUS.md. Two decisions come out of it at once.
+
+1. **A drag begins where the button goes down.** On the frame a button is pressed,
+   the pointer's movement in that frame is not part of the drag. On a slow frame the
+   pointer's whole journey to the place arrived with the press, so a right-drag that
+   was to turn the view half way round also tilted and slid it: two pictures of
+   `dressw` claimed the north wall and showed the inside of the roof, and passed. On
+   a fast machine the difference is a dot or two. This changes what a drag does on
+   the slow renderer; no expectation of any demonstration is changed by it. And the
+   place a view turns about, or the wheel closes on, is the place under the pointer
+   **where the pointer is now**: what it was last found to be over is used only if
+   it lies on the line of sight from there, and otherwise the ground under the
+   pointer is. (On a slow frame the view turned about the place the pointer had
+   left, and the house swung off the screen.)
+2. **A demonstration that claims a view measures it.** `dressw` now turns from the
+   whole job in view, and measures the colours of the north and east walls in the
+   picture that claims them, as it already did for the south and west.

@@ -66,6 +66,10 @@ session() { # $1 job, $2 the folder of $OUT its pictures go in, $3 the steps
 #!/bin/bash
 export APP="$APP" T="$T" OUT="$OUT/$2" ICD="$ICD"
 . "$PWD/demos/window.sh"
+# A turn is about the place under the pointer (Google Earth's rule): about the middle
+# of the roof it carries the eye round the house; about a near eave, half a turn puts
+# the eye over the far corner, looking at roof. turn_at X Y says where the pointer is.
+turn_at() { xdotool mousemove \$1 \$2; sleep 1.5; xdotool mousedown 3; sleep 1.2; for i in \$(seq 1 \$5); do xdotool mousemove_relative -- \$3 \$4; sleep 0.3; done; sleep 1; xdotool mouseup 3; sleep 8; }
 turn() { xdotool mousemove 750 450; sleep 0.6; xdotool mousedown 3; sleep 0.6; for i in \$(seq 1 \$3); do xdotool mousemove_relative -- \$1 \$2; sleep 0.3; done; xdotool mouseup 3; sleep 5; }
 nearer() { xdotool mousemove 750 450; sleep 0.6; for i in \$(seq 1 \$1); do xdotool click 4; sleep 0.5; done; sleep 5; }
 open_window "$1"
@@ -85,10 +89,13 @@ shot                        # 01 as opened: the south wall in brick, the west in
 turn 0 -10 5
 nearer 2
 shot                        # 02 lower and nearer: the courses, the corner, the panel door, the windows
-turn 26 0 20                # half way round
+turn 0 10 5                 # the eye raised again to where it was
+xdotool key f; sleep 8      # and the whole job in view, as it opened
+turn_at 797 272 26 0 17     # most of half way round, about the middle of the ridge
+park
 shot                        # 03 the north wall in shingles over a stone wainscot, the east in white lap siding
-turn -26 0 20
-click 560 560               # the south wall, picked
+turn_at 797 272 -26 0 17    # and back
+click 930 600               # the south wall, right of its door, picked
 park
 shot                        # 04 its Finish, in the panel: what it is dressed in and the line that says so
 '
@@ -100,8 +107,9 @@ shot                        # 01 as opened
 turn 0 -10 5
 nearer 2
 shot                        # 02 lower and nearer: lap siding over a stone wainscot, double-hung windows, the entry door
-turn 0 30 8
-xdotool key f; sleep 5
+xdotool key f; sleep 8      # the whole job in view, then the eye raised over it
+turn_at 797 262 0 30 8
+park
 shot                        # 03 from above: the seams run up each plane
 '
 
@@ -136,6 +144,18 @@ def check(what, got, test, want):
 # west wall is stucco, a pale warm gray.
 check("one-each: the south wall, right of its door", mean("one-each/01", (880, 560, 980, 640)), lambda c: c[0] - c[1] > 40 and c[0] - c[2] > 40, "red well over green and blue (brick)")
 check("one-each: the west wall", mean("one-each/01", (480, 520, 600, 640)), lambda c: abs(c[0] - c[1]) < 25 and c[0] > 150, "pale and nearly gray (stucco)")
+# Turned round: the north wall is cedar shingles (warm, red well over blue) over a
+# stone wainscot (gray, no warmer than the shingles by half), and the east wall is
+# white lap siding (pale, no colour to it). Measured, because this picture once
+# claimed these walls, showed the inside of the roof, and passed (DECISIONS.md call
+# 121): on that picture the three boxes are the dark gray of the roof and each fails.
+# (As measured on a run of the repaired steps: shingles (129, 98, 70), stone (146,
+# 142, 134), lap siding in the shade (161, 163, 164); on the old picture (70, 75, 81),
+# (66, 71, 78) and (59, 66, 74).)
+shingles, stone, lap = mean("one-each/03", (780, 560, 900, 620)), mean("one-each/03", (760, 720, 900, 760)), mean("one-each/03", (630, 560, 700, 650))
+check("one-each: the north wall, turned to", shingles, lambda c: c[0] - c[2] > 40, "red well over blue (cedar shingles)")
+check("one-each: the wainscot under it", stone, lambda c: c[0] - c[2] < 25 and 80 < c[0] < 190, "gray (stone)")
+check("one-each: the east wall", lap, lambda c: abs(c[0] - c[2]) < 25 and c[0] > 140, "pale and nearly gray (white lap siding)")
 # The sample house: priced, its walls are cedar siding; unpriced, the same place is bare.
 p, b = mean("priced/01", (700, 460, 760, 520)), mean("bare/01", (700, 460, 760, 520))
 # This wall is out of the sun, lit by the sky alone since the house has had a sun and

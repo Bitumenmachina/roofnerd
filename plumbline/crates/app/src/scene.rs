@@ -1619,7 +1619,7 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
 /// carries on and eases to a stop. A double-click flies to the place clicked. On foot
 /// the same keys walk and the right button looks round.
 #[allow(clippy::too_many_arguments)]
-pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Res<ButtonInput<MouseButton>>, scroll: Res<AccumulatedMouseScroll>, keys: Res<ButtonInput<KeyCode>>, time: Res<Time>, doc: Res<Doc>, window: Query<&Window, With<PrimaryWindow>>, hover: Res<bevy::picking::hover::HoverMap>, panels: Query<(), With<Node>>, mut presses: MessageReader<bevy::input::mouse::MouseButtonInput>) {
+pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Res<ButtonInput<MouseButton>>, scroll: Res<AccumulatedMouseScroll>, keys: Res<ButtonInput<KeyCode>>, time: Res<Time>, doc: Res<Doc>, window: Query<&Window, With<PrimaryWindow>>, hover: Res<bevy::picking::hover::HoverMap>, panels: Query<(), With<Node>>, mut presses: MessageReader<bevy::input::mouse::MouseButtonInput>, mut ray_cast: MeshRayCast) {
     use std::sync::atomic::Ordering::Relaxed;
     // How many times the left button went down since the last frame: on a slow machine
     // both presses of a double-click can land in one frame.
@@ -1637,11 +1637,36 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         (Some(now), Some(then)) => now - then,
         _ => Vec2::ZERO,
     };
+    // On the frame a button goes down, what the pointer did up to then was getting
+    // there, not a drag: on a slow frame the whole way to the place came in with the
+    // press, and a turn begun there also tilted and slid the view by that much
+    // (the demonstration pictures of 5be55e3, read by a worker: a half turn ended
+    // with the eye in the roof; call 121).
+    let moved = if buttons.any_just_pressed([MouseButton::Left, MouseButton::Middle, MouseButton::Right]) { Vec2::ZERO } else { moved };
     feel.was = cursor;
     let inside = cursor.is_some() && !on_panel;
-    let under = |orbit: &Orbit| -> Option<Vec3> {
-        let nearest = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p);
-        nearest.or_else(|| cursor.and_then(|c| { let (eye, way) = ray_at(orbit, window, c); on_level(eye, way, 0.0) }))
+    let mut under = |orbit: &Orbit| -> Option<Vec3> {
+        let sight = cursor.map(|c| ray_at(orbit, window, c)).map(|(eye, way)| (eye, way.normalize_or_zero()));
+        // What the pointer was over when that was last worked out is under it now
+        // only if it lies on the line of sight from where the pointer is: on a slow
+        // frame the pointer can have come a long way since, and a view turned about
+        // the place it had left swung the house off the screen (call 121).
+        let in_sight = |p: &Vec3| {
+            sight.is_some_and(|(eye, way)| {
+                let v = *p - eye;
+                let along = v.dot(way);
+                along > 0.0 && (v - way * along).length() < along * 0.01 + 0.05
+            })
+        };
+        let nearest = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p).filter(in_sight);
+        // Where the pointer has moved on since, what is under it is found afresh
+        // along that line of sight; failing anything there, the ground under it.
+        let afresh = || {
+            let (eye, way) = sight?;
+            let ray = Ray3d::new(eye, Dir3::new(way).ok()?);
+            ray_cast.cast_ray(ray, &MeshRayCastSettings::default()).first().map(|(_, hit)| hit.point)
+        };
+        nearest.or_else(afresh).or_else(|| sight.and_then(|(eye, way)| on_level(eye, way, 0.0)))
     };
     let dt = time.delta_secs().min(0.1);
     // A speed is what moved over how long the frame really took, however slow the frame.
@@ -1710,6 +1735,9 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
                 let per_px = std::f32::consts::TAU / window.height().max(1.0);
                 let (yaw, pitch) = (-moved.x * per_px, moved.y * per_px);
                 turn_about(&mut orbit, grabbed, yaw, pitch);
+                if std::env::var_os("PLUMBLINE_TRACE").is_some() {
+                    eprintln!("turn: moved {moved:?} about {grabbed:?}: target {:?} yaw {:.3} pitch {:.3} distance {:.1} (held {held}, let go {let_go})", orbit.target, orbit.yaw, orbit.pitch, orbit.distance);
+                }
                 feel.spin = (feel.spin.0.lerp(Vec2::new(yaw, pitch) / took, 0.5), grabbed);
             }
             Hold::Ground => {

@@ -6487,9 +6487,9 @@ It is not in the workbook or any demonstration yet, and has not been judged.
 demonstrations passed, each on its first run, and the twenty-one at the command line
 passed on the same copy (`field-job.sh` is the helper two of them call, not a
 demonstration). The 368 pictures are committed (aaa1f27, 4b38b33) and are of
-5be55e3. **They were handed to a worker to read, one by one, against what each
-step says it shows; what it found is the next section when it is in. Until then
-they are not read.**
+5be55e3. **A worker read them, one by one, against what each step says it shows:
+the section after this one has what it found, thirty things, the first of them two
+pictures that showed the inside of a roof where they claimed two walls.**
 
 **After the full run (call 118; not in any demonstration, seen by hand on the sample
 house).** The Job panel, with nothing selected, now opens on what the job comes to:
@@ -6512,6 +6512,51 @@ on; built, tests pass, **not seen**). The twenty-seventh pair of judges was star
 on ebcc649, the commit before these two changes: what they say of "10.00 ft" and
 "Comes to, detail" is of that build.
 
+## The pictures of the full run on 5be55e3, read by a worker (2026-11-17; call 121)
+
+A worker on another model read all 27 sets in `demos/captured/` against what each
+step says it shows (it compared consecutive sheet pictures by their dots and opened
+those that differed; ten of the seventeen old `trades` pictures it saw only reduced).
+Its notes are `research/pictures-read-5be55e3.md`. **Twenty-five demonstrations had
+passed; thirty things in their pictures were wrong or would trip a person.** What I
+checked myself is marked so; the rest is the worker's word, to be checked as each
+is taken up.
+
+| # | What the pictures show | Where it stands |
+|---|---|---|
+| 1 | `dress/one-each/03` and `04` claimed the north and east walls and the south wall's Finish, and showed the inside of the roof with a roof plane selected | **So (seen). Fixed and seen again.** Three causes. The step turned the view about a near eave, so half a turn put the eye over the far corner (the step now turns about the middle of the ridge). On the frame a button went down the pointer's travel to that place counted as drag, tilting the view (fixed in the program). And the place a view turns about was the place the pointer had left a frame before (fixed in the program: it is found afresh). `dressw` now measures the shingles, the stone and the lap siding in that picture; the check fails on the old picture ((66, 71, 78): roof) and passes on the new ((129, 98, 70): cedar). Retaken on the build of this commit. |
+| 18 | `dress/priced/03` claimed "from above" and was the opening view | **So. Fixed, seen**: the Frame key undid the tilt; the step now frames first and tilts after. |
+| 2 | `field/04, 06, 07`: a measurement taken is announced in red; values not measured turn Known "found as drawn" | open: the tone of the message to be looked at; the second is the demonstration answering "same" |
+| 3, 7 | `d4`, `d5`, `d2`: the old roof sample's lines have no cost type and no division, so its Estimate says "Job cost none" beside a Budget of $24,685.91 | open: the sample made by `plumbline sample` predates cost types (call 57); its lines want a cost type and a division each, and five demonstrations' expectations with them |
+| 4, 15 | `d4/05`: 251.56 SF at $31.50 shown beside $7,924.06 (the area is 251.5576) | open: a thing's rate row is the detail divided by the area, both rounded for show |
+| 5 | a plane picked on the far side of a roof shows only as an outline through the near planes | open |
+| 6 | `d5`: priced as copper and drawn charcoal, "Also priced, not drawn" | open: two roofings priced on one plane; the first is drawn |
+| 8 | `itemnew/04-05`: "The one set down is called that too" while Open items still name it "Wall oven, 27 in" | open, to be checked |
+| 9 | `house/03`: a system's ends as "2, 17, 8.4" | open |
+| 10 | `clash` sheet: "H 3' 0" in", "H 24' 0"" on a 9 ft level, "what it is: 6 in round elbow" | open |
+| 11 | old hand-taken pictures in `glass/step*`, `layers/plan-panels`, `layers/estimate-window`, `light/`, `trades/` show "plumbline", "FACETS" and an old price | open: to be retaken or taken out and said so |
+| 12 | bringing a designer's model in says "buildingstorey", "#23 in the file", "this program has no element for it" | open (words) |
+| 13 | the file list shows the temporary folder's name | not so as a fault: it is the folder the demonstration works in |
+| 14 | `draw/10`: a stray wall selected shows only its label | open |
+| 16 | `roofw/05`: a rate typed as 2 hr/SQ reads "0.02 hr/SF" on the line | open (words: say it as typed) |
+| 17 | "prices vary" on a line of the by-item table that has no price at all | open: one place with no price is "no price" |
+| 19 | `money`: an eave measured at 9' 2" leaves the roof above 9 ft walls with nothing said | open |
+| 20 | `money` sheet: the Verify in field list's Where is blank for a roof and its walls | open |
+| 21 | a placed item is a 30-dot box in an empty field: its change of shape cannot be seen | open: the demonstrations should go nearer |
+| 22-24 | `build`: only one of two rooms labelled; "whether wall 1, wall 3, wall 4 and wall 5 bound this room rests on their heights" up to six times; a prior estimate brought in is nowhere on screen | open |
+| 25 | Next steps says "Add a level" on a roof made at the command line | open |
+| 26, 27, 30 | a pitch change turning 69 values Assumed without a word; a scale said as 1" = 7' 1"; counts that are of different things side by side | open, each to be read before it is called a fault |
+| 28 | `carry/04`: "2' 0 11/16" east" where the step meant a foot and a half | likely the press-frame travel fixed under 1; to be seen on the next run |
+| 29 | a minus sign before feet and inches ("E -2' 1"") | open (words: west and south of the corner) |
+
+**What this changes in the record.** "All twenty-five passed" stands, and is not
+"all twenty-five show what they say": two pictures did not, and their script could
+not tell. **The fix under 1 changes what a drag does on the slow renderer, in every
+window demonstration** (a drag no longer takes in the pointer's travel to where the
+button goes down; a turn or a wheel is about the place under the pointer now). Only
+`dressw` has been run on it (it passes, three times, on a frozen copy of this
+build). **The other twenty-four have not been run since, and a full run is owed.**
+
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 325 tests pass,
@@ -6519,9 +6564,10 @@ the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the 
 commit of code. **All twenty-five window demonstrations and the twenty-one at the
 command line passed on a frozen copy of 5be55e3 (2026-11-17), each window one on its
 first run.** That is every call to 117. Call 118 (the job's money on the Job panel,
-"not coded" said quietly) came after it and is seen by hand only. Whether the
-pictures of that run have been read is said in "Looked at as someone who has to work
-it", just above. The machine was restarted twice in the night of 2026-11-16, each
+"not coded" said quietly) and calls 119 to 121 came after it and are seen by hand
+only; **call 121 changes what a drag does, so a full run is owed again.** The
+pictures of that run were read by a worker: "The pictures of the full run on
+5be55e3", just above, has the thirty things it found and where each stands. The machine was restarted twice in the night of 2026-11-16, each
 time under a long run; a full run is done one demonstration at a time from a script
 that can be started again where it stopped. Read `CLAUDE.md`, then this section,
 then the table of thirteen, then the two sections of the twenty-fifth judgment
