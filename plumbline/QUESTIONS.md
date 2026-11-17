@@ -360,6 +360,8 @@ demonstration's figures with it, and is not made without his word.
 
 ## Q26. Is an allowance on a thing with no cost lines in the price? (2026-11-16, from the twenty-second judgment, J22A-10)
 
+**ANSWERED by Patrick, 2026-11-17: "Allowances are allowed and noted as such."** It is in the price, on a row of its own named Allowances (DECISIONS.md call 114). What follows is the question as it stood.
+
 A veteran estimator put $12.50/SF on a room (686.40 SF, $8,580.05) and read the top
 bar: the price had not moved. The allowance was on the Budget tab, set against the
 detail, and in no line of the estimate. To him the bid was $8,580 short and nothing

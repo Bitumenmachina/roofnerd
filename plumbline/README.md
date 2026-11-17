@@ -1,4 +1,6 @@
-# plumbline (working name)
+# BuildOS
+
+(Its working name was plumbline, and the folder, the crates and the two commands are still called that: `plumbline` and `plumbline-app`. DECISIONS.md call 115 says what was renamed and what is owed.)
 
 A 3D estimating program for the whole house, every trade. Trace the drawings you are
 given, build the 3D house from the tracing, price it division by division (the sixteen

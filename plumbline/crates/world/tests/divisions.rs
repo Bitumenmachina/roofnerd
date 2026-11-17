@@ -183,22 +183,45 @@ fn a_job_file_changed_by_hand_is_refused_in_plain_words() {
 }
 
 #[test]
-fn an_allowance_on_a_thing_with_no_cost_line_is_said_to_be_out_of_the_price() {
+fn an_allowance_on_a_thing_with_no_cost_line_is_carried_in_the_price_and_noted_as_one() {
     use plumbline_world::view;
-    // The sample house's living room is 614.7188 SF inside its walls and has no cost
-    // line. At a made-up $10.00/SF its allowance is 6,147.19 (6,147.188 to the cent).
+    // Patrick, 2026-11-17 (call 114): "Allowances are allowed and noted as such". The
+    // sample house's living room is 614.7188 SF inside its walls and has no cost line.
+    // At a made-up $10.00/SF its allowance is $6,147.19 (6,147.188 to the cent).
     let mut job = plumbline_world::sample::house();
     let path = job.order.clone().into_iter().find_map(|e| job.world.get::<plumbline_world::Node>(e).filter(|n| n.name == "living room").map(|n| n.path.clone())).unwrap();
     assert_eq!(view::pricing(&mut job).allowances_alone(), None, "nothing is priced by an allowance alone to begin with");
-    let before = view::estimate(&mut job).price.value;
+    let before = view::estimate(&mut job);
+    assert!(before.allowance_on.is_empty() && before.allowances.value.is_none());
     job.set(&path, "allowance", Some("10"), plumbline_world::Status::Assumed, "made-up budget").unwrap();
     job.derive();
     let pricing = view::pricing(&mut job);
     assert_eq!(pricing.allowances_alone(), Some((1, Some(6147.19))));
     let said = pricing.allowances_alone_said().unwrap();
-    assert!(said.starts_with("1 thing is priced by an allowance and no cost line ($6,147.19)") && said.contains("not in this price"), "{said}");
-    // And it is not: the price is what it was.
-    assert_eq!(view::estimate(&mut job).price.value, before);
+    assert_eq!(said, "1 thing is priced by an allowance and no cost line ($6,147.19): it is carried in the job cost and the price as an allowance, and noted as such, until it is given cost lines");
+    // It is in the job cost, on a row of its own, in no cost type and no division; the
+    // sixteen and what they leave out still come to the job cost.
+    let est = view::estimate(&mut job);
+    let cents = |x: f64| (x * 100.0).round() / 100.0;
+    assert_eq!((est.allowances.value, est.allowances.members, est.allowances.status), (Some(6147.19), 1, plumbline_world::Status::Assumed));
+    // (The sample house has nothing priced to begin with: its job cost is the allowance.)
+    assert_eq!(est.job_cost.value.map(cents), Some(cents(before.job_cost.value.unwrap_or(0.0) + 6147.19)));
+    assert_eq!(est.classes.iter().filter_map(|c| c.total.value).sum::<f64>(), before.classes.iter().filter_map(|c| c.total.value).sum::<f64>());
+    let sixteen: f64 = est.divisions.iter().filter_map(|d| d.total.value).sum();
+    assert_eq!(cents(sixteen + est.no_division.value.unwrap_or(0.0)), cents(est.job_cost.value.unwrap()));
+    assert_eq!(est.no_division.value.map(cents), Some(cents(before.no_division.value.unwrap_or(0.0) + 6147.19)));
+    // The price is over it, where the job has its markup.
+    if let (Some(was), Some(is)) = (before.price.value, est.price.value) {
+        assert!(is > was + 6147.19 - 0.005, "{was} {is}");
+    }
+    // Given a cost line that comes to a figure, the room is priced by its line and the
+    // allowance is no longer carried: 614.7188 SF at a made-up $2.00 is $1,229.44.
+    job.add_line(&path, "Flooring", "floor_area", Some(plumbline_world::Class::Material), false).unwrap();
+    job.set_on_line(&path, "unit_cost", Some("Flooring"), Some("$2.00/SF"), plumbline_world::Status::Assumed, "made up").unwrap();
+    job.derive();
+    let est = view::estimate(&mut job);
+    assert!(est.allowance_on.is_empty() && est.allowances.value.is_none());
+    assert_eq!(est.job_cost.value.map(cents), Some(cents(before.job_cost.value.unwrap_or(0.0) + 1229.44)));
 }
 
 #[test]

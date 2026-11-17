@@ -439,7 +439,7 @@ pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<B
         let mut out = bring(job, &r, name, how, unit_name, k)?;
         if assumed + unknown > 0 {
             out.notes.push(format!(
-                "this model was written by plumbline and marks {assumed} of its values Assumed and {unknown} Unknown: which value each mark was on is not read back, so {}",
+                "this model was written by BuildOS and marks {assumed} of its values Assumed and {unknown} Unknown: which value each mark was on is not read back, so {}",
                 if said_known { "everything from it was brought in Assumed, not Known as was said of it" } else { "nothing from it is surer than was said of it as a whole" }
             ));
         }

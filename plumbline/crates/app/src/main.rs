@@ -158,7 +158,7 @@ fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window { title: "plumbline: model".into(), resolution: (1600u32, 960u32).into(), position: WindowPosition::At(IVec2::new(0, 0)), ..default() }),
+            primary_window: Some(Window { title: "BuildOS: model".into(), resolution: (1600u32, 960u32).into(), position: WindowPosition::At(IVec2::new(0, 0)), ..default() }),
             // Closing is ours to answer: work not saved is never dropped without a word.
             close_when_requested: false,
             ..default()
@@ -198,7 +198,7 @@ fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>, camera: Query<
     let ui = camera.single().expect("the 3D camera is there");
     // The sheet: a second window on the same world. Its camera looks at a layer nothing
     // 3D is on, so the model's lines are not drawn over the sheet.
-    let window = commands.spawn((Window { title: "plumbline: sheet".into(), resolution: (880u32, 960u32).into(), position: WindowPosition::At(IVec2::new(1610, 0)), ..default() }, sheet::SheetWindow)).id();
+    let window = commands.spawn((Window { title: "BuildOS: sheet".into(), resolution: (880u32, 960u32).into(), position: WindowPosition::At(IVec2::new(1610, 0)), ..default() }, sheet::SheetWindow)).id();
     let sheet = commands.spawn((Camera2d, Msaa::Off, RenderLayers::layer(1), RenderTarget::Window(WindowRef::Entity(window)))).id();
     commands.insert_resource(panels::Cameras { ui, sheet });
 }
@@ -757,8 +757,8 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                 // what to do, and not only as a figure on the top bar (J24A-9;
                                 // whether it belongs in the price is QUESTIONS.md Q26).
                                 let bare = field == Entry::Allowance && doc.job.find(&sel).is_some_and(|e| doc.job.world.get::<plumbline_world::Cost>(e).is_none_or(|c| c.lines.is_empty()));
-                                let also = if bare { format!("{also} It is the budget's figure and is not in the price: give this cost lines (Assembly, or Add cost line) to carry it in.") } else { also };
-                                doc.say(if bare { Tone::Warned } else { Tone::Done }, format!("{sel}: {}{of} set to {said}.{also}", if field == Entry::Rate { "production rate".to_string() } else { what.replace('_', " ") }));
+                                let also = if bare { format!("{also} It is carried in the price as an allowance, and noted as one, until this is given cost lines (Assembly, or Add cost line).") } else { also };
+                                doc.say(Tone::Done, format!("{sel}: {}{of} set to {said}.{also}", if field == Entry::Rate { "production rate".to_string() } else { what.replace('_', " ") }));
                             }
                             Err(why) => {
                                 tools::cant(doc, match field { Entry::StretchOut => "set that stretch-out", Entry::Rate => "set that production rate", _ => "set that price" }, why);

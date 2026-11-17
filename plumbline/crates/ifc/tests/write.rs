@@ -88,7 +88,7 @@ fn a_model_this_program_wrote_keeps_its_doubt_when_it_is_read_back_as_known() {
     assert!(written.text.contains("(Assumed; "), "the model does not carry its marks");
     let mut back = Job::new("read back (not a real job)", "test", "test");
     let brought = plumbline_ifc::import(&mut back, written.text.as_bytes(), "unsure.ifc", Entered { status: Status::Known, source: "their model" }).unwrap();
-    assert!(brought.notes.iter().any(|n| n.contains("was written by plumbline and marks") && n.contains("everything from it was brought in Assumed, not Known as was said of it")), "{:#?}", brought.notes);
+    assert!(brought.notes.iter().any(|n| n.contains("was written by BuildOS and marks") && n.contains("everything from it was brought in Assumed, not Known as was said of it")), "{:#?}", brought.notes);
     assert!(brought.notes.iter().any(|n| n.starts_with("not read: ") && n.contains("property set")), "{:#?}", brought.notes);
     back.derive();
     let levels = storey_totals(&mut back);

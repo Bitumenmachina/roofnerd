@@ -748,8 +748,17 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 }),
             }
         }
+        // Allowances carried in the price, on a row of their own and named as that
+        // (call 114): what is priced by an allowance and by no cost line.
+        if !est.allowance_on.is_empty() {
+            let things = view::so_many(est.allowance_on.len(), "thing");
+            match est.allowances.value {
+                Some(x) => line(t, "Allowances".to_string(), format!("{things}, no cost lines yet"), rests(est.allowances.assumed), view::money(x), est.allowances.status, false),
+                None => line(t, "Allowances".to_string(), format!("{things}, none with a figure"), String::new(), "no figure".to_string(), Status::Unknown, false),
+            }
+        }
         match est.job_cost.value {
-            Some(x) => line(t, "Job cost".to_string(), lines_of(est.job_cost.members), rests(est.job_cost.assumed), view::money(x), est.job_cost.status, true),
+            Some(x) => line(t, "Job cost".to_string(), if est.allowance_on.is_empty() { lines_of(est.job_cost.members) } else { format!("{} and allowances", lines_of(est.job_cost.members - est.allowances.members)) }, rests(est.job_cost.assumed), view::money(x), est.job_cost.status, true),
             None => line(t, "Job cost".to_string(), "no line with a cost type comes to a figure".to_string(), String::new(), "none".to_string(), Status::Unknown, true),
         }
         let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!("at {} %", view::rate(x)))).unwrap_or_default();
@@ -798,8 +807,8 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     }
                     t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(8.0) }, ..default() }).with_child(text(fonts, format!("{said}."), 11.5, Weight::Medium, theme::ink_soft()));
                 }
-                // And what is priced by an allowance alone: in the budget, in no line
-                // of this price (J22A-10).
+                // And what is priced by an allowance alone: carried in this price,
+                // and noted as an allowance (call 114).
                 if let Some(said) = snap.pricing.as_ref().and_then(|p| p.allowances_alone_said()) {
                     t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(8.0) }, ..default() }).with_child(text(fonts, format!("{said}."), 11.5, Weight::Medium, theme::ink_soft()));
                 }

@@ -244,6 +244,14 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
         };
         recap.push(vec![text(name), amount, lines, c.hours.filter(|_| c.total.members > 0).map(|h| Out::Number(h.0 + 0.0)).unwrap_or(Out::None), text(note)]);
     }
+    // Allowances carried in the price (call 114): what is priced by an allowance and
+    // by no cost line, on a row of its own. The things are not lines of the sheet, so
+    // the figure is as written and says so; the job cost below adds it with the rest.
+    if !est.allowance_on.is_empty() {
+        let n = est.allowance_on.len();
+        let said = format!("as written: {n} thing{} priced by an allowance and no cost line, carried in the price as allowances: {}", if n == 1 { "" } else { "s" }, est.allowance_on.iter().map(|(_, name, _)| name.as_str()).collect::<Vec<_>>().join(", "));
+        recap.push(vec![text("Allowances"), est.allowances.value.map(Out::Dollars).unwrap_or_else(|| text("no figure")), Out::Number(est.allowances.members as f64), Out::None, text(said)]);
+    }
     let class_last = recap.len();
     let cost_row = recap.len() + 1;
     // The job cost: "none" until some cost type has a figure; nothing is not $0.00 (J17C-4).

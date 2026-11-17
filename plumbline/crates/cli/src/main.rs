@@ -516,7 +516,7 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
         None => "no figure".to_string(),
     };
     let mut out = String::from("flags:  ~ Assumed    ? Unknown    (no mark) Known\n");
-    if est.lines.is_empty() {
+    if est.lines.is_empty() && est.allowance_on.is_empty() {
         out.push_str("\nNothing in this job has a cost line.\n");
         return out;
     }
@@ -609,9 +609,28 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
         let _ = writeln!(s, "  {:<20}{:>14}{}", name, flagged(d), if d.value.is_none() { format!("   ? {}", d.note) } else { String::new() });
         s
     };
+    // Allowances carried in the price, on a row of their own (call 114).
+    if !est.allowance_on.is_empty() {
+        let things = view::so_many(est.allowance_on.len(), "thing");
+        match est.allowances.value {
+            Some(x) => {
+                let _ = writeln!(out, "  {:<20}{:>14}   {things} priced by an allowance and no cost line", "Allowances", format!("{}{}", est.allowances.status.flag().trim_end(), money(x)));
+            }
+            None => {
+                let _ = writeln!(out, "  {:<20}{:>14}   ? {things} priced by an allowance, none with a figure", "Allowances", "no figure");
+            }
+        }
+    }
     match est.job_cost.value {
         Some(x) => {
-            let _ = writeln!(out, "  {:<20}{:>14}   {} line{}", "Job cost", format!("{}{}", est.job_cost.status.flag().trim_end(), money(x)), est.job_cost.members, if est.job_cost.members == 1 { "" } else { "s" });
+            // An allowance carried in it is not a line, and is counted as what it is.
+            let lines = est.job_cost.members - est.allowances.members;
+            let carried = match est.allowances.members {
+                0 => String::new(),
+                1 => " and 1 allowance".to_string(),
+                n => format!(" and {n} allowances"),
+            };
+            let _ = writeln!(out, "  {:<20}{:>14}   {} line{}{carried}", "Job cost", format!("{}{}", est.job_cost.status.flag().trim_end(), money(x)), lines, if lines == 1 { "" } else { "s" });
         }
         None => {
             let _ = writeln!(out, "  {:<20}{:>14}   no line with a cost type comes to a figure", "Job cost", "none");

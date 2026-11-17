@@ -4043,3 +4043,62 @@ How each clause was read:
 
 Nothing was built on this message. It asks for confirmation and states a direction;
 product scope is his.
+
+### Call 114. Patrick, 2026-11-17: "Allowances are allowed and noted as such" (QUESTIONS.md Q26, ruled)
+
+His words: "Allowances are allowed and noted as such". Q26 asked whether an allowance
+on a thing with no cost lines is in the price; four judges had read "price" and
+expected it in, and the builder's working assumption had kept it out and said so.
+**He ruled it in.** How it was read:
+
+- **An allowance on a thing with no cost line is carried in the job cost and so in the
+  price**, with overhead and profit on it as on any cost. It stops being carried the
+  moment the thing has a cost line that is on: then the cost lines are the price and
+  the allowance is what they are held against on the Budget tab, as before. A thing
+  with both is never counted twice.
+- **"Noted as such"**: it is never mixed into a cost type. It has a row of its own in
+  the recap, **Allowances**, between the cost types and the job cost; the job cost row
+  says "and allowances"; the sentence under the price says how many things and how
+  many dollars are carried as allowances; the top bar says "$X in allowances"; the
+  command line prints the same row; the workbook has the row, its figure as written
+  and its note naming each thing, and the job cost's formula adds it. It is in none
+  of the sixteen divisions: it is counted with what the sixteen leave out, so the
+  sixteen and that row still come to the job cost.
+- An allowance with no figure (its area not known) is left out of the job cost and
+  named with what is left out, like a line with no figure.
+- It is as sure as what it rests on: Assumed where the rate or the quantity is.
+- Not changed: the three columns of the sheet (material, labor, sub and general) are
+  over cost lines and an allowance is in none of them; the verify-in-field list's
+  dollars ride on cost lines and do not yet count an allowance's.
+
+**Every job with an allowance on a bare thing now has a larger job cost and price.**
+The expectations that move with it are changed after this was written.
+
+### Call 115. Patrick, 2026-11-17: "rebrand to BuildOS" (and how far it was taken today)
+
+"plumbline" was a working name (the README said so in its first line). The product
+is **BuildOS**.
+
+Done today, everywhere a person reads the name: the wordmark at the head of both
+windows; the two windows' titles ("BuildOS: model", "BuildOS: sheet"); the README's
+title and first lines; this repository's instructions; the sentence an IFC model
+brought back in says about who wrote it. The demonstration kit finds the window by
+its new title.
+
+**Not done today, and still called plumbline**: the folder `plumbline/`; the crates
+(`plumbline-world` and the rest); the two commands a person types (`plumbline`,
+`plumbline-app`) and so every usage line the command line prints; the environment
+names the demonstrations use (`PLUMBLINE_BIN`, `PLUMBLINE_MAP`). Renaming those is one
+mechanical change across about fifty scripts, and it is owed as a commit of its own
+made on a head whose every demonstration has just passed: the machine was restarted
+twice the night before under long runs, and the head has not had a full run since.
+Doing it now would put two risks in one commit.
+
+**Never to be renamed without a ruling**: `pl::` at the head of every attribute in a
+saved job, and `Plumbline_Values` in a written IFC model. They are the file format;
+jobs and models already written have to keep reading.
+
+**Not checked**: whether the name BuildOS is free to use (a trademark, a company, a
+web address). That is a search outside this machine with the product's name in it,
+and it is Patrick's to ask for. The pictures in `demos/captured/` taken before today
+show the old wordmark and are stale in that one respect until the next full run.

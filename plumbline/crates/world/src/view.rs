@@ -703,8 +703,8 @@ impl SheetLine {
 
 impl Pricing {
     /// What is priced by an allowance and by no cost line: how many things, and what
-    /// their allowances that have a figure come to, to the cent. An allowance is the
-    /// budget's figure; the price is over the cost lines. These are in no line of it.
+    /// their allowances that have a figure come to, to the cent. Each is carried in the
+    /// job cost and the price as an allowance until the thing has cost lines (call 114).
     pub fn allowances_alone(&self) -> Option<(usize, Option<f64>)> {
         let alone: Vec<&PricedElement> = self.elements.iter().filter(|e| e.allowance.is_some() && e.detail.is_none()).collect();
         if alone.is_empty() {
@@ -721,7 +721,7 @@ impl Pricing {
     pub fn allowances_alone_said(&self) -> Option<String> {
         let (n, sum) = self.allowances_alone()?;
         let money = sum.map(money).unwrap_or_else(|| "no figure".to_string());
-        Some(format!("{n} thing{} priced by an allowance and no cost line ({money}): an allowance is the budget's figure and is not in this price. Give {} cost lines to carry {} into it", if n == 1 { " is" } else { "s are" }, if n == 1 { "it" } else { "them" }, if n == 1 { "it" } else { "them" }))
+        Some(format!("{n} thing{} priced by an allowance and no cost line ({money}): {} carried in the job cost and the price as {}, and noted as such, until {} given cost lines", if n == 1 { " is" } else { "s are" }, if n == 1 { "it is" } else { "they are" }, if n == 1 { "an allowance" } else { "allowances" }, if n == 1 { "it is" } else { "they are" }))
     }
 }
 
@@ -876,8 +876,14 @@ pub struct Estimate {
     pub classes: Vec<ClassTotal>,
     /// Lines with no class. They are in no column and no row of the recap.
     pub not_classed: Vec<(String, String)>,
-    /// The sum of the classes. Left out: every classed line with no figure, and every
-    /// line with no class.
+    /// What is priced by an allowance and by no cost line: carried in the job cost and
+    /// the price as an allowance, on its own row, until the thing is given cost lines
+    /// (Patrick, 2026-11-17: "Allowances are allowed and noted as such"). Each by its
+    /// path and name, with what its allowance comes to.
+    pub allowances: MoneyTotal,
+    pub allowance_on: Vec<(String, String, Derived)>,
+    /// The sum of the classes and the allowances. Left out: every classed line with no
+    /// figure, every line with no class, and every allowance with no figure.
     pub job_cost: MoneyTotal,
     /// The job cost read division by division: all sixteen, in order, whether or not
     /// anything is in them. Each is over the lines of the job cost in that division.
@@ -910,6 +916,8 @@ fn total_of(parts: &[(String, &Derived)]) -> MoneyTotal {
 
 /// The estimate sheet and its recap.
 pub fn estimate(job: &mut Job) -> Estimate {
+    // What is priced by an allowance alone (the one rule for it is `Pricing`'s).
+    let allowance_on: Vec<(String, String, Derived)> = pricing(job).elements.into_iter().filter(|e| e.detail.is_none()).filter_map(|e| e.allowance.map(|a| (e.path, e.name, a))).collect();
     let order = job.order.clone();
     let root = job.root();
     let w = &job.world;
@@ -986,7 +994,13 @@ pub fn estimate(job: &mut Job) -> Estimate {
     // The job cost: every classed line that is on. A line with no class is left out and
     // named with the rest.
     let no_class = Derived::refused("$", "", &[], "the line has no cost type, so it is in no row of the recap");
-    let all: Vec<(String, &Derived)> = on.iter().map(|l| (label(l), if l.class.is_some() { &l.amount } else { &no_class })).collect();
+    let mut all: Vec<(String, &Derived)> = on.iter().map(|l| (label(l), if l.class.is_some() { &l.amount } else { &no_class })).collect();
+    // And every allowance on a thing with no cost line: in the job cost, and so in the
+    // price, as an allowance. It is in no cost type's row and no division: it has a
+    // row of its own in the recap, and is counted with what the sixteen leave out.
+    let carried: Vec<(String, &Derived)> = allowance_on.iter().map(|(path, _, d)| (format!("{path}: its allowance"), d)).collect();
+    let allowances = total_of(&carried);
+    all.extend(carried.iter().cloned());
     let job_cost = total_of(&all);
     // The same lines, division by division. A line with no cost type is out of the job
     // cost and so out of every division; one with a cost type and no division is in
@@ -998,7 +1012,9 @@ pub fn estimate(job: &mut Job) -> Estimate {
         on.iter().filter(|l| l.division == d && (l.class.is_some() || d.is_some())).map(|l| (label(l), if l.class.is_some() { &l.amount } else { &no_class })).collect()
     };
     let divisions: Vec<DivisionTotal> = crate::components::Division::ALL.iter().map(|&division| DivisionTotal { division, total: total_of(&in_division(Some(division))) }).collect();
-    let no_division = total_of(&in_division(None));
+    let mut undivided = in_division(None);
+    undivided.extend(carried.iter().cloned());
+    let no_division = total_of(&undivided);
 
     let markup = w.get::<Markup>(root).cloned();
     let root_path = w.get::<Node>(root).map(|n| n.path.clone()).unwrap_or_default();
@@ -1012,7 +1028,7 @@ pub fn estimate(job: &mut Job) -> Estimate {
             (Some(r), Some((b, status))) => crate::lines::dollars(Some(b * r.value.unwrap_or(0.0) / 100.0), &[status, r.status], formula, &inputs),
         }
     };
-    let no_cost = "there is no job cost: no line with a cost type comes to a figure";
+    let no_cost = "there is no job cost: no line with a cost type and no allowance comes to a figure";
     let cost = job_cost.value.map(|v| (v, job_cost.status));
     let overhead = percent_of(cost, no_cost, markup.as_ref().map(|m| &m.overhead), "overhead", "job cost × overhead ÷ 100");
     let with_overhead = cost.zip(overhead.value).map(|((c, s), o)| (crate::lines::cents(c + o), s.max(overhead.status)));
@@ -1050,5 +1066,5 @@ pub fn estimate(job: &mut Job) -> Estimate {
             (s.clone(), total_of(&parts))
         })
         .collect();
-    Estimate { lines, columns, classes, not_classed, job_cost, divisions, no_division, markup, overhead, profit, price, suppliers, at_generic, at_supplier }
+    Estimate { lines, columns, classes, not_classed, allowances, allowance_on, job_cost, divisions, no_division, markup, overhead, profit, price, suppliers, at_generic, at_supplier }
 }

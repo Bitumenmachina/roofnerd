@@ -68,7 +68,7 @@ pub fn wordmark(p: &mut ChildSpawnerCommands, fonts: &Fonts) {
             bob.spawn((Node { width: px(2.0), height: px(13.0), ..default() }, BackgroundColor(theme::accent())));
             bob.spawn((Node { width: px(8.0), height: px(8.0), border_radius: BorderRadius::all(px(4.0)), ..default() }, BackgroundColor(theme::accent())));
         });
-        m.spawn((text(fonts, "plumbline", 15.0, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
+        m.spawn((text(fonts, "BuildOS", 15.0, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
     });
 }
 
@@ -358,10 +358,10 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         if let Some(n) = snap.estimate.as_ref().map(|e| e.job_cost.left_out.len()).filter(|n| *n > 0) {
             chip(bar, fonts, &format!("{} unpriced", plumbline_world::view::so_many(n, "line")), theme::red(), theme::red_wash());
         }
-        // What is priced by an allowance alone is the budget's and is in no line of
-        // the price (J22A-10).
+        // What is priced by an allowance alone is carried in the price, and noted as
+        // an allowance beside it (call 114; it was kept out of the price, J22A-10).
         if let Some((_, Some(sum))) = snap.pricing.as_ref().and_then(|p| p.allowances_alone()) {
-            chip(bar, fonts, &format!("allowances ${} not in price", plumbline_world::view::figure(sum, 2)), theme::amber(), theme::amber_wash());
+            chip(bar, fonts, &format!("{} in allowances", plumbline_world::view::money(sum)), theme::amber(), theme::amber_wash());
         }
         // What there is to verify in the field, and the dollars riding on it.
         let questions = snap.verify.questions.len();

@@ -12,11 +12,11 @@
 # is drawn about the middle of the window, at the scale the script says.
 export VK_ICD_FILENAMES="$ICD" WGPU_BACKEND=vulkan PLUMBLINE_SHOTS="$OUT" PLUMBLINE_MAP="$T/map.txt"
 
-focus() { xdotool windowfocus "$(xdotool search --name 'plumbline: model' | head -1)"; sleep 1; }
+focus() { xdotool windowfocus "$(xdotool search --name 'BuildOS: model' | head -1)"; sleep 1; }
 open_window() {
   "$APP" "$@" > "${LOG:-$T/app.log}" 2>&1 &
   APP_PID=$!
-  for i in $(seq 1 60); do xdotool search --name "plumbline: model" >/dev/null 2>&1 && break; sleep 1; done
+  for i in $(seq 1 60); do xdotool search --name "BuildOS: model" >/dev/null 2>&1 && break; sleep 1; done
   sleep 40   # the first frames are slow on a software renderer
   focus
 }

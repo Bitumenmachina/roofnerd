@@ -12,7 +12,7 @@ harness for each division) are folded in below.
 
 ## What this is
 
-**plumbline** (`plumbline/`): a 3D estimating program for the whole house, every trade.
+**BuildOS** (Patrick's name for it, 2026-11-17; its working name was plumbline, and the folder `plumbline/`, the crates and the two commands are still called that: `plumbline/DECISIONS.md` call 115): a 3D estimating program for the whole house, every trade.
 The job is one world; the 3D view, the estimate sheet, the reports and the lists are
 views of it. `plumbline/STATUS.md` says where the build is, `plumbline/SPEC.md` what the
 model is, `plumbline/DECISIONS.md` what was decided and why.
