@@ -105,6 +105,7 @@ fn main() {
     }
     // The roof on show: the one named, else the first solved from a footprint, else the first.
     let roof = roof_arg.or_else(|| solve::roofs(&mut job).into_iter().next()).or_else(|| job.order.iter().find_map(|e| (job.world.get::<Kind>(*e) == Some(&Kind::Roof)).then(|| job.world.get::<plumbline_world::Node>(*e).map(|n| n.path.clone())).flatten()));
+    let carried = plumbline_world::view::carried_now(&mut job);
     let (tone, message) = if fresh {
         (Tone::Done, format!("A new job. Next steps, on the left, says where to start. Save keeps it as {}.", std::path::Path::new(&path).file_stem().and_then(|s| s.to_str()).unwrap_or("this job")))
     } else if report.stale.is_empty() {
@@ -149,6 +150,8 @@ fn main() {
         edited: fresh,
         plan: false,
         plan_level: None,
+        carried,
+        also: None,
         walk: false,
         show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, ground: true, framing: false, finishes: true, off_levels: Default::default(), off_systems: Default::default(), away: [false; 3] },
         // The sheet opens on the estimate once anything is priced; before that, on what

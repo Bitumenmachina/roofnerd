@@ -4360,3 +4360,22 @@ command line makes (`set ... quantity ... --line`), through the same check: a na
 that is not a figure of the thing is refused with the figures it has. Entered in the
 window it is Assumed, "entered on screen", as a price typed there is. A line made of
 a material by a coverage keeps its coverage; this changes the quantity it covers.
+
+### Call 126. An allowance that stops being carried is said, to the cent; Undo brings the roof back to the window; an item nobody has set down is not on the field list (2026-11-17; the twenty-seventh judgment, J27A-28, -22, -27)
+
+- **J27A-28 decided item 12 against the program.** A floor carried a $6,412.67
+  allowance. Add cost line on it, the line left unpriced: the allowance stopped
+  being carried (a thing with cost lines is priced by them, call 114), the price
+  fell by it and by its markup, and the screen said only "Added ... with no price
+  yet". The rule stands; the silence does not. Whatever the change (a cost line
+  added, an assembly given), where a thing's allowance stops being carried the
+  message now ends: **"Floor 1's allowance of $6,412.67 is no longer carried in the
+  price: it is priced by its cost lines now."** In amber. One place does it for
+  every change made in the window.
+- **J27A-22.** A roof deleted and brought back with Undo was in the job and priced
+  and was not drawn: the window lets go of a roof that is gone and did not take it
+  up again. After Undo or Redo it looks for the job's roof again.
+- **J27A-27.** The field list asked a carpenter to measure a sofa, a chair and a bed
+  that are in the item library and were never set down. An item is a thing that can
+  be placed, not a thing in the building: it is on the list only through what is
+  set down from it.

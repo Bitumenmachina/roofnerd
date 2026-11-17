@@ -875,6 +875,12 @@ pub fn step(doc: &mut Doc, redo: bool) {
             doc.draw.picked.clear();
             // What the step took away is no longer there to be selected, shown or drawn on.
             doc.let_go_of_what_is_gone();
+            // And a roof the step brought back is taken up again: it was in the job
+            // and priced, and not drawn until the job was opened again (J27A-22).
+            if doc.roof.is_none() {
+                doc.roof = doc.job.order.iter().find_map(|e| (doc.job.world.get::<Kind>(*e) == Some(&Kind::Roof)).then(|| doc.job.world.get::<plumbline_world::Node>(*e).map(|n| n.path.clone())).flatten());
+            }
+            doc.carried = plumbline_world::view::carried_now(&mut doc.job);
             doc.say(Tone::Done, format!("{}: {label}.", if redo { "Redone" } else { "Undone" }));
         }
         Err(why) => cant(doc, if redo { "redo" } else { "undo" }, why),

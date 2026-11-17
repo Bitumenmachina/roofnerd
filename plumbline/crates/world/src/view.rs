@@ -623,6 +623,31 @@ pub fn came_off_said(before: &Estimate, job: &mut Job) -> Option<String> {
     gone_said(before, job, true)
 }
 
+/// After any change: each thing whose allowance was carried in the price before and
+/// is not now, though the thing is still there (it was given cost lines, and is priced
+/// by them from then on). A price that falls by an allowance says so (J27A-28, call
+/// 126). `before` is what was carried: each thing's path, name and what it came to.
+pub fn allowance_dropped_said(before: &[(String, String, Option<f64>)], job: &mut Job) -> Option<String> {
+    let now: Vec<String> = estimate(job).allowance_on.into_iter().map(|(path, _, _)| path).collect();
+    let said: Vec<String> = before
+        .iter()
+        .filter(|(path, _, _)| !now.contains(path) && job.find(path).is_some())
+        .map(|(_, name, value)| {
+            let name = format!("{}{}", name[..1].to_uppercase(), &name[1..]);
+            match value {
+                Some(x) => format!("{name}'s allowance of {} is no longer carried in the price: it is priced by its cost lines now.", money(*x)),
+                None => format!("{name}'s allowance is no longer carried in the price: it is priced by its cost lines now."),
+            }
+        })
+        .collect();
+    (!said.is_empty()).then(|| said.join(" "))
+}
+
+/// What is carried as an allowance now, as `allowance_dropped_said` takes it.
+pub fn carried_now(job: &mut Job) -> Vec<(String, String, Option<f64>)> {
+    estimate(job).allowance_on.into_iter().map(|(path, name, d)| (path, name, d.value)).collect()
+}
+
 /// After a roof change that dropped a priced plane: what the job cost was and is. The
 /// planes that stay change size when one goes, and what is priced on them changes
 /// with it: a hip made a gable drops a plane's dollars and the two planes beside it

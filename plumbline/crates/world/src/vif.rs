@@ -244,6 +244,12 @@ pub fn vif(job: &mut Job) -> Vif {
 
     // The things with a value that can be measured or checked and is not Known.
     for el in &elements {
+        // An item is a thing that can be placed, not a thing in the building: it is
+        // on this list only through what is set down from it (J27A-27: a carpenter
+        // was sent to measure a sofa nobody had set down).
+        if job.find(&el.path).is_some_and(|e| job.world.get::<crate::Item>(e).is_some()) {
+            continue;
+        }
         let labels: Vec<String> = el.rows.iter().filter(|r| !r.derived && !r.label.contains(": ") && r.status != Status::Known).map(|r| r.label.clone()).collect();
         if labels.is_empty() {
             continue;

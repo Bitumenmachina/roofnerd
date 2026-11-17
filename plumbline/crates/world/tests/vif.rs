@@ -459,3 +459,34 @@ fn what_is_carried_as_an_allowance_rides_on_the_thing_it_is_on() {
     assert_eq!((q.dollars, q.lines), (Some(1300.00), 1));
     assert_eq!(list.riding, Some(1300.00));
 }
+
+#[test]
+fn an_allowance_that_stops_being_carried_is_said_and_an_item_not_set_down_is_not_a_question() {
+    // The floor of the test above, 200 SF at $6.50: $1,300.00 carried. Given a cost
+    // line with no price it is priced by its lines, the $1,300.00 is out of the price,
+    // and that is said to the cent (J27A-28, call 126).
+    let mut job = Job::new("an allowance let go (not a real job)", "test", "test");
+    let level = ed::storey(&mut job, "ground", "0 ft", "9 ft", KNOWN).unwrap();
+    let slab = ed::floor_type(&mut job, "slab", "4 in", KNOWN).unwrap();
+    let floor = ed::floor(&mut job, &level, &slab, ed::FloorBy::Points(&[[0.0, 0.0], [20.0, 0.0], [20.0, 10.0], [0.0, 10.0]]), TRACED).unwrap().path;
+    job.set(&floor, "allowance", Some("6.50"), Status::Assumed, "a made-up budget figure").unwrap();
+    job.derive();
+    let before = view::carried_now(&mut job);
+    assert_eq!(before.len(), 1);
+    assert_eq!(view::allowance_dropped_said(&before, &mut job), None, "nothing has changed yet");
+    job.add_line(&floor, "Floor finish", "plan_area", Some(Class::Material), false).unwrap();
+    job.derive();
+    let name = before[0].1.clone();
+    let name = format!("{}{}", name[..1].to_uppercase(), &name[1..]);
+    assert_eq!(view::allowance_dropped_said(&before, &mut job), Some(format!("{name}'s allowance of $1,300.00 is no longer carried in the price: it is priced by its cost lines now.")));
+    assert_eq!(view::estimate(&mut job).job_cost.value, None);
+    // The starter items are things that can be placed; none is set down, and none is
+    // a question for the field (J27A-27).
+    let mut job = sample::house();
+    let before = vif(&mut job).questions.len();
+    let starter: Vec<Vec<String>> = tables::STARTER_ITEMS.lines().map(|l| l.split(',').map(str::to_string).collect()).collect();
+    let (brought, _) = tables::items_in_missing(&mut job, &starter, None).unwrap();
+    assert!(!brought.done.is_empty(), "the starter items came in");
+    job.derive();
+    assert_eq!(vif(&mut job).questions.len(), before);
+}

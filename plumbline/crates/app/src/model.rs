@@ -321,6 +321,10 @@ pub struct Doc {
     /// on show (a plan is of one level). Leaving the plan with that level still the
     /// one on show puts every level back.
     pub plan_level: Option<String>,
+    /// What was carried as an allowance at the last change, and what is to be said
+    /// with the next message because one of them no longer is (call 126).
+    pub carried: Vec<(String, String, Option<f64>)>,
+    pub also: Option<String>,
     /// On foot inside the model, at eye height.
     pub walk: bool,
     pub show: Show,
@@ -336,6 +340,12 @@ impl Doc {
         self.edited = true;
         self.draw.edits += 1;
         self.draw.label = what.to_string();
+        // An allowance that this change stopped carrying is said with what is said
+        // next: the price fell by it (J27A-28).
+        if let Some(dropped) = view::allowance_dropped_said(&self.carried, &mut self.job) {
+            self.also = Some(dropped);
+        }
+        self.carried = view::carried_now(&mut self.job);
     }
     /// The job has changed under the window (a thing deleted, a step taken back): let
     /// go of whatever the window was holding that is no longer in the job. What is
@@ -385,6 +395,13 @@ impl Doc {
             None => {
                 self.tone = tone;
                 self.message = message.into();
+            }
+        }
+        // What the change before this message took out of the price is said with it.
+        if tone != Tone::Refused {
+            if let Some(also) = self.also.take() {
+                self.message = format!("{}\n{also}", self.message);
+                self.tone = Tone::Warned;
             }
         }
         // A refusal is not a step: only what was done is what a step is remembered by.

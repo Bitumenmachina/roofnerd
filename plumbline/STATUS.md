@@ -6637,9 +6637,9 @@ by the screen's own message. **Item 12 fails** on J27A-28.
 
 | Finding | Where it stands |
 |---|---|
-| **J27A-28 (decides item 12)**: a floor carried a $6.50/SF allowance, $6,412.67. Add cost line on it, left unpriced: the price fell from $21,099.96 to $13,481.70 and the screen said only "Added ... with no price yet" | see below this table |
+| **J27A-28 (decides item 12)**: a floor carried a $6.50/SF allowance, $6,412.67. Add cost line on it, left unpriced: the price fell from $21,099.96 to $13,481.70 and the screen said only "Added ... with no price yet" | **fixed (call 126), tested at the model, not seen in the window**: whatever change stops a thing's allowance being carried, the message ends "Floor 1's allowance of $6,412.67 is no longer carried in the price: it is priced by its cost lines now.", in amber. One place in the window does it for every change. **Item 12 is not passed by this: it has to be judged again** |
 | J27A-11: the field list left the allowance out of every dollar figure | fixed, tested (call 123) |
-| **J27A-22**: a priced roof deleted, then Undo: the money came back and the roof did not, until the job was closed and opened | see below this table |
+| **J27A-22**: a priced roof deleted, then Undo: the money came back and the roof did not, until the job was closed and opened | **fixed (call 126), not seen**: after Undo or Redo the window takes the job's roof up again |
 | J27A-23: a wall changed to brick veneer still drawn in lap siding; a gable's triangle of wall is an open hole | open: the second is PROPOSALS.md 29; the first to be seen |
 | J27A-29: the workbook's "Suppliers, side by side" sheet empty after two suppliers' lists were brought in | open |
 | J27A-19: overhead 100 typed for 10 taken without a word | fixed, tested (call 124) |
@@ -6651,7 +6651,7 @@ by the screen's own message. **Item 12 fails** on J27A-28.
 | J27A-9, -13: "each"; the roof missing from `takeoff` | fixed, tested (call 124) |
 | J27A-18, -21: the gable message and the price-list message hard to follow | open |
 | J27A-6: "Not sav" | fixed, not seen |
-| J27A-12, -27: "Check its a point inside it" (fixed, call 124); "its turned", "(type)"; **the field list asks a carpenter to measure 21 library items never set down**; roof rows with no Where (fixed, call 122) | the library items on the field list are open and want fixing next: an item nobody has set down is not in the building |
+| J27A-12, -27: "Check its a point inside it" (fixed, call 124); "its turned", "(type)"; **the field list asks a carpenter to measure 21 library items never set down**; roof rows with no Where (fixed, call 122) | **the library items fixed (call 126), tested**: an item nobody has set down is not on the field list; "its turned" and "(type)" open |
 | J27A-24, -25, -26, -30, -31: "is one of it"; "a outdoor unit"; a renamed item answering to its old name (fixed since, tested); "wall-0005" in the workbook; "prices vary" on a line with no price (fixed, call 122) | the first, second and fourth open |
 | J27A-8: sheathing by the plane, shingles with no waste | open (J25A-11) |
 | J27A-1, -2: the view going back to the whole sheet after a scale is set; "rests on their heights" (reworded, call 122) | the first open |
@@ -6723,7 +6723,7 @@ scaled and traced.
 
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 328 tests pass,
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 329 tests pass,
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
 commit of code. **All twenty-five window demonstrations and the twenty-one at the
 command line passed on a frozen copy of 5be55e3 (2026-11-17), each window one on its
