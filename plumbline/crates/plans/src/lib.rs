@@ -12,6 +12,7 @@
 //! under a point long, lines in white, dashed lines and lines under a mask are each
 //! counted and said. The edges of filled shapes are lines, as strokes are.
 
+pub mod scan;
 use hayro::hayro_interpret::font::GlyphRun;
 use hayro::hayro_interpret::util::TransformExt;
 use hayro::hayro_interpret::{interpret_page, BlendMode, ClipPath, Context, Device, DrawMode, DrawProps, ImageDrawProps, InterpreterSettings, SoftMask};

@@ -4397,3 +4397,39 @@ under a sky of (184, 196, 211), and there is no line. `PLUMBLINE_FOG="r,g,b"` tr
 another, for whoever sets it by eye on a real screen. It is a matched pair of
 numbers, not a cause understood: if the sky's colours are changed, the haze is
 measured again.
+
+### Call 128. Patrick, 2026-11-17: "It's approved for ply import" (PROPOSALS.md 32, the first piece)
+
+His words, after the survey of `research/lidar-renovation.md`: "It's approved for ply
+import". Read as: the point cloud of a scan, as a PLY file, brought in as something
+to trace over at true size. Not read as approving what he did not name: existing,
+demolish and new (PROPOSALS.md 33), walls found without tracing, other formats, or a
+reading off a scan making a value Known.
+
+How it is built, and why:
+
+- **Our own reader.** PLY is a short public format (a header in words, then the
+  points as text or as bytes). Reading it ourselves adds no code under anyone
+  else's licence. Text, little-endian and big-endian files are read; of each point
+  its x, y and z, whatever else it carries (colour, normals) is not kept, and that
+  loss is said.
+- **Units and which way is up are not in the file, so they are said, not guessed.**
+  A phone scan is in metres. The file is taken as metres with z up unless told
+  otherwise (`--units ft`, `--up y`), and what was taken is said in the message and
+  kept in the drawing's source. Everything from a scan is **Assumed**.
+- **The scan becomes a sheet, through the path a sheet already takes.** The floor
+  and the ceiling are found as the two heights where most points lie; the points
+  within 2 in of 4 ft above the floor (`--cut` says another height) are drawn from
+  overhead, north up, at 24 dots to the foot, as a picture written beside the job;
+  that picture is added under the level as a drawing, already to scale and in the
+  scan's own place. So tracing, snapping where there are lines, the Assumed mark and
+  its source all work as they do for a plan, in the window and at the command line,
+  with nothing new to learn. A picture of points has no drawn lines, so the Wall
+  tool is placed by eye on it.
+- **The level's height is said, not set.** "Floor to ceiling reads 8' 0" on the
+  scan": the person gives it to the level with Measure if they take it.
+
+Owed after this first piece, in order: the scan seen in 3D as a ghost under the
+model; two taped lengths checking the scan; a length picked off the scan; bringing
+it in from the window's Bring in list (today: the command line makes the sheet, and
+the window traces it).

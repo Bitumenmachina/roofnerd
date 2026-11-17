@@ -6820,9 +6820,66 @@ needs a demonstration of its own).
 and 18 (the `dress` set, read by the lead: fixed), 11 (old pictures, now named as
 old in the folder's note; `trades/` retaken).
 
+## A scan brought in as a sheet to trace: a demonstration, written before it is built (`demos/scan.sh`, call 128)
+
+Patrick approved the PLY import on 2026-11-17. The first piece, at the command line
+(the sheet it makes is traced in the window as any sheet is).
+
+**The made-up scan** (`tools/made-up-scan.py`; no real scan is in the repository): a
+room 20 ft by 12 ft inside and 8 ft high, as points 0.05 m apart on its four walls,
+its floor and its ceiling, in metres with z up, its southwest inside corner at the
+scan's zero: 6.096 m by 3.6576 m by 2.4384 m. Written twice, as text and as bytes.
+
+**What the demonstration checks, with the figures worked by hand.**
+
+1. `plumbline import scan <job> room.ply --level <level>` says how many points it
+   read and that it took them as metres with z up; that the scan is 20' 0" by
+   12' 0" on plan; that the floor is at 0' 0" and the ceiling 8' 0" above it; and
+   that it cut it 4 ft above the floor.
+2. A picture "room cut at 4 ft.png" is beside the job: 24 dots to the foot with 2
+   ft of margin all round, so (20 + 4) x 24 = 576 dots wide and (12 + 4) x 24 = 384
+   high.
+3. The job has a drawing under the level, to scale (576 dots is 24 ft: 1/2 in to
+   the dot) and placed so that the scan's zero is the plan's zero. It is Assumed,
+   and its source names the scan and says metres and z up.
+4. Traced over it at the four inside corners (on the page, from its lower left:
+   (48, 48), (528, 48), (528, 336), (48, 336)), a closed run of walls is 20 + 12 +
+   20 + 12 = **64.00 LF**, its corners at (0, 0), (20, 0), (20, 12), (0, 12) on the
+   plan, each wall Assumed and sourced to the drawing.
+5. The same file as bytes gives the same picture, dot for dot.
+6. Refusals, each in a sentence: a file that is not a PLY; one with no x, y, z; one
+   cut short; `--units` or `--up` given a word that is neither of its two.
+7. A scan in feet with y up (`--units ft --up y`), the same room, gives the same
+   20' 0" by 12' 0" and the same 8' 0".
+
+**Built and run the same night (call 128).** `crates/plans/src/scan.rs` reads a PLY
+file itself (text, and bytes of either order; three tests), finds the floor and the
+ceiling, and cuts the scan into a picture; `plumbline import scan` makes the sheet,
+adds it under the level, scales it and puts it in the scan's own place.
+**`demos/scan.sh` passes, every figure as worked above**: 36,924 points; 20' 0" by
+12' 0"; 8' 0" floor to ceiling; a sheet 576 by 384 dots at 24 to the foot; four walls
+traced over it, 64.00 LF, their corners at (0, 0), (20, 0), (20, 12) and (0, 12),
+each Assumed; the same sheet dot for dot from the file as bytes; the same room from
+a file in feet with y up; six refusals in a sentence each with the job left as it
+was. The sheet was looked at: the room's four walls as a dotted outline, north up,
+2 ft of paper round it. **What it found on the way**: a point on a dot's edge fell
+in one dot from a text file and the next from bytes (now drawn at its nearest dot);
+a text file broken off mid-line was called "not three numbers" where it is cut
+short (now said so).
+
+**Not done, and not to be taken as done.** It has been run on a made-up room of
+evenly placed points and on **no real scan**: a phone's scan is millions of
+uneven points with furniture, noise and holes, and how the floor and ceiling are
+found and how the cut reads on one are untried. Nothing brings a scan in from the
+window's Bring in list yet (the command line makes the sheet; the window then
+traces it like any sheet, which is not yet shown by a window demonstration). The
+scan is not seen in 3D. No judge has tried it. Owed, in order: a real scan from
+Patrick, cleaned as he would clean it, tried at the command line and the result
+read; Scan under Bring in; the scan as a ghost in 3D; two taped lengths checking it.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 329 tests pass, the
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 332 tests pass, the
 three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
 commit of code. **It is not a release candidate and is not tagged.** Read
 `CLAUDE.md` (its section "Who holds what" says what the lead keeps and what a worker

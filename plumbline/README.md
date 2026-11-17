@@ -110,6 +110,7 @@ demos/itemlibw.sh          # the item library in the window: starter items by tr
 demos/turnw.sh             # a panelboard set down into a wall on plan, turned a quarter to clear it, and widened in the library where it stands
 demos/itemneww.sh          # an item typed into the job's library in the window, given its trade, renamed with what stands, kept from deletion while one stands, and another taken out
 demos/quantityw.sh         # what a cost line is priced by, changed on the line in the window ("face area x 1.10"), and a figure the thing does not have refused
+demos/scan.sh              # a scan of a room (a PLY point cloud) brought in as a sheet to trace: to scale, in its own place, Assumed; traced walls to the foot; text and bytes alike; refusals
 demos/glassw.sh            # moving round the model, measured: the wheel closes on the pointer, a turn is about it, a flick carries on; pictures in demos/captured/glass
 demos/carryw.sh            # a vanity picked up in the model and carried clear of a clash, red while it is in it; pictures in demos/captured/carry
 demos/itemsw.sh            # in the window: a maker's sheet made into an item, one set down with a click, and the BIM model, workbook, CSV and lenses written out; pictures in demos/captured/items
@@ -301,7 +302,7 @@ follow: the formulas are the program's own arithmetic, to the cent. Each lens is
 estimate with what its reader is not shown left out, and says at its head what that is.
 The IFC model carries every value's status and source with it (what is Assumed here is
 still said to be Assumed there), and the command lists what a building model has no
-place for. An estimate written as CSV reads back in with `import prior`. `estimate <job> by-item` reads the estimate as an estimator writes it: each item once, with how many places it is in, under its division. What is to verify in the field goes out as a sheet to print with `export vif <job> <out.xlsx or out.csv>`, or Field list under Write out in the window.
+place for. A scan of the building (a PLY point cloud, as a phone's LiDAR scanner writes) comes in with `import scan <job> <scan.ply> --level <level>`: it is cut 4 ft above its floor into a sheet under that level, to scale and in the scan's own place, to trace over as any sheet is; it is taken as metres with z up unless `--units ft` or `--up y` says otherwise, and everything from it is Assumed. An estimate written as CSV reads back in with `import prior`. `estimate <job> by-item` reads the estimate as an estimator writes it: each item once, with how many places it is in, under its division. What is to verify in the field goes out as a sheet to print with `export vif <job> <out.xlsx or out.csv>`, or Field list under Write out in the window.
 
 ## Assemblies, and pricing
 
