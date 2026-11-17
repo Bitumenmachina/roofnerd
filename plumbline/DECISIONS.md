@@ -4123,3 +4123,41 @@ files, a check that exists first, no change to a number, a meaning, a format or 
 expectation, and a result that can be accepted from a diff and its pictures). It is
 there and not here because it is how the work is done, and that file is read first
 every session.
+
+### Call 117. Looked at as someone who has to work it, at a desk and on site; the estimate read by item (2026-11-17)
+
+Patrick offered one more pass: "truly view it and see if you can see what I would
+change as if you had to work this in the field or office what's sticking out the
+most". Six screens of the priced sample house were read at full size, one at a time,
+not on contact sheets. What stuck out, most first:
+
+1. **The estimate was a list of the model, not an estimate.** 399 lines: "footing 1,
+   Concrete footing, in place, 2.9630 CY", then footing 2, 3 and 4, then four walls.
+   An estimator writes one line: footings, 10.07 CY at $450.00, $4,533.40. **Built
+   today**: "The estimate, by item" above the sheet: 52 items for that house, each
+   with how many places it is made of, its quantity, its price where every place is
+   at one price ("prices vary" where not) and what it comes to, under its division
+   with the division's total. It is the same lines and the same amounts added up in
+   the model (`Estimate::by_item`); the line-by-line sheet below is still where a
+   price is typed. Test: `the_estimate_reads_item_by_item_and_comes_to_the_same_money`.
+2. **Money is not where the eye goes.** Click a wall and its panel leads with its area
+   and length; what the wall costs is under "more below". The price of the job is in
+   small type on the top bar; the Job panel lists lengths and areas by level and not
+   one dollar by division. Open.
+3. **The verify-in-field list cannot go to the field.** It says "first floor" and not
+   which room; "Check what it is, size" and "piece 4 of 4" are the program's words;
+   inches are decimals (0.50 in); thirty-eight-dollar elbows sit in the same list as
+   a $7,800 heat pump; nothing can be ticked off; and it cannot be printed or written
+   out from the window at all. Open, and the largest thing between this and a
+   superintendent using it.
+4. **Figures are written to more places than the trade writes.** 210.00 LF, 1,120.00
+   SF, 2.9630 CY, a height as 10.00 ft beside 10' 0". (In the new table a count of
+   whole things is written whole.) Open elsewhere.
+5. **A plan with no dimensions on it.** Rooms carry their names and areas; no wall
+   says how long it is, and a door has no swing. An estimator checks a takeoff
+   against dimension strings. Open.
+6. **Noise that is always there.** A finished job still gives the top of the left
+   panel to a checklist with nine of ten ticked; "Cost code: Unknown, not coded" is in
+   red on every thing selected; a wall's line is given as coordinates. Open.
+
+Not looked at in this pass: drawing a job from nothing, and anything in motion.

@@ -902,6 +902,65 @@ pub struct Estimate {
     pub at_supplier: Vec<(String, MoneyTotal)>,
 }
 
+/// One item of the estimate as an estimator writes it: every line of one description,
+/// one cost type and one division, bought by one unit, added up. A house with four
+/// footings has one line for its footings, with how many places it is made of.
+#[derive(Clone, Debug)]
+pub struct ItemTotal {
+    pub division: Option<crate::components::Division>,
+    pub class: Option<Class>,
+    pub description: String,
+    /// The unit the lines are priced in (CY, SF, hr).
+    pub unit: String,
+    /// How many lines of the sheet it is the sum of.
+    pub places: usize,
+    /// What they come to in that unit, when every one of them has a quantity.
+    pub quantity: Option<f64>,
+    pub quantity_status: Status,
+    /// The price each is at, when every one of them is at the same price.
+    pub unit_cost: Option<f64>,
+    pub amount: MoneyTotal,
+}
+
+impl Estimate {
+    /// The lines that are on, read item by item: in the order of the divisions (what is
+    /// in none comes last), and within one in the order each item first appears. It is
+    /// the same lines and the same amounts as the sheet, added up; nothing is worked
+    /// out again. (2026-11-17: the sheet of the sample house was 399 lines, four of
+    /// them the same footing line, and read as a list of the model and not an estimate.)
+    pub fn by_item(&self) -> Vec<ItemTotal> {
+        let mut groups: Vec<((u8, String, String, Option<Class>), Vec<&SheetLine>)> = Vec::new();
+        for l in self.lines.iter().filter(|l| !l.off) {
+            let key = (l.division.map(|d| d.number()).unwrap_or(u8::MAX), l.description.clone(), l.priced.unit.clone(), l.class);
+            match groups.iter_mut().find(|g| g.0 == key) {
+                Some(g) => g.1.push(l),
+                None => groups.push((key, vec![l])),
+            }
+        }
+        groups.sort_by_key(|g| g.0 .0);
+        groups
+            .into_iter()
+            .map(|((_, description, unit, class), lines)| {
+                let parts: Vec<(String, &Derived)> = lines.iter().map(|l| (format!("{}: {:?}", l.path, l.description), &l.amount)).collect();
+                let quantities: Vec<f64> = lines.iter().filter_map(|l| l.priced.value).collect();
+                let costs: Vec<f64> = lines.iter().filter_map(|l| l.unit_cost.as_ref().and_then(|v| v.value)).collect();
+                let one_price = costs.len() == lines.len() && costs.iter().all(|c| (c - costs[0]).abs() < 1.0e-9);
+                ItemTotal {
+                    division: lines[0].division,
+                    class,
+                    description,
+                    unit,
+                    places: lines.len(),
+                    quantity: (quantities.len() == lines.len()).then(|| (quantities.iter().sum::<f64>() * 10000.0).round() / 10000.0),
+                    quantity_status: lines.iter().map(|l| l.priced.status).max().unwrap_or(Status::Unknown),
+                    unit_cost: one_price.then(|| costs[0]),
+                    amount: total_of(&parts),
+                }
+            })
+            .collect()
+    }
+}
+
 fn total_of(parts: &[(String, &Derived)]) -> MoneyTotal {
     let included: Vec<&Derived> = parts.iter().map(|(_, d)| *d).filter(|d| d.value.is_some()).collect();
     let cents = crate::lines::cents;

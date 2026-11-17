@@ -880,6 +880,52 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             });
         }
     });
+    // The estimate as an estimator writes it: one line an item, however many pieces of
+    // the house it is on. (The sheet below is every piece on its own, which is where a
+    // price is typed; read alone it was a list of the model: four footings, four lines.)
+    let items = est.by_item();
+    if !items.is_empty() {
+        table(p, fonts, "The estimate, by item", format!("{}, added up from the {} below", view::so_many(items.len(), "item"), view::so_many(est.lines.iter().filter(|l| !l.off).count(), "line")), |t| {
+            let mut division: Option<Option<u8>> = None;
+            for it in &items {
+                let d = it.division.map(|d| d.number());
+                if division != Some(d) {
+                    division = Some(d);
+                    let heading = it.division.map(|d| format!("Division {}  {}", d.number(), d.title())).unwrap_or_else(|| "No division".to_string());
+                    t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(6.0)), border: UiRect::bottom(px(1.0)), ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::hairline()))).with_children(|r| {
+                        cell(r, 7.0, false, |_| {});
+                        cell(r, 0.0, false, |c| words(c, fonts, heading.to_uppercase(), 11.0, Weight::Semibold, theme::ink()));
+                        // What the division comes to, as By division above has it.
+                        let total = match it.division {
+                            Some(d) => est.divisions.iter().find(|x| x.division == d).map(|x| &x.total),
+                            None => Some(&est.no_division),
+                        };
+                        if let Some((x, status)) = total.and_then(|t| t.value.map(|x| (x, t.status))) {
+                            cell(r, 130.0, true, |c| words(c, fonts, view::money(x), 12.5, Weight::Semibold, theme::status_ink(status)));
+                        }
+                    });
+                }
+                row(t, false, None, |r| {
+                    cell(r, 7.0, false, |c| dot(c, if it.amount.value.is_some() { it.amount.status } else { Status::Unknown }));
+                    cell(r, 0.0, false, |c| words(c, fonts, it.description.clone(), 12.5, Weight::Medium, theme::ink()));
+                    cell(r, 62.0, true, |c| words(c, fonts, if it.places == 1 { String::new() } else { format!("{} places", it.places) }, 11.0, Weight::Regular, theme::ink_faint()));
+                    cell(r, 104.0, true, |c| match it.quantity {
+                        // A count of whole things is written whole: 9 EA, not 9.00 EA.
+                        Some(q) => words(c, fonts, format!("{} {}", view::figure(q, if it.unit == "EA" && q.fract() == 0.0 { 0 } else { 2 }), it.unit), 12.5, Weight::Regular, theme::status_ink(it.quantity_status)),
+                        None => words(c, fonts, "no quantity", 11.5, Weight::Regular, theme::status_ink(Status::Unknown)),
+                    });
+                    cell(r, 92.0, true, |c| match it.unit_cost {
+                        Some(x) => words(c, fonts, format!("${}", view::rate(x)), 12.5, Weight::Regular, theme::ink_soft()),
+                        None => words(c, fonts, "prices vary", 11.0, Weight::Regular, theme::ink_faint()),
+                    });
+                    cell(r, 112.0, true, |c| match it.amount.value {
+                        Some(x) => words(c, fonts, view::money(x), 12.5, Weight::Semibold, theme::status_ink(it.amount.status)),
+                        None => words(c, fonts, "no figure", 12.5, Weight::Medium, theme::status_ink(Status::Unknown)),
+                    });
+                });
+            }
+        });
+    }
     table(p, fonts, "The sheet", format!("{} lines", est.lines.len()), |t| {
         // The lines, division by division; then those in no division. Each division
         // names the columns under its own heading, so there is no row of them up here.

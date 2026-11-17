@@ -6454,6 +6454,23 @@ written IFC model are the file format and stay. **Not checked: whether the name 
 free to use.** The pictures in `demos/captured/` from before today show the old
 wordmark.
 
+## Looked at as someone who has to work it (call 117; 2026-11-17)
+
+Patrick asked for one more pass, as someone at a desk or on site. DECISIONS.md call
+117 has the six things that stuck out, most first, and each is owed in that order:
+(1) the estimate read as a list of the model, **answered today by "The estimate, by
+item"** (52 items from 399 lines on the sample house; the footings on one line, 10.07
+CY at $450.00, $4,533.40; a test holds it; seen by hand in the estimate window); (2)
+money is not where the eye goes: a thing's cost is not at the head of its panel, the
+price is small, the Job panel has no dollars by division; (3) the verify-in-field
+list cannot go to the field: no room, the program's words, decimal inches, trifles
+beside large items, nothing to tick, no way to print it or write it out; (4) figures
+to more places than the trade writes; (5) a plan with no dimensions and doors with no
+swing; (6) a ticked checklist and a red "not coded" on every screen.
+
+The by-item table is not in the command line's estimate, the workbook or any
+demonstration yet, and has not been judged.
+
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 322 tests pass,

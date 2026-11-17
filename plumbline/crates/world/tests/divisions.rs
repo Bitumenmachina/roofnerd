@@ -278,3 +278,32 @@ fn a_plane_knows_the_other_planes_of_its_roof() {
     let wall = q.iter(&job.world).find(|(_, k)| **k == Kind::Wall).map(|(n, _)| n.path.clone()).unwrap();
     assert!(job.sister_planes(&wall).is_empty());
 }
+
+#[test]
+fn the_estimate_reads_item_by_item_and_comes_to_the_same_money() {
+    use plumbline_world::view;
+    // The sample whole house, priced. Its four strip footings are four lines of the
+    // sheet, "Concrete footing, in place" at a made-up $450.00/CY: 2.9630 + 2.0741 +
+    // 2.9630 + 2.0741 = 10.0742 CY, and 1,333.35 + 933.35 + 1,333.35 + 933.35 =
+    // $4,533.40. Read by item they are one line of four places.
+    let mut job = plumbline_world::sample::house_priced();
+    let est = view::estimate(&mut job);
+    let items = est.by_item();
+    let footings = items.iter().find(|i| i.description == "Concrete footing, in place").unwrap();
+    assert_eq!((footings.places, footings.quantity, footings.unit.as_str(), footings.unit_cost), (4, Some(10.0742), "CY", Some(450.0)));
+    assert_eq!(footings.amount.value, Some(4533.40));
+    assert_eq!(footings.division.map(|d| d.number()), Some(3));
+    // Every line that is on is in one item and no other, and the items come to what
+    // the lines come to: nothing is worked out again and nothing is left behind.
+    let on = est.lines.iter().filter(|l| !l.off).count();
+    assert_eq!(items.iter().map(|i| i.places).sum::<usize>(), on);
+    assert!(items.len() < on / 3, "{} items from {on} lines", items.len());
+    let cents = |x: f64| (x * 100.0).round() / 100.0;
+    let lines: f64 = est.lines.iter().filter(|l| !l.off && l.class.is_some()).filter_map(|l| l.amount.value).sum();
+    let by_item: f64 = items.iter().filter(|i| i.class.is_some()).filter_map(|i| i.amount.value).sum();
+    assert_eq!(cents(by_item), cents(lines));
+    assert_eq!(Some(cents(by_item)), est.job_cost.value.map(cents));
+    // The items are in the order of the divisions.
+    let order: Vec<u8> = items.iter().map(|i| i.division.map(|d| d.number()).unwrap_or(u8::MAX)).collect();
+    assert!(order.windows(2).all(|w| w[0] <= w[1]));
+}
