@@ -414,3 +414,23 @@ of items (cuts, sweeps, export to a CAD file), a kernel is needed and none of th
 three is a safe one to stand on today; the survey says why, and the choice would be
 looked at again then, with truck (MIT/Apache) and OpenCascade bindings (LGPL: may
 not be linked) beside them.
+
+## Q28. What does a shop want to receive, and for which trade first? (2026-11-17, from call 113)
+
+Patrick asked for a converter from a simple table to "a machine shop spec or
+countertop slabs". Before any of PROPOSALS.md 30 is built, two things are his to say.
+
+- **Which trade first.** Countertops (slabs, edges, cutouts, seams) and sheet metal
+  (flat patterns and bends) are the two nearest to what the program already holds: a
+  quantity, a stretch-out, a material bought by the sheet. Cabinets and millwork are
+  further.
+- **What the shop takes.** A cut list in a workbook is one answer and needs no new
+  format. A drawing a machine reads is another: DXF is what stone and sheet-metal
+  shops are most often sent, and it would be the first format this program writes
+  that is not a table or a building model. STEP is a machine shop's format for solid
+  parts and is a much larger thing.
+
+**Working assumption: nothing is built.** If he says go with no more than that, the
+first step would be countertops, a cut list as a workbook, and the outline of each
+piece as DXF, with the claim about what shops take checked against fabricators'
+own published requirements before a line is written.

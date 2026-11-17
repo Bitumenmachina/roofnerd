@@ -4010,3 +4010,36 @@ script's working says what the old figure was and why it was wrong. A direction 
 the square (a wall at 45 degrees) is still as good as the pointer's dot.
 
 Test: the same in `a_typed_length_is_kept_finely_enough_to_multiply_to_the_cent`.
+
+### Call 113. Patrick, 2026-11-17: what comes in and goes out, and other agents bringing a trade's knowledge, prices and specs (and how it was read)
+
+His message, as he wrote it: "I need to confirm what files I can import and export into
+the program it would be beneficial for me to have other AI agents in the future to
+upload trade knowledge , pricing , CAD similar specs like an auto converter from
+something simple like an xls to something more powerful or complex like a machine shop
+spec or countertop slabs". He also said three earlier questions had not been answered
+(two restarts of the machine had replayed them; the answers were in a message he may
+not have been shown).
+
+How each clause was read:
+- *"what files I can import and export"*: answered from the program's own list of
+  verbs, not from memory. In: plans as PDF (drawn or scanned), PNG, JPEG; price lists,
+  assembly libraries, item libraries and prior estimates as CSV or XLSX; a designer's
+  model as IFC2x3 or IFC4; a maker's sheet as PDF; the program's own job file. Out: the
+  estimate as an XLSX workbook of live formulas and as CSV; the supplier, subcontractor
+  and PM lenses as XLSX or CSV; prices and assemblies as CSV or XLSX; the item library
+  as CSV; the building as IFC4. **Not in or out**: DWG, DXF, STEP, STL, Revit files,
+  any shop or machine format.
+- *"other AI agents ... upload trade knowledge, pricing"*: this is the harness for each
+  division of calls 75 and 76, which is not built. What an agent can do today is what
+  a person can: write a table (prices, assemblies, items) and bring it in. What it
+  brings arrives Assumed with its source named, and is never Known on its say-so; that
+  rule is already in the tables.
+- *"CAD similar specs like an auto converter from ... an xls to ... a machine shop
+  spec or countertop slabs"*: **new scope, not built, and nothing in the program does
+  any of it.** It is two things: a table of parts turned into shapes (an item's own
+  shape as data is PROPOSALS.md 28), and shapes written out in a form a shop cuts
+  from. It is PROPOSALS.md 30, and what a shop wants to receive is QUESTIONS.md Q28.
+
+Nothing was built on this message. It asks for confirmation and states a direction;
+product scope is his.

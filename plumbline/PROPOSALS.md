@@ -230,3 +230,35 @@ edge when the roof overhangs; and it is a relation between a wall and a roof tha
 model does not hold today. That is a change to the model's rules, so it is Patrick's.
 Until then STATUS.md says a gable end is not drawn and not priced, and the estimate
 of a gable roof is short by its gable ends.
+
+## 30. A table in, a shop's spec out: trade packs an agent can bring, and fabricated parts (2026-11-17, from Patrick's message of that day, call 113)
+
+Patrick wants other agents, later, to bring a trade's knowledge, its prices and its
+specs into the program, and "an auto converter from something simple like an xls to
+something more powerful or complex like a machine shop spec or countertop slabs".
+
+What is there to build on: every table the program reads (prices, assemblies, items,
+prior estimates) comes in as CSV or XLSX, row by row, with every row that was not
+used named and why, and every value Assumed with its source. Nothing is written out
+that a shop could cut from: the outputs are a workbook, CSV and IFC4.
+
+Proposed, in three steps, each usable alone.
+1. **A trade pack.** One folder an agent or a person hands over for a trade: its price
+   list, its assemblies, its items, and a page of what it knows in words (rules of
+   thumb, waste, what goes with what), each a table or a text the program already
+   reads or a builder can. Brought in as one thing, said row by row, taken back out as
+   one thing. This is the door the per-division harness of calls 75 and 76 would use
+   (PROPOSALS.md 21).
+2. **A fabricated part.** A thing that is cut from stock and is more than its box: a
+   countertop run (its outline, thickness, edge, cutouts for a sink and a cooktop, its
+   seams, its backsplash), a sheet-metal piece (its flat pattern and bends, which is
+   the stretch-out the estimate already carries), a cabinet box. Typed as rows of a
+   table (a run 96 in by 25 1/2 in, a 33 in sink cutout 12 in from the left), drawn
+   in the house, priced by its area, its edge and its cutouts, and nested on slabs or
+   sheets of a named size so that the count of slabs is a figure with its working
+   shown and not a guess.
+3. **Out to the shop.** The same part written as what a fabricator takes: a cut list
+   as a workbook, and its outline as a drawing a saw or a waterjet reads.
+
+It is new scope, a change to what the job holds, and for step 3 a new file written
+out, so it waits for Patrick's word. Which format a shop wants is QUESTIONS.md Q28.
