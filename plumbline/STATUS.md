@@ -6780,11 +6780,22 @@ needs a demonstration of its own).
 1. `field/04, 06`: after one laser reading the screen says "A second reading came
    straight after that one and was not used." Either the demonstration sends two or
    the program counts one as two; not yet looked at.
-2. `first/02` and `plan/04`: what the worker took for the same sheet and the same
-   41' 3" dimension gives "1" = 7' 1"" in one and "1/8" = 1'-0"" in the other, about
-   12 % apart, and nothing warns. **To be checked before anything else in the
-   tracing path**: if they are the same page, one demonstration scales from the
-   wrong two points and its lengths are 12 % out while agreeing with themselves.
+2. `first/02` and `plan/04`: the same sheet and the same 41' 3" dimension give
+   "1" = 7' 1"" in one and "1/8" = 1'-0"" in the other, about 12 % apart. **Checked,
+   and so: `demos/firstw.sh` is wrong and has been since 2026-11-13.** It clicks the
+   dimension's ends at (480, 696) and (1099, 699), where they were before the window
+   was rebuilt; `planw` was corrected that day to (512, 664) and (1060, 667) (the
+   dimension is 547 dots long, not 619) and `firstw` was not. Its walls are typed
+   lengths, so its figures are right and agree with themselves, and its check
+   passes; **the sheet under them is scaled 12 % small, so the tracing does not sit
+   on the drawing, and the demonstration that is meant to show a first job traced
+   from a plan does not show that.** Tried: with the two ends and the corner taken
+   from `planw` ((511, 592)), the scale comes right and every later click lands
+   wrong (the windows miss their walls: walls 133.56 LF for 130.33, no windows), so
+   every position after the scale has to be taken again on the right scale. Put
+   back as it was, passing and wrong, and owed next: a worker's job, with the check
+   already there (its own figures) and one to add (the scale said on screen is
+   1/8" = 1'-0").
 3. `d4`, `d2`, `d5`: the old roof sample's lines have no cost type, so its Estimate
    says "Price no figure" beside a Budget of $22,033.70 in allowances (the earlier
    3 and 7, still there).
