@@ -279,3 +279,41 @@ the BIM file (IFC's operation type on the door) and read from one.
 
 It is a new value in the saved job and a new thing a person sets, so it waits for
 Patrick's word.
+
+## 32. A LiDAR scan of the house brought in (2026-11-17, Patrick: "I use Scaniverse: what is the ability to import any of the lidar models to this program and how much time would that take")
+
+**Today: none directly.** The program brings in plan sheets (PDF, PNG, JPEG), tables
+(CSV, XLSX), a designer's BIM model (IFC), makers' sheets and its own job. It reads
+no mesh and no point cloud. The one way a scan helps today: a picture of the scan
+taken straight down, brought in as a drawing, scaled from one length measured on
+site, and traced.
+
+**What the phone app writes** (its community forum's list; not its own manual):
+meshes as OBJ, FBX, GLB, USDZ, STL; point clouds as PLY and LAS.
+
+**Proposed, in three steps, each useful alone.**
+
+1. **The scan as something to trace over, at true size.** Bring in a mesh (GLB or
+   OBJ first: both have permissively licensed readers; to be checked by
+   `tools/licenses.sh`) or a PLY point cloud. A scan is already in real units, so
+   there is no scale to set: only where it sits and which way is north. It is shown
+   in 3D as a ghost under the model, and cut at a height (4 ft above a floor) into a
+   plan outline that the Wall tool snaps to. Everything traced from it is Assumed,
+   sourced to the scan's file. Loss is reported: colour and texture are not kept.
+2. **The scan as a tape.** Two points picked on the scan give a length; given to a
+   value on the verify-in-field list it answers the question as a reading does, with
+   "measured on the scan <file>" as its source. Whether such a reading makes a value
+   Known or leaves it Assumed is Patrick's (a phone scan drifts over the length of a
+   house; a laser on site does not): the working answer would be Assumed, said so.
+3. **Walls and rooms found in the scan without tracing.** Fitting planes to a scan
+   and reading walls, openings and rooms out of them. Not a reader but a piece of
+   research: results would arrive Assumed and want checking one by one.
+
+**How long.** Step 1: two to three days of building, with its demonstration, its
+pictures read and a judge. Step 2: one to two days more. Step 3: weeks, with no
+promise of how good; not to be started before 1 and 2 are used on a real house.
+A scan with no mesh (a "splat") is a picture, not a measure, and is out.
+
+It is a new kind of file brought in and a new thing the job holds, so it waits for
+Patrick's word. FBX and USDZ are left out at first (no settled permissive reader);
+LAS after PLY.
