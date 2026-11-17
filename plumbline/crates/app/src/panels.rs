@@ -94,6 +94,17 @@ pub fn amount(value: Option<f64>, decimals: usize, unit: &str) -> String {
 }
 
 /// A total as it is said: the figure, or that there is nothing to total, or what is missing.
+/// A total on the Job panel: the same figure, without zeros it does not need (210 LF,
+/// not 210.00 LF; 1,793.02 SF as it is). Nothing is rounded: a figure with cents of a
+/// foot keeps them. (The takeoff tables keep two places, so a column lines up.)
+pub fn total_plain(sum: &view::Sum) -> String {
+    let said = total(sum);
+    match said.split_once(".00 ") {
+        Some((whole, unit)) if !unit.contains(' ') => format!("{whole} {unit}"),
+        _ => said,
+    }
+}
+
 pub fn total(sum: &view::Sum) -> String {
     match (sum.value, sum.members) {
         (_, 0) => "none".into(),
@@ -1539,6 +1550,34 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             ))
             .with_children(|l| quiet(l, fonts, units::feet_as_ft_in(length, 16), 11.0, Weight::Medium, if line.status == Status::Known { theme::line_colour(line.kind) } else { theme::status_ink(line.status) }));
         }
+        // On the plan of a level each wall carries its length, as a drawing carries
+        // its dimensions (call 117: a plan with no dimension on it cannot be checked
+        // against the takeoff). Along its centre line, in feet and inches, set just
+        // outside the wall's line so it does not sit on the room's name; in the
+        // colour of how sure the wall is. Short returns (under 3 ft) are left bare.
+        if doc.plan && doc.show.architecture && !doc.walk {
+            if let Some(level) = &doc.show.storey {
+                for placed in snap.drawn.iter().filter(|d| d.kind == Kind::Wall && d.storey.as_ref() == Some(level)) {
+                    let Shape::Wall { a, b, base, height, thickness, .. } = &placed.shape else { continue };
+                    let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+                    let length = dx.hypot(dy);
+                    if length < 3.0 {
+                        continue;
+                    }
+                    // To the left of the way the wall was drawn, clear of its thickness.
+                    let off = thickness / 2.0 + 0.9;
+                    let mid = [(a[0] + b[0]) / 2.0 - dy / length * off, (a[1] + b[1]) / 2.0 + dx / length * off, base + height + 0.2];
+                    o.spawn((
+                        Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(4.0), px(0.0)), border_radius: BorderRadius::all(px(6.0)), ..default() },
+                        UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
+                        BackgroundColor(theme::panel().with_alpha(0.75)),
+                        Pickable::IGNORE,
+                        Label { at: to_view(doc.origin, mid), facing: None, rank: 3 },
+                    ))
+                    .with_children(|l| quiet(l, fonts, units::feet_as_ft_in(length, 16), 10.5, Weight::Regular, theme::status_ink(placed.status)));
+                }
+            }
+        }
         // On plan each room carries its name and its floor area, as a drawing does
         // (call 81): written where the room was named, which is always inside it.
         // With the roof on show the roof plan is what is read, and the rooms wait.
@@ -2066,16 +2105,16 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     }
     for storey in &snap.storeys {
         heading(p, fonts, &format!("Level: {}", storey.name));
-        listed(p, fonts, None, "Walls", storey.walls.members.to_string(), total(&storey.walls), if storey.walls.members == 0 { Status::Known } else { storey.walls.status });
-        listed(p, fonts, None, "Wall face, less openings", String::new(), total(&storey.wall_net), if storey.wall_net.members == 0 { Status::Known } else { storey.wall_net.status });
+        listed(p, fonts, None, "Walls", storey.walls.members.to_string(), total_plain(&storey.walls), if storey.walls.members == 0 { Status::Known } else { storey.walls.status });
+        listed(p, fonts, None, "Wall face, less openings", String::new(), total_plain(&storey.wall_net), if storey.wall_net.members == 0 { Status::Known } else { storey.wall_net.status });
         // A level's footings, where it has any: their length, and the concrete in them.
         if storey.footings.members > 0 {
-            listed(p, fonts, None, "Footings", storey.footings.members.to_string(), total(&storey.footings), storey.footings.status);
-            listed(p, fonts, None, "Footing concrete", String::new(), total(&storey.footing_volume), storey.footing_volume.status);
+            listed(p, fonts, None, "Footings", storey.footings.members.to_string(), total_plain(&storey.footings), storey.footings.status);
+            listed(p, fonts, None, "Footing concrete", String::new(), total_plain(&storey.footing_volume), storey.footing_volume.status);
         }
-        listed(p, fonts, None, "Floor", storey.floors.members.to_string(), total(&storey.floors), if storey.floors.members == 0 { Status::Known } else { storey.floors.status });
+        listed(p, fonts, None, "Floor", storey.floors.members.to_string(), total_plain(&storey.floors), if storey.floors.members == 0 { Status::Known } else { storey.floors.status });
         if storey.rooms.members > 0 {
-            listed(p, fonts, None, "Rooms, inside their walls", storey.rooms.members.to_string(), total(&storey.rooms), storey.rooms.status);
+            listed(p, fonts, None, "Rooms, inside their walls", storey.rooms.members.to_string(), total_plain(&storey.rooms), storey.rooms.status);
         }
         // Each counted with its own word: "1 and 0" left the reader to work out which.
         let some = view::so_many;

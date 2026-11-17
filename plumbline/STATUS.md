@@ -6470,8 +6470,11 @@ inches as a tape reads them, the run and not its piece, what to do as a sentence
 **Field list under Write out** writes a workbook to print, with a box to tick and a
 blank for what was found (a test holds it; seen by hand, 93 rows); still open: trifles
 beside large items, and the command line's `vif` verb wording its own rows; (4) figures
-to more places than the trade writes; (5) a plan with no dimensions and doors with no
-swing; (6) a ticked checklist and a red "not coded" on every screen.
+to more places than the trade writes: **the Job panel's totals now drop zeros they do
+not need** (210 LF), the tables and the priced lines are as they were; (5) a plan with
+no dimensions: **each wall now carries its length on the plan of its level** (seen by
+hand), doors still have no swing; (6) noise: **a priced job opens with its checklist
+folded**, the red "not coded" is as it was.
 
 The by-item table is not in the command line's estimate, the workbook or any
 demonstration yet, and has not been judged. The cost at the head of a panel moves

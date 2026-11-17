@@ -4175,3 +4175,16 @@ not on contact sheets. What stuck out, most first:
    red on every thing selected; a wall's line is given as coordinates. Open.
 
 Not looked at in this pass: drawing a job from nothing, and anything in motion.
+
+Later the same day, the smaller three, each in part:
+- **4, figures.** On the Job panel a total is written without zeros it does not need:
+  210 LF, 1,120 SF; 1,793.02 SF stays as it is. Nothing is rounded. The takeoff tables
+  keep two places so a column lines up, and a priced line keeps the places it needs
+  to multiply to its amount: both still open as to how the trade would write them.
+- **5, the plan.** On the plan of a level each wall carries its length in feet and
+  inches along its line, in the colour of how sure the wall is; returns under 3 ft are
+  left bare. Seen by hand: 40' 0", 28' 0", 12' 0", 10' 0" on the sample's first floor.
+  A tag can still sit over a duct or a piece of equipment; there are no dimension
+  strings to openings; a door still has no swing.
+- **6, noise.** A job that already has cost lines opens with the checklist folded to
+  its one next step. The red "not coded" on every thing selected is as it was.

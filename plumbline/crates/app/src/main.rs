@@ -129,7 +129,9 @@ fn main() {
         form_at: 0,
         pressed: Vec::new(),
         go: None,
-        steps_open: true,
+        // A job that is already priced opens with the checklist folded to its one
+        // next step: nine ticks out of ten took the head of the panel (call 117).
+        steps_open: !has_lines,
         look_at: None,
         dropped: None,
         choosing: false,
