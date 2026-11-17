@@ -6417,6 +6417,43 @@ that came out whole and were **not read on contact sheets as the earlier runs' w
 The other fourteen window demonstrations were last run on c0d5922 and their pictures
 are of that commit.
 
+## Patrick's two rulings of 2026-11-17: allowances are in the price; the product is BuildOS (calls 114 and 115)
+
+**"Allowances are allowed and noted as such."** QUESTIONS.md Q26 is answered. **A
+changed number on every job that has one**: an allowance on a thing with no cost line
+is carried in the job cost and the price, on a row of its own named Allowances, until
+the thing has a cost line; it is in none of the sixteen divisions and is counted with
+what they leave out. Worked by hand in the test that holds it: the sample house's
+living room, 614.7188 SF at a made-up $10.00/SF, is $6,147.19 of job cost where it
+was none; given a cost line at $2.00/SF the room is $1,229.44 and the allowance is no
+longer carried. The model, the estimate window, the top bar ("$6,147.19 in
+allowances"), the command line and the workbook each have the row. 322 tests and the
+command-line demonstrations that touch the price pass on it; none of their figures
+moved (none prices a thing by an allowance alone).
+
+**Found on the way, by looking**: a job priced only by allowances had no Estimate tab
+in the estimate window and "nothing priced yet" on the top bar, so its price could be
+read nowhere. Both are put right. **Seen by hand** on the sample house with that
+allowance: the row, the job cost row reading "allowances only", the top bar.
+
+**Run in the window on a frozen copy of the build with both rulings**: `moneyw`, `d4w`
+and `itemneww` passed, each on its first run there (the kit finds the window by its
+new title). Their pictures are committed and were not read on contact sheets. The
+other twenty-two window demonstrations have not been run on this build.
+
+**Not done**: the verify-in-field list's dollars ride on cost lines and do not count
+an allowance's; the three columns of the sheet are over cost lines only; no window
+demonstration prices a thing by an allowance alone and reads the price.
+
+**"rebrand to BuildOS."** The wordmark on both windows, the windows' titles, the
+README and the instructions say BuildOS. The folder, the crates, the two commands
+(`plumbline`, `plumbline-app`) and the demonstrations' environment names keep the
+working name: that rename is owed as a commit of its own on a head whose every
+demonstration has just passed. `pl::` in a saved job and `Plumbline_Values` in a
+written IFC model are the file format and stay. **Not checked: whether the name is
+free to use.** The pictures in `demos/captured/` from before today show the old
+wordmark.
+
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 322 tests pass,
@@ -6527,14 +6564,14 @@ seen**). **Items 10 and 12 are therefore still not judged on anything after
    `research/judgment-25b-words.md` has all 69.
 6. **The money that is short or over and is said so here**: a gable end's triangle of
    wall is not drawn and not priced (PROPOSALS.md 29); sheathing is rounded up to
-   whole sheets plane by plane (J25A-11); an allowance on a thing with no cost lines
-   is out of the price (Q26).
+   whole sheets plane by plane (J25A-11). **The rename owed**: the folder, the
+   crates and the two commands to BuildOS (call 115), after a full run passes.
 7. **The open rows** of the reviews and the earlier judgments (their tables above): a
    keystroke re-reads the whole job (R21-2); the rest of one money writer (R21-12);
    a footing dug wider cannot be recorded on it alone (J21-6); base is priced by a
    room's perimeter and drawn by its runs less its doors.
 
-**Patrick's, not the builder's.** Q26 first: whether an allowance with no cost lines is in the price. Three veteran judges on three builds read "price" and expected it in; the builder's reading is the minority of four. Q27: whether he wants the feel of the three
+**Patrick's, not the builder's.** (Q26 is answered: allowances are in the price, call 114.) Whether the name BuildOS is free to use is his to have checked. Q28: which trade and which shop format for a table-to-shop-spec converter (PROPOSALS.md 30). Q27: whether he wants the feel of the three
 geometry libraries he named, or one of them linked (the working answer is the feel);
 and PROPOSALS.md 28, an item's shape as data and a bench to make it on. Q26: whether an allowance with no cost lines
 belongs in the price (the veteran judge read "PRICE" and expected it in; the working
