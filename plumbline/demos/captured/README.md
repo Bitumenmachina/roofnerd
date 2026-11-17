@@ -44,5 +44,7 @@ program was called plumbline until 2026-11-17), the panels, the words and the pr
   rebuilt to call 62, step by step (2026-11-13).
 - `layers/plan-panels.png`, `layers/estimate-window.png`: the same rebuild.
 - `light/`: the house before and after it was given a sun and a sky (call 68).
-- `trades/`: one picture of each of seven trades drawn in the model, which Patrick
-  asked to see (QUESTIONS.md Q23). STATUS.md says when these were last retaken.
+
+**Taken by hand, and current.** `trades/`: one picture of each of seven trades drawn
+in the model, which Patrick asked to see (QUESTIONS.md Q23), and the first floor
+alone. Retaken 2026-11-17 on a frozen copy of 8a77f02; no script retakes them.
