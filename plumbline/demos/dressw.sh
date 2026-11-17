@@ -86,18 +86,17 @@ echo
 echo "== One cladding to a wall: brick south, lap siding east; turned round, shingles over stone north, stucco west =="
 session "$J" one-each '
 shot                        # 01 as opened: the south wall in brick, the west in stucco
-turn 0 -10 5
-nearer 2
-shot                        # 02 lower and nearer: the courses, the corner, the panel door, the windows
-turn 0 10 5                 # the eye raised again to where it was
-xdotool key f; sleep 8      # and the whole job in view, as it opened
-turn_at 797 272 26 0 17     # most of half way round, about the middle of the ridge
+turn_at 797 330 26 0 17     # most of half way round, about the middle of the roof (not its ridge line: a line of sight there can pass over it), from the view as opened
 park
-shot                        # 03 the north wall in shingles over a stone wainscot, the east in white lap siding
-turn_at 797 272 -26 0 17    # and back
+shot                        # 02 the north wall in shingles over a stone wainscot, the east in white lap siding
+turn_at 797 330 -26 0 17    # and back
 click 930 600               # the south wall, right of its door, picked
 park
-shot                        # 04 its Finish, in the panel: what it is dressed in and the line that says so
+shot                        # 03 its Finish, in the panel: what it is dressed in and the line that says so
+esc
+turn 0 -10 5
+nearer 2
+shot                        # 04 lower and nearer: the courses, the corner, the panel door, the windows
 '
 
 echo
@@ -149,10 +148,11 @@ check("one-each: the west wall", mean("one-each/01", (480, 520, 600, 640)), lamb
 # white lap siding (pale, no colour to it). Measured, because this picture once
 # claimed these walls, showed the inside of the roof, and passed (DECISIONS.md call
 # 121): on that picture the three boxes are the dark gray of the roof and each fails.
-# (As measured on a run of the repaired steps: shingles (129, 98, 70), stone (146,
-# 142, 134), lap siding in the shade (161, 163, 164); on the old picture (70, 75, 81),
-# (66, 71, 78) and (59, 66, 74).)
-shingles, stone, lap = mean("one-each/03", (780, 560, 900, 620)), mean("one-each/03", (760, 720, 900, 760)), mean("one-each/03", (630, 560, 700, 650))
+# (As measured on a run of these steps: shingles (129, 98, 70), stone (155, 153, 147),
+# lap siding in the shade (160, 162, 163). On the picture that showed the inside of
+# the roof the three were its dark gray, and on one where the turn threw the house
+# out of view they were the ground, (186, 182, 175): each fails the shingles' test.)
+shingles, stone, lap = mean("one-each/02", (560, 620, 680, 680)), mean("one-each/02", (600, 790, 760, 830)), mean("one-each/02", (400, 560, 470, 640))
 check("one-each: the north wall, turned to", shingles, lambda c: c[0] - c[2] > 40, "red well over blue (cedar shingles)")
 check("one-each: the wainscot under it", stone, lambda c: c[0] - c[2] < 25 and 80 < c[0] < 190, "gray (stone)")
 check("one-each: the east wall", lap, lambda c: abs(c[0] - c[2]) < 25 and c[0] > 140, "pale and nearly gray (white lap siding)")

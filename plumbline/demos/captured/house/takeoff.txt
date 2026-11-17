@@ -22,6 +22,13 @@ second floor  (level-0008)
     rooms 5            1,057.95 SF  (the floor inside the walls)
     doors 4, windows 9
 
+roof  (roof-0072)
+    roof planes 4      1,408.72 SF, 14.09 SQ
+    predominant pitch  6:12
+    eave     4         144.00 LF
+    hip      4         90.00 LF
+    ridge    1         12.00 LF
+
 Supply air  (Supply Air; 20 straight pieces, 195.00 LF)
   ~ Duct     6 in round       13 pieces    88.40 LF
   ~ Duct     12 in × 8 in      3 pieces    59.20 LF

@@ -1664,7 +1664,13 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         let afresh = || {
             let (eye, way) = sight?;
             let ray = Ray3d::new(eye, Dir3::new(way).ok()?);
-            ray_cast.cast_ray(ray, &MeshRayCastSettings::default()).first().map(|(_, hit)| hit.point)
+            // Every thing along the line, and the nearest of them: left to stop at
+            // the first it met, the search stopped at the ground (whose bounds the eye
+            // stands inside) and the view turned about a place far behind the house
+            // (`dressw` on the full run of aa5084c: its measured check failed on it).
+            // The sky's dome is not a place to turn about.
+            let all = MeshRayCastSettings::default().never_early_exit();
+            ray_cast.cast_ray(ray, &all).iter().filter(|(_, hit)| hit.distance < 5000.0).min_by(|a, b| a.1.distance.total_cmp(&b.1.distance)).map(|(_, hit)| hit.point)
         };
         nearest.or_else(afresh).or_else(|| sight.and_then(|(eye, way)| on_level(eye, way, 0.0)))
     };

@@ -6721,13 +6721,48 @@ after names, "no shape to test", "480.00 hr at 8 hr/EA"; "Let go."; "look round"
 **Not reached by this judge**: B2 to B5, deleting a wall that has a price, a drawing
 scaled and traced.
 
+## The full run on aa5084c, and what it caught (2026-11-17, late)
+
+All twenty-six window demonstrations were run on a frozen copy of aa5084c, their
+pictures written to a scratch folder and copied into `demos/captured/` in one step
+after the last had ended. **Twenty-five passed, each on its first run. `dressw`
+failed, on the measured check added that day**: its turned picture showed bare
+ground, the house thrown out of view, and the script said so instead of passing (the
+check was written because that picture had once shown the inside of a roof and
+passed).
+
+Two causes, both mine. The step turned the view after tilting, zooming and
+re-framing it, so the place it pressed was not where it expected; and it pressed
+exactly on the ridge line, where a line of sight can pass over the roof to the
+ground far behind. The steps now turn straight from the view as opened, pressed on
+the middle of the roof. In the program, the place under the pointer, where it has
+to be found afresh, is the nearest thing along the line of sight and not the first
+met (changed on reasoning; this run did not show it to matter).
+
+**`dressw` then passed whole, on a frozen copy of the commit that holds this
+section, and its four `one-each` pictures were read**: the house as opened; the
+north wall in shingles over stone and the east in white lap siding; the south wall
+picked with its Finish; the courses near. Its pictures here are of that build; the
+other twenty-five sets are of aa5084c.
+
+**What is owed after it.** The change in the program since aa5084c is in one place
+(what a turn or the wheel is about when the pointer has just moved); the other
+twenty-five demonstrations have not been run on it. The 340 pictures of this run
+have not been read but for `dressw`'s and `quantityw`'s: a worker is to read them
+against what each step says, as was done for 5be55e3. The twenty-one command-line
+demonstrations last passed on the build of call 124; call 126 has not been run
+through them.
+
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 329 tests pass,
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
-commit of code. **All twenty-five window demonstrations and the twenty-one at the
-command line passed on a frozen copy of 5be55e3 (2026-11-17), each window one on its
-first run.** That is every call to 117. Call 118 (the job's money on the Job panel,
+commit of code. **Twenty-five of the twenty-six window demonstrations passed on a
+frozen copy of aa5084c (2026-11-17, late) and the twenty-sixth, `dressw`, on the
+commit after it: "The full run on aa5084c, and what it caught", just above, has
+what is and is not covered.** Before that, all twenty-five and the twenty-one at the
+command line had passed on a frozen copy of 5be55e3, each window one on its
+first run. That is every call to 117. Call 118 (the job's money on the Job panel,
 "not coded" said quietly) and calls 119 to 121 came after it and are seen by hand
 only; **call 121 changes what a drag does, so a full run is owed again.** The
 pictures of that run were read by a worker: "The pictures of the full run on
