@@ -252,6 +252,49 @@ the list in its `README.md`.
     cargo test --workspace --manifest-path src-tauri/Cargo.toml
     pnpm build:app && node tools/probe/front-door.mjs && node tools/probe/runtime-check.mjs
 
+## Who holds what (Patrick asked, 2026-11-17, as the model that built this runs out)
+
+Four seats. One mind does not sit in two of them on the same piece of work.
+
+**Patrick: the owner.** Scope, rulings, the name, real data, and the look. He reads
+the pictures in `demos/captured/` and has all along: when he says he does not see it,
+it is not there, and when a question is his (`plumbline/QUESTIONS.md`) a ruling from
+him is a few words and ends days of a working assumption. Put the question to him
+early and plainly; do not build round it.
+
+**The lead: one session at a time, the strongest model on hand.** It holds what
+breaks everything else when it is wrong, and it is never delegated:
+- what a number means: the model's rules, one arithmetic for one number, Known,
+  Assumed and Unknown, how a quantity is kept and rounded, what is in the price;
+- the saved job and every file written out (the format is a promise to old jobs);
+- every decision in `plumbline/DECISIONS.md`, written before an expectation moves;
+- the gates and the expectations of tests and demonstrations (never loosened);
+- reading what a judge found and deciding what is so;
+- what goes in one commit, and in what order, when two risks could meet;
+- the truth of `plumbline/STATUS.md`: what was run, on which commit, and what was
+  not. Nobody else says "done".
+
+**Workers: any capable model, given a contract.** A piece of work can be handed off
+when it has all four: the files it may touch; a check that already exists or is
+written first (a test, a demonstration with its figures worked by hand, a gate); a
+rule that it changes no number, no meaning, no file format and no expectation; and a
+result the lead can accept by reading a diff and its pictures. That covers most of
+what is owed: a division's assemblies, items and prices as tables (they arrive
+Assumed); a shape for a thing or a detail of the house, one file each; the wording
+pass against a list the lead has decided; running the window demonstrations and
+reading their pictures; mechanical changes (the rename to BuildOS, splitting a long
+file); an installer; a reader or a writer for a file behind a table the lead has
+fixed; a survey of what others do, from their own pages.
+
+**Judges: never the mind that built it.** They try to break it cold and write as
+they go. They find; they do not decide.
+
+**Where the cost went, so it is not paid again.** Most of the lead's effort on this
+branch was not judgment: it was waiting on window runs at a frame a second, reading
+contact sheets, and keeping the record. All of that is a worker's. The largest single
+saving is a machine with a real graphics card and a screen: a check that takes hours
+here takes minutes there, and feel can be judged at all.
+
 ## For whoever builds next
 
 Patrick asked for this section and named Opus 5.5 as the model that builds next. It is

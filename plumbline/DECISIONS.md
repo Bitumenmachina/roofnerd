@@ -4102,3 +4102,24 @@ jobs and models already written have to keep reading.
 web address). That is a search outside this machine with the product's name in it,
 and it is Patrick's to ask for. The pictures in `demos/captured/` taken before today
 show the old wordmark and are stale in that one respect until the next full run.
+
+### Call 116. Patrick, 2026-11-17: what the lead holds and what is handed off (and a correction)
+
+His words: "I will be out of fable 5.2 context what do you feel you need to control vs
+what can be delegated. Think big picture framework. Do you not think I've been
+looking at all the screenshots ? It's not polished but if what you were spending
+millions of tokens on and 5-6 days with two resets I would have stopped this a long
+time ago".
+
+**A correction to what the builder had said.** It had told him nobody real had seen
+the program and that it lacked his eyes. He has read the pictures all along. What is
+true is narrower: nobody has driven it on a machine with a real graphics card and a
+screen, and it has not been set against a real estimate. The first is a matter of
+where it is run; the second waits on a sanitized estimate in `refs/`.
+
+**The framework** is in `CLAUDE.md`, "Who holds what": the owner, the lead, workers
+and judges, with the test for whether a piece of work can be handed off (bounded
+files, a check that exists first, no change to a number, a meaning, a format or an
+expectation, and a result that can be accepted from a diff and its pictures). It is
+there and not here because it is how the work is done, and that file is read first
+every session.
