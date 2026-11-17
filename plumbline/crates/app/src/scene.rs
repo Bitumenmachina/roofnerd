@@ -171,6 +171,12 @@ pub const SKY_GLOW: f32 = 1.7;
 /// overhead in it, lifted. (The pale alone folded to a neutral grey; with a fifth of
 /// the blue it was still read as "a grey fog, no sky colour and no horizon": J22B-2,
 /// J22B-33. The far ground fades into this, so distance reads blue, as it does.)
+/// The colour the far ground fades into. Set by measuring the screen, so that it
+/// meets the sky at the horizon without a line: the sky's own horizon colour, given to
+/// the haze as it stands, came out a deeper blue than the sky above it ((171, 196,
+/// 222) under (184, 196, 211)), a hard band across every view (J27B-1; call 127).
+const HAZE: LinearRgba = LinearRgba::rgb(0.910, 1.024, 1.235);
+
 fn sky_low() -> LinearRgba {
     let (pale, blue) = (theme::sky_horizon().to_linear(), theme::sky_overhead().to_linear());
     let mixed = |a: f32, b: f32| a + (b - a) * 0.5;
@@ -219,7 +225,9 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
     let over = materials.add(StandardMaterial { base_color: Color::WHITE, unlit: true, cull_mode: None, fog_enabled: false, ..default() });
     commands.spawn((Mesh3d(meshes.add(dome)), MeshMaterial3d(over), Transform::from_scale(Vec3::splat(15_000.0)), bevy::light::NotShadowCaster, Pickable::IGNORE, Sky));
     // The ground far off fades into the sky at the horizon, in the horizon's own light.
-    let fog = DistanceFog { color: Color::from(sky_low()), falloff: FogFalloff::Linear { start: 4000.0, end: 9000.0 }, ..default() };
+    // PLUMBLINE_FOG="r,g,b" (linear) tries another colour for the far haze, for setting it by eye.
+    let haze = std::env::var("PLUMBLINE_FOG").ok().and_then(|v| { let f: Vec<f32> = v.split(',').filter_map(|x| x.trim().parse().ok()).collect(); (f.len() == 3).then(|| LinearRgba::rgb(f[0], f[1], f[2])) }).unwrap_or(HAZE);
+    let fog = DistanceFog { color: Color::from(haze), falloff: FogFalloff::Linear { start: 4000.0, end: 9000.0 }, ..default() };
     if graphics.full {
         // Ambient occlusion darkens where surfaces meet, and the picture is steadied over
         // several frames instead of being left jagged.

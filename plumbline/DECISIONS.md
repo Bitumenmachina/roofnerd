@@ -4379,3 +4379,21 @@ a material by a coverage keeps its coverage; this changes the quantity it covers
   that are in the item library and were never set down. An item is a thing that can
   be placed, not a thing in the building: it is on the list only through what is
   set down from it.
+
+### Call 127. The far ground fades into the sky without a line (2026-11-17; J27B-1, VISUAL.md C2)
+
+Every 3D view had a hard edge across it about an eighth of the way down: pale sky
+above, a band of deeper blue below, fading down to the ground. The judge of the look
+named it second of the ten things that would change the owner's mind, and it is the
+first thing seen. Measured on the screen: sky at the horizon (184, 196, 211); the far
+ground's haze (171, 196, 222). The haze had been given the colour the sky's dome is
+given at its foot, and the two do not come to the screen alike (why is not found:
+moving the sky's lift from the dome's corner colours to its material changed
+nothing, and was put back).
+
+The haze's colour is now set by measuring the screen: tried at five colours, and set
+between the two nearest (`HAZE` in `scene.rs`). With it the haze reads (188, 195, 207)
+under a sky of (184, 196, 211), and there is no line. `PLUMBLINE_FOG="r,g,b"` tries
+another, for whoever sets it by eye on a real screen. It is a matched pair of
+numbers, not a cause understood: if the sky's colours are changed, the haze is
+measured again.

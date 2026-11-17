@@ -6685,7 +6685,7 @@ where each stands:**
 | # | Finding | Where it stands |
 |---|---|---|
 | 1 | The house reads as a box with a hat: no porch, step, gutter, soffit or chimney (J27B-3; D5, D8) | open: the same since the twenty-second judgment; a gutter is priced (144 LF) and none is drawn, which breaks "what it is dressed in is what the estimate prices" the other way round |
-| 2 | A hard grey band across the top of the sky on every 3D view, at about 120 dots down (J27B-1; C2) | **so: it is in every picture in `demos/captured/`.** Open; to be found and removed first, since it is the first thing seen. Measured on `dress/one-each/01-model.png`: above 117 dots down the colour is (184, 196, 211), below it (171, 196, 222), the same edge across the whole width and through the gaps between the panels, so it is in the scene and not a panel. Not yet found: the likeliest cause is the far edge of the ground (or the far limit of what the eye draws) against what is behind it, the two folded to different colours; `scene.rs` `setup` (the dome, `sky_low`, the fog) and `place_camera` (the fog's start and end) are where to look |
+| 2 | A hard grey band across the top of the sky on every 3D view, at about 120 dots down (J27B-1; C2) | **So. Fixed (call 127), seen.** It was the far ground's haze, a deeper blue on screen ((171, 196, 222)) than the sky at the horizon above it ((184, 196, 211)). The haze's colour is now set by measuring the screen: (188, 195, 207) under (184, 196, 211), and no line. Why the two came out unlike is not found; it is a matched pair of numbers. `dressw`, `tradesw` and `glassw`, the three that measure colours, pass on a frozen copy of the commit with it, and their pictures here are of that build; **every other picture in `demos/captured/` still shows the band** until its demonstration is run again |
 | 3 | Ducts are saturated blue tubes and equipment is plain boxes (J27B-6, -33; C3, D6) | open |
 | 4 | The wheel over the left panel, once its list ended, zoomed the house away (J27B-30; B7) | open, not checked: it may be the slow frame (the wheel arriving in the frame the pointer did, before the program knew it was over a panel), which call 121 found in another place |
 | 5 | Walls of red: a thing's cost lines each "unknown, no price entered", the same open items on every tab (J27B-25, -42; A6) | open |
@@ -6745,13 +6745,61 @@ north wall in shingles over stone and the east in white lap siding; the south wa
 picked with its Finish; the courses near. Its pictures here are of that build; the
 other twenty-five sets are of aa5084c.
 
-**What is owed after it.** The change in the program since aa5084c is in one place
-(what a turn or the wheel is about when the pointer has just moved); the other
-twenty-five demonstrations have not been run on it. The 340 pictures of this run
-have not been read but for `dressw`'s and `quantityw`'s: a worker is to read them
-against what each step says, as was done for 5be55e3. The twenty-one command-line
-demonstrations last passed on the build of call 124; call 126 has not been run
-through them.
+**What is owed after it.** The changes in the program since aa5084c are in two
+places (what a turn or the wheel is about when the pointer has just moved; and the
+colour of the far haze, call 127, after which `dressw`, `tradesw` and `glassw` were
+run and pass); the other
+twenty-five demonstrations have not been run on it. The pictures of this run were
+then read by a worker (the next section). The twenty-one command-line demonstrations
+pass on a frozen copy of 52efdc7, the commit after aa5084c.
+
+## The pictures of the run on aa5084c, read by a worker (2026-11-17, late)
+
+`research/pictures-read-aa5084c.md`. A worker on another model read twenty-four sets
+(not `dress` and `quantityw`, which the lead had read) against what each step says,
+then went down the thirty findings of the earlier reading and the fixes claimed
+since. **It is not a clean bill: most of the thirty are still there.**
+
+**Fixes it saw in the pictures**: "no price" where a row has none (17, gone); the
+room's outline sentence (23, gone); a roof's Where on the field list (20, gone); a
+measured reading in amber; "Detail comes to"; the renamed item called by its new
+name in the lists (but for one line of where a value came from, which is the record
+of what was typed); an open end's place with its units; "not coded" quiet on the
+model's panels.
+
+**Fixes only partly there**: west and south are said as W and S on panels and under
+the pointer, and a roof's table of corners still writes "-0' 6"" (d2/04-07); a
+worked-out height is 9' 0" and a typed one beside it is still "9 ft" as typed, so
+one panel has both; the sheet window still marks "not coded" in red.
+
+**Not seen at all: the Allowances row** (no demonstration has a thing priced by an
+allowance alone with the By division table on screen; it is tested at the model and
+needs a demonstration of its own).
+
+**New, or seen newly, worst first**:
+1. `field/04, 06`: after one laser reading the screen says "A second reading came
+   straight after that one and was not used." Either the demonstration sends two or
+   the program counts one as two; not yet looked at.
+2. `first/02` and `plan/04`: what the worker took for the same sheet and the same
+   41' 3" dimension gives "1" = 7' 1"" in one and "1/8" = 1'-0"" in the other, about
+   12 % apart, and nothing warns. **To be checked before anything else in the
+   tracing path**: if they are the same page, one demonstration scales from the
+   wrong two points and its lengths are 12 % out while agreeing with themselves.
+3. `d4`, `d2`, `d5`: the old roof sample's lines have no cost type, so its Estimate
+   says "Price no figure" beside a Budget of $22,033.70 in allowances (the earlier
+   3 and 7, still there).
+4. Height written two ways on one panel; four-place quantities on lines a person
+   edits; "2 hr/SQ" shown as "0.02 hr/SF" (the earlier 15 and 16, still there).
+5. A thing's name tag hiding the thing (`turnw/02-04`, `draw/10`); labels on the
+   plan over one another (`house/06-07`); a selected plane on the far side of a
+   roof; a copper roof drawn grey (earlier 5, 6, 14, still there).
+6. Words still on screen: "buildingstorey", "#23 in the file", "IFC4 ... Not in it:
+   2 x type", "snap to", a temporary folder's name in the file list.
+
+**Still there from the thirty, as the worker read them**: 3 to 7, 12 to 16, 19, 21,
+22, 24 to 28, 30. Gone: 17, 20, 23, and most of 8, 9, 10, 29. Not looked at by it: 1
+and 18 (the `dress` set, read by the lead: fixed), 11 (old pictures, now named as
+old in the folder's note; `trades/` retaken).
 
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
