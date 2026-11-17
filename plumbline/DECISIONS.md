@@ -4345,3 +4345,18 @@ by the allowances that rest on something not Known.
   squares, predominant pitch and its eaves, hips, ridges and valleys by length.
 - **On the field list** a room reads "Check where it is" (it read "Check its a point
   inside it").
+
+### Call 125. What a line is priced by is changed on the line (2026-11-17; J27A-16)
+
+The rule is that a formula is visible and editable on the line. In the window it was
+visible ("Quantity 298.00 SF, net area") and could be set only when the line was
+added; after that only the command line could change it, and the veteran judge
+stopped there ("I could not find how to change what a quantity is made of").
+
+On the estimate sheet a line's quantity is now a field, as its unit cost is: a click
+opens it with what the line is priced by now, in words ("net area"), and what is
+typed replaces it ("face area x 1.10", "12", "each"). It is the same setting the
+command line makes (`set ... quantity ... --line`), through the same check: a name
+that is not a figure of the thing is refused with the figures it has. Entered in the
+window it is Assumed, "entered on screen", as a price typed there is. A line made of
+a material by a coverage keeps its coverage; this changes the quantity it covers.

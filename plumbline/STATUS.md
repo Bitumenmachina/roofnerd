@@ -6601,9 +6601,19 @@ while it worked, already held money findings that needed no window to fix:
   command line's `takeoff` has each roof in it (the sample's: 4 planes, 1,408.72 SF,
   14.09 SQ, 6:12, eaves 144.00 LF, hips 90.00 LF, ridge 12.00 LF); on the field
   list a room reads "Check where it is".
-- **Still open from its notes so far**: J27A-16, what a line's quantity is made of
-  cannot be changed in the window once the line is on (the command line can; the
-  rule is that a formula is editable on the line, so this is owed); J27A-18, after a
+- **J27A-16: what a line is priced by could not be changed in the window. Built
+  (call 125), demonstrated, seen.** On the estimate sheet a line's quantity is a
+  field, as its unit cost is: it opens holding what the line is priced by now and is
+  typed over. `demos/quantityw.sh`, a twenty-sixth window demonstration, written
+  with its figures worked by hand (one wall 20 ft by 9 ft, lap siding by net area
+  at $4.50: 180.00 SF, $810.00; by "face area x 1.10": 198.00 SF, $891.00; "roof
+  area" refused with the figures a wall has), **passed on its first run on a frozen
+  copy of this build, and its six pictures were read**: the field open on "net
+  area", the line at 198.00 SF and $891.00 with Division 7 and the job cost the
+  same, and the refusal in red with the field still open on what was typed. (It was
+  built before its demonstration was written, which is the wrong order; the
+  figures were worked before either was run.)
+- **Still open from its notes so far**: J27A-18, after a
   gable the message gives what came out and then a job cost that went up, and leaves
   the reader to subtract; a line added by hand lands in no division; J27A-8, sheathing
   by the plane and shingles with no waste (PROPOSALS.md 29's neighbour, J25A-11);

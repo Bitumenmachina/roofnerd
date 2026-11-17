@@ -1517,6 +1517,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
         Entry::Move => format!("Move the eave of {name}"),
         Entry::Allowance => format!("Allowance for {name}"),
         Entry::UnitCost => format!("Unit cost of {:?}", doc.entry_line.clone().unwrap_or_default()),
+        Entry::Quantity => format!("What {:?} is priced by", doc.entry_line.clone().unwrap_or_default()),
         Entry::StretchOut => format!("Stretch-out of {:?}", doc.entry_line.clone().unwrap_or_default()),
         Entry::Rate => format!("Production rate of {:?}", doc.entry_line.clone().unwrap_or_default()),
         Entry::Division => format!("Division of {:?}", doc.entry_line.clone().unwrap_or_default()),
@@ -1545,6 +1546,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
         Entry::Move => "Out is +, like 1' 6\" or -6 in",
         Entry::Allowance => "Dollars per SF or LF, like 28 or $28.00",
         Entry::UnitCost => "Dollars for what the line is priced in, like 31.50",
+        Entry::Quantity => "A figure of the thing, a number, or the two worked together, like face area x 1.10",
         Entry::StretchOut => "The girth of the piece, like 24 in or 2 ft",
         Entry::Rate => "How fast your crew does it, like 40 SF/hr or 0.5 hr/EA",
         Entry::Division => "Its number, 1 to 16, like 7 for Thermal and Moisture Protection",
@@ -1870,7 +1872,7 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             press(r, "Labor on or off", "L", KeyCode::KeyL);
         }
     });
-    if matches!(doc.entry, Some((Entry::Pitch | Entry::Move | Entry::Allowance | Entry::UnitCost | Entry::StretchOut | Entry::Rate | Entry::Division | Entry::Material, _))) {
+    if matches!(doc.entry, Some((Entry::Pitch | Entry::Move | Entry::Allowance | Entry::UnitCost | Entry::Quantity | Entry::StretchOut | Entry::Rate | Entry::Division | Entry::Material, _))) {
         entry_box(p, fonts, doc, snap);
     }
     // A cost line being added to this thing: three fields, and under them the thing's

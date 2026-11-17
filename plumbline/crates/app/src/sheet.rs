@@ -1046,7 +1046,21 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 // To the places it is priced at (`SheetLine::priced_places`): hours to two,
                 // as a time sheet has them.
                 let places = l.priced_places(2);
-                cell(r, 96.0, true, |c| words(c, fonts, amount(l.priced.value, places, &l.priced.unit), 12.5, Weight::Regular, theme::status_ink(l.priced.status)));
+                cell(r, 96.0, true, |c| {
+                    // What the line is priced by is changed here, as its price is
+                    // beside it (call 125): the field opens with what it is priced by
+                    // now, in words.
+                    let (path, line) = (l.path.clone(), l.description.clone());
+                    editable(c, fonts, format!("Quantity of {} on {}", l.description, l.element), amount(l.priced.value, places, &l.priced.unit), theme::status_ink(l.priced.status), typing(Entry::Quantity), move |doc| {
+                        doc.select(&path);
+                        let now = doc.job.find(&path).and_then(|e| doc.job.world.get::<plumbline_world::Cost>(e)).and_then(|c| c.lines.iter().find(|x| x.description == line).map(|x| x.quantity.replace('_', " "))).unwrap_or_default();
+                        doc.open(Entry::Quantity, &now);
+                        // It opens holding what the line is priced by now: the first
+                        // key typed replaces that, as typing over a filled field does.
+                        doc.fresh = true;
+                        doc.entry_line = Some(line.clone());
+                    });
+                });
                 cell(r, 108.0, true, |c| {
                     let (said, ink) = match l.unit_cost.as_ref().and_then(|v| v.value.map(|x| (x, v))) {
                         Some((x, v)) => (format!("${}/{}", view::rate(x), v.unit.trim_start_matches("$/")), theme::status_ink(v.status)),

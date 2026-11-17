@@ -700,10 +700,11 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
             Some(true) => match field {
                 // A price typed here is entered as Assumed, like everything set in this
                 // window: there is nowhere in it yet to say where a figure came from.
-                Entry::Allowance | Entry::UnitCost | Entry::StretchOut | Entry::Rate => {
+                Entry::Allowance | Entry::UnitCost | Entry::Quantity | Entry::StretchOut | Entry::Rate => {
                     let what = match field {
                         Entry::Allowance => "allowance",
                         Entry::UnitCost => "unit_cost",
+                        Entry::Quantity => "quantity",
                         Entry::Rate => "order",
                         _ => "stretch_out",
                     };
@@ -716,6 +717,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                 doc.edit(match field {
                                     Entry::Allowance => "Allowance",
                                     Entry::UnitCost => "Unit cost",
+                                    Entry::Quantity => "Quantity",
                                     Entry::Rate => "Production rate",
                                     _ => "Stretch-out",
                                 });
@@ -725,7 +727,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                 // is answered "$24.00", as the line then shows it.
                                 let typed = text.trim();
                                 let said = match typed.parse::<f64>() {
-                                    Ok(x) if !matches!(field, Entry::StretchOut | Entry::Rate) => plumbline_world::view::money(x),
+                                    Ok(x) if !matches!(field, Entry::StretchOut | Entry::Rate | Entry::Quantity) => plumbline_world::view::money(x),
                                     _ => typed.to_string(),
                                 };
                                 // A roof is priced once: the same line on the roof's other
@@ -763,7 +765,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                 doc.say(Tone::Done, format!("{sel}: {}{of} set to {said}.{also}", if field == Entry::Rate { "production rate".to_string() } else { what.replace('_', " ") }));
                             }
                             Err(why) => {
-                                tools::cant(doc, match field { Entry::StretchOut => "set that stretch-out", Entry::Rate => "set that production rate", _ => "set that price" }, why);
+                                tools::cant(doc, match field { Entry::StretchOut => "set that stretch-out", Entry::Rate => "set that production rate", Entry::Quantity => "price it by that", _ => "set that price" }, why);
                                 // The field stays open on the same line with what was
                                 // typed, to be put right: typing replaces it. (It
                                 // closed, and the "0" typed next to correct "-12" took

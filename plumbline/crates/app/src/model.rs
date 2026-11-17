@@ -130,6 +130,9 @@ pub enum Entry {
     Allowance,
     /// The price of the selected element's cost line.
     UnitCost,
+    /// What a cost line is priced by: its quantity, as a figure of the thing or a
+    /// formula on them (call 125).
+    Quantity,
     /// The stretch-out of the selected element's cost line.
     StretchOut,
     /// How fast the in-house work of the selected element's cost line goes: "40 SF/hr".
