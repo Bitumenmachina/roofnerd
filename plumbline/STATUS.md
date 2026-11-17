@@ -6561,8 +6561,8 @@ build). **The other twenty-four have not been run since, and a full run is owed.
 
 Two judges on another model were started on ebcc649: part A, a veteran estimator's
 first day and the money path (`research/judgment-27a-brief.md`); part B, the look and
-the words (`research/judgment-27b-brief.md`). **Part B has reported (below: both
-items fail). Part A had not when this was written.** Part A's notes, read
+the words (`research/judgment-27b-brief.md`). **Both have reported (below): item 10
+passes; items 9, 11 and 12 fail.** Part A's notes, read
 while it worked, already held money findings that needed no window to fix:
 
 - **J27A-5, -10, -15: an allowance folded into "in no division".** A section headed
@@ -6621,6 +6621,50 @@ while it worked, already held money findings that needed no window to fix:
 
 All twenty-one command-line demonstrations pass on a frozen copy of this build
 (after call 124 too).
+
+### Part A, a veteran's first day and the money path (on ebcc649): item 10 PASSES, item 12 FAILS
+
+`research/judgment-27a-notes.md` (J27A-1 to -31). **Item 10 passes**: from an empty
+job and the public plan, in the window only and without the README, the judge made a
+level, picked the page from a list, scaled it from 41' 3", drew six walls by typed
+lengths, a door and four windows, the floor, three rooms, a hip roof and a duct,
+priced them with the starter assemblies, unit costs, an allowance and labor in
+hours, set overhead and profit, read the field list, measured the eave height from
+it and saved: walls 166.33 LF, floor 986.56 SF, roof 1,240.96 SF, price $18,753.16,
+**every figure worked by hand and agreeing on the top bar, the sheet, the Job panel
+and at the command line.** Its one stop was a door priced "each" (J27A-9), cleared
+by the screen's own message. **Item 12 fails** on J27A-28.
+
+| Finding | Where it stands |
+|---|---|
+| **J27A-28 (decides item 12)**: a floor carried a $6.50/SF allowance, $6,412.67. Add cost line on it, left unpriced: the price fell from $21,099.96 to $13,481.70 and the screen said only "Added ... with no price yet" | see below this table |
+| J27A-11: the field list left the allowance out of every dollar figure | fixed, tested (call 123) |
+| **J27A-22**: a priced roof deleted, then Undo: the money came back and the roof did not, until the job was closed and opened | see below this table |
+| J27A-23: a wall changed to brick veneer still drawn in lap siding; a gable's triangle of wall is an open hole | open: the second is PROPOSALS.md 29; the first to be seen |
+| J27A-29: the workbook's "Suppliers, side by side" sheet empty after two suppliers' lists were brought in | open |
+| J27A-19: overhead 100 typed for 10 taken without a word | fixed, tested (call 124) |
+| J27A-16: what a line is priced by could not be changed in the window | built, demonstrated, seen (call 125) |
+| J27A-20: nothing on the model picks the roof | fixed, not seen (call 124) |
+| J27A-17: "face area x 0.10" refused | fixed, tested (call 124); the retyping going to another field after the refusal is open |
+| J27A-14, -4, -7: cents between what is shown and what is multiplied | QUESTIONS.md Q29 |
+| J27A-10, -5, -15: an allowance folded into "in no division" | fixed, tested (call 123) |
+| J27A-9, -13: "each"; the roof missing from `takeoff` | fixed, tested (call 124) |
+| J27A-18, -21: the gable message and the price-list message hard to follow | open |
+| J27A-6: "Not sav" | fixed, not seen |
+| J27A-12, -27: "Check its a point inside it" (fixed, call 124); "its turned", "(type)"; **the field list asks a carpenter to measure 21 library items never set down**; roof rows with no Where (fixed, call 122) | the library items on the field list are open and want fixing next: an item nobody has set down is not in the building |
+| J27A-24, -25, -26, -30, -31: "is one of it"; "a outdoor unit"; a renamed item answering to its old name (fixed since, tested); "wall-0005" in the workbook; "prices vary" on a line with no price (fixed, call 122) | the first, second and fourth open |
+| J27A-8: sheathing by the plane, shingles with no waste | open (J25A-11) |
+| J27A-1, -2: the view going back to the whole sheet after a scale is set; "rests on their heights" (reworded, call 122) | the first open |
+
+**What held, by the judge's own trying**: nonsense in every money field refused in
+plain words with nothing changed; labor off and on, and undo and redo across a
+price, to the cent in three places; an assembly changed, a priced wall and a priced
+roof deleted, each saying to the cent what came out; Steeper, Flatter, the eave
+moved and a gable each saying "was X and is Y"; a supplier's list brought in with
+its name, pricing what it matched and saying what it left and why, a second
+changing nothing and saying so; items set down, turned, measured, written out,
+changed by hand and brought back, with the one set down following; the workbook
+worked again in another program to the window's price; save, close and open.
 
 ### Part B, the look and the words (on ebcc649): both FAIL, a fourth time
 
