@@ -6685,7 +6685,7 @@ where each stands:**
 | # | Finding | Where it stands |
 |---|---|---|
 | 1 | The house reads as a box with a hat: no porch, step, gutter, soffit or chimney (J27B-3; D5, D8) | open: the same since the twenty-second judgment; a gutter is priced (144 LF) and none is drawn, which breaks "what it is dressed in is what the estimate prices" the other way round |
-| 2 | A hard grey band across the top of the sky on every 3D view, at about 120 dots down (J27B-1; C2) | **So. Fixed (call 127), seen.** It was the far ground's haze, a deeper blue on screen ((171, 196, 222)) than the sky at the horizon above it ((184, 196, 211)). The haze's colour is now set by measuring the screen: (188, 195, 207) under (184, 196, 211), and no line. Why the two came out unlike is not found; it is a matched pair of numbers. `dressw`, `tradesw` and `glassw`, the three that measure colours, pass on a frozen copy of the commit with it, and their pictures here are of that build; **every other picture in `demos/captured/` still shows the band** until its demonstration is run again |
+| 2 | A hard grey band across the top of the sky on every 3D view, at about 120 dots down (J27B-1; C2) | **So. Much reduced (call 127), not gone** (the builder first wrote "no line"; a worker's reading of the next run measured it in twelve views, about 4 parts in 255 where it had been 13, and a line when enlarged). It was the far ground's haze, a deeper blue on screen ((171, 196, 222)) than the sky at the horizon above it ((184, 196, 211)). The haze's colour is now set by measuring the screen: (188, 195, 207) under (184, 196, 211). Why the two came out unlike is not found; it is a matched pair of numbers. `dressw`, `tradesw` and `glassw`, the three that measure colours, pass on a frozen copy of the commit with it, and their pictures here are of that build; **every other picture in `demos/captured/` still shows the band** until its demonstration is run again |
 | 3 | Ducts are saturated blue tubes and equipment is plain boxes (J27B-6, -33; C3, D6) | open |
 | 4 | The wheel over the left panel, once its list ended, zoomed the house away (J27B-30; B7) | open, not checked: it may be the slow frame (the wheel arriving in the frame the pointer did, before the program knew it was over a panel), which call 121 found in another place |
 | 5 | Walls of red: a thing's cost lines each "unknown, no price entered", the same open items on every tab (J27B-25, -42; A6) | open |
@@ -6903,8 +6903,48 @@ copied into `demos/captured/` in one step. Nothing in the window, the model, the
 workbook or the BIM reader has changed since that build (the commits after it add
 the scan import, which is in the plan reader and the command line); so every
 picture in `demos/captured/` written by a script is now of the window as it
-stands, with the band across the sky gone. **These pictures have not been read**:
-a worker was given them the same morning, and what it finds goes below.
+stands.
+
+**The pictures were read by a worker the same morning**
+(`research/pictures-read-de8cc5b.md`): every model picture of the 26 sets and about
+twenty sheet pictures opened, the rest compared by their dots. What it found, as it
+came:
+
+- **Seen, that had only been tested**: the Job panel opening on the price, job
+  cost, overhead and profit, then By division, and the rows adding to the job cost
+  in four jobs it worked by hand (the sample house: sixteen rows, $394,677.48);
+  Saved or Not saved whole on the top bar in every picture; `firstw`'s sheet said
+  to be at 1/8" = 1'-0" and its four walls on the drawn walls, within a few dots;
+  `dressw`'s turned picture showing shingles over stone and lap siding, and its
+  picked wall with its Finish; a measured reading in amber; `quantityw`'s field
+  and its 198.00 SF and $891.00.
+- **The band across the sky is fainter, not gone** (its first finding; call 127 is
+  corrected).
+- **`field/04`**: after one reading the amber message still ends "A second reading
+  came straight after that one and was not used." Not yet looked at: either the
+  demonstration's laser sends two or the program counts one as two.
+- **`itemnew/05`**: the open items still quote "Wall oven, 27 in: typed in the
+  window" after the rename. That is the record of where the size came from, which
+  names the item as it was called when typed; a person reads it as the old name
+  still in use. Open (words).
+- **A minus sign before feet and inches** is still on a roof's table of corners
+  ("NORTH -0' 6"", `d2/04-07`) and on a level below the datum ("foundation -4' 0"").
+  The first is owed (call 122 reached the panels and the pointer, not that table);
+  the second is a height, where the sign is meant.
+- **Forms opening below the fold**: New item (`itemnew/01`), an item's Change
+  (`itemlib/01`), the Items list (`items/01`).
+- **File and software words**, widely: file names with their endings, a temporary
+  folder's name, "IFC4", "buildingstorey (as the model calls it) #23 in the file",
+  "1 cell holds a formula", "Estimate tab", "(PDF, PNG or JPEG)".
+- **Smaller**: `price/07`, a price set and the wall's cost still "no figure" with no
+  word why on that screen; `build/02-03`, a floor that changes nothing on the plan
+  and one of two rooms labelled; `carry/03`, the panel's position and the pointer's
+  read-out a few sixteenths apart; messages left over from the step before
+  (`gablew/01`, `glass/04-07`, `roofw/04`); coloured streaks of the model showing
+  through frosted panels under words; lengths on the plan lying on the wall lines;
+  "Center, along the wall 4.4167 ft"; `quantity "roof area" uses "roof area"`.
+
+Nothing it found is a wrong figure. None of it is fixed yet.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
@@ -6942,8 +6982,10 @@ every full run, and where a picture claims a view, measure it in the script.
 
 1. (Done the same night: `demos/firstw.sh` scaled its sheet 12 % small; repaired by
    a worker and accepted. The section just above, 2.)
-2. (Done: all twenty-six pass on the window as it stands. Its pictures are to be
-   read by a worker; if no reading is recorded above this section, that is owed.)
+2. (Done: all twenty-six pass on the window as it stands, and their pictures were
+   read: the section above. What that reading found is owed: the "second reading"
+   message after one reading; the minus sign on a roof's corners; forms that open
+   below the fold; the band across the sky, fainter and still there.)
 3. **Items 9, 11 and 12 judged again**, by agents that did not build it, told to
    write as they go. The briefs are `research/judgment-27a-brief.md` and `-27b-`.
 4. **The look** (Patrick's own test is his eyes). In the judge's order: the house

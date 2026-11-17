@@ -4452,3 +4452,15 @@ same pipe, and broke it in two places a phone's scan would. Three things changed
 
 It is a made-up scan built to be awkward; it is not a phone's scan, and stands in
 for one only until one is tried.
+
+**Call 127, corrected (2026-11-18).** "There is no line" was the builder's reading of
+one crop. A worker reading the next full run's pictures measured twelve 3D views and
+found the edge still there in each, fainter: about 4 parts in 255 across two rows
+where it had been 13, and visible as a line when a picture is enlarged. So: **much
+reduced, not gone.** Two nearer colours were then tried on the same frozen build
+with `PLUMBLINE_FOG`: (0.9025, 1.033, 1.26) gives haze (188, 196, 208) and (0.895,
+1.045, 1.29) gives (187, 196, 209) under a sky of (184, 196, 211). The constant was
+not changed again: every picture in `demos/captured/` would be of another build
+than the program, and the gain is two parts in 255. The next change to it goes with
+a full run; and the cause (why the haze and the sky's foot, given one colour, come
+to the screen as two) is still not found, which is the real repair.
