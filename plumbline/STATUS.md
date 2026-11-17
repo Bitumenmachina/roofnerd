@@ -6499,6 +6499,15 @@ was. A door's swing is not drawn: the job holds no hand for a door, and PROPOSAL
 start sixteen rows lower on a job priced in every division; no demonstration clicks
 them (they use the O and R keys), and none has been run on this build.
 
+**Call 119, the same day (not in any demonstration).** On a panel a worked-out
+dimension is written in feet and inches (a wall's Height reads 10' 0", seen by hand
+on the sample house; it read 10.00 ft), and a quantity keeps its decimals (40.00 LF,
+329.99 SF). A thing's cost rows read "Detail comes to", "Detail, all in",
+"Allowance comes to", "Detail over allowance" (they read "Comes to, detail" and so
+on; built, tests pass, **not seen**). The twenty-seventh pair of judges was started
+on ebcc649, the commit before these two changes: what they say of "10.00 ft" and
+"Comes to, detail" is of that build.
+
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 324 tests pass,

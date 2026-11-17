@@ -116,7 +116,17 @@ pub fn total(sum: &view::Sum) -> String {
 
 pub fn pretty(label: &str) -> String {
     // What a thing's assembly is is kept in the job under its older name.
-    let s = if label == "condition" { "assembly".to_string() } else { label.replace('_', " ") };
+    // What a thing's lines come to is said as an estimator says it (call 119): the
+    // job keeps these under "comes to, ...".
+    let s = match label {
+        "condition" => "assembly".to_string(),
+        "comes to, allowance" => "allowance comes to".to_string(),
+        "comes to, detail" => "detail comes to".to_string(),
+        "comes to, detail rate" => "detail, all in".to_string(),
+        "comes to, difference" => "detail over allowance".to_string(),
+        "comes to, difference percent" => "detail over allowance, %".to_string(),
+        _ => label.replace('_', " "),
+    };
     let mut c = s.chars();
     match c.next() {
         Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
@@ -124,9 +134,13 @@ pub fn pretty(label: &str) -> String {
     }
 }
 
-/// A row's value as the panels show it: a derived figure to two places, a pitch as 6:12.
+/// A row's value as the panels show it: a dimension in feet and inches, any other figure
+/// to two places, a pitch as 6:12.
 pub fn shown(row: &view::Row) -> String {
     match row.number {
+        // A dimension is written as a tape reads it; a quantity keeps its decimals
+        // (call 119).
+        Some(x) if row.unit == "ft" => plumbline_world::units::feet_as_ft_in(x, 16),
         Some(x) => amount(Some(x), if row.unit == "EA" { 0 } else { 2 }, &row.unit),
         None => places(&theme::trade(&row.text)),
     }

@@ -4213,3 +4213,25 @@ Later the same day, the smaller three, each in part:
    set is shown as before.
 3. **A door's swing is not drawn**, because the job does not hold a door's hand and a
    swing drawn without one is made up (the fourth fixed rule). It is PROPOSALS.md 31.
+
+### Call 119. A dimension is written in feet and inches; a quantity keeps its decimals (2026-11-17; call 117's fourth point, and the words judges' "lengths written four ways in one panel")
+
+One panel wrote a wall's height as "10.00 ft", its line as "E 0' 0" to E 40' 0"" and
+its wainscot "to 3' 0"". The trade writes two things two ways and no others:
+
+- **A dimension** (a height, a width, a thickness, an elevation, a length read off a
+  plan: anything whose unit is ft) is written as a tape reads it, feet and inches to
+  the sixteenth: 10' 0", 6' 8", 23' 11". It was decimal feet to two places.
+- **A quantity** that is priced or added up (LF, SF, SQ, CY, EA) is written as a
+  decimal, as an estimate sheet has it: 40.00 LF, 329.99 SF.
+
+Nothing is rounded in the job; this is how a worked-out figure is written on a panel
+and in the Open items list. A value a person typed is shown as it was typed, as
+before. The estimate window's tables are not changed by this.
+
+The same day, the words on a thing's cost rows, which two words judges marked
+("Comes to, detail", "Comes to, detail rate"): on a panel they read **Detail comes
+to**, **Detail, all in** (its rate for each SF or LF), **Allowance comes to**,
+**Detail over allowance** and **Detail over allowance, %**. "Detail" is the owner's
+word for a thing priced line by line. The job and the command line keep the older
+names; only the window's wording changed.
