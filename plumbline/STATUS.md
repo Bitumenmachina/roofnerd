@@ -6561,8 +6561,8 @@ build). **The other twenty-four have not been run since, and a full run is owed.
 
 Two judges on another model were started on ebcc649: part A, a veteran estimator's
 first day and the money path (`research/judgment-27a-brief.md`); part B, the look and
-the words (`research/judgment-27b-brief.md`). **Neither had reported when this was
-written; their findings and verdicts go here when they do.** Part A's notes, read
+the words (`research/judgment-27b-brief.md`). **Part B has reported (below: both
+items fail). Part A had not when this was written.** Part A's notes, read
 while it worked, already held money findings that needed no window to fix:
 
 - **J27A-5, -10, -15: an allowance folded into "in no division".** A section headed
@@ -6621,6 +6621,61 @@ while it worked, already held money findings that needed no window to fix:
 
 All twenty-one command-line demonstrations pass on a frozen copy of this build
 (after call 124 too).
+
+### Part B, the look and the words (on ebcc649): both FAIL, a fourth time
+
+`research/judgment-27b-notes.md` (J27B-1 to -46) and `research/judgment-27b-words.md`
+(about 716 words and phrases). **The look: 23 lines of VISUAL.md pass, 18 fail**, four
+(B2 to B5: drag, turn, carry-on, double-click) cannot be judged from still pictures,
+one is in doubt. **The words: 44 marked, 4 of them software terms**; none of the plain
+ones (error, null, invalid, parse, toggle, element, object) is on any screen.
+
+What passes now: the panels float and can be put away (A1), frost and depth (A2, A3),
+the wheel closing on what is under the pointer (B1), the light and the ground (C1,
+C4, C5), the dressed walls, windows and door (D1 to D4), the framing as drawn (D7),
+the levels and switches (E2 to E4), a rate typed on its line (F3, F4).
+
+**What the judge says would most change the owner's mind, most serious first, and
+where each stands:**
+
+| # | Finding | Where it stands |
+|---|---|---|
+| 1 | The house reads as a box with a hat: no porch, step, gutter, soffit or chimney (J27B-3; D5, D8) | open: the same since the twenty-second judgment; a gutter is priced (144 LF) and none is drawn, which breaks "what it is dressed in is what the estimate prices" the other way round |
+| 2 | A hard grey band across the top of the sky on every 3D view, at about 120 dots down (J27B-1; C2) | **so: it is in every picture in `demos/captured/`.** Open; to be found and removed first, since it is the first thing seen |
+| 3 | Ducts are saturated blue tubes and equipment is plain boxes (J27B-6, -33; C3, D6) | open |
+| 4 | The wheel over the left panel, once its list ended, zoomed the house away (J27B-30; B7) | open, not checked: it may be the slow frame (the wheel arriving in the frame the pointer did, before the program knew it was over a panel), which call 121 found in another place |
+| 5 | Walls of red: a thing's cost lines each "unknown, no price entered", the same open items on every tab (J27B-25, -42; A6) | open |
+| 6 | Known, Assumed, Unknown turns the house white and shows none of the 84 it counts (J27B-7) | open, to be seen: call 106 was to have answered this for a roof |
+| 7 | On plan, lengths are written over fixtures and on clash lines, and doors have no swing (J27B-10, -11; E1) | the lengths are call 117's and want placing clear of things; the swing is PROPOSALS.md 31 |
+| 8 | Text cut: Budget names mid-word, the Clashes WHERE column, a status line with room to spare (J27B-5, -22, -27; A5) | open |
+| 9 | A lavatory is an empty square on plan though its panel says "Drawn as lavatory"; a sofa is grey like equipment (J27B-32, -36) | open |
+| 10 | The Wall tool moved the view from 3D to the foundation's plan without a word; one click threw away three typed level fields (J27B-28, -39; A9) | open: the first is the plan going to one level (call 110), and it should say which and why |
+
+**Also failing**: a drawing under the tracing has no switch (B8); no suppliers side by
+side on the sample house's estimate (F1, J27B-18: the sample has no supplier's quote,
+so the table has nothing to show; the sample should carry two); the recap says "Labor
+none" while the column totals say "LABOR $40,800.00" (F2, J27B-20: the superintendent
+is Supervision in the recap and falls in the labor column, and the two names for one
+figure read as a contradiction); "Job cost none" over nine unpriced lines (J27B-41).
+
+**The words marked, and what has been done since ebcc649**: "Comes to, detail" and
+its rate (reworded, call 119); a worked-out dimension as "10.00 ft" (feet and inches
+now, call 119; a typed "Sill 2.5 ft" is still shown as typed); "N -0' 3"" (S 0' 3",
+call 122). **Still there**: a file's name with its ending in messages and lists
+("house field list.xlsx", "usda-7213.pdf, 1") and folder names in the file list;
+"tab", "in the model", "BIM model", "snap to"; a wall's line and a thing's position
+as E and N; roofing priced by the SF where the trade prices by the square;
+quantities to four places; "90 deg"; "rises from edge 1 of roof", "worked out from
+the footprint of roof", "Top level", "Labor on or off", "Double-click flies to a
+thing", "Architecture" as a layer, "turned (turned by hand in the model)", "Drawn as
+... inside the box of its sizes", "Model" for a maker's model; on the sheet "no line
+with a cost type comes to a figure", "PRICED BY nothing", "the job  the job", "what
+it is: unknown, and 234 more for the same reason", "(fitting)", "(pipe)", "(type)"
+after names, "no shape to test", "480.00 hr at 8 hr/EA"; "Let go."; "look round"
+(British: "look around"); "riding".
+
+**Not reached by this judge**: B2 to B5, deleting a wall that has a price, a drawing
+scaled and traced.
 
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
