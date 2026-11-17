@@ -2311,7 +2311,7 @@ pub fn takeoff(p: &mut ChildSpawnerCommands, fonts: &Fonts, t: &SystemTakeoff) {
             listed(p, fonts, None, &plural(j.no_fitting.len(), "join with no fitting", "joins with no fitting"), "a run meets another along its length".into(), String::new(), plumbline_world::Status::Known);
         }
         for o in &j.open {
-            listed(p, fonts, None, &o.said, "open end".into(), format!("{}, {}, {}", view::num(o.at[0]), view::num(o.at[1]), view::num(o.at[2])), plumbline_world::Status::Known);
+            listed(p, fonts, None, &o.said, "open end".into(), format!("{}, {}, {}", compass(o.at[0], 0), compass(o.at[1], 1), compass(o.at[2], 2)), plumbline_world::Status::Known);
         }
         for warning in &j.warnings {
             listed(p, fonts, None, warning, "to look at".into(), String::new(), plumbline_world::Status::Known);

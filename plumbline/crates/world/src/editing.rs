@@ -734,6 +734,15 @@ pub fn rename_item(job: &mut Job, path: &str, name: &str) -> Result<usize, Strin
             p.what.value = Some(name.to_string());
             building::check_placed(&at, k, &p)?;
             job.put(&at, p)?;
+            // One still called by the item's old name is called by the new one: it was
+            // told "the one set down is called that too" while every list went on
+            // naming it as before (the pictures of `itemneww`, read by a worker). One a
+            // person has given a name of its own keeps it.
+            if let Some(mut node) = job.find(&at).and_then(|e| job.world.get_mut::<Node>(e)) {
+                if node.name == was {
+                    node.name = name.to_string();
+                }
+            }
         }
         Ok(count)
     })

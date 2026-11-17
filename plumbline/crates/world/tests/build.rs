@@ -270,6 +270,11 @@ fn an_item_is_renamed_with_what_stands_and_is_not_deleted_from_under_it() {
     assert_eq!(ed::rename_item(&mut job, &oven, "Wall oven, single"), Ok(1));
     let e = job.find(&placed).unwrap();
     assert_eq!(job.world.get::<plumbline_world::Placed>(e).unwrap().what.value.as_deref(), Some("Wall oven, single"));
+    // And is named so wherever it is listed: it was called by the old name in every
+    // list while the screen said "the one set down is called that too".
+    assert_eq!(job.world.get::<plumbline_world::Node>(e).unwrap().name, "Wall oven, single");
+    let listed = plumbline_world::view::elements(&mut job);
+    assert!(listed.iter().all(|el| el.name != "Wall oven, 27 in"), "something is still called by the old name");
     assert!(ed::rename_item(&mut job, &oven, "range hood").unwrap_err().contains("another item is called"));
     assert!(ed::rename_item(&mut job, &oven, "  ").unwrap_err().contains("needs a name"));
     // Not deleted from under what stands; with that gone, it goes. One nothing is set

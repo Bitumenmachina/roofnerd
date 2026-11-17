@@ -6531,8 +6531,8 @@ is taken up.
 | 4, 15 | `d4/05`: 251.56 SF at $31.50 shown beside $7,924.06 (the area is 251.5576) | open: a thing's rate row is the detail divided by the area, both rounded for show |
 | 5 | a plane picked on the far side of a roof shows only as an outline through the near planes | open |
 | 6 | `d5`: priced as copper and drawn charcoal, "Also priced, not drawn" | open: two roofings priced on one plane; the first is drawn |
-| 8 | `itemnew/04-05`: "The one set down is called that too" while Open items still name it "Wall oven, 27 in" | open, to be checked |
-| 9 | `house/03`: a system's ends as "2, 17, 8.4" | open |
+| 8 | `itemnew/04-05`: "The one set down is called that too" while Open items still name it "Wall oven, 27 in" | **So: a fault in the model. Fixed, tested, not seen.** Renaming an item changed what the set-down thing is and left its own name, so every list went on calling it by the old one. One still called by the item's old name now takes the new one; one a person named keeps its name |
+| 9 | `house/03`: a system's ends as "2, 17, 8.4" | **fixed, not seen**: an open end's place reads E 2' 0", N 17' 0", H 8' 4 13/16" as every other place does |
 | 10 | `clash` sheet: "H 3' 0" in", "H 24' 0"" on a 9 ft level, "what it is: 6 in round elbow" | **the first fixed (call 122), tested**: a place kept in inches was written as feet; the other two open |
 | 11 | old hand-taken pictures in `glass/step*`, `layers/plan-panels`, `layers/estimate-window`, `light/`, `trades/` show "plumbline", "FACETS" and an old price | open: to be retaken or taken out and said so |
 | 12 | bringing a designer's model in says "buildingstorey", "#23 in the file", "this program has no element for it" | **the last fixed (call 122)**: "nothing here to bring it in as", with its tests and two demonstrations; the other two open |
@@ -6559,7 +6559,7 @@ build). **The other twenty-four have not been run since, and a full run is owed.
 
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 326 tests pass,
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 326 tests pass (one made stronger),
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
 commit of code. **All twenty-five window demonstrations and the twenty-one at the
 command line passed on a frozen copy of 5be55e3 (2026-11-17), each window one on its
