@@ -6793,9 +6793,17 @@ needs a demonstration of its own).
    from `planw` ((511, 592)), the scale comes right and every later click lands
    wrong (the windows miss their walls: walls 133.56 LF for 130.33, no windows), so
    every position after the scale has to be taken again on the right scale. Put
-   back as it was, passing and wrong, and owed next: a worker's job, with the check
-   already there (its own figures) and one to add (the scale said on screen is
-   1/8" = 1'-0").
+   back as it was, passing and wrong, and handed to a worker with a contract (that
+   one file; no expectation changed; one check added). **Repaired the same night,
+   in one run, and accepted by its diff and its pictures.** The ends, the corner and
+   the three wall directions are where `planw` has them; the door, windows, floor,
+   room and roof were in feet from the corner and needed nothing. Every figure it
+   expected before is met unchanged (walls 130.3334 LF, floor 986.56 SF, roof
+   1,103.01 SF). It now fails unless the program says the sheet is at
+   1/8" = 1'-0" (proved red by reasoning only: the old places gave "1" = 7' 1"";
+   they were not run again). The lead read its third picture: the four walls lie
+   on the drawn outside walls of the house. Its pictures here are of a frozen copy
+   of de8cc5b.
 3. `d4`, `d2`, `d5`: the old roof sample's lines have no cost type, so its Estimate
    says "Price no figure" beside a Budget of $22,033.70 in allowances (the earlier
    3 and 7, still there).
@@ -6847,9 +6855,8 @@ every full run, and where a picture claims a view, measure it in the script.
 
 **What is owed, in this order.**
 
-1. **`demos/firstw.sh` scales its sheet 12 % small** (the section just above, 2). A
-   worker was given its repair on 2026-11-17, late; if this line is still here, look
-   for its result in the commits after this one, and if there is none, do it.
+1. (Done the same night: `demos/firstw.sh` scaled its sheet 12 % small; repaired by
+   a worker and accepted. The section just above, 2.)
 2. **A full run of all twenty-six on a frozen copy of the head**, pictures to a
    scratch folder and into the tree in one step (a run's half-taken set must never
    be in the tree: the scratch script that does it is described in "The full run on

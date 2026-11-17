@@ -34,8 +34,15 @@ touch "$T/started"
 echo "== The session: a new job; the plan, its scale; walls, a door, two windows, the floor, a room, the roof; 3D; save =="
 # Where things are on the sheet, two steps of the wheel in: the ends of the 41'-3"
 # dimension under the house, and the house's southwest outside corner, by eye (as
-# demos/planw.sh has them). Everything after that corner is placed in feet from it: the
-# script asks the program where on screen that is.
+# demos/planw.sh has them). The wheel now closes in by 0.81 a step about the pointer, so
+# the dimension is 547 dots long on screen, not the 619 it was before the window was
+# rebuilt (2026-11-13): its ends are at (512, 664) and (1060, 667), where they were at
+# (480, 696) and (1099, 699), and the corner at (511, 592), where it was at (478, 614).
+# Clicked at the old places the sheet is scaled about 12 % too small ("1" = 7' 1"" where
+# the sheet is drawn at 1/8" = 1'-0"), and the walls, typed in feet, do not lie on the
+# drawing. The directions of the typed walls are given the way planw.sh gives them.
+# Everything after the corner is placed in feet from it: the script asks the program
+# where on screen that is.
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
@@ -52,18 +59,18 @@ on "Add drawing"; sleep 2; typed "$T/usda-7213.pdf, 4"
 sleep 30                                # a scanned sheet takes a while to read
 closer
 on "Set scale"
-click 480 696                           # the west end of the 41'-3" dimension
-click 1099 699                          # its east end
+click 512 664                           # the west end of the 41'-3" dimension
+click 1060 667                          # its east end
 typed "41' 3\""
 closer                                  # the sheet is to scale now, and was framed again
 park
 shot                                    # 02 the sheet, to scale
 tool "Wall" "6 in, 8 ft"
-click 478 614                           # the southwest outside corner, by eye
-read -r E0 N0 <<<"\$(plan_ft 478 614)"  # where that is on the plan, in feet
-len 1000 616 "41' 3\""                  # east, the overall dimension
-len 1102 400 "23' 11\""                 # north
-len 700 252 "41' 3\""                   # west
+click 511 592                           # the southwest outside corner, by eye
+read -r E0 N0 <<<"\$(plan_ft 511 592)"  # where that is on the plan, in feet
+len 972 592 "41' 3\""                   # east, the overall dimension
+len 1060 402 "23' 11\""                 # north
+len 707 274 "41' 3\""                   # west
 from_corner 0 0                         # and closed on the first corner
 esc; esc
 park
@@ -111,6 +118,15 @@ echo
 echo "== What the session left in the saved job =="
 [ -s "$J" ] || { echo "FAIL: the new job was not written when it was saved"; exit 1; }
 "$P" check "$J"
+# The sheet is to scale as the sheet draws it: the program says the drawing's scale in
+# a draftsman's words. The sheet is a 1/8" = 1'-0" plan; a scale set from ends picked
+# in the wrong places said 1" = 7' 1" (12 % too small), which does not contain this.
+SCALE="$("$P" drawings "$J")"
+echo "$SCALE" | sed 's/^/    /' | head -3
+case "$SCALE" in
+  *'1/8" = 1'"'"'-0"'*) echo "    the sheet's scale, as the program says it, is 1/8\" = 1'-0\"" ;;
+  *) echo "FAIL: the program does not say the sheet is at 1/8\" = 1'-0\": the ends of the dimension were not picked where it is"; exit 1 ;;
+esac
 python3 - "$J" <<'PY'
 import sys, json
 data = json.load(open(sys.argv[1]))["data"]
