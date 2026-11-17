@@ -6812,134 +6812,94 @@ needs a demonstration of its own).
 and 18 (the `dress` set, read by the lead: fixed), 11 (old pictures, now named as
 old in the folder's note; `trades/` retaken).
 
-## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
+## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 329 tests pass,
-the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
-commit of code. **Twenty-five of the twenty-six window demonstrations passed on a
-frozen copy of aa5084c (2026-11-17, late) and the twenty-sixth, `dressw`, on the
-commit after it: "The full run on aa5084c, and what it caught", just above, has
-what is and is not covered.** Before that, all twenty-five and the twenty-one at the
-command line had passed on a frozen copy of 5be55e3, each window one on its
-first run. That is every call to 117. Call 118 (the job's money on the Job panel,
-"not coded" said quietly) and calls 119 to 121 came after it and are seen by hand
-only; **call 121 changes what a drag does, so a full run is owed again.** The
-pictures of that run were read by a worker: "The pictures of the full run on
-5be55e3", just above, has the thirty things it found and where each stands. The machine was restarted twice in the night of 2026-11-16, each
-time under a long run; a full run is done one demonstration at a time from a script
-that can be started again where it stopped. Read `CLAUDE.md`, then this section,
-then the table of thirteen, then the two sections of the twenty-fifth judgment
-above.
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 329 tests pass, the
+three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
+commit of code. **It is not a release candidate and is not tagged.** Read
+`CLAUDE.md` (its section "Who holds what" says what the lead keeps and what a worker
+or a judge is given), then this section, then the five sections above it, newest
+last: the pictures of 5be55e3 read; the twenty-seventh judgment; the full run on
+aa5084c; the pictures of aa5084c read.
 
-**What happened on 2026-11-16.** Patrick asked for a fresh pass of code and review,
-the window and a clean-up, run alone. Two code reviewers read the model and the
-window crate (42 findings); a twenty-first judge walked the four new trades (21); a
-twenty-second pair judged the look and the words, and a veteran's first day and the
-money path; a twenty-third tried the money path at the command line; and a
-twenty-fourth pair did what the twenty-second did again, on the build after the
-fixes. That afternoon Patrick asked for a workbench of items by trade kept like a
-database (call 105), and it was built as far as a library that is a table. In the
-night a twenty-fifth pair judged the item library and the money path, and the look
-and the words. Each finding is a row in this file with where it stands. Calls 77 to
-109 in DECISIONS.md are the decisions made on the way; Q26 and Q27 in QUESTIONS.md
-are new, and PROPOSALS.md 23 to 29.
+**What was run, on what.** Twenty-five of the twenty-six window demonstrations
+passed on a frozen copy of aa5084c, each on its first run; `dressw` failed there on
+a check that measures its picture, was repaired, and passes on the commits after.
+`dressw`, `tradesw` and `glassw` (the three that measure colours) pass on the build
+with the sky's band gone (call 127). The twenty-one command-line demonstrations
+pass on a frozen copy of 52efdc7. **No full run has been made on the last commit**:
+since aa5084c the program changed in what a turn or the wheel is about when the
+pointer has just moved, and in the colour of the far haze. Most pictures in
+`demos/captured/` are of aa5084c and still show the band across the sky.
 
-**What is true of the program today.** It traces a plan, builds the house in 3D
-dressed as it is priced, prices it in sixteen divisions, finds clashes, lists what
-to verify in the field by dollars, brings in and writes out price lists, assemblies,
-estimates and BIM files, and makes items from makers' sheets. **It is not a release
-candidate.** The look and the words (items 11 and 9) were judged three times on
-2026-11-16 and failed three times; the money path (item 12) passed narrowly in the
-evening and failed in the night on a supplier's list; the veteran's first day (item
-10) passed in the evening on d20ac60 and has not been judged since.
+**How it was judged, last (the twenty-seventh, on ebcc649).** Item 10, a veteran's
+whole-house takeoff from a PDF with only the screen: **passes**. Item 12, the money
+path: **fails** on an allowance lost from the price without a word (fixed since, call
+126; not judged again). Item 11, the look: **fails**, 23 lines pass and 18 fail.
+Item 9, the words: **fails**, 44 marked of about 716, 4 of them software terms.
 
-**The twenty-fifth judgment (2026-11-16, night, on 9868569) is in, both parts, and
-recorded above.** Part A: the money path FAILED on a supplier's list pricing nothing
-(fixed since, call 108) and the item library is "not yet a library I can keep" (five
-of its seven reasons answered since, calls 107 and 109). Part B: the look FAILED a
-third time (17 lines pass, 16 fail) and the words a third time (69 marked of about
-860; 9 software terms, down from 31). Calls 106 to 109 are what was done about them.
-**Nothing done since 9868569 has been judged.**
-
-**The twenty-sixth judgment, part A (2026-11-16, late in the night, on c0d5922) was
-cut off**: the machine was restarted under it about an hour and a half in. Its notes
-as far as it got are `research/judgment-26a-notes.md`, its brief
-`research/judgment-26a-brief.md`. **It reached no verdict.** What it had done, all in
-the window from a new job and the public plan: a level, the plan added and scaled
-from its 41 ft 3 in dimension, six walls (190.42 LF), doors and windows, the floor
-(1,168.75 SF), three rooms, a hip roof (1,379.08 SF), assemblies on a wall and on
-the roof, unit costs, production rates and wages, overhead and profit: **every figure
-agreed with its own hand arithmetic to the cent and it had written no stop.** It had
-not yet reached the three things it was asked to press on (a supplier's list with the
-supplier's name, a roof change saying its dollars, the item library). Its five
-findings: J26A-1, overhead and profit said to be "not yet checked against a drawing"
-(**fixed, call 110, not seen**); J26A-2, roof sheathing rounded up plane by plane, 46
-sheets where 44 cover the roof (J25A-11 again: **open**); J26A-3, 1,168.75 SF at $6.00
-comes to $7,012.49 because a typed length was kept to four places (**fixed, tested,
-call 110, not seen**); J26A-4, an allowance is not in the price (Q26, a fourth
-judge); J26A-5, a comma cannot be typed in a cost line's name (**fixed, call 110, not
-seen**). **Items 10 and 12 are therefore still not judged on anything after
-9868569.** The brief can be given again as it stands.
+**What two readings of the pictures taught.** A script that passes has not looked
+at its pictures. Twice a worker on another model read every picture against what its
+step claims and found what the scripts could not: a picture of the inside of a roof
+where two walls were claimed; a demonstration scaling its sheet 12 % small for four
+days; a renamed item still called by its old name. Have the pictures read after
+every full run, and where a picture claims a view, measure it in the script.
 
 **What is owed, in this order.**
 
-1. **Have items 9 to 12 judged again** on the last commit, by agents that did not
-   build it, on Opus or Sonnet, told to write their notes as they go. Nothing done
-   after 9868569 has been judged: calls 106 to 109.
-2. **See in the window what is built and has not been seen**: a cost line taking its
-   price from a named supplier's list (call 108; a test holds it, and `bringw` shows
-   the job's price set, on a job with no line to price); the top bar with all four
-   notes on it; "doors and windows" ticking with one of each (call 106); the Door
-   tool offering the last door's sizes on a job opened again. **Seen by hand on a
-   frozen copy of c0d5922, after the full run, on a made-up roof 40 ft by 26 ft with
-   shingles at $105.00 a square** (by the builder, not by a judge, and in no
-   demonstration yet): Steeper says "What is priced on the roof changed with it: the
-   job cost was $1,182.98 and is $1,194.13"; Undo says "Undone: pitch changed on edge
-   1 of Main roof ..."; an allowance of "-12" is refused and its field is still open;
-   in the Known, Assumed, Unknown view the roof and its lines are amber, with no
-   orange hip; on the plan of the level the roof sits on, a click inside a plane's
-   outline says "Selected plane 1" and opens its panel (the plane picked was not
-   marked on the plan; **built since and not seen**: a plane has its outline there,
-   so one picked is marked as anything selected is); Starter items pressed a
-   second time says "The starter items are already in this job, and each was left as
-   it is here."
-3. **The item library, to be one a person keeps** (the twenty-fifth judge, part A).
-   Built since: an item added, renamed and deleted in the window (call 111). Owed: a price, a unit and labor on an
-   item (PROPOSALS.md 28, with an item's shape as data and the bench to make it on);
-   forms for a range, a refrigerator, a washer, a panelboard; a thing named on plan;
-   Starter assemblies pressed twice tried for the fault Starter items had.
-4. **The look**, which is Patrick's own test. Open after three judgments: the side
-   panels stand nearly the height of the window (A1, failed anew); rows cut by "more
-   below" (A5); red and amber used both for how sure and for messages (A6); no
-   soffit, gutter or step at the door (D5); equipment still boxes (D6); an empty
-   kitchen and bath and ducts across rooms (D8); the estimate's column heads scroll
-   away and a circuit is four lines by piece (F1); "none" where "no figure" is meant
-   (F2); a drawing has no switch (B8).
-5. **The words** still marked: lengths written four ways in one panel (decimal feet
-   beside feet and inches: the sample house keeps its doors at 6.67 ft); places as E,
-   N, H with negative feet and inches; "Comes to, detail", "rises from edge 1", "roof
-   solved again"; a cable by its diameter (PROPOSALS.md 25); "Architecture" for walls
-   and doors; a folder's and a file's name in the Add drawing list.
-   `research/judgment-25b-words.md` has all 69.
-6. **The money that is short or over and is said so here**: a gable end's triangle of
-   wall is not drawn and not priced (PROPOSALS.md 29); sheathing is rounded up to
-   whole sheets plane by plane (J25A-11). **The rename owed**: the folder, the
-   crates and the two commands to BuildOS (call 115); a full run has now passed, so
-   it can be done, as one commit with nothing else in it and a full run after.
-7. **The open rows** of the reviews and the earlier judgments (their tables above): a
-   keystroke re-reads the whole job (R21-2); the rest of one money writer (R21-12);
-   a footing dug wider cannot be recorded on it alone (J21-6); base is priced by a
-   room's perimeter and drawn by its runs less its doors.
+1. **`demos/firstw.sh` scales its sheet 12 % small** (the section just above, 2). A
+   worker was given its repair on 2026-11-17, late; if this line is still here, look
+   for its result in the commits after this one, and if there is none, do it.
+2. **A full run of all twenty-six on a frozen copy of the head**, pictures to a
+   scratch folder and into the tree in one step (a run's half-taken set must never
+   be in the tree: the scratch script that does it is described in "The full run on
+   aa5084c"), then the pictures read by a worker.
+3. **Items 9, 11 and 12 judged again**, by agents that did not build it, told to
+   write as they go. The briefs are `research/judgment-27a-brief.md` and `-27b-`.
+4. **The look** (Patrick's own test is his eyes). In the judge's order: the house
+   reads as a box with a hat (no porch, step, soffit or chimney; a gutter is priced
+   and none is drawn); ducts are plain tubes and equipment plain boxes; a lavatory
+   is an empty square on plan; walls of red on a thing's cost lines and the same
+   open items on every tab; Known, Assumed, Unknown showing none of what it counts;
+   lengths on the plan written over things; text cut on the Budget and Clashes
+   tabs; the Wall tool taking the view to one level's plan without a word.
+5. **The money that is short, over, or shown so as to mislead**: the old roof
+   sample's lines have no cost type, so three demonstrations show "Price no figure"
+   beside a budget (give the sample's lines a cost type and a division, and move
+   five demonstrations' expectations with a decision written first); a gable end's
+   triangle of wall (PROPOSALS.md 29); sheathing by the plane and shingles with no
+   waste (J25A-11); the workbook's "Suppliers, side by side" sheet empty after two
+   lists are brought in (J27A-29); the estimate by item is not in the workbook.
+6. **Not yet seen in the window, though built and tested**: the Allowances row on
+   the By division table and the Job panel (needs a demonstration with a thing
+   priced by an allowance alone); "... is no longer carried in the price" when a
+   cost line is added to such a thing; Undo bringing a deleted roof back; Whole roof
+   on a plane's panel; Saved standing before the counts.
+7. **The words** still marked (`research/judgment-27b-words.md`; the list in the
+   twenty-seventh judgment's part B above): file names with their endings and
+   folder names, a wall's line and a thing's position as E and N, a typed "9 ft"
+   beside a worked-out 9' 0", four-place quantities, "2 hr/SQ" shown as "0.02
+   hr/SF", "buildingstorey", "(type)", "Let go.", "look round".
+8. **The item library, to be one a person keeps**: a price, a unit and labor on an
+   item (PROPOSALS.md 28); shapes for a range, a refrigerator, a washer, a
+   panelboard; the New item form opens below the fold.
+9. **The rename owed**: the folder, the crates and the two commands to BuildOS (call
+   115), as one commit with nothing else in it and a full run after.
+10. **The open rows** of the reviews and earlier judgments (their tables above).
 
-**Patrick's, not the builder's.** (Q26 is answered: allowances are in the price, call 114.) Whether the name BuildOS is free to use is his to have checked. Q28: which trade and which shop format for a table-to-shop-spec converter (PROPOSALS.md 30). Q27: whether he wants the feel of the three
-geometry libraries he named, or one of them linked (the working answer is the feel);
-and PROPOSALS.md 28, an item's shape as data and a bench to make it on. Q26: whether an allowance with no cost lines
-belongs in the price (the veteran judge read "PRICE" and expected it in; the working
-answer is that it does not, and that it is said wherever the price is read). Q25.
-Q5: a hand estimate in `refs/` for item 13.
+**Patrick's, not the builder's.** Q29: whether a quantity is rounded to the
+hundredth before it is priced, as an estimator's sheet does (three judges tripped on
+the four-place rule; changing it moves cents on most lines of every demonstration).
+Whether the name BuildOS is free to use is his to have checked. Q28: which trade
+and which shop format for a table-to-shop-spec converter (PROPOSALS.md 30). Q27:
+the feel of the three geometry libraries he named, or one of them linked.
+PROPOSALS.md 25 to 31 (31 is a door's hand and its swing). Q5: a hand estimate in
+`refs/` for item 13.
 
-**What not to do.** Do not tag. Do not loosen a demonstration to get it green. Do
-not commit a demonstration's pictures while its run is still going. Do not take a
-judge's "not so" from me without reading it: J22B-32 is the one finding I recorded
-as mistaken, and why is in its row; J24B-59 (a wall with siding drawn plain) I
-recorded as "to be tried again" because the picture may show the other wall.
+**What not to do.** Do not tag. Do not loosen a demonstration to get it green: when
+`dressw` failed on the full run it was right to fail. Do not commit a
+demonstration's pictures while its run is still going, and do not let a run write
+into the tree. Do not call a thing seen that only a test has seen. Do not take a
+judge's or a worker's "so" or "not so" without reading the picture or the code it
+points at: of the worker's findings checked this way, most were so, and one cause I
+gave for a fault (the sky's band) was wrong and is said to be.
