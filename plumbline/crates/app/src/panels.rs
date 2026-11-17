@@ -444,10 +444,10 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             questions > 0,
         ];
         divider(bar);
-        if notes.iter().filter(|n| **n).count() < 4 {
-            tally_chips(bar, fonts, snap.tally);
-            divider(bar);
-        }
+        // Saved or not comes before the counts: where the bar runs out of room it is
+        // the counts that are cut, never the one thing a person must be able to read
+        // before closing ("Not sav", J27A-6, with a price, an allowance and the verify
+        // note on the bar).
         // (The job's title is at the left of this bar. The name of the file it is kept
         // in is not said here: it is not a builder's word, and it crowded the tally off
         // the end of the bar, J18-4.)
@@ -455,6 +455,10 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             chip(bar, fonts, "Not saved", theme::amber(), theme::amber_wash());
         } else {
             chip(bar, fonts, "Saved", theme::green(), theme::panel());
+        }
+        if notes.iter().filter(|n| **n).count() < 3 {
+            divider(bar);
+            tally_chips(bar, fonts, snap.tally);
         }
     });
     });
@@ -2178,6 +2182,10 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         }
         if est.no_division.members > 0 {
             listed(p, fonts, None, "In no division", String::new(), said(&est.no_division), if est.no_division.value.is_some() { est.no_division.status } else { Status::Unknown });
+        }
+        // What is carried as an allowance, named as one (call 123).
+        if !est.allowance_on.is_empty() {
+            listed(p, fonts, None, "Allowances", est.allowance_on.len().to_string(), said(&est.allowances), if est.allowances.value.is_some() { est.allowances.status } else { Status::Unknown });
         }
     }
     // The job's markup: each is typed into here.

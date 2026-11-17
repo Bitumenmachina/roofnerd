@@ -208,8 +208,10 @@ fn an_allowance_on_a_thing_with_no_cost_line_is_carried_in_the_price_and_noted_a
     assert_eq!(est.job_cost.value.map(cents), Some(cents(before.job_cost.value.unwrap_or(0.0) + 6147.19)));
     assert_eq!(est.classes.iter().filter_map(|c| c.total.value).sum::<f64>(), before.classes.iter().filter_map(|c| c.total.value).sum::<f64>());
     let sixteen: f64 = est.divisions.iter().filter_map(|d| d.total.value).sum();
-    assert_eq!(cents(sixteen + est.no_division.value.unwrap_or(0.0)), cents(est.job_cost.value.unwrap()));
-    assert_eq!(est.no_division.value.map(cents), Some(cents(before.no_division.value.unwrap_or(0.0) + 6147.19)));
+    // The sixteen, the lines in no division and the allowances come to the job cost;
+    // the allowance is not folded into "in no division" (call 123).
+    assert_eq!(cents(sixteen + est.no_division.value.unwrap_or(0.0) + 6147.19), cents(est.job_cost.value.unwrap()));
+    assert_eq!((est.no_division.value, est.no_division.members), (before.no_division.value, before.no_division.members));
     // The price is over it, where the job has its markup.
     if let (Some(was), Some(is)) = (before.price.value, est.price.value) {
         assert!(is > was + 6147.19 - 0.005, "{was} {is}");

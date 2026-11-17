@@ -436,3 +436,23 @@ fn the_list_goes_to_the_field_with_its_room_its_fractions_and_a_box_to_tick() {
     assert_eq!(rows[1][1], list.questions[0].dollars.map(view::money).unwrap());
     assert!(rows.iter().filter(|r| r[2].contains(", ")).count() > rows.len() / 2, "most of them are in a room");
 }
+
+#[test]
+fn what_is_carried_as_an_allowance_rides_on_the_thing_it_is_on() {
+    // A floor 20 ft by 10 ft traced off a plan (Assumed), priced by an allowance of
+    // $6.50/SF and by no cost line: 200 SF x 6.50 = $1,300.00 is carried in the job
+    // cost, and a tape on the floor can move it. It rides on the floor's question and
+    // is in the list's total; it was in neither (J27A-11, call 123).
+    let mut job = Job::new("an allowance to verify (not a real job)", "test", "test");
+    let level = ed::storey(&mut job, "ground", "0 ft", "9 ft", KNOWN).unwrap();
+    let slab = ed::floor_type(&mut job, "slab", "4 in", KNOWN).unwrap();
+    let floor = ed::floor(&mut job, &level, &slab, ed::FloorBy::Points(&[[0.0, 0.0], [20.0, 0.0], [20.0, 10.0], [0.0, 10.0]]), TRACED).unwrap().path;
+    job.set(&floor, "allowance", Some("6.50"), Status::Assumed, "a made-up budget figure").unwrap();
+    job.derive();
+    let est = view::estimate(&mut job);
+    assert_eq!((est.allowances.value, est.job_cost.value), (Some(1300.00), Some(1300.00)));
+    let list = vif(&mut job);
+    let q = list.questions.iter().find(|q| q.path == floor).expect("the floor is a question");
+    assert_eq!((q.dollars, q.lines), (Some(1300.00), 1));
+    assert_eq!(list.riding, Some(1300.00));
+}

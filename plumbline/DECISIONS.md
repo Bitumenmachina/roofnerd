@@ -4303,3 +4303,29 @@ Each is a wording or a showing; no figure changes.
 
 The expectations of three tests of the model, one of the window's place words, two
 of the BIM reader and two demonstrations (`export.sh`, `model.sh`) change with the last two, word for word.
+
+### Call 123. An allowance is on its own row wherever the job cost is read by division, and its dollars ride on the field list (2026-11-17; the twenty-seventh judge's notes, J27A-5, -10, -11, -15, read while it was still at work)
+
+Call 114 carried an allowance in the job cost and, to keep "the sixteen and what is
+in none come to the job cost", folded it into the figure for "in no division". The
+judge met the result four times: a section headed "No division $6,862.67" whose only
+line was $450.00; a Job panel row "In no division $6,412.67" with no word that it
+was an allowance; a recap by division that did not read as footing; and a
+verify-in-field list that left the largest number in the job out of every dollar
+figure, though the floor it is on was traced and Assumed.
+
+- **Three things come to the job cost: the sixteen divisions, the lines in no
+  division, and the allowances.** "In no division" is lines only, everywhere, so a
+  section's total is the total of its lines. **Allowances** has its own row beside
+  it: on the estimate window's By division table, on the Job panel, at the command
+  line, in the workbook's By division sheet (where "in no division" is now the job
+  cost less the sixteen less the allowances) and in the PM's lens. It is named an
+  allowance each time (Patrick: "allowed and noted as such").
+- **What is carried as an allowance rides on the field list.** An allowance is an
+  area or a length times a rate; where the thing it is on is not Known, a tape can
+  move it, so its dollars ride on that thing's question as a line's do, and are in
+  the list's total.
+
+No amount, job cost or price changes. The figure called "in no division" changes
+wherever an allowance had been folded into it, and the verify-in-field dollars rise
+by the allowances that rest on something not Known.

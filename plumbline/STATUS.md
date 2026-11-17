@@ -6557,9 +6557,46 @@ button goes down; a turn or a wheel is about the place under the pointer now). O
 `dressw` has been run on it (it passes, three times, on a frozen copy of this
 build). **The other twenty-four have not been run since, and a full run is owed.**
 
+## The twenty-seventh judgment (started 2026-11-17 on ebcc649): what was fixed from its notes while it was still at work
+
+Two judges on another model were started on ebcc649: part A, a veteran estimator's
+first day and the money path (`research/judgment-27a-brief.md`); part B, the look and
+the words (`research/judgment-27b-brief.md`). **Neither had reported when this was
+written; their findings and verdicts go here when they do.** Part A's notes, read
+while it worked, already held money findings that needed no window to fix:
+
+- **J27A-5, -10, -15: an allowance folded into "in no division".** A section headed
+  "No division $6,862.67" had one line under it, of $450.00; the rest was a floor's
+  allowance, named nowhere on that sheet. **Fixed (call 123), tested**: "in no
+  division" is lines only; Allowances has its own row on the estimate window's By
+  division table, on the Job panel, at the command line, in the workbook's By
+  division sheet and in the PM's lens; the sixteen, what is in no division and the
+  allowances come to the job cost. Not seen in the window.
+- **J27A-11: the field list left the allowance's dollars out.** $6,412.67 on a
+  traced floor was in no dollar figure of the list. **Fixed (call 123), tested** (a
+  floor 20 ft by 10 ft at $6.50: $1,300.00 rides on the floor and is in the total).
+- **J27A-6: "Not sav" cut off at the end of the top bar.** **Fixed, not seen**:
+  Saved or Not saved now stands before the counts of known, assumed and unknown, so
+  it is the counts that give way, and they are left off when three notes are on the
+  bar (it was four).
+- **J27A-14: on the estimate by item, quantity times unit cost a few cents off the
+  amount.** Answered in part by call 120 (the quantity is written to four places
+  where two would not multiply out); the cent or two that is left is the sum of
+  each place's line rounded to the cent, and the row says how many places.
+- **Open, and the lead's to decide, not a judge's**: J27A-4 and -7. A quantity is
+  kept to four places and shown to two until two will not multiply out, so the same
+  line reads 4.33 SQ and then 4.3267 SQ, and a floor typed 41' 3" by 23' 11" comes to
+  3 cents more than a calculator gives from the 986.56 SF on screen (its corners
+  are kept to four places of a foot). An estimator rounds a quantity to the
+  hundredth and multiplies that. Doing the same would change cents on most lines of
+  every demonstration, each worked by hand: it is QUESTIONS.md Q29, with the working
+  answer that nothing changes until it is decided.
+
+All twenty-one command-line demonstrations pass on a frozen copy of this build.
+
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 326 tests pass (one made stronger),
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 327 tests pass,
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
 commit of code. **All twenty-five window demonstrations and the twenty-one at the
 command line passed on a frozen copy of 5be55e3 (2026-11-17), each window one on its

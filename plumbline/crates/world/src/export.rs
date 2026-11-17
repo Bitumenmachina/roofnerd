@@ -247,9 +247,11 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
     // Allowances carried in the price (call 114): what is priced by an allowance and
     // by no cost line, on a row of its own. The things are not lines of the sheet, so
     // the figure is as written and says so; the job cost below adds it with the rest.
+    let mut allowance_row: Option<usize> = None;
     if !est.allowance_on.is_empty() {
         let n = est.allowance_on.len();
         let said = format!("as written: {n} thing{} priced by an allowance and no cost line, carried in the price as allowances: {}", if n == 1 { "" } else { "s" }, est.allowance_on.iter().map(|(_, name, _)| name.as_str()).collect::<Vec<_>>().join(", "));
+        allowance_row = Some(recap.len() + 1);
         recap.push(vec![text("Allowances"), est.allowances.value.map(Out::Dollars).unwrap_or_else(|| text("no figure")), Out::Number(est.allowances.members as f64), Out::None, text(said)]);
     }
     let class_last = recap.len();
@@ -332,7 +334,9 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
     // so the two still come to the job cost after any change on the sheet (J17A-4).
     {
         let none = &est.no_division;
-        let less = format!("ROUND(Recap!B{cost_row}-SUM(B{division_first}:B{division_last}),2)");
+        // Less what is carried as allowances, which has a row of its own below.
+        let allowed = allowance_row.map(|r| format!("-IF(COUNT(Recap!B{r})=0,0,Recap!B{r})")).unwrap_or_default();
+        let less = format!("ROUND(Recap!B{cost_row}-SUM(B{division_first}:B{division_last}){allowed},2)");
         let rule = format!("=IF(COUNT(Recap!B{cost_row})=0,\"none\",IF({less}=0,\"none\",{less}))");
         let amount = match none.value {
             Some(v) if v.abs() >= 0.005 => Out::Formula { text: rule, value: Some(v) },
@@ -346,6 +350,14 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
             note = format!("{note}; as written: leaves out {} with no figure ({})", none.left_out.len(), none.left_out.iter().map(|(who, _)| who.as_str()).collect::<Vec<_>>().join("; "));
         }
         by_division.push(vec![text("In no division"), amount, Out::Number(none.members as f64), text(note)]);
+        if let Some(r) = allowance_row {
+            let rule = format!("=IF(COUNT(Recap!B{r})=0,\"no figure\",Recap!B{r})");
+            let amount = match est.allowances.value {
+                Some(v) => Out::Formula { text: rule, value: Some(v) },
+                None => Out::FormulaText { text: rule, shown: "no figure".into() },
+            };
+            by_division.push(vec![text("Allowances"), amount, Out::Number(est.allowance_on.len() as f64), text("carried in the job cost as allowances, as the recap has them; the sixteen, what is in no division and these come to the job cost")]);
+        }
     }
     let mut out = vec![
         sheet,
@@ -497,6 +509,9 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
             }
             if est.no_division.members > 0 || !est.no_division.left_out.is_empty() {
                 budget.push(vec![text("In no division"), est.no_division.value.map(Out::Dollars).unwrap_or_else(|| text("no figure")), Out::None, Out::Number(est.no_division.members as f64), text(how(&est.no_division))]);
+            }
+            if !est.allowance_on.is_empty() {
+                budget.push(vec![text("Allowances"), est.allowances.value.map(Out::Dollars).unwrap_or_else(|| text("no figure")), Out::None, Out::Number(est.allowance_on.len() as f64), text("carried in the job cost as allowances")]);
             }
             // What is to verify in the field, by the dollars riding on each.
             let list = crate::vif::vif(job);

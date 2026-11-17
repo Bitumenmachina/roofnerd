@@ -888,8 +888,8 @@ pub struct Estimate {
     /// The job cost read division by division: all sixteen, in order, whether or not
     /// anything is in them. Each is over the lines of the job cost in that division.
     pub divisions: Vec<DivisionTotal>,
-    /// The lines of the job cost that are in no division: what the sixteen leave out.
-    /// The sixteen and this come to the job cost.
+    /// The lines of the job cost that are in no division. The sixteen, this and
+    /// `allowances` come to the job cost.
     pub no_division: MoneyTotal,
     pub markup: Option<Markup>,
     pub overhead: Derived,
@@ -1105,9 +1105,10 @@ pub fn estimate(job: &mut Job) -> Estimate {
         on.iter().filter(|l| l.division == d && (l.class.is_some() || d.is_some())).map(|l| (label(l), if l.class.is_some() { &l.amount } else { &no_class })).collect()
     };
     let divisions: Vec<DivisionTotal> = crate::components::Division::ALL.iter().map(|&division| DivisionTotal { division, total: total_of(&in_division(Some(division))) }).collect();
-    let mut undivided = in_division(None);
-    undivided.extend(carried.iter().cloned());
-    let no_division = total_of(&undivided);
+    // What is carried as an allowance is in the job cost and in neither of these: it
+    // is `allowances`, on a row of its own (call 123). The sixteen, the lines in no
+    // division and the allowances come to the job cost.
+    let no_division = total_of(&in_division(None));
 
     let markup = w.get::<Markup>(root).cloned();
     let root_path = w.get::<Node>(root).map(|n| n.path.clone()).unwrap_or_default();

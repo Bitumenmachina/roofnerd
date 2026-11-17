@@ -159,6 +159,34 @@ pub fn vif(job: &mut Job) -> Vif {
         }
         lines.push(Line { key: (sheet.path.clone(), sheet.description.clone()), on: sheet.path.clone(), amount, status: if amount.is_some() { sheet.amount.status } else { sheet.priced.status }, quantity: sheet.quantity.status, rests });
     }
+    // What is carried as an allowance (a thing priced by an allowance and by no cost
+    // line) rides as a line does: it is an area or a length times a rate, and where
+    // the thing it is on is not Known a tape can move it (call 123; J27A-11: the
+    // largest number in a job was in no dollar figure of this list).
+    for (path, _, d) in &estimate.allowance_on {
+        let Some(e) = job.find(path) else { continue };
+        let mut rests: BTreeSet<String> = BTreeSet::from([path.clone()]);
+        let mut quantity = Status::Known;
+        for input in &d.inputs {
+            let (of, name) = input.split_once('#').unwrap_or((input.as_str(), ""));
+            rests.insert(of.to_string());
+            // How sure what it is measured by is: the rate is not a thing to tape.
+            if let Some(m) = job.find(of).and_then(|x| job.world.get::<Measure>(x)).and_then(|m| m.0.get(name)) {
+                quantity = quantity.max(m.status);
+                rests.extend(m.inputs.iter().map(|i| i.split('#').next().unwrap_or("").to_string()));
+            }
+        }
+        if d.inputs.is_empty() {
+            quantity = job.world.get::<Measure>(e).map(|m| m.0.values().map(|x| x.status).max().unwrap_or(Status::Known)).unwrap_or(d.status);
+        }
+        for roof in rests.iter().filter_map(|p| solved_from.get(p)).cloned().collect::<Vec<_>>() {
+            rests.insert(roof);
+        }
+        for drawing in rests.iter().filter_map(|p| traced_over.get(p)).cloned().collect::<Vec<_>>() {
+            rests.insert(drawing);
+        }
+        lines.push(Line { key: (path.clone(), "its allowance".to_string()), on: path.clone(), amount: d.value, status: d.status, quantity, rests });
+    }
     let cents = crate::lines::cents;
     let sum = |picked: &[&Line]| -> (Option<f64>, Status, usize, usize) {
         let unpriced = picked.iter().filter(|l| l.amount.is_none()).count();

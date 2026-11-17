@@ -436,3 +436,19 @@ countertop slabs". Before any of PROPOSALS.md 30 is built, two things are his to
 first step would be countertops, a cut list as a workbook, and the outline of each
 piece as DXF, with the claim about what shops take checked against fabricators'
 own published requirements before a line is written.
+
+
+## Q29. Is a quantity rounded to the hundredth before it is priced? (2026-11-17; judges 17A, 26A and 27A each tripped on it)
+
+Today a quantity is kept to four places and multiplied as kept; it is shown to two
+places unless two will not multiply out to the amount, and then to four. So one line
+reads 4.33 SQ before it is priced and 4.3267 SQ after, and 4.33 x $99.00 is not the
+$428.34 on the line. An estimator's sheet carries a quantity to the hundredth and
+multiplies that figure: what is written is what is priced.
+
+**Working answer: nothing changes until this is decided.** If it changes, every
+priced quantity is rounded to the hundredth (hours too) before it is multiplied, the
+screen shows two places always, and the cents on most lines of every demonstration
+move and are worked again by hand. It is a change to what a number means, so it is
+the lead's to make and Patrick's to know about; a word from him ("round it the way
+an estimator does") settles it.

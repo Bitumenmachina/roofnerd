@@ -865,6 +865,18 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 cell(r, 130.0, true, |c| words(c, fonts, est.no_division.value.map(view::money).unwrap_or_else(|| "no figure".to_string()), 12.5, Weight::Semibold, theme::status_ink(Status::Unknown)));
             });
         }
+        // What is carried as an allowance, on a row of its own and named as one: the
+        // sixteen, what is in no division and this come to the job cost (call 123).
+        if !est.allowance_on.is_empty() {
+            let status = if est.allowances.value.is_some() { est.allowances.status } else { Status::Unknown };
+            row(t, false, None, |r| {
+                cell(r, 7.0, false, |c| dot(c, status));
+                cell(r, 24.0, true, |_| {});
+                cell(r, 0.0, false, |c| words(c, fonts, "Allowances: carried in the job cost as allowances, in none of the sixteen", 12.5, Weight::Medium, theme::ink()));
+                cell(r, 80.0, true, |c| words(c, fonts, view::so_many(est.allowance_on.len(), "allowance"), 11.5, Weight::Regular, theme::ink_faint()));
+                cell(r, 130.0, true, |c| words(c, fonts, est.allowances.value.map(view::money).unwrap_or_else(|| "no figure".to_string()), 12.5, Weight::Semibold, theme::status_ink(status)));
+            });
+        }
     });
     // The estimate as an estimator writes it: one line an item, however many pieces of
     // the house it is on. (The sheet below is every piece on its own, which is where a

@@ -712,7 +712,7 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
     }
 
     // The job cost again, division by division: all sixteen, and what is in none.
-    if est.divisions.iter().any(|d| d.total.members > 0) || est.no_division.members > 0 || !est.no_division.left_out.is_empty() || est.divisions.iter().any(|d| !d.total.left_out.is_empty()) {
+    if est.divisions.iter().any(|d| d.total.members > 0) || !est.allowance_on.is_empty() || est.no_division.members > 0 || !est.no_division.left_out.is_empty() || est.divisions.iter().any(|d| !d.total.left_out.is_empty()) {
         let _ = writeln!(out, "\nBY DIVISION");
         let lines = |n: usize| plumbline_world::view::so_many(n, "line");
         for d in &est.divisions {
@@ -751,6 +751,13 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
                     }
                 }
             }
+        }
+        // What is carried as an allowance, named as one: the sixteen, what is in no
+        // division and this come to the job cost (call 123).
+        if !est.allowance_on.is_empty() {
+            let a = &est.allowances;
+            let said = a.value.map(|x| format!("{}{}", a.status.flag().trim_end(), money(x))).unwrap_or_else(|| "no figure".to_string());
+            let _ = writeln!(out, "  allowances: {}, {said}: carried in the job cost as allowances, and in none of the sixteen", plumbline_world::view::so_many(est.allowance_on.len(), "allowance"));
         }
     }
 
