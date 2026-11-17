@@ -262,3 +262,20 @@ Proposed, in three steps, each usable alone.
 
 It is new scope, a change to what the job holds, and for step 3 a new file written
 out, so it waits for Patrick's word. Which format a shop wants is QUESTIONS.md Q28.
+
+## 31. A door's hand and its swing (2026-11-17, from call 117's fifth point)
+
+A plan is read by its door swings: which side the hinges are on and which room the
+leaf opens into. The job holds a door's width, height and place in its wall and
+nothing of its hand, so the plan draws a door as a gap with its frame and no leaf. To
+draw a swing today would be to make one up, and a made-up swing sends the wrong
+hardware (a left-hand lockset on a right-hand door).
+
+Proposed: a door carries its hand as the trade names it (LH, RH, LHR, RHR, by the
+hinge side seen from outside the room it secures), Unknown until it is said. On the
+plan of its level the leaf is drawn open a quarter with its arc; an Unknown hand is
+drawn as the gap is now and is a question on the field list. The hand is written to
+the BIM file (IFC's operation type on the door) and read from one.
+
+It is a new value in the saved job and a new thing a person sets, so it waits for
+Patrick's word.

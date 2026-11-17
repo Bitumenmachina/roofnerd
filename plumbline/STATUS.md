@@ -6477,28 +6477,42 @@ hand), doors still have no swing; (6) noise: **a priced job opens with its check
 folded**, the red "not coded" is as it was.
 
 The by-item table is not in the command line's estimate, the workbook or any
-demonstration yet, and has not been judged. The cost at the head of a panel moves
-the buttons under it down by one row: **no window demonstration has been run since
-it was added**, and the full run that is owed first will say whether any of them
-reaches for a button that is now below the fold.
+demonstration yet, and has not been judged.
+
+**The full run, on a frozen copy of 5be55e3 (2026-11-17).** All twenty-five window
+demonstrations passed, each on its first run, and the twenty-one at the command line
+passed on the same copy (`field-job.sh` is the helper two of them call, not a
+demonstration). The 368 pictures are committed (aaa1f27, 4b38b33) and are of
+5be55e3. **They were handed to a worker to read, one by one, against what each
+step says it shows; what it found is the next section when it is in. Until then
+they are not read.**
+
+**After the full run (call 118; not in any demonstration, seen by hand on the sample
+house).** The Job panel, with nothing selected, now opens on what the job comes to:
+the price at 26 px ($468,876.85 on the sample), under it the job cost, overhead and
+profit ($394,677.48, $39,467.75, $34,731.62: they add to the price), then **By
+division**, a row for each division with work in it (the sixteen on the sample add
+to the job cost, $394,677.48, worked by hand from the picture). A thing with no cost
+code says "Cost code  not coded" in quiet ink with no red mark; its status is as it
+was. A door's swing is not drawn: the job holds no hand for a door, and PROPOSALS.md
+31 asks for one. **Changed for a person**: the Job panel's Markup and Level rows
+start sixteen rows lower on a job priced in every division; no demonstration clicks
+them (they use the O and R keys), and none has been run on this build.
 
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 322 tests pass,
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 324 tests pass,
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
-commit of code. **The window demonstrations are not all of one commit.** All
-twenty-four passed on a frozen copy of c0d5922 with every picture read. After that
-came calls 110 to 112 (a typed length to the cent, a comma in a cost line's name, a
-markup's source, an item added, renamed and taken out by hand, a wall typed north
-being north) and a twenty-fifth demonstration, `itemneww`. On abd00fc, the last
-commit of code, eight of them were run again and passed (`planw` with its figure
-worked again, and the seven others that draw by typed lengths); `moneyw`, `turnw`
-and `itemneww` passed on the commit before it and were not run on it; the other
-fourteen were not run after c0d5922. The machine was restarted twice in the night,
-each time under a long run. **The first thing to do is run all twenty-five on a
-frozen copy of the head and read the pictures.** Read `CLAUDE.md`, then this
-section, then the table of thirteen, then the two sections of the twenty-fifth
-judgment above.
+commit of code. **All twenty-five window demonstrations and the twenty-one at the
+command line passed on a frozen copy of 5be55e3 (2026-11-17), each window one on its
+first run.** That is every call to 117. Call 118 (the job's money on the Job panel,
+"not coded" said quietly) came after it and is seen by hand only. Whether the
+pictures of that run have been read is said in "Looked at as someone who has to work
+it", just above. The machine was restarted twice in the night of 2026-11-16, each
+time under a long run; a full run is done one demonstration at a time from a script
+that can be started again where it stopped. Read `CLAUDE.md`, then this section,
+then the table of thirteen, then the two sections of the twenty-fifth judgment
+above.
 
 **What happened on 2026-11-16.** Patrick asked for a fresh pass of code and review,
 the window and a clean-up, run alone. Two code reviewers read the model and the
@@ -6593,7 +6607,8 @@ seen**). **Items 10 and 12 are therefore still not judged on anything after
 6. **The money that is short or over and is said so here**: a gable end's triangle of
    wall is not drawn and not priced (PROPOSALS.md 29); sheathing is rounded up to
    whole sheets plane by plane (J25A-11). **The rename owed**: the folder, the
-   crates and the two commands to BuildOS (call 115), after a full run passes.
+   crates and the two commands to BuildOS (call 115); a full run has now passed, so
+   it can be done, as one commit with nothing else in it and a full run after.
 7. **The open rows** of the reviews and the earlier judgments (their tables above): a
    keystroke re-reads the whole job (R21-2); the rest of one money writer (R21-12);
    a footing dug wider cannot be recorded on it alone (J21-6); base is priced by a

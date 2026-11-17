@@ -4188,3 +4188,28 @@ Later the same day, the smaller three, each in part:
   strings to openings; a door still has no swing.
 - **6, noise.** A job that already has cost lines opens with the checklist folded to
   its one next step. The red "not coded" on every thing selected is as it was.
+
+### Call 118. The job's money on the Job panel; "not coded" said quietly; a door's swing is not made up (2026-11-17; the rest of call 117's second, fifth and sixth points)
+
+1. **The Job panel says what the job comes to, first.** With nothing selected the
+   right panel was the job's name, its markup, then lengths and areas level by level:
+   the one figure an estimator opens the job for was 16 px in the top bar and nowhere
+   on the panel headed "Job", and no dollar figure by division was in the model
+   window at all. Now, under the job's name, where anything is priced: the price,
+   large, in the colour of how sure it is; under it the job cost, the overhead and the
+   profit; then **By division**, a row for each division with work in it (its number,
+   its name, what it comes to), and a row for what is in no division where anything
+   is. Every figure is the estimate's own, the same as the estimate window's recap and
+   its By division table: nothing is worked out in the window. A division with lines
+   and no figure says "no figure", never $0.00. Sixteen rows with twelve of them empty
+   would be the noise call 117 complained of, so the empty ones are left to the
+   estimate window, which lists all sixteen.
+2. **"Not coded" is not an alarm.** A thing with no cost code showed a red "Unknown"
+   mark and red words on every panel of every thing, on a job where nothing is coded.
+   A cost code is how a line is filed in a builder's books; it is not a fact about the
+   building that anyone verifies. The row now reads "Cost code  not coded" in quiet
+   ink with no mark. Its status is unchanged (it is still Unknown in the job, in the
+   tally and under Open items); only the panel stops shouting it. A cost code that is
+   set is shown as before.
+3. **A door's swing is not drawn**, because the job does not hold a door's hand and a
+   swing drawn without one is made up (the fourth fixed rule). It is PROPOSALS.md 31.

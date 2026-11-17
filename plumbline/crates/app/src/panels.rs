@@ -1705,6 +1705,14 @@ pub fn stat(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: Str
     });
 }
 
+/// A small figure under a label, three to a row: what the price is made of.
+fn small_stat(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: String, status: Status) {
+    p.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(1.0), flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_children(|s| {
+        s.spawn((text(fonts, label.to_uppercase(), 9.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+        s.spawn((text(fonts, value, 12.5, Weight::Semibold, theme::status_ink(status)), TextLayout::no_wrap()));
+    });
+}
+
 /// One value: its name, its flag, what it is, and under it where it came from, or for a
 /// worked-out figure, how. A long value takes its own line. `act`, when there is one,
 /// is what a click on the row does ("Measure"), said at the row's foot.
@@ -1716,6 +1724,10 @@ fn property<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, val
     // builder to guess what 5:12 was of (call 96).
     let value = if label.to_lowercase().starts_with("edge ") && value.ends_with(":12") { format!("{value} pitch") } else { value };
     let long = value.chars().count() > 24;
+    // A cost code not set is how the job is filed, not a doubt about the building: it
+    // is said in quiet ink with no mark (call 118). Its status in the job is as it was.
+    let quiet = status == Status::Unknown && label.eq_ignore_ascii_case("cost code");
+    let ink = if quiet { theme::ink_faint() } else { theme::status_ink(status) };
     let mut row = p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::vertical(px(4.0)), row_gap: px(2.0), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() }, BorderColor::all(theme::rule())));
     if !act.is_empty() {
         row.insert(Named { name: theme::spoken(label), scrolls: true });
@@ -1723,14 +1735,16 @@ fn property<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, val
     row.with_children(|r| {
         r.spawn((Node { align_items: AlignItems::Center, column_gap: px(8.0), ..default() }, Pickable::IGNORE)).with_children(|top| {
             top.spawn((text(fonts, label, 12.0, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap(), Pickable::IGNORE));
-            status_chip(top, fonts, status);
+            if !quiet {
+                status_chip(top, fonts, status);
+            }
             top.spawn(Node { flex_grow: 1.0, ..default() });
             if !long {
-                top.spawn((text(fonts, value.clone(), 12.0, Weight::Medium, theme::status_ink(status)), TextLayout::no_wrap(), Pickable::IGNORE));
+                top.spawn((text(fonts, value.clone(), 12.0, if quiet { Weight::Regular } else { Weight::Medium }, ink), TextLayout::no_wrap(), Pickable::IGNORE));
             }
         });
         if long {
-            r.spawn((text(fonts, value, 12.0, Weight::Medium, theme::status_ink(status)), Pickable::IGNORE));
+            r.spawn((text(fonts, value, 12.0, Weight::Medium, ink), Pickable::IGNORE));
         }
         if !basis.is_empty() || !act.is_empty() {
             r.spawn((Node { align_items: AlignItems::FlexStart, column_gap: px(8.0), ..default() }, Pickable::IGNORE)).with_children(|foot| {
@@ -2087,6 +2101,39 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     title_block(p, fonts, "Job", &snap.title, String::new());
     if snap.storeys.is_empty() && snap.totals.is_none() {
         p.spawn(Node { margin: UiRect::top(px(10.0)), ..default() }).with_child(text(fonts, "Nothing is drawn yet. Next steps, on the left, says where to start.", 12.0, Weight::Regular, theme::ink_soft()));
+    }
+    // What the job comes to, first: the price, what it is made of, and the job cost
+    // division by division (call 118). Every figure is the estimate's own.
+    if let Some(est) = snap.estimate.as_ref().filter(|e| !e.lines.is_empty() || !e.allowance_on.is_empty()) {
+        let (price, status) = crate::sheet::dollars(Some(&est.price));
+        p.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(1.0), margin: UiRect::top(px(10.0)), flex_shrink: 0.0, ..default() }).with_children(|s| {
+            s.spawn(text(fonts, "PRICE", 9.5, Weight::Semibold, theme::ink_faint()));
+            s.spawn(Node { align_items: AlignItems::Center, column_gap: px(8.0), ..default() }).with_children(|v| {
+                v.spawn((text(fonts, price, 26.0, Weight::Semibold, theme::status_ink(status)), TextLayout::no_wrap()));
+                status_chip(v, fonts, status);
+            });
+        });
+        let part = |d: &plumbline_world::Derived| crate::sheet::dollars(Some(d));
+        let job_cost = match est.job_cost.value {
+            Some(x) => (view::money(x), est.job_cost.status),
+            None => ("no figure".to_string(), Status::Unknown),
+        };
+        p.spawn(Node { margin: UiRect::top(px(8.0)), column_gap: px(10.0), flex_shrink: 0.0, ..default() }).with_children(|r| {
+            small_stat(r, fonts, "Job cost", job_cost.0, job_cost.1);
+            let (s, st) = part(&est.overhead);
+            small_stat(r, fonts, "Overhead", s, st);
+            let (s, st) = part(&est.profit);
+            small_stat(r, fonts, "Profit", s, st);
+        });
+        heading(p, fonts, "By division");
+        let said = |t: &view::MoneyTotal| t.value.map(view::money).unwrap_or_else(|| "no figure".to_string());
+        for d in est.divisions.iter().filter(|d| d.total.members > 0 || !d.total.left_out.is_empty()) {
+            let status = if d.total.value.is_some() { d.total.status } else { Status::Unknown };
+            listed(p, fonts, None, &format!("{}  {}", d.division.number(), d.division.title()), String::new(), said(&d.total), status);
+        }
+        if est.no_division.members > 0 {
+            listed(p, fonts, None, "In no division", String::new(), said(&est.no_division), if est.no_division.value.is_some() { est.no_division.status } else { Status::Unknown });
+        }
     }
     // The job's markup: each is typed into here.
     if let Some(est) = &snap.estimate {
