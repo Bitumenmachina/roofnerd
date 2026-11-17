@@ -3984,3 +3984,29 @@ drawn by its name). **Not right**: the New item form opens at the foot of the le
 panel and its lower fields are under "more below" until the wheel is turned. **Not
 built**: a price, a unit or labor on an item; an item's own shape; a bench where it
 stands alone (PROPOSALS.md 28). Not judged.
+
+### Call 112. A wall typed north is north: what the finer place showed (2026-11-17)
+
+Call 110 kept the end of a typed length to a hundred-millionth of a foot. The first
+run of the demonstrations that type lengths on a build with it moved one figure: in
+`demos/planw.sh` the farmhouse's outside walls came to 1,042.667 SF of face where the
+script wanted 1,042.6672.
+
+Neither was right. The old expectation was worked from a wall 23 ft 11 in long held as
+23.9167 ft, 0.0004 in too long, which is the fault call 110 mended. The new figure was
+off the other way: **the length is laid off toward the pointer, and a pointer held "on
+the angle" is on it to a dot of the screen and no better.** Kept to four places, that
+lean was rounded away with everything else; kept finely, a wall typed north leaned a
+few hundred-thousandths of a foot east and its neighbours' faces moved in the fourth
+place.
+
+Decided: **a direction that is east, west, north or south to within a hundredth of a
+percent is that direction exactly** (`editing::toward`). A wall typed 23 ft 11 in north
+from 41 ft 3 in east ends at 41.25, 23.91666667. The demonstration's figure is worked
+again by hand in its comments: each wall's face is kept to four places, 8 x
+23.91666667 = 191.3333 SF, and 2 x 330 + 2 x 191.3333 = 1,042.6666 SF, which is what
+the program gives. The expectation was changed after this was written, and the
+script's working says what the old figure was and why it was wrong. A direction off
+the square (a wall at 45 degrees) is still as good as the pointer's dot.
+
+Test: the same in `a_typed_length_is_kept_finely_enough_to_multiply_to_the_cent`.

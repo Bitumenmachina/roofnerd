@@ -246,6 +246,8 @@ fn a_typed_length_is_kept_finely_enough_to_multiply_to_the_cent() {
     let area = 41.25 * far[1];
     assert_eq!((area * 100.0).round() / 100.0, 1168.75);
     assert_eq!((area * 6.0 * 100.0).round() / 100.0, 7012.50);
+    // A pointer held north to within a dot is north: the wall does not lean.
+    assert_eq!(ed::toward([41.25, 0.0], [41.25003, 30.0], 23.0 + 11.0 / 12.0), [41.25, 23.91666667]);
     // A length that is a round number of feet is still exactly that.
     assert_eq!(ed::toward([0.1, 0.2], [5.0, 0.2], 24.0), [24.1, 0.2]);
 }

@@ -152,10 +152,14 @@ echo
 echo "== What the first session left in the saved job: the farmhouse's outside walls =="
 "$P" check "$J"
 "$P" drawings "$J" | sed 's/^/    /' | head -6
-# 41'-3" is 41.25 ft. 23'-11" is 23.91666... ft, and a place on the plan is kept to a
-# ten-thousandth of a foot, so the wall is 23.9167 ft long (0.0004 in over). Round the
-# house 2 x (41.25 + 23.9167) = 130.3334 LF, shown as 130.33; at the 8'-0" the wall
-# section gives, 1,042.6672 SF of face, shown as 1,042.67. Each wall is
+# 41'-3" is 41.25 ft. 23'-11" is 23.91666... ft, and the end of a typed length is kept
+# to a hundred-millionth of a foot (DECISIONS.md call 110; it was kept to a
+# ten-thousandth, and the wall was 0.0004 in too long). Each figure of a wall is kept to
+# four places: its length 23.9167 ft, so the four added as they are kept come to
+# 2 x (41.25 + 23.9167) = 130.3334 LF, shown as 130.33; its face at the 8'-0" the wall
+# section gives is 8 x 23.91666667 = 191.3333 SF, and the long walls' 330 SF each:
+# 2 x 330 + 2 x 191.3333 = 1,042.6666 SF, shown as 1,042.67. (With the wall held too
+# long this was 1,042.6672.) Each wall is
 # Assumed and says which drawing it was traced from. The scale is the 41'-3" as read off
 # the sheet, Assumed. Picked by eye on a scan, the two ends are good to a pixel or two in
 # 619, so the sheet's own size is only checked to be about what that makes it. On the
@@ -173,7 +177,7 @@ got = {
     "round the house": round(sum(m(w, "plan_length")["value"] for w in walls), 4),
     "face": round(sum(m(w, "face_area")["value"] for w in walls), 4),
 }
-want = {"walls": 4, "lengths": [23.9167, 23.9167, 41.25, 41.25], "round the house": 130.3334, "face": 1042.6672}
+want = {"walls": 4, "lengths": [23.9167, 23.9167, 41.25, 41.25], "round the house": 130.3334, "face": 1042.6666}
 for k in want:
     print("    %-16s %s" % (k, got[k]))
 if got != want:

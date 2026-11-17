@@ -6393,6 +6393,23 @@ the program's: it says "drawn as a box, its name saying nothing else"). Its ten
 pictures were read. **Not right**: the form opens at the foot of the left panel with
 its lower fields under "more below". Not judged.
 
+## A typed length to the cent: what changed, and what was run on it (calls 110 and 112; 2026-11-17)
+
+**A changed number.** The end of a typed length is kept to a hundred-millionth of a
+foot (it was a ten-thousandth), and a direction held square is square exactly. A wall
+typed 23 ft 11 in is 23.91666667 ft where it was 23.9167. **`demos/planw.sh`'s
+expectation changed with it**: the face of the farmhouse's outside walls is 1,042.6666
+SF, worked by hand in the script, where it was 1,042.6672 (worked from a wall held
+0.0004 in too long). No other demonstration's figure moved. The older sections of
+this file that say 1,042.6672 or "a place is kept to the ten-thousandth of a foot"
+are the record of what was so when they were written.
+
+**What was run.** On a frozen copy of cf58c3a (the finer place, without the square
+direction): ten window demonstrations, nine passed and `planw` failed on the figure
+above. On a frozen copy of the build with the square direction: `planw` passed, and
+the other nine and `demos/itemneww.sh` were run again; their result is in "Start
+here".
+
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 320 tests pass,

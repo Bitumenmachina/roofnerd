@@ -943,6 +943,17 @@ pub fn toward(last: P2, pointer: P2, length_ft: f64) -> P2 {
     let (dx, dy) = (pointer[0] - last[0], pointer[1] - last[1]);
     let d = (dx * dx + dy * dy).sqrt();
     let (ux, uy) = if d > crate::check::FIT_TOLERANCE_FT { (dx / d, dy / d) } else { (1.0, 0.0) };
+    // A direction that is east, west, north or south to within a hundredth of a
+    // percent is that direction exactly. The pointer held "on the angle" is on it to
+    // a dot of the screen and no better; kept to four places the difference was
+    // rounded away with everything else, and kept finely (below) it would lean a wall
+    // typed 23 ft 11 in north by a few hundred-thousandths of a foot and move its
+    // face area in the fourth place (seen in `demos/planw.sh` on the first build
+    // with the finer place).
+    let square = |u: f64| if u.abs() < 1.0e-4 { 0.0 } else { u };
+    let (ux, uy) = (square(ux), square(uy));
+    let n = (ux * ux + uy * uy).sqrt();
+    let (ux, uy) = if n > 0.0 { (ux / n, uy / n) } else { (1.0, 0.0) };
     // Kept to a hundred-millionth of a foot. It was kept to four places, and 28 ft 4 in
     // became 28.3333: a floor 41 ft 3 in by 28 ft 4 in was shown as 1,168.75 SF, held as
     // 1,168.7486, and at $6.00 came to $7,012.49 where a calculator says $7,012.50
