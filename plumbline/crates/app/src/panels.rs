@@ -1831,6 +1831,12 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             press(r, "Eave out 6 in", "]", KeyCode::BracketRight);
             press(r, "Eave in 6 in", "[", KeyCode::BracketLeft);
             press(r, "Gable", "G", KeyCode::KeyG);
+            // The roof the plane is part of, to have it in hand (to delete it, to
+            // measure its eave height): nothing on the model picked it (J27A-20).
+            if !snap.roof_path.is_empty() {
+                let roof = snap.roof_path.clone();
+                on_click(&mut button(r, fonts, "Whole roof", "", false), move |doc| doc.select(&roof));
+            }
         });
     }
     // A thing set down is turned a quarter at a time, to face the room.

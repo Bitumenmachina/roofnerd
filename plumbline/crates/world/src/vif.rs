@@ -382,6 +382,8 @@ impl Question {
                 let said = |name: &str| match name {
                     "condition" => "its assembly".to_string(),
                     n if n.starts_with("what ") => n.to_string(),
+                    // A room is kept by a point inside it: on site that is where it is.
+                    "a point inside it" => "where it is".to_string(),
                     n => format!("its {}", n.replace('_', " ")),
                 };
                 let listed = |length: bool| -> String {

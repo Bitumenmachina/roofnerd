@@ -324,6 +324,26 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
         }
         let _ = writeln!(out, "    doors {}, windows {}", s.doors, s.windows);
     }
+    // Each roof: its planes, surface and squares, and its lines by kind (J27A-13: a
+    // roof of 12 squares was not in the takeoff, and nothing said it was left out).
+    let roofs: Vec<(String, String)> = view::elements(job).into_iter().filter(|e| e.kind == plumbline_world::Kind::Roof).map(|e| (e.path, e.name)).collect();
+    for (path, name) in roofs {
+        let t = view::roof_totals(job, &path);
+        let squares = view::in_squares(&t.surface);
+        let _ = writeln!(out, "\n{name}  ({path})");
+        let _ = writeln!(out, "  {} roof planes {:<6} {}, {}", t.surface.status.flag(), t.facets, said(&t.surface), said(&squares));
+        match t.predominant_pitch {
+            Some((pitch, status)) => {
+                let _ = writeln!(out, "  {} predominant pitch  {}", status.flag(), view::pitch_said(pitch));
+            }
+            None => {
+                let _ = writeln!(out, "  ? predominant pitch  not said: {}", t.pitch_note);
+            }
+        }
+        for (kind, sum) in &t.lines {
+            let _ = writeln!(out, "  {} {:<8} {:<9} {}", sum.status.flag(), kind.said(), sum.members, said(sum));
+        }
+    }
     for t in building::takeoff(job) {
         let what = if !t.classification.is_empty() { t.classification.as_str() } else if t.flag == Status::Unknown { "which system is not known" } else { "no system" };
         // The length is no surer than the runs it is the sum of, and is marked so.

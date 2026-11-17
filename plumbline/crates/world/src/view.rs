@@ -600,7 +600,11 @@ pub fn so_many(n: usize, one: &str) -> String {
 /// (J22A-19; J23-8: the command line took it without a word).
 pub fn markup_large_said(typed: &str) -> Option<String> {
     let x = typed.trim().trim_end_matches('%').trim().parse::<f64>().ok()?;
-    (x > 100.0).then(|| format!("That is more than what it is a percentage of. If {} % was meant, enter it again.", figure(x / 10.0, 2)))
+    if x > 100.0 {
+        return Some(format!("That is more than what it is a percentage of. If {} % was meant, enter it again.", figure(x / 10.0, 2)));
+    }
+    // 100 typed for 10 doubles a bid and was taken without a word (J27A-19).
+    (x >= 50.0).then(|| format!("That is a large markup. If {} % was meant, enter it again.", figure(x / 10.0, 2)))
 }
 
 /// What was priced on the things a step took out of the job, in the one sentence that

@@ -5994,3 +5994,19 @@ fn a_size_is_written_in_inches_as_the_trade_writes_it() {
     // A side of 8 ft or more: feet and inches, as a tape reads.
     assert_eq!(size_said([10.0, 2.0, 7.0]), "10' 0\" × 2' 0\" × 7' 0\"");
 }
+
+#[test]
+fn a_quantity_is_written_as_a_takeoff_sheet_writes_it() {
+    use formula::{names, parse};
+    // "face_area x 0.10" is times (call 124): the same reading as with the star, and
+    // the one name it uses is the area. A thing named x on its own is still a name.
+    assert_eq!(format!("{:?}", parse("face_area x 0.10").unwrap()), format!("{:?}", parse("face_area * 0.10").unwrap()));
+    assert_eq!(names(&parse("face_area x 0.10").unwrap()), vec!["face_area".to_string()]);
+    assert_eq!(format!("{:?}", parse("2 X 3").unwrap()), format!("{:?}", parse("2 * 3").unwrap()));
+    assert_eq!(names(&parse("x").unwrap()), vec!["x".to_string()]);
+    // Priced each: one.
+    assert_eq!(format!("{:?}", parse("each").unwrap()), format!("{:?}", parse("1").unwrap()));
+    assert_eq!(format!("{:?}", parse("EA").unwrap()), format!("{:?}", parse("1").unwrap()));
+    // Two figures side by side say what goes between them.
+    assert!(parse("face_area 0.10").unwrap_err().ends_with("put +, -, x or / between them"));
+}

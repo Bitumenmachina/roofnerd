@@ -4329,3 +4329,19 @@ figure, though the floor it is on was traced and Assumed.
 No amount, job cost or price changes. The figure called "in no division" changes
 wherever an allowance had been folded into it, and the verify-in-field dollars rise
 by the allowances that rest on something not Known.
+
+### Call 124. Seven stops and silences from the veteran judge's notes (2026-11-17; J27A-9, -12, -13, -17, -19, -20, read while it was still at work)
+
+- **"x" is times in a quantity** ("face area x 0.10"), as every takeoff sheet writes
+  it and as the program itself writes "quantity × unit cost". And two figures side
+  by side now say what goes between them: "put +, -, x or / between them".
+- **"each" is one.** A door is priced each: "each" or "EA" typed as a quantity is 1.
+- **A markup from 50 % up is asked about.** 100 typed for 10 went in without a word
+  while 1,000 was questioned. From 50 % to 100 %: "That is a large markup. If 10.00 %
+  was meant, enter it again." Over 100 % the words are as they were.
+- **A plane's panel has Whole roof**, which picks the roof the plane is part of; the
+  refusal to delete a plane says so. (Nothing on the model picked the roof itself.)
+- **The command line's takeoff has the roof in it**: each roof's planes, surface,
+  squares, predominant pitch and its eaves, hips, ridges and valleys by length.
+- **On the field list** a room reads "Check where it is" (it read "Check its a point
+  inside it").

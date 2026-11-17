@@ -797,7 +797,7 @@ pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
         let kind = job.kind(path).ok_or_else(|| format!("no element {path}"))?;
         let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
         if let Some(solved) = job.world.get::<Solved>(e) {
-            return Err(format!("{path} is solved from {}'s footprint and would come back: change the footprint, or remove {}", solved.from, solved.from));
+            return Err(format!("{path} is solved from {}'s footprint and would come back: change the footprint, or remove {} (in the window, Whole roof on the plane's panel picks it)", solved.from, solved.from));
         }
         let name = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_default();
         let listed = |who: &[String]| format!("{}{}", who.iter().take(3).cloned().collect::<Vec<_>>().join(", "), if who.len() > 3 { format!(" and {} more", who.len() - 3) } else { String::new() });

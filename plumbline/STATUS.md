@@ -6592,11 +6592,29 @@ while it worked, already held money findings that needed no window to fix:
   every demonstration, each worked by hand: it is QUESTIONS.md Q29, with the working
   answer that nothing changes until it is decided.
 
-All twenty-one command-line demonstrations pass on a frozen copy of this build.
+- **J27A-9, -12, -13, -17, -19, -20: stops and silences. Fixed (call 124), each
+  tested but the two in the window, which are not seen.** "x" is times in a quantity
+  ("face area x 0.10") and two figures side by side say what goes between them;
+  "each" typed as a quantity is one; overhead or profit from 50 % up is asked about
+  (100 typed for 10 went in without a word); a plane's panel has **Whole roof**, which
+  picks its roof, and the refusal to delete a plane says so (window, not seen); the
+  command line's `takeoff` has each roof in it (the sample's: 4 planes, 1,408.72 SF,
+  14.09 SQ, 6:12, eaves 144.00 LF, hips 90.00 LF, ridge 12.00 LF); on the field
+  list a room reads "Check where it is".
+- **Still open from its notes so far**: J27A-16, what a line's quantity is made of
+  cannot be changed in the window once the line is on (the command line can; the
+  rule is that a formula is editable on the line, so this is owed); J27A-18, after a
+  gable the message gives what came out and then a job cost that went up, and leaves
+  the reader to subtract; a line added by hand lands in no division; J27A-8, sheathing
+  by the plane and shingles with no waste (PROPOSALS.md 29's neighbour, J25A-11);
+  J27A-1, the view going back to the whole sheet after a scale is set.
+
+All twenty-one command-line demonstrations pass on a frozen copy of this build
+(after call 124 too).
 
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 327 tests pass,
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 328 tests pass,
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
 commit of code. **All twenty-five window demonstrations and the twenty-one at the
 command line passed on a frozen copy of 5be55e3 (2026-11-17), each window one on its

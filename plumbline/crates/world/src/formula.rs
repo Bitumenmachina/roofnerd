@@ -85,7 +85,15 @@ fn tokens(text: &str) -> Result<Vec<Tok>, String> {
                 while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
                     i += 1;
                 }
-                out.push(Tok::Name(chars[start..i].iter().collect()));
+                let word: String = chars[start..i].iter().collect();
+                let after_a_figure = matches!(out.last(), Some(Tok::Num(_) | Tok::Name(_) | Tok::Close));
+                match word.to_ascii_lowercase().as_str() {
+                    // "face_area x 0.10": times, as a takeoff sheet writes it (call 124).
+                    "x" if after_a_figure => out.push(Tok::Op('*')),
+                    // Priced each: one.
+                    "each" | "ea" => out.push(Tok::Num(1.0)),
+                    _ => out.push(Tok::Name(word)),
+                }
             }
             other => return Err(format!("{other:?} is not something a formula can hold; it takes names, numbers, + - * / and brackets")),
         }
@@ -178,6 +186,13 @@ pub fn parse(text: &str) -> Result<Expr, String> {
                 j += 1;
             }
             let word = |c: char| c.is_ascii_alphabetic() || c == '_';
+            // An x standing alone between two things is times, as a takeoff sheet
+            // writes it ("face area x 0.10"), and is not a word of a name (call 124).
+            if i > 0 && j + 1 < chars.len() && matches!(chars[j], 'x' | 'X') && chars[j + 1] == ' ' {
+                joined.push('*');
+                i = j + 1;
+                continue;
+            }
             if i > 0 && j < chars.len() && word(chars[i - 1]) && word(chars[j]) {
                 joined.push('_');
                 i = j;
@@ -198,7 +213,7 @@ pub fn parse(text: &str) -> Result<Expr, String> {
     match p.peek() {
         None => Ok(expr),
         Some(Tok::Close) => Err("has a closing bracket with nothing open".into()),
-        Some(_) => Err("has two things side by side with nothing between them".into()),
+        Some(_) => Err("has two things side by side with nothing between them: put +, -, x or / between them".into()),
     }
 }
 

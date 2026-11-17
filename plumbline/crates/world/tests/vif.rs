@@ -366,6 +366,9 @@ fn lines_that_come_off_or_go_with_a_dropped_plane_are_said_to_the_cent() {
     // Overhead typed ten times too large is answered; an ordinary one is not.
     assert_eq!(view::markup_large_said("250").as_deref(), Some("That is more than what it is a percentage of. If 25.00 % was meant, enter it again."));
     assert_eq!(view::markup_large_said("12"), None);
+    // 100 typed for 10 doubles a bid: asked about too (call 124), in its own words.
+    assert_eq!(view::markup_large_said("100").as_deref(), Some("That is a large markup. If 10.00 % was meant, enter it again."));
+    assert_eq!(view::markup_large_said("49"), None);
 }
 
 #[test]
