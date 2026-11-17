@@ -3574,7 +3574,7 @@ fn a_room_is_no_surer_than_a_height_that_decides_whether_a_wall_bounds_it() {
         let d = measure_of(&mut job, &r, name);
         assert_eq!(d.status, Status::Assumed, "{name}");
         // (Named by its path as well as its name since the tenth judgment: two walls can share a name.)
-        assert_eq!(d.note, format!("whether partition ({p}) bounds this room rests on its heights, which are assumed"), "{name}");
+        assert_eq!(d.note, format!("its outline counts on partition ({p}), whose height is assumed"), "{name}");
         assert!(d.inputs.contains(&format!("{p}#pl::wall")), "{name}: {:?}", d.inputs);
     }
     assert_eq!(figures_of(&mut job, &r), [Some(185.25), Some(200.0), Some(58.0)]);
@@ -3609,7 +3609,7 @@ fn a_room_is_no_surer_than_a_height_that_decides_whether_a_wall_bounds_it() {
     job.derive();
     let d = measure_of(&mut job, &r, "floor_area");
     assert_eq!((d.value, d.status), (Some(185.25), Status::Assumed));
-    assert!(d.note.contains("whether basement partition (wall-") && d.note.contains(") bounds this room"), "{}", d.note);
+    assert!(d.note.contains("its outline counts on basement partition (wall-") && d.note.contains("), whose height is assumed"), "{}", d.note);
 }
 
 #[test]
@@ -4288,7 +4288,7 @@ fn j10_10_a_wall_that_starts_above_a_room_does_not_flag_it_whatever_its_top() {
     job.derive();
     let d = measure_of(&mut job, &r, "floor_area");
     assert_eq!(d.status, Status::Assumed);
-    assert!(d.note.contains(&format!("whether above ({above}) bounds this room rests on its heights")), "{}", d.note);
+    assert!(d.note.contains(&format!("its outline counts on above ({above}), whose height is")), "{}", d.note);
 }
 
 // ---- Drawing and editing (HANDOFF_DRAW.md) ----

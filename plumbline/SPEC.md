@@ -805,7 +805,7 @@ window, the left panel's Drawings to trace.
   body is a circle or a rectangle pushed along its run, level, sloping or upright, on
   the system the file puts it on where that is one of section 4's.
 * **Listed and not brought in:** everything else the model names, placed or not, by
-  what it is in words (a beam, a stair), how many, and why: no element for it; a body of
+  what it is in words (a beam, a stair), how many, and why: nothing here to bring it in as; a body of
   more than one piece; a body that is not a plain pushed shape; a wall not upright or a
   floor not level to an eighth of an inch in eight feet; a floor whose outline has a
   hole; a floor or a run already in that very place.

@@ -544,8 +544,7 @@ fn estimate_by_item(job: &mut plumbline_world::Job) -> String {
         };
         let at = match it.unit_cost {
             Some(x) => format!("${}/{}", view::rate(x), it.unit),
-            None if it.places > 1 => "prices vary".to_string(),
-            None => "no price".to_string(),
+            None => it.no_one_price_said(),
         };
         let class = it.class.map(plumbline_world::Class::title).unwrap_or("no cost type");
         // A long name is cut and says it is cut; `plumbline estimate` has it whole.

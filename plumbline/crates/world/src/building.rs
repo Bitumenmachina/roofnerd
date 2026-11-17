@@ -1308,8 +1308,8 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                 }
                 for (how, walls) in by_how_sure {
                     notes.push(match walls.as_slice() {
-                        [one] => format!("whether {one} bounds this room rests on its heights, which are {how}"),
-                        [most @ .., last] => format!("whether {} and {last} bound this room rests on their heights, which are {how}", most.join(", ")),
+                        [one] => format!("its outline counts on {one}, whose height is {how}"),
+                        [most @ .., last] => format!("its outline counts on {} and {last}, whose heights are {how}", most.join(", ")),
                         [] => continue,
                     });
                 }

@@ -31,7 +31,7 @@ echo "$OUT" | sed 's/^/    /'
 # pipe, and a beam, a stair and a chair.
 for made in "2 levels" "4 walls" "1 door" "1 window" "1 floor" "1 room" "1 duct" "1 pipe"; do says "brought in" "$made" "$OUT"; done
 says "what was not" "not brought in: 3 things" "$OUT"
-for left in "1 beam: this program has no element for it" "1 stair: this program has no element for it" "1 furniture: this program has no element for it"; do says "listed" "$left" "$OUT"; done
+for left in "1 beam: nothing here to bring it in as" "1 stair: nothing here to bring it in as" "1 furniture: nothing here to bring it in as"; do says "listed" "$left" "$OUT"; done
 says "its unit" "the model is in meters: every length was turned into feet" "$OUT"
 "$P" check "$J"
 

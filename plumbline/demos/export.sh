@@ -172,11 +172,11 @@ fi
 "$P" import ifc "$T/readback.json" "$T/house.ifc" --status Assumed --source "this program's own model, written out" > "$T/in.txt"
 says "$T/in.txt" "16 walls"
 says "$T/in.txt" "10 rooms"
-# What this program has no element for it says, by kind and count; nothing goes missing.
+# What there is nothing here to bring in as, it says, by kind and count; nothing goes missing.
 # Call 65: of the 22 fixtures, the six that IFC has a plumber's word for (water closets,
 # lavatories, tubs) are written as sanitary terminals; the other 16 are as they were.
-says "$T/in.txt" "16 fixture or outlet: this program has no element for it"
-says "$T/in.txt" "6 plumbing fixtures: this program has no element for it"
+says "$T/in.txt" "16 fixture or outlet: nothing here to bring it in as"
+says "$T/in.txt" "6 plumbing fixtures: nothing here to bring it in as"
 # (Its walls by type are left out of the comparison: a building model is written with
 # each wall's own thickness and not its type, which the export says, so the types a
 # reader makes for them are the reader's and are named by it.)

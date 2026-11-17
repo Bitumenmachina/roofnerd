@@ -919,10 +919,23 @@ pub struct ItemTotal {
     pub quantity_status: Status,
     /// The price each is at, when every one of them is at the same price.
     pub unit_cost: Option<f64>,
+    /// How many of its lines have a price at all.
+    pub priced_places: usize,
     pub amount: MoneyTotal,
 }
 
 impl ItemTotal {
+    /// What stands where the unit cost would when the lines are not all at one price:
+    /// "no price" where none has one, how many have where some do, and "prices vary"
+    /// only where every line is priced and they differ.
+    pub fn no_one_price_said(&self) -> String {
+        match self.priced_places {
+            0 => "no price".to_string(),
+            n if n < self.places => format!("{n} of {} priced", self.places),
+            _ => "prices vary".to_string(),
+        }
+    }
+
     /// The quantity as it is written, for the window and the command line alike: a
     /// count of whole things whole; anything else to two places unless, at two, it
     /// would not multiply by its price to its amount on a calculator, and then to the
@@ -974,6 +987,7 @@ impl Estimate {
                     quantity: (quantities.len() == lines.len()).then(|| (quantities.iter().sum::<f64>() * 10000.0).round() / 10000.0),
                     quantity_status: lines.iter().map(|l| l.priced.status).max().unwrap_or(Status::Unknown),
                     unit_cost: one_price.then(|| costs[0]),
+                    priced_places: costs.len(),
                     amount: total_of(&parts),
                 }
             })

@@ -151,6 +151,27 @@ pub fn shown(row: &view::Row) -> String {
 /// height, H. (J19-16, J19-27: a bracketed pair of decimal feet is not how a builder
 /// says where something is, and the window wrote one place two ways.) Words with no
 /// such pair in them come back as they were.
+/// One figure of a place, in feet: east (0), north (1) or height (2). West and south
+/// of the plan's corner are said as that, not as a minus sign before feet and inches
+/// (call 122: "E -2' 1"" is W 2' 1").
+pub fn compass(feet: f64, way: usize) -> String {
+    let said = units::feet_as_ft_in(feet.abs(), 16);
+    let back = feet < 0.0 && said != units::feet_as_ft_in(0.0, 16);
+    match (way, back) {
+        (0, false) => format!("E {said}"),
+        (0, true) => format!("W {said}"),
+        (1, false) => format!("N {said}"),
+        (1, true) => format!("S {said}"),
+        _ => format!("H {}", units::feet_as_ft_in(feet, 16)),
+    }
+}
+
+/// What follows " in" where that is the unit of the figures before it (the end, or a
+/// mark), and not the word "in" ("in the wall").
+fn inches_after(after: &str) -> Option<&str> {
+    after.strip_prefix(" in").filter(|more| more.is_empty() || more.starts_with([',', ';', '.', ':', ')']))
+}
+
 pub fn places(words: &str) -> String {
     let mut out = String::new();
     let mut rest = words;
@@ -160,7 +181,9 @@ pub fn places(words: &str) -> String {
         let figures: Vec<Option<f64>> = rest[open + 1..close].split(", ").map(|f| f.parse().ok()).collect();
         out.push_str(&rest[..open]);
         if (2..=3).contains(&figures.len()) && figures.iter().all(Option::is_some) {
-            let said: Vec<String> = figures.iter().flatten().zip(["E", "N", "H"]).map(|(f, way)| format!("{way} {}", units::feet_as_ft_in(*f, 16))).collect();
+            // Figures followed by "in" are inches (a connection's place on a fitting).
+            let per = if inches_after(&rest[close + 1..]).is_some() { 12.0 } else { 1.0 };
+            let said: Vec<String> = figures.iter().flatten().zip(0..).map(|(f, way)| compass(*f / per, way)).collect();
             out.push_str(&said.join(", "));
             any = true;
         } else {
@@ -169,7 +192,7 @@ pub fn places(words: &str) -> String {
         rest = &rest[close + 1..];
     }
     // The unit that followed the figures is in the figures now.
-    out.push_str(if any { rest.strip_prefix(" ft").unwrap_or(rest) } else { rest });
+    out.push_str(if any { rest.strip_prefix(" ft").or_else(|| inches_after(rest)).unwrap_or(rest) } else { rest });
     out
 }
 
@@ -180,8 +203,16 @@ mod place_words {
     #[test]
     fn a_pair_of_feet_is_said_as_east_and_north() {
         assert_eq!(places("(0, 28) to (0, 0) ft"), "E 0' 0\", N 28' 0\" to E 0' 0\", N 0' 0\"");
-        assert_eq!(places("(-13.3475, 8.3125) ft"), "E -13' 4 3/16\", N 8' 3 3/4\"");
+        assert_eq!(places("(-13.3475, 8.3125) ft"), "W 13' 4 3/16\", N 8' 3 3/4\"");
         assert_eq!(places("(1, 2, 8.5) ft"), "E 1' 0\", N 2' 0\", H 8' 6\"");
+    }
+
+    #[test]
+    fn west_and_south_of_the_corner_are_said_so_and_inches_are_inches() {
+        assert_eq!(places("(-2.5, -0.5) ft"), "W 2' 6\", S 0' 6\"");
+        assert_eq!(places("(0, 0, 3) in"), "E 0' 0\", N 0' 0\", H 0' 3\"");
+        assert_eq!(places("(4, 2, -4) ft"), "E 4' 0\", N 2' 0\", H -4' 0\"");
+        assert_eq!(places("(1, 2) in the wall"), "E 1' 0\", N 2' 0\" in the wall");
     }
 
     #[test]
@@ -2513,7 +2544,7 @@ pub fn write_pointer(doc: Res<Doc>, mut out: Query<&mut Text, With<PointerText>>
     // With a tool in hand, what the next pick would snap to is said beside where it is.
     let snapped = doc.draw.found.as_ref().map(|f| f.kind.name()).filter(|n| !n.is_empty()).map(|n| format!("     {n}")).unwrap_or_default();
     let s = match doc.pointer {
-        Some(p) => format!("E {}     N {}     H {}{snapped}", units::feet_as_ft_in(p[0], 16), units::feet_as_ft_in(p[1], 16), units::feet_as_ft_in(p[2], 16)),
+        Some(p) => format!("{}     {}     {}{snapped}", compass(p[0], 0), compass(p[1], 1), compass(p[2], 2)),
         None => String::new(),
     };
     // Through the one place every word on screen is said, as all other text is.

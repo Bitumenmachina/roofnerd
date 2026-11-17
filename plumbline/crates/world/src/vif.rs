@@ -333,6 +333,8 @@ impl Question {
         match (&self.room, self.storey.is_empty()) {
             (Some(room), false) => format!("{}, {room}", self.storey),
             (Some(room), true) => room.clone(),
+            // A roof is on no level: where it is is the roof (it was a blank).
+            (None, true) if matches!(self.kind, Kind::Roof | Kind::RoofPlane) => "Roof".to_string(),
             (None, _) => self.storey.clone(),
         }
     }

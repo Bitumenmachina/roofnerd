@@ -1007,9 +1007,9 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             continue;
         }
         if is_placed {
-            leave(&e.name, "this program has no element for it");
+            leave(&e.name, "nothing here to bring it in as");
         } else if Reader::text(r.arg(e, 0)).is_some_and(|mark| mark.len() == 22) && e.args.len() >= 7 && !e.name.starts_with("IFCREL") && !e.name.ends_with("TYPE") && !e.name.ends_with("STYLE") && !e.name.ends_with("TEMPLATE") && !NOT_THINGS.contains(&e.name.as_str()) {
-            leave(&e.name, "the model gives it no place, and this program has no element for it");
+            leave(&e.name, "the model gives it no place, and there is nothing here to bring it in as");
         }
     }
     if guessed > 0 {

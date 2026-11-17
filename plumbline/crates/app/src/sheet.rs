@@ -903,7 +903,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     });
                     cell(r, 92.0, true, |c| match it.unit_cost {
                         Some(x) => words(c, fonts, format!("${}", view::rate(x)), 12.5, Weight::Regular, theme::ink_soft()),
-                        None => words(c, fonts, "prices vary", 11.0, Weight::Regular, theme::ink_faint()),
+                        None => words(c, fonts, it.no_one_price_said(), 11.0, Weight::Regular, if it.priced_places == 0 { theme::status_ink(Status::Unknown) } else { theme::ink_faint() }),
                     });
                     cell(r, 112.0, true, |c| match it.amount.value {
                         Some(x) => words(c, fonts, view::money(x), 12.5, Weight::Semibold, theme::status_ink(it.amount.status)),

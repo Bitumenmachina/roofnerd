@@ -33,7 +33,7 @@ fn a_model_comes_in_as_storeys_walls_openings_a_floor_a_room_and_runs_and_the_re
     let left: Vec<(&str, usize)> = b.left_out.iter().map(|(c, n, _)| (c.as_str(), *n)).collect();
     // Call 50: what the model calls a kind of thing is said in words.
     assert_eq!(left, [("beam", 1), ("furniture", 1), ("stair", 1)]);
-    assert!(b.left_out.iter().all(|(_, _, why)| why == "this program has no element for it"));
+    assert!(b.left_out.iter().all(|(_, _, why)| why == "nothing here to bring it in as"));
     assert!(b.notes.iter().any(|n| n.contains("the model is in meters")));
     job.derive();
 
@@ -212,7 +212,7 @@ fn j15_11_12_22_what_is_not_read_is_listed_and_counted() {
     assert_eq!(b.made.get("walls"), Some(&3));
     let left: Vec<(&str, usize, &str)> = b.left_out.iter().map(|(c, n, why)| (c.as_str(), *n, why.as_str())).collect();
     assert!(left.contains(&("wall", 1, "its body is made of more than one piece: only a body of one piece is read")), "{left:?}");
-    assert!(left.contains(&("beam", 1, "the model gives it no place, and this program has no element for it")), "{left:?}");
+    assert!(left.contains(&("beam", 1, "the model gives it no place, and there is nothing here to bring it in as")), "{left:?}");
     // The door that was in that wall is listed too: nothing is dropped unsaid.
     assert!(left.iter().any(|(c, n, why)| *c == "door" && *n == 1 && why.contains("fills no hole in a wall that was brought in")), "{left:?}");
     assert!(b.notes.iter().any(|n| n.starts_with("1 number in the file is used by more than one thing")), "{:?}", b.notes);

@@ -892,7 +892,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
         burst.trailing = false;
         burst.said = true;
         let first = doc.message.clone();
-        doc.say(Tone::Refused, format!("{first}\nA second reading came straight after that one and was not used. One reading to a value: click the next value, then shoot."));
+        doc.say(Tone::Warned, format!("{first}\nA second reading came straight after that one and was not used. One reading to a value: click the next value, then shoot."));
         doc.touch();
     }
     if in_burst {
@@ -901,7 +901,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
             burst.said = true;
             if burst.after_entry {
                 let first = doc.message.clone();
-                doc.say(Tone::Refused, format!("{first}\nA second reading came straight after that one and was not used. One reading to a value: click the next value, then shoot."));
+                doc.say(Tone::Warned, format!("{first}\nA second reading came straight after that one and was not used. One reading to a value: click the next value, then shoot."));
             } else {
                 doc.say(Tone::Refused, "A reading came in with no value picked to take it, and was not used. Click the value first (in the panel on the right), then shoot or type.");
             }

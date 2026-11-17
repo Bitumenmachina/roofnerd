@@ -4274,3 +4274,32 @@ stands is in STATUS.md. Two decisions come out of it at once.
 2. **A demonstration that claims a view measures it.** `dressw` now turns from the
    whole job in view, and measures the colours of the north and east walls in the
    picture that claims them, as it already did for the south and west.
+
+### Call 122. Words and small things from the pictures read (2026-11-17; `research/pictures-read-5be55e3.md` 2, 10, 12, 17, 20, 23, 29)
+
+Each is a wording or a showing; no figure changes.
+
+- **West and south.** A place west or south of the plan's corner read "E -2' 1"" and
+  "N -0' 6"". It reads **W 2' 1"** and **S 0' 6"**, in the panels and under the
+  pointer. Height keeps its sign (a footing is below the datum).
+- **A place given in inches is inches.** A connection's place on a fitting, kept in
+  inches, was written as if feet ("H 3' 0" in"). It reads H 0' 3".
+- **A second reading refused is a caution, not a refusal of the first.** "Ground:
+  level height is 8' 10 1/2", measured ... A second reading came straight after that
+  one and was not used" was all in the red of a refusal though the first reading was
+  taken. It is in amber.
+- **"No price" is not "prices vary".** On the estimate by item, a row whose lines
+  have no price says "no price"; one with some priced says "2 of 4 priced"; "prices
+  vary" is only for a row priced throughout at more than one price.
+- **A roof's place is "Roof"** on the verify-in-field list (it was blank: a roof is
+  on no level).
+- **A room's outline.** "whether wall 1, wall 3 and wall 5 bound this room rests on
+  their heights, which are assumed" did not read. It is **"its outline counts on
+  wall 1, wall 3 and wall 5, whose heights are assumed"** (one wall: "counts on wall
+  1, whose height is assumed").
+- **What a designer's model holds that this program does not.** "this program has no
+  element for it" used a software word. It is **"nothing here to bring it in as"**
+  ("the model gives it no place, and there is nothing here to bring it in as").
+
+The expectations of three tests of the model, one of the window's place words, two
+of the BIM reader and two demonstrations (`export.sh`, `model.sh`) change with the last two, word for word.
