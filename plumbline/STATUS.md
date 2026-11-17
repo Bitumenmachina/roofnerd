@@ -6894,6 +6894,18 @@ scan is not seen in 3D. No judge has tried it. Owed, in order: a real scan from
 Patrick, cleaned as he would clean it, tried at the command line and the result
 read; Scan under Bring in; the scan as a ghost in 3D; two taped lengths checking it.
 
+## The full run on the window as it stands (2026-11-18, early; a frozen copy of de8cc5b)
+
+**All twenty-six window demonstrations pass on one build**: twenty-two in this run,
+each on its first run, and `dressw`, `tradesw`, `glassw` and `firstw` on the same
+frozen copy just before it. Their pictures were written to a scratch folder and
+copied into `demos/captured/` in one step. Nothing in the window, the model, the
+workbook or the BIM reader has changed since that build (the commits after it add
+the scan import, which is in the plan reader and the command line); so every
+picture in `demos/captured/` written by a script is now of the window as it
+stands, with the band across the sky gone. **These pictures have not been read**:
+a worker was given them the same morning, and what it finds goes below.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 332 tests pass, the
@@ -6907,12 +6919,11 @@ aa5084c; the pictures of aa5084c read.
 **What was run, on what.** Twenty-five of the twenty-six window demonstrations
 passed on a frozen copy of aa5084c, each on its first run; `dressw` failed there on
 a check that measures its picture, was repaired, and passes on the commits after.
-`dressw`, `tradesw` and `glassw` (the three that measure colours) pass on the build
-with the sky's band gone (call 127). The twenty-one command-line demonstrations
-pass on a frozen copy of 52efdc7. **No full run has been made on the last commit**:
-since aa5084c the program changed in what a turn or the wheel is about when the
-pointer has just moved, and in the colour of the far haze. Most pictures in
-`demos/captured/` are of aa5084c and still show the band across the sky.
+**Since then all twenty-six pass on a frozen copy of de8cc5b, the window as it
+stands** ("The full run on the window as it stands", just above), and the pictures
+in `demos/captured/` are of that build. The twenty-one command-line demonstrations
+pass on a frozen copy of 52efdc7, and `demos/scan.sh`, the twenty-second, on the
+head.
 
 **How it was judged, last (the twenty-seventh, on ebcc649).** Item 10, a veteran's
 whole-house takeoff from a PDF with only the screen: **passes**. Item 12, the money
@@ -6931,10 +6942,8 @@ every full run, and where a picture claims a view, measure it in the script.
 
 1. (Done the same night: `demos/firstw.sh` scaled its sheet 12 % small; repaired by
    a worker and accepted. The section just above, 2.)
-2. **A full run of all twenty-six on a frozen copy of the head**, pictures to a
-   scratch folder and into the tree in one step (a run's half-taken set must never
-   be in the tree: the scratch script that does it is described in "The full run on
-   aa5084c"), then the pictures read by a worker.
+2. (Done: all twenty-six pass on the window as it stands. Its pictures are to be
+   read by a worker; if no reading is recorded above this section, that is owed.)
 3. **Items 9, 11 and 12 judged again**, by agents that did not build it, told to
    write as they go. The briefs are `research/judgment-27a-brief.md` and `-27b-`.
 4. **The look** (Patrick's own test is his eyes). In the judge's order: the house
