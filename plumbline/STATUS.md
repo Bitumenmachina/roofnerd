@@ -6406,18 +6406,34 @@ are the record of what was so when they were written.
 
 **What was run.** On a frozen copy of cf58c3a (the finer place, without the square
 direction): ten window demonstrations, nine passed and `planw` failed on the figure
-above. On a frozen copy of the build with the square direction: `planw` passed, and
-the other nine and `demos/itemneww.sh` were run again; their result is in "Start
-here".
+above. On a frozen copy of abd00fc (the build with the square direction): `planw`
+passed with the figure worked by hand, and then `buildw`, `draww`, `toolsw`,
+`firstw`, `fieldw`, `clashw` and `pricew` passed, each on its first run. **The
+machine was restarted before `moneyw`, `turnw` and `itemneww` were run on that build**
+(it had been restarted once already that night, under the twenty-sixth judge): those
+three passed on cf58c3a, the commit before, and have not been run on abd00fc. The
+pictures of the eight are of abd00fc and are committed; they were looked over as files
+that came out whole and were **not read on contact sheets as the earlier runs' were**.
+The other fourteen window demonstrations were last run on c0d5922 and their pictures
+are of that commit.
 
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 320 tests pass,
+**Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 322 tests pass,
 the three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last
-commit of code that was pushed. **All twenty-four window demonstrations and the
-twenty-one command-line ones pass on a frozen copy of c0d5922**, the last commit of
-code; every picture was read and is committed. Read `CLAUDE.md`, then this section,
-then the table of thirteen, then the two sections of the twenty-fifth judgment above.
+commit of code. **The window demonstrations are not all of one commit.** All
+twenty-four passed on a frozen copy of c0d5922 with every picture read. After that
+came calls 110 to 112 (a typed length to the cent, a comma in a cost line's name, a
+markup's source, an item added, renamed and taken out by hand, a wall typed north
+being north) and a twenty-fifth demonstration, `itemneww`. On abd00fc, the last
+commit of code, eight of them were run again and passed (`planw` with its figure
+worked again, and the seven others that draw by typed lengths); `moneyw`, `turnw`
+and `itemneww` passed on the commit before it and were not run on it; the other
+fourteen were not run after c0d5922. The machine was restarted twice in the night,
+each time under a long run. **The first thing to do is run all twenty-five on a
+frozen copy of the head and read the pictures.** Read `CLAUDE.md`, then this
+section, then the table of thirteen, then the two sections of the twenty-fifth
+judgment above.
 
 **What happened on 2026-11-16.** Patrick asked for a fresh pass of code and review,
 the window and a clean-up, run alone. Two code reviewers read the model and the
