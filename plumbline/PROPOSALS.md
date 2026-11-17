@@ -317,3 +317,23 @@ A scan with no mesh (a "splat") is a picture, not a measure, and is out.
 It is a new kind of file brought in and a new thing the job holds, so it waits for
 Patrick's word. FBX and USDZ are left out at first (no settled permissive reader);
 LAS after PLY.
+
+**32, after more research the same day** (`research/lidar-renovation.md`): bring in
+the **point cloud (PLY first)** as the thing to work from, not the mesh; cut it at
+4 ft into a sheet and trace it with the tools that exist; take the level's height
+from the scan; check the scan against two taped lengths. Patrick is content to
+clean the scan in another program and to trace.
+
+## 33. Existing, to demolish, new: a renovation job (2026-11-17, from Patrick: "thought process being on renovations and then being able to work off that")
+
+A scan gives the house as it stands. To work off it the job has to know, for each
+wall, door, floor, run and fixture, whether it is **existing to remain, to be
+demolished, or new** (the BIM standard's own Status: New, Existing, Demolish,
+Temporary). Existing work is drawn light and is not priced; demolition is drawn
+dashed and priced as demolition; new work is drawn heavy and priced as it is now.
+One job shows the plan before, the demolition, and after. The BIM file carries the
+Status out and in. A job with no such mark on anything is all new, as every job is
+today.
+
+It is a new value on every thing in the saved job and a new way the estimate is
+read, so it waits for Patrick's word. About 3 to 5 days, not prototyped.
