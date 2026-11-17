@@ -6461,15 +6461,20 @@ Patrick asked for one more pass, as someone at a desk or on site. DECISIONS.md c
 (1) the estimate read as a list of the model, **answered today by "The estimate, by
 item"** (52 items from 399 lines on the sample house; the footings on one line, 10.07
 CY at $450.00, $4,533.40; a test holds it; seen by hand in the estimate window); (2)
-money is not where the eye goes: a thing's cost is not at the head of its panel, the
-price is small, the Job panel has no dollars by division; (3) the verify-in-field
+money is not where the eye goes: **a thing selected now shows its cost and its cost
+for each SF or LF at the head of its panel** (seen by hand: the south wall, $10,990.84
+and $33.31/SF); the job's price is still small and the Job panel has no dollars by
+division; (3) the verify-in-field
 list cannot go to the field: no room, the program's words, decimal inches, trifles
 beside large items, nothing to tick, no way to print it or write it out; (4) figures
 to more places than the trade writes; (5) a plan with no dimensions and doors with no
 swing; (6) a ticked checklist and a red "not coded" on every screen.
 
 The by-item table is not in the command line's estimate, the workbook or any
-demonstration yet, and has not been judged.
+demonstration yet, and has not been judged. The cost at the head of a panel moves
+the buttons under it down by one row: **no window demonstration has been run since
+it was added**, and the full run that is owed first will say whether any of them
+reaches for a button that is now below the fold.
 
 ## Start here (written 2026-11-16, late; this is the last section, and the one CLAUDE.md sends you to)
 

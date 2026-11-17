@@ -4141,9 +4141,12 @@ not on contact sheets. What stuck out, most first:
    the model (`Estimate::by_item`); the line-by-line sheet below is still where a
    price is typed. Test: `the_estimate_reads_item_by_item_and_comes_to_the_same_money`.
 2. **Money is not where the eye goes.** Click a wall and its panel leads with its area
-   and length; what the wall costs is under "more below". The price of the job is in
-   small type on the top bar; the Job panel lists lengths and areas by level and not
-   one dollar by division. Open.
+   and length; what the wall costs is under "more below". **Built today for a thing
+   selected**: under its two figures, Cost (its cost lines added up) and All in (that
+   for each SF or LF of it), or Allowance where it has no cost line; the sample
+   house's south wall reads $10,990.84 and $33.31/SF (10,990.84 / 329.99 = 33.307).
+   Seen by hand. Still open: the price of the job is in small type on the top bar, and
+   the Job panel lists lengths and areas by level and not one dollar by division.
 3. **The verify-in-field list cannot go to the field.** It says "first floor" and not
    which room; "Check what it is, size" and "piece 4 of 4" are the program's words;
    inches are decimals (0.50 in); thirty-eight-dollar elbows sit in the same list as

@@ -2244,6 +2244,24 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
             }
         });
     }
+    // What it costs, where the eye already is (call 117: a wall's panel led with its
+    // area and length, and its cost was under "more below"). Its cost lines added up,
+    // with what that is for each SF or LF of it; or its allowance, named as one,
+    // where it has no cost line. The figures are the model's (`view::pricing`).
+    if let Some(priced) = snap.pricing.as_ref().and_then(|p| p.elements.iter().find(|e| e.path == el.path)) {
+        let cost = priced.detail.as_ref().map(|d| ("Cost", d, priced.detail_rate.as_ref())).or(priced.allowance.as_ref().map(|a| ("Allowance", a, None)));
+        if let Some((label, d, rate)) = cost {
+            p.spawn(Node { margin: UiRect::top(px(8.0)), column_gap: px(12.0), flex_shrink: 0.0, ..default() }).with_children(|r| {
+                match d.value {
+                    Some(x) => stat(r, fonts, label, view::money(x), "", d.status),
+                    None => stat(r, fonts, label, "no figure".into(), "", Status::Unknown),
+                }
+                if let Some((x, rate)) = rate.and_then(|rate| rate.value.map(|x| (x, rate))) {
+                    stat(r, fonts, "All in", view::money(x), rate.unit.trim_start_matches('$'), rate.status);
+                }
+            });
+        }
+    }
     // What it is dressed in, and what priced on it says so (call 58).
     let finish = plumbline_world::finish::said_of(&snap.dress, &el.path, el.kind);
     if !finish.is_empty() {
