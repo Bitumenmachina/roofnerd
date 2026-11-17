@@ -332,7 +332,7 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     row.spawn(card(true)).with_children(|bar| {
         // The price, in the colour of how sure it is.
         // A job with nothing priced has no price yet, which is not a price in doubt.
-        let priced = snap.estimate.as_ref().is_some_and(|e| !e.lines.is_empty());
+        let priced = snap.estimate.as_ref().is_some_and(|e| !e.lines.is_empty() || !e.allowance_on.is_empty());
         let (price, status) = match (&snap.estimate, priced) {
             (Some(e), true) => crate::sheet::dollars(Some(&e.price)),
             _ => ("nothing priced yet".to_string(), Status::Known),

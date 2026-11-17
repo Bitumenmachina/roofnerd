@@ -202,7 +202,9 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
         root.spawn((Node { flex_shrink: 0.0, padding: UiRect::axes(px(12.0), px(8.0)), column_gap: px(1.0), overflow: Overflow::clip(), ..default() }, BackgroundColor(Color::NONE))).with_children(|tabs| {
             // The estimate first: it is what the job is for. Then what is to verify and
             // what clashes; then the takeoff, by what was taken off.
-            let mut all = vec![(Tab::Estimate, "Estimate".to_string(), snap.estimate.as_ref().map(|e| e.lines.len()).unwrap_or(0))];
+            // (An allowance carried in the price is on the estimate too: a job priced only by
+            // allowances had no Estimate tab, and so nowhere to read its price. Call 114.)
+            let mut all = vec![(Tab::Estimate, "Estimate".to_string(), snap.estimate.as_ref().map(|e| e.lines.len() + e.allowance_on.len()).unwrap_or(0))];
             // The budget: the job priced from its allowances and from its lines, compared.
             all.push((Tab::Money, "Budget".to_string(), snap.pricing.as_ref().map(|p| p.elements.len()).unwrap_or(0)));
             all.push((Tab::Verify, "Verify in field".to_string(), snap.verify.questions.len()));
@@ -697,8 +699,8 @@ pub fn dollars(d: Option<&plumbline_world::Derived>) -> (String, Status) {
 fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
     use plumbline_world::{Class, Column};
     let Some(est) = &snap.estimate else { return };
-    if est.lines.is_empty() {
-        nothing(p, fonts, "Nothing in this job has a cost line.");
+    if est.lines.is_empty() && est.allowance_on.is_empty() {
+        nothing(p, fonts, "Nothing in this job has a cost line or an allowance.");
         return;
     }
     let money = |d: &plumbline_world::Derived| dollars(Some(d));
@@ -758,7 +760,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             }
         }
         match est.job_cost.value {
-            Some(x) => line(t, "Job cost".to_string(), if est.allowance_on.is_empty() { lines_of(est.job_cost.members) } else { format!("{} and allowances", lines_of(est.job_cost.members - est.allowances.members)) }, rests(est.job_cost.assumed), view::money(x), est.job_cost.status, true),
+            Some(x) => line(t, "Job cost".to_string(), match (est.allowance_on.is_empty(), est.job_cost.members - est.allowances.members) { (true, n) => lines_of(n), (false, 0) => "allowances only".to_string(), (false, n) => format!("{} and allowances", lines_of(n)) }, rests(est.job_cost.assumed), view::money(x), est.job_cost.status, true),
             None => line(t, "Job cost".to_string(), "no line with a cost type comes to a figure".to_string(), String::new(), "none".to_string(), Status::Unknown, true),
         }
         let rate = |v: Option<&plumbline_world::Val<f64>>| v.and_then(|v| v.value.map(|x| format!("at {} %", view::rate(x)))).unwrap_or_default();
