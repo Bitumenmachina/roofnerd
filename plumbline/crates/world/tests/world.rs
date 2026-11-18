@@ -1287,8 +1287,8 @@ fn a_formula_that_does_not_make_sense_is_refused_with_the_reason() {
         let e = parse(text).expect_err(text);
         assert!(e.contains(says), "{text:?}: {e}");
     }
-    // On a line: names the element does not have, lengths added to areas, volumes,
-    // one-over-a-length, and division by a zero.
+    // On a line: names the element does not have, lengths added to areas, more than a
+    // volume, one-over-a-length, and division by a zero.
     let mut job = parapet_job();
     let mut refuse = |formula: &str, with: &[(&str, &str)]| {
         let with: Vec<(String, String)> = with.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect();
@@ -1297,7 +1297,8 @@ fn a_formula_that_does_not_make_sense_is_refused_with_the_reason() {
     assert!(refuse("plan_length * hieght", &[]).contains("is not a figure of this thing"));
     assert!(refuse("true_length * height", &[]).contains("is not a figure of this thing"));
     assert!(refuse("plan_length + face_area", &[]).contains("adds what cannot be added"));
-    assert!(refuse("plan_length * height * height", &[]).contains("volume"));
+    // A volume is a quantity now, in CY (call 130); more than a volume is not.
+    assert!(refuse("plan_length * height * height * height", &[]).contains("more than a volume"));
     assert!(refuse("height / face_area", &[]).contains("one over a length"));
     assert!(refuse("slope_factor", &[]).contains("is not a figure of this thing"));
     assert!(refuse("plan_length * height", &[("extra", "2")]).contains("does not use"));
@@ -4389,6 +4390,54 @@ fn casing_is_taken_off_by_the_openings_own_size() {
     let footing = ed::footings(&mut job, &s, &ft, &[[30.0, 0.0], [40.0, 0.0]], false, "12 in", how).unwrap().remove(0);
     let refused = job.add_line(&footing, "Forms", "volume * 2", Some(Class::Material), false).unwrap_err();
     assert!(refused.contains("a formula works in lengths, areas and counts") && !refused.contains("the figure it comes from"), "{refused}");
+}
+
+/// Foundation work (calls 130 and 133). A wall says how thick it is, and a floor how
+/// thick and how far round; a formula whose lengths make a volume comes out in CY with
+/// the ÷ 27 written in; and a formula works from a figure as it was worked, so forms on a
+/// footing 10 in deep are 66.6667 SF, not the 66.664 its written 0.8333 ft would give.
+/// Figures by hand: a wall 20 ft by 9 ft, 6 in thick: 180 SF, 180 x 0.5 / 27 = 3.3333 CY.
+/// A slab 20 by 10, 4 in: perimeter 60 LF, 200 x 4/12 / 27 = 2.4691 CY. A footing 40 ft
+/// by 24 in by 10 in: forms 2 x 40 x 10/12 = 66.6667 SF.
+#[test]
+fn a_foundation_is_taken_off_in_cubic_yards_from_figures_as_worked() {
+    use plumbline_world::editing as ed;
+    let how = ed::Entered { status: Status::Known, source: "made-up plan" };
+    let (mut job, s, wt, _, _) = drawn();
+    let wall = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [20.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap().remove(0);
+    let st = ed::floor_type(&mut job, "slab 4 in", "4 in", how).unwrap();
+    let slab = ed::floor(&mut job, &s, &st, ed::FloorBy::Points(&[[0.0, 0.0], [20.0, 0.0], [20.0, 10.0], [0.0, 10.0]]), how).unwrap().path;
+    let ft = ed::footing_type(&mut job, "footing 24 x 10", "24 in", how).unwrap();
+    let footing = ed::footings(&mut job, &s, &ft, &[[30.0, 0.0], [70.0, 0.0]], false, "10 in", how).unwrap().remove(0);
+    job.add_line(&wall, "Wall concrete", "net_area * thickness", Some(Class::Material), false).unwrap();
+    job.add_line(&slab, "Slab concrete", "plan_area * thickness", Some(Class::Material), false).unwrap();
+    job.add_line(&slab, "Edge form", "perimeter", Some(Class::Material), false).unwrap();
+    job.add_line(&footing, "Footing forms", "2 * plan_length * depth", Some(Class::Material), false).unwrap();
+    job.derive();
+    assert_eq!(measure(&mut job, &wall, "thickness").value, Some(0.5));
+    assert_eq!(measure(&mut job, &slab, "perimeter").value, Some(60.0));
+    assert_eq!(measure(&mut job, &slab, "thickness").value, Some(0.3333));
+    let quantity = |job: &mut Job, path: &str, line: &str| {
+        let e = job.find(path).unwrap();
+        job.world.get::<plumbline_world::LineQuantities>(e).unwrap().0[line].quantity.clone()
+    };
+    let concrete = quantity(&mut job, &wall, "Wall concrete");
+    assert_eq!((concrete.value, concrete.unit.as_str(), concrete.formula.as_str()), (Some(3.3333), "CY", "net_area × thickness ÷ 27"), "{concrete:?}");
+    let slab_cy = quantity(&mut job, &slab, "Slab concrete");
+    assert_eq!((slab_cy.value, slab_cy.unit.as_str()), (Some(2.4691), "CY"), "{slab_cy:?}");
+    assert_eq!(quantity(&mut job, &slab, "Edge form").value, Some(60.0));
+    // The ÷ 27 is the program's: typed out of habit, it would divide twice.
+    let twice = job.add_line(&footing, "Footing concrete by hand", "plan_length * width * depth / 27", Some(Class::Material), false).unwrap_err();
+    assert!(twice.contains("take the ÷ 27 out"), "{twice}");
+    // The footing's depth is written 0.8333 ft and worked as 10/12.
+    assert_eq!(measure(&mut job, &footing, "depth").value, Some(0.8333));
+    assert_eq!(quantity(&mut job, &footing, "Footing forms").value, Some(66.6667));
+    // A height typed on the line in feet and inches works as typed: 20 x 3 ft 4 in is
+    // 66.6667 SF. (A line waiting on a height nobody has given, Unknown in the starter
+    // library, has no figure at all: demos/foundation.sh.)
+    job.set_formula(&wall, Some("Wall concrete"), "plan_length * below_grade", &[("below_grade".into(), "3 ft 4 in".into())], Status::Known, "made-up grading plan").unwrap();
+    job.derive();
+    assert_eq!(quantity(&mut job, &wall, "Wall concrete").value, Some(66.6667));
 }
 
 #[test]

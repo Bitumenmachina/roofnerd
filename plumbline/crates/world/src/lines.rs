@@ -68,10 +68,10 @@ fn operand(on: &On, line: &CostLine, name: &str) -> Result<Operand, String> {
             "LF" | "ft" => 1,
             "SF" => 2,
             "" => 0,
-            other => return Err(format!("uses {name}, which is in {other}; a formula works in lengths, areas and counts. Price the line by {name} alone", name = crate::view::words(name))),
+            other => return Err(format!("uses {name}, which is in {other}; a formula works in lengths, areas and counts, and comes out in CY when its lengths make a volume. Price the line by {name} alone, with its waste on the line", name = crate::view::words(name))),
         };
         let d = on.measure.and_then(|m| m.0.get(name));
-        return Ok(Operand { value: d.and_then(|d| d.value), dim, status: d.map(|d| d.status).unwrap_or(Status::Unknown), shown: name.to_string() });
+        return Ok(Operand { value: d.and_then(|d| d.worked()), dim, status: d.map(|d| d.status).unwrap_or(Status::Unknown), shown: name.to_string() });
     }
     let mut have: Vec<&str> = on.kind.measures().iter().map(|(n, _)| *n).collect();
     if on.kind == Kind::Parapet {
@@ -109,6 +109,12 @@ pub fn read(on: &On, line: &CostLine) -> Result<Read, String> {
     }
     let worked = formula::work(&expr, &|name| operand(on, line, name))?;
     let unit = formula::unit_of(worked.dim)?;
+    // The ÷ 27 to cubic yards is the program's; one typed out of habit would divide twice,
+    // and 2.0576 CY of footing would read 0.0762 (judged 2026-11-18).
+    if worked.dim == 3 && formula::divides_by(&expr, formula::CF_PER_CY) {
+        return Err("divides by 27, and a volume is already given in CY with the ÷ 27 worked in for you: take the ÷ 27 out".into());
+    }
+    let worked = formula::in_yards(&expr, worked);
     // A factor dressed as a formula (`slope_factor * 1`) is still a factor, not a count.
     let names = formula::names(&expr);
     let is_factor = |n: &String| on.kind.measures().iter().any(|(m, u)| m == n && u.is_empty());

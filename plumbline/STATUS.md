@@ -6946,6 +6946,134 @@ came:
 
 Nothing it found is a wrong figure. None of it is fixed yet.
 
+## Foundation work, the first trade taken to its finish line by the second builder: a demonstration, written before it is built (`demos/foundation.sh`, calls 129 and 130)
+
+**What "done" means for foundations** (the finish line, written first). A residential
+foundation of strip footings and poured concrete walls is taken off from the model
+alone, line by line the way a concrete sub's estimator writes it, each figure worked in
+the core and checked against a figure worked by hand, each rule that decides a figure
+named with its source, and nothing taken for granted shown as Known:
+
+1. Footing: trench (LF), forms both sides (SF of contact, `2 x plan_length x depth`),
+   concrete (CY, `volume`, with an over-order), continuous bars (LF to lb), placing
+   labor (hr, no rate).
+2. Wall: forms both faces (SF of contact), concrete (CY, `net_area x thickness`, the
+   new volume formula), horizontal and vertical bars (LF to lb), anchor bolts (EA),
+   dampproofing (SF, to grade, Unknown until the height to grade is given),
+   foundation drain (off unless the wall encloses space below grade), labor (hr).
+3. The same figures go out to IFC as each footing's, wall's and slab's base
+   quantities (IFC4 `Qto_FootingBaseQuantities`, `Qto_WallBaseQuantities`,
+   `Qto_SlabBaseQuantities`), so a designer's program reads the estimate's numbers,
+   not its own.
+4. What is not yet there is listed, not implied: pad footings, stepped footings,
+   corner bars, bar laps counted splice by splice, excavation by volume (the model
+   has no grade), the slab's own assembly by its thickness.
+
+**Sources** (read by a worker on another model, 2026-11-18, from the 2021 IRC as
+reproduced by UpCodes, the ICC viewer refusing automated reading; NRMCA's Concrete in
+Practice sheets; ASTM A615 bar weights through a supplier's table; OSHA 1926):
+anchor bolts 1/2 in, not more than 6 ft apart and one within 12 in of each end of each
+plate piece (R403.1.6); a wall 8 ft or less has one #4 within 12 in of its top and one
+near mid-height (Table R404.1.2(1)); vertical bars no more than 48 in apart, the
+spacing from Tables R404.1.2(2) to (8) by height, backfill and soil; #4 Grade 60 laps
+30 in (Table R608.5.4(1)); dampproofing from the top of the footing to finished grade
+(R406.1); a drain where the wall retains earth and encloses habitable or usable space
+below grade (R405.1); order 4 % to 10 % more concrete than the plan quantity (NRMCA
+CIP 31); a #4 bar weighs 0.668 lb per foot (ASTM A615). Each of these goes on the line
+as Assumed with its source: the jurisdiction's own code decides, not this program.
+
+**The made-up foundation.** A level `foundation` at -4 ft, 4 ft floor to floor. A ring
+of strip footings on the walls' center lines, 40 ft by 28 ft: a footing type 20 in
+wide, 10 in deep. A ring of foundation walls on the same lines, 8 in thick, 4 ft tall.
+"Strip footing, formed, two #4 bars" on each footing; "Foundation wall, poured
+concrete" on each wall.
+
+**Figures worked by hand** (a 40 ft side; a 28 ft side; the ring of four):
+
+| Line | 40 ft | 28 ft | Ring |
+|---|---|---|---|
+| Trench for the footing | 40 LF | 28 LF | 136 LF |
+| Footing forms, both sides: 2 x L x 10/12 | 66.6667 SF | 46.6667 SF | 226.6667 SF |
+| Footing concrete: L x 20/12 x 10/12 / 27, + 5 % | 2.0576 -> 2.1605 CY | 1.4403 -> 1.5123 CY | 7.3457 CY |
+| Footing bars: 2 x L, + 12.5 % laps, x 0.668 lb/LF | 90 LF, 60.12 lb | 63 LF, 42.084 lb | 204.408 lb |
+| Wall forms, both faces: 2 x L x 4 | 320 SF | 224 SF | 1,088 SF |
+| Wall concrete: L x 4 x 8/12 / 27, + 5 % | 3.9506 -> 4.1481 CY | 2.7654 -> 2.9037 CY | 14.1037 CY |
+| Horizontal bars: 2 x L, + 12.5 %, x 0.668 | 90 LF, 60.12 lb | 63 LF, 42.084 lb | 204.408 lb |
+| Vertical bars: (L / 4 + 1) x 4, x 0.668 | 44 LF, 29.392 lb | 32 LF, 21.376 lb | 101.536 lb |
+| Anchor bolts: (L - 2) / 6 + 1, whole | 7.33 -> 8 EA | 5.33 -> 6 EA | 28 EA |
+| Dampproofing: L x below grade | no figure (below grade Unknown) | no figure | none, said as such |
+| Foundation drain | off | off | off |
+
+A ring of footings or walls on center lines is exact in plan: at a plain corner the
+square two runs share is the square left open outside it (call 70), so the ring's
+concrete is the four runs added. Then, once the height to grade is given on the four
+walls (3 ft 4 in: the 4 ft wall less 8 in above grade), dampproofing is 40 x 3.3333 =
+133.3333 SF and 28 x 3.3333 = 93.3333 SF, 453.3333 SF round. The demonstration
+checks each figure above at the command line, the IFC file's quantities against the
+same figures, and that every line from a code rule says it is Assumed and where it
+came from.
+
+## Foundation work. What was run and what it showed (2026-11-18; the second builder)
+
+**Built** (calls 129 to 133): a formula comes out in CY (and a typed ÷ 27 is refused);
+a wall has a `thickness`, a floor a `thickness` and a `perimeter`; a formula works from
+each figure as it was worked out, not as written to four places, and so does a
+footing's volume; three starter assemblies (strip footing; foundation wall; basement
+wall with a drain); every footing, wall, floor, roof plane, door, window and room
+carries its IFC4 base quantities; `demos/field-job.sh` uses the frozen program a
+demonstration names (it used the tree's own build, so a frozen run made its job with
+whatever the tree held).
+
+**Run, on the working tree at 289ff27 plus these changes:**
+
+- `cargo test --workspace`: 333 passed, 0 failed (one new test: the foundation's
+  figures in CY, from figures as worked, and the typed ÷ 27 refused).
+- `demos/foundation.sh`: passes; every figure in the table above as worked by hand,
+  dampproofing with no figure until the height to grade is given and 133.3333 SF after,
+  a basement wall's drain 40 LF, the priced footing concrete $1,101.86 round the ring,
+  and the IFC model valid by IfcOpenShell 0.9.0 with its express rules and a 40 ft
+  footing's NetVolume 55.5556 CF.
+- `demos/foundw.sh` (new, in the window, on a frozen copy): passes. The starter
+  assemblies brought in with one click, the ground switched off, the south footing
+  picked on the plan just outside the wall's face, "Strip footing, formed, two #4 bars"
+  picked from the list of the one assembly that goes on a footing, the south wall
+  picked and given "Foundation wall, poured concrete", the sheet read, saved; the saved
+  job has 66.6667 SF of forms, 2.1605 CY and 60.12 lb on the footing, 4.1481 CY and 8
+  anchor bolts on the wall, dampproofing Unknown.
+- Every command-line demonstration on the same frozen copy: all 25 pass (build,
+  clash, d1 to d5, div, dress, export, field, fit, found, foundation, house, imports,
+  items, library, model, plan, scan, spec, units, vif). `demos/library.sh` with its
+  counts moved by call 132. The pictures `demos/d2.sh` and `demos/house.sh` take were
+  taken again and differ from the committed ones only in the top bar's count of known
+  figures (more figures are worked out now: a wall's thickness, a floor's perimeter and
+  thickness); the committed ones are kept, and are stale in that count alone.
+
+**The pictures of `foundw`, read by the builder** (`demos/captured/foundw`): the ground
+away shows the four walls standing on their footings, plainly; the footing's panel
+lists the one assembly that goes on a footing with its five lines, and its takeoff in
+feet and inches (depth 0' 10", width 1' 8", volume 2.06 CY); the wall's panel says it is
+finished in concrete "as a line priced on it says"; the sheet's recap names what is left
+out. Not right in them: Next steps still asks for doors and windows, the floor and the
+roof on a foundation-only job (the checklist is the same for every job, J5 of the
+review); the wall's thickness is below the fold of its panel.
+
+**Judged** by an agent on another model, cold (`review/J-foundation-judge.md` in the
+review's folder; the findings and where each stands):
+
+| # | Found | Stands |
+|---|---|---|
+| J-F1 | A footing's volume was worked from its written width and depth: 55.5544 CF in the IFC where it is 55.5556, and the demonstration failed on it | **Fixed** (call 133's second paragraph) |
+| J-F2 | 20 in by 11 in by 40 ft showed 2.2635 CY, 2.2634 by hand | **Fixed** with J-F1 |
+| J-F3 | `plan_length * width * depth / 27` was accepted and read 0.0762 CY | **Fixed**: refused, "take the ÷ 27 out" (call 130) |
+| J-F4 | The IFC volume's formula said ÷ 27 while the figure was in cubic feet | **Fixed**: "(…) × 27, in cubic feet" |
+| J-F5 | The field list says nothing of a priced line waiting on an Unknown figure on the line (the height to grade); the estimate does name it as left out | **Open**: a figure entered on a line is not yet a field question; owed, with the field list's own rules (call 126's) |
+| J-F6 | A wall over 8 ft keeps two rows of horizontal bars; the rule's limit is in its source only | **Open**: a formula has no "if"; the row count is Assumed and its source says "8 ft or less" |
+| J-F7 | A footing 10 ft deep passes without a word | Open, minor (deeper than 20 ft is refused) |
+| J-F8 | A wall under 2 ft long gets 1 anchor bolt where the code asks two to a plate piece | Open, minor: no "at least" in a formula |
+| J-F9 | Forms are not reduced at openings, and there are no bars or bucks round them | Open (the code adds a bar each side of an opening, R404.1.3.3.7.3) |
+| J-F10 | Missing for a foundation sub: keyway, corner and L bars, dowels, form ties, sill seal, mix and strength, pump or short-load, testing, stepped footings, drain stone, excavation and backfill by the CY | Listed under "not yet" in the finish line above |
+| — | The made-up whole house is unchanged ($468,876.85, `check` passes); `show`, `estimate`, by item and the CSV agree; IFC valid for it too | Held |
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 332 tests pass, the

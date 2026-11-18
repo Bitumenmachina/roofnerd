@@ -238,13 +238,13 @@ impl Kind {
         } else if self.is_run() {
             &[("plan_length", "LF"), ("true_length", "LF")]
         } else if self == Kind::Wall {
-            &[("plan_length", "LF"), ("height", "ft"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF")]
+            &[("plan_length", "LF"), ("height", "ft"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF"), ("thickness", "ft")]
         } else if matches!(self, Kind::Door | Kind::Window) {
             &[("width", "ft"), ("height", "ft"), ("opening_area", "SF")]
         } else if self == Kind::Footing {
             &[("plan_length", "LF"), ("width", "ft"), ("depth", "ft"), ("volume", "CY")]
         } else if self == Kind::Floor {
-            &[("plan_area", "SF")]
+            &[("plan_area", "SF"), ("perimeter", "LF"), ("thickness", "ft")]
         } else if self == Kind::Room {
             &[("floor_area", "SF"), ("gross_area", "SF"), ("perimeter", "LF")]
         } else if self == Kind::Duct {

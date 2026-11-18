@@ -10,7 +10,10 @@
 # carries gypsum board on its net face at $2.40/SF. Overhead 10, profit 8.
 set -euo pipefail
 J="$1"
-P="$(cd "$(dirname "$0")/.." && pwd)/target/debug/plumbline"
+# The program the calling demonstration uses: PLUMBLINE_BIN's when it names one (a frozen
+# copy), else the tree's own build. It used the tree's always, so a run "on a frozen
+# copy" made its job with whatever the tree held (found 2026-11-18).
+P="${PLUMBLINE_BIN:-${CARGO_TARGET_DIR:-$(cd "$(dirname "$0")/.." && pwd)/target}/debug}/plumbline"
 K=(--status Known --source "made-up plan")
 A=(--status Assumed --source "scaled off a made-up plan")
 made() { sed -E 's/^([a-z]+-[0-9]+).*/\1/' <<<"$1"; }

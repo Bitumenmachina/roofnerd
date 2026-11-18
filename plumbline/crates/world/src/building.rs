@@ -780,6 +780,22 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 m.insert("face_area".into(), face);
                 m.insert("opening_area".into(), open);
                 m.insert("net_area".into(), net);
+                // How thick it is: its type's thickness, as sure as the type and the
+                // wall's choice of it. A foundation wall's concrete is net_area ×
+                // thickness (call 130), worked here and not typed beside the wall.
+                let f = "the thickness its type gives";
+                let mut t_inputs = input.to_vec();
+                let thick = match typed(&tree.wall_types, &w.type_name, "a wall") {
+                    Ok((type_path, t)) => {
+                        t_inputs.push(format!("{type_path}#{K_WALL_TYPE}"));
+                        match t.thickness.feet() {
+                            Some(x) => Derived::new(Some(x), "ft", &[w.type_name.status, t.thickness.status], f, &t_inputs),
+                            None => Derived::refused("ft", f, &t_inputs, "its type's thickness is not known"),
+                        }
+                    }
+                    Err(why) => Derived::refused("ft", f, &t_inputs, &why),
+                };
+                m.insert("thickness".into(), thick);
             }
             // A strip footing: its length on plan, its width from its type, how deep it
             // is, and the concrete in it. Length times width times depth is the volume of
@@ -830,7 +846,9 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 }
                 let f_vol = if within.is_empty() { "plan_length × width × depth ÷ 27".to_string() } else { format!("(plan_length × width × depth − {} CF that lies in {} and is counted there) ÷ 27", view::figure_shown(taken, 4), within.join(" and ")) };
                 let f_vol = f_vol.as_str();
-                let volume = match (plan.value, wide.value, deep.value) {
+                // From the three as they were worked, not as they are written (call 133):
+                // 20 in by 10 in is 20/12 by 10/12, not 1.6667 by 0.8333.
+                let volume = match (plan.worked(), wide.worked(), deep.worked()) {
                     (Some(l), Some(x), Some(d)) => Derived::new(Some((l * x * d - taken).max(0.0) / 27.0), "CY", &[plan.status, wide.status, deep.status], f_vol, &inputs),
                     _ => {
                         let why = [&plan, &wide, &deep].iter().find(|d| d.value.is_none()).map(|d| d.note.clone()).unwrap_or_default();
@@ -853,6 +871,33 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                         Some(fl) => Derived::new(fl.boundary_ft().map(|p| geom::plan_area(&p)), "SF", &[fl.boundary.status], &f, &input),
                     },
                 );
+                // The distance round it on the plan: a slab's edge form, its thickened
+                // edge, the sill seal on it (call 130).
+                let f = format!("the distance round the boundary on the plan{}", floor.filter(|f| f.boundary.unit == units::IN).map(|_| " ÷ 12 (entered in inches)").unwrap_or_default());
+                m.insert(
+                    "perimeter".into(),
+                    match floor {
+                        None => Derived::refused("LF", &f, &input, "no boundary entered"),
+                        Some(fl) if fl.boundary.value.is_some() && fl.boundary_ft().is_none() => Derived::refused("LF", &f, &input, &format!("the boundary {NOT_CONVERTED}")),
+                        Some(fl) => Derived::new(fl.boundary_ft().map(|p| geom::perimeter(&p)), "LF", &[fl.boundary.status], &f, &input),
+                    },
+                );
+                // How thick it is: its type's thickness, as sure as the type and the
+                // floor's choice of it. A slab's concrete is plan_area × thickness (call 130).
+                let f = "the thickness its type gives";
+                let mut inputs = input.to_vec();
+                let thick = match floor.map(|fl| (fl, typed(&tree.floor_types, &fl.type_name, "a floor"))) {
+                    None => Derived::refused("ft", f, &inputs, "no boundary entered"),
+                    Some((_, Err(why))) => Derived::refused("ft", f, &inputs, &why),
+                    Some((fl, Ok((type_path, t)))) => {
+                        inputs.push(format!("{type_path}#{K_FLOOR_TYPE}"));
+                        match t.thickness.feet() {
+                            Some(x) => Derived::new(Some(x), "ft", &[fl.type_name.status, t.thickness.status], f, &inputs),
+                            None => Derived::refused("ft", f, &inputs, "its type's thickness is not known"),
+                        }
+                    }
+                };
+                m.insert("thickness".into(), thick);
             }
             k if k.is_segment() => {
                 let input = [format!("{me}#{K_SEGMENT}")];

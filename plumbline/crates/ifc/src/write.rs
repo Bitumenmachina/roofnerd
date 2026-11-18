@@ -37,6 +37,32 @@ pub struct Written {
     pub not_written: Vec<(String, usize, String)>,
 }
 
+/// What sort of quantity an IFC4 base quantity is.
+enum Q {
+    Length,
+    Area,
+    Volume,
+}
+
+/// The IFC4 base quantity set for a thing of this kind, and for each of its quantities,
+/// the figure of ours it is (names from the IFC4 property and quantity set templates:
+/// `Qto_FootingBaseQuantities`, `Qto_WallBaseQuantities`, `Qto_SlabBaseQuantities`,
+/// `Qto_DoorBaseQuantities`, `Qto_WindowBaseQuantities`, `Qto_SpaceBaseQuantities`).
+/// Only figures this program works out are named: a gross volume of a wall, which the
+/// program does not keep, is not made up here.
+fn base_quantities(kind: Kind) -> Option<(&'static str, &'static [(&'static str, &'static str, Q)])> {
+    Some(match kind {
+        Kind::Footing => ("Qto_FootingBaseQuantities", &[("Length", "plan_length", Q::Length), ("Width", "width", Q::Length), ("Height", "depth", Q::Length), ("NetVolume", "volume", Q::Volume)]),
+        Kind::Wall => ("Qto_WallBaseQuantities", &[("Length", "plan_length", Q::Length), ("Width", "thickness", Q::Length), ("Height", "height", Q::Length), ("GrossSideArea", "face_area", Q::Area), ("NetSideArea", "net_area", Q::Area)]),
+        Kind::Floor => ("Qto_SlabBaseQuantities", &[("Width", "thickness", Q::Length), ("Perimeter", "perimeter", Q::Length), ("GrossArea", "plan_area", Q::Area)]),
+        Kind::RoofPlane => ("Qto_SlabBaseQuantities", &[("GrossArea", "surface_area", Q::Area)]),
+        Kind::Door => ("Qto_DoorBaseQuantities", &[("Width", "width", Q::Length), ("Height", "height", Q::Length), ("Area", "opening_area", Q::Area)]),
+        Kind::Window => ("Qto_WindowBaseQuantities", &[("Width", "width", Q::Length), ("Height", "height", Q::Length), ("Area", "opening_area", Q::Area)]),
+        Kind::Room => ("Qto_SpaceBaseQuantities", &[("NetFloorArea", "floor_area", Q::Area), ("GrossFloorArea", "gross_area", Q::Area), ("NetPerimeter", "perimeter", Q::Length)]),
+        _ => return None,
+    })
+}
+
 /// A number as a STEP file writes one: a point always, no exponent, no negative zero.
 fn real(x: f64) -> String {
     let rounded = (x * 1.0e6).round() / 1.0e6;
@@ -574,6 +600,40 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
         o.add(format!("IFCRELDEFINESBYPROPERTIES({},$,$,$,(#{id}),#{set})", o.id(&format!("{path} has values"))));
     }
 
+    // ---- Each thing's base quantities, as IFC4 names them (`Qto_*BaseQuantities`):
+    // the figures this program has already worked out for it, the same ones the
+    // estimate is priced from, and nothing worked out here (call 131). A figure with no
+    // value is left out, not written as zero; each one written says how sure it is and
+    // what it was worked from.
+    for (path, id) in &written {
+        let Some(e) = job.find(path) else { continue };
+        let Some(kind) = job.world.get::<Kind>(e).copied() else { continue };
+        let Some(measure) = job.world.get::<plumbline_world::Measure>(e).cloned() else { continue };
+        let Some((set, wanted)) = base_quantities(kind) else { continue };
+        let mut items = Vec::new();
+        for (ifc_name, ours, sort) in wanted {
+            let Some(d) = measure.0.get(*ours) else { continue };
+            let Some(value) = d.value else { continue };
+            // A volume this program keeps in cubic yards is written in the model's unit,
+            // the cubic foot, from the figure as it was worked (call 133) and to four
+            // places, as every figure is written.
+            let (entity, value) = match *sort {
+                Q::Length => ("IFCQUANTITYLENGTH", value),
+                Q::Area => ("IFCQUANTITYAREA", value),
+                Q::Volume if d.unit == "CY" => ("IFCQUANTITYVOLUME", (d.worked().unwrap_or(value) * 27.0 * 10_000.0).round() / 10_000.0),
+                Q::Volume => ("IFCQUANTITYVOLUME", value),
+            };
+            let how = format!("{:?}", d.status);
+            // A volume kept in CY is written in cubic feet, and its formula says so.
+            let formula = if matches!(sort, Q::Volume) && d.unit == "CY" { format!("({}) × 27, in cubic feet", d.formula) } else { d.formula.clone() };
+            items.push(format!("#{}", o.add(format!("{entity}({},{},$,{},{})", text(ifc_name), text(&how), real(value), text(&formula)))));
+        }
+        if items.is_empty() {
+            continue;
+        }
+        let q = o.add(format!("IFCELEMENTQUANTITY({},$,{},$,$,({}))", o.id(&format!("{path} quantities")), text(set), items.join(",")));
+        o.add(format!("IFCRELDEFINESBYPROPERTIES({},$,$,$,(#{id}),#{q})", o.id(&format!("{path} has quantities"))));
+    }
     // ---- What a model has no place for, counted.
     for (path, why) in &not_drawn {
         let called = names.get(path).cloned().unwrap_or_else(|| path.clone());

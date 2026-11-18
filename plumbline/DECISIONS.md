@@ -4464,3 +4464,189 @@ not changed again: every picture in `demos/captured/` would be of another build
 than the program, and the gain is two parts in 255. The next change to it goes with
 a full run; and the cause (why the haze and the sky's foot, given one colour, come
 to the screen as two) is still not found, which is the real repair.
+
+### Call 129. Patrick, 2026-11-18: the program stays in this repository; the scope is every trade and the design professions; a second builder, Opus 5.5, is approved for named work
+
+After a review of this branch (published to Patrick as "BuildOS Branch Review"), his words:
+
+> "This needs to be a software where all 16 trades can use it along with engineer,
+> designer, architect and designer. BuildOS wins in engine however learned specifics
+> can be ported from roof nerd."
+
+> "Make a note in existing repository we stay here for now you are approved for the
+> following research and execution of the program database trade catalogs and
+> assemblies, fixes from this review, IFC quantity and property sets, the
+> implementation tweaks so program is useable and anything else that's prudent while
+> knowing you co own codebase but fable will override those changes if made without
+> deep thought. Start with one trade like foundation work to show me you understand"
+
+How each clause is read:
+
+- **"We stay here for now."** BuildOS stays in this repository, in `plumbline/`, on
+  branches of it. A separate repository was discussed and is not made now. (The
+  review's suggestion to move it out without the 2.3 GB of pictures in history waits
+  on a later word from him.)
+- **"All 16 trades … along with engineer, designer, architect."** The sixteen
+  divisions stay the frame (call 57), and the people who use the job now include the
+  design side: an architect or designer hands work in and takes it back (IFC both
+  ways), and an engineer's numbers (loads, sizes) are carried as figures with a
+  source. A calculation the program shows is for estimating and checking; it is never
+  a stamped design, and where the program shows one it says so.
+- **"BuildOS wins in engine; learned specifics can be ported from roofnerd."** This
+  engine is the one built on. What roofnerd learned (its tapered layout, crickets,
+  coping stretch-out, walls and curbs with their flashing heights, fastening by wind
+  zone, and the rules in its DECISIONS.md) is ported in as Division 7's depth, from
+  its source in `src-tauri/core`, with the port listed the way `PORTMAP.md` lists
+  BIMCraft's. Q11's "share one core crate" is answered by this: one engine, this one.
+- **Who builds.** A second builder, Opus 5.5, co-owns the code with the builder of
+  record (Fable 5.2) and is approved for: research; the item and assembly catalogs of
+  every trade (the program's library); the fixes the review found; IFC quantity and
+  property sets; the changes that make the program usable by a person; and other
+  prudent work. "Fable will override those changes if made without deep thought" is
+  read as a bar, not a threat: every change by the second builder is made by this
+  file's rules (the demonstration written first with figures worked by hand, the
+  decision written before an expectation moves, judges on another model, pictures
+  read), and says in this file why, so that the other builder can weigh it rather
+  than redo it. A change that one builder makes to the other's call is written here
+  as a new call that names the old one.
+- **Where it is pushed.** The second builder's session may push only to its own
+  branch, `claude/hopeful-cannon-kng8eo`, which starts at this branch's head
+  (289ff27) and adds commits on top, so `claude/nifty-tesla-qmn44n` can be brought
+  up to it by a fast-forward. Neither builder rewrites the other's history.
+- **"Start with one trade, like foundation work."** The first trade taken to its
+  finish line by the second builder is foundations: footings, foundation walls and
+  the slab on grade, Divisions 2, 3 and 7 where they meet the foundation. Its finish
+  line, its sources and its demonstration are written in STATUS.md before it is
+  built.
+
+### Call 130. A formula can come out in cubic yards; a wall and a floor say how thick they are, and a floor its perimeter (2026-11-18; the second builder, for foundation work, call 129)
+
+Three changes to what a number can be made of. Each is made because foundation work
+cannot be taken off without it, and each is checked against a figure worked by hand.
+
+- **A formula whose lengths multiply to a volume comes out in CY.** Until now a line's
+  formula that came out as feet × feet × feet was refused ("a line is a count, a length
+  or an area"). Concrete, gravel, fill and excavation are bought by the cubic yard, and
+  the only way to get one was a hidden order factor (`81 SF/CY` on the slab, which is
+  right only while the slab is 4 in). Now the formula is worked in feet as before, and a
+  result in cubic feet is divided by 27 and said so in the worked formula
+  (`face_area × thickness ÷ 27`). Every other dimension is refused as before. A figure
+  that is already in CY (a footing's `volume`) still stands alone on its line, with its
+  waste on the line; using it inside a formula is refused, as it was, and the refusal
+  now says a formula can also come out as a volume. A volume formula that divides by
+  27 itself is refused and told to take the ÷ 27 out: typed out of an estimator's habit
+  it would divide twice (`plan_length * width * depth / 27` on a 2.0576 CY footing read
+  0.0762 CY; found by the judge of 2026-11-18).
+  **Expectation moved:** the formula test's `plan_length * height * height` on a
+  parapet, refused before, now comes out in CY (`crates/world/tests/world.rs`, the
+  formula test). Nothing else in the suite used a volume.
+- **A wall has a `thickness`**, its type's thickness (ft), as sure as the type and the
+  wall's choice of it. A foundation wall's concrete is `net_area × thickness`, in CY,
+  worked in the core like any other figure, not typed beside it.
+- **A floor has a `thickness`** (its type's) **and a `perimeter`** (the length round
+  its boundary on the plan, LF): a slab's edge form is its perimeter, its concrete
+  `plan_area × thickness`.
+
+The new figures are added at the end of each kind's list, so every figure that was there
+keeps its place. Where a message lists what a wall or a floor has, the list grows by
+these names; demonstrations that quote the list whole are moved to the new list in the
+same commit (`demos/quantityw.sh`).
+
+### Call 131. Each thing in the IFC model carries its base quantities, from the figures the estimate is priced on (2026-11-18; the second builder; the review's IFC finding)
+
+A designer's or another trade's program opening our IFC file found no quantities in it:
+0 `Qto_*` sets, every value as text in one set. IFC4 has a standard set of base
+quantities for each kind of thing (the names are IFC4's own, read from the property and
+quantity set templates IfcOpenShell ships), and a program that reads IFC reads those.
+
+- **What is written:** for each footing, wall, floor, roof plane, door, window and room
+  that goes into the model, an `IfcElementQuantity` named for its IFC4 set
+  (`Qto_FootingBaseQuantities` and the rest), holding the figures this program has
+  already worked out for it, the same ones its cost lines are priced from: a footing's
+  length, width, depth and volume; a wall's length, thickness, height, face area and
+  net area; a floor's thickness, perimeter and area; a roof plane's area on its slope;
+  a door's or a window's width, height and area; a room's floor area, gross area and
+  perimeter.
+- **Nothing is worked out in the writer.** A figure the program does not keep (a
+  wall's volume, a door's perimeter) is not computed there to fill the set: one
+  arithmetic for one number. A figure with no value is left out, never written as 0.
+- **How sure each one is goes with it.** Each quantity's description is Known, Assumed
+  or Unknown, and its formula is the formula the program worked it by, so a designer
+  sees that a wall's height was Assumed before relying on it.
+- **Units.** The model's units are feet, square feet and cubic feet (as before); a
+  footing's volume, kept in cubic yards, is written in cubic feet.
+- **Reading our own file back** still reads the shapes and the values it read before;
+  the quantity sets are counted with the property sets as not read, as an element
+  quantity was before this.
+
+### Call 132. The starter library takes off a foundation: a strip footing, a poured foundation wall, and a foundation drain (2026-11-18; the second builder; call 129's first trade)
+
+The starter library had no assembly that goes on a footing or on a foundation wall:
+the made-up whole house priced its footings by one typed line, and a person drawing a
+foundation had nothing to give it. Three assemblies are added, at the end of the file,
+with no price in them, every rule that sets a figure written on the line as Assumed
+with its source (the jurisdiction's own code decides, not this program):
+
+- **Strip footing, formed, two #4 bars** (goes on a footing): trench for the footing
+  (LF); footing forms, both sides (`2 × plan_length × depth`, SF of contact); footing
+  concrete (`volume`, CY, 5 % over, "NRMCA CIP 31: order 4% to 10% over the plan
+  quantity"); footing bars, #4, continuous (`bars × plan_length` with bars = 2, 12.5 %
+  for 30 in laps on 20 ft bars, IRC Table R608.5.4(1); ordered by the lb at 0.668 lb/LF,
+  ASTM A615); placing labor (hr, no rate).
+- **Foundation wall, poured concrete** (goes on a wall): forms, both faces (`2 ×
+  face_area`); concrete (`net_area × thickness`, CY, call 130, 5 % over); horizontal
+  bars, #4 (`rows × plan_length`, rows = 2 by IRC Table R404.1.2(1) for a wall 8 ft or
+  less, 12.5 % laps); vertical bars, #4 (`(plan_length ÷ spacing + 1) × height`,
+  spacing = 48 in, the most Tables R404.1.2(2) to (8) allow); anchor bolts, 1/2 in
+  (`(plan_length − 2 × end) ÷ spacing + 1`, end = 12 in, spacing = 6 ft, IRC 2021
+  R403.1.6; a count, rounded up); dampproofing, outside face (`plan_length ×
+  below_grade`, with below_grade **Unknown**: the height from the top of the footing to
+  finished grade, IRC R406.1, is not on a plan, so the line has no figure until it is
+  given, and is never a guess); forming and placing labor (hr, no rate).
+- **Basement wall, poured concrete, with a drain** (goes on a wall): the foundation
+  wall's lines, and a foundation drain, perforated pipe in gravel, by the LF. The code
+  asks for a drain only where the wall retains earth and encloses habitable or usable
+  space below grade (IRC R405.1), which is the trade's line between a basement wall and
+  a crawl space's: so it is a wall of its own, not a line carried on every foundation
+  wall. (It was first a one-line assembly to add beside the wall's; a thing carries one
+  assembly, and a line can be switched off only if it is labor, so neither way held.)
+  Changing a wall from one to the other with `--change` keeps what the two share, the
+  height to grade and any price included.
+
+**Expectations moved, with this call written first:** the starter library is 33
+assemblies and 131 lines, 21 of them labor (was 30, 111 and 18): `crates/cli/tests/cli.rs` (the starter
+library test, which now reads a line's division from its 27th cell, since figures
+entered on a line follow it), `demos/library.sh`, and `demos/pricew.sh` (the assemblies
+in the saved job). The file's heading gains the
+"Figure 1" and "Figure 2" columns the program writes when a line carries figures of
+its own, so the file still goes out byte for byte as it came in.
+
+What a foundation still lacks is listed in STATUS.md ("Foundation work"): pad footings,
+stepped footings, corner bars, laps counted splice by splice, excavation by the CY
+(the model has no grade), the slab's assembly by its own thickness.
+
+### Call 133. A formula works from a figure as it was worked out, not as it is written (2026-11-18; the second builder; found taking off the foundation)
+
+Every figure the program works out is written to four decimals (value.rs, `round4`),
+and a formula on a line took its figures as written. A footing 10 in deep is written
+0.8333 ft, so its forms, `2 × plan_length × depth` on a 40 ft footing, came to 66.664
+SF; by hand, and by the shape, they are 66.6667. The error grows with every figure a
+formula multiplies, and an estimator checking the line against the footing's 10 in sees
+it wrong.
+
+A derived figure now keeps the value it was worked to, in memory only, beside the one
+it is written as (`Derived::exact`), and a formula works from that. Nothing about what
+is written changes: the saved job, every screen and every file still carry four
+decimals, and the written figure is what two figures are compared by. A job read from
+its file works its figures out again before any formula is worked, as it always has.
+How a quantity is rounded before it is priced is untouched (Q29 is Patrick's).
+
+The same was so inside the program's own arithmetic in one place found: a footing's
+volume was worked from its width and depth as written, so a 40 ft footing 20 in by 10 in
+was 40 × 1.6667 × 0.8333 = 55.5544 CF where it is 55.5556 (seen in the IFC file, which
+writes the volume in cubic feet; in CY both round to 2.0576). It is worked from the
+figures as worked now. Other figures worked from other written figures may be found the
+same way; each is fixed where it is found, and said here.
+
+No expectation in the suite moved with it: every figure a test or demonstration checks
+was already the same to four places either way, apart from the new foundation's.

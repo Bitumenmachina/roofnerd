@@ -48,6 +48,8 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 
 - "Excavation and grading", in the assembly "Slab on grade, 4 in" (goes on a floor): subcontract, by `plan_area`
 - "Gravel base, 4 in", in the assembly "Slab on grade, 4 in" (goes on a floor): material, by `plan_area`
+- "Trench for the footing", in the assembly "Strip footing, formed, two #4 bars" (goes on a footing): subcontract, by `plan_length`
+- "Foundation drain, perforated pipe in gravel", in the assembly "Basement wall, poured concrete, with a drain" (goes on a wall): subcontract, by `plan_length` (IRC R405.1: where the wall retains earth and encloses habitable or usable space below grade)
 
 ## Division 3. Concrete
 
@@ -59,7 +61,7 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 
 **In the model:** Strip footings (a kind of their own, `Kind::Footing`) and foundation walls as walls on a level under the first floor; the slab is the first floor's floor. A wall priced as concrete is drawn as concrete. Ground switch under Show.
 
-**What the program knows, and where from:** Footing concrete is length x width x depth / 27 CY (call 70). **Open from judgment 20:** at a T, where one footing ends on the middle of another, that overcounts by half a width x width x depth (J20-1); quantities are rounded to four places before pricing (J20-3). No rebar, forms, pad footings or stepped footings.
+**What the program knows, and where from:** Footing concrete is length x width x depth / 27 CY (call 70); where one footing stops on the run of another (a T, a cross), the part inside the other is taken off (J20-1, J21-1 to -4, closed). A wall knows its thickness and a floor its thickness and perimeter, and a line's formula can come out in CY (`net_area * thickness`, call 130), worked from each figure as it was worked out rather than as written to four places (call 133). The starter library takes off strip footings, foundation walls and basement walls with forms, concrete, bars, anchor bolts, dampproofing and a drain (call 132), each code rule on its line as Assumed with its 2021 IRC section; `demos/foundation.sh` checks every figure against one worked by hand. Quantities are still rounded to four places before pricing (J20-3; Q29 is Patrick's). **Not yet:** pad or stepped footings, corner bars, laps counted splice by splice, excavation by the CY (the model has no grade), a slab assembly by its own thickness.
 
 **In the starter assemblies the program ships with** (no prices in them; `plumbline import assemblies <job> starter`):
 
@@ -67,6 +69,8 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 - "Welded wire reinforcing", in the assembly "Slab on grade, 4 in" (goes on a floor): material, by `plan_area`
 - "Concrete, 4 in slab", in the assembly "Slab on grade, 4 in" (goes on a floor): material, by `plan_area`
 - "Place and finish concrete", in the assembly "Slab on grade, 4 in" (goes on a floor): subcontract, by `plan_area`
+- "Footing forms, both sides", "Footing concrete" (5 % over), "Footing bars, #4, continuous" (by the lb) and "Place the footing concrete" (labor), in the assembly "Strip footing, formed, two #4 bars" (goes on a footing), by `2 * plan_length * depth`, `volume`, `bars * plan_length` and `volume`
+- "Wall forms, both faces", "Wall concrete" (5 % over), "Horizontal bars, #4", "Vertical bars, #4", "Anchor bolts, 1/2 in, with nut and washer" and "Form and place the wall" (labor), in the assemblies "Foundation wall, poured concrete" and "Basement wall, poured concrete, with a drain" (go on a wall), by `2 * face_area`, `net_area * thickness`, `rows * plan_length`, `(plan_length / spacing + 1) * height`, `(plan_length - 2 * end) / spacing + 1` and `2 * face_area`
 
 ## Division 4. Masonry
 
@@ -164,6 +168,7 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 
 **In the starter assemblies the program ships with** (no prices in them; `plumbline import assemblies <job> starter`):
 
+- "Dampproofing, outside face", in the assemblies "Foundation wall, poured concrete" and "Basement wall, poured concrete, with a drain" (go on a wall): subcontract, by `plan_length * below_grade`, the height to grade Unknown until it is given (IRC R406.1)
 - "Weather barrier", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): material, by `net_area`
 - "Batt insulation", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): material, by `net_area`
 - "Lap siding", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): material, by `net_area`

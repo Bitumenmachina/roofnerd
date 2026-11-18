@@ -158,30 +158,47 @@ fn the_estimate_says_what_has_nothing_priced_on_it() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
-/// The starter library the program ships with comes into an empty job whole (30
-/// assemblies, none refused), goes back out byte for byte as the file in the repository,
+/// The starter library the program ships with comes into an empty job whole (33
+/// assemblies, none refused: call 132 added the footing's, the foundation wall's and the basement wall's), goes back out byte for byte as the file in the repository,
 /// has a line in every one of the sixteen divisions, and has no price in it.
 #[test]
 fn the_starter_library_comes_in_whole_goes_out_as_it_was_and_has_no_price_in_it() {
     let dir = folder("starter");
     assert!(run(&dir, &["new", "j.json", "Starter (not a real job)"]).0);
     let (ok, said) = run(&dir, &["import", "assemblies", "j.json", "starter"]);
-    assert!(ok && said.contains("set: 30") && said.contains("not used: 0"), "{said}");
+    assert!(ok && said.contains("set: 33") && said.contains("not used: 0"), "{said}");
     assert!(run(&dir, &["export", "assemblies", "j.json", "out.csv"]).0);
     let out = std::fs::read_to_string(dir.join("out.csv")).unwrap();
     let shipped = include_str!("../../../library/sixteen-divisions.csv");
     assert_eq!(out, shipped);
-    // The last cell of each line is its division; the one before a "$?/unit" is no figure.
+    // The 27th cell of each line is its division (figures entered on a line follow it,
+    // three cells each: call 132); the one before a "$?/unit" is no figure.
+    let cells = |line: &str| -> Vec<String> {
+        let (mut out, mut cell, mut quoted, mut chars) = (Vec::new(), String::new(), false, line.chars().peekable());
+        while let Some(c) = chars.next() {
+            match (c, quoted) {
+                ('"', true) if chars.peek() == Some(&'"') => {
+                    cell.push('"');
+                    chars.next();
+                }
+                ('"', _) => quoted = !quoted,
+                (',', false) => out.push(std::mem::take(&mut cell)),
+                _ => cell.push(c),
+            }
+        }
+        out.push(cell);
+        out
+    };
     let mut divisions = std::collections::BTreeSet::new();
     for line in shipped.lines().skip(1) {
-        divisions.insert(line.rsplit(',').next().unwrap().parse::<u8>().unwrap());
+        divisions.insert(cells(line)[26].parse::<u8>().unwrap());
         assert!(line.contains(",$?/") && line.contains(",Unknown,no price entered,"), "{line}");
         assert!(!line.chars().zip(line.chars().skip(1)).any(|(a, b)| a == '$' && b.is_ascii_digit()), "a price in the library: {line}");
     }
     assert_eq!(divisions.into_iter().collect::<Vec<_>>(), (1..=16).collect::<Vec<u8>>());
     // Brought in a second time, it is the same as the job already has.
     let (ok, said) = run(&dir, &["import", "assemblies", "j.json", "starter"]);
-    assert!(ok && said.contains("set: 0") && said.contains("the same as the job already has: 111"), "{said}");
+    assert!(ok && said.contains("set: 0") && said.contains("the same as the job already has: 131"), "{said}");
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

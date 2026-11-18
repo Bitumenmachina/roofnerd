@@ -17,6 +17,12 @@ pub fn plan_area(pts: &[P2]) -> f64 {
     twice.abs() / 2.0
 }
 
+/// The distance round an outline on the plan, back to where it started.
+pub fn perimeter(pts: &[P2]) -> f64 {
+    let n = pts.len();
+    (0..n).map(|i| dist(pts[i], pts[(i + 1) % n])).sum()
+}
+
 /// How far a point is from a line segment.
 pub fn point_to_segment(p: P2, a: P2, b: P2) -> f64 {
     let (ex, ey) = (b[0] - a[0], b[1] - a[1]);

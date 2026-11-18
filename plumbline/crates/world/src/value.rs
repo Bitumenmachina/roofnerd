@@ -120,7 +120,7 @@ impl Val<Len> {
 
 /// A value worked out from other values. It shows its formula and names its inputs,
 /// so anyone reading the file can see how the number was reached and what feeds it.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Derived {
     pub value: Option<f64>,
@@ -132,9 +132,29 @@ pub struct Derived {
     /// Why it is flagged, when there is a reason beyond a flagged input.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub note: String,
+    /// The figure before it was written to four decimals, for a formula to work from
+    /// (call 133): a footing 10 in deep is 0.8333 ft written and 10/12 ft worked, so two
+    /// sides of 40 ft of it are 66.6667 SF, not 66.664. Never saved and never shown; a job
+    /// read from its file works its figures out again.
+    #[serde(skip)]
+    pub exact: Option<f64>,
+}
+
+/// Two derived figures are the same when what is written of them is: the figure kept
+/// for formulas is not part of what a figure is.
+impl PartialEq for Derived {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value && self.unit == other.unit && self.status == other.status && self.formula == other.formula && self.inputs == other.inputs && self.note == other.note
+    }
 }
 
 impl Derived {
+    /// The figure a formula works from: as it was worked out, where that is to hand, and
+    /// as it is written otherwise (a figure read from a file before it is worked again).
+    pub fn worked(&self) -> Option<f64> {
+        self.exact.filter(|_| self.value.is_some()).or(self.value)
+    }
+
     /// A derived number. The status is the worst among its inputs; an Unknown input
     /// leaves no number behind, and so does arithmetic that runs off the end of the
     /// number line.
@@ -148,14 +168,15 @@ impl Derived {
             return Derived::refused(unit, formula, inputs, "the figure is smaller than 0.0001 and would be written as zero");
         }
         let status = statuses.iter().copied().max().unwrap_or(Status::Unknown);
-        let value = if status == Status::Unknown { None } else { value.map(round4) };
+        let exact = if status == Status::Unknown { None } else { value };
+        let value = exact.map(round4);
         let status = if value.is_none() { Status::Unknown } else { status };
-        Derived { value, unit: unit.into(), status, formula: formula.into(), inputs: inputs.to_vec(), note: String::new() }
+        Derived { value, unit: unit.into(), status, formula: formula.into(), inputs: inputs.to_vec(), note: String::new(), exact }
     }
 
     /// A derived value that cannot be given, with the reason.
     pub fn refused(unit: &str, formula: &str, inputs: &[String], why: &str) -> Self {
-        Derived { value: None, unit: unit.into(), status: Status::Unknown, formula: formula.into(), inputs: inputs.to_vec(), note: why.into() }
+        Derived { value: None, unit: unit.into(), status: Status::Unknown, formula: formula.into(), inputs: inputs.to_vec(), note: why.into(), exact: None }
     }
 }
 

@@ -8,8 +8,9 @@
 //! Three things a spreadsheet cell does not do, which is why this is ours:
 //!
 //! * **Units.** Every length comes in as feet, whatever it was entered in, and the worked
-//!   formula says where (`stretch_out ÷ 12`). Lengths multiply to areas. A formula that
-//!   adds a length to an area, or comes out as a volume, is refused.
+//!   formula says where (`stretch_out ÷ 12`). Lengths multiply to areas, and to volumes,
+//!   which come out in cubic yards with the ÷ 27 written in (call 130). A formula that
+//!   adds a length to an area is refused.
 //! * **Status.** The result is as good as its worst operand.
 //! * **No number from nothing.** An Unknown operand leaves no result. It is never zero.
 
@@ -333,19 +334,44 @@ fn dim_word(dim: i32) -> &'static str {
         0 => "a plain number",
         1 => "a length",
         2 => "an area",
-        _ => "neither a number, a length nor an area",
+        3 => "a volume",
+        _ => "neither a number, a length, an area nor a volume",
     }
 }
 
 /// The unit a result of this dimension is counted in, or why a line cannot be counted
-/// in it.
+/// in it. A volume is worked in cubic feet and counted in cubic yards, as concrete,
+/// gravel, fill and excavation are bought (call 130): see `in_yards`.
 pub fn unit_of(dim: i32) -> Result<&'static str, String> {
     match dim {
         0 => Ok("EA"),
         1 => Ok("LF"),
         2 => Ok("SF"),
-        3 => Err("comes out as a volume (feet × feet × feet); a line is a count, a length or an area".into()),
-        d if d < 0 => Err("comes out as one over a length; a line is a count, a length or an area".into()),
-        _ => Err("comes out as more than a volume; a line is a count, a length or an area".into()),
+        3 => Ok("CY"),
+        d if d < 0 => Err("comes out as one over a length; a line is a count, a length, an area or a volume".into()),
+        _ => Err("comes out as more than a volume; a line is a count, a length, an area or a volume".into()),
     }
+}
+
+/// Cubic feet to the cubic yard.
+pub const CF_PER_CY: f64 = 27.0;
+
+/// Does the formula divide by this number anywhere in it?
+pub fn divides_by(expr: &Expr, n: f64) -> bool {
+    match expr {
+        Expr::Bin(a, op, b) => (*op == '/' && matches!(**b, Expr::Num(x) if x == n)) || divides_by(a, n) || divides_by(b, n),
+        Expr::Neg(a) => divides_by(a, n),
+        _ => false,
+    }
+}
+
+/// A formula worked to a volume, in cubic feet, given in cubic yards: the value divided
+/// by 27 and the worked formula saying so. Any other result is given back as it is.
+pub fn in_yards(expr: &Expr, worked: Worked) -> Worked {
+    if worked.dim != 3 {
+        return worked;
+    }
+    // A sum is bracketed before it is divided; a product or a single name is not.
+    let text = if matches!(expr, Expr::Bin(_, '+' | '-', _)) { format!("({}) \u{00F7} 27", worked.text) } else { format!("{} \u{00F7} 27", worked.text) };
+    Worked { value: worked.value.map(|v| v / CF_PER_CY), text, ..worked }
 }
