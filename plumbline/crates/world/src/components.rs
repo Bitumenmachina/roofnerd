@@ -241,6 +241,9 @@ impl Kind {
             &[("plan_length", "LF"), ("height", "ft"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF"), ("thickness", "ft")]
         } else if matches!(self, Kind::Door | Kind::Window) {
             &[("width", "ft"), ("height", "ft"), ("opening_area", "SF")]
+        } else if self == Kind::Roof {
+            // The whole roof, from its planes and lines (call 134).
+            &[("surface_area", "SF"), ("squares", "SQ"), ("eave_length", "LF"), ("rake_length", "LF"), ("hip_length", "LF"), ("ridge_length", "LF"), ("valley_length", "LF"), ("headwall_length", "LF")]
         } else if self == Kind::Footing {
             &[("plan_length", "LF"), ("width", "ft"), ("depth", "ft"), ("volume", "CY")]
         } else if self == Kind::Floor {

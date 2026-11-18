@@ -168,6 +168,7 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 
 **In the starter assemblies the program ships with** (no prices in them; `plumbline import assemblies <job> starter`):
 
+- Roof sheathing, underlayment, ice barrier, field shingles, starter strip, hip and ridge cap, drip edge, ridge vent, open valley flashing, headwall flashing, pipe boots and two labor lines, in the assembly "Asphalt shingle roof, whole roof" (goes on a roof): by the roof's own figures (`surface_area`, `squares`, `eave_length + rake_length`, `hip_length + ridge_length`, `valley_length`, `headwall_length`), in whole sheets, rolls, bundles and pieces, each rule Assumed with its IRC R905 section or the maker's data (call 135)
 - "Dampproofing, outside face", in the assemblies "Foundation wall, poured concrete" and "Basement wall, poured concrete, with a drain" (go on a wall): subcontract, by `plan_length * below_grade`, the height to grade Unknown until it is given (IRC R406.1)
 - "Weather barrier", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): material, by `net_area`
 - "Batt insulation", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): material, by `net_area`

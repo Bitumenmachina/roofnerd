@@ -116,7 +116,8 @@ cp "$J" "$T/before.json"
 price
 says "the allowance moved" "allowance   \$13,125.00 at \$28.00 per SF"
 says "the detail moved" "detail      \$14,765.63, which is \$31.50 per SF"
-# In the file: the plane, and the lines that lie on it (their lengths follow its slope).
+# In the file: the plane, the lines that lie on it (their lengths follow its slope), and
+# the roof they are under (its figures are worked from them: call 134).
 python3 - "$T/before.json" "$J" <<'PY'
 import sys, json
 a = {e["path"]: e for e in json.load(open(sys.argv[1]))["data"]}
@@ -124,7 +125,8 @@ b = {e["path"]: e for e in json.load(open(sys.argv[2]))["data"]}
 changed = sorted(p for p in a if a[p] != b[p])
 print("    elements changed in the file:", ", ".join(changed))
 planes = lambda p: a[p]["attributes"].get("pl::run", {}).get("planes", [])
-stray = [p for p in changed if p != "plane-0003" and "plane-0003" not in planes(p)]
+roof = lambda p: a[p]["attributes"].get("pl::class") == "Roof"
+stray = [p for p in changed if p != "plane-0003" and "plane-0003" not in planes(p) and not roof(p)]
 if "plane-0003" not in changed or stray:
     print("FAIL: something changed that is not the plane or a line on it:", stray); sys.exit(1)
 priced = [p for p in changed if a[p]["attributes"].get("pl::priced") != b[p]["attributes"].get("pl::priced")]

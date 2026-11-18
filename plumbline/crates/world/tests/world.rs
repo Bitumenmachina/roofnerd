@@ -69,7 +69,8 @@ fn changing_one_pitch_touches_only_that_plane_and_what_is_derived_from_it() {
     job.set("plane-0017", "pitch", Some("4"), Status::Known, "field measured").unwrap();
     let changed = job.derive();
     let after = save(&mut job);
-    let expect = ["plane-0017", "eave-0018", "rake-0019", "rake-0020", "headwall-0021"];
+    // The roof is worked from its planes and lines (call 134), so it moves with them.
+    let expect = ["roof-0016", "plane-0017", "eave-0018", "rake-0019", "rake-0020", "headwall-0021"];
     assert_eq!(touched(&before, &after), expect);
     assert_eq!(changed, expect);
     // On the plane itself only the pitch and the measure moved.
@@ -113,7 +114,7 @@ fn planes_that_disagree_about_a_hip_give_no_length() {
     job.set("plane-0003", "pitch", Some("8"), Status::Known, "revised").unwrap();
     job.derive();
     let after = save(&mut job);
-    assert_eq!(touched(&before, &after), ["plane-0003", "ridge-0011", "hip-0012", "hip-0013"]);
+    assert_eq!(touched(&before, &after), ["roof-0002", "plane-0003", "ridge-0011", "hip-0012", "hip-0013"]);
     for hip in ["ridge-0011", "hip-0012", "hip-0013"] {
         let d = measure(&mut job, hip, "true_length");
         assert_eq!((d.value, d.status), (None, Status::Unknown));
@@ -1864,6 +1865,34 @@ fn hip_roof() -> (Job, String) {
     let mut job = sample();
     let (roof_path, _) = solve::new_roof(&mut job, "house", footprint(vec![[0.0, 0.0], [40.0, 0.0], [40.0, 30.0], [0.0, 30.0]], &[Rise::Pitch(6.0); 4], 10.0)).unwrap();
     (job, roof_path)
+}
+
+/// A roof's own figures, from its planes and lines (call 134). A hip roof 40 by 30 at
+/// 6:12: 1,200 SF on plan x sqrt(1.25) = 1,341.6408 SF, 13.4164 SQ; eaves 140 LF; the
+/// ridge 40 - 30 = 10 LF; four hips, each 15 sqrt 2 on plan rising 7.5 ft, 22.5 ft: 90 LF;
+/// no valleys, rakes or headwalls: 0 each, and said why. A plane with no surface leaves
+/// the roof none, and the roof says which plane.
+#[test]
+fn a_roof_is_taken_off_whole_from_its_planes_and_lines() {
+    let (mut job, roof_path) = hip_roof();
+    job.derive();
+    assert_eq!(measure(&mut job, &roof_path, "surface_area").value, Some(1341.6408));
+    assert_eq!(measure(&mut job, &roof_path, "squares").value, Some(13.4164));
+    assert_eq!(measure(&mut job, &roof_path, "eave_length").value, Some(140.0));
+    assert_eq!(measure(&mut job, &roof_path, "ridge_length").value, Some(10.0));
+    assert_eq!(measure(&mut job, &roof_path, "hip_length").value, Some(90.0));
+    let valleys = measure(&mut job, &roof_path, "valley_length");
+    assert_eq!((valleys.value, valleys.formula.as_str()), (Some(0.0), "the roof has no valley line"), "{valleys:?}");
+    // The same as the panel's totals: one arithmetic.
+    let totals = plumbline_world::view::roof_totals(&mut job, &roof_path);
+    assert_eq!(totals.surface.value, Some(1341.6408));
+    // A pitch struck out of the file: the roof has no surface and names a plane.
+    let text = save(&mut job);
+    let struck = edit(&text, |v| attrs(v, &roof_path)["pl::footprint"]["edges"][0] = serde_json::json!({"value": null, "unit": "in/12", "status": "Unknown", "source": "not on the drawing"}));
+    let (mut loaded, _) = load(&struck).unwrap();
+    let surface = measure(&mut loaded, &roof_path, "surface_area");
+    assert_eq!((surface.value, surface.status), (None, Status::Unknown));
+    assert!(surface.note.contains("has no surface"), "{surface:?}");
 }
 
 #[test]

@@ -162,6 +162,43 @@ pub fn derive(world: &mut World) -> Vec<String> {
         }
     }
 
+    // What each roof comes to, from its planes and its lines (call 134): its surface and
+    // squares, and the length of its eaves, rakes, hips, ridges, valleys and headwalls,
+    // so that a roof is priced as a roofer prices it, once and whole, and not plane by
+    // plane. Each plane's surface by the same arithmetic as the plane's own
+    // (`plane_measures`); each line's length is the one worked above.
+    let mut roof_figures: HashMap<String, BTreeMap<String, Derived>> = HashMap::new();
+    {
+        let mut planes_of: BTreeMap<String, Vec<(String, Derived)>> = BTreeMap::new();
+        let mut lines_of: BTreeMap<(String, &'static str), Vec<(String, Derived)>> = BTreeMap::new();
+        let mut roofs: Vec<String> = Vec::new();
+        let mut rq = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>)>();
+        for (node, kind, outline, pitch) in rq.iter(world) {
+            if *kind == Kind::Roof {
+                roofs.push(node.path.clone());
+            } else if let Some(parent) = &node.parent {
+                if kind.is_area() {
+                    let surface = plane_measures(&node.path, outline, pitch).remove("surface_area").expect("a plane has a surface figure");
+                    planes_of.entry(parent.clone()).or_default().push((node.path.clone(), surface));
+                } else if let Some((_, name)) = ROOF_LINES.iter().find(|(k, _)| k == kind) {
+                    if let Some(d) = lengths.get(&node.path) {
+                        lines_of.entry((parent.clone(), *name)).or_default().push((node.path.clone(), d.clone()));
+                    }
+                }
+            }
+        }
+        // In the order of their paths, not the order the world happens to hold them in:
+        // a job read back from its file holds them in another (its figures have to read
+        // back the same, inputs and all).
+        for list in planes_of.values_mut().chain(lines_of.values_mut()) {
+            list.sort_by(|a, b| a.0.cmp(&b.0));
+        }
+        for roof in roofs {
+            let planes = planes_of.remove(&roof).unwrap_or_default();
+            roof_figures.insert(roof.clone(), roof_measures(&planes, &mut lines_of, &roof));
+        }
+    }
+
     // The rest of the building: walls, floors, ducts, pipes. Worked out in `building.rs`
     // and added to each element's measure below.
     let mut building = crate::building::measures(world);
@@ -187,49 +224,7 @@ pub fn derive(world: &mut World) -> Vec<String> {
         let mut m = BTreeMap::new();
 
         if kind.is_area() {
-            let in_outline = format!("{me}#{K_OUTLINE}");
-            let in_pitch = format!("{me}#{K_PITCH}");
-            let both = [in_outline.clone(), in_pitch.clone()];
-            let f_area = format!("area of the outline on the plan{}", outline.map(|o| entered_in(&o.points.unit, "144")).unwrap_or_default());
-            let f_factor = "√(1 + (pitch ÷ 12)²)";
-            let f_surface = "plan_area × slope_factor";
-            let f_squares = "surface_area ÷ 100";
-            let pts = outline.and_then(|o| o.points_ft());
-            let area = pts.as_ref().map(|p| geom::plan_area(p));
-            let factor = pitch.and_then(|p| p.0.value.map(|p| (1.0 + (p / 12.0).powi(2)).sqrt()));
-            let surface = area.zip(factor).map(|(a, f)| a * f);
-            let unit_fault = outline.is_some_and(|o| o.points.value.is_some() && pts.is_none());
-            m.insert(
-                "plan_area".into(),
-                match outline {
-                    Some(_) if unit_fault => Derived::refused("SF", &f_area, std::slice::from_ref(&in_outline), &format!("the outline {NOT_CONVERTED}")),
-                    Some(o) => Derived::new(area, "SF", &[o.points.status], &f_area, std::slice::from_ref(&in_outline)),
-                    None => Derived::refused("SF", &f_area, std::slice::from_ref(&in_outline), "no outline entered"),
-                },
-            );
-            m.insert(
-                "slope_factor".into(),
-                match pitch {
-                    Some(p) => Derived::new(factor, "", &[p.0.status], f_factor, std::slice::from_ref(&in_pitch)),
-                    None => Derived::refused("", f_factor, std::slice::from_ref(&in_pitch), "no pitch entered"),
-                },
-            );
-            let (surface_d, squares_d) = match (outline, pitch) {
-                (Some(_), Some(_)) if unit_fault => {
-                    let why = format!("the outline {NOT_CONVERTED}");
-                    (Derived::refused("SF", f_surface, &both, &why), Derived::refused("SQ", f_squares, &both, &why))
-                }
-                (Some(o), Some(p)) => {
-                    let s = [o.points.status, p.0.status];
-                    (Derived::new(surface, "SF", &s, f_surface, &both), Derived::new(surface.map(|s| s / 100.0), "SQ", &s, f_squares, &both))
-                }
-                _ => {
-                    let why = if outline.is_none() { "no outline entered" } else { "no pitch entered" };
-                    (Derived::refused("SF", f_surface, &both, why), Derived::refused("SQ", f_squares, &both, why))
-                }
-            };
-            m.insert("surface_area".into(), surface_d);
-            m.insert("squares".into(), squares_d);
+            m.extend(plane_measures(me, outline, pitch));
         }
 
         if kind.is_run() {
@@ -270,6 +265,9 @@ pub fn derive(world: &mut World) -> Vec<String> {
         if let Some(more) = building.remove(me) {
             m.extend(more);
         }
+        if let Some(more) = roof_figures.remove(me) {
+            m.extend(more);
+        }
 
         // Every cost line, worked out against this element's figures: quantity, then
         // waste, then order units.
@@ -306,10 +304,13 @@ pub fn derive(world: &mut World) -> Vec<String> {
         let mut insert_lq = None;
         match measure {
             Some(mut old) => {
+                // What is written decides whether it moved; the figure kept for formulas
+                // is always the one just worked (call 133: a figure read from a file has
+                // none until it is worked again).
                 if *old != new {
-                    *old = new;
                     moved = true;
                 }
+                *old = new;
             }
             None if !new.0.is_empty() => {
                 insert_m = Some(new);
@@ -370,6 +371,103 @@ pub fn derive(world: &mut World) -> Vec<String> {
         }
     }
     changed
+}
+
+/// The lines a roof's lengths are added up from, and the figure each kind adds up to.
+const ROOF_LINES: [(Kind, &str); 6] = [(Kind::Eave, "eave_length"), (Kind::Rake, "rake_length"), (Kind::Hip, "hip_length"), (Kind::Ridge, "ridge_length"), (Kind::Valley, "valley_length"), (Kind::Headwall, "headwall_length")];
+
+/// A roof's figures from its planes' surfaces and its lines' lengths (call 134). A sum
+/// with a member that has no figure has no figure, and says which; a roof with no
+/// planes has no surface. A roof with no line of a kind (no valleys on a hip roof) has
+/// none of that length: 0, as sure as its planes, and its formula says why.
+fn roof_measures(planes: &[(String, Derived)], lines_of: &mut BTreeMap<(String, &'static str), Vec<(String, Derived)>>, roof: &str) -> BTreeMap<String, Derived> {
+    let mut m = BTreeMap::new();
+    let inputs: Vec<String> = planes.iter().map(|(p, _)| format!("{p}#{K_MEASURE}")).collect();
+    let f_surface = format!("the surface of its {} on the slope, added up", if planes.len() == 1 { "one plane".to_string() } else { format!("{} planes", planes.len()) });
+    let planes_status = planes.iter().map(|(_, d)| d.status).max().unwrap_or(Status::Unknown);
+    let surface = if planes.is_empty() {
+        Derived::refused("SF", &f_surface, &inputs, "the roof has no planes")
+    } else if let Some((p, d)) = planes.iter().find(|(_, d)| d.value.is_none()) {
+        Derived::refused("SF", &f_surface, &inputs, &format!("{p} has no surface{}", if d.note.is_empty() { String::new() } else { format!(": {}", d.note) }))
+    } else {
+        Derived::new(Some(planes.iter().filter_map(|(_, d)| d.worked()).sum()), "SF", &planes.iter().map(|(_, d)| d.status).collect::<Vec<_>>(), &f_surface, &inputs)
+    };
+    let squares = match surface.worked() {
+        Some(v) => Derived::new(Some(v / 100.0), "SQ", &[surface.status], "surface_area ÷ 100", &inputs),
+        None => Derived::refused("SQ", "surface_area ÷ 100", &inputs, if surface.note.is_empty() { "the roof has no surface" } else { &surface.note }),
+    };
+    m.insert("surface_area".into(), surface);
+    m.insert("squares".into(), squares);
+    for (kind, name) in ROOF_LINES {
+        let lines = lines_of.remove(&(roof.to_string(), name)).unwrap_or_default();
+        let said = kind.stem();
+        let inputs: Vec<String> = lines.iter().map(|(p, _)| format!("{p}#{K_MEASURE}")).collect();
+        let d = if lines.is_empty() {
+            if planes.is_empty() {
+                Derived::refused("LF", &format!("the true length of its {said} lines, added up"), &inputs, "the roof has no planes")
+            } else {
+                Derived::new(Some(0.0), "LF", &[planes_status], &format!("the roof has no {said} line"), &inputs)
+            }
+        } else if let Some((p, d)) = lines.iter().find(|(_, d)| d.value.is_none()) {
+            Derived::refused("LF", &format!("the true length of its {said} lines, added up"), &inputs, &format!("{p} has no length{}", if d.note.is_empty() { String::new() } else { format!(": {}", d.note) }))
+        } else {
+            let f = if lines.len() == 1 { format!("the true length of its one {said} line") } else { format!("the true length of its {} {said} lines, added up", lines.len()) };
+            Derived::new(Some(lines.iter().filter_map(|(_, d)| d.worked()).sum()), "LF", &lines.iter().map(|(_, d)| d.status).collect::<Vec<_>>(), &f, &inputs)
+        };
+        m.insert(name.to_string(), d);
+    }
+    m
+}
+
+/// A roof plane's figures: its area on the plan, its slope factor, its surface on the
+/// slope and that surface in squares. One arithmetic, used for the plane itself and for
+/// the roof its surface adds up to (call 134).
+fn plane_measures(me: &str, outline: Option<&Outline>, pitch: Option<&Pitch>) -> BTreeMap<String, Derived> {
+    let mut m = BTreeMap::new();
+    let in_outline = format!("{me}#{K_OUTLINE}");
+    let in_pitch = format!("{me}#{K_PITCH}");
+    let both = [in_outline.clone(), in_pitch.clone()];
+    let f_area = format!("area of the outline on the plan{}", outline.map(|o| entered_in(&o.points.unit, "144")).unwrap_or_default());
+    let f_factor = "√(1 + (pitch ÷ 12)²)";
+    let f_surface = "plan_area × slope_factor";
+    let f_squares = "surface_area ÷ 100";
+    let pts = outline.and_then(|o| o.points_ft());
+    let area = pts.as_ref().map(|p| geom::plan_area(p));
+    let factor = pitch.and_then(|p| p.0.value.map(|p| (1.0 + (p / 12.0).powi(2)).sqrt()));
+    let surface = area.zip(factor).map(|(a, f)| a * f);
+    let unit_fault = outline.is_some_and(|o| o.points.value.is_some() && pts.is_none());
+    m.insert(
+        "plan_area".into(),
+        match outline {
+            Some(_) if unit_fault => Derived::refused("SF", &f_area, std::slice::from_ref(&in_outline), &format!("the outline {NOT_CONVERTED}")),
+            Some(o) => Derived::new(area, "SF", &[o.points.status], &f_area, std::slice::from_ref(&in_outline)),
+            None => Derived::refused("SF", &f_area, std::slice::from_ref(&in_outline), "no outline entered"),
+        },
+    );
+    m.insert(
+        "slope_factor".into(),
+        match pitch {
+            Some(p) => Derived::new(factor, "", &[p.0.status], f_factor, std::slice::from_ref(&in_pitch)),
+            None => Derived::refused("", f_factor, std::slice::from_ref(&in_pitch), "no pitch entered"),
+        },
+    );
+    let (surface_d, squares_d) = match (outline, pitch) {
+        (Some(_), Some(_)) if unit_fault => {
+            let why = format!("the outline {NOT_CONVERTED}");
+            (Derived::refused("SF", f_surface, &both, &why), Derived::refused("SQ", f_squares, &both, &why))
+        }
+        (Some(o), Some(p)) => {
+            let s = [o.points.status, p.0.status];
+            (Derived::new(surface, "SF", &s, f_surface, &both), Derived::new(surface.map(|s| s / 100.0), "SQ", &s, f_squares, &both))
+        }
+        _ => {
+            let why = if outline.is_none() { "no outline entered" } else { "no pitch entered" };
+            (Derived::refused("SF", f_surface, &both, why), Derived::refused("SQ", f_squares, &both, why))
+        }
+    };
+    m.insert("surface_area".into(), surface_d);
+    m.insert("squares".into(), squares_d);
+    m
 }
 
 /// The length of a line along the slope. The line has to fit every plane it names: on the

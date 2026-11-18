@@ -7087,6 +7087,72 @@ review's folder; the findings and where each stands):
 | J-F10 | Missing for a foundation sub: keyway, corner and L bars, dowels, form ties, sill seal, mix and strength, pump or short-load, testing, stepped footings, drain stone, excavation and backfill by the CY | Listed under "not yet" in the finish line above |
 | — | The made-up whole house is unchanged ($468,876.85, `check` passes); `show`, `estimate`, by item and the CSV agree; IFC valid for it too | Held |
 
+## A shingle roof priced whole: a demonstration, written before it is built (`demos/shingle.sh`, `demos/shinglew.sh`, calls 134 and 135)
+
+**The finish line for a residential shingle roof.** The roof is taken off once, whole,
+the way a roofer writes it: sheathing in whole sheets, underlayment in whole rolls, ice
+barrier at the eaves and valleys in whole rolls, field shingles in whole bundles after a
+waste for how cut up the roof is, starter, cap and drip edge in their packs, and the
+edges in LF; every rule or pack size on its line as Assumed with its source; the pipe
+boots waiting, Unknown, for a count. Not yet: two layers of underlayment below 4:12,
+step flashing at sidewalls, tear-off and disposal, standing seam priced whole, nails.
+
+**The made-up roof.** A hip roof over a footprint of 42 ft by 30 ft (the walls' 40 by 28
+with a 1 ft overhang), 6:12 all round, its eave at 9 ft.
+
+**Figures worked by hand.** Plan area 42 x 30 = 1,260 SF; at 6:12 the slope factor is
+sqrt(1 + 0.25) = 1.118034, so the surface is 1,408.7228 SF, 14.0872 SQ. Eaves 2 x (42 +
+30) = 144 LF; the ridge 42 - 30 = 12 LF; each hip 15 sqrt 2 = 21.2132 ft on plan, rising
+7.5 ft: sqrt(450 + 56.25) = 22.5 ft, four of them 90 LF; no rakes, valleys or headwalls.
+
+| Line | Worked | To order |
+|---|---|---|
+| Roof sheathing | 1,408.7228 SF + 10 % = 1,549.5951 SF; / 32 = 48.42 | 49 sheets |
+| Underlayment, synthetic | 14.0872 SQ + 10 % = 15.4959 SQ; / 10 = 1.55 | 2 rolls |
+| Ice barrier, eaves and valleys | 144 x 3 + 0 x 3 = 432 SF; / 200 = 2.16 | 3 rolls |
+| Field shingles | 14.0872 SQ + 15 % = 16.2003 SQ; x 3 = 48.60 | 49 bundles |
+| Starter strip | 144 + 0 = 144 LF + 5 % = 151.2 LF; / 105 = 1.44 | 2 bundles |
+| Hip and ridge cap | 90 + 12 = 102 LF + 5 % = 107.1 LF; / 20 = 5.36 | 6 bundles |
+| Drip edge | 144 LF / 9.8333 = 14.64 | 15 pieces |
+| Ridge vent | 12 LF | |
+| Open valley flashing; headwall flashing | 0 LF each: "comes to nothing" | |
+| Pipe boots | Unknown until counted; then 3 typed: 3 EA | |
+
+With prices typed on the shingles ($38.00 a bundle) and the sheathing ($24.00 a
+sheet): 49 x 38 = $1,862.00 and 49 x 24 = $1,176.00.
+
+## A shingle roof priced whole. What was run and what it showed (2026-11-18; the second builder)
+
+**Built** (calls 134 to 136): a roof's own figures from its planes and lines (surface,
+squares, eaves, rakes, hips, ridges, valleys, headwalls), worked by the plane's own
+arithmetic and the lines' own lengths, in the order of their paths so a reloaded job
+works the same; the panel's roof totals from the same exact figures; the starter
+library's "Asphalt shingle roof, whole roof" (13 lines: whole sheets, rolls, bundles and
+pieces); a roof priced both whole and by the plane said to be counted twice, in the
+estimate and on the sheet's Price row; derive keeps the figure it has just worked for
+formulas even where the written figure has not moved (a job read from its file had
+none until then).
+
+**Run:** `cargo test --workspace` 334 passed (one new: the roof's figures to the hand
+figures, a pitch struck out leaving the roof no surface and naming a plane). All 26
+command-line demonstrations pass on a frozen copy of this build (`shingle` new; `d1`,
+`d4`, `foundation` with the expectations calls 134 and 135 moved). The window run on the
+same copy is recorded below when it has ended.
+
+**Judged** by an agent on another model (`review/J-roof-judge.md` in the review's
+folder): an L hip roof at 12:12 (valley 17.3205 LF, ridge 40, hips 86.6025, 1,697.0563
+SF), a mixed-pitch L, a gable (rakes 49.4773 LF into starter and drip edge), overhangs,
+whole packs per roof, a clean round trip, Unknown boots named as left out: held.
+
+| # | Found | Stands |
+|---|---|---|
+| J-R1 | The plane-by-plane and the whole-roof assemblies together counted sheathing and shingles twice without a word | **Fixed**: call 136 |
+| J-R2 | A shed or porch roof against the house names its high edge a ridge, so ridge cap and vent are priced on it and its headwall flashing is 0 LF | **Open**: the roof solver's (call 9's lineage); a ridge of one shed plane is allowed by the model (`planes_allowed`); a high edge against a wall should be a headwall |
+| J-R3 | Below 4:12 the code asks two layers of underlayment; nothing says so on the roof | **Open**: a formula has no "if"; needs a figure for the squares under 4:12 or a check that says it |
+| J-R4 | Ice barrier width is a note against the overhang, not worked from it | Open: the model has the overhang (`move:<n>`); 24 in inside the wall line along the slope can be worked from it |
+| J-R5 | Missing: step flashing at sidewalls, tear-off and disposal, nails, ridge vent net free area, waste by how cut up the roof is | Listed in the finish line above as not yet |
+| J-R6 | The starter library cannot be brought into the made-up whole house (it already has "Slab on grade, 4 in") | Open, minor: the import refuses a library whose assembly the job has under another recipe, by design (call 105's rule) |
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

@@ -4650,3 +4650,98 @@ same way; each is fixed where it is found, and said here.
 
 No expectation in the suite moved with it: every figure a test or demonstration checks
 was already the same to four places either way, apart from the new foundation's.
+
+### Call 134. A roof has figures of its own, worked from its planes and lines, so a roof is priced as a roofer prices it: whole (2026-11-18; the second builder; roofing, call 129)
+
+A roofer takes off a shingle roof once, for the whole roof: its squares with a waste
+for how cut up it is, then its eaves, rakes, hips, ridges and valleys in LF. This program
+could only price a roof plane by plane, so every plane rounded its own sheets and
+squares (ten 20 LF copings bought 20 sheets where 12 would do; four planes bought their
+own sheathing), and the edges had no line to go on but each line's own. The roof's
+panel already showed the roof's surface, squares and lengths (`view::roof_totals`), but
+no cost line could use them.
+
+- **A roof has eight figures**, worked in the derive pass from what is under it:
+  `surface_area` (SF) and `squares` (SQ), the surface of its planes added up; and
+  `eave_length`, `rake_length`, `hip_length`, `ridge_length`, `valley_length` and
+  `headwall_length` (LF), the true lengths of its lines of each kind added up. A
+  plane's surface is worked by the one function the plane's own figure comes from
+  (`plane_measures`), and a line's length is the length the line itself has: one
+  arithmetic for each number.
+- **A sum is only as good as its members.** A roof with a plane that has no surface has
+  no surface, and says which plane; a line with no length leaves its kind's sum with
+  none, and says which line. A roof with no line of a kind (no valleys on a hip roof)
+  has 0 of that length, as sure as its planes, its formula saying "the roof has no
+  valley line": a quantity of 0 is said to come to nothing, never left blank.
+- **The figures are the roof's own and show where its figures are shown** (`show`, the
+  panel's takeoff); nothing about a plane's figures changes, and a roof is still not a
+  thing bought "by" one figure (its allowance stays on its planes).
+- **A change to a plane or a line now touches its roof too**, since the roof's figures
+  are worked from them: the two tests that list what one change touches
+  (`changing_one_pitch_touches_only_that_plane_and_what_is_derived_from_it`,
+  `planes_that_disagree_about_a_hip_give_no_length`) and the two demonstrations that
+  check it (`demos/d1.sh`, `demos/d4.sh`) list the roof too. The roof's
+  planes and lines are taken in the order of their paths, so a job read back from its
+  file works the same roof figures, inputs and all (taken in the world's own order
+  first, three tests found the reloaded roof stale). The panel's roof totals are worked
+  from the same exact figures as the roof's own (they were the sum of the planes'
+  written figures, 1,341.6406 SF on a 40 by 30 hip roof that is 1,341.6408).
+
+### Call 135. The starter library prices a shingle roof whole: an assembly that goes on the roof (2026-11-18; the second builder; the roofers' judgment of the review)
+
+Both roofers on the review's panel stopped at the same lines: shingles in 3.8025 SQ,
+plane by plane, no waste, no bundles; no starter, drip edge, ice barrier or cap though the
+eaves, hips and ridges were measured. The plane assembly stays as it was (a job built on
+it keeps it), and **"Asphalt shingle roof, whole roof"** is added, going on a roof
+(call 134). Every figure that is a rule or a product's packing is on its line as
+Assumed, with its source (read from the 2021 IRC as reproduced by UpCodes, and from the
+makers' published product data; the jurisdiction's code and the product bought decide):
+
+- Roof sheathing, `surface_area`, 10 % for cuts (the estimator's allowance; no standard
+  sets it), in whole 4 by 8 sheets.
+- Underlayment, synthetic, `squares`, 10 % for its 2 in side and 4 in end laps (IRC
+  R905.1.1, one layer at 4:12 and steeper; two below 4:12, which this line does not
+  double), in whole 10 SQ rolls.
+- Ice barrier, at the eaves and in the valleys, `eave_length × eave_width +
+  valley_length × valley_width`, each width 3 ft (one 36 in course; R905.1.2 asks it to
+  reach at least 24 in inside the exterior wall line where ice damming is known: check
+  it against the overhang), in whole 200 SF rolls. One line, so one roll count for both.
+- Field shingles, `squares`, 15 % waste (the trade's published ranges: about 10 % on a
+  gable, 12 to 15 % on a hip, 15 to 20 % cut up; no standard sets it), in whole bundles
+  at 3 bundles to the square (two makers' architectural shingles).
+- Starter strip, `eave_length + rake_length`, 5 %, in whole bundles of 105 LF (one
+  maker's; another's is 120).
+- Hip and ridge cap, `hip_length + ridge_length`, 5 %, in whole bundles of 20 LF (the low
+  end of 20 to 35 by product: the roofer buys over, not under).
+- Drip edge, `eave_length + rake_length` (R905.2.8.5: at eaves and rakes, lapped 2 in), in
+  whole 10 ft pieces less the 2 in lap: 9.8333 LF to the piece (the 10 ft piece is the
+  trade's; not read in a standard).
+- Ridge vent, `ridge_length`; open valley flashing, `valley_length` (R905.2.8.2, at least
+  24 in wide); headwall flashing, `headwall_length`.
+- Pipe boots, `boots`, **Unknown**: penetrations are not drawn, so the line has no
+  figure until the count is given.
+- Labor: sheathe the roof (`surface_area`) and lay the roof (`squares`), in hours with no
+  production rate, as every starter labor line.
+
+**Expectations moved, this call written first:** the starter library is 34 assemblies
+and 144 lines, 23 of them labor (was 33, 131 and 21): `crates/cli/tests/cli.rs`,
+`demos/library.sh`, `demos/pricew.sh`, `demos/foundation.sh`.
+
+**Not yet:** a second layer of underlayment below 4:12; step flashing at sidewalls (the
+model has headwalls, not sidewalls); tear-off and disposal (a reroofing assembly);
+standing seam priced whole; nails.
+
+### Call 136. A roof priced whole and plane by plane is said to be counted twice (2026-11-18; the second builder; the judge of the whole roof)
+
+A judge put the plane-by-plane "Asphalt shingle roof" on a plane and "Asphalt shingle
+roof, whole roof" on its roof: the estimate carried the plane's sheathing and shingles
+and the roof's, without a word. The two assemblies name the same shingles differently
+("Asphalt shingles", "Field shingles"), so a check by the line's name would miss most of
+it. What is said is the pricing both ways: wherever a roof carries a cost line that is
+switched on and one of its planes does too, the estimate says, under its price, at the
+command line and on the sheet's Price row, in red: "counted twice: Main roof is priced
+whole, and plane 1 is priced on its own as well: what both carry (its sheathing, its
+shingles) is in the price twice; take one of the two off". It is said, not refused: a
+roof can carry a line of its own beside its planes' (a tear-off by the roof, shingles
+by the plane), and only the estimator knows which; the sentence says how to clear it.
+(`view::Pricing::twice`, `view::twice_said`; checked in `demos/shingle.sh`.)

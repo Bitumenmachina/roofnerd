@@ -788,6 +788,14 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             // the price is read (J19-48: two doors and a window were drawn, the price
             // went DOWN by the wall they cut out, and only the command line said why).
             if name == "Price" {
+                // A roof priced whole and plane by plane is in the price twice (call 136).
+                if let Some(said) = snap.pricing.as_ref().and_then(|p| view::twice_said(&p.twice)) {
+                    let mut said = said;
+                    if let Some(first) = said.get_mut(0..1) {
+                        first.make_ascii_uppercase();
+                    }
+                    t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(8.0) }, ..default() }).with_child(text(fonts, format!("{said}."), 11.5, Weight::Medium, theme::red()));
+                }
                 if let Some(said) = snap.pricing.as_ref().and_then(|p| view::not_priced_said(&p.not_priced)) {
                     let mut said = said;
                     if let Some(first) = said.get_mut(0..1) {

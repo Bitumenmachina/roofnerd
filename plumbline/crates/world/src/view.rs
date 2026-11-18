@@ -453,7 +453,9 @@ pub fn roof_totals(job: &mut Job, roof_path: &str) -> RoofTotals {
         if !children.contains(&node.path) {
             continue;
         }
-        let figure = |name: &str| w.get::<Measure>(e).and_then(|m| m.0.get(name)).map(|d| (d.value, d.status)).unwrap_or((None, Status::Unknown));
+        // Each figure as it was worked (call 133), so that the roof's totals are the
+        // roof's own figures to the last place (call 134): one arithmetic.
+        let figure = |name: &str| w.get::<Measure>(e).and_then(|m| m.0.get(name)).map(|d| (d.worked(), d.status)).unwrap_or((None, Status::Unknown));
         if kind.is_area() {
             let (v, s) = figure("surface_area");
             let pitch_of = w.get::<Pitch>(e).and_then(|p| p.0.value.map(|x| (x, p.0.status)));
@@ -553,6 +555,11 @@ pub struct Pricing {
     /// bought by the each) and carry neither an allowance nor a cost line: how many of
     /// each kind.
     pub not_priced: Vec<(Kind, usize)>,
+    /// A roof priced whole (it carries cost lines) with planes that are priced on their
+    /// own as well: (the roof, its planes that carry lines). The two assemblies name the
+    /// same shingles differently ("Field shingles", "Asphalt shingles"), so it is the
+    /// pricing both ways that is said, not a line's name (call 136).
+    pub twice: Vec<(String, Vec<String>)>,
 }
 
 impl Estimate {
@@ -703,6 +710,20 @@ fn gone_said(before: &Estimate, job: &mut Job, came_off: bool) -> Option<String>
 /// What is built and has nothing priced on it, in the one sentence every view says it
 /// with: "nothing is priced on 3 things that could be (2 doors, 1 window): they are in
 /// no line and no total above". None when everything that could be priced is.
+/// A roof priced whole and plane by plane, in one sentence: "Main roof is priced whole,
+/// and plane 1 and plane 2 are priced on their own as well: what both carry (its sheathing,
+/// its shingles) is in the price twice; take one of the two off". None when no roof is.
+pub fn twice_said(twice: &[(String, Vec<String>)]) -> Option<String> {
+    let (roof, planes) = twice.first()?;
+    let named = match planes.len() {
+        1 => format!("{} is", planes[0]),
+        n if n <= 3 => format!("{} and {} are", planes[..n - 1].join(", "), planes[n - 1]),
+        n => format!("{}, {} and {} more are", planes[0], planes[1], n - 2),
+    };
+    let more = if twice.len() > 1 { format!(" ({} more roofs the same)", twice.len() - 1) } else { String::new() };
+    Some(format!("counted twice: {roof} is priced whole, and {named} priced on {} own as well: what both carry (its sheathing, its shingles) is in the price twice; take one of the two off{more}", if planes.len() == 1 { "its" } else { "their" }))
+}
+
 pub fn not_priced_said(not_priced: &[(Kind, usize)]) -> Option<String> {
     if not_priced.is_empty() {
         return None;
@@ -785,6 +806,7 @@ fn finish_total(mut t: MoneyTotal) -> MoneyTotal {
 /// Nothing here is arithmetic of its own beyond adding up: each element's figures are
 /// its `pl::priced`, worked out in `derive`.
 pub fn pricing(job: &mut Job) -> Pricing {
+    let twice = on_the_roof_and_a_plane(job);
     let order = job.order.clone();
     let w = &job.world;
     let mut elements = Vec::new();
@@ -819,7 +841,33 @@ pub fn pricing(job: &mut Job) -> Pricing {
     let worst = |side: &dyn Fn(&((f64, Status), (f64, Status))) -> Status| pairs.iter().map(side).max().unwrap_or(Status::Unknown);
     let (sa, sd) = (worst(&|p| p.0 .1), worst(&|p| p.1 .1));
     let both = if pairs.is_empty() { None } else { Some(((cents(pairs.iter().map(|p| p.0 .0).sum()), sa), (cents(pairs.iter().map(|p| p.1 .0).sum()), sd), sa.max(sd), pairs.len())) };
-    Pricing { allowance: money_total(&allowances), detail: money_total(&details), both, not_priced: bare, elements }
+    Pricing { allowance: money_total(&allowances), detail: money_total(&details), both, not_priced: bare, elements, twice }
+}
+
+/// Each roof priced whole whose planes are priced on their own too: (the roof's name,
+/// the names of those planes), in the job's order.
+fn on_the_roof_and_a_plane(job: &mut Job) -> Vec<(String, Vec<String>)> {
+    let children = job.children();
+    let w = &job.world;
+    // Each element's name and kind, and whether it carries a line that is switched on.
+    let mut by_path: std::collections::HashMap<String, (String, Kind, bool)> = std::collections::HashMap::new();
+    for &e in &job.order {
+        let (Some(node), Some(kind)) = (w.get::<Node>(e), w.get::<Kind>(e)) else { continue };
+        let priced = w.get::<Cost>(e).is_some_and(|c| c.lines.iter().any(|l| !l.off));
+        by_path.insert(node.path.clone(), (node.name.clone(), *kind, priced));
+    }
+    let mut out = Vec::new();
+    for &e in &job.order {
+        let (Some(node), Some(Kind::Roof)) = (w.get::<Node>(e), w.get::<Kind>(e)) else { continue };
+        let Some((roof, _, true)) = by_path.get(&node.path) else { continue };
+        let mut planes: Vec<&String> = children.get(&node.path).map(|c| c.values().collect()).unwrap_or_default();
+        planes.sort();
+        let priced: Vec<String> = planes.into_iter().filter_map(|p| by_path.get(p)).filter(|(_, k, priced)| k.is_area() && *priced).map(|(n, _, _)| n.clone()).collect();
+        if !priced.is_empty() {
+            out.push((roof.clone(), priced));
+        }
+    }
+    out
 }
 
 /// One cost line as the estimate sheet lists it.

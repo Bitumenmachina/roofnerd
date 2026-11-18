@@ -23,6 +23,7 @@ such reading, and STATUS.md says where each thing it found stands).
 | `gablew` | `demos/gablew.sh` |
 | `foundw` | `demos/foundw.sh` |
 | `glass` (`01` to `09`) | `demos/glassw.sh` |
+| `shinglew` | `demos/shinglew.sh` |
 | `house` | `demos/house.sh` |
 | `itemlib` | `demos/itemlibw.sh` |
 | `itemnew` | `demos/itemneww.sh` |

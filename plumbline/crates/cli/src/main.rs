@@ -717,6 +717,9 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
     if let Some(said) = view::not_priced_said(&pricing.not_priced) {
         let _ = writeln!(out, "  ! {said}");
     }
+    if let Some(said) = view::twice_said(&pricing.twice) {
+        let _ = writeln!(out, "  ! {said}");
+    }
     if let Some(said) = pricing.allowances_alone_said() {
         let _ = writeln!(out, "  ! {said}");
     }

@@ -102,6 +102,7 @@ demos/spec.sh              # items made from manufacturers' sheets (PDF), placed
 demos/items.sh             # the item library: the things that can be placed, by trade, in a table that is brought in, written out the same, changed and brought back
 demos/found.sh             # the foundation drawn: strip footings and foundation walls, footing concrete by the CY, and out to an IFC4 model
 demos/foundation.sh        # foundation work taken off from the starter library: forms, concrete, bars, anchor bolts, dampproofing and a drain, each against a figure worked by hand, and the same figures in the IFC model
+demos/shingle.sh           # a shingle roof priced whole: the roof's own figures, and sheathing, underlayment, ice barrier, shingles, starter, cap and drip edge in whole packs, each against a figure worked by hand
 demos/tradesw.sh           # the layers in the window, a click each: finish off to the weather barrier, walls as frames, the ground off the foundation, one floor looked into
 demos/moneyw.sh            # what the window says when money is at stake: a roof measured off the verify-in-field list, a labor line added, a priced wall deleted, a markup typed ten times too large
 demos/roofw.sh             # a roof priced once in the window: an assembly given to one plane goes on all four, a price typed once prices every plane, a rate said in squares

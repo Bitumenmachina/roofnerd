@@ -104,7 +104,7 @@ lines = [l["description"] for l in wall["pl::cost"]["lines"]]
 assemblies = sum(1 for e in d.values() if e["attributes"].get("pl::class") == "Condition")
 is_now = wall["pl::condition"]
 print("    in the file: %d assemblies; the south wall is %r (%s) with %d lines" % (assemblies, is_now["value"], is_now["status"], len(lines)))
-ok = assemblies == 33 and is_now["value"] == "Exterior wall, 2x6, brick veneer" and is_now["status"] == "Assumed"
+ok = assemblies == 34 and is_now["value"] == "Exterior wall, 2x6, brick veneer" and is_now["status"] == "Assumed"
 # Framing, sheathing, barrier, insulation, gypsum board, paint and the framing labor,
 # which the two assemblies share; then brick and its ties. The siding and its labor are gone.
 ok = ok and lines == ["Wall framing, 2x6 at 16 in", "Wall sheathing", "Weather barrier", "Batt insulation", "Gypsum board, hung and finished", "Paint, two coats", "Frame and sheathe the wall", "Brick veneer", "Brick ties and flashing"]

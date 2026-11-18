@@ -47,7 +47,8 @@ for line in open(changes):
     print("    " + rest.rstrip())
 print()
 print("elements with any change:", ", ".join(touched))
-expected = ["plane-0017", "eave-0018", "rake-0019", "rake-0020", "headwall-0021"]
+# The roof is worked from its planes and lines (call 134), so it moves with them.
+expected = ["roof-0016", "plane-0017", "eave-0018", "rake-0019", "rake-0020", "headwall-0021"]
 if touched != expected:
     print("FAIL: expected exactly", expected); sys.exit(1)
 print("PASS: only the plane whose pitch changed and the four lines that lie on it")
