@@ -7048,6 +7048,19 @@ whatever the tree held).
   figures (more figures are worked out now: a wall's thickness, a floor's perimeter and
   thickness); the committed ones are kept, and are stale in that count alone.
 
+**The full window run on a frozen copy of a7fcb46** (2026-11-18, the commit with all
+of the above): 27 window demonstrations, the 26 that were and `foundw`. 26 passed on
+their first run; `glassw` failed once on its wheel step (the door grew 2.04 times for
+six lines of the wheel, 1.88 by hand) and passed when run again alone on the same copy:
+it measures the view after the wheel's easing has run on frames of uneven length, and
+this repair touched neither the wheel nor the view. Of 292 pictures taken against the
+committed ones, 287 differ in less than half a percent of their dots; the most changed
+is `pricew` 03, where the list of assemblies for a wall now ends with "Foundation wall,
+poured concrete" and "Basement wall, poured concrete, with a drain", read and right.
+`demos/captured/foundw` is that run's; the other folders are not retaken, and are
+stale only in the count of known figures on the top bar where a wall or a floor is on
+screen.
+
 **The pictures of `foundw`, read by the builder** (`demos/captured/foundw`): the ground
 away shows the four walls standing on their footings, plainly; the footing's panel
 lists the one assembly that goes on a footing with its five lines, and its takeoff in
@@ -7075,6 +7088,17 @@ review's folder; the findings and where each stands):
 | — | The made-up whole house is unchanged ($468,876.85, `check` passes); `show`, `estimate`, by item and the CSV agree; IFC valid for it too | Held |
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
+
+**Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
+Patrick ruled that BuildOS stays in this repository, that its scope is every trade and
+the design professions, that roofnerd's learned specifics are ported in, and that a
+second builder co-owns the code for named work. Its first trade, foundations, is in the
+two "Foundation work" sections just above (calls 130 to 133): volume formulas in CY, a
+wall's and a floor's thickness, a floor's perimeter, figures worked from their exact
+values, three foundation assemblies in the starter library, IFC4 base quantities, and
+`demos/foundation.sh` and `demos/foundw.sh`. Its commits are on
+`claude/hopeful-cannon-kng8eo`, which starts at this branch's head and can be brought
+here by a fast-forward. Everything owed below still stands.
 
 **Where the work is.** Branch `claude/nifty-tesla-qmn44n`, pushed. 332 tests pass, the
 three gates and `tools/portmap.sh` pass, `tools/committed.sh` passes on the last

@@ -21,6 +21,7 @@ such reading, and STATUS.md says where each thing it found stands).
 | `field` | `demos/fieldw.sh` |
 | `first` | `demos/firstw.sh` |
 | `gablew` | `demos/gablew.sh` |
+| `foundw` | `demos/foundw.sh` |
 | `glass` (`01` to `09`) | `demos/glassw.sh` |
 | `house` | `demos/house.sh` |
 | `itemlib` | `demos/itemlibw.sh` |
