@@ -1008,7 +1008,11 @@ pub fn drains(job: &mut Job, area: &str, at: &[P2], at_drain: &str, how: Entered
         let e = job.find(area).ok_or_else(|| format!("there is no {area} in this job"))?;
         let ring = job.world.get::<Outline>(e).and_then(|o| o.points_ft()).ok_or_else(|| format!("{area} has no outline to put drains on"))?;
         let ring: Vec<plumbline_roofing::Point> = ring.iter().map(|p| plumbline_roofing::Point::new(p[0], p[1])).collect();
+        let corners: Vec<P2> = ring.iter().map(|p| [p.x, p.y]).collect();
         for d in at {
+            if crate::taper::on_edge(*d, &corners) {
+                return Err(format!("the drain at {},{} is on the edge of {area}: {}", d[0], d[1], crate::taper::ON_EDGE));
+            }
             if !plumbline_roofing::inside(plumbline_roofing::Point::new(d[0], d[1]), &ring) {
                 return Err(format!("the drain at {},{} is not on {area}: a drain goes inside the area's outline", d[0], d[1]));
             }

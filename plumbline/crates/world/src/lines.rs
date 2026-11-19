@@ -276,6 +276,23 @@ fn extension(price: &Price, quantity: &Derived, with_waste: Option<&Derived>, or
 /// condition: an assumed condition makes assumed money, and one that is not known leaves
 /// none.
 pub fn figures(me: &str, on: &On, line: &CostLine, stock: &Stock, condition: Option<&Val<String>>) -> LineFigures {
+    let mut out = figures_worked(me, on, line, stock, condition);
+    // A caution a figure carries with its value travels to a line priced by it, so it is
+    // read where the money is (judged 2026-11-19: a taper's "nothing caps the build-up
+    // yet" was in `show` and in no estimate, workbook or lens).
+    if out.quantity.value.is_some() && out.quantity.note.is_empty() {
+        if let (Ok(expr), Some(m)) = (formula::parse(&line.quantity), on.measure) {
+            let said: Vec<String> = formula::names(&expr).iter().filter_map(|n| m.0.get(n.as_str())).filter(|d| d.value.is_some() && !d.note.is_empty()).map(|d| d.note.clone()).collect();
+            let mut said: Vec<String> = said.into_iter().fold(Vec::new(), |mut v, x| { if !v.contains(&x) { v.push(x); } v });
+            if !said.is_empty() {
+                out.quantity.note = std::mem::take(&mut said).join("; ");
+            }
+        }
+    }
+    out
+}
+
+fn figures_worked(me: &str, on: &On, line: &CostLine, stock: &Stock, condition: Option<&Val<String>>) -> LineFigures {
     let cost_in = format!("{me}#{K_COST}");
     let mut held: Vec<Status> = Vec::new();
     let mut inputs = vec![cost_in];

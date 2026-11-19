@@ -74,7 +74,7 @@ echo
 echo "== What the program said as it went =="
 LOG="$(cat "$T/map.txt.said")"
 says "set" "Wall 1: quantity of \"Lap siding\" set to face area x 1.10." "$LOG"
-says "refused, with the figures a wall has" "Can't price it by that: wall 1 cost line \"Lap siding\": its quantity \"roof area\" uses \"roof area\", which is not a figure of this thing (a wall has plan length, height, face area, opening area, net area, thickness)" "$LOG"
+says "refused, with the figures a wall has" "Can't price it by that: wall 1 cost line \"Lap siding\": its quantity \"roof area\" uses \"roof area\", which is not a figure of this thing (a wall has plan length, height, face area, opening area, net area, thickness, studs, plate length, header length, sill length)" "$LOG"
 
 echo
 echo "== What the session left in the saved job =="

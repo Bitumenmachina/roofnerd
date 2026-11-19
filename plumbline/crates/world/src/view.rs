@@ -149,6 +149,10 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         if let Some(c) = w.get::<Pitch>(e) {
             rows.push(entered(p, "pitch", &c.0, |x| num(*x)));
         }
+        if let Some(t) = w.get::<Taper>(e) {
+            rows.push(entered(p, "drains", &t.drains, |pts| so_many(pts.len(), "drain")));
+            rows.push(length(p, "thickness at the drain", &t.at_drain));
+        }
         if let Some(c) = w.get::<Run>(e) {
             rows.push(entered(p, "line ends", &c.ends, |[a, b]| format!("({}, {}) to ({}, {})", num(a[0]), num(a[1]), num(b[0]), num(b[1]))));
         }

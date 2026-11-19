@@ -81,6 +81,16 @@ pub fn measures(me: &str, outline: Option<&Outline>, pitch: Option<&Pitch>, tape
         return m;
     }
 
+    if let Some(on) = drains.iter().find(|d| on_edge(**d, &ring)) {
+        refuse_all(&mut m, &format!("the drain at {},{} is on the area's edge: {ON_EDGE}", tidy(on[0]), tidy(on[1])), true);
+        return m;
+    }
+    // Laid out where it is, the same answer however it was traced (judged 2026-11-19):
+    // the area is moved to the plan's origin first, since a roof traced 250,000 ft out
+    // drifted 0.25 % in floating point; and its outline is started at one corner and run
+    // one way, since where two sides tie for longest the corner it began at chose which
+    // one the boards were laid to (7,029.52 BF or 7,025.86).
+    let (ring, drains, origin) = settled(&ring, &drains);
     let field = match solve(&ring, &drains, at_drain, slope) {
         Ok(field) => field,
         Err(why) => {
@@ -94,7 +104,7 @@ pub fn measures(me: &str, outline: Option<&Outline>, pitch: Option<&Pitch>, tape
     for r in &field.regions {
         let faces: f64 = r.facets.iter().filter_map(|f| area_and_middle(&f.shape).map(|(a, _)| a)).sum();
         if (faces - r.square_feet).abs() > LOST_SF {
-            refuse_all(&mut m, &format!("the taper's layout lost ground: the drain at {},{} has {} SF and its faces come to {} SF", tidy(r.drain.x), tidy(r.drain.y), tidy(r.square_feet), tidy(faces)), true);
+            refuse_all(&mut m, &format!("the taper's layout lost ground: the drain at {},{} has {} SF and its faces come to {} SF", tidy(r.drain.x + origin[0]), tidy(r.drain.y + origin[1]), tidy(r.square_feet), tidy(faces)), true);
             return m;
         }
     }
@@ -127,6 +137,34 @@ pub fn measures(me: &str, outline: Option<&Outline>, pitch: Option<&Pitch>, tape
     m.insert("average_thickness".into(), uncapped_said(Derived::new(average, "in", &uncapped, F_AVERAGE, &inputs)));
     m.insert("valley_length".into(), Derived::new(Some(valleys), "LF", &statuses, F_VALLEYS, &inputs));
     m
+}
+
+/// What a drain on the very edge of the area is told.
+pub const ON_EDGE: &str = "a roof drain stands inside the area; one in the edge is a scupper, which is not drawn yet";
+
+/// Is a point on the outline's edge (within a millionth of a foot)?
+pub fn on_edge(p: [f64; 2], ring: &[[f64; 2]]) -> bool {
+    (0..ring.len()).any(|i| {
+        let (a, b) = (ring[i], ring[(i + 1) % ring.len()]);
+        let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+        let len2 = dx * dx + dy * dy;
+        let t = if len2 > 0.0 { (((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2).clamp(0.0, 1.0) } else { 0.0 };
+        (p[0] - a[0] - t * dx).hypot(p[1] - a[1] - t * dy) < 1.0e-6
+    })
+}
+
+/// The outline and its drains moved so the outline's lowest corner (least x, then least
+/// y) is at the plan's origin, the outline started at that corner and run
+/// counter-clockwise. Lengths and areas are what they were.
+fn settled(ring: &[[f64; 2]], drains: &[[f64; 2]]) -> (Vec<[f64; 2]>, Vec<[f64; 2]>, [f64; 2]) {
+    let first = (0..ring.len()).min_by(|&i, &j| ring[i][0].total_cmp(&ring[j][0]).then(ring[i][1].total_cmp(&ring[j][1]))).unwrap_or(0);
+    let o = ring[first];
+    let mut out: Vec<[f64; 2]> = (0..ring.len()).map(|k| ring[(first + k) % ring.len()]).map(|p| [p[0] - o[0], p[1] - o[1]]).collect();
+    let turn: f64 = (0..out.len()).map(|k| { let (a, b) = (out[k], out[(k + 1) % out.len()]); a[0] * b[1] - b[0] * a[1] }).sum();
+    if turn < 0.0 {
+        out[1..].reverse();
+    }
+    (out, drains.iter().map(|d| [d[0] - o[0], d[1] - o[1]]).collect(), o)
 }
 
 fn tidy(x: f64) -> String {

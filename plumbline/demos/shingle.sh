@@ -61,6 +61,10 @@ says "$T/roof.txt" "? quantity: Pipe boots unknown"
 # What a rule set is Assumed and says where it came from.
 says "$T/roof.txt" "~ waste: Field shingles 15 %"
 says "$T/roof.txt" "~ order factor: Field shingles 3 bundle/SQ"
+# Its planes are dressed in what the roof is priced whole with (call 141).
+"$P" finishes "$J" > "$T/finishes.txt"
+says "$T/finishes.txt" "plane 1"
+says "$T/finishes.txt" "asphalt shingles (the roof's line \"Field shingles\")"
 
 echo
 echo "== The boots counted, and two prices typed =="

@@ -241,7 +241,8 @@ pub fn taper(path: &str, kind: Kind, t: &Taper) -> Result<(), String> {
             point_ok(&format!("{path} drains"), *p)?;
             // One drain typed twice would be counted, priced and laid out twice
             // (judged 2026-11-19): two drains closer than an inch are one.
-            if pts[..i].iter().any(|q| (q[0] - p[0]).hypot(q[1] - p[1]) < 1.0 / 12.0) {
+            // Exactly an inch apart is two drains (judged 2026-11-19: 1/12 ft was refused).
+            if pts[..i].iter().any(|q| (q[0] - p[0]).hypot(q[1] - p[1]) < 1.0 / 12.0 - 1.0e-9) {
                 return Err(format!("{path} drains: the drain at {},{} is given twice (two drains closer than 1 in are one drain)", p[0], p[1]));
             }
         }

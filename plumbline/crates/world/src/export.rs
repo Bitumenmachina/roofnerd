@@ -138,6 +138,10 @@ fn note_of(l: &SheetLine) -> String {
     if l.amount.value.is_none() && !l.amount.note.is_empty() {
         said.push(l.amount.note.clone());
     }
+    // What the quantity rests on, where its figure says (call 142).
+    if l.quantity.value.is_some() && !l.quantity.note.is_empty() {
+        said.push(format!("its quantity: {}", l.quantity.note));
+    }
     if l.class.is_none() {
         said.push("no cost type: in no row of the recap".to_string());
     }
@@ -433,7 +437,14 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
                 // A quantity that is not all there is not a smaller quantity: it is none.
                 // To the four places a quantity is shown to, as the recap's hours are.
                 let quantity = if without == 0 { Out::Number((with.iter().sum::<f64>() * 10000.0).round() / 10000.0) } else { text("no quantity") };
-                let note = if without == 0 { String::new() } else { format!("{without} of its lines {} no quantity: {}", if without == 1 { "has" } else { "have" }, lines.iter().filter(|l| l.priced.value.is_none()).map(|l| format!("{} ({})", on(l), l.priced.note)).collect::<Vec<_>>().join("; ")) };
+                let mut note = if without == 0 { String::new() } else { format!("{without} of its lines {} no quantity: {}", if without == 1 { "has" } else { "have" }, lines.iter().filter(|l| l.priced.value.is_none()).map(|l| format!("{} ({})", on(l), l.priced.note)).collect::<Vec<_>>().join("; ")) };
+                // What a quantity rests on, said where it is quoted (call 142).
+                for l in lines.iter().filter(|l| l.quantity.value.is_some() && !l.quantity.note.is_empty()) {
+                    let said = format!("{}: {}", on(l), l.quantity.note);
+                    if !note.contains(&said) {
+                        note = [note, said].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("; ");
+                    }
+                }
                 rows.push(vec![text(what.clone()), quantity, text(unit.clone()), Out::Number(lines.len() as f64), text(sure(lines.iter().map(|l| l.priced.status).max().unwrap_or(Status::Known))), text(note)]);
             }
             left_out(&mut rows);
@@ -447,7 +458,7 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
                 ["Where", "Scope", "Quantity", "Unit", "How sure", "Note"].iter().map(|h| text(*h)).collect(),
             ];
             for l in live.iter().filter(|l| l.class == Some(Class::Subcontract)) {
-                rows.push(vec![text(on(l)), text(l.description.clone()), l.priced.value.map(Out::Number).unwrap_or_else(|| text("no quantity")), text(l.priced.unit.clone()), text(sure(l.priced.status)), text(if l.priced.value.is_none() { l.priced.note.clone() } else { String::new() })]);
+                rows.push(vec![text(on(l)), text(l.description.clone()), l.priced.value.map(Out::Number).unwrap_or_else(|| text("no quantity")), text(l.priced.unit.clone()), text(sure(l.priced.status)), text(if l.priced.value.is_none() { l.priced.note.clone() } else if l.quantity.value.is_some() && !l.quantity.note.is_empty() { format!("its quantity: {}", l.quantity.note) } else { String::new() })]);
             }
             left_out(&mut rows);
             vec![OutSheet { name: "Scope".into(), rows, head: 3, widths: vec![22.0, 48.0, 14.0, 8.0, 10.0, 60.0] }]

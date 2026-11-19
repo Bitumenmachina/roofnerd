@@ -4795,6 +4795,13 @@ says so.
 blocking and fire blocking; double top plates lapped at the corners (here two plates
 the wall's length); headers sized from the load; floor joists, rafters and trusses.
 
+**Missed when this was made, found by the window run of 2026-11-19:** a wall's list of
+figures has the four framing figures in it, so a refusal that names what a wall has
+names them too ("a wall has plan length, height, face area, opening area, net area,
+thickness, studs, plate length, header length, sill length"). `demos/quantityw.sh`
+checks that sentence word for word and was not moved with this call; it failed on the
+frozen copy of this build. The program is right; the demonstration's sentence moves.
+
 ### Call 138. roofnerd's core comes across whole, as a crate, its tests with it (2026-11-19; the second builder; call 129's "learned specifics … ported from roof nerd", step 1 of `research/roofnerd-port.md`)
 
 roofnerd's solvers (the tapered package laid out the NRCA way, crickets, sumps, the board
@@ -4930,3 +4937,47 @@ area is that size.
 **Expectations moved:** none of call 139's figures. The new test
 `a_taper_does_not_hang_on_the_order_its_drains_are_typed_in` holds the eight drains in six
 orders and a 6 by 6 grid in four to one answer.
+
+### Call 141. A roof priced whole dresses its planes (2026-11-19; the second builder; the pictures of the shingle roof's window run)
+
+The window run of call 135's demonstration was looked at: the roof was priced whole as
+asphalt shingles, 13 lines on the roof, and its four planes were drawn bare gray. The
+house is dressed in what the estimate prices (Patrick's fixed rules), and a plane read
+only its own lines. Now a plane, or a low-slope area, with no roofing of its own is
+dressed in what its roof is priced whole with, and `finishes` says so: "asphalt
+shingles (the roof's line \"Field shingles\")". A plane that has roofing priced on its
+own keeps it; a plane with neither stays bare and says so. No number moves.
+
+### Call 142. What a taper rests on is said where its money is; the field list asks about the drains; a roof is laid out the same however it is traced (2026-11-19; the second builder; the second judge of the taper)
+
+The second judge, about 400 jobs against its own exact cut, found the order fix of call
+140 holding and these, each now changed:
+
+- **A caution travels with its figure.** A figure that has a value and a note (the
+  taper's "nothing caps the build-up yet") passes the note to every line priced by it,
+  and the line's note says it: "its quantity: nothing caps …". It is read in `estimate`,
+  the estimate's CSV and workbook, the PM lens's note, and the supplier and
+  subcontractor lenses' notes. It had been in `show` and `vif` only.
+- **The field list asks about the drains.** The taper record's two values are listed on
+  the area ("drains", "thickness at the drain") and `measure` takes them: the drains are
+  marked "same" once seen where they are, the thickness is measured as a length. The
+  field list then asks "check: drains; measure: thickness at the drain" with the
+  insulation's dollars on them; before, it sent a person to measure the eave height,
+  which moves no board foot. A drain moved is placed again with `drains`.
+- **A drain on the area's very edge is refused on every side**, with "a roof drain
+  stands inside the area; one in the edge is a scupper, which is not drawn yet". It had
+  been taken on the west and south edges and refused on the east and north.
+- **Drains exactly an inch apart are two drains** (the refusal said "closer than 1 in"
+  and refused exactly 1 in).
+- **Laid out the same wherever and however the roof is traced.** The area is moved to
+  the plan's origin before it is laid out (250,000 ft out it drifted up to 0.25 %), and
+  its outline is started at its lowest corner and run counter-clockwise (where two sides
+  tie for longest, the corner the outline began at chose the side the boards are laid
+  to: 7,029.52 or 7,025.86 BF).
+
+**Left, and said in STATUS.md:** the taper's figures stay Assumed until the build-up is
+capped (port step 4); a U-shaped roof with one drain is laid out by the straight run
+across its open middle (NRCA puts a cricket or an area divider there: port step 3);
+`drains` replaces the whole list.
+
+**No number moves** on any job of calls 139 to 141.

@@ -327,6 +327,14 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
                 return Ok(Some(Measured { said, also }));
             }
         }
+        // A low-slope roof's drains, checked where they are, and the insulation's
+        // thickness at them, measured (call 142: the field list never asked of them,
+        // though the insulation's money rides on both).
+        on!(Taper, |c: &Taper| check::taper(path, kind, c), |c| match what {
+            "drains" => Some(Slot::Other(&mut c.drains)),
+            "thickness at the drain" => Some(Slot::Length(&mut c.at_drain)),
+            _ => None,
+        });
         on!(WallType, |c: &WallType| building::check_wall_type(path, kind, c), |c| if what == "wall thickness" || what == "footing width" { Some(Slot::Length(&mut c.thickness)) } else { layer_slot(&mut c.layers, what) });
         on!(FloorType, |c: &FloorType| building::check_floor_type(path, kind, c), |c| if what == "floor thickness" { Some(Slot::Length(&mut c.thickness)) } else { layer_slot(&mut c.layers, what) });
         // An item: what is placed from it is as big as it says, so each follows.

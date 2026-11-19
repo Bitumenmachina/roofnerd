@@ -822,7 +822,13 @@ pub fn dress(job: &mut Job) -> Dress {
         let on = texts(job, e);
         match kind {
             k if k.is_area() => {
-                if let Some(said) = first_and_also(on.iter().filter_map(|(text, by)| roofing_in(text).map(|r| (r, tone_in(text), by.clone()))), Roofing::said) {
+                let roofing = |on: &[(String, String)]| first_and_also(on.iter().filter_map(|(text, by)| roofing_in(text).map(|r| (r, tone_in(text), by.clone()))), Roofing::said);
+                // A plane with no roofing of its own is dressed in what its roof is priced
+                // whole with (call 135): a shingle roof priced whole was drawn bare.
+                let parent = node.parent.clone();
+                let roof = parent.and_then(|p| job.find(&p)).filter(|r| job.world.get::<Kind>(*r) == Some(&Kind::Roof));
+                let whole: Vec<(String, String)> = roof.map(|r| texts(job, r).into_iter().map(|(text, by)| { let what = by.strip_prefix("the ").or_else(|| by.strip_prefix("its ")).unwrap_or(&by).to_string(); (text, format!("the roof's {what}")) }).collect()).unwrap_or_default();
+                if let Some(said) = roofing(&on).or_else(|| roofing(&whole)) {
                     out.roofs.insert(path, said);
                 }
             }

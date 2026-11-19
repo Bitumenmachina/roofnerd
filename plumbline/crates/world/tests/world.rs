@@ -6231,3 +6231,79 @@ fn a_taper_does_not_hang_on_the_order_its_drains_are_typed_in() {
     let why = ed::drains(&mut job, &area, &[[20.0, 10.0], [20.0, 10.0]], "1 in", how()).unwrap_err();
     assert!(why.contains("is given twice"), "{why}");
 }
+
+/// Judged 2026-11-19, after call 140: a drain on the edge was taken on two sides and
+/// refused on the other two; drains exactly an inch apart were refused; a roof drawn far
+/// from the plan's origin drifted; and where two sides tie for longest, the corner the
+/// outline began at changed the figures.
+#[test]
+fn a_taper_is_the_same_wherever_and_however_its_roof_is_traced() {
+    use plumbline_world::editing as ed;
+    let how = || ed::Entered { status: Status::Known, source: "made-up roof plan" };
+    let made = |ring: &[[f64; 2]]| -> (Job, String) {
+        let mut job = Job::new("Flat roof", "test", "2026-11-19");
+        let area = ed::low_slope(&mut job, "Main roof", ring, "1/4:12", "11 ft", how()).unwrap();
+        (job, area)
+    };
+    let bf = |ring: &[[f64; 2]], drains: &[[f64; 2]]| -> Option<f64> {
+        let (mut job, area) = made(ring);
+        ed::drains(&mut job, &area, drains, "1 in", how()).unwrap();
+        job.derive();
+        measure(&mut job, &area, "board_feet").value
+    };
+    // Every edge and corner alike.
+    let square = [[0.0, 0.0], [40.0, 0.0], [40.0, 40.0], [0.0, 40.0]];
+    for d in [[0.0, 20.0], [20.0, 0.0], [40.0, 20.0], [20.0, 40.0], [0.0, 0.0], [40.0, 40.0]] {
+        let (mut job, area) = made(&square);
+        let why = ed::drains(&mut job, &area, &[d], "1 in", how()).unwrap_err();
+        assert!(why.contains("is on the edge"), "{d:?}: {why}");
+    }
+    // Exactly an inch apart is two drains.
+    let (mut job, area) = made(&square);
+    ed::drains(&mut job, &area, &[[20.0, 20.0], [20.0 + 1.0 / 12.0, 20.0]], "1 in", how()).unwrap();
+    // Far from the origin, the same.
+    let roof = [[0.0, 0.0], [80.0, 0.0], [80.0, 50.0], [0.0, 50.0]];
+    let seven = [[10.0, 10.0], [30.0, 14.0], [55.0, 12.0], [12.0, 38.0], [33.0, 41.0], [65.0, 37.0], [70.0, 25.0]];
+    let here = bf(&roof, &seven);
+    for far in [1.0e5, 5.0e5, 9.0e5] {
+        let moved = |p: &[[f64; 2]]| p.iter().map(|q| [q[0] + far, q[1] + far]).collect::<Vec<_>>();
+        assert_eq!(bf(&moved(&roof), &moved(&seven)), here, "{far}");
+    }
+    // A rhombus, every side 50 ft, begun at each corner and run either way.
+    let (c, s) = (0.3f64.cos(), 0.3f64.sin());
+    let rhombus: Vec<[f64; 2]> = [[0.0, 0.0], [50.0, 0.0], [80.0, 40.0], [30.0, 40.0]].iter().map(|p| [100.0 + p[0] * c - p[1] * s, 100.0 + p[0] * s + p[1] * c]).collect();
+    let middle = [rhombus.iter().map(|p| p[0]).sum::<f64>() / 4.0, rhombus.iter().map(|p| p[1]).sum::<f64>() / 4.0];
+    let first = bf(&rhombus, &[middle]);
+    assert!(first.is_some());
+    for start in 0..4 {
+        let mut r: Vec<[f64; 2]> = (0..4).map(|k| rhombus[(start + k) % 4]).collect();
+        assert_eq!(bf(&r, &[middle]), first, "begun at {start}");
+        r.reverse();
+        assert_eq!(bf(&r, &[middle]), first, "begun at {start}, run the other way");
+    }
+}
+
+/// Call 142: the field list asks about the drains and the thickness at them, `measure`
+/// takes both, and the uncapped caution travels to the line priced by the board feet.
+#[test]
+fn the_field_list_asks_about_a_tapers_drains_and_its_caution_reaches_the_line() {
+    use plumbline_world::editing as ed;
+    let how = || ed::Entered { status: Status::Assumed, source: "made-up roof plan" };
+    let mut job = Job::new("Flat roof", "test", "2026-11-19");
+    let area = ed::low_slope(&mut job, "Main roof", &[[0.0, 0.0], [48.0, 0.0], [48.0, 48.0], [0.0, 48.0]], "1/4:12", "11 ft", ed::Entered { status: Status::Known, source: "made-up roof plan" }).unwrap();
+    ed::drains(&mut job, &area, &[[12.0, 12.0], [36.0, 36.0], [12.0, 36.0], [36.0, 12.0]], "1/2 in", how()).unwrap();
+    job.put(&area, Cost { code: value::Val::unknown("", "not coded"), lines: vec![CostLine::of("Tapered polyiso", "board_feet", value::Val::known(1.2, "$/BF", "made-up price"))] }).unwrap();
+    job.derive();
+    assert_eq!(measure(&mut job, &area, "board_feet").value, Some(5760.0));
+    let q = &figures(&mut job, &area, "Tapered polyiso").quantity;
+    assert!(q.note.contains("nothing caps the build-up yet"), "{q:?}");
+    let list = plumbline_world::vif::vif(&mut job);
+    let asked: Vec<String> = list.questions.iter().filter(|x| x.path == area).flat_map(|x| x.values.iter().map(|v| v.0.clone())).collect();
+    assert!(asked.contains(&"drains".to_string()) && asked.contains(&"thickness at the drain".to_string()), "{asked:?}");
+    ed::measure::measure(&mut job, &area, "thickness at the drain", ed::measure::Reading::Length("5/8 in"), None, "tape at the drain").unwrap();
+    ed::measure::measure(&mut job, &area, "drains", ed::measure::Reading::Same, None, "walked the roof").unwrap();
+    job.derive();
+    // 2,304 SF × 1/8 in more.
+    assert_eq!(measure(&mut job, &area, "board_feet").value, Some(6048.0));
+    assert!(plumbline_world::vif::vif(&mut job).questions.iter().all(|x| x.path != area));
+}

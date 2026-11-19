@@ -7315,6 +7315,36 @@ PASS, now also checking a drain typed twice, "in place of", and the uncapped not
 three gates and the licences PASS; `tools/committed.sh` is run before the push and its
 result is in the commit's message. `tools/portmap.sh` still cannot be run here.
 
+**Judged again after call 140** (a fresh agent on another model, cold). It checked about
+400 jobs against its own exact polygon cut (rectangles, regular and irregular grids, L, U,
+T and notched roofs, rotated and skewed outlines, a triangle, a diamond, drains a
+thousandth of a foot off an edge, halfway lines through corners, 25-drain grids) in every
+drain order: the figures matched to 0.01 BF every time, and no job made "lost ground"
+appear. By hand, four drains on the 48 ft square: 5,760 BF, 2.5 in average, 3.5 in
+thickest, 271.529 LF of valleys, and the money to $14,238.89: the program agreed. What it
+found:
+
+| | Found | Where it stands |
+|---|---|---|
+| J-T10 (E) | "Nothing caps the build-up yet" is in `show` and `vif` only; the estimate, its CSV and workbook, the supplier lens and the field list's export carry the bare "Assumed" | **Fixed** (call 142): a figure's caution travels to every line priced by it, and is in the estimate, its CSV and workbook, and all three lenses |
+| J-T11 (F) | The field list never asks to check the drains or the thickness at them, though they carry the money; it puts the insulation's dollars on the eave height, which does not move them; `measure` cannot reach the drains | **Fixed**: the drains and the thickness are listed and `measure` takes them; the field list asks "check: drains; measure: thickness at the drain". Measured at 5/8 in, four drains on the 48 ft square went from 5,760 to 6,048 BF (2,304 SF × 1/8 in = 288 more, by hand) |
+| J-T12 (G) | The taper's figures cannot become Known, since they rest on the uncapped build-up (call 140) | open: they become Known when the cap is joined (port step 4) |
+| J-T13 (A) | A drain exactly on the edge is taken on the west and south edges and refused on the east and north | **Fixed**: refused on every edge and corner, as a scupper |
+| J-T14 (B) | Two drains exactly 1 in apart are refused, though the refusal says "closer than 1 in" | **Fixed** |
+| J-T15 (C) | The same roof drawn 250,000 ft or more from the plan's origin drifts up to 0.25 % | **Fixed**: laid out from the plan's origin; held by a test at 100,000, 500,000 and 900,000 ft, proved red without the fix (12,607.29 against 12,607.31) |
+| J-T16 (D) | Where two sides tie for longest, which corner the outline starts at changes the figures (7,029.52 or 7,025.86 BF) | **Fixed**: the outline is started at one corner and run one way; held by a test over every start, both ways |
+| J-T17 (I) | On a U-shaped roof with one drain, the far arm is laid out by the straight run across the open middle, not by the way the water goes round | open: NRCA lays a roof like that out with crickets or an area divider (port step 3) |
+| J-T18 (H) | `drains` replaces the whole list; adding one means typing them all | open, by design for now |
+| J-T19 (J) | `lines` names a flat roof's edges eave, rake and ridge | open (J-T6) |
+
+**After the second judge's fixes (calls 141 and 142), on the tree as committed with
+them:** `cargo test --workspace` 462 pass, 0 fail (three new: the tracing test, proved red
+without its fix; the field list's; and a roof priced whole dressing its planes);
+`demos/taper.sh`, `shingle.sh` (now checking its planes are dressed in shingles),
+`library.sh`, `foundation.sh`, `framing.sh`, `d4.sh`, `house.sh`, `vif.sh`, `field.sh`,
+`export.sh` PASS (`house.sh` rewrote its pictures in the tree; they were put back, not
+committed unread); the three gates PASS. `tools/committed.sh` is run before the push.
+
 **The window run on the framing build (d47986e, frozen copy) was cut off twice by the
 machine restarting.** What it reached: bringw, buildw, carryw, clashw, d4w, d5w, draww
 pass. **dressw failed one measure**: "the north wall, turned to" read (160, 162, 163)
@@ -7323,7 +7353,19 @@ shingles over the stone wainscot, dressed right; the turn landed short of where 
 script measures, and the box fell on the white lap siding at the corner. That is the
 slow renderer losing part of a turn, not the dressing. It is to be run again alone; the
 rest of the window run (dressw on) is owed and will be recorded here. **Run again: dressw
-PASS** (330 s), so the miss was the lost turn; fieldw and firstw PASS; the rest running.
+PASS** (330 s), so the miss was the lost turn; fieldw and firstw PASS. **Then the rest:** foundw, gablew, glassw, itemlibw,
+itemneww, itemsw, moneyw, pagew, planw, pricew, roofw, shinglew, toolsw, tradesw, turnw
+PASS. **quantityw failed**, and rightly: its refusal sentence names the figures a wall
+has, and call 137 gave a wall four more (studs, plate length, header length, sill
+length) without moving the sentence. The program is right; the sentence moved (call
+137, addendum) and quantityw then PASSED on the same copy. So every window
+demonstration passes on the framing build. **The shinglew pictures were looked at:** the
+roof panel shows the whole-roof assembly applied, its 13 lines, and each figure with
+how it was worked; the sheet's recap lists every unpriced line with its reason. And the
+roof, priced as asphalt shingles, was drawn bare gray: a plane read only its own lines.
+Fixed (call 141): a plane with no roofing of its own is dressed in its roof's. The
+shinglew pictures are not committed: they show the bare roof that call 141 changed, so
+they are to be retaken on the new build.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

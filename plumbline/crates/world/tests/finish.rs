@@ -257,3 +257,31 @@ fn a_shed_in_a_courtyard_and_a_wall_that_runs_on_past_the_house() {
     let said = finish::report(&mut job).join("\n");
     assert!(said.contains("part of it bounds what its level's walls enclose and part runs on outside; split it where it leaves the house"), "{said}");
 }
+
+/// Call 141: a roof priced whole dresses its planes; a plane with its own roofing keeps it.
+#[test]
+fn a_roof_priced_whole_dresses_its_planes() {
+    use plumbline_world::*;
+    let mut job = sample::house();
+    let roof = {
+        let mut q = job.world.query::<(&Node, &Kind)>();
+        q.iter(&job.world).find(|(_, k)| **k == Kind::Roof).map(|(n, _)| n.path.clone()).expect("the house has a roof")
+    };
+    let planes: Vec<String> = {
+        let mut q = job.world.query::<(&Node, &Kind)>();
+        q.iter(&job.world).filter(|(n, k)| **k == Kind::RoofPlane && n.parent.as_deref() == Some(roof.as_str())).map(|(n, _)| n.path.clone()).collect()
+    };
+    assert!(planes.len() >= 2);
+    // Take every plane's own lines off, and price the roof whole in shingles.
+    for p in &planes {
+        let e = job.find(p).unwrap();
+        job.world.entity_mut(e).remove::<Cost>();
+    }
+    job.put(&roof, Cost { code: value::Val::unknown("", "not coded"), lines: vec![CostLine::of("Field shingles", "squares", value::Val::unknown("$/SQ", "no price entered"))] }).unwrap();
+    job.put(&planes[0], Cost { code: value::Val::unknown("", "not coded"), lines: vec![CostLine::of("Standing seam roofing", "surface_area", value::Val::unknown("$/SF", "no price entered"))] }).unwrap();
+    let dress = finish::dress(&mut job);
+    assert_eq!(dress.roofs.get(&planes[0]).map(|s| s.what), Some(finish::Roofing::StandingSeam));
+    let other = dress.roofs.get(&planes[1]).expect("dressed from its roof");
+    assert_eq!(other.what, finish::Roofing::AsphaltShingles);
+    assert!(other.by.contains("the roof's line"), "{}", other.by);
+}
