@@ -4469,6 +4469,47 @@ fn a_foundation_is_taken_off_in_cubic_yards_from_figures_as_worked() {
     assert_eq!(quantity(&mut job, &wall, "Wall concrete").value, Some(66.6667));
 }
 
+/// A wall's frame, counted (call 137), from the line that names its framing. A 24 ft wall
+/// at 16 in: studs centred on 16, 32 ... 272 in (17) and one at each end, 19. An opening's
+/// offset is to its centre: a 3 ft door at 6 ft runs 54 to 90 in and takes the studs on
+/// 64 and 80; a 4 ft window at 15 ft 6 in runs 162 to 210 in and takes those on 176, 192
+/// and 208, and the one on 160 stands where its king and jack go: 13 left. A king and a
+/// jack each side of each opening: 8. Cripples on the stations inside the openings: 2
+/// over the door, 3 over the window and 3 under it: 8. 29 in all. Plates 3 x 24 = 72 LF;
+/// headers jack to jack 3.25 + 4.25 = 7.5 LF; a rough sill under the window, 4 LF. (The
+/// first count by hand took the offset to the opening's near edge and got 30.) A wall
+/// nothing names a framing for has none of the four.
+#[test]
+fn a_walls_frame_is_counted_from_the_line_that_names_its_framing() {
+    use plumbline_world::editing as ed;
+    let how = ed::Entered { status: Status::Known, source: "made-up plan" };
+    // `drawn` gives a door 3 ft by 7 ft and a window 4 ft by 3 ft.
+    let (mut job, s, wt, dt, nt) = drawn();
+    let wall = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [24.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap().remove(0);
+    ed::opening(&mut job, &wall, Kind::Door, &dt, ed::OnWall::Offset("6 ft"), "0 ft", how).unwrap();
+    ed::opening(&mut job, &wall, Kind::Window, &nt, ed::OnWall::Offset("15 ft 6 in"), "3 ft", how).unwrap();
+    job.derive();
+    let e = job.find(&wall).unwrap();
+    assert!(!job.world.get::<Measure>(e).unwrap().0.contains_key("studs"), "nothing names its framing yet");
+    job.add_line(&wall, "Studs, 2x6 at 16 in", "studs", Some(Class::Material), false).unwrap();
+    job.derive();
+    assert_eq!(measure(&mut job, &wall, "studs").value, Some(29.0));
+    assert_eq!(measure(&mut job, &wall, "plate_length").value, Some(72.0));
+    assert_eq!(measure(&mut job, &wall, "header_length").value, Some(7.5));
+    assert_eq!(measure(&mut job, &wall, "sill_length").value, Some(4.0));
+    // The count rests on a rule (the spacing the line names; corners left to the
+    // allowance): Assumed, though the wall is Known.
+    assert_eq!(measure(&mut job, &wall, "studs").status, Status::Assumed);
+    // A window whose head is in the top plates has no room for a header: the frame is
+    // refused, and says why, as is one that does not fit its wall (judged 2026-11-18).
+    let high = ed::walls(&mut job, &s, &wt, &[[0.0, 10.0], [12.0, 10.0]], false, ed::Top::Height("9 ft"), how).unwrap().remove(0);
+    ed::opening(&mut job, &high, Kind::Window, &nt, ed::OnWall::Offset("6 ft"), "6 ft", how).unwrap();
+    job.add_line(&high, "Studs, 2x6 at 16 in", "studs", Some(Class::Material), false).unwrap();
+    job.derive();
+    let refused = measure(&mut job, &high, "header_length");
+    assert!(refused.value.is_none() && refused.note.contains("top plates"), "{refused:?}");
+}
+
 #[test]
 fn a_house_is_drawn_from_nothing_and_its_figures_are_the_ones_worked_by_hand() {
     use plumbline_world::editing as ed;

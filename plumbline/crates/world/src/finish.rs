@@ -315,6 +315,23 @@ pub fn barrier_in(text: &str) -> bool {
 /// house wrap", "Demo existing concrete wall", "Tear off felt paper", "Wall framing, 2x6
 /// at 16 in - NOT INCLUDED", "by others". A remodel's estimate is full of such lines,
 /// and what they name is not drawn as if it were being put in (J21-7).
+/// The framing a wall is built with: the first of what is priced on it that names a
+/// lumber size and a spacing and is in the work ("Wall framing, 2x6 at 16 in"). The one
+/// rule both the wall's dress (what is drawn) and its framing figures (what is counted:
+/// call 137) take it by.
+pub fn framing_of<'a>(texts: impl IntoIterator<Item = &'a str>) -> Option<(f64, f64)> {
+    texts.into_iter().find_map(|text| if not_in_the_work(text) { None } else { crate::building::framing::named(text) })
+}
+
+/// What a wall's framing is read from: its lines that are on, its material and its
+/// assembly, in that order (as its dress reads them).
+pub fn wall_texts(cost: Option<&Cost>, made_of: Option<&MadeOf>, condition: Option<&Condition>) -> Vec<String> {
+    let mut out: Vec<String> = cost.map(|c| c.lines.iter().filter(|l| !l.off).map(|l| l.description.clone()).collect()).unwrap_or_default();
+    out.extend(made_of.and_then(|m| m.0.value.clone()));
+    out.extend(condition.and_then(|c| c.0.value.clone()));
+    out
+}
+
 pub fn not_in_the_work(text: &str) -> bool {
     let w = words(text);
     const OUT: &[&str] = &["remove", "removal", "removing", "demo", "demolish", "demolition", "tear off", "tear out", "strip off", "strip out", "haul off", "haul away", "dispose", "disposal", "not included", "not in contract", "excluded", "exclude", "by others", "by owner", "nic", "omit", "omitted", "deduct", "credit for"];
@@ -788,7 +805,7 @@ pub fn dress(job: &mut Job) -> Dress {
         });
         // A framing line that is taken out or not in the work frames nothing.
         let framed_by = |text: &str| if not_in_the_work(text) { None } else { crate::building::framing::named(text) };
-        let framing = on.iter().find_map(|(text, _)| framed_by(text));
+        let framing = framing_of(on.iter().map(|(text, _)| text.as_str()));
         let framing_lines = on.iter().filter(|(text, _)| framed_by(text).is_some()).count();
         // Lines that name framing and give no lumber size and spacing to draw it by:
         // not drawn, and said (J21-8: "2x4 framing" was passed over without a word).

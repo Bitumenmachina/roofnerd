@@ -107,7 +107,7 @@ print("    in the file: %d assemblies; the south wall is %r (%s) with %d lines" 
 ok = assemblies == 34 and is_now["value"] == "Exterior wall, 2x6, brick veneer" and is_now["status"] == "Assumed"
 # Framing, sheathing, barrier, insulation, gypsum board, paint and the framing labor,
 # which the two assemblies share; then brick and its ties. The siding and its labor are gone.
-ok = ok and lines == ["Wall framing, 2x6 at 16 in", "Wall sheathing", "Weather barrier", "Batt insulation", "Gypsum board, hung and finished", "Paint, two coats", "Frame and sheathe the wall", "Brick veneer", "Brick ties and flashing"]
+ok = ok and lines == ["Studs, 2x6 at 16 in", "Plates, 2x6", "Headers, two plies", "Rough sills, 2x6", "Wall sheathing", "Weather barrier", "Batt insulation", "Gypsum board, hung and finished", "Paint, two coats", "Frame and sheathe the wall", "Brick veneer", "Brick ties and flashing"]
 if not ok:
     print("FAIL: wanted the brick assembly's nine lines, the shared ones first:", lines); sys.exit(1)
 PY

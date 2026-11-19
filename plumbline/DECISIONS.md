@@ -4745,3 +4745,52 @@ shingles) is in the price twice; take one of the two off". It is said, not refus
 roof can carry a line of its own beside its planes' (a tear-off by the roof, shingles
 by the plane), and only the estimator knows which; the sentence says how to clear it.
 (`view::Pricing::twice`, `view::twice_said`; checked in `demos/shingle.sh`.)
+
+### Call 137. A wall's frame is counted, and the starter walls buy their lumber by the piece and the foot (2026-11-18; the second builder; the framer's judgment of the review)
+
+The framer on the review's panel: "studs, headers and jacks are drawn, not counted;
+framing is priced by the SF". The frame was laid out only in the window, to draw it
+(`scene.rs`, from `building::framing`, BIMCraft's layout). It is now laid out in the
+core too, by the same function from the same line, and counted.
+
+- **A wall whose priced line names its framing** (the first line, material or assembly
+  that names a lumber size and a spacing and is in the work: "Studs, 2x6 at 16 in", as
+  its dress has read it since call 71; `finish::framing_of`, now the one rule both read)
+  **has four more figures**: `studs` (EA: every stud, king, jack and cripple, one stud
+  each), `plate_length` (LF: the bottom plate and two top plates), `header_length` (LF:
+  a header over each opening, jack to jack) and `sill_length` (LF: a rough sill under
+  each window). A wall nothing names a framing for has none of the four: a wall framed
+  by nobody is not a wall with no studs. A wall whose openings are not placed has them
+  refused, and says which opening.
+- **A count of pieces is a count**: a line priced by `studs` with a waste takes it in
+  whole studs (a figure in EA standing alone was taken as it stood).
+- **The starter library's five framed walls** (four exterior 2x6 walls and the 2x4
+  partition) carry, in place of the one material line priced by the SF ("Wall framing,
+  2x6 at 16 in", `face_area`): "Studs, 2x6 at 16 in" (`studs`, 10 % for culls, corners
+  and blocking), "Plates, 2x6" (`plate_length`, 10 %, in whole 16 ft pieces), "Headers,
+  two plies" (`2 * header_length`, LF) and "Rough sills, 2x6" (`sill_length`, LF); each
+  allowance Assumed, said to be the estimator's. A header's size from its span is a rule
+  of thumb (`framing::header_depth`: a 2x6 to 4 ft, a 2x8 to 6 ft, a 2x10 to 8 ft, a 2x12
+  beyond); the code sizes it from its load (IRC R602.7). The labor stays by the SF, as a
+  framing sub quotes it.
+
+**Expectations moved, with this call written first:** the starter library is 34
+assemblies and 159 lines (was 144): `crates/cli/tests/cli.rs` (the starter library; an
+assembly changed for another, which priced the framing line by the SF; a partition's labor, whose assembly now gains seven lines, not four), `demos/library.sh`,
+`demos/pricew.sh` (the brick wall's lines). The made-up whole house (`sample.rs`) keeps
+its "Wall framing, 2x6 at 16 in" by the SF: it is a job built before this, and a job
+keeps what it was priced with.
+
+**Judged the same day** (an agent on another model; STATUS.md has its table): an
+opening that does not fit its wall (past an end, over another) was framed as if cut to
+fit, and a window whose head is in the top plates got a header of 0 LF, both without a
+word. Now the four figures are refused for such a wall, with the reason the wall's net
+area already gave ("window-0007 starts 9.00 ft before the start of its wall"; "the head
+of window-0007 is in the top plates: there is no room for its header"). And the stud
+count is **Assumed** even on a Known wall: it rests on the spacing the line names and
+leaves a corner's and an intersection's extra studs to the allowance, and its formula
+says so.
+
+**Not yet:** corners and channels counted as studs of their own (a corner takes three);
+blocking and fire blocking; double top plates lapped at the corners (here two plates
+the wall's length); headers sized from the load; floor joists, rafters and trusses.

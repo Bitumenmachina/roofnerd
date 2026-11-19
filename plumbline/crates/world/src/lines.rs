@@ -67,7 +67,8 @@ fn operand(on: &On, line: &CostLine, name: &str) -> Result<Operand, String> {
         let dim = match *unit {
             "LF" | "ft" => 1,
             "SF" => 2,
-            "" => 0,
+            // A count of pieces (a wall's studs: call 137) is a number like any other.
+            "" | "EA" => 0,
             other => return Err(format!("uses {name}, which is in {other}; a formula works in lengths, areas and counts, and comes out in CY when its lengths make a volume. Price the line by {name} alone, with its waste on the line", name = crate::view::words(name))),
         };
         let d = on.measure.and_then(|m| m.0.get(name));
@@ -368,7 +369,9 @@ fn worked(me: &str, on: &On, line: &CostLine, order_by: Option<&Order>, price: &
         Expr::Name(name) => line.inputs.contains_key(name),
         _ => false,
     };
-    let is_count = read.unit == "EA" && !read.plain_measure && !entered;
+    // A figure that is a count of pieces (a wall's studs, call 137) is a count too, and
+    // its waste is taken in whole pieces.
+    let is_count = read.unit == "EA" && !entered;
     let value = if is_count {
         text.push_str(", rounded up to a whole number");
         count(read.worked.value)

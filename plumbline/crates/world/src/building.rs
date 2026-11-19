@@ -681,8 +681,8 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
             })
             .collect()
     };
-    let mut q = world.query::<(&Node, &Kind, Option<&Wall>, Option<&Floor>, Option<&Segment>)>();
-    for (node, kind, wall, floor, segment) in q.iter(world) {
+    let mut q = world.query::<(&Node, &Kind, Option<&Wall>, Option<&Floor>, Option<&Segment>, Option<&Cost>, Option<&MadeOf>, Option<&Condition>)>();
+    for (node, kind, wall, floor, segment, cost, made_of, condition) in q.iter(world) {
         let me = &node.path;
         let mut m = BTreeMap::new();
         match kind {
@@ -796,6 +796,60 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                     Err(why) => Derived::refused("ft", f, &t_inputs, &why),
                 };
                 m.insert("thickness".into(), thick);
+                // Its frame, counted, where what is priced on it names the lumber and the
+                // spacing it is framed with (call 137): the frame the window draws, laid out
+                // by the same rule (`framing::frame`), from the same line (`finish::framing_of`).
+                // Not given at all where nothing names a framing: a wall framed by nobody is
+                // not a wall with no studs.
+                if let Some((_, spacing)) = crate::finish::framing_of(crate::finish::wall_texts(cost, made_of, condition).iter().map(String::as_str)) {
+                    let mut f_inputs = inputs.clone();
+                    f_inputs.push(format!("{me}#{K_COST}"));
+                    let names = [("studs", "EA", "every stud, king, jack and cripple of its frame, one stud each; a corner's and an intersection's extra studs not counted"), ("plate_length", "LF", "its bottom plate and two top plates"), ("header_length", "LF", "a header over each opening, jack to jack"), ("sill_length", "LF", "a rough sill under each window")];
+                    // An opening that does not fit its wall (past an end, over the top, over
+                    // another) is not framed as if it were cut to fit: the frame is refused,
+                    // as the wall's net area is, with the same reason (judged 2026-11-18). Nor
+                    // is one whose head is in the top plates: it has no room for a header.
+                    let misfits: Vec<&String> = faults.iter().filter(|f| !f.starts_with("where ")).collect();
+                    let plates = 2.0 * 1.5 / 12.0;
+                    let why = match (length, &heights.height) {
+                        _ if unit_fault => Some(format!("the wall line {NOT_CONVERTED}")),
+                        (None, _) => Some("the wall has no length".to_string()),
+                        (_, Err(why)) => Some(why.clone()),
+                        _ if !misfits.is_empty() => Some(misfits.iter().map(|f| f.as_str()).collect::<Vec<_>>().join("; ")),
+                        (_, Ok(h)) => mine
+                            .iter()
+                            .find(|o| o.span.is_none())
+                            .map(|o| format!("where {} is in the wall is not known", o.path))
+                            .or_else(|| mine.iter().find(|o| o.span.is_some_and(|sp| sp[3] > h - plates + 1e-9)).map(|o| format!("the head of {} is in the top plates: there is no room for its header", o.path))),
+                    };
+                    match (why, length, &heights.height) {
+                        (None, Some(l), Ok(h)) => {
+                            let spans: Vec<[f64; 4]> = mine.iter().filter_map(|h| h.span).collect();
+                            let tally = framing::tally(&framing::frame(l, *h, &spans, spacing));
+                            let of = |pieces: &[framing::Piece], count: bool| -> f64 { tally.iter().filter(|(p, _, _)| pieces.contains(p)).map(|(_, n, len)| if count { *n as f64 } else { *len }).sum() };
+                            use framing::Piece::*;
+                            let figures = [of(&[Stud, King, Jack, Cripple], true), of(&[BottomPlate, TopPlate], false), of(&[Header], false), of(&[Sill], false)];
+                            let mut statuses: Vec<Status> = mine.iter().map(|h| h.status).collect();
+                            statuses.extend([w.line.status, heights.status]);
+                            for ((name, unit, f), v) in names.iter().zip(figures) {
+                                // The count rests on a rule as well as on the wall: studs on
+                                // the spacing the line names, the corners left to the
+                                // allowance. Assumed, and its formula says what is not in it.
+                                let mut st = statuses.clone();
+                                if *name == "studs" {
+                                    st.push(Status::Assumed);
+                                }
+                                m.insert(name.to_string(), Derived::new(Some(v), unit, &st, f, &f_inputs));
+                            }
+                        }
+                        (why, _, _) => {
+                            let why = why.unwrap_or_else(|| "the frame cannot be laid out".to_string());
+                            for (name, unit, f) in names {
+                                m.insert(name.to_string(), Derived::refused(unit, f, &f_inputs, &why));
+                            }
+                        }
+                    }
+                }
             }
             // A strip footing: its length on plan, its width from its type, how deep it
             // is, and the concrete in it. Length times width times depth is the volume of

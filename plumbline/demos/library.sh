@@ -36,7 +36,7 @@ assert len(labor) == 23 and all(r[head.index("Ordered by")] == "hr" and r[head.i
 print("    %d labor lines, each in hours with no production rate and no wage: how fast a crew goes is the estimator's own" % len(labor))
 print("    %d assemblies, %d lines, a line in each of divisions %s; every unit cost is $?, and no dollar figure is in the file"
       % (len({r[0] for r in lines}), len(lines), ", ".join(str(d) for d in sorted({int(r[division]) for r in lines}))))
-assert sorted({int(r[division]) for r in lines}) == list(range(1, 17)) and len({r[0] for r in lines}) == 34 and len(lines) == 144
+assert sorted({int(r[division]) for r in lines}) == list(range(1, 17)) and len({r[0] for r in lines}) == 34 and len(lines) == 159
 PY
 
 echo

@@ -7153,6 +7153,57 @@ whole packs per roof, a clean round trip, Unknown boots named as left out: held.
 | J-R5 | Missing: step flashing at sidewalls, tear-off and disposal, nails, ridge vent net free area, waste by how cut up the roof is | Listed in the finish line above as not yet |
 | J-R6 | The starter library cannot be brought into the made-up whole house (it already has "Slab on grade, 4 in") | Open, minor: the import refuses a library whose assembly the job has under another recipe, by design (call 105's rule) |
 
+## A wall's frame counted: a demonstration, written before it is built (`demos/framing.sh`, call 137)
+
+**The finish line for framing a wall.** A wall whose priced line names its lumber and
+spacing is counted as a framer counts it, from the frame the window draws: studs by the
+piece (every stud, king, jack and cripple), plates by the foot and in whole 16 ft
+pieces, headers by the foot in two plies, rough sills by the foot. Not yet: a corner's
+extra studs, blocking, plates lapped at corners, headers sized from their load, joists,
+rafters and trusses.
+
+**The made-up walls**, 9 ft, 2x6 at 16 in, given "Exterior wall, 2x6, lap siding": a plain
+12 ft wall; and a 24 ft wall with a 3 ft by 7 ft door centred 6 ft along it and a 4 ft by 3
+ft window centred 15 ft 6 in along it, its sill at 3 ft.
+
+**Figures worked by hand.** The 12 ft wall: studs centred on 16 to 128 in (8) and one at
+each end: 10; 11 with 10 %. Plates 3 x 12 = 36 LF, 39.6 with 10 %: 2.475 sixteens, 3
+pieces. No header, no sill: 0 LF each. The 24 ft wall: 19 layout studs less the 6 an
+opening or its king and jack takes (64 and 80 in the door; 160, 176, 192 and 208 by the
+window), 13; 4 kings, 4 jacks; cripples on the stations inside the openings, 2 over the
+door and 3 over and 3 under the window, 8: 29 studs, 32 with 10 % (31.9). Plates 72 LF,
+79.2 with 10 %: 4.95 sixteens, 5 pieces. Headers jack to jack 3.25 + 4.25 = 7.5 LF, two
+plies: 15 LF. One rough sill, 4 LF.
+
+## A wall's frame counted. What was run and what it showed (2026-11-18; the second builder)
+
+**Built** (call 137): a wall's frame laid out in the core by the window's own layout
+(`framing::frame`) from the line its dress reads (`finish::framing_of`), counted into
+`studs`, `plate_length`, `header_length` and `sill_length`; the starter library's five
+framed walls buying studs, plates, headers and sills in place of a material line by the
+SF; a count of pieces taken in whole pieces with its waste.
+
+**Run:** `cargo test --workspace` 335 passed (new: the 24 ft wall's 29 studs, 72 LF of
+plate, 7.5 LF of header and 4 LF of sill, worked by hand; the stud count Assumed; a head
+in the top plates refused). `demos/framing.sh` passes, and all 27 command-line demonstrations
+on a frozen copy of this build (the library's counts and `pricew`'s wall lines moved by
+call 137). The window run on the same copy is recorded below when it has ended.
+
+**Judged** by an agent on another model (`review/J-framing-judge.md`): heights of 8, 9
+and 10 ft, spacings of 12, 16 and 24 in, lengths from 1 to 25 ft, a height from the level
+above, a 2x4 partition with a door, whole studs with waste, Assumed inputs carried, an
+unplaced opening refused: held against counts by hand.
+
+| # | Found | Stands |
+|---|---|---|
+| J-F1 | An opening running off its wall (or over another) was framed as if cut to fit, and `check` passed: 11.75 LF of header on a 12 ft wall | **Fixed**: the frame is refused with the net area's own reason |
+| J-F2 | A window whose head is in the top plates had a header of 0 LF, unsaid | **Fixed**: refused, "there is no room for its header" |
+| J-F3 | Corners are not counted: a closed 16 by 16 ring is two studs a corner where a framer builds three, about 8 % short, inside the 10 % allowance; T-intersections have no backing | **Said, not yet counted**: the stud count is Assumed and its formula says a corner's and an intersection's studs are not in it |
+| J-F4 | Overlapping windows double their sill | **Fixed** with J-F1 (overlap is a misfit) |
+| J-F5 | Studs Known though they rest on a rule | **Fixed**: Assumed |
+| J-F6 | Missing: precut stud lengths, blocking and fire blocking, nails and hangers, headers by load, more jacks on wide openings, lapped top plates | Open, listed in call 137's "not yet" |
+| J-F7 | A name like "Sheathing: 2x6 stud pack, 16 in" reads as framing; two framing lines on one wall, the first drives the layout; an unplaced opening also refuses the plates | Open, minor |
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
