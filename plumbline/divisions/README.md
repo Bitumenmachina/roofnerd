@@ -346,7 +346,7 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 - Conduit, installed, by the LF (2 lines)
 - Cable, pulled, by the LF (16 lines)
 
-**In the model:** Conduit, cable, panel, meter, receptacles and lights, by system.
+**In the model:** Conduit, cable, panel, meter, receptacles and lights, by system. **A room has `receptacles`** (call 147): the fewest receptacle outlets its walls need by NEC 210.52(A)(1), its floor line cut at each door into runs of wall, one outlet for each 12 ft of a run or part; Assumed, since fireplaces, fixed cabinets and stationary appliances are not drawn and bathrooms, hallways, foyers and counters have rules of their own; `demos/receptacles.sh`.
 
 **In the starter assemblies the program ships with** (no prices in them; `plumbline import assemblies <job> starter`):
 

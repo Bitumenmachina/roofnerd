@@ -5076,3 +5076,28 @@ The judge found, by hand:
 (its depth then read as concrete); the ceiling's board is still one line with its paint,
 in SF; board on several walls is rounded up to whole sheets wall by wall; a slab's edge
 forms are the whole perimeter. No number moves but those named above.
+
+### Call 147. A room has the fewest receptacles its walls need, by NEC 210.52(A) (2026-11-19; the second builder; Division 16)
+
+NEC 210.52(A)(1), as *Understanding the 2023 NEC* (Mike Holt) gives it: "The wall space
+receptacle outlet must be installed so no point along the floor line of any wall is
+more than 6 ft, measured horizontally along the floor line, from a receptacle outlet."
+(A)(2): wall space is "any wall space 2 ft or more in width that is unbroken along the
+floor line by doorways, fireplaces, stationary appliances, and fixed cabinets without
+countertops or work surfaces", measured round corners. (A) covers "every kitchen, family
+room, dining room, living room, sunroom, parlor, library, den, bedroom, recreation room,
+and similar room or area" of a dwelling unit. The NFPA's own text was not read (its
+viewer refuses an automated reader); the line on the figure says where it came from.
+
+A room now has `receptacles` (EA): round the room at its walls' faces, the floor line is
+cut at each door into runs of wall; a run of 2 ft or more needs one outlet for every 12
+ft of it or part (an outlet serves 6 ft either way), and a shorter run none; a room with
+no door is one run all the way round. Islands standing in the room are runs of their
+own. It is **Assumed** however sure the walls are, and says why: the fireplaces,
+stationary appliances and fixed cabinets that also break wall space are not drawn; it
+is for the rooms 210.52(A) covers; a bathroom, a hallway, a foyer and a kitchen's
+counters have rules of their own (210.52(D), (H), (I), (C)), not worked here; and
+which room a room is, is the estimator's. It is refused where the room's wall area
+is.
+
+No number moves; a room lists one more figure.

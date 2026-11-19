@@ -7457,6 +7457,40 @@ the counted-twice line); `demos/drywall.sh`, `slab.sh`, `library.sh`, `taper.sh`
 
 **Owed:** dressw run whole with its new check on the next build.
 
+## The fewest receptacles a room's walls need: a demonstration, written before it is built (`demos/receptacles.sh`, call 147)
+
+From an empty job, by hand (each run of wall between doorways needs one outlet for each
+12 ft or part, NEC 210.52(A)(1)):
+
+- the drywall demonstration's house (24 ft by 16 ft, 6 in walls, a partition with a 3
+  ft door): each room is 54 LF round at its faces; less the door, one run of 51 ft:
+  51 ÷ 12 = 4.25, **5 receptacles** each. The window does not cut the floor line.
+- a room 10 ft by 12 ft inside 6 in walls with no door (9.5 by 11.5 at its faces): 42
+  LF round, one closed run: 42 ÷ 12 = 3.5, **4**.
+- the same house with a second 3 ft door in the north wall, centred at x = 4.5 (its
+  north face runs 3 to 6): the west room's floor line is cut twice. From the partition
+  door's top (y = 9.5) up the east face 6.25 and along the north face from 11.75 to 6,
+  5.75: **12 ft, 1**; from 3 on round, 2.75 + 15.5 + 11.5 + 6.25: **36 ft, 3**; **4**
+  in all, where the run uncut by this door would need 5. (Placed at x = 6 instead, the
+  runs are 10.5 and 37.5 ft, 1 and 4, and the count is 5 either way: the door is put
+  where cutting the floor line changes the answer, so the step proves the cut.)
+- each figure is Assumed and says what it leaves out.
+
+## The fewest receptacles. What was run and what it showed (2026-11-19; the second builder; call 147)
+
+**Built.** A room has `receptacles` (EA), worked from its outline at its walls' faces
+and the doors in those walls: each run of wall between doors, one outlet for each 12 ft
+or part; Assumed, with the note of what it leaves out. Islands are runs of their own.
+
+**Run, on the tree as committed with this section:** `cargo test --workspace` 464 pass,
+0 fail; `demos/receptacles.sh` PASS to the hand figures (5 and 5; 4 once the second door
+cuts the run, where uncut it would be 5; 4 in a closed room); `drywall.sh`, `slab.sh`,
+`library.sh` PASS; the gates PASS; `tools/committed.sh` before the push.
+
+**Owed:** a judge (started after this commit). Not yet: a bathroom's, a hallway's, a
+foyer's and a kitchen counter's own rules; which room is which kind of room; fireplaces
+and fixed cabinets as things that break wall space; receptacles placed in the model.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

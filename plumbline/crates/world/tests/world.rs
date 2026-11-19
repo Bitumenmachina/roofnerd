@@ -6334,3 +6334,21 @@ fn a_rooms_wall_area_takes_in_what_stands_inside_it_and_board_twice_is_said() {
     let said = plumbline_world::view::board_twice_said(&plumbline_world::view::pricing(&mut job).board_twice).expect("said");
     assert!(said.contains("Big's walls are priced by its wall area") && said.contains("in the price twice"), "{said}");
 }
+
+/// Call 147: the fewest receptacles a room's walls need, NEC 210.52(A)(1): runs of wall
+/// between doors, one for each 12 ft or part; Assumed, saying what it leaves out.
+#[test]
+fn a_room_counts_the_fewest_receptacles_its_walls_need() {
+    use plumbline_world::editing as ed;
+    let how = || ed::Entered { status: Status::Known, source: "made-up plan" };
+    let mut job = Job::new("Rooms", "test", "2026-11-19");
+    let level = ed::storey(&mut job, "ground", "0 ft", "9 ft", how()).unwrap();
+    let w6 = ed::wall_type(&mut job, "w6", "6 in", how()).unwrap();
+    ed::walls(&mut job, &level, &w6, &[[0.0, 0.0], [10.0, 0.0], [10.0, 12.0], [0.0, 12.0]], true, ed::Top::Height("9 ft"), how()).unwrap();
+    let shut = ed::room(&mut job, &level, "Closed room", [5.0, 6.0], how()).unwrap();
+    job.derive();
+    // 42 LF round its faces, one closed run: 3.5, so 4.
+    let d = measure(&mut job, &shut, "receptacles");
+    assert_eq!((d.value, d.status), (Some(4.0), Status::Assumed), "{d:?}");
+    assert!(d.note.contains("not drawn") && d.formula.contains("210.52(A)(1)"), "{d:?}");
+}
