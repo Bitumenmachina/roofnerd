@@ -4887,3 +4887,46 @@ less, and a test that reads anything else outside the folder still fails it.
 **What moved.** No existing number but the library's size above. Every saved job gains one line in its list of record
 kinds (`schemas`), as each record before it did. A low-slope area's list of figures has
 six more; on an area with no drains each is refused with "no drains placed on it".
+
+### Call 140. A taper's layout does not depend on the order its drains are typed in; what it rests on is said where a person reads it (2026-11-19; the second builder; the judge of call 139)
+
+The judge of call 139 found the tapered insulation's board feet changing with the order
+the drains were typed: eight drains on a 140 by 80 field came to 50,587.5, 49,469.5 or
+48,682 BF by order, against 50,700 worked by hand, with nothing flagged. The cause was
+in the ported solver's geometry: it cuts each drain's region, and each region's faces,
+with `geo`'s boolean intersection, which works on a fixed grid. An earlier cut left a
+region's corner as two corners a millionth of a foot apart, and the next cut, along the
+45° line through that corner, gave a face its point three feet from its drain; on a grid
+of drains a whole face (225 of a region's 900 SF) went. Which drain was cut first decided
+whether it happened.
+
+**What changed, in `crates/roofing/src/geom.rs`:** a convex shape is now cut by a half
+plane exactly, side by side (every region of a convex roof, every face); `geo` is kept
+only for a shape that is not convex, which it alone splits into pieces; and every shape a
+`geo` cut gives back has its corners read to a millionth of a foot, corners that then
+coincide made one. roofnerd's 122 tests pass unchanged.
+
+**And in `crates/world/src/taper.rs`:** the faces are added up against their region and
+the regions against the area; ground unaccounted for (more than 0.01 SF) refuses all six
+figures with "the taper's layout lost ground: …", never a short price. Board feet are
+given to a hundredth of a board foot, and the formula says so: the faces are cut in
+floating point, and two orders of thirty-six drains came 0.005 BF apart (half a cent at
+a dollar a board foot); written to four places, the figure would claim what the cut does
+not give.
+
+**What a person now reads.** `thickest`, `average_thickness` and `board_feet` are at least
+Assumed, with the note "nothing caps the build-up yet: it rises at the slope to the far
+edge, and the flashing height along a parapet or curb, which caps it on the roof, is not
+joined to it", because that is what they rest on (the judge: a 100 ft strip showed 13.5 in
+with no word). A drain typed twice (two within an inch) is refused: it had been counted,
+priced and laid out twice. `drains` given again says what it replaced ("2 drains in place
+of the 1 drain it had") and echoes the thickness as read, not as typed ("-0 in" was echoed).
+
+**Measured, and left:** the solve's time grows with the area, because the solver lays its
+board grid out on 4 ft squares (the bill is the next step): 250,000 SF 0.3 s, 1,000,000
+SF 1.1 s, 4,000,000 SF 3.6 s on this machine. The judge's 100,000,000 SF hung; no roof
+area is that size.
+
+**Expectations moved:** none of call 139's figures. The new test
+`a_taper_does_not_hang_on_the_order_its_drains_are_typed_in` holds the eight drains in six
+orders and a 6 by 6 grid in four to one answer.

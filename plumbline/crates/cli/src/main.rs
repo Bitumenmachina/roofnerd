@@ -2129,7 +2129,9 @@ fn draw(args: &[String]) -> Result<(), String> {
             let (status, source) = how(&status, &source)?;
             let at = points(&need(flag("--at"), "--at", "\"24,24\", or \"12,24 36,24\" for two (feet)")?)?;
             let at_drain = need(flag("--at-drain"), "--at-drain", "\"1/2 in\" (how thick the insulation is at a drain)")?;
+            let had = job.find(area).and_then(|e| job.world.get::<plumbline_world::components::Taper>(e)).and_then(|t| t.drains.value.as_ref().map(Vec::len));
             ed::drains(&mut job, area, &at, &at_drain, ed::Entered { status, source: &source })?;
+            let given = job.find(area).and_then(|e| job.world.get::<plumbline_world::components::Taper>(e)).and_then(|t| t.at_drain.value.as_ref().map(|l| units::show_length(l, &t.at_drain.unit))).unwrap_or_else(|| at_drain.trim().to_string());
             job.derive();
             let figure = |job: &mut plumbline_world::Job, name: &str| -> String {
                 let d = job.find(area).and_then(|e| job.world.get::<plumbline_world::components::Measure>(e)).and_then(|m| m.0.get(name).cloned());
@@ -2142,9 +2144,10 @@ fn draw(args: &[String]) -> Result<(), String> {
                 }
             };
             format!(
-                "{area}: {}, the insulation {} at a drain. Its taper: thickest {}, average {}, {}; valleys {}",
+                "{area}: {}{}, the insulation {} at a drain. Its taper: thickest {}, average {}, {}; valleys {}",
                 plumbline_world::view::so_many(at.len(), "drain"),
-                at_drain.trim(),
+                had.map(|n| format!(" in place of the {} it had", plumbline_world::view::so_many(n, "drain"))).unwrap_or_default(),
+                given,
                 figure(&mut job, "thickest"),
                 figure(&mut job, "average_thickness"),
                 figure(&mut job, "board_feet"),

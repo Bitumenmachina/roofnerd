@@ -7289,6 +7289,32 @@ saved job's list of record kinds gains `pl::taper`.
 | A judge on another model | **owed**: started after this commit; its table goes below when it reports |
 | The window | nothing in the window changed but the figures an area lists; no window demonstration was written for this piece. Drawing a drain in the window is owed (research/roofnerd-port.md) |
 
+**Judged the same day** (an agent on another model, briefed cold as a commercial roofing
+estimator; its notes are kept outside the repository). It worked by hand and matched:
+the 48 ft square, off-centre, corner and edge drains, two drains, L shapes with one and
+three drains, opposite arms of a concave area, 1/8:12 and 1/2:12, the starter
+assembly's quantities and money, overhead and profit, every refusal (job left byte for
+byte), an Unknown or 0 pitch, save and read-back, the workbook's formulas. What it
+found, and where each stands:
+
+| | Found | Where it stands |
+|---|---|---|
+| J-T1 | With many drains (8 on 140 by 80; grids of 4×4 to 6×6) the board feet change with the order the drains are typed, up to 4 %, unflagged | **Fixed** (call 140): the solver's cuts lost a face where a 45° cut met a corner; a convex shape is now cut exactly, a cut's corners are read to a millionth of a foot, and ground a layout loses refuses the figures. The eight drains give 50,700 BF, the judge's hand figure, in every order; a new test holds six orders and a shuffled 6×6 grid |
+| J-T2 | The same drain typed twice is two drains: the insulation and the drain line double | **Fixed**: two drains within an inch are refused, at entry and when the file is read |
+| J-T3 | "Nothing caps the build-up" is only in the formula; a 100 ft strip shows 13.5 in thickest with no word where a person looks | **Fixed**: thickest, average and board feet are at least Assumed and say why in `show`, `vif` and the flagged list |
+| J-T4 | A 10,000 ft square area with a drain hangs `lines`, `takeoff`, `price`, `vif` | **Measured and left**: the time grows with the area (the solver lays its board grid); 250,000 SF 0.3 s, 1,000,000 SF 1.1 s, 4,000,000 SF 3.6 s. No roof area is 100,000,000 SF |
+| J-T5 | The IFC model shows the level deck at the area's pitch, and does not write the drains or say they were left out | open |
+| J-T6 | `lines` lists a ridge and two rakes on a low-slope area (it reads the area as a plane from its eave) | open; older than this piece |
+| J-T7 | A bare `0` is taken as a thickness at the drain, and "-0 in" is echoed | **Echo fixed** (the thickness is said as read). A thickness of 0 at the drain is kept: a taper can start from nothing over a flat base layer |
+| J-T8 | `drains` given again replaces the drains without saying so | **Fixed**: "2 drains in place of the 1 drain it had" |
+| J-T9 | The starter assembly on an area with no drains: the estimate gives "no price" as the reason, not "no drains" | open |
+
+**After the judge's fixes (call 140), on the tree as committed with them:** `cargo test
+--workspace` 459 pass, 0 fail (roofnerd's 122 unchanged among them); `demos/taper.sh`
+PASS, now also checking a drain typed twice, "in place of", and the uncapped note; the
+three gates and the licences PASS; `tools/committed.sh` is run before the push and its
+result is in the commit's message. `tools/portmap.sh` still cannot be run here.
+
 **The window run on the framing build (d47986e, frozen copy) was cut off twice by the
 machine restarting.** What it reached: bringw, buildw, carryw, clashw, d4w, d5w, draww
 pass. **dressw failed one measure**: "the north wall, turned to" read (160, 162, 163)
@@ -7296,7 +7322,8 @@ where cedar shingles were wanted. The picture (looked at) shows the north wall i
 shingles over the stone wainscot, dressed right; the turn landed short of where the
 script measures, and the box fell on the white lap siding at the corner. That is the
 slow renderer losing part of a turn, not the dressing. It is to be run again alone; the
-rest of the window run (dressw on) is owed and will be recorded here.
+rest of the window run (dressw on) is owed and will be recorded here. **Run again: dressw
+PASS** (330 s), so the miss was the lost turn; fieldw and firstw PASS; the rest running.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

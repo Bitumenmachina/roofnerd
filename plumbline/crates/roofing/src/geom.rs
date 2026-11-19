@@ -323,11 +323,36 @@ fn coords_of(ring: &[Point]) -> LineString<f64> {
     LineString::from(ring.iter().map(|p| Coord { x: p.x, y: p.y }).collect::<Vec<_>>())
 }
 
+/// Where a cut's corners are read to: a millionth of a foot.
+///
+/// `geo`'s boolean operations work on a fixed grid and hand a corner back up to half
+/// a millionth of a foot from where it belongs, sometimes as two corners that close
+/// together. Cut again along a line through such a pair, they gave a face its point
+/// three feet from the drain it rises from, and which drain was cut first decided
+/// whether the pair was there: eight drains on a 140 by 80 field lost 45 SF of
+/// insulation in one order and not in another (BuildOS call 140). Every shape a cut
+/// gives back is read to this, and corners that then coincide are one corner.
+const CORNER_FT: f64 = 1.0e-6;
+
 fn points_of(ring: &LineString<f64>) -> Vec<Point> {
-    let mut out: Vec<Point> = ring.coords().map(|c| Point::new(c.x, c.y)).collect();
+    tidy_ring(ring.coords().map(|c| Point::new(c.x, c.y)).collect())
+}
+
+/// A ring's corners read to `CORNER_FT`, corners that then coincide made one, and the
+/// ring left open.
+fn tidy_ring(ring: Vec<Point>) -> Vec<Point> {
+    let read = |x: f64| (x / CORNER_FT).round() * CORNER_FT + 0.0;
+    let mut out: Vec<Point> = Vec::new();
+    for c in ring {
+        let p = Point::new(read(c.x), read(c.y));
+        if out.last().is_some_and(|q: &Point| (q.x - p.x).abs() < CORNER_FT / 2.0 && (q.y - p.y).abs() < CORNER_FT / 2.0) {
+            continue;
+        }
+        out.push(p);
+    }
     // `geo` closes a ring by repeating its first point; a ring in this program is
     // open, the way a trace arrives from the sheet.
-    if out.len() > 1 && out[0] == out[out.len() - 1] {
+    while out.len() > 1 && (out[0].x - out[out.len() - 1].x).abs() < CORNER_FT / 2.0 && (out[0].y - out[out.len() - 1].y).abs() < CORNER_FT / 2.0 {
         out.pop();
     }
     out
@@ -397,8 +422,74 @@ pub fn governed_by(origin: Point, directions: &[Point], mine: usize) -> Vec<Half
         .collect()
 }
 
+/// Is the ring convex, with no holes in its shape: every corner turns the same way.
+fn convex(shape: &Shape) -> bool {
+    let r = &shape.ring;
+    if !shape.holes.is_empty() || r.len() < 3 {
+        return false;
+    }
+    let mut sign = 0.0f64;
+    for i in 0..r.len() {
+        let (a, b, c) = (r[i], r[(i + 1) % r.len()], r[(i + 2) % r.len()]);
+        let turn = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
+        // A corner on a straight line turns neither way and is no objection.
+        if turn.abs() <= 1e-9 * (1.0 + (b.x - a.x).hypot(b.y - a.y) * (c.x - b.x).hypot(c.y - b.y)) {
+            continue;
+        }
+        if sign == 0.0 {
+            sign = turn.signum();
+        } else if turn.signum() != sign {
+            return false;
+        }
+    }
+    true
+}
+
+/// A convex ring cut by one half plane, exactly: each side kept where it is inside,
+/// and a corner put where a side crosses the line. What is left of a convex ring is
+/// convex, so this is the whole answer, with nothing a fixed grid can drop.
+fn clip_convex(ring: &[Point], half: HalfPlane) -> Vec<Point> {
+    let mut out = Vec::with_capacity(ring.len() + 1);
+    for i in 0..ring.len() {
+        let (a, b) = (ring[i], ring[(i + 1) % ring.len()]);
+        let (da, db) = (half.beyond(a), half.beyond(b));
+        if da <= 0.0 {
+            out.push(a);
+        }
+        if (da < 0.0 && db > 0.0) || (da > 0.0 && db < 0.0) {
+            let t = da / (da - db);
+            out.push(Point::new(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t));
+        }
+    }
+    out
+}
+
 /// Cut shapes by half planes, one after another.
+///
+/// A convex shape is cut exactly, side by side (`clip_convex`); `geo`'s boolean
+/// intersection is kept for a shape that is not convex, which it alone splits into its
+/// pieces. On a grid of drains a 45° cut passes through a region's corner exactly, and
+/// there `geo` dropped a whole face (900 SF of region, 675 SF of faces: BuildOS call
+/// 140).
 pub fn cut_by(shapes: &[Shape], halves: &[HalfPlane], reach: f64) -> Vec<Shape> {
+    if shapes.iter().all(convex) {
+        let mut out = Vec::new();
+        for shape in shapes {
+            let mut ring = shape.ring.clone();
+            for half in halves {
+                if ring.len() < 3 {
+                    break;
+                }
+                ring = clip_convex(&ring, *half);
+            }
+            let ring = tidy_ring(ring);
+            let kept = Shape::of(ring);
+            if kept.ring.len() >= 3 && kept.square_feet() > 1e-9 {
+                out.push(kept);
+            }
+        }
+        return out;
+    }
     let mut now: MultiPolygon<f64> = MultiPolygon::new(shapes.iter().map(polygon_of).collect());
     for half in halves {
         if now.0.is_empty() {

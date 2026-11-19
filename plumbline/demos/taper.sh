@@ -57,9 +57,12 @@ says "$T/est.txt" "\$640.00"
 
 echo
 echo "== 3. Two drains, 12,24 and 36,24: two regions 24 ft by 48 ft =="
-"$P" drains "$J" "$A" --at "12,24 36,24" --at-drain "1/2 in" --status Assumed --source "made-up: the designer's minimum" >/dev/null
+"$P" drains "$J" "$A" --at "12,24 36,24" --at-drain "1/2 in" --status Assumed --source "made-up: the designer's minimum" > "$T/out.txt"
+says "$T/out.txt" "2 drains in place of the 1 drain it had"
 "$P" show "$J" > "$T/show.txt"; block "$A" > "$T/area.txt"
 says "$T/area.txt" "~ drains           2 EA"
+# What the thickest rests on is said where a person reads it (call 140).
+says "$T/show.txt" "thickest: 6.5 in (nothing caps the build-up yet"
 says "$T/area.txt" "~ thickest         6.5 in"
 # The average run over a 12 by 24 quarter region is 3,744 / 288 = 13 ft: 0.5 + 0.25 x 13.
 says "$T/area.txt" "~ average thickness 3.75 in"
@@ -76,6 +79,8 @@ echo "== 4. Refused, each in words, the job unchanged =="
 cp "$J" "$T/before.json"
 refused "$T/before.json" "$P" drains "$J" "$A" --at "60,24" --at-drain "1/2 in" --status Assumed --source "made-up"
 says "$T/out.txt" "the drain at 60,24 is not on $A: a drain goes inside the area's outline"
+refused "$T/before.json" "$P" drains "$J" "$A" --at "12,24 12,24" --at-drain "1/2 in" --status Assumed --source "made-up"
+says "$T/out.txt" "the drain at 12,24 is given twice"
 "$P" roof "$J" "Porch" --points "60,0 90,0 90,20 60,20" --pitch 6:12 --eave-height "9 ft" --status Known --source "made-up roof plan" >/dev/null
 cp "$J" "$T/before.json"
 PLANE="$("$P" show "$J" | grep -oE 'plane-[0-9]+' | head -1)"

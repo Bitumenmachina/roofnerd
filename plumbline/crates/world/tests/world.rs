@@ -6180,3 +6180,54 @@ fn a_low_slope_areas_taper_is_laid_out_to_its_drains() {
     let why = load(&put).err().expect("refused");
     assert!(why.contains("only a low-slope area can"), "{why}");
 }
+
+/// Judged 2026-11-19 (call 140): eight drains on a 140 by 80 field gave 50,587.5 BF in
+/// the order typed and 49,469.5 or 48,682 in others; one region's faces lost 45 SF when
+/// a cut met a corner the solver had left as two. The order the drains are typed in
+/// changes nothing, and a drain typed twice is refused.
+#[test]
+fn a_taper_does_not_hang_on_the_order_its_drains_are_typed_in() {
+    use plumbline_world::editing as ed;
+    let how = || ed::Entered { status: Status::Known, source: "made-up roof plan" };
+    let bf = |ring: &[[f64; 2]], drains: &[[f64; 2]]| -> Derived {
+        let mut job = Job::new("Flat roof", "test", "2026-11-19");
+        let area = ed::low_slope(&mut job, "Main roof", ring, "1/4:12", "11 ft", how()).unwrap();
+        ed::drains(&mut job, &area, drains, "1 in", how()).unwrap();
+        job.derive();
+        measure(&mut job, &area, "board_feet")
+    };
+    // A shuffle that is the same every run.
+    let shuffled = |pts: &[[f64; 2]], seed: u64| -> Vec<[f64; 2]> {
+        let mut v = pts.to_vec();
+        let mut x = seed;
+        for i in (1..v.len()).rev() {
+            x = x.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            v.swap(i, (x >> 33) as usize % (i + 1));
+        }
+        v
+    };
+    let field = [[0.0, 0.0], [140.0, 0.0], [140.0, 80.0], [0.0, 80.0]];
+    let eight: Vec<[f64; 2]> = [20.0, 50.0].iter().flat_map(|y| [20.0, 50.0, 80.0, 110.0].iter().map(move |x| [*x, *y])).collect();
+    let first = bf(&field, &eight);
+    assert_eq!(first.status, Status::Assumed, "it rests on the uncapped build-up: {first:?}");
+    assert!(first.note.contains("nothing caps the build-up yet"), "{first:?}");
+    let mut reversed = eight.clone();
+    reversed.reverse();
+    assert_eq!(bf(&field, &reversed).value, first.value);
+    for seed in 1..6 {
+        assert_eq!(bf(&field, &shuffled(&eight, seed)).value, first.value, "seed {seed}");
+    }
+    let square = [[0.0, 0.0], [200.0, 0.0], [200.0, 200.0], [0.0, 200.0]];
+    let grid: Vec<[f64; 2]> = (0..6).flat_map(|j| (0..6).map(move |i| [25.0 + 30.0 * i as f64, 25.0 + 30.0 * j as f64])).collect();
+    let in_order = bf(&square, &grid).value;
+    assert!(in_order.is_some());
+    for seed in 1..4 {
+        let got = bf(&square, &shuffled(&grid, seed));
+        assert_eq!(got.value, in_order, "seed {seed}: {got:?}");
+    }
+    // The same drain twice is one drain typed twice.
+    let mut job = Job::new("Flat roof", "test", "2026-11-19");
+    let area = ed::low_slope(&mut job, "Main roof", &field, "1/4:12", "11 ft", how()).unwrap();
+    let why = ed::drains(&mut job, &area, &[[20.0, 10.0], [20.0, 10.0]], "1 in", how()).unwrap_err();
+    assert!(why.contains("is given twice"), "{why}");
+}

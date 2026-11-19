@@ -16,11 +16,16 @@ use plumbline_roofing::{inside, Point, Shape};
 use crate::components::{Outline, Pitch, Taper, K_OUTLINE, K_PITCH, K_TAPER};
 use crate::value::{Derived, Status};
 
+/// What a figure that rests on the uncapped build-up says of itself.
+const UNCAPPED: &str = "nothing caps the build-up yet: it rises at the slope to the far edge, and the flashing height along a parapet or curb, which caps it on the roof, is not joined to it";
+/// More ground than this unaccounted for, and the layout is refused.
+const LOST_SF: f64 = 0.01;
+
 const F_DRAINS: &str = "the drains placed on it";
 const F_THINNEST: &str = "the thickness at the drain";
 const F_THICKEST: &str = "the thickness at the drain + the pitch (in per ft) × the longest run to a drain, square along the boards (NRCA four-way layout); nothing caps the build-up yet";
 const F_AVERAGE: &str = "board_feet ÷ plan_area";
-const F_BOARD_FEET: &str = "each face of the layout: its area × its thickness at its middle, added up (NRCA four-way layout to the drains, at the area's pitch)";
+const F_BOARD_FEET: &str = "each face of the layout: its area × its thickness at its middle, added up, to a hundredth of a board foot (NRCA four-way layout to the drains, at the area's pitch)";
 const F_VALLEYS: &str = "the 45° valley lines of the layout, added up";
 
 /// The six figures of a low-slope area's taper, each with its formula and inputs.
@@ -83,14 +88,43 @@ pub fn measures(me: &str, outline: Option<&Outline>, pitch: Option<&Pitch>, tape
             return m;
         }
     };
+    // Every piece of ground is laid once: each region's faces add up to the region, and
+    // the regions to the area. A layout that lost ground (as one did, call 140) is
+    // refused, never priced short.
+    for r in &field.regions {
+        let faces: f64 = r.facets.iter().filter_map(|f| area_and_middle(&f.shape).map(|(a, _)| a)).sum();
+        if (faces - r.square_feet).abs() > LOST_SF {
+            refuse_all(&mut m, &format!("the taper's layout lost ground: the drain at {},{} has {} SF and its faces come to {} SF", tidy(r.drain.x), tidy(r.drain.y), tidy(r.square_feet), tidy(faces)), true);
+            return m;
+        }
+    }
+    let regions: f64 = field.regions.iter().map(|r| r.square_feet).sum();
+    if (regions - field.square_feet).abs() > LOST_SF {
+        refuse_all(&mut m, &format!("the taper's layout lost ground: the area is {} SF and its drains' regions come to {} SF", tidy(field.square_feet), tidy(regions)), true);
+        return m;
+    }
+    // Nothing caps the build-up yet (call 139): where it is thickest rests on that, and
+    // says so where a person reads it, not only in its formula (judged 2026-11-19).
     let statuses = [outline.map(|o| o.points.status).unwrap_or(Status::Unknown), pitch.map(|p| p.0.status).unwrap_or(Status::Unknown), taper.drains.status, taper.at_drain.status];
+    let uncapped = [statuses[0], statuses[1], statuses[2], statuses[3], Status::Assumed];
+    // To a hundredth of a board foot: the faces are cut in floating point, and on a roof
+    // of thirty-six drains two orders of the same drains came 0.005 BF apart (half a
+    // cent at a dollar a board foot). Written to four places it would claim what the
+    // cut does not give.
     let board_feet: f64 = field.regions.iter().flat_map(|r| r.facets.iter().map(move |f| face_board_feet(f, &r.planes, field.start_inches, field.cap_inches))).sum();
+    let board_feet = (board_feet * 100.0).round() / 100.0 + 0.0;
     let valleys: f64 = field.regions.iter().flat_map(|r| r.valleys.iter()).map(|v| read_to(v.a).distance(read_to(v.b))).sum();
     m.insert("thinnest".into(), Derived::new(field.thin_inches, "in", &statuses, F_THINNEST, &inputs));
-    m.insert("thickest".into(), Derived::new(field.thick_inches, "in", &statuses, F_THICKEST, &inputs));
-    m.insert("board_feet".into(), Derived::new(Some(board_feet), "BF", &statuses, F_BOARD_FEET, &inputs));
+    let uncapped_said = |mut d: Derived| {
+        if d.value.is_some() {
+            d.note = UNCAPPED.to_string();
+        }
+        d
+    };
+    m.insert("thickest".into(), uncapped_said(Derived::new(field.thick_inches, "in", &uncapped, F_THICKEST, &inputs)));
+    m.insert("board_feet".into(), uncapped_said(Derived::new(Some(board_feet), "BF", &uncapped, F_BOARD_FEET, &inputs)));
     let average = if field.square_feet > 0.0 { Some(board_feet / field.square_feet) } else { None };
-    m.insert("average_thickness".into(), Derived::new(average, "in", &statuses, F_AVERAGE, &inputs));
+    m.insert("average_thickness".into(), uncapped_said(Derived::new(average, "in", &uncapped, F_AVERAGE, &inputs)));
     m.insert("valley_length".into(), Derived::new(Some(valleys), "LF", &statuses, F_VALLEYS, &inputs));
     m
 }
