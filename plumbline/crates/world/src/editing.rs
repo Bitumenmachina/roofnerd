@@ -37,6 +37,7 @@ pub use measure::{measure, takes, Measured, Reading};
 
 use crate::building::{self, InSystem, SystemInfo};
 use crate::components::*;
+use crate::check;
 use crate::file;
 use crate::job::Job;
 use crate::units::{self, Len};
@@ -970,4 +971,51 @@ pub fn toward(last: P2, pointer: P2, length_ft: f64) -> P2 {
     // further than that: what is typed has to multiply to the cent.
     let round = |x: f64| (x * 1e8).round() / 1e8 + 0.0;
     [round(last[0] + ux * length_ft), round(last[1] + uy * length_ft)]
+}
+
+/// A low-slope area drawn from its outline (call 139): a roof of its own under the job,
+/// and under it the area, its outline traced on the plan, its pitch, and how high its
+/// deck is. Its first edge is the edge its pitch is measured from.
+pub fn low_slope(job: &mut Job, name: &str, points: &[P2], pitch: &str, deck_height: &str, how: Entered) -> Result<String, String> {
+    all_or_nothing(job, |job| {
+        let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
+        if points.len() < 3 {
+            return Err(format!("a low-slope area is an outline of 3 corners or more; {} given", points.len()));
+        }
+        let roof = job.add(&root, Kind::Roof, name)?;
+        let area = job.add(&roof, Kind::LowSlopeArea, "field")?;
+        let outline = Outline { points: how.val(points.to_vec(), units::FT), eave: how.val([points[0], points[1]], units::FT), eave_height: how.length(deck_height)? };
+        check::outline(&area, Kind::LowSlopeArea, &outline)?;
+        let p = Pitch(how.val(units::parse_pitch(pitch)?, units::PITCH));
+        check::pitch(&area, Kind::LowSlopeArea, &p)?;
+        if p.0.value.is_some_and(|x| x > 2.0) {
+            return Err(format!("{area}: a pitch of {pitch} is a steep roof, not a low-slope one (a low-slope roof is 2:12 or less); draw it with `roof`"));
+        }
+        job.put(&area, outline)?;
+        job.put(&area, p)?;
+        Ok(area)
+    })
+}
+
+/// The roof drains on a low-slope area and how thick its tapered insulation is at them
+/// (call 139). Given again, they replace the drains it had. Each has to be on the area.
+pub fn drains(job: &mut Job, area: &str, at: &[P2], at_drain: &str, how: Entered) -> Result<(), String> {
+    all_or_nothing(job, |job| {
+        let kind = job.kind(area).ok_or_else(|| format!("there is no {area} in this job"))?;
+        if kind != Kind::LowSlopeArea {
+            return Err(format!("{area} is {kind:#}; only a low-slope area takes roof drains"));
+        }
+        let e = job.find(area).ok_or_else(|| format!("there is no {area} in this job"))?;
+        let ring = job.world.get::<Outline>(e).and_then(|o| o.points_ft()).ok_or_else(|| format!("{area} has no outline to put drains on"))?;
+        let ring: Vec<plumbline_roofing::Point> = ring.iter().map(|p| plumbline_roofing::Point::new(p[0], p[1])).collect();
+        for d in at {
+            if !plumbline_roofing::inside(plumbline_roofing::Point::new(d[0], d[1]), &ring) {
+                return Err(format!("the drain at {},{} is not on {area}: a drain goes inside the area's outline", d[0], d[1]));
+            }
+        }
+        let t = Taper { drains: how.val(at.to_vec(), units::FT), at_drain: how.length(at_drain)? };
+        check::taper(area, kind, &t)?;
+        job.put(area, t)?;
+        Ok(())
+    })
 }

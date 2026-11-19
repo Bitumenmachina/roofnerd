@@ -7204,6 +7204,100 @@ unplaced opening refused: held against counts by hand.
 | J-F6 | Missing: precut stud lengths, blocking and fire blocking, nails and hangers, headers by load, more jacks on wide openings, lapped top plates | Open, listed in call 137's "not yet" |
 | J-F7 | A name like "Sheathing: 2x6 stud pack, 16 in" reads as framing; two framing lines on one wall, the first drives the layout; an unplaced opening also refuses the plates | Open, minor |
 
+## Drains and the tapered insulation on a low-slope area: a demonstration, written before it is built (`demos/taper.sh`, call 139)
+
+From an empty job, at the command line. Every figure below is worked by hand first, on
+NRCA's own figure 4-11 (*Membrane Roof Systems* 2019, p. 165: a square roof, one drain in
+the middle, four planes at one slope). Prices are made up.
+
+1. `new`, then `low-slope` draws a 48 ft square low-slope area, `0,0 48,0 48,48 0,48`, at
+   `1/4:12`, its deck 11 ft up. Its plan area is 48 × 48 = **2,304 SF**. Its six taper
+   figures are each refused: "no drains placed on it".
+2. `drains` puts one drain at `24,24`, the insulation `1/2 in` thick there (Assumed, the
+   designer's minimum). By hand, with the thickness at a place = 0.5 in + 0.25 in/ft ×
+   the greater of its two square runs to the drain (NRCA p. 165):
+   - drains **1 EA**; thinnest **0.5 in** (at the drain);
+   - thickest: every edge is 24 ft from the drain square along the boards, so
+     0.5 + 0.25 × 24 = **6.5 in**, the whole perimeter;
+   - the four faces are triangles from the drain to each side, each 576 SF; a
+     triangle's middle is two-thirds of the way out, 16 ft, so each is 0.5 + 0.25 × 16 =
+     4.5 in at its middle: average **4.5 in**, and 2,304 SF × 4.5 in = **10,368 BF**;
+   - the valleys run from the drain to the four corners at 45°: 4 × 24 × √2 =
+     **135.7645 LF**.
+   Every figure is Assumed (the thickness at the drain is).
+3. Two lines on the area: "Tapered polyiso insulation, 1/4 in per ft" by `board_feet`,
+   Division 7, at $0.95/BF: 10,368 × 0.95 = **$9,849.60**; "Roof drain, cast iron, set"
+   by `drains`, Division 15, at $640: **$640.00**.
+4. `drains` again with two drains, `12,24 36,24`: the line halfway between them, x = 24,
+   splits the roof into two regions 24 by 48, each with its drain in its middle. A
+   region's thickness is 0.5 + 0.25 × the greater of |dx| ≤ 12 and |dy| ≤ 24.
+   - thickest is still at the corners and the ends of the middle line, 24 ft from a
+     drain: **6.5 in**;
+   - the average run over a quarter region, 12 by 24 (288 SF): where y ≥ x it is
+     ∫₀¹² ∫ₓ²⁴ y dy dx = 3,456 − 288 = 3,168; where x > y, ∫₀¹² x² dx = 576; together
+     3,744 ÷ 288 = 13 ft. Average **0.5 + 0.25 × 13 = 3.75 in**; 2,304 × 3.75 =
+     **8,640 BF**;
+   - each region has four valleys from its drain at 45°, each until it meets the long
+     sides 12 ft off: 8 × 12 × √2 = **135.7645 LF** (the same total);
+   - the insulation line becomes 8,640 × 0.95 = **$8,208.00** and the drains 2 × 640 =
+     **$1,280.00**.
+5. Refused, each in words, the job unchanged: a drain at `60,24` (not on the area); the
+   drains on a wall's level or a roof plane (only a low-slope area takes drains); a line
+   whose formula multiplies `thickest` (a thickness is not used in a formula).
+6. The same roof, one drain, given the starter library's "Low-slope roof, tapered
+   insulation, single-ply membrane": the polyiso 10,368 × 1.05 = **10,886.4 BF**; the
+   cover board on the surface, 2,304 × √(1 + (0.25/12)²) = 2,304.4999 SF, × 1.05 =
+   2,419.7249 SF ÷ 32 = 75.6, **76 sheets**; the membrane 2,304.4999 × 1.10 = 2,534.9499
+   SF, **3 rolls** of 1,000 SF; **1 drain**; the labor on **23.045 SQ**.
+7. The job saved and read back gives the same figures and nothing is said to be stale.
+
+## Drains and the tapered insulation. What was run and what it showed (2026-11-19; the second builder)
+
+**Built (call 139).** A low-slope area holds `pl::taper` (its drains, the insulation's
+thickness at them); `crates/world/src/taper.rs` hands the area to roofnerd's solver
+(`crates/roofing`, call 138) and reads back six figures: `drains`, `thinnest`,
+`thickest`, `average_thickness`, `board_feet`, `valley_length`. Board feet are each face
+of the layout's area times its thickness at its middle (a face is one plane, so exact).
+Two verbs: `plumbline low-slope` and `plumbline drains`. A starter assembly, "Low-slope
+roof, tapered insulation, single-ply membrane". A line on an area with no drains that
+asks for a taper figure is told so, in words.
+
+**Found while building, and fixed.** (1) Two drains first gave 8,640.0001 BF, not the
+8,640 worked by hand: the solver cuts its regions with `geo`'s boolean operations, which
+work on a fixed grid and leave a corner up to half a millionth of a foot out. The faces
+and valleys are now read to a hundred-thousandth of a foot (call 139). (2) With six
+figures refused on every low-slope area that has no drains, the sample's flat roof would
+have shown six new "unknown" flags; an area with no drains now has no taper figures, and
+a line that asks for one is told there are no drains. (3) "uses thickest, which is in in"
+now reads "which is a thickness, in inches".
+
+**What changed that a person sees.** A low-slope area with drains lists six more figures.
+The starter library is 35 assemblies, 164 lines, 24 of them labor (was 34, 159, 23):
+the tests and demonstrations that count it moved with it (call 139 names them). Every
+saved job's list of record kinds gains `pl::taper`.
+
+**Run, on the tree as committed with this section:**
+
+| What | Result |
+|---|---|
+| `cargo test --workspace` | 458 pass, 0 fail (was 457; the new one is `a_low_slope_areas_taper_is_laid_out_to_its_drains`) |
+| `demos/taper.sh` | PASS: every figure in the demonstration above, to the hand figures |
+| `demos/library.sh`, `foundation.sh`, `framing.sh`, `shingle.sh`, `d1.sh`, `d4.sh`, `house.sh` | PASS |
+| `tools/gate-language.sh`, `gate-egress.sh`, `gate-clientdata.sh --all`, `tools/licenses.sh` | PASS |
+| `tools/committed.sh` | first FAIL: three of roofnerd's tests read the earlier program's `roof.ts` and `model.ts`, outside the folder the check lays out (the call 138 commit failed it too, unnoticed). The check now lays those two committed files out where they stand (call 139); then PASS |
+| `tools/portmap.sh` | **not run**: BIMCraft's source was lost when the machine restarted and could not be fetched in this session. `low_slope` and `drains` are in `PORTMAP.md` as ours, each saying its grep was not run. Run it with the source before the next push that adds a public item to the building model |
+| A judge on another model | **owed**: started after this commit; its table goes below when it reports |
+| The window | nothing in the window changed but the figures an area lists; no window demonstration was written for this piece. Drawing a drain in the window is owed (research/roofnerd-port.md) |
+
+**The window run on the framing build (d47986e, frozen copy) was cut off twice by the
+machine restarting.** What it reached: bringw, buildw, carryw, clashw, d4w, d5w, draww
+pass. **dressw failed one measure**: "the north wall, turned to" read (160, 162, 163)
+where cedar shingles were wanted. The picture (looked at) shows the north wall in cedar
+shingles over the stone wainscot, dressed right; the turn landed short of where the
+script measures, and the box fell on the white lap siding at the corner. That is the
+slow renderer losing part of a turn, not the dressing. It is to be run again alone; the
+rest of the window run (dressw on) is owed and will be recorded here.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

@@ -158,16 +158,16 @@ fn the_estimate_says_what_has_nothing_priced_on_it() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
-/// The starter library the program ships with comes into an empty job whole (34
+/// The starter library the program ships with comes into an empty job whole (35
 /// assemblies, none refused: call 132 added the footing's, the foundation wall's and the basement wall's,
-/// call 135 the whole shingle roof's), goes back out byte for byte as the file in the repository,
+/// call 135 the whole shingle roof's, call 139 the low-slope roof's), goes back out byte for byte as the file in the repository,
 /// has a line in every one of the sixteen divisions, and has no price in it.
 #[test]
 fn the_starter_library_comes_in_whole_goes_out_as_it_was_and_has_no_price_in_it() {
     let dir = folder("starter");
     assert!(run(&dir, &["new", "j.json", "Starter (not a real job)"]).0);
     let (ok, said) = run(&dir, &["import", "assemblies", "j.json", "starter"]);
-    assert!(ok && said.contains("set: 34") && said.contains("not used: 0"), "{said}");
+    assert!(ok && said.contains("set: 35") && said.contains("not used: 0"), "{said}");
     assert!(run(&dir, &["export", "assemblies", "j.json", "out.csv"]).0);
     let out = std::fs::read_to_string(dir.join("out.csv")).unwrap();
     let shipped = include_str!("../../../library/sixteen-divisions.csv");
@@ -199,7 +199,7 @@ fn the_starter_library_comes_in_whole_goes_out_as_it_was_and_has_no_price_in_it(
     assert_eq!(divisions.into_iter().collect::<Vec<_>>(), (1..=16).collect::<Vec<u8>>());
     // Brought in a second time, it is the same as the job already has.
     let (ok, said) = run(&dir, &["import", "assemblies", "j.json", "starter"]);
-    assert!(ok && said.contains("set: 0") && said.contains("the same as the job already has: 159"), "{said}");
+    assert!(ok && said.contains("set: 0") && said.contains("the same as the job already has: 164"), "{said}");
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

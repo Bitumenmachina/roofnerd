@@ -164,6 +164,8 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 
 **In the model:** Siding and roofing as finishes; gutters where priced; with the Finishes switch off, the weather barrier on each wall that has one priced and flashing round each opening that has it priced.
 
+**A low-slope roof's tapered insulation** (call 139): `plumbline low-slope` draws a low-slope area, `plumbline drains` places its roof drains and the insulation's thickness at them, and roofnerd's solver (`crates/roofing`) lays the taper out on NRCA's four-way layout (*Membrane Roof Systems* 2019, ch. 4) at the area's pitch. The area then has `drains` (EA), `thinnest`, `thickest` and `average_thickness` (in), `board_feet` (BF, what tapered insulation is quoted by) and `valley_length` (LF); a line is priced by `board_feet` or `drains`. Not yet: the build-up capped at the flashing height along a parapet, crickets and sumps, the boards by letter, and a drain drawn in the window. In the starter assemblies: "Low-slope roof, tapered insulation, single-ply membrane" (goes on a low-slope area): the tapered polyiso by `board_feet`, a 1/2 in cover board in 4 ft by 8 ft sheets, 60 mil TPO in 1,000 SF rolls, the drains (Division 15, subcontract) and the labor, each rule Assumed with its reason.
+
 **What the program knows, and where from:** A weather barrier is read by the trade's words for it (weather barrier, house wrap, building paper, WRB, air barrier). **Judgment 20 expected, not yet verified:** "Tyvek" and "felt paper" are not read. Flashing is drawn 4 in wide, a drawing size; priced by the opening.
 
 **In the starter assemblies the program ships with** (no prices in them; `plumbline import assemblies <job> starter`):

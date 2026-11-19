@@ -36,7 +36,7 @@ echo "    nothing priced names a framing yet: no studs are counted"
 echo
 echo "== Each given the starter library's lap-siding wall =="
 "$P" import assemblies "$J" starter > "$T/in.txt"
-says "$T/in.txt" "set: 34"
+says "$T/in.txt" "set: 35"
 for w in "$PLAIN" "$OPEN"; do "$P" apply "$J" "$w" "Exterior wall, 2x6, lap siding" --source "made-up plan" >/dev/null; done
 "$P" show "$J" > "$T/show.txt"; block "$PLAIN" > "$T/plain.txt"; block "$OPEN" > "$T/open.txt"
 

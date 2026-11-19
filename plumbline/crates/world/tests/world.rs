@@ -6129,3 +6129,54 @@ fn a_quantity_is_written_as_a_takeoff_sheet_writes_it() {
     // Two figures side by side say what goes between them.
     assert!(parse("face_area 0.10").unwrap_err().ends_with("put +, -, x or / between them"));
 }
+
+/// Call 139: a low-slope area's drains and its tapered insulation, laid out by roofnerd's
+/// solver on NRCA's four-way layout. Fig. 4-11's square roof, worked by hand in STATUS.md.
+#[test]
+fn a_low_slope_areas_taper_is_laid_out_to_its_drains() {
+    use plumbline_world::editing as ed;
+    let how = || ed::Entered { status: Status::Assumed, source: "made-up roof plan" };
+    let mut job = Job::new("Flat roof", "test", "2026-11-19");
+    let area = ed::low_slope(&mut job, "Main roof", &[[0.0, 0.0], [48.0, 0.0], [48.0, 48.0], [0.0, 48.0]], "1/4:12", "11 ft", how()).unwrap();
+    job.derive();
+    // No drains: no taper, and nothing flagged for it.
+    for name in plumbline_world::taper::FIGURES {
+        assert!(job.find(&area).and_then(|e| job.world.get::<Measure>(e)).is_some_and(|m| !m.0.contains_key(name)), "{name}");
+    }
+    ed::drains(&mut job, &area, &[[24.0, 24.0]], "1/2 in", how()).unwrap();
+    job.derive();
+    let got = |job: &mut Job, n: &str| measure(job, &area, n).value;
+    assert_eq!(got(&mut job, "drains"), Some(1.0));
+    assert_eq!(got(&mut job, "thinnest"), Some(0.5));
+    assert_eq!(got(&mut job, "thickest"), Some(6.5));
+    assert_eq!(got(&mut job, "average_thickness"), Some(4.5));
+    assert_eq!(got(&mut job, "board_feet"), Some(10368.0));
+    assert_eq!(got(&mut job, "valley_length"), Some(135.7645));
+    assert_eq!(measure(&mut job, &area, "board_feet").status, Status::Assumed);
+    // Two drains: two regions 24 by 48.
+    ed::drains(&mut job, &area, &[[12.0, 24.0], [36.0, 24.0]], "1/2 in", how()).unwrap();
+    job.derive();
+    assert_eq!(got(&mut job, "average_thickness"), Some(3.75));
+    assert_eq!(got(&mut job, "board_feet"), Some(8640.0));
+    // A drain off the area is refused and the job keeps what it had.
+    let before = save(&mut job);
+    let why = ed::drains(&mut job, &area, &[[60.0, 24.0]], "1/2 in", how()).unwrap_err();
+    assert!(why.contains("is not on"), "{why}");
+    assert_eq!(save(&mut job), before);
+    // Read back: the same figures.
+    let (mut loaded, _) = load(&before).unwrap();
+    assert_eq!(measure(&mut loaded, &area, "board_feet").value, Some(8640.0));
+    // A drain moved off the area by hand in the file: refused on the figures, not silent.
+    let moved = edit(&before, |v| attrs(v, &area)["pl::taper"]["drains"]["value"][1] = serde_json::json!([70.0, 24.0]));
+    let (mut loaded, _) = load(&moved).unwrap();
+    let bf = measure(&mut loaded, &area, "board_feet");
+    assert_eq!((bf.value, bf.status), (None, Status::Unknown));
+    assert!(bf.note.contains("the drain at 70,24 is not on the area"), "{bf:?}");
+    // The record on a roof plane is refused when the file is read.
+    let (mut hip, roof) = hip_roof();
+    let plane = child(&mut hip, &roof, "plane 1");
+    let text = save(&mut hip);
+    let put = edit(&text, |v| attrs(v, &plane)["pl::taper"] = serde_json::json!({"drains": {"value": [[5.0, 5.0]], "unit": "ft", "status": "Known", "source": "x"}, "at_drain": {"value": 0.5, "unit": "in", "status": "Known", "source": "x"}}));
+    let why = load(&put).err().expect("refused");
+    assert!(why.contains("only a low-slope area can"), "{why}");
+}

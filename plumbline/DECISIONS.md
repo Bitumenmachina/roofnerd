@@ -4815,3 +4815,75 @@ its average and greatest thickness, the boards by letter); then crickets and sum
 and coping, wind and fastening. Its licence (MIT) is in `NOTICE`; `LICENSES.md` lists it
 under borrowed code; its two crates (`cavalier_contours`, `geo`, both MIT OR Apache-2.0)
 pass `tools/licenses.sh`.
+
+### Call 139. A low-slope area holds its drains, and its tapered insulation is laid out by roofnerd's solver into figures a line can price (2026-11-19; the second builder; step 1 of `research/roofnerd-port.md`)
+
+**What is held.** A low-slope area gains one record, `pl::taper`: `drains`, the places
+of its roof drains on the plan (ft), and `at_drain`, how thick the tapered insulation is
+at a drain (in), each with its status and source. Nothing else is typed. The slope the
+insulation makes is the area's own pitch: with drains on it, the deck is taken as level
+and the pitch is the finished slope the taper builds (a quarter inch per foot is
+`1/4:12`), so one number is not held twice. A job without the record is as it was; the
+record is refused on anything but a low-slope area, and a drain that is not on the
+area's outline is refused with where it is.
+
+**What is worked out**, by roofnerd's `taper::solve` (call 138) and nothing else, on the
+layout NRCA gives (*Membrane Roof Systems* 2019, ch. 4, pp. 163–168: one region to each
+drain, cut by the line halfway between drains; four planes to an interior drain at the
+one slope, laid square to the area's longest side; the valleys where two planes meet, at
+45°). Six figures on the area, each with its formula and its inputs (the outline, the
+pitch, the taper record), at the worst status of those:
+
+| Figure | Unit | What it is |
+|---|---|---|
+| `drains` | EA | the drains on the area |
+| `thinnest` | in | the thickness at the drain, where the water leaves |
+| `thickest` | in | at the furthest run from a drain, measured square along the boards (not the diagonal) |
+| `average_thickness` | in | the insulation's volume over the area's plan area |
+| `board_feet` | BF | the insulation's volume, a board foot being a square foot an inch thick: each face of the layout's area times its thickness at its middle (a face is one plane, so that is exact), added up |
+| `valley_length` | LF | the 45° lines the boards are mitred along |
+
+The solver cuts its regions with `geo`'s boolean operations, which work on a fixed grid
+and leave a corner up to half a millionth of a foot from where it belongs: two drains on
+a 48 ft roof first came to 8,640.0001 BF, not the 8,640 worked by hand. The faces and
+valleys are read to a hundred-thousandth of a foot before they are added up; nothing a
+roofer cuts is finer, and the figure is then the layout's own.
+
+Tapered insulation is quoted by the board foot; a line priced by `board_feet` alone is
+in BF. The thicknesses are in inches and are not used in a formula (a formula works in
+lengths, areas and counts and says so); a line uses `board_feet` for the insulation and
+`drains` for the drains.
+
+**Where it is not yet whole, said on the figure, not left silent.** Nothing caps the
+build-up: roofnerd caps it at the flashing height along a parapet (8 in under the top of
+the base flashing, NRCA pp. 159, 251–252) or at a number of layers, and neither is joined
+to the building model yet (step 4 of the port). So `thickest` is the build-up as the
+slope makes it, and the formula says nothing caps it. Crickets, sumps, the board bill by
+letter, and drawing a drain in the window are the later steps. A drain on a low-slope
+area is not a plumbing fixture here: the storm piping it feeds is not drawn from it.
+
+**Two command-line verbs**, so a demonstration starts from an empty job: `low-slope`
+draws a low-slope area under a roof of its own (its outline, its pitch, how high its
+deck is), and `drains` places the drains on one and says how thick the taper is at them.
+
+**A starter assembly**, "Low-slope roof, tapered insulation, single-ply membrane" (goes on
+a low-slope area): the tapered polyiso by `board_feet` (5 % for the cuts, Assumed, until
+the boards are laid out by letter); a 1/2 in cover board by `surface_area` in 4 ft by 8 ft
+sheets (5 %); a 60 mil TPO membrane by `surface_area` in 1,000 SF rolls (10 % for laps
+and turn-ups; the roll size as GAF's, IKO's and Johns Manville's 60 mil TPO data sheets
+give it, 10 ft by 100 ft); the drains set, by `drains`, Division 15, subcontract; and the
+labor by `squares`, with no production rate. Each rule is Assumed with its reason; no
+prices. The library is then 35 assemblies and 164 lines, 24 of them labor (was 34, 159 and 23), and the
+expectations that count it move with it: `crates/cli/tests/cli.rs` (the starter library
+set; the same library twice), `demos/library.sh`, `demos/foundation.sh`,
+`demos/framing.sh`, `demos/shingle.sh`.
+
+**Found when the commit was checked:** `tools/committed.sh` lays out only the
+`plumbline` folder, and three of roofnerd's ported tests read `packages/engine/src/roof.ts`
+and `model.ts` beside it (call 138), so the call 138 commit already failed it. The check
+now lays those two files out from the commit too, where they stand; it checks nothing
+less, and a test that reads anything else outside the folder still fails it.
+
+**What moved.** No existing number but the library's size above. Every saved job gains one line in its list of record
+kinds (`schemas`), as each record before it did. A low-slope area's list of figures has
+six more; on an area with no drains each is refused with "no drains placed on it".

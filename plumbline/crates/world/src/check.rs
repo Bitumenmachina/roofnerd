@@ -225,6 +225,34 @@ pub fn pitch(path: &str, kind: Kind, p: &Pitch) -> Result<(), String> {
     Ok(())
 }
 
+/// The drains on a low-slope area and the thickness at them (call 139). Whether each
+/// drain is on the area's outline is the taper's to say, on its figures: the outline may
+/// be read after this.
+pub fn taper(path: &str, kind: Kind, t: &Taper) -> Result<(), String> {
+    if kind != Kind::LowSlopeArea {
+        return Err(format!("{path}: {kind:#} cannot take roof drains; only a low-slope area can"));
+    }
+    coords_ok(&format!("{path} drains"), &t.drains)?;
+    if let Some(pts) = t.drains_ft() {
+        if pts.is_empty() {
+            return Err(format!("{path} drains: none given; a low-slope area with no drains has no taper record"));
+        }
+        for p in pts {
+            point_ok(&format!("{path} drains"), p)?;
+        }
+    }
+    t.at_drain.check_length(&format!("{path} thickness at the drain"))?;
+    if let Some(x) = t.at_drain.feet() {
+        if x < 0.0 {
+            return Err(format!("{path} thickness at the drain: must be zero or more"));
+        }
+        if x > 2.0 {
+            return Err(format!("{path} thickness at the drain: {} in is more than 24 in of insulation at the low point; a thickness at the drain is given in inches, like 1/2 in", x * 12.0));
+        }
+    }
+    Ok(())
+}
+
 pub fn run(path: &str, kind: Kind, r: &Run) -> Result<(), String> {
     if !kind.is_run() {
         return Err(format!("{path}: {kind:#} cannot carry a line"));

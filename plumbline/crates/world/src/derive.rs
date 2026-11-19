@@ -218,13 +218,16 @@ pub fn derive(world: &mut World) -> Vec<String> {
         }
     }
     #[allow(clippy::type_complexity)]
-    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Run>, Option<&Height>, Option<&Cost>, Option<&Allowance>, Option<&MadeOf>, Option<&Condition>, Option<&mut Measure>, Option<&mut LineQuantities>)>();
-    for (node, kind, outline, pitch, run, height, cost, allowance, made_of, condition, measure, line_quantities) in q.iter_mut(world) {
+    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Taper>, Option<&Run>, Option<&Height>, Option<&Cost>, Option<&Allowance>, Option<&MadeOf>, Option<&Condition>, Option<&mut Measure>, Option<&mut LineQuantities>)>();
+    for (node, kind, outline, pitch, taper, run, height, cost, allowance, made_of, condition, measure, line_quantities) in q.iter_mut(world) {
         let me = &node.path;
         let mut m = BTreeMap::new();
 
         if kind.is_area() {
             m.extend(plane_measures(me, outline, pitch));
+        }
+        if *kind == Kind::LowSlopeArea {
+            m.extend(crate::taper::measures(me, outline, pitch, taper));
         }
 
         if kind.is_run() {

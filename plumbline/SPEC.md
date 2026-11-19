@@ -211,6 +211,7 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 | `pl::solved` | planes and lines the solver made | `from`: the roof it was solved from. `edge`: for a plane, the footprint edge it rises from, counted from 1. | |
 | `pl::outline` | areas | `points`: the footprint traced on the plan, either way round. `eave`: the low edge the pitch rises from, as its own line along one edge of the outline (an edge traced in pieces is one edge when every corner inside it is within 0.01 ft of the one line from its start to its end), with no part of the outline on its other side. The slope is measured from that edge's line. `eave_height`. | `points`, `eave`: `ft` or `in`. `eave_height`: `ft`, `in` or `ft-in` |
 | `pl::pitch` | areas | Rise in inches per 12 inches of run | `in/12` |
+| `pl::taper` | a LowSlopeArea | Its roof drains and its tapered insulation (call 139). `drains`: each drain's place on the plan, inside the area's outline. `at_drain`: how thick the insulation is at a drain. The slope it makes is the area's `pl::pitch`, over a deck taken as level. The layout (NRCA's four-way, by `crates/roofing`) and its figures (`drains`, `thinnest`, `thickest`, `average_thickness`, `board_feet`, `valley_length`) are worked out, never typed. | `drains`: `ft` or `in`. `at_drain`: `in`, `ft` or `ft-in` |
 | `pl::run` | lines | `ends`: the two ends on the plan. `planes`: paths of the planes the line lies on. | `ft` or `in` |
 | `pl::height` | parapets | Height | `ft`, `in` or `ft-in` |
 | `pl::condition` | any | The assigned condition, by name | none |

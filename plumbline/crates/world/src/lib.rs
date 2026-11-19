@@ -31,6 +31,7 @@ pub mod job;
 pub mod lines;
 pub mod plans;
 pub mod tables;
+pub mod taper;
 pub mod roof;
 pub mod sample;
 pub mod skeleton;

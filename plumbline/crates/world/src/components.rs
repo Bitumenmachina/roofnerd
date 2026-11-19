@@ -231,7 +231,10 @@ impl Kind {
     }
     /// The quantities worked out for an element of this kind, each with its unit.
     pub fn measures(self) -> &'static [(&'static str, &'static str)] {
-        if self.is_area() {
+        if self == Kind::LowSlopeArea {
+            // And its tapered insulation, laid out to its drains (call 139).
+            &[("plan_area", "SF"), ("slope_factor", ""), ("surface_area", "SF"), ("squares", "SQ"), ("drains", "EA"), ("thinnest", "in"), ("thickest", "in"), ("average_thickness", "in"), ("board_feet", "BF"), ("valley_length", "LF")]
+        } else if self.is_area() {
             &[("plan_area", "SF"), ("slope_factor", ""), ("surface_area", "SF"), ("squares", "SQ")]
         } else if self == Kind::Parapet {
             &[("plan_length", "LF"), ("face_area", "SF")]
@@ -300,6 +303,28 @@ impl Outline {
 /// `pl::pitch`: rise in inches for every 12 inches of run.
 #[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Pitch(pub Val<f64>);
+
+/// `pl::taper`: the roof drains on a low-slope area and how thick its tapered insulation
+/// is at a drain (call 139). The slope the insulation makes is the area's pitch: with
+/// drains on it the deck is taken as level, and the pitch is the finished slope the taper
+/// builds. The rest (where it is thickest, its board feet, its valleys) is laid out by
+/// `plumbline_roofing::taper` and never typed.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Taper {
+    /// Each drain's place on the plan.
+    pub drains: Val<Vec<P2>>,
+    /// How thick the insulation is at a drain: the thinnest it is anywhere.
+    pub at_drain: Val<Len>,
+}
+
+impl Taper {
+    /// The drains in feet, whatever unit they were entered in.
+    pub fn drains_ft(&self) -> Option<Vec<P2>> {
+        let d = units::coord_divisor(&self.drains.unit).ok()?;
+        self.drains.value.as_ref().map(|pts| pts.iter().map(|p| [p[0] / d, p[1] / d]).collect())
+    }
+}
 
 /// `pl::run`: a line on the plan (an eave, a hip, a parapet) by its two ends, and the
 /// paths of the planes it lies on.
@@ -670,6 +695,7 @@ pub const K_CLASS: &str = "pl::class";
 pub const K_JOB: &str = "pl::job";
 pub const K_OUTLINE: &str = "pl::outline";
 pub const K_PITCH: &str = "pl::pitch";
+pub const K_TAPER: &str = "pl::taper";
 pub const K_RUN: &str = "pl::run";
 pub const K_HEIGHT: &str = "pl::height";
 pub const K_CONDITION: &str = "pl::condition";

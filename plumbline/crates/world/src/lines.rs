@@ -69,8 +69,11 @@ fn operand(on: &On, line: &CostLine, name: &str) -> Result<Operand, String> {
             "SF" => 2,
             // A count of pieces (a wall's studs: call 137) is a number like any other.
             "" | "EA" => 0,
-            other => return Err(format!("uses {name}, which is in {other}; a formula works in lengths, areas and counts, and comes out in CY when its lengths make a volume. Price the line by {name} alone, with its waste on the line", name = crate::view::words(name))),
+            other => return Err(format!("uses {name}, which is {}; a formula works in lengths, areas and counts, and comes out in CY when its lengths make a volume. Price the line by {name} alone, with its waste on the line", if other == "in" { "a thickness, in inches".to_string() } else { format!("in {other}") }, name = crate::view::words(name))),
         };
+        if let Some(why) = crate::taper::none_without_drains(on.kind, name, on.measure) {
+            return Err(why);
+        }
         let d = on.measure.and_then(|m| m.0.get(name));
         return Ok(Operand { value: d.and_then(|d| d.worked()), dim, status: d.map(|d| d.status).unwrap_or(Status::Unknown), shown: name.to_string() });
     }
@@ -102,6 +105,9 @@ pub fn read(on: &On, line: &CostLine) -> Result<Read, String> {
         if let Some((_, unit)) = on.kind.measures().iter().find(|(m, _)| m == name) {
             if unit.is_empty() {
                 return Err(format!("is {name:?}, which is a factor, not a quantity"));
+            }
+            if let Some(why) = crate::taper::none_without_drains(on.kind, name, on.measure) {
+                return Err(why);
             }
             let d = on.measure.and_then(|m| m.0.get(name.as_str()));
             let worked = formula::Worked { value: d.and_then(|d| d.value), dim: 0, status: d.map(|d| d.status).unwrap_or(Status::Unknown), text: name.clone() };

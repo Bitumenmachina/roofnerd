@@ -13,7 +13,15 @@ set -euo pipefail
 ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 HERE="$ROOT/plumbline"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-git -C "$ROOT" archive "${COMMIT:-HEAD}" plumbline | tar -x -C "$T"
+# And the two files of the earlier program that roofnerd's ported tests hold their
+# conventions to (DECISIONS.md call 138): they read them where they stand in this
+# repository, so the check lays them out where they stand, from the commit like the rest.
+EARLIER=""
+for f in packages/engine/src/roof.ts packages/engine/src/model.ts; do
+  git -C "$ROOT" cat-file -e "${COMMIT:-HEAD}:$f" 2>/dev/null && EARLIER="$EARLIER $f"
+done
+# shellcheck disable=SC2086
+git -C "$ROOT" archive "${COMMIT:-HEAD}" plumbline $EARLIER | tar -x -C "$T"
 cd "$T/plumbline"
 cargo metadata --offline --no-deps --format-version 1 >/dev/null || { echo "committed: FAIL. The last commit is not a workspace cargo can read: a crate is missing from it."; exit 1; }
 missing=0
