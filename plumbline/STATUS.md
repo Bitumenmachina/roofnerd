@@ -7367,6 +7367,75 @@ Fixed (call 141): a plane with no roofing of its own is dressed in its roof's. T
 shinglew pictures are not committed: they show the bare roof that call 141 changed, so
 they are to be retaken on the new build.
 
+## Drywall bought for both faces of a partition: a demonstration, written before it is built (`demos/drywall.sh`, call 143)
+
+From an empty job: a level 9 ft high, 6 in walls round 24 ft by 16 ft, a partition from
+12,0 to 12,16 with a 3 ft by 7 ft door at its middle, a 3 ft by 5 ft window in the south
+wall. The starter library's "Interior partition, 2x4" on the partition and "Exterior
+wall, 2x6, lap siding" on the south wall. By hand:
+
+- the partition: 16 × 9 = 144 SF of face, less the door's 21 = **123 SF net**. Board for
+  both faces 2 × 123 = **246 SF**, with 10 % waste **270.6 SF**, ÷ 32 = 8.46: **9
+  sheets**. Paint both faces **246 SF**.
+- the south wall: 24 × 9 = 216, less the window's 15 = **201 SF net**. Its inside board
+  with 10 % waste **221.1 SF**, ÷ 32 = 6.91: **7 sheets**. Paint **201 SF**.
+- the gypsum board's waste is Assumed and says why.
+
+**And the rooms' wall board (call 144), on the same house.** With 6 in walls on their
+centre lines, the faces are 0.25 ft in: the west room is 11.5 ft by 15.5 ft inside,
+178.25 SF of floor, 54 LF round, and its walls 54 × 9 = 486 SF less the partition's
+door, 21 SF: **465 SF**. The east room is the same size, less the same door and the
+window's 15 SF: **450 SF**. The door comes off both rooms.
+
+## A slab on grade bought by its own thickness: a demonstration, written before it is built (`demos/slab.sh`, call 145)
+
+From an empty job: a level, a floor type 4 in thick, a floor 40 ft by 28 ft; then the
+same floor's type changed to 6 in. By hand, with 27 CF to the CY:
+
+- 4 in: plan area **1,120 SF**, perimeter **136 LF**. Concrete 1,120 × 4/12 = 373.333 CF
+  = **13.8272 CY**, with 5 % **14.5186 CY** (13.8272 × 1.05: the quantity is written to
+  four places before its waste is added, QUESTIONS.md Q29; worked exactly it is 14.5185). Base course 1,120 × 4/12 = **13.8272 CY**.
+  Vapor retarder 1,120 with 10 % = **1,232 SF**. Edge forms 136 × 4/12 = **45.3333 SF**.
+- 6 in: concrete 1,120 × 6/12 = 560 CF = **20.7407 CY**, with 5 % **21.7777 CY** (Q29 again; exactly, 21.7778); edge
+  forms 136 × 1/2 = **68 SF**; the base stays 13.8272 CY. The old "Slab on grade, 4 in"
+  on the same 6 in floor still buys 1,120 ÷ 81 = 13.8272 CY of concrete: that is why
+  the new assembly exists.
+
+## Drywall, rooms and slabs. What was run and what it showed (2026-11-19; the second builder; calls 143, 144, 145)
+
+**Built.** Call 143: the starter partition's board and paint for both faces
+(`2 * net_area`; they were one face), board in 4 ft by 8 ft sheets, 10 % waste on every
+gypsum board line, Assumed. Call 144: a room's `wall_area`, side by side at its walls'
+faces, less the doors and windows along each side (a door comes off both rooms). Call
+145: "Slab on grade, by its thickness", from the floor's own thickness and perimeter.
+
+**Run, on the tree as committed with this section:** `cargo test --workspace` 462 pass,
+0 fail; `demos/drywall.sh` and `demos/slab.sh` PASS to the hand figures (the slab's
+14.5186 CY, not the 14.5185 worked exactly, is QUESTIONS.md Q29's rounding, said in the
+demonstration); `library.sh` (36 assemblies, 171 lines, 24 labor), `foundation.sh`,
+`framing.sh`, `shingle.sh`, `taper.sh` PASS; the library goes out byte for byte as it
+came in; the three gates PASS. `tools/committed.sh` is run before the push.
+
+**What moved:** a partition priced from the starter library buys twice the board and
+paint it did, in sheets; every exterior wall's board is ordered with 10 % waste; rooms
+list one more figure; the library counts. No job built before this changes.
+
+**The window, on the build of 421fb48 (calls 141, 142; frozen copy):** shinglew PASS,
+now also measuring the roof bare before its assembly and shingled after (proved: on the
+build before call 141 the after-picture reads (137, 148, 157), the bare roof's, and
+fails); its pictures, looked at, show the roof in asphalt shingle courses and are
+committed in `demos/captured/shinglew`. roofw PASS. dressw failed its "north wall, turned
+to" box again while the picture showed the wall dressed right: the turn lands a hundred
+pixels apart from run to run on this renderer (two runs overlapped after the machine
+restarted, which slows it further). The check was at fault, so it was changed:
+the north wall is measured as the share of the house that is cedar and the share that
+is brick (cedar has more green than brick). On both runs' pictures, turned: cedar 0.196
+and 0.258, brick 0; as opened: cedar 0.035, brick 0.18 and 0.186. The wainscot and east
+wall boxes are as they were and passed both times.
+
+**Owed:** a judge of calls 143 to 145 (started after this commit; its table below when
+it reports); dressw run whole with its new check on the next build.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

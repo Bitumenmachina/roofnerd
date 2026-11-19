@@ -1233,6 +1233,56 @@ fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], points: &[crate::s
         .collect()
 }
 
+/// A room's wall area (call 144): each side of its outline at its walls' faces, as long as
+/// it is and as tall as the wall it lies against, less the part of each door and window
+/// in that wall that lies along the side. A door between two rooms is taken off both:
+/// both its faces are cut. With the statuses and inputs of the openings it took off.
+fn room_wall_area(outline: &[crate::skeleton::P2], mine: &[usize], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, tol: f64) -> Result<(f64, Vec<Status>, Vec<String>), String> {
+    use crate::skeleton::P2 as V;
+    if outline.len() < 3 {
+        return Err("no loop of walls closes round its point".into());
+    }
+    let rings: Vec<(usize, Vec<(V, V)>)> = mine.iter().map(|&k| {
+        let ring = walls::outline(walls, k, tol);
+        let edges = ring.iter().copied().zip(ring.iter().copied().cycle().skip(1)).collect();
+        (k, edges)
+    }).collect();
+    let on = |m: V, a: V, b: V| {
+        let d = b - a;
+        let t = if d.dot(d) > 0.0 { ((m - a).dot(d) / d.dot(d)).clamp(0.0, 1.0) } else { 0.0 };
+        m.dist(a + d * t) <= tol
+    };
+    let (mut total, mut statuses, mut cited) = (0.0, Vec::new(), Vec::new());
+    for i in 0..outline.len() {
+        let (p, q) = (outline[i], outline[(i + 1) % outline.len()]);
+        let length = p.dist(q);
+        if length <= tol {
+            continue;
+        }
+        let mid = (p + q) * 0.5;
+        let Some(&(k, _)) = rings.iter().find(|(_, edges)| edges.iter().any(|(a, b)| on(mid, *a, *b))) else {
+            return Err(format!("the side of the room from ({}, {}) to ({}, {}) lies along no wall's face", view::num(p.0), view::num(p.1), view::num(q.0), view::num(q.1)));
+        };
+        let w = &walls[k];
+        let tall = w.top - w.base;
+        total += length * tall;
+        let (s1, s2) = (w.project(p).0, w.project(q).0);
+        let (lo, hi) = (s1.min(s2), s1.max(s2));
+        for hole in holes.get(&placed[k].path).map(Vec::as_slice).unwrap_or(&[]) {
+            let Some([from, to, sill, head]) = hole.span else {
+                return Err(format!("where {} is in its wall is not known, so what it takes off this room's walls is not", hole.path));
+            };
+            let along = to.min(hi) - from.max(lo);
+            if along > tol {
+                total -= along * (head.min(tall) - sill.max(0.0)).max(0.0);
+                statuses.push(hole.status);
+                cited.extend(hole.inputs.iter().cloned());
+            }
+        }
+    }
+    Ok((total, statuses, cited))
+}
+
 /// Each room's figures: the floor inside the faces of the walls round its point, the area
 /// to those walls' centre lines, and how far it is round the room at their faces.
 ///
@@ -1274,6 +1324,18 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
     const F_FLOOR: &str = "the floor inside the faces of the walls round its point";
     const F_GROSS: &str = "the area to the center lines of the walls round its point";
     const F_ROUND: &str = "the distance round the room at the faces of its walls";
+    const F_WALLS: &str = "each side of the room at its walls' faces × the height of the wall it is against, less the part of each door and window in that wall along the side";
+    // Each wall's doors and windows, for the room's wall area (call 144).
+    let holes_of: HashMap<String, Vec<Hole>> = {
+        let mut q = world.query::<(&Node, &Kind, &Opening)>();
+        let mut all: Vec<(String, Hole)> = q.iter(world).filter(|(_, k, _)| k.is_opening()).filter_map(|(n, _, o)| n.parent.clone().map(|p| (p, hole_of(tree, &n.path, o).0))).collect();
+        all.sort_by_key(|(_, h)| path_number(&h.path));
+        let mut map: HashMap<String, Vec<Hole>> = HashMap::new();
+        for (p, h) in all {
+            map.entry(p).or_default().push(h);
+        }
+        map
+    };
     for (storey, mut list) in by_storey {
         list.sort_by_key(|(path, _)| path_number(path));
         let refuse_all = |out: &mut HashMap<String, BTreeMap<String, Derived>>, path: &str, inputs: &[String], why: &str| {
@@ -1281,6 +1343,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
             m.insert("floor_area".into(), Derived::refused("SF", F_FLOOR, inputs, why));
             m.insert("gross_area".into(), Derived::refused("SF", F_GROSS, inputs, why));
             m.insert("perimeter".into(), Derived::refused("LF", F_ROUND, inputs, why));
+            m.insert("wall_area".into(), Derived::refused("SF", F_WALLS, inputs, why));
         };
         // Where the storey's rooms find their walls.
         let level = tree.levels.get(&storey);
@@ -1452,11 +1515,28 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                 (Ok((area, round, mine)), false) => {
                     m.insert("floor_area".into(), figure(*area, mine, "SF", F_FLOOR));
                     m.insert("perimeter".into(), figure(*round, mine, "LF", F_ROUND));
+                    let walls_d = match room_wall_area(&found.outline, mine, &plan_walls, &placed, &holes_of, tol) {
+                        Ok((value, statuses, cited)) => {
+                            let mut d = figure(value, mine, "SF", F_WALLS);
+                            if d.value.is_some() {
+                                d.status = statuses.into_iter().fold(d.status, Status::max);
+                                for c in cited {
+                                    if !d.inputs.contains(&c) {
+                                        d.inputs.push(c);
+                                    }
+                                }
+                            }
+                            d
+                        }
+                        Err(why) => Derived::refused("SF", F_WALLS, std::slice::from_ref(&input), &why),
+                    };
+                    m.insert("wall_area".into(), walls_d);
                 }
                 (other, _) => {
                     let reason = why(other.as_ref().err().copied().unwrap_or(Unbound::NotEnclosed));
                     m.insert("floor_area".into(), Derived::refused("SF", F_FLOOR, std::slice::from_ref(&input), &reason));
                     m.insert("perimeter".into(), Derived::refused("LF", F_ROUND, std::slice::from_ref(&input), &reason));
+                    m.insert("wall_area".into(), Derived::refused("SF", F_WALLS, std::slice::from_ref(&input), &reason));
                 }
             }
             // The faces can close a room that the wall lines do not: two walls drawn

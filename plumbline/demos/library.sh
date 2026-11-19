@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The starter library of assemblies (library/sixteen-divisions.csv): 35 assemblies with a
+# The starter library of assemblies (library/sixteen-divisions.csv): 36 assemblies with a
 # line in every one of the sixteen divisions, labor lines among them, and no price and
 # no production rate in it. It is brought into an
 # empty job, its assemblies are applied to a small made-up house, the takeoff comes out
@@ -36,7 +36,7 @@ assert len(labor) == 24 and all(r[head.index("Ordered by")] == "hr" and r[head.i
 print("    %d labor lines, each in hours with no production rate and no wage: how fast a crew goes is the estimator's own" % len(labor))
 print("    %d assemblies, %d lines, a line in each of divisions %s; every unit cost is $?, and no dollar figure is in the file"
       % (len({r[0] for r in lines}), len(lines), ", ".join(str(d) for d in sorted({int(r[division]) for r in lines}))))
-assert sorted({int(r[division]) for r in lines}) == list(range(1, 17)) and len({r[0] for r in lines}) == 35 and len(lines) == 164
+assert sorted({int(r[division]) for r in lines}) == list(range(1, 17)) and len({r[0] for r in lines}) == 36 and len(lines) == 171
 PY
 
 echo
@@ -66,9 +66,9 @@ ALL="$("$P" show "$J")"
 of() { grep -oE "$1-[0-9]+" <<<"$ALL" | sort -u; }
 
 echo
-echo "== The library comes in: 35 assemblies, none refused =="
+echo "== The library comes in: 36 assemblies, none refused =="
 OUT="$("$P" import assemblies "$J" "$LIB")"; echo "$OUT" | grep -E "rows|set:|same|not used" | sed 's/^/  /'
-says "all of them" "set: 35"
+says "all of them" "set: 36"
 says "none refused" "not used: 0"
 
 echo

@@ -91,7 +91,7 @@ impl PlanWall {
     }
     /// How far along it the point nearest `p` is (from 0 to its length), and how far to
     /// its left `p` lies.
-    fn project(&self, p: V) -> (f64, f64) {
+    pub(crate) fn project(&self, p: V) -> (f64, f64) {
         let u = self.tangent();
         ((p - self.start).dot(u).clamp(0.0, self.length()), (p - self.start).dot(u.perp()))
     }

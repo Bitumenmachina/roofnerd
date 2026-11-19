@@ -253,7 +253,8 @@ impl Kind {
         } else if self == Kind::Floor {
             &[("plan_area", "SF"), ("perimeter", "LF"), ("thickness", "ft")]
         } else if self == Kind::Room {
-            &[("floor_area", "SF"), ("gross_area", "SF"), ("perimeter", "LF")]
+            // Its walls' board at their faces, less its openings (call 144).
+            &[("floor_area", "SF"), ("gross_area", "SF"), ("perimeter", "LF"), ("wall_area", "SF")]
         } else if self == Kind::Duct {
             &[("true_length", "LF"), ("surface_area", "SF")]
         } else if matches!(self, Kind::Pipe | Kind::Conduit | Kind::Cable) {

@@ -76,4 +76,25 @@ says "$T/roof.txt" "to order: Starter strip 2 bundle"
 says "$T/roof.txt" "to order: Hip and ridge cap 6 bundle"
 says "$T/roof.txt" "to order: Drip edge 15 piece"
 says "$T/roof.txt" "? quantity: Pipe boots unknown"
-echo "  PASS: in the window, a plane was clicked, its whole roof picked, and the whole-roof assembly given from the list; the saved job has the roof in whole packs to the figures worked by hand"
+echo
+echo "== The roof is dressed as it is priced (call 141): bare before, shingled after, measured =="
+# The same patch of the south plane, before the assembly (picture 03) and after (04).
+# As measured on a run of these steps: bare (138, 149, 157), blue over red; shingled
+# (104, 106, 102), darker and with no blue to it. A roof drawn bare after it is priced
+# fails the second test (call 141 found it so).
+python3 -I - "$OUT" <<'PY'
+import sys
+from PIL import Image
+out = sys.argv[1]
+def mean(name):
+    im = Image.open(f"{out}/{name}-model.png").convert("RGB").crop((760, 470, 960, 540))
+    px = list(im.getdata())
+    return tuple(round(sum(p[i] for p in px) / len(px)) for i in range(3))
+bare, shingled = mean("03"), mean("04")
+ok = bare[2] - bare[0] > 10
+print("    before: %s  %s" % (bare, "as wanted (bare, blue over red)" if ok else "FAIL: wanted the bare roof's blue-gray"))
+good = shingled[2] - shingled[0] < 5 and sum(shingled) / 3 < 125
+print("    after:  %s  %s" % (shingled, "as wanted (shingles: darker, no blue to it)" if good else "FAIL: wanted asphalt shingles"))
+sys.exit(0 if ok and good else 1)
+PY
+echo "  PASS: in the window, a plane was clicked, its whole roof picked, and the whole-roof assembly given from the list; the saved job has the roof in whole packs to the figures worked by hand, and the roof is drawn in shingles once it is priced in them"

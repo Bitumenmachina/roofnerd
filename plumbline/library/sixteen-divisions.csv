@@ -20,7 +20,7 @@ Framed floor,Floor,,,,Unknown,not coded,Frame the floor and lay the subfloor,Lab
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Lap siding,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
-"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,10,Assumed,"cuts at openings, corners and ends: the estimator's allowance; no standard sets it",sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Frame and sheathe the wall,Labor,face_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Hang the siding,Labor,net_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,7
@@ -33,7 +33,7 @@ Framed floor,Floor,,,,Unknown,not coded,Frame the floor and lay the subfloor,Lab
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Lap siding,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Stone veneer wainscot, 3 ft",Subcontract,plan_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,4
-"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,10,Assumed,"cuts at openings, corners and ends: the estimator's allowance; no standard sets it",sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Frame and sheathe the wall,Labor,face_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Hang the siding,Labor,net_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,7
@@ -46,7 +46,7 @@ Framed floor,Floor,,,,Unknown,not coded,Frame the floor and lay the subfloor,Lab
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Brick veneer,Subcontract,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,4
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Brick ties and flashing,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,4
-"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,10,Assumed,"cuts at openings, corners and ends: the estimator's allowance; no standard sets it",sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Frame and sheathe the wall,Labor,face_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Studs, 2x6 at 16 in",Material,studs,,,,10,Assumed,"culls, corners and blocking: the estimator's allowance",,,,,,$?/EA,Unknown,no price entered,,,6
@@ -57,15 +57,15 @@ Framed floor,Floor,,,,Unknown,not coded,Frame the floor and lay the subfloor,Lab
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Stucco, three coat",Subcontract,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
-"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
+"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,10,Assumed,"cuts at openings, corners and ends: the estimator's allowance; no standard sets it",sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,Frame and sheathe the wall,Labor,face_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 "Interior partition, 2x4",Wall,,,,Unknown,not coded,"Studs, 2x4 at 16 in",Material,studs,,,,10,Assumed,"culls, corners and blocking: the estimator's allowance",,,,,,$?/EA,Unknown,no price entered,,,6
 "Interior partition, 2x4",Wall,,,,Unknown,not coded,"Plates, 2x4",Material,plate_length,,,,10,Assumed,cuts and laps at the corners and joints,piece,16 LF/piece,yes,Assumed,a 16 ft plate: the lengths a yard stocks vary,$?/piece,Unknown,no price entered,,,6
 "Interior partition, 2x4",Wall,,,,Unknown,not coded,"Headers, two plies",Material,2 * header_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Interior partition, 2x4",Wall,,,,Unknown,not coded,"Rough sills, 2x4",Material,sill_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
-"Interior partition, 2x4",Wall,,,,Unknown,not coded,"Gypsum board, both sides",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
-"Interior partition, 2x4",Wall,,,,Unknown,not coded,"Paint, both sides",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Interior partition, 2x4",Wall,,,,Unknown,not coded,"Gypsum board, both sides",Material,2 * net_area,,,,10,Assumed,"cuts at openings, corners and ends: the estimator's allowance; no standard sets it",sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
+"Interior partition, 2x4",Wall,,,,Unknown,not coded,"Paint, both sides",Material,2 * net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Interior partition, 2x4",Wall,,,,Unknown,not coded,Frame the partition,Labor,face_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 "Room, hardwood floor",Room,,,,Unknown,not coded,Hardwood flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Room, hardwood floor",Room,,,,Unknown,not coded,Base and trim,Material,perimeter,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
@@ -163,3 +163,10 @@ Electrical equipment,Equipment,,,,Unknown,not coded,"Electrical equipment, set a
 "Low-slope roof, tapered insulation, single-ply membrane",LowSlopeArea,,,,Unknown,not coded,"TPO membrane, 60 mil",Material,surface_area,,,,10,Assumed,the laps at the seams and the turn-ups at the edges: the estimator's allowance; the maker's lap is on its sheet,roll,1000 SF/roll,yes,Assumed,"a 10 ft by 100 ft roll, 1,000 SF, as three makers' 60 mil TPO data sheets give it; the product bought decides",$?/roll,Unknown,no price entered,,,7
 "Low-slope roof, tapered insulation, single-ply membrane",LowSlopeArea,,,,Unknown,not coded,"Roof drain, set",Subcontract,drains,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,15
 "Low-slope roof, tapered insulation, single-ply membrane",LowSlopeArea,,,,Unknown,not coded,Lay the insulation and membrane,Labor,squares,,,,,,,hr,unknown SQ/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,7
+"Slab on grade, by its thickness",Floor,,,,Unknown,not coded,Excavation and grading,Subcontract,plan_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,2
+"Slab on grade, by its thickness",Floor,,,,Unknown,not coded,"Base course, gravel",Material,plan_area * base,,,,,,,,,,,,$?/CY,Unknown,no price entered,,,2,base = 4 in,Assumed,"2021 IRC R506.2.2: a 4 in base course of clean graded sand, gravel or crushed stone; not required on well-drained soils: check it"
+"Slab on grade, by its thickness",Floor,,,,Unknown,not coded,"Vapor retarder, 10 mil",Material,plan_area,,,,10,Assumed,"2021 IRC R506.2.3: 10 mil, ASTM E1745 Class A, joints lapped at least 6 in; the waste is the laps and turn-ups, the estimator's allowance",,,,,,$?/SF,Unknown,no price entered,,,7
+"Slab on grade, by its thickness",Floor,,,,Unknown,not coded,Welded wire reinforcing,Material,plan_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,3
+"Slab on grade, by its thickness",Floor,,,,Unknown,not coded,Slab edge forms,Subcontract,perimeter * thickness,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,3
+"Slab on grade, by its thickness",Floor,,,,Unknown,not coded,Slab concrete,Material,plan_area * thickness,,,,5,Assumed,NRMCA CIP 31: order 4% to 10% over the plan quantity,,,,,,$?/CY,Unknown,no price entered,,,3
+"Slab on grade, by its thickness",Floor,,,,Unknown,not coded,Place and finish the slab,Subcontract,plan_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,3

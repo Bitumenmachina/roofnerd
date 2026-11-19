@@ -153,7 +153,21 @@ check("one-each: the west wall", mean("one-each/01", (480, 520, 600, 640)), lamb
 # the roof the three were its dark gray, and on one where the turn threw the house
 # out of view they were the ground, (186, 182, 175): each fails the shingles' test.)
 shingles, stone, lap = mean("one-each/02", (560, 620, 680, 680)), mean("one-each/02", (600, 790, 760, 830)), mean("one-each/02", (400, 560, 470, 640))
-check("one-each: the north wall, turned to", shingles, lambda c: c[0] - c[2] > 40, "red well over blue (cedar shingles)")
+# The north wall is measured as a share of the house, not a box: on this renderer the
+# turn lands a hundred pixels apart from run to run, and a box at one place fell on the
+# white siding by the corner while the wall was dressed right (2026-11-19, twice). Cedar
+# has more green to it than brick (cedar (129, 98, 70), brick (113, 69, 61)), so the two
+# are told apart. As measured: turned round, cedar 0.196 and 0.258 of the house and
+# brick none; as opened (the brick front), cedar 0.035 and brick 0.18 to 0.22.
+def share(name, box, test):
+    im = Image.open(f"{out}/{name}-model.png").convert("RGB").crop(box)
+    px = list(im.getdata())
+    return round(sum(1 for p in px if test(*p)) / len(px), 3)
+cedar = lambda r, g, b: r - b > 40 and g - b > 18 and r > 90
+brick = lambda r, g, b: r - b > 35 and r - g > 30 and g - b < 15
+house = (360, 480, 1220, 810)
+check("one-each: the north wall, turned to (cedar, brick)", (share("one-each/02", house, cedar), share("one-each/02", house, brick)), lambda c: c[0] > 0.10 and c[1] < 0.02, "a tenth of the house or more cedar shingles, and no brick")
+check("one-each: the same, as opened (cedar, brick)", (share("one-each/01", house, cedar), share("one-each/01", house, brick)), lambda c: c[0] < 0.08 and c[1] > 0.10, "the brick front: little cedar, a tenth or more brick")
 check("one-each: the wainscot under it", stone, lambda c: c[0] - c[2] < 25 and 80 < c[0] < 190, "gray (stone)")
 check("one-each: the east wall", lap, lambda c: abs(c[0] - c[2]) < 25 and c[0] > 140, "pale and nearly gray (white lap siding)")
 # The sample house: priced, its walls are cedar siding; unpriced, the same place is bare.

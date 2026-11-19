@@ -4981,3 +4981,74 @@ across its open middle (NRCA puts a cricket or an area divider there: port step 
 `drains` replaces the whole list.
 
 **No number moves** on any job of calls 139 to 141.
+
+### Call 143. A partition's board and paint are bought for both its faces, and gypsum board carries its waste (2026-11-19; the second builder; Division 9, from the review)
+
+The starter library's "Interior partition, 2x4" had "Gypsum board, both sides" and
+"Paint, both sides" by `net_area`, which is one face of the wall: a partition priced
+from it bought board and paint for half of it, in SF, with no sheets. Now:
+
+- "Gypsum board, both sides": `2 * net_area`, 10 % waste, in 4 ft by 8 ft sheets
+  (32 SF/sheet, whole sheets), as the exterior walls' board already was.
+- "Paint, both sides": `2 * net_area`.
+- Every "Gypsum board, hung and finished" line (the four exterior walls' inside face):
+  10 % waste, Assumed, "cuts at openings, corners and ends: the estimator's allowance;
+  no standard sets it". The sheet size stays as it was.
+
+What moves: every job priced from these assemblies (a partition's board and paint
+double; an exterior wall's board is ordered with its waste). No job built before this
+changes: a job keeps the lines it was priced with. The made-up whole house
+(`sample.rs`) keeps its own lines. Tests and demonstrations that count these lines'
+quantities are named in STATUS.md as they move; the library keeps 35 assemblies and 164
+lines.
+
+**Not yet:** a room's own wall and ceiling board (the room's walls at their faces,
+less its openings, and its ceiling), which is how a drywall estimator takes off a
+house; joint compound and tape by their own measure; 4 ft by 12 ft sheets.
+
+### Call 144. A room has the area of its walls' board, as a drywall estimator takes it off (2026-11-19; the second builder; Division 9)
+
+A drywall estimator takes a house off room by room: round each room at its walls' faces,
+times the height, less the doors and windows, and the ceiling. A room had its floor
+area and its perimeter, and the board was priced on walls, by each wall's own net area
+on its line, both faces or one.
+
+A room now has `wall_area` (SF): each side of its outline at its walls' faces, as long as
+it is, times the height of the wall it lies against, less the part of each door and
+window in that wall that lies along the side. A door between two rooms comes off both,
+since both faces are cut. Its status is the worst of the walls it is measured to (as the
+floor area's is) and of the openings it took off; its inputs cite them. It is refused,
+with the reason, where the room has no outline, where a side lies along no wall's face,
+or where an opening's place in its wall is not known. The ceiling is the floor area,
+which rooms already have, so there is no second figure for it.
+
+This is a figure, not an assembly: the wall assemblies already put board on each wall,
+and a room priced by `wall_area` as well would buy the same board twice. Which way a job
+is priced is the estimator's; the library is not changed by this call. No number moves.
+
+### Call 145. A slab on grade is bought by its own thickness (2026-11-19; the second builder; Division 3)
+
+The starter library's "Slab on grade, 4 in" buys its concrete and its base at 81 SF to
+the CY, which is 4 in, whatever the floor's type says: a 6 in slab drawn as 6 in was
+bought as 4 in, a third short, without a word. That assembly stays as it is (jobs were
+priced with it, and its name says 4 in); a new one, "Slab on grade, by its thickness"
+(goes on a floor), works from the floor's own figures (`plan_area`, `perimeter`,
+`thickness`, call 130):
+
+| Line | Quantity | Rule, Assumed, with its source |
+|---|---|---|
+| Excavation and grading | `plan_area`, subcontract, Division 2 | |
+| Base course, gravel | `plan_area * base`, CY, Division 2 | `base` = 4 in: 2021 IRC R506.2.2 (a 4 in base course of clean graded sand, gravel or crushed stone; not required on well-drained soils: check it) |
+| Vapor retarder, 10 mil | `plan_area`, 10 % waste, Division 7 | 2021 IRC R506.2.3: 10 mil, ASTM E1745 Class A, joints lapped at least 6 in (the 2018 code's 6 mil is not this); the waste is the laps and turn-ups, the estimator's allowance |
+| Welded wire reinforcing | `plan_area`, Division 3 | |
+| Slab edge forms | `perimeter * thickness`, SF, Division 3 | |
+| Slab concrete | `plan_area * thickness`, CY, 5 % waste, Division 3 | NRMCA CIP 31: order 4 % to 10 % over the plan quantity (as the footing's and the wall's, call 132) |
+| Place and finish the slab | `plan_area`, subcontract, Division 3 | |
+
+The IRC text was read through a copy of Virginia's adoption of the 2021 IRC and a code
+forum quoting R506.2.3, not the ICC's own page (which refuses an automated reader); the
+vapor retarder's 10 mil is in both. Each rule is Assumed and says so. The library is
+then 36 assemblies and 171 lines, 24 of them labor; what counts it moves with it:
+`crates/cli/tests/cli.rs`, `demos/library.sh`, `foundation.sh`, `framing.sh`, `shingle.sh`.
+The demonstration's 14.5186 CY (not the 14.5185 worked exactly) is QUESTIONS.md Q29's:
+a quantity is written to four places before its waste is added, and that is Patrick's.
