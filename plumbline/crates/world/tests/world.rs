@@ -6307,3 +6307,30 @@ fn the_field_list_asks_about_a_tapers_drains_and_its_caution_reaches_the_line() 
     assert_eq!(measure(&mut job, &area, "board_feet").value, Some(6048.0));
     assert!(plumbline_world::vif::vif(&mut job).questions.iter().all(|x| x.path != area));
 }
+
+/// Call 146: a room's wall area goes round what stands inside it, is refused where an
+/// opening does not fit its wall, and board priced by the room and on its walls is said.
+#[test]
+fn a_rooms_wall_area_takes_in_what_stands_inside_it_and_board_twice_is_said() {
+    use plumbline_world::editing as ed;
+    let how = || ed::Entered { status: Status::Known, source: "made-up plan" };
+    let mut job = Job::new("Rooms", "test", "2026-11-19");
+    let level = ed::storey(&mut job, "ground", "0 ft", "9 ft", how()).unwrap();
+    let w6 = ed::wall_type(&mut job, "w6", "6 in", how()).unwrap();
+    let w4 = ed::wall_type(&mut job, "w4", "4 in", how()).unwrap();
+    let outer = ed::walls(&mut job, &level, &w6, &[[0.0, 0.0], [24.0, 0.0], [24.0, 16.0], [0.0, 16.0]], true, ed::Top::Height("9 ft"), how()).unwrap();
+    ed::walls(&mut job, &level, &w4, &[[8.0, 5.0], [14.0, 5.0], [14.0, 11.0], [8.0, 11.0]], true, ed::Top::Height("9 ft"), how()).unwrap();
+    let big = ed::room(&mut job, &level, "Big", [3.0, 3.0], how()).unwrap();
+    job.derive();
+    // 103.3333 LF round, the inner room's faces with it, × 9 ft.
+    assert_eq!(measure(&mut job, &big, "perimeter").value, Some(103.3333));
+    assert_eq!(measure(&mut job, &big, "wall_area").value, Some(930.0));
+    // Priced by its wall area, and board on one of its walls as well: said.
+    job.put(&big, Cost { code: value::Val::unknown("", "not coded"), lines: vec![CostLine::of("Gypsum board, walls", "wall_area", value::Val::unknown("$/SF", "no price entered"))] }).unwrap();
+    job.derive();
+    assert!(plumbline_world::view::pricing(&mut job).board_twice.is_empty());
+    job.put(&outer[0], Cost { code: value::Val::unknown("", "not coded"), lines: vec![CostLine::of("Gypsum board, hung and finished", "net_area", value::Val::unknown("$/SF", "no price entered"))] }).unwrap();
+    job.derive();
+    let said = plumbline_world::view::board_twice_said(&plumbline_world::view::pricing(&mut job).board_twice).expect("said");
+    assert!(said.contains("Big's walls are priced by its wall area") && said.contains("in the price twice"), "{said}");
+}

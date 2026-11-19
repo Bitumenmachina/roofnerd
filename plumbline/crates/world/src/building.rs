@@ -1193,6 +1193,9 @@ struct RoomFigures {
     /// The room's outline at the faces of its walls, counter-clockwise, without what
     /// stands free inside it; empty when no walls close round its point.
     outline: Vec<crate::skeleton::P2>,
+    /// What stands free inside it, at its walls' faces: a room within the room, a
+    /// chase. Its sides are the room's walls too (judged 2026-11-19).
+    islands: Vec<Vec<crate::skeleton::P2>>,
 }
 
 /// Every room of one storey measured against `walls`, of which those at `bounding` bound
@@ -1226,6 +1229,7 @@ fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], points: &[crate::s
         .map(|i| RoomFigures {
             corners: finish.bound(points, i, tol).map(|g| std::iter::once(&g.outer).chain(g.holes.iter()).flatten().copied().collect()).unwrap_or_default(),
             outline: finish.bound(points, i, tol).map(|g| g.outer).unwrap_or_default(),
+            islands: finish.bound(points, i, tol).map(|g| g.holes).unwrap_or_default(),
             finish: finish.bound(points, i, tol).map(|g| (g.area(), g.perimeter(), touching(&g, &outline_edges))),
             centre: centre.bound(points, i, tol).map(|g| (g.area(), touching(&g, &centre_lines))),
             in_wall: !points[i].0.is_nan() && outlines.iter().any(|ring| rooms::contains(ring, points[i])),
@@ -1237,10 +1241,23 @@ fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], points: &[crate::s
 /// it is and as tall as the wall it lies against, less the part of each door and window
 /// in that wall that lies along the side. A door between two rooms is taken off both:
 /// both its faces are cut. With the statuses and inputs of the openings it took off.
-fn room_wall_area(outline: &[crate::skeleton::P2], mine: &[usize], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, tol: f64) -> Result<(f64, Vec<Status>, Vec<String>), String> {
+fn room_wall_area(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, tol: f64) -> Result<(f64, Vec<Status>, Vec<String>), String> {
     use crate::skeleton::P2 as V;
     if outline.len() < 3 {
         return Err("no loop of walls closes round its point".into());
+    }
+    // An opening that does not fit its wall (past an end, over its top) leaves the wall
+    // with no net area, and the room is no surer of what it takes off (judged
+    // 2026-11-19: the room's figure stood Known beside the wall's Unknown).
+    for &k in mine {
+        let (w, length) = (&walls[k], walls[k].start.dist(walls[k].end));
+        for hole in holes.get(&placed[k].path).map(Vec::as_slice).unwrap_or(&[]) {
+            if let Some([from, to, _, head]) = hole.span {
+                if from < -tol || to > length + tol || head > w.top - w.base + tol {
+                    return Err(format!("{} does not fit its wall, so what it takes off this room's walls is not known", hole.path));
+                }
+            }
+        }
     }
     let rings: Vec<(usize, Vec<(V, V)>)> = mine.iter().map(|&k| {
         let ring = walls::outline(walls, k, tol);
@@ -1253,8 +1270,8 @@ fn room_wall_area(outline: &[crate::skeleton::P2], mine: &[usize], walls: &[wall
         m.dist(a + d * t) <= tol
     };
     let (mut total, mut statuses, mut cited) = (0.0, Vec::new(), Vec::new());
-    for i in 0..outline.len() {
-        let (p, q) = (outline[i], outline[(i + 1) % outline.len()]);
+    let sides: Vec<(V, V)> = std::iter::once(outline).chain(islands.iter().map(Vec::as_slice)).flat_map(|ring| (0..ring.len()).map(move |i| (ring[i], ring[(i + 1) % ring.len()]))).collect();
+    for (p, q) in sides {
         let length = p.dist(q);
         if length <= tol {
             continue;
@@ -1515,7 +1532,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                 (Ok((area, round, mine)), false) => {
                     m.insert("floor_area".into(), figure(*area, mine, "SF", F_FLOOR));
                     m.insert("perimeter".into(), figure(*round, mine, "LF", F_ROUND));
-                    let walls_d = match room_wall_area(&found.outline, mine, &plan_walls, &placed, &holes_of, tol) {
+                    let walls_d = match room_wall_area(&found.outline, &found.islands, mine, &plan_walls, &placed, &holes_of, tol) {
                         Ok((value, statuses, cited)) => {
                             let mut d = figure(value, mine, "SF", F_WALLS);
                             if d.value.is_some() {

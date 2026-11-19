@@ -564,6 +564,9 @@ pub struct Pricing {
     /// same shingles differently ("Field shingles", "Asphalt shingles"), so it is the
     /// pricing both ways that is said, not a line's name (call 136).
     pub twice: Vec<(String, Vec<String>)>,
+    /// Rooms whose walls' board is priced by the room's wall area, each with the walls
+    /// round it that carry board of their own (call 146).
+    pub board_twice: Vec<(String, Vec<String>)>,
 }
 
 impl Estimate {
@@ -845,7 +848,8 @@ pub fn pricing(job: &mut Job) -> Pricing {
     let worst = |side: &dyn Fn(&((f64, Status), (f64, Status))) -> Status| pairs.iter().map(side).max().unwrap_or(Status::Unknown);
     let (sa, sd) = (worst(&|p| p.0 .1), worst(&|p| p.1 .1));
     let both = if pairs.is_empty() { None } else { Some(((cents(pairs.iter().map(|p| p.0 .0).sum()), sa), (cents(pairs.iter().map(|p| p.1 .0).sum()), sd), sa.max(sd), pairs.len())) };
-    Pricing { allowance: money_total(&allowances), detail: money_total(&details), both, not_priced: bare, elements, twice }
+    let board_twice = board_on_the_room_and_a_wall(job);
+    Pricing { allowance: money_total(&allowances), detail: money_total(&details), both, not_priced: bare, elements, twice, board_twice }
 }
 
 /// Each roof priced whole whose planes are priced on their own too: (the roof's name,
@@ -872,6 +876,54 @@ fn on_the_roof_and_a_plane(job: &mut Job) -> Vec<(String, Vec<String>)> {
         }
     }
     out
+}
+
+/// Does a line's text name wallboard?
+fn names_board(text: &str) -> bool {
+    let t = text.to_lowercase();
+    ["gypsum", "drywall", "sheetrock", "wallboard", "plasterboard"].iter().any(|w| t.contains(w))
+}
+
+/// Rooms with a line priced by their walls' area (`wall_area`, call 144) whose walls
+/// carry board lines of their own: the same board bought twice (call 146). Each room by
+/// its name, with the names of those walls.
+fn board_on_the_room_and_a_wall(job: &mut Job) -> Vec<(String, Vec<String>)> {
+    let w = &job.world;
+    let mut boarded: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    for &e in &job.order {
+        let (Some(node), Some(Kind::Wall)) = (w.get::<Node>(e), w.get::<Kind>(e)) else { continue };
+        if w.get::<Cost>(e).is_some_and(|c| c.lines.iter().any(|l| !l.off && names_board(&l.description))) {
+            boarded.insert(node.path.clone(), node.name.clone());
+        }
+    }
+    let mut out = Vec::new();
+    for &e in &job.order {
+        let (Some(node), Some(Kind::Room)) = (w.get::<Node>(e), w.get::<Kind>(e)) else { continue };
+        let by_walls = w.get::<Cost>(e).is_some_and(|c| c.lines.iter().any(|l| !l.off && crate::formula::parse(&l.quantity).is_ok_and(|x| crate::formula::names(&x).iter().any(|n| n == "wall_area"))));
+        if !by_walls {
+            continue;
+        }
+        let cited: Vec<String> = w.get::<Measure>(e).and_then(|m| m.0.get("wall_area")).map(|d| d.inputs.iter().filter_map(|i| i.strip_suffix(&format!("#{}", crate::building::K_WALL))).map(str::to_string).collect()).unwrap_or_default();
+        let mut walls: Vec<String> = cited.iter().filter_map(|p| boarded.get(p).cloned()).collect();
+        walls.dedup();
+        if !walls.is_empty() {
+            out.push((node.name.clone(), walls));
+        }
+    }
+    out
+}
+
+/// "counted twice: Kitchen's walls are priced by its wall area, and wall 1 and wall 2
+/// carry board of their own: ...". None when no room is.
+pub fn board_twice_said(twice: &[(String, Vec<String>)]) -> Option<String> {
+    let (room, walls) = twice.first()?;
+    let named = match walls.len() {
+        1 => format!("{} carries", walls[0]),
+        n if n <= 3 => format!("{} and {} carry", walls[..n - 1].join(", "), walls[n - 1]),
+        n => format!("{}, {} and {} more carry", walls[0], walls[1], n - 2),
+    };
+    let more = if twice.len() > 1 { format!(" ({} more rooms the same)", twice.len() - 1) } else { String::new() };
+    Some(format!("counted twice: {room}'s walls are priced by its wall area, and {named} board of {} own: the board on those walls is in the price twice; take one of the two off{more}", if walls.len() == 1 { "its" } else { "their" }))
 }
 
 /// One cost line as the estimate sheet lists it.

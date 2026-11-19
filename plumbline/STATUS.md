@@ -7433,8 +7433,29 @@ is brick (cedar has more green than brick). On both runs' pictures, turned: ceda
 and 0.258, brick 0; as opened: cedar 0.035, brick 0.18 and 0.186. The wainscot and east
 wall boxes are as they were and passed both times.
 
-**Owed:** a judge of calls 143 to 145 (started after this commit; its table below when
-it reports); dressw run whole with its new check on the next build.
+**Judged** (an agent on another model, cold, as a drywall contractor and a flatwork
+estimator; its notes are kept outside the repository). What it found:
+
+| | Found | Where it stands |
+|---|---|---|
+| J-D1 (F2) | A room with a room inside it: its perimeter counted the inner room's faces and its wall area did not (702 SF for 930), Known | **Fixed** (call 146): 930 SF |
+| J-D2 (F1) | An opening hung off its wall's end: the wall's net area Unknown, the room's wall area Known | **Fixed**: refused, naming the opening |
+| J-D3 (F3a) | Board priced by a room's wall area and on its walls is bought twice without a word | **Fixed**: "counted twice: …" under the price, in `estimate` and the sheet |
+| J-D4 (F4) | "Slab on grade, by its thickness" is taken on a framed upper floor, its 12 in depth read as concrete | open |
+| J-D5 (F3b) | Board is rounded up to whole sheets wall by wall, and quoted as two items (one face, both faces); about a sheet over on a small house | open |
+| J-D6 (F3c) | A room's wall area (at the faces) and the walls' board (on their lines) differ by design (3.5 % on the test house), and nothing explains it | open: said in call 144 |
+| J-D7 (F3d) | The ceiling's board is one line with its paint, by the SF, no waste, no sheets | open |
+| J-D8 (F3e) | The exports do not say a quantity's waste or sheet size | open |
+| J-D9 (F5) | Slab edge forms are the whole perimeter, Known; not flagged where a stem wall stands | open |
+| J-D10 (F6) | `apply --change` from the 4 in slab to the new one keeps no price (the lines are named differently); it says so | open |
+| J-D11 (F7) | Concrete is quoted to four places (21.7777 CY), not an order quantity | open (Q29) |
+
+**After the judge's fixes (call 146), on the tree as committed with them:** `cargo test
+--workspace` 463 pass, 0 fail (the new one: a room round a room inside it, 930 SF, and
+the counted-twice line); `demos/drywall.sh`, `slab.sh`, `library.sh`, `taper.sh`,
+`shingle.sh` PASS; the gates PASS; `tools/committed.sh` before the push.
+
+**Owed:** dressw run whole with its new check on the next build.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

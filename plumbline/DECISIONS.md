@@ -5052,3 +5052,27 @@ then 36 assemblies and 171 lines, 24 of them labor; what counts it moves with it
 `crates/cli/tests/cli.rs`, `demos/library.sh`, `foundation.sh`, `framing.sh`, `shingle.sh`.
 The demonstration's 14.5186 CY (not the 14.5185 worked exactly) is QUESTIONS.md Q29's:
 a quantity is written to four places before its waste is added, and that is Patrick's.
+
+### Call 146. A room's wall area takes in what stands inside it; it is refused where an opening does not fit; board priced by the room and by its walls is said to be counted twice (2026-11-19; the second builder; the judge of calls 143 to 145)
+
+The judge found, by hand:
+
+- **A room with a room inside it** (a closet or a chase standing free) counted the inner
+  room's faces in its perimeter and left them out of its wall area: 702 SF where 930 SF
+  is board, 228 SF short, Known. The wall area now goes round what stands free inside
+  the room as well as round the room.
+- **An opening that does not fit its wall** (hung off its end) left the wall's net area
+  Unknown and the room's wall area Known, clipped to the room's sides. The room's wall
+  area is now refused, naming the opening, as the wall's own net area is.
+- **Board priced twice.** A room priced by `wall_area` whose walls also carry board lines
+  bought the board twice, and nothing said so. Under the price, in `estimate` and in the
+  sheet, it is now said, as a roof priced whole and plane by plane is (call 136):
+  "counted twice: Kitchen's walls are priced by its wall area, and wall 1 carries board of
+  its own: the board on those walls is in the price twice; take one of the two off". A
+  wall carries board when a line on it that is switched on names gypsum, drywall,
+  sheetrock, wallboard or plasterboard.
+
+**Left, and said in STATUS.md:** a slab-on-grade assembly is taken on a framed upper floor
+(its depth then read as concrete); the ceiling's board is still one line with its paint,
+in SF; board on several walls is rounded up to whole sheets wall by wall; a slab's edge
+forms are the whole perimeter. No number moves but those named above.

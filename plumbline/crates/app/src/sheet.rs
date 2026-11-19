@@ -789,7 +789,8 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             // went DOWN by the wall they cut out, and only the command line said why).
             if name == "Price" {
                 // A roof priced whole and plane by plane is in the price twice (call 136).
-                if let Some(said) = snap.pricing.as_ref().and_then(|p| view::twice_said(&p.twice)) {
+                // And a room priced by its wall area whose walls carry board (call 146).
+                for said in snap.pricing.as_ref().map(|p| [view::twice_said(&p.twice), view::board_twice_said(&p.board_twice)]).into_iter().flatten().flatten() {
                     let mut said = said;
                     if let Some(first) = said.get_mut(0..1) {
                         first.make_ascii_uppercase();
