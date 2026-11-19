@@ -1,0 +1,14 @@
+[package]
+name = "plumbline-roofing"
+description = "Low-slope roofing, ported from roofnerd's core: the tapered package to the drains, crickets, sumps, the board bill, walls and curbs, coping, wind zones and fastening"
+version.workspace = true
+edition.workspace = true
+# roofnerd's core, MIT; this workspace is MIT OR Apache-2.0 and takes it under its MIT licence.
+license = "MIT"
+rust-version.workspace = true
+
+[dependencies]
+cavalier_contours = "0.4.0"
+geo = "0.29.3"
+serde = { workspace = true }
+serde_json = { workspace = true }

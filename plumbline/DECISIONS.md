@@ -4794,3 +4794,24 @@ says so.
 **Not yet:** corners and channels counted as studs of their own (a corner takes three);
 blocking and fire blocking; double top plates lapped at the corners (here two plates
 the wall's length); headers sized from the load; floor joists, rafters and trusses.
+
+### Call 138. roofnerd's core comes across whole, as a crate, its tests with it (2026-11-19; the second builder; call 129's "learned specifics … ported from roof nerd", step 1 of `research/roofnerd-port.md`)
+
+roofnerd's solvers (the tapered package laid out the NRCA way, crickets, sumps, the board
+bill, walls and curbs with their flashing heights, coping, wind zones and fastening by
+the maker's table) are about 8,800 lines and 122 tests, each rule sourced. They are not
+rewritten: the core is brought into this workspace whole as `crates/roofing`
+(`plumbline-roofing`), with the maker's profile and fastening tables and the
+demonstration job its tests read, and its 122 tests pass here unchanged but for the
+crate's name and the paths to what they read. Two tests still read the earlier
+program's TypeScript (`packages/engine/src/roof.ts`, `model.ts`) to hold the two copies
+of its conventions together; they read it where it stands in this repository, and if
+BuildOS moves to a repository of its own they move with it or are retired with a call.
+
+Nothing in the building model uses it yet. The next steps (`research/roofnerd-port.md`):
+a drain placed on a low-slope area and the area's tapered package solved by this crate
+from the area's outline and drains, giving figures a line can price (the taper's area,
+its average and greatest thickness, the boards by letter); then crickets and sumps, walls
+and coping, wind and fastening. Its licence (MIT) is in `NOTICE`; `LICENSES.md` lists it
+under borrowed code; its two crates (`cavalier_contours`, `geo`, both MIT OR Apache-2.0)
+pass `tools/licenses.sh`.

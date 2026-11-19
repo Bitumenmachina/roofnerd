@@ -1,0 +1,350 @@
+{
+  "manufacturer": "Versico",
+  "product": "VersiCore MP-H Tapered Polyiso",
+  "document_id": "VE-7830",
+  "document_title": "VersiCore MP-H Tapered Polyiso - Technical Data Bulletin",
+  "document_date": "2019-12-16",
+  "fetched": "2026-09-12",
+  "source_url": "versico.com Document Viewer (hubspot mirror)",
+  "panel_size_ft": [
+    4,
+    4
+  ],
+  "min_thickness_in": 0.5,
+  "max_thickness_in": 4.5,
+  "min_max_thickness_note": "as printed under Panel Characteristics: available in thickness of 1/2 inch (12 mm) minimum to 4.5 inch (115 mm) maximum. The Standard 1/2-slope table alone runs Q..Q5 to a 12.5 inch thick edge and the Extended sets run to an 8.5 inch thick edge, both above this bullet -- see data/README.md and c2-data-notes.md",
+  "slopes": [
+    {
+      "label": "1/16\"",
+      "slope_in_per_ft": 0.0625,
+      "slope_mm_per_ft": 2,
+      "standard": null,
+      "extended": null,
+      "note": "listed under \"Available slopes (per foot)\"; no panel profile diagram printed for this slope"
+    },
+    {
+      "label": "1/8\"",
+      "slope_in_per_ft": 0.125,
+      "slope_mm_per_ft": 3,
+      "standard": {
+        "fill_in": "2.0 ISO",
+        "panels": [
+          {
+            "designation": "AA",
+            "thin_edge_in": 0.5,
+            "thick_edge_in": 1.0,
+            "fill_in": "2.0 ISO"
+          },
+          {
+            "designation": "A",
+            "thin_edge_in": 1.0,
+            "thick_edge_in": 1.5,
+            "fill_in": "2.0 ISO"
+          },
+          {
+            "designation": "B",
+            "thin_edge_in": 1.5,
+            "thick_edge_in": 2.0,
+            "fill_in": "2.0 ISO"
+          },
+          {
+            "designation": "C",
+            "thin_edge_in": 2.0,
+            "thick_edge_in": 2.5,
+            "fill_in": "2.0 ISO"
+          }
+        ]
+      },
+      "extended": {
+        "fill_in": "4.0 ISO",
+        "panels": [
+          {
+            "designation": "AA",
+            "thin_edge_in": 0.5,
+            "thick_edge_in": 1.0,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "A",
+            "thin_edge_in": 1.0,
+            "thick_edge_in": 1.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "B",
+            "thin_edge_in": 1.5,
+            "thick_edge_in": 2.0,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "C",
+            "thin_edge_in": 2.0,
+            "thick_edge_in": 2.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "D",
+            "thin_edge_in": 2.5,
+            "thick_edge_in": 3.0,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "E",
+            "thin_edge_in": 3.0,
+            "thick_edge_in": 3.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "F",
+            "thin_edge_in": 3.5,
+            "thick_edge_in": 4.0,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "FF",
+            "thin_edge_in": 4.0,
+            "thick_edge_in": 4.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "AA1",
+            "thin_edge_in": 4.5,
+            "thick_edge_in": 5.0,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "A1",
+            "thin_edge_in": 5.0,
+            "thick_edge_in": 5.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "B1",
+            "thin_edge_in": 5.5,
+            "thick_edge_in": 6.0,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "C1",
+            "thin_edge_in": 6.0,
+            "thick_edge_in": 6.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "D1",
+            "thin_edge_in": 6.5,
+            "thick_edge_in": 7.0,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "E1",
+            "thin_edge_in": 7.0,
+            "thick_edge_in": 7.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "F1",
+            "thin_edge_in": 7.5,
+            "thick_edge_in": 8.0,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "FF1",
+            "thin_edge_in": 8.0,
+            "thick_edge_in": 8.5,
+            "fill_in": "4.0 ISO"
+          }
+        ]
+      }
+    },
+    {
+      "label": "3/16\"",
+      "slope_in_per_ft": 0.1875,
+      "slope_mm_per_ft": 5,
+      "standard": null,
+      "extended": null,
+      "note": "listed under \"Available slopes (per foot)\"; no panel profile diagram printed for this slope"
+    },
+    {
+      "label": "1/4\"",
+      "slope_in_per_ft": 0.25,
+      "slope_mm_per_ft": 6,
+      "standard": {
+        "fill_in": "2.0 ISO",
+        "panels": [
+          {
+            "designation": "X",
+            "thin_edge_in": 0.5,
+            "thick_edge_in": 1.5,
+            "fill_in": "2.0 ISO"
+          },
+          {
+            "designation": "Y",
+            "thin_edge_in": 1.5,
+            "thick_edge_in": 2.5,
+            "fill_in": "2.0 ISO"
+          }
+        ]
+      },
+      "extended": {
+        "fill_in": "4.0 ISO",
+        "panels": [
+          {
+            "designation": "X",
+            "thin_edge_in": 0.5,
+            "thick_edge_in": 1.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "Y",
+            "thin_edge_in": 1.5,
+            "thick_edge_in": 2.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "Z",
+            "thin_edge_in": 2.5,
+            "thick_edge_in": 3.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "ZZ",
+            "thin_edge_in": 3.5,
+            "thick_edge_in": 4.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "X1",
+            "thin_edge_in": 4.5,
+            "thick_edge_in": 5.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "Y1",
+            "thin_edge_in": 5.5,
+            "thick_edge_in": 6.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "Z1",
+            "thin_edge_in": 6.5,
+            "thick_edge_in": 7.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "ZZ1",
+            "thin_edge_in": 7.5,
+            "thick_edge_in": 8.5,
+            "fill_in": "4.0 ISO"
+          }
+        ]
+      }
+    },
+    {
+      "label": "3/8\"",
+      "slope_in_per_ft": 0.375,
+      "slope_mm_per_ft": 10,
+      "standard": null,
+      "extended": null,
+      "note": "listed under \"Available slopes (per foot)\"; no panel profile diagram printed for this slope"
+    },
+    {
+      "label": "1/2\"",
+      "slope_in_per_ft": 0.5,
+      "slope_mm_per_ft": 12,
+      "standard": {
+        "fill_in": "2.0 ISO",
+        "panels": [
+          {
+            "designation": "Q",
+            "thin_edge_in": 0.5,
+            "thick_edge_in": 2.5,
+            "fill_in": "2.0 ISO"
+          },
+          {
+            "designation": "Q1",
+            "thin_edge_in": 2.5,
+            "thick_edge_in": 4.5,
+            "fill_in": "2.0 ISO"
+          },
+          {
+            "designation": "Q2",
+            "thin_edge_in": 4.5,
+            "thick_edge_in": 6.5,
+            "fill_in": "2.0 ISO"
+          },
+          {
+            "designation": "Q3",
+            "thin_edge_in": 6.5,
+            "thick_edge_in": 8.5,
+            "fill_in": "2.0 ISO"
+          },
+          {
+            "designation": "Q4",
+            "thin_edge_in": 8.5,
+            "thick_edge_in": 10.5,
+            "fill_in": "2.0 ISO"
+          },
+          {
+            "designation": "Q5",
+            "thin_edge_in": 10.5,
+            "thick_edge_in": 12.5,
+            "fill_in": "2.0 ISO"
+          }
+        ]
+      },
+      "extended": {
+        "fill_in": "4.0 ISO",
+        "panels": [
+          {
+            "designation": "Q",
+            "thin_edge_in": 0.5,
+            "thick_edge_in": 2.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "QQ",
+            "thin_edge_in": 2.5,
+            "thick_edge_in": 4.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "Q1",
+            "thin_edge_in": 4.5,
+            "thick_edge_in": 6.5,
+            "fill_in": "4.0 ISO"
+          },
+          {
+            "designation": "QQ1",
+            "thin_edge_in": 6.5,
+            "thick_edge_in": 8.5,
+            "fill_in": "4.0 ISO"
+          }
+        ]
+      }
+    }
+  ],
+  "panel_characteristics": {
+    "core": "closed cell polyisocyanurate foam",
+    "facer": "glass reinforced felt (GRF) facers (both sides)",
+    "compressive_strength": {
+      "test_method": "ASTM D1621 / ASTM 1289",
+      "value": "20 psi minimum (138 kPa, Grade 2)"
+    },
+    "dimensional_stability": {
+      "test_method": "ASTM D2126",
+      "value": "2% linear change (7 days)"
+    },
+    "moisture_vapor_transmission": {
+      "test_method": "ASTM E96 / 12.10",
+      "value": "<1 perm (57.5 ng/(Pa·s·m²))"
+    },
+    "water_absorption": {
+      "test_method": "ASTM C209",
+      "value": "<1% volume"
+    },
+    "service_temperature": "-100° to 250°F (-73°C to 122°C)",
+    "note": "POLYISO FOAM CORE ONLY -- typical properties, not guaranteed for all samples (as printed)"
+  },
+  "provenance": "Manufacturer technical data bulletin, transcribed from the PDF's own page images. Not authority for fastening or code compliance -- the manual on disk is authority; this file is solver input for the tapered-package solver (C2)."
+}

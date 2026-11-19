@@ -29,6 +29,9 @@ membrane) as the low-slope area's own values.
 
 ## The order
 
+**Step 0, done 2026-11-19 (call 138):** the core is in this workspace whole, as
+`crates/roofing`, its 122 tests passing. Nothing in the building model uses it yet.
+
 1. **Drains and the taper** (`taper.rs`, `profile.rs`, the part of `geom.rs` it needs).
    A drain placed on a low-slope area; the area's tapered package solved in the core:
    regions, planes, valleys, the depth at any point, the thickest and thinnest, the

@@ -486,6 +486,8 @@ from a shallow clone of the source.
 
 | The building model: levels, walls and their types and joins, doors and windows and their types, floors, rooms, straight runs and their types, placed things, fittings, connectors, and the network of what is joined | BIMCraft, `crates/core/src/model.rs`, `walls.rs`, `runs.rs`, `network.rs`, `rooms.rs`, `geom.rs` and `family.rs`, commit `f202abd85d1cf165325e2f7b250da0b5e51f5b71` (https://github.com/IPedrax/bimcraft; MIT OR Apache-2.0) | MIT | `crates/world/src/building/model.rs`, `walls.rs`, `runs.rs`, `network.rs` and `rooms.rs`, and five small items in `crates/world/src/building.rs`. Each header says what is ported and lists what was changed; `PORTMAP.md` gives the source line of every public item and is checked by `tools/portmap.sh`. The copyright and permission notice are in `NOTICE`. |
 
+| Low-slope roofing: the tapered package to the drains, crickets, sumps, the board bill, walls and curbs, coping, wind zones and fastening, with the maker's profile and fastening tables and the earlier program's demonstration job its tests read | roofnerd's core (`src-tauri/core`, `data/profiles`, `data/fastening`, `jobs/demo-job`), this repository's default branch at `2bd6894` (MIT) | MIT | `crates/roofing`, whole: its source, its tests (the NRCA figures and the rest, 122 of them, passing unchanged but for the crate's name and the paths to what they read), and its data. DECISIONS.md call 138. The copyright and permission notice are in `NOTICE`. |
+
 Nothing else is borrowed. IfcOpenShell (LGPL-3.0) and buildingSMART's IFC4.3 documentation
 were read for the values of one IFC enumeration (DECISIONS.md call 29); nothing of either
 is copied or linked. The owner's earlier program was read for the pattern a cost line

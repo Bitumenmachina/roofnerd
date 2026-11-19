@@ -1,0 +1,1858 @@
+{
+  "publisher": "Carlisle",
+  "title": "Design References DR-05 -- Insulation Fastening Patterns",
+  "document_id": "DR-05",
+  "document_date": "2024-07",
+  "fetched": "2026-09-12",
+  "source": "aadvanced.com mirror of the Carlisle PDF",
+  "publisher_note": "Versico publishes the same fastening-pattern family under its own cover as DR-05-19",
+  "guidance_text": [
+    "The information contained represents guidelines to address possible requirements as part of the building specification as listed under the Quality Insurance or Performance Article. Carlisle recommends that the building owner retain a design professional to verify that these guidelines are appropriate.",
+    "When enhanced insulation fastening is required as prescribed in Factory Mutual Loss Prevention Data Sheet 1-29, ANSI/SPRI WD-1, or Miami-Dade County, the specifier may consider the enclosed insulation pattern securements."
+  ],
+  "minimum_thickness_note": "All insulation and underlayment shown are the minimum thickness required for the established rating.",
+  "pattern_count": 29,
+  "patterns": [
+    {
+      "board": "4x4",
+      "fasteners": 4,
+      "layout": {
+        "board_size_in": [
+          48,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 12,
+            "x_in": [
+              12,
+              36
+            ]
+          },
+          {
+            "y_in": 36,
+            "x_in": [
+              12,
+              36
+            ]
+          }
+        ],
+        "uniform_grid": true,
+        "edge_in": 12,
+        "spacing_in": 24,
+        "rows": 2,
+        "columns": 2
+      },
+      "ratings": [
+        {
+          "fm_class": "1-90",
+          "products": [
+            "2\" Polyiso HP-H/Insulbase or SecurShield",
+            "1/2\" SecurShield HD Plus",
+            "5/8\" Dens Deck Prime, DensDeck StormX Prime or Securock"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x4",
+      "fasteners": 5,
+      "layout": {
+        "board_size_in": [
+          48,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              42
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              24
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              42
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "note": "4 corners at 6in inset + 1 true-center fastener",
+        "rows": 3,
+        "columns": 3
+      },
+      "ratings": [
+        {
+          "fm_class": "1-90",
+          "products": [
+            "1/2\" Securock",
+            "1-1/2\" Polyiso HP-H/Insulbase (base layer fastened only)"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x4",
+      "fasteners": 6,
+      "layout": {
+        "board_size_in": [
+          48,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              42
+            ]
+          },
+          {
+            "y_in": 12,
+            "x_in": [
+              24
+            ]
+          },
+          {
+            "y_in": 36,
+            "x_in": [
+              24
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              42
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "note": "4 corners at 6in inset + 2 center-column fasteners at 12in/36in",
+        "rows": 4,
+        "columns": 3
+      },
+      "ratings": [
+        {
+          "fm_class": "1-90",
+          "products": [
+            "1/4\" Dens Deck Prime"
+          ]
+        },
+        {
+          "fm_class": "1-75",
+          "products": [
+            "1/4\" Securock"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x4",
+      "fasteners": 8,
+      "layout": {
+        "board_size_in": [
+          48,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              42
+            ]
+          },
+          {
+            "y_in": 12,
+            "x_in": [
+              24
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              12,
+              36
+            ]
+          },
+          {
+            "y_in": 36,
+            "x_in": [
+              24
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              42
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "note": "the pattern-6 corners+center-column, plus 2 mid-field fasteners at 24in from each edge, 12in/36in across",
+        "rows": 5,
+        "columns": 5
+      },
+      "ratings": [
+        {
+          "fm_class": "1-90",
+          "products": [
+            "1\" Polyiso HP-H/Insulbase (recover only)"
+          ],
+          "note": "\"FM 1-90 for all except\" -- printed as the only exception listed"
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x4",
+      "fasteners": 9,
+      "layout": {
+        "board_size_in": [
+          48,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              24,
+              42
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              6,
+              24,
+              42
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              24,
+              42
+            ]
+          }
+        ],
+        "uniform_grid": true,
+        "edge_in": 6,
+        "spacing_in": 18,
+        "rows": 3,
+        "columns": 3
+      },
+      "ratings": [],
+      "enhancement_only": true,
+      "enhancement_text": "Fastening pattern should only be used when required by FM for perimeter or corner enhancement or required by Carlisle for issuance of extended wind speed warranty."
+    },
+    {
+      "board": "4x4",
+      "fasteners": 10,
+      "layout": {
+        "board_size_in": [
+          48,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              24,
+              42
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              24
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              6,
+              42
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              24
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              24,
+              42
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "note": "4x4, variant 1 of 2 ten-fastener patterns in this manual",
+        "rows": 5,
+        "columns": 3
+      },
+      "ratings": [
+        {
+          "fm_class": "1-150",
+          "products": [
+            "2\" Polyiso HP-H/InsulBase (EPDM, TPO and FleeceBACK)",
+            "1/2\" Securock (EPDM, TPO and FleeceBACK)"
+          ]
+        },
+        {
+          "fm_class": "1-135",
+          "products": [
+            "2\" Polyiso HP-H/InsulBase (PVC)"
+          ]
+        },
+        {
+          "fm_class": "1-105",
+          "products": [
+            "1/2\" Dens Deck Prime"
+          ]
+        },
+        {
+          "fm_class": "1-90",
+          "products": [
+            "1-1/2\" Polyiso HP-H/InsulBase (Recover)"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x4",
+      "fasteners": 11,
+      "layout": {
+        "board_size_in": [
+          48,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              24,
+              42
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              6,
+              42
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              24
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              6,
+              42
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              24,
+              42
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "rows": 5,
+        "columns": 3
+      },
+      "ratings": [],
+      "enhancement_only": true,
+      "enhancement_text": "Fastening pattern should only be used when required by FM for perimeter or corner enhancement or required by Carlisle for issuance of extended wind speed warranty."
+    },
+    {
+      "board": "4x4",
+      "fasteners": 14,
+      "layout": {
+        "board_size_in": [
+          48,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              18,
+              30,
+              42
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              6,
+              24,
+              42
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              6,
+              24,
+              42
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              18,
+              30,
+              42
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "rows": 4,
+        "columns": 5
+      },
+      "ratings": [],
+      "enhancement_only": true,
+      "enhancement_text": "Fastening pattern should only be used when required by FM for perimeter or corner enhancement or required by Carlisle for issuance of extended wind speed warranty."
+    },
+    {
+      "board": "4x4",
+      "fasteners": 16,
+      "layout": {
+        "board_size_in": [
+          48,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              18,
+              30,
+              42
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              6,
+              18,
+              30,
+              42
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              6,
+              18,
+              30,
+              42
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              18,
+              30,
+              42
+            ]
+          }
+        ],
+        "uniform_grid": true,
+        "edge_in": 6,
+        "spacing_in": 12,
+        "rows": 4,
+        "columns": 4
+      },
+      "ratings": [
+        {
+          "fm_class": "1-285",
+          "products": [
+            "1/2\" Dens Deck Prime (FleeceBACK)"
+          ],
+          "note": "printed as \"FM I-285\" (capital I, not the numeral 1) in the source; normalized here to 1-285 -- see c2-data-notes.md"
+        },
+        {
+          "fm_class": "1-225",
+          "products": [
+            "2\" SecurShield",
+            "2\" Polyiso HP-H/InsulBase (FleeceBACK)",
+            "1/2\" Securock"
+          ]
+        },
+        {
+          "fm_class": "1-195",
+          "products": [
+            "2\" Polyiso HP-H/InsulBase (EPDM and TPO)"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x8",
+      "fasteners": 6,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 12,
+            "x_in": [
+              12,
+              84
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              48
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              48
+            ]
+          },
+          {
+            "y_in": 36,
+            "x_in": [
+              12,
+              84
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 12,
+        "note": "4 corners at 12in inset + 2 center-column fasteners at 18in/30in from top",
+        "rows": 4,
+        "columns": 3
+      },
+      "ratings": [
+        {
+          "fm_class": "1-75",
+          "products": [
+            "1/2\" Securock (with InsulFAST fasteners and SecurFAST Plates)"
+          ]
+        },
+        {
+          "fm_class": "1-90",
+          "products": [
+            "5/8\" Securock (with InsulFAST fasteners and SecurFAST Plates)"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x8",
+      "fasteners": 8,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 12,
+            "x_in": [
+              12,
+              36,
+              60,
+              84
+            ]
+          },
+          {
+            "y_in": 36,
+            "x_in": [
+              12,
+              36,
+              60,
+              84
+            ]
+          }
+        ],
+        "uniform_grid": true,
+        "edge_in": 12,
+        "spacing_in": 24,
+        "rows": 2,
+        "columns": 4
+      },
+      "ratings": [
+        {
+          "fm_class": "1-90",
+          "products": [
+            "2\" Polyiso HP-H/InsulBase/InsulBase NH/InsulBase RL or SecurShield",
+            "1/2\" SecurShield HD Plus",
+            "5/8\" Dens Deck Prime, DensDeck StormX Prime or Securock",
+            "5/8\" or 1/2\" Securock (with InsulFAST fasteners and SecurFAST Plates)"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x8",
+      "fasteners": 10,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              42,
+              54,
+              90
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              24,
+              72
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              42,
+              54,
+              90
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "note": "4x8, variant 1 of 2 ten-fastener patterns for this board size",
+        "rows": 3,
+        "columns": 6
+      },
+      "ratings": [
+        {
+          "fm_class": "1-90",
+          "products": [
+            "1/2\" Securock",
+            "1-1/2\" Polyiso HP-H/InsulBase/InsulBase NH/InsulBase RL (base layer fastened only)"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x8",
+      "fasteners": 10,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 12,
+            "x_in": [
+              12,
+              36,
+              60,
+              84
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              24,
+              72
+            ]
+          },
+          {
+            "y_in": 36,
+            "x_in": [
+              12,
+              36,
+              60,
+              84
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 12,
+        "note": "4x8, variant 2 of 2 ten-fastener patterns for this board size",
+        "rows": 3,
+        "columns": 6
+      },
+      "ratings": [
+        {
+          "fm_class": "1-90",
+          "products": [
+            "1/4\" Securock (with InsulFAST fasteners and SecurFAST Plates)",
+            "1/2\" Dens Deck Prime"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x8",
+      "fasteners": 11,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              12,
+              36,
+              60,
+              84
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              24,
+              48,
+              72
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              12,
+              36,
+              60,
+              84
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "rows": 3,
+        "columns": 7
+      },
+      "ratings": [
+        {
+          "fm_class": "1-90",
+          "products": [
+            "1-1/2\" Polyiso HP-H/InsulBase/InsulBase NH/InsulBase RL"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x8",
+      "fasteners": 12,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 12,
+            "x_in": [
+              12,
+              36,
+              60,
+              84
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              12,
+              36,
+              60,
+              84
+            ]
+          },
+          {
+            "y_in": 36,
+            "x_in": [
+              12,
+              36,
+              60,
+              84
+            ]
+          }
+        ],
+        "uniform_grid": true,
+        "edge_in": 12,
+        "spacing_in": {
+          "x_in": 24,
+          "y_in": 12
+        },
+        "rows": 3,
+        "columns": 4
+      },
+      "ratings": [
+        {
+          "fm_class": "1-90",
+          "products": [
+            "1/4\" Dens Deck Prime"
+          ]
+        },
+        {
+          "fm_class": "1-75",
+          "products": [
+            "1/4\" Securock"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x8",
+      "fasteners": 15,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              12,
+              30,
+              48,
+              66,
+              84
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              12,
+              30,
+              48,
+              66,
+              84
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              12,
+              30,
+              48,
+              66,
+              84
+            ]
+          }
+        ],
+        "uniform_grid": true,
+        "edge_in": {
+          "x_in": 12,
+          "y_in": 6
+        },
+        "spacing_in": 18,
+        "rows": 3,
+        "columns": 5
+      },
+      "ratings": [],
+      "enhancement_only": true,
+      "enhancement_text": "Fastening pattern should only be used when required by FM for perimeter or corner enhancement or required by Carlisle for issuance of extended wind speed warranty."
+    },
+    {
+      "board": "4x8",
+      "fasteners": 16,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              42,
+              54,
+              90
+            ]
+          },
+          {
+            "y_in": 12,
+            "x_in": [
+              24,
+              72
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              12,
+              36,
+              60,
+              84
+            ]
+          },
+          {
+            "y_in": 36,
+            "x_in": [
+              24,
+              72
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              42,
+              54,
+              90
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "note": "two diamonds side by side, 16 total",
+        "rows": 5,
+        "columns": 10
+      },
+      "ratings": [
+        {
+          "fm_class": "1-90",
+          "products": [
+            "1\" Polyiso HP-H/InsulBase/InsulBase NH/InsulBase RL (Recover Only)"
+          ],
+          "note": "\"FM 1-90 for all except\" -- printed as the only exception listed"
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x8",
+      "fasteners": 17,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              24,
+              48,
+              72,
+              90
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              6,
+              90
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              24,
+              48,
+              72
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              6,
+              90
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              24,
+              48,
+              72,
+              90
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "rows": 5,
+        "columns": 5
+      },
+      "ratings": [
+        {
+          "fm_class": "1-105",
+          "products": [
+            "7/16\" OSB (EPDM)"
+          ]
+        },
+        {
+          "fm_class": "1-150",
+          "products": [
+            "7/16\" OSB (TPO and FleeceBACK)"
+          ]
+        },
+        {
+          "fm_class": "1-120",
+          "products": [
+            "7/16\" OSB (PVC)"
+          ],
+          "note": "printed as \"FM-120\" (missing the \"1-\") in the source; normalized here to 1-120 -- see c2-data-notes.md"
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x8",
+      "fasteners": 18,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90
+            ]
+          }
+        ],
+        "uniform_grid": true,
+        "edge_in": 6,
+        "spacing_in": [
+          18,
+          18,
+          12,
+          18,
+          18
+        ],
+        "note": "x-spacing is 18in except the 12in gap either side of the board's own 4ft splice line (42in/54in)",
+        "rows": 3,
+        "columns": 6
+      },
+      "ratings": [],
+      "enhancement_only": true,
+      "enhancement_text": "Fastening pattern should only be used when required by FM for perimeter or corner enhancement or required by Carlisle for issuance of extended wind speed warranty."
+    },
+    {
+      "board": "4x8",
+      "fasteners": 20,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              24,
+              72
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              6,
+              42,
+              54,
+              90
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              24,
+              72
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "rows": 5,
+        "columns": 6
+      },
+      "ratings": [
+        {
+          "fm_class": "1-150",
+          "products": [
+            "2\" Polyiso HP-H/InsulBase/InsulBase NH/InsulBase RL (EPDM, TPO and FleeceBACK)",
+            "1/2\" Securock (EPDM, TPO and FleeceBACK)",
+            "1-1/2\" SecurShield HD Composite",
+            "2\" SecurShield HD Composite RL"
+          ]
+        },
+        {
+          "fm_class": "1-135",
+          "products": [
+            "2\" Polyiso HP-H/InsulBase/InsulBase NH/InsulBase RL (PVC)"
+          ]
+        },
+        {
+          "fm_class": "1-105",
+          "products": [
+            "1/2\" Dens Deck Prime"
+          ]
+        },
+        {
+          "fm_class": "1-90",
+          "products": [
+            "1\" Poyiso HP-H/InsulBase/InsulBase NH/InsulBase RL (Recover)"
+          ],
+          "note": "printed as \"Poyiso\" (missing the \"l\") in the source -- transcribed verbatim"
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x8",
+      "fasteners": 21,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              12,
+              24,
+              36,
+              48,
+              60,
+              72,
+              84
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              12,
+              24,
+              36,
+              48,
+              60,
+              72,
+              84
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              12,
+              24,
+              36,
+              48,
+              60,
+              72,
+              84
+            ]
+          }
+        ],
+        "uniform_grid": true,
+        "edge_in": 12,
+        "spacing_in": {
+          "x_in": 12,
+          "y_in": 18
+        },
+        "rows": 3,
+        "columns": 7
+      },
+      "ratings": [],
+      "enhancement_only": true,
+      "enhancement_text": "Fastening pattern should only be used when required by FM for perimeter or corner enhancement or required by Carlisle for issuance of extended wind speed warranty."
+    },
+    {
+      "board": "4x8",
+      "fasteners": 24,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90
+            ]
+          }
+        ],
+        "uniform_grid": true,
+        "edge_in": 6,
+        "spacing_in": [
+          18,
+          18,
+          12,
+          18,
+          18
+        ],
+        "note": "same 6-column set as the 18-fastener pattern (12in gap either side of the 4ft splice line)",
+        "rows": 4,
+        "columns": 6
+      },
+      "ratings": [],
+      "enhancement_only": true,
+      "enhancement_text": "Fastening pattern should only be used when required by FM for perimeter or corner enhancement or required by Carlisle for issuance of extended wind speed warranty."
+    },
+    {
+      "board": "4x8",
+      "fasteners": 26,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              18,
+              36,
+              60,
+              78,
+              90
+            ]
+          },
+          {
+            "y_in": 12,
+            "x_in": [
+              48
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              6,
+              18,
+              36,
+              60,
+              78,
+              90
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              6,
+              18,
+              36,
+              60,
+              78,
+              90
+            ]
+          },
+          {
+            "y_in": 36,
+            "x_in": [
+              48
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              18,
+              36,
+              60,
+              78,
+              90
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "rows": 6,
+        "columns": 7
+      },
+      "ratings": [],
+      "enhancement_only": true,
+      "enhancement_text": "Fastening pattern should only be used when required by FM for perimeter or corner enhancement or required by Carlisle for issuance of extended wind speed warranty."
+    },
+    {
+      "board": "4x8",
+      "fasteners": 28,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              18,
+              30,
+              42,
+              54,
+              66,
+              78,
+              90
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              18,
+              30,
+              42,
+              54,
+              66,
+              78,
+              90
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "rows": 4,
+        "columns": 10
+      },
+      "ratings": [],
+      "enhancement_only": true,
+      "enhancement_text": "Fastening pattern should only be used when required by FM for perimeter or corner enhancement or required by Carlisle for issuance of extended wind speed warranty."
+    },
+    {
+      "board": "4x8",
+      "fasteners": 30,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              18,
+              30,
+              42,
+              54,
+              66,
+              78,
+              90
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              6,
+              18,
+              30,
+              66,
+              78,
+              90
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              42,
+              54
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              6,
+              18,
+              30,
+              66,
+              78,
+              90
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              18,
+              30,
+              42,
+              54,
+              66,
+              78,
+              90
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "rows": 5,
+        "columns": 8
+      },
+      "ratings": [],
+      "enhancement_only": true,
+      "enhancement_text": "Fastening pattern should only be used when required by FM for perimeter or corner enhancement or required by Carlisle for issuance of extended wind speed warranty."
+    },
+    {
+      "board": "4x8",
+      "fasteners": 32,
+      "layout": {
+        "board_size_in": [
+          96,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              18,
+              30,
+              42,
+              54,
+              66,
+              78,
+              90
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              6,
+              18,
+              30,
+              42,
+              54,
+              66,
+              78,
+              90
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              6,
+              18,
+              30,
+              42,
+              54,
+              66,
+              78,
+              90
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              18,
+              30,
+              42,
+              54,
+              66,
+              78,
+              90
+            ]
+          }
+        ],
+        "uniform_grid": true,
+        "edge_in": 6,
+        "spacing_in": 12,
+        "rows": 4,
+        "columns": 8
+      },
+      "ratings": [
+        {
+          "fm_class": "1-225",
+          "products": [
+            "2\" SecurShield",
+            "1/2\" Securock",
+            "2\" Polyiso HP-H/InsulBase/InsulBase NH/InsulBase RL (FleeceBACK)"
+          ]
+        },
+        {
+          "fm_class": "1-195",
+          "products": [
+            "2\" Polyiso HP-H/InsulBase/InsulBase NH/InsulBase RL (EPDM and TPO)"
+          ]
+        },
+        {
+          "fm_class": "1-285",
+          "products": [
+            "1/2\" Dens Deck Prime (FleeceBACK)"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x12",
+      "fasteners": 12,
+      "layout": {
+        "board_size_in": [
+          144,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 12,
+            "x_in": [
+              12,
+              36,
+              60,
+              84,
+              108,
+              132
+            ]
+          },
+          {
+            "y_in": 36,
+            "x_in": [
+              12,
+              36,
+              60,
+              84,
+              108,
+              132
+            ]
+          }
+        ],
+        "uniform_grid": true,
+        "edge_in": 12,
+        "spacing_in": 24,
+        "rows": 2,
+        "columns": 6
+      },
+      "ratings": [
+        {
+          "fm_class": "1-90",
+          "products": [
+            "2\" Polyiso HP-H/InsulBase/InsulBase NH/InsulBase RL"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x12",
+      "fasteners": 24,
+      "layout": {
+        "board_size_in": [
+          144,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              42,
+              54,
+              90,
+              102,
+              138
+            ]
+          },
+          {
+            "y_in": 12,
+            "x_in": [
+              24,
+              72,
+              120
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              12,
+              36,
+              60,
+              84,
+              108,
+              132
+            ]
+          },
+          {
+            "y_in": 36,
+            "x_in": [
+              24,
+              72,
+              120
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              42,
+              54,
+              90,
+              102,
+              138
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "note": "the 4x8 diamond pattern tiled 3x across the 12ft length",
+        "rows": 5,
+        "columns": 15
+      },
+      "ratings": [
+        {
+          "fm_class": "1-90",
+          "products": [
+            "1\" Polyiso HP-H/InsulBase/InsulBase NH/InsulBase RL (Recover Only)"
+          ],
+          "note": "\"FM 1-90 for all except\" -- printed as the only exception listed"
+        }
+      ],
+      "enhancement_only": false
+    },
+    {
+      "board": "4x12",
+      "fasteners": 30,
+      "layout": {
+        "board_size_in": [
+          144,
+          48
+        ],
+        "positions": [
+          {
+            "y_in": 6,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90,
+              102,
+              120,
+              138
+            ]
+          },
+          {
+            "y_in": 18,
+            "x_in": [
+              24,
+              72,
+              120
+            ]
+          },
+          {
+            "y_in": 24,
+            "x_in": [
+              6,
+              42,
+              54,
+              90,
+              102,
+              138
+            ]
+          },
+          {
+            "y_in": 30,
+            "x_in": [
+              24,
+              72,
+              120
+            ]
+          },
+          {
+            "y_in": 42,
+            "x_in": [
+              6,
+              24,
+              42,
+              54,
+              72,
+              90,
+              102,
+              120,
+              138
+            ]
+          }
+        ],
+        "uniform_grid": false,
+        "edge_in": 6,
+        "note": "the 4x8 32-fastener column set tiled 3x across the 12ft length",
+        "rows": 5,
+        "columns": 9
+      },
+      "ratings": [
+        {
+          "fm_class": "1-150",
+          "products": [
+            "2\" Polyiso HP-H/InsulBase/InsulBase NH/InsulBase RL (EPDM, TPO and FleeceBACK)"
+          ]
+        },
+        {
+          "fm_class": "1-135",
+          "products": [
+            "2\" Polyiso HP-H/InsulBase/InsulBase NH/InsulBase RL (PVC)"
+          ]
+        }
+      ],
+      "enhancement_only": false
+    }
+  ],
+  "provenance": "Carlisle Design Reference, transcribed from the PDF's own page images and cross-checked by pixel-detecting the fastener markers on each drawing. Not authority for fastening design -- the manual on disk is authority; this file is solver input for the fastening solver (C4)."
+}

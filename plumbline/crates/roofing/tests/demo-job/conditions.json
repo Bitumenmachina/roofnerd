@@ -1,0 +1,756 @@
+[
+  {
+    "color": "#4a6b8a",
+    "id": "c-field",
+    "items": [
+      {
+        "costCode": "07-100-100",
+        "description": "TPO membrane, 60 mil",
+        "formula": "SQ",
+        "id": "tpo-60",
+        "layer": "membrane",
+        "order": {
+          "name": "ROLL",
+          "per": 10,
+          "rule": "ceil"
+        },
+        "price": {
+          "contains": 1000,
+          "name": "SF",
+          "rule": "exact"
+        },
+        "thickness": 0.06,
+        "unit": "SQ",
+        "unitCost": 1.25,
+        "waste": 10
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Tapered *",
+        "eachOf": "TAPER_*_SF",
+        "formula": "TAPER_*_SF / 100",
+        "id": "iso",
+        "notes": "One line for the whole tapered package. The sheet draws one per lettered panel the layout reached, and each takes its price from the book by its own name — so moving the slope into another chart's series buys the panels that chart prints rather than pricing nothing.",
+        "unit": "SQ",
+        "waste": 8
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Flat polyiso fill board",
+        "formula": "FILL_SF / 100",
+        "id": "iso-fill",
+        "unit": "SQ",
+        "unitCost": 170.25,
+        "waste": 8
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "High density cover board, 1/2 in",
+        "formula": "SQ",
+        "id": "coverboard",
+        "layer": "cover board",
+        "thickness": 0.5,
+        "unit": "SQ",
+        "unitCost": 93.25,
+        "waste": 8
+      },
+      {
+        "costCode": "07-100-170",
+        "description": "Base layer fasteners, field",
+        "formula": "FASTENERS_Z1_EA",
+        "id": "base-fasteners-field",
+        "layer": "fastening",
+        "notes": "One fastened board to a board position, and the pattern for the field zone off the manufacturer's own sheet at the uplift rating the field pressure asks for. Everything above the base layer is adhered.",
+        "order": {
+          "name": "BOX",
+          "per": 1000,
+          "rule": "exact"
+        },
+        "unit": "EA",
+        "unitCost": 290
+      },
+      {
+        "costCode": "07-100-170",
+        "description": "Base layer fasteners, perimeter",
+        "formula": "FASTENERS_Z2_EA",
+        "id": "base-fasteners-perimeter",
+        "layer": "fastening",
+        "order": {
+          "name": "BOX",
+          "per": 1000,
+          "rule": "exact"
+        },
+        "unit": "EA",
+        "unitCost": 290
+      },
+      {
+        "costCode": "07-100-170",
+        "description": "Base layer fasteners, corner",
+        "formula": "FASTENERS_Z3_EA",
+        "id": "base-fasteners-corner",
+        "layer": "fastening",
+        "order": {
+          "name": "BOX",
+          "per": 1000,
+          "rule": "exact"
+        },
+        "unit": "EA",
+        "unitCost": 290
+      },
+      {
+        "costCode": "07-100-170",
+        "description": "Barbed plates, 3 in",
+        "formula": "PLATES_EA",
+        "id": "base-plates",
+        "layer": "fastening",
+        "notes": "One plate to a fastener, which is how the sheet prints them: \"Insulation Fasteners & Plates\".",
+        "order": {
+          "name": "BOX",
+          "per": 1000,
+          "rule": "exact"
+        },
+        "unit": "EA",
+        "unitCost": 218
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Insulation adhesive, dual tank set, field",
+        "formula": "ADHESIVE_SETS_Z1_EA",
+        "id": "iso-adhesive-field",
+        "layer": "adhesive",
+        "unit": "EA",
+        "unitCost": 1249.5
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Insulation adhesive, dual tank set, perimeter",
+        "formula": "ADHESIVE_SETS_Z2_EA",
+        "id": "iso-adhesive-perimeter",
+        "layer": "adhesive",
+        "unit": "EA",
+        "unitCost": 1249.5
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Insulation adhesive, dual tank set, corner",
+        "formula": "ADHESIVE_SETS_Z3_EA",
+        "id": "iso-adhesive-corner",
+        "layer": "adhesive",
+        "notes": "Every board course above the fastened one, and the cover board over the lot, at the ribbon spacing the manufacturer's warranty table gives for this wind speed. The table stops below this coast; the top row it prints is what this rests on, and the fastening plan says so on its face.",
+        "unit": "EA",
+        "unitCost": 1249.5
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Bonding adhesive, 5 gallon pail",
+        "formula": "BONDING_GAL / 5",
+        "id": "bonding-adhesive",
+        "layer": "adhesive",
+        "notes": "Gallons into five gallon pails. The coverage rate the manual prints already carries both faces, so it is not doubled here.",
+        "unit": "EA",
+        "unitCost": 246
+      },
+      {
+        "costCode": "07-100-210",
+        "description": "Tear off existing roof",
+        "formula": "SQ",
+        "id": "tearoff",
+        "production": {
+          "crew": 6,
+          "per": "crew-day",
+          "rate": 40
+        },
+        "unit": "SQ",
+        "unitCost": 53.5
+      },
+      {
+        "costCode": "07-100-230",
+        "description": "Lay the tapered package",
+        "formula": "SQ",
+        "id": "set-insulation",
+        "production": {
+          "crew": 6,
+          "per": "crew-day",
+          "rate": 25
+        },
+        "unit": "SQ",
+        "unitCost": 48.25
+      },
+      {
+        "costCode": "07-100-230",
+        "description": "Lay cover board",
+        "formula": "SQ",
+        "id": "set-coverboard",
+        "production": {
+          "crew": 6,
+          "per": "crew-day",
+          "rate": 50
+        },
+        "unit": "SQ",
+        "unitCost": 53.25
+      },
+      {
+        "costCode": "07-100-230",
+        "description": "Weld the membrane",
+        "formula": "SQ",
+        "id": "install-membrane",
+        "production": {
+          "crew": 6,
+          "per": "crew-day",
+          "rate": 40
+        },
+        "unit": "SQ",
+        "unitCost": 56.25
+      },
+      {
+        "costCode": "07-100-940",
+        "description": "Telehandler rental, weekly",
+        "formula": "SQ / 32",
+        "id": "lift",
+        "notes": "Three weeks on the roof, at the pace the crew lines above set.",
+        "order": {
+          "name": "EA",
+          "per": 1,
+          "rule": "ceil"
+        },
+        "unit": "EA",
+        "unitCost": 2268.75
+      },
+      {
+        "costCode": "07-100-950",
+        "description": "Dumpster, 30 yard",
+        "formula": "SQ / 14",
+        "id": "dumpster",
+        "notes": "Fourteen squares of single-ply tear-off to a thirty yard box.",
+        "order": {
+          "name": "EA",
+          "per": 1,
+          "rule": "ceil"
+        },
+        "unit": "EA",
+        "unitCost": 830.5
+      },
+      {
+        "costCode": "07-100-920",
+        "description": "Manufacturer warranty, 20 year NDL",
+        "formula": "SQ",
+        "id": "warranty",
+        "unit": "SQ",
+        "unitCost": 53.75
+      }
+    ],
+    "kind": "area",
+    "name": "Main Roof Field",
+    "properties": {
+      "BOARDS": 3,
+      "DECK": 1.5,
+      "ELEV": 0,
+      "ROOF_HEIGHT_FT": 22,
+      "SIDES": 8,
+      "T": 0.5,
+      "TAPER": 0.25,
+      "WIND_PSF_CORNER": 122,
+      "WIND_PSF_FIELD": 71,
+      "WIND_PSF_PERIMETER": 96
+    },
+    "traces": [
+      {
+        "id": "t1",
+        "pageId": "page-1",
+        "points": [
+          {
+            "x": 63,
+            "y": 225
+          },
+          {
+            "x": 225,
+            "y": 225
+          },
+          {
+            "x": 225,
+            "y": 189
+          },
+          {
+            "x": 522,
+            "y": 189
+          },
+          {
+            "x": 522,
+            "y": 225
+          },
+          {
+            "x": 549,
+            "y": 225
+          },
+          {
+            "x": 549,
+            "y": 603
+          },
+          {
+            "x": 63,
+            "y": 603
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "color": "#1d5f8a",
+    "id": "c-parapet",
+    "items": [
+      {
+        "costCode": "07-100-100",
+        "description": "TPO wall flashing, 60 mil",
+        "formula": "FLASH_SF",
+        "id": "wallflash",
+        "layer": "flashing",
+        "unit": "SF",
+        "unitCost": 1,
+        "waste": 10
+      },
+      {
+        "costCode": "07-100-150",
+        "description": "Coping cap, 24 ga galvanized",
+        "formula": "COPING_LF * (STRETCHOUT / 12)",
+        "id": "coping",
+        "layer": "edge metal",
+        "notes": "Linear feet of run become square feet of flat coil through the stretch-out, and pounds through the coil weight. The stretch-out belongs to Detail P-1, not to the coil.",
+        "order": {
+          "contains": 1.156,
+          "name": "LB",
+          "rule": "exact"
+        },
+        "profileId": "coping-p1",
+        "unit": "SF",
+        "unitCost": 3.5,
+        "waste": 10
+      },
+      {
+        "costCode": "07-100-150",
+        "description": "Continuous cleat, 20 ga",
+        "formula": "CLEAT_LF",
+        "id": "cleat",
+        "layer": "edge metal",
+        "notes": "Both faces of the cap.",
+        "unit": "LF",
+        "unitCost": 2,
+        "waste": 5
+      },
+      {
+        "costCode": "07-100-150",
+        "description": "Shop-formed corner, mitre welded",
+        "formula": "COPING_CORNERS_EA",
+        "id": "mitre",
+        "layer": "edge metal",
+        "notes": "Every turn the run makes: six outside and two inside on this roof's own trace, and both kinds are mitred. The straight lengths between them are the line under this one.",
+        "unit": "EA",
+        "unitCost": 89.5
+      },
+      {
+        "costCode": "07-100-160",
+        "description": "Termination bar and sealant",
+        "formula": "LF",
+        "id": "termbar",
+        "layer": "flashing",
+        "unit": "LF",
+        "unitCost": 3.25
+      },
+      {
+        "costCode": "07-100-170",
+        "description": "Fasteners, cleat and termination bar",
+        "formula": "CLEAT_LF * (12 / FASTEN_OC)",
+        "id": "metal-fasteners",
+        "layer": "fastening",
+        "notes": "Twelve inches on centre, both.",
+        "order": {
+          "name": "BOX",
+          "per": 1000,
+          "rule": "exact"
+        },
+        "unit": "EA",
+        "unitCost": 353.25
+      },
+      {
+        "costCode": "07-100-240",
+        "description": "Flash the wall",
+        "formula": "LF",
+        "id": "install-flashing",
+        "production": {
+          "crew": 2,
+          "per": "crew-day",
+          "rate": 120
+        },
+        "unit": "LF",
+        "unitCost": 57
+      },
+      {
+        "costCode": "07-100-900",
+        "description": "Form and set the metal",
+        "formula": "LF",
+        "id": "set-metal",
+        "notes": "Bought in. The shop brakes the cap and the cleat and sets them.",
+        "off": {
+          "reason": "alternate — the shop is fabricating this"
+        },
+        "priceSource": {
+          "firmness": "firm",
+          "from": "Bayside Sheet Metal",
+          "on": "2026-09-02"
+        },
+        "unit": "LF",
+        "unitCost": 8.25
+      },
+      {
+        "costCode": "07-100-320",
+        "description": "Fabricate coping cap, 24 ga",
+        "formula": "COPING_LF",
+        "id": "fab-coping",
+        "layer": "edge metal",
+        "production": {
+          "per": "shop-hour",
+          "rate": 70
+        },
+        "unit": "LF",
+        "unitCost": 47.25
+      },
+      {
+        "costCode": "07-100-300",
+        "description": "Install coping cap, 24 ga",
+        "formula": "COPING_LF",
+        "id": "install-coping",
+        "layer": "edge metal",
+        "production": {
+          "crew": 2,
+          "per": "crew-day",
+          "rate": 160
+        },
+        "unit": "LF",
+        "unitCost": 51.75
+      },
+      {
+        "costCode": "07-100-320",
+        "description": "Fabricate continuous cleat, 20 ga",
+        "formula": "CLEAT_LF",
+        "id": "fab-cleat",
+        "layer": "edge metal",
+        "production": {
+          "per": "shop-hour",
+          "rate": 200
+        },
+        "unit": "LF",
+        "unitCost": 47
+      },
+      {
+        "costCode": "07-100-300",
+        "description": "Install continuous cleat, 20 ga",
+        "formula": "CLEAT_LF",
+        "id": "install-cleat",
+        "layer": "edge metal",
+        "production": {
+          "crew": 2,
+          "per": "crew-day",
+          "rate": 300
+        },
+        "unit": "LF",
+        "unitCost": 53
+      },
+      {
+        "costCode": "07-100-150",
+        "description": "Coping length, shop-formed",
+        "formula": "COPING_PCS_EA - COPING_CORNERS_EA",
+        "id": "coping-length",
+        "layer": "edge metal",
+        "notes": "The pieces the run is cut into that are not corners — run off the brake, cut square, no weld. The section length sets how many there are.",
+        "unit": "EA",
+        "unitCost": 24.75
+      }
+    ],
+    "kind": "line",
+    "name": "Parapet Wall Flashing",
+    "properties": {
+      "ELEV": 0,
+      "FASTEN_OC": 12,
+      "FLASHUP": 24,
+      "H": 3.5,
+      "STRETCHOUT": 19.5,
+      "W": 1.17,
+      "WALL": 8
+    },
+    "traces": [
+      {
+        "id": "t2",
+        "pageId": "page-1",
+        "points": [
+          {
+            "x": 63,
+            "y": 225
+          },
+          {
+            "x": 225,
+            "y": 225
+          },
+          {
+            "x": 225,
+            "y": 189
+          },
+          {
+            "x": 522,
+            "y": 189
+          },
+          {
+            "x": 522,
+            "y": 225
+          },
+          {
+            "x": 549,
+            "y": 225
+          },
+          {
+            "x": 549,
+            "y": 603
+          },
+          {
+            "x": 63,
+            "y": 603
+          },
+          {
+            "x": 63,
+            "y": 225
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "color": "#1f7a8c",
+    "id": "c-drains",
+    "items": [
+      {
+        "costCode": "07-100-100",
+        "description": "Retrofit drain, 4 in",
+        "formula": "EA",
+        "id": "drain",
+        "unit": "EA",
+        "unitCost": 478.5
+      },
+      {
+        "costCode": "07-100-100",
+        "description": "Tapered sump panel, 4 ft square",
+        "formula": "SUMP_PANELS_EA",
+        "id": "sump-panel",
+        "unit": "EA",
+        "unitCost": 187.25
+      },
+      {
+        "costCode": "07-100-240",
+        "description": "Set the drains",
+        "formula": "EA",
+        "id": "set-drain",
+        "production": {
+          "crew": 2,
+          "per": "crew-day",
+          "rate": 3
+        },
+        "unit": "EA",
+        "unitCost": 49.5
+      }
+    ],
+    "kind": "count",
+    "name": "Roof Drains",
+    "properties": {
+      "SUMP": 4
+    },
+    "role": "drain",
+    "traces": [
+      {
+        "id": "t3",
+        "pageId": "page-1",
+        "points": [
+          {
+            "x": 162,
+            "y": 441
+          },
+          {
+            "x": 333,
+            "y": 441
+          },
+          {
+            "x": 504,
+            "y": 441
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "color": "#8d989e",
+    "id": "c-curb",
+    "items": [
+      {
+        "costCode": "07-100-100",
+        "description": "TPO curb flashing, 60 mil",
+        "formula": "FLASH_SF",
+        "id": "curbflash",
+        "layer": "flashing",
+        "unit": "SF",
+        "unitCost": 1.25,
+        "waste": 10
+      },
+      {
+        "costCode": "07-100-150",
+        "description": "Curb cap, 24 ga galvanized",
+        "formula": "COPING_LF * (STRETCHOUT / 12)",
+        "id": "curbcap",
+        "layer": "edge metal",
+        "notes": "The same coil as the coping and a different stretch-out: twenty-six inches at an equipment curb cap against nineteen and a half at the parapet.",
+        "order": {
+          "contains": 1.156,
+          "name": "LB",
+          "rule": "exact"
+        },
+        "profileId": "curb-cap-rtu",
+        "unit": "SF",
+        "unitCost": 3.5,
+        "waste": 10
+      },
+      {
+        "costCode": "07-100-240",
+        "description": "Flash the curb",
+        "formula": "LF",
+        "id": "set-curb",
+        "production": {
+          "crew": 2,
+          "per": "crew-day",
+          "rate": 48
+        },
+        "unit": "LF",
+        "unitCost": 55.75
+      },
+      {
+        "costCode": "07-100-900",
+        "description": "Crane and curb rework",
+        "formula": "1",
+        "id": "crane",
+        "notes": "One rigging day: the unit comes off the curb and goes back on it so the curb can be raised and reflashed. A typed one, because it is a quoted day and not a thing the drawing can be asked how many of.",
+        "priceSource": {
+          "firmness": "firm",
+          "from": "Ridgeline Rigging",
+          "on": "2026-09-02"
+        },
+        "unit": "EA",
+        "unitCost": 3053
+      }
+    ],
+    "kind": "line",
+    "name": "RTU-1 Curb",
+    "properties": {
+      "ELEV": 0,
+      "FLASHUP": 18,
+      "H": 2,
+      "STRETCHOUT": 26,
+      "W": 1.5,
+      "WALL": 6
+    },
+    "role": "curb",
+    "traces": [
+      {
+        "id": "t-curb",
+        "pageId": "page-1",
+        "points": [
+          {
+            "x": 238.5,
+            "y": 342
+          },
+          {
+            "x": 256.5,
+            "y": 342
+          },
+          {
+            "x": 256.5,
+            "y": 378
+          },
+          {
+            "x": 238.5,
+            "y": 378
+          },
+          {
+            "x": 238.5,
+            "y": 342
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "between": [
+      "c-curb"
+    ],
+    "color": "#8a5a1d",
+    "id": "c-cricket",
+    "items": [
+      {
+        "costCode": "07-100-100",
+        "description": "Cricket stock, cut to the saddle",
+        "formula": "CRICKET_SF",
+        "id": "cricket-stock",
+        "unit": "SF",
+        "unitCost": 2.5,
+        "waste": 10
+      }
+    ],
+    "kind": "line",
+    "name": "Cricket behind RTU-1",
+    "properties": {
+      "TAPER": 0.5
+    },
+    "role": "ridge",
+    "traces": [
+      {
+        "id": "t-cricket",
+        "pageId": "page-1",
+        "points": [
+          {
+            "x": 247.5,
+            "y": 342
+          },
+          {
+            "x": 247.5,
+            "y": 319.5
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "color": "#7a7a82",
+    "id": "c-general",
+    "items": [
+      {
+        "costCode": "07-100-990",
+        "description": "Supervision, foreman day",
+        "formula": "15",
+        "id": "supervision",
+        "notes": "Fifteen foreman days: a crew of one for a day apiece, so the hours land in the same column as everybody else’s and the recap can be read against them. Typed, because how long somebody stands on a roof is a judgement and not a thing the drawing can be asked.",
+        "production": {
+          "crew": 1,
+          "per": "crew-day",
+          "rate": 1
+        },
+        "unit": "EA",
+        "unitCost": 69.5
+      },
+      {
+        "costCode": "07-100-950",
+        "description": "Permit and inspections",
+        "formula": "1",
+        "id": "permit",
+        "unit": "EA",
+        "unitCost": 1039.75
+      }
+    ],
+    "kind": "count",
+    "name": "General Conditions — Labor & Misc",
+    "properties": {},
+    "traces": []
+  }
+]
