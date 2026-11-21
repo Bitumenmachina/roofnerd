@@ -7558,6 +7558,30 @@ BIMCraft (`research/renovation-scan-to-existing.md`), cabinet runs
 (`research/renovation-kitchen-and-phasing.md`), joists, rafters and beams
 (`research/renovation-structure.md`).
 
+## Calls 147 and 148 judged (2026-11-21; an agent on another model, cold; its notes are `research/judgment-reno-and-receptacles.md`)
+
+**Held, to its hand figures:** receptacles on a room with no door (62 LF: 6), one door
+(5), two opposite doors (3 + 3), abutting doors, doors at corners, a door in a shared
+wall (5 and 5), an L-shaped room (78 LF: 7), an island (2 more), 24.00 LF (2) against
+24.02 (3). A demolished partition merging two rooms (364.25 SF, 78 LF, 7 outlets); the
+addition (550.25 SF, 102 LF, 9); refusals leaving the job as it was; save and read
+back; a job, a level, a type and a room refused the mark.
+
+| | Found | Where it stands |
+|---|---|---|
+| J-N1 | A doorway widened (the old door to demolish, a wider one hung in its place): the wall's net area Unknown with no reason, and the room takes both doors off | to fix: a door or window to demolish is filled in, and is no hole |
+| J-N2 | A window made a door: the demolished window is still taken off | to fix, with J-N1 |
+| J-N3 | Marking a wall existing re-marks a new door already hung in it | to fix: an opening with a mark of its own keeps it |
+| J-N4 | Marked new again after `--clear`: nothing says its lines are gone | to fix: said |
+| J-N5 | `apply` puts an assembly's new-work lines on a wall marked existing or to demolish without a word | to fix: said when it is done |
+| J-N6 | `takeoff` counts a wall to demolish among the walls, unlabelled | to fix |
+| J-N7 | `clashes` leaves a demolished thing out and does not name it | to fix |
+| J-N8 | The BIM file: a demolished wall goes out as a plain wall; "not written" says nothing of it; read back, everything is new | owed with the window work (call 149's "not yet") |
+| J-N9 | A door to demolish in a standing wall still cuts the floor line for receptacles | to fix, with J-N1 |
+| J-N10 | A new door can be hung in a wall marked to demolish | to fix: said |
+| J-N11 | A new wall on part of a demolished wall's line leaves the second room Unknown, explained by `check` and not by `show` | open |
+| J-N12 | `mark` with its word missing or after a flag prints the whole usage | to fix |
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

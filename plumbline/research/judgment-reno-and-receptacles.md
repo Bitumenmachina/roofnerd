@@ -1,0 +1,22 @@
+# Judgment: renovation marks (call 148) and receptacles (call 147)
+
+Judge: cold, made-up jobs only, frozen program bin13. Scripts under scratchpad review/jr (lib.sh, setup).
+Held up (hand figures matched): receptacles 62 LF no door 6, one door 5, two opposite doors 3+3, abutting doors 5, doors at corners 5, L-room 78 LF 7, island +18 LF +2 (8), shared-wall door 5/5, 24.00 LF 2 but 24.02 LF 3, hallway computed (6); partition demolished merges rooms 364.25 SF/78 LF/7; addition 550.25 SF/102 LF/9; partial new wall perimeter 93.5; refusals leave job unchanged; job, level, type, room refused for mark; check reads back; --clear/--keep both refused; priced thing refused without flag.
+
+| # | Finding | Reproduce | Expected | Program did | Severity |
+|---|---|---|---|---|---|
+| 1 | Widen a doorway: demolished door plus overlapping new 5 ft door: wall net/opening area UNKNOWN, no reason given; room wall area subtracts both | wall mid-partition, door 3ft at 8; mark door demolish; new door at 8 ft | net area = 144-35=109 SF, or a reason | `? net area unknown`; takeoff "wall face, net no total, 1 of 5 missing"; room wall area 430 (deducts 21+35) | Medium: a widening is the commonest remodel; paint/drywall quantity lost or overstated |
+| 2 | Window made a door: demolished window still deducts its opening beside the new door | south wall, window 3x5 sill 3 at 6 ft; mark window demolish; door 3 ft at 6 | room wall area 702-21=681 SF | 666 SF (both deducted); wall net unknown (overlap) | Medium (15 SF per case; sheathing/finish short) |
+| 3 | `mark <wall> existing/demolish` re-marks every opening in it, overwriting a new door already hung there | widen case, then `mark partition existing` | new door stays new | new door became "existing to remain" | Medium: new door falls out of any new-work reading |
+| 4 | Marking back to `new` after `--clear` gives no warning the lines are gone; wall still reads "condition: Exterior wall..." with zero lines; shows as unpriced | priced wall, `mark demolish --clear`, `mark new` | warn lines were taken off, or restore | prints "new"; 12 lines silently gone | Medium (undercount) |
+| 5 | Guard only fires on `mark`: `apply` of an assembly to a wall already existing/demolished adds 12 new-build lines silently | `mark south existing`, `apply south "Exterior wall, 2x6, lap siding"` | refuse or say | gained 12 lines, priced as new | Medium-High: existing wall bought again |
+| 6 | Demolished/existing walls inside takeoff totals unlabeled | partition demolish; `takeoff` | say walls to demolish are in/out | "walls 5 96 LF, face 864 SF" includes the demolished wall, silent | Medium (LF read as new build) |
+| 7 | `clashes` leaves demolished wall out but only says "Tested: 5 elements" | pipe through partition; `mark demolish`; `clashes` | "Never tested" names what came down | not named | Low |
+| 8 | IFC: demolished/existing written as plain IFCWALL; status only as free-text property "work" in Plumbline_Values; not in "not written" list; import of it returns all walls as new (note only says property sets not read) | `mark demolish`; `export ifc`; `import ifc` | say Status not written / lost | silent about it | Medium for another trade reading the BIM |
+| 9 | Demolished door in a standing wall still cuts the floor line (5 vs 6) and still deducts its opening; meaning of "demolish a door" (doorway left or filled) undefined, fill-in is owed | 20x12 room, door mid south, mark door demolish | 6 if infilled | 5 | Low-Medium: one outlet short, inspection |
+| 10 | A new door can be hung in a wall already marked to demolish, no word | `mark south demolish`; `door south ...` | refuse/say | accepted | Low |
+| 11 | Partial new wall on a demolished line: second room becomes unknown (only `check` explains "Left was placed first") | demolish partition, wall 12,0-12,8, two rooms | explain on the room or `show` | unexplained in `show`; reason only in `check` | Low |
+| 12 | `mark` with flags before the word, or no word, prints the full usage / "existing needs a value" | `mark f w --status Known --source x existing`; `mark f w --status Known` | plain refusal | usage dump / opaque | Low |
+| 13 | Unpriced list: demolished/temporary walls and demolished doors ARE listed as "nothing is priced", existing ones not | partition demolish with other priced line | consistent with claim 1 | listed (arguably right: demolition unpriced) | Info |
+
+Not tested: window demo of marks (none yet); a priced `--keep` existing wall's full build stays in totals unlabeled as existing (by design).
