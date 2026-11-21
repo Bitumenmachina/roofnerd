@@ -5147,3 +5147,27 @@ three views.
 
 **What moved.** No number on a job with no mark. Every saved job's list of record
 kinds gains `pl::work`.
+
+### Call 149. The renovation mark in the window: seen, and made with three buttons (2026-11-21; Patrick: "run until we have a working prototype"; call 148's "not yet")
+
+Patrick's scans are Scaniverse's, his desktop is Linux, and the prototype he is owed is:
+open the window, lay his scan under the plan, trace the house as it stands, say what
+stays and what comes down, draw the addition, and watch the rooms and the price follow.
+This call is the part of that the window lacks for call 148.
+
+- **Seen.** Existing work is drawn light (its own colours washed toward pale gray): it
+  reads as the house that is there. Work to demolish is drawn as a faint red ghost, in
+  3D and on the plan, so what comes down can be seen through. New and temporary work
+  is drawn as work is drawn today.
+- **A switch under Show, "Demolition":** on, the ghosts are drawn; off, they are not,
+  and the window shows the house as the work leaves it.
+- **Made.** The panel of a selected thing that is built has a row, WORK, with three
+  buttons: "Existing", "To demolish", "New work"; the one that holds is lit. Pressed on
+  a thing that carries cost lines (for existing or to demolish), two buttons take the
+  row's place: "Take its lines off" and "Keep its lines", with the sentence call 148
+  refuses with; either finishes the mark. What the window says after is what
+  `editing::mark` says. Marking in the window is Assumed, "entered on screen", as
+  everything entered there is, until measured.
+- The words are a builder's: existing, to demolish, new work, demolition.
+
+No number moves. `demos/renow.sh` shows it, its pictures measured.
