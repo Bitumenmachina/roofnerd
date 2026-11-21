@@ -341,6 +341,9 @@ struct Builder<'a, 'w, 's> {
     /// on it. A plan is a drawing; lit, a roof on plan was pale on the planes that
     /// faced the sun and dark on the others (J24B-15, E1).
     flat: bool,
+    /// What the work does to the thing being built (call 149): existing is drawn light,
+    /// what comes down as a faint red ghost; new and temporary as they are.
+    work: Option<plumbline_world::WorkStatus>,
 }
 
 impl Builder<'_, '_, '_> {
@@ -349,9 +352,20 @@ impl Builder<'_, '_, '_> {
     fn piece(&mut self, path: &str, system: Option<&String>, mesh: Handle<Mesh>, at: Transform, colour: Color, roughness: f32, metallic: f32, ghosted: bool) {
         let see_through = ghosted && self.ghost;
         // Shown by how sure it is, a thing is one flat color whatever it is dressed in.
-        let pattern = self.pattern.take().filter(|_| self.wash.is_none());
+        use plumbline_world::WorkStatus;
+        let (existing, coming_down) = (self.work == Some(WorkStatus::Existing), self.work == Some(WorkStatus::Demolish));
+        let pattern = self.pattern.take().filter(|_| self.wash.is_none() && !existing && !coming_down);
         let colour = self.wash.map(|w| w.with_alpha(colour.alpha())).unwrap_or(colour);
-        let (roughness, metallic) = if self.wash.is_some() { (0.95, 0.0) } else { (roughness, metallic) };
+        let (roughness, metallic) = if self.wash.is_some() || existing || coming_down { (0.95, 0.0) } else { (roughness, metallic) };
+        // Existing work is its own colours washed toward pale gray: the house that is
+        // there. Work to demolish is a faint red ghost, seen through.
+        let colour = if existing {
+            mix(colour, theme::existing_tone(), 0.65)
+        } else if coming_down {
+            theme::demolition_tone()
+        } else {
+            colour
+        };
         let colour = if see_through { colour.with_alpha(colour.alpha().min(0.06)) } else { colour };
         let blend = colour.alpha() < 0.999;
         let handle = self.materials.add(StandardMaterial {
@@ -531,7 +545,7 @@ pub fn rebuild(
     drawing.frames.clear();
     drawing.surfaces.clear();
     let drawing = &mut *drawing;
-    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None, flat: on_plan_view };
+    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None, flat: on_plan_view, work: None };
     let has_walls = snap.drawn.iter().any(|p| p.kind == Kind::Wall);
     // Each outside wall as the roof's edge sees it: its line, the way its outside face
     // looks, half its thickness and its top. An eave that hangs past one gets a soffit.
@@ -572,6 +586,12 @@ pub fn rebuild(
     for p in &snap.drawn {
         // Its trade's switch, the level on show, its level's own switch, its system's.
         if !show.discipline(p.discipline) || show.storey.as_ref().is_some_and(|s| p.storey.as_ref() != Some(s)) || p.storey.as_ref().is_some_and(|s| show.off_levels.contains(s)) || p.system.as_ref().is_some_and(|s| show.off_systems.contains(s)) {
+            continue;
+        }
+        // What the work takes down is drawn as a ghost while Demolition is on, and not
+        // at all when it is off: the house as the work leaves it (call 149).
+        build.work = snap.work.get(&p.path).copied();
+        if build.work == Some(plumbline_world::WorkStatus::Demolish) && !show.demolition {
             continue;
         }
         let colour = theme::system_colour(snap.classification(p.system.as_ref()));
@@ -923,6 +943,7 @@ pub fn rebuild(
 
     // ---- The roof ----
     build.wash = None;
+    build.work = None;
     // In 3D the roof is drawn with every level on show, and with the top level alone on
     // show: it sits on that one. (It was drawn only with every level showing, and a job
     // with one level has no such choice: its roof was never drawn.) On the plan of one
@@ -933,6 +954,11 @@ pub fn rebuild(
         build.drawing.roof_dressed = !show.certainty && !snap.planes.is_empty() && snap.planes.iter().all(|p| p.area.is_some() && snap.dress.roofs.contains_key(&p.path));
         for info in &snap.planes {
             build.wash = show.certainty.then(|| theme::certainty(info.worst()));
+            // A plane is as its roof is, unless it is marked itself.
+            build.work = snap.work.get(&info.path).or_else(|| snap.work.get(&snap.roof_path)).copied();
+            if build.work == Some(plumbline_world::WorkStatus::Demolish) && !show.demolition {
+                continue;
+            }
             let Some(plane) = &info.solid else { continue };
             let positions: Vec<Vec3> = plane.points.iter().map(|p| to_view(origin, [p[0], p[1], plane.height_at(*p)])).collect();
             let tris = triangles(&plane.points);
@@ -965,6 +991,7 @@ pub fn rebuild(
                 }
             }
             build.wash = None;
+            build.work = None;
             let lifted: Vec<Vec3> = positions.iter().map(|p| *p + normal * 0.06).collect();
             build.drawing.frames.push((info.path.clone(), (0..lifted.len()).map(|i| (lifted[i], lifted[(i + 1) % lifted.len()])).collect()));
         }

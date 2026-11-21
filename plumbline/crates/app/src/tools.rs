@@ -245,6 +245,38 @@ pub fn cant(doc: &mut Doc, what: &str, why: impl std::fmt::Display) {
     doc.say(Tone::Refused, format!("Can't {what}: {why}"));
 }
 
+/// Mark the selected thing as the work leaves it: existing, to demolish, new (call 149).
+/// What `editing::mark` says is what the window says. A thing that carries cost lines is
+/// refused until the estimator says what is to become of them: `marking` holds the
+/// question, and the row's two buttons answer it. A step to undo, like any other.
+pub fn mark_work(doc: &mut Doc, status: plumbline_world::WorkStatus, lines: ed::ItsLines) {
+    let Some(sel) = doc.selected.clone() else {
+        return cant(doc, "mark it", "nothing is selected");
+    };
+    let how = ed::Entered { status: Status::Assumed, source: SOURCE };
+    match ed::mark(&mut doc.job, std::slice::from_ref(&sel), status, lines, how) {
+        Ok(said) => {
+            doc.marking = None;
+            doc.job.derive();
+            doc.edit("Mark work");
+            doc.say(Tone::Done, said.join("\n"));
+            doc.redraw();
+        }
+        Err(why) => {
+            // The model's sentence ends by telling a command line what to type; on the
+            // window it is the two buttons that answer.
+            match why.split_once(". Say which:") {
+                Some((carries, _)) if matches!(lines, ed::ItsLines::Ask) => {
+                    doc.marking = Some((sel, status));
+                    doc.say(Tone::Refused, format!("{carries}. Say which: Take its lines off, or Keep its lines priced, as work done to it (paint, a patch, taking it down)."));
+                    doc.touch();
+                }
+                _ => cant(doc, "mark it", why),
+            }
+        }
+    }
+}
+
 /// Take a tool in hand. It goes to the plan and to a storey by itself: with the whole
 /// building on show, the lowest storey is the one drawn on. With its settings not yet
 /// said, it asks for them first.

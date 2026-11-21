@@ -221,6 +221,9 @@ pub struct Show {
     /// what is under it is seen: the weather barrier where one is priced, and the
     /// flashing at each opening that has it.
     pub finishes: bool,
+    /// What the work takes down, drawn as a faint red ghost where it stood (call 149).
+    /// Off, the house is shown as the work leaves it.
+    pub demolition: bool,
     /// The levels switched off, by path: what stands on one is not drawn. (A level
     /// "on show" alone is `storey`; this is each level's own switch.)
     pub off_levels: std::collections::BTreeSet<String>,
@@ -331,6 +334,10 @@ pub struct Doc {
     pub tab: Tab,
     /// The drawing in hand, and the undo history.
     pub draw: crate::tools::Draw,
+    /// A mark refused because the thing carries cost lines: the thing and what it was
+    /// to be marked, kept while the two buttons ask what is to become of its lines
+    /// (call 149).
+    pub marking: Option<(String, plumbline_world::WorkStatus)>,
 }
 
 impl Doc {
@@ -455,6 +462,7 @@ impl Doc {
     pub fn select(&mut self, path: &str) {
         // The list of assemblies was for what was selected before.
         self.choosing = false;
+        self.marking = None;
         self.selected = Some(path.to_string());
         self.say(Tone::Done, format!("Selected {path}."));
         self.touch();
@@ -606,6 +614,9 @@ pub struct Snapshot {
     /// Where each room was named, by its path, in feet on the plan: where its name is
     /// written on the plan.
     pub room_points: std::collections::HashMap<String, [f64; 2]>,
+    /// What the work does to each thing that is marked, by path (call 148). A thing not
+    /// here is new.
+    pub work: std::collections::HashMap<String, plumbline_world::WorkStatus>,
 }
 
 impl Snapshot {
@@ -753,6 +764,10 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     }
     s.drawn = drawn;
     s.not_drawn = not_drawn;
+    s.work = {
+        let mut q = doc.job.world.query::<(&plumbline_world::Node, &plumbline_world::Work)>();
+        q.iter(&doc.job.world).filter_map(|(n, w)| w.status.value.map(|v| (n.path.clone(), v))).collect()
+    };
     // A drawing laid under a storey is part of what there is to look at.
     s.drawings = crate::plans::laid(&mut doc.job);
     for l in &s.drawings {

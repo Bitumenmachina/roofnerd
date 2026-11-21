@@ -95,6 +95,10 @@ pub fn accent_wash() -> Color { hex(0xE8F0FE) }
 pub fn amber() -> Color { hex(0xA9690A) }
 pub fn amber_wash() -> Color { hex(0xFFF3D1) }
 pub fn red() -> Color { hex(0xB93227) }
+/// Existing work is washed toward this pale gray (call 149).
+pub fn existing_tone() -> Color { hex(0xD9DBDD) }
+/// What comes down: a faint red, seen through (call 149).
+pub fn demolition_tone() -> Color { Color::srgba(0.86, 0.20, 0.18, 0.30) }
 pub fn red_wash() -> Color { hex(0xFDE7E4) }
 pub fn green() -> Color { hex(0x1F7A4D) }
 

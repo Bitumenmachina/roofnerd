@@ -1020,6 +1020,15 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 doc.redraw();
             }));
         }
+        // What the work takes down: on, it is drawn as a faint red ghost where it stood;
+        // off, the house is as the work leaves it (call 149).
+        let coming_down = snap.work.values().filter(|w| **w == plumbline_world::WorkStatus::Demolish).count();
+        if coming_down > 0 {
+            layer(c, "Demolition", "", theme::red(), doc.show.demolition, Some(coming_down), Box::new(|doc| {
+                doc.show.demolition = !doc.show.demolition;
+                doc.redraw();
+            }));
+        }
         // The frame of each wall whose framing is priced: on, those walls are drawn as
         // their plates, studs and headers in place of their finished faces.
         let framed = snap.dress.walls.values().filter(|d| d.framing.is_some()).count();
@@ -1844,6 +1853,28 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     // A thing set down is turned a quarter at a time, to face the room.
     if matches!(el.kind, Kind::Fixture | Kind::Equipment | Kind::Furnishing) {
         line(p, &|r| press(r, "Turn a quarter", "Q", KeyCode::KeyQ));
+    }
+    // What the work does to a thing that is built: stays, comes down, or is new (call 149).
+    // The one that holds is lit. A thing that carries cost lines is asked what is to
+    // become of them, in the row's place.
+    if plumbline_world::check::takes_work(el.kind) {
+        use plumbline_world::{editing::ItsLines, WorkStatus};
+        let now = snap.work.get(&el.path).copied().unwrap_or(WorkStatus::New);
+        let asked = doc.marking.as_ref().filter(|(path, _)| *path == el.path).map(|(_, status)| *status);
+        p.spawn(Node { margin: UiRect::top(px(8.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, align_items: AlignItems::Center, flex_shrink: 0.0, ..default() }).with_children(|r| {
+            r.spawn((text(fonts, "WORK", 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+            match asked {
+                Some(status) => {
+                    on_click(&mut button(r, fonts, "Take its lines off", "", false), move |doc| crate::tools::mark_work(doc, status, ItsLines::Clear));
+                    on_click(&mut button(r, fonts, "Keep its lines", "", false), move |doc| crate::tools::mark_work(doc, status, ItsLines::Keep));
+                }
+                None => {
+                    for (label, status) in [("Existing", WorkStatus::Existing), ("To demolish", WorkStatus::Demolish), ("New work", WorkStatus::New)] {
+                        on_click(&mut button(r, fonts, label, "", now == status), move |doc| crate::tools::mark_work(doc, status, ItsLines::Ask));
+                    }
+                }
+            }
+        });
     }
     // A drawing is a sheet under the tracing: it has no condition, no price and no
     // material, and is offered none.

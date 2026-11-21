@@ -34,6 +34,7 @@ such reading, and STATUS.md says where each thing it found stands).
 | `plan` | `demos/planw.sh` |
 | `price` | `demos/pricew.sh` |
 | `quantityw` | `demos/quantityw.sh` |
+| `renow` | `demos/renow.sh` |
 | `roofw` | `demos/roofw.sh` |
 | `tools` | `demos/toolsw.sh` |
 | `turnw` | `demos/turnw.sh` |

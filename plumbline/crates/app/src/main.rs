@@ -153,11 +153,12 @@ fn main() {
         carried,
         also: None,
         walk: false,
-        show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, ground: true, framing: false, finishes: true, off_levels: Default::default(), off_systems: Default::default(), away: [false; 3] },
+        show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, ground: true, framing: false, finishes: true, demolition: true, off_levels: Default::default(), off_systems: Default::default(), away: [false; 3] },
         // The sheet opens on the estimate once anything is priced; before that, on what
         // has been taken off.
         tab: if has_lines { Tab::Estimate } else if has_roof { Tab::Roof } else { Tab::Building },
         draw,
+        marking: None,
     };
     let graphics = scene::Graphics { full: std::env::var("PLUMBLINE_GRAPHICS").map(|v| v != "plain").unwrap_or(true) };
 
