@@ -7491,6 +7491,26 @@ cuts the run, where uncut it would be 5; 4 in a closed room); `drywall.sh`, `sla
 foyer's and a kitchen counter's own rules; which room is which kind of room; fireplaces
 and fixed cabinets as things that break wall space; receptacles placed in the model.
 
+## The check against BIMCraft, run again (2026-11-21)
+
+BIMCraft's source is back on the machine at its pinned commit (f202abd85d1c; a plain
+clone of the public repository is allowed here, which the earlier session's attempt
+was not). `tools/portmap.sh`: **PASS**, 239 public items, 131 ported, 108 ours, each with
+its search. The two rows written without their search on 2026-11-19 (`low_slope`,
+`drains`) now carry it: BIMCraft has no low-slope area and no taper; it does have a roof
+drain as a kind of placed drain (`family.rs:131`), which is where a drawn roof drain
+would be ported from.
+
+**Call 147 (receptacles) has not been judged.** A judge is owed before it is leaned on.
+
+**The renovation track (Patrick, 2026-11-21).** He has a real renovation with an
+addition: LiDAR and plans of the existing house, a kitchen and cabinetry to design,
+structural changes, room footprints that move; he will run the program on his desktop
+and wants to be designing soon. Three surveys were started the same day, each told to
+read what this program and BIMCraft already have before the web, and each writes one
+file: `research/renovation-scan-to-existing.md`, `research/renovation-kitchen-and-phasing.md`,
+`research/renovation-structure.md`. What is built next is decided from those three.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
