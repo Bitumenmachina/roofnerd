@@ -259,6 +259,19 @@ pub fn taper(path: &str, kind: Kind, t: &Taper) -> Result<(), String> {
     Ok(())
 }
 
+/// Whether a kind of thing is built, and so can be existing, demolished or new.
+pub fn takes_work(kind: Kind) -> bool {
+    kind.is_area() || kind.is_run() || matches!(kind, Kind::Roof | Kind::Wall | Kind::Footing | Kind::Door | Kind::Window | Kind::Floor | Kind::Duct | Kind::Pipe | Kind::Conduit | Kind::Cable | Kind::Fitting | Kind::Fixture | Kind::Furnishing | Kind::Equipment)
+}
+
+/// What the work does to a thing (call 148): on a thing that is built, with its source.
+pub fn work(path: &str, kind: Kind, w: &Work) -> Result<(), String> {
+    if !takes_work(kind) {
+        return Err(format!("{path}: {kind:#} is not a thing that is built, so it is not existing, new or to demolish"));
+    }
+    w.status.check(&format!("{path} work"), "")
+}
+
 pub fn run(path: &str, kind: Kind, r: &Run) -> Result<(), String> {
     if !kind.is_run() {
         return Err(format!("{path}: {kind:#} cannot carry a line"));

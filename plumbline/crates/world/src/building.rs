@@ -350,6 +350,9 @@ pub(crate) fn typed<'a, T>(table: &'a HashMap<String, T>, r: &'a Val<String>, wh
 /// a type named is a type of the right sort, a top level named is a storey, and a system
 /// named is a system in the job.
 pub fn check_whole(job: &mut Job) -> Result<(), String> {
+    // What is to be demolished is gone when the work is done: a new wall may stand
+    // where it stood (call 148).
+    let gone = crate::components::demolished(&mut job.world);
     let tree = Tree::of(&mut job.world);
     let kinds = &tree.kinds;
     let classed: HashMap<String, String> = {
@@ -462,6 +465,9 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
     for (i, (a, storey, line, thick, stands)) in standing.iter().enumerate() {
         for (b, other, its, as_thick, theirs) in &standing[i + 1..] {
             let tol = crate::check::FIT_TOLERANCE_FT;
+            if gone.contains(a) != gone.contains(b) {
+                continue;
+            }
             // Where each stands, above the datum: walls on two storeys are compared too
             // (a wall held up to the roof and another on the floor above, on one line).
             // Where that is not known, walls of one storey are taken to stand together
@@ -1395,6 +1401,8 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
     let tol = crate::check::FIT_TOLERANCE_FT;
     // Every wall of the job: placed, or why not. A wall with nothing entered on it is a
     // wall that cannot be placed, not a wall that is not there.
+    // A wall to be demolished bounds no room: rooms are the rooms the work leaves.
+    let gone = crate::components::demolished(world);
     let mut placed: Vec<RoomWall> = Vec::new();
     let mut unplaced: Vec<(String, String)> = Vec::new();
     let mut q = world.query::<(&Node, &Kind, Option<&Wall>)>();
@@ -1403,7 +1411,12 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
     for (n, w) in all {
         match w.map(|w| (w, plan_wall(tree, &n.path, w))) {
             None => unplaced.push((n.path.clone(), "it has no wall line entered".into())),
-            Some((w, Ok((wall, shape, span, base)))) => placed.push(RoomWall { path: n.path.clone(), wall, shape, span, base, bounds: w.room_bounding }),
+            Some((w, Ok((mut wall, shape, span, base)))) => {
+                // Nor do the walls it met end on it: they meet each other where it stood.
+                let stands = !gone.contains(&n.path);
+                wall.join = wall.join && stands;
+                placed.push(RoomWall { path: n.path.clone(), wall, shape, span, base, bounds: w.room_bounding && stands });
+            }
             Some((_, Err(why))) => unplaced.push((n.path.clone(), why)),
         }
     }

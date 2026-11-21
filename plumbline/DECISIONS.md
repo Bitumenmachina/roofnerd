@@ -5101,3 +5101,49 @@ which room a room is, is the estimator's. It is refused where the room's wall ar
 is.
 
 No number moves; a room lists one more figure.
+
+### Call 148. Existing to remain, to demolish, new: a renovation job (2026-11-21; Patrick's go-ahead on PROPOSALS.md 33: "you own codebase", asked for his own renovation)
+
+**What is held.** Any thing that is built (a wall, a door, a window, a floor, a footing,
+a roof, a run, a thing set in place) may carry `pl::work`: `status`, one of the BIM
+standard's four words for an element's Status (IFC `PEnum_ElementStatus`): New,
+Existing, Demolish, Temporary, with how sure it is and where that came from. A thing
+with no mark is new, so a job made before this reads as it did. The four words and
+what they mean are BIMCraft's `Status` (`crates/core/src/phasing.rs:40`); its ordered
+list of phases, its phase filters and its design options are not taken: one job, one
+piece of work, one mark on each thing.
+
+**What the mark does.**
+- **Rooms are the rooms the work leaves.** A wall to demolish bounds no room: take a
+  partition down and the room is the two it was; take an outside wall down and draw the
+  addition, and the room runs into it.
+- **The walls it met do not end on it** (found by the demonstration: the room past a
+  demolished outside wall read 550.375 SF for 550.25, a quarter-foot pocket left at each
+  end where the walls had been trimmed to it).
+- **A new wall may stand where a demolished one stood.** "One wall drawn over another"
+  is refused as before between two walls that both stand or both come down.
+- **What comes down is in nothing's way**: it is left out of the clash test.
+- **Existing work is not bought.** A thing marked existing or to demolish that carries
+  cost lines is refused until the estimator says which: `--clear` takes the lines off it
+  (what stands is not bought again, what comes down is not built) or `--keep` leaves
+  them priced, as work done to it. Lines added after are priced as any line is: paint on
+  an existing wall, the taking down of a partition by its face area. An existing thing
+  with nothing priced on it is not listed as unpriced. (First built by switching the
+  lines off; the saved job was then refused on reading, because only a Labor line can be
+  switched off, call 23's reading of "labor toggles per line". That rule stands; the
+  design changed.)
+- **A wall's doors and windows are marked with it.**
+- It is listed with the thing ("work: existing to remain"), `measure <thing> work same`
+  makes it Known once it has been looked at, and it is saved and read back.
+
+**One verb:** `plumbline mark <file> <path> [<path> ...] <new|existing|demolish|temporary>`.
+
+**Not yet, each owed:** drawn in the window (existing light, demolition dashed) and a
+way to mark there; the Status written to and read from the BIM file; a door filled in
+(an opening to demolish in a wall that stays still comes off that wall's net area);
+demolition assemblies in
+the starter library (rates are a sub's); the plan before, the demolition and after as
+three views.
+
+**What moved.** No number on a job with no mark. Every saved job's list of record
+kinds gains `pl::work`.

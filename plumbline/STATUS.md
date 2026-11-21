@@ -7511,6 +7511,53 @@ read what this program and BIMCraft already have before the web, and each writes
 file: `research/renovation-scan-to-existing.md`, `research/renovation-kitchen-and-phasing.md`,
 `research/renovation-structure.md`. What is built next is decided from those three.
 
+## A renovation: existing, to demolish, new. A demonstration, written before it is built (`demos/reno.sh`, call 148)
+
+From an empty job, by hand. The house as it stands: 24 ft by 16 ft, 6 in walls 9 ft
+tall, a partition from 12,0 to 12,16, one room placed at 6,8.
+
+1. The room as it stands: 11.5 by 15.5 at the faces, **178.25 SF**.
+2. The south wall given the starter "Exterior wall, 2x6, lap siding", then all five
+   walls marked existing: refused until told what to do with the south wall's lines
+   (`--clear` or `--keep`); with `--clear` they are taken off and said; each wall
+   lists "work: existing to remain"; the existing walls are not counted among what has
+   nothing priced on it.
+3. A new wall drawn along the partition while it stands is refused: one wall drawn
+   over another.
+4. The partition marked to demolish: the room is the whole house inside its faces,
+   23.5 by 15.5 = **364.25 SF**. Its taking down, typed as a line by its face area:
+   16 × 9 = 144 SF at $2.50 = **$360.00**. The same new wall along its line is now taken.
+5. The addition: the east wall marked to demolish, three new walls 24,0 36,0 36,16
+   24,16: the room is 35.5 by 15.5 = **550.25 SF**.
+6. A room is not a thing that is built: marking one is refused in words. The job
+   saved and read back says the same.
+
+## A renovation. What was run and what it showed (2026-11-21; call 148)
+
+**Built.** `pl::work` on any built thing (New, Existing, Demolish, Temporary; BIMCraft's
+four statuses), `plumbline mark`, and what the mark does: a wall to demolish bounds no
+room, joins no wall, may have a new wall where it stood, and is out of the clash test;
+an existing thing with nothing priced is not listed as unpriced; a priced thing marked
+existing or to demolish is refused until `--clear` or `--keep` is said.
+
+**Found while building.** (1) The first design switched the lines off; the saved job was
+then refused on reading, since only a Labor line can be switched off. The rule stands and
+the design changed to clear-or-keep. (That a job could be saved in a state its own
+reading refuses is a hole of its own: `put` does not check a cost line as reading does.
+Owed.) (2) The room past a demolished outside wall read 550.375 SF for the hand's 550.25:
+the walls it met were still trimmed to it. Fixed.
+
+**Run, on the tree as committed with this section:** `cargo test --workspace` 465 pass,
+0 fail; `demos/reno.sh` PASS to the hand figures (178.25, 364.25, 550.25 SF; $360.00);
+`drywall.sh`, `receptacles.sh`, `library.sh` PASS; the three gates and
+`tools/portmap.sh` PASS (241 items); `tools/committed.sh` before the push.
+
+**Owed, in this order:** a judge of calls 147 and 148; the mark drawn and made in the
+window; Status to and from the BIM file; then the scan reader and snap ported from
+BIMCraft (`research/renovation-scan-to-existing.md`), cabinet runs
+(`research/renovation-kitchen-and-phasing.md`), joists, rafters and beams
+(`research/renovation-structure.md`).
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

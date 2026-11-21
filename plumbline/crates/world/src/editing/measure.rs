@@ -330,6 +330,8 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
         // A low-slope roof's drains, checked where they are, and the insulation's
         // thickness at them, measured (call 142: the field list never asked of them,
         // though the insulation's money rides on both).
+        // Whether a thing is existing, new or to come down is checked by looking (call 148).
+        on!(Work, |c: &Work| check::work(path, kind, c), |c| if what == "work" { Some(Slot::Other(&mut c.status)) } else { None });
         on!(Taper, |c: &Taper| check::taper(path, kind, c), |c| match what {
             "drains" => Some(Slot::Other(&mut c.drains)),
             "thickness at the drain" => Some(Slot::Length(&mut c.at_drain)),

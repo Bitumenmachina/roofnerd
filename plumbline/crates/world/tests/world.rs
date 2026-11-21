@@ -6352,3 +6352,47 @@ fn a_room_counts_the_fewest_receptacles_its_walls_need() {
     assert_eq!((d.value, d.status), (Some(4.0), Status::Assumed), "{d:?}");
     assert!(d.note.contains("not drawn") && d.formula.contains("210.52(A)(1)"), "{d:?}");
 }
+
+/// Call 148: existing, to demolish, new. A demolished partition bounds no room and does
+/// not trim the walls it met; a new wall may stand where it stood; a priced thing marked
+/// existing asks what to do with its lines; the mark is saved, read back, and refused on
+/// what is not built.
+#[test]
+fn a_renovation_marks_what_stands_what_comes_down_and_what_is_new() {
+    use plumbline_world::editing as ed;
+    let how = || ed::Entered { status: Status::Known, source: "made-up survey" };
+    let mut job = Job::new("Renovation", "test", "2026-11-21");
+    let level = ed::storey(&mut job, "ground", "0 ft", "9 ft", how()).unwrap();
+    let w6 = ed::wall_type(&mut job, "w6", "6 in", how()).unwrap();
+    let outer = ed::walls(&mut job, &level, &w6, &[[0.0, 0.0], [24.0, 0.0], [24.0, 16.0], [0.0, 16.0]], true, ed::Top::Height("9 ft"), how()).unwrap();
+    let part = ed::walls(&mut job, &level, &w6, &[[12.0, 0.0], [12.0, 16.0]], false, ed::Top::Height("9 ft"), how()).unwrap().remove(0);
+    let room = ed::room(&mut job, &level, "Living", [6.0, 8.0], how()).unwrap();
+    job.derive();
+    assert_eq!(measure(&mut job, &room, "floor_area").value, Some(178.25));
+    // A wall over the standing partition is one wall drawn over another.
+    let over = |job: &mut Job| ed::walls(job, &level, &w6, &[[12.0, 0.0], [12.0, 16.0]], false, ed::Top::Height("9 ft"), ed::Entered { status: Status::Assumed, source: "made-up plan" });
+    assert!(over(&mut job).unwrap_err().contains("drawn over another"));
+    // Priced, then marked existing: asked which; cleared.
+    job.put(&part, Cost { code: value::Val::unknown("", "not coded"), lines: vec![CostLine::of("Gypsum board, both sides", "2 * net_area", value::Val::unknown("$/SF", "no price entered"))] }).unwrap();
+    let why = ed::mark(&mut job, &[part.clone()], WorkStatus::Existing, ed::ItsLines::Ask, how()).unwrap_err();
+    assert!(why.contains("--clear") && why.contains("--keep"), "{why}");
+    ed::mark(&mut job, &[part.clone()], WorkStatus::Existing, ed::ItsLines::Clear, how()).unwrap();
+    assert!(job.find(&part).and_then(|e| job.world.get::<Cost>(e)).is_none());
+    // To demolish: one room of two, to the faces, with no notch where it met the walls.
+    ed::mark(&mut job, &[part.clone()], WorkStatus::Demolish, ed::ItsLines::Ask, how()).unwrap();
+    job.derive();
+    assert_eq!(measure(&mut job, &room, "floor_area").value, Some(364.25));
+    // The addition past a demolished east wall.
+    ed::mark(&mut job, &[outer[1].clone()], WorkStatus::Demolish, ed::ItsLines::Ask, how()).unwrap();
+    ed::walls(&mut job, &level, &w6, &[[24.0, 0.0], [36.0, 0.0], [36.0, 16.0], [24.0, 16.0]], false, ed::Top::Height("9 ft"), how()).unwrap();
+    job.derive();
+    assert_eq!(measure(&mut job, &room, "floor_area").value, Some(550.25));
+    // A new wall where the partition stood is taken now.
+    let text = save(&mut job);
+    over(&mut job).unwrap();
+    // Saved and read back; a room is not built.
+    let (mut loaded, _) = load(&text).unwrap();
+    assert_eq!(measure(&mut loaded, &room, "floor_area").value, Some(550.25));
+    assert_eq!(loaded.find(&part).and_then(|e| loaded.world.get::<Work>(e)).and_then(|w| w.status.value), Some(WorkStatus::Demolish));
+    assert!(ed::mark(&mut loaded, &[room.clone()], WorkStatus::Existing, ed::ItsLines::Ask, how()).unwrap_err().contains("not a thing that is built"));
+}

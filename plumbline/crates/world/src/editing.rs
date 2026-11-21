@@ -1023,3 +1023,62 @@ pub fn drains(job: &mut Job, area: &str, at: &[P2], at_drain: &str, how: Entered
         Ok(())
     })
 }
+
+/// What to do with the cost lines a thing carries when it is marked existing or to
+/// demolish: they are lines for building it, and it is not being built.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ItsLines {
+    /// Not said: a thing that carries lines is refused, and told the two choices.
+    Ask,
+    /// Take them off the thing.
+    Clear,
+    /// Leave them priced: they are work done to it (paint, a patch, taking it down).
+    Keep,
+}
+
+/// Mark what the work does to things (call 148): existing to remain, to demolish, new,
+/// or temporary. A wall's doors and windows are marked with it. A thing marked existing
+/// or to demolish that carries cost lines is not bought again or built: its lines are
+/// cleared or kept as `lines` says, and where that is not said it is refused with the
+/// choice. Returns what to say, thing by thing.
+pub fn mark(job: &mut Job, paths: &[String], status: WorkStatus, lines: ItsLines, how: Entered) -> Result<Vec<String>, String> {
+    all_or_nothing(job, |job| {
+        let mut said = Vec::new();
+        for path in paths {
+            let kind = job.kind(path).ok_or_else(|| format!("there is no {path} in this job"))?;
+            if !check::takes_work(kind) {
+                return Err(format!("{path} is {kind:#}, which is not a thing that is built: walls, doors, windows, floors, footings, roofs, runs and things set in place are marked"));
+            }
+            let mut all = vec![path.clone()];
+            if kind == Kind::Wall {
+                let children = job.children().get(path).cloned().unwrap_or_default();
+                all.extend(children.into_values().filter(|c| job.kind(c).is_some_and(|k| k.is_opening())));
+            }
+            for (i, p) in all.iter().enumerate() {
+                let k = job.kind(p).ok_or_else(|| format!("there is no {p} in this job"))?;
+                let w = Work { status: how.val(status, "") };
+                check::work(p, k, &w)?;
+                job.put(p, w)?;
+                let e = job.find(p).ok_or_else(|| format!("there is no {p} in this job"))?;
+                let name = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_else(|| p.clone());
+                let mut line = if i == 0 { format!("{name} ({p}): {}", status.said()) } else { format!("  {name} ({p}), in it: {}", status.said()) };
+                let carried = job.world.get::<Cost>(e).map(|c| c.lines.len()).unwrap_or(0);
+                if matches!(status, WorkStatus::Existing | WorkStatus::Demolish) && carried > 0 {
+                    let why = if status == WorkStatus::Existing { "what stands is not bought again" } else { "what comes down is not built" };
+                    match lines {
+                        ItsLines::Ask => {
+                            return Err(format!("{name} ({p}) carries {}, and {why}. Say which: --clear takes them off it; --keep leaves them priced, as work done to it (paint, a patch, taking it down)", crate::view::so_many(carried, "cost line")));
+                        }
+                        ItsLines::Clear => {
+                            job.world.entity_mut(e).remove::<Cost>();
+                            line.push_str(&format!("; its {} taken off: {why}", crate::view::so_many(carried, "cost line")));
+                        }
+                        ItsLines::Keep => line.push_str(&format!("; its {} kept and priced, as work done to it", crate::view::so_many(carried, "cost line"))),
+                    }
+                }
+                said.push(line);
+            }
+        }
+        Ok(said)
+    })
+}

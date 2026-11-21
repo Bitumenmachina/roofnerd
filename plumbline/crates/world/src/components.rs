@@ -327,6 +327,55 @@ impl Taper {
     }
 }
 
+/// What the work does to a thing, in the BIM standard's own words for an element's
+/// Status (IFC `PEnum_ElementStatus`: NEW, EXISTING, DEMOLISH, TEMPORARY), as BIMCraft
+/// holds it (`crates/core/src/phasing.rs`, `Status`). A thing with no mark is new.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkStatus {
+    New,
+    /// Standing before the work and after it: existing to remain.
+    Existing,
+    /// Standing before the work and taken down in it.
+    Demolish,
+    /// Put up and taken down within the work: shoring, a temporary wall.
+    Temporary,
+}
+
+impl WorkStatus {
+    /// As a builder says it on a plan.
+    pub fn said(self) -> &'static str {
+        match self {
+            WorkStatus::New => "new",
+            WorkStatus::Existing => "existing to remain",
+            WorkStatus::Demolish => "to demolish",
+            WorkStatus::Temporary => "temporary",
+        }
+    }
+    /// The word typed for it.
+    pub fn read(word: &str) -> Option<WorkStatus> {
+        match word.trim().to_lowercase().as_str() {
+            "new" => Some(WorkStatus::New),
+            "existing" | "existing to remain" | "remain" => Some(WorkStatus::Existing),
+            "demolish" | "demo" | "to demolish" | "remove" => Some(WorkStatus::Demolish),
+            "temporary" | "temp" => Some(WorkStatus::Temporary),
+            _ => None,
+        }
+    }
+}
+
+/// `pl::work`: what the work does to this thing (call 148). Left out, the thing is new.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Work {
+    pub status: Val<WorkStatus>,
+}
+
+/// The paths of everything marked to demolish: gone when the work is done.
+pub fn demolished(world: &mut World) -> std::collections::HashSet<String> {
+    let mut q = world.query::<(&Node, &Work)>();
+    q.iter(world).filter(|(_, w)| w.status.value == Some(WorkStatus::Demolish)).map(|(n, _)| n.path.clone()).collect()
+}
+
 /// `pl::run`: a line on the plan (an eave, a hip, a parapet) by its two ends, and the
 /// paths of the planes it lies on.
 #[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -697,6 +746,7 @@ pub const K_JOB: &str = "pl::job";
 pub const K_OUTLINE: &str = "pl::outline";
 pub const K_PITCH: &str = "pl::pitch";
 pub const K_TAPER: &str = "pl::taper";
+pub const K_WORK: &str = "pl::work";
 pub const K_RUN: &str = "pl::run";
 pub const K_HEIGHT: &str = "pl::height";
 pub const K_CONDITION: &str = "pl::condition";

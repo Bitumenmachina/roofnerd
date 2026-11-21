@@ -560,7 +560,12 @@ pub fn clashes(job: &mut Job, clearance: Option<f64>) -> Result<Clashes, String>
     let mut solid: BTreeMap<&str, usize> = BTreeMap::new();
     let mut tested = 0;
     let carried = carried_on(&drawn, &net);
+    // What is to be demolished is in nothing's way once the work is done (call 148).
+    let gone = crate::components::demolished(&mut job.world);
     for (i, p) in drawn.iter().enumerate() {
+        if gone.contains(&p.path) {
+            continue;
+        }
         match pieces_of(p, i) {
             Ok(mut its) => {
                 if let (Some(&(a, b)), Shape::Run { round, rect, .. }) = (carried.get(&i), &p.shape) {

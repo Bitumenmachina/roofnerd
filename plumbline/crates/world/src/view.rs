@@ -149,6 +149,9 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         if let Some(c) = w.get::<Pitch>(e) {
             rows.push(entered(p, "pitch", &c.0, |x| num(*x)));
         }
+        if let Some(x) = w.get::<Work>(e) {
+            rows.push(entered(p, "work", &x.status, |s| s.said().to_string()));
+        }
         if let Some(t) = w.get::<Taper>(e) {
             rows.push(entered(p, "drains", &t.drains, |pts| so_many(pts.len(), "drain")));
             rows.push(length(p, "thickness at the drain", &t.at_drain));
@@ -825,6 +828,10 @@ pub fn pricing(job: &mut Job) -> Pricing {
         let all_off = has_lines && w.get::<Cost>(e).is_some_and(|c| c.lines.iter().all(|l| l.off));
         let rate = w.get::<Allowance>(e).map(|a| a.rate.clone());
         if rate.is_none() && !has_lines {
+            // What is existing to remain is not bought: nothing is owed on it (call 148).
+            if w.get::<Work>(e).is_some_and(|x| x.status.value == Some(WorkStatus::Existing)) {
+                continue;
+            }
             // It could be priced and is not: by its area or length, or by the each.
             if kind.priced_by().is_some() || matches!(kind, Kind::Door | Kind::Window | Kind::Fitting | Kind::Fixture | Kind::Furnishing | Kind::Equipment) {
                 match bare.iter_mut().find(|b| b.0 == kind) {
