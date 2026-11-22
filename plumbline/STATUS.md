@@ -8837,6 +8837,63 @@ kitchen drawn as a kitchen with clearances and an order sheet; packs and waste.
 **11. Reach**: one name through the code (call 174); a download for each kind of
 machine; type that reads at arm's length (the builder: "most small grey type").
 
+## Call 175's fixes: a demonstration, written before it is built (2026-11-22)
+
+`demos/sweep-money.sh`, at the command line, from an empty job (a made-up house; no
+real figure). Each step fails the script if the program does not say the hand figure.
+
+**1. Siding over stone.** One outside wall, 40 ft long and 10 ft high, with a door 3 ft
+by 6 ft 8 in (sill at the floor) and a window 5 ft by 5 ft with its sill at 3 ft. The
+starter assembly "Exterior wall, 2x6, lap siding over a stone wainscot" on it.
+- face 40 x 10 = 400 SF; the door 3 x 6.6667 = 20.00 SF; the window 25 SF; `net_area`
+  400 - 45 = **355.00 SF**.
+- `net_length` = 40 - 3 = **37.00 LF** (the door comes to the floor; the window does not).
+- "Stone veneer wainscot, 3 ft": **37.00 LF** (was 40.00).
+- "Lap siding" and "Hang the siding": 355 - 3 x 37 = **244.00 SF** (was 355.00).
+- "Weather barrier", "Batt insulation": 355.00 SF, unchanged; "Wall sheathing" on the
+  face, unchanged.
+- The same wall with no door: `net_length` 40.00, stone 40.00 LF, siding 380 - 120 =
+  260.00 SF.
+- A wall with no line naming a wainscot says nothing new and prints what it printed.
+
+**2. Base in the sample house.** `sixteen`: for every room, the quantity of "Base and
+trim" on the estimate is the room's own `base_run` (the kitchen: **45.08 LF**, was
+50.25; the living room 99.28, was 110.125), and the sum of the lines is the sum of the
+rooms' base runs. The sample's price falls by the difference at $7.50/LF, and the
+demonstration prints both totals.
+
+**3. Set against, and in the same space.** A room 12 by 10 with a tub set so that it
+stands 0.45 in into the wall behind it; a duct and a pipe drawn through one another in
+the middle of the room.
+- `clashes`: in the same space **1** (the duct and the pipe); set against **1** (the
+  tub and its wall), listed under its own heading and not counted as a clash.
+- The tub moved 6 in into the wall: it is in the same space as the wall (**2** in all):
+  past 2 in, a thing is in the wall and not against it.
+
+**4. A hole counted once.** A pipe riser of three pieces, end to end, up through one
+floor: through a floor **1** (was 3), and the line says 1 hole, the pipe's size, the
+floor. The same riser carried up through a second floor: **2**.
+
+**5. Two on one line.** A footing 40 ft long; a second, 16 ft long, drawn on the same
+line: `check` and `takeoff` each say the second lies on the first for **16 LF** and is
+counted twice; the totals still count both (56 LF) and say so. Two walls the same.
+
+**6. A header's depth.** A wall with a 6 ft opening and a framing line: the frame's
+figures give the header's length as before and its depth as **Unknown, "not sized: the
+program sizes nothing"**; typed "9 1/4 in", Assumed, it is that; the field list asks
+the depth of each header in a wall said bearing or not said, and does not ask it in a
+wall said not bearing. No figure that counts lumber changes (call 137's counts take a
+header's length and plies, not its depth): `demos/framing.sh` passes untouched.
+
+**7. The BIM file's own word.** A job with one wall existing, one to demolish, one new
+(said bearing), a door to demolish and a roof: written out, the file holds `Status`
+EXISTING, DEMOLISH and NEW on the three walls and DEMOLISH on the door (the literals as
+the schema gives them, read from the schema files that come with the outside checker,
+never from memory), `LoadBearing` true on the wall said bearing and absent on the
+others. Read back into an empty job: 1 existing, 1 to demolish, 1 new wall; the door to
+demolish; the wall types by their names; the roof; and `takeoff` of the job read back
+says what the first job's did. The outside checker passes the file.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
