@@ -71,6 +71,10 @@
 //!   in which one of them is being changed has to stay open.
 //! * An opening whose head is above its wall's top is not allowed here; BIMCraft allows
 //!   it (DECISIONS.md call 29).
+//! * A beam is a `Segment` too (BIMCraft's beam is a run), its heights to its top; a post and
+//!   a pad footing are `Stood`, BIMCraft's `Column` (a pad footing a column laid flat), both
+//!   of a `SegmentType` that gives their section (call 164). A type may carry a weight per
+//!   foot, a beam's only: BIMCraft has none for any member but rebar.
 //! * The checks are the `Val` rules of this project around BIMCraft's rules; each rule
 //!   taken from BIMCraft names its line where it is applied.
 
@@ -280,6 +284,38 @@ impl Floor {
     }
 }
 
+/// `pl::joists_span` (call 165): on a Floor, which way its joists run: `the short way` (square
+/// to the floor's longest edge) or `the long way`, with how sure that is and where it came
+/// from. Left out, nothing was said, and the joists are taken to span the short way, Assumed.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct JoistsSpan(pub Val<String>);
+
+/// The two ways joists run, as a builder says them.
+pub const SHORT_WAY: &str = "the short way";
+pub const LONG_WAY: &str = "the long way";
+
+impl JoistsSpan {
+    /// The words typed for it: the two ways, in any capitals and with or without "the".
+    pub fn read(word: &str) -> Result<&'static str, String> {
+        match word.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase().as_str() {
+            "the short way" | "short way" | "short" => Ok(SHORT_WAY),
+            "the long way" | "long way" | "long" => Ok(LONG_WAY),
+            _ => Err(format!("{:?} is not a way for joists to run: they span \"the short way\" or \"the long way\"", word.trim())),
+        }
+    }
+}
+
+pub fn check_joists_span(path: &str, kind: Kind, j: &JoistsSpan) -> Result<(), String> {
+    if kind != Kind::Floor {
+        return Err(format!("{path}: {kind:#} is not a floor; the way joists span is said of a floor"));
+    }
+    j.0.check(&format!("{path} joists span"), "")?;
+    if j.0.value.as_deref().is_some_and(|v| v != SHORT_WAY && v != LONG_WAY) {
+        return Err(format!("{path} joists span: joists span \"the short way\" or \"the long way\""));
+    }
+    Ok(())
+}
+
 /// `pl::room`: on a Room under its storey. A point inside the room: its boundary is found
 /// from the walls around the point, so it follows them when they move. `number` is what
 /// the plan calls it.
@@ -343,14 +379,19 @@ pub struct SegmentType {
     pub depth: Option<Val<Len>>,
     #[serde(default)]
     pub round: bool,
+    /// What a foot of it weighs, in pounds, where its type says (a steel shape's name says
+    /// it: W8x18 is 18 lb/ft); a beam's only (call 164). The program holds no table of
+    /// shapes: it is typed, with how sure it is and where it came from.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight_per_foot: Option<Val<f64>>,
 }
 
 impl SegmentType {
     pub fn round(category: Kind, diameter: Val<Len>) -> SegmentType {
-        SegmentType { category, width: diameter, depth: None, round: true }
+        SegmentType { category, width: diameter, depth: None, round: true, weight_per_foot: None }
     }
     pub fn rectangular(category: Kind, width: Val<Len>, depth: Val<Len>) -> SegmentType {
-        SegmentType { category, width, depth: Some(depth), round: false }
+        SegmentType { category, width, depth: Some(depth), round: false, weight_per_foot: None }
     }
     /// The worst status among the dimensions it has.
     pub fn status(&self) -> crate::value::Status {
@@ -865,8 +906,22 @@ pub fn check_segment_type(path: &str, kind: Kind, t: &SegmentType) -> Result<(),
     if kind != Kind::Type {
         return Err(format!("{path}: {kind:#} cannot carry a run's type; only a type can"));
     }
-    if !t.category.is_segment() {
-        return Err(format!("{path} run type: is for a {:?}; a run type is for a Duct, a Pipe, a Conduit or a Cable", t.category));
+    if !(t.category.is_segment() || t.category.is_framing()) {
+        return Err(format!("{path} run type: is for a {:?}; a run type is for a Duct, a Pipe, a Conduit, a Cable, a Beam, a Post or a PadFooting", t.category));
+    }
+    // A pad footing is square or rectangular (BIMCraft lays a column flat, and a round
+    // one laid flat is a drum, not a pad); a weight per foot is a beam's (call 164).
+    if t.category == Kind::PadFooting && t.round {
+        return Err(format!("{path} pad footing type: is round; a pad footing is square or rectangular, by a width and a depth"));
+    }
+    if let Some(w) = &t.weight_per_foot {
+        if t.category != Kind::Beam {
+            return Err(format!("{path} run type: a weight per foot is a beam's; a {} has none", t.category.said()));
+        }
+        w.check(&format!("{path} weight per foot"), "lb/ft")?;
+        if w.value.is_some_and(|x| !(x.is_finite() && x > 0.0)) {
+            return Err(format!("{path} weight per foot: has to be more than nothing"));
+        }
     }
     // A round section has one size (BIMCraft `model.rs:6265`: as deep as it is wide).
     match (t.round, &t.depth) {
@@ -885,8 +940,8 @@ pub fn check_segment_type(path: &str, kind: Kind, t: &SegmentType) -> Result<(),
 }
 
 pub fn check_segment(path: &str, kind: Kind, r: &Segment) -> Result<(), String> {
-    if !kind.is_segment() {
-        return Err(format!("{path}: {kind:#} cannot carry a run's line; only a duct, a pipe, a conduit or a cable can"));
+    if !(kind.is_segment() || kind == Kind::Beam) {
+        return Err(format!("{path}: {kind:#} cannot carry a run's line; only a duct, a pipe, a conduit, a cable or a beam can"));
     }
     type_ref(&format!("{path} run type"), &r.type_name)?;
     let d = coords(&format!("{path} line"), &r.line)?;
@@ -899,11 +954,76 @@ pub fn check_segment(path: &str, kind: Kind, r: &Segment) -> Result<(), String> 
     }
     // Too short to be a run (BIMCraft `runs.rs:63`): its ends are the same point in space.
     if let (Some([a, b]), Some((z0, z1))) = (r.line_ft(), r.offsets_ft()) {
+        // A beam given the very same point twice was meant stood on end: said as that, where
+        // BIMCraft would say only that it is too short (its two ends are one point).
+        if kind == Kind::Beam && crate::geom::dist(a, b) < 1.0e-9 && (z1 - z0).abs() < 1.0e-9 {
+            return Err(format!("{path} line: its ends are one over the other; a beam runs along, and what stands is a post"));
+        }
         let length = crate::geom::dist(a, b).hypot(z1 - z0);
         if length <= crate::check::FIT_TOLERANCE_FT {
             return Err(format!("{path} line: is {} ft long; a run goes from one point to another", crate::view::num(length)));
         }
+        // A beam runs along (BIMCraft `runs.rs:62-76`): its ends are not one over the
+        // other, and it is not sloped past 75 degrees; what stands is a post.
+        if kind == Kind::Beam {
+            let plan = crate::geom::dist(a, b);
+            if plan <= crate::check::FIT_TOLERANCE_FT {
+                return Err(format!("{path} line: its ends are one over the other; a beam runs along, and what stands is a post"));
+            }
+            let tilt = (z1 - z0).abs().atan2(plan).to_degrees();
+            if tilt > MAX_BEAM_SLOPE_DEG {
+                return Err(format!("{path} line: it slopes {tilt:.1} degrees, more than the {MAX_BEAM_SLOPE_DEG} degrees a beam may; what stands is a post"));
+            }
+        }
     }
+    Ok(())
+}
+
+/// The steepest a beam may slope (BIMCraft `runs.rs` `MAX_SLOPE`): past it, what stands
+/// is a post.
+pub const MAX_BEAM_SLOPE_DEG: f64 = 75.0;
+
+/// `pl::column`: on a Post or a Pad footing (call 164). BIMCraft's `Column` (`model.rs:1526`):
+/// a point on plan, a type, how far its base is above the floor of the level it is under,
+/// and how tall it is; a pad footing is one laid flat, its `height` its thickness and its
+/// `base_offset` its top less that (`commands.rs:8674-8686`, so a top below the floor
+/// gives a minus offset). Its type is a `SegmentType` of the category Post or PadFooting.
+/// Not taken: `angle` (a post is not turned), `top_level` (a height is typed; one the
+/// program fills in says so), `room_bounding`, `params`.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Stood {
+    /// The path of its type: a Type element carrying `pl::segment_type`.
+    #[serde(rename = "type")]
+    pub type_name: Val<String>,
+    pub at: Val<P2>,
+    /// How far its base is above the floor of its level (below it, negative).
+    pub base_offset: Val<Len>,
+    /// How tall it is (a pad footing: how thick).
+    pub height: Val<Len>,
+}
+
+impl Stood {
+    pub fn at_ft(&self) -> Option<P2> {
+        let d = units::coord_divisor(&self.at.unit).ok()?;
+        self.at.value.map(|p| p.map(|x| x / d))
+    }
+}
+
+pub fn check_column(path: &str, kind: Kind, c: &Stood) -> Result<(), String> {
+    if !matches!(kind, Kind::Post | Kind::PadFooting) {
+        return Err(format!("{path}: {kind:#} cannot carry a column's place; only a post or a pad footing can"));
+    }
+    type_ref(&format!("{path} type"), &c.type_name)?;
+    let d = coords(&format!("{path} position"), &c.at)?;
+    if let Some(at) = &c.at.value {
+        usable(&format!("{path} position"), at, d)?;
+    }
+    offset_ok(&format!("{path} base"), &c.base_offset)?;
+    let what = if kind == Kind::PadFooting { "thickness" } else { "height" };
+    // Its top must be above its base (BIMCraft: a column's top above its base; a footing's
+    // thickness above zero, `commands.rs:8674`).
+    positive(&format!("{path} {what}"), &c.height, false).map_err(|why| if kind == Kind::PadFooting { format!("{why}; a pad footing has a thickness, and nobody gave one") } else { format!("{why}; a post's top is above its base") })?;
     Ok(())
 }
 

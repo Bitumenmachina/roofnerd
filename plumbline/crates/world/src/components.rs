@@ -85,6 +85,17 @@ pub enum Kind {
     /// how deep it is), as a door and a window are both held as an opening; it is never
     /// counted as a wall. (BIMCraft's `strip_footing`.)
     Footing,
+    /// A beam (call 164): a run by its two ends on plan and the height of its top, with a
+    /// section from its type. BIMCraft's beam is a run, and so is this: held as a
+    /// `Segment`, but it is no duct or pipe and joins nothing.
+    Beam,
+    /// A post (call 164): a point on plan, a height and the height of its base, with a
+    /// section from its type. BIMCraft's structural column; a steel column is a post of a
+    /// round or a square type.
+    Post,
+    /// A pad footing (call 164): a post laid flat, its height its thickness, as BIMCraft's
+    /// isolated footing is a column laid flat.
+    PadFooting,
     /// A set of ducts, pipes, cables, equipment and fixtures that work as one.
     System,
     Duct,
@@ -137,6 +148,7 @@ impl Kind {
             Kind::PitchBreak => "pitch break",
             Kind::RoomLine => "room line",
             Kind::Condition => "assembly",
+            Kind::PadFooting => "pad footing",
             other => other.stem(),
         }
     }
@@ -183,6 +195,9 @@ impl Kind {
             Kind::Window => "window",
             Kind::Floor => "floor",
             Kind::Footing => "footing",
+            Kind::Beam => "beam",
+            Kind::Post => "post",
+            Kind::PadFooting => "pad",
             Kind::System => "system",
             Kind::Duct => "duct",
             Kind::Pipe => "pipe",
@@ -229,6 +244,10 @@ impl Kind {
             Kind::Floor => Some(("plan_area", "SF")),
             // Concrete is bought by the cubic yard.
             Kind::Footing => Some(("volume", "CY")),
+            // A beam is bought by the foot, a pad footing by its concrete; a post by the
+            // piece, which is no figure of it (call 164).
+            Kind::Beam => Some(("length", "LF")),
+            Kind::PadFooting => Some(("volume", "CY")),
             Kind::Room => Some(("floor_area", "SF")),
             Kind::Duct | Kind::Pipe | Kind::Conduit | Kind::Cable => Some(("true_length", "LF")),
             _ => None,
@@ -239,6 +258,9 @@ impl Kind {
         if self == Kind::LowSlopeArea {
             // And its tapered insulation, laid out to its drains (call 139).
             &[("plan_area", "SF"), ("slope_factor", ""), ("surface_area", "SF"), ("squares", "SQ"), ("drains", "EA"), ("thinnest", "in"), ("thickest", "in"), ("average_thickness", "in"), ("board_feet", "BF"), ("valley_length", "LF")]
+        } else if self == Kind::RoofPlane {
+            // Its rafters only where a line of it or of its roof names them (call 165).
+            &[("plan_area", "SF"), ("slope_factor", ""), ("surface_area", "SF"), ("squares", "SQ"), ("rafters", "EA"), ("rafter_length", "LF"), ("rafter_longest", "ft")]
         } else if self.is_area() {
             &[("plan_area", "SF"), ("slope_factor", ""), ("surface_area", "SF"), ("squares", "SQ")]
         } else if self == Kind::Parapet {
@@ -252,11 +274,18 @@ impl Kind {
             &[("width", "ft"), ("height", "ft"), ("opening_area", "SF")]
         } else if self == Kind::Roof {
             // The whole roof, from its planes and lines (call 134).
-            &[("surface_area", "SF"), ("squares", "SQ"), ("eave_length", "LF"), ("rake_length", "LF"), ("hip_length", "LF"), ("ridge_length", "LF"), ("valley_length", "LF"), ("headwall_length", "LF")]
+            &[("surface_area", "SF"), ("squares", "SQ"), ("eave_length", "LF"), ("rake_length", "LF"), ("hip_length", "LF"), ("ridge_length", "LF"), ("valley_length", "LF"), ("headwall_length", "LF"), ("rafters", "EA"), ("rafter_length", "LF"), ("rafter_longest", "ft")]
         } else if self == Kind::Footing {
             &[("plan_length", "LF"), ("width", "ft"), ("depth", "ft"), ("volume", "CY")]
+        } else if self == Kind::Beam {
+            // Its weight only where its type gives a weight per foot (call 164).
+            &[("length", "LF"), ("width", "ft"), ("depth", "ft"), ("weight", "LB"), ("section_area", "SF"), ("volume", "CY")]
+        } else if self == Kind::Post {
+            &[("height", "LF"), ("width", "ft"), ("depth", "ft"), ("section_area", "SF"), ("volume", "CY")]
+        } else if self == Kind::PadFooting {
+            &[("width", "ft"), ("length", "ft"), ("thickness", "ft"), ("plan_area", "SF"), ("form_area", "SF"), ("volume", "CY")]
         } else if self == Kind::Floor {
-            &[("plan_area", "SF"), ("perimeter", "LF"), ("thickness", "ft")]
+            &[("plan_area", "SF"), ("perimeter", "LF"), ("thickness", "ft"), ("joists", "EA"), ("joist_length", "LF"), ("joist_longest", "ft"), ("rim_length", "LF")]
         } else if self == Kind::Room {
             // Its walls' board at their faces, less its openings (call 144).
             &[("floor_area", "SF"), ("gross_area", "SF"), ("perimeter", "LF"), ("wall_area", "SF"), ("wall_run", "LF"), ("base_run", "LF"), ("receptacles", "EA")]

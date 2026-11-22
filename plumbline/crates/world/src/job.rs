@@ -216,7 +216,7 @@ impl Job {
         let field = if matches!(lower.as_str(), "bearing" | "in_the_wall" | "inthewall") { if lower == "bearing" { "bearing" } else { "in_the_wall" } } else { field };
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
-        let on_element = matches!(field, "pitch" | "height" | "eave_height" | "condition" | "wbs" | "allowance" | "material" | "overhead" | "profit" | "price" | "bearing" | "in_the_wall") || (field == "order" && kind == Kind::Material);
+        let on_element = matches!(field, "pitch" | "height" | "eave_height" | "condition" | "wbs" | "allowance" | "material" | "overhead" | "profit" | "price" | "bearing" | "in_the_wall") || (field == "order" && kind == Kind::Material) || (field == "type" && kind.is_framing()) || (field == "joists_span" && kind == Kind::Floor);
         if line.is_some() && on_element {
             return Err(format!("{field} belongs to the element, not to one of its cost lines; leave --line off"));
         }
@@ -284,6 +284,29 @@ impl Job {
                 }
                 check::made_of(path, kind, &new)?;
                 self.world.entity_mut(e).insert(new);
+            }
+            // Which way a floor's joists run (call 165): "the short way" or "the long way".
+            "joists_span" => {
+                let word = value.map(crate::JoistsSpan::read).transpose()?;
+                let new = crate::JoistsSpan(Val { value: word.map(str::to_string), unit: String::new(), status, source: source.into() });
+                crate::building::check_joists_span(path, kind, &new)?;
+                self.world.entity_mut(e).insert(new);
+            }
+            // A beam, a post or a pad footing changed to another type of its kind (call 164).
+            "type" => {
+                let typed = value.ok_or_else(|| format!("{path} has to have a type: give the type's path"))?;
+                let made_for = self.find(typed).and_then(|t| self.world.get::<crate::SegmentType>(t).map(|t| t.category));
+                if made_for != Some(kind) {
+                    return Err(format!("{typed} is not a type of {}: {}", kind.said(), match made_for { Some(other) => format!("it is a type of {}", other.said()), None => format!("make one with `type {}`", kind.said().replace("pad footing", "pad")) }));
+                }
+                let new = Val { value: Some(typed.to_string()), unit: String::new(), status, source: source.into() };
+                if let Some(mut c) = self.world.get_mut::<crate::Stood>(e) {
+                    c.type_name = new;
+                } else if let Some(mut c) = self.world.get_mut::<crate::Segment>(e) {
+                    c.type_name = new;
+                } else {
+                    return Err(missing("place"));
+                }
             }
             "bearing" | "in_the_wall" => {
                 // What the wall is and holds, said of a wall (call 160): bearing or not

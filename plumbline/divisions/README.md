@@ -65,6 +65,7 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 
 **In the starter assemblies the program ships with** (no prices in them; `plumbline import assemblies <job> starter`):
 
+- "Pad concrete" (by `volume`), "Pad forms" (by `form_area`) and "Form, place and strip" (labor), in the assembly "Pad footing, formed" (goes on a pad footing, call 164)
 - "Vapor barrier under the slab", in the assembly "Slab on grade, 4 in" (goes on a floor): material, by `plan_area`
 - "Welded wire reinforcing", in the assembly "Slab on grade, 4 in" (goes on a floor): material, by `plan_area`
 - "Concrete, 4 in slab", in the assembly "Slab on grade, 4 in" (goes on a floor): material, by `plan_area`
@@ -116,7 +117,11 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 
 **In the starter assemblies the program ships with** (no prices in them; `plumbline import assemblies <job> starter`):
 
+- "Beam, engineered lumber" (by `length`), "Hangers and bearing hardware" (2 EA, Assumed) and "Set the beam" (labor), in the assembly "Beam, engineered lumber" (goes on a beam: call 164, sizes typed, nothing sized by the program)
+- "Post", "Post cap and base" (2 EA, Assumed) and "Set the post" (labor), in the assembly "Post" (goes on a post)
 - "Floor framing", in the assembly "Framed floor" (goes on a floor): material, by `plan_area`
+- "Floor joists, 2x10 at 16 in" (by `joists`, EA) and "Rim joist" (by `rim_length`, LF), in the assembly "Framed floor" (call 165: counted across the floor by the framer's rule, the way they run Assumed until said; blocking, hangers and doubled members are not in the count)
+- "Rafters, 2x8 at 24 in" (by `rafters`, EA), in the assembly "Asphalt shingle roof, whole roof" (call 165)
 - "Subfloor", in the assembly "Framed floor" (goes on a floor): material, by `plan_area`
 - "Frame the floor and lay the subfloor", in the assembly "Framed floor" (goes on a floor): labor, by `plan_area`, in hours, with no production rate in it
 - "Wall framing, 2x6 at 16 in", in the assembly "Exterior wall, 2x6, lap siding" (goes on a wall): material, by `face_area`

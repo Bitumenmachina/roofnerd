@@ -12,3 +12,5 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 plumbline-roofing = { path = "../roofing" }
 parry3d-f64 = { workspace = true }
+# The PDF of a plan set is written by hand; its streams are deflated (already in the lockfile).
+flate2 = "1.1"

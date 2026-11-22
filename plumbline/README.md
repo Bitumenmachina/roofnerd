@@ -100,6 +100,9 @@ demos/div.sh               # sixteen divisions: a whole house's lines in all six
 demos/library.sh           # the starter assemblies: no price in them, a house's takeoff in fourteen divisions, three prices by division
 demos/partwork.sh          # work on part of a thing typed as a measure ("60 SF", with how sure and where from) and the starter assembly "Take down a partition", each against a figure worked by hand
 demos/hidden.sh            # what a wall the work opens may be hiding: bearing and what is in it asked in the field, what a bearing wall that comes down needs, and what is in the way of it
+demos/stretch.sh           # a wall moved takes the ends of the walls that meet it: an addition made longer, a partition slid between two walls, a move refused for a window it would strand, and --alone, each against a figure worked by hand
+demos/joists.sh            # joists counted across a floor and rafters across a roof plane where a priced line names them: the short and the long way, an L, a gable and a hip roof, the starter library's Framed floor
+demos/structure.sh         # a beam, its posts and their pad footings: typed sizes (nothing is sized), figures, price, the clash test, the list for the engineer, the BIM file, the three starter assemblies
 demos/kitchen.sh           # a kitchen's base that does not run behind the cabinets, the lump lines said to be in the price beside the things set, and the countertop priced and its corner leg said
 demos/spec.sh              # items made from manufacturers' sheets (PDF), placed, moved clear of a clash, and out to an IFC4 model
 demos/items.sh             # the item library: the things that can be placed, by trade, in a table that is brought in, written out the same, changed and brought back

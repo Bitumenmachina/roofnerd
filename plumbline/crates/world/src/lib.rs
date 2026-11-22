@@ -12,6 +12,8 @@
 //! * `skeleton`: where a footprint's slopes meet (ported from BIMCraft; see the file).
 //! * `solve`: a roof's planes and lines made from its footprint and kept in step with it.
 //! * `building`: storeys, walls, floors, and the ducts, pipes, cables and equipment in them.
+//! * `paper`: a page of line work and the PDF it is written as (ported from BIMCraft; see the files).
+//! * `plan_set`: the plan of a level as it stands, the demolition plan and the proposed plan, on paper.
 //! * `plans`: a sheet of the plans laid under the tracing, and its scale.
 //! * `job`: the world and the edits made to it.
 //! * `file`: the saved job.
@@ -30,6 +32,8 @@ pub mod geom;
 pub mod hidden;
 pub mod job;
 pub mod lines;
+pub mod paper;
+pub mod plan_set;
 pub mod plans;
 pub mod tables;
 pub mod taper;
@@ -38,12 +42,13 @@ pub mod sample;
 pub mod skeleton;
 pub mod solve;
 pub mod spec;
+pub mod structure;
 pub mod units;
 pub mod value;
 pub mod view;
 pub mod vif;
 
-pub use building::{Item, Connector, ConnectorKind, Connectors, Discipline, Domain, Flow, Fitting, FittingKind, Floor, FloorType, Function, InSystem, Justify, Layer, Level, Location, Opening, OpeningType, Placed, Room, RoomLine, Segment, SegmentType, SystemInfo, Wall, WallType, P3};
+pub use building::{JoistsSpan, Stood, Item, Connector, ConnectorKind, Connectors, Discipline, Domain, Flow, Fitting, FittingKind, Floor, FloorType, Function, InSystem, Justify, Layer, Level, Location, Opening, OpeningType, Placed, Room, RoomLine, Segment, SegmentType, SystemInfo, Wall, WallType, P3};
 pub use components::*;
 pub use job::{Header, Job};
 pub use units::Len;

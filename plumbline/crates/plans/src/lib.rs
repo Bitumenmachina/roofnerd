@@ -371,6 +371,14 @@ pub fn read(bytes: &[u8], page: usize) -> Result<Page, String> {
     }
 }
 
+/// A picture as a PNG file, to look at: the page of a plan set drawn by this reader.
+pub fn png(picture: &Picture) -> Result<Vec<u8>, String> {
+    let image = image::RgbaImage::from_raw(picture.width, picture.height, picture.rgba.clone()).ok_or("the picture has no size to write")?;
+    let mut out = std::io::Cursor::new(Vec::new());
+    image.write_to(&mut out, image::ImageFormat::Png).map_err(|e| format!("the picture could not be written: {e}"))?;
+    Ok(out.into_inner())
+}
+
 /// What a page is without drawing it: the sort of file, how many pages the file has, and
 /// the page's size (a PDF's in points, a picture's in dots). The refusals are `read`'s.
 pub fn size_of(bytes: &[u8], page: usize) -> Result<(Sort, usize, [f64; 2]), String> {

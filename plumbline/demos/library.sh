@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The starter library of assemblies (library/sixteen-divisions.csv): 37 assemblies with a
+# The starter library of assemblies (library/sixteen-divisions.csv): 40 assemblies with a
 # line in every one of the sixteen divisions, labor lines among them, and no price and
 # no production rate in it. It is brought into an
 # empty job, its assemblies are applied to a small made-up house, the takeoff comes out
@@ -32,11 +32,11 @@ assert all(re.fullmatch(r"\$\?/[A-Za-z]+", r[cost]) for r in lines), "a unit cos
 assert not any(re.search(r"\$\s*\d", cell) for r in lines for cell in r), "a dollar figure in the library"
 assert all(r[ctype] for r in lines) and all(r[division] for r in lines), "a line with no cost type or no division"
 labor = [r for r in lines if r[ctype] == "Labor"]
-assert len(labor) == 25 and all(r[head.index("Ordered by")] == "hr" and r[head.index("Ordered at")].startswith("unknown ") for r in labor), "a labor line with a production rate in it"
+assert len(labor) == 28 and all(r[head.index("Ordered by")] == "hr" and r[head.index("Ordered at")].startswith("unknown ") for r in labor), "a labor line with a production rate in it"
 print("    %d labor lines, each in hours with no production rate and no wage: how fast a crew goes is the estimator's own" % len(labor))
 print("    %d assemblies, %d lines, a line in each of divisions %s; every unit cost is $?, and no dollar figure is in the file"
       % (len({r[0] for r in lines}), len(lines), ", ".join(str(d) for d in sorted({int(r[division]) for r in lines}))))
-assert sorted({int(r[division]) for r in lines}) == list(range(1, 17)) and len({r[0] for r in lines}) == 37 and len(lines) == 179
+assert sorted({int(r[division]) for r in lines}) == list(range(1, 17)) and len({r[0] for r in lines}) == 40 and len(lines) == 191
 PY
 
 echo
@@ -66,9 +66,9 @@ ALL="$("$P" show "$J")"
 of() { grep -oE "$1-[0-9]+" <<<"$ALL" | sort -u; }
 
 echo
-echo "== The library comes in: 37 assemblies, none refused =="
+echo "== The library comes in: 40 assemblies, none refused =="
 OUT="$("$P" import assemblies "$J" "$LIB")"; echo "$OUT" | grep -E "rows|set:|same|not used" | sed 's/^/  /'
-says "all of them" "set: 37"
+says "all of them" "set: 40"
 says "none refused" "not used: 0"
 
 echo

@@ -252,6 +252,16 @@ fn built_in(kind: Kind) -> bool {
     matches!(kind, Kind::Wall | Kind::Floor | Kind::Footing)
 }
 
+/// What carries the building: a beam, a post, a pad footing (call 164). Framing bears on
+/// framing, so none of it is tested against walls, floors, footings or each other; what
+/// it is tested against is every run and every thing set in place.
+fn bears(x: Kind, y: Kind) -> bool {
+    (x.is_framing() && (built_in(y) || y.is_framing())) || (y.is_framing() && built_in(x))
+}
+
+/// What a report says of framing, once, where the job has any (call 164).
+pub const FRAMING_NOT_TESTED: &str = "a beam, a post and a pad footing are not tested against walls, floors, footings or each other: framing bears on framing (a post under a beam, a beam in a wall's line, a pad under a post); each is tested against every run and every thing set in place";
+
 fn pair(a: &str, b: &str) -> (String, String) {
     if a <= b {
         (a.to_string(), b.to_string())
@@ -529,6 +539,13 @@ fn said(p: &Placement, what: &BTreeMap<String, String>) -> String {
 /// Every clash in the job. With a `clearance` (in feet), also every two things closer
 /// than that. Nothing is changed and nothing is stored: the answer is worked out from the
 /// job as it stands, so it cannot go stale.
+/// Whether the job has a beam, a post or a pad footing, so a report says what is not
+/// tested of them (a job with none prints what it always printed).
+pub fn has_framing(job: &mut Job) -> bool {
+    let mut q = job.world.query::<&Kind>();
+    q.iter(&job.world).any(|k| k.is_framing())
+}
+
 pub fn clashes(job: &mut Job, clearance: Option<f64>) -> Result<Clashes, String> {
     find(job, clearance, false)
 }
@@ -766,7 +783,7 @@ fn find(job: &mut Job, clearance: Option<f64>, with_walls_coming_down: bool) -> 
             let (first, second) = if p.owner < q.owner { (p, q) } else { (q, p) };
             let (x, y) = (&drawn[first.owner], &drawn[second.owner]);
             // What is joined is tested apart, below, with its joints taken out.
-            if (built_in(x.kind) && built_in(y.kind)) || joined.contains_key(&pair(&x.path, &y.path)) {
+            if (built_in(x.kind) && built_in(y.kind)) || bears(x.kind, y.kind) || joined.contains_key(&pair(&x.path, &y.path)) {
                 continue;
             }
             meet(first, second, middle_of(&wide, &q.aabb), clearance);

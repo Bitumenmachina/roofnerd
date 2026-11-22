@@ -2472,8 +2472,8 @@ fn the_building_checks_refuse_what_cannot_be() {
     use plumbline_world::building::*;
     let len = |x: f64| Val::known(Len::One(x), "in", "test");
     // A section is round, by a diameter, or rectangular, by a width and a depth.
-    assert!(check_segment_type("t", Kind::Type, &SegmentType { category: Kind::Pipe, width: len(1.0), depth: Some(len(2.0)), round: true }).is_err());
-    assert!(check_segment_type("t", Kind::Type, &SegmentType { category: Kind::Duct, width: len(12.0), depth: None, round: false }).is_err());
+    assert!(check_segment_type("t", Kind::Type, &SegmentType { category: Kind::Pipe, width: len(1.0), depth: Some(len(2.0)), round: true, weight_per_foot: None }).is_err());
+    assert!(check_segment_type("t", Kind::Type, &SegmentType { category: Kind::Duct, width: len(12.0), depth: None, round: false, weight_per_foot: None }).is_err());
     assert!(check_segment_type("t", Kind::Type, &SegmentType::round(Kind::Pipe, len(0.0))).is_err());
     assert!(check_segment_type("t", Kind::Type, &SegmentType::round(Kind::Wall, len(1.0))).is_err());
     assert!(check_segment_type("t", Kind::Pipe, &SegmentType::round(Kind::Pipe, len(1.0))).is_err());
@@ -5346,7 +5346,7 @@ fn j12_1_a_wall_drawn_over_another_is_refused_by_the_verbs_and_on_load() {
     assert!(ed::walls(&mut job, &s, &wt, &[[30.0, 0.0], [40.0, 0.0]], true, ed::Top::Height("9 ft"), how).unwrap_err().contains("counted twice"));
     // A chain that goes back over itself, and a wall moved onto another.
     assert!(ed::walls(&mut job, &s, &wt, &[[30.0, 0.0], [40.0, 0.0], [35.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap_err().contains("for 5.00 ft"));
-    assert!(ed::move_by(&mut job, &made[2], 0.0, -10.0, how).unwrap_err().contains("counted twice"));
+    assert!(ed::move_alone(&mut job, &made[2], 0.0, -10.0, how).unwrap_err().contains("counted twice"));
     assert_eq!(save(&mut job), before);
     assert_eq!(total(&mut job), Some(60.0));
     // What is not one wall over another: a wall that carries on in line from a corner, a

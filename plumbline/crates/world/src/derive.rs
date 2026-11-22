@@ -168,6 +168,16 @@ pub fn derive(world: &mut World) -> Vec<String> {
     // plane. Each plane's surface by the same arithmetic as the plane's own
     // (`plane_measures`); each line's length is the one worked above.
     let mut roof_figures: HashMap<String, BTreeMap<String, Derived>> = HashMap::new();
+    // Where a priced line names the rafters ("Rafters, 2x8 at 24 in"), on a roof or on one of
+    // its planes: the spacing it names (call 165). Nothing is counted where nothing is named.
+    let rafters_named: HashMap<String, f64> = {
+        let mut nq = world.query::<(&Node, &Kind, Option<&Cost>, Option<&MadeOf>, Option<&Condition>)>();
+        nq.iter(world)
+            .filter(|(_, k, ..)| matches!(k, Kind::Roof | Kind::RoofPlane))
+            .filter_map(|(n, _, cost, made_of, condition)| crate::finish::members_named(crate::finish::wall_texts(cost, made_of, condition).iter().map(String::as_str), &["rafter"]).map(|(_, spacing)| (n.path.clone(), spacing)))
+            .collect()
+    };
+    let mut plane_rafters: HashMap<String, BTreeMap<String, Derived>> = HashMap::new();
     {
         let mut planes_of: BTreeMap<String, Vec<(String, Derived)>> = BTreeMap::new();
         let mut lines_of: BTreeMap<(String, &'static str), Vec<(String, Derived)>> = BTreeMap::new();
@@ -180,6 +190,12 @@ pub fn derive(world: &mut World) -> Vec<String> {
                 if kind.is_area() {
                     let surface = plane_measures(&node.path, outline, pitch).remove("surface_area").expect("a plane has a surface figure");
                     planes_of.entry(parent.clone()).or_default().push((node.path.clone(), surface));
+                    // Its rafters, where its own lines or its roof's name them.
+                    if *kind == Kind::RoofPlane {
+                        if let Some(spacing) = rafters_named.get(&node.path).or_else(|| rafters_named.get(parent)) {
+                            plane_rafters.insert(node.path.clone(), rafter_figures(&node.path, outline, pitch, *spacing));
+                        }
+                    }
                 } else if let Some((_, name)) = ROOF_LINES.iter().find(|(k, _)| k == kind) {
                     if let Some(d) = lengths.get(&node.path) {
                         lines_of.entry((parent.clone(), *name)).or_default().push((node.path.clone(), d.clone()));
@@ -195,7 +211,13 @@ pub fn derive(world: &mut World) -> Vec<String> {
         }
         for roof in roofs {
             let planes = planes_of.remove(&roof).unwrap_or_default();
-            roof_figures.insert(roof.clone(), roof_measures(&planes, &mut lines_of, &roof));
+            let mut figures = roof_measures(&planes, &mut lines_of, &roof);
+            // The roof's own rafters, where its own lines name them: its planes' added up.
+            if rafters_named.contains_key(&roof) {
+                let mine: Vec<(String, &BTreeMap<String, Derived>)> = planes.iter().filter_map(|(p, _)| plane_rafters.get(p).map(|f| (p.clone(), f))).collect();
+                figures.extend(roof_rafters(&mine, planes.len()));
+            }
+            roof_figures.insert(roof.clone(), figures);
         }
     }
 
@@ -269,6 +291,9 @@ pub fn derive(world: &mut World) -> Vec<String> {
             m.extend(more);
         }
         if let Some(more) = roof_figures.remove(me) {
+            m.extend(more);
+        }
+        if let Some(more) = plane_rafters.remove(me) {
             m.extend(more);
         }
 
@@ -416,6 +441,76 @@ fn roof_measures(planes: &[(String, Derived)], lines_of: &mut BTreeMap<(String, 
         } else {
             let f = if lines.len() == 1 { format!("the true length of its one {said} line") } else { format!("the true length of its {} {said} lines, added up", lines.len()) };
             Derived::new(Some(lines.iter().filter_map(|(_, d)| d.worked()).sum()), "LF", &lines.iter().map(|(_, d)| d.status).collect::<Vec<_>>(), &f, &inputs)
+        };
+        m.insert(name.to_string(), d);
+    }
+    m
+}
+
+/// A plane's rafters counted (call 165): `rafters`, `rafter_length` (along the slope: each
+/// piece's length on plan times the plane's slope factor, its overhang being in the outline as
+/// drawn, so a rafter's tail is in its length) and `rafter_longest`. They run up the plane
+/// square to its eave, on marks along the eave (`building::members`).
+fn rafter_figures(me: &str, outline: Option<&Outline>, pitch: Option<&Pitch>, spacing: f64) -> BTreeMap<String, Derived> {
+    let names = [
+        ("rafters", "EA", "one rafter at each multiple of the spacing along the eave from its first end, and one inside each rake, each cut to the outline"),
+        ("rafter_length", "LF", "the lengths of its rafters on the slope, added: each one's length on the plan × slope_factor"),
+        ("rafter_longest", "ft", "the longest of its rafters on the slope: the stock they are bought in is that length or the next up"),
+    ];
+    let mut inputs = vec![format!("{me}#{K_OUTLINE}"), format!("{me}#{K_PITCH}")];
+    inputs.push(format!("{me}#{K_COST}"));
+    let refused = |why: &str| names.iter().map(|(n, u, f)| (n.to_string(), Derived::refused(u, f, &inputs, why))).collect::<BTreeMap<_, _>>();
+    let (Some(o), Some(p)) = (outline, pitch) else { return refused(if outline.is_none() { "no outline entered" } else { "no pitch entered" }) };
+    let Some(ring) = o.points_ft() else { return refused(&format!("the outline {NOT_CONVERTED}")) };
+    let Some(rise) = p.0.value else { return refused("no pitch entered: the rafters' length is along the slope") };
+    let Some(eave) = o.eave_ft().and_then(|line| check::eave_edge(&ring, line).ok()) else { return refused("it has no eave: the rafters run up the plane from its eave") };
+    // Up the plane: square to the eave, toward where the plane lies.
+    let (ex, ey) = (eave[1][0] - eave[0][0], eave[1][1] - eave[0][1]);
+    let middle = [ring.iter().map(|q| q[0]).sum::<f64>() / ring.len() as f64, ring.iter().map(|q| q[1]).sum::<f64>() / ring.len() as f64];
+    let toward = (middle[0] - eave[0][0]) * -ey + (middle[1] - eave[0][1]) * ex;
+    let up = if toward >= 0.0 { [-ey, ex] } else { [ey, -ex] };
+    let factor = (1.0 + (rise / 12.0).powi(2)).sqrt();
+    match crate::building::members::members_across(&ring, up, spacing) {
+        Err(why) => refused(&why),
+        Ok(across) => {
+            let mut note = Vec::new();
+            if across.left_out > 0 {
+                note.push(format!("{} piece{} under 6 in left out", across.left_out, if across.left_out == 1 { "" } else { "s" }));
+            }
+            note.push(crate::building::NOT_COUNTED.to_string());
+            let status = [o.points.status, o.eave.status, p.0.status];
+            let figures = [across.count() as f64, across.total() * factor, across.longest() * factor];
+            names
+                .iter()
+                .zip(figures)
+                .map(|((n, u, f), v)| {
+                    let mut d = Derived::new(Some(v), u, &status, f, &inputs);
+                    d.note = note.join("; ");
+                    (n.to_string(), d)
+                })
+                .collect()
+        }
+    }
+}
+
+/// A roof's rafters: its planes' added up, the longest of them. A roof with a plane that has
+/// no rafters has none, and says which plane and why.
+fn roof_rafters(planes: &[(String, &BTreeMap<String, Derived>)], of: usize) -> BTreeMap<String, Derived> {
+    let inputs: Vec<String> = planes.iter().map(|(p, _)| format!("{p}#{K_MEASURE}")).collect();
+    let mut m = BTreeMap::new();
+    for (name, unit, longest) in [("rafters", "EA", false), ("rafter_length", "LF", false), ("rafter_longest", "ft", true)] {
+        let f = if longest { "the longest of its planes' rafters" } else { "its planes' rafters, added up" };
+        let d = if planes.is_empty() || planes.len() < of {
+            Derived::refused(unit, f, &inputs, if planes.is_empty() { "the roof has no planes" } else { "a plane of the roof has no rafters counted" })
+        } else if let Some((p, d)) = planes.iter().filter_map(|(p, f)| f.get(name).map(|d| (p, d))).find(|(_, d)| d.value.is_none()) {
+            Derived::refused(unit, f, &inputs, &format!("{p} has no {}{}", name.replace('_', " "), if d.note.is_empty() { String::new() } else { format!(": {}", d.note) }))
+        } else {
+            let values = planes.iter().filter_map(|(_, f)| f.get(name)).filter_map(|d| d.worked());
+            let value = if longest { values.fold(0.0, f64::max) } else { values.sum() };
+            let status: Vec<Status> = planes.iter().filter_map(|(_, f)| f.get(name)).map(|d| d.status).collect();
+            let mut d = Derived::new(Some(value), unit, &status, f, &inputs);
+            d.note = crate::building::NOT_COUNTED.to_string();
+            d
         };
         m.insert(name.to_string(), d);
     }

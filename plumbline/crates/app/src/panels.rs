@@ -2702,6 +2702,9 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         Kind::Floor => &[("plan_area", "Area")],
         Kind::Room => &[("floor_area", "Floor area"), ("perimeter", "Perimeter")],
         Kind::Duct => &[("true_length", "Length"), ("surface_area", "Duct surface")],
+        Kind::Beam => &[("length", "Length"), ("weight", "Weight")],
+        Kind::Post => &[("height", "Height")],
+        Kind::PadFooting => &[("volume", "Concrete"), ("form_area", "Forms")],
         k if k.is_segment() => &[("true_length", "Length")],
         _ => &[],
     };

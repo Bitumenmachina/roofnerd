@@ -323,6 +323,13 @@ pub fn framing_of<'a>(texts: impl IntoIterator<Item = &'a str>) -> Option<(f64, 
     texts.into_iter().find_map(|text| if not_in_the_work(text) { None } else { crate::building::framing::named(text) })
 }
 
+/// The same rule for the members of a floor or a roof: the first of what is priced on it that
+/// names a lumber size and a spacing and one of `members` ("joist", "rafter") and is in the
+/// work: ("Floor joists, 2x10 at 16 in": the lumber's depth and the spacing, in feet; call 165).
+pub fn members_named<'a>(texts: impl IntoIterator<Item = &'a str>, members: &[&str]) -> Option<(f64, f64)> {
+    texts.into_iter().find_map(|text| if not_in_the_work(text) { None } else { crate::building::framing::named_with(text, members) })
+}
+
 /// What a wall's framing is read from: its lines that are on, its material and its
 /// assembly, in that order (as its dress reads them).
 pub fn wall_texts(cost: Option<&Cost>, made_of: Option<&MadeOf>, condition: Option<&Condition>) -> Vec<String> {

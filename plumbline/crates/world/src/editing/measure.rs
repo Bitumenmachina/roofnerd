@@ -18,7 +18,7 @@ use crate::components::*;
 use crate::job::Job;
 use crate::units::{self, Len};
 use crate::value::{Status, Val};
-use crate::{check, Item, Connectors, Floor, FloorType, InSystem, Justify, Level, Opening, OpeningType, Placed, Room, RoomLine, Segment, SegmentType, Wall, WallType};
+use crate::{check, JoistsSpan, Stood, Item, Connectors, Floor, FloorType, InSystem, Justify, Level, Opening, OpeningType, Placed, Room, RoomLine, Segment, SegmentType, Wall, WallType};
 
 /// What the person on site has to say about a value.
 #[derive(Clone, Copy)]
@@ -453,6 +453,17 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
             "diameter" if c.round => Some(Slot::Length(&mut c.width)),
             "width" if !c.round => Some(Slot::Length(&mut c.width)),
             "depth" => c.depth.as_mut().map(Slot::Length),
+            "weight per foot" => c.weight_per_foot.as_mut().map(|v| Slot::Other(v)),
+            _ => None,
+        });
+        // Which way a floor's joists run, found out (call 165).
+        on!(JoistsSpan, |c: &JoistsSpan| building::check_joists_span(path, kind, c), |c| if what == "joists span" { Some(Slot::Other(&mut c.0)) } else { None });
+        // A post and a pad footing (call 164).
+        on!(Stood, |c: &Stood| building::check_column(path, kind, c), |c| match what {
+            "type" => Some(Slot::Other(&mut c.type_name)),
+            "position" => Some(Slot::Other(&mut c.at)),
+            "base, above its level's floor" => Some(Slot::Length(&mut c.base_offset)),
+            "height" | "thickness" => Some(Slot::Length(&mut c.height)),
             _ => None,
         });
         if let Some(mut c) = job.world.get::<Segment>(e).cloned() {

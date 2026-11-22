@@ -29,8 +29,10 @@ pub mod history;
 pub mod join;
 pub mod measure;
 pub mod snap;
+pub mod stretch;
 
 pub use history::{History, UNDO_LIMIT};
+pub use stretch::{move_wall, Followed, Moved};
 pub use join::{connect, connect_at, fit_all, fitting, split, Fitted, PassedOver};
 pub(crate) use measure::takes_among;
 pub use measure::{measure, measure_on_line, takes, Measured, Reading};
@@ -42,7 +44,7 @@ use crate::file;
 use crate::job::Job;
 use crate::units::{self, Len};
 use crate::value::{Status, Val};
-use crate::{Item, Level, Opening, OpeningType, Placed, Segment, SegmentType, Wall, WallType, P3};
+use crate::{Stood, Item, Level, Opening, OpeningType, Placed, Segment, SegmentType, Wall, WallType, P3};
 
 /// How sure a thing being drawn is, and who says so. Everything a verb writes carries it.
 #[derive(Clone, Copy)]
@@ -231,10 +233,110 @@ pub fn opening_type(job: &mut Job, name: &str, kind: Kind, width: &str, height: 
 pub fn segment_type(job: &mut Job, name: &str, kind: Kind, width: &str, depth: Option<&str>, how: Entered) -> Result<String, String> {
     all_or_nothing(job, |job| {
         let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
-        let t = SegmentType { category: kind, width: how.length(width)?, depth: depth.map(|d| how.length(d)).transpose()?, round: depth.is_none() };
+        let t = SegmentType { category: kind, width: how.length(width)?, depth: depth.map(|d| how.length(d)).transpose()?, round: depth.is_none(), weight_per_foot: None };
         let path = job.add(&root, Kind::Type, name)?;
         building::check_segment_type(&path, Kind::Type, &t)?;
         job.put(&path, t)?;
+        Ok(path)
+    })
+}
+
+/// A type for a beam, a post or a pad footing (call 164): its section, round and so far
+/// across or so wide by so deep, and, for a beam, what a foot of it weighs where that is
+/// said (`weight`: "18 lb/ft"; a number with no unit is refused). Nothing here sizes
+/// anything: every figure is typed, with how sure it is and where it came from.
+pub fn framing_type(job: &mut Job, name: &str, kind: Kind, width: &str, depth: Option<&str>, weight: Option<&str>, how: Entered) -> Result<String, String> {
+    all_or_nothing(job, |job| {
+        if !kind.is_framing() {
+            return Err(format!("{kind:#} is not a beam, a post or a pad footing"));
+        }
+        let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
+        let weight_per_foot = match weight {
+            None => None,
+            Some(typed) => {
+                let text = typed.trim();
+                let lower = text.to_ascii_lowercase();
+                let number = ["lb/ft", "lbs/ft", "plf", "#/ft"].iter().find_map(|u| lower.strip_suffix(u)).ok_or_else(|| format!("{text:?} is a weight per foot with no unit: write it like \"18 lb/ft\""))?;
+                Some(how.val(units::parse_number(number)?, "lb/ft"))
+            }
+        };
+        let t = SegmentType { category: kind, width: how.length(width)?, depth: depth.map(|d| how.length(d)).transpose()?, round: depth.is_none(), weight_per_foot };
+        let path = job.add(&root, Kind::Type, name)?;
+        building::check_segment_type(&path, Kind::Type, &t)?;
+        job.put(&path, t)?;
+        Ok(path)
+    })
+}
+
+/// Beams along `points` (in feet, on the plan): each pair of points that follow one
+/// another is one beam (BIMCraft's `beam`, `commands.rs:577`, which makes one run for
+/// each segment of its points), its heights held to its **top** as BIMCraft's beams are
+/// (`runs.rs:57`), `top` above the level's floor. A beam that is too short, whose ends
+/// are one over the other or that slopes more than 75 degrees is refused (`runs.rs:62-76`).
+pub fn beams(job: &mut Job, storey: &str, type_path: &str, points: &[P2], top: &str, how: Entered) -> Result<Vec<String>, String> {
+    all_or_nothing(job, |job| {
+        storey_of(job, storey)?;
+        if points.len() < 2 {
+            return Err("a beam needs at least 2 points".into());
+        }
+        let mut made = Vec::new();
+        for pair in points.windows(2) {
+            let segment = Segment { type_name: how.path(type_path), line: how.val([pair[0], pair[1]], "ft"), offset: how.length(top)?, end_offset: None, justify: crate::Justify::Top };
+            let path = add_numbered(job, storey, Kind::Beam)?;
+            building::check_segment(&path, Kind::Beam, &segment)?;
+            job.put(&path, segment)?;
+            made.push(path);
+        }
+        Ok(made)
+    })
+}
+
+/// A post stood at a point (BIMCraft's `stood_of`, `commands.rs:8662`, for a structural
+/// column): `height` tall from `base` above the level's floor. With no height said it
+/// stands to its level's height, Assumed, and the value says so (BIMCraft stands a column
+/// to the level above); with no base said it stands on the floor, Assumed.
+pub fn post(job: &mut Job, storey: &str, type_path: &str, at: P2, height: Option<&str>, base: Option<&str>, how: Entered) -> Result<String, String> {
+    all_or_nothing(job, |job| {
+        storey_of(job, storey)?;
+        let height = match height {
+            Some(typed) => how.length(typed)?,
+            None => {
+                let level = job.find(storey).and_then(|e| job.world.get::<Level>(e)).map(|l| l.height.clone()).ok_or_else(|| format!("no level {storey}"))?;
+                if level.value.is_none() {
+                    return Err(format!("{storey}'s height is not known, so a post has nothing to stand to: say how tall it is with --height"));
+                }
+                Val { status: Status::Assumed.max(level.status), source: format!("stands to its level's height: nobody said how tall it is (the level's: {})", level.source), ..level }
+            }
+        };
+        let base = match base {
+            Some(typed) => how.length(typed)?,
+            None => Val { value: Some(Len::One(0.0)), unit: "ft".into(), status: Status::Assumed, source: "stands on its level's floor: no base was given".into() },
+        };
+        let column = Stood { type_name: how.path(type_path), at: how.val(at, "ft"), base_offset: base, height };
+        let path = add_numbered(job, storey, Kind::Post)?;
+        building::check_column(&path, Kind::Post, &column)?;
+        job.put(&path, column)?;
+        Ok(path)
+    })
+}
+
+/// A pad footing: a post laid flat, `thickness` thick, its **top** `top` above the level's
+/// floor (below it, a minus height), so its base is the top less the thickness
+/// (BIMCraft `commands.rs:8674-8686`). Unlike there, the thickness is always said: the
+/// 400 mm it is given there is a thickness nobody gave.
+pub fn pad(job: &mut Job, storey: &str, type_path: &str, at: P2, thickness: &str, top: &str, how: Entered) -> Result<String, String> {
+    all_or_nothing(job, |job| {
+        storey_of(job, storey)?;
+        let thick = how.length(thickness)?;
+        let up = how.length(top)?;
+        let (Some(t), Some(u)) = (thick.feet(), up.feet()) else { return Err("a pad footing's thickness and top are lengths this program converts".into()) };
+        // Its base in feet, from the two as they were worked (a thickness in inches and a
+        // top in feet are added as feet).
+        let base = how.val(Len::One(((u - t) * 1.0e9).round() / 1.0e9), "ft");
+        let column = Stood { type_name: how.path(type_path), at: how.val(at, "ft"), base_offset: base, height: thick };
+        let path = add_numbered(job, storey, Kind::PadFooting)?;
+        building::check_column(&path, Kind::PadFooting, &column)?;
+        job.put(&path, column)?;
         Ok(path)
     })
 }
@@ -952,8 +1054,24 @@ pub fn room_lines_unreached_said(job: &mut Job, made: &[String]) -> Vec<String> 
 /// so many feet east and north. A wall's doors and windows go with it: they are placed
 /// along it. What was moved is no surer than the move: it takes `how`'s status if that
 /// is worse than its own.
+///
+/// A wall moved takes with it the ends of the walls that meet it (call 170): see
+/// `stretch::move_wall`, which this is for a wall, and which says what followed. To move
+/// a wall and nothing else, `move_alone`.
 pub fn move_by(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -> Result<(), String> {
-    all_or_nothing(job, |job| {
+    move_wall(job, path, east, north, how, false).map(|_| ())
+}
+
+/// A wall, a run, a fixture, a piece of equipment, a fitting or a room's point moved by
+/// itself: whatever meets it is left where it was (a wall's doors and windows still go
+/// with it). What `move_by` did to a wall before call 170.
+pub fn move_alone(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -> Result<(), String> {
+    all_or_nothing(job, |job| shift_one(job, path, east, north, how))
+}
+
+/// The move of one element and nothing else; the caller keeps it all or nothing.
+pub(crate) fn shift_one(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -> Result<(), String> {
+    {
         let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = job.kind(path).ok_or_else(|| format!("{path} has no kind"))?;
         if !(east.is_finite() && north.is_finite()) {
@@ -1001,7 +1119,7 @@ pub fn move_by(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -
             return Err(format!("{kind:#} is not moved this way; a wall, a run, a fixture, equipment, a fitting, a room or a room line is"));
         }
         Ok(())
-    })
+    }
 }
 
 /// Turn a placed thing about its own point, by `degrees` counter-clockwise seen from

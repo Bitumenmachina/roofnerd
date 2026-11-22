@@ -53,6 +53,11 @@ enum Q {
 fn base_quantities(kind: Kind) -> Option<(&'static str, &'static [(&'static str, &'static str, Q)])> {
     Some(match kind {
         Kind::Footing => ("Qto_FootingBaseQuantities", &[("Length", "plan_length", Q::Length), ("Width", "width", Q::Length), ("Height", "depth", Q::Length), ("NetVolume", "volume", Q::Volume)]),
+        // A beam and a post: BIMCraft's `member_quantities` (`ifc.rs:707`), from figures the
+        // program has already worked out; a pad footing is a footing (call 164).
+        Kind::Beam => ("Qto_BeamBaseQuantities", &[("Length", "length", Q::Length), ("CrossSectionArea", "section_area", Q::Area), ("GrossVolume", "volume", Q::Volume)]),
+        Kind::Post => ("Qto_ColumnBaseQuantities", &[("Length", "height", Q::Length), ("CrossSectionArea", "section_area", Q::Area), ("GrossVolume", "volume", Q::Volume)]),
+        Kind::PadFooting => ("Qto_FootingBaseQuantities", &[("Length", "length", Q::Length), ("Width", "width", Q::Length), ("Height", "thickness", Q::Length), ("NetVolume", "volume", Q::Volume)]),
         Kind::Wall => ("Qto_WallBaseQuantities", &[("Length", "plan_length", Q::Length), ("Width", "thickness", Q::Length), ("Height", "height", Q::Length), ("GrossSideArea", "face_area", Q::Area), ("NetSideArea", "net_area", Q::Area)]),
         Kind::Floor => ("Qto_SlabBaseQuantities", &[("Width", "thickness", Q::Length), ("Perimeter", "perimeter", Q::Length), ("GrossArea", "plan_area", Q::Area)]),
         Kind::RoofPlane => ("Qto_SlabBaseQuantities", &[("GrossArea", "surface_area", Q::Area)]),
@@ -409,6 +414,10 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                     Kind::Duct => ("IFCDUCTSEGMENT", "RIGIDSEGMENT", "ducts"),
                     Kind::Pipe => ("IFCPIPESEGMENT", "RIGIDSEGMENT", "pipes"),
                     Kind::Conduit => ("IFCCABLECARRIERSEGMENT", "CONDUITSEGMENT", "conduits"),
+                    // Framing (call 164): BIMCraft writes a beam as an IFCBEAM and a column
+                    // as an IFCCOLUMN (`runs.rs:22-38`, `ifc.rs:1031-1064`).
+                    Kind::Beam => ("IFCBEAM", "BEAM", "beams"),
+                    Kind::Post => ("IFCCOLUMN", "COLUMN", "posts"),
                     _ => ("IFCCABLESEGMENT", "CABLESEGMENT", "cables"),
                 };
                 count(what);
@@ -419,6 +428,11 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                 let placed_at = o.placed(Some(within), [at[0], at[1], at[2] - floor], up, [turn.cos(), turn.sin(), 0.0]);
                 let body = o.pushed_rect([0.0, 0.0], size[0], size[1], size[2]);
                 match p.kind {
+                    // A pad footing: BIMCraft's isolated footing, `IFCFOOTING .PAD_FOOTING.`.
+                    Kind::PadFooting => {
+                        count("pad footings");
+                        o.add(format!("IFCFOOTING({},$,{name},$,$,#{placed_at},#{body},$,.PAD_FOOTING.)", o.id(&p.path)))
+                    }
                     Kind::Fitting => {
                         let kind = job.find(&p.path).and_then(|e| job.world.get::<Fitting>(e)).map(|f| f.kind);
                         // What a fitting is called depends on what it joins.

@@ -101,10 +101,18 @@ pub fn dressed(nominal: u32) -> Option<f64> {
 /// in. o.c." is 3 1/2 in at 24 in. None for words that name no framing: nothing is
 /// framed on a guess.
 pub fn named(words: &str) -> Option<(f64, f64)> {
+    named_with(words, &["framing", "stud"])
+}
+
+/// The same for what a line says one kind of member is: "Floor joists, 2x10 at 16 in" names
+/// joists, "Rafters, 2x8 at 24 in" rafters (call 165). A line names the lumber's depth and the
+/// members' spacing and says which member by one of `members`; words that name none are not a
+/// framing line, and nothing is framed on a guess.
+pub fn named_with(words: &str, members: &[&str]) -> Option<(f64, f64)> {
     // As estimators write it: "2x6 at 16 in", "2 x 6 @ 24", "2X4 studs 16 OC",
     // "2x6 16 in o.c.".
     let lower = words.to_lowercase().replace('×', "x").replace(" x ", "x");
-    if !lower.contains("framing") && !lower.contains("stud") {
+    if !members.iter().any(|m| lower.contains(m)) {
         return None;
     }
     // "2x6": a 2 by something that dressed lumber comes in.

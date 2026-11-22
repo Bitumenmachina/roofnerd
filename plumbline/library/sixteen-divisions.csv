@@ -11,6 +11,8 @@ General conditions,Job,,,,Unknown,not coded,Final cleaning,General conditions,1,
 "Slab on grade, 4 in",Floor,,,,Unknown,not coded,Place and finish concrete,Subcontract,plan_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,3
 Framed floor,Floor,,,,Unknown,not coded,Floor framing,Material,plan_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,6
 Framed floor,Floor,,,,Unknown,not coded,Subfloor,Material,plan_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
+Framed floor,Floor,,,,Unknown,not coded,"Floor joists, 2x10 at 16 in",Material,joists,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,6
+Framed floor,Floor,,,,Unknown,not coded,Rim joist,Material,rim_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 Framed floor,Floor,,,,Unknown,not coded,Frame the floor and lay the subfloor,Labor,plan_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Studs, 2x6 at 16 in",Material,studs,,,,10,Assumed,"culls, corners and blocking: the estimator's allowance",,,,,,$?/EA,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Plates, 2x6",Material,plate_length,,,,10,Assumed,cuts and laps at the corners and joints,piece,16 LF/piece,yes,Assumed,a 16 ft plate: the lengths a yard stocks vary,$?/piece,Unknown,no price entered,,,6
@@ -156,6 +158,7 @@ Electrical equipment,Equipment,,,,Unknown,not coded,"Electrical equipment, set a
 "Asphalt shingle roof, whole roof",Roof,,,,Unknown,not coded,Open valley flashing,Material,valley_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,7
 "Asphalt shingle roof, whole roof",Roof,,,,Unknown,not coded,Headwall flashing,Material,headwall_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,7
 "Asphalt shingle roof, whole roof",Roof,,,,Unknown,not coded,Pipe boots,Material,boots,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,7,boots = unknown,Unknown,the roof's pipes and vents are not drawn: count them on the plan or on the roof
+"Asphalt shingle roof, whole roof",Roof,,,,Unknown,not coded,"Rafters, 2x8 at 24 in",Material,rafters,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,6
 "Asphalt shingle roof, whole roof",Roof,,,,Unknown,not coded,Sheathe the roof,Labor,surface_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 "Asphalt shingle roof, whole roof",Roof,,,,Unknown,not coded,Lay the roof,Labor,squares,,,,,,,hr,unknown SQ/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,7
 "Low-slope roof, tapered insulation, single-ply membrane",LowSlopeArea,,,,Unknown,not coded,Tapered polyiso insulation,Material,board_feet,,,,5,Assumed,"cuts along the valleys and at the edges: the estimator's allowance until the boards are laid out by letter (research/roofnerd-port.md, step 2)",,,,,,$?/BF,Unknown,no price entered,,,7
@@ -178,3 +181,12 @@ Take down a partition,Wall,,,,Unknown,not coded,Patch the floor where it stood,S
 Take down a partition,Wall,,,,Unknown,not coded,Patch the ceiling where it stood,Subcontract,plan_length * thickness,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 Take down a partition,Wall,,,,Unknown,not coded,Patch the walls it met,Subcontract,ends,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,9,ends = 2,Assumed,one patch at each end; a wall that ends free has one
 Take down a partition,Wall,,,,Unknown,not coded,Shore the floor above,Labor,plan_length,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,yes,2
+"Beam, engineered lumber",Beam,,,,Unknown,not coded,"Beam, engineered lumber",Material,length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+"Beam, engineered lumber",Beam,,,,Unknown,not coded,Hangers and bearing hardware,Material,hardware,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,6,hardware = 2,Assumed,one hanger or bearing plate at each end of the beam: the engineer's connection detail decides
+"Beam, engineered lumber",Beam,,,,Unknown,not coded,Set the beam,Labor,length,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
+Post,Post,,,,Unknown,not coded,Post,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,6
+Post,Post,,,,Unknown,not coded,Post cap and base,Material,hardware,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,6,hardware = 2,Assumed,a cap at the top and a base at the foot: the engineer's connection detail decides
+Post,Post,,,,Unknown,not coded,Set the post,Labor,1,,,,,,,hr,unknown EA/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
+"Pad footing, formed",PadFooting,,,,Unknown,not coded,Pad concrete,Material,volume,,,,,,,,,,,,$?/CY,Unknown,no price entered,,,3
+"Pad footing, formed",PadFooting,,,,Unknown,not coded,Pad forms,Subcontract,form_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,3
+"Pad footing, formed",PadFooting,,,,Unknown,not coded,"Form, place and strip",Labor,volume,,,,,,,hr,unknown CY/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,3

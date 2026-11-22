@@ -65,8 +65,10 @@ pub mod clash;
 mod footings;
 pub mod forms;
 pub mod framing;
+pub mod members;
 pub mod model;
 pub mod network;
+pub mod planset;
 pub mod rooms;
 pub mod runs;
 pub mod walls;
@@ -91,6 +93,8 @@ pub const K_CONNECTORS: &str = "pl::connectors";
 pub const K_ROOM: &str = "pl::room";
 pub const K_ROOM_LINE: &str = "pl::room_line";
 pub const K_PLACED: &str = "pl::placed";
+pub const K_COLUMN: &str = "pl::column";
+pub const K_JOISTS_SPAN: &str = "pl::joists_span";
 pub const K_SYSTEM: &str = "pl::system";
 pub const K_IN_SYSTEM: &str = "pl::in_system";
 
@@ -202,6 +206,11 @@ impl Kind {
     }
     pub fn is_opening(self) -> bool {
         matches!(self, Kind::Door | Kind::Window)
+    }
+    /// A beam, a post or a pad footing (call 164): what carries the building. Framing bears
+    /// on framing, and none of it is a run of anything that flows.
+    pub fn is_framing(self) -> bool {
+        matches!(self, Kind::Beam | Kind::Post | Kind::PadFooting)
     }
     /// A thing set at a place: equipment, a fixture, or a fitting.
     pub fn is_placed(self) -> bool {
@@ -364,8 +373,8 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
     // Each wall with a line: its storey, its centre line, its thickness (none when its
     // type's is not known) and the heights it stands between, where both are known.
     let mut standing: Vec<(String, String, [P2; 2], f64, Option<(f64, f64)>)> = Vec::new();
-    let mut q = job.world.query::<(&Node, &Kind, Option<&InSystem>, Option<&Wall>, Option<&Opening>, Option<&Floor>, Option<&Segment>)>();
-    for (node, kind, in_system, wall, opening, floor, segment) in q.iter(&job.world) {
+    let mut q = job.world.query::<(&Node, &Kind, Option<&InSystem>, Option<&Wall>, Option<&Opening>, Option<&Floor>, Option<&Segment>, Option<&Stood>)>();
+    for (node, kind, in_system, wall, opening, floor, segment, column) in q.iter(&job.world) {
         let me = &node.path;
         let parent = node.parent.as_ref().and_then(|p| kinds.get(p)).copied();
         if kind.is_opening() && parent != Some(Kind::Wall) {
@@ -458,8 +467,15 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
                 Some(_) => {}
             }
         }
+        if let Some(p) = column.and_then(|c| c.type_name.value.as_ref()) {
+            match tree.segment_types.get(p) {
+                None => return Err(format!("{me}: its type is {p:?}, which is not a {} type in this job", kind.said())),
+                Some(t) if t.category != *kind => return Err(format!("{me}: is {kind:#}, but its type, {p}, is {:#}'s", t.category)),
+                Some(_) => {}
+            }
+        }
         // A run's heights and a placed thing's are above the storey it is under.
-        if (kind.is_segment() || kind.is_placed()) && tree.storey_of(me).is_none() {
+        if (kind.is_segment() || kind.is_placed() || kind.is_framing()) && tree.storey_of(me).is_none() {
             return Err(format!("{me}: {kind:#} is set at a height above a level and has to be under one"));
         }
     }
@@ -533,6 +549,23 @@ fn hole_of(tree: &Tree, me: &str, o: &Opening) -> (Hole, Result<(Val<Len>, Val<L
             (Hole { path: me.into(), span, area, status, area_status, inputs }, Ok((t.width.clone(), t.height.clone())))
         }
     }
+}
+
+/// How wide each door and window is, in feet, by path: its type's width. One whose type
+/// or width is not known is left out (call 170: a wall moved asks whether its openings
+/// still lie within it).
+pub(crate) fn opening_widths(job: &mut Job) -> HashMap<String, f64> {
+    let tree = Tree::of(&mut job.world);
+    let mut out = HashMap::new();
+    let mut q = job.world.query::<(&Node, &Kind, &Opening)>();
+    for (n, k, o) in q.iter(&job.world) {
+        if k.is_opening() {
+            if let Some(w) = typed(&tree.opening_types, &o.type_name, "a door or window").ok().and_then(|(_, t)| t.width.feet()) {
+                out.insert(n.path.clone(), w);
+            }
+        }
+    }
+    out
 }
 
 /// A wall's base and its height, worked out from its storey, its top level and its
@@ -699,8 +732,8 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
         let mut sq = world.query::<(&Node, &Kind, &Placed)>();
         sq.iter(world).filter(|(_, k, _)| matches!(**k, Kind::Furnishing | Kind::Equipment | Kind::Fixture)).map(|(n, _, p)| (n.path.clone(), p.what.value.clone().unwrap_or_else(|| n.name.clone()), tree.storey_of(&n.path).map(str::to_string), p.clone())).collect()
     };
-    let mut q = world.query::<(&Node, &Kind, Option<&Wall>, Option<&Floor>, Option<&Segment>, Option<&Cost>, Option<&MadeOf>, Option<&Condition>, Option<&Placed>)>();
-    for (node, kind, wall, floor, segment, cost, made_of, condition, placed) in q.iter(world) {
+    let mut q = world.query::<(&Node, &Kind, Option<&Wall>, Option<&Floor>, Option<&Segment>, Option<&Cost>, Option<&MadeOf>, Option<&Condition>, Option<&Placed>, Option<&Stood>, Option<&JoistsSpan>)>();
+    for (node, kind, wall, floor, segment, cost, made_of, condition, placed, column, joists_span) in q.iter(world) {
         let me = &node.path;
         let mut m = BTreeMap::new();
         match kind {
@@ -970,8 +1003,19 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                     }
                 };
                 m.insert("thickness".into(), thick);
+                // Its joists, counted where what is priced on it names the lumber and the
+                // spacing they are framed with (call 165), by the rule a wall's studs are
+                // (`finish::members_named`); not given at all where nothing names joists.
+                if let Some((_, spacing)) = crate::finish::members_named(crate::finish::wall_texts(cost, made_of, condition).iter().map(String::as_str), &["joist"]) {
+                    let mut f_inputs = input.to_vec();
+                    f_inputs.push(format!("{me}#{K_COST}"));
+                    if joists_span.is_some() {
+                        f_inputs.push(format!("{me}#{K_JOISTS_SPAN}"));
+                    }
+                    m.extend(joist_figures(floor, joists_span, spacing, &f_inputs));
+                }
             }
-            k if k.is_segment() => {
+            k if k.is_segment() || *k == Kind::Beam => {
                 let input = [format!("{me}#{K_SEGMENT}")];
                 let Some(r) = segment else {
                     for (name, unit) in kind.measures() {
@@ -1013,7 +1057,126 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                     };
                     m.insert("surface_area".into(), skin);
                 }
-                m.insert("true_length".into(), len_d);
+                // A beam's figures (call 164): its length along it, its section from its
+                // type, and what it weighs where its type says what a foot of it weighs.
+                if *k == Kind::Beam {
+                    let formula = "length × its type's weight per foot";
+                    match typed(&tree.segment_types, &r.type_name, "a beam") {
+                        Err(why) => {
+                            for (name, unit, f) in [("width", "ft", "its type's width"), ("depth", "ft", "its type's depth"), ("weight", "LB", formula), ("section_area", "SF", "width × depth"), ("volume", "CY", "section_area × length ÷ 27")] {
+                                m.insert(name.into(), Derived::refused(unit, f, &input, &why));
+                            }
+                        }
+                        Ok((type_path, t)) => {
+                            let inputs = [input[0].clone(), format!("{type_path}#{K_SEGMENT_TYPE}")];
+                            let sure = r.type_name.status;
+                            let size = |v: Option<&Val<Len>>, what: &str| match v {
+                                Some(v) => match v.feet() {
+                                    Some(x) => Derived::new(Some(x), "ft", &[sure, v.status], &units::to_feet_text(what, &v.unit), &inputs),
+                                    None => Derived::refused("ft", what, &inputs, &format!("{what} is not known")),
+                                },
+                                None => Derived::refused("ft", what, &inputs, &format!("{what} is not known")),
+                            };
+                            let wide = size(Some(&t.width), if t.round { "its type's diameter" } else { "its type's width" });
+                            let deep = if t.round { size(Some(&t.width), "its type's diameter") } else { size(t.depth.as_ref(), "its type's depth") };
+                            // What the BIM file's base quantities are (BIMCraft `member_quantities`).
+                            let (area, volume) = section_figures(&wide, &deep, t.round, &len_d, &inputs);
+                            m.insert("width".into(), wide);
+                            m.insert("depth".into(), deep);
+                            m.insert("section_area".into(), area);
+                            m.insert("volume".into(), volume);
+                            let weight = match (&t.weight_per_foot, len_d.worked()) {
+                                (None, _) => Derived::refused("LB", formula, &inputs, "its type gives no weight per foot: type what a foot of it weighs, from its shape's name or its maker's sheet"),
+                                (Some(w), _) if w.value.is_none() => Derived::refused("LB", formula, &inputs, "its type's weight per foot is not known"),
+                                (Some(_), None) => Derived::refused("LB", formula, &inputs, &len_d.note),
+                                (Some(w), Some(l)) => Derived::new(w.value.map(|per| l * per), "LB", &[len_d.status, sure, w.status], formula, &inputs),
+                            };
+                            m.insert("weight".into(), weight);
+                        }
+                    }
+                    m.insert("length".into(), len_d);
+                } else {
+                    m.insert("true_length".into(), len_d);
+                }
+            }
+            // A post, and a pad footing, which is a post laid flat (call 164): where it
+            // stands, how tall (how thick), and its section from its type.
+            Kind::Post | Kind::PadFooting => {
+                let input = [format!("{me}#{K_COLUMN}")];
+                let post = *kind == Kind::Post;
+                let Some(c) = column else {
+                    for (name, unit) in kind.measures() {
+                        m.insert(name.to_string(), Derived::refused(unit, "", &input, "no position entered"));
+                    }
+                    out.entry(me.clone()).or_default().extend(m);
+                    continue;
+                };
+                let tall = match c.height.feet() {
+                    Some(h) => Derived::new(Some(h), if post { "LF" } else { "ft" }, &[c.height.status], if post { "its height, as entered" } else { "its thickness, as entered" }, &input),
+                    None => Derived::refused(if post { "LF" } else { "ft" }, if post { "its height, as entered" } else { "its thickness, as entered" }, &input, if post { "its height is not known" } else { "its thickness is not known" }),
+                };
+                let mut inputs = input.to_vec();
+                // The section its type gives: across and deep (a round one is as deep as it is wide).
+                let section: Result<(Derived, Derived), String> = match typed(&tree.segment_types, &c.type_name, if post { "a post" } else { "a pad footing" }) {
+                    Err(why) => Err(why),
+                    Ok((type_path, t)) => {
+                        inputs.push(format!("{type_path}#{K_SEGMENT_TYPE}"));
+                        let sure = c.type_name.status;
+                        let one = |v: Option<&Val<Len>>, what: &str, inputs: &[String]| match v.and_then(|v| v.feet().map(|x| (x, v.status))) {
+                            Some((x, status)) => Derived::new(Some(x), "ft", &[sure, status], &format!("the {what} its type gives"), inputs),
+                            None => Derived::refused("ft", &format!("the {what} its type gives"), inputs, &format!("its type's {what} is not known")),
+                        };
+                        if t.round {
+                            Ok((one(Some(&t.width), "diameter", &inputs), one(Some(&t.width), "diameter", &inputs)))
+                        } else {
+                            Ok((one(Some(&t.width), "width", &inputs), one(t.depth.as_ref(), "depth", &inputs)))
+                        }
+                    }
+                };
+                match (section, post) {
+                    (Err(why), true) => {
+                        m.insert("width".into(), Derived::refused("ft", "the width its type gives", &inputs, &why));
+                        m.insert("depth".into(), Derived::refused("ft", "the depth its type gives", &inputs, &why));
+                        m.insert("section_area".into(), Derived::refused("SF", "width × depth", &inputs, &why));
+                        m.insert("volume".into(), Derived::refused("CY", "section_area × height ÷ 27", &inputs, &why));
+                        m.insert("height".into(), tall);
+                    }
+                    (Ok((w, d)), true) => {
+                        let round = typed(&tree.segment_types, &c.type_name, "a post").ok().is_some_and(|(_, t)| t.round);
+                        let (area, volume) = section_figures(&w, &d, round, &tall, &inputs);
+                        m.insert("width".into(), w);
+                        m.insert("depth".into(), d);
+                        m.insert("section_area".into(), area);
+                        m.insert("volume".into(), volume);
+                        m.insert("height".into(), tall);
+                    }
+                    (section, false) => {
+                        // A pad: its sides are 2 × (width + length) × thickness of form, its
+                        // concrete the three multiplied, in cubic yards. Each from the sizes as
+                        // they were worked, so 36 in by 36 in by 18 in is 3 by 3 by 1.5.
+                        let (w, l) = match section {
+                            Ok(x) => x,
+                            Err(why) => (Derived::refused("ft", "the width its type gives", &inputs, &why), Derived::refused("ft", "the depth its type gives", &inputs, &why)),
+                        };
+                        let figure = |name: &str, unit: &str, f: &str, list: &[&Derived], by: &dyn Fn(f64, f64, f64) -> f64| match (w.worked(), l.worked(), tall.worked()) {
+                            (Some(a), Some(b), Some(t)) => Derived::new(Some(by(a, b, t)), unit, &list.iter().map(|d| d.status).collect::<Vec<_>>(), f, &inputs),
+                            _ => {
+                                let why = list.iter().find(|d| d.value.is_none()).map(|d| d.note.clone()).unwrap_or_default();
+                                let _ = name;
+                                Derived::refused(unit, f, &inputs, &why)
+                            }
+                        };
+                        let area = figure("plan_area", "SF", "width × length", &[&w, &l], &|a, b, _| a * b);
+                        let form = figure("form_area", "SF", "2 × (width + length) × thickness", &[&w, &l, &tall], &|a, b, t| 2.0 * (a + b) * t);
+                        let volume = figure("volume", "CY", "width × length × thickness ÷ 27", &[&w, &l, &tall], &|a, b, t| a * b * t / 27.0);
+                        m.insert("width".into(), w);
+                        m.insert("length".into(), l);
+                        m.insert("thickness".into(), tall);
+                        m.insert("plan_area".into(), area);
+                        m.insert("form_area".into(), form);
+                        m.insert("volume".into(), volume);
+                    }
+                }
             }
             // A thing set in place: the figures of its size, as sure as its size (call 155).
             Kind::Equipment | Kind::Fixture | Kind::Furnishing => {
@@ -1059,6 +1222,77 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
     }
     room_measures(world, &tree, &mut out, &mut HashMap::new());
     out
+}
+
+/// What is not in a count of joists or rafters, said on every figure of it (call 165).
+pub const NOT_COUNTED: &str = "blocking, hangers and doubled members are not in this count";
+
+/// A floor's joists counted across its boundary (call 165): `joists`, `joist_length`,
+/// `joist_longest` and `rim_length`. They run square to the longest edge (the short way) unless
+/// the floor says the long way; not said, the short way is taken, Assumed, and the figures say so.
+pub(crate) fn joist_figures(floor: Option<&Floor>, span: Option<&JoistsSpan>, spacing: f64, inputs: &[String]) -> BTreeMap<String, Derived> {
+    const NAMES: [(&str, &str, &str); 4] = [
+        ("joists", "EA", "one joist at each multiple of the spacing from the first side, and one inside each edge that runs with them, each cut to the boundary"),
+        ("joist_length", "LF", "the lengths of its joists, added"),
+        ("joist_longest", "ft", "the longest of its joists: the stock they are bought in is that length or the next up"),
+        ("rim_length", "LF", "the boundary's edges measured square to the joists: the band their ends meet"),
+    ];
+    let refused = |why: &str| NAMES.iter().map(|(n, u, f)| (n.to_string(), Derived::refused(u, f, inputs, why))).collect::<BTreeMap<_, _>>();
+    let Some(floor) = floor else { return refused("no boundary entered") };
+    let Some(ring) = floor.boundary_ft() else {
+        return refused(if floor.boundary.value.is_some() { "the boundary is in a unit this program does not convert" } else { "no boundary entered" });
+    };
+    // Which way they run: square to the longest edge, or along it.
+    let longest = (0..ring.len()).map(|i| (ring[i], ring[(i + 1) % ring.len()])).max_by(|a, b| geom::dist(a.0, a.1).total_cmp(&geom::dist(b.0, b.1)));
+    let Some((p, q)) = longest.filter(|(p, q)| geom::dist(*p, *q) > 1.0e-9) else { return refused("the boundary has no length") };
+    let along = [q[0] - p[0], q[1] - p[1]];
+    let said = span.and_then(|s| s.0.value.as_deref().map(|w| (w == LONG_WAY, s.0.status)));
+    let (long_way, way_status) = said.unwrap_or((false, Status::Assumed));
+    let run = if long_way { along } else { [-along[1], along[0]] };
+    let mut note = Vec::new();
+    if said.is_none() {
+        note.push("joists usually span the short way: say which way these run".to_string());
+    }
+    let layout = members::members_across(&ring, run, spacing).and_then(|a| members::rim_length(&ring, run).map(|r| (a, r)));
+    match layout {
+        Err(why) => refused(&why),
+        Ok((across, rim)) => {
+            if across.left_out > 0 {
+                note.push(format!("{} piece{} under 6 in left out", across.left_out, if across.left_out == 1 { "" } else { "s" }));
+            }
+            note.push(NOT_COUNTED.to_string());
+            let status = [floor.boundary.status, way_status];
+            let figures = [across.count() as f64, across.total(), across.longest(), rim];
+            NAMES
+                .iter()
+                .zip(figures)
+                .map(|((n, u, f), v)| {
+                    let mut d = Derived::new(Some(v), u, &status, f, inputs);
+                    d.note = note.join("; ");
+                    (n.to_string(), d)
+                })
+                .collect()
+        }
+    }
+}
+
+/// The area of a beam's or a post's section, and its volume over its length, from the two
+/// sizes as they were worked: a round section is a circle across its width, a rectangular
+/// one its width by its depth (BIMCraft `member_quantities`, `ifc.rs:707`). `along` is its
+/// length (a post's height).
+fn section_figures(wide: &Derived, deep: &Derived, round: bool, along: &Derived, inputs: &[String]) -> (Derived, Derived) {
+    let statuses = [wide.status, deep.status];
+    let f_area = if round { "π × diameter² ÷ 4" } else { "width × depth" };
+    let area = match (wide.worked(), deep.worked()) {
+        (Some(w), Some(d)) => Derived::new(Some(if round { std::f64::consts::PI * w * w / 4.0 } else { w * d }), "SF", &statuses, f_area, inputs),
+        _ => Derived::refused("SF", f_area, inputs, &[wide, deep].iter().find(|d| d.value.is_none()).map(|d| d.note.clone()).unwrap_or_default()),
+    };
+    let f_vol = "section_area × its length ÷ 27";
+    let volume = match (area.worked(), along.worked()) {
+        (Some(a), Some(l)) => Derived::new(Some(a * l / 27.0), "CY", &[area.status, along.status], f_vol, inputs),
+        _ => Derived::refused("CY", f_vol, inputs, &[&area, along].iter().find(|d| d.value.is_none()).map(|d| d.note.clone()).unwrap_or_default()),
+    };
+    (area, volume)
 }
 
 /// Each room's outline at the faces of the walls round its point, in feet on the plan,
@@ -2289,6 +2523,9 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         rows.push(view::length(path, "center, along the wall", &c.offset));
         rows.push(view::length(path, "sill", &c.sill));
     }
+    if let Some(c) = w.get::<JoistsSpan>(e) {
+        rows.push(view::entered(path, "joists span", &c.0, |s| s.clone()));
+    }
     if let Some(c) = w.get::<Floor>(e) {
         rows.push(view::entered(path, "type", &c.type_name, named));
         rows.push(view::entered(path, "boundary", &c.boundary, |pts| format!("{} points", pts.len())));
@@ -2301,6 +2538,22 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         rows.push(view::length(path, if c.round { "diameter" } else { "width" }, &c.width));
         if let Some(d) = &c.depth {
             rows.push(view::length(path, "depth", d));
+        }
+        if let Some(per) = &c.weight_per_foot {
+            rows.push(view::entered(path, "weight per foot", per, |x| view::num(*x)));
+        }
+    }
+    if let Some(c) = w.get::<Stood>(e) {
+        let pad = w.get::<Kind>(e) == Some(&Kind::PadFooting);
+        rows.push(view::entered(path, "type", &c.type_name, named));
+        rows.push(view::entered(path, "position", &c.at, |p| format!("({}, {})", view::num(p[0]), view::num(p[1]))));
+        rows.push(view::length(path, "base, above its level's floor", &c.base_offset));
+        rows.push(view::length(path, if pad { "thickness" } else { "height" }, &c.height));
+        // A pad's top is where it was said to be; it is held as its base and its thickness.
+        if let (true, Some(b), Some(h)) = (pad, c.base_offset.feet(), c.height.feet()) {
+            let mut top = plain("top", crate::structure::at_height(b + h), "its base and its thickness");
+            top.status = c.base_offset.status.max(c.height.status);
+            rows.push(top);
         }
     }
     if let Some(c) = w.get::<Segment>(e) {
@@ -2397,7 +2650,7 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
     let mut not_drawn = Vec::new();
     for &e in &order {
         let (Some(n), Some(kind)) = (node(e), w.get::<Kind>(e).copied()) else { continue };
-        if !(matches!(kind, Kind::Wall | Kind::Floor | Kind::Footing) || kind.is_segment() || kind.is_placed()) {
+        if !(matches!(kind, Kind::Wall | Kind::Floor | Kind::Footing) || kind.is_segment() || kind.is_placed() || kind.is_framing()) {
             continue;
         }
         let storey = tree.storey_of(&n.path).map(str::to_string);
@@ -2474,7 +2727,7 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
                 let thickness = t.thickness.feet().ok_or("its type's thickness is not known")?;
                 Ok((Shape::Floor { boundary, top: level + offset, thickness }, c.boundary.status.max(c.type_name.status).max(t.thickness.status).max(offset_status).max(floor_status)))
             })(),
-            k if k.is_segment() => (|| {
+            k if k.is_segment() || k == Kind::Beam => (|| {
                 let c = w.get::<Segment>(e).ok_or("it has no line")?;
                 let [p, q] = c.line_ft().ok_or("its line is not known")?;
                 let level = base.ok_or("it is under no level")?.ok_or("its level's elevation is not known")?;
@@ -2491,6 +2744,25 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
                 let status = c.line.status.max(c.offset.status).max(c.end_offset.as_ref().map(|e| e.status).unwrap_or(Status::Known)).max(sized).max(floor_status);
                 Ok((Shape::Run { a: g.a, b: g.b, round, rect }, status))
             })(),
+            // A post stands as a vertical run, its section from its type; a pad footing is a
+            // box of its type's width and length and its own thickness, its top where it
+            // was said to be (call 164).
+            Kind::Post | Kind::PadFooting => (|| {
+                let c = w.get::<Stood>(e).ok_or("it has no position")?;
+                let at = c.at_ft().ok_or("its position is not known")?;
+                let level = base.ok_or("it is under no level")?.ok_or("its level's elevation is not known")?;
+                let (b, h) = (c.base_offset.feet().ok_or("its base's height above its level is not known")?, c.height.feet().ok_or("its height is not known")?);
+                let t = typed(&tree.segment_types, &c.type_name, if kind == Kind::Post { "a post" } else { "a pad footing" }).ok().map(|x| x.1);
+                let (round, rect) = (t.and_then(|t| t.round_ft()), t.and_then(|t| t.rect_ft()));
+                let sized = if round.is_some() || rect.is_some() { t.map(|t| t.status().max(c.type_name.status)).unwrap_or(Status::Unknown) } else { Status::Unknown };
+                let status = c.at.status.max(c.base_offset.status).max(c.height.status).max(sized).max(floor_status);
+                if kind == Kind::Post {
+                    Ok((Shape::Run { a: [at[0], at[1], level + b], b: [at[0], at[1], level + b + h], round, rect }, status))
+                } else {
+                    let (wide, long) = rect.ok_or("its type's width and depth are not known")?;
+                    Ok((Shape::Box { at: [at[0], at[1], level + b], size: [wide, long, h], angle: 0.0 }, status))
+                }
+            })(),
             _ => (|| {
                 let c = w.get::<Placed>(e).ok_or("it has no position")?;
                 let at = c.at_ft().ok_or("its position is not known")?;
@@ -2506,6 +2778,7 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
             Ok((shape, status)) => {
                 // An item says what it is drawn as, or leaves it to its name.
                 let form = match &shape {
+                    Shape::Box { .. } if kind.is_framing() => None,
                     Shape::Box { .. } => {
                         let said = w.get::<Placed>(e).and_then(|c| c.item.as_ref()).and_then(|item| index.get(item)).and_then(|t| w.get::<Item>(*t)).and_then(|it| it.form.clone());
                         match said {

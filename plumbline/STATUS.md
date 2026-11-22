@@ -8986,6 +8986,24 @@ retaken model picture cold: `research/pictures-read-call169.md`.
   reruns them all.
 - Not yet judged by a judge who drives the window.
 
+## The held work is in the tree: calls 164, 165, 168 and 170 (2026-11-22)
+
+The patch held in `research/held/` (structure: beams, posts, pad footings; joists and
+rafters; the plan set as a PDF; a wall moved with the walls that meet it) was applied
+on top of call 169 and the held copy removed. On the tree as committed: the whole
+workspace builds, the window included (the new kinds' arms in `theme.rs` and
+`panels.rs` had never been compiled before this); **557 tests pass, 0 fail**; all 39
+command-line demonstrations pass (`structure.sh`, `joists.sh`, `planset.sh`,
+`stretch.sh` among them); the three gates, `portmap.sh` and `licenses.sh` pass.
+
+**Not run:** no window demonstration has been run since these went in. Nothing draws a
+beam, a post, a pad footing, a joist or a rafter in the window yet, and no tool there
+makes one (calls 171 and 177). `draww.sh` moves a partition and has not been rerun
+under call 170's rule that the walls meeting a moved wall follow.
+
+**Not judged:** calls 164, 165, 168 and 170 have each been run and read by the lead
+and by no judge.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

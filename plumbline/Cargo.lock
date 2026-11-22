@@ -4306,6 +4306,7 @@ name = "plumbline-world"
 version = "0.1.0"
 dependencies = [
  "bevy_ecs",
+ "flate2",
  "parry3d-f64",
  "plumbline-roofing",
  "serde",

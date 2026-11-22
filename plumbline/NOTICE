@@ -36,6 +36,22 @@ the same license:
                                         crates/core/src/view3d.rs; the rest of
                                         the file is this project's own
 
+The plan set's page of line work and its PDF are ported from the same project at
+the same commit, under the same license:
+
+  crates/world/src/paper/mod.rs         from crates/core/src/render.rs (the
+                                        display list: fills and lines)
+  crates/world/src/paper/font.rs        from crates/core/src/font.rs (the
+                                        lettering of strokes)
+  crates/world/src/paper/pen.rs         from crates/core/src/pen.rs (the pens)
+  crates/world/src/paper/size.rs        from crates/core/src/model.rs (paper
+                                        sizes) and crates/core/src/units.rs
+                                        (the scale's wording)
+  crates/world/src/paper/cut.rs         from crates/core/src/render.rs (the
+                                        wall-cut pass: joined walls)
+  crates/world/src/paper/pdf.rs         from crates/core/src/pdf.rs (the PDF
+                                        written by hand)
+
 What draws and edits the building is ported from the same project at the same
 commit, under the same license:
 
@@ -51,6 +67,10 @@ commit, under the same license:
                                         split in crates/core/src/commands.rs;
                                         the rest of the file is this project's
                                         own
+  crates/world/src/editing/stretch.rs   what a moved wall does at a joint, from
+                                        relocate and move_elements in
+                                        crates/core/src/commands.rs; the rest of
+                                        the file is this project's own
 
 Each file's header states what is ported and lists what was changed. PORTMAP.md
 names, for every public item of the building model, the BIMCraft file and line
