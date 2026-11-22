@@ -8198,6 +8198,30 @@ doubled members are not in the count. A floor and a plane with no such line have
 of these figures. The starter "Framed floor" on the first floor: "Floor joists, 2x10 at
 16 in" 19 EA, "Rim joist" 48 LF.
 
+## The judge's findings on calls 159 to 166 set right: the cases, worked by hand before they are built (call 167; added to `partwork.sh`, `hidden.sh`, `kitchen.sh`)
+
+- **`partwork.sh`.** With the patch line at "60 SF", Assumed, "walked it", priced $14/SF:
+  the field list asks the south wall to measure "Patch and match siding", 60 SF, with
+  **$840.00** riding on 1 line. Measured Known, it leaves, and where nothing else is
+  asked the list says every value that can be measured is Known. Typed "1,200 SF": 1,200
+  SF, at $14 **$16,800.00**; "60 sq ft": 60 SF; "24 ft": 24 LF; "-3 SF": refused, below
+  zero; "60 boards": refused with LF, SF, SQ, CY, EA.
+- **`hidden.sh`.** The south wall, bearing and cut for a window, nothing priced on it: the
+  caution is under the estimate. Three pipes meeting at east 12, north 14, 4 ft up, one
+  of them from there east to 15,14, through the partition (6 in thick about east 12,
+  to demolish): the place given for that pipe is north **14**, **4 ft** up, and east
+  between **12** and **12.25** (on the pipe and in the wall). "non-bearing" is taken and
+  prints "not bearing"; `mark` on a wall whose bearing and contents are said does not
+  ask again.
+- **`kitchen.sh`.** `price-item Countertop "$80/LF"`: countertop A, 8 ft of front edge,
+  8 LF × 80 = **$640.00**; B, 3 LF × 80 = **$240.00**; each line reads LF. Back to
+  "$62/SF": **$1,054.00** and **$395.25**. "$5/EA" refused with the two it takes. With
+  "Cabinets" taken off, `show` reads the room's assembly "Kitchen" without its line
+  "Cabinets"; the Kitchen put on again adds that one line back and no other; put on a
+  third time it says the room has every line of it. A line "Hardware" of `1 + 1` on the
+  room in Division 12 is said beside the things set there; one of `0` is not. `place`
+  takes "B36" by its name.
+
 ## Call 157 and the window's five pieces judged (2026-11-22; an agent on another model, cold; `research/judgment-call157-and-window.md`)
 
 **Held, by hand:** `wall_run` in every case tried (doors single, overlapping, at a

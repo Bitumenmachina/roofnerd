@@ -5778,3 +5778,51 @@ lines it has. The thing's other lines, its assembly's name and its code stay as 
 are; what the estimate comes to drops by what the line came to, and by nothing else. In
 the window it is a button on the line (the next window work). `demos/kitchen.sh` takes
 the Kitchen's "Cabinets" line off with it, in place of editing a copy of the file.
+
+### Call 167. What the judge of calls 159 to 166 found, set right (2026-11-22; `research/judgment-calls-159-166.md`)
+
+1. **A typed measure that is not Known is a field question** (J166-2). A measure typed
+   on a line ("60 SF", Assumed, "walked it") is a measurement of the building, and the
+   loop is for it: the field list asks it under its thing, to measure, by the line's
+   name and what was typed, with that line's dollars riding; `measure <thing> measured
+   same --line` (or a new figure) makes it Known and it leaves. Only values in a
+   measure's units (LF, SF, SQ, CY, EA) are asked: an assembly's rule values (a strip's
+   width, a swell) are the estimator's allowances and are not site questions, as now.
+   The list's sentence "Every value that can be measured is Known" is then true when it
+   is said.
+2. **A line bought by a length reads in LF** (J166-13). Where a line's quantity works
+   out to a length, its unit is LF and its price is per LF, whatever unit the figure it
+   is taken from is shown in (a thing's `width` is a size, shown in ft). `price-item
+   Countertop "$80/LF"` puts the countertop's line on `width`, its front edge, at that
+   price; `"$62/SF"` puts it on `plan_area`. A price per any other unit is refused with
+   the two it takes.
+3. **A bearing wall the work opens says so under the estimate whether or not anything is
+   priced on it** (J166-8).
+4. **The place given for a thing in the way of a wall that comes down is on that thing,
+   inside the wall** (J166-9: with three pipes meeting it was a foot off).
+5. **An assembly less a line says so, and can be made whole** (J166-19). Where a thing
+   carries an assembly and lacks lines that assembly has (taken off with `remove-line`),
+   `show` reads the assembly's name "without its line "Cabinets"". Putting the same
+   assembly on again adds the lines of it the thing lacks, says which, and touches no
+   other line; with none lacking it says the thing has every line of it already.
+6. **Measures and words as estimators write them** (J166-1, 7, 12). A typed measure
+   takes thousands with a comma ("1,200 SF") and the units' common spellings: sf, sq ft,
+   sqft; lf, lin ft, ft (a length typed on a line is LF); sq, square, squares; cy, cu
+   yd; ea, each. One below zero is refused as below zero; what is not a measure is
+   refused with the units a measure takes. `bearing` takes "non-bearing", "nonbearing",
+   "load bearing" and "load-bearing" as well as its two words, in any capitals, and
+   prints its two. "in the wall" is taken in any capitals, and the list of what can be
+   said of a wall names both.
+7. **A lump line is one whose quantity names no figure and is more than nothing**
+   (J166-15): a number, numbers worked together (`1 + 1`), or a count typed as a measure
+   ("4 EA"). A quantity of 0 is not one.
+8. **`place` takes an item by its name** (J166-16), in any capitals, as well as by its
+   number; two items of one name are refused with both.
+9. **`mark` asks "Is it bearing, and what is in it?" only of what has not been said**
+   (J166-10).
+
+Left open, each low: a typed measure's source in the workbook; "0 SF" taken without a
+word; the odd words when an assembly would double a line; `check` without the
+corner-leg caution; how near a wall and the floor a box must be to cover base (it
+over-buys base, never under); `remove-line` minding capitals. J166-20 is as meant: a
+blind corner base is 24 in deep and the top covers it.
