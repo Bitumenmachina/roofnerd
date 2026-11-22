@@ -78,3 +78,16 @@ Setup: job made with the command line (house, east wall to demolish, a 12 ft add
 
 ### J161-10 (to check) corner rule
 In p11 the first run was on the east wall's SOUTH end; the second run was on the north wall near the NORTH-east corner, where no run stands; the window still said "the run starts 2' 0" along wall 7". TRY-IT says 24 in only for a corner another run fills. See session E for the same click with no run in the job.
+
+### J161-10 settled (confusing): start offset differs by wall and is unexplained
+With NO run anywhere in the job (fresh session after Starter items), clicking the north wall's face near its east end said: "Cabinets: the run starts 2' 0" along wall 7, in Kitchen." while the east wall said 1' 0". TRY-IT says 24 in only for "a corner another run fills". Nothing on screen says why this wall starts at 2 ft (t10/said-a.txt of session s12). The field "starts at" can be typed over; not tried. Cosmetic/confusing, the figure is honest.
+
+## Session E: Thing 5 (layouts), first half (pictures p13, p14)
+- Held up: Layouts tab explains itself in a heading: "Try a job two ways and set the layouts side by side. Keep this job as another layout, change either one, and set them side by side: each is a job kept in this job's folder. Rooms are matched by name. Setting side by side writes nothing; keeping a layout writes only the new one." (p13/05-sheet.png). Esc at the title: "Cancelled." Title cleared then Enter: "Can't keep this as another layout: it needs a title: type one, then Enter". Enter with the offered title: "Kept a copy of this job as Kitchen job (not real) B, beside it, and set it beside this one: the table is on the sheet, under Layouts. Open another layout opens it to be changed; this job's own file is as it was." Keeping again under the same offered title: "Can't keep this as another layout: a job is kept here under that title already (kitchen-job-not-real-b). Give this layout another title". Table readable, "same" in the third column.
+- Held up: with the copy open and a change made (Starter items), Open another layout shows the heading "PICK THE JOB TO OPEN, FROM THIS JOB'S FOLDER" and in orange "This job has changes that are not saved: Save first (Ctrl+S), then pick." and the status bar goes red "Save first (Ctrl+S)." (p14/04-sheet.png). A file that is no job (notes) is not listed.
+
+### J161-11 (confusing) Unsaved: the rows look like buttons and are not
+In that state the jobs are listed in the same dark type as a live list, with no greyed look (p14/04-sheet.png); my script could not click them (they are not on the map) - see session F for what a real click does.
+
+### J161-12 (cosmetic/wording) File stems on screen
+The layout list shows each job by title and, in grey, its file name without ending ("addition", "other-house", "kitchen-job-not-real-b" in the refusal and the beside-line) and a tag "job". These are file names, not a path or ending; a builder knows his file names, but "kitchen-job-not-real-b" in a refusal is program-made text.
