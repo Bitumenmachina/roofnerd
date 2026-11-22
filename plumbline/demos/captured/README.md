@@ -36,6 +36,7 @@ such reading, and STATUS.md says where each thing it found stands).
 | `quantityw` | `demos/quantityw.sh` |
 | `renow` | `demos/renow.sh` |
 | `roofw` | `demos/roofw.sh` |
+| `scanw` | `demos/scanw.sh` |
 | `tools` | `demos/toolsw.sh` |
 | `turnw` | `demos/turnw.sh` |
 

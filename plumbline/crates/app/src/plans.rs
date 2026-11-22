@@ -293,7 +293,7 @@ pub fn add(doc: &mut Doc, text: &str) {
 }
 
 /// A file's path from a folder, with `..` where it has to climb.
-fn from_folder(folder: &Path, file: &Path) -> Result<String, String> {
+pub fn from_folder(folder: &Path, file: &Path) -> Result<String, String> {
     use std::path::Component;
     let folder = folder.canonicalize().map_err(|e| format!("cannot find the job's folder: {e}"))?;
     let file = file.canonicalize().map_err(|e| format!("cannot find {}: {e}", file.display()))?;

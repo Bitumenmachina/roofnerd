@@ -7716,6 +7716,33 @@ each with its source. This is worth keeping and is not to be started again.
 5. **On screen, bringing a scan in is named "Scan file"**: the program does not scan;
    he scans in Scaniverse and brings the file in. "Scan" alone read to him as scanning.
 
+## Step A1 done: a scan file brought in from the window (2026-11-22; a worker under contract, accepted by its diff and pictures)
+
+"Scan file" under Bring in lists the scans in the job's folder, brings the picked one in
+on the level in view through the same reading, levelling, cutting and scaling the
+command line uses, and lays its sheet under the plan; a wall traced over it is Assumed,
+"traced from" the sheet; Undo takes it back. `demos/scanw.sh` drives it with the pointer
+and measures its pictures (dark along the four wall lines with the scan: 1.00; before
+it, after Undo, and on lines moved 3 ft: 0.01 to 0.03).
+
+**Run by the worker on a frozen copy:** before any change, the three checks the
+interrupted commit skipped: `cargo test` 466 pass, `tools/committed.sh` PASS,
+`demos/renow.sh` PASS. After: `cargo test --workspace` 467 pass; `scanw.sh`, `bringw.sh`
+PASS; the gates and the port map PASS.
+
+**Not right, each owed:**
+- **What Scaniverse's file is has not been confirmed.** Its pages say its PLY is a
+  colour point cloud; text or binary, its units and which way is up are not said
+  anywhere found. The window reads which way is up from the file itself (the shorter of
+  its two candidates) and says which it took, takes metres, and warns when the plan is
+  not the size of a house. **Patrick's first real file is the test.**
+- The sheet's dots are faint on screen (222 of 255): to be darkened for tracing.
+- The glue of the import is written twice (command line and window) over the same
+  arithmetic: to be one function.
+- "meters" in the window, "metres" at the command line: one spelling, the US one.
+- The view is not moved onto the sheet when it comes in; reading a large file holds the
+  window still while it reads; Open items shows the sheet's file name.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

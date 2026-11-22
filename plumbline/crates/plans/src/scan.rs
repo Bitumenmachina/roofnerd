@@ -53,6 +53,9 @@ pub fn read_ply(bytes: &[u8], units: Units, up: Up) -> Result<Scan, String> {
     let head = String::from_utf8_lossy(&bytes[..end]).to_string();
     let body = &bytes[end + 11..];
     let (mut format, mut count, mut in_vertex, mut before_vertex) = (None, None, false, false);
+    // How many faces a mesh file has (a scan saved as a mesh): its points are read, its
+    // faces are not, and that is said.
+    let mut faces = 0usize;
     // Each property of a point: its name, how many bytes, whether a real number.
     let mut props: Vec<(String, usize, bool, String)> = Vec::new();
     for line in head.lines().map(str::trim) {
@@ -62,6 +65,11 @@ pub fn read_ply(bytes: &[u8], units: Units, up: Up) -> Result<Scan, String> {
             ["element", "vertex", n] => {
                 count = Some(n.parse::<usize>().map_err(|_| format!("it says it has {n:?} points, which is not a count"))?);
                 in_vertex = true;
+            }
+            ["element", "face", n] => {
+                faces = n.parse::<usize>().unwrap_or(0);
+                before_vertex |= count.is_none();
+                in_vertex = false;
             }
             ["element", ..] => {
                 before_vertex |= count.is_none();
@@ -143,7 +151,12 @@ pub fn read_ply(bytes: &[u8], units: Units, up: Up) -> Result<Scan, String> {
     let others: Vec<&str> = props.iter().map(|p| p.0.as_str()).filter(|n| !matches!(*n, "x" | "y" | "z")).collect();
     let mut lost = Vec::new();
     if !others.is_empty() {
-        lost.push(format!("each point's {} (only where a point is is kept)", others.join(", ")));
+        // A file with a great many properties (a splat file has sixty) is not listed in full.
+        let named = if others.len() > 8 { format!("{} and {} more", others[..8].join(", "), others.len() - 8) } else { others.join(", ") };
+        lost.push(format!("each point's {named} (only where a point is is kept)"));
+    }
+    if faces > 0 {
+        lost.push(format!("its {faces} faces (the surface drawn over the points: only where the points are is kept)"));
     }
     Ok(Scan { points, lost })
 }
@@ -323,6 +336,62 @@ mod tests {
         // The same place written in feet with y up: east 1, up 3, south 2.
         let p = read_ply(&text(&[[1.0, 3.0, -2.0]]), Units::Feet, Up::Y).unwrap().points[0];
         assert_eq!(p, [1.0, 2.0, 3.0]);
+    }
+
+    /// A scan as a phone app writes it: bytes, little-endian, each point's place as three
+    /// real numbers and its colour as three whole ones (with a fourth, opacity), the
+    /// triangles of a mesh after the points. Made up; written to the shape the format
+    /// allows, since the app's own page does not say which it uses.
+    fn phone_bytes(points: &[[f32; 3]], faces: usize, normals: bool) -> Vec<u8> {
+        let mut out = format!("ply\nformat binary_little_endian 1.0\ncomment made up\nelement vertex {}\nproperty float x\nproperty float y\nproperty float z\n", points.len()).into_bytes();
+        if normals {
+            out.extend_from_slice(b"property float nx\nproperty float ny\nproperty float nz\n");
+        }
+        out.extend_from_slice(b"property uchar red\nproperty uchar green\nproperty uchar blue\nproperty uchar alpha\n");
+        if faces > 0 {
+            out.extend_from_slice(format!("element face {faces}\nproperty list uchar int vertex_indices\n").as_bytes());
+        }
+        out.extend_from_slice(b"end_header\n");
+        for (i, p) in points.iter().enumerate() {
+            for c in p {
+                out.extend_from_slice(&c.to_le_bytes());
+            }
+            if normals {
+                for c in [0.0f32, 0.0, 1.0] {
+                    out.extend_from_slice(&c.to_le_bytes());
+                }
+            }
+            out.extend_from_slice(&[(i % 256) as u8, 120, 200, 255]);
+        }
+        for f in 0..faces {
+            out.push(3);
+            for k in 0..3i32 {
+                out.extend_from_slice(&(((f as i32 + k) % points.len() as i32).to_le_bytes()));
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn a_phone_scan_with_colour_and_faces_is_read_by_its_points() {
+        let points = [[0.0f32, 0.0, 0.0], [3.048, 0.0, 0.0], [3.048, 2.0, 2.4384], [0.0, 2.0, 2.4384]];
+        for (faces, normals) in [(0, false), (2, false), (2, true)] {
+            let scan = read_ply(&phone_bytes(&points, faces, normals), Units::Metres, Up::Z).unwrap();
+            assert_eq!(scan.points.len(), 4, "faces {faces} normals {normals}");
+            let (p, q) = (scan.points[1], scan.points[2]);
+            assert!((p[0] - 10.0).abs() < 1e-4 && (q[2] - 8.0).abs() < 1e-4, "{p:?} {q:?}");
+            // The loss is said: the colour (and normals), and the faces where there are any.
+            assert!(scan.lost.iter().any(|l| l.contains("red, green, blue, alpha")), "{:?}", scan.lost);
+            assert_eq!(scan.lost.iter().any(|l| l.contains("2 faces")), faces > 0, "{:?}", scan.lost);
+        }
+        // Metres with y up, as an app that keeps the phone's own axes would write it:
+        // the same corner is east 10 ft, north 0 and 8 ft up.
+        let up = read_ply(&phone_bytes(&[[3.048, 2.4384, 0.0]], 0, false), Units::Metres, Up::Y).unwrap().points[0];
+        assert!((up[0] - 10.0).abs() < 1e-4 && up[1].abs() < 1e-9 && (up[2] - 8.0).abs() < 1e-4, "{up:?}");
+        // Cut short anywhere in the points it is refused, in words, not read part way.
+        let mut cut = phone_bytes(&points, 0, false);
+        cut.truncate(cut.len() - 5);
+        assert!(read_ply(&cut, Units::Metres, Up::Z).unwrap_err().contains("cut short"));
     }
 
     #[test]

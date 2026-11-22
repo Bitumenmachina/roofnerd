@@ -85,6 +85,10 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
         },
         _ => (name, None),
     };
+    if what == Bring::Scan {
+        scan(doc, typed);
+        return;
+    }
     if name.is_empty() {
         crate::tools::cant(doc, "bring it in", "no file was named. Type the file's name, or drop the file on this window.");
         doc.touch();
@@ -184,6 +188,8 @@ pub fn dropped(doc: &mut Doc, file: &str) {
         bring(doc, what, file);
     } else if lower.ends_with(".ifc") {
         bring(doc, Bring::Model, file);
+    } else if lower.ends_with(".ply") {
+        bring(doc, Bring::Scan, file);
     } else if lower.ends_with(".csv") || lower.ends_with(".xlsx") || lower.ends_with(".xlsm") || lower.ends_with(".xls") {
         doc.dropped = Some(file.to_string());
         doc.say(Tone::Warned, format!("{} is a table. Say what it is: click Price list, Assemblies, Prior estimate or Item library, under Bring in on the left.", Path::new(file).file_name().and_then(|f| f.to_str()).unwrap_or(file)));
@@ -309,4 +315,118 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
         Err(why) => crate::tools::cant(doc, &format!("write out the {}", what.said()), why),
     }
     doc.touch();
+}
+
+/// A scan of the house as it stands, laid under the level on show as a sheet to trace
+/// over: to scale, in the scan's own place, Assumed. It is the command line's own
+/// (`plumbline import scan`): the same reader, the same levelling by its floor, the same
+/// cut 4 ft above the floor at 24 dots to the foot, the same sheet, scale and place.
+/// `typed` is the file's name, and after a comma what the file does not say: `feet`,
+/// `y up` or `z up`.
+fn scan(doc: &mut Doc, typed: &str) {
+    use plumbline_plans::scan::{read_ply, Units, Up};
+    let (name, said_so) = typed.rsplit_once(',').map_or((typed.trim(), String::new()), |(n, rest)| (n.trim(), rest.to_lowercase()));
+    if name.is_empty() {
+        crate::tools::cant(doc, "bring in the scan file", "no file was named. Pick the scan from the list, or drop the file on this window.");
+        doc.touch();
+        return;
+    }
+    // With the whole house on show, the sheet goes under its lowest level, as a plan does.
+    if doc.show.storey.is_none() {
+        doc.show.storey = plumbline_world::building::storey_totals(&mut doc.job).into_iter().min_by(|a, b| a.elevation.unwrap_or(f64::MAX).total_cmp(&b.elevation.unwrap_or(f64::MAX))).map(|s| s.path);
+    }
+    let Some(level) = doc.show.storey.clone() else {
+        crate::tools::cant(doc, "bring in the scan file", "this job has no level for it to be a scan of. Add a level first.");
+        doc.touch();
+        return;
+    };
+    let path = found(doc, name);
+    let file = path.file_name().and_then(|f| f.to_str()).unwrap_or(name).to_string();
+    let done = (|| -> Result<(String, bool), String> {
+        let bytes = std::fs::read(&path).map_err(|e| format!("{file} {}", crate::plans::why_not_opened(&e)))?;
+        let units = if said_so.contains("feet") || said_so.contains("ft") { Units::Feet } else { Units::Metres };
+        // Which way is up is not in the file. Said where it was told; otherwise it is the
+        // way the house is shortest (a house is wider than it is tall), and said so.
+        let (up, why_up) = if said_so.contains("y up") {
+            (Up::Y, "as you said")
+        } else if said_so.contains("z up") {
+            (Up::Z, "as you said")
+        } else {
+            // The file's own axes, as read with z up: its y and its z, how far each runs.
+            let flat = read_ply(&bytes, units, Up::Z).map_err(|why| format!("{file}: {why}"))?;
+            let (lo, hi) = flat.bounds().ok_or_else(|| format!("{file}: it has no points"))?;
+            let (along_y, along_z) = (hi[1] - lo[1], hi[2] - lo[2]);
+            if along_y < 0.8 * along_z {
+                (Up::Y, "the way the house is shortest")
+            } else if along_z < 0.8 * along_y {
+                (Up::Z, "the way the house is shortest")
+            } else {
+                (Up::Z, "its height does not show which way is up")
+            }
+        };
+        let mut scan = read_ply(&bytes, units, up).map_err(|why| format!("{file}: {why}"))?;
+        let leaned = scan.level_by_floor();
+        let called = path.file_stem().and_then(|s| s.to_str()).unwrap_or("scan").to_string();
+        let taken = format!("taken as {} with {} up", if units == Units::Metres { "metres" } else { "feet" }, if up == Up::Z { "z" } else { "y" });
+        let (lo, _) = scan.bounds().ok_or_else(|| format!("{file}: it has no points"))?;
+        let (floor, ceiling) = scan.floor_and_ceiling();
+        let ft_in = |x: f64| plumbline_world::units::feet_as_ft_in(x, 16);
+        let cut_at = 4.0;
+        let base = floor.unwrap_or(lo[2]);
+        let cut = scan.cut(base + cut_at, 2.0 / 12.0, 24.0, 2.0).map_err(|why| format!("{file}: {why}"))?;
+        // The sheet is written beside the job, and the drawing is made from it as any is.
+        let folder = crate::plans::folder_of(&doc.path);
+        let sheet = folder.join(format!("{called} cut at {}.png", ft_in(cut_at).replace('\'', " ft").replace('"', " in").replace("  ", " ").trim()));
+        std::fs::write(&sheet, &cut.png).map_err(|_| format!("the sheet could not be written beside the job ({}): is the folder one this program may write in", folder.display()))?;
+        let given = sheet.to_str().ok_or("the file's name has letters this cannot use")?.to_string();
+        let read = plumbline_plans::read(&cut.png, 1).map_err(|why| format!("{given}: {why}"))?;
+        let kept = crate::plans::from_folder(&folder, &sheet)?;
+        let source = format!("scan {called}.ply, cut {} above its floor ({taken})", ft_in(cut_at));
+        let how = Entered { status: Status::Assumed, source: &source };
+        let made = plumbline_world::plans::add(&mut doc.job, &level, &called, plumbline_world::plans::Read { file: &kept, page: 1, bytes: cut.png.len() as u64, checksum: &plumbline_plans::checksum(&cut.png), size: read.size }, how)?;
+        let wide = f64::from(cut.size[0]);
+        plumbline_world::plans::calibrate(&mut doc.job, &made, [0.0, 0.0], [wide, 0.0], &format!("{} ft", plumbline_world::view::num(wide / cut.dots)), how)?;
+        plumbline_world::plans::line_up(&mut doc.job, &made, [0.0, 0.0], cut.corner, how)?;
+        let figure = |n: usize| plumbline_world::view::figure(n as f64, 0);
+        let about = |x: f64| plumbline_world::units::feet_as_ft_in((x * 12.0).round() / 12.0, 16);
+        let mut out = format!("Brought in the scan file {called:?}: {} points, {taken} ({why_up}), Assumed.\n", figure(scan.points.len()));
+        let _ = std::fmt::Write::write_fmt(&mut out, format_args!("On plan, where it is cut, it is about {} by {}.", about(cut.extent[0]), about(cut.extent[1])));
+        let mut to_see = false;
+        // A size that no house is says what to check.
+        if cut.extent[0].max(cut.extent[1]) < 6.0 || cut.extent[0].max(cut.extent[1]) > 400.0 {
+            out.push_str("\nThat is not the size of a house: if the scan is in feet or lies on its side, pick it again and say after its name: feet, y up or z up.");
+            to_see = true;
+        }
+        if let Some(lean) = leaned.filter(|l| *l * 120.0 >= 0.125) {
+            out.push_str(&format!("\nIt leaned {} in 10 ft and was levelled by its own floor.", plumbline_world::units::show_length(&plumbline_world::units::Len::One((lean * 120.0 * 16.0).round() / 16.0), "in")));
+        }
+        match (floor, ceiling) {
+            (Some(f), Some(c)) => out.push_str(&format!("\nFloor to ceiling reads about {} on the scan. It is not given to the level: measure the level's height if you take it.", about(c - f))),
+            (Some(_), None) => out.push_str("\nIts floor shows and no ceiling does: no height read."),
+            _ => out.push_str(&format!("\nNo floor shows in it: it is cut {} above its lowest point.", ft_in(cut_at))),
+        }
+        out.push_str(&format!("\nCut {} above the floor: {} points drawn on the sheet, {} by {} dots at {} to the foot.", ft_in(cut_at), figure(cut.points), cut.size[0], cut.size[1], plumbline_world::view::num(cut.dots)));
+        if cut.strays > 0 {
+            out.push_str(&format!("\nLeft off the sheet: {} stray points at that height, each alone in its square foot of plan.", figure(cut.strays)));
+        }
+        out.push_str("\nIt is a drawing under the level on show, to scale and in the scan's own place: trace over it as over any plan.");
+        for lost in &scan.lost {
+            out.push_str(&format!("\nNot kept: {lost}."));
+            to_see = true;
+        }
+        Ok((out, to_see))
+    })();
+    match done {
+        Ok((out, to_see)) => {
+            doc.job.derive();
+            if !doc.plan {
+                doc.go = Some((true, false));
+            }
+            doc.framed = false;
+            doc.edit("Scan");
+            doc.say(if to_see { Tone::Warned } else { Tone::Done }, out);
+        }
+        Err(why) => crate::tools::cant(doc, "bring in the scan file", why),
+    }
+    doc.redraw();
 }

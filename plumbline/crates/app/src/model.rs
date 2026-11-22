@@ -34,6 +34,8 @@ pub enum Bring {
     Sheet,
     /// An item library: the things that can be placed, by trade, as a table.
     Items,
+    /// A scan of the house as it stands (a point cloud): laid as a sheet to trace over.
+    Scan,
 }
 
 /// What is written out of the job, from the window.
@@ -98,7 +100,7 @@ impl WriteOut {
 }
 
 impl Bring {
-    pub const ALL: [Bring; 6] = [Bring::Prices, Bring::Assemblies, Bring::Prior, Bring::Model, Bring::Sheet, Bring::Items];
+    pub const ALL: [Bring; 7] = [Bring::Prices, Bring::Assemblies, Bring::Prior, Bring::Model, Bring::Sheet, Bring::Items, Bring::Scan];
     pub fn name(self) -> &'static str {
         match self {
             Bring::Prices => "Price list",
@@ -107,6 +109,7 @@ impl Bring {
             Bring::Model => "Designer's model",
             Bring::Sheet => "Maker's sheet",
             Bring::Items => "Item library",
+            Bring::Scan => "Scan file",
         }
     }
     /// What it is called in the middle of a sentence.
@@ -118,6 +121,7 @@ impl Bring {
             Bring::Model => "designer's model",
             Bring::Sheet => "maker's sheet",
             Bring::Items => "item library",
+            Bring::Scan => "scan file",
         }
     }
 }

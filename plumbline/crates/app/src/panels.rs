@@ -679,6 +679,7 @@ fn plain_name(name: &str) -> (String, &'static str) {
         "csv" => "table",
         "xlsx" => "workbook",
         "ifc" => "BIM model",
+        "ply" => "scan",
         _ => "",
     };
     (stem.to_string(), kind)
@@ -740,18 +741,21 @@ fn picker(c: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
                     crate::model::Bring::Prices => "Pick the price list (a table or a workbook), or drop it on this window.",
                     crate::model::Bring::Model => "Pick the model, or drop it on this window.",
                     crate::model::Bring::Sheet => "Pick the maker's sheet (a PDF), or drop it on this window. It is made an item to place.",
+                    crate::model::Bring::Scan => "Pick the scan file of the house, or drop it on this window. It is laid under the plan on show, to trace over.",
                     _ => "Pick it (a table or a workbook), or drop it on this window.",
                 };
                 f.spawn(text(fonts, hint, 10.5, Weight::Regular, theme::ink_faint()));
                 let kinds: &'static [&'static str] = match what {
                     crate::model::Bring::Model => &[".ifc"],
                     crate::model::Bring::Sheet => &[".pdf"],
+                    crate::model::Bring::Scan => &[".ply"],
                     _ => &[".csv", ".xlsx"],
                 };
                 pick_list(f, fonts, doc, Entry::BringIn(what), kinds, "", what.said());
                 type_it(f, typed, match what {
                     crate::model::Bring::Prices => "A supplier's name can follow a comma. ",
                     crate::model::Bring::Sheet => "If its name does not say what it is, say after a comma: fixture, equipment or furnishing. ",
+                    crate::model::Bring::Scan => "It is taken as metres, with up the way the house is shortest. To say otherwise, say after a comma: feet, y up or z up. ",
                     _ => "",
                 });
             });
@@ -1173,7 +1177,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                         on_click(&mut button(b, fonts, what.name(), "", false), move |doc| {
                             // A table dropped on the window and waiting to be told what it is.
                             match doc.dropped.take() {
-                                Some(file) if !matches!(what, crate::model::Bring::Model | crate::model::Bring::Sheet) => crate::bring::bring(doc, what, &file),
+                                Some(file) if !matches!(what, crate::model::Bring::Model | crate::model::Bring::Sheet | crate::model::Bring::Scan) => crate::bring::bring(doc, what, &file),
                                 _ => {
                                     doc.browse = None;
                                     doc.open(Entry::BringIn(what), "");
