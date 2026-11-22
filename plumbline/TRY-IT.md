@@ -1,10 +1,9 @@
 # Try it: one renovation, on your own desktop
 
-**Reissued 2026-11-22.** A judge found two of the five things below could not be done from
-the screen alone; both were put right (DECISIONS.md call 161) and every picture of the five
-was retaken (`demos/captured/scanw`, `renow`, `roomlinew`, `cabinetsw`, `layoutsw`). The
-steps below are the window as it is now. The fix has been read picture by picture by the
-builder; a fresh judge of it, cold, is owed and its findings will be in `STATUS.md`.
+**Reissued 2026-11-22, and judged.** A second judge, cold, did three of the five things
+below from the screen and this page alone and two partly (`STATUS.md`, "Call 161 judged").
+What it met is written into the steps below so you do not meet it blind, and is being put
+right (DECISIONS.md call 169).
 
 This is the one page for Patrick's first hour with BuildOS on his Linux desktop. Nobody
 has yet used the window on a real machine with a real graphics card: this hour is that
@@ -45,7 +44,9 @@ and copy that file into `~/jobs/addition/`.
 
 1. **Bring your scan in.** Left side: Add level (the first floor). Then BRING IN, **Scan
    file**. At the head of the list choose **Measured in meters** or **Measured in feet**
-   (meters to begin with), then click your scan in the list. Its outline lays under the
+   (meters to begin with), then click your scan in the list. *If it is refused with
+   "nothing to draw", or the house comes in several times too big, it is the other
+   measure: choose it and click the scan again* (the window does not yet say so). Its outline lays under the
    plan. Read the message: it says how big it took the house to be. If the house came in
    on its side, the message has a button, **It is lying on its side: stand it up**. *If
    the size is wrong, that is the most useful thing you can report* (Scaniverse does not
@@ -53,19 +54,22 @@ and copy that file into `~/jobs/addition/`.
    and says what it assumed).
 2. **Trace the house as it stands.** Wall tool (key 1): accept or type the thickness and
    height, click each corner over the scan. Door and Window on the walls. Room in each
-   room. Then select the walls and press **Existing** in the panel's WORK row.
+   room. Then mark the house existing: click a wall and press **Existing** in the panel's
+   WORK row, **one wall at a time** (several cannot be selected together yet).
 3. **Take down and add on.** Select a wall, **To demolish**. Draw the addition's walls.
    Where the plan is open, the **Room line** tool parts two rooms with no wall. Watch
    the rooms' areas follow. The **Demolition** switch under Show hides what comes down.
 4. **Set a kitchen.** BRING IN, Starter items. Then the **Cabinets** tool: click a wall's
    face on the room's side, type the boxes (`B18 [Dishwasher] SB36 B24 DB18 B36`: the
    codes, the appliances and a one-line key list above the field), Enter. Each box shows
-   its code on the plan. A run off a corner another run fills starts 24 in from it.
+   its code on the plan. The run starts where you click (you can type another start in Starts at); a run off
+   a corner another run fills has to start 24 in from it.
 5. **Try it two ways.** Save (Ctrl+S). In the sheet window, **Layouts**, **Keep this as
    another layout**: a title is offered, Enter keeps a copy beside this job and sets it
-   beside this one. **Open another layout** opens the copy to change it (the addition
-   longer, say); save; open the first again, and **Set beside another layout** to see
-   rooms, walls and cost side by side.
+   beside this one. **Open another layout** opens the copy to change it. *A wall cannot
+   be made longer or moved with its neighbours yet:* to change the addition, take its
+   walls out with Delete and draw them again; save; open the first again, and **Set
+   beside another layout** to see rooms, walls and cost side by side.
 
 ## What is known not to be there yet
 

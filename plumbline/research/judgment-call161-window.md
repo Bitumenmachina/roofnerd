@@ -1,14 +1,17 @@
 # Judgment of the window against TRY-IT.md section 3 (call 161), written cold
 
+Frozen program bin16, virtual display, software renderer. Pictures and scripts: /tmp/claude-0/-home-user-roofnerd/ca6a484f-c0e5-523e-99ce-c9d574b09f03/scratchpad/judge161/ (p1..p15c, t*/map.txt.said).
+
 | # | Thing | Verdict |
 |---|---|---|
-| 1 | Bring your scan in | (pending) |
-| 2 | Trace the house as it stands | (pending) |
-| 3 | Take down and add on | (pending) |
-| 4 | Set a kitchen | (pending) |
-| 5 | Try it two ways | (pending) |
+| 1 | Bring your scan in | PARTLY: it works, in the right unit and the wrong way up; a wrong unit gives "nothing to draw" with no hint of the unit, or a huge house with no cue (J161-1, J161-4) |
+| 2 | Trace the house as it stands | PARTLY: walls, doors, windows, rooms work; "select the walls and press Existing" cannot be done: one wall at a time only, and the page and the screen do not say so (J161-5) |
+| 3 | Take down and add on | YES: demolish, undo, addition, Room line, areas follow, Demolition switch all done from the screen; rough edges J161-6, 7, 8 |
+| 4 | Set a kitchen | YES: refusals and key list good; the page's corner sentence does not match what the screen does (J161-10); label overlap J161-9 |
+| 5 | Try it two ways | PARTLY: keep, open, set beside, Save-first all work with plain words; "make the addition longer" was not tried (no way found by me in this run to lengthen a wall by a typed length; untested) |
 
-Findings follow, appended after each session.
+Findings follow.
+, appended after each session.
 
 ## Session A: Thing 1 (scan), empty job, wrong order, wrong units
 
@@ -91,3 +94,32 @@ In that state the jobs are listed in the same dark type as a live list, with no 
 
 ### J161-12 (cosmetic/wording) File stems on screen
 The layout list shows each job by title and, in grey, its file name without ending ("addition", "other-house", "kitchen-job-not-real-b" in the refusal and the beside-line) and a tag "job". These are file names, not a path or ending; a builder knows his file names, but "kitchen-job-not-real-b" in a refusal is program-made text.
+
+## Session F: Thing 5 second half (p15c)
+- Held up: with changes unsaved, a click on a job row in "Open another layout": status "Save first (Ctrl+S)."; after saving, picking the first layout: "Opened Kitchen job (not real). The other layouts are as they were; set one beside this to compare."; "Set beside another layout" then the copy: "Set Kitchen job (not real) B beside this job: the table is on the sheet, under Layouts. Nothing is written to either file." Table readable (p15c/05-sheet.png): rooms same, job cost "no figure ... not worked".
+- Harness note: xdotool "ctrl+s" in one burst did NOT save at one frame a second (no "Saved." said, three tries); held for 2 s each key it saved ("Saved."). Retried; I count this as the slow renderer, not a defect, but a builder on a slow machine could see the same.
+- Not tested: making the addition longer in the second layout (I did not find in this run a screen way to give a wall a new length; changed Starter items instead), so the money half of Thing 5 (a cost difference between layouts) was not seen: both columns read "no figure" since nothing is priced. Also not tested: two layouts with the same title (the window refused the same offered title).
+
+## Words check
+Scanned said-lines: no ".ply", "tmp", axis names or paths anywhere said or on screen. Seen program-ish words: "two things in one place cannot go by one name" (J161-2), "Study was placed first" (J161-6), "A reading came in with no value picked to take it" (after typing a door's sizes, J161 door note), file stems like kitchen-job-not-real-b (J161-12), "wall 1/wall 6" numbering that is the program's. "Existing, shown pale 0" counts shown as 0 when only a demolition is marked: seen in p9 ("Existing, shown pale 0").
+
+## Builder's own "not right" list, confirmed or not
+- Scan card still seven lines; after stand-up nothing says it was turned: CONFIRMED (p4/03, said-04).
+- "Existing, shown pale 0" with count 0: CONFIRMED (p9/05).
+- Receptacle count changes with a mark: CONFIRMED in numbers: Receptacles of Study 7 EA before, 6 EA after the east wall to demolish (p7 vs p8/07), and the sentence only gives the area.
+- "Dishwasher" label wider than its box; countertop no outline; boxes plain tan: CONFIRMED (p10/07, p11/06; 3D not looked at closely).
+- Layouts tab open items under the table and long: CONFIRMED (p13/05: 14 open items under the table, long sentences repeated).
+- List of jobs shows file name beside title where titles differ: CONFIRMED (p14/04 shows "addition" and "job" beside every title).
+- "tool chest" vs "this job's items": B99 refusal says "this job's items" (not "tool chest"): consistent with the window's heading Items.
+
+## Findings by severity (summary)
+| id | severity | what |
+|---|---|---|
+| J161-5 | cannot do it as written | no multi-select; "select the walls and press Existing" |
+| J161-1 / J161-4 | confusing | wrong unit: refusal "nothing to draw" or a 79 ft house with no cue |
+| J161-6 | confusing | Kitchen "no area yet... Study was placed first" with no next step |
+| J161-7 | wrong result (message false) | a Room line that parts nothing is accepted and said to part two rooms |
+| J161-10 | confusing | run starts 2 ft on one wall, 1 ft on another, with no run in the corner |
+| door note | confusing | "A reading came in with no value picked" after typing door sizes |
+| J161-2, 11, 12 | wording | program talk in refusals, rows that look live, file stems |
+| J161-3, 8, 9 | cosmetic | card over plan, label collisions, Dishwasher label overflow |

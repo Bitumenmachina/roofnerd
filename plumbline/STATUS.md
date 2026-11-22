@@ -8467,6 +8467,38 @@ places; `remove-line` to the cent. About 45 refusals left their files as they we
 | J166-20 | A blind corner base (BLB36) gives no corner caution | as meant: it is 24 in deep and a top covers it; the notes say so |
 | J166-3 to 6, 10 to 12, 14, 17, 18 | low: a typed measure's source is not in the workbook; "0 SF" taken without a word; the assembly put on twice refuses in odd words; `mark` asks "Is it bearing" when it is already said; the order of two windows in the caution changes; "non-bearing" not taken; `check` leaves out the corner-leg caution; a box 1/8 in off the wall or 3/8 in off the floor covers nothing (base is over-bought, never under); `remove-line` minds capitals | "non-bearing" and the `mark` sentence to fix; the rest open |
 
+## Call 161 judged: the five things from the screen alone, a second time (2026-11-22; an agent on another model, cold, on the frozen build; `research/judgment-call161-window.md`)
+
+| | Thing | Could a builder do it from the screen and the page? |
+|---|---|---|
+| 1 | Bring your scan in | **Partly** (was no). It comes in by a click, in the right measure, and "stand it up" works. In the wrong measure nothing says so: refused with "nothing to draw", or a house 79 ft long with no cue |
+| 2 | Trace the house as it stands | **Partly.** Walls, doors, windows and rooms work and refuse in clear words. "Select the walls and press Existing" cannot be done: one wall at a time, and nothing says so |
+| 3 | Take down and add on | **Yes** |
+| 4 | Set a kitchen | **Yes** (was partly) |
+| 5 | Try it two ways | **Partly** (was no). Keeping, opening and setting beside all work in plain words. The judge found no way to make the addition longer but to draw it again, and saw no cost differ (nothing was priced) |
+
+Held when it was broken at: an empty job; Scan file with no level; empty fields; a tool
+clicked before its sizes; Undo and Redo of a mark, a scan and a run, one step each; a
+room whose wall comes down reads honestly as not enclosed; a box code the job lacks; a
+run across a door; an empty, repeated or cancelled layout title; opening with changes
+not saved. No file ending, folder, axis or other program word was seen or said.
+
+| | Found | Where it stands |
+|---|---|---|
+| J161-5 | No way to select several: Existing marks one wall at a time | to fix (call 169) |
+| J161-1, 4 | A scan in the wrong measure gives no cue | to fix (call 169) |
+| J161-6 | A room with no area: "Study was placed first", and not what to do | to fix (call 169) |
+| J161-7 | A room line that parts nothing is taken and said to part two rooms | to fix (call 169) |
+| J161-10 | Where a run of boxes starts is the click, not the page's "24 in" | the page and the hint to fix (call 169) |
+| door note | The laser's message after a door's sizes are typed | to fix (call 169) |
+| J161-2, 11, 12 | A scan brought in twice refused in the program's words; rows that look live when they are not; file names beside titles | to fix (call 169) |
+| J161-3, 8, 9 | The message card over the plan; labels over each other; "Dishwasher" wider than its box | to fix (call 169), but for dimension labels meeting room labels, open |
+| | No way to make a wall longer or move it with its neighbours | its own call, owed |
+
+The builder's own list of what was not right was confirmed line by line. `TRY-IT.md`
+was corrected the same hour: step 2 says one wall at a time until call 169 is in, step 4
+says where a run starts, step 5 says the addition is drawn again to change it.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

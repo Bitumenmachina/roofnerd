@@ -5880,3 +5880,61 @@ pens by scale, the paper sizes, the lettering of strokes, the PDF written by han
 each dimension as lettered, each room label, the notes), so a figure on paper can be
 checked without reading the picture. The same pages can be written from the window under
 Write out (the next window work). The saved job does not change; no number moves.
+
+### Call 169. The window, from what its second judge met (2026-11-22; `research/judgment-call161-window.md`: three of the five things done from the screen, two partly) and the window's half of calls 159 to 167
+
+**From the judge.**
+1. **Several things marked at once** (J161-5: "select the walls and press Existing"
+   could not be done). Shift and a click adds a thing to what is selected, or takes it
+   out; the panel is the last one picked, headed "and 3 more". The panel of a wall,
+   door, window, floor or footing has **"Select all on this level"**. The WORK row and
+   Delete act on all that is selected, in one step that one Undo takes back; every
+   other control acts on the one whose panel it is, and says so when more are selected.
+2. **A scan in the wrong measure says so** (J161-1, 4). Every scan's message ends: "If
+   that is not the size of the house, choose the other measure at the head of the list
+   and bring it in again." A scan refused because no point of it is at the height it is
+   cut at adds the same. A house over 150 ft long, or a floor to ceiling under 6 ft or
+   over 15 ft, turns the message to a warning with that sentence first. The same scan
+   brought in twice: "It is already in, under the plan. Undo takes it out." (J161-2).
+   Stood up, the message begins "Stood up."
+3. **A room with no area says what to do** (J161-6): "Kitchen has no area yet: its point
+   is in the space Study has. Part the two with a wall or a room line, and each gets its
+   own." (the model's sentence, so the command line says it too).
+4. **A room line that parts nothing says so** (J161-7): "Added room line 3. It does not
+   run from wall to wall, so it parts nothing yet." A line that does part two rooms says
+   what it said.
+5. **Where a run of boxes starts** (J161-10): at the click, to the nearest foot along
+   the wall; the hint and the message say "the run starts where you click; type another
+   start in Starts at". `TRY-IT.md`'s sentence about 24 in is for a corner another run
+   fills, and says only that.
+6. **The laser's message only for a laser** (the door note): "A reading came in with no
+   value picked to take it" is not said after a tool's own sizes are typed.
+7. **A message card can be put away** (J161-3; the fixed rule: every panel can be): a
+   mark at its corner puts it away, and so does Esc with no tool in hand.
+8. **Appliances on plan by their plan marks** (J161-9): DW, REF, RNG, WASH, DRY; any
+   other label too wide for its box is lettered smaller, never over its neighbour. The
+   key card says the marks.
+9. **Words** (J161-11, 12, and the builder's own list): with changes not saved the list
+   of jobs to open is grey; a job is named by its title, and by its file's name as well
+   only where two titles are alike; "Existing, shown pale" shows only where something is
+   so marked; a mark that changes a room's receptacles says so with its area.
+
+**The window's half of the command line's calls.**
+10. **A line's quantity takes a typed measure** ("60 SF": call 159); typed in the
+    window it is Assumed, "entered on screen", as every typed value is.
+11. **A wall the work opens** (call 160): its panel has Bearing with "Bearing" and "Not
+    bearing", and "In the wall" with a field; each reads unknown with its reason until
+    said; what a bearing wall needs is a card in the panel; the field list and the open
+    items carry both questions and what is in the way of a wall that comes down.
+12. **"Take line off"** on a cost line (call 166), one Undo.
+13. **The tool chest** (call 151; Patrick's word): the list headed Items is headed
+    **Tool chest**; "Starter items" is "Starter tool chest", "Item library" is "Tool
+    chest file", "Item library, to keep" is "Tool chest, to keep"; a thing in it is
+    still an item ("New item"). The window says "the tool chest" wherever the model does
+    (call 163's stand-in, "this job's items", goes). Every script that clicks one of the
+    three renamed controls is changed with it, in the same pass.
+
+Owed after this, each its own call: a wall moved with the walls that meet it following
+(the judge found no way to make the addition longer but to take walls down and draw
+them again); the counts three ways on the Building tab; tools to draw a beam, a post
+and a pad footing; the plan set written from the window.
