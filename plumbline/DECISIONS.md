@@ -6116,3 +6116,42 @@ sides, sill and head within 2 in.
 
 The window's half (the offer on the card when a scan is brought in; the found walls
 shown before they are laid) is a call of its own once this is judged.
+
+### Call 174. Patrick, 2026-11-22: the builder runs on its own; a sweep by everyone who looks at the building (and what is no longer said to him)
+
+Patrick: "Please stop saying it hasn't been judged on a real machine this sandbox and
+images are sufficient for now." "I would like to see a deep sweep of each trade viewing
+this including home owner, builder and architect/ engineer"; the program is to be "as
+close to perfect clean and at the cutting edge of software as possible before I ever put
+it in the desktop"; the builder is to "infer intent and research / review / advise on
+your own while providing updates but nothing needed from me", and to run continually.
+The same day: one program has shown him three names (BuildOS, plumbline, roomline), and
+"a 3d view of a building is needed for everyone" with "the toggle on MEPs as a see
+through".
+
+**Read as:**
+1. **This machine and its pictures are the proof, for now.** The window is judged on
+   pictures taken here. That it has not run on a graphics card is not said to Patrick
+   again and is not offered as a reason for anything. (CLAUDE.md's note on where the
+   cost went stays as a note to builders.)
+2. **Nothing is asked of Patrick.** Scope he has already given is inferred from; what
+   is his alone (QUESTIONS.md) keeps its working answer and the build goes on. Updates
+   go to him as pictures and a few plain lines.
+3. **The sweep.** Each person who opens the building is a reviewer of its own, briefed
+   as that person and looking at the same house: a homeowner; a builder (general
+   contractor, estimator, project manager); an architect; a structural engineer; an
+   electrician; a plumber and an HVAC mechanic; the shell (foundation, framing); the
+   envelope (roofing, siding, windows, waterproofing); the interior (drywall, flooring,
+   tile, paint, cabinets and kitchens). Each says what it opens the program to see,
+   what it sees, what is missing or wrong, and what the best tools of its trade show
+   today (from their own pages). A tenth reads what is at the edge of the craft for the
+   3D view itself. The first pass reads the pictures on hand and the command line; the
+   second walks the window once calls 169 and 171 and the held work are in it. Notes go
+   to `research/sweep/`. The lead reads them all and writes one list, in order, in
+   STATUS.md; what the list changes is built, judged and shown in pictures.
+4. **One name.** The program is BuildOS everywhere a person can see it (it is, on
+   screen). The folder, the crates and the two commands are renamed in one change of
+   their own once the work in hand has landed (call 115 left them); demonstrations'
+   file names are not names of anything and are left.
+5. **The centre is the 3D building, seen by each trade.** See through and the switches
+   for each trade are the first thing the sweep looks at.
