@@ -7,3 +7,5 @@ only so a restart of the machine cannot lose it; it is removed in the commit tha
 it. `STATUS.md` says what each is and why it is held.
 
 - `call170.patch`: a wall moved, and the walls that meet it follow (DECISIONS.md call 170).
+- `call168.patch`: a plan set on paper (DECISIONS.md call 168). It carries its own pictures
+  (`demos/captured/planset/`) as binary pieces of the patch.
