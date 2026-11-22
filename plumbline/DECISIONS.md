@@ -5261,3 +5261,27 @@ No number moves on a job without one. Every saved job's list of record kinds gai
 No number moves. `demos/roomlinew.sh` shows the tool; `demos/scanw.sh` keeps passing
 with its darker sheet (its measure's threshold may move with the sheet's darkness, and
 says so).
+
+### Call 154. Two layouts side by side (2026-11-22; plan step A3; the design review's "biggest single gain")
+
+A builder designing an addition tries it two ways and wants the two set beside each
+other. The first road is the plain one: **each layout is a job file, and the program
+sets two or three of them side by side.** (BIMCraft keeps options inside one model,
+`phasing.rs`, `OptionSet`; that is the later road, when a layout has to share one
+drawing with another. A copy of the job is how a builder keeps a second scheme today.)
+
+`plumbline options <a.json> <b.json> [<c.json>]` prints one table, each layout under
+its job's title, and a last column, the last layout less the first:
+
+- **Rooms**, matched by name: each room's floor area; a room one layout lacks reads
+  "none"; then all rooms together.
+- **Walls** by what the work does to them: new (and temporary), existing to remain, to
+  demolish, each in LF.
+- **Job cost**, and under it each division that has work in either layout.
+- Every figure carries its flag (Assumed, Unknown) as it does in its own job; a figure
+  with no value in a layout reads "no figure" and its difference is not worked.
+- Nothing is written to any of the files.
+
+One arithmetic: each figure is the one its own job's `takeoff` and `estimate` give; the
+table adds nothing but the differences. In the window it is a view of the sheet,
+built after this.

@@ -7798,6 +7798,30 @@ either side of the dashed line; the scan's outline plain to trace.
 there are no drawn lines on it to snap to); 1 thing not read from it": true and clumsy.
 Calls 152 and 153 have not been judged.
 
+## Two layouts side by side: a demonstration, written before it is built (`demos/options.sh`, call 154)
+
+Two jobs, by hand. Both: the house of `demos/roomline.sh` (walls round 0,0 to 24,16
+marked existing, the east wall to demolish, a room line from 24,0 to 24,16, rooms
+Living at 6,8 and Kitchen at 30,8). **A, "Addition 12 ft"**: new walls 24,0 36,0 36,16
+24,16. **B, "Addition 16 ft"**: new walls 24,0 40,0 40,16 24,16. On each new wall a
+line "Wall, framed and finished" by `face_area` at $12/SF; on the Kitchen "Flooring" by
+`floor_area` at $8/SF.
+
+| | A | B | B less A |
+|---|---|---|---|
+| Living | 368.125 SF | 368.125 SF | same |
+| Kitchen | 11.75 × 15.5 = 182.125 SF | 15.75 × 15.5 = 244.125 SF | +62 SF |
+| all rooms | 550.25 SF | 612.25 SF | +62 SF |
+| walls, new | 12 + 16 + 12 = 40 LF | 16 + 16 + 16 = 48 LF | +8 LF |
+| walls, existing to remain | 24 + 24 + 16 = 64 LF | 64 LF | same |
+| walls, to demolish | 16 LF | 16 LF | same |
+| new walls' line | 40 × 9 = 360 SF: $4,320.00 | 432 SF: $5,184.00 | +$864.00 |
+| Kitchen's flooring | 182.125 × 8 = $1,457.00 | 244.125 × 8 = $1,953.00 | +$496.00 |
+| job cost | **$5,777.00** | **$7,137.00** | **+$1,360.00** |
+
+Neither file is changed by the comparison. A third file, an empty job, reads "none"
+and "no figure" down its column.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
