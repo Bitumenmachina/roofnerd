@@ -5241,3 +5241,23 @@ answer, a room separation line (`room_separator`, `crates/core/src/commands.rs:4
 
 No number moves on a job without one. Every saved job's list of record kinds gains
 `pl::room_line`.
+
+### Call 153. The room line drawn in the window; the scan sheet made fit to trace (2026-11-22; plan steps A1 and A2, their window halves)
+
+- **A tool, "Room line", beside Room** in the window's BUILDING tools: on the plan, a
+  click at each end sets one room line on the level in view (Assumed, entered on
+  screen); it snaps to wall ends and faces as the Wall tool does; Esc puts the tool
+  down. A room line is drawn on the plan as a thin dashed line in the colour rooms are
+  named in, is not drawn in 3D, can be picked, moved and deleted, and its panel says
+  what it is in one sentence: "Parts two rooms where no wall stands. It is not built
+  and not priced." It has a switch with the rooms' layer, not one of its own.
+- **The scan's sheet is darkened** so its dots can be traced over (they were 222 of
+  255; walls on a sheet should read at about half that), and **the view moves to the
+  sheet** when a scan file or a drawing is brought in, eased, as every move of the view
+  is.
+- **"meters"**, the US spelling, in the window and at the command line alike; and the
+  bringing in of a scan is one function in the model's crates that both call.
+
+No number moves. `demos/roomlinew.sh` shows the tool; `demos/scanw.sh` keeps passing
+with its darker sheet (its measure's threshold may move with the sheet's darkness, and
+says so).
