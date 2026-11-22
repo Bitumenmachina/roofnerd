@@ -1,5 +1,10 @@
 # Try it: one renovation, on your own desktop
 
+**Not yet (2026-11-22).** A judge found two of the five things below cannot be done from
+the screen alone as the window stands (bringing a scan file in, and making a second
+layout). They are being put right (DECISIONS.md call 161). This page is reissued when
+that is in and its pictures are retaken; until then steps 1 and 5 are not as written.
+
 This is the one page for Patrick's first hour with BuildOS on his Linux desktop. Nobody
 has yet used the window on a real machine with a real graphics card: this hour is that
 test. Write down everything that is wrong, slow, confusing or missing; that list is what
@@ -18,10 +23,11 @@ cargo build
 ```
 
 (`cargo build` is the build every test and demonstration here has run on; the 3D engine
-inside it is built at full speed either way.) The package list was checked against what the window actually loads
-(`tools/installs.sh`: PASS, 2026-11-22). The full install from a clean machine has not
-been re-run in this session (the cloud machine is out of disk for a second build), so
-if a step fails, the message it prints is the first thing to send back.
+inside it is built at full speed either way.) **These steps were run on a clean clone from
+GitHub on 2026-11-22:** the build took 23 minutes 41 seconds on a small cloud machine and
+all 478 tests passed on it. The package list was checked against what the window
+actually loads (`tools/installs.sh`: PASS). If a step fails on your desktop, the message
+it prints is the first thing to send back.
 
 ## 2. Start a job in its own folder
 

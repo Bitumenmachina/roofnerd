@@ -8108,6 +8108,22 @@ the subcontractor row in `tests/export.rs` gains its three new cells. **Not done
 rooms are not split (a room carries no mark); the window's Building tab does not show
 the three ways; not judged.
 
+## A clean clone installs and passes (2026-11-22)
+
+With the disk cleared (the build folder's stale pieces: 91 % to 60 %), the README's steps
+were run on a fresh clone of `claude/nifty-tesla-qmn44n` from GitHub, at 9b38b27, in a
+folder of its own: `cargo build` finished in 23 min 41 s, `cargo test --workspace` 478
+pass, 0 fail, and the window program was built. The system packages and Rust were
+already on the machine, so those two lines of the README were not re-run;
+`tools/installs.sh` checks the package list against what the window loads, and passes.
+The clone was removed after. **This is deliverable item 1, less the two lines named.**
+
+`TRY-IT.md` now says so, and says at its head that it is not to be used until call 161
+is in: its judge found two of its five steps cannot be done from the screen.
+
+**Owed on the commit of call 158 (fe25444):** `tools/committed.sh`, not run because
+other builds were running; to be run when the machine is free.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
