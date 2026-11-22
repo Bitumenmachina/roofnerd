@@ -8602,6 +8602,43 @@ are used; the window's Move tool does not yet say what followed or take a typed 
 not judged. Run so far: 509 tests on every crate but the window's, 38 command-line
 demonstrations, the gates and the port map, by the worker.
 
+## Call 168 built and held: a plan set on paper (2026-11-22; a worker under contract, in a second working copy; read, run and its pages looked at by the lead; **not yet in the tree**)
+
+`plumbline plan-set <file> <level> <out.pdf>` writes the plan as it stands, the
+demolition plan and the proposed plan as a PDF of line work, each to scale on the
+smallest ARCH paper it fits. Built apart from the main tree as a patch
+(`research/held/call168.patch`: `crates/world/src/paper/`, `plan_set.rs`,
+`building/planset.rs`, a second verb `page` that reads a PDF's page back, the
+demonstration and its three pictures), to be applied, run on the whole workspace and
+committed when the window work of call 169 is in.
+
+**Ported from BIMCraft** (each file's head says the file and line): the display list,
+the wall-cut pass (walls filled as one, inked on the outer edge of the union, mitred),
+the pens by scale, ARCH A to D and the scale's wording, the lettering of strokes, the
+PDF written by hand (no font, no new dependency but `flate2`, already locked). **Ours:**
+the three pages by the work mark, a dimension along each wall, VIF, the rooms as they
+stand, a dash measured on paper, the notes.
+
+**Every hand figure came out on the lead's own run of `planset.sh`:** 3 pages, ARCH A,
+1/4" = 1'-0"; existing: 4 walls, `24'-0"`, `16'-0"`, `24'-0"`, `16'-0"`, LIVING 364 SF,
+no Kitchen; demolition: 3 light, 1 dashed, "1 WALL COMES DOWN, 16 LF"; proposed: 3 light
+and 3 heavy, six dimensions, LIVING 368 SF and KITCHEN 182 SF; an Assumed wall reads
+`24'-0" VIF` on every page; a 3 ft door's gap; 1/2 in to the foot goes to ARCH C and is
+refused on ARCH A with the scale that fits; nothing marked gives one FLOOR PLAN; the
+file read back by the program's own reader is 864 by 648 points and the 24 ft string is
+432 points (6 in); the same job writes the same bytes; the job file is untouched.
+
+**The lead looked at pages 2 and 3** and they read as plans: a border, a title, the plan
+to scale, dimension strings with ticks outside the walls, room names with areas, notes
+and a title box. **Not right on them:** on the demolition plan the dashed wall is two
+dashed faces with the mitre lines of its corners showing; pages with less on them sit
+left of centre (the plan is placed once for all three); the note for a room left off
+reads "NOT LETTERED, NOTHING THAT STANDS CLOSES ROUND THEIR POINTS: KITCHEN", which is
+the program's way of saying it; no page with a door or a window on it has been looked
+at; openings are not dimensioned and doors have no swing (as the call says); a string
+on a partition can run through a room. Not judged. Run so far, by the worker: 512 tests
+on every crate but the window's, the gates, the port map, the licences.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
