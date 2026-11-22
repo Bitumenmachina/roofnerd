@@ -62,3 +62,19 @@ In the zoomed-out plan the "16' 0"" side label runs into "Kitchen 182 SF" and th
 
 ### Note: counts
 Walls 7 120 LF in the Level panel still includes the wall to demolish, with Demolition off (p9/06). Matches the builder's list ("counts not split", TRY-IT says so).
+
+## Session D: Thing 4 (kitchen cabinets) (pictures p10, p11)
+
+Setup: job made with the command line (house, east wall to demolish, a 12 ft addition, Study and Kitchen, a Room line, a door in the Kitchen's east wall); everything else from the window: zoomed out with the wheel, Starter items clicked, Cabinets tool.
+
+- Held up: Cabinets before Starter items: tool takes a click and shows "Cabinets: the run starts 1' 0" along wall 6, in Kitchen. Type the boxes, like B18 SB36 B24 (an appliance by its name in square brackets, like [Dishwasher]), then Enter." (the job has no items yet: only Enter would tell him). After "Starter items": "Brought in 48 starter items, trade by trade, at typical sizes: each size is Assumed until the product is chosen. They are under Items, on the left..." Clear.
+- Held up: click on bare ground with the tool: "Can't set the run: click on a wall's face, on the room's side of it". Enter with the boxes field empty: "Cabinets: The boxes' codes, like B18 SB36 B24 is still to be typed. Enter sets the run once both are in." Code not in the job: "Can't set the run: B99 is not in this job's items. The list above the field has the boxes and the appliances this job has." (the list above the field is on screen: p10/06-model.png, with the one-line KEY "B base · SB sink base · DB drawer base · W wall ... the number is the width in inches" - readable). Run over the door: "Can't set the run: a run of 12' 0" from 1' 0" crosses door 1, which is in wall 6 from 8' 6" to 11' 6": a door is no place for boxes". Good words.
+- Held up: `B18 dishwasher SB36` WITHOUT brackets was taken: "Set 3 boxes along wall 6 in Kitchen: a run of 6.5 ft, from 1 ft to 7.5 ft along the wall; 8.25 ft left to the corner. | Countertop: 6.5 ft long by 25 1/2 in deep, 34 1/2 in up; 13.8125 SF, front edge 6.5 LF." Each box shows its code on the plan (B18, Dishwasher, SB36) (p10/07-model.png).
+- Second run: clicking the north wall's face near the east corner: "Cabinets: the run starts 2' 0" along wall 7, in Kitchen." then "Set 2 boxes along wall 7 ...from 2 ft to 6 ft". Undo: "Undone: Set 2 boxes along wall 7 in Kitchen: ..." one step.
+- Price after the boxes: the big figure reads "no figure" in red with "11 not priced 3 lines unpriced"; open items "B18, cost code: unknown, and 2 more for the same reason". True to the rules (no prices in the starter) but the builder is not told where to put a price from the cabinet screen.
+
+### J161-9 (cosmetic, confirms builder) Labels on the boxes
+"Dishwasher" is wider than its box and runs over the neighbouring SB36 and B18 labels; at the plan's zoomed-out scale (needed to reach an addition) the "12' 0"" dimension label sits on top of the B24 box (p11/06-model.png). Countertop has no outline of its own.
+
+### J161-10 (to check) corner rule
+In p11 the first run was on the east wall's SOUTH end; the second run was on the north wall near the NORTH-east corner, where no run stands; the window still said "the run starts 2' 0" along wall 7". TRY-IT says 24 in only for a corner another run fills. See session E for the same click with no run in the job.
