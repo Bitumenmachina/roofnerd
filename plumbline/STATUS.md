@@ -8757,6 +8757,86 @@ east, within half a degree).
 room alone, write the same files as before, byte for byte (`demos/scan.sh` and
 `demos/scanw.sh` rest on them).
 
+## The sweep: one list (2026-11-22; calls 172, 174, 175; notes in `research/sweep/`)
+
+Nine people looked at the same made-up house in pictures of the window (as committed at
+48f3bdf) and at the command line: a homeowner, a builder, an architect, a structural
+engineer, an electrician, a plumber and an HVAC mechanic, the shell, the envelope, the
+interior. None ran the live window; that is the second pass, once calls 169 and 171 and
+the held work are in. What follows is what the lead takes from them, in the order it is
+built. Nothing below is built yet.
+
+**What all of them said is right and must not change:** Known, Assumed and Unknown on
+every value; "no figure" and never zero; what a total leaves out, said; the field list
+by dollars; See through with a switch for each trade; the take-off-or-keep question on
+an existing wall; the sub's scope with none of the builder's prices; the dressed house.
+
+**1. Wrong in dollars (call 175): first, because a wrong figure outranks a missing one.**
+Siding bought over the stone; base bought across doorways in the sample; fixtures
+against their own wall counted as clashes; a hole counted once for each piece of a run;
+two footings on one line not said; a header's depth from a rule of thumb; the BIM file
+losing existing, demolished and new on its own round trip. (Checked and not a defect:
+footing concrete at the corners of a ring.)
+
+**2. The trade's view of the 3D building: the centre.** Asked for by seven of nine.
+- **The frame drawn**: joists, rafters, beams and posts in the 3D view under Framing
+  (the model has them in the held work of calls 164 and 165; nothing draws them).
+- **A crossing named for what it cuts**: "through a joist", "through a top plate",
+  "between studs", with the hole's size; a clash class of its own for structure.
+- **Labels on the work**: with a trade on, a run wears its size and system ("3 in
+  waste", "16 x 8 supply", "12-2"), a footing and a wall their size, a thing its name;
+  the stack drawn heavier. Today sizes are read only by clicking.
+- **One switch for a trade**: "Framing", "Plumbing", "Electrical", "Heating and
+  cooling", "Foundation", "Outside", "Inside": everything else to glass, that trade's
+  labels on. Today the framing picture takes seven switches.
+- **A clash says where and what to do**: the room, not only east, north and up; and the
+  trade's own choices.
+
+**3. What carries what.** A wall says what stands on it and what it stands on, worked
+from the walls, floors and footings above and below its line; "rests on: nothing found"
+is said. Walls tinted bearing, not bearing, not said. Joist direction is a question
+until said, not a default. A red mark in the top bar when a wall said bearing, or not
+said, comes down. (The sweep's worst finding: a first-floor wall demolished under a
+second-floor wall, and not a word.)
+
+**4. The renovation seen in 3D.** Existing pale, what comes down red, new in full, with
+a key, in the 3D view and not only on the plan; "before" and "after" as one switch;
+what comes down by wall and by system ("wet wall: the stack, hot, cold, waste, a trunk")
+with the stack first; demolition's own quantities.
+
+**5. Taking in** (call 172): walls found in a scan (call 173, being built); walls found
+on a drawn PDF; the scan seen in 3D with the house in it; a phone's mesh.
+
+**6. The owner's view.** Plain words for trade words; "Your choices" (what the owner
+picks, the allowance, picked or not, over or under); "Could cost more" (the unknowns in
+plain words, by dollars, small things rolled into one row); the price as a range while
+it rests on Assumed and Unknown; a sheet for the owner.
+
+**7. A change to the design carries through.** A wall moved takes its floor edge, its
+footing, the wall above and the roof's edge with it (call 170 moves the walls that meet
+it; the rest is owed); the price never falls because a line fell off (found: 4 ft added
+to a house and the price fell $16,000, six lines "left out").
+
+**8. Drawings out and in.** A section and four elevations; the plan with dimension
+strings, door swings and room names, the same in the window as in the plan set (call
+168); options inside one job.
+
+**9. Each trade's depth, as tables and items (workers; they arrive Assumed).**
+Electrical: a panel with its circuits, cable by its trade name, devices with their
+boxes, counters and the basin in the receptacle count. Plumbing: fall and material on a
+pipe, what a moved fixture must reach. Heating and cooling: tons, CFM, the nameplate
+asked. Foundation: a grade line, steps, new to old, bar. Framing: a cut and buy list,
+corners, rough openings. Outside: fascia, soffit, corner boards and casing priced as
+drawn; flashing by the foot of opening; boots and sleeves from the clashes; the roof
+tie-in; a window and door schedule. Inside: a room's finishes as one schedule; floors
+and ceilings drawn; wall tile and its backer; patch and match; casing and crown; a
+kitchen drawn as a kitchen with clearances and an order sheet; packs and waste.
+
+**10. Labor on every line; the order of the work; inspections before cover.**
+
+**11. Reach**: one name through the code (call 174); a download for each kind of
+machine; type that reads at arm's length (the builder: "most small grey type").
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

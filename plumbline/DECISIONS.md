@@ -6155,3 +6155,58 @@ through".
    file names are not names of anything and are left.
 5. **The centre is the 3D building, seen by each trade.** See through and the switches
    for each trade are the first thing the sweep looks at.
+
+### Call 175. What the sweep found wrong in dollars, and what is decided (2026-11-22)
+
+The sweep (call 174; `research/sweep/`) found figures that are wrong or said twice. The
+lead checked each against the code before writing this. Each moves an expectation, so
+each is decided here first.
+
+1. **Siding is not bought over the stone.** In the sample whole house and in the starter
+   assembly "Exterior wall, 2x6, lap siding over a stone wainscot", lap siding is priced
+   on `net_area` while a 3 ft stone wainscot is priced on the same wall's `plan_length`:
+   on a 40 ft wall, 120 SF of siding bought behind stone (checked: 329.99 SF of siding
+   and 40.00 LF of stone on the south wall). **A wall gains a figure `net_length`: its
+   plan length less the widths of its openings that come down to its floor** (a door; a
+   window with its sill at the floor). The stone is priced on `net_length` (no stone
+   across a doorway); the siding and "Hang the siding" on `net_area - 3 * net_length`.
+   The weather barrier, sheathing and insulation stay on the whole wall: they run behind
+   the stone. By hand on the sample's south wall if it has no door: stone 40.00 LF,
+   siding 329.99 - 120 = 209.99 SF.
+2. **Base is not bought across a doorway.** The sample house prices "Base and trim" on a
+   room's `perimeter`; the library's base lines went to `base_run` at call 162 and the
+   sample was left behind (kitchen 50.25 LF priced, 45.08 LF drawn). The sample's line
+   goes to `base_run`.
+3. **A fixture set against its own wall is not a clash.** A thing that stands against or
+   hangs on a wall (a tub, a water closet, a cabinet, a receptacle in the wall it is set
+   in), a cable where it ends at its device, and a branch where it joins its own trunk
+   are **set against**, counted and listed apart, and are not in "in the same space".
+   The clash test's shapes do not change; what a finding is called does.
+4. **A hole is counted once.** A run through a floor or a wall is one hole to cut for
+   each floor or wall it passes, not one for each piece of the run: a riser of three
+   pieces through one floor is one hole. The list says how many holes, of what size,
+   through what.
+5. **Two footings, or two walls, drawn on one line are said.** `check` and the takeoff
+   name it ("footing 5 lies on footing 1 for 16 LF: counted twice"); it is a caution,
+   not a refusal, since an old footing and a new one may truly lie side by side.
+6. **A header's depth is not the program's to give.** The frame draws a header and the
+   takeoff counts its length (call 137); its depth today comes from a rule of thumb
+   carried in the port. The program sizes nothing (call 164): the depth is Unknown
+   until typed, the header is drawn at the depth typed or, with none, as an outline,
+   and the field list asks it for every opening in a wall said bearing or not said.
+7. **The BIM file says existing, demolished and new in its own word.** A wall, door,
+   window, floor, roof and footing is written with its common property set's `Status`
+   (the standard's own literals, read from the schema page before a line is written),
+   and a wall with `LoadBearing` where bearing is said and left out where it is not;
+   the program's own text property stays. Reading the program's own file back gives
+   the same marks, type names and roof: a round trip that loses them is a defect
+   (found: it loses all three). Reading another's file takes `Status` in as the mark,
+   Assumed, sourced to the file.
+8. **Not a defect, checked:** footing concrete on a closed ring is plan length on the
+   centre line times width times depth, which is exact at mitred corners (a 40 by 28
+   ring, 24 in wide: outer 42 x 30 less inner 38 x 26 = 272 SF = 136 LF x 2 ft). The
+   reviewer's suspected 0.3 CY over is not there.
+
+Not decided here, on the list in STATUS.md: the receptacle count in a bath and a
+kitchen (the 210.52(A) count of call 147 is for wall space; (C) counters and (D) the
+basin are not built and the count must say so where a room is a kitchen or a bath).
