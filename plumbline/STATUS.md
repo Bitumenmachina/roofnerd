@@ -8639,6 +8639,49 @@ at; openings are not dimensioned and doors have no swing (as the call says); a s
 on a partition can run through a room. Not judged. Run so far, by the worker: 512 tests
 on every crate but the window's, the gates, the port map, the licences.
 
+## Calls 164 and 165 built and held: a beam, its posts and their pad footings; joists and rafters counted (2026-11-22; a worker under contract, in a second working copy; read and run by the lead; **not yet in the tree**)
+
+Held as `research/held/call164-165.patch` until the window work of call 169 is in.
+
+**Call 164.** Three new kinds of thing. A beam is held as BIMCraft's run (justify Top,
+its top's height given), a post and a pad footing as BIMCraft's column (a pad is a post
+laid flat, its height its thickness); a beam type may give a weight per foot. Verbs
+`beam`, `post`, `pad`, `type beam|post|pad`, `structure`. Every hand figure came out on
+the lead's run of `structure.sh`: the beam 16 LF, $152.00, no weight until its type
+gives one; as W8x18, 288 LB, $316.80; the four refusals; posts 8 LF, $128.00; pads 9 SF,
+forms 18 SF, 0.5 CY, $90.00 each; Division 6 $280.00, Division 3 $180.00, job cost
+$460.00; the duct and the beam clash and framing is tested against no framing, said
+once; `structure` lists the wall that comes down, the beam, two posts, two pads and "5
+of 5" sizes not Known, then none once they are; the BIM file has 1 IFCBEAM, 2 IFCCOLUMN
+and 2 IFCFOOTING as PAD_FOOTING, **and IfcOpenShell 0.9.0, run as an outside checker,
+passes it**.
+
+**Call 165.** `members_across`, ours (BIMCraft lays out nothing across a floor or a
+roof), with the four hand layouts as unit tests. On the lead's run of `joists.sh`: the 24
+by 16 floor 19 joists, 304 LF, rim 48 LF the short way (Assumed, and said), 13 joists,
+312 LF, rim 32 LF the long way; the L 20 joists, 250 LF, rim 48 LF; a gable plane 13
+rafters, 116.2755 LF; hip planes 11 (71.4843 LF) and 7 (35.7072 LF), the roof 36,
+214.383 LF, the piece under 6 in left out and said. The lead's figures were checked by a
+small calculation before the worker began, and all stood.
+
+**The library is 40 assemblies, 191 lines, 28 of them labor** (three assemblies and nine
+lines for the beam, post and pad; three lines for joists, rim and rafters); the places
+that count it moved with it and no other expectation did.
+
+**The worker's choices, kept:** a post and a pad are a component of their own (not a
+thing set in place, which has no type, and not a run, which joins fittings); a beam takes
+no part in joints or systems; the BIM file's quantities are figures the model works out
+(`section_area`, `volume`), not worked in the writer; `set <beam> type <type>` changes
+its type; a line names joists only by the word "joist" and rafters by "rafter", with a
+size and a spacing.
+
+**Not right, owed:** nothing of this was built or seen in the window (the worker added
+the arms the window needs to compile, unbuilt); no tools to draw a beam, a post or a pad
+there; the window's list of what the clash test leaves out does not name framing; the
+joist figures' note shows from the command line only when the figure is flagged; not
+judged. Run so far, by the worker: 514 tests on every crate but the window's, all 37
+command-line demonstrations, the gates, the port map (287 items), the licences.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
