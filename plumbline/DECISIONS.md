@@ -6254,3 +6254,71 @@ The clash test, the price and every existing figure are unchanged.
 
 Built after the held work of calls 164 and 165 is in the tree (it needs the beam and
 the joists' direction).
+
+### Call 177. A trade's view of the building: one switch, the frame drawn, sizes on the work (2026-11-22; the sweep, asked by seven of nine; Patrick: "a 3d view of a building is needed for everyone" and "the toggle on MEPs as a see through")
+
+The window can already show one trade: See through, and a switch each for Mechanical,
+Electrical, Plumbing, Framing, Finishes, Ground and Roof. The sweep found what is
+between that and a trade opening it every day: the framing picture takes seven
+switches; a pipe's size is read only by clicking it; pipes are hairlines in the glass
+house; and no floor or roof frame is drawn at all.
+
+**1. Trades, one click each.** At the head of the Show list, a row: **All, Foundation,
+Framing, Outside, Plumbing, HVAC, Electrical, Inside**. A trade is a setting of the
+switches that are already there, not a second state: pressing one moves the switches
+below it, where they can be read and changed, and "All" puts them as they were before
+the first trade was pressed.
+
+| Trade | What it sets |
+|---|---|
+| Foundation | Ground off; footings, pad footings and foundation walls solid; everything above them glass; Sizes on |
+| Framing | Framing on, Finishes off, Roof's covering off so the rafters show; walls as their frames; the rest glass; Sizes on |
+| Outside | Finishes on, Roof on, See through off; the house as it will be built |
+| Plumbing | See through on; Plumbing on, Mechanical and Electrical off; Sizes on |
+| HVAC | See through on; Mechanical on, the other two off; Sizes on |
+| Electrical | See through on; Electrical on, the other two off; Sizes on |
+| Inside | See through off; Roof off; the level looked into, Finishes on |
+
+The status line says what was set, in a sentence ("Plumbing: the rest of the house
+shown as glass, sizes on"). The names of the existing switches do not change
+("Mechanical" stays the switch; "HVAC" is the trade's button).
+
+**2. Sizes: the work wears its size.** A switch "Sizes" in the Show list. With it on,
+each run of a trade that is shown wears a small tag at its middle, facing the viewer:
+its size and what it carries, in the words the model already has for it (the run
+type's name and the system: "3 in waste", "3/4 in cold water", "16 x 8 supply"); a
+footing, a foundation wall, a beam and a post wear their size; a thing set in place
+wears its name. The words are the model's (one wording, as one arithmetic): the window
+makes none up, and where the model has no trade name for a type it shows the type's
+own name. Tags thin out, not pile up: of the pieces of one run end to end only the
+longest wears the tag, and a tag that would cover a nearer tag is not drawn. A tag is
+on the map by its words, so a demonstration can find it.
+
+**3. The frame drawn.** Under Framing, with the walls' frames: joists and rafters as
+the model lays them out (call 165's `members_across`: the window draws the members it
+is given and works out none), their rim, beams and posts (call 164); pad footings
+under Ground. Drawn only where a line prices them, as every trade's layer is. A floor
+whose joists' direction is not said is drawn with no joists and wears the tag "joists:
+direction not said".
+
+**4. A run is never a hairline.** In a trade's view a run is drawn no thinner than 2
+dots on the screen, however far off: this is how it is drawn and changes no figure;
+the tag gives the true size. A vertical drain 3 in and over (a stack) is drawn at its
+true size and wears "stack" with its size.
+
+**5. A clash says where.** A clash's row and its mark in the 3D view name the room it
+is in (the room whose outline holds the point; "outside any room" where none does),
+before east, north and up.
+
+What a clash says to do about it, a structure class of clash ("through a joist") and
+the bearing tint (call 176's window half) are calls of their own after this one and
+after call 175's "set against" is in.
+
+Built after call 169 and the held work are in the tree. The demonstration
+(`demos/tradesw.sh`, which already walks four layers, gains these steps, each the way
+a stranger would do it): each trade's button pressed from a house opened cold, the
+switches read off the map after it, the status line's sentence, and on the picture by
+measurement: with Plumbing, pipe colour present and wire colour and duct colour absent;
+the tags "3 in waste" (or the sample's own sizes) found on the map and inside the
+window; with Framing, lumber-coloured ink across the floor where no joist was drawn
+before (proved red on the picture as committed today); "All" puts every switch back.
