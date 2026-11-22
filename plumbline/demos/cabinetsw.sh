@@ -52,8 +52,8 @@ read -r ADD1 KEAST ADD3 <<<"$("$P" wall "$J" "$S" "$WT" --points "24,0 36,0 36,1
 KITCHEN="$(made "$("$P" room "$J" "$S" "Kitchen" --at "30,8" "${K[@]}")")"
 "$P" room-line "$J" "$S" --points "24,0 24,16" "${N[@]}" >/dev/null
 IN="$("$P" import items "$J" starter)"
-grep -qF "set: 46" <<<"$IN" || { echo "FAIL: the starter tool chest is not 46 items"; echo "$IN"; exit 1; }
-echo "    the east wall is $KEAST, the Kitchen is $KITCHEN, the tool chest has 46 items"
+grep -qF "set: 48" <<<"$IN" || { echo "FAIL: the starter tool chest is not 48 items"; echo "$IN"; exit 1; }
+echo "    the east wall is $KEAST, the Kitchen is $KITCHEN, the tool chest has 48 items"
 cp "$J" "$T/before.json"
 # What the command line makes of the same run, on a copy: what the window's run is set against.
 cp "$J" "$T/cli.json"

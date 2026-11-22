@@ -405,6 +405,15 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
     let title = title(job);
     let live: Vec<&SheetLine> = est.lines.iter().filter(|l| !l.off).collect();
     let unclassed: Vec<&&SheetLine> = live.iter().filter(|l| l.class.is_none()).collect();
+    // A thing set in place is no surer than where it stands and its size, however sure its
+    // count of one is (call 157): by the worst of them, for the lines on such a thing.
+    let stands: std::collections::HashMap<String, Status> = live
+        .iter()
+        .filter_map(|l| {
+            let p = job.find(&l.path).and_then(|e| job.world.get::<crate::building::Placed>(e))?;
+            Some((l.path.clone(), p.at.status.max(p.size.status).max(p.offset.status).max(p.angle.as_ref().map(|a| a.status).unwrap_or(Status::Known))))
+        })
+        .collect();
     let left_out = |rows: &mut Vec<Vec<Out>>| {
         if !unclassed.is_empty() {
             rows.push(vec![]);
@@ -445,7 +454,7 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
                         note = [note, said].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("; ");
                     }
                 }
-                rows.push(vec![text(what.clone()), quantity, text(unit.clone()), Out::Number(lines.len() as f64), text(sure(lines.iter().map(|l| l.priced.status).max().unwrap_or(Status::Known))), text(note)]);
+                rows.push(vec![text(what.clone()), quantity, text(unit.clone()), Out::Number(lines.len() as f64), text(sure(lines.iter().map(|l| l.priced.status.max(stands.get(&l.path).copied().unwrap_or(Status::Known))).max().unwrap_or(Status::Known))), text(note)]);
             }
             left_out(&mut rows);
             vec![OutSheet { name: "To quote".into(), rows, head: 3, widths: vec![40.0, 14.0, 8.0, 8.0, 10.0, 60.0] }]

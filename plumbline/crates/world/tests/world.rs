@@ -6607,7 +6607,7 @@ fn a_run_of_cabinet_boxes_stands_along_a_wall_to_the_figures_worked_by_hand() {
     ed::room(&mut job, &level, "Living", [6.0, 8.0], known()).unwrap();
     let kitchen = ed::room(&mut job, &level, "Kitchen", [30.0, 8.0], known()).unwrap();
     ed::room_lines(&mut job, &level, &[[24.0, 0.0], [24.0, 16.0]], assumed()).unwrap();
-    // The tool chest: 25 boxes in Division 12, by their codes.
+    // The tool chest: 27 boxes in Division 12, by their codes.
     let rows: Vec<Vec<String>> = plumbline_world::tables::STARTER_ITEMS
         .lines()
         .map(|line| {
@@ -6624,7 +6624,7 @@ fn a_run_of_cabinet_boxes_stands_along_a_wall_to_the_figures_worked_by_hand() {
         })
         .collect();
     plumbline_world::tables::items_in(&mut job, &rows, None).unwrap();
-    assert_eq!(ed::box_codes(&mut job).len(), 25);
+    assert_eq!(ed::box_codes(&mut job).len(), 27);
     let clashes_before = clashes_of(&mut job, None);
 
     // Refused, and the job is as it was.

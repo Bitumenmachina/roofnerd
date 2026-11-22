@@ -571,14 +571,50 @@ pub fn box_codes(job: &mut Job) -> Vec<(String, String)> {
     found.into_iter().map(|(_, path, name)| (path, name)).collect()
 }
 
+/// Boxes named in a list: words separated by spaces, each an item's code (B18, SB36) or,
+/// in square brackets, any item of the job by its name, which may have a space or a comma
+/// in it: `B18 [Dishwasher] SB36 [Range, 30 in]` is four boxes (call 157).
+pub fn box_list(text: &str) -> Result<Vec<String>, String> {
+    let mut out: Vec<String> = Vec::new();
+    let mut rest = text.trim_start();
+    while !rest.is_empty() {
+        if let Some(inner) = rest.strip_prefix('[') {
+            let Some(close) = inner.find(']') else {
+                return Err(format!("a name in square brackets is not closed: [{}", inner.trim_end()));
+            };
+            let name = inner[..close].trim();
+            if name.is_empty() {
+                return Err("a pair of square brackets has no name in it".into());
+            }
+            out.push(name.to_string());
+            rest = inner[close + 1..].trim_start();
+        } else {
+            let end = rest.find(char::is_whitespace).unwrap_or(rest.len());
+            if rest[..end].contains('[') || rest[..end].contains(']') {
+                return Err(format!("{:?} has a square bracket in the middle of it: a name with a space or a comma goes whole in brackets, like [Range, 30 in]", &rest[..end]));
+            }
+            out.push(rest[..end].to_string());
+            rest = rest[end..].trim_start();
+        }
+    }
+    Ok(out)
+}
+
+/// The most a thing can stand and still have a countertop laid over it: a base box's height.
+const COUNTER_HEIGHT_FT: f64 = 34.5 / 12.0;
+
 /// A run of cabinet boxes set side by side along the face `wall` has on `room`'s side,
 /// backs to the wall, from `from` along the wall's line from its first end, each turned to
 /// the wall. Base and tall boxes stand on the floor; wall boxes hang 54 in up (Assumed).
-/// Each is one of its item, as sure as the item, and carries one cost line (its item's
-/// name, 1 EA, Division 12, no price). With `countertop`, one countertop over the base
-/// boxes: as long as they are, 25 1/2 in deep, 1 1/2 in thick, 34 1/2 in up (Assumed).
-/// Refused, the job as it was: a code the tool chest has not, a run past the room's corner
-/// or starting inside it, a run across a door.
+/// An item that is no box (a dishwasher, a range, named in the list by its name) stands on
+/// the floor, back to the wall, as a base box does. Each is one of its item, as sure as
+/// the item, and carries one cost line (its item's name, 1 EA, no price). With
+/// `countertop`, one countertop over the base boxes and whatever else stands no taller than
+/// they do: as long as they are, 25 1/2 in deep, 1 1/2 in thick, 34 1/2 in up (Assumed).
+/// Refused, the job as it was: a code the tool chest has not, a wall that is to demolish, a
+/// run past the room's corner or starting inside it, a run across a door, a box across a
+/// window it would stand in front of (a wall box or a tall box; a base box where the sill is
+/// below its top), a box that would stand in another thing set in place (call 157).
 #[allow(clippy::too_many_arguments)]
 pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str, codes: &[String], countertop: bool, how: Entered) -> Result<Cabinets, String> {
     all_or_nothing(job, |job| {
@@ -592,22 +628,37 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
         if start < 0.0 {
             return Err("a run starts so far along the wall from its first end: that is not less than nothing".into());
         }
-        // The boxes, by their codes, with their sizes.
+        // The boxes, by their codes (or any item by its name), with their sizes.
+        struct Boxed {
+            path: String,
+            name: String,
+            size: P3,
+            /// A box of the tool chest, named by a code: wall boxes start with W, tall ones with T.
+            code: bool,
+            division: Option<crate::components::Division>,
+        }
         let chest = box_codes(job);
-        let mut boxes: Vec<(String, String, P3, Status)> = Vec::new();
+        let mut boxes: Vec<Boxed> = Vec::new();
         for code in codes {
-            let Some((path, name)) = chest.iter().find(|(_, name)| name.eq_ignore_ascii_case(code.trim())) else {
+            let named = chest.iter().find(|(_, name)| name.eq_ignore_ascii_case(code.trim())).map(|(p, n)| (p.clone(), n.clone(), true)).or_else(|| {
+                let mut q = job.world.query::<(&Node, &Item)>();
+                let mut all: Vec<(u64, String, String)> = q.iter(&job.world).filter(|(n, _)| n.name.eq_ignore_ascii_case(code.trim())).map(|(n, _)| (n.path.rsplit('-').next().and_then(|x| x.parse().ok()).unwrap_or(u64::MAX), n.path.clone(), n.name.clone())).collect();
+                all.sort();
+                all.into_iter().next().map(|(_, p, n)| (p, n, false))
+            });
+            let Some((path, name, code)) = named else {
                 let have = chest.iter().map(|(_, n)| n.as_str()).collect::<Vec<_>>().join(" ");
                 return Err(if have.is_empty() { format!("{code} is not in the tool chest, and it has no boxes: bring the starter items in first") } else { format!("{code} is not in the tool chest. It has: {have}") });
             };
-            let e = job.find(path).ok_or_else(|| format!("{path} is not in the job"))?;
+            let e = job.find(&path).ok_or_else(|| format!("{path} is not in the job"))?;
             let it = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{path} is not an item"))?;
-            let (size, status, _) = it.size_ft().map_err(|why| format!("{name}: {why}, so it cannot be set"))?;
-            boxes.push((path.clone(), name.clone(), size, status));
+            let (size, _, _) = it.size_ft().map_err(|why| format!("{name}: {why}, so it cannot be set"))?;
+            boxes.push(Boxed { path, name, size, code, division: it.division });
         }
-        let hangs = |code: &str| code.starts_with('W');
-        let stands_tall = |code: &str| code.starts_with('T');
-        let wall_boxes = boxes.iter().filter(|b| hangs(&b.1)).count();
+        let hangs = |b: &Boxed| b.code && b.name.starts_with('W');
+        // What a countertop goes over: what is not hung and stands no taller than a base box.
+        let covered = |b: &Boxed| !hangs(b) && b.size[2] <= COUNTER_HEIGHT_FT + tol;
+        let wall_boxes = boxes.iter().filter(|b| hangs(b)).count();
         if wall_boxes != 0 && wall_boxes != boxes.len() {
             return Err("wall boxes hang over the counter and base boxes stand under it: set them as two runs".into());
         }
@@ -615,11 +666,16 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
         if countertop && hung.is_some() {
             return Err("a countertop goes over base boxes, and a run of wall boxes has none".into());
         }
-        if countertop && !boxes.iter().any(|b| !stands_tall(&b.1)) {
+        if countertop && !boxes.iter().any(&covered) {
             return Err("a countertop goes over base boxes, and this run has none".into());
         }
+        // A wall that is to demolish is no wall to set boxes against.
+        if crate::components::demolished(&mut job.world).contains(wall) {
+            let called = job.find(wall).and_then(|e| job.world.get::<Node>(e)).map(|n| format!("{} ({wall})", n.name)).unwrap_or_else(|| wall.to_string());
+            return Err(format!("{called} is to demolish: boxes set against a wall that is coming down would be left standing with nothing behind them. Set the run along a wall that stays"));
+        }
         let face = building::wall_face(job, storey, wall, room)?;
-        let run: f64 = boxes.iter().map(|b| b.2[0]).sum();
+        let run: f64 = boxes.iter().map(|b| b.size[0]).sum();
         let end = start + run;
         let Some(&(_, hi)) = face.clear.iter().find(|(lo, hi)| start >= lo - tol && start <= hi + tol) else {
             let said = face.clear.iter().map(|(lo, hi)| format!("{} to {}", ft(*lo), ft(*hi))).collect::<Vec<_>>().join(", ");
@@ -630,6 +686,33 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
         }
         if let Some((door, a, b)) = face.doors.iter().find(|(_, a, b)| start < *b - tol && *a < end - tol) {
             return Err(format!("a run of {} from {} crosses {door}, which is in {} from {} to {}: a door is no place for boxes", ft(run), ft(start), face.wall_called, ft(*a), ft(*b)));
+        }
+        // A window the box would stand in front of: it reaches from the floor (or from where
+        // it hangs) up to its top, and the window from its sill up to its head.
+        let mut at = start;
+        for b in &boxes {
+            let (low, high) = (hung.unwrap_or(0.0), hung.unwrap_or(0.0) + b.size[2]);
+            for (window, called, from, to, sill, head) in &face.windows {
+                if at < *to - tol && *from < at + b.size[0] - tol && low < *head - tol && *sill < high - tol {
+                    let hangs_or_stands = if hung.is_some() { "hangs" } else { "stands" };
+                    return Err(format!(
+                        "{} {hangs_or_stands} from {} to {} along {} and from {} up to {} high, across {called} ({window}), which is in {} from {} to {} and from {} up to {} high{}",
+                        b.name,
+                        ft(at),
+                        ft(at + b.size[0]),
+                        face.wall_called,
+                        ft(low),
+                        ft(high),
+                        face.wall_called,
+                        ft(*from),
+                        ft(*to),
+                        ft(*sill),
+                        ft(*head),
+                        if hung.is_none() && covered(b) && *sill > low + tol { format!(": a base box fits under a window only where the sill is at or above its top ({}), and this sill is lower", ft(high)) } else { if hung.is_some() { ": a wall box does not hang across a window".to_string() } else { ": a tall box does not stand in front of a window".to_string() } }
+                    ));
+                }
+            }
+            at += b.size[0];
         }
         // Each box's middle on the plan: along the wall, then back from the face into the room.
         let (u, into) = (face.along, face.into);
@@ -655,7 +738,8 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
         let mut set: Vec<(String, String, P2, f64)> = Vec::new();
         let mut along = start;
         let mut base_span: Option<(f64, f64)> = None;
-        for (item, code, size, _) in &boxes {
+        for b in &boxes {
+            let (item, code, size) = (&b.path, &b.name, b.size);
             let mid = spot(along + size[0] / 2.0, face.off + size[1] / 2.0);
             let offset = match hung {
                 Some(up) => Val { value: Some(units::Len::One(up)), unit: "ft".into(), status: assumed.status, source: "wall boxes hang with their bottoms 54 in up, 18 in over a 36 in counter; the maker's catalog decides".into() },
@@ -664,8 +748,8 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
             let path = place_item_in(job, storey, item, mid, offset, Entered { status: sure, source: &by })?;
             to_wall(job, &path)?;
             job.add_line(&path, code, "1", Some(crate::Class::Material), false)?;
-            job.set_division(&path, Some(code), crate::components::Division::of_number(12).ok_or("Division 12 is not there")?)?;
-            if !hangs(code) && !stands_tall(code) {
+            job.set_division(&path, Some(code), b.division.or(crate::components::Division::of_number(12)).ok_or("Division 12 is not there")?)?;
+            if covered(b) {
                 base_span = Some(match base_span {
                     Some((a, _)) => (a, along + size[0]),
                     None => (along, along + size[0]),
@@ -674,20 +758,42 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
             set.push((path, code.clone(), mid, size[0]));
             along += size[0];
         }
+        // A box that stands in another thing set in place (a box of another run, an
+        // appliance) is refused: the clash test is the one `clashes` reports with, asked of
+        // the job as it now stands, and only what a box of this run is in is looked at.
+        let mine: std::collections::HashSet<&str> = set.iter().map(|(p, _, _, _)| p.as_str()).collect();
+        if let Ok(found) = building::clash::clashes(job, None) {
+            let is_set_thing = |k: Kind| matches!(k, Kind::Furnishing | Kind::Equipment | Kind::Fixture);
+            for c in found.found.iter().filter(|c| c.how == building::clash::ClashKind::Hard && !c.through) {
+                let (this, other_name, other_kind, other_path) = match (mine.contains(c.a.as_str()), mine.contains(c.b.as_str())) {
+                    (true, false) => (&c.a, &c.b_name, c.b_kind, &c.b),
+                    (false, true) => (&c.b, &c.a_name, c.a_kind, &c.a),
+                    _ => continue,
+                };
+                if !is_set_thing(other_kind) {
+                    continue;
+                }
+                let name = set.iter().find(|(p, _, _, _)| p == this).map(|(_, code, _, _)| code.clone()).unwrap_or_default();
+                return Err(format!(
+                    "{name} would stand in {other_name} ({other_path}){}: set the run clear of it. A run that turns an inside corner starts off the corner by what the other run fills (24 in for base boxes)",
+                    c.by.map(|d| format!(" by {} in", crate::view::num((d * 12.0 * 100.0).round() / 100.0))).unwrap_or_default()
+                ));
+            }
+        }
         // The countertop over the base boxes.
         let top = if countertop {
             let (a, b) = base_span.ok_or("a countertop goes over base boxes, and this run has none")?;
-            if boxes.iter().filter(|x| stands_tall(&x.1)).count() > 0 {
+            if boxes.iter().any(|x| !covered(x) && !hangs(x)) {
                 let mut at = start;
-                let mut tall_between = false;
-                for (_, code, size, _) in &boxes {
-                    if stands_tall(code) && at > a + tol && at + size[0] < b - tol {
-                        tall_between = true;
+                let mut between: Option<&Boxed> = None;
+                for x in &boxes {
+                    if !covered(x) && at > a + tol && at + x.size[0] < b - tol {
+                        between = Some(x);
                     }
-                    at += size[0];
+                    at += x.size[0];
                 }
-                if tall_between {
-                    return Err("a tall box stands in the middle of the base boxes, and a countertop does not go over it: set the countertop by hand".into());
+                if let Some(x) = between {
+                    return Err(if x.code { "a tall box stands in the middle of the base boxes, and a countertop does not go over it: set the countertop by hand".to_string() } else { format!("{} stands taller than a countertop in the middle of the base boxes, and a countertop does not go over it: set the countertop by hand", x.name) });
                 }
             }
             let (long, deep, thick) = (b - a, 25.5 / 12.0, 1.5 / 12.0);
@@ -806,6 +912,19 @@ pub fn room_lines(job: &mut Job, storey: &str, points: &[P2], how: Entered) -> R
         }
         Ok(made)
     })
+}
+
+/// What to say of room lines just drawn, each end that meets no wall and no other room
+/// line of its level: "its end at x,y meets no wall and no room line: it parts nothing
+/// until it does". One sentence for each such end; none when every end meets something.
+pub fn room_lines_unreached_said(job: &mut Job, made: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    for path in made {
+        for p in building::room_line_unreached(job, path) {
+            out.push(format!("{path}: its end at {},{} meets no wall and no room line: it parts nothing until it does", crate::view::num(p[0]), crate::view::num(p[1])));
+        }
+    }
+    out
 }
 
 /// Move a wall, a run, a fixture, a piece of equipment, a fitting or a room's point by
@@ -991,6 +1110,72 @@ pub(crate) fn after(source: &str, done: &str, by: &str) -> String {
     } else {
         format!("{source}{note}")
     }
+}
+
+/// What `price_item` priced.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ItemPriced {
+    /// The item's name.
+    pub item: String,
+    /// Each thing set down from the item whose line named for it was priced.
+    pub priced: Vec<String>,
+    /// Each that has no line of that name, and so took nothing.
+    pub without: Vec<String>,
+}
+
+/// A unit cost on the cost line named for an item, on every one of the item set in the job
+/// (a box set in a run carries one line named for its item): one price for one code
+/// (call 157). `item` is the item's name or its path. Things set from it that have no line
+/// of that name take nothing, and are listed. Nothing is set where none of the item has
+/// been set down yet; that is for the caller to say.
+pub fn price_item(job: &mut Job, item: &str, price: &str, status: Status, source: &str) -> Result<ItemPriced, String> {
+    all_or_nothing(job, |job| {
+        let found: Vec<(u64, String, String)> = {
+            let mut q = job.world.query::<(&Node, &Item)>();
+            q.iter(&job.world).filter(|(n, _)| n.path == item || n.name.eq_ignore_ascii_case(item.trim())).map(|(n, _)| (n.path.rsplit('-').next().and_then(|x| x.parse().ok()).unwrap_or(u64::MAX), n.path.clone(), n.name.clone())).collect()
+        };
+        let Some((_, path, name)) = found.into_iter().min() else {
+            return Err(format!("{item} is not an item of this job: price takes an item's name, like B18"));
+        };
+        let set: Vec<String> = {
+            let mut q = job.world.query::<(&Node, &Placed)>();
+            let mut all: Vec<(u64, String)> = q.iter(&job.world).filter(|(_, p)| p.item.as_deref() == Some(path.as_str())).map(|(n, _)| (n.path.rsplit('-').next().and_then(|x| x.parse().ok()).unwrap_or(u64::MAX), n.path.clone())).collect();
+            all.sort();
+            all.into_iter().map(|(_, p)| p).collect()
+        };
+        let (mut priced, mut without) = (Vec::new(), Vec::new());
+        for thing in set {
+            let has = job.find(&thing).and_then(|e| job.world.get::<Cost>(e)).is_some_and(|c| c.lines.iter().any(|l| l.description == name));
+            if has {
+                job.set_on_line(&thing, "unit_cost", Some(&name), Some(price), status, source)?;
+                priced.push(thing);
+            } else {
+                without.push(thing);
+            }
+        }
+        Ok(ItemPriced { item: name, priced, without })
+    })
+}
+
+/// What stands against a wall's faces and would be left standing when it goes, said in a
+/// sentence: "3 things set against it still stand: B18 (furnishing-0059), ...; move or
+/// remove them". None when nothing does. Nothing is moved or removed for the estimator
+/// (call 157).
+pub fn set_against_said(job: &mut Job, wall: &str) -> Option<String> {
+    let found = building::things_against(job, wall).ok()?;
+    if found.is_empty() {
+        return None;
+    }
+    let named: Vec<String> = found.iter().take(5).map(|(p, n)| format!("{n} ({p})")).collect();
+    let more = if found.len() > 5 { format!(" and {} more", found.len() - 5) } else { String::new() };
+    let one = found.len() == 1;
+    Some(format!(
+        "{} set against it still {}: {}{more}; move or remove {}",
+        if one { "1 thing".to_string() } else { format!("{} things", found.len()) },
+        if one { "stands" } else { "stand" },
+        named.join(", "),
+        if one { "it" } else { "them" }
+    ))
 }
 
 /// Take an element out of the job. A wall's doors and windows go with it. Anything else
@@ -1300,6 +1485,11 @@ pub fn mark(job: &mut Job, paths: &[String], status: WorkStatus, lines: ItsLines
                     line.push_str("; it carries no cost lines: give it its assembly or its lines again");
                 }
                 said.push(line);
+                if i == 0 && kind == Kind::Wall && status == WorkStatus::Demolish {
+                    if let Some(against) = set_against_said(job, p) {
+                        said.push(format!("  {against}"));
+                    }
+                }
             }
         }
         Ok(said)

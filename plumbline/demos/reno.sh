@@ -73,7 +73,7 @@ says "$T/out.txt" "1 wall"
 echo
 echo "== 5. The addition: the east wall to demolish, three new walls; the room runs into it =="
 "$P" mark "$J" "$EAST" demolish "${K[@]}" >/dev/null
-"$P" wall "$J" "$S" "$WT" --points "24,0 36,0 36,16 24,16" --height "9 ft" "${N[@]}" >/dev/null
+read -r _ AEAST _ <<<"$("$P" wall "$J" "$S" "$WT" --points "24,0 36,0 36,16 24,16" --height "9 ft" "${N[@]}" | grep -oE 'wall-[0-9]+' | tr '\n' ' ')"
 "$P" show "$J" > "$T/show.txt"; block "$R" > "$T/room.txt"
 # 35.5 by 15.5 inside the faces; Assumed, since the addition's walls are.
 says "$T/room.txt" "~ floor area       550.25 SF"
@@ -86,5 +86,26 @@ says "$T/out.txt" "is not a thing that is built"
 cmp -s "$J" "$T/before.json" || { echo "FAIL: the refusal changed the job"; exit 1; }
 "$P" check "$J" > "$T/check.txt"
 says "$T/check.txt" "its figures agree with what is drawn, and saving it back writes the same file"
+echo
+echo "== 7. A wall to demolish with boxes set against it (call 157): it says what still stands, and moves nothing =="
+"$P" import items "$J" starter >/dev/null
+"$P" cabinets "$J" "$S" "$AEAST" --in "$R" --from "1 ft" --boxes "B18 B18" "${N[@]}" >/dev/null
+cp "$J" "$T/boxed.json"
+"$P" mark "$J" "$AEAST" demolish "${K[@]}" > "$T/out.txt"
+says "$T/out.txt" "$AEAST: to demolish"
+says "$T/out.txt" "2 things set against it still stand: B18 (furnishing-"
+says "$T/out.txt" "move or remove them"
+"$P" show "$J" > "$T/show.txt"
+[ "$(grep -cE "^ *furnishing-[0-9]+  B18" "$T/show.txt")" = 2 ] || { echo "FAIL: the boxes were moved or removed for the estimator"; exit 1; }
+echo "    both boxes still stand in the job"
+cp "$J" "$T/before.json"
+refused "$P" cabinets "$J" "$S" "$AEAST" --in "$R" --from "6 ft" --boxes "B18" "${N[@]}"
+says "$T/out.txt" "is to demolish: boxes set against a wall that is coming down"
+lacks "$T/out.txt" "no face on that room's side"
+cmp -s "$J" "$T/before.json" || { echo "FAIL: the refusal changed the job"; exit 1; }
+cp "$T/boxed.json" "$T/removed.json"
+"$P" remove "$T/removed.json" "$AEAST" > "$T/out.txt"
+says "$T/out.txt" "2 things set against it still stand: B18 (furnishing-"
+says "$T/out.txt" "move or remove them"
 echo
 echo "  PASS: a house as it stands was marked existing and not bought again, a partition taken down made one room of two and was priced by its face, a new wall was refused over a standing wall and taken over a demolished one, and an addition drawn past a demolished outside wall took the room with it, to the figures worked by hand"

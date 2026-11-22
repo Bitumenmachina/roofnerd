@@ -68,27 +68,27 @@ Framed floor,Floor,,,,Unknown,not coded,Frame the floor and lay the subfloor,Lab
 "Interior partition, 2x4",Wall,,,,Unknown,not coded,"Paint, both sides",Material,2 * net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Interior partition, 2x4",Wall,,,,Unknown,not coded,Frame the partition,Labor,face_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 "Room, hardwood floor",Room,,,,Unknown,not coded,Hardwood flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
-"Room, hardwood floor",Room,,,,Unknown,not coded,Base and trim,Material,perimeter,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+"Room, hardwood floor",Room,,,,Unknown,not coded,Base and trim,Material,wall_run,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Room, hardwood floor",Room,,,,Unknown,not coded,"Ceiling, gypsum board and paint",Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
-"Room, hardwood floor",Room,,,,Unknown,not coded,Install base and trim,Labor,perimeter,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
+"Room, hardwood floor",Room,,,,Unknown,not coded,Install base and trim,Labor,wall_run,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 "Bath, tile floor",Room,,,,Unknown,not coded,Tile flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
-"Bath, tile floor",Room,,,,Unknown,not coded,Base and trim,Material,perimeter,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+"Bath, tile floor",Room,,,,Unknown,not coded,Base and trim,Material,wall_run,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Bath, tile floor",Room,,,,Unknown,not coded,"Ceiling, gypsum board and paint",Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Bath, tile floor",Room,,,,Unknown,not coded,Toilet and bath accessories,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,10
-"Bath, tile floor",Room,,,,Unknown,not coded,Install base and trim,Labor,perimeter,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
+"Bath, tile floor",Room,,,,Unknown,not coded,Install base and trim,Labor,wall_run,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 Kitchen,Room,,,,Unknown,not coded,Hardwood flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
-Kitchen,Room,,,,Unknown,not coded,Base and trim,Material,perimeter,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+Kitchen,Room,,,,Unknown,not coded,Base and trim,Material,wall_run,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 Kitchen,Room,,,,Unknown,not coded,"Ceiling, gypsum board and paint",Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 Kitchen,Room,,,,Unknown,not coded,Kitchen appliances,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,11
 Kitchen,Room,,,,Unknown,not coded,Cabinets,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,12
 Kitchen,Room,,,,Unknown,not coded,Countertops,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,12
-Kitchen,Room,,,,Unknown,not coded,Install base and trim,Labor,perimeter,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
+Kitchen,Room,,,,Unknown,not coded,Install base and trim,Labor,wall_run,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 Laundry or utility room,Room,,,,Unknown,not coded,Tile flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
-Laundry or utility room,Room,,,,Unknown,not coded,Base and trim,Material,perimeter,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+Laundry or utility room,Room,,,,Unknown,not coded,Base and trim,Material,wall_run,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 Laundry or utility room,Room,,,,Unknown,not coded,"Ceiling, gypsum board and paint",Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 Laundry or utility room,Room,,,,Unknown,not coded,Closet shelving,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,10
 Laundry or utility room,Room,,,,Unknown,not coded,Laundry appliances,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,11
-Laundry or utility room,Room,,,,Unknown,not coded,Install base and trim,Labor,perimeter,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
+Laundry or utility room,Room,,,,Unknown,not coded,Install base and trim,Labor,wall_run,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 Sauna or other built room,Room,,,,Unknown,not coded,"Prefabricated room, set in place",Subcontract,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,13
 Asphalt shingle roof,RoofPlane,,,,Unknown,not coded,Roof sheathing,Material,surface_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
 Asphalt shingle roof,RoofPlane,,,,Unknown,not coded,Underlayment,Material,surface_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7

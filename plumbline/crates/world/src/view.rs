@@ -1329,7 +1329,7 @@ pub enum OptionGroup {
 pub struct OptionRow {
     pub group: OptionGroup,
     pub label: String,
-    /// "SF", "LF" or "$".
+    /// "SF", "LF", "$" or "lines".
     pub unit: &'static str,
     /// One figure for each layout, in the order they were given.
     pub figures: Vec<OptionFigure>,
@@ -1350,6 +1350,11 @@ impl OptionFigure {
         match self {
             OptionFigure::None => "none".to_string(),
             OptionFigure::NoFigure => "no figure".to_string(),
+            OptionFigure::Is(x, _) if unit == "lines" => match *x as usize {
+                0 => "none".to_string(),
+                1 => "1 line".to_string(),
+                n => format!("{n} lines"),
+            },
             OptionFigure::Is(x, status) => {
                 let flag = status.flag().trim_end();
                 if unit == "$" { format!("{flag}{}", money(*x)) } else { format!("{flag}{} {unit}", num(*x)) }
@@ -1368,6 +1373,9 @@ impl OptionRow {
             return "same".to_string();
         }
         let sign = if d < 0.0 { "-" } else { "+" };
+        if self.unit == "lines" {
+            return format!("{sign}{} line{}", num(d.abs()), if d.abs() == 1.0 { "" } else { "s" });
+        }
         if self.unit == "$" { format!("{sign}{}", money(d.abs())) } else { format!("{sign}{} {}", num(d.abs()), self.unit) }
     }
 }
@@ -1448,6 +1456,9 @@ pub fn options(jobs: &mut [&mut Job]) -> Options {
         push(OptionGroup::Walls, label.into(), "LF", walls.iter().map(|w| from_sum(&sum_of("LF", &w[at]))).collect());
     }
     push(OptionGroup::Cost, "job cost".into(), "$", estimates.iter().map(|e| match e.job_cost.value { Some(x) => OptionFigure::Is(x, e.job_cost.status), None => OptionFigure::NoFigure }).collect());
+    // What each job cost leaves out, so two job costs are not set side by side as if both
+    // were whole (call 157): the lines the estimate has no figure for.
+    push(OptionGroup::Cost, "left out of the job cost".into(), "lines", estimates.iter().map(|e| OptionFigure::Is(e.job_cost.left_out.len() as f64, Status::Known)).collect());
     for (i, d) in Division::ALL.iter().enumerate() {
         let totals: Vec<&MoneyTotal> = estimates.iter().map(|e| &e.divisions[i].total).collect();
         if totals.iter().any(|t| t.members > 0 || !t.left_out.is_empty()) {

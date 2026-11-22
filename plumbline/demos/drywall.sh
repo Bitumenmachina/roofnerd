@@ -63,8 +63,18 @@ block "$WEST" > "$T/west.txt"; block "$EAST" > "$T/east.txt"
 # Faces 0.25 ft in: 11.5 by 15.5 inside, 178.25 SF, 54 LF round.
 says "$T/west.txt" "floor area       178.25 SF"
 says "$T/west.txt" "perimeter        54 LF"
+# Its run of wall (call 157): 54 LF round, less the partition's 3 ft door: 51 LF. The east room's
+# floor line is cut at the same door: 51 LF.
+says "$T/west.txt" "wall run         51 LF"
+says "$T/east.txt" "wall run         51 LF"
 # 54 x 9 = 486, less the door's 21: 465 SF. The east room loses the window's 15 as well.
 says "$T/west.txt" "wall area        465 SF"
 says "$T/east.txt" "wall area        450 SF"
+# Base is priced by it, and not by the 54 LF round: 51 LF in each room.
+"$P" apply "$J" "$WEST" "Room, hardwood floor" --source "made-up plan" >/dev/null
+"$P" apply "$J" "$EAST" "Room, hardwood floor" --source "made-up plan" >/dev/null
+"$P" estimate "$J" > "$T/est.txt"
+[ "$(grep -cE "^  Base and trim +51.00 LF" "$T/est.txt")" = 2 ] || { echo "FAIL: each room's base is not 51 LF"; grep -n "Base and trim" "$T/est.txt"; exit 1; }
+echo "    Base and trim: 51.00 LF in each room (54 LF round, less the 3 ft door)"
 echo
 echo "  PASS: a partition's board and paint were bought for both its faces, and gypsum board on it and on an outside wall ordered in whole sheets with its waste, and each room's walls taken off at their faces less its doors and windows, to the figures worked by hand"

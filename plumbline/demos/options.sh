@@ -67,6 +67,7 @@ has "$T/two.txt" "walls, new" "walls, new (with temporary) ~40 LF ~48 LF +8 LF"
 has "$T/two.txt" "walls, existing" "walls, existing to remain 64 LF 64 LF same"
 has "$T/two.txt" "walls, to demolish" "walls, to demolish 16 LF 16 LF same"
 has "$T/two.txt" "job cost" "job cost ~\$5,777.00 ~\$7,137.00 +\$1,360.00"
+has "$T/two.txt" "left out of the job cost" "left out of the job cost none none same"
 has "$T/two.txt" " 6 Wood" "6 Wood and Plastics ~\$4,320.00 ~\$5,184.00 +\$864.00"
 has "$T/two.txt" " 9 Finishes" "9 Finishes ~\$1,457.00 ~\$1,953.00 +\$496.00"
 
@@ -87,22 +88,45 @@ has "$T/three.txt" "Living" "Living ~368.125 SF ~368.125 SF none not worked"
 has "$T/three.txt" "all rooms" "all rooms ~550.25 SF ~612.25 SF none not worked"
 has "$T/three.txt" "walls, new" "walls, new (with temporary) ~40 LF ~48 LF none not worked"
 has "$T/three.txt" "job cost" "job cost ~\$5,777.00 ~\$7,137.00 no figure not worked"
+has "$T/three.txt" "left out of the job cost" "left out of the job cost none none none same"
 has "$T/three.txt" " 6 Wood" "6 Wood and Plastics ~\$4,320.00 ~\$5,184.00 none not worked"
 
 echo
-echo "== 5. One file, or four, is refused in words =="
+echo "== 5. Two layouts of one title, one of them with a line the estimate leaves out (call 157) =="
+# The same job drawn twice, the second with the Kitchen's flooring unpriced: the estimate
+# leaves that line out. Each column is headed by its title and its file's name, and the job
+# cost row is followed by what each leaves out: none, and 1 line. The job cost of the second
+# is $4,320.00 (the walls), $1,457.00 (the floor, 182.125 SF at $8) less than the first.
+layout "$T/d.json" "Addition 12 ft" 36
+KD="$("$P" show "$T/d.json" | grep -oE 'room-[0-9]+  Kitchen' | cut -d' ' -f1)"
+"$P" set "$T/d.json" "$KD" unit_cost unknown --line "Flooring" --status Unknown --source "made-up: not priced yet" >/dev/null
+cp "$T/d.json" "$T/d.before"
+"$P" options "$T/a.json" "$T/d.json" > "$T/same.txt"
+cat "$T/same.txt"
+says "$T/same.txt" "Addition 12 ft (a.json)"
+says "$T/same.txt" "Addition 12 ft (d.json)"
+says "$T/same.txt" "Addition 12 ft (d.json) less Addition 12 ft (a.json)"
+has "$T/same.txt" "job cost" "job cost ~\$5,777.00 ~\$4,320.00 -\$1,457.00"
+has "$T/same.txt" "left out of the job cost" "left out of the job cost none 1 line +1 line"
+has "$T/same.txt" " 9 Finishes" "9 Finishes ~\$1,457.00 no figure not worked"
+
+echo
+echo "== 6. One file, or four, is refused in one sentence =="
 refused "$P" options "$T/a.json"
-says "$T/out.txt" "options sets two or three layouts side by side"
+says "$T/out.txt" "options sets two or three layouts side by side, each a job file; 1 was given"
+[ "$(wc -l < "$T/out.txt")" = 1 ] || { echo "FAIL: the refusal is more than one line"; cat "$T/out.txt"; exit 1; }
 refused "$P" options
-says "$T/out.txt" "options sets two or three layouts side by side"
+says "$T/out.txt" "options sets two or three layouts side by side, each a job file; none was given"
+[ "$(wc -l < "$T/out.txt")" = 1 ] || { echo "FAIL: the refusal is more than one line"; cat "$T/out.txt"; exit 1; }
 refused "$P" options "$T/a.json" "$T/b.json" "$T/c.json" "$T/a.json"
-says "$T/out.txt" "options sets two or three layouts side by side"
+says "$T/out.txt" "options sets two or three layouts side by side, each a job file; 4 were given"
+[ "$(wc -l < "$T/out.txt")" = 1 ] || { echo "FAIL: the refusal is more than one line"; cat "$T/out.txt"; exit 1; }
 refused "$P" options "$T/a.json" "$T/missing.json"
 says "$T/out.txt" "cannot read"
 
 echo
-echo "== 6. Nothing was written: each file is byte for byte as it was =="
-cmp "$T/a.json" "$T/a.before"; cmp "$T/b.json" "$T/b.before"; cmp "$T/c.json" "$T/c.before"
-echo "    a.json, b.json and c.json are unchanged"
+echo "== 7. Nothing was written: each file is byte for byte as it was =="
+cmp "$T/a.json" "$T/a.before"; cmp "$T/b.json" "$T/b.before"; cmp "$T/c.json" "$T/c.before"; cmp "$T/d.json" "$T/d.before"
+echo "    a.json, b.json, c.json and d.json are unchanged"
 echo
 echo "  PASS: two layouts of an addition were set side by side to the figures worked by hand (Kitchen +62 SF, new walls +8 LF, job cost +\$1,360.00), a third that is empty read none and no figure with no difference worked, one file or four was refused, and no file was changed"

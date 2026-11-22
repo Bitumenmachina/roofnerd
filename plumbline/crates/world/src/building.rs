@@ -1082,6 +1082,9 @@ pub struct WallFace {
     pub clear: Vec<(f64, f64)>,
     /// The doors in the wall: path, and where each starts and ends along it.
     pub doors: Vec<(String, f64, f64)>,
+    /// The windows in the wall that is to stay: path, what it is called, where it starts and
+    /// ends along the wall, and its sill and head in feet above the wall's base (call 157).
+    pub windows: Vec<(String, String, f64, f64, f64, f64)>,
     /// As sure as the wall's line and thickness.
     pub status: Status,
 }
@@ -1155,7 +1158,99 @@ pub fn wall_face(job: &mut Job, storey: &str, wall: &str, room: &str) -> Result<
     }
     mine.sort_by_key(|m| m.3);
     doors.extend(mine.into_iter().map(|(p, f, t, _)| (p, f, t)));
-    Ok(WallFace { wall_called, room_called, start: a, end: b, along: u, into: [first.signum() * n[0], first.signum() * n[1]], off: first.abs(), clear, doors, status: shape })
+    let mut windows: Vec<(String, String, f64, f64, f64, f64, u64)> = Vec::new();
+    let mut q = job.world.query::<(&Node, &Kind, &Opening)>();
+    for (node, kind, o) in q.iter(&job.world) {
+        if *kind == Kind::Window && node.parent.as_deref() == Some(wall) && !gone.contains(&node.path) {
+            if let Some([from, to, sill, head]) = hole_of(&tree, &node.path, o).0.span {
+                windows.push((node.path.clone(), tree.called(&node.path), from, to, sill, head, path_number(&node.path)));
+            }
+        }
+    }
+    windows.sort_by_key(|m| m.6);
+    let windows = windows.into_iter().map(|(p, c, f, t, s, h, _)| (p, c, f, t, s, h)).collect();
+    Ok(WallFace { wall_called, room_called, start: a, end: b, along: u, into: [first.signum() * n[0], first.signum() * n[1]], off: first.abs(), clear, doors, windows, status: shape })
+}
+
+/// What is set against a wall's faces and would stand when the wall is gone: each thing
+/// set in place (furnishing, equipment, fixture) on the wall's storey that is not itself to
+/// demolish, whose plan is along the wall and touches the wall's thickness or a face of it.
+/// Path and name, in the order the job holds them (call 157). Nothing is moved or removed.
+pub fn things_against(job: &mut Job, wall: &str) -> Result<Vec<(String, String)>, String> {
+    let tol = crate::check::FIT_TOLERANCE_FT;
+    let tree = Tree::of(&mut job.world);
+    if job.kind(wall) != Some(Kind::Wall) {
+        return Err(format!("{wall} is not a wall"));
+    }
+    let e = job.find(wall).ok_or_else(|| format!("no element {wall}"))?;
+    let w = job.world.get::<Wall>(e).cloned().ok_or_else(|| format!("{wall} has no wall line entered"))?;
+    let Ok((pw, _, _, _)) = plan_wall(&tree, wall, &w) else { return Ok(Vec::new()) };
+    let storey = tree.storey_of(wall).map(str::to_string);
+    let (a, b) = ([pw.start.0, pw.start.1], [pw.end.0, pw.end.1]);
+    let length = geom::dist(a, b);
+    if length <= tol {
+        return Ok(Vec::new());
+    }
+    let u = [(b[0] - a[0]) / length, (b[1] - a[1]) / length];
+    let n = [-u[1], u[0]];
+    let band = pw.ext.abs().max(pw.int.abs()) + tol;
+    let gone = crate::components::demolished(&mut job.world);
+    let (drawn, _) = placements(job);
+    let mut found = Vec::new();
+    for p in drawn {
+        let Shape::Box { at, size, angle } = p.shape else { continue };
+        if !matches!(p.kind, Kind::Furnishing | Kind::Equipment | Kind::Fixture) || p.storey != storey || gone.contains(&p.path) {
+            continue;
+        }
+        let (sin, cos) = angle.to_radians().sin_cos();
+        let (mut s_lo, mut s_hi, mut d_lo, mut d_hi) = (f64::INFINITY, f64::NEG_INFINITY, f64::INFINITY, f64::NEG_INFINITY);
+        for (sx, sy) in [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)] {
+            let (lx, ly) = (sx * size[0] / 2.0, sy * size[1] / 2.0);
+            let (x, y) = (at[0] + lx * cos - ly * sin - a[0], at[1] + lx * sin + ly * cos - a[1]);
+            let (s, d) = (x * u[0] + y * u[1], x * n[0] + y * n[1]);
+            (s_lo, s_hi, d_lo, d_hi) = (s_lo.min(s), s_hi.max(s), d_lo.min(d), d_hi.max(d));
+        }
+        if s_hi.min(length) - s_lo.max(0.0) > tol && d_hi >= -band && d_lo <= band {
+            found.push((p.path.clone(), p.name.clone()));
+        }
+    }
+    Ok(found)
+}
+
+/// The ends of a room line that meet no wall and no other room line of its storey, in feet
+/// on the plan: an end meets a wall where it lies in the wall's outline or on its edge, and
+/// another room line where it lies on it. Such a line parts nothing until it does (call 157).
+pub fn room_line_unreached(job: &mut Job, line: &str) -> Vec<P2> {
+    use crate::skeleton::P2 as V;
+    let tol = crate::check::FIT_TOLERANCE_FT;
+    let tree = Tree::of(&mut job.world);
+    let Some(storey) = tree.storey_of(line).map(str::to_string) else { return Vec::new() };
+    let gone = crate::components::demolished(&mut job.world);
+    let mine = job.find(line).and_then(|e| job.world.get::<RoomLine>(e).and_then(|r| r.line_ft()));
+    let Some([a, b]) = mine else { return Vec::new() };
+    let mut others: Vec<(V, V)> = Vec::new();
+    let mut q = job.world.query::<(&Node, &Kind, &RoomLine)>();
+    for (n, k, r) in q.iter(&job.world) {
+        if *k == Kind::RoomLine && n.path != line && tree.storey_of(&n.path) == Some(storey.as_str()) {
+            if let Some([c, d]) = r.line_ft() {
+                others.push((V(c[0], c[1]), V(d[0], d[1])));
+            }
+        }
+    }
+    let mut pws: Vec<walls::PlanWall> = Vec::new();
+    let mut q = job.world.query::<(&Node, &Kind, &Wall)>();
+    for (n, k, w) in q.iter(&job.world) {
+        if *k == Kind::Wall && !gone.contains(&n.path) && tree.storey_of(&n.path) == Some(storey.as_str()) {
+            if let Ok((pw, _, _, _)) = plan_wall(&tree, &n.path, w) {
+                pws.push(pw);
+            }
+        }
+    }
+    let rings: Vec<Vec<V>> = (0..pws.len()).map(|i| walls::outline(&pws, i, tol)).collect();
+    let reaches = |p: V| {
+        rings.iter().any(|ring| rooms::contains(ring, p) || ring.iter().zip(ring.iter().cycle().skip(1)).any(|(x, y)| on_line(p, *x, *y, tol))) || others.iter().any(|(x, y)| on_line(p, *x, *y, tol))
+    };
+    [a, b].into_iter().filter(|p| !reaches(V(p[0], p[1]))).collect()
 }
 
 /// The number at the end of a path: paths are numbered in the order elements were added,
@@ -1462,13 +1557,14 @@ fn room_wall_area(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleto
     Ok((total, statuses, cited))
 }
 
-/// The fewest receptacle outlets a room's walls need (call 147, NEC 210.52(A)): each ring
-/// of its floor line (round the room, and round what stands inside it) cut at its doors
-/// into runs; a run of 2 ft or more takes one outlet for each 12 ft or part, a shorter
-/// run none, a ring with no door one run all the way round. A side along a room line cuts
-/// it as a door does. With the statuses and inputs of the doors that cut it.
+/// The runs of wall along a room's floor line (calls 147 and 157): each ring of it (round
+/// the room, and round what stands inside it) cut at its doors into runs; a side along a
+/// room line cuts it as a door does (call 152); a ring with no door is one run all the way
+/// round. A door to demolish is filled in and is no doorway. The length of each run, with
+/// the statuses and inputs of the doors that cut it. Receptacle outlets (`room_receptacles`)
+/// and the room's `wall_run` are both worked from these: one walk of the floor line.
 #[allow(clippy::too_many_arguments)]
-fn room_receptacles(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, kinds: &HashMap<String, Kind>, tol: f64) -> Result<(f64, Vec<Status>, Vec<String>), String> {
+fn room_runs(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, kinds: &HashMap<String, Kind>, tol: f64) -> Result<(Vec<f64>, Vec<Status>, Vec<String>), String> {
     use crate::skeleton::P2 as V;
     let rings: Vec<(usize, Vec<(V, V)>)> = mine.iter().map(|&k| {
         let ring = walls::outline(walls, k, tol);
@@ -1480,9 +1576,7 @@ fn room_receptacles(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skele
         let t = if d.dot(d) > 0.0 { ((m - a).dot(d) / d.dot(d)).clamp(0.0, 1.0) } else { 0.0 };
         m.dist(a + d * t) <= tol
     };
-    // How many outlets a run of this length needs: a run under 2 ft is no wall space.
-    let need = |run: f64| if run < 2.0 - tol { 0.0 } else { (run / 12.0 - 1.0e-9).ceil().max(1.0) };
-    let (mut total, mut statuses, mut cited) = (0.0, Vec::new(), Vec::new());
+    let (mut runs, mut statuses, mut cited) = (Vec::new(), Vec::new(), Vec::new());
     for ring in std::iter::once(outline).chain(islands.iter().map(Vec::as_slice)) {
         // The doorways along this ring, as stretches of its length from its first corner.
         let mut round = 0.0;
@@ -1521,7 +1615,7 @@ fn room_receptacles(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skele
             continue;
         }
         if cuts.is_empty() {
-            total += need(round);
+            runs.push(round);
             continue;
         }
         cuts.sort_by(|a, b| a.0.total_cmp(&b.0));
@@ -1537,10 +1631,30 @@ fn room_receptacles(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skele
         for i in 0..merged.len() {
             let start = merged[i].1;
             let end = if i + 1 < merged.len() { merged[i + 1].0 } else { merged[0].0 + round };
-            total += need(end - start);
+            runs.push(end - start);
         }
     }
-    Ok((total, statuses, cited))
+    Ok((runs, statuses, cited))
+}
+
+/// The fewest receptacle outlets a room's walls need (call 147, NEC 210.52(A)): each run of
+/// its floor line (`room_runs`) of 2 ft or more takes one outlet for each 12 ft or part, a
+/// shorter run none. With the statuses and inputs of the doors that cut it.
+#[allow(clippy::too_many_arguments)]
+fn room_receptacles(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, kinds: &HashMap<String, Kind>, tol: f64) -> Result<(f64, Vec<Status>, Vec<String>), String> {
+    // How many outlets a run of this length needs: a run under 2 ft is no wall space.
+    let need = |run: f64| if run < 2.0 - tol { 0.0 } else { (run / 12.0 - 1.0e-9).ceil().max(1.0) };
+    let (runs, statuses, cited) = room_runs(outline, islands, mine, room_lines, walls, placed, holes, kinds, tol)?;
+    Ok((runs.into_iter().map(need).sum(), statuses, cited))
+}
+
+/// A room's run of wall (call 157): the length of its floor line along walls, each side
+/// that lies along a wall less the doorways in it, nothing for a side along a room line,
+/// islands standing in the room with it. The sum of `room_runs`.
+#[allow(clippy::too_many_arguments)]
+fn room_wall_run(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, kinds: &HashMap<String, Kind>, tol: f64) -> Result<(f64, Vec<Status>, Vec<String>), String> {
+    let (runs, statuses, cited) = room_runs(outline, islands, mine, room_lines, walls, placed, holes, kinds, tol)?;
+    Ok((runs.into_iter().sum(), statuses, cited))
 }
 
 /// Each room's figures: the floor inside the faces of the walls round its point, the area
@@ -1618,6 +1732,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
     const F_ROUND: &str = "the distance round the room at the faces of its walls";
     const F_OUTLETS: &str = "round the room at its walls' faces, its floor line cut at each door into runs of wall; each run of 2 ft or more, one receptacle outlet for every 12 ft or part (no point more than 6 ft from one: NEC 2023 210.52(A)(1) and (A)(2), as Mike Holt's Understanding the 2023 NEC gives them); a room with no door is one run all the way round";
     const OUTLETS_NOTE: &str = "for the rooms NEC 210.52(A) covers (kitchen, family room, dining room, living room, sunroom, parlor, library, den, bedroom, recreation room and the like): fireplaces, stationary appliances and fixed cabinets also break wall space and are not drawn; a bathroom, a hallway, a foyer and a kitchen's counters have rules of their own (210.52(D), (H), (I), (C)), not worked here";
+    const F_RUN: &str = "the room's floor line along its walls: each side of the room at its walls' faces that lies along a wall, less the doorways in it (a door to demolish is filled in and is no doorway), nothing for a side along a room line; what stands inside the room is taken with it";
     const F_WALLS: &str = "each side of the room at its walls' faces × the height of the wall it is against, less the part of each door and window in that wall along the side";
     // Each wall's doors and windows, for the room's wall area (call 144).
     let holes_of: HashMap<String, Vec<Hole>> = {
@@ -1638,6 +1753,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
             m.insert("gross_area".into(), Derived::refused("SF", F_GROSS, inputs, why));
             m.insert("perimeter".into(), Derived::refused("LF", F_ROUND, inputs, why));
             m.insert("wall_area".into(), Derived::refused("SF", F_WALLS, inputs, why));
+            m.insert("wall_run".into(), Derived::refused("LF", F_RUN, inputs, why));
             m.insert("receptacles".into(), Derived::refused("EA", F_OUTLETS, inputs, why));
         };
         // Where the storey's rooms find their walls.
@@ -1838,7 +1954,24 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                         }
                         Err(why) => Derived::refused("SF", F_WALLS, std::slice::from_ref(&input), &why),
                     };
+                    // The run of wall: wall_area's status and inputs, and the doorways it is cut at (call 157).
+                    let run_d = match room_wall_area(&found.outline, &found.islands, mine, &room_lines, &plan_walls, &placed, &holes_of, tol).and_then(|(_, area_statuses, area_cited)| room_wall_run(&found.outline, &found.islands, mine, &room_lines, &plan_walls, &placed, &holes_of, &tree.kinds, tol).map(|(v, s, c)| (v, area_statuses.into_iter().chain(s).collect::<Vec<_>>(), area_cited.into_iter().chain(c).collect::<Vec<_>>()))) {
+                        Ok((value, statuses, cited)) => {
+                            let mut d = figure(value, mine, "LF", F_RUN);
+                            if d.value.is_some() {
+                                d.status = statuses.into_iter().fold(d.status, Status::max);
+                                for c in cited {
+                                    if !d.inputs.contains(&c) {
+                                        d.inputs.push(c);
+                                    }
+                                }
+                            }
+                            d
+                        }
+                        Err(why) => Derived::refused("LF", F_RUN, std::slice::from_ref(&input), &why),
+                    };
                     m.insert("wall_area".into(), walls_d);
+                    m.insert("wall_run".into(), run_d);
                     let outlets = match room_wall_area(&found.outline, &found.islands, mine, &room_lines, &plan_walls, &placed, &holes_of, tol).and_then(|_| room_receptacles(&found.outline, &found.islands, mine, &room_lines, &plan_walls, &placed, &holes_of, &tree.kinds, tol)) {
                         Ok((count, statuses, cited)) => {
                             let mut d = figure(count, mine, "EA", F_OUTLETS);
@@ -1863,6 +1996,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                     m.insert("floor_area".into(), Derived::refused("SF", F_FLOOR, std::slice::from_ref(&input), &reason));
                     m.insert("perimeter".into(), Derived::refused("LF", F_ROUND, std::slice::from_ref(&input), &reason));
                     m.insert("wall_area".into(), Derived::refused("SF", F_WALLS, std::slice::from_ref(&input), &reason));
+                    m.insert("wall_run".into(), Derived::refused("LF", F_RUN, std::slice::from_ref(&input), &reason));
                     m.insert("receptacles".into(), Derived::refused("EA", F_OUTLETS, std::slice::from_ref(&input), &reason));
                 }
             }

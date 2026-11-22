@@ -7937,6 +7937,42 @@ on the map. **Not right:** the countertop hides the boxes under it in 3D (one bl
 the Layouts list offers every .json file in the folder; a wall's dimension is written
 over the boxes on the plan; the sheet's message line cuts long messages.
 
+## Call 157 built: a room's run of wall; the kitchen and layouts set right (2026-11-22; a worker under contract, accepted by its diff and the lead's own runs)
+
+Each of the judge's findings it answers no longer reproduces:
+
+| | Now |
+|---|---|
+| J-K1, K3 | A room has `wall_run`, from the same walk of the floor line as `receptacles`; the eight starter base lines are priced by it. The judge's room reads 31 LF of base (was 46.5); the roomline house's Living 63 LF and Kitchen 39 LF, perimeters 78.5 and 54.5 as they were; the drywall rooms 51 LF each (54 round, one 3 ft door). A room line that reaches nothing still adds to perimeter and not to `wall_run` |
+| J-K2 | A room line that reaches no wall says so when drawn |
+| J-K7, K8, K10 | `options`: a "left out of the job cost" row; file names under like titles; a one-sentence refusal |
+| J-K11, K12 | A run that would stand in another thing is refused, naming it and by how much; a run started 24 in off the corner is taken |
+| J-K13 | A wall or tall box across a window refused; a base box under a 36 in sill taken, under a 24 in sill refused |
+| J-K14 | A wall removed or marked to demolish names what is set against it |
+| J-K15 | A run on a wall to demolish is refused for that reason |
+| J-K17 | `plumbline price-item` prices every box of a code and says how many |
+| J-K19 | The supplier's list reads Assumed for a box set Assumed |
+| the designer's | Appliances in a run by name in square brackets (`B18 [Dishwasher] SB36 [Range, 30 in]`: a countertop of 6.5 ft by 2.125 ft = 13.8125 SF over the first three, none over the range); BLB36 and LS36 in the starter items (48 now) |
+
+**Expectations moved, all counts of the starter items** (46 to 48, and the counts that
+follow from it) in `tests/tables.rs`, `tests/world.rs`, and the demonstrations
+`items.sh`, `cabinets.sh`, `cabinetsw.sh`, `itemlibw.sh`, `turnw.sh`. One the worker
+missed and the lead's run caught: `items.sh` still expected 45 rows "the same as the job
+already has" where there are 47; moved. No test or demonstration checked a starter
+room's base quantity, so none moved for `wall_run`.
+
+**Run by the lead:** `cargo test --workspace` 478 pass, 0 fail; `roomline.sh`,
+`drywall.sh`, `cabinets.sh`, `options.sh`, `reno.sh`, `receptacles.sh`, `library.sh`,
+`items.sh` PASS; `cabinetsw.sh`, `itemlibw.sh` and `turnw.sh` on a frozen copy of this
+build (their counts had been moved unrun): recorded with the commit. By the worker: every
+other command-line demonstration, the gates, the port map and the licences PASS
+(`d2.sh` and `house.sh`, which open a window, were not run through).
+
+**Not right, owed:** the window's Cabinets field still splits on spaces (no bracketed
+names there) and its Layouts table has no file names; the corner refusal quotes the
+clash test's depth (18 in for a B36 against a B18) where a builder thinks 24 in; an
+island; end panels and toe kick; a countertop that follows a box taken out. Not judged.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

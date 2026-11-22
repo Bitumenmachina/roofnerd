@@ -55,11 +55,14 @@ says "$T/living.txt" "floor area       368.125 SF"
 says "$T/living.txt" "perimeter        78.5 LF"
 says "$T/living.txt" "wall area        567 SF"
 says "$T/living.txt" "receptacles      6 EA"
+# Its run of wall, for base: the same 63 LF (call 157; the line takes none, no door cuts it).
+says "$T/living.txt" "wall run         63 LF"
 # Kitchen: 11.75 by 15.5; walls 11.75 + 15.5 + 11.75 = 39 LF: 351 SF; 39 / 12 = 3.25, 4 outlets.
 says "$T/kitchen.txt" "floor area       182.125 SF"
 says "$T/kitchen.txt" "perimeter        54.5 LF"
 says "$T/kitchen.txt" "wall area        351 SF"
 says "$T/kitchen.txt" "receptacles      4 EA"
+says "$T/kitchen.txt" "wall run         39 LF"
 # The two floors add to 550.25; a room measured to the line is no surer than it (Assumed).
 "$P" show "$J" > "$T/show.txt"
 says "$T/show.txt" "$RL  room line 1  [room line]"
@@ -90,6 +93,14 @@ lacks "$T/clash.txt" "$RL"
 "$P" export ifc "$J" "$T/o.ifc" > "$T/ifc.txt"
 says "$T/ifc.txt" "1 x room line:"
 says "$T/ifc.txt" "7 walls"
+# Base is priced by the run of wall, and not by the perimeter, which takes in the line:
+# Living's base is 63 LF and not 78.5; the Kitchen's 39 LF and not 54.5 (call 157).
+"$P" apply "$J" "$LIVING" "Room, hardwood floor" --source "made-up" >/dev/null
+"$P" apply "$J" "$KITCHEN" "Kitchen" --source "made-up" >/dev/null
+"$P" estimate "$J" > "$T/est.txt"
+grep -E "^  Base and trim +~63.00 LF" "$T/est.txt" > /dev/null || { echo "FAIL: Living's base is not 63 LF"; cat "$T/est.txt"; exit 1; }
+grep -E "^  Base and trim +~39.00 LF" "$T/est.txt" > /dev/null || { echo "FAIL: the Kitchen's base is not 39 LF"; cat "$T/est.txt"; exit 1; }
+echo "    Base and trim: 63.00 LF in Living, 39.00 LF in the Kitchen (the perimeters, 78.5 and 54.5, take the line in)"
 
 echo
 echo "== 4. Saved and read back the same; removed, the rooms are as in step 1 =="
@@ -102,5 +113,16 @@ says "$T/living.txt" "floor area       368.125 SF"
 shown "$LIVING" living; shown "$KITCHEN" kitchen
 says "$T/living.txt" "floor area       550.25 SF"
 says "$T/kitchen.txt" "floor area       unknown"
+echo
+echo "== 5. A room line that reaches nothing is taken, and said (call 157) =="
+# A stub from 12,-5 to 12,5: one end outside the house, the other inside the room, neither at a
+# wall or another room line. A line from 12,0 to 12,16 meets the south and north walls and says nothing.
+"$P" room-line "$J" "$S" --points "12,-5 12,5" "${N[@]}" > "$T/out.txt"
+says "$T/out.txt" "1 room line: "
+says "$T/out.txt" "its end at 12,-5 meets no wall and no room line: it parts nothing until it does"
+says "$T/out.txt" "its end at 12,5 meets no wall and no room line: it parts nothing until it does"
+"$P" room-line "$J" "$S" --points "12,0 12,16" "${N[@]}" > "$T/out.txt"
+says "$T/out.txt" "1 room line: "
+lacks "$T/out.txt" "meets no wall"
 echo
 echo "  PASS: a room line parted one room into two where no wall stands, to the figures worked by hand (368.125 and 182.125 SF, adding to 550.25), was no wall and took no price or mark, was saved and read back, and removing it gave the one room back"
