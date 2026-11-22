@@ -8119,6 +8119,46 @@ starter "Kitchen" put on the room. Prices are made up.
 7. Run B marked to demolish: `base_run` = 51 − 8 − 3 = **40 LF** (LS36 still covers 3 ft
    of the south wall).
 
+## A beam, its posts and their pad footings: a demonstration, written before it is built (`demos/structure.sh`, call 164)
+
+From an empty job, by hand. The house of `demos/reno.sh` (6 in walls 9 ft tall round 0,0
+to 24,16; the partition from 12,0 to 12,16), the walls existing, the partition to
+demolish and said bearing (Assumed, "joists lap over it"). Prices are made up.
+
+1. A beam type "LVL 3 1/2 x 11 7/8": 3.5 in wide, 11.875 in deep, Assumed, "drawn size,
+   not an engineer's". A beam of it from 12,0 to 12,16, its top 9 ft up: `length`
+   **16 LF**. At $9.50/LF: **$152.00**. It has no `weight` and a line by weight says the
+   type gives no weight per foot.
+2. A second type "W8x18": 5.25 in wide, 8.14 in deep, 18 lb/ft. The same beam changed to
+   it: `weight` = 16 × 18 = **288 LB**; at $1.10/LB: **$316.80**. Changed back.
+3. Refused, the file as it was: a beam from 12,0 to 12,0 ("a beam runs along, and what
+   stands is a post"); a beam 0.01 ft long (too short); a post 0 ft tall; a pad with no
+   thickness.
+4. A post type "6x6 post", 5.5 in by 5.5 in. Two posts, at 12,0 and 12,16, 8 ft tall:
+   `height` **8 LF** each. At $64 each: **$128.00**.
+5. A pad type "Pad 36 x 36", 3 ft by 3 ft. A pad under each post, 18 in thick, its top
+   1 ft below the floor: `plan_area` **9 SF**, `form_area` 2 × (3 + 3) × 1.5 = **18 SF**,
+   `volume` 3 × 3 × 1.5 = 13.5 CF = **0.5 CY** each. Concrete at $180/CY: **$90.00** each,
+   **$180.00**.
+6. The estimate: Division 6, 152.00 + 128.00 = **$280.00**; Division 3, **$180.00**; job
+   cost **$460.00**.
+7. A round duct 12 in across from 6,8 to 18,8, its middle 8.5 ft up: it passes through
+   the beam (the beam is from 8 ft 1/8 in to 9 ft up, 3.5 in wide at east 12). `clashes`
+   finds the duct and the beam; nothing between the beam, the posts, the pads and the
+   walls; and says once that framing is not tested against framing.
+8. `structure`: the partition, bearing, comes down; one beam, LVL 3 1/2 x 11 7/8, 16 LF,
+   top 9 ft; two posts 8 ft; two pads 36 x 36 by 18 in; **5 members** whose size is not
+   Known, to be sized by an engineer. With the three types' sizes made Known ("engineer's
+   letter, made up") it says none are.
+9. The BIM file: 1 `IFCBEAM`, 2 `IFCCOLUMN`, 2 `IFCFOOTING` with `PAD_FOOTING` (the
+   strip footings are `STRIP_FOOTING` as before); the beam's Length 16 ft = 4.8768 m;
+   the outside checker passes it where it is on the machine.
+10. The three starter assemblies put on the beam, a post and a pad: the lines the call
+    lists, each quantity as above (the beam 16 LF, hardware 2 EA; the post 1 EA, cap and
+    base 2 EA; concrete 0.5 CY, forms 18 SF).
+11. Saved and opened again: `show`, `estimate`, `clashes` and `structure` print what they
+    printed.
+
 ## Call 157 and the window's five pieces judged (2026-11-22; an agent on another model, cold; `research/judgment-call157-and-window.md`)
 
 **Held, by hand:** `wall_run` in every case tried (doors single, overlapping, at a

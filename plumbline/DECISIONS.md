@@ -5638,3 +5638,74 @@ guessed. (The top as an L is owed with the countertop drawn to its true outline.
 
 After call 159 the library is 37 assemblies and 179 lines; this call changes the
 formula of 8 of them and adds none.
+
+### Call 164. A beam, its posts and their pad footings (2026-11-22; plan step C8, its first half; `research/structure-port-survey.md`; `research/renovation-structure.md`)
+
+Where a bearing wall comes out its load goes to a beam, the beam's ends to posts, and
+the posts to footings. The three are things of the model, drawn, counted, priced, in
+the clash test and in the BIM file. **Every size is typed, with how sure it is and where
+it came from; the program sizes nothing** (no span table is in it, and none may be).
+
+**1. A beam** (`Kind::Beam`, said "beam") is held as BIMCraft holds one: a run, by its
+two ends on plan, the height of its **top** above its level's floor, and a type that
+gives its width and depth (ported: `Run`, `RunType`, justify Top as BIMCraft's beams
+are, the command `beam`). A beam type may also give a **weight per foot**, typed (a
+steel shape's name says it; no table of shapes is in the program). `plumbline type
+<file> beam "<name>" --width .. --depth .. [--weight "18 lb/ft"]`; `plumbline beam
+<file> <level> <type> --points "x,y x,y" --top "<height>"`. Refused, in BIMCraft's
+three ways: too short; ends one over the other ("a beam runs along, and what stands is
+a post"); sloped more than 75°. Its figures: `length` (LF, along the beam), `width`,
+`depth`, and `weight` (LB = length × its type's weight per foot; where the type gives
+none there is no such figure, and a line by it says why). It is bought by `length`.
+
+**2. A post** (`Kind::Post`, said "post"; a steel column is a post of a round or a
+square type) is held as BIMCraft's structural column: a point on plan, a height, the
+height of its base above its level's floor, a type that gives its width and depth or
+its diameter. `plumbline type <file> post "<name>" --width .. --depth ..` (or `--round
+..`); `plumbline post <file> <level> <type> --at "x,y" --height ".." [--base ".."]`.
+With no height given it stands to its level's height, Assumed, and says so (BIMCraft
+stands a column to the level above). Its top must be above its base. Its figures:
+`height` (LF), `width`, `depth`. It is bought by the piece.
+
+**3. A pad footing** (`Kind::PadFooting`, said "pad footing") is held as BIMCraft's: a
+post laid flat, its height its thickness, the height of its **top** given (below the
+floor is a minus height). `plumbline type <file> pad "<name>" --width .. --depth ..`;
+`plumbline pad <file> <level> <type> --at "x,y" --thickness ".." --top ".."`. The
+thickness is required and above nothing (BIMCraft's default of 400 mm is not taken: a
+thickness nobody gave is not a thickness). Its figures: `width`, `length`, `thickness`,
+`plan_area` (SF), `form_area` (SF: its four sides, 2 × (width + length) × thickness)
+and `volume` (CY). It is bought by `volume`, as a strip footing is.
+
+**4. In the clash test.** A beam, a post and a pad footing are tested against every run
+and every thing set in place, as a wall is: a duct through a beam is a clash. They are
+not tested against walls, floors, footings or each other: framing bears on framing (a
+post under a beam, a beam in a wall's line, a pad under a post), and `clashes` says so
+once among what it leaves out and why.
+
+**5. For the engineer.** `plumbline structure <file>` lists, level by level: each wall
+the work opens with what was said of its bearing (call 160); each beam with its type,
+length and the height of its top; each post; each pad footing; each size with how sure
+it is and its source. It ends with the count of members whose size is not Known: "to be
+sized by an engineer before it is built or priced firm". Nothing in the list is the
+program's opinion of a size.
+
+**6. In the BIM file**: a beam is `IFCBEAM .BEAM.` with `Qto_BeamBaseQuantities`
+(Length, CrossSectionArea, GrossVolume: BIMCraft's `member_quantities`), a post is
+`IFCCOLUMN .COLUMN.` with `Qto_ColumnBaseQuantities`, a pad footing is `IFCFOOTING
+.PAD_FOOTING.` with `Qto_FootingBaseQuantities`; each carries its values and their
+status as every written thing does. They are not read back in from another program's
+file yet, and `import` says so by name.
+
+**7. Three starter assemblies**, no prices, each rule Assumed with its reason: "Beam,
+engineered lumber" (on a beam: the beam by `length`, LF; "Hangers and bearing hardware"
+2 EA; labor "Set the beam" by `length`), Division 6; "Post" (on a post: the post, 1
+EA; "Post cap and base" 2 EA; labor "Set the post", 1 EA), Division 6; "Pad footing,
+formed" (on a pad footing: concrete by `volume`, CY; forms by `form_area`, SF; labor
+"Form, place and strip" by `volume`), Division 3. Three assemblies and nine lines,
+three of them labor, are added to what the library holds.
+
+In the window they are drawn (a beam and a post as their timber, a pad as concrete,
+with the Framing and Ground switches) and can be selected and read; tools to draw them
+there are the next window work. The saved job gains the three kinds; a job from before
+opens as it was. No number of any job without them moves. Joists and rafters counted
+across a floor and a roof plane are call 165.
