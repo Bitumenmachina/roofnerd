@@ -510,6 +510,29 @@ pub fn opening(job: &mut Job, wall: &str, kind: Kind, type_path: &str, at: OnWal
     })
 }
 
+/// One straight piece of duct, pipe, conduit or cable that stands upright at `point` (in
+/// feet), from `from` up to `to` above the storey's floor: a riser. Several, end to end, are
+/// one riser of several pieces (call 175, for a demonstration of a hole counted once).
+#[allow(clippy::too_many_arguments)]
+pub fn riser(job: &mut Job, storey: &str, kind: Kind, type_path: &str, point: P2, from: &str, to: &str, system: Option<&str>, how: Entered) -> Result<String, String> {
+    all_or_nothing(job, |job| {
+        storey_of(job, storey)?;
+        if !kind.is_segment() {
+            return Err(format!("{kind:#} is not a duct, a pipe, a conduit or a cable"));
+        }
+        let segment = Segment { type_name: how.path(type_path), line: how.val([point, point], "ft"), offset: how.length(from)?, end_offset: Some(how.length(to)?), justify: Default::default() };
+        let path = add_numbered(job, storey, kind)?;
+        building::check_segment(&path, kind, &segment)?;
+        job.put(&path, segment)?;
+        if let Some(system) = system {
+            let on = InSystem(how.path(system));
+            building::check_in_system(&path, kind, &on)?;
+            job.put(&path, on)?;
+        }
+        Ok(path)
+    })
+}
+
 /// Straight pieces of duct, pipe, conduit or cable along `points` (in feet), level at
 /// `height` above the storey's floor, on `system` if one is named (BIMCraft's `runs_of`,
 /// `commands.rs:8776`: one run for each pair of points that follow one another).
@@ -1456,6 +1479,34 @@ pub fn wall_type_for(job: &mut Job, thickness: &str, how: Entered) -> Result<Str
     match found.into_iter().next() {
         Some(path) => Ok(path),
         None => wall_type(job, &format!("wall {}", thickness.trim()), thickness, how),
+    }
+}
+
+/// The wall type of this name and this thickness with no layers, or a new one of that name:
+/// what a model this program wrote says each wall's type was called (call 175). Where the
+/// job has a type of the name at another thickness, the name is not taken, and it is the
+/// type of this thickness (`wall_type_for`) that is given.
+pub fn wall_type_named(job: &mut Job, name: &str, thickness: &str, how: Entered) -> Result<String, String> {
+    let wanted = how.length(thickness)?.feet().ok_or("the thickness is not a length this program converts")?;
+    let mut q = job.world.query::<(&Node, &WallType)>();
+    let same: Vec<(String, bool)> = q.iter(&job.world).filter(|(n, t)| n.name == name && !t.footing).map(|(n, t)| (n.path.clone(), t.layers.is_empty() && t.thickness.feet().is_some_and(|x| (x - wanted).abs() < 1e-9))).collect();
+    match same.iter().find(|(_, fits)| *fits) {
+        Some((path, _)) => Ok(path.clone()),
+        None if same.is_empty() => wall_type(job, name, thickness, how),
+        None => wall_type_for(job, thickness, how),
+    }
+}
+
+/// The door or window type of this name, width and height, or a new one of that name
+/// (as `wall_type_named`).
+pub fn opening_type_named(job: &mut Job, kind: Kind, name: &str, width: &str, height: &str, how: Entered) -> Result<String, String> {
+    let (w, h) = (how.length(width)?.feet().ok_or("the width is not a length this program converts")?, how.length(height)?.feet().ok_or("the height is not a length this program converts")?);
+    let mut q = job.world.query::<(&Node, &OpeningType)>();
+    let same: Vec<(String, bool)> = q.iter(&job.world).filter(|(n, t)| n.name == name && t.category == kind).map(|(n, t)| (n.path.clone(), t.width.feet().is_some_and(|x| (x - w).abs() < 1e-9) && t.height.feet().is_some_and(|x| (x - h).abs() < 1e-9))).collect();
+    match same.iter().find(|(_, fits)| *fits) {
+        Some((path, _)) => Ok(path.clone()),
+        None if same.is_empty() => opening_type(job, name, kind, width, height, how),
+        None => opening_type_for(job, kind, width, height, how),
     }
 }
 

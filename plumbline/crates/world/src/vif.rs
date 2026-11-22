@@ -29,6 +29,9 @@ pub struct Between {
     /// A run through a wall or a floor: a hole to cut, not two things in each other's
     /// way. Where it is is still to verify; nothing priced rides on the hole itself.
     pub through: bool,
+    /// A thing standing against a wall, or a run at its joint, in the other by no more than
+    /// two inches (call 175): not two things in one space.
+    pub set_against: bool,
     /// How far one is into the other, or apart, in feet, when that is worked out.
     pub by: Option<f64>,
     /// Where, in feet: east, north, height above the datum.
@@ -240,7 +243,14 @@ pub fn vif(job: &mut Job) -> Vif {
             // A hole to cut that is still in question is a question too (J17C-2): it is
             // on the clash list as one to verify, and so it is here. Nothing rides on
             // it in dollars: neither thing has to move, a hole has to be cut.
+            // (A hole is one question however many pieces of the run pass through it.)
+            let mut holes_seen: BTreeSet<usize> = BTreeSet::new();
             for c in found.found.iter().filter(|c| c.status != Status::Known) {
+                if let Some(h) = c.hole.filter(|_| c.through) {
+                    if !holes_seen.insert(h) {
+                        continue;
+                    }
+                }
                 let picked: Vec<&Line> = if c.through { Vec::new() } else { lines.iter().filter(|l| l.on == c.a || l.on == c.b).collect() };
                 counted.extend(picked.iter().map(|l| l.key.clone()));
                 let (dollars, dollars_status, n, unpriced) = sum(&picked);
@@ -251,7 +261,7 @@ pub fn vif(job: &mut Job) -> Vif {
                         kind: c.a_kind,
                         storey: storey_name(&c.a, c.a_kind),
                         room: None,
-                        clash: Some(Between { other: c.b.clone(), other_name: c.b_name.clone(), how: c.how, through: c.through, by: c.by, at: c.at }),
+                        clash: Some(Between { other: c.b.clone(), other_name: c.b_name.clone(), how: c.how, through: c.through, set_against: c.set_against, by: c.by, at: c.at }),
                         in_the_way: None,
                         values: Vec::new(),
                         dollars,
@@ -444,6 +454,7 @@ impl Question {
         }
         match &self.clash {
             Some(c) if c.through => "One passes through the other: a hole to cut. Where is still to verify.".to_string(),
+            Some(c) if c.set_against => "Set against the other, not in its way. Where it stands is still to verify.".to_string(),
             Some(c) => {
                 let by = c.by.map(|by| format!(", by {}", crate::units::show_length(&crate::units::Len::One((by * 12.0 * 16.0).round() / 16.0 + 0.0), "in"))).unwrap_or_default();
                 format!("In the same space{by}. Measure either one.")

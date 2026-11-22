@@ -9004,6 +9004,65 @@ under call 170's rule that the walls meeting a moved wall follow.
 **Not judged:** calls 164, 165, 168 and 170 have each been run and read by the lead
 and by no judge.
 
+## Calls 173 and 175 built and in the tree (2026-11-22)
+
+**Call 173: walls found in a scan.** `plumbline find-walls <job> <scan> --level <level>
+[--lay [--outside "<wall type>"]]` reads a scan's points and says the walls, each
+doorway and window, what stood short of the ceiling and was not a wall, what was hidden
+and taken as wall, and what was squared; with `--lay` it lays them as ordinary walls,
+doors and windows, every one Assumed with "found in scan <name>" as its source. The
+finder is `crates/plans/src/found.rs`; the worker's account of how it works, every
+measure it chose and where it would fail on a real scan is
+`research/worker-report-call173.md`. `demos/findwalls.sh` gives the hand figures:
+
+| | By hand | Said |
+|---|---|---|
+| walls / seen from one side | 5 / 4 | 5 / 4 |
+| partition: centre, thickness, length | 18 ft 0 in, 4 1/2 in, 20 ft 0 in | the same |
+| doorway | 9 ft 0 in to 12 ft 0 in, head 6 ft 8 in | 9 ft 0 in to 12 ft 0 in (12 ft 1 in turned), 6 ft 8 in |
+| window | 8 ft to 13 ft, sill 3 ft, head 7 ft | 7 ft 11 in to 12 ft 11 in, sill 3 ft 1 in, head 7 ft 0 in |
+| stood short, tallest | 3, 7 ft 0 in | 3, 7 ft 1 in |
+| hidden, taken as wall | 9 ft 0 in | 8 ft 10 in |
+| rooms laid | 356.25 and 236.25 SF | 356.17 and 236.21 SF |
+
+**The lead broke it once.** The same house turned 33 degrees found no walls at all
+(turned 17, the demonstration's angle, it found five). The cause was in the finder: it
+took the top row of its grid as "near the ceiling", and at some angles the ceiling read
+a hair higher and the top row was empty. Fixed at the cause; a test now turns the house
+to 0, 5, 17, 33, 45, 60, 75 and 88 degrees, and the demonstration walks 33 and 60. The
+lead then tried 33, 52 and 81 and the plain one-room scan: all found.
+
+**What it is not.** It has seen only made-up scans from one generator: nothing here
+says it works on a phone's scan. By its builder's account it will fail or mislead on a
+sloped or vaulted ceiling (walls read as "stood short"), curved walls, a wall hidden
+over half its length, a glass door (read as a doorway), a second floor in the scan,
+and two real walls 2 to 16 in apart (read as one thick wall). It makes no rooms: a
+person places them. Not judged. No window half yet.
+
+**Call 175: what the sweep found wrong in dollars.** In the tree: siding is no longer
+bought behind the stone and the stone not across a doorway (a wall's new figure
+`net_length`); the sample's base is on the base that is drawn; a thing set against its
+own wall, and a run at what it joins, are counted apart from clashes; a run through a
+floor or wall is one hole however many pieces; the BIM file writes Status and
+LoadBearing in the standard's property sets and reads marks, bearing and type names
+back. `demos/sweep-money.sh` gives the hand figures (DECISIONS.md "Call 175, as built"
+has what was withdrawn, what was changed, and the lead's wrong hand figure).
+
+**What moved, each by call 175:** the sample house's job cost, $394,677.48 to
+**$390,174.76** (`crates/cli/tests/cli.rs`); its clashes, in the same space 21 to
+**11** with **10** set against, and 71 pieces through to **60** holes;
+`demos/quantityw.sh`'s wall-figures sentence gains "net length" (a window
+demonstration: not rerun).
+
+**Not right.** The BIM file does not read a roof back. A header's depth still comes
+from a rule of thumb and is not yet labelled as one (owed with call 176). The window
+still counts clashes the old way. Not judged.
+
+**Run on the tree as committed, with the held work, call 173 and call 175 together:**
+**576 tests pass, 0 fail**; all 43 command-line demonstrations pass; the three gates,
+`portmap.sh` and `licenses.sh` pass; the window builds. No window demonstration has
+been run on this tree.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

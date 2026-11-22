@@ -635,6 +635,7 @@ pub fn lens_out_for(job: &mut Job, lens: Lens, division: Option<&str>, system: O
             for q in &list.questions {
                 let (what, to_do) = match &q.clash {
                     Some(c) if c.through => (format!("{} and {}", q.name, c.other_name), "one passes through the other: a hole to cut, and where is still to verify".to_string()),
+                    Some(c) if c.set_against => (format!("{} and {}", q.name, c.other_name), "set against the other, not in its way: where it stands is still to verify".to_string()),
                     Some(c) => (format!("{} and {}", q.name, c.other_name), format!("in the same space{}: measure either one", c.by.map(|by| format!(" by {:.2} in", by * 12.0 + 0.0)).unwrap_or_default())),
                     None => {
                         let named = |length: bool| q.values.iter().filter(|v| v.2 == length).map(|v| v.0.clone()).collect::<Vec<_>>().join(", ");

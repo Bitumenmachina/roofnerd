@@ -544,10 +544,12 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
         written.push((plane.path.clone(), id));
         count("roof planes");
     }
+    let mut roofs: Vec<(String, u64)> = Vec::new();
     for (roof, parts) in &by_roof {
         let at = o.placed(Some(building_at), [0.0; 3], up, [1.0, 0.0, 0.0]);
         let id = o.add(format!("IFCROOF({},$,{},$,$,#{at},$,$,.NOTDEFINED.)", o.id(roof), name_or_none(names.get(roof).map(String::as_str).unwrap_or("roof"))));
         o.add(format!("IFCRELAGGREGATES({},$,$,$,#{id},({}))", o.id(&format!("{roof} has planes")), parts.iter().map(|i| format!("#{i}")).collect::<Vec<_>>().join(",")));
+        roofs.push((roof.clone(), id));
         on_building.push(id);
         count("roofs");
     }
@@ -612,6 +614,52 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
         }
         let set = o.add(format!("IFCPROPERTYSET({},$,'Plumbline_Values',$,({}))", o.id(&format!("{path} values")), props.join(",")));
         o.add(format!("IFCRELDEFINESBYPROPERTIES({},$,$,$,(#{id}),#{set})", o.id(&format!("{path} has values"))));
+    }
+
+    // ---- What the work does to each thing, and which walls carry (call 175): in the common
+    // property set IFC4 gives its kind, `Status` with the literals of the standard's own
+    // enumeration (PEnum_ElementStatus: NEW, EXISTING, DEMOLISH, TEMPORARY; read from
+    // IfcOpenShell's copy of the buildingSMART property set templates, `Pset_IFC4_ADD2.ifc`),
+    // and a wall said to be bearing or not bearing with `LoadBearing`. A thing with no mark
+    // and a wall whose bearing is not said are left out: nothing is written that nobody said.
+    {
+        use plumbline_world::components::{Bearing, Hidden, Work, WorkStatus};
+        let mut marked: Vec<(String, u64)> = written.clone();
+        marked.extend(roofs.iter().cloned());
+        for (path, id) in &marked {
+            let Some(e) = job.find(path) else { continue };
+            let Some(kind) = job.world.get::<Kind>(e).copied() else { continue };
+            let set = match kind {
+                Kind::Wall => "Pset_WallCommon",
+                Kind::Door => "Pset_DoorCommon",
+                Kind::Window => "Pset_WindowCommon",
+                Kind::Floor => "Pset_SlabCommon",
+                Kind::Roof => "Pset_RoofCommon",
+                Kind::Footing => "Pset_FootingCommon",
+                _ => continue,
+            };
+            let mut props = Vec::new();
+            if let Some(mark) = job.world.get::<Work>(e).and_then(|w| w.status.value) {
+                let literal = match mark {
+                    WorkStatus::New => "NEW",
+                    WorkStatus::Existing => "EXISTING",
+                    WorkStatus::Demolish => "DEMOLISH",
+                    WorkStatus::Temporary => "TEMPORARY",
+                };
+                props.push(format!("#{}", o.add(format!("IFCPROPERTYSINGLEVALUE('Status',$,IFCLABEL('{literal}'),$)"))));
+            }
+            if kind == Kind::Wall {
+                if let Some(carries) = job.world.get::<Hidden>(e).and_then(|h| h.bearing.as_ref()).and_then(|b| b.value) {
+                    let flag = if carries == Bearing::Bearing { ".T." } else { ".F." };
+                    props.push(format!("#{}", o.add(format!("IFCPROPERTYSINGLEVALUE('LoadBearing',$,IFCBOOLEAN({flag}),$)"))));
+                }
+            }
+            if props.is_empty() {
+                continue;
+            }
+            let ps = o.add(format!("IFCPROPERTYSET({},$,'{set}',$,({}))", o.id(&format!("{path} common values")), props.join(",")));
+            o.add(format!("IFCRELDEFINESBYPROPERTIES({},$,$,$,(#{id}),#{ps})", o.id(&format!("{path} has common values"))));
+        }
     }
 
     // ---- Each thing's base quantities, as IFC4 names them (`Qto_*BaseQuantities`):

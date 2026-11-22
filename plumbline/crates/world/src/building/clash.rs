@@ -74,6 +74,14 @@ use crate::components::{Kind, Node};
 use crate::geom;
 use crate::job::Job;
 use crate::value::Status;
+use crate::view;
+
+/// How far a thing may be in a wall, or a run in what it is joined to at its end, and be set
+/// against it and not in it: two inches (call 175).
+pub const SET_AGAINST_FT: f64 = 2.0 / 12.0;
+
+/// How far from a joint a clash may lie, in feet, and be at that joint: a termination is inches in, where a branch drawn a foot back up inside its main is a drawing fault and stays a clash (demos/clash.sh).
+const JOINT_REACH_FT: f64 = 0.25;
 
 /// The widest clearance that can be asked for, in feet. Past this the answer is every
 /// pair of things in a room.
@@ -108,6 +116,12 @@ pub struct Clash {
     pub how: ClashKind,
     /// A run meeting a wall or a floor: a hole to cut, listed apart.
     pub through: bool,
+    /// A thing standing against a wall, or a run at its joint, in each other by no more than
+    /// `SET_AGAINST_FT` (call 175): counted and listed apart, and not in the same space.
+    pub set_against: bool,
+    /// A hole to cut, for a run through a wall or a floor: which of `Clashes::holes` it is a
+    /// piece of. A riser of three pieces through one floor is one hole.
+    pub hole: Option<usize>,
     /// Hard: how far one would have to move to clear the other, in feet; none for a run
     /// through a wall or a floor (it is meant to go through), and none where the depth
     /// could not be worked out. Clearance: how far apart they are, in feet.
@@ -117,10 +131,30 @@ pub struct Clash {
     pub status: Status,
 }
 
+/// One hole to cut in a wall or a floor, for a run (call 175): the pieces of the run that
+/// pass through it are one hole.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Hole {
+    /// The wall or floor it is cut in.
+    pub through: String,
+    pub through_name: String,
+    pub through_kind: Kind,
+    /// The pieces of the run, and the fittings on it, that pass through, by path and name.
+    pub pieces: Vec<(String, String)>,
+    /// The widest of them, as a person says it ("6 in round", "12 in by 8 in"); empty where
+    /// no piece has a size.
+    pub size: String,
+    /// Where, in feet: east, north, height above the datum.
+    pub at: P3,
+    pub status: Status,
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Clashes {
     /// Clashes between things, then runs through walls and floors, then clearances.
     pub found: Vec<Clash>,
+    /// The holes to cut, each once (call 175).
+    pub holes: Vec<Hole>,
     /// How many elements had a solid and were tested.
     pub tested: usize,
     /// What was not tested, each with why.
@@ -882,9 +916,113 @@ fn find(job: &mut Job, clearance: Option<f64>, with_walls_coming_down: bool) -> 
         let (x, y) = (&drawn[i], &drawn[j]);
         let through = through(x, y);
         let (how, by) = if met.hard { (ClashKind::Hard, met.depth.filter(|_| !through)) } else { (ClashKind::Clearance, Some(met.gap.max(0.0))) };
-        found.push(Clash { a: x.path.clone(), b: y.path.clone(), a_name: said(x, &what), b_name: said(y, &what), a_kind: x.kind, b_kind: y.kind, how, through, by, at: met.at, status: x.status.max(y.status) });
+        found.push(Clash { a: x.path.clone(), b: y.path.clone(), a_name: said(x, &what), b_name: said(y, &what), a_kind: x.kind, b_kind: y.kind, how, through, set_against: false, hole: None, by, at: met.at, status: x.status.max(y.status) });
+    }
+    // Set against (call 175). A placed thing and a wall in each other by no more than two
+    // inches: a thing that stands against a wall, or hangs on it, or is set in it (the
+    // wall's own list of what is set against it, `things_against`, says which things). A run
+    // and the thing or run it is joined to (the job's network, `joined`), in each other by
+    // no more than that, at that joint. The shapes are what they were; only the name changes.
+    let mut against: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for c in found.iter_mut() {
+        if c.how != ClashKind::Hard || c.through || c.by.is_none_or(|by| by > SET_AGAINST_FT + 1.0e-9) {
+            continue;
+        }
+        let is_thing = |k: Kind| matches!(k, Kind::Furnishing | Kind::Equipment | Kind::Fixture);
+        let (thing, wall) = match (c.a_kind, c.b_kind) {
+            (k, Kind::Wall) if is_thing(k) => (Some(&c.a), Some(&c.b)),
+            (Kind::Wall, k) if is_thing(k) => (Some(&c.b), Some(&c.a)),
+            _ => (None, None),
+        };
+        if let (Some(thing), Some(wall)) = (thing, wall) {
+            let list = against.entry(wall.clone()).or_insert_with(|| super::things_against(job, wall).unwrap_or_default().into_iter().map(|(p, _)| p).collect());
+            if list.contains(thing) {
+                c.set_against = true;
+                continue;
+            }
+        }
+        if let Some(places) = joined.get(&pair(&c.a, &c.b)) {
+            if places.iter().any(|p| ((p[0] - c.at[0]).powi(2) + (p[1] - c.at[1]).powi(2) + (p[2] - c.at[2]).powi(2)).sqrt() <= JOINT_REACH_FT) {
+                c.set_against = true;
+            }
+        }
     }
     // Things in each other first, then holes to cut, then what is only close.
     found.sort_by_key(|c| (c.how, c.through && c.how == ClashKind::Hard));
-    Ok(Clashes { found, tested, left_out })
+    // A hole is counted once (call 175): the pieces of a run that pass through one wall or
+    // floor, joined end to end (or to a fitting on it), are one hole to cut.
+    let mut holes: Vec<Hole> = Vec::new();
+    let mut hole_of: Vec<Option<usize>> = vec![None; found.len()];
+    let sides = |c: &Clash| if matches!(c.b_kind, Kind::Wall | Kind::Floor) { (c.a.clone(), c.b.clone()) } else { (c.b.clone(), c.a.clone()) };
+    let cut: Vec<usize> = (0..found.len()).filter(|&i| found[i].how == ClashKind::Hard && found[i].through).collect();
+    // Which pieces are one run: the same piece, or two joined, through the same wall or floor.
+    let mut root: Vec<usize> = (0..cut.len()).collect();
+    fn top(root: &mut [usize], mut i: usize) -> usize {
+        while root[i] != i {
+            root[i] = root[root[i]];
+            i = root[i];
+        }
+        i
+    }
+    for x in 0..cut.len() {
+        for y in 0..x {
+            let ((run_x, whole_x), (run_y, whole_y)) = (sides(&found[cut[x]]), sides(&found[cut[y]]));
+            // One hole holds pieces of one run that pass through at one place: joined, and no
+            // further apart where they pass than their widths and a little over (a branch that
+            // joins a stack a foot away has a hole of its own).
+            let across = |path: &str| drawn.iter().find(|p| p.path == path).map(|p| match &p.shape {
+                Shape::Run { round: Some(d), .. } => *d,
+                Shape::Run { rect: Some((w, h)), .. } => w.max(*h),
+                Shape::Box { size, .. } => size[0].max(size[1]),
+                _ => 0.0,
+            }).unwrap_or(0.0);
+            let (px, py) = (found[cut[x]].at, found[cut[y]].at);
+            let near = (px[0] - py[0]).hypot(px[1] - py[1]) <= (across(&run_x) + across(&run_y)) / 2.0 + 0.25;
+            if whole_x == whole_y && near && (run_x == run_y || joined.contains_key(&pair(&run_x, &run_y))) {
+                let (rx, ry) = (top(&mut root, x), top(&mut root, y));
+                root[rx.max(ry)] = rx.min(ry);
+            }
+        }
+    }
+    let mut hole_at_root: BTreeMap<usize, usize> = BTreeMap::new();
+    for x in 0..cut.len() {
+        let i = cut[x];
+        let (run, whole) = sides(&found[i]);
+        let at = match hole_at_root.get(&top(&mut root, x)) {
+            Some(&h) => h,
+            None => {
+                let on_b = found[i].b == whole;
+                holes.push(Hole { through: whole, through_name: if on_b { found[i].b_name.clone() } else { found[i].a_name.clone() }, through_kind: if on_b { found[i].b_kind } else { found[i].a_kind }, pieces: Vec::new(), size: String::new(), at: found[i].at, status: found[i].status });
+                hole_at_root.insert(top(&mut root, x), holes.len() - 1);
+                holes.len() - 1
+            }
+        };
+        hole_of[i] = Some(at);
+        let name = if found[i].a == run { found[i].a_name.clone() } else { found[i].b_name.clone() };
+        holes[at].pieces.push((run, name));
+        holes[at].status = holes[at].status.max(found[i].status);
+    }
+    for (c, h) in found.iter_mut().zip(&hole_of) {
+        c.hole = *h;
+    }
+    // Each hole's size: the widest run through it, as it is said.
+    let as_said = |inches: f64| view::figure_shown(inches, 2);
+    for hole in holes.iter_mut() {
+        let mut widest: Option<(f64, String)> = None;
+        for (path, _) in &hole.pieces {
+            let Some(p) = drawn.iter().find(|p| &p.path == path) else { continue };
+            if let Shape::Run { round, rect, .. } = &p.shape {
+                let (across, text) = match (round, rect) {
+                    (Some(d), _) => (*d, format!("{} in round", as_said(d * 12.0))),
+                    (None, Some((w, h))) => (w.max(*h), format!("{} in by {} in", as_said(w * 12.0), as_said(h * 12.0))),
+                    _ => continue,
+                };
+                if widest.as_ref().is_none_or(|(was, _)| across > *was) {
+                    widest = Some((across, text));
+                }
+            }
+        }
+        hole.size = widest.map(|(_, t)| t).unwrap_or_default();
+    }
+    Ok(Clashes { found, holes, tested, left_out })
 }

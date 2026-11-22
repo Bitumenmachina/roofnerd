@@ -269,7 +269,7 @@ impl Kind {
             &[("plan_length", "LF"), ("true_length", "LF")]
         } else if self == Kind::Wall {
             // The last four only where what is priced on it names its framing (call 137).
-            &[("plan_length", "LF"), ("height", "ft"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF"), ("thickness", "ft"), ("studs", "EA"), ("plate_length", "LF"), ("header_length", "LF"), ("sill_length", "LF")]
+            &[("plan_length", "LF"), ("height", "ft"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF"), ("thickness", "ft"), ("studs", "EA"), ("plate_length", "LF"), ("header_length", "LF"), ("sill_length", "LF"), ("net_length", "LF")]
         } else if matches!(self, Kind::Door | Kind::Window) {
             &[("width", "ft"), ("height", "ft"), ("opening_area", "SF")]
         } else if self == Kind::Roof {

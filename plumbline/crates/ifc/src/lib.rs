@@ -445,7 +445,7 @@ pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<B
         }
         if property_sets + materials > 0 {
             out.notes.push(format!(
-                "not read: {property_sets} property set{} and {materials} material{} in the model. A thing brought in has its shape, its place and its name; what the model says it is made of, and anything else it says about it, is not brought in",
+                "not read: {property_sets} property set{} and {materials} material{} in the model. A thing brought in has its shape, its place and its name, and, where the model gives them, the Status it says (as its mark: new, existing, to demolish or temporary) and the LoadBearing it says, each Assumed; what the model says it is made of, and anything else it says about it, is not brought in",
                 if property_sets == 1 { "" } else { "s" },
                 if materials == 1 { "" } else { "s" }
             ));
@@ -477,6 +477,78 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     let mut ids: Vec<u64> = r.file.entities.keys().copied().collect();
     ids.sort_unstable();
     let of = |class: &[&str]| -> Vec<(u64, &Entity)> { ids.iter().filter_map(|id| r.file.entities.get(id).map(|e| (*id, e))).filter(|(_, e)| class.contains(&e.name.as_str())).collect() };
+
+    // ---- What the model says of each thing in its property sets: the work mark and whether a
+    // wall carries (`Status` and `LoadBearing` in the common property set IFC4 gives its kind),
+    // and what this program wrote its type's name as (call 175). Each comes in as the mark of
+    // the thing, Assumed, and says the file it came from.
+    #[derive(Default)]
+    struct OfIt {
+        status: Option<String>,
+        carries: Option<bool>,
+        type_name: Option<String>,
+    }
+    let mut said_of: HashMap<u64, OfIt> = HashMap::new();
+    for (_, rel) in of(&["IFCRELDEFINESBYPROPERTIES"]) {
+        let Some((_, set)) = r.get(r.arg(rel, 5)) else { continue };
+        if set.name != "IFCPROPERTYSET" {
+            continue;
+        }
+        let set_name = Reader::text(r.arg(set, 2)).unwrap_or("");
+        let mut it = OfIt::default();
+        for prop in Reader::list(r.arg(set, 4)) {
+            let Some((_, p)) = r.get(prop) else { continue };
+            if p.name != "IFCPROPERTYSINGLEVALUE" {
+                continue;
+            }
+            let (called, value) = (Reader::text(r.arg(p, 0)).unwrap_or(""), r.arg(p, 2));
+            match called {
+                "Status" if set_name.starts_with("Pset_") && set_name.ends_with("Common") => it.status = Reader::text(value).map(str::to_string),
+                "LoadBearing" if set_name.starts_with("Pset_") && set_name.ends_with("Common") => {
+                    if let V::Typed(_, inner) = value {
+                        it.carries = match inner.as_ref() {
+                            V::Enum(x) if x == "T" => Some(true),
+                            V::Enum(x) if x == "F" => Some(false),
+                            _ => None,
+                        };
+                    }
+                }
+                "type" if set_name == "Plumbline_Values" => it.type_name = Reader::text(value).and_then(|t| t.find(" (type-").map(|at| t[..at].to_string())).filter(|n| !n.is_empty()),
+                _ => {}
+            }
+        }
+        for obj in Reader::list(r.arg(rel, 4)) {
+            if let V::Ref(id) = obj {
+                let at = said_of.entry(*id).or_default();
+                at.status = at.status.take().or(it.status.clone());
+                at.carries = at.carries.or(it.carries);
+                at.type_name = at.type_name.take().or(it.type_name.clone());
+            }
+        }
+    }
+    // The mark a thing comes in with, from what the model says of it; the file's own word
+    // for the work, never Known on its say-so.
+    let marks = |job: &mut Job, path: &str, id: u64, source: &str, kind: Kind| -> Result<(), String> {
+        use plumbline_world::components::{Bearing, Hidden, Work, WorkStatus};
+        let Some(it) = said_of.get(&id) else { return Ok(()) };
+        if let Some(word) = &it.status {
+            let mark = match word.as_str() {
+                "NEW" => Some(WorkStatus::New),
+                "EXISTING" => Some(WorkStatus::Existing),
+                "DEMOLISH" => Some(WorkStatus::Demolish),
+                "TEMPORARY" => Some(WorkStatus::Temporary),
+                _ => None,
+            };
+            if let Some(mark) = mark {
+                job.put(path, Work { status: Val { value: Some(mark), unit: String::new(), status: Status::Assumed, source: source.to_string() } })?;
+            }
+        }
+        if let (Kind::Wall, Some(carries)) = (kind, it.carries) {
+            let bearing = if carries { Bearing::Bearing } else { Bearing::NotBearing };
+            job.put(path, Hidden { bearing: Some(Val { value: Some(bearing), unit: String::new(), status: Status::Assumed, source: source.to_string() }), in_the_wall: None })?;
+        }
+        Ok(())
+    };
 
     // ---- Storeys, lowest first. Each is as tall as it is to the next one up.
     // A storey says how high its floor is (its elevation), and it is also placed. The
@@ -630,9 +702,14 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         let source = from(e, id);
         let entered = Entered { status: how.status, source: &source };
         let made_wall = (|| -> Result<String, String> {
-            let wall_type = ed::wall_type_for(job, &format!("{} in", tidy(thickness * k * 12.0)), entered)?;
+            let size = format!("{} in", tidy(thickness * k * 12.0));
+            let wall_type = match said_of.get(&id).and_then(|it| it.type_name.as_deref()) {
+                Some(called) => ed::wall_type_named(job, called, &size, entered)?,
+                None => ed::wall_type_for(job, &size, entered)?,
+            };
             let made = ed::walls(job, &storey, &wall_type, &[[tidy(a[0] * k), tidy(a[1] * k)], [tidy(b[0] * k), tidy(b[1] * k)]], false, ed::Top::Height(&feet(body.depth * k)), entered)?;
             let path = made.into_iter().next().ok_or("no wall was made")?;
+            marks(job, &path, id, &source, Kind::Wall)?;
             // The model's own name for the wall, where it has one nothing else on the
             // storey goes by.
             let called = r.name(e);
@@ -688,7 +765,11 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         let source = from(e, id);
         let entered = Entered { status: how.status, source: &source };
         let size = |x: f64| format!("{} in", tidy(x * k * 12.0));
-        let done = ed::opening_type_for(job, kind, &size(width), &size(height), entered).and_then(|t| ed::opening(job, wall, kind, &t, ed::OnWall::Offset(&feet(along * k)), &feet(sill * k), entered));
+        let type_for = match said_of.get(&id).and_then(|it| it.type_name.as_deref()) {
+            Some(called) => ed::opening_type_named(job, kind, called, &size(width), &size(height), entered),
+            None => ed::opening_type_for(job, kind, &size(width), &size(height), entered),
+        };
+        let done = type_for.and_then(|t| ed::opening(job, wall, kind, &t, ed::OnWall::Offset(&feet(along * k)), &feet(sill * k), entered)).and_then(|path| marks(job, &path, id, &source, kind).map(|()| path));
         match done {
             Ok(_) => made(if kind == Kind::Door { "doors" } else { "windows" }),
             Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),

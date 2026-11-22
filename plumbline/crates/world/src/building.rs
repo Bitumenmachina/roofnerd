@@ -814,6 +814,29 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                     (_, o) => o,
                 };
                 let fault = (!faults.is_empty()).then(|| faults.join("; "));
+                // Its length less what comes down to its floor (call 175): a door, and a window
+                // whose sill is at the floor. Given only where a line of this wall's names it,
+                // as the frame's figures are: a wall that prices nothing on it has no new figure.
+                let names_net_length = cost.is_some_and(|c| c.lines.iter().any(|l| !l.off && crate::formula::parse(&l.quantity).is_ok_and(|e| crate::formula::names(&e).iter().any(|n| n == "net_length"))));
+                let net_length = if !names_net_length {
+                    None
+                } else {
+                    let f_nl = "plan_length − the widths of the doors and of the windows whose sill is at the floor";
+                    Some(match (&fault, length) {
+                        _ if unit_fault => Derived::refused("LF", f_nl, &inputs, &format!("the wall line {NOT_CONVERTED}")),
+                        (Some(why), _) => Derived::refused("LF", f_nl, &inputs, why),
+                        (None, None) => Derived::refused("LF", f_nl, &inputs, "the wall has no length"),
+                        (None, Some(l)) => match mine.iter().find(|h| h.span.is_none()) {
+                            Some(h) => Derived::refused("LF", f_nl, &inputs, &format!("{} has no size, so how much of the wall it takes is not known", h.path)),
+                            None => {
+                                let cut: f64 = mine.iter().filter_map(|h| h.span).filter(|s| s[2] <= crate::check::FIT_TOLERANCE_FT).map(|s| s[1] - s[0]).sum();
+                                let mut s: Vec<Status> = mine.iter().map(|h| h.status).collect();
+                                s.push(w.line.status);
+                                Derived::new(Some(l - cut), "LF", &s, f_nl, &inputs)
+                            }
+                        },
+                    })
+                };
                 let f_net = "face_area − opening_area";
                 let net = match (fault, face.value, open.value) {
                     (Some(why), _, _) => Derived::refused("SF", f_net, &inputs, &why),
@@ -831,6 +854,9 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 m.insert("face_area".into(), face);
                 m.insert("opening_area".into(), open);
                 m.insert("net_area".into(), net);
+                if let Some(nl) = net_length {
+                    m.insert("net_length".into(), nl);
+                }
                 // How thick it is: its type's thickness, as sure as the type and the
                 // wall's choice of it. A foundation wall's concrete is net_area ×
                 // thickness (call 130), worked here and not typed beside the wall.

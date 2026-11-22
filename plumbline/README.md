@@ -120,6 +120,7 @@ demos/turnw.sh             # a panelboard set down into a wall on plan, turned a
 demos/itemneww.sh          # an item typed into the job's library in the window, given its trade, renamed with what stands, kept from deletion while one stands, and another taken out
 demos/quantityw.sh         # what a cost line is priced by, changed on the line in the window ("face area x 1.10"), and a figure the thing does not have refused
 demos/scan.sh              # a scan of a room (a PLY point cloud) brought in as a sheet to trace: to scale, in its own place, Assumed; traced walls to the foot; text and bytes alike; refusals
+demos/findwalls.sh          # walls, doors, windows and what stands short found in a scan, said in full and laid only on the word (call 173): two faces make a wall and its thickness, a wall seen from one side needs a type named, what is not seen is taken as wall and said, nothing is found without a ceiling; the house turned 17 degrees the same
 demos/glassw.sh            # moving round the model, measured: the wheel closes on the pointer, a turn is about it, a flick carries on; pictures in demos/captured/glass
 demos/carryw.sh            # a vanity picked up in the model and carried clear of a clash, red while it is in it; pictures in demos/captured/carry
 demos/itemsw.sh            # in the window: a maker's sheet made into an item, one set down with a click, and the BIM model, workbook, CSV and lenses written out; pictures in demos/captured/items
@@ -138,6 +139,7 @@ tools/fetch-plans.sh       # fetches the public-domain plan set the demonstratio
 demos/d4w.sh               # the same in the window: the sheet's Budget tab, and prices typed on what is selected
 demos/d2.sh                # the 3D prototype, driven on a virtual display; pictures in demos/captured/d2
 demos/house.sh             # a whole house with its heating, plumbing and wiring, walked round; pictures in demos/captured/house
+demos/sweep-money.sh       # what the sweep found wrong in dollars (call 175): siding not bought over stone, base not across a doorway, a thing set against its wall is not a clash, a hole counted once, the BIM file's own word for existing, demolished and new; each against a figure worked by hand
 cargo run -p plumbline-app -- job.json    # the model window and the sheet window (every button says its key)
 tools/licenses.sh          # every linked crate and its license; fails on a non-permissive one
 tools/installs.sh          # the README's install list brings every system library the running window opens

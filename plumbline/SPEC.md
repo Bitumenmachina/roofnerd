@@ -459,6 +459,7 @@ a placed thing's heights are above the level they are under.
 | Wall | `face_area` SF | `plan_length × height`: one face, with nothing taken out |
 | Wall | `opening_area` SF | the `opening_area` of each door and window under it, added up. A wall with none has 0, and that zero is Known. It is as sure as the openings' sizes; where each one is does not come into it. |
 | Wall | `net_area` SF | `face_area − opening_area`. Refused, with the reason, when an opening starts before the wall does, runs past its end, stands taller than it, or lies over another, when an opening has no area, or when where an opening is in the wall is not known. It is as sure as where each opening is as well as its size. The gross face still stands. |
+| Wall | `net_length` LF | `plan_length` less the widths of the doors, and of the windows whose sill is at the wall's floor (call 175): the length of wall that has a face to the floor, which a wainscot or a base is bought by. Given only where a cost line of the wall names it (as the frame's figures are), so a wall that prices nothing on it has no new figure and its saved job is as it was. Refused, with the reason, where an opening has no size or does not fit, and as sure as the wall's line and its openings. |
 | Door, Window | `width`, `height` ft | its type's |
 | Door, Window | `opening_area` SF | `width × height` |
 | Floor | `plan_area` SF | area of its boundary on the plan |
@@ -981,7 +982,17 @@ lays out one lens on it; `plumbline_sheets::xlsx` writes sheets as a workbook an
   the area of, as high as their level is to the next; the roof's planes as they lie;
   runs as their section pushed along their run; fittings, fixtures and equipment as
   their boxes; systems with what is on them. Every value entered on a thing goes with
-  it in a property set (`Plumbline_Values`), with its status and its source. A thing's
+  it in a property set (`Plumbline_Values`), with its status and its source. What the
+  work does to a wall, door, window, floor, roof or footing that has a mark is written
+  as `Status` in the common property set of its kind (`Pset_WallCommon`, `Pset_DoorCommon`,
+  `Pset_WindowCommon`, `Pset_SlabCommon`, `Pset_RoofCommon`, `Pset_FootingCommon`) with
+  the standard's own literals (`PEnum_ElementStatus`: NEW, EXISTING, DEMOLISH, TEMPORARY,
+  read from the property set templates that come with IfcOpenShell), and a wall said
+  bearing or not bearing carries `LoadBearing` (true or false); a thing with no mark and a
+  wall whose bearing is not said have neither (call 175). Read back, `Status` is the
+  thing's mark and `LoadBearing` the wall's bearing, each Assumed and sourced to the file;
+  a wall's, door's or window's type comes back by the name the program wrote (its
+  `Plumbline_Values` row `type`). The roof is not read back. A thing's
   identifier is worked from the job and the thing, so a model written twice is the
   same file. What a model has no place for (cost lines, materials, conditions,
   drawings, estimates made before, types) and what has no shape is counted and said.

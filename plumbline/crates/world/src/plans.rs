@@ -461,3 +461,155 @@ pub fn traced_from(job: &mut Job, drawing: &str) -> Result<String, String> {
     }
     Ok(traced_text(job, drawing, &d))
 }
+
+/// A wall found in a scan, as it is handed to be laid (DECISIONS.md call 173): its centre
+/// line on the plan in feet, how thick it is, whether the scan measured that, and its
+/// doors and windows, each along the line from its first end.
+#[derive(Clone, Debug)]
+pub struct FoundWall {
+    pub from: P2,
+    pub to: P2,
+    /// Feet. Measured from the scan's two faces of it, or the thickness of the type the
+    /// person named for walls the scan saw from one side.
+    pub thickness: f64,
+    pub measured: bool,
+    pub openings: Vec<FoundOpening>,
+}
+
+/// An opening found: along the wall from its first end, and its heights above the floor, in feet.
+#[derive(Clone, Copy, Debug)]
+pub struct FoundOpening {
+    pub window: bool,
+    pub from: f64,
+    pub to: f64,
+    pub sill: f64,
+    pub head: f64,
+}
+
+/// What laying found walls made.
+#[derive(Clone, Debug, Default)]
+pub struct FoundLaid {
+    pub walls: Vec<String>,
+    pub doors: Vec<String>,
+    pub windows: Vec<String>,
+    /// Wall, door and window types the program made for them (those the job had are used).
+    pub types: Vec<(String, String)>,
+}
+
+/// How thick a wall type makes a wall, in feet.
+pub fn wall_type_feet(job: &mut Job, type_path: &str) -> Result<f64, String> {
+    job.find(type_path).and_then(|e| job.world.get::<crate::WallType>(e)).and_then(|t| t.thickness.feet()).ok_or_else(|| format!("{type_path} is not a wall type with a thickness"))
+}
+
+/// Walls found in a scan laid on a level, with their doors and windows, all Assumed, their
+/// source "found in scan <name>" (call 173). Laid with the model's own wall, door and
+/// window: nothing here makes a wall another way. A wall seen from one side is laid with
+/// `outside`'s type; the thickness it was handed is that type's. All of it or none: a
+/// refusal leaves the job as it was. Laying a second time from the same scan onto the
+/// same level is refused.
+pub fn lay_found(job: &mut Job, level: &str, scan_name: &str, height_ft: f64, outside: Option<&str>, found: &[FoundWall]) -> Result<FoundLaid, String> {
+    let source = format!("found in scan {scan_name}");
+    let how = Entered { status: Status::Assumed, source: &source };
+    all_or_nothing(job, |job| {
+        // The scan's walls already on this level: laying twice would make two of each.
+        let mut q = job.world.query::<(&crate::Node, &crate::Wall)>();
+        let already = q.iter(&job.world).filter(|(n, w)| n.parent.as_deref() == Some(level) && w.line.source == source).count();
+        if already > 0 {
+            return Err(format!("{level} already has {already} wall{} found in scan {scan_name}: laying it again would make two of each. Take those away first if it is to be laid again", if already == 1 { "" } else { "s" }));
+        }
+        let had: std::collections::BTreeSet<String> = {
+            let mut t = job.world.query::<(&crate::Node, &crate::components::Kind)>();
+            t.iter(&job.world).filter(|(_, k)| **k == Kind::Type).map(|(n, _)| n.path.clone()).collect()
+        };
+        let inches = |ft: f64| format!("{} in", crate::view::num((ft * 12.0 * 4.0).round() / 4.0));
+        let mut out = FoundLaid::default();
+        let top = format!("{} in", crate::view::num((height_ft * 12.0).round()));
+        for w in found {
+            let kind = if w.measured {
+                crate::editing::wall_type_for(job, &inches(w.thickness), how)?
+            } else {
+                outside.ok_or("a wall seen from one side needs the wall type it is to be laid as")?.to_string()
+            };
+            let line = [[w.from[0], w.from[1]], [w.to[0], w.to[1]]].map(|p| p.map(|x| (x * 10_000.0).round() / 10_000.0 + 0.0));
+            let made = crate::editing::walls(job, level, &kind, &line, false, crate::editing::Top::Height(&top), how)?;
+            let wall = made.first().ok_or("a wall was not made")?.clone();
+            for o in &w.openings {
+                let across = format!("{} in", (((o.to - o.from) * 12.0).round()).max(1.0));
+                let (kind_of, type_path, sill) = if o.window {
+                    let t = crate::editing::opening_type_for(job, Kind::Window, &across, &format!("{} in", ((o.head - o.sill) * 12.0).round().max(1.0)), how)?;
+                    (Kind::Window, t, format!("{} in", (o.sill * 12.0).round()))
+                } else {
+                    let t = crate::editing::opening_type_for(job, Kind::Door, &across, &format!("{} in", (o.head * 12.0).round().max(1.0)), how)?;
+                    (Kind::Door, t, "0 in".to_string())
+                };
+                let at = format!("{:.4} ft", (o.from + o.to) / 2.0);
+                let path = crate::editing::opening(job, &wall, kind_of, &type_path, crate::editing::OnWall::Offset(&at), &sill, how)?;
+                if o.window { out.windows.push(path) } else { out.doors.push(path) }
+            }
+            out.walls.push(wall);
+        }
+        let mut t = job.world.query::<(&crate::Node, &crate::components::Kind)>();
+        out.types = t.iter(&job.world).filter(|(n, k)| **k == Kind::Type && !had.contains(&n.path)).map(|(n, _)| (n.path.clone(), n.name.clone())).collect();
+        out.types.sort();
+        Ok(out)
+    })
+}
+
+#[cfg(test)]
+mod found_tests {
+    use super::*;
+    use crate::editing;
+
+    fn job_with_a_level() -> (Job, String) {
+        let mut job = Job::new("found walls (made up)", "plumbline", "2026-11-22");
+        let how = Entered { status: Status::Assumed, source: "test" };
+        let level = editing::storey(&mut job, "ground", "0 ft", "8 ft", how).unwrap();
+        (job, level)
+    }
+
+    fn walls() -> Vec<FoundWall> {
+        // A partition 4 1/2 in thick with a doorway, and an outside wall seen from one side with a window.
+        vec![
+            FoundWall { from: [18.0, -0.25], to: [18.0, 20.25], thickness: 0.375, measured: true, openings: vec![FoundOpening { window: false, from: 9.25, to: 12.25, sill: 0.0, head: 6.67 }] },
+            FoundWall { from: [30.5, -0.25], to: [-0.25, -0.25], thickness: 0.5, measured: false, openings: vec![FoundOpening { window: true, from: 18.0, to: 23.0, sill: 3.0, head: 7.0 }] },
+        ]
+    }
+
+    #[test]
+    fn found_walls_are_laid_assumed_from_the_scan_with_the_models_own_wall_door_and_window() {
+        let (mut job, level) = job_with_a_level();
+        let how = Entered { status: Status::Assumed, source: "test" };
+        let outside = editing::wall_type(&mut job, "Existing outside wall", "6 in", how).unwrap();
+        let made = lay_found(&mut job, &level, "house", 8.0, Some(&outside), &walls()).unwrap();
+        assert_eq!((made.walls.len(), made.doors.len(), made.windows.len()), (2, 1, 1));
+        // Each wall's line is Assumed and says where it came from; none is Known.
+        let mut q = job.world.query::<(&crate::Node, &crate::Wall)>();
+        let all: Vec<(String, Status, String)> = q.iter(&job.world).map(|(n, w)| (n.path.clone(), w.line.status, w.line.source.clone())).collect();
+        assert_eq!(all.len(), 2);
+        assert!(all.iter().all(|(_, s, src)| *s == Status::Assumed && src == "found in scan house"), "{all:?}");
+        // The partition's type is one the program made, 4 1/2 in.
+        assert!(made.types.iter().any(|(_, name)| name == "wall 4.5 in"), "{:?}", made.types);
+        crate::building::check_whole(&mut job).unwrap();
+    }
+
+    #[test]
+    fn laying_the_same_scan_twice_on_a_level_is_refused_and_changes_nothing() {
+        let (mut job, level) = job_with_a_level();
+        let how = Entered { status: Status::Assumed, source: "test" };
+        let outside = editing::wall_type(&mut job, "Existing outside wall", "6 in", how).unwrap();
+        lay_found(&mut job, &level, "house", 8.0, Some(&outside), &walls()).unwrap();
+        let before = crate::file::save(&mut job);
+        let why = lay_found(&mut job, &level, "house", 8.0, Some(&outside), &walls()).unwrap_err();
+        assert!(why.contains("already has 2 walls found in scan house"), "{why}");
+        assert_eq!(crate::file::save(&mut job), before);
+    }
+
+    #[test]
+    fn a_wall_seen_from_one_side_with_no_type_named_is_refused() {
+        let (mut job, level) = job_with_a_level();
+        let before = crate::file::save(&mut job);
+        let why = lay_found(&mut job, &level, "house", 8.0, None, &walls()).unwrap_err();
+        assert!(why.contains("needs the wall type"), "{why}");
+        assert_eq!(crate::file::save(&mut job), before);
+    }
+}

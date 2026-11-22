@@ -688,10 +688,14 @@ pub fn house_priced() -> Job {
                 put(&mut job, path, "Sheathing and weather barrier", "net_area", Material, 7, "$2.10/SF");
                 put(&mut job, path, "Batt insulation", "net_area", Material, 7, "$1.60/SF");
                 put(&mut job, path, "Cedar lap siding, installed", "net_area", Material, 7, "$9.50/SF");
+                if on_ground {
+                    // No siding is bought behind the stone, and no stone across a doorway (call 175).
+                    job.set_formula(path, Some("Cedar lap siding, installed"), "net_area - wainscot * net_length", &[("wainscot".to_string(), "3 ft".to_string())], Status::Known, "the 3 ft in the name of the stone line (made-up)").expect(OK);
+                }
                 put(&mut job, path, "Gypsum board, hung and finished", "net_area", Material, 9, "$2.40/SF");
                 put(&mut job, path, "Paint, two coats", "net_area", Material, 9, "$1.10/SF");
                 if on_ground {
-                    put(&mut job, path, "Stone veneer wainscot, 3 ft", "plan_length", Subcontract, 4, "$95/LF");
+                    put(&mut job, path, "Stone veneer wainscot, 3 ft", "net_length", Subcontract, 4, "$95/LF");
                 }
             }
             Kind::Wall => {
@@ -726,7 +730,7 @@ pub fn house_priced() -> Job {
                 } else {
                     put(&mut job, path, "Hardwood flooring", "floor_area", Material, 9, "$12/SF");
                 }
-                put(&mut job, path, "Base and trim", "perimeter", Material, 6, "$7.50/LF");
+                put(&mut job, path, "Base and trim", "base_run", Material, 6, "$7.50/LF");
                 put(&mut job, path, "Ceiling, gypsum board and paint", "floor_area", Material, 9, "$3.40/SF");
                 match name.as_str() {
                     "kitchen" => {
