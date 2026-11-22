@@ -9063,6 +9063,44 @@ still counts clashes the old way. Not judged.
 `portmap.sh` and `licenses.sh` pass; the window builds. No window demonstration has
 been run on this tree.
 
+## Calls 164 to 175 judged: what three judges found (2026-11-22)
+
+Three judges tried, cold, to break the program as committed at 8627a83 (which
+`tools/committed.sh` passes: 45 test runs from the commit alone). Notes:
+`research/judgment-call173-scan-walls.md`, `research/judgment-calls-175-164-165.md`,
+`research/judgment-calls-168-170.md`. DECISIONS.md call 179 has each finding and what
+is decided. **Nothing below is fixed yet.**
+
+**Wrong figures, found:**
+- The BIM file read back moves every wall (20 ft comes back 20.4167 LF; 12 ft comes
+  back 11.5), unsaid. STATUS's own claim above, that the job read back takes off as the
+  first did, is false for lengths: the demonstration checked counts.
+- A window with its sill under 3 ft is taken off the siding twice (255 SF where 265).
+- A joist mark on a notch's edge is counted twice (20 where 19; 26 where 25).
+- A wall moved leaves its floor, footing, roof and the wall above behind: a room of
+  426 SF on a floor of 384 SF, `check` passing; the price moves by the walls only.
+- A floor inside a floor adds its area; a beam or post drawn twice is counted twice.
+- A hole's place is 1.4 ft off after a pipe is split; a pipe laid in a slab is "1 hole".
+
+**Silent or misleading, found:**
+- The scan's walls: a thin scan (under about 40 points a square foot), a wall half
+  hidden by cabinets, a sloped ceiling, or rooms of two heights give no walls or
+  missing walls, called furniture, with no word; a cabinet bank to the ceiling is laid
+  as a wall; an 18 in wall as two walls; the wrong measure lays walls 15 ft 6 in high.
+- A move may cross another wall and turn the house inside out; a room line does not
+  follow; a door may hang past its wall's end; two doors may overlap.
+- The plan set: a new door in an existing wall shows on the existing and demolition
+  sheets; a long title runs out of its box; small rooms' lettering overprints; no
+  sheet numbers, north arrow, key or overall dimension; cabinets and fixtures are not
+  drawn and it is not said.
+
+**Held, by the judges' own hand figures:** every dimension and area on every plan
+sheet; the wall-to-wall mechanics of a move; `net_length` and the siding on walls with
+doors; set against at 1.9, 2.0 and 2.1 in; the sample's base and totals; hole counts;
+every joist and rafter layout but the notch edge; pad footing concrete; the scan's
+walls on an L, three rooms, turned houses, thicknesses 3 1/2 to 14 in, with everything
+laid Assumed and sourced to the scan.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

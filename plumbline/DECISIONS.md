@@ -6431,3 +6431,133 @@ The builder finished items 1 to 4 and 7 and stopped, rightly, on 5 and 6. The le
   stone across the door, and the base across doorways, $4,502.72).
 - **Owed in the window:** it still counts clashes its old way (per piece, mountings
   in); it takes the model's new counts with call 177's pass.
+
+### Call 179. What three judges found in calls 164 to 175, and what is decided (2026-11-22)
+
+Three judges (Sonnet, cold, on the program as committed at 8627a83) tried to break the
+scan walls, the money fixes and structure, and the plan set and the wall move. Their
+notes are `research/judgment-call173-scan-walls.md`,
+`research/judgment-calls-175-164-165.md`, `research/judgment-calls-168-170.md`. Each
+finding below was reproduced by its judge from an empty job; the lead read each and
+decides what is so. None is waved away.
+
+**A. The scan's walls (call 173).** The finder holds on dense scans of ordinary houses
+(an L, three rooms, turned, walls 3 1/2 to 14 in). It fails silently elsewhere, and
+silence is the defect.
+1. *Too few points.* Under about 40 points a square foot it finds no walls, calls them
+   furniture, and does not say why. **It says how thick the scan is and, where that is
+   too thin to tell a wall, says so and finds nothing**; its counts that depend on how
+   thick the scan is are worked from the scan's own thickness, not fixed.
+2. *A wall half hidden vanishes, and the room is left open without a word.* **A face
+   hidden by what stands in front of it is not "stood short"**: where things stand
+   along a wall, the wall is found from what shows above and between them. **Whatever
+   is found, it says whether the walls close**: "the walls found do not close: 2 ends
+   meet nothing", with where.
+3. *A cabinet bank within 6 in of the ceiling is laid as a wall across the room.* **A
+   face that reaches the ceiling but whose two ends meet no wall, with a wall face
+   behind it within 3 ft, is "a wall or something tall standing at the wall": it is
+   said, and laid only on the person's word** (it is never laid by `--lay` alone).
+4. *A sloped ceiling reads as "no ceiling"; with an 8 ft and a 10 ft room the low
+   room's walls are furniture.* **A wall is judged against the ceiling over it**, not
+   one height for the house; it says "the ceiling is not one height: 8 ft 0 in and 10
+   ft 0 in" or "the ceiling slopes", and what it could not do there.
+5. *A closet and a thin wall beside a thick one give leaning and phantom walls, and
+   laying then refuses all of it with a sentence that names no wall.* **A wall found is
+   never laid leaning** (a face is fitted along its whole length or not found); **what
+   cannot be laid is named as the find named it ("wall 3 of what was found") and the
+   rest is laid**, with what was not said.
+6. *An 18 in wall is two 6 in walls.* **Two faces up to 24 in apart with no floor seen
+   between them are one wall.**
+7. *The wrong measure or the wrong way up gives a 15 ft 6 in ceiling and six walls laid
+   at that height.* **A floor to ceiling under 6 ft or over 15 ft, or a house over 150
+   ft, is said first as "this is not likely the house: check the measure and which way
+   is up", and nothing is laid without `--lay --anyway`.**
+8. *A level 9 ft high, Known, gets walls 8 ft high from the scan with no word.* **The
+   disagreement is said** and the walls take the scan's height, Assumed.
+9. *Small:* doors an inch apart in the noise become two door types (**openings within
+   1 in of one another in width and head are one type**); a wall's end printed "-0' 4"
+   past the face (**ends are trimmed to the faces they meet**); "PLY", "z up", raw
+   level and type marks in what is said (**builder's words; a level and a type by
+   name**); a scan far from zero laid thousands of feet off (**it is laid where its
+   sheet lies; with no sheet, at its own southwest corner, and it says so**).
+Not a defect: a person who types "found in scan" as the source of a field measure has
+measured, on their word; the program does not police a person's source.
+
+**B. Moving a wall (call 170), and what may be drawn.**
+1. *The floor, the footing, the roof and the wall above are left behind, and nothing
+   says so; `check` passes with a room bigger than its floor.* **A moved outside wall
+   takes with it: the floor's edge that lay on it, the footing under it, the wall
+   above it on the next level (and so on up), and the roof's edge over it.** Each is
+   said, as the walls that follow are. What cannot follow is said as left behind, and
+   `check` cautions wherever a room reaches past its floor or a wall stands off its
+   footing. `--alone` moves the wall only and says what it left.
+2. *A room line ending on the moved wall stays put.* **It follows, as a wall that butts
+   does.**
+3. *A move across another wall is accepted; the house can be turned inside out.* **A
+   move that would carry a wall across a wall it does not meet, or past its own far
+   side, is refused**, saying which wall is in the way and how far it can go.
+4. *`--by` takes feet only; a move west is "moved -4 ft east".* **Every length is typed
+   any way the program reads a length elsewhere; a direction is said as a direction
+   ("4 ft west"); a wall is named with its level.**
+5. *A door or window may be hung past the end of its wall, and two may overlap.*
+   **Refused when drawn or moved**, as two walls on one line are: an opening lies
+   within its wall, clear of every other opening in it.
+6. *A floor drawn inside another floor is accepted and its area added; a beam or a post
+   drawn twice in one place is counted twice.* **Refused, as two walls on one line
+   are** (two floors of one level may not overlap; two beams, two posts, two pad
+   footings may not lie in one place).
+
+**C. Figures.**
+1. *The BIM file read back moves every wall* (20 ft comes back 20.4167, 12 ft comes
+   back 11.5). **Wrong quantity, unsaid: the worst finding of the three.** A wall
+   written by the program is read back on the line it was drawn on, to the same length:
+   `takeoff` of the job read back gives the same wall lengths, face areas and counts,
+   and the demonstration checks the lengths, not only the counts. What is truly not
+   brought back (footings, the roof) stays said.
+2. *A window with its sill under 3 ft is taken off the siding twice* (255 SF where 265
+   is right). **The siding is the wall's net area less the net area of the wall below
+   the top of the stone**: the face up to 3 ft less the parts of its openings below 3
+   ft. The stone's length stays `net_length`.
+3. *A joist's mark that falls on a notch's edge is counted twice* (an L mirrored: 20
+   joists where 19; a U: 26 where 25). **A mark is one joist.** The mirrored L and the
+   U join the unit tests with the count by hand.
+4. *After a pipe is split, the hole's place is given 1.4 ft off the wall.* **A hole is
+   where the run passes through the wall or floor**, and the field list sends a person
+   there.
+5. *A pipe lying inside a slab is "1 hole to cut".* **A run that lies in a floor or a
+   wall along its length is "laid in" it, said and counted apart from a hole.**
+6. *A door in a wall to demolish is lost on read-back, with advice the program then
+   contradicts.* Brought back with its wall, or said as lost with what to do that
+   works.
+7. *No question is asked of a beam's ends* (what it bears on) *or of the size the
+   starter lines name ("2x10 at 16 in" reads as drawn).* **A beam asks what carries
+   each end; a line's size that came from the starter library is Assumed and says "the
+   starter library's size, not this job's"**; joists and rafters are named in what the
+   clash test leaves out.
+8. *Words:* "18 lb/LF" refused as having no unit (**read**); "property sets" and
+   "LoadBearing" in what is said of a model brought in (**"its bearing mark", "what the
+   model says of each thing"**); a raw figure name in a note (**its words**).
+
+**D. The plan set (call 168).** No dimension or area on any sheet was wrong: every one
+was checked by hand against the model. What is wrong is the drawing.
+1. *A new door in an existing wall is drawn on the existing and the demolition plans.*
+   **An opening is drawn on the sheets its own mark puts it on** (unmarked is new).
+2. *A long title runs through its box and the sheet's edge, lettered under 3/32 in;
+   small rooms' names, areas and dimensions print over one another ("64-6F").*
+   **Lettering is never under 3/32 in at the printed scale and never over other
+   lettering or outside its box**: a title that does not fit goes to two lines, then is
+   cut at a word with an ellipsis; a room too small for its name and area takes a mark
+   and a schedule at the side.
+3. *Cabinets, fixtures and pipes are not drawn, and the notes do not say so.* **The
+   notes say what the sheet does not show.** Cabinets and fixtures set in place are
+   drawn on the proposed plan as their outlines.
+4. *No sheet numbers, north arrow, key to the line types, or overall dimension.* **Each
+   sheet has its number ("A-1 of 3"), a north arrow, a key (existing, to demolish,
+   new), and an overall dimension outside the strings on each side.**
+5. *A window hanging past its wall's end is drawn.* Gone with B5.
+6. *A file named ".txt" is written as a PDF; an existing file is written over without
+   a word.* **The plan set's name ends as a PDF's does or is refused; writing over a
+   file is said ("wrote over the plan set that was there").**
+Lettering as strokes (not text a reader can search) is left: it is what keeps the
+program free of a font's licence and the sheets the same on every machine; said in the
+notes of SPEC.md.
