@@ -5974,3 +5974,39 @@ window the Move tool does the same; with a wall in hand, a length typed and Ente
 it that far toward the pointer, square to the wall where walls meet its ends. A run, a
 thing set in place, a fitting and a room's point move as they did. No saved job
 changes; a wall that no wall meets moves exactly as before.
+
+### Call 171. The window's half of calls 164, 168 and 170, and the counts three ways (2026-11-22)
+
+What the command line gained apart from the window, brought into it; nothing here works
+a figure out, each is the model's.
+
+1. **Move** (call 170). A wall moved in the window takes with it the walls that meet it,
+   as the command line does, in one step that one Undo takes back; the message says what
+   followed and by how much, what stands against it and was not moved, and any existing
+   wall that moved, in the model's own sentences. With a wall in hand, a length typed and
+   Enter moves it that far toward the pointer, square to the wall where walls meet its
+   ends. The tool's strip has a switch, **Alone**, off to begin with. A refusal (a door
+   left outside its wall; a wall held at both ends pushed along itself) is the model's
+   sentence, and nothing moves.
+2. **Beam, Post, Pad footing** (call 164): three tools with the building's. Beam: its
+   width, depth and the height of its top, then two clicks. Post: its width, depth and
+   height, then a click. Pad footing: its width, length, thickness and the height of its
+   top, then a click. A size typed is Assumed, "entered on screen", as every typed size
+   is, and each tool's hint ends "an engineer sizes it: this is what was typed". A beam
+   and a post show with the Framing switch, a pad with the Ground switch; each is drawn
+   to its size (timber for a beam and a post, concrete for a pad), can be selected, and
+   its panel shows its figures, its type's size with how sure it is, and Assembly.
+3. **For the engineer** (call 164): on the sheet window's Building tab, a card "What
+   carries the building" with the model's `structure` list and its last line, the count
+   of sizes not Known.
+4. **Plan set** (call 168): under Write out, "Plan set" writes the level on show to a
+   PDF in the job's folder, named for the job and the level (never over a file that is a
+   job), and the message says which pages were written, on what paper and at what
+   scale, in the model's sentence.
+5. **Counts three ways** (call 158): on the Building tab, wherever anything it counts
+   carries a mark, each count reads to build, existing and to demolish under its line,
+   as `takeoff` prints them.
+6. **What the clash test leaves out** names framing where the job has any (call 164).
+
+Each is proved by a window demonstration that does it the way a stranger would, checked
+in what the window said and, where it is something seen, on the picture.
