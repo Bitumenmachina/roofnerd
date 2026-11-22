@@ -7623,9 +7623,15 @@ demonstration with hand figures, a judge.
 3. **Two layouts side by side** (design 1, "the biggest single gain"): options of one
    job, their areas, wall lengths and price compared. Today: copy the file and read two
    takeoffs by eye.
-4. **Cabinet runs and countertops** (design 4; envelope 2, 3, 6): base, wall and tall
-   boxes by code along a wall, fillers, a schedule the cabinet maker can quote, the
-   countertop by SF and edge LF. And the wrong thing now: the Kitchen assembly's
+4. **Cabinets, countertops and design selections out of the tool chest** (Patrick,
+   2026-11-22: "tool chest is a more apt way to have single items like cabinets,
+   countertops and design selections"; design 4; envelope 2, 3, 6). The tool chest is
+   read as the item library the program already has (items by trade, brought in and
+   written out as a table, placed, moved, clash-tested: calls 105 to 111). So this is
+   not a kitchen tool of its own: base, wall and tall boxes by code, countertops,
+   fixtures, appliances and finish selections are items in the chest, by trade; what is
+   added is setting them in a run along a wall with fillers, a schedule the cabinet maker
+   can quote, and the countertop by SF and edge LF from the boxes under it. And the wrong thing now: the Kitchen assembly's
    "Cabinets, Countertops, Appliances = 1 EA" go to the supplier as Known.
 
 *B. Make a renovation's numbers honest for each trade.*

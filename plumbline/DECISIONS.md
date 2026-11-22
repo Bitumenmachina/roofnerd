@@ -5199,3 +5199,16 @@ No number moves. `demos/renow.sh` shows it, its pictures measured.
 Still owed from that judgment: the Status in the BIM file (J-N8); a second room left
 Unknown by a new wall on part of a demolished wall's line says why in `check` only
 (J-N11).
+
+### Call 151. The tool chest (2026-11-22; Patrick's word)
+
+Patrick: "we have all the trades and tool chest; I imagine that tool chest is a more apt
+way to have single items like cabinets, countertops and design selections." No part of
+the program carried that name. It is read as the item library (calls 105 to 111: items
+by trade, kept as a table, brought in, written out, placed, moved, clash-tested, each
+size Assumed and sourced to its maker's sheet), and that reading is said to him, to be
+set right if he meant something else. What follows from it: single things a job picks
+(cabinet boxes, countertops, fixtures, appliances, finish selections) live in the tool
+chest by trade and are not given tools of their own; the renovation plan's step 4 is
+built that way. Whether the screen's words "Item library" and "Starter items" become
+"Tool chest" is a wording call, made when step 4 is built.
