@@ -8053,6 +8053,39 @@ demolish. Prices are made up.
 4. The estimate's job cost with those four prices: 1,008.00 + 259.20 + 360.00 + 340.00 =
    **$1,967.20**, the lines without a price left out and said.
 
+## Call 157 and the window's five pieces judged (2026-11-22; an agent on another model, cold; `research/judgment-call157-and-window.md`)
+
+**Held, by hand:** `wall_run` in every case tried (doors single, overlapping, at a
+corner, across a room line, to demolish, existing; an island; an L; a demolished
+partition with a room line in its place); the cabinet refusals, the corner boxes,
+appliances in a run, a countertop split round a range (9.5625 + 7.4375 SF), `price-item`,
+`options`, the supplier's list. Nineteen refusals left their files as they were.
+
+**Could a builder do each from the screen alone?** A scan file: **no** (the list takes
+Enter only, and speaks of "tmp", ".ply", "y up or z up"). Existing and demolition: yes,
+guessing at the colours. A room line: partly (what it is for is never shown; the dashed
+line is lost over the pink of a demolished wall). A run of cabinets: partly (only for
+someone who reads box codes; the run is an unlabelled strip). Layouts: reading yes;
+**making the second layout no** (the window has no way to save a copy or open another).
+So `TRY-IT.md` as written sends Patrick into two things the screen does not carry.
+
+| | Found | Where it stands |
+|---|---|---|
+| J-W1 | Scan file: Enter only, no button to bring it in; software words in its list and message | to fix (call 161) |
+| J-W2 | Layouts: no "save a copy as another layout" and no way to open another job from the window; the list shows every file | to fix (call 161) |
+| J-W3 | The window lacks call 157: no appliances by name in the Cabinets field, no corner boxes in its list, no "left out" row or file names in Layouts | to fix (call 161) |
+| J-W4 | No key for the pink of demolition and the pale of existing; existing brick goes plain gray; the room's area and receptacles change without a word when a wall is marked | to fix (call 161) |
+| J-W5 | Box codes unexplained; a run is an unlabelled strip with a dimension written over it; the sheet lists no boxes | to fix (call 161) |
+| J-W6 | Open items flooded by the starter items' unknown makers ("and 91 more") | to fix (call 161) |
+| J-W7 | A refusal shown three times; "Wall 1 (wall 1)"; "tool chest" in a refusal where the screen says items | to fix (call 161) |
+| J-W8 | Pictures in four folders are older than call 157, renow's older than call 153 | retaken with call 161 |
+| J-C-A | A room priced from the starter library before call 157 keeps its base on perimeter; `apply --change` says "already" | open: a job keeps what it was priced with; to be said by `check` |
+| J-C-C | The Kitchen assembly: base run behind the cabinets, and its three lump lines beside the boxes' own lines (a double count) | to fix (call 162) |
+| J-C-D | A turning corner box (36 in deep) under a 25 1/2 in countertop: 12.75 SF for 15.375 | to fix (call 162) |
+| J-C-F, H | A window added or a box moved or removed after a run: nothing said; the countertop stays whole | open |
+| J-C-G | A countertop cannot be priced by `price-item` | to fix (call 162) |
+| J-C-B, E, I, J, K, L | low: a window with its sill on the floor does not shorten the wall run; a range mid-run with a countertop is refused and told to do what nothing does; a room line left on a demolished wall; words; boxes on a temporary wall or taller than the level; no price row in `options` | open |
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
