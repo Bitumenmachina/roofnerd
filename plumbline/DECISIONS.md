@@ -5709,3 +5709,49 @@ with the Framing and Ground switches) and can be selected and read; tools to dra
 there are the next window work. The saved job gains the three kinds; a job from before
 opens as it was. No number of any job without them moves. Joists and rafters counted
 across a floor and a roof plane are call 165.
+
+### Call 165. Joists and rafters counted (2026-11-22; plan step C8, its second half; JLC's Lumber field guide: "joists = floor width / spacing + 1"; `research/renovation-structure.md`)
+
+A floor's joists and a roof plane's rafters are counted as a wall's studs are (call
+137): **where a priced line names the framing**, by the rule walls use
+(`finish::framing_of`: a lumber size and a spacing, "Floor joists, 2x10 at 16 in",
+"Rafters, 2x8 at 24 in"), and nowhere else. They are figures of the floor and of the
+plane, not things of their own; nothing is sized (the size is the line's words, typed).
+BIMCraft lays out nothing across a floor or a roof (`research/structure-port-survey.md`):
+the layout is ours, by the framer's own rule, and its stations are laid the way
+BIMCraft's `timber.rs` lays a wall's studs, on multiples of the spacing from one end.
+
+**The layout, one for both** (`members_across`: an outline on plan, the way the members
+run, a spacing):
+- A member is 1 1/2 in thick. Its middle is 3/4 in past its layout mark.
+- **An edge member** lies 3/4 in inside every edge of the outline that runs with the
+  members (a rim or end joist; the rafter at a rake), as long as that edge.
+- **Marks** are at each multiple of the spacing from the outline's first side, square to
+  the members (its west or south end first); the member at a mark is the line there cut
+  to the outline: one piece for each length of it that lies inside.
+- A piece that lies within a member's thickness of an edge member beside it, over the
+  same length, is that edge member and is not counted twice.
+- A piece under 6 in long is not a piece: it is left out, and the figure says how many.
+
+**A floor**, where a line names its joists: `joists` (EA, the pieces), `joist_length`
+(LF, their lengths added), `joist_longest` (ft: the stock they are bought in is that or
+the next length up), `rim_length` (LF: the band the joist ends meet, the outline's
+edges measured square to the joists). Which way they run is a value on the floor,
+**"joists span"**: `the short way` (square to the floor's longest edge) or `the long
+way`. Not said, it is taken as the short way, Assumed, "joists usually span the short
+way: say which way these run", and every joist figure rests on it.
+
+**A roof plane**, where a line of its roof names its rafters: `rafters` (EA),
+`rafter_length` (LF, along the slope: each piece's length on plan times the plane's
+slope factor), `rafter_longest` (ft). Rafters run up the plane square to its eave; the
+marks are along the eave. The plane is as drawn, its overhang in it, so a rafter's tail
+is in its length. A plane with no eave (or no pitch) has no rafter figures and says why.
+
+Each figure is Assumed where the outline, the pitch or the way they run is; each says
+what it was worked from. Hangers, blocking, bridging, doubled joists under a partition
+and the headers round a stair are not counted: the figures' note says "blocking,
+hangers and doubled members are not in this count". The starter library's "Framed
+floor" gains "Floor joists, 2x10 at 16 in" by `joists` (EA) and "Rim joist" by
+`rim_length` (LF); a starter roof assembly gains "Rafters, 2x8 at 24 in" by `rafters`.
+No number moves on a floor or a roof priced before this: the figures exist only where
+a line names the framing, and the lines a job already has are the job's.

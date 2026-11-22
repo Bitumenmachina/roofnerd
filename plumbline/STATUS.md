@@ -8159,6 +8159,45 @@ demolish and said bearing (Assumed, "joists lap over it"). Prices are made up.
 11. Saved and opened again: `show`, `estimate`, `clashes` and `structure` print what they
     printed.
 
+## Joists and rafters counted: a demonstration, written before it is built (`demos/joists.sh`, call 165)
+
+By hand. A member is 1 1/2 in thick; its middle is 3/4 in (0.0625 ft) past its mark.
+
+**A floor 24 ft by 16 ft**, a line "Floor joists, 2x10 at 16 in" on it. Not said, the
+joists span the short way (16 ft), Assumed. Edge joists 0.0625 ft inside the west and
+east edges; marks every 1.3333 ft from the west: joists at 1.3958, 2.7292, ... 22.7292
+(marks 1 to 17: 17 of them; the mark at 0 is the west edge joist; the next, at 24.0625,
+is past the east edge joist at 23.9375). **19 joists** (JLC: 24 / 1.3333 + 1 = 19),
+each 16 ft: `joist_length` **304 LF**, `joist_longest` **16 ft**, `rim_length` 2 × 24 =
+**48 LF**. Said "the long way": marks along the 16 ft, 11 of them, and two edge joists:
+**13 joists** of 24 ft, **312 LF**, rim **32 LF**.
+
+**An L-shaped floor**: 0,0; 24,0; 24,10; 12,10; 12,16; 0,16. Its longest edge is the
+south, 24 ft: the joists run north. Edge joists inside the west edge (16 ft), the east
+edge (10 ft) and the edge at east 12 between north 10 and 16 (6 ft, at east 11.9375).
+Marks 1 to 8 (east 1.3958 to 10.7292) are 16 ft long: 8 joists; marks 9 to 17 (east
+12.0625 to 22.7292) are 10 ft: 9 joists. **20 joists**: (1 + 8) × 16 + 6 + (9 + 1) × 10
+= 144 + 6 + 100 = **250 LF**; longest **16 ft**; rim 24 + 12 + 12 = **48 LF**.
+
+**A gable roof** over 24 ft by 16 ft, 6 in 12, the ridge along the 24 ft: each plane has
+an eave of 24 ft and runs 8 ft on plan; the slope factor is √(6² + 12²) / 12 =
+1.118034, so a rafter is 8 × 1.118034 = **8.944272 ft**. "Rafters, 2x8 at 24 in": an
+edge rafter at each rake and marks 1 to 11: **13 rafters** a plane (24 / 2 + 1),
+`rafter_length` 13 × 8.944272 = **116.2755 LF**; the roof **26 rafters**.
+
+**A hip roof** over the same, 6 in 12 all round. A long plane (eave 24 ft, ridge 8 ft):
+no edge runs with the rafters; at a mark x ft along the eave the rafter is min(x, 8,
+24 − x) ft on plan. Marks at 0.0625, 2.0625, ... 22.0625: 0.0625 (under 6 in: left out
+and said), 2.0625, 4.0625, 6.0625, then 8 four times, then 7.9375, 5.9375, 3.9375,
+1.9375: **11 rafters**, 63.9375 ft on plan, **71.4843 LF**. A short plane (eave 16 ft,
+a triangle): 2.0625, 4.0625, 6.0625, 7.9375, 5.9375, 3.9375, 1.9375: **7 rafters**,
+31.9375 ft on plan, **35.7072 LF**. The roof: **36 rafters**, **214.383 LF**.
+
+Each figure reads Assumed where what it rests on is, and says blocking, hangers and
+doubled members are not in the count. A floor and a plane with no such line have none
+of these figures. The starter "Framed floor" on the first floor: "Floor joists, 2x10 at
+16 in" 19 EA, "Rim joist" 48 LF.
+
 ## Call 157 and the window's five pieces judged (2026-11-22; an agent on another model, cold; `research/judgment-call157-and-window.md`)
 
 **Held, by hand:** `wall_run` in every case tried (doors single, overlapping, at a
