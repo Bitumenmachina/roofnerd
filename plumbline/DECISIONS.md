@@ -6210,3 +6210,47 @@ each is decided here first.
 Not decided here, on the list in STATUS.md: the receptacle count in a bath and a
 kitchen (the 210.52(A) count of call 147 is for wall space; (C) counters and (D) the
 basin are not built and the count must say so where a room is a kitchen or a bath).
+
+### Call 176. What a wall carries and what it stands on (2026-11-22; the sweep's worst finding)
+
+The engineer, the builder and the framer each found it: a first-floor wall marked to
+demolish with a second-floor wall standing on its line, and the program silent. Call 160
+asks whether an opened wall is bearing; nothing looks at what is drawn above it.
+
+**Worked from what is drawn, and said to be only that.** For any wall the program works
+out, from the plan lines of what is on the level above and the level below:
+
+- **what stands on it**: each wall of the level above whose line lies over this wall's
+  (within this wall's thickness, and within 1 degree of its direction), with the length
+  they share; the roof, where an eave of a roof plane lies over the wall (a rake does
+  not bear on the wall under it, and is not listed); the floor above, by its joists: if
+  the joists' direction is said (call 165) and they cross this wall, "the joists of the
+  floor above cross it"; if they run alongside it, nothing; if their direction is not
+  said, "which way the joists of the floor above run is not said".
+- **what it stands on**: a wall of the level below under its line, a footing under it,
+  a beam under it (call 164), each with the shared length; and for the length where
+  none is found, "nothing found under it for N LF" (on the lowest level: no footing; on
+  an upper level: it stands on the floor alone, which is ordinary for a partition and
+  is said plainly, not as an alarm).
+
+These are figures of the wall (`carries`, `stands on`), worked in `crates/world`, each
+resting on the positions it was worked from (Assumed if they are). Every place they are
+shown carries the sentence: "worked from what is drawn above and below this line; it is
+not an engineer's finding". The program still sizes nothing.
+
+**Where it speaks up.**
+1. A wall marked to demolish, or opened (call 160's rule for opened), with anything
+   standing on it: a caution on the wall, in `check`, and a question on the field list
+   with the wall's dollars riding: "wall B stands on it for 12 LF: once it is down,
+   nothing is found under that wall". A beam drawn under the upper wall's line (new
+   work) answers it: the upper wall then stands on the beam.
+2. A wall said not bearing with a wall or an eave standing on it: a caution ("said not
+   bearing, and wall B stands on it for 12 LF").
+3. A wall whose bearing is not said with something standing on it is counted, for the
+   window's tint (bearing, not bearing, not said) and its top-bar mark.
+
+Nothing is refused: the drawing may be wrong, or the engineer may have it in hand.
+The clash test, the price and every existing figure are unchanged.
+
+Built after the held work of calls 164 and 165 is in the tree (it needs the beam and
+the joists' direction).

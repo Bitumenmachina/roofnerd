@@ -8894,6 +8894,53 @@ others. Read back into an empty job: 1 existing, 1 to demolish, 1 new wall; the 
 demolish; the wall types by their names; the roof; and `takeoff` of the job read back
 says what the first job's did. The outside checker passes the file.
 
+## What a wall carries: a demonstration, written before it is built (call 176; 2026-11-22)
+
+`demos/carries.sh`, at the command line, from an empty job; made-up figures.
+
+**The house as made.** Two levels, each a box 24 ft (east) by 16 ft (north), outside
+walls 6 in, each level 9 ft. Strip footings under the four first-floor outside walls
+only. A first-floor partition P1 on the line east 12, from north 0 to 16 (16 LF). A
+second-floor partition P2 on the line east 12, from north 4 to 16 (12 LF), over P1. A
+gable roof, its ridge running east-west: eaves over the north and south walls, rakes
+over the east and west.
+
+**Step 1. As drawn.**
+
+| Wall | Stands on it | It stands on |
+|---|---|---|
+| P1 | P2 for 12.00 LF; joists of the floor above: direction not said | nothing found under it for 16.00 LF (no footing) |
+| first-floor south | second-floor south for 24.00 LF | a footing for 24.00 LF |
+| second-floor south | the roof's eave for 24.00 LF | first-floor south for 24.00 LF |
+| second-floor east | nothing (a rake is over it) | first-floor east for 16.00 LF |
+| P2 | nothing | P1 for 12.00 LF |
+
+Every one of these says it is worked from what is drawn and is not an engineer's
+finding. `check` passes with no caution: nothing is opened.
+
+**Step 2. The joists said.** The second floor's joists said to run north-south (they
+span the 16 ft): P1 runs north-south too, alongside them: P1 carries P2 for 12.00 LF
+and no joists. Said to run east-west (they span the 24 ft and cross east 12): "the
+joists of the floor above cross it".
+
+**Step 3. P1 marked to demolish.** A caution on P1 and in `check`: "P2 stands on it for
+12.00 LF: once it is down, nothing is found under that wall" (and, with the joists
+east-west, that they cross it). The field list asks it with P1's dollars riding (P1
+carries the starter partition assembly, priced at a made-up $10.00/SF of face: 16 x 9 =
+144 SF, **$1,440.00** riding). P2 now reads: stands on nothing found for 12.00 LF.
+
+**Step 4. A beam answers it.** A beam (call 164) drawn on the second floor's line east
+12 from north 0 to 16, under P2, as new work: P2 stands on the beam for 12.00 LF; the
+caution on P1 goes; the field list no longer asks it. The beam's own questions (its
+size, what it bears on at each end: call 164) stand.
+
+**Step 5. Said not bearing.** With the beam taken away and P1 marked existing and said
+not bearing: a caution, "said not bearing, and P2 stands on it for 12.00 LF".
+
+**Step 6. Nothing else moves.** The estimate, the clash list and the takeoff of the job
+are the same before and after the figures are asked for (byte for byte), and a job
+saved before opens and saves byte for byte.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
