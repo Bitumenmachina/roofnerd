@@ -89,6 +89,13 @@ impl Lens {
     }
 }
 
+/// The Work column for a row that stands for several lines: the one thing they all are,
+/// or each of the things they are, in the order a job is read (call 158).
+fn work_of_group<'a>(each: impl Iterator<Item = &'a str>) -> String {
+    let each: Vec<&str> = each.collect();
+    ["new work", "existing to remain", "to demolish", "temporary"].into_iter().filter(|w| each.contains(w)).collect::<Vec<_>>().join("; ")
+}
+
 fn sure(s: Status) -> &'static str {
     match s {
         Status::Known => "Known",
@@ -399,12 +406,68 @@ pub fn estimate_out(job: &mut Job, formulas: bool) -> Vec<OutSheet> {
     out
 }
 
+/// What a line's thing is to the work, said as the Work column says it (call 158): a
+/// thing with no mark is new work.
+fn work_said(job: &mut Job, path: &str) -> &'static str {
+    match job.find(path).and_then(|e| job.world.get::<crate::components::Work>(e)).and_then(|w| w.status.value) {
+        None | Some(crate::components::WorkStatus::New) => "new work",
+        Some(w) => w.said(),
+    }
+}
+
+/// The system a line's thing is on, by the system's name; blank where it is on none, or
+/// where which one is not known.
+fn system_said(job: &mut Job, path: &str) -> String {
+    let Some(e) = job.find(path) else { return String::new() };
+    let Some(s) = job.world.get::<crate::building::InSystem>(e) else { return String::new() };
+    if s.0.status == Status::Unknown {
+        return String::new();
+    }
+    let Some(sys) = s.0.value.clone() else { return String::new() };
+    job.find(&sys).and_then(|e| job.world.get::<crate::components::Node>(e)).map(|n| n.name.clone()).unwrap_or_default()
+}
+
 /// One lens on the estimate.
 pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
+    lens_out_for(job, lens, None, None).expect("a list with no filter is always written")
+}
+
+/// One lens on the estimate; for the subcontractor's list, one trade's or one system's
+/// scope alone (call 158). A division outside 1 to 16, or a system the job does not
+/// have, is refused in words. What the filter left out is counted in the list's last line.
+pub fn lens_out_for(job: &mut Job, lens: Lens, division: Option<&str>, system: Option<&str>) -> Result<Vec<OutSheet>, String> {
+    let division = match division {
+        None => None,
+        Some(d) if lens == Lens::Subcontractor => Some(crate::components::Division::parse(d)?),
+        Some(_) => return Err("only the subcontractor's list is cut to one division".into()),
+    };
+    let system = match system {
+        None => None,
+        Some(name) if lens == Lens::Subcontractor => {
+            let mut have: Vec<(String, String)> = Vec::new();
+            let mut q = job.world.query::<(&crate::components::Node, &crate::building::SystemInfo)>();
+            for (n, _) in q.iter(&job.world) {
+                have.push((n.path.clone(), n.name.clone()));
+            }
+            match have.iter().find(|(p, n)| n == name || p == name) {
+                Some((_, n)) => Some(n.clone()),
+                None if have.is_empty() => return Err(format!("no system called {name:?}: this job has no systems")),
+                None => return Err(format!("no system called {name:?}: this job has {}", have.iter().map(|(_, n)| format!("{n:?}")).collect::<Vec<_>>().join(", "))),
+            }
+        }
+        Some(_) => return Err("only the subcontractor's list is cut to one system".into()),
+    };
     let est = view::estimate(job);
     let title = title(job);
     let live: Vec<&SheetLine> = est.lines.iter().filter(|l| !l.off).collect();
-    let unclassed: Vec<&&SheetLine> = live.iter().filter(|l| l.class.is_none()).collect();
+    // What each line's thing is to the work, and for the subcontractor's list the system
+    // it is on (call 158).
+    let work: std::collections::HashMap<String, &'static str> = est.lines.iter().map(|l| (l.path.clone(), work_said(job, &l.path))).collect();
+    let systems: std::collections::HashMap<String, String> = if lens == Lens::Subcontractor { est.lines.iter().map(|l| (l.path.clone(), system_said(job, &l.path))).collect() } else { Default::default() };
+    // Whether the filter, if there is one, lets a line through.
+    let wanted = |l: &SheetLine| division.is_none_or(|d| l.division == Some(d)) && system.as_ref().is_none_or(|s| systems.get(&l.path) == Some(s));
+    let unclassed_all: Vec<&&SheetLine> = live.iter().filter(|l| l.class.is_none()).collect();
+    let unclassed: Vec<&&SheetLine> = unclassed_all.iter().copied().filter(|l| wanted(l)).collect();
     // A thing set in place is no surer than where it stands and its size, however sure its
     // count of one is (call 157): by the worst of them, for the lines on such a thing.
     let stands: std::collections::HashMap<String, Status> = live
@@ -423,13 +486,13 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
             }
         }
     };
-    match lens {
+    Ok(match lens {
         Lens::Supplier => {
             let mut rows: Vec<Vec<Out>> = vec![
                 vec![text(format!("{title}: materials to quote"))],
                 vec![text("Quantities only, by what is bought and the unit it is bought by. None of our prices are in this list.")],
                 vec![],
-                ["What to quote", "Quantity", "Unit", "Lines", "How sure", "Note"].iter().map(|h| text(*h)).collect(),
+                ["What to quote", "Quantity", "Unit", "Lines", "How sure", "Note", "Work"].iter().map(|h| text(*h)).collect(),
             ];
             // By what is bought and its unit, in the order the estimate first names each.
             let mut groups: Vec<(String, String, Vec<&SheetLine>)> = Vec::new();
@@ -454,23 +517,55 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
                         note = [note, said].into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join("; ");
                     }
                 }
-                rows.push(vec![text(what.clone()), quantity, text(unit.clone()), Out::Number(lines.len() as f64), text(sure(lines.iter().map(|l| l.priced.status.max(stands.get(&l.path).copied().unwrap_or(Status::Known))).max().unwrap_or(Status::Known))), text(note)]);
+                rows.push(vec![text(what.clone()), quantity, text(unit.clone()), Out::Number(lines.len() as f64), text(sure(lines.iter().map(|l| l.priced.status.max(stands.get(&l.path).copied().unwrap_or(Status::Known))).max().unwrap_or(Status::Known))), text(note), text(work_of_group(lines.iter().map(|l| work[&l.path])))]);
             }
             left_out(&mut rows);
-            vec![OutSheet { name: "To quote".into(), rows, head: 3, widths: vec![40.0, 14.0, 8.0, 8.0, 10.0, 60.0] }]
+            vec![OutSheet { name: "To quote".into(), rows, head: 3, widths: vec![40.0, 14.0, 8.0, 8.0, 10.0, 60.0, 20.0] }]
         }
         Lens::Subcontractor => {
             let mut rows: Vec<Vec<Out>> = vec![
                 vec![text(format!("{title}: scope for subcontractors"))],
                 vec![text("Scope and quantities only: the lines of the estimate whose cost type is Subcontract. None of our prices are in this list.")],
                 vec![],
-                ["Where", "Scope", "Quantity", "Unit", "How sure", "Note"].iter().map(|h| text(*h)).collect(),
+                ["Where", "Scope", "Quantity", "Unit", "How sure", "Note", "Work", "Division", "System"].iter().map(|h| text(*h)).collect(),
             ];
+            let (mut left_in_none, mut left) = (false, 0usize);
+            let mut leave = |l: &SheetLine| {
+                left += 1;
+                left_in_none |= division.is_some_and(|d| l.division != Some(d)) && l.division.is_none();
+            };
             for l in live.iter().filter(|l| l.class == Some(Class::Subcontract)) {
-                rows.push(vec![text(on(l)), text(l.description.clone()), l.priced.value.map(Out::Number).unwrap_or_else(|| text("no quantity")), text(l.priced.unit.clone()), text(sure(l.priced.status)), text(if l.priced.value.is_none() { l.priced.note.clone() } else if l.quantity.value.is_some() && !l.quantity.note.is_empty() { format!("its quantity: {}", l.quantity.note) } else { String::new() })]);
+                if !wanted(l) {
+                    leave(l);
+                    continue;
+                }
+                rows.push(vec![
+                    text(on(l)),
+                    text(l.description.clone()),
+                    l.priced.value.map(Out::Number).unwrap_or_else(|| text("no quantity")),
+                    text(l.priced.unit.clone()),
+                    text(sure(l.priced.status)),
+                    text(if l.priced.value.is_none() { l.priced.note.clone() } else if l.quantity.value.is_some() && !l.quantity.note.is_empty() { format!("its quantity: {}", l.quantity.note) } else { String::new() }),
+                    text(work[&l.path]),
+                    text(l.division.map(|d| format!("{} {}", d.number(), d.title())).unwrap_or_default()),
+                    text(systems.get(&l.path).cloned().unwrap_or_default()),
+                ]);
+            }
+            for l in unclassed_all.iter().filter(|l| !wanted(l)) {
+                leave(l);
             }
             left_out(&mut rows);
-            vec![OutSheet { name: "Scope".into(), rows, head: 3, widths: vec![22.0, 48.0, 14.0, 8.0, 10.0, 60.0] }]
+            if left > 0 {
+                let whose = match (division.is_some(), system.is_some()) {
+                    (true, true) => "in other divisions or on other systems",
+                    (true, false) if left_in_none => "in other divisions or in none",
+                    (true, false) => "in other divisions",
+                    _ => "on other systems or on none",
+                };
+                rows.push(vec![]);
+                rows.push(vec![text(format!("{left} other {}, {whose}, {} not in this list", if left == 1 { "line" } else { "lines" }, if left == 1 { "is" } else { "are" }))]);
+            }
+            vec![OutSheet { name: "Scope".into(), rows, head: 3, widths: vec![22.0, 48.0, 14.0, 8.0, 10.0, 60.0, 20.0, 30.0, 24.0] }]
         }
         Lens::Pm => {
             let mut code = |path: &str| job.find(path).and_then(|e| job.world.get::<WorkCode>(e)).and_then(|c| c.wbs.value.clone()).unwrap_or_default();
@@ -478,7 +573,7 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
                 vec![text(format!("{title}: for the project manager"))],
                 vec![text("Every line of the estimate with its hours, what is ordered, its cost type, its division and its code. No overhead, no profit and no price are in this list.")],
                 vec![],
-                ["Element", "Line", "Cost type", "Code", "Quantity", "Unit", "Hours", "Amount", "How sure", "Note", "Division"].iter().map(|h| text(*h)).collect(),
+                ["Element", "Line", "Cost type", "Code", "Quantity", "Unit", "Hours", "Amount", "How sure", "Note", "Division", "Work"].iter().map(|h| text(*h)).collect(),
             ];
             for l in &est.lines {
                 let hours = l.class.filter(|c| c.in_hours() && !l.off).and(l.priced.value);
@@ -496,6 +591,7 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
                     // A line that is in no total says so beside its division, as on the
                     // estimate, so the lines here add to the budget below them (J17C-8).
                     text(l.division.map(|d| format!("{} {}{}", d.number(), d.title(), if l.off || l.class.is_none() { " (in no total)" } else { "" })).unwrap_or_default()),
+                    text(work[&l.path]),
                 ]);
             }
             let mut budget: Vec<Vec<Out>> = vec![vec![text(format!("{title}: the budget by cost type"))], vec![], ["Cost type", "Amount", "Hours", "Lines", "How sure"].iter().map(|h| text(*h)).collect()];
@@ -559,12 +655,12 @@ pub fn lens_out(job: &mut Job, lens: Lens) -> Vec<OutSheet> {
                 verify.push(vec![text("Nothing: every value that can be measured is Known, and no clash is a question.")]);
             }
             vec![
-                OutSheet { name: "Lines".into(), rows: lines, head: 3, widths: vec![22.0, 44.0, 18.0, 12.0, 12.0, 7.0, 10.0, 13.0, 10.0, 60.0] },
+                OutSheet { name: "Lines".into(), rows: lines, head: 3, widths: vec![22.0, 44.0, 18.0, 12.0, 12.0, 7.0, 10.0, 13.0, 10.0, 60.0, 30.0, 20.0] },
                 OutSheet { name: "Budget".into(), rows: budget, head: 2, widths: vec![26.0, 14.0, 10.0, 8.0, 10.0] },
                 OutSheet { name: "Verify in field".into(), rows: verify, head: 2, widths: vec![14.0, 44.0, 14.0, 60.0, 8.0] },
             ]
         }
-    }
+    })
 }
 
 /// What is written out as rows of values, for a CSV file: each sheet after the last,

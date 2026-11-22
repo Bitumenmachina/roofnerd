@@ -342,11 +342,57 @@ pub(crate) fn sum_of(unit: &'static str, figures: &[(String, Option<f64>, Status
     Sum { value, unit, status: if missing.is_empty() { status } else { Status::Unknown }, members: figures.len(), missing }
 }
 
+/// What a thing's mark says it is to the work, as one of three places (call 158): 0 to
+/// build (new, temporary, or no mark: a thing with no mark is new), 1 existing to remain,
+/// 2 to demolish.
+pub fn work_place(w: &bevy_ecs::world::World, e: bevy_ecs::entity::Entity) -> usize {
+    match w.get::<Work>(e).and_then(|k| k.status.value) {
+        None | Some(WorkStatus::New) | Some(WorkStatus::Temporary) => 0,
+        Some(WorkStatus::Existing) => 1,
+        Some(WorkStatus::Demolish) => 2,
+    }
+}
+
+/// A line's figures, given three ways (call 158): to build, existing to remain, to
+/// demolish. Each is the sum of the same figures the line itself sums, so the three add
+/// up to it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct WorkSplit {
+    pub to_build: Sum,
+    pub existing: Sum,
+    pub demolish: Sum,
+}
+
+impl WorkSplit {
+    /// The three, in order, with the words a builder says for each.
+    pub fn parts(&self) -> [(&'static str, &Sum); 3] {
+        [("to build", &self.to_build), ("existing to remain", &self.existing), ("to demolish", &self.demolish)]
+    }
+}
+
+/// The same figures as `sum_of`, split by the place each is in. None where every one is
+/// to build: a line with nothing marked prints as it always did.
+pub(crate) fn split_by_work(unit: &'static str, figures: &[(String, Option<f64>, Status)], places: &[usize]) -> Option<WorkSplit> {
+    if places.iter().all(|p| *p == 0) {
+        return None;
+    }
+    let part = |at: usize| {
+        let of: Vec<(String, Option<f64>, Status)> = figures.iter().zip(places).filter(|(_, p)| **p == at).map(|(f, _)| f.clone()).collect();
+        sum_of(unit, &of)
+    };
+    Some(WorkSplit { to_build: part(0), existing: part(1), demolish: part(2) })
+}
+
 /// What a roof comes to: its planes' surface in SF, and its lines' length in LF by kind.
 #[derive(Clone, Debug)]
 pub struct RoofTotals {
     pub surface: Sum,
     pub lines: Vec<(Kind, Sum)>,
+    /// The surface and each line given three ways, where a plane or a line is not new
+    /// work (call 158): None where nothing is marked. `lines_by_work` is in step with
+    /// `lines`.
+    pub surface_by_work: Option<WorkSplit>,
+    pub lines_by_work: Vec<Option<WorkSplit>>,
     /// How many planes the roof has: its facets, as a roof report counts them.
     pub facets: usize,
     /// The pitch that covers the most of the roof's surface, in inches in 12, with the
@@ -451,6 +497,9 @@ pub fn roof_totals(job: &mut Job, roof_path: &str) -> RoofTotals {
     // Surface by pitch, to find the pitch most of the roof is at.
     let mut by_pitch: Vec<(f64, f64, Status)> = Vec::new();
     let mut by_kind: Vec<(Kind, Vec<(String, Option<f64>, Status)>)> = Vec::new();
+    // Where each plane and each line is, to build, existing or to demolish (call 158).
+    let mut area_places: Vec<usize> = Vec::new();
+    let mut kind_places: Vec<Vec<usize>> = Vec::new();
     // Planes with no pitch or no surface: any one of them might be what tips the balance.
     let mut unplaced: Vec<String> = Vec::new();
     // In job order, so the sheet reads the same every time.
@@ -479,12 +528,19 @@ pub fn roof_totals(job: &mut Job, roof_path: &str) -> RoofTotals {
                 }
             }
             areas.push((node.path.clone(), v, s));
+            area_places.push(work_place(w, e));
         } else if kind.is_run() {
             // A parapet stands on the plan: its length is its plan length.
             let (v, s) = figure(if *kind == Kind::Parapet { "plan_length" } else { "true_length" });
-            match by_kind.iter_mut().find(|(k, _)| k == kind) {
-                Some((_, list)) => list.push((node.path.clone(), v, s)),
-                None => by_kind.push((*kind, vec![(node.path.clone(), v, s)])),
+            match by_kind.iter().position(|(k, _)| k == kind) {
+                Some(at) => {
+                    by_kind[at].1.push((node.path.clone(), v, s));
+                    kind_places[at].push(work_place(w, e));
+                }
+                None => {
+                    by_kind.push((*kind, vec![(node.path.clone(), v, s)]));
+                    kind_places.push(vec![work_place(w, e)]);
+                }
             }
         }
     }
@@ -503,6 +559,8 @@ pub fn roof_totals(job: &mut Job, roof_path: &str) -> RoofTotals {
         predominant_pitch,
         pitch_note,
         surface: sum_of("SF", &areas),
+        surface_by_work: split_by_work("SF", &areas, &area_places),
+        lines_by_work: by_kind.iter().zip(&kind_places).map(|((_, list), places)| split_by_work("LF", list, places)).collect(),
         lines: by_kind.into_iter().map(|(k, list)| (k, sum_of("LF", &list))).collect(),
     }
 }

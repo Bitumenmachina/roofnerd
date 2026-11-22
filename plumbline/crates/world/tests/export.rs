@@ -102,7 +102,7 @@ fn the_lenses_are_the_estimates_quantities_with_none_of_our_prices() {
     );
     let sub = &lens_out(&mut job, Lens::Subcontractor)[0];
     let scope: Vec<Vec<String>> = sub.rows[sub.head + 1..].iter().take_while(|r| !r.is_empty()).map(|r| r.iter().map(Out::said).collect()).collect();
-    assert_eq!(scope, vec![vec!["west", "Standing seam roofing, by subcontractor", "251.5576", "SF", "Known", ""]]);
+    assert_eq!(scope, vec![vec!["west", "Standing seam roofing, by subcontractor", "251.5576", "SF", "Known", "", "new work", "7 Thermal and Moisture Protection", ""]]);
     // Not a price, not an amount, not a dollar in either: neither has a column for one,
     // and no cell of either is a figure of money.
     for sheet in [supplier, sub] {

@@ -8086,6 +8086,28 @@ So `TRY-IT.md` as written sends Patrick into two things the screen does not carr
 | J-C-G | A countertop cannot be priced by `price-item` | to fix (call 162) |
 | J-C-B, E, I, J, K, L | low: a window with its sill on the floor does not shorten the wall run; a range mid-run with a countertop is refused and told to do what nothing does; a room line left on a demolished wall; words; boxes on a temporary wall or taller than the level; no price row in `options` | open |
 
+## Step B5 done at the command line: counts and lists by what is built, kept and taken down, and by trade (2026-11-22; call 158; a worker under contract, accepted by its diff and the lead's own run)
+
+`takeoff` gives each count three ways under its line wherever a mark is on anything it
+counts (walls, faces, footings and their concrete, floors, doors and windows, a roof's
+planes and lines, each system's runs and things); the three lists carry a Work column,
+the subcontractor's Division and System as well, with `--division` and `--system` to
+write one trade's or one system's scope and a last line counting what was left out.
+Every hand figure came out: 8 walls, 136 LF as it stands; to build 3, 40 LF; existing 3,
+64 LF; to demolish 2, 32 LF; faces 1,224 / 360 / 576 / 288 SF; footing concrete 4.74 CY
+as it stands, 2.96 to build and 1.78 existing, matching the program's own `show`.
+
+**A job with no mark prints as it did:** the takeoff of the `demos/library.sh` house is
+byte for byte the text the program printed before this call (kept in `lists.sh` and
+compared there); the house, sixteen and sample jobs the same.
+
+**Run:** by the lead, `cargo test --workspace` 480 pass, 0 fail; `demos/lists.sh` PASS
+and its figures read; `tools/committed.sh` before the push. By the worker: 33 of 33
+command-line demonstrations, the gates and the port map PASS. **One expectation moved:**
+the subcontractor row in `tests/export.rs` gains its three new cells. **Not done:**
+rooms are not split (a room carries no mark); the window's Building tab does not show
+the three ways; not judged.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
