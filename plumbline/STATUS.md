@@ -7912,6 +7912,31 @@ the countertop; every refusal leaving its file as it was; the item library out a
 a second run does not start 24 in off the first). Then: appliances cannot go in a run;
 no island (a run off a wall); end panels and toe kick; more sizes; a price by code.
 
+## Steps A3 and A4 in the window (2026-11-22; call 156; a worker under contract, accepted by its diff and pictures)
+
+A "Cabinets" tool after Room line: a click on a wall's face picks the wall, the room on
+that side and where the run starts (a "Starts at" field, prefilled, takes a typed
+start); the boxes' codes are typed, listed as they are typed; Enter sets the run through
+`editing::cabinets`, its countertop with the switch on; Undo takes the run back whole.
+A "Layouts" tab in the sheet window sets this job beside one or two other job files
+through `view::options`, in the command line's rows and words; nothing is written.
+
+**Run by the worker on a frozen copy:** `cargo test --workspace` 470 pass; `cabinetsw.sh`
+and `layoutsw.sh` (new), `roomlinew.sh`, `moneyw.sh` PASS; the gates and the port map
+PASS. `cabinetsw.sh`: the saved job equals the command line's value for value (five
+boxes at the hand figures, the countertop 23.375 SF, an 11 ft run, 3.75 ft left); its
+picture measured (the run's patch (190,153,112) against the plan's (253,253,253); the
+same check on the before picture and on patches moved 6 ft west says no run). 
+`layoutsw.sh`: the sheet's table matches `plumbline options` word for word; the job
+files are byte for byte as they were. The lead read the pictures: the boxes along the
+kitchen's east wall with the run said above the plan; the layouts table plain to read.
+
+**Found and fixed by the worker:** an eighth tool pushed Delete off the tool bar again
+(`moneyw` caught it); the tool groups now shrink, and `cabinetsw.sh` checks Delete is
+on the map. **Not right:** the countertop hides the boxes under it in 3D (one block);
+the Layouts list offers every .json file in the folder; a wall's dimension is written
+over the boxes on the plan; the sheet's message line cuts long messages.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

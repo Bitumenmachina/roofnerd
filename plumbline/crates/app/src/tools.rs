@@ -34,6 +34,9 @@ pub enum Tool {
     Room,
     /// A room line: the two ends of a line that parts two rooms where no wall stands.
     RoomLine,
+    /// A run of cabinet boxes along a wall (call 156): a click on the wall's face where the
+    /// run starts, then the boxes' codes typed.
+    Cabinets,
     /// A roof: the corners of its footprint in turn, and the first again to close it.
     Roof,
     /// Move what is selected: from one pick to the next.
@@ -51,7 +54,7 @@ pub enum Tool {
 impl Tool {
     /// The build bar, in the order it shows them: the building itself; what runs through
     /// it and stands in it (mechanical, electrical, plumbing); and moving what is there.
-    pub const BUILDING: [Tool; 7] = [Tool::Wall, Tool::Door, Tool::Window, Tool::Floor, Tool::Room, Tool::RoomLine, Tool::Roof];
+    pub const BUILDING: [Tool; 8] = [Tool::Wall, Tool::Door, Tool::Window, Tool::Floor, Tool::Room, Tool::RoomLine, Tool::Cabinets, Tool::Roof];
     pub const MEP: [Tool; 8] = [Tool::Run(Kind::Duct), Tool::Run(Kind::Pipe), Tool::Run(Kind::Conduit), Tool::Run(Kind::Cable), Tool::Fitting, Tool::Thing(Kind::Equipment), Tool::Thing(Kind::Fixture), Tool::Join];
     /// The tools a number key takes in hand, 1 to 9 and then 0.
     pub const KEYED: [Tool; 10] = [Tool::Wall, Tool::Door, Tool::Window, Tool::Floor, Tool::Room, Tool::Roof, Tool::Run(Kind::Duct), Tool::Run(Kind::Pipe), Tool::Run(Kind::Conduit), Tool::Run(Kind::Cable)];
@@ -70,6 +73,7 @@ impl Tool {
             Tool::Floor => "Floor",
             Tool::Room => "Room",
             Tool::RoomLine => "Room line",
+            Tool::Cabinets => "Cabinets",
             Tool::Roof => "Roof",
             Tool::Move => "Move",
             Tool::Fitting => "Fitting",
@@ -103,7 +107,7 @@ impl Tool {
             Tool::Thing(_) => &[("What it is", "Lavatory"), ("Size L x W x H, ft", "2 x 1.5 x 3"), ("Height AFF", "0 ft")],
             Tool::Floor => &[("Thickness", "4 in")],
             Tool::Roof => &[("Pitch", "6:12"), ("Eave height", "8 ft")],
-            Tool::Room | Tool::RoomLine | Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => &[],
+            Tool::Room | Tool::RoomLine | Tool::Cabinets | Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => &[],
         }
     }
 
@@ -122,6 +126,7 @@ impl Tool {
             Tool::Floor => "Click anywhere on the level. The floor fills the outline its walls enclose.",
             Tool::Room => "Click inside the room, then type its name.",
             Tool::RoomLine => "Click one end of the line, then the other. It parts two rooms where no wall stands. Esc ends.",
+            Tool::Cabinets => "Click a wall's face, on the room's side, where the run of boxes starts. Then type the boxes' codes. Esc ends.",
             Tool::Roof => "Click each corner of the roof's outline, then the first again to close it.",
             Tool::Move => "Click a point on it, then where that point goes.",
             Tool::Fitting => "Click where runs meet.",
@@ -165,6 +170,10 @@ pub struct Draw {
     /// The plan's snap scene, with the drawing and the storey it was made for and the
     /// element left out of it (what is being moved does not snap to itself).
     pub scene: Option<(u64, String, Option<String>, usize, snap::Scene)>,
+    /// The wall and the room the Cabinets tool's click found, while the run's boxes are typed.
+    pub cabinets: Option<(String, String)>,
+    /// The switch "Countertop" beside the Cabinets fields is off (it is on to begin with).
+    pub without_top: bool,
 }
 
 /// What the window enters is Assumed, and says where it came from: the window itself, or
@@ -227,7 +236,7 @@ fn checked(tool: Tool, values: &[String]) -> Result<Vec<String>, (usize, String)
             units::parse_pitch(&parts[0]).map_err(|why| (0, why))?;
             length(1, true)?;
         }
-        Tool::Room | Tool::RoomLine | Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => {}
+        Tool::Room | Tool::RoomLine | Tool::Cabinets | Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => {}
     }
     Ok(parts)
 }
@@ -644,6 +653,21 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             doc.draw.picked.clear();
             Some(ed::room_lines(&mut doc.job, &storey, &pts, how(traced)).map(|made| format!("Added {}. It parts two rooms where no wall stands.", made.join(", "))))
         }
+        // A run of cabinet boxes: the click finds the wall's face and the room on that side
+        // and where along the wall the run starts; the boxes' codes are typed next.
+        Tool::Cabinets => {
+            doc.draw.traced = Some(traced.to_string());
+            match run_start(doc, &storey, at) {
+                Err(why) => cant(doc, "set the run", why),
+                Ok((wall, room, from)) => {
+                    doc.draw.cabinets = Some((wall.clone(), room.clone()));
+                    doc.open_form(Entry::Cabinets, vec![units::feet_as_ft_in(from, 16), String::new()], 1);
+                    doc.say(Tone::Done, format!("Cabinets: the run starts {} along {wall}, in {room}. Type the boxes' codes, like B18 SB36 B24, then Enter.", units::feet_as_ft_in(from, 16)));
+                }
+            }
+            doc.touch();
+            return;
+        }
         // A roof's footprint: each corner in turn; a pick on the first corner again, with
         // three or more picked, closes it, and the roof is worked out from it.
         Tool::Roof => {
@@ -739,12 +763,142 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
     doc.redraw();
 }
 
+/// Where a click with the Cabinets tool fell (call 156): the wall whose face it is on, the
+/// room on that side of it, and how far along the wall's line from its first end the run
+/// starts, to the inch and snapped to the room's corner when within 6 in of it. Or why
+/// nothing was found. What a face is and where it is clear is the model's
+/// (`building::wall_face`); the click only says which.
+fn run_start(doc: &mut Doc, storey: &str, at: [f64; 2]) -> Result<(String, String, f64), String> {
+    // The wall nearest the click, if the click is on it or within 6 in of its face.
+    let wall = {
+        let Some((_, _, _, _, scene)) = &doc.draw.scene else { return Err("the plan is not ready: click again".to_string()) };
+        let mut best: Option<(f64, String)> = None;
+        for (a, b, thick, path) in &scene.walls {
+            let (u, len2) = ([b[0] - a[0], b[1] - a[1]], (b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2));
+            if len2 < 1e-9 {
+                continue;
+            }
+            let t = (((at[0] - a[0]) * u[0] + (at[1] - a[1]) * u[1]) / len2).clamp(0.0, 1.0);
+            let d = (at[0] - (a[0] + u[0] * t)).hypot(at[1] - (a[1] + u[1] * t));
+            if d <= thick / 2.0 + 0.5 && best.as_ref().is_none_or(|(bd, _)| d < *bd) {
+                best = Some((d, path.clone()));
+            }
+        }
+        best.map(|(_, path)| path).ok_or_else(|| "click on a wall's face, on the room's side of it".to_string())?
+    };
+    let rooms: Vec<String> = {
+        let w = &doc.job.world;
+        doc.job.order.iter().filter(|e| w.get::<Kind>(**e) == Some(&Kind::Room)).filter_map(|e| w.get::<plumbline_world::Node>(*e)).map(|n| n.path.clone()).collect()
+    };
+    // The rooms that have a face on this wall; the one the click is on the side of.
+    let mut faces = Vec::new();
+    let mut why = None;
+    for room in rooms {
+        match plumbline_world::building::wall_face(&mut doc.job, storey, &wall, &room) {
+            Ok(face) => faces.push((room, face)),
+            Err(e) => why = Some(e),
+        }
+    }
+    if faces.is_empty() {
+        return Err(match why {
+            Some(why) if doc.job.find(&wall).is_some() => format!("{wall} has no room on either side that it closes: {why}"),
+            _ => format!("{wall} has no room beside it: name the room first with the Room tool"),
+        });
+    }
+    let side = |f: &plumbline_world::building::WallFace| (at[0] - f.start[0]) * f.into[0] + (at[1] - f.start[1]) * f.into[1];
+    let (room, face) = faces.into_iter().filter(|(_, f)| side(f) > 0.0).max_by(|a, b| side(&a.1).total_cmp(&side(&b.1))).ok_or_else(|| format!("that is not on the face of {wall} any room has: click on the room's side of it"))?;
+    let along = (at[0] - face.start[0]) * face.along[0] + (at[1] - face.start[1]) * face.along[1];
+    let mut from = ((along * 12.0).round() / 12.0).max(0.0);
+    if let Some(&(lo, _)) = face.clear.iter().min_by(|a, b| (from - a.0).abs().total_cmp(&(from - b.0).abs())) {
+        if (from - lo).abs() <= 0.5 {
+            from = lo;
+        }
+    }
+    Ok((wall, room, from))
+}
+
+/// The boxes typed for a run, set along the wall the click found (call 156): what
+/// `editing::cabinets` says is what the window says, and a refusal sets nothing.
+pub fn cabinets_entered(doc: &mut Doc, values: &[String]) {
+    let (Some((wall, room)), Some(storey)) = (doc.draw.cabinets.clone(), doc.show.storey.clone()) else {
+        return cant(doc, "set the run", "click a wall's face first");
+    };
+    let from = values.first().map(|v| v.trim()).unwrap_or("").to_string();
+    let codes: Vec<String> = values.get(1).map(|v| v.split_whitespace().map(str::to_string).collect()).unwrap_or_default();
+    let traced = doc.draw.traced.clone().unwrap_or_else(|| SOURCE.to_string());
+    let top = !doc.draw.without_top;
+    match ed::cabinets(&mut doc.job, &storey, &wall, &room, &from, &codes, top, how(&traced)) {
+        Ok(made) => {
+            doc.job.derive();
+            doc.edit("Cabinets");
+            let num = plumbline_world::view::num;
+            let mut said = format!(
+                "Set {} along {wall} in {room}: a run of {} ft, from {} ft to {} ft along the wall; {} ft left to the corner.",
+                if made.boxes.len() == 1 { "1 box".to_string() } else { format!("{} boxes", made.boxes.len()) },
+                num(made.run),
+                num(made.from),
+                num(made.from + made.run),
+                num(made.left)
+            );
+            if let Some(up) = made.hung {
+                said.push_str(&format!(" The boxes hang {} up.", units::feet_as_ft_in(up, 16)));
+            }
+            if let Some((path, _)) = &made.countertop {
+                let figure = |doc: &mut Doc, name: &str| doc.job.find(path).and_then(|e| doc.job.world.get::<plumbline_world::components::Measure>(e)).and_then(|m| m.0.get(name).and_then(|d| d.worked()));
+                if let (Some(long), Some(area)) = (figure(doc, "width"), figure(doc, "plan_area")) {
+                    said.push_str(&format!("\nCountertop: {} ft long by 25 1/2 in deep, 34 1/2 in up; {} SF, front edge {} LF.", num(long), num(area), num(long)));
+                }
+            }
+            doc.draw.cabinets = None;
+            doc.say(Tone::Done, said);
+        }
+        Err(why) => {
+            let at = if why.contains("starts so far") || why.contains("where the run starts") { 0 } else { 1 };
+            doc.reopen_form(Entry::Cabinets, values.to_vec(), at);
+            cant(doc, "set the run", why);
+        }
+    }
+    doc.redraw();
+}
+
+/// Set the layout in the job file `name` (kept in this job's folder) beside this job, on the
+/// sheet's Layouts tab (call 156). The file is read and never written.
+pub fn set_beside(doc: &mut Doc, name: &str) {
+    if doc.beside.len() >= 2 {
+        return cant(doc, "set it beside this job", "two other layouts are set beside it already, the most. Take one away first");
+    }
+    let path = crate::plans::folder_of(&doc.path).join(name);
+    let read = std::fs::read_to_string(&path).map_err(|e| format!("{name} cannot be read: {e}")).and_then(|text| file::load(&text).map_err(|why| format!("{name}: {why}")));
+    match read {
+        Ok((job, _)) => {
+            let title = job.world.get::<plumbline_world::JobInfo>(job.root()).map(|i| i.title.clone()).unwrap_or_default();
+            doc.beside.push(crate::model::Beside { file: name.to_string(), job });
+            doc.choosing_layout = false;
+            doc.say(Tone::Done, format!("Set {title} beside this job: the table is on the sheet, under Layouts. Nothing is written to either file."));
+            doc.touch();
+        }
+        Err(why) => cant(doc, "set it beside this job", why),
+    }
+}
+
+/// Take the `which`th layout set beside this job away; the job file it was read from is
+/// as it was.
+pub fn take_layout_away(doc: &mut Doc, which: usize) {
+    if which < doc.beside.len() {
+        let gone = doc.beside.remove(which);
+        let title = gone.job.world.get::<plumbline_world::JobInfo>(gone.job.root()).map(|i| i.title.clone()).filter(|t| !t.is_empty()).unwrap_or_else(|| crate::panels::plain_stem(&gone.file));
+        doc.say(Tone::Done, format!("Took {title} away from beside this job. Its file is as it was."));
+        doc.touch();
+    }
+}
+
 /// What a tool does, as a refusal says it: "Can't draw the wall".
 fn doing(tool: Tool) -> String {
     match tool {
         Tool::Wall | Tool::Run(_) => format!("draw the {}", tool.name().to_lowercase()),
         Tool::Door | Tool::Window | Tool::Thing(_) | Tool::Floor | Tool::Room | Tool::Roof | Tool::Fitting => format!("add the {}", tool.name().to_lowercase()),
         Tool::RoomLine => "draw the room line".to_string(),
+        Tool::Cabinets => "set the run".to_string(),
         Tool::Move => "move it".to_string(),
         Tool::Join => "connect it".to_string(),
         Tool::Scale => "set the scale".to_string(),
@@ -1039,7 +1193,7 @@ pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, plans: Res<crate:
         // A roof's outline is drawn corner to corner, as a wall is.
         Tool::Roof => snap::snap(scene, p, reach, picked, square, &snap::Snaps::default()),
         // A floor and a room are a click anywhere inside: nothing to snap to.
-        Tool::Floor | Tool::Room => snap::snap(scene, p, reach, &[], false, &snap::Snaps::none()),
+        Tool::Floor | Tool::Room | Tool::Cabinets => snap::snap(scene, p, reach, &[], false, &snap::Snaps::none()),
         Tool::Thing(_) | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => snap::snap(scene, p, reach, &[], false, &snap::Snaps::default()),
     };
     doc.pointer = Some([found.at[0], found.at[1], elevation]);
@@ -1070,6 +1224,11 @@ pub fn clicks(mut doc: ResMut<Doc>, mouse: Res<ButtonInput<MouseButton>>, window
     // that is said (call 86, R21-8).
     if mouse.just_pressed(MouseButton::Left) && doc.draw.tool.is_some() && matches!(doc.entry, Some((Entry::Length, _))) && windows.single().ok().and_then(|w| w.cursor_position().map(|c| over_model(w, c))).unwrap_or(false) {
         doc.say(Tone::Refused, "Nothing was placed: the length typed is not set yet. Press Enter to go that far toward the pointer, or Esc to let the length go.");
+        doc.touch();
+    }
+    // The same while a run's boxes are being typed (call 156).
+    if mouse.just_pressed(MouseButton::Left) && doc.draw.tool == Some(Tool::Cabinets) && matches!(doc.entry, Some((Entry::Cabinets, _))) && windows.single().ok().and_then(|w| w.cursor_position().map(|c| over_model(w, c))).unwrap_or(false) {
+        doc.say(Tone::Refused, "Nothing was set: the run's boxes are not entered yet. Press Enter to set the run, or Esc to let it go, then click the next wall.");
         doc.touch();
     }
     if !mouse.just_pressed(MouseButton::Left) || doc.draw.tool.is_none() || doc.entry.is_some() || !doc.plan {

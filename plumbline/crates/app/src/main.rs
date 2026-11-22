@@ -160,6 +160,8 @@ fn main() {
         tab: if has_lines { Tab::Estimate } else if has_roof { Tab::Roof } else { Tab::Building },
         draw,
         marking: None,
+        beside: Vec::new(),
+        choosing_layout: false,
     };
     let graphics = scene::Graphics { full: std::env::var("PLUMBLINE_GRAPHICS").map(|v| v != "plain").unwrap_or(true) };
 
@@ -621,6 +623,10 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                                     let name = ["Its name", "Its kind", "Its width", "Its depth", "Its height"].get(i).copied().unwrap_or("A field");
                                     doc.say(Tone::Refused, format!("New item: {name} is still to be typed. Enter adds the item once all five are in."));
                                 }
+                                if field == Entry::Cabinets {
+                                    let name = ["Where the run starts along the wall", "The boxes' codes, like B18 SB36 B24"].get(i).copied().unwrap_or("A field");
+                                    doc.say(Tone::Refused, format!("Cabinets: {name} is still to be typed. Enter sets the run once both are in."));
+                                }
                                 // A level's form said nothing (J22B-34).
                                 if field == Entry::Storey {
                                     let name = ["Its name", "The elevation of its floor", "Floor-to-floor"].get(i).copied().unwrap_or("A field");
@@ -691,6 +697,9 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                 if field == Entry::Distance || field == Entry::Room {
                     // The points picked for a scale, or for a room, go with what was not typed.
                     doc.draw.picked.clear();
+                }
+                if field == Entry::Cabinets {
+                    doc.draw.cabinets = None;
                 }
                 doc.measuring = None;
                 // A length let go leaves the line's start where it was: said, so that
@@ -793,6 +802,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                 Entry::Distance => tools::scale_entered(doc, &text),
                 Entry::Measure => tools::measured(doc, &text),
                 Entry::Room => tools::room_named(doc, &text),
+                Entry::Cabinets => tools::cabinets_entered(doc, &values),
                 Entry::Division => {
                     let line = doc.entry_line.take();
                     match (doc.selected.clone(), plumbline_world::Division::parse(&text)) {

@@ -212,6 +212,8 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             // Clashes switch gives (J19-20: one said 87 and the other 21, with nothing to
             // say that 66 of the 87 were holes to cut, which the tab lists apart).
             all.push((Tab::Clashes, "Clashes".to_string(), snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.iter().filter(|x| !x.through).count()).unwrap_or(0)));
+            // Layouts: this job beside others of it. Always offered, with how many are set.
+            all.push((Tab::Layouts, "Layouts".to_string(), doc.beside.len()));
             all.push((Tab::Building, "Building".to_string(), snap.fabric.len()));
             all.push((Tab::Roof, "Roof".to_string(), snap.planes.len()));
             for d in [Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing] {
@@ -220,7 +222,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             for (tab, name, count) in all {
                 let on = doc.tab == tab;
                 // A job with nothing under a tab does not offer it.
-                if count == 0 && !on {
+                if count == 0 && !on && tab != Tab::Layouts {
                     continue;
                 }
                 tabs.spawn((rounded(Node { padding: UiRect::axes(px(8.0), px(6.0)), column_gap: px(5.0), align_items: AlignItems::Center, flex_shrink: 0.0, ..default() }, 8.0), BackgroundColor(if on { theme::accent_wash() } else { Color::NONE }), theme::named(name.clone())))
@@ -253,6 +255,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
                 Tab::Estimate => estimate(body, fonts, &doc, &snap),
                 Tab::Clashes => clashes(body, fonts, &doc, &snap),
                 Tab::Verify => verify(body, fonts, &doc, &snap),
+                Tab::Layouts => layouts(body, fonts, &doc, &snap),
             }
             notes(body, fonts, &snap);
             cost_lines(body, fonts, &snap);
@@ -665,6 +668,116 @@ fn verify(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsho
     if let Some(why) = &list.clashes_not_tested {
         nothing(p, fonts, &format!("The clashes are not on this list: they could not be worked out ({why})."));
     }
+}
+
+/// This job set beside one or two other layouts of it (call 154): each a job file kept in
+/// the same folder, picked from a list. The table is `view::options`, in the rows and the
+/// words `plumbline options` gives; nothing is worked out here and nothing is written to
+/// any file.
+fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
+    p.spawn(theme::card(Node { flex_direction: FlexDirection::Column, padding: UiRect::axes(px(16.0), px(14.0)), row_gap: px(10.0), flex_shrink: 0.0, ..default() })).with_children(|c| {
+        c.spawn(text(fonts, "Layouts", 14.0, Weight::Semibold, theme::ink()));
+        c.spawn(text(fonts, "Try a job two ways and set the layouts side by side: each is a job file kept in the same folder as this one. Rooms are matched by name. Nothing is written to any of the files.", 12.0, Weight::Regular, theme::ink_soft()));
+        c.spawn(Node { column_gap: px(8.0), row_gap: px(6.0), flex_wrap: FlexWrap::Wrap, align_items: AlignItems::Center, ..default() }).with_children(|b| {
+            if doc.beside.len() < 2 {
+                let mut e = theme::button(b, fonts, "Set beside another layout", "", doc.choosing_layout);
+                e.observe(|press: On<PointerClick>, mut doc: ResMut<Doc>| {
+                    if press.button == PointerButton::Primary {
+                        doc.choosing_layout = !doc.choosing_layout;
+                        doc.touch();
+                    }
+                });
+            } else {
+                b.spawn(text(fonts, "Two other layouts are set beside this one, which is the most. Take one away to set another.", 12.0, Weight::Regular, theme::ink_faint()));
+            }
+        });
+        // Each layout set beside this job, with its own way to take it away.
+        for (i, beside) in doc.beside.iter().enumerate() {
+            let title = snap.layouts.as_ref().and_then(|t| t.titles.get(i + 1)).cloned().unwrap_or_default();
+            c.spawn(Node { column_gap: px(10.0), align_items: AlignItems::Center, ..default() }).with_children(|r| {
+                r.spawn(text(fonts, format!("Beside this one: {title}"), 12.5, Weight::Medium, theme::ink()));
+                r.spawn(text(fonts, crate::panels::plain_stem(&beside.file), 11.0, Weight::Regular, theme::ink_faint()));
+                let mut e = theme::button(r, fonts, "Take it away", "", false);
+                e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
+                    if press.button == PointerButton::Primary {
+                        crate::tools::take_layout_away(&mut doc, i);
+                    }
+                });
+            });
+        }
+        // The job files in this job's folder that are not set beside it yet: a file is
+        // picked from a list.
+        if doc.choosing_layout && doc.beside.len() < 2 {
+            let here = crate::plans::folder_of(&doc.path);
+            let mine = doc.path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            let mut files: Vec<String> = std::fs::read_dir(&here)
+                .map(|read| read.flatten().filter_map(|e| e.file_name().to_str().map(str::to_string)).filter(|n| !n.starts_with('.') && n.to_lowercase().ends_with(".json") && *n != mine && !doc.beside.iter().any(|b| b.file == *n)).collect())
+                .unwrap_or_default();
+            files.sort_by_key(|n| n.to_lowercase());
+            c.spawn(text(fonts, "PICK THE LAYOUT, FROM WHERE THIS JOB IS KEPT", 9.5, Weight::Semibold, theme::ink_faint()));
+            if files.is_empty() {
+                c.spawn(text(fonts, "No other job is kept here. Save another layout of this job in the same folder, then pick it.", 12.0, Weight::Regular, theme::ink_faint()));
+            }
+            for name in files.into_iter().take(40) {
+                let stem = crate::panels::plain_stem(&name);
+                let mut e = c.spawn((
+                    Node { align_items: AlignItems::Center, column_gap: px(8.0), padding: UiRect::axes(px(8.0), px(4.0)), min_height: px(26.0), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() },
+                    BorderColor::all(theme::rule()),
+                    theme::Named { name: format!("Layout {stem}"), scrolls: true },
+                ));
+                e.with_children(|r| {
+                    r.spawn((text(fonts, stem, 12.5, Weight::Medium, theme::ink()), Pickable::IGNORE));
+                    r.spawn((text(fonts, "job", 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
+                });
+                e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
+                    if press.button == PointerButton::Primary {
+                        crate::tools::set_beside(&mut doc, &name);
+                    }
+                });
+            }
+        }
+    });
+    let Some(options) = snap.layouts.as_ref().filter(|_| !doc.beside.is_empty()) else {
+        return nothing(p, fonts, "No other layout is set beside this one. Press Set beside another layout, then pick a job.");
+    };
+    let last = options.titles.len().saturating_sub(1);
+    let diff_head = format!("{} less {}", options.titles.get(last).cloned().unwrap_or_default(), options.titles.first().cloned().unwrap_or_default());
+    let flagged = "~ Assumed   ? Unknown   (no mark) Known";
+    p.spawn(text(fonts, format!("Flags: {flagged}. A figure a layout has none of reads none; one with no value reads no figure, and its difference is not worked."), 11.0, Weight::Regular, theme::ink_faint()));
+    table(p, fonts, "This job and the layouts beside it", format!("{} layouts", options.titles.len()), |t| {
+        // The heading: each layout under its job's title, and the last less the first.
+        let mut head = format!("Layouts heading | {}", options.titles.join(" | "));
+        head.push_str(&format!(" | {diff_head}"));
+        let mut e = t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(8.0)), border: UiRect::bottom(px(1.0)), ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::hairline()), theme::Named { name: head, scrolls: true }));
+        e.with_children(|r| {
+            cell(r, 0.0, false, |c| words(c, fonts, "", 10.0, Weight::Semibold, theme::ink_faint()));
+            for title in &options.titles {
+                cell(r, 170.0, true, |c| words(c, fonts, title, 12.0, Weight::Semibold, theme::ink()));
+            }
+            cell(r, 200.0, true, |c| words(c, fonts, diff_head.clone(), 11.0, Weight::Semibold, theme::ink_soft()));
+        });
+        let mut group = None;
+        for r in &options.rows {
+            if group.is_some() && group != Some(r.group) {
+                t.spawn(Node { height: px(8.0), flex_shrink: 0.0, ..default() });
+            }
+            group = Some(r.group);
+            let figures: Vec<String> = r.figures.iter().map(|f| f.said(r.unit)).collect();
+            let diff = r.difference_said();
+            let name = format!("Layouts row | {} | {} | {diff}", r.label.trim(), figures.join(" | "));
+            let mut e = t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(0.0)), min_height: px(29.0), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() }, BorderColor::all(theme::rule()), theme::Named { name, scrolls: true }));
+            e.with_children(|row| {
+                let bold = matches!(r.label.as_str(), "job cost" | "all rooms");
+                cell(row, 0.0, false, |c| words(c, fonts, r.label.trim(), 12.5, if bold { Weight::Semibold } else { Weight::Regular }, theme::ink()));
+                for f in &figures {
+                    let ink = if f == "none" || f == "no figure" { theme::ink_faint() } else { theme::ink() };
+                    cell(row, 170.0, true, |c| words(c, fonts, f.clone(), 12.5, Weight::Regular, ink));
+                }
+                let ink = if diff == "same" || diff == "not worked" { theme::ink_faint() } else { theme::ink() };
+                cell(row, 200.0, true, |c| words(c, fonts, diff.clone(), 12.5, Weight::Medium, ink));
+            });
+        }
+    });
 }
 
 /// A figure of money as the sheet says it: the amount, or that there is none.

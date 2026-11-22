@@ -320,7 +320,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, plans
             right(root, fonts, &doc, &snap, &plans, scrolls.inspector);
         }
         if on[2] {
-            build_bar(root, fonts, &doc);
+            build_bar(root, fonts, &doc, &snap);
         }
         top_bar(root, fonts, &doc, &snap);
         views(root, fonts, &doc);
@@ -335,7 +335,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, plans
 fn panels_on(doc: &Doc) -> [bool; 3] {
     let typing = doc.entry.as_ref().map(|(field, _)| *field);
     let in_left = matches!(typing, Some(Entry::Storey | Entry::NewItem | Entry::BringIn(_) | Entry::Drawing));
-    let in_tools = matches!(typing, Some(Entry::Settings(_) | Entry::Length | Entry::Distance | Entry::Room));
+    let in_tools = matches!(typing, Some(Entry::Settings(_) | Entry::Length | Entry::Distance | Entry::Room | Entry::Cabinets));
     let in_right = typing.is_some() && !in_left && !in_tools;
     [!doc.show.away[0] || in_left, !doc.show.away[1] || in_right, !doc.show.away[2] || in_tools || doc.draw.tool.is_some()]
 }
@@ -667,6 +667,11 @@ fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entr
     if files.len() > 40 || folders.len() > 30 {
         f.spawn(text(fonts, "More than fit in this list: type the start of the name, or go into a folder.", 10.5, Weight::Regular, theme::ink_faint()));
     }
+}
+
+/// A file's name as a person reads it, without its ending.
+pub fn plain_stem(name: &str) -> String {
+    plain_name(name).0
 }
 
 /// A file's name as a person reads it, and what kind of thing it is in a word: the
@@ -1363,6 +1368,15 @@ fn mark(p: &mut ChildSpawnerCommands, what: &str, ink: Color) {
                 bar(11.2, 7.0, 1.5, 4.0);
                 bar(11.2, 13.0, 1.5, 4.0);
             }
+            // A run of boxes side by side.
+            "Cabinets" => {
+                bar(2.0, 5.0, 20.0, 1.5);
+                bar(2.0, 15.0, 20.0, 1.5);
+                bar(2.0, 5.0, 1.5, 11.5);
+                bar(8.7, 5.0, 1.5, 11.5);
+                bar(15.3, 5.0, 1.5, 11.5);
+                bar(20.5, 5.0, 1.5, 11.5);
+            }
             "Line up" => {
                 bar(4.0, 3.0, 1.5, 12.0);
                 bar(4.0, 13.5, 16.0, 1.5);
@@ -1429,9 +1443,22 @@ fn tool_button<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, 
     e
 }
 
+/// What a run's boxes could be, listed as they are typed (call 156): every box code the
+/// job's items have, or, once a word is begun, those that begin with it.
+fn cabinets_hint(doc: &Doc, snap: &Snapshot, typed: &str) -> String {
+    if snap.boxes.is_empty() {
+        return "This job has no cabinet boxes to set. Bring the starter items in first (Starter items, on the left). Esc cancels.".to_string();
+    }
+    let boxes_text = if doc.form_at == 1 { typed.to_string() } else { doc.form.get(1).cloned().unwrap_or_default() };
+    let word = if boxes_text.ends_with(' ') { "" } else { boxes_text.split_whitespace().last().unwrap_or("") }.to_uppercase();
+    let matching: Vec<&str> = snap.boxes.iter().map(String::as_str).filter(|c| c.starts_with(word.as_str())).collect();
+    let (shown, lead) = if matching.is_empty() { (snap.boxes.iter().map(String::as_str).collect::<Vec<_>>(), format!("No box begins {word}: ")) } else { (matching, "Boxes: ".to_string()) };
+    format!("{lead}{}. Enter sets the run. Esc cancels.", shown.join(" "))
+}
+
 /// Along the bottom of the model: the tool in hand with its fields and what to do with
 /// it, over every tool there is, grouped by what it builds.
-fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
+fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
     use crate::tools::{self, Tool};
     p.spawn(docked(Node { left: px(LEFT_W), right: px(RIGHT_W), bottom: px(STATUS_H), height: px(BUILD_H), flex_direction: FlexDirection::Column, ..default() })).with_children(|bar| {
         // The tool in hand: its fields, each typed into where it stands.
@@ -1463,6 +1490,33 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
                     doc.open_form(Entry::Settings(tool), values, i);
                 });
             }
+            // A run of cabinet boxes (call 156): where along the wall it starts and the boxes'
+            // codes, typed side by side; and the switch for the countertop over them.
+            if tool == Tool::Cabinets {
+                if matches!(doc.entry, Some((Entry::Cabinets, _))) {
+                    for (i, (label, like, width)) in [("Starts at", "1 ft", 96.0), ("Boxes", "B18 SB36 B24", 250.0)].into_iter().enumerate() {
+                        on_click(&mut form_field(strip, fonts, doc, true, i, label, like, "", width), move |doc| {
+                            let values = match doc.entry.clone() {
+                                Some((Entry::Cabinets, typed)) => {
+                                    let mut values = doc.form.clone();
+                                    let at = doc.form_at;
+                                    values[at] = typed;
+                                    values
+                                }
+                                _ => vec![String::new(); 2],
+                            };
+                            doc.open_form(Entry::Cabinets, values, i);
+                        });
+                    }
+                }
+                strip.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(2.0), flex_shrink: 0.0, ..default() }).with_children(|c| {
+                    c.spawn((text(fonts, "COUNTERTOP", 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+                    switch_at(c, !doc.draw.without_top, "Countertop".to_string(), false, |doc| {
+                        doc.draw.without_top = !doc.draw.without_top;
+                        doc.touch();
+                    });
+                });
+            }
             // What is typed at the pointer while drawing: a length, a dimension, a name.
             if let Some((field @ (Entry::Length | Entry::Distance | Entry::Room), typed)) = &doc.entry {
                 let (label, width) = match field {
@@ -1477,6 +1531,7 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
                 Some((Entry::Length, _)) => "Toward the pointer, like 24 ft or 12' 6\". Enter sets it.".to_string(),
                 Some((Entry::Distance, _)) => "As the drawing says it, like 41' 3\" or 30 ft. Enter sets it.".to_string(),
                 Some((Entry::Room, _)) => "Like Kitchen. Enter adds the room.".to_string(),
+                Some((Entry::Cabinets, typed)) => cabinets_hint(doc, snap, typed),
                 _ => tool.how().to_string(),
             };
             strip.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, hint, 11.5, Weight::Regular, theme::ink_soft()));
@@ -1485,9 +1540,12 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
         bar.spawn(Node { flex_grow: 1.0, padding: UiRect::horizontal(px(6.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), ..default() }).with_children(|all| {
             let in_hand = typing.or(doc.draw.tool);
             let group = |all: &mut ChildSpawnerCommands, name: &str, tools: &[Tool], delete: bool| {
-                all.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(1.0), flex_shrink: 1.0, ..default() }).with_children(|g| {
+                // A group may be narrower than its buttons side by side (`min_width` 0), so that
+                // the buttons shrink to fit the bar instead of pushing the last of them off its
+                // end: with the Cabinets tool the bar's Delete was pushed off (call 156).
+                all.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(1.0), flex_shrink: 1.0, min_width: px(0.0), ..default() }).with_children(|g| {
                     g.spawn((text(fonts, name.to_uppercase(), 9.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
-                    g.spawn(Node { column_gap: px(2.0), ..default() }).with_children(|r| {
+                    g.spawn(Node { column_gap: px(2.0), min_width: px(0.0), ..default() }).with_children(|r| {
                         for tool in tools.iter().copied() {
                             on_click(&mut tool_button(r, fonts, tool.name(), tool.key(), in_hand == Some(tool)), move |doc| tools::start(doc, tool));
                         }

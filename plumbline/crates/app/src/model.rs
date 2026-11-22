@@ -173,6 +173,9 @@ pub enum Entry {
     Measure,
     /// The name of the room whose point was just picked.
     Room,
+    /// A run of cabinet boxes (call 156): where along the wall it starts, and the boxes'
+    /// codes, typed as two fields that go together.
+    Cabinets,
 }
 
 /// How the last action went. Said by what happened, not read back out of the words.
@@ -198,6 +201,15 @@ pub enum Tab {
     Clashes,
     /// What is still to be verified in the field, and the dollars riding on each.
     Verify,
+    /// This job set beside one or two other layouts of it (call 154).
+    Layouts,
+}
+
+/// A layout set beside this job (call 154): the file it was read from, as a person names
+/// it, and the job read from it. Nothing is ever written back to it.
+pub struct Beside {
+    pub file: String,
+    pub job: Job,
 }
 
 /// What of the building is on show.
@@ -345,6 +357,10 @@ pub struct Doc {
     /// to be marked, kept while the two buttons ask what is to become of its lines
     /// (call 149).
     pub marking: Option<(String, plumbline_world::WorkStatus)>,
+    /// The layouts set beside this job, up to two (call 154).
+    pub beside: Vec<Beside>,
+    /// The list of job files to set beside this one is open, on the sheet's Layouts tab.
+    pub choosing_layout: bool,
 }
 
 impl Doc {
@@ -592,6 +608,11 @@ pub struct Snapshot {
     /// The job's items (things to place, made from makers' sheets): each one's path,
     /// its name, what kind of thing it is, and its size as said, or what is missing.
     pub items: Vec<(String, String, Kind, String, u8)>,
+    /// The codes of the cabinet boxes the job's items have (`editing::box_codes`), in the
+    /// order the item library has them: what the Cabinets tool's boxes are typed from.
+    pub boxes: Vec<String>,
+    /// This job set beside the layouts that were picked (`view::options`).
+    pub layouts: Option<view::Options>,
     pub totals: Option<view::RoofTotals>,
     pub planes: Vec<PlaneInfo>,
     pub lines: Vec<LineInfo>,
@@ -680,6 +701,14 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
         // Trade by trade, and by name within a trade; what says no trade comes last.
         all.sort_by(|a, b| (a.4 == 0).cmp(&(b.4 == 0)).then(a.4.cmp(&b.4)).then(a.1.cmp(&b.1)).then(a.0.cmp(&b.0)));
         all
+    };
+    s.boxes = plumbline_world::editing::box_codes(&mut doc.job).into_iter().map(|(_, name)| name).collect();
+    s.layouts = if doc.beside.is_empty() {
+        None
+    } else {
+        let mut jobs: Vec<&mut Job> = vec![&mut doc.job];
+        jobs.extend(doc.beside.iter_mut().map(|b| &mut b.job));
+        Some(view::options(&mut jobs))
     };
     if doc.selected.as_ref().is_some_and(|sel| doc.job.find(sel).is_none()) {
         doc.selected = None;

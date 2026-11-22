@@ -27,7 +27,9 @@ such reading, and STATUS.md says where each thing it found stands).
 | `house` | `demos/house.sh` |
 | `itemlib` | `demos/itemlibw.sh` |
 | `itemnew` | `demos/itemneww.sh` |
+| `cabinetsw` (`01` to `10`) | `demos/cabinetsw.sh` |
 | `items` | `demos/itemsw.sh` |
+| `layoutsw` (`01` to `04`) | `demos/layoutsw.sh` |
 | `layers` (`01` to `05`) | `demos/tradesw.sh` |
 | `money` | `demos/moneyw.sh` |
 | `pagew` | `demos/pagew.sh` |
