@@ -7743,6 +7743,24 @@ PASS; the gates and the port map PASS.
 - The view is not moved onto the sheet when it comes in; reading a large file holds the
   window still while it reads; Open items shows the sheet's file name.
 
+## An open plan: a room line. A demonstration, written before it is built (`demos/roomline.sh`, call 152)
+
+From an empty job, by hand. The house of `demos/reno.sh` after its addition: walls 6 in
+thick and 9 ft tall round 0,0 to 24,16; the east wall to demolish; three new walls
+24,0 36,0 36,16 24,16; no partition.
+
+1. One room placed at 6,8 is the whole inside: 35.5 by 15.5 = **550.25 SF**. A second
+   room placed at 30,8 is refused its figures: the first has the space.
+2. A room line from 24,0 to 24,16. Living (6,8): 23.75 by 15.5 = **368.125 SF**, **78.5
+   LF** round; its walls are on three sides, 23.75 + 15.5 + 23.75 = 63 LF at 9 ft:
+   **567 SF** of wall; its floor line is one run of 63 ft: 63 / 12 = 5.25, **6
+   receptacles**. Kitchen (30,8): 11.75 by 15.5 = **182.125 SF**, **54.5 LF** round;
+   walls 11.75 + 15.5 + 11.75 = 39 LF: **351 SF**; 39 / 12 = 3.25, **4 receptacles**.
+   The two floors add to 550.25.
+3. `takeoff` still counts 7 walls and no more; the room line takes no cost line and no
+   work mark, each refused in words; `clashes` does not test it.
+4. Removed, the rooms are as in step 1. Saved and read back, the same.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

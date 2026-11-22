@@ -5212,3 +5212,32 @@ set right if he meant something else. What follows from it: single things a job 
 chest by trade and are not given tools of their own; the renovation plan's step 4 is
 built that way. Whether the screen's words "Item library" and "Starter items" become
 "Tool chest" is a wording call, made when step 4 is built.
+
+### Call 152. A room line parts two rooms where no wall stands (2026-11-22; plan step A2; the design and MEP reviews: an open kitchen read "floor area unknown")
+
+An open plan has rooms with no wall between them. The program found rooms only among
+walls, so a kitchen opened into an addition had no area. BIMCraft has the BIM tools'
+answer, a room separation line (`room_separator`, `crates/core/src/commands.rs:466`;
+`RoomSeparator` in its model), and it is ported, not invented.
+
+- **What is held.** A new kind of thing, a **room line** (`Kind::RoomLine`, said "room
+  line"), under a level, with `pl::room_line`: `line`, its two ends on the plan (ft or
+  in), with how sure and where from. Nothing else: no type, no height, no thickness.
+- **What it does.** It bounds the rooms of its level as a wall of no thickness would, at
+  whatever height the rooms are found. A room on each side is measured to the line.
+- **What it is not.** It is not built: it has no figures, takes no cost line, no
+  assembly and no work mark, is never counted as a wall (takeoff, lists), is not
+  clash-tested, joins and trims no wall, and is not written to the BIM file (the list
+  of what was not written says so).
+- **In a room's figures:** `floor_area` and `gross_area` run to the line. `perimeter`
+  is the distance round the room, the line's side with it (it is the room's size round,
+  as it already takes in doorways). `wall_area` gets nothing from a side along a room
+  line: no wall is there. `receptacles`: a side along a room line is not wall space and
+  cuts the floor line as a doorway does (NEC 210.52(A)(2) counts wall space, and an
+  opening is none).
+- **One verb:** `plumbline room-line <file> <level> --points "24,0 24,16"` (one line
+  for each pair of points that follow one another). In the window it is a tool beside
+  Room, built after the model.
+
+No number moves on a job without one. Every saved job's list of record kinds gains
+`pl::room_line`.
