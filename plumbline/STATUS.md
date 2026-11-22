@@ -8371,9 +8371,9 @@ call 157 test; the cabinet test prices the "Countertop" line the countertop now 
 in place of adding one (still $1,449.25).
 
 **The pictures in `demos/captured/d2` and `demos/captured/house`** were overwritten by
-the worker's run of those two demonstrations on a half-built program. They are not in this
-commit: the lead is retaking both on a frozen copy of the finished build, and the commit
-that carries them says what the runs showed.
+the worker's run of those two demonstrations on a half-built program. They were retaken by
+the lead on a frozen copy of the finished build (`d2.sh` PASS, `house.sh` PASS, a picture
+of each read) and committed after the code.
 
 **Not right, owed:**
 - the window shows none of this: no typed measure in a line's field, no bearing rows or
@@ -8385,8 +8385,31 @@ that carries them says what the runs showed.
 - the top over a turning corner box is said short, not drawn as the L it is;
 - a room priced before call 162 keeps `wall_run` on its base lines and nothing says the
   library moved on (J-C-A, still open).
-A judge on another model is walking calls 159, 160, 162 and 166 cold; its notes go to
-`research/judgment-calls-159-166.md` as it writes them.
+
+## Calls 159, 160, 162 and 166 judged (2026-11-22; an agent on another model, cold, on the frozen build; `research/judgment-calls-159-166.md`)
+
+**No wrong dollar figure was found.** Held, worked by hand and then run: every unit of a
+typed measure and every refusal of one; the eight lines of "Take down a partition" on an
+exterior wall, a wall with a door and a wall half a foot long; a job with no mark prints
+none of the new text; marks put on and taken off in every order; what is and is not in
+the way of a wall that comes down (a pipe 0.2 in clear, a duct above the top, a fixture
+flush with the face are not; one through two walls is asked twice with its dollars
+once); base run with a corner box, an island, overlapping boxes, a tall box, a hung
+box, a box across a partition, a demolished box; the lump-line sentence in all three
+places; `remove-line` to the cent. About 45 refusals left their files as they were.
+
+| | Found | Where it stands |
+|---|---|---|
+| J166-13 | A countertop cannot be priced per LF: `price-item Countertop "$80/LF"` is refused, and by `width` the line reads in "ft", not LF | to fix |
+| J166-2 | With an Assumed typed measure carrying $840, the field list says "nothing. Every value that can be measured is Known": false | to fix |
+| J166-8 | The bearing caution is under the estimate only where the wall carries a cost line | to fix |
+| J166-9 | Where three pipes meet in a wall that comes down, the place given for one of them is about a foot off it | to fix |
+| J166-19 | After one line of an assembly is taken off, the thing still carries the assembly's name, the assembly cannot be put back on, and nothing says the scope is no longer whole | to fix |
+| J166-1, 7 | Refusals with the wrong reason: a measure below zero said to be in an unknown unit; "60 sq ft" and "1,200 SF" said to be "a formula or a count"; "In The Wall" refused as `In_The_Wall`, and the list of what a wall takes leaves out bearing and in the wall | to fix |
+| J166-15 | A lump line of 0 EA is flagged; `1 + 1` and a typed "4 EA" are lumps too and are not | to fix |
+| J166-16 | `place` takes an item by its number only, not by its name ("B36 is not in the job") | to fix |
+| J166-20 | A blind corner base (BLB36) gives no corner caution | as meant: it is 24 in deep and a top covers it; the notes say so |
+| J166-3 to 6, 10 to 12, 14, 17, 18 | low: a typed measure's source is not in the workbook; "0 SF" taken without a word; the assembly put on twice refuses in odd words; `mark` asks "Is it bearing" when it is already said; the order of two windows in the caution changes; "non-bearing" not taken; `check` leaves out the corner-leg caution; a box 1/8 in off the wall or 3/8 in off the floor covers nothing (base is over-bought, never under); `remove-line` minds capitals | "non-bearing" and the `mark` sentence to fix; the rest open |
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

@@ -43,3 +43,22 @@ Door needs Width typed (no default), and Window needs Width, Height, Sill height
 
 ### J161-5 (wrong for the page / confusing) "select the walls and press Existing": there is no selecting several
 Selected a wall, shift-held clicks on others: each click replaces the selection ("Selected door 1. Selected window 1. Selected wall 3. Selected wall 4."; panel shows only "wall 4", p7/05-model.png). Existing then marks only that wall: "Wall 4: existing to remain" (p7/06-model.png). Nothing on screen says walls must be marked one at a time, or offers all the walls of the level at once. A builder following TRY-IT 2 ("select the walls") would mark one wall and think it done; the other walls stay New work with no word. Also clicking at a window position selected the window, not the wall (expected).
+
+## Session C: Thing 3 (take down, add on, Room line, Demolition switch)
+(pictures in .../judge161/p8 and p9)
+
+- Held up: select east wall, To demolish: "Wall 2: to demolish"; Undo: "Undone: Mark work."; Redo: "Redone: Mark work." (p8). The wall shows red; "Demolition, shown red 1" under Show. Demolition switch off: "Demolition: switched off." and the red wall and its count go from the plan (p9/06-model.png).
+- Held up: with the east wall to demolish and no addition, the Study's area goes honestly Unknown: "no loop of walls closes round its point" (p8/05-model.png); a Room line over the demolished wall brings it back: "Study 368 SF" (p8/07-model.png). Addition walls: "Added wall 5, 12' 0" long." etc. Room line: "Room line: from here. Click the other end." then "Added room line 1. It parts two rooms where no wall stands." Rooms' areas follow (Study 182 SF, Kitchen 182 SF after a second room line across the Study) (p9/05-model.png).
+- My first attempt put clicks under the right-hand panel (the addition lies east of the house at the plan's first scale); I had to zoom out with the wheel first. Nothing on screen warned me that clicks landed on a panel (a click on a panel just did nothing). Not counted as a defect; a builder would find the wheel (the hint text says "The wheel closes on what is under the pointer").
+
+### J161-6 (confusing) Kitchen drawn before the Room line gets no area and is not told what to do
+Room tool, clicked in the addition, typed Kitchen, Enter: "Added room "Kitchen": It has no area yet: Study was placed first and has the space this room's point is in." (said, p9). It does not say "part the rooms with a Room line" (the next thing to do), and "Study was placed first" is about the program's order, not a builder's word. Once the Room line was drawn the Kitchen read 182 SF. (TRY-IT's order draws the room line second, so the builder may meet this.)
+
+### J161-7 (confusing) A Room line that parts nothing is taken silently
+A short Room line (34,8 to 34,12) floating inside the Kitchen: "Added room line 3. It parts two rooms where no wall stands." It parts nothing; the picture shows a stray dashed stub with an arrowhead (p9/05-model.png). The sentence is false for it. (A line from wall to wall across the Study at 16 ft was also accepted, correctly parting it.)
+
+### J161-8 (cosmetic) Dimension labels collide
+In the zoomed-out plan the "16' 0"" side label runs into "Kitchen 182 SF" and the wall's "16' 0"" label ("Kitchen 182 SF — 16' 0"") and a dashed room line passes through "24' 0"" labels (p9/05-model.png).
+
+### Note: counts
+Walls 7 120 LF in the Level panel still includes the wall to demolish, with Demolition off (p9/06). Matches the builder's list ("counts not split", TRY-IT says so).
