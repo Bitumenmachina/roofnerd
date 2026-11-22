@@ -298,6 +298,23 @@ impl Room {
     }
 }
 
+/// `pl::room_line`: on a Room line under its level (call 152). Its two ends on the plan,
+/// in feet or in inches, with how sure and where from. It bounds the rooms of its level as
+/// a wall of no thickness would; it has no type, no height and no thickness, and is built
+/// of nothing.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RoomLine {
+    pub line: Val<[P2; 2]>,
+}
+
+impl RoomLine {
+    pub fn line_ft(&self) -> Option<[P2; 2]> {
+        let d = units::coord_divisor(&self.line.unit).ok()?;
+        self.line.value.map(|l| l.map(|p| [p[0] / d, p[1] / d]))
+    }
+}
+
 /// A cross-section beyond this (in feet) is a typing error.
 pub const MAX_SECTION_FT: f64 = 20.0;
 
@@ -615,6 +632,27 @@ pub fn check_room(path: &str, kind: Kind, r: &Room) -> Result<(), String> {
     }
     if let Some(n) = &r.number {
         n.check(&format!("{path} room number"), "")?;
+    }
+    Ok(())
+}
+
+/// A room line is on a level, has a line of two ends that are two points, farther apart
+/// than a point is told from another (BIMCraft `room_separator`, `commands.rs:6938`: two
+/// points make a line).
+pub fn check_room_line(path: &str, kind: Kind, r: &RoomLine) -> Result<(), String> {
+    if kind != Kind::RoomLine {
+        return Err(format!("{path}: {kind:#} cannot carry a room line; only a room line can"));
+    }
+    let d = coords(&format!("{path} room line"), &r.line)?;
+    if let Some([a, b]) = r.line.value {
+        usable(&format!("{path} room line"), &[a[0], a[1], b[0], b[1]], d)?;
+        if a == b {
+            return Err(format!("{path} room line: the two ends are the same point"));
+        }
+        let length = crate::geom::dist([a[0] / d, a[1] / d], [b[0] / d, b[1] / d]);
+        if length <= crate::check::FIT_TOLERANCE_FT {
+            return Err(format!("{path} room line: is {} ft long; a room line is longer than the {} ft two points are told apart by", crate::view::num(length), crate::check::FIT_TOLERANCE_FT));
+        }
     }
     Ok(())
 }

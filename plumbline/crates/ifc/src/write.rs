@@ -646,6 +646,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
     for (kind, what, why) in [
         (Kind::Material, "material", "its price and how it is ordered are the estimate's"),
         (Kind::Condition, "condition", "its recipe of cost lines is the estimate's"),
+        (Kind::RoomLine, "room line", "it only parts one room from another where no wall stands; each room is written with the figures it came to, and no line is a part of the building"),
         (Kind::Drawing, "drawing", "a plan laid under a level is kept as where its file is, which another program cannot follow"),
         (Kind::Prior, "estimate made before", "it is kept beside the job, and is no part of the building"),
         (Kind::Type, "type", "each thing is written with its own size; the type it took it from is named among its values"),

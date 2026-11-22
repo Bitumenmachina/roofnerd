@@ -613,6 +613,28 @@ pub fn room(job: &mut Job, storey: &str, name: &str, at: P2, how: Entered) -> Re
     })
 }
 
+/// Room lines along `points` (in feet, on the plan): each pair of points that follow one
+/// another is one room line. A room line bounds the rooms of its level where no wall
+/// stands (call 152; BIMCraft's `room_separator` command, `commands.rs:6938`, one line
+/// for each pair of points).
+pub fn room_lines(job: &mut Job, storey: &str, points: &[P2], how: Entered) -> Result<Vec<String>, String> {
+    all_or_nothing(job, |job| {
+        storey_of(job, storey)?;
+        if points.len() < 2 {
+            return Err("a room line needs at least 2 points".into());
+        }
+        let mut made = Vec::new();
+        for pair in points.windows(2) {
+            let line = crate::RoomLine { line: how.val([pair[0], pair[1]], "ft") };
+            let path = add_called(job, storey, Kind::RoomLine, "room line", 1, false)?;
+            building::check_room_line(&path, Kind::RoomLine, &line)?;
+            job.put(&path, line)?;
+            made.push(path);
+        }
+        Ok(made)
+    })
+}
+
 /// Move a wall, a run, a fixture, a piece of equipment, a fitting or a room's point by
 /// so many feet east and north. A wall's doors and windows go with it: they are placed
 /// along it. What was moved is no surer than the move: it takes `how`'s status if that
@@ -650,6 +672,12 @@ pub fn move_by(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -
             p.at = Val { value: Some(shift(&p.at.unit, at)?), unit: p.at.unit.clone(), status, source };
             building::check_placed(path, kind, &p)?;
             job.put(path, p)?;
+        } else if let Some(mut r) = job.world.get::<crate::RoomLine>(e).cloned() {
+            let line = r.line.value.ok_or_else(|| format!("{path}'s line is not known, so it cannot be moved"))?;
+            let (status, source) = moved(r.line.status, &r.line.source);
+            r.line = Val { value: Some([shift(&r.line.unit, line[0])?, shift(&r.line.unit, line[1])?]), unit: r.line.unit.clone(), status, source };
+            building::check_room_line(path, kind, &r)?;
+            job.put(path, r)?;
         } else if let Some(mut r) = job.world.get::<crate::Room>(e).cloned() {
             let at = r.point.value.ok_or_else(|| format!("{path}'s point is not known, so it cannot be moved"))?;
             let (status, source) = moved(r.point.status, &r.point.source);
@@ -657,7 +685,7 @@ pub fn move_by(job: &mut Job, path: &str, east: f64, north: f64, how: Entered) -
             building::check_room(path, kind, &r)?;
             job.put(path, r)?;
         } else {
-            return Err(format!("{kind:#} is not moved this way; a wall, a run, a fixture, equipment, a fitting or a room is"));
+            return Err(format!("{kind:#} is not moved this way; a wall, a run, a fixture, equipment, a fitting, a room or a room line is"));
         }
         Ok(())
     })

@@ -89,6 +89,7 @@ pub const K_SEGMENT_TYPE: &str = "pl::segment_type";
 pub const K_FITTING: &str = "pl::fitting";
 pub const K_CONNECTORS: &str = "pl::connectors";
 pub const K_ROOM: &str = "pl::room";
+pub const K_ROOM_LINE: &str = "pl::room_line";
 pub const K_PLACED: &str = "pl::placed";
 pub const K_SYSTEM: &str = "pl::system";
 pub const K_IN_SYSTEM: &str = "pl::in_system";
@@ -372,6 +373,9 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
         }
         if *kind == Kind::Room && parent != Some(Kind::Storey) {
             return Err(format!("{me}: a room is a space on a level and has to be directly under one"));
+        }
+        if *kind == Kind::RoomLine && parent != Some(Kind::Storey) {
+            return Err(format!("{me}: a room line parts the rooms of a level and has to be directly under one"));
         }
         if matches!(kind, Kind::Wall | Kind::Floor | Kind::Footing) && parent != Some(Kind::Storey) {
             return Err(format!("{me}: {kind:#} stands on a level and has to be under one"));
@@ -1205,16 +1209,19 @@ struct RoomFigures {
     /// What stands free inside it, at its walls' faces: a room within the room, a
     /// chase. Its sides are the room's walls too (judged 2026-11-19).
     islands: Vec<Vec<crate::skeleton::P2>>,
+    /// The room lines (by their place in the list given) with a side of the room along
+    /// them: the room is measured to them (call 152).
+    along: Vec<usize>,
 }
 
 /// Every room of one storey measured against `walls`, of which those at `bounding` bound
-/// the storey's rooms. Each of `walls` can join the others where they meet (BIMCraft
+/// the storey's rooms, and `room_lines`, which part them where no wall stands. Each of `walls` can join the others where they meet (BIMCraft
 /// `rooms.rs:62` and `walls.rs:238`: a bounding wall's outline is cut against every wall
 /// it meets, bounding or not).
-fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], points: &[crate::skeleton::P2], tol: f64) -> Vec<RoomFigures> {
+fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], points: &[crate::skeleton::P2], tol: f64) -> Vec<RoomFigures> {
     use crate::skeleton::P2 as V;
     use rooms::{Plan, RoomArea};
-    let (centre, finish) = (Plan::of_walls(walls, bounding, RoomArea::Centre, tol), Plan::of_walls(walls, bounding, RoomArea::Finish, tol));
+    let (centre, finish) = (Plan::of_walls(walls, bounding, room_lines, RoomArea::Centre, tol), Plan::of_walls(walls, bounding, room_lines, RoomArea::Finish, tol));
     let centre_lines: Vec<Vec<(V, V)>> = bounding.iter().map(|&i| walls::centre_line(walls, i, tol)).map(|[a, b]| vec![(a, b)]).collect();
     let outlines: Vec<Vec<V>> = bounding.iter().map(|&i| walls::outline(walls, i, tol)).collect();
     let outline_edges: Vec<Vec<(V, V)>> = outlines.iter().map(|ring| ring.iter().copied().zip(ring.iter().copied().cycle().skip(1)).collect()).collect();
@@ -1234,8 +1241,14 @@ fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], points: &[crate::s
             .map(|k| bounding[k])
             .collect()
     };
+    // The room lines a region has a side along.
+    let along = |g: &rooms::Region| -> Vec<usize> {
+        let mids: Vec<V> = std::iter::once(&g.outer).chain(g.holes.iter()).flat_map(|ring| ring.iter().zip(ring.iter().cycle().skip(1)).map(|(a, b)| (*a + *b) * 0.5)).collect();
+        (0..room_lines.len()).filter(|&k| mids.iter().any(|m| on_line(*m, room_lines[k].0, room_lines[k].1, tol))).collect()
+    };
     (0..points.len())
         .map(|i| RoomFigures {
+            along: finish.bound(points, i, tol).map(|g| along(&g)).unwrap_or_default(),
             corners: finish.bound(points, i, tol).map(|g| std::iter::once(&g.outer).chain(g.holes.iter()).flatten().copied().collect()).unwrap_or_default(),
             outline: finish.bound(points, i, tol).map(|g| g.outer).unwrap_or_default(),
             islands: finish.bound(points, i, tol).map(|g| g.holes).unwrap_or_default(),
@@ -1246,11 +1259,19 @@ fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], points: &[crate::s
         .collect()
 }
 
+/// Whether `m` lies on the line from `a` to `b`, to within `tol`.
+fn on_line(m: crate::skeleton::P2, a: crate::skeleton::P2, b: crate::skeleton::P2, tol: f64) -> bool {
+    let d = b - a;
+    let t = if d.dot(d) > 0.0 { ((m - a).dot(d) / d.dot(d)).clamp(0.0, 1.0) } else { 0.0 };
+    m.dist(a + d * t) <= tol
+}
+
 /// A room's wall area (call 144): each side of its outline at its walls' faces, as long as
 /// it is and as tall as the wall it lies against, less the part of each door and window
 /// in that wall that lies along the side. A door between two rooms is taken off both:
-/// both its faces are cut. With the statuses and inputs of the openings it took off.
-fn room_wall_area(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, tol: f64) -> Result<(f64, Vec<Status>, Vec<String>), String> {
+/// both its faces are cut. A side along a room line is no wall and takes nothing. With the
+/// statuses and inputs of the openings it took off.
+fn room_wall_area(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, tol: f64) -> Result<(f64, Vec<Status>, Vec<String>), String> {
     use crate::skeleton::P2 as V;
     if outline.len() < 3 {
         return Err("no loop of walls closes round its point".into());
@@ -1287,6 +1308,10 @@ fn room_wall_area(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleto
         }
         let mid = (p + q) * 0.5;
         let Some(&(k, _)) = rings.iter().find(|(_, edges)| edges.iter().any(|(a, b)| on(mid, *a, *b))) else {
+            // A side along a room line has no wall: it takes no wall area (call 152).
+            if room_lines.iter().any(|(a, b)| on(mid, *a, *b)) {
+                continue;
+            }
             return Err(format!("the side of the room from ({}, {}) to ({}, {}) lies along no wall's face", view::num(p.0), view::num(p.1), view::num(q.0), view::num(q.1)));
         };
         let w = &walls[k];
@@ -1312,10 +1337,10 @@ fn room_wall_area(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleto
 /// The fewest receptacle outlets a room's walls need (call 147, NEC 210.52(A)): each ring
 /// of its floor line (round the room, and round what stands inside it) cut at its doors
 /// into runs; a run of 2 ft or more takes one outlet for each 12 ft or part, a shorter
-/// run none, a ring with no door one run all the way round. With the statuses and
-/// inputs of the doors that cut it.
+/// run none, a ring with no door one run all the way round. A side along a room line cuts
+/// it as a door does. With the statuses and inputs of the doors that cut it.
 #[allow(clippy::too_many_arguments)]
-fn room_receptacles(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, kinds: &HashMap<String, Kind>, tol: f64) -> Result<(f64, Vec<Status>, Vec<String>), String> {
+fn room_receptacles(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, kinds: &HashMap<String, Kind>, tol: f64) -> Result<(f64, Vec<Status>, Vec<String>), String> {
     use crate::skeleton::P2 as V;
     let rings: Vec<(usize, Vec<(V, V)>)> = mine.iter().map(|&k| {
         let ring = walls::outline(walls, k, tol);
@@ -1357,6 +1382,9 @@ fn room_receptacles(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skele
                             cited.extend(hole.inputs.iter().cloned());
                         }
                     }
+                } else if room_lines.iter().any(|(a, b)| on(mid, *a, *b)) {
+                    // A side along a room line is no wall space, and cuts the floor line as a doorway does (call 152).
+                    cuts.push((round, round + length));
                 }
             }
             round += length;
@@ -1423,6 +1451,31 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
             Some((_, Err(why))) => unplaced.push((n.path.clone(), why)),
         }
     }
+    // Every room line (call 152): its storey, where it lies, or why it cannot be placed.
+    // Like a wall's, a room line with no figure leaves its storey's rooms with none.
+    struct Parting {
+        path: String,
+        line: Option<[crate::skeleton::P2; 2]>,
+        status: Status,
+        why: String,
+    }
+    let mut partings: BTreeMap<String, Vec<Parting>> = BTreeMap::new();
+    {
+        let mut q = world.query::<(&Node, &Kind, Option<&RoomLine>)>();
+        let mut all: Vec<(&Node, Option<&RoomLine>)> = q.iter(world).filter(|(_, k, _)| **k == Kind::RoomLine).map(|(n, _, r)| (n, r)).collect();
+        all.sort_by_key(|(n, _)| path_number(&n.path));
+        for (n, r) in all {
+            let (line, status, why) = match r {
+                None => (None, Status::Unknown, "it has no line entered".to_string()),
+                Some(r) => match (r.line.value.is_some(), r.line_ft()) {
+                    (_, Some([a, b])) => (Some([crate::skeleton::P2(a[0], a[1]), crate::skeleton::P2(b[0], b[1])]), r.line.status, String::new()),
+                    (true, None) => (None, r.line.status, "its line is in a unit this program does not convert".to_string()),
+                    (false, None) => (None, r.line.status, "its line is not known".to_string()),
+                },
+            };
+            partings.entry(n.parent.clone().unwrap_or_default()).or_default().push(Parting { path: n.path.clone(), line, status, why });
+        }
+    }
     // The rooms, storey by storey, in the order they were added: the first to be placed
     // in a space has it.
     let mut q = world.query::<(&Node, &Kind, Option<&Room>)>();
@@ -1469,6 +1522,14 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                 (Some(e), Some(c)) => c.feet().map(|up| (e + up, l.elevation.status.max(c.status))).ok_or_else(|| "the height its level's rooms find their walls at is not known".to_string()),
             },
         };
+        let parting = partings.get(&storey).map(Vec::as_slice).unwrap_or(&[]);
+        if let Some(p) = parting.iter().find(|p| p.line.is_none()) {
+            for (path, _) in &list {
+                refuse_all(out, path, &[format!("{path}#{K_ROOM}"), format!("{}#{K_ROOM_LINE}", p.path)], &format!("{} cannot be placed ({}), so what bounds the rooms of this level is not known", tree.called(&p.path), p.why));
+            }
+            continue;
+        }
+        let room_lines: Vec<(V, V)> = parting.iter().filter_map(|p| p.line).map(|[a, b]| (a, b)).collect();
         let stuck = unplaced.iter().find(|(path, _)| tree.storey_of(path) == Some(storey.as_str()));
         let (cut, cut_status) = match (cut, stuck) {
             (Err(why), _) => {
@@ -1494,7 +1555,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
         let plan_walls: Vec<walls::PlanWall> = placed.iter().map(|w| w.wall.clone()).collect();
         let spans = |w: &walls::PlanWall| w.base <= cut && cut < w.top;
         let bounding: Vec<usize> = (0..placed.len()).filter(|&i| placed[i].bounds && spans(&placed[i].wall)).collect();
-        let as_entered = rooms_among(&plan_walls, &bounding, &points, tol);
+        let as_entered = rooms_among(&plan_walls, &bounding, &room_lines, &points, tol);
         for (i, (path, _)) in list.iter().enumerate() {
             if as_entered[i].outline.len() >= 3 {
                 outlines.insert(path.clone(), as_entered[i].outline.iter().map(|p| [p.0, p.1]).collect());
@@ -1507,7 +1568,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
         for k in (0..placed.len()).filter(|&k| placed[k].span != Status::Known) {
             let without: Vec<walls::PlanWall> = plan_walls.iter().enumerate().filter(|(i, _)| *i != k).map(|(_, w)| w.clone()).collect();
             let shifted: Vec<usize> = bounding.iter().filter(|&&i| i != k).map(|&i| if i > k { i - 1 } else { i }).collect();
-            let gone = rooms_among(&without, &shifted, &points, tol);
+            let gone = rooms_among(&without, &shifted, &room_lines, &points, tol);
             // Standing as tall as it could: its top anywhere above, and its base anywhere
             // below only if its base is itself unsure. A wall that starts at a Known
             // height does not reach below it whatever its top turns out to be.
@@ -1521,7 +1582,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                 with.push(k);
                 with.sort_unstable();
             }
-            let standing = rooms_among(&tall, &with, &points, tol);
+            let standing = rooms_among(&tall, &with, &room_lines, &points, tol);
             // Compared by what a room comes to, not by which walls are listed (taking a
             // wall away renumbers the rest).
             let same = |a: &RoomFigures, b: &RoomFigures| {
@@ -1567,6 +1628,11 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                 inputs.extend(mine.iter().map(|&k| format!("{}#{K_WALL}", placed[k].path)));
                 let mut statuses: Vec<Status> = mine.iter().map(|&k| placed[k].shape.max(placed[k].span)).collect();
                 statuses.extend([room.point.status, cut_status]);
+                // A room measured to a room line is no surer than the line (call 152).
+                for &k in &found.along {
+                    statuses.push(parting[k].status);
+                    inputs.push(format!("{}#{K_ROOM_LINE}", parting[k].path));
+                }
                 let mut notes: Vec<String> = Vec::new();
                 // Walls whose heights are equally sure are said in one sentence, not one
                 // each: a room of four traced walls read as the same clause four times.
@@ -1629,7 +1695,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                 (Ok((area, round, mine)), false) => {
                     m.insert("floor_area".into(), figure(*area, mine, "SF", F_FLOOR));
                     m.insert("perimeter".into(), figure(*round, mine, "LF", F_ROUND));
-                    let walls_d = match room_wall_area(&found.outline, &found.islands, mine, &plan_walls, &placed, &holes_of, tol) {
+                    let walls_d = match room_wall_area(&found.outline, &found.islands, mine, &room_lines, &plan_walls, &placed, &holes_of, tol) {
                         Ok((value, statuses, cited)) => {
                             let mut d = figure(value, mine, "SF", F_WALLS);
                             if d.value.is_some() {
@@ -1645,7 +1711,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                         Err(why) => Derived::refused("SF", F_WALLS, std::slice::from_ref(&input), &why),
                     };
                     m.insert("wall_area".into(), walls_d);
-                    let outlets = match room_wall_area(&found.outline, &found.islands, mine, &plan_walls, &placed, &holes_of, tol).and_then(|_| room_receptacles(&found.outline, &found.islands, mine, &plan_walls, &placed, &holes_of, &tree.kinds, tol)) {
+                    let outlets = match room_wall_area(&found.outline, &found.islands, mine, &room_lines, &plan_walls, &placed, &holes_of, tol).and_then(|_| room_receptacles(&found.outline, &found.islands, mine, &room_lines, &plan_walls, &placed, &holes_of, &tree.kinds, tol)) {
                         Ok((count, statuses, cited)) => {
                             let mut d = figure(count, mine, "EA", F_OUTLETS);
                             if d.value.is_some() {
@@ -1728,6 +1794,9 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         if let Some(n) = &c.number {
             rows.push(view::entered(path, "number", n, |s| s.clone()));
         }
+    }
+    if let Some(c) = w.get::<RoomLine>(e) {
+        rows.push(view::entered(path, "line", &c.line, pair));
     }
     if let Some(c) = w.get::<WallType>(e) {
         // A footing's type gives a width; a wall's, a thickness. It is a footing's where

@@ -49,7 +49,7 @@ struct Entry {
     extra: BTreeMap<String, Value>,
 }
 
-const KNOWN_KEYS: [&str; 40] = [K_ITEM, crate::tables::K_PRIOR, crate::plans::K_DRAWING, K_MATERIAL, K_SUPPLY, K_MARKUP, K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_TAPER, K_WORK, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_ALLOWANCE, K_PRICED, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_SEGMENT, K_SEGMENT_TYPE, K_FITTING, K_CONNECTORS, K_ROOM, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
+const KNOWN_KEYS: [&str; 41] = [K_ITEM, crate::tables::K_PRIOR, crate::plans::K_DRAWING, K_MATERIAL, K_SUPPLY, K_MARKUP, K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_TAPER, K_WORK, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_ALLOWANCE, K_PRICED, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_SEGMENT, K_SEGMENT_TYPE, K_FITTING, K_CONNECTORS, K_ROOM, K_ROOM_LINE, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
 
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
@@ -107,6 +107,7 @@ pub fn save(job: &mut Job) -> String {
         put!(Fitting, K_FITTING);
         put!(Connectors, K_CONNECTORS);
         put!(Room, K_ROOM);
+        put!(RoomLine, K_ROOM_LINE);
         put!(Placed, K_PLACED);
         put!(SystemInfo, K_SYSTEM);
         put!(InSystem, K_IN_SYSTEM);
@@ -482,6 +483,11 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                 K_ROOM => {
                     let c: Room = parse(&path, &k, v)?;
                     building::check_room(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_ROOM_LINE => {
+                    let c: RoomLine = parse(&path, &k, v)?;
+                    building::check_room_line(&path, kind, &c)?;
                     ent.insert(c);
                 }
                 K_CONNECTORS => {

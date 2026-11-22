@@ -18,7 +18,7 @@ use crate::components::*;
 use crate::job::Job;
 use crate::units::{self, Len};
 use crate::value::{Status, Val};
-use crate::{check, Item, Connectors, Floor, FloorType, InSystem, Justify, Level, Opening, OpeningType, Placed, Room, Segment, SegmentType, Wall, WallType};
+use crate::{check, Item, Connectors, Floor, FloorType, InSystem, Justify, Level, Opening, OpeningType, Placed, Room, RoomLine, Segment, SegmentType, Wall, WallType};
 
 /// What the person on site has to say about a value.
 #[derive(Clone, Copy)]
@@ -464,6 +464,7 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
             "number" => c.number.as_mut().map(|v| Slot::Other(v)),
             _ => None,
         });
+        on!(RoomLine, |c: &RoomLine| building::check_room_line(path, kind, c), |c| if what == "line" { Some(Slot::Other(&mut c.line)) } else { None });
         on!(InSystem, |c: &InSystem| building::check_in_system(path, kind, c), |c| if what == "system" { Some(Slot::Other(&mut c.0)) } else { None });
         // The roof's own lengths.
         on!(Height, |c: &Height| check::height(path, kind, c), |c| if what == "height" { Some(Slot::Length(&mut c.0)) } else { None });

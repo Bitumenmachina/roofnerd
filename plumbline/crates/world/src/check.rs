@@ -339,7 +339,7 @@ pub fn allowance(path: &str, kind: Kind, a: &Allowance) -> Result<(), String> {
 pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
     // Cost lines are on what is built and on the job. A condition's lines are its recipe;
     // a material's cost is its price; a type is not a thing that is bought.
-    if matches!(kind, Kind::Condition | Kind::Material | Kind::Type | Kind::System | Kind::Storey | Kind::Drawing | Kind::Prior) && !c.lines.is_empty() {
+    if matches!(kind, Kind::Condition | Kind::RoomLine | Kind::Material | Kind::Type | Kind::System | Kind::Storey | Kind::Drawing | Kind::Prior) && !c.lines.is_empty() {
         return Err(format!("{path}: {kind:#} cannot carry cost lines; they go on what is built, or on the job for general conditions{}", if kind == Kind::Condition { " (an assembly's own lines are what it is)" } else { "" }));
     }
     c.code.check(&format!("{path} cost code"), "")?;

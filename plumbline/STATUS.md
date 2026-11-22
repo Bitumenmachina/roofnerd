@@ -7761,6 +7761,22 @@ thick and 9 ft tall round 0,0 to 24,16; the east wall to demolish; three new wal
    work mark, each refused in words; `clashes` does not test it.
 4. Removed, the rooms are as in step 1. Saved and read back, the same.
 
+## Step A2 done at the command line: a room line (2026-11-22; a worker under contract, accepted by its diff and the lead's own run)
+
+Built as call 152 says, ported from BIMCraft (`to_centre`, `model.rs:7896`; separation
+lines among the wall centre lines and face edges, `model.rs:5785` and `5935`). Every
+hand figure of the demonstration came out to the digit and no expectation moved:
+550.25 SF; then Living 368.125 SF, 78.5 LF, 567 SF of wall, 6 receptacles; Kitchen
+182.125 SF, 54.5 LF, 351 SF, 4.
+
+**Run:** by the worker, `cargo test --workspace` 468 pass, 0 fail; `roomline.sh`,
+`reno.sh`, `receptacles.sh`, `drywall.sh`, `library.sh` PASS; the gates PASS. By the
+lead: `roomline.sh` PASS and its figures read; `tools/portmap.sh` PASS (245 items);
+`tools/committed.sh` before the push.
+
+**Not done:** the tool to draw one in the window (next, with a room said in the window
+to be two); no judge yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

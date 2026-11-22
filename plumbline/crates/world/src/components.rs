@@ -104,6 +104,9 @@ pub enum Kind {
     Fitting,
     /// A room: the space the walls round a point enclose.
     Room,
+    /// A room line (call 152): bounds the rooms of its level where no wall stands, as a
+    /// wall of no thickness would. It is not built: it has no figures and is no wall.
+    RoomLine,
     /// A material: what something is made of, how it is bought and what it costs. An
     /// element says what it is made of by the material's name.
     Material,
@@ -132,6 +135,7 @@ impl Kind {
             Kind::RoofPlane => "roof plane",
             Kind::LowSlopeArea => "low-slope area",
             Kind::PitchBreak => "pitch break",
+            Kind::RoomLine => "room line",
             Kind::Condition => "assembly",
             other => other.stem(),
         }
@@ -190,6 +194,7 @@ impl Kind {
             Kind::Type => "type",
             Kind::Fitting => "fitting",
             Kind::Room => "room",
+            Kind::RoomLine => "roomline",
             Kind::Material => "material",
             Kind::Drawing => "drawing",
             Kind::Prior => "prior",

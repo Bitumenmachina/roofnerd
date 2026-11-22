@@ -6429,3 +6429,81 @@ fn a_door_to_demolish_is_filled_in() {
     ed::mark(&mut job, &[part.clone()], WorkStatus::Demolish, ed::ItsLines::Ask, how()).unwrap();
     assert!(ed::opening(&mut job, &part, Kind::Door, &d3, ed::OnWall::Offset("3 ft"), "0 ft", how()).unwrap_err().contains("is to demolish"));
 }
+
+/// Call 152: a room line parts two rooms where no wall stands. It runs the rooms of its
+/// level to it, is no wall anywhere, takes no price and no mark, is no surer than it says,
+/// is saved and read back, and when it is removed the rooms are as they were.
+#[test]
+fn a_room_line_parts_two_rooms_where_no_wall_stands() {
+    use plumbline_world::editing as ed;
+    let known = || ed::Entered { status: Status::Known, source: "made-up survey" };
+    let mut job = Job::new("Open plan", "test", "2026-11-22");
+    let level = ed::storey(&mut job, "ground", "0 ft", "9 ft", known()).unwrap();
+    let w6 = ed::wall_type(&mut job, "w6", "6 in", known()).unwrap();
+    let outer = ed::walls(&mut job, &level, &w6, &[[0.0, 0.0], [24.0, 0.0], [24.0, 16.0], [0.0, 16.0]], true, ed::Top::Height("9 ft"), known()).unwrap();
+    ed::mark(&mut job, &[outer[1].clone()], WorkStatus::Demolish, ed::ItsLines::Ask, known()).unwrap();
+    ed::walls(&mut job, &level, &w6, &[[24.0, 0.0], [36.0, 0.0], [36.0, 16.0], [24.0, 16.0]], false, ed::Top::Height("9 ft"), known()).unwrap();
+    let living = ed::room(&mut job, &level, "Living", [6.0, 8.0], known()).unwrap();
+    let kitchen = ed::room(&mut job, &level, "Kitchen", [30.0, 8.0], known()).unwrap();
+    job.derive();
+    // One room is the whole inside; the second has no figures: the first has the space.
+    assert_eq!(measure(&mut job, &living, "floor_area").value, Some(550.25));
+    let (k, status) = (measure(&mut job, &kitchen, "floor_area"), measure(&mut job, &living, "floor_area").status);
+    assert!(k.value.is_none() && k.note.contains("has the space"), "{k:?}");
+    assert_eq!(status, Status::Known);
+    let clashes_before = clashes_of(&mut job, None);
+    let walls_before = plumbline_world::building::storey_totals(&mut job)[0].walls.clone();
+
+    // A room line is under a level and nothing else.
+    let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).unwrap();
+    assert!(ed::room_lines(&mut job, &root, &[[24.0, 0.0], [24.0, 16.0]], known()).unwrap_err().contains("not a level"));
+    let loose = job.add(&root, Kind::RoomLine, "loose").unwrap();
+    job.put(&loose, RoomLine { line: value::Val::known([[24.0, 0.0], [24.0, 16.0]], "ft", known().source) }).unwrap();
+    assert!(plumbline_world::building::check_whole(&mut job).unwrap_err().contains("has to be directly under"));
+    job.remove(&loose).unwrap();
+
+    // The line, Assumed: the two rooms, to the digit.
+    let made = ed::room_lines(&mut job, &level, &[[24.0, 0.0], [24.0, 16.0]], ed::Entered { status: Status::Assumed, source: "made-up addition plan" }).unwrap();
+    assert_eq!(made.len(), 1);
+    job.derive();
+    let figure = |job: &mut Job, room: &str, name: &str| measure(job, room, name).value;
+    for (room, floor, round, gross, walls, outlets) in [(&living, 368.125, 78.5, 384.0, 567.0, 6.0), (&kitchen, 182.125, 54.5, 192.0, 351.0, 4.0)] {
+        assert_eq!(figure(&mut job, room, "floor_area"), Some(floor), "{room}");
+        assert_eq!(figure(&mut job, room, "perimeter"), Some(round), "{room}");
+        assert_eq!(figure(&mut job, room, "gross_area"), Some(gross), "{room}");
+        assert_eq!(figure(&mut job, room, "wall_area"), Some(walls), "{room}");
+        assert_eq!(figure(&mut job, room, "receptacles"), Some(outlets), "{room}");
+        // No surer than the line: it is cited, and the room is Assumed.
+        let d = measure(&mut job, room, "floor_area");
+        assert_eq!(d.status, Status::Assumed, "{room}");
+        assert!(d.inputs.iter().any(|i| i == &format!("{}#pl::room_line", made[0])), "{d:?}");
+    }
+    assert_eq!(figure(&mut job, &living, "floor_area").unwrap() + figure(&mut job, &kitchen, "floor_area").unwrap(), 550.25);
+
+    // It is no wall: not counted, not tested, not priced, not marked.
+    let totals = plumbline_world::building::storey_totals(&mut job);
+    assert_eq!((totals[0].walls.members, totals[0].walls.value), (walls_before.members, walls_before.value));
+    assert_eq!(totals[0].walls.members, 7);
+    assert_eq!(clashes_of(&mut job, None), clashes_before);
+    let why = job.add_line(&made[0], "Partition", "1", None, false).unwrap_err();
+    assert!(why.contains("a room line cannot carry cost lines"), "{why}");
+    let why = job.set(&made[0], "allowance", Some("$2.00/SF"), Status::Known, "made-up").unwrap_err();
+    assert!(why.contains("a room line cannot carry an allowance"), "{why}");
+    let why = ed::mark(&mut job, &[made[0].clone()], WorkStatus::Existing, ed::ItsLines::Ask, known()).unwrap_err();
+    assert!(why.contains("a room line, which is not a thing that is built") || why.contains("not a thing that is built"), "{why}");
+
+    // Saved and read back the same.
+    let text = save(&mut job);
+    assert!(text.contains("pl::room_line"));
+    let (mut loaded, _) = load(&text).unwrap();
+    assert_eq!(save(&mut loaded), text);
+    assert_eq!(measure(&mut loaded, &living, "floor_area").value, Some(368.125));
+    assert_eq!(measure(&mut loaded, &kitchen, "floor_area").value, Some(182.125));
+
+    // Removed, the rooms are as they were.
+    ed::remove(&mut job, &made[0]).unwrap();
+    job.derive();
+    assert_eq!(figure(&mut job, &living, "floor_area"), Some(550.25));
+    assert_eq!(measure(&mut job, &living, "floor_area").status, Status::Known);
+    assert!(figure(&mut job, &kitchen, "floor_area").is_none());
+}

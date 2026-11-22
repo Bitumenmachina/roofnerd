@@ -21,8 +21,12 @@
 //!   finds each level's once. As there, a bounding wall is joined to every wall it meets,
 //!   bounding or not. A room that another has the space of is
 //!   named by its place in the list given, not by an id.
-//! * Not taken: room separation lines, room-bounding columns, a frozen room and the
-//!   boundary it keeps.
+//! * Room separation lines are taken (call 152; BIMCraft `model.rs:5836` `separators`,
+//!   `model.rs:5785` `bounding_lines_in`, `model.rs:5935` `room_lines_in`, `model.rs:7896`
+//!   `to_centre`): a room line is one more line among the walls', at the faces as it is
+//!   drawn and, at the centre lines, run on to the centre line of a wall its end lies
+//!   in. It is called a room line here and is given by `Plan::of_walls`.
+//! * Not taken: room-bounding columns, a frozen room and the boundary it keeps.
 //! * BIMCraft's centre measure does not look at wall bodies, so a room whose point is
 //!   inside a wall has a boundary at the centre lines there. The caller here
 //!   (`room_measures`) gives such a room no figure at either measure.
@@ -101,6 +105,27 @@ fn split(segs: &[(V, V)], tol: f64) -> Vec<(V, V)> {
         }));
     }
     out
+}
+
+/// Where the line from `from` through `end` reaches the centre line of a wall that `end`
+/// lies inside (within half the wall's thickness of that line), carrying on the way it
+/// points; `end` itself when it lies in no wall or is on a centre line already (BIMCraft
+/// `to_centre`, `model.rs:7896`; `walls` are centre lines and half their thickness).
+fn to_centre(from: V, end: V, walls: &[(V, V, f64)], tol: f64) -> V {
+    let way = (end - from).unit();
+    if !way.is_finite() {
+        return end;
+    }
+    walls
+        .iter()
+        .filter(|&&(a, b, half)| half > 0.0 && dist_to_segment(end, a, b) <= half + tol)
+        .filter_map(|&(a, b, half)| {
+            // Far enough to cross a wall met at a slant, short of the wall beyond it.
+            let reach = 4.0 * half + tol;
+            crossing(end, end + way * reach, a, b).map(|t| t * reach)
+        })
+        .min_by(f64::total_cmp)
+        .map_or(end, |d| end + way * d)
 }
 
 /// A ring's corners: its points less those on a straight run between their neighbours
@@ -241,15 +266,18 @@ impl Plan {
     /// The plan of the walls at `bounding` (a storey's room-bounding walls) measured at
     /// `at`. Each is joined to whichever of `all` it meets, bounding or not: a partition
     /// that ends on a wall which does not bound rooms still stops at that wall's face.
-    pub fn of_walls(all: &[PlanWall], bounding: &[usize], at: RoomArea, tol: f64) -> Plan {
+    pub fn of_walls(all: &[PlanWall], bounding: &[usize], room_lines: &[(V, V)], at: RoomArea, tol: f64) -> Plan {
         match at {
             RoomArea::Centre => {
-                let lines: Vec<(V, V)> = bounding.iter().map(|&i| walls::centre_line(all, i, tol)).map(|[a, b]| (a, b)).collect();
+                let centres: Vec<(V, V, f64)> = bounding.iter().map(|&i| (walls::centre_line(all, i, tol), (all[i].ext - all[i].int).abs() / 2.0)).map(|([a, b], half)| (a, b, half)).collect();
+                let mut lines: Vec<(V, V)> = centres.iter().map(|&(a, b, _)| (a, b)).collect();
+                lines.extend(room_lines.iter().map(|&(a, b)| (to_centre(b, a, &centres, tol), to_centre(a, b, &centres, tol))));
                 Plan { faces: faces(&lines, tol), walls: Vec::new() }
             }
             RoomArea::Finish => {
                 let outlines: Vec<Vec<V>> = bounding.iter().map(|&i| walls::outline(all, i, tol)).collect();
-                let lines: Vec<(V, V)> = outlines.iter().flat_map(|ring| ring_edges(ring)).collect();
+                let mut lines: Vec<(V, V)> = outlines.iter().flat_map(|ring| ring_edges(ring)).collect();
+                lines.extend(room_lines.iter().copied());
                 Plan { faces: faces(&lines, tol), walls: outlines }
             }
         }

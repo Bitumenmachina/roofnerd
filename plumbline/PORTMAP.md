@@ -26,6 +26,7 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `K_FITTING` | ours |  |  | the saved job's `pl::` keys are this program's (handoff 7.9); `grep -rn pl:: crates/core/src`: nothing |
 | `K_CONNECTORS` | ours |  |  | the saved job's `pl::` keys are this program's (handoff 7.9); `grep -rn pl:: crates/core/src`: nothing |
 | `K_ROOM` | ours |  |  | the saved job's `pl::` keys are this program's (handoff 7.9); `grep -rn pl:: crates/core/src`: nothing |
+| `K_ROOM_LINE` | ours |  |  | the saved job's `pl::` keys are this program's (handoff 7.9); `grep -rn pl:: crates/core/src`: nothing |
 | `K_PLACED` | ours |  |  | the saved job's `pl::` keys are this program's (handoff 7.9); `grep -rn pl:: crates/core/src`: nothing |
 | `K_SYSTEM` | ours |  |  | the saved job's `pl::` keys are this program's (handoff 7.9); `grep -rn pl:: crates/core/src`: nothing |
 | `K_IN_SYSTEM` | ours |  |  | the saved job's `pl::` keys are this program's (handoff 7.9); `grep -rn pl:: crates/core/src`: nothing |
@@ -87,6 +88,7 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `Floor` | ported | `Floor` | `crates/core/src/model.rs:567` |  |
 | `boundary_ft` | ours |  |  | a value held in the unit it was entered in is ours (call 16); read `units.rs` whole: BIMCraft holds millimetres only |
 | `Room` | ported | `Room` | `crates/core/src/model.rs:852` |  |
+| `RoomLine` | ported | `RoomSeparator` | `crates/core/src/model.rs:216` | a room separation line: two ends on a level. Here it is a thing under its level with its line a `Val`, as a wall's is, so how sure it is and where from go with it (call 152) |
 | `point_ft` | ours |  |  | a value held in the unit it was entered in is ours (call 16); read `units.rs` whole: BIMCraft holds millimetres only |
 | `MAX_SECTION_FT` | ported | `MAX_CONNECTOR_SIZE` | `crates/core/src/family.rs:396` | the largest size a section may be; 2000 mm there, 20 ft here for a duct |
 | `Justify` | ported | `Justify` | `crates/core/src/model.rs:1551` |  |
@@ -119,6 +121,7 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `MAX_CONNECTORS` | ported | `MAX_CONNECTORS` | `crates/core/src/family.rs:698` | 8 a family there, 64 a thing here; the change is in the header of `building/model.rs` |
 | `check_level` | ported | `computation_height` | `crates/core/src/model.rs:6498` | a level's elevation and computation height are usable numbers (`model.rs:6497`, `6498`); a storey height above zero and the `Val` rules (a unit, a status, a source) are ours |
 | `check_room` | ported | `point` | `crates/core/src/model.rs:6713` | a room's point is a usable point and its number is text (`model.rs:6713`, `6715`); the rest is the `Val` rules |
+| `check_room_line` | ours |  |  | a room line is under a level, its two ends are two usable points and are not the same point or closer than a point is told from another. BIMCraft's `room_separator` (`commands.rs:6938`) asks only for at least two points; `grep -rn 'RoomSeparator' crates/core/src` finds no other check of the line |
 | `check_wall_type` | ported | `MAX_LAYERS` | `crates/core/src/model.rs:481` | and the layers adding up to the thickness, `model.rs:6245` |
 | `check_floor_type` | ported | `MAX_LAYERS` | `crates/core/src/model.rs:481` | as check_wall_type |
 | `check_opening_type` | ported | `size` | `crates/core/src/model.rs:6673` | an opening's width and height are above zero (`model.rs:6673`, `6674`; `size`, `7593`); the rest is the `Val` rules |
@@ -195,6 +198,7 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `rename_item` | ported | `rename_type` | `crates/core/src/commands.rs:12943` | a library entry called something else: a name another has is refused, and what refers to it follows (there `rename_entry`; here each thing set down from the item is called what the item is). Not taken: a family's types named `family: type`; a rename to the name it has is refused here, where BIMCraft answers that it was done |
 | `remove` | ported | `delete` | `crates/core/src/commands.rs:13011` | take an element out, and a wall's doors and windows with it (`commands.rs:13040`) |
 | `room` | ported | `room` | `crates/core/src/commands.rs:7909` | a room placed by a point on a level, with a name. Not taken: a number given when none is said |
+| `room_lines` | ported | `room_separator` | `crates/core/src/commands.rs:6938` | one room line for each pair of points that follow one another, on a level (the `closed` flag is not taken: a closed ring of room lines is made by giving the first point again) |
 | `STEP_FT` | ported | `STEP` | `crates/core/src/snap.rs:19` | what a point with nothing to snap to rounds to; an inch here, 10 mm there (header) |
 | `SnapKind` | ported | `Kind` | `crates/core/src/snap.rs:34` | what a point snapped to; curves', scans' and annotation's kinds are not taken |
 | `name` | ported | `name` | `crates/core/src/snap.rs:59` | what a snap is called |
