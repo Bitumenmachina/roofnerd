@@ -451,6 +451,44 @@ pub fn parse_length(text: &str) -> Result<(Len, &'static str), String> {
     }
 }
 
+/// The units a typed measure (a value entered on a line that is not a length of the
+/// model's own) is given in: a length, an area, a roofer's square, a volume, a count.
+pub const MEASURE_UNITS: [&str; 5] = ["LF", "SF", "SQ", "CY", "EA"];
+
+/// Is this one of the units of a typed measure?
+pub fn is_measure_unit(unit: &str) -> bool {
+    MEASURE_UNITS.contains(&unit)
+}
+
+/// What a typed measure counts in, as a formula works it: its dimension (a count 0, a
+/// length 1, an area 2, a volume 3) and what one of its unit is in feet to that power (a
+/// square is 100 SF, a cubic yard 27 CF).
+pub fn measure_dimension(unit: &str) -> Option<(i32, f64)> {
+    match unit {
+        "EA" => Some((0, 1.0)),
+        "LF" => Some((1, 1.0)),
+        "SF" => Some((2, 1.0)),
+        "SQ" => Some((2, 100.0)),
+        "CY" => Some((3, 27.0)),
+        _ => None,
+    }
+}
+
+/// Read a measure as typed: a number and one of LF, SF, SQ, CY or EA (`60 SF`, `2 CY`,
+/// `24 LF`), in any capitals. A number alone is a count and is not read here; a length
+/// in feet or inches is `parse_length`'s.
+pub fn parse_measure(text: &str) -> Result<(f64, &'static str), String> {
+    let typed = text.trim();
+    let split = typed.rfind(|c: char| c.is_ascii_digit() || c == '.').map(|i| i + 1).ok_or_else(|| format!("{typed:?} is not a measure; write a number and its unit, like 60 SF, 24 LF, 2 CY, 3 SQ or 4 EA"))?;
+    let (number, unit) = (typed[..split].trim(), typed[split..].trim());
+    let unit = MEASURE_UNITS.iter().find(|u| u.eq_ignore_ascii_case(unit)).ok_or_else(|| format!("{typed:?} is not a measure; write a number and its unit, like 60 SF, 24 LF, 2 CY, 3 SQ or 4 EA"))?;
+    let x = parse_number(number).map_err(|_| format!("{typed:?} is not a measure; write a number and its unit, like 60 SF, 24 LF, 2 CY, 3 SQ or 4 EA"))?;
+    if x < 0.0 {
+        return Err(format!("{typed:?} is below zero; a measure is zero or more"));
+    }
+    Ok((x, unit))
+}
+
 /// Read a pitch as typed: rise in inches for 12 of run. `6`, `6:12`, `6/12`, `6 in/12`,
 /// `1/4:12`, `1/4 in/ft`. Anything else (degrees, percent, a run other than 12, a bare
 /// fraction such as `3/4`) is refused.

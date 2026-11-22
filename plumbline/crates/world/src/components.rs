@@ -259,7 +259,7 @@ impl Kind {
             &[("plan_area", "SF"), ("perimeter", "LF"), ("thickness", "ft")]
         } else if self == Kind::Room {
             // Its walls' board at their faces, less its openings (call 144).
-            &[("floor_area", "SF"), ("gross_area", "SF"), ("perimeter", "LF"), ("wall_area", "SF"), ("wall_run", "LF"), ("receptacles", "EA")]
+            &[("floor_area", "SF"), ("gross_area", "SF"), ("perimeter", "LF"), ("wall_area", "SF"), ("wall_run", "LF"), ("base_run", "LF"), ("receptacles", "EA")]
         } else if matches!(self, Kind::Equipment | Kind::Fixture | Kind::Furnishing) {
             // A thing set in place has the figures of its size, so a line can be priced by
             // them: a countertop by its plan_area (call 155).
@@ -377,6 +377,44 @@ impl WorkStatus {
 #[serde(deny_unknown_fields)]
 pub struct Work {
     pub status: Val<WorkStatus>,
+}
+
+/// Whether a wall carries the floor or roof above it: the trade's two words (call 160).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Bearing {
+    #[serde(rename = "bearing")]
+    Bearing,
+    #[serde(rename = "not bearing")]
+    NotBearing,
+}
+
+impl Bearing {
+    pub fn said(self) -> &'static str {
+        match self {
+            Bearing::Bearing => "bearing",
+            Bearing::NotBearing => "not bearing",
+        }
+    }
+    /// The word typed for it: the two words, in any capitals and spacing, and no other.
+    pub fn read(word: &str) -> Result<Bearing, String> {
+        match word.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase().as_str() {
+            "bearing" => Ok(Bearing::Bearing),
+            "not bearing" => Ok(Bearing::NotBearing),
+            _ => Err(format!("{:?} is not a word for it: a wall is \"bearing\" or \"not bearing\"", word.trim())),
+        }
+    }
+}
+
+/// `pl::hidden`: what is said of a wall the work opens (call 160): whether it is bearing,
+/// and what runs inside it, each with how sure it is and where that came from. Left out,
+/// nothing was said; a thing not said is not known, and is asked of a wall the work opens.
+#[derive(Component, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Hidden {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bearing: Option<Val<Bearing>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub in_the_wall: Option<Val<String>>,
 }
 
 /// The paths of everything marked to demolish: gone when the work is done.
@@ -756,6 +794,7 @@ pub const K_OUTLINE: &str = "pl::outline";
 pub const K_PITCH: &str = "pl::pitch";
 pub const K_TAPER: &str = "pl::taper";
 pub const K_WORK: &str = "pl::work";
+pub const K_HIDDEN: &str = "pl::hidden";
 pub const K_RUN: &str = "pl::run";
 pub const K_HEIGHT: &str = "pl::height";
 pub const K_CONDITION: &str = "pl::condition";

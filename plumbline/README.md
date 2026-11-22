@@ -98,6 +98,9 @@ demos/field.sh             # what is measured on site put on a traced job: the f
 demos/fieldw.sh            # the same in the window, each reading typed as a laser in keyboard mode types it; pictures in demos/captured/field
 demos/div.sh               # sixteen divisions: a whole house's lines in all sixteen, the recap by division, and the workbook's Divisions sheet
 demos/library.sh           # the starter assemblies: no price in them, a house's takeoff in fourteen divisions, three prices by division
+demos/partwork.sh          # work on part of a thing typed as a measure ("60 SF", with how sure and where from) and the starter assembly "Take down a partition", each against a figure worked by hand
+demos/hidden.sh            # what a wall the work opens may be hiding: bearing and what is in it asked in the field, what a bearing wall that comes down needs, and what is in the way of it
+demos/kitchen.sh           # a kitchen's base that does not run behind the cabinets, the lump lines said to be in the price beside the things set, and the countertop priced and its corner leg said
 demos/spec.sh              # items made from manufacturers' sheets (PDF), placed, moved clear of a clash, and out to an IFC4 model
 demos/items.sh             # the item library: the things that can be placed, by trade, in a table that is brought in, written out the same, changed and brought back
 demos/found.sh             # the foundation drawn: strip footings and foundation walls, footing concrete by the CY, and out to an IFC4 model

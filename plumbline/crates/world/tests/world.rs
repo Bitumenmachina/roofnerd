@@ -6670,12 +6670,12 @@ fn a_run_of_cabinet_boxes_stands_along_a_wall_to_the_figures_worked_by_hand() {
     let e = job.find(&top).unwrap();
     let p = job.world.get::<Placed>(e).unwrap().clone();
     assert_eq!(p.offset.feet(), Some(2.875));
-    // Priced by plan_area at $62/SF: 23.375 x 62 = 1,449.25.
-    job.add_line(&top, "Countertop, quartz", "plan_area", Some(Class::Material), false).unwrap();
-    job.set(&top, "unit_cost", Some("$62.00/SF"), Status::Assumed, "made-up price").unwrap();
+    // Priced by plan_area at $62/SF: 23.375 x 62 = 1,449.25. (Call 162: the countertop carries its
+    // own line, "Countertop", by its area, with no price; it is priced where it stands.)
+    job.set_on_line(&top, "unit_cost", Some("Countertop"), Some("$62.00/SF"), Status::Assumed, "made-up price").unwrap();
     job.derive();
     let est = plumbline_world::view::estimate(&mut job);
-    let line = est.lines.iter().find(|l| l.description == "Countertop, quartz").unwrap();
+    let line = est.lines.iter().find(|l| l.path == top && l.description == "Countertop").unwrap();
     assert!((line.amount.value.unwrap() - 1449.25).abs() < 1.0e-9, "{:?}", line.amount);
     // The wall boxes, hung 54 in up.
     let wall_codes: Vec<String> = "W3030 W3630 W1830".split(' ').map(str::to_string).collect();

@@ -272,6 +272,24 @@ pub fn work(path: &str, kind: Kind, w: &Work) -> Result<(), String> {
     w.status.check(&format!("{path} work"), "")
 }
 
+/// What is said of a wall's bearing and of what runs in it (call 160): of a wall only,
+/// each with its source; the words in it are not empty.
+pub fn hidden(path: &str, kind: Kind, h: &Hidden) -> Result<(), String> {
+    if kind != Kind::Wall {
+        return Err(format!("{path}: {kind:#} is not a wall; bearing and what is in the wall are said of a wall"));
+    }
+    if let Some(b) = &h.bearing {
+        b.check(&format!("{path} bearing"), "")?;
+    }
+    if let Some(w) = &h.in_the_wall {
+        w.check(&format!("{path} in the wall"), "")?;
+        if w.value.as_ref().is_some_and(|t| t.trim().is_empty()) {
+            return Err(format!("{path} in the wall: says nothing; write what runs in it (\"nothing\" if nothing does), or leave it unknown"));
+        }
+    }
+    Ok(())
+}
+
 pub fn run(path: &str, kind: Kind, r: &Run) -> Result<(), String> {
     if !kind.is_run() {
         return Err(format!("{path}: {kind:#} cannot carry a line"));
@@ -386,6 +404,14 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
                     Some(units::Len::One(x)) if x.is_finite() && x.abs() <= MAX_UNIT_COST => {}
                     Some(units::Len::One(_)) => return Err(format!("{named}: is not a usable number")),
                     Some(units::Len::FtIn(_)) => return Err(format!("{named}: is a [feet, inches] pair with no unit; the unit for a pair is \"ft-in\"")),
+                }
+            } else if units::is_measure_unit(&v.unit) {
+                // A typed measure: a number of LF, SF, SQ, CY or EA, zero or more.
+                v.check_basics(&named)?;
+                match v.value {
+                    None => {}
+                    Some(units::Len::One(x)) if x.is_finite() && (0.0..=MAX_UNIT_COST).contains(&x) => {}
+                    Some(_) => return Err(format!("{named}: is not a usable measure; it is a number of {}, zero or more", v.unit)),
                 }
             } else {
                 v.check_length(&named)?;

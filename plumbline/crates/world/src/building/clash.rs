@@ -530,6 +530,45 @@ fn said(p: &Placement, what: &BTreeMap<String, String>) -> String {
 /// than that. Nothing is changed and nothing is stored: the answer is worked out from the
 /// job as it stands, so it cannot go stale.
 pub fn clashes(job: &mut Job, clearance: Option<f64>) -> Result<Clashes, String> {
+    find(job, clearance, false)
+}
+
+/// What is in the way of a wall that comes down (call 160): a run, a fitting or a thing set
+/// in place that is in a wall marked to demolish and is not itself to demolish, found with
+/// the same shapes the clash test uses (a wall that is to demolish is in nothing's way
+/// once the work is done, and so is not in `clashes`; it is here, with its own meaning:
+/// what has to be capped, rerouted or taken out when the wall comes down). Nothing is
+/// returned for a job in which no wall is marked to demolish, and nothing is tested.
+pub fn in_the_way(job: &mut Job) -> Result<Vec<crate::hidden::InTheWay>, String> {
+    let gone = crate::components::demolished(&mut job.world);
+    let walls: BTreeSet<String> = {
+        let mut q = job.world.query::<(&Node, &Kind)>();
+        q.iter(&job.world).filter(|(n, k)| **k == Kind::Wall && gone.contains(&n.path)).map(|(n, _)| n.path.clone()).collect()
+    };
+    if walls.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut out = Vec::new();
+    for c in find(job, None, true)?.found {
+        if c.how != ClashKind::Hard {
+            continue;
+        }
+        let (wall, wall_name, thing, thing_name, thing_kind) = match (walls.contains(&c.a), walls.contains(&c.b)) {
+            (true, false) => (c.a, c.a_name, c.b, c.b_name, c.b_kind),
+            (false, true) => (c.b, c.b_name, c.a, c.a_name, c.a_kind),
+            _ => continue,
+        };
+        if !(thing_kind.is_segment() || thing_kind == Kind::Fitting || thing_kind.is_placed()) || gone.contains(&thing) {
+            continue;
+        }
+        out.push(crate::hidden::InTheWay { thing, thing_name, thing_kind, wall, wall_name, at: c.at });
+    }
+    Ok(out)
+}
+
+/// `with_walls_coming_down`: a wall that is to demolish is tested like any other (the
+/// question of what is in its way); otherwise it is left out, as call 148 has it.
+fn find(job: &mut Job, clearance: Option<f64>, with_walls_coming_down: bool) -> Result<Clashes, String> {
     if let Some(c) = clearance {
         if !(c.is_finite() && c > 0.0) {
             return Err("a clearance is a length of more than nothing".into());
@@ -563,7 +602,7 @@ pub fn clashes(job: &mut Job, clearance: Option<f64>) -> Result<Clashes, String>
     // What is to be demolished is in nothing's way once the work is done (call 148).
     let gone = crate::components::demolished(&mut job.world);
     for (i, p) in drawn.iter().enumerate() {
-        if gone.contains(&p.path) {
+        if gone.contains(&p.path) && !(with_walls_coming_down && p.kind == Kind::Wall) {
             left_out.push((p.path.clone(), "it is to demolish, and in nothing's way once the work is done".into()));
             continue;
         }

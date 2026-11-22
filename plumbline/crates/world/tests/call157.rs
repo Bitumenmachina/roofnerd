@@ -100,13 +100,16 @@ fn a_rooms_run_of_wall_is_its_floor_line_along_walls_less_its_doorways() {
 /// The judge's room: a 24 x 16 house, rooms A and B, a room line at x = 8. A's perimeter is
 /// 7.75 + 15.5 + 7.75 + 15.5 = 46.5; its wall is 31. Base priced from the starter library
 /// (`Room, hardwood floor`) reads 31 LF, and not 46.5. Eight lines of the library are priced by
-/// the run of wall, and none by the perimeter.
+/// the run of base (call 162: the run of wall less what stands against it), and none by the
+/// perimeter.
 #[test]
 fn base_from_the_starter_library_is_priced_by_the_run_of_wall() {
     let lib = tables::STARTER_LIBRARY;
     let base: Vec<&str> = lib.lines().filter(|l| l.contains(",Base and trim,") || l.contains(",Install base and trim,")).collect();
     assert_eq!(base.len(), 8);
-    assert!(base.iter().all(|l| l.contains(",wall_run,") && !l.contains(",perimeter,")), "{base:?}");
+    // Call 162: the base lines are by the run of base, which is the run of wall less what stands
+    // against it on the floor; with nothing set it is the run of wall, to the digit.
+    assert!(base.iter().all(|l| l.contains(",base_run,") && !l.contains(",wall_run,") && !l.contains(",perimeter,")), "{base:?}");
 
     let (mut job, level, _, _) = house();
     let a = ed::room(&mut job, &level, "A", [4.0, 8.0], known()).unwrap();
@@ -118,6 +121,7 @@ fn base_from_the_starter_library_is_priced_by_the_run_of_wall() {
     job.derive();
     assert_eq!(measure(&mut job, &a, "perimeter").value, Some(46.5));
     assert_eq!(measure(&mut job, &a, "wall_run").value, Some(31.0));
+    assert_eq!(measure(&mut job, &a, "base_run").value, Some(31.0));
     let est = estimate(&mut job);
     let line = est.lines.iter().find(|l| l.element == "A" && l.description == "Base and trim" || l.path == a && l.description == "Base and trim").unwrap();
     // 31 LF at $2.00: $62.00, and not 46.5 LF, $93.00.

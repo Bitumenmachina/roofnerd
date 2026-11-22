@@ -211,6 +211,57 @@ pub fn measure(job: &mut Job, path: &str, what: &str, reading: Reading, to: Opti
     })
 }
 
+/// A value entered on one of an element's cost lines (one its formula names: `measured`
+/// on a line typed as "60 SF", a spacing, a turn-up), measured on site: it becomes Known
+/// on `source`'s word, as a length does. The reading is a number and its unit as the
+/// value is kept in (`72 SF`), or "same" for a value looked at and found as it was.
+pub fn measure_on_line(job: &mut Job, path: &str, line: &str, name: &str, reading: Reading, source: &str) -> Result<Measured, String> {
+    if source.trim().is_empty() {
+        return Err("a measurement says who measured it, or with what; give its source".into());
+    }
+    all_or_nothing(job, |job| {
+        let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let kind = job.kind(path).ok_or_else(|| format!("{path} has no kind"))?;
+        let who = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_else(|| path.to_string());
+        let mut cost = job.world.get::<Cost>(e).cloned().ok_or_else(|| format!("{who} has no cost line to measure a value of"))?;
+        let have = || cost.lines.iter().map(|l| format!("{:?}", l.description)).collect::<Vec<_>>().join(", ");
+        let at = cost.lines.iter().position(|l| l.description == line).ok_or_else(|| format!("{who} has no cost line described as {line:?} (it has: {})", have()))?;
+        let l = &mut cost.lines[at];
+        let named = l.inputs.keys().cloned().collect::<Vec<_>>().join(", ");
+        let v = l.inputs.get_mut(name).ok_or_else(|| if named.is_empty() { format!("{who}'s line {line:?} has no entered value to measure") } else { format!("{who}'s line {line:?} has no entered value called {name:?}; it has: {named}") })?;
+        let shown = |v: &Val<Len>| match &v.value {
+            Some(len) => units::show_length(len, &v.unit),
+            None => "unknown".into(),
+        };
+        let said = match reading {
+            Reading::Same => {
+                if v.value.is_none() || v.status == Status::Unknown {
+                    return Err(format!("{who}'s {name} on {line:?} is not known, so there is nothing for it to be the same as; measure it"));
+                }
+                let again = v.status == Status::Known;
+                v.status = Status::Known;
+                v.source = after(&v.source, "found as drawn", source);
+                format!("{who}: {name} on {line:?} is {}, {}", shown(v), if again { "found the same again" } else { "found as drawn" })
+            }
+            Reading::Length(typed) => {
+                let was = if v.value.is_some() { format!("it was {}, {}: {}", shown(v), status_said(v.status), v.source) } else { format!("it was not known: {}", v.source) };
+                let (len, unit) = if let Ok((x, unit)) = units::parse_measure(typed) {
+                    (Len::One(x), unit)
+                } else if v.unit.is_empty() {
+                    (Len::One(units::parse_number(typed)?), "")
+                } else {
+                    units::parse_length(typed)?
+                };
+                *v = Val { value: Some(len), unit: unit.into(), status: Status::Known, source: source.into() };
+                format!("{who}: {name} on {line:?} is {}, measured ({was})", shown(v))
+            }
+        };
+        check::cost(path, kind, &cost)?;
+        job.put(path, cost)?;
+        Ok(Measured { said, also: Vec::new() })
+    })
+}
+
 /// What a run or a placed thing meets at its ends or its connectors, by path and name.
 fn joined_to(job: &mut Job, path: &str) -> Vec<(String, String)> {
     let Ok(net) = building::network::network(job, None, None, building::network::TOLERANCE_FT) else { return Vec::new() };

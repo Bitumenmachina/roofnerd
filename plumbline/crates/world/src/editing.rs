@@ -33,7 +33,7 @@ pub mod snap;
 pub use history::{History, UNDO_LIMIT};
 pub use join::{connect, connect_at, fit_all, fitting, split, Fitted, PassedOver};
 pub(crate) use measure::takes_among;
-pub use measure::{measure, takes, Measured, Reading};
+pub use measure::{measure, measure_on_line, takes, Measured, Reading};
 
 use crate::building::{self, InSystem, SystemInfo};
 use crate::components::*;
@@ -804,6 +804,10 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
             building::check_placed(&path, Kind::Furnishing, &placed)?;
             job.put(&path, placed)?;
             to_wall(job, &path)?;
+            // It carries its own line, by its area, to be priced (call 162); `price-item
+            // Countertop` finds countertops by what they are.
+            job.add_line(&path, "Countertop", "plan_area", Some(crate::Class::Material), false)?;
+            job.set_division(&path, Some("Countertop"), crate::components::Division::of_number(12).ok_or("Division 12 is not there")?)?;
             Some((path, mid))
         } else {
             None
@@ -1134,14 +1138,26 @@ pub fn price_item(job: &mut Job, item: &str, price: &str, status: Status, source
             let mut q = job.world.query::<(&Node, &Item)>();
             q.iter(&job.world).filter(|(n, _)| n.path == item || n.name.eq_ignore_ascii_case(item.trim())).map(|(n, _)| (n.path.rsplit('-').next().and_then(|x| x.parse().ok()).unwrap_or(u64::MAX), n.path.clone(), n.name.clone())).collect()
         };
-        let Some((_, path, name)) = found.into_iter().min() else {
-            return Err(format!("{item} is not an item of this job: price takes an item's name, like B18"));
-        };
-        let set: Vec<String> = {
+        // What is cut to its run and is no item of the tool chest (a countertop) is found by
+        // what it is: every thing set in place of that name that is of no item (call 162).
+        let by_what: Vec<(u64, String)> = {
             let mut q = job.world.query::<(&Node, &Placed)>();
-            let mut all: Vec<(u64, String)> = q.iter(&job.world).filter(|(_, p)| p.item.as_deref() == Some(path.as_str())).map(|(n, _)| (n.path.rsplit('-').next().and_then(|x| x.parse().ok()).unwrap_or(u64::MAX), n.path.clone())).collect();
-            all.sort();
-            all.into_iter().map(|(_, p)| p).collect()
+            q.iter(&job.world).filter(|(_, p)| p.item.is_none() && p.what.value.as_deref().is_some_and(|w| w.eq_ignore_ascii_case(item.trim()))).map(|(n, _)| (n.path.rsplit('-').next().and_then(|x| x.parse().ok()).unwrap_or(u64::MAX), n.path.clone())).collect()
+        };
+        let (name, set): (String, Vec<String>) = match found.into_iter().min() {
+            Some((_, path, name)) => {
+                let mut q = job.world.query::<(&Node, &Placed)>();
+                let mut all: Vec<(u64, String)> = q.iter(&job.world).filter(|(_, p)| p.item.as_deref() == Some(path.as_str())).map(|(n, _)| (n.path.rsplit('-').next().and_then(|x| x.parse().ok()).unwrap_or(u64::MAX), n.path.clone())).collect();
+                all.sort();
+                (name, all.into_iter().map(|(_, p)| p).collect())
+            }
+            None if !by_what.is_empty() => {
+                let mut all = by_what;
+                all.sort();
+                let name = job.world.query::<&Placed>().iter(&job.world).find_map(|p| p.what.value.clone().filter(|w| w.eq_ignore_ascii_case(item.trim()))).unwrap_or_else(|| item.trim().to_string());
+                (name, all.into_iter().map(|(_, p)| p).collect())
+            }
+            None => return Err(format!("{item} is not an item of this job: price takes an item's name, like B18")),
         };
         let (mut priced, mut without) = (Vec::new(), Vec::new());
         for thing in set {
@@ -1491,6 +1507,11 @@ pub fn mark(job: &mut Job, paths: &[String], status: WorkStatus, lines: ItsLines
                     }
                 }
             }
+        }
+        // A wall that comes down may be bearing and may have pipes and wiring in it: not
+        // seen until it is opened. Both are asked in the field (call 160).
+        if status == WorkStatus::Demolish && paths.iter().any(|p| job.kind(p) == Some(Kind::Wall)) {
+            said.push("Is it bearing, and what is in it? Both are on the field list.".to_string());
         }
         Ok(said)
     })

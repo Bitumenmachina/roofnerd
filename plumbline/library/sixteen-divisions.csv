@@ -68,27 +68,27 @@ Framed floor,Floor,,,,Unknown,not coded,Frame the floor and lay the subfloor,Lab
 "Interior partition, 2x4",Wall,,,,Unknown,not coded,"Paint, both sides",Material,2 * net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Interior partition, 2x4",Wall,,,,Unknown,not coded,Frame the partition,Labor,face_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 "Room, hardwood floor",Room,,,,Unknown,not coded,Hardwood flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
-"Room, hardwood floor",Room,,,,Unknown,not coded,Base and trim,Material,wall_run,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+"Room, hardwood floor",Room,,,,Unknown,not coded,Base and trim,Material,base_run,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Room, hardwood floor",Room,,,,Unknown,not coded,"Ceiling, gypsum board and paint",Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
-"Room, hardwood floor",Room,,,,Unknown,not coded,Install base and trim,Labor,wall_run,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
+"Room, hardwood floor",Room,,,,Unknown,not coded,Install base and trim,Labor,base_run,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 "Bath, tile floor",Room,,,,Unknown,not coded,Tile flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
-"Bath, tile floor",Room,,,,Unknown,not coded,Base and trim,Material,wall_run,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+"Bath, tile floor",Room,,,,Unknown,not coded,Base and trim,Material,base_run,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Bath, tile floor",Room,,,,Unknown,not coded,"Ceiling, gypsum board and paint",Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Bath, tile floor",Room,,,,Unknown,not coded,Toilet and bath accessories,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,10
-"Bath, tile floor",Room,,,,Unknown,not coded,Install base and trim,Labor,wall_run,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
+"Bath, tile floor",Room,,,,Unknown,not coded,Install base and trim,Labor,base_run,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 Kitchen,Room,,,,Unknown,not coded,Hardwood flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
-Kitchen,Room,,,,Unknown,not coded,Base and trim,Material,wall_run,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+Kitchen,Room,,,,Unknown,not coded,Base and trim,Material,base_run,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 Kitchen,Room,,,,Unknown,not coded,"Ceiling, gypsum board and paint",Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 Kitchen,Room,,,,Unknown,not coded,Kitchen appliances,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,11
 Kitchen,Room,,,,Unknown,not coded,Cabinets,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,12
 Kitchen,Room,,,,Unknown,not coded,Countertops,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,12
-Kitchen,Room,,,,Unknown,not coded,Install base and trim,Labor,wall_run,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
+Kitchen,Room,,,,Unknown,not coded,Install base and trim,Labor,base_run,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 Laundry or utility room,Room,,,,Unknown,not coded,Tile flooring,Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
-Laundry or utility room,Room,,,,Unknown,not coded,Base and trim,Material,wall_run,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+Laundry or utility room,Room,,,,Unknown,not coded,Base and trim,Material,base_run,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 Laundry or utility room,Room,,,,Unknown,not coded,"Ceiling, gypsum board and paint",Material,floor_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 Laundry or utility room,Room,,,,Unknown,not coded,Closet shelving,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,10
 Laundry or utility room,Room,,,,Unknown,not coded,Laundry appliances,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,11
-Laundry or utility room,Room,,,,Unknown,not coded,Install base and trim,Labor,wall_run,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
+Laundry or utility room,Room,,,,Unknown,not coded,Install base and trim,Labor,base_run,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
 Sauna or other built room,Room,,,,Unknown,not coded,"Prefabricated room, set in place",Subcontract,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,13
 Asphalt shingle roof,RoofPlane,,,,Unknown,not coded,Roof sheathing,Material,surface_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
 Asphalt shingle roof,RoofPlane,,,,Unknown,not coded,Underlayment,Material,surface_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
@@ -170,3 +170,11 @@ Electrical equipment,Equipment,,,,Unknown,not coded,"Electrical equipment, set a
 "Slab on grade, by its thickness",Floor,,,,Unknown,not coded,Slab edge forms,Subcontract,perimeter * thickness,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,3
 "Slab on grade, by its thickness",Floor,,,,Unknown,not coded,Slab concrete,Material,plan_area * thickness,,,,5,Assumed,NRMCA CIP 31: order 4% to 10% over the plan quantity,,,,,,$?/CY,Unknown,no price entered,,,3
 "Slab on grade, by its thickness",Floor,,,,Unknown,not coded,Place and finish the slab,Subcontract,plan_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,3
+Take down a partition,Wall,,,,Unknown,not coded,"Protect the floors, both sides",General conditions,2 * plan_length * strip,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,1,strip = 4 ft,Assumed,a 4 ft run of floor protection each side: the estimator's allowance
+Take down a partition,Wall,,,,Unknown,not coded,Dust barrier,General conditions,barrier * height,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,1,barrier = unknown ft,Unknown,where the work is closed off is the job's to say: give its length
+Take down a partition,Wall,,,,Unknown,not coded,Take down the partition,Subcontract,face_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,2
+Take down a partition,Wall,,,,Unknown,not coded,Haul off and dump,Subcontract,net_area * thickness * swell,,,,,,,,,,,,$?/CY,Unknown,no price entered,,,2,swell = 1.5,Assumed,broken board and framing lie loose at about half again their volume in place: the estimator's allowance; the hauler's box is what is paid for
+Take down a partition,Wall,,,,Unknown,not coded,Patch the floor where it stood,Subcontract,plan_length * thickness,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+Take down a partition,Wall,,,,Unknown,not coded,Patch the ceiling where it stood,Subcontract,plan_length * thickness,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+Take down a partition,Wall,,,,Unknown,not coded,Patch the walls it met,Subcontract,ends,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,9,ends = 2,Assumed,one patch at each end; a wall that ends free has one
+Take down a partition,Wall,,,,Unknown,not coded,Shore the floor above,Labor,plan_length,,,,,,,hr,unknown LF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,yes,2

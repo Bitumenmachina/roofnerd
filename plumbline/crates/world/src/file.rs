@@ -49,7 +49,7 @@ struct Entry {
     extra: BTreeMap<String, Value>,
 }
 
-const KNOWN_KEYS: [&str; 41] = [K_ITEM, crate::tables::K_PRIOR, crate::plans::K_DRAWING, K_MATERIAL, K_SUPPLY, K_MARKUP, K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_TAPER, K_WORK, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_ALLOWANCE, K_PRICED, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_SEGMENT, K_SEGMENT_TYPE, K_FITTING, K_CONNECTORS, K_ROOM, K_ROOM_LINE, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
+const KNOWN_KEYS: [&str; 42] = [K_HIDDEN, K_ITEM, crate::tables::K_PRIOR, crate::plans::K_DRAWING, K_MATERIAL, K_SUPPLY, K_MARKUP, K_CLASS, K_JOB, K_FOOTPRINT, K_SOLVE, K_SOLVED, K_OUTLINE, K_PITCH, K_TAPER, K_WORK, K_RUN, K_HEIGHT, K_CONDITION, K_COST, K_SCHEDULE, K_RECIPE, K_MEASURE, K_LINE_QUANTITIES, K_ALLOWANCE, K_PRICED, K_LEVEL, K_WALL, K_WALL_TYPE, K_OPENING, K_OPENING_TYPE, K_FLOOR, K_FLOOR_TYPE, K_SEGMENT, K_SEGMENT_TYPE, K_FITTING, K_CONNECTORS, K_ROOM, K_ROOM_LINE, K_PLACED, K_SYSTEM, K_IN_SYSTEM];
 
 /// What loading found that the reader should know about. Not errors: the job loaded.
 #[derive(Debug, Default)]
@@ -82,6 +82,7 @@ pub fn save(job: &mut Job) -> String {
         put!(Pitch, K_PITCH);
         put!(Taper, K_TAPER);
         put!(Work, K_WORK);
+        put!(Hidden, K_HIDDEN);
         put!(Run, K_RUN);
         put!(Height, K_HEIGHT);
         put!(Condition, K_CONDITION);
@@ -141,7 +142,13 @@ pub fn save(job: &mut Job) -> String {
     }
     // The file's own schema entries are kept; ours are added beside them.
     let mut schemas = job.schemas.clone();
+    // `pl::hidden` is written only where something says it (call 160): a job that says
+    // nothing of what is in a wall saves as it always did, schema and all.
+    let says_hidden = job.order.iter().any(|e| job.world.get::<Hidden>(*e).is_some());
     for k in KNOWN_KEYS {
+        if k == K_HIDDEN && !says_hidden {
+            continue;
+        }
         schemas.entry(k.to_string()).or_insert_with(|| json!({ "value": { "dataType": if k == K_CLASS { "String" } else { "Object" } } }));
     }
     let root = FileRoot { header: job.header.clone(), imports: job.imports.clone(), schemas, data, extra: job.extra.clone() };
@@ -348,6 +355,11 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
                 K_WORK => {
                     let c: Work = parse(&path, &k, v)?;
                     check::work(&path, kind, &c)?;
+                    ent.insert(c);
+                }
+                K_HIDDEN => {
+                    let c: Hidden = parse(&path, &k, v)?;
+                    check::hidden(&path, kind, &c)?;
                     ent.insert(c);
                 }
                 K_TAPER => {

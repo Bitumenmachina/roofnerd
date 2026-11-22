@@ -8322,6 +8322,72 @@ commit builds and passes from what is in it). That run is of a tree that has cal
 commit (fe25444) in it; the check owed on fe25444 itself was not run on that commit
 alone and is not owed any longer.
 
+## Steps B6 and B7 and the kitchen's fixes built at the command line (2026-11-22; calls 159, 160, 162; a worker under contract, accepted by its diff and the lead's own runs; call 166 the lead's)
+
+**B6, work on part of a thing (call 159).** A line's quantity can be a measure typed
+outright (`"60 SF"`, in LF, SF, SQ, CY or EA), held as a value entered on the line with
+how sure it is and where it came from, and refused without them. The starter library
+has "Take down a partition": protection, dust barrier, taking down, haul and dump,
+three patches, and shoring switched off. Every hand figure came out: $840.00 for the
+patch, $1,008.00 at 72 SF, 144 SF from `measured * 2`; the partition 128, 180, 144 SF,
+4 CY, 8 and 8 SF, 2 EA; job cost $1,967.20 with the six unpriced lines named.
+
+**B7, what a wall the work opens may be hiding (call 160).** A wall marked to demolish,
+or an existing wall with a new opening cut in it, is asked on the field list whether it
+is bearing and what is in it, with everything priced on it riding; a bearing wall the
+work opens says what that needs and that it is not in the price; a run or a thing in a
+wall that comes down is asked ("cap it, reroute it or take it out") and counted by
+`clashes` apart from the clashes. Every hand figure came out: nothing asked before a
+mark; $360.00 on the partition and $120.00 on the pipe, $480.00 together; said Known
+they leave; a new window in an old wall asks that wall with no dollars riding, not
+$0.00. **Set right by the lead after reading the diff** (DECISIONS.md, "Call 160, as
+built"): a door taken out and filled in was opening its wall; it does not, and
+`hidden.sh` has the case.
+
+**The kitchen (call 162).** A room's `base_run` is its wall run less what stands on the
+floor against its walls: 51 LF with nothing set, 37 LF behind five boxes covering 14 ft
+(a corner box covering its width on one wall and its depth on the other), 40 LF with a
+run taken down; the starter library's eight base lines are by it. The estimate, `check`
+and `cabinets` say when a lump line sits in the price beside the lines of the things set
+in the room. A countertop carries its own line, is priced by `price-item Countertop`
+($1,054.00 and $395.25 at $62/SF), and says the leg it leaves out over a turning corner
+box (1.86 SF).
+
+**One cost line taken off a thing (call 166).** Accepting the kitchen showed that the
+estimate said "take the line off" and nothing could: a line could never be taken off by
+itself. `remove-line` does it, says what went, and refuses a name the thing does not
+have with the lines it has.
+
+**Run:** by the lead, `cargo test --workspace` 492 pass, 0 fail on the worker's tree,
+then the new tests of calls 160, 162 and 166 again after the lead's two changes;
+`demos/partwork.sh`, `hidden.sh` and `kitchen.sh` PASS and their output read. By the
+worker: all 37 command-line demonstrations, the gates, the licences and the port map
+(260 items) PASS. `tools/committed.sh` before the push.
+
+**Expectations that moved, each named by its decision:** the library's counts (37
+assemblies, 179 lines, 25 labor) in `library.sh`, `foundation.sh`, `framing.sh`,
+`shingle.sh` and the starter-library test; the eight base lines by `base_run` in the
+call 157 test; the cabinet test prices the "Countertop" line the countertop now carries
+in place of adding one (still $1,449.25).
+
+**The pictures in `demos/captured/d2` and `demos/captured/house`** were overwritten by
+the worker's run of those two demonstrations on a half-built program. They are not in this
+commit: the lead is retaking both on a frozen copy of the finished build, and the commit
+that carries them says what the runs showed.
+
+**Not right, owed:**
+- the window shows none of this: no typed measure in a line's field, no bearing rows or
+  their reasons, no caution, no "in the way of demolition", no base run in a room's
+  panel beyond what its figures list, no button to take a line off;
+- an Assumed typed measure is not on the field list (a value entered on a line never
+  is), and nothing says so;
+- `bearing` does not go out in the BIM file (BIMCraft writes `LoadBearing`);
+- the top over a turning corner box is said short, not drawn as the L it is;
+- a room priced before call 162 keeps `wall_run` on its base lines and nothing says the
+  library moved on (J-C-A, still open).
+A judge on another model is walking calls 159, 160, 162 and 166 cold; its notes go to
+`research/judgment-calls-159-166.md` as it writes them.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

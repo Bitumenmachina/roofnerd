@@ -44,6 +44,14 @@ fn operand(on: &On, line: &CostLine, name: &str) -> Result<Operand, String> {
         return Ok(Operand { value: so.feet(), dim: 1, status: so.status, shown: units::to_feet_text(STRETCH_OUT, &so.unit) });
     }
     if let Some(v) = line.inputs.get(name) {
+        // A typed measure is what its unit says: a length, an area, a volume, a count.
+        if let Some((dim, per)) = units::measure_dimension(&v.unit) {
+            let value = match v.value {
+                Some(units::Len::One(x)) => Some(x * per),
+                _ => None,
+            };
+            return Ok(Operand { value, dim, status: v.status, shown: name.to_string() });
+        }
         return Ok(if v.unit.is_empty() {
             let value = match v.value {
                 Some(units::Len::One(x)) => Some(x),

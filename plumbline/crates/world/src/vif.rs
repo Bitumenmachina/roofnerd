@@ -48,6 +48,8 @@ pub struct Question {
     pub room: Option<String>,
     /// For a clash: what it is with.
     pub clash: Option<Between>,
+    /// For a thing in a wall that comes down (call 160): which wall, and where.
+    pub in_the_way: Option<crate::hidden::InTheWay>,
     /// What to measure (true) or check (false) to settle it: each value as the screen
     /// names it, with how sure it is now. Empty for a clash, whose two things each
     /// have a row of their own when they have such a value.
@@ -102,6 +104,7 @@ pub fn vif(job: &mut Job) -> Vif {
     let elements = view::elements(job);
     let estimate = view::estimate(job);
     let storeys = crate::building::storeys_of(job);
+    let opened = crate::hidden::opened_walls(&mut job.world);
     let names: BTreeMap<&str, &str> = elements.iter().map(|e| (e.path.as_str(), e.name.as_str())).collect();
     let storey_name = |path: &str, kind: Kind| -> String {
         if kind == Kind::Storey {
@@ -229,6 +232,7 @@ pub fn vif(job: &mut Job) -> Vif {
                         storey: storey_name(&c.a, c.a_kind),
                         room: None,
                         clash: Some(Between { other: c.b.clone(), other_name: c.b_name.clone(), how: c.how, through: c.through, by: c.by, at: c.at }),
+                        in_the_way: None,
                         values: Vec::new(),
                         dollars,
                         dollars_status,
@@ -250,8 +254,13 @@ pub fn vif(job: &mut Job) -> Vif {
         if job.find(&el.path).is_some_and(|e| job.world.get::<crate::Item>(e).is_some()) {
             continue;
         }
-        let labels: Vec<String> = el.rows.iter().filter(|r| !r.derived && !r.label.contains(": ") && r.status != Status::Known).map(|r| r.label.clone()).collect();
-        if labels.is_empty() {
+        let mut labels: Vec<String> = el.rows.iter().filter(|r| !r.derived && !r.label.contains(": ") && r.status != Status::Known).map(|r| r.label.clone()).collect();
+        // What a wall the work opens may hide is asked of it, as things to check; of a
+        // wall the work does not open nothing is asked (call 160).
+        let is_hidden = |l: &String| l == crate::hidden::BEARING || l == crate::hidden::IN_THE_WALL;
+        let asked_hidden: Vec<String> = if opened.contains_key(&el.path) { labels.iter().filter(|l| is_hidden(l)).cloned().collect() } else { Vec::new() };
+        labels.retain(|l| !is_hidden(l));
+        if labels.is_empty() && asked_hidden.is_empty() {
             continue;
         }
         let values: Vec<(String, Status, bool)> = crate::editing::takes_among(job, &el.path, &labels)
@@ -263,9 +272,9 @@ pub fn vif(job: &mut Job) -> Vif {
             .collect();
         // What the thing is, where that is itself to be checked (see below). Worked out
         // before the next step adds values that are not of that kind.
-        let identity = values.iter().any(|v| !v.2);
+        let identity = values.iter().any(|v| !v.2) || !asked_hidden.is_empty();
         let mut values = values;
-        if values.is_empty() {
+        if values.is_empty() && asked_hidden.is_empty() {
             // Nothing on it is a value `measure` takes, but priced lines whose quantity
             // is in question rest on it. It is a question all the same, to be checked,
             // and their dollars ride on it: left off, an estimator sorting his field
@@ -288,6 +297,11 @@ pub fn vif(job: &mut Job) -> Vif {
                 continue;
             }
         }
+        // Everything priced on the wall rides on what it is, as on what any thing is.
+        for label in &asked_hidden {
+            let status = el.rows.iter().find(|r| r.label == *label).map(|r| r.status).unwrap_or(Status::Unknown);
+            values.push((label.clone(), status, false));
+        }
         // Only a line that is itself still in question has anything riding on a
         // measurement. But where what the thing is (its type, what it is, its size) is
         // itself to be checked, everything priced on it rides on that check, however
@@ -299,7 +313,25 @@ pub fn vif(job: &mut Job) -> Vif {
         let picked: Vec<&Line> = lines.iter().filter(|l| (l.quantity != Status::Known && l.rests.contains(&el.path)) || (identity && l.on == el.path)).collect();
         counted.extend(picked.iter().map(|l| l.key.clone()));
         let (dollars, dollars_status, n, unpriced) = sum(&picked);
-        place(Question { path: el.path.clone(), name: el.name.clone(), kind: el.kind, storey: storey_name(&el.path, el.kind), room: None, clash: None, values, dollars, dollars_status, lines: n, unpriced }, &mut with, &mut without);
+        place(Question { path: el.path.clone(), name: el.name.clone(), kind: el.kind, storey: storey_name(&el.path, el.kind), room: None, clash: None, in_the_way: None, values, dollars, dollars_status, lines: n, unpriced }, &mut with, &mut without);
+    }
+
+    // What is in the way of a wall that comes down: cap it, reroute it or take it out.
+    // What rides on it is what is priced on that thing (call 160).
+    match clash::in_the_way(job) {
+        Err(why) => clashes_not_tested = clashes_not_tested.or(Some(why)),
+        Ok(found) => {
+            for w in found {
+                let picked: Vec<&Line> = lines.iter().filter(|l| l.on == w.thing).collect();
+                counted.extend(picked.iter().map(|l| l.key.clone()));
+                let (dollars, dollars_status, n, unpriced) = sum(&picked);
+                place(
+                    Question { path: w.thing.clone(), name: w.thing_name.clone(), kind: w.thing_kind, storey: storey_name(&w.thing, w.thing_kind), room: None, clash: None, in_the_way: Some(w), values: Vec::new(), dollars, dollars_status, lines: n, unpriced },
+                    &mut with,
+                    &mut without,
+                );
+            }
+        }
     }
 
     // Largest first; a tie keeps the order found, which is clashes and then the job's.
@@ -334,7 +366,7 @@ pub fn vif(job: &mut Job) -> Vif {
 }
 
 /// Whether a place lies inside an outline on plan.
-fn inside(outline: &[[f64; 2]], at: [f64; 2]) -> bool {
+pub(crate) fn inside(outline: &[[f64; 2]], at: [f64; 2]) -> bool {
     let mut odd = false;
     for i in 0..outline.len() {
         let (a, b) = (outline[i], outline[(i + 1) % outline.len()]);
@@ -377,6 +409,9 @@ impl Question {
     /// reads them (1/2 in, not 0.50 in). One wording for the window, the command line
     /// and the list that is written out.
     pub fn to_do(&self) -> String {
+        if let Some(w) = &self.in_the_way {
+            return w.said();
+        }
         match &self.clash {
             Some(c) if c.through => "One passes through the other: a hole to cut. Where is still to verify.".to_string(),
             Some(c) => {
@@ -387,6 +422,8 @@ impl Question {
                 // "Measure its width and its height; check what it is and its size."
                 let said = |name: &str| match name {
                     "condition" => "its assembly".to_string(),
+                    n if n == crate::hidden::BEARING => "whether it is bearing".to_string(),
+                    n if n == crate::hidden::IN_THE_WALL => "what is in the wall".to_string(),
                     n if n.starts_with("what ") => n.to_string(),
                     // A room is kept by a point inside it: on site that is where it is.
                     "a point inside it" => "where it is".to_string(),

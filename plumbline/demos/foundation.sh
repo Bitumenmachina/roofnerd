@@ -37,7 +37,7 @@ read -r W_S W_E W_N W_W <<<"$("$P" wall "$J" "$L" "$WT" --points "0,0 40,0 40,28
 echo
 echo "== The starter library comes in, and each footing and wall is given its assembly =="
 "$P" import assemblies "$J" starter > "$T/in.txt"
-says "$T/in.txt" "set: 36"
+says "$T/in.txt" "set: 37"
 says "$T/in.txt" "not used: 0"
 for f in "$F_S" "$F_E" "$F_N" "$F_W"; do "$P" apply "$J" "$f" "Strip footing, formed, two #4 bars" --source "made-up foundation plan" >/dev/null; done
 for w in "$W_S" "$W_E" "$W_N" "$W_W"; do "$P" apply "$J" "$w" "Foundation wall, poured concrete" --source "made-up foundation plan" >/dev/null; done

@@ -27,6 +27,7 @@ pub mod file;
 pub mod finish;
 pub mod formula;
 pub mod geom;
+pub mod hidden;
 pub mod job;
 pub mod lines;
 pub mod plans;

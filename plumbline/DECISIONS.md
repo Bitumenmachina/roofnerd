@@ -5755,3 +5755,26 @@ floor" gains "Floor joists, 2x10 at 16 in" by `joists` (EA) and "Rim joist" by
 `rim_length` (LF); a starter roof assembly gains "Rafters, 2x8 at 24 in" by `rafters`.
 No number moves on a floor or a roof priced before this: the figures exist only where
 a line names the framing, and the lines a job already has are the job's.
+
+### Call 160, as built: an opening that is taken out and filled in does not open the wall (2026-11-22; the lead, reading the worker's diff)
+
+The call said a wall is opened when "a door or window not itself marked existing is in
+it". The worker read that to the letter, so a door marked **to demolish** in an existing
+wall asked the wall whether it is bearing. That is the wrong question: a door taken out
+and filled in (call 150) cuts nothing; its header stays and the wall carries what it
+carried. A wall is cut by an opening that is **new or temporary**: not marked, marked
+new, or marked temporary. An opening marked existing or to demolish does not open the
+wall. `demos/hidden.sh` gains the case: the north wall, existing, with a door in it
+marked to demolish, is asked nothing.
+
+### Call 166. One cost line taken off a thing (2026-11-22; found accepting call 162: the estimate says "take the line off" and nothing could)
+
+A line put on a thing, by hand or by an assembly, could be changed, priced, switched off
+(labor only) or cleared with every other line of the thing (call 148), and never taken
+off by itself. `plumbline remove-line <file> <thing> "<line>"` takes that one line off,
+with whatever was entered on it, and says what went: its quantity as it stood and its
+price, or that it had none. A thing that has no line of that name is refused, with the
+lines it has. The thing's other lines, its assembly's name and its code stay as they
+are; what the estimate comes to drops by what the line came to, and by nothing else. In
+the window it is a button on the line (the next window work). `demos/kitchen.sh` takes
+the Kitchen's "Cabinets" line off with it, in place of editing a copy of the file.

@@ -694,6 +694,11 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
             })
             .collect()
     };
+    // Every thing set in place, for a countertop to see what stands under it (call 162).
+    let set_in_place: Vec<(String, String, Option<String>, Placed)> = {
+        let mut sq = world.query::<(&Node, &Kind, &Placed)>();
+        sq.iter(world).filter(|(_, k, _)| matches!(**k, Kind::Furnishing | Kind::Equipment | Kind::Fixture)).map(|(n, _, p)| (n.path.clone(), p.what.value.clone().unwrap_or_else(|| n.name.clone()), tree.storey_of(&n.path).map(str::to_string), p.clone())).collect()
+    };
     let mut q = world.query::<(&Node, &Kind, Option<&Wall>, Option<&Floor>, Option<&Segment>, Option<&Cost>, Option<&MadeOf>, Option<&Condition>, Option<&Placed>)>();
     for (node, kind, wall, floor, segment, cost, made_of, condition, placed) in q.iter(world) {
         let me = &node.path;
@@ -1027,7 +1032,13 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                             let depth = Derived::new(Some(d), "ft", &st, f_d, &input);
                             m.insert("height".into(), Derived::new(Some(h), "ft", &st, f_h, &input));
                             // From the sizes as they were worked, so 24 in by 25 1/2 in is 2 by 2.125.
-                            m.insert("plan_area".into(), Derived::new(Some(w * d), "SF", &[width.status, depth.status], f_a, &input));
+                            let mut area = Derived::new(Some(w * d), "SF", &[width.status, depth.status], f_a, &input);
+                            // A countertop over a box that turns a corner does not have the leg
+                            // that turns it: the area does not move, and says so (call 162).
+                            if p.what.value.as_deref().is_some_and(|what| what.eq_ignore_ascii_case("Countertop")) {
+                                area.note = counter_legs_said(me, p, [w, d, h], &set_in_place).join("; ");
+                            }
+                            m.insert("plan_area".into(), area);
                             m.insert("width".into(), width);
                             m.insert("depth".into(), depth);
                         }
@@ -1564,8 +1575,10 @@ fn room_wall_area(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleto
 /// the statuses and inputs of the doors that cut it. Receptacle outlets (`room_receptacles`)
 /// and the room's `wall_run` are both worked from these: one walk of the floor line.
 #[allow(clippy::too_many_arguments)]
-fn room_runs(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, kinds: &HashMap<String, Kind>, tol: f64) -> Result<(Vec<f64>, Vec<Status>, Vec<String>), String> {
+fn room_runs(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, kinds: &HashMap<String, Kind>, against: &[&Standing], tol: f64) -> Result<(Vec<f64>, Vec<Status>, Vec<String>, Vec<usize>), String> {
     use crate::skeleton::P2 as V;
+    // Which of `against` cover some of the floor line (call 162).
+    let mut touched: Vec<usize> = Vec::new();
     let rings: Vec<(usize, Vec<(V, V)>)> = mine.iter().map(|&k| {
         let ring = walls::outline(walls, k, tol);
         let edges = ring.iter().copied().zip(ring.iter().copied().cycle().skip(1)).collect();
@@ -1604,6 +1617,34 @@ fn room_runs(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2
                             cited.extend(hole.inputs.iter().cloned());
                         }
                     }
+                    // What stands on the floor against this side covers it, by the length
+                    // of the side its plan lies along (call 162): a cut, as a door is.
+                    if !against.is_empty() && length > tol {
+                        let u = (q - p) * (1.0 / length);
+                        let mut n = V(-u.1, u.0);
+                        let into_room = |at: V| rooms::contains(outline, at) && !islands.iter().any(|i| rooms::contains(i, at));
+                        if !into_room(mid + n * 0.05) && into_room(mid - n * 0.05) {
+                            n = V(-n.0, -n.1);
+                        }
+                        for (i, thing) in against.iter().enumerate() {
+                            let (mut s_lo, mut s_hi, mut d_lo, mut d_hi) = (f64::INFINITY, f64::NEG_INFINITY, f64::INFINITY, f64::NEG_INFINITY);
+                            for c in thing.corners {
+                                let (s, d) = ((c - p).dot(u), (c - p).dot(n));
+                                (s_lo, s_hi, d_lo, d_hi) = (s_lo.min(s), s_hi.max(s), d_lo.min(d), d_hi.max(d));
+                            }
+                            let (lo, hi) = (s_lo.max(0.0), s_hi.min(length));
+                            // Its plan lies against the face (within the fit tolerance) and
+                            // reaches into the room.
+                            if d_lo <= tol && d_hi > tol && hi - lo > tol {
+                                cuts.push((round + lo, round + hi));
+                                statuses.push(thing.status);
+                                cited.push(format!("{}#{K_PLACED}", thing.path));
+                                if !touched.contains(&i) {
+                                    touched.push(i);
+                                }
+                            }
+                        }
+                    }
                 } else if room_lines.iter().any(|(a, b)| on(mid, *a, *b)) {
                     // A side along a room line is no wall space, and cuts the floor line as a doorway does (call 152).
                     cuts.push((round, round + length));
@@ -1634,7 +1675,53 @@ fn room_runs(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2
             runs.push(end - start);
         }
     }
-    Ok((runs, statuses, cited))
+    Ok((runs, statuses, cited, touched))
+}
+
+/// What a countertop leaves out where a box under it is deeper than the top is (call 162): a
+/// box that turns a corner (36 in on each wall) is taken as the top's depth, and the leg that
+/// turns the corner, (the box's depth less the top's) by the top's depth, is not in the
+/// area. Said, not guessed: the model holds a top as a rectangle. One sentence for each such
+/// box under the top. The boxes are those on the same storey standing on the floor no taller
+/// than a base box, square to the top, in its length and with their backs on its wall.
+fn counter_legs_said(me: &str, top: &Placed, size: [f64; 3], things: &[(String, String, Option<String>, Placed)]) -> Vec<String> {
+    let tol = crate::check::FIT_TOLERANCE_FT;
+    let (Some(at), Some(angle)) = (top.at_ft(), top.angle_deg()) else { return Vec::new() };
+    let (long, deep) = (size[0], size[1]);
+    let (sin, cos) = angle.to_radians().sin_cos();
+    let storey = things.iter().find(|t| t.0 == me).and_then(|t| t.2.clone());
+    let mut out = Vec::new();
+    for (path, name, on, b) in things {
+        let (Some(bat), Some([bw, bd, bh]), Some(bangle), Some(up)) = (b.at_ft(), b.size_ft(), b.angle_deg(), b.offset.feet()) else { continue };
+        if path == me || *on != storey || up > tol || bh > 34.5 / 12.0 + tol || b.what.value.as_deref().is_some_and(|w| w.eq_ignore_ascii_case("Countertop")) {
+            continue;
+        }
+        let (dx, dy) = (bat[0] - at[0], bat[1] - at[1]);
+        let (lx, ly) = (dx * cos + dy * sin, -dx * sin + dy * cos);
+        let turned = (bangle - angle).to_radians();
+        let (w, d) = if turned.sin().abs() < 1.0e-6 {
+            (bw, bd)
+        } else if turned.cos().abs() < 1.0e-6 {
+            (bd, bw)
+        } else {
+            continue;
+        };
+        let in_length = lx - w / 2.0 >= -long / 2.0 - tol && lx + w / 2.0 <= long / 2.0 + tol;
+        let back_on_its_wall = ((ly + d / 2.0) - deep / 2.0).abs() <= tol;
+        if in_length && back_on_its_wall && d > deep + tol {
+            let inches = |feet: f64| units::show_length(&units::Len::One((feet * 12.0 * 64.0).round() / 64.0), units::IN);
+            out.push(format!("the leg that turns the corner over {name}, {} by {} ({:.2} SF), is not in this area: add it where the top is priced by area.", inches(d - deep), inches(deep), (d - deep) * deep));
+        }
+    }
+    out
+}
+
+/// A thing set in place that stands on the floor, by its plan: its four corners on the
+/// plan, in feet, and how sure they are (call 162).
+struct Standing {
+    path: String,
+    corners: [crate::skeleton::P2; 4],
+    status: Status,
 }
 
 /// The fewest receptacle outlets a room's walls need (call 147, NEC 210.52(A)): each run of
@@ -1644,7 +1731,7 @@ fn room_runs(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2
 fn room_receptacles(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, kinds: &HashMap<String, Kind>, tol: f64) -> Result<(f64, Vec<Status>, Vec<String>), String> {
     // How many outlets a run of this length needs: a run under 2 ft is no wall space.
     let need = |run: f64| if run < 2.0 - tol { 0.0 } else { (run / 12.0 - 1.0e-9).ceil().max(1.0) };
-    let (runs, statuses, cited) = room_runs(outline, islands, mine, room_lines, walls, placed, holes, kinds, tol)?;
+    let (runs, statuses, cited, _) = room_runs(outline, islands, mine, room_lines, walls, placed, holes, kinds, &[], tol)?;
     Ok((runs.into_iter().map(need).sum(), statuses, cited))
 }
 
@@ -1653,8 +1740,19 @@ fn room_receptacles(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skele
 /// islands standing in the room with it. The sum of `room_runs`.
 #[allow(clippy::too_many_arguments)]
 fn room_wall_run(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, kinds: &HashMap<String, Kind>, tol: f64) -> Result<(f64, Vec<Status>, Vec<String>), String> {
-    let (runs, statuses, cited) = room_runs(outline, islands, mine, room_lines, walls, placed, holes, kinds, tol)?;
+    let (runs, statuses, cited, _) = room_runs(outline, islands, mine, room_lines, walls, placed, holes, kinds, &[], tol)?;
     Ok((runs.into_iter().sum(), statuses, cited))
+}
+
+/// A room's run of base (call 162): its run of wall less the length of its walls' faces that
+/// things set in place cover at the floor. A thing covers a face where its plan lies against
+/// it and it stands on the floor; what it covers is the length of the face its plan lies
+/// along, two things over the same length counting it once. The figure, the statuses and
+/// inputs of what it rests on, and how many things covered something.
+#[allow(clippy::too_many_arguments)]
+fn room_base_run(outline: &[crate::skeleton::P2], islands: &[Vec<crate::skeleton::P2>], mine: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], walls: &[walls::PlanWall], placed: &[RoomWall], holes: &HashMap<String, Vec<Hole>>, kinds: &HashMap<String, Kind>, against: &[&Standing], tol: f64) -> Result<(f64, Vec<Status>, Vec<String>, usize), String> {
+    let (runs, statuses, cited, touched) = room_runs(outline, islands, mine, room_lines, walls, placed, holes, kinds, against, tol)?;
+    Ok((runs.into_iter().sum(), statuses, cited, touched.len()))
 }
 
 /// Each room's figures: the floor inside the faces of the walls round its point, the area
@@ -1733,6 +1831,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
     const F_OUTLETS: &str = "round the room at its walls' faces, its floor line cut at each door into runs of wall; each run of 2 ft or more, one receptacle outlet for every 12 ft or part (no point more than 6 ft from one: NEC 2023 210.52(A)(1) and (A)(2), as Mike Holt's Understanding the 2023 NEC gives them); a room with no door is one run all the way round";
     const OUTLETS_NOTE: &str = "for the rooms NEC 210.52(A) covers (kitchen, family room, dining room, living room, sunroom, parlor, library, den, bedroom, recreation room and the like): fireplaces, stationary appliances and fixed cabinets also break wall space and are not drawn; a bathroom, a hallway, a foyer and a kitchen's counters have rules of their own (210.52(D), (H), (I), (C)), not worked here";
     const F_RUN: &str = "the room's floor line along its walls: each side of the room at its walls' faces that lies along a wall, less the doorways in it (a door to demolish is filled in and is no doorway), nothing for a side along a room line; what stands inside the room is taken with it";
+    const F_BASE: &str = "the room's wall run, less the length of its walls' faces that things set in place cover at the floor (what is hung on a wall covers nothing, nor does what is to demolish; two things over the same length count it once)";
     const F_WALLS: &str = "each side of the room at its walls' faces × the height of the wall it is against, less the part of each door and window in that wall along the side";
     // Each wall's doors and windows, for the room's wall area (call 144).
     let holes_of: HashMap<String, Vec<Hole>> = {
@@ -1745,6 +1844,31 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
         }
         map
     };
+    // What is set in place and stands on the floor, by its plan: it covers the base of the
+    // wall it is against (call 162). What is hung (up from the floor), what is to demolish
+    // and what has no plan covers nothing.
+    let standing: Vec<(Option<String>, Standing)> = {
+        let mut q = world.query::<(&Node, &Kind, &Placed)>();
+        let mut all: Vec<(u64, Option<String>, Standing)> = q
+            .iter(world)
+            .filter(|(n, k, _)| matches!(**k, Kind::Furnishing | Kind::Equipment | Kind::Fixture) && !gone.contains(&n.path))
+            .filter_map(|(n, _, p)| {
+                if p.offset.feet()? > tol {
+                    return None;
+                }
+                let (at, size) = (p.at_ft()?, p.size_ft()?);
+                let (sin, cos) = p.angle_deg()?.to_radians().sin_cos();
+                let corner = |sx: f64, sy: f64| {
+                    let (lx, ly) = (sx * size[0] / 2.0, sy * size[1] / 2.0);
+                    crate::skeleton::P2(at[0] + lx * cos - ly * sin, at[1] + lx * sin + ly * cos)
+                };
+                let status = [p.at.status, p.size.status, p.offset.status, p.angle.as_ref().map(|a| a.status).unwrap_or(Status::Known)].into_iter().max().unwrap_or(Status::Known);
+                Some((path_number(&n.path), tree.storey_of(&n.path).map(str::to_string), Standing { path: n.path.clone(), corners: [corner(-1.0, -1.0), corner(1.0, -1.0), corner(1.0, 1.0), corner(-1.0, 1.0)], status }))
+            })
+            .collect();
+        all.sort_by_key(|(n, _, _)| *n);
+        all.into_iter().map(|(_, storey, s)| (storey, s)).collect()
+    };
     for (storey, mut list) in by_storey {
         list.sort_by_key(|(path, _)| path_number(path));
         let refuse_all = |out: &mut HashMap<String, BTreeMap<String, Derived>>, path: &str, inputs: &[String], why: &str| {
@@ -1754,6 +1878,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
             m.insert("perimeter".into(), Derived::refused("LF", F_ROUND, inputs, why));
             m.insert("wall_area".into(), Derived::refused("SF", F_WALLS, inputs, why));
             m.insert("wall_run".into(), Derived::refused("LF", F_RUN, inputs, why));
+            m.insert("base_run".into(), Derived::refused("LF", F_BASE, inputs, why));
             m.insert("receptacles".into(), Derived::refused("EA", F_OUTLETS, inputs, why));
         };
         // Where the storey's rooms find their walls.
@@ -1970,8 +2095,32 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                         }
                         Err(why) => Derived::refused("LF", F_RUN, std::slice::from_ref(&input), &why),
                     };
+                    // The base: the run of wall less what stands against it on the floor (call 162).
+                    let on_this_storey: Vec<&Standing> = standing.iter().filter(|(s, _)| s.as_deref() == Some(storey.as_str())).map(|(_, s)| s).collect();
+                    let base_d = match room_wall_area(&found.outline, &found.islands, mine, &room_lines, &plan_walls, &placed, &holes_of, tol).and_then(|(_, area_statuses, area_cited)| room_base_run(&found.outline, &found.islands, mine, &room_lines, &plan_walls, &placed, &holes_of, &tree.kinds, &on_this_storey, tol).map(|(v, s, c, n)| (v, area_statuses.into_iter().chain(s).collect::<Vec<_>>(), area_cited.into_iter().chain(c).collect::<Vec<_>>(), n))) {
+                        Ok((value, statuses, cited, things)) => {
+                            let mut d = figure(value, mine, "LF", F_BASE);
+                            if d.value.is_some() {
+                                d.status = statuses.into_iter().fold(d.status, Status::max);
+                                for c in cited {
+                                    if !d.inputs.contains(&c) {
+                                        d.inputs.push(c);
+                                    }
+                                }
+                                // What it took off the wall run is said (less what is set against the walls).
+                                let wall_run = run_d.value;
+                                if let (Some(run), true) = (wall_run, things > 0) {
+                                    let took = format!("less {} ft behind {} set against the walls", crate::view::num(run - value), if things == 1 { "1 thing".to_string() } else { format!("{things} things") });
+                                    d.note = if d.note.is_empty() { took } else { format!("{}; {took}", d.note) };
+                                }
+                            }
+                            d
+                        }
+                        Err(why) => Derived::refused("LF", F_BASE, std::slice::from_ref(&input), &why),
+                    };
                     m.insert("wall_area".into(), walls_d);
                     m.insert("wall_run".into(), run_d);
+                    m.insert("base_run".into(), base_d);
                     let outlets = match room_wall_area(&found.outline, &found.islands, mine, &room_lines, &plan_walls, &placed, &holes_of, tol).and_then(|_| room_receptacles(&found.outline, &found.islands, mine, &room_lines, &plan_walls, &placed, &holes_of, &tree.kinds, tol)) {
                         Ok((count, statuses, cited)) => {
                             let mut d = figure(count, mine, "EA", F_OUTLETS);
@@ -1997,6 +2146,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                     m.insert("perimeter".into(), Derived::refused("LF", F_ROUND, std::slice::from_ref(&input), &reason));
                     m.insert("wall_area".into(), Derived::refused("SF", F_WALLS, std::slice::from_ref(&input), &reason));
                     m.insert("wall_run".into(), Derived::refused("LF", F_RUN, std::slice::from_ref(&input), &reason));
+                    m.insert("base_run".into(), Derived::refused("LF", F_BASE, std::slice::from_ref(&input), &reason));
                     m.insert("receptacles".into(), Derived::refused("EA", F_OUTLETS, std::slice::from_ref(&input), &reason));
                 }
             }

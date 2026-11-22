@@ -101,6 +101,9 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         }
         out
     };
+    // The walls the work opens, and what the bearing ones say they need (call 160).
+    let opened = crate::hidden::opened_walls(&mut job.world);
+    let cautions: std::collections::HashMap<String, String> = crate::hidden::cautions(&mut job.world).into_iter().collect();
     let w = &job.world;
     // How deep each element sits. The tree was checked on load; the step limit is only
     // so that a world built wrongly in code cannot hang a view.
@@ -151,6 +154,23 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         }
         if let Some(x) = w.get::<Work>(e) {
             rows.push(entered(p, "work", &x.status, |s| s.said().to_string()));
+        }
+        // What a wall the work opens may be hiding: what is said of it, and what is not
+        // said and so is not known (call 160). A wall the work does not open is asked
+        // nothing; a word said of it anyway is kept and shown.
+        if kind == Kind::Wall {
+            let said = w.get::<Hidden>(e);
+            let asked = opened.contains_key(p);
+            match said.and_then(|h| h.bearing.as_ref()) {
+                Some(b) => rows.push(entered(p, crate::hidden::BEARING, b, |v| v.said().to_string())),
+                None if asked => rows.push(Row { path: p.clone(), label: crate::hidden::BEARING.into(), text: "unknown".into(), status: Status::Unknown, basis: crate::hidden::BEARING_NOT_SEEN.into(), note: String::new(), derived: false, number: None, unit: String::new() }),
+                None => {}
+            }
+            match said.and_then(|h| h.in_the_wall.as_ref()) {
+                Some(t) => rows.push(entered(p, crate::hidden::IN_THE_WALL, t, |v| v.clone())),
+                None if asked => rows.push(Row { path: p.clone(), label: crate::hidden::IN_THE_WALL.into(), text: "unknown".into(), status: Status::Unknown, basis: crate::hidden::IN_THE_WALL_NOT_SEEN.into(), note: String::new(), derived: false, number: None, unit: String::new() }),
+                None => {}
+            }
         }
         if let Some(t) = w.get::<Taper>(e) {
             rows.push(entered(p, "drains", &t.drains, |pts| so_many(pts.len(), "drain")));
@@ -260,6 +280,10 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         }
         // A condition's recipe is read, not counted: its blanks are not this job's unknowns.
         let mut notes = Vec::new();
+        // What a bearing wall the work opens needs, and that it is not in the price.
+        if let Some(said) = cautions.get(p) {
+            notes.push(format!("! {said}"));
+        }
         if let Some(t) = w.get::<Recipe>(e) {
             notes.push(format!("applies to: {}", t.applies_to.iter().map(|k| k.said().to_string()).collect::<Vec<_>>().join(", ")));
             for line in &t.cost.lines {
@@ -628,6 +652,9 @@ pub struct Pricing {
     /// Rooms whose walls' board is priced by the room's wall area, each with the walls
     /// round it that carry board of their own (call 146).
     pub board_twice: Vec<(String, Vec<String>)>,
+    /// A lump line on a room (a plain number: "Cabinets" 1 EA) priced beside the lines of
+    /// things set in that room in its division: both are in the price (call 162).
+    pub lumps: Vec<LumpLine>,
 }
 
 impl Estimate {
@@ -914,7 +941,62 @@ pub fn pricing(job: &mut Job) -> Pricing {
     let (sa, sd) = (worst(&|p| p.0 .1), worst(&|p| p.1 .1));
     let both = if pairs.is_empty() { None } else { Some(((cents(pairs.iter().map(|p| p.0 .0).sum()), sa), (cents(pairs.iter().map(|p| p.1 .0).sum()), sd), sa.max(sd), pairs.len())) };
     let board_twice = board_on_the_room_and_a_wall(job);
-    Pricing { allowance: money_total(&allowances), detail: money_total(&details), both, not_priced: bare, elements, twice, board_twice }
+    let lumps = lump_lines(job);
+    Pricing { allowance: money_total(&allowances), detail: money_total(&details), both, not_priced: bare, elements, twice, board_twice, lumps }
+}
+
+/// A line on a room whose quantity is a plain number, in a division where things set in
+/// the room carry lines of their own (call 162): the design-phase allowance ("Cabinets",
+/// 1 EA) and the things it stands for, both in the price.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LumpLine {
+    /// The room, by path and name.
+    pub room: String,
+    pub room_name: String,
+    pub line: String,
+    /// The plain number the line's quantity is.
+    pub quantity: f64,
+    pub division: Division,
+    /// How many things set in the room carry lines in that division.
+    pub things: usize,
+}
+
+impl LumpLine {
+    /// "Kitchen's line "Cabinets" (1 EA, 12 Furnishings) is in the price beside the lines of
+    /// 7 things set in Kitchen in that division: if it stands for them, take the line off."
+    pub fn said(&self) -> String {
+        let lines = if self.things == 1 { "the line of 1 thing".to_string() } else { format!("the lines of {} things", self.things) };
+        format!("{room}'s line {line:?} ({} EA, {} {}) is in the price beside {lines} set in {room} in that division: if it stands for {them}, take the line off.", num(self.quantity), self.division.number(), self.division.title(), room = self.room_name, line = self.line, them = if self.things == 1 { "it" } else { "them" })
+    }
+}
+
+/// Every such line, once, in the job's order. A thing is set in a room where it stands (its
+/// plan's middle is inside the room's outline, on the room's storey); it counts where it
+/// carries a line that is not switched off in the line's division. Nothing is taken off.
+pub fn lump_lines(job: &mut Job) -> Vec<LumpLine> {
+    let outlines = crate::building::room_outlines(job);
+    let (drawn, _) = crate::building::placements(job);
+    let w = &job.world;
+    // The divisions each thing carries a live line in.
+    let divisions: std::collections::HashMap<&str, Vec<Division>> = job.order.iter().filter_map(|&e| Some((w.get::<Node>(e)?.path.as_str(), w.get::<Cost>(e)?.lines.iter().filter(|l| !l.off).filter_map(|l| l.division).collect()))).collect();
+    let mut out = Vec::new();
+    for &e in &job.order {
+        let (Some(node), Some(Kind::Room), Some(cost)) = (w.get::<Node>(e), w.get::<Kind>(e).copied(), w.get::<Cost>(e)) else { continue };
+        let Some(outline) = outlines.get(&node.path) else { continue };
+        for line in cost.lines.iter().filter(|l| !l.off) {
+            let (Some(division), Ok(crate::formula::Expr::Num(quantity))) = (line.division, crate::formula::parse(&line.quantity)) else { continue };
+            let things = drawn
+                .iter()
+                .filter(|p| matches!(p.kind, Kind::Furnishing | Kind::Equipment | Kind::Fixture) && p.storey.as_deref() == node.parent.as_deref())
+                .filter(|p| matches!(p.shape, crate::building::Shape::Box { at, .. } if crate::vif::inside(outline, [at[0], at[1]])))
+                .filter(|p| divisions.get(p.path.as_str()).is_some_and(|d| d.contains(&division)))
+                .count();
+            if things > 0 {
+                out.push(LumpLine { room: node.path.clone(), room_name: node.name.clone(), line: line.description.clone(), quantity, division, things });
+            }
+        }
+    }
+    out
 }
 
 /// Each roof priced whole whose planes are priced on their own too: (the roof's name,

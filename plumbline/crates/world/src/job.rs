@@ -213,7 +213,7 @@ impl Job {
         let field = if field == "assembly" { "condition" } else { field };
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
-        let on_element = matches!(field, "pitch" | "height" | "eave_height" | "condition" | "wbs" | "allowance" | "material" | "overhead" | "profit" | "price") || (field == "order" && kind == Kind::Material);
+        let on_element = matches!(field, "pitch" | "height" | "eave_height" | "condition" | "wbs" | "allowance" | "material" | "overhead" | "profit" | "price" | "bearing" | "in_the_wall") || (field == "order" && kind == Kind::Material);
         if line.is_some() && on_element {
             return Err(format!("{field} belongs to the element, not to one of its cost lines; leave --line off"));
         }
@@ -280,6 +280,21 @@ impl Job {
                     }
                 }
                 check::made_of(path, kind, &new)?;
+                self.world.entity_mut(e).insert(new);
+            }
+            "bearing" | "in_the_wall" => {
+                // What the wall is and holds, said of a wall (call 160): bearing or not
+                // bearing; and in words, what runs inside it.
+                if kind != Kind::Wall {
+                    return Err(format!("{path} is {kind:#}, not a wall: bearing and what is in the wall are said of a wall"));
+                }
+                let mut new = self.world.get::<Hidden>(e).cloned().unwrap_or(Hidden { bearing: None, in_the_wall: None });
+                if field == "bearing" {
+                    new.bearing = Some(Val { value: value.map(Bearing::read).transpose()?, unit: String::new(), status, source: source.into() });
+                } else {
+                    new.in_the_wall = Some(Val { value: value.map(|t| t.split_whitespace().collect::<Vec<_>>().join(" ")), unit: String::new(), status, source: source.into() });
+                }
+                check::hidden(path, kind, &new)?;
                 self.world.entity_mut(e).insert(new);
             }
             "overhead" | "profit" => {
@@ -397,9 +412,14 @@ impl Job {
     /// cost is Unknown until it is entered. A line made of the element's material
     /// (`of_material`) carries no price of its own.
     pub fn add_line(&mut self, path: &str, description: &str, quantity: &str, class: Option<Class>, of_material: bool) -> Result<(), String> {
+        self.add_line_with(path, description, quantity, class, of_material, BTreeMap::new())
+    }
+
+    fn add_line_with(&mut self, path: &str, description: &str, quantity: &str, class: Option<Class>, of_material: bool, inputs: BTreeMap<String, Val<Len>>) -> Result<(), String> {
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
         let mut line = if of_material { CostLine::of_material(description, quantity) } else { CostLine::of(description, quantity, Val::unknown("", "no price entered")) };
+        line.inputs = inputs;
         if !of_material {
             line.class = class;
             let on = lines::On { kind, measure: None, height: None };
@@ -413,6 +433,40 @@ impl Job {
         check::cost(path, kind, &new)?;
         self.world.entity_mut(e).insert(new);
         Ok(())
+    }
+
+    /// Take one cost line off a thing, with whatever was entered on it (call 166). The
+    /// thing's other lines, its assembly and its code stay as they are. Gives the line as
+    /// it stood. A thing with no line of that name is refused, with the lines it has.
+    pub fn remove_line(&mut self, path: &str, description: &str) -> Result<CostLine, String> {
+        let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
+        let mut cost = self.world.get::<Cost>(e).cloned().ok_or_else(|| format!("{path} has no cost lines to take one off"))?;
+        let Some(at) = cost.lines.iter().position(|l| l.description == description) else {
+            let has: Vec<String> = cost.lines.iter().map(|l| format!("{:?}", l.description)).collect();
+            return Err(if has.is_empty() { format!("{path} has no cost lines to take one off") } else { format!("{path} has no cost line {description:?}; it has {}", has.join(", ")) });
+        };
+        let line = cost.lines.remove(at);
+        check::cost(path, kind, &cost)?;
+        self.world.entity_mut(e).insert(cost);
+        Ok(line)
+    }
+
+    /// A new cost line whose quantity is a measure typed outright ("60 SF": call 159): a
+    /// number and one of LF, SF, SQ, CY or EA. It is held as a value entered on the line,
+    /// named `measured`, with how sure it is and where it came from, as every entered
+    /// value is; the line's quantity is that value.
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_line_measured(&mut self, path: &str, description: &str, measure: &str, class: Option<Class>, of_material: bool, status: Status, source: &str) -> Result<(), String> {
+        let (x, unit) = units::parse_measure(measure)?;
+        if status == Status::Unknown {
+            return Err(format!("{measure:?} is a figure that was typed, so it is Known or Assumed; to leave a quantity not known, give the line a figure to take it from"));
+        }
+        if source.trim().is_empty() {
+            return Err(format!("{measure:?} says where it came from: a measure typed on a line gives its source"));
+        }
+        let measured = Val { value: Some(Len::One(x)), unit: unit.into(), status, source: source.into() };
+        self.add_line_with(path, description, "measured", class, of_material, BTreeMap::from([("measured".to_string(), measured)]))
     }
 
     /// Add a line of in-house work (Labor, Fabrication, Supervision): its hours come from
@@ -521,6 +575,11 @@ impl Job {
                 (None, None) => Err(format!("{what} has no {name} to mark unknown")),
                 (Some(text), was) if units::parse_number(text).is_ok() && was.is_none_or(|w| w.unit.is_empty()) => Ok(Val { value: Some(Len::One(units::parse_number(text)?)), unit: String::new(), status, source: source.into() }),
                 (Some(text), Some(was)) if was.unit.is_empty() => Err(format!("{what}: {name} is a plain number on this line, and {text:?} is not one")),
+                // 60 SF, 24 LF, 2 CY, 3 SQ, 4 EA: a measure typed outright.
+                (Some(text), _) if units::parse_measure(text).is_ok() => {
+                    let (x, unit) = units::parse_measure(text)?;
+                    Ok(Val { value: Some(Len::One(x)), unit: unit.into(), status, source: source.into() })
+                }
                 (Some(_), _) => typed_length(text, was, status, source),
             }
         };
@@ -773,6 +832,8 @@ impl Job {
             "eave_height" => self.world.get::<Outline>(e).map(|o| length(&o.eave_height)),
             "condition" => self.world.get::<Condition>(e).map(|c| c.0.value.clone().unwrap_or_else(|| "unknown".into())),
             "wbs" => self.world.get::<WorkCode>(e).map(|c| c.wbs.value.clone().unwrap_or_else(|| "unknown".into())),
+            "bearing" => self.world.get::<Hidden>(e).and_then(|h| h.bearing.as_ref()).map(|b| b.value.map(|v| v.said().to_string()).unwrap_or_else(|| "unknown".into())),
+            "in_the_wall" => self.world.get::<Hidden>(e).and_then(|h| h.in_the_wall.as_ref()).map(|b| b.value.clone().unwrap_or_else(|| "unknown".into())),
             _ => {
                 let cost = self.world.get::<Cost>(e)?;
                 let l = match line {
