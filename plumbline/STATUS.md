@@ -8254,6 +8254,38 @@ Living (point 6,8) and Kitchen (point 30,8).
    on paper (24 ft at 1/4 in to the foot).
 10. The job file is byte for byte what it was.
 
+## A wall moved, and the walls that meet it follow: a demonstration, written before it is built (`demos/stretch.sh`, call 170)
+
+From an empty job, by hand. 6 in walls 9 ft tall, Known: south 0,0 to 24,0; east 24,0 to
+24,16; north 24,16 to 0,16; west 0,16 to 0,0; a partition 12,0 to 12,16. A door 3 ft wide
+in the south wall 18 ft along it (east 18 to 21). A window 3 ft wide in the north wall
+6 ft along it from its first end at 24,16 (east 18 down to 15). Rooms West (point 6,8)
+and East (point 18,8): each 11.5 by 15.5 ft inside, **178.25 SF**. Walls **96 LF**.
+
+1. **The east wall moved 4 ft east.** It is 28,0 to 28,16. The south wall follows at its
+   second end: **28 LF**. The north wall follows at its first end: **28 LF**; its window
+   stays at east 18 to 15, now **10 ft** along it. East is 15.5 by 15.5 ft: **240.25
+   SF**; West **178.25 SF**. Walls **104 LF**. The reply names the south and north walls,
+   each 4 ft longer.
+2. **The partition moved 2 ft west.** Its ends stay on the south and north walls: 10,0 to
+   10,16, **16 LF**. West 9.5 by 15.5: **147.25 SF**; East 17.5 by 15.5: **271.25 SF**.
+   No other wall changes.
+3. **The partition moved 3 ft north** (along itself): refused, both its ends are held by
+   the walls they meet; the file is as it was.
+4. **The south wall moved 2 ft south.** The west wall's end and the east wall's end
+   follow: each **18 LF**. The partition's end follows square: **18 LF**. The door is
+   still 18 ft along the south wall. West 9.5 by 17.5: **166.25 SF**; East 17.5 by 17.5:
+   **306.25 SF**. Walls 28 + 18 + 28 + 18 + 18 = **110 LF**.
+5. **The east wall moved 12 ft west** (to east 16): the north wall's window, east 18 to
+   15, would no longer lie within it: refused, naming the window; the file is as it was.
+6. **`--alone`**: the east wall moved 1 ft east alone: the south and north walls stay
+   **28 LF**, and the reply says nothing followed.
+7. A box set against the east wall's inside face before a move: the reply says 1 thing
+   stands against it and was not moved.
+8. Moved with "Assumed, design": the moved wall's line and each follower's line read
+   Assumed and say they were moved; the rest stay Known. A wall marked existing that
+   follows is named.
+
 ## Call 157 and the window's five pieces judged (2026-11-22; an agent on another model, cold; `research/judgment-call157-and-window.md`)
 
 **Held, by hand:** `wall_run` in every case tried (doors single, overlapping, at a

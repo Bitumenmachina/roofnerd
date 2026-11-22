@@ -5938,3 +5938,39 @@ Owed after this, each its own call: a wall moved with the walls that meet it fol
 (the judge found no way to make the addition longer but to take walls down and draw
 them again); the counts three ways on the Building tab; tools to draw a beam, a post
 and a pad footing; the plan set written from the window.
+
+### Call 170. A wall moved, and the walls that meet it follow (2026-11-22; the window's second judge: "no way to make the addition longer but to draw it again"; Patrick's job: rooms whose footprints change)
+
+Design is pushing walls about. Today `move` shifts a wall alone and leaves its
+neighbours where they were, a gap at each end. BIMCraft's `move` (`commands.rs:12419`,
+`relocate`, and its `end` for one end of a wall) is the source to port from; what it
+does at a joint is read there before anything is written here.
+
+**A wall moved takes with it the ends that meet it**, unless it is moved `--alone`:
+1. **At its ends**: every other wall's end that is at one of its ends (within the
+   tolerance walls join by) moves as that end moves. The neighbour grows, shrinks, or
+   turns if the move is not along it.
+2. **Along it**: every other wall's end that lies on it between its ends (a partition
+   that butts into it) moves by the part of the move that is square to the moved wall:
+   it stays butted, and keeps its place along.
+3. **Where one of its own ends butts into a wall that is not moving**: that end stays on
+   that wall. It goes where the moved wall's new line meets that wall's line. (So a
+   partition slid sideways between two walls keeps its ends on them, and one pushed
+   along its own length does not move at all: that is refused, in words.)
+4. **Doors and windows stay where they are in the house.** One in the moved wall goes
+   with it (it is placed along it). One in a wall whose first end moved along the wall's
+   own line keeps its place by having its offset changed by as much; one that would no
+   longer lie within its wall refuses the whole move, naming it.
+5. **What stands against the moved wall does not follow**, and the reply says how many
+   and which ("1 thing stands against wall 2 and was not moved").
+6. Everything whose line changed is no surer than the move, as now: the moved wall and
+   each wall that followed. A wall marked existing that is moved or made to follow is
+   said by name: "wall 3 is marked existing: as moved, it is not as it stands."
+7. The whole move is one step: all of it is done or none of it, and one Undo takes it
+   back in the window.
+
+The reply names each wall that followed and by how much it grew or shrank. In the
+window the Move tool does the same; with a wall in hand, a length typed and Enter moves
+it that far toward the pointer, square to the wall where walls meet its ends. A run, a
+thing set in place, a fitting and a room's point move as they did. No saved job
+changes; a wall that no wall meets moves exactly as before.
