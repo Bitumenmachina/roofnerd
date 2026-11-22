@@ -1302,3 +1302,165 @@ pub fn estimate(job: &mut Job) -> Estimate {
         .collect();
     Estimate { lines, columns, classes, not_classed, allowances, allowance_on, job_cost, divisions, no_division, markup, overhead, profit, price, suppliers, at_generic, at_supplier }
 }
+
+// ---------------------------------------------------------------------------------------
+// Two or three layouts side by side (call 154).
+
+/// One figure of one layout: what its own job's takeoff or estimate gives it.
+#[derive(Clone, Debug, PartialEq)]
+pub enum OptionFigure {
+    /// The layout has nothing of this: no such room, no wall of this kind, no work in it.
+    None,
+    /// It has the thing and the thing has no figure.
+    NoFigure,
+    Is(f64, Status),
+}
+
+/// Which part of the table a row belongs to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OptionGroup {
+    Rooms,
+    Walls,
+    Cost,
+    Divisions,
+}
+
+#[derive(Clone, Debug)]
+pub struct OptionRow {
+    pub group: OptionGroup,
+    pub label: String,
+    /// "SF", "LF" or "$".
+    pub unit: &'static str,
+    /// One figure for each layout, in the order they were given.
+    pub figures: Vec<OptionFigure>,
+    /// The last layout less the first; not worked where either has no value.
+    pub difference: Option<f64>,
+}
+
+#[derive(Clone, Debug)]
+pub struct Options {
+    /// Each layout's job title, in the order given.
+    pub titles: Vec<String>,
+    pub rows: Vec<OptionRow>,
+}
+
+impl OptionFigure {
+    /// As a figure is written beside its flag: "~368.125 SF", "$5,777.00", "none", "no figure".
+    pub fn said(&self, unit: &str) -> String {
+        match self {
+            OptionFigure::None => "none".to_string(),
+            OptionFigure::NoFigure => "no figure".to_string(),
+            OptionFigure::Is(x, status) => {
+                let flag = status.flag().trim_end();
+                if unit == "$" { format!("{flag}{}", money(*x)) } else { format!("{flag}{} {unit}", num(*x)) }
+            }
+        }
+    }
+}
+
+impl OptionRow {
+    /// The difference as a builder writes it: "+62 SF", "-8 LF", "+$1,360.00", "same";
+    /// "not worked" where a layout has no value.
+    pub fn difference_said(&self) -> String {
+        let Some(d) = self.difference else { return "not worked".to_string() };
+        let tiny = if self.unit == "$" { 0.005 } else { 0.00005 };
+        if d.abs() < tiny {
+            return "same".to_string();
+        }
+        let sign = if d < 0.0 { "-" } else { "+" };
+        if self.unit == "$" { format!("{sign}{}", money(d.abs())) } else { format!("{sign}{} {}", num(d.abs()), self.unit) }
+    }
+}
+
+/// The layouts set side by side. Every figure is the one the job's own takeoff and estimate
+/// work out (a room's floor area and a wall's plan length as the takeoff adds them, the
+/// job cost and each division as the estimate has them); this adds up nothing of its own
+/// but the differences. Nothing in a job is changed.
+pub fn options(jobs: &mut [&mut Job]) -> Options {
+    type Fig = (String, Option<f64>, Status);
+    let from_sum = |s: &Sum| match (s.members, s.value) {
+        (0, _) => OptionFigure::None,
+        (_, Some(x)) => OptionFigure::Is(x, s.status),
+        (_, None) => OptionFigure::NoFigure,
+    };
+    let from_money = |t: &MoneyTotal| match t.value {
+        Some(x) => OptionFigure::Is(x, t.status),
+        None if t.left_out.is_empty() => OptionFigure::None,
+        None => OptionFigure::NoFigure,
+    };
+    let mut titles = Vec::new();
+    // Rooms by name, in the order each is first met; walls by what the work does.
+    let mut room_names: Vec<String> = Vec::new();
+    let mut rooms: Vec<(Vec<(String, Vec<Fig>)>, Vec<Fig>)> = Vec::new();
+    let mut walls: Vec<[Vec<Fig>; 3]> = Vec::new();
+    let mut estimates = Vec::new();
+    for job in jobs.iter_mut() {
+        let root = job.root();
+        titles.push(job.world.get::<JobInfo>(root).map(|i| i.title.clone()).unwrap_or_default());
+        let (mut by_name, mut all): (Vec<(String, Vec<Fig>)>, Vec<Fig>) = (Vec::new(), Vec::new());
+        let mut by_work: [Vec<Fig>; 3] = Default::default();
+        let w = &job.world;
+        for &e in &job.order {
+            let (Some(n), Some(kind)) = (w.get::<Node>(e), w.get::<Kind>(e)) else { continue };
+            let figure = |name: &str| w.get::<Measure>(e).and_then(|m| m.0.get(name)).map(|d| (n.path.clone(), d.value, d.status)).unwrap_or((n.path.clone(), None, Status::Unknown));
+            match kind {
+                Kind::Room => {
+                    let f = figure("floor_area");
+                    if !room_names.contains(&n.name) {
+                        room_names.push(n.name.clone());
+                    }
+                    match by_name.iter_mut().find(|(name, _)| *name == n.name) {
+                        Some((_, v)) => v.push(f.clone()),
+                        None => by_name.push((n.name.clone(), vec![f.clone()])),
+                    }
+                    all.push(f);
+                }
+                Kind::Wall => {
+                    // A thing with no mark is new; a temporary wall is counted with the new.
+                    let at = match w.get::<Work>(e).and_then(|k| k.status.value) {
+                        None | Some(WorkStatus::New) | Some(WorkStatus::Temporary) => 0,
+                        Some(WorkStatus::Existing) => 1,
+                        Some(WorkStatus::Demolish) => 2,
+                    };
+                    by_work[at].push(figure("plan_length"));
+                }
+                _ => {}
+            }
+        }
+        rooms.push((by_name, all));
+        walls.push(by_work);
+        estimates.push(estimate(job));
+    }
+    let mut rows: Vec<OptionRow> = Vec::new();
+    let mut push = |group: OptionGroup, label: String, unit: &'static str, figures: Vec<OptionFigure>| {
+        let difference = match (figures.first(), figures.last()) {
+            (Some(OptionFigure::Is(a, _)), Some(OptionFigure::Is(b, _))) if figures.len() > 1 => Some(crate::value::round4(b - a)),
+            _ => None,
+        };
+        rows.push(OptionRow { group, label, unit, figures, difference });
+    };
+    for name in &room_names {
+        let figures = rooms.iter().map(|(by_name, _)| by_name.iter().find(|(n, _)| n == name).map(|(_, f)| from_sum(&sum_of("SF", f))).unwrap_or(OptionFigure::None)).collect();
+        push(OptionGroup::Rooms, name.clone(), "SF", figures);
+    }
+    push(OptionGroup::Rooms, "all rooms".into(), "SF", rooms.iter().map(|(_, all)| from_sum(&sum_of("SF", all))).collect());
+    for (at, label) in ["walls, new (with temporary)", "walls, existing to remain", "walls, to demolish"].into_iter().enumerate() {
+        push(OptionGroup::Walls, label.into(), "LF", walls.iter().map(|w| from_sum(&sum_of("LF", &w[at]))).collect());
+    }
+    push(OptionGroup::Cost, "job cost".into(), "$", estimates.iter().map(|e| match e.job_cost.value { Some(x) => OptionFigure::Is(x, e.job_cost.status), None => OptionFigure::NoFigure }).collect());
+    for (i, d) in Division::ALL.iter().enumerate() {
+        let totals: Vec<&MoneyTotal> = estimates.iter().map(|e| &e.divisions[i].total).collect();
+        if totals.iter().any(|t| t.members > 0 || !t.left_out.is_empty()) {
+            push(OptionGroup::Divisions, format!("{:>2} {}", d.number(), d.title()), "$", totals.into_iter().map(from_money).collect());
+        }
+    }
+    // What the job cost holds that is in none of the sixteen is said, so the rows add up.
+    let others: [(&str, fn(&Estimate) -> &MoneyTotal); 2] = [("Allowances", |e| &e.allowances), ("in no division", |e| &e.no_division)];
+    for (label, of) in others {
+        let totals: Vec<&MoneyTotal> = estimates.iter().map(of).collect();
+        if totals.iter().any(|t| t.members > 0 || !t.left_out.is_empty()) {
+            push(OptionGroup::Divisions, label.into(), "$", totals.into_iter().map(from_money).collect());
+        }
+    }
+    Options { titles, rows }
+}

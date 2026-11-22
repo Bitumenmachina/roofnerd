@@ -6507,3 +6507,78 @@ fn a_room_line_parts_two_rooms_where_no_wall_stands() {
     assert_eq!(measure(&mut job, &living, "floor_area").status, Status::Known);
     assert!(figure(&mut job, &kitchen, "floor_area").is_none());
 }
+
+/// One layout of "Two layouts side by side" (call 154): the house of the room-line test, the
+/// addition `x` ft out, its walls priced at $12/SF (Division 6) and the Kitchen's floor at
+/// $8/SF (Division 9).
+fn addition_layout(title: &str, x: f64) -> Job {
+    use plumbline_world::editing as ed;
+    let known = || ed::Entered { status: Status::Known, source: "made-up survey" };
+    let assumed = || ed::Entered { status: Status::Assumed, source: "made-up addition plan" };
+    let mut job = Job::new(title, "test", "2026-11-22");
+    let level = ed::storey(&mut job, "ground", "0 ft", "9 ft", known()).unwrap();
+    let w6 = ed::wall_type(&mut job, "w6", "6 in", known()).unwrap();
+    let outer = ed::walls(&mut job, &level, &w6, &[[0.0, 0.0], [24.0, 0.0], [24.0, 16.0], [0.0, 16.0]], true, ed::Top::Height("9 ft"), known()).unwrap();
+    ed::mark(&mut job, &[outer[0].clone(), outer[2].clone(), outer[3].clone()], WorkStatus::Existing, ed::ItsLines::Keep, known()).unwrap();
+    ed::mark(&mut job, &[outer[1].clone()], WorkStatus::Demolish, ed::ItsLines::Ask, known()).unwrap();
+    let new = ed::walls(&mut job, &level, &w6, &[[24.0, 0.0], [x, 0.0], [x, 16.0], [24.0, 16.0]], false, ed::Top::Height("9 ft"), assumed()).unwrap();
+    ed::room(&mut job, &level, "Living", [6.0, 8.0], known()).unwrap();
+    let kitchen = ed::room(&mut job, &level, "Kitchen", [x - 6.0, 8.0], known()).unwrap();
+    ed::room_lines(&mut job, &level, &[[24.0, 0.0], [24.0, 16.0]], assumed()).unwrap();
+    for (path, what, quantity, division, rate) in new.iter().map(|w| (w.clone(), "Wall, framed and finished", "face_area", Division::WoodAndPlastics, "$12.00/SF")).chain([(kitchen, "Flooring", "floor_area", Division::Finishes, "$8.00/SF")]) {
+        job.add_line(&path, what, quantity, Some(Class::Material), false).unwrap();
+        job.set_division(&path, Some(what), division).unwrap();
+        job.set(&path, "unit_cost", Some(rate), Status::Known, "made-up price").unwrap();
+    }
+    job.derive();
+    job
+}
+
+#[test]
+fn two_layouts_are_set_side_by_side_from_their_own_takeoff_and_estimate() {
+    use plumbline_world::view::{options, OptionFigure::*};
+    let (mut a, mut b, mut c) = (addition_layout("Addition 12 ft", 36.0), addition_layout("Addition 16 ft", 40.0), Job::new("Nothing drawn yet", "test", "2026-11-22"));
+    c.derive();
+    let before = (save(&mut a), save(&mut b), save(&mut c));
+    let two = options(&mut [&mut a, &mut b]);
+    assert_eq!(two.titles, ["Addition 12 ft", "Addition 16 ft"]);
+    let row = |t: &plumbline_world::view::Options, label: &str| t.rows.iter().find(|r| r.label.contains(label)).unwrap_or_else(|| panic!("no row {label}: {:?}", t.rows.iter().map(|r| &r.label).collect::<Vec<_>>())).clone();
+    // To the figures worked by hand in STATUS.md.
+    for (label, x, y, said) in [
+        ("Living", 368.125, 368.125, "same"),
+        ("Kitchen", 182.125, 244.125, "+62 SF"),
+        ("all rooms", 550.25, 612.25, "+62 SF"),
+        ("walls, new", 40.0, 48.0, "+8 LF"),
+        ("job cost", 5777.0, 7137.0, "+$1,360.00"),
+        ("Wood and Plastics", 4320.0, 5184.0, "+$864.00"),
+        ("Finishes", 1457.0, 1953.0, "+$496.00"),
+    ] {
+        let r = row(&two, label);
+        assert_eq!((&r.figures[0], &r.figures[1]), (&Is(x, Status::Assumed), &Is(y, Status::Assumed)), "{label}");
+        assert_eq!(r.difference_said(), said, "{label}");
+    }
+    // What stands and what comes down: Known (the survey), the same in both.
+    assert_eq!(row(&two, "existing").figures, [Is(64.0, Status::Known), Is(64.0, Status::Known)]);
+    assert_eq!(row(&two, "to demolish").figures, [Is(16.0, Status::Known), Is(16.0, Status::Known)]);
+    assert_eq!(row(&two, "existing").difference_said(), "same");
+    // Divisions with no work in either are not rows.
+    assert!(two.rows.iter().all(|r| !r.label.contains("Masonry")));
+    // The other way round, a decrease has its minus.
+    let back = options(&mut [&mut b, &mut a]);
+    assert_eq!(row(&back, "Kitchen").difference_said(), "-62 SF");
+    assert_eq!(row(&back, "walls, new").difference_said(), "-8 LF");
+    assert_eq!(row(&back, "job cost").difference_said(), "-$1,360.00");
+    // A third, empty: none, no figure, and no difference worked.
+    let three = options(&mut [&mut a, &mut b, &mut c]);
+    assert_eq!(three.titles[2], "Nothing drawn yet");
+    for label in ["Living", "all rooms", "walls, new", "Wood and Plastics"] {
+        let r = row(&three, label);
+        assert_eq!(r.figures[2], None, "{label}");
+        assert_eq!(r.difference, Option::None, "{label}");
+        assert_eq!(r.difference_said(), "not worked", "{label}");
+    }
+    assert_eq!(row(&three, "job cost").figures[2], NoFigure);
+    assert_eq!(row(&three, "job cost").difference, Option::None);
+    // Nothing in any of the three was changed.
+    assert_eq!((save(&mut a), save(&mut b), save(&mut c)), before);
+}

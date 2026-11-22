@@ -7822,6 +7822,22 @@ line "Wall, framed and finished" by `face_area` at $12/SF; on the Kitchen "Floor
 Neither file is changed by the comparison. A third file, an empty job, reads "none"
 and "no figure" down its column.
 
+## Step A3 done at the command line: two layouts side by side (2026-11-22; call 154; a worker under contract, accepted by its diff and the lead's own run)
+
+`plumbline options <a> <b> [<c>]` sets two or three job files beside each other: rooms by
+name, walls by what the work does to them, job cost and each division, and the last
+layout less the first. Every hand figure of the demonstration came out: Kitchen 182.125
+against 244.125 SF (+62 SF); new walls 40 against 48 LF; job cost $5,777.00 against
+$7,137.00 (+$1,360.00). Each figure is its own job's (`estimate`'s job cost and
+divisions; the rooms' and walls' own measures); only the difference is added, and it is
+"not worked" where either side has no value. Rows for allowances and for work in no
+division appear where a layout has any, so the divisions add up to the job cost.
+
+**Run:** by the worker, the whole test suite, `options.sh`, `roomline.sh`, `reno.sh`,
+`library.sh`, the gates and the port map PASS. By the lead: `options.sh` PASS and its
+table read; `tools/committed.sh` before the push. **Not done:** the table in the
+window; no judge yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
