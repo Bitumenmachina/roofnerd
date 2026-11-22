@@ -7973,6 +7973,34 @@ names there) and its Layouts table has no file names; the corner refusal quotes 
 clash test's depth (18 in for a B36 against a B18) where a builder thinks 24 in; an
 island; end panels and toe kick; a countertop that follows a box taken out. Not judged.
 
+## Where things stand, on one page (2026-11-22, late)
+
+**The milestone** (the builder's determination above): one renovation, end to end, on
+Patrick's desktop, then his hour of use sets the list. **`TRY-IT.md` is his one page**:
+install, start a job beside his Scaniverse file, five things to try, what is known not
+to be there, what to send back.
+
+**In the window today**, each with a demonstration that drives it with the pointer,
+checks the saved job and measures its picture: a scan file brought in and traced over
+(`scanw`); existing, to demolish, new work marked and seen (`renow`); a room line for an
+open plan (`roomlinew`); a run of cabinet boxes and its countertop from the tool chest
+(`cabinetsw`); two layouts side by side (`layoutsw`).
+
+**On the last commit of code (call 157):** `cargo test --workspace` 478 pass;
+`tools/committed.sh` PASS; `cabinetsw`, `itemlibw`, `turnw` PASS on a frozen copy of
+it; the command-line demonstrations, the gates, the licences and the port map PASS;
+`tools/installs.sh` PASS (the README's package list against what the window loads).
+
+**Not done before he tries it, and said in `TRY-IT.md`:** a clean-machine install was
+not re-run (this machine has no room for a second build); Scaniverse's own file has
+not been seen (units and which way is up are read from the file and said); call 157 and
+the window pieces of calls 153 and 156 have not been judged; the takeoff and lists
+still count existing and demolished work with new (plan step B5).
+
+**Next, in order, unless his hour says otherwise:** B5 (lists split build, demolish,
+keep, and by trade); the window's Cabinets field taking appliances by name; an island;
+then B6 and B7.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
