@@ -317,6 +317,9 @@ pub struct Doc {
     /// to it in 32-bit numbers; the model itself stays 64-bit.
     pub origin: [f64; 3],
     pub framed: bool,
+    /// A sheet just brought in (its two corners on the plan, in feet): the view is eased
+    /// onto it when it next frames (call 153), instead of onto the whole job.
+    pub frame_on: Option<[[f64; 2]; 2]>,
     /// Where the pointer is on the model, in plan feet and height.
     pub pointer: Option<[f64; 3]>,
     pub shots: u32,
@@ -618,6 +621,9 @@ pub struct Snapshot {
     /// Where each room was named, by its path, in feet on the plan: where its name is
     /// written on the plan.
     pub room_points: std::collections::HashMap<String, [f64; 2]>,
+    /// Each room line (call 153): its path, its storey, and its two ends in feet on the
+    /// plan. Drawn dashed on plan; it has no shape in 3D.
+    pub room_lines: Vec<(String, String, [[f64; 2]; 2])>,
     /// What the work does to each thing that is marked, by path (call 148). A thing not
     /// here is new.
     pub work: std::collections::HashMap<String, plumbline_world::WorkStatus>,
@@ -764,6 +770,11 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
             if let Some(point) = doc.job.find(&el.path).and_then(|e| doc.job.world.get::<plumbline_world::Room>(e)).and_then(|r| r.point_ft()) {
                 s.room_points.insert(el.path.clone(), point);
             }
+        }
+    }
+    for el in elements.iter().filter(|e| e.kind == Kind::RoomLine) {
+        if let Some(ends) = doc.job.find(&el.path).and_then(|e| doc.job.world.get::<plumbline_world::RoomLine>(e)).and_then(|r| r.line_ft()) {
+            s.room_lines.push((el.path.clone(), on.get(&el.path).cloned().unwrap_or_default(), ends));
         }
     }
     s.drawn = drawn;

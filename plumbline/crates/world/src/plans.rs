@@ -265,6 +265,45 @@ pub struct Read<'a> {
     pub size: P2,
 }
 
+/// A file's path from a folder, with `..` where it has to climb: how the job keeps the
+/// place of a plan file (call 153: one copy, for the command line and the window).
+pub fn path_from(folder: &std::path::Path, file: &std::path::Path) -> Result<String, String> {
+    use std::path::{Component, PathBuf};
+    let folder = if folder.as_os_str().is_empty() { std::path::Path::new(".") } else { folder };
+    let folder = folder.canonicalize().map_err(|e| format!("cannot find the job's folder: {e}"))?;
+    let file = file.canonicalize().map_err(|e| format!("cannot find {}: {e}", file.display()))?;
+    let (a, b): (Vec<Component>, Vec<Component>) = (folder.components().collect(), file.components().collect());
+    let shared = a.iter().zip(&b).take_while(|(x, y)| x == y).count();
+    let mut out = PathBuf::new();
+    for _ in shared..a.len() {
+        out.push("..");
+    }
+    for part in &b[shared..] {
+        out.push(part);
+    }
+    out.to_str().map(str::to_string).ok_or_else(|| "the plan file's path is not text this program can keep".to_string())
+}
+
+/// A scan's sheet laid under a level (DECISIONS.md call 128, call 153): the picture is
+/// written beside the job, the drawing is made from it as any is, given its scale (its
+/// whole width is so many feet) and put in the scan's own place (its lower-left corner is
+/// where the scan's own feet put it). Everything about it is Assumed. Returns the
+/// drawing's path.
+#[allow(clippy::too_many_arguments)]
+pub fn lay_scan_sheet(job: &mut Job, level: &str, folder: &std::path::Path, called: &str, taken: &str, cut_at: f64, png: &[u8], checksum: &str, size: P2, cut_size: [u32; 2], dots: f64, corner: P2) -> Result<String, String> {
+    let ft_in = |x: f64| units::feet_as_ft_in(x, 16);
+    let sheet = folder.join(format!("{called} cut at {}.png", ft_in(cut_at).replace('\'', " ft").replace('"', " in").replace("  ", " ").trim()));
+    std::fs::write(&sheet, png).map_err(|e| format!("the sheet could not be written beside the job ({}): {e}", folder.display()))?;
+    let kept = path_from(folder, &sheet)?;
+    let source = format!("scan {called}.ply, cut {} above its floor ({taken})", ft_in(cut_at));
+    let how = Entered { status: Status::Assumed, source: &source };
+    let made = add(job, level, called, Read { file: &kept, page: 1, bytes: png.len() as u64, checksum, size }, how)?;
+    let wide = f64::from(cut_size[0]);
+    calibrate(job, &made, [0.0, 0.0], [wide, 0.0], &format!("{} ft", crate::view::num(wide / dots)), how)?;
+    line_up(job, &made, [0.0, 0.0], corner, how)?;
+    Ok(made)
+}
+
 /// A page of a plan file, laid under a storey. It has no scale yet. Its lower-left corner
 /// is put at the plan's own corner (0, 0) until it is lined up with something.
 pub fn add(job: &mut Job, storey: &str, name: &str, read: Read, how: Entered) -> Result<String, String> {

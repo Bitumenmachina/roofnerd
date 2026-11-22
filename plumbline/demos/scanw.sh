@@ -146,7 +146,7 @@ if grep -q "made-up-room" "$T/undone.txt"; then echo "FAIL: Undo did not take th
 echo "    Undo took the scan's sheet out of the saved job (and Redo put it back)"
 "$P" drawings "$J" > "$T/drawings.txt"
 says "$T/drawings.txt" "28 ft between (0, 0) and (672, 0) on its page" "the sheet's scale"
-says "$T/drawings.txt" "cut 4' 0\" above its floor (taken as metres with y up)" "the sheet's source"
+says "$T/drawings.txt" "cut 4' 0\" above its floor (taken as meters with y up)" "the sheet's source"
 says "$T/drawings.txt" "~ made-up-room" "Assumed"
 "$P" show "$J" > "$T/show.txt"
 python3 - "$J" <<'PY'
@@ -173,6 +173,11 @@ echo "== The pictures, measured =="
 # and 6 ft off the west wall, which the scan does not draw, as the control. The same
 # measure on the picture from before the scan came in, at the same places, has to fail:
 # a check that passes on a picture without the scan is no check.
+# (Call 153: the sheet's dots were 2 across and read, at this size, 222 of 255 along a wall
+# (233 at the wall's own line): too faint to trace over. They are 4 across and 100 of 255
+# now: along a wall's own line the sheet reads 100. This measure's threshold, 238, is not
+# moved: it is a "has a dot at all" test, and the sheet before the change and after it
+# both pass it; what the change cures is read from the picture.)
 python3 - "$OUT" "$T/plan2.txt" <<'PY'
 import sys
 from PIL import Image

@@ -465,10 +465,25 @@ pub fn rebuild(
         // forty about the origin, so there is ground and a grid before the first wall.
         if let Some((lo, hi, top)) = snap.extent.or(Some(([-30.0, -20.0], [30.0, 20.0], 10.0))) {
             doc.framed = true;
+            // A sheet just brought in is what the view eases onto (call 153): its
+            // middle, at the floor, and far enough back to see all of it.
+            let sheet = doc.frame_on.take();
+            // (The ground and its grid are laid for the whole job all the same.)
+            let whole = {
+                let (w, d) = ((hi[0] - lo[0]) as f32, (hi[1] - lo[1]) as f32);
+                (w * w + d * d + (top as f32).powi(2)).sqrt()
+            };
+            let (lo, hi, top) = match sheet {
+                Some([a, b]) => ([a[0].min(b[0]), a[1].min(b[1])], [a[0].max(b[0]), a[1].max(b[1])], 0.0),
+                None => (lo, hi, top),
+            };
             let (w, d) = ((hi[0] - lo[0]) as f32, (hi[1] - lo[1]) as f32);
             let size = (w * w + d * d + (top as f32).powi(2)).sqrt();
             orbit.distance = size * 1.6;
-            orbit.target = Vec3::new(0.0, top as f32 * 0.42, 0.0);
+            orbit.target = match sheet {
+                Some(_) => to_view(origin, [(lo[0] + hi[0]) / 2.0, (lo[1] + hi[1]) / 2.0, 0.0]),
+                None => Vec3::new(0.0, top as f32 * 0.42, 0.0),
+            };
             orbit.home = (orbit.target, orbit.distance);
             // As the job opens the eye is set where it frames it. After that no view
             // jumps (R21-21: a file brought in, a drawing added or a scale set cut to
@@ -479,7 +494,7 @@ pub fn rebuild(
                 Some(before) => orbit.now.0 += to_view(origin, before),
             }
             *framed_about = Some(origin);
-            drawing.reach = (size * 2.4 / 10.0).ceil() * 10.0;
+            drawing.reach = (whole * 2.4 / 10.0).ceil() * 10.0;
             for e in &ground {
                 commands.entity(e).despawn();
             }
@@ -579,6 +594,32 @@ pub fn rebuild(
                 let middle = to_view(origin, [on_plan[0], on_plan[1], floor]) + Vec3::Y * (tall / 2.0);
                 build.piece(room, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(len as f32, tall, thick) }, theme::casework(), 0.6, 0.0, true);
             }
+        }
+    }
+
+    // ---- Room lines (call 153): on plan only, dashed, in the ink the rooms are named in ----
+    // A room line parts two rooms where no wall stands. It is not built, so it has no
+    // shape in 3D. Over it lies a thin invisible strip, so that a click can pick it.
+    if on_plan_view && !doc.walk && show.architecture {
+        build.work = None;
+        build.wash = None;
+        for (path, storey, ends) in &snap.room_lines {
+            if show.storey.as_ref().is_some_and(|s| s != storey) || show.off_levels.contains(storey) {
+                continue;
+            }
+            let floor = snap.storeys.iter().find(|s| &s.path == storey).and_then(|s| s.elevation).unwrap_or(0.0) + 0.1;
+            let (va, vb) = (to_view(origin, [ends[0][0], ends[0][1], floor]), to_view(origin, [ends[1][0], ends[1][1], floor]));
+            let length = va.distance(vb);
+            if length < 1e-4 {
+                continue;
+            }
+            build.drawing.runs.push((va, vb, theme::ink(), true));
+            build.drawing.frames.push((path.clone(), vec![(va, vb)]));
+            let turn = Quat::from_rotation_arc(Vec3::X, ((vb - va) / length).with_y(0.0).normalize_or(Vec3::X));
+            build.piece(path, None, solids.cube.clone(), Transform { translation: (va + vb) / 2.0, rotation: turn, scale: Vec3::new(length, 0.05, 0.6) }, Color::NONE, 0.9, 0.0, false);
+            // Not tinted when it is pointed at or selected: the strip is only to click on,
+            // and the line itself is what is seen (and outlined when it is selected).
+            build.drawing.surfaces.pop();
         }
     }
 

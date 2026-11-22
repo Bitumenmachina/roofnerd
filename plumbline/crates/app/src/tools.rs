@@ -32,6 +32,8 @@ pub enum Tool {
     Floor,
     /// A room: a point inside it, then its name typed.
     Room,
+    /// A room line: the two ends of a line that parts two rooms where no wall stands.
+    RoomLine,
     /// A roof: the corners of its footprint in turn, and the first again to close it.
     Roof,
     /// Move what is selected: from one pick to the next.
@@ -49,7 +51,7 @@ pub enum Tool {
 impl Tool {
     /// The build bar, in the order it shows them: the building itself; what runs through
     /// it and stands in it (mechanical, electrical, plumbing); and moving what is there.
-    pub const BUILDING: [Tool; 6] = [Tool::Wall, Tool::Door, Tool::Window, Tool::Floor, Tool::Room, Tool::Roof];
+    pub const BUILDING: [Tool; 7] = [Tool::Wall, Tool::Door, Tool::Window, Tool::Floor, Tool::Room, Tool::RoomLine, Tool::Roof];
     pub const MEP: [Tool; 8] = [Tool::Run(Kind::Duct), Tool::Run(Kind::Pipe), Tool::Run(Kind::Conduit), Tool::Run(Kind::Cable), Tool::Fitting, Tool::Thing(Kind::Equipment), Tool::Thing(Kind::Fixture), Tool::Join];
     /// The tools a number key takes in hand, 1 to 9 and then 0.
     pub const KEYED: [Tool; 10] = [Tool::Wall, Tool::Door, Tool::Window, Tool::Floor, Tool::Room, Tool::Roof, Tool::Run(Kind::Duct), Tool::Run(Kind::Pipe), Tool::Run(Kind::Conduit), Tool::Run(Kind::Cable)];
@@ -67,6 +69,7 @@ impl Tool {
             Tool::Thing(_) => "Fixture",
             Tool::Floor => "Floor",
             Tool::Room => "Room",
+            Tool::RoomLine => "Room line",
             Tool::Roof => "Roof",
             Tool::Move => "Move",
             Tool::Fitting => "Fitting",
@@ -100,7 +103,7 @@ impl Tool {
             Tool::Thing(_) => &[("What it is", "Lavatory"), ("Size L x W x H, ft", "2 x 1.5 x 3"), ("Height AFF", "0 ft")],
             Tool::Floor => &[("Thickness", "4 in")],
             Tool::Roof => &[("Pitch", "6:12"), ("Eave height", "8 ft")],
-            Tool::Room | Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => &[],
+            Tool::Room | Tool::RoomLine | Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => &[],
         }
     }
 
@@ -118,6 +121,7 @@ impl Tool {
             Tool::Thing(_) => "Click where it stands.",
             Tool::Floor => "Click anywhere on the level. The floor fills the outline its walls enclose.",
             Tool::Room => "Click inside the room, then type its name.",
+            Tool::RoomLine => "Click one end of the line, then the other. It parts two rooms where no wall stands. Esc ends.",
             Tool::Roof => "Click each corner of the roof's outline, then the first again to close it.",
             Tool::Move => "Click a point on it, then where that point goes.",
             Tool::Fitting => "Click where runs meet.",
@@ -223,7 +227,7 @@ fn checked(tool: Tool, values: &[String]) -> Result<Vec<String>, (usize, String)
             units::parse_pitch(&parts[0]).map_err(|why| (0, why))?;
             length(1, true)?;
         }
-        Tool::Room | Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => {}
+        Tool::Room | Tool::RoomLine | Tool::Move | Tool::Fitting | Tool::Join | Tool::Scale | Tool::LineUp => {}
     }
     Ok(parts)
 }
@@ -628,6 +632,18 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             doc.say(Tone::Done, "Room: type its name, like Kitchen.");
             return;
         }
+        // A room line: one end, then the other; the tool stays in hand for the next.
+        Tool::RoomLine => {
+            doc.draw.picked.push(at);
+            let [a, b] = doc.draw.picked.as_slice() else {
+                doc.say(Tone::Done, "Room line: from here. Click the other end.");
+                doc.touch();
+                return;
+            };
+            let pts = [*a, *b];
+            doc.draw.picked.clear();
+            Some(ed::room_lines(&mut doc.job, &storey, &pts, how(traced)).map(|made| format!("Added {}. It parts two rooms where no wall stands.", made.join(", "))))
+        }
         // A roof's footprint: each corner in turn; a pick on the first corner again, with
         // three or more picked, closes it, and the roof is worked out from it.
         Tool::Roof => {
@@ -728,6 +744,7 @@ fn doing(tool: Tool) -> String {
     match tool {
         Tool::Wall | Tool::Run(_) => format!("draw the {}", tool.name().to_lowercase()),
         Tool::Door | Tool::Window | Tool::Thing(_) | Tool::Floor | Tool::Room | Tool::Roof | Tool::Fitting => format!("add the {}", tool.name().to_lowercase()),
+        Tool::RoomLine => "draw the room line".to_string(),
         Tool::Move => "move it".to_string(),
         Tool::Join => "connect it".to_string(),
         Tool::Scale => "set the scale".to_string(),
@@ -1018,7 +1035,7 @@ pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, plans: Res<crate:
     let found = match tool {
         // A door or a window goes on a wall's line and nowhere else.
         Tool::Door | Tool::Window => snap::snap(scene, p, reach, &[], false, &snap::Snaps { nearest: true, ..snap::Snaps::none() }),
-        Tool::Wall | Tool::Run(_) | Tool::Move => snap::snap(scene, p, reach, picked, square, &snap::Snaps::default()),
+        Tool::Wall | Tool::RoomLine | Tool::Run(_) | Tool::Move => snap::snap(scene, p, reach, picked, square, &snap::Snaps::default()),
         // A roof's outline is drawn corner to corner, as a wall is.
         Tool::Roof => snap::snap(scene, p, reach, picked, square, &snap::Snaps::default()),
         // A floor and a room are a click anywhere inside: nothing to snap to.

@@ -7777,6 +7777,27 @@ lead: `roomline.sh` PASS and its figures read; `tools/portmap.sh` PASS (245 item
 **Not done:** the tool to draw one in the window (next, with a room said in the window
 to be two); no judge yet.
 
+## Steps A1 and A2 in the window (2026-11-22; call 153; a worker under contract, accepted by its diff and pictures)
+
+A "Room line" tool beside Room: two clicks on the plan set one, drawn dashed, picked,
+moved and deleted like any thing, Undo taking each back. The scan's sheet is dark enough
+to trace (its dots read 100 of 255, were 222) and the view eases onto a sheet when it is
+brought in. "meters" throughout; bringing a scan in is one function
+(`plumbline_plans::scan::bring_in`, laying its sheet through
+`plumbline_world::plans::lay_scan_sheet`) that the command line and the window both call.
+The tool bar now shrinks to fit: a seventh button had pushed Delete off a 1600 px window.
+
+**Run by the worker on a frozen copy:** `cargo test --workspace` 468 pass; `roomlinew.sh`
+(new), `scanw.sh`, `renow.sh`, `bringw.sh` PASS; `scan.sh`, `roomline.sh`, the gates and
+the port map PASS. `roomlinew.sh` measures the dashed line at x = 24 (24 dashes, 0.49
+dark; before the tool 0.01, which fails its test) and the saved job: Living 368.125 SF,
+Kitchen 182.125 SF. The lead read the pictures: the two rooms named with their areas
+either side of the dashed line; the scan's outline plain to trace.
+
+**Not right:** after a scan comes in the window says "its page is read (it is a scan:
+there are no drawn lines on it to snap to); 1 thing not read from it": true and clumsy.
+Calls 152 and 153 have not been judged.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

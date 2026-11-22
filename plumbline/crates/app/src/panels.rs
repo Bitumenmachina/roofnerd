@@ -755,7 +755,7 @@ fn picker(c: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
                 type_it(f, typed, match what {
                     crate::model::Bring::Prices => "A supplier's name can follow a comma. ",
                     crate::model::Bring::Sheet => "If its name does not say what it is, say after a comma: fixture, equipment or furnishing. ",
-                    crate::model::Bring::Scan => "It is taken as metres, with up the way the house is shortest. To say otherwise, say after a comma: feet, y up or z up. ",
+                    crate::model::Bring::Scan => "It is taken as meters, with up the way the house is shortest. To say otherwise, say after a comma: feet, y up or z up. ",
                     _ => "",
                 });
             });
@@ -1357,6 +1357,12 @@ fn mark(p: &mut ChildSpawnerCommands, what: &str, ink: Color) {
                 bar(11.2, 2.0, 1.5, 14.0);
                 bar(4.0, 8.2, 16.0, 1.5);
             }
+            // A dashed line standing across the plan.
+            "Room line" => {
+                bar(11.2, 1.0, 1.5, 4.0);
+                bar(11.2, 7.0, 1.5, 4.0);
+                bar(11.2, 13.0, 1.5, 4.0);
+            }
             "Line up" => {
                 bar(4.0, 3.0, 1.5, 12.0);
                 bar(4.0, 13.5, 16.0, 1.5);
@@ -1408,7 +1414,7 @@ fn mark(p: &mut ChildSpawnerCommands, what: &str, ink: Color) {
 fn tool_button<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, key: &str, on: bool) -> EntityCommands<'a> {
     let ink = if on { theme::accent() } else { theme::ink() };
     let mut e = p.spawn((
-        Node { width: px(52.0), height: px(44.0), border_radius: BorderRadius::all(px(theme::BUTTON_RADIUS)), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, justify_content: JustifyContent::Center, row_gap: px(2.0), border: UiRect::all(px(1.0)), flex_shrink: 0.0, ..default() },
+        Node { width: px(52.0), height: px(44.0), border_radius: BorderRadius::all(px(theme::BUTTON_RADIUS)), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, justify_content: JustifyContent::Center, row_gap: px(2.0), border: UiRect::all(px(1.0)), flex_shrink: 1.0, min_width: px(44.0), ..default() },
         BackgroundColor(if on { theme::accent_wash() } else { theme::panel() }),
         BorderColor::all(if on { theme::accent() } else { theme::rule() }),
         named(label),
@@ -1476,12 +1482,12 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             strip.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, hint, 11.5, Weight::Regular, theme::ink_soft()));
         });
         // Every tool, in three groups.
-        bar.spawn(Node { flex_grow: 1.0, padding: UiRect::horizontal(px(10.0)), align_items: AlignItems::Center, column_gap: px(12.0), overflow: Overflow::clip(), ..default() }).with_children(|all| {
+        bar.spawn(Node { flex_grow: 1.0, padding: UiRect::horizontal(px(6.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), ..default() }).with_children(|all| {
             let in_hand = typing.or(doc.draw.tool);
             let group = |all: &mut ChildSpawnerCommands, name: &str, tools: &[Tool], delete: bool| {
-                all.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(1.0), flex_shrink: 0.0, ..default() }).with_children(|g| {
+                all.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(1.0), flex_shrink: 1.0, ..default() }).with_children(|g| {
                     g.spawn((text(fonts, name.to_uppercase(), 9.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
-                    g.spawn(Node { column_gap: px(3.0), ..default() }).with_children(|r| {
+                    g.spawn(Node { column_gap: px(2.0), ..default() }).with_children(|r| {
                         for tool in tools.iter().copied() {
                             on_click(&mut tool_button(r, fonts, tool.name(), tool.key(), in_hand == Some(tool)), move |doc| tools::start(doc, tool));
                         }
@@ -2393,6 +2399,9 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
     // An item is kept with the job's types; to a person it is an item.
     let kind = if el.rows.iter().any(|r| r.label == "drawn as") { "Item" } else { theme::kind_name(el.kind) };
     title_block(p, fonts, kind, &el.name, under);
+    if el.kind == Kind::RoomLine {
+        p.spawn(Node { margin: UiRect::top(px(6.0)), ..default() }).with_child(text(fonts, "Parts two rooms where no wall stands. It is not built and not priced.", 12.0, Weight::Regular, theme::ink_soft()));
+    }
     let find = |label: &str| el.rows.iter().find(|r| r.label == label);
     // The two figures that matter most for this kind of element, large.
     let lead: &[(&str, &str)] = match el.kind {

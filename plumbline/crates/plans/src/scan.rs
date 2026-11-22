@@ -275,11 +275,18 @@ impl Scan {
             // To the nearest dot: a point on a dot's edge (a wall at a whole foot) is
             // the same dot whether its file kept it as text or as bytes.
             let (x, y) = (((p[0] - lo[0] + margin) * dots).round() as i64, ((p[1] - lo[1] + margin) * dots).round() as i64);
-            // A point is a dot two across, so a wall of points reads as a line.
-            for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1)] {
-                let (px, py) = (x + dx, i64::from(h) - 1 - (y + dy));
-                if px >= 0 && py >= 0 && px < i64::from(w) && py < i64::from(h) {
-                    picture.put_pixel(px as u32, py as u32, image::Luma([20u8]));
+            // A point is a dot four across (two inches at 24 to the foot), so that a wall
+            // of points reads as a line on the screen at the size a house is seen at:
+            // at two across, the sheet was sampled between its dots and the walls read
+            // 222 of 255, too faint to trace over (call 153). The dot is a mid gray, 100
+            // of 255: a wall drawn over it in ink still shows against it. The dot's
+            // centre is where it was.
+            for dx in -1..=2 {
+                for dy in -1..=2 {
+                    let (px, py) = (x + dx, i64::from(h) - 1 - (y + dy));
+                    if px >= 0 && py >= 0 && px < i64::from(w) && py < i64::from(h) {
+                        picture.put_pixel(px as u32, py as u32, image::Luma([100u8]));
+                    }
                 }
             }
         }
@@ -314,6 +321,85 @@ pub struct Cut {
     pub strays: usize,
     /// How far the building runs on the sheet, east to west and north to south, in feet.
     pub extent: [f64; 2],
+}
+
+/// What the person said of a scan file; the rest is worked out and said.
+pub struct Said {
+    pub units: Units,
+    /// None: up is the way the house is shortest, as far as that shows.
+    pub up: Option<Up>,
+    /// How high above the floor the sheet is cut, in feet.
+    pub cut_at: f64,
+}
+
+/// The sheet made from a scan, handed to whoever lays it under a level.
+pub struct Sheet<'a> {
+    /// The scan's own name, without its extension.
+    pub called: &'a str,
+    /// What was taken for granted: "taken as meters with z up".
+    pub taken: &'a str,
+    pub cut_at: f64,
+    pub png: &'a [u8],
+    pub checksum: &'a str,
+    /// The picture's size in dots, as the reader of pictures gives it.
+    pub size: [f64; 2],
+    pub cut: &'a Cut,
+}
+
+/// What bringing a scan in came to, for the caller to say in its own words.
+pub struct Brought {
+    pub called: String,
+    pub taken: String,
+    /// Why up is the way it was taken.
+    pub why_up: &'static str,
+    pub points: usize,
+    /// How far it leaned, in feet for each foot, where it was levelled by its own floor.
+    pub leaned: Option<f64>,
+    pub floor: Option<f64>,
+    pub ceiling: Option<f64>,
+    pub base: f64,
+    pub cut: Cut,
+    /// What laying the sheet returned (the drawing's path).
+    pub laid: String,
+    pub lost: Vec<String>,
+}
+
+/// Bring a scan in: read it, say which way is up (as it was said, or the way the house
+/// is shortest), level it by its floor, cut it above its floor into a sheet, and hand the
+/// sheet to `lay`, which puts it under a level. Both the command line and the window
+/// call this and nothing else (call 153); each says the result in its own words.
+/// `label` is how errors name the file.
+pub fn bring_in(bytes: &[u8], label: &str, stem: &str, said: &Said, lay: &mut dyn FnMut(&Sheet) -> Result<String, String>) -> Result<Brought, String> {
+    let (up, why_up) = match said.up {
+        Some(up) => (up, "as you said"),
+        None => {
+            // The file's own axes, as read with z up: its y and its z, how far each runs.
+            let flat = read_ply(bytes, said.units, Up::Z).map_err(|why| format!("{label}: {why}"))?;
+            let (lo, hi) = flat.bounds().ok_or_else(|| format!("{label}: it has no points"))?;
+            let (along_y, along_z) = (hi[1] - lo[1], hi[2] - lo[2]);
+            if along_y < 0.8 * along_z {
+                (Up::Y, "the way the house is shortest")
+            } else if along_z < 0.8 * along_y {
+                (Up::Z, "the way the house is shortest")
+            } else {
+                (Up::Z, "its height does not show which way is up")
+            }
+        }
+    };
+    let mut scan = read_ply(bytes, said.units, up).map_err(|why| format!("{label}: {why}"))?;
+    // A scan made by hand is seldom level: it is levelled by its own floor, and how far
+    // it leaned is said.
+    let leaned = scan.level_by_floor();
+    let taken = format!("taken as {} with {} up", if said.units == Units::Metres { "meters" } else { "feet" }, if up == Up::Z { "z" } else { "y" });
+    let (lo, _) = scan.bounds().ok_or_else(|| format!("{label}: it has no points"))?;
+    let (floor, ceiling) = scan.floor_and_ceiling();
+    // Cut above the floor; where no floor shows, above the lowest point, and said.
+    let base = floor.unwrap_or(lo[2]);
+    let cut = scan.cut(base + said.cut_at, 2.0 / 12.0, 24.0, 2.0).map_err(|why| format!("{label}: {why}"))?;
+    let read = crate::read(&cut.png, 1).map_err(|why| format!("{label}: the sheet made from it: {why}"))?;
+    let checksum = crate::checksum(&cut.png);
+    let laid = lay(&Sheet { called: stem, taken: &taken, cut_at: said.cut_at, png: &cut.png, checksum: &checksum, size: read.size, cut: &cut })?;
+    Ok(Brought { called: stem.to_string(), taken, why_up, points: scan.points.len(), leaned, floor, ceiling, base, cut, laid, lost: scan.lost })
 }
 
 #[cfg(test)]

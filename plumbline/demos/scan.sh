@@ -28,7 +28,7 @@ echo
 echo "== Brought in: what it read, what it took for granted, and the sheet it made =="
 IN="$("$P" import scan "$J" "$T/room.ply" --level "$L")"
 D="$(made "$IN")"
-says "the points, and what was taken for granted" "36,924 points, taken as metres with z up (--units ft or --up y says otherwise)" "$IN"
+says "the points, and what was taken for granted" "36,924 points, taken as meters with z up (--units ft or --up y says otherwise)" "$IN"
 says "6.096 m by 3.6576 m" "on plan, where it is cut, it is about 20' 0\" by 12' 0\"" "$IN"
 says "2.4384 m" "floor to ceiling reads about 8' 0\" on the scan" "$IN"
 says "the sheet: (20 + 4) x 24 by (12 + 4) x 24 dots" "576 by 384 dots at 24 to the foot" "$IN"
@@ -37,7 +37,7 @@ says "what is not kept" "not kept: each point's red" "$IN"
 "$P" check "$J"
 DR="$("$P" drawings "$J")"
 says "to scale: 576 dots are 24 ft" "24 ft between (0, 0) and (576, 0) on its page: 24 dots to the foot" "$DR"
-says "its source, with what was taken for granted" "scan room.ply, cut 4' 0\" above its floor (taken as metres with z up)" "$DR"
+says "its source, with what was taken for granted" "scan room.ply, cut 4' 0\" above its floor (taken as meters with z up)" "$DR"
 says "Assumed" "~ room [$D]" "$DR"
 
 echo

@@ -145,6 +145,7 @@ fn main() {
         measuring: None,
         origin: [0.0; 3],
         framed: false,
+        frame_on: None,
         pointer: None,
         shots: 0,
         edited: fresh,

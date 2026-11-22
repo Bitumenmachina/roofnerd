@@ -81,6 +81,11 @@ pub fn laid(job: &mut plumbline_world::Job) -> Vec<Laid> {
         .collect()
 }
 
+/// Where a drawing lies on the plan: its two opposite corners, in feet.
+pub fn corners_of(job: &mut plumbline_world::Job, path: &str) -> Option<[[f64; 2]; 2]> {
+    laid(job).into_iter().find(|l| l.path == path).map(|l| [l.on_plan([0.0, 0.0]), l.on_plan(l.drawing.size)])
+}
+
 /// A drawing's page as read.
 pub struct Read {
     /// The file and page it was read from: a drawing pointed at another is read again.
@@ -285,6 +290,7 @@ pub fn add(doc: &mut Doc, text: &str) {
         Ok(said) => {
             doc.edit("Add drawing");
             doc.framed = false;
+            doc.frame_on = laid(&mut doc.job).last().map(|l| l.path.clone()).and_then(|path| corners_of(&mut doc.job, &path));
             doc.say(Tone::Done, said);
         }
         Err(why) => crate::tools::cant(doc, "add the drawing", why),
