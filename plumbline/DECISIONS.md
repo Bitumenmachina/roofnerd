@@ -5473,3 +5473,46 @@ and the units here are the estimator's to change:
 The library is then 37 assemblies and 179 lines, 25 of them labor; what counts it moves.
 
 No other number moves.
+
+### Call 161. The five new things done from the screen alone (2026-11-22; the judge of the window's pieces: a scan file "no", a second layout "no", cabinets and a room line "partly")
+
+A builder opening the window cold has to be able to do each of the five without a manual
+and without a software word. What changes, each in the window's crate:
+
+1. **Bring in lists.** In every list under Bring in, a click on a row brings that file
+   in (Enter still does). A row shows the file's name without its ending and what it is
+   in a builder's word (scan, plan, price list, job). The folder is named "this job's
+   folder", never by its path. **Scan file:** the list's head has two choices, lit when
+   chosen, "Measured in meters" and "Measured in feet" (meters to begin with). The
+   message after says how big the house came in and "which way is up was read from the
+   scan"; if it came in on its side, one button under the message, "It is lying on its
+   side: stand it up", brings it in again turned. Nobody types an axis.
+2. **Layouts, made in the window.** On the Layouts tab: "Keep this as another layout"
+   takes a name in a field (the job's title and "B" offered), saves a copy of the job
+   beside it under that title, and sets it beside this one. "Open another layout" lists
+   the jobs in this job's folder by their titles (only files that are jobs) and opens
+   the picked one in this window; with changes not saved it says "Save first (Ctrl+S)"
+   and opens nothing. The table carries call 157's "left out of the job cost" row and
+   file names under like titles.
+3. **Cabinets.** The field takes what the command line takes, appliances by name in
+   square brackets with them; the list under it shows the corner boxes and the
+   appliances the job has, and one line of key: "B base · SB sink base · DB drawer base
+   · W wall (width, then height) · T tall · F filler · BLB blind corner · LS turning
+   corner · the number is the width in inches". On the plan each box carries its code,
+   and a wall's dimension is not written over a run. The sheet's estimate lists each
+   box's line.
+4. **What is existing and what comes down, keyed.** Under Show, with anything marked:
+   "Existing, shown pale" and "Demolition, shown red", each with its swatch. Existing
+   work keeps its pattern, washed pale (brick still reads as brick). When a mark changes
+   a room, the message says so: "Living is now 364.25 SF (was 178.25)".
+5. **A room line** is drawn in its own ink (dark blue, dashed), over whatever it lies
+   on, and the tool's hint says what it is for: "Parts two rooms where no wall stands:
+   click each end."
+6. **Open items** do not list an item's unknown maker, model or weight until one of it
+   is set in the job. A refusal is said on the card and in the message line, not in the
+   panel as well. A thing is named once.
+7. **Every picture of the five demonstrations is retaken** on the build that has this,
+   and each demonstration is changed to do its step the new way (a click on the scan's
+   row; the second layout kept from the window; an appliance in the run) and to check it.
+
+No number moves.
