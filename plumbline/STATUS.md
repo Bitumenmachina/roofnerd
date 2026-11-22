@@ -8222,6 +8222,38 @@ of these figures. The starter "Framed floor" on the first floor: "Floor joists, 
   room in Division 12 is said beside the things set there; one of `0` is not. `place`
   takes "B36" by its name.
 
+## A plan set on paper: a demonstration, written before it is built (`demos/planset.sh`, call 168)
+
+From an empty job, by hand. The house of the layouts demonstration: 6 in walls 9 ft tall
+round 0,0 to 24,16, Known; the south, north and west walls existing (24 + 24 + 16 = 64
+LF), the east wall to demolish (16 LF); an addition of three new walls, 24,0 to 36,0 to
+36,16 to 24,16 (12 + 16 + 12 = 40 LF); a room line where the east wall stood; rooms
+Living (point 6,8) and Kitchen (point 30,8).
+
+1. `plan-set` writes **3 pages**, each ARCH A, 12 by 9 in (864 by 648 points), at
+   1/4" = 1'-0": the house and its addition are 36 by 16 ft, 9 by 4 in on paper.
+2. **EXISTING PLAN**: 4 walls, full weight; 4 dimensions, `24'-0"`, `16'-0"`, `24'-0"`,
+   `16'-0"`; Living as it stands, 23.5 by 15.5 ft inside: **LIVING 364 SF**; no Kitchen
+   (nothing that stands encloses its point); no new wall.
+3. **DEMOLITION PLAN**: 3 walls light, 1 dashed; "1 wall comes down, 16 LF"; the same
+   room.
+4. **PROPOSED PLAN**: 3 walls light, 3 heavy and filled; 6 dimensions, `24'-0"`, `24'-0"`,
+   `16'-0"`, `12'-0"`, `16'-0"`, `12'-0"`; **LIVING 368 SF** (368.125) and **KITCHEN 182
+   SF** (182.125); the east wall is not on it.
+5. Each page's notes: door swings are not set; dimensions are to the walls' lines as
+   drawn; no length carries VIF. With the north wall's line made Assumed, its dimension
+   reads `24'-0" VIF` on every page it is on, and the notes say 1 length is to verify in
+   field.
+6. A door 3 ft wide in the south wall: its gap, 3 ft, on each page the south wall is on;
+   no swing.
+7. At `--scale "1/2 in"` the plan is 18 by 8 in and goes to ARCH C (24 by 18 in); with
+   `--paper "ARCH A"` at that scale it is refused, with the scale that fits.
+8. A job with nothing marked: **1 page**, FLOOR PLAN.
+9. The file written is brought back in as a drawing by the program's own reader: its
+   page is 12 by 9 in, and the south wall's outer line on the proposed plan is 6 in long
+   on paper (24 ft at 1/4 in to the foot).
+10. The job file is byte for byte what it was.
+
 ## Call 157 and the window's five pieces judged (2026-11-22; an agent on another model, cold; `research/judgment-call157-and-window.md`)
 
 **Held, by hand:** `wall_run` in every case tried (doors single, overlapping, at a

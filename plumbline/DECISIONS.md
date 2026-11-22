@@ -5826,3 +5826,57 @@ word; the odd words when an assembly would double a line; `check` without the
 corner-leg caution; how near a wall and the floor a box must be to cover base (it
 over-buys base, never under); `remove-line` minding capitals. J166-20 is as meant: a
 blind corner base is 24 in deep and the top covers it.
+
+### Call 168. A plan set on paper: the plan as it stands, the demolition plan and the proposed plan (2026-11-22; plan step D10; `research/sheets-port-survey.md`; the design and GC reviews)
+
+A renovation is built from three plans of each level. The model already holds what each
+shows (the work mark, call 148); nothing was written out. `plumbline plan-set <file>
+<level> <out.pdf>` writes them, one page each, as line work a printer takes; "plan set"
+is the builder's word (a "sheet" on this program's screens is already the estimate's, and
+a "drawing" is one brought in).
+
+**What each page shows.**
+- **EXISTING PLAN**: what is marked existing or to demolish, as it stands, in full
+  weight; new work is not on it.
+- **DEMOLITION PLAN**: what stays, drawn light; what comes down, drawn dashed; new work is
+  not on it. A line under the title counts what comes down ("1 wall, 16 LF").
+- **PROPOSED PLAN**: what stays, drawn light and unfilled; new work heavy, its walls
+  filled; what comes down is not on it.
+A level with no mark on anything gets one page, **FLOOR PLAN**, everything heavy. A page
+with nothing to show is not written, and what was written is said.
+
+**How it is drawn** (ported from BIMCraft's plan pass, sheet and PDF writer: the display
+list of fills and lines, `cut_unions`, `cut_edges`, `ink_cut` and `turn_corners` for walls
+that read as one where they join, the door's gap and jambs, the window's three lines, the
+pens by scale, the paper sizes, the lettering of strokes, the PDF written by hand with
+`flate2`, already in the lockfile; no font and no new dependency):
+- Walls cut at the level's own height for it (4 ft), by their thickness, joined.
+- A door is its gap, its jambs and its leaf drawn shut across the gap: **which way a door
+  swings is not in the model**, so no swing is drawn, and the page says so in its notes
+  ("door swings are not set"). (A door's hand is its own call.)
+- **Rooms**: each room's name and its area in whole SF at the room's point. On the
+  proposed plan they are the rooms the work leaves. On the existing and demolition plans
+  they are the rooms as they stand: each room's point bounded by the walls that stand
+  today (existing and to demolish, no new wall, no room line that stands for a wall taken
+  down); a room whose point no standing wall encloses is not lettered there.
+- **Dimensions**: one string along each wall on the page, on its outer side, end to end
+  of the wall's line as drawn, with a tick at each end and its length in feet and inches
+  as plans write them (`24'-0"`). **A length that is not Known is lettered with VIF after
+  it** ("verify in field", the trade's own mark), and one that is Unknown is lettered
+  `?`: the paper carries what the model knows about each number. Openings are not
+  dimensioned yet, and the notes say so.
+- **Scale and paper**: `1/4" = 1'-0"` unless `--scale` says another (1/8, 3/16, 1/4, 3/8,
+  1/2 in to the foot); the smallest of ARCH A (12 by 9 in), B (18 by 12), C (24 by 18)
+  and D (36 by 24) that the level fits on with its dimensions and a 1/2 in margin, unless
+  `--paper` names one; if it fits on none at that scale it is refused with the scale that
+  does fit.
+- **Title box**, lower right: the job's title, the page's name, the level, the scale, the
+  date (`--date`, else the day it is written), and "page 1 of 3". **Notes**, beside it:
+  what VIF means and how many lengths carry it; that door swings are not set; that
+  dimensions are to the walls' lines as drawn.
+- Plan north is up the page. No north arrow: true north is not in the model.
+
+`plan-set ... --list` prints, page by page, what is on it (each wall with its weight,
+each dimension as lettered, each room label, the notes), so a figure on paper can be
+checked without reading the picture. The same pages can be written from the window under
+Write out (the next window work). The saved job does not change; no number moves.
