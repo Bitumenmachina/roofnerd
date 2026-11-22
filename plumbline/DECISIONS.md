@@ -5335,3 +5335,25 @@ boxes with others is refused; a box's line is Material; a door whose place is no
 is not checked for a run across it (owed: it should refuse). The counts of the starter
 items moved from 21 to 46 in `tables.rs`, `demos/items.sh`, `demos/itemlibw.sh` and
 `demos/turnw.sh`.
+
+### Call 156. The kitchen run and the layouts in the window (2026-11-22; plan steps A3 and A4, their window halves)
+
+- **A tool, "Cabinets", in the BUILDING row after Room line.** With it in hand, a click
+  on a wall's face on the plan picks that wall and the room on that side, and where
+  along the wall the click fell is where the run starts (snapped to the room's corner
+  when within 6 in of it). A field then takes the boxes as the command line does, their
+  codes with spaces between ("B18 SB36 B24"); Enter sets the run through
+  `editing::cabinets`, with its countertop when the switch "Countertop" beside the field
+  is on (on to begin with). What the window says is what the command line says; a
+  refusal is said and nothing is set. The codes the job's items have are listed under
+  the field as they are typed, so nobody has to remember them; a job with no boxes says
+  to bring the starter items in. Undo takes a run back whole.
+- **Layouts, a tab of the sheet window beside Estimate and Budget.** A button "Set
+  beside another layout" lists the job files in the job's folder (a file is picked from
+  a list); the picked one is set beside this job as `view::options` works it, in the
+  rows and words of `plumbline options`; "Take it away" clears it. Nothing is written
+  to either file. Up to two others.
+
+No number moves. `demos/cabinetsw.sh` and `demos/layoutsw.sh` show them, their saved
+jobs and what the window said checked against the command line's demonstrations'
+figures.
