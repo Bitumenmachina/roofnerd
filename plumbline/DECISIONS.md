@@ -5437,3 +5437,39 @@ handed their own lists. Call 148's mark is what tells them apart, and it is used
   the same figures the line sums.
 
 No number moves; lists gain columns and the takeoff gains lines.
+
+### Call 159. Work on part of a thing, typed as a measure; taking a partition down as a scope (2026-11-22; plan step B6; the finishes and GC reviews: "a typed patch of 60 SF is refused"; "this is the whole renovation job")
+
+**1. A line's quantity may be a measure typed outright.** A renovation is full of work on
+part of a thing that no figure of the model gives: 60 SF of siding patched, 24 LF of
+base matched, 2 CY hauled. `plumbline line <thing> "Patch and match siding" "60 SF"
+--status Assumed --source "walked it"` is taken: a number and one of LF, SF, SQ, CY or
+EA. It is held as a value entered on the line (named `measured`), with how sure it is and
+where it came from, as every entered value is; `--status` and `--source` are required
+with it, and it is refused without them, in words. A plain number is a count, as before.
+In a formula such a value is what its unit says (an area, a length, a volume, a
+count), so `measured * 2` is in SF. `set <thing> measured "72 SF" --line "<line>"
+--status ... --source ...` changes it, and `measure` makes it Known. A value entered on a
+line may carry SF, SQ, CY or EA as well as a length, by `--with "name=60 SF"`.
+
+**2. A starter assembly, "Take down a partition" (goes on a wall)**, Division 2 unless
+said, no prices, each rule Assumed with its reason; a sub prices demolition his own way
+and the units here are the estimator's to change:
+- "Protect the floors, both sides": `2 * plan_length * strip`, SF, `strip` = 4 ft
+  ("a 4 ft run of floor protection each side: the estimator's allowance"), Division 1.
+- "Dust barrier": `barrier * height`, SF, `barrier` Unknown ("where the work is closed
+  off is the job's to say: give its length"), Division 1.
+- "Take down the partition": `face_area`, SF, subcontract.
+- "Haul off and dump": `net_area * thickness * swell`, CY, `swell` = 1.5 ("broken board
+  and framing lie loose at about half again their volume in place: the estimator's
+  allowance; the hauler's box is what is paid for").
+- "Patch the floor where it stood" and "Patch the ceiling where it stood": each
+  `plan_length * thickness`, SF, Division 9.
+- "Patch the walls it met": `ends`, EA, `ends` = 2 ("one patch at each end; a wall that
+  ends free has one"), Division 9.
+- "Shore the floor above": Labor by `plan_length`, in hours with no production rate,
+  **switched off**: on only where the wall carries load (call 160 says how that is asked).
+
+The library is then 37 assemblies and 179 lines, 25 of them labor; what counts it moves.
+
+No other number moves.

@@ -8027,6 +8027,32 @@ partition and the east wall marked to demolish; three new walls 24,0 36,0 36,16 
 4. A job with no mark: `takeoff` prints as it did before this call (checked against the
    starter house of `demos/library.sh`, unchanged).
 
+## Work on part of a thing, and a partition taken down as a scope: a demonstration, written before it is built (`demos/partwork.sh`, call 159)
+
+From an empty job, by hand. The house of `demos/reno.sh` (6 in walls 9 ft tall round 0,0
+to 24,16, a partition 12,0 to 12,16), all five walls marked existing, the partition to
+demolish. Prices are made up.
+
+1. On the south wall, existing: `line` "Patch and match siding" `"60 SF"`, Assumed,
+   "walked it", Division 7, at $14/SF: 60 × 14 = **$840.00**; and "Paint the wall" by
+   `net_area` at $1.20/SF: 24 × 9 = 216 SF: **$259.20**. Typed without a status it is
+   refused. Changed to `"72 SF"`: **$1,008.00**. Measured (`measure ... measured same`):
+   Known.
+2. `measured * 2` on a second line is in SF: **144 SF**.
+3. The partition given "Take down a partition" from the starter library. It is 16 ft
+   long, 9 ft tall, 0.5 ft thick:
+   - protect the floors: 2 × 16 × 4 = **128 SF**;
+   - dust barrier: no figure until its length is given; with `barrier` 20 ft: 20 × 9 =
+     **180 SF**;
+   - take down: **144 SF**; at $2.50: **$360.00**;
+   - haul off: 144 × 0.5 = 72 CF = 2.6667 CY in place, × 1.5 = **4 CY**; at $85:
+     **$340.00**;
+   - patch the floor: 16 × 0.5 = **8 SF**; the ceiling the same;
+   - patch the walls it met: **2 EA**;
+   - shore the floor above: switched off, in no total.
+4. The estimate's job cost with those four prices: 1,008.00 + 259.20 + 360.00 + 340.00 =
+   **$1,967.20**, the lines without a price left out and said.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
