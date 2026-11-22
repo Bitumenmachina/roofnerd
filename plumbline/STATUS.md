@@ -7597,6 +7597,72 @@ should hold, and that is not proved). Run those three before anything is built o
 demolish, new, and asked why it was added. The renovation track's order is his to set
 again; nothing more is built on it until he says what he meant.
 
+## The plan, remade from how each trade would use it (2026-11-22; Patrick: "relook at what you have and see how each trade would use it then replan based on that")
+
+**Read this before the older "Start here" below; where the two differ, this one holds
+for the renovation track.** Four reviews, each working a made-up existing house with a
+12 ft addition in the program as it stands, checked figures by hand and ranked what
+their trades need: `research/trades-use-gc-structure.md`, `-envelope-finishes.md`,
+`-mep.md`, `-design.md`. Behind them: `research/how-a-renovation-is-done.md` (what the
+trade does, and what calls 148 to 150 got wrong: built first, priced the wrong thing).
+
+**What all four found right:** the quantities (every hand check agreed); whole sheets,
+bundles and rolls with waste and their code citations; the existing / demolish / new
+marks moving the rooms; the field list by dollars; honest "left out" totals.
+
+**What all four hit, in the order it is to be built.** Each step is a call, a
+demonstration with hand figures, a judge.
+
+*A. Get the house that is there into the window, and design on it.*
+1. **The scan in the window** (in hand: a worker, `demos/scanw.sh`): a Scaniverse file
+   from Bring in, laid under the plan, walls traced over it.
+2. **Open plan, and rooms that are part old, part new.** A line that parts two rooms
+   where no wall stands (design 2; MEP 10: the kitchen opened into the addition read
+   "floor area unknown"); a room, or part of one, said to be existing so new flooring is
+   not bought over the old half (envelope 1).
+3. **Two layouts side by side** (design 1, "the biggest single gain"): options of one
+   job, their areas, wall lengths and price compared. Today: copy the file and read two
+   takeoffs by eye.
+4. **Cabinet runs and countertops** (design 4; envelope 2, 3, 6): base, wall and tall
+   boxes by code along a wall, fillers, a schedule the cabinet maker can quote, the
+   countertop by SF and edge LF. And the wrong thing now: the Kitchen assembly's
+   "Cabinets, Countertops, Appliances = 1 EA" go to the supplier as Known.
+
+*B. Make a renovation's numbers honest for each trade.*
+5. **The takeoff and every list split into build, demolish and keep, and by trade**
+   (GC 1; MEP 2, 3; envelope 10): the takeoff said 6.09 CY of footing concrete where 2.12
+   is new; an existing air handler went out as "set and connected"; plumbing and HVAC
+   cannot be handed their own lists. This is where the mark earns its place.
+6. **Work on part of an existing thing** (envelope 1; GC 4): a patch of 60 SF of siding,
+   drywall or paint typed as an area (a typed "60 SF" is refused today); demolition as an
+   assembly with protection, dust control, haul and dump, patching and shoring, taken off
+   by scope, not by a wall's face.
+7. **What is hidden, asked in the field with its dollars** (GC 3; MEP 1; design 7): a wall
+   said to be bearing, not bearing or not known; what is behind it; a pipe, duct or cable
+   in a wall that comes down, to cap, reroute or remove. Today the field list asks only
+   about new work, and a run through a demolished wall is silent everywhere.
+
+*C. Structure and tie-ins.*
+8. **A beam, its posts and their footings over an opened wall; headers; joists and
+   rafters counted** (GC 2, 5; design 7), sizes typed with their source, what an engineer
+   must size flagged and listed for him. No span tables (their terms do not allow it).
+9. **The addition tied to the house**: the roof cut into the old one, its valley and
+   flashing; footing dowels; floor heights; a new run joined to an existing one (GC 6;
+   envelope 4; MEP 4; design 9).
+
+*D. Paper.*
+10. **Existing, demolition and proposed sheets with the model's dimensions**, a window
+    and door schedule by size, the BIM file carrying the standard Status (design 3, 6;
+    envelope 5).
+
+**Smaller, each real, picked up beside the steps they touch:** a crew's labor rate set
+once for the job (GC 10); trade packs and units (roofing by the SQ, 4 by 12 sheets,
+gallons: envelope 8); equipment sizes and "is it enough" (MEP 5); electrical circuits
+and devices (MEP 6); clash noise from a thing against its own wall (MEP 8; design 5);
+a receptacle count that is wrong for a bath (MEP 10); contingency and allowances (GC 9).
+
+**Parked until A is done:** more on the mark itself (its judge's J-N8, J-N11).
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
