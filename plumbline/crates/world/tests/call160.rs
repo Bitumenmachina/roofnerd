@@ -58,7 +58,7 @@ fn what_is_said_of_a_wall_is_saved_and_read_back_the_same() {
 fn any_other_word_for_bearing_is_refused_and_it_is_said_of_a_wall_only() {
     let (mut job, part, outer) = house();
     let before = save(&mut job);
-    let why = job.set(&part, "bearing", Some("load bearing"), Status::Known, "seen").unwrap_err();
+    let why = job.set(&part, "bearing", Some("bearing wall"), Status::Known, "seen").unwrap_err();
     assert!(why.contains("\"bearing\" or \"not bearing\""), "{why}");
     assert!(job.set(&part, "bearing", Some("bearing"), Status::Known, " ").is_err());
     assert!(job.set(&part, "in_the_wall", Some("   "), Status::Known, "seen").is_err());

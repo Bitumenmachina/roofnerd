@@ -82,11 +82,23 @@ lacks "$T/clashes.txt" "wall 5 [$PART] and pipe 1"
 echo
 echo "== 3. Said: not bearing, one 2 in drain: the partition leaves the list, the pipe stays =="
 cp "$J" "$T/before.json"
-refused "$P" set "$J" "$PART" bearing "load bearing" "${K[@]}"
+refused "$P" set "$J" "$PART" bearing "bearing wall" "${K[@]}"
 says "$T/out.txt" "is not a word for it: a wall is \"bearing\" or \"not bearing\""
 unchanged
 refused "$P" set "$J" "$PIPE" bearing "bearing" "${K[@]}"
 unchanged
+# The words a trade writes (call 167): in any capitals; said back as its two words. On a copy.
+cp "$J" "$T/words.json"
+for typed in "non-bearing" "Nonbearing" "NOT BEARING"; do
+    "$P" set "$T/words.json" "$PART" bearing "$typed" "${K[@]}" > "$T/out.txt"
+    says "$T/out.txt" "set $PART bearing = not bearing (Known)"
+done
+for typed in "load bearing" "Load-Bearing"; do
+    "$P" set "$T/words.json" "$PART" bearing "$typed" "${K[@]}" > "$T/out.txt"
+    says "$T/out.txt" "set $PART bearing = bearing (Known)"
+done
+"$P" set "$T/words.json" "$PART" "In The Wall" "one 2 in drain" "${K[@]}" > "$T/out.txt"
+says "$T/out.txt" "set $PART in the wall = one 2 in drain (Known)"
 "$P" set "$J" "$PART" bearing "not bearing" --status Known --source "joists run with it, seen from the attic" > "$T/out.txt"
 says "$T/out.txt" "set $PART bearing = not bearing (Known)"
 "$P" set "$J" "$PART" "in the wall" "one 2 in drain" --status Known --source "opened at the base" > "$T/out.txt"
@@ -100,6 +112,21 @@ sed -n "/^ *$PART  /,/^ *[a-z]*-[0-9]*  /p" "$T/show.txt" > "$T/part.txt"
 says "$T/part.txt" "  bearing          not bearing"
 says "$T/part.txt" "  in the wall      one 2 in drain"
 lacks "$T/part.txt" "is bearing and comes down"
+# `mark` asks only of what has not been said (call 167): this wall's bearing and contents are
+# said, so marking it to demolish again asks neither; with only its contents not said, it asks those.
+cp "$J" "$T/again.json"
+"$P" mark "$T/again.json" "$PART" existing --keep "${K[@]}" >/dev/null
+"$P" mark "$T/again.json" "$PART" demolish --keep "${K[@]}" > "$T/out.txt"
+says "$T/out.txt" "$PART: to demolish"
+lacks "$T/out.txt" "bearing"
+lacks "$T/out.txt" "field list"
+cp "$J" "$T/again2.json"
+"$P" set "$T/again2.json" "$PART" "in the wall" unknown --status Unknown --source "not opened yet" >/dev/null
+"$P" mark "$T/again2.json" "$PART" existing --keep "${K[@]}" >/dev/null
+"$P" mark "$T/again2.json" "$PART" demolish --keep "${K[@]}" > "$T/out.txt"
+tail -n 1 "$T/out.txt" | grep -qxF "What is in it? That is on the field list." || { echo "FAIL: mark did not ask only what is in the wall"; cat "$T/out.txt"; exit 1; }
+echo "    (marked again: what mark says ends: What is in it? That is on the field list.)"
+lacks "$T/out.txt" "Is it bearing"
 
 echo
 echo "== 4. Said bearing, Assumed: asked again, and what it needs is in show, check and the estimate =="
@@ -125,6 +152,39 @@ says "$T/vif.txt" "wall 5 [$PART] (wall), on ground: \$360.00, 1 line"
 lacks "$T/clashes.txt" "In the way of demolition"
 
 echo
+echo "== 5b. Three pipes meeting at east 12, north 14, 4 ft up: the place given is on the pipe, in the wall =="
+# On a copy, the partition to demolish, 6 in thick about east 12 (11.75 to 12.25). Pipe A runs
+# from there east to 15,14, through the partition; pipe B comes from the west to 12,14; pipe C
+# runs from 12,14 down the partition to 12,12. A, B and C meet at one point. The place given for
+# A is north 14, 4 ft up, and east between 12 and 12.25: on A and inside the wall, not a foot off.
+cp "$J" "$T/meet.json"
+A="$("$P" run "$T/meet.json" "$S" pipe "$PT" --points "12,14 15,14" --height "4 ft" "${K[@]}" | grep -oE 'pipe-[0-9]+' | head -1)"
+B="$("$P" run "$T/meet.json" "$S" pipe "$PT" --points "6,14 12,14" --height "4 ft" "${K[@]}" | grep -oE 'pipe-[0-9]+' | head -1)"
+C="$("$P" run "$T/meet.json" "$S" pipe "$PT" --points "12,14 12,12" --height "4 ft" "${K[@]}" | grep -oE 'pipe-[0-9]+' | head -1)"
+"$P" clashes "$T/meet.json" > "$T/clashes.txt"
+says "$T/clashes.txt" "In the way of demolition: 3"
+python3 - "$T/clashes.txt" "$A" "$B" "$C" <<'PY'
+import re, sys
+text = open(sys.argv[1]).read()
+a, b, c = sys.argv[2:5]
+def place(path):
+    m = re.search(r"\[" + path + r"\] is in wall 5 \[[a-z0-9-]+\], which comes down, at \(([-0-9.]+), ([-0-9.]+), ([-0-9.]+)\)", text)
+    assert m, (path, text)
+    return tuple(float(x) for x in m.groups())
+x, y, z = place(a)
+assert abs(y - 14) < 1e-9 and abs(z - 4) < 1e-9 and 12 <= x <= 12.25, (x, y, z)
+print("    pipe A is in the partition at east %s, north %s, %s ft up: on the pipe and in the wall" % (x, y, z))
+# B comes from the west to 12,14: the part of it in the wall is east 11.75 to 12, north 14.
+x, y, z = place(b)
+assert abs(y - 14) < 1e-9 and abs(z - 4) < 1e-9 and 11.75 <= x <= 12, (x, y, z)
+print("    pipe B at east %s, north %s, %s ft up: on the pipe and in the wall" % (x, y, z))
+# C runs along the partition from north 14 to 12, all of it in the wall: its middle.
+x, y, z = place(c)
+assert abs(x - 12) < 1e-9 and abs(y - 13) < 1e-9 and abs(z - 4) < 1e-9, (x, y, z)
+print("    pipe C at east %s, north %s, %s ft up: the middle of what is in the wall" % (x, y, z))
+PY
+
+echo
 echo "== 6. A window set in the south wall, which stays: the wall is asked, and nothing rides =="
 WIN="$(made "$("$P" window "$J" "$SOUTH" "$NT" --offset "18 ft" --sill "2.5 ft" "${K[@]}")")"
 shown
@@ -139,6 +199,16 @@ lacks "$T/vif.txt" "\$0.00"
 CUT="is bearing and is cut for Window 1: the opening needs a header sized by an engineer, and shoring while it is cut. None of that is in this price unless a line of this job says so."
 shown; says "$T/show.txt" "Wall 1 $CUT"
 "$P" check "$J" > "$T/check.txt"; says "$T/check.txt" "$CUT"
+
+# The caution is under the estimate whether or not anything is priced on the wall (call 167):
+# with every line taken off a copy, the estimate has no lines, and says it still.
+cp "$J" "$T/bare.json"
+"$P" remove-line "$T/bare.json" "$PART" "Take down the partition" >/dev/null
+"$P" remove-line "$T/bare.json" "$PIPE" "Drain pipe" >/dev/null
+"$P" estimate "$T/bare.json" > "$T/est.txt"
+says "$T/est.txt" "Nothing in this job has a cost line."
+says "$T/est.txt" "Wall 1 $CUT"
+says "$T/est.txt" "$CAUTION"
 
 # A door in the north wall, which stays, itself marked to demolish (taken out and filled
 # in): that cuts nothing, and the north wall is asked nothing (call 160, as built).
@@ -166,4 +236,4 @@ cmp -s "$J" "$T/copy.json" || { echo "FAIL: the job opened and saved again is no
 "$P" clashes "$T/copy.json" | cmp -s - "$T/clashes1.txt" || { echo "FAIL: clashes printed differently when opened again"; exit 1; }
 echo "    show, the field list and clashes print what they printed"
 echo
-echo "  PASS: nothing was asked of a wall before a mark; the partition to demolish was asked its bearing and what is in it with \$360.00 riding and the pipe in its way with \$120.00, \$480.00 together; said, they left the list; a bearing wall that comes down said what that needs and that it is not in the price; a new window in an old wall asked the same of that wall with nothing riding; saved and read back the same, to the figures worked by hand"
+echo "  PASS: nothing was asked of a wall before a mark; the partition to demolish was asked its bearing and what is in it with \$360.00 riding and the pipe in its way with \$120.00, \$480.00 together; said, they left the list; a bearing wall that comes down said what that needs and that it is not in the price; a new window in an old wall asked the same of that wall with nothing riding, said under the estimate with nothing priced; a pipe in the wall was given a place on it and in the wall; the trade's words for bearing were taken and mark asked only what was not said; saved and read back the same, to the figures worked by hand"

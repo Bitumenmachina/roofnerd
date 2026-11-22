@@ -245,8 +245,15 @@ pub fn measure_on_line(job: &mut Job, path: &str, line: &str, name: &str, readin
             }
             Reading::Length(typed) => {
                 let was = if v.value.is_some() { format!("it was {}, {}: {}", shown(v), status_said(v.status), v.source) } else { format!("it was not known: {}", v.source) };
-                let (len, unit) = if let Ok((x, unit)) = units::parse_measure(typed) {
+                // A measure is read as estimators write it (1,200 SF, 60 sq ft); on a value that
+                // is a measure already a length in feet is LF, and what is not a measure there is
+                // refused with the units a measure takes.
+                let held = units::is_measure_unit(&v.unit);
+                let (len, unit) = if let Some(read) = units::read_measure(typed, held) {
+                    let (x, unit) = read?;
                     (Len::One(x), unit)
+                } else if held {
+                    return Err(units::parse_measure(typed).unwrap_err());
                 } else if v.unit.is_empty() {
                     (Len::One(units::parse_number(typed)?), "")
                 } else {

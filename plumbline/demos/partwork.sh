@@ -56,6 +56,11 @@ est
 # 60 x 14 = $840.00; the wall is 24 x 9 = 216 SF, painted at $1.20: $259.20.
 says "$T/est.txt" "Patch and match siding [Subcontract] ~60.00 SF \$14.00/SF ~\$840.00"
 says "$T/est.txt" "Paint the wall [Subcontract] 216.00 SF \$1.20/SF \$259.20"
+# A measure typed and not yet Known is a measurement of the building: the field list asks it
+# under its wall, with what rides on it (call 167). 60 x 14 = $840.00 on 1 line.
+"$P" vif "$J" > "$T/vif.txt"
+says "$T/vif.txt" "wall 1 [$SOUTH] (wall), on ground: ~\$840.00, 1 line"
+says "$T/vif.txt" "measure: ~\"Patch and match siding\" (60 SF)"
 "$P" set "$J" "$SOUTH" measured "72 SF" --line "Patch and match siding" --status Assumed --source "walked it again" > "$T/out.txt"
 says "$T/out.txt" "set $SOUTH measured = 72 SF (Assumed)"
 est
@@ -67,6 +72,44 @@ est
 says "$T/est.txt" "Patch and match siding [Subcontract] 72.00 SF \$14.00/SF \$1,008.00"
 "$P" show "$J" > "$T/show.txt"
 says "$T/show.txt" "            measured: Patch and match siding 72 SF"
+# Measured Known, it leaves the list; where nothing else is asked, the list says every value
+# that can be measured is Known (the partition's bearing and contents said on a copy first).
+"$P" vif "$J" > "$T/vif.txt"
+lacks "$T/vif.txt" "Patch and match siding"
+cp "$J" "$T/said.json"
+"$P" set "$T/said.json" "$PART" bearing "not bearing" "${K[@]}" >/dev/null
+"$P" set "$T/said.json" "$PART" "in the wall" nothing "${K[@]}" >/dev/null
+"$P" vif "$T/said.json" > "$T/vif.txt"
+says "$T/vif.txt" "Verify in field: nothing. Every value that can be measured is Known"
+
+echo
+echo "== 2b. A measure as estimators write it: thousands with a comma, the units' common spellings =="
+# On a copy. 1,200 x 14 = $16,800.00.
+cp "$J" "$T/typed.json"
+"$P" line "$T/typed.json" "$SOUTH" "Big patch" "1,200 SF" --cost-type subcontract --status Assumed --source "walked it" --division 7 > "$T/out.txt"
+says "$T/out.txt" "= 1200 SF (Assumed, walked it)"
+"$P" set "$T/typed.json" "$SOUTH" unit_cost '$14/SF' --line "Big patch" --status Known --source "made-up price" >/dev/null
+"$P" estimate "$T/typed.json" | tr -s ' ' > "$T/est2.txt"
+says "$T/est2.txt" "Big patch [Subcontract] ~1,200.00 SF \$14.00/SF ~\$16,800.00"
+"$P" line "$T/typed.json" "$SOUTH" "Small patch" "60 sq ft" --cost-type subcontract --status Assumed --source "walked it" > "$T/out.txt"
+says "$T/out.txt" "\"Small patch\" = 60 SF (Assumed, walked it)"
+"$P" line "$T/typed.json" "$SOUTH" "Edge" "24 ft" --cost-type subcontract --status Assumed --source "walked it" > "$T/out.txt"
+says "$T/out.txt" "\"Edge\" = 24 LF (Assumed, walked it)"
+"$P" line "$T/typed.json" "$SOUTH" "Roofer's patch" "2 squares" --cost-type subcontract --status Assumed --source "walked it" > "$T/out.txt"
+says "$T/out.txt" "\"Roofer's patch\" = 2 SQ (Assumed, walked it)"
+cp "$J" "$T/before.json"
+refused "$P" set "$J" "$SOUTH" measured "-3 SF" --line "Patch and match siding" --status Assumed --source "walked it"
+says "$T/out.txt" "is below zero"
+unchanged
+refused "$P" set "$J" "$SOUTH" measured "60 boards" --line "Patch and match siding" --status Assumed --source "walked it"
+says "$T/out.txt" "one of LF, SF, SQ, CY, EA"
+unchanged
+refused "$P" line "$J" "$SOUTH" "Boards" "60 boards" --status Assumed --source "walked it"
+says "$T/out.txt" "one of LF, SF, SQ, CY, EA"
+unchanged
+refused "$P" line "$J" "$SOUTH" "Below" "-3 SF" --status Assumed --source "walked it"
+says "$T/out.txt" "is below zero"
+unchanged
 
 echo
 echo "== 3. A measure in a formula is what its unit says: measured * 2 is in SF =="
@@ -128,4 +171,4 @@ says "$T/out.txt" "Take down a partition: added, with 8 lines"
 cmp -s "$T/lib.csv" "$T/lib2.csv" || { echo "FAIL: the assembly library did not go out and come in again the same"; exit 1; }
 echo "    the assemblies went out and came in again without loss"
 echo
-echo "  PASS: a measure typed on a line was refused without its status and source, held as an entered value, changed and measured Known, worked as what its unit says in a formula; the starter assembly \"Take down a partition\" gave 128, 180, 144, 4 CY, 8, 8 and 2 and left shoring off; the job cost came to \$1,967.20, to the figures worked by hand"
+echo "  PASS: a measure typed on a line was refused without its status and source, held as an entered value, asked on the field list with \$840.00 riding until measured Known, taken with a comma and as sq ft or ft and refused below zero or in an unknown unit, changed and measured Known, worked as what its unit says in a formula; the starter assembly \"Take down a partition\" gave 128, 180, 144, 4 CY, 8, 8 and 2 and left shoring off; the job cost came to \$1,967.20, to the figures worked by hand"

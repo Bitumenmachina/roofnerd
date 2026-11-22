@@ -901,7 +901,8 @@ fn length_in(cell: &str, status: Status, source: &str) -> Result<Val<units::Len>
         return Ok(Val { value: Some(units::Len::One(x)), unit: String::new(), status, source: source.to_string() });
     }
     // 60 SF, 2 CY, 24 LF, 3 SQ, 4 EA: a measure typed on a line (call 159).
-    if let Ok((x, unit)) = units::parse_measure(t) {
+    if let Some(read) = units::read_measure(t, false) {
+        let (x, unit) = read?;
         return Ok(Val { value: Some(units::Len::One(x)), unit: unit.to_string(), status, source: source.to_string() });
     }
     let (len, unit) = units::parse_length(t)?;

@@ -68,7 +68,7 @@ use parry3d_f64::math::{Pose, Rotation, Vector};
 use parry3d_f64::query;
 use parry3d_f64::shape::{ConvexPolyhedron, Cuboid, Cylinder, Shape as Solid};
 
-use super::{network, placements, Placed, Placement, Shape, P3};
+use super::{network, placements, Placed, Placement, Shape, P2, P3};
 use crate::check::FIT_TOLERANCE_FT;
 use crate::components::{Kind, Node};
 use crate::geom;
@@ -563,7 +563,79 @@ pub fn in_the_way(job: &mut Job) -> Result<Vec<crate::hidden::InTheWay>, String>
         }
         out.push(crate::hidden::InTheWay { thing, thing_name, thing_kind, wall, wall_name, at: c.at });
     }
+    // Where each is, for a person with a bar in the wall: on the thing and inside the wall,
+    // not where the clash test found it deepest (a run that carries on past the wall, or
+    // meets others at a joint, was given a place a foot off it: call 167).
+    let (drawn, _) = placements(job);
+    for w in out.iter_mut() {
+        let shape = |path: &str| drawn.iter().find(|p| p.path == path).map(|p| &p.shape);
+        if let (Some(Shape::Wall { a, b, base, height, thickness, .. }), Some(thing)) = (shape(&w.wall), shape(&w.thing)) {
+            if let Some(at) = inside_wall(*a, *b, (*base, base + height), *thickness, thing, w.at) {
+                w.at = at;
+            }
+        }
+    }
     Ok(out)
+}
+
+/// A place on a thing that lies inside a wall: for a run, the middle of the length of its
+/// centre line that is in the wall (the wall's thickness, widened by the run's own, if the
+/// centre line is not itself in it); for a thing in a box, its middle held inside the wall.
+/// `near` is where the clash was found, used when nothing better can be said.
+fn inside_wall(a: P2, b: P2, up: (f64, f64), thickness: f64, thing: &Shape, near: P3) -> Option<P3> {
+    let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+    let length = dx.hypot(dy);
+    if length <= 1.0e-9 {
+        return None;
+    }
+    let (ux, uy) = (dx / length, dy / length);
+    // A place in the wall's own directions: along it, across it, and up.
+    let local = |p: P3| ((p[0] - a[0]) * ux + (p[1] - a[1]) * uy, -(p[0] - a[0]) * uy + (p[1] - a[1]) * ux, p[2]);
+    let world = |u: f64, v: f64, z: f64| [a[0] + ux * u - uy * v, a[1] + uy * u + ux * v, z];
+    let held = |u: f64, v: f64, z: f64| world(u.clamp(0.0, length), v.clamp(-thickness / 2.0, thickness / 2.0), z.clamp(up.0, up.1));
+    match thing {
+        Shape::Run { a: from, b: to, round, rect } => {
+            let (p, q) = (local(*from), local(*to));
+            // How far the run's own body reaches beyond its centre line, across the wall.
+            let reach = round.map(|d| d / 2.0).or(rect.map(|(w, h)| w.max(h) / 2.0)).unwrap_or(0.0);
+            // The part of the centre line, from p to q, that is within the wall's length and
+            // within half its thickness to either side; if none is, within that and the run's
+            // own reach.
+            let span = |half: f64| -> Option<(f64, f64)> {
+                let (mut s0, mut s1) = (0.0_f64, 1.0_f64);
+                for (from, to, low, high) in [(p.0, q.0, 0.0, length), (p.1, q.1, -half, half)] {
+                    let d = to - from;
+                    if d.abs() < 1.0e-12 {
+                        if from < low - 1.0e-9 || from > high + 1.0e-9 {
+                            return None;
+                        }
+                        continue;
+                    }
+                    let (t0, t1) = ((low - from) / d, (high - from) / d);
+                    s0 = s0.max(t0.min(t1));
+                    s1 = s1.min(t0.max(t1));
+                }
+                (s0 <= s1).then_some((s0, s1))
+            };
+            let Some((s0, s1)) = span(thickness / 2.0).or_else(|| span(thickness / 2.0 + reach)) else {
+                return Some(held_at(near, &local, &held));
+            };
+            let s = (s0 + s1) / 2.0;
+            let (u, v, z) = (p.0 + (q.0 - p.0) * s, p.1 + (q.1 - p.1) * s, p.2 + (q.2 - p.2) * s);
+            Some(held(u, v, z))
+        }
+        Shape::Box { at, size, .. } => {
+            let (u, v, z) = local([at[0], at[1], at[2] + size[2] / 2.0]);
+            Some(held(u, v, z))
+        }
+        _ => None,
+    }
+}
+
+/// Where the clash was found, held inside the wall.
+fn held_at(near: P3, local: &dyn Fn(P3) -> (f64, f64, f64), held: &dyn Fn(f64, f64, f64) -> P3) -> P3 {
+    let (u, v, z) = local(near);
+    held(u, v, z)
 }
 
 /// `with_walls_coming_down`: a wall that is to demolish is tested like any other (the

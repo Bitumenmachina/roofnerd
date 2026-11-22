@@ -211,6 +211,9 @@ impl Job {
     pub fn set_on_line(&mut self, path: &str, field: &str, line: Option<&str>, value: Option<&str>, status: Status, source: &str) -> Result<(), String> {
         // What a thing's assembly is was once called its condition, and is taken by either word.
         let field = if field == "assembly" { "condition" } else { field };
+        // What is said of a wall is named by its words, in any capitals ("In The Wall").
+        let lower = field.to_ascii_lowercase();
+        let field = if matches!(lower.as_str(), "bearing" | "in_the_wall" | "inthewall") { if lower == "bearing" { "bearing" } else { "in_the_wall" } } else { field };
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
         let on_element = matches!(field, "pitch" | "height" | "eave_height" | "condition" | "wbs" | "allowance" | "material" | "overhead" | "profit" | "price" | "bearing" | "in_the_wall") || (field == "order" && kind == Kind::Material);
@@ -458,7 +461,7 @@ impl Job {
     /// value is; the line's quantity is that value.
     #[allow(clippy::too_many_arguments)]
     pub fn add_line_measured(&mut self, path: &str, description: &str, measure: &str, class: Option<Class>, of_material: bool, status: Status, source: &str) -> Result<(), String> {
-        let (x, unit) = units::parse_measure(measure)?;
+        let (x, unit) = units::parse_measure_on_line(measure)?;
         if status == Status::Unknown {
             return Err(format!("{measure:?} is a figure that was typed, so it is Known or Assumed; to leave a quantity not known, give the line a figure to take it from"));
         }
@@ -556,7 +559,7 @@ impl Job {
             return Err(if matches!(field, "stretch_out" | "quantity" | "waste" | "order" | "unit_cost") {
                 format!("{path} has no cost line to set a {field} on")
             } else {
-                format!("{field:?} is not a field that can be set on {path}; an element takes pitch, height, eave_height, assembly, wbs or allowance, a roof drawn from its footprint takes edge:<n> (a pitch, or gable) and move:<n>, and a cost line takes stretch_out, quantity, waste, order, unit_cost or a value its formula names")
+                format!("{field:?} is not a field that can be set on {path}; an element takes pitch, height, eave_height, assembly, wbs or allowance, a wall also takes bearing (bearing or not bearing) and in the wall (what runs in it), a roof drawn from its footprint takes edge:<n> (a pitch, or gable) and move:<n>, and a cost line takes stretch_out, quantity, waste, order, unit_cost or a value its formula names")
             });
         };
         let mut new = cost.clone();
@@ -575,12 +578,21 @@ impl Job {
                 (None, None) => Err(format!("{what} has no {name} to mark unknown")),
                 (Some(text), was) if units::parse_number(text).is_ok() && was.is_none_or(|w| w.unit.is_empty()) => Ok(Val { value: Some(Len::One(units::parse_number(text)?)), unit: String::new(), status, source: source.into() }),
                 (Some(text), Some(was)) if was.unit.is_empty() => Err(format!("{what}: {name} is a plain number on this line, and {text:?} is not one")),
-                // 60 SF, 24 LF, 2 CY, 3 SQ, 4 EA: a measure typed outright.
-                (Some(text), _) if units::parse_measure(text).is_ok() => {
-                    let (x, unit) = units::parse_measure(text)?;
-                    Ok(Val { value: Some(Len::One(x)), unit: unit.into(), status, source: source.into() })
+                // 60 SF, 24 LF, 2 CY, 3 SQ, 4 EA: a measure typed outright, as estimators
+                // write it (1,200 SF, 60 sq ft). Where the value is a measure already (or is
+                // the one a line is typed with), a length in feet is LF, and what is typed
+                // that is not a measure is refused with the units a measure takes.
+                (Some(text), was) => {
+                    let measure_held = name == "measured" || was.is_some_and(|w| units::is_measure_unit(&w.unit));
+                    match units::read_measure(text, measure_held) {
+                        Some(read) => {
+                            let (x, unit) = read?;
+                            Ok(Val { value: Some(Len::One(x)), unit: unit.into(), status, source: source.into() })
+                        }
+                        None if measure_held => Err(format!("{what}: {}", units::parse_measure(text).unwrap_err())),
+                        None => typed_length(Some(text), was, status, source),
+                    }
                 }
-                (Some(_), _) => typed_length(text, was, status, source),
             }
         };
         match field {
@@ -739,6 +751,16 @@ impl Job {
                 return Err(format!("{path} is already {have:?}; applying {name:?} would put its lines under another assembly's name. To change it to this one, say so (at the command line, --change; in the window, pick it from the list)"));
             }
         }
+        // The assembly it has already, put on again: only what it lacks of it goes on (a
+        // line taken off with remove-line comes back), and no other line is touched.
+        let has_it = self.world.get::<Condition>(e).and_then(|c| c.0.value.as_deref()) == Some(name.as_str());
+        let lacking: Vec<CostLine> = match self.world.get::<Cost>(e) {
+            Some(have) if has_it => recipe.cost.lines.iter().filter(|l| !have.lines.iter().any(|h| h.description == l.description)).cloned().collect(),
+            _ => recipe.cost.lines.clone(),
+        };
+        if has_it && lacking.is_empty() && self.world.get::<Cost>(e).is_some() {
+            return Err(format!("{path} is already {name:?} and has every line of it"));
+        }
         let new = match self.world.get::<Cost>(e) {
             None => recipe.cost.clone(),
             Some(have) => {
@@ -746,14 +768,14 @@ impl Job {
                     return Err(format!("{path} already carries a cost code of its own, and {name:?} brings another; an element has one cost code"));
                 }
                 let mut joined = have.clone();
-                joined.lines.extend(recipe.cost.lines.iter().cloned());
+                joined.lines.extend(lacking.iter().cloned());
                 joined
             }
         };
         check::cost(path, kind, &new)?;
         let assigned = Condition(Val { value: Some(name.clone()), unit: String::new(), status, source: source.into() });
         check::condition(path, &assigned)?;
-        let added = recipe.cost.lines.iter().map(|l| l.description.clone()).collect();
+        let added = lacking.iter().map(|l| l.description.clone()).collect();
         self.world.entity_mut(e).insert((new, assigned));
         Ok(added)
     }
@@ -777,8 +799,9 @@ impl Job {
             // Nothing to take the place of, or no one assembly of that name: as a first one is given.
             return self.apply_as(path, assembly, status, source).map(|added| (added, Vec::new()));
         };
+        // The same assembly again: what it lacks of it is put back, or it is said to be whole.
         if have == new.1 {
-            return Err(format!("{path} is already {have:?}"));
+            return self.apply_as(path, assembly, status, source).map(|added| (added, Vec::new()));
         }
         if !new.2.applies_to.contains(&kind) {
             return Err(format!("{:?} goes on {}, and {path} is a {}", new.1, new.2.applies_to.iter().map(|k| format!("a {}", k.said())).collect::<Vec<_>>().join(" or "), kind.said()));

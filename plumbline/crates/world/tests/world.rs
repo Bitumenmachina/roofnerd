@@ -1144,7 +1144,7 @@ fn one_parapet_and_one_condition_make_four_lines_and_nothing_is_assumed_for_them
     assert!(job.apply("plane-0003", "Parapet with copper coping", "x").unwrap_err().contains("applies to a parapet"));
     assert!(job.apply("parapet-0024", "No such condition", "x").unwrap_err().contains("no assembly"));
     job.apply("parapet-0024", "condition-0025", "x").unwrap();
-    assert!(job.apply("parapet-0024", "condition-0025", "x").unwrap_err().contains("two cost lines"));
+    assert!(job.apply("parapet-0024", "condition-0025", "x").unwrap_err().contains("has every line of it"));
 }
 
 #[test]

@@ -8467,6 +8467,41 @@ places; `remove-line` to the cent. About 45 refusals left their files as they we
 | J166-20 | A blind corner base (BLB36) gives no corner caution | as meant: it is 24 in deep and a top covers it; the notes say so |
 | J166-3 to 6, 10 to 12, 14, 17, 18 | low: a typed measure's source is not in the workbook; "0 SF" taken without a word; the assembly put on twice refuses in odd words; `mark` asks "Is it bearing" when it is already said; the order of two windows in the caution changes; "non-bearing" not taken; `check` leaves out the corner-leg caution; a box 1/8 in off the wall or 3/8 in off the floor covers nothing (base is over-bought, never under); `remove-line` minds capitals | "non-bearing" and the `mark` sentence to fix; the rest open |
 
+## Call 167 built: what the judge of calls 159 to 166 found, set right (2026-11-22; begun by a worker under contract, finished and accepted by the lead)
+
+All nine are in, each proved by its case in `partwork.sh`, `hidden.sh` or `kitchen.sh`
+and by tests (`crates/world/tests/call167.rs`, `crates/cli/tests/call167.rs`):
+
+| | Was | Now |
+|---|---|---|
+| J166-2 | An Assumed "60 SF" with $840 on it, and the field list said every value was Known | The field list asks its thing to measure "Patch and match siding" (60 SF), $840.00 riding; Known, it leaves |
+| J166-13 | A countertop could not be priced per LF, and read "ft" | `price-item Countertop "$80/LF"`: $640.00 and $240.00, each line in LF; per SF as before; any other unit refused with the two it takes. A line bought by a length reads LF everywhere |
+| J166-8 | The bearing caution under the estimate only where the wall was priced | Under the estimate for every bearing wall the work opens |
+| J166-9 | The place given for a pipe in the way was a foot off it | On the pipe and in the wall: east 12.125, north 14, 4 ft up |
+| J166-19 | An assembly less a line could not be made whole and did not say it was short | `show` reads the assembly "without its line"; put on again it adds what is lacking and no other; with none lacking it says so |
+| J166-1, 7, 12 | Refusals with the wrong reason; trade spellings not taken | "1,200 SF", "60 sq ft", "24 ft" taken; below zero and "60 boards" refused in their own words; "non-bearing", "load-bearing" taken; "in the wall" in any capitals |
+| J166-15 | A lump of 0 flagged; `1 + 1` not | A lump is a quantity that names no figure and is more than nothing |
+| J166-16 | `place` took an item by number only | By its name, in any capitals |
+| J166-10 | `mark` asked "Is it bearing" of what was already said | Asked only of what is not said |
+
+**What happened to the worker.** It stopped at a permission prompt for a shell command
+and stayed stopped; nothing was building, so the lead ended it and took the work over
+from the tree it left. That tree compiled and its cases were in the three
+demonstrations; the lead ran everything.
+
+**Run by the lead:** `cargo test --workspace` 510 pass, 0 fail; all 37 command-line
+demonstrations PASS; the three with the new cases read; several of the nine tried by
+hand on a made-up job; the gates and the port map PASS; `tools/committed.sh` before the
+push.
+
+**Two expectations moved, each by the decision:** the test of a refused word for bearing
+uses "bearing wall" where it used "load bearing", which is now taken; an assembly put on
+a second time says the thing "has every line of it" where it said "two cost lines".
+
+**Not right:** the refusal that lists what can be set on a thing still names
+`eave_height` and `wbs` as the program spells them; a typed "1,250 SF" is echoed as
+"1250 SF"; `set` on bearing ends "no measure changed". Not judged again.
+
 ## Call 161 judged: the five things from the screen alone, a second time (2026-11-22; an agent on another model, cold, on the frozen build; `research/judgment-call161-window.md`)
 
 | | Thing | Could a builder do it from the screen and the page? |

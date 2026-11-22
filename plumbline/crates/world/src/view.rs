@@ -101,6 +101,11 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
         }
         out
     };
+    // Each assembly's recipe, by name: what an assembly brings, to say what a thing lacks of it.
+    let recipes: std::collections::HashMap<String, Recipe> = {
+        let mut q = job.world.query::<(&Node, &Recipe)>();
+        q.iter(&job.world).map(|(n, r)| (n.name.clone(), r.clone())).collect()
+    };
     // The walls the work opens, and what the bearing ones say they need (call 160).
     let opened = crate::hidden::opened_walls(&mut job.world);
     let cautions: std::collections::HashMap<String, String> = crate::hidden::cautions(&mut job.world).into_iter().collect();
@@ -183,7 +188,20 @@ pub fn elements(job: &mut Job) -> Vec<ElementRows> {
             rows.push(length(p, "height", &c.0));
         }
         if let Some(c) = w.get::<Condition>(e) {
-            rows.push(entered(p, "condition", &c.0, |s| s.clone()));
+            let mut row = entered(p, "condition", &c.0, |s| s.clone());
+            // An assembly less a line (taken off with remove-line) says so, so what it
+            // leaves out of the thing is not taken for part of it (call 167).
+            if let (Some(name), Some(cost)) = (c.0.value.as_deref(), w.get::<Cost>(e)) {
+                let lacking: Vec<String> = recipes.get(name).map(|r| r.cost.lines.iter().filter(|l| !cost.lines.iter().any(|h| h.description == l.description)).map(|l| format!("{:?}", l.description)).collect()).unwrap_or_default();
+                if !lacking.is_empty() {
+                    row.note = format!("without its {} {}", if lacking.len() == 1 { "line" } else { "lines" }, match lacking.as_slice() {
+                        [one] => one.clone(),
+                        [most @ .., last] => format!("{} and {last}", most.join(", ")),
+                        [] => String::new(),
+                    });
+                }
+            }
+            rows.push(row);
         }
         if let Some(c) = w.get::<Cost>(e) {
             rows.push(entered(p, "cost code", &c.code, |k| format!("{} {} {}", k.scheme, k.code, k.title)));
@@ -970,6 +988,29 @@ impl LumpLine {
     }
 }
 
+/// What a line's quantity is when it names no figure of the building and is more than
+/// nothing (call 167): a number, numbers worked together (`1 + 1`), or a count typed on the
+/// line as a measure (`4 EA`). None for any other, and for a quantity of 0.
+fn lump_quantity(line: &CostLine) -> Option<f64> {
+    use crate::formula::{self, Operand};
+    let expr = formula::parse(&line.quantity).ok()?;
+    // What the formula names has to be a count or a plain number entered on this line.
+    let counted = |name: &str| -> Result<Operand, String> {
+        match line.inputs.get(name) {
+            Some(v) if v.unit.is_empty() || v.unit == "EA" => match &v.value {
+                Some(crate::units::Len::One(x)) => Ok(Operand { value: Some(*x), dim: 0, status: v.status, shown: name.to_string() }),
+                _ => Err(format!("{name} has no figure")),
+            },
+            _ => Err(format!("{name} is a figure of the thing")),
+        }
+    };
+    let worked = formula::work(&expr, &counted).ok()?;
+    match worked.value {
+        Some(x) if worked.dim == 0 && x > 0.0 => Some(x),
+        _ => None,
+    }
+}
+
 /// Every such line, once, in the job's order. A thing is set in a room where it stands (its
 /// plan's middle is inside the room's outline, on the room's storey); it counts where it
 /// carries a line that is not switched off in the line's division. Nothing is taken off.
@@ -984,7 +1025,7 @@ pub fn lump_lines(job: &mut Job) -> Vec<LumpLine> {
         let (Some(node), Some(Kind::Room), Some(cost)) = (w.get::<Node>(e), w.get::<Kind>(e).copied(), w.get::<Cost>(e)) else { continue };
         let Some(outline) = outlines.get(&node.path) else { continue };
         for line in cost.lines.iter().filter(|l| !l.off) {
-            let (Some(division), Ok(crate::formula::Expr::Num(quantity))) = (line.division, crate::formula::parse(&line.quantity)) else { continue };
+            let (Some(division), Some(quantity)) = (line.division, lump_quantity(line)) else { continue };
             let things = drawn
                 .iter()
                 .filter(|p| matches!(p.kind, Kind::Furnishing | Kind::Equipment | Kind::Fixture) && p.storey.as_deref() == node.parent.as_deref())

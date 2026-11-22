@@ -395,11 +395,13 @@ impl Bearing {
             Bearing::NotBearing => "not bearing",
         }
     }
-    /// The word typed for it: the two words, in any capitals and spacing, and no other.
+    /// The word typed for it: the two words and the ways the trade writes them (load
+    /// bearing, load-bearing; non-bearing, nonbearing), in any capitals and spacing, and
+    /// no other. It is said back as its two words.
     pub fn read(word: &str) -> Result<Bearing, String> {
-        match word.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase().as_str() {
-            "bearing" => Ok(Bearing::Bearing),
-            "not bearing" => Ok(Bearing::NotBearing),
+        match word.replace('-', " ").split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase().as_str() {
+            "bearing" | "load bearing" => Ok(Bearing::Bearing),
+            "not bearing" | "non bearing" | "nonbearing" => Ok(Bearing::NotBearing),
             _ => Err(format!("{:?} is not a word for it: a wall is \"bearing\" or \"not bearing\"", word.trim())),
         }
     }

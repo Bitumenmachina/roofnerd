@@ -119,6 +119,9 @@ pub fn read(on: &On, line: &CostLine) -> Result<Read, String> {
             }
             let d = on.measure.and_then(|m| m.0.get(name.as_str()));
             let worked = formula::Worked { value: d.and_then(|d| d.value), dim: 0, status: d.map(|d| d.status).unwrap_or(Status::Unknown), text: name.clone() };
+            // A line bought by a length reads in LF, as the trades write it, whatever unit
+            // the figure it is taken from is shown in: a size (a width) is shown in ft (call 167).
+            let unit = if *unit == "ft" { "LF" } else { unit };
             return Ok(Read { expr, unit, worked, plain_measure: true });
         }
     }

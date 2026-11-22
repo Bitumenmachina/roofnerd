@@ -603,6 +603,10 @@ fn estimate_by_item(job: &mut plumbline_world::Job) -> String {
     let items = est.by_item();
     if items.is_empty() {
         out.push_str("\nNothing in this job has a cost line.\n");
+        // A bearing wall the work opens says what that needs, priced or not (call 167).
+        for (_, said) in plumbline_world::hidden::cautions(&mut job.world) {
+            let _ = writeln!(out, "  ! {said}");
+        }
         return out;
     }
     let on = est.lines.iter().filter(|l| !l.off).count();
@@ -651,6 +655,10 @@ fn estimate(job: &mut plumbline_world::Job) -> String {
     let mut out = String::from("flags:  ~ Assumed    ? Unknown    (no mark) Known\n");
     if est.lines.is_empty() && est.allowance_on.is_empty() {
         out.push_str("\nNothing in this job has a cost line.\n");
+        // A bearing wall the work opens says what that needs, priced or not (call 167).
+        for (_, said) in plumbline_world::hidden::cautions(&mut job.world) {
+            let _ = writeln!(out, "  ! {said}");
+        }
         return out;
     }
     let _ = writeln!(out, "\n{:<58}{:>14} {:>16} {:>13} {:>13} {:>13}", "THE SHEET", "priced", "at", "MATERIAL", "LABOR", "GENERAL");
@@ -1681,8 +1689,14 @@ fn run(args: &[String]) -> Result<(), String> {
             let (mut job, _) = read(path)?;
             // "60 SF": a measure typed outright, a value entered on the line (call 159). It
             // says how sure it is and where it came from, as every entered value does.
-            let typed_measure = plumbline_world::units::parse_measure(quantity).is_ok();
+            // What is typed as a number and a word is read as a measure, as estimators write
+            // one (1,200 SF, 60 sq ft, 24 ft); one that is not right is refused for what is
+            // wrong, with the units a measure takes (call 167).
+            let typed_measure = plumbline_world::units::looks_like_measure(quantity);
+            let mut typed_said = quantity.trim().to_string();
             if typed_measure {
+                let (x, unit) = plumbline_world::units::parse_measure_on_line(quantity)?;
+                typed_said = plumbline_world::units::show_length(&plumbline_world::Len::One(x), unit);
                 let status = match status.as_deref() {
                     Some("Known") => Status::Known,
                     Some("Assumed") => Status::Assumed,
@@ -1702,7 +1716,7 @@ fn run(args: &[String]) -> Result<(), String> {
             }
             job.derive();
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
-            say!("added to {element}: {description:?} = {}{}{}", if typed_measure { format!("{} ({}, {})", quantity.trim(), status.as_deref().unwrap_or_default(), source.as_deref().unwrap_or_default()) } else { quantity.to_string() }, if of_material { ", made of the element's material".to_string() } else { ", with no price yet".to_string() }, division.map(|d| format!("; {}", d.said())).unwrap_or_default());
+            say!("added to {element}: {description:?} = {}{}{}", if typed_measure { format!("{} ({}, {})", typed_said, status.as_deref().unwrap_or_default(), source.as_deref().unwrap_or_default()) } else { quantity.to_string() }, if of_material { ", made of the element's material".to_string() } else { ", with no price yet".to_string() }, division.map(|d| format!("; {}", d.said())).unwrap_or_default());
             Ok(())
         }
         // One cost line taken off a thing, with whatever was entered on it (call 166).
@@ -1786,7 +1800,7 @@ fn run(args: &[String]) -> Result<(), String> {
             job.derive();
             let came_off = view::came_off_said(&priced_before, &mut job);
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
-            say!("{element} is now {:?} and has gained {} cost lines:", job.shown(element, "condition", None).unwrap_or_default(), added.len());
+            say!("{element} is now {:?} and has gained {} cost {}:", job.shown(element, "condition", None).unwrap_or_default(), added.len(), if added.len() == 1 { "line" } else { "lines" });
             // On a thing that is existing or coming down these are not lines for building
             // it, and that is said where they go on (judged 2026-11-21).
             if let Some(w) = job.find(element).and_then(|e| job.world.get::<plumbline_world::components::Work>(e)).and_then(|w| w.status.value).filter(|w| matches!(w, plumbline_world::components::WorkStatus::Existing | plumbline_world::components::WorkStatus::Demolish)) {
@@ -1810,7 +1824,7 @@ fn run(args: &[String]) -> Result<(), String> {
             let [_, path, element, field, value, rest @ ..] = args else { return Err(usage()) };
             // A field is named by its words, joined or not: "unit cost" is unit_cost.
             let field = &field.trim().replace(' ', "_");
-            let said = view::words(field);
+            let said = view::words(&field.to_lowercase());
             let mut status = None;
             let mut source = None;
             let mut line = None;
@@ -1981,7 +1995,9 @@ fn show(job: &mut plumbline_world::Job, report: &file::LoadReport) -> String {
         }
         for r in &el.rows {
             let eq = if r.derived { "=" } else { " " };
-            let _ = writeln!(out, "{pad}    {eq} {} {:<16} {}", r.status.flag(), view::words(&r.label), r.text);
+            // An assembly less a line reads so: "Kitchen without its line "Cabinets"" (call 167).
+            let less = if r.label == "condition" && !r.derived && !r.note.is_empty() { format!(" {}", r.note) } else { String::new() };
+            let _ = writeln!(out, "{pad}    {eq} {} {:<16} {}{less}", r.status.flag(), view::words(&r.label), r.text);
         }
     }
     let (known, assumed, unknown) = view::tally(&elements);

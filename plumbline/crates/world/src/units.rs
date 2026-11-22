@@ -474,19 +474,77 @@ pub fn measure_dimension(unit: &str) -> Option<(i32, f64)> {
     }
 }
 
-/// Read a measure as typed: a number and one of LF, SF, SQ, CY or EA (`60 SF`, `2 CY`,
-/// `24 LF`), in any capitals. A number alone is a count and is not read here; a length
-/// in feet or inches is `parse_length`'s.
-pub fn parse_measure(text: &str) -> Result<(f64, &'static str), String> {
-    let typed = text.trim();
-    let split = typed.rfind(|c: char| c.is_ascii_digit() || c == '.').map(|i| i + 1).ok_or_else(|| format!("{typed:?} is not a measure; write a number and its unit, like 60 SF, 24 LF, 2 CY, 3 SQ or 4 EA"))?;
-    let (number, unit) = (typed[..split].trim(), typed[split..].trim());
-    let unit = MEASURE_UNITS.iter().find(|u| u.eq_ignore_ascii_case(unit)).ok_or_else(|| format!("{typed:?} is not a measure; write a number and its unit, like 60 SF, 24 LF, 2 CY, 3 SQ or 4 EA"))?;
-    let x = parse_number(number).map_err(|_| format!("{typed:?} is not a measure; write a number and its unit, like 60 SF, 24 LF, 2 CY, 3 SQ or 4 EA"))?;
-    if x < 0.0 {
-        return Err(format!("{typed:?} is below zero; a measure is zero or more"));
+/// The unit a measure's last word is, as estimators write it: sf, sq ft, sqft; lf, lin ft;
+/// sq, square, squares; cy, cu yd; ea, each; and, where a length typed on a line is a
+/// length of the line (`ft_is_lf`), ft. In any capitals, with or without stops.
+fn measure_unit_word(word: &str, ft_is_lf: bool) -> Option<&'static str> {
+    let said: String = word.to_lowercase().replace('.', " ").split_whitespace().collect::<Vec<_>>().join(" ");
+    match said.as_str() {
+        "sf" | "sq ft" | "sqft" => Some("SF"),
+        "lf" | "lin ft" | "linft" => Some("LF"),
+        "ft" if ft_is_lf => Some("LF"),
+        "sq" | "square" | "squares" => Some("SQ"),
+        "cy" | "cu yd" | "cuyd" => Some("CY"),
+        "ea" | "each" => Some("EA"),
+        _ => None,
     }
-    Ok((x, unit))
+}
+
+/// What a typed measure is refused with when it is not one: the units it takes.
+fn not_a_measure(typed: &str) -> String {
+    format!("{typed:?} is not a measure; a measure is a number and one of {}, like 60 SF, 24 LF, 2 CY, 3 SQ or 4 EA", MEASURE_UNITS.join(", "))
+}
+
+/// Read what is typed as a measure, where it is one: a number (with a comma for the
+/// thousands, `1,200`) and a unit as estimators write it. None when it is not a number
+/// and a unit at all; Some(Err) when it is one and is not right (below zero, a comma
+/// that is no thousands mark); `ft_is_lf` reads "ft" as LF, for a length typed on a line.
+pub fn read_measure(text: &str, ft_is_lf: bool) -> Option<Result<(f64, &'static str), String>> {
+    let typed = text.trim();
+    let split = typed.rfind(|c: char| c.is_ascii_digit())? + 1;
+    let (number, unit) = (typed[..split].trim(), typed[split..].trim());
+    let unit = measure_unit_word(unit, ft_is_lf)?;
+    let plain = if number.contains(',') {
+        if !commas_part_thousands(number) {
+            return Some(Err(format!("{typed:?} has a comma that is not a thousands mark; write 1,200 or 1200, and a part of a unit with a point")));
+        }
+        number.replace(',', "")
+    } else {
+        number.to_string()
+    };
+    let x = match parse_number(&plain) {
+        Ok(x) => x,
+        Err(_) => return Some(Err(not_a_measure(typed))),
+    };
+    if x < 0.0 {
+        return Some(Err(format!("{typed:?} is below zero; a measure is zero or more")));
+    }
+    Some(Ok((x, unit)))
+}
+
+/// Read a measure as typed: a number and one of LF, SF, SQ, CY or EA (`60 SF`, `2 CY`,
+/// `24 LF`, `1,200 SF`, `60 sq ft`), in any capitals. A number alone is a count and is not
+/// read here; a length in feet or inches is `parse_length`'s.
+pub fn parse_measure(text: &str) -> Result<(f64, &'static str), String> {
+    read_measure(text, false).unwrap_or_else(|| Err(not_a_measure(text.trim())))
+}
+
+/// As `parse_measure`, for a figure typed on a line to be bought by (a length is LF).
+pub fn parse_measure_on_line(text: &str) -> Result<(f64, &'static str), String> {
+    read_measure(text, true).unwrap_or_else(|| Err(not_a_measure(text.trim())))
+}
+
+/// Does what is typed as a quantity look like a measure someone meant to write, a number
+/// and then words (`60 boards`, `-3 SF`, `24 ft`), and so is to be read as one or refused
+/// with the units a measure takes? A formula has an operator or a name of its own.
+pub fn looks_like_measure(text: &str) -> bool {
+    let t = text.trim();
+    let digits_then_words = |t: &str| {
+        let split = t.find(|c: char| !(c.is_ascii_digit() || c == ',' || c == '.' || c == ' ')).unwrap_or(t.len());
+        let (number, words) = (&t[..split], &t[split..]);
+        number.chars().any(|c| c.is_ascii_digit()) && !words.is_empty() && words.chars().all(|c| c.is_ascii_alphabetic() || c == '.' || c == ' ') && words.chars().any(|c| c.is_ascii_alphabetic())
+    };
+    digits_then_words(t.strip_prefix('-').unwrap_or(t).trim_start())
 }
 
 /// Read a pitch as typed: rise in inches for 12 of run. `6`, `6:12`, `6/12`, `6 in/12`,

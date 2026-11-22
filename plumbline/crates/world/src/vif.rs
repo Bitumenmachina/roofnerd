@@ -98,6 +98,25 @@ struct Line {
     /// How sure its quantity is: what a measurement can make surer.
     quantity: Status,
     rests: BTreeSet<String>,
+    /// Its quantity is worked from a measure typed on the line that is not Known: a tape
+    /// on the building settles it (call 167).
+    typed: bool,
+}
+
+/// A measure typed on a cost line (a value entered in LF, SF, SQ, CY or EA, and named by
+/// the line's formula) that is not Known: what to measure, as the list names it, and how
+/// sure it is. An assembly's rule values (a strip's width, a swell) are not in these
+/// units and are the estimator's allowances, not a question of the site.
+fn typed_unsure(line: &crate::CostLine) -> Option<(String, Status)> {
+    let names = formula::parse(&line.quantity).map(|e| formula::names(&e)).unwrap_or_default();
+    let mut unsure: Vec<(&String, &crate::Val<crate::units::Len>)> = line.inputs.iter().filter(|(n, v)| names.contains(n) && crate::units::is_measure_unit(&v.unit) && v.status != Status::Known).collect();
+    unsure.sort_by(|a, b| a.0.cmp(b.0));
+    let (_, v) = unsure.first()?;
+    let typed = match &v.value {
+        Some(len) => crate::units::show_length(len, &v.unit),
+        None => "no figure yet".to_string(),
+    };
+    Some((format!("\"{}\" ({typed})", line.description), v.status))
 }
 
 pub fn vif(job: &mut Job) -> Vif {
@@ -140,6 +159,7 @@ pub fn vif(job: &mut Job) -> Vif {
         let Some(e) = job.find(&sheet.path) else { continue };
         let mut rests = BTreeSet::new();
         let formula = job.world.get::<Cost>(e).and_then(|c| c.lines.iter().find(|l| l.description == sheet.description)).map(|l| l.quantity.clone());
+        let typed = job.world.get::<Cost>(e).and_then(|c| c.lines.iter().find(|l| l.description == sheet.description)).is_some_and(|l| typed_unsure(l).is_some());
         if let (Some(Ok(expr)), Some(measure)) = (formula.map(|f| formula::parse(&f)), job.world.get::<Measure>(e)) {
             for name in formula::names(&expr) {
                 if let Some(d) = measure.0.get(&name) {
@@ -160,7 +180,7 @@ pub fn vif(job: &mut Job) -> Vif {
         for drawing in rests.iter().filter_map(|p| traced_over.get(p)).cloned().collect::<Vec<_>>() {
             rests.insert(drawing);
         }
-        lines.push(Line { key: (sheet.path.clone(), sheet.description.clone()), on: sheet.path.clone(), amount, status: if amount.is_some() { sheet.amount.status } else { sheet.priced.status }, quantity: sheet.quantity.status, rests });
+        lines.push(Line { key: (sheet.path.clone(), sheet.description.clone()), on: sheet.path.clone(), amount, status: if amount.is_some() { sheet.amount.status } else { sheet.priced.status }, quantity: sheet.quantity.status, rests, typed });
     }
     // What is carried as an allowance (a thing priced by an allowance and by no cost
     // line) rides as a line does: it is an area or a length times a rate, and where
@@ -188,7 +208,7 @@ pub fn vif(job: &mut Job) -> Vif {
         for drawing in rests.iter().filter_map(|p| traced_over.get(p)).cloned().collect::<Vec<_>>() {
             rests.insert(drawing);
         }
-        lines.push(Line { key: (path.clone(), "its allowance".to_string()), on: path.clone(), amount: d.value, status: d.status, quantity, rests });
+        lines.push(Line { key: (path.clone(), "its allowance".to_string()), on: path.clone(), amount: d.value, status: d.status, quantity, rests, typed: false });
     }
     let cents = crate::lines::cents;
     let sum = |picked: &[&Line]| -> (Option<f64>, Status, usize, usize) {
@@ -260,7 +280,13 @@ pub fn vif(job: &mut Job) -> Vif {
         let is_hidden = |l: &String| l == crate::hidden::BEARING || l == crate::hidden::IN_THE_WALL;
         let asked_hidden: Vec<String> = if opened.contains_key(&el.path) { labels.iter().filter(|l| is_hidden(l)).cloned().collect() } else { Vec::new() };
         labels.retain(|l| !is_hidden(l));
-        if labels.is_empty() && asked_hidden.is_empty() {
+        // A measure typed on a line that is not Known is a measurement of the building,
+        // and a field question under its thing, by the line and what was typed (call 167).
+        let typed: Vec<(String, Status)> = match job.find(&el.path) {
+            Some(e) => job.world.get::<Cost>(e).map(|c| c.lines.iter().filter_map(typed_unsure).collect()).unwrap_or_default(),
+            None => Vec::new(),
+        };
+        if labels.is_empty() && asked_hidden.is_empty() && typed.is_empty() {
             continue;
         }
         let values: Vec<(String, Status, bool)> = crate::editing::takes_among(job, &el.path, &labels)
@@ -274,7 +300,7 @@ pub fn vif(job: &mut Job) -> Vif {
         // before the next step adds values that are not of that kind.
         let identity = values.iter().any(|v| !v.2) || !asked_hidden.is_empty();
         let mut values = values;
-        if values.is_empty() && asked_hidden.is_empty() {
+        if values.is_empty() && asked_hidden.is_empty() && typed.is_empty() {
             // Nothing on it is a value `measure` takes, but priced lines whose quantity
             // is in question rest on it. It is a question all the same, to be checked,
             // and their dollars ride on it: left off, an estimator sorting his field
@@ -297,6 +323,10 @@ pub fn vif(job: &mut Job) -> Vif {
                 continue;
             }
         }
+        // What was typed on a line to measure: that line's dollars ride on it.
+        for (label, status) in &typed {
+            values.push((label.clone(), *status, true));
+        }
         // Everything priced on the wall rides on what it is, as on what any thing is.
         for label in &asked_hidden {
             let status = el.rows.iter().find(|r| r.label == *label).map(|r| r.status).unwrap_or(Status::Unknown);
@@ -310,7 +340,7 @@ pub fn vif(job: &mut Job) -> Vif {
         // What rides on a measurement is a line whose quantity is itself in question:
         // a line of a Known length at an Assumed price is not made surer by a tape,
         // and its dollars do not send anyone to measure (call 83, M21-2).
-        let picked: Vec<&Line> = lines.iter().filter(|l| (l.quantity != Status::Known && l.rests.contains(&el.path)) || (identity && l.on == el.path)).collect();
+        let picked: Vec<&Line> = lines.iter().filter(|l| (l.quantity != Status::Known && l.rests.contains(&el.path)) || (identity && l.on == el.path) || (l.typed && l.on == el.path)).collect();
         counted.extend(picked.iter().map(|l| l.key.clone()));
         let (dollars, dollars_status, n, unpriced) = sum(&picked);
         place(Question { path: el.path.clone(), name: el.name.clone(), kind: el.kind, storey: storey_name(&el.path, el.kind), room: None, clash: None, in_the_way: None, values, dollars, dollars_status, lines: n, unpriced }, &mut with, &mut without);
@@ -425,6 +455,8 @@ impl Question {
                     n if n == crate::hidden::BEARING => "whether it is bearing".to_string(),
                     n if n == crate::hidden::IN_THE_WALL => "what is in the wall".to_string(),
                     n if n.starts_with("what ") => n.to_string(),
+                    // A measure typed on a line: the line and what was typed, as they read.
+                    n if n.starts_with('"') => n.to_string(),
                     // A room is kept by a point inside it: on site that is where it is.
                     "a point inside it" => "where it is".to_string(),
                     n => format!("its {}", n.replace('_', " ")),

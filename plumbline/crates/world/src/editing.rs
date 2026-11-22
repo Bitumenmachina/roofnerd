@@ -516,8 +516,25 @@ pub fn item_trade(job: &mut Job, item: &str, division: Option<crate::components:
 pub fn place_item(job: &mut Job, storey: &str, item: &str, at: P2, offset: &str, how: Entered) -> Result<String, String> {
     all_or_nothing(job, |job| {
         let offset = how.length(offset)?;
-        place_item_in(job, storey, item, at, offset, how)
+        let item = item_by_name(job, item)?;
+        place_item_in(job, storey, &item, at, offset, how)
     })
+}
+
+/// An item by its number, or by its name in any capitals (call 167). Two items of one name are
+/// refused with both; what names no item is left as typed, for the caller to refuse.
+fn item_by_name(job: &mut Job, typed: &str) -> Result<String, String> {
+    let mut q = job.world.query::<(&Node, &Item)>();
+    let mut named: Vec<(String, String)> = q.iter(&job.world).filter(|(n, _)| n.path == typed || n.name.eq_ignore_ascii_case(typed.trim())).map(|(n, _)| (n.path.clone(), n.name.clone())).collect();
+    named.sort();
+    if let Some(one) = named.iter().find(|(path, _)| path == typed) {
+        return Ok(one.0.clone());
+    }
+    match named.as_slice() {
+        [] => Ok(typed.to_string()),
+        [(path, _)] => Ok(path.clone()),
+        many => Err(format!("{} items are called {:?}: {}; give the one to set down by its number", many.len(), typed.trim(), many.iter().map(|(path, name)| format!("{name} ({path})")).collect::<Vec<_>>().join(", "))),
+    }
 }
 
 /// One of an item set down, within a change that is all or nothing already.
@@ -1144,6 +1161,7 @@ pub fn price_item(job: &mut Job, item: &str, price: &str, status: Status, source
             let mut q = job.world.query::<(&Node, &Placed)>();
             q.iter(&job.world).filter(|(_, p)| p.item.is_none() && p.what.value.as_deref().is_some_and(|w| w.eq_ignore_ascii_case(item.trim()))).map(|(n, _)| (n.path.rsplit('-').next().and_then(|x| x.parse().ok()).unwrap_or(u64::MAX), n.path.clone())).collect()
         };
+        let found_by_what = found.is_empty() && !by_what.is_empty();
         let (name, set): (String, Vec<String>) = match found.into_iter().min() {
             Some((_, path, name)) => {
                 let mut q = job.world.query::<(&Node, &Placed)>();
@@ -1159,10 +1177,31 @@ pub fn price_item(job: &mut Job, item: &str, price: &str, status: Status, source
             }
             None => return Err(format!("{item} is not an item of this job: price takes an item's name, like B18")),
         };
+        // A countertop is bought by the LF of its front edge (its width) or by the SF of its
+        // top (its plan area): a price that says which puts the line on that figure; one that
+        // says another unit is refused with the two it takes (call 167).
+        let countertop = found_by_what;
+        let figure: Option<&str> = match (countertop, price.rsplit_once('/')) {
+            (true, Some((_, per))) => match per.trim().to_uppercase().as_str() {
+                "LF" => Some("width"),
+                "SF" => Some("plan_area"),
+                _ => return Err(format!("{price:?} is a price per {}, and a countertop is priced by the LF of its front edge or by the SF of its top: write it like $80/LF or $62/SF", per.trim())),
+            },
+            _ => None,
+        };
         let (mut priced, mut without) = (Vec::new(), Vec::new());
         for thing in set {
             let has = job.find(&thing).and_then(|e| job.world.get::<Cost>(e)).is_some_and(|c| c.lines.iter().any(|l| l.description == name));
             if has {
+                if let Some(figure) = figure {
+                    let on = job.find(&thing).and_then(|e| job.world.get::<Cost>(e)).and_then(|c| c.lines.iter().find(|l| l.description == name)).map(|l| l.quantity.clone());
+                    if on.as_deref() != Some(figure) {
+                        // A price does not carry from one unit to another: it is cleared, the
+                        // line is put on the figure, and the price is entered in its unit.
+                        job.set_on_line(&thing, "unit_cost", Some(&name), None, Status::Unknown, "the line changed units")?;
+                        job.set_formula(&thing, Some(&name), figure, &[], status, source)?;
+                    }
+                }
                 job.set_on_line(&thing, "unit_cost", Some(&name), Some(price), status, source)?;
                 priced.push(thing);
             } else {
@@ -1510,8 +1549,25 @@ pub fn mark(job: &mut Job, paths: &[String], status: WorkStatus, lines: ItsLines
         }
         // A wall that comes down may be bearing and may have pipes and wiring in it: not
         // seen until it is opened. Both are asked in the field (call 160).
-        if status == WorkStatus::Demolish && paths.iter().any(|p| job.kind(p) == Some(Kind::Wall)) {
-            said.push("Is it bearing, and what is in it? Both are on the field list.".to_string());
+        // Only what has not been said is asked: a wall whose bearing was said is not asked
+        // that again (call 167).
+        if status == WorkStatus::Demolish {
+            let (mut bearing, mut inside) = (false, false);
+            for p in paths {
+                if job.kind(p) != Some(Kind::Wall) {
+                    continue;
+                }
+                let found = job.find(p);
+                let said_of = found.and_then(|e| job.world.get::<Hidden>(e)).cloned();
+                bearing |= said_of.as_ref().and_then(|h| h.bearing.as_ref()).is_none_or(|b| b.value.is_none());
+                inside |= said_of.as_ref().and_then(|h| h.in_the_wall.as_ref()).is_none_or(|b| b.value.is_none());
+            }
+            match (bearing, inside) {
+                (true, true) => said.push("Is it bearing, and what is in it? Both are on the field list.".to_string()),
+                (true, false) => said.push("Is it bearing? That is on the field list.".to_string()),
+                (false, true) => said.push("What is in it? That is on the field list.".to_string()),
+                (false, false) => {}
+            }
         }
         Ok(said)
     })

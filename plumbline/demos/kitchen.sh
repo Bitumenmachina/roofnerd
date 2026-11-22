@@ -85,7 +85,20 @@ says "$T/runb.txt" "6.375 SF, front edge 3 LF; one line, Countertop, by its area
 lacks "$T/runb.txt" "the leg that turns the corner"
 
 echo
-echo "== 5. One price on every countertop: 17 x \$62 = \$1,054.00 and 6.375 x \$62 = \$395.25 =="
+echo "== 5. A countertop by the LF of its front edge, then one price on every countertop by its area =="
+# By the LF first (call 167): A has 8 ft of front edge and B 3 ft, so 8 x $80 = $640.00 and
+# 3 x $80 = $240.00, each line read in LF. A price per any other unit is refused with the two it takes.
+cp "$J" "$T/before.json"
+refused "$P" price-item "$J" Countertop '$5/EA' --status Assumed --source "made-up quote"
+says "$T/out.txt" "a countertop is priced by the LF of its front edge or by the SF of its top"
+cmp -s "$J" "$T/before.json" || { echo "FAIL: a refused price-item changed the file"; exit 1; }
+"$P" price-item "$J" Countertop '$80/LF' --status Assumed --source "made-up quote" > "$T/out.txt"
+says "$T/out.txt" "priced 2 Countertop at \$80/LF (Assumed): $TOPA, $TOPB"
+est
+says "$T/est1.txt" "Countertop ~8.00 LF ~\$80.00/LF ~\$640.00"
+says "$T/est1.txt" "Countertop ~3.00 LF ~\$80.00/LF ~\$240.00"
+lacks "$T/est.txt" "/ft"
+echo "-- and back to the area: 17 x \$62 = \$1,054.00 and 6.375 x \$62 = \$395.25 --"
 "$P" price-item "$J" Countertop '$62/SF' --status Assumed --source "made-up quote" > "$T/out.txt"
 says "$T/out.txt" "priced 2 Countertop at \$62/SF (Assumed): $TOPA, $TOPB"
 est
@@ -133,6 +146,41 @@ says "$T/took.txt" "took \"Cabinets\" off $R: 1 EA, with no price on it"
 "$P" estimate "$T/nocab.json" > "$T/nocab-est.txt"
 lacks "$T/nocab-est.txt" "Kitchen's line \"Cabinets\""
 says "$T/nocab-est.txt" "$TOPS 10 things"
+# With a line off, the assembly reads less it; put on again, it adds that line back and no other; put
+# on a third time it says the room has every line of it (call 167).
+"$P" show "$T/nocab.json" | sed -n "/^ *$R  /,/^ *[a-z]*-[0-9]*  /p" > "$T/nocab-room.txt"
+says "$T/nocab-room.txt" "condition        Kitchen without its line \"Cabinets\""
+"$P" apply "$T/nocab.json" "$R" "Kitchen" --source "the starter library" > "$T/again.txt"
+says "$T/again.txt" "$R is now \"Kitchen\" and has gained 1 cost line:"
+says "$T/again.txt" "  Cabinets"
+lacks "$T/again.txt" "Hardwood flooring"
+lacks "$T/again.txt" "Countertops"
+"$P" show "$T/nocab.json" | sed -n "/^ *$R  /,/^ *[a-z]*-[0-9]*  /p" > "$T/nocab-room.txt"
+lacks "$T/nocab-room.txt" "without its line"
+"$P" estimate "$T/nocab.json" > "$T/nocab-est.txt"
+says "$T/nocab-est.txt" "$CAB 10 things"
+cp "$T/nocab.json" "$T/whole.json"
+refused "$P" apply "$T/nocab.json" "$R" "Kitchen" --source "the starter library"
+says "$T/out.txt" "$R is already \"Kitchen\" and has every line of it"
+cmp -s "$T/nocab.json" "$T/whole.json" || { echo "FAIL: a refused apply changed the file"; exit 1; }
+
+# A lump line is one whose quantity names no figure and is more than nothing: numbers worked together
+# and a count typed as a measure are lumps; a quantity of 0 is not (on a copy).
+cp "$J" "$T/lump.json"
+"$P" line "$T/lump.json" "$R" "Hardware" "1 + 1" --division 12 >/dev/null
+"$P" line "$T/lump.json" "$R" "Handles" "4 EA" --status Assumed --source "made-up count" --division 12 >/dev/null
+"$P" line "$T/lump.json" "$R" "Nothing at all" "0" --division 12 >/dev/null
+"$P" estimate "$T/lump.json" > "$T/lump-est.txt"
+says "$T/lump-est.txt" "Kitchen's line \"Hardware\" (2 EA, 12 Furnishings) is in the price beside the lines of 10 things set in Kitchen in that division"
+says "$T/lump-est.txt" "Kitchen's line \"Handles\" (4 EA, 12 Furnishings) is in the price beside the lines of 10 things set in Kitchen in that division"
+lacks "$T/lump-est.txt" "Kitchen's line \"Nothing at all\""
+
+# `place` takes an item by its name, in any capitals, as well as by its number (call 167). On a copy.
+cp "$J" "$T/placed.json"
+"$P" place "$T/placed.json" "$S" B36 --at "6,8" --status Assumed --source "made-up layout" > "$T/out.txt"
+says "$T/out.txt" ": one of B36, 3' 0\" wide"
+"$P" place "$T/placed.json" "$S" b36 --at "6,10" --status Assumed --source "made-up layout" > "$T/out.txt"
+says "$T/out.txt" ": one of b36, 3' 0\" wide"
 
 echo
 echo "== 7. Run B marked to demolish: LS36 still covers 3 ft of the south wall; the base is 51 - 8 - 3 = 40 LF =="
@@ -146,4 +194,4 @@ says "$T/show.txt" "Kitchen base run: 40 LF (less 11 ft behind 3 things set agai
 says "$T/check.txt" "its figures agree with what is drawn, and saving it back writes the same file"
 
 echo
-echo "  PASS: base ran 51 LF with nothing set and 37 LF behind five things covering 14 ft, still 37 with wall boxes hung, 40 with run B taken down; the countertops came to 17 SF with the leg over the corner box said and 6.375 SF, priced at \$62 together \$1,449.25; the lump lines Cabinets and Countertops were said to be in the price beside the things set in the room, and Kitchen appliances only where a dishwasher is, to the figures worked by hand"
+echo "  PASS: base ran 51 LF with nothing set and 37 LF behind five things covering 14 ft, still 37 with wall boxes hung, 40 with run B taken down; the countertops came to 17 SF with the leg over the corner box said and 6.375 SF, priced at \$62 together \$1,449.25; the countertops by the LF of their front edge came to \$640.00 and \$240.00 and back by their area; the lump lines Cabinets and Countertops were said to be in the price beside the things set in the room, and Kitchen appliances only where a dishwasher is, a line of 1 + 1 or 4 EA too and one of 0 not; the Kitchen assembly less a line said so and was made whole; place took B36 by its name, to the figures worked by hand"
