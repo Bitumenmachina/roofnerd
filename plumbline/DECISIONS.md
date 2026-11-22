@@ -6010,3 +6010,109 @@ a figure out, each is the model's.
 
 Each is proved by a window demonstration that does it the way a stranger would, checked
 in what the window said and, where it is something seen, on the picture.
+
+### Call 172. What the program is for, in Patrick's words, and the order of work turned to it (2026-11-22)
+
+Patrick, 2026-11-22, asked what was done, why it had stopped, and whether the builder
+was "building what you think is easy what is known vs making the first 3d first
+renovation oriented platform that allows pdf, model or lidar integestion that every
+person can use for free so knowledge is no longer lost or mid translated"; and whether
+what is known in building and in technology had been used and refined "to work smarter,
+more in tune with field users".
+
+**The purpose, as ruled.** The first 3D-first, renovation-first platform. It takes in
+what a person already has (a PDF, a model, a LiDAR scan) and gives back the house in
+3D, priced, with what must be checked in the field. Free, for every person. What a
+tradesman knows is kept in it and reaches the next person without being lost or said
+wrong on the way.
+
+**What the answer to his question was, written down so the next builder does not repeat
+it.** The model underneath is right for that purpose and is the hard part done: every
+value Known, Assumed or Unknown with its source; existing, to demolish, new; what is
+hidden in a wall asked before it is opened; clashes as field questions sorted by
+dollars; sixteen divisions priced. But three things were built the easy way:
+
+1. **Taking in.** A scan is cut into a picture and traced by hand. A PDF is calibrated
+   and traced by hand, snapping to its lines. PROPOSALS.md 32 put "walls and rooms found
+   in the scan without tracing" last, as research, "not to be started before 1 and 2
+   are used on a real house", and recorded Patrick as content to trace. That was the
+   builder choosing what a machine with no screen could prove. Finding flat faces in
+   points is known work, and the program's own rule (it arrives Assumed, sourced, and is
+   checked one by one) is exactly what makes a rough find safe to use.
+2. **Proof.** Most judging went to the command line, because it is quick to check here.
+   The window a person uses has trailed the arithmetic since the eighteenth judgment.
+3. **Reach.** "Every person, for free" has an install line for Linux and nothing else,
+   and the window has never run on a real graphics card.
+
+**The order of work from here** (this goes ahead of the smaller open items; calls 169
+and 171 and the held patch of 164, 165, 168 and 170 are finished and landed first, as
+they are already built or in hand):
+
+1. **Walls, openings and rooms found in a scan** (call 173), at the command line, then
+   in the window as the first thing a scan offers when it is brought in.
+2. **Walls found on a drawn PDF** the same way: the lines are already read to snap to;
+   pairs of long parallel lines a wall's thickness apart are offered as walls, Assumed,
+   sourced to the sheet (a call of its own, written when 1 is in hand).
+3. **The scan seen in 3D with the house built inside it**, so a person sees what was
+   found against what was scanned, and a thing that was missed.
+4. **A mesh from the phone** (GLB or OBJ) read as a scan is, since that is what most
+   people will export first.
+5. **Reach**: a program a person downloads and opens on Windows, macOS and Linux with
+   no build; the first job walked on a machine with a graphics card.
+6. **What a tradesman knows, kept**: the item and assembly tables as files a person
+   reads, changes and hands on (PROPOSALS 24, 30), and each division's harness (calls
+   75, 76).
+
+Nothing in the fixed rules moves. What is found by the program is Assumed, never Known.
+
+### Call 173. Walls, openings and rooms found in a scan (2026-11-22; call 172's first)
+
+A scan already brought in as a sheet (call 128) can be read for its walls. What is found
+is offered, said in full, and laid only on the person's word. The finding is geometry in
+`crates/plans`; laying uses the wall, door and window the model already has. One
+arithmetic: the floor, the ceiling and the levelling are the ones call 128 already
+works out.
+
+**What a wall is, in a scan.** A flat upright face at least 2 ft long whose points run
+from near the floor to near the ceiling (within 6 in of each, over its length, but for
+its openings). An upright face that stops short of the ceiling is something standing in
+the room (a cabinet, a sofa) and is **not** a wall: it is counted and said, with the
+height of the tallest, never dropped without a word. With no ceiling in the scan a wall
+cannot be told from a tall cabinet: nothing is found, and that is said.
+
+**Two faces make a wall.** Two faces parallel within 1 degree, 2 in to 16 in apart,
+alongside one another, are the two sides of one wall: its centre lies between them and
+its thickness is the distance between them, Assumed, source the scan. A face with no
+partner is a wall **seen from one side** (an outside wall scanned from indoors): the
+scan does not give its thickness. It is laid only where the person names the wall it is
+(`--outside <a wall type>`), with the seen face on the scan's face and the type's
+thickness; where no type is named it is said and not laid.
+
+**Square.** Faces within 1 degree of the scan's two main directions are taken as square
+to them, and how many is said. The house is laid as the scan lies on its sheet; it is
+not turned to the page.
+
+**Corners.** A found wall is carried to meet another where its end comes within 1 ft of
+the other's line, so that rooms close.
+
+**Openings.** A stretch of a found wall at least 1 ft 6 in long with no points between
+two heights is an opening. Clear from the floor up to a head: a doorway (the scan cannot
+tell a door from an open doorway, and says so); it is laid as a door of that width and
+head. Clear from a sill up to a head: a window, with its width, sill and head. Each
+size is Assumed, source the scan, to the nearest inch. **Not seen is not open:** where
+something stands in front of the stretch (within 3 ft, on the scanned side) the wall
+behind is hidden, not opened: it is laid as wall and the stretch is said ("not seen for
+9' 0\" behind what stands at it: taken as wall, to be checked").
+
+**What is said.** Each wall found (where, how long, how thick or "seen from one side");
+each opening; what was squared; what stood short and was not a wall; what was hidden
+and taken as wall; and what was laid or not laid, and why. Everything laid is Assumed,
+its source "found in scan <name>". Nothing is Known. Laying a second time from the same
+scan onto the same level is refused.
+
+**How near** (the demonstration's test, on a made-up scan with 1.5 cm of scatter, strays
+and half a degree of lean): a face within 1 in; a thickness within 1/2 in; an opening's
+sides, sill and head within 2 in.
+
+The window's half (the offer on the card when a scan is brought in; the found walls
+shown before they are laid) is a call of its own once this is judged.

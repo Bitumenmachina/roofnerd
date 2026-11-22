@@ -8682,6 +8682,81 @@ joist figures' note shows from the command line only when the figure is flagged;
 judged. Run so far, by the worker: 514 tests on every crate but the window's, all 37
 command-line demonstrations, the gates, the port map (287 items), the licences.
 
+## Walls found in a scan: a demonstration, written before it is built (call 173; 2026-11-22)
+
+`demos/found.sh`, at the command line, from an empty job. The scan is made up
+(`tools/made-up-scan.py --rough --as-scanned`, a new flag: the rough two-room house of
+`demos/scan.sh` with two things a real scan has and the made-up one lacked). No real
+scan is in the repository.
+
+**The house as made** (feet; zero at the southwest inside corner): inside 30 by 20, 8
+high. The four outside walls are seen from indoors only: one face each, at east 0 and
+30, north 0 and 20. A partition with **two faces**, at east 18 ft less 2 1/4 in and 18 ft
+plus 2 1/4 in (4 1/2 in apart: a 2x4 with 1/2 in board each side), with a doorway from 9
+to 12 ft north, clear from the floor to 6.67 ft (6 ft 8 in). A window in the south wall
+from 8 to 13 ft east, clear from 3 ft to 7 ft. Tall cabinets against the north wall from
+20 to 29 ft east, 2 ft deep, 7 ft high, and **the north wall behind them not seen** below
+7 ft. A table 2 ft 6 in high and a sofa 3 ft high. Scatter 1.5 cm, one point in fifty a
+stray, the scan leaning half a degree.
+
+**Step 1. Found, nothing laid.** The scan is brought in on a level 8 ft high and its
+walls asked for. By hand it must say:
+
+| What | By hand | How near |
+|---|---|---|
+| walls found | 5 | exactly |
+| of them seen from one side | 4 (the outside walls) | exactly |
+| the partition's centre | 18 ft 0 in east | 1 in |
+| the partition's thickness | 4 1/2 in | 1/2 in |
+| the partition's length | 20 ft 0 in | 2 in |
+| doorway in the partition | 9 ft 0 in to 12 ft 0 in north: 3 ft 0 in wide, head 6 ft 8 in | 2 in each |
+| window in the south wall | 8 ft 0 in to 13 ft 0 in east: 5 ft 0 in wide, sill 3 ft 0 in, head 7 ft 0 in | 2 in each |
+| stood short, not walls | 3 things (the cabinets, the sofa, the table); the tallest 7 ft 0 in | count exactly; 2 in |
+| hidden, taken as wall | the north wall, 9 ft 0 in (20 to 29 ft east) | 4 in |
+| squared | all 6 faces (4 outside, 2 of the partition) | exactly |
+| laid | nothing; and it says the four outside walls need a wall named | |
+
+The job holds no wall after this step (`walls` lists none).
+
+**Step 2. Laid, with the outside wall named.** A wall type "Existing outside wall", 6
+in, is made and named as the outside wall; the find is laid. Then:
+
+- 5 walls, each Assumed, its source "found in scan" and the scan's name; none Known.
+- The partition's type is one the program made for it, 4 1/2 in (within 1/2 in),
+  Assumed, source the scan.
+- 1 door on the partition, 3 ft 0 in wide and 6 ft 8 in high (2 in); 1 window on the
+  south wall, 5 ft 0 in wide, 4 ft 0 in high, its sill at 3 ft 0 in (2 in each).
+- The north wall is one wall from corner to corner (no opening where the cabinets
+  stand), and what was said in step 1 about the 9 ft not seen is said again.
+- **Rooms** (the program's own room finding, from the walls laid): 2.
+  West room: (18 ft less 2 1/4 in) by 20 ft = 17.8125 x 20 = **356.25 SF**.
+  East room: (30 ft less 18 ft 2 1/4 in) by 20 ft = 11.8125 x 20 = **236.25 SF**.
+  Together 592.5 SF = 30 x 20 less the partition's 0.375 x 20 = 7.5 SF. Each within 4 SF
+  (a face 1 in out over 20 ft is 1.7 SF).
+- The outside walls stand with their inside faces on the scan's faces: the house
+  measured over the outside is 31 ft 0 in by 21 ft 0 in (30 and 20 plus two 6 in walls),
+  within 2 in.
+- `check` passes.
+
+**Step 3. Refusals and what is said.**
+- Laid a second time from the same scan on the same level: refused, and nothing changes
+  (the job's file is byte for byte the same).
+- Laid with no outside wall named: the partition, its door and nothing else is laid, and
+  it says 4 walls seen from one side were not laid and how to lay them.
+- A scan with no ceiling (the same house with its ceiling's points and everything above
+  7 ft 6 in left out, flag `--no-ceiling`): nothing found, and it says walls cannot be
+  told from what stands in the room without a ceiling.
+
+**Step 4. The same house turned.** The scan turned 17 degrees about its southwest corner
+(flag `--turned 17`): the same 5 walls, 1 doorway, 1 window, 3 things stood short and 9
+ft hidden are found; laid, the two rooms are 356.25 SF and 236.25 SF within 4 SF each;
+the walls lie as the scan lies (the south wall's line is 17 degrees off the sheet's
+east, within half a degree).
+
+**What the made-up scan with the old flags must still be:** `--rough` alone, and the
+room alone, write the same files as before, byte for byte (`demos/scan.sh` and
+`demos/scanw.sh` rest on them).
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
