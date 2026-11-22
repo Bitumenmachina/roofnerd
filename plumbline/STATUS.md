@@ -8566,6 +8566,42 @@ The builder's own list of what was not right was confirmed line by line. `TRY-IT
 was corrected the same hour: step 2 says one wall at a time until call 169 is in, step 4
 says where a run starts, step 5 says the addition is drawn again to change it.
 
+## Call 170 built and held: a wall moved, and the walls that meet it follow (2026-11-22; a worker under contract, in a second working copy; read and run by the lead; **not yet in the tree**)
+
+Built apart from the main tree (the window's worker had it), as a patch
+(`editing/stretch.rs`, the `move` verb's `--alone`, `demos/stretch.sh`, 13 tests). It is
+held until the window work of call 169 is in, so the program does not change under that
+worker's timed runs, and is applied, run on the whole workspace and committed then.
+
+**What BIMCraft does at a joint was read first** (`relocate`, `commands.rs:11767`): an
+end on a moved wall's end goes with it; an end on its span slides along its own line; a
+moved wall's end on a wall that stays slides along that wall; a door or window keeps its
+place in the house. Rules 1, 3 and 4 of the call are ported from it. Ours: rule 2 as the
+part of the move square to the wall (the same as BIMCraft's wherever walls meet square),
+the refusal of a door or window left outside its wall, and what the reply says.
+
+**Every hand figure came out, on the lead's own run of `stretch.sh`:** 178.25 SF each and
+96 LF to start; the east wall 4 ft east: south and north 28 LF, the window still at east
+18 to 15, East 240.25 SF, 104 LF; the partition 2 ft west: 147.25 and 271.25 SF; pushed
+along itself: refused; the south wall 2 ft south: 18, 18 and 18 LF, 166.25 and 306.25
+SF, 110 LF; `--alone`: nothing follows; a box against the wall: said, not moved; moved
+"Assumed, design": the moved wall and its followers say so, an existing follower is
+named.
+
+**The lead's hand figure was short in one place:** moving the east wall 12 ft west puts
+the south wall's door outside its wall as well as the north wall's window. The program
+names both; the demonstration checks both.
+
+**One expectation moved, keeping its meaning:** the test that a wall moved onto another
+is refused as counted twice now moves it alone (moved with its neighbours it is refused
+sooner, a neighbour shrinking to nothing, which the new tests hold).
+
+**Not right, owed:** a strip footing under a moved wall stays behind (BIMCraft moves
+it); where a wall's end is on a wall whose own end is on the moved wall, the old lines
+are used; the window's Move tool does not yet say what followed or take a typed length;
+not judged. Run so far: 509 tests on every crate but the window's, 38 command-line
+demonstrations, the gates and the port map, by the worker.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
