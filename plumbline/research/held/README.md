@@ -9,3 +9,4 @@ it. `STATUS.md` says what each is and why it is held.
 - `call170.patch`: a wall moved, and the walls that meet it follow (DECISIONS.md call 170).
 - `call168.patch`: a plan set on paper (DECISIONS.md call 168). It carries its own pictures
   (`demos/captured/planset/`) as binary pieces of the patch.
+- `call164-165.patch`: a beam, its posts and their pad footings; joists and rafters counted (DECISIONS.md calls 164 and 165).
