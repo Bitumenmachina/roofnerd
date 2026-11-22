@@ -6322,3 +6322,112 @@ measurement: with Plumbing, pipe colour present and wire colour and duct colour 
 the tags "3 in waste" (or the sample's own sizes) found on the map and inside the
 window; with Framing, lumber-coloured ink across the floor where no joist was drawn
 before (proved red on the picture as committed today); "All" puts every switch back.
+
+### Call 178. What the pictures of call 169 showed: the window made clean (2026-11-22; a reader's notes on every retaken picture, `research/pictures-read-call169.md`, and the lead's own reading)
+
+Call 169's thirteen items are built and their demonstrations pass. A reader then read
+every retaken picture cold, and the lead read the ones that mattered. The demonstrations
+pass and the window is still not clean: these are decided here, all of them the
+builder's to decide (words and look), and go to the window's next pass.
+
+1. **No file word on screen, anywhere.** Found: ".json" in the Layouts column heads;
+   "items.csv" and "48 rows read" in a card; "file:" as a label in Open items ("Made-up-
+   room, file: made-up-room cut at ..."); "scan file:" before a name. A job is named by
+   its title; a table brought in is "the tool chest file" or "the price list" and its
+   count is of items or prices, not rows; an open item about a scan says "Scan
+   made-up-room, cut 4 ft above the floor: Assumed". The language gate gains these
+   patterns for the window's strings (proved red on today's source first).
+2. **Existing reads as existing.** Found: a brick wall marked existing is as red as one
+   that is not (the wash of call 161 is 0.15 and cannot be seen; its check asks only
+   "lighter by 10" and passes). Drawn as drafting draws it: **new work in full;
+   existing in halftone** (its own colour mixed half-way to a pale gray, its pattern
+   kept); **what comes down dashed in red**. On the plan: new walls filled solid,
+   existing walls filled in light gray with their outline kept, demolished walls a red
+   dashed outline with no fill. "Existing, shown pale" becomes a switch like every
+   other row (off: existing is drawn as new work is). The check: over the wall's patch,
+   the colour's strength (the largest channel less the smallest) falls by over a third
+   from unmarked to existing, and the spread of brightness stays over 10 (the pattern
+   is kept); proved red on today's picture.
+3. **The view goes to what was brought in.** A scan, a drawing or a model brought in is
+   framed with the job, easing there; it never leaves the person looking at an empty
+   sheet (found: a 197 ft scan brought in and nothing on screen but a dash).
+4. **A message put away is put away.** The mark on a card, or Esc, clears it from the
+   status line of both windows as well. While a card is up the status line does not
+   repeat it. A sentence in the status line is never cut inside a word: where it does
+   not fit, it ends at the last whole word and an ellipsis, and the card has the rest.
+5. **Colour says what a message is.** Done: green. A question the program needs
+   answered, or the next thing to type: blue, the window's own accent. A caution:
+   amber. Refused, or wrong: red, and only that. (Found: "Say which: take its lines off
+   or keep them", "its cost type is still to be typed" and "save first" in red; a scan
+   brought in rightly, in amber.)
+6. **A card is short and does not sit on what it is about.** Four lines at most, the
+   first being what happened; "More" opens the rest. A button in a card looks like a
+   button. A scan's card says what was brought in, its size and what to do if the size
+   is wrong; the rest is under More. A sentence is said once (found: one sentence twice
+   in one card).
+7. **The same thing said many times is said once with a count.** Open items with the
+   same reason on one thing are one row ("Den: 6 figures wait on its area"); "and N
+   more for the same reason" only where the reason is the same.
+8. **Nothing under 11 points, nothing fainter than can be read.** The smallest type is
+   11; the faintest ink for words a person must read is the panel's secondary ink, not
+   the hint ink. A label does not wrap into a stray digit ("Rooms, inside their walls"
+   is shortened to "Rooms" with its note under it).
+9. **One way to write a figure.** An area is written to two decimals wherever it is
+   shown (found: 27.625 SF on a card and 27.62 SF on the sheet beside it); the model's
+   sentences use the same writer as the sheet.
+10. **A name reads as a name.** A wall type made by the program is named for what it
+    is ("6 in wall", not "wall 6 in"); "along wall 6 in Kitchen" is "along wall 6, in
+    Kitchen"; an undo names what a person did ("Undone: marked existing"), not the
+    program's word for it ("Mark work").
+11. **What matters is at the top of a thing's panel.** Its name, its WORK mark, then
+    its cost lines each with "Take off" at the end of its row, then as drawn and
+    takeoff. (Found: "Take line off" is on no picture; it sits below "more below".)
+12. **Left over from call 169, by its builder's own account:** the laser message after
+    a tool's sizes is unproved by any step; the smaller lettering for a label too wide
+    for its box is unproved; a typed measure works on a new line and not on an existing
+    line's quantity; bearing and what is in a wall can be said from the window only as
+    Assumed (to make them Known needs the field's measure box to take words: the same
+    box, with "looked at in the field" as its source).
+
+The 3D view reading as "a box in fog" on small made-up jobs is the look's own matter
+(calls 62, 177 and the trade views) and is not decided again here.
+
+### Call 175, as built (2026-11-22)
+
+The builder finished items 1 to 4 and 7 and stopped, rightly, on 5 and 6. The lead ran
+`demos/sweep-money.sh` on its build and read what it changed.
+
+- **Item 5 is withdrawn.** Two footings, or two walls, on one line are already refused
+  when drawn, when moved and when a file is read (`bodies_overlap`): they cannot be
+  counted twice because they cannot be there. The reviewer's doubled figure came from
+  an old footing and a new one drawn beside each other, which is two footings. Nothing
+  is changed.
+- **Item 6 is changed.** The frame's layout uses a header's depth to decide whether a
+  cripple fits above it, and cripples are counted in `studs`, which is priced; making
+  the depth Unknown would move a count. So the layout keeps its depth, and the program
+  stops presenting it as a size: wherever the header's depth is shown it reads
+  "Assumed: a rule of thumb used to lay out the cripples, not a size: an engineer or a
+  span table sizes a header", and the field list asks the header's size for each
+  opening in a wall said bearing or not said. No count moves. (Owed: built with call
+  176, which already walks every opened wall.)
+- **Item 7, the roof.** The BIM file writes a roof as its slabs and reads back walls,
+  doors, marks, bearing and type names; it does not read a roof back, because the file
+  holds the roof's surfaces and not what the program draws a roof from (its footprint,
+  pitch and eave height). Writing those into the file as the program's own values and
+  reading them back is owed, and is said by the demonstration's last line until it is.
+- **A hand figure of the lead's was wrong.** "The same wall with no door: siding 380 -
+  120 = 260": with no door the net is 400 - 25 = 375 and the siding 375 - 120 =
+  **255.00 SF**. The builder did not bend the program to it; the demonstration checks
+  255.
+- **Chosen by the builder and kept:** a thing is set against a wall when the wall's own
+  list of things against it holds it and they are in each other by no more than 2 in;
+  a run and what it is joined to are "joined" within 3 in of the joint (at more, a
+  branch drawn a foot back up inside its main would stop being a clash, and it is a
+  drawing fault); pieces of one run are one hole where they are joined end to end and
+  pass within their widths plus 3 in. A riser can now be drawn at the command line
+  (`run --rises-to`).
+- **The sample house:** in the same space 11 (was 21), set against 10; 60 holes (were
+  71 pieces); job cost $390,174.76 (was $394,677.48: the siding behind the stone, the
+  stone across the door, and the base across doorways, $4,502.72).
+- **Owed in the window:** it still counts clashes its old way (per piece, mountings
+  in); it takes the model's new counts with call 177's pass.

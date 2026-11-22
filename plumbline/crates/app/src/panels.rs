@@ -38,6 +38,28 @@ pub struct Label {
     pub rank: u8,
 }
 
+/// A label that is to stay inside a box on the plan (call 169): lettered smaller where
+/// its words are wider than the box, and never wider than it. The box's four corners.
+#[derive(Component)]
+pub struct Fit {
+    pub corners: [Vec3; 4],
+}
+
+/// What an appliance is called on a plan, as a drawing marks it: DW, REF, RNG, WASH, DRY.
+/// Any other name is its own.
+pub fn plan_mark(name: &str) -> String {
+    let lower = name.to_lowercase();
+    let first = lower.split([',', ' ']).next().unwrap_or("");
+    match first {
+        "dishwasher" => "DW".to_string(),
+        "refrigerator" | "fridge" => "REF".to_string(),
+        "range" => "RNG".to_string(),
+        "washer" => "WASH".to_string(),
+        "dryer" => "DRY".to_string(),
+        _ => name.to_string(),
+    }
+}
+
 /// The cameras that draw panels: one over the 3D view, one in the sheet window.
 #[derive(Resource)]
 pub struct Cameras {
@@ -1075,7 +1097,9 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         // the work leaves it.
         let coming_down = snap.work.values().filter(|w| **w == plumbline_world::WorkStatus::Demolish).count();
         let standing = snap.work.values().filter(|w| **w == plumbline_world::WorkStatus::Existing).count();
-        if coming_down + standing > 0 {
+        // "Existing, shown pale" is there only where something is marked existing, and the
+        // demolition switch only where something comes down (call 169).
+        if standing > 0 {
             row(c, false, "Key Existing".to_string(), |doc| {
                 doc.say(Tone::Done, "Existing, shown pale: work that is there and stays is drawn washed pale, in its own finish.");
             }, |r| {
@@ -1083,6 +1107,8 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 r.spawn((text(fonts, "Existing, shown pale", 12.0, Weight::Medium, theme::ink()), Pickable::IGNORE));
                 r.spawn((text(fonts, standing.to_string(), 11.0, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
             });
+        }
+        if coming_down > 0 {
             layer(c, "Demolition", "", theme::red(), doc.show.demolition, Some(coming_down), Box::new(|doc| {
                 doc.show.demolition = !doc.show.demolition;
                 doc.redraw();
@@ -1227,7 +1253,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                     // The set of assemblies the program ships with: no file to find.
                     on_click(&mut button(b, fonts, "Starter assemblies", "", false), crate::bring::starter);
                     // And the set of things to place: fixtures, equipment, furnishings.
-                    on_click(&mut button(b, fonts, "Starter items", "", false), crate::bring::starter_items);
+                    on_click(&mut button(b, fonts, "Starter tool chest", "", false), crate::bring::starter_items);
                     for what in crate::model::Bring::ALL {
                         on_click(&mut button(b, fonts, what.name(), "", false), move |doc| {
                             // A table dropped on the window and waiting to be told what it is.
@@ -1296,7 +1322,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         // The job's library of things to place. A new one is added here by hand
         // (it could only come from a written library or a maker's sheet, and a library
         // kept like a database is one a row can be added to: J25A).
-        heading(c, fonts, "Items");
+        heading(c, fonts, "Tool chest");
         if matches!(doc.entry, Some((Entry::NewItem, _))) {
             c.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(4.0), padding: UiRect::axes(px(6.0), px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|f| {
                 for (i, (label, like)) in [("Name", "Wall oven, 27 in"), ("Kind", "equipment, fixture or furnishing"), ("Width", "27 in"), ("Depth", "24 in"), ("Height", "29 in")].into_iter().enumerate() {
@@ -1509,7 +1535,7 @@ fn cabinets_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
             });
         };
         if snap.boxes.is_empty() {
-            c.spawn(text(fonts, "This job has no cabinet boxes to set. Bring the starter items in first (Starter items, on the left). Esc cancels.", 11.0, Weight::Regular, theme::ink_soft()));
+            c.spawn(text(fonts, "This job has no cabinet boxes to set. Bring the starter tool chest in first (Starter tool chest, on the left). Esc cancels.", 11.0, Weight::Regular, theme::ink_soft()));
             return;
         }
         line(c, "Boxes", straight.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(" "));
@@ -1519,6 +1545,7 @@ fn cabinets_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
         if !appliances.is_empty() {
             line(c, "Appliances", format!("{}   (type one with its brackets)", appliances.join(" ")));
         }
+        line(c, "Marks on the plan", "DW dishwasher \u{b7} REF refrigerator \u{b7} RNG range \u{b7} WASH washer \u{b7} DRY dryer; any other name is written as it is".to_string());
         line(c, "Key", "B base \u{b7} SB sink base \u{b7} DB drawer base \u{b7} W wall (width, then height) \u{b7} T tall \u{b7} F filler \u{b7} BLB blind corner \u{b7} LS turning corner \u{b7} the number is the width in inches".to_string());
     });
 }
@@ -1687,6 +1714,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
             None => "Measured on site".to_string(),
         },
         Entry::RenameItem => format!("What {name} is called"),
+        Entry::InTheWall => format!("What is in {name}"),
         _ => String::new(),
     };
     let hint = match field {
@@ -1707,6 +1735,7 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
             _ => "Type same if it is as drawn",
         },
         Entry::RenameItem => "A name of its own, like Wall oven, 27 in",
+        Entry::InTheWall => "In words, like a 2 in drain and two cables, or nothing",
         _ => "",
     };
     (title, hint)
@@ -1815,18 +1844,25 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             if let Some(level) = &doc.show.storey {
                 let appliances: Vec<&str> = snap.items.iter().filter(|i| i.4 == 11).map(|i| i.1.as_str()).collect();
                 for placed in snap.drawn.iter().filter(|d| d.storey.as_ref() == Some(level) && matches!(d.kind, Kind::Furnishing | Kind::Equipment)) {
-                    let Shape::Box { at, size, .. } = &placed.shape else { continue };
+                    let Shape::Box { at, size, angle } = &placed.shape else { continue };
                     if !(snap.boxes.contains(&placed.name) || appliances.contains(&placed.name.as_str())) {
                         continue;
                     }
+                    let (sin, cos) = angle.to_radians().sin_cos();
+                    let z = at[2] + size[2] + 0.1;
+                    let corners = [(-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)].map(|(u, v)| {
+                        let (x, y) = (u * size[0], v * size[1]);
+                        to_view(doc.origin, [at[0] + x * cos - y * sin, at[1] + x * sin + y * cos, z])
+                    });
                     o.spawn((
                         Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(3.0), px(0.0)), border_radius: BorderRadius::all(px(5.0)), ..default() },
                         UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
                         BackgroundColor(theme::panel().with_alpha(0.8)),
                         Pickable::IGNORE,
-                        Label { at: to_view(doc.origin, [at[0], at[1], at[2] + size[2] + 0.1]), facing: None, rank: 1 },
+                        Label { at: to_view(doc.origin, [at[0], at[1], z]), facing: None, rank: 1 },
+                        Fit { corners },
                     ))
-                    .with_children(|l| quiet(l, fonts, placed.name.clone(), 9.5, Weight::Semibold, theme::ink()));
+                    .with_children(|l| quiet(l, fonts, plan_mark(&placed.name), 9.5, Weight::Semibold, theme::ink()));
                 }
             }
         }
@@ -1913,7 +1949,7 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         // What went well is said in full too when the bar cannot hold it: the bar cut
         // "Brought in 30 starter assemblies ... then Assembl" at its edge, and the
         // rest could be read nowhere (J22A-4, J22B-30).
-        if doc.tone != Tone::Done || doc.message.chars().count() > BAR_HOLDS || doc.message.lines().count() > 1 || doc.scan_side.is_some() {
+        if message_card_up(doc) {
             o.spawn((Node { position_type: PositionType::Absolute, top: px(TOP_H + 2.0 * theme::GAP + 54.0), left: px(LEFT_W + 3.0 * theme::GAP), right: px(RIGHT_W + 3.0 * theme::GAP), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, ..default() }, Pickable::IGNORE)).with_children(|mid| {
                 let ink = match doc.tone {
                     Tone::Refused => theme::red(),
@@ -1946,10 +1982,25 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                             on_click(&mut e, crate::bring::stand_it_up);
                         }
                     });
+                    // The mark at the card's corner that puts it away (call 169).
+                    card.spawn(Node { align_self: AlignSelf::FlexStart, flex_shrink: 0.0, ..default() }).with_children(|corner| {
+                        let mut e = button(corner, fonts, "\u{00D7}", "", false);
+                        e.insert(Named { name: "Put the message away".to_string(), scrolls: false });
+                        on_click(&mut e, |doc| {
+                            doc.card_away = true;
+                            doc.touch();
+                        });
+                    });
                 });
             });
         }
     });
+}
+
+/// The card over the model that says in full what the bar cannot hold, and anything that
+/// went wrong. It can be put away by its mark or by Esc (call 169, the fixed rule).
+pub fn message_card_up(doc: &Doc) -> bool {
+    !doc.card_away && (doc.tone != Tone::Done || doc.message.chars().count() > BAR_HOLDS || doc.message.lines().count() > 1 || doc.scan_side.is_some())
 }
 
 pub fn stat(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: String, unit: &str, status: Status) {
@@ -2056,6 +2107,12 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     // What the work does to a thing that is built: stays, comes down, or is new (call 149).
     // The one that holds is lit. A thing that carries cost lines is asked what is to
     // become of them, in the row's place.
+    if matches!(el.kind, Kind::Wall | Kind::Door | Kind::Window | Kind::Floor | Kind::Footing) {
+        line(p, &|r| {
+            let (path, kind) = (el.path.clone(), el.kind);
+            on_click(&mut button(r, fonts, "Select all on this level", "", false), move |doc| crate::tools::select_all_on_level(doc, &path, kind));
+        });
+    }
     if plumbline_world::check::takes_work(el.kind) {
         use plumbline_world::{editing::ItsLines, WorkStatus};
         let now = snap.work.get(&el.path).copied().unwrap_or(WorkStatus::New);
@@ -2122,7 +2179,7 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     }
                 });
             }
-            f.spawn(text(fonts, "A cost type is material, subcontract or general; or in-house work with how fast it goes: labor at 40 SF/hr, fabrication, supervision. Tab or Enter to the next; Enter on the last adds the line. Esc cancels.", 10.5, Weight::Regular, theme::ink_faint()));
+            f.spawn(text(fonts, "Priced by is one of its own figures (below), a formula, or a measure you type, like 60 SF, which is Assumed until it is measured. A cost type is material, subcontract or general; or in-house work with how fast it goes: labor at 40 SF/hr, fabrication, supervision. Tab or Enter to the next; Enter on the last adds the line. Esc cancels.", 10.5, Weight::Regular, theme::ink_faint()));
         });
         if !figures.is_empty() {
             heading(p, fonts, "Priced by: its own takeoff");
@@ -2299,7 +2356,7 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
         });
     }
     heading(p, fonts, "Trade");
-    hint(p, "Which trade's item it is: where it is listed, and in an item library written out.");
+    hint(p, "Which trade's item it is: where it is listed, and in a tool chest written out.");
     for d in plumbline_world::Division::ALL {
         let shown = format!("{} {}", d.number(), d.title());
         let mine = trade == format!("Division {shown}");
@@ -2317,6 +2374,41 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
         }, |r| {
             r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, shown.clone(), 12.0, if mine { Weight::Semibold } else { Weight::Regular }, theme::ink()));
         });
+    }
+}
+
+/// What a wall the work opens may be hiding (call 160): the two questions, each reading
+/// unknown with its reason until it is said; bearing is said with a click, what is in the
+/// wall in words; and what a bearing wall that is opened needs is a card.
+fn behind_the_wall(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, el: &view::ElementRows, own: &[&view::Row]) {
+    heading(p, fonts, "Behind the wall");
+    let find = |label: &str| own.iter().find(|r| r.label == label).copied();
+    if let Some(row) = find(plumbline_world::hidden::BEARING) {
+        property(p, fonts, "Bearing", shown(row), row.status, &row.basis, "", "");
+        p.spawn(Node { margin: UiRect::vertical(px(4.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|r| {
+            for (label, word) in [("Bearing", "bearing"), ("Not bearing", "not bearing")] {
+                let lit = row.number.is_none() && row.text == word;
+                on_click(&mut button(r, fonts, label, "", lit), move |doc| crate::tools::said_of_wall(doc, "bearing", word));
+            }
+        });
+    }
+    if let Some(row) = find(plumbline_world::hidden::IN_THE_WALL) {
+        property(p, fonts, "In the wall", shown(row), row.status, &row.basis, "", "");
+        let now = if row.status == Status::Unknown { String::new() } else { row.text.clone() };
+        p.spawn(Node { margin: UiRect::vertical(px(4.0)), flex_shrink: 0.0, ..default() }).with_children(|r| {
+            on_click(&mut button(r, fonts, "In the wall", "", matches!(doc.entry, Some((Entry::InTheWall, _)))), move |doc| {
+                doc.open(Entry::InTheWall, now.clone());
+                doc.fresh = true;
+                doc.say(Tone::Done, "In the wall: type what runs inside it, in words, like a 2 in drain and two cables, or nothing. Enter sets it.");
+            });
+        });
+        if matches!(doc.entry, Some((Entry::InTheWall, _))) {
+            entry_box(p, fonts, doc, snap);
+        }
+    }
+    // What a bearing wall that is opened needs, and that it is not in the price.
+    for note in el.notes.iter().filter_map(|n| n.strip_prefix("! ")) {
+        p.spawn((Node { padding: UiRect::all(px(8.0)), margin: UiRect::vertical(px(4.0)), border: UiRect::left(px(3.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::amber()))).with_child(text(fonts, note.to_string(), 11.5, Weight::Regular, theme::ink()));
     }
 }
 
@@ -2581,13 +2673,21 @@ pub fn takeoff(p: &mut ChildSpawnerCommands, fonts: &Fonts, t: &SystemTakeoff) {
 }
 
 fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot, el: &view::ElementRows) {
-    let under = match &snap.rises_from {
+    let mut under = match &snap.rises_from {
         Some((_, edge)) => format!("rises from edge {edge} of {}", snap.roof_name),
         None => String::new(),
     };
+    // Several picked with Shift (call 169): this is the last one's panel.
+    if !doc.together.is_empty() {
+        let more = doc.together.len();
+        under = format!("{}and {more} more", if under.is_empty() { String::new() } else { format!("{under}, ") });
+    }
     // An item is kept with the job's types; to a person it is an item.
     let kind = if el.rows.iter().any(|r| r.label == "drawn as") { "Item" } else { theme::kind_name(el.kind) };
     title_block(p, fonts, kind, &el.name, under);
+    if !doc.together.is_empty() {
+        p.spawn(Node { margin: UiRect::top(px(6.0)), ..default() }).with_child(text(fonts, "WORK (Existing, To demolish, New work) and Delete act on all that are selected. Every other button acts on this one only. Esc lets go of them all.", 11.5, Weight::Regular, theme::ink_soft()));
+    }
     if el.kind == Kind::RoomLine {
         p.spawn(Node { margin: UiRect::top(px(6.0)), ..default() }).with_child(text(fonts, "Parts two rooms where no wall stands. It is not built and not priced.", 12.0, Weight::Regular, theme::ink_soft()));
     }
@@ -2677,9 +2777,15 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
     }
     // A cost line's own values are named "what: line"; everything else is the element's.
     let (own, costed): (Vec<&view::Row>, Vec<&view::Row>) = el.rows.iter().partition(|r| !r.label.contains(": "));
-    if own.iter().any(|r| !r.derived) {
+    let behind = |r: &&&view::Row| r.label == plumbline_world::hidden::BEARING || r.label == plumbline_world::hidden::IN_THE_WALL;
+    // A wall the work opens: whether it is bearing and what is in it, asked here, with
+    // what a bearing wall needs (call 160).
+    if el.kind == Kind::Wall && own.iter().any(|r| behind(&r)) {
+        behind_the_wall(p, fonts, doc, snap, el, &own);
+    }
+    if own.iter().any(|r| !r.derived && !behind(&r)) {
         heading(p, fonts, "As drawn");
-        for row in own.iter().filter(|r| !r.derived) {
+        for row in own.iter().filter(|r| !r.derived && !behind(r)) {
             // A value a measurement can be put on says so, and a click on it asks for
             // what was read: a length is measured, anything else is checked.
             match snap.takes.iter().find(|t| t.0 == row.label) {
@@ -2739,6 +2845,12 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
                         c.spawn(text(fonts, basis, 10.5, Weight::Regular, theme::ink_faint()));
                     }
                 }
+                // One line off this thing, with what was entered on it (call 166); the
+                // thing's other lines stay. One step to undo.
+                let (path, name, description) = (el.path.clone(), el.name.clone(), line.to_string());
+                let mut e = button(c, fonts, "Take line off", "", false);
+                e.insert(Named { name: format!("Take line off: {line}"), scrolls: true });
+                on_click(&mut e, move |doc| crate::tools::take_line_off(doc, &path, &name, &description));
             });
         }
     }
@@ -2746,8 +2858,22 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
 
 /// Keep each label at its point of the model as the view moves. Where two would lie over
 /// each other, the one nearer the eye stays and the other waits until there is room.
-pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>, mut labels: Query<(Entity, &Label, &mut Node, &mut Visibility, &ComputedNode)>) {
+pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>, mut labels: Query<(Entity, &Label, &mut Node, &mut Visibility, &ComputedNode)>, mut fitted: Query<(&Fit, &ComputedNode, &mut UiTransform)>) {
     let Ok((camera, eye)) = camera.single() else { return };
+    // A label that has to stay inside its box is lettered smaller where its words are
+    // wider than the box is on the screen (call 169).
+    for (fit, computed, mut transform) in &mut fitted {
+        let xs: Vec<f32> = fit.corners.iter().filter_map(|c| camera.world_to_viewport(eye, *c).ok()).map(|p| p.x).collect();
+        if xs.len() < 4 || computed.size.x <= 0.0 {
+            continue;
+        }
+        let (lo, hi) = xs.iter().fold((f32::MAX, f32::MIN), |(lo, hi), x| (lo.min(*x), hi.max(*x)));
+        let wide = computed.size.x * computed.inverse_scale_factor;
+        let k = if wide > 0.0 { ((hi - lo) * 0.92 / wide).clamp(0.4, 1.0) } else { 1.0 };
+        if (transform.scale.x - k).abs() > 0.01 {
+            transform.scale = Vec2::splat(k);
+        }
+    }
     let mut wanted: Vec<(Entity, u8, f32, Vec2, Vec2)> = Vec::new();
     for (entity, label, _, _, computed) in &labels {
         let towards = if doc.plan { Vec3::Y } else { eye.translation() - label.at };

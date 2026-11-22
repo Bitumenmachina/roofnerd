@@ -711,9 +711,14 @@ fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         // Each layout set beside this job, with its own way to take it away.
         for (i, beside) in doc.beside.iter().enumerate() {
             let title = snap.layouts.as_ref().and_then(|t| t.titles.get(i + 1)).cloned().unwrap_or_default();
+            // A job is named by its title; by its file's name as well only where two
+            // titles are alike (call 169).
+            let alike = snap.layouts.as_ref().is_some_and(|t| t.titles.iter().enumerate().any(|(j, other)| j != i + 1 && *other == title));
             c.spawn(Node { column_gap: px(10.0), align_items: AlignItems::Center, ..default() }).with_children(|r| {
                 r.spawn(text(fonts, format!("Beside this one: {title}"), 12.5, Weight::Medium, theme::ink()));
-                r.spawn(text(fonts, crate::panels::plain_stem(&beside.file), 11.0, Weight::Regular, theme::ink_faint()));
+                if alike {
+                    r.spawn(text(fonts, crate::panels::plain_stem(&beside.file), 11.0, Weight::Regular, theme::ink_faint()));
+                }
                 let mut e = theme::button(r, fonts, "Take it away", "", false);
                 e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
                     if press.button == PointerButton::Primary {
@@ -734,8 +739,13 @@ fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             if files.is_empty() {
                 c.spawn(text(fonts, "No other job is kept here. Keep this one as another layout, then pick it.", 12.0, Weight::Regular, theme::ink_faint()));
             }
-            for (name, title) in files.into_iter().take(40) {
+            // With changes not saved nothing in the list can be opened: it is grey.
+            let grey = doc.opening_layout && doc.edited;
+            let titles: Vec<&str> = files.iter().map(|(_, t)| t.as_str()).collect();
+            let own = snap.title.as_str();
+            for (name, title) in files.iter().copied().take(40) {
                 let stem = crate::panels::plain_stem(name);
+                let alike = titles.iter().filter(|t| **t == title.as_str()).count() > 1 || (setting && own == title.as_str());
                 let name = name.clone();
                 let mut e = c.spawn((
                     Node { align_items: AlignItems::Center, column_gap: px(8.0), padding: UiRect::axes(px(8.0), px(4.0)), min_height: px(26.0), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() },
@@ -744,9 +754,10 @@ fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 ));
                 let (title, from) = (title.clone(), stem.clone());
                 e.with_children(|r| {
-                    r.spawn((text(fonts, title, 12.5, Weight::Medium, theme::ink()), Pickable::IGNORE));
-                    r.spawn((text(fonts, from, 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
-                    r.spawn((text(fonts, "job", 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
+                    r.spawn((text(fonts, title, 12.5, Weight::Medium, if grey { theme::ink_faint() } else { theme::ink() }), Pickable::IGNORE));
+                    if alike {
+                        r.spawn((text(fonts, from, 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
+                    }
                 });
                 let open = !setting;
                 e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {

@@ -95,6 +95,9 @@ plan_px() { local x0 y0 k; read -r x0 y0 k <<<"$(plan_line)"; awk -v x0="$x0" -v
 plan_ft() { local x0 y0 k; read -r x0 y0 k <<<"$(plan_line)"; awk -v x0="$x0" -v y0="$y0" -v k="$k" -v x="$1" -v y="$2" 'BEGIN { printf "%.4f %.4f", (x - x0) / k, (y0 - y) / k }'; }
 # A click at a place on the plan given in feet east and north.
 at() { if [ -z "$(plan_line)" ]; then echo "the plan is not on screen, or the view has not come to rest: no place for $1, $2" >> "$T/missing.txt"; close_window; exit 1; fi; click $(plan_px "$1" "$2"); }
+# Shift held with a click: adds the thing to what is selected, or takes it out (call 169).
+shift_click() { xdotool mousemove "$1" "$2"; sleep 1.5; xdotool keydown shift; sleep 0.8; xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 0.8; xdotool keyup shift; sleep 3; }
+shift_at() { if [ -z "$(plan_line)" ]; then echo "the plan is not on screen, or the view has not come to rest: no place for $1, $2" >> "$T/missing.txt"; close_window; exit 1; fi; shift_click $(plan_px "$1" "$2"); }
 esc() { xdotool key Escape; sleep 2; }
 # Typed, then Enter. With a second word, a picture is taken before the Enter.
 typed() { xdotool type --delay 250 -- "$1"; sleep 1; if [ -n "${2:-}" ]; then shot; fi; xdotool key Return; sleep 3; }

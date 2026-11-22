@@ -66,7 +66,7 @@ impl WriteOut {
             WriteOut::Supplier => "For suppliers",
             WriteOut::Subcontractor => "For subcontractors",
             WriteOut::Pm => "For the PM",
-            WriteOut::Items => "Item library, to keep",
+            WriteOut::Items => "Tool chest, to keep",
             WriteOut::Field => "Field list",
         }
     }
@@ -80,7 +80,7 @@ impl WriteOut {
             WriteOut::Supplier => "workbook for suppliers",
             WriteOut::Subcontractor => "workbook for subcontractors",
             WriteOut::Pm => "workbook for the PM",
-            WriteOut::Items => "item library",
+            WriteOut::Items => "tool chest",
             WriteOut::Field => "field list",
         }
     }
@@ -108,7 +108,7 @@ impl Bring {
             Bring::Prior => "estimate",
             Bring::Model => "model",
             Bring::Sheet => "maker's sheet",
-            Bring::Items => "item list",
+            Bring::Items => "tool chest file",
             Bring::Scan => "scan",
         }
     }
@@ -120,7 +120,7 @@ impl Bring {
             Bring::Prior => "Prior estimate",
             Bring::Model => "Designer's model",
             Bring::Sheet => "Maker's sheet",
-            Bring::Items => "Item library",
+            Bring::Items => "Tool chest file",
             Bring::Scan => "Scan file",
         }
     }
@@ -132,7 +132,7 @@ impl Bring {
             Bring::Prior => "prior estimate",
             Bring::Model => "designer's model",
             Bring::Sheet => "maker's sheet",
-            Bring::Items => "item library",
+            Bring::Items => "tool chest file",
             Bring::Scan => "scan file",
         }
     }
@@ -190,6 +190,8 @@ pub enum Entry {
     Cabinets,
     /// The title a layout is kept under (call 161), typed on the sheet's Layouts tab.
     LayoutName,
+    /// What runs inside the selected wall, in words (call 160).
+    InTheWall,
 }
 
 /// How the last action went. Said by what happened, not read back out of the words.
@@ -292,6 +294,12 @@ pub struct Doc {
     pub roof: Option<String>,
     /// The selected element, by path.
     pub selected: Option<String>,
+    /// The others picked with it (Shift and a click): `selected` is the last one picked
+    /// and the panel is its panel (call 169). Empty when one thing is picked.
+    pub together: Vec<String>,
+    /// The message card has been put away (its mark, or Esc): it comes back with the next
+    /// thing said.
+    pub card_away: bool,
     /// The element the pointer is over.
     pub hover: Option<String>,
     /// What the last action did, or why it was refused.
@@ -413,8 +421,10 @@ impl Doc {
     pub fn let_go_of_what_is_gone(&mut self) {
         let gone = |job: &mut Job, held: &Option<String>| held.as_ref().is_some_and(|p| job.find(p).is_none());
         if gone(&mut self.job, &self.selected) {
-            self.selected = None;
+            self.selected = self.together.pop();
         }
+        let job = &mut self.job;
+        self.together.retain(|p| job.find(p).is_some());
         if gone(&mut self.job, &self.hover) {
             self.hover = None;
         }
@@ -443,6 +453,7 @@ impl Doc {
         self.geometry += 1;
     }
     pub fn say(&mut self, tone: Tone, message: impl Into<String>) {
+        self.card_away = false;
         // Something half typed that was let go is said first, once (J18-6).
         match self.lost.take() {
             Some(lost) => {
@@ -513,9 +524,43 @@ impl Doc {
         // The list of assemblies was for what was selected before.
         self.choosing = false;
         self.marking = None;
+        self.together.clear();
         self.selected = Some(path.to_string());
         self.say(Tone::Done, format!("Selected {path}."));
         self.touch();
+    }
+    /// Shift and a click (call 169): the thing is added to what is selected, or taken
+    /// out of it if it is already in. The one picked last has the panel.
+    pub fn select_also(&mut self, path: &str) {
+        self.choosing = false;
+        self.marking = None;
+        let Some(current) = self.selected.clone() else { return self.select(path) };
+        if current == path {
+            self.selected = self.together.pop();
+            self.say(Tone::Done, format!("Took {path} out of what is selected. {}", self.how_many_selected()));
+        } else if let Some(at) = self.together.iter().position(|p| p == path) {
+            self.together.remove(at);
+            self.say(Tone::Done, format!("Took {path} out of what is selected. {}", self.how_many_selected()));
+        } else {
+            self.together.push(current);
+            self.selected = Some(path.to_string());
+            self.say(Tone::Done, format!("Added {path}. {}", self.how_many_selected()));
+        }
+        self.touch();
+    }
+    /// Every path that is selected, the last picked first.
+    pub fn all_selected(&self) -> Vec<String> {
+        self.selected.iter().chain(self.together.iter().rev()).cloned().collect()
+    }
+    pub fn is_selected(&self, path: &str) -> bool {
+        self.selected.as_deref() == Some(path) || self.together.iter().any(|p| p == path)
+    }
+    fn how_many_selected(&self) -> String {
+        match self.together.len() + usize::from(self.selected.is_some()) {
+            0 => "Nothing is selected.".to_string(),
+            1 => "1 thing is selected.".to_string(),
+            n => format!("{n} things are selected."),
+        }
     }
     /// Start typing one value. Whatever was being typed before is let go.
     pub fn open(&mut self, field: Entry, text: impl Into<String>) {
@@ -739,6 +784,9 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     };
     if doc.selected.as_ref().is_some_and(|sel| doc.job.find(sel).is_none()) {
         doc.selected = None;
+    }
+    if doc.selected.is_none() {
+        doc.together.clear();
     }
     if doc.placing.as_ref().is_some_and(|item| doc.job.find(item).is_none()) {
         doc.placing = None;

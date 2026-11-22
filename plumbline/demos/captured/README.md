@@ -36,10 +36,10 @@ such reading, and STATUS.md says where each thing it found stands).
 | `plan` | `demos/planw.sh` |
 | `price` | `demos/pricew.sh` |
 | `quantityw` | `demos/quantityw.sh` |
-| `renow` | `demos/renow.sh` |
+| `renow` (`01` to `10`; `multi/` `01` to `14`: several at once, a wall the work opens, a line taken off, a measure typed) | `demos/renow.sh` |
 | `roofw` | `demos/roofw.sh` |
-| `roomlinew` (`01` to `04`) | `demos/roomlinew.sh` |
-| `scanw` (`01` to `10`) | `demos/scanw.sh` |
+| `roomlinew` (`01` to `06`) | `demos/roomlinew.sh` |
+| `scanw` (`01` to `15`) | `demos/scanw.sh` |
 | `tools` | `demos/toolsw.sh` |
 | `turnw` | `demos/turnw.sh` |
 

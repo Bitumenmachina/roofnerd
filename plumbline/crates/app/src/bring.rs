@@ -122,7 +122,7 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
                 if !made.missing.is_empty() {
                     out.push_str(&format!("\nNot on the sheet, and Unknown until entered: {}.", made.missing.join(", ")));
                 }
-                out.push_str("\nIt is under Items, on the left: click it there, then click where one stands.");
+                out.push_str("\nIt is in the tool chest, on the left: click it there, then click where one stands.");
                 Ok((out, !made.missing.is_empty()))
             }
             Bring::Model => {
@@ -192,7 +192,7 @@ pub fn dropped(doc: &mut Doc, file: &str) {
         bring(doc, Bring::Scan, file);
     } else if lower.ends_with(".csv") || lower.ends_with(".xlsx") || lower.ends_with(".xlsm") || lower.ends_with(".xls") {
         doc.dropped = Some(file.to_string());
-        doc.say(Tone::Warned, format!("{} is a table. Say what it is: click Price list, Assemblies, Prior estimate or Item library, under Bring in on the left.", Path::new(file).file_name().and_then(|f| f.to_str()).unwrap_or(file)));
+        doc.say(Tone::Warned, format!("{} is a table. Say what it is: click Price list, Assemblies, Prior estimate or Tool chest file, under Bring in on the left.", Path::new(file).file_name().and_then(|f| f.to_str()).unwrap_or(file)));
         doc.touch();
     } else {
         crate::plans::add(doc, file);
@@ -227,13 +227,13 @@ pub fn starter_items(doc: &mut Doc) {
         n => format!(" {n} are in the job already and were left as they are here: what was changed on them is kept."),
     };
     match done {
-        Ok((b, _)) if b.done.is_empty() => doc.say(Tone::Done, "The starter items are already in this job, and each was left as it is here. They are under Items, on the left: click one, then click where one stands."),
+        Ok((b, _)) if b.done.is_empty() => doc.say(Tone::Done, "The starter tool chest is already in this job, and each item was left as it is here. They are under Tool chest, on the left: click one, then click where one stands."),
         Ok((b, kept)) => {
             doc.job.derive();
-            doc.edit("Starter items");
-            doc.say(Tone::Done, format!("Brought in {} starter items, trade by trade, at typical sizes: each size is Assumed until the product is chosen.{} They are under Items, on the left: click one, then click where one stands; Change opens it to be changed.", b.done.len(), left(&kept)));
+            doc.edit("Starter tool chest");
+            doc.say(Tone::Done, format!("Brought in {} starter items, trade by trade, at typical sizes: each size is Assumed until the product is chosen.{} They are in the tool chest, on the left: click one, then click where one stands; Change opens it to be changed.", b.done.len(), left(&kept)));
         }
-        Err(why) => crate::tools::cant(doc, "bring in the starter items", why),
+        Err(why) => crate::tools::cant(doc, "bring in the starter tool chest", why),
     }
     doc.touch();
 }
@@ -281,7 +281,7 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
             WriteOut::Items => {
                 let rows = tables::items_out(&mut doc.job);
                 wrote(plumbline_sheets::csv(&rows).as_bytes())?;
-                Ok(format!("Wrote {name}, beside the job: the job's items, {} under their headings. Open it, change a size or add a row, and bring it back in with Item library, under Bring in.", count(rows.len().saturating_sub(1), "row", "rows")))
+                Ok(format!("Wrote {name}, beside the job: the job's tool chest, {} under their headings. Open it, change a size or add a row, and bring it back in with Tool chest file, under Bring in.", count(rows.len().saturating_sub(1), "row", "rows")))
             }
             WriteOut::Rows => {
                 let sheets = export::estimate_out(&mut doc.job, false);
@@ -335,7 +335,7 @@ fn scan(doc: &mut Doc, typed: &str) {
     } else {
         None
     };
-    scan_file(doc, name, units, up);
+    scan_file(doc, name, units, up, false);
 }
 
 /// The button "It is lying on its side: stand it up" (call 161): the step that brought the
@@ -350,10 +350,14 @@ pub fn stand_it_up(doc: &mut Doc) {
     }
     crate::tools::step(doc, false);
     let units = if doc.scan_feet { Units::Feet } else { Units::Metres };
-    scan_file(doc, &file, units, Some(if was_z { Up::Y } else { Up::Z }));
+    scan_file(doc, &file, units, Some(if was_z { Up::Y } else { Up::Z }), true);
 }
 
-fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up: Option<plumbline_plans::scan::Up>) {
+/// What every scan's message ends with (call 169): the size is the first thing a builder
+/// can check, and the measure at the head of the list is the one thing to change.
+const OTHER_MEASURE: &str = "If that is not the size of the house, choose the other measure at the head of the list and bring it in again.";
+
+fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up: Option<plumbline_plans::scan::Up>, stood: bool) {
     use plumbline_plans::scan::Said;
     doc.scan_side = None;
     if name.is_empty() {
@@ -375,6 +379,7 @@ fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up:
     let mut laid: Option<String> = None;
     let mut up_taken: Option<bool> = None;
     let mut doubtful = false;
+    let mut wrong = false;
     let done = (|| -> Result<(String, bool), String> {
         let bytes = std::fs::read(&path).map_err(|e| format!("{file} {}", crate::plans::why_not_opened(&e)))?;
         let called = path.file_stem().and_then(|s| s.to_str()).unwrap_or("scan").to_string();
@@ -405,11 +410,14 @@ fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up:
                 to_see = true;
             }
         }
-        // A size that no house is says what to check.
-        if cut.extent[0].max(cut.extent[1]) < 6.0 || cut.extent[0].max(cut.extent[1]) > 400.0 {
-            out.push_str("\nThat is not the size of a house: if the scan is in feet, or lies on its side, say so with the choices at the head of the list and the button below, and bring it in again.");
+        // A house over 150 ft long, or a floor to ceiling under 6 ft or over 15 ft, is
+        // not likely to be the house: the message is a warning and says so first.
+        let long = cut.extent[0].max(cut.extent[1]);
+        let storey = match (floor, ceiling) { (Some(f), Some(c)) => Some(c - f), _ => None };
+        if long > 150.0 || long < 6.0 || storey.is_some_and(|h| !(6.0..=15.0).contains(&h)) {
             to_see = true;
             doubtful = !told;
+            wrong = true;
         }
         if let Some(lean) = leaned.filter(|l| *l * 120.0 >= 0.125) {
             out.push_str(&format!("\nIt leaned {} in 10 ft and was levelled by its own floor.", plumbline_world::units::show_length(&plumbline_world::units::Len::One((lean * 120.0 * 16.0).round() / 16.0), "in")));
@@ -435,6 +443,14 @@ fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up:
             out.push_str("\nOnly where its points are is kept: not its colors, and not the surface drawn over them.");
             to_see = true;
         }
+        out.push('\n');
+        out.push_str(OTHER_MEASURE);
+        if wrong {
+            out = format!("{OTHER_MEASURE}\n{out}");
+        }
+        if stood {
+            out = format!("Stood up. {out}");
+        }
         Ok((out, to_see))
     })();
     match done {
@@ -453,6 +469,10 @@ fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up:
             }
             doc.say(if to_see { Tone::Warned } else { Tone::Done }, out);
         }
+        Err(why) if why.contains("there is already something called") => {
+            doc.say(Tone::Refused, "Can't bring in the scan file: It is already in, under the plan. Undo takes it out.");
+        }
+        Err(why) if why.contains("no point of it is at that height") => crate::tools::cant(doc, "bring in the scan file", format!("{why}. {OTHER_MEASURE}")),
         Err(why) => crate::tools::cant(doc, "bring in the scan file", why),
     }
     doc.redraw();

@@ -8684,7 +8684,7 @@ command-line demonstrations, the gates, the port map (287 items), the licences.
 
 ## Walls found in a scan: a demonstration, written before it is built (call 173; 2026-11-22)
 
-`demos/found.sh`, at the command line, from an empty job. The scan is made up
+`demos/findwalls.sh` (`demos/found.sh` is the foundation's), at the command line, from an empty job. The scan is made up
 (`tools/made-up-scan.py --rough --as-scanned`, a new flag: the rough two-room house of
 `demos/scan.sh` with two things a real scan has and the made-up one lacked). No real
 scan is in the repository.
@@ -8852,8 +8852,9 @@ starter assembly "Exterior wall, 2x6, lap siding over a stone wainscot" on it.
 - "Lap siding" and "Hang the siding": 355 - 3 x 37 = **244.00 SF** (was 355.00).
 - "Weather barrier", "Batt insulation": 355.00 SF, unchanged; "Wall sheathing" on the
   face, unchanged.
-- The same wall with no door: `net_length` 40.00, stone 40.00 LF, siding 380 - 120 =
-  260.00 SF.
+- The same wall with no door: `net_length` 40.00, stone 40.00 LF, `net_area` 400 - 25 =
+  375, siding 375 - 120 = 255.00 SF. (First written here as 380 - 120 = 260: the lead's
+  slip, caught by the builder; DECISIONS.md "Call 175, as built".)
 - A wall with no line naming a wainscot says nothing new and prints what it printed.
 
 **2. Base in the sample house.** `sixteen`: for every room, the quantity of "Base and
@@ -8940,6 +8941,50 @@ not bearing: a caution, "said not bearing, and P2 stands on it for 12.00 LF".
 **Step 6. Nothing else moves.** The estimate, the clash list and the takeoff of the job
 are the same before and after the figures are asked for (byte for byte), and a job
 saved before opens and saves byte for byte.
+
+## Call 169 built: the window's thirteen (2026-11-22)
+
+A worker built call 169's thirteen items in the window and proved them by driving it:
+`renow.sh` (a second session: several walls picked with Shift and with "Select all on
+this level", marked existing in one step and taken back by one Undo; a wall the work
+opens with Bearing, Not bearing and In the wall, and its caution; a line taken off; "60
+SF" typed as a line's quantity; the key rows under Show only once something is so
+marked; the receptacles said with the area), `scanw.sh` (a scan in the wrong measure;
+the same scan twice; "Stood up."; the card put away by its mark and by Esc),
+`roomlinew.sh`, `cabinetsw.sh` (DW on the plan, measured), `layoutsw.sh` (the grey list,
+titles), and the three renames to "tool chest". Its own report is
+`research/worker-report-call169.md`.
+
+**What the lead ran and read.** The whole workspace's tests on the tree as committed:
+**510 passed, 0 failed** (the first run failed one test: the room sentence of item
+3 was moved in two assertions and not a third, `crates/world/tests/world.rs`; moved to
+call 169's wording by the lead). The language gate passes. The demonstrations'
+final runs are the worker's, all on one frozen build made from the source as committed
+(by its account; none was rerun by the lead). The code's diff was read. Pictures:
+the lead read `renow/multi/06` and `09` and `renow/10`; a reader (Sonnet) read every
+retaken model picture cold: `research/pictures-read-call169.md`.
+
+**Expectations moved, each by call 169:** the room sentence (item 3) in
+`demos/roomline.sh` and three assertions of `crates/world/tests/world.rs`;
+`cabinetsw.sh` forbids "this job's items" where it forbade "tool chest" (item 13);
+`itemlibw.sh`, `turnw.sh`, `layoutsw.sh` follow the renames.
+
+**Not right, and where each goes (call 178 has them decided):**
+- A wall marked existing cannot be told from one that is not, on the plan or in 3D,
+  and the check passes anyway (it asks "lighter by 10"). The check is the defect.
+- File words on screen: ".json" in the Layouts heads, "items.csv", "48 rows read",
+  "file:" in Open items.
+- A wrong-measure scan leaves the plan empty: the view does not go to what came in.
+- A card put away leaves its text in the status line, cut mid-word; questions and
+  prompts are red; a scan's card is eight to ten lines and says one sentence twice.
+- "Take line off" is below "more below" and on no picture.
+- By the worker's account: item 6 (the laser message) is proved by no step; item 8's
+  smaller lettering is unproved; item 10 works on a new line only; bearing and what is
+  in a wall cannot be made Known from the window.
+- Pictures of demonstrations that were not rerun still show the old names in the left
+  panel ("Starter items", "Item library"): stale there until the window's next pass
+  reruns them all.
+- Not yet judged by a judge who drives the window.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

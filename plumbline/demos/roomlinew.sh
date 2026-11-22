@@ -69,6 +69,17 @@ on "Room"; sleep 2                       # Room
 at 30 8; sleep 2; typed "Kitchen"        # a second room, in the addition
 esc; park
 shot                                     # 04 two rooms, each with its floor area
+on "Room"; sleep 2                       # a third room, in the space Living has (call 169)
+at 6 12; sleep 2; typed "Den"
+park
+shot                                     # 05 it has no area yet, and the card says what to do
+esc
+on "Room line"; sleep 3
+at 6 4; sleep 2                          # a short line inside Living: it runs from no wall to no wall
+at 6 6; sleep 4; park
+shot                                     # 06 the card says it parts nothing yet
+esc; esc
+on "Undo"; sleep 4; park                 # the short line taken out again
 xdotool key F2; sleep 4                  # save
 close_window
 SESSION
@@ -76,10 +87,10 @@ chmod +x "$T/session.sh"
 timeout 1500 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
 if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a control it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
-for n in 01 02 03 04; do
+for n in 01 02 03 04 05 06; do
   [ "$OUT/$n-model.png" -nt "$T/before.json" ] && [ "$OUT/$n-sheet.png" -nt "$T/before.json" ] || { echo "FAIL: no picture $n of both windows from this run"; exit 1; }
 done
-echo "  8 pictures saved to $OUT (model and sheet, after each of 4 steps)"
+echo "  12 pictures saved to $OUT (model and sheet, after each of 6 steps)"
 
 echo
 echo "== What the window said =="
@@ -87,6 +98,12 @@ cp "$T/map.txt.said" "$T/said.txt"
 says "$T/said.txt" "Room line: from here. Click the other end."
 says "$T/said.txt" "It parts two rooms where no wall stands."
 says "$T/said.txt" "Added room \"Kitchen\": "
+# A room placed in the space another has says what to do (the model's own sentence, call 169); a
+# room line that runs from no wall to no wall says it parts nothing yet.
+says "$T/said.txt" "Den has no area yet: its point is in the space Living has. Part the two with a wall or a room line, and each gets its own."
+says "$T/said.txt" "It does not run from wall to wall, so it parts nothing yet."
+if grep -q "was placed first" "$T/said.txt"; then echo "FAIL: the window said the program's order, not what to do"; exit 1; fi
+says "$T/said.txt" "Undone: "
 if grep -qiE 'roomline|room_line' "$T/said.txt"; then echo "FAIL: the window said a program word"; grep -iE 'roomline|room_line' "$T/said.txt"; exit 1; fi
 
 echo

@@ -39,7 +39,7 @@ shown "$LIVING" living; shown "$KITCHEN" kitchen
 says "$T/living.txt" "floor area       550.25 SF"
 says "$T/kitchen.txt" "floor area       unknown"
 "$P" show "$J" | grep -F "Kitchen floor area" > "$T/why.txt"
-says "$T/why.txt" "Living was placed first and has the space this room's point is in"
+says "$T/why.txt" "Kitchen has no area yet: its point is in the space Living has. Part the two with a wall or a room line, and each gets its own."
 
 echo
 echo "== 2. A room line from 24,0 to 24,16: two rooms, to the figures worked by hand =="

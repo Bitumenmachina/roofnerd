@@ -112,6 +112,31 @@ with open(out, "wb") as f:
 open(count, "w").write("{:,}".format(len(pts)))
 print("   ", len(pts), "points: the second scan, 24 ft by 10 ft by 9 ft high")
 PY
+# The third scan: a house 60 ft by 40 ft and 9 ft high, written in feet (a point every half
+# foot along the plan, every tenth of a foot up). Brought in as meters it is 197 ft long, which
+# is no house: that is what the window is to warn of (call 169).
+python3 - "$T/big-house.ply" <<'PY'
+import struct, sys
+out = sys.argv[1]
+def span(a, b, step):
+    k = int(round((b - a) / step)); return [a + (b - a) * i / k for i in range(k + 1)]
+pts = []
+for x in span(0, 60, 0.5):
+    for n in span(0, 40, 0.5):
+        pts.append((x, 0.0, -n)); pts.append((x, 9.0, -n))
+for y in span(0, 9, 0.1):
+    for x in span(0, 60, 0.5):
+        pts.append((x, y, 0.0)); pts.append((x, y, -40.0))
+    for n in span(0, 40, 0.5):
+        pts.append((0.0, y, -n)); pts.append((60.0, y, -n))
+head = ("ply\nformat binary_little_endian 1.0\ncomment made up for a demonstration\nelement vertex %d\n"
+        "property float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nproperty uchar alpha\nend_header\n" % len(pts))
+with open(out, "wb") as f:
+    f.write(head.encode())
+    for i, (x, y, z) in enumerate(pts):
+        f.write(struct.pack("<fffBBBB", x, y, z, (i * 7) % 256, 120, 200, 255))
+print("   ", len(pts), "points: the third scan, 60 ft by 40 ft by 9 ft high, written in feet")
+PY
 "$P" new "$J" "A scanned room (not a real job)" >/dev/null
 "$P" level "$J" ground --elevation "0 ft" --height "9 ft" --status Assumed --source "to be checked on site" >/dev/null
 touch "$T/started"
@@ -164,6 +189,35 @@ park; sleep 6
 cp "$T/map.txt" "\$T/map-stood.txt"
 shot                                    # 10 stood up: brought in again, turned
 xdotool key F2; sleep 4                 # save
+cp "$J" "$T/last.json"
+# A scan in the wrong measure (call 169). The first scan is written in meters: chosen as feet it
+# is a house of 8 ft with a ceiling under 3 ft, and nothing of it is 4 ft above its floor.
+on "Scan file"; sleep 3
+on "Measured in feet"; sleep 2
+on "File made-up-room.ply"; sleep 10
+park; sleep 4
+cp "$T/map.txt" "\$T/map-wrong.txt"
+shot                                    # 11 refused, with the sentence about the other measure
+on "Put the message away"; sleep 3      # the mark at the card's corner
+cp "$T/map.txt" "\$T/map-away.txt"
+shot                                    # 12 the card put away: the plan clear
+# The third scan is written in feet: chosen as meters it is 197 ft long.
+on "Scan file"; sleep 3
+on "Measured in meters"; sleep 2
+on "File big-house.ply"; sleep 20
+park; sleep 6
+cp "$T/map.txt" "\$T/map-big.txt"
+shot                                    # 13 a warning, the sentence first
+# The same scan again: it is already in, under the plan.
+on "Scan file"; sleep 3
+on "Measured in meters"; sleep 2
+on "File big-house.ply"; sleep 14
+park; sleep 4
+cp "$T/map.txt" "\$T/map-twice.txt"
+shot                                    # 14 already in
+xdotool key Escape; sleep 3             # Esc, with no tool in hand, puts the card away
+cp "$T/map.txt" "\$T/map-esc.txt"
+shot                                    # 15 away again
 close_window
 SESSION
 chmod +x "$T/session.sh"
@@ -193,6 +247,24 @@ says "$SAID" "Floor to ceiling reads about 10' 0\" on the scan." "the scan on it
 says "$SAID" "Which way is up is not clear from the scan. If the house looks to be lying on its side, press the button below." "the scan on its side"
 says "$SAID" "On plan, where it is cut, it is about 24' 0\" by 10' 0\"." "the scan stood up"
 says "$SAID" "Floor to ceiling reads about 9' 0\" on the scan." "the scan stood up"
+# Every scan's message ends with the sentence about the other measure; a scan refused because nothing
+# of it is at the height it is cut at adds it; a house over 150 ft long is a warning with it first;
+# the same scan twice says it is in; stood up begins "Stood up." (call 169).
+SENT="If that is not the size of the house, choose the other measure at the head of the list and bring it in again."
+[ "$(grep -cF "$SENT" "$SAID")" -ge 5 ] || { echo "FAIL: the sentence about the other measure was not said enough times"; grep -cF "$SENT" "$SAID"; exit 1; }
+says "$SAID" "nothing to draw. $SENT" "the scan in the wrong measure"
+says "$SAID" "Stood up. " "the scan stood up"
+says "$SAID" "about 196' 10\" by 131' 3\"" "the 60 ft house read as meters"
+says "$SAID" "It is already in, under the plan. Undo takes it out." "the same scan twice"
+# (what the window said is one line to a message, its lines joined with " | ": the sentence begins the message)
+BIG="$(grep -F 'Brought in the scan "big-house"' "$SAID" | head -1)"
+case "$BIG" in "$SENT | Brought in the scan"*) ;; *) echo "FAIL: the sentence is not first in the warning for the 197 ft house"; echo "$BIG" | cut -c1-200; exit 1;; esac
+echo "    the warning for a house over 150 ft puts the sentence first"
+grep -q $'^model\tPut the message away\t' "$T/map-wrong.txt" || { echo "FAIL: the card has no mark to put it away"; exit 1; }
+! grep -q $'^model\tPut the message away\t' "$T/map-away.txt" || { echo "FAIL: the card is still up after its mark was pressed"; exit 1; }
+grep -q $'^model\tPut the message away\t' "$T/map-twice.txt" || { echo "FAIL: the card for the second bring-in is not up"; exit 1; }
+! grep -q $'^model\tPut the message away\t' "$T/map-esc.txt" || { echo "FAIL: Esc did not put the card away"; exit 1; }
+echo "    the message card has its mark; the mark puts it away, and so does Esc with no tool in hand"
 # No software word is anywhere a person reads: in what was said, or on the map (the rows named
 # "File <name>" are the handles a script clicks, and are left out). The folder is named
 # "this job's folder" and never by its place.

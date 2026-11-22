@@ -57,7 +57,7 @@ shot                                     # 02 set down, and in the wall: said, a
 xdotool key q; sleep 7                   # a quarter turn
 park
 shot                                     # 03 its 4 in now toward the wall: clear
-on_at "Item library, to keep"; sleep 6      # the library written out beside the job
+on_at "Tool chest, to keep"; sleep 6      # the library written out beside the job
 python3 - "$T/job/turned items.csv" <<'PY'
 import csv, sys
 rows = list(csv.reader(open(sys.argv[1], newline="")))
@@ -66,7 +66,7 @@ assert rows[at][4] == "15 in", rows[at]
 rows[at][4] = "20 in"                    # a 42-circuit panel is wider
 csv.writer(open(sys.argv[1], "w", newline=""), lineterminator="\n").writerows(rows)
 PY
-on_at "Item library" 4; sleep 3          # Bring in: the list as changed
+on_at "Tool chest file" 4; sleep 3          # Bring in: the list as changed
 typed "turned items.csv"; sleep 6
 park
 shot                                     # 04 changed, and the one set down is now that size
@@ -97,7 +97,7 @@ echo "    set down: in the same space as wall 2, $SAID_IN in into each other"
 # A quarter turn: its 4 in is now east and west, 2 in each way of 23.5: to 23.667 ft,
 # an inch short of the wall's face.
 says "the turn" "Turned Panelboard, 200 A a quarter: its width runs north and south. It is clear of everything." "$LOG"
-says "the library written out" "Wrote turned items.csv, beside the job: the job's items, 48 rows under their headings." "$LOG"
+says "the library written out" "Wrote turned items.csv, beside the job: the job's tool chest, 48 rows under their headings." "$LOG"
 says "the change, and what stands" "Panelboard, 200 A: changed: its width; the one set down is now that size" "$LOG"
 
 echo

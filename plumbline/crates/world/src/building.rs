@@ -1990,7 +1990,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
                 // centre line: which side of the wall was meant is not something to guess.
                 _ if found.in_wall => "its point is inside a wall".to_string(),
                 Unbound::NotEnclosed => "no loop of walls closes round its point".to_string(),
-                Unbound::Shared(before) => format!("{} was placed first and has the space this room's point is in", tree.called(&list[before].0)),
+                Unbound::Shared(before) => format!("{} has no area yet: its point is in the space {} has. Part the two with a wall or a room line, and each gets its own.", tree.called(path), tree.called(&list[before].0)),
             };
             let figure = |value: f64, mine: &[usize], unit: &str, formula: &str| -> Derived {
                 let mut inputs = vec![input.clone()];

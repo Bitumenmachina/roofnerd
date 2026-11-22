@@ -38,7 +38,7 @@ export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$J"
 sleep 8; park
-on "Starter items"; sleep 5
+on "Starter tool chest"; sleep 5
 shot                                     # 01 the items, trade by trade, each with Change
 on "Item Vanity, 36 in"; sleep 4         # in hand
 click 700 500; sleep 5                   # set down on the floor
@@ -50,7 +50,7 @@ shot                                     # 03 its sizes, its trade, what it is d
 on "Drawn as Box"; sleep 5
 park
 shot                                     # 04 drawn as its box, and so is the one on the floor
-on "Item library, to keep"; sleep 6         # written out beside the job
+on "Tool chest, to keep"; sleep 6         # written out beside the job
 park
 shot                                     # 05 said, with where it is and what to do with it
 xdotool key F2; sleep 3                  # save
@@ -72,7 +72,7 @@ LOG="$(cat "$T/map.txt.said")"
 says "the starter" "Brought in 48 starter items, trade by trade, at typical sizes: each size is Assumed until the product is chosen." "$LOG"
 says "one set down" "Set one down on Ground." "$LOG"
 says "what it is drawn as" "Vanity, 36 in is drawn as a box, wherever one stands." "$LOG"
-says "the library written out" "Wrote bench items.csv, beside the job: the job's items, 48 rows under their headings." "$LOG"
+says "the library written out" "Wrote bench items.csv, beside the job: the job's tool chest, 48 rows under their headings." "$LOG"
 
 echo
 echo "== What the session left: the saved job, and the library beside it =="

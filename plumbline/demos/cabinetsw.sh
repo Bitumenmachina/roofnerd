@@ -127,17 +127,21 @@ echo "  22 pictures saved to $OUT (model and sheet, after each of 11 steps)"
 echo
 echo "== What the window said =="
 cp "$T/map.txt.said" "$T/said.txt"
-says "$T/said.txt" "Cabinets: the run starts 1' 0\" along "
+# The run starts where the click was, and says so (call 169; the click here was 1 ft along).
+says "$T/said.txt" "Cabinets: the run starts where you click, 1' 0\" along "
+says "$T/said.txt" "type another start in Starts at."
 # (The window says what a thing is called, not its number in the file: "wall 6", "Kitchen".)
 says "$T/said.txt" "Set 6 boxes along wall "
 says "$T/said.txt" " in Kitchen: a run of 13 ft, from 1 ft to 14 ft along the wall; 1.75 ft left to the corner."
 says "$T/said.txt" "Undone: Set 6 boxes along wall "
 says "$T/said.txt" "Countertop: 13 ft long by 25 1/2 in deep, 34 1/2 in up; 27.625 SF, front edge 13 LF."
-says "$T/said.txt" "Can't set the run: B99 is not in this job's items. The list above the field has the boxes and the appliances this job has."
+says "$T/said.txt" "Can't set the run: B99 is not in the tool chest. The list above the field has the boxes and the appliances this job has."
 # A refusal is said on the card and in the message line, once: not again in the panel, and the
 # list of what there is is not said again in it either (call 161).
 [ "$(grep -c "B99 is not in" "$T/said.txt")" = 1 ] || { echo "FAIL: the refusal was said more than once"; grep "B99" "$T/said.txt"; exit 1; }
-if grep -qiE 'tool chest' "$T/said.txt"; then echo "FAIL: the window said tool chest"; exit 1; fi
+# The window says "the tool chest" where the model does (call 169: Patrick's word, call 151); the
+# stand-in "this job's items" (call 163) is gone.
+if grep -qiE "this job's items" "$T/said.txt"; then echo "FAIL: the window said this job's items, not the tool chest"; exit 1; fi
 if grep -qiE 'furnishing-|wall-0|room-0|Entered|Err\(' "$T/said.txt"; then echo "FAIL: the window said a program word"; grep -iE 'furnishing-|wall-0|room-0|Entered|Err\(' "$T/said.txt"; exit 1; fi
 
 echo
@@ -316,6 +320,29 @@ light_before = count("04", *win, lambda l: l > 215)
 print("    the wall's 16' 0\" window (34.85, 8.0): before the run %d non-paper pixels; over the run %d light pixels (picture 04 as a control: %d)" % (text_before, light_after, light_before))
 good = text_before >= 6 and light_after == 0 and light_before > 100
 ok = ok and good
+# (4) The dishwasher is marked DW on the plan, as a drawing marks it (call 169), and its label stays
+# inside its box. The box stands 33.75 to 35.75 ft east, its middle 3.5 ft north, and the countertop's
+# slate edge runs along 33.6 to 33.8 ft: a label wider than the box lies over that edge as a light
+# pill. The light pixels (luminance over 180) in that strip at the dishwasher's row (3.2 to 3.8 ft
+# north) are counted: 0 on picture 05 of this run, and 47 on the picture from before this change
+# (demos/captured/cabinetsw/05-model.png at the commit before it, "Dishwasher" lettered wider than its
+# box), which fails the check. And DW has ink inside the box (at least 6 dark pixels).
+def light(name, e0, e1, n0, n1, lum=180):
+    im = Image.open("%s/%s-model.png" % (out, name)).convert("RGB")
+    px = im.load()
+    n = 0
+    for x in range(int(round(x0 + e0 * k)), int(round(x0 + e1 * k)) + 1):
+        for y in range(int(round(y0 - n1 * k)), int(round(y0 - n0 * k)) + 1):
+            p = px[x, y]
+            if (p[0] * 299 + p[1] * 587 + p[2] * 114) / 1000 > lum:
+                n += 1
+    return n
+ink_out = light("05", 33.6, 33.8, 3.2, 3.8)
+ink_in = dark("05", 34.0, 35.5, 3.2, 3.8)
+print("    the dishwasher's label: %d light pixels over the countertop's edge beside its box, %d dark pixels of it inside" % (ink_out, ink_in))
+good_dw = ink_out == 0 and ink_in >= 6
+ok = ok and good_dw
+print("    DW inside its own box, none of it over the edge beside: %s" % ("as wanted" if good_dw else "FAIL"))
 print("    the dimension is gone from over the run: %s" % ("as wanted" if good else "FAIL: wanted the figure there before (>= 6), no light pixel over the run, and the control light"))
 sys.exit(0 if ok else 1)
 PY

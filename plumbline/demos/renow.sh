@@ -119,6 +119,140 @@ says "$T/south.txt" "Brick veneer"
 says "$T/room.txt" "floor area       364.25 SF"
 
 echo
+echo "== Several things at once, a wall the work opens, a line taken off, a measure typed (call 169) =="
+# The same house in a second job. Worked by hand: the partition down opens the Living room
+# to 23.5 ft by 15.5 ft inside the faces, 364.25 SF where it was 178.25 SF with the partition
+# standing. Receptacles (NEC 210.52(A): one for every 12 ft or part of a room with no door, all
+# the way round): 11.5 by 15.5 ft inside is 54 ft round, 4.5, so 5; 23.5 by 15.5 is 78 ft round,
+# 6.5, so 7.
+J2="$T/job2.json"; M="$OUT/multi"; mkdir -p "$M"
+"$P" new "$J2" "Renovation, several at once (not a real job)" >/dev/null
+S2="$(made "$("$P" level "$J2" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+WT2="$(made "$("$P" type "$J2" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
+read -r SOUTH2 EAST2 NORTH2 WEST2 <<<"$("$P" wall "$J2" "$S2" "$WT2" --points "0,0 24,0 24,16 0,16" --closed --height "9 ft" "${K[@]}" | grep -oE 'wall-[0-9]+' | tr '\n' ' ')"
+PART2="$("$P" wall "$J2" "$S2" "$WT2" --points "12,0 12,16" --height "9 ft" "${K[@]}" | grep -oE 'wall-[0-9]+' | head -1)"
+"$P" room "$J2" "$S2" "Living" --at "6,8" "${K[@]}" >/dev/null
+"$P" line "$J2" "$SOUTH2" "Brick veneer" net_area --cost-type material --division 4 >/dev/null
+touch "$T/started2"
+cat > "$T/session2.sh" <<SESSION
+#!/bin/bash
+export APP="$APP" T="$T" OUT="$M" ICD="$ICD"
+. "$PWD/demos/window.sh"
+LOG="$T/app2.log"
+open_window "$J2"
+sleep 8; park
+on "Plan"; sleep 8; park
+echo "\$(plan_px 24 8) \$(plan_px 12 8) \$(plan_px 6 0) \$(plan_line)" > "$T/px2.txt"
+cp "$T/map.txt" "$T/map-0.txt"
+shot                                      # 01 nothing marked, nothing selected: no key rows under Show
+at 6 0; sleep 3                           # the south wall
+shift_at 24 8; shift_at 12 8              # Shift and a click: the east wall, the partition
+shot                                      # 02 three picked: "and 2 more", the three outlined
+on "Existing"; sleep 4; park              # the south wall carries a line: asked
+on "Keep its lines"; sleep 4; park
+shot                                      # 03 all three marked existing, in one step
+click 1000 800; sleep 3
+cp "$T/map.txt" "$T/map-1.txt"
+on "Undo"; sleep 4; park                  # one Undo takes the whole mark back
+cp "$T/map.txt" "$T/map-2.txt"
+shot                                      # 04 none of the three is marked
+xdotool key F2; sleep 3
+cp "$J2" "$T/after-undo.json"
+at 12 4; sleep 3                          # the partition alone
+on "To demolish"; sleep 4; park
+cp "$T/map.txt" "$T/map-3.txt"
+shot                                      # 05 the partition to demolish: Living and its receptacles said
+on "Bearing"; sleep 4; park               # the wall the work opens: asked, and said from the panel
+shot                                      # 06 Behind the wall: bearing, and what a bearing wall needs
+on "In the wall"; sleep 3
+typed "a 2 in drain" yes; sleep 2         # 07 typed, then Enter
+park
+shot                                      # 08 both said
+at 6 0; sleep 3
+on "Select all on this level"; sleep 4; park
+shot                                      # 09 every wall of the level picked from one button
+on "Existing"; sleep 4; park
+on "Keep its lines"; sleep 4; park
+shot                                      # 10 five marked in one step
+on "Undo"; sleep 4; park                  # one Undo takes all five back
+click 1000 800; sleep 3
+at 6 16; sleep 3
+shift_at 0 8; sleep 2
+on "Delete"; sleep 4; park                # Delete acts on both, in one step
+shot                                      # 11 two walls gone
+on "Undo"; sleep 4; park
+click 1000 800; sleep 3
+at 6 0; sleep 3
+on_right "Take line off: Brick veneer"; sleep 4; park
+shot                                      # 12 the line is off the south wall
+on "Undo"; sleep 4; park                  # put back, by one Undo
+on "Add cost line"; sleep 3
+typed "Patch and match siding"; typed "60 SF"; typed "material" yes
+sleep 3; park
+shot                                      # 13 a measure typed as the quantity
+xdotool key F2; sleep 4
+close_window
+SESSION
+chmod +x "$T/session2.sh"
+timeout 1800 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session2.sh" || true
+if [ -s "$T/missing.txt" ]; then echo "FAIL: the second session stopped: a control it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
+if grep -q "panicked" "$T/app2.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app2.log" | head; exit 1; fi
+for n in 01 02 03 04 05 06 08 09 10 11 12 13; do
+  [ "$M/$n-model.png" -nt "$T/started2" ] || { echo "FAIL: no picture $n of the second session"; exit 1; }
+done
+echo "  pictures saved to $M"
+SAID2="$T/map.txt.said"
+says "$SAID2" "Added wall "
+says "$SAID2" " things are selected."
+says "$SAID2" "Marked 3 things: existing to remain"
+says "$SAID2" "Undone: Mark work."
+says "$SAID2" "Living is now 364.25 SF (was 178.25), and needs 7 receptacles (was 5)"
+says "$SAID2" " is bearing. Assumed: entered on screen"
+says "$SAID2" ": a 2 in drain. Assumed: entered on screen"
+says "$SAID2" "Selected all 5 walls on Ground"
+says "$SAID2" "Marked 5 things: existing to remain"
+says "$SAID2" "Deleted 2 things"
+says "$SAID2" "Took \"Brick veneer\" off wall "
+says "$SAID2" "Its quantity, 60 SF, is Assumed: entered on screen"
+# "Existing, shown pale" is under Show only once something is marked existing; the Demolition
+# switch only once something comes down.
+key() { grep -q $'^model\t'"$2"$'\t' "$1"; }
+! key "$T/map-0.txt" "Key Existing" && ! key "$T/map-0.txt" "Show Demolition" || { echo "FAIL: a key row is there with nothing marked"; exit 1; }
+key "$T/map-1.txt" "Key Existing" || { echo "FAIL: no Existing key row with three marked existing"; exit 1; }
+! key "$T/map-2.txt" "Key Existing" || { echo "FAIL: the Existing key row is still there after Undo"; exit 1; }
+key "$T/map-3.txt" "Show Demolition" && ! key "$T/map-3.txt" "Key Existing" || { echo "FAIL: with only a demolition marked, the Demolition switch should show and Existing should not"; exit 1; }
+echo "    under Show: no key rows with nothing marked; Existing once three are existing, gone with Undo; only Demolition with a demolition alone"
+"$P" show "$T/after-undo.json" > "$T/show-undo.txt"
+if grep -q "existing to remain" "$T/show-undo.txt"; then echo "FAIL: one Undo left a wall marked existing"; exit 1; fi
+echo "    one Undo took all three marks back (the job saved after it has none)"
+"$P" check "$J2"; "$P" show "$J2" > "$T/show2.txt"
+block2() { sed -n "/^ *$1  /,/^ *[a-z]*-[0-9]*  /p" "$T/show2.txt" | sed '$d'; }
+block2 "$PART2" > "$T/part2.txt"; block2 "$SOUTH2" > "$T/south2.txt"
+says "$T/part2.txt" "to demolish"
+# (`show` marks an Assumed value with ~)
+says "$T/part2.txt" "~ bearing          bearing"
+says "$T/part2.txt" "~ in the wall      a 2 in drain"
+says "$T/south2.txt" "Patch and match siding"
+says "$T/south2.txt" "Brick veneer"
+grep -q "60 SF" "$T/south2.txt" || { echo "FAIL: the typed 60 SF is not on the line"; cat "$T/south2.txt"; exit 1; }
+grep -q "is bearing and comes down" "$T/show2.txt" || { echo "FAIL: the saved job does not say what a bearing wall that comes down needs"; exit 1; }
+echo "    saved: the partition to demolish, bearing and what is in it Assumed (~) from the screen, what a bearing wall needs said; the south wall with its brick and the typed 60 SF"
+python3 -I - "$M" "$T/px2.txt" <<'PY'
+import sys
+from PIL import Image
+m, v = sys.argv[1], [float(x) for x in open(sys.argv[2]).read().split()]
+east = (v[0], v[1])
+def blue(name, cx, cy, w=26, h=60):
+    im = Image.open(f"{m}/{name}-model.png").convert("RGB").crop((int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2)))
+    return sum(1 for p in im.getdata() if p[2] - p[0] > 80)
+# The wall is 16 pixels across: a window 26 wide takes in both its edges, where the outline is drawn.
+a, b = blue("01", *east), blue("02", *east)
+print("    pixels of the picked blue along the east wall: unpicked (01) %d, picked with Shift (02) %d" % (a, b))
+good = a < 5 and b > 40
+print("    outlined blue once picked along with the others: %s" % ("as wanted" if good else "FAIL"))
+sys.exit(0 if good else 1)
+PY
+echo
 echo "== The pictures, measured =="
 # Boxes: the partition on the plan is worked from where the program says the plan lies on
 # screen ($T/px.txt: the partition's two ends 3 and 13 ft up, and the plan's scale); the

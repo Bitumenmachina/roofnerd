@@ -165,6 +165,8 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
         path: PathBuf::from(path),
         roof,
         selected: None,
+        together: Vec::new(),
+        card_away: false,
         hover: None,
         message,
         tone,
@@ -459,6 +461,9 @@ struct Burst {
     /// More keys came after the key that ended an entry, in the same frame: a second
     /// reading, not used, and not yet said.
     trailing: bool,
+    /// A tool's own sizes were being typed until then (and for a moment after): quick
+    /// typing there is a hand and not a laser, and nothing is said of a reading (call 169).
+    sizes_until: f64,
 }
 
 /// Two character keys closer together than this are a burst, not a hand: seconds.
@@ -567,6 +572,9 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
     }
     // A value being typed takes the keyboard until Enter or Escape.
     if let Some((field, mut text)) = doc.entry.take() {
+        if matches!(field, Entry::Settings(_)) {
+            burst.sizes_until = now + 4.0;
+        }
         // Saving is never put off by a field that has the keyboard (J19-46: with a
         // size being typed F2 did nothing and said nothing, the program was closed,
         // and three windows were lost). The job is saved as it stands, and the line
@@ -819,6 +827,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                 Entry::Room => tools::room_named(doc, &text),
                 Entry::Cabinets => tools::cabinets_entered(doc, &values),
                 Entry::LayoutName => tools::keep_layout(doc, &text),
+                Entry::InTheWall => tools::said_of_wall(doc, "in_the_wall", text.trim()),
                 Entry::Division => {
                     let line = doc.entry_line.take();
                     match (doc.selected.clone(), plumbline_world::Division::parse(&text)) {
@@ -921,6 +930,10 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
     // once. (Escape, and the keys that save, still act.)
     // A second reading that came in the very frame the first ended: said now, however
     // long that frame took.
+    if burst.trailing && now < burst.sizes_until {
+        burst.trailing = false;
+        burst.said = true;
+    }
     if burst.trailing {
         burst.trailing = false;
         burst.said = true;
@@ -930,6 +943,9 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
     }
     if in_burst {
         burst.waiting.clear();
+        if !burst.said && now < burst.sizes_until {
+            burst.said = true;
+        }
         if !burst.said {
             burst.said = true;
             if burst.after_entry {
@@ -1154,7 +1170,12 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
     }
     if keys.just_pressed(KeyCode::Escape) && doc.selected.is_some() {
         doc.selected = None;
+        doc.together.clear();
         doc.say(Tone::Done, "Nothing selected.");
+        doc.touch();
+    } else if keys.just_pressed(KeyCode::Escape) && panels::message_card_up(doc) {
+        // With no tool in hand and nothing selected, Esc puts the message card away (call 169).
+        doc.card_away = true;
         doc.touch();
     }
     if keys.just_pressed(KeyCode::Tab) {

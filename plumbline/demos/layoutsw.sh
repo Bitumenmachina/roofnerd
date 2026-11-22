@@ -110,10 +110,11 @@ cp "$T/map.txt" "$T/map-open-list.txt"
 shot                                     # 07 the jobs again, to open one in this window
 sheet "Layout addition-12-ft-b"; sleep 14; park
 shot                                     # 08 the kept copy is open in this window
-on "Starter items"; sleep 6              # a change not saved
-sheet "Open another layout"; sleep 3
+on "Starter tool chest"; sleep 6              # a change not saved
+sheet "Open another layout"; sleep 3; park
+cp "$T/map.txt" "$T/map-grey.txt"
 sheet "Layout addition-12"; sleep 5; park
-shot                                     # 09 refused: Save first (Ctrl+S); nothing opened
+shot                                     # 09 refused: Save first (Ctrl+S); nothing opened; the list grey
 xdotool key F2; sleep 4                  # saved: the kept copy, which is the program's own to write
 sheet "Layout addition-12"; sleep 14; park
 cp "$T/map.txt" "$T/map-reopened.txt"
@@ -248,6 +249,41 @@ print("    all %d rows are the command line's rows, word for word" % len(shown))
 if away:
     sys.exit("FAIL: after Take it away the table is still on the sheet: %s" % away)
 print("    after Take it away: no row of the table is on the sheet")
+PY
+
+echo
+echo "== The list with changes not saved is grey; a job is named by its title, its file's name only where two titles are alike (call 169) =="
+# The sheet window is 880 pixels wide at the right of the screen (the map's places are the
+# screen's). The row of "Addition 16 ft" (its title alone) and of "Addition 12 ft" (two jobs have it)
+# are read from picture 09, with changes not saved, and the first from picture 07, with none.
+# Measured on a run of these steps: the title's darkest pixel is luminance 25 in 07 and 133 in 09; the
+# stem's place (130 to 260 pixels across) has 0 pixels under 200 for Addition 16 ft and 121 for the
+# two Addition 12 ft rows. Run on the picture from before this change (demos/captured/layoutsw/09-sheet.png
+# at the commit before it: the title in full ink, a stem and the word job on every row) the first check
+# fails (darkest 25, wanted over 100) and the second fails (161 pixels where 0 are wanted).
+python3 -I - "$OUT" "$T/map-grey.txt" "$T/map-open-list.txt" <<'PY'
+import sys
+from PIL import Image
+out, mapfile, mapfile7 = sys.argv[1], sys.argv[2], sys.argv[3]
+def row_y(name, mapfile=mapfile):
+    for line in open(mapfile):
+        p = line.rstrip("\n").split("\t")
+        if len(p) >= 4 and p[0] == "sheet" and p[1] == name:
+            return int(float(p[3]))
+sixteen, twelve, sixteen7 = row_y("Layout addition-16"), row_y("Layout addition-12"), row_y("Layout addition-16", mapfile7)
+if sixteen is None or twelve is None or sixteen7 is None:
+    sys.exit("FAIL: the rows are not on the map")
+def darkest(name, y):
+    im = Image.open("%s/%s-sheet.png" % (out, name)).convert("L")
+    return min(im.getpixel((x, yy)) for x in range(40, 128) for yy in range(y - 8, y + 9))
+def stem_ink(name, y):
+    im = Image.open("%s/%s-sheet.png" % (out, name)).convert("L")
+    return sum(1 for x in range(130, 260) for yy in range(y - 8, y + 9) if im.getpixel((x, yy)) < 200)
+print("    the title's darkest pixel: no changes (07) %d, changes not saved (09) %d" % (darkest("07", sixteen7), darkest("09", sixteen)))
+print("    a stem beside the title: Addition 16 ft %d pixels, Addition 12 ft %d pixels" % (stem_ink("09", sixteen), stem_ink("09", twelve)))
+ok = darkest("07", sixteen7) < 90 and darkest("09", sixteen) > 100 and stem_ink("09", sixteen) == 0 and stem_ink("09", twelve) > 10
+print("    grey when nothing can be opened, a file's name only beside a title that is not alone: %s" % ("as wanted" if ok else "FAIL"))
+sys.exit(0 if ok else 1)
 PY
 
 echo

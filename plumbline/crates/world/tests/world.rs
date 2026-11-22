@@ -3223,7 +3223,7 @@ fn a_room_is_the_space_its_walls_enclose_measured_inside_their_faces_and_to_thei
     assert_eq!(measure_of(&mut job, &bath, "gross_area").value, Some(120.0));
     let lost = measure_of(&mut job, &utility, "floor_area");
     assert_eq!((lost.value, lost.status), (None, Status::Unknown));
-    assert_eq!(lost.note, "bath was placed first and has the space this room's point is in");
+    assert_eq!(lost.note, "utility has no area yet: its point is in the space bath has. Part the two with a wall or a room line, and each gets its own.");
 }
 
 #[test]
@@ -3689,7 +3689,7 @@ fn a_partition_stops_at_the_face_of_a_wall_that_does_not_bound_rooms() {
     let east = room(&mut job, &s, "east side", [15.0, 7.5]);
     job.derive();
     // (The room placed first, at (5, 5), has the space: the east room is in it.)
-    assert_eq!(measure_of(&mut job, &east, "floor_area").note, "room was placed first and has the space this room's point is in");
+    assert_eq!(measure_of(&mut job, &east, "floor_area").note, "east side has no area yet: its point is in the space room has. Part the two with a wall or a room line, and each gets its own.");
     let first = path_named(&mut job, "room");
     assert_eq!(figures_of(&mut job, &first), [Some(180.5), Some(200.0), Some(77.0)]);
     // The same with N only 3 ft tall and bounding rooms where it stands: it stops short of
@@ -6449,7 +6449,7 @@ fn a_room_line_parts_two_rooms_where_no_wall_stands() {
     // One room is the whole inside; the second has no figures: the first has the space.
     assert_eq!(measure(&mut job, &living, "floor_area").value, Some(550.25));
     let (k, status) = (measure(&mut job, &kitchen, "floor_area"), measure(&mut job, &living, "floor_area").status);
-    assert!(k.value.is_none() && k.note.contains("has the space"), "{k:?}");
+    assert!(k.value.is_none() && k.note.contains("its point is in the space Living has"), "{k:?}");
     assert_eq!(status, Status::Known);
     let clashes_before = clashes_of(&mut job, None);
     let walls_before = plumbline_world::building::storey_totals(&mut job)[0].walls.clone();

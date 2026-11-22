@@ -126,7 +126,7 @@ impl Tool {
             Tool::Floor => "Click anywhere on the level. The floor fills the outline its walls enclose.",
             Tool::Room => "Click inside the room, then type its name.",
             Tool::RoomLine => "Parts two rooms where no wall stands: click each end. Esc ends.",
-            Tool::Cabinets => "Click a wall's face, on the room's side, where the run of boxes starts. Then type the boxes, like B18 SB36 B24. Esc ends.",
+            Tool::Cabinets => "Click a wall's face, on the room's side. The run starts where you click; type another start in Starts at. Then type the boxes, like B18 SB36 B24. Esc ends.",
             Tool::Roof => "Click each corner of the roof's outline, then the first again to close it.",
             Tool::Move => "Click a point on it, then where that point goes.",
             Tool::Fitting => "Click where runs meet.",
@@ -260,7 +260,7 @@ pub fn cant(doc: &mut Doc, what: &str, why: impl std::fmt::Display) {
 
 /// Each room's name and floor area, as the job works it out now (a room is said by its
 /// name; the figure is the model's).
-fn room_areas(job: &mut plumbline_world::Job) -> Vec<(String, String, Option<f64>)> {
+fn room_areas(job: &mut plumbline_world::Job) -> Vec<(String, String, Option<f64>, Option<f64>)> {
     let order = job.order.clone();
     order
         .iter()
@@ -269,8 +269,10 @@ fn room_areas(job: &mut plumbline_world::Job) -> Vec<(String, String, Option<f64
                 return None;
             }
             let node = job.world.get::<plumbline_world::Node>(*e)?;
-            let area = job.world.get::<plumbline_world::components::Measure>(*e).and_then(|m| m.0.get("floor_area")).and_then(|d| d.value);
-            Some((node.path.clone(), node.name.clone(), area))
+            let measures = job.world.get::<plumbline_world::components::Measure>(*e);
+            let area = measures.and_then(|m| m.0.get("floor_area")).and_then(|d| d.value);
+            let receptacles = measures.and_then(|m| m.0.get("receptacles")).and_then(|d| d.value);
+            Some((node.path.clone(), node.name.clone(), area, receptacles))
         })
         .collect()
 }
@@ -285,19 +287,29 @@ pub fn mark_work(doc: &mut Doc, status: plumbline_world::WorkStatus, lines: ed::
     };
     let how = ed::Entered { status: Status::Assumed, source: SOURCE };
     let rooms_before = room_areas(&mut doc.job);
-    match ed::mark(&mut doc.job, std::slice::from_ref(&sel), status, lines, how) {
+    // Everything that is selected is marked, in one step (call 169).
+    let all = doc.all_selected();
+    match ed::mark(&mut doc.job, &all, status, lines, how) {
         Ok(mut said) => {
+            if all.len() > 1 {
+                said.insert(0, format!("Marked {}: {}.", plumbline_world::view::so_many(all.len(), "thing"), status.said()));
+            }
             doc.marking = None;
             doc.job.derive();
             // A room that the mark changes says so (call 161): what comes down opens the
             // room it parted, and what stays is a wall again.
-            for (path, name, was) in rooms_before {
-                let now = room_areas(&mut doc.job).into_iter().find(|r| r.0 == path).and_then(|r| r.2);
-                if let (Some(was), Some(now)) = (was, now) {
-                    if (was - now).abs() > 1e-6 {
-                        let num = plumbline_world::view::num;
-                        said.push(format!("{name} is now {} SF (was {})", num(now), num(was)));
-                    }
+            for (path, name, was, was_outlets) in rooms_before {
+                let Some((_, _, now, now_outlets)) = room_areas(&mut doc.job).into_iter().find(|r| r.0 == path) else { continue };
+                let num = plumbline_world::view::num;
+                let area_moved = matches!((was, now), (Some(a), Some(b)) if (a - b).abs() > 1e-6);
+                let outlets_moved = matches!((was_outlets, now_outlets), (Some(a), Some(b)) if (a - b).abs() > 1e-6);
+                // What a mark changes in a room is said with its area: the receptacles
+                // the walls need are worked from the same walls (call 169).
+                match (area_moved, outlets_moved, was, now, was_outlets, now_outlets) {
+                    (true, true, Some(was), Some(now), Some(wo), Some(no)) => said.push(format!("{name} is now {} SF (was {}), and needs {} receptacles (was {})", num(now), num(was), num(no), num(wo))),
+                    (true, false, Some(was), Some(now), ..) => said.push(format!("{name} is now {} SF (was {})", num(now), num(was))),
+                    (false, true, _, Some(now), Some(wo), Some(no)) => said.push(format!("{name} is still {} SF, and needs {} receptacles (was {})", num(now), num(no), num(wo))),
+                    _ => {}
                 }
             }
             doc.edit("Mark work");
@@ -524,6 +536,9 @@ pub fn new_line(doc: &mut Doc, values: &[String]) {
     let made = match (doc.selected.clone(), parts.as_slice()) {
         (None, _) => Err("nothing is selected. Click what the line is on first".to_string()),
         (Some(on), [what, by, kind]) if !what.is_empty() && !by.is_empty() && !kind.is_empty() => {
+            // A measure typed outright ("60 SF": call 159) is the line's quantity, entered on
+            // screen: Assumed, and says so, as every typed value does.
+            let typed_measure = plumbline_world::units::looks_like_measure(by);
             // A takeoff figure is typed as it is read on the panel: "net area".
             let by = if by.chars().all(|c| c.is_ascii_alphabetic() || c == ' ') { by.to_lowercase().replace(' ', "_") } else { by.to_string() };
             // In-house work is by the hour: how fast it goes follows the cost type,
@@ -535,6 +550,15 @@ pub fn new_line(doc: &mut Doc, values: &[String]) {
             plumbline_world::Class::parse(kind).and_then(|class| {
                 let in_hours = matches!(class, plumbline_world::Class::Labor | plumbline_world::Class::Fabrication | plumbline_world::Class::Supervision);
                 match (in_hours, rate) {
+                    (true, Some(rate)) if typed_measure => ed::all_or_nothing(&mut doc.job, |job| {
+                        if !(rate.contains("/hr") || rate.contains("hr/")) {
+                            return Err(format!("{rate:?} is not a production rate; write how fast the work goes, like 40 SF/hr or 0.025 hr/SF"));
+                        }
+                        job.add_line_measured(&on, what, &by, None, false, Status::Assumed, crate::model::PRICED)?;
+                        job.set_on_line(&on, "order", Some(what), Some(rate), Status::Assumed, crate::model::PRICED)?;
+                        job.set_class(&on, Some(what), class)
+                    }),
+                    (false, None) if typed_measure => doc.job.add_line_measured(&on, what, &by, Some(class), false, Status::Assumed, crate::model::PRICED),
                     (true, Some(rate)) => doc.job.add_line_in_hours(&on, what, &by, class, rate, Status::Assumed, crate::model::PRICED),
                     (true, None) => Err(format!("{} is in-house work, priced by the hour: say how fast it goes after the cost type, like {} at 40 SF/hr (or 0.025 hr/SF)", class.title(), class.title().to_lowercase())),
                     (false, Some(_)) => Err(format!("{} is not priced by the hour: leave the rate off, or make it labor", class.title())),
@@ -549,7 +573,8 @@ pub fn new_line(doc: &mut Doc, values: &[String]) {
         Ok((on, class)) => {
             doc.job.derive();
             doc.edit("Cost line");
-            doc.say(Tone::Done, format!("Added to {on}: {:?}, {}, with no price yet. Click its price on the sheet's Estimate tab and type it.", parts[0], class.title().to_lowercase()));
+            let typed = if plumbline_world::units::looks_like_measure(parts[1]) { format!(" Its quantity, {}, is Assumed: entered on screen, until it is measured.", parts[1]) } else { String::new() };
+            doc.say(Tone::Done, format!("Added to {on}: {:?}, {}, with no price yet.{typed} Click its price on the sheet's Estimate tab and type it.", parts[0], class.title().to_lowercase()));
         }
         Err(why) => {
             // The form stays open, to be put right.
@@ -680,7 +705,16 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             };
             let pts = [*a, *b];
             doc.draw.picked.clear();
-            Some(ed::room_lines(&mut doc.job, &storey, &pts, how(traced)).map(|made| format!("Added {}. It parts two rooms where no wall stands.", made.join(", "))))
+            Some(ed::room_lines(&mut doc.job, &storey, &pts, how(traced)).map(|made| {
+                // A line with an end that meets no wall and no other room line parts
+                // nothing yet, and says so (call 169; the model works the ends out).
+                let loose = made.iter().any(|m| !plumbline_world::building::room_line_unreached(&mut doc.job, m).is_empty());
+                if loose {
+                    format!("Added {}. It does not run from wall to wall, so it parts nothing yet.", made.join(", "))
+                } else {
+                    format!("Added {}. It parts two rooms where no wall stands.", made.join(", "))
+                }
+            }))
         }
         // A run of cabinet boxes: the click finds the wall's face and the room on that side
         // and where along the wall the run starts; the boxes' codes are typed next.
@@ -691,7 +725,7 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
                 Ok((wall, room, from)) => {
                     doc.draw.cabinets = Some((wall.clone(), room.clone()));
                     doc.open_form(Entry::Cabinets, vec![units::feet_as_ft_in(from, 16), String::new()], 1);
-                    doc.say(Tone::Done, format!("Cabinets: the run starts {} along {wall}, in {room}. Type the boxes, like B18 SB36 B24 (an appliance by its name in square brackets, like [Dishwasher]), then Enter.", units::feet_as_ft_in(from, 16)));
+                    doc.say(Tone::Done, format!("Cabinets: the run starts where you click, {} along {wall}, in {room}; type another start in Starts at. Type the boxes, like B18 SB36 B24 (an appliance by its name in square brackets, like [Dishwasher]), then Enter.", units::feet_as_ft_in(from, 16)));
                 }
             }
             doc.touch();
@@ -893,11 +927,11 @@ pub fn cabinets_entered(doc: &mut Doc, values: &[String]) {
         Err(why) => {
             let at = if why.contains("starts so far") || why.contains("where the run starts") { 0 } else { 1 };
             doc.reopen_form(Entry::Cabinets, values.to_vec(), at);
-            // The screen says "items" where the model's sentence says "tool chest".
+            // The window says "the tool chest" where the model does (call 169).
             // The list of what there is is under the field: the sentence does not say it again.
             let why = match why.split_once(". It has: ") {
-                Some((cant_find, _)) => format!("{}. The list above the field has the boxes and the appliances this job has.", cant_find.replace("the tool chest", "this job's items")),
-                None => why.replace("the tool chest", "this job's items"),
+                Some((cant_find, _)) => format!("{}. The list above the field has the boxes and the appliances this job has.", cant_find),
+                None => why,
             };
             cant(doc, "set the run", why);
         }
@@ -993,7 +1027,7 @@ pub fn keep_layout(doc: &mut Doc, title: &str) {
     if to.exists() || doc.path.file_name().is_some_and(|n| n.to_string_lossy() == name) {
         doc.open(Entry::LayoutName, title);
         doc.fresh = true;
-        return cant(doc, "keep this as another layout", format!("a job is kept here under that title already ({}). Give this layout another title", crate::panels::plain_stem(&name)));
+        return cant(doc, "keep this as another layout", format!("a job is kept here under that title already. Give this layout another title"));
     }
     let made = file::load(&file::save(&mut doc.job)).map(|(job, _)| job);
     match made {
@@ -1188,6 +1222,8 @@ pub fn room_named(doc: &mut Doc, text: &str) {
             let area = doc.job.find(&path).and_then(|e| doc.job.world.get::<plumbline_world::Measure>(e)).and_then(|m| m.0.get("floor_area").cloned());
             let said = match area.as_ref().map(|d| (d.value, d.note.as_str())) {
                 Some((Some(x), _)) => format!("{} SF inside its walls. If that is more than the room, a wall round it does not close: draw it to meet. Click inside the next room, or Esc.", plumbline_world::view::figure(x, 2)),
+                // The model's own sentence names the room and what to do (call 169).
+                Some((None, why)) if why.contains(" has no area yet: ") => why.to_string(),
                 Some((None, why)) if !why.is_empty() => format!("It has no area yet: {why}."),
                 _ => "Click inside the next one, or Esc.".to_string(),
             };
@@ -1257,8 +1293,102 @@ pub fn step(doc: &mut Doc, redo: bool) {
     doc.redraw();
 }
 
+/// What is said of a wall the work opens (call 160), in the window: whether it is bearing,
+/// and what runs inside it. Said on screen it is Assumed, as every typed value is, until it
+/// is looked at in the field.
+pub fn said_of_wall(doc: &mut Doc, what: &str, word: &str) {
+    let Some(sel) = doc.selected.clone() else { return cant(doc, "say it", "nothing is selected") };
+    let name = doc.job.find(&sel).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or_else(|| sel.clone());
+    if word.is_empty() {
+        return cant(doc, "say what is in the wall", "type it in words, like a 2 in drain and two cables, or nothing");
+    }
+    match doc.job.set(&sel, what, Some(word), Status::Assumed, crate::model::PRICED) {
+        Ok(()) => {
+            doc.job.derive();
+            doc.edit(if what == "bearing" { "Bearing" } else { "In the wall" });
+            let said = if what == "bearing" { format!("{name} is {word}") } else { format!("In {name}: {word}") };
+            doc.say(Tone::Done, format!("{said}. Assumed: entered on screen, until it is looked at in the field."));
+        }
+        Err(why) => cant(doc, "say it", why),
+    }
+    doc.redraw();
+}
+
+/// One cost line taken off a thing (call 166), with whatever was entered on it. Says what
+/// the line came to before it went, as the estimate had it. One step to undo.
+pub fn take_line_off(doc: &mut Doc, path: &str, name: &str, description: &str) {
+    doc.job.derive();
+    let before = plumbline_world::view::estimate(&mut doc.job);
+    let was = before.lines.iter().find(|l| l.path == path && l.description == description).map(|l| (l.quantity.value, l.quantity.unit.clone(), l.amount.value));
+    match doc.job.remove_line(path, description) {
+        Ok(_) => {
+            doc.job.derive();
+            doc.edit("Take line off");
+            let num = plumbline_world::view::num;
+            let stood = match was {
+                Some((Some(q), unit, Some(amount))) => format!("{} {unit}, {}", num(q), plumbline_world::view::money(amount)),
+                Some((Some(q), unit, None)) => format!("{} {unit}, with no price on it", num(q)),
+                _ => "with no figure on it".to_string(),
+            };
+            doc.say(Tone::Done, format!("Took {description:?} off {name}: {stood}. Undo puts it back."));
+            doc.redraw();
+        }
+        Err(why) => cant(doc, "take the line off", why),
+    }
+}
+
+/// Every wall (door, window, floor, footing) on the level this one is on, selected, this
+/// one in hand (call 169). One click for "mark all the walls existing".
+pub fn select_all_on_level(doc: &mut Doc, path: &str, kind: Kind) {
+    let on = plumbline_world::building::storeys_of(&mut doc.job);
+    let Some(level) = on.get(path).cloned() else { return cant(doc, "select them", "it is on no level") };
+    let mut same: Vec<String> = on.iter().filter(|(p, l)| **l == level && p.as_str() != path && doc.job.kind(p) == Some(kind)).map(|(p, _)| p.clone()).collect();
+    same.sort();
+    let name = plumbline_world::building::storey_totals(&mut doc.job).into_iter().find(|s| s.path == level).map(|s| crate::panels::pretty(&s.name)).unwrap_or(level);
+    let n = same.len() + 1;
+    doc.choosing = false;
+    doc.marking = None;
+    doc.together = same;
+    doc.selected = Some(path.to_string());
+    let what = theme::kind_name(kind).to_lowercase();
+    doc.say(Tone::Done, format!("Selected all {n} {what}{} on {name}. WORK and Delete act on all of them; Esc lets go.", if n == 1 { "" } else { "s" }));
+    doc.touch();
+}
+
 /// Take what is selected out of the job.
 pub fn delete(doc: &mut Doc) {
+    // Several selected (call 169): all go, in one step that one Undo takes back.
+    if !doc.together.is_empty() {
+        let before = plumbline_world::view::estimate(&mut doc.job);
+        let mut gone = Vec::new();
+        for path in doc.all_selected() {
+            if doc.job.find(&path).is_none() {
+                continue;
+            }
+            match ed::remove(&mut doc.job, &path) {
+                Ok(g) => gone.extend(g),
+                Err(why) => {
+                    if gone.is_empty() {
+                        return cant(doc, "delete them", why);
+                    }
+                    break;
+                }
+            }
+        }
+        let went = plumbline_world::view::went_with_said(&before, &mut doc.job);
+        doc.selected = None;
+        doc.together.clear();
+        doc.hover = None;
+        doc.let_go_of_what_is_gone();
+        doc.edit("Delete");
+        let said = format!("Deleted {}: {}.", plumbline_world::view::so_many(gone.len(), "thing"), gone.join(", "));
+        match went {
+            Some(went) => doc.say(Tone::Warned, format!("{said} {}{}", went[..1].to_uppercase(), &went[1..])),
+            None => doc.say(Tone::Done, said),
+        }
+        doc.redraw();
+        return;
+    }
     match doc.selected.clone() {
         None => cant(doc, "delete", "nothing is selected. Click what is to be deleted first."),
         Some(sel) => {

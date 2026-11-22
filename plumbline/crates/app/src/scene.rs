@@ -421,7 +421,7 @@ impl Builder<'_, '_, '_> {
         }
         let (click, over, out) = (path.to_string(), path.to_string(), path.to_string());
         let on_plan = self.on_plan.clone();
-        e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>, snap: Res<Snapshot>| {
+        e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>, snap: Res<Snapshot>, keys: Res<ButtonInput<KeyCode>>| {
             // With a drawing tool in hand a click is a pick, not a selection.
             if press.button == PointerButton::Primary && doc.draw.tool.is_none() && !doc.draw.swallow && !dragged() && !doc.field_in_the_way() {
                 let mut path = on_plan.as_ref().filter(|_| doc.plan).unwrap_or(&click).clone();
@@ -433,7 +433,12 @@ impl Builder<'_, '_, '_> {
                         path = under;
                     }
                 }
-                doc.select(&path);
+                // Shift and a click adds to what is selected, or takes out of it (call 169).
+                if keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight) {
+                    doc.select_also(&path);
+                } else {
+                    doc.select(&path);
+                }
             }
         })
         .observe(|moved: On<PointerMove>, mut doc: ResMut<Doc>| {
@@ -542,6 +547,7 @@ pub fn rebuild(
                     // A click on the ground lets go of the selection.
                     if doc.selected.is_some() {
                         doc.selected = None;
+                        doc.together.clear();
                         doc.say(Tone::Done, "Nothing selected.");
                         doc.touch();
                     }
@@ -1194,16 +1200,16 @@ pub fn facing(positions: &[Vec3]) -> Vec3 {
 
 /// Light up what is pointed at and what is selected. A selected system keeps its colour
 /// and glows, and everything on other systems goes grey, so the one system stands out.
-pub fn tint(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut materials: ResMut<Assets<StandardMaterial>>, mut shown: Local<(Option<String>, Option<String>, u64, u64)>) {
-    if shown.0 == doc.hover && shown.1 == doc.selected && shown.2 == doc.geometry && shown.3 == snap.revision {
+pub fn tint(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut materials: ResMut<Assets<StandardMaterial>>, mut shown: Local<(Option<String>, Option<String>, u64, u64, Vec<String>)>) {
+    if shown.0 == doc.hover && shown.1 == doc.selected && shown.2 == doc.geometry && shown.3 == snap.revision && shown.4 == doc.together {
         return;
     }
-    *shown = (doc.hover.clone(), doc.selected.clone(), doc.geometry, snap.revision);
+    *shown = (doc.hover.clone(), doc.selected.clone(), doc.geometry, snap.revision, doc.together.clone());
     // A placed thing that is selected and in the same space as another is drawn red.
     let clashing = doc.selected.as_ref().filter(|p| snap.selected.as_ref().is_some_and(|s| stands(s.kind) && s.path == **p) && in_what(&snap, p).is_some());
     let a_system = doc.selected.as_ref().is_some_and(|s| drawing.surfaces.iter().any(|x| x.system.as_ref() == Some(s)));
     for surface in &drawing.surfaces {
-        let chosen = doc.selected.as_deref() == Some(surface.path.as_str());
+        let chosen = doc.is_selected(surface.path.as_str());
         let on_system = a_system && surface.system.as_ref() == doc.selected.as_ref();
         let pointed = doc.hover.as_deref() == Some(surface.path.as_str());
         // What is selected keeps the colour of what it is made of, a little lighter: the
@@ -2023,7 +2029,7 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
         }
         for (path, kind, c) in &drawing.openings {
             // The selected one is drawn over in the accent, as anything selected is.
-            if doc.selected.as_ref() == Some(path) {
+            if doc.is_selected(path) {
                 for i in 0..4 {
                     highlight.line(c[i], c[(i + 1) % 4], theme::accent());
                 }
@@ -2061,6 +2067,13 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
                 for axis in [Vec3::X, Vec3::Y, Vec3::Z] {
                     highlight.line(at - axis * 0.75, at + axis * 0.75, colour);
                 }
+            }
+        }
+    }
+    for with in &doc.together {
+        for (_, frame) in drawing.frames.iter().filter(|(p, _)| p == with) {
+            for (a, b) in frame {
+                highlight.line(*a, *b, theme::accent());
             }
         }
     }
