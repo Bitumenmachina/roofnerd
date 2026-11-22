@@ -321,11 +321,41 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
 /// over: to scale, in the scan's own place, Assumed. It is the command line's own
 /// (`plumbline import scan`): the same reader, the same levelling by its floor, the same
 /// cut 4 ft above the floor at 24 dots to the foot, the same sheet, scale and place.
-/// `typed` is the file's name, and after a comma what the file does not say: `feet`,
-/// `y up` or `z up`.
+/// `typed` is the file's name. What the file does not say is what the list's two choices
+/// say (meters or feet, `Doc::scan_feet`); which way is up is read from the scan. A comma
+/// and a word after the name (`feet`, `y up`, `z up`) still say it for whoever types.
 fn scan(doc: &mut Doc, typed: &str) {
-    use plumbline_plans::scan::{Said, Units, Up};
+    use plumbline_plans::scan::{Units, Up};
     let (name, said_so) = typed.rsplit_once(',').map_or((typed.trim(), String::new()), |(n, rest)| (n.trim(), rest.to_lowercase()));
+    let units = if said_so.contains("feet") || said_so.contains("ft") || (doc.scan_feet && !said_so.contains("meters") && !said_so.contains("metres")) { Units::Feet } else { Units::Metres };
+    let up = if said_so.contains("y up") {
+        Some(Up::Y)
+    } else if said_so.contains("z up") {
+        Some(Up::Z)
+    } else {
+        None
+    };
+    scan_file(doc, name, units, up);
+}
+
+/// The button "It is lying on its side: stand it up" (call 161): the step that brought the
+/// scan in is taken back, and the same file is brought in again with the other way up.
+pub fn stand_it_up(doc: &mut Doc) {
+    use plumbline_plans::scan::{Units, Up};
+    let Some((file, was_z, step)) = doc.scan_side.clone() else { return };
+    if doc.draw.edits != step {
+        doc.scan_side = None;
+        doc.touch();
+        return;
+    }
+    crate::tools::step(doc, false);
+    let units = if doc.scan_feet { Units::Feet } else { Units::Metres };
+    scan_file(doc, &file, units, Some(if was_z { Up::Y } else { Up::Z }));
+}
+
+fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up: Option<plumbline_plans::scan::Up>) {
+    use plumbline_plans::scan::Said;
+    doc.scan_side = None;
     if name.is_empty() {
         crate::tools::cant(doc, "bring in the scan file", "no file was named. Pick the scan from the list, or drop the file on this window.");
         doc.touch();
@@ -343,18 +373,10 @@ fn scan(doc: &mut Doc, typed: &str) {
     let path = found(doc, name);
     let file = path.file_name().and_then(|f| f.to_str()).unwrap_or(name).to_string();
     let mut laid: Option<String> = None;
+    let mut up_taken: Option<bool> = None;
+    let mut doubtful = false;
     let done = (|| -> Result<(String, bool), String> {
         let bytes = std::fs::read(&path).map_err(|e| format!("{file} {}", crate::plans::why_not_opened(&e)))?;
-        let units = if said_so.contains("feet") || said_so.contains("ft") { Units::Feet } else { Units::Metres };
-        // Which way is up is not in the file. Said where it was told; otherwise it is the
-        // way the house is shortest (a house is wider than it is tall), and said so.
-        let up = if said_so.contains("y up") {
-            Some(Up::Y)
-        } else if said_so.contains("z up") {
-            Some(Up::Z)
-        } else {
-            None
-        };
         let called = path.file_stem().and_then(|s| s.to_str()).unwrap_or("scan").to_string();
         let cut_at = 4.0;
         let folder = crate::plans::folder_of(&doc.path);
@@ -363,33 +385,54 @@ fn scan(doc: &mut Doc, typed: &str) {
             plumbline_world::plans::lay_scan_sheet(&mut doc.job, &level, &folder, s.called, s.taken, s.cut_at, s.png, s.checksum, s.size, s.cut.size, s.cut.dots, s.cut.corner)
         })?;
         laid = Some(brought.laid.clone());
-        let (taken, why_up, cut, floor, ceiling, leaned) = (brought.taken.as_str(), brought.why_up, &brought.cut, brought.floor, brought.ceiling, brought.leaned);
+        up_taken = Some(brought.taken.contains("z up"));
+        let (why_up, cut, floor, ceiling, leaned) = (brought.why_up, &brought.cut, brought.floor, brought.ceiling, brought.leaned);
         let ft_in = |x: f64| plumbline_world::units::feet_as_ft_in(x, 16);
         let figure = |n: usize| plumbline_world::view::figure(n as f64, 0);
         let about = |x: f64| plumbline_world::units::feet_as_ft_in((x * 12.0).round() / 12.0, 16);
-        let mut out = format!("Brought in the scan file {called:?}: {} points, {taken} ({why_up}), Assumed.\n", figure(brought.points));
+        // A builder's words: the way the scan was measured, and that which way is up was
+        // read from it. Nobody is asked for an axis (call 161).
+        let mut out = format!("Brought in the scan {called:?}: {} points, measured in {}, Assumed.\n", figure(brought.points), if units == plumbline_plans::scan::Units::Feet { "feet" } else { "meters" });
         let _ = std::fmt::Write::write_fmt(&mut out, format_args!("On plan, where it is cut, it is about {} by {}.", about(cut.extent[0]), about(cut.extent[1])));
         let mut to_see = false;
+        let told = why_up == "as you said";
+        if !told {
+            if why_up == "the way the house is shortest" {
+                out.push_str("\nWhich way is up was read from the scan.");
+            } else {
+                out.push_str("\nWhich way is up is not clear from the scan. If the house looks to be lying on its side, press the button below.");
+                doubtful = true;
+                to_see = true;
+            }
+        }
         // A size that no house is says what to check.
         if cut.extent[0].max(cut.extent[1]) < 6.0 || cut.extent[0].max(cut.extent[1]) > 400.0 {
-            out.push_str("\nThat is not the size of a house: if the scan is in feet or lies on its side, pick it again and say after its name: feet, y up or z up.");
+            out.push_str("\nThat is not the size of a house: if the scan is in feet, or lies on its side, say so with the choices at the head of the list and the button below, and bring it in again.");
             to_see = true;
+            doubtful = !told;
         }
         if let Some(lean) = leaned.filter(|l| *l * 120.0 >= 0.125) {
             out.push_str(&format!("\nIt leaned {} in 10 ft and was levelled by its own floor.", plumbline_world::units::show_length(&plumbline_world::units::Len::One((lean * 120.0 * 16.0).round() / 16.0), "in")));
         }
         match (floor, ceiling) {
-            (Some(f), Some(c)) => out.push_str(&format!("\nFloor to ceiling reads about {} on the scan. It is not given to the level: measure the level's height if you take it.", about(c - f))),
+            (Some(f), Some(c)) => {
+                out.push_str(&format!("\nFloor to ceiling reads about {} on the scan. It is not given to the level: measure the level's height if you take it.", about(c - f)));
+                if !told && !(6.0..=20.0).contains(&(c - f)) {
+                    doubtful = true;
+                }
+            }
             (Some(_), None) => out.push_str("\nIts floor shows and no ceiling does: no height read."),
             _ => out.push_str(&format!("\nNo floor shows in it: it is cut {} above its lowest point.", ft_in(cut_at))),
         }
-        out.push_str(&format!("\nCut {} above the floor: {} points drawn on the sheet, {} by {} dots at {} to the foot.", ft_in(cut_at), figure(cut.points), cut.size[0], cut.size[1], plumbline_world::view::num(cut.dots)));
+        // The sheet's size in dots and the file's column names are the command line's to
+        // say; the window says what a builder reads (call 163).
+        out.push_str(&format!("\nIt is cut {} above the floor, as a plan is.", ft_in(cut_at)));
         if cut.strays > 0 {
             out.push_str(&format!("\nLeft off the sheet: {} stray points at that height, each alone in its square foot of plan.", figure(cut.strays)));
         }
         out.push_str("\nIt is a drawing under the level on show, to scale and in the scan's own place: trace over it as over any plan.");
-        for lost in &brought.lost {
-            out.push_str(&format!("\nNot kept: {lost}."));
+        if !brought.lost.is_empty() {
+            out.push_str("\nOnly where its points are is kept: not its colors, and not the surface drawn over them.");
             to_see = true;
         }
         Ok((out, to_see))
@@ -403,6 +446,11 @@ fn scan(doc: &mut Doc, typed: &str) {
             doc.framed = false;
             doc.frame_on = laid.and_then(|path| crate::plans::corners_of(&mut doc.job, &path));
             doc.edit("Scan");
+            // The button is there only when the way up was guessed and may be wrong, and
+            // only while this is the last thing done.
+            if doubtful && up.is_none() {
+                doc.scan_side = up_taken.map(|z| (name.to_string(), z, doc.draw.edits));
+            }
             doc.say(if to_see { Tone::Warned } else { Tone::Done }, out);
         }
         Err(why) => crate::tools::cant(doc, "bring in the scan file", why),

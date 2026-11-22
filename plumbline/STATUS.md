@@ -8053,6 +8053,72 @@ demolish. Prices are made up.
 4. The estimate's job cost with those four prices: 1,008.00 + 259.20 + 360.00 + 340.00 =
    **$1,967.20**, the lines without a price left out and said.
 
+## What a wall the work opens may be hiding: a demonstration, written before it is built (`demos/hidden.sh`, call 160)
+
+From an empty job, by hand. The house of `demos/reno.sh` (6 in walls 9 ft tall round 0,0
+to 24,16; a partition from 12,0 to 12,16, wall 5). A drain pipe 12 ft long from 6,8 to
+18,8, 4 ft up: it passes through the partition. Prices are made up: on the partition
+"Take down the partition" by `face_area` (16 × 9 = 144 SF) at $2.50/SF: **$360.00**; on
+the pipe "Drain pipe" by `length` (12 LF) at $10/LF: **$120.00**.
+
+1. Before any mark: `show` has no bearing row on any wall, and the field list asks
+   nothing about bearing or about the pipe in the wall.
+2. All five walls marked existing, then the partition to demolish (its line kept). What
+   `mark` says ends "Is it bearing, and what is in it? Both are on the field list."
+   `show`: the partition's **bearing: unknown** and **in the wall: unknown**, each with
+   its reason; the four walls that stay have neither. The field list, by dollars:
+   the partition, to check bearing and in the wall, **$360.00** riding on 1 line; then
+   "the pipe is in the partition, which comes down: cap it, reroute it or take it out",
+   **$120.00** riding on 1 line. Both together: **$480.00** on 2 lines. `clashes`: "in
+   the way of demolition: 1", and its count of clashes as it was.
+3. Said: bearing `not bearing`, Known, "joists run with it, seen from the attic"; in
+   the wall "one 2 in drain", Known, "opened at the base". The partition leaves the
+   field list; the pipe's question stays: **$120.00** riding. A word that is neither
+   `bearing` nor `not bearing` is refused and the file is as it was.
+4. Said instead: `bearing`, Assumed, "joists lap over it". It is asked again
+   (**$360.00**), and the caution reads in `show`, `check` and under the estimate: "is
+   bearing and comes down: what it carries needs a beam, its posts and their footings,
+   sized by an engineer, and shoring while it is out. None of that is in this price
+   unless a line of this job says so."
+5. The pipe marked to demolish too (its line kept): its question goes, and "in the way
+   of demolition" is gone from `clashes`.
+6. A window 3 ft by 5 ft set in the south wall (existing), the window itself not
+   marked: the south wall is now asked bearing and in the wall; nothing is priced on
+   it, so no dollars ride, which is not $0.00.
+7. Saved and opened again: `show`, the field list and `clashes` print what they printed.
+
+## A kitchen's base, lump lines and countertop: a demonstration, written before it is built (`demos/kitchen.sh`, call 162)
+
+From an empty job, by hand. One room: 6 in walls 9 ft tall round 0,0 to 12,16, a 3 ft
+door in the west wall, the room "Kitchen" inside: 11.5 by 15.5 ft, 178.25 SF, 54 LF
+round, wall run 54 − 3 = **51 LF**. The starter assemblies and items brought in; the
+starter "Kitchen" put on the room. Prices are made up.
+
+1. Before anything is set: `base_run` **51 LF**, the same as the wall run; "Base and
+   trim" 51 LF.
+2. Run A stands in the southeast corner and goes north along the east wall: `LS36 B24
+   SB36`, 36 + 24 + 36 = 96 in = **8 ft**, with its countertop. Run B goes west along the
+   south wall, starting 36 in off that corner (what LS36 fills): `B18 DB18`, **3 ft**,
+   with its countertop. Covered at the floor: the east wall 8 ft; the south wall 3 ft of
+   LS36 and 3 ft of run B, 6 ft: **14 ft**. `base_run` = 51 − 14 = **37 LF**, saying
+   "less 14 ft behind 5 things"; `wall_run` still **51 LF**. "Base and trim" at $4/LF:
+   37 × 4 = **$148.00**.
+3. Three wall boxes hung over run A (`W3030 W2430 W3030`, 54 in up): `base_run` is
+   still **37 LF**.
+4. Countertop A: 8 ft by 25 1/2 in = 2,448 sq in = **17 SF**, and it says the leg that
+   turns the corner over LS36, 10 1/2 in by 25 1/2 in (**1.86 SF**), is not in it; the
+   caution is on its line in the estimate. Countertop B: 3 ft by 25 1/2 in = **6.375 SF**,
+   with no caution.
+5. `price-item Countertop "$62/SF"`: A 17 × 62 = **$1,054.00**, B 6.375 × 62 =
+   **$395.25**; both priced, **$1,449.25**.
+6. The estimate says, under its totals, that Kitchen's "Cabinets" (1 EA) and
+   "Countertops" (1 EA) are each in the price beside the lines of the things set in
+   Kitchen in their division, and says nothing of "Kitchen appliances" (nothing of
+   Division 11 is set). With `[Dishwasher]` set in a third run it says it of that line
+   too. With the "Cabinets" line taken off, it is said of "Countertops" only.
+7. Run B marked to demolish: `base_run` = 51 − 8 − 3 = **40 LF** (LS36 still covers 3 ft
+   of the south wall).
+
 ## Call 157 and the window's five pieces judged (2026-11-22; an agent on another model, cold; `research/judgment-call157-and-window.md`)
 
 **Held, by hand:** `wall_run` in every case tried (doors single, overlapping, at a
@@ -8123,6 +8189,52 @@ is in: its judge found two of its five steps cannot be done from the screen.
 
 **Owed on the commit of call 158 (fe25444):** `tools/committed.sh`, not run because
 other builds were running; to be run when the machine is free.
+
+## Call 161 built: the five window pieces done from the screen alone (2026-11-22; a worker under contract, accepted by its diff, the lead's own runs and every retaken picture read)
+
+What the judge said could not be done from the screen now can, in the window's crate
+only (nothing in the model or the command line was touched):
+
+| | Was | Now |
+|---|---|---|
+| J-W1 | A scan file was brought in by Enter only, with "tmp", ".ply", "y up or z up" on screen | A click on its row brings it in. The list is headed "this job's folder", has "Measured in meters" and "Measured in feet" at its head, and names each file without its ending and by what it is. The message says how big the house came in; where which way is up is in doubt it has one button, "It is lying on its side: stand it up" |
+| J-W2 | A second layout could not be made or opened from the window | On the Layouts tab: "Keep this as another layout" (a title offered, a copy kept beside the job and set beside it; a file is never written over), "Open another layout" (jobs listed by title; with changes not saved: "Save first (Ctrl+S)") |
+| J-W3 | The window lacked call 157 | The Cabinets field takes `[Dishwasher]`; the table has "left out of the job cost"; like titles are headed with their file names |
+| J-W4 | No key for pale and pink; existing brick went gray; a room changed without a word | Under Show: "Existing, shown pale" and "Demolition, shown red". Existing brick keeps its pattern, washed pale. The mark says "Living is now 364.25 SF (was 178.25)" |
+| J-W5 | Box codes unexplained; a run an unlabelled strip | A card over the field lists boxes, corner boxes, appliances and a one-line key; each box carries its code on the plan; the wall's dimension is off the run; the sheet lists each box |
+| J-W6 | Open items flooded by starter items' unknown makers | An item nobody has set down lists no unknown maker, model or weight |
+| J-W7 | A refusal three times; "Wall 1 (wall 1)" | Once on the card and once on the message line; a name said once |
+| J-W8 | Stale pictures | All five folders retaken on this build |
+
+**Call 163, the lead's, on top of it:** the scan's message in the window lost "672 by 480
+dots at 24 to the foot" and the file's column names; it says "It is cut 4' 0" above the
+floor, as a plan is." and "Only where its points are is kept: not its colors, and not
+the surface drawn over them."
+
+**Run:** by the lead, `cargo test --workspace` 480 pass, 0 fail on the worker's tree;
+`demos/scanw.sh` run by the lead on a frozen copy of the build with call 163 in it:
+PASS, its ten pictures retaken and the two message cards read. By the worker, on a frozen copy of its final build: `scanw`, `renow`,
+`roomlinew`, `cabinetsw`, `layoutsw`, and `moneyw`, `bringw`, `itemlibw`, `firstw`
+PASS; the language and egress gates and the port map PASS. The worker proved its two
+new picture checks red on the old pictures (existing brick: luminance spread 6.68 on the
+old picture against a floor of 10, 14.22 now; the room line: 0.00 of rows blue on the old
+picture, 0.51 now).
+
+**Read by the lead, picture by picture, and not right:**
+- the scan's message card is still seven lines; after "stand it up" nothing but the new
+  size says the turn was made;
+- "Existing, shown pale 0" shows with a count of 0 when only a demolition is marked;
+- the receptacle count still changes with a mark and only the area is said;
+- the "Dishwasher" label is wider than its box; the countertop has no outline of its own;
+  the boxes in 3D are plain tan blocks;
+- the Layouts tab's open items sit under the table and are long; the list of jobs shows
+  each file's name beside its title where the titles differ and it is not needed;
+- a refusal that the model words with "the tool chest" reads "this job's items" in the
+  window, whose list is headed Items; Patrick's word is tool chest (one wording call
+  owed, call 163's last paragraph).
+
+**Not judged.** A fresh judge of the five from the screen alone is owed before anyone is
+told the window carries them. `TRY-IT.md` is reissued and says so at its head.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

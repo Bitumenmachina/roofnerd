@@ -5516,3 +5516,125 @@ and without a software word. What changes, each in the window's crate:
    row; the second layout kept from the window; an appliance in the run) and to check it.
 
 No number moves.
+
+### Call 163. The scan's message in the window, in the words a builder reads (2026-11-22; the lead's reading of the scan pictures retaken for call 161)
+
+Call 161's worker read its own pictures and said the scan's message is long and that
+"each point's red, green, blue, alpha" is not a builder's word. It is right, and so is
+"672 by 480 dots at 24 to the foot". In the window's message only (the command line's
+`import scan` prints what it printed: whoever types the verb is asking for the detail):
+
+- "Cut 4' 0" above the floor: N points drawn on the sheet, W by H dots at 24 to the
+  foot." becomes "**It is cut 4' 0" above the floor, as a plan is.**" The sheet's size
+  in feet is already under Drawings.
+- Each "Not kept: ..." line (the file's own column names, its count of faces) becomes
+  one sentence, said whenever anything in the file was not kept: "**Only where its
+  points are is kept: not its colors, and not the surface drawn over them.**" It still
+  turns the message to a warning: loss is said, never silent.
+
+`demos/scanw.sh` checks the new sentences in place of the old three. No number moves.
+
+Call 161 as accepted, and one word of the worker's that stands for now: in the window a
+refusal that the model words with "the tool chest" reads "this job's items", because the
+window's own list is headed Items. Patrick's word is tool chest (call 151). Which of the
+two the window's list is headed is owed as one wording call with the next window work,
+made once and carried to every control's name in one pass.
+
+### Call 160. What a wall the work opens may be hiding, asked in the field (2026-11-22; plan step B7; the GC, MEP and structure reviews: "the remodel's money is in what is behind the wall"; "a run through a demolished wall is silent everywhere")
+
+**1. Two things can be said of a wall**, each a value with how sure it is and where that
+came from, as every value is (held on the wall as `pl::hidden`; left out, nothing was
+said):
+- **bearing**: `bearing` or `not bearing`, the trade's two words for whether it carries
+  the floor or roof above;
+- **in the wall**: in words, what runs inside it ("nothing", "a 2 in drain and two
+  cables").
+
+`plumbline set <file> <wall> bearing "not bearing" --status Known --source "joists run
+with it, seen from the attic"`; `set <file> <wall> "in the wall" "one 2 in drain"
+--status ... --source ...`; `unknown` puts either back to not known. Any other word for
+bearing is refused, with the two it takes.
+
+**2. They are asked of a wall the work opens, and of no other.** The work opens a wall
+when it is marked to demolish, or when it is marked existing and a door or window not
+itself marked existing is in it (a new opening cut in an old wall). On such a wall each
+of the two not yet said reads **Unknown**, with its reason ("not seen until it is
+looked at": for bearing, "which way the joists above run and what bears on it"; for in
+the wall, "pipes, ducts and wiring in an old wall are not seen until it is opened"), in
+`show`, in the window's open items, and on the field list as things to **check**, not
+to measure. Everything priced on that wall rides on them, as it does on what a thing is
+(call 59): a price to take a wall down is a price for something else if the wall is
+bearing. Said Assumed they are still asked; said Known they leave the list. A wall the
+work does not open is asked nothing; a word said of it anyway is kept and shown.
+
+**3. A bearing wall the work opens says what that needs, and that it is not in the
+price.** Where bearing is said (Assumed or Known) of a wall that comes down or is cut:
+a caution on the wall, in `show`, in `check` and under the estimate's totals: "Wall 5
+is bearing and comes down: what it carries needs a beam, its posts and their footings,
+sized by an engineer, and shoring while it is out. None of that is in this price unless
+a line of this job says so." (For a new opening: "is bearing and is cut for Window 3:
+the opening needs a header sized by an engineer, and shoring while it is cut.") The
+program sizes nothing and prices nothing by it: a flag, never a fabrication; no span
+table is in the program (their terms do not allow it; `research/renovation-structure.md`).
+The beam itself is plan step C8.
+
+**4. What is in the way of a wall that comes down is asked too.** A run (pipe, duct,
+conduit, cable), a fitting or a placed thing that the clash test's own shapes find in a
+wall marked to demolish, and that is not itself marked to demolish, is a question on
+the field list: "Pipe 1 is in Wall 5, which comes down: cap it, reroute it or take it
+out", where it is, with what is priced on that run riding on it. `clashes` says it in a
+count of its own, "in the way of demolition", apart from the clashes (it is not one:
+call 148 stands, a demolished wall is in nothing's way once the work is done). Marked to
+demolish itself, or moved clear, it goes.
+
+**5. Marking says so.** When a wall is marked to demolish, what `mark` says ends: "Is
+it bearing, and what is in it? Both are on the field list."
+
+The saved job gains `pl::hidden` on a wall something was said of; a job from before
+opens as it was, and a job with no mark has no new row, no new question and no number
+moved.
+
+### Call 162. A kitchen's base, its lump lines and its countertop set right (2026-11-22; the judge of call 157: J-C-C, J-C-D, J-C-G)
+
+**1. Base does not run behind what stands on the floor against the wall.** A room gains
+`base_run`: its wall run (call 157) less the length of its walls' faces that things set
+in place cover at the floor. A thing covers a face where its plan lies against the face
+(within the fit tolerance the clash test uses) and it stands on the floor (it is not
+hung: a wall box 54 in up covers nothing); what it covers is the length of the face its
+plan lies along, so a box in a corner covers its width on one wall and its depth on the
+other, and two things covering the same length count it once. A thing marked to
+demolish covers nothing. `base_run` is Assumed where anything it rests on is, and says
+what it took off ("less 14 ft behind 5 things set against the walls"). In the starter
+library every base line that was by `wall_run` (Room, Bath, Kitchen, Laundry or utility
+room: material and labor, 8 lines) is by `base_run`. With nothing set against a wall it
+is the wall run, to the digit: no number moves on such a room. `wall_run` stays and
+means what it meant; a job priced before this keeps the figure its lines name.
+
+**2. A lump line and the things it stands for, both in the price, is said.** The
+starter Kitchen keeps "Kitchen appliances", "Cabinets" and "Countertops" at 1 EA: they
+are the design-phase allowance, before anything is set. Once things are set in the room
+that carry lines of their own in the same division, the estimate (under its totals),
+`check`, and `cabinets` when it sets a run each say, once for each such line: "Kitchen's
+line "Cabinets" (1 EA, 12 Furnishings) is in the price beside the lines of 7 things set
+in Kitchen in that division: if it stands for them, take the line off." The rule is
+general, not the Kitchen's: a line on a room whose quantity is a plain number, and
+things set in that room (by where they stand) that carry cost lines in the line's
+division. Nothing is taken off or switched off by the program.
+
+**3. A countertop carries its line and is priced like an item.** The countertop
+`cabinets` lays carries a line "Countertop" by `plan_area`, in SF, Division 12, with no
+price. `price-item <file> Countertop "$62/SF"` prices that line on every countertop in
+the job (a countertop is cut to its run and is no item of the tool chest: it is found by
+what it is). A price per LF is by `width`, the front edge.
+
+**4. A countertop over a turning corner box says what it leaves out.** Over LS36 (36 in
+on each wall) a top 25 1/2 in deep is taken as 36 in by 25 1/2 in; the leg that turns
+the corner, (36 − 25 1/2) by 25 1/2 in = 267.75 sq in = 1.859375 SF, is not in it. The
+countertop's `plan_area` carries that as a caution, which goes with it to its line
+(call 142) and is in what `cabinets` says: "the leg that turns the corner over LS36,
+10 1/2 in by 25 1/2 in (1.86 SF), is not in this area: add it where the top is priced
+by area." The area itself does not move: a shape the model does not hold is said, not
+guessed. (The top as an L is owed with the countertop drawn to its true outline.)
+
+After call 159 the library is 37 assemblies and 179 lines; this call changes the
+formula of 8 of them and adds none.

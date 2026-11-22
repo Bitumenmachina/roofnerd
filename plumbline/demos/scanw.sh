@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 # A scan of a house as it stands, brought in from the window and traced over (DECISIONS.md
 # call 128, the window's half of it; the command line's is demos/scan.sh). A job with one
-# level is opened; under Bring in, Scan file is pressed, the scan is picked from the list, and
-# Enter brings it in: it lies under the plan as a sheet, to scale and in the scan's own
-# place. Undo takes it back and Redo lays it again. Then one wall is drawn over it with the
-# Wall tool and the job is saved.
+# level is opened; under Bring in, Scan file is pressed and the scan is brought in by a click
+# on its row in the list (call 161: not Enter; nobody types where a file lies): it lies under
+# the plan as a sheet, to scale and in the scan's own place. Undo takes it back and Redo lays
+# it again. Then one wall is drawn over it with the Wall tool and the job is saved. A second
+# made-up scan, written on its side (its height and its depth so near alike that the program
+# cannot tell which way is up), is brought in the same way: the program says so and offers
+# "It is lying on its side: stand it up", which is pressed once and brings it in turned.
+# What was said and what the map held at each step has no "tmp", no ".ply", no "y up" or
+# "z up" (the map's rows named "File <name>" are the handles a script clicks, not what a
+# person reads, and are left out of that check).
 # Run from the repository root:  demos/scanw.sh [folder for the pictures]
 #
 # The scan is made up here (no real scan is in the repository), in the shape a phone app
@@ -42,12 +48,12 @@ J="$T/room.json"
 says() { grep -qF -- "$2" "$1" || { echo "FAIL: $3: it does not say: $2"; cat "$1"; exit 1; }; printf '    %s\n' "$2"; }
 
 echo "== The made-up scan, in the shape a phone writes, and a job with one level =="
-python3 - "$T/made-up-room.ply" "$T/points.txt" <<'PY'
+python3 - "$T/made-up-room.ply" "$T/points.txt" 16 <<'PY'
 import struct, sys
-out, count = sys.argv[1], sys.argv[2]
+out, count, deep = sys.argv[1], sys.argv[2], float(sys.argv[3])
 FT = 0.3048
 x0, x1 = 4 * FT, 28 * FT              # the room's inside, east: 24 ft
-n0, n1 = 4 * FT, 20 * FT              # north: 16 ft (in the file, z is minus north)
+n0, n1 = 4 * FT, (4 + deep) * FT      # north: 16 ft (in the file, z is minus north)
 h = 9 * FT                            # 9 ft high; y is up
 step = 0.05
 def span(a, b):
@@ -75,12 +81,43 @@ with open(out, "wb") as f:
 open(count, "w").write("{:,}".format(len(pts)))
 print("   ", len(pts), "points,", faces, "faces")
 PY
+# The second scan, on its side as far as the program can tell: 24 ft by 10 ft by 9 ft high,
+# so that its height (9 ft) and its depth (10 ft) are within a fifth of each other.
+python3 - "$T/lying-room.ply" "$T/points2.txt" 10 <<'PY'
+import struct, sys
+out, count, deep = sys.argv[1], sys.argv[2], float(sys.argv[3])
+FT = 0.3048
+x0, x1 = 4 * FT, 28 * FT
+n0, n1 = 4 * FT, (4 + deep) * FT
+h = 9 * FT
+step = 0.05
+def span(a, b):
+    k = int(round((b - a) / step)); return [a + (b - a) * i / k for i in range(k + 1)]
+pts = []
+for x in span(x0, x1):
+    for n in span(n0, n1):
+        pts.append((x, 0.0, -n)); pts.append((x, h, -n))
+for y in span(0.0, h):
+    for x in span(x0, x1):
+        pts.append((x, y, -n0)); pts.append((x, y, -n1))
+    for n in span(n0, n1):
+        pts.append((x0, y, -n)); pts.append((x1, y, -n))
+head = ("ply\nformat binary_little_endian 1.0\ncomment made up for a demonstration\nelement vertex %d\n"
+        "property float x\nproperty float y\nproperty float z\n"
+        "property uchar red\nproperty uchar green\nproperty uchar blue\nproperty uchar alpha\nend_header\n" % len(pts))
+with open(out, "wb") as f:
+    f.write(head.encode())
+    for i, (x, y, z) in enumerate(pts):
+        f.write(struct.pack("<fffBBBB", x, y, z, (i * 7) % 256, 120, 200, 255))
+open(count, "w").write("{:,}".format(len(pts)))
+print("   ", len(pts), "points: the second scan, 24 ft by 10 ft by 9 ft high")
+PY
 "$P" new "$J" "A scanned room (not a real job)" >/dev/null
 "$P" level "$J" ground --elevation "0 ft" --height "9 ft" --status Assumed --source "to be checked on site" >/dev/null
 touch "$T/started"
 
 echo
-echo "== The session: Scan file pressed, the scan picked from the list and brought in; Undo and Redo; a wall traced over it; save =="
+echo "== The session: Scan file pressed, the scan brought in by a click on its row; Undo and Redo; a wall traced over it; save; the scan on its side, stood up =="
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
@@ -90,11 +127,14 @@ on "Plan"; sleep 5
 park
 shot                                    # 01 the level on its plan, nothing under it
 on "Scan file"; sleep 3                 # Bring in: Scan file
-shot                                    # 02 the list of scans in the job's folder
-on "File made-up-room.ply"; sleep 2         # the scan, picked from the list
-shot                                    # 03 picked: its name where it is asked for
-xdotool key Return; sleep 12            # brought in
+cp "$T/map.txt" "\$T/map-list.txt"
+shot                                    # 02 the list of scans in this job's folder, the two choices at its head
+on "Measured in feet"; sleep 2          # a choice is lit when chosen ...
+shot                                    # 03 feet chosen
+on "Measured in meters"; sleep 2        # ... and meters is the one to begin with
+on "File made-up-room.ply"; sleep 14    # a click on the scan's row brings it in: no Enter
 park; sleep 8
+cp "$T/map.txt" "\$T/map-brought.txt"
 plan_line > "$T/plan.txt"
 shot                                    # 04 the scan laid under the plan, to scale
 on "Undo"; sleep 4
@@ -113,30 +153,60 @@ esc; esc
 park
 shot                                    # 08 the wall, traced over the scan
 xdotool key F2; sleep 4                 # save
+cp "$J" "$T/first.json"
+on "Scan file"; sleep 3                 # a second scan, the one on its side
+on "File lying-room.ply"; sleep 14      # brought in by its row, as the first was
+park; sleep 6
+cp "$T/map.txt" "\$T/map-side.txt"
+shot                                    # 09 it came in on its side: the message and the button under it
+on "It is lying on its side: stand it up"; sleep 14
+park; sleep 6
+cp "$T/map.txt" "\$T/map-stood.txt"
+shot                                    # 10 stood up: brought in again, turned
+xdotool key F2; sleep 4                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"
 timeout 1500 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
 if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
-for n in 01 02 03 04 05 06 07 08; do
+for n in 01 02 03 04 05 06 07 08 09 10; do
   [ "$OUT/$n-model.png" -nt "$T/started" ] || { echo "FAIL: no picture $n from this run"; exit 1; }
 done
-echo "  8 pictures saved to $OUT"
+echo "  10 pictures saved to $OUT"
 
 echo
 echo "== What the window said =="
 SAID="$T/map.txt.said"
 N="$(cat "$T/points.txt")"
-says "$SAID" "Brought in the scan file \"made-up-room\": $N points, taken as meters with y up (the way the house is shortest), Assumed." "Scan"
+says "$SAID" "Brought in the scan \"made-up-room\": $N points, measured in meters, Assumed." "Scan"
+says "$SAID" "Which way is up was read from the scan." "Scan"
 says "$SAID" "On plan, where it is cut, it is about 24' 0\" by 16' 0\"." "Scan"
 says "$SAID" "Floor to ceiling reads about 9' 0\" on the scan." "Scan"
-says "$SAID" "Cut 4' 0\" above the floor:" "Scan"
-says "$SAID" "672 by 480 dots at 24 to the foot." "Scan"
+says "$SAID" "It is cut 4' 0\" above the floor, as a plan is." "Scan"
 says "$SAID" "to scale and in the scan's own place: trace over it as over any plan." "Scan"
-says "$SAID" "Not kept: each point's red, green, blue, alpha" "Scan"
-says "$SAID" "its 200 faces" "Scan"
-grep -qi "ply\|vertex\|binary\|point cloud\|mesh" <(grep -F "Brought in the scan file" "$SAID") && { echo "FAIL: the message has a file-format word in it"; grep -F "Brought in the scan file" "$SAID"; exit 1; }
+says "$SAID" "Only where its points are is kept: not its colors, and not the surface drawn over them." "Scan"
+# The second scan: its way up is in doubt and the window says so; stood up, it is 24 ft by 10 ft
+# and 9 ft high (before: 24 ft by 9 ft and 10 ft high, on its side).
+says "$SAID" "On plan, where it is cut, it is about 24' 0\" by 9' 0\"." "the scan on its side"
+says "$SAID" "Floor to ceiling reads about 10' 0\" on the scan." "the scan on its side"
+says "$SAID" "Which way is up is not clear from the scan. If the house looks to be lying on its side, press the button below." "the scan on its side"
+says "$SAID" "On plan, where it is cut, it is about 24' 0\" by 10' 0\"." "the scan stood up"
+says "$SAID" "Floor to ceiling reads about 9' 0\" on the scan." "the scan stood up"
+# No software word is anywhere a person reads: in what was said, or on the map (the rows named
+# "File <name>" are the handles a script clicks, and are left out). The folder is named
+# "this job's folder" and never by its place.
+if grep -qiE 'tmp|\.ply|y up|z up|vertex|binary|point cloud|mesh' "$SAID"; then echo "FAIL: what the window said has a software word or a path in it"; grep -iE 'tmp|\.ply|y up|z up|vertex|binary|point cloud|mesh' "$SAID"; exit 1; fi
+for m in map-list map-brought map-side map-stood; do
+  [ -s "$T/$m.txt" ] || { echo "FAIL: the session kept no $m"; exit 1; }
+  if grep -v $'^model\tFile ' "$T/$m.txt" | grep -qiE 'tmp|\.ply|y up|z up'; then echo "FAIL: the map ($m) has a software word or a path in it"; grep -v $'^model\tFile ' "$T/$m.txt" | grep -iE 'tmp|\.ply|y up|z up'; exit 1; fi
+done
+echo "    nothing said and nothing on the map has tmp, .ply, y up or z up in it (4 maps, $(wc -l < "$SAID") lines said)"
+grep -q $'^model\tMeasured in meters\t' "$T/map-list.txt" && grep -q $'^model\tMeasured in feet\t' "$T/map-list.txt" || { echo "FAIL: the scan list's two choices are not on the map"; exit 1; }
+echo "    the list has its two choices at its head: Measured in meters, Measured in feet"
+grep -q $'^model\tIt is lying on its side: stand it up\t' "$T/map-side.txt" || { echo "FAIL: the second scan came in on its side and the button is not on the map"; exit 1; }
+if grep -q "It is lying on its side" "$T/map-brought.txt" "$T/map-stood.txt"; then echo "FAIL: the button is there for a scan that came in the right way up, or after it was stood up"; exit 1; fi
+echo "    the button 'It is lying on its side: stand it up' is there for the second scan only, and gone once it is pressed"
 
 echo
 echo "== The saved jobs =="
@@ -148,6 +218,22 @@ echo "    Undo took the scan's sheet out of the saved job (and Redo put it back)
 says "$T/drawings.txt" "28 ft between (0, 0) and (672, 0) on its page" "the sheet's scale"
 says "$T/drawings.txt" "cut 4' 0\" above its floor (taken as meters with y up)" "the sheet's source"
 says "$T/drawings.txt" "~ made-up-room" "Assumed"
+# The second scan stood up came in once, turned: its sheet is 24 ft by 10 ft of room and
+# 2 ft of paper all round, at 24 dots to the foot: 672 by (10 + 4) x 24 = 336 dots (on its side
+# it was 672 by (9 + 4) x 24 = 312).
+says "$T/drawings.txt" "~ lying-room" "the stood-up scan"
+[ "$(grep -c -- '~ lying-room' "$T/drawings.txt")" = 1 ] || { echo "FAIL: the second scan is in the job more than once"; cat "$T/drawings.txt"; exit 1; }
+python3 -I - "$T" <<'PY'
+import sys, glob
+from PIL import Image
+f = glob.glob(sys.argv[1] + "/lying-room cut at*.png")
+if len(f) != 1:
+    sys.exit("FAIL: wanted the one sheet of the second scan, found %s" % f)
+w, h = Image.open(f[0]).size
+print("    the second scan's sheet is %d by %d dots" % (w, h))
+if (w, h) != (672, 336):
+    sys.exit("FAIL: wanted 672 by 336 dots, the scan stood up")
+PY
 "$P" show "$J" > "$T/show.txt"
 python3 - "$J" <<'PY'
 import json, sys
@@ -225,4 +311,4 @@ if max(moved) > 0.5:
 if bad:
     print("FAIL: the sheet's walls are not on the plan where the room's walls are (or the check passes where it should not)"); sys.exit(1)
 PY
-echo "  PASS: in the window, Scan file listed the scans beside the job, brought the picked one in as a sheet under the plan, to scale and in its own place, said what it took for granted and what it did not keep, Undo took it back and Redo laid it again, and a wall traced over it is saved Assumed from it"
+echo "  PASS: in the window, Scan file listed the scans in this job's folder with its two choices (meters, feet), a click on a row brought the scan in as a sheet under the plan, to scale and in its own place, said how big it came in, that which way is up was read from it and what was not kept, with no tmp, .ply, y up or z up said or on the map; Undo took it back and Redo laid it again; a wall traced over it is saved Assumed from it; a second scan, on its side as far as the program could tell, said so, and the button It is lying on its side: stand it up brought it in again turned (24 ft by 10 ft, 9 ft high), once"

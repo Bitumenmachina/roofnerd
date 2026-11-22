@@ -677,20 +677,37 @@ fn verify(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsho
 fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
     p.spawn(theme::card(Node { flex_direction: FlexDirection::Column, padding: UiRect::axes(px(16.0), px(14.0)), row_gap: px(10.0), flex_shrink: 0.0, ..default() })).with_children(|c| {
         c.spawn(text(fonts, "Layouts", 14.0, Weight::Semibold, theme::ink()));
-        c.spawn(text(fonts, "Try a job two ways and set the layouts side by side: each is a job file kept in the same folder as this one. Rooms are matched by name. Nothing is written to any of the files.", 12.0, Weight::Regular, theme::ink_soft()));
+        c.spawn(text(fonts, "Try a job two ways and set the layouts side by side. Keep this job as another layout, change either one, and set them side by side: each is a job kept in this job's folder. Rooms are matched by name. Setting side by side writes nothing; keeping a layout writes only the new one.", 12.0, Weight::Regular, theme::ink_soft()));
         c.spawn(Node { column_gap: px(8.0), row_gap: px(6.0), flex_wrap: FlexWrap::Wrap, align_items: AlignItems::Center, ..default() }).with_children(|b| {
+            let mut e = theme::button(b, fonts, "Keep this as another layout", "", matches!(doc.entry, Some((Entry::LayoutName, _))));
+            e.observe(|press: On<PointerClick>, mut doc: ResMut<Doc>| {
+                if press.button == PointerButton::Primary {
+                    crate::tools::ask_layout_name(&mut doc);
+                }
+            });
             if doc.beside.len() < 2 {
                 let mut e = theme::button(b, fonts, "Set beside another layout", "", doc.choosing_layout);
                 e.observe(|press: On<PointerClick>, mut doc: ResMut<Doc>| {
                     if press.button == PointerButton::Primary {
-                        doc.choosing_layout = !doc.choosing_layout;
-                        doc.touch();
+                        crate::tools::choose_layout(&mut doc, false);
                     }
                 });
             } else {
                 b.spawn(text(fonts, "Two other layouts are set beside this one, which is the most. Take one away to set another.", 12.0, Weight::Regular, theme::ink_faint()));
             }
+            let mut e = theme::button(b, fonts, "Open another layout", "", doc.opening_layout);
+            e.observe(|press: On<PointerClick>, mut doc: ResMut<Doc>| {
+                if press.button == PointerButton::Primary {
+                    crate::tools::choose_layout(&mut doc, true);
+                }
+            });
         });
+        // The title a kept layout is given, typed here: this job's title and "B" offered.
+        if let Some((Entry::LayoutName, typed)) = &doc.entry {
+            c.spawn(text(fonts, "ITS TITLE (A COPY OF THIS JOB IS KEPT UNDER IT, BESIDE THIS ONE)", 9.5, Weight::Semibold, theme::ink_faint()));
+            theme::field(c, fonts, "Layout title", typed, "", if doc.fresh { 3 } else { 1 }, 360.0);
+            c.spawn(text(fonts, "Enter keeps it and sets it beside this job. Esc lets go.", 11.0, Weight::Regular, theme::ink_faint()));
+        }
         // Each layout set beside this job, with its own way to take it away.
         for (i, beside) in doc.beside.iter().enumerate() {
             let title = snap.layouts.as_ref().and_then(|t| t.titles.get(i + 1)).cloned().unwrap_or_default();
@@ -705,56 +722,86 @@ fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 });
             });
         }
-        // The job files in this job's folder that are not set beside it yet: a file is
-        // picked from a list.
-        if doc.choosing_layout && doc.beside.len() < 2 {
-            let here = crate::plans::folder_of(&doc.path);
-            let mine = doc.path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
-            let mut files: Vec<String> = std::fs::read_dir(&here)
-                .map(|read| read.flatten().filter_map(|e| e.file_name().to_str().map(str::to_string)).filter(|n| !n.starts_with('.') && n.to_lowercase().ends_with(".json") && *n != mine && !doc.beside.iter().any(|b| b.file == *n)).collect())
-                .unwrap_or_default();
-            files.sort_by_key(|n| n.to_lowercase());
-            c.spawn(text(fonts, "PICK THE LAYOUT, FROM WHERE THIS JOB IS KEPT", 9.5, Weight::Semibold, theme::ink_faint()));
-            if files.is_empty() {
-                c.spawn(text(fonts, "No other job is kept here. Save another layout of this job in the same folder, then pick it.", 12.0, Weight::Regular, theme::ink_faint()));
+        // The jobs in this job's folder, by their titles (only files that are jobs): one is
+        // picked from the list, to be set beside this job or to be opened in its place.
+        let setting = doc.choosing_layout && doc.beside.len() < 2;
+        if setting || doc.opening_layout {
+            let files: Vec<&(String, String)> = doc.jobs_here.iter().filter(|(n, _)| setting && !doc.beside.iter().any(|b| b.file == *n) || doc.opening_layout).collect();
+            c.spawn(text(fonts, if setting { "PICK THE LAYOUT, FROM THIS JOB'S FOLDER" } else { "PICK THE JOB TO OPEN, FROM THIS JOB'S FOLDER" }, 9.5, Weight::Semibold, theme::ink_faint()));
+            if doc.opening_layout && doc.edited {
+                c.spawn(text(fonts, "This job has changes that are not saved: Save first (Ctrl+S), then pick.", 12.0, Weight::Regular, theme::amber()));
             }
-            for name in files.into_iter().take(40) {
-                let stem = crate::panels::plain_stem(&name);
+            if files.is_empty() {
+                c.spawn(text(fonts, "No other job is kept here. Keep this one as another layout, then pick it.", 12.0, Weight::Regular, theme::ink_faint()));
+            }
+            for (name, title) in files.into_iter().take(40) {
+                let stem = crate::panels::plain_stem(name);
+                let name = name.clone();
                 let mut e = c.spawn((
                     Node { align_items: AlignItems::Center, column_gap: px(8.0), padding: UiRect::axes(px(8.0), px(4.0)), min_height: px(26.0), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() },
                     BorderColor::all(theme::rule()),
                     theme::Named { name: format!("Layout {stem}"), scrolls: true },
                 ));
+                let (title, from) = (title.clone(), stem.clone());
                 e.with_children(|r| {
-                    r.spawn((text(fonts, stem, 12.5, Weight::Medium, theme::ink()), Pickable::IGNORE));
+                    r.spawn((text(fonts, title, 12.5, Weight::Medium, theme::ink()), Pickable::IGNORE));
+                    r.spawn((text(fonts, from, 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
                     r.spawn((text(fonts, "job", 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
                 });
+                let open = !setting;
                 e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>| {
                     if press.button == PointerButton::Primary {
-                        crate::tools::set_beside(&mut doc, &name);
+                        if open {
+                            crate::tools::open_layout(&mut doc, &name);
+                        } else {
+                            crate::tools::set_beside(&mut doc, &name);
+                        }
                     }
                 });
             }
         }
     });
     let Some(options) = snap.layouts.as_ref().filter(|_| !doc.beside.is_empty()) else {
-        return nothing(p, fonts, "No other layout is set beside this one. Press Set beside another layout, then pick a job.");
+        return nothing(p, fonts, "No other layout is set beside this one. Press Keep this as another layout, or Set beside another layout and pick a job.");
     };
     let last = options.titles.len().saturating_sub(1);
-    let diff_head = format!("{} less {}", options.titles.get(last).cloned().unwrap_or_default(), options.titles.first().cloned().unwrap_or_default());
+    // Where two layouts have one title, each column is headed by its title and its file's
+    // name, as `plumbline options` heads them (call 157): two job costs are not set side by
+    // side under the same words.
+    let files: Vec<String> = std::iter::once(doc.path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()).chain(doc.beside.iter().map(|b| b.file.clone())).collect();
+    let one_title = options.titles.iter().enumerate().any(|(i, t)| options.titles[..i].contains(t));
+    let heads: Vec<String> = options.titles.iter().zip(&files).map(|(t, f)| if one_title { format!("{t} ({f})") } else { t.clone() }).collect();
+    // Three layouts side by side are narrower each, to leave the row names their room.
+    let (col_w, diff_w) = if options.titles.len() >= 3 { (130.0, 170.0) } else { (150.0, 190.0) };
+    let diff_head = format!("{} less {}", heads.get(last).cloned().unwrap_or_default(), heads.first().cloned().unwrap_or_default());
     let flagged = "~ Assumed   ? Unknown   (no mark) Known";
     p.spawn(text(fonts, format!("Flags: {flagged}. A figure a layout has none of reads none; one with no value reads no figure, and its difference is not worked."), 11.0, Weight::Regular, theme::ink_faint()));
     table(p, fonts, "This job and the layouts beside it", format!("{} layouts", options.titles.len()), |t| {
         // The heading: each layout under its job's title, and the last less the first.
-        let mut head = format!("Layouts heading | {}", options.titles.join(" | "));
+        let mut head = format!("Layouts heading | {}", heads.join(" | "));
         head.push_str(&format!(" | {diff_head}"));
         let mut e = t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(8.0)), border: UiRect::bottom(px(1.0)), ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::hairline()), theme::Named { name: head, scrolls: true }));
         e.with_children(|r| {
             cell(r, 0.0, false, |c| words(c, fonts, "", 10.0, Weight::Semibold, theme::ink_faint()));
-            for title in &options.titles {
-                cell(r, 170.0, true, |c| words(c, fonts, title, 12.0, Weight::Semibold, theme::ink()));
+            // A title and, where two layouts have one title, its file's name under it.
+            for title in &heads {
+                cell(r, col_w, true, |c| {
+                    let (first, file) = match title.rsplit_once(" (") {
+                        Some((t, f)) => (t.to_string(), Some(format!("({f}"))),
+                        None => (title.clone(), None),
+                    };
+                    c.spawn(Node { flex_direction: FlexDirection::Column, align_items: AlignItems::FlexEnd, ..default() }).with_children(|col| {
+                        words(col, fonts, first, 12.0, Weight::Semibold, theme::ink());
+                        if let Some(file) = file {
+                            words(col, fonts, file, 10.0, Weight::Regular, theme::ink_faint());
+                        }
+                    });
+                });
             }
-            cell(r, 200.0, true, |c| words(c, fonts, diff_head.clone(), 11.0, Weight::Semibold, theme::ink_soft()));
+            // "the last less the first", wrapped where it is long.
+            cell(r, diff_w, true, |c| {
+                c.spawn(Node { max_width: px(diff_w), ..default() }).with_child(text(fonts, diff_head.clone(), 11.0, Weight::Semibold, theme::ink_soft()));
+            });
         });
         let mut group = None;
         for r in &options.rows {
@@ -771,10 +818,10 @@ fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 cell(row, 0.0, false, |c| words(c, fonts, r.label.trim(), 12.5, if bold { Weight::Semibold } else { Weight::Regular }, theme::ink()));
                 for f in &figures {
                     let ink = if f == "none" || f == "no figure" { theme::ink_faint() } else { theme::ink() };
-                    cell(row, 170.0, true, |c| words(c, fonts, f.clone(), 12.5, Weight::Regular, ink));
+                    cell(row, col_w, true, |c| words(c, fonts, f.clone(), 12.5, Weight::Regular, ink));
                 }
                 let ink = if diff == "same" || diff == "not worked" { theme::ink_faint() } else { theme::ink() };
-                cell(row, 200.0, true, |c| words(c, fonts, diff.clone(), 12.5, Weight::Medium, ink));
+                cell(row, diff_w, true, |c| words(c, fonts, diff.clone(), 12.5, Weight::Medium, ink));
             });
         }
     });

@@ -101,6 +101,9 @@ pub struct Surface {
     pub system: Option<String>,
     pub handle: Handle<StandardMaterial>,
     pub colour: Color,
+    /// The light a surface carries of its own (existing work in its pattern, washed pale):
+    /// kept when it is pointed at or selected.
+    pub lift: LinearRgba,
 }
 
 /// On plan the view is this much of the camera's distance tall, in feet.
@@ -119,6 +122,8 @@ pub struct Drawing {
     pub roof_dressed: bool,
     /// The centre lines of thin runs, and of runs with no size (drawn broken).
     pub runs: Vec<(Vec3, Vec3, Color, bool)>,
+    /// Each room line's two ends: drawn dashed, in dark blue, over what it lies on.
+    pub room_lines: Vec<(Vec3, Vec3)>,
     /// Each element's outline, by path: drawn when it is selected.
     pub frames: Vec<(String, Vec<(Vec3, Vec3)>)>,
     pub surfaces: Vec<Surface>,
@@ -163,6 +168,9 @@ pub struct RunLines;
 pub struct GridLines;
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct Highlight;
+/// A room line: dashed, in its own ink, over whatever it lies on (call 161).
+#[derive(Default, Reflect, GizmoConfigGroup)]
+pub struct RoomLines;
 
 /// How much brighter than paper white the sky and the far haze are drawn, before the
 /// camera folds the range of light to the screen.
@@ -259,6 +267,13 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
     let (grid, _) = store.config_mut::<GridLines>();
     grid.line.width = 1.0;
     grid.render_layers = RenderLayers::layer(0);
+    // A room line is not a wall and not a run: dashed, in dark blue, in front of whatever
+    // it lies on (it was lost over the pink of a demolished wall).
+    let (room, _) = store.config_mut::<RoomLines>();
+    room.line.width = 3.0;
+    room.line.style = GizmoLineStyle::Dashed { gap_scale: 2.5, line_scale: 3.0 };
+    room.depth_bias = -0.5;
+    room.render_layers = RenderLayers::layer(0);
     let (highlight, _) = store.config_mut::<Highlight>();
     // What is selected is outlined finely: a heavy wire hid what it was round.
     highlight.line.width = 2.5;
@@ -354,12 +369,16 @@ impl Builder<'_, '_, '_> {
         // Shown by how sure it is, a thing is one flat color whatever it is dressed in.
         use plumbline_world::WorkStatus;
         let (existing, coming_down) = (self.work == Some(WorkStatus::Existing), self.work == Some(WorkStatus::Demolish));
-        let pattern = self.pattern.take().filter(|_| self.wash.is_none() && !existing && !coming_down);
+        // Existing work keeps its pattern, washed pale: brick still reads as brick (call 161).
+        let pattern = self.pattern.take().filter(|_| self.wash.is_none() && !coming_down);
         let colour = self.wash.map(|w| w.with_alpha(colour.alpha())).unwrap_or(colour);
         let (roughness, metallic) = if self.wash.is_some() || existing || coming_down { (0.95, 0.0) } else { (roughness, metallic) };
         // Existing work is its own colours washed toward pale gray: the house that is
         // there. Work to demolish is a faint red ghost, seen through.
-        let colour = if existing {
+        let colour = if existing && pattern.is_some() {
+            // In its pattern it keeps its own colour: the wash is the light added below.
+            colour
+        } else if existing {
             mix(colour, theme::existing_tone(), 0.65)
         } else if coming_down {
             theme::demolition_tone()
@@ -367,6 +386,10 @@ impl Builder<'_, '_, '_> {
             colour
         };
         let colour = if see_through { colour.with_alpha(colour.alpha().min(0.06)) } else { colour };
+        // A pattern is the light it reflects times its colour: it can only be darkened by
+        // a base colour. Existing work in its pattern is washed pale by a light of its own
+        // added over it, so brick reads as pale brick and not as gray (call 161).
+        let emissive = if existing && pattern.is_some() { LinearRgba::from(theme::existing_tone().to_linear()) * 0.15 } else { LinearRgba::BLACK };
         let blend = colour.alpha() < 0.999;
         let handle = self.materials.add(StandardMaterial {
             base_color: colour,
@@ -376,12 +399,13 @@ impl Builder<'_, '_, '_> {
             double_sided: true,
             cull_mode: None,
             alpha_mode: if blend { AlphaMode::Blend } else { AlphaMode::Opaque },
+            emissive,
             base_color_texture: pattern.as_ref().map(|p| p.colour.clone()),
             normal_map_texture: pattern.as_ref().map(|p| p.relief.clone()),
             unlit: self.flat,
             ..default()
         });
-        self.drawing.surfaces.push(Surface { path: path.to_string(), system: system.cloned(), handle: handle.clone(), colour });
+        self.drawing.surfaces.push(Surface { path: path.to_string(), system: system.cloned(), handle: handle.clone(), colour, lift: emissive });
         if see_through && !self.drawing.ghosts.iter().any(|g| g == path) {
             self.drawing.ghosts.push(path.to_string());
         }
@@ -553,6 +577,7 @@ pub fn rebuild(
     drawing.roof_lines.clear();
     drawing.roof_dressed = false;
     drawing.runs.clear();
+    drawing.room_lines.clear();
     drawing.ghosts.clear();
     drawing.fittings.clear();
     drawing.openings.clear();
@@ -613,7 +638,7 @@ pub fn rebuild(
             if length < 1e-4 {
                 continue;
             }
-            build.drawing.runs.push((va, vb, theme::ink(), true));
+            build.drawing.room_lines.push((va, vb));
             build.drawing.frames.push((path.clone(), vec![(va, vb)]));
             let turn = Quat::from_rotation_arc(Vec3::X, ((vb - va) / length).with_y(0.0).normalize_or(Vec3::X));
             build.piece(path, None, solids.cube.clone(), Transform { translation: (va + vb) / 2.0, rotation: turn, scale: Vec3::new(length, 0.05, 0.6) }, Color::NONE, 0.9, 0.0, false);
@@ -1199,6 +1224,7 @@ pub fn tint(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut mater
         } else {
             (surface.colour, LinearRgba::BLACK)
         };
+        let glow = LinearRgba::new(glow.red + surface.lift.red, glow.green + surface.lift.green, glow.blue + surface.lift.blue, glow.alpha);
         if let Some(mut material) = materials.get_mut(&surface.handle) {
             if material.base_color != colour || material.emissive != glow {
                 material.base_color = colour;
@@ -1934,7 +1960,7 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
 }
 
 /// The ground's grid, the roof's lines, thin runs, and the outline of what is selected.
-pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut lines: Gizmos<RoofLines>, mut runs: Gizmos<RunLines>, mut broken: Gizmos<BrokenLines>, mut grid: Gizmos<GridLines>, mut highlight: Gizmos<Highlight>) {
+pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut lines: Gizmos<RoofLines>, mut runs: Gizmos<RunLines>, mut broken: Gizmos<BrokenLines>, mut grid: Gizmos<GridLines>, mut highlight: Gizmos<Highlight>, mut room: Gizmos<RoomLines>) {
     // The grid: a line every ten feet, a stronger one every fifty, fading out with
     // distance from the building so the ground has no edge.
     let reach = drawing.reach;
@@ -2018,6 +2044,9 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
         } else {
             runs.line(*a, *b, *colour);
         }
+    }
+    for (a, b) in &drawing.room_lines {
+        room.line(*a, *b, theme::room_line());
     }
     // With the sheet on its Clashes tab, each place two things are in the same space is
     // marked on the model: three short strokes, seen through whatever is in front.

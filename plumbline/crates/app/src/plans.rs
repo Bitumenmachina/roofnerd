@@ -189,7 +189,12 @@ pub fn read(mut doc: ResMut<Doc>, mut plans: ResMut<Plans>, mut images: ResMut<A
                 if changed {
                     said.push_str("; ITS FILE HAS CHANGED since the drawing was made from it");
                 }
-                doc.say(if changed { Tone::Refused } else { Tone::Done }, said);
+                // A scan's sheet read says nothing of its own: what the scan came to was
+                // said when it was brought in, and is not to be covered by this (call 161).
+                let from_scan = laid(&mut doc.job).iter().any(|l| l.path == path && l.drawing.file.source.starts_with("scan "));
+                if changed || !from_scan {
+                    doc.say(if changed { Tone::Refused } else { Tone::Done }, said);
+                }
                 plans.read.insert(path, Read { key, image: images.add(image), lines: page.lines, lost: page.lost, changed });
             }
             Err(why) => {

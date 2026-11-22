@@ -1,9 +1,10 @@
 # Try it: one renovation, on your own desktop
 
-**Not yet (2026-11-22).** A judge found two of the five things below cannot be done from
-the screen alone as the window stands (bringing a scan file in, and making a second
-layout). They are being put right (DECISIONS.md call 161). This page is reissued when
-that is in and its pictures are retaken; until then steps 1 and 5 are not as written.
+**Reissued 2026-11-22.** A judge found two of the five things below could not be done from
+the screen alone; both were put right (DECISIONS.md call 161) and every picture of the five
+was retaken (`demos/captured/scanw`, `renow`, `roomlinew`, `cabinetsw`, `layoutsw`). The
+steps below are the window as it is now. The fix has been read picture by picture by the
+builder; a fresh judge of it, cold, is owed and its findings will be in `STATUS.md`.
 
 This is the one page for Patrick's first hour with BuildOS on his Linux desktop. Nobody
 has yet used the window on a real machine with a real graphics card: this hour is that
@@ -43,11 +44,13 @@ and copy that file into `~/jobs/addition/`.
 ## 3. Five things to try, in order
 
 1. **Bring your scan in.** Left side: Add level (the first floor). Then BRING IN, **Scan
-   file**, pick your file. Its outline lays under the plan. Read the message: it says how
-   big it took the house to be and which way it took as up. *If the size is wrong, that
-   is the most useful thing you can report* (Scaniverse does not publish its file's
-   units or which way is up, so the program reads them from the file and says what it
-   assumed).
+   file**. At the head of the list choose **Measured in meters** or **Measured in feet**
+   (meters to begin with), then click your scan in the list. Its outline lays under the
+   plan. Read the message: it says how big it took the house to be. If the house came in
+   on its side, the message has a button, **It is lying on its side: stand it up**. *If
+   the size is wrong, that is the most useful thing you can report* (Scaniverse does not
+   publish its file's units or which way is up, so the program reads them from the file
+   and says what it assumed).
 2. **Trace the house as it stands.** Wall tool (key 1): accept or type the thickness and
    height, click each corner over the scan. Door and Window on the walls. Room in each
    room. Then select the walls and press **Existing** in the panel's WORK row.
@@ -55,19 +58,22 @@ and copy that file into `~/jobs/addition/`.
    Where the plan is open, the **Room line** tool parts two rooms with no wall. Watch
    the rooms' areas follow. The **Demolition** switch under Show hides what comes down.
 4. **Set a kitchen.** BRING IN, Starter items. Then the **Cabinets** tool: click a wall's
-   face on the room's side, type the boxes (`B18 SB36 B24 DB18 B36`; the codes list as
-   you type), Enter. A run off a corner another run fills starts 24 in from it.
-5. **Try it two ways.** Save (Ctrl+S). Copy `job.json` to `job-b.json`, open the copy,
-   change the addition, save. In the sheet window, **Layouts**, Set beside another
-   layout, pick the other file: rooms, walls and cost side by side.
+   face on the room's side, type the boxes (`B18 [Dishwasher] SB36 B24 DB18 B36`: the
+   codes, the appliances and a one-line key list above the field), Enter. Each box shows
+   its code on the plan. A run off a corner another run fills starts 24 in from it.
+5. **Try it two ways.** Save (Ctrl+S). In the sheet window, **Layouts**, **Keep this as
+   another layout**: a title is offered, Enter keeps a copy beside this job and sets it
+   beside this one. **Open another layout** opens the copy to change it (the addition
+   longer, say); save; open the first again, and **Set beside another layout** to see
+   rooms, walls and cost side by side.
 
 ## What is known not to be there yet
 
 So you do not spend your hour looking for it: walls are not found from the scan (you
 trace them); no beams, joists or rafters; no island or corner fillers worked out for
 you; no printed sheets; prices are yours to type (the starter library carries none);
-the takeoff and lists still count existing and demolished work with new; demolition is
-a line you type. Each is on the plan in `STATUS.md`.
+in the window the counts are not yet split into new, existing and to demolish (the
+command line's are); demolition is a line you type. Each is on the plan in `STATUS.md`.
 
 ## What to send back
 

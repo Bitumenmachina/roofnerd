@@ -67,7 +67,8 @@ shot                                     # 05 refused, the wall carries a line: 
 on "Keep its lines"; sleep 4; park
 shot                                     # 06 "Keep its lines" pressed: "Existing" lit, the line kept
 click 1000 800; sleep 3
-shot                                     # 07 nothing picked: the south wall washed pale, the ghost still there
+cp "$T/map.txt" "$T/map-keys.txt"
+shot                                     # 07 nothing picked: the south wall washed pale, the ghost still there; the two key rows under Show
 on "Show Demolition"; sleep 4
 click 1000 800; sleep 3
 shot                                     # 08 Demolition off: the house as the work leaves it
@@ -94,9 +95,18 @@ cp "$T/map.txt.said" "$T/said.txt"
 says "$T/said.txt" ": to demolish"
 says "$T/said.txt" "Say which: Take its lines off, or Keep its lines"
 says "$T/said.txt" ": existing to remain; its 1 cost line kept and priced, as work done to it"
+# The partition marked to demolish opens the room it parted: the window says so, with the figures
+# before and after (178.25 SF with the partition standing; 23.5 ft by 15.5 ft = 364.25 SF without).
+says "$T/said.txt" "Living is now 364.25 SF (was 178.25)"
 says "$T/said.txt" "Demolition: switched off."
 says "$T/said.txt" "Demolition: switched on."
 if grep -qE -- '--clear|--keep' "$T/said.txt"; then echo "FAIL: the window gave the command line's words"; exit 1; fi
+# A thing is named once: "Wall 5 (wall 5)" was the name and then the name again (call 161).
+if grep -qE '([Ww]all [0-9]+) \(([Ww]all [0-9]+)\)' "$T/said.txt"; then echo "FAIL: a wall is named twice in what the window said"; grep -E '([Ww]all [0-9]+) \(([Ww]all [0-9]+)\)' "$T/said.txt"; exit 1; fi
+# The two key rows under Show, once anything is marked (call 161), from the map at picture 07:
+# "Existing, shown pale" and, with its switch, "Demolition, shown red".
+grep -q $'^model\tKey Existing\t' "$T/map-keys.txt" && grep -q $'^model\tShow Demolition\t' "$T/map-keys.txt" || { echo "FAIL: the two key rows (Existing, Demolition) are not under Show"; grep -E 'Show|Key' "$T/map-keys.txt"; exit 1; }
+echo "    under Show: the key rows Existing (shown pale) and Demolition (shown red, with its switch)"
 
 echo
 echo "== What the session left in the saved job =="
@@ -143,6 +153,23 @@ def report(what, a, b, test, want):
     ok = ok and good
     print("    %-58s %s -> %s  %s" % (what, a, b, "as wanted" if good else "FAIL: wanted " + want))
 report("south wall in 3D, unmarked (01), existing (10)", mean("01", south3d), mean("10", south3d), lambda a, b: lum(b) > lum(a) + 10, "lighter by over 10")
+# Existing brick keeps its pattern (call 161): the spread of brightness over the wall's patch
+# (the standard deviation of luminance, 300 by 150 pixels) is that of brick, not of a flat wash.
+#   brick unmarked (01): spread 24.45; brick existing (10): 14.22 (the wall washed pale, 0.15 of a pale light added over it); a plain wall's patch
+#   (the west wall, cream; 120 by 100 pixels at (450, 500)): 0.30.
+#   The picture from before this change (demos/captured/renow/10-model.png at the commit before
+#   call 161, the brick washed to flat gray): spread 6.68, which this check fails (it wants over 10).
+def spread(name, box):
+    im = Image.open(f"{out}/{name}-model.png").convert("RGB").crop(box)
+    lums = [(p[0] * 299 + p[1] * 587 + p[2] * 114) / 1000 for p in im.getdata()]
+    m = sum(lums) / len(lums)
+    return (sum((x - m) ** 2 for x in lums) / len(lums)) ** 0.5
+plain_west = (450, 500, 570, 600)
+s_brick, s_existing, s_plain = spread("01", south3d), spread("10", south3d), spread("10", plain_west)
+print("    spread of brightness over the south wall: brick unmarked (01) %.2f; existing (10) %.2f; a plain wall (10) %.2f" % (s_brick, s_existing, s_plain))
+good = s_existing > 10 and s_existing > 10 * max(s_plain, 0.5) and s_existing > 0.4 * s_brick
+ok = ok and good
+print("    existing brick still has its pattern (its spread over 10, over ten times a plain wall's, over 0.4 of the unmarked brick's): %s" % ("as wanted" if good else "FAIL"))
 report("partition, ghost on (04) against Demolition off (08)", mean("04", part), mean("08", part), lambda a, b: sum(abs(x - y) for x, y in zip(a, b)) > 40, "a different place by over 40")
 report("partition, ghost on again (09) as it was on (04)", mean("04", part), mean("09", part), lambda a, b: sum(abs(x - y) for x, y in zip(a, b)) < 15, "the same to within 15")
 report("partition, as opened (02) against ghost (04): redder", mean("02", part), mean("04", part), lambda a, b: (b[0] - b[2]) > (a[0] - a[2]) + 5, "redder over blue by 5")

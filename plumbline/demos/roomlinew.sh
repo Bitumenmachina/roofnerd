@@ -59,15 +59,16 @@ open_window "$J"
 on "Plan"; sleep 8; park
 plan_line > "$T/plan.txt"
 shot                                     # 01 the plan as opened: one room, no line
-on "Room line"; sleep 3                  # Room line in hand
+on "Room line"; sleep 3; park           # Room line in hand
+shot                                     # 02 the tool in hand: its hint says what it is for
 at 24 0; sleep 2                         # one end: the south wall's end
 at 24 16; sleep 4                        # the other: the north wall's end
 esc; esc; park
-shot                                     # 02 the room line drawn, dashed, where the east wall stood
+shot                                     # 03 the room line drawn, dashed, dark blue, over the pink of the wall that came down
 on "Room"; sleep 2                       # Room
 at 30 8; sleep 2; typed "Kitchen"        # a second room, in the addition
 esc; park
-shot                                     # 03 two rooms, each with its floor area
+shot                                     # 04 two rooms, each with its floor area
 xdotool key F2; sleep 4                  # save
 close_window
 SESSION
@@ -75,10 +76,10 @@ chmod +x "$T/session.sh"
 timeout 1500 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
 if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a control it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
-for n in 01 02 03; do
+for n in 01 02 03 04; do
   [ "$OUT/$n-model.png" -nt "$T/before.json" ] && [ "$OUT/$n-sheet.png" -nt "$T/before.json" ] || { echo "FAIL: no picture $n of both windows from this run"; exit 1; }
 done
-echo "  6 pictures saved to $OUT (model and sheet, after each of 3 steps)"
+echo "  8 pictures saved to $OUT (model and sheet, after each of 4 steps)"
 
 echo
 echo "== What the window said =="
@@ -121,9 +122,17 @@ echo "== The pictures, measured =="
 # as runs. A dashed line is several runs with gaps between them; before the tool there is
 # none. As measured on a run of these steps (column, rows 0.25 to 15.75 ft):
 #   before the tool (01): 2 runs, 0.01 of the rows dark (the line is not there: the check "a dashed line" FAILS on it)
-#   after the tool (02):  24 runs, 0.49 of the rows dark (the plan 23.95 pixels to the foot); the same with Kitchen (03)
+#   after the tool (03):  24 runs, 0.49 of the rows dark (the plan 23.95 pixels to the foot); the same with Kitchen (04)
 # The same measure on picture 01 fails the check (it must), and so does the same line moved
 # 6 ft west, where the room line is not (a check that passes anywhere is no check).
+# Then its ink (call 161): the dark pixels of the dashes are counted again, now those that are
+# blue (luminance under 130 and blue over red by more than 50). The room line is dark blue
+# (11, 42, 140) over the pink of the wall that came down (238, 188, 188 either side of it).
+#   the room line, picture 03: 0.51 of the rows have a dark blue pixel on the line, 0.49 a dark one
+#   before the tool (01): 0.00 blue; 6 ft west of the line (03): 0.00 blue
+#   the picture from before this change (demos/captured/roomlinew/02-model.png at the commit
+#   before call 161: the line drawn in the black of a wall): 0.49 dark and 0.00 blue, which this
+#   check fails (it wants at least 0.3).
 python3 -I - "$OUT" "$T/plan.txt" <<'PY'
 import sys
 from PIL import Image
@@ -148,16 +157,40 @@ def dashed(r):
     n, share = r
     return n >= 4 and 0.25 <= share <= 0.8
 print("    the plan on screen: zero at (%.0f, %.0f), %.2f pixels to the foot" % (x0, y0, k))
-before, after, after3 = runs("01"), runs("02"), runs("03")
-west = runs("02", east=18.0)
-print("    along x = 24: before the tool (01) %d runs, %.2f dark; after (02) %d runs, %.2f dark; with Kitchen (03) %d runs, %.2f dark" % (before + after + after3))
-print("    along x = 18 (no line there), picture 02: %d runs, %.2f dark" % west)
+before, after, after3 = runs("01"), runs("03"), runs("04")
+west = runs("03", east=18.0)
+print("    along x = 24: before the tool (01) %d runs, %.2f dark; after (03) %d runs, %.2f dark; with Kitchen (04) %d runs, %.2f dark" % (before + after + after3))
+print("    along x = 18 (no line there), picture 03: %d runs, %.2f dark" % west)
 ok = True
-for what, r, want in (("before the tool (01): no dashed line", before, False), ("after the tool (02): a dashed line", after, True), ("with Kitchen (03): the dashed line still", after3, True), ("x = 18 in picture 02: no dashed line", west, False)):
+for what, r, want in (("before the tool (01): no dashed line", before, False), ("after the tool (03): a dashed line", after, True), ("with Kitchen (04): the dashed line still", after3, True), ("x = 18 in picture 03: no dashed line", west, False)):
     good = dashed(r) == want
     ok = ok and good
     print("    %-44s %s" % (what, "as wanted" if good else "FAIL"))
+def blue(name, east=24.0, north0=0.25, north1=15.75):
+    im = Image.open("%s/%s-model.png" % (out, name)).convert("RGB")
+    px = im.load()
+    x = int(round(x0 + east * k))
+    rows = range(int(round(y0 - north1 * k)), int(round(y0 - north0 * k)) + 1)
+    n = 0
+    for y in rows:
+        for dx in (-1, 0, 1):
+            p = px[x + dx, y]
+            if (p[0] * 299 + p[1] * 587 + p[2] * 114) / 1000 < 130 and p[2] - p[0] > 50:
+                n += 1
+                break
+    side = [px[x + dx, y] for y in rows for dx in (-4, 4)]
+    return n / len(rows), sum(p[0] - p[2] for p in side) / len(side)
+for what, name, east, want in (("the room line (03) is dark blue", "03", 24.0, True), ("with Kitchen (04), still", "04", 24.0, True), ("before the tool (01): no blue", "01", 24.0, False), ("6 ft west of the line (03): no blue", "03", 18.0, False)):
+    share, pink = blue(name, east)
+    good = (share >= 0.3) == want
+    ok = ok and good
+    print("    %-40s %.2f of the rows blue on the line; the wall beside it reads red over blue by %.0f: %s" % (what, share, pink, "as wanted" if good else "FAIL"))
+# the wall it lies on is pink on either side of the line: the ink is over the demolished wall's pink
+share, pink = blue("03")
+good = pink > 20
+ok = ok and good
+print("    the line lies over the pink of the wall that came down (red over blue by %.0f at its sides): %s" % (pink, "as wanted" if good else "FAIL"))
 sys.exit(0 if ok else 1)
 PY
 echo
-echo "  PASS: in the window, on the plan, the Room line tool drew a dashed line from 24,0 to 24,16 (Assumed, entered on screen) that parted Living into 368.125 SF and, with Kitchen placed beyond it, 182.125 SF, saved as one room line; the pictures show the dashed line and none before"
+echo "  PASS: in the window, on the plan, the Room line tool drew a dashed line from 24,0 to 24,16 (Assumed, entered on screen) that parted Living into 368.125 SF and, with Kitchen placed beyond it, 182.125 SF, saved as one room line; the pictures show the dashed line, dark blue over the pink of the wall that came down, and none before"

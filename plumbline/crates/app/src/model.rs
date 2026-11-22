@@ -100,6 +100,18 @@ impl WriteOut {
 }
 
 impl Bring {
+    /// What a file in the list of this kind is, in a builder's word (call 161).
+    pub fn file_is(self) -> &'static str {
+        match self {
+            Bring::Prices => "price list",
+            Bring::Assemblies => "assemblies",
+            Bring::Prior => "estimate",
+            Bring::Model => "model",
+            Bring::Sheet => "maker's sheet",
+            Bring::Items => "item list",
+            Bring::Scan => "scan",
+        }
+    }
     pub const ALL: [Bring; 7] = [Bring::Prices, Bring::Assemblies, Bring::Prior, Bring::Model, Bring::Sheet, Bring::Items, Bring::Scan];
     pub fn name(self) -> &'static str {
         match self {
@@ -176,6 +188,8 @@ pub enum Entry {
     /// A run of cabinet boxes (call 156): where along the wall it starts, and the boxes'
     /// codes, typed as two fields that go together.
     Cabinets,
+    /// The title a layout is kept under (call 161), typed on the sheet's Layouts tab.
+    LayoutName,
 }
 
 /// How the last action went. Said by what happened, not read back out of the words.
@@ -361,6 +375,19 @@ pub struct Doc {
     pub beside: Vec<Beside>,
     /// The list of job files to set beside this one is open, on the sheet's Layouts tab.
     pub choosing_layout: bool,
+    /// The name for a layout being kept as another job is being typed, on the Layouts tab (call 161).
+    pub keeping_layout: Option<String>,
+    /// The list of jobs in this job's folder, to open one in this window, is open (call 161).
+    pub opening_layout: bool,
+    /// The jobs kept in this job's folder, each its file's name and its title (only files
+    /// that are jobs), read when a list of them is opened.
+    pub jobs_here: Vec<(String, String)>,
+    /// The scan list's two choices: true when the scan is measured in feet; meters to begin with.
+    pub scan_feet: bool,
+    /// A scan just brought in whose up may be wrong: the file as it was picked, which way up
+    /// it was taken (true: z), and the step it was brought in as. The button "It is lying on
+    /// its side" is there while that step is the last (call 161).
+    pub scan_side: Option<(String, bool, u64)>,
 }
 
 impl Doc {
@@ -832,11 +859,21 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     // What is not yet Known. Solved planes and lines rest on their roof's footprint, which
     // is listed itself; a condition's recipe is a blank form, not this job's unknowns.
     let mut groups: Vec<(Status, String, Vec<String>)> = Vec::new();
+    // The items one of which is set in the job (call 161): an item nobody has set down has
+    // no maker, model or weight to be sorted out yet, and its unknowns are not listed.
+    let set_down: std::collections::HashSet<String> = {
+        let mut q = doc.job.world.query::<&plumbline_world::Placed>();
+        q.iter(&doc.job.world).filter_map(|p| p.item.clone()).collect()
+    };
     for el in &elements {
         if el.kind == Kind::Condition || solved.contains(&el.path) {
             continue;
         }
+        let an_item = doc.job.find(&el.path).is_some_and(|e| doc.job.world.get::<plumbline_world::Item>(e).is_some());
         for r in el.rows.iter().filter(|r| r.status != Status::Known) {
+            if an_item && !set_down.contains(&el.path) && matches!(r.label.as_str(), "maker" | "model" | "weight") {
+                continue;
+            }
             if r.label == "solved roof" {
                 s.notes.push((r.status, if r.text == "not solved" { format!("{}: its planes could not be worked out", el.name) } else { format!("{}: worked out, with a note", el.name) }, r.note.clone()));
                 continue;

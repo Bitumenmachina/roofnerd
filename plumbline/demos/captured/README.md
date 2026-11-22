@@ -27,9 +27,9 @@ such reading, and STATUS.md says where each thing it found stands).
 | `house` | `demos/house.sh` |
 | `itemlib` | `demos/itemlibw.sh` |
 | `itemnew` | `demos/itemneww.sh` |
-| `cabinetsw` (`01` to `10`) | `demos/cabinetsw.sh` |
+| `cabinetsw` (`01` to `11`) | `demos/cabinetsw.sh` |
 | `items` | `demos/itemsw.sh` |
-| `layoutsw` (`01` to `04`) | `demos/layoutsw.sh` |
+| `layoutsw` (`01` to `10`) | `demos/layoutsw.sh` |
 | `layers` (`01` to `05`) | `demos/tradesw.sh` |
 | `money` | `demos/moneyw.sh` |
 | `pagew` | `demos/pagew.sh` |
@@ -38,8 +38,8 @@ such reading, and STATUS.md says where each thing it found stands).
 | `quantityw` | `demos/quantityw.sh` |
 | `renow` | `demos/renow.sh` |
 | `roofw` | `demos/roofw.sh` |
-| `roomlinew` | `demos/roomlinew.sh` |
-| `scanw` | `demos/scanw.sh` |
+| `roomlinew` (`01` to `04`) | `demos/roomlinew.sh` |
+| `scanw` (`01` to `10`) | `demos/scanw.sh` |
 | `tools` | `demos/toolsw.sh` |
 | `turnw` | `demos/turnw.sh` |
 

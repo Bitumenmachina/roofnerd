@@ -75,6 +75,54 @@ fn main() {
     // With no job named, the job is `job.json` in the folder the program was started in.
     let path = args.next().unwrap_or_else(|| "job.json".to_string());
     let roof_arg = args.next();
+    let doc = match build_doc(path.clone(), roof_arg) {
+        Ok(doc) => doc,
+        Err(why) => {
+            eprintln!("plumbline-app: {why}");
+            std::process::exit(1);
+        }
+    };
+    let graphics = scene::Graphics { full: std::env::var("PLUMBLINE_GRAPHICS").map(|v| v != "plain").unwrap_or(true) };
+
+    App::new()
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window { title: "BuildOS: model".into(), resolution: (1600u32, 960u32).into(), position: WindowPosition::At(IVec2::new(0, 0)), ..default() }),
+            // Closing is ours to answer: work not saved is never dropped without a word.
+            close_when_requested: false,
+            ..default()
+        }))
+        .add_plugins(MeshPickingPlugin)
+        .init_gizmo_group::<scene::RoofLines>()
+        .init_gizmo_group::<scene::BrokenLines>()
+        .init_gizmo_group::<scene::RunLines>()
+        .init_gizmo_group::<scene::GridLines>()
+        .init_gizmo_group::<scene::Highlight>()
+        .init_gizmo_group::<scene::RoomLines>()
+        .insert_resource(ClearColor(theme::canvas()))
+        .insert_resource(doc)
+        .insert_resource(graphics)
+        .init_resource::<Snapshot>()
+        .init_resource::<scene::Drawing>()
+        .init_resource::<dress::Patterns>()
+        .init_resource::<plans::Plans>()
+        .init_resource::<panels::Scrolls>()
+        .insert_resource(Orbit::new())
+        .init_resource::<scene::Feel>()
+        .init_resource::<scene::Carry>()
+        .add_plugins(glass::GlassPlugin)
+        .add_observer(scene::pressed)
+        .add_observer(scene::dragging)
+        .add_systems(Startup, (scene::setup, glass::setup, setup).chain())
+        .add_systems(Last, closing)
+        .add_systems(
+            Update,
+            ((tools::frame_begins, keys).chain(), plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::place_camera, scene::ground_tone, glass::follow).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
+        )
+        .run();
+}
+
+/// A job opened as a window holds it: read from its file (or new, where there is none yet).
+pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> {
     // A job file that is not there yet is a new job: it is written when it is first saved.
     let fresh = !std::path::Path::new(&path).exists();
     let (mut job, report) = if fresh {
@@ -84,23 +132,20 @@ fn main() {
         let text = match std::fs::read_to_string(&path) {
             Ok(t) => t,
             Err(e) => {
-                eprintln!("plumbline-app: cannot read {path}: {e}");
-                std::process::exit(1);
+                return Err(format!("cannot read {path}: {e}"));
             }
         };
         match file::load(&text) {
             Ok(x) => x,
             Err(e) => {
-                eprintln!("plumbline-app: {path}: {e}");
-                std::process::exit(1);
+                return Err(format!("{path}: {e}"));
             }
         }
     };
     // A roof named on the command line has to be a roof in the job.
     if let Some(named) = &roof_arg {
         if job.kind(named) != Some(Kind::Roof) {
-            eprintln!("plumbline-app: {named} is not a roof in {path}");
-            std::process::exit(1);
+            return Err(format!("{named} is not a roof in {path}"));
         }
     }
     // The roof on show: the one named, else the first solved from a footprint, else the first.
@@ -162,43 +207,13 @@ fn main() {
         marking: None,
         beside: Vec::new(),
         choosing_layout: false,
+        keeping_layout: None,
+        opening_layout: false,
+        jobs_here: Vec::new(),
+        scan_feet: false,
+        scan_side: None,
     };
-    let graphics = scene::Graphics { full: std::env::var("PLUMBLINE_GRAPHICS").map(|v| v != "plain").unwrap_or(true) };
-
-    App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window { title: "BuildOS: model".into(), resolution: (1600u32, 960u32).into(), position: WindowPosition::At(IVec2::new(0, 0)), ..default() }),
-            // Closing is ours to answer: work not saved is never dropped without a word.
-            close_when_requested: false,
-            ..default()
-        }))
-        .add_plugins(MeshPickingPlugin)
-        .init_gizmo_group::<scene::RoofLines>()
-        .init_gizmo_group::<scene::BrokenLines>()
-        .init_gizmo_group::<scene::RunLines>()
-        .init_gizmo_group::<scene::GridLines>()
-        .init_gizmo_group::<scene::Highlight>()
-        .insert_resource(ClearColor(theme::canvas()))
-        .insert_resource(doc)
-        .insert_resource(graphics)
-        .init_resource::<Snapshot>()
-        .init_resource::<scene::Drawing>()
-        .init_resource::<dress::Patterns>()
-        .init_resource::<plans::Plans>()
-        .init_resource::<panels::Scrolls>()
-        .insert_resource(Orbit::new())
-        .init_resource::<scene::Feel>()
-        .init_resource::<scene::Carry>()
-        .add_plugins(glass::GlassPlugin)
-        .add_observer(scene::pressed)
-        .add_observer(scene::dragging)
-        .add_systems(Startup, (scene::setup, glass::setup, setup).chain())
-        .add_systems(Last, closing)
-        .add_systems(
-            Update,
-            ((tools::frame_begins, keys).chain(), plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::place_camera, scene::ground_tone, glass::follow).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
-        )
-        .run();
+    Ok(doc)
 }
 
 fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>, camera: Query<Entity, With<scene::MainCamera>>) {
@@ -803,6 +818,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                 Entry::Measure => tools::measured(doc, &text),
                 Entry::Room => tools::room_named(doc, &text),
                 Entry::Cabinets => tools::cabinets_entered(doc, &values),
+                Entry::LayoutName => tools::keep_layout(doc, &text),
                 Entry::Division => {
                     let line = doc.entry_line.take();
                     match (doc.selected.clone(), plumbline_world::Division::parse(&text)) {

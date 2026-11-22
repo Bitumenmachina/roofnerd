@@ -95,6 +95,8 @@ pub fn accent_wash() -> Color { hex(0xE8F0FE) }
 pub fn amber() -> Color { hex(0xA9690A) }
 pub fn amber_wash() -> Color { hex(0xFFF3D1) }
 pub fn red() -> Color { hex(0xB93227) }
+/// A room line's ink: dark blue, in its own colour so it is never taken for a wall (call 161).
+pub fn room_line() -> Color { hex(0x0B2A8C) }
 /// Existing work is washed toward this pale gray (call 149).
 pub fn existing_tone() -> Color { hex(0xD9DBDD) }
 /// What comes down: a faint red, seen through (call 149).
@@ -279,9 +281,14 @@ pub fn spoken(text: &str) -> String {
         }
     }
     for name in said {
-        let twice = format!("{name} ({name})");
-        if out.contains(&twice) {
-            out = out.replace(&twice, &name);
+        // A name said twice is said once, whether the first began a sentence (a capital)
+        // or not: "Wall 5 (wall 5)" is "Wall 5" (call 161).
+        let mut small = name.chars();
+        let lower = small.next().map(|f| f.to_lowercase().collect::<String>() + small.as_str()).unwrap_or_default();
+        for twice in [format!("{name} ({name})"), format!("{name} ({lower})")] {
+            if out.contains(&twice) {
+                out = out.replace(&twice, &name);
+            }
         }
     }
     // A kind of thing as the program's own text names it (RoofPlane, LowSlopeArea) is
@@ -355,6 +362,11 @@ pub fn spoken(text: &str) -> String {
     // for itself: 8' 10 1/2" is not written 8' 10 1/2\" on a drawing.
     if out.contains('\\') {
         out = out.replace("\\\"", "\"").replace("\\'", "'");
+    }
+    // A scan's sheet, as a person reads it (call 161): the way the scan was measured, with
+    // no axis and no file ending; a page that is the only one is not numbered.
+    if out.contains(" with y up") || out.contains(" with z up") || out.contains("taken as meters") || out.contains("taken as feet") || out.contains(".ply") || out.contains(".png, page 1") {
+        out = out.replace(" with y up", "").replace(" with z up", "").replace("taken as meters", "measured in meters").replace("taken as feet", "measured in feet").replace(".ply", "").replace(".png, page 1", "");
     }
     // "(os error 2)": the machine's number for why a file could not be read.
     while let Some(at) = out.find(" (os error ") {

@@ -125,8 +125,8 @@ impl Tool {
             Tool::Thing(_) => "Click where it stands.",
             Tool::Floor => "Click anywhere on the level. The floor fills the outline its walls enclose.",
             Tool::Room => "Click inside the room, then type its name.",
-            Tool::RoomLine => "Click one end of the line, then the other. It parts two rooms where no wall stands. Esc ends.",
-            Tool::Cabinets => "Click a wall's face, on the room's side, where the run of boxes starts. Then type the boxes' codes. Esc ends.",
+            Tool::RoomLine => "Parts two rooms where no wall stands: click each end. Esc ends.",
+            Tool::Cabinets => "Click a wall's face, on the room's side, where the run of boxes starts. Then type the boxes, like B18 SB36 B24. Esc ends.",
             Tool::Roof => "Click each corner of the roof's outline, then the first again to close it.",
             Tool::Move => "Click a point on it, then where that point goes.",
             Tool::Fitting => "Click where runs meet.",
@@ -258,6 +258,23 @@ pub fn cant(doc: &mut Doc, what: &str, why: impl std::fmt::Display) {
     doc.say(Tone::Refused, format!("Can't {what}: {why}"));
 }
 
+/// Each room's name and floor area, as the job works it out now (a room is said by its
+/// name; the figure is the model's).
+fn room_areas(job: &mut plumbline_world::Job) -> Vec<(String, String, Option<f64>)> {
+    let order = job.order.clone();
+    order
+        .iter()
+        .filter_map(|e| {
+            if job.world.get::<Kind>(*e) != Some(&Kind::Room) {
+                return None;
+            }
+            let node = job.world.get::<plumbline_world::Node>(*e)?;
+            let area = job.world.get::<plumbline_world::components::Measure>(*e).and_then(|m| m.0.get("floor_area")).and_then(|d| d.value);
+            Some((node.path.clone(), node.name.clone(), area))
+        })
+        .collect()
+}
+
 /// Mark the selected thing as the work leaves it: existing, to demolish, new (call 149).
 /// What `editing::mark` says is what the window says. A thing that carries cost lines is
 /// refused until the estimator says what is to become of them: `marking` holds the
@@ -267,10 +284,22 @@ pub fn mark_work(doc: &mut Doc, status: plumbline_world::WorkStatus, lines: ed::
         return cant(doc, "mark it", "nothing is selected");
     };
     let how = ed::Entered { status: Status::Assumed, source: SOURCE };
+    let rooms_before = room_areas(&mut doc.job);
     match ed::mark(&mut doc.job, std::slice::from_ref(&sel), status, lines, how) {
-        Ok(said) => {
+        Ok(mut said) => {
             doc.marking = None;
             doc.job.derive();
+            // A room that the mark changes says so (call 161): what comes down opens the
+            // room it parted, and what stays is a wall again.
+            for (path, name, was) in rooms_before {
+                let now = room_areas(&mut doc.job).into_iter().find(|r| r.0 == path).and_then(|r| r.2);
+                if let (Some(was), Some(now)) = (was, now) {
+                    if (was - now).abs() > 1e-6 {
+                        let num = plumbline_world::view::num;
+                        said.push(format!("{name} is now {} SF (was {})", num(now), num(was)));
+                    }
+                }
+            }
             doc.edit("Mark work");
             doc.say(Tone::Done, said.join("\n"));
             doc.redraw();
@@ -662,7 +691,7 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
                 Ok((wall, room, from)) => {
                     doc.draw.cabinets = Some((wall.clone(), room.clone()));
                     doc.open_form(Entry::Cabinets, vec![units::feet_as_ft_in(from, 16), String::new()], 1);
-                    doc.say(Tone::Done, format!("Cabinets: the run starts {} along {wall}, in {room}. Type the boxes' codes, like B18 SB36 B24, then Enter.", units::feet_as_ft_in(from, 16)));
+                    doc.say(Tone::Done, format!("Cabinets: the run starts {} along {wall}, in {room}. Type the boxes, like B18 SB36 B24 (an appliance by its name in square brackets, like [Dishwasher]), then Enter.", units::feet_as_ft_in(from, 16)));
                 }
             }
             doc.touch();
@@ -824,7 +853,16 @@ pub fn cabinets_entered(doc: &mut Doc, values: &[String]) {
         return cant(doc, "set the run", "click a wall's face first");
     };
     let from = values.first().map(|v| v.trim()).unwrap_or("").to_string();
-    let codes: Vec<String> = values.get(1).map(|v| v.split_whitespace().map(str::to_string).collect()).unwrap_or_default();
+    // The boxes as the command line takes them: codes side by side, and an appliance or any
+    // item of the job by its name in square brackets, like [Dishwasher] (call 161).
+    let codes = match ed::box_list(values.get(1).map(String::as_str).unwrap_or("")) {
+        Ok(codes) => codes,
+        Err(why) => {
+            doc.reopen_form(Entry::Cabinets, values.to_vec(), 1);
+            cant(doc, "set the run", why);
+            return doc.redraw();
+        }
+    };
     let traced = doc.draw.traced.clone().unwrap_or_else(|| SOURCE.to_string());
     let top = !doc.draw.without_top;
     match ed::cabinets(&mut doc.job, &storey, &wall, &room, &from, &codes, top, how(&traced)) {
@@ -855,6 +893,12 @@ pub fn cabinets_entered(doc: &mut Doc, values: &[String]) {
         Err(why) => {
             let at = if why.contains("starts so far") || why.contains("where the run starts") { 0 } else { 1 };
             doc.reopen_form(Entry::Cabinets, values.to_vec(), at);
+            // The screen says "items" where the model's sentence says "tool chest".
+            // The list of what there is is under the field: the sentence does not say it again.
+            let why = match why.split_once(". It has: ") {
+                Some((cant_find, _)) => format!("{}. The list above the field has the boxes and the appliances this job has.", cant_find.replace("the tool chest", "this job's items")),
+                None => why.replace("the tool chest", "this job's items"),
+            };
             cant(doc, "set the run", why);
         }
     }
@@ -879,6 +923,126 @@ pub fn set_beside(doc: &mut Doc, name: &str) {
         }
         Err(why) => cant(doc, "set it beside this job", why),
     }
+}
+
+/// The jobs kept in this job's folder, each its file's name and its title: only files that
+/// are jobs, and not this one (call 161). Read when a list of them is opened, not at every
+/// frame.
+pub fn jobs_here(doc: &Doc) -> Vec<(String, String)> {
+    let here = crate::plans::folder_of(&doc.path);
+    let mine = doc.path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+    let mut found: Vec<(String, String)> = std::fs::read_dir(&here)
+        .map(|read| {
+            read.flatten()
+                .filter_map(|e| e.file_name().to_str().map(str::to_string))
+                .filter(|n| !n.starts_with('.') && n.to_lowercase().ends_with(".json") && *n != mine)
+                .filter_map(|n| {
+                    let text = std::fs::read_to_string(here.join(&n)).ok()?;
+                    let (job, _) = file::load(&text).ok()?;
+                    let title = job.world.get::<plumbline_world::JobInfo>(job.root()).map(|i| i.title.clone()).filter(|t| !t.trim().is_empty()).unwrap_or_else(|| crate::panels::plain_stem(&n));
+                    Some((n, title))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    found.sort_by_key(|(n, t)| (t.to_lowercase(), n.to_lowercase()));
+    found
+}
+
+/// "Set beside another layout" or "Open another layout" pressed: the list of jobs in this
+/// job's folder is opened (or put away again).
+pub fn choose_layout(doc: &mut Doc, to_open: bool) {
+    let (was_set, was_open) = (doc.choosing_layout, doc.opening_layout);
+    doc.choosing_layout = !to_open && !was_set;
+    doc.opening_layout = to_open && !was_open;
+    if doc.entry.as_ref().is_some_and(|(e, _)| *e == Entry::LayoutName) {
+        doc.entry = None;
+    }
+    if doc.choosing_layout || doc.opening_layout {
+        doc.jobs_here = jobs_here(doc);
+    }
+    doc.touch();
+}
+
+/// "Keep this as another layout" pressed: the title is asked for, this job's own title and
+/// "B" offered (call 161).
+pub fn ask_layout_name(doc: &mut Doc) {
+    doc.choosing_layout = false;
+    doc.opening_layout = false;
+    let title = doc.job.world.get::<plumbline_world::JobInfo>(doc.job.root()).map(|i| i.title.clone()).unwrap_or_default();
+    doc.open(Entry::LayoutName, format!("{} B", title.trim()));
+    doc.fresh = true;
+    doc.say(Tone::Done, "Keep this as another layout: type its title, then Enter. Esc lets go.");
+}
+
+/// Keep a copy of this job, as it is on screen now, beside it under `title`, and set it
+/// beside this job (call 161). Its file is named from the title, in this job's folder;
+/// a file of that name is never written over. This job's own file is not touched.
+pub fn keep_layout(doc: &mut Doc, title: &str) {
+    let title = title.trim();
+    if title.is_empty() {
+        doc.open(Entry::LayoutName, "");
+        return cant(doc, "keep this as another layout", "it needs a title: type one, then Enter");
+    }
+    if doc.beside.len() >= 2 {
+        return cant(doc, "keep this as another layout", "two other layouts are set beside this job already, the most. Take one away first");
+    }
+    let name = format!("{}.json", plumbline_world::job::slug(title));
+    let folder = crate::plans::folder_of(&doc.path);
+    let to = folder.join(&name);
+    if to.exists() || doc.path.file_name().is_some_and(|n| n.to_string_lossy() == name) {
+        doc.open(Entry::LayoutName, title);
+        doc.fresh = true;
+        return cant(doc, "keep this as another layout", format!("a job is kept here under that title already ({}). Give this layout another title", crate::panels::plain_stem(&name)));
+    }
+    let made = file::load(&file::save(&mut doc.job)).map(|(job, _)| job);
+    match made {
+        Ok(mut job) => {
+            let root = job.root();
+            if let Some(mut info) = job.world.get_mut::<plumbline_world::JobInfo>(root) {
+                info.title = title.to_string();
+            }
+            let text = file::save(&mut job);
+            match std::fs::write(&to, &text) {
+                Ok(()) => match file::load(&text) {
+                    Ok((job, _)) => {
+                        doc.beside.push(crate::model::Beside { file: name.clone(), job });
+                        doc.say(Tone::Done, format!("Kept a copy of this job as {title}, beside it, and set it beside this one: the table is on the sheet, under Layouts. Open another layout opens it to be changed; this job's own file is as it was."));
+                    }
+                    Err(why) => cant(doc, "keep this as another layout", why),
+                },
+                Err(e) => cant(doc, "keep this as another layout", format!("{} {}", crate::panels::plain_stem(&name), crate::plans::why_not_opened(&e))),
+            }
+        }
+        Err(why) => cant(doc, "keep this as another layout", why),
+    }
+    doc.touch();
+}
+
+/// "Open another layout": the job in the file `name`, kept in this job's folder, is opened
+/// in this window in place of this one. With changes not saved it opens nothing (call 161).
+pub fn open_layout(doc: &mut Doc, name: &str) {
+    if doc.edited {
+        doc.say(Tone::Refused, "Save first (Ctrl+S).");
+        doc.touch();
+        return;
+    }
+    let path = crate::plans::folder_of(&doc.path).join(name);
+    match crate::build_doc(path.to_string_lossy().to_string(), None) {
+        Ok(mut next) => {
+            let title = next.job.world.get::<plumbline_world::JobInfo>(next.job.root()).map(|i| i.title.clone()).unwrap_or_default();
+            next.revision = doc.revision + 1;
+            next.geometry = doc.geometry + 1;
+            // The pictures taken go on being counted: the next is not the first again.
+            next.shots = doc.shots;
+            // The sheet stays on the Layouts tab, where it was asked for.
+            next.tab = doc.tab;
+            next.say(Tone::Done, format!("Opened {title}. The other layouts are as they were; set one beside this to compare."));
+            *doc = next;
+        }
+        Err(why) => cant(doc, "open that layout", why),
+    }
+    doc.touch();
 }
 
 /// Take the `which`th layout set beside this job away; the job file it was read from is
