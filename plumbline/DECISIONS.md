@@ -5412,3 +5412,28 @@ said: "its end at x,y meets no wall and no room line: it parts nothing until it 
 
 Not in this call: an island (a run off a wall); end panels and toe kick; a countertop
 that follows a box taken out of its run; more sizes.
+
+### Call 158. Every count and list says what is built, what stays and what comes down, and whose it is (2026-11-22; plan step B5; the GC, MEP and finishes reviews)
+
+The takeoff said 6.09 CY of footing concrete on a job where 2.12 CY is new; an existing
+air handler went out to a sub as "set and connected"; plumbing and HVAC could not be
+handed their own lists. Call 148's mark is what tells them apart, and it is used.
+
+- **`takeoff`.** Where a level (or a roof, or a system's runs) has anything that is not
+  new work, each count and quantity is given three ways under its line: **to build**
+  (new and temporary work), **existing to remain**, **to demolish**; the line itself
+  stays the whole, as it stands, and says "as it stands". A job with no mark on anything
+  prints as it did.
+- **`export supplier` and `export subcontractor`** gain a column, **Work** (new work,
+  existing to remain, to demolish, temporary): what the thing the line is on is. A line
+  on an existing thing is work done to it and says so; nothing is dropped.
+- **`export subcontractor`** gains **Division** (its number and title) and **System**
+  (the system a run, a fitting, a fixture or a piece of equipment is on, blank
+  otherwise), and takes `--division <1 to 16>` and `--system "<name>"` to write one
+  trade's or one system's scope alone; what the filter left out is counted in a last
+  line ("12 other lines, in other divisions, are not in this list").
+- **`export pm`** gains the Work column.
+- One arithmetic: the three ways add up to the line, to the digit; each is the sum of
+  the same figures the line sums.
+
+No number moves; lists gain columns and the takeoff gains lines.

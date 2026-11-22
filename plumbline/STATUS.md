@@ -8001,6 +8001,32 @@ still count existing and demolished work with new (plan step B5).
 keep, and by trade); the window's Cabinets field taking appliances by name; an island;
 then B6 and B7.
 
+## Lists by what is built, kept and taken down, and by trade: a demonstration, written before it is built (`demos/lists.sh`, call 158)
+
+From an empty job, by hand. The house of `demos/reno.sh`: walls 6 in thick, 9 ft tall,
+round 0,0 to 24,16 and a partition 12,0 to 12,16; all five marked existing; the
+partition and the east wall marked to demolish; three new walls 24,0 36,0 36,16 24,16.
+
+1. `takeoff`, the level's walls: **8 walls, 136 LF as it stands** (24 + 16 + 24 + 16 +
+   16 + 12 + 16 + 12); **to build 3 walls, 40 LF**; **existing to remain 3 walls, 64
+   LF**; **to demolish 2 walls, 32 LF**; 40 + 64 + 32 = 136. Face: 136 × 9 = 1,224 SF as
+   it stands; to build 360 SF, existing 576 SF, to demolish 288 SF.
+2. A footing under each new wall (24 in wide, 12 in deep): 40 LF × 2 × 1 = 80 CF =
+   **2.963 CY to build** (the corner where two meet is taken off once by the program, so
+   the figure it gives is checked against its own `show`, and the three ways add up to
+   it); an existing footing drawn under the south wall, 24 LF, marked existing:
+   **existing to remain** on its own line; none to demolish.
+3. Lines: on the new walls "Wall, framed" by `face_area`, subcontract, Division 6; on
+   the partition "Demolish partition, haul off" by `face_area`, subcontract, Division 2;
+   a pipe on a plumbing system, new, "Piping, installed" by `true_length`, Division 15;
+   a duct on a supply air system, new, "Ductwork, installed" by `true_length`, Division
+   15. `export subcontractor`: every row has its Work (the partition's line reads "to
+   demolish"), its Division and, for the pipe and the duct, its System. With
+   `--division 15`: the pipe and the duct only, and the last line counts the other
+   lines left out. With `--system` and the plumbing system's name: the pipe only.
+4. A job with no mark: `takeoff` prints as it did before this call (checked against the
+   starter house of `demos/library.sh`, unchanged).
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
