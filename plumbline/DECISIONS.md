@@ -5357,3 +5357,58 @@ items moved from 21 to 46 in `tables.rs`, `demos/items.sh`, `demos/itemlibw.sh` 
 No number moves. `demos/cabinetsw.sh` and `demos/layoutsw.sh` show them, their saved
 jobs and what the window said checked against the command line's demonstrations'
 figures.
+
+### Call 157. A room's run of wall; the kitchen and layouts set right, from their judge (2026-11-22; the judge of calls 152, 154, 155)
+
+**1. A room has `wall_run` (LF), and base is priced by it.** Call 152 let a room's
+perimeter take in a room line, and the starter library prices base by perimeter: on the
+judge's room 31 LF of wall read 46.5 LF. Perimeter stays what it is, the distance round
+the room. The new figure is the run of the room's walls along its floor line: each
+side of the room that lies along a wall, less the doorways in it (a door to demolish is
+filled in and is no doorway), nothing for a side along a room line; islands standing
+in the room with it. It is the floor line `receptacles` already walks. Its status and
+inputs are `wall_area`'s. In `library/sixteen-divisions.csv` every "Base and trim" and
+"Install base and trim" line is priced by `wall_run` and no longer by `perimeter`.
+**What moves:** base on any room priced from the starter library, down by its doorways
+and room lines (the drywall demonstration's rooms: 54 LF round, one 3 ft door, 51 LF).
+Each test and demonstration that checks such a quantity moves with it and is named in
+STATUS.md with its old and new figure.
+
+**2. `options`**: under the job cost, a row "left out of the job cost" with each
+layout's count of lines the estimate leaves out (none reads "none"), so two job costs
+are not set side by side as if both were whole; where two layouts have one title, each
+column is headed by its title and its file's name; a wrong count of files is refused in
+a sentence, not with the whole usage.
+
+**3. `cabinets`**:
+- A box that would stand in another thing set in place (a box of another run, an
+  appliance) is refused, naming it and by how much: a second run over the first, and a
+  run into the corner another run fills, are no longer taken. A run is started off the
+  corner by what the other run fills (24 in for base boxes), by hand.
+- A wall box or a tall box that would stand across a window is refused, naming the
+  window; a base box under a window is taken where the sill is at or above the box's
+  top, and refused where it is below.
+- `--boxes` takes any item of the job by its name as well as a code; a name with a
+  space or a comma in it goes in square brackets: `"B18 [Dishwasher] SB36 [Range, 30
+  in]"`. An appliance in a run stands on the floor, back to the wall, as a base box
+  does; the countertop is not laid over a range or a refrigerator (anything taller
+  than 34 1/2 in), and is laid over a dishwasher.
+- Two corner boxes in the starter items: BLB36 (a blind corner base, 36 in wide, 24 in
+  deep) and LS36 (a turning corner base, 36 in by 36 in), sizes Assumed as the others.
+- A run on a wall that is to demolish is refused for that reason, in words.
+- The supplier's list says how sure a box is by the worst of where it stands and its
+  size (a box set Assumed reads Assumed, not Known).
+
+**4. A wall removed or marked to demolish** says what is set against its faces and still
+stands ("3 things set against it still stand: ...; move or remove them"). Nothing is
+moved or removed for the estimator.
+
+**5. A price by its code.** `plumbline price-item <file> "<item>" '$180' --status ...
+--source ...` puts that unit cost on the line named for the item on every one of it set
+in the job, and says how many; one not yet set takes nothing, and that is said.
+
+**6. A room line that reaches no wall and no other room line at an end** is taken and
+said: "its end at x,y meets no wall and no room line: it parts nothing until it does".
+
+Not in this call: an island (a run off a wall); end panels and toe kick; a countertop
+that follows a box taken out of its run; more sizes.
