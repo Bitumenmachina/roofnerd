@@ -406,15 +406,15 @@ fn items(job: &mut Job) -> Vec<(String, Item)> {
 
 #[test]
 fn an_item_library_goes_out_and_comes_back_the_same_and_a_changed_row_changes_its_item() {
-    // The library the program ships with, into a job with nothing in it: 21 items, in
+    // The library the program ships with, into a job with nothing in it: 46 items, in
     // four trades, every size Assumed and saying so.
     let starter = Read { rows: tables::STARTER_ITEMS.lines().map(cells).collect() };
     let mut job = Job::new("an item library (not a real job)", "test", "test");
     let brought = tables::items_in(&mut job, &starter.rows, None).unwrap();
-    assert_eq!((brought.rows, brought.done.len(), brought.same, brought.not_used.len()), (21, 21, 0, 0));
+    assert_eq!((brought.rows, brought.done.len(), brought.same, brought.not_used.len()), (46, 46, 0, 0));
     let had = items(&mut job);
-    assert_eq!(had.len(), 21);
-    assert!(had.iter().all(|(_, it)| it.division.is_some() && it.width.status == Status::Assumed && it.width.source == "a typical size; the product is not chosen" && it.maker.status == Status::Unknown));
+    assert_eq!(had.len(), 46);
+    assert!(had.iter().all(|(_, it)| it.division.is_some() && it.width.status == Status::Assumed && ["a typical size; the product is not chosen", "the trade's stock sizes; the maker's catalog decides"].contains(&it.width.source.as_str()) && it.maker.status == Status::Unknown));
     let trades: std::collections::BTreeSet<u8> = had.iter().filter_map(|(_, it)| it.division.map(|d| d.number())).collect();
     assert_eq!(trades.into_iter().collect::<Vec<_>>(), [11, 12, 15, 16]);
     // Written out it is the file as it is kept, cell for cell; brought back in, every
@@ -423,7 +423,7 @@ fn an_item_library_goes_out_and_comes_back_the_same_and_a_changed_row_changes_it
     assert_eq!(out, starter.rows);
     assert_eq!(out[0], tables::ITEM_HEADINGS);
     let again = tables::items_in(&mut job, &out, None).unwrap();
-    assert_eq!((again.done.len(), again.same, again.not_used.len()), (0, 21, 0));
+    assert_eq!((again.done.len(), again.same, again.not_used.len()), (0, 46, 0));
     // A row changed in the file changes its item and says what changed; a row for an
     // item the job has not got adds it; a row drawn as nothing the program draws is
     // not used and says what there is; a second row for one item is not used.
@@ -442,14 +442,14 @@ fn an_item_library_goes_out_and_comes_back_the_same_and_a_changed_row_changes_it
     edited.push(edited[vanity].clone());
     let brought = tables::items_in(&mut job, &edited, None).unwrap();
     assert_eq!(brought.done, ["Vanity, 36 in: changed: what it is drawn as, its width", "Mudroom bench: added"]);
-    assert_eq!(brought.same, 20);
+    assert_eq!(brought.same, 45);
     assert_eq!(brought.not_used.len(), 2);
     assert!(brought.not_used[0].1.starts_with("Gazebo: drawn as: \"gazebo\" is not something a thing can be drawn as. There are: box, base cabinet"), "{:?}", brought.not_used);
     assert_eq!(brought.not_used[1].1, format!("Vanity, 36 in: row {} of this library is the same item, and was used", vanity + 1));
     let now = items(&mut job);
     let (_, v) = now.iter().find(|(n, _)| n == "Vanity, 36 in").unwrap();
     assert_eq!((v.width.feet(), v.form.as_deref()), (Some(4.0), Some("box")));
-    assert_eq!(now.len(), 22);
+    assert_eq!(now.len(), 47);
     // The job still reads back as it was saved.
     let text = save(&mut job);
     assert_eq!(save(&mut load(&text).unwrap().0), text);
@@ -512,7 +512,7 @@ fn a_size_changed_in_the_library_reaches_what_is_already_set_down_and_says_so() 
     // back as the same item (J25A-7).
     let out = tables::items_out(&mut job);
     assert_eq!(out[row][19..22], ["".to_string(), "Unknown".to_string(), "not said".to_string()]);
-    assert_eq!(tables::items_in(&mut job, &out, None).unwrap().same, 21);
+    assert_eq!(tables::items_in(&mut job, &out, None).unwrap().same, 46);
 }
 
 #[test]
@@ -563,7 +563,7 @@ fn the_starter_items_brought_in_again_write_over_nothing_the_job_has() {
     let starter: Vec<Vec<String>> = tables::STARTER_ITEMS.lines().map(cells).collect();
     let mut job = Job::new("starter twice (not a real job)", "test", "test");
     let (first, kept) = tables::items_in_missing(&mut job, &starter, None).unwrap();
-    assert_eq!((first.done.len(), kept.len()), (21, 0));
+    assert_eq!((first.done.len(), kept.len()), (46, 0));
     // The lavatory is changed here, through the library a person keeps; a range is
     // taken out of the job's list.
     let mut mine = tables::items_out(&mut job);
@@ -574,9 +574,9 @@ fn the_starter_items_brought_in_again_write_over_nothing_the_job_has() {
     mine[lav][6] = "measured on site".into();
     assert_eq!(tables::items_in(&mut job, &mine, None).unwrap().done, ["Lavatory: changed: what it is drawn as, its width"]);
     let before = items(&mut job);
-    // The starter again: nothing is added, nothing is changed, and all 21 are named as kept.
+    // The starter again: nothing is added, nothing is changed, and all 46 are named as kept.
     let (again, kept) = tables::items_in_missing(&mut job, &starter, None).unwrap();
-    assert_eq!((again.done.len(), again.same, again.not_used.len(), kept.len()), (0, 0, 0, 21));
+    assert_eq!((again.done.len(), again.same, again.not_used.len(), kept.len()), (0, 0, 0, 46));
     assert_eq!(items(&mut job), before);
     let (_, lavatory) = before.iter().find(|(n, _)| n == "Lavatory").unwrap();
     assert_eq!((lavatory.width.feet(), lavatory.width.status, lavatory.form.as_deref()), (Some(2.0), Status::Known, Some("sink")));

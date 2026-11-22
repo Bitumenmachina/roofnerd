@@ -5322,3 +5322,16 @@ wrong and is next.
 
 No number moves on a job made before this; the tool chest's count of items does, and
 what counts it moves with it.
+
+**Call 155, as built (2026-11-22).** One expectation moved by this decision and not by
+the worker, who left it failing and said so: `crates/world/tests/tables.rs` held every
+starter item's width to the one sentence "a typical size; the product is not chosen".
+What that test guards is that every starter size is Assumed and says where it came from;
+the cabinet boxes say "the trade's stock sizes; the maker's catalog decides", which is
+truer of a stock box than "typical". The test now takes either sentence, each exactly,
+and nothing else. The worker's own choices, taken: tall boxes are drawn as a wardrobe
+and the filler as a box; the filler is 3 in by 24 in by 34 1/2 in; a run that mixes wall
+boxes with others is refused; a box's line is Material; a door whose place is not known
+is not checked for a run across it (owed: it should refuse). The counts of the starter
+items moved from 21 to 46 in `tables.rs`, `demos/items.sh`, `demos/itemlibw.sh` and
+`demos/turnw.sh`.

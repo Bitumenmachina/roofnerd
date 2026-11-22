@@ -260,6 +260,10 @@ impl Kind {
         } else if self == Kind::Room {
             // Its walls' board at their faces, less its openings (call 144).
             &[("floor_area", "SF"), ("gross_area", "SF"), ("perimeter", "LF"), ("wall_area", "SF"), ("receptacles", "EA")]
+        } else if matches!(self, Kind::Equipment | Kind::Fixture | Kind::Furnishing) {
+            // A thing set in place has the figures of its size, so a line can be priced by
+            // them: a countertop by its plan_area (call 155).
+            &[("width", "ft"), ("depth", "ft"), ("height", "ft"), ("plan_area", "SF")]
         } else if self == Kind::Duct {
             &[("true_length", "LF"), ("surface_area", "SF")]
         } else if matches!(self, Kind::Pipe | Kind::Conduit | Kind::Cable) {

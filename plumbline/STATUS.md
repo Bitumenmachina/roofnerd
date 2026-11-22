@@ -7859,6 +7859,33 @@ on the Kitchen's side is at x = 35.75, clear from y = 0.25 to 15.75.
 5. Refused, the job unchanged: `B99` (not in the tool chest); a run of six B36 (18 ft:
    past the corner); a run across a door hung in that wall.
 
+## Step A4 done at the command line: a kitchen from the tool chest (2026-11-22; call 155; a worker under contract, accepted by its diff and the lead's own runs)
+
+The starter tool chest has 46 items (was 21): 25 cabinet boxes by the trade's codes.
+`plumbline cabinets` sets a run of them along a wall's face in a room, with its
+countertop; a thing set in place has `width`, `depth`, `height` and `plan_area` to be
+priced by; each box carries its line, so the estimate by item is the box schedule.
+Every hand figure came out: five base boxes, an 11 ft run from 1 ft to 12 ft, 3.75 ft
+left to the corner, each box's place; the countertop 23.375 SF and 11 LF, $1,449.25 at
+$62/SF; three wall boxes, 7 ft, 54 in up. No box clashes with the wall it backs onto or
+its neighbour (and one pushed 0.3 ft into the wall does: the test is live, unchanged).
+Refused, the job unchanged: a code the chest lacks, a run past the corner, a run across
+a door.
+
+**Run:** by the lead, `cargo test --workspace` 470 pass, 0 fail; `demos/cabinets.sh`
+PASS and its figures read; `itemlibw.sh` and `turnw.sh` PASS on a frozen copy of this
+build (their expected count of starter items had moved to 46 unrun); `tools/committed.sh`
+before the push. By the worker: `items.sh`, `roomline.sh`, `options.sh`, `library.sh`,
+the gates, the licences and the port map PASS.
+
+**One expectation moved by a decision** (DECISIONS.md, call 155 as built): the test that
+held every starter item's size to one sentence now takes either of two.
+
+**Not right, owed:** the window's message on bringing the starter items in says "at
+typical sizes", which the stock boxes are not; a door whose place is not known is not
+checked for a run across it; no corner boxes; the run is not set or dragged in the
+window; the Kitchen assembly's three "1 EA" lines still go out Known. Not judged.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

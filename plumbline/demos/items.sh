@@ -22,10 +22,10 @@ echo "== The library the program ships with, into an empty job =="
 "$P" new "$J" "An item library (not a real job)" >/dev/null
 L="$(made "$("$P" level "$J" ground --elevation "0 ft" --height "9 ft" --status Known --source "made-up plan")")"
 IN="$("$P" import items "$J" starter)"
-says "all of it is set" "  set: 21" "$IN"
+says "all of it is set" "  set: 46" "$IN"
 says "nothing is left out" "  not used: 0" "$IN"
 LIST="$("$P" items "$J")"
-says "by trade" "ITEMS: the things that can be placed, by trade (21)" "$LIST"
+says "by trade" "ITEMS: the things that can be placed, by trade (46)" "$LIST"
 for trade in "Division 11 Equipment" "Division 12 Furnishings" "Division 15 Mechanical" "Division 16 Electrical"; do says "a trade" "  $trade" "$LIST"; done
 # Every size in it is a typical one, flagged, and says so.
 says "a size is flagged" "Vanity, 36 in [" "$LIST"
@@ -37,7 +37,7 @@ echo "== Written out, it is the file as it is kept; brought back, nothing change
 cmp "$T/out.csv" library/items.csv || { echo "FAIL: the library written out is not the library as it is kept"; exit 1; }
 echo "    written out: the same as library/items.csv, to the byte"
 AGAIN="$("$P" import items "$J" "$T/out.csv")"
-says "brought back" "  the same as the job already has: 21" "$AGAIN"
+says "brought back" "  the same as the job already has: 46" "$AGAIN"
 
 echo
 echo "== A row changed in the file, a row added, a row that cannot be read =="
@@ -48,7 +48,7 @@ echo '"Gazebo",12 Furnishings,furnishing,gazebo,10 ft,Assumed,a made-up sketch,1
 CH="$("$P" import items "$J" "$T/edited.csv")"
 says "the changed row" "    Vanity, 36 in: changed: its width" "$CH"
 says "the added row" "    Mudroom bench: added" "$CH"
-says "the rest" "  the same as the job already has: 20" "$CH"
+says "the rest" "  the same as the job already has: 45" "$CH"
 says "the row that cannot be read" "Gazebo: drawn as: \"gazebo\" is not something a thing can be drawn as. There are: box, base cabinet" "$CH"
 
 echo

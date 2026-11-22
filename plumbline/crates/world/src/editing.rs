@@ -515,21 +515,194 @@ pub fn item_trade(job: &mut Job, item: &str, division: Option<crate::components:
 /// which of its sizes is missing. Where it stands is as sure as `how`.
 pub fn place_item(job: &mut Job, storey: &str, item: &str, at: P2, offset: &str, how: Entered) -> Result<String, String> {
     all_or_nothing(job, |job| {
+        let offset = how.length(offset)?;
+        place_item_in(job, storey, item, at, offset, how)
+    })
+}
+
+/// One of an item set down, within a change that is all or nothing already.
+fn place_item_in(job: &mut Job, storey: &str, item: &str, at: P2, offset: Val<Len>, how: Entered) -> Result<String, String> {
+    storey_of(job, storey)?;
+    let e = job.find(item).ok_or_else(|| format!("{item} is not in the job"))?;
+    let (name, it) = match (job.world.get::<Node>(e), job.world.get::<Item>(e)) {
+        (Some(n), Some(it)) => (n.name.clone(), it.clone()),
+        _ => return Err(format!("{item} is not an item: an item is made from a maker's sheet, or entered by its sizes")),
+    };
+    let size = match it.size_ft() {
+        Ok((feet, status, source)) => Val { value: Some(feet), unit: "ft".into(), status, source: format!("{name}: {source}") },
+        Err(why) => Val::unknown("ft", &format!("{name}: {why}")),
+    };
+    let placed = Placed { what: Val { value: Some(name.clone()), unit: String::new(), status: Status::Known, source: format!("the item {item}") }, at: how.val(at, "ft"), offset, angle: None, size, item: Some(item.to_string()) };
+    let path = add_called(job, storey, it.category, &name, 2, true)?;
+    building::check_placed(&path, it.category, &placed)?;
+    job.put(&path, placed)?;
+    Ok(path)
+}
+
+/// What a run of cabinet boxes came to (call 155).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Cabinets {
+    /// Each box set: its path, its code, the middle of its base on the plan, and how wide it is.
+    pub boxes: Vec<(String, String, P2, f64)>,
+    /// The countertop over the base boxes, with the middle of its base on the plan, if one was asked for.
+    pub countertop: Option<(String, P2)>,
+    /// Where the run starts along the wall's line from its first end, how long it is, and
+    /// how much of the wall's face is left beyond it to its corner; all in feet.
+    pub from: f64,
+    pub run: f64,
+    pub left: f64,
+    /// The boxes hang on the wall (they are wall boxes), this far up in feet.
+    pub hung: Option<f64>,
+}
+
+/// The box codes a job's tool chest has: its furnishings of Division 12 named by one word of
+/// letters then figures (B18, SB36, W3030, T1884, F3).
+pub fn box_codes(job: &mut Job) -> Vec<(String, String)> {
+    let mut q = job.world.query::<(&Node, &Item)>();
+    let mut found: Vec<(u64, String, String)> = q
+        .iter(&job.world)
+        .filter(|(n, it)| {
+            let (letters, rest) = n.name.split_at(n.name.find(|c: char| !c.is_ascii_uppercase()).unwrap_or(n.name.len()));
+            it.category == Kind::Furnishing && it.division == crate::components::Division::of_number(12) && !letters.is_empty() && !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit())
+        })
+        .map(|(n, _)| (n.path.rsplit('-').next().and_then(|x| x.parse().ok()).unwrap_or(u64::MAX), n.path.clone(), n.name.clone()))
+        .collect();
+    found.sort();
+    found.into_iter().map(|(_, path, name)| (path, name)).collect()
+}
+
+/// A run of cabinet boxes set side by side along the face `wall` has on `room`'s side,
+/// backs to the wall, from `from` along the wall's line from its first end, each turned to
+/// the wall. Base and tall boxes stand on the floor; wall boxes hang 54 in up (Assumed).
+/// Each is one of its item, as sure as the item, and carries one cost line (its item's
+/// name, 1 EA, Division 12, no price). With `countertop`, one countertop over the base
+/// boxes: as long as they are, 25 1/2 in deep, 1 1/2 in thick, 34 1/2 in up (Assumed).
+/// Refused, the job as it was: a code the tool chest has not, a run past the room's corner
+/// or starting inside it, a run across a door.
+#[allow(clippy::too_many_arguments)]
+pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str, codes: &[String], countertop: bool, how: Entered) -> Result<Cabinets, String> {
+    all_or_nothing(job, |job| {
         storey_of(job, storey)?;
-        let e = job.find(item).ok_or_else(|| format!("{item} is not in the job"))?;
-        let (name, it) = match (job.world.get::<Node>(e), job.world.get::<Item>(e)) {
-            (Some(n), Some(it)) => (n.name.clone(), it.clone()),
-            _ => return Err(format!("{item} is not an item: an item is made from a maker's sheet, or entered by its sizes")),
+        if codes.is_empty() {
+            return Err("a run needs boxes: give their codes, like \"B18 SB36 B24\"".into());
+        }
+        let tol = crate::check::FIT_TOLERANCE_FT;
+        let ft = |x: f64| units::feet_as_ft_in(x, 16);
+        let start = how.length(from)?.feet().ok_or("where the run starts is not a length")?;
+        if start < 0.0 {
+            return Err("a run starts so far along the wall from its first end: that is not less than nothing".into());
+        }
+        // The boxes, by their codes, with their sizes.
+        let chest = box_codes(job);
+        let mut boxes: Vec<(String, String, P3, Status)> = Vec::new();
+        for code in codes {
+            let Some((path, name)) = chest.iter().find(|(_, name)| name.eq_ignore_ascii_case(code.trim())) else {
+                let have = chest.iter().map(|(_, n)| n.as_str()).collect::<Vec<_>>().join(" ");
+                return Err(if have.is_empty() { format!("{code} is not in the tool chest, and it has no boxes: bring the starter items in first") } else { format!("{code} is not in the tool chest. It has: {have}") });
+            };
+            let e = job.find(path).ok_or_else(|| format!("{path} is not in the job"))?;
+            let it = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{path} is not an item"))?;
+            let (size, status, _) = it.size_ft().map_err(|why| format!("{name}: {why}, so it cannot be set"))?;
+            boxes.push((path.clone(), name.clone(), size, status));
+        }
+        let hangs = |code: &str| code.starts_with('W');
+        let stands_tall = |code: &str| code.starts_with('T');
+        let wall_boxes = boxes.iter().filter(|b| hangs(&b.1)).count();
+        if wall_boxes != 0 && wall_boxes != boxes.len() {
+            return Err("wall boxes hang over the counter and base boxes stand under it: set them as two runs".into());
+        }
+        let hung = (wall_boxes != 0).then_some(54.0 / 12.0);
+        if countertop && hung.is_some() {
+            return Err("a countertop goes over base boxes, and a run of wall boxes has none".into());
+        }
+        if countertop && !boxes.iter().any(|b| !stands_tall(&b.1)) {
+            return Err("a countertop goes over base boxes, and this run has none".into());
+        }
+        let face = building::wall_face(job, storey, wall, room)?;
+        let run: f64 = boxes.iter().map(|b| b.2[0]).sum();
+        let end = start + run;
+        let Some(&(_, hi)) = face.clear.iter().find(|(lo, hi)| start >= lo - tol && start <= hi + tol) else {
+            let said = face.clear.iter().map(|(lo, hi)| format!("{} to {}", ft(*lo), ft(*hi))).collect::<Vec<_>>().join(", ");
+            return Err(format!("{} does not have a clear face at {} along it: its face on {} runs clear from {said}", face.wall_called, ft(start), face.room_called));
         };
-        let size = match it.size_ft() {
-            Ok((feet, status, source)) => Val { value: Some(feet), unit: "ft".into(), status, source: format!("{name}: {source}") },
-            Err(why) => Val::unknown("ft", &format!("{name}: {why}")),
+        if end > hi + tol {
+            return Err(format!("a run of {} from {} reaches {} along {}, {} past the corner of {} at {}", ft(run), ft(start), ft(end), face.wall_called, ft(end - hi), face.room_called, ft(hi)));
+        }
+        if let Some((door, a, b)) = face.doors.iter().find(|(_, a, b)| start < *b - tol && *a < end - tol) {
+            return Err(format!("a run of {} from {} crosses {door}, which is in {} from {} to {}: a door is no place for boxes", ft(run), ft(start), face.wall_called, ft(*a), ft(*b)));
+        }
+        // Each box's middle on the plan: along the wall, then back from the face into the room.
+        let (u, into) = (face.along, face.into);
+        let spot = |along: f64, out: f64| -> P2 { [face.start[0] + u[0] * along + into[0] * out, face.start[1] + u[1] * along + into[1] * out] };
+        // Turned so its back (the +y of its own frame) is against the wall.
+        let turned = {
+            let mut a = into[0].atan2(-into[1]).to_degrees();
+            if a <= -180.0 {
+                a += 360.0;
+            }
+            (a * 1.0e6).round() / 1.0e6
         };
-        let placed = Placed { what: Val { value: Some(name.clone()), unit: String::new(), status: Status::Known, source: format!("the item {item}") }, at: how.val(at, "ft"), offset: how.length(offset)?, angle: None, size, item: Some(item.to_string()) };
-        let path = add_called(job, storey, it.category, &name, 2, true)?;
-        building::check_placed(&path, it.category, &placed)?;
-        job.put(&path, placed)?;
-        Ok(path)
+        let sure = how.status.max(face.status);
+        let by = format!("{}, {} along {} against {} ({})", "set in a run", ft(start), face.wall_called, face.room_called, how.source);
+        let assumed = Entered { status: how.status.max(Status::Assumed), source: "" };
+        let to_wall = |job: &mut Job, path: &str| -> Result<(), String> {
+            let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
+            let mut p = job.world.get::<Placed>(e).cloned().ok_or_else(|| format!("{path} has no position"))?;
+            p.angle = if turned == 0.0 && sure == Status::Known { None } else { Some(Val { value: Some(turned), unit: "deg".into(), status: sure, source: format!("turned to {}, the wall it backs onto", face.wall_called) }) };
+            building::check_placed(path, job.kind(path).unwrap_or(Kind::Furnishing), &p)?;
+            job.put(path, p)
+        };
+        let mut set: Vec<(String, String, P2, f64)> = Vec::new();
+        let mut along = start;
+        let mut base_span: Option<(f64, f64)> = None;
+        for (item, code, size, _) in &boxes {
+            let mid = spot(along + size[0] / 2.0, face.off + size[1] / 2.0);
+            let offset = match hung {
+                Some(up) => Val { value: Some(units::Len::One(up)), unit: "ft".into(), status: assumed.status, source: "wall boxes hang with their bottoms 54 in up, 18 in over a 36 in counter; the maker's catalog decides".into() },
+                None => how.length("0 ft")?,
+            };
+            let path = place_item_in(job, storey, item, mid, offset, Entered { status: sure, source: &by })?;
+            to_wall(job, &path)?;
+            job.add_line(&path, code, "1", Some(crate::Class::Material), false)?;
+            job.set_division(&path, Some(code), crate::components::Division::of_number(12).ok_or("Division 12 is not there")?)?;
+            if !hangs(code) && !stands_tall(code) {
+                base_span = Some(match base_span {
+                    Some((a, _)) => (a, along + size[0]),
+                    None => (along, along + size[0]),
+                });
+            }
+            set.push((path, code.clone(), mid, size[0]));
+            along += size[0];
+        }
+        // The countertop over the base boxes.
+        let top = if countertop {
+            let (a, b) = base_span.ok_or("a countertop goes over base boxes, and this run has none")?;
+            if boxes.iter().filter(|x| stands_tall(&x.1)).count() > 0 {
+                let mut at = start;
+                let mut tall_between = false;
+                for (_, code, size, _) in &boxes {
+                    if stands_tall(code) && at > a + tol && at + size[0] < b - tol {
+                        tall_between = true;
+                    }
+                    at += size[0];
+                }
+                if tall_between {
+                    return Err("a tall box stands in the middle of the base boxes, and a countertop does not go over it: set the countertop by hand".into());
+                }
+            }
+            let (long, deep, thick) = (b - a, 25.5 / 12.0, 1.5 / 12.0);
+            let mid = spot((a + b) / 2.0, face.off + deep / 2.0);
+            let said = Entered { status: assumed.status, source: "a countertop over the base boxes: as long as they are, 25 1/2 in deep (a 1 1/2 in overhang at the front), 1 1/2 in thick, 34 1/2 in up; the maker's catalog decides" };
+            let path = add_called(job, storey, Kind::Furnishing, "Countertop", 2, true)?;
+            let placed = Placed { what: how.val("Countertop".to_string(), ""), at: Entered { status: sure, source: &by }.val(mid, "ft"), offset: Val { value: Some(units::Len::One(34.5 / 12.0)), unit: "ft".into(), status: said.status, source: said.source.into() }, angle: None, size: said.val([long, deep, thick], "ft"), item: None };
+            building::check_placed(&path, Kind::Furnishing, &placed)?;
+            job.put(&path, placed)?;
+            to_wall(job, &path)?;
+            Some((path, mid))
+        } else {
+            None
+        };
+        Ok(Cabinets { boxes: set, countertop: top, from: start, run, left: hi - end, hung })
     })
 }
 

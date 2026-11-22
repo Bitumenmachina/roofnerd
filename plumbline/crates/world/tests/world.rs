@@ -6582,3 +6582,114 @@ fn two_layouts_are_set_side_by_side_from_their_own_takeoff_and_estimate() {
     // Nothing in any of the three was changed.
     assert_eq!((save(&mut a), save(&mut b), save(&mut c)), before);
 }
+
+/// Call 155: a run of cabinet boxes along a wall's face on a room's side, by the trade's
+/// codes. The house of `a_room_line_parts_two_rooms_where_no_wall_stands`: the Kitchen's
+/// east wall runs 36,0 to 36,16, its face on the Kitchen's side is at x = 35.75, clear from
+/// y = 0.25 to 15.75. B18 SB36 B24 DB18 B36 from 1 ft: 18 + 36 + 24 + 18 + 36 = 132 in, 11 ft
+/// from y = 1 to y = 12, 3.75 ft left. Each box is 2 ft deep: its middle is 1 ft off the
+/// face, x = 34.75, at y = 1.75, 4, 6.5, 8.25, 10.5. The countertop: 11 ft by 25 1/2 in
+/// (2.125 ft) is 23.375 SF, its middle 1.0625 ft off the face (34.6875, 6.5), 34 1/2 in up;
+/// at $62/SF, 23.375 x 62 = $1,449.25. Wall boxes W3030 W3630 W1830 from 1 ft: 7 ft, 1 ft
+/// deep, middles 0.5 ft off the face (35.25) at y = 2.25, 5, 7.25, 54 in up.
+#[test]
+fn a_run_of_cabinet_boxes_stands_along_a_wall_to_the_figures_worked_by_hand() {
+    use plumbline_world::editing as ed;
+    let known = || ed::Entered { status: Status::Known, source: "made-up survey" };
+    let assumed = || ed::Entered { status: Status::Assumed, source: "made-up addition plan" };
+    let mut job = Job::new("A kitchen", "test", "2026-11-22");
+    let level = ed::storey(&mut job, "ground", "0 ft", "9 ft", known()).unwrap();
+    let w6 = ed::wall_type(&mut job, "w6", "6 in", known()).unwrap();
+    let outer = ed::walls(&mut job, &level, &w6, &[[0.0, 0.0], [24.0, 0.0], [24.0, 16.0], [0.0, 16.0]], true, ed::Top::Height("9 ft"), known()).unwrap();
+    ed::mark(&mut job, &[outer[1].clone()], WorkStatus::Demolish, ed::ItsLines::Ask, known()).unwrap();
+    let new = ed::walls(&mut job, &level, &w6, &[[24.0, 0.0], [36.0, 0.0], [36.0, 16.0], [24.0, 16.0]], false, ed::Top::Height("9 ft"), assumed()).unwrap();
+    let east = new[1].clone();
+    ed::room(&mut job, &level, "Living", [6.0, 8.0], known()).unwrap();
+    let kitchen = ed::room(&mut job, &level, "Kitchen", [30.0, 8.0], known()).unwrap();
+    ed::room_lines(&mut job, &level, &[[24.0, 0.0], [24.0, 16.0]], assumed()).unwrap();
+    // The tool chest: 25 boxes in Division 12, by their codes.
+    let rows: Vec<Vec<String>> = plumbline_world::tables::STARTER_ITEMS
+        .lines()
+        .map(|line| {
+            let (mut out, mut cell, mut quoted) = (Vec::new(), String::new(), false);
+            for c in line.chars() {
+                match (c, quoted) {
+                    ('"', _) => quoted = !quoted,
+                    (',', false) => out.push(std::mem::take(&mut cell)),
+                    (c, _) => cell.push(c),
+                }
+            }
+            out.push(cell);
+            out
+        })
+        .collect();
+    plumbline_world::tables::items_in(&mut job, &rows, None).unwrap();
+    assert_eq!(ed::box_codes(&mut job).len(), 25);
+    let clashes_before = clashes_of(&mut job, None);
+
+    // Refused, and the job is as it was.
+    let before = save(&mut job);
+    let err = ed::cabinets(&mut job, &level, &east, &kitchen, "1 ft", &["B99".to_string()], false, assumed()).unwrap_err();
+    assert!(err.contains("B99 is not in the tool chest. It has: ") && err.contains("B18") && err.contains("T2484"), "{err}");
+    let six: Vec<String> = ["B36"; 6].iter().map(|c| c.to_string()).collect();
+    let err = ed::cabinets(&mut job, &level, &east, &kitchen, "1 ft", &six, false, assumed()).unwrap_err();
+    assert!(err.contains("18' 0\" from 1' 0\" reaches 19' 0\" along") && err.contains("past the corner"), "{err}");
+    let err = ed::cabinets(&mut job, &level, &east, &kitchen, "0 ft", &["B18".to_string()], false, assumed()).unwrap_err();
+    assert!(err.contains("clear face"), "{err}");
+    assert_eq!(save(&mut job), before);
+
+    // The run, with its countertop.
+    let codes: Vec<String> = "B18 SB36 B24 DB18 B36".split(' ').map(str::to_string).collect();
+    let run = ed::cabinets(&mut job, &level, &east, &kitchen, "1 ft", &codes, true, assumed()).unwrap();
+    assert_eq!((run.from, run.run, run.left, run.hung), (1.0, 11.0, 3.75, None));
+    let places: Vec<(&str, [f64; 2])> = run.boxes.iter().map(|b| (b.1.as_str(), b.2)).collect();
+    assert_eq!(places, [("B18", [34.75, 1.75]), ("SB36", [34.75, 4.0]), ("B24", [34.75, 6.5]), ("DB18", [34.75, 8.25]), ("B36", [34.75, 10.5])]);
+    // Each box is one of its item, as sure as the item, backs to the wall (turned a quarter
+    // the wrong way round from east: -90 degrees puts its back, +y, on the east), with one
+    // line: its item's name, 1 EA, Division 12, no price.
+    for (path, code, _, width) in &run.boxes {
+        let e = job.find(path).unwrap();
+        let p = job.world.get::<Placed>(e).unwrap().clone();
+        assert!(p.item.is_some() && p.size.status == Status::Assumed && p.at.status == Status::Assumed && p.offset.value == Some(units::Len::One(0.0)), "{p:?}");
+        assert_eq!(p.angle_deg(), Some(-90.0));
+        assert_eq!(p.size_ft().map(|s| (s[0], s[1])), Some((*width, 2.0)));
+        let cost = job.world.get::<Cost>(e).unwrap();
+        assert_eq!(cost.lines.len(), 1);
+        assert_eq!((cost.lines[0].description.as_str(), cost.lines[0].quantity.as_str(), cost.lines[0].division.map(|d| d.number()), cost.lines[0].unit_cost.value.is_none()), (code.as_str(), "1", Some(12), true));
+    }
+    // Its figures are as sure as its size, each with its formula and inputs.
+    let (top, at) = run.countertop.clone().unwrap();
+    assert_eq!(at, [34.6875, 6.5]);
+    for (name, want) in [("width", 11.0), ("depth", 2.125), ("plan_area", 23.375)] {
+        let d = measure(&mut job, &top, name);
+        assert_eq!(d.value, Some(want), "{name}: {d:?}");
+        assert_eq!(d.status, Status::Assumed);
+        assert!(!d.formula.is_empty() && d.inputs == [format!("{top}#pl::placed")], "{d:?}");
+    }
+    assert_eq!(measure(&mut job, &top, "height").value, Some(0.125));
+    let e = job.find(&top).unwrap();
+    let p = job.world.get::<Placed>(e).unwrap().clone();
+    assert_eq!(p.offset.feet(), Some(2.875));
+    // Priced by plan_area at $62/SF: 23.375 x 62 = 1,449.25.
+    job.add_line(&top, "Countertop, quartz", "plan_area", Some(Class::Material), false).unwrap();
+    job.set(&top, "unit_cost", Some("$62.00/SF"), Status::Assumed, "made-up price").unwrap();
+    job.derive();
+    let est = plumbline_world::view::estimate(&mut job);
+    let line = est.lines.iter().find(|l| l.description == "Countertop, quartz").unwrap();
+    assert!((line.amount.value.unwrap() - 1449.25).abs() < 1.0e-9, "{:?}", line.amount);
+    // The wall boxes, hung 54 in up.
+    let wall_codes: Vec<String> = "W3030 W3630 W1830".split(' ').map(str::to_string).collect();
+    let hung = ed::cabinets(&mut job, &level, &east, &kitchen, "1 ft", &wall_codes, false, assumed()).unwrap();
+    assert_eq!((hung.run, hung.hung), (7.0, Some(4.5)));
+    let places: Vec<[f64; 2]> = hung.boxes.iter().map(|b| b.2).collect();
+    assert_eq!(places, [[35.25, 2.25], [35.25, 5.0], [35.25, 7.25]]);
+    let e = job.find(&hung.boxes[0].0).unwrap();
+    let p = job.world.get::<Placed>(e).unwrap().clone();
+    assert_eq!((p.offset.feet(), p.offset.status), (Some(4.5), Status::Assumed));
+    assert!(p.offset.source.contains("54 in up"));
+    // No box clashes with the wall it backs onto or with the boxes beside it.
+    assert_eq!(clashes_of(&mut job, None), clashes_before);
+    // The test is live: a box pushed 0.3 ft into the wall does clash with it.
+    ed::move_by(&mut job, &run.boxes[0].0, 0.3, 0.0, assumed()).unwrap();
+    assert_eq!(clashes_of(&mut job, None).len(), clashes_before.len() + 1);
+}

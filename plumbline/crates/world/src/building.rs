@@ -694,8 +694,8 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
             })
             .collect()
     };
-    let mut q = world.query::<(&Node, &Kind, Option<&Wall>, Option<&Floor>, Option<&Segment>, Option<&Cost>, Option<&MadeOf>, Option<&Condition>)>();
-    for (node, kind, wall, floor, segment, cost, made_of, condition) in q.iter(world) {
+    let mut q = world.query::<(&Node, &Kind, Option<&Wall>, Option<&Floor>, Option<&Segment>, Option<&Cost>, Option<&MadeOf>, Option<&Condition>, Option<&Placed>)>();
+    for (node, kind, wall, floor, segment, cost, made_of, condition, placed) in q.iter(world) {
         let me = &node.path;
         let mut m = BTreeMap::new();
         match kind {
@@ -1010,6 +1010,36 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 }
                 m.insert("true_length".into(), len_d);
             }
+            // A thing set in place: the figures of its size, as sure as its size (call 155).
+            Kind::Equipment | Kind::Fixture | Kind::Furnishing => {
+                let input = [format!("{me}#{K_PLACED}")];
+                let (f_w, f_d, f_h, f_a) = ("its width, along its own x before it is turned", "its depth, from its front to its back", "its height, from its underside", "width × depth");
+                match placed {
+                    None => {
+                        for (name, unit) in kind.measures() {
+                            m.insert(name.to_string(), Derived::refused(unit, "", &input, "no position and size entered"));
+                        }
+                    }
+                    Some(p) => match p.size_ft() {
+                        Some([w, d, h]) => {
+                            let st = [p.size.status];
+                            let width = Derived::new(Some(w), "ft", &st, f_w, &input);
+                            let depth = Derived::new(Some(d), "ft", &st, f_d, &input);
+                            m.insert("height".into(), Derived::new(Some(h), "ft", &st, f_h, &input));
+                            // From the sizes as they were worked, so 24 in by 25 1/2 in is 2 by 2.125.
+                            m.insert("plan_area".into(), Derived::new(Some(w * d), "SF", &[width.status, depth.status], f_a, &input));
+                            m.insert("width".into(), width);
+                            m.insert("depth".into(), depth);
+                        }
+                        None => {
+                            let why = if p.size.value.is_some() { format!("its size {NOT_CONVERTED}") } else { format!("it has no size: {}", p.size.source) };
+                            for (name, unit) in kind.measures() {
+                                m.insert(name.to_string(), Derived::refused(unit, "", &input, &why));
+                            }
+                        }
+                    },
+                }
+            }
             _ => {}
         }
         if !m.is_empty() {
@@ -1028,6 +1058,104 @@ pub fn room_outlines(job: &mut Job) -> HashMap<String, Vec<P2>> {
     let mut outlines = HashMap::new();
     room_measures(&mut job.world, &tree, &mut HashMap::new(), &mut outlines);
     outlines
+}
+
+/// A wall's face on one room's side: where it is, which way the room lies from it, and
+/// how much of it is clear to stand things against (call 155; BIMCraft hosts a thing on a
+/// wall by the wall's path and a distance along it, `commands.rs` `host`: here the room's
+/// outline at the faces of its walls gives the face and its corners).
+#[derive(Clone, Debug, PartialEq)]
+pub struct WallFace {
+    /// The wall, and the room, as people call them.
+    pub wall_called: String,
+    pub room_called: String,
+    /// The wall's line, first end and second, in feet on the plan.
+    pub start: P2,
+    pub end: P2,
+    /// The way the wall runs, a unit vector, and the way the room lies from the face.
+    pub along: P2,
+    pub into: P2,
+    /// How far the face is from the wall's line.
+    pub off: f64,
+    /// The stretches of the face along the wall's line, in feet from its first end, with
+    /// no corner or cross wall in them, in order.
+    pub clear: Vec<(f64, f64)>,
+    /// The doors in the wall: path, and where each starts and ends along it.
+    pub doors: Vec<(String, f64, f64)>,
+    /// As sure as the wall's line and thickness.
+    pub status: Status,
+}
+
+/// The face of `wall` that `room` has, or why it has none. Both must be on `storey`.
+pub fn wall_face(job: &mut Job, storey: &str, wall: &str, room: &str) -> Result<WallFace, String> {
+    let tol = crate::check::FIT_TOLERANCE_FT;
+    let tree = Tree::of(&mut job.world);
+    if job.kind(wall) != Some(Kind::Wall) {
+        return Err(format!("{wall} is not a wall"));
+    }
+    if job.kind(room) != Some(Kind::Room) {
+        return Err(format!("{room} is not a room"));
+    }
+    let (wall_called, room_called) = (tree.called(wall), tree.called(room));
+    if tree.storey_of(wall) != Some(storey) {
+        return Err(format!("{wall_called} ({wall}) is not on {}", tree.called(storey)));
+    }
+    if tree.storey_of(room) != Some(storey) {
+        return Err(format!("{room_called} ({room}) is not on {}", tree.called(storey)));
+    }
+    let e = job.find(wall).ok_or_else(|| format!("no element {wall}"))?;
+    let w = job.world.get::<Wall>(e).cloned().ok_or_else(|| format!("{wall_called} has no wall line entered"))?;
+    let (pw, shape, _, _) = plan_wall(&tree, wall, &w).map_err(|why| format!("{wall_called} ({wall}) cannot be placed: {why}"))?;
+    let outline = room_outlines(job).remove(room).ok_or_else(|| format!("no walls close round {room_called}'s point, so it has no faces to stand things against"))?;
+    let (a, b) = ([pw.start.0, pw.start.1], [pw.end.0, pw.end.1]);
+    let length = geom::dist(a, b);
+    if length <= tol {
+        return Err(format!("{wall_called} has no length"));
+    }
+    let u = [(b[0] - a[0]) / length, (b[1] - a[1]) / length];
+    let n = [-u[1], u[0]];
+    let reach = pw.ext.abs() + pw.int.abs() + tol;
+    // The room's sides that lie along this wall, on one side of its line.
+    let mut found: Vec<(f64, f64, f64)> = Vec::new();
+    for i in 0..outline.len() {
+        let (p, q) = (outline[i], outline[(i + 1) % outline.len()]);
+        let (dp, dq) = ((p[0] - a[0]) * n[0] + (p[1] - a[1]) * n[1], (q[0] - a[0]) * n[0] + (q[1] - a[1]) * n[1]);
+        if (dp - dq).abs() > tol || dp.abs() > reach || dp.abs() <= tol {
+            continue;
+        }
+        let (sp, sq) = ((p[0] - a[0]) * u[0] + (p[1] - a[1]) * u[1], (q[0] - a[0]) * u[0] + (q[1] - a[1]) * u[1]);
+        let (lo, hi) = (sp.min(sq).max(0.0), sp.max(sq).min(length));
+        if hi - lo > tol {
+            found.push((dp, lo, hi));
+        }
+    }
+    let Some(&(first, _, _)) = found.first() else {
+        return Err(format!("{wall_called} ({wall}) is not one of the walls round {room_called}: it has no face on that room's side"));
+    };
+    // Its first side's side of the wall; any that lie on the other side are left alone.
+    let mut sides: Vec<(f64, f64)> = found.iter().filter(|(d, _, _)| (d.signum() - first.signum()).abs() < 0.5).map(|&(_, lo, hi)| (lo, hi)).collect();
+    sides.sort_by(|x, y| x.0.total_cmp(&y.0));
+    let mut clear: Vec<(f64, f64)> = Vec::new();
+    for (lo, hi) in sides {
+        match clear.last_mut() {
+            Some(last) if lo <= last.1 + tol => last.1 = last.1.max(hi),
+            _ => clear.push((lo, hi)),
+        }
+    }
+    let gone = crate::components::demolished(&mut job.world);
+    let mut doors: Vec<(String, f64, f64)> = Vec::new();
+    let mut q = job.world.query::<(&Node, &Kind, &Opening)>();
+    let mut mine: Vec<(String, f64, f64, u64)> = Vec::new();
+    for (node, kind, o) in q.iter(&job.world) {
+        if *kind == Kind::Door && node.parent.as_deref() == Some(wall) && !gone.contains(&node.path) {
+            if let Some([from, to, _, _]) = hole_of(&tree, &node.path, o).0.span {
+                mine.push((node.path.clone(), from, to, path_number(&node.path)));
+            }
+        }
+    }
+    mine.sort_by_key(|m| m.3);
+    doors.extend(mine.into_iter().map(|(p, f, t, _)| (p, f, t)));
+    Ok(WallFace { wall_called, room_called, start: a, end: b, along: u, into: [first.signum() * n[0], first.signum() * n[1]], off: first.abs(), clear, doors, status: shape })
 }
 
 /// The number at the end of a path: paths are numbered in the order elements were added,
