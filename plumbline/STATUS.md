@@ -7886,6 +7886,32 @@ typical sizes", which the stock boxes are not; a door whose place is not known i
 checked for a run across it; no corner boxes; the run is not set or dragged in the
 window; the Kitchen assembly's three "1 EA" lines still go out Known. Not judged.
 
+## Calls 152, 154 and 155 judged (2026-11-22; an agent on another model, cold; its notes and exact commands are `research/judgment-roomline-layouts-cabinets.md`)
+
+**Held, to its hand figures:** room lines parting a room in two and in three, an L-shaped
+open plan, per level, moved and removed; `options` against each job's own takeoff and
+estimate, allowances with it; cabinet runs on all four walls, on a partition from both
+sides and on a wall at an angle; a run under a window taken and across a door refused;
+the countertop; every refusal leaving its file as it was; the item library out and back.
+
+| | Found | Where it stands |
+|---|---|---|
+| J-K1, K3 | **The builder's own call 152 was wrong for the money:** a room's perimeter takes in the room line, and the starter "Base and trim" is priced by perimeter: 31 LF of wall read 46.5 LF, base over-bought by half | to fix: a room figure for the run of its walls, less doorways and room lines, and the base lines priced by it |
+| J-K8 | `options`' job cost leaves a line with no figure out and does not say so (the estimate does) | to fix |
+| J-K14 | Boxes still stand, priced, after their wall is removed or marked to demolish, without a word | to fix: said |
+| J-K16 | A base box removed leaves the countertop whole over the gap | open |
+| J-K17 | Boxes are priced one line at a time: no price by code | to fix |
+| J-K2 | A room line that does not reach a wall parts nothing and says nothing | to fix: said when drawn |
+| J-K11, K12 | A second run over the first, and two runs meeting in a corner (24 in over each other), are taken; only `clashes` says | to fix: refused, in words |
+| J-K13 | A box set in front of a window is taken; windows are not clash-tested | to fix for wall and tall boxes |
+| J-K7 | `options` heads its columns by job title: two layouts of one job read alike | to fix |
+| J-K19 | The supplier's list says Known for boxes set Assumed | to fix |
+| J-K4, 5, 6, 9, 10, 15, 18, 20 | low: a room line doubled or along a wall; a room's point on the line; "Check its line" in the field list; no overhead and profit in `options`; the whole usage printed for a wrong count of files; a wrong reason for a run on a wall to demolish; the countertop's edge not a figure; a run cannot start from the wall's far end | open, K10 and K15 with the fixes above |
+
+**As a kitchen designer, what it missed first: corners** (no blind-corner or turning base;
+a second run does not start 24 in off the first). Then: appliances cannot go in a run;
+no island (a run off a wall); end panels and toe kick; more sizes; a price by code.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
