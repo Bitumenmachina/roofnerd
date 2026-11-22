@@ -7569,18 +7569,33 @@ back; a job, a level, a type and a room refused the mark.
 
 | | Found | Where it stands |
 |---|---|---|
-| J-N1 | A doorway widened (the old door to demolish, a wider one hung in its place): the wall's net area Unknown with no reason, and the room takes both doors off | to fix: a door or window to demolish is filled in, and is no hole |
-| J-N2 | A window made a door: the demolished window is still taken off | to fix, with J-N1 |
-| J-N3 | Marking a wall existing re-marks a new door already hung in it | to fix: an opening with a mark of its own keeps it |
-| J-N4 | Marked new again after `--clear`: nothing says its lines are gone | to fix: said |
-| J-N5 | `apply` puts an assembly's new-work lines on a wall marked existing or to demolish without a word | to fix: said when it is done |
-| J-N6 | `takeoff` counts a wall to demolish among the walls, unlabelled | to fix |
-| J-N7 | `clashes` leaves a demolished thing out and does not name it | to fix |
+| J-N1 | A doorway widened (the old door to demolish, a wider one hung in its place): the wall's net area Unknown with no reason, and the room takes both doors off | **Fixed** (call 150): 109 SF, the judge's figure; the room's wall area 451 SF |
+| J-N2 | A window made a door: the demolished window is still taken off | **Fixed** with J-N1 |
+| J-N3 | Marking a wall existing re-marks a new door already hung in it | **Part fixed**: an opening with a mark of its own keeps it and is said; an unmarked new door still follows its wall, and is said |
+| J-N4 | Marked new again after `--clear`: nothing says its lines are gone | **Fixed**: said |
+| J-N5 | `apply` puts an assembly's new-work lines on a wall marked existing or to demolish without a word | **Fixed**: said where the lines go on (command line; the window's Assembly button is owed the same) |
+| J-N6 | `takeoff` counts a wall to demolish among the walls, unlabelled | **Fixed** |
+| J-N7 | `clashes` leaves a demolished thing out and does not name it | **Fixed** |
 | J-N8 | The BIM file: a demolished wall goes out as a plain wall; "not written" says nothing of it; read back, everything is new | owed with the window work (call 149's "not yet") |
-| J-N9 | A door to demolish in a standing wall still cuts the floor line for receptacles | to fix, with J-N1 |
-| J-N10 | A new door can be hung in a wall marked to demolish | to fix: said |
+| J-N9 | A door to demolish in a standing wall still cuts the floor line for receptacles | **Fixed** with J-N1 |
+| J-N10 | A new door can be hung in a wall marked to demolish | **Fixed**: said |
 | J-N11 | A new wall on part of a demolished wall's line leaves the second room Unknown, explained by `check` and not by `show` | open |
-| J-N12 | `mark` with its word missing or after a flag prints the whole usage | to fix |
+| J-N12 | `mark` with its word missing or after a flag prints the whole usage | **Fixed** |
+
+## Call 150 as committed (2026-11-22): what was run and what was not
+
+The fixes from the judge of calls 147 and 148 (call 150). **Run:** `cargo test
+--workspace` 465 pass, 0 fail, before the last test was added; that test
+(`a_door_to_demolish_is_filled_in`: 109 SF, 451 SF) passes on its own; `demos/reno.sh`,
+`receptacles.sh`, `drywall.sh` PASS; the three gates PASS at the commit. **Not run,
+because the work was interrupted:** the whole suite again with the new test in it;
+`tools/committed.sh`; `demos/renow.sh` on a build with these changes (what `mark` says
+changed: it names a thing once, by its path; the window's checks of it are loose and
+should hold, and that is not proved). Run those three before anything is built on this.
+
+**Patrick, 2026-11-22:** he said he may have misled the builder about existing,
+demolish, new, and asked why it was added. The renovation track's order is his to set
+again; nothing more is built on it until he says what he meant.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

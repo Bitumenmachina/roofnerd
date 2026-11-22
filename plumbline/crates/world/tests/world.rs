@@ -6375,7 +6375,7 @@ fn a_renovation_marks_what_stands_what_comes_down_and_what_is_new() {
     // Priced, then marked existing: asked which; cleared.
     job.put(&part, Cost { code: value::Val::unknown("", "not coded"), lines: vec![CostLine::of("Gypsum board, both sides", "2 * net_area", value::Val::unknown("$/SF", "no price entered"))] }).unwrap();
     let why = ed::mark(&mut job, &[part.clone()], WorkStatus::Existing, ed::ItsLines::Ask, how()).unwrap_err();
-    assert!(why.contains("--clear") && why.contains("--keep"), "{why}");
+    assert!(why.contains("Say which: take its lines off, or keep them priced"), "{why}");
     ed::mark(&mut job, &[part.clone()], WorkStatus::Existing, ed::ItsLines::Clear, how()).unwrap();
     assert!(job.find(&part).and_then(|e| job.world.get::<Cost>(e)).is_none());
     // To demolish: one room of two, to the faces, with no notch where it met the walls.
@@ -6395,4 +6395,37 @@ fn a_renovation_marks_what_stands_what_comes_down_and_what_is_new() {
     assert_eq!(measure(&mut loaded, &room, "floor_area").value, Some(550.25));
     assert_eq!(loaded.find(&part).and_then(|e| loaded.world.get::<Work>(e)).and_then(|w| w.status.value), Some(WorkStatus::Demolish));
     assert!(ed::mark(&mut loaded, &[room.clone()], WorkStatus::Existing, ed::ItsLines::Ask, how()).unwrap_err().contains("not a thing that is built"));
+}
+
+/// Call 150: a doorway widened. The old door to demolish is filled in and is no hole;
+/// the wider door is the wall's one hole; no door is set in a wall coming down.
+#[test]
+fn a_door_to_demolish_is_filled_in() {
+    use plumbline_world::editing as ed;
+    let how = || ed::Entered { status: Status::Known, source: "made-up survey" };
+    let mut job = Job::new("Renovation", "test", "2026-11-21");
+    let level = ed::storey(&mut job, "ground", "0 ft", "9 ft", how()).unwrap();
+    let w6 = ed::wall_type(&mut job, "w6", "6 in", how()).unwrap();
+    let d3 = ed::opening_type(&mut job, "d3", Kind::Door, "3 ft", "7 ft", how()).unwrap();
+    let d5 = ed::opening_type(&mut job, "d5", Kind::Door, "5 ft", "7 ft", how()).unwrap();
+    ed::walls(&mut job, &level, &w6, &[[0.0, 0.0], [24.0, 0.0], [24.0, 16.0], [0.0, 16.0]], true, ed::Top::Height("9 ft"), how()).unwrap();
+    let part = ed::walls(&mut job, &level, &w6, &[[12.0, 0.0], [12.0, 16.0]], false, ed::Top::Height("9 ft"), how()).unwrap().remove(0);
+    let old = ed::opening(&mut job, &part, Kind::Door, &d3, ed::OnWall::Offset("8 ft"), "0 ft", how()).unwrap();
+    let room = ed::room(&mut job, &level, "West", [6.0, 8.0], how()).unwrap();
+    ed::mark(&mut job, &[old.clone()], WorkStatus::Demolish, ed::ItsLines::Ask, how()).unwrap();
+    job.derive();
+    // Filled in: the partition is whole, and the room's floor line is one run of 54 ft.
+    assert_eq!(measure(&mut job, &part, "net_area").value, Some(144.0));
+    assert_eq!(measure(&mut job, &room, "receptacles").value, Some(5.0));
+    ed::opening(&mut job, &part, Kind::Door, &d5, ed::OnWall::Offset("8 ft"), "0 ft", how()).unwrap();
+    job.derive();
+    // 144 less the 5 ft door's 35; the room's 486 less the same.
+    assert_eq!(measure(&mut job, &part, "net_area").value, Some(109.0));
+    assert_eq!(measure(&mut job, &room, "wall_area").value, Some(451.0));
+    // Marking the wall leaves the door that is coming out as it is.
+    let said = ed::mark(&mut job, &[part.clone()], WorkStatus::Existing, ed::ItsLines::Ask, how()).unwrap().join("\n");
+    assert!(said.contains(&format!("{old}, in it: stays to demolish")), "{said}");
+    // No door in a wall that is coming down.
+    ed::mark(&mut job, &[part.clone()], WorkStatus::Demolish, ed::ItsLines::Ask, how()).unwrap();
+    assert!(ed::opening(&mut job, &part, Kind::Door, &d3, ed::OnWall::Offset("3 ft"), "0 ft", how()).unwrap_err().contains("is to demolish"));
 }

@@ -368,6 +368,10 @@ pub fn opening(job: &mut Job, wall: &str, kind: Kind, type_path: &str, at: OnWal
             return Err(format!("{kind:#} is not a door or a window"));
         }
         let host = job.find(wall).and_then(|e| job.world.get::<Wall>(e).cloned()).ok_or_else(|| format!("{wall} is not a wall with a line"))?;
+        // A wall that is coming down takes no new door or window (judged 2026-11-21).
+        if job.find(wall).and_then(|e| job.world.get::<Work>(e)).is_some_and(|w| w.status.value == Some(WorkStatus::Demolish)) {
+            return Err(format!("{wall} is to demolish: {kind:#} is not set in a wall that is coming down. Mark the wall existing or new first, or draw the new wall it goes in"));
+        }
         let offset = match at {
             OnWall::Offset(typed) => how.length(typed)?,
             OnWall::Point(p) => {
@@ -1049,25 +1053,38 @@ pub fn mark(job: &mut Job, paths: &[String], status: WorkStatus, lines: ItsLines
             if !check::takes_work(kind) {
                 return Err(format!("{path} is {kind:#}, which is not a thing that is built: walls, doors, windows, floors, footings, roofs, runs and things set in place are marked"));
             }
+            // What the thing itself was before this mark: its doors and windows follow it
+            // only where they were what it was. One with a mark of its own (a new door
+            // hung in an existing wall, a door to demolish) keeps it, and that is said.
+            let status_of = |job: &mut Job, p: &str| job.find(p).and_then(|e| job.world.get::<Work>(e)).and_then(|w| w.status.value).unwrap_or(WorkStatus::New);
+            let was = status_of(job, path);
             let mut all = vec![path.clone()];
             if kind == Kind::Wall {
                 let children = job.children().get(path).cloned().unwrap_or_default();
-                all.extend(children.into_values().filter(|c| job.kind(c).is_some_and(|k| k.is_opening())));
+                let openings: Vec<String> = children.into_values().filter(|c| job.kind(c).is_some_and(|k| k.is_opening())).collect();
+                for c in openings {
+                    let its = status_of(job, &c);
+                    if its == was {
+                        all.push(c);
+                    } else {
+                        said.push(format!("  {c}, in it: stays {}", its.said()));
+                    }
+                }
             }
             for (i, p) in all.iter().enumerate() {
                 let k = job.kind(p).ok_or_else(|| format!("there is no {p} in this job"))?;
+                let before = status_of(job, p);
                 let w = Work { status: how.val(status, "") };
                 check::work(p, k, &w)?;
                 job.put(p, w)?;
                 let e = job.find(p).ok_or_else(|| format!("there is no {p} in this job"))?;
-                let name = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_else(|| p.clone());
-                let mut line = if i == 0 { format!("{name} ({p}): {}", status.said()) } else { format!("  {name} ({p}), in it: {}", status.said()) };
+                let mut line = if i == 0 { format!("{p}: {}", status.said()) } else { format!("  {p}, in it: {}", status.said()) };
                 let carried = job.world.get::<Cost>(e).map(|c| c.lines.len()).unwrap_or(0);
                 if matches!(status, WorkStatus::Existing | WorkStatus::Demolish) && carried > 0 {
                     let why = if status == WorkStatus::Existing { "what stands is not bought again" } else { "what comes down is not built" };
                     match lines {
                         ItsLines::Ask => {
-                            return Err(format!("{name} ({p}) carries {}, and {why}. Say which: --clear takes them off it; --keep leaves them priced, as work done to it (paint, a patch, taking it down)", crate::view::so_many(carried, "cost line")));
+                            return Err(format!("{p} carries {}, and {why}. Say which: take its lines off, or keep them priced as work done to it (paint, a patch, taking it down)", crate::view::so_many(carried, "cost line")));
                         }
                         ItsLines::Clear => {
                             job.world.entity_mut(e).remove::<Cost>();
@@ -1075,6 +1092,11 @@ pub fn mark(job: &mut Job, paths: &[String], status: WorkStatus, lines: ItsLines
                         }
                         ItsLines::Keep => line.push_str(&format!("; its {} kept and priced, as work done to it", crate::view::so_many(carried, "cost line"))),
                     }
+                }
+                // New work with nothing priced on it, that was existing or coming down:
+                // whatever was taken off it then is not back (judged 2026-11-21).
+                if matches!(status, WorkStatus::New | WorkStatus::Temporary) && matches!(before, WorkStatus::Existing | WorkStatus::Demolish) && carried == 0 {
+                    line.push_str("; it carries no cost lines: give it its assembly or its lines again");
                 }
                 said.push(line);
             }

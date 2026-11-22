@@ -626,6 +626,9 @@ pub(crate) fn wall_section(tree: &Tree, w: &Wall) -> Result<(f64, Vec<(Function,
 /// element's measure beside whatever else it carries.
 pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>> {
     let mut out: HashMap<String, BTreeMap<String, Derived>> = HashMap::new();
+    // A door or window to demolish in a wall that stays is filled in: it is no hole in
+    // its wall when the work is done (call 150).
+    let gone = crate::components::demolished(world);
     let tree = Tree::of(world);
 
     // Openings first: each one's size and area, and each wall's list of them.
@@ -668,7 +671,7 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
             }
         };
         out.entry(me.clone()).or_default().extend(m);
-        if let Some(parent) = &node.parent {
+        if let Some(parent) = node.parent.as_ref().filter(|_| !gone.contains(me)) {
             holes.entry(parent.clone()).or_default().push(hole);
         }
     }
@@ -1438,7 +1441,7 @@ fn room_measures(world: &mut World, tree: &Tree, out: &mut HashMap<String, BTree
     // Each wall's doors and windows, for the room's wall area (call 144).
     let holes_of: HashMap<String, Vec<Hole>> = {
         let mut q = world.query::<(&Node, &Kind, &Opening)>();
-        let mut all: Vec<(String, Hole)> = q.iter(world).filter(|(_, k, _)| k.is_opening()).filter_map(|(n, _, o)| n.parent.clone().map(|p| (p, hole_of(tree, &n.path, o).0))).collect();
+        let mut all: Vec<(String, Hole)> = q.iter(world).filter(|(n, k, _)| k.is_opening() && !gone.contains(&n.path)).filter_map(|(n, _, o)| n.parent.clone().map(|p| (p, hole_of(tree, &n.path, o).0))).collect();
         all.sort_by_key(|(_, h)| path_number(&h.path));
         let mut map: HashMap<String, Vec<Hole>> = HashMap::new();
         for (p, h) in all {

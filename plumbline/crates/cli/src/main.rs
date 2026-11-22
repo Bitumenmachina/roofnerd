@@ -302,11 +302,19 @@ fn takeoff(job: &mut plumbline_world::Job) -> String {
         (None, n) => format!("no total, {} of {n} missing", sum.missing.len()),
     };
     let mut out = String::from("flags:  ~ Assumed    ? Unknown    (no mark) Known\n");
+    let mut gone: Vec<String> = plumbline_world::components::demolished(&mut job.world).into_iter().collect();
+    gone.sort();
+    let under = job.children();
     for s in building::storey_totals(job) {
         let _ = writeln!(out, "\n{}  ({})", s.name, s.path);
         let _ = writeln!(out, "  {} walls {:<12} {}", s.walls.status.flag(), s.walls.members, said(&s.walls));
         let _ = writeln!(out, "  {} wall face, gross   {}", s.wall_face.status.flag(), said(&s.wall_face));
         let _ = writeln!(out, "  {} wall face, net     {}", s.wall_net.status.flag(), said(&s.wall_net));
+        // What is coming down is counted as it stands, and said (judged 2026-11-21).
+        let down: Vec<String> = gone.iter().filter(|p| p.starts_with("wall-") && under.get(&s.path).is_some_and(|c| c.values().any(|x| x == *p))).cloned().collect();
+        if !down.is_empty() {
+            let _ = writeln!(out, "      of the walls, {} to demolish ({}): counted above as {} stand{}", down.len(), down.join(", "), if down.len() == 1 { "it" } else { "they" }, if down.len() == 1 { "s" } else { "" });
+        }
         // By the type of wall, where a level has more than one.
         if s.walls_by_type.len() > 1 {
             for t in &s.walls_by_type {
@@ -1585,6 +1593,11 @@ fn run(args: &[String]) -> Result<(), String> {
             let came_off = view::came_off_said(&priced_before, &mut job);
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
             say!("{element} is now {:?} and has gained {} cost lines:", job.shown(element, "condition", None).unwrap_or_default(), added.len());
+            // On a thing that is existing or coming down these are not lines for building
+            // it, and that is said where they go on (judged 2026-11-21).
+            if let Some(w) = job.find(element).and_then(|e| job.world.get::<plumbline_world::components::Work>(e)).and_then(|w| w.status.value).filter(|w| matches!(w, plumbline_world::components::WorkStatus::Existing | plumbline_world::components::WorkStatus::Demolish)) {
+                say!("! {element} is {}: an assembly's lines are for building a thing new, and these are now priced on it. Take off what is not done to it", w.said());
+            }
             for d in added {
                 say!("  {d}");
             }
@@ -2129,8 +2142,9 @@ fn draw(args: &[String]) -> Result<(), String> {
                 (false, true) => ed::ItsLines::Keep,
                 (false, false) => ed::ItsLines::Ask,
             };
-            ed::mark(&mut job, paths, what, its, ed::Entered { status, source: &source })?.join("\n")
+            ed::mark(&mut job, paths, what, its, ed::Entered { status, source: &source }).map_err(|why| if why.contains("Say which:") { format!("{why}: --clear takes them off, --keep leaves them priced") } else { why })?.join("\n")
         }
+        ("mark", _) => return Err("mark takes the things to mark and then what the work does to them, before any flag: plumbline mark <file> wall-0004 wall-0005 existing --status Known --source \"survey\" (new, existing, demolish or temporary)".into()),
         ("low-slope", [name]) => {
             let (status, source) = how(&status, &source)?;
             let pts = points(&need(flag("--points"), "--points", "\"0,0 48,0 48,48 0,48\" (feet)")?)?;

@@ -38,10 +38,10 @@ echo "== 2. Its walls marked existing: what stands is not bought again =="
 "$P" apply "$J" "$SOUTH" "Exterior wall, 2x6, lap siding" --source "made-up survey" >/dev/null
 cp "$J" "$T/before.json"
 refused "$P" mark "$J" "$SOUTH" "$EAST" "$NORTH" "$WEST" "$PART" existing "${K[@]}"
-says "$T/out.txt" "and what stands is not bought again. Say which: --clear takes them off it; --keep leaves them priced"
+says "$T/out.txt" "and what stands is not bought again. Say which: take its lines off, or keep them priced as work done to it (paint, a patch, taking it down): --clear takes them off, --keep leaves them priced"
 cmp -s "$J" "$T/before.json" || { echo "FAIL: the refusal changed the job"; exit 1; }
 "$P" mark "$J" "$SOUTH" "$EAST" "$NORTH" "$WEST" "$PART" existing --clear "${K[@]}" > "$T/out.txt"
-says "$T/out.txt" "($SOUTH): existing to remain; its"
+says "$T/out.txt" "$SOUTH: existing to remain; its"
 says "$T/out.txt" "taken off: what stands is not bought again"
 "$P" show "$J" > "$T/show.txt"; block "$PART" > "$T/part.txt"
 says "$T/part.txt" "work             existing to remain"
@@ -57,7 +57,7 @@ says "$T/out.txt" "drawn over another"
 echo
 echo "== 4. The partition to demolish: the room is the two it was; its taking down priced =="
 "$P" mark "$J" "$PART" demolish "${K[@]}" > "$T/out.txt"
-says "$T/out.txt" "($PART): to demolish"
+says "$T/out.txt" "$PART: to demolish"
 "$P" show "$J" > "$T/show.txt"; block "$R" > "$T/room.txt"
 # 23.5 by 15.5 inside the faces.
 says "$T/room.txt" "floor area       364.25 SF"

@@ -5171,3 +5171,31 @@ This call is the part of that the window lacks for call 148.
 - The words are a builder's: existing, to demolish, new work, demolition.
 
 No number moves. `demos/renow.sh` shows it, its pictures measured.
+
+### Call 150. A door or window to demolish is filled in; the mark's edges, from its judge (2026-11-21; the judge of calls 147 and 148)
+
+- **A door or window to demolish in a wall that stays is filled in**, and is no hole in
+  that wall when the work is done: the wall's net area, the room's wall area and the
+  room's floor line (its receptacles) take it back in. A doorway widened (the old door to
+  demolish, a wider one hung where it was) is then the wider door's hole alone: the
+  judge's partition reads 144 − 35 = 109 SF, where it had no net area and no reason. The
+  filling in itself is priced by a line on the opening that comes out.
+- **A wall's doors and windows follow its mark only where they were what the wall was.**
+  One with a mark of its own keeps it, and that is said ("door-0011, in it: stays to
+  demolish"). A new door hung in a wall before the wall is marked existing cannot be told
+  from one that was always there: it follows, and is said, and is marked new again by hand.
+- **No new door or window is set in a wall that is to demolish**: refused, in words.
+- **Marked new again with nothing priced on it**, a thing that was existing or coming
+  down says it carries no cost lines.
+- **`apply` on a thing that is existing or coming down** says, where the lines go on,
+  that an assembly's lines are for building a thing new.
+- **`takeoff` names the walls to demolish** under a level's walls (they are counted as
+  they stand); **`clashes` names what it left out** as to demolish.
+- **The mark's refusal** names the choice in words ("take its lines off, or keep them
+  priced as work done to it"); the command line adds its two flags; the window its two
+  buttons. What `mark` says names a thing once, by its path, as other edits do.
+- `mark` with its word missing says what it takes, not the whole usage.
+
+Still owed from that judgment: the Status in the BIM file (J-N8); a second room left
+Unknown by a new wall on part of a demolished wall's line says why in `check` only
+(J-N11).

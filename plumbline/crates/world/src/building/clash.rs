@@ -564,6 +564,7 @@ pub fn clashes(job: &mut Job, clearance: Option<f64>) -> Result<Clashes, String>
     let gone = crate::components::demolished(&mut job.world);
     for (i, p) in drawn.iter().enumerate() {
         if gone.contains(&p.path) {
+            left_out.push((p.path.clone(), "it is to demolish, and in nothing's way once the work is done".into()));
             continue;
         }
         match pieces_of(p, i) {
