@@ -7838,6 +7838,27 @@ division appear where a layout has any, so the divisions add up to the job cost.
 table read; `tools/committed.sh` before the push. **Not done:** the table in the
 window; no judge yet.
 
+## A kitchen from the tool chest: a demonstration, written before it is built (`demos/cabinets.sh`, call 155)
+
+From an empty job, by hand. The house of `demos/roomline.sh` with its 12 ft addition and
+the rooms Living and Kitchen. The Kitchen's east wall runs from 36,0 to 36,16; its face
+on the Kitchen's side is at x = 35.75, clear from y = 0.25 to 15.75.
+
+1. `import items <job> starter`, then `cabinets` on the east wall, in the Kitchen, from
+   1 ft, boxes `B18 SB36 B24 DB18 B36`, with `--countertop`. Widths 18 + 36 + 24 + 18 +
+   36 = 132 in: **an 11 ft run**, from y = 1 to y = 12, **3.75 ft left** to the corner.
+   Each box is 2 ft deep, so its middle is 1 ft off the face: B18 at (34.75, 1.75),
+   SB36 at (34.75, 4), B24 at (34.75, 6.5), DB18 at (34.75, 8.25), B36 at (34.75, 10.5).
+2. The countertop: 11 ft by 25 1/2 in = 11 × 2.125 = **23.375 SF**, front edge **11 LF**,
+   its middle 1.0625 ft off the face at (34.6875, 6.5), 34 1/2 in up. A line on it
+   "Countertop, quartz" by `plan_area` at $62/SF: 23.375 × 62 = **$1,449.25**.
+3. Wall boxes on the same wall from 1 ft: `W3030 W3630 W1830`: 30 + 36 + 18 = 84 in, **7
+   ft**, 1 ft deep, middles 0.5 ft off the face: W3030 at (35.25, 2.25), 54 in up.
+4. The estimate by item lists eight boxes, each by its code, 1 EA, no price; the
+   supplier's list has them. No box clashes with the wall it backs onto.
+5. Refused, the job unchanged: `B99` (not in the tool chest); a run of six B36 (18 ft:
+   past the corner); a run across a door hung in that wall.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

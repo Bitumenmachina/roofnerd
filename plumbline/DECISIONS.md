@@ -5285,3 +5285,40 @@ its job's title, and a last column, the last layout less the first:
 One arithmetic: each figure is the one its own job's `takeoff` and `estimate` give; the
 table adds nothing but the differences. In the window it is a view of the sheet,
 built after this.
+
+### Call 155. A kitchen set from the tool chest: cabinet boxes by code, in a run along a wall, with its countertop (2026-11-22; plan step A4; call 151; the design and finishes reviews)
+
+**The tool chest gains cabinet boxes by the trade's codes.** In `library/items.csv`,
+Division 12, each an item to place like any other, its sizes Assumed and sourced "the
+trade's stock sizes; the maker's catalog decides": base boxes 34 1/2 in high and 24 in
+deep (B12, B15, B18, B21, B24, B27, B30, B33, B36; sink bases SB30, SB33, SB36; drawer
+bases DB18, DB24); wall boxes 12 in deep, named width then height (W1230, W1530, W1830,
+W2430, W3030, W3630, W3018, W3612); tall boxes 24 in deep and 84 in high (T1884, T2484);
+a 3 in filler (F3). The code's number is the width in inches, as the trade reads it.
+The one "Base cabinet, 36 in" stays for the jobs that have it.
+
+**A run.** `plumbline cabinets <file> <level> <wall> --in <room> --from "1 ft" --boxes
+"B18 SB36 B24"`: sets the boxes side by side along the wall's face on the room's side,
+backs to the wall, starting so far along the wall's line from its first end, each
+turned to the wall. Base and tall boxes stand on the floor; wall boxes hang with their
+bottoms 54 in up (18 in over a 36 in counter), Assumed, said. Each box is one of its
+item, as sure as the item; each carries one cost line, its item's name, 1 EA, Division
+12, with no price, so the estimate by item is the box schedule a cabinet maker quotes
+from and the supplier list has every box by its code. It says the run's length and
+what is left to the room's corner. Refused, in words, the job unchanged: a code the
+chest does not have (naming those it has); a run that passes the room's corner; a run
+across a door.
+
+**Its countertop.** With `--countertop`, one countertop is set over the base boxes of
+the run: as long as they are, 25 1/2 in deep (a 1 1/2 in overhang at the front),
+1 1/2 in thick, at 34 1/2 in up, Assumed. **A thing set in place has figures of its
+size** so it can be priced by them: `width` and `depth` (ft), `height` (ft) and
+`plan_area` (SF). A countertop is priced by `plan_area`; its front edge by `width`.
+
+**Not yet:** corner boxes; a filler worked out from the wall's length; door styles and
+finishes as selections; the run set and dragged in the window; the Kitchen assembly's
+three "1 EA" lines (cabinets, countertops, appliances) still go out as Known, which is
+wrong and is next.
+
+No number moves on a job made before this; the tool chest's count of items does, and
+what counts it moves with it.
