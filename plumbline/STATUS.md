@@ -7669,6 +7669,53 @@ a receptacle count that is wrong for a bath (MEP 10); contingency and allowances
 
 **Parked until A is done:** more on the mark itself (its judge's J-N8, J-N11).
 
+## The whole program reviewed by its builder, and what is decided (2026-11-22; Patrick: "self review the entire program and make a determination on moving forward")
+
+**What it is today, counted.** About 51,000 lines: the model and its arithmetic 23,900,
+the window 12,300, roofnerd's ported roofing 8,900, the rest (command line, plans and
+scan files, workbook, BIM file) 6,000. 466 tests pass. 62 demonstrations (32 at the
+command line, 30 in the window). 13,000 lines of record in this file and DECISIONS.md.
+30 questions in QUESTIONS.md, most still on working assumptions.
+
+**What is sound.** The numbers. Across this month about ten judges on another model
+worked figures by hand against it (footings, framing, roofs, tapered insulation,
+drywall, rooms, receptacles, a renovation) and where they found a wrong number it was at
+an edge, and was fixed. Every value says how sure it is and where it came from; the
+field list by dollars; the workbook with live formulas; the starter library's rules
+each with its source. This is worth keeping and is not to be started again.
+
+**What is not.**
+- **Nobody has used the window.** It has only ever run on a cloud machine's software
+  renderer at about a frame a second, driven by scripts and judged from pictures by
+  agents. Its last judgment of look and words failed (18 of 41 lines of the look; 44
+  words marked). Patrick has not opened it. By this repository's own rule his eyes are
+  the test, and that test has never been run.
+- **It is wide and thin.** Estimating, a 3D model, clashes, scan files, a kitchen, a
+  structure and permit sheets, for sixteen trades and the design professions: each has a
+  slice, and each of the four trade reviews found its own core things missing.
+- **Its direction has come from agents' reviews and the builder's inference, not from
+  use.** Twice in three days the wrong thing was built first: trade depth in an order
+  nobody had asked for, and the renovation mark before there was a house to mark.
+- **The record costs more than it gives.** Thirteen thousand lines that each new
+  builder must read around, and that burn the builder's working memory.
+
+**Decided.**
+1. **Keep the program and its engine. Stop widening it.** No new trade depth, and
+   nothing from steps B, C and D of the plan above, until item 3 has happened.
+2. **One job, end to end, on Patrick's desktop** is the only milestone: his Scaniverse
+   file brought in; the house as it stands traced over it; the addition drawn with an
+   open plan; a kitchen set from the tool chest; a price by trade that does not buy what
+   is already there. Steps A1 to A4 of the plan, and step B5 only as far as the price
+   needs it.
+3. **Then he uses it for an hour on his own job, and what he writes down is the list.**
+   Before that hour the README's three install steps are run once more on a clean
+   machine here, and he is handed one page: how to install, how to open his file, the
+   five things to try.
+4. **The record is cut to what is used:** this file gets a one-page head saying where
+   things stand, and the long sections below it are history.
+5. **On screen, bringing a scan in is named "Scan file"**: the program does not scan;
+   he scans in Scaniverse and brings the file in. "Scan" alone read to him as scanning.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
