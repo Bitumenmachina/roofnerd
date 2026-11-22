@@ -8233,8 +8233,15 @@ picture, 0.51 now).
   window, whose list is headed Items; Patrick's word is tool chest (one wording call
   owed, call 163's last paragraph).
 
-**Not judged.** A fresh judge of the five from the screen alone is owed before anyone is
-told the window carries them. `TRY-IT.md` is reissued and says so at its head.
+**Not judged yet.** A fresh judge of the five from the screen alone was started on the
+frozen copy of this build once it was committed; its notes are written as it goes to
+`research/judgment-call161-window.md`. `TRY-IT.md` is reissued and says at its head that
+the judgment is owed.
+
+**Committed and pushed:** 331bf9c. `tools/committed.sh` PASS on it (34 test runs: the
+commit builds and passes from what is in it). That run is of a tree that has call 158's
+commit (fe25444) in it; the check owed on fe25444 itself was not run on that commit
+alone and is not owed any longer.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
