@@ -9206,6 +9206,42 @@ floor is drawn clear of the other floor of its level (its figures are the same).
 part of another's line, or two posts a hair apart, are not refused; the questions a
 beam asks of its ends (C7) are not built. Not judged again.
 
+## Call 179 part A fixed: the scan's walls a judge broke (2026-11-23)
+
+A worker fixed the nine findings in the finder, each with its failing check first, and
+ran the judge's whole set of houses again with five more nobody had tried; its report,
+with every measure it chose and the full before-and-after table, is
+`research/worker-report-call179A.md`. The lead ran its tests and demonstrations on its
+copy and a house turned to an angle of its own (41 degrees: five walls, closing), then
+merged it over part C's fixes.
+
+| House | Right | Before | Now |
+|---|---|---|---|
+| a 30 ft house at 10 to 40 points a square foot | 5 walls | 0 walls, "furniture", no word | 5 walls, and how thick the scan is said |
+| a wall 30 to 90 % hidden by cabinets | 4 walls, the hidden stretch said | 3 walls at 60 % and over; nothing said | 4 walls, "not seen" said, the walls close |
+| a room packed with tall furniture on three walls | 4 walls | 1 wall | 4 walls, three hidden stretches said |
+| a cabinet bank to the ceiling | not laid on `--lay` alone | laid as a wall across the room | "in doubt", said, laid only when taken by its number |
+| a sloped ceiling; rooms 8 ft and 10 ft | walls, and the ceiling said | "no ceiling"; 1 wall | 4 walls and "the ceiling slopes"; 5 walls and both heights |
+| a closet; a 3 1/2 in wall beside a 12 in | 7; 6 | leaning and phantom walls; laying refused all | 6 (one 2 ft cross wall missing, said); 6, none leaning; laying names what it cannot lay and lays the rest |
+| walls 18 in and 22 in thick | one wall each | two walls each | one wall each |
+| the wrong measure, or the wrong way up | "not likely the house" | six walls laid 15 ft 6 in high | said first; nothing laid without `--anyway` |
+| a level 9 ft high, Known, and a scan 8 ft | the disagreement said | silent | said; walls at the scan's height, Assumed |
+
+It now says whether the walls found close, and where they do not.
+
+**Run on the integration copy with parts A and C together:** 625 tests pass in the six
+command-line crates, 0 fail; all 44 command-line demonstrations pass; the three gates
+and `portmap.sh` pass. The window's crate was not built on it.
+
+**Still wrong, by the worker's own table:** a 4 ft closet wall with a wide doorway is
+not found (said, and the walls "do not close" there); openings on a scan of 10 to 25
+points a square foot can be counted twice or missed (said); under a slope a wall's
+height reads up to 7 in off, and a slope steeper than 6 in to the foot is not read; a
+wall under two ceiling heights is laid at one. One speed test can fail on a loaded
+machine (it asks 20 s). Words the worker left because existing demonstrations quote
+them: a level and a type by their marks in "laid on ...", "it is not a PLY file".
+It has still seen only made-up scans. Not judged again.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

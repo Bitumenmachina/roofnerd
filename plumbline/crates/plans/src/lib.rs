@@ -13,6 +13,10 @@
 //! counted and said. The edges of filled shapes are lines, as strokes are.
 
 pub mod found;
+#[cfg(test)]
+mod found_179;
+#[cfg(test)]
+mod found_scenes;
 pub mod scan;
 use hayro::hayro_interpret::font::GlyphRun;
 use hayro::hayro_interpret::util::TransformExt;
