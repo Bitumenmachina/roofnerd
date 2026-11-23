@@ -9101,6 +9101,52 @@ every joist and rafter layout but the notch edge; pad footing concrete; the scan
 walls on an L, three rooms, turned houses, thicknesses 3 1/2 to 14 in, with everything
 laid Assumed and sourced to the scan.
 
+## Call 177 built: a trade's view of the building (2026-11-23)
+
+A worker built call 177's five parts in the window and proved them by `demos/tradesw.sh`
+on one frozen build made from the source as committed; its report is
+`research/worker-report-call177.md`.
+
+1. **Trades, one click each**: All, Foundation, Framing, Outside, Plumbing, HVAC,
+   Electrical, Inside, at the head of Show. Each sets the switches that were already
+   there; the status line says what was set; All puts them back.
+2. **Sizes**: a switch; each run wears a tag with its size and what it carries, in the
+   model's words ("3 in waste stack", "3/4 in cold water"); a beam and a post wear
+   theirs; a floor whose joists' direction is not said wears "joists: direction not
+   said". Tags are on the map by their words.
+3. **The frame drawn**: joists, their rim, rafters, beams and posts under Framing, from
+   the same layout the counts use (`building/frames.rs`, `members_placed`).
+4. **A run is never a hairline**: no thinner than 2 dots on screen; a stack at its true
+   size.
+5. **A clash says where**, and the window takes the model's counts of call 175: the
+   room first; "Set against: not clashes" apart; one row for a hole.
+
+**What the lead ran and read.** On the tree as committed: the whole workspace's tests,
+**582 passed, 0 failed**; all 43 command-line demonstrations pass (so no figure moved
+under the shared layout code); the language gate passes. The window demonstration's
+final run is the worker's (the lead did not rerun it). The lead read
+`trades/button-framing.png` and `button-plumbing.png`: the frame reads as a framed
+house with its beam and posts tagged; the plumbing reads with its sizes.
+
+**Changed behaviour, named:** beams and posts are drawn only with Framing on; the line
+"it is in ..." when a thing is carried no longer counts what is set against (call
+175's meaning); the Show list's clash count is the model's (12 on the sample, was 21).
+
+**Not right** (the worker's own list, picture by picture, and the lead's reading):
+- Plumbing: the pipes are pale against the glass house; hot water barely reads; about
+  twenty tags crowd the middle of the house.
+- Framing: at this distance the second floor's joists read as a nearly solid slab; rim
+  and joists look fused.
+- Foundation: strip footings read as pale slabs; one tag repeats on every piece.
+- Inside: other trades' work is all on; a duct runs through the cut wall.
+- From far off only a few tags are left.
+- Clash marks float over walls; a thing set in a wall is "outside any room".
+- Rafters have no tails, plumb cuts or ridge board; blocking and hangers are not drawn.
+- An environment switch (`PLUMBLINE_RUN_DOTS`) was added so the 2-dot check could be
+  proved red; it is a tester's switch and no person sees it.
+- Not judged; every other window demonstration's pictures are now stale in the Show
+  list (the trades row is new) until the next pass reruns them.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

@@ -149,6 +149,67 @@ pub struct Hole {
     pub status: Status,
 }
 
+impl Clashes {
+    /// What is in the same space as what: two things in each other by more than they could be
+    /// set to, and not a run through a wall or a floor (a hole) nor a thing set against one.
+    /// The count a window shows is this one's (call 177).
+    pub fn in_the_same_space(&self) -> Vec<&Clash> {
+        self.found.iter().filter(|c| c.how == ClashKind::Hard && !c.through && !c.set_against).collect()
+    }
+    /// What stands against a wall, or is joined to it, by no more than `SET_AGAINST_FT`: not a
+    /// clash, and listed apart (call 175).
+    pub fn set_against(&self) -> Vec<&Clash> {
+        self.found.iter().filter(|c| c.how == ClashKind::Hard && !c.through && c.set_against).collect()
+    }
+    /// The holes to cut, each once: the first piece of a run that passes through a wall or a
+    /// floor stands for its hole (call 175).
+    pub fn hole_rows(&self) -> Vec<&Clash> {
+        let mut seen: Vec<usize> = Vec::new();
+        self.found
+            .iter()
+            .filter(|c| c.how == ClashKind::Hard && c.through)
+            .filter(|c| match c.hole {
+                Some(h) if seen.contains(&h) => false,
+                Some(h) => {
+                    seen.push(h);
+                    true
+                }
+                None => true,
+            })
+            .collect()
+    }
+}
+
+/// Where each clash and each hole of `found` is, to the room: the name of the room whose
+/// outline holds the place on the storey the thing in it is on, or "outside any room"
+/// where none does (call 177). One for each of `found.found`, then one for each of
+/// `found.holes`. The storey is the one of whichever of the two is not a wall or a floor.
+pub fn rooms_of(job: &mut Job, found: &Clashes) -> (Vec<String>, Vec<String>) {
+    const NONE: &str = "outside any room";
+    let rooms: Vec<(String, String, Vec<P2>)> = super::room_outlines(job)
+        .into_iter()
+        .filter_map(|(path, outline)| {
+            let e = job.find(&path)?;
+            let n = job.world.get::<Node>(e)?;
+            Some((n.parent.clone()?, n.name.clone(), outline))
+        })
+        .collect();
+    let placed = placements(job).0;
+    let storey_of = |path: &str| placed.iter().find(|p| p.path == path).and_then(|p| p.storey.clone());
+    let kind_of = |path: &str| placed.iter().find(|p| p.path == path).map(|p| p.kind);
+    let room = |storey: Option<String>, at: P3| -> String {
+        let Some(storey) = storey else { return NONE.to_string() };
+        rooms.iter().find(|(of, _, outline)| *of == storey && crate::vif::inside(outline, [at[0], at[1]])).map(|r| r.1.clone()).unwrap_or_else(|| NONE.to_string())
+    };
+    let thing = |a: &str, b: &str| -> Option<String> {
+        let solid = |k: Option<Kind>| !matches!(k, Some(Kind::Wall | Kind::Floor | Kind::Footing));
+        if solid(kind_of(a)) { storey_of(a) } else if solid(kind_of(b)) { storey_of(b) } else { storey_of(a) }
+    };
+    let clashes = found.found.iter().map(|c| room(thing(&c.a, &c.b), c.at)).collect();
+    let holes = found.holes.iter().map(|h| room(h.pieces.first().and_then(|(p, _)| storey_of(p)).or_else(|| storey_of(&h.through)), h.at)).collect();
+    (clashes, holes)
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Clashes {
     /// Clashes between things, then runs through walls and floors, then clearances.

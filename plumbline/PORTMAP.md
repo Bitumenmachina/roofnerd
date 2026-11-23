@@ -328,3 +328,12 @@ from BIMCraft at the same commit is listed here by hand, and is checked by its o
 | `LONG_WAY` | ours |  |  | one of the two ways joists run; `grep -rn 'joists_span' crates/`: nothing |
 | `read` | ours |  |  | the words typed for the way joists run (`JoistsSpan::read`); `grep -rn 'fn read' crates/core/src/timber.rs`: nothing |
 | `check_joists_span` | ours |  |  | the checks of `JoistsSpan`; `grep -rn 'fn check_joists_span' crates/`: nothing |
+| `members_placed` | ours |  |  | the members `members_across` counts, each with its two ends on the plan, for a window to draw (call 177); `grep -rn 'fn members_placed' crates/`: nothing, and BIMCraft lays out nothing across a floor or a roof (as `members_across`) |
+| `Frame` | ours |  |  | the joists of a floor and the rafters of a roof plane a priced line names, placed (call 177); `grep -rn 'struct Frame' crates/` in BIMCraft: nothing |
+| `frames` | ours |  |  | every floor with joists named and every roof plane with rafters named, laid by `members_placed` the way the counts lay them; `grep -rn 'fn frames' crates/` in BIMCraft: nothing |
+| `trade_word` | ours |  |  | what a classification of system is called in a size ("waste", "cold water", "supply"); `grep -rni 'cold water' crates/core/src`: only the classification names, no trade word (call 177) |
+| `run_tag` | ours |  |  | a run called by its size and what it carries ("3 in waste", "16 x 8 supply"); `grep -rn 'fn run_tag' crates/` in BIMCraft: nothing (call 177) |
+| `in_the_same_space` | ours |  |  | the clashes a window counts: two things in each other by more than they could be set to, not a hole and not a thing set against a wall (call 177); the clash test is ours: `grep -rni clash crates/core/src` finds two comments and a variable |
+| `set_against` | ours |  |  | what stands against a wall by no more than two inches, listed apart (call 175, handed to the window by call 177); `grep -rniw 'set against' crates` in BIMCraft: nothing |
+| `hole_rows` | ours |  |  | each hole to cut once, for a window's list (call 175, call 177); `grep -rn 'struct Hole' crates` in BIMCraft: nothing |
+| `rooms_of` | ours |  |  | the room each clash and each hole is in, or "outside any room" (call 177); `grep -rni 'clash' crates/core/src` finds two comments and a variable |

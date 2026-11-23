@@ -30,7 +30,7 @@ such reading, and STATUS.md says where each thing it found stands).
 | `cabinetsw` (`01` to `11`) | `demos/cabinetsw.sh` |
 | `items` | `demos/itemsw.sh` |
 | `layoutsw` (`01` to `10`) | `demos/layoutsw.sh` |
-| `layers` (`01` to `05`) | `demos/tradesw.sh` |
+| `layers` (`01` to `05`; `06` to `17` are the trades' buttons, call 177) | `demos/tradesw.sh` |
 | `money` | `demos/moneyw.sh` |
 | `pagew` | `demos/pagew.sh` |
 | `plan` | `demos/planw.sh` |
@@ -52,6 +52,4 @@ program was called plumbline until 2026-11-17), the panels, the words and the pr
 - `layers/plan-panels.png`, `layers/estimate-window.png`: the same rebuild.
 - `light/`: the house before and after it was given a sun and a sky (call 68).
 
-**Taken by hand, and current.** `trades/`: one picture of each of seven trades drawn
-in the model, which Patrick asked to see (QUESTIONS.md Q23), and the first floor
-alone. Retaken 2026-11-17 on a frozen copy of 8a77f02; no script retakes them.
+**`trades/`** is written by `demos/tradesw.sh` and was retaken on the frozen build of call 177 (2026-11-22). `1-foundation` to `7-waterproofing` and `first-floor-alone` are the layers of the made-up whole house (the ground away, the walls as their frames, electrical, plumbing, HVAC, the inside looked into, the finish off, the first floor alone). `button-<trade>` is each trade's button pressed from the same house opened cold, with a beam, two posts, two pad footings, and joists and rafters named, added to it; `button-all` puts the switches back, and the plumbing, HVAC, electrical and inside ones are the same pictures as `4-plumbing`, `5-hvac`, `3-electrical` and `6-interior-woodwork`. `far-plumbing` is the plumbing seen from far off, its runs no thinner than two dots; `clash-rooms-model` and `clash-rooms-sheet` are the clashes marked and listed, each saying its room.

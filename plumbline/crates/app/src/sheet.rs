@@ -211,7 +211,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             // The count is of what is in the same space, the same count the model window's
             // Clashes switch gives (J19-20: one said 87 and the other 21, with nothing to
             // say that 66 of the 87 were holes to cut, which the tab lists apart).
-            all.push((Tab::Clashes, "Clashes".to_string(), snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.iter().filter(|x| !x.through).count()).unwrap_or(0)));
+            all.push((Tab::Clashes, "Clashes".to_string(), snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.in_the_same_space().len()).unwrap_or(0)));
             // Layouts: this job beside others of it. Always offered, with how many are set.
             all.push((Tab::Layouts, "Layouts".to_string(), doc.beside.len()));
             all.push((Tab::Building, "Building".to_string(), snap.fabric.len()));
@@ -540,13 +540,16 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
 /// what was not tested. A row selects the second of its two elements, which is the run or
 /// the thing rather than the wall, so the model shows where.
 fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
-    use plumbline_world::building::clash::{Clash, ClashKind, NEVER_TESTED};
+    use plumbline_world::building::clash::{Clash, NEVER_TESTED};
     let found = match &snap.clashes {
         Some(Ok(found)) => found,
         Some(Err(why)) => return nothing(p, fonts, &format!("Clashes could not be worked out: {why}")),
         None => return nothing(p, fonts, "Clashes have not been worked out."),
     };
-    let list = |p: &mut ChildSpawnerCommands, title: &str, rows: Vec<&Clash>, depth: bool| {
+    // Where each is, to the room, first (call 177): the model's own, `clash::rooms_of`.
+    let room_of = |c: &Clash| found.found.iter().position(|x| std::ptr::eq(x, c)).and_then(|i| snap.clash_rooms.0.get(i)).cloned().unwrap_or_default();
+    let where_said = |room: &str, at: [f64; 3]| format!("{room}: {}, {}, {}", units::feet_as_ft_in(at[0], 16), units::feet_as_ft_in(at[1], 16), units::feet_as_ft_in(at[2], 16));
+    let list = |p: &mut ChildSpawnerCommands, title: &str, rows: Vec<&Clash>, depth: Option<&str>| {
         // Between things that are Known a clash is a finding; where either rests on
         // something assumed it is a question for the field.
         let field = rows.iter().filter(|c| c.status != Status::Known).count();
@@ -561,10 +564,10 @@ fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         let count = parts.join("  ·  ");
         table(p, fonts, title, count, |t| {
             let mut columns = vec![("", 7.0, false), ("What", 0.0, false)];
-            if depth {
-                columns.push(("In each other by", 120.0, true));
+            if let Some(by) = depth {
+                columns.push((by, 120.0, true));
             }
-            columns.push(("Where: east, north, up", 190.0, true));
+            columns.push(("Where: room; east, north, up", 290.0, true));
             header_row(t, fonts, &columns);
             for c in rows {
                 let selected = doc.selected.as_deref() == Some(c.b.as_str()) || doc.selected.as_deref() == Some(c.a.as_str());
@@ -573,26 +576,58 @@ fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     // a question for the field keeps its own colour (J22B-17).
                     cell(r, 7.0, false, |x| if c.status == Status::Known { mark(x, theme::red()) } else { dot(x, c.status) });
                     cell(r, 0.0, false, |x| named(x, fonts, format!("{} and {}", c.a_name, c.b_name), theme::ink(), format!("{} and {}", theme::kind_name(c.a_kind).to_lowercase(), theme::kind_name(c.b_kind).to_lowercase()), theme::ink_faint()));
-                    if depth {
+                    if depth.is_some() {
                         let by = c.by.map(|by| format!("{:.2} in", by * 12.0 + 0.0)).unwrap_or("not worked out".into());
                         cell(r, 120.0, true, |x| words(x, fonts, by, 12.5, Weight::Medium, theme::status_ink(c.status)));
                     }
-                    let at = format!("{}, {}, {}", units::feet_as_ft_in(c.at[0], 16), units::feet_as_ft_in(c.at[1], 16), units::feet_as_ft_in(c.at[2], 16));
-                    cell(r, 190.0, true, |x| words(x, fonts, at, 12.0, Weight::Regular, theme::ink_soft()));
+                    cell(r, 290.0, true, |x| words(x, fonts, where_said(&room_of(c), c.at), 12.0, Weight::Regular, theme::ink_soft()));
                 });
             }
         });
     };
-    let hard: Vec<&Clash> = found.found.iter().filter(|c| c.how == ClashKind::Hard && !c.through).collect();
-    let through: Vec<&Clash> = found.found.iter().filter(|c| c.how == ClashKind::Hard && c.through).collect();
-    if hard.is_empty() && through.is_empty() {
+    // What the model counts (call 175), and no more: two things in the same space; what is set
+    // against a wall, which is not a clash and is listed apart; and each hole to cut once.
+    let hard = found.in_the_same_space();
+    let against = found.set_against();
+    let holes = found.hole_rows();
+    if hard.is_empty() && holes.is_empty() {
         nothing(p, fonts, &format!("Nothing is in the same space as anything else: {} things tested.", found.tested));
     }
     if !hard.is_empty() {
-        list(p, "In the same space", hard, true);
+        list(p, "In the same space", hard, Some("In each other by"));
     }
-    if !through.is_empty() {
-        list(p, "Through a wall or a floor: holes to cut", through, false);
+    if !against.is_empty() {
+        list(p, "Set against: not clashes", against, Some("Set into it by"));
+    }
+    if !holes.is_empty() {
+        let field = holes.iter().filter(|c| c.status != Status::Known).count();
+        let count = if field == 0 { holes.len().to_string() } else { format!("{}  ·  {field} to verify in the field", holes.len()) };
+        table(p, fonts, "Through a wall or a floor: holes to cut", count, |t| {
+            header_row(t, fonts, &[("", 7.0, false), ("What", 0.0, false), ("Where: room; east, north, up", 290.0, true)]);
+            for c in holes {
+                let hole = c.hole.and_then(|h| found.holes.get(h).map(|hole| (h, hole)));
+                let go = hole.and_then(|(_, h)| h.pieces.first().map(|p| p.0.clone())).unwrap_or_else(|| c.b.clone());
+                let selected = doc.selected.as_deref() == Some(go.as_str());
+                row(t, selected, Some(go), |r| {
+                    cell(r, 7.0, false, |x| dot(x, c.status));
+                    // One hole: the run's pieces that pass through it, and what it is cut in.
+                    cell(r, 0.0, false, |x| match hole {
+                        Some((_, h)) => {
+                            let mut names: Vec<&str> = h.pieces.iter().take(3).map(|p| p.1.as_str()).collect();
+                            if h.pieces.len() > 3 {
+                                names.push("more");
+                            }
+                            let size = if h.size.is_empty() { String::new() } else { format!("{}, ", h.size) };
+                            let of = if h.pieces.len() > 1 { format!(", through {} pieces of the run", h.pieces.len()) } else { String::new() };
+                            named(x, fonts, format!("{} and {}", names.join(", "), h.through_name), theme::ink(), format!("1 hole, {size}{}{of}", theme::kind_name(h.through_kind).to_lowercase()), theme::ink_faint())
+                        }
+                        None => named(x, fonts, format!("{} and {}", c.a_name, c.b_name), theme::ink(), "a hole to cut".to_string(), theme::ink_faint()),
+                    });
+                    let room = c.hole.and_then(|h| snap.clash_rooms.1.get(h)).cloned().unwrap_or_else(|| room_of(c));
+                    cell(r, 290.0, true, |x| words(x, fonts, where_said(&room, c.at), 12.0, Weight::Regular, theme::ink_soft()));
+                });
+            }
+        });
     }
     let count = match found.left_out.len() {
         0 => "everything with a shape was; what follows never is".to_string(),

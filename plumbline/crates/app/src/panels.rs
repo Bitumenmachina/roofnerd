@@ -1050,10 +1050,27 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         // written out is used a few times a job and is below. (J19-2: on the whole house
         // the switches opened below the bottom of the panel.)
         heading(c, fonts, "Show");
+        // A trade's view, one click each (call 177): the buttons set the switches below.
+        c.spawn(Node { padding: UiRect::axes(px(6.0), px(3.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|b| {
+            for trade in crate::trades::TRADES {
+                let on = doc.trade.as_ref().is_some_and(|(t, set)| *t == trade && *set == doc.show);
+                let mut e = button(b, fonts, trade, "", on);
+                e.insert(Named { name: trade.to_string(), scrolls: true });
+                e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>, snap: Res<Snapshot>| {
+                    if press.button == PointerButton::Primary {
+                        crate::trades::press(&mut doc, &snap, trade);
+                    }
+                });
+            }
+        });
         let layer = |c: &mut ChildSpawnerCommands, name: &str, key: &str, colour: Color, on: bool, count: Option<usize>, act: Box<dyn Fn(&mut Doc) + Send + Sync>| {
             // A switch says what it did (VISUAL.md A9; J22B-7: twelve switches pressed and
             // the line along the bottom read "Opened." through all of them).
-            let said = format!("{name}: switched {}.", if on { "off" } else { "on" });
+            let mut said = format!("{name}: switched {}.", if on { "off" } else { "on" });
+            // The tags of the work inside a house wait for it to be seen through.
+            if name == "Sizes" && !on && !see_in(doc) {
+                said.push_str(" The work inside is tagged when the house is seen through (X) or its frame is shown.");
+            }
             row(c, false, format!("Show {name}"), move |doc| {
                 act(doc);
                 doc.say(Tone::Done, said.clone());
@@ -1074,7 +1091,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         };
         // The ground has a switch where something is drawn under it: with it off the
         // footings and the foundation walls are seen.
-        if snap.drawn.iter().any(|p| p.kind == Kind::Footing) || snap.storeys.iter().any(|s| s.elevation.is_some_and(|e| e < -0.5)) {
+        if snap.drawn.iter().any(|p| matches!(p.kind, Kind::Footing | Kind::PadFooting)) || snap.storeys.iter().any(|s| s.elevation.is_some_and(|e| e < -0.5)) {
             layer(c, "Ground", "", theme::yard(), doc.show.ground, None, Box::new(|doc| {
                 doc.show.ground = !doc.show.ground;
                 doc.redraw();
@@ -1116,7 +1133,9 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         }
         // The frame of each wall whose framing is priced: on, those walls are drawn as
         // their plates, studs and headers in place of their finished faces.
-        let framed = snap.dress.walls.values().filter(|d| d.framing.is_some()).count();
+        // The walls' frames, each floor's joists and each roof plane's rafters, and the beams and
+        // posts: the work that carries the building (call 177).
+        let framed = snap.dress.walls.values().filter(|d| d.framing.is_some()).count() + snap.frames.len() + snap.drawn.iter().filter(|p| matches!(p.kind, Kind::Beam | Kind::Post)).count();
         if framed > 0 {
             layer(c, "Framing", "", theme::lumber(), doc.show.framing, Some(framed), Box::new(|doc| {
                 doc.show.framing = !doc.show.framing;
@@ -1154,6 +1173,10 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
             doc.show.ghost = !doc.show.ghost;
             doc.redraw();
         }));
+        layer(c, "Sizes", "", theme::ink_soft(), doc.show.sizes, None, Box::new(|doc| {
+            doc.show.sizes = !doc.show.sizes;
+            doc.redraw();
+        }));
         layer(c, "Known, Assumed, Unknown", "", theme::amber(), doc.show.certainty, None, Box::new(|doc| {
             doc.show.certainty = !doc.show.certainty;
             doc.redraw();
@@ -1176,7 +1199,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 }
             });
         }
-        let found = snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.iter().filter(|x| !x.through).count()).unwrap_or(0);
+        let found = snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.in_the_same_space().len()).unwrap_or(0);
         if found > 0 {
             layer(c, "Clashes", "", theme::clash(), doc.show.clashes || doc.tab == crate::model::Tab::Clashes, Some(found), Box::new(|doc| {
                 doc.show.clashes = !doc.show.clashes;
@@ -1184,7 +1207,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
             }));
             // What the two colours of mark mean, where the marks are switched on (J19-20).
             if doc.show.clashes || doc.tab == crate::model::Tab::Clashes {
-                let sure = snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.found.iter().filter(|x| !x.through && x.status == plumbline_world::value::Status::Known).count()).unwrap_or(0);
+                let sure = snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.in_the_same_space().iter().filter(|x| x.status == plumbline_world::value::Status::Known).count()).unwrap_or(0);
                 // Each on a line of its own: side by side, the second mark was left at
                 // the end of the first line with its words below it.
                 c.spawn((Node { flex_direction: FlexDirection::Column, row_gap: px(2.0), padding: UiRect::new(px(22.0), px(8.0), px(0.0), px(4.0)), ..default() }, Pickable::IGNORE)).with_children(|l| {
@@ -1782,6 +1805,131 @@ fn inside_box(at: [f64; 2], size: [f64; 2], angle: f64, p: [f64; 2]) -> bool {
     u.abs() <= size[0] / 2.0 && v.abs() <= size[1] / 2.0
 }
 
+/// Whether the work of a placement is on show now: its trade's switch, its level, its
+/// system, and the work that comes down only while that is shown.
+pub fn on_show(doc: &Doc, p: &plumbline_world::building::Placement) -> bool {
+    let show = &doc.show;
+    show.discipline(p.discipline)
+        && show.storey.as_ref().is_none_or(|s| p.storey.as_ref() == Some(s))
+        && !p.storey.as_ref().is_some_and(|s| show.off_levels.contains(s))
+        && !p.system.as_ref().is_some_and(|s| show.off_systems.contains(s))
+}
+
+/// Whether what is inside the house can be seen: the house as glass, its frame, or the
+/// ground away. A tag on work behind a solid wall would hang in front of the wall.
+fn see_in(doc: &Doc) -> bool {
+    doc.show.ghost || doc.show.framing || !doc.show.ground
+}
+
+/// The work wears its size (call 177). Each run of a trade that is shown, each footing,
+/// foundation wall, beam, post and pad footing, and each fixture and piece of equipment
+/// wears a small tag at its middle: its size and what it carries, in the words the model
+/// has for it (`Placement::tag`). Of the pieces of one run end to end only the longest
+/// wears it, and a tag that would cover a nearer one is not drawn (`place_labels`).
+fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
+    use plumbline_world::building::Placement;
+    if !doc.show.sizes || doc.plan || doc.walk || !see_in(doc) {
+        return;
+    }
+    let shown: Vec<&Placement> = snap.drawn.iter().filter(|p| on_show(doc, p)).filter(|p| !(snap.work.get(&p.path) == Some(&plumbline_world::WorkStatus::Demolish) && !doc.show.demolition)).collect();
+    // The pieces of a run, end to end: one tag for them, on the longest. Two pieces are
+    // end to end where an end of one is within a foot of an end of the other, they run the
+    // same way, and carry the same size of the same system.
+    let runs: Vec<(usize, &Placement, [Vec3; 2])> = shown
+        .iter()
+        .enumerate()
+        .filter_map(|(i, p)| match &p.shape {
+            Shape::Run { a, b, .. } if p.kind.is_segment() && p.tag.is_some() => Some((i, *p, [to_view(doc.origin, *a), to_view(doc.origin, *b)])),
+            _ => None,
+        })
+        .collect();
+    let mut group: Vec<usize> = (0..runs.len()).collect();
+    fn find(group: &mut [usize], i: usize) -> usize {
+        let mut r = i;
+        while group[r] != r {
+            r = group[r];
+        }
+        group[i] = r;
+        r
+    }
+    for i in 0..runs.len() {
+        for j in (i + 1)..runs.len() {
+            let (x, y) = (&runs[i], &runs[j]);
+            if x.1.tag != y.1.tag || x.1.system != y.1.system || x.1.storey != y.1.storey {
+                continue;
+            }
+            let (dx, dy) = ((x.2[1] - x.2[0]).normalize_or_zero(), (y.2[1] - y.2[0]).normalize_or_zero());
+            if dx.dot(dy).abs() < 0.98 {
+                continue;
+            }
+            let meets = x.2.iter().any(|e| y.2.iter().any(|f| e.distance(*f) < 1.0));
+            if meets {
+                let (gx, gy) = (find(&mut group, i), find(&mut group, j));
+                group[gx] = gy;
+            }
+        }
+    }
+    let mut longest: std::collections::HashMap<usize, (f32, usize)> = std::collections::HashMap::new();
+    for i in 0..runs.len() {
+        let g = find(&mut group, i);
+        let length = runs[i].2[0].distance(runs[i].2[1]);
+        let best = longest.entry(g).or_insert((-1.0, i));
+        if length > best.0 {
+            *best = (length, i);
+        }
+    }
+    let mut tags: Vec<(String, Vec3, Color)> = Vec::new();
+    for (g, (_, i)) in &longest {
+        let _ = g;
+        let (_, p, [a, b]) = &runs[*i];
+        tags.push((p.tag.clone().unwrap_or_default(), (*a + *b) / 2.0, theme::system_colour(snap.classification(p.system.as_ref()))));
+    }
+    // A foundation wall is a wall below the ground or one that is cast; no other wall wears one.
+    let below = |p: &Placement| p.storey.as_ref().and_then(|st| snap.storeys.iter().find(|x| &x.path == st)).and_then(|x| x.elevation).is_some_and(|e| e < -0.5);
+    for p in &shown {
+        let Some(tag) = &p.tag else {
+            if matches!(p.kind, Kind::Equipment | Kind::Fixture) && p.discipline != Discipline::Architecture {
+                if let Shape::Box { at, size, .. } = &p.shape {
+                    tags.push((p.name.clone(), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::system_colour(snap.classification(p.system.as_ref()))));
+                }
+            }
+            continue;
+        };
+        // What is under the ground is tagged where the ground is away, and the beams and
+        // posts where the frame is shown: a trade's view carries its own tags.
+        let under = !doc.show.ground;
+        let frame = doc.show.framing;
+        match (&p.shape, p.kind) {
+            (_, Kind::Footing | Kind::PadFooting | Kind::Wall) if !under => {}
+            (_, Kind::Beam | Kind::Post) if !frame => {}
+            (Shape::Wall { a, b, base, height, .. }, Kind::Footing) => tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete())),
+            (Shape::Wall { a, b, base, height, .. }, Kind::Wall) if below(p) || snap.dress.walls.get(&p.path).is_some_and(|d| d.concrete) => {
+                tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete()))
+            }
+            (Shape::Run { a, b, .. }, Kind::Beam | Kind::Post) => tags.push((tag.clone(), (to_view(doc.origin, *a) + to_view(doc.origin, *b)) / 2.0, theme::lumber())),
+            (Shape::Box { at, size, .. }, Kind::PadFooting) => tags.push((tag.clone(), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::concrete())),
+            _ => {}
+        }
+    }
+    // The same words from the same place are one tag.
+    tags.sort_by(|x, y| x.0.cmp(&y.0).then(x.1.x.total_cmp(&y.1.x)).then(x.1.z.total_cmp(&y.1.z)).then(x.1.y.total_cmp(&y.1.y)));
+    tags.dedup_by(|x, y| x.0 == y.0 && x.1.distance(y.1) < 0.2);
+    for (words, at, colour) in tags {
+        o.spawn((
+            Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(6.0), px(1.0)), column_gap: px(4.0), align_items: AlignItems::Center, border_radius: BorderRadius::all(px(8.0)), ..default() },
+            UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
+            BackgroundColor(theme::panel().with_alpha(0.86)),
+            Pickable::IGNORE,
+            Label { at: at + Vec3::Y * 0.25, facing: None, rank: 2 },
+            Named { name: format!("Tag {words}"), scrolls: false },
+        ))
+        .with_children(|l| {
+            l.spawn((Node { width: px(6.0), height: px(6.0), border_radius: BorderRadius::all(px(3.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(colour), Pickable::IGNORE));
+            quiet(l, fonts, theme::spoken(&words), 10.5, Weight::Medium, theme::ink());
+        });
+    }
+}
+
 fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
     p.spawn((Node { position_type: PositionType::Absolute, top: px(0.0), left: px(0.0), right: px(0.0), bottom: px(0.0), overflow: Overflow::clip(), ..default() }, Pickable::IGNORE)).with_children(|o| {
         let roof_on_show = doc.show.roof && !doc.show.ghost && doc.show.storey.is_none() && !doc.walk;
@@ -1917,6 +2065,52 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     l.spawn((Node { width: px(6.0), height: px(6.0), ..default() }, BackgroundColor(if selected && plane.worst() == Status::Unknown { theme::red_wash() } else { dot }), Pickable::IGNORE));
                 }
             });
+        }
+        size_tags(o, fonts, doc, snap);
+        // Each clash's mark says the room it is in (call 177), the model's: the place is
+        // east, north and up in the sheet, and here it is in which room.
+        if matches!(doc.tab, crate::model::Tab::Clashes | crate::model::Tab::Verify) || doc.show.clashes {
+            if let Some(Ok(found)) = &snap.clashes {
+                for c in found.in_the_same_space() {
+                    let room = found.found.iter().position(|x| std::ptr::eq(x, c)).and_then(|i| snap.clash_rooms.0.get(i)).cloned().unwrap_or_default();
+                    let words = if room == "outside any room" { room.clone() } else { format!("in {room}") };
+                    let colour = if c.status == Status::Known { theme::clash() } else { theme::clash_to_verify() };
+                    o.spawn((
+                        Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(6.0), px(1.0)), column_gap: px(4.0), align_items: AlignItems::Center, border_radius: BorderRadius::all(px(8.0)), ..default() },
+                        UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
+                        BackgroundColor(theme::panel().with_alpha(0.88)),
+                        Pickable::IGNORE,
+                        Label { at: to_view(doc.origin, c.at) + Vec3::Y * 1.1, facing: None, rank: 3 },
+                        Named { name: format!("Tag clash {words}"), scrolls: false },
+                    ))
+                    .with_children(|l| {
+                        l.spawn((Node { width: px(6.0), height: px(6.0), border_radius: BorderRadius::all(px(3.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(colour), Pickable::IGNORE));
+                        quiet(l, fonts, theme::spoken(&words), 10.5, Weight::Medium, theme::ink());
+                    });
+                }
+            }
+        }
+        // A floor whose joists are named and whose joists' direction is not said has none
+        // drawn, and says why (call 177).
+        if doc.show.framing && doc.show.architecture && !doc.plan && !doc.walk {
+            for frame in snap.frames.iter().filter(|f| f.kind == Kind::Floor && !f.said) {
+                let Some(floor) = snap.drawn.iter().find(|p| p.path == frame.path) else { continue };
+                let Shape::Floor { boundary, top, .. } = &floor.shape else { continue };
+                if !on_show(doc, floor) {
+                    continue;
+                }
+                let c = centroid(boundary);
+                let words = "joists: direction not said";
+                o.spawn((
+                    Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(7.0), px(2.0)), border_radius: BorderRadius::all(px(8.0)), ..default() },
+                    UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
+                    BackgroundColor(theme::panel().with_alpha(0.88)),
+                    Pickable::IGNORE,
+                    Label { at: to_view(doc.origin, [c[0], c[1], *top + 0.2]), facing: None, rank: 1 },
+                    Named { name: format!("Tag {words}"), scrolls: false },
+                ))
+                .with_children(|l| quiet(l, fonts, words, 10.5, Weight::Medium, theme::amber()));
+            }
         }
         // The selected element of the rest of the building: its name on it.
         if let Some(placed) = doc.selected.as_ref().and_then(|s| snap.drawn.iter().find(|p| p.path == *s)) {

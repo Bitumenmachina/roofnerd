@@ -14,6 +14,8 @@
 //! many pixels a foot is. Two things with one name are told apart as "Height" and
 //! "Height #2", from the top of the screen down. Without the variable nothing is written.
 //!
+//! Also: `state<TAB>Ground<TAB>off`, one line for each switch of the Show list (and `state<TAB>Level<TAB>all`).
+//!
 //! Beside it, in `<file>.said`, is every message the window gave, one to a line in the
 //! order given, in the words on the screen: a demonstration checks what a person was
 //! told, and not only what the saved job holds.
@@ -115,6 +117,29 @@ pub fn write(
         before = Some((window, name.clone()));
         let called = if count == 1 { name.clone() } else { format!("{name} #{count}") };
         out.push_str(&format!("{window}\t{called}\t{}\t{}\n", x.round(), y.round()));
+    }
+    // What each switch of the Show list reads, so that a script can check what a button of
+    // a trade set (call 177): `state<TAB>Ground<TAB>off`. And the level on show alone.
+    {
+        let show = &doc.show;
+        let level = show.storey.as_ref().and_then(|s| snap.storeys.iter().find(|x| &x.path == s)).map(|s| s.name.clone()).unwrap_or_else(|| "all".to_string());
+        for (name, on) in [
+            ("Ground", show.ground),
+            ("Finishes", show.finishes),
+            ("Framing", show.framing),
+            ("Architecture", show.architecture),
+            ("Roof", show.roof),
+            ("Mechanical", show.mechanical),
+            ("Electrical", show.electrical),
+            ("Plumbing", show.plumbing),
+            ("See through", show.ghost),
+            ("Sizes", show.sizes),
+            ("Known, Assumed, Unknown", show.certainty),
+            ("Clashes", show.clashes),
+        ] {
+            out.push_str(&format!("state\t{name}\t{}\n", if on { "on" } else { "off" }));
+        }
+        out.push_str(&format!("state\tLevel\t{level}\n"));
     }
     away.sort();
     away.dedup_by(|a, b| a.0 == b.0);

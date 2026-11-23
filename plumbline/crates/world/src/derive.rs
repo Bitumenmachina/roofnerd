@@ -447,6 +447,22 @@ fn roof_measures(planes: &[(String, Derived)], lines_of: &mut BTreeMap<(String, 
     m
 }
 
+/// Which way a plane's rafters run: its outline on the plan, the way up the plane (square to
+/// its eave, toward where the plane lies) and its rise in 12. One rule, for what is counted
+/// and what is drawn (call 177).
+pub(crate) fn rafter_layout(outline: Option<&Outline>, pitch: Option<&Pitch>) -> Result<(Vec<P2>, P2, f64), String> {
+    let (Some(o), Some(p)) = (outline, pitch) else { return Err((if outline.is_none() { "no outline entered" } else { "no pitch entered" }).into()) };
+    let Some(ring) = o.points_ft() else { return Err(format!("the outline {NOT_CONVERTED}")) };
+    let Some(rise) = p.0.value else { return Err("no pitch entered: the rafters' length is along the slope".into()) };
+    let Some(eave) = o.eave_ft().and_then(|line| check::eave_edge(&ring, line).ok()) else { return Err("it has no eave: the rafters run up the plane from its eave".into()) };
+    // Up the plane: square to the eave, toward where the plane lies.
+    let (ex, ey) = (eave[1][0] - eave[0][0], eave[1][1] - eave[0][1]);
+    let middle = [ring.iter().map(|q| q[0]).sum::<f64>() / ring.len() as f64, ring.iter().map(|q| q[1]).sum::<f64>() / ring.len() as f64];
+    let toward = (middle[0] - eave[0][0]) * -ey + (middle[1] - eave[0][1]) * ex;
+    let up = if toward >= 0.0 { [-ey, ex] } else { [ey, -ex] };
+    Ok((ring, up, rise))
+}
+
 /// A plane's rafters counted (call 165): `rafters`, `rafter_length` (along the slope: each
 /// piece's length on plan times the plane's slope factor, its overhang being in the outline as
 /// drawn, so a rafter's tail is in its length) and `rafter_longest`. They run up the plane
@@ -460,15 +476,11 @@ fn rafter_figures(me: &str, outline: Option<&Outline>, pitch: Option<&Pitch>, sp
     let mut inputs = vec![format!("{me}#{K_OUTLINE}"), format!("{me}#{K_PITCH}")];
     inputs.push(format!("{me}#{K_COST}"));
     let refused = |why: &str| names.iter().map(|(n, u, f)| (n.to_string(), Derived::refused(u, f, &inputs, why))).collect::<BTreeMap<_, _>>();
-    let (Some(o), Some(p)) = (outline, pitch) else { return refused(if outline.is_none() { "no outline entered" } else { "no pitch entered" }) };
-    let Some(ring) = o.points_ft() else { return refused(&format!("the outline {NOT_CONVERTED}")) };
-    let Some(rise) = p.0.value else { return refused("no pitch entered: the rafters' length is along the slope") };
-    let Some(eave) = o.eave_ft().and_then(|line| check::eave_edge(&ring, line).ok()) else { return refused("it has no eave: the rafters run up the plane from its eave") };
-    // Up the plane: square to the eave, toward where the plane lies.
-    let (ex, ey) = (eave[1][0] - eave[0][0], eave[1][1] - eave[0][1]);
-    let middle = [ring.iter().map(|q| q[0]).sum::<f64>() / ring.len() as f64, ring.iter().map(|q| q[1]).sum::<f64>() / ring.len() as f64];
-    let toward = (middle[0] - eave[0][0]) * -ey + (middle[1] - eave[0][1]) * ex;
-    let up = if toward >= 0.0 { [-ey, ex] } else { [ey, -ex] };
+    let (ring, up, rise) = match rafter_layout(outline, pitch) {
+        Ok(laid) => laid,
+        Err(why) => return refused(&why),
+    };
+    let (Some(o), Some(p)) = (outline, pitch) else { return refused("no outline entered") };
     let factor = (1.0 + (rise / 12.0).powi(2)).sqrt();
     match crate::building::members::members_across(&ring, up, spacing) {
         Err(why) => refused(&why),

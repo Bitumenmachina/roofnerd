@@ -359,6 +359,8 @@ struct Builder<'a, 'w, 's> {
     /// What the work does to the thing being built (call 149): existing is drawn light,
     /// what comes down as a faint red ghost; new and temporary as they are.
     work: Option<plumbline_world::WorkStatus>,
+    /// The piece spawned last, so that a caller can add to it.
+    last: Option<Entity>,
 }
 
 impl Builder<'_, '_, '_> {
@@ -410,6 +412,7 @@ impl Builder<'_, '_, '_> {
             self.drawing.ghosts.push(path.to_string());
         }
         let mut e = self.commands.spawn((Mesh3d(mesh), MeshMaterial3d(handle), at, SceneMesh));
+        self.last = Some(e.id());
         if blend {
             // What is drawn as glass does not darken what is inside it.
             e.insert(NotShadowCaster);
@@ -455,6 +458,66 @@ impl Builder<'_, '_, '_> {
             }
         });
     }
+}
+
+/// A run of duct, pipe, conduit or cable as one solid piece, kept so that it can be drawn
+/// no thinner than two dots on the screen however far off the eye is (call 177). `scale`
+/// is its true size; `cross` says which two axes of it are its section (0 x, 1 y, 2 z).
+/// A stack (a vertical drain of 3 in and over) is drawn at its true size.
+#[derive(Component, Clone)]
+pub struct RunPiece {
+    pub scale: Vec3,
+    pub cross: [usize; 2],
+    pub stack: bool,
+}
+
+/// The fewest dots across a run is drawn. PLUMBLINE_RUN_DOTS=0 draws every run at its true
+/// size, as before call 177, to see what the two dots change.
+pub const RUN_DOTS: f32 = 2.0;
+
+fn run_dots() -> f32 {
+    static DOTS: std::sync::OnceLock<f32> = std::sync::OnceLock::new();
+    *DOTS.get_or_init(|| std::env::var("PLUMBLINE_RUN_DOTS").ok().and_then(|v| v.trim().parse().ok()).unwrap_or(RUN_DOTS))
+}
+
+/// Widen each run piece that would be thinner than `RUN_DOTS` on the screen to that
+/// many. How it is drawn only: the piece's size in the model, and every figure, stay as
+/// they are.
+pub fn widen_runs(camera: Query<(&Camera, &GlobalTransform, &Projection), With<MainCamera>>, mut pieces: Query<(&RunPiece, &mut Transform)>) {
+    let Ok((camera, eye, projection)) = camera.single() else { return };
+    let Some(size) = camera.logical_viewport_size() else { return };
+    for (piece, mut t) in &mut pieces {
+        // Dots to a foot of the model at this piece: with the lens, by how far it is.
+        let per_foot = match projection {
+            Projection::Perspective(p) => {
+                let away = eye.translation().distance(t.translation).max(0.01);
+                size.y / (2.0 * away * (p.fov / 2.0).tan())
+            }
+            Projection::Orthographic(o) => match o.scaling_mode {
+                ScalingMode::FixedVertical { viewport_height } => size.y / viewport_height.max(0.01),
+                _ => continue,
+            },
+            _ => continue,
+        };
+        let least = run_dots() / per_foot.max(1.0e-6);
+        let mut scale = piece.scale;
+        if !piece.stack {
+            for axis in piece.cross {
+                scale[axis] = scale[axis].max(least);
+            }
+        }
+        if (t.scale - scale).abs().max_element() > 1.0e-5 {
+            t.scale = scale;
+        }
+    }
+}
+
+/// Whether a placement's trade, level and system are on show.
+fn panels_show(show: &crate::model::Show, p: &plumbline_world::building::Placement) -> bool {
+    show.discipline(p.discipline)
+        && show.storey.as_ref().is_none_or(|s| p.storey.as_ref() == Some(s))
+        && !p.storey.as_ref().is_some_and(|s| show.off_levels.contains(s))
+        && !p.system.as_ref().is_some_and(|s| show.off_systems.contains(s))
 }
 
 /// Draw the building again from the snapshot whenever what is drawn has changed.
@@ -591,7 +654,7 @@ pub fn rebuild(
     drawing.frames.clear();
     drawing.surfaces.clear();
     let drawing = &mut *drawing;
-    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None, flat: on_plan_view, work: None };
+    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None, flat: on_plan_view, work: None, last: None };
     let has_walls = snap.drawn.iter().any(|p| p.kind == Kind::Wall);
     // Each outside wall as the roof's edge sees it: its line, the way its outside face
     // looks, half its thickness and its top. An eave that hangs past one gets a soffit.
@@ -655,9 +718,17 @@ pub fn rebuild(
     }
 
     // ---- The rest of the building ----
+    // The foundation's view (call 177): the house as glass and the ground away leaves
+    // what is under it solid.
+    let under_solid = show.ghost && !show.ground;
     for p in &snap.drawn {
         // Its trade's switch, the level on show, its level's own switch, its system's.
         if !show.discipline(p.discipline) || show.storey.as_ref().is_some_and(|s| p.storey.as_ref() != Some(s)) || p.storey.as_ref().is_some_and(|s| show.off_levels.contains(s)) || p.system.as_ref().is_some_and(|s| show.off_systems.contains(s)) {
+            continue;
+        }
+        // A beam and a post are the frame's: drawn with Framing (call 177). A pad footing
+        // is under the ground, as a footing is.
+        if matches!(p.kind, Kind::Beam | Kind::Post) && !show.framing {
             continue;
         }
         // What the work takes down is drawn as a ghost while Demolition is on, and not
@@ -670,6 +741,7 @@ pub fn rebuild(
         build.wash = show.certainty.then(|| theme::certainty(p.status));
         match &p.shape {
             Shape::Wall { a, b, base, height, thickness, holes } => {
+                let below_ground = p.storey.as_ref().and_then(|st| snap.storeys.iter().find(|x| &x.path == st)).and_then(|x| x.elevation).is_some_and(|e| e < -0.5);
                 let (va, vb) = (to_view(origin, [a[0], a[1], *base]), to_view(origin, [b[0], b[1], *base]));
                 let length = va.distance(vb);
                 let along = (vb - va) / length.max(1e-6);
@@ -682,7 +754,7 @@ pub fn rebuild(
                     let meets = |at: &[f64; 2]| snap.drawn.iter().any(|q| q.kind == Kind::Footing && q.path != p.path && matches!(&q.shape, Shape::Wall { a: qa, b: qb, .. } if [qa, qb].iter().any(|e| (e[0] - at[0]).abs() < 0.01 && (e[1] - at[1]).abs() < 0.01)));
                     let (back, on) = (if meets(a) { t / 2.0 } else { 0.0 }, if meets(b) { t / 2.0 } else { 0.0 });
                     let middle = va + along * ((length + on - back) / 2.0) + Vec3::Y * (h / 2.0);
-                    build.piece(&p.path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(length + back + on, h, t) }, theme::concrete(), 0.92, 0.0, true);
+                    build.piece(&p.path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(length + back + on, h, t) }, theme::concrete(), 0.92, 0.0, !under_solid);
                     // Its edges, to be outlined when it is selected: a footing had
                     // none, and a selected one showed only its tag (J24B-26, C5).
                     let (half, up) = (turn * Vec3::Z * (t / 2.0), Vec3::Y * h);
@@ -704,7 +776,7 @@ pub fn rebuild(
                     for m in plumbline_world::building::framing::frame(f64::from(length), *height, &spans, spacing) {
                         let (x0, x1, y0, y1) = (m.along[0] as f32, m.along[1] as f32, m.up[0] as f32, m.up[1] as f32);
                         let middle = va + along * ((x0 + x1) / 2.0) + Vec3::Y * ((y0 + y1) / 2.0);
-                        build.piece(&p.path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(x1 - x0, y1 - y0, deep as f32) }, theme::lumber(), 0.85, 0.0, true);
+                        build.piece(&p.path, None, solids.cube.clone(), Transform { translation: middle, rotation: turn, scale: Vec3::new(x1 - x0, y1 - y0, deep as f32) }, theme::lumber(), 0.85, 0.0, false);
                     }
                     // The wall is still one thing to pick: a clear body the size of the
                     // wall takes the click, the pointer and a double-click, so that a
@@ -780,9 +852,12 @@ pub fn rebuild(
                     }
                     // A wall priced as concrete (a foundation wall) is concrete on every face.
                     let cast = wd.is_some_and(|d| d.concrete);
-                    build.piece(&p.path, None, meshes.add(plain.mesh()), Transform::IDENTITY, if cast { theme::concrete() } else { theme::wall_inside() }, 0.92, 0.0, true);
+                    // With the house seen through and the ground away (the foundation's view)
+                    // what stands below the ground, and what is cast, stays solid (call 177).
+                    let stays = under_solid && (cast || below_ground);
+                    build.piece(&p.path, None, meshes.add(plain.mesh()), Transform::IDENTITY, if cast { theme::concrete() } else { theme::wall_inside() }, 0.92, 0.0, !stays);
                     if !bare.is_empty() {
-                        build.piece(&p.path, None, meshes.add(bare.mesh()), Transform::IDENTITY, if wrapped { theme::barrier() } else if cast { theme::concrete() } else { theme::wall_outside() }, if wrapped { 0.55 } else { 0.92 }, 0.0, true);
+                        build.piece(&p.path, None, meshes.add(bare.mesh()), Transform::IDENTITY, if wrapped { theme::barrier() } else if cast { theme::concrete() } else { theme::wall_outside() }, if wrapped { 0.55 } else { 0.92 }, 0.0, !stays);
                     }
                     if let (false, Some(pattern)) = (over.is_empty(), &upper) {
                         build.pattern = Some(pattern.clone());
@@ -916,6 +991,9 @@ pub fn rebuild(
                         for s in pts.windows(2) {
                             let turn = Quat::from_rotation_arc(Vec3::Y, (s[1] - s[0]).normalize_or(Vec3::Y));
                             build.piece(&p.path, p.system.as_ref(), solids.cylinder.clone(), Transform { translation: (s[0] + s[1]) / 2.0, rotation: turn, scale: Vec3::new(d, s[0].distance(s[1]), d) }, if d < THIN_FT { colour } else { fill }, 0.45, metal, false);
+                            if let (true, Some(id)) = (p.kind.is_segment(), build.last) {
+                                build.commands.entity(id).insert(RunPiece { scale: Vec3::new(d, s[0].distance(s[1]), d), cross: [0, 2], stack: p.stack });
+                            }
                             if d >= THIN_FT {
                                 edge(&mut build, s[0], s[1], d / 2.0, d / 2.0);
                             }
@@ -937,6 +1015,9 @@ pub fn rebuild(
                             let turn = Quat::from_mat3(&Mat3::from_cols(side, upward, dir));
                             let (from, to) = (s[0], s[1]);
                             build.piece(&p.path, p.system.as_ref(), solids.cube.clone(), Transform { translation: (from + to) / 2.0, rotation: turn, scale: Vec3::new(w, d, from.distance(to)) }, fill, 0.5, metal, false);
+                            if let (true, Some(id)) = (p.kind.is_segment(), build.last) {
+                                build.commands.entity(id).insert(RunPiece { scale: Vec3::new(w, d, from.distance(to)), cross: [0, 1], stack: p.stack });
+                            }
                             edge(&mut build, from, to, w / 2.0, d / 2.0);
                         }
                     }
@@ -1013,6 +1094,38 @@ pub fn rebuild(
         }
     }
 
+    // ---- The floors' joists (call 177) ----
+    // Where a priced line names them and the way they run is said: the members the model
+    // lays out (`building::frames`), each a board 1 1/2 in thick and as deep as the line
+    // says, hung from the top of its floor; and the rim at their ends. Under Framing, with
+    // the floor as it is (glass, when the house is seen through).
+    build.wash = None;
+    build.work = None;
+    if show.framing && show.architecture && !on_plan_view {
+        for frame in snap.frames.iter().filter(|f| f.kind == Kind::Floor && f.said) {
+            let Some(floor) = snap.drawn.iter().find(|p| p.path == frame.path) else { continue };
+            let Shape::Floor { top, .. } = &floor.shape else { continue };
+            if !panels_show(&show, floor) {
+                continue;
+            }
+            build.work = snap.work.get(&frame.path).copied();
+            if build.work == Some(plumbline_world::WorkStatus::Demolish) && !show.demolition {
+                continue;
+            }
+            let depth = frame.depth as f32;
+            let thick = plumbline_world::building::members::MEMBER_THICKNESS_FT as f32;
+            for [a, b] in frame.members.iter().chain(frame.rim.iter()) {
+                let (va, vb) = (to_view(origin, [a[0], a[1], *top]), to_view(origin, [b[0], b[1], *top]));
+                let length = va.distance(vb);
+                if length < 1.0e-4 {
+                    continue;
+                }
+                let turn = Quat::from_rotation_y((b[1] - a[1]).atan2(b[0] - a[0]) as f32);
+                build.piece(&frame.path, None, solids.cube.clone(), Transform { translation: (va + vb) / 2.0 - Vec3::Y * (depth / 2.0), rotation: turn, scale: Vec3::new(length, depth, thick) }, theme::lumber(), 0.85, 0.0, false);
+            }
+        }
+    }
+
     // ---- The roof ----
     build.wash = None;
     build.work = None;
@@ -1066,6 +1179,29 @@ pub fn rebuild(
             build.work = None;
             let lifted: Vec<Vec3> = positions.iter().map(|p| *p + normal * 0.06).collect();
             build.drawing.frames.push((info.path.clone(), (0..lifted.len()).map(|i| (lifted[i], lifted[(i + 1) % lifted.len()])).collect()));
+            // The rafters of this plane, where a priced line names them (call 177): laid by
+            // the model on the plan, lifted onto the plane's own slope, each a board 1 1/2 in
+            // thick and as deep as the line says, under the plane's surface.
+            if let (true, Some(frame)) = (show.framing && !on_plan_view, snap.frames.iter().find(|f| f.kind == Kind::RoofPlane && f.path == info.path)) {
+                let depth = frame.depth as f32;
+                let thick = plumbline_world::building::members::MEMBER_THICKNESS_FT as f32;
+                for [a, b] in &frame.members {
+                    let (pa, pb) = (to_view(origin, [a[0], a[1], plane.height_at(*a)]), to_view(origin, [b[0], b[1], plane.height_at(*b)]));
+                    let length = pa.distance(pb);
+                    if length < 1.0e-4 {
+                        continue;
+                    }
+                    let dir = (pb - pa) / length;
+                    // Its section square to the slope: across it level, and its depth under the surface.
+                    let side = dir.cross(Vec3::Y).normalize_or(Vec3::X);
+                    let upward = dir.cross(side).normalize_or(Vec3::Y);
+                    // Whichever way up it comes, the three stay a right-handed set: turned
+                    // together (side and up both reversed), never one of them alone.
+                    let (side, upward) = if upward.y < 0.0 { (-side, -upward) } else { (side, upward) };
+                    let turn = Quat::from_mat3(&Mat3::from_cols(side, upward, dir));
+                    build.piece(&info.path, None, solids.cube.clone(), Transform { translation: (pa + pb) / 2.0 - upward * (depth / 2.0), rotation: turn, scale: Vec3::new(thick, depth, length) }, theme::lumber(), 0.85, 0.0, false);
+                }
+            }
         }
         for line in &snap.lines {
             let Some([a, b]) = line.ends else { continue };
@@ -1507,9 +1643,9 @@ pub fn in_what_now(doc: &mut Doc, path: &str) -> Option<String> {
 /// 1' 4"" read as a size (J25A-5).
 fn said_in(found: &plumbline_world::building::clash::Clashes, path: &str) -> Option<String> {
     let with: Vec<String> = found
-        .found
-        .iter()
-        .filter(|c| c.how == plumbline_world::building::clash::ClashKind::Hard && !c.through && (c.a == path || c.b == path))
+        .in_the_same_space()
+        .into_iter()
+        .filter(|c| c.a == path || c.b == path)
         .map(|c| format!("{}{}", if c.a == path { &c.b_name } else { &c.a_name }, c.by.map(|by| format!(" ({} into each other)", near(by))).unwrap_or_default()))
         .collect();
     (!with.is_empty()).then(|| with.join(", and "))
@@ -2058,7 +2194,7 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
     // marked on the model: three short strokes, seen through whatever is in front.
     if matches!(doc.tab, crate::model::Tab::Clashes | crate::model::Tab::Verify) || doc.show.clashes {
         if let Some(Ok(found)) = &snap.clashes {
-            for c in found.found.iter().filter(|c| !c.through) {
+            for c in found.in_the_same_space() {
                 let at = to_view(doc.origin, c.at);
                 // How sure it is shows on the mark (J19-20: every mark was one red). Between
                 // things that are Known it is a finding and is red; where either rests on

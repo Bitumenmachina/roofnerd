@@ -65,6 +65,7 @@ pub mod clash;
 mod footings;
 pub mod forms;
 pub mod framing;
+pub mod frames;
 pub mod members;
 pub mod model;
 pub mod network;
@@ -1253,6 +1254,20 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
 /// What is not in a count of joists or rafters, said on every figure of it (call 165).
 pub const NOT_COUNTED: &str = "blocking, hangers and doubled members are not in this count";
 
+/// Which way a floor's joists run, from its boundary and what is said of it: the way (a
+/// direction on the plan), whether anything was said, and how sure that is. Square to the
+/// longest edge (the short way) unless the floor says the long way; not said, the short way,
+/// Assumed. One rule, for what is counted and for what is drawn (call 177).
+pub(crate) fn joist_run(ring: &[P2], span: Option<&JoistsSpan>) -> Option<(P2, Option<bool>, Status)> {
+    let longest = (0..ring.len()).map(|i| (ring[i], ring[(i + 1) % ring.len()])).max_by(|a, b| geom::dist(a.0, a.1).total_cmp(&geom::dist(b.0, b.1)));
+    let (p, q) = longest.filter(|(p, q)| geom::dist(*p, *q) > 1.0e-9)?;
+    let along = [q[0] - p[0], q[1] - p[1]];
+    let said = span.and_then(|s| s.0.value.as_deref().map(|w| (w == LONG_WAY, s.0.status)));
+    let (long_way, way_status) = said.unwrap_or((false, Status::Assumed));
+    let run = if long_way { along } else { [-along[1], along[0]] };
+    Some((run, said.map(|(long, _)| long), way_status))
+}
+
 /// A floor's joists counted across its boundary (call 165): `joists`, `joist_length`,
 /// `joist_longest` and `rim_length`. They run square to the longest edge (the short way) unless
 /// the floor says the long way; not said, the short way is taken, Assumed, and the figures say so.
@@ -1269,12 +1284,7 @@ pub(crate) fn joist_figures(floor: Option<&Floor>, span: Option<&JoistsSpan>, sp
         return refused(if floor.boundary.value.is_some() { "the boundary is in a unit this program does not convert" } else { "no boundary entered" });
     };
     // Which way they run: square to the longest edge, or along it.
-    let longest = (0..ring.len()).map(|i| (ring[i], ring[(i + 1) % ring.len()])).max_by(|a, b| geom::dist(a.0, a.1).total_cmp(&geom::dist(b.0, b.1)));
-    let Some((p, q)) = longest.filter(|(p, q)| geom::dist(*p, *q) > 1.0e-9) else { return refused("the boundary has no length") };
-    let along = [q[0] - p[0], q[1] - p[1]];
-    let said = span.and_then(|s| s.0.value.as_deref().map(|w| (w == LONG_WAY, s.0.status)));
-    let (long_way, way_status) = said.unwrap_or((false, Status::Assumed));
-    let run = if long_way { along } else { [-along[1], along[0]] };
+    let Some((run, said, way_status)) = joist_run(&ring, span) else { return refused("the boundary has no length") };
     let mut note = Vec::new();
     if said.is_none() {
         note.push("joists usually span the short way: say which way these run".to_string());
@@ -2661,6 +2671,71 @@ pub struct Placement {
     /// What a placed thing is drawn as, inside its box: what its item says, else what
     /// its name says. None: the box, and always for anything that is not placed.
     pub form: Option<forms::Form>,
+    /// What it is called by its size, in the words the trade uses (call 177): "3 in waste",
+    /// "3/4 in cold water", "16 x 8 supply" for a run on a system; its type's own name for a
+    /// run that is on none, a beam, a post, a pad footing, a footing or a wall. None for
+    /// what has no type to name. Worked here, once; a window only writes it.
+    pub tag: Option<String>,
+    /// A vertical drain of 3 in or more: a stack (call 177). Its tag says so.
+    pub stack: bool,
+}
+
+/// A length in feet as inches the way a pipe is sized: to the sixteenth as a fraction
+/// where it is one ("3/4", "1 1/2"), else as a decimal ("0.4").
+fn inches_said(feet: f64) -> String {
+    let inches = feet * 12.0;
+    let sixteenths = inches * 16.0;
+    if (sixteenths - sixteenths.round()).abs() > 0.02 {
+        let d = format!("{:.2}", inches);
+        return d.trim_end_matches('0').trim_end_matches('.').to_string();
+    }
+    let parts = sixteenths.round() as u64;
+    let (whole, mut top, mut bottom) = (parts / 16, parts % 16, 16);
+    while top > 0 && top % 2 == 0 {
+        top /= 2;
+        bottom /= 2;
+    }
+    match (whole, top) {
+        (w, 0) => format!("{w}"),
+        (0, t) => format!("{t}/{bottom}"),
+        (w, t) => format!("{w} {t}/{bottom}"),
+    }
+}
+
+/// What a classification of system is called in the trade, in a size: a drain carries
+/// "waste", a supply duct "supply".
+pub fn trade_word(classification: &str) -> Option<&'static str> {
+    Some(match classification {
+        "Supply Air" => "supply",
+        "Return Air" => "return",
+        "Exhaust Air" => "exhaust",
+        "Refrigerant" => "refrigerant",
+        "Domestic Cold Water" => "cold water",
+        "Domestic Hot Water" => "hot water",
+        "Sanitary" => "waste",
+        "Vent" => "vent",
+        "Power" => "power",
+        "Lighting" => "lighting",
+        _ => return None,
+    })
+}
+
+/// A size and what it carries, said as a tag (call 177): the section by itself, then the
+/// system's word. A run on no system, or on one with no trade word, is its type's name. One
+/// whose size is not known says so.
+pub fn run_tag(type_name: Option<&str>, round: Option<f64>, rect: Option<(f64, f64)>, classification: Option<&str>) -> Option<String> {
+    let size = match (round, rect) {
+        (Some(d), _) => Some(format!("{} in", inches_said(d))),
+        (None, Some((w, d))) => Some(format!("{} x {}", inches_said(w), inches_said(d))),
+        _ => None,
+    };
+    match (size, classification.and_then(trade_word)) {
+        (Some(size), Some(word)) => Some(format!("{size} {word}")),
+        // Its size is not known: said, and not left off or guessed.
+        (None, Some(word)) => Some(format!("{word}, size not known")),
+        (Some(size), None) => Some(type_name.map(str::to_string).unwrap_or(size)),
+        (None, None) => Some(type_name.map(|t| format!("{t}, size not known")).unwrap_or_else(|| "size not known".to_string())),
+    }
 }
 
 /// Every element of this module's kinds that has a shape, placed in space, and every one
@@ -2814,7 +2889,26 @@ pub fn placements(job: &mut Job) -> (Vec<Placement>, Vec<(String, String)>) {
                     }
                     _ => None,
                 };
-                drawn.push(Placement { path: n.path.clone(), name: n.name.clone(), kind, storey, system, discipline, shape, status, form })
+                // What it is called by its size (call 177): worked here, from its type.
+                let type_path = match kind {
+                    Kind::Wall | Kind::Footing => w.get::<Wall>(e).and_then(|c| c.type_name.value.clone()),
+                    Kind::Post | Kind::PadFooting => w.get::<Stood>(e).and_then(|c| c.type_name.value.clone()),
+                    k if k.is_segment() || k == Kind::Beam => w.get::<Segment>(e).and_then(|c| c.type_name.value.clone()),
+                    _ => None,
+                };
+                let type_name = type_path.as_ref().and_then(|t| tree.names.get(t)).map(String::as_str);
+                let class = system.as_ref().and_then(|p| index.get(p)).and_then(|s| w.get::<SystemInfo>(*s)).map(|s| s.classification.as_str());
+                let (tag, stack) = match &shape {
+                    Shape::Run { a, b, round, rect } if kind.is_segment() => {
+                        let upright = (a[0] - b[0]).hypot(a[1] - b[1]) < 1.0e-6 && (a[2] - b[2]).abs() > 1.0e-6;
+                        let stack = upright && class == Some("Sanitary") && round.is_some_and(|d| d >= 0.25 - 1.0e-6);
+                        let tag = run_tag(type_name, *round, *rect, class);
+                        (tag.map(|t| if stack { format!("{t} stack") } else { t }), stack)
+                    }
+                    _ if type_name.is_some() => (type_name.map(str::to_string), false),
+                    _ => (None, false),
+                };
+                drawn.push(Placement { path: n.path.clone(), name: n.name.clone(), kind, storey, system, discipline, shape, status, form, tag, stack })
             }
             Err(why) => not_drawn.push((n.path.clone(), why)),
         }

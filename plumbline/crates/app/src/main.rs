@@ -54,6 +54,7 @@ mod scene;
 mod sheet;
 mod skylight;
 mod theme;
+mod trades;
 mod tools;
 
 use std::path::PathBuf;
@@ -116,7 +117,7 @@ fn main() {
         .add_systems(Last, closing)
         .add_systems(
             Update,
-            ((tools::frame_begins, keys).chain(), plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::place_camera, scene::ground_tone, glass::follow).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
+            ((tools::frame_begins, keys).chain(), plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::place_camera, scene::widen_runs, scene::ground_tone, glass::follow).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
         )
         .run();
 }
@@ -199,9 +200,11 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
         plan: false,
         plan_level: None,
         carried,
+        trade: None,
+        before_trade: None,
         also: None,
         walk: false,
-        show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, ground: true, framing: false, finishes: true, demolition: true, off_levels: Default::default(), off_systems: Default::default(), away: [false; 3] },
+        show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, ground: true, framing: false, finishes: true, demolition: true, off_levels: Default::default(), off_systems: Default::default(), away: [false; 3], sizes: false },
         // The sheet opens on the estimate once anything is priced; before that, on what
         // has been taken off.
         tab: if has_lines { Tab::Estimate } else if has_roof { Tab::Roof } else { Tab::Building },

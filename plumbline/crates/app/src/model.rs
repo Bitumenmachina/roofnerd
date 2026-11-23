@@ -265,6 +265,9 @@ pub struct Show {
     /// right, the tools along the foot. Each has a switch at the lower right (the fixed
     /// rule: every panel has a switch that reads on or off at a glance).
     pub away: [bool; 3],
+    /// Each run, footing, beam and post of a trade that is shown wears a small tag of its
+    /// size and what it carries (call 177).
+    pub sizes: bool,
 }
 
 impl Show {
@@ -288,6 +291,11 @@ impl Show {
 
 #[derive(Resource)]
 pub struct Doc {
+    /// The trade whose button was pressed last and the switches as it set them
+    /// (call 177): its button reads on while they are still so.
+    pub trade: Option<(&'static str, Show)>,
+    /// The switches as they were before the first trade was pressed: what "All" puts back.
+    pub before_trade: Option<Show>,
     pub job: Job,
     pub path: PathBuf,
     /// The roof on show.
@@ -668,6 +676,9 @@ pub struct Snapshot {
     pub drawings: Vec<crate::plans::Laid>,
     /// What clashes (`building::clash::clashes`), or why that could not be worked out.
     pub clashes: Option<Result<plumbline_world::building::clash::Clashes, String>>,
+    /// The room each of `clashes.found` is in, then the room each of its holes is in, or
+    /// "outside any room" (`clash::rooms_of`, call 177).
+    pub clash_rooms: (Vec<String>, Vec<String>),
     /// What is still to be verified in the field (`vif::vif`).
     pub verify: plumbline_world::vif::Vif,
     /// What each wall, roof plane, window and door is finished with, read from what is
@@ -703,6 +714,9 @@ pub struct Snapshot {
     pub extent: Option<([f64; 2], [f64; 2], f64)>,
     /// The rest of the building, placed in space.
     pub drawn: Vec<Placement>,
+    /// The joists of each floor and the rafters of each roof plane that a priced line names,
+    /// laid as lines on the plan (`building::frames`, call 177).
+    pub frames: Vec<plumbline_world::building::frames::Frame>,
     /// What has no shape to draw, and why.
     pub not_drawn: Vec<(String, String)>,
     pub storeys: Vec<StoreyTotals>,
@@ -749,6 +763,10 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     s.pricing = Some(view::pricing(&mut doc.job));
     s.estimate = Some(view::estimate(&mut doc.job));
     s.clashes = Some(plumbline_world::building::clash::clashes(&mut doc.job, None));
+    // Where each clash and each hole is, to the room (call 177): the model's own.
+    if let Some(Ok(found)) = &s.clashes {
+        s.clash_rooms = plumbline_world::building::clash::rooms_of(&mut doc.job, found);
+    }
     s.verify = plumbline_world::vif::vif(&mut doc.job);
     s.dress = plumbline_world::finish::dress(&mut doc.job);
     s.assemblies = {
@@ -883,6 +901,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     }
     s.drawn = drawn;
     s.not_drawn = not_drawn;
+    s.frames = plumbline_world::building::frames::frames(&mut doc.job);
     s.work = {
         let mut q = doc.job.world.query::<(&plumbline_world::Node, &plumbline_world::Work)>();
         q.iter(&doc.job.world).filter_map(|(n, w)| w.status.value.map(|v| (n.path.clone(), v))).collect()

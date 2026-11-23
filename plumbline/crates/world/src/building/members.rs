@@ -98,6 +98,21 @@ pub fn rim_length(outline: &[P2], run: P2) -> Result<f64, String> {
 /// Members across `outline` (feet on the plan, either way round) running along `run`, on
 /// marks `spacing` apart from the outline's first side.
 pub fn members_across(outline: &[P2], run: P2, spacing: f64) -> Result<Across, String> {
+    let (laid, left_out) = members_laid(outline, run, spacing)?;
+    Ok(Across { pieces: laid.iter().map(|m| m.0).collect(), left_out })
+}
+
+/// The members `members_across` counts, each placed: its length on plan and its two ends on
+/// the plan, in the order it counts them (edge members first, then by their marks), and how
+/// many were under 6 in and left out. A window draws these; it works out none of them.
+pub fn members_placed(outline: &[P2], run: P2, spacing: f64) -> Result<(Vec<[P2; 2]>, usize), String> {
+    let (laid, left_out) = members_laid(outline, run, spacing)?;
+    Ok((laid.iter().map(|m| [m.1, m.2]).collect(), left_out))
+}
+
+type Laid = (f64, P2, P2);
+
+fn members_laid(outline: &[P2], run: P2, spacing: f64) -> Result<(Vec<Laid>, usize), String> {
     if outline.len() < 3 {
         return Err("an outline has at least 3 corners".into());
     }
@@ -110,13 +125,16 @@ pub fn members_across(outline: &[P2], run: P2, spacing: f64) -> Result<Across, S
     let ring: Vec<P2> = outline.iter().map(|p| [p[0] * u[0] + p[1] * u[1], p[0] * v[0] + p[1] * v[1]]).collect();
     let (low, high) = ring.iter().fold((f64::MAX, f64::MIN), |(lo, hi), p| (lo.min(p[1]), hi.max(p[1])));
     let half = MEMBER_THICKNESS_FT / 2.0;
-    let mut pieces: Vec<f64> = Vec::new();
+    let mut pieces: Vec<Laid> = Vec::new();
     let mut left_out = 0;
-    let mut keep = |length: f64, pieces: &mut Vec<f64>| {
-        if length < SHORTEST_PIECE_FT - EPS {
+    // A piece lies along the members at `across`, from `lo` to `hi` along them.
+    let back = |lo: f64, hi: f64, at: f64| -> (P2, P2) { ([u[0] * lo + v[0] * at, u[1] * lo + v[1] * at], [u[0] * hi + v[0] * at, u[1] * hi + v[1] * at]) };
+    let mut keep = |lo: f64, hi: f64, at: f64, pieces: &mut Vec<Laid>| {
+        if hi - lo < SHORTEST_PIECE_FT - EPS {
             left_out += 1;
         } else {
-            pieces.push(length);
+            let (from, to) = back(lo, hi, at);
+            pieces.push((hi - lo, from, to));
         }
     };
     // Edge members: each edge that runs with the members, 3/4 in inside, as long as the edge.
@@ -132,8 +150,8 @@ pub fn members_across(outline: &[P2], run: P2, spacing: f64) -> Result<Across, S
         let b = if inside(&ring, middle, p[1] + 1.0e-4) { p[1] + half } else { p[1] - half };
         edges.push((b, lo, hi));
     }
-    for (_, lo, hi) in &edges {
-        keep(hi - lo, &mut pieces);
+    for (at, lo, hi) in &edges {
+        keep(*lo, *hi, *at, &mut pieces);
     }
     // Marks, from the first side: the line there cut to the outline.
     let mut k = 0usize;
@@ -160,13 +178,13 @@ pub fn members_across(outline: &[P2], run: P2, spacing: f64) -> Result<Across, S
             if edges.iter().any(|(eb, lo, hi)| (b - eb).abs() <= MEMBER_THICKNESS_FT + EPS && ((hi - lo) - length).abs() < 1.0e-6 && (lo - pair[0]).abs() < 1.0e-6) {
                 continue;
             }
-            keep(length, &mut pieces);
+            keep(pair[0], pair[1], b, &mut pieces);
         }
         if k > 100_000 {
             return Err("that many members are not a floor or a roof: check the spacing".into());
         }
     }
-    Ok(Across { pieces, left_out })
+    Ok((pieces, left_out))
 }
 
 #[cfg(test)]
