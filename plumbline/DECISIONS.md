@@ -6840,3 +6840,38 @@ with the hand, nothing jumps), and gains walking with doors that open.
 
 Built by one window builder at a time, after call 178's clean-up is merged; steps 1
 and 2 first, since they change every picture.
+
+### Call 185. The outside trim priced: fascia, soffit, gutters, corner boards, casing (2026-11-23; call 184 step 1's model half; the envelope reviewer of the sweep: "drawn but not priced")
+
+Call 184 draws detail only from what is priced. These are the figures and the starter
+lines that price the trim an eave, a rake, a corner and an opening have; the window
+draws each from its line (a call of its own for the window's half).
+
+**Figures, each worked in the model from what is drawn, Assumed where its positions
+are:**
+- **An eave's and a rake's `overhang`**: the distance on the plan from the roof's edge
+  to the outside face of the wall under it (what a carpenter measures a soffit by).
+  The wall under an edge is found as call 180 finds a roof over a wall (by the plan).
+  Unknown, with the reason, where no wall is found under the edge.
+- **A rake**: the sloped edge of a roof plane at a gable. Its `true_length` is its
+  length along the slope. Where the model does not yet hold a rake as a thing of its
+  own (it holds eaves, hips and ridges), it is made one, as an eave is.
+- **A wall's `outside_corners`**: how many of its two ends are outside corners of the
+  ring of walls it belongs to (a corner that points out of the house; an inside corner
+  is not one), and **`corner_board_length`**: its height for each of them. A corner is
+  counted on both its walls: a corner has a board on each face.
+- **An opening's `casing_length`**: a window, twice its width and its height (head,
+  two legs and the sill's apron); a door, its width and twice its height.
+
+**Starter lines** (each with no price entered, Division 6 unless said; the library
+grows and its counts move by this call):
+- on an eave: "Fascia", by `true_length`; "Soffit", `true_length * overhang` in SF;
+  the gutter line that is there already; "Downspouts", EA, **with no quantity until a
+  person types it** (how many is a judgment the program does not make);
+- on a rake: "Rake fascia", by `true_length`; "Rake soffit", `true_length * overhang`;
+- on an outside wall's assemblies with siding: "Corner boards", by
+  `corner_board_length`;
+- on a window and a door: "Exterior casing", by `casing_length`.
+
+The sample house's own lines do not change (its "Casing and trim" by the each stays a
+person's choice); nothing existing moves but the library's counts.

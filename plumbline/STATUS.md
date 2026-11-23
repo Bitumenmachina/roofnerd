@@ -9651,6 +9651,47 @@ window demonstration is rerun on this tree, their pictures show the window befor
 the merge**, and a wall moved in the window is undemonstrated. That rerun is the next
 window builder's first job.
 
+## The outside trim priced: a demonstration, written before it is built (call 185; 2026-11-23)
+
+`demos/trim.sh`, at the command line, from an empty job; made-up figures.
+
+**The house as made.** One level 9 ft high; a ring of walls on the lines of a box 24 ft
+(east) by 16 ft (north), 6 in thick (outside faces 24 ft 6 in by 16 ft 6 in). A gable
+roof drawn 1 ft outside the walls' lines all round (26 ft by 18 ft on plan), its ridge
+running east-west, pitch 6 in 12. A window 3 ft wide by 5 ft high and a door 3 ft wide
+by 6 ft 8 in high in the south wall.
+
+**By hand.**
+- Eaves: the north and the south, each 26.00 LF. Rakes: four, each the slope of a 9 ft
+  run at 6 in 12: 9 x 1.118034 = **10.0623 LF**; together 40.25 LF.
+- `overhang`: the roof's edge is 1 ft outside the walls' lines; the walls' outside
+  faces are 3 in outside their lines: 12 - 3 = **9 in (0.75 ft)** at every eave and rake.
+- Fascia, on the eaves: 2 x 26 = **52.00 LF**. Rake fascia: **40.25 LF**.
+- Soffit, on the eaves: 2 x 26 x 0.75 = **39.00 SF**. Rake soffit: 40.2492 x 0.75 =
+  **30.19 SF**.
+- Gutter (the line that exists): 52.00 LF. Downspouts: no figure until typed; typed 4
+  EA, Assumed, it is 4.
+- Corner boards: each wall has 2 outside corners: 2 x 9 = 18.00 LF a wall; four walls
+  **72.00 LF** (4 corners, a board on each face, 9 ft each).
+- Exterior casing: the window 2 x (3 + 5) = **16.00 LF**; the door 3 + 2 x 6.6667 =
+  **16.33 LF**.
+
+**Steps.** (1) The house drawn; the eaves and rakes list their lengths and overhangs
+as above, each Assumed with the positions it rests on. (2) The starter lines brought in
+and given to the eaves, the rakes, the walls, the window and the door: the estimate's
+quantities are the figures above, each with no price ("no figure", never zero), and
+"Downspouts" says a person is to say how many. (3) Prices typed (made up: fascia $4.00,
+soffit $6.00, corner boards $3.50, casing $3.00): fascia 52 x 4 = $208.00 and 40.25 x 4
+= $161.00; soffit 39 x 6 = $234.00 and 30.19 x 6 = $181.12; corner boards 72 x 3.5 =
+$252.00; casing (16 + 16.33) x 3 = $97.00 (to the cent as the program rounds a line:
+say each line). (4) **An L-shaped house** (a 24 by 16 box with a 12 by 10 wing off its
+north side): five outside corners and one inside: corner boards 10 x 9 = **90.00 LF**
+(the inside corner has none), and the two walls that meet at the inside corner have
+one outside corner each. (5) A roof with no wall under one edge (the roof drawn
+alone): that edge's overhang is Unknown and says why; its soffit has no figure. (6) A
+job with none of these lines prints what it printed: the sample house's estimate is
+the same before and after, byte for byte.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what
