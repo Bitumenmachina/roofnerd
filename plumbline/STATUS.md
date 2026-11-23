@@ -10075,7 +10075,8 @@ Worked by hand (the pieces of a kind add up to the priced quantity of the line):
 - **Casing**: the window 4 pieces (head 3 ft, sill 3 ft, two sides 5 ft: 16.00 LF);
   the door 3 pieces (head 3 ft, two sides 6 ft 8 in: 16.33 LF, none across its
   foot), each on the south wall's outside face (north -0.25).
-- 23 pieces in all. Each is Assumed (the house was drawn with Assumed values) and
+- 27 pieces in all (2 + 4 + 2 + 4 + 8 + 4 + 3; the lead first wrote 23, an adding
+  mistake the builder caught: the demonstration says 27). Each is Assumed (the house was drawn with Assumed values) and
   says where its size came from; a size the line does not name is a drawing size
   only, says so, and is in no quantity.
 - **The L-shaped house** (step 4 above): 10 corner boards, 90.00 LF; none at the
@@ -10087,6 +10088,45 @@ Worked by hand (the pieces of a kind add up to the priced quantity of the line):
 Not worked by hand, and to be said by the builder from what the model holds before
 anything is built: how high the roof's edge is, and so how high each fascia and
 soffit lies.
+
+## Where each piece of outside trim lies: built (call 184 step 1, the model's half; 2026-11-23)
+
+Built by a Sonnet worker in a second working copy, tests first; accepted by the lead
+on the integration copy (the runs are in the commit's message). `plumbline trim <job>
+--pieces` lists every piece of fascia, rake fascia, soffit, rake soffit, corner board
+and casing that a cost line prices, with where it lies, its size and where the size
+came from, and ends with each kind's total beside the priced quantity
+(`crates/world/src/trim/lay.rs`: `pieces`, `lay`). `demos/trim.sh` step 6 walks it: 27
+pieces on the demonstration's house; fascia 52.00 LF, rake fascia 40.25 LF, soffit
+39.00 SF, rake soffit 30.19 SF, corner boards 72.00 LF, casing 32.33 LF, each the
+priced quantity; the L-shaped house 10 corner boards, 90.00 LF, none at the inside
+corner; the roof drawn alone a fascia and no soffit, and it says why. Without
+`--pieces` the verb prints what it printed. The window does not draw them yet: that
+is the next window job.
+
+What the model holds, said by the builder before building: a roof has one eave
+height above the job's datum; an eave lies at it along its whole length and a rake
+climbs from it to the ridge. On the demonstration's house the roof's edge, 1 ft out,
+is at 9 ft, so the roof's surface is 4 1/2 in above the wall's top at the wall's
+outside face, and the soffit, level, meets the wall 5 1/2 in below its top. That is
+what the figures give; nothing was bent to hide it.
+
+Set right: the lead's "the corner board at the corner of the outside faces" is the
+board's outer edge; the piece is listed by the middle of its back, half a board in.
+
+What is not right (each is a drawing matter; no quantity or price rests on it):
+- No starter line names a board's size, so every piece is drawn at a common size
+  (fascia 5 1/2 in, corner board and casing 3 1/2 in, 3/4 in thick; soffit 1/2 in)
+  and says so. Where a line's words name a nominal size the piece takes it.
+- Ends are square: no mitre where a rake meets an eave, at a ridge, at a casing's
+  corner or where two soffits meet; two corner boards leave a 3/4 in notch at the
+  corner; a corner board runs to the wall's top, not to the soffit.
+- A priced line whose formula a person has changed so that the pieces no longer add
+  up to it is not drawn, and the list says so.
+- Hips and valleys have no trim piece; a rake between two planes uses the first.
+- A wall that is not on the outside of the level's outline gets no casing (said).
+- Not tested: a labor line left out; two lines pricing the same piece; walls that
+  meet off square.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

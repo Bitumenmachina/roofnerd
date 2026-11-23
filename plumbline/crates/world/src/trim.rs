@@ -31,6 +31,9 @@
 
 use std::collections::{HashMap, HashSet};
 
+pub mod lay;
+pub use lay::{lay, pieces, Kind as PieceKind, Laid, Piece};
+
 use bevy_ecs::prelude::*;
 
 use crate::building::{self, plan_wall, wall_heights, Tree, Wall};

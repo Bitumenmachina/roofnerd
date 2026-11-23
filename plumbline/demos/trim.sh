@@ -195,7 +195,90 @@ says "$T/rtrim.txt" "[$RE]: ~26 LF long; overhang ? no figure (no wall is found 
 handre "$T/rest.txt" "its soffit" "no figure" "^  Soffit +no figure +no price"
 
 echo
-echo "== 6. The sample houses: nothing moves. Each job file and each estimate is the same, byte for byte, as before this call =="
+echo "== 6. Where each piece lies (call 184, step 1): \`trim --pieces\` on the house of step 1, its lines given, made-up prices on =="
+"$P" trim "$J" > "$T/trim-plain.txt"
+cmp -s "$T/trim.txt" "$T/trim-plain.txt" && echo "    (without --pieces, \`trim\` says what it said at step 1, byte for byte: the lines changed nothing)"
+lacks "$T/trim-plain.txt" "piece"
+"$P" trim "$J" --pieces > "$T/pieces.txt"
+python3 - "$T/pieces.txt" "$EAVE_S" "$EAVE_N" "$SOUTH" "$WIN" "$DOOR" <<'PY'
+import re, sys
+text = open(sys.argv[1]).read()
+eave_s, eave_n, south, win, door = sys.argv[2:7]
+pat = re.compile(r'^  (.+) \[([a-z]+-\d+)\], priced by "(.*)": ([~?]?)([\d.]+) LF from \(([^)]*)\) to \(([^)]*)\); looks ([^;]*); (.*) wide, (.*) thick \((.*)\)$')
+kind, rows = None, []
+for line in text.splitlines():
+    if re.match(r'^[A-Z][a-z ]+:$', line):
+        kind = line[:-1]
+    m = pat.match(line)
+    if m and kind:
+        name, path, priced, flag, length, a, b, looks, width, thick, said = m.groups()
+        rows.append(dict(kind=kind, path=path, line=priced, flag=flag, length=float(length), a=[float(x) for x in a.split(",")], b=[float(x) for x in b.split(",")], looks=looks, width=width, thick=thick, said=said))
+def of(k): return [r for r in rows if r["kind"] == k]
+def check(what, by_hand, got, ok):
+    print("    %-44s by hand %-22s said %s" % (what, by_hand, got))
+    if not ok: print("FAIL: %s" % what); print(text); sys.exit(1)
+def close(x, y, e=0.0006): return abs(x - y) < e
+want = {"Fascia": (2, 52.0), "Rake fascia": (4, 40.2492), "Soffit": (2, 26.0 * 2), "Rake soffit": (4, 40.2492), "Corner boards": (8, 72.0), "Casing": (7, 32.3333)}
+for k, (n, total) in want.items():
+    got = of(k)
+    check("%s: pieces, and their length" % k, "%d, %.2f LF" % (n, total), "%d, %.2f LF" % (len(got), sum(r["length"] for r in got)), len(got) == n and close(sum(r["length"] for r in got), total, 0.001))
+check("2+4+2+4+8+4+3: all pieces", "27", str(len(rows)), len(rows) == 27)
+z = 9 - 5.5 / 12 / 2
+f = {r["path"]: r for r in of("Fascia")}
+check("south fascia, from and to (east, north, up)", "(-1,-1,%.4f)-(25,-1,%.4f)" % (z, z), "%s-%s" % (f[eave_s]["a"], f[eave_s]["b"]), f[eave_s]["a"] == [-1.0, -1.0, round(z, 4)] and f[eave_s]["b"] == [25.0, -1.0, round(z, 4)] and f[eave_s]["looks"] == "south")
+check("north fascia, from and to", "(-1,17,%.4f)-(25,17,%.4f)" % (z, z), "%s-%s" % (f[eave_n]["a"], f[eave_n]["b"]), f[eave_n]["a"] == [-1.0, 17.0, round(z, 4)] and f[eave_n]["b"] == [25.0, 17.0, round(z, 4)] and f[eave_n]["looks"] == "north")
+check("each rake fascia climbs 4.5 ft in 9 ft on the plan", "10.0623 LF, up 4.5", "%s" % sorted(set((r["length"], round(r["b"][2] - r["a"][2], 4)) for r in of("Rake fascia"))), all(close(r["length"], 10.0623) and close(r["b"][2] - r["a"][2], 4.5) and close(abs(r["b"][1] - r["a"][1]), 9.0) for r in of("Rake fascia")))
+check("each soffit is as wide as the overhang, looking down", "9 in", "%s" % sorted(set(r["width"] for r in of("Soffit"))), all(r["width"] == "9 in" and r["looks"] == "down" for r in of("Soffit")))
+check("each rake soffit: 9 in wide, 10.0623 LF", "9 in, 10.0623", "%s" % sorted(set((r["width"], r["length"]) for r in of("Rake soffit"))), all(r["width"] == "9 in" and close(r["length"], 10.0623) for r in of("Rake soffit")))
+cb = of("Corner boards")
+check("each corner board stands 9 ft from the foot", "9 LF", "%s" % sorted(set(r["length"] for r in cb)), all(close(r["length"], 9.0) and r["a"][2] == 0.0 and r["b"][2] == 9.0 for r in cb))
+sw = [r for r in cb if r["path"] == south and close(r["a"][0], -0.25 + 3.5 / 24)]
+check("south wall's board at the south-west corner", "(-0.1042,-0.25), looks south", "%s %s" % (sw[0]["a"][:2], sw[0]["looks"]) if sw else "none", len(sw) == 1 and sw[0]["a"][1] == -0.25 and sw[0]["looks"] == "south")
+cs = of("Casing")
+win_p, door_p = [r for r in cs if r["path"] == win], [r for r in cs if r["path"] == door]
+check("window casing: head 3, sill 3, two sides 5", "4 pieces, 16 LF", "%d pieces, %.2f LF" % (len(win_p), sum(r["length"] for r in win_p)), len(win_p) == 4 and close(sum(r["length"] for r in win_p), 16.0, 0.001))
+check("door casing: head 3, two sides 6.6667, none at its foot", "3 pieces, 16.33 LF", "%d pieces, %.2f LF" % (len(door_p), sum(r["length"] for r in door_p)), len(door_p) == 3 and close(sum(r["length"] for r in door_p), 16.3333, 0.001) and all(min(r["a"][2], r["b"][2]) >= 0 for r in door_p) and sum(1 for r in door_p if r["a"][2] == r["b"][2]) == 1)
+check("casing lies on the south wall's outside face", "north -0.25, looks south", "%s" % sorted(set((r["a"][1], r["looks"]) for r in cs)), all(r["a"][1] == -0.25 and r["b"][1] == -0.25 and r["looks"] == "south" for r in cs))
+check("every piece is Assumed (the tracing is)", "~ on all 27", "%d with ~" % sum(1 for r in rows if r["flag"] == "~"), all(r["flag"] == "~" for r in rows))
+check("a size no line names is said to be drawn only", "'the line names no size'", "%d say so" % sum(1 for r in rows if "the line names no size" in r["said"]), all("the line names no size" in r["said"] for r in rows))
+PY
+echo "  each kind's pieces beside what its lines price, as the verb ends:"
+says "$T/pieces.txt" "  fascia: 2 pieces come to 52 LF; the lines price 52 LF"
+says "$T/pieces.txt" "  rake fascia: 4 pieces come to 40.2492 LF; the lines price 40.2492 LF"
+says "$T/pieces.txt" "  soffit: 2 pieces come to 39 SF; the lines price 39 SF"
+says "$T/pieces.txt" "  rake soffit: 4 pieces come to 30.1869 SF; the lines price 30.1869 SF"
+says "$T/pieces.txt" "  corner boards: 8 pieces come to 72 LF; the lines price 72 LF"
+says "$T/pieces.txt" "  casing: 7 pieces come to 32.3333 LF; the lines price 32.3333 LF"
+echo "  an eave with no fascia line has no fascia: the job before its lines were given has no piece at all, and says so:"
+"$P" trim "$T/job-before-lines.json" --pieces > "$T/pieces0.txt"
+says "$T/pieces0.txt" "No cost line prices any outside trim here, so no piece is drawn."
+echo "  only the south eave given a fascia line: one piece, on it:"
+cp "$T/job-before-lines.json" "$T/one.json"
+"$P" line "$T/one.json" "$EAVE_S" "Fascia" true_length --division 6 >/dev/null
+"$P" trim "$T/one.json" --pieces > "$T/pieces1.txt"
+says "$T/pieces1.txt" "  fascia: 1 piece comes to 26 LF; the lines price 26 LF"
+lacks "$T/pieces1.txt" "[$EAVE_N]"
+echo "  the L-shaped house of step 4: ten corner boards, none at the inside corner (12,16):"
+"$P" trim "$L_" --pieces > "$T/lpieces.txt"
+says "$T/lpieces.txt" "  corner boards: 10 pieces come to 90 LF; the lines price 90 LF"
+python3 - "$T/lpieces.txt" <<'PY'
+import re, sys
+pts = [tuple(float(x) for x in m.group(1).split(",")[:2]) for m in re.finditer(r"LF from \(([^)]*)\) to", open(sys.argv[1]).read())]
+assert len(pts) == 10, pts
+near = [p for p in pts if ((p[0] - 12) ** 2 + (p[1] - 16) ** 2) ** 0.5 < 0.6]
+print("    boards within 0.6 ft of the inside corner (12,16): by hand 0, said %d" % len(near))
+assert not near, near
+PY
+echo "  the roof alone, a soffit line and no wall under the edge: no soffit piece, and the list says why:"
+"$P" line "$R_" "$RE" "Fascia" true_length --division 6 >/dev/null
+"$P" trim "$R_" --pieces > "$T/rpieces.txt"
+says "$T/rpieces.txt" "Left out:"
+says "$T/rpieces.txt" "no wall is found under this edge"
+lacks "$T/rpieces.txt" "Soffit:"
+says "$T/rpieces.txt" "  fascia: 1 piece comes to 26 LF; the lines price 26 LF"
+
+echo
+echo "== 7. The sample houses: nothing moves. Each job file and each estimate is the same, byte for byte, as before this call =="
 for v in sample house sixteen priced; do
     "$P" "$v" "$T/$v.json" >/dev/null
     "$P" estimate "$T/$v.json" > "$T/$v.estimate.txt" 2>&1
