@@ -6634,3 +6634,61 @@ walls, and the siding over stone.
    beams share a line, and where two pads' areas overlap.**
 5. *A door taller than its wall leaves the wall's net area Unknown with no reason.*
    **Refused when drawn**, saying the wall's height.
+
+### Call 181. Walls found on a drawn plan (2026-11-23; call 172's second)
+
+A plan that is a drawing (a PDF with lines of its own, not a scan of paper) is already
+read for its lines so that a traced wall can snap to them (order of work, step 2). The
+walls are in those lines. As with a scan (call 173), what is found is offered, said in
+full, and laid only on the person's word; the finding is geometry in `crates/plans`;
+laying uses the wall, door and window the model already has; and silence is the defect
+(call 179 A): whatever it cannot tell, it says, with where.
+
+**It needs the sheet's scale.** Nothing is found on a sheet that has not been scaled
+(calibrated from one dimension, as a traced sheet is): it says so.
+
+**What a wall is, on a drawing.** Two lines side by side, parallel, a wall's thickness
+apart (3 in to 14 in at the sheet's scale), each at least 2 ft long at scale, alongside
+one another for that length. Its centre lies between them and its thickness is the
+distance between them: Assumed, its source the sheet, since a drawn thickness is the
+drafter's, not the wall's.
+- **A line across the two lines ends a wall there** (the drawing's own end of one wall
+  and start of the next, as where new work meets existing).
+- **Three or more parallel lines evenly spaced are not walls** (stair treads, siding,
+  hatching, a deck's boards): they are counted and said.
+- **A pair that meets no other wall at either end is "in doubt"** (a counter's edge, a
+  dimension line and its overall, a beam shown dashed): said, and laid only when taken
+  by its number, as a scan's doubtful face is.
+- Lettering, dimension lines, the sheet's border and title block are not walls; what
+  was left out is counted by kind and said.
+
+**Corners and closing.** Walls are carried to meet where their ends come within a
+thickness of one another's line. It says whether the walls found close, and where they
+do not.
+
+**Openings.** A break in both lines of a wall, with the wall going on in line beyond
+it, is an opening, with its width and where it is. Thin lines across the break inside
+the wall's thickness mark a window; none, a door or an open doorway. **A plan does not
+give a head or a sill**: openings are laid only when the person gives them
+(`--doors "6 ft 8 in"`, `--windows "3 ft" "6 ft 8 in"` for sill and head), each
+Assumed, its source "said when the walls were found"; where they are not given, the
+openings are said and the walls are laid whole across them, and it says that the
+walls then stand across N openings and are priced as if solid until the openings are
+set.
+
+**Heights.** A plan gives none: walls are laid to the level's height.
+
+**What is said, and laid.** As call 173: each wall (where, how long, how thick), each
+opening, what was in doubt, what was not taken as walls and why, whether the walls
+close, and what was laid or not. Everything laid is Assumed, its source "found on
+sheet <name>". Nothing is Known. Laying twice from the same sheet onto the same level
+is refused.
+
+**How near.** A drawing's lines are exact: on the made-up sheet of the demonstration a
+wall's line within 1/2 in, its thickness within 1/8 in, an opening's sides within 1 in.
+On a real sheet the program says what it found and a person looks: the demonstration
+runs the public farmhouse plan and prints what it found without a hand figure to hold
+it to, and says so.
+
+The window's half (the offer on the card when a drawn plan is scaled) is a call of its
+own once this is judged.

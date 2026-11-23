@@ -9386,6 +9386,72 @@ still gets the distance to the next level (Assumed, said); a round pad is taken 
 square; a height read back is written in decimal feet where the job wrote feet and
 inches; `SPEC.md` was not brought up to date. Not judged again.
 
+## Walls found on a drawn plan: a demonstration, written before it is built (call 181; 2026-11-23)
+
+`demos/planwalls.sh`, at the command line, from an empty job. The drawing is one the
+program writes itself, so every figure of it is known: no real plan is in the
+repository.
+
+**The house as made** (job A; feet; walls' lines): a ring 36 by 16 of 6 in walls, 9 ft
+high: the west 24 ft of it existing (west wall 16 ft; north and south walls 24 ft
+each), the east 12 ft new (north 12, east 16, south 12). A door 3 ft wide in the new
+east wall, from 6 ft 6 in to 9 ft 6 in north. A window 5 ft wide in the existing south
+wall, from 8 ft to 13 ft east. A room line at east 24 and two rooms. Its plan set is
+written at 1/4 in to the foot and its proposed plan (sheet A-103) taken as the drawing.
+
+**Step 1. Not scaled: nothing found.** The sheet brought into an empty job B and its
+walls asked for before it is scaled: refused, saying the sheet has no scale yet.
+
+**Step 2. Scaled from one dimension.** The overall dimension along the north side, 36
+ft, between its two ends as drawn.
+
+**Step 3. Found, nothing laid.**
+
+| What | By hand | How near |
+|---|---|---|
+| walls found | 6 | exactly |
+| their lengths on their lines | 24, 16, 24 (existing) and 12, 16, 12 (new): 104.00 LF | 1 in each |
+| each wall's thickness | 6 in | 1/8 in |
+| the walls close | yes: every end meets another wall | |
+| openings | 2: a door or doorway 3 ft 0 in wide in the east wall, 6 ft 6 in to 9 ft 6 in from its south end; a window 5 ft 0 in wide in the south wall, 8 ft to 13 ft from its west end | 1 in |
+| in doubt | none | exactly |
+| not taken as walls | the dimension lines, the lettering, the border and title block, the key: said by kind, none laid | |
+| the room line | not a wall (one line, dashed): not found | |
+
+The job holds no wall after this step.
+
+**Step 4. Laid with the openings' heights given** (doors 6 ft 8 in; windows sill 3 ft,
+head 6 ft 8 in), with a wall type named for none (the thickness is on the sheet): 6
+walls, each Assumed, source "found on sheet", none Known; a wall type 6 in made for
+them, Assumed; 1 door 3 ft by 6 ft 8 in; 1 window 5 ft by 3 ft 8 in, sill 3 ft. A room
+placed inside: 35.5 by 15.5 = **550.25 SF** (the two rooms of job A, 368.125 and
+182.125, together), within 1 SF. Walls 104.00 LF; face 104 x 9 = 936 SF; net 936 - 20 -
+18.33 = **897.67 SF** (the door 3 x 6.6667 = 20.00; the window 5 x 3.6667 = 18.33),
+within 1 SF. `check` passes.
+
+**Step 5. Laid with no heights given** (a fresh job): 6 walls, no door, no window; it
+says the walls stand across 2 openings and are priced as if solid until the openings
+are set; net face 936 SF.
+
+**Step 6. Refusals and what is not a wall.**
+- Laid a second time from the same sheet on the same level: refused, the job's file
+  byte for byte the same.
+- A sheet with a stair drawn as twelve treads 10 in apart, 3 ft long, inside the house
+  (the same plan with those lines added by the demonstration's own small PDF writer,
+  or drawn as a deck's boards outside it): still 6 walls; "1 set of 13 evenly spaced
+  lines not taken as walls".
+- Two free lines 8 ft long and 4 in apart in the middle of a room (a beam shown, or a
+  counter's two edges): **1 in doubt**, said with where; not laid by laying alone; laid
+  when taken by its number.
+
+**Step 7. A real sheet, with no hand figure.** The public farmhouse plan (USDA plan
+7213, public domain, fetched by `tools/fetch-plans.sh`; skipped with a word if it is
+not on the machine): scaled from the dimension `demos/first.sh` already scales it by,
+its walls asked for. The demonstration prints what was found (walls, openings, in
+doubt, left out, whether they close) and asserts only that it finishes, finds at least
+one wall and lays nothing Known. **Nobody has worked that sheet by hand: what it
+prints is to be looked at, and says so.**
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
