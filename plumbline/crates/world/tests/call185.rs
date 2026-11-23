@@ -78,7 +78,7 @@ fn box_house(status: ed::Entered<'static>, roof_status: Status) -> (House, Strin
     let level = ed::storey(&mut job, "ground", "0 ft", "9 ft", status).unwrap();
     let w6 = ed::wall_type(&mut job, "w6", "6 in", status).unwrap();
     let walls = ed::walls(&mut job, &level, &w6, &[[0.0, 0.0], [24.0, 0.0], [24.0, 16.0], [0.0, 16.0]], true, ed::Top::Height("9 ft"), status).unwrap();
-    let r = roof(&mut job, "R", &[[-1.0, -1.0], [25.0, -1.0], [25.0, 17.0], [-1.0, 17.0]], roof_status);
+    let _r = roof(&mut job, "R", &[[-1.0, -1.0], [25.0, -1.0], [25.0, 17.0], [-1.0, 17.0]], roof_status);
     job.derive();
     (House { job, walls }, level)
 }
@@ -188,7 +188,7 @@ fn an_l_has_five_outside_corners_and_the_inside_corner_has_no_board() {
 #[test]
 fn a_roof_with_no_wall_under_its_edge_has_no_overhang_and_says_why() {
     let mut job = Job::new("Roof alone (not a real job)", "test", "2026-11-23");
-    let r = roof(&mut job, "R", &[[-1.0, -1.0], [25.0, -1.0], [25.0, 17.0], [-1.0, 17.0]], Status::Assumed);
+    let _r = roof(&mut job, "R", &[[-1.0, -1.0], [25.0, -1.0], [25.0, 17.0], [-1.0, 17.0]], Status::Assumed);
     let eave = of_kind(&mut job, Kind::Eave)[0].clone();
     job.add_line(&eave, "Soffit", "true_length * overhang", Some(Class::Material), false).unwrap();
     job.derive();

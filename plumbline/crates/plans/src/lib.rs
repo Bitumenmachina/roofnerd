@@ -13,6 +13,7 @@
 //! counted and said. The edges of filled shapes are lines, as strokes are.
 
 pub mod drawn;
+pub mod faces;
 #[cfg(test)]
 mod drawn_tests;
 pub mod found;

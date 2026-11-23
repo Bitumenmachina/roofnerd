@@ -9977,6 +9977,40 @@ strings from a sheet's words it says so ("the sheet's own dimensions: 9 dimensio
 strings are read from its words") in place of the page reader's line that a
 dimension is typed by whoever reads it, which the same run then contradicted.
 
+## Call 190, the two worked-out parts built (2026-11-23)
+
+Built by a Sonnet worker in a second working copy, tests first; accepted by the lead
+on the integration copy (the runs are in the commit's message). Neither is called by
+the window or a verb yet: the window half is next (the demonstration is the section
+"A wall traced over a scan, set by its face", above).
+
+- `plumbline_plans::faces::faces` (and `faces_rgba`): the straight lines a scan's
+  sheet shows, read from the sheet's own picture, each at least 2 ft long, with the
+  side the room is on and, where a wall shows both faces, the other face and how far
+  apart. A made-up face at a whole foot is read within 1/16 in; the house of the
+  demonstration gives its 6 faces at 0, 17, 33 and 45 degrees, the partition's two a
+  pair 4 1/2 in apart.
+- `plumbline_world::editing::carry::carried_out`: a line of clicks carried out by
+  half a thickness, corners both ways. Ported from BIMCraft's `offset_poly`
+  (`PORTMAP.md`); a corner under 15 degrees is cut square (ours).
+
+On the three real phone scans (not in the repository), the lead's reading of the
+worker's pictures: the faces lie on the scanned walls. Small room: 5 faces, 4 on
+walls, 1 through furniture. Long room: 11 faces, 8 on walls, 3 short stubs; every
+wall stretch of the room has a face, and where the hand-read truth file and the
+face differ (the west wall, by about 10 in) the picture shows the face is on the
+wall and the truth file is not. Large room: 17 faces, 7 on walls, about 10 on
+furniture and stray streaks. The room's side is right on every wall looked at.
+
+What is not right:
+- Furniture and stray streaks 2 ft long or more that are straight come back as
+  faces. The program cannot tell a wardrobe from a wall; the person tracing does,
+  which is why the faces are places to pick and are never laid by themselves.
+- A wall scanned in two passes 10 in apart reads as two faces of one 10 in wall.
+- A doorway wider than 1 ft 6 in cuts a face in two (the wall tool draws across).
+- A sheet the page reader has shrunk (over 4,096 dots a side) needs its dots to the
+  foot scaled by the caller: the window half must do it and its demonstration check it.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what

@@ -25,6 +25,7 @@
 //! * Not taken: arcs, closed runs, a run's end height and justification, families,
 //!   attaching a wall's top or base, moving one end, moving or removing several at once.
 
+pub mod carry;
 pub mod history;
 pub mod join;
 pub mod measure;
